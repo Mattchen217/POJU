@@ -1,0 +1,105 @@
+---
+description: 三条绝对不可违反的品牌承诺（Never stored / Never required / Never manipulative）
+alwaysApply: true
+---
+
+# Three Non-Negotiables
+
+以下三条是 POJU 的生命线。**任何代码、UI、文案违反任一条都要立即拒绝**并向用户指出。
+
+## 1. Never Stored
+
+所有对话数据**只在用户设备的 IndexedDB 里**（AES-256-GCM 加密）。
+
+### 代码层面的硬规则
+
+- ✅ 使用 `Dexie.js` 封装 IndexedDB
+- ✅ 所有消息内容存储前用 `crypto.subtle.encrypt()` 加密
+- ✅ 加密密钥用 `crypto.subtle.generateKey()` 本地生成，存 localStorage
+- ❌ **禁止** `localStorage.setItem('chat_history', ...)`（未加密）
+- ❌ **禁止** 把对话内容发送到除 Anthropic API 外的任何服务
+- ❌ **禁止** 任何 server-side 数据库存储对话内容
+- ❌ **禁止** 使用 Redis / KV / Supabase 缓存用户对话
+
+### 服务端只能存什么
+
+```sql
+-- 可以存
+device_fingerprints   (fingerprint_hash, first_seen, last_seen)
+payment_records       (stripe_id, amount, status, token_hash)  
+scheduled_emails      (email, send_at, 发送后 24h 物理删除)
+
+-- 不能存
+chat_messages         ❌
+oracle_signs          ❌  
+syncro_readings       ❌
+user_bazi             ❌
+任何可识别个人身份的数据 ❌
+```
+
+### 邮箱处理
+
+- 邮箱**只在**用户主动要求 PDF 时询问
+- 发送 PDF + 1 封回访邮件后 **24 小时内**物理删除
+- Resend 端也要配置 30 天 auto-delete
+
+## 2. Never Required
+
+- ❌ 无注册流程
+- ❌ 无登录页面
+- ❌ 无密码、无 magic link、无 OAuth
+- ❌ 不强制邮箱（除了 PDF 导出流）
+- ✅ 唯一"身份"是 FingerprintJS 生成的设备哈希
+- ✅ 用户第一次访问就能用 Syncro / Oracle
+- ✅ 用户支付 $9.99 后才需要 token（Stripe session → session token，不涉及用户创建）
+
+### 禁用的 UI 组件
+
+- ❌ "Sign up" 按钮
+- ❌ "Log in" 按钮
+- ❌ "Create account" 链接
+- ❌ "Forgot password" 流
+- ❌ Google/Apple/Facebook OAuth 按钮
+- ❌ 用户资料页 `/profile`
+
+## 3. Never Manipulative
+
+禁止所有 dark patterns。
+
+### 禁用清单
+
+- ❌ "Limited time offer" / "Only today" 等虚假稀缺
+- ❌ 倒计时（除了 Syncro 时辰倒计时，那是功能不是营销）
+- ❌ "3 people just bought" / "Join thousands of users" 等羊群效应
+- ❌ 关闭按钮隐藏 / 难找
+- ❌ 默认勾选的条款
+- ❌ "Are you sure you want to leave?" 挽留弹窗
+- ❌ 订阅默认开启
+- ❌ 自动续费 / 年付 / Pro 版本逻辑
+- ❌ Upsell 弹窗
+
+### 定价规则
+
+**一个价格：$9.99，只针对 POJU，只在用户需要深度时**。
+
+- ✅ 显示 `$9.99 · one-time` 
+- ❌ 禁止显示 `~~$99~~ $9.99`（假定价）
+- ❌ 禁止 "First month free" 等钓鱼
+- ❌ 禁止多档定价（$9.99 / $19.99 Pro / $49.99 Annual）
+
+## 违反检测
+
+**如果用户请求的功能违反任一条**，你的标准回应：
+
+```
+This request conflicts with POJU's Non-Negotiable [1/2/3]: 
+[具体解释哪一条]. 
+
+POJU's brand moat is these three promises. Implementing this 
+would break the entire product philosophy. 
+
+Here's an alternative that respects the principle: [替代方案].
+
+Confirm to proceed with the alternative, or explain why this 
+exception is needed.
+```

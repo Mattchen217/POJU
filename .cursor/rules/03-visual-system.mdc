@@ -1,0 +1,206 @@
+---
+description: 视觉系统基础规范 - Design Tokens 结构与使用规则
+alwaysApply: true
+---
+
+# Visual System · Foundation
+
+> **重要**：这份文件定义**视觉系统的基础结构与使用规则**。
+> 
+> **具体色值、字体、卡片样式等视觉语言**在 `05-visual-language.mdc` 里（深空紫 + 星云粒子美学）。
+> 
+> 两份文件分工：**本文件 = 如何使用 tokens，05 = tokens 具体是什么**。
+
+---
+
+## Design Tokens 使用原则
+
+### 1. 所有视觉值必须来自 tokens
+
+```tsx
+// ❌ 禁止 - 硬编码色值
+<div className="bg-[#8B5CF6]">
+
+// ❌ 禁止 - Tailwind 默认色
+<div className="bg-purple-500">
+
+// ✅ 正确 - 使用项目 tokens
+<div className="bg-purple-primary">
+```
+
+### 2. Tailwind 配置必须映射所有 tokens
+
+在 `tailwind.config.ts` 中扩展 theme，让所有 tokens 通过 Tailwind class 可用：
+
+```ts
+theme: {
+  extend: {
+    colors: {
+      'bg-deep': 'var(--bg-deep)',
+      'purple-primary': 'var(--purple-primary)',
+      // ... 映射所有 05-visual-language.mdc 里的 token
+    },
+    fontFamily: {
+      primary: ['var(--font-primary)'],
+      verse: ['var(--font-verse)'],
+    },
+  }
+}
+```
+
+### 3. CSS 变量在根作用域定义
+
+所有 tokens 在 `styles/tokens.css` 中定义：
+
+```css
+:root {
+  --bg-deep: #0B0815;
+  --purple-primary: #8B5CF6;
+  /* ... */
+}
+```
+
+然后在 `app/global.css` 中导入 `@import './tokens.css';`
+
+## 间距系统（8pt 网格）
+
+所有间距**必须**是 8 的倍数：
+
+```css
+--space-1:  4px;
+--space-2:  8px;    /* 基础单位 */
+--space-3:  16px;
+--space-4:  24px;
+--space-5:  32px;
+--space-6:  48px;
+--space-7:  64px;
+--space-8:  96px;
+```
+
+**禁止**使用非 token 间距值（如 `padding: 17px`、`margin: 13px`）。
+
+## 圆角系统
+
+```css
+--radius-sm:   4px;    /* 极小元素（标签、小按钮） */
+--radius-md:   8px;    /* 输入框、小卡片 */
+--radius-lg:   16px;   /* 主卡片 */
+--radius-xl:   24px;   /* 大卡片、Oracle 卡片 */
+--radius-full: 9999px; /* Pill 按钮 */
+```
+
+## 缓动曲线
+
+```css
+--ease-smooth:  cubic-bezier(0.4, 0, 0.2, 1);
+--ease-out:     cubic-bezier(0.0, 0, 0.2, 1);
+--ease-in:      cubic-bezier(0.4, 0, 1, 1);
+--ease-ornate:  cubic-bezier(0.22, 1, 0.36, 1);  /* 诗意收尾 · 毛笔、卡片 */
+```
+
+## 动画时长规范
+
+```
+instant:   100ms  (hover / tap 反馈)
+quick:     200ms  (UI 过渡)
+smooth:    300ms  (内容切换)
+slow:      500ms  (视觉重点)
+ornate:   1000ms  (仪式动画)
+epic:     2500ms  (毛笔写入 / 卡片展开)
+```
+
+## 音效资源
+
+```
+/sfx/hum.mp3        低频嗡鸣 (Oracle 召唤, 循环, vol 0.2)
+/sfx/explosion.mp3  粒子爆炸 (0.3s, vol 0.7)
+/sfx/paper.mp3      纸张展开 (2s, vol 0.5)
+/sfx/brush.mp3      毛笔划纸 (循环 15-20s, vol 0.3)
+/sfx/bell.mp3       钟响 (1s, vol 0.6)
+/sfx/shift.mp3      时辰切换 (vol 0.5)
+/sfx/click.mp3      UI 点击 (vol 0.4)
+```
+
+- 默认开启
+- 右上角设置可全局静音
+- 静音状态 localStorage 持久化
+- 使用 Howler.js 统一管理
+
+## 响应式断点
+
+```
+Mobile:   0 - 767px       （主要设计目标）
+Tablet:   768 - 1023px
+Desktop:  1024px+
+```
+
+**原则：移动优先。所有布局先为 iPhone (375-430px) 设计，再扩展到更大屏幕。**
+
+## 可访问性硬要求
+
+- 所有交互元素支持键盘
+- 所有图片有 alt
+- 检测 `prefers-reduced-motion: reduce` → 禁用非必要动画
+- 颜色对比度 WCAG AA 达标
+- 焦点可见（`:focus-visible` 有明确视觉反馈）
+
+## 暗色模式
+
+POJU **只有暗色模式**，不支持浅色模式。不需要 `prefers-color-scheme` 检测，不需要 `dark:` Tailwind 前缀。
+
+理由：POJU 的深空美学是品牌核心，浅色模式会破坏整体氛围。
+
+## 动画克制原则
+
+**不做的**：
+- ❌ 跳跃、弹跳、抖动（破坏克制感）
+- ❌ 霓虹灯式连续发光闪烁
+- ❌ 每个元素都在动
+- ❌ 用户每次交互都触发大型过渡
+
+**该做的**：
+- ✅ 缓慢的呼吸感（2-4 秒循环）
+- ✅ 粒子的 Curl Noise 流动
+- ✅ 毛笔写字的 `stroke-dasharray` 动画
+- ✅ 页面切换的淡入淡出（300ms）
+- ✅ Hover 的微升（translateY -2px）+ 光晕加深
+
+**仪式瞬间可以稍微浮夸**（Oracle 爆炸、Syncro 时辰切换、支付成功），但每个用户旅程中只出现 1-3 次。
+
+## 图标规范
+
+**主要图标**：使用自定义 SVG（参考 `05-visual-language.mdc` 对图标风格的描述：outline + 粒子装饰 + 紫色发光）。
+
+**次要 UI 图标**（返回、关闭、菜单）：可用 Lucide Icons
+- 线条粗细：1.5px
+- 尺寸：16 / 20 / 24 / 32
+- 颜色：跟随 `--text-body`
+
+**不使用 emoji** 作为主要 UI 元素（除非用户内容）。
+
+**唯一例外**：**✦** 符号作为 POJU 品牌装饰符号，可用于标题和分隔符。
+
+## 视觉迭代协议
+
+当用户上传新参考图片时：
+
+1. 读取 `05-visual-language.mdc` 的当前视觉语言
+2. 对比新图片的视觉差异
+3. 向用户明确报告：
+   ```
+   Reference image analyzed. Proposed changes:
+   
+   Color adjustments:
+   - [具体 token] from [当前值] to [图片值]
+   
+   Keeping unchanged:
+   - Dark theme
+   - Glassmorphism cards
+   - Particle-nebula visual DNA
+   - Purple as primary accent
+   
+   Confirm to update 05-visual-language.mdc?
+   ```
+4. 用户确认后，**更新 `05-visual-language.mdc`**，不在本文件里改
+
+本文件（`03-visual-system.mdc`）定义的**结构原则**极少需要改动。视觉迭代主要影响 `05-visual-language.mdc`。

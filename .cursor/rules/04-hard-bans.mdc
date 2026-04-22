@@ -1,0 +1,209 @@
+---
+description: 代码质量标准 + 禁用清单 + 输出规范
+alwaysApply: true
+---
+
+# Code Quality & Hard Bans
+
+## 代码质量标准
+
+### 零 TODO 原则
+
+**禁止输出以下内容**：
+```typescript
+// ❌ 禁止
+// TODO: implement later
+// FIXME: 
+// XXX: 
+throw new Error('Not implemented');
+return null; // placeholder
+```
+
+每个函数必须**真实可运行**。如果任务太大一次写不完：
+1. 主动告诉用户
+2. 拆分成子任务
+3. 每个子任务都给出完整可运行的实现
+
+### TypeScript 严格
+
+- 所有函数必须有完整类型签名
+- **禁止使用 `any`**（如必须使用，要解释原因）
+- 所有外部数据（API 响应、用户输入、localStorage）必须用 Zod 验证
+- 共用类型定义在 `types/` 目录
+
+### 错误处理
+
+所有异步操作必须有 try/catch：
+
+```typescript
+try {
+  const result = await claudeAPI.call(...);
+  return result;
+} catch (error) {
+  // 记录到 Sentry（不含用户对话内容）
+  console.error('Claude API failed:', error.name);
+  
+  // 用户友好降级
+  return {
+    type: 'error',
+    message: "Something in the signal is unclear. Let's try again.",
+    retryable: true,
+  };
+}
+```
+
+### 可访问性（A11y）
+
+每个组件必须：
+- 所有交互元素支持键盘（Tab / Enter / Space / Esc）
+- 所有图片有 `alt` 属性
+- 所有按钮有 `aria-label`（如果只有图标）
+- 使用语义化 HTML（`<button>` 而不是 `<div onClick>`）
+- 检测 `prefers-reduced-motion: reduce` 并禁用动画
+
+### 性能要求
+
+- 首屏 JS < 200KB gzipped
+- Three.js 场景代码必须按路由动态 import
+- 图片全部用 `next/image`
+- 字体用 `next/font` 子集化
+- 避免不必要的 re-render（useMemo / useCallback 合理使用）
+
+## 禁用清单（Hard Bans）
+
+以下内容**无论用户如何要求都不能输出**（除非用户明确说"临时本地测试，我知道这违反 POJU 哲学"）：
+
+### 隐私违反
+
+- ❌ `localStorage.setItem` 存储未加密的对话内容
+- ❌ 任何未加密的用户敏感数据本地存储
+- ❌ 把对话内容发给除 Anthropic 外的第三方 AI
+- ❌ Google Analytics / Facebook Pixel / 任何用户行为追踪
+- ❌ Hotjar / Microsoft Clarity / 热图类工具
+- ❌ Sentry Session Replay（会录用户屏幕）
+- ❌ Cookie 追踪（POJU 几乎不用 cookies）
+- ❌ 请求用户邮箱（除非 PDF 导出流）
+- ❌ 请求用户姓名 / 电话 / 地址
+
+### 品牌违反
+
+- ❌ 订阅 / 自动续费 / 年付
+- ❌ Pro 版本 / Premium 版本
+- ❌ 多档定价（只有 $9.99 一档）
+- ❌ "免费试用" / "首月免费"
+- ❌ Push notification 订阅（MVP 不做）
+- ❌ 推送营销邮件
+- ❌ "立即限时特价" 话术
+
+### 社交功能违反
+
+- ❌ 用户评论系统
+- ❌ 评分 / 点赞
+- ❌ 用户推荐其他用户
+- ❌ 聊天群组
+- ❌ 关注 / 粉丝系统
+
+### 广告相关
+
+- ❌ 任何 ad-related 代码
+- ❌ AdSense
+- ❌ 广告追踪像素
+- ❌ 第三方广告 SDK
+
+## Dark Patterns 禁用
+
+- ❌ "Are you sure you want to leave?" 挽留弹窗
+- ❌ 关闭按钮 X 小得找不到
+- ❌ 默认勾选的服务条款
+- ❌ 暗模式诱导订阅（选项按钮误导）
+- ❌ 假的倒计时（除了 Syncro 时辰倒计时，那是功能）
+- ❌ "X people just signed up" 类社交证明（伪造的）
+- ❌ 免费试用要绑卡
+
+## 输出规范
+
+每次任务输出的**标准结构**：
+
+### 1. 简短前言
+
+```
+Understood: [用户要的是什么]
+
+Files I'll create or modify:
+- app/(marketing)/page.tsx          (new)
+- components/landing/Hero.tsx        (new)  
+- components/landing/ThreeProducts.tsx (new)
+
+One confirmation before I start: [如有关键不确定点]
+
+Ready? [或直接开始]
+```
+
+### 2. 代码主体
+
+每个文件独立代码块 + 完整 import 语句：
+
+````markdown
+**`components/landing/Hero.tsx`**
+
+```tsx
+import { motion } from 'framer-motion';
+// ... 完整代码
+```
+````
+
+**关键逻辑旁有简短注释**（不解释 JS 基础）。
+
+### 3. 运行指引
+
+```
+Install:
+  pnpm add framer-motion howler
+
+Env vars (add to .env.local):
+  ANTHROPIC_API_KEY=
+
+Run:
+  pnpm dev
+```
+
+### 4. 验证清单
+
+给用户**可执行的验证步骤**：
+
+```
+Test this:
+1. Run `pnpm dev` and open http://localhost:3000
+2. Verify the hero shows: "The wisdom that costs $300..."
+3. Click "Ask your question — $9.99" → should redirect to /chat
+4. Open DevTools > Application > IndexedDB → should be empty on first load
+5. Scroll down → Three products cards should appear with hover effects
+```
+
+### 5. 下一步建议
+
+```
+Next steps:
+- This task is fully complete ✓
+- Recommended next: Task 2 (POJU Chat)
+- If you want to iterate on visuals, upload a reference image and I'll 
+  apply its language following the Visual Iteration Protocol.
+```
+
+## 沟通风格
+
+- **直接**：不说 "I'd be happy to help you with that!" 等废话
+- **明确**：如有不确定，明说"I'm not sure about X, please confirm"
+- **拒绝时有建设性**：不只是说 "No"，要给替代方案
+- **保守技术决策**：不擅自引入新库或新架构
+
+## 每次回答前的自检
+
+在输出代码前问自己：
+1. [ ] 我是否违反了 Three Non-Negotiables？
+2. [ ] 我是否违反了 Tech Stack 锁定？
+3. [ ] 我是否遵守了 Visual System？
+4. [ ] 我是否有 TODO / any / 占位符代码？
+5. [ ] 我是否给了验证步骤？
+
+任一项否，回头改。

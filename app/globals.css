@@ -1,26 +1,413 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@import "../styles/tokens.css";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --font-primary: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-verse: var(--font-garamond), Georgia, serif;
+  --font-logo-zh: "Noto Serif SC", "Source Han Serif SC", serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  min-height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background:
+    radial-gradient(circle at 82% 10%, rgba(168, 85, 247, 0.24), transparent 36%),
+    radial-gradient(circle at 15% 85%, rgba(59, 130, 246, 0.12), transparent 34%),
+    radial-gradient(circle at 50% -10%, rgba(124, 58, 237, 0.25), transparent 45%),
+    var(--bg-deep);
+  color: var(--text-body);
+  font-family: var(--font-primary);
+}
+
+a,
+button {
+  transition: all 200ms var(--ease-smooth);
+}
+
+:focus-visible {
+  outline: 2px solid var(--purple-vivid);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@layer components {
+  .poju-landing-shell {
+    @apply relative overflow-hidden rounded-2xl border border-white/10 bg-[#080d1d]/90 p-3 md:p-4;
+    box-shadow:
+      0 24px 60px rgba(3, 6, 16, 0.7),
+      0 10px 32px rgba(79, 70, 229, 0.22);
+  }
+
+  .poju-browser-bar {
+    @apply mb-3 flex items-center justify-between rounded-xl border border-white/10 bg-[#0f152b] px-3 py-2;
+  }
+
+  .poju-browser-url {
+    @apply rounded-full border border-white/10 bg-black/25 px-3 py-1 text-[10px] text-text-dim;
+  }
+
+  .poju-inner-nav {
+    @apply mb-6 flex items-center justify-between rounded-full border border-white/10 bg-black/20 px-4 py-2;
+  }
+
+  .poju-inner-nav-links {
+    @apply hidden items-center gap-4 text-[10px] uppercase tracking-[0.18em] text-text-secondary md:flex;
+  }
+
+  .poju-designed-strip {
+    @apply mt-4 rounded-xl border border-[#d9dce8] bg-[#f5f7fc] px-4 py-5;
+  }
+
+  .poju-designed-grid {
+    @apply mt-4 grid gap-4 text-center md:grid-cols-4;
+  }
+
+  .poju-designed-item {
+    @apply rounded-lg border border-[#e3e7f3] bg-white px-3 py-3;
+  }
+
+  .poju-cosmic-panel {
+    @apply relative overflow-hidden rounded-2xl border border-glass-border bg-bg-layer-1 bg-opacity-70 shadow-card;
+    box-shadow:
+      0 20px 70px rgba(9, 7, 20, 0.62),
+      0 8px 30px rgba(139, 92, 246, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  .poju-cosmic-panel::before {
+    content: "";
+    @apply absolute inset-0;
+    background:
+      radial-gradient(circle at 75% 18%, rgba(168, 85, 247, 0.24), transparent 30%),
+      radial-gradient(circle at 30% 80%, rgba(34, 211, 238, 0.12), transparent 35%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 26%);
+    pointer-events: none;
+  }
+
+  .poju-glass-card {
+    @apply border border-glass-border bg-glass-tint backdrop-blur-xl shadow-card rounded-xl;
+    box-shadow:
+      0 12px 36px rgba(9, 7, 20, 0.45),
+      0 4px 18px rgba(139, 92, 246, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .poju-button-primary {
+    @apply inline-flex items-center justify-center rounded-full border px-6 py-3 text-sm font-medium text-white hover:-translate-y-px;
+    border-color: rgba(212, 175, 55, 0.7);
+    background: linear-gradient(180deg, rgba(212, 175, 55, 0.12), rgba(212, 175, 55, 0.05));
+    box-shadow:
+      0 0 0 1px rgba(212, 175, 55, 0.2) inset,
+      0 10px 30px rgba(212, 175, 55, 0.15);
+  }
+
+  .poju-button-primary:hover {
+    background: linear-gradient(180deg, rgba(212, 175, 55, 0.34), rgba(212, 175, 55, 0.16));
+    box-shadow:
+      0 0 0 1px rgba(212, 175, 55, 0.35) inset,
+      0 12px 34px rgba(212, 175, 55, 0.24);
+  }
+
+  .poju-button-secondary {
+    @apply inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-medium text-text-body border border-glass-border bg-glass-tint hover:bg-purple-primary hover:bg-opacity-20 hover:-translate-y-px;
+  }
+
+  .poju-section-title {
+    @apply text-2xl font-semibold text-text-primary md:text-3xl;
+  }
+
+  .poju-kicker {
+    @apply text-xs uppercase tracking-[0.22em] text-text-accent;
+  }
+
+  .poju-product-card {
+    @apply relative overflow-hidden rounded-xl border border-glass-border bg-bg-layer-1 bg-opacity-90 p-4 shadow-card;
+    min-height: 124px;
+    border-color: rgba(167, 139, 250, 0.22);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      0 10px 26px rgba(7, 8, 22, 0.42),
+      0 0 0 1px rgba(255, 255, 255, 0.02);
+  }
+
+  .poju-path-headline {
+    @apply mt-8 text-center text-[13px] font-medium text-white;
+  }
+
+  .poju-path-subline {
+    @apply mt-1 text-center text-[9px] tracking-[0.08em] text-[#8d97bb];
+  }
+
+  .poju-path-grid {
+    @apply mt-3 grid gap-2.5 md:grid-cols-3;
+  }
+
+  .poju-path-card {
+    @apply relative overflow-hidden rounded-[10px] border p-3;
+    min-height: 112px;
+    border-color: rgba(148, 163, 184, 0.24);
+    background:
+      linear-gradient(145deg, rgba(79, 70, 229, 0.2) 0%, rgba(17, 24, 39, 0.64) 42%, rgba(10, 15, 34, 0.95) 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 8px 24px rgba(3, 8, 24, 0.52);
+  }
+
+  .poju-path-card::before {
+    content: "";
+    @apply absolute inset-0;
+    background: radial-gradient(circle at 14% -22%, rgba(255, 255, 255, 0.08), transparent 50%);
+    pointer-events: none;
+  }
+
+  .poju-path-dot {
+    @apply inline-flex h-4 w-4 items-center justify-center rounded-full text-[9px] text-white;
+    background: linear-gradient(135deg, rgba(199, 104, 255, 0.95), rgba(131, 56, 236, 0.92));
+    box-shadow: 0 0 10px rgba(199, 104, 255, 0.4);
+  }
+
+  .poju-path-title {
+    @apply text-[10px] font-semibold uppercase tracking-[0.14em] text-[#dce1ff];
+  }
+
+  .poju-path-caption {
+    @apply text-[9px] text-[#8f9ac1];
+  }
+
+  .poju-path-body {
+    @apply mt-3 max-w-[66%] text-[9px] leading-4 text-[#9ea8ce];
+  }
+
+  .poju-path-link {
+    @apply mt-3 text-[9px] font-medium text-[#cdd5ff];
+  }
+
+  .poju-path-core {
+    @apply pointer-events-none absolute right-2 top-1/2 -translate-y-1/2;
+  }
+
+  .poju-path-card.poju::after {
+    content: "";
+    @apply absolute -bottom-5 right-1 h-16 w-16 rounded-full;
+    background: radial-gradient(circle, rgba(178, 87, 255, 0.85), rgba(124, 58, 237, 0.2) 48%, rgba(109, 40, 217, 0) 72%);
+  }
+
+  .poju-path-card.poju .poju-path-core {
+    @apply h-10 w-10 rounded-full border border-purple-200/20;
+    background: radial-gradient(circle, rgba(226, 198, 255, 0.38), rgba(226, 198, 255, 0.02) 62%, transparent 74%);
+    box-shadow:
+      0 0 18px rgba(167, 139, 250, 0.36),
+      inset 0 0 12px rgba(255, 255, 255, 0.08);
+  }
+
+  .poju-path-card.syncro {
+    background:
+      linear-gradient(145deg, rgba(21, 91, 180, 0.34) 0%, rgba(10, 42, 79, 0.66) 38%, rgba(7, 20, 40, 0.95) 100%);
+  }
+
+  .poju-path-card.syncro::after {
+    content: "";
+    @apply absolute -bottom-6 -right-2 h-20 w-20 rounded-full;
+    background: radial-gradient(circle, rgba(66, 228, 255, 0.88), rgba(8, 145, 178, 0.18) 52%, rgba(6, 182, 212, 0) 74%);
+  }
+
+  .poju-path-card.syncro .poju-path-core {
+    @apply h-11 w-11 rounded-full border border-cyan-200/35;
+    background: radial-gradient(circle, rgba(125, 240, 255, 0.3), rgba(125, 240, 255, 0.02) 62%, transparent 74%);
+    box-shadow:
+      0 0 20px rgba(34, 211, 238, 0.5),
+      inset 0 0 12px rgba(103, 232, 249, 0.18);
+  }
+
+  .poju-path-card.oracle {
+    background:
+      linear-gradient(145deg, rgba(151, 56, 170, 0.36) 0%, rgba(71, 27, 113, 0.64) 38%, rgba(30, 15, 56, 0.95) 100%);
+  }
+
+  .poju-path-card.oracle::after {
+    content: "";
+    @apply absolute -bottom-5 right-1 h-16 w-16 rounded-full;
+    background: radial-gradient(circle, rgba(244, 114, 182, 0.8), rgba(217, 70, 239, 0.2) 48%, rgba(217, 70, 239, 0) 74%);
+  }
+
+  .poju-path-card.oracle .poju-path-core {
+    @apply h-[48px] w-[34px] rounded-xl border border-pink-200/35;
+    transform: translateY(-50%) rotate(-16deg);
+    background: linear-gradient(165deg, rgba(244, 114, 182, 0.22), rgba(107, 33, 168, 0.2));
+    box-shadow:
+      0 0 18px rgba(236, 72, 153, 0.46),
+      inset 0 0 12px rgba(244, 114, 182, 0.16);
+  }
+
+  .poju-path-card.oracle .poju-path-core::after {
+    content: "";
+    @apply absolute inset-[18%] rounded-md border border-pink-100/35;
+  }
+
+  .poju-product-card::before {
+    content: "";
+    @apply absolute inset-0;
+    background:
+      radial-gradient(circle at 18% -20%, rgba(255, 255, 255, 0.07), transparent 45%),
+      linear-gradient(135deg, rgba(113, 63, 255, 0.24) 0%, rgba(25, 26, 58, 0.46) 46%, rgba(11, 13, 33, 0.92) 100%);
+    pointer-events: none;
+  }
+
+  .poju-product-card::after {
+    content: "";
+    @apply absolute -bottom-7 -right-7 h-20 w-20 rounded-full;
+    background: radial-gradient(circle, rgba(186, 121, 255, 0.76), rgba(124, 58, 237, 0.2) 45%, rgba(109, 40, 217, 0) 74%);
+    filter: blur(0.5px);
+    pointer-events: none;
+  }
+
+  .poju-product-icon {
+    @apply relative z-10 inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/15 text-[9px] font-semibold text-white;
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.7), rgba(217, 70, 239, 0.65));
+    box-shadow: 0 0 12px rgba(168, 85, 247, 0.28);
+  }
+
+  .poju-product-card.syncro::before {
+    background:
+      radial-gradient(circle at 18% -20%, rgba(255, 255, 255, 0.06), transparent 45%),
+      linear-gradient(135deg, rgba(23, 133, 255, 0.28) 0%, rgba(8, 47, 73, 0.5) 48%, rgba(9, 20, 40, 0.95) 100%);
+  }
+
+  .poju-product-card.syncro::after {
+    @apply h-24 w-24;
+    background: radial-gradient(circle, rgba(69, 226, 255, 0.9), rgba(8, 145, 178, 0.2) 46%, rgba(6, 182, 212, 0) 72%);
+  }
+
+  .poju-product-card.oracle::before {
+    background:
+      radial-gradient(circle at 18% -20%, rgba(255, 255, 255, 0.06), transparent 45%),
+      linear-gradient(135deg, rgba(197, 77, 203, 0.32) 0%, rgba(77, 29, 149, 0.52) 45%, rgba(29, 14, 56, 0.96) 100%);
+  }
+
+  .poju-product-card.oracle::after {
+    background: radial-gradient(circle, rgba(245, 122, 218, 0.82), rgba(217, 70, 239, 0.22) 44%, rgba(217, 70, 239, 0) 74%);
+  }
+
+  .poju-product-orbit {
+    @apply absolute pointer-events-none rounded-full border border-white/15;
+  }
+
+  .poju-card-core {
+    @apply absolute right-2 top-1/2 h-16 w-16 -translate-y-1/2 rounded-full border border-white/15;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.02) 54%, transparent 74%);
+    box-shadow:
+      0 0 20px rgba(168, 85, 247, 0.42),
+      inset 0 0 20px rgba(255, 255, 255, 0.08);
+  }
+
+  .poju-card-core.syncro {
+    border-color: rgba(103, 232, 249, 0.4);
+    box-shadow:
+      0 0 22px rgba(34, 211, 238, 0.56),
+      inset 0 0 22px rgba(103, 232, 249, 0.18);
+    background: radial-gradient(circle, rgba(125, 240, 255, 0.38), rgba(8, 145, 178, 0.08) 52%, transparent 74%);
+  }
+
+  .poju-card-core.oracle {
+    @apply h-[62px] w-[46px] rounded-xl border-pink-300/35;
+    transform: translateY(-50%) rotate(-16deg);
+    box-shadow:
+      0 0 22px rgba(236, 72, 153, 0.52),
+      inset 0 0 18px rgba(244, 114, 182, 0.2);
+    background: linear-gradient(165deg, rgba(244, 114, 182, 0.25), rgba(107, 33, 168, 0.18));
+  }
+
+  .poju-card-core.oracle::after {
+    content: "";
+    @apply absolute inset-[18%] rounded-lg border border-pink-200/35;
+  }
+
+  .poju-window-bar {
+    @apply mb-6 flex items-center justify-between rounded-full border border-white/10 bg-black/20 px-3 py-1.5;
+  }
+
+  .poju-window-dots {
+    @apply flex items-center gap-1.5;
+  }
+
+  .poju-window-dots span {
+    @apply h-1.5 w-1.5 rounded-full bg-white/35;
+  }
+
+  .poju-hero-ring {
+    animation: pojuPulse 6s var(--ease-ornate) infinite;
+  }
+
+  .poju-hero-ring::after {
+    content: "";
+    @apply absolute inset-[-12%] rounded-full border border-purple-vivid border-opacity-20;
+    animation: pojuSpin 14s linear infinite;
+  }
+
+  .poju-divider {
+    @apply my-4 h-px w-full;
+    background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.36), transparent);
+  }
+
+  .poju-identity-panel {
+    @apply poju-glass-card p-5;
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.03), rgba(139, 92, 246, 0.08));
+  }
+
+  .poju-swatch {
+    @apply h-6 w-6 rounded-md border border-white/10;
+  }
+
+  .poju-phone {
+    @apply poju-glass-card relative min-h-[250px] overflow-hidden rounded-[22px] p-4;
+    background: linear-gradient(180deg, rgba(20, 16, 41, 0.95), rgba(11, 8, 21, 0.95));
+  }
+
+  .poju-phone-notch {
+    @apply mx-auto mb-4 h-1.5 w-16 rounded-full bg-white/15;
+  }
+
+  .poju-mini-label {
+    @apply text-[10px] uppercase tracking-[0.14em] text-text-dim;
+  }
+
+  .poju-flow-card {
+    @apply poju-phone min-h-[208px] p-3;
+  }
+}
+
+@keyframes pojuPulse {
+  0%,
+  100% {
+    transform: scale(0.98);
+    filter: drop-shadow(0 0 20px rgba(168, 85, 247, 0.28));
+  }
+  50% {
+    transform: scale(1.02);
+    filter: drop-shadow(0 0 34px rgba(168, 85, 247, 0.45));
+  }
+}
+
+@keyframes pojuSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }

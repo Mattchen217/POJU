@@ -1,0 +1,98 @@
+---
+description: POJU 项目主上下文 - 每次对话自动加载
+alwaysApply: true
+---
+
+# POJU · Master Context
+
+你正在开发 **POJU**，一个面向北美市场的付费东方破局顾问产品。你不是在做普通项目——你是在实现一套有完整产品哲学、品牌承诺、学理根基的系统。
+
+## 一句话产品定义
+
+**Ancient Eastern Wisdom, reinforced by modern science, delivered by AI Agent, personalized for you.**
+
+Three ways in. One way through.
+
+## 三产品架构
+
+POJU Universe 由三个产品组成：
+
+| 产品 | 角色 | 付费 | 路径 |
+|---|---|---|---|
+| **POJU** | 主产品 · 深度破局顾问（Agent 式） | **$9.99 单次议题** | `/` `/poju` `/chat` |
+| **Syncro** | 空间方位能量场（粒子球 + AR） | 完全免费 | `/syncro` |
+| **Oracle** | 古老启示卡片（爆炸 + 神秘卡） | 完全免费 | `/oracle` |
+
+**Syncro 和 Oracle 的唯一商业目的是引流 POJU**。所有免费产品结果页底部都有 `Ask POJU to go deeper · $9.99` 钩子。
+
+## 三产品英文定义（文案不可改写）
+
+**POJU**:
+> Break your deadlock — guided by 2,000 years of Eastern wisdom, reinforced by modern science, delivered by an AI Agent that walks with you.
+
+**Syncro**:
+> See how your energy aligns with the space around you. Syncro reads your Bazi (birth chart), your location, and this exact moment, then shows you which direction carries what energy — and what to do with it.
+
+**Oracle**:
+> A 2,000-year practice of sincere questioning. Bring a real question to an ancient listening presence. Receive not words, but a sign — a mysterious card drawn from one hundred archetypal patterns refined over millennia. A sincere heart opens the channel.
+
+## 品牌气质三原则
+
+**1. 神秘但务实（Mysterious but Actionable）**
+- 有神秘感，但每次输出都要落到"今天就能做的动作"
+- 禁止纯哲理（"Let go of your attachments"）
+- 禁止纯鼓励（"You've got this"）
+
+**2. 克制但有力（Restrained but Heavy）**
+- 深色背景 / 极少色彩 / 极简文字 / 禁用 emoji（唯一例外 ✦ 品牌符号）
+- 每个元素都要有重量——粒子呼吸节奏、毛笔落纸声都决定 $9.99 是否值得
+- 禁止赛博朋克风、Y2K 风、中国传统红金风
+- 目标质感："文物博物馆的夜场光线"
+
+**3. 私密但开放（Private but Shareable）**
+- 所有产品都有一张"IG Story 9:16 可分享"的结果页
+- 私密使用，开放分享
+
+## 语言策略
+
+- **主语言：英文**（所有 UI、AI 默认回复以英文为原生）
+- **中文作为精准翻译**
+- **拼音作为品牌调味料**：`QI` · `BAZI` · `WUXING` · `BAGUA` · `GANZHI` · `XUAN` · `YUAN` · `SHICHEN`
+  - 首次出现时附英文 gloss："Your Bazi (birth chart) shows..."
+  - 大写首字母作为品牌资产
+- **除 POJU "破局" Logo 外，UI 正文禁止中文字符**
+- **典故叙事化**：AI 禁止输出中文专名（苏武、关公、诸葛亮）。必须改为 "Two thousand years ago in the East, a loyal envoy..."
+
+## 视觉迭代协议
+
+当用户上传参考图片时：
+
+**你必须做的**：
+1. 分析图片：主色调、字体气质、留白节奏、光影、动效暗示
+2. 覆盖默认 tokens 的视觉层（颜色、字体、间距、圆角、阴影）
+3. **保持功能和结构不变**：页面流程、组件层级、交互逻辑、状态机、数据流
+4. 明确汇报修改了什么、保持了什么
+
+**你绝对不能做的**：
+即使图片里有以下元素也不能应用到 POJU：
+- ❌ 注册表单 / 登录按钮（违反 Never Required）
+- ❌ 订阅层级 / 月费选项（违反品牌）
+- ❌ "Limited Time" / 倒计时（违反 Never Manipulative）
+- ❌ 用户评论 / 社交分享墙
+- ❌ 浮夸的 3D 头像或插画
+- ❌ 改写英文产品定义文案
+- ❌ 改变三产品架构
+
+## 完整参考文档
+
+需要详细规范时请查阅：
+- `@docs/POJU_Development_Document_v3.0.1.md` — 完整开发文档
+- `@docs/tasks/task-N-XXX.md` — 当前任务的具体要求
+
+## 每次回答前你要做的
+
+1. 确认你在遵守三产品架构
+2. 确认你在遵守语言策略（英文为主，拼音为品牌）
+3. 确认你在遵守克制美学
+4. 如有不确定处，**主动 @引用** 完整文档对应章节
+5. 写代码前列出将创建/修改的文件清单

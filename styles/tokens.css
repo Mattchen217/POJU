@@ -1,0 +1,50 @@
+:root {
+  --bg-deep: #0b0815;
+  --bg-layer-1: #141029;
+  --bg-layer-2: #1c1735;
+  --glass-tint: rgba(139, 92, 246, 0.08);
+  --glass-border: rgba(167, 139, 250, 0.28);
+
+  --purple-primary: #8b5cf6;
+  --purple-bright: #a855f7;
+  --purple-vivid: #c084fc;
+  --purple-pink: #d946ef;
+  --purple-deep: #6d28d9;
+  --purple-glow: rgba(139, 92, 246, 0.45);
+  --gold-rare: #d4af37;
+
+  --cyan-primary: #06b6d4;
+  --cyan-bright: #22d3ee;
+  --blue-soft: #3b82f6;
+
+  --text-primary: #ffffff;
+  --text-body: #e4e4e7;
+  --text-secondary: #a1a1aa;
+  --text-dim: #71717a;
+  --text-accent: #c084fc;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 32px;
+  --space-6: 48px;
+  --space-7: 64px;
+  --space-8: 96px;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-ornate: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --shadow-card:
+    0 8px 32px rgba(139, 92, 246, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --shadow-glow: 0 10px 40px rgba(139, 92, 246, 0.26);
+}

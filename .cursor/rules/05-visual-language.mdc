@@ -1,0 +1,598 @@
+---
+description: POJU 视觉语言 - 基于参考图的精确视觉规范（深空紫 + 星云粒子美学）
+alwaysApply: true
+---
+
+# Visual Language · Deep Cosmic Purple
+
+这份规则定义 POJU 的**最终视觉语言**。以图片参考为准：
+
+> `docs/visual-reference/poju-visual-style-master.png`
+> 
+> 必要时用户会主动 `@` 引用此图与你对照。
+
+## 核心视觉哲学
+
+**深空 × 粒子星云 × 紫色能量 × 毛玻璃质感**
+
+POJU 的视觉不是"博物馆金光"，而是"**宇宙深处观察者的视角**"——你正从一个寂静的暗空间，看向缓缓旋转的能量场。
+
+每一屏必须具备的三要素：
+1. **深空黑紫背景**（不是纯黑，是带紫调的墨色）
+2. **紫色粒子或星云光源**（作为视觉重心或氛围）
+3. **毛玻璃卡片悬浮感**（所有主要卡片都是半透明、背景模糊）
+
+---
+
+## 色彩系统（主）
+
+### 背景层
+
+```css
+/* 深空墨紫（不是纯黑，带紫调） */
+--bg-deep:       #0B0815;   /* 最深层，近黑的深紫 */
+--bg-layer-1:    #141029;   /* 卡片底色 */
+--bg-layer-2:    #1C1735;   /* 悬浮层 */
+
+/* 毛玻璃卡片叠加色 */
+--glass-tint:    rgba(139, 92, 246, 0.06);  /* 紫色玻璃雾 */
+--glass-border:  rgba(167, 139, 250, 0.18); /* 紫色边框，带发光 */
+```
+
+### 紫色系（主 Accent）
+
+```css
+--purple-primary:  #8B5CF6;   /* 品牌主紫 · Primary 按钮、强调文字 */
+--purple-bright:   #A855F7;   /* 发光紫 · Hover、活跃状态 */
+--purple-vivid:    #C084FC;   /* 亮紫 · 关键强调词 "AI-Powered" "You" */
+--purple-pink:     #D946EF;   /* 粉紫 · 星云渐变终点 */
+--purple-deep:     #6D28D9;   /* 深紫 · 按钮按下态 */
+--purple-glow:     rgba(139, 92, 246, 0.4);  /* 光晕用 */
+```
+
+### 青蓝系（Syncro 专用 + 次要 accent）
+
+```css
+--cyan-primary:  #06B6D4;   /* Syncro 罗盘主色 */
+--cyan-bright:   #22D3EE;   /* Syncro 粒子高光 */
+--blue-soft:     #3B82F6;   /* 次要信息 */
+```
+
+### 文字层级
+
+```css
+--text-primary:   #FFFFFF;   /* 主标题 · 纯白 */
+--text-body:      #E4E4E7;   /* 正文 · 极浅灰 */
+--text-secondary: #A1A1AA;   /* 次要信息 · 中灰 */
+--text-dim:       #71717A;   /* 弱化信息 · 暗灰 */
+--text-accent:    #C084FC;   /* 强调词 · 亮紫（给"You""$9.99"这种关键词用）*/
+```
+
+### Oracle 风向系 7 级（重新对齐深空紫美学）
+
+```css
+--wind-divine:  #F0ABFC;   /* Divine Tailwind - 粉紫光辉 */
+--wind-fair:    #A78BFA;   /* Fair Sky - 柔紫 */
+--wind-calm:    #8B5CF6;   /* Calm Current - 主紫 */
+--wind-still:   #6366F1;   /* Still Water - 蓝紫 */
+--wind-cross:   #7C3AED;   /* Crosswind - 深品红 */
+--wind-head:    #5B21B6;   /* Headwind - 暗紫 */
+--wind-storm:   #3B0764;   /* Eye of Storm - 最深紫 */
+```
+
+### Syncro 8 方位色（重新对齐）
+
+```css
+--dir-wealth:    #C084FC;   /* Wealth · 亮紫 */
+--dir-focus:     #06B6D4;   /* Focus · 青 */
+--dir-love:      #EC4899;   /* Love · 玫红 */
+--dir-health:    #10B981;   /* Health · 翠绿 */
+--dir-helper:    #8B5CF6;   /* Helper · 主紫 */
+--dir-conflict:  #EF4444;   /* Conflict · 警红 */
+--dir-loss:      #6B7280;   /* Loss · 中灰 */
+--dir-shadow:    #374151;   /* Shadow · 深灰 */
+```
+
+### 金色（降级为次要 accent · 稀有场景）
+
+**原"金色为主"已废弃**。金色**只在以下场景使用**：
+- 破局汉字 Logo（品牌图腾保留）
+- Divine Tailwind（最高等级签）的细节高光
+- PDF 报告中的封面装饰
+
+```css
+--gold-rare:     #D4AF37;   /* 仅稀有场景 */
+```
+
+日常 UI **禁止出现金色**。
+
+---
+
+## 字体系统
+
+### 主字体（混搭：Sans 做主力，Serif 做诗意）
+
+```css
+/* 主标题 / 正文 / UI · 无衬线（Inter 或 Geist） */
+--font-primary:   'Inter', 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+
+/* Oracle 签诗 · 衬线（保留诗意感） */
+--font-verse:     'EB Garamond', 'Cormorant Garamond', serif;
+
+/* 破局 Logo · 东方图腾（辅助使用） */
+--font-logo-zh:   'POJU-Logo', 'Source Han Serif SC', serif;
+
+/* 中文内容（如用户切换到中文环境）*/
+--font-zh:        'Source Han Sans SC', -apple-system, sans-serif;
+```
+
+### 字体使用规则
+
+| 场景 | 字体 | 示例 |
+|---|---|---|
+| 落地页主标题 | Inter, 粗体, 64-80px | "Ancient Wisdom, AI-Powered. Made for You." |
+| 产品页标题 | Inter, Semibold, 40-48px | "Break your deadlock" |
+| 正文 | Inter, Regular, 14-18px | 所有描述文字 |
+| Oracle 签诗 | EB Garamond, Italic, 20-24px | "The frost in your chest..." |
+| Logo (字母) | Inter, Bold + 字距 | "POJU" |
+| Logo (图腾) | POJU-Logo 艺术字 | "破局" |
+| Pinyin 术语 | Inter, 全大写 + 字距 | QI · BAZI · WUXING |
+
+### 字号规范
+
+```css
+--size-display:   80px;    /* Hero 超大标题 */
+--size-h1:        48px;
+--size-h2:        32px;
+--size-h3:        24px;
+--size-body-l:    18px;
+--size-body:      16px;
+--size-body-s:    14px;
+--size-caption:   12px;
+```
+
+### 字重
+
+- **300 Light** · 极少用（只在 Hero 副标题）
+- **400 Regular** · 正文默认
+- **500 Medium** · 强调正文、小标题
+- **600 Semibold** · 所有标题
+- **700 Bold** · 仅用于 Logo 和最高级标题
+
+---
+
+## 毛玻璃卡片（核心 UI 元素）
+
+POJU 的所有主要卡片**都是毛玻璃风格**，不是纯色卡片。
+
+### 标准毛玻璃卡片
+
+```css
+.poju-glass-card {
+  background: rgba(139, 92, 246, 0.06);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(167, 139, 250, 0.18);
+  border-radius: 16px;
+  box-shadow: 
+    0 8px 32px rgba(139, 92, 246, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+```
+
+### Hover 态
+
+```css
+.poju-glass-card:hover {
+  background: rgba(139, 92, 246, 0.10);
+  border-color: rgba(167, 139, 250, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 
+    0 12px 40px rgba(139, 92, 246, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+```
+
+### 卡片内部的图标容器
+
+每张卡片左上角通常有一个**圆形图标**，带紫色渐变填充 + 光晕：
+
+```css
+.poju-icon-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #8B5CF6 0%, #A855F7 50%, #D946EF 100%);
+  box-shadow: 0 0 24px rgba(139, 92, 246, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+```
+
+---
+
+## 按钮系统
+
+### Primary 按钮（主 CTA）
+
+```css
+.btn-primary {
+  background: #8B5CF6;
+  color: #FFFFFF;
+  padding: 12px 32px;
+  border-radius: 9999px;  /* Pill 形 */
+  font-weight: 500;
+  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.3);
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-primary:hover {
+  background: #A855F7;
+  box-shadow: 0 6px 24px rgba(139, 92, 246, 0.5);
+  transform: translateY(-1px);
+}
+```
+
+### Secondary 按钮（副 CTA）
+
+```css
+.btn-secondary {
+  background: rgba(139, 92, 246, 0.1);
+  backdrop-filter: blur(12px);
+  color: #E4E4E7;
+  border: 1px solid rgba(167, 139, 250, 0.3);
+  padding: 12px 32px;
+  border-radius: 9999px;
+}
+
+.btn-secondary:hover {
+  background: rgba(139, 92, 246, 0.18);
+  border-color: rgba(167, 139, 250, 0.5);
+}
+```
+
+### Tertiary（文字按钮）
+
+```css
+.btn-tertiary {
+  color: #A1A1AA;
+  background: transparent;
+}
+
+.btn-tertiary:hover {
+  color: #C084FC;  /* 紫色高亮 */
+}
+```
+
+**所有按钮都是圆角 pill 形**（`border-radius: 9999px`），不是矩形。
+
+---
+
+## 粒子 / 星云效果规范
+
+### 落地页 Hero 星云光圈
+
+参考图片 01 第一屏右侧的**紫色星云圆环**。
+
+```
+技术实现：React Three Fiber + Particle System
+位置：Hero 右侧 50% 宽度占比
+中心：由暗到亮的径向渐变
+颜色：粒子色从 #8B5CF6 → #A855F7 → #D946EF → #EC4899 多层混合
+动画：缓慢旋转 + 呼吸感（20-30 秒一个循环）
+数量：旗舰机 3000 / 中端 1500 / 低端 500
+```
+
+### Syncro 能量环（青紫混合）
+
+参考图片 04 第一屏 Syncro 登录页。
+
+```
+双色能量环：
+  外环 - 紫色 (#8B5CF6) 粒子流动
+  内环 - 青色 (#06B6D4) 粒子流动
+  两色在中心混合，形成明暗对比
+  中心十字星光作为方向指示
+```
+
+### Oracle 召唤星云
+
+参考图片 04 第二行 Oracle 长按 3 秒的场景。
+
+```
+用户长按时：
+  粒子从四周向中心凝聚
+  颜色从 --purple-bright 过渡到 --purple-pink
+  中心出现光点，逐渐放大成卡片
+  背景是深紫色星空
+```
+
+---
+
+## 图标风格
+
+**不使用** Lucide 默认图标作为主要视觉元素。
+
+**使用**：
+- 自定义 SVG 图标（参考图片里的 outline + 内部装饰风格）
+- 所有图标带**紫色发光轮廓**
+- 图标内部有星光 / 粒子点缀
+
+**示例**：POJU 图标 = 圆形 + 内部三道波纹（代表气场）
+**示例**：Syncro 图标 = 菱形罗盘 + 中心十字
+**示例**：Oracle 图标 = 菱形卡片 + 折角
+**示例**：Archive 图标 = 时钟 + 内部星点
+
+小型 UI 图标（返回、关闭、菜单）可用 Lucide，但线条改为 1.5px，颜色跟随 `--text-body`。
+
+---
+
+## Logo 使用规范
+
+### 主 Logo（字母）
+
+```
+"POJU" 字母组合 + 左侧圆形紫色光球图标
+
+字体：Inter Bold
+字距：0.05em
+颜色：#FFFFFF
+图标：24x24 紫色球（--purple-primary 到 --purple-pink 径向渐变）
+```
+
+使用场景：
+- 所有网页导航栏
+- PWA 图标
+- 社交媒体头像
+- App Store / Play Store 展示
+- 邮件签名
+
+### 辅助 Logo（破局汉字图腾）
+
+```
+"破局" 汉字艺术字
+字体：自定义 OTF 或 SVG
+颜色：金色 #D4AF37（稀有金色的唯一主要使用场景）
+```
+
+使用场景：
+- PDF 报告封面
+- Syncro 学理页
+- Oracle 登录页的仪式感角落
+- 特殊节日视觉
+- 品牌故事页
+
+**绝不同时出现**两个 Logo 在同一屏。字母 Logo 是常态，汉字图腾是仪式感补充。
+
+---
+
+## Oracle 卡片视觉规范
+
+### 卡片外壳（所有等级通用）
+
+参考图片 04 第二行 Oracle 场景：
+
+```
+形状：纵向菱形 / 圆角矩形（9:16 比例）
+边框：1px 紫色发光
+内填：毛玻璃（blur 24px + rgba purple 0.08）
+圆角：24px
+内部布局：
+  顶部 - ✦ 等级名 + 副标题
+  中部 - 禅诗（EB Garamond Italic）
+  底部 - POJU 钩子
+```
+
+### 卡片内容结构（不变）
+
+内容依然按 POJU 原规范（4-6 行禅诗 + What It Means + For Today），但用**紫色星云外壳**包裹：
+
+```
+┌──────────────────────────────────┐
+│         ✦  A  SIGN  ✦            │  ← 顶部品牌符号
+│                                  │
+│     ✦ Divine Tailwind ✦          │  ← 等级名
+│       Sign of Grace              │  ← 副标题
+│                                  │
+│  ─── THE VERSE ───               │
+│  The frost in your chest         │  ← EB Garamond Italic
+│  is not a wall.                  │     紫色文字
+│  It is a door                    │
+│  that waits for morning.         │
+│                                  │
+│  ─── WHAT IT MEANS ───           │
+│  You asked about ending it.      │  ← Inter 正文
+│  What you're really asking...    │
+│                                  │
+│  ─── FOR TODAY ───               │
+│  Before sunset, write down       │
+│  one thing you gave up to stay.  │
+│                                  │
+│  ─────                           │
+│  Ask POJU · $9.99                │  ← 底部钩子
+│                                  │
+└──────────────────────────────────┘
+   背景：紫色星云粒子 + 深空底
+```
+
+### 不同等级的视觉差异
+
+保持克制（不要搞成 Co-Star 那种红黑刺眼对比）。通过**边框发光强度 + 粒子颜色**微调：
+
+- **Divine Tailwind**：边框最亮紫 + 金色稀有装饰线
+- **Fair Sky → Eye of Storm**：边框颜色从亮紫逐渐过渡到深紫
+- **所有等级都是紫色系**，只是深浅和饱和度不同
+
+---
+
+## 页面布局模式
+
+### 落地页 Hero（参考图 01 第 1 屏）
+
+```
+左侧（40%） - 文字内容
+  大标题（80px Inter Bold）
+  副标题（18px Inter Regular，灰紫色）
+  两个 CTA 按钮（Primary 紫 + Secondary 玻璃）
+
+右侧（60%） - 星云光圈
+  紫色粒子星云，缓慢旋转
+  中心有暗色"黑洞"效果
+  边缘有粒子扩散光晕
+```
+
+### 三产品卡片（参考图 01 第 2 行）
+
+```
+三张毛玻璃卡片横向排列
+POJU 卡片：紫色 accent + 光球图标
+Syncro 卡片：青蓝 accent + 罗盘图标
+Oracle 卡片：粉紫 accent + 菱形卡片图标
+
+每张卡片：
+  左上 - 圆形渐变图标
+  标题 - 产品名
+  描述 - 2-3 行简述
+  底部链接 - "Learn more →" 或 "Open →"
+```
+
+### 信息模块（参考图 01 第 3 屏）
+
+```
+水平三列信息 + 图标
+  No Sign Up | Privacy First | Yours Only
+
+用 border-top 1px rgba(purple, 0.1) 分隔
+背景为毛玻璃
+```
+
+---
+
+## 动画风格
+
+**所有动画都要呼吸感，不要跳跃感。**
+
+### 核心动画类型
+
+1. **星云粒子循环旋转** · 20-30 秒一圈
+2. **光晕呼吸** · 3-4 秒循环（`opacity: 0.8 ↔ 1.0`）
+3. **卡片 hover 微升** · 200ms，`translateY(-2px)` + 光晕加深
+4. **按钮 hover** · 200ms，轻微上浮 + 阴影加深
+5. **页面切换** · 300-500ms，fadeIn + slideUp 8px
+6. **Oracle 爆炸 → 卡片** · 2000ms 仪式流
+7. **毛笔写入** · 每行 2500ms ease-ornate
+
+### 禁用的动画
+
+- ❌ 弹跳 / 抖动 / 旋转过度
+- ❌ 霓虹灯闪烁
+- ❌ 每个元素都在动
+- ❌ 用户每次交互都触发大型过渡
+- ❌ Lottie 复杂动画（用 Framer Motion 即可）
+
+### 允许的"强调瞬间"
+
+在特定时刻**可以稍微浮夸**：
+- Oracle 爆炸瞬间：光球炸开 + 粒子四散
+- Syncro 时辰切换：罗盘整体旋转渐变
+- 支付成功瞬间：紫色光芒从中心扩散
+
+这些"强调瞬间"每个用户旅程中只出现 1-3 次，形成仪式感记忆点。
+
+---
+
+## 页面具体视觉指引
+
+### POJU Chat 页面（参考图 03）
+
+```
+背景：深空墨紫 (--bg-deep)
+左侧栏：340px 宽，毛玻璃背景，历史对话列表
+主区域：
+  顶部元数据条（带"Session"标签）
+  AI 回复气泡 - 毛玻璃紫色调
+  用户气泡 - 纯紫色实心
+  输入框 - 底部固定，毛玻璃 + 紫色边框
+  
+Thinking 气泡：
+  紫色发光边框
+  内部文字流式滚动
+  文字颜色是 --text-accent (#C084FC)
+  动画：文字逐行淡入
+```
+
+### Syncro（参考图 04）
+
+```
+登录页：
+  深空背景
+  紫青双色能量环居中
+  下方"Align your space"文字
+  底部"Start Scanning"按钮
+
+扫描页：
+  半透明紫色罗盘覆盖
+  粒子从四周向中心流动
+  底部"Move your phone to scan the space"
+
+结果页：
+  方位文字居中大显示（如"Southeast 135°"）
+  下方"Good for Focus & Growth"标签
+  底部 8 方位罗盘可交互
+```
+
+### Oracle（参考图 04 第二行）
+
+```
+登录页：
+  紫色星云背景
+  中心"Oracle"标题
+  下方"Ancient Guidance"副标题
+  底部长按区域提示
+
+召唤页：
+  深紫背景 + 缓慢粒子
+  中心"Hold to Draw"文字
+  3 秒倒计时光环（圆形进度）
+
+抽签完成：
+  卡片从星云中升起
+  展开动画 2-3 秒
+  文字逐行写入（毛笔效果）
+```
+
+---
+
+## 响应式设计
+
+基于图片中 iOS 视觉稿（02 屏），移动端必须做到：
+
+- **所有毛玻璃效果在移动端保留**（不要降级成纯色）
+- **Hero 区在移动端**：星云在顶部，文字在下方（垂直堆叠）
+- **三产品卡片**：纵向堆叠 + 完整毛玻璃
+- **底部 Tab 导航**：毛玻璃背景 + 紫色激活态
+- **iPhone 刘海处理**：安全区域 padding
+
+---
+
+## 视觉迭代时的优先级
+
+当用户上传新参考图要求调整时，优先级顺序：
+
+1. **可以改**：具体色值细节、字重微调、间距节奏、特定动画细节
+2. **可以讨论后改**：整体色调倾向（例如紫色深浅）、字体家族
+3. **不能改**：
+   - 深色主题（必须深空底）
+   - 毛玻璃卡片质感（POJU 视觉 DNA）
+   - 紫色主 accent（品牌色）
+   - 粒子星云作为核心视觉元素
+   - 三非品牌承诺相关的 UI（无注册、无订阅等）
+
+## 参考图直接引用
+
+当需要核对具体细节时，明确向用户请求：
+
+> "To match the exact visual, please @docs/visual-reference/poju-visual-style-master.png so I can compare my output to the reference."
+
+**绝不凭想象猜测**图片里某个细节的具体样式——有疑问就请求用户 @引用原图。

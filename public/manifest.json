@@ -1,0 +1,18 @@
+{
+  "name": "POJU",
+  "short_name": "POJU",
+  "description": "Ancient Eastern Wisdom, reinforced by modern science, delivered by AI Agent, personalized for you.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0815",
+  "theme_color": "#0b0815",
+  "icons": [
+    {
+      "src": "/next.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

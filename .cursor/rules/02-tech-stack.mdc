@@ -1,0 +1,159 @@
+---
+description: 技术栈锁定 - 不可随意替换的库和工具链
+alwaysApply: true
+---
+
+# Tech Stack (Locked)
+
+以下技术栈是经过深思熟虑的选择。**不可随意替换**。若有替换需求，必须先向用户解释理由和权衡。
+
+## 核心框架
+
+```
+框架：      Next.js 14 App Router
+语言：      TypeScript 5+
+Package:   pnpm (不用 npm / yarn)
+部署：      Vercel
+PWA:       Serwist (Workbox 现代化版)
+```
+
+## UI 层
+
+```
+样式：      Tailwind CSS + CSS Design Tokens
+组件：      不引入成熟组件库（如 shadcn）— 所有组件自建以保品牌一致性
+动画：      Framer Motion（UI 过渡）
+3D：        React Three Fiber + Three.js r155+
+Shader:    GLSL 自定义
+音效：      Howler.js
+```
+
+## 数据 & 状态
+
+```
+本地存储：  Dexie.js (IndexedDB)
+加密：      Web Crypto API (AES-256-GCM)
+状态管理：  Zustand + persist middleware
+表单：      React Hook Form + Zod
+```
+
+## AI & RAG
+
+```
+主模型：    Claude Sonnet 4.5 (@anthropic-ai/sdk)
+辅助：      Claude Haiku (话题检测、相似度)
+兜底：      Claude Opus
+流式：      Vercel AI SDK
+嵌入：      OpenAI text-embedding-3-small (仅用于 embedding)
+向量库：    Supabase + pgvector
+TTS：       ElevenLabs Turbo v2.5 API
+```
+
+**禁止将用户对话内容发给 OpenAI（或任何非 Anthropic 的 LLM）**。OpenAI 只允许做 embedding。
+
+## 服务端
+
+```
+数据库：    Supabase (PostgreSQL + pgvector)
+支付：      Stripe + Provider 抽象（备份 Paddle）
+邮件：      Resend + Scheduled Send API
+PDF：       Puppeteer (服务端渲染)
+设备指纹：  FingerprintJS OSS
+SMS:        Twilio (仅 Syncro PC 端链接发送)
+错误监控：  Sentry (过滤掉对话内容)
+```
+
+## 禁用的技术
+
+- ❌ `jQuery` 或任何 legacy DOM 操作库
+- ❌ `Redux` (用 Zustand 更轻)
+- ❌ `Styled Components` / `Emotion`（用 Tailwind）
+- ❌ `Moment.js`（用 `date-fns` 或原生 `Intl`）
+- ❌ `Axios`（用原生 `fetch`）
+- ❌ `Lodash`（按需引用单个函数或用原生 JS）
+- ❌ `Firebase`（违反品牌无账户原则）
+- ❌ `Google Analytics` / `Segment` / `Mixpanel`（违反 Never Stored）
+- ❌ `Sentry Session Replay`（会记录用户界面）
+- ❌ `Hotjar` / 任何 heatmap（违反 Never Stored）
+- ❌ `Next-Auth`（我们没有账户系统）
+- ❌ `Prisma`（Supabase 原生 SDK 够用）
+- ❌ `tRPC`（过度工程）
+- ❌ 任何 React Native / Flutter（PWA 优先，不做原生 APP）
+
+## 字体加载
+
+```
+使用 next/font 统一管理：
+
+英文主体：EB Garamond (serif) + Inter (sans)
+签诗：    Crimson Pro 或 EB Garamond Italic
+Logo：   POJU 破局艺术字（自定义 OTF 或 SVG）
+
+不从 Google Fonts CDN 动态加载 — 全部子集化本地托管。
+```
+
+## 性能硬约束
+
+- 首屏 JS < **200KB gzipped**
+- Three.js 场景代码**按路由懒加载**
+- 图片用 `next/image` + AVIF/WebP
+- Lighthouse Performance > 90
+- Lighthouse Accessibility > 95
+- Lighthouse PWA = installable
+
+## 文件结构约定
+
+所有代码遵循：
+
+```
+pojulife/
+├── app/                       # Next.js 14 App Router
+│   ├── (marketing)/           # 落地页路由组
+│   ├── (product)/             # 产品路由组
+│   └── api/                   # API Routes
+├── components/
+│   ├── ui/                    # 基础 UI
+│   ├── chat/ syncro/ oracle/  # 产品组件
+│   └── archive/ disclaimer/
+├── lib/
+│   ├── ai/                    # AI 调用
+│   ├── storage/               # 本地存储
+│   ├── bazi/                  # 八字计算
+│   ├── sensors/               # 罗盘/GPS/加速度计
+│   ├── audio/                 # 音效管理
+│   ├── payment/               # 支付抽象
+│   └── utils/
+├── shaders/                   # GLSL shaders
+├── public/
+│   ├── fonts/ sfx/ logos/
+│   └── manifest.json
+└── styles/
+    └── tokens.css             # Design tokens
+```
+
+新建文件前先确认这个结构，不要随意创建新目录。
+
+## 环境变量
+
+所有环境变量在 `.env.local` 并在 `.env.example` 写清结构：
+
+```
+# Public
+NEXT_PUBLIC_SITE_URL
+NEXT_PUBLIC_FINGERPRINT_API_KEY
+
+# Private
+ANTHROPIC_API_KEY
+OPENAI_API_KEY          # embedding only
+ELEVENLABS_API_KEY
+SUPABASE_URL
+SUPABASE_SERVICE_KEY
+STRIPE_SECRET_KEY
+STRIPE_WEBHOOK_SECRET
+RESEND_API_KEY
+TWILIO_ACCOUNT_SID      # optional
+TWILIO_AUTH_TOKEN       # optional
+SENTRY_DSN
+```
+
+**绝对禁止**在代码里硬编码任何 API key。
