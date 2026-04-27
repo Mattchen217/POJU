@@ -1,5 +1,32 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { ScrollToTopButton } from "@/components/scroll-to-top-button";
+import { DisclaimerModal } from "@/components/disclaimer/disclaimer-modal";
+import { PwaTabbar } from "@/components/layout/pwa-tabbar";
+import { ForceHomeScreenGate } from "@/components/marketing/force-home-screen-gate";
+import { siteConfig } from "@/lib/config/site";
+
 export function Providers({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+  const [accepted, setAccepted] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    try {
+      const key = `pojulife_disclaimer_${siteConfig.disclaimerVersion}`;
+      const value = localStorage.getItem(key);
+      setAccepted(value === "accepted");
+    } catch {
+      setAccepted(false);
+    }
+  }, []);
+
+  return (
+    <>
+      {children}
+      <ScrollToTopButton />
+      <PwaTabbar />
+      {accepted === false ? <DisclaimerModal onAccepted={() => setAccepted(true)} /> : null}
+      <ForceHomeScreenGate />
+    </>
+  );
 }

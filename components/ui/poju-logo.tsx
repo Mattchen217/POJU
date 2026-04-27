@@ -1,4 +1,7 @@
+import Image from "next/image";
 import Link from "next/link";
+
+import pojuLogo from "@/assets/images/POJUlogo.png";
 import { cn } from "@/lib/utils/classnames";
 
 type PojuLogoProps = {
@@ -10,14 +13,23 @@ export function PojuLogo({ compact = false, className }: PojuLogoProps) {
   return (
     <Link
       href="/"
-      className={cn("inline-flex items-center gap-2 text-text-primary", className)}
+      className={cn("inline-flex items-center gap-0 text-text-primary", className)}
       aria-label="POJU home"
     >
-      <span className="h-5 w-5 rounded-full bg-gradient-to-br from-purple-primary via-purple-bright to-purple-pink shadow-glow" />
+      <span className="inline-flex h-[28px] w-[28px] shrink-0 items-center justify-center sm:h-[30px] sm:w-[30px] md:h-[34px] md:w-[34px]">
+        <Image
+          src={pojuLogo}
+          alt=""
+          width={256}
+          height={256}
+          aria-hidden
+          className="max-h-full max-w-full object-contain shadow-glow"
+        />
+      </span>
       {!compact && (
-        <span className="inline-flex items-end gap-2">
-          <span className="font-logo text-sm text-gold-rare">破局</span>
-          <span className="text-sm font-semibold tracking-[0.1em]">POJU</span>
+        <span className="inline-flex items-center gap-2">
+          <span className="font-logo text-sm leading-none text-gold-rare">破局</span>
+          <span className="text-sm font-semibold leading-none tracking-[0.1em]">POJU</span>
         </span>
       )}
     </Link>

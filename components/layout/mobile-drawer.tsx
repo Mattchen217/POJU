@@ -37,6 +37,7 @@ export function MobileDrawer({ open, onClose }: MobileDrawerProps) {
               <Link href="/disclaimer" onClick={onClose}>Disclaimer</Link>
               <Link href="/privacy" onClick={onClose}>Privacy</Link>
               <Link href="/terms" onClick={onClose}>Terms</Link>
+              <Link href="/contact" onClick={onClose}>Contact</Link>
             </nav>
           </motion.aside>
         </>

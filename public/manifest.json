@@ -4,15 +4,28 @@
   "description": "Ancient Eastern Wisdom, reinforced by modern science, delivered by AI Agent, personalized for you.",
   "start_url": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
   "background_color": "#0b0815",
   "theme_color": "#0b0815",
   "icons": [
     {
-      "src": "/next.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/api/pwa-icon?size=192",
+      "sizes": "192x192",
+      "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "/api/pwa-icon?size=512",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/api/pwa-icon?size=512",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

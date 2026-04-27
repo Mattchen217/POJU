@@ -1,9 +1,19 @@
 import Link from "next/link";
+import { Suspense } from "react"; // 只保留这一个导入
 import { HeroSpline } from "@/components/marketing/hero-spline";
+import { MarketingLanguageSwitcher } from "@/components/marketing/marketing-language-switcher";
+import { PojuMarkLogo } from "@/components/marketing/poju-mark-logo";
 import { PojuCardCornerVortex } from "@/components/marketing/poju-card-corner-vortex";
 import { SyncroCardCornerCompass } from "@/components/marketing/syncro-card-corner-compass";
 import { OracleCardParticleCard } from "@/components/marketing/oracle-card-particle-card";
+import { ScienceEvidenceSection } from "@/components/marketing/science-evidence-section";
+import { TwoTruthsTimelineSection } from "@/components/marketing/two-truths-timeline";
+import { StationeryPaperPanel } from "@/components/marketing/stationery-paper-panel";
+import { PaymentCancelToast } from "@/components/marketing/payment-cancel-toast";
+import { AddToHomeScreenCta } from "@/components/marketing/add-to-home-screen-cta";
 
+// 强制动态渲染，解决 build 时的 Prerender 错误
+export const dynamic = "force-dynamic";
 const productCards = [
   {
     name: "POJU",
@@ -50,11 +60,12 @@ function ProductCardIcon({ kind, iconGradient }: { kind: string; iconGradient: s
   if (kind === "poju") {
     return (
       <span
-        className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/30 shadow-[0_0_14px_rgba(217,70,239,0.32)]"
+        className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-[linear-gradient(135deg,rgba(106,69,239,0.45)_0%,rgba(53,42,131,0.65)_60%,rgba(20,26,66,0.9)_100%)] shadow-[0_0_14px_rgba(217,70,239,0.32)] transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3"
         style={{ backgroundImage: iconGradient }}
       >
-        <span className="h-5 w-5 rounded-full border border-white/75" />
-        <span className="absolute h-2 w-2 rounded-full bg-white" />
+        <span className="material-symbols-outlined text-[20px] text-white" data-icon="self_improvement">
+          self_improvement
+        </span>
       </span>
     );
   }
@@ -62,7 +73,7 @@ function ProductCardIcon({ kind, iconGradient }: { kind: string; iconGradient: s
   if (kind === "syncro") {
     return (
       <span
-        className="relative inline-flex h-10 w-10 items-center justify-center rounded-[11px] border border-white/30 shadow-[0_0_14px_rgba(34,211,238,0.3)]"
+        className="relative inline-flex h-10 w-10 items-center justify-center rounded-[11px] border border-white/30 shadow-[0_0_14px_rgba(34,211,238,0.3)] transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3"
         style={{ backgroundImage: iconGradient }}
       >
         <span className="h-5 w-5 rotate-45 rounded-[2px] border border-white/80" />
@@ -74,7 +85,7 @@ function ProductCardIcon({ kind, iconGradient }: { kind: string; iconGradient: s
 
   return (
     <span
-      className="relative inline-flex h-10 w-10 items-center justify-center rounded-[11px] border border-white/30 shadow-[0_0_14px_rgba(232,121,249,0.32)]"
+      className="relative inline-flex h-10 w-10 items-center justify-center rounded-[11px] border border-white/30 shadow-[0_0_14px_rgba(232,121,249,0.32)] transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3"
       style={{ backgroundImage: iconGradient }}
     >
       <span className="h-5 w-5 rotate-45 rounded-[2px] border border-white/85" />
@@ -87,39 +98,152 @@ function ProductCardEffect({ kind }: { kind: string }) {
   return null;
 }
 
-const promiseItems = [
-  ["No Sign Up", "We don't require an account or personal info."],
-  ["Privacy First", "All data stays only on your device."],
-  ["Yours Only", "Your sessions, your answers, your control."],
+type PromiseIconKind = "noUser" | "shieldLock" | "fingerprint";
+
+function PromiseIcon({ kind, className }: { kind: PromiseIconKind; className?: string }) {
+  const cls = className ?? "mx-auto h-11 w-11 shrink-0 text-neutral-900";
+
+  if (kind === "noUser") {
+    return (
+      <svg className={cls} viewBox="0 0 48 48" fill="none" aria-hidden>
+        <circle cx="24" cy="24" r="15" stroke="currentColor" strokeWidth="2" />
+        <circle cx="24" cy="18" r="3.8" stroke="currentColor" strokeWidth="2" />
+        <path
+          d="M16.5 31.5c2.2-4.2 6.5-6.8 7.5-6.8s5.3 2.6 7.5 6.8"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+        <path d="M15 14L33 34" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  if (kind === "shieldLock") {
+    return (
+      <svg className={cls} viewBox="0 0 48 48" fill="none" aria-hidden>
+        <path
+          d="M24 7.5L37 13.2V25.8c0 9.6-5.8 17.8-13 21.3-7.2-3.5-13-11.7-13-21.3V13.2L24 7.5Z"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M22.5 24.5v-3a1.5 1.5 0 013 0v3"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+        <rect x="19.5" y="24.5" width="9" height="7" rx="1.5" stroke="currentColor" strokeWidth="2" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg className={cls} viewBox="0 0 48 48" fill="none" aria-hidden>
+      <path d="M24 9c-6 3-9 8-9 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M20 12c-4 2.5-6 7-6 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M28 12c4 2.5 6 7 6 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M17 18c-2.5 3-3.5 7-3.5 11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M31 18c2.5 3 3.5 7 3.5 11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M15 25c-1 3-1 6 0 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M33 25c1 3 1 6 0 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M24 20v14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+const promiseItems: { title: string; desc: string; iconKind: PromiseIconKind }[] = [
+  {
+    title: "No Sign Up",
+    desc: "Instant access. No barriers between you and insight.",
+    iconKind: "noUser",
+  },
+  {
+    title: "Privacy First",
+    desc: "Zero data retention. Your queries evaporate instantly.",
+    iconKind: "shieldLock",
+  },
+  {
+    title: "Yours Only",
+    desc: "Personalized readings tailored uniquely to your context.",
+    iconKind: "fingerprint",
+  },
 ];
 
-const elements = [
-  ["✦ ANCIENT", "Two thousand years of Eastern observation: Daoism · Feng Shui · Bazi · Yi Jing"],
-  ["✦ MODERN", "Reinforced by science: magnetic fields · spatial cognition · circadian rhythms · environmental psych"],
-  ["✦ AI AGENT", "Translated by an intelligence trained on both — into what you can do, today."],
-  ["✦ YOU", "Your birth chart. Your direction. Your question. Your this exact moment."],
-];
+type ThreePromiseGlyphId = "homeVault" | "openPassage" | "trueNorth";
 
-const scienceItems = [
-  "✦ Magnetic fields affect cognition — [Journal / Year]",
-  "✦ Spatial orientation shapes decisions — [Journal / Year]",
-  "✦ Circadian cycles drive biology — [Journal / Year]",
-  "✦ Visual direction influences focus — [Journal / Year]",
-];
+function ThreePromiseGlyph({ id, className }: { id: ThreePromiseGlyphId; className?: string }) {
+  const cls = `h-11 w-11 shrink-0 ${className ?? ""}`;
+  if (id === "homeVault") {
+    return (
+      <svg className={cls} viewBox="0 0 48 48" fill="none" aria-hidden>
+        <path
+          d="M24 8L10 20v18h7V27h14v11h7V20L24 8z"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinejoin="round"
+        />
+        <rect x="20" y="28" width="8" height="7" rx="1" stroke="currentColor" strokeWidth="2" />
+        <path d="M21.5 28v-2.25a2.5 2.5 0 015 0V28" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (id === "openPassage") {
+    return (
+      <svg className={cls} viewBox="0 0 48 48" fill="none" aria-hidden>
+        <path d="M24 11v24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <path
+          d="M24 13c-7.5 0-9.5 4-9.5 9.5V36"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+        <path
+          d="M24 13c7.5 0 9.5 4 9.5 9.5V36"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+        <path d="M17 17l-6-5M31 17l6-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  return (
+    <svg className={cls} viewBox="0 0 48 48" fill="none" aria-hidden>
+      <path
+        d="M24 9l5 10 10 5-10 5-5 10-5-10-10-5 10-5 5-10z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <circle cx="24" cy="24" r="3" fill="currentColor" />
+    </svg>
+  );
+}
 
-const threeNevers = [
-  [
-    "✦ Never stored",
-    "Your conversations live only on your device. We encrypt them locally. We cannot read them. No one can.",
-  ],
-  [
-    "✦ Never required",
-    "No account. No login. No password. No email, unless you want your reading as a PDF.",
-  ],
-  [
-    "✦ Never manipulative",
-    "No dark patterns. No fake urgency. No \"limited time.\" No upsells. One price: $9.99 when you need it.",
-  ],
+const threePromiseAccents = [
+  "text-violet-400 transition-[color,filter] duration-300 group-hover:text-violet-300 group-hover:drop-shadow-[0_0_14px_rgba(167,139,250,0.5)] motion-reduce:group-hover:drop-shadow-none",
+  "text-cyan-400 transition-[color,filter] duration-300 group-hover:text-cyan-300 group-hover:drop-shadow-[0_0_14px_rgba(34,211,238,0.5)] motion-reduce:group-hover:drop-shadow-none",
+  "text-amber-300 transition-[color,filter] duration-300 group-hover:text-amber-200 group-hover:drop-shadow-[0_0_14px_rgba(252,211,77,0.45)] motion-reduce:group-hover:drop-shadow-none",
+] as const;
+
+const threePromisesItems: { title: string; desc: string; glyph: ThreePromiseGlyphId }[] = [
+  {
+    title: "Never stored",
+    desc: "Your conversations live only on your device. We encrypt them locally. We cannot read them. No one can.",
+    glyph: "homeVault",
+  },
+  {
+    title: "Never required",
+    desc: "No account. No login. No password. No email, unless you want your reading as a PDF.",
+    glyph: "openPassage",
+  },
+  {
+    title: "Never manipulative",
+    desc: "No dark patterns. No fake urgency. No \"limited time.\" No upsells. One price: $9.99 when you need it.",
+    glyph: "trueNorth",
+  },
 ];
 
 const protectItems = [
@@ -149,23 +273,26 @@ const protectItems = [
 export default function LandingPage() {
   return (
     <main className="bg-bg-deep text-text-body">
-      <div className="w-full px-3 pb-10 pt-4 sm:px-4 sm:pt-6 md:px-6 md:pb-12">
+      {/* 在 main 下面紧跟这一行 */}
+      <Suspense fallback={<div className="min-h-screen bg-bg-deep" />}>
+        <PaymentCancelToast />
+        <div className="w-full px-3 pb-10 pt-4 sm:px-4 sm:pt-6 md:px-6 md:pb-12">
         <section>
           <header className="px-1 py-2.5 sm:py-3 md:px-2">
             <div className="mx-auto flex w-full max-w-6xl items-center justify-between">
-              <Link href="/" className="flex items-center gap-2">
-                <span className="h-4 w-4 rounded-full bg-gradient-to-br from-purple-primary to-purple-pink" />
-                <span className="text-sm font-semibold tracking-[0.09em] text-text-primary">POJU</span>
+              <Link href="/" className="inline-flex items-center gap-0">
+                <PojuMarkLogo />
+                <span className="inline-flex items-center text-[14px] font-semibold leading-none tracking-[0.09em] text-text-primary sm:text-[15px] md:text-[16px]">
+                  POJU
+                </span>
               </Link>
-              <nav className="hidden items-center gap-7 text-[11px] uppercase tracking-[0.14em] text-text-secondary md:flex">
+              <nav className="hidden items-center gap-7 text-[12px] uppercase tracking-[0.12em] text-text-secondary sm:text-[13px] md:flex md:text-[14px]">
                 <Link href="/poju" className="hover:text-text-primary">POJU 破局</Link>
                 <Link href="/syncro" className="hover:text-text-primary">POJU SYNCRO</Link>
                 <Link href="/oracle" className="hover:text-text-primary">POJU ORACLE</Link>
                 <Link href="/archive" className="hover:text-text-primary">THE ARCHIVE</Link>
               </nav>
-              <Link href="/poju" className="rounded-full border border-purple-vivid/35 bg-purple-primary/35 px-3 py-1 text-[10px] text-text-primary sm:px-4 sm:py-1.5 sm:text-[11px]">
-                Get PoJU
-              </Link>
+              <MarketingLanguageSwitcher />
             </div>
           </header>
 
@@ -193,9 +320,7 @@ export default function LandingPage() {
                   >
                     Start with POJU
                   </Link>
-                  <a href="#products" className="poju-button-secondary w-full max-w-[260px] min-w-[160px] justify-center !px-5 !py-2.5 sm:w-auto">
-                    Explore Tools
-                  </a>
+                  <AddToHomeScreenCta className="poju-button-secondary w-full max-w-[260px] min-w-[160px] justify-center !px-5 !py-2.5 sm:w-auto" />
                 </div>
               </div>
             </div>
@@ -211,12 +336,15 @@ export default function LandingPage() {
                 {productCards.map((card, index) => (
                   <article
                     key={card.kind}
-                    className={`relative w-full overflow-hidden rounded-[14px] p-4 aspect-[5/3] sm:p-5 ${
+                    className={`group relative w-full overflow-hidden rounded-[14px] p-4 aspect-[5/3] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(6,10,28,0.45)] sm:p-5 ${
                       index === 0 ? "lg:scale-[1.02]" : ""
                     }`}
                   >
-                    <div className="absolute inset-0" style={{ backgroundImage: card.cardGradient }} />
-                    <div className="absolute inset-0" style={{ backgroundImage: card.overlayGradient }} />
+                    <div className="absolute inset-0 transition-transform duration-700 group-hover:scale-[1.04]" style={{ backgroundImage: card.cardGradient }} />
+                    <div className="absolute inset-0 transition-opacity duration-500 group-hover:opacity-80" style={{ backgroundImage: card.overlayGradient }} />
+                    <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100">
+                      <div className="absolute -inset-10 bg-[radial-gradient(circle_at_70%_70%,rgba(255,255,255,0.18),transparent_55%)]" />
+                    </div>
                     {card.kind === "poju" ? <PojuCardCornerVortex /> : null}
                     <ProductCardEffect kind={card.kind} />
                     <div className="relative z-10 flex h-full min-h-0 flex-col text-left">
@@ -240,7 +368,9 @@ export default function LandingPage() {
                         {card.desc}
                       </p>
                       <div className="mt-auto flex items-center justify-start gap-3 pt-3 text-left">
-                        <Link href={card.href} className="whitespace-nowrap text-[16px] text-text-body hover:text-text-primary">{card.cta}</Link>
+                        <Link href={card.href} className="whitespace-nowrap text-[16px] text-text-body transition-all duration-300 hover:text-text-primary group-hover:translate-x-1">
+                          {card.cta}
+                        </Link>
                       </div>
                     </div>
                     {card.kind === "syncro" ? <SyncroCardCornerCompass /> : null}
@@ -251,124 +381,125 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="border-t border-white/10 bg-[#f5f7fc] px-4 py-6 md:px-8">
-            <h3 className="text-center text-[28px] font-semibold text-[#202a42] sm:text-[32px] md:text-[36px]">Designed for Real Life</h3>
-            <div className="mx-auto mt-5 grid w-full max-w-6xl gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {promiseItems.map(([title, desc]) => (
-                <article key={title} className="rounded-xl border border-[#e2e7f3] bg-white px-4 py-4 text-center">
-                  <div className="mx-auto h-8 w-8 rounded-full border border-[#d2daed] bg-[#f8faff]" />
-                  <p className="mt-2 text-sm font-semibold text-[#1f2a44]">{title}</p>
-                  <p className="mt-1 text-[12px] leading-5 text-[#6c7690]">{desc}</p>
+          <div className="bg-white px-4 py-8 md:px-8">
+            <h3 className="text-center text-[28px] font-semibold text-neutral-900 sm:text-[32px] md:text-[36px]">Designed for Real Life</h3>
+            <div className="mx-auto mt-8 w-full max-w-6xl">
+              <div className="grid gap-10 md:grid-cols-3 md:gap-0">
+                {promiseItems.map((item, idx) => (
+                  <article
+                    key={item.title}
+                    className={`text-center md:px-8 ${idx < promiseItems.length - 1 ? "md:border-r md:border-neutral-200" : ""}`}
+                  >
+                    <PromiseIcon kind={item.iconKind} />
+                    <p className="mt-4 text-[17px] font-semibold tracking-tight text-neutral-900 sm:text-[18px]">{item.title}</p>
+                    <p className="mx-auto mt-2 max-w-[300px] text-[15px] leading-7 text-neutral-700 sm:text-[16px]">{item.desc}</p>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <TwoTruthsTimelineSection />
+
+        <ScienceEvidenceSection />
+
+        <section className="mx-auto mt-8 w-full max-w-6xl px-4 py-10 md:mt-10 md:px-8 md:py-12">
+          <h2 className="text-center text-[28px] font-semibold leading-tight text-text-primary sm:text-[32px] md:text-[36px]">
+            Three promises we don&apos;t break.
+          </h2>
+          <div className="mx-auto mt-8 w-full max-w-6xl md:mt-10">
+            <div className="grid gap-10 md:grid-cols-3 md:gap-0">
+              {threePromisesItems.map((item, idx) => (
+                <article
+                  key={item.title}
+                  className={`group text-center transition-transform duration-300 motion-reduce:transition-none md:px-8 ${
+                    idx < threePromisesItems.length - 1 ? "md:border-r md:border-white/12" : ""
+                  }`}
+                >
+                  <div className="mx-auto flex justify-center transition-transform duration-300 ease-out will-change-transform group-hover:scale-110 motion-reduce:group-hover:scale-100">
+                    <ThreePromiseGlyph id={item.glyph} className={threePromiseAccents[idx]} />
+                  </div>
+                  <p className="mt-4 inline-block text-[17px] font-semibold tracking-tight text-text-primary transition-transform duration-300 ease-out group-hover:scale-[1.04] motion-reduce:group-hover:scale-100 sm:text-[18px]">
+                    {item.title}
+                  </p>
+                  <p className="mx-auto mt-2 max-w-[300px] text-[15px] leading-7 text-text-secondary transition-colors duration-300 group-hover:text-[#e4e8f5] motion-reduce:group-hover:text-inherit sm:text-[16px]">
+                    {item.desc}
+                  </p>
                 </article>
               ))}
             </div>
           </div>
         </section>
 
-        <section className="poju-glass-card mx-auto mt-6 w-full max-w-6xl p-5 sm:p-6 md:p-8">
-          <p className="poju-kicker">Where two truths meet.</p>
-          <div className="mt-4 space-y-3">
-            {elements.map(([title, text]) => (
-              <article key={title} className="rounded-lg border border-glass-border/70 bg-black/20 p-4">
-                <p className="text-sm font-semibold tracking-[0.08em] text-text-primary">{title}</p>
-                <div className="my-2 h-px w-full bg-gradient-to-r from-transparent via-purple-vivid/45 to-transparent" />
-                <p className="text-sm text-text-secondary">{text}</p>
-              </article>
-            ))}
+        <section
+          id="how-we-protect"
+          className="mx-auto mt-8 w-full max-w-6xl px-4 py-10 text-left md:mt-10 md:px-8 md:py-12"
+        >
+          <StationeryPaperPanel>
+            <p className="poju-kicker">How we actually keep our word.</p>
+            <h2 className="mt-3 max-w-3xl text-xl font-semibold leading-snug text-text-primary sm:text-2xl">
+              Privacy isn&apos;t a checkbox. It&apos;s our architecture.
+            </h2>
+            <div className="mt-8 max-w-3xl space-y-10">
+              {protectItems.map((item) => (
+                <article key={item.title}>
+                  <p className="font-semibold text-text-primary">{item.title}</p>
+                  <p className="mt-2 text-sm leading-7 text-text-secondary">{item.body}</p>
+                  <p className="mt-2 text-xs italic leading-relaxed text-text-dim">{item.verify}</p>
+                </article>
+              ))}
+            </div>
+            <div className="mt-10 max-w-2xl space-y-4 text-sm leading-7 text-text-secondary">
+              <p className="text-pretty hyphens-manual">
+                We&apos;re not a company that sells data because we don&apos;t collect data. We&apos;re a company that
+                sells one thing: a $9.9 conversation that helps you move through what&apos;s stuck. That&apos;s the
+                whole <span className="whitespace-nowrap">business model.</span>
+              </p>
+              <p>
+                If you ever doubt us: every claim on this page can be verified in a minute with your browser&apos;s
+                DevTools or public documentation.
+              </p>
+            </div>
+            <Link href="/privacy" className="mt-6 inline-block text-sm text-text-accent hover:text-purple-vivid">
+              Read our full Privacy Policy →
+            </Link>
+          </StationeryPaperPanel>
+        </section>
+
+        <section className="poju-cosmic-panel mt-8 w-full px-4 py-8 text-center md:mt-10 md:px-8 md:py-10">
+          <div className="mx-auto flex w-full max-w-6xl flex-col items-center">
+            <h2 className="text-[30px] font-semibold text-text-primary sm:text-3xl">Ready to break through?</h2>
+            <p className="mt-2 max-w-xl text-sm text-text-secondary sm:text-[15px]">One question. $9.9. Delivered in one conversation.</p>
+            <Link
+              href="/poju"
+              className="mt-5 inline-flex w-full max-w-[260px] min-w-[180px] justify-center rounded-full border border-[#7b5cff] bg-[#6d4dff] px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_26px_rgba(109,77,255,0.42)] hover:bg-[#7a5dff] sm:w-auto"
+            >
+              Ask Your Question →
+            </Link>
           </div>
         </section>
 
-        <section className="poju-glass-card mx-auto mt-6 w-full max-w-6xl p-5 sm:p-6 md:p-8">
-          <h2 className="poju-section-title">What Eastern traditions observed, science is beginning to measure.</h2>
-          <ul className="mt-5 space-y-3">
-            {scienceItems.map((item) => (
-              <li key={item} className="rounded-lg border border-glass-border/70 bg-black/20 px-4 py-3 text-sm text-text-secondary">
-                {item}
-              </li>
-            ))}
-          </ul>
-          <div className="my-4 h-px w-full bg-gradient-to-r from-transparent via-glass-border to-transparent" />
-          <p className="text-sm text-text-secondary">Eastern traditions named these forces two thousand years ago.</p>
-          <p className="mt-2 text-sm tracking-[0.16em] text-text-accent">QI · XUAN · BAZI · YUAN</p>
-          <p className="mt-3 text-sm text-text-secondary">
-            POJU uses AI to translate both languages into something
-            <br />
-            you can act on — today.
-          </p>
-        </section>
-
-        <section className="poju-glass-card mx-auto mt-6 w-full max-w-6xl p-5 sm:p-6 md:p-8">
-          <h2 className="poju-section-title">Three promises we don&apos;t break.</h2>
-          <div className="mt-4 space-y-3">
-            {threeNevers.map(([title, text]) => (
-              <article key={title} className="rounded-lg border border-glass-border/70 bg-black/20 p-4">
-                <p className="font-semibold text-text-primary">{title}</p>
-                <p className="mt-2 text-sm text-text-secondary">{text}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="poju-glass-card mx-auto mt-6 w-full max-w-6xl p-5 sm:p-6 md:p-8">
-          <p className="poju-kicker">How we actually keep our word.</p>
-          <h2 className="mt-2 text-xl font-semibold text-text-primary">Privacy isn&apos;t a checkbox. It&apos;s our architecture.</h2>
-          <div className="mt-5 space-y-4">
-            {protectItems.map((item) => (
-              <article key={item.title} className="rounded-lg border border-glass-border/70 bg-black/20 p-4">
-                <p className="font-semibold text-text-primary">{item.title}</p>
-                <p className="mt-2 text-sm leading-6 text-text-secondary">{item.body}</p>
-                <p className="mt-2 text-xs italic text-text-dim">{item.verify}</p>
-              </article>
-            ))}
-          </div>
-          <div className="my-5 h-px w-full bg-gradient-to-r from-transparent via-glass-border to-transparent" />
-          <p className="text-sm leading-6 text-text-secondary">
-            We&apos;re not a company that sells data because we don&apos;t
-            <br />
-            collect data. We&apos;re a company that sells one thing:
-            <br />
-            a $9.99 conversation that helps you move through what&apos;s
-            <br />
-            stuck. That&apos;s the whole business model.
-          </p>
-          <p className="mt-4 text-sm leading-6 text-text-secondary">
-            If you ever doubt us: every claim on this page can be
-            <br />
-            verified in a minute with your browser&apos;s DevTools or
-            <br />
-            Anthropic&apos;s public documentation.
-          </p>
-          <Link href="/privacy" className="mt-4 inline-block text-sm text-text-accent hover:text-purple-vivid">
-            Read our full Privacy Policy →
-          </Link>
-        </section>
-
-        <section className="poju-cosmic-panel mx-auto mt-6 w-full max-w-6xl p-6 sm:p-8 text-center">
-          <h2 className="text-[30px] font-semibold text-text-primary sm:text-3xl">Ready to break through?</h2>
-          <p className="mt-2 text-sm text-text-secondary">One question. $9.99. Delivered in one conversation.</p>
-          <Link href="/poju" className="poju-button-primary mt-5">
-            Ask Your Question →
-          </Link>
-        </section>
-
-        <footer className="mx-auto mt-8 w-full max-w-6xl rounded-xl border border-glass-border bg-bg-layer-1/60 p-6">
-          <div className="text-center">
+        <footer className="mt-8 w-full rounded-xl bg-bg-layer-1/60 px-4 py-6 md:px-8">
+          <div className="mx-auto max-w-6xl text-center">
             <p className="text-lg font-semibold tracking-[0.12em] text-text-primary">POJU</p>
             <p className="mt-1 text-sm text-text-secondary">pojulife.com</p>
+            <div className="my-4 h-px bg-gradient-to-r from-transparent via-glass-border to-transparent" />
+            <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-text-secondary">
+              <Link href="/disclaimer" className="hover:text-text-primary">Disclaimer</Link>
+              <Link href="/privacy" className="hover:text-text-primary">Privacy Policy</Link>
+              <Link href="/terms" className="hover:text-text-primary">Terms of Service</Link>
+              <Link href="/contact" className="hover:text-text-primary">Contact</Link>
+            </div>
+            <p className="mt-4 text-center text-xs text-text-dim">© 2026 POJU. All rights reserved.</p>
+            <p className="mt-2 text-center text-xs text-text-dim">
+              Not medical, legal, or financial advice. Consult licensed professionals for those matters.
+            </p>
           </div>
-          <div className="my-4 h-px bg-gradient-to-r from-transparent via-glass-border to-transparent" />
-          <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-text-secondary">
-            <Link href="/disclaimer" className="hover:text-text-primary">Disclaimer</Link>
-            <Link href="/privacy" className="hover:text-text-primary">Privacy Policy</Link>
-            <Link href="/terms" className="hover:text-text-primary">Terms of Service</Link>
-            <Link href="/contact" className="hover:text-text-primary">Contact</Link>
-          </div>
-          <p className="mt-4 text-center text-xs text-text-dim">© 2026 POJU. All rights reserved.</p>
-          <p className="mt-2 text-center text-xs text-text-dim">
-            Not medical, legal, or financial advice. Consult licensed professionals for those matters.
-          </p>
         </footer>
-      </div>
+      </div> 
+
+      </Suspense> 
     </main>
   );
 }

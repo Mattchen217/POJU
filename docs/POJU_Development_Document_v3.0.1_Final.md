@@ -2231,7 +2231,7 @@ SHICHEN · two-hour Chinese time block
 虽然 Oracle（观音百签）的学理体系不同（主要是**签文体系**），但上述四学科的部分内容仍然适用：
 
 - **干支历法**：Oracle 抽签的瞬间时间，也会影响解读（抽签时的时辰 → 影响签的"温度"）
-- **五行**：签文的底层结构也有五行属性（比如 Calm Current 签多属水，Headwind 签多属金克）
+- **五行**：签文的底层结构也有五行属性（比如 Still Water 签多属水，Crosswind 签多属金克）
 - **地磁 / 真太阳时**：对 Oracle 影响较小，但"48 小时间隔"的设计背后就是对地球时空周期的尊重
 
 Oracle 的 System Prompt 会借鉴这些学科元素，但**不要求像 Syncro 那样四学科全覆盖推理**。Oracle 的核心是签文 + 个性化解读，学科支撑是底色不是主菜。
@@ -2392,22 +2392,26 @@ System Prompt 硬规则：
 
 ## 04.3 风向系等级系统
 
-**7 个等级**，每个等级有**英文名**、**诗意副标题**、**粒子颜色**、**卡片纹理**、**出现概率**。
+**5 个等级**，每个等级有**英文名**、**诗意副标题**、**粒子颜色**、**卡片纹理**、**出现概率**。
 
 | 等级 | 英文名 | 副标题 | 粒子色 | 卡片纹理 | 概率 |
 |---|---|---|---|---|---|
-| 1 | **Divine Tailwind** | *Sign of Grace* | 金白光粒 | 金色光晕 | 5% |
-| 2 | **Fair Sky** | *Sign of Ease* | 天青色 | 淡蓝纹理 | 15% |
-| 3 | **Calm Current** | *Sign of Flow* | 蓝绿 | 水纹底 | 20% |
-| 4 | **Still Water** | *Sign of Pause* | 素白 | 极简纸面 | 25% |
-| 5 | **Crosswind** | *Sign of Turn* | 橘黄 | 斜纹底 | 20% |
-| 6 | **Headwind** | *Sign of Effort* | 深红 | 粗糙纹 | 10% |
-| 7 | **Eye of Storm** | *Sign of Stillness* | 暗紫 | 裂纹墨染 | 5% |
+| 1 | **Divine Tailwind** | *Sign of Grace* | 粉紫光辉 + 金色 | 金色光晕 | **5%** |
+| 2 | **Fair Sky** | *Sign of Openness* | 柔紫 | 柔紫纹理 | **25%** |
+| 3 | **Still Water** | *Sign of Stillness* | 蓝紫 | 涟漪底 | **40%** |
+| 4 | **Crosswind** | *Sign of Tension* | 深品红紫 | 交叉风纹 | **25%** |
+| 5 | **Eye of Storm** | *Sign of the Still Center* | 最深紫 + 金点 | 风暴眼 | **5%** |
+
+**概率分布特性**：
+- **对称分布**（5-25-40-25-5，总和 100%）
+- 正负平衡：Divine Tailwind + Fair Sky (30%) ↔ Crosswind + Eye of Storm (30%)
+- 中性最多（40% Still Water），符合"大多数问题其实需要静观"的现实
 
 **关键设计**：
 - 用户看到的**不是单词本身**（Tailwind），而是包含**类型 + 副标题**的组合
 - 副标题传递的是"这是关于什么的 sign"，不是吉凶判断
 - **视觉差异要有但不过度**：最好和最差之间差 20-30%（不是 Co-Star 那种黑红刺眼对比）
+- **Eye of Storm 用 ◉ 符号**（不是星星），唯一的非星星等级
 
 ### 04.3.1 Eye of Storm 的特殊处理
 
@@ -2423,21 +2427,44 @@ System Prompt 硬规则：
 
 把坏签反转成"稀有洞察时刻"。东方智慧的核心：祸福相倚。
 
-### 04.3.2 风向系 vs 原上上签的映射
+### 04.3.2 5 级对传统签签别的映射
 
-原观音百签为 7 级制（上上/上/中上/中/中下/下/下下），映射如下：
+如果使用传统观音百签 5 级体系（上上/中上/中/中下/下下）：
 
-| 原签 | 新签 |
-|---|---|
-| 上上签 | Divine Tailwind |
-| 上签 | Fair Sky |
-| 中上签 | Calm Current |
-| 中签 | Still Water |
-| 中下签 | Crosswind |
-| 下签 | Headwind |
-| 下下签 | Eye of Storm |
+| 原签 | 新签 | 概率 |
+|---|---|---|
+| 上上签 | Divine Tailwind | 5% |
+| 上吉签 / 中上签 | Fair Sky | 25% |
+| 中吉签 / 中签 | Still Water | 40% |
+| 中平签 / 中下签 | Crosswind | 25% |
+| 下下签 | Eye of Storm | 5% |
 
-100 签数据清洗时做一对一映射。
+**重要**：每级签实际数量不影响概率分布——算法是"先按概率决定级别，再从该级签中随机选一个"（见 04.3.3 抽签算法）。
+
+### 04.3.3 抽签算法
+
+**两层结构**：
+
+```typescript
+function drawSign(userQuestion: string): SignResult {
+  // 第 1 层：按概率决定级别
+  const rand = Math.random();
+  let level: Level;
+  if (rand < 0.05) level = 'divine_tailwind';
+  else if (rand < 0.30) level = 'fair_sky';
+  else if (rand < 0.70) level = 'still_water';
+  else if (rand < 0.95) level = 'crosswind';
+  else level = 'eye_of_storm';
+  
+  // 第 2 层：从该级别的签中随机选一个
+  const signsOfLevel = ALL_100_SIGNS.filter(s => s.level === level);
+  const chosenSign = signsOfLevel[Math.floor(Math.random() * signsOfLevel.length)];
+  
+  return chosenSign;
+}
+```
+
+100 签数据清洗时按此映射做分级。
 
 ## 04.4 核心交互流程
 
@@ -2688,7 +2715,7 @@ Stage 2 的三条仪式提示（见 04.4.1）。
 │     You've already asked this.       │
 │                                      │
 │   Your sign from [2 hours ago]:      │
-│   ✦ Calm Current                     │
+│   ✦ Still Water                     │
 │                                      │
 │   Answers don't change just because  │
 │   you ask again. Give it 48 hours.   │
@@ -2785,7 +2812,7 @@ AI 基于 Past + Present + Future 三签合看
   "timestamp": "2026-04-19T15:47:00-04:00",
   "question_hash": "sha256...",  // 问题脱敏哈希，用于 48h 相似度检测
   "question_summary": "About love",  // 用户可选手动命名
-  "level": "Calm Current",
+  "level": "Still Water",
   "verse": "The frost in your chest...",
   "meaning": "You asked about ending it...",
   "action": "Before sunset, write down...",
@@ -2808,8 +2835,8 @@ AI 基于 Past + Present + Future 三签合看
 ```json
 {
   "sign_number": 47,
-  "level": "Calm Current",
-  "level_subtitle": "Sign of Flow",
+  "level": "Still Water",
+  "level_subtitle": "Sign of Stillness",
   
   "source": {
     "chinese_poem": "春风得意马蹄疾...",  // 原签诗
@@ -2842,7 +2869,7 @@ User question: "Should I end my relationship with ___?"
 Question category: love
 
 Signed pulled:
-  Level: Calm Current (Sign of Flow)
+  Level: Still Water (Sign of Stillness)
   Verse: "The frost in your chest / is not a wall. / It is a door / that waits for morning."
   Core wisdom: patience_with_self
   Keywords: waiting, inner_shift, morning
@@ -5604,7 +5631,7 @@ The Archive 是用户所有历史数据的统一入口，**完全本地**。它�
 │                                              │
 │   Apr 10 · Oracle                            │
 │   "Should I..."                              │
-│   Calm Current · Sign of Flow                │
+│   Still Water · Sign of Stillness                │
 │   [ View ]                                   │
 │                                              │
 │   ──────────────────                         │
@@ -8096,8 +8123,8 @@ this question, this moment.
   "language": "en",
   "sign": {
     "number": 47,
-    "level": "Calm Current",
-    "level_subtitle": "Sign of Flow",
+    "level": "Still Water",
+    "level_subtitle": "Sign of Stillness",
     "verse_en": "The frost in your chest\nis not a wall...",
     "core_wisdom": "patience_with_self",
     "keywords": ["waiting", "inner_shift", "morning"],
@@ -8233,7 +8260,7 @@ integrate the full spread.
 **输出**：每一签的结构化数据，包括：
 - 精修英文 verse（4-6 行现代诗体）
 - 精修中文 verse（去典故）
-- 风向系等级映射（7 级）
+- 风向系等级映射（5 级）
 - 副标题（level_subtitle）
 - core_wisdom 标签
 - keywords（3-5 个）
@@ -8247,8 +8274,8 @@ integrate the full spread.
 ```json
 {
   "sign_number": 47,
-  "level": "Calm Current",
-  "level_subtitle": "Sign of Flow",
+  "level": "Still Water",
+  "level_subtitle": "Sign of Stillness",
   
   "source_chinese": {
     "original_verse": "春风得意马蹄疾，一日看尽长安花",
@@ -8285,11 +8312,16 @@ Step 1 · 原始数据整理（约 8 小时）
   · 验证完整性
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Step 2 · 风向系映射（约 3 小时）
+Step 2 · 风向系映射（约 2 小时）
 
-  · 原 7 级（上上 / 上 / 中上 / 中 / 中下 / 下 / 下下）
-    → 新 7 级（Divine Tailwind / Fair Sky / Calm Current /
-              Still Water / Crosswind / Headwind / Eye of Storm）
+  · 原 5 级（上上 / 上吉 / 中吉 / 中平 / 下下）
+    → 新 5 级：
+        上上签 → Divine Tailwind （5%）
+        上吉签 → Fair Sky        （25%）
+        中吉签 → Still Water     （40%）
+        中平签 → Crosswind       （25%）
+        下下签 → Eye of Storm    （5%）
+  · 每级签的具体数量不影响抽签概率（算法是"先按概率定级，再从该级随机选"）
   · 一对一映射，无需主观判断
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -8381,16 +8413,20 @@ Step 8 · 质量抽检（约 5 小时）
 ```
 原签级别          新级别              概率权重
 ────────────────────────────────────────────
-上上签（5%）     Divine Tailwind     5%
-上签（15%）      Fair Sky            15%
-中上签（20%）    Calm Current        20%
-中签（25%）      Still Water         25%
-中下签（20%）    Crosswind           20%
-下签（10%）      Headwind            10%
-下下签（5%）     Eye of Storm        5%
+上上签          Divine Tailwind     5%
+上吉签          Fair Sky            25%
+中吉签          Still Water         40%
+中平签          Crosswind           25%
+下下签          Eye of Storm        5%
+                                   ─────
+                                   100%
 ```
 
-100 签按此比例分布。
+**注意**：每级签的实际数量**不影响**上述概率分布。算法是"先按概率决定级别，再从该级签中随机选一个"（见第 04.3.3 节）。
+
+所以即使你的 100 签分布是 10/20/30/25/15，最终用户抽到的级别分布仍按上述 5-25-40-25-5 对称概率呈现。
+
+100 签数据清洗时按此映射分级即可。
 
 ## B.6 预算
 
@@ -8455,15 +8491,17 @@ Step 8 · 质量抽检（约 5 小时）
   --text-very-dim: #505050   次要
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-风向系 7 级（Oracle）
+风向系 5 级（Oracle）
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Divine Tailwind   #f0e7c8  ■ 金白光粒
-  Fair Sky          #a8c4d8  ■ 天青色
-  Calm Current      #7fa896  ■ 蓝绿
-  Still Water       #d0d0d0  ■ 素白
-  Crosswind         #c89a6a  ■ 橘黄
-  Headwind          #8a4a4a  ■ 深红
-  Eye of Storm      #4a3a5a  ■ 暗紫
+  Divine Tailwind   #F0ABFC  ■ 粉紫光辉 + 金色点缀（5%）
+  Fair Sky          #A78BFA  ■ 柔紫（25%）
+  Still Water       #6366F1  ■ 蓝紫（40% 最常见）
+  Crosswind         #7C3AED  ■ 深品红紫（25%）
+  Eye of Storm      #3B0764  ■ 最深紫 + 一丝金色（5%）
+
+  特殊色：
+  --wind-divine-gold:   #FFD700  Divine Tailwind 专用金色
+  --wind-storm-center:  #FBBF24  Eye of Storm 中心金点
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Syncro 8 方位色

@@ -39,7 +39,7 @@ export function HomeSections() {
                 The wisdom that costs $300 with a master. Delivered in one conversation. $9.99.
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
-                <CtaButton href="/poju" className="min-w-[220px]">
+                <CtaButton href="/chat?token=ui-preview" className="min-w-[220px]">
                   Ask your question
                 </CtaButton>
                 <CtaButton href="/syncro" variant="secondary" className="border-white/20">
