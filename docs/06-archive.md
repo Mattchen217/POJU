@@ -10,7 +10,7 @@
 | 目标用户 | 所有用户（付费和免费都用） |
 | 核心目标 | 统一展示用户在三个产品中的历史数据，完全本地可控 |
 | 优先级 | 中高（跨 Task 持续完善） |
-| 所属 Task | Task 1（空状态）→ Task 2（POJU 条目）→ Task 3（Syncro）→ Task 4（Oracle）→ Task 5（Wipe Everything） |
+| 所属 Task | Task 1（空状态）→ Task 2（POJU 条目）→ Task 3（Syncro）→ Task 4（Glyph）→ Task 5（Wipe Everything） |
 
 ---
 
@@ -26,7 +26,7 @@
 ## 页面结构清单
 
 1. 顶部区（标题 + 隐私提示）
-2. 筛选标签（All / POJU / Syncro / Oracle）
+2. 筛选标签（All / POJU / Syncro / Glyph）
 3. 搜索框（可选展开）
 4. 历史条目列表（按时间分组倒序）
 5. Wipe Everything 按钮
@@ -63,7 +63,7 @@ Back up anything precious before clearing your browser.
 **四个标签横排**，水平对齐：
 
 ```
-[ All ]  [ POJU ]  [ Syncro ]  [ Oracle ]
+[ All ]  [ POJU ]  [ Syncro ]  [ Glyph ]
 ```
 
 **默认选中**：`All`
@@ -159,12 +159,12 @@ Back up anything precious before clearing your browser.
 
 ---
 
-### 4.2 Oracle 条目
+### 4.2 Glyph 条目
 
 **格式**：
 ```
 ┌──────────────────────────────────────────┐
-│ [图标] Apr 18 · Oracle                   │
+│ [图标] Apr 18 · Glyph                    │
 │ "About my decision to move..."           │
 │ ✦ Calm Current · Sign of Flow            │
 │                                          │
@@ -173,7 +173,7 @@ Back up anything precious before clearing your browser.
 ```
 
 **字段**：
-- 图标：Oracle 粉紫色菱形
+- 图标：Glyph 粉紫色菱形
 - 日期 + 产品类型
 - 问题摘要（60 字符以内）
 - 签等级 + 副标题
@@ -182,7 +182,7 @@ Back up anything precious before clearing your browser.
 **操作**：
 
 #### `View`
-- 全屏显示该卡片（Oracle 卡片完整格式）
+- 全屏显示该卡片（Glyph 卡片完整格式）
 - 右上角 `×` 关闭
 - 底部：
   - `Share as image`
@@ -194,12 +194,12 @@ Back up anything precious before clearing your browser.
 
 ---
 
-### 4.3 Oracle 3 签联动组合条目
+### 4.3 Glyph 3 签联动组合条目
 
 **格式**（特殊展示）：
 ```
 ┌──────────────────────────────────────────┐
-│ [图标] Apr 18 · Oracle (3-Sign Reading)  │
+│ [图标] Apr 18 · Glyph (3-Sign Reading)   │
 │ "About my decision to move..."           │
 │                                          │
 │  ┌────┐ ┌────┐ ┌────┐                   │
@@ -376,7 +376,7 @@ No POJU sessions yet.
 **IndexedDB**：
 - `sessions` 表（POJU Session）
 - `messages` 表（消息数，计算用）
-- `oracle_entries` 表（Oracle 抽签）
+- `oracle_entries` 表（Glyph 抽签）
 - `syncro_entries` 表（Syncro 方位 + 精准拍照）
 
 **localStorage**：
@@ -476,9 +476,9 @@ const grouped = groupByTimeRange([
 - [ ] `View` 显示当时的方位快照
 - [ ] `Re-read now` 调用 AI 重新分析
 
-### Task 4 阶段（Oracle 条目）
+### Task 4 阶段（Glyph 条目）
 
-- [ ] Oracle 抽签历史自动出现
+- [ ] Glyph 抽签历史自动出现
 - [ ] `View` 全屏显示卡片
 - [ ] 3 签联动以组合条目形式展示
 - [ ] `Open POJU chat` 跳转关联 Session
@@ -512,7 +512,7 @@ const grouped = groupByTimeRange([
 - `@.cursor/rules/05-visual-language.mdc`
 - `@docs/POJU_Development_Document_v3.0.1_Final.md` — 第 07.7 节 The Archive
 - `@docs/pages/05-chat.md` — POJU Session Resume 跳转目标
-- `@docs/pages/04-oracle.md` — Oracle 卡片展示格式
+- `@docs/pages/04-glyph.md` — Glyph 卡片展示格式
 
 ### 关键约束
 

@@ -71,7 +71,7 @@ const faqText = `Common questions:
   in Chrome and "Add to Home Screen" for the full experience.
 
 ▸ Can I use POJU without payment?
-  Syncro and Oracle are completely free, no account needed. 
+  Syncro and Glyph are completely free, no account needed. 
   POJU (the breakthrough chat) is $9.99 per session.
 
 ▸ How does POJU make money if it doesn't sell data?
@@ -93,7 +93,7 @@ const faqItems = [
   },
   {
     q: "Can I use POJU without payment?",
-    a: "Syncro and Oracle are completely free, no account needed. POJU (the breakthrough chat) is $9.99 per session.",
+    a: "Syncro and Glyph are completely free, no account needed. POJU (the breakthrough chat) is $9.99 per session.",
   },
   {
     q: "How does POJU make money if it doesn't sell data?",
@@ -122,8 +122,8 @@ function ContactContent() {
                 <Link href="/syncro" className="hover:text-text-primary">
                   POJU SYNCRO
                 </Link>
-                <Link href="/oracle" className="hover:text-text-primary">
-                  POJU ORACLE
+                <Link href="/glyph" className="hover:text-text-primary">
+                  POJU GLYPH
                 </Link>
                 <Link href="/archive" className="hover:text-text-primary">
                   THE ARCHIVE
@@ -202,6 +202,9 @@ function ContactContent() {
                 </Link>
               </div>
               <p className="mt-4 text-center text-xs text-text-dim">© 2026 POJU. All rights reserved.</p>
+              <p className="mt-2 text-center text-xs text-text-dim">
+                For reflection and entertainment. POJU does not predict outcomes or replace professional advice.
+              </p>
             </div>
           </footer>
         </div>

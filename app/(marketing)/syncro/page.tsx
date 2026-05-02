@@ -43,7 +43,7 @@ const scienceVsEast = [
   },
   {
     science: "Timestamp + circadian timing",
-    east: "Moment-based fortune rhythm",
+    east: "Moment-based rhythm pattern",
   },
   {
     science: "Personal data model and calibration",
@@ -71,8 +71,8 @@ function SyncroContent() {
               <Link href="/syncro" className="text-text-primary">
                 POJU SYNCRO
               </Link>
-              <Link href="/oracle" className="hover:text-text-primary">
-                POJU ORACLE
+              <Link href="/glyph" className="hover:text-text-primary">
+                POJU GLYPH
               </Link>
               <Link href="/archive" className="hover:text-text-primary">
                 THE ARCHIVE
@@ -87,6 +87,24 @@ function SyncroContent() {
         </div>
 
         <SyncroProductHero />
+        <section className="mx-auto mt-2 w-full max-w-3xl px-4 md:px-8">
+          <div className="rounded-2xl border border-white/10 bg-black/25 px-5 py-6 sm:px-7 sm:py-7">
+            <h2 className="text-center text-[24px] font-semibold text-text-primary sm:text-[28px]">Syncro</h2>
+            <p className="mt-2 text-center text-sm italic text-text-secondary sm:text-base">
+              See your natural rhythms.
+            </p>
+            <p className="mt-4 text-[15px] leading-8 text-text-secondary">
+              Based on your birth context, Syncro reflects how the day&apos;s energy aligns with your
+              personal patterns - where to lean in, where to slow down, and where the windows are open.
+            </p>
+            <p className="mt-3 text-[15px] leading-8 text-text-secondary">
+              Think of it as a weather forecast for your inner life, updated every two hours.
+            </p>
+            <p className="mt-4 text-center text-sm text-text-dim">
+              Free · No signup · For self-awareness
+            </p>
+          </div>
+        </section>
         <SyncroMobileFlow />
 
         <section className="mx-auto mt-8 w-full max-w-6xl px-4 py-8 md:mt-10 md:px-8 md:py-10">
@@ -163,6 +181,27 @@ function SyncroContent() {
           </div>
         </section>
 
+        <section className="mx-auto mt-8 w-full max-w-6xl px-4 py-10 md:mt-10 md:px-8 md:py-12">
+          <div className="grid gap-6 md:grid-cols-2">
+            <article className="rounded-xl border border-white/10 bg-black/25 p-6">
+              <h3 className="text-xl font-semibold text-text-primary">What you&apos;ll see</h3>
+              <ul className="mt-4 space-y-2 text-[15px] leading-8 text-text-secondary">
+                <li>A short description of the current pattern</li>
+                <li>What this period suits</li>
+                <li>What this period does not suit</li>
+              </ul>
+            </article>
+            <article className="rounded-xl border border-white/10 bg-black/25 p-6">
+              <h3 className="text-xl font-semibold text-text-primary">What Syncro is NOT</h3>
+              <ul className="mt-4 space-y-2 text-[15px] leading-8 text-text-secondary">
+                <li>Does not predict events</li>
+                <li>Does not promise outcomes</li>
+                <li>Does not replace your own judgment</li>
+              </ul>
+            </article>
+          </div>
+        </section>
+
         <section className="poju-cosmic-panel mt-8 w-full px-4 py-8 text-center md:mt-10 md:px-8 md:py-10">
           <div className="mx-auto flex w-full max-w-6xl flex-col items-center">
             <h2 className="text-[30px] font-semibold text-text-primary sm:text-[34px] md:text-[38px]">
@@ -204,7 +243,7 @@ function SyncroContent() {
             </div>
             <p className="mt-4 text-center text-xs text-text-dim">© 2026 POJU. All rights reserved.</p>
             <p className="mt-2 text-center text-xs text-text-dim">
-              Not medical, legal, or financial advice. Consult licensed professionals for those matters.
+              Syncro is a self-awareness tool. Take what resonates. Decisions are yours alone.
             </p>
           </div>
         </footer>

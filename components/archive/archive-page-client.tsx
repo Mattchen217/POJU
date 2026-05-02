@@ -24,7 +24,7 @@ export function ArchivePageClient() {
             <button className="whitespace-nowrap rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-[12px] text-primary">All</button>
             <button className="whitespace-nowrap rounded-full border border-outline-variant/20 bg-surface-container-high/50 px-4 py-2 text-[12px] text-on-surface-variant transition-colors hover:text-on-surface">POJU</button>
             <button className="whitespace-nowrap rounded-full border border-outline-variant/20 bg-surface-container-high/50 px-4 py-2 text-[12px] text-on-surface-variant transition-colors hover:text-on-surface">Syncro</button>
-            <button className="whitespace-nowrap rounded-full border border-outline-variant/20 bg-surface-container-high/50 px-4 py-2 text-[12px] text-on-surface-variant transition-colors hover:text-on-surface">Oracle</button>
+            <button className="whitespace-nowrap rounded-full border border-outline-variant/20 bg-surface-container-high/50 px-4 py-2 text-[12px] text-on-surface-variant transition-colors hover:text-on-surface">Glyph</button>
           </div>
         </div>
 
@@ -58,13 +58,13 @@ export function ArchivePageClient() {
                   <div className="flex h-8 w-8 items-center justify-center rounded-full border border-amber-500/20 bg-amber-500/10 text-amber-400">
                     <span className="material-symbols-outlined text-sm">auto_awesome</span>
                   </div>
-                  <span className="text-[12px] uppercase tracking-widest text-amber-400">Oracle</span>
+                  <span className="text-[12px] uppercase tracking-widest text-amber-400">Glyph</span>
                 </div>
                 <div className="mb-5">
                   <h3 className="mb-2 text-[24px] text-on-surface">&quot;About my decision to move...&quot;</h3>
                   <div className="inline-flex items-center gap-2 rounded-lg border border-outline-variant/30 bg-surface-container/50 px-3 py-1.5">
                     <span className="material-symbols-outlined text-xs text-amber-400">water_drop</span>
-                    <span className="text-sm text-on-surface-variant">✦ Calm Current · Sign of Flow</span>
+                    <span className="text-sm text-on-surface-variant">✦ Calm Current · Pattern of Flow</span>
                   </div>
                 </div>
                 <div className="flex gap-3">
@@ -117,7 +117,7 @@ export function ArchivePageClient() {
         </a>
         <a className="flex flex-col items-center justify-center px-3 py-1 text-white/30 transition-all hover:bg-white/5" href="#">
           <span className="material-symbols-outlined mb-1">auto_awesome</span>
-          <span className="text-[10px] uppercase tracking-tight">Oracle</span>
+          <span className="text-[10px] uppercase tracking-tight">Glyph</span>
         </a>
         <a className="flex flex-col items-center justify-center px-3 py-1 text-white/30 transition-all hover:bg-white/5" href="#">
           <span className="material-symbols-outlined mb-1">sync</span>

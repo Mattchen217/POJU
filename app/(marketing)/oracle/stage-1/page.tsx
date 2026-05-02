@@ -55,7 +55,7 @@ const SIGN_COPY = {
 const SIGN_LEVELS: ReadonlyArray<SignLevel> = [
   {
     name: "Divine Tailwind",
-    subtitle: "Sign of Grace",
+    subtitle: "Pattern of Alignment",
     particleColor: "#F0ABFC",
     cardClass: "border-[#F0ABFC]/40 bg-[#F0ABFC]/10",
     weight: 5,
@@ -63,7 +63,7 @@ const SIGN_LEVELS: ReadonlyArray<SignLevel> = [
   },
   {
     name: "Fair Sky",
-    subtitle: "Sign of Openness",
+    subtitle: "Pattern of Openness",
     particleColor: "#A78BFA",
     cardClass: "border-[#A78BFA]/40 bg-[#A78BFA]/10",
     weight: 25,
@@ -71,7 +71,7 @@ const SIGN_LEVELS: ReadonlyArray<SignLevel> = [
   },
   {
     name: "Still Water",
-    subtitle: "Sign of Stillness",
+    subtitle: "Pattern of Patience",
     particleColor: "#6366F1",
     cardClass: "border-[#6366F1]/40 bg-[#6366F1]/10",
     weight: 40,
@@ -79,7 +79,7 @@ const SIGN_LEVELS: ReadonlyArray<SignLevel> = [
   },
   {
     name: "Crosswind",
-    subtitle: "Sign of Tension",
+    subtitle: "Pattern of Recalibration",
     particleColor: "#7C3AED",
     cardClass: "border-[#7C3AED]/40 bg-[#7C3AED]/10",
     weight: 25,
@@ -87,7 +87,7 @@ const SIGN_LEVELS: ReadonlyArray<SignLevel> = [
   },
   {
     name: "Eye of Storm",
-    subtitle: "Sign of the Still Center",
+    subtitle: "Pattern of Clarity",
     particleColor: "#3B0764",
     cardClass: "border-[#3B0764]/40 bg-[#3B0764]/15",
     weight: 5,
@@ -395,8 +395,8 @@ function OracleStageOneContent() {
         id: `oracle_archive_${Date.now()}`,
         kind: "oracle",
         createdAt: Date.now(),
-        title: `${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })} · Oracle`,
-        subtitle: `"${question.trim() || "Oracle reading"}" · ✦ ${signLevel.name} · ${signLevel.subtitle}`,
+        title: `${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })} · Glyph`,
+        subtitle: `"${question.trim() || "Glyph reflection"}" · ✦ ${signLevel.name} · ${signLevel.subtitle}`,
         refId: lastOracleRecordId || undefined,
       };
       localStorage.setItem(ARCHIVE_RUNTIME_KEY, JSON.stringify([row, ...list].slice(0, 120)));
@@ -412,7 +412,7 @@ function OracleStageOneContent() {
       <div className="mx-auto mb-4 w-full max-w-xl">
         <ArchiveReturnBanner />
       </div>
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-fuchsia-200/80">Oracle Ritual Flow</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-fuchsia-200/80">Glyph Ritual Flow</p>
       <h1 className="mt-3 text-2xl font-semibold text-text-primary sm:text-3xl">Stage {stage}</h1>
 
       {stage === 1 ? (
@@ -586,7 +586,7 @@ function OracleStageOneContent() {
               onClick={() => {
                 if (navigator.share) {
                   void navigator.share({
-                    title: "POJU Oracle Sign",
+                    title: "POJU Glyph Reflection",
                     text: `My sign: ${signLevel?.name ?? "Unknown"} · Sign No. ${signNo || "-"}`,
                     url: "https://pojulife.com",
                   });
@@ -604,10 +604,10 @@ function OracleStageOneContent() {
       ) : null}
 
       <Link
-        href="/oracle"
+        href="/glyph"
         className="mt-10 inline-flex justify-center rounded-full border border-fuchsia-300/45 bg-fuchsia-500/20 px-6 py-3 text-sm font-semibold text-fuchsia-100 hover:bg-fuchsia-400/28"
       >
-        ← Back to Oracle
+        ← Back to Glyph
       </Link>
 
       {dupModalOpen ? (
@@ -657,7 +657,7 @@ export default function OracleStageOnePage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-bg-deep flex items-center justify-center text-text-secondary">
-        Loading Oracle Ritual...
+        Loading Glyph Ritual...
       </div>
     }>
       <OracleStageOneContent />

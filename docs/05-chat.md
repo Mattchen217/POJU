@@ -8,7 +8,7 @@
 | 文件位置 | `app/(product)/chat/page.tsx` |
 | 页面标题 | `POJU Session` |
 | 目标用户 | **仅付费用户**（已完成 Stripe 支付，有有效 Session Token） |
-| 核心目标 | 提供完整 AI Agent 对话体验，Phase 5 后导出 PDF，支持 Summon Syncro/Oracle |
+| 核心目标 | 提供完整 AI Agent 对话体验，Phase 5 后导出 PDF，支持 Summon Syncro/Glyph |
 | 优先级 | **最高**（Task 2 核心 + Task 5 AI 真实对接） |
 | 所属 Task | Task 2（Mock AI + UI 完整）+ **Task 5（Claude API 接入 + PDF + 邮件）** |
 
@@ -65,7 +65,7 @@
 │ Archive  │                                      │
 │          │                                      │
 │ Syncro → │  ──────────────────────────────────  │
-│ Oracle → │  [📎] [🎤] Type your reply...  [→]  │
+│ Glyph →  │  [📎] [🎤] Type your reply...  [→]  │
 └──────────┴──────────────────────────────────────┘
 ```
 
@@ -140,7 +140,7 @@ Apr 15 · [Hidden by you]
 #### 工具链接
 
 - `Syncro →`
-- `Oracle →`
+- `Glyph →`
 - 点击**不跳转**，而是在当前页面打开**底部抽屉**内嵌面板
 - 完成后数据回传当前对话
 
@@ -304,7 +304,7 @@ This is your reading so far.
 
 ---
 
-#### 3.7 Summon Syncro / Oracle 按钮（AI 主动召唤）
+#### 3.7 Summon Syncro / Glyph 按钮（AI 主动召唤）
 
 当 AI 判断需要辅助工具时，在 AI 回复末尾生成按钮：
 
@@ -321,13 +321,13 @@ I need to see your space first.
 ─────
 Let me show you a sign about this.
 
-[ ✦ Summon Oracle ]
+[ ✦ Summon Glyph ]
 ```
 
 **点击行为**：
 - **不跳转页面**
 - 底部抽屉（约 90% 屏幕高度）从屏幕底部滑出
-- 抽屉内嵌 Syncro 或 Oracle 完整面板
+- 抽屉内嵌 Syncro 或 Glyph 完整面板
 - 用户完成交互后数据自动回传当前对话
 - 抽屉关闭，AI 基于新数据生成下一条回复
 
@@ -390,7 +390,7 @@ recognition.interimResults = true;
 ```
 ✦ Save this reading as PDF       (仅 Phase 5 完成后激活)
 ✦ Summon Syncro                  (底部抽屉)
-✦ Summon Oracle                  (底部抽屉)
+✦ Summon Glyph                   (底部抽屉)
 ✦ Rename this session            
 ✦ Archive this session           (折叠，可恢复)
 ✦ End & Wipe this session        (彻底销毁，二次确认)
@@ -511,7 +511,7 @@ Settings                         (音效开关 / 语言等)
 
 ---
 
-## Summon Syncro / Oracle 底部抽屉
+## Summon Syncro / Glyph 底部抽屉
 
 ### 打开动画
 
@@ -523,14 +523,14 @@ Settings                         (音效开关 / 语言等)
 ### 抽屉内容
 
 - **Syncro 抽屉**：完整 Syncro 流程（但简化为"快速模式"，跳过教学区）
-- **Oracle 抽屉**：完整 Oracle 7 Stage 流程
+- **Glyph 抽屉**：完整 Glyph 7 Stage 流程
 
 ### 数据回传
 
 - 用户完成交互 → `postMessage` 或回调
 - 数据结构：
   - Syncro: 8 方位 + 当前朝向
-  - Oracle: 抽到的签 + 问题
+  - Glyph: 抽到的签 + 问题
 - 抽屉自动关闭
 - POJU Chat 中 AI 根据回传数据生成下一条回复
 
@@ -609,7 +609,7 @@ async function mockPOJUResponse(userMessage: string) {
 - `POST /api/email/send-pdf`（Task 5）
 - `POST /api/email/schedule-checkin`（Task 5）
 - `POST /api/tts/stream`（Task 5：ElevenLabs 代理）
-- `POST /api/ai/oracle`（Summon Oracle 时）
+- `POST /api/ai/oracle`（Summon Glyph 时）
 - `POST /api/ai/syncro`（Summon Syncro 时）
 
 ### 需要的客户端能力
@@ -674,7 +674,7 @@ async function mockPOJUResponse(userMessage: string) {
 - [ ] End & Wipe 二次确认 → 确认后本地数据真的清除
 - [ ] 图片上传工作，缩略图预览正确
 - [ ] 语音输入工作，实时转文字
-- [ ] Summon Syncro / Oracle 底部抽屉正确弹出
+- [ ] Summon Syncro / Glyph 底部抽屉正确弹出
 - [ ] 菜单所有项点击响应
 - [ ] Mobile 侧滑抽屉工作
 
@@ -702,7 +702,7 @@ async function mockPOJUResponse(userMessage: string) {
 - `@.cursor/rules/05-visual-language.mdc` — 对话气泡视觉
 - `@docs/POJU_Development_Document_v3.0.1_Final.md` — 第 02 章 POJU + 附录 A System Prompt
 - `@docs/pages/03-syncro.md` — Summon Syncro 抽屉集成
-- `@docs/pages/04-oracle.md` — Summon Oracle 抽屉集成
+- `@docs/pages/04-glyph.md` — Summon Glyph 抽屉集成
 - `@docs/pages/06-archive.md` — Session 列表展示
 - `@docs/pages/12-payment-callback.md` — 支付成功回跳
 

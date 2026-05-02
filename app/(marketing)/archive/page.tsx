@@ -9,7 +9,7 @@ import { PojuMarkLogo } from "@/components/marketing/poju-mark-logo";
 export const metadata: Metadata = {
   title: "The Archive — Your personal vault",
   description:
-    "Everything here lives only on this device. Your POJU sessions, Oracle signs, and Syncro readings in one local vault.",
+    "Everything here lives only on this device. Your POJU sessions, Glyph reflections, and Syncro readings in one local vault.",
 };
 
 export default function ArchivePage() {
@@ -31,8 +31,8 @@ export default function ArchivePage() {
               <Link href="/syncro" className="hover:text-text-primary">
                 POJU SYNCRO
               </Link>
-              <Link href="/oracle" className="hover:text-text-primary">
-                POJU ORACLE
+              <Link href="/glyph" className="hover:text-text-primary">
+                POJU GLYPH
               </Link>
               <Link href="/archive" className="text-text-primary">
                 THE ARCHIVE
@@ -71,7 +71,7 @@ export default function ArchivePage() {
             </a>
             <a className="flex flex-col items-center justify-center px-3 py-1 text-white/30 transition-all hover:bg-white/5" href="#">
               <span className="material-symbols-outlined mb-1">auto_awesome</span>
-              <span className="font-['Manrope'] text-[10px] font-medium uppercase tracking-tight">Oracle</span>
+              <span className="font-['Manrope'] text-[10px] font-medium uppercase tracking-tight">Glyph</span>
             </a>
             <a className="flex flex-col items-center justify-center px-3 py-1 text-white/30 transition-all hover:bg-white/5" href="#">
               <span className="material-symbols-outlined mb-1">sync</span>
@@ -109,6 +109,9 @@ export default function ArchivePage() {
               </Link>
             </div>
             <p className="mt-4 text-center text-xs text-text-dim">© 2026 POJU. All rights reserved.</p>
+            <p className="mt-2 text-center text-xs text-text-dim">
+              For reflection and entertainment. POJU does not predict outcomes or replace professional advice.
+            </p>
           </div>
         </footer>
       </div>

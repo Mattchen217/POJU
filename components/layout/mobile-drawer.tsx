@@ -31,7 +31,7 @@ export function MobileDrawer({ open, onClose }: MobileDrawerProps) {
             <nav className="mt-8 flex flex-col gap-4 text-sm">
               <Link href="/poju" onClick={onClose}>POJU · Break your deadlock</Link>
               <Link href="/syncro" onClick={onClose}>SYNCRO · Your energy map</Link>
-              <Link href="/oracle" onClick={onClose}>ORACLE · Receive a sign</Link>
+              <Link href="/glyph" onClick={onClose}>GLYPH · Read your reflection</Link>
               <Link href="/archive" onClick={onClose}>✦ Archive</Link>
               <hr className="my-2 border-glass-border" />
               <Link href="/disclaimer" onClick={onClose}>Disclaimer</Link>

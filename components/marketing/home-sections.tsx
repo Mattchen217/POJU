@@ -19,7 +19,7 @@ export function HomeSections() {
             <div className="poju-inner-nav-links">
               <span>POJU</span>
               <span>SYNCRO</span>
-              <span>ORACLE</span>
+              <span>GLYPH</span>
               <span>ARCHIVE</span>
             </div>
             <span className="rounded-full border border-purple-vivid/35 bg-purple-primary/25 px-3 py-1 text-[10px] text-text-primary">
@@ -87,11 +87,11 @@ export function HomeSections() {
               <div className="relative z-10 flex items-center gap-2">
                 <span className="poju-path-dot">◇</span>
                 <div>
-                  <h3 className="poju-path-title">ORACLE</h3>
-                  <p className="poju-path-caption">Reveal your next sign</p>
+                  <h3 className="poju-path-title">GLYPH</h3>
+                  <p className="poju-path-caption">A 60-second mirror</p>
                 </div>
               </div>
-              <p className="poju-path-body">Draw a card and read your direction with calm precision.</p>
+              <p className="poju-path-body">Draw one pattern and read your reflection with calm precision.</p>
               <p className="poju-path-link !text-pink-300">Start Here →</p>
               <span className="poju-path-core" />
             </article>

@@ -406,7 +406,7 @@ export function ChatPageClient() {
           <Link href="/" className="text-2xl font-bold tracking-tight text-transparent bg-gradient-to-r from-violet-400 to-fuchsia-500 bg-clip-text">
             POJU
           </Link>
-          <p className="mt-1 text-[11px] uppercase tracking-wider text-on-surface-variant">Zen-Futurist Oracle</p>
+          <p className="mt-1 text-[11px] uppercase tracking-wider text-on-surface-variant">Zen-Futurist Glyph</p>
           <p className="mt-2 text-xs text-text-dim">{activeCount} active sessions</p>
         </div>
         <button
@@ -488,7 +488,7 @@ export function ChatPageClient() {
           Syncro →
         </button>
         <button className="mt-2 text-left text-sm text-on-surface-variant hover:text-primary" onClick={() => setDrawer("oracle")}>
-          Oracle →
+          Glyph →
         </button>
       </div>
     </aside>
@@ -553,7 +553,7 @@ export function ChatPageClient() {
                       ✦ Summon Syncro
                     </button>
                     <button className="w-full rounded-md px-3 py-2 text-left hover:bg-white/5" onClick={() => setDrawer("oracle")}>
-                      ✦ Summon Oracle
+                      ✦ Summon Glyph
                     </button>
                     <button
                       className="w-full rounded-md px-3 py-2 text-left hover:bg-white/5"
@@ -630,7 +630,7 @@ export function ChatPageClient() {
                   {m.summon ? (
                     <div className="mt-3 border-t border-purple-vivid/20 pt-3 text-sm">
                       <button className="text-purple-vivid underline underline-offset-4" onClick={() => setDrawer(m.summon || null)}>
-                        ✦ {m.summon === "syncro" ? "Summon Syncro" : "Summon Oracle"}
+                        ✦ {m.summon === "syncro" ? "Summon Syncro" : "Summon Glyph"}
                       </button>
                     </div>
                   ) : null}
@@ -722,7 +722,7 @@ export function ChatPageClient() {
         <div className="fixed inset-0 z-[130] bg-black/70 p-2 sm:p-4">
           <div className="mx-auto h-[90dvh] max-w-4xl rounded-2xl border border-white/12 bg-bg-layer-1 p-4">
             <div className="flex items-center justify-between">
-              <p className="text-lg font-semibold text-text-primary">Summon {drawer === "syncro" ? "Syncro" : "Oracle"}</p>
+              <p className="text-lg font-semibold text-text-primary">Summon {drawer === "syncro" ? "Syncro" : "Glyph"}</p>
               <button className="text-text-dim hover:text-text-primary" onClick={() => setDrawer(null)}>
                 ×
               </button>
@@ -739,7 +739,7 @@ export function ChatPageClient() {
                     text:
                       drawer === "syncro"
                         ? "Syncro data received: I now see your space orientation. Next, I will align this with your current decision cycle."
-                        : "Oracle sign received: I now have a symbolic signal to refine your next action.",
+                        : "Glyph pattern received: I now have a symbolic mirror to refine your next action.",
                     createdAt: Date.now(),
                   });
                   setDrawer(null);

@@ -30,8 +30,8 @@ export default function DisclaimerPage() {
                 <Link href="/syncro" className="hover:text-text-primary">
                   POJU SYNCRO
                 </Link>
-                <Link href="/oracle" className="hover:text-text-primary">
-                  POJU ORACLE
+                <Link href="/glyph" className="hover:text-text-primary">
+                  POJU GLYPH
                 </Link>
                 <Link href="/archive" className="hover:text-text-primary">
                   THE ARCHIVE
@@ -70,6 +70,9 @@ export default function DisclaimerPage() {
                 </Link>
               </div>
               <p className="mt-4 text-center text-xs text-text-dim">© 2026 POJU. All rights reserved.</p>
+              <p className="mt-2 text-center text-xs text-text-dim">
+                For reflection and entertainment. POJU does not predict outcomes or replace professional advice.
+              </p>
             </div>
           </footer>
         </div>

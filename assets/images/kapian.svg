@@ -1,0 +1,75 @@
+import React from 'react';
+
+const Card = ({title, subtitle, colors, children}:{title:string; subtitle:string; colors:[string,string]; children:React.ReactNode}) => (
+  <div className="relative w-full aspect-[9/16] rounded-[24px] overflow-hidden bg-black border border-white/10 shadow-2xl">
+    <svg viewBox="0 0 900 1600" className="w-full h-full">
+      <defs>
+        <linearGradient id={`bg-${title}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#06070d"/>
+          <stop offset="100%" stopColor="#0d1020"/>
+        </linearGradient>
+        <radialGradient id={`glow-${title}`}>
+          <stop offset="0%" stopColor={colors[0]} stopOpacity="0.9"/>
+          <stop offset="100%" stopColor={colors[1]} stopOpacity="0"/>
+        </radialGradient>
+        <filter id={`blur-${title}`}><feGaussianBlur stdDeviation="8"/></filter>
+      </defs>
+      <rect width="900" height="1600" fill={`url(#bg-${title})`} rx="40"/>
+      <rect x="18" y="18" width="864" height="1564" rx="34" fill="none" stroke={colors[0]} opacity="0.45"/>
+      <circle cx="450" cy="560" r="280" fill={`url(#glow-${title})`} filter={`url(#blur-${title})`} />
+      {children}
+      <text x="450" y="1320" textAnchor="middle" fill={colors[0]} fontSize="64" fontFamily="serif">{title}</text>
+      <text x="450" y="1390" textAnchor="middle" fill="#d1d5db" fontSize="30">{subtitle}</text>
+    </svg>
+  </div>
+);
+
+export const DivineTailwind = ()=> <Card title="DIVINE TAILWIND" subtitle="Guidance · Momentum · Blessing" colors={["#f6c453","#7c4d00"]}><path d="M300 620 C420 360,560 420,620 600 C560 520,450 540,390 720" fill="none" stroke="#f6c453" strokeWidth="18" strokeLinecap="round"/><path d="M360 520 l80 -140 M470 470 l120 -90" stroke="#fff2b0" strokeWidth="10"/></Card>;
+export const FairSky = ()=> <Card title="FAIR SKY" subtitle="Clarity · Opportunity · Hope" colors={["#52a8ff","#123caa"]}><circle cx="450" cy="520" r="70" fill="#ffffff"/><path d="M220 700 Q450 520 680 700" stroke="#52a8ff" strokeWidth="16" fill="none"/><path d="M220 760 Q450 580 680 760" stroke="#52a8ff" strokeWidth="10" fill="none" opacity="0.7"/></Card>;
+export const StillWater = ()=> <Card title="STILL WATER" subtitle="Peace · Reflection · Serenity" colors={["#3df0e6","#0c6f79"]}><circle cx="450" cy="470" r="78" fill="#dffcff"/><path d="M220 720 Q320 700 420 720 T620 720" stroke="#3df0e6" strokeWidth="12" fill="none"/><path d="M220 790 Q320 770 420 790 T620 790" stroke="#3df0e6" strokeWidth="8" fill="none" opacity="0.7"/></Card>;
+export const Crosswind = ()=> <Card title="CROSSWIND" subtitle="Change · Flow · Direction" colors={["#9d6bff","#4411aa"]}><path d="M290 760 C300 500,620 470,610 760 C600 1020,300 1020,290 760" fill="none" stroke="#9d6bff" strokeWidth="18"/><path d="M390 650 C470 560,560 620,520 740 C470 850,330 840,360 700" fill="none" stroke="#ffffff" strokeWidth="8" opacity="0.8"/></Card>;
+export const EyeOfStorm = ()=> <Card title="EYE OF STORM" subtitle="Clarity · Insight · Calm" colors={["#ff5577","#8a1030"]}><ellipse cx="450" cy="620" rx="220" ry="120" fill="none" stroke="#ff5577" strokeWidth="18"/><circle cx="450" cy="620" r="58" fill="#ffd1dc"/><circle cx="450" cy="620" r="24" fill="#8a1030"/></Card>;
+
+import { Canvas, useFrame } from '@react-three/fiber';
+import { Points, PointMaterial } from '@react-three/drei';
+import { useRef, useMemo } from 'react';
+import * as THREE from 'three';
+
+function ParticleSwirl({ color='#9d6bff', type='spiral' }: {color?:string; type?:string}) {
+  const ref = useRef<any>(null);
+  const positions = useMemo(() => {
+    const arr = new Float32Array(6000);
+    for (let i=0;i<2000;i++) {
+      const p=i/2000; let x=0,y=0,z=(Math.random()-0.5)*3;
+      if(type==='eye'){ const a=p*Math.PI*2; x=Math.cos(a)*8; y=Math.sin(a)*3; }
+      else if(type==='water'){ const a=p*20; x=(p-0.5)*16; y=Math.sin(a)*2; }
+      else if(type==='sky'){ const a=p*Math.PI*2; x=Math.cos(a)*p*8; y=Math.sin(a)*p*8; }
+      else if(type==='tailwind'){ const a=p*Math.PI*5; x=Math.cos(a)*p*7; y=Math.sin(a)*p*5; }
+      else { const a=p*Math.PI*8; x=Math.cos(a)*p*8; y=Math.sin(a)*p*8; }
+      arr[i*3]=x; arr[i*3+1]=y; arr[i*3+2]=z;
+    }
+    return arr;
+  },[type]);
+  useFrame((state,d)=>{ if(ref.current){ ref.current.rotation.z += d*0.12; ref.current.rotation.y = Math.sin(state.clock.elapsedTime*0.3)*0.08; }});
+  return <Points ref={ref} positions={positions} stride={3} frustumCulled>
+    <PointMaterial transparent color={color} size={0.18} sizeAttenuation depthWrite={false} blending={THREE.AdditiveBlending} />
+  </Points>;
+}
+
+function R3FCard({title,color,type}:{title:string;color:string;type:string}){
+ return <div className="relative w-full aspect-[9/16] rounded-[24px] overflow-hidden bg-black border border-white/10">
+   <Canvas orthographic camera={{zoom:55, position:[0,0,100]}}>
+    <color attach="background" args={['#05060a']} />
+    <ambientLight intensity={0.7}/>
+    <pointLight position={[0,0,10]} intensity={2} color={color}/>
+    <ParticleSwirl color={color} type={type}/>
+    <mesh position={[0,0,-2]}>
+      <planeGeometry args={[30,52]} />
+      <meshBasicMaterial color={color} transparent opacity={0.05} />
+    </mesh>
+   </Canvas>
+   <div className="absolute bottom-8 inset-x-0 text-center text-white tracking-[0.25em] text-sm font-light drop-shadow-xl">{title}</div>
+ </div>
+}
+
+export default function OracleGrid(){return <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 bg-[#05060a]"> <R3FCard title="DIVINE TAILWIND" color="#f6c453" type="tailwind"/> <R3FCard title="FAIR SKY" color="#52a8ff" type="sky"/> <R3FCard title="STILL WATER" color="#3df0e6" type="water"/> <R3FCard title="CROSSWIND" color="#9d6bff" type="spiral"/> <R3FCard title="EYE OF STORM" color="#ff5577" type="eye"/> </div>}

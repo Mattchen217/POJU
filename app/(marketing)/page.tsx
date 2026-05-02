@@ -10,7 +10,6 @@ import { ScienceEvidenceSection } from "@/components/marketing/science-evidence-
 import { TwoTruthsTimelineSection } from "@/components/marketing/two-truths-timeline";
 import { StationeryPaperPanel } from "@/components/marketing/stationery-paper-panel";
 import { PaymentCancelToast } from "@/components/marketing/payment-cancel-toast";
-import { AddToHomeScreenCta } from "@/components/marketing/add-to-home-screen-cta";
 
 // 强制动态渲染，解决 build 时的 Prerender 错误
 export const dynamic = "force-dynamic";
@@ -18,10 +17,10 @@ const productCards = [
   {
     name: "POJU",
     titleLine: "POJU-破局",
-    subtitle: "Breakthrough Q&A",
-    desc: "Deep analysis, actionable plans, real results.",
-    badge: "$9.9",
-    cta: "Learn more →",
+    subtitle: "Breakthrough sessions",
+    desc: "For the question that won't let you go.",
+    badge: "$9.99",
+    cta: "Start a session →",
     href: "/poju",
     cardGradient: "linear-gradient(135deg, rgba(106,69,239,0.62) 0%, rgba(53,42,131,0.74) 48%, rgba(20,26,66,0.98) 100%)",
     overlayGradient: "linear-gradient(180deg, rgba(5,8,23,0.10) 0%, rgba(5,8,23,0.35) 100%)",
@@ -31,8 +30,8 @@ const productCards = [
   {
     name: "SYNCRO",
     titleLine: "POJU-Syncro",
-    subtitle: "Energy Field",
-    desc: "Analyze spatial energy using Bazi, location and time.",
+    subtitle: "See your natural rhythms",
+    desc: "A weather forecast for your inner life, updated every two hours.",
     badge: "Free",
     cta: "Open Syncro →",
     href: "/syncro",
@@ -42,17 +41,17 @@ const productCards = [
     kind: "syncro",
   },
   {
-    name: "ORACLE",
-    titleLine: "POJU-Oracle",
-    subtitle: "Ancient Guidance",
-    desc: "Draw cards for timeless insights and inspiration.",
+    name: "GLYPH",
+    titleLine: "POJU-Glyph",
+    subtitle: "A 60-second mirror",
+    desc: "Read with a wink. The patterns mirror, they don't predict.",
     badge: "Free",
-    cta: "Open Oracle →",
-    href: "/oracle",
+    cta: "Try Glyph →",
+    href: "/glyph",
     cardGradient: "linear-gradient(135deg, rgba(243,193,58,0.62) 0%, rgba(138,90,223,0.74) 48%, rgba(47,35,101,0.98) 100%)",
     overlayGradient: "linear-gradient(180deg, rgba(21,15,36,0.08) 0%, rgba(21,15,36,0.30) 100%)",
     iconGradient: "linear-gradient(135deg, #fbbf24 0%, #e879f9 100%)",
-    kind: "oracle",
+    kind: "glyph",
   },
 ];
 
@@ -289,7 +288,7 @@ export default function LandingPage() {
               <nav className="hidden items-center gap-7 text-[12px] uppercase tracking-[0.12em] text-text-secondary sm:text-[13px] md:flex md:text-[14px]">
                 <Link href="/poju" className="hover:text-text-primary">POJU 破局</Link>
                 <Link href="/syncro" className="hover:text-text-primary">POJU SYNCRO</Link>
-                <Link href="/oracle" className="hover:text-text-primary">POJU ORACLE</Link>
+                <Link href="/glyph" className="hover:text-text-primary">POJU GLYPH</Link>
                 <Link href="/archive" className="hover:text-text-primary">THE ARCHIVE</Link>
               </nav>
               <MarketingLanguageSwitcher />
@@ -301,36 +300,41 @@ export default function LandingPage() {
             <div className="relative z-10 mx-auto grid min-h-[360px] w-full max-w-6xl items-center gap-8 sm:min-h-[420px] md:min-h-[520px] md:grid-cols-[1fr]">
               <div className="text-center">
                 <h1 className="text-[36px] font-semibold leading-[1.06] text-text-primary sm:text-[44px] md:text-[56px] lg:text-[62px]">
-                  Ancient Wisdom,
-                  <br />
-                  <span className="bg-gradient-to-r from-[#7EEBFF] to-[#55E6FF] bg-clip-text text-transparent">
-                    AI-Powered.
-                  </span>
-                  <br />
-                  Made for You.
+                  POJU
                 </h1>
                 <p className="mx-auto mt-4 max-w-[560px] px-2 text-[13px] leading-6 text-[#e6e8f3] sm:text-sm md:px-0 md:text-[15px]">
-                  POJU is an AI Agent that combines timeless Eastern wisdom with modern science to help you
-                  break through life&apos;s challenges.
+                  Where AI meets a thousand years of wisdom.
+                </p>
+                <p className="mx-auto mt-2 max-w-[560px] px-2 text-[13px] leading-6 text-[#e6e8f3] sm:text-sm md:px-0 md:text-[15px]">
+                  When one question keeps circling back, POJU sits with you through it. Backed by AI.
+                  Grounded in millennia of human reflection.
                 </p>
                 <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
                   <Link
                     href="/poju"
                     className="inline-flex w-full max-w-[260px] min-w-[180px] justify-center rounded-full border border-[#7b5cff] bg-[#6d4dff] px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_26px_rgba(109,77,255,0.42)] hover:bg-[#7a5dff] sm:w-auto"
                   >
-                    Start with POJU
+                    Start a POJU session · $9.99
                   </Link>
-                  <AddToHomeScreenCta className="poju-button-secondary w-full max-w-[260px] min-w-[160px] justify-center !px-5 !py-2.5 sm:w-auto" />
+                  <Link
+                    href="/glyph"
+                    className="poju-button-secondary inline-flex w-full max-w-[260px] min-w-[160px] justify-center !px-5 !py-2.5 sm:w-auto"
+                  >
+                    Try Glyph · Free
+                  </Link>
                 </div>
+                <p className="mx-auto mt-3 text-xs text-text-dim">
+                  No account · No subscription · Decisions are yours alone
+                </p>
               </div>
             </div>
 
             <div id="products" className="relative mx-auto mt-8 w-full max-w-6xl pt-5">
-              <h2 className="text-center text-[31px] font-semibold leading-none text-text-primary sm:text-[34px]">Three Paths, One Purpose</h2>
+              <h2 className="text-center text-[31px] font-semibold leading-none text-text-primary sm:text-[34px]">POJU · Glyph · Syncro</h2>
               <div className="mt-2 text-center text-[12px] leading-5 text-text-dim">
-                Explore different dimensions of wisdom.
+                AI breakthrough sessions, grounded in millennia of human reflection.
                 <br />
-                Find clarity, align your energy, and take action.
+                Three ways in. One way through.
               </div>
               <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {productCards.map((card, index) => (
@@ -374,7 +378,7 @@ export default function LandingPage() {
                       </div>
                     </div>
                     {card.kind === "syncro" ? <SyncroCardCornerCompass /> : null}
-                    {card.kind === "oracle" ? <OracleCardParticleCard /> : null}
+                    {card.kind === "glyph" ? <OracleCardParticleCard /> : null}
                   </article>
                 ))}
               </div>
@@ -453,7 +457,7 @@ export default function LandingPage() {
             <div className="mt-10 max-w-2xl space-y-4 text-sm leading-7 text-text-secondary">
               <p className="text-pretty hyphens-manual">
                 We&apos;re not a company that sells data because we don&apos;t collect data. We&apos;re a company that
-                sells one thing: a $9.9 conversation that helps you move through what&apos;s stuck. That&apos;s the
+                sells one thing: a $9.99 conversation that helps you move through what&apos;s stuck. That&apos;s the
                 whole <span className="whitespace-nowrap">business model.</span>
               </p>
               <p>
@@ -470,7 +474,7 @@ export default function LandingPage() {
         <section className="poju-cosmic-panel mt-8 w-full px-4 py-8 text-center md:mt-10 md:px-8 md:py-10">
           <div className="mx-auto flex w-full max-w-6xl flex-col items-center">
             <h2 className="text-[30px] font-semibold text-text-primary sm:text-3xl">Ready to break through?</h2>
-            <p className="mt-2 max-w-xl text-sm text-text-secondary sm:text-[15px]">One question. $9.9. Delivered in one conversation.</p>
+            <p className="mt-2 max-w-xl text-sm text-text-secondary sm:text-[15px]">One question. $9.99. Delivered in one conversation.</p>
             <Link
               href="/poju"
               className="mt-5 inline-flex w-full max-w-[260px] min-w-[180px] justify-center rounded-full border border-[#7b5cff] bg-[#6d4dff] px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_26px_rgba(109,77,255,0.42)] hover:bg-[#7a5dff] sm:w-auto"
@@ -493,7 +497,7 @@ export default function LandingPage() {
             </div>
             <p className="mt-4 text-center text-xs text-text-dim">© 2026 POJU. All rights reserved.</p>
             <p className="mt-2 text-center text-xs text-text-dim">
-              Not medical, legal, or financial advice. Consult licensed professionals for those matters.
+              For reflection and entertainment. POJU does not predict outcomes or replace professional advice.
             </p>
           </div>
         </footer>

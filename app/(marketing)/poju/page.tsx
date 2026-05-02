@@ -83,8 +83,8 @@ export default function PojuProductPage() {
               <Link href="/syncro" className="hover:text-text-primary">
                 POJU SYNCRO
               </Link>
-              <Link href="/oracle" className="hover:text-text-primary">
-                POJU ORACLE
+              <Link href="/glyph" className="hover:text-text-primary">
+                POJU GLYPH
               </Link>
               <Link href="/archive" className="hover:text-text-primary">
                 THE ARCHIVE
@@ -96,28 +96,48 @@ export default function PojuProductPage() {
 
         <PojuProductHero />
 
+        <section className="mx-auto mt-6 w-full max-w-3xl px-4 md:px-8">
+          <div className="rounded-2xl border border-white/10 bg-black/25 px-5 py-6 sm:px-7 sm:py-7">
+            <h2 className="text-center text-[24px] font-semibold text-text-primary sm:text-[28px]">POJU</h2>
+            <p className="mt-2 text-center text-sm italic text-text-secondary sm:text-base">
+              Breakthrough sessions for the question that won&apos;t let you go.
+            </p>
+            <p className="mt-4 text-[15px] leading-8 text-text-secondary">
+              When you&apos;ve already read the books, talked to friends, weighed the pros and cons - and
+              still can&apos;t see clearly - POJU sits with you through it.
+            </p>
+            <p className="mt-3 text-[15px] leading-8 text-text-secondary">
+              It asks. It listens. It pulls threads you didn&apos;t know were connected. It doesn&apos;t tell
+              you what to do. It helps you see what you couldn&apos;t see alone.
+            </p>
+            <p className="mt-4 text-center text-sm text-text-dim">
+              $9.99 per session · No subscription · Unlimited depth
+            </p>
+          </div>
+        </section>
+
         <section
-          id="oracle-vs-poju"
+          id="glyph-vs-poju"
           className="mx-auto mt-8 w-full max-w-3xl scroll-mt-28 px-4 pt-2 pb-2 md:px-8"
         >
           <div className="rounded-2xl border border-white/10 bg-black/25 px-5 py-6 sm:px-7 sm:py-7">
             <h2 className="text-center text-[22px] font-semibold text-text-primary sm:text-[24px]">
-              Oracle vs POJU
+              Glyph vs POJU
             </h2>
             <p className="mt-4 text-center text-[15px] leading-8 text-text-secondary sm:text-base">
-              <span className="font-medium text-fuchsia-200">Oracle</span> is free and fast — one sincere question, one
+              <span className="font-medium text-fuchsia-200">Glyph</span> is free and fast — one sincere question, one
               sign in about two minutes. <span className="font-medium text-purple-vivid">POJU</span> is a paid session
               that walks with you for much longer when you need a full breakthrough, not only a direction.
             </p>
             <p className="mt-3 text-center text-sm text-text-dim">
-              Full side-by-side lives on the Oracle page. Jump there if you are still choosing.
+              Full side-by-side lives on the Glyph page. Jump there if you are still choosing.
             </p>
             <div className="mt-5 flex justify-center">
               <Link
-                href="/oracle#oracle-poju-compare"
+                href="/glyph#glyph-poju-compare"
                 className="text-sm font-medium text-fuchsia-200/90 underline-offset-4 hover:text-fuchsia-100 hover:underline sm:text-[15px]"
               >
-                Open the Oracle comparison table →
+                Open the Glyph comparison table →
               </Link>
             </div>
           </div>
@@ -235,6 +255,29 @@ export default function PojuProductPage() {
           </div>
         </section>
 
+        <section className="mx-auto mt-8 w-full max-w-6xl px-4 py-10 md:mt-10 md:px-8 md:py-12">
+          <div className="grid gap-6 md:grid-cols-2">
+            <article className="rounded-xl border border-white/10 bg-black/25 p-6">
+              <h3 className="text-xl font-semibold text-text-primary">What&apos;s included</h3>
+              <ul className="mt-4 space-y-2 text-[15px] leading-8 text-text-secondary">
+                <li>Unlimited depth in a single session</li>
+                <li>Action plan you can act on tomorrow</li>
+                <li>Reflection prompts to sit with</li>
+                <li>30-day session access</li>
+              </ul>
+            </article>
+            <article className="rounded-xl border border-white/10 bg-black/25 p-6">
+              <h3 className="text-xl font-semibold text-text-primary">What POJU is NOT</h3>
+              <ul className="mt-4 space-y-2 text-[15px] leading-8 text-text-secondary">
+                <li>Does not predict your future</li>
+                <li>Does not replace professional advice</li>
+                <li>Does not make decisions for you</li>
+              </ul>
+              <p className="mt-4 text-sm text-text-dim">POJU is a thinking partner. Decisions remain yours.</p>
+            </article>
+          </div>
+        </section>
+
         <section id="poju-cta" className="poju-cosmic-panel mt-8 w-full px-4 py-8 text-center md:mt-10 md:px-8 md:py-10">
           <div className="mx-auto flex w-full max-w-6xl flex-col items-center">
             <h2 className="text-[30px] font-semibold text-text-primary sm:text-[34px] md:text-[38px] lg:text-[40px]">
@@ -276,7 +319,7 @@ export default function PojuProductPage() {
             </div>
             <p className="mt-4 text-center text-xs text-text-dim">© 2026 POJU. All rights reserved.</p>
             <p className="mt-2 text-center text-xs text-text-dim">
-              Not medical, legal, or financial advice. Consult licensed professionals for those matters.
+              POJU is a thinking partner. It offers perspectives, not prophecies. Decisions are yours alone.
             </p>
           </div>
         </footer>

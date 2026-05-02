@@ -9,7 +9,7 @@ const tabs = [
   { href: "/", label: "⌂" },
   { href: "/poju", label: "POJU" },
   { href: "/syncro", label: "SYNCRO" },
-  { href: "/oracle", label: "ORACLE" },
+  { href: "/glyph", label: "GLYPH" },
   { href: "/archive", label: "✦" },
 ];
 

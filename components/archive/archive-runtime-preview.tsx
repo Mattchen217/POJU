@@ -120,7 +120,7 @@ export function ArchiveRuntimePreview() {
       return;
     }
     if (entry.kind === "oracle") {
-      router.push(`/oracle/stage-1?${params.toString()}`);
+      router.push(`/glyph/stage-1?${params.toString()}`);
       return;
     }
     router.push(`/syncro?${params.toString()}`);
@@ -220,7 +220,7 @@ export function ArchiveRuntimePreview() {
             { key: "all", label: "All" },
             { key: "poju", label: "POJU" },
             { key: "syncro", label: "Syncro" },
-            { key: "oracle", label: "Oracle" },
+            { key: "oracle", label: "Glyph" },
           ] as const).map((opt) => (
             <button
               key={opt.key}

@@ -10,16 +10,26 @@ const withSerwist = withSerwistInit({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // 强制指定使用 webpack 避免 Turbopack 自动开启
-  transpilePackages: ["three"], 
-  
-  webpack(config) {
-    // 兼容 GLSL
-    config.module.rules.push({
-      test: /\.(glsl|vert|frag)$/,
-      type: "asset/source",
-    });
-    return config;
+  // 便于在 VPS / Docker 用「单进程 + 小 node_modules」部署
+  output: "standalone",
+  async redirects() {
+    return [
+      {
+        source: "/oracle",
+        destination: "/glyph",
+        permanent: true,
+      },
+      {
+        source: "/oracle/reading",
+        destination: "/glyph/reading",
+        permanent: true,
+      },
+      {
+        source: "/oracle/stage-1",
+        destination: "/glyph/stage-1",
+        permanent: true,
+      },
+    ];
   },
 };
 

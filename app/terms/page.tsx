@@ -26,7 +26,7 @@ const terms = [
 ] as const;
 
 const termsOriginalBlocks = [
-  `By accessing or using POJU, Syncro, or Oracle (collectively, 
+  `By accessing or using POJU, Syncro, or Glyph (collectively, 
 "the Services"), you agree to these Terms of Service.
 
 POJU provides AI-powered insights drawing from Eastern 
@@ -52,7 +52,7 @@ See our Disclaimer (/disclaimer) for full details.`,
   `POJU Breakthrough Sessions cost US$9.99 per session, 
 charged once.
 
-Syncro and Oracle are free and always will be.
+Syncro and Glyph are free and always will be.
 
 · All payments are one-time only. No subscriptions.
 · No automatic renewals. No hidden charges.
@@ -145,8 +145,8 @@ function TermsContent() {
                 <Link href="/syncro" className="hover:text-text-primary">
                   POJU SYNCRO
                 </Link>
-                <Link href="/oracle" className="hover:text-text-primary">
-                  POJU ORACLE
+                <Link href="/glyph" className="hover:text-text-primary">
+                  POJU GLYPH
                 </Link>
                 <Link href="/archive" className="hover:text-text-primary">
                   THE ARCHIVE
@@ -202,6 +202,9 @@ function TermsContent() {
                 </Link>
               </div>
               <p className="mt-4 text-center text-xs text-text-dim">© 2026 POJU. All rights reserved.</p>
+              <p className="mt-2 text-center text-xs text-text-dim">
+                For reflection and entertainment. POJU does not predict outcomes or replace professional advice.
+              </p>
             </div>
           </footer>
         </div>

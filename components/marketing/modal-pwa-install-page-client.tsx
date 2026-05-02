@@ -49,7 +49,7 @@ export function ModalPwaInstallPageClient() {
                   Add POJU to your home screen
                 </h2>
                 <p className="mx-auto max-w-[280px] text-[16px] leading-[1.6] text-[#cbc3d7]">
-                  Experience the Oracle as a native app.
+                  Experience Glyph as a native app.
                 </p>
               </div>
             </div>

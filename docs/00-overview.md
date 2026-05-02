@@ -38,7 +38,7 @@ pojulife.com
 │
 ├─ /syncro                  03-syncro.md               Syncro 产品页
 │
-├─ /oracle                  04-oracle.md               Oracle 产品页
+├─ /glyph                   04-glyph.md                Glyph 产品页
 │
 ├─ /chat                    05-chat.md                 POJU Chat 付费对话页
 │
@@ -82,7 +82,7 @@ pojulife.com
 - `01-landing.md` — 主落地页（9 屏 Hero → Footer）
 - `02-poju.md` — POJU 产品页
 - `03-syncro.md` — Syncro 产品页 **PC 端部分**（移动端留 Task 3）
-- `04-oracle.md` — Oracle 产品页 **静态介绍部分**（交互留 Task 4）
+- `04-glyph.md` — Glyph 产品页 **静态介绍部分**（交互留 Task 4）
 - `06-archive.md` — The Archive **空状态版本**
 - `07-disclaimer.md` — 免责声明
 - `08-privacy.md` — 隐私政策
@@ -104,10 +104,10 @@ pojulife.com
 - `17-modal-pwa-install.md` — PWA 添加主屏幕引导弹窗
 - `06-archive.md` 补完 — Syncro 条目展示
 
-### Task 4 · Oracle 完整交互
+### Task 4 · Glyph 完整交互
 
-- `04-oracle.md` 补完 — 完整 7 Stage 仪式流
-- `06-archive.md` 补完 — Oracle 条目 + 3 签联动组合条目
+- `04-glyph.md` 补完 — 完整 7 Stage 仪式流
+- `06-archive.md` 补完 — Glyph 条目 + 3 签联动组合条目
 
 ### Task 5 · 支付 + 邮件 + 真实 AI
 
@@ -135,7 +135,7 @@ pojulife.com
 **中部水平菜单**：
 - POJU（→ `/poju`）
 - SYNCRO（→ `/syncro`）
-- ORACLE（→ `/oracle`）
+- GLYPH（→ `/glyph`）
 - THE ARCHIVE（→ `/archive`）
 
 **右侧**：
@@ -150,7 +150,7 @@ pojulife.com
 - 汉堡按钮 `≡`
 
 **点击汉堡** → 侧滑抽屉：
-- POJU / SYNCRO / ORACLE / The Archive
+- POJU / SYNCRO / GLYPH / The Archive
 - 分隔线
 - Disclaimer / Privacy / Terms / Contact
 - 关闭按钮 `×`
@@ -161,7 +161,7 @@ pojulife.com
 - Home `⌂` → `/`
 - POJU → `/poju` 或 `/chat`（若有活跃 Session）
 - Syncro → `/syncro`
-- Oracle → `/oracle`
+- Glyph → `/glyph`
 - Archive `✦` → `/archive`
 
 当前 Tab 下方紫色小圆点指示。
@@ -181,7 +181,7 @@ pojulife.com
   - Contact
 - 分隔线
 - 版权声明：`© 2026 POJU. All rights reserved.`
-- 免责声明短句：`Not medical, legal, or financial advice. Consult licensed professionals for those matters.`
+- 免责声明短句：`For reflection and entertainment. POJU does not predict outcomes or replace professional advice.`
 
 **移动端**：Legal 和 Support 折叠为手风琴，默认关闭。
 
@@ -200,12 +200,12 @@ pojulife.com
 | POJU 产品页底部 | `poju_page_bottom` |
 | Syncro 结果页钩子 | `syncro_hook` |
 | Syncro 精准拍照钩子 | `syncro_precise_hook` |
-| Oracle 卡片底部钩子 | `oracle_hook` |
-| Oracle 3 签联动触发 | `oracle_3sign_trigger` |
+| Glyph 卡片底部钩子 | `oracle_hook` |
+| Glyph 3 签联动触发 | `oracle_3sign_trigger` |
 | Chat 左侧栏 "New POJU" | `chat_new_poju` |
 | Archive 空状态 CTA | `archive_new_question` |
 
-所有支付成功后，metadata 会传给 Chat 页面作为 AI 起始上下文（例如从 Oracle 钩子进入时，AI 第一句话会引用刚抽的签）。
+所有支付成功后，metadata 会传给 Chat 页面作为 AI 起始上下文（例如从 Glyph 钩子进入时，AI 第一句话会引用刚抽的签）。
 
 ---
 

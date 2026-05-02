@@ -10,7 +10,7 @@ import { MobileDrawer } from "@/components/layout/mobile-drawer";
 const navItems = [
   { href: "/poju", label: "POJU" },
   { href: "/syncro", label: "SYNCRO" },
-  { href: "/oracle", label: "ORACLE" },
+  { href: "/glyph", label: "GLYPH" },
   { href: "/archive", label: "✦ ARCHIVE" },
 ];
 

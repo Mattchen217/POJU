@@ -14,11 +14,11 @@ export function PojuProductHero() {
         <div className="relative z-10 mx-auto flex min-h-[360px] w-full max-w-6xl items-center justify-center px-2 sm:min-h-[420px] sm:px-4 md:min-h-[520px] md:px-6">
           <div className="min-w-0 w-full max-w-[720px] text-center">
             <h1 className="mx-auto max-w-[720px] text-[36px] font-semibold leading-[1.06] text-text-primary sm:text-[44px] md:text-[52px] md:leading-[1.04] lg:text-[56px]">
-              Break your deadlock.
+              Breakthrough sessions for the question that won&apos;t let you go.
             </h1>
             <p className="mx-auto mt-6 max-w-xl px-2 text-[14px] leading-7 text-[#e6e8f3] sm:mt-7 sm:text-[15px] sm:leading-8 md:mt-8 md:px-0 md:text-[16px] md:leading-9">
-              Guided by 2,000 years of Eastern wisdom, reinforced by modern science, delivered by an AI Agent that walks
-              with you.
+              When you&apos;ve read the books, talked to friends, and still can&apos;t see clearly, POJU sits
+              with you through it. An AI agent grounded in millennia of human reflection.
             </p>
             <div className="mx-auto mt-10 flex max-w-xl flex-col items-center justify-center gap-4 sm:mt-12 sm:flex-row sm:flex-wrap md:mt-14">
               <Link

@@ -14,11 +14,7 @@ export function SyncroProductHero() {
         <div className="relative z-10 mx-auto flex min-h-[360px] w-full max-w-6xl items-center justify-center px-2 sm:min-h-[420px] sm:px-4 md:min-h-[520px] md:px-6">
           <div className="min-w-0 w-full max-w-[760px] text-center">
             <h1 className="mx-auto max-w-[760px] text-[36px] font-semibold leading-[1.08] text-text-primary sm:text-[40px] md:text-[48px] lg:text-[52px]">
-              See how your energy aligns with
-              <br />
-              <span className="bg-gradient-to-r from-[#7EEBFF] to-[#55E6FF] bg-clip-text text-transparent">
-                the space around you.
-              </span>
+              See your natural rhythms.
             </h1>
             <div className="mx-auto mt-10 flex max-w-xl flex-col items-center justify-center gap-4 sm:mt-12 sm:flex-row sm:flex-wrap md:mt-14">
               <a
@@ -39,8 +35,8 @@ export function SyncroProductHero() {
       </div>
       <div className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-10 text-center sm:pb-12 md:px-6">
         <p className="mx-auto max-w-xl text-[14px] leading-7 text-[#e6e8f3] sm:text-[15px] sm:leading-8 md:text-[16px] md:leading-9">
-          Syncro reads your Bazi, your location, and this exact moment — then shows you which direction carries what
-          energy.
+          Based on your birth context, Syncro reflects how the day&apos;s energy aligns with your personal
+          patterns. Think of it as a weather forecast for your inner life.
         </p>
         <p className="mx-auto mt-5 inline-flex rounded-full border border-amber-200/30 bg-amber-200/10 px-3 py-1 text-xs font-medium text-amber-100">
           Opens on mobile only
