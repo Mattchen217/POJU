@@ -29,10 +29,10 @@ export function MobileDrawer({ open, onClose }: MobileDrawerProps) {
             className="fixed right-0 top-0 z-50 h-full w-72 border-l border-glass-border bg-bg-layer-1/95 p-6 backdrop-blur-xl"
           >
             <nav className="mt-8 flex flex-col gap-4 text-sm">
-              <Link href="/poju" onClick={onClose}>POJU · Break your deadlock</Link>
-              <Link href="/syncro" onClick={onClose}>SYNCRO · Your energy map</Link>
-              <Link href="/glyph" onClick={onClose}>GLYPH · Read your reflection</Link>
-              <Link href="/archive" onClick={onClose}>✦ Archive</Link>
+              <Link href="/poju" onClick={onClose}>POJU</Link>
+              <Link href="/glyph" onClick={onClose}>Glyph</Link>
+              <Link href="/syncro" onClick={onClose}>Syncro</Link>
+              <Link href="/archive" onClick={onClose}>Archive</Link>
               <hr className="my-2 border-glass-border" />
               <Link href="/disclaimer" onClick={onClose}>Disclaimer</Link>
               <Link href="/privacy" onClick={onClose}>Privacy</Link>

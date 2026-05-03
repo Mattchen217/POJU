@@ -415,10 +415,10 @@ export function SyncroMobileFlow() {
         <div className="mt-4 rounded-2xl border border-white/10 bg-black/25 p-4">
           <h3 className="text-[16px] font-semibold text-text-primary">How Syncro reads you</h3>
           <ul className="mt-3 space-y-2 text-sm leading-7 text-text-secondary">
-            <li>✦ GANZHI — 60-base time coordination</li>
-            <li>✦ BAGUA — 9-palace spatial map</li>
-            <li>✦ WUXING — 5-phase dynamics</li>
-            <li>✦ KANYU — magnetic + solar timing context</li>
+            <li>✦ Session timing — calendar windows aligned with your birth context</li>
+            <li>✦ Direction grid — headings mapped into eight directional zones</li>
+            <li>✦ Phase cues — emphasis shifts across the day&apos;s cycle</li>
+            <li>✦ Sensor fusion — compass, GPS, and daylight timing for local context</li>
           </ul>
           <label className="mt-3 flex items-center gap-2 text-sm text-text-secondary">
             <input type="checkbox" checked={dontShow} onChange={(e) => setDontShow(e.target.checked)} />

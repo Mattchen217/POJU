@@ -9,7 +9,7 @@ const scienceEvidenceCards: {
   {
     title: "Magnetic fields affect cognition",
     body:
-      "Geomagnetic cues subtly shape spatial judgement and neural processing—effects Eastern traditions long linked to polarity, direction, and auspicious alignment.",
+      "Geomagnetic cues subtly shape spatial judgement and neural processing—effects some traditions long linked to polarity, direction, and supportive spatial framing.",
     citation: "[COGNITIVE NEUROSCIENCE / 2024]",
     deco: "brain",
   },
@@ -163,7 +163,7 @@ export function ScienceEvidenceSection() {
 
       <div className="mx-auto mt-12 max-w-3xl text-center md:mt-14">
         <p className="text-sm text-text-secondary">Eastern traditions named these forces two thousand years ago.</p>
-        <p className="mt-2 text-sm tracking-[0.16em] text-text-accent">QI · XUAN · BAZI · YUAN</p>
+        <p className="mt-2 text-sm tracking-[0.16em] text-text-accent">PATTERN · PLACE · TIME · YOU</p>
         <p className="mt-3 text-sm text-text-secondary">
           POJU uses AI to translate both languages into something
           <br />

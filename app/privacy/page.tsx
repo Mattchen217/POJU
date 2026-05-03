@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { MarketingLanguageSwitcher } from "@/components/marketing/marketing-language-switcher";
 import { MarketingLocaleProvider } from "@/components/marketing/marketing-locale";
 import { PojuMarkLogo } from "@/components/marketing/poju-mark-logo";
+import { StationeryPaperPanel } from "@/components/marketing/stationery-paper-panel";
 
 // 1. 强制动态渲染，防止 Build 时的 Prerender 错误
 export const dynamic = "force-dynamic";
@@ -181,6 +182,30 @@ Physical address (if required by your jurisdiction):
   re-agreement`,
 ] as const;
 
+const privacyArchitectureItems = [
+  {
+    title: "✦ Your conversations are encrypted on your device.",
+    body: "Not \"secured on our servers.\" Encrypted with AES-256-GCM right in your browser, using a key we never see. Even if our servers were breached, there is nothing to steal.",
+    verify:
+      "Verify it yourself: open DevTools -> Application -> IndexedDB. You'll see encrypted gibberish, not your words.",
+  },
+  {
+    title: "✦ We have no account system.",
+    body: "No email at signup. No password. No phone number. No Google/Apple login. Your device fingerprint is your only ID - a one-way hash we use to restore your paid session, nothing else.",
+    verify: "Verify it yourself: nothing to sign up for. Try the free tools right now.",
+  },
+  {
+    title: "✦ Your email is forbidden from living on our servers.",
+    body: "If you export your reading as PDF, we ask for your email. We send the PDF. Then we delete your address within 24 hours - physically erased from the database. Even we can't reach you after that.",
+    verify: "Your control: one-click unsubscribe. Auto-delete everywhere.",
+  },
+  {
+    title: "✦ Anthropic's Zero Data Retention is enabled.",
+    body: "Your conversations go through Claude, but Anthropic doesn't save them, doesn't train on them, and doesn't let humans review them. We pay extra specifically for this guarantee.",
+    verify: "Verify it yourself: Anthropic's Zero Data Retention policy is public.",
+  },
+] as const;
+
 // 2. 将原页面逻辑移至 Content 组件
 function PrivacyContent() {
   return (
@@ -195,18 +220,18 @@ function PrivacyContent() {
                   POJU
                 </span>
               </Link>
-              <nav className="hidden items-center gap-7 text-[12px] uppercase tracking-[0.12em] text-text-secondary sm:text-[13px] md:flex md:text-[14px]">
+              <nav className="hidden items-center gap-7 text-[12px] tracking-[0.12em] text-text-secondary sm:text-[13px] md:flex md:text-[14px]">
                 <Link href="/poju" className="hover:text-text-primary">
-                  POJU 破局
-                </Link>
-                <Link href="/syncro" className="hover:text-text-primary">
-                  POJU SYNCRO
+                  POJU
                 </Link>
                 <Link href="/glyph" className="hover:text-text-primary">
-                  POJU GLYPH
+                  Glyph
+                </Link>
+                <Link href="/syncro" className="hover:text-text-primary">
+                  Syncro
                 </Link>
                 <Link href="/archive" className="hover:text-text-primary">
-                  THE ARCHIVE
+                  Archive
                 </Link>
               </nav>
               <MarketingLanguageSwitcher />
@@ -220,6 +245,35 @@ function PrivacyContent() {
             <pre className="mx-auto mt-6 max-w-2xl whitespace-pre-wrap text-center text-[15px] leading-8 text-text-secondary">
               {privacyIntro}
             </pre>
+
+            <section id="privacy-architecture" className="mx-auto mt-10 max-w-3xl scroll-mt-24 px-1">
+              <StationeryPaperPanel>
+                <p className="poju-kicker">How we actually keep our word.</p>
+                <h2 className="mt-3 max-w-3xl text-xl font-semibold leading-snug text-text-primary sm:text-2xl">
+                  Privacy isn&apos;t a checkbox. It&apos;s our architecture.
+                </h2>
+                <div className="mt-8 max-w-3xl space-y-10">
+                  {privacyArchitectureItems.map((item) => (
+                    <article key={item.title}>
+                      <p className="font-semibold text-text-primary">{item.title}</p>
+                      <p className="mt-2 text-sm leading-7 text-text-secondary">{item.body}</p>
+                      <p className="mt-2 text-xs italic leading-relaxed text-text-dim">{item.verify}</p>
+                    </article>
+                  ))}
+                </div>
+                <div className="mt-10 max-w-2xl space-y-4 text-sm leading-7 text-text-secondary">
+                  <p className="text-pretty hyphens-manual">
+                    We&apos;re not a company that sells data because we don&apos;t collect data. We&apos;re a company that
+                    sells one thing: a $9.99 conversation that helps you move through what&apos;s stuck. That&apos;s
+                    the whole <span className="whitespace-nowrap">business model.</span>
+                  </p>
+                  <p>
+                    If you ever doubt us: every claim on this page can be verified in a minute with your browser&apos;s
+                    DevTools or public documentation.
+                  </p>
+                </div>
+              </StationeryPaperPanel>
+            </section>
 
             <div className="mt-8 space-y-7">
               {sections.map((section, idx) => (
@@ -261,7 +315,7 @@ function PrivacyContent() {
               </div>
               <p className="mt-4 text-center text-xs text-text-dim">© 2026 POJU. All rights reserved.</p>
               <p className="mt-2 text-center text-xs text-text-dim">
-                For reflection and entertainment. POJU does not predict outcomes or replace professional advice.
+                For self-reflection and entertainment. POJU offers perspectives, not predictions. All decisions are yours alone.
               </p>
             </div>
           </footer>

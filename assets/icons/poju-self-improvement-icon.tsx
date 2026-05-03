@@ -1,11 +1,9 @@
+import { Layers } from "lucide-react";
+
 type PojuSelfImprovementIconProps = {
   className?: string;
 };
 
-export function PojuSelfImprovementIcon({ className = "text-[20px] text-white" }: PojuSelfImprovementIconProps) {
-  return (
-    <span className={`material-symbols-outlined ${className}`} aria-hidden>
-      self_improvement
-    </span>
-  );
+export function PojuSelfImprovementIcon({ className = "h-5 w-5 text-white" }: PojuSelfImprovementIconProps) {
+  return <Layers className={className} strokeWidth={1.5} aria-hidden />;
 }

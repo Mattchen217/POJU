@@ -121,7 +121,7 @@ export function HomeSections() {
         <h2 className="poju-section-title mt-2">Ancient · Modern · AI Agent · You</h2>
         <div className="mt-6 grid gap-3">
           {[
-            ["Ancient", "Two thousand years of Eastern observation: Daoism · Feng Shui · Bazi · Yi Jing."],
+            ["Ancient", "Two thousand years of human observation on patterns, place, timing, and purpose."],
             ["Modern", "Reinforced by science: magnetic fields · spatial cognition · circadian rhythms · environmental psychology."],
             ["AI Agent", "Translated by an intelligence trained on both into actions you can do today."],
             ["You", "Your birth chart. Your direction. Your question. Your this exact moment."],

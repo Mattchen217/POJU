@@ -67,15 +67,28 @@ function formatDate(ts: number): string {
   return new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function dateGroup(ts: number): "Today" | "This Week" | "Earlier" {
+function dateGroup(ts: number): "Today" | "Yesterday" | "Previous Sessions" {
   const now = new Date();
   const d = new Date(ts);
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const val = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   const diff = Math.floor((today - val) / 86400000);
   if (diff <= 0) return "Today";
-  if (diff < 7) return "This Week";
-  return "Earlier";
+  if (diff === 1) return "Yesterday";
+  return "Previous Sessions";
+}
+
+function sessionListIcon(group: "Today" | "Yesterday" | "Previous Sessions", isActive: boolean) {
+  const name = group === "Today" ? "history" : group === "Yesterday" ? "schedule" : "folder_open";
+  const cls =
+    group === "Today" && isActive
+      ? "text-violet-400"
+      : "text-neutral-400 group-hover:text-white";
+  return (
+    <span className={`material-symbols-outlined shrink-0 text-[20px] leading-none ${cls}`}>
+      {name}
+    </span>
+  );
 }
 
 export function ChatPageClient() {
@@ -89,7 +102,7 @@ export function ChatPageClient() {
 
   const [ready, setReady] = useState(false);
   const [mobileDrawer, setMobileDrawer] = useState(false);
-  const [rightMenuOpen, setRightMenuOpen] = useState(false);
+  const [mysticalToolsOpen, setMysticalToolsOpen] = useState(false);
   const sessions = useChatStore((s) => s.sessions);
   const messages = useChatStore((s) => s.messages);
   const activeSessionId = useChatStore((s) => s.activeSessionId);
@@ -99,7 +112,6 @@ export function ChatPageClient() {
   const setActiveSessionId = useChatStore((s) => s.setActiveSessionId);
   const [composer, setComposer] = useState("");
   const [composerImage, setComposerImage] = useState<ComposerImage | null>(null);
-  const [welcomeVisible, setWelcomeVisible] = useState(true);
   const [thinkingLines, setThinkingLines] = useState<string[]>([]);
   const [thinkingVisible, setThinkingVisible] = useState(false);
   const [copiedId, setCopiedId] = useState("");
@@ -194,23 +206,21 @@ export function ChatPageClient() {
     }
   }, [searchParams, sessions, setActiveSessionId]);
 
-  useEffect(() => {
-    scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, thinkingLines, welcomeVisible]);
-
   const activeSession = useMemo(() => sessions.find((s) => s.id === activeSessionId), [sessions, activeSessionId]);
   const activeMessages = useMemo(
     () => messages.filter((m) => m.sessionId === activeSessionId),
     [messages, activeSessionId],
   );
-  const activeCount = sessions.filter((s) => s.status === "active").length;
 
+  useEffect(() => {
+    scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages, thinkingLines, activeSessionId, activeMessages.length]);
   const groupedSessions = useMemo(() => {
     const visible = sessions.filter((s) => !s.hidden || s.id === activeSessionId).sort((a, b) => b.createdAt - a.createdAt);
     return {
       Today: visible.filter((s) => dateGroup(s.createdAt) === "Today"),
-      "This Week": visible.filter((s) => dateGroup(s.createdAt) === "This Week"),
-      Earlier: visible.filter((s) => dateGroup(s.createdAt) === "Earlier"),
+      Yesterday: visible.filter((s) => dateGroup(s.createdAt) === "Yesterday"),
+      "Previous Sessions": visible.filter((s) => dateGroup(s.createdAt) === "Previous Sessions"),
     };
   }, [sessions, activeSessionId]);
 
@@ -264,7 +274,6 @@ export function ChatPageClient() {
     });
     setComposer("");
     setComposerImage(null);
-    setWelcomeVisible(false);
     const userTurnCount =
       messages.filter((m) => m.sessionId === activeSessionId && m.role === "user").length + 1;
     await simulateAssistant(text, userTurnCount);
@@ -275,7 +284,6 @@ export function ChatPageClient() {
     setSessions((prev) => [s, ...prev]);
     setActiveSessionId(s.id);
     setMessages((prev) => prev);
-    setWelcomeVisible(true);
   };
 
   const renameSession = () => {
@@ -399,31 +407,47 @@ export function ChatPageClient() {
 
   if (!ready || !activeSession) return null;
 
-  const sidebar = (
-    <aside className="h-full w-full border-r border-white/10 bg-neutral-950/60 shadow-[0_0_40px_rgba(139,92,246,0.1)] backdrop-blur-2xl lg:w-72">
-      <div className="flex h-full flex-col p-4">
-        <div className="border-b border-white/10 pb-4">
-          <Link href="/" className="text-2xl font-bold tracking-tight text-transparent bg-gradient-to-r from-violet-400 to-fuchsia-500 bg-clip-text">
+  const sessionGroupsOrder = ["Today", "Yesterday", "Previous Sessions"] as const;
+
+  const sidebarInner = (
+    <div className="flex h-full flex-col">
+      <div className="flex items-center justify-between border-b border-white/10 p-4">
+        <div>
+          <Link
+            href="/"
+            className="bg-gradient-to-r from-violet-400 to-fuchsia-500 bg-clip-text text-2xl font-bold tracking-tight text-transparent"
+          >
             POJU
           </Link>
-          <p className="mt-1 text-[11px] uppercase tracking-wider text-on-surface-variant">Zen-Futurist Glyph</p>
-          <p className="mt-2 text-xs text-text-dim">{activeCount} active sessions</p>
+          <p className="mt-1 text-[11px] uppercase tracking-wider text-on-surface-variant">Zen-Futurist Oracle</p>
         </div>
+        <img
+          alt=""
+          className="h-8 w-8 rounded-full border border-outline-variant object-cover"
+          src="/api/pwa-icon?size=64"
+          width={32}
+          height={32}
+        />
+      </div>
+      <div className="p-2">
         <button
           type="button"
           onClick={newSession}
-          className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-medium text-on-primary shadow-[0_0_15px_rgba(139,92,246,0.4)] transition-transform hover:scale-[1.02]"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-medium text-on-primary shadow-[0_0_15px_rgba(139,92,246,0.4)] transition-transform hover:scale-[1.02]"
         >
-          <span>＋</span> New POJU {siteConfig.priceLabel}
+          <span className="material-symbols-outlined text-[20px] leading-none">add</span>
+          New POJU {siteConfig.priceLabel}
         </button>
-        <div className="my-4 h-px bg-white/10" />
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
-          {(Object.keys(groupedSessions) as Array<keyof typeof groupedSessions>).map((g) =>
-            groupedSessions[g].length ? (
-              <div key={g}>
-                <p className="mb-2 text-xs uppercase tracking-[0.12em] text-text-dim">{g}</p>
-                <div className="space-y-1.5">
-                  {groupedSessions[g].map((s) => (
+      </div>
+      <nav className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2">
+        {sessionGroupsOrder.map((g) =>
+          groupedSessions[g].length ? (
+            <div key={g}>
+              <p className="mb-1 px-1 text-[11px] uppercase tracking-wider text-on-surface-variant">{g}</p>
+              <div className="flex flex-col gap-1">
+                {groupedSessions[g].map((s) => {
+                  const active = s.id === activeSessionId;
+                  return (
                     <button
                       key={s.id}
                       type="button"
@@ -431,66 +455,56 @@ export function ChatPageClient() {
                         setActiveSessionId(s.id);
                         setMobileDrawer(false);
                       }}
-                      className={`w-full rounded-lg border px-3 py-3 text-left text-xs transition-all hover:scale-[1.02] ${
-                        s.id === activeSessionId
-                          ? "border-violet-500/25 bg-violet-500/10 text-violet-200 ring-1 ring-inset ring-violet-500/20"
-                          : "border-white/8 bg-black/20 text-text-secondary hover:bg-white/5"
+                      className={`group flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left transition-all hover:scale-[1.02] ${
+                        active
+                          ? "bg-violet-500/10 font-semibold text-violet-300 ring-1 ring-inset ring-violet-500/20"
+                          : "text-neutral-400 hover:bg-white/5 hover:text-white"
                       }`}
                     >
-                      <div className="flex items-center gap-2">
-                        {s.id === activeSessionId ? <span className="h-2 w-2 rounded-full bg-purple-vivid" /> : null}
-                        <span>{formatDate(s.createdAt)}</span>
-                        <span>·</span>
-                        <span className="truncate">{s.hidden ? "[Hidden by you]" : s.title}</span>
-                      </div>
-                      <div className="mt-1 flex gap-2 text-[11px] text-text-dim">
-                        <span
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setRenameValue(s.title);
-                            setActiveSessionId(s.id);
-                            setRenameOpen(true);
-                          }}
-                        >
-                          ✎ Rename
-                        </span>
-                        <span
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSessions((prev) => prev.map((x) => (x.id === s.id ? { ...x, hidden: !x.hidden } : x)));
-                          }}
-                        >
-                          {s.hidden ? "Reveal" : "Hide"}
-                        </span>
-                        <span
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setActiveSessionId(s.id);
-                            setWipeOpen(true);
-                          }}
-                        >
-                          Wipe
+                      {sessionListIcon(g, active)}
+                      <div className="min-w-0 truncate">
+                        <span className="block text-sm">
+                          {formatDate(s.createdAt)} · &quot;{s.hidden ? "Hidden by you" : s.title}&quot;
                         </span>
                       </div>
                     </button>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
-            ) : null,
-          )}
-        </div>
-        <div className="my-4 h-px bg-white/10" />
-        <button className="text-left text-sm text-on-surface-variant hover:text-primary" onClick={() => router.push("/archive")}>
+            </div>
+          ) : null,
+        )}
+      </nav>
+      <div className="flex flex-col gap-1 border-t border-white/10 p-4">
+        <button
+          type="button"
+          className="flex items-center gap-2 text-left text-xs uppercase tracking-wider text-on-surface-variant transition-colors hover:text-primary"
+          onClick={() => router.push("/archive")}
+        >
+          <span className="material-symbols-outlined text-[18px] leading-none">inventory_2</span>
           The Archive
         </button>
-        <div className="my-4 h-px bg-white/10" />
-        <button className="text-left text-sm text-on-surface-variant hover:text-primary" onClick={() => setDrawer("syncro")}>
-          Syncro →
+        <button
+          type="button"
+          className="mt-1 flex items-center justify-between text-left text-xs uppercase tracking-wider text-on-surface-variant transition-colors hover:text-primary"
+          onClick={() => setDrawer("syncro")}
+        >
+          <span>Syncro →</span>
         </button>
-        <button className="mt-2 text-left text-sm text-on-surface-variant hover:text-primary" onClick={() => setDrawer("oracle")}>
-          Glyph →
+        <button
+          type="button"
+          className="mt-1 flex items-center justify-between text-left text-xs uppercase tracking-wider text-on-surface-variant transition-colors hover:text-primary"
+          onClick={() => setDrawer("oracle")}
+        >
+          <span>Oracle →</span>
         </button>
       </div>
+    </div>
+  );
+
+  const desktopSidebar = (
+    <aside className="fixed left-0 top-0 z-40 hidden h-screen w-72 flex-col border-r border-white/10 bg-neutral-950/60 shadow-[0_0_40px_rgba(139,92,246,0.1)] backdrop-blur-2xl md:flex">
+      {sidebarInner}
     </aside>
   );
 
@@ -517,205 +531,332 @@ export function ChatPageClient() {
         </div>
       ) : null}
 
-      <div className="aura-bg flex h-full">
-        <div className="hidden lg:block">{sidebar}</div>
+      <div className="aura-bg relative z-0 flex h-full w-full">
+        {desktopSidebar}
 
-        <section className="relative flex min-w-0 flex-1 flex-col">
+        <section className="relative flex min-h-0 min-w-0 flex-1 flex-col md:ml-72">
           <div className="px-4 pt-3 md:px-6">
             <ArchiveReturnBanner />
           </div>
-          <div className="sticky top-0 z-10 border-b border-white/10 bg-neutral-950/40 px-6 py-4 backdrop-blur-md">
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0 flex items-center gap-3">
-                <div className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.6)]" />
-                <div>
-                  <p className="truncate text-lg font-medium text-on-surface">POJU Session</p>
-                  <p className="text-xs text-on-surface-variant">
-                    Started {formatDate(activeSession.createdAt)} · {activeSession.status === "active" ? "Active" : "Archived"}
-                  </p>
+          <header className="sticky top-0 z-10 flex w-full items-center justify-between border-b border-white/10 bg-neutral-950/40 px-6 py-4 backdrop-blur-md">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="h-2 w-2 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.6)]" />
+              <div className="min-w-0">
+                <h2 className="truncate text-lg font-medium text-on-surface">POJU Session</h2>
+                <p className="text-xs text-on-surface-variant">
+                  Started {formatDate(activeSession.createdAt)} · {activeSession.status === "active" ? "Active" : "Archived"}
+                </p>
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                title="Save as PDF"
+                onClick={() => {
+                  setPdfOpen(true);
+                  setMysticalToolsOpen(false);
+                }}
+                className="flex items-center justify-center rounded-full p-2 text-neutral-500 transition-colors hover:bg-violet-500/10 hover:text-neutral-200"
+              >
+                <span className="material-symbols-outlined text-[22px] leading-none">picture_as_pdf</span>
+              </button>
+              <button
+                type="button"
+                title="Mystical tools"
+                onClick={() => setMysticalToolsOpen((v) => !v)}
+                className="flex items-center justify-center rounded-full p-2 text-neutral-500 transition-colors hover:bg-violet-500/10 hover:text-neutral-200"
+              >
+                <span className="material-symbols-outlined text-[22px] leading-none">auto_fix_high</span>
+              </button>
+              <button
+                type="button"
+                title="Sessions"
+                onClick={() => setMobileDrawer(true)}
+                className="flex items-center justify-center rounded-full p-2 text-neutral-500 transition-colors hover:bg-violet-500/10 hover:text-neutral-200 md:hidden"
+              >
+                <span className="material-symbols-outlined text-[22px] leading-none">menu</span>
+              </button>
+            </div>
+          </header>
+
+          <div
+            ref={scrollerRef}
+            className="relative flex min-h-0 flex-1 flex-col items-center gap-6 overflow-y-auto p-6 pb-40 selection:bg-primary-container selection:text-on-primary-container"
+          >
+            {!activeMessages.length ? (
+              <div className="glass-panel relative z-[1] mt-10 w-full max-w-2xl shrink-0 rounded-xl p-8 text-center">
+                <span className="material-symbols-outlined jewel-icon mb-2 block text-5xl leading-none">self_improvement</span>
+                <h3 className="mb-2 text-2xl font-semibold text-on-surface">Welcome to the Oracle</h3>
+                <p className="mx-auto mb-6 max-w-md text-base leading-relaxed text-on-surface-variant">
+                  I am POJU, blending ancient Eastern wisdom with modern clarity. Ask specific questions for guidance, or simply share your
+                  thoughts. Your privacy is sacred here.
+                </p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  <span className="rounded-full border border-primary-container/20 bg-primary-container/10 px-3 py-1 text-xs font-medium uppercase tracking-wider text-primary">
+                    I Ching
+                  </span>
+                  <span className="rounded-full border border-primary-container/20 bg-primary-container/10 px-3 py-1 text-xs font-medium uppercase tracking-wider text-primary">
+                    Daily Meditation
+                  </span>
                 </div>
+                <p className="mt-6 text-xs text-on-surface-variant/80">Type below to begin, or tap the microphone to speak.</p>
               </div>
-              <div className="relative flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setMobileDrawer(true)}
-                  className="rounded-md border border-white/10 px-2 py-1 text-xs text-text-secondary lg:hidden"
-                >
-                  Sessions
-                </button>
-                <button type="button" onClick={() => setRightMenuOpen((v) => !v)} className="rounded-full p-2 text-neutral-500 hover:bg-violet-500/10 hover:text-neutral-200">≡</button>
-                {rightMenuOpen ? (
-                  <div className="absolute right-0 top-9 z-20 w-64 rounded-xl border border-white/12 bg-bg-layer-1 p-2 text-sm text-text-secondary shadow-xl">
-                    <button className="w-full rounded-md px-3 py-2 text-left hover:bg-white/5" onClick={() => setPdfOpen(true)}>
-                      ✦ Save this reading as PDF
-                    </button>
-                    <button className="w-full rounded-md px-3 py-2 text-left hover:bg-white/5" onClick={() => setDrawer("syncro")}>
-                      ✦ Summon Syncro
-                    </button>
-                    <button className="w-full rounded-md px-3 py-2 text-left hover:bg-white/5" onClick={() => setDrawer("oracle")}>
-                      ✦ Summon Glyph
-                    </button>
-                    <button
-                      className="w-full rounded-md px-3 py-2 text-left hover:bg-white/5"
-                      onClick={() => {
-                        setRenameValue(activeSession.title);
-                        setRenameOpen(true);
-                      }}
+            ) : null}
+
+            <div className="flex w-full max-w-3xl flex-col gap-4">
+              {activeMessages.map((m) => (
+                <article key={m.id} className={`flex w-full gap-4 ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                  {m.role === "assistant" ? (
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-outline-variant bg-surface-container-high">
+                      <img alt="" className="h-full w-full object-cover" src="/api/pwa-icon?size=128" width={40} height={40} />
+                    </div>
+                  ) : null}
+                  <div
+                    className={`max-w-[85%] ${
+                      m.role === "user"
+                        ? "message-gradient rounded-2xl rounded-tr-sm p-4 text-white shadow-[0_4px_20px_rgba(139,92,246,0.2)]"
+                        : "glass-panel rounded-2xl rounded-tl-sm border border-primary/30 p-5 shadow-[0_0_20px_rgba(139,92,246,0.1)]"
+                    }`}
+                  >
+                    {m.imageDataUrl ? <img src={m.imageDataUrl} alt="attachment" className="mb-2 max-h-48 rounded-lg" /> : null}
+                    <p
+                      className={`whitespace-pre-wrap text-[15px] leading-relaxed ${
+                        m.role === "user" ? "text-white" : "text-on-surface"
+                      }`}
                     >
-                      ✦ Rename this session
-                    </button>
-                    <button
-                      className="w-full rounded-md px-3 py-2 text-left hover:bg-white/5"
-                      onClick={archiveActiveSession}
-                    >
-                      ✦ Archive this session
-                    </button>
-                    <button className="w-full rounded-md px-3 py-2 text-left text-red-300 hover:bg-red-500/10" onClick={() => setWipeOpen(true)}>
-                      ✦ End & Wipe this session
-                    </button>
-                    <div className="my-1 h-px bg-white/10" />
-                    <button className="w-full rounded-md px-3 py-2 text-left hover:bg-white/5">
-                      Settings
-                    </button>
+                      {m.text}
+                    </p>
+                    {m.role === "assistant" ? (
+                      <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-outline-variant/30 pt-3">
+                        <button
+                          type="button"
+                          className="flex items-center gap-1 text-xs text-on-surface-variant transition-colors hover:text-primary"
+                          onClick={() => copyMsg(m)}
+                        >
+                          <span className="material-symbols-outlined text-[16px] leading-none">content_copy</span>
+                          {copiedId === m.id ? "Copied" : "Copy"}
+                        </button>
+                        <button
+                          type="button"
+                          className="flex items-center gap-1 text-xs text-on-surface-variant transition-colors hover:text-primary"
+                          onClick={() => toggleRead(m)}
+                        >
+                          <span className="material-symbols-outlined text-[16px] leading-none">volume_up</span>
+                          {ttsPlayingId === m.id ? "Stop" : "Read Aloud"}
+                        </button>
+                      </div>
+                    ) : null}
+                    {m.phaseFive ? (
+                      <div className="mt-3 border-t border-purple-vivid/20 pt-3 text-sm">
+                        <p className="text-text-dim">This is your reading so far.</p>
+                        <button className="mt-1 text-purple-vivid underline underline-offset-4" onClick={() => setPdfOpen(true)}>
+                          ✦ Save this reading as PDF
+                        </button>
+                      </div>
+                    ) : null}
+                    {m.summon ? (
+                      <div className="mt-3 border-t border-purple-vivid/20 pt-3 text-sm">
+                        <button className="text-purple-vivid underline underline-offset-4" onClick={() => setDrawer(m.summon || null)}>
+                          ✦ {m.summon === "syncro" ? "Summon Syncro" : "Summon Glyph"}
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
-                ) : null}
-              </div>
+                </article>
+              ))}
+
+              {thinkingVisible ? (
+                <article className="flex w-full justify-start gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-outline-variant bg-surface-container-high">
+                    <span className="material-symbols-outlined jewel-icon text-[20px] leading-none">auto_awesome</span>
+                  </div>
+                  <div className="glass-panel max-w-[80%] rounded-2xl rounded-tl-sm border border-primary/20 p-4 shadow-[0_0_20px_rgba(139,92,246,0.1)]">
+                    <p className="animate-pulse text-xs font-medium uppercase tracking-wider text-primary">Consulting the wisdom...</p>
+                    {thinkingLines.map((line) => (
+                      <p key={line} className="mt-2 text-sm italic leading-7 text-on-surface-variant">
+                        {line}
+                      </p>
+                    ))}
+                  </div>
+                </article>
+              ) : null}
             </div>
           </div>
 
-          <div ref={scrollerRef} className="min-h-0 flex-1 space-y-6 overflow-y-auto p-6 pb-36">
-            {welcomeVisible && !activeMessages.length ? (
-              <div className="mx-auto w-full max-w-2xl rounded-xl border border-white/10 border-t-white/20 bg-[rgba(30,30,34,0.6)] p-8 text-center text-text-secondary backdrop-blur-xl">
-                <p className="text-lg font-semibold text-on-surface">Welcome to the POJU-破局</p>
-                <p className="mt-3">Tell me what&apos;s holding you back — career, family, love, money, health, any crossroads.</p>
-                <p className="mt-4">
-                  The more specific, the better. Places, timing, people, what you&apos;ve tried, what you fear.
-                </p>
-                <p className="mt-4">Two thousand years of Eastern wisdom can answer you, but it needs to see the real you first.</p>
-                <p className="mt-4">──</p>
-                <p className="mt-4">Once you finish, I&apos;ll begin the reading. Everything you say stays on this device only.</p>
-                <p className="mt-3 text-xs text-text-dim">Type below to begin, or tap the microphone to speak.</p>
-              </div>
-            ) : null}
-
-            {activeMessages.map((m) => (
-              <article key={m.id} className={`flex w-full ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div
-                  className={`max-w-[85%] rounded-2xl px-4 py-3 ${
-                    m.role === "user"
-                      ? "rounded-tr-sm bg-gradient-to-br from-violet-500 to-[#6d3bd7] text-white shadow-[0_4px_20px_rgba(139,92,246,0.2)]"
-                      : "rounded-tl-sm border border-primary/20 border-t-white/20 bg-[rgba(30,30,34,0.6)] text-on-surface backdrop-blur-xl"
-                  }`}
+          <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-[5] bg-gradient-to-t from-background via-background/90 to-transparent p-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            <div className="pointer-events-auto mx-auto max-w-3xl">
+              {composerImage ? (
+                <div className="mb-2 inline-flex items-center gap-2 rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-xs">
+                  <img src={composerImage.dataUrl} alt={composerImage.name} className="h-9 w-9 rounded object-cover" />
+                  <span className="max-w-40 truncate text-text-secondary">{composerImage.name}</span>
+                  <button type="button" onClick={() => setComposerImage(null)} className="text-text-dim hover:text-text-primary">
+                    ×
+                  </button>
+                </div>
+              ) : null}
+              <div className="glass-panel flex items-end gap-1 rounded-full border border-white/10 p-2 pr-3 transition-all focus-within:border-primary/50 focus-within:shadow-[0_0_20px_rgba(139,92,246,0.2)]">
+                <button
+                  type="button"
+                  className="flex items-center justify-center rounded-full p-2 text-on-surface-variant transition-colors hover:text-primary"
+                  onClick={() => fileRef.current?.click()}
                 >
-                  {m.imageDataUrl ? <img src={m.imageDataUrl} alt="attachment" className="mb-2 max-h-48 rounded-lg" /> : null}
-                  <p className="whitespace-pre-wrap text-[15px] leading-7">{m.text}</p>
-                  {m.role === "assistant" ? (
-                    <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-outline-variant/30 pt-3 text-xs text-text-dim">
-                      <button className="hover:text-text-primary" onClick={() => copyMsg(m)}>
-                        {copiedId === m.id ? "✓ Copied" : "📋 Copy"}
-                      </button>
-                      <button className="hover:text-text-primary" onClick={() => toggleRead(m)}>
-                        {ttsPlayingId === m.id ? "⏹ Stop" : "🔊 Read Aloud"}
-                      </button>
-                    </div>
-                  ) : null}
-                  {m.phaseFive ? (
-                    <div className="mt-3 border-t border-purple-vivid/20 pt-3 text-sm">
-                      <p className="text-text-dim">This is your reading so far.</p>
-                      <button className="mt-1 text-purple-vivid underline underline-offset-4" onClick={() => setPdfOpen(true)}>
-                        ✦ Save this reading as PDF
-                      </button>
-                    </div>
-                  ) : null}
-                  {m.summon ? (
-                    <div className="mt-3 border-t border-purple-vivid/20 pt-3 text-sm">
-                      <button className="text-purple-vivid underline underline-offset-4" onClick={() => setDrawer(m.summon || null)}>
-                        ✦ {m.summon === "syncro" ? "Summon Syncro" : "Summon Glyph"}
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
-              </article>
-            ))}
-
-            {thinkingVisible ? (
-              <article className="flex justify-start">
-                <div className="max-w-[80%] rounded-2xl rounded-tl-sm border border-primary/20 border-t-white/20 bg-[rgba(30,30,34,0.6)] px-4 py-3 text-text-accent backdrop-blur-xl">
-                  {thinkingLines.map((line) => (
-                    <p key={line} className="text-sm leading-7">
-                      {line}
-                    </p>
-                  ))}
-                </div>
-              </article>
-            ) : null}
-          </div>
-
-          <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-background via-background/90 to-transparent p-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-            {composerImage ? (
-              <div className="mb-2 inline-flex items-center gap-2 rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-xs">
-                <img src={composerImage.dataUrl} alt={composerImage.name} className="h-9 w-9 rounded object-cover" />
-                <span className="max-w-40 truncate text-text-secondary">{composerImage.name}</span>
-                <button onClick={() => setComposerImage(null)} className="text-text-dim hover:text-text-primary">
-                  ×
+                  <span className="material-symbols-outlined text-[22px] leading-none">attach_file</span>
+                </button>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/heic"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) void onAttachFile(f);
+                  }}
+                />
+                <button
+                  type="button"
+                  className={`flex items-center justify-center rounded-full p-2 transition-colors ${
+                    recognizing ? "text-red-300" : "text-on-surface-variant hover:text-primary"
+                  }`}
+                  onClick={toggleSpeech}
+                >
+                  <span className="material-symbols-outlined text-[22px] leading-none">mic</span>
+                </button>
+                <textarea
+                  value={composer}
+                  onChange={(e) => setComposer(e.target.value)}
+                  placeholder="Type your reply..."
+                  rows={1}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey && window.innerWidth >= 768) {
+                      e.preventDefault();
+                      void onSend();
+                    }
+                  }}
+                  className="max-h-40 min-h-[44px] flex-1 resize-y border-none bg-transparent px-2 py-3 text-sm text-on-surface outline-none ring-0 placeholder:text-on-surface-variant/40 focus:ring-0"
+                />
+                <button
+                  type="button"
+                  onClick={() => void onSend()}
+                  disabled={!composer.trim() && !composerImage}
+                  className="ml-1 inline-flex shrink-0 items-center gap-1 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-on-primary transition-colors hover:bg-primary-container disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Send
+                  <span className="material-symbols-outlined text-[16px] leading-none">arrow_forward</span>
                 </button>
               </div>
-            ) : null}
-            <div className="mx-auto flex max-w-3xl items-end gap-2 rounded-full border border-white/10 border-t-white/20 bg-[rgba(30,30,34,0.6)] p-2 pr-3 backdrop-blur-xl">
-              <button
-                className="rounded-full p-2 text-on-surface-variant hover:text-primary"
-                onClick={() => fileRef.current?.click()}
-              >
-                📎
-              </button>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/png,image/jpeg,image/webp,image/heic"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) void onAttachFile(f);
-                }}
-              />
-              <button
-                className={`rounded-full p-2 ${recognizing ? "text-red-300" : "text-on-surface-variant hover:text-primary"}`}
-                onClick={toggleSpeech}
-              >
-                🎤
-              </button>
-              <textarea
-                value={composer}
-                onChange={(e) => setComposer(e.target.value)}
-                placeholder="Type your reply..."
-                rows={1}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey && window.innerWidth >= 768) {
-                    e.preventDefault();
-                    void onSend();
-                  }
-                }}
-                className="max-h-40 min-h-[44px] flex-1 resize-y bg-transparent px-2 py-3 text-sm text-on-surface placeholder:text-on-surface-variant/40 outline-none"
-              />
-              <button
-                onClick={() => void onSend()}
-                disabled={!composer.trim() && !composerImage}
-                className="ml-2 inline-flex items-center gap-1 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-on-primary disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Send →
-              </button>
             </div>
           </div>
         </section>
       </div>
 
       {mobileDrawer ? (
-        <div className="fixed inset-0 z-[120] bg-black/70 lg:hidden">
-          <div className="h-full w-[86%] max-w-sm bg-bg-deep">{sidebar}</div>
-          <button className="absolute right-4 top-4 rounded-md border border-white/10 px-3 py-1" onClick={() => setMobileDrawer(false)}>
+        <div className="fixed inset-0 z-[120] bg-black/70 md:hidden">
+          <aside className="h-full w-[86%] max-w-sm border-r border-white/10 bg-neutral-950/95 shadow-xl backdrop-blur-2xl">{sidebarInner}</aside>
+          <button
+            type="button"
+            className="absolute right-4 top-4 rounded-md border border-white/10 px-3 py-1 text-sm text-text-secondary"
+            onClick={() => setMobileDrawer(false)}
+          >
             Close
           </button>
         </div>
+      ) : null}
+
+      {mysticalToolsOpen ? (
+        <>
+          <button
+            type="button"
+            className="fixed inset-0 z-[110] bg-black/50"
+            aria-label="Close tools"
+            onClick={() => setMysticalToolsOpen(false)}
+          />
+          <aside className="fixed right-0 top-0 z-[115] flex h-full w-[min(100vw,20rem)] flex-col border-l border-white/10 bg-neutral-950/85 shadow-2xl shadow-violet-900/20 backdrop-blur-3xl">
+            <div className="border-b border-white/10 p-4">
+              <h2 className="text-lg font-semibold text-violet-100">Mystical Tools</h2>
+              <p className="text-xs text-violet-400">Enhance your session</p>
+            </div>
+            <nav className="flex flex-col gap-1 p-2 text-sm text-neutral-400">
+              <button
+                type="button"
+                className="flex items-center gap-3 rounded-lg px-4 py-3 text-left transition-colors hover:bg-white/5 hover:text-white"
+                onClick={() => {
+                  setPdfOpen(true);
+                  setMysticalToolsOpen(false);
+                }}
+              >
+                <span className="material-symbols-outlined text-[20px] leading-none">download</span>
+                Export PDF
+              </button>
+              <button
+                type="button"
+                className="flex items-center gap-3 rounded-lg px-4 py-3 text-left transition-colors hover:bg-white/5 hover:text-white"
+                onClick={() => {
+                  setDrawer("syncro");
+                  setMysticalToolsOpen(false);
+                }}
+              >
+                <span className="material-symbols-outlined text-[20px] leading-none">auto_awesome</span>
+                Summon Syncro
+              </button>
+              <button
+                type="button"
+                className="flex items-center gap-3 rounded-lg px-4 py-3 text-left transition-colors hover:bg-white/5 hover:text-white"
+                onClick={() => {
+                  setDrawer("oracle");
+                  setMysticalToolsOpen(false);
+                }}
+              >
+                <span className="material-symbols-outlined text-[20px] leading-none">auto_awesome</span>
+                Summon Glyph
+              </button>
+              <button
+                type="button"
+                className="flex items-center gap-3 rounded-lg px-4 py-3 text-left transition-colors hover:bg-white/5 hover:text-white"
+                onClick={() => {
+                  setRenameValue(activeSession.title);
+                  setRenameOpen(true);
+                  setMysticalToolsOpen(false);
+                }}
+              >
+                <span className="material-symbols-outlined text-[20px] leading-none">settings</span>
+                Session settings (rename)
+              </button>
+              <button
+                type="button"
+                className="flex items-center gap-3 rounded-lg px-4 py-3 text-left transition-colors hover:bg-white/5 hover:text-white"
+                onClick={() => {
+                  void router.push("/archive");
+                  setMysticalToolsOpen(false);
+                }}
+              >
+                <span className="material-symbols-outlined text-[20px] leading-none">inventory_2</span>
+                Archive
+              </button>
+              <button
+                type="button"
+                className="flex items-center gap-3 rounded-lg px-4 py-3 text-left transition-colors hover:bg-white/5 hover:text-white"
+                onClick={() => {
+                  archiveActiveSession();
+                  setMysticalToolsOpen(false);
+                }}
+              >
+                <span className="material-symbols-outlined text-[20px] leading-none">archive</span>
+                Archive this session
+              </button>
+              <button
+                type="button"
+                className="flex items-center gap-3 rounded-lg px-4 py-3 text-left text-red-300 transition-colors hover:bg-red-500/10"
+                onClick={() => {
+                  setWipeOpen(true);
+                  setMysticalToolsOpen(false);
+                }}
+              >
+                <span className="material-symbols-outlined text-[20px] leading-none">delete_forever</span>
+                End &amp; wipe session
+              </button>
+            </nav>
+          </aside>
+        </>
       ) : null}
 
       {drawer ? (

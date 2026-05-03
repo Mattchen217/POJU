@@ -103,8 +103,9 @@ responses, PDF reports) is yours to use personally. You
 may not republish AI-generated outputs as your own work 
 or for commercial purposes.
 
-Eastern philosophical texts referenced (Daoism, I Ching, 
-Feng Shui principles) are in the public domain.`,
+Public-domain works and classical commentary referenced in 
+documentation are cited where applicable; POJU does not claim 
+exclusive rights over traditional ideas.`,
   `To the maximum extent permitted by law:
 
 · The Services are provided "as is"
@@ -138,18 +139,18 @@ function TermsContent() {
                   POJU
                 </span>
               </Link>
-              <nav className="hidden items-center gap-7 text-[12px] uppercase tracking-[0.12em] text-text-secondary sm:text-[13px] md:flex md:text-[14px]">
+              <nav className="hidden items-center gap-7 text-[12px] tracking-[0.12em] text-text-secondary sm:text-[13px] md:flex md:text-[14px]">
                 <Link href="/poju" className="hover:text-text-primary">
-                  POJU 破局
-                </Link>
-                <Link href="/syncro" className="hover:text-text-primary">
-                  POJU SYNCRO
+                  POJU
                 </Link>
                 <Link href="/glyph" className="hover:text-text-primary">
-                  POJU GLYPH
+                  Glyph
+                </Link>
+                <Link href="/syncro" className="hover:text-text-primary">
+                  Syncro
                 </Link>
                 <Link href="/archive" className="hover:text-text-primary">
-                  THE ARCHIVE
+                  Archive
                 </Link>
               </nav>
               <MarketingLanguageSwitcher />
@@ -203,7 +204,7 @@ function TermsContent() {
               </div>
               <p className="mt-4 text-center text-xs text-text-dim">© 2026 POJU. All rights reserved.</p>
               <p className="mt-2 text-center text-xs text-text-dim">
-                For reflection and entertainment. POJU does not predict outcomes or replace professional advice.
+                For self-reflection and entertainment. POJU offers perspectives, not predictions. All decisions are yours alone.
               </p>
             </div>
           </footer>

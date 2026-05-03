@@ -8,8 +8,8 @@ import { cn } from "@/lib/utils/classnames";
 const tabs = [
   { href: "/", label: "⌂" },
   { href: "/poju", label: "POJU" },
-  { href: "/syncro", label: "SYNCRO" },
-  { href: "/glyph", label: "GLYPH" },
+  { href: "/glyph", label: "Glyph" },
+  { href: "/syncro", label: "Syncro" },
   { href: "/archive", label: "✦" },
 ];
 

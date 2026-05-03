@@ -4,15 +4,13 @@ import { ArchiveReturnBanner } from "@/components/archive/archive-return-banner"
 import { MarketingLanguageSwitcher } from "@/components/marketing/marketing-language-switcher";
 import { PojuMarkLogo } from "@/components/marketing/poju-mark-logo";
 import { SyncroProductHero } from "@/components/marketing/syncro-product-hero";
-import { SyncroMobileFlow } from "@/components/syncro/syncro-mobile-flow";
 
-// 1. 强制动态渲染，解决 build 时的 Prerender 错误
 export const dynamic = "force-dynamic";
 
 const useCases = [
   {
     title: "Study spot",
-    body: "Choose the desk direction with calmer focus energy before a deep work block.",
+    body: "Choose a desk orientation that supports steady focus before a deep work block.",
   },
   {
     title: "Negotiation",
@@ -32,26 +30,6 @@ const useCases = [
   },
 ] as const;
 
-const scienceVsEast = [
-  {
-    science: "Compass heading + geomagnetic field",
-    east: "Directional Qi tendency",
-  },
-  {
-    science: "GPS coordinates + local context",
-    east: "Place-based energetic pattern",
-  },
-  {
-    science: "Timestamp + circadian timing",
-    east: "Moment-based rhythm pattern",
-  },
-  {
-    science: "Personal data model and calibration",
-    east: "Bazi-aligned personal blueprint",
-  },
-] as const;
-
-// 2. 将原本的内容移入一个内部组件
 function SyncroContent() {
   return (
     <main className="bg-bg-deep text-text-body">
@@ -64,18 +42,18 @@ function SyncroContent() {
                 POJU
               </span>
             </Link>
-            <nav className="hidden items-center gap-7 text-[12px] uppercase tracking-[0.12em] text-text-secondary sm:text-[13px] md:flex md:text-[14px]">
+            <nav className="hidden items-center gap-7 text-[12px] tracking-[0.12em] text-text-secondary sm:text-[13px] md:flex md:text-[14px]">
               <Link href="/poju" className="hover:text-text-primary">
-                POJU 破局
-              </Link>
-              <Link href="/syncro" className="text-text-primary">
-                POJU SYNCRO
+                POJU
               </Link>
               <Link href="/glyph" className="hover:text-text-primary">
-                POJU GLYPH
+                Glyph
+              </Link>
+              <Link href="/syncro" className="text-text-primary">
+                Syncro
               </Link>
               <Link href="/archive" className="hover:text-text-primary">
-                THE ARCHIVE
+                Archive
               </Link>
             </nav>
             <MarketingLanguageSwitcher />
@@ -87,58 +65,37 @@ function SyncroContent() {
         </div>
 
         <SyncroProductHero />
-        <section className="mx-auto mt-2 w-full max-w-3xl px-4 md:px-8">
-          <div className="rounded-2xl border border-white/10 bg-black/25 px-5 py-6 sm:px-7 sm:py-7">
-            <h2 className="text-center text-[24px] font-semibold text-text-primary sm:text-[28px]">Syncro</h2>
-            <p className="mt-2 text-center text-sm italic text-text-secondary sm:text-base">
-              See your natural rhythms.
-            </p>
-            <p className="mt-4 text-[15px] leading-8 text-text-secondary">
-              Based on your birth context, Syncro reflects how the day&apos;s energy aligns with your
-              personal patterns - where to lean in, where to slow down, and where the windows are open.
-            </p>
-            <p className="mt-3 text-[15px] leading-8 text-text-secondary">
-              Think of it as a weather forecast for your inner life, updated every two hours.
-            </p>
-            <p className="mt-4 text-center text-sm text-text-dim">
-              Free · No signup · For self-awareness
-            </p>
-          </div>
-        </section>
-        <SyncroMobileFlow />
 
-        <section className="mx-auto mt-8 w-full max-w-6xl px-4 py-8 md:mt-10 md:px-8 md:py-10">
-          <div className="grid gap-6 rounded-2xl border border-white/10 bg-black/25 p-5 sm:p-6 md:grid-cols-[1.2fr_0.8fr] md:items-center">
-            <div>
-              <p className="text-xs uppercase tracking-[0.14em] text-cyan-100/85">PC fallback</p>
-              <h2 className="mt-2 text-[24px] font-semibold text-text-primary sm:text-[28px]">
-                Open Syncro on mobile for full experience
-              </h2>
-              <p className="mt-3 text-sm leading-7 text-text-secondary">
-                Syncro needs compass, GPS, and camera. On desktop, scan the QR code or send the link to your phone.
-              </p>
-              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                <input
-                  type="tel"
-                  placeholder="Phone number"
-                  className="w-full rounded-lg border border-white/10 bg-bg-layer-1/50 px-3 py-2 text-sm text-text-primary placeholder:text-text-dim focus:border-cyan-300/35 focus:outline-none"
-                />
-                <button
-                  type="button"
-                  className="rounded-lg border border-cyan-300/35 bg-cyan-400/20 px-4 py-2 text-sm font-medium text-cyan-100 hover:bg-cyan-300/25"
-                >
-                  Text me the link
-                </button>
+        <section className="mx-auto mt-10 w-full max-w-6xl px-4 md:mt-14 md:px-8">
+          <h2 className="text-center text-[28px] font-semibold text-text-primary sm:text-[32px] md:text-[36px]">
+            What Syncro shows.
+          </h2>
+          <div className="mx-auto mt-8 flex max-w-lg flex-col items-center">
+            <div className="aspect-[9/19] w-full max-w-[280px] rounded-[2rem] border border-white/15 bg-gradient-to-b from-white/10 to-black/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+              <div className="flex h-full flex-col items-center justify-center px-6 text-center">
+                <p className="text-xs uppercase tracking-[0.16em] text-text-dim">Preview</p>
+                <p className="mt-3 text-sm leading-7 text-text-secondary">
+                  Phone mockup placeholder — replace with a Syncro screen capture when ready.
+                </p>
               </div>
             </div>
-            <div className="mx-auto w-full max-w-[220px] rounded-xl border border-white/12 bg-bg-layer-1/40 p-4 text-center">
-              <img
-                src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=https%3A%2F%2Fpojulife.com%2Fsyncro"
-                alt="QR code for Syncro mobile link"
-                className="h-auto w-full rounded-md"
-              />
-              <p className="mt-3 text-xs text-text-dim">pojulife.com/syncro</p>
-            </div>
+          </div>
+          <div className="mx-auto mt-10 max-w-2xl space-y-4 text-center text-[15px] leading-8 text-text-secondary">
+            <p>
+              Hold your phone toward a direction.
+              <br />
+              See what&apos;s available. See what isn&apos;t.
+            </p>
+            <p className="text-left sm:text-center">
+              Each direction shows:
+              <br />
+              ✦ A short description of the current pattern
+              <br />
+              ✦ What this period suits (for example, slow conversations)
+              <br />
+              ✦ What this period doesn&apos;t suit (for example, wait on big asks)
+            </p>
+            <p>Updated every two hours, with your context.</p>
           </div>
         </section>
 
@@ -161,42 +118,35 @@ function SyncroContent() {
 
         <section className="mx-auto mt-8 w-full max-w-6xl px-4 py-10 md:mt-10 md:px-8 md:py-12">
           <h2 className="text-center text-[28px] font-semibold text-text-primary sm:text-[32px] md:text-[36px]">
-            Science × Eastern Lens
+            What it is. What it isn&apos;t.
           </h2>
-          <p className="mx-auto mt-4 max-w-3xl text-center text-[15px] leading-7 text-text-secondary">
-            Syncro does not replace either worldview. It maps measurable signals and classical directional logic into
-            one practical view.
-          </p>
-          <div className="mt-8 overflow-hidden rounded-xl border border-white/12 bg-black/25">
-            <div className="grid grid-cols-2 border-b border-white/10 text-[12px] uppercase tracking-[0.14em] text-text-dim">
-              <p className="px-4 py-3 sm:px-5">Science side</p>
-              <p className="border-l border-white/10 px-4 py-3 sm:px-5">Eastern side</p>
-            </div>
-            {scienceVsEast.map((row) => (
-              <div key={row.science} className="grid grid-cols-2 border-b border-white/5 last:border-0">
-                <p className="px-4 py-4 text-sm leading-7 text-text-primary sm:px-5">{row.science}</p>
-                <p className="border-l border-white/10 px-4 py-4 text-sm leading-7 text-cyan-100 sm:px-5">{row.east}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="mx-auto mt-8 w-full max-w-6xl px-4 py-10 md:mt-10 md:px-8 md:py-12">
-          <div className="grid gap-6 md:grid-cols-2">
-            <article className="rounded-xl border border-white/10 bg-black/25 p-6">
-              <h3 className="text-xl font-semibold text-text-primary">What you&apos;ll see</h3>
-              <ul className="mt-4 space-y-2 text-[15px] leading-8 text-text-secondary">
-                <li>A short description of the current pattern</li>
-                <li>What this period suits</li>
-                <li>What this period does not suit</li>
+          <div className="mx-auto mt-10 grid max-w-4xl gap-8 md:grid-cols-2 md:gap-10">
+            <article className="rounded-xl border border-white/10 bg-black/25 p-6 sm:p-7">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-dim">What it shows</p>
+              <ul className="mt-5 space-y-3 text-[15px] leading-8 text-text-secondary">
+                <li>
+                  <span className="text-cyan-200">✦</span> Current rhythm pattern for the next 2 hours
+                </li>
+                <li>
+                  <span className="text-cyan-200">✦</span> Eight directions with what they suit
+                </li>
+                <li>
+                  <span className="text-cyan-200">✦</span> Where to lean in, where to slow down
+                </li>
               </ul>
             </article>
-            <article className="rounded-xl border border-white/10 bg-black/25 p-6">
-              <h3 className="text-xl font-semibold text-text-primary">What Syncro is NOT</h3>
-              <ul className="mt-4 space-y-2 text-[15px] leading-8 text-text-secondary">
-                <li>Does not predict events</li>
-                <li>Does not promise outcomes</li>
-                <li>Does not replace your own judgment</li>
+            <article className="rounded-xl border border-white/10 bg-black/25 p-6 sm:p-7">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-dim">What it isn&apos;t</p>
+              <ul className="mt-5 space-y-3 text-[15px] leading-8 text-text-secondary">
+                <li>
+                  <span className="text-red-300/90">✗</span> A predictor of events
+                </li>
+                <li>
+                  <span className="text-red-300/90">✗</span> A promiser of outcomes
+                </li>
+                <li>
+                  <span className="text-red-300/90">✗</span> A replacement for your own judgment
+                </li>
               </ul>
             </article>
           </div>
@@ -252,7 +202,6 @@ function SyncroContent() {
   );
 }
 
-// 3. 默认导出的页面组件，使用 Suspense 包裹子组件
 export default function SyncroPage() {
   return (
     <Suspense fallback={<div className="min-h-screen bg-bg-deep" />}>

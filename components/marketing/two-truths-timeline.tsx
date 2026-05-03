@@ -8,7 +8,7 @@ const twoTruthsSteps: {
 }[] = [
   {
     title: "✦ ANCIENT",
-    body: "Two thousand years of Eastern observation: Daoism · Feng Shui · Bazi · Yi Jing",
+    body: "Two thousand years of human observation on patterns, place, timing, and purpose.",
     align: "left",
     accent: "purple",
   },

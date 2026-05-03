@@ -11,44 +11,13 @@ import eyeOfStorm from "@/assets/images/eye of storm.png";
 import fairSky from "@/assets/images/fair sky.png";
 import stillWater from "@/assets/images/still water.png";
 
-const appendixNarrative = [
-  "Across the East, for two thousand years, people came with a single question, held in silence, carried in a sincere heart. They did not ask for advice. They did not expect words. They offered their question to an ancient presence — one said to listen to every soul who came with true intent — and waited for the answer to arrive in a different form.",
-  "Not a voice. A pattern. A card drawn from one hundred archetypal forms refined over millennia. The answer is not prescriptive - it describes what you already carry, now named and visible.",
-  "The only requirement is sincerity. Casual curiosity receives noise. A real question, held honestly, receives a clearer reflection.",
-  "Today, we bring this practice into your hand. The pattern library is intact. What changed is only the medium - an AI that reads the drawn pattern, understands your question, and delivers context you can act on today.",
-] as const;
-
-const glyphFitScenarios = [
-  {
-    title: "You're holding one question that keeps circling back",
-    body: "One thread that will not let go — not five topics at once.",
-  },
-  {
-    title: "You don't need an answer - you need a mirror",
-    body: "You are not looking for a checklist. You are looking for a direction you can feel.",
-  },
-  {
-    title: "You want to listen before you speak",
-    body: "You are willing to pause, compress the question, and receive before you decide.",
-  },
-  {
-    title: "You're at a threshold and unsure which side you're on",
-    body: "A doorway moment where a single image can name what you already sense.",
-  },
-] as const;
-
-const glyphVsPojuRows: { label: string; glyph: string; poju: string }[] = [
-  { label: "Time", glyph: "~2 minutes", poju: "30 minutes – hours" },
-  { label: "Depth", glyph: "One pattern, one perspective", poju: "Full breakthrough path" },
-  { label: "Price", glyph: "Free", poju: "$9.99 per session" },
-  {
-    label: "Best when you need",
-    glyph: "Direction from a pattern",
-    poju: "A complete plan to break the deadlock",
-  },
-] as const;
-
 /** 风向系 5 级（产品页预告文案） */
+const glyphUsageRules = [
+  "One question per reading. Don't ask many things at once.",
+  "Wait 48 hours before asking the same thing again. Answers need time to settle.",
+  "Compress your question into 60 characters. The compression is the beginning of the answer.",
+] as const;
+
 const windSignLevels = [
   {
     name: "Divine Tailwind",
@@ -105,12 +74,6 @@ const windSignLevels = [
   },
 ] as const;
 
-const usageTips = [
-  "One question per reading. Don't ask many things at once.",
-  "Wait 48 hours before asking the same thing again. Answers need time to settle.",
-  "Compress your question into 60 characters. The compression is the beginning of the answer.",
-] as const;
-
 function SectionShell({
   id,
   children,
@@ -142,18 +105,18 @@ export default function OraclePage() {
                 POJU
               </span>
             </Link>
-            <nav className="hidden items-center gap-7 text-[12px] uppercase tracking-[0.12em] text-text-secondary sm:text-[13px] md:flex md:text-[14px]">
+            <nav className="hidden items-center gap-7 text-[12px] tracking-[0.12em] text-text-secondary sm:text-[13px] md:flex md:text-[14px]">
               <Link href="/poju" className="hover:text-text-primary">
-                POJU 破局
-              </Link>
-              <Link href="/syncro" className="hover:text-text-primary">
-                POJU SYNCRO
+                POJU
               </Link>
               <Link href="/glyph" className="text-text-primary">
-                POJU GLYPH
+                Glyph
+              </Link>
+              <Link href="/syncro" className="hover:text-text-primary">
+                Syncro
               </Link>
               <Link href="/archive" className="hover:text-text-primary">
-                THE ARCHIVE
+                Archive
               </Link>
             </nav>
             <MarketingLanguageSwitcher />
@@ -162,97 +125,13 @@ export default function OraclePage() {
 
         <OracleProductHero />
 
-        <SectionShell id="glyph-enter" className="scroll-mt-28">
-          <p className="text-center text-xs font-semibold uppercase tracking-[0.22em] text-fuchsia-200/85">
-            The Glyph
-          </p>
-          <h2 className="mt-3 text-center text-[26px] font-semibold leading-tight text-text-primary sm:text-[30px] md:text-[32px]">
-            What Glyph is
-          </h2>
-          <p className="mx-auto mt-2 text-center text-sm italic text-text-secondary sm:text-base">
-            A 60-second reflection practice.
-          </p>
-          <p className="mx-auto mt-4 max-w-2xl text-center text-[15px] leading-8 text-text-secondary">
-            Hold a question. Draw one of 100 archetypal patterns refined over a thousand years of
-            human reflection. Receive a structured response from AI - grounded in wisdom traditions,
-            decision psychology, and behavioral economics.
-          </p>
-          <p className="mt-2 text-center text-sm text-text-dim">
-            Free · No signup · Read with a wink
-          </p>
-          <div className="mt-10 space-y-6 text-[15px] leading-8 text-text-secondary sm:text-base sm:leading-9">
-            {appendixNarrative.map((para, i) => (
-              <p key={i}>{para}</p>
-            ))}
-            <p className="text-center text-[15px] font-medium italic leading-8 text-text-primary sm:text-base">
-            One question. One pattern. One next step.
-              <br />
-              Read with a wink. Decisions are yours alone.
-            </p>
-          </div>
-        </SectionShell>
-
-        <SectionShell id="when-glyph" className="border-t border-white/6 bg-black/10">
-          <h2 className="text-center text-[24px] font-semibold text-text-primary sm:text-[28px] md:text-[30px]">
-            When Glyph is the right fit
-          </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-center text-sm leading-7 text-text-secondary sm:text-[15px] sm:leading-8">
-            Not every kind of confusion belongs here. These moments match the practice best.
-          </p>
-          <ul className="mx-auto mt-10 max-w-2xl space-y-8">
-            {glyphFitScenarios.map((item) => (
-              <li key={item.title}>
-                <p className="text-[16px] font-semibold tracking-[0.04em] text-text-primary sm:text-lg">
-                  <span className="text-fuchsia-300">✦</span> {item.title}
-                </p>
-                <p className="mt-2 text-[15px] leading-8 text-text-secondary sm:text-base sm:leading-8">{item.body}</p>
-              </li>
-            ))}
-          </ul>
-        </SectionShell>
-
-        <SectionShell id="glyph-poju-compare" className="border-t border-white/6">
-          <h2 className="text-center text-[24px] font-semibold text-text-primary sm:text-[28px] md:text-[30px]">
-            Glyph and POJU — how to choose
-          </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-center text-sm leading-7 text-text-secondary sm:text-[15px]">
-            Same lineage of care, different depth and pace.
-          </p>
-          <div className="mt-10 overflow-x-auto rounded-xl border border-white/10 bg-black/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-            <table className="w-full min-w-[520px] border-collapse text-left text-sm sm:text-[15px]" aria-label="Glyph compared to POJU">
-              <thead>
-                <tr className="border-b border-white/10 text-[11px] uppercase tracking-[0.12em] text-text-dim sm:text-xs">
-                  <th className="px-4 py-3 font-medium sm:px-5 sm:py-4" scope="col" />
-                  <th className="px-4 py-3 font-medium text-fuchsia-200 sm:px-5 sm:py-4" scope="col">
-                    Glyph
-                  </th>
-                  <th className="px-4 py-3 font-medium text-purple-vivid sm:px-5 sm:py-4" scope="col">
-                    POJU
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="text-text-secondary">
-                {glyphVsPojuRows.map((row) => (
-                  <tr key={row.label} className="border-b border-white/5 last:border-0">
-                    <th className="px-4 py-3.5 font-medium text-text-primary sm:px-5 sm:py-4" scope="row">
-                      {row.label}
-                    </th>
-                    <td className="px-4 py-3.5 sm:px-5 sm:py-4">{row.glyph}</td>
-                    <td className="px-4 py-3.5 sm:px-5 sm:py-4">{row.poju}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </SectionShell>
-
-        <SectionShell id="five-winds" className="border-t border-white/6 bg-black/10">
+        <SectionShell id="five-winds" className="max-w-6xl scroll-mt-28 border-t border-white/6 bg-black/10">
           <h2 className="text-center text-[24px] font-semibold text-text-primary sm:text-[28px] md:text-[30px]">
             Five winds — five archetypal patterns
           </h2>
           <p className="mx-auto mt-4 text-center text-sm leading-7 text-text-secondary sm:text-[15px] sm:leading-8">
-            The five patterns are mirrors, not predictions. Each one describes a human situation and helps
-            you frame what is already happening.
+            The five patterns are mirrors, not predictions. Each one describes a human situation and helps you frame what is
+            already happening.
           </p>
           <p className="mx-auto mt-5 text-center text-xs text-text-dim">
             <Link href="/five-wind-cards" className="text-cyan-bright/90 underline-offset-2 hover:underline">
@@ -390,8 +269,8 @@ export default function OraclePage() {
               );
             })()}
           </div>
-          <div className="mx-auto mt-10 max-w-xl space-y-4 text-center text-sm leading-7 text-text-secondary sm:text-[15px] sm:leading-8">
-            <p className="font-semibold uppercase tracking-[0.08em] text-text-primary">On the cards</p>
+          <div className="mx-auto mt-12 max-w-xl space-y-4 text-center text-sm leading-7 text-text-secondary sm:text-[15px] sm:leading-8">
+            <p className="font-semibold uppercase tracking-[0.08em] text-text-primary">On the cards.</p>
             <p>
               The five glyphs are not labels of fortune.
               <br />
@@ -402,8 +281,8 @@ export default function OraclePage() {
               particular person.
             </p>
             <p>
-              The same glyph can mean entirely different things on different days, for different people, about
-              different questions.
+              The same glyph can mean entirely different things on different days, for different people, about different
+              questions.
             </p>
             <p>
               What you receive is not a verdict.
@@ -413,35 +292,43 @@ export default function OraclePage() {
           </div>
         </SectionShell>
 
-        <SectionShell id="glyph-guidelines" className="border-t border-white/6">
+        <SectionShell id="glyph-how-it-works" className="max-w-6xl border-t border-white/6">
           <h2 className="text-center text-[24px] font-semibold text-text-primary sm:text-[28px] md:text-[30px]">
-            Before you start
+            How Glyph works.
           </h2>
-          <p className="mx-auto mt-3 max-w-xl text-center text-sm text-text-dim sm:text-[15px]">
-            Read these once — they shape the quality of what you receive.
-          </p>
-          <ul className="mx-auto mt-8 max-w-2xl space-y-4 rounded-xl border border-white/10 bg-black/25 p-5 sm:p-6">
-            {usageTips.map((tip) => (
-              <li key={tip} className="text-[15px] leading-8 text-text-secondary sm:text-base sm:leading-8">
+          <div className="mx-auto mt-10 grid max-w-4xl gap-10 md:grid-cols-3 md:gap-6">
+            <div className="text-center">
+              <p className="text-4xl font-semibold leading-none text-fuchsia-300/90">1</p>
+              <p className="mt-4 text-[16px] font-semibold text-text-primary">Hold your question.</p>
+              <p className="mt-2 text-[14px] leading-7 text-text-secondary sm:text-[15px]">
+                Compress it to 60 characters. The compression begins the answer.
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-4xl font-semibold leading-none text-fuchsia-300/90">2</p>
+              <p className="mt-4 text-[16px] font-semibold text-text-primary">Draw your pattern.</p>
+              <p className="mt-2 text-[14px] leading-7 text-text-secondary sm:text-[15px]">
+                One of 100 archetypal forms, refined over a thousand years.
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-4xl font-semibold leading-none text-fuchsia-300/90">3</p>
+              <p className="mt-4 text-[16px] font-semibold text-text-primary">Read your reflection.</p>
+              <p className="mt-2 text-[14px] leading-7 text-text-secondary sm:text-[15px]">
+                A short response — grounded in wisdom traditions and modern psychology.
+              </p>
+            </div>
+          </div>
+          <ul className="mx-auto mt-10 max-w-2xl space-y-3 rounded-xl border border-white/10 bg-black/25 p-5 text-left sm:p-6">
+            {glyphUsageRules.map((rule) => (
+              <li key={rule} className="text-[14px] leading-8 text-text-secondary sm:text-[15px] sm:leading-8">
                 <span className="mr-2 text-fuchsia-200">◉</span>
-                {tip}
+                {rule}
               </li>
             ))}
           </ul>
-        </SectionShell>
-
-        <SectionShell id="glyph-storage" className="border-t border-white/6 bg-black/10">
-          <h2 className="text-center text-[24px] font-semibold text-text-primary sm:text-[28px] md:text-[30px]">
-            What we never store
-          </h2>
-          <ul className="mx-auto mt-8 max-w-2xl space-y-3 text-[15px] leading-8 text-text-secondary sm:text-base">
-            <li>- Your question (browser local only)</li>
-            <li>- Your name (we never ask)</li>
-            <li>- Your IP (anonymized within 24h)</li>
-            <li>- Your conversation (after you leave)</li>
-          </ul>
-          <p className="mx-auto mt-6 max-w-2xl text-center text-sm text-text-dim sm:text-[15px]">
-            Free to use. No account. Take what&apos;s useful, leave what isn&apos;t.
+          <p className="mx-auto mt-8 max-w-xl text-center text-sm leading-7 text-text-dim sm:text-[15px]">
+            One question per session. If the same question calls you back, wait 48 hours.
           </p>
         </SectionShell>
 
@@ -450,7 +337,10 @@ export default function OraclePage() {
           className="mx-auto mt-4 w-full max-w-3xl scroll-mt-24 px-4 pb-6 pt-12 text-center md:px-6 md:pb-8 md:pt-14"
         >
           <div className="rounded-2xl border border-fuchsia-400/20 bg-gradient-to-b from-fuchsia-950/30 to-black/40 px-6 py-12 sm:px-10 sm:py-14">
-            <h2 className="text-[22px] font-semibold text-text-primary sm:text-[26px]">Ready for your Glyph?</h2>
+            <h2 className="text-[22px] font-semibold text-text-primary sm:text-[26px]">Hold one question.</h2>
+            <p className="mx-auto mt-4 max-w-lg text-[15px] leading-8 text-text-secondary">
+              What you receive is not a verdict. It is an invitation to look more carefully.
+            </p>
             <div className="mt-8 flex flex-col items-center gap-4 sm:mt-10">
               <Link
                 href="/glyph/reading"
@@ -458,17 +348,11 @@ export default function OraclePage() {
                 rel="noopener noreferrer"
                 className="inline-flex w-full min-w-[220px] max-w-sm justify-center rounded-full border border-fuchsia-300/55 bg-fuchsia-500/30 px-8 py-3.5 text-[15px] font-semibold text-fuchsia-50 shadow-[0_10px_28px_rgba(217,70,239,0.35)] hover:bg-fuchsia-400/35 sm:w-auto md:px-10 md:py-4 md:text-base"
               >
-                Start Your Glyph →
-              </Link>
-              <Link
-                href="/poju#glyph-vs-poju"
-                className="text-sm font-medium text-text-secondary underline-offset-4 transition hover:text-fuchsia-200 hover:underline sm:text-[15px]"
-              >
-                Still unsure? Learn how Glyph compares to POJU →
+                Try Glyph — Free
               </Link>
             </div>
             <p className="mt-8 text-xs leading-6 text-text-dim sm:text-sm">
-              Read with a wink. The patterns mirror, they don&apos;t predict. Decisions are yours alone.
+              Read with a wink. The patterns mirror, they don&apos;t predict.
             </p>
           </div>
         </section>
@@ -497,7 +381,7 @@ export default function OraclePage() {
             </div>
             <p className="mt-4 text-center text-xs text-text-dim">© 2026 POJU. All rights reserved.</p>
             <p className="mt-2 text-center text-xs text-text-dim">
-              For reflection and entertainment. POJU does not predict outcomes or replace professional advice.
+              For self-reflection and entertainment. POJU offers perspectives, not predictions. All decisions are yours alone.
             </p>
           </div>
         </footer>

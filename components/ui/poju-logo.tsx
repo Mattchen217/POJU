@@ -26,12 +26,9 @@ export function PojuLogo({ compact = false, className }: PojuLogoProps) {
           className="max-h-full max-w-full object-contain shadow-glow"
         />
       </span>
-      {!compact && (
-        <span className="inline-flex items-center gap-2">
-          <span className="font-logo text-sm leading-none text-gold-rare">破局</span>
-          <span className="text-sm font-semibold leading-none tracking-[0.1em]">POJU</span>
-        </span>
-      )}
+      {!compact ? (
+        <span className="text-sm font-semibold leading-none tracking-[0.1em]">POJU</span>
+      ) : null}
     </Link>
   );
 }

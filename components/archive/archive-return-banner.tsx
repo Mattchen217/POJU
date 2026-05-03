@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 type Props = {
   className?: string;
 };
 
-export function ArchiveReturnBanner({ className = "" }: Props) {
+function ArchiveReturnBannerInner({ className = "" }: Props) {
   const searchParams = useSearchParams();
   const from = searchParams.get("from");
   const entry = searchParams.get("entry");
@@ -27,3 +28,11 @@ export function ArchiveReturnBanner({ className = "" }: Props) {
   );
 }
 
+/** Suspense required by Next.js when using useSearchParams (App Router). */
+export function ArchiveReturnBanner(props: Props) {
+  return (
+    <Suspense fallback={null}>
+      <ArchiveReturnBannerInner {...props} />
+    </Suspense>
+  );
+}
