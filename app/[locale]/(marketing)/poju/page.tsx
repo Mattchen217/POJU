@@ -17,11 +17,13 @@ const STEP_NUMS = ["1", "2", "3", "4", "5", "6"] as const;
 
 export default async function PojuProductPage() {
   const t = await getTranslations("marketingSite.poju");
+  const tNav = await getTranslations("nav");
   const howSteps = STEP_NUMS.map((k) => t(`how_it_works.steps.${k}`));
   const includedItems = t.raw("two_columns.included.items") as string[];
   const notIncludedItems = t.raw("two_columns.not_included.items") as string[];
 
   const heroCopy = {
+    kicker: tNav("poju"),
     heading: t("hero.heading"),
     description: t("hero.description"),
     tagline: t("hero.tagline"),

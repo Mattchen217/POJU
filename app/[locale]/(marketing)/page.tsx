@@ -175,10 +175,10 @@ export default async function LandingPage() {
   }));
 
   const meetsMomentCards = [
-    { key: "card1" as const, href: "/poju", emoji: "🌪️" },
-    { key: "card2" as const, href: "/glyph", emoji: "🪞" },
-    { key: "card3" as const, href: "/syncro", emoji: "🌅" },
-    { key: "card4" as const, href: "/poju", emoji: "💭" },
+    { key: "card1" as const, href: "/poju", imageSrc: "/animations/S1.jpg" as const },
+    { key: "card2" as const, href: "/glyph", imageSrc: "/animations/S2.jpg" as const },
+    { key: "card3" as const, href: "/syncro", imageSrc: "/animations/S3.jpg" as const },
+    { key: "card4" as const, href: "/poju", imageSrc: "/animations/S4.jpg" as const },
   ];
 
   return (
@@ -398,21 +398,24 @@ export default async function LandingPage() {
                   {tHome("meetsMoment.subtitle")}
                 </p>
                 <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-7 lg:grid-cols-4 lg:gap-6">
-                  {meetsMomentCards.map(({ key, href, emoji }) => (
+                  {meetsMomentCards.map(({ key, href, imageSrc }) => (
                     <Link
                       key={key}
                       href={href}
                       className="group flex flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] transition-colors hover:border-white/16 hover:bg-white/[0.05]"
                     >
                       <div className="relative aspect-[16/10] w-full overflow-hidden bg-gradient-to-br from-white/[0.08] via-white/[0.03] to-black/45">
-                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4">
-                          <span className="text-5xl leading-none sm:text-[3.25rem]" aria-hidden>
-                            {emoji}
-                          </span>
-                          <span className="text-center text-[10px] font-medium uppercase tracking-[0.14em] text-white/38 sm:text-[11px]">
-                            {tHome("meetsMoment.imagePlaceholder")}
-                          </span>
-                        </div>
+                        <Image
+                          src={imageSrc}
+                          alt=""
+                          fill
+                          className="object-cover object-center transition-transform duration-500 group-hover:scale-[1.04]"
+                          sizes="(max-width:640px) 100vw, (max-width:1024px) 50vw, 25vw"
+                        />
+                        <div
+                          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent"
+                          aria-hidden
+                        />
                       </div>
                       <div className="flex min-h-0 flex-1 flex-col p-5 sm:p-6">
                         <div className="min-h-0 flex-1 space-y-2 text-left text-[15px] leading-7 text-white/90 sm:text-[16px] sm:leading-8">

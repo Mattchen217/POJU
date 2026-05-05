@@ -2,6 +2,7 @@ import { Link } from "@/i18n/navigation";
 import { HeroSpline } from "@/components/marketing/hero-spline";
 
 export type PojuProductHeroCopy = {
+  kicker: string;
   heading: string;
   description: string;
   tagline: string;
@@ -21,6 +22,9 @@ export function PojuProductHero({ copy }: { copy: PojuProductHeroCopy }) {
         />
         <div className="relative z-10 mx-auto flex min-h-[360px] w-full max-w-6xl items-center justify-center px-2 sm:min-h-[420px] sm:px-4 md:min-h-[520px] md:px-6">
           <div className="min-w-0 w-full max-w-[720px] text-center">
+            <p className="mb-3 font-primary text-[13px] font-semibold uppercase tracking-[0.18em] text-purple-vivid sm:mb-4 sm:text-sm md:text-[15px]">
+              {copy.kicker}
+            </p>
             <h1 className="mx-auto max-w-[720px] text-[36px] font-semibold leading-[1.06] text-text-primary sm:text-[44px] md:text-[52px] md:leading-[1.04] lg:text-[56px]">
               {copy.heading}
             </h1>

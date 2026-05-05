@@ -114,7 +114,6 @@
     "meetsMoment": {
       "heading": "When pojulife meets your moment.",
       "subtitle": "Real situations where pojulife helps you see clearly.",
-      "imagePlaceholder": "Image placeholder",
       "card1": {
         "p1": "You're stuck between two paths.",
         "p2": "Career change. Relationship decision. Where to live.",
@@ -122,10 +121,10 @@
         "cta": "Try POJU"
       },
       "card2": {
-        "p1": "You need a fresh angle, in 60 seconds.",
-        "p2": "Something feels off. You're not sure what.",
-        "p3": "Glyph holds up a mirror — read what comes back.",
-        "cta": "Try Glyph"
+        "p1": "Du brauchst eine frische Perspektive auf das, was sich im Kreis dreht.",
+        "p2": "Etwas fühlt sich falsch an. Du weißt nicht genau was.",
+        "p3": "Glyph hält dir einen Spiegel vor — lies, was zurückkommt.",
+        "cta": "Glyph ausprobieren"
       },
       "card3": {
         "p1": "You want to know your own rhythm.",
