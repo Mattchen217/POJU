@@ -2,9 +2,14 @@ import path from "node:path";
 import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
+import createNextIntlPlugin from "next-intl/plugin";
 import withSerwistInit from "@serwist/next";
 
+const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+/** 绝对路径，避免 Turbopack / Windows 下相对 `resolveAlias` 未指向仓库内 `i18n/request.ts` 而落到 next-intl 占位模块 */
+const nextIntlRequestConfig = path.resolve(__dirname, "i18n/request.ts");
 
 const withSerwist = withSerwistInit({
   swSrc: "app/sw.ts",
@@ -54,4 +59,31 @@ const nextConfig = {
   },
 };
 
-export default withSerwist(nextConfig);
+const mergedConfig = withNextIntl(withSerwist(nextConfig));
+
+/** @type {import('next').NextConfig} */
+const finalConfig = {
+  ...mergedConfig,
+  turbopack: {
+    ...mergedConfig.turbopack,
+    resolveAlias: {
+      ...mergedConfig.turbopack?.resolveAlias,
+      "next-intl/config": nextIntlRequestConfig,
+    },
+  },
+};
+
+if (typeof mergedConfig.webpack === "function") {
+  const previousWebpack = mergedConfig.webpack;
+  finalConfig.webpack = (config, options) => {
+    const out = previousWebpack(config, options);
+    out.resolve ||= {};
+    out.resolve.alias = {
+      ...out.resolve.alias,
+      "next-intl/config": nextIntlRequestConfig,
+    };
+    return out;
+  };
+}
+
+export default finalConfig;

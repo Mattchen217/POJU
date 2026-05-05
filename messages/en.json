@@ -1,0 +1,459 @@
+{
+  "common": {
+    "brandWordmark": "Poju Life",
+    "brand": "POJU LIFE",
+    "domain": "pojulife.com",
+    "tagline": "Where AI meets a thousand years of wisdom.",
+    "footerTagline": "For self-reflection and entertainment. POJU offers perspectives, not predictions. All decisions are yours alone.",
+    "copyright": "© 2026 POJU. All rights reserved.",
+    "syncroFooterTagline": "Syncro is a self-awareness tool. Take what resonates. Decisions are yours alone."
+  },
+  "nav": {
+    "home": "Home",
+    "poju": "POJU",
+    "glyph": "Glyph",
+    "syncro": "Syncro",
+    "archive": "Archive",
+    "disclaimer": "Disclaimer",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "contact": "Contact"
+  },
+  "language": {
+    "short": "Lang",
+    "comingSoon": "All locales active",
+    "aria": "Language",
+    "mobileSection": "Language"
+  },
+  "home": {
+    "hero": {
+      "brand": "Poju Life",
+      "headline": "Break through what won't let you go.",
+      "descLine1": "Two thousand years of Eastern wisdom.",
+      "descLine2": "Confirmed by modern science.",
+      "descLine3": "Translated by AI — for you, today.",
+      "trustLine": "No account · No subscription · Decisions are yours alone"
+    },
+    "threeWays": {
+      "heading": "Three ways in. One way through."
+    },
+    "cta": {
+      "startSession": "Start a POJU session · $9.99",
+      "tryGlyph": "Try Glyph · Free",
+      "yoursToDecide": "No account · No subscription · Yours to decide"
+    },
+    "twoLanguages": {
+      "heading": "Where two languages meet.",
+      "line1": "Two thousand years of human reflection.",
+      "line2": "Modern AI translation.",
+      "line3": "One conversation that helps you see clearly.",
+      "patternTitle": "PATTERN",
+      "patternBody": "Ancient observation on what recurs.",
+      "directionTitle": "DIRECTION",
+      "directionBody": "Spatial psychology on what we notice.",
+      "timingTitle": "TIMING",
+      "timingBody": "Cycles that shape biology.",
+      "youTitle": "YOU",
+      "youBody": "Your birth context, moment, and question."
+    },
+    "promises": {
+      "heading": "Three promises we don't break.",
+      "neverStoredTitle": "Never stored",
+      "neverStoredBody": "Your conversations live encrypted on your device. We can't read them. No one can.",
+      "neverRequiredTitle": "Never required",
+      "neverRequiredBody": "No account. No login. No password. Email only when you want a PDF.",
+      "neverManipulativeTitle": "Never manipulative",
+      "neverManipulativeBody": "No dark patterns. No fake urgency. One price: $9.99 when you need it.",
+      "readMore": "Read the full privacy architecture →"
+    },
+    "finalCta": {
+      "heading": "When the question won't let you go.",
+      "subtitle": "Stop reading. Start moving through it.",
+      "subline": "Stop reading. Start moving through it.",
+      "primary": "Ask Your Question — $9.99",
+      "secondary": "Or try Glyph for free first →",
+      "readyHeading": "Ready to begin?",
+      "readySubheading": "Three ways in. Choose what fits this moment.",
+      "poju": {
+        "title": "Start a POJU session",
+        "sub": "$9.99 · For one question"
+      },
+      "glyph": {
+        "title": "Try Glyph",
+        "sub": "Free · A pocket-sized mirror"
+      },
+      "syncro": {
+        "title": "Open Syncro",
+        "sub": "Free · On your phone"
+      }
+    },
+    "products": {
+      "poju": {
+        "name": "POJU",
+        "line1": "For the question that won't let you go.",
+        "line2": "A deep conversation that walks with you until you see your way through.",
+        "badge": "$9.99",
+        "cta": "Try it →"
+      },
+      "glyph": {
+        "name": "Glyph",
+        "line1": "A pocket-sized mirror for your moment.",
+        "line2": "Hold a question. Draw a pattern. Read what comes back.",
+        "badgeFree": "Free",
+        "badgeStruck": "$1.99",
+        "cta": "Try it →"
+      },
+      "syncro": {
+        "name": "Syncro",
+        "line1": "See your natural rhythms unfold.",
+        "line2": "A weather forecast for your inner life, updated every two hours.",
+        "badge": "Free",
+        "cta": "Try it →"
+      }
+    },
+    "meetsMoment": {
+      "heading": "When pojulife meets your moment.",
+      "subtitle": "Real situations where pojulife helps you see clearly.",
+      "imagePlaceholder": "Image placeholder",
+      "card1": {
+        "p1": "You're stuck between two paths.",
+        "p2": "Career change. Relationship decision. Where to live.",
+        "p3": "You've thought about it. Now think differently.",
+        "cta": "Try POJU"
+      },
+      "card2": {
+        "p1": "You need a fresh angle, in 60 seconds.",
+        "p2": "Something feels off. You're not sure what.",
+        "p3": "Glyph holds up a mirror — read what comes back.",
+        "cta": "Try Glyph"
+      },
+      "card3": {
+        "p1": "You want to know your own rhythm.",
+        "p2": "When do you have momentum? When does friction arrive?",
+        "p3": "Syncro maps it, every two hours.",
+        "cta": "Try Syncro"
+      },
+      "card4": {
+        "p1": "The question keeps you up at 2 AM.",
+        "p2": "You've talked to friends, read the books. Still circling.",
+        "p3": "POJU sits with you through it. $9.99. Once.",
+        "cta": "Start a POJU session"
+      }
+    }
+  },
+  "legal": {
+    "lastUpdated": "Last updated: October 30, 2025",
+    "version": "Version 1.0"
+  },
+  "marketingSite": {
+    "common": {
+      "tagline": "Where AI meets a thousand years of wisdom.",
+      "footer_disclaimer": "For self-reflection and entertainment. POJU offers perspectives, not predictions. All decisions are yours alone.",
+      "trust_line": "No account · No subscription · Yours to decide",
+      "read_with_wink": "Read with a wink. The patterns mirror, they don't predict."
+    },
+    "nav": {
+      "poju": "POJU",
+      "glyph": "Glyph",
+      "syncro": "Syncro",
+      "archive": "Archive"
+    },
+    "home": {
+      "hero": {
+        "subtitle": "Where AI meets a thousand years of wisdom.",
+        "cta_primary": "Start a POJU session · $9.99",
+        "cta_secondary": "Try Glyph · Free"
+      },
+      "three_ways": {
+        "heading": "Three ways in. One way through.",
+        "poju": {
+          "tagline": "For the question that won't let you go.",
+          "description": "A single deep conversation, until you see it through."
+        },
+        "glyph": {
+          "tagline": "A 60-second mirror.",
+          "description": "Hold a question. Draw a pattern. Read a reflection."
+        },
+        "syncro": {
+          "tagline": "See your natural rhythms.",
+          "description": "Updated every two hours, on your phone."
+        },
+        "try_it": "Try it →"
+      },
+      "two_languages": {
+        "heading": "Where two languages meet.",
+        "subtitles": [
+          "Two thousand years of human reflection.",
+          "Modern AI translation.",
+          "One conversation that helps you see clearly."
+        ],
+        "pattern": {
+          "title": "PATTERN",
+          "description": "Ancient observation on what recurs."
+        },
+        "direction": {
+          "title": "DIRECTION",
+          "description": "Spatial psychology on what we notice."
+        },
+        "timing": {
+          "title": "TIMING",
+          "description": "Cycles that shape biology."
+        },
+        "you": {
+          "title": "YOU",
+          "description": "Your birth context, moment, and question."
+        }
+      },
+      "promises": {
+        "heading": "Three promises we don't break.",
+        "never_stored": {
+          "title": "Never stored",
+          "description": "Your conversations live encrypted on your device. We can't read them. No one can."
+        },
+        "never_required": {
+          "title": "Never required",
+          "description": "No account. No login. No password. Email only when you want a PDF."
+        },
+        "never_manipulative": {
+          "title": "Never manipulative",
+          "description": "No dark patterns. No fake urgency. One price: $9.99 when you need it."
+        },
+        "read_more": "Read the full privacy architecture →"
+      },
+      "final_cta": {
+        "heading": "When the question won't let you go.",
+        "subtitle": "Stop reading. Start moving through it.",
+        "primary": "Ask Your Question — $9.99",
+        "secondary": "Or try Glyph for free first →"
+      }
+    },
+    "poju": {
+      "hero": {
+        "heading": "Sometimes reading isn't enough.",
+        "description": "You've already read the books, talked to the friends, and weighed the pros and cons. The question still won't let you go.",
+        "tagline": "POJU is what comes after thinking alone.",
+        "cta_primary": "Ask your question — $9.99",
+        "cta_secondary": "See how it works ↓"
+      },
+      "when_to_come": {
+        "heading": "When to come to POJU.",
+        "stuck": {
+          "title": "You're stuck between two paths",
+          "description": "Career change. Relationship decision. Where to live."
+        },
+        "confused": {
+          "title": "You've done your research and you're more confused",
+          "description": "Conflicting advice. Family pressure. A ticking clock."
+        },
+        "repeating": {
+          "title": "Something keeps repeating and you don't know why",
+          "description": "Same kind of relationship. Same blocks. Same setbacks."
+        },
+        "depth": {
+          "title": "You need depth that friends can't give",
+          "description": "No one around you has the distance to see clearly."
+        },
+        "direction": {
+          "title": "You want direction, not prediction",
+          "description": "\"Will X happen\" is astrology. \"What should I do\" is POJU."
+        }
+      },
+      "how_it_works": {
+        "heading": "How POJU works",
+        "subtitle": "Not a single answer — a continuous breakthrough loop.",
+        "steps": {
+          "1": "Issue Identification",
+          "2": "Information Collection",
+          "3": "Pattern Analysis",
+          "4": "Core Analysis",
+          "5": "Action Generation",
+          "6": "Implementation Tracking"
+        },
+        "footer": "You act. You come back. The path adjusts. Until you move through."
+      },
+      "two_columns": {
+        "heading": "Two columns, one promise.",
+        "included": {
+          "title": "What's included",
+          "items": [
+            "Unlimited depth in a single session",
+            "Action plan you can act on tomorrow",
+            "Reflection prompts to sit with",
+            "30-day session access"
+          ]
+        },
+        "not_included": {
+          "title": "What it's not",
+          "items": [
+            "Does not predict your future",
+            "Does not replace professional advice",
+            "Does not make decisions for you"
+          ]
+        },
+        "tagline": "POJU is a thinking partner. The decisions remain yours.",
+        "cta": "Ask your question — $9.99",
+        "footnote": "One question · Unlimited depth · Deletes when you close"
+      }
+    },
+    "glyph": {
+      "hero": {
+        "heading": "Glyph",
+        "subtitle": "A 60-second mirror.",
+        "description": "Hold a question. Draw a pattern. Read a reflection.",
+        "footnote": "Free. No signup. Read with a wink.",
+        "cta": "Try Glyph — Free"
+      },
+      "five_winds": {
+        "heading": "Five winds — five archetypal patterns",
+        "description": "The five patterns are mirrors, not predictions. Each one describes a human situation and helps you frame what is already happening.",
+        "divine_tailwind": {
+          "name": "Divine Tailwind",
+          "description": "The rare grace of full alignment. Everything you need is already moving toward you."
+        },
+        "fair_sky": {
+          "name": "Fair Sky",
+          "description": "Clear paths with gentle support. The way is open, but you must still walk it."
+        },
+        "still_water": {
+          "name": "Still Water",
+          "description": "The time for patience and stillness. Neither forward nor backward. Sit with what is."
+        },
+        "crosswind": {
+          "name": "Crosswind",
+          "description": "Competing forces are pulling at you. This is not a cue to push harder. It's a cue to listen more carefully."
+        },
+        "eye_of_storm": {
+          "name": "Eye of Storm",
+          "description": "The deep stillness found at the center of a storm. When everything external is turbulent, clarity lives in the one place nothing can reach."
+        }
+      },
+      "on_the_cards": {
+        "heading": "On the cards.",
+        "paragraphs": [
+          "The five glyphs are not labels of fortune. They are not \"good cards\" or \"bad cards.\"",
+          "Each one is a lens — a way of reading this particular moment, for this particular question, held by this particular person.",
+          "The same glyph can mean entirely different things on different days, for different people, about different questions.",
+          "What you receive is not a verdict. It is a perspective — and an invitation to look more carefully."
+        ]
+      },
+      "how_it_works": {
+        "heading": "How Glyph works.",
+        "step_1": {
+          "title": "Hold your question.",
+          "description": "Compress it to 60 characters. The compression begins the answer."
+        },
+        "step_2": {
+          "title": "Draw your pattern.",
+          "description": "One of 100 archetypal forms, refined over a thousand years."
+        },
+        "step_3": {
+          "title": "Read your reflection.",
+          "description": "A short response — grounded in wisdom traditions and modern psychology."
+        },
+        "rules": [
+          "One question per reading. Don't ask many things at once.",
+          "Wait 48 hours before asking the same thing again. Answers need time to settle.",
+          "Compress your question into 60 characters. The compression is the beginning of the answer."
+        ],
+        "session_reminder": "One question per session. If the same question calls you back, wait 48 hours."
+      },
+      "final_cta": {
+        "heading": "Hold one question.",
+        "subtitle": "What you receive is not a verdict. It is an invitation to look more carefully.",
+        "cta": "Try Glyph — Free"
+      }
+    },
+    "syncro": {
+      "hero": {
+        "heading": "Syncro",
+        "subtitle": "See your natural rhythms.",
+        "description": "Based on your birth context, Syncro reflects how the day's patterns align with you. Where to lean in. Where to slow down.",
+        "tagline": "A weather forecast for your inner life, updated every two hours.",
+        "footnote": "Free · Opens on mobile only",
+        "cta": "Open Syncro",
+        "qr_label": "pojulife.com/syncro",
+        "sms_label": "Text yourself the link",
+        "sms_button": "Text me the link",
+        "notify_cta": "Get notified when Syncro launches",
+        "sms_body": "Open Syncro on your phone: {url}",
+        "phone_placeholder": "Phone number"
+      },
+      "what_shows": {
+        "heading": "What Syncro shows.",
+        "intro": "Hold your phone toward a direction. See what's available. See what isn't.",
+        "items_intro": "Each direction shows:",
+        "items": [
+          "A short description of the current pattern",
+          "What this period suits (for example, slow conversations)",
+          "What this period doesn't suit (for example, wait on big asks)"
+        ],
+        "footnote": "Updated every two hours, with your context.",
+        "preview_label": "Preview",
+        "preview_placeholder": "Phone mockup placeholder — replace with a Syncro screen capture when ready."
+      },
+      "use_cases": {
+        "heading": "Where people use Syncro",
+        "study": {
+          "title": "Study spot",
+          "description": "Choose a desk orientation that supports steady focus before a deep work block."
+        },
+        "negotiation": {
+          "title": "Negotiation",
+          "description": "Find a seating orientation that supports confidence and steadier communication."
+        },
+        "bed": {
+          "title": "Bed orientation",
+          "description": "Test sleeping directions and compare how your rest quality changes over time."
+        },
+        "travel": {
+          "title": "Travel decision",
+          "description": "Check directional tone before heading out when timing and clarity both matter."
+        },
+        "companion": {
+          "title": "POJU companion",
+          "description": "Use Syncro as a real-world layer, then return to POJU for deeper decision strategy."
+        }
+      },
+      "what_it_is": {
+        "heading": "What it is. What it isn't.",
+        "shows": {
+          "title": "What it shows",
+          "items": [
+            "Current rhythm pattern for the next 2 hours",
+            "Eight directions with what they suit",
+            "Where to lean in, where to slow down"
+          ]
+        },
+        "isnt": {
+          "title": "What it isn't",
+          "items": [
+            "A predictor of events",
+            "A promiser of outcomes",
+            "A replacement for your own judgment"
+          ]
+        }
+      },
+      "always_free": {
+        "heading": "Always free.",
+        "description": "Syncro stays free as your everyday rhythm companion. Open it whenever you need clarity on the moment.",
+        "cta": "Open Syncro on mobile"
+      }
+    },
+    "footer": {
+      "disclaimers": {
+        "home": "For self-reflection and entertainment. POJU offers perspectives, not predictions. All decisions are yours alone.",
+        "poju": "POJU is a thinking partner. It offers perspectives, not prophecies. All decisions are yours alone.",
+        "glyph": "Read with a wink. The patterns mirror, they don't predict. All decisions are yours alone.",
+        "syncro": "Syncro is a self-awareness tool. Take what resonates. Decisions are yours alone."
+      },
+      "links": {
+        "home": "Home",
+        "disclaimer": "Disclaimer",
+        "privacy": "Privacy Policy",
+        "terms": "Terms of Service",
+        "contact": "Contact"
+      },
+      "copyright": "© 2026 POJU. All rights reserved."
+    }
+  }
+}

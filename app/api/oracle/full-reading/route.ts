@@ -1,6 +1,10 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 import signsData from "../../../../public/oracle/data/signs.json";
+import {
+  getLanguageDirective,
+  parseAppLocale,
+} from "@/lib/prompts/language-directive";
 import type { SignData } from "@/types/oracle";
 
 function getGeminiClient(): GoogleGenerativeAI | null {
@@ -25,6 +29,9 @@ interface RequestBody {
     shichen: string;
   };
   user_question: string;
+  /** next-intl 界面语言，用于 OUTPUT LANGUAGE INSTRUCTION */
+  locale?: unknown;
+  conversation_history?: Array<{ role: string; content: string }>;
 }
 
 const SYSTEM_PROMPT = `You are POJU's Oracle Interpreter.
@@ -377,6 +384,15 @@ export async function POST(req: Request) {
     }
 
     const body: RequestBody = await req.json();
+    const locale = parseAppLocale(body.locale);
+    const langDirective = getLanguageDirective({
+      locale,
+      userInput: body.user_question,
+      conversationHistory: body.conversation_history,
+    });
+    const systemInstruction =
+      SYSTEM_PROMPT + langDirective.directive;
+
     if (detectDangerousContent(body.user_question)) {
       return NextResponse.json({ reading: SAFETY_FALLBACK });
     }
@@ -409,17 +425,18 @@ ${signData.raw_md_content}
 ─────────────────────────────────────────
 
 Now generate the JSON response per the system prompt's format.
-Total length: 800-1100 English words. Strict JSON only, no preamble.`;
+Target length: about 800-1100 English words of substance if the output language is English; for Chinese, Spanish, French, or German, use a comparable depth (do not shorten just because the script is denser). Strict JSON only, no preamble.`;
 
     const model = genAI.getGenerativeModel({
       model: GEMINI_MODEL,
-      systemInstruction: SYSTEM_PROMPT,
+      systemInstruction,
     });
     const dedupeKey = JSON.stringify({
       sign_number: body.sign_number,
       level: body.level,
       user_birth: body.user_birth,
       user_question: body.user_question,
+      locale,
     });
 
     const runPromise =
@@ -480,18 +497,23 @@ Total length: 800-1100 English words. Strict JSON only, no preamble.`;
       throw new Error("LLM response reflections must be array of 2");
     }
 
-    const totalWords =
-      countWords(r.situation) +
-      countWords(r.meaning) +
-      countWords(r.wisdom) +
-      r.actions.reduce((sum, a) => sum + countWords(a), 0) +
-      r.reflections.reduce((sum, q) => sum + countWords(q), 0) +
-      countWords(r.revisit_timing);
-    if (totalWords < 800 || totalWords > 1100) {
-      throw new Error(`LLM response word count out of range: ${totalWords}`);
+    if (locale === "en") {
+      const totalWords =
+        countWords(r.situation) +
+        countWords(r.meaning) +
+        countWords(r.wisdom) +
+        r.actions.reduce((sum, a) => sum + countWords(a), 0) +
+        r.reflections.reduce((sum, q) => sum + countWords(q), 0) +
+        countWords(r.revisit_timing);
+      if (totalWords < 800 || totalWords > 1100) {
+        throw new Error(`LLM response word count out of range: ${totalWords}`);
+      }
     }
 
-    return NextResponse.json({ reading: r });
+    return NextResponse.json({
+      reading: r,
+      language: langDirective.outputLanguage,
+    });
   } catch (error) {
     const message = formatGeminiError(error);
     console.error("Full reading API error:", error);

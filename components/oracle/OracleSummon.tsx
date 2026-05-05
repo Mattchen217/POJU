@@ -94,7 +94,7 @@ export function OracleSummon({ userInput: _userInput, onComplete }: OracleSummon
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-b from-[#0B0815] to-black">
       <div
-        className="absolute inset-0 select-none"
+        className={`absolute inset-0 select-none ${isPressing && phase === "idle" ? "cursor-none touch-none" : ""}`}
         onMouseDown={(e) => {
           if (!isWithinCenterZone(e.clientX, e.clientY)) return;
           handlePressStart();

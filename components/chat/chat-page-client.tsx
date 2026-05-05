@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { useRouter, useSearchParams } from "next/navigation";
 import { z } from "zod";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -83,7 +83,7 @@ function sessionListIcon(group: "Today" | "Yesterday" | "Previous Sessions", isA
   const cls =
     group === "Today" && isActive
       ? "text-violet-400"
-      : "text-neutral-400 group-hover:text-white";
+      : "text-neutral-400 group-hover/session-row:text-white";
   return (
     <span className={`material-symbols-outlined shrink-0 text-[20px] leading-none ${cls}`}>
       {name}
@@ -121,11 +121,19 @@ export function ChatPageClient() {
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const [wipeOpen, setWipeOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [inlineRenameId, setInlineRenameId] = useState<string | null>(null);
+  const [inlineRenameValue, setInlineRenameValue] = useState("");
+  const inlineRenameEscapeRef = useRef(false);
   const [pdfOpen, setPdfOpen] = useState(false);
   const [pdfEmail, setPdfEmail] = useState("");
   const [pdfError, setPdfError] = useState("");
   const [sentToast, setSentToast] = useState("");
   const [welcomeToast, setWelcomeToast] = useState(false);
+  const [sessionMenu, setSessionMenu] = useState<{ sessionId: string; top: number; right: number } | null>(null);
+  const [exportHistorySessionId, setExportHistorySessionId] = useState<string | null>(null);
+  const [exportHistoryEmail, setExportHistoryEmail] = useState("");
+  const [exportHistoryError, setExportHistoryError] = useState("");
 
   useEffect(() => {
     let stop = false;
@@ -294,20 +302,51 @@ export function ChatPageClient() {
     setRenameOpen(false);
   };
 
-  const wipeSession = () => {
-    if (!activeSession) return;
-    const sid = activeSession.id;
-    setMessages((prev) => prev.filter((m) => m.sessionId !== sid));
-    const remaining = sessions.filter((s) => s.id !== sid);
-    setSessions(() => remaining);
-    if (!remaining.length) {
-      clearLegacySnapshot();
-      void clearSecureChatSnapshot();
-      router.replace("/");
+  const commitInlineRename = useCallback(() => {
+    if (!inlineRenameId) return;
+    const val = inlineRenameValue.trim().slice(0, 40);
+    if (!val) {
+      setInlineRenameId(null);
       return;
     }
-    setActiveSessionId(remaining[0].id);
+    setSessions((prev) => prev.map((s) => (s.id === inlineRenameId ? { ...s, title: val } : s)));
+    setInlineRenameId(null);
+  }, [inlineRenameId, inlineRenameValue, setSessions]);
+
+  const purgeSessionById = useCallback(
+    (sid: string) => {
+      setMessages((prev) => prev.filter((m) => m.sessionId !== sid));
+      const remaining = sessions.filter((s) => s.id !== sid);
+      setSessions(() => remaining);
+      try {
+        localStorage.removeItem(`pojulife_chat_welcome_seen_${sid}`);
+      } catch {
+        //
+      }
+      if (!remaining.length) {
+        clearLegacySnapshot();
+        void clearSecureChatSnapshot();
+        router.replace("/");
+        return;
+      }
+      if (sid === activeSessionId) {
+        setActiveSessionId(remaining[0].id);
+      }
+    },
+    [sessions, activeSessionId, setMessages, setSessions, setActiveSessionId, router],
+  );
+
+  const wipeSession = () => {
+    if (!activeSession) return;
+    purgeSessionById(activeSession.id);
     setWipeOpen(false);
+  };
+
+  const confirmSidebarDeleteSession = () => {
+    if (!deleteTargetId) return;
+    purgeSessionById(deleteTargetId);
+    setDeleteTargetId(null);
+    setMobileDrawer(false);
   };
 
   const archiveActiveSession = () => {
@@ -349,6 +388,36 @@ export function ChatPageClient() {
     setPdfOpen(false);
     setTimeout(() => setSentToast(""), 3000);
   };
+
+  const submitExportChatHistory = () => {
+    if (!exportHistorySessionId) return;
+    const parsed = EMAIL_SCHEMA.safeParse(exportHistoryEmail.trim());
+    if (!parsed.success) {
+      setExportHistoryError("Please enter a valid email address.");
+      return;
+    }
+    setExportHistoryError("");
+    const hidden = parsed.data.replace(/(.{2}).+(@.+)/, "$1***$2");
+    const sess = sessions.find((x) => x.id === exportHistorySessionId);
+    setSentToast(`We'll email the complete chat history for "${sess?.title ?? "this session"}" to ${hidden}.`);
+    setExportHistorySessionId(null);
+    setExportHistoryEmail("");
+    setTimeout(() => setSentToast(""), 5000);
+  };
+
+  useEffect(() => {
+    if (!sessionMenu) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSessionMenu(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [sessionMenu]);
+
+  useEffect(() => {
+    if (!sessionMenu) return;
+    if (!sessions.some((x) => x.id === sessionMenu.sessionId)) setSessionMenu(null);
+  }, [sessionMenu, sessions]);
 
   const onAttachFile = async (file: File) => {
     const reader = new FileReader();
@@ -407,6 +476,11 @@ export function ChatPageClient() {
 
   if (!ready || !activeSession) return null;
 
+  const pendingDeleteSession = deleteTargetId ? sessions.find((s) => s.id === deleteTargetId) : undefined;
+  const pendingExportSession = exportHistorySessionId
+    ? sessions.find((s) => s.id === exportHistorySessionId)
+    : undefined;
+
   const sessionGroupsOrder = ["Today", "Yesterday", "Previous Sessions"] as const;
 
   const sidebarInner = (
@@ -448,26 +522,103 @@ export function ChatPageClient() {
                 {groupedSessions[g].map((s) => {
                   const active = s.id === activeSessionId;
                   return (
-                    <button
+                    <div
                       key={s.id}
-                      type="button"
-                      onClick={() => {
-                        setActiveSessionId(s.id);
-                        setMobileDrawer(false);
-                      }}
-                      className={`group flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left transition-all hover:scale-[1.02] ${
+                      className={`group/session-row flex w-full items-stretch overflow-hidden rounded-lg transition-transform hover:scale-[1.02] ${
                         active
-                          ? "bg-violet-500/10 font-semibold text-violet-300 ring-1 ring-inset ring-violet-500/20"
+                          ? "bg-violet-500/10 ring-1 ring-inset ring-violet-500/20"
                           : "text-neutral-400 hover:bg-white/5 hover:text-white"
                       }`}
                     >
-                      {sessionListIcon(g, active)}
-                      <div className="min-w-0 truncate">
-                        <span className="block text-sm">
-                          {formatDate(s.createdAt)} · &quot;{s.hidden ? "Hidden by you" : s.title}&quot;
-                        </span>
-                      </div>
-                    </button>
+                      {inlineRenameId === s.id ? (
+                        <div
+                          className={`flex min-w-0 flex-1 items-center gap-3 px-3 py-2 ${
+                            active ? "font-semibold text-violet-300" : "text-neutral-200"
+                          }`}
+                        >
+                          {sessionListIcon(g, active)}
+                          <input
+                            autoFocus
+                            maxLength={40}
+                            value={inlineRenameValue}
+                            onChange={(e) => setInlineRenameValue(e.target.value)}
+                            onFocus={(e) => e.target.select()}
+                            onBlur={() => {
+                              if (inlineRenameEscapeRef.current) {
+                                inlineRenameEscapeRef.current = false;
+                                return;
+                              }
+                              commitInlineRename();
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                (e.target as HTMLInputElement).blur();
+                              }
+                              if (e.key === "Escape") {
+                                e.preventDefault();
+                                inlineRenameEscapeRef.current = true;
+                                setInlineRenameId(null);
+                              }
+                            }}
+                            className="min-w-0 flex-1 rounded-md border border-white/10 bg-black/40 px-2 py-1.5 text-sm text-text-primary outline-none ring-0 focus:border-white/15 focus:outline-none focus:ring-0"
+                            aria-label="Session name"
+                          />
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveSessionId(s.id);
+                            setMobileDrawer(false);
+                          }}
+                          onDoubleClick={(e) => {
+                            e.preventDefault();
+                            setSessionMenu(null);
+                            inlineRenameEscapeRef.current = false;
+                            setActiveSessionId(s.id);
+                            setMobileDrawer(false);
+                            setInlineRenameId(s.id);
+                            setInlineRenameValue(s.title);
+                          }}
+                          className={`flex min-w-0 flex-1 select-none items-center gap-3 px-3 py-3 text-left ${
+                            active ? "font-semibold text-violet-300" : "hover:text-white"
+                          }`}
+                        >
+                          {sessionListIcon(g, active)}
+                          <div className="min-w-0 truncate">
+                            <span className="block text-sm">
+                              {formatDate(s.createdAt)} · &quot;{s.hidden ? "Hidden by you" : s.title}&quot;
+                            </span>
+                          </div>
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        title="Session actions"
+                        aria-label="Session actions"
+                        aria-haspopup="menu"
+                        aria-expanded={sessionMenu?.sessionId === s.id}
+                        className={`flex shrink-0 items-center justify-center px-2 transition-colors hover:text-text-primary ${
+                          active ? "text-violet-400/90" : "text-neutral-500"
+                        }`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                          setSessionMenu((prev) =>
+                            prev?.sessionId === s.id
+                              ? null
+                              : {
+                                  sessionId: s.id,
+                                  top: rect.bottom + 6,
+                                  right: Math.max(12, window.innerWidth - rect.right),
+                                },
+                          );
+                        }}
+                      >
+                        <span className="material-symbols-outlined text-[22px] leading-none">more_vert</span>
+                      </button>
+                    </div>
                   );
                 })}
               </div>
@@ -531,6 +682,67 @@ export function ChatPageClient() {
         </div>
       ) : null}
 
+      {sessionMenu && sessions.some((x) => x.id === sessionMenu.sessionId) ? (
+        <>
+          <div className="fixed inset-0 z-[134] bg-transparent" aria-hidden onClick={() => setSessionMenu(null)} />
+          <div
+            role="menu"
+            className="fixed z-[135] min-w-[220px] rounded-xl border border-white/12 bg-neutral-950 py-1 shadow-2xl"
+            style={{ top: sessionMenu.top, right: sessionMenu.right }}
+          >
+            {(() => {
+              const s = sessions.find((x) => x.id === sessionMenu.sessionId)!;
+              return (
+                <>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-on-surface-variant hover:bg-white/10 hover:text-text-primary"
+                    onClick={() => {
+                      setSessionMenu(null);
+                      setActiveSessionId(s.id);
+                      setMobileDrawer(false);
+                      inlineRenameEscapeRef.current = false;
+                      setInlineRenameId(s.id);
+                      setInlineRenameValue(s.title);
+                    }}
+                  >
+                    <span className="material-symbols-outlined text-[20px] leading-none">drive_file_rename_outline</span>
+                    Rename
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-on-surface-variant hover:bg-white/10 hover:text-text-primary"
+                    onClick={() => {
+                      setSessionMenu(null);
+                      setExportHistorySessionId(s.id);
+                      setExportHistoryEmail("");
+                      setExportHistoryError("");
+                    }}
+                  >
+                    <span className="material-symbols-outlined text-[20px] leading-none">download</span>
+                    Download chat log
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-red-300/90 hover:bg-red-500/10 hover:text-red-200"
+                    onClick={() => {
+                      setSessionMenu(null);
+                      setDeleteTargetId(s.id);
+                    }}
+                  >
+                    <span className="material-symbols-outlined text-[20px] leading-none">delete</span>
+                    Delete
+                  </button>
+                </>
+              );
+            })()}
+          </div>
+        </>
+      ) : null}
+
       <div className="aura-bg relative z-0 flex h-full w-full">
         {desktopSidebar}
 
@@ -583,25 +795,23 @@ export function ChatPageClient() {
             ref={scrollerRef}
             className="relative flex min-h-0 flex-1 flex-col items-center gap-6 overflow-y-auto p-6 pb-40 selection:bg-primary-container selection:text-on-primary-container"
           >
-            {!activeMessages.length ? (
-              <div className="glass-panel relative z-[1] mt-10 w-full max-w-2xl shrink-0 rounded-xl p-8 text-center">
-                <span className="material-symbols-outlined jewel-icon mb-2 block text-5xl leading-none">self_improvement</span>
-                <h3 className="mb-2 text-2xl font-semibold text-on-surface">Welcome to the Oracle</h3>
-                <p className="mx-auto mb-6 max-w-md text-base leading-relaxed text-on-surface-variant">
-                  I am POJU, blending ancient Eastern wisdom with modern clarity. Ask specific questions for guidance, or simply share your
-                  thoughts. Your privacy is sacred here.
-                </p>
-                <div className="flex flex-wrap justify-center gap-2">
-                  <span className="rounded-full border border-primary-container/20 bg-primary-container/10 px-3 py-1 text-xs font-medium uppercase tracking-wider text-primary">
-                    I Ching
-                  </span>
-                  <span className="rounded-full border border-primary-container/20 bg-primary-container/10 px-3 py-1 text-xs font-medium uppercase tracking-wider text-primary">
-                    Daily Meditation
-                  </span>
-                </div>
-                <p className="mt-6 text-xs text-on-surface-variant/80">Type below to begin, or tap the microphone to speak.</p>
+            <div className="glass-panel relative z-[1] mt-4 w-full max-w-2xl shrink-0 rounded-xl p-8 text-center sm:mt-8">
+              <span className="material-symbols-outlined jewel-icon mb-2 block text-5xl leading-none">self_improvement</span>
+              <h3 className="mb-2 text-2xl font-semibold text-on-surface">Welcome to the Oracle</h3>
+              <p className="mx-auto mb-6 max-w-md text-base leading-relaxed text-on-surface-variant">
+                I am POJU, blending ancient Eastern wisdom with modern clarity. Ask specific questions for guidance, or simply share your
+                thoughts. Your privacy is sacred here.
+              </p>
+              <div className="flex flex-wrap justify-center gap-2">
+                <span className="rounded-full border border-primary-container/20 bg-primary-container/10 px-3 py-1 text-xs font-medium uppercase tracking-wider text-primary">
+                  I Ching
+                </span>
+                <span className="rounded-full border border-primary-container/20 bg-primary-container/10 px-3 py-1 text-xs font-medium uppercase tracking-wider text-primary">
+                  Daily Meditation
+                </span>
               </div>
-            ) : null}
+              <p className="mt-6 text-xs text-on-surface-variant/80">Type below to begin, or tap the microphone to speak.</p>
+            </div>
 
             <div className="flex w-full max-w-3xl flex-col gap-4">
               {activeMessages.map((m) => (
@@ -694,7 +904,7 @@ export function ChatPageClient() {
                   </button>
                 </div>
               ) : null}
-              <div className="glass-panel flex items-end gap-1 rounded-full border border-white/10 p-2 pr-3 transition-all focus-within:border-primary/50 focus-within:shadow-[0_0_20px_rgba(139,92,246,0.2)]">
+              <div className="glass-panel flex items-end gap-1 rounded-full border border-white/10 p-2 pr-3">
                 <button
                   type="button"
                   className="flex items-center justify-center rounded-full p-2 text-on-surface-variant transition-colors hover:text-primary"
@@ -732,7 +942,7 @@ export function ChatPageClient() {
                       void onSend();
                     }
                   }}
-                  className="max-h-40 min-h-[44px] flex-1 resize-y border-none bg-transparent px-2 py-3 text-sm text-on-surface outline-none ring-0 placeholder:text-on-surface-variant/40 focus:ring-0"
+                  className="max-h-40 min-h-[44px] flex-1 resize-y border-none bg-transparent px-2 py-3 text-sm text-on-surface outline-none ring-0 placeholder:text-on-surface-variant/40 focus:outline-none focus:ring-0"
                 />
                 <button
                   type="button"
@@ -887,6 +1097,86 @@ export function ChatPageClient() {
                 }}
               >
                 Complete and return to chat
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {exportHistorySessionId ? (
+        <div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-md rounded-xl border border-white/12 bg-bg-layer-1 p-6 text-text-secondary">
+            <p className="text-lg font-semibold text-text-primary">Email this chat</p>
+            <p className="mt-3 text-sm leading-7">
+              Enter your email address. We will send the <span className="font-medium text-text-primary">complete chat transcript</span>{" "}
+              for this session to that inbox. This is a one-time delivery for this export — no marketing.
+            </p>
+            {pendingExportSession ? (
+              <p className="mt-3 rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-xs text-on-surface-variant">
+                {formatDate(pendingExportSession.createdAt)} · &quot;
+                {pendingExportSession.hidden ? "Hidden by you" : pendingExportSession.title}&quot;
+              </p>
+            ) : null}
+            <input
+              type="email"
+              value={exportHistoryEmail}
+              onChange={(e) => setExportHistoryEmail(e.target.value)}
+              placeholder="your.email@example.com"
+              className="mt-4 w-full rounded-lg border border-white/12 bg-black/25 px-3 py-2 text-sm"
+            />
+            {exportHistoryError ? <p className="mt-2 text-xs text-red-300">{exportHistoryError}</p> : null}
+            <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end sm:gap-3">
+              <button
+                type="button"
+                className="rounded-full border border-white/12 px-4 py-2 text-sm"
+                onClick={() => {
+                  setExportHistorySessionId(null);
+                  setExportHistoryEmail("");
+                  setExportHistoryError("");
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="rounded-full border border-purple-vivid/30 px-4 py-2 text-sm text-purple-vivid"
+                onClick={submitExportChatHistory}
+              >
+                Send transcript
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {deleteTargetId ? (
+        <div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-md rounded-xl border border-white/12 bg-bg-layer-1 p-6 text-text-secondary">
+            <p className="text-lg font-semibold text-text-primary">Delete this session?</p>
+            <p className="mt-3 text-sm leading-7">
+              All messages in this chat will be removed from this device.{" "}
+              <span className="font-medium text-text-primary">This cannot be undone and cannot be recovered.</span>
+            </p>
+            {pendingDeleteSession ? (
+              <p className="mt-3 rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-xs text-on-surface-variant">
+                {formatDate(pendingDeleteSession.createdAt)} · &quot;
+                {pendingDeleteSession.hidden ? "Hidden by you" : pendingDeleteSession.title}&quot;
+              </p>
+            ) : null}
+            <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end sm:gap-3">
+              <button
+                type="button"
+                className="rounded-full border border-white/12 px-4 py-2 text-sm"
+                onClick={() => setDeleteTargetId(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="rounded-full border border-red-400/40 px-4 py-2 text-sm text-red-300 hover:bg-red-500/10"
+                onClick={confirmSidebarDeleteSession}
+              >
+                Delete permanently
               </button>
             </div>
           </div>

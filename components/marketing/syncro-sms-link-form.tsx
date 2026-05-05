@@ -4,27 +4,43 @@ import { useMemo, useState } from "react";
 
 const SYNCRO_URL = "https://pojulife.com/syncro";
 
-export function SyncroSmsLinkForm() {
+export type SyncroSmsLinkFormCopy = {
+  hint: string;
+  placeholder: string;
+  phoneAriaLabel: string;
+  buttonLabel: string;
+  /** 须包含字面量 `{url}`，由客户端替换为 Syncro 链接 */
+  smsBodyTemplate: string;
+};
+
+export function SyncroSmsLinkForm({
+  hint,
+  placeholder,
+  phoneAriaLabel,
+  buttonLabel,
+  smsBodyTemplate,
+}: SyncroSmsLinkFormCopy) {
   const [phone, setPhone] = useState("");
 
   const smsHref = useMemo(() => {
     const normalized = phone.replace(/[^\d+]/g, "");
-    const body = encodeURIComponent(`Open Syncro on your phone: ${SYNCRO_URL}`);
+    const bodyText = smsBodyTemplate.replace("{url}", SYNCRO_URL);
+    const body = encodeURIComponent(bodyText);
     return normalized ? `sms:${normalized}?body=${body}` : "#";
-  }, [phone]);
+  }, [phone, smsBodyTemplate]);
 
   return (
     <div className="mt-6">
-      <p className="mb-2 text-xs uppercase tracking-[0.14em] text-text-dim">Text yourself the link</p>
+      <p className="mb-2 text-xs uppercase tracking-[0.14em] text-text-dim">{hint}</p>
       <div className="flex flex-col gap-2 sm:flex-row">
         <input
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           type="tel"
           inputMode="tel"
-          placeholder="phone number"
+          placeholder={placeholder}
           className="h-11 w-full rounded-lg border border-white/15 bg-black/30 px-3 text-sm text-text-primary placeholder:text-text-dim focus:border-cyan-300/60 focus:outline-none"
-          aria-label="Phone number"
+          aria-label={phoneAriaLabel}
         />
         <a
           href={smsHref}
@@ -38,7 +54,7 @@ export function SyncroSmsLinkForm() {
             if (!phone.trim()) e.preventDefault();
           }}
         >
-          Text me the link
+          {buttonLabel}
         </a>
       </div>
     </div>

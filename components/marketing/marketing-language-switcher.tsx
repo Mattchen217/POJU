@@ -1,73 +1,107 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ChevronDown } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 
-import { MARKETING_LOCALES, type MarketingLocale, useMarketingLocale } from "@/components/marketing/marketing-locale";
+import { usePathname, useRouter } from "@/i18n/navigation";
 
-function shortLabel(code: MarketingLocale): string {
-  if (code === "zh") return "中文";
-  return code.toUpperCase();
-}
+import { routing } from "@/i18n/routing";
 
-export function MarketingLanguageSwitcher() {
-  const { locale, setLocale } = useMarketingLocale();
+type LocaleCode = (typeof routing.locales)[number];
+
+/** 下拉项顺序与文案：各语言自称（默认站点语言为英语，见 `i18n/routing.ts`） */
+const LOCALE_OPTIONS: { code: LocaleCode; label: string }[] = [
+  { code: "en", label: "English" },
+  { code: "es", label: "Español" },
+  { code: "de", label: "Deutsch" },
+  { code: "fr", label: "Français" },
+  { code: "zh", label: "中文" },
+];
+
+export function MarketingLanguageSwitcher({
+  onAfterSelect,
+}: {
+  /** 选择语言后回调（例如关闭移动端抽屉） */
+  onAfterSelect?: () => void;
+}) {
+  const locale = useLocale() as LocaleCode;
+  const pathname = usePathname();
+  const router = useRouter();
+  const t = useTranslations("language");
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      const el = rootRef.current;
-      if (!el || el.contains(e.target as Node)) return;
+    const onDocMouseDown = (e: MouseEvent) => {
+      if (rootRef.current?.contains(e.target as Node)) return;
       setOpen(false);
     };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
+    document.addEventListener("mousedown", onDocMouseDown);
+    return () => document.removeEventListener("mousedown", onDocMouseDown);
   }, [open]);
 
-  return (
-    <div ref={rootRef} className="relative shrink-0">
-      <button
-        type="button"
-        className="inline-flex items-center gap-2 rounded-full bg-black/42 px-3 py-1.5 text-[12px] font-medium uppercase tracking-[0.12em] text-text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition hover:bg-black/55 sm:text-[13px] md:py-2 md:text-[14px]"
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-      >
-        <span className="text-text-secondary">Lang</span>
-        <span className="text-text-primary">{shortLabel(locale)}</span>
-        <span className="text-text-dim" aria-hidden>
-          ▾
-        </span>
-      </button>
+  const currentLabel =
+    LOCALE_OPTIONS.find((o) => o.code === locale)?.label ?? "English";
 
-      {open ? (
-        <ul
-          role="listbox"
-          className="absolute right-0 z-[60] mt-1 min-w-[10.5rem] rounded-lg bg-[#0b1022]/96 py-1 shadow-[0_12px_40px_rgba(0,0,0,0.55)] backdrop-blur-md"
-          aria-label="Language"
+  const select = (code: LocaleCode) => {
+    if (code !== locale) router.replace(pathname, { locale: code });
+    setOpen(false);
+    onAfterSelect?.();
+  };
+
+  return (
+    <div ref={rootRef} className="relative z-[80] flex items-center">
+      <div className="relative">
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-haspopup="listbox"
+          aria-label={t("aria")}
+          onClick={() => setOpen((v) => !v)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setOpen(false);
+          }}
+          className="flex items-center gap-2 rounded-full bg-white/[0.07] px-2.5 py-1.5 text-left transition-colors hover:bg-white/[0.1] sm:gap-2 sm:px-3 sm:py-1.5"
         >
-          {MARKETING_LOCALES.map((item) => (
-            <li key={item.code} role="option" aria-selected={item.code === locale}>
-              <button
-                type="button"
-                className={`flex w-full items-center justify-between px-3 py-2 text-left text-[12px] sm:text-[13px] ${
-                  item.code === locale
-                    ? "bg-white/10 text-text-primary"
-                    : "text-text-secondary hover:bg-white/6 hover:text-text-primary"
-                }`}
-                onClick={() => {
-                  setLocale(item.code);
-                  setOpen(false);
-                }}
-              >
-                <span>{item.label}</span>
-                {item.code === locale ? <span className="text-purple-vivid">✓</span> : null}
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+          <span className="min-w-0 truncate text-[13px] font-medium text-text-primary sm:text-[14px]">
+            {currentLabel}
+          </span>
+          <ChevronDown
+            className={`h-4 w-4 shrink-0 text-text-secondary transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+            aria-hidden
+          />
+        </button>
+
+        {open ? (
+          <ul
+            role="listbox"
+            className="absolute right-0 top-[calc(100%+0.35rem)] z-[90] min-w-[10.5rem] overflow-hidden rounded-xl bg-[#14121f]/95 py-1 shadow-[0_12px_40px_rgba(0,0,0,0.55)] backdrop-blur-md"
+          >
+            {LOCALE_OPTIONS.map((opt) => {
+              const selected = opt.code === locale;
+              return (
+                <li key={opt.code} role="none">
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    onClick={() => select(opt.code)}
+                    className={`flex w-full items-center px-3 py-2 text-left text-[13px] sm:text-[14px] ${
+                      selected
+                        ? "bg-white/12 text-text-primary"
+                        : "text-text-secondary hover:bg-white/8 hover:text-text-primary"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        ) : null}
+      </div>
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
+import { useLocale } from "next-intl";
 import { AnimatePresence, motion } from "framer-motion";
 import { GlyphFront } from "@/components/oracle/glyph-front/GlyphFront";
 import { generateFullReading } from "@/lib/oracle/api";
@@ -34,6 +35,7 @@ export function FullReading({
   onClose,
   onReadingReady,
 }: FullReadingProps) {
+  const locale = useLocale();
   const [reading, setReading] = useState<FullReadingType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +53,7 @@ export function FullReading({
         const result = await generateFullReading({
           sign,
           userInput,
+          locale,
         });
 
         if (!canceled) {
@@ -75,7 +78,7 @@ export function FullReading({
     return () => {
       canceled = true;
     };
-  }, [sign, userInput]);
+  }, [sign, userInput, locale]);
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-gradient-to-b from-[#0B0815] to-black">

@@ -5,9 +5,12 @@ const inFlightFullReadingRequests = new Map<string, Promise<FullReading>>();
 export async function generateFullReading({
   sign,
   userInput,
+  locale,
 }: {
   sign: SignData;
   userInput: UserInput;
+  /** next-intl 当前 locale，传给 LLM 语言指令 */
+  locale: string;
 }): Promise<FullReading> {
   const requestPayload = {
     sign_number: sign.sign_number,
@@ -19,6 +22,7 @@ export async function generateFullReading({
       shichen: userInput.birthShichen,
     },
     user_question: userInput.question,
+    locale,
   };
   const requestKey = JSON.stringify(requestPayload);
 
@@ -51,7 +55,10 @@ export async function generateFullReading({
       throw new Error(errorMessage);
     }
 
-    const data = (await response.json()) as { reading: FullReading };
+    const data = (await response.json()) as {
+      reading: FullReading;
+      language?: string;
+    };
     return data.reading;
   })().finally(() => {
     inFlightFullReadingRequests.delete(requestKey);

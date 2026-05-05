@@ -27,7 +27,7 @@ export function ScrollToTopButton() {
     <button
       type="button"
       onClick={goTop}
-      className="fixed bottom-6 right-5 z-[90] flex h-11 w-11 items-center justify-center rounded-full border border-white/14 bg-bg-layer-1/85 text-text-primary shadow-[0_8px_28px_rgba(0,0,0,0.4)] backdrop-blur-md transition hover:border-purple-vivid/35 hover:bg-bg-layer-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-vivid/50 sm:bottom-8 sm:right-8"
+      className="fixed bottom-6 right-5 z-[90] flex h-11 w-11 items-center justify-center rounded-full border-0 bg-black text-white shadow-[0_8px_28px_rgba(0,0,0,0.45)] transition hover:bg-neutral-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-vivid/50 sm:bottom-8 sm:right-8"
       aria-label="Back to top"
     >
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>

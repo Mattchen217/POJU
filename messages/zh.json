@@ -1,0 +1,459 @@
+{
+  "common": {
+    "brandWordmark": "Poju Life",
+    "brand": "POJU LIFE",
+    "domain": "pojulife.com",
+    "tagline": "AI 与千年智慧的相遇。",
+    "footerTagline": "POJU 用于自我反思与启发。我们提供视角,而非预测。所有决定都由你自己做出。",
+    "copyright": "© 2026 POJU. 版权所有。",
+    "syncroFooterTagline": "Syncro 是自我觉察工具。取走与你共鸣的。决定由你自己做出。"
+  },
+  "nav": {
+    "home": "首页",
+    "poju": "POJU",
+    "glyph": "Glyph",
+    "syncro": "Syncro",
+    "archive": "存档",
+    "disclaimer": "免责声明",
+    "privacy": "隐私政策",
+    "terms": "服务条款",
+    "contact": "联系我们"
+  },
+  "language": {
+    "short": "语言",
+    "comingSoon": "多语言已启用",
+    "aria": "选择界面语言",
+    "mobileSection": "语言"
+  },
+  "home": {
+    "hero": {
+      "brand": "Poju Life",
+      "headline": "突破那些挥之不去的困扰。",
+      "descLine1": "两千年的东方智慧。",
+      "descLine2": "现代科学印证。",
+      "descLine3": "由 AI 为你呈现 —— 就在今天。",
+      "trustLine": "无需账户 · 无需订阅 · 决定权唯你所有"
+    },
+    "threeWays": {
+      "heading": "三种入口。一种穿越。"
+    },
+    "cta": {
+      "startSession": "开启 POJU 对话 · $9.99",
+      "tryGlyph": "免费体验 Glyph",
+      "yoursToDecide": "无需账户 · 无需订阅 · 由你决定"
+    },
+    "twoLanguages": {
+      "heading": "两种语言的相遇。",
+      "line1": "两千年的人类沉思。",
+      "line2": "现代 AI 的翻译。",
+      "line3": "一次对话,帮你看得更清。",
+      "patternTitle": "图案",
+      "patternBody": "古人对反复出现之事的观察。",
+      "directionTitle": "方向",
+      "directionBody": "空间心理学,关乎我们看见什么。",
+      "timingTitle": "时机",
+      "timingBody": "塑造生命的节律周期。",
+      "youTitle": "你",
+      "youBody": "你的出生背景、当下、和问题。"
+    },
+    "promises": {
+      "heading": "我们不会打破的三个承诺。",
+      "neverStoredTitle": "从不存储",
+      "neverStoredBody": "你的对话以加密形式存在你的设备上。我们读不到。任何人都读不到。",
+      "neverRequiredTitle": "从不强制",
+      "neverRequiredBody": "无需账户。无需登录。无需密码。除非你想要 PDF,否则也不需要邮箱。",
+      "neverManipulativeTitle": "从不操纵",
+      "neverManipulativeBody": "没有黑暗模式。没有虚假紧迫。一个价格:$9.99,在你需要时。",
+      "readMore": "阅读完整隐私架构 →"
+    },
+    "finalCta": {
+      "heading": "当问题挥之不去。",
+      "subtitle": "停止阅读。开始穿越它。",
+      "subline": "停止阅读。开始穿越它。",
+      "primary": "提出你的问题 — $9.99",
+      "secondary": "或者先免费试试 Glyph →",
+      "readyHeading": "准备好开始了吗？",
+      "readySubheading": "三种入口。选择适合此刻的方式。",
+      "poju": {
+        "title": "开始 POJU 对话",
+        "sub": "$9.99 · 单次提问"
+      },
+      "glyph": {
+        "title": "体验 Glyph",
+        "sub": "免费 · 掌心里的镜子"
+      },
+      "syncro": {
+        "title": "打开 Syncro",
+        "sub": "免费 · 在手机上"
+      }
+    },
+    "products": {
+      "poju": {
+        "name": "POJU",
+        "line1": "为那个挥之不去的问题。",
+        "line2": "一次深入对话,直到你看清。",
+        "badge": "$9.99",
+        "cta": "试试看 →"
+      },
+      "glyph": {
+        "name": "Glyph",
+        "line1": "60 秒的镜子。",
+        "line2": "握住问题。抽取图案。读一次反射。",
+        "badgeFree": "免费",
+        "badgeStruck": "$1.99",
+        "cta": "试试看 →"
+      },
+      "syncro": {
+        "name": "Syncro",
+        "line1": "看见你的自然节奏。",
+        "line2": "每两小时更新一次,在你的手机上。",
+        "badge": "免费",
+        "cta": "试试看 →"
+      }
+    },
+    "meetsMoment": {
+      "heading": "当 pojulife 遇见你的时刻。",
+      "subtitle": "真实情境里，pojulife 帮你看得更清楚。",
+      "imagePlaceholder": "图片占位",
+      "card1": {
+        "p1": "你卡在两条路之间。",
+        "p2": "换工作。感情抉择。定居何处。",
+        "p3": "你已经想了很多。现在换一种方式想。",
+        "cta": "体验 POJU"
+      },
+      "card2": {
+        "p1": "你需要一个新角度，只要 60 秒。",
+        "p2": "总觉得哪里不对。说不清是什么。",
+        "p3": "Glyph 举起一面镜子 —— 读一读回来的话。",
+        "cta": "体验 Glyph"
+      },
+      "card3": {
+        "p1": "你想了解自己的节奏。",
+        "p2": "什么时候有冲劲？什么时候会感到阻力？",
+        "p3": "Syncro 为你绘制，每两小时更新。",
+        "cta": "体验 Syncro"
+      },
+      "card4": {
+        "p1": "这个问题让你凌晨两点还醒着。",
+        "p2": "朋友聊过，书也读过。还在原地打转。",
+        "p3": "POJU 陪你一起面对。$9.99。一次。",
+        "cta": "开启一次 POJU 对话"
+      }
+    }
+  },
+  "legal": {
+    "lastUpdated": "Last updated: October 30, 2025",
+    "version": "Version 1.0"
+  },
+  "marketingSite": {
+    "common": {
+      "tagline": "AI 与千年智慧的相遇。",
+      "footer_disclaimer": "POJU 用于自我反思与启发。我们提供视角,而非预测。所有决定都由你自己做出。",
+      "trust_line": "无需账户 · 无需订阅 · 由你决定",
+      "read_with_wink": "带一丝玩味去读。这些图案是镜子,不是预言。"
+    },
+    "nav": {
+      "poju": "POJU",
+      "glyph": "Glyph",
+      "syncro": "Syncro",
+      "archive": "存档"
+    },
+    "home": {
+      "hero": {
+        "subtitle": "AI 与千年智慧的相遇。",
+        "cta_primary": "开启 POJU 对话 · $9.99",
+        "cta_secondary": "免费体验 Glyph"
+      },
+      "three_ways": {
+        "heading": "三种入口。一种穿越。",
+        "poju": {
+          "tagline": "为那个挥之不去的问题。",
+          "description": "一次深入对话,直到你看清。"
+        },
+        "glyph": {
+          "tagline": "60 秒的镜子。",
+          "description": "握住问题。抽取图案。读一次反射。"
+        },
+        "syncro": {
+          "tagline": "看见你的自然节奏。",
+          "description": "每两小时更新一次,在你的手机上。"
+        },
+        "try_it": "试试看 →"
+      },
+      "two_languages": {
+        "heading": "两种语言的相遇。",
+        "subtitles": [
+          "两千年的人类沉思。",
+          "现代 AI 的翻译。",
+          "一次对话,帮你看得更清。"
+        ],
+        "pattern": {
+          "title": "图案",
+          "description": "古人对反复出现之事的观察。"
+        },
+        "direction": {
+          "title": "方向",
+          "description": "空间心理学,关乎我们看见什么。"
+        },
+        "timing": {
+          "title": "时机",
+          "description": "塑造生命的节律周期。"
+        },
+        "you": {
+          "title": "你",
+          "description": "你的出生背景、当下、和问题。"
+        }
+      },
+      "promises": {
+        "heading": "我们不会打破的三个承诺。",
+        "never_stored": {
+          "title": "从不存储",
+          "description": "你的对话以加密形式存在你的设备上。我们读不到。任何人都读不到。"
+        },
+        "never_required": {
+          "title": "从不强制",
+          "description": "无需账户。无需登录。无需密码。除非你想要 PDF,否则也不需要邮箱。"
+        },
+        "never_manipulative": {
+          "title": "从不操纵",
+          "description": "没有黑暗模式。没有虚假紧迫。一个价格:$9.99,在你需要时。"
+        },
+        "read_more": "阅读完整隐私架构 →"
+      },
+      "final_cta": {
+        "heading": "当问题挥之不去。",
+        "subtitle": "停止阅读。开始穿越它。",
+        "primary": "提出你的问题 — $9.99",
+        "secondary": "或者先免费试试 Glyph →"
+      }
+    },
+    "poju": {
+      "hero": {
+        "heading": "有时候,光是读还不够。",
+        "description": "你已经读过书,跟朋友谈过,权衡过利弊。这个问题仍然不放过你。",
+        "tagline": "POJU 在你独自思考之后开始。",
+        "cta_primary": "提出你的问题 — $9.99",
+        "cta_secondary": "看看它如何运作 ↓"
+      },
+      "when_to_come": {
+        "heading": "什么时候来 POJU。",
+        "stuck": {
+          "title": "你卡在两条路之间",
+          "description": "职业转变。关系抉择。在哪里生活。"
+        },
+        "confused": {
+          "title": "你做了功课,反而更困惑",
+          "description": "建议相互冲突。家庭压力。时间在流逝。"
+        },
+        "repeating": {
+          "title": "某种模式不断重复,你不知道为什么",
+          "description": "同样类型的关系。同样的阻塞。同样的挫折。"
+        },
+        "depth": {
+          "title": "你需要朋友给不了的深度",
+          "description": "你身边没人能拉开距离看清楚。"
+        },
+        "direction": {
+          "title": "你想要方向,而不是预测",
+          "description": "\"X 会发生吗\" 是占星。\"我该怎么做\" 是 POJU。"
+        }
+      },
+      "how_it_works": {
+        "heading": "POJU 如何运作",
+        "subtitle": "不是一个答案 — 而是一个持续的破局循环。",
+        "steps": {
+          "1": "问题识别",
+          "2": "信息收集",
+          "3": "图案分析",
+          "4": "核心分析",
+          "5": "行动生成",
+          "6": "执行追踪"
+        },
+        "footer": "你行动。你回来。路径调整。直到你穿越。"
+      },
+      "two_columns": {
+        "heading": "两栏,一个承诺。",
+        "included": {
+          "title": "包含什么",
+          "items": [
+            "单次会话中无限的深度",
+            "明天就能开始的行动计划",
+            "可以静思的反思提示",
+            "30 天会话访问"
+          ]
+        },
+        "not_included": {
+          "title": "不是什么",
+          "items": [
+            "不预测你的未来",
+            "不替代专业建议",
+            "不替你做决定"
+          ]
+        },
+        "tagline": "POJU 是思考伙伴。决定永远是你的。",
+        "cta": "提出你的问题 — $9.99",
+        "footnote": "一个问题 · 无限深度 · 关闭即删除"
+      }
+    },
+    "glyph": {
+      "hero": {
+        "heading": "Glyph",
+        "subtitle": "60 秒的镜子。",
+        "description": "握住一个问题。抽取一个图案。读一次反射。",
+        "footnote": "免费。无需注册。带一丝玩味去读。",
+        "cta": "免费体验 Glyph"
+      },
+      "five_winds": {
+        "heading": "五种风 — 五种原型图案",
+        "description": "这五种图案是镜子,不是预测。每一种都描述一种人类处境,帮你看清正在发生什么。",
+        "divine_tailwind": {
+          "name": "Divine Tailwind",
+          "description": "完全对齐的稀有恩典。你需要的一切已经在朝你而来。"
+        },
+        "fair_sky": {
+          "name": "Fair Sky",
+          "description": "通畅的路,带着温柔的支持。道路开放,但你仍要走过去。"
+        },
+        "still_water": {
+          "name": "Still Water",
+          "description": "耐心和静止的时候。既不向前,也不向后。与当下共处。"
+        },
+        "crosswind": {
+          "name": "Crosswind",
+          "description": "互相竞争的力量在拉扯你。这不是用力推的信号。这是更仔细地倾听的信号。"
+        },
+        "eye_of_storm": {
+          "name": "Eye of Storm",
+          "description": "暴风眼中心的深度静止。当外面一切都在动荡时,清晰住在那个无可触及的地方。"
+        }
+      },
+      "on_the_cards": {
+        "heading": "关于图案。",
+        "paragraphs": [
+          "这五种 Glyph 不是命运的标签。它们不是\"好牌\"或\"坏牌\"。",
+          "每一种都是一面透镜 — 一种阅读这个特定时刻、这个特定问题、由这个特定的人持有的方式。",
+          "同一个 Glyph 在不同的日子、对不同的人、关于不同的问题,可以意味着完全不同的东西。",
+          "你收到的不是判决。它是一个视角 — 一个邀请,让你更仔细地看。"
+        ]
+      },
+      "how_it_works": {
+        "heading": "Glyph 如何运作。",
+        "step_1": {
+          "title": "握住你的问题。",
+          "description": "压缩到 60 个字符。压缩本身就是答案的开始。"
+        },
+        "step_2": {
+          "title": "抽取你的图案。",
+          "description": "100 种原型形态之一,经过千年提炼。"
+        },
+        "step_3": {
+          "title": "读你的反射。",
+          "description": "一份简短的回应 — 根植于智慧传统和现代心理学。"
+        },
+        "rules": [
+          "每次一个问题。不要一次问很多。",
+          "同一个问题,等 48 小时再问。答案需要时间沉淀。",
+          "把你的问题压缩到 60 个字符。压缩是答案的开始。"
+        ],
+        "session_reminder": "每次会话一个问题。若同一问题再次浮现,请等待 48 小时。"
+      },
+      "final_cta": {
+        "heading": "握住一个问题。",
+        "subtitle": "你收到的不是判决。它是邀请,让你更仔细地看。",
+        "cta": "免费体验 Glyph"
+      }
+    },
+    "syncro": {
+      "hero": {
+        "heading": "Syncro",
+        "subtitle": "看见你的自然节奏。",
+        "description": "基于你的出生信息,Syncro 反映当日的能量如何与你对齐。哪里该投入,哪里该慢下来。",
+        "tagline": "为你的内在世界提供天气预报,每两小时更新一次。",
+        "footnote": "免费 · 仅在手机上打开",
+        "cta": "打开 Syncro",
+        "qr_label": "pojulife.com/syncro",
+        "sms_label": "把链接发给自己",
+        "sms_button": "把链接发给我",
+        "notify_cta": "Syncro 上线时通知我",
+        "sms_body": "在手机上打开 Syncro：{url}",
+        "phone_placeholder": "手机号码"
+      },
+      "what_shows": {
+        "heading": "Syncro 显示什么。",
+        "intro": "把手机指向某个方向。看到什么开放,什么不开放。",
+        "items_intro": "每个方向显示:",
+        "items": [
+          "当前图案的简短描述",
+          "这段时间适合什么(例如,缓慢的对话)",
+          "这段时间不适合什么(例如,等等再提大要求)"
+        ],
+        "footnote": "每两小时更新一次,根据你的背景。",
+        "preview_label": "预览",
+        "preview_placeholder": "手机示意图占位符 — 准备好后可替换为 Syncro 截图。"
+      },
+      "use_cases": {
+        "heading": "人们在哪里使用 Syncro",
+        "study": {
+          "title": "学习场所",
+          "description": "在深度工作前,选择一个支持稳定专注的桌子方向。"
+        },
+        "negotiation": {
+          "title": "谈判",
+          "description": "找一个支持自信和稳定沟通的座位方向。"
+        },
+        "bed": {
+          "title": "床的方向",
+          "description": "测试睡眠方向,比较休息质量随时间的变化。"
+        },
+        "travel": {
+          "title": "出行决定",
+          "description": "出发前查看方向基调,当时机和清晰都重要时。"
+        },
+        "companion": {
+          "title": "POJU 伴侣",
+          "description": "把 Syncro 作为现实层,然后回到 POJU 进行更深的决策策略。"
+        }
+      },
+      "what_it_is": {
+        "heading": "它是什么。它不是什么。",
+        "shows": {
+          "title": "它显示什么",
+          "items": [
+            "未来 2 小时的当前节奏图案",
+            "八个方向以及它们适合什么",
+            "哪里该投入,哪里该慢下来"
+          ]
+        },
+        "isnt": {
+          "title": "它不是什么",
+          "items": [
+            "事件的预测者",
+            "结果的承诺者",
+            "你自己判断的替代品"
+          ]
+        }
+      },
+      "always_free": {
+        "heading": "永远免费。",
+        "description": "Syncro 永远免费,作为你日常的节奏伴侣。当你需要对当下的清晰时,随时打开。",
+        "cta": "在手机上打开 Syncro"
+      }
+    },
+    "footer": {
+      "disclaimers": {
+        "home": "POJU 用于自我反思与启发。我们提供视角,而非预测。所有决定都由你自己做出。",
+        "poju": "POJU 是思考伙伴。它提供视角,不是预言。所有决定都由你自己做出。",
+        "glyph": "带一丝玩味去读。这些图案是镜子,不是预言。所有决定都由你自己做出。",
+        "syncro": "Syncro 是自我觉察工具。取走与你共鸣的。决定由你自己做出。"
+      },
+      "links": {
+        "home": "首页",
+        "disclaimer": "免责声明",
+        "privacy": "隐私政策",
+        "terms": "服务条款",
+        "contact": "联系我们"
+      },
+      "copyright": "© 2026 POJU. 版权所有。"
+    }
+  }
+}

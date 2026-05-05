@@ -1,0 +1,459 @@
+{
+  "common": {
+    "brandWordmark": "Poju Life",
+    "brand": "POJU LIFE",
+    "domain": "pojulife.com",
+    "tagline": "Wo KI auf tausend Jahre Weisheit trifft.",
+    "footerTagline": "Zur Selbstreflexion und Unterhaltung. POJU bietet Perspektiven, keine Vorhersagen. Alle Entscheidungen liegen bei dir.",
+    "copyright": "© 2026 POJU. Alle Rechte vorbehalten.",
+    "syncroFooterTagline": "Syncro ist ein Selbstwahrnehmungswerkzeug. Nimm, was bei dir ankommt. Die Entscheidungen liegen bei dir."
+  },
+  "nav": {
+    "home": "Startseite",
+    "poju": "POJU",
+    "glyph": "Glyph",
+    "syncro": "Syncro",
+    "archive": "Archiv",
+    "disclaimer": "Haftungsausschluss",
+    "privacy": "Datenschutz",
+    "terms": "Nutzungsbedingungen",
+    "contact": "Kontakt"
+  },
+  "language": {
+    "short": "Spr.",
+    "comingSoon": "Alle Sprachen aktiv",
+    "aria": "Sprache",
+    "mobileSection": "Sprache"
+  },
+  "home": {
+    "hero": {
+      "brand": "Poju Life",
+      "headline": "Break through what won't let you go.",
+      "descLine1": "Two thousand years of Eastern wisdom.",
+      "descLine2": "Confirmed by modern science.",
+      "descLine3": "Translated by AI — for you, today.",
+      "trustLine": "No account · No subscription · Decisions are yours alone"
+    },
+    "threeWays": {
+      "heading": "Drei Wege hinein. Ein Weg hindurch."
+    },
+    "cta": {
+      "startSession": "POJU-Sitzung starten · $9.99",
+      "tryGlyph": "Glyph kostenlos testen",
+      "yoursToDecide": "Kein Konto · Kein Abo · Du entscheidest"
+    },
+    "twoLanguages": {
+      "heading": "Wo zwei Sprachen sich treffen.",
+      "line1": "Zweitausend Jahre menschlicher Reflexion.",
+      "line2": "Moderne KI-Übersetzung.",
+      "line3": "Ein Gespräch, das dir hilft, klar zu sehen.",
+      "patternTitle": "MUSTER",
+      "patternBody": "Alte Beobachtung dessen, was wiederkehrt.",
+      "directionTitle": "RICHTUNG",
+      "directionBody": "Räumliche Psychologie über das, was wir wahrnehmen.",
+      "timingTitle": "ZEITPUNKT",
+      "timingBody": "Zyklen, die die Biologie formen.",
+      "youTitle": "DU",
+      "youBody": "Dein Geburtskontext, dein Moment, deine Frage."
+    },
+    "promises": {
+      "heading": "Drei Versprechen, die wir nicht brechen.",
+      "neverStoredTitle": "Nie gespeichert",
+      "neverStoredBody": "Deine Gespräche leben verschlüsselt auf deinem Gerät. Wir können sie nicht lesen. Niemand kann.",
+      "neverRequiredTitle": "Nie erforderlich",
+      "neverRequiredBody": "Kein Konto. Kein Login. Kein Passwort. E-Mail nur, wenn du ein PDF willst.",
+      "neverManipulativeTitle": "Nie manipulativ",
+      "neverManipulativeBody": "Keine dunklen Muster. Keine falsche Dringlichkeit. Ein Preis: $9.99, wenn du es brauchst.",
+      "readMore": "Vollständige Datenschutzarchitektur lesen →"
+    },
+    "finalCta": {
+      "heading": "Wenn die Frage dich nicht loslässt.",
+      "subtitle": "Hör auf zu lesen. Fang an, sie zu durchqueren.",
+      "subline": "Hör auf zu lesen. Fang an, sie zu durchqueren.",
+      "primary": "Stell deine Frage — $9.99",
+      "secondary": "Oder probier Glyph erst kostenlos →",
+      "readyHeading": "Bereit anzufangen?",
+      "readySubheading": "Drei Zugänge. Wähle, was zu diesem Moment passt.",
+      "poju": {
+        "title": "Starte eine POJU-Sitzung",
+        "sub": "$9.99 · Für eine Frage"
+      },
+      "glyph": {
+        "title": "Glyph ausprobieren",
+        "sub": "Kostenlos · Ein Spiegel für die Tasche"
+      },
+      "syncro": {
+        "title": "Syncro öffnen",
+        "sub": "Kostenlos · Auf dem Handy"
+      }
+    },
+    "products": {
+      "poju": {
+        "name": "POJU",
+        "line1": "Für die Frage, die dich nicht loslässt.",
+        "line2": "Ein einziges tiefes Gespräch, bis du es durchschaut hast.",
+        "badge": "$9.99",
+        "cta": "Ausprobieren →"
+      },
+      "glyph": {
+        "name": "Glyph",
+        "line1": "Ein 60-Sekunden-Spiegel.",
+        "line2": "Halte eine Frage. Ziehe ein Muster. Lies eine Spiegelung.",
+        "badgeFree": "KOSTENLOS",
+        "badgeStruck": "$1.99",
+        "cta": "Ausprobieren →"
+      },
+      "syncro": {
+        "name": "Syncro",
+        "line1": "Sieh deine natürlichen Rhythmen.",
+        "line2": "Aktualisiert alle zwei Stunden, auf deinem Telefon.",
+        "badge": "Kostenlos",
+        "cta": "Ausprobieren →"
+      }
+    },
+    "meetsMoment": {
+      "heading": "When pojulife meets your moment.",
+      "subtitle": "Real situations where pojulife helps you see clearly.",
+      "imagePlaceholder": "Image placeholder",
+      "card1": {
+        "p1": "You're stuck between two paths.",
+        "p2": "Career change. Relationship decision. Where to live.",
+        "p3": "You've thought about it. Now think differently.",
+        "cta": "Try POJU"
+      },
+      "card2": {
+        "p1": "You need a fresh angle, in 60 seconds.",
+        "p2": "Something feels off. You're not sure what.",
+        "p3": "Glyph holds up a mirror — read what comes back.",
+        "cta": "Try Glyph"
+      },
+      "card3": {
+        "p1": "You want to know your own rhythm.",
+        "p2": "When do you have momentum? When does friction arrive?",
+        "p3": "Syncro maps it, every two hours.",
+        "cta": "Try Syncro"
+      },
+      "card4": {
+        "p1": "The question keeps you up at 2 AM.",
+        "p2": "You've talked to friends, read the books. Still circling.",
+        "p3": "POJU sits with you through it. $9.99. Once.",
+        "cta": "Start a POJU session"
+      }
+    }
+  },
+  "legal": {
+    "lastUpdated": "Last updated: October 30, 2025",
+    "version": "Version 1.0"
+  },
+  "marketingSite": {
+    "common": {
+      "tagline": "Wo KI auf tausend Jahre Weisheit trifft.",
+      "footer_disclaimer": "Zur Selbstreflexion und Unterhaltung. POJU bietet Perspektiven, keine Vorhersagen. Alle Entscheidungen liegen bei dir.",
+      "trust_line": "Kein Konto · Kein Abo · Du entscheidest",
+      "read_with_wink": "Lies mit einem Augenzwinkern. Die Muster spiegeln, sie sagen nicht voraus."
+    },
+    "nav": {
+      "poju": "POJU",
+      "glyph": "Glyph",
+      "syncro": "Syncro",
+      "archive": "Archiv"
+    },
+    "home": {
+      "hero": {
+        "subtitle": "Wo KI auf tausend Jahre Weisheit trifft.",
+        "cta_primary": "POJU-Sitzung starten · $9.99",
+        "cta_secondary": "Glyph kostenlos testen"
+      },
+      "three_ways": {
+        "heading": "Drei Wege hinein. Ein Weg hindurch.",
+        "poju": {
+          "tagline": "Für die Frage, die dich nicht loslässt.",
+          "description": "Ein einziges tiefes Gespräch, bis du es durchschaut hast."
+        },
+        "glyph": {
+          "tagline": "Ein 60-Sekunden-Spiegel.",
+          "description": "Halte eine Frage. Ziehe ein Muster. Lies eine Spiegelung."
+        },
+        "syncro": {
+          "tagline": "Sieh deine natürlichen Rhythmen.",
+          "description": "Aktualisiert alle zwei Stunden, auf deinem Telefon."
+        },
+        "try_it": "Ausprobieren →"
+      },
+      "two_languages": {
+        "heading": "Wo zwei Sprachen sich treffen.",
+        "subtitles": [
+          "Zweitausend Jahre menschlicher Reflexion.",
+          "Moderne KI-Übersetzung.",
+          "Ein Gespräch, das dir hilft, klar zu sehen."
+        ],
+        "pattern": {
+          "title": "MUSTER",
+          "description": "Alte Beobachtung dessen, was wiederkehrt."
+        },
+        "direction": {
+          "title": "RICHTUNG",
+          "description": "Räumliche Psychologie über das, was wir wahrnehmen."
+        },
+        "timing": {
+          "title": "ZEITPUNKT",
+          "description": "Zyklen, die die Biologie formen."
+        },
+        "you": {
+          "title": "DU",
+          "description": "Dein Geburtskontext, dein Moment, deine Frage."
+        }
+      },
+      "promises": {
+        "heading": "Drei Versprechen, die wir nicht brechen.",
+        "never_stored": {
+          "title": "Nie gespeichert",
+          "description": "Deine Gespräche leben verschlüsselt auf deinem Gerät. Wir können sie nicht lesen. Niemand kann."
+        },
+        "never_required": {
+          "title": "Nie erforderlich",
+          "description": "Kein Konto. Kein Login. Kein Passwort. E-Mail nur, wenn du ein PDF willst."
+        },
+        "never_manipulative": {
+          "title": "Nie manipulativ",
+          "description": "Keine dunklen Muster. Keine falsche Dringlichkeit. Ein Preis: $9.99, wenn du es brauchst."
+        },
+        "read_more": "Vollständige Datenschutzarchitektur lesen →"
+      },
+      "final_cta": {
+        "heading": "Wenn die Frage dich nicht loslässt.",
+        "subtitle": "Hör auf zu lesen. Fang an, sie zu durchqueren.",
+        "primary": "Stell deine Frage — $9.99",
+        "secondary": "Oder probier Glyph erst kostenlos →"
+      }
+    },
+    "poju": {
+      "hero": {
+        "heading": "Manchmal reicht Lesen nicht aus.",
+        "description": "Du hast bereits die Bücher gelesen, mit Freunden gesprochen und das Für und Wider abgewogen. Die Frage lässt dich immer noch nicht los.",
+        "tagline": "POJU ist das, was nach dem alleine Denken kommt.",
+        "cta_primary": "Stell deine Frage — $9.99",
+        "cta_secondary": "Wie es funktioniert ↓"
+      },
+      "when_to_come": {
+        "heading": "Wann zu POJU kommen.",
+        "stuck": {
+          "title": "Du steckst zwischen zwei Wegen fest",
+          "description": "Karrierewechsel. Beziehungsentscheidung. Wo wohnen."
+        },
+        "confused": {
+          "title": "Du hast recherchiert und bist verwirrter",
+          "description": "Widersprüchliche Ratschläge. Familiendruck. Eine tickende Uhr."
+        },
+        "repeating": {
+          "title": "Etwas wiederholt sich und du weißt nicht warum",
+          "description": "Die gleiche Art von Beziehung. Die gleichen Blockaden. Die gleichen Rückschläge."
+        },
+        "depth": {
+          "title": "Du brauchst Tiefe, die Freunde nicht geben können",
+          "description": "Niemand um dich herum hat den Abstand, klar zu sehen."
+        },
+        "direction": {
+          "title": "Du willst Richtung, keine Vorhersage",
+          "description": "\"Wird X passieren\" ist Astrologie. \"Was sollte ich tun\" ist POJU."
+        }
+      },
+      "how_it_works": {
+        "heading": "Wie POJU funktioniert",
+        "subtitle": "Nicht eine einzelne Antwort — eine kontinuierliche Durchbruchschleife.",
+        "steps": {
+          "1": "Problemidentifikation",
+          "2": "Informationssammlung",
+          "3": "Musteranalyse",
+          "4": "Kernanalyse",
+          "5": "Aktionsgenerierung",
+          "6": "Umsetzungsverfolgung"
+        },
+        "footer": "Du handelst. Du kommst zurück. Der Weg passt sich an. Bis du hindurchgehst."
+      },
+      "two_columns": {
+        "heading": "Zwei Spalten, ein Versprechen.",
+        "included": {
+          "title": "Was enthalten ist",
+          "items": [
+            "Unbegrenzte Tiefe in einer einzigen Sitzung",
+            "Aktionsplan, den du morgen umsetzen kannst",
+            "Reflexionsfragen zum Verweilen",
+            "30 Tage Sitzungszugang"
+          ]
+        },
+        "not_included": {
+          "title": "Was es nicht ist",
+          "items": [
+            "Sagt deine Zukunft nicht voraus",
+            "Ersetzt keinen professionellen Rat",
+            "Trifft keine Entscheidungen für dich"
+          ]
+        },
+        "tagline": "POJU ist ein Denkpartner. Die Entscheidungen bleiben bei dir.",
+        "cta": "Stell deine Frage — $9.99",
+        "footnote": "Eine Frage · Unbegrenzte Tiefe · Wird beim Schließen gelöscht"
+      }
+    },
+    "glyph": {
+      "hero": {
+        "heading": "Glyph",
+        "subtitle": "Ein 60-Sekunden-Spiegel.",
+        "description": "Halte eine Frage. Ziehe ein Muster. Lies eine Spiegelung.",
+        "footnote": "Kostenlos. Keine Anmeldung. Lies mit einem Augenzwinkern.",
+        "cta": "Glyph kostenlos testen"
+      },
+      "five_winds": {
+        "heading": "Fünf Winde — fünf archetypische Muster",
+        "description": "Die fünf Muster sind Spiegel, keine Vorhersagen. Jedes beschreibt eine menschliche Situation und hilft dir, das einzuordnen, was bereits geschieht.",
+        "divine_tailwind": {
+          "name": "Divine Tailwind",
+          "description": "Die seltene Anmut völliger Ausrichtung. Alles, was du brauchst, bewegt sich bereits auf dich zu."
+        },
+        "fair_sky": {
+          "name": "Fair Sky",
+          "description": "Klare Pfade mit sanfter Unterstützung. Der Weg ist offen, aber du musst ihn trotzdem gehen."
+        },
+        "still_water": {
+          "name": "Still Water",
+          "description": "Die Zeit für Geduld und Stille. Weder vorwärts noch rückwärts. Sitze mit dem, was ist."
+        },
+        "crosswind": {
+          "name": "Crosswind",
+          "description": "Konkurrierende Kräfte ziehen an dir. Das ist kein Hinweis, härter zu drücken. Es ist ein Hinweis, sorgfältiger zuzuhören."
+        },
+        "eye_of_storm": {
+          "name": "Eye of Storm",
+          "description": "Die tiefe Stille im Zentrum eines Sturms. Wenn alles Äußere turbulent ist, lebt Klarheit am einzigen Ort, den nichts erreichen kann."
+        }
+      },
+      "on_the_cards": {
+        "heading": "Über die Karten.",
+        "paragraphs": [
+          "Die fünf Glyphs sind keine Etiketten des Schicksals. Sie sind keine \"guten Karten\" oder \"schlechten Karten\".",
+          "Jede ist eine Linse — eine Art, diesen besonderen Moment zu lesen, für diese besondere Frage, gehalten von dieser besonderen Person.",
+          "Der gleiche Glyph kann an verschiedenen Tagen, für verschiedene Personen, über verschiedene Fragen, völlig verschiedene Dinge bedeuten.",
+          "Was du erhältst, ist kein Urteil. Es ist eine Perspektive — und eine Einladung, genauer hinzusehen."
+        ]
+      },
+      "how_it_works": {
+        "heading": "Wie Glyph funktioniert.",
+        "step_1": {
+          "title": "Halte deine Frage.",
+          "description": "Komprimiere sie auf 60 Zeichen. Die Komprimierung beginnt die Antwort."
+        },
+        "step_2": {
+          "title": "Ziehe dein Muster.",
+          "description": "Eine von 100 archetypischen Formen, verfeinert über tausend Jahre."
+        },
+        "step_3": {
+          "title": "Lies deine Spiegelung.",
+          "description": "Eine kurze Antwort — verwurzelt in Weisheitstraditionen und moderner Psychologie."
+        },
+        "rules": [
+          "Eine Frage pro Lesung. Frage nicht viele Dinge auf einmal.",
+          "Warte 48 Stunden, bevor du dasselbe wieder fragst. Antworten brauchen Zeit, sich zu setzen.",
+          "Komprimiere deine Frage auf 60 Zeichen. Die Komprimierung ist der Anfang der Antwort."
+        ],
+        "session_reminder": "Eine Frage pro Sitzung. Wenn dieselbe Frage zurückkehrt, warte 48 Stunden."
+      },
+      "final_cta": {
+        "heading": "Halte eine Frage.",
+        "subtitle": "Was du erhältst, ist kein Urteil. Es ist eine Einladung, genauer hinzusehen.",
+        "cta": "Glyph kostenlos testen"
+      }
+    },
+    "syncro": {
+      "hero": {
+        "heading": "Syncro",
+        "subtitle": "Sieh deine natürlichen Rhythmen.",
+        "description": "Basierend auf deinem Geburtskontext spiegelt Syncro wider, wie die Muster des Tages sich mit dir ausrichten. Wo lehnen, wo verlangsamen.",
+        "tagline": "Eine Wettervorhersage für dein Innenleben, alle zwei Stunden aktualisiert.",
+        "footnote": "Kostenlos · Öffnet nur auf dem Handy",
+        "cta": "Syncro öffnen",
+        "qr_label": "pojulife.com/syncro",
+        "sms_label": "Sende dir den Link",
+        "sms_button": "Schick mir den Link",
+        "notify_cta": "Benachrichtigung, wenn Syncro startet",
+        "sms_body": "Syncro auf dem Handy öffnen: {url}",
+        "phone_placeholder": "Telefonnummer"
+      },
+      "what_shows": {
+        "heading": "Was Syncro zeigt.",
+        "intro": "Halte dein Telefon in eine Richtung. Sieh, was verfügbar ist. Sieh, was nicht.",
+        "items_intro": "Jede Richtung zeigt:",
+        "items": [
+          "Eine kurze Beschreibung des aktuellen Musters",
+          "Wofür diese Periode geeignet ist (zum Beispiel, langsame Gespräche)",
+          "Wofür diese Periode nicht geeignet ist (zum Beispiel, mit großen Anfragen warten)"
+        ],
+        "footnote": "Alle zwei Stunden aktualisiert, mit deinem Kontext.",
+        "preview_label": "Vorschau",
+        "preview_placeholder": "Platzhalter für das Telefon-Mockup — später durch einen Syncro-Screenshot ersetzen."
+      },
+      "use_cases": {
+        "heading": "Wo Menschen Syncro nutzen",
+        "study": {
+          "title": "Lernort",
+          "description": "Wähle eine Schreibtischausrichtung, die stetigen Fokus vor einem tiefen Arbeitsblock unterstützt."
+        },
+        "negotiation": {
+          "title": "Verhandlung",
+          "description": "Finde eine Sitzausrichtung, die Selbstvertrauen und stabilere Kommunikation unterstützt."
+        },
+        "bed": {
+          "title": "Bettausrichtung",
+          "description": "Teste Schlafrichtungen und vergleiche, wie sich deine Schlafqualität im Laufe der Zeit ändert."
+        },
+        "travel": {
+          "title": "Reiseentscheidung",
+          "description": "Prüfe den Richtungston vor dem Aufbruch, wenn sowohl Timing als auch Klarheit wichtig sind."
+        },
+        "companion": {
+          "title": "POJU-Begleiter",
+          "description": "Nutze Syncro als Schicht der echten Welt, kehre dann zu POJU zurück für tiefere Entscheidungsstrategie."
+        }
+      },
+      "what_it_is": {
+        "heading": "Was es ist. Was es nicht ist.",
+        "shows": {
+          "title": "Was es zeigt",
+          "items": [
+            "Aktuelles Rhythmusmuster für die nächsten 2 Stunden",
+            "Acht Richtungen mit ihren Eignungen",
+            "Wo sich lehnen, wo verlangsamen"
+          ]
+        },
+        "isnt": {
+          "title": "Was es nicht ist",
+          "items": [
+            "Ein Vorhersager von Ereignissen",
+            "Ein Versprecher von Ergebnissen",
+            "Ein Ersatz für dein eigenes Urteil"
+          ]
+        }
+      },
+      "always_free": {
+        "heading": "Immer kostenlos.",
+        "description": "Syncro bleibt kostenlos als dein täglicher Rhythmusbegleiter. Öffne es, wann immer du Klarheit über den Moment brauchst.",
+        "cta": "Syncro auf dem Handy öffnen"
+      }
+    },
+    "footer": {
+      "disclaimers": {
+        "home": "Zur Selbstreflexion und Unterhaltung. POJU bietet Perspektiven, keine Vorhersagen. Alle Entscheidungen liegen bei dir.",
+        "poju": "POJU ist ein Denkpartner. Es bietet Perspektiven, keine Prophezeiungen. Alle Entscheidungen liegen bei dir.",
+        "glyph": "Lies mit einem Augenzwinkern. Die Muster spiegeln, sie sagen nicht voraus. Alle Entscheidungen liegen bei dir.",
+        "syncro": "Syncro ist ein Selbstwahrnehmungswerkzeug. Nimm, was bei dir ankommt. Die Entscheidungen liegen bei dir."
+      },
+      "links": {
+        "home": "Startseite",
+        "disclaimer": "Haftungsausschluss",
+        "privacy": "Datenschutz",
+        "terms": "Nutzungsbedingungen",
+        "contact": "Kontakt"
+      },
+      "copyright": "© 2026 POJU. Alle Rechte vorbehalten."
+    }
+  }
+}

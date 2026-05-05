@@ -1,7 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+
+import { Link } from "@/i18n/navigation";
+import { MarketingLanguageSwitcher } from "@/components/marketing/marketing-language-switcher";
 
 type MobileDrawerProps = {
   open: boolean;
@@ -38,6 +40,11 @@ export function MobileDrawer({ open, onClose }: MobileDrawerProps) {
               <Link href="/privacy" onClick={onClose}>Privacy</Link>
               <Link href="/terms" onClick={onClose}>Terms</Link>
               <Link href="/contact" onClick={onClose}>Contact</Link>
+              <hr className="my-2 border-glass-border" />
+              <p className="text-xs uppercase tracking-[0.14em] text-text-dim">Language</p>
+              <div className="mt-2 flex justify-start">
+                <MarketingLanguageSwitcher onAfterSelect={onClose} />
+              </div>
             </nav>
           </motion.aside>
         </>

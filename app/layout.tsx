@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import { GeistSans } from "geist/font/sans";
 import { EB_Garamond, Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 
+/** UI：Geist Sans 为主，Inter 作回退（与建议一致） */
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
@@ -37,7 +39,7 @@ export default function RootLayout({
     <html
       lang="en"
       translate="no"
-      className={`${inter.variable} ${garamond.variable} h-full antialiased notranslate`}
+      className={`${GeistSans.variable} ${inter.variable} ${garamond.variable} h-full antialiased notranslate`}
     >
       <head>
         <meta name="google" content="notranslate" />
