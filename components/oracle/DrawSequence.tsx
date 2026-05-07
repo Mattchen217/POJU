@@ -43,6 +43,7 @@ export function DrawSequence({
       return;
     }
     if (stage === "card-front") {
+      if (!sign) return;
       onFullReading(sign);
     }
   }, [onFullReading, sign, stage]);
