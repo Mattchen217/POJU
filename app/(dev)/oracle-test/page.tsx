@@ -37,14 +37,6 @@ export default function OracleTestPage() {
       <FullReading
         sign={forcedSign}
         userInput={MOCK_USER_INPUT}
-        onAskAgain={() => {
-          setForcedSign(null);
-          setShowFullReading(false);
-        }}
-        onClose={() => {
-          setForcedSign(null);
-          setShowFullReading(false);
-        }}
       />
     );
   }
