@@ -14,8 +14,12 @@ function getGeminiClient(): GoogleGenerativeAI | null {
   return new GoogleGenerativeAI(apiKey);
 }
 
-const GEMINI_MODEL =
-  process.env.GOOGLE_GENERATIVE_AI_MODEL ?? "gemini-3-flash";
+const GEMINI_MODEL = process.env.GOOGLE_GENERATIVE_AI_MODEL ?? "gemini-3-flash-preview";
+const GEMINI_FALLBACK_MODELS = [
+  "gemini-3-flash-latest",
+  "gemini-2.0-flash",
+  "gemini-1.5-flash",
+] as const;
 
 const ALL_SIGNS = signsData as SignData[];
 
@@ -427,10 +431,9 @@ ${signData.raw_md_content}
 Now generate the JSON response per the system prompt's format.
 Target length: about 800-1100 English words of substance if the output language is English; for Chinese, Spanish, French, or German, use a comparable depth (do not shorten just because the script is denser). Strict JSON only, no preamble.`;
 
-    const model = genAI.getGenerativeModel({
-      model: GEMINI_MODEL,
-      systemInstruction,
-    });
+    const candidateModels = Array.from(
+      new Set([GEMINI_MODEL, ...GEMINI_FALLBACK_MODELS]),
+    );
     const dedupeKey = JSON.stringify({
       sign_number: body.sign_number,
       level: body.level,
@@ -441,17 +444,42 @@ Target length: about 800-1100 English words of substance if the output language 
 
     const runPromise =
       requestDedupe.get(dedupeKey) ??
-      model
-        .generateContent({
-          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-          generationConfig: {
-            maxOutputTokens: 8192,
-            temperature: 0.7,
-          },
-        })
-        .finally(() => {
-          requestDedupe.delete(dedupeKey);
-        });
+      (async () => {
+        let lastError: unknown = null;
+
+        for (const modelName of candidateModels) {
+          try {
+            const model = genAI.getGenerativeModel({
+              model: modelName,
+              systemInstruction,
+            });
+            return await model.generateContent({
+              contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+              generationConfig: {
+                maxOutputTokens: 8192,
+                temperature: 0.7,
+              },
+            });
+          } catch (err) {
+            const message = formatGeminiError(err);
+            const isModelNotFound =
+              /models\/[\w.-]+ is not found|not supported for generateContent|404|NOT_FOUND/i.test(
+                message,
+              ) || /Requested entity was not found/i.test(message);
+            if (!isModelNotFound) throw err;
+            lastError = err;
+          }
+        }
+
+        throw (
+          lastError ??
+          new Error(
+            `No available Gemini model. Tried: ${candidateModels.join(", ")}`,
+          )
+        );
+      })().finally(() => {
+        requestDedupe.delete(dedupeKey);
+      });
     requestDedupe.set(dedupeKey, runPromise);
 
     const result = (await runPromise) as Awaited<typeof runPromise> & {
