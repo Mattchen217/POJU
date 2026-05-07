@@ -15,7 +15,7 @@ function getGeminiClient(): GoogleGenerativeAI | null {
 }
 
 const GEMINI_MODEL =
-  process.env.GOOGLE_GENERATIVE_AI_MODEL ?? "gemini-2.0-flash";
+  process.env.GOOGLE_GENERATIVE_AI_MODEL ?? "gemini-3-flash";
 
 const ALL_SIGNS = signsData as SignData[];
 
