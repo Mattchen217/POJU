@@ -14,7 +14,16 @@ function getGeminiClient(): GoogleGenerativeAI | null {
   return new GoogleGenerativeAI(apiKey);
 }
 
-const GEMINI_MODEL = process.env.GOOGLE_GENERATIVE_AI_MODEL ?? "gemini-3-flash-preview";
+function normalizeGeminiModelId(modelId: string): string {
+  const normalized = modelId.trim();
+  // Google's model ids may require preview/latest suffixes in v1beta.
+  if (normalized === "gemini-3-flash") return "gemini-3-flash-preview";
+  return normalized;
+}
+
+const GEMINI_MODEL = normalizeGeminiModelId(
+  process.env.GOOGLE_GENERATIVE_AI_MODEL ?? "gemini-3-flash-preview",
+);
 const GEMINI_FALLBACK_MODELS = [
   "gemini-3-flash-latest",
   "gemini-2.0-flash",
