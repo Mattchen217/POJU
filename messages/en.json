@@ -1,11 +1,11 @@
 {
   "common": {
-    "brandWordmark": "Poju Life",
-    "brand": "POJU LIFE",
+    "brandWordmark": "pojulife",
+    "brand": "pojulife",
     "domain": "pojulife.com",
     "tagline": "Where AI meets a thousand years of wisdom.",
-    "footerTagline": "For self-reflection and entertainment. POJU offers perspectives, not predictions. All decisions are yours alone.",
-    "copyright": "© 2026 POJU. All rights reserved.",
+    "footerTagline": "For self-reflection and entertainment. pojulife offers perspectives, not predictions. All decisions are yours alone.",
+    "copyright": "© 2026 pojulife. All rights reserved.",
     "syncroFooterTagline": "Syncro is a self-awareness tool. Take what resonates. Decisions are yours alone."
   },
   "nav": {
@@ -106,7 +106,7 @@
       "syncro": {
         "name": "Syncro",
         "line1": "See your natural rhythms unfold.",
-        "line2": "A weather forecast for your inner life, updated every two hours.",
+        "line2": "A weather forecast for your inner life, updated through your day.",
         "badge": "Free",
         "cta": "Try it →"
       }
@@ -129,13 +129,13 @@
       "card3": {
         "p1": "You want to know your own rhythm.",
         "p2": "When do you have momentum? When does friction arrive?",
-        "p3": "Syncro maps it, every two hours.",
+        "p3": "Syncro maps it, updated through your day.",
         "cta": "Try Syncro"
       },
       "card4": {
         "p1": "The question keeps you up at 2 AM.",
         "p2": "You've talked to friends, read the books. Still circling.",
-        "p3": "POJU sits with you through it. $9.99. Once.",
+        "p3": "POJU sits with you through it — once, until you see through.",
         "cta": "Start a POJU session"
       }
     }
@@ -147,7 +147,7 @@
   "marketingSite": {
     "common": {
       "tagline": "Where AI meets a thousand years of wisdom.",
-      "footer_disclaimer": "For self-reflection and entertainment. POJU offers perspectives, not predictions. All decisions are yours alone.",
+      "footer_disclaimer": "For self-reflection and entertainment. pojulife offers perspectives, not predictions. All decisions are yours alone.",
       "trust_line": "No account · No subscription · Yours to decide",
       "read_with_wink": "Read with a wink. The patterns mirror, they don't predict."
     },
@@ -170,12 +170,12 @@
           "description": "A single deep conversation, until you see it through."
         },
         "glyph": {
-          "tagline": "A 60-second mirror.",
+          "tagline": "A pocket-sized mirror.",
           "description": "Hold a question. Draw a pattern. Read a reflection."
         },
         "syncro": {
           "tagline": "See your natural rhythms.",
-          "description": "Updated every two hours, on your phone."
+          "description": "Updated through your day, on your phone."
         },
         "try_it": "Try it →"
       },
@@ -297,7 +297,7 @@
     "glyph": {
       "hero": {
         "heading": "Glyph",
-        "subtitle": "A 60-second mirror.",
+        "subtitle": "A pocket-sized mirror.",
         "description": "Hold a question. Draw a pattern. Read a reflection.",
         "footnote": "Free. No signup. Read with a wink.",
         "cta": "Try Glyph — Free"
@@ -367,50 +367,49 @@
         "heading": "Syncro",
         "subtitle": "See your natural rhythms.",
         "description": "Based on your birth context, Syncro reflects how the day's patterns align with you. Where to lean in. Where to slow down.",
-        "tagline": "A weather forecast for your inner life, updated every two hours.",
+        "tagline": "A light rhythm map you can open anytime through your day.",
         "footnote": "Free · Opens on mobile only",
         "cta": "Open Syncro",
         "qr_label": "pojulife.com/syncro",
         "sms_label": "Text yourself the link",
         "sms_button": "Text me the link",
-        "notify_cta": "Get notified when Syncro launches",
         "sms_body": "Open Syncro on your phone: {url}",
         "phone_placeholder": "Phone number"
       },
       "what_shows": {
         "heading": "What Syncro shows.",
-        "intro": "Hold your phone toward a direction. See what's available. See what isn't.",
+        "intro": "Open Syncro for a quick read on this stretch of your day — what's emphasized, and what to ease off.",
         "items_intro": "Each direction shows:",
         "items": [
           "A short description of the current pattern",
           "What this period suits (for example, slow conversations)",
           "What this period doesn't suit (for example, wait on big asks)"
         ],
-        "footnote": "Updated every two hours, with your context.",
+        "footnote": "Refreshes as you move through the day, with your context.",
         "preview_label": "Preview",
         "preview_placeholder": "Phone mockup placeholder — replace with a Syncro screen capture when ready."
       },
       "use_cases": {
-        "heading": "Where people use Syncro",
-        "study": {
-          "title": "Study spot",
-          "description": "Choose a desk orientation that supports steady focus before a deep work block."
+        "heading": "Where Syncro fits.",
+        "before_matters": {
+          "title": "Before something matters",
+          "description": "When you have a conversation, a decision, or a meeting ahead. A quick check-in before you step in."
         },
-        "negotiation": {
-          "title": "Negotiation",
-          "description": "Find a seating orientation that supports confidence and steadier communication."
+        "pace_off": {
+          "title": "When the pace feels off",
+          "description": "When you're pushing but nothing's moving, or things feel frictionless but unfocused. A moment to recalibrate."
         },
-        "bed": {
-          "title": "Bed orientation",
-          "description": "Test sleeping directions and compare how your rest quality changes over time."
+        "daily_rhythm": {
+          "title": "As a daily rhythm",
+          "description": "Some people open Syncro the way others check the weather — a small ritual, a way to notice themselves."
         },
-        "travel": {
-          "title": "Travel decision",
-          "description": "Check directional tone before heading out when timing and clarity both matter."
+        "traveling": {
+          "title": "When you're traveling",
+          "description": "New environments, new timing. A way to stay grounded in your own rhythm wherever you are."
         },
-        "companion": {
-          "title": "POJU companion",
-          "description": "Use Syncro as a real-world layer, then return to POJU for deeper decision strategy."
+        "poju_companion": {
+          "title": "As a POJU companion",
+          "description": "Use Syncro between POJU sessions to notice how your situation evolves between deeper conversations."
         }
       },
       "what_it_is": {
@@ -418,7 +417,7 @@
         "shows": {
           "title": "What it shows",
           "items": [
-            "Current rhythm pattern for the next 2 hours",
+            "The rhythm pattern of the moment",
             "Eight directions with what they suit",
             "Where to lean in, where to slow down"
           ]
@@ -440,7 +439,7 @@
     },
     "footer": {
       "disclaimers": {
-        "home": "For self-reflection and entertainment. POJU offers perspectives, not predictions. All decisions are yours alone.",
+        "home": "For self-reflection and entertainment. pojulife offers perspectives, not predictions. All decisions are yours alone.",
         "poju": "POJU is a thinking partner. It offers perspectives, not prophecies. All decisions are yours alone.",
         "glyph": "Read with a wink. The patterns mirror, they don't predict. All decisions are yours alone.",
         "syncro": "Syncro is a self-awareness tool. Take what resonates. Decisions are yours alone."
@@ -452,7 +451,7 @@
         "terms": "Terms of Service",
         "contact": "Contact"
       },
-      "copyright": "© 2026 POJU. All rights reserved."
+      "copyright": "© 2026 pojulife. All rights reserved."
     }
   }
 }

@@ -1,17 +1,23 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 
+import { Link } from "@/i18n/navigation";
 import { ArchiveReturnBanner } from "@/components/archive/archive-return-banner";
 import { SyncroProductHero } from "@/components/marketing/syncro-product-hero";
 
 export const dynamic = "force-dynamic";
 
-const USE_CASE_KEYS = ["study", "negotiation", "bed", "travel", "companion"] as const;
+export const metadata: Metadata = {
+  title: "Syncro — pojulife",
+  description:
+    "Where AI meets a thousand years of wisdom. A light rhythm map you can open through your day — free on mobile.",
+};
+
+const USE_CASE_KEYS = ["before_matters", "pace_off", "daily_rhythm", "traveling", "poju_companion"] as const;
 
 async function SyncroContent() {
   const t = await getTranslations("marketingSite.syncro");
-  const notifySubject = encodeURIComponent(t("hero.notify_cta"));
-  const notifyHref = `mailto:support@pojulife.com?subject=${notifySubject}`;
   const whatShowsItems = t.raw("what_shows.items") as string[];
   const showsItems = t.raw("what_it_is.shows.items") as string[];
   const isntItems = t.raw("what_it_is.isnt.items") as string[];
@@ -22,8 +28,6 @@ async function SyncroContent() {
     description: t("hero.description"),
     tagline: t("hero.tagline"),
     footnote: t("hero.footnote"),
-    notifyCta: t("hero.notify_cta"),
-    notifyHref,
     qrLabel: t("hero.qr_label"),
     qrAlt: t("hero.qr_label"),
     smsForm: {
@@ -83,7 +87,9 @@ async function SyncroContent() {
                 className="rounded-xl border border-white/10 bg-black/25 px-4 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
               >
                 <p className="text-[15px] font-semibold text-cyan-100">{t(`use_cases.${key}.title`)}</p>
-                <p className="mt-2 text-sm leading-7 text-text-secondary">{t(`use_cases.${key}.description`)}</p>
+                <p className="mt-2 text-sm leading-7 text-text-secondary whitespace-pre-line">
+                  {t(`use_cases.${key}.description`)}
+                </p>
               </article>
             ))}
           </div>
@@ -123,12 +129,12 @@ async function SyncroContent() {
               {t("always_free.heading")}
             </h2>
             <p className="mt-4 max-w-2xl text-[15px] leading-8 text-text-secondary sm:text-base">{t("always_free.description")}</p>
-            <a
-              href={notifyHref}
+            <Link
+              href="/syncro"
               className="mt-7 inline-flex rounded-full border border-cyan-300/35 bg-cyan-400/20 px-8 py-3 text-sm font-semibold text-cyan-100 hover:bg-cyan-300/25 sm:text-[15px]"
             >
-              {t("hero.notify_cta")}
-            </a>
+              {t("always_free.cta")}
+            </Link>
           </div>
         </section>
       </div>

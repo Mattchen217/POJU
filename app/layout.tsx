@@ -16,9 +16,9 @@ const garamond = EB_Garamond({
 });
 
 export const metadata: Metadata = {
-  title: "POJU",
+  title: "pojulife",
   description:
-    "Ancient Eastern Wisdom, reinforced by modern science, delivered by AI Agent, personalized for you.",
+    "Where AI meets a thousand years of wisdom. Decision support for the questions that won't let you go.",
   manifest: "/manifest.json",
   icons: {
     icon: [

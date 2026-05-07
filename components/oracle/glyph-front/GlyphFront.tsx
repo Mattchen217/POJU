@@ -16,9 +16,10 @@ import { LEVEL_META, type SignData } from "@/types/oracle";
 interface GlyphFrontProps {
   sign: SignData;
   animate?: boolean;
+  compact?: boolean;
 }
 
-export function GlyphFront({ sign, animate = true }: GlyphFrontProps) {
+export function GlyphFront({ sign, animate = true, compact = false }: GlyphFrontProps) {
   const meta = LEVEL_META[sign.level];
   const frontByLevel = {
     divine_tailwind: divineTailwindFront,
@@ -73,34 +74,40 @@ export function GlyphFront({ sign, animate = true }: GlyphFrontProps) {
       <div className="absolute inset-0 bg-black/28" />
       <WindBorderParticlesOverlay particleKey={particleKeyByLevel[sign.level]} />
 
-      <div className="relative z-20 flex h-full flex-col px-[11%] py-[13%] text-center">
+      <div
+        className="relative z-20 flex h-full flex-col px-[11%] py-[13%] text-center"
+        style={
+          compact
+            ? {
+                transform: "scale(0.84)",
+                transformOrigin: "top center",
+              }
+            : undefined
+        }
+      >
         <motion.div
           className="pt-[7%]"
           initial={animate ? { opacity: 0, y: -10 } : false}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
-          <h2
-            className="font-verse mb-1 text-3xl tracking-wide md:text-4xl"
-            style={{ color: toneColor }}
-          >
+          <h2 className="font-verse mb-1 text-3xl tracking-wide md:text-4xl" style={{ color: toneColor }}>
             {meta.display_name}
           </h2>
 
-          <p
-            className="mb-4 text-sm italic opacity-70 md:text-base"
-            style={{ color: toneColor }}
-          >
+          <p className="mb-4 text-sm italic opacity-70 md:text-base" style={{ color: toneColor }}>
             {meta.subtitle}
           </p>
 
-          <div className="text-[0.65rem] tracking-[0.2em] text-white md:text-[0.72rem]">
+          <div
+            className={`text-[0.65rem] tracking-[0.2em] text-white md:text-[0.72rem] ${compact ? "mt-1 mb-4" : ""}`}
+          >
             GLYPH No. {String(sign.sign_number).padStart(3, "0")}
           </div>
         </motion.div>
 
         <motion.div
-          className="mx-auto -mt-2 h-[46%] w-[88%] overflow-hidden"
+          className={`mx-auto h-[46%] w-[88%] overflow-hidden ${compact ? "mt-1" : "-mt-2"}`}
           initial={animate ? { opacity: 0 } : false}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.5 }}
@@ -132,16 +139,6 @@ export function GlyphFront({ sign, animate = true }: GlyphFrontProps) {
           </div>
         </motion.div>
 
-        <p
-          className="absolute bottom-[7%] left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-xs tracking-[0.3em]"
-          style={{
-            color: toneColor,
-            background: "rgba(0,0,0,0.72)",
-          }}
-        >
-          pojulife.com
-        </p>
-
         <motion.div
           className="mt-2 min-h-[16%] px-2"
           initial={animate ? { opacity: 0 } : false}
@@ -153,6 +150,18 @@ export function GlyphFront({ sign, animate = true }: GlyphFrontProps) {
           </p>
         </motion.div>
       </div>
+
+      <p
+        className={`absolute left-1/2 z-30 -translate-x-1/2 rounded-full px-3 py-1 text-xs tracking-[0.3em] ${
+          compact ? "bottom-[3.8%]" : "bottom-[7%]"
+        }`}
+        style={{
+          color: toneColor,
+          background: "rgba(0,0,0,0.72)",
+        }}
+      >
+        pojulife.com
+      </p>
     </motion.div>
   );
 }

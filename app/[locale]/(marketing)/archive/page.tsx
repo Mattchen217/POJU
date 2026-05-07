@@ -4,7 +4,7 @@ import { ArchiveRuntimePreview } from "@/components/archive/archive-runtime-prev
 import { WipeEverythingButton } from "@/components/archive/wipe-everything-button";
 
 export const metadata: Metadata = {
-  title: "The Archive — Your personal vault",
+  title: "The Archive — pojulife",
   description:
     "Everything here lives only on this device. Your POJU sessions, Glyph reflections, and Syncro readings in one local vault.",
 };

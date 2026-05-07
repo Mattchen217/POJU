@@ -7,8 +7,6 @@ export type SyncroProductHeroCopy = {
   description: string;
   tagline: string;
   footnote: string;
-  notifyCta: string;
-  notifyHref: string;
   qrLabel: string;
   qrAlt: string;
   smsForm: SyncroSmsLinkFormCopy;
@@ -40,14 +38,6 @@ export function SyncroProductHero({ copy }: { copy: SyncroProductHeroCopy }) {
               <p className="mx-auto mt-5 inline-flex rounded-full border border-amber-200/30 bg-amber-200/10 px-3 py-1 text-xs font-medium text-amber-100 md:mx-0">
                 {copy.footnote}
               </p>
-              <div className="mt-6 flex justify-center md:justify-start">
-                <a
-                  href={copy.notifyHref}
-                  className="inline-flex w-full max-w-sm justify-center rounded-full border border-cyan-300/50 bg-cyan-400/25 px-8 py-3.5 text-[15px] font-semibold text-cyan-50 shadow-[0_10px_26px_rgba(34,211,238,0.28)] hover:bg-cyan-300/30 md:w-auto"
-                >
-                  {copy.notifyCta}
-                </a>
-              </div>
             </div>
 
             <div className="flex flex-col gap-4 md:pt-2">

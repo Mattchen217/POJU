@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { WindCardsGallery } from "@/components/oracle/wind-cards";
 
 export const metadata: Metadata = {
-  title: "五风卡面 · POJU",
+  title: "五风卡面 · pojulife",
   description: "五张独立卡面展示（assets/images）。",
 };
 

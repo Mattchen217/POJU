@@ -1,6 +1,13 @@
 import { Link } from "@/i18n/navigation";
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { getTranslations } from "next-intl/server";
+
+export const metadata: Metadata = {
+  title: "Glyph — pojulife",
+  description:
+    "Where AI meets a thousand years of wisdom. A pocket-sized mirror — hold a question, draw a pattern, read what comes back.",
+};
 
 import { OracleProductHero } from "@/components/marketing/oracle-product-hero";
 import { WindCardWithParticles, type WindCardParticleKey } from "@/components/oracle/wind-cards";

@@ -85,7 +85,7 @@ export function FullReading({
       <div className="mx-auto max-w-[640px] px-6 py-8">
         <div className="mb-8">
           <div className="mx-auto w-full max-w-[280px]">
-            <GlyphFront sign={sign} animate={false} />
+            <GlyphFront sign={sign} animate={false} compact />
           </div>
         </div>
 

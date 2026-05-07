@@ -5,8 +5,8 @@ import { Link } from "@/i18n/navigation";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Contact — POJU",
-  description: "Contact POJU",
+  title: "Contact — pojulife",
+  description: "Contact pojulife",
 };
 
 function ContactContent() {
@@ -14,7 +14,7 @@ function ContactContent() {
     <main className="bg-bg-deep text-text-body">
       <div className="w-full px-3 pb-10 pt-4 sm:px-4 sm:pt-6 md:px-6 md:pb-12">
         <article className="prose prose-invert prose-lg mx-auto mt-2 max-w-3xl rounded-2xl border border-white/10 bg-black/25 px-5 py-8 text-text-secondary prose-headings:text-text-primary prose-a:text-purple-vivid sm:px-7 md:px-10">
-          <h1 className="text-text-primary">Contact POJU</h1>
+          <h1 className="text-text-primary">Contact pojulife</h1>
           <p>We&apos;re a small team. Every email is read and answered by a real person.</p>
           <hr />
 
@@ -53,7 +53,7 @@ function ContactContent() {
               <Link href="/terms">Terms of Service</Link> — What you agree to
             </li>
             <li>
-              <Link href="/disclaimer">Disclaimer</Link> — What POJU is and isn&apos;t
+              <Link href="/disclaimer">Disclaimer</Link> — What POJULIFE is and isn&apos;t
             </li>
           </ul>
 
@@ -69,7 +69,7 @@ function ContactContent() {
               findahelpline.com
             </a>
           </p>
-          <p>POJU is not equipped to help with mental health crises. Please reach out to a human trained for this.</p>
+          <p>POJULIFE is not equipped to help with mental health crises. Please reach out to a human trained for this.</p>
 
           <hr />
 

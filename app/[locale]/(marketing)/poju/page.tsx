@@ -6,9 +6,9 @@ import { PojuHowWorksRing } from "@/components/marketing/poju-how-works-ring";
 import { PojuProductHero } from "@/components/marketing/poju-product-hero";
 
 export const metadata: Metadata = {
-  title: "POJU — Break your deadlock",
+  title: "pojulife — Break your deadlock",
   description:
-    "Guided by 2,000 years of Eastern wisdom, reinforced by modern science, delivered by an AI Agent that walks with you.",
+    "Where AI meets a thousand years of wisdom. Decision support for the questions that won't let you go.",
 };
 export const dynamic = "force-dynamic";
 

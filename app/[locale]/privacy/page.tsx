@@ -5,8 +5,8 @@ import { StationeryPaperPanel } from "@/components/marketing/stationery-paper-pa
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — POJU",
-  description: "POJU privacy policy",
+  title: "Privacy Policy — pojulife",
+  description: "pojulife privacy policy",
 };
 
 const privacyArchitectureItems = [
@@ -42,10 +42,10 @@ export default function PrivacyPage() {
           <h1 className="mt-3 text-center text-text-primary not-prose text-[28px] font-semibold sm:text-[34px]">
             Privacy Policy
           </h1>
-          <p className="text-center text-sm text-text-dim not-prose">Last updated: October 30, 2025</p>
+          <p className="text-center text-sm text-text-dim not-prose">Last updated: May 1, 2026</p>
 
           <p className="mt-6 text-center not-prose">
-            POJU was built differently.
+            POJULIFE was built differently.
             <br />
             <br />
             Most products talk about &quot;respecting your privacy.&quot; We built a product that doesn&apos;t need your
@@ -95,8 +95,8 @@ export default function PrivacyPage() {
               for 7 years for tax compliance.
             </li>
             <li>
-              <strong>Email</strong> (only when you explicitly provide it) — Used to deliver PDF readings and one check-in
-              email. Deleted within 24 hours after sending.
+              <strong>Email</strong> (only when you explicitly provide it) — Used to deliver PDF readings. Deleted within 24
+              hours after sending.
             </li>
             <li>
               <strong>Aggregated usage stats</strong> (anonymous) — Total sessions, not per-user behavior.
@@ -118,7 +118,7 @@ export default function PrivacyPage() {
           <ul>
             <li>Device fingerprint: fraud prevention and session restoration only</li>
             <li>Payment records: tax compliance (required by law)</li>
-            <li>Email: send PDF + optional check-in, then deleted</li>
+            <li>Email: deliver PDF readings only, then deleted</li>
             <li>Aggregate stats: improve product</li>
           </ul>
           <p>We NEVER:</p>
@@ -151,76 +151,96 @@ export default function PrivacyPage() {
           </p>
 
           <h2>6. Third-Party Services</h2>
-          <p>Services we use and their privacy policies:</p>
+          <p>Services we rely on today and how they handle data:</p>
           <ul>
             <li>
-              Anthropic (Claude API) — AI processing. Zero Data Retention enabled — they don&apos;t save your
-              conversations. Privacy:{" "}
+              <strong>Anthropic (Claude API)</strong> — AI processing. Zero Data Retention is enabled for our use; they do
+              not retain your conversations for training. Privacy:{" "}
               <a href="https://www.anthropic.com/privacy" rel="noopener noreferrer" target="_blank">
                 anthropic.com/privacy
               </a>
             </li>
             <li>
-              OpenAI — Used ONLY for embedding (converting knowledge base to vectors). Your conversations never go to
-              OpenAI. Privacy:{" "}
-              <a href="https://openai.com/privacy/" rel="noopener noreferrer" target="_blank">
-                openai.com/privacy
-              </a>
+              <strong>Our payment processor (DodoPayments)</strong> — Processes payments; we never see your full card details.
+              See the processor&apos;s terms and privacy notice at checkout.
             </li>
             <li>
-              ElevenLabs — Text-to-speech for reading aloud. Optional, user-initiated. Privacy:{" "}
-              <a href="https://elevenlabs.io/privacy" rel="noopener noreferrer" target="_blank">
-                elevenlabs.io/privacy
-              </a>
-            </li>
-            <li>
-              DodoPayments — Payment processing. They handle your payment method. (Stripe is planned as we grow.) Privacy:
-              refer to DodoPayments&apos; published policy at checkout.
-            </li>
-            <li>
-              Resend — Email delivery. Auto-deletes messages after 30 days. Privacy:{" "}
-              <a href="https://resend.com/legal/privacy-policy" rel="noopener noreferrer" target="_blank">
-                resend.com/legal/privacy-policy
-              </a>
-            </li>
-            <li>
-              Vercel — Hosting. Standard web server logs (IP, user agent, URL). Privacy:{" "}
+              <strong>Vercel</strong> — Hosting and edge delivery. Standard server logs may include IP and user agent. Privacy:{" "}
               <a href="https://vercel.com/legal/privacy-policy" rel="noopener noreferrer" target="_blank">
                 vercel.com/legal/privacy-policy
               </a>
             </li>
             <li>
-              Supabase — Database (for payment records + knowledge base). Privacy:{" "}
-              <a href="https://supabase.com/privacy" rel="noopener noreferrer" target="_blank">
-                supabase.com/privacy
-              </a>
+              <strong>Transactional email</strong> — When we send PDFs or essential service email, messages pass through a
+              provider we select for delivery only; content is not used for marketing.
             </li>
-            <li>FingerprintJS (OSS version) — Device identification. Runs entirely on your device. No data sent to FingerprintJS servers (OSS version).</li>
           </ul>
 
           <h2>7. AI Model Data Handling</h2>
-          <p>Your conversations are sent to Anthropic for processing by Claude. We&apos;ve specifically enabled:</p>
+          <p>
+            To meet quality requirements, POJULIFE may call upon AI models from leading providers including
+            Anthropic&apos;s Claude, OpenAI&apos;s GPT, and Google&apos;s Gemini.
+          </p>
+
+          <h3>What this means for your data</h3>
+          <p>
+            While POJULIFE does not store your conversations (they live encrypted on your device), your inputs are
+            transmitted to these AI providers for processing. This is unavoidable — the AI cannot generate responses without
+            receiving your inputs.
+          </p>
+
+          <h3>How we minimize this</h3>
           <ul>
             <li>
-              Zero Data Retention (ZDR) — Anthropic does not keep your API requests or responses.
+              <strong>Zero Data Retention (ZDR)</strong> is enabled where supported. This is a paid contractual guarantee
+              that the provider does not save your API requests or responses, does not use them for training, and does not
+              allow human review.
             </li>
-            <li>No training on your data — Your conversations are not used to improve Claude.</li>
             <li>
-              No human review — Unless you explicitly flag content for abuse, no Anthropic employee will see your
-              conversations.
+              <strong>No training on your data</strong>: We have opted out of any data sharing for AI model training across
+              all providers we use.
+            </li>
+            <li>
+              <strong>Minimum data principle</strong>: We send only what&apos;s needed for the specific task. Your name,
+              email, and other personal identifiers are never sent to AI providers.
             </li>
           </ul>
-          <p>This guarantee is contractual — we pay extra for ZDR.</p>
+
+          <h3>Third-party privacy policies</h3>
+          <p>
+            When POJULIFE uses an AI provider&apos;s service, that provider&apos;s privacy policy applies to the API
+            transaction:
+          </p>
+          <ul>
+            <li>
+              Anthropic Privacy Policy:{" "}
+              <a href="https://www.anthropic.com/privacy" rel="noopener noreferrer" target="_blank">
+                https://www.anthropic.com/privacy
+              </a>
+            </li>
+            <li>
+              OpenAI Privacy Policy:{" "}
+              <a href="https://openai.com/privacy/" rel="noopener noreferrer" target="_blank">
+                https://openai.com/privacy/
+              </a>
+            </li>
+            <li>
+              Google Privacy Policy:{" "}
+              <a href="https://policies.google.com/privacy" rel="noopener noreferrer" target="_blank">
+                https://policies.google.com/privacy
+              </a>
+            </li>
+          </ul>
 
           <h2>8. Children&apos;s Privacy</h2>
-          <p>POJU is not intended for users under 18.</p>
+          <p>POJULIFE is not intended for users under 18.</p>
           <p>
-            We do not knowingly collect data from minors. If you believe a minor has used POJU, contact{" "}
+            We do not knowingly collect data from minors. If you believe a minor has used POJULIFE, contact{" "}
             <a href="mailto:privacy@pojulife.com">privacy@pojulife.com</a> and we&apos;ll delete any associated data
             immediately.
           </p>
 
-          <h2>9. Your Rights (US — California Residents)</h2>
+          <h2>9. Your Rights (California Residents)</h2>
           <p>As a California resident, you have the right to:</p>
           <ul>
             <li>Know what personal information we collect, use, disclose</li>
@@ -254,11 +274,9 @@ export default function PrivacyPage() {
 
           <h2>11. Contact</h2>
           <p>
-            For privacy questions: <a href="mailto:privacy@pojulife.com">privacy@pojulife.com</a>
-            <br />
-            For general questions: <a href="mailto:support@pojulife.com">support@pojulife.com</a>
-            <br />
-            For legal matters: <a href="mailto:legal@pojulife.com">legal@pojulife.com</a>
+            <a href="mailto:privacy@pojulife.com">privacy@pojulife.com</a> (privacy) ·{" "}
+            <a href="mailto:support@pojulife.com">support@pojulife.com</a> (support) ·{" "}
+            <a href="mailto:legal@pojulife.com">legal@pojulife.com</a> (legal)
           </p>
 
           <h2>12. Updates to This Policy</h2>

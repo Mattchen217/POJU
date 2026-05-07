@@ -1,7 +1,7 @@
 import { BrandWordmark, type BrandWordmarkSize } from "@/components/marketing/brand-wordmark";
 import { PojuMarkLogo } from "@/components/marketing/poju-mark-logo";
 
-/** 图形标 + 与页脚一致排版的 POJU LIFE 字标 */
+/** 图形标 + 字标（文案来自 common.brand，如 pojulife） */
 export function BrandLockup({
   label,
   size,

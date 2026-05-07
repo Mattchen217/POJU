@@ -1,11 +1,11 @@
 {
   "common": {
-    "brandWordmark": "Poju Life",
-    "brand": "POJU LIFE",
+    "brandWordmark": "pojulife",
+    "brand": "pojulife",
     "domain": "pojulife.com",
     "tagline": "AI 与千年智慧的相遇。",
-    "footerTagline": "POJU 用于自我反思与启发。我们提供视角,而非预测。所有决定都由你自己做出。",
-    "copyright": "© 2026 POJU. 版权所有。",
+    "footerTagline": "pojulife 用于自我反思与启发。我们提供视角,而非预测。所有决定都由你自己做出。",
+    "copyright": "© 2026 pojulife. 版权所有。",
     "syncroFooterTagline": "Syncro 是自我觉察工具。取走与你共鸣的。决定由你自己做出。"
   },
   "nav": {
@@ -97,7 +97,7 @@
       },
       "glyph": {
         "name": "Glyph",
-        "line1": "60 秒的镜子。",
+        "line1": "随身可得的一面镜子。",
         "line2": "握住问题。抽取图案。读一次反射。",
         "badgeFree": "免费",
         "badgeStruck": "$1.99",
@@ -129,13 +129,13 @@
       "card3": {
         "p1": "你想了解自己的节奏。",
         "p2": "什么时候有冲劲？什么时候会感到阻力？",
-        "p3": "Syncro 为你绘制，每两小时更新。",
+        "p3": "Syncro 为你绘制，在一天里持续更新。",
         "cta": "体验 Syncro"
       },
       "card4": {
         "p1": "这个问题让你凌晨两点还醒着。",
         "p2": "朋友聊过，书也读过。还在原地打转。",
-        "p3": "POJU 陪你一起面对。$9.99。一次。",
+        "p3": "POJU 陪你一起面对 —— 一次陪伴，直到你看穿。",
         "cta": "开启一次 POJU 对话"
       }
     }
@@ -147,7 +147,7 @@
   "marketingSite": {
     "common": {
       "tagline": "AI 与千年智慧的相遇。",
-      "footer_disclaimer": "POJU 用于自我反思与启发。我们提供视角,而非预测。所有决定都由你自己做出。",
+      "footer_disclaimer": "pojulife 用于自我反思与启发。我们提供视角,而非预测。所有决定都由你自己做出。",
       "trust_line": "无需账户 · 无需订阅 · 由你决定",
       "read_with_wink": "带一丝玩味去读。这些图案是镜子,不是预言。"
     },
@@ -170,7 +170,7 @@
           "description": "一次深入对话,直到你看清。"
         },
         "glyph": {
-          "tagline": "60 秒的镜子。",
+          "tagline": "随身可得的一面镜子。",
           "description": "握住问题。抽取图案。读一次反射。"
         },
         "syncro": {
@@ -297,7 +297,7 @@
     "glyph": {
       "hero": {
         "heading": "Glyph",
-        "subtitle": "60 秒的镜子。",
+        "subtitle": "随身可得的一面镜子。",
         "description": "握住一个问题。抽取一个图案。读一次反射。",
         "footnote": "免费。无需注册。带一丝玩味去读。",
         "cta": "免费体验 Glyph"
@@ -367,50 +367,49 @@
         "heading": "Syncro",
         "subtitle": "看见你的自然节奏。",
         "description": "基于你的出生信息,Syncro 反映当日的能量如何与你对齐。哪里该投入,哪里该慢下来。",
-        "tagline": "为你的内在世界提供天气预报,每两小时更新一次。",
+        "tagline": "一份轻量的节奏地图,可以在一天里随时打开。",
         "footnote": "免费 · 仅在手机上打开",
         "cta": "打开 Syncro",
         "qr_label": "pojulife.com/syncro",
         "sms_label": "把链接发给自己",
         "sms_button": "把链接发给我",
-        "notify_cta": "Syncro 上线时通知我",
         "sms_body": "在手机上打开 Syncro：{url}",
         "phone_placeholder": "手机号码"
       },
       "what_shows": {
         "heading": "Syncro 显示什么。",
-        "intro": "把手机指向某个方向。看到什么开放,什么不开放。",
+        "intro": "打开 Syncro,快速读一读这段日程里什么被强调、什么适合放一放。",
         "items_intro": "每个方向显示:",
         "items": [
           "当前图案的简短描述",
           "这段时间适合什么(例如,缓慢的对话)",
           "这段时间不适合什么(例如,等等再提大要求)"
         ],
-        "footnote": "每两小时更新一次,根据你的背景。",
+        "footnote": "随着你度过一天而刷新,并结合你的背景。",
         "preview_label": "预览",
         "preview_placeholder": "手机示意图占位符 — 准备好后可替换为 Syncro 截图。"
       },
       "use_cases": {
-        "heading": "人们在哪里使用 Syncro",
-        "study": {
-          "title": "学习场所",
-          "description": "在深度工作前,选择一个支持稳定专注的桌子方向。"
+        "heading": "Syncro 适合放在哪里。",
+        "before_matters": {
+          "title": "在重要时刻之前",
+          "description": "当你即将面对一场对话、一个决定或一场会议。在走进去之前,快速和自己对一下表。"
         },
-        "negotiation": {
-          "title": "谈判",
-          "description": "找一个支持自信和稳定沟通的座位方向。"
+        "pace_off": {
+          "title": "当节奏感觉不对",
+          "description": "当你用力推却动不了,或一切顺滑却抓不住重点。给自己一个重新校准的瞬间。"
         },
-        "bed": {
-          "title": "床的方向",
-          "description": "测试睡眠方向,比较休息质量随时间的变化。"
+        "daily_rhythm": {
+          "title": "作为日常节奏",
+          "description": "有人会像看天气一样打开 Syncro —— 一个小仪式,一种留意自己的方式。"
         },
-        "travel": {
-          "title": "出行决定",
-          "description": "出发前查看方向基调,当时机和清晰都重要时。"
+        "traveling": {
+          "title": "当你在外出行",
+          "description": "新的环境、新的时间表。一种让自己无论在哪儿都能踩在自己节奏上的方式。"
         },
-        "companion": {
-          "title": "POJU 伴侣",
-          "description": "把 Syncro 作为现实层,然后回到 POJU 进行更深的决策策略。"
+        "poju_companion": {
+          "title": "作为 POJU 的同伴",
+          "description": "在两次 POJU 深谈之间用 Syncro,留意处境如何慢慢变化。"
         }
       },
       "what_it_is": {
@@ -418,7 +417,7 @@
         "shows": {
           "title": "它显示什么",
           "items": [
-            "未来 2 小时的当前节奏图案",
+            "当下的节奏图案",
             "八个方向以及它们适合什么",
             "哪里该投入,哪里该慢下来"
           ]
@@ -433,14 +432,14 @@
         }
       },
       "always_free": {
-        "heading": "永远免费。",
-        "description": "Syncro 永远免费,作为你日常的节奏伴侣。当你需要对当下的清晰时,随时打开。",
+        "heading": "免费。",
+        "description": "Syncro 免费,作为你日常的节律同伴。当你需要对当下多一点清晰时,随时打开。",
         "cta": "在手机上打开 Syncro"
       }
     },
     "footer": {
       "disclaimers": {
-        "home": "POJU 用于自我反思与启发。我们提供视角,而非预测。所有决定都由你自己做出。",
+        "home": "pojulife 用于自我反思与启发。我们提供视角,而非预测。所有决定都由你自己做出。",
         "poju": "POJU 是思考伙伴。它提供视角,不是预言。所有决定都由你自己做出。",
         "glyph": "带一丝玩味去读。这些图案是镜子,不是预言。所有决定都由你自己做出。",
         "syncro": "Syncro 是自我觉察工具。取走与你共鸣的。决定由你自己做出。"
@@ -452,7 +451,7 @@
         "terms": "服务条款",
         "contact": "联系我们"
       },
-      "copyright": "© 2026 POJU. 版权所有。"
+      "copyright": "© 2026 pojulife. 版权所有。"
     }
   }
 }

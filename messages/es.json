@@ -1,11 +1,11 @@
 {
   "common": {
-    "brandWordmark": "Poju Life",
-    "brand": "POJU LIFE",
+    "brandWordmark": "pojulife",
+    "brand": "pojulife",
     "domain": "pojulife.com",
     "tagline": "Donde la IA se encuentra con mil años de sabiduría.",
-    "footerTagline": "Para autorreflexión y entretenimiento. POJU ofrece perspectivas, no predicciones. Todas las decisiones son tuyas.",
-    "copyright": "© 2026 POJU. Todos los derechos reservados.",
+    "footerTagline": "Para autorreflexión y entretenimiento. pojulife ofrece perspectivas, no predicciones. Todas las decisiones son tuyas.",
+    "copyright": "© 2026 pojulife. Todos los derechos reservados.",
     "syncroFooterTagline": "Syncro es una herramienta de auto-conciencia. Toma lo que resuene. Las decisiones son tuyas."
   },
   "nav": {
@@ -97,7 +97,7 @@
       },
       "glyph": {
         "name": "Glyph",
-        "line1": "Un espejo de 60 segundos.",
+        "line1": "Un espejo de bolsillo para tu momento.",
         "line2": "Sostén una pregunta. Saca un patrón. Lee un reflejo.",
         "badgeFree": "GRATIS",
         "badgeStruck": "$1.99",
@@ -129,13 +129,13 @@
       "card3": {
         "p1": "You want to know your own rhythm.",
         "p2": "When do you have momentum? When does friction arrive?",
-        "p3": "Syncro maps it, every two hours.",
+        "p3": "Syncro maps it, updated through your day.",
         "cta": "Try Syncro"
       },
       "card4": {
         "p1": "The question keeps you up at 2 AM.",
         "p2": "You've talked to friends, read the books. Still circling.",
-        "p3": "POJU sits with you through it. $9.99. Once.",
+        "p3": "POJU sits with you through it — once, until you see through.",
         "cta": "Start a POJU session"
       }
     }
@@ -147,7 +147,7 @@
   "marketingSite": {
     "common": {
       "tagline": "Donde la IA se encuentra con mil años de sabiduría.",
-      "footer_disclaimer": "Para autorreflexión y entretenimiento. POJU ofrece perspectivas, no predicciones. Todas las decisiones son tuyas.",
+      "footer_disclaimer": "Para autorreflexión y entretenimiento. pojulife ofrece perspectivas, no predicciones. Todas las decisiones son tuyas.",
       "trust_line": "Sin cuenta · Sin suscripción · Tú decides",
       "read_with_wink": "Léelo con una sonrisa. Los patrones reflejan, no predicen."
     },
@@ -170,7 +170,7 @@
           "description": "Una sola conversación profunda, hasta verla con claridad."
         },
         "glyph": {
-          "tagline": "Un espejo de 60 segundos.",
+          "tagline": "Un espejo de bolsillo.",
           "description": "Sostén una pregunta. Saca un patrón. Lee un reflejo."
         },
         "syncro": {
@@ -297,7 +297,7 @@
     "glyph": {
       "hero": {
         "heading": "Glyph",
-        "subtitle": "Un espejo de 60 segundos.",
+        "subtitle": "Un espejo de bolsillo.",
         "description": "Sostén una pregunta. Saca un patrón. Lee un reflejo.",
         "footnote": "Gratis. Sin registro. Léelo con una sonrisa.",
         "cta": "Prueba Glyph — Gratis"
@@ -367,50 +367,49 @@
         "heading": "Syncro",
         "subtitle": "Ve tus ritmos naturales.",
         "description": "Basado en tu contexto de nacimiento, Syncro refleja cómo los patrones del día se alinean contigo. Dónde inclinarte, dónde frenar.",
-        "tagline": "Un pronóstico del clima para tu vida interior, actualizado cada dos horas.",
+        "tagline": "Un mapa ligero de ritmo que puedes abrir a lo largo del día.",
         "footnote": "Gratis · Solo se abre en móvil",
         "cta": "Abrir Syncro",
         "qr_label": "pojulife.com/syncro",
         "sms_label": "Envíate el enlace",
         "sms_button": "Envíame el enlace",
-        "notify_cta": "Avísame cuando Syncro esté disponible",
         "sms_body": "Abre Syncro en tu móvil: {url}",
         "phone_placeholder": "Número de teléfono"
       },
       "what_shows": {
         "heading": "Lo que Syncro muestra.",
-        "intro": "Apunta tu teléfono hacia una dirección. Ve qué está disponible. Ve qué no.",
+        "intro": "Abre Syncro para una lectura rápida de este tramo del día — qué se enfatiza y qué conviene suavizar.",
         "items_intro": "Cada dirección muestra:",
         "items": [
           "Una descripción breve del patrón actual",
           "Para qué sirve este período (por ejemplo, conversaciones lentas)",
           "Para qué no sirve (por ejemplo, espera para pedir cosas grandes)"
         ],
-        "footnote": "Actualizado cada dos horas, con tu contexto.",
+        "footnote": "Se actualiza mientras avanzas en el día, con tu contexto.",
         "preview_label": "Vista previa",
         "preview_placeholder": "Marcador de posición del mockup del teléfono — sustituir por una captura de Syncro cuando esté listo."
       },
       "use_cases": {
-        "heading": "Dónde la gente usa Syncro",
-        "study": {
-          "title": "Lugar de estudio",
-          "description": "Elige una orientación de escritorio que apoye el enfoque sostenido antes de un bloque de trabajo profundo."
+        "heading": "Dónde encaja Syncro.",
+        "before_matters": {
+          "title": "Antes de que algo importe",
+          "description": "Cuando tienes una conversación, una decisión o una reunión por delante. Un chequeo breve antes de entrar."
         },
-        "negotiation": {
-          "title": "Negociación",
-          "description": "Encuentra una orientación de asiento que apoye la confianza y comunicación más estable."
+        "pace_off": {
+          "title": "Cuando el ritmo se siente raro",
+          "description": "Cuando empujas pero nada se mueve, o todo fluye pero sin foco. Un momento para recalibrar."
         },
-        "bed": {
-          "title": "Orientación de cama",
-          "description": "Prueba direcciones para dormir y compara cómo cambia la calidad de tu descanso con el tiempo."
+        "daily_rhythm": {
+          "title": "Como ritmo diario",
+          "description": "Algunas personas abren Syncro como otros miran el tiempo — un pequeño ritual, una forma de notarse."
         },
-        "travel": {
-          "title": "Decisión de viaje",
-          "description": "Revisa el tono direccional antes de salir, cuando tanto el tiempo como la claridad importan."
+        "traveling": {
+          "title": "Cuando viajas",
+          "description": "Entornos nuevos, tiempos nuevos. Una forma de mantenerse en tu propio ritmo estés donde estés."
         },
-        "companion": {
-          "title": "Compañero de POJU",
-          "description": "Usa Syncro como capa del mundo real, luego vuelve a POJU para estrategia de decisión más profunda."
+        "poju_companion": {
+          "title": "Como compañero de POJU",
+          "description": "Usa Syncro entre sesiones de POJU para notar cómo evoluciona tu situación entre conversaciones más profundas."
         }
       },
       "what_it_is": {
@@ -418,7 +417,7 @@
         "shows": {
           "title": "Lo que muestra",
           "items": [
-            "Patrón de ritmo actual para las próximas 2 horas",
+            "El patrón de ritmo del momento",
             "Ocho direcciones con para qué sirven",
             "Dónde inclinarte, dónde frenar"
           ]
@@ -433,14 +432,14 @@
         }
       },
       "always_free": {
-        "heading": "Siempre gratis.",
-        "description": "Syncro se queda gratis como tu compañero diario de ritmo. Ábrelo cuando necesites claridad sobre el momento.",
+        "heading": "Gratis.",
+        "description": "Syncro sigue gratis como tu compañero cotidiano de ritmo. Ábrelo cuando necesites claridad sobre el momento.",
         "cta": "Abrir Syncro en móvil"
       }
     },
     "footer": {
       "disclaimers": {
-        "home": "Para autorreflexión y entretenimiento. POJU ofrece perspectivas, no predicciones. Todas las decisiones son tuyas.",
+        "home": "Para autorreflexión y entretenimiento. pojulife ofrece perspectivas, no predicciones. Todas las decisiones son tuyas.",
         "poju": "POJU es un compañero de pensamiento. Ofrece perspectivas, no profecías. Todas las decisiones son tuyas.",
         "glyph": "Léelo con una sonrisa. Los patrones reflejan, no predicen. Todas las decisiones son tuyas.",
         "syncro": "Syncro es una herramienta de auto-conciencia. Toma lo que resuene. Las decisiones son tuyas."
@@ -452,7 +451,7 @@
         "terms": "Términos de servicio",
         "contact": "Contacto"
       },
-      "copyright": "© 2026 POJU. Todos los derechos reservados."
+      "copyright": "© 2026 pojulife. Todos los derechos reservados."
     }
   }
 }
