@@ -7,8 +7,9 @@ import { FullReading } from "@/components/oracle/FullReading";
 import { OracleInput } from "@/components/oracle/OracleInput";
 import { OracleIntro } from "@/components/oracle/OracleIntro";
 import { OracleSummon } from "@/components/oracle/OracleSummon";
+import { appendRuntimeArchiveEntry } from "@/lib/archive/runtime-archive";
 import { saveOracleEntry } from "@/lib/oracle/saveToArchive";
-import type { SignData, UserInput, FullReading as FullReadingType } from "@/types/oracle";
+import { LEVEL_META, type SignData, type UserInput, type FullReading as FullReadingType } from "@/types/oracle";
 
 type Phase = "intro" | "input" | "summon" | "draw" | "reading";
 type ArchiveSaveState = "idle" | "saving" | "saved" | "failed";
@@ -32,10 +33,6 @@ export function OracleFlow({ showIntro = true }: OracleFlowProps) {
     setPhase("summon");
   }, []);
 
-  const handleInputClose = useCallback(() => {
-    setPhase(showIntro ? "intro" : "input");
-  }, [showIntro]);
-
   const handleSummonComplete = useCallback(() => {
     setPhase("draw");
   }, []);
@@ -56,10 +53,19 @@ export function OracleFlow({ showIntro = true }: OracleFlowProps) {
       if (!drawnSign || !userInput) return;
       setArchiveSaveState("saving");
       try {
-        await saveOracleEntry({
+        const refId = await saveOracleEntry({
           sign: drawnSign,
           userInput,
           fullReading: reading,
+        });
+        appendRuntimeArchiveEntry({
+          id: crypto.randomUUID(),
+          kind: "oracle",
+          title: `${LEVEL_META[drawnSign.level].display_name} · Full reading`,
+          subtitle: userInput.question,
+          createdAt: Date.now(),
+          refId,
+          oracleVariant: "full_reading",
         });
         setArchiveSaveState("saved");
       } catch (error) {
@@ -83,7 +89,6 @@ export function OracleFlow({ showIntro = true }: OracleFlowProps) {
           <OracleInput
             initialInput={userInput ?? undefined}
             onSubmit={handleInputSubmit}
-            onClose={handleInputClose}
           />
         </motion.div>
       ) : null}

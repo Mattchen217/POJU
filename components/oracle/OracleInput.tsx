@@ -2,12 +2,12 @@
 
 import type { PointerEventHandler } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { assessOracleQuestionHeuristic } from "@/lib/oracle/questionHeuristics";
 import type { UserInput } from "@/types/oracle";
 
 interface OracleInputProps {
   initialInput?: UserInput;
   onSubmit: (input: UserInput) => void;
-  onClose: () => void;
 }
 
 const SHICHEN_OPTIONS = [
@@ -72,12 +72,13 @@ const SHICHEN_RANGE_LABEL: Record<string, string> = {
   hai: "9PM-11PM",
 };
 
-export function OracleInput({ initialInput, onSubmit, onClose }: OracleInputProps) {
+export function OracleInput({ initialInput, onSubmit }: OracleInputProps) {
   const [year, setYear] = useState(initialInput?.birthYear ?? 2000);
   const [month, setMonth] = useState(initialInput?.birthMonth ?? 1);
   const [day, setDay] = useState(initialInput?.birthDay ?? 1);
   const [shichen, setShichen] = useState(initialInput?.birthShichen ?? "");
   const [question, setQuestion] = useState(initialInput?.question ?? "");
+  const [questionWarning, setQuestionWarning] = useState<string | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const dayMax = useMemo(() => getDaysInMonth(year, month), [year, month]);
@@ -90,27 +91,25 @@ export function OracleInput({ initialInput, onSubmit, onClose }: OracleInputProp
 
   const handleSubmit = () => {
     if (!isValid) return;
+    const trimmed = question.trim();
+    const check = assessOracleQuestionHeuristic(trimmed);
+    if (!check.ok) {
+      setQuestionWarning(check.message);
+      return;
+    }
+    setQuestionWarning(null);
     onSubmit({
       birthYear: year,
       birthMonth: month,
       birthDay: day,
       birthShichen: shichen,
-      question: question.trim(),
+      question: trimmed,
     });
   };
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-gradient-to-b from-[#0B0815] to-black">
       <div className="relative mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-16">
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute right-6 top-6 z-20 flex h-10 w-10 items-center justify-center rounded-full text-white/60 transition-all hover:bg-white/10 hover:text-white"
-          aria-label="Close"
-        >
-          ✕
-        </button>
-
         <div className="rounded-2xl border border-white/10 bg-[#121022]/70 px-5 py-8 shadow-[0_20px_80px_rgba(0,0,0,0.45)] backdrop-blur-md sm:px-8 sm:py-10">
           <div className="mb-10 text-center">
             <p className="mb-3 text-xs uppercase tracking-[0.25em] text-purple-300/70">POJU Glyph</p>
@@ -141,7 +140,10 @@ export function OracleInput({ initialInput, onSubmit, onClose }: OracleInputProp
               </label>
               <textarea
                 value={question}
-                onChange={(e) => setQuestion(e.target.value.slice(0, 60))}
+                onChange={(e) => {
+                  setQuestionWarning(null);
+                  setQuestion(e.target.value.slice(0, 60));
+                }}
                 placeholder="e.g. Should I take this new job offer?"
                 rows={4}
                 className="w-full resize-none rounded-xl border border-white/20 bg-white/[0.04] px-4 py-3 text-white placeholder:text-white/40 transition-colors focus:border-purple-400 focus:outline-none"
@@ -150,6 +152,11 @@ export function OracleInput({ initialInput, onSubmit, onClose }: OracleInputProp
               <p className="mt-3 text-sm italic text-white/50">
                 Keep it specific and honest. One real question gets the clearest reading.
               </p>
+              {questionWarning ? (
+                <p className="mt-3 rounded-lg border border-amber-400/35 bg-amber-500/10 px-3 py-2 text-sm leading-relaxed text-amber-100/95">
+                  {questionWarning}
+                </p>
+              ) : null}
             </div>
 
             <button

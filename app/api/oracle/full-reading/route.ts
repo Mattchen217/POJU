@@ -47,15 +47,56 @@ interface RequestBody {
   conversation_history?: Array<{ role: string; content: string }>;
 }
 
+function createInvalidInputReading(
+  question: string,
+  locale: string,
+): {
+  situation: string;
+  meaning: string;
+  wisdom: string;
+  actions: string[];
+  reflections: string[];
+  revisit_timing: string;
+  invalid_input: true;
+} {
+  const q = question.trim() || "(empty input)";
+  const message =
+    locale === "zh"
+      ? `我收到了你的输入「${q}」，但目前无法识别为一个可解读的真实问题。请用一两句话清楚描述你当下真实的处境与困惑后再试。`
+      : `I received your input "${q}", but I cannot parse it as a real, interpretable life question. Please rewrite it in one or two clear sentences about your actual situation and dilemma, then try again.`;
+  return {
+    situation: message,
+    meaning: "",
+    wisdom: "",
+    actions: [],
+    reflections: [],
+    revisit_timing: "",
+    invalid_input: true,
+  };
+}
+
+function isInvalidInputStyleReading(r: {
+  situation?: string;
+  meaning?: string;
+  wisdom?: string;
+}): boolean {
+  const all = `${r.situation ?? ""}\n${r.meaning ?? ""}\n${r.wisdom ?? ""}`.toLowerCase();
+  return (
+    all.includes("cannot understand the question you entered") ||
+    all.includes("please re-enter your question") ||
+    all.includes("please enter a real question") ||
+    all.includes("无法理解") ||
+    all.includes("请输入真实问题")
+  );
+}
+
 const SYSTEM_PROMPT = `You are POJU's Oracle Interpreter.
 
 FIRST GATE (MANDATORY INPUT VALIDATION): Before any interpretation, decide whether the user's question is a real, understandable question/dilemma or obvious gibberish/noise (examples: "阿萨法发撒", "dsfasasfADA DASG DAF", random keyboard mashing, or meaningless fragments). If input is gibberish or not interpretable, DO NOT generate a normal reading. Instead, still return STRICT JSON in the same schema, with all text fields clearly saying:
 - "You are seeking an interpretation of: '<repeat the user's original input>', but I cannot understand the question you entered, so please re-enter your question."
 - "Please enter a real question that genuinely exists in your life. Please take this Glyph session seriously."
 For this invalid-input case:
-- situation / meaning / wisdom / revisit_timing should contain this warning (paraphrase allowed but same meaning).
-- actions must be exactly 3 short corrective actions about rewriting the question clearly.
-- reflections must be exactly 2 short reflective prompts helping the user rewrite their real problem.
+- Output a COMPACT rejection only (one short paragraph). Do not write a full six-section reading.
 - Keep the tone respectful, firm, and clear.
 
 # Your Identity & Knowledge Base
@@ -517,40 +558,52 @@ Target length: about 800-1100 English words of substance if the output language 
       throw new Error("Invalid LLM response format");
     }
 
-    const r = reading as {
+    let r = reading as {
       situation?: string;
       meaning?: string;
       wisdom?: string;
       actions?: string[];
       reflections?: string[];
       revisit_timing?: string;
+      invalid_input?: boolean;
     };
+
+    // Enforce compact output for gibberish/uninterpretable-input cases.
+    if (isInvalidInputStyleReading(r)) {
+      r = createInvalidInputReading(body.user_question, locale);
+    }
 
     if (
       !r.situation ||
-      !r.meaning ||
-      !r.wisdom ||
-      !r.actions ||
-      !r.reflections ||
-      !r.revisit_timing
+      (!r.invalid_input &&
+        (!r.meaning ||
+          !r.wisdom ||
+          !r.actions ||
+          !r.reflections ||
+          !r.revisit_timing))
     ) {
       throw new Error("LLM response missing required fields");
     }
-    if (!Array.isArray(r.actions) || r.actions.length !== 3) {
+    if (!r.invalid_input && (!Array.isArray(r.actions) || r.actions.length !== 3)) {
       throw new Error("LLM response actions must be array of 3");
     }
-    if (!Array.isArray(r.reflections) || r.reflections.length !== 2) {
+    if (!r.invalid_input && (!Array.isArray(r.reflections) || r.reflections.length !== 2)) {
       throw new Error("LLM response reflections must be array of 2");
     }
 
-    if (locale === "en") {
+    if (locale === "en" && !r.invalid_input) {
+      const meaning = r.meaning as string;
+      const wisdom = r.wisdom as string;
+      const actions = r.actions as string[];
+      const reflections = r.reflections as string[];
+      const revisitTiming = r.revisit_timing as string;
       const totalWords =
         countWords(r.situation) +
-        countWords(r.meaning) +
-        countWords(r.wisdom) +
-        r.actions.reduce((sum, a) => sum + countWords(a), 0) +
-        r.reflections.reduce((sum, q) => sum + countWords(q), 0) +
-        countWords(r.revisit_timing);
+        countWords(meaning) +
+        countWords(wisdom) +
+        actions.reduce((sum, a) => sum + countWords(a), 0) +
+        reflections.reduce((sum, q) => sum + countWords(q), 0) +
+        countWords(revisitTiming);
       if (totalWords < 800 || totalWords > 1100) {
         throw new Error(`LLM response word count out of range: ${totalWords}`);
       }

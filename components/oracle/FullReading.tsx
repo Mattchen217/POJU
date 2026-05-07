@@ -57,7 +57,9 @@ export function FullReading({
         if (!canceled) {
           setReading(result);
           setLoading(false);
-          onReadingReadyRef.current?.(result);
+          if (!result.invalid_input) {
+            onReadingReadyRef.current?.(result);
+          }
         }
       } catch (err) {
         if (!canceled) {
@@ -95,7 +97,7 @@ export function FullReading({
         {error ? <ReadingError error={error} /> : null}
         {reading ? <ReadingContent reading={reading} sign={sign} /> : null}
 
-        {reading ? (
+        {reading && !reading.invalid_input ? (
           <ReadingFooter
             sign={sign}
             archiveSaveState={archiveSaveState}
@@ -164,6 +166,19 @@ function ReadingContent({
   sign: SignData;
 }) {
   const meta = LEVEL_META[sign.level];
+
+  if (reading.invalid_input) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="rounded-xl border border-amber-300/20 bg-amber-200/[0.04] px-5 py-6 text-[15px] leading-8 text-white/90"
+      >
+        <p>{reading.situation}</p>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div

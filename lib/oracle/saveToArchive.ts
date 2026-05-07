@@ -57,6 +57,13 @@ export async function saveOracleEntry({
   return entry.id;
 }
 
+export async function getOracleArchiveEntryById(
+  id: string,
+): Promise<OracleArchiveEntry | undefined> {
+  const db = await getDB();
+  return db.get("oracle_entries", id);
+}
+
 export async function getAllOracleEntries(): Promise<OracleArchiveEntry[]> {
   const db = await getDB();
   const entries = await db.getAllFromIndex("oracle_entries", "by-date");

@@ -4,17 +4,21 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { buildMockArchiveEntries, shouldShowArchiveMockData } from "@/lib/archive/mock-archive-entries";
+import { ARCHIVE_RUNTIME_KEY, ARCHIVE_UPDATED_EVENT } from "@/lib/archive/runtime-archive";
 import type { ArchiveEntry, ArchiveProductKind } from "@/lib/archive/types";
-import { getOracleSignById, type OracleSignRecord } from "@/lib/oracle/storage";
 import { loadSecureChatSnapshot } from "@/lib/chat/secure-storage";
-
-const ARCHIVE_RUNTIME_KEY = "pojulife_archive_runtime_v1";
+import {
+  getOracleArchiveEntryById,
+  type OracleArchiveEntry,
+} from "@/lib/oracle/saveToArchive";
+import { getOracleSignById, type OracleSignRecord } from "@/lib/oracle/storage";
 const SYNCRO_ARCHIVE_KEY = "pojulife_syncro_archive_v1";
 type Source = "runtime" | "mock";
 type FilterKey = "all" | ArchiveProductKind;
 type MixedEntry = ArchiveEntry & { source: Source };
 type EntryDetail =
   | { kind: "oracle"; sign: OracleSignRecord }
+  | { kind: "oracle-full"; entry: OracleArchiveEntry }
   | {
       kind: "syncro";
       capture: {
@@ -59,14 +63,21 @@ export function ArchiveRuntimePreview() {
   const [detail, setDetail] = useState<EntryDetail | null>(null);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(ARCHIVE_RUNTIME_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as ArchiveEntry[];
-      setRuntimeEntries(parsed);
-    } catch {
-      // ignore
-    }
+    const loadRuntime = () => {
+      try {
+        const raw = localStorage.getItem(ARCHIVE_RUNTIME_KEY);
+        if (!raw) {
+          setRuntimeEntries([]);
+          return;
+        }
+        setRuntimeEntries(JSON.parse(raw) as ArchiveEntry[]);
+      } catch {
+        setRuntimeEntries([]);
+      }
+    };
+    loadRuntime();
+    window.addEventListener(ARCHIVE_UPDATED_EVENT, loadRuntime);
+    return () => window.removeEventListener(ARCHIVE_UPDATED_EVENT, loadRuntime);
   }, []);
 
   const removeRuntimeEntry = (id: string) => {
@@ -120,6 +131,10 @@ export function ArchiveRuntimePreview() {
       return;
     }
     if (entry.kind === "oracle") {
+      if (entry.oracleVariant === "full_reading") {
+        setSelectedEntry(entry);
+        return;
+      }
       router.push(`/glyph/stage-1?${params.toString()}`);
       return;
     }
@@ -146,8 +161,18 @@ export function ArchiveRuntimePreview() {
       setDetailLoading(true);
       try {
         if (selectedEntry.kind === "oracle") {
-          const sign = await getOracleSignById(selectedEntry.refId as string);
-          if (!stop) setDetail(sign ? { kind: "oracle", sign } : null);
+          const ref = selectedEntry.refId as string;
+          const sign = await getOracleSignById(ref);
+          if (sign) {
+            if (!stop) setDetail({ kind: "oracle", sign });
+            return;
+          }
+          const full = await getOracleArchiveEntryById(ref);
+          if (full) {
+            if (!stop) setDetail({ kind: "oracle-full", entry: full });
+            return;
+          }
+          if (!stop) setDetail(null);
           return;
         }
         if (selectedEntry.kind === "syncro") {
@@ -308,6 +333,46 @@ export function ArchiveRuntimePreview() {
                   <p className="text-[#cbc3d7]/75">For today: {detail.sign.forToday}</p>
                 </div>
               ) : null}
+              {!detailLoading && detail?.kind === "oracle-full" ? (
+                <div className="max-h-[min(50vh,420px)] space-y-4 overflow-y-auto pr-1 text-sm">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.08em] text-[#d0bcff]/80">The situation</p>
+                    <p className="mt-1 whitespace-pre-wrap text-[#cbc3d7]/90">{detail.entry.full_reading.situation}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.08em] text-[#d0bcff]/80">Meaning</p>
+                    <p className="mt-1 whitespace-pre-wrap text-[#cbc3d7]/90">{detail.entry.full_reading.meaning}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.08em] text-[#d0bcff]/80">Wisdom</p>
+                    <p className="mt-1 whitespace-pre-wrap text-[#cbc3d7]/90">{detail.entry.full_reading.wisdom}</p>
+                  </div>
+                  {detail.entry.full_reading.actions?.length ? (
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.08em] text-[#d0bcff]/80">Actions</p>
+                      <ul className="mt-1 list-inside list-disc space-y-1 text-[#cbc3d7]/90">
+                        {detail.entry.full_reading.actions.map((a, i) => (
+                          <li key={i}>{a}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                  {detail.entry.full_reading.reflections?.length ? (
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.08em] text-[#d0bcff]/80">Reflections</p>
+                      <ul className="mt-1 list-inside list-disc space-y-1 text-[#cbc3d7]/85">
+                        {detail.entry.full_reading.reflections.map((r, i) => (
+                          <li key={i}>{r}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.08em] text-[#d0bcff]/80">Revisit</p>
+                    <p className="mt-1 text-[#cbc3d7]/80">{detail.entry.full_reading.revisit_timing}</p>
+                  </div>
+                </div>
+              ) : null}
               {!detailLoading && detail?.kind === "syncro" ? (
                 <div className="space-y-1 text-sm">
                   <p className="text-[#e7e0ed]">
@@ -332,16 +397,18 @@ export function ArchiveRuntimePreview() {
               {!detailLoading && !detail ? <p className="text-xs text-[#958ea0]">No linked detail found for this entry.</p> : null}
             </div>
             <div className="mt-5 flex justify-end">
-              <button
-                type="button"
-                onClick={() => {
-                  openEntry(selectedEntry);
-                  setSelectedEntry(null);
-                }}
-                className="mr-2 rounded-lg border border-[#d0bcff]/25 px-4 py-2 text-xs uppercase tracking-[0.05em] text-[#d0bcff]"
-              >
-                Open
-              </button>
+              {!(selectedEntry.kind === "oracle" && selectedEntry.oracleVariant === "full_reading") ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    openEntry(selectedEntry);
+                    setSelectedEntry(null);
+                  }}
+                  className="mr-2 rounded-lg border border-[#d0bcff]/25 px-4 py-2 text-xs uppercase tracking-[0.05em] text-[#d0bcff]"
+                >
+                  Open
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={() => setSelectedEntry(null)}

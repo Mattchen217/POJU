@@ -40,6 +40,8 @@ export interface FullReading {
   actions: string[];
   reflections: string[];
   revisit_timing: string;
+  /** True when question is gibberish / uninterpretable and UI should show one compact warning block. */
+  invalid_input?: boolean;
 }
 
 export interface LevelMeta {
