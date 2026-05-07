@@ -12,7 +12,7 @@ interface DrawSequenceProps {
   userInput: UserInput;
   onSaveCard?: (sign: SignData) => void;
   onShareCard?: (sign: SignData) => void;
-  onFullReading?: (sign: SignData) => void;
+  onFullReading: (sign: SignData) => void;
   onClose?: () => void;
   forcedSign?: SignData;
 }
@@ -127,7 +127,7 @@ export function DrawSequence({
                 icon="📖"
                 label="Full Reading"
                 primary
-                onClick={() => onFullReading?.(sign)}
+                onClick={() => onFullReading(sign)}
               />
             </motion.div>
           ) : null}
