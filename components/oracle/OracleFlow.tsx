@@ -13,11 +13,13 @@ import { shareCardBack } from "@/lib/oracle/shareCard";
 import type { SignData, UserInput, FullReading as FullReadingType } from "@/types/oracle";
 
 type Phase = "intro" | "input" | "summon" | "draw" | "reading";
+type ArchiveSaveState = "idle" | "saving" | "saved" | "failed";
 
 export function OracleFlow() {
   const [phase, setPhase] = useState<Phase>("intro");
   const [userInput, setUserInput] = useState<UserInput | null>(null);
   const [drawnSign, setDrawnSign] = useState<SignData | null>(null);
+  const [archiveSaveState, setArchiveSaveState] = useState<ArchiveSaveState>("idle");
 
   const handleStart = useCallback(() => {
     setPhase("input");
@@ -49,6 +51,7 @@ export function OracleFlow() {
 
   const handleFullReading = useCallback((sign: SignData) => {
     setDrawnSign(sign);
+    setArchiveSaveState("idle");
     setPhase("reading");
   }, []);
 
@@ -60,35 +63,21 @@ export function OracleFlow() {
   const handleReadingReady = useCallback(
     async (reading: FullReadingType) => {
       if (!drawnSign || !userInput) return;
+      setArchiveSaveState("saving");
       try {
         await saveOracleEntry({
           sign: drawnSign,
           userInput,
           fullReading: reading,
         });
+        setArchiveSaveState("saved");
       } catch (error) {
         console.error("Failed to save to archive:", error);
+        setArchiveSaveState("failed");
       }
     },
     [drawnSign, userInput],
   );
-
-  const handleAskAgain = useCallback(() => {
-    if (userInput) {
-      setUserInput({
-        ...userInput,
-        question: "",
-      });
-    }
-    setDrawnSign(null);
-    setPhase("input");
-  }, [userInput]);
-
-  const handleClose = useCallback(() => {
-    setPhase("intro");
-    setUserInput(null);
-    setDrawnSign(null);
-  }, []);
 
   return (
     <AnimatePresence mode="wait">
@@ -131,9 +120,8 @@ export function OracleFlow() {
           <FullReading
             sign={drawnSign}
             userInput={userInput}
-            onAskAgain={handleAskAgain}
-            onClose={handleClose}
             onReadingReady={handleReadingReady}
+            archiveSaveState={archiveSaveState}
           />
         </motion.div>
       ) : null}

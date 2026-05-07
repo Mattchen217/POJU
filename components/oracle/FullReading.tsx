@@ -23,17 +23,15 @@ const LOADING_MESSAGES = [
 interface FullReadingProps {
   sign: SignData;
   userInput: UserInput;
-  onAskAgain: () => void;
-  onClose: () => void;
   onReadingReady?: (reading: FullReadingType) => void;
+  archiveSaveState?: "idle" | "saving" | "saved" | "failed";
 }
 
 export function FullReading({
   sign,
   userInput,
-  onAskAgain,
-  onClose,
   onReadingReady,
+  archiveSaveState = "idle",
 }: FullReadingProps) {
   const locale = useLocale();
   const [reading, setReading] = useState<FullReadingType | null>(null);
@@ -82,7 +80,7 @@ export function FullReading({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-gradient-to-b from-[#0B0815] to-black">
-      <div className="mx-auto max-w-[640px] px-6 py-8">
+      <div className="mx-auto max-w-[860px] px-5 py-8 sm:px-6">
         <div className="mb-8">
           <div className="mx-auto w-full max-w-[280px]">
             <GlyphFront sign={sign} animate={false} compact />
@@ -98,7 +96,10 @@ export function FullReading({
         {reading ? <ReadingContent reading={reading} sign={sign} /> : null}
 
         {reading ? (
-          <ReadingFooter onAskAgain={onAskAgain} onClose={onClose} sign={sign} />
+          <ReadingFooter
+            sign={sign}
+            archiveSaveState={archiveSaveState}
+          />
         ) : null}
       </div>
     </div>
@@ -169,7 +170,7 @@ function ReadingContent({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="space-y-8 text-white/90"
+      className="space-y-10 text-[16px] leading-8 text-white/90 sm:text-[17px] sm:leading-9"
     >
       <Section title="THE SITUATION" accentColor={meta.accent_color}>
         <p>{reading.situation}</p>
@@ -184,7 +185,7 @@ function ReadingContent({
       </Section>
 
       <Section title="TODAY'S ACTIONS" accentColor={meta.accent_color}>
-        <ol className="list-decimal space-y-3 pl-6">
+        <ol className="list-decimal space-y-5 pl-6">
           {reading.actions.map((action, idx) => (
             <li key={idx}>{action}</li>
           ))}
@@ -192,7 +193,7 @@ function ReadingContent({
       </Section>
 
       <Section title="REFLECTION QUESTIONS" accentColor={meta.accent_color}>
-        <ul className="list-disc space-y-3 pl-6">
+        <ul className="list-disc space-y-5 pl-6">
           {reading.reflections.map((question, idx) => (
             <li key={idx} className="italic">
               {question}
@@ -218,14 +219,14 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <div>
-      <div className="mb-3 flex items-center gap-3">
+    <div className="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-5 sm:px-5">
+      <div className="mb-4 flex items-center gap-3">
         <div
           className="h-[1px] w-8"
           style={{ backgroundColor: accentColor, opacity: 0.6 }}
         />
         <h3
-          className="text-xs font-medium tracking-[0.2em]"
+          className="text-[11px] font-semibold tracking-[0.24em] sm:text-xs"
           style={{ color: accentColor }}
         >
           {title}
@@ -235,20 +236,29 @@ function Section({
           style={{ backgroundColor: accentColor, opacity: 0.3 }}
         />
       </div>
-      <div className="leading-relaxed">{children}</div>
+      <div className="space-y-5 leading-8 text-white/90">{children}</div>
     </div>
   );
 }
 
 function ReadingFooter({
-  onAskAgain,
-  onClose,
   sign,
+  archiveSaveState,
 }: {
-  onAskAgain: () => void;
-  onClose: () => void;
   sign: SignData;
+  archiveSaveState: "idle" | "saving" | "saved" | "failed";
 }) {
+  const archiveStatusText =
+    archiveSaveState === "saving"
+      ? "Saving this reading to Archive..."
+      : archiveSaveState === "saved"
+        ? "✓ This reading is saved to your Archive. Return anytime."
+        : archiveSaveState === "failed"
+          ? "Could not save to Archive automatically. Please copy key notes or try Ask Again."
+          : "Preparing auto-save to Archive...";
+  const archiveStatusClass =
+    archiveSaveState === "failed" ? "text-amber-300/90" : "text-white/50";
+
   return (
     <div className="mt-12 border-t border-white/10 pt-12">
       <div className="mb-12 rounded-2xl border border-purple-500/20 bg-gradient-to-b from-purple-900/20 to-transparent px-6 py-8 text-center">
@@ -266,29 +276,10 @@ function ReadingFooter({
         </a>
       </div>
 
-      <p className="mb-8 text-center text-sm italic text-white/40">
-        ✓ This reading is saved to your Archive. Return anytime.
+      <p className={`mb-8 text-center text-sm italic ${archiveStatusClass}`}>
+        {archiveStatusText}
       </p>
 
-      <div className="flex justify-center gap-4">
-        <button
-          type="button"
-          onClick={onAskAgain}
-          className="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-6 py-3 text-white/90 backdrop-blur-md transition-all hover:bg-white/20"
-        >
-          <span>🔄</span>
-          <span>Ask Again</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={onClose}
-          className="flex items-center gap-2 rounded-full bg-white/5 px-6 py-3 text-white/70 transition-all hover:bg-white/10"
-        >
-          <span>✕</span>
-          <span>Close</span>
-        </button>
-      </div>
     </div>
   );
 }
