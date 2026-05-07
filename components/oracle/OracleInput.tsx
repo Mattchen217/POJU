@@ -40,6 +40,38 @@ function formatDate(year: number, month: number, day: number): string {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
+const SHICHEN_VALUES = SHICHEN_OPTIONS.map((opt) => opt.value);
+
+const SHICHEN_SHORT_LABEL: Record<string, string> = {
+  zi: "Zi",
+  chou: "Chou",
+  yin: "Yin",
+  mao: "Mao",
+  chen: "Chen",
+  si: "Si",
+  wu: "Wu",
+  wei: "Wei",
+  shen: "Shen",
+  you: "You",
+  xu: "Xu",
+  hai: "Hai",
+};
+
+const SHICHEN_RANGE_LABEL: Record<string, string> = {
+  zi: "11PM-1AM",
+  chou: "1AM-3AM",
+  yin: "3AM-5AM",
+  mao: "5AM-7AM",
+  chen: "7AM-9AM",
+  si: "9AM-11AM",
+  wu: "11AM-1PM",
+  wei: "1PM-3PM",
+  shen: "3PM-5PM",
+  you: "5PM-7PM",
+  xu: "7PM-9PM",
+  hai: "9PM-11PM",
+};
+
 export function OracleInput({ initialInput, onSubmit, onClose }: OracleInputProps) {
   const [year, setYear] = useState(initialInput?.birthYear ?? 2000);
   const [month, setMonth] = useState(initialInput?.birthMonth ?? 1);
@@ -69,102 +101,70 @@ export function OracleInput({ initialInput, onSubmit, onClose }: OracleInputProp
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-gradient-to-b from-[#0B0815] to-black">
-      <div className="relative mx-auto max-w-xl px-6 py-16">
+      <div className="relative mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-16">
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-6 top-6 flex h-10 w-10 items-center justify-center rounded-full text-white/60 transition-all hover:bg-white/10 hover:text-white"
+          className="absolute right-6 top-6 z-20 flex h-10 w-10 items-center justify-center rounded-full text-white/60 transition-all hover:bg-white/10 hover:text-white"
           aria-label="Close"
         >
           ✕
         </button>
 
-        <div className="mb-12 text-center">
-          <h2 className="font-verse mb-6 text-2xl text-purple-200">You&apos;re about to ask</h2>
-
-          <div className="mb-6 space-y-2 text-white/80 italic">
-            <p>One question.</p>
-            <p>Honest question.</p>
-            <p>60 characters.</p>
-          </div>
-
-          <p className="italic text-purple-300">A sincere heart opens the channel.</p>
-
-          <div className="mt-8 border-t border-white/10 pt-8">
-            <p className="text-sm italic leading-relaxed text-white/60">
-              There are no good glyphs and no bad glyphs.
-              <br />
-              Only honest mirrors of this moment.
+        <div className="rounded-2xl border border-white/10 bg-[#121022]/70 px-5 py-8 shadow-[0_20px_80px_rgba(0,0,0,0.45)] backdrop-blur-md sm:px-8 sm:py-10">
+          <div className="mb-10 text-center">
+            <p className="mb-3 text-xs uppercase tracking-[0.25em] text-purple-300/70">POJU Glyph</p>
+            <h2 className="font-verse mb-4 text-3xl text-purple-100 sm:text-4xl">Ask one real question</h2>
+            <p className="mx-auto max-w-2xl text-sm text-white/60 sm:text-base">
+              Enter your birth date and hour, then describe the one question that truly matters right now.
             </p>
           </div>
-        </div>
 
-        <div className="space-y-8">
-          <div>
-            <label className="mb-3 block text-sm tracking-wide text-white/80">
-              Your birth date
-            </label>
+          <div className="space-y-8">
+            <div>
+              <label className="mb-3 block text-sm tracking-wide text-white/80">
+                Birth date and time
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowDatePicker(true)}
+                className="w-full rounded-xl border border-white/20 bg-white/[0.04] px-4 py-3 text-left text-white transition-colors hover:border-purple-300/60 focus:border-purple-400 focus:outline-none"
+              >
+                {formatDate(year, month, day)}
+                {shichen ? ` · ${SHICHEN_RANGE_LABEL[shichen] ?? shichen}` : ""}
+              </button>
+            </div>
+
+            <div>
+              <label className="mb-3 block text-sm tracking-wide text-white/80">
+                What question or dilemma do you want interpreted?
+              </label>
+              <textarea
+                value={question}
+                onChange={(e) => setQuestion(e.target.value.slice(0, 60))}
+                placeholder="e.g. Should I take this new job offer?"
+                rows={4}
+                className="w-full resize-none rounded-xl border border-white/20 bg-white/[0.04] px-4 py-3 text-white placeholder:text-white/40 transition-colors focus:border-purple-400 focus:outline-none"
+              />
+              <div className="mt-1 text-right text-xs text-white/40">{question.length} / 60</div>
+              <p className="mt-3 text-sm italic text-white/50">
+                Keep it specific and honest. One real question gets the clearest reading.
+              </p>
+            </div>
+
             <button
               type="button"
-              onClick={() => setShowDatePicker(true)}
-              className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-left text-white transition-colors hover:border-purple-300/60 focus:border-purple-400 focus:outline-none"
+              onClick={handleSubmit}
+              disabled={!isValid}
+              className={`w-full rounded-full py-4 font-medium tracking-wide transition-all ${
+                isValid
+                  ? "cursor-pointer bg-purple-500 text-white shadow-lg shadow-purple-500/30 hover:bg-purple-600"
+                  : "cursor-not-allowed bg-white/10 text-white/40"
+              }`}
             >
-              {formatDate(year, month, day)}
+              Begin →
             </button>
           </div>
-
-          <div>
-            <label className="mb-3 block text-sm tracking-wide text-white/80">
-              Your birth hour
-            </label>
-            <select
-              value={shichen}
-              onChange={(e) => setShichen(e.target.value)}
-              className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white transition-colors focus:border-purple-400 focus:outline-none"
-            >
-              <option value="" className="bg-[#0B0815] text-white/50">
-                Select birth hour
-              </option>
-              {SHICHEN_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value} className="bg-[#0B0815]">
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="mb-3 block text-sm tracking-wide text-white/80">
-              Please describe: what is trapping you, and what question or event are you seeking interpretation for?
-            </label>
-            <textarea
-              value={question}
-              onChange={(e) => setQuestion(e.target.value.slice(0, 60))}
-              placeholder="e.g. Should I take this new job offer?"
-              rows={3}
-              className="w-full resize-none rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder:text-white/40 transition-colors focus:border-purple-400 focus:outline-none"
-            />
-            <div className="mt-1 text-right text-xs text-white/40">
-              {question.length} / 60
-            </div>
-            <p className="mt-3 text-sm italic text-white/50">
-              Think of one thing. One real thing. If it&apos;s many, choose the one that weighs
-              most.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={!isValid}
-            className={`w-full rounded-full py-4 font-medium tracking-wide transition-all ${
-              isValid
-                ? "cursor-pointer bg-purple-500 text-white shadow-lg shadow-purple-500/30 hover:bg-purple-600"
-                : "cursor-not-allowed bg-white/10 text-white/40"
-            }`}
-          >
-            Begin →
-          </button>
         </div>
       </div>
 
@@ -173,11 +173,13 @@ export function OracleInput({ initialInput, onSubmit, onClose }: OracleInputProp
           year={year}
           month={month}
           day={day}
+          shichen={shichen}
           onCancel={() => setShowDatePicker(false)}
-          onConfirm={(nextYear, nextMonth, nextDay) => {
+          onConfirm={(nextYear, nextMonth, nextDay, nextShichen) => {
             setYear(nextYear);
             setMonth(nextMonth);
             setDay(nextDay);
+            setShichen(nextShichen);
             setShowDatePicker(false);
           }}
         />
@@ -190,18 +192,23 @@ function BirthDatePicker({
   year,
   month,
   day,
+  shichen,
   onCancel,
   onConfirm,
 }: {
   year: number;
   month: number;
   day: number;
+  shichen: string;
   onCancel: () => void;
-  onConfirm: (year: number, month: number, day: number) => void;
+  onConfirm: (year: number, month: number, day: number, shichen: string) => void;
 }) {
   const [draftYear, setDraftYear] = useState(year);
   const [draftMonth, setDraftMonth] = useState(month);
   const [draftDay, setDraftDay] = useState(day);
+  const [draftShichenIndex, setDraftShichenIndex] = useState(
+    Math.max(0, SHICHEN_VALUES.indexOf(shichen || "zi")),
+  );
 
   const draftDayMax = useMemo(
     () => getDaysInMonth(draftYear, draftMonth),
@@ -230,7 +237,7 @@ function BirthDatePicker({
           Center year starts around 2000. Use mouse wheel, drag, or up/down buttons.
         </p>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <WheelColumn
             label="Year"
             min={YEAR_MIN}
@@ -254,10 +261,22 @@ function BirthDatePicker({
             onChange={setDraftDay}
             formatValue={(v) => String(v).padStart(2, "0")}
           />
+          <WheelColumn
+            label="Time"
+            min={0}
+            max={SHICHEN_VALUES.length - 1}
+            value={draftShichenIndex}
+            onChange={setDraftShichenIndex}
+            formatValue={(idx) => SHICHEN_RANGE_LABEL[SHICHEN_VALUES[idx] ?? "zi"] ?? "11PM-1AM"}
+          />
         </div>
 
         <div className="mt-6 flex items-center justify-between gap-3">
-          <div className="text-sm text-white/70">{formatDate(draftYear, draftMonth, draftDay)}</div>
+          <div className="text-sm text-white/70">
+            {formatDate(draftYear, draftMonth, draftDay)} ·{" "}
+            {SHICHEN_OPTIONS.find((opt) => opt.value === SHICHEN_VALUES[draftShichenIndex])?.label ??
+              "11 PM – 1 AM · Midnight (Zi)"}
+          </div>
           <div className="flex gap-2">
             <button
               type="button"
@@ -268,7 +287,14 @@ function BirthDatePicker({
             </button>
             <button
               type="button"
-              onClick={() => onConfirm(draftYear, draftMonth, draftDay)}
+              onClick={() =>
+                onConfirm(
+                  draftYear,
+                  draftMonth,
+                  draftDay,
+                  SHICHEN_VALUES[draftShichenIndex] ?? "zi",
+                )
+              }
               className="rounded-full bg-purple-500 px-5 py-2 text-sm font-medium text-white hover:bg-purple-600"
             >
               Confirm
@@ -296,7 +322,7 @@ function WheelColumn({
   formatValue?: (value: number) => string;
 }) {
   const dragStateRef = useRef<{ startY: number; startValue: number } | null>(null);
-  const stepPx = 26;
+  const stepPx = 34;
   const display = formatValue ?? ((v: number) => String(v));
   const inRange = (v: number) => v >= min && v <= max;
   const maybeDisplay = (v: number) => (inRange(v) ? display(v) : "");
@@ -313,7 +339,8 @@ function WheelColumn({
   const onPointerMove: PointerEventHandler<HTMLDivElement> = (e) => {
     const state = dragStateRef.current;
     if (!state) return;
-    const delta = Math.round((state.startY - e.clientY) / stepPx);
+    // Dragging down should increase value; dragging up should decrease value.
+    const delta = Math.round((e.clientY - state.startY) / stepPx);
     onChange(clamp(state.startValue + delta, min, max));
   };
 
@@ -326,38 +353,48 @@ function WheelColumn({
       <p className="mb-2 text-center text-xs tracking-[0.2em] text-white/50">{label}</p>
       <button
         type="button"
-        onClick={() => shift(1)}
+        onClick={() => shift(-1)}
         className="mb-2 flex h-8 w-full items-center justify-center rounded-md bg-white/10 text-white/75 hover:bg-white/20"
         aria-label={`${label} up`}
       >
         ▲
       </button>
       <div
-        className="relative h-[136px] touch-none overflow-hidden rounded-md border border-white/15 bg-black/35"
+        className="relative h-[176px] touch-none overflow-hidden rounded-md border border-white/15 bg-black/35"
         onWheel={(e) => {
           e.preventDefault();
-          shift(e.deltaY > 0 ? -1 : 1);
+          // Wheel down should increase value.
+          shift(e.deltaY > 0 ? 1 : -1);
         }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
       >
-        <div className="pointer-events-none absolute inset-x-2 top-1/2 -translate-y-1/2 rounded-md border border-purple-300/55 bg-purple-300/10 py-1 text-center text-lg font-semibold text-white">
+        <div className="pointer-events-none absolute inset-x-2 top-1/2 -translate-y-1/2 rounded-md border border-purple-300/55 bg-purple-300/10 py-1 text-center text-[1.25rem] font-semibold leading-none text-white">
           {display(value)}
         </div>
 
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-sm text-white/35">
-          <span>{maybeDisplay(value + 2)}</span>
-          <span>{maybeDisplay(value + 1)}</span>
-          <span className="opacity-0">{display(value)}</span>
-          <span>{maybeDisplay(value - 1)}</span>
-          <span>{maybeDisplay(value - 2)}</span>
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-white/35">
+          {[-3, -2, -1, 0, 1, 2, 3].map((offset) => {
+            const rowValue = value + offset;
+            const isCenter = offset === 0;
+            return (
+              <span
+                key={offset}
+                className={`flex h-[34px] items-center justify-center leading-none ${
+                  isCenter ? "opacity-0" : "text-[0.92rem]"
+                }`}
+              >
+                {maybeDisplay(rowValue)}
+              </span>
+            );
+          })}
         </div>
       </div>
       <button
         type="button"
-        onClick={() => shift(-1)}
+        onClick={() => shift(1)}
         className="mt-2 flex h-8 w-full items-center justify-center rounded-md bg-white/10 text-white/75 hover:bg-white/20"
         aria-label={`${label} down`}
       >

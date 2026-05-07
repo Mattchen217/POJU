@@ -46,8 +46,6 @@ export default function OracleTestPage() {
       <DrawSequence
         userInput={MOCK_USER_INPUT}
         forcedSign={forcedSign}
-        onSaveCard={() => alert("Save card (test)")}
-        onShareCard={() => alert("Share card (test)")}
         onFullReading={() => {
           setShowFullReading(true);
         }}

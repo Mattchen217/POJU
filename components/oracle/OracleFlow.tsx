@@ -7,16 +7,18 @@ import { FullReading } from "@/components/oracle/FullReading";
 import { OracleInput } from "@/components/oracle/OracleInput";
 import { OracleIntro } from "@/components/oracle/OracleIntro";
 import { OracleSummon } from "@/components/oracle/OracleSummon";
-import { saveCardBack } from "@/lib/oracle/saveCard";
 import { saveOracleEntry } from "@/lib/oracle/saveToArchive";
-import { shareCardBack } from "@/lib/oracle/shareCard";
 import type { SignData, UserInput, FullReading as FullReadingType } from "@/types/oracle";
 
 type Phase = "intro" | "input" | "summon" | "draw" | "reading";
 type ArchiveSaveState = "idle" | "saving" | "saved" | "failed";
 
-export function OracleFlow() {
-  const [phase, setPhase] = useState<Phase>("intro");
+interface OracleFlowProps {
+  showIntro?: boolean;
+}
+
+export function OracleFlow({ showIntro = true }: OracleFlowProps) {
+  const [phase, setPhase] = useState<Phase>(showIntro ? "intro" : "input");
   const [userInput, setUserInput] = useState<UserInput | null>(null);
   const [drawnSign, setDrawnSign] = useState<SignData | null>(null);
   const [archiveSaveState, setArchiveSaveState] = useState<ArchiveSaveState>("idle");
@@ -31,22 +33,11 @@ export function OracleFlow() {
   }, []);
 
   const handleInputClose = useCallback(() => {
-    setPhase("intro");
-  }, []);
+    setPhase(showIntro ? "intro" : "input");
+  }, [showIntro]);
 
   const handleSummonComplete = useCallback(() => {
     setPhase("draw");
-  }, []);
-
-  const handleSaveCard = useCallback(async (sign: SignData) => {
-    const result = await saveCardBack(sign.level, sign.sign_number);
-    if (result.success) {
-      console.log("Card saved", result.method);
-    }
-  }, []);
-
-  const handleShareCard = useCallback(async (sign: SignData) => {
-    await shareCardBack(sign.level, sign.sign_number);
   }, []);
 
   const handleFullReading = useCallback((sign: SignData) => {
@@ -56,9 +47,9 @@ export function OracleFlow() {
   }, []);
 
   const handleDrawClose = useCallback(() => {
-    setPhase("intro");
+    setPhase(showIntro ? "intro" : "input");
     setDrawnSign(null);
-  }, []);
+  }, [showIntro]);
 
   const handleReadingReady = useCallback(
     async (reading: FullReadingType) => {
@@ -81,7 +72,7 @@ export function OracleFlow() {
 
   return (
     <AnimatePresence mode="wait">
-      {phase === "intro" ? (
+      {showIntro && phase === "intro" ? (
         <motion.div key="intro" exit={{ opacity: 0 }}>
           <OracleIntro onStart={handleStart} />
         </motion.div>
@@ -107,8 +98,6 @@ export function OracleFlow() {
         <motion.div key="draw" exit={{ opacity: 0 }}>
           <DrawSequence
             userInput={userInput}
-            onSaveCard={handleSaveCard}
-            onShareCard={handleShareCard}
             onFullReading={handleFullReading}
             onClose={handleDrawClose}
           />
