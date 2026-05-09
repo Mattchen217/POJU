@@ -9,7 +9,7 @@ export type SyncroSmsLinkFormCopy = {
   placeholder: string;
   phoneAriaLabel: string;
   buttonLabel: string;
-  /** 须包含字面量 `{url}`，由客户端替换为 Syncro 链接 */
+  /** 须包含字面量 `__SYNCRO_URL__`，由客户端替换为 Syncro 链接（避免与 next-intl 的 `{var}` 插值冲突） */
   smsBodyTemplate: string;
 };
 
@@ -24,7 +24,7 @@ export function SyncroSmsLinkForm({
 
   const smsHref = useMemo(() => {
     const normalized = phone.replace(/[^\d+]/g, "");
-    const bodyText = smsBodyTemplate.replace("{url}", SYNCRO_URL);
+    const bodyText = smsBodyTemplate.replace("__SYNCRO_URL__", SYNCRO_URL);
     const body = encodeURIComponent(bodyText);
     return normalized ? `sms:${normalized}?body=${body}` : "#";
   }, [phone, smsBodyTemplate]);

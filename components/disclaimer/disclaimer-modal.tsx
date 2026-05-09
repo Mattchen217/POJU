@@ -37,7 +37,7 @@ export function DisclaimerModal({ onAccepted }: DisclaimerModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+    <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/70 p-4">
       <div className="poju-glass-card w-full max-w-xl p-6">
         <h2 className="text-xl font-semibold text-text-primary">Before you enter POJU</h2>
         <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-text-secondary">

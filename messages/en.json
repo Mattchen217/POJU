@@ -1,12 +1,13 @@
 {
   "common": {
-    "brandWordmark": "pojulife",
-    "brand": "pojulife",
+    "brandWordmark": "Pojulife",
+    "brand": "Pojulife",
     "domain": "pojulife.com",
     "tagline": "Where AI meets a thousand years of wisdom.",
     "footerTagline": "For self-reflection and entertainment. pojulife offers perspectives, not predictions. All decisions are yours alone.",
     "copyright": "© 2026 pojulife. All rights reserved.",
-    "syncroFooterTagline": "Syncro is a self-awareness tool. Take what resonates. Decisions are yours alone."
+    "syncroFooterTagline": "Syncro is a self-awareness tool. Take what resonates. Decisions are yours alone.",
+    "openNavigationMenu": "Open navigation menu"
   },
   "nav": {
     "home": "Home",
@@ -17,7 +18,11 @@
     "disclaimer": "Disclaimer",
     "privacy": "Privacy Policy",
     "terms": "Terms of Service",
-    "contact": "Contact"
+    "contact": "Contact",
+    "mobileSheetTitle": "Menu",
+    "mobileSheetClose": "Close menu",
+    "mobileNavPrimary": "Explore",
+    "mobileNavLegal": "Legal"
   },
   "language": {
     "short": "Lang",
@@ -80,7 +85,7 @@
       },
       "glyph": {
         "title": "Try Glyph",
-        "sub": "Free · A pocket-sized mirror"
+        "sub": "First reading free daily — $1.99"
       },
       "syncro": {
         "title": "Open Syncro",
@@ -231,7 +236,7 @@
         "heading": "Sometimes reading isn't enough.",
         "description": "You've already read the books, talked to the friends, and weighed the pros and cons. The question still won't let you go.",
         "tagline": "POJU is what comes after thinking alone.",
-        "cta_primary": "Ask your question — $9.99",
+        "cta_primary": "Start your session — $9.99",
         "cta_secondary": "See how it works ↓"
       },
       "when_to_come": {
@@ -300,7 +305,8 @@
         "subtitle": "A pocket-sized mirror.",
         "description": "Hold a question. Draw a pattern. Read a reflection.",
         "footnote": "Free. No signup. Read with a wink.",
-        "cta": "Try Glyph — Free"
+        "cta": "Start Glyph",
+        "cta_subline": "First reading free daily — $1.99"
       },
       "five_winds": {
         "heading": "Five winds — five archetypal patterns",
@@ -359,7 +365,8 @@
       "final_cta": {
         "heading": "Hold one question.",
         "subtitle": "What you receive is not a verdict. It is an invitation to look more carefully.",
-        "cta": "Try Glyph — Free"
+        "cta": "Start Glyph",
+        "cta_subline": "First reading free daily — $1.99"
       }
     },
     "syncro": {
@@ -373,7 +380,7 @@
         "qr_label": "pojulife.com/syncro",
         "sms_label": "Text yourself the link",
         "sms_button": "Text me the link",
-        "sms_body": "Open Syncro on your phone: {url}",
+        "sms_body": "Open Syncro on your phone: __SYNCRO_URL__",
         "phone_placeholder": "Phone number"
       },
       "what_shows": {

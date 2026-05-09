@@ -13,6 +13,7 @@ export function SiteFooter() {
   const tNav = useTranslations("nav");
   const tCommon = useTranslations("common");
   const tFooter = useTranslations("marketingSite.footer");
+  const brandLabel = tCommon("brand").replace(/^p/, "P");
 
   const tagline = disclaimerKey ? tFooter(`disclaimers.${disclaimerKey}`) : tCommon("footerTagline");
 
@@ -20,11 +21,10 @@ export function SiteFooter() {
     <footer className="mt-16 w-full px-4 py-8 md:mt-24 md:px-8">
       <div className="mx-auto max-w-6xl text-center">
         <div className="flex justify-center">
-          <Link href="/" className="inline-flex" aria-label={`${tCommon("brand")} — ${tCommon("domain")}`}>
-            <BrandLockup label={tCommon("brand")} size="footer" />
+          <Link href="/" className="inline-flex" aria-label={`${brandLabel} — ${tCommon("domain")}`}>
+            <BrandLockup label={brandLabel} size="footer" />
           </Link>
         </div>
-        <p className="mt-1 text-sm text-text-secondary">{tCommon("domain")}</p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-4 text-sm text-text-secondary">
           <Link href="/disclaimer" className="hover:text-text-primary">
             {tNav("disclaimer")}

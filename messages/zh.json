@@ -1,12 +1,13 @@
 {
   "common": {
-    "brandWordmark": "pojulife",
-    "brand": "pojulife",
+    "brandWordmark": "Pojulife",
+    "brand": "Pojulife",
     "domain": "pojulife.com",
     "tagline": "AI 与千年智慧的相遇。",
     "footerTagline": "pojulife 用于自我反思与启发。我们提供视角,而非预测。所有决定都由你自己做出。",
     "copyright": "© 2026 pojulife. 版权所有。",
-    "syncroFooterTagline": "Syncro 是自我觉察工具。取走与你共鸣的。决定由你自己做出。"
+    "syncroFooterTagline": "Syncro 是自我觉察工具。取走与你共鸣的。决定由你自己做出。",
+    "openNavigationMenu": "打开导航菜单"
   },
   "nav": {
     "home": "首页",
@@ -17,7 +18,11 @@
     "disclaimer": "免责声明",
     "privacy": "隐私政策",
     "terms": "服务条款",
-    "contact": "联系我们"
+    "contact": "联系我们",
+    "mobileSheetTitle": "菜单",
+    "mobileSheetClose": "关闭菜单",
+    "mobileNavPrimary": "浏览",
+    "mobileNavLegal": "法律与条款"
   },
   "language": {
     "short": "语言",
@@ -80,7 +85,7 @@
       },
       "glyph": {
         "title": "体验 Glyph",
-        "sub": "免费 · 掌心里的镜子"
+        "sub": "每日首次免费阅读 — $1.99"
       },
       "syncro": {
         "title": "打开 Syncro",
@@ -300,7 +305,8 @@
         "subtitle": "随身可得的一面镜子。",
         "description": "握住一个问题。抽取一个图案。读一次反射。",
         "footnote": "免费。无需注册。带一丝玩味去读。",
-        "cta": "免费体验 Glyph"
+        "cta": "开始 Glyph",
+        "cta_subline": "每日首次免费阅读 — $1.99"
       },
       "five_winds": {
         "heading": "五种风 — 五种原型图案",
@@ -359,7 +365,8 @@
       "final_cta": {
         "heading": "握住一个问题。",
         "subtitle": "你收到的不是判决。它是邀请,让你更仔细地看。",
-        "cta": "免费体验 Glyph"
+        "cta": "开始 Glyph",
+        "cta_subline": "每日首次免费阅读 — $1.99"
       }
     },
     "syncro": {
@@ -373,7 +380,7 @@
         "qr_label": "pojulife.com/syncro",
         "sms_label": "把链接发给自己",
         "sms_button": "把链接发给我",
-        "sms_body": "在手机上打开 Syncro：{url}",
+        "sms_body": "在手机上打开 Syncro：__SYNCRO_URL__",
         "phone_placeholder": "手机号码"
       },
       "what_shows": {

@@ -14,6 +14,7 @@
 html,
 body {
   min-height: 100%;
+  overflow-x: clip;
 }
 
 body {
@@ -138,6 +139,111 @@ button {
       radial-gradient(circle at 30% 80%, rgba(34, 211, 238, 0.12), transparent 35%),
       linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 26%);
     pointer-events: none;
+  }
+
+  /* 产品页底部钩子：与 .poju-cosmic-panel 同结构，按产品线换光晕主色 */
+  .poju-cosmic-panel.syncro-cta-panel::before {
+    background:
+      radial-gradient(circle at 75% 18%, rgba(34, 211, 238, 0.22), transparent 30%),
+      radial-gradient(circle at 30% 80%, rgba(59, 130, 246, 0.14), transparent 36%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 26%);
+  }
+
+  .poju-cosmic-panel.syncro-cta-panel {
+    box-shadow:
+      0 20px 70px rgba(9, 7, 20, 0.62),
+      0 8px 30px rgba(34, 211, 238, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  .poju-cosmic-panel.glyph-cta-panel::before {
+    background:
+      radial-gradient(circle at 72% 15%, rgba(232, 121, 249, 0.26), transparent 32%),
+      radial-gradient(circle at 28% 82%, rgba(168, 85, 247, 0.18), transparent 38%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 28%);
+  }
+
+  .poju-cosmic-panel.glyph-cta-panel {
+    box-shadow:
+      0 20px 70px rgba(9, 7, 20, 0.62),
+      0 8px 32px rgba(217, 70, 239, 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  /* Glyph 页底钩子：无底色素面，仅外阴影勾边（与页面背景融合） */
+  .poju-cosmic-panel.glyph-final-cta-gold-panel {
+    @apply bg-transparent shadow-none;
+    background-color: transparent;
+    box-shadow:
+      0 20px 70px rgba(9, 7, 20, 0.55),
+      0 8px 36px rgba(251, 191, 36, 0.22);
+  }
+
+  .poju-cosmic-panel.glyph-final-cta-gold-panel::before {
+    display: none;
+  }
+
+  /* POJU 页底钩子：无底色素面，仅紫色外阴影（与 Glyph 钩子的「无填充+光晕」同构） */
+  .poju-cosmic-panel.poju-final-cta-outline-panel {
+    @apply bg-transparent shadow-none;
+    background-color: transparent;
+    box-shadow:
+      0 20px 70px rgba(9, 7, 20, 0.55),
+      0 8px 36px rgba(109, 77, 255, 0.24);
+  }
+
+  .poju-cosmic-panel.poju-final-cta-outline-panel::before {
+    display: none;
+  }
+
+  /**
+   * 营销页透明胶囊 CTA：描边与外发光共用主题色，悬停铺满同色系。
+   * 换色：增加修饰类 marketing-pill-outline-cta--violet | --amber | --fuchsia | --cyan
+   * --cta-accent 为「R G B」空格分隔（与 rgb(var(--cta-accent) / α) 配合）
+   */
+  .marketing-pill-outline-cta {
+    @apply inline-flex justify-center rounded-full border bg-transparent font-semibold text-white;
+    border-color: rgb(var(--cta-accent) / 0.55);
+    box-shadow: 0 10px 28px rgb(var(--cta-accent) / 0.32);
+    transition:
+      transform 200ms ease-out,
+      box-shadow 200ms ease-out,
+      background-color 200ms ease-out,
+      border-color 200ms ease-out,
+      color 200ms ease-out;
+  }
+
+  .marketing-pill-outline-cta:hover {
+    border-color: rgb(var(--cta-accent) / 0.92);
+    background-color: rgb(var(--cta-accent) / 0.94);
+    box-shadow: 0 10px 26px rgb(var(--cta-accent) / 0.48);
+  }
+
+  .marketing-pill-outline-cta--violet {
+    --cta-accent: 109 77 255;
+  }
+
+  .marketing-pill-outline-cta--amber {
+    --cta-accent: 245 158 11;
+  }
+
+  .marketing-pill-outline-cta--fuchsia {
+    --cta-accent: 217 70 239;
+  }
+
+  .marketing-pill-outline-cta--cyan {
+    --cta-accent: 34 211 238;
+  }
+
+  /* 琥珀悬停填色较亮，字改深色以保证对比 */
+  .marketing-pill-outline-cta--amber:hover {
+    color: rgb(15 10 8);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .marketing-pill-outline-cta {
+      transition-duration: 0.01ms;
+    }
   }
 
   .poju-glass-card {

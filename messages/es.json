@@ -1,12 +1,13 @@
 {
   "common": {
-    "brandWordmark": "pojulife",
-    "brand": "pojulife",
+    "brandWordmark": "Pojulife",
+    "brand": "Pojulife",
     "domain": "pojulife.com",
     "tagline": "Donde la IA se encuentra con mil años de sabiduría.",
     "footerTagline": "Para autorreflexión y entretenimiento. pojulife ofrece perspectivas, no predicciones. Todas las decisiones son tuyas.",
     "copyright": "© 2026 pojulife. Todos los derechos reservados.",
-    "syncroFooterTagline": "Syncro es una herramienta de auto-conciencia. Toma lo que resuene. Las decisiones son tuyas."
+    "syncroFooterTagline": "Syncro es una herramienta de auto-conciencia. Toma lo que resuene. Las decisiones son tuyas.",
+    "openNavigationMenu": "Abrir menú de navegación"
   },
   "nav": {
     "home": "Inicio",
@@ -17,7 +18,11 @@
     "disclaimer": "Aviso legal",
     "privacy": "Política de privacidad",
     "terms": "Términos de servicio",
-    "contact": "Contacto"
+    "contact": "Contacto",
+    "mobileSheetTitle": "Menú",
+    "mobileSheetClose": "Cerrar menú",
+    "mobileNavPrimary": "Explorar",
+    "mobileNavLegal": "Legal"
   },
   "language": {
     "short": "Idioma",
@@ -80,7 +85,7 @@
       },
       "glyph": {
         "title": "Prueba Glyph",
-        "sub": "Gratis · Un espejo de bolsillo"
+        "sub": "Primera lectura gratis al día — $1.99"
       },
       "syncro": {
         "title": "Abre Syncro",
@@ -300,7 +305,8 @@
         "subtitle": "Un espejo de bolsillo.",
         "description": "Sostén una pregunta. Saca un patrón. Lee un reflejo.",
         "footnote": "Gratis. Sin registro. Léelo con una sonrisa.",
-        "cta": "Prueba Glyph — Gratis"
+        "cta": "Empezar Glyph",
+        "cta_subline": "Primera lectura gratis al día — $1.99"
       },
       "five_winds": {
         "heading": "Cinco vientos — cinco patrones arquetípicos",
@@ -359,7 +365,8 @@
       "final_cta": {
         "heading": "Sostén una pregunta.",
         "subtitle": "Lo que recibes no es un veredicto. Es una invitación a mirar con más cuidado.",
-        "cta": "Prueba Glyph — Gratis"
+        "cta": "Empezar Glyph",
+        "cta_subline": "Primera lectura gratis al día — $1.99"
       }
     },
     "syncro": {
@@ -373,7 +380,7 @@
         "qr_label": "pojulife.com/syncro",
         "sms_label": "Envíate el enlace",
         "sms_button": "Envíame el enlace",
-        "sms_body": "Abre Syncro en tu móvil: {url}",
+        "sms_body": "Abre Syncro en tu móvil: __SYNCRO_URL__",
         "phone_placeholder": "Número de teléfono"
       },
       "what_shows": {

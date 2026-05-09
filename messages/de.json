@@ -1,12 +1,13 @@
 {
   "common": {
-    "brandWordmark": "pojulife",
-    "brand": "pojulife",
+    "brandWordmark": "Pojulife",
+    "brand": "Pojulife",
     "domain": "pojulife.com",
     "tagline": "Wo KI auf tausend Jahre Weisheit trifft.",
     "footerTagline": "Zur Selbstreflexion und Unterhaltung. pojulife bietet Perspektiven, keine Vorhersagen. Alle Entscheidungen liegen bei dir.",
     "copyright": "© 2026 pojulife. Alle Rechte vorbehalten.",
-    "syncroFooterTagline": "Syncro ist ein Selbstwahrnehmungswerkzeug. Nimm, was bei dir ankommt. Die Entscheidungen liegen bei dir."
+    "syncroFooterTagline": "Syncro ist ein Selbstwahrnehmungswerkzeug. Nimm, was bei dir ankommt. Die Entscheidungen liegen bei dir.",
+    "openNavigationMenu": "Navigationsmenü öffnen"
   },
   "nav": {
     "home": "Startseite",
@@ -17,7 +18,11 @@
     "disclaimer": "Haftungsausschluss",
     "privacy": "Datenschutz",
     "terms": "Nutzungsbedingungen",
-    "contact": "Kontakt"
+    "contact": "Kontakt",
+    "mobileSheetTitle": "Menü",
+    "mobileSheetClose": "Menü schließen",
+    "mobileNavPrimary": "Entdecken",
+    "mobileNavLegal": "Rechtliches"
   },
   "language": {
     "short": "Spr.",
@@ -80,7 +85,7 @@
       },
       "glyph": {
         "title": "Glyph ausprobieren",
-        "sub": "Kostenlos · Ein Spiegel für die Tasche"
+        "sub": "Erste Legung täglich kostenlos — $1.99"
       },
       "syncro": {
         "title": "Syncro öffnen",
@@ -300,7 +305,8 @@
         "subtitle": "Ein handlicher Spiegel.",
         "description": "Halte eine Frage. Ziehe ein Muster. Lies eine Spiegelung.",
         "footnote": "Kostenlos. Keine Anmeldung. Lies mit einem Augenzwinkern.",
-        "cta": "Glyph kostenlos testen"
+        "cta": "Glyph starten",
+        "cta_subline": "Erste Legung täglich kostenlos — $1.99"
       },
       "five_winds": {
         "heading": "Fünf Winde — fünf archetypische Muster",
@@ -359,7 +365,8 @@
       "final_cta": {
         "heading": "Halte eine Frage.",
         "subtitle": "Was du erhältst, ist kein Urteil. Es ist eine Einladung, genauer hinzusehen.",
-        "cta": "Glyph kostenlos testen"
+        "cta": "Glyph starten",
+        "cta_subline": "Erste Legung täglich kostenlos — $1.99"
       }
     },
     "syncro": {
@@ -373,7 +380,7 @@
         "qr_label": "pojulife.com/syncro",
         "sms_label": "Sende dir den Link",
         "sms_button": "Schick mir den Link",
-        "sms_body": "Syncro auf dem Handy öffnen: {url}",
+        "sms_body": "Syncro auf dem Handy öffnen: __SYNCRO_URL__",
         "phone_placeholder": "Telefonnummer"
       },
       "what_shows": {

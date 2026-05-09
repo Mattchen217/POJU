@@ -8,6 +8,7 @@ export type OracleProductHeroCopy = {
   description: string;
   footnote: string;
   cta: string;
+  ctaSubline: string;
 };
 
 /**
@@ -30,19 +31,22 @@ export function OracleProductHero({ copy }: { copy: OracleProductHeroCopy }) {
               {copy.heading}
             </h1>
             <p className="mx-auto mt-4 text-[18px] font-medium text-fuchsia-200/95 sm:text-[20px]">{copy.subtitle}</p>
-            <p className="mx-auto mt-4 max-w-xl px-2 text-[14px] leading-7 text-[#e6e8f3] sm:mt-5 sm:text-[15px] sm:leading-8 md:px-0 md:text-[16px] md:leading-9">
+            <p className="mx-auto mt-4 max-w-xl px-2 text-[14px] leading-7 text-white sm:mt-5 sm:text-[15px] sm:leading-8 md:px-0 md:text-[16px] md:leading-9">
               {copy.description}
             </p>
             <p className="mx-auto mt-3 text-sm text-text-dim sm:text-[15px]">{copy.footnote}</p>
             <div className="mx-auto mt-8 flex flex-col items-center justify-center sm:mt-9 md:mt-10">
               <Link
-                href="/glyph/reading"
+                href="/start?next=%2Fglyph%2Freading"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex min-w-[200px] justify-center rounded-full border border-amber-300/55 bg-amber-400/18 px-8 py-3.5 text-[15px] font-semibold text-amber-50 shadow-[0_10px_28px_rgba(251,191,36,0.35)] transition-[transform,box-shadow,background-color,border-color,color] duration-200 ease-out hover:-translate-y-0.5 hover:scale-[1.04] hover:border-amber-200/90 hover:bg-gradient-to-r hover:from-amber-300/95 hover:to-amber-400/90 hover:text-neutral-950 hover:shadow-[0_14px_36px_rgba(251,191,36,0.55)] motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100 active:scale-[0.99] active:translate-y-0 md:px-10 md:py-4 md:text-base"
+                className="marketing-pill-outline-cta marketing-pill-outline-cta--amber inline-flex min-w-[200px] px-8 py-3.5 text-[15px] hover:-translate-y-0.5 hover:scale-[1.04] motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100 active:scale-[0.99] md:px-10 md:py-4 md:text-base"
               >
                 {copy.cta}
               </Link>
+              <p className="mt-2 max-w-md px-2 text-center text-[12px] leading-5 text-white sm:text-[13px] sm:leading-5 md:text-[14px] md:leading-6">
+                {copy.ctaSubline}
+              </p>
             </div>
           </div>
         </div>

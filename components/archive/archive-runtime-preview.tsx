@@ -53,6 +53,33 @@ function dayLabel(ts: number): "Today" | "Yesterday" | "Earlier" {
   return "Earlier";
 }
 
+function archiveKindLabel(kind: ArchiveProductKind): string {
+  switch (kind) {
+    case "oracle":
+      return "Glyph";
+    case "poju":
+      return "POJU";
+    case "syncro":
+      return "Syncro";
+    default:
+      return kind;
+  }
+}
+
+function formatSavedAt(ts: number): string {
+  try {
+    return new Date(ts).toLocaleString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "";
+  }
+}
+
 export function ArchiveRuntimePreview() {
   const router = useRouter();
   const [runtimeEntries, setRuntimeEntries] = useState<ArchiveEntry[]>([]);
@@ -61,6 +88,7 @@ export function ArchiveRuntimePreview() {
   const [selectedEntry, setSelectedEntry] = useState<MixedEntry | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detail, setDetail] = useState<EntryDetail | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<MixedEntry | null>(null);
 
   useEffect(() => {
     const loadRuntime = () => {
@@ -85,11 +113,20 @@ export function ArchiveRuntimePreview() {
       const next = prev.filter((x) => x.id !== id);
       try {
         localStorage.setItem(ARCHIVE_RUNTIME_KEY, JSON.stringify(next));
+        window.dispatchEvent(new CustomEvent(ARCHIVE_UPDATED_EVENT));
       } catch {
         // ignore
       }
       return next;
     });
+  };
+
+  const confirmRemoveRuntimeEntry = () => {
+    if (!deleteTarget) return;
+    const id = deleteTarget.id;
+    removeRuntimeEntry(id);
+    setSelectedEntry((cur) => (cur?.id === id ? null : cur));
+    setDeleteTarget(null);
   };
 
   const previewEntries = useMemo(() => {
@@ -274,19 +311,15 @@ export function ArchiveRuntimePreview() {
             <div className="space-y-3">
               {list.map((entry) => (
                 <div key={entry.id} className="rounded-xl border border-white/10 bg-[rgba(30,30,34,0.5)] p-4 backdrop-blur-[16px]">
-                  <p className="font-['Inter'] text-[11px] uppercase tracking-[0.06em] text-[#958ea0]">{entry.kind}</p>
+                  <p className="font-['Inter'] text-[11px] uppercase tracking-[0.06em] text-[#958ea0]">
+                    {archiveKindLabel(entry.kind)}
+                  </p>
                   <h4 className="mt-1 font-['Manrope'] text-[18px] font-semibold text-[#e7e0ed]">{entry.title}</h4>
+                  <p className="mt-1 font-['Inter'] text-[12px] text-[#958ea0]">Saved · {formatSavedAt(entry.createdAt)}</p>
                   {entry.subtitle ? (
                     <p className="mt-1 font-['Inter'] text-[14px] leading-[1.5] text-[#cbc3d7]/70">{entry.subtitle}</p>
                   ) : null}
-                  <div className="mt-3 flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedEntry(entry)}
-                      className="rounded-lg border border-[#494454] px-3 py-1.5 text-[11px] uppercase tracking-[0.05em] text-[#e7e0ed]"
-                    >
-                      View
-                    </button>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
                     <button
                       type="button"
                       onClick={() => openEntry(entry)}
@@ -297,7 +330,7 @@ export function ArchiveRuntimePreview() {
                     {entry.source === "runtime" ? (
                       <button
                         type="button"
-                        onClick={() => removeRuntimeEntry(entry.id)}
+                        onClick={() => setDeleteTarget(entry)}
                         className="rounded-lg border border-red-400/30 px-3 py-1.5 text-[11px] uppercase tracking-[0.05em] text-red-300"
                       >
                         Delete
@@ -316,7 +349,9 @@ export function ArchiveRuntimePreview() {
       {selectedEntry ? (
         <div className="fixed inset-0 z-[160] flex items-center justify-center bg-black/70 px-4">
           <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-[#1c1824] p-5">
-            <p className="text-[11px] uppercase tracking-[0.06em] text-[#958ea0]">{selectedEntry.kind}</p>
+            <p className="text-[11px] uppercase tracking-[0.06em] text-[#958ea0]">
+              {archiveKindLabel(selectedEntry.kind)}
+            </p>
             <h4 className="mt-1 font-['Manrope'] text-[22px] font-semibold text-[#e7e0ed]">{selectedEntry.title}</h4>
             {selectedEntry.subtitle ? (
               <p className="mt-2 font-['Inter'] text-[15px] leading-[1.6] text-[#cbc3d7]/80">{selectedEntry.subtitle}</p>
@@ -415,6 +450,38 @@ export function ArchiveRuntimePreview() {
                 className="rounded-lg border border-[#494454] px-4 py-2 text-xs uppercase tracking-[0.05em] text-[#e7e0ed]"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {deleteTarget ? (
+        <div className="fixed inset-0 z-[170] flex items-center justify-center bg-black/75 px-4">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#1c1824] p-5 shadow-xl">
+            <h3 className="font-['Manrope'] text-lg font-semibold text-[#e7e0ed]">Delete this entry?</h3>
+            <p className="mt-3 font-['Inter'] text-[14px] leading-relaxed text-[#cbc3d7]/85">
+              This will permanently remove it from your local Archive. You cannot undo this action.
+            </p>
+            {deleteTarget.title ? (
+              <p className="mt-3 rounded-lg border border-white/10 bg-black/25 px-3 py-2 font-['Inter'] text-[13px] text-[#e7e0ed]/90">
+                {deleteTarget.title}
+              </p>
+            ) : null}
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                className="rounded-lg border border-[#494454] px-4 py-2 text-xs uppercase tracking-[0.05em] text-[#e7e0ed]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmRemoveRuntimeEntry}
+                className="rounded-lg border border-red-400/40 bg-red-950/40 px-4 py-2 text-xs uppercase tracking-[0.05em] text-red-200"
+              >
+                Delete permanently
               </button>
             </div>
           </div>

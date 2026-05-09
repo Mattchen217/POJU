@@ -123,15 +123,15 @@ async function SyncroContent() {
           </div>
         </section>
 
-        <section className="poju-cosmic-panel mt-8 w-full px-4 py-8 text-center md:mt-10 md:px-8 md:py-10">
-          <div className="mx-auto flex w-full max-w-6xl flex-col items-center">
+        <section className="poju-cosmic-panel syncro-cta-panel mx-auto mt-8 w-full max-w-6xl px-4 py-8 text-center md:mt-10 md:px-8 md:py-10">
+          <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col items-center">
             <h2 className="text-[30px] font-semibold text-text-primary sm:text-[34px] md:text-[38px]">
               {t("always_free.heading")}
             </h2>
             <p className="mt-4 max-w-2xl text-[15px] leading-8 text-text-secondary sm:text-base">{t("always_free.description")}</p>
             <Link
-              href="/syncro"
-              className="mt-7 inline-flex rounded-full border border-cyan-300/35 bg-cyan-400/20 px-8 py-3 text-sm font-semibold text-cyan-100 hover:bg-cyan-300/25 sm:text-[15px]"
+              href="/start?next=%2Fsyncro"
+              className="mt-7 inline-flex w-full min-w-[220px] max-w-sm justify-center rounded-full border border-cyan-300/40 bg-cyan-400/20 px-8 py-3 text-sm font-semibold text-cyan-100 shadow-[0_10px_26px_rgba(34,211,238,0.2)] hover:bg-cyan-300/25 sm:w-auto sm:text-[15px] md:px-10 md:py-4 md:text-base"
             >
               {t("always_free.cta")}
             </Link>

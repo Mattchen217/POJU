@@ -53,6 +53,7 @@ export default async function OraclePage() {
     description: t("hero.description"),
     footnote: t("hero.footnote"),
     cta: t("hero.cta"),
+    ctaSubline: t("hero.cta_subline"),
   };
 
   const divine = {
@@ -96,7 +97,7 @@ export default async function OraclePage() {
       <div className="w-full px-3 pb-10 pt-4 sm:px-4 sm:pt-6 md:px-6 md:pb-12">
         <OracleProductHero copy={heroCopy} />
 
-        <SectionShell id="five-winds" className="max-w-6xl scroll-mt-28 border-t border-white/6 bg-black/10">
+        <SectionShell id="five-winds" className="max-w-6xl scroll-mt-28">
           <h2 className="text-center text-[24px] font-semibold text-text-primary sm:text-[28px] md:text-[30px]">
             {t("five_winds.heading")}
           </h2>
@@ -104,115 +105,125 @@ export default async function OraclePage() {
             {t("five_winds.description")}
           </p>
           <div className="mx-auto mt-10 max-w-6xl">
-            <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:grid-rows-3 lg:gap-x-10 lg:gap-y-10">
-              <div className="flex items-center justify-center gap-3 lg:col-start-1 lg:row-start-1 lg:justify-start">
-                <div className="w-full max-w-[96px] shrink-0">
-                  <WindCardWithParticles
-                    src={divine.image}
-                    alt={divine.imageAlt}
-                    particleKey={divine.particleKey}
-                    sizes="96px"
-                    priority
-                  />
-                </div>
-                <div className="max-w-[360px] text-center lg:text-left">
-                  <p className="whitespace-nowrap text-[17px] font-semibold leading-tight tracking-[0.01em] text-text-primary sm:text-[18px]">
-                    {divine.name}
-                  </p>
-                  <div className="mt-1 space-y-0.5 text-[12px] leading-5 text-text-secondary sm:text-[13px] sm:leading-5">
-                    {divine.lines.map((line) => (
-                      <p key={line} className="whitespace-normal break-words sm:whitespace-nowrap">
-                        {line}
-                      </p>
-                    ))}
+            <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:grid-rows-3 lg:gap-x-6 lg:gap-y-16">
+              <div className="flex justify-center lg:col-start-1 lg:row-start-1 lg:justify-end lg:pr-1">
+                <div className="grid w-full max-w-xl grid-cols-[128px_minmax(0,1fr)] items-center gap-4">
+                  <div className="w-full max-w-[128px]">
+                    <WindCardWithParticles
+                      src={divine.image}
+                      alt={divine.imageAlt}
+                      particleKey={divine.particleKey}
+                      sizes="128px"
+                      priority
+                    />
+                  </div>
+                  <div className="min-w-0 text-center lg:text-left">
+                    <p className="whitespace-nowrap text-[20px] font-semibold leading-tight tracking-[0.01em] text-text-primary sm:text-[22px] md:text-[23px]">
+                      {divine.name}
+                    </p>
+                    <div className="mt-1.5 space-y-1 text-[14px] leading-6 text-text-secondary sm:text-[15px] sm:leading-7 md:text-[16px] md:leading-7">
+                      {divine.lines.map((line) => (
+                        <p key={line} className="whitespace-normal break-words sm:whitespace-nowrap">
+                          {line}
+                        </p>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center justify-center gap-3 lg:col-start-1 lg:row-start-2 lg:justify-start">
-                <div className="w-full max-w-[96px] shrink-0">
-                  <WindCardWithParticles
-                    src={still.image}
-                    alt={still.imageAlt}
-                    particleKey={still.particleKey}
-                    sizes="96px"
-                  />
-                </div>
-                <div className="max-w-[360px] text-center lg:text-left">
-                  <p className="whitespace-nowrap text-[17px] font-semibold leading-tight tracking-[0.01em] text-text-primary sm:text-[18px]">
-                    {still.name}
-                  </p>
-                  <div className="mt-1 space-y-0.5 text-[12px] leading-5 text-text-secondary sm:text-[13px] sm:leading-5">
-                    {still.lines.map((line) => (
-                      <p key={line} className="whitespace-normal break-words sm:whitespace-nowrap">
-                        {line}
-                      </p>
-                    ))}
+              <div className="flex justify-center lg:col-start-1 lg:row-start-2 lg:justify-end lg:pr-1">
+                <div className="grid w-full max-w-xl grid-cols-[128px_minmax(0,1fr)] items-center gap-4">
+                  <div className="w-full max-w-[128px]">
+                    <WindCardWithParticles
+                      src={still.image}
+                      alt={still.imageAlt}
+                      particleKey={still.particleKey}
+                      sizes="128px"
+                    />
+                  </div>
+                  <div className="min-w-0 text-center lg:text-left">
+                    <p className="whitespace-nowrap text-[20px] font-semibold leading-tight tracking-[0.01em] text-text-primary sm:text-[22px] md:text-[23px]">
+                      {still.name}
+                    </p>
+                    <div className="mt-1.5 space-y-1 text-[14px] leading-6 text-text-secondary sm:text-[15px] sm:leading-7 md:text-[16px] md:leading-7">
+                      {still.lines.map((line) => (
+                        <p key={line} className="whitespace-normal break-words sm:whitespace-nowrap">
+                          {line}
+                        </p>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center justify-center gap-3 lg:col-start-1 lg:row-start-3 lg:justify-start">
-                <div className="w-full max-w-[96px] shrink-0">
-                  <WindCardWithParticles
-                    src={eye.image}
-                    alt={eye.imageAlt}
-                    particleKey={eye.particleKey}
-                    sizes="96px"
-                  />
-                </div>
-                <div className="max-w-[360px] text-center lg:text-left">
-                  <p className="whitespace-nowrap text-[17px] font-semibold leading-tight tracking-[0.01em] text-text-primary sm:text-[18px]">
-                    {eye.name}
-                  </p>
-                  <div className="mt-1 space-y-0.5 text-[12px] leading-5 text-text-secondary sm:text-[13px] sm:leading-5">
-                    {eye.lines.map((line) => (
-                      <p key={line} className="whitespace-normal break-words sm:whitespace-nowrap">
-                        {line}
-                      </p>
-                    ))}
+              <div className="flex justify-center lg:col-start-1 lg:row-start-3 lg:justify-end lg:pr-1">
+                <div className="grid w-full max-w-xl grid-cols-[128px_minmax(0,1fr)] items-center gap-4">
+                  <div className="w-full max-w-[128px]">
+                    <WindCardWithParticles
+                      src={eye.image}
+                      alt={eye.imageAlt}
+                      particleKey={eye.particleKey}
+                      sizes="128px"
+                    />
+                  </div>
+                  <div className="min-w-0 text-center lg:text-left">
+                    <p className="whitespace-nowrap text-[20px] font-semibold leading-tight tracking-[0.01em] text-text-primary sm:text-[22px] md:text-[23px]">
+                      {eye.name}
+                    </p>
+                    <div className="mt-1.5 space-y-1 text-[14px] leading-6 text-text-secondary sm:text-[15px] sm:leading-7 md:text-[16px] md:leading-7">
+                      {eye.lines.map((line) => (
+                        <p key={line} className="whitespace-normal break-words sm:whitespace-nowrap">
+                          {line}
+                        </p>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center justify-center gap-3 lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:self-center lg:justify-end">
-                <div className="max-w-[360px] text-center lg:text-right">
-                  <p className="whitespace-nowrap text-[17px] font-semibold leading-tight tracking-[0.01em] text-text-primary sm:text-[18px]">
-                    {fair.name}
-                  </p>
-                  <div className="mt-1 space-y-0.5 text-[12px] leading-5 text-text-secondary sm:text-[13px] sm:leading-5">
-                    {fair.lines.map((line) => (
-                      <p key={line} className="whitespace-normal break-words sm:whitespace-nowrap">
-                        {line}
-                      </p>
-                    ))}
+              <div className="flex justify-center lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:self-center lg:justify-start lg:pl-1">
+                <div className="grid w-full max-w-xl grid-cols-[minmax(0,1fr)_128px] items-center gap-4">
+                  <div className="min-w-0 text-center lg:text-right">
+                    <p className="whitespace-nowrap text-[20px] font-semibold leading-tight tracking-[0.01em] text-text-primary sm:text-[22px] md:text-[23px]">
+                      {fair.name}
+                    </p>
+                    <div className="mt-1.5 space-y-1 text-[14px] leading-6 text-text-secondary sm:text-[15px] sm:leading-7 md:text-[16px] md:leading-7">
+                      {fair.lines.map((line) => (
+                        <p key={line} className="whitespace-normal break-words sm:whitespace-nowrap">
+                          {line}
+                        </p>
+                      ))}
+                    </div>
                   </div>
-                </div>
-                <div className="w-full max-w-[96px] shrink-0">
-                  <WindCardWithParticles src={fair.image} alt={fair.imageAlt} particleKey={fair.particleKey} sizes="96px" />
+                  <div className="w-full max-w-[128px] justify-self-end">
+                    <WindCardWithParticles src={fair.image} alt={fair.imageAlt} particleKey={fair.particleKey} sizes="128px" />
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-center justify-center gap-3 lg:col-start-2 lg:row-start-2 lg:row-span-2 lg:self-center lg:justify-end">
-                <div className="max-w-[360px] text-center lg:text-right">
-                  <p className="whitespace-nowrap text-[17px] font-semibold leading-tight tracking-[0.01em] text-text-primary sm:text-[18px]">
-                    {cross.name}
-                  </p>
-                  <div className="mt-1 space-y-0.5 text-[12px] leading-5 text-text-secondary sm:text-[13px] sm:leading-5">
-                    {cross.lines.map((line) => (
-                      <p key={line} className="whitespace-normal break-words sm:whitespace-nowrap">
-                        {line}
-                      </p>
-                    ))}
+              <div className="flex justify-center lg:col-start-2 lg:row-start-2 lg:row-span-2 lg:self-center lg:justify-start lg:pl-1">
+                <div className="grid w-full max-w-xl grid-cols-[minmax(0,1fr)_128px] items-center gap-4">
+                  <div className="min-w-0 text-center lg:text-right">
+                    <p className="whitespace-nowrap text-[20px] font-semibold leading-tight tracking-[0.01em] text-text-primary sm:text-[22px] md:text-[23px]">
+                      {cross.name}
+                    </p>
+                    <div className="mt-1.5 space-y-1 text-[14px] leading-6 text-text-secondary sm:text-[15px] sm:leading-7 md:text-[16px] md:leading-7">
+                      {cross.lines.map((line) => (
+                        <p key={line} className="whitespace-normal break-words sm:whitespace-nowrap">
+                          {line}
+                        </p>
+                      ))}
+                    </div>
                   </div>
-                </div>
-                <div className="w-full max-w-[96px] shrink-0">
-                  <WindCardWithParticles
-                    src={cross.image}
-                    alt={cross.imageAlt}
-                    particleKey={cross.particleKey}
-                    sizes="96px"
-                  />
+                  <div className="w-full max-w-[128px] justify-self-end">
+                    <WindCardWithParticles
+                      src={cross.image}
+                      alt={cross.imageAlt}
+                      particleKey={cross.particleKey}
+                      sizes="128px"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -225,7 +236,7 @@ export default async function OraclePage() {
           </div>
         </SectionShell>
 
-        <SectionShell id="glyph-how-it-works" className="max-w-6xl border-t border-white/6">
+        <SectionShell id="glyph-how-it-works" className="max-w-6xl">
           <h2 className="text-center text-[24px] font-semibold text-text-primary sm:text-[28px] md:text-[30px]">
             {t("how_it_works.heading")}
           </h2>
@@ -261,22 +272,25 @@ export default async function OraclePage() {
 
         <section
           id="glyph-final-cta"
-          className="mx-auto mt-4 w-full max-w-3xl scroll-mt-24 px-4 pb-6 pt-12 text-center md:px-6 md:pb-8 md:pt-14"
+          className="poju-cosmic-panel glyph-final-cta-gold-panel mx-auto mt-8 w-full max-w-6xl scroll-mt-24 px-4 py-8 text-center md:mt-10 md:px-8 md:py-10"
         >
-          <div className="rounded-2xl border border-fuchsia-400/20 bg-gradient-to-b from-fuchsia-950/30 to-black/40 px-6 py-12 sm:px-10 sm:py-14">
-            <h2 className="text-[22px] font-semibold text-text-primary sm:text-[26px]">{t("final_cta.heading")}</h2>
-            <p className="mx-auto mt-4 max-w-lg text-[15px] leading-8 text-text-secondary">{t("final_cta.subtitle")}</p>
-            <div className="mt-8 flex flex-col items-center gap-4 sm:mt-10">
-              <Link
-                href="/glyph/reading"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex w-full min-w-[220px] max-w-sm justify-center rounded-full border border-fuchsia-300/55 bg-fuchsia-500/30 px-8 py-3.5 text-[15px] font-semibold text-fuchsia-50 shadow-[0_10px_28px_rgba(217,70,239,0.35)] hover:bg-fuchsia-400/35 sm:w-auto md:px-10 md:py-4 md:text-base"
-              >
-                {t("final_cta.cta")}
-              </Link>
-            </div>
-            <p className="mt-8 text-xs leading-6 text-text-dim sm:text-sm">{tCommon("read_with_wink")}</p>
+          <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col items-center">
+            <h2 className="text-[30px] font-semibold text-text-primary sm:text-[34px] md:text-[38px]">
+              {t("final_cta.heading")}
+            </h2>
+            <p className="mt-4 max-w-2xl text-[15px] leading-8 text-amber-50/90 sm:text-base">{t("final_cta.subtitle")}</p>
+            <Link
+              href="/start?next=%2Fglyph%2Freading"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="marketing-pill-outline-cta marketing-pill-outline-cta--amber mt-7 inline-flex w-full min-w-[220px] max-w-sm px-8 py-3.5 text-[15px] hover:-translate-y-0.5 hover:scale-[1.04] motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100 active:scale-[0.99] sm:w-auto md:px-10 md:py-4 md:text-base"
+            >
+              {t("final_cta.cta")}
+            </Link>
+            <p className="mt-2 max-w-md text-center text-[12px] leading-5 text-white sm:text-[13px] sm:leading-5 md:text-[14px] md:leading-6">
+              {t("final_cta.cta_subline")}
+            </p>
+            <p className="mt-6 max-w-2xl text-xs leading-6 text-amber-50/75 sm:mt-8 sm:text-sm">{tCommon("read_with_wink")}</p>
           </div>
         </section>
       </div>

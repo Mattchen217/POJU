@@ -115,7 +115,7 @@ export function OracleSummon({ userInput: _userInput, onComplete }: OracleSummon
             phase === "burst" ? "scale-[5] opacity-0 duration-1000" : "scale-100 opacity-100 duration-150"
           }`}
         >
-          <Spline scene="/spline/oracle-explosion.splinecode" />
+          <Spline scene="/spline/oracle-explosion.splinecode" className="h-full w-full" />
         </div>
       </div>
 

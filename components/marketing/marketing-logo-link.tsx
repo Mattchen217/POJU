@@ -11,7 +11,7 @@ export async function MarketingLogoLink({
   className?: string;
 }) {
   const t = await getTranslations("common");
-  const brand = t("brand");
+  const brand = t("brand").replace(/^p/, "P");
   return (
     <Link href="/" className={`inline-flex min-w-0 items-center ${className ?? ""}`} aria-label={`${brand} — ${t("domain")}`}>
       <BrandLockup label={brand} size={size} />

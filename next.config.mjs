@@ -21,6 +21,11 @@ const withSerwist = withSerwistInit({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  /**
+   * Allow LAN-origin dev resources (HMR/chunks) when opening the site on phones
+   * via http://192.168.31.197:3000 during local development.
+   */
+  allowedDevOrigins: ["192.168.31.197", "localhost", "127.0.0.1"],
   // 便于在 VPS / Docker 用「单进程 + 小 node_modules」部署
   output: "standalone",
   /**

@@ -4,7 +4,6 @@ import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { ScrollToTopButton } from "@/components/scroll-to-top-button";
 import { DisclaimerModal } from "@/components/disclaimer/disclaimer-modal";
-import { ForceHomeScreenGate } from "@/components/marketing/force-home-screen-gate";
 import { siteConfig } from "@/lib/config/site";
 
 /** Client-only tab bar — avoids SSR edge cases alongside webpack path normalization */
@@ -15,6 +14,28 @@ const PwaTabbar = dynamic(
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [accepted, setAccepted] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    // Temporary hard reset for mobile stale bundles:
+    // unregister old PWA service workers and clear runtime caches.
+    if (typeof window === "undefined") return;
+    if (!("serviceWorker" in navigator)) return;
+    void (async () => {
+      try {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((reg) => reg.unregister()));
+      } catch {
+        // ignore
+      }
+      try {
+        if (!("caches" in window)) return;
+        const keys = await caches.keys();
+        await Promise.all(keys.map((key) => caches.delete(key)));
+      } catch {
+        // ignore
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     try {
@@ -32,7 +53,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <ScrollToTopButton />
       <PwaTabbar />
       {accepted === false ? <DisclaimerModal onAccepted={() => setAccepted(true)} /> : null}
-      <ForceHomeScreenGate />
     </>
   );
 }

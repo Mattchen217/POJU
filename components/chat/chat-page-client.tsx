@@ -102,6 +102,7 @@ export function ChatPageClient() {
 
   const [ready, setReady] = useState(false);
   const [mobileDrawer, setMobileDrawer] = useState(false);
+  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
   const [mysticalToolsOpen, setMysticalToolsOpen] = useState(false);
   const sessions = useChatStore((s) => s.sessions);
   const messages = useChatStore((s) => s.messages);
@@ -474,6 +475,15 @@ export function ChatPageClient() {
     speechSynthesis.speak(u);
   };
 
+  const toggleSessionsSidebar = useCallback(() => {
+    if (typeof window === "undefined") return;
+    if (window.matchMedia("(min-width: 768px)").matches) {
+      setDesktopSidebarCollapsed((v) => !v);
+    } else {
+      setMobileDrawer((v) => !v);
+    }
+  }, []);
+
   if (!ready || !activeSession) return null;
 
   const pendingDeleteSession = deleteTargetId ? sessions.find((s) => s.id === deleteTargetId) : undefined;
@@ -493,7 +503,6 @@ export function ChatPageClient() {
           >
             POJU
           </Link>
-          <p className="mt-1 text-[11px] uppercase tracking-wider text-on-surface-variant">Zen-Futurist Oracle</p>
         </div>
         <img
           alt=""
@@ -507,10 +516,10 @@ export function ChatPageClient() {
         <button
           type="button"
           onClick={newSession}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-medium text-on-primary shadow-[0_0_15px_rgba(139,92,246,0.4)] transition-transform hover:scale-[1.02]"
+          className="relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-full bg-gradient-to-br from-violet-200/95 via-purple-200/90 to-fuchsia-200/85 px-3 py-2 text-[13px] font-semibold text-[#1b1030] shadow-[0_16px_40px_rgba(168,85,247,0.32)] backdrop-blur-xl transition-transform hover:scale-[1.01]"
         >
-          <span className="material-symbols-outlined text-[20px] leading-none">add</span>
-          New POJU {siteConfig.priceLabel}
+          <span className="material-symbols-outlined relative z-10 text-[18px] leading-none">add</span>
+          <span className="relative z-10">New POJU {siteConfig.priceLabel}</span>
         </button>
       </div>
       <nav className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2">
@@ -653,7 +662,7 @@ export function ChatPageClient() {
     </div>
   );
 
-  const desktopSidebar = (
+  const desktopSidebar = desktopSidebarCollapsed ? null : (
     <aside className="fixed left-0 top-0 z-40 hidden h-screen w-72 flex-col border-r border-white/10 bg-neutral-950/60 shadow-[0_0_40px_rgba(139,92,246,0.1)] backdrop-blur-2xl md:flex">
       {sidebarInner}
     </aside>
@@ -746,12 +755,27 @@ export function ChatPageClient() {
       <div className="aura-bg relative z-0 flex h-full w-full">
         {desktopSidebar}
 
-        <section className="relative flex min-h-0 min-w-0 flex-1 flex-col md:ml-72">
+        <section className={`relative flex min-h-0 min-w-0 flex-1 flex-col ${desktopSidebarCollapsed ? "md:ml-0" : "md:ml-72"}`}>
           <div className="px-4 pt-3 md:px-6">
             <ArchiveReturnBanner />
           </div>
           <header className="sticky top-0 z-10 flex w-full items-center justify-between border-b border-white/10 bg-neutral-950/40 px-6 py-4 backdrop-blur-md">
             <div className="flex min-w-0 items-center gap-3">
+              <button
+                type="button"
+                onClick={toggleSessionsSidebar}
+                className="inline-flex items-center justify-center rounded-full p-2 text-neutral-400 transition-colors hover:bg-violet-500/10 hover:text-neutral-200"
+                title="Sessions sidebar"
+                aria-label="Toggle sessions sidebar"
+              >
+                {/* Mobile: menu / close drawer; Desktop (md+): expand / collapse fixed sidebar */}
+                <span className="material-symbols-outlined text-[22px] leading-none md:hidden">
+                  {mobileDrawer ? "close" : "menu"}
+                </span>
+                <span className="material-symbols-outlined hidden text-[22px] leading-none md:inline">
+                  {desktopSidebarCollapsed ? "chevron_right" : "chevron_left"}
+                </span>
+              </button>
               <div className="h-2 w-2 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.6)]" />
               <div className="min-w-0">
                 <h2 className="truncate text-lg font-medium text-on-surface">POJU Session</h2>
@@ -780,92 +804,70 @@ export function ChatPageClient() {
               >
                 <span className="material-symbols-outlined text-[22px] leading-none">auto_fix_high</span>
               </button>
-              <button
-                type="button"
-                title="Sessions"
-                onClick={() => setMobileDrawer(true)}
-                className="flex items-center justify-center rounded-full p-2 text-neutral-500 transition-colors hover:bg-violet-500/10 hover:text-neutral-200 md:hidden"
-              >
-                <span className="material-symbols-outlined text-[22px] leading-none">menu</span>
-              </button>
             </div>
           </header>
 
           <div
             ref={scrollerRef}
-            className="relative flex min-h-0 flex-1 flex-col items-center gap-6 overflow-y-auto p-6 pb-40 selection:bg-primary-container selection:text-on-primary-container"
+            className="relative flex min-h-0 flex-1 flex-col items-center gap-10 overflow-y-auto p-6 pb-40 selection:bg-primary-container selection:text-on-primary-container sm:gap-12"
           >
-            <div className="glass-panel relative z-[1] mt-4 w-full max-w-2xl shrink-0 rounded-xl p-8 text-center sm:mt-8">
-              <span className="material-symbols-outlined jewel-icon mb-2 block text-5xl leading-none">self_improvement</span>
-              <h3 className="mb-2 text-2xl font-semibold text-on-surface">Welcome to the Oracle</h3>
+            <div className="relative z-[1] mt-4 w-full max-w-2xl shrink-0 rounded-xl bg-white/[0.06] p-8 text-center shadow-[0_8px_34px_rgba(12,12,16,0.35)] backdrop-blur-xl sm:mt-8">
+              <span className="material-symbols-outlined jewel-icon mb-2 block text-6xl leading-none sm:text-7xl">self_improvement</span>
+              <h3 className="mb-2 text-2xl font-semibold text-on-surface">Welcome to POJU</h3>
               <p className="mx-auto mb-6 max-w-md text-base leading-relaxed text-on-surface-variant">
                 I am POJU, blending ancient Eastern wisdom with modern clarity. Ask specific questions for guidance, or simply share your
                 thoughts. Your privacy is sacred here.
               </p>
-              <div className="flex flex-wrap justify-center gap-2">
-                <span className="rounded-full border border-primary-container/20 bg-primary-container/10 px-3 py-1 text-xs font-medium uppercase tracking-wider text-primary">
-                  I Ching
-                </span>
-                <span className="rounded-full border border-primary-container/20 bg-primary-container/10 px-3 py-1 text-xs font-medium uppercase tracking-wider text-primary">
-                  Daily Meditation
-                </span>
-              </div>
               <p className="mt-6 text-xs text-on-surface-variant/80">Type below to begin, or tap the microphone to speak.</p>
             </div>
 
-            <div className="flex w-full max-w-3xl flex-col gap-4">
+            <div className="flex w-full max-w-3xl flex-col gap-10 sm:gap-12">
               {activeMessages.map((m) => (
                 <article key={m.id} className={`flex w-full gap-4 ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                   {m.role === "assistant" ? (
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-outline-variant bg-surface-container-high">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/[0.09] shadow-[0_4px_16px_rgba(0,0,0,0.25)] backdrop-blur-md">
                       <img alt="" className="h-full w-full object-cover" src="/api/pwa-icon?size=128" width={40} height={40} />
                     </div>
                   ) : null}
                   <div
                     className={`max-w-[85%] ${
                       m.role === "user"
-                        ? "message-gradient rounded-2xl rounded-tr-sm p-4 text-white shadow-[0_4px_20px_rgba(139,92,246,0.2)]"
-                        : "glass-panel rounded-2xl rounded-tl-sm border border-primary/30 p-5 shadow-[0_0_20px_rgba(139,92,246,0.1)]"
+                        ? "rounded-2xl rounded-tr-sm bg-white/[0.07] p-4 shadow-[0_8px_24px_rgba(16,16,26,0.24)] backdrop-blur-xl"
+                        : "p-0"
                     }`}
                   >
                     {m.imageDataUrl ? <img src={m.imageDataUrl} alt="attachment" className="mb-2 max-h-48 rounded-lg" /> : null}
                     <p
-                      className={`whitespace-pre-wrap text-[15px] leading-relaxed ${
-                        m.role === "user" ? "text-white" : "text-on-surface"
+                      className={`whitespace-pre-wrap text-[15px] ${
+                        m.role === "assistant"
+                          ? "leading-8 text-justify text-on-surface"
+                          : "leading-relaxed text-on-surface"
                       }`}
                     >
                       {m.text}
                     </p>
                     {m.role === "assistant" ? (
-                      <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-outline-variant/30 pt-3">
+                      <div className="mt-4 flex flex-wrap items-center gap-3 pt-3">
                         <button
                           type="button"
-                          className="flex items-center gap-1 text-xs text-on-surface-variant transition-colors hover:text-primary"
+                          className="flex items-center gap-1 text-[11px] text-on-surface-variant/85 transition-colors hover:text-primary"
                           onClick={() => copyMsg(m)}
                         >
-                          <span className="material-symbols-outlined text-[16px] leading-none">content_copy</span>
+                          <span className="material-symbols-outlined text-[14px] leading-none">content_copy</span>
                           {copiedId === m.id ? "Copied" : "Copy"}
                         </button>
                         <button
                           type="button"
-                          className="flex items-center gap-1 text-xs text-on-surface-variant transition-colors hover:text-primary"
+                          className="flex items-center gap-1 text-[11px] text-on-surface-variant/85 transition-colors hover:text-primary"
                           onClick={() => toggleRead(m)}
                         >
-                          <span className="material-symbols-outlined text-[16px] leading-none">volume_up</span>
+                          <span className="material-symbols-outlined text-[14px] leading-none">volume_up</span>
                           {ttsPlayingId === m.id ? "Stop" : "Read Aloud"}
                         </button>
                       </div>
                     ) : null}
-                    {m.phaseFive ? (
-                      <div className="mt-3 border-t border-purple-vivid/20 pt-3 text-sm">
-                        <p className="text-text-dim">This is your reading so far.</p>
-                        <button className="mt-1 text-purple-vivid underline underline-offset-4" onClick={() => setPdfOpen(true)}>
-                          ✦ Save this reading as PDF
-                        </button>
-                      </div>
-                    ) : null}
                     {m.summon ? (
-                      <div className="mt-3 border-t border-purple-vivid/20 pt-3 text-sm">
+                      <div className="mt-3 pt-3 text-sm">
                         <button className="text-purple-vivid underline underline-offset-4" onClick={() => setDrawer(m.summon || null)}>
                           ✦ {m.summon === "syncro" ? "Summon Syncro" : "Summon Glyph"}
                         </button>
@@ -877,10 +879,10 @@ export function ChatPageClient() {
 
               {thinkingVisible ? (
                 <article className="flex w-full justify-start gap-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-outline-variant bg-surface-container-high">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/[0.09] shadow-[0_4px_16px_rgba(0,0,0,0.25)] backdrop-blur-md">
                     <span className="material-symbols-outlined jewel-icon text-[20px] leading-none">auto_awesome</span>
                   </div>
-                  <div className="glass-panel max-w-[80%] rounded-2xl rounded-tl-sm border border-primary/20 p-4 shadow-[0_0_20px_rgba(139,92,246,0.1)]">
+                  <div className="max-w-[80%] rounded-2xl rounded-tl-sm bg-white/[0.07] p-4 shadow-[0_8px_24px_rgba(16,16,26,0.24)] backdrop-blur-xl">
                     <p className="animate-pulse text-xs font-medium uppercase tracking-wider text-primary">Consulting the wisdom...</p>
                     {thinkingLines.map((line) => (
                       <p key={line} className="mt-2 text-sm italic leading-7 text-on-surface-variant">

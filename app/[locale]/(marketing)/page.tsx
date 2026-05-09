@@ -10,6 +10,9 @@ import { PaymentCancelToast } from "@/components/marketing/payment-cancel-toast"
 import { ReadyCtaPillLink } from "@/components/marketing/ready-cta-pill-link";
 import { LANDING_ASSETS } from "@/lib/marketing/landing-assets";
 import { hasPublicFile } from "@/lib/marketing/has-public-file";
+import productCardIconG from "@/assets/icons/G.png";
+import productCardIconP from "@/assets/icons/P.png";
+import productCardIconS from "@/assets/icons/S.png";
 
 export const dynamic = "force-dynamic";
 
@@ -53,41 +56,37 @@ const productCardStyles = [
 function ProductCardIcon({ kind }: { kind: string }) {
   const motion = "transition-transform duration-500 group-hover:scale-105";
 
-  if (kind === "poju") {
-    return (
-      <span
-        className={`relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/35 bg-gradient-to-br from-violet-500 to-purple-800 shadow-[0_0_22px_rgba(139,92,246,0.45)] sm:h-11 sm:w-11 ${motion}`}
-      >
-        <span className="absolute h-[22px] w-[22px] rounded-full border-[2.5px] border-white/90 sm:h-[26px] sm:w-[26px]" aria-hidden />
-        <span className="absolute h-[9px] w-[9px] rounded-full bg-white shadow-[0_0_12px_rgba(255,255,255,0.65)] sm:h-[11px] sm:w-[11px]" aria-hidden />
-      </span>
-    );
-  }
-
-  if (kind === "syncro") {
-    return (
-      <span
-        className={`relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-cyan-300/45 bg-gradient-to-br from-cyan-500/45 to-blue-950/60 shadow-[0_0_22px_rgba(34,211,238,0.35)] sm:h-11 sm:w-11 ${motion}`}
-      >
-        <svg className="h-5 w-5 text-white sm:h-6 sm:w-6" viewBox="0 0 24 24" fill="none" aria-hidden>
-          <path
-            d="M6 12l4 4 8-9"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </span>
-    );
-  }
+  const cfg =
+    kind === "poju"
+      ? {
+          src: productCardIconP,
+          ring:
+            "bg-gradient-to-br from-violet-500 to-purple-800 shadow-[0_0_22px_rgba(139,92,246,0.45)]",
+        }
+      : kind === "glyph"
+        ? {
+            src: productCardIconG,
+            ring:
+              "bg-gradient-to-br from-amber-400/35 via-orange-500/25 to-fuchsia-950/55 shadow-[0_0_22px_rgba(251,191,36,0.28)]",
+          }
+        : {
+            src: productCardIconS,
+            ring:
+              "bg-gradient-to-br from-cyan-500/45 to-blue-950/60 shadow-[0_0_22px_rgba(34,211,238,0.35)]",
+          };
 
   return (
     <span
-      className={`relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-300/55 bg-gradient-to-br from-amber-400/35 via-orange-500/25 to-fuchsia-950/55 shadow-[0_0_22px_rgba(251,191,36,0.28)] sm:h-11 sm:w-11 ${motion}`}
+      className={`relative inline-flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full sm:h-11 sm:w-11 ${cfg.ring} ${motion}`}
+      aria-hidden
     >
-      <span className="absolute h-[18px] w-[2.5px] rotate-45 rounded-full bg-white/95 sm:h-[22px] sm:w-[3px]" aria-hidden />
-      <span className="absolute h-[18px] w-[2.5px] -rotate-45 rounded-full bg-white/95 sm:h-[22px] sm:w-[3px]" aria-hidden />
+      <Image
+        src={cfg.src}
+        alt=""
+        width={88}
+        height={88}
+        className="h-[72%] w-[72%] object-contain object-center"
+      />
     </span>
   );
 }
@@ -197,7 +196,7 @@ export default async function LandingPage() {
                   fill
                   priority
                   sizes="100vw"
-                  className="object-cover object-[center_42%] sm:object-[center_38%]"
+                  className="object-cover object-[80%_42%] sm:object-cover sm:object-[center_38%]"
                 />
               </div>
               {/* 压暗背景亮度，减轻亮部星云刺眼，叠在图上、文案下 */}

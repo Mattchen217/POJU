@@ -61,7 +61,9 @@ export function HomeSections() {
           <div className="poju-path-grid">
             <article className="poju-path-card poju">
               <div className="relative z-10 flex items-center gap-2">
-                <span className="poju-path-dot">✦</span>
+                <span className="material-symbols-outlined jewel-icon text-[22px] leading-none text-violet-300">
+                  self_improvement
+                </span>
                 <div>
                   <h3 className="poju-path-title">POJU</h3>
                   <p className="poju-path-caption">AI chat breakthrough</p>
