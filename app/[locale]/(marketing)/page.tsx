@@ -7,6 +7,7 @@ import { ProductCardGlyphSpline } from "@/components/marketing/product-card-glyp
 import { ProductCardPojuSpline } from "@/components/marketing/product-card-poju-spline";
 import { ProductCardSyncroSpline } from "@/components/marketing/product-card-syncro-spline";
 import { PaymentCancelToast } from "@/components/marketing/payment-cancel-toast";
+import { HeroInstallCta } from "@/components/marketing/hero-install-cta";
 import { ReadyCtaPillLink } from "@/components/marketing/ready-cta-pill-link";
 import { LANDING_ASSETS } from "@/lib/marketing/landing-assets";
 import { hasPublicFile } from "@/lib/marketing/has-public-file";
@@ -229,6 +230,7 @@ export default async function LandingPage() {
               <p className="font-primary mt-8 max-w-xl text-[11px] font-normal leading-relaxed text-white/78 drop-shadow-[0_1px_8px_rgba(0,0,0,0.75)] sm:mt-9 sm:text-xs md:text-[13px]">
                 {tHome("hero.trustLine")}
               </p>
+              <HeroInstallCta />
             </div>
           </div>
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[11] h-6 bg-gradient-to-b from-transparent to-bg-deep" aria-hidden />

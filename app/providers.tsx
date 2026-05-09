@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { ScrollToTopButton } from "@/components/scroll-to-top-button";
 import { DisclaimerModal } from "@/components/disclaimer/disclaimer-modal";
+import { PwaInstallProvider } from "@/components/pwa/pwa-install-context";
 import { siteConfig } from "@/lib/config/site";
 
 /** Client-only tab bar — avoids SSR edge cases alongside webpack path normalization */
@@ -48,11 +49,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <>
+    <PwaInstallProvider>
       {children}
       <ScrollToTopButton />
       <PwaTabbar />
       {accepted === false ? <DisclaimerModal onAccepted={() => setAccepted(true)} /> : null}
-    </>
+    </PwaInstallProvider>
   );
 }
