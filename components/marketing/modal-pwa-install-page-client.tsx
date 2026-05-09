@@ -1,17 +1,19 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 export function ModalPwaInstallPageClient() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [status, setStatus] = useState("");
 
   const nextPath = useMemo(() => {
-    const raw = searchParams.get("next") ?? "/";
+    const raw =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("next") ?? "/"
+        : "/";
     return raw.startsWith("/") ? raw : "/";
-  }, [searchParams]);
+  }, []);
 
   const platform = useMemo<"ios" | "android" | "other">(() => {
     if (typeof navigator === "undefined") return "other";

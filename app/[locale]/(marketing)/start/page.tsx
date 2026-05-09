@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import { useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
 
 function isMobileDevice(): boolean {
@@ -19,10 +18,12 @@ function isStandaloneMode(): boolean {
 
 export default function StartGatePage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   useEffect(() => {
-    const rawNext = searchParams.get("next") ?? "/";
+    const rawNext =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("next") ?? "/"
+        : "/";
     const nextPath = rawNext.startsWith("/") ? rawNext : "/";
     const shouldRequirePwaInstall = isMobileDevice() && !isStandaloneMode();
 
@@ -32,7 +33,7 @@ export default function StartGatePage() {
     }
 
     window.location.assign(nextPath);
-  }, [router, searchParams]);
+  }, [router]);
 
   return <main className="min-h-screen bg-bg-deep" />;
 }
