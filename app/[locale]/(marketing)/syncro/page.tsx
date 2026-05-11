@@ -5,6 +5,8 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { ArchiveReturnBanner } from "@/components/archive/archive-return-banner";
 import { SyncroProductHero } from "@/components/marketing/syncro-product-hero";
+import { SyncroEnergyBall } from "@/components/syncro/syncro-energy-ball";
+import { SyncroViewportBranch } from "@/components/syncro/syncro-viewport-branch";
 
 export const dynamic = "force-dynamic";
 
@@ -53,10 +55,15 @@ async function SyncroContent() {
             {t("what_shows.heading")}
           </h2>
           <div className="mx-auto mt-8 flex max-w-lg flex-col items-center">
-            <div className="aspect-[9/19] w-full max-w-[280px] rounded-[2rem] border border-white/15 bg-gradient-to-b from-white/10 to-black/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-              <div className="flex h-full flex-col items-center justify-center px-6 text-center">
-                <p className="text-xs uppercase tracking-[0.16em] text-text-dim">{t("what_shows.preview_label")}</p>
-                <p className="mt-3 text-sm leading-7 text-text-secondary">{t("what_shows.preview_placeholder")}</p>
+            <div className="aspect-[9/19] w-full max-w-[280px] overflow-hidden rounded-[2rem] border border-white/15 bg-gradient-to-b from-white/10 to-black/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+              <div className="relative flex h-full w-full flex-col">
+                <p className="absolute left-0 right-0 top-3 z-10 text-center text-[10px] uppercase tracking-[0.16em] text-text-dim">
+                  {t("what_shows.preview_label")}
+                </p>
+                <SyncroEnergyBall className="min-h-0 flex-1 rounded-none" initialZoom={0.95} />
+                <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/70 via-black/35 to-transparent px-4 pb-5 pt-10 text-center">
+                  <p className="text-xs leading-6 text-text-secondary">{t("what_shows.preview_placeholder")}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -135,6 +142,12 @@ async function SyncroContent() {
             >
               {t("always_free.cta")}
             </Link>
+            <Link
+              href="/syncro/live"
+              className="mt-3 inline-flex w-full min-w-[220px] max-w-sm justify-center rounded-full border border-white/25 bg-white/5 px-8 py-3 text-sm font-semibold text-white hover:bg-white/10 sm:w-auto sm:text-[15px]"
+            >
+              Open Live Compass
+            </Link>
           </div>
         </section>
       </div>
@@ -145,7 +158,9 @@ async function SyncroContent() {
 export default function SyncroPage() {
   return (
     <Suspense fallback={<div className="min-h-screen bg-bg-deep" />}>
-      <SyncroContent />
+      <SyncroViewportBranch>
+        <SyncroContent />
+      </SyncroViewportBranch>
     </Suspense>
   );
 }

@@ -1,4 +1,3 @@
-import { Link } from "@/i18n/navigation";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { getTranslations } from "next-intl/server";
@@ -16,6 +15,7 @@ import divineTailwind from "@/assets/images/divine tailwind.png";
 import eyeOfStorm from "@/assets/images/eye of storm.png";
 import fairSky from "@/assets/images/fair sky.png";
 import stillWater from "@/assets/images/still water.png";
+import { PwaInlineOpenLink } from "@/components/marketing/pwa-inline-open-link";
 
 function linesFromGlyphDescription(description: string): string[] {
   const parts = description
@@ -279,14 +279,14 @@ export default async function OraclePage() {
               {t("final_cta.heading")}
             </h2>
             <p className="mt-4 max-w-2xl text-[15px] leading-8 text-amber-50/90 sm:text-base">{t("final_cta.subtitle")}</p>
-            <Link
+            <PwaInlineOpenLink
               href="/start?next=%2Fglyph%2Freading"
-              target="_blank"
-              rel="noopener noreferrer"
+              frameTitle="Glyph"
+              closeLabel="关闭"
               className="marketing-pill-outline-cta marketing-pill-outline-cta--amber mt-7 inline-flex w-full min-w-[220px] max-w-sm px-8 py-3.5 text-[15px] hover:-translate-y-0.5 hover:scale-[1.04] motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100 active:scale-[0.99] sm:w-auto md:px-10 md:py-4 md:text-base"
             >
               {t("final_cta.cta")}
-            </Link>
+            </PwaInlineOpenLink>
             <p className="mt-2 max-w-md text-center text-[12px] leading-5 text-white sm:text-[13px] sm:leading-5 md:text-[14px] md:leading-6">
               {t("final_cta.cta_subline")}
             </p>

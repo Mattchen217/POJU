@@ -17,6 +17,12 @@ body {
   overflow-x: clip;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  /* 减少双击缩放；配合 viewport user-scalable=no */
+  touch-action: manipulation;
+}
+
 body {
   background:
     radial-gradient(circle at 82% 10%, rgba(168, 85, 247, 0.24), transparent 36%),

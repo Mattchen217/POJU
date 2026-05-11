@@ -1,5 +1,5 @@
-import { Link } from "@/i18n/navigation";
 import { HeroSpline } from "@/components/marketing/hero-spline";
+import { PojuSessionStarter } from "@/components/poju/poju-session-starter";
 
 export type PojuProductHeroCopy = {
   heading: string;
@@ -30,12 +30,9 @@ export function PojuProductHero({ copy }: { copy: PojuProductHeroCopy }) {
               {copy.tagline}
             </p>
             <div className="mx-auto mt-9 flex max-w-xl flex-col items-center justify-center gap-4 sm:mt-10 sm:flex-row sm:flex-wrap md:mt-12">
-              <Link
-                href="/start?next=%2Fchat%3Ftoken%3Dui-preview"
-                className="marketing-pill-outline-cta marketing-pill-outline-cta--violet inline-flex w-full min-w-0 px-8 py-3.5 text-[15px] hover:-translate-y-0.5 hover:scale-[1.02] motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100 active:scale-[0.99] sm:w-auto sm:min-w-[220px] md:px-10 md:py-4 md:text-base"
-              >
+              <PojuSessionStarter className="marketing-pill-outline-cta marketing-pill-outline-cta--violet inline-flex w-full min-w-0 px-8 py-3.5 text-[15px] hover:-translate-y-0.5 hover:scale-[1.02] motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100 active:scale-[0.99] sm:w-auto sm:min-w-[220px] md:px-10 md:py-4 md:text-base">
                 {copy.ctaPrimary}
-              </Link>
+              </PojuSessionStarter>
             </div>
           </div>
         </div>

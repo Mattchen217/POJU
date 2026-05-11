@@ -1,4 +1,4 @@
-import { HeroSpline } from "@/components/marketing/hero-spline";
+import { SyncroEnergyBall } from "@/components/syncro/syncro-energy-ball";
 import { SyncroSmsLinkForm, type SyncroSmsLinkFormCopy } from "@/components/marketing/syncro-sms-link-form";
 
 export type SyncroProductHeroCopy = {
@@ -17,10 +17,9 @@ export function SyncroProductHero({ copy }: { copy: SyncroProductHeroCopy }) {
   return (
     <section className="relative">
       <div className="relative overflow-hidden pb-6 pt-8 sm:pb-8 sm:pt-10 md:pb-12 md:pt-12">
-        <HeroSpline
-          scene="/animations/FWscene.splinecode"
-          initialZoom={1.2}
-          className="pointer-events-none absolute left-1/2 top-1/2 h-[600px] w-[132%] -translate-x-1/2 -translate-y-1/2 opacity-75 sm:h-[700px] md:h-[860px]"
+        <SyncroEnergyBall
+          initialZoom={1.05}
+          className="pointer-events-none absolute left-1/2 top-1/2 h-[600px] w-[132%] -translate-x-1/2 -translate-y-1/2 opacity-80 sm:h-[700px] md:h-[860px]"
         />
         <div className="relative z-10 mx-auto w-full max-w-6xl px-4 md:px-6">
           <div className="grid items-start gap-10 md:grid-cols-[1fr_360px] md:gap-12">

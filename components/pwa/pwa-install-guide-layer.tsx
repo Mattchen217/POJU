@@ -2,10 +2,10 @@
 
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
+import { IosSafariInstallContent } from "@/components/pwa/ios-safari-install-content";
 
 export type PwaInstallGuideKind =
   | "ios"
-  | "ios_other"
   | "mac"
   | "mac_chromium"
   | "windows_chromium"
@@ -36,9 +36,11 @@ function GuideBackdrop({ onClose }: { onClose: () => void }) {
 function BottomSheet({
   children,
   onClose,
+  hideDefaultClose = false,
 }: {
   children: React.ReactNode;
   onClose: () => void;
+  hideDefaultClose?: boolean;
 }) {
   return (
     <div
@@ -49,13 +51,15 @@ function BottomSheet({
       <div className="relative mx-auto w-full rounded-t-[28px] border border-[#e9ddff]/18 border-b-0 bg-[#1a1820]/92 px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-16px_48px_rgba(0,0,0,0.45)] backdrop-blur-2xl sm:rounded-b-[28px] sm:border-b">
         <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-white/25" />
         {children}
-        <button
-          type="button"
-          onClick={onClose}
-          className="mt-5 w-full rounded-full py-3 text-sm font-medium text-[#cbc3d7] transition hover:bg-white/6 hover:text-[#f4f0fa]"
-        >
-          知道了
-        </button>
+        {hideDefaultClose ? null : (
+          <button
+            type="button"
+            onClick={onClose}
+            className="mt-5 w-full rounded-full py-3 text-sm font-medium text-[#cbc3d7] transition hover:bg-white/6 hover:text-[#f4f0fa]"
+          >
+            知道了
+          </button>
+        )}
       </div>
     </div>
   );
@@ -87,35 +91,8 @@ export function PwaInstallGuideLayer({ kind, onClose, androidApkUrl }: PwaInstal
       <GuideBackdrop onClose={onClose} />
 
       {kind === "ios" ? (
-        <BottomSheet onClose={onClose}>
-          <div className="flex flex-col items-center gap-1 pb-1">
-            <span
-              className="material-symbols-outlined animate-bounce text-5xl text-[#e9ddff] drop-shadow-[0_2px_12px_rgba(160,120,255,0.45)]"
-              style={{ animationDuration: "1.25s" }}
-            >
-              arrow_downward
-            </span>
-            <span className="text-center text-xs font-medium text-[#e7e0ed]/90">请向屏幕底端寻找 Safari 分享按钮</span>
-          </div>
-          <h2 className="mt-2 text-center text-lg font-semibold text-[#f4f0fa]">添加到主屏幕</h2>
-          <p className="mt-2 text-center text-sm leading-relaxed text-[#cbc3d7]">
-            轻点 Safari 底部工具栏的<strong className="text-[#e9ddff]">分享</strong>
-            ，再选择<strong className="text-[#e9ddff]">添加到主屏幕</strong>。
-          </p>
-          <div className="mt-4 flex justify-center gap-4 rounded-2xl border border-white/10 bg-black/25 px-4 py-3">
-            <span className="material-symbols-outlined text-3xl text-[#d0bcff]">ios_share</span>
-            <span className="material-symbols-outlined text-3xl text-[#d0bcff]">add_box</span>
-          </div>
-        </BottomSheet>
-      ) : null}
-
-      {kind === "ios_other" ? (
-        <BottomSheet onClose={onClose}>
-          <h2 className="text-center text-lg font-semibold text-[#f4f0fa]">请使用 Safari</h2>
-          <p className="mt-2 text-center text-sm leading-relaxed text-[#cbc3d7]">
-            当前浏览器无法直接添加到主屏幕。请复制链接，用 <strong className="text-[#e9ddff]">Safari</strong>{" "}
-            打开后，再通过分享 → 添加到主屏幕。
-          </p>
+        <BottomSheet onClose={onClose} hideDefaultClose>
+          <IosSafariInstallContent onLater={onClose} />
         </BottomSheet>
       ) : null}
 
@@ -147,6 +124,17 @@ export function PwaInstallGuideLayer({ kind, onClose, androidApkUrl }: PwaInstal
             <strong className="text-[#e9ddff]">安装应用</strong> 或
             <strong className="text-[#e9ddff]">保存并分享 → 将页面添加到程序坞</strong>（不同版本文案可能略有差异）。
           </p>
+          <p className="mt-3 rounded-xl border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-center text-xs leading-relaxed text-amber-100/95">
+            若你<strong>刚卸载</strong>过本应用：当前标签页可能还没重新收到浏览器的安装信号。请点下方
+            <strong>刷新页面</strong>，或关掉标签后重新打开本站，再点安装。
+          </p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-3 w-full rounded-full border border-[#e9ddff]/35 bg-[#7c3aed] py-3 text-sm font-semibold text-white shadow-[0_0_20px_rgba(124,58,237,0.35)] transition hover:bg-[#6d28d9]"
+          >
+            刷新页面并重试
+          </button>
         </BottomSheet>
       ) : null}
 
@@ -165,6 +153,21 @@ export function PwaInstallGuideLayer({ kind, onClose, androidApkUrl }: PwaInstal
             <strong className="text-[#e9ddff]">安装此站点</strong> /{" "}
             <strong className="text-[#e9ddff]">Install this site as an app</strong>。
           </p>
+          <p className="mt-3 rounded-xl border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-center text-xs leading-relaxed text-amber-100/95">
+            <strong>为什么卸载后再点安装只有提示、没有系统弹窗？</strong>
+            <br />
+            浏览器会在<strong>新的页面加载周期</strong>里才再次派发 <code className="text-[10px] text-white/80">beforeinstallprompt</code>
+            。若你<strong>没关标签页</strong>就卸载了应用，当前页往往<strong>还没收到</strong>这条事件，我们只能先显示手动说明。
+            <br />
+            请先<strong>刷新本页</strong>（或 Ctrl+Shift+R 硬刷新），或关闭标签重新打开网站，再点安装；多数情况下安装按钮会恢复。
+          </p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-3 w-full rounded-full border border-[#e9ddff]/35 bg-[#7c3aed] py-3 text-sm font-semibold text-white shadow-[0_0_20px_rgba(124,58,237,0.35)] transition hover:bg-[#6d28d9]"
+          >
+            刷新页面并重试
+          </button>
         </BottomSheet>
       ) : null}
 

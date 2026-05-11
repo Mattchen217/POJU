@@ -34,12 +34,24 @@ export interface DrawResult {
 }
 
 export interface FullReading {
-  situation: string;
-  meaning: string;
-  wisdom: string;
-  actions: string[];
-  reflections: string[];
-  revisit_timing: string;
+  wind_category_blurb: string;
+  classical_voice: string;
+  meaning_for_question: string;
+  hidden_tension: string;
+  your_moment: string;
+  exploration: {
+    text: string;
+    timeframe: "today" | "tonight" | "within_24h" | "this_week";
+    duration_estimate: string;
+    is_solo: boolean;
+  };
+  reflection_question: string;
+  metadata?: {
+    tone?: string;
+    key_insights?: string[];
+    language?: string;
+    word_count?: number;
+  };
   /** True when question is gibberish / uninterpretable and UI should show one compact warning block. */
   invalid_input?: boolean;
 }

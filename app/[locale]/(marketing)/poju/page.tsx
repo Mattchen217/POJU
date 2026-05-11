@@ -1,9 +1,9 @@
-import { Link } from "@/i18n/navigation";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { Compass, GitBranch, RefreshCcw, Search, UserRoundSearch } from "lucide-react";
 
 import { PojuHowWorksRing } from "@/components/marketing/poju-how-works-ring";
+import { PojuSessionStarter } from "@/components/poju/poju-session-starter";
 import { PojuProductHero } from "@/components/marketing/poju-product-hero";
 
 export const metadata: Metadata = {
@@ -131,12 +131,9 @@ export default async function PojuProductPage() {
           </p>
           <div className="poju-cosmic-panel poju-final-cta-outline-panel mx-auto mt-10 w-full max-w-6xl px-4 py-8 text-center md:px-8 md:py-10">
             <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col items-center">
-              <Link
-                href="/start?next=%2Fchat%3Ftoken%3Dui-preview"
-                className="marketing-pill-outline-cta marketing-pill-outline-cta--violet inline-flex w-full min-w-[220px] max-w-sm px-8 py-3.5 text-[15px] hover:-translate-y-0.5 hover:scale-[1.02] motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100 active:scale-[0.99] sm:w-auto md:px-10 md:py-4 md:text-base"
-              >
+              <PojuSessionStarter className="marketing-pill-outline-cta marketing-pill-outline-cta--violet inline-flex w-full min-w-[220px] max-w-sm px-8 py-3.5 text-[15px] hover:-translate-y-0.5 hover:scale-[1.02] motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100 active:scale-[0.99] sm:w-auto md:px-10 md:py-4 md:text-base">
                 {t("two_columns.cta")}
-              </Link>
+              </PojuSessionStarter>
               <p className="mt-8 max-w-2xl text-sm leading-7 text-text-secondary sm:text-[15px] sm:leading-8 md:text-base">
                 {t("two_columns.footnote")}
               </p>

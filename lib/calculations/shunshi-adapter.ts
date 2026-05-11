@@ -1,0 +1,91 @@
+import type { GetBaziChartOutput } from "shunshi-bazi-core";
+import { getBaziChart } from "shunshi-bazi-core";
+import type { BirthInfo, UserProfile } from "@/lib/profile/types";
+
+function fallbackProfile(input: BirthInfo): UserProfile {
+  const now = Date.now();
+  const id = `profile_${input.year}_${input.month}_${input.day}_${input.hour}`;
+  return {
+    id,
+    birth: input,
+    bazi: {
+      yearPillar: "未知",
+      monthPillar: "未知",
+      dayPillar: "未知",
+      hourPillar: "未知",
+    },
+    diagnosis: {
+      dayMaster: "unknown",
+      favorableElements: ["wood", "fire"],
+      challengingElements: ["metal", "water"],
+      patternSummary: "Fallback profile. shunshi-bazi-core not available at runtime.",
+    },
+    createdAt: now,
+    updatedAt: now,
+    source: "fallback",
+  };
+}
+
+function toShunshiGender(g: BirthInfo["gender"]): 0 | 1 {
+  if (g === "male") return 1;
+  return 0;
+}
+
+function parsePillars(chart: GetBaziChartOutput): {
+  yearPillar: string;
+  monthPillar: string;
+  dayPillar: string;
+  hourPillar: string;
+} {
+  const detail = chart.八字?.柱位详细;
+  if (detail) {
+    return {
+      yearPillar: detail.年柱?.干支 ?? "未知",
+      monthPillar: detail.月柱?.干支 ?? "未知",
+      dayPillar: detail.日柱?.干支 ?? "未知",
+      hourPillar: detail.时柱?.干支 ?? "未知",
+    };
+  }
+  const joined = chart.八字?.四柱 ?? "";
+  const [yearPillar = "未知", monthPillar = "未知", dayPillar = "未知", hourPillar = "未知"] = joined.split(" ");
+  return { yearPillar, monthPillar, dayPillar, hourPillar };
+}
+
+export async function calculateProfileWithShunshi(input: BirthInfo): Promise<UserProfile> {
+  const now = Date.now();
+  const id = `profile_${input.year}_${input.month}_${input.day}_${input.hour}`;
+
+  try {
+    const chart = getBaziChart({
+      year: input.year,
+      month: input.month,
+      day: input.day,
+      hour: input.hour,
+      minute: input.minute ?? 0,
+      gender: toShunshiGender(input.gender),
+      city: input.city,
+      latitude: input.latitude,
+      longitude: input.longitude,
+      useTrueSolarTime: true,
+    });
+    const pillars = parsePillars(chart);
+    const dominant = chart.八字?.五行分值?.日主五行 ?? "未知";
+
+    return {
+      id,
+      birth: input,
+      bazi: pillars,
+      diagnosis: {
+        dayMaster: chart.八字?.日主 ?? "unknown",
+        favorableElements: [String(dominant)],
+        challengingElements: [],
+        patternSummary: `日主 ${chart.八字?.日主 ?? "unknown"}，四柱 ${pillars.yearPillar} ${pillars.monthPillar} ${pillars.dayPillar} ${pillars.hourPillar}。`,
+      },
+      createdAt: now,
+      updatedAt: now,
+      source: "shunshi",
+    };
+  } catch {
+    return fallbackProfile(input);
+  }
+}

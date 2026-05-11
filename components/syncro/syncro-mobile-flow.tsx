@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { mockRegenerateSyncroDirections, type SyncroDirectionRow } from "@/lib/ai/mock-syncro";
+import type { SyncroDirectionRow } from "@/lib/ai/mock-syncro";
+import { getNextShichenBoundary } from "@/lib/calculations";
+import { getUserProfile } from "@/lib/profile/storage";
+import { directionRowsFromM6 } from "@/lib/syncro/direction-rows-from-m6";
 import type { ArchiveEntry } from "@/lib/archive/types";
 
 type PermissionState = "idle" | "granted" | "denied";
@@ -83,13 +86,10 @@ function getCurrentShichen(date: Date): ShichenEntry {
   return SHICHEN_MAP[Math.min(11, Math.max(1, idx))];
 }
 
-function getNextShichenBoundary(date: Date): Date {
-  const h = date.getHours();
-  const nextHour = h % 2 === 0 ? h + 1 : h + 2;
-  const next = new Date(date);
-  next.setMinutes(0, 0, 0);
-  next.setHours(nextHour);
-  return next;
+function parseBirthYear(year: string): number {
+  const y = Number.parseInt(year.trim(), 10);
+  if (Number.isFinite(y) && y >= 1900 && y <= 2100) return y;
+  return 1990;
 }
 
 export function SyncroMobileFlow() {
@@ -118,9 +118,10 @@ export function SyncroMobileFlow() {
   const [nextShiftInSec, setNextShiftInSec] = useState(0);
   const [ritualToast, setRitualToast] = useState("");
   const [retuneTick, setRetuneTick] = useState(0);
+  const [profileBirthYear, setProfileBirthYear] = useState<number | null>(null);
   const [currentShichen, setCurrentShichen] = useState<ShichenEntry>(() => getCurrentShichen(new Date()));
   const [directionRows, setDirectionRows] = useState<SyncroDirectionRow[]>(() =>
-    mockRegenerateSyncroDirections(getCurrentShichen(new Date()).name),
+    directionRowsFromM6({ birthYear: 1990, headingDeg: 0 }),
   );
   const [archiveReplay, setArchiveReplay] = useState<{
     id: string;
@@ -306,9 +307,18 @@ export function SyncroMobileFlow() {
   const directionIndex = Math.round((((heading % 360) + 360) % 360) / 45) % 8;
   const DIRECTIONS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"] as const;
   useEffect(() => {
-    // Task 3: mock regenerateReading() 接口位
-    setDirectionRows(mockRegenerateSyncroDirections(currentShichen.name));
-  }, [retuneTick, currentShichen.name]);
+    void (async () => {
+      const profile = await getUserProfile();
+      if (profile?.birth.year) setProfileBirthYear(profile.birth.year);
+    })();
+  }, []);
+
+  useEffect(() => {
+    const birthYear = parseBirthYear(form.year);
+    const effectiveBirthYear = profileBirthYear ?? birthYear;
+    // Ratings depend on hour + 用神, not on compass heading; heading only selects the active row in UI.
+    setDirectionRows(directionRowsFromM6({ birthYear: effectiveBirthYear, headingDeg: 0, at: new Date() }));
+  }, [retuneTick, form.year, profileBirthYear]);
   const activeRow = directionRows[directionIndex];
   const holdTimerRef = useMemo(() => ({ id: 0 as number | 0, progressId: 0 as number | 0 }), []);
   const isCapturing = captureState === "holding" || captureState === "analyzing";

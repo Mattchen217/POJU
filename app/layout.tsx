@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
 import { EB_Garamond, Inter } from "next/font/google";
 import "./globals.css";
@@ -14,6 +14,15 @@ const garamond = EB_Garamond({
   variable: "--font-garamond",
   subsets: ["latin"],
 });
+
+/** 移动端 / PWA：禁止手势缩放（与 manifest standalone 一致由同一文档加载） */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+};
 
 export const metadata: Metadata = {
   title: "pojulife",

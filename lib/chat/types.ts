@@ -1,4 +1,4 @@
-export type SessionStatus = "active" | "archived";
+export type SessionStatus = "active" | "suspended" | "resolved" | "archived";
 
 export type ChatSession = {
   id: string;

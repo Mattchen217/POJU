@@ -32,7 +32,7 @@ export default function StartGatePage() {
       return;
     }
 
-    window.location.assign(nextPath);
+    router.replace(nextPath);
   }, [router]);
 
   return <main className="min-h-screen bg-bg-deep" />;

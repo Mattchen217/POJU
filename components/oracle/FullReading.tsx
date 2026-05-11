@@ -175,7 +175,7 @@ function ReadingContent({
         transition={{ duration: 0.4 }}
         className="rounded-xl border border-amber-300/20 bg-amber-200/[0.04] px-5 py-6 text-[15px] leading-8 text-white/90"
       >
-        <p>{reading.situation}</p>
+        <p>{reading.wind_category_blurb}</p>
       </motion.div>
     );
   }
@@ -187,38 +187,30 @@ function ReadingContent({
       transition={{ duration: 0.5 }}
       className="space-y-10 text-[16px] leading-8 text-white/90 sm:text-[17px] sm:leading-9"
     >
-      <Section title="THE SITUATION" accentColor={meta.accent_color}>
-        <p>{reading.situation}</p>
+      <Section title="YOUR PATTERN" accentColor={meta.accent_color}>
+        <p>{reading.wind_category_blurb}</p>
       </Section>
 
-      <Section title="WHAT THIS GLYPH REVEALS" accentColor={meta.accent_color}>
-        <p>{reading.meaning}</p>
+      <Section title="YOUR GLYPH" accentColor={meta.accent_color}>
+        <p>{reading.classical_voice}</p>
+        <p>{reading.meaning_for_question}</p>
+        <p>{reading.hidden_tension}</p>
       </Section>
 
-      <Section title="THE WISDOM" accentColor={meta.accent_color}>
-        <p>{reading.wisdom}</p>
+      <Section title="YOUR MOMENT" accentColor={meta.accent_color}>
+        <p>{reading.your_moment}</p>
       </Section>
 
-      <Section title="TODAY'S ACTIONS" accentColor={meta.accent_color}>
-        <ol className="list-decimal space-y-5 pl-6">
-          {reading.actions.map((action, idx) => (
-            <li key={idx}>{action}</li>
-          ))}
-        </ol>
+      <Section title="EXPLORATION" accentColor={meta.accent_color}>
+        <p>{reading.exploration.text}</p>
+        <p className="text-sm text-white/70">
+          {reading.exploration.timeframe.replace("_", " ")} · {reading.exploration.duration_estimate} ·{" "}
+          {reading.exploration.is_solo ? "solo" : "shared"}
+        </p>
       </Section>
 
-      <Section title="REFLECTION QUESTIONS" accentColor={meta.accent_color}>
-        <ul className="list-disc space-y-5 pl-6">
-          {reading.reflections.map((question, idx) => (
-            <li key={idx} className="italic">
-              {question}
-            </li>
-          ))}
-        </ul>
-      </Section>
-
-      <Section title="WHEN TO REVISIT" accentColor={meta.accent_color}>
-        <p>{reading.revisit_timing}</p>
+      <Section title="A REFLECTION" accentColor={meta.accent_color}>
+        <p className="italic">{reading.reflection_question}</p>
       </Section>
     </motion.div>
   );

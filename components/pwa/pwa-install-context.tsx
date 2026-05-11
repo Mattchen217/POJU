@@ -130,8 +130,17 @@ export function PwaInstallProvider({ children }: { children: ReactNode }) {
   const requestInstall = useCallback(async () => {
     if (!clientReady || standalone) return;
 
+    /** 卸载 PWA 后浏览器常延迟数秒才再次派发 beforeinstallprompt；桌面端多等一会 */
+    const bipWaitMs =
+      persona === "win_chromium" ||
+      persona === "linux_chromium" ||
+      persona === "desktop_chromium" ||
+      persona === "mac_chromium"
+        ? 12_000
+        : 4500;
+
     if (!deferredPromptRef.current) {
-      await waitForDeferredPrompt(deferredPromptRef, 2800);
+      await waitForDeferredPrompt(deferredPromptRef, bipWaitMs);
     }
 
     if (deferredPromptRef.current) {
@@ -146,12 +155,8 @@ export function PwaInstallProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (persona === "ios_safari") {
+    if (persona === "ios_safari" || persona === "ios_other") {
       setInstallGuide("ios");
-      return;
-    }
-    if (persona === "ios_other") {
-      setInstallGuide("ios_other");
       return;
     }
     if (persona === "mac_safari") {

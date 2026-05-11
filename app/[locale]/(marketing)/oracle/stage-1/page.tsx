@@ -408,7 +408,16 @@ function OracleStageOneContent() {
   };
 
   return (
-    <main className="min-h-screen bg-bg-deep px-4 py-12 text-center text-text-body">
+    <main className="relative min-h-screen bg-bg-deep px-4 py-12 text-center text-text-body">
+      <Link
+        href="/glyph"
+        className="fixed right-4 top-[max(1rem,env(safe-area-inset-top))] z-[100] inline-flex h-11 min-w-[2.75rem] items-center justify-center rounded-full border border-fuchsia-300/40 bg-black/55 px-3 text-sm font-semibold text-fuchsia-100 shadow-lg backdrop-blur-md transition hover:bg-fuchsia-500/20"
+        aria-label="关闭并返回 Glyph 介绍页"
+      >
+        <span className="material-symbols-outlined text-[22px] leading-none" aria-hidden>
+          close
+        </span>
+      </Link>
       <div className="mx-auto mb-4 w-full max-w-xl">
         <ArchiveReturnBanner />
       </div>

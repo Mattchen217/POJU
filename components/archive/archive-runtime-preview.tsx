@@ -35,7 +35,7 @@ type EntryDetail =
       session: {
         id: string;
         title: string;
-        status: "active" | "archived";
+        status: "active" | "suspended" | "resolved" | "archived";
         createdAt: number;
         messageCount: number;
       };
@@ -370,42 +370,42 @@ export function ArchiveRuntimePreview() {
               ) : null}
               {!detailLoading && detail?.kind === "oracle-full" ? (
                 <div className="max-h-[min(50vh,420px)] space-y-4 overflow-y-auto pr-1 text-sm">
+                  {(() => {
+                    const reading = detail.entry.full_reading as unknown as Record<string, unknown>;
+                    const exploration = (reading.exploration ?? {}) as Record<string, unknown>;
+                    return (
+                      <>
                   <div>
-                    <p className="text-[10px] uppercase tracking-[0.08em] text-[#d0bcff]/80">The situation</p>
-                    <p className="mt-1 whitespace-pre-wrap text-[#cbc3d7]/90">{detail.entry.full_reading.situation}</p>
+                    <p className="text-[10px] uppercase tracking-[0.08em] text-[#d0bcff]/80">Your pattern</p>
+                    <p className="mt-1 whitespace-pre-wrap text-[#cbc3d7]/90">{String(reading.wind_category_blurb ?? "")}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase tracking-[0.08em] text-[#d0bcff]/80">Meaning</p>
-                    <p className="mt-1 whitespace-pre-wrap text-[#cbc3d7]/90">{detail.entry.full_reading.meaning}</p>
+                    <p className="text-[10px] uppercase tracking-[0.08em] text-[#d0bcff]/80">Classical voice</p>
+                    <p className="mt-1 whitespace-pre-wrap text-[#cbc3d7]/90">{String(reading.classical_voice ?? "")}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase tracking-[0.08em] text-[#d0bcff]/80">Wisdom</p>
-                    <p className="mt-1 whitespace-pre-wrap text-[#cbc3d7]/90">{detail.entry.full_reading.wisdom}</p>
+                    <p className="text-[10px] uppercase tracking-[0.08em] text-[#d0bcff]/80">Meaning for question</p>
+                    <p className="mt-1 whitespace-pre-wrap text-[#cbc3d7]/90">{String(reading.meaning_for_question ?? "")}</p>
                   </div>
-                  {detail.entry.full_reading.actions?.length ? (
-                    <div>
-                      <p className="text-[10px] uppercase tracking-[0.08em] text-[#d0bcff]/80">Actions</p>
-                      <ul className="mt-1 list-inside list-disc space-y-1 text-[#cbc3d7]/90">
-                        {detail.entry.full_reading.actions.map((a, i) => (
-                          <li key={i}>{a}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : null}
-                  {detail.entry.full_reading.reflections?.length ? (
-                    <div>
-                      <p className="text-[10px] uppercase tracking-[0.08em] text-[#d0bcff]/80">Reflections</p>
-                      <ul className="mt-1 list-inside list-disc space-y-1 text-[#cbc3d7]/85">
-                        {detail.entry.full_reading.reflections.map((r, i) => (
-                          <li key={i}>{r}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : null}
                   <div>
-                    <p className="text-[10px] uppercase tracking-[0.08em] text-[#d0bcff]/80">Revisit</p>
-                    <p className="mt-1 text-[#cbc3d7]/80">{detail.entry.full_reading.revisit_timing}</p>
+                    <p className="text-[10px] uppercase tracking-[0.08em] text-[#d0bcff]/80">Hidden tension</p>
+                    <p className="mt-1 text-[#cbc3d7]/80">{String(reading.hidden_tension ?? "")}</p>
                   </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.08em] text-[#d0bcff]/80">Your moment</p>
+                    <p className="mt-1 text-[#cbc3d7]/80">{String(reading.your_moment ?? "")}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.08em] text-[#d0bcff]/80">Exploration</p>
+                    <p className="mt-1 text-[#cbc3d7]/80">{String(exploration.text ?? "")}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.08em] text-[#d0bcff]/80">Reflection</p>
+                    <p className="mt-1 text-[#cbc3d7]/80">{String(reading.reflection_question ?? "")}</p>
+                  </div>
+                      </>
+                    );
+                  })()}
                 </div>
               ) : null}
               {!detailLoading && detail?.kind === "syncro" ? (

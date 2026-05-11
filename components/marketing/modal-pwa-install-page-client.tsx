@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { IosSafariInstallContent } from "@/components/pwa/ios-safari-install-content";
 import { usePwaInstall } from "@/components/pwa/pwa-install-context";
 import { isPwaStandalone } from "@/lib/pwa/detect";
 import type { PwaInstallPersona } from "@/lib/pwa/types";
@@ -79,6 +80,20 @@ export function ModalPwaInstallPageClient() {
 
   if (clientReady && standalone) {
     return <main className="min-h-[100dvh] bg-[#0f0d15]" />;
+  }
+
+  if (clientReady && (persona === "ios_safari" || persona === "ios_other")) {
+    return (
+      <main className="relative min-h-[100dvh] bg-[#0f0d15] font-['Inter'] text-[#e7e0ed] antialiased">
+        <div className="fixed inset-0 z-40 bg-[#0f0d15]/80 backdrop-blur-md" aria-hidden />
+        <div className="fixed inset-x-0 bottom-0 z-50 mx-auto flex w-full max-w-md flex-col pb-safe">
+          <div className="relative mx-auto w-full rounded-t-[28px] border border-[#e9ddff]/18 border-b-0 bg-[#1a1820]/92 px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-16px_48px_rgba(0,0,0,0.45)] backdrop-blur-2xl sm:rounded-b-[28px] sm:border-b">
+            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-white/25" />
+            <IosSafariInstallContent onLater={handleLater} />
+          </div>
+        </div>
+      </main>
+    );
   }
 
   return (

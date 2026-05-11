@@ -5,6 +5,7 @@ import {
   getLanguageDirective,
   parseAppLocale,
 } from "@/lib/prompts/language-directive";
+import { calculateProfile } from "@/lib/calculations";
 import type { SignData } from "@/types/oracle";
 
 function getGeminiClient(): GoogleGenerativeAI | null {
@@ -51,12 +52,18 @@ function createInvalidInputReading(
   question: string,
   locale: string,
 ): {
-  situation: string;
-  meaning: string;
-  wisdom: string;
-  actions: string[];
-  reflections: string[];
-  revisit_timing: string;
+  wind_category_blurb: string;
+  classical_voice: string;
+  meaning_for_question: string;
+  hidden_tension: string;
+  your_moment: string;
+  exploration: {
+    text: string;
+    timeframe: "today";
+    duration_estimate: "5 minutes";
+    is_solo: true;
+  };
+  reflection_question: string;
   invalid_input: true;
 } {
   const q = question.trim() || "(empty input)";
@@ -65,22 +72,19 @@ function createInvalidInputReading(
       ? `我收到了你的输入「${q}」，但目前无法识别为一个可解读的真实问题。请用一两句话清楚描述你当下真实的处境与困惑后再试。`
       : `I received your input "${q}", but I cannot parse it as a real, interpretable life question. Please rewrite it in one or two clear sentences about your actual situation and dilemma, then try again.`;
   return {
-    situation: message,
-    meaning: "",
-    wisdom: "",
-    actions: [],
-    reflections: [],
-    revisit_timing: "",
+    wind_category_blurb: message,
+    classical_voice: "",
+    meaning_for_question: "",
+    hidden_tension: "",
+    your_moment: "",
+    exploration: { text: "", timeframe: "today", duration_estimate: "5 minutes", is_solo: true },
+    reflection_question: "",
     invalid_input: true,
   };
 }
 
-function isInvalidInputStyleReading(r: {
-  situation?: string;
-  meaning?: string;
-  wisdom?: string;
-}): boolean {
-  const all = `${r.situation ?? ""}\n${r.meaning ?? ""}\n${r.wisdom ?? ""}`.toLowerCase();
+function isInvalidInputStyleReading(r: Record<string, unknown>): boolean {
+  const all = `${String(r.wind_category_blurb ?? "")}\n${String(r.meaning_for_question ?? "")}\n${String(r.classical_voice ?? "")}`.toLowerCase();
   return (
     all.includes("cannot understand the question you entered") ||
     all.includes("please re-enter your question") ||
@@ -387,23 +391,21 @@ const DANGER_KEYWORDS_ZH = [
 ];
 
 const SAFETY_FALLBACK = {
-  situation:
+  wind_category_blurb:
     "I see weight in this question - more than the words can hold. Before we look at the glyph, I want to make sure you're safe right now.",
-  meaning:
+  classical_voice:
     "The Oracle was made for sincere questions about life direction. What you're carrying might need something more immediate than this conversation can offer.",
-  wisdom:
+  meaning_for_question:
     "You don't have to face this alone. People trained to listen - really listen - are available right now.",
-  actions: [
-    "If you're in the United States: Call or text 988 (Suicide & Crisis Lifeline). They're available 24/7, free, and confidential.",
-    "If you're outside the US: visit findahelpline.com to find a service in your country.",
-    "If this isn't urgent for you, but the question still feels heavy - consider talking to a therapist this week.",
-  ],
-  reflections: [
-    "Is there one person in your life who would want to know what you're going through right now?",
-    "What would 'safe' feel like in your body, in this moment?",
-  ],
-  revisit_timing:
-    "Come back to the Oracle anytime. But please reach out to someone first if you're in a hard place.",
+  hidden_tension: "Immediate safety support matters more than interpretation right now.",
+  your_moment: "Please pause and reach out now. You do not need to carry this alone.",
+  exploration: {
+    text: "If possible, text one trusted person right now with: I need support tonight. Then contact a local helpline.",
+    timeframe: "today",
+    duration_estimate: "5 minutes",
+    is_solo: false,
+  },
+  reflection_question: "Who can help you stay safe in the next hour?",
 } as const;
 
 function detectDangerousContent(question: string): boolean {
@@ -465,6 +467,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Sign not found" }, { status: 404 });
     }
 
+    const userProfile = await calculateProfile({
+      year: body.user_birth.year,
+      month: body.user_birth.month,
+      day: body.user_birth.day,
+      hour: 12,
+      minute: 0,
+      gender: "other",
+    });
+
     let userPrompt = "";
     if (USE_FEW_SHOT) {
       userPrompt += `${FEW_SHOT_EXAMPLES}\n\n`;
@@ -488,7 +499,20 @@ ${signData.raw_md_content}
 ─────────────────────────────────────────
 
 Now generate the JSON response per the system prompt's format.
-Target length: about 800-1100 English words of substance if the output language is English; for Chinese, Spanish, French, or German, use a comparable depth (do not shorten just because the script is denser). Strict JSON only, no preamble.`;
+Target length: 600-800 words. Strict JSON only, no preamble.
+
+User profile diagnosis:
+${JSON.stringify(userProfile.diagnosis, null, 2)}
+
+JSON schema keys required:
+- wind_category_blurb
+- classical_voice
+- meaning_for_question
+- hidden_tension
+- your_moment
+- exploration: { text, timeframe(today|tonight|within_24h|this_week), duration_estimate, is_solo }
+- reflection_question
+- metadata`;
 
     const candidateModels = Array.from(
       new Set([GEMINI_MODEL, ...GEMINI_FALLBACK_MODELS]),
@@ -559,13 +583,15 @@ Target length: about 800-1100 English words of substance if the output language 
     }
 
     let r = reading as {
-      situation?: string;
-      meaning?: string;
-      wisdom?: string;
-      actions?: string[];
-      reflections?: string[];
-      revisit_timing?: string;
+      wind_category_blurb?: string;
+      classical_voice?: string;
+      meaning_for_question?: string;
+      hidden_tension?: string;
+      your_moment?: string;
+      exploration?: { text?: string; timeframe?: string; duration_estimate?: string; is_solo?: boolean };
+      reflection_question?: string;
       invalid_input?: boolean;
+      metadata?: { word_count?: number };
     };
 
     // Enforce compact output for gibberish/uninterpretable-input cases.
@@ -574,39 +600,47 @@ Target length: about 800-1100 English words of substance if the output language 
     }
 
     if (
-      !r.situation ||
+      !r.wind_category_blurb ||
       (!r.invalid_input &&
-        (!r.meaning ||
-          !r.wisdom ||
-          !r.actions ||
-          !r.reflections ||
-          !r.revisit_timing))
+        (!r.classical_voice ||
+          !r.meaning_for_question ||
+          !r.hidden_tension ||
+          !r.your_moment ||
+          !r.exploration?.text ||
+          !r.reflection_question))
     ) {
       throw new Error("LLM response missing required fields");
     }
-    if (!r.invalid_input && (!Array.isArray(r.actions) || r.actions.length !== 3)) {
-      throw new Error("LLM response actions must be array of 3");
-    }
-    if (!r.invalid_input && (!Array.isArray(r.reflections) || r.reflections.length !== 2)) {
-      throw new Error("LLM response reflections must be array of 2");
+
+    if (!r.invalid_input) {
+      const tf = r.exploration?.timeframe;
+      if (tf !== "today" && tf !== "tonight" && tf !== "within_24h" && tf !== "this_week") {
+        r.exploration = {
+          ...r.exploration,
+          timeframe: "today",
+        };
+      }
+      r.exploration = {
+        text: r.exploration?.text ?? "",
+        timeframe: (r.exploration?.timeframe as "today" | "tonight" | "within_24h" | "this_week") ?? "today",
+        duration_estimate: r.exploration?.duration_estimate ?? "5 minutes",
+        is_solo: r.exploration?.is_solo ?? true,
+      };
     }
 
     if (locale === "en" && !r.invalid_input) {
-      const meaning = r.meaning as string;
-      const wisdom = r.wisdom as string;
-      const actions = r.actions as string[];
-      const reflections = r.reflections as string[];
-      const revisitTiming = r.revisit_timing as string;
       const totalWords =
-        countWords(r.situation) +
-        countWords(meaning) +
-        countWords(wisdom) +
-        actions.reduce((sum, a) => sum + countWords(a), 0) +
-        reflections.reduce((sum, q) => sum + countWords(q), 0) +
-        countWords(revisitTiming);
-      if (totalWords < 800 || totalWords > 1100) {
+        countWords(r.wind_category_blurb as string) +
+        countWords(r.classical_voice as string) +
+        countWords(r.meaning_for_question as string) +
+        countWords(r.hidden_tension as string) +
+        countWords(r.your_moment as string) +
+        countWords(r.exploration?.text ?? "") +
+        countWords(r.reflection_question as string);
+      if (totalWords < 520 || totalWords > 900) {
         throw new Error(`LLM response word count out of range: ${totalWords}`);
       }
+      r.metadata = { ...(r.metadata ?? {}), word_count: totalWords };
     }
 
     return NextResponse.json({

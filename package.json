@@ -34,6 +34,7 @@
     "react-dom": "19.2.5",
     "react-hook-form": "^7.73.1",
     "serwist": "^9.5.7",
+    "shunshi-bazi-core": "^0.1.0",
     "zod": "^4.3.6",
     "zustand": "^5.0.12"
   },

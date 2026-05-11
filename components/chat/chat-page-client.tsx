@@ -1,11 +1,11 @@
 "use client";
 
-import { Link } from "@/i18n/navigation";
-import { useRouter, useSearchParams } from "next/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
+import { useLocale } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import { z } from "zod";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { buildMockResponse } from "@/lib/chat/mock-poju-response";
 import {
   clearLegacySnapshot,
   clearSecureChatSnapshot,
@@ -18,10 +18,14 @@ import { useChatStore } from "@/lib/store/chat-store";
 import type { ChatMessage, ChatSession, DrawerKind } from "@/lib/chat/types";
 import { siteConfig } from "@/lib/config/site";
 import type { ArchiveEntry } from "@/lib/archive/types";
+import { PojuDataCollectionForm } from "@/components/poju/poju-data-collection-form";
+import { PojuRenewalBanner } from "@/components/poju/poju-renewal-banner";
+import { getPojuDeviceId } from "@/lib/poju/client-device-id";
+import { getUserProfile } from "@/lib/profile/storage";
+import type { ActionItem } from "@/lib/poju/types";
 
 type ComposerImage = { id: string; dataUrl: string; name: string };
 const ARCHIVE_RUNTIME_KEY = "pojulife_archive_runtime_v1";
-
 const EMAIL_SCHEMA = z.string().email();
 declare global {
   interface Window {
@@ -92,6 +96,7 @@ function sessionListIcon(group: "Today" | "Yesterday" | "Previous Sessions", isA
 }
 
 export function ChatPageClient() {
+  const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -135,6 +140,13 @@ export function ChatPageClient() {
   const [exportHistorySessionId, setExportHistorySessionId] = useState<string | null>(null);
   const [exportHistoryEmail, setExportHistoryEmail] = useState("");
   const [exportHistoryError, setExportHistoryError] = useState("");
+  const [pojuActionsBySession, setPojuActionsBySession] = useState<Record<string, ActionItem[]>>({});
+  const [pojuSessionUi, setPojuSessionUi] = useState<Record<string, { phase: number; showDataForm: boolean }>>({});
+  const [pojuRenewalHintBySession, setPojuRenewalHintBySession] = useState<
+    Record<string, { expiresAt: number; show: boolean }>
+  >({});
+  const [pojuRenewalDismissed, setPojuRenewalDismissed] = useState<Record<string, boolean>>({});
+  const [pojuExtendBusy, setPojuExtendBusy] = useState(false);
 
   useEffect(() => {
     let stop = false;
@@ -142,6 +154,38 @@ export function ChatPageClient() {
     const token = searchParams.get("token");
 
     const bootstrap = async () => {
+      const sid = searchParams.get("sid");
+      if (sid) {
+        const r = await fetch(`/api/poju/session?sessionId=${encodeURIComponent(sid)}`);
+        const d = (await r.json()) as {
+          ok?: boolean;
+          sessionId?: string;
+          expiresAt?: number;
+          showRenewalPrompt?: boolean;
+        };
+        if (stop) return;
+        if (r.ok && d.ok && d.sessionId) {
+          const row = seedSession();
+          row.id = d.sessionId;
+          setAll({
+            sessions: [row],
+            messages: [],
+            activeSessionId: d.sessionId,
+          });
+          if (typeof d.expiresAt === "number") {
+            setPojuRenewalHintBySession({
+              [d.sessionId]: {
+                expiresAt: d.expiresAt,
+                show: Boolean(d.showRenewalPrompt),
+              },
+            });
+          }
+          setReady(true);
+          router.replace("/chat");
+          return;
+        }
+      }
+
       const secure = await loadSecureChatSnapshot();
       if (stop) return;
       if (secure) {
@@ -172,7 +216,15 @@ export function ChatPageClient() {
         return;
       }
       if (token && !hasAny) {
+        const profile = await getUserProfile();
+        const created = await fetch("/api/poju/create", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ deviceId: getPojuDeviceId(), userProfile: profile ?? undefined }),
+        });
+        const data = (await created.json()) as { sessionId?: string };
         const first = seedSession();
+        first.id = data.sessionId ?? first.id;
         setSessions(() => [first]);
         setActiveSessionId(first.id);
       }
@@ -216,6 +268,10 @@ export function ChatPageClient() {
   }, [searchParams, sessions, setActiveSessionId]);
 
   const activeSession = useMemo(() => sessions.find((s) => s.id === activeSessionId), [sessions, activeSessionId]);
+  const pojuActions = useMemo(
+    () => (activeSessionId ? pojuActionsBySession[activeSessionId] ?? [] : []),
+    [activeSessionId, pojuActionsBySession],
+  );
   const activeMessages = useMemo(
     () => messages.filter((m) => m.sessionId === activeSessionId),
     [messages, activeSessionId],
@@ -223,7 +279,7 @@ export function ChatPageClient() {
 
   useEffect(() => {
     scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, thinkingLines, activeSessionId, activeMessages.length]);
+  }, [messages, thinkingLines, activeSessionId, activeMessages.length, pojuSessionUi]);
   const groupedSessions = useMemo(() => {
     const visible = sessions.filter((s) => !s.hidden || s.id === activeSessionId).sort((a, b) => b.createdAt - a.createdAt);
     return {
@@ -237,37 +293,149 @@ export function ChatPageClient() {
     setMessages((prev) => [...prev, message]);
   }, []);
 
-  const simulateAssistant = useCallback(
-    async (input: string, userTurnCount: number) => {
-      const chunks = buildMockResponse(input);
-      setThinkingVisible(true);
-      setThinkingLines([]);
-      for (const chunk of chunks) {
-        if (chunk.type === "thinking") {
-          await new Promise((r) => setTimeout(r, chunk.delayMs));
-          setThinkingLines((prev) => [...prev, chunk.text]);
-        }
-      }
-      await new Promise((r) => setTimeout(r, 550));
-      setThinkingVisible(false);
-      const answer = chunks.find((c) => c.type === "answer");
-      if (!answer || answer.type !== "answer") return;
-      const shouldPhaseFive = answer.phaseFive || userTurnCount >= 3;
+  const onPojuDataCollectComplete = useCallback(
+    (payload: { reply: string; phase: number }) => {
+      if (!activeSessionId) return;
       appendMessage({
         id: uid("msg"),
         sessionId: activeSessionId,
         role: "assistant",
-        text: answer.text,
+        text: payload.reply,
         createdAt: Date.now(),
-        summon: answer.summon,
-        phaseFive: shouldPhaseFive,
+        phaseFive: payload.phase >= 5,
       });
-      if (shouldPhaseFive) {
-        setSessions((prev) => prev.map((s) => (s.id === activeSessionId ? { ...s, title: "Action plan in progress" } : s)));
+      setPojuSessionUi((prev) => ({
+        ...prev,
+        [activeSessionId]: { phase: payload.phase, showDataForm: false },
+      }));
+      if (payload.phase >= 5) {
+        setSessions((prev) =>
+          prev.map((s) => (s.id === activeSessionId ? { ...s, title: "Action tracking" } : s)),
+        );
       }
     },
-    [activeSessionId, appendMessage],
+    [activeSessionId, appendMessage, setSessions],
   );
+
+  const updatePojuActionStatus = useCallback(
+    async (actionId: string, status: ActionItem["status"]) => {
+      if (!activeSessionId) return;
+      const res = await fetch("/api/poju/action", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sessionId: activeSessionId, actionId, status }),
+      });
+      const data = (await res.json()) as { actions?: ActionItem[] };
+      if (res.ok && data.actions) {
+        setPojuActionsBySession((prev) => ({ ...prev, [activeSessionId]: data.actions! }));
+      }
+    },
+    [activeSessionId],
+  );
+
+  const simulateAssistant = useCallback(
+    async (input: string) => {
+      setThinkingVisible(true);
+      setThinkingLines(["Reading session state...", "Routing current phase...", "Composing response..."]);
+      const profile = await getUserProfile();
+      const res = await fetch("/api/poju/chat", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          sessionId: activeSessionId,
+          input,
+          locale,
+          userProfile: profile ?? undefined,
+        }),
+      });
+      const data = (await res.json()) as {
+        reply?: string;
+        phase?: number;
+        status?: "active" | "suspended" | "resolved" | "archived";
+        actions?: ActionItem[];
+        showDataForm?: boolean;
+        expiresAt?: number;
+        showRenewalPrompt?: boolean;
+        error?: string;
+      };
+      setThinkingVisible(false);
+      setThinkingLines([]);
+      if (!res.ok) {
+        appendMessage({
+          id: uid("msg"),
+          sessionId: activeSessionId,
+          role: "assistant",
+          text: `Session error: ${data.error ?? "unknown_error"}`,
+          createdAt: Date.now(),
+        });
+        return;
+      }
+      if (data.actions && activeSessionId) {
+        setPojuActionsBySession((prev) => ({ ...prev, [activeSessionId]: data.actions! }));
+      }
+      if (activeSessionId) {
+        setPojuSessionUi((prev) => ({
+          ...prev,
+          [activeSessionId]: {
+            phase: data.phase ?? 1,
+            showDataForm: Boolean(data.showDataForm),
+          },
+        }));
+        if (typeof data.expiresAt === "number") {
+          setPojuRenewalHintBySession((prev) => ({
+            ...prev,
+            [activeSessionId]: {
+              expiresAt: data.expiresAt!,
+              show: Boolean(data.showRenewalPrompt),
+            },
+          }));
+        }
+      }
+
+      const shouldPhaseFive = (data.phase ?? 1) >= 5;
+      appendMessage({
+        id: uid("msg"),
+        sessionId: activeSessionId,
+        role: "assistant",
+        text: data.reply ?? "",
+        createdAt: Date.now(),
+        phaseFive: shouldPhaseFive,
+      });
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === activeSessionId
+            ? {
+                ...s,
+                title: shouldPhaseFive ? "Action tracking" : s.title,
+                status: data.status ?? s.status,
+              }
+            : s,
+        ),
+      );
+    },
+    [activeSessionId, appendMessage, locale, setSessions],
+  );
+
+  const extendPojuActiveSession = useCallback(async () => {
+    if (!activeSessionId) return;
+    setPojuExtendBusy(true);
+    try {
+      const res = await fetch("/api/poju/extend", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sessionId: activeSessionId }),
+      });
+      const data = (await res.json()) as { ok?: boolean; expiresAt?: number };
+      if (res.ok && data.ok && typeof data.expiresAt === "number") {
+        setPojuRenewalHintBySession((prev) => ({
+          ...prev,
+          [activeSessionId]: { expiresAt: data.expiresAt!, show: false },
+        }));
+      }
+    } finally {
+      setPojuExtendBusy(false);
+    }
+  }, [activeSessionId]);
 
   const onSend = useCallback(async () => {
     if (!composer.trim() && !composerImage) return;
@@ -283,16 +451,26 @@ export function ChatPageClient() {
     });
     setComposer("");
     setComposerImage(null);
-    const userTurnCount =
-      messages.filter((m) => m.sessionId === activeSessionId && m.role === "user").length + 1;
-    await simulateAssistant(text, userTurnCount);
+    await simulateAssistant(text);
   }, [activeSessionId, appendMessage, composer, composerImage, messages, simulateAssistant]);
 
   const newSession = () => {
-    const s = seedSession();
-    setSessions((prev) => [s, ...prev]);
-    setActiveSessionId(s.id);
-    setMessages((prev) => prev);
+    void (async () => {
+      const profile = await getUserProfile();
+      const created = await fetch("/api/poju/create", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ deviceId: getPojuDeviceId(), userProfile: profile ?? undefined }),
+      });
+      const data = (await created.json()) as { sessionId?: string };
+      const s = seedSession();
+      s.id = data.sessionId ?? s.id;
+      setSessions((prev) => [s, ...prev]);
+      setActiveSessionId(s.id);
+      setPojuActionsBySession((prev) => ({ ...prev, [s.id]: [] }));
+      setPojuSessionUi((prev) => ({ ...prev, [s.id]: { phase: 1, showDataForm: false } }));
+      setMessages((prev) => prev);
+    })();
   };
 
   const renameSession = () => {
@@ -317,6 +495,26 @@ export function ChatPageClient() {
   const purgeSessionById = useCallback(
     (sid: string) => {
       setMessages((prev) => prev.filter((m) => m.sessionId !== sid));
+      setPojuActionsBySession((prev) => {
+        const next = { ...prev };
+        delete next[sid];
+        return next;
+      });
+      setPojuSessionUi((prev) => {
+        const next = { ...prev };
+        delete next[sid];
+        return next;
+      });
+      setPojuRenewalHintBySession((prev) => {
+        const next = { ...prev };
+        delete next[sid];
+        return next;
+      });
+      setPojuRenewalDismissed((prev) => {
+        const next = { ...prev };
+        delete next[sid];
+        return next;
+      });
       const remaining = sessions.filter((s) => s.id !== sid);
       setSessions(() => remaining);
       try {
@@ -758,6 +956,19 @@ export function ChatPageClient() {
         <section className={`relative flex min-h-0 min-w-0 flex-1 flex-col ${desktopSidebarCollapsed ? "md:ml-0" : "md:ml-72"}`}>
           <div className="px-4 pt-3 md:px-6">
             <ArchiveReturnBanner />
+            {activeSessionId &&
+            pojuRenewalHintBySession[activeSessionId]?.show &&
+            !pojuRenewalDismissed[activeSessionId] &&
+            pojuRenewalHintBySession[activeSessionId]!.expiresAt > Date.now() ? (
+              <PojuRenewalBanner
+                expiresAt={pojuRenewalHintBySession[activeSessionId]!.expiresAt}
+                extending={pojuExtendBusy}
+                onExtend={() => void extendPojuActiveSession()}
+                onDismiss={() =>
+                  setPojuRenewalDismissed((prev) => ({ ...prev, [activeSessionId]: true }))
+                }
+              />
+            ) : null}
           </div>
           <header className="sticky top-0 z-10 flex w-full items-center justify-between border-b border-white/10 bg-neutral-950/40 px-6 py-4 backdrop-blur-md">
             <div className="flex min-w-0 items-center gap-3">
@@ -785,6 +996,14 @@ export function ChatPageClient() {
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-2">
+              <Link
+                href="/poju"
+                className="flex items-center justify-center rounded-full p-2 text-neutral-500 transition-colors hover:bg-red-500/15 hover:text-red-200"
+                title="关闭并返回 POJU 介绍页"
+                aria-label="关闭并返回 POJU 介绍页"
+              >
+                <span className="material-symbols-outlined text-[22px] leading-none">close</span>
+              </Link>
               <button
                 type="button"
                 title="Save as PDF"
@@ -877,6 +1096,16 @@ export function ChatPageClient() {
                 </article>
               ))}
 
+              {activeSessionId && pojuSessionUi[activeSessionId]?.showDataForm ? (
+                <div className="w-full max-w-2xl shrink-0">
+                  <PojuDataCollectionForm
+                    sessionId={activeSessionId}
+                    locale={locale}
+                    onComplete={onPojuDataCollectComplete}
+                  />
+                </div>
+              ) : null}
+
               {thinkingVisible ? (
                 <article className="flex w-full justify-start gap-4">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/[0.09] shadow-[0_4px_16px_rgba(0,0,0,0.25)] backdrop-blur-md">
@@ -897,6 +1126,28 @@ export function ChatPageClient() {
 
           <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-[5] bg-gradient-to-t from-background via-background/90 to-transparent p-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             <div className="pointer-events-auto mx-auto max-w-3xl">
+              {pojuActions.length > 0 ? (
+                <div className="mb-2 max-h-36 overflow-y-auto rounded-2xl border border-white/10 bg-black/35 p-3 text-xs shadow-lg backdrop-blur-md">
+                  <p className="mb-2 font-semibold uppercase tracking-wide text-on-surface-variant">Phase actions</p>
+                  <ul className="space-y-2">
+                    {pojuActions.map((a) => (
+                      <li key={a.id} className="flex flex-col gap-1 rounded-lg border border-white/5 bg-white/[0.04] p-2 sm:flex-row sm:items-center sm:gap-2">
+                        <span className="min-w-0 flex-1 text-on-surface">{a.title}</span>
+                        <select
+                          value={a.status}
+                          onChange={(e) => void updatePojuActionStatus(a.id, e.target.value as ActionItem["status"])}
+                          className="w-full shrink-0 rounded-md border border-white/15 bg-black/40 px-2 py-1 text-[11px] text-on-surface sm:w-28"
+                        >
+                          <option value="todo">To do</option>
+                          <option value="doing">Doing</option>
+                          <option value="done">Done</option>
+                          <option value="skipped">Skipped</option>
+                        </select>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
               {composerImage ? (
                 <div className="mb-2 inline-flex items-center gap-2 rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-xs">
                   <img src={composerImage.dataUrl} alt={composerImage.name} className="h-9 w-9 rounded object-cover" />

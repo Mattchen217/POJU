@@ -1,6 +1,5 @@
-import { Link } from "@/i18n/navigation";
-
 import { HeroSpline } from "@/components/marketing/hero-spline";
+import { PwaInlineOpenLink } from "@/components/marketing/pwa-inline-open-link";
 
 export type OracleProductHeroCopy = {
   heading: string;
@@ -36,14 +35,14 @@ export function OracleProductHero({ copy }: { copy: OracleProductHeroCopy }) {
             </p>
             <p className="mx-auto mt-3 text-sm text-text-dim sm:text-[15px]">{copy.footnote}</p>
             <div className="mx-auto mt-8 flex flex-col items-center justify-center sm:mt-9 md:mt-10">
-              <Link
+              <PwaInlineOpenLink
                 href="/start?next=%2Fglyph%2Freading"
-                target="_blank"
-                rel="noopener noreferrer"
+                frameTitle="Glyph"
+                closeLabel="关闭"
                 className="marketing-pill-outline-cta marketing-pill-outline-cta--amber inline-flex min-w-[200px] px-8 py-3.5 text-[15px] hover:-translate-y-0.5 hover:scale-[1.04] motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100 active:scale-[0.99] md:px-10 md:py-4 md:text-base"
               >
                 {copy.cta}
-              </Link>
+              </PwaInlineOpenLink>
               <p className="mt-2 max-w-md px-2 text-center text-[12px] leading-5 text-white sm:text-[13px] sm:leading-5 md:text-[14px] md:leading-6">
                 {copy.ctaSubline}
               </p>

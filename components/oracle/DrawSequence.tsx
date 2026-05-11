@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { Link } from "@/i18n/navigation";
 import { GlyphCard } from "@/components/oracle/GlyphCard";
 import { drawSign } from "@/lib/oracle/drawSign";
 import type { SignData, UserInput } from "@/types/oracle";
@@ -65,13 +66,12 @@ export function DrawSequence({
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-b from-[#0B0815] to-black px-6 text-center">
         <p className="mb-6 max-w-md text-white/80">{drawError}</p>
-        <button
-          type="button"
-          onClick={onClose}
+        <Link
+          href="/glyph"
           className="rounded-full border border-white/20 px-6 py-2 text-sm text-white/80 hover:bg-white/10"
         >
-          Close
-        </button>
+          返回 Glyph
+        </Link>
       </div>
     );
   }
@@ -82,14 +82,16 @@ export function DrawSequence({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-b from-[#0B0815] to-black px-6 py-12">
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute right-6 top-6 flex h-10 w-10 items-center justify-center rounded-full text-white/60 transition-all hover:bg-white/10 hover:text-white"
-        aria-label="Close"
-      >
-        ✕
-      </button>
+      {onClose ? (
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-6 top-6 flex h-10 w-10 items-center justify-center rounded-full text-white/60 transition-all hover:bg-white/10 hover:text-white"
+          aria-label="Close"
+        >
+          ✕
+        </button>
+      ) : null}
 
       {/* Single column: card + hint slot share one layout box so flex centering does not jump when hint fades in. */}
       <div className="flex w-full max-w-[400px] flex-col items-stretch">
