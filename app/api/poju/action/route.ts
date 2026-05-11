@@ -18,12 +18,12 @@ export async function POST(req: Request) {
   if (!["todo", "doing", "done", "skipped"].includes(status)) {
     return NextResponse.json({ error: "invalid_status" }, { status: 400 });
   }
-  const session = loadSession(sessionId);
+  const session = await loadSession(sessionId);
   if (!session) return NextResponse.json({ error: "session_not_found" }, { status: 404 });
   if (session.status !== "active") {
     return NextResponse.json({ error: "session_not_active" }, { status: 400 });
   }
   updateActionStatus(session, actionId, status);
-  saveSession(session);
+  await saveSession(session);
   return NextResponse.json({ ok: true, actions: session.actions });
 }

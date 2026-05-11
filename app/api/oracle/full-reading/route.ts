@@ -96,11 +96,9 @@ function isInvalidInputStyleReading(r: Record<string, unknown>): boolean {
 
 const SYSTEM_PROMPT = `You are POJU's Oracle Interpreter.
 
-FIRST GATE (MANDATORY INPUT VALIDATION): Before any interpretation, decide whether the user's question is a real, understandable question/dilemma or obvious gibberish/noise (examples: "阿萨法发撒", "dsfasasfADA DASG DAF", random keyboard mashing, or meaningless fragments). If input is gibberish or not interpretable, DO NOT generate a normal reading. Instead, still return STRICT JSON in the same schema, with all text fields clearly saying:
-- "You are seeking an interpretation of: '<repeat the user's original input>', but I cannot understand the question you entered, so please re-enter your question."
-- "Please enter a real question that genuinely exists in your life. Please take this Glyph session seriously."
+FIRST GATE (MANDATORY INPUT VALIDATION): Before any interpretation, decide whether the user's question is a real, understandable question/dilemma or obvious gibberish/noise (examples: "阿萨法发撒", "dsfasasfADA DASG DAF", random keyboard mashing, or meaningless fragments). If input is gibberish or not interpretable, DO NOT generate a normal reading. Instead, still return STRICT JSON using the SAME keys as a normal reading, and set "invalid_input": true. Put the full rejection message in wind_category_blurb (include the user's original input in quotes). Use empty strings for classical_voice, meaning_for_question, hidden_tension, your_moment; exploration with empty text and timeframe "today"; reflection_question empty string.
 For this invalid-input case:
-- Output a COMPACT rejection only (one short paragraph). Do not write a full six-section reading.
+- Output a COMPACT rejection only (one short paragraph in wind_category_blurb). Do not write a full reading in the other fields.
 - Keep the tone respectful, firm, and clear.
 
 # Your Identity & Knowledge Base
@@ -224,43 +222,27 @@ keep the wisdom.
 
 # Output Format — STRICT JSON
 
-Total word count: 800-1100 English words.
+Total word count: 800-1100 English words (when invalid_input is false).
+
+You MUST use these exact top-level keys (the client parses only this shape):
 
 {
-  "situation": "120-180 words. Restate the user's question and the real 
-                situation as you read it. Reference the question 
-                directly. Acknowledge what they're truly asking 
-                beneath the surface.",
-  
-  "meaning": "180-250 words. What does THIS glyph reveal about THIS 
-              question? Quote the verse imagery. Use the traditional 
-              interpretation as raw material, but make it personal 
-              and current. 3-4 short paragraphs.",
-  
-  "wisdom": "150-220 words. Tell the story behind the glyph as a 
-             universal narrative (no Chinese names). Connect the 
-             ancient pattern to the user's modern situation. 2-3 
-             paragraphs.",
-  
-  "actions": [
-    "First action — something they can do today (40-60 words). 
-     Specific. Concrete. No abstract advice.",
-    "Second action — something this week (40-60 words). 
-     Builds on the first.",
-    "Third action — an ongoing practice (40-60 words). 
-     Frames the longer rhythm."
-  ],
-  
-  "reflections": [
-    "First reflective question (20-30 words). Sits with them 
-     after they close the page. Not rhetorical.",
-    "Second reflective question (20-30 words). Different angle 
-     from the first."
-  ],
-  
-  "revisit_timing": "30-50 words. When should they return to the 
-                     Oracle? What change should trigger a new reading?"
+  "wind_category_blurb": "120-180 words. Restate the user's question and the real situation as you read it. Reference the question directly.",
+  "classical_voice": "150-220 words. Tell the story behind the glyph as a universal narrative (no Chinese names). Connect the ancient pattern to the user's modern situation.",
+  "meaning_for_question": "180-250 words. What does THIS glyph reveal about THIS question? Quote the verse imagery; make it personal and current.",
+  "hidden_tension": "80-120 words. Name the inner friction or paradox the user may be avoiding.",
+  "your_moment": "80-120 words. What this moment asks of them emotionally and practically.",
+  "exploration": {
+    "text": "40-80 words. One concrete next step they can try.",
+    "timeframe": "today | tonight | within_24h | this_week",
+    "duration_estimate": "e.g. 5 minutes, 20 minutes, 1 hour",
+    "is_solo": true
+  },
+  "reflection_question": "20-35 words. One non-rhetorical question to sit with after they close the page.",
+  "metadata": { "word_count": 0 }
 }
+
+Set metadata.word_count to your best estimate of total English words in the text fields (integer).
 
 Return ONLY the JSON object. No preamble. No explanation. No markdown 
 code blocks. Just valid parseable JSON.
@@ -269,22 +251,22 @@ code blocks. Just valid parseable JSON.
 
 If the user's question contains indicators of suicide, self-harm, 
 violence toward others, or illegal activity (in any language), DO NOT 
-interpret the glyph normally. Return this exact safety response:
+interpret the glyph normally. Return this exact safety response (same key names):
 
 {
-  "situation": "I see weight in this question — more than the words can hold. Before we look at the glyph, I want to make sure you're safe right now.",
-  "meaning": "The Oracle was made for sincere questions about life direction. What you're carrying might need something more immediate than this conversation can offer.",
-  "wisdom": "You don't have to face this alone. People trained to listen — really listen — are available right now.",
-  "actions": [
-    "If you're in the United States: Call or text 988 (Suicide & Crisis Lifeline). They're available 24/7, free, and confidential.",
-    "If you're outside the US: visit findahelpline.com to find a service in your country.",
-    "If this isn't urgent for you, but the question still feels heavy — consider talking to a therapist this week."
-  ],
-  "reflections": [
-    "Is there one person in your life who would want to know what you're going through right now?",
-    "What would 'safe' feel like in your body, in this moment?"
-  ],
-  "revisit_timing": "Come back to the Oracle anytime. But please reach out to someone first if you're in a hard place."
+  "wind_category_blurb": "I see weight in this question — more than the words can hold. Before we look at the glyph, I want to make sure you're safe right now.",
+  "classical_voice": "The Oracle was made for sincere questions about life direction. What you're carrying might need something more immediate than this conversation can offer.",
+  "meaning_for_question": "You don't have to face this alone. People trained to listen — really listen — are available right now.",
+  "hidden_tension": "Immediate safety support matters more than interpretation right now.",
+  "your_moment": "Please pause and reach out now. You do not need to carry this alone.",
+  "exploration": {
+    "text": "If you're in the United States: Call or text 988 (Suicide & Crisis Lifeline). They're available 24/7, free, and confidential. If you're outside the US: visit findahelpline.com to find a service in your country.",
+    "timeframe": "today",
+    "duration_estimate": "5 minutes",
+    "is_solo": false
+  },
+  "reflection_question": "Is there one person in your life who would want to know what you're going through right now?",
+  "metadata": { "word_count": 0 }
 }
 
 # Final Reminders
@@ -314,19 +296,19 @@ The glyph drawn:
 
 EXAMPLE 1 - OUTPUT:
 {
-  "situation": "You're holding a question with weight...",
-  "meaning": "The verse speaks of someone hidden in shadow...",
-  "wisdom": "Centuries ago, a man of great skill lived in obscurity...",
-  "actions": [
-    "Today: write down what your current role is teaching you...",
-    "This week: have one conversation with someone who left too early...",
-    "Ongoing: practice noticing when you're moving from clarity vs anxiety..."
-  ],
-  "reflections": [
-    "If you knew the right moment to leave was six months from now, what would you do?",
-    "What part of you is afraid that if you don't take this, you won't get another chance?"
-  ],
-  "revisit_timing": "Return when you've completed the chapter currently forming."
+  "wind_category_blurb": "You're holding a question with weight...",
+  "classical_voice": "Centuries ago, a man of great skill lived in obscurity...",
+  "meaning_for_question": "The verse speaks of someone hidden in shadow...",
+  "hidden_tension": "The tension between urgency and the need to let something finish forming beneath the surface.",
+  "your_moment": "This is not a moment to force clarity; it is a moment to listen to what the pause is teaching you.",
+  "exploration": {
+    "text": "Write down what your current role is teaching you before you decide to leave it.",
+    "timeframe": "today",
+    "duration_estimate": "15 minutes",
+    "is_solo": true
+  },
+  "reflection_question": "If you knew the right moment to leave was six months from now, what would you do today?",
+  "metadata": { "word_count": 650 }
 }
 
 EXAMPLE 2 - INPUT:
@@ -342,19 +324,19 @@ The glyph drawn:
 
 EXAMPLE 2 - OUTPUT:
 {
-  "situation": "You're asking whether to file for divorce now...",
-  "meaning": "The verse points to the center of a storm...",
-  "wisdom": "There's an old story of a sailor who survived a typhoon...",
-  "actions": [
-    "Today: write a single page describing what you see right now...",
-    "This week: speak with one person about the practical first step...",
-    "Ongoing: protect your inner stillness."
-  ],
-  "reflections": [
-    "If you knew this clarity would fade in two weeks, what would you record now?",
-    "Whose voice are you afraid to disappoint by trusting your own?"
-  ],
-  "revisit_timing": "Return after you've taken the first practical step."
+  "wind_category_blurb": "You're asking whether to file for divorce now...",
+  "classical_voice": "There's an old story of a sailor who survived a typhoon...",
+  "meaning_for_question": "The verse points to the center of a storm...",
+  "hidden_tension": "You want a single decisive move while the situation still churns around you.",
+  "your_moment": "Stillness here is not passivity; it is how you keep your judgment from being stolen by the noise.",
+  "exploration": {
+    "text": "Write one page describing only what you see right now, without deciding the next legal step.",
+    "timeframe": "tonight",
+    "duration_estimate": "30 minutes",
+    "is_solo": true
+  },
+  "reflection_question": "If this clarity faded in two weeks, what would you want your future self to remember about today?",
+  "metadata": { "word_count": 720 }
 }`;
 
 const DANGER_KEYWORDS_EN = [
@@ -421,6 +403,68 @@ function countWords(input: string): number {
     .trim()
     .split(/\s+/)
     .filter(Boolean).length;
+}
+
+/** Older prompts asked for situation/meaning/wisdom/actions; map into the UI schema if the model still returns that shape. */
+function normalizeLegacyReadingShape(raw: Record<string, unknown>): Record<string, unknown> {
+  const o: Record<string, unknown> = { ...raw };
+  if (typeof o.wind_category_blurb !== "string" || !String(o.wind_category_blurb).trim()) {
+    if (typeof o.situation === "string" && o.situation.trim()) o.wind_category_blurb = o.situation;
+  }
+  if (typeof o.classical_voice !== "string" || !String(o.classical_voice).trim()) {
+    if (typeof o.wisdom === "string" && o.wisdom.trim()) o.classical_voice = o.wisdom;
+  }
+  if (typeof o.meaning_for_question !== "string" || !String(o.meaning_for_question).trim()) {
+    if (typeof o.meaning === "string" && o.meaning.trim()) o.meaning_for_question = o.meaning;
+  }
+  const actions = Array.isArray(o.actions) ? o.actions.map((x) => String(x ?? "").trim()).filter(Boolean) : [];
+  if (typeof o.hidden_tension !== "string" || !String(o.hidden_tension).trim()) {
+    if (actions[1]) o.hidden_tension = actions[1];
+    else if (actions[0]) o.hidden_tension = actions[0];
+    else if (typeof o.meaning_for_question === "string" && o.meaning_for_question.trim()) {
+      o.hidden_tension =
+        "The pressure in your question is real; hold it without forcing a single clean story yet.";
+    }
+  }
+  if (typeof o.your_moment !== "string" || !String(o.your_moment).trim()) {
+    if (actions[0]) o.your_moment = actions[0];
+    else if (typeof o.revisit_timing === "string" && o.revisit_timing.trim()) o.your_moment = o.revisit_timing;
+    else if (typeof o.wind_category_blurb === "string" && o.wind_category_blurb.trim()) {
+      o.your_moment = "Stay with one small next step rather than solving the whole horizon today.";
+    }
+  }
+  if (typeof o.reflection_question !== "string" || !String(o.reflection_question).trim()) {
+    const refs = Array.isArray(o.reflections) ? o.reflections : [];
+    if (refs.length > 0) o.reflection_question = String(refs[0] ?? "").trim();
+    else if (typeof o.revisit_timing === "string" && o.revisit_timing.trim()) {
+      o.reflection_question = "What would you want to remember about how you felt at the end of this reading?";
+    }
+  }
+  const explorationTextFallback =
+    (actions[2] as string | undefined) ||
+    (actions[1] as string | undefined) ||
+    (actions[0] as string | undefined) ||
+    (typeof o.revisit_timing === "string" ? o.revisit_timing : "");
+  if (!o.exploration || typeof o.exploration !== "object" || o.exploration === null) {
+    if (explorationTextFallback) {
+      o.exploration = {
+        text: explorationTextFallback,
+        timeframe: "today",
+        duration_estimate: "5 minutes",
+        is_solo: true,
+      };
+    }
+  } else {
+    const ex = o.exploration as Record<string, unknown>;
+    if (!String(ex.text ?? "").trim() && explorationTextFallback) {
+      ex.text = explorationTextFallback;
+      if (!ex.timeframe) ex.timeframe = "today";
+      if (!ex.duration_estimate) ex.duration_estimate = "5 minutes";
+      if (typeof ex.is_solo !== "boolean") ex.is_solo = true;
+      o.exploration = ex;
+    }
+  }
+  return o;
 }
 
 function formatGeminiError(error: unknown): string {
@@ -498,21 +542,11 @@ The full traditional content of this glyph (Chinese + English mixed):
 ${signData.raw_md_content}
 ─────────────────────────────────────────
 
-Now generate the JSON response per the system prompt's format.
-Target length: 600-800 words. Strict JSON only, no preamble.
+Now generate the JSON response using exactly the key names defined in the system instruction (wind_category_blurb, classical_voice, meaning_for_question, hidden_tension, your_moment, exploration, reflection_question, metadata). Do not use situation, meaning, wisdom, actions, reflections, or revisit_timing as JSON keys.
+Target length: 600-900 English words for a normal reading. Strict JSON only, no preamble.
 
 User profile diagnosis:
-${JSON.stringify(userProfile.diagnosis, null, 2)}
-
-JSON schema keys required:
-- wind_category_blurb
-- classical_voice
-- meaning_for_question
-- hidden_tension
-- your_moment
-- exploration: { text, timeframe(today|tonight|within_24h|this_week), duration_estimate, is_solo }
-- reflection_question
-- metadata`;
+${JSON.stringify(userProfile.diagnosis, null, 2)}`;
 
     const candidateModels = Array.from(
       new Set([GEMINI_MODEL, ...GEMINI_FALLBACK_MODELS]),
@@ -581,6 +615,8 @@ JSON schema keys required:
       console.error("Failed to parse LLM response:", responseText);
       throw new Error("Invalid LLM response format");
     }
+
+    reading = normalizeLegacyReadingShape(reading as Record<string, unknown>);
 
     let r = reading as {
       wind_category_blurb?: string;

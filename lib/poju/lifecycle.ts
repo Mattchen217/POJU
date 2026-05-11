@@ -7,24 +7,25 @@ export function defaultExpiry(): number {
   return Date.now() + THIRTY_DAYS;
 }
 
-export function checkAndArchiveSessions(): string[] {
+export async function checkAndArchiveSessions(): Promise<string[]> {
   const now = Date.now();
   const archived: string[] = [];
-  allSessions().forEach((s) => {
+  const list = await allSessions();
+  for (const s of list) {
     if (s.status === "active" && s.expiresAt <= now) {
-      archiveSession(s.sessionId);
+      await archiveSession(s.sessionId);
       archived.push(s.sessionId);
     }
-  });
+  }
   return archived;
 }
 
-export function extendSession(sessionId: string): SessionState | null {
-  const s = loadSession(sessionId);
+export async function extendSession(sessionId: string): Promise<SessionState | null> {
+  const s = await loadSession(sessionId);
   if (!s || s.status !== "active") return null;
   s.expiresAt += THIRTY_DAYS;
   s.renewals.push({ at: Date.now(), days: 30 });
   s.lastInteractionAt = Date.now();
-  saveSession(s);
+  await saveSession(s);
   return s;
 }

@@ -7,7 +7,7 @@ import type { ChatInput } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
 
 export async function POST(req: Request) {
-  checkAndArchiveSessions();
+  await checkAndArchiveSessions();
   const body = (await req.json().catch(() => ({}))) as Partial<ChatInput> & {
     locale?: string;
     userProfile?: UserProfile | null;
@@ -17,7 +17,7 @@ export async function POST(req: Request) {
   if (!sessionId || !input) {
     return NextResponse.json({ error: "sessionId and input are required" }, { status: 400 });
   }
-  const session = loadSession(sessionId);
+  const session = await loadSession(sessionId);
   if (!session) return NextResponse.json({ error: "session_not_found" }, { status: 404 });
   if (session.status !== "active") {
     return NextResponse.json({ error: "session_not_active", status: session.status }, { status: 400 });
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
       : null;
   const out = await runPojuTurn(session, input, locale, userProfile);
   out.next.messages.push({ role: "assistant", text: out.reply, createdAt: Date.now() });
-  saveSession(out.next);
+  await saveSession(out.next);
 
   const showDataForm = out.next.phase === 2 && !canLeavePhase2(out.next);
   const now = Date.now();

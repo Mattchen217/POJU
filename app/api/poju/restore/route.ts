@@ -5,7 +5,7 @@ export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as { sessionId?: string };
   const sessionId = String(body.sessionId ?? "");
   if (!sessionId) return NextResponse.json({ error: "sessionId is required" }, { status: 400 });
-  const restored = restoreSession(sessionId);
+  const restored = await restoreSession(sessionId);
   if (!restored) return NextResponse.json({ error: "archived_session_not_found" }, { status: 404 });
   return NextResponse.json({
     ok: true,

@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "sessionId required" }, { status: 400 });
   }
 
-  const session = loadSession(sessionId);
+  const session = await loadSession(sessionId);
   if (!session) return NextResponse.json({ ok: false, error: "session_not_found" }, { status: 404 });
   if (session.status !== "active") {
     return NextResponse.json({ ok: false, error: "session_not_active" }, { status: 400 });
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
     session.profileDeclined = true;
     session.phase = 3;
     session.lastInteractionAt = Date.now();
-    saveSession(session);
+    await saveSession(session);
     return NextResponse.json({
       ok: true,
       phase: session.phase,
@@ -101,7 +101,7 @@ export async function POST(req: Request) {
 
   session.phase = 3;
   session.lastInteractionAt = Date.now();
-  saveSession(session);
+  await saveSession(session);
 
   return NextResponse.json({
     ok: true,

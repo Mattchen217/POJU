@@ -30,11 +30,11 @@ function makeSession(deviceId: string): SessionState {
 }
 
 export async function POST(req: Request) {
-  checkAndArchiveSessions();
+  await checkAndArchiveSessions();
   const body = (await req.json().catch(() => ({}))) as Partial<CreateSessionInput> & { userProfile?: UserProfile | null };
   const deviceId = String(body.deviceId ?? "device_local");
 
-  const existing = getActiveByDevice(deviceId);
+  const existing = await getActiveByDevice(deviceId);
   if (existing) {
     return NextResponse.json({
       ok: true,
@@ -50,7 +50,7 @@ export async function POST(req: Request) {
   if (body.userProfile && typeof body.userProfile.id === "string") {
     applyUserProfileToSession(session, body.userProfile);
   }
-  saveSession(session);
+  await saveSession(session);
   return NextResponse.json({
     ok: true,
     reused: false,
