@@ -90,7 +90,8 @@ export async function runPojuTurn(
     const drift = detectTopicDrift(anchor, input);
     if (drift.drift) {
       const llmOffTopic = await confirmRuleBasedDriftWithLLM(anchor, input, locale);
-      if (llmOffTopic !== false) {
+      // Only refuse on explicit LLM "off topic". `null` = no client, parse error, or ambiguous — fail open so the main Gemini path still runs.
+      if (llmOffTopic === true) {
         return {
           reply: refusal.drift,
           next: session,
