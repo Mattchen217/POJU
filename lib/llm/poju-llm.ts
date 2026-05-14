@@ -1,5 +1,6 @@
 import { buildPOJUSystemPrompt } from "@/lib/llm/poju-prompts";
 import { repairLLMOutput, validateLLMOutput } from "@/lib/llm/output-validator";
+import { applyPojuOutputPolicies } from "@/lib/poju/output-policy";
 import {
   GEMINI_PRIMARY_MODEL,
   generateGeminiChatCompletion,
@@ -72,7 +73,7 @@ export async function callPOJULLM(input: CallInput): Promise<POJULLMResponse> {
       maxOutputTokens: 4096,
     });
 
-    const parsed = parseStep5LLMResponse(text, locale);
+    const parsed = parseStep5LLMResponse(text, locale, session, profile);
 
     return {
       response: parsed.response,
@@ -107,17 +108,28 @@ function emptyFailureResponse(session: POJUSessionState, locale: string, model: 
   };
 }
 
-function parseStep5LLMResponse(rawText: string, locale: string): any {
+function parseStep5LLMResponse(
+  rawText: string,
+  locale: string,
+  session: POJUSessionState,
+  profile: UserProfile | null,
+): any {
   try {
     const cleaned = rawText.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
     const parsed = JSON.parse(cleaned);
     const validation = validateLLMOutput(parsed);
-    if (validation.valid) return validation.data;
-    console.warn("[poju-llm] Invalid output, attempting repair:", validation.error);
-    return repairLLMOutput(parsed, locale);
+    const base = validation.valid ? validation.data : repairLLMOutput(parsed, locale);
+    if (!validation.valid) {
+      console.warn("[poju-llm] Invalid output, attempting repair:", validation.error);
+    }
+    return applyPojuOutputPolicies(base, { session, profile, locale });
   } catch {
     console.error("[poju-llm] JSON parse failed");
-    return repairLLMOutput({ response: rawText || getLLMFailureMessage(locale) }, locale);
+    return applyPojuOutputPolicies(repairLLMOutput({ response: rawText || getLLMFailureMessage(locale) }, locale), {
+      session,
+      profile,
+      locale,
+    });
   }
 }
 

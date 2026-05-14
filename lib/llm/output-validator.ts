@@ -21,7 +21,14 @@ const MainDeliverySchema = z.object({
   invitation: z.string(),
 });
 
+const ThoughtSchema = z.object({
+  current_context_score: z.number().min(0).max(10),
+  missing_keys: z.array(z.string()),
+  next_best_action: z.enum(["continue_chat", "show_birth_form", "deliver_main", "track_progress"]),
+});
+
 export const POJULLMResponseSchema = z.object({
+  thought: ThoughtSchema,
   response: z.string().min(10),
   user_intent: z.enum([
     "greeting",
@@ -66,7 +73,21 @@ export function validateLLMOutput(raw: any): { valid: boolean; data?: any; error
 }
 
 export function repairLLMOutput(raw: any, fallbackLocale: string): any {
+  const thought =
+    raw?.thought &&
+    typeof raw.thought === "object" &&
+    typeof raw.thought.current_context_score === "number" &&
+    Array.isArray(raw.thought.missing_keys) &&
+    typeof raw.thought.next_best_action === "string"
+      ? raw.thought
+      : {
+          current_context_score: 2,
+          missing_keys: ["situation_detail", "people_or_stakes", "what_you_tried", "what_you_fear_next"],
+          next_best_action: "continue_chat" as const,
+        };
+
   return {
+    thought,
     response: raw?.response || getFallbackResponse(fallbackLocale),
     user_intent: raw?.user_intent || "unclear",
     current_state: raw?.current_state || "collecting_context",
