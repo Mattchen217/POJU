@@ -1,8 +1,13 @@
 "use client";
 
 import { useRouter } from "@/i18n/navigation";
+import { useLocale } from "next-intl";
 import { useState, type ReactNode } from "react";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
+import { getActivePOJUSessionsByDevice } from "@/lib/poju/session-manager";
+
+/** Until a real gateway is wired, quick-start must seed the same sessionStorage keys as the question dialog flow. */
+const MOCK_PENDING_QUESTION = "I'd like to begin a POJU session.";
 
 type Props = {
   className?: string;
@@ -10,10 +15,12 @@ type Props = {
 };
 
 /**
- * Batch4：同设备单 active 检查 → 可选继续；否则走 $9.99 占位支付链 → /start → /chat?token=…
+ * v4：同设备已有 IndexedDB active 会话 → 确认后进入 `/poju/session/[id]`；
+ * 否则走占位支付链。
  */
 export function PojuSessionStarter({ className, children }: Props) {
   const router = useRouter();
+  const locale = useLocale();
   const [busy, setBusy] = useState(false);
 
   async function onClick() {
@@ -21,34 +28,41 @@ export function PojuSessionStarter({ className, children }: Props) {
     setBusy(true);
     try {
       const deviceId = getPojuDeviceId();
-      const st = await fetch("/api/poju/status", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ deviceId }),
-      });
-      const status = (await st.json()) as {
-        ok?: boolean;
-        active?: boolean;
-        sessionId?: string;
-      };
-      if (status.ok && status.active && status.sessionId) {
+      const v4Active = await getActivePOJUSessionsByDevice(deviceId);
+      if (v4Active.length > 0) {
+        v4Active.sort((a, b) => b.last_interaction_at.getTime() - a.last_interaction_at.getTime());
+        const sessionId = v4Active[0].session_id;
         const go = window.confirm(
           "You already have an active POJU session on this device. Open it now, or Cancel to stay on this page.",
         );
         if (go) {
-          router.push(`/poju/session/${encodeURIComponent(status.sessionId)}`);
+          queueMicrotask(() => {
+            router.push(`/poju/session/${sessionId}`);
+          });
         }
         return;
       }
 
+      sessionStorage.setItem("poju_pending_question", MOCK_PENDING_QUESTION);
+      const returnUrl =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/${locale}/poju/payment-success`
+          : `/${locale}/poju/payment-success`;
       const pay = await fetch("/api/payments/create", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ product: "poju" }),
+        body: JSON.stringify({ product: "poju", locale, return_url: returnUrl }),
       });
-      const p = (await pay.json()) as { checkout_url?: string; ok?: boolean };
-      if (p.checkout_url) {
-        router.push(p.checkout_url);
+      const p = (await pay.json()) as {
+        checkout_url?: string;
+        payment_url?: string;
+        order_id?: string;
+        ok?: boolean;
+      };
+      const target = p.payment_url ?? p.checkout_url;
+      if (target) {
+        if (p.order_id) sessionStorage.setItem("poju_pending_order_id", p.order_id);
+        window.location.href = target;
         return;
       }
     } finally {

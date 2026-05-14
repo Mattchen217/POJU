@@ -5,6 +5,7 @@ import { Compass, GitBranch, RefreshCcw, Search, UserRoundSearch } from "lucide-
 import { PojuHowWorksRing } from "@/components/marketing/poju-how-works-ring";
 import { PojuSessionStarter } from "@/components/poju/poju-session-starter";
 import { PojuProductHero } from "@/components/marketing/poju-product-hero";
+import { PojuStep2Entry } from "@/components/poju/poju-step2-entry";
 
 export const metadata: Metadata = {
   title: "pojulife — Break your deadlock",
@@ -139,6 +140,7 @@ export default async function PojuProductPage() {
               </p>
             </div>
           </div>
+          <PojuStep2Entry />
         </section>
       </div>
     </main>

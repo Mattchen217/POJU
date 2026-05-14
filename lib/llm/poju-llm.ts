@@ -1,141 +1,125 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import {
-  buildPojuDriftJudgeSystemPrompt,
-  buildPojuGuidedTemplatePrompt,
-  buildPojuPhase3SystemPrompt,
-  buildPojuPhase5SystemPrompt,
-} from "@/lib/prompts/poju-phase-prompts";
-import { getLanguageDirective, parseAppLocale } from "@/lib/prompts/language-directive";
-import type { SessionMessage, SessionState } from "@/lib/poju/types";
-import {
-  POJU_GEMINI_MODEL,
-  pojuDriftGenerationConfig,
-  pojuMainGenerationConfig,
-} from "@/lib/llm/gemini-poju-config";
+import Anthropic from "@anthropic-ai/sdk";
+import { buildPOJUSystemPrompt } from "@/lib/llm/poju-prompts";
+import { repairLLMOutput, validateLLMOutput } from "@/lib/llm/output-validator";
+import type { POJUSessionState } from "@/lib/poju/types";
+import type { UserProfile } from "@/lib/profile/types";
 
-function getGeminiClient(): GoogleGenerativeAI | null {
-  const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY ?? process.env.GEMINI_API_KEY;
-  if (!apiKey) return null;
-  return new GoogleGenerativeAI(apiKey);
-}
+const anthropicClient = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
 
-type Part = { text?: string; thought?: boolean };
-
-/** 思考链片段可能出现在 parts 中；只拼接对用户可见的 text。 */
-function extractPublicModelText(response: { candidates?: Array<{ content?: { parts?: Part[] } }> }): string {
-  const parts = response.candidates?.[0]?.content?.parts;
-  if (!parts?.length) return "";
-  const chunks: string[] = [];
-  for (const p of parts) {
-    if (p.thought) continue;
-    if (typeof p.text === "string" && p.text.length) chunks.push(p.text);
-  }
-  return chunks.join("").trim();
-}
-
-function recentTranscript(messages: SessionMessage[], maxPairs = 8): string {
-  const tail = messages.slice(-maxPairs * 2);
-  return tail
-    .map((m) => `${m.role === "user" ? "User" : "POJU"}: ${m.text}`)
-    .join("\n\n")
-    .slice(0, 12000);
-}
-
-/**
- * 规则层判定 drift 后由 LLM 二次确认（不启用思考模式，JSON 输出）。
- * @returns `false` = 仍同主题（放行）；`true` = 离题（拒绝）；`null` = 未调用或解析失败。
- */
-export async function confirmRuleBasedDriftWithLLM(
-  anchor: string,
-  incoming: string,
-  locale: string,
-): Promise<boolean | null> {
-  const genAI = getGeminiClient();
-  if (!genAI) return null;
-  const appLocale = parseAppLocale(locale);
-  const model = genAI.getGenerativeModel({
-    model: POJU_GEMINI_MODEL,
-    systemInstruction: buildPojuDriftJudgeSystemPrompt(anchor, incoming, appLocale),
-  });
-  try {
-    const res = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: "Return only one JSON object." }] }],
-      generationConfig: pojuDriftGenerationConfig({ temperature: 0.1, maxOutputTokens: 128 }) as import("@google/generative-ai").GenerationConfig,
-    });
-    const raw = res.response as unknown as { candidates?: Array<{ content?: { parts?: Part[] } }> };
-    const text = extractPublicModelText(raw) || (res.response as { text?: () => string }).text?.() || "";
-    const json = JSON.parse(text.replace(/^```json\s*|```$/g, "").trim()) as { sameTopic?: boolean };
-    if (typeof json.sameTopic === "boolean") {
-      return !json.sameTopic;
-    }
-  } catch {
-    return null;
-  }
-  return null;
-}
-
-export async function generatePojuPhaseReply(params: {
-  session: SessionState;
+interface CallInput {
+  session: POJUSessionState;
+  profile: UserProfile | null;
   locale: string;
-  userInput: string;
-  templateReply: string;
-  phaseBefore: number;
-  phaseAfter: number;
-}): Promise<string | null> {
-  const { session, locale, userInput, templateReply, phaseBefore, phaseAfter } = params;
-  const genAI = getGeminiClient();
-  if (!genAI) return null;
+}
 
-  const appLocale = parseAppLocale(locale);
-  const lang = getLanguageDirective({
-    locale: appLocale,
-    userInput,
-    conversationHistory: session.messages.map((m) => ({
-      role: m.role,
-      content: m.text,
-    })),
+export interface POJULLMResponse {
+  response: string;
+  model: string;
+  tokens_used: number;
+  user_intent:
+    | "greeting"
+    | "sharing_situation"
+    | "asking_specific"
+    | "reporting_progress"
+    | "wrapping_up"
+    | "unclear"
+    | "off_topic";
+  current_state: "greeting" | "collecting_context" | "awaiting_profile" | "analyzing" | "delivered" | "tracking";
+  action_requested?: "continue_chat" | "show_birth_form" | "deliver_main" | "track_progress";
+  topic_drift_detected: boolean;
+  context_updates: Record<string, any>;
+  contains_delivery: boolean;
+  main_delivery?: any;
+  new_actions?: any[];
+}
+
+export async function callPOJULLM(input: CallInput): Promise<POJULLMResponse> {
+  const { session, profile, locale } = input;
+  const systemPrompt = buildPOJUSystemPrompt({
+    session,
+    profile,
+    locale,
   });
 
-  const deepPhase =
-    (phaseBefore === 3 && phaseAfter === 3) || (phaseBefore === 5 && phaseAfter === 5);
-  const system = deepPhase
-    ? `${phaseAfter === 5 ? buildPojuPhase5SystemPrompt(session, appLocale) : buildPojuPhase3SystemPrompt(session, appLocale)}
+  const conversationMessages = session.messages
+    .filter((m) => m.role === "user" || m.role === "assistant")
+    .filter((m) => !m.is_rejected)
+    .map((m) => ({
+      role: m.role as "user" | "assistant",
+      content: m.content,
+    }));
 
-${lang.directive}
-
-If you cannot comply, output the fallback verbatim:
----
-${templateReply}
----
-Otherwise write the best POJU reply (no meta-commentary).`
-    : `${buildPojuGuidedTemplatePrompt(session, appLocale, phaseBefore, phaseAfter, templateReply)}
-
-${lang.directive}`;
-
-  const model = genAI.getGenerativeModel({
-    model: POJU_GEMINI_MODEL,
-    systemInstruction: system,
-  });
-
-  const history = recentTranscript(session.messages);
-  const userBlock = `Recent conversation:\n${history}\n\nLatest user message:\n${userInput}`;
-
-  const genCfg = pojuMainGenerationConfig({
-    temperature: deepPhase ? 0.65 : 0.55,
-    maxOutputTokens: deepPhase ? 2200 : 1200,
-  });
+  const lastMessage = session.messages[session.messages.length - 1];
+  if (lastMessage?.role === "system") {
+    conversationMessages.push({
+      role: "user",
+      content: lastMessage.content,
+    });
+  }
 
   try {
-    const res = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: userBlock }] }],
-      // thinkingConfig 在官方 REST 已支持；@google/generative-ai 的 GenerationConfig 类型尚未声明该字段。
-      generationConfig: genCfg as import("@google/generative-ai").GenerationConfig,
+    const rawResponse = await anthropicClient.messages.create({
+      model: "claude-sonnet-4-5-20250929",
+      max_tokens: 2500,
+      system: systemPrompt,
+      messages: conversationMessages,
     });
-    const raw = res.response as unknown as { candidates?: Array<{ content?: { parts?: Part[] } }> };
-    const text = extractPublicModelText(raw) || res.response.text().trim();
-    if (text.length > 12) return text;
-  } catch {
-    return null;
+
+    const rawText = rawResponse.content[0]?.type === "text" ? rawResponse.content[0].text : "";
+    const parsed = parseStep5LLMResponse(rawText, locale);
+
+    return {
+      response: parsed.response,
+      model: "claude-sonnet-4-5-20250929",
+      tokens_used: (rawResponse.usage?.input_tokens || 0) + (rawResponse.usage?.output_tokens || 0),
+      user_intent: parsed.user_intent || "unclear",
+      current_state: parsed.current_state || (session.main_delivery_done ? "tracking" : "collecting_context"),
+      action_requested: parsed.action_requested,
+      topic_drift_detected: parsed.topic_drift_detected || false,
+      context_updates: parsed.context_updates || {},
+      contains_delivery: parsed.contains_delivery || false,
+      main_delivery: parsed.main_delivery,
+      new_actions: parsed.new_actions,
+    };
+  } catch (error: any) {
+    console.error("[poju-llm] Claude API failed:", error?.message ?? error);
+    return {
+      response: getLLMFailureMessage(locale),
+      model: "claude-sonnet-4-5-20250929",
+      tokens_used: 0,
+      user_intent: "unclear",
+      current_state: session.main_delivery_done ? "tracking" : "collecting_context",
+      topic_drift_detected: false,
+      contains_delivery: false,
+      context_updates: {},
+    };
   }
-  return null;
+}
+
+function parseStep5LLMResponse(rawText: string, locale: string): any {
+  try {
+    const cleaned = rawText.replace(/^```json\s*/i, "").replace(/```\s*$/, "").trim();
+    const parsed = JSON.parse(cleaned);
+    const validation = validateLLMOutput(parsed);
+    if (validation.valid) return validation.data;
+    console.warn("[poju-llm] Invalid output, attempting repair:", validation.error);
+    return repairLLMOutput(parsed, locale);
+  } catch {
+    console.error("[poju-llm] JSON parse failed");
+    return repairLLMOutput({ response: rawText || getLLMFailureMessage(locale) }, locale);
+  }
+}
+
+function getLLMFailureMessage(locale: string): string {
+  const messages: Record<string, string> = {
+    en: "I'm having trouble connecting right now. Could you try again in a moment? Your session is saved.",
+    zh: "我现在连接有点问题,请稍后再试一下。你的会话已经保存。",
+    es: "Tengo problemas para conectarme en este momento. ¿Podrías intentarlo de nuevo en un momento? Tu sesión está guardada.",
+    fr: "J'ai des difficultés à me connecter en ce moment. Pourriez-vous réessayer dans un instant ? Votre session est sauvegardée.",
+    de: "Ich habe gerade Verbindungsprobleme. Könnten Sie es in einem Moment erneut versuchen? Ihre Sitzung ist gespeichert.",
+  };
+  const langCode = locale.split("-")[0];
+  return messages[langCode] || messages.en;
 }

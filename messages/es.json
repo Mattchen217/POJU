@@ -460,5 +460,92 @@
       },
       "copyright": "© 2026 pojulife. Todos los derechos reservados."
     }
+  },
+  "birthForm": {
+    "title": "Datos de nacimiento",
+    "subtitle": "Se usa una vez para crear tu perfil compartido de POJU / Glyph / Syncro.",
+    "year": "Año",
+    "month": "Mes",
+    "day": "Día",
+    "hour": "Hora",
+    "minute": "Minuto",
+    "gender": "Género",
+    "genderMale": "Hombre",
+    "genderFemale": "Mujer",
+    "genderOther": "Otro",
+    "cityOptional": "Ciudad (opcional)",
+    "privacy": "Se guarda localmente en IndexedDB cifrado en este dispositivo. Puedes cambiarlo en ajustes de perfil.",
+    "submit": "Guardar perfil compartido",
+    "submitting": "Calculando…",
+    "done": "Perfil guardado en IndexedDB cifrado.",
+    "errorGeneric": "Algo salió mal. Inténtalo de nuevo.",
+    "skip": "Omitir por ahora",
+    "skipConfirmTitle": "¿Continuar sin datos de nacimiento?",
+    "skipConfirmBody": "Sin datos de nacimiento solo usamos patrones genéricos, sin carta personalizada. Puedes añadirlos cuando quieras en el perfil.",
+    "skipConfirmStay": "Volver al formulario",
+    "skipConfirmLeave": "Continuar sin datos",
+    "close": "Cerrar"
+  },
+  "poju": {
+    "chat": {
+      "question_label": "Tu pregunta",
+      "archive_link": "Sesiones y archivo",
+      "input_placeholder": "Escribe tu mensaje…",
+      "send": "Enviar",
+      "sending": "Pensando…",
+      "turns": "Turnos",
+      "tokens": "Tokens",
+      "end_session": "Terminar sesión",
+      "ending": "Guardando…",
+      "end_confirm": "¿Marcar esta sesión como terminada? Aún puedes revisar el historial en Archivo en este dispositivo."
+    },
+    "expiry": {
+      "expires_in": "Quedan unos {days} días en la ventana de esta sesión.",
+      "extend_30": "Ampliar 30 días",
+      "extending": "Ampliando…"
+    },
+    "delivery": {
+      "badge": "Lectura POJU",
+      "intro": "Esto es lo que veo a partir de nuestra conversación:",
+      "reminder": "Quédate con lo que resuene; suelta lo demás. La decisión es tuya."
+    },
+    "actions": {
+      "title": "Lo que puedes hacer"
+    },
+    "action_card": {
+      "category_traditional": "Tradicional",
+      "category_decisive": "Acción",
+      "category_reflective": "Reflexión",
+      "timing_immediate": "Hoy",
+      "timing_this_week": "Esta semana",
+      "timing_this_month": "Este mes",
+      "timing_ongoing": "Continuo",
+      "why_this_action": "Por qué esta acción",
+      "mark_completed": "Lo hice",
+      "mark_modified": "Lo adapté",
+      "mark_skipped": "No lo hice",
+      "status_completed": "Hecho",
+      "status_modified": "Adaptado",
+      "status_skipped": "Omitido"
+    },
+    "message": {
+      "thinking": "POJU está pensando…"
+    },
+    "archive": {
+      "title": "Sesiones POJU",
+      "subtitle": "Las sesiones se guardan cifradas en este dispositivo.",
+      "back": "Volver a POJU",
+      "section_active": "Activas",
+      "section_paused": "En pausa",
+      "section_resolved": "Terminadas",
+      "section_archived": "Archivadas",
+      "continue": "Continuar",
+      "pause": "Pausar",
+      "restore": "Restaurar",
+      "delete_forever": "Borrar para siempre",
+      "delete_confirm": "¿Eliminar permanentemente esta sesión de este dispositivo? No se puede deshacer.",
+      "meta_expires": "Vence",
+      "meta_status": "Estado"
+    }
   }
 }

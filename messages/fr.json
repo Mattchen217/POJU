@@ -460,5 +460,92 @@
       },
       "copyright": "© 2026 pojulife. Tous droits réservés."
     }
+  },
+  "birthForm": {
+    "title": "Informations de naissance",
+    "subtitle": "Utilisé une seule fois pour créer votre profil partagé POJU / Glyph / Syncro.",
+    "year": "Année",
+    "month": "Mois",
+    "day": "Jour",
+    "hour": "Heure",
+    "minute": "Minute",
+    "gender": "Genre",
+    "genderMale": "Homme",
+    "genderFemale": "Femme",
+    "genderOther": "Autre",
+    "cityOptional": "Ville (facultatif)",
+    "privacy": "Stocké localement dans IndexedDB chiffré sur cet appareil. Modifiable dans les paramètres du profil.",
+    "submit": "Enregistrer le profil partagé",
+    "submitting": "Calcul…",
+    "done": "Profil enregistré dans IndexedDB chiffré.",
+    "errorGeneric": "Une erreur s'est produite. Réessayez.",
+    "skip": "Passer pour l'instant",
+    "skipConfirmTitle": "Continuer sans données de naissance ?",
+    "skipConfirmBody": "Sans données de naissance, nous n'utilisons que des motifs génériques — pas de thème personnalisé. Vous pourrez les ajouter plus tard dans le profil.",
+    "skipConfirmStay": "Remplir le formulaire",
+    "skipConfirmLeave": "Continuer sans données",
+    "close": "Fermer"
+  },
+  "poju": {
+    "chat": {
+      "question_label": "Votre question",
+      "archive_link": "Sessions et archive",
+      "input_placeholder": "Écrivez votre message…",
+      "send": "Envoyer",
+      "sending": "Réflexion…",
+      "turns": "Tours",
+      "tokens": "Jetons",
+      "end_session": "Terminer la session",
+      "ending": "Enregistrement…",
+      "end_confirm": "Marquer cette session comme terminée ? Vous pourrez encore consulter l’historique dans Archive sur cet appareil."
+    },
+    "expiry": {
+      "expires_in": "Environ {days} jours restants dans la fenêtre de cette session.",
+      "extend_30": "Prolonger de 30 jours",
+      "extending": "Prolongation…"
+    },
+    "delivery": {
+      "badge": "Lecture POJU",
+      "intro": "Voici ce que je vois à partir de notre échange :",
+      "reminder": "Gardez ce qui résonne ; laissez le reste. La décision vous appartient."
+    },
+    "actions": {
+      "title": "Ce que vous pouvez faire"
+    },
+    "action_card": {
+      "category_traditional": "Traditionnel",
+      "category_decisive": "Action",
+      "category_reflective": "Réflexion",
+      "timing_immediate": "Aujourd’hui",
+      "timing_this_week": "Cette semaine",
+      "timing_this_month": "Ce mois-ci",
+      "timing_ongoing": "En continu",
+      "why_this_action": "Pourquoi cette action",
+      "mark_completed": "Je l’ai fait",
+      "mark_modified": "Je l’ai adaptée",
+      "mark_skipped": "Je ne l’ai pas faite",
+      "status_completed": "Fait",
+      "status_modified": "Adapté",
+      "status_skipped": "Ignoré"
+    },
+    "message": {
+      "thinking": "POJU réfléchit…"
+    },
+    "archive": {
+      "title": "Sessions POJU",
+      "subtitle": "Les sessions sont stockées chiffrées sur cet appareil.",
+      "back": "Retour à POJU",
+      "section_active": "Actives",
+      "section_paused": "En pause",
+      "section_resolved": "Terminées",
+      "section_archived": "Archivées",
+      "continue": "Continuer",
+      "pause": "Mettre en pause",
+      "restore": "Restaurer",
+      "delete_forever": "Supprimer définitivement",
+      "delete_confirm": "Supprimer définitivement cette session de cet appareil ? Irréversible.",
+      "meta_expires": "Expire",
+      "meta_status": "Statut"
+    }
   }
 }

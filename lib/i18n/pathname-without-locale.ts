@@ -20,7 +20,8 @@ export function getFirstRouteSegment(pathname: string): string | undefined {
 }
 
 export function isChatRoute(pathname: string): boolean {
-  return getFirstRouteSegment(pathname) === "chat";
+  const path = getPathnameWithoutLocale(pathname);
+  return path === "/chat" || path.startsWith("/poju/session/");
 }
 
 export type SiteNavActive = "poju" | "glyph" | "syncro" | "archive";

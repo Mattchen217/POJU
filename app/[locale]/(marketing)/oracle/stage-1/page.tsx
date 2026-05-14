@@ -23,6 +23,7 @@ type SignLevel = {
 
 const QUESTION_HISTORY_KEY = "pojulife_oracle_question_history_v1";
 const ARCHIVE_RUNTIME_KEY = "pojulife_archive_runtime_v1";
+const STAGE1_SHELL_KEY = "pojulife_oracle_stage1_shell";
 
 const SIGN_COPY = {
   "Divine Tailwind": {
@@ -138,8 +139,107 @@ function OracleStageOneContent() {
   const [latestSign, setLatestSign] = useState<OracleSignRecord | null>(null);
   const [archiveSaved, setArchiveSaved] = useState(false);
   const [lastOracleRecordId, setLastOracleRecordId] = useState("");
+  const [shell, setShell] = useState<"dark" | "light">(() => {
+    if (typeof window === "undefined") return "dark";
+    try {
+      const v = window.localStorage.getItem(STAGE1_SHELL_KEY);
+      return v === "light" ? "light" : "dark";
+    } catch {
+      return "dark";
+    }
+  });
   const holdIntervalRef = useRef<number | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(STAGE1_SHELL_KEY, shell);
+    } catch {
+      // ignore
+    }
+  }, [shell]);
+
+  const skin = useMemo(() => {
+    if (shell === "light") {
+      return {
+        main: "relative min-h-screen bg-zinc-50 px-4 py-12 text-center text-zinc-800 antialiased",
+        toggle:
+          "fixed left-4 top-[max(1rem,env(safe-area-inset-top))] z-[110] inline-flex h-11 min-w-[2.75rem] items-center justify-center gap-1.5 rounded-full border border-zinc-300/90 bg-white px-3.5 text-zinc-800 shadow-md transition hover:bg-zinc-100",
+        close:
+          "fixed right-4 top-[max(1rem,env(safe-area-inset-top))] z-[110] inline-flex h-11 min-w-[2.75rem] items-center justify-center rounded-full border border-fuchsia-400/50 bg-white/95 px-3 text-sm font-semibold text-fuchsia-900 shadow-md transition hover:bg-fuchsia-50",
+        kicker: "text-xs font-semibold uppercase tracking-[0.2em] text-fuchsia-700/85",
+        h1: "mt-3 text-2xl font-semibold text-zinc-900 sm:text-3xl",
+        ritualBox:
+          "mx-auto mt-6 max-w-xl rounded-xl border border-fuchsia-200/90 bg-fuchsia-50/80 p-4 text-left text-sm leading-7 text-zinc-700",
+        btnContinueLg:
+          "mt-8 inline-flex rounded-full border border-fuchsia-400/55 bg-fuchsia-100/90 px-6 py-3 text-sm font-semibold text-fuchsia-950 shadow-sm transition hover:bg-fuchsia-200/90",
+        card: "mx-auto mt-8 max-w-xl rounded-xl border border-zinc-200/95 bg-white p-5 text-left shadow-sm",
+        cardP6: "mx-auto mt-8 max-w-xl rounded-xl border border-zinc-200/95 bg-white p-6 shadow-sm",
+        label: "text-sm text-zinc-600",
+        input:
+          "mt-3 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400",
+        counter: "mt-2 text-xs text-zinc-500",
+        btnContinueMd:
+          "mt-4 rounded-full border border-fuchsia-400/55 bg-fuchsia-100/90 px-5 py-2 text-sm font-semibold text-fuchsia-950 shadow-sm disabled:opacity-40",
+        stageLead: "text-lg text-zinc-900",
+        stageSub: "mt-2 text-sm text-zinc-600",
+        btnOutlineSm:
+          "mt-5 rounded-full border border-fuchsia-400/50 bg-fuchsia-50/80 px-5 py-2 text-sm text-fuchsia-900 transition hover:bg-fuchsia-100",
+        holdBtn:
+          "mt-5 w-full rounded-xl border border-fuchsia-400/50 bg-fuchsia-50/90 px-5 py-6 text-sm text-fuchsia-950",
+        progressTrack: "mt-3 h-1.5 w-full overflow-hidden rounded-full bg-zinc-200",
+        revealCard: "mx-auto mt-4 h-32 w-24 rounded-md border border-zinc-300 bg-zinc-100/90",
+        dimXs: "mt-1 text-xs text-zinc-500",
+        backLink:
+          "mt-10 inline-flex justify-center rounded-full border border-fuchsia-400/55 bg-fuchsia-100/90 px-6 py-3 text-sm font-semibold text-fuchsia-950 shadow-sm transition hover:bg-fuchsia-200/90",
+        gridBtn: "rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50",
+        gridBtnAccent: "rounded-lg border border-fuchsia-400/60 bg-fuchsia-50 px-3 py-2 text-sm text-fuchsia-900",
+        dupOverlay: "fixed inset-0 z-[120] flex items-center justify-center bg-zinc-900/35 px-4 backdrop-blur-sm",
+        dupPanel: "w-full max-w-md rounded-2xl border border-fuchsia-200/90 bg-white p-5 text-left shadow-xl",
+        dupTitle: "text-lg font-semibold text-zinc-900",
+        dupBody: "mt-3 text-sm text-zinc-600",
+        dupBtn: "rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-100",
+        dupBtnPrimary: "rounded-lg border border-fuchsia-400/60 bg-fuchsia-100 px-3 py-2 text-sm font-medium text-fuchsia-950",
+      };
+    }
+    return {
+      main: "relative min-h-screen bg-bg-deep px-4 py-12 text-center text-text-body",
+      toggle:
+        "fixed left-4 top-[max(1rem,env(safe-area-inset-top))] z-[110] inline-flex h-11 min-w-[2.75rem] items-center justify-center gap-1.5 rounded-full border border-zinc-500/40 bg-black/55 px-3.5 text-sm font-semibold text-zinc-200 shadow-lg backdrop-blur-md transition hover:bg-white/10",
+      close:
+        "fixed right-4 top-[max(1rem,env(safe-area-inset-top))] z-[110] inline-flex h-11 min-w-[2.75rem] items-center justify-center rounded-full border border-fuchsia-300/40 bg-black/55 px-3 text-sm font-semibold text-fuchsia-100 shadow-lg backdrop-blur-md transition hover:bg-fuchsia-500/20",
+      kicker: "text-xs font-semibold uppercase tracking-[0.2em] text-fuchsia-200/80",
+      h1: "mt-3 text-2xl font-semibold text-text-primary sm:text-3xl",
+      ritualBox:
+        "mx-auto mt-6 max-w-xl rounded-xl border border-fuchsia-300/20 bg-fuchsia-900/10 p-4 text-left text-sm leading-7 text-text-secondary",
+      btnContinueLg:
+        "mt-8 inline-flex rounded-full border border-fuchsia-300/45 bg-fuchsia-500/20 px-6 py-3 text-sm font-semibold text-fuchsia-100",
+      card: "mx-auto mt-8 max-w-xl rounded-xl border border-white/12 bg-black/25 p-5 text-left",
+      cardP6: "mx-auto mt-8 max-w-xl rounded-xl border border-white/12 bg-black/25 p-6",
+      label: "text-sm text-text-secondary",
+      input: "mt-3 w-full rounded-lg border border-white/12 bg-black/20 px-3 py-2 text-sm",
+      counter: "mt-2 text-xs text-text-dim",
+      btnContinueMd:
+        "mt-4 rounded-full border border-fuchsia-300/45 bg-fuchsia-500/20 px-5 py-2 text-sm font-semibold text-fuchsia-100 disabled:opacity-40",
+      stageLead: "text-lg text-text-primary",
+      stageSub: "mt-2 text-sm text-text-secondary",
+      btnOutlineSm: "mt-5 rounded-full border border-fuchsia-300/45 px-5 py-2 text-sm text-fuchsia-100",
+      holdBtn: "mt-5 w-full rounded-xl border border-fuchsia-300/45 bg-fuchsia-500/15 px-5 py-6 text-sm text-fuchsia-100",
+      progressTrack: "mt-3 h-1.5 w-full overflow-hidden rounded-full bg-black/40",
+      revealCard: "mx-auto mt-4 h-32 w-24 rounded-md border border-white/20 bg-white/5",
+      dimXs: "mt-1 text-xs text-text-dim",
+      backLink:
+        "mt-10 inline-flex justify-center rounded-full border border-fuchsia-300/45 bg-fuchsia-500/20 px-6 py-3 text-sm font-semibold text-fuchsia-100 hover:bg-fuchsia-400/28",
+      gridBtn: "rounded-lg border border-white/12 px-3 py-2 text-sm text-text-secondary",
+      gridBtnAccent: "rounded-lg border border-fuchsia-300/45 px-3 py-2 text-sm text-fuchsia-100",
+      dupOverlay: "fixed inset-0 z-[120] flex items-center justify-center bg-black/60 px-4",
+      dupPanel: "w-full max-w-md rounded-2xl border border-fuchsia-300/20 bg-bg-deep p-5 text-left",
+      dupTitle: "text-lg font-semibold text-text-primary",
+      dupBody: "mt-3 text-sm text-text-secondary",
+      dupBtn: "rounded-lg border border-white/12 px-3 py-2 text-sm text-text-secondary",
+      dupBtnPrimary: "rounded-lg border border-fuchsia-300/45 bg-fuchsia-500/20 px-3 py-2 text-sm text-fuchsia-100",
+    };
+  }, [shell]);
 
   const canContinue = question.trim().length > 0 && question.trim().length <= 60;
 
@@ -289,12 +389,15 @@ function OracleStageOneContent() {
     setHoldProgress(0);
   };
 
-  const ritualHints = (
-    <div className="mx-auto mt-6 max-w-xl rounded-xl border border-fuchsia-300/20 bg-fuchsia-900/10 p-4 text-left text-sm leading-7 text-text-secondary">
-      <p>◉ One question per reading. Asking many things at once dilutes the sign.</p>
-      <p className="mt-2">◉ If the same question calls you back, wait 48 hours. Answers need time to settle.</p>
-      <p className="mt-2">◉ Compress your question into 60 characters. The compression is the beginning of the answer.</p>
-    </div>
+  const ritualHints = useMemo(
+    () => (
+      <div className={skin.ritualBox}>
+        <p>◉ One question per reading. Asking many things at once dilutes the sign.</p>
+        <p className="mt-2">◉ If the same question calls you back, wait 48 hours. Answers need time to settle.</p>
+        <p className="mt-2">◉ Compress your question into 60 characters. The compression is the beginning of the answer.</p>
+      </div>
+    ),
+    [skin],
   );
 
   const downloadCardAsPng = async () => {
@@ -408,10 +511,22 @@ function OracleStageOneContent() {
   };
 
   return (
-    <main className="relative min-h-screen bg-bg-deep px-4 py-12 text-center text-text-body">
+    <main className={skin.main}>
+      <button
+        type="button"
+        className={skin.toggle}
+        onClick={() => setShell((s) => (s === "dark" ? "light" : "dark"))}
+        aria-label={shell === "dark" ? "Switch to light appearance" : "Switch to dark appearance"}
+        title={shell === "dark" ? "Light appearance" : "Dark appearance"}
+      >
+        <span className="material-symbols-outlined text-[20px] leading-none" aria-hidden>
+          {shell === "dark" ? "light_mode" : "dark_mode"}
+        </span>
+        <span className="text-[11px] font-semibold tracking-wide">{shell === "dark" ? "Light" : "Dark"}</span>
+      </button>
       <Link
         href="/glyph"
-        className="fixed right-4 top-[max(1rem,env(safe-area-inset-top))] z-[100] inline-flex h-11 min-w-[2.75rem] items-center justify-center rounded-full border border-fuchsia-300/40 bg-black/55 px-3 text-sm font-semibold text-fuchsia-100 shadow-lg backdrop-blur-md transition hover:bg-fuchsia-500/20"
+        className={skin.close}
         aria-label="关闭并返回 Glyph 介绍页"
       >
         <span className="material-symbols-outlined text-[22px] leading-none" aria-hidden>
@@ -421,8 +536,8 @@ function OracleStageOneContent() {
       <div className="mx-auto mb-4 w-full max-w-xl">
         <ArchiveReturnBanner />
       </div>
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-fuchsia-200/80">Glyph Ritual Flow</p>
-      <h1 className="mt-3 text-2xl font-semibold text-text-primary sm:text-3xl">Stage {stage}</h1>
+      <p className={skin.kicker}>Glyph Ritual Flow</p>
+      <h1 className={skin.h1}>Stage {stage}</h1>
 
       {stage === 1 ? (
         <>
@@ -430,7 +545,7 @@ function OracleStageOneContent() {
           <button
             type="button"
             onClick={() => setStage(2)}
-            className="mt-8 inline-flex rounded-full border border-fuchsia-300/45 bg-fuchsia-500/20 px-6 py-3 text-sm font-semibold text-fuchsia-100"
+            className={skin.btnContinueLg}
           >
             Continue →
           </button>
@@ -438,20 +553,20 @@ function OracleStageOneContent() {
       ) : null}
 
       {stage === 2 ? (
-        <div className="mx-auto mt-8 max-w-xl rounded-xl border border-white/12 bg-black/25 p-5 text-left">
-          <p className="text-sm text-text-secondary">What do you bring today?</p>
+        <div className={skin.card}>
+          <p className={skin.label}>What do you bring today?</p>
           <input
             value={question}
             onChange={(e) => setQuestion(e.target.value.slice(0, 60))}
             placeholder="e.g. Should I end my relationship..."
-            className="mt-3 w-full rounded-lg border border-white/12 bg-black/20 px-3 py-2 text-sm"
+            className={skin.input}
           />
-          <p className="mt-2 text-xs text-text-dim">{question.length}/60</p>
+          <p className={skin.counter}>{question.length}/60</p>
           <button
             type="button"
             disabled={!canContinue}
             onClick={onContinueFromStage2}
-            className="mt-4 rounded-full border border-fuchsia-300/45 bg-fuchsia-500/20 px-5 py-2 text-sm font-semibold text-fuchsia-100 disabled:opacity-40"
+            className={skin.btnContinueMd}
           >
             Continue →
           </button>
@@ -459,13 +574,13 @@ function OracleStageOneContent() {
       ) : null}
 
       {stage === 3 ? (
-        <div className="mx-auto mt-8 max-w-xl rounded-xl border border-white/12 bg-black/25 p-6">
-          <p className="text-lg text-text-primary">Hold to summon your sign</p>
-          <p className="mt-2 text-sm text-text-secondary">Particles accelerate. Hum rises.</p>
+        <div className={`${skin.cardP6} text-center`}>
+          <p className={skin.stageLead}>Hold to summon your sign</p>
+          <p className={skin.stageSub}>Particles accelerate. Hum rises.</p>
           <button
             type="button"
             onClick={() => setStage(4)}
-            className="mt-5 rounded-full border border-fuchsia-300/45 px-5 py-2 text-sm text-fuchsia-100"
+            className={skin.btnOutlineSm}
           >
             Enter Summon Stage
           </button>
@@ -473,9 +588,9 @@ function OracleStageOneContent() {
       ) : null}
 
       {stage === 4 ? (
-        <div className="mx-auto mt-8 max-w-xl rounded-xl border border-white/12 bg-black/25 p-6">
-          <p className="text-lg text-text-primary">Stage 4 · Summon</p>
-          <p className="mt-2 text-sm text-text-secondary">Press and hold for 3 seconds.</p>
+        <div className={`${skin.cardP6} text-center`}>
+          <p className={skin.stageLead}>Stage 4 · Summon</p>
+          <p className={skin.stageSub}>Press and hold for 3 seconds.</p>
           <button
             type="button"
             onMouseDown={startHold}
@@ -483,33 +598,33 @@ function OracleStageOneContent() {
             onMouseLeave={cancelHold}
             onTouchStart={startHold}
             onTouchEnd={cancelHold}
-            className="mt-5 w-full rounded-xl border border-fuchsia-300/45 bg-fuchsia-500/15 px-5 py-6 text-sm text-fuchsia-100"
+            className={skin.holdBtn}
           >
             {holding ? "Summoning..." : "Hold to summon your sign"}
           </button>
-          <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-black/40">
+          <div className={skin.progressTrack}>
             <div className="h-full bg-fuchsia-300/80 transition-all" style={{ width: `${holdProgress}%` }} />
           </div>
         </div>
       ) : null}
 
       {stage === 5 ? (
-        <div className="mx-auto mt-8 max-w-xl rounded-xl border border-white/12 bg-black/25 p-6">
-          <p className="text-lg text-text-primary">Stage 5 · Reveal</p>
-          <p className="mt-2 text-sm text-text-secondary">Card appears from the particle burst. Paper sound rises.</p>
-          <div className="mx-auto mt-4 h-32 w-24 rounded-md border border-white/20 bg-white/5" />
+        <div className={`${skin.cardP6} text-center`}>
+          <p className={skin.stageLead}>Stage 5 · Reveal</p>
+          <p className={skin.stageSub}>Card appears from the particle burst. Paper sound rises.</p>
+          <div className={skin.revealCard} />
           {revealTick >= 2 && signLevel ? (
             <p className="mt-3 text-sm" style={{ color: signLevel.particleColor }}>
               ✦ {signLevel.name} ✦
             </p>
           ) : null}
-          {revealTick >= 3 ? <p className="mt-1 text-xs text-text-dim">Card unfolding...</p> : null}
+          {revealTick >= 3 ? <p className={skin.dimXs}>Card unfolding...</p> : null}
         </div>
       ) : null}
 
       {stage === 6 ? (
-        <div className="mx-auto mt-8 max-w-xl rounded-xl border border-white/12 bg-black/25 p-6 text-left">
-          <p className="text-center text-lg text-text-primary">Stage 6 · Inscribe</p>
+        <div className={`${skin.cardP6} text-left`}>
+          <p className={`text-center ${skin.stageLead}`}>Stage 6 · Inscribe</p>
           <div
             ref={cardRef}
             className={`mt-4 rounded-lg border p-4 ${signLevel?.cardClass ?? "border-fuchsia-300/20 bg-fuchsia-900/10"}`}
@@ -548,10 +663,10 @@ function OracleStageOneContent() {
       ) : null}
 
       {stage === 7 ? (
-        <div className="mx-auto mt-8 max-w-xl rounded-xl border border-white/12 bg-black/25 p-6">
-          <p className="text-lg text-text-primary">Stage 7 · Carry</p>
+        <div className={skin.cardP6}>
+          <p className={`text-center ${skin.stageLead}`}>Stage 7 · Carry</p>
           {latestSign ? (
-            <p className="mt-2 text-xs text-text-dim">
+            <p className={`mt-2 text-center text-xs ${skin.counter}`}>
               Loaded previous sign: {latestSign.levelName} · Sign No. {latestSign.signNo}
             </p>
           ) : null}
@@ -579,14 +694,14 @@ function OracleStageOneContent() {
             <button
               type="button"
               onClick={() => void downloadCardAsPng()}
-              className="rounded-lg border border-white/12 px-3 py-2 text-sm text-text-secondary"
+              className={skin.gridBtn}
             >
               {exporting ? "Exporting..." : "Save as image"}
             </button>
             <button
               type="button"
               onClick={saveToArchive}
-              className="rounded-lg border border-white/12 px-3 py-2 text-sm text-text-secondary"
+              className={skin.gridBtn}
             >
               {archiveSaved ? "Saved" : "Save to Archive"}
             </button>
@@ -601,11 +716,11 @@ function OracleStageOneContent() {
                   });
                 }
               }}
-              className="rounded-lg border border-white/12 px-3 py-2 text-sm text-text-secondary"
+              className={skin.gridBtn}
             >
               Share
             </button>
-            <button className="rounded-lg border border-fuchsia-300/45 px-3 py-2 text-sm text-fuchsia-100">
+            <button type="button" className={skin.gridBtnAccent}>
               Ask POJU to go deeper · $9.99
             </button>
           </div>
@@ -614,22 +729,22 @@ function OracleStageOneContent() {
 
       <Link
         href="/glyph"
-        className="mt-10 inline-flex justify-center rounded-full border border-fuchsia-300/45 bg-fuchsia-500/20 px-6 py-3 text-sm font-semibold text-fuchsia-100 hover:bg-fuchsia-400/28"
+        className={skin.backLink}
       >
         ← Back to Glyph
       </Link>
 
       {dupModalOpen ? (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 px-4">
-          <div className="w-full max-w-md rounded-2xl border border-fuchsia-300/20 bg-bg-deep p-5 text-left">
-            <p className="text-lg font-semibold text-text-primary">You&apos;ve already asked this.</p>
-            <p className="mt-3 text-sm text-text-secondary">Your sign from [{dupHoursAgo} hours ago]: ✦ Still Water</p>
-            <p className="mt-2 text-sm text-text-secondary">Answers don&apos;t change just because you ask again. Give it 48 hours.</p>
+        <div className={skin.dupOverlay}>
+          <div className={skin.dupPanel}>
+            <p className={skin.dupTitle}>You&apos;ve already asked this.</p>
+            <p className={`mt-3 ${skin.dupBody}`}>Your sign from [{dupHoursAgo} hours ago]: ✦ Still Water</p>
+            <p className={`mt-2 ${skin.dupBody}`}>Answers don&apos;t change just because you ask again. Give it 48 hours.</p>
             <div className="mt-4 grid gap-2">
               <button
                 type="button"
                 onClick={() => void loadPreviousSign()}
-                className="rounded-lg border border-white/12 px-3 py-2 text-sm text-text-secondary"
+                className={skin.dupBtn}
               >
                 {loadingPrev ? "Loading..." : "Read my previous sign"}
               </button>
@@ -639,7 +754,7 @@ function OracleStageOneContent() {
                   setDupModalOpen(false);
                   setQuestion("");
                 }}
-                className="rounded-lg border border-white/12 px-3 py-2 text-sm text-text-secondary"
+                className={skin.dupBtn}
               >
                 Ask a different question
               </button>
@@ -649,7 +764,7 @@ function OracleStageOneContent() {
                   setDupModalOpen(false);
                   setStage(3);
                 }}
-                className="rounded-lg border border-fuchsia-300/45 bg-fuchsia-500/20 px-3 py-2 text-sm text-fuchsia-100"
+                className={skin.dupBtnPrimary}
               >
                 I know. Draw anyway.
               </button>

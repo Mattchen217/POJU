@@ -460,5 +460,92 @@
       },
       "copyright": "© 2026 pojulife. 版权所有。"
     }
+  },
+  "birthForm": {
+    "title": "出生信息",
+    "subtitle": "仅用于一次性生成 POJU / Glyph / Syncro 共用的个人档案。",
+    "year": "年",
+    "month": "月",
+    "day": "日",
+    "hour": "时",
+    "minute": "分",
+    "gender": "性别",
+    "genderMale": "男",
+    "genderFemale": "女",
+    "genderOther": "其他",
+    "cityOptional": "出生地（可选）",
+    "privacy": "在本设备以加密 IndexedDB 本地保存。可随时在资料设置中修改。",
+    "submit": "保存共用档案",
+    "submitting": "计算中…",
+    "done": "档案已保存至加密 IndexedDB。",
+    "errorGeneric": "出错了，请重试。",
+    "skip": "暂时跳过",
+    "skipConfirmTitle": "不填写出生资料继续？",
+    "skipConfirmBody": "没有出生资料时，我们只能用通用模式，无法生成个性化命盘。你仍可在资料设置中随时补充。",
+    "skipConfirmStay": "返回填写",
+    "skipConfirmLeave": "不填资料继续",
+    "close": "关闭"
+  },
+  "poju": {
+    "chat": {
+      "question_label": "你的问题",
+      "archive_link": "会话与归档",
+      "input_placeholder": "输入消息…",
+      "send": "发送",
+      "sending": "思考中…",
+      "turns": "轮次",
+      "tokens": "用量",
+      "end_session": "结束会话",
+      "ending": "保存中…",
+      "end_confirm": "将本会话标记为已结束？你仍可在「归档」中查看本设备上的历史会话。"
+    },
+    "expiry": {
+      "expires_in": "本会话窗口还剩约 {days} 天。",
+      "extend_30": "延长 30 天",
+      "extending": "延长中…"
+    },
+    "delivery": {
+      "badge": "POJU 解读",
+      "intro": "基于我们的对话，我看到的是：",
+      "reminder": "可以采纳，也可以放下。决定权在你。"
+    },
+    "actions": {
+      "title": "你可以做的"
+    },
+    "action_card": {
+      "category_traditional": "传统建议",
+      "category_decisive": "行动",
+      "category_reflective": "反思",
+      "timing_immediate": "今天",
+      "timing_this_week": "本周",
+      "timing_this_month": "本月",
+      "timing_ongoing": "持续",
+      "why_this_action": "为什么这条建议",
+      "mark_completed": "我做了",
+      "mark_modified": "我调整过",
+      "mark_skipped": "我没做",
+      "status_completed": "已完成",
+      "status_modified": "已调整",
+      "status_skipped": "已跳过"
+    },
+    "message": {
+      "thinking": "POJU 正在思考…"
+    },
+    "archive": {
+      "title": "POJU 会话",
+      "subtitle": "会话以加密形式保存在本设备。",
+      "back": "返回 POJU",
+      "section_active": "进行中",
+      "section_paused": "已暂停",
+      "section_resolved": "已结束",
+      "section_archived": "已归档",
+      "continue": "继续",
+      "pause": "暂停",
+      "restore": "恢复",
+      "delete_forever": "永久删除",
+      "delete_confirm": "从本设备永久删除该会话？此操作不可撤销。",
+      "meta_expires": "到期",
+      "meta_status": "状态"
+    }
   }
 }

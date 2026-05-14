@@ -460,5 +460,92 @@
       },
       "copyright": "© 2026 pojulife. All rights reserved."
     }
+  },
+  "birthForm": {
+    "title": "Birth information",
+    "subtitle": "We use this once to build your shared POJU / Glyph / Syncro profile.",
+    "year": "Year",
+    "month": "Month",
+    "day": "Day",
+    "hour": "Hour",
+    "minute": "Minute",
+    "gender": "Gender",
+    "genderMale": "Male",
+    "genderFemale": "Female",
+    "genderOther": "Other",
+    "cityOptional": "City (optional)",
+    "privacy": "Stored locally in encrypted IndexedDB on this device. You can change it anytime in profile settings.",
+    "submit": "Save shared profile",
+    "submitting": "Calculating…",
+    "done": "Profile saved to encrypted IndexedDB.",
+    "errorGeneric": "Something went wrong. Please try again.",
+    "skip": "Skip for now",
+    "skipConfirmTitle": "Continue without birth data?",
+    "skipConfirmBody": "Without birth data we use generic patterns only — no personalized chart. You can add this anytime in profile settings.",
+    "skipConfirmStay": "Fill in the form",
+    "skipConfirmLeave": "Continue without birth data",
+    "close": "Close"
+  },
+  "poju": {
+    "chat": {
+      "question_label": "Your question",
+      "archive_link": "Sessions & archive",
+      "input_placeholder": "Type your message...",
+      "send": "Send",
+      "sending": "Thinking...",
+      "turns": "Turns",
+      "tokens": "Tokens",
+      "end_session": "End session",
+      "ending": "Saving…",
+      "end_confirm": "Mark this session as ended? You can still open Archive to review past threads on this device."
+    },
+    "expiry": {
+      "expires_in": "{days} days left in this session window.",
+      "extend_30": "Extend 30 days",
+      "extending": "Extending…"
+    },
+    "delivery": {
+      "badge": "POJU reading",
+      "intro": "Here is what I see from our conversation:",
+      "reminder": "Take what resonates. Leave what does not. The decision is always yours."
+    },
+    "actions": {
+      "title": "What you can do"
+    },
+    "action_card": {
+      "category_traditional": "Traditional",
+      "category_decisive": "Action",
+      "category_reflective": "Reflection",
+      "timing_immediate": "Today",
+      "timing_this_week": "This week",
+      "timing_this_month": "This month",
+      "timing_ongoing": "Ongoing",
+      "why_this_action": "Why this action",
+      "mark_completed": "I did this",
+      "mark_modified": "I adapted it",
+      "mark_skipped": "I skipped this",
+      "status_completed": "Done",
+      "status_modified": "Adapted",
+      "status_skipped": "Skipped"
+    },
+    "message": {
+      "thinking": "POJU is thinking…"
+    },
+    "archive": {
+      "title": "POJU sessions",
+      "subtitle": "Sessions are stored on this device in encrypted form.",
+      "back": "Back to POJU",
+      "section_active": "Active",
+      "section_paused": "Paused",
+      "section_resolved": "Ended",
+      "section_archived": "Archived",
+      "continue": "Continue",
+      "pause": "Pause",
+      "restore": "Restore",
+      "delete_forever": "Delete forever",
+      "delete_confirm": "Permanently delete this session from this device? This cannot be undone.",
+      "meta_expires": "Expires",
+      "meta_status": "Status"
+    }
   }
 }

@@ -1,86 +1,92 @@
-import type { UserProfile } from "@/lib/profile/types";
+// ---------------------------------------------------------------------------
+// POJU v4.0 (POJU_v4.0_POJU_Part1.md) — Agent session model (IndexedDB + LLM)
+// ---------------------------------------------------------------------------
 
-export type PojuPhase = 1 | 2 | 3 | 4 | 5;
-export type PojuStatus = "active" | "suspended" | "resolved" | "archived";
+export type PojuV4SessionStatus = "active" | "paused" | "resolved" | "archived";
 
-export type RenewalRecord = {
-  at: number;
-  days: number;
-};
+export type PojuV4StateHint =
+  | "greeting"
+  | "collecting_context"
+  | "awaiting_profile"
+  | "analyzing"
+  | "delivered"
+  | "tracking";
 
-export type DataCollectionState = {
-  name?: string;
-  birthDate?: string;
-  birthTime?: string;
-  location?: string;
-  relationshipStatus?: string;
-  profession?: string;
-};
+export type PojuV4UserIntent =
+  | "greeting"
+  | "sharing_situation"
+  | "asking_specific"
+  | "reporting_progress"
+  | "wrapping_up"
+  | "unclear"
+  | "off_topic";
 
-export type AbuseMetrics = {
-  messageCount: number;
-  totalChars: number;
-  blockedCount: number;
-};
+export type PojuV4ActionRequested = "continue_chat" | "show_birth_form" | "deliver_main" | "track_progress";
 
-export type ActionItem = {
-  id: string;
-  title: string;
-  status: "todo" | "doing" | "done" | "skipped";
-  createdAt: number;
-};
+export interface POJUMessage {
+  role: "user" | "assistant" | "system";
+  content: string;
+  timestamp: string;
+  meta?: {
+    llm_model?: string;
+    tokens_used?: number;
+    user_intent?: PojuV4UserIntent;
+    current_state?: PojuV4StateHint;
+    action_requested?: PojuV4ActionRequested;
+    topic_drift_detected?: boolean;
+    contains_delivery?: boolean;
+  };
+  is_rejected?: boolean;
+  rejection_type?: "too_long" | "jailbreak" | "spam";
+}
 
-export type SessionMessage = {
-  role: "user" | "assistant";
+export interface POJUAction {
+  action_id: string;
+  given_at: string;
   text: string;
-  createdAt: number;
-};
+  category: "traditional" | "modern_decisive" | "modern_reflective";
+  timing: "immediate" | "this_week" | "this_month" | "ongoing";
+  rationale: string;
+  status: "pending" | "completed" | "modified" | "skipped";
+  user_feedback?: string;
+  updated_at?: string;
+}
 
-export type SessionState = {
-  sessionId: string;
-  deviceId: string;
-  status: PojuStatus;
-  phase: PojuPhase;
-  title: string;
-  createdAt: number;
-  lastInteractionAt: number;
-  expiresAt: number;
-  renewals: RenewalRecord[];
-  collection: DataCollectionState;
-  userProfileId?: string;
-  /** 用户在 Phase 2 选择「通用分析」，不强制 birth profile（Batch1 3.3 场景 1）。 */
-  profileDeclined?: boolean;
-  /** 首条用户问题锚点（Batch4 话题锁定）。 */
-  originalQuestion?: string;
-  topicKeywords?: string[];
-  questionLockedAt?: number;
-  actions: ActionItem[];
-  messages: SessionMessage[];
-  abuse: AbuseMetrics;
-};
+export interface POJUDelivery {
+  delivered_at: string;
+  language: string;
+  analysis: {
+    user_situation_summary: string;
+    pattern_insight: string;
+    current_phase_insight: string;
+    hidden_dynamics: string[];
+  };
+  conclusion: {
+    core_message: string;
+    perspective_shift: string;
+  };
+  actions: POJUAction[];
+  invitation: string;
+}
 
-export type CreateSessionInput = {
-  deviceId: string;
-  userProfile?: UserProfile | null;
-};
-
-export type CreateSessionOutput = {
-  sessionId: string;
-  status: PojuStatus;
-  phase: PojuPhase;
-  expiresAt: number;
-};
-
-export type ChatInput = {
-  sessionId: string;
-  input: string;
-  userProfile?: UserProfile | null;
-};
-
-export type ChatOutput = {
-  sessionId: string;
-  status: PojuStatus;
-  phase: PojuPhase;
-  reply: string;
-  shouldArchive: boolean;
-};
+export interface POJUSessionState {
+  session_id: string;
+  device_id: string;
+  original_question: string;
+  messages: POJUMessage[];
+  context_collected: Record<string, unknown>;
+  has_profile: boolean;
+  profile_skipped: boolean;
+  actions: POJUAction[];
+  main_delivery_done: boolean;
+  main_delivery: POJUDelivery | null;
+  tokens_used: number;
+  abuse_metrics: {
+    long_input_count: number;
+    jailbreak_attempts: number;
+    duplicate_attempts: number;
+  };
+  created_at: string;
+  last_interaction_at: string;
+  expires_at: string;
+}
