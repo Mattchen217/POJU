@@ -4,7 +4,7 @@ import type { POJUSessionState } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
 
 /**
- * POJU v4 only: proxy to Claude with `buildPOJUSystemPrompt`.
+ * POJU v4 only: proxy to Gemini (same stack as Glyph `/api/oracle/full-reading`) with `buildPOJUSystemPrompt`.
  * Request body: `{ session, profile?, locale? }` (session must include `session_id`).
  */
 export async function POST(req: Request) {

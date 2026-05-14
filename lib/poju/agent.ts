@@ -56,7 +56,7 @@ function normalizeNewActions(raw: unknown[] | undefined): POJUAction[] {
  * Step 3 dynamic agent skeleton:
  * - appends user/system message
  * - prepares profile context
- * - calls /api/poju/chat (Claude via server)
+ * - calls /api/poju/chat (Gemini via server, same models as Glyph oracle full-reading)
  * - appends assistant message
  */
 export async function handleUserMessage(input: HandleInput): Promise<POJUSessionState> {

@@ -1,12 +1,12 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { buildPOJUSystemPrompt } from "@/lib/llm/poju-prompts";
 import { repairLLMOutput, validateLLMOutput } from "@/lib/llm/output-validator";
+import {
+  GEMINI_PRIMARY_MODEL,
+  generateGeminiChatCompletion,
+  getGeminiClient,
+} from "@/lib/llm/gemini-shared";
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
-
-const anthropicClient = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
 
 interface CallInput {
   session: POJUSessionState;
@@ -59,21 +59,25 @@ export async function callPOJULLM(input: CallInput): Promise<POJULLMResponse> {
     });
   }
 
+  if (!getGeminiClient()) {
+    console.error("[poju-llm] Missing GOOGLE_GENERATIVE_AI_API_KEY or GEMINI_API_KEY");
+    return emptyFailureResponse(session, locale, GEMINI_PRIMARY_MODEL);
+  }
+
   try {
-    const rawResponse = await anthropicClient.messages.create({
-      model: "claude-sonnet-4-5-20250929",
-      max_tokens: 2500,
-      system: systemPrompt,
+    const { text, modelUsed, tokens_used } = await generateGeminiChatCompletion({
+      systemInstruction: systemPrompt,
       messages: conversationMessages,
+      temperature: 0.55,
+      maxOutputTokens: 4096,
     });
 
-    const rawText = rawResponse.content[0]?.type === "text" ? rawResponse.content[0].text : "";
-    const parsed = parseStep5LLMResponse(rawText, locale);
+    const parsed = parseStep5LLMResponse(text, locale);
 
     return {
       response: parsed.response,
-      model: "claude-sonnet-4-5-20250929",
-      tokens_used: (rawResponse.usage?.input_tokens || 0) + (rawResponse.usage?.output_tokens || 0),
+      model: modelUsed,
+      tokens_used,
       user_intent: parsed.user_intent || "unclear",
       current_state: parsed.current_state || (session.main_delivery_done ? "tracking" : "collecting_context"),
       action_requested: parsed.action_requested,
@@ -83,24 +87,29 @@ export async function callPOJULLM(input: CallInput): Promise<POJULLMResponse> {
       main_delivery: parsed.main_delivery,
       new_actions: parsed.new_actions,
     };
-  } catch (error: any) {
-    console.error("[poju-llm] Claude API failed:", error?.message ?? error);
-    return {
-      response: getLLMFailureMessage(locale),
-      model: "claude-sonnet-4-5-20250929",
-      tokens_used: 0,
-      user_intent: "unclear",
-      current_state: session.main_delivery_done ? "tracking" : "collecting_context",
-      topic_drift_detected: false,
-      contains_delivery: false,
-      context_updates: {},
-    };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("[poju-llm] Gemini API failed:", msg);
+    return emptyFailureResponse(session, locale, GEMINI_PRIMARY_MODEL);
   }
+}
+
+function emptyFailureResponse(session: POJUSessionState, locale: string, model: string): POJULLMResponse {
+  return {
+    response: getLLMFailureMessage(locale),
+    model,
+    tokens_used: 0,
+    user_intent: "unclear",
+    current_state: session.main_delivery_done ? "tracking" : "collecting_context",
+    topic_drift_detected: false,
+    contains_delivery: false,
+    context_updates: {},
+  };
 }
 
 function parseStep5LLMResponse(rawText: string, locale: string): any {
   try {
-    const cleaned = rawText.replace(/^```json\s*/i, "").replace(/```\s*$/, "").trim();
+    const cleaned = rawText.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
     const parsed = JSON.parse(cleaned);
     const validation = validateLLMOutput(parsed);
     if (validation.valid) return validation.data;
