@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useLocale } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createPOJUSession } from "@/lib/poju/session-manager";
 
 type StepStatus = "verifying" | "creating" | "success" | "error";
 
-export default function PojuPaymentSuccessPage() {
+function PojuPaymentSuccessInner() {
   const router = useRouter();
   const params = useSearchParams();
   const locale = useLocale();
@@ -90,5 +90,22 @@ export default function PojuPaymentSuccessPage() {
         </div>
       ) : null}
     </main>
+  );
+}
+
+function PojuPaymentSuccessFallback() {
+  return (
+    <main className="mx-auto flex min-h-[50vh] w-full max-w-2xl flex-col items-center justify-center px-6 text-center text-white">
+      <p>Verifying payment...</p>
+    </main>
+  );
+}
+
+/** `useSearchParams()` requires Suspense during static prerender (Next.js 14+). */
+export default function PojuPaymentSuccessPage() {
+  return (
+    <Suspense fallback={<PojuPaymentSuccessFallback />}>
+      <PojuPaymentSuccessInner />
+    </Suspense>
   );
 }
