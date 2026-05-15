@@ -1,5 +1,7 @@
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
+import { findMissingFields } from "@/lib/poju/agent-state";
+import { formatContextForPrompt, formatMissingFieldsForPrompt } from "@/lib/poju/context-extractor";
 
 const AGENT_THOUGHT_CONTRACT = `# MANDATORY AGENT AUDIT (OODA — EVERY TURN)
 
@@ -30,20 +32,34 @@ interface PromptInput {
  * Detailed variants are implemented in Step 6-8.
  */
 export function buildPOJUSystemPrompt(input: PromptInput): string {
-  const { session, profile, locale } = input;
+  const { session, profile } = input;
+  let core: string;
   if (profile && session.main_delivery_done) {
-    return buildTrackingPrompt(input);
+    core = buildTrackingPrompt(input);
+  } else if (profile) {
+    core = buildDeepAnalysisPrompt(input);
+  } else if (session.profile_skipped) {
+    core = buildGenericPrompt(input);
+  } else {
+    core = buildPreProfilePrompt(input);
   }
+  return core + formatAgentV2Block(session);
+}
 
-  if (profile) {
-    return buildDeepAnalysisPrompt(input);
-  }
+function formatAgentV2Block(session: POJUSessionState): string {
+  const a = session.agent_v2;
+  if (!a) return "";
+  const missing = findMissingFields(a);
+  return `
 
-  if (session.profile_skipped) {
-    return buildGenericPrompt(input);
-  }
+# STRUCTURED SESSION STATE (server-maintained)
+- **agent_phase**: ${a.current_phase}
+- **collection_completeness (code)**: ${(a.collection_completeness * 100).toFixed(0)}%
 
-  return buildPreProfilePrompt(input);
+${formatContextForPrompt(a)}
+
+${formatMissingFieldsForPrompt(missing)}
+`;
 }
 
 function buildPreProfilePrompt(input: PromptInput): string {

@@ -1,5 +1,6 @@
 import Dexie, { type EntityTable } from "dexie";
 import type { EncryptedPayload } from "@/lib/crypto";
+import type { UserProfile } from "@/lib/profile/types";
 
 export type EncryptedRecord = {
   id: string;
@@ -52,6 +53,57 @@ export interface POJUSessionArchiveRecord {
   satisfaction_rating?: number;
 }
 
+/** POJU_v4.0_Agent_Implementation_Part1 — Step 1: multi-person BaZi rows (plaintext index + encrypted blob). */
+export type StoredProfileRelationship =
+  | "self"
+  | "spouse"
+  | "child"
+  | "parent"
+  | "sibling"
+  | "friend"
+  | "other";
+
+export interface StoredProfileRecord {
+  profile_id: string;
+  device_id: string;
+  display_name: string;
+  birth_info_hash: string;
+  relationship: StoredProfileRelationship;
+  /** AES-GCM ciphertext (base64), same convention as `pojuSessionRecords.encrypted_data`. */
+  encrypted_data: string;
+  iv: string;
+  created_at: Date;
+  last_used_at: Date;
+  used_in_products: { poju: number; glyph: number; syncro: number };
+  has_base_analysis: boolean;
+  base_analysis_at?: Date;
+}
+
+export interface StoredProfileBirthInfo {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  /** Stored for hashing / UI; maps to `BirthGender` when calling shunshi. */
+  gender: "M" | "F" | "X";
+  timezone: string;
+  longitude: number;
+  latitude: number;
+  location_name?: string;
+}
+
+export interface StoredProfileData {
+  birth_info: StoredProfileBirthInfo;
+  user_profile: UserProfile;
+  base_analysis?: {
+    generated_at: string;
+    model: string;
+    content: unknown;
+    tokens_used: number;
+  };
+}
+
 export class PojuDb extends Dexie {
   userProfiles!: EntityTable<EncryptedRecord, "id">;
   glyphHistory!: EntityTable<EncryptedRecord, "id">;
@@ -61,6 +113,7 @@ export class PojuDb extends Dexie {
   /** v4.0 POJU agent sessions (Part1 Step 1). */
   pojuSessionRecords!: EntityTable<POJUSessionRecord, "session_id">;
   pojuSessionArchive!: EntityTable<POJUSessionArchiveRecord, "session_id">;
+  stored_profiles!: EntityTable<StoredProfileRecord, "profile_id">;
 
   constructor() {
     super("pojulife_v4");
@@ -87,6 +140,16 @@ export class PojuDb extends Dexie {
       usage: "id, dayKey, product, updatedAt",
       pojuSessionRecords: "session_id, device_id, status, expires_at, last_interaction_at",
       pojuSessionArchive: "session_id, device_id, archived_at",
+    });
+    this.version(4).stores({
+      userProfiles: "id, updatedAt",
+      glyphHistory: "id, updatedAt",
+      syncroCache: "id, updatedAt",
+      pojuSessions: "id, updatedAt",
+      usage: "id, dayKey, product, updatedAt",
+      pojuSessionRecords: "session_id, device_id, status, expires_at, last_interaction_at",
+      pojuSessionArchive: "session_id, device_id, archived_at",
+      stored_profiles: "profile_id, device_id, birth_info_hash, last_used_at, has_base_analysis",
     });
   }
 }

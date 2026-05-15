@@ -7,9 +7,15 @@ import type { POJUSessionState, PojuV4StateHint } from "@/lib/poju/types";
 const SESSION_SECRET = "pojulife_v4_poju_session";
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
+function isLikelyStoredProfileId(id: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id.trim());
+}
+
 export async function createPOJUSession(input: {
   payment_id: string;
   original_question: string;
+  /** When set, Step 8 can load Step 7 `base_analysis` from this `stored_profiles` row. */
+  selected_stored_profile_id?: string | null;
 }): Promise<string> {
   const db = getPojuDb();
   const deviceId = getPojuDeviceId();
@@ -17,6 +23,11 @@ export async function createPOJUSession(input: {
   const sessionId = crypto.randomUUID();
   const profileExists = (await getUserProfile()) != null;
   const expiresAt = new Date(now.getTime() + THIRTY_DAYS_MS);
+
+  const storedId =
+    typeof input.selected_stored_profile_id === "string" && isLikelyStoredProfileId(input.selected_stored_profile_id)
+      ? input.selected_stored_profile_id.trim()
+      : null;
 
   const sessionState: POJUSessionState = {
     session_id: sessionId,
@@ -26,6 +37,7 @@ export async function createPOJUSession(input: {
     context_collected: {},
     has_profile: profileExists,
     profile_skipped: false,
+    selected_stored_profile_id: storedId,
     actions: [],
     main_delivery_done: false,
     main_delivery: null,

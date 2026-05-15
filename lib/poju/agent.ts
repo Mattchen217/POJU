@@ -1,13 +1,33 @@
 import { getUserProfile } from "@/lib/profile/storage";
 import type { POJUAction, POJUSessionState, POJUMessage } from "@/lib/poju/types";
 import { checkRuleViolation, getRuleRejectionMessage } from "@/lib/poju/rules";
+import {
+  applyPhaseTransition,
+  calculateCompleteness,
+  createInitialAgentState,
+  decidePhaseTransition,
+  type AgentPhase,
+  type POJUAgentState,
+} from "@/lib/poju/agent-state";
+import { extractQuestionCategory, mergeContextUpdates, recordToLLMContextUpdates } from "@/lib/poju/context-extractor";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+/** Session uses default `userProfiles` slot from device. */
+const SESSION_PROFILE_SLOT = "active_user_profile";
+
+function resolveSelectedProfileId(session: POJUSessionState, agent: POJUAgentState): string | null {
+  const sid = session.selected_stored_profile_id?.trim();
+  if (sid) return sid;
+  if (session.has_profile) return agent.selected_profile_id ?? SESSION_PROFILE_SLOT;
+  return null;
+}
 
 interface HandleInput {
   session: POJUSessionState;
   userMessage: string;
   locale: string;
+  /** Session already includes this user turn (optimistic UI); skip rule re-check and duplicate append. */
+  userAlreadyAppended?: boolean;
 }
 
 type LLMApiPayload = {
@@ -25,6 +45,94 @@ type LLMApiPayload = {
   new_actions?: unknown[];
   error?: string;
 };
+
+function ensureAgentV2(session: POJUSessionState): POJUAgentState {
+  if (session.agent_v2) {
+    return {
+      ...session.agent_v2,
+      profile_skipped: session.profile_skipped,
+      has_base_analysis: session.has_profile,
+      selected_profile_id: resolveSelectedProfileId(session, session.agent_v2),
+    };
+  }
+  const init = createInitialAgentState({ original_question: session.original_question });
+  return {
+    ...init,
+    profile_skipped: session.profile_skipped,
+    has_base_analysis: session.has_profile,
+    selected_profile_id: resolveSelectedProfileId(session, init),
+  };
+}
+
+function mapLlmHintToAgentPhase(hint: string | undefined): AgentPhase | null {
+  if (!hint) return null;
+  switch (hint) {
+    case "greeting":
+      return "greeting";
+    case "awaiting_profile":
+      return "awaiting_profile";
+    case "collecting_context":
+    case "analyzing":
+      return "collecting_context";
+    case "delivered":
+      return "delivered";
+    case "tracking":
+      return "tracking";
+    default:
+      return null;
+  }
+}
+
+function finalizeAgentV2(
+  base: POJUAgentState,
+  session: POJUSessionState,
+  llm: {
+    context_updates: Record<string, unknown>;
+    tokens_used?: number;
+    current_state?: string;
+    contains_delivery?: boolean;
+    main_delivery?: unknown;
+  },
+  userMessage: string,
+  isSystemMessage: boolean,
+): POJUAgentState {
+  const flat = llm.context_updates ?? {};
+  const structured = recordToLLMContextUpdates(flat);
+  let merged: POJUAgentState = {
+    ...base,
+    context_collected: mergeContextUpdates(base.context_collected, structured),
+    question_category: extractQuestionCategory(flat) ?? base.question_category,
+    profile_skipped: session.profile_skipped,
+    has_base_analysis: session.has_profile,
+    selected_profile_id: resolveSelectedProfileId(session, base),
+  };
+  merged = {
+    ...merged,
+    collection_completeness: calculateCompleteness(merged),
+    has_situation_analysis: calculateCompleteness(merged) >= 0.4,
+  };
+  const llmPhase = mapLlmHintToAgentPhase(llm.current_state);
+  const transition = decidePhaseTransition({
+    current_state: merged,
+    llm_suggested_phase: llmPhase,
+    user_message: isSystemMessage ? "" : userMessage,
+  });
+  let after = applyPhaseTransition(merged, transition);
+  const nowIso = new Date().toISOString();
+  if (llm.contains_delivery) {
+    after = {
+      ...after,
+      main_delivery_at: nowIso,
+      main_delivery_data: llm.main_delivery ?? after.main_delivery_data,
+    };
+  }
+  const tokenDelta = typeof llm.tokens_used === "number" ? llm.tokens_used : 0;
+  return {
+    ...after,
+    turn_count: after.turn_count + (isSystemMessage ? 0 : 1),
+    tokens_used: after.tokens_used + tokenDelta,
+  };
+}
 
 function normalizeNewActions(raw: unknown[] | undefined): POJUAction[] {
   if (!Array.isArray(raw)) return [];
@@ -60,10 +168,10 @@ function normalizeNewActions(raw: unknown[] | undefined): POJUAction[] {
  * - appends assistant message
  */
 export async function handleUserMessage(input: HandleInput): Promise<POJUSessionState> {
-  const { session, userMessage, locale } = input;
+  const { session, userMessage, locale, userAlreadyAppended } = input;
   const isSystemMessage = userMessage.startsWith("[SYSTEM:");
 
-  if (!isSystemMessage) {
+  if (!isSystemMessage && !userAlreadyAppended) {
     const ruleCheck = checkRuleViolation(userMessage, session);
     if (ruleCheck.violated && ruleCheck.type) {
       return handleRuleRejection(session, userMessage, ruleCheck.type, locale);
@@ -76,7 +184,17 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     timestamp: new Date().toISOString(),
   };
 
-  const messagesWithUser = [...session.messages, newUserMessage];
+  let messagesWithUser: POJUMessage[];
+  if (!isSystemMessage && userAlreadyAppended) {
+    const last = session.messages[session.messages.length - 1];
+    if (last?.role === "user" && last.content.trim() === userMessage.trim()) {
+      messagesWithUser = session.messages;
+    } else {
+      messagesWithUser = [...session.messages, newUserMessage];
+    }
+  } else {
+    messagesWithUser = [...session.messages, newUserMessage];
+  }
   const profile = session.has_profile ? await getUserProfile() : null;
 
   const llmResponse = await callLLMViaAPI({
@@ -88,6 +206,16 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   const normalizedNewActions = normalizeNewActions(llmResponse.new_actions);
   const mergedActions =
     normalizedNewActions.length > 0 ? [...session.actions, ...normalizedNewActions] : session.actions;
+
+  const sessionForAgent: POJUSessionState = { ...session, messages: messagesWithUser };
+  const agentCore = finalizeAgentV2(
+    ensureAgentV2(sessionForAgent),
+    sessionForAgent,
+    llmResponse,
+    userMessage,
+    isSystemMessage,
+  );
+  const agent_v2: POJUAgentState = { ...agentCore, actions: mergedActions };
 
   const assistantMessage: POJUMessage = {
     role: "assistant",
@@ -115,12 +243,30 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       ...(llmResponse.context_updates ?? {}),
     },
     actions: mergedActions,
+    agent_v2,
     main_delivery_done: llmResponse.contains_delivery || session.main_delivery_done,
     main_delivery: (llmResponse.main_delivery as POJUSessionState["main_delivery"]) || session.main_delivery,
     tokens_used: session.tokens_used + (llmResponse.tokens_used || 0),
     last_interaction_at: nowIso,
     expires_at: rollingExpiry,
   };
+}
+
+/**
+ * If the message violates rules, returns the session with rejection messages appended.
+ * Call before optimistic user append; pass the same session `handleUserMessage` would see.
+ */
+export function tryHandleRuleRejection(
+  session: POJUSessionState,
+  userMessage: string,
+  locale: string,
+): POJUSessionState | null {
+  if (userMessage.startsWith("[SYSTEM:")) return null;
+  const ruleCheck = checkRuleViolation(userMessage, session);
+  if (ruleCheck.violated && ruleCheck.type) {
+    return handleRuleRejection(session, userMessage, ruleCheck.type, locale);
+  }
+  return null;
 }
 
 function handleRuleRejection(

@@ -258,49 +258,55 @@ export function SyncroMobileFlow() {
     };
   }, []);
 
-  const grantPermissions = async () => {
-    // Step 1: Geolocation
-    if (navigator.geolocation) {
-      await new Promise<void>((resolve) => {
-        navigator.geolocation.getCurrentPosition(
-          () => {
-            setGeo("granted");
-            resolve();
-          },
-          () => {
-            setGeo("denied");
-            resolve();
-          },
-          { enableHighAccuracy: false, maximumAge: 30000, timeout: 8000 },
-        );
-      });
-    } else {
-      setGeo("denied");
-    }
-
-    // Step 2: iOS compass permission (if present)
+  const grantPermissions = () => {
+    // iOS Safari: `DeviceOrientationEvent.requestPermission()` must run in the same synchronous
+    // user gesture as the tap. Awaiting geolocation first often yields "denied" with no system sheet.
+    let compassPromise: Promise<"granted" | "denied">;
     try {
-      const DeviceOrientationEventAny = DeviceOrientationEvent as unknown as {
+      const DOE = DeviceOrientationEvent as unknown as {
         requestPermission?: () => Promise<"granted" | "denied">;
       };
-      if (typeof DeviceOrientationEventAny.requestPermission === "function") {
-        const result = await DeviceOrientationEventAny.requestPermission();
-        setCompass(result === "granted" ? "granted" : "denied");
+      if (typeof DOE.requestPermission === "function") {
+        compassPromise = DOE
+          .requestPermission()
+          .then((r) => (r === "granted" ? ("granted" as const) : ("denied" as const)))
+          .catch(() => "denied" as const);
       } else {
-        setCompass("granted");
+        compassPromise = Promise.resolve("granted");
       }
     } catch {
-      setCompass("denied");
+      compassPromise = Promise.resolve("denied");
     }
 
-    // Step 3: Camera permission
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-      stream.getTracks().forEach((t) => t.stop());
-      setCamera("granted");
-    } catch {
-      setCamera("denied");
-    }
+    void (async () => {
+      setCompass(await compassPromise);
+
+      if (navigator.geolocation) {
+        await new Promise<void>((resolve) => {
+          navigator.geolocation.getCurrentPosition(
+            () => {
+              setGeo("granted");
+              resolve();
+            },
+            () => {
+              setGeo("denied");
+              resolve();
+            },
+            { enableHighAccuracy: false, maximumAge: 30000, timeout: 8000 },
+          );
+        });
+      } else {
+        setGeo("denied");
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        stream.getTracks().forEach((t) => t.stop());
+        setCamera("granted");
+      } catch {
+        setCamera("denied");
+      }
+    })();
   };
 
   const permissionOk = useMemo(() => geo === "granted" && compass === "granted" && camera === "granted", [geo, compass, camera]);
@@ -409,11 +415,15 @@ export function SyncroMobileFlow() {
 
         <button
           type="button"
-          onClick={() => void grantPermissions()}
+          onClick={grantPermissions}
           className="mt-4 rounded-full border border-cyan-300/35 bg-cyan-400/20 px-4 py-2 text-sm font-semibold text-cyan-100"
         >
           Grant permissions
         </button>
+        <p className="mt-2 text-[11px] leading-5 text-text-dim">
+          iPhone: compass uses motion/orientation access. If you see no prompt and Compass is denied, tap Grant again. If
+          you tapped Block earlier, allow motion for this site in Settings → Safari (or reset site permissions).
+        </p>
         <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
           <p className="rounded bg-black/20 px-2 py-1 text-center">GPS: {geo}</p>
           <p className="rounded bg-black/20 px-2 py-1 text-center">Compass: {compass}</p>

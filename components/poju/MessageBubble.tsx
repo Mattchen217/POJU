@@ -6,6 +6,8 @@ import pojuLogo from "@/assets/images/POJUlogo.png";
 import type { POJUAction, POJUMessage } from "@/lib/poju/types";
 import { parseDeliveryContent, type DeliverySection } from "@/lib/poju/parse-delivery";
 
+const thinkingProcessStepKeys = ["thinking_step_1", "thinking_step_2", "thinking_step_3"] as const;
+
 export interface MessageBubbleProps {
   message: POJUMessage;
   hideWelcomePanel?: boolean;
@@ -14,6 +16,7 @@ export interface MessageBubbleProps {
 }
 
 export function MessageBubble({ message, hideWelcomePanel = false, actions, onActionUpdate }: MessageBubbleProps) {
+  const tChat = useTranslations("poju.chat");
   const isUser = message.role === "user";
   const isWelcomePanel = isAssistantWelcomeMessage(message);
   if (isWelcomePanel && hideWelcomePanel) return null;
@@ -70,13 +73,13 @@ export function MessageBubble({ message, hideWelcomePanel = false, actions, onAc
           <details className="w-full overflow-hidden rounded-xl border border-white/10 bg-white/5 backdrop-blur-md">
             <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 text-sm text-on-surface-variant">
               <span className="material-symbols-outlined text-primary text-[18px]">psychology</span>
-              <span>Thinking Process</span>
+              <span>{tChat("thinking_process_title")}</span>
               <span className="material-symbols-outlined ml-auto text-[18px]">keyboard_arrow_down</span>
             </summary>
             <div className="border-t border-white/10 bg-black/20 px-4 pb-4 pt-2 text-sm text-on-surface-variant">
               <ul className="list-disc space-y-1 pl-4">
-                {buildThinkingSteps(message.content).map((step) => (
-                  <li key={step}>{step}</li>
+                {thinkingProcessStepKeys.map((key) => (
+                  <li key={key}>{tChat(key)}</li>
                 ))}
               </ul>
             </div>
@@ -120,15 +123,6 @@ function splitWelcomeParagraphs(content: string): string[] {
     .filter((s) => !/^welcome to poju\.?$/i.test(s));
   if (blocks.length >= 3) return blocks.slice(0, 3);
   return blocks;
-}
-
-function buildThinkingSteps(content: string): string[] {
-  const firstLine = content.split("\n").find((x) => x.trim()) ?? "Interpret user input.";
-  return [
-    "Analyze user request and context.",
-    `Extract key signal: "${firstLine.slice(0, 60)}${firstLine.length > 60 ? "..." : ""}"`,
-    "Compose structured response with practical next step.",
-  ];
 }
 
 function renderPlainContent(content: string) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
@@ -9,11 +9,15 @@ import { BirthInfoForm } from "@/components/forms/BirthInfoForm";
 import { MessageBubble } from "@/components/poju/MessageBubble";
 import { getPojuDb } from "@/lib/db/poju-db";
 import { createPOJUSession, loadPOJUSession, savePOJUSession, extendPOJUV4Session } from "@/lib/poju/session-manager";
-import { handleUserMessage } from "@/lib/poju/agent";
+import { clearPendingStoredProfileId, readPendingStoredProfileId } from "@/lib/poju/pending-stored-profile";
+import { handleUserMessage, tryHandleRuleRejection } from "@/lib/poju/agent";
 import { markPOJUV4SessionResolved } from "@/lib/poju/v4-lifecycle";
 import { DEFAULT_NEW_SESSION_TITLE, formatSessionListPrimaryLine } from "@/lib/poju/session-list-label";
-import type { POJUSessionState, POJUAction } from "@/lib/poju/types";
+import type { POJUSessionState, POJUAction, POJUMessage } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
+import { computeSituationContextFingerprint } from "@/lib/poju/situation-context-fingerprint";
+import { getCachedSituationAnalysis, requestSituationAnalysis } from "@/lib/llm/deepseek/situation-analysis";
+import { runFinalDeliveryForSession } from "@/lib/llm/pro/final-delivery";
 
 interface Props {
   session: POJUSessionState;
@@ -75,6 +79,12 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const [recognizing, setRecognizing] = useState(false);
   const [composerImage, setComposerImage] = useState<ComposerImage | null>(null);
   const [creatingSession, setCreatingSession] = useState(false);
+  const [situationFp, setSituationFp] = useState<string | null>(null);
+  const [situationBusy, setSituationBusy] = useState(false);
+  const [situationError, setSituationError] = useState<string | null>(null);
+  const [situationNotice, setSituationNotice] = useState<string | null>(null);
+  const [finalBusy, setFinalBusy] = useState(false);
+  const [finalError, setFinalError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const speechRef = useRef<SpeechRecognition | null>(null);
@@ -82,16 +92,33 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   sessionRef.current = session;
   const router = useRouter();
 
+  const scrollChatToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior, block: "end" });
+      });
+    });
+  }, []);
+
   const visibleMessages = session.messages.filter((m) => m.role !== "system");
   const hasUserMessage = visibleMessages.some((m) => m.role === "user");
-  const shouldHideWelcomePanel = hasUserMessage || input.trim().length > 0;
+  const shouldHideWelcomePanel = hasUserMessage;
   const lastDeliveryTs = [...visibleMessages]
     .reverse()
     .find((m) => m.role === "assistant" && m.meta?.contains_delivery)?.timestamp;
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [session.messages]);
+    scrollChatToBottom("smooth");
+  }, [session.messages, scrollChatToBottom]);
+
+  useEffect(() => {
+    if (thinking) scrollChatToBottom("auto");
+  }, [thinking, scrollChatToBottom]);
+
+  useEffect(() => {
+    if (!sending || thinkingLines.length === 0) return;
+    scrollChatToBottom("auto");
+  }, [sending, thinkingLines, scrollChatToBottom]);
 
   useEffect(() => {
     let cancelled = false;
@@ -114,6 +141,21 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       cancelled = true;
     };
   }, [session.device_id, session.session_id, session.last_interaction_at, session.original_question]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void computeSituationContextFingerprint({
+      session_id: session.session_id,
+      original_question: session.original_question,
+      agent_v2: session.agent_v2,
+      context_collected: session.context_collected,
+    }).then((fp) => {
+      if (!cancelled) setSituationFp(fp);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [session.session_id, session.original_question, session.agent_v2, session.context_collected]);
 
   useEffect(() => {
     const lastMsg = session.messages[session.messages.length - 1];
@@ -145,14 +187,41 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     const typed = input.trim();
     const imageNote = composerImage ? `[Image attached: ${composerImage.name}]` : "";
     const userMessage = typed || imageNote;
+    const baseSession = sessionRef.current;
+
+    const rejected = tryHandleRuleRejection(baseSession, userMessage, locale);
+    if (rejected) {
+      setInput("");
+      setComposerImage(null);
+      onSessionUpdate(rejected);
+      await savePOJUSession(rejected);
+      return;
+    }
+
+    const savedComposerImage = composerImage;
     setInput("");
     setComposerImage(null);
+
+    const nowIso = new Date().toISOString();
+    const optimisticUser: POJUMessage = {
+      role: "user",
+      content: userMessage,
+      timestamp: nowIso,
+    };
+    const withUser: POJUSessionState = {
+      ...baseSession,
+      messages: [...baseSession.messages, optimisticUser],
+    };
+    onSessionUpdate(withUser);
     setSending(true);
+    scrollChatToBottom("smooth");
+
     try {
       const updatedSession = await handleUserMessage({
-        session: sessionRef.current,
+        session: withUser,
         userMessage,
         locale,
+        userAlreadyAppended: true,
       });
       const userCount = updatedSession.messages.filter((m) => m.role === "user").length;
       let toPersist = updatedSession;
@@ -177,6 +246,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       await savePOJUSession(toPersist);
     } catch (err) {
       console.error("[poju] Send failed:", err);
+      onSessionUpdate(baseSession);
+      setInput(typed);
+      if (savedComposerImage) setComposerImage(savedComposerImage);
       alert("Connection issue. Please try again.");
     } finally {
       setSending(false);
@@ -260,10 +332,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       });
       const payData = (await payRes.json().catch(() => ({}))) as { order_id?: string };
       const orderId = payData.order_id ?? `mockpoju_${Date.now()}`;
+      const pendingProfile = readPendingStoredProfileId();
       const newSessionId = await createPOJUSession({
         payment_id: orderId,
         original_question: DEFAULT_NEW_SESSION_TITLE,
+        selected_stored_profile_id: pendingProfile,
       });
+      clearPendingStoredProfileId();
       router.push(`/poju/session/${newSessionId}`);
       setSidebarOpenMobile(false);
     } catch (err) {
@@ -281,6 +356,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       ...s,
       has_profile: true,
       profile_skipped: false,
+      selected_stored_profile_id: null,
       messages: [
         ...s.messages,
         {
@@ -307,6 +383,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     const updatedSession: POJUSessionState = {
       ...s,
       profile_skipped: true,
+      selected_stored_profile_id: null,
       messages: [
         ...s.messages,
         {
@@ -368,6 +445,39 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       }
     } finally {
       setExtending(false);
+    }
+  }
+
+  async function handleSituationAnalysis(force: boolean) {
+    setSituationError(null);
+    setSituationNotice(null);
+    setFinalError(null);
+    setSituationBusy(true);
+    try {
+      const out = await requestSituationAnalysis(sessionRef.current, locale, { force });
+      onSessionUpdate(out.session);
+      await savePOJUSession(out.session);
+      setSituationNotice(out.cache_hit ? t("situation_analysis_cache_hit") : t("situation_analysis_new"));
+    } catch (e) {
+      setSituationError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSituationBusy(false);
+    }
+  }
+
+  async function handleFinalDelivery() {
+    setFinalError(null);
+    setSituationError(null);
+    setFinalBusy(true);
+    try {
+      const next = await runFinalDeliveryForSession(sessionRef.current, locale);
+      onSessionUpdate(next);
+      await savePOJUSession(next);
+      setSituationNotice(t("final_delivery_done"));
+    } catch (e) {
+      setFinalError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setFinalBusy(false);
     }
   }
 
@@ -531,6 +641,49 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
             <div className="mx-auto flex w-full max-w-[800px] flex-col gap-6 py-6 pb-36">
               <SessionExpiryNotice session={session} extending={extending} onExtend={() => void handleExtendSession()} />
 
+              {session.agent_v2 ? (
+                <div className="rounded-xl border border-cyan-500/20 bg-cyan-950/20 px-3 py-2 text-xs text-on-surface-variant">
+                  <p className="text-on-surface">{t("situation_analysis_hint")}</p>
+                  {situationFp && getCachedSituationAnalysis(session, situationFp) ? (
+                    <p className="mt-1 text-emerald-200/90">{t("situation_analysis_have_cache")}</p>
+                  ) : null}
+                  {situationNotice ? <p className="mt-1 text-cyan-200/90">{situationNotice}</p> : null}
+                  {situationError ? <p className="mt-1 text-red-300">{situationError}</p> : null}
+                  {finalError ? <p className="mt-1 text-red-300">{finalError}</p> : null}
+                  <p className="mt-2 text-[11px] text-white/50">{t("final_delivery_hint")}</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={situationBusy}
+                      className="rounded-lg border border-cyan-400/40 bg-cyan-500/15 px-3 py-1.5 text-xs font-medium text-cyan-100 disabled:opacity-50"
+                      onClick={() => void handleSituationAnalysis(false)}
+                    >
+                      {situationBusy ? t("situation_analysis_running") : t("situation_analysis_run")}
+                    </button>
+                    {situationFp && getCachedSituationAnalysis(session, situationFp) ? (
+                      <button
+                        type="button"
+                        disabled={situationBusy}
+                        className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-on-surface-variant disabled:opacity-50"
+                        onClick={() => void handleSituationAnalysis(true)}
+                      >
+                        {t("situation_analysis_force")}
+                      </button>
+                    ) : null}
+                    {situationFp && getCachedSituationAnalysis(session, situationFp) && !session.main_delivery_done ? (
+                      <button
+                        type="button"
+                        disabled={finalBusy || situationBusy}
+                        className="rounded-lg border border-violet-400/40 bg-violet-500/15 px-3 py-1.5 text-xs font-medium text-violet-100 disabled:opacity-50"
+                        onClick={() => void handleFinalDelivery()}
+                      >
+                        {finalBusy ? t("final_delivery_running") : t("final_delivery_run")}
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+
               {visibleMessages.map((msg, idx) => (
                 <MessageBubble
                   key={`${msg.timestamp}-${idx}`}
@@ -544,7 +697,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                 <details open className="w-full overflow-hidden rounded-xl border border-white/10 bg-white/5 backdrop-blur-md">
                   <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 text-sm text-on-surface-variant">
                     <span className="material-symbols-outlined animate-pulse text-primary text-[18px]">psychology</span>
-                    <span>Thinking Process</span>
+                    <span>{t("thinking_process_title")}</span>
                     <span className="material-symbols-outlined ml-auto text-[18px]">keyboard_arrow_down</span>
                   </summary>
                   <div className="border-t border-white/10 bg-black/20 px-4 pb-4 pt-2 text-sm text-on-surface-variant">

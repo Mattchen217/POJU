@@ -69,6 +69,15 @@ export interface POJUDelivery {
   invitation: string;
 }
 
+/** Step 8 困境分析单次缓存条目（按语境指纹存于 session）。 */
+export interface SituationAnalysisCacheEntry {
+  context_fingerprint: string;
+  generated_at: string;
+  model: string;
+  tokens_used: number;
+  content: unknown;
+}
+
 export interface POJUSessionState {
   session_id: string;
   device_id: string;
@@ -80,6 +89,15 @@ export interface POJUSessionState {
   actions: POJUAction[];
   main_delivery_done: boolean;
   main_delivery: POJUDelivery | null;
+  /** Agent state machine (Agent Implementation Part1 Step 4–6). */
+  agent_v2?: import("./agent-state").POJUAgentState;
+  /**
+   * Step 8 困境分析缓存：key = `computeSituationContextFingerprint` 结果。
+   * 语境变化 → 新 key → 可再次调用模型。
+   */
+  situation_analysis_by_fingerprint?: Record<string, SituationAnalysisCacheEntry>;
+  /** 若从 `stored_profiles` 选人，写入 profile_id 以便挂载 Step 7 `base_analysis`。 */
+  selected_stored_profile_id?: string | null;
   tokens_used: number;
   abuse_metrics: {
     long_input_count: number;

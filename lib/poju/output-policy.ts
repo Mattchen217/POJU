@@ -6,6 +6,8 @@ import {
 } from "@/lib/poju/context-readiness";
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
+import { sanitizeResponse } from "@/lib/llm/phases/response-sanitizer";
+import { sanitizerStateFromSession } from "@/lib/llm/phases/types";
 
 /** Life domains: if user writes these and birth profile is missing (not skipped), force birth form. */
 const DEEP_LIFE_TOPIC_RE =
@@ -104,6 +106,7 @@ export function applyPojuOutputPolicies<T extends Record<string, unknown>>(parse
       out.current_state = "collecting_context";
       if (!forceBirthForm) out.action_requested = (out.action_requested as string) || "continue_chat";
     }
+    response = sanitizeResponse(response, sanitizerStateFromSession(session));
   }
 
   if (!hasProfile && !profileSkipped && out.action_requested === "deliver_main") {

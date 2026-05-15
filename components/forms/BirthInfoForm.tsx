@@ -14,6 +14,8 @@ export type BirthInfoFormProps = {
   allowSkip?: boolean;
   /** Reserved for future copy variants (e.g. chat vs profile setup). */
   context?: "chat" | "profile";
+  /** When true (default), persist to default `userProfiles` slot. Set false for multi-profile / `stored_profiles` flows. */
+  persistDefaultProfile?: boolean;
 };
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -23,6 +25,7 @@ export function BirthInfoForm({
   onProfileReady,
   onSkip,
   allowSkip = false,
+  persistDefaultProfile = true,
 }: BirthInfoFormProps) {
   const t = useTranslations("birthForm");
   const notifyReady = onComplete ?? onProfileReady;
@@ -53,7 +56,9 @@ export function BirthInfoForm({
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as { profile: UserProfile };
-      await saveUserProfile(data.profile);
+      if (persistDefaultProfile) {
+        await saveUserProfile(data.profile);
+      }
       setStatus("done");
       notifyReady?.(data.profile);
     } catch (err) {

@@ -96,10 +96,11 @@ export function resolvePojuGeminiThinkingLevel(): "low" | "high" {
   return raw === "low" ? "low" : "high";
 }
 
-function isThinkingConfigUnsupportedError(message: string): boolean {
-  return /thinkingconfig|thinking_config|thinking level|unsupported.*thinking|unknown field.*thinking/i.test(
-    message,
-  );
+/** When unset, POJU tries `thinkingConfig` first, then falls back on any error (same model). Set `0`/`false` to skip thinking entirely. */
+export function isPojuGeminiThinkingPreferred(): boolean {
+  const v = (process.env.POJU_GEMINI_THINKING ?? "").trim().toLowerCase();
+  if (v === "0" || v === "false" || v === "off") return false;
+  return true;
 }
 
 /**
@@ -107,8 +108,8 @@ function isThinkingConfigUnsupportedError(message: string): boolean {
  * leading `assistant` turns are merged into the system instruction.
  * Uses the same primary model + fallback chain as `generateGeminiText` / Oracle full-reading.
  *
- * Enables Gemini **thinking** for supported models (`thinkingConfig`); thoughts are not included
- * in the returned text (`includeThoughts: false`) so JSON parsing stays stable.
+ * By default attempts **thinking** (`thinkingConfig`, `includeThoughts: false`). If that call fails
+ * for any reason, retries **once without** `thinkingConfig` on the same model (no model switch).
  */
 export async function generateGeminiChatCompletion(options: {
   systemInstruction: string;
@@ -144,6 +145,7 @@ export async function generateGeminiChatCompletion(options: {
   const candidateModels = Array.from(new Set([GEMINI_PRIMARY_MODEL, ...GEMINI_FALLBACK_MODELS]));
   let lastError: unknown = null;
   const thinkingLevel = resolvePojuGeminiThinkingLevel();
+  const preferThinking = isPojuGeminiThinkingPreferred();
 
   for (const modelName of candidateModels) {
     try {
@@ -155,21 +157,30 @@ export async function generateGeminiChatCompletion(options: {
         temperature: options.temperature,
         maxOutputTokens: options.maxOutputTokens,
       };
-      let res;
-      try {
-        res = await model.generateContent({
-          contents,
-          generationConfig: {
-            ...baseGen,
-            thinkingConfig: {
-              thinkingLevel,
-              includeThoughts: false,
+      let res: Awaited<ReturnType<typeof model.generateContent>>;
+      if (preferThinking) {
+        try {
+          res = await model.generateContent({
+            contents,
+            generationConfig: {
+              ...baseGen,
+              thinkingConfig: {
+                thinkingLevel,
+                includeThoughts: false,
+              },
             },
-          },
-        } as Parameters<typeof model.generateContent>[0]);
-      } catch (inner) {
-        const innerMsg = formatGeminiError(inner);
-        if (!isThinkingConfigUnsupportedError(innerMsg)) throw inner;
+          } as Parameters<typeof model.generateContent>[0]);
+        } catch (inner) {
+          console.warn(
+            `[poju-gemini] thinkingConfig failed on ${modelName}, retrying without thinking:`,
+            formatGeminiError(inner),
+          );
+          res = await model.generateContent({
+            contents,
+            generationConfig: baseGen,
+          } as Parameters<typeof model.generateContent>[0]);
+        }
+      } else {
         res = await model.generateContent({
           contents,
           generationConfig: baseGen,

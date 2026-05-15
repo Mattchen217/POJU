@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useLocale } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createPOJUSession } from "@/lib/poju/session-manager";
+import { clearPendingStoredProfileId, readPendingStoredProfileId } from "@/lib/poju/pending-stored-profile";
 
 type StepStatus = "verifying" | "creating" | "success" | "error";
 
@@ -51,10 +52,13 @@ function PojuPaymentSuccessInner() {
         }
 
         setStatus("creating");
+        const pendingProfile = readPendingStoredProfileId();
         const sessionId = await createPOJUSession({
           payment_id: orderId,
           original_question: question,
+          selected_stored_profile_id: pendingProfile,
         });
+        clearPendingStoredProfileId();
 
         sessionStorage.removeItem("poju_pending_order_id");
         sessionStorage.removeItem("poju_pending_question");

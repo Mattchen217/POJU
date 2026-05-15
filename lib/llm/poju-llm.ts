@@ -2,10 +2,17 @@ import { buildPOJUSystemPrompt } from "@/lib/llm/poju-prompts";
 import { repairLLMOutput, validateLLMOutput } from "@/lib/llm/output-validator";
 import { applyPojuOutputPolicies } from "@/lib/poju/output-policy";
 import {
+  callGreetingPhase,
+  shouldUseGreetingPhase,
+} from "@/lib/llm/phases/greeting-phase";
+import type { PhaseLLMResult } from "@/lib/llm/phases/types";
+import {
   GEMINI_PRIMARY_MODEL,
   generateGeminiChatCompletion,
   getGeminiClient,
 } from "@/lib/llm/gemini-shared";
+import { getOpenRouterDefaultModel, isOpenRouterConfigured, openRouterChatCompletion } from "@/lib/llm/openrouter-shared";
+import { getLastUserMessageContent } from "@/lib/poju/context-readiness";
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
 
@@ -38,6 +45,11 @@ export interface POJULLMResponse {
 
 export async function callPOJULLM(input: CallInput): Promise<POJULLMResponse> {
   const { session, profile, locale } = input;
+
+  if (shouldUseGreetingPhase(session, profile)) {
+    return callPOJULLMGreetingPath(input);
+  }
+
   const systemPrompt = buildPOJUSystemPrompt({
     session,
     profile,
@@ -60,18 +72,42 @@ export async function callPOJULLM(input: CallInput): Promise<POJULLMResponse> {
     });
   }
 
-  if (!getGeminiClient()) {
-    console.error("[poju-llm] Missing GOOGLE_GENERATIVE_AI_API_KEY or GEMINI_API_KEY");
-    return emptyFailureResponse(session, locale, GEMINI_PRIMARY_MODEL);
+  if (!isOpenRouterConfigured() && !getGeminiClient()) {
+    console.error("[poju-llm] Set OPENROUTER_API_KEY (preferred) or GOOGLE_GENERATIVE_AI_API_KEY / GEMINI_API_KEY");
+    return emptyFailureResponse(session, locale, isOpenRouterConfigured() ? getOpenRouterDefaultModel() : GEMINI_PRIMARY_MODEL);
   }
 
   try {
-    const { text, modelUsed, tokens_used } = await generateGeminiChatCompletion({
-      systemInstruction: systemPrompt,
-      messages: conversationMessages,
-      temperature: 0.55,
-      maxOutputTokens: 4096,
-    });
+    let text: string;
+    let modelUsed: string;
+    let tokens_used: number;
+
+    if (isOpenRouterConfigured()) {
+      const msgs = [
+        { role: "system" as const, content: systemPrompt },
+        ...conversationMessages.map((m) => ({ role: m.role, content: m.content })),
+      ];
+      const out = await openRouterChatCompletion({
+        messages: msgs,
+        temperature: 0.55,
+        max_tokens: 4096,
+        json_mode: true,
+        reasoning_effort: "high",
+      });
+      text = out.text;
+      modelUsed = out.model;
+      tokens_used = out.tokens_used;
+    } else {
+      const gemini = await generateGeminiChatCompletion({
+        systemInstruction: systemPrompt,
+        messages: conversationMessages,
+        temperature: 0.55,
+        maxOutputTokens: 4096,
+      });
+      text = gemini.text;
+      modelUsed = gemini.modelUsed;
+      tokens_used = gemini.tokens_used;
+    }
 
     const parsed = parseStep5LLMResponse(text, locale, session, profile);
 
@@ -90,8 +126,75 @@ export async function callPOJULLM(input: CallInput): Promise<POJULLMResponse> {
     };
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.error("[poju-llm] Gemini API failed:", msg);
-    return emptyFailureResponse(session, locale, GEMINI_PRIMARY_MODEL);
+    console.error("[poju-llm] LLM request failed:", msg);
+    return emptyFailureResponse(
+      session,
+      locale,
+      isOpenRouterConfigured() ? getOpenRouterDefaultModel() : GEMINI_PRIMARY_MODEL,
+    );
+  }
+}
+
+function mapGreetingPhaseToPojuResponse(phase: PhaseLLMResult, model: string): POJULLMResponse {
+  const suggested = phase.suggested_phase;
+  let current_state: POJULLMResponse["current_state"] = "greeting";
+  let action_requested: POJULLMResponse["action_requested"] = "continue_chat";
+  let user_intent: POJULLMResponse["user_intent"] = "greeting";
+
+  if (suggested === "awaiting_profile") {
+    current_state = "awaiting_profile";
+    action_requested = "show_birth_form";
+    user_intent = "sharing_situation";
+  } else if (suggested === "collecting_context") {
+    current_state = "collecting_context";
+    user_intent = "sharing_situation";
+  } else if (phase.context_updates && Object.keys(phase.context_updates).length > 0) {
+    user_intent = "sharing_situation";
+  }
+
+  return {
+    response: phase.response,
+    model,
+    tokens_used: phase.tokens_used,
+    user_intent,
+    current_state,
+    action_requested,
+    topic_drift_detected: false,
+    context_updates: phase.context_updates ?? {},
+    contains_delivery: false,
+  };
+}
+
+async function callPOJULLMGreetingPath(input: CallInput): Promise<POJULLMResponse> {
+  const { session, profile, locale } = input;
+  const fallbackModel = isOpenRouterConfigured() ? getOpenRouterDefaultModel() : GEMINI_PRIMARY_MODEL;
+
+  if (!isOpenRouterConfigured() && !getGeminiClient()) {
+    console.error("[poju-llm] Set OPENROUTER_API_KEY (preferred) or GOOGLE_GENERATIVE_AI_API_KEY / GEMINI_API_KEY");
+    return emptyFailureResponse(session, locale, fallbackModel);
+  }
+
+  try {
+    const phase = await callGreetingPhase({
+      session,
+      profile,
+      locale,
+      user_message: getLastUserMessageContent(session),
+    });
+    const mapped = mapGreetingPhaseToPojuResponse(phase, phase.model ?? fallbackModel);
+    const withThought = {
+      ...mapped,
+      thought: {
+        current_context_score: 2,
+        missing_keys: ["birth_profile_missing"],
+        next_best_action: mapped.action_requested ?? "continue_chat",
+      },
+    };
+    return applyPojuOutputPolicies(withThought, { session, profile, locale }) as POJULLMResponse;
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("[poju-llm] Greeting phase failed:", msg);
+    return emptyFailureResponse(session, locale, fallbackModel);
   }
 }
 

@@ -6,6 +6,7 @@ import {
   parseAppLocale,
 } from "@/lib/prompts/language-directive";
 import { calculateProfile } from "@/lib/calculations";
+import { isOpenRouterConfigured, openRouterChatCompletion } from "@/lib/llm/openrouter-shared";
 import type { SignData } from "@/types/oracle";
 
 function getGeminiClient(): GoogleGenerativeAI | null {
@@ -477,16 +478,15 @@ function formatGeminiError(error: unknown): string {
   }
 }
 
-const requestDedupe = new Map<string, Promise<unknown>>();
+const requestDedupe = new Map<string, Promise<string>>();
 
 export async function POST(req: Request) {
   try {
-    const genAI = getGeminiClient();
-    if (!genAI) {
+    if (!isOpenRouterConfigured() && !getGeminiClient()) {
       return NextResponse.json(
         {
           error:
-            "Server missing GOOGLE_GENERATIVE_AI_API_KEY or GEMINI_API_KEY",
+            "Server missing OPENROUTER_API_KEY, or GOOGLE_GENERATIVE_AI_API_KEY / GEMINI_API_KEY",
         },
         { status: 500 },
       );
@@ -559,9 +559,26 @@ ${JSON.stringify(userProfile.diagnosis, null, 2)}`;
       locale,
     });
 
+    const useOpenRouter = isOpenRouterConfigured();
+
     const runPromise =
       requestDedupe.get(dedupeKey) ??
-      (async () => {
+      (async (): Promise<string> => {
+        if (useOpenRouter) {
+          const { text } = await openRouterChatCompletion({
+            messages: [
+              { role: "system", content: systemInstruction },
+              { role: "user", content: userPrompt },
+            ],
+            temperature: 0.7,
+            max_tokens: 8192,
+            json_mode: true,
+            reasoning_effort: "high",
+          });
+          return text;
+        }
+
+        const genAI = getGeminiClient()!;
         let lastError: unknown = null;
 
         for (const modelName of candidateModels) {
@@ -570,13 +587,14 @@ ${JSON.stringify(userProfile.diagnosis, null, 2)}`;
               model: modelName,
               systemInstruction,
             });
-            return await model.generateContent({
+            const result = await model.generateContent({
               contents: [{ role: "user", parts: [{ text: userPrompt }] }],
               generationConfig: {
                 maxOutputTokens: 8192,
                 temperature: 0.7,
               },
             });
+            return result.response.text();
           } catch (err) {
             const message = formatGeminiError(err);
             const isModelNotFound =
@@ -599,10 +617,7 @@ ${JSON.stringify(userProfile.diagnosis, null, 2)}`;
       });
     requestDedupe.set(dedupeKey, runPromise);
 
-    const result = (await runPromise) as Awaited<typeof runPromise> & {
-      response: { text: () => string };
-    };
-    const responseText = result.response.text();
+    const responseText = await runPromise;
 
     let reading: unknown;
     try {
