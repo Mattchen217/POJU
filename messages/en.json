@@ -545,6 +545,7 @@
       "ending": "Saving…",
       "end_confirm": "Mark this session as ended? You can still open Archive to review past threads on this device.",
       "thinking_process_title": "Thinking process",
+      "thinking_waiting": "DeepSeek is reasoning on OpenRouter (high effort). Full reasoning will appear here when the reply is ready.",
       "thinking_step_1": "Read your message together with this session’s context.",
       "thinking_step_2": "Aligned the reply with POJU depth and safety rules. (This is a short digest—not a raw model chain-of-thought.)",
       "thinking_step_3": "Composed the response shown below.",

@@ -545,6 +545,7 @@
       "ending": "保存中…",
       "end_confirm": "将本会话标记为已结束？你仍可在「归档」中查看本设备上的历史会话。",
       "thinking_process_title": "思考过程",
+      "thinking_waiting": "DeepSeek 正在通过 OpenRouter 进行深度推理，回复完成后将在此显示完整思考过程。",
       "thinking_step_1": "结合本会话上下文阅读你的这条消息。",
       "thinking_step_2": "在 POJU 的深度与安全规则下对齐回复。（这是简要说明，不是模型的原始思维链。）",
       "thinking_step_3": "生成下方展示的正文。",

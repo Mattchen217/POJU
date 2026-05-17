@@ -9,13 +9,19 @@ import { BirthInfoForm } from "@/components/forms/BirthInfoForm";
 import { ContextSummaryEditor } from "@/components/poju/ContextSummaryEditor";
 import type { ContextSummary } from "@/lib/poju/agent-state";
 import { MessageBubble } from "@/components/poju/MessageBubble";
+import { ThinkingProcessDetails } from "@/components/poju/ThinkingProcessDetails";
 import { ProfileSelector } from "@/components/profile/ProfileSelector";
 import { getPojuDb } from "@/lib/db/poju-db";
 import { createPOJUSession, loadPOJUSession, savePOJUSession, extendPOJUV4Session } from "@/lib/poju/session-manager";
 import { clearPendingStoredProfileId, readPendingStoredProfileId } from "@/lib/poju/pending-stored-profile";
 import { runConfirmationPipeline, runPostTurnOrchestration } from "@/lib/poju/agent-orchestrator";
 import { handleUserMessage, tryHandleRuleRejection } from "@/lib/poju/agent";
-import { withSessionProfileFlags } from "@/lib/poju/session-profile";
+import {
+  clearBirthFormActionIfProfileBound,
+  resolveSessionHasProfile,
+  withSessionProfileFlags,
+} from "@/lib/poju/session-profile";
+import { applyPhaseTransition } from "@/lib/poju/agent-state";
 import { generateBaseAnalysis } from "@/lib/llm/deepseek/base-analysis";
 import { importCalculatedProfileAsStored, recordProfileUsage } from "@/lib/profile/stored-profiles-service";
 import { markPOJUV4SessionResolved } from "@/lib/poju/v4-lifecycle";
@@ -74,8 +80,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const t = useTranslations("poju.chat");
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
-  const [thinking, setThinking] = useState(false);
-  const [thinkingLines, setThinkingLines] = useState<string[]>([]);
   const [showBirthForm, setShowBirthForm] = useState(false);
   const [extending, setExtending] = useState(false);
   const [ending, setEnding] = useState(false);
@@ -123,13 +127,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   }, [session.messages, scrollChatToBottom]);
 
   useEffect(() => {
-    if (thinking) scrollChatToBottom("auto");
-  }, [thinking, scrollChatToBottom]);
-
-  useEffect(() => {
-    if (!sending || thinkingLines.length === 0) return;
-    scrollChatToBottom("auto");
-  }, [sending, thinkingLines, scrollChatToBottom]);
+    if (sending) scrollChatToBottom("auto");
+  }, [sending, scrollChatToBottom]);
 
   useEffect(() => {
     let cancelled = false;
@@ -169,11 +168,21 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   }, [session.session_id, session.original_question, session.agent_v2, session.context_collected]);
 
   useEffect(() => {
+    if (resolveSessionHasProfile(session)) {
+      if (showBirthForm) setShowBirthForm(false);
+      return;
+    }
     const lastMsg = session.messages[session.messages.length - 1];
     if (lastMsg?.meta?.action_requested === "show_birth_form" && !showBirthForm) {
       setShowBirthForm(true);
     }
-  }, [session.messages, showBirthForm]);
+  }, [
+    session.messages,
+    session.selected_stored_profile_id,
+    session.birth_submitted_in_session,
+    session.profile_skipped,
+    showBirthForm,
+  ]);
 
   useEffect(() => {
     if (!overlayFormOpen) return;
@@ -182,23 +191,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     });
   }, [overlayFormOpen]);
 
-  useEffect(() => {
-    if (!sending) {
-      setThinking(false);
-      setThinkingLines([]);
-      return;
-    }
-    setThinking(true);
-    setThinkingLines(["Initializing context...", "Reading your signal...", "Composing response..."]);
-    const timer = window.setInterval(() => {
-      setThinkingLines((prev) => {
-        const next = [...prev];
-        next.push(next.length % 2 === 0 ? "Checking hidden dynamics..." : "Finalizing message...");
-        return next.slice(-3);
-      });
-    }, 1200);
-    return () => window.clearInterval(timer);
-  }, [sending]);
 
   async function handleSend() {
     if ((!input.trim() && !composerImage) || sending) return;
@@ -266,8 +258,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       });
       onSessionUpdate(orch.session);
       await savePOJUSession(orch.session);
-      if (orch.ui.showBirthForm) setShowBirthForm(true);
-      if (orch.ui.showProfilePicker) setShowProfilePicker(true);
+      if (!resolveSessionHasProfile(orch.session)) {
+        if (orch.ui.showBirthForm) setShowBirthForm(true);
+        if (orch.ui.showProfilePicker) setShowProfilePicker(true);
+      }
       if (orch.ui.pipelineNotice) setSituationNotice(orch.ui.pipelineNotice);
       if (orch.ui.pipelineError) setSituationError(orch.ui.pipelineError);
       setPipelineBusy(orch.ui.pipelineBusy);
@@ -380,57 +374,92 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     const s = sessionRef.current;
     setShowBirthForm(false);
     setShowProfilePicker(false);
-    const { profile_id } = await importCalculatedProfileAsStored({
-      profile,
-      display_name: `${profile.birth.year}-${profile.birth.month}-${profile.birth.day}`,
-      relationship: "self",
-    });
-    await recordProfileUsage(profile_id, "poju");
-    let updatedSession = withSessionProfileFlags(
-      {
-        ...s,
-        profile_skipped: false,
-        birth_submitted_in_session: true,
-        selected_stored_profile_id: profile_id,
-        messages: [
-          ...s.messages,
-          {
-            role: "system",
-            content: "[Birth info collected. Profile generated.]",
-            timestamp: new Date().toISOString(),
-          },
-        ],
-      },
-      { birth_submitted_in_session: true, selected_stored_profile_id: profile_id },
-    );
     try {
-      await generateBaseAnalysis(profile_id);
+      const { profile_id } = await importCalculatedProfileAsStored({
+        profile,
+        display_name: `${profile.birth.year}-${profile.birth.month}-${profile.birth.day}`,
+        relationship: "self",
+      });
+      await recordProfileUsage(profile_id, "poju");
+
+      let updatedSession = withSessionProfileFlags(
+        {
+          ...s,
+          profile_skipped: false,
+          birth_submitted_in_session: true,
+          selected_stored_profile_id: profile_id,
+          messages: [
+            ...s.messages,
+            {
+              role: "system",
+              content: "[Birth info collected. Profile generated.]",
+              timestamp: new Date().toISOString(),
+            },
+          ],
+        },
+        { birth_submitted_in_session: true, selected_stored_profile_id: profile_id },
+      );
+
       if (updatedSession.agent_v2) {
+        const transitioned =
+          updatedSession.agent_v2.current_phase === "awaiting_profile" ||
+          updatedSession.agent_v2.current_phase === "greeting"
+            ? applyPhaseTransition(updatedSession.agent_v2, {
+                should_transition: true,
+                new_phase: "collecting_context",
+                reason: "Birth profile bound to session",
+              })
+            : updatedSession.agent_v2;
         updatedSession = {
           ...updatedSession,
           agent_v2: {
-            ...updatedSession.agent_v2,
-            has_base_analysis: true,
+            ...transitioned,
             selected_profile_id: profile_id,
+            profile_skipped: false,
           },
         };
       }
-    } catch (e) {
-      console.warn("[poju] base analysis after birth submit:", e);
-    }
 
-    const finalSession = await handleUserMessage({
-      session: updatedSession,
-      userMessage: "[SYSTEM: Birth info just collected. Please acknowledge and continue.]",
-      locale,
-    });
-    const orch = await runPostTurnOrchestration(finalSession, { locale });
-    onSessionUpdate(orch.session);
-    await savePOJUSession(orch.session);
+      onSessionUpdate(updatedSession);
+      await savePOJUSession(updatedSession);
+
+      void generateBaseAnalysis(profile_id)
+        .then(() => {
+          const cur = sessionRef.current;
+          if (!cur.agent_v2) return;
+          const next = {
+            ...cur,
+            agent_v2: { ...cur.agent_v2, has_base_analysis: true, selected_profile_id: profile_id },
+          };
+          onSessionUpdate(next);
+          void savePOJUSession(next);
+        })
+        .catch((e) => console.warn("[poju] base analysis after birth submit:", e));
+
+      let finalSession = await handleUserMessage({
+        session: updatedSession,
+        userMessage: "[SYSTEM: Birth info just collected. Please acknowledge and continue collecting context.]",
+        locale,
+      });
+      finalSession = clearBirthFormActionIfProfileBound(finalSession);
+
+      const orch = await runPostTurnOrchestration(finalSession, { locale });
+      let next = clearBirthFormActionIfProfileBound(orch.session);
+      onSessionUpdate(next);
+      await savePOJUSession(next);
+    } catch (e) {
+      console.error("[poju] Profile submit failed:", e);
+      alert(
+        locale.startsWith("zh")
+          ? "保存命盘失败，请检查网络后重试。"
+          : "Could not save your birth profile. Please check your connection and try again.",
+      );
+    }
   }
 
   async function handleStoredProfileSelected(profileId: string) {
     setShowProfilePicker(false);
+    setShowBirthForm(false);
     const s = sessionRef.current;
     await recordProfileUsage(profileId, "poju");
     let updatedSession = withSessionProfileFlags(
@@ -449,29 +478,45 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       },
       { selected_stored_profile_id: profileId },
     );
-    try {
-      await generateBaseAnalysis(profileId);
-      if (updatedSession.agent_v2) {
-        updatedSession = {
-          ...updatedSession,
-          agent_v2: {
-            ...updatedSession.agent_v2,
-            has_base_analysis: true,
-            selected_profile_id: profileId,
-          },
-        };
-      }
-    } catch (e) {
-      console.warn("[poju] base analysis after profile select:", e);
+    if (updatedSession.agent_v2) {
+      const transitioned =
+        updatedSession.agent_v2.current_phase === "awaiting_profile" ||
+        updatedSession.agent_v2.current_phase === "greeting"
+          ? applyPhaseTransition(updatedSession.agent_v2, {
+              should_transition: true,
+              new_phase: "collecting_context",
+              reason: "Stored profile linked",
+            })
+          : updatedSession.agent_v2;
+      updatedSession = {
+        ...updatedSession,
+        agent_v2: { ...transitioned, selected_profile_id: profileId, profile_skipped: false },
+      };
     }
-    const finalSession = await handleUserMessage({
+    onSessionUpdate(updatedSession);
+    await savePOJUSession(updatedSession);
+
+    void generateBaseAnalysis(profileId)
+      .then(() => {
+        const cur = sessionRef.current;
+        if (!cur.agent_v2) return;
+        onSessionUpdate({
+          ...cur,
+          agent_v2: { ...cur.agent_v2, has_base_analysis: true, selected_profile_id: profileId },
+        });
+      })
+      .catch((e) => console.warn("[poju] base analysis after profile select:", e));
+
+    let finalSession = await handleUserMessage({
       session: updatedSession,
       userMessage: "[SYSTEM: User linked a saved birth profile. Acknowledge and continue collecting context.]",
       locale,
     });
+    finalSession = clearBirthFormActionIfProfileBound(finalSession);
     const orch = await runPostTurnOrchestration(finalSession, { locale });
-    onSessionUpdate(orch.session);
-    await savePOJUSession(orch.session);
+    const next = clearBirthFormActionIfProfileBound(orch.session);
+    onSessionUpdate(next);
+    await savePOJUSession(next);
   }
 
   async function handleConfirmSummary(editedSummary: ContextSummary) {
@@ -894,21 +939,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                   onActionUpdate={(id, st, fb) => void handleActionUpdate(id, st, fb)}
                 />
               ))}
-              {thinking ? (
-                <details open className="w-full overflow-hidden rounded-xl border border-white/10 bg-white/5 backdrop-blur-md">
-                  <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 text-sm text-on-surface-variant">
-                    <span className="material-symbols-outlined animate-pulse text-primary text-[18px]">psychology</span>
-                    <span>{t("thinking_process_title")}</span>
-                    <span className="material-symbols-outlined ml-auto text-[18px]">keyboard_arrow_down</span>
-                  </summary>
-                  <div className="border-t border-white/10 bg-black/20 px-4 pb-4 pt-2 text-sm text-on-surface-variant">
-                    <ul className="list-disc space-y-1 pl-4">
-                      {thinkingLines.map((line) => (
-                        <li key={line}>{line}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </details>
+              {sending ? (
+                <ThinkingProcessDetails open pulseIcon waitingLabel={t("thinking_waiting")} />
               ) : null}
 
               {showBirthForm ? (

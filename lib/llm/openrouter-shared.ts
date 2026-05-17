@@ -46,9 +46,18 @@ function resolveReasoningEffort(
   return "high";
 }
 
+export type OpenRouterCompletionResult = {
+  text: string;
+  model: string;
+  tokens_used: number;
+  /** DeepSeek / OpenRouter reasoning tokens when `reasoning.effort` is enabled. */
+  reasoning?: string;
+  reasoning_details?: unknown;
+};
+
 export async function openRouterChatCompletion(
   options: OpenRouterChatOptions,
-): Promise<{ text: string; model: string; tokens_used: number }> {
+): Promise<OpenRouterCompletionResult> {
   const apiKey = process.env.OPENROUTER_API_KEY?.trim();
   if (!apiKey) {
     throw new Error("missing_openrouter_api_key");
@@ -107,7 +116,13 @@ export async function openRouterChatCompletion(
 
   let data: {
     model?: string;
-    choices?: Array<{ message?: { content?: string | null } }>;
+    choices?: Array<{
+      message?: {
+        content?: string | null;
+        reasoning?: string | null;
+        reasoning_details?: unknown;
+      };
+    }>;
     usage?: {
       total_tokens?: number;
       prompt_tokens?: number;
@@ -120,7 +135,8 @@ export async function openRouterChatCompletion(
     throw new Error("openrouter_invalid_json_response");
   }
 
-  const text = String(data.choices?.[0]?.message?.content ?? "").trim();
+  const message = data.choices?.[0]?.message;
+  const text = String(message?.content ?? "").trim();
   const modelOut = typeof data.model === "string" ? data.model : model;
   const u = data.usage;
   const tokens_used =
@@ -129,5 +145,16 @@ export async function openRouterChatCompletion(
       : (typeof u?.prompt_tokens === "number" ? u.prompt_tokens : 0) +
         (typeof u?.completion_tokens === "number" ? u.completion_tokens : 0);
 
-  return { text, model: modelOut, tokens_used };
+  const reasoning =
+    typeof message?.reasoning === "string" && message.reasoning.trim()
+      ? message.reasoning.trim()
+      : undefined;
+
+  return {
+    text,
+    model: modelOut,
+    tokens_used,
+    reasoning,
+    reasoning_details: message?.reasoning_details,
+  };
 }

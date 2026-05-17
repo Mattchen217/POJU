@@ -48,6 +48,7 @@ type LLMApiPayload = {
   agent_suggested_phase?: string;
   current_summary?: ContextSummary | null;
   question_category?: string | null;
+  thinking_process?: string;
 };
 
 function ensureAgentV2(session: POJUSessionState): POJUAgentState {
@@ -256,6 +257,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       action_requested: llmResponse.action_requested,
       topic_drift_detected: llmResponse.topic_drift_detected,
       contains_delivery: llmResponse.contains_delivery,
+      thinking_process: llmResponse.thinking_process,
     },
   };
 
@@ -363,6 +365,7 @@ async function callLLMViaAPI(input: {
   agent_suggested_phase?: string;
   current_summary?: ContextSummary | null;
   question_category?: string | null;
+  thinking_process?: string;
 }> {
   const response = await fetch("/api/poju/chat", {
     method: "POST",
@@ -406,6 +409,7 @@ async function callLLMViaAPI(input: {
     agent_suggested_phase: data.agent_suggested_phase,
     current_summary: data.current_summary,
     question_category: data.question_category,
+    thinking_process: typeof data.thinking_process === "string" ? data.thinking_process : undefined,
   };
 }
 

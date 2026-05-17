@@ -1,6 +1,7 @@
 import { formatContextForPrompt } from "@/lib/poju/context-extractor";
 import type { AgentPhase, ContextSummary } from "@/lib/poju/agent-state";
 import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseJson } from "@/lib/llm/phases/phase-transport";
+import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
 import { sanitizeResponse } from "@/lib/llm/phases/response-sanitizer";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
 import { sanitizerStateFromSession } from "@/lib/llm/phases/types";
@@ -83,5 +84,6 @@ export async function callConfirmationPhase(input: PhaseLLMInput): Promise<Phase
     total_cost: 0,
     call_count: 1,
     model: result.model,
+    thinking_process: thinkingFromPhaseTransport(result, parsed, input.locale),
   };
 }

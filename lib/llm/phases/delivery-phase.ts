@@ -1,5 +1,6 @@
 import type { AgentPhase } from "@/lib/poju/agent-state";
 import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseJson } from "@/lib/llm/phases/phase-transport";
+import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
 
 function buildDeliverySystemPrompt(input: PhaseLLMInput): string {
@@ -51,5 +52,6 @@ export async function callDeliveryPhase(input: PhaseLLMInput): Promise<PhaseLLMR
     total_cost: 0,
     call_count: 1,
     model: result.model,
+    thinking_process: thinkingFromPhaseTransport(result, parsed, input.locale),
   };
 }

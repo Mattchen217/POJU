@@ -23,6 +23,8 @@ export interface PhaseLLMResult {
   total_cost: number;
   call_count: number;
   model?: string;
+  /** OpenRouter reasoning + optional structured thought, for UI "Thinking process". */
+  thinking_process?: string;
 }
 
 export interface SanitizerStateSlice {

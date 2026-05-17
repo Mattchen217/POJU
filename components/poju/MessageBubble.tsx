@@ -6,8 +6,7 @@ import pojuLogo from "@/assets/images/POJUlogo.png";
 import type { POJUAction, POJUMessage } from "@/lib/poju/types";
 import { MainDeliveryView } from "@/components/poju/MainDeliveryView";
 import { parseDeliveryContent, type DeliverySection } from "@/lib/poju/parse-delivery";
-
-const thinkingProcessStepKeys = ["thinking_step_1", "thinking_step_2", "thinking_step_3"] as const;
+import { ThinkingProcessDetails } from "@/components/poju/ThinkingProcessDetails";
 
 export interface MessageBubbleProps {
   message: POJUMessage;
@@ -70,20 +69,7 @@ export function MessageBubble({ message, hideWelcomePanel = false, actions, onAc
           <p className="px-1 text-[11px] uppercase tracking-[0.12em] text-on-surface-variant">You</p>
         ) : null}
         {!isUser && !isWelcomePanel ? (
-          <details className="w-full overflow-hidden rounded-xl border border-white/10 bg-white/5 backdrop-blur-md">
-            <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 text-sm text-on-surface-variant">
-              <span className="material-symbols-outlined text-primary text-[18px]">psychology</span>
-              <span>{tChat("thinking_process_title")}</span>
-              <span className="material-symbols-outlined ml-auto text-[18px]">keyboard_arrow_down</span>
-            </summary>
-            <div className="border-t border-white/10 bg-black/20 px-4 pb-4 pt-2 text-sm text-on-surface-variant">
-              <ul className="list-disc space-y-1 pl-4">
-                {thinkingProcessStepKeys.map((key) => (
-                  <li key={key}>{tChat(key)}</li>
-                ))}
-              </ul>
-            </div>
-          </details>
+          <ThinkingProcessDetails thinkingProcess={message.meta?.thinking_process} />
         ) : null}
         <div
           className={`rounded-2xl px-5 py-4 text-sm leading-relaxed shadow-[0_8px_30px_rgba(0,0,0,0.2)] ring-1 ring-white/5 ${

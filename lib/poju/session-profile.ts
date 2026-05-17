@@ -43,6 +43,20 @@ export function withSessionProfileFlags(
 }
 
 /** Browser-only: load UserProfile for LLM / Step 7–9. */
+/** Prevent birth-form UI from re-opening after profile is bound (stale assistant meta). */
+export function clearBirthFormActionIfProfileBound(session: POJUSessionState): POJUSessionState {
+  if (!resolveSessionHasProfile(session)) return session;
+  const messages = session.messages.map((m, i) => {
+    if (i !== session.messages.length - 1 || m.role !== "assistant") return m;
+    if (m.meta?.action_requested !== "show_birth_form") return m;
+    return {
+      ...m,
+      meta: { ...m.meta, action_requested: "continue_chat" as const },
+    };
+  });
+  return { ...session, messages };
+}
+
 export async function loadSessionUserProfile(session: POJUSessionState): Promise<UserProfile | null> {
   if (!resolveSessionHasProfile(session)) return null;
   const sid = session.selected_stored_profile_id?.trim();

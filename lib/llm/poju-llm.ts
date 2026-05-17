@@ -14,6 +14,10 @@ import {
   getGeminiClient,
 } from "@/lib/llm/gemini-shared";
 import { getOpenRouterDefaultModel, isOpenRouterConfigured, openRouterChatCompletion } from "@/lib/llm/openrouter-shared";
+import {
+  buildThinkingProcessDisplay,
+  parseThoughtFromUnknown,
+} from "@/lib/llm/thinking-process";
 import { getLastUserMessageContent } from "@/lib/poju/context-readiness";
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
@@ -54,6 +58,7 @@ export interface POJULLMResponse {
   agent_suggested_phase?: string;
   current_summary?: unknown;
   question_category?: string | null;
+  thinking_process?: string;
 }
 
 export async function callPOJULLM(input: CallInput): Promise<POJULLMResponse> {
@@ -105,6 +110,7 @@ async function callPOJULLMPhasePath(input: CallInput): Promise<POJULLMResponse> 
     agent_suggested_phase: typeof mapped.agent_suggested_phase === "string" ? mapped.agent_suggested_phase : undefined,
     current_summary: mapped.current_summary,
     question_category: typeof mapped.question_category === "string" ? mapped.question_category : null,
+    thinking_process: phase.thinking_process,
   };
 }
 
@@ -141,6 +147,8 @@ async function callPOJULLMLegacyPath(input: CallInput): Promise<POJULLMResponse>
     let text: string;
     let modelUsed: string;
     let tokens_used: number;
+    let openRouterReasoning: string | undefined;
+    let openRouterReasoningDetails: unknown;
 
     if (isOpenRouterConfigured()) {
       const msgs = [
@@ -157,6 +165,8 @@ async function callPOJULLMLegacyPath(input: CallInput): Promise<POJULLMResponse>
       text = out.text;
       modelUsed = out.model;
       tokens_used = out.tokens_used;
+      openRouterReasoning = out.reasoning;
+      openRouterReasoningDetails = out.reasoning_details;
     } else {
       const gemini = await generateGeminiChatCompletion({
         systemInstruction: systemPrompt,
@@ -170,6 +180,12 @@ async function callPOJULLMLegacyPath(input: CallInput): Promise<POJULLMResponse>
     }
 
     const parsed = parseStep5LLMResponse(text, locale, session, profile);
+    const thinking_process = buildThinkingProcessDisplay({
+      openRouterReasoning,
+      reasoning_details: openRouterReasoningDetails,
+      thought: parseThoughtFromUnknown(parsed.thought),
+      locale,
+    });
 
     return {
       response: String(parsed.response ?? ""),
@@ -185,6 +201,7 @@ async function callPOJULLMLegacyPath(input: CallInput): Promise<POJULLMResponse>
       contains_delivery: Boolean(parsed.contains_delivery),
       main_delivery: parsed.main_delivery,
       new_actions: parsed.new_actions as unknown[] | undefined,
+      thinking_process,
     };
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
@@ -226,6 +243,7 @@ function mapGreetingPhaseToPojuResponse(phase: PhaseLLMResult, model: string): P
     contains_delivery: false,
     agent_suggested_phase: suggested ?? undefined,
     question_category: phase.question_category,
+    thinking_process: phase.thinking_process,
   };
 }
 

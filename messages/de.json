@@ -545,6 +545,7 @@
       "ending": "Speichert…",
       "end_confirm": "Diese Session als beendet markieren? Du kannst den Verlauf weiterhin unter Archiv auf diesem Gerät einsehen.",
       "thinking_process_title": "Denkprozess",
+      "thinking_waiting": "DeepSeek rechnet über OpenRouter (hoher Aufwand). Die vollständige Begründung erscheint hier, sobald die Antwort fertig ist.",
       "thinking_step_1": "Ich habe deine Nachricht im Kontext dieser Session gelesen.",
       "thinking_step_2": "Antwort an die POJU-Tiefen- und Sicherheitsregeln angepasst. (Kurze Zusammenfassung, keine rohe Modell-Gedankenkette.)",
       "thinking_step_3": "Die unten stehende Antwort formuliert.",

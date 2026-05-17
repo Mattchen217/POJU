@@ -545,6 +545,7 @@
       "ending": "Guardando…",
       "end_confirm": "¿Marcar esta sesión como terminada? Aún puedes revisar el historial en Archivo en este dispositivo.",
       "thinking_process_title": "Proceso de reflexión",
+      "thinking_waiting": "DeepSeek está razonando en OpenRouter (esfuerzo alto). El razonamiento completo aparecerá aquí cuando la respuesta esté lista.",
       "thinking_step_1": "Leí tu mensaje junto con el contexto de esta sesión.",
       "thinking_step_2": "Alineé la respuesta con las reglas de profundidad y seguridad de POJU. (Esto es un resumen breve, no la cadena de pensamiento cruda del modelo.)",
       "thinking_step_3": "Redacté la respuesta que ves debajo.",

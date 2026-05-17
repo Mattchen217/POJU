@@ -36,6 +36,8 @@ export interface POJUMessage {
     action_requested?: PojuV4ActionRequested;
     topic_drift_detected?: boolean;
     contains_delivery?: boolean;
+    /** DeepSeek / OpenRouter reasoning tokens + POJU thought digest for this turn. */
+    thinking_process?: string;
   };
   is_rejected?: boolean;
   rejection_type?: "too_long" | "jailbreak" | "spam";

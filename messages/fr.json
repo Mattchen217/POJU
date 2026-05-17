@@ -545,6 +545,7 @@
       "ending": "Enregistrement…",
       "end_confirm": "Marquer cette session comme terminée ? Vous pourrez encore consulter l’historique dans Archive sur cet appareil.",
       "thinking_process_title": "Processus de réflexion",
+      "thinking_waiting": "DeepSeek raisonne via OpenRouter (effort élevé). Le raisonnement complet s’affichera ici dès que la réponse sera prête.",
       "thinking_step_1": "J’ai lu votre message avec le contexte de cette session.",
       "thinking_step_2": "J’ai aligné la réponse sur les règles de profondeur et de sécurité de POJU. (Résumé court, pas la chaîne de pensée brute du modèle.)",
       "thinking_step_3": "J’ai rédigé la réponse affichée ci-dessous.",

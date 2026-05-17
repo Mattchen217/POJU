@@ -7,6 +7,7 @@ import {
   getGeminiClient,
 } from "@/lib/llm/gemini-shared";
 import { isOpenRouterConfigured, openRouterChatCompletion } from "@/lib/llm/openrouter-shared";
+import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
 import {
   detectInitialLanguage,
   sanitizeResponse,
@@ -152,7 +153,13 @@ function normalizeSuggestedPhase(raw: unknown): AgentPhase | null {
 async function callGreetingTransport(
   system: string,
   messages: Array<{ role: "user" | "assistant"; content: string }>,
-): Promise<{ content: string; model: string; tokens_used: number }> {
+): Promise<{
+  content: string;
+  model: string;
+  tokens_used: number;
+  reasoning?: string;
+  reasoning_details?: unknown;
+}> {
   if (isOpenRouterConfigured()) {
     const msgs = [
       { role: "system" as const, content: system },
@@ -165,7 +172,13 @@ async function callGreetingTransport(
       json_mode: true,
       reasoning_effort: "high",
     });
-    return { content: out.text, model: out.model, tokens_used: out.tokens_used };
+    return {
+      content: out.text,
+      model: out.model,
+      tokens_used: out.tokens_used,
+      reasoning: out.reasoning,
+      reasoning_details: out.reasoning_details,
+    };
   }
   if (!getGeminiClient()) {
     throw new Error("missing_llm_api_key");
@@ -228,5 +241,6 @@ export async function callGreetingPhase(input: PhaseLLMInput): Promise<PhaseLLMR
     total_cost: 0,
     call_count: 1,
     model: result.model,
+    thinking_process: thinkingFromPhaseTransport(result, parsed, input.locale),
   };
 }

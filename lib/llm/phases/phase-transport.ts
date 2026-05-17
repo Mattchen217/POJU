@@ -4,11 +4,19 @@ import {
 } from "@/lib/llm/gemini-shared";
 import { isOpenRouterConfigured, openRouterChatCompletion } from "@/lib/llm/openrouter-shared";
 
+export type PhaseTransportResult = {
+  content: string;
+  model: string;
+  tokens_used: number;
+  reasoning?: string;
+  reasoning_details?: unknown;
+};
+
 export async function callPhaseJsonTransport(
   system: string,
   messages: Array<{ role: "user" | "assistant"; content: string }>,
   options?: { temperature?: number; max_tokens?: number },
-): Promise<{ content: string; model: string; tokens_used: number }> {
+): Promise<PhaseTransportResult> {
   const temperature = options?.temperature ?? 0.5;
   const max_tokens = options?.max_tokens ?? 2500;
 
@@ -24,7 +32,13 @@ export async function callPhaseJsonTransport(
       json_mode: true,
       reasoning_effort: "high",
     });
-    return { content: out.text, model: out.model, tokens_used: out.tokens_used };
+    return {
+      content: out.text,
+      model: out.model,
+      tokens_used: out.tokens_used,
+      reasoning: out.reasoning,
+      reasoning_details: out.reasoning_details,
+    };
   }
   if (!getGeminiClient()) {
     throw new Error("missing_llm_api_key");
