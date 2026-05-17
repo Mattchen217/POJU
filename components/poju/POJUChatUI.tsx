@@ -113,6 +113,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const visibleMessages = session.messages.filter((m) => m.role !== "system");
   const hasUserMessage = visibleMessages.some((m) => m.role === "user");
   const shouldHideWelcomePanel = hasUserMessage;
+  const overlayFormOpen = showBirthForm || showProfilePicker;
   const lastDeliveryTs = [...visibleMessages]
     .reverse()
     .find((m) => m.role === "assistant" && m.meta?.contains_delivery)?.timestamp;
@@ -173,6 +174,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       setShowBirthForm(true);
     }
   }, [session.messages, showBirthForm]);
+
+  useEffect(() => {
+    if (!overlayFormOpen) return;
+    requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    });
+  }, [overlayFormOpen]);
 
   useEffect(() => {
     if (!sending) {
@@ -785,7 +793,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           </header>
 
           <div className="flex-1 overflow-y-auto px-4 md:px-8">
-            <div className="mx-auto flex w-full max-w-[800px] flex-col gap-6 py-6 pb-36">
+            <div
+              className={`mx-auto flex w-full max-w-[800px] flex-col gap-6 py-6 ${overlayFormOpen ? "pb-8" : "pb-36"}`}
+            >
               <SessionExpiryNotice session={session} extending={extending} onExtend={() => void handleExtendSession()} />
 
               {session.agent_v2 ? (
@@ -901,18 +911,22 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                 </details>
               ) : null}
 
+              {showBirthForm ? (
+                <div className="rounded-2xl border border-violet-300/20 bg-violet-950/30 p-3">
+                  <BirthInfoForm
+                    context="chat"
+                    allowSkip
+                    onComplete={(p) => void handleProfileSubmitted(p)}
+                    onSkip={() => void handleProfileSkipped()}
+                  />
+                </div>
+              ) : null}
+
               <div ref={messagesEndRef} />
             </div>
           </div>
 
-          {showBirthForm ? (
-            <div className="mx-4 mb-3 rounded-2xl border border-violet-300/20 bg-violet-950/30 p-3 md:mx-6">
-              <div className="mx-auto w-full max-w-[800px]">
-                <BirthInfoForm context="chat" allowSkip onComplete={(p) => void handleProfileSubmitted(p)} onSkip={() => void handleProfileSkipped()} />
-              </div>
-            </div>
-          ) : null}
-
+          {!overlayFormOpen ? (
           <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-20 flex justify-center bg-gradient-to-t from-background via-background/90 to-transparent p-4 md:p-6">
             <div className="pointer-events-auto w-full max-w-[800px]">
               {composerImage ? (
@@ -979,6 +993,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
               </div>
             </div>
           </div>
+          ) : null}
         </section>
       </div>
     </div>

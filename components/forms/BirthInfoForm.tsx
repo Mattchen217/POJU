@@ -25,6 +25,7 @@ export function BirthInfoForm({
   onProfileReady,
   onSkip,
   allowSkip = false,
+  context = "profile",
   persistDefaultProfile = true,
 }: BirthInfoFormProps) {
   const t = useTranslations("birthForm");
@@ -137,18 +138,37 @@ export function BirthInfoForm({
             className="mt-1 w-full rounded-md border border-white/15 bg-black/30 px-2 py-2 text-sm text-text-primary"
           />
         </label>
-        <label className="text-xs text-text-dim">
-          {t("gender")}
-          <select
-            value={form.gender}
-            onChange={(e) => setForm((p) => ({ ...p, gender: e.target.value as BirthGender }))}
-            className="mt-1 w-full rounded-md border border-white/15 bg-black/30 px-2 py-2 text-sm text-text-primary"
-          >
-            <option value="male">{t("genderMale")}</option>
-            <option value="female">{t("genderFemale")}</option>
-            <option value="other">{t("genderOther")}</option>
-          </select>
-        </label>
+        <div className="text-xs text-text-dim">
+          <span className="block">{t("gender")}</span>
+          {context === "chat" ? (
+            <div className="mt-1 flex flex-wrap gap-1.5" role="group" aria-label={t("gender")}>
+              {(["male", "female", "other"] as const).map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => setForm((p) => ({ ...p, gender: g }))}
+                  className={`rounded-md border px-2.5 py-2 text-sm transition-colors ${
+                    form.gender === g
+                      ? "border-cyan-400/50 bg-cyan-500/20 text-cyan-100"
+                      : "border-white/15 bg-black/30 text-text-primary hover:border-white/25"
+                  }`}
+                >
+                  {g === "male" ? t("genderMale") : g === "female" ? t("genderFemale") : t("genderOther")}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <select
+              value={form.gender}
+              onChange={(e) => setForm((p) => ({ ...p, gender: e.target.value as BirthGender }))}
+              className="mt-1 w-full rounded-md border border-white/15 bg-black/30 px-2 py-2 text-sm text-text-primary"
+            >
+              <option value="male">{t("genderMale")}</option>
+              <option value="female">{t("genderFemale")}</option>
+              <option value="other">{t("genderOther")}</option>
+            </select>
+          )}
+        </div>
       </div>
 
       <label className="mt-3 block text-xs text-text-dim">
