@@ -4,17 +4,18 @@ import {
   countUserTurns,
   getLastUserMessageContent,
 } from "@/lib/poju/context-readiness";
+import { resolveSessionHasProfile, shouldForceBirthForm } from "@/lib/poju/session-profile";
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
 import { sanitizeResponse } from "@/lib/llm/phases/response-sanitizer";
 import { sanitizerStateFromSession } from "@/lib/llm/phases/types";
 
-/** Life domains: if user writes these and birth profile is missing (not skipped), force birth form. */
-const DEEP_LIFE_TOPIC_RE =
-  /事业|职业|工作|职场|创业|财富|收入|金钱|投资|生意|感情|恋爱|婚姻|婚恋|夫妻|家庭|抚养|合伙|生存压力|经济压力|失业|转行/i;
-
 const FORBIDDEN_PRE_PROFILE_TRAIT_RE =
-  /(在我的感知中|天生|天赋|命盘|八字|五行|用神|木火|命理|生命特质|草木|藤蔓|从你的生命|从.*特质来看|你其实是.{0,12}(极具|非常|很有))/i;
+  /(在我的感知中|天生|天赋|命盘|八字|五行|用神|木火|木的能量|命理|生命特质|草木|藤蔓|从你的生命|从.*特质来看|你其实是.{0,12}(极具|非常|很有)|(?:你|您).{0,5}(?:其实|本质上|天然).{0,15}(?:是|有|具有)|从你(?:的)?(?:个人|内在).{0,5}(?:看|来看)|Your\s+(?:natural|true|inner)\s+(?:nature|pattern|self))/i;
+
+/** Block "I prepared your full analysis" before Step 9 delivery (Part2 Step 18 — preview only, no rewrite). */
+const PREMATURE_DELIVERY_PROMISE_RE =
+  /(?:已经|刚刚).{0,5}(?:为你|帮你).{0,5}(?:整理|准备|完成).{0,5}(?:一份|完整的?|详细的?)|I\s+have\s+(?:already\s+)?(?:prepared|completed|put\s+together).{0,30}(?:complete|full|detailed)/i;
 
 const DELIVERY_SECTION_RE = /═══\s*ANALYSIS\s*═══|═══\s*CONCLUSION\s*═══|═══\s*WHAT\s+YOU\s+CAN\s+DO\s*═══/i;
 
@@ -64,22 +65,18 @@ function mainDeliveryAllowed(
  */
 export function applyPojuOutputPolicies<T extends Record<string, unknown>>(parsed: T, ctx: PolicyContext): T {
   const { session, profile, locale } = ctx;
-  const hasProfile = Boolean(profile);
+  const hasProfile = resolveSessionHasProfile(session) && Boolean(profile);
   const profileSkipped = session.profile_skipped;
   const userTurns = countUserTurns(session);
   const score = computeContextReadinessScore(session, hasProfile);
   const contextSignals = countContextSignals(session);
   const lastUser = getLastUserMessageContent(session);
+  const phase = session.agent_v2?.current_phase;
 
   const out = { ...parsed } as Record<string, unknown>;
   let response = String(out.response ?? "");
 
-  const forceBirthForm =
-    !hasProfile &&
-    !profileSkipped &&
-    userTurns >= 1 &&
-    lastUser.length > 0 &&
-    DEEP_LIFE_TOPIC_RE.test(lastUser);
+  const forceBirthForm = shouldForceBirthForm(session, lastUser);
 
   if (forceBirthForm) {
     out.action_requested = "show_birth_form";
@@ -88,6 +85,29 @@ export function applyPojuOutputPolicies<T extends Record<string, unknown>>(parse
   const deliveryAllowed = mainDeliveryAllowed(hasProfile, profileSkipped, score, userTurns, contextSignals);
 
   /** 无档案且未声明跳过：禁止任何主交付 / 命理终审块（不依赖轮数）。 */
+  /** Step 9 owns full delivery; chat must not ship ANALYSIS blocks during collection. */
+  if (
+    phase === "collecting_context" ||
+    phase === "awaiting_profile" ||
+    phase === "awaiting_confirmation" ||
+    phase === "greeting"
+  ) {
+    if (out.contains_delivery || DELIVERY_SECTION_RE.test(response)) {
+      out.contains_delivery = false;
+      out.main_delivery = null;
+      out.new_actions = [];
+      if (DELIVERY_SECTION_RE.test(response)) {
+        response =
+          phase === "awaiting_confirmation"
+            ? traitGateResponse(locale, false)
+            : traitGateResponse(locale, forceBirthForm || (!hasProfile && !profileSkipped));
+      }
+    }
+    if (out.action_requested === "deliver_main") {
+      out.action_requested = "continue_chat";
+    }
+  }
+
   if (!hasProfile && !profileSkipped) {
     if (out.contains_delivery || DELIVERY_SECTION_RE.test(response)) {
       out.contains_delivery = false;
@@ -98,7 +118,10 @@ export function applyPojuOutputPolicies<T extends Record<string, unknown>>(parse
         response = traitGateResponse(locale, true);
       }
     }
-    if (FORBIDDEN_PRE_PROFILE_TRAIT_RE.test(response)) {
+    if (
+      FORBIDDEN_PRE_PROFILE_TRAIT_RE.test(response) ||
+      (!session.main_delivery_done && PREMATURE_DELIVERY_PROMISE_RE.test(response))
+    ) {
       response = traitGateResponse(locale, forceBirthForm || out.action_requested === "show_birth_form");
       out.contains_delivery = false;
       out.main_delivery = null;

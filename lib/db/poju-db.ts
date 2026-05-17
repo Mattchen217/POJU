@@ -36,7 +36,14 @@ export interface POJUSessionRecord {
   }>;
   tokens_used: number;
   turn_count: number;
-  current_state_hint: "greeting" | "collecting_context" | "awaiting_profile" | "analyzing" | "delivered" | "tracking";
+  current_state_hint:
+    | "greeting"
+    | "collecting_context"
+    | "awaiting_profile"
+    | "awaiting_confirmation"
+    | "analyzing"
+    | "delivered"
+    | "tracking";
   main_delivery_done: boolean;
   main_delivery_at?: Date;
 }

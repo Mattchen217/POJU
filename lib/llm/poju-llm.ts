@@ -6,6 +6,8 @@ import {
   shouldUseGreetingPhase,
 } from "@/lib/llm/phases/greeting-phase";
 import type { PhaseLLMResult } from "@/lib/llm/phases/types";
+import { callPhaseSpecificLLM, resolveActiveAgentPhase } from "@/lib/llm/poju-phase-router";
+import { mapPhaseResultToChatPayload } from "@/lib/poju/phase-llm-mapper";
 import {
   GEMINI_PRIMARY_MODEL,
   generateGeminiChatCompletion,
@@ -34,13 +36,24 @@ export interface POJULLMResponse {
     | "wrapping_up"
     | "unclear"
     | "off_topic";
-  current_state: "greeting" | "collecting_context" | "awaiting_profile" | "analyzing" | "delivered" | "tracking";
+  current_state:
+    | "greeting"
+    | "collecting_context"
+    | "awaiting_profile"
+    | "awaiting_confirmation"
+    | "analyzing"
+    | "delivered"
+    | "tracking";
   action_requested?: "continue_chat" | "show_birth_form" | "deliver_main" | "track_progress";
   topic_drift_detected: boolean;
-  context_updates: Record<string, any>;
+  context_updates: Record<string, unknown>;
   contains_delivery: boolean;
-  main_delivery?: any;
-  new_actions?: any[];
+  main_delivery?: unknown;
+  new_actions?: unknown[];
+  /** Phase module hint for `agent_v2` state machine (Part2). */
+  agent_suggested_phase?: string;
+  current_summary?: unknown;
+  question_category?: string | null;
 }
 
 export async function callPOJULLM(input: CallInput): Promise<POJULLMResponse> {
@@ -50,11 +63,54 @@ export async function callPOJULLM(input: CallInput): Promise<POJULLMResponse> {
     return callPOJULLMGreetingPath(input);
   }
 
-  const systemPrompt = buildPOJUSystemPrompt({
+  if (isOpenRouterConfigured() || getGeminiClient()) {
+  const hasUserTurns = session.messages.some((m) => m.role === "user" && !m.is_rejected);
+  if (hasUserTurns) {
+    try {
+      return await callPOJULLMPhasePath(input);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.warn("[poju-llm] Phase path failed, falling back to legacy prompt:", msg);
+    }
+  }
+  }
+
+  return callPOJULLMLegacyPath(input);
+}
+
+async function callPOJULLMPhasePath(input: CallInput): Promise<POJULLMResponse> {
+  const { session, profile, locale } = input;
+  const fallbackModel = isOpenRouterConfigured() ? getOpenRouterDefaultModel() : GEMINI_PRIMARY_MODEL;
+
+  const { phase, activePhase } = await callPhaseSpecificLLM({ session, profile, locale });
+  const mapped = mapPhaseResultToChatPayload(phase, {
     session,
     profile,
     locale,
+    fallbackPhase: activePhase,
   });
+
+  return {
+    response: String(mapped.response ?? phase.response),
+    model: phase.model ?? fallbackModel,
+    tokens_used: phase.tokens_used,
+    user_intent: (mapped.user_intent as POJULLMResponse["user_intent"]) ?? "sharing_situation",
+    current_state: (mapped.current_state as POJULLMResponse["current_state"]) ?? "collecting_context",
+    action_requested: mapped.action_requested as POJULLMResponse["action_requested"],
+    topic_drift_detected: Boolean(mapped.topic_drift_detected),
+    context_updates: (mapped.context_updates as Record<string, unknown>) ?? {},
+    contains_delivery: Boolean(mapped.contains_delivery),
+    main_delivery: mapped.main_delivery,
+    new_actions: mapped.new_actions as unknown[] | undefined,
+    agent_suggested_phase: typeof mapped.agent_suggested_phase === "string" ? mapped.agent_suggested_phase : undefined,
+    current_summary: mapped.current_summary,
+    question_category: typeof mapped.question_category === "string" ? mapped.question_category : null,
+  };
+}
+
+async function callPOJULLMLegacyPath(input: CallInput): Promise<POJULLMResponse> {
+  const { session, profile, locale } = input;
+  const systemPrompt = buildPOJUSystemPrompt({ session, profile, locale });
 
   const conversationMessages = session.messages
     .filter((m) => m.role === "user" || m.role === "assistant")
@@ -74,7 +130,11 @@ export async function callPOJULLM(input: CallInput): Promise<POJULLMResponse> {
 
   if (!isOpenRouterConfigured() && !getGeminiClient()) {
     console.error("[poju-llm] Set OPENROUTER_API_KEY (preferred) or GOOGLE_GENERATIVE_AI_API_KEY / GEMINI_API_KEY");
-    return emptyFailureResponse(session, locale, isOpenRouterConfigured() ? getOpenRouterDefaultModel() : GEMINI_PRIMARY_MODEL);
+    return emptyFailureResponse(
+      session,
+      locale,
+      isOpenRouterConfigured() ? getOpenRouterDefaultModel() : GEMINI_PRIMARY_MODEL,
+    );
   }
 
   try {
@@ -112,17 +172,19 @@ export async function callPOJULLM(input: CallInput): Promise<POJULLMResponse> {
     const parsed = parseStep5LLMResponse(text, locale, session, profile);
 
     return {
-      response: parsed.response,
+      response: String(parsed.response ?? ""),
       model: modelUsed,
       tokens_used,
-      user_intent: parsed.user_intent || "unclear",
-      current_state: parsed.current_state || (session.main_delivery_done ? "tracking" : "collecting_context"),
-      action_requested: parsed.action_requested,
-      topic_drift_detected: parsed.topic_drift_detected || false,
-      context_updates: parsed.context_updates || {},
-      contains_delivery: parsed.contains_delivery || false,
+      user_intent: (parsed.user_intent as POJULLMResponse["user_intent"]) || "unclear",
+      current_state:
+        (parsed.current_state as POJULLMResponse["current_state"]) ||
+        (session.main_delivery_done ? "tracking" : "collecting_context"),
+      action_requested: parsed.action_requested as POJULLMResponse["action_requested"],
+      topic_drift_detected: Boolean(parsed.topic_drift_detected),
+      context_updates: (parsed.context_updates as Record<string, unknown>) || {},
+      contains_delivery: Boolean(parsed.contains_delivery),
       main_delivery: parsed.main_delivery,
-      new_actions: parsed.new_actions,
+      new_actions: parsed.new_actions as unknown[] | undefined,
     };
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
@@ -162,6 +224,8 @@ function mapGreetingPhaseToPojuResponse(phase: PhaseLLMResult, model: string): P
     topic_drift_detected: false,
     context_updates: phase.context_updates ?? {},
     contains_delivery: false,
+    agent_suggested_phase: suggested ?? undefined,
+    question_category: phase.question_category,
   };
 }
 
@@ -216,7 +280,7 @@ function parseStep5LLMResponse(
   locale: string,
   session: POJUSessionState,
   profile: UserProfile | null,
-): any {
+): Record<string, unknown> {
   try {
     const cleaned = rawText.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
     const parsed = JSON.parse(cleaned);
@@ -225,14 +289,14 @@ function parseStep5LLMResponse(
     if (!validation.valid) {
       console.warn("[poju-llm] Invalid output, attempting repair:", validation.error);
     }
-    return applyPojuOutputPolicies(base, { session, profile, locale });
+    return applyPojuOutputPolicies(base, { session, profile, locale }) as Record<string, unknown>;
   } catch {
     console.error("[poju-llm] JSON parse failed");
     return applyPojuOutputPolicies(repairLLMOutput({ response: rawText || getLLMFailureMessage(locale) }, locale), {
       session,
       profile,
       locale,
-    });
+    }) as Record<string, unknown>;
   }
 }
 

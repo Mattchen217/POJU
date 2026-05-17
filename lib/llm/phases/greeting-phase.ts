@@ -17,13 +17,14 @@ import {
   sanitizerStateFromSession,
 } from "@/lib/llm/phases/types";
 import type { AgentPhase } from "@/lib/poju/agent-state";
+import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
 
 const VALID_SUGGESTED: AgentPhase[] = ["greeting", "awaiting_profile", "collecting_context"];
 
 export function shouldUseGreetingPhase(session: POJUSessionState, profile: UserProfile | null): boolean {
-  if (profile || session.profile_skipped || session.main_delivery_done) return false;
+  if (resolveSessionHasProfile(session) || profile || session.profile_skipped || session.main_delivery_done) return false;
   const phase = session.agent_v2?.current_phase;
   if (phase && phase !== "greeting") return false;
   return true;

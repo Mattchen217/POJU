@@ -1,4 +1,4 @@
-import { getUserProfile } from "@/lib/profile/storage";
+import { loadSessionUserProfile, withSessionProfileFlags } from "@/lib/poju/session-profile";
 import type { POJUAction, POJUSessionState, POJUMessage } from "@/lib/poju/types";
 import { checkRuleViolation, getRuleRejectionMessage } from "@/lib/poju/rules";
 import {
@@ -7,6 +7,7 @@ import {
   createInitialAgentState,
   decidePhaseTransition,
   type AgentPhase,
+  type ContextSummary,
   type POJUAgentState,
 } from "@/lib/poju/agent-state";
 import { extractQuestionCategory, mergeContextUpdates, recordToLLMContextUpdates } from "@/lib/poju/context-extractor";
@@ -44,6 +45,9 @@ type LLMApiPayload = {
   main_delivery?: unknown;
   new_actions?: unknown[];
   error?: string;
+  agent_suggested_phase?: string;
+  current_summary?: ContextSummary | null;
+  question_category?: string | null;
 };
 
 function ensureAgentV2(session: POJUSessionState): POJUAgentState {
@@ -64,20 +68,21 @@ function ensureAgentV2(session: POJUSessionState): POJUAgentState {
   };
 }
 
+const AGENT_PHASES: AgentPhase[] = [
+  "greeting",
+  "awaiting_profile",
+  "collecting_context",
+  "awaiting_confirmation",
+  "delivered",
+  "tracking",
+];
+
 function mapLlmHintToAgentPhase(hint: string | undefined): AgentPhase | null {
   if (!hint) return null;
+  if (AGENT_PHASES.includes(hint as AgentPhase)) return hint as AgentPhase;
   switch (hint) {
-    case "greeting":
-      return "greeting";
-    case "awaiting_profile":
-      return "awaiting_profile";
-    case "collecting_context":
     case "analyzing":
-      return "collecting_context";
-    case "delivered":
-      return "delivered";
-    case "tracking":
-      return "tracking";
+      return "awaiting_confirmation";
     default:
       return null;
   }
@@ -90,6 +95,9 @@ function finalizeAgentV2(
     context_updates: Record<string, unknown>;
     tokens_used?: number;
     current_state?: string;
+    agent_suggested_phase?: string;
+    current_summary?: ContextSummary | null;
+    question_category?: string | null;
     contains_delivery?: boolean;
     main_delivery?: unknown;
   },
@@ -101,7 +109,10 @@ function finalizeAgentV2(
   let merged: POJUAgentState = {
     ...base,
     context_collected: mergeContextUpdates(base.context_collected, structured),
-    question_category: extractQuestionCategory(flat) ?? base.question_category,
+    question_category:
+      extractQuestionCategory(flat) ??
+      (llm.question_category as POJUAgentState["question_category"]) ??
+      base.question_category,
     profile_skipped: session.profile_skipped,
     has_base_analysis: session.has_profile,
     selected_profile_id: resolveSelectedProfileId(session, base),
@@ -111,13 +122,19 @@ function finalizeAgentV2(
     collection_completeness: calculateCompleteness(merged),
     has_situation_analysis: calculateCompleteness(merged) >= 0.4,
   };
-  const llmPhase = mapLlmHintToAgentPhase(llm.current_state);
+  const llmPhase =
+    (llm.agent_suggested_phase && AGENT_PHASES.includes(llm.agent_suggested_phase as AgentPhase)
+      ? (llm.agent_suggested_phase as AgentPhase)
+      : null) ?? mapLlmHintToAgentPhase(llm.current_state);
   const transition = decidePhaseTransition({
     current_state: merged,
     llm_suggested_phase: llmPhase,
     user_message: isSystemMessage ? "" : userMessage,
   });
   let after = applyPhaseTransition(merged, transition);
+  if (llm.current_summary && after.current_phase === "awaiting_confirmation") {
+    after = { ...after, current_summary: llm.current_summary };
+  }
   const nowIso = new Date().toISOString();
   if (llm.contains_delivery) {
     after = {
@@ -195,10 +212,11 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   } else {
     messagesWithUser = [...session.messages, newUserMessage];
   }
-  const profile = session.has_profile ? await getUserProfile() : null;
+  const sessionForLlm = withSessionProfileFlags({ ...session, messages: messagesWithUser });
+  const profile = await loadSessionUserProfile(sessionForLlm);
 
   const llmResponse = await callLLMViaAPI({
-    session: { ...session, messages: messagesWithUser },
+    session: sessionForLlm,
     profile,
     locale,
   });
@@ -211,7 +229,16 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   const agentCore = finalizeAgentV2(
     ensureAgentV2(sessionForAgent),
     sessionForAgent,
-    llmResponse,
+    {
+      context_updates: llmResponse.context_updates ?? {},
+      tokens_used: llmResponse.tokens_used,
+      current_state: llmResponse.current_state,
+      agent_suggested_phase: llmResponse.agent_suggested_phase,
+      current_summary: llmResponse.current_summary,
+      question_category: llmResponse.question_category,
+      contains_delivery: llmResponse.contains_delivery,
+      main_delivery: llmResponse.main_delivery,
+    },
     userMessage,
     isSystemMessage,
   );
@@ -235,7 +262,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   const nowIso = new Date().toISOString();
   const rollingExpiry = new Date(Date.now() + THIRTY_DAYS_MS).toISOString();
 
-  return {
+  return withSessionProfileFlags({
     ...session,
     messages: [...messagesWithUser, assistantMessage],
     context_collected: {
@@ -249,7 +276,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     tokens_used: session.tokens_used + (llmResponse.tokens_used || 0),
     last_interaction_at: nowIso,
     expires_at: rollingExpiry,
-  };
+  });
 }
 
 /**
@@ -333,6 +360,9 @@ async function callLLMViaAPI(input: {
   contains_delivery: boolean;
   main_delivery?: unknown;
   new_actions?: unknown[];
+  agent_suggested_phase?: string;
+  current_summary?: ContextSummary | null;
+  question_category?: string | null;
 }> {
   const response = await fetch("/api/poju/chat", {
     method: "POST",
@@ -373,11 +403,16 @@ async function callLLMViaAPI(input: {
     contains_delivery: Boolean(data.contains_delivery),
     main_delivery: data.main_delivery,
     new_actions: data.new_actions,
+    agent_suggested_phase: data.agent_suggested_phase,
+    current_summary: data.current_summary,
+    question_category: data.question_category,
   };
 }
 
 function sessionStateHint(session: POJUSessionState) {
-  if (session.main_delivery_done) return "tracking" as const;
-  if (session.has_profile) return "analyzing" as const;
+  const phase = session.agent_v2?.current_phase;
+  if (session.main_delivery_done || phase === "delivered") return "tracking" as const;
+  if (phase === "awaiting_confirmation") return "awaiting_confirmation" as const;
+  if (phase === "awaiting_profile") return "awaiting_profile" as const;
   return "collecting_context" as const;
 }

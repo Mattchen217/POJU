@@ -8,6 +8,7 @@ export type PojuV4StateHint =
   | "greeting"
   | "collecting_context"
   | "awaiting_profile"
+  | "awaiting_confirmation"
   | "analyzing"
   | "delivered"
   | "tracking";
@@ -85,6 +86,8 @@ export interface POJUSessionState {
   messages: POJUMessage[];
   context_collected: Record<string, unknown>;
   has_profile: boolean;
+  /** True when user submitted birth info in this session (default `userProfiles` slot). */
+  birth_submitted_in_session?: boolean;
   profile_skipped: boolean;
   actions: POJUAction[];
   main_delivery_done: boolean;

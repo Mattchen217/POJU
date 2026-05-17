@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 import pojuLogo from "@/assets/images/POJUlogo.png";
 import type { POJUAction, POJUMessage } from "@/lib/poju/types";
+import { MainDeliveryView } from "@/components/poju/MainDeliveryView";
 import { parseDeliveryContent, type DeliverySection } from "@/lib/poju/parse-delivery";
 
 const thinkingProcessStepKeys = ["thinking_step_1", "thinking_step_2", "thinking_step_3"] as const;
@@ -47,12 +48,11 @@ export function MessageBubble({ message, hideWelcomePanel = false, actions, onAc
           <Image src={pojuLogo} alt="" width={32} height={32} className="object-cover" />
         </div>
         <div className="min-w-0 max-w-[min(100%,42rem)] flex-1 rounded-2xl border border-amber-400/25 bg-gradient-to-br from-amber-500/[0.07] to-zinc-950/90 p-4 shadow-lg sm:p-5">
-          <DeliveryHeader />
-          <DeliveryContent content={message.content} />
-          {actions && actions.length > 0 ? (
-            <ActionsBlock actions={actions} onActionUpdate={onActionUpdate} />
-          ) : null}
-          <DeliveryFooter />
+          <MainDeliveryView
+            fullText={message.content}
+            actions={actions ?? []}
+            onActionUpdate={onActionUpdate}
+          />
         </div>
       </div>
     );

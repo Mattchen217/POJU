@@ -1,7 +1,7 @@
 import { encryptJson, decryptJson } from "@/lib/crypto";
 import { getPojuDb } from "@/lib/db/poju-db";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
-import { getUserProfile } from "@/lib/profile/storage";
+import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import type { POJUSessionState, PojuV4StateHint } from "@/lib/poju/types";
 
 const SESSION_SECRET = "pojulife_v4_poju_session";
@@ -21,7 +21,6 @@ export async function createPOJUSession(input: {
   const deviceId = getPojuDeviceId();
   const now = new Date();
   const sessionId = crypto.randomUUID();
-  const profileExists = (await getUserProfile()) != null;
   const expiresAt = new Date(now.getTime() + THIRTY_DAYS_MS);
 
   const storedId =
@@ -35,7 +34,8 @@ export async function createPOJUSession(input: {
     original_question: input.original_question.trim(),
     messages: [],
     context_collected: {},
-    has_profile: profileExists,
+    has_profile: Boolean(storedId),
+    birth_submitted_in_session: false,
     profile_skipped: false,
     selected_stored_profile_id: storedId,
     actions: [],
@@ -116,8 +116,11 @@ export async function getActivePOJUSessionsByDevice(deviceId: string) {
 
 function getCurrentStateHint(state: POJUSessionState): PojuV4StateHint {
   if (state.main_delivery_done) return "tracking";
+  const phase = state.agent_v2?.current_phase;
+  if (phase === "awaiting_confirmation") return "analyzing";
+  if (phase === "awaiting_profile") return "awaiting_profile";
   if (state.messages.length === 0) return "greeting";
-  if (state.has_profile) return "analyzing";
+  if (resolveSessionHasProfile(state)) return "analyzing";
   return "collecting_context";
 }
 

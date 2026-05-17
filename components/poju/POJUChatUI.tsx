@@ -6,11 +6,18 @@ import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import pojuLogo from "@/assets/images/POJUlogo.png";
 import { BirthInfoForm } from "@/components/forms/BirthInfoForm";
+import { ContextSummaryEditor } from "@/components/poju/ContextSummaryEditor";
+import type { ContextSummary } from "@/lib/poju/agent-state";
 import { MessageBubble } from "@/components/poju/MessageBubble";
+import { ProfileSelector } from "@/components/profile/ProfileSelector";
 import { getPojuDb } from "@/lib/db/poju-db";
 import { createPOJUSession, loadPOJUSession, savePOJUSession, extendPOJUV4Session } from "@/lib/poju/session-manager";
 import { clearPendingStoredProfileId, readPendingStoredProfileId } from "@/lib/poju/pending-stored-profile";
+import { runConfirmationPipeline, runPostTurnOrchestration } from "@/lib/poju/agent-orchestrator";
 import { handleUserMessage, tryHandleRuleRejection } from "@/lib/poju/agent";
+import { withSessionProfileFlags } from "@/lib/poju/session-profile";
+import { generateBaseAnalysis } from "@/lib/llm/deepseek/base-analysis";
+import { importCalculatedProfileAsStored, recordProfileUsage } from "@/lib/profile/stored-profiles-service";
 import { markPOJUV4SessionResolved } from "@/lib/poju/v4-lifecycle";
 import { DEFAULT_NEW_SESSION_TITLE, formatSessionListPrimaryLine } from "@/lib/poju/session-list-label";
 import type { POJUSessionState, POJUAction, POJUMessage } from "@/lib/poju/types";
@@ -85,6 +92,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const [situationNotice, setSituationNotice] = useState<string | null>(null);
   const [finalBusy, setFinalBusy] = useState(false);
   const [finalError, setFinalError] = useState<string | null>(null);
+  const [showProfilePicker, setShowProfilePicker] = useState(false);
+  const [confirmBusy, setConfirmBusy] = useState(false);
+  const [pipelineBusy, setPipelineBusy] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const speechRef = useRef<SpeechRecognition | null>(null);
@@ -242,8 +252,17 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           );
         }
       }
-      onSessionUpdate(toPersist);
-      await savePOJUSession(toPersist);
+      const orch = await runPostTurnOrchestration(toPersist, {
+        locale,
+        lastUserMessage: userMessage,
+      });
+      onSessionUpdate(orch.session);
+      await savePOJUSession(orch.session);
+      if (orch.ui.showBirthForm) setShowBirthForm(true);
+      if (orch.ui.showProfilePicker) setShowProfilePicker(true);
+      if (orch.ui.pipelineNotice) setSituationNotice(orch.ui.pipelineNotice);
+      if (orch.ui.pipelineError) setSituationError(orch.ui.pipelineError);
+      setPipelineBusy(orch.ui.pipelineBusy);
     } catch (err) {
       console.error("[poju] Send failed:", err);
       onSessionUpdate(baseSession);
@@ -349,37 +368,165 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     }
   }
 
-  async function handleProfileSubmitted(_profile: UserProfile) {
+  async function handleProfileSubmitted(profile: UserProfile) {
     const s = sessionRef.current;
     setShowBirthForm(false);
-    const updatedSession: POJUSessionState = {
-      ...s,
-      has_profile: true,
-      profile_skipped: false,
-      selected_stored_profile_id: null,
-      messages: [
-        ...s.messages,
-        {
-          role: "system",
-          content: "[Birth info collected. Profile generated.]",
-          timestamp: new Date().toISOString(),
-        },
-      ],
-    };
+    setShowProfilePicker(false);
+    const { profile_id } = await importCalculatedProfileAsStored({
+      profile,
+      display_name: `${profile.birth.year}-${profile.birth.month}-${profile.birth.day}`,
+      relationship: "self",
+    });
+    await recordProfileUsage(profile_id, "poju");
+    let updatedSession = withSessionProfileFlags(
+      {
+        ...s,
+        profile_skipped: false,
+        birth_submitted_in_session: true,
+        selected_stored_profile_id: profile_id,
+        messages: [
+          ...s.messages,
+          {
+            role: "system",
+            content: "[Birth info collected. Profile generated.]",
+            timestamp: new Date().toISOString(),
+          },
+        ],
+      },
+      { birth_submitted_in_session: true, selected_stored_profile_id: profile_id },
+    );
+    try {
+      await generateBaseAnalysis(profile_id);
+      if (updatedSession.agent_v2) {
+        updatedSession = {
+          ...updatedSession,
+          agent_v2: {
+            ...updatedSession.agent_v2,
+            has_base_analysis: true,
+            selected_profile_id: profile_id,
+          },
+        };
+      }
+    } catch (e) {
+      console.warn("[poju] base analysis after birth submit:", e);
+    }
 
     const finalSession = await handleUserMessage({
       session: updatedSession,
       userMessage: "[SYSTEM: Birth info just collected. Please acknowledge and continue.]",
       locale,
     });
+    const orch = await runPostTurnOrchestration(finalSession, { locale });
+    onSessionUpdate(orch.session);
+    await savePOJUSession(orch.session);
+  }
 
-    onSessionUpdate(finalSession);
-    await savePOJUSession(finalSession);
+  async function handleStoredProfileSelected(profileId: string) {
+    setShowProfilePicker(false);
+    const s = sessionRef.current;
+    await recordProfileUsage(profileId, "poju");
+    let updatedSession = withSessionProfileFlags(
+      {
+        ...s,
+        profile_skipped: false,
+        selected_stored_profile_id: profileId,
+        messages: [
+          ...s.messages,
+          {
+            role: "system",
+            content: "[Stored birth profile linked to this session.]",
+            timestamp: new Date().toISOString(),
+          },
+        ],
+      },
+      { selected_stored_profile_id: profileId },
+    );
+    try {
+      await generateBaseAnalysis(profileId);
+      if (updatedSession.agent_v2) {
+        updatedSession = {
+          ...updatedSession,
+          agent_v2: {
+            ...updatedSession.agent_v2,
+            has_base_analysis: true,
+            selected_profile_id: profileId,
+          },
+        };
+      }
+    } catch (e) {
+      console.warn("[poju] base analysis after profile select:", e);
+    }
+    const finalSession = await handleUserMessage({
+      session: updatedSession,
+      userMessage: "[SYSTEM: User linked a saved birth profile. Acknowledge and continue collecting context.]",
+      locale,
+    });
+    const orch = await runPostTurnOrchestration(finalSession, { locale });
+    onSessionUpdate(orch.session);
+    await savePOJUSession(orch.session);
+  }
+
+  async function handleConfirmSummary(editedSummary: ContextSummary) {
+    setConfirmBusy(true);
+    setFinalError(null);
+    setSituationError(null);
+    try {
+      const base = sessionRef.current;
+      const withSummary: POJUSessionState = base.agent_v2
+        ? { ...base, agent_v2: { ...base.agent_v2, current_summary: editedSummary } }
+        : base;
+      onSessionUpdate(withSummary);
+      const next = await runConfirmationPipeline(withSummary, locale);
+      onSessionUpdate(next);
+      await savePOJUSession(next);
+      setSituationNotice(t("final_delivery_done"));
+    } catch (e) {
+      setFinalError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setConfirmBusy(false);
+    }
+  }
+
+  async function handleSummaryAddMore(note: string) {
+    const s = sessionRef.current;
+    const updated: POJUSessionState = {
+      ...s,
+      messages: [
+        ...s.messages,
+        { role: "user", content: `[Additional context for summary] ${note}`, timestamp: new Date().toISOString() },
+      ],
+    };
+    onSessionUpdate(updated);
+    await savePOJUSession(updated);
+    const finalSession = await handleUserMessage({
+      session: updated,
+      userMessage: note,
+      locale,
+      userAlreadyAppended: true,
+    });
+    const orch = await runPostTurnOrchestration(finalSession, { locale, lastUserMessage: note });
+    onSessionUpdate(orch.session);
+    await savePOJUSession(orch.session);
+  }
+
+  function agentPhaseKey(): string {
+    const phase = session.agent_v2?.current_phase;
+    if (!phase) return "agent_phase_greeting";
+    const map: Record<string, string> = {
+      greeting: "agent_phase_greeting",
+      awaiting_profile: "agent_phase_awaiting_profile",
+      collecting_context: "agent_phase_collecting",
+      awaiting_confirmation: "agent_phase_confirm",
+      delivered: "agent_phase_delivered",
+      tracking: "agent_phase_tracking",
+    };
+    return map[phase] ?? "agent_phase_collecting";
   }
 
   async function handleProfileSkipped() {
     const s = sessionRef.current;
     setShowBirthForm(false);
+    setShowProfilePicker(false);
     const updatedSession: POJUSessionState = {
       ...s,
       profile_skipped: true,
@@ -642,14 +789,58 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
               <SessionExpiryNotice session={session} extending={extending} onExtend={() => void handleExtendSession()} />
 
               {session.agent_v2 ? (
-                <div className="rounded-xl border border-cyan-500/20 bg-cyan-950/20 px-3 py-2 text-xs text-on-surface-variant">
-                  <p className="text-on-surface">{t("situation_analysis_hint")}</p>
+                <div className="flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-surface-container-low px-3 py-2 text-xs">
+                  <span className="text-on-surface-variant">{t("agent_phase_label")}:</span>
+                  <span className="rounded-md bg-primary/20 px-2 py-0.5 font-medium text-primary">{t(agentPhaseKey())}</span>
+                  {session.agent_v2.has_base_analysis ? <span className="text-emerald-300/90">Step 7 ✓</span> : null}
+                  {session.agent_v2.has_situation_analysis ? <span className="text-cyan-300/90">Step 8 ✓</span> : null}
+                  {session.main_delivery_done ? <span className="text-violet-300/90">Step 9 ✓</span> : null}
+                  {pipelineBusy || confirmBusy ? <span className="text-amber-200/90">{t("pipeline_busy")}</span> : null}
+                </div>
+              ) : null}
+
+              {session.agent_v2?.current_phase === "awaiting_confirmation" &&
+              session.agent_v2.current_summary &&
+              !session.main_delivery_done ? (
+                <ContextSummaryEditor
+                  summary={session.agent_v2.current_summary}
+                  busy={confirmBusy || pipelineBusy}
+                  onConfirm={(edited) => void handleConfirmSummary(edited)}
+                  onAddMore={(note) => void handleSummaryAddMore(note)}
+                />
+              ) : null}
+
+              {showProfilePicker ? (
+                <div className="rounded-2xl border border-violet-300/20 bg-violet-950/30 p-3">
+                  <p className="text-sm font-medium text-on-surface">{t("profile_picker_in_chat_title")}</p>
+                  <p className="mt-1 text-xs text-on-surface-variant">{t("profile_picker_in_chat_hint")}</p>
+                  <div className="mt-3">
+                    <ProfileSelector
+                      product="poju"
+                      allowSkip
+                      onSelected={(id) => void handleStoredProfileSelected(id)}
+                      onSkip={() => void handleProfileSkipped()}
+                      onCancel={() => setShowProfilePicker(false)}
+                    />
+                  </div>
+                </div>
+              ) : null}
+
+              {situationNotice || situationError || finalError ? (
+                <p className="text-xs text-on-surface-variant">
+                  {situationNotice ? <span className="text-cyan-200/90">{situationNotice} </span> : null}
+                  {situationError ? <span className="text-red-300">{situationError} </span> : null}
+                  {finalError ? <span className="text-red-300">{finalError}</span> : null}
+                </p>
+              ) : null}
+
+              {session.agent_v2 && !session.main_delivery_done ? (
+                <details className="rounded-xl border border-cyan-500/20 bg-cyan-950/20 px-3 py-2 text-xs text-on-surface-variant">
+                  <summary className="cursor-pointer text-on-surface">{t("advanced_pipeline")}</summary>
+                  <p className="mt-2 text-on-surface">{t("situation_analysis_hint")}</p>
                   {situationFp && getCachedSituationAnalysis(session, situationFp) ? (
                     <p className="mt-1 text-emerald-200/90">{t("situation_analysis_have_cache")}</p>
                   ) : null}
-                  {situationNotice ? <p className="mt-1 text-cyan-200/90">{situationNotice}</p> : null}
-                  {situationError ? <p className="mt-1 text-red-300">{situationError}</p> : null}
-                  {finalError ? <p className="mt-1 text-red-300">{finalError}</p> : null}
                   <p className="mt-2 text-[11px] text-white/50">{t("final_delivery_hint")}</p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <button
@@ -681,7 +872,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                       </button>
                     ) : null}
                   </div>
-                </div>
+                </details>
               ) : null}
 
               {visibleMessages.map((msg, idx) => (
