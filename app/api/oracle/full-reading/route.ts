@@ -6,6 +6,7 @@ import {
   parseAppLocale,
 } from "@/lib/prompts/language-directive";
 import { calculateProfile } from "@/lib/calculations";
+import { legacyFormToBirthInfo } from "@/lib/profile/birth-info-utils";
 import { isOpenRouterConfigured, openRouterChatCompletion } from "@/lib/llm/openrouter-shared";
 import type { SignData } from "@/types/oracle";
 
@@ -511,14 +512,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Sign not found" }, { status: 404 });
     }
 
-    const userProfile = await calculateProfile({
-      year: body.user_birth.year,
-      month: body.user_birth.month,
-      day: body.user_birth.day,
-      hour: 12,
-      minute: 0,
-      gender: "other",
-    });
+    const userProfile = await calculateProfile(
+      legacyFormToBirthInfo({
+        year: body.user_birth.year,
+        month: body.user_birth.month,
+        day: body.user_birth.day,
+        hour: 12,
+        minute: 0,
+        gender: "male",
+      }),
+    );
 
     let userPrompt = "";
     if (USE_FEW_SHOT) {

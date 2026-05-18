@@ -6,7 +6,7 @@ import {
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 import type { UserProfile } from "@/lib/profile/types";
 
-export const maxDuration = 120;
+export const maxDuration = 180;
 
 function isRecord(x: unknown): x is Record<string, unknown> {
   return Boolean(x) && typeof x === "object" && !Array.isArray(x);

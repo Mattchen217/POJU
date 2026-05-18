@@ -71,6 +71,16 @@ export function resolveDeliveryLanguage(input: {
   return { code, instruction };
 }
 
+/** Non-Chinese deliveries: Action 2 must use platforms the user can use locally (Step K / issue 12). */
+export function buildRegionalPlatformGuidance(code: DeliveryLanguageCode): string {
+  if (code === "zh") return "";
+  return `# Regional platforms (Action 2 — Modern Decisive Action)
+
+- Assume the user is in North America / global English context unless they stated otherwise.
+- Prefer: LinkedIn, Reddit, industry Discords/Slack, email outreach, local meetups, Upwork/Fiverr if relevant.
+- Do NOT recommend 知乎, 微博, 豆瓣, 脉脉, 小红书, or other China-only platforms unless the user explicitly operates in China.`;
+}
+
 export function buildFinalDeliveryPrompt(input: {
   base_analysis: unknown | null;
   situation_analysis: unknown | null;
@@ -86,6 +96,7 @@ export function buildFinalDeliveryPrompt(input: {
     locale,
     recent_user_messages,
   });
+  const regionalGuidance = buildRegionalPlatformGuidance(deliveryLang);
 
   const system = `# YOU ARE POJU (Final Delivery Mode)
 
@@ -117,7 +128,7 @@ ${langInstruction}
 Detected target language code: **${deliveryLang}**
 Session locale hint: ${locale}
 
-Rules:
+${regionalGuidance ? `${regionalGuidance}\n\n` : ""}Rules:
 - The opening, ANALYSIS, CONCLUSION, WHAT TO DO (all 3 actions), and COMING BACK must ALL be in the same target language.
 - Never deliver the full package in Chinese just because the expert analyses are in Chinese.
 - Never default to English if the user wrote in Spanish, French, German, etc.

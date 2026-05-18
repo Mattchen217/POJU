@@ -2,7 +2,8 @@ import {
   generateGeminiChatCompletion,
   getGeminiClient,
 } from "@/lib/llm/gemini-shared";
-import { isOpenRouterConfigured, openRouterChatCompletion } from "@/lib/llm/openrouter-shared";
+import { callLLM, type LLMCallType } from "@/lib/llm/router";
+import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 
 export type PhaseTransportResult = {
   content: string;
@@ -15,31 +16,34 @@ export type PhaseTransportResult = {
 export async function callPhaseJsonTransport(
   system: string,
   messages: Array<{ role: "user" | "assistant"; content: string }>,
-  options?: { temperature?: number; max_tokens?: number },
+  options?: {
+    temperature?: number;
+    max_tokens?: number;
+    call_type?: LLMCallType;
+  },
 ): Promise<PhaseTransportResult> {
   const temperature = options?.temperature ?? 0.5;
   const max_tokens = options?.max_tokens ?? 2500;
+  const call_type = options?.call_type ?? "collection_flash";
 
   if (isOpenRouterConfigured()) {
-    const msgs = [
-      { role: "system" as const, content: system },
-      ...messages.map((m) => ({ role: m.role, content: m.content })),
-    ];
-    const out = await openRouterChatCompletion({
-      messages: msgs,
-      temperature,
+    const result = await callLLM({
+      call_type,
+      system,
+      messages,
       max_tokens,
-      json_mode: true,
-      reasoning_effort: "high",
+      temperature,
+      response_format: "json",
     });
     return {
-      content: out.text,
-      model: out.model,
-      tokens_used: out.tokens_used,
-      reasoning: out.reasoning,
-      reasoning_details: out.reasoning_details,
+      content: result.content,
+      model: result.actual_model,
+      tokens_used: result.meta.tokens_used,
+      reasoning: result.reasoning,
+      reasoning_details: result.reasoning_details,
     };
   }
+
   if (!getGeminiClient()) {
     throw new Error("missing_llm_api_key");
   }

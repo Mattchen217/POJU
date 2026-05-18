@@ -5,6 +5,7 @@
 export type PojuV4SessionStatus = "active" | "paused" | "resolved" | "archived";
 
 export type PojuV4StateHint =
+  | "opening"
   | "greeting"
   | "collecting_context"
   | "awaiting_profile"

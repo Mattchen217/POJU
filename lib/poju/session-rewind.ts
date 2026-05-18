@@ -1,4 +1,4 @@
-import { applyPhaseTransition } from "@/lib/poju/agent-state";
+import { applyPhaseTransition, normalizeAgentPhase } from "@/lib/poju/agent-state";
 import { downgradePrematureConfirmationPhase } from "@/lib/poju/summary-readiness";
 import type { POJUSessionState } from "@/lib/poju/types";
 
@@ -41,12 +41,7 @@ export function rewindSessionToUserMessage(
 
   if (next.agent_v2 && cutCount > 0) {
     const userTurns = truncated.filter((m) => m.role === "user" && !m.is_rejected).length;
-    const phase =
-      userTurns < 1
-        ? next.agent_v2.current_phase === "awaiting_profile"
-          ? "awaiting_profile"
-          : "greeting"
-        : "collecting_context";
+    const phase = userTurns < 1 ? "opening" : "collecting_context";
 
     const agent_v2 = applyPhaseTransition(
       {

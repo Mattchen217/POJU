@@ -1,6 +1,6 @@
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
 import { getPojuDb } from "@/lib/db/poju-db";
-import { getUserProfile } from "@/lib/profile/storage";
+import { getUserProfile } from "@/lib/profile/active-profile";
 import { runPOJUV4SessionMaintenance } from "@/lib/poju/v4-lifecycle";
 
 const FP_CACHE_KEY = "pojulife_v4_fp";

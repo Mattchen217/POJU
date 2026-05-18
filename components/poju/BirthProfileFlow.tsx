@@ -96,7 +96,7 @@ export function BirthProfileFlow({
           <Image src={pojuLogo} alt="" width={40} height={40} className="object-cover" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm text-on-surface-variant">{t("birth_flow_intro_cta_hint")}</p>
+          <p className="text-[1rem] leading-7 text-on-surface-variant">{t("birth_flow_intro_cta_hint")}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"

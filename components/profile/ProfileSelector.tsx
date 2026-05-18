@@ -11,9 +11,10 @@ import {
   importCalculatedProfileAsStored,
   listStoredProfiles,
   recordProfileUsage,
-  updateStoredProfileMeta,
   type StoredProfileSummary,
 } from "@/lib/profile/stored-profiles-service";
+import { HOUR_PERIOD_INFO } from "@/lib/profile/types";
+import { normalizeStoredBirthInfo } from "@/lib/profile/birth-info-utils";
 import type { UserProfile } from "@/lib/profile/types";
 import { generateBaseAnalysis } from "@/lib/llm/deepseek/base-analysis";
 
@@ -25,7 +26,7 @@ export interface ProfileSelectorProps {
   onSkip?: () => void;
 }
 
-type Step = "list" | "confirm" | "create" | "edit";
+type Step = "list" | "confirm" | "create";
 
 const REL_OPTIONS: StoredProfileRelationship[] = [
   "self",
@@ -61,7 +62,6 @@ export function ProfileSelector({ product, onSelected, onCancel, allowSkip, onSk
   const [step, setStep] = useState<Step>("list");
   const [profiles, setProfiles] = useState<StoredProfileSummary[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
-  const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   async function loadProfiles() {
@@ -107,10 +107,6 @@ export function ProfileSelector({ product, onSelected, onCancel, allowSkip, onSk
             setStep("confirm");
           }}
           onAddNew={() => setStep("create")}
-          onEdit={(id) => {
-            setEditingProfileId(id);
-            setStep("edit");
-          }}
           onDelete={(id) => void handleDelete(id)}
           onCancel={onCancel}
           allowSkip={allowSkip}
@@ -123,10 +119,6 @@ export function ProfileSelector({ product, onSelected, onCancel, allowSkip, onSk
           profileId={selectedProfileId}
           onConfirm={() => void handleConfirmAndContinue()}
           onBack={() => setStep("list")}
-          onEdit={() => {
-            setEditingProfileId(selectedProfileId);
-            setStep("edit");
-          }}
         />
       ) : null}
 
@@ -145,20 +137,6 @@ export function ProfileSelector({ product, onSelected, onCancel, allowSkip, onSk
         />
       ) : null}
 
-      {step === "edit" && editingProfileId ? (
-        <ProfileEditMetaView
-          profileId={editingProfileId}
-          onSaved={() => {
-            setEditingProfileId(null);
-            void loadProfiles();
-            setStep("list");
-          }}
-          onBack={() => {
-            setEditingProfileId(null);
-            setStep("list");
-          }}
-        />
-      ) : null}
     </div>
   );
 }
@@ -167,7 +145,6 @@ function ProfileListView({
   profiles,
   onSelect,
   onAddNew,
-  onEdit,
   onDelete,
   onCancel,
   allowSkip,
@@ -176,7 +153,6 @@ function ProfileListView({
   profiles: StoredProfileSummary[];
   onSelect: (id: string) => void;
   onAddNew: () => void;
-  onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onCancel?: () => void;
   allowSkip?: boolean;
@@ -210,10 +186,10 @@ function ProfileListView({
                 <span className="text-xs font-normal text-text-dim">({rel(p.relationship)})</span>
               </p>
               <p className="mt-1 text-xs text-text-secondary">
-                {p.birth_date} · {p.birth_time} ·{" "}
-                {p.gender === "M" ? t("male") : p.gender === "F" ? t("female") : t("other_gender")}
+                {p.birth_date} · {HOUR_PERIOD_INFO[p.hour_period].zh_label} ·{" "}
+                {p.gender === "M" ? t("male") : t("female")}
               </p>
-              <p className="mt-1 text-xs text-text-dim">{p.location_name}</p>
+              <p className="mt-1 text-xs text-text-dim">{p.timezone}</p>
               {p.has_base_analysis ? (
                 <span className="mt-2 inline-block rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] text-emerald-200">
                   {t("analyzed")}
@@ -221,13 +197,6 @@ function ProfileListView({
               ) : null}
             </button>
             <div className="mt-2 flex gap-2 border-t border-white/10 pt-2">
-              <button
-                type="button"
-                className="text-xs text-cyan-200/90 hover:underline"
-                onClick={() => onEdit(p.profile_id)}
-              >
-                {t("edit")}
-              </button>
               <button type="button" className="text-xs text-red-300/90 hover:underline" onClick={() => onDelete(p.profile_id)}>
                 {t("delete")}
               </button>
@@ -263,12 +232,10 @@ function ProfileConfirmView({
   profileId,
   onConfirm,
   onBack,
-  onEdit,
 }: {
   profileId: string;
   onConfirm: () => void;
   onBack: () => void;
-  onEdit: () => void;
 }) {
   const t = useTranslations("profile_selector");
   const [data, setData] = useState<Awaited<ReturnType<typeof getStoredProfile>> | null | undefined>(undefined);
@@ -304,7 +271,7 @@ function ProfileConfirmView({
 
   if (loadingProfile || data === undefined) return <p className="text-sm text-text-secondary">{t("loading")}</p>;
   if (data === null) return <p className="text-sm text-red-300">Profile not found.</p>;
-  const birth = data.birth_info;
+  const birth = normalizeStoredBirthInfo(data.birth_info as unknown as Record<string, unknown>);
 
   return (
     <div className="space-y-4 rounded-xl border border-white/10 bg-black/25 p-4">
@@ -320,12 +287,12 @@ function ProfileConfirmView({
         <div className="flex justify-between gap-4">
           <dt className="text-text-dim">{t("birth_time_label")}</dt>
           <dd className="text-text-primary">
-            {birth.hour}:{String(birth.minute).padStart(2, "0")}
+            {HOUR_PERIOD_INFO[birth.hour_period].zh_label}
           </dd>
         </div>
         <div className="flex justify-between gap-4">
           <dt className="text-text-dim">{t("birth_location_label")}</dt>
-          <dd className="text-text-primary">{birth.location_name ?? `${birth.latitude}, ${birth.longitude}`}</dd>
+          <dd className="text-text-primary">{birth.timezone}</dd>
         </div>
         <div className="flex justify-between gap-4">
           <dt className="text-text-dim">{t("gender_label")}</dt>
@@ -355,9 +322,6 @@ function ProfileConfirmView({
         <button type="button" className="rounded-lg border border-white/20 px-3 py-2 text-sm" onClick={onBack}>
           {t("back_to_list")}
         </button>
-        <button type="button" className="rounded-lg border border-white/20 px-3 py-2 text-sm" onClick={onEdit}>
-          {t("edit_this")}
-        </button>
         <button
           type="button"
           className="rounded-full border border-cyan-300/40 bg-cyan-400/20 px-4 py-2 text-sm font-semibold text-cyan-100"
@@ -382,71 +346,18 @@ function ProfileCreateView({
   onSkip?: () => void;
 }) {
   const t = useTranslations("profile_selector");
-  const [displayName, setDisplayName] = useState("我自己");
-  const [relationship, setRelationship] = useState<StoredProfileRelationship>("self");
-  const [showBirth, setShowBirth] = useState(false);
 
   async function onProfileReady(profile: UserProfile) {
-    const { profile_id } = await importCalculatedProfileAsStored({
-      profile,
-      display_name: displayName.trim() || "Profile",
-      relationship,
-    });
+    const { profile_id } = await importCalculatedProfileAsStored({ profile });
     onComplete(profile_id);
-  }
-
-  if (!showBirth) {
-    return (
-      <div className="space-y-4 rounded-xl border border-white/10 bg-black/25 p-4">
-        <h2 className="text-lg font-semibold text-text-primary">{t("create_title")}</h2>
-        <p className="text-sm text-text-secondary">{t("create_description")}</p>
-        <label className="block text-xs text-text-dim">
-          {t("display_name")}
-          <input
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            className="mt-1 w-full rounded-md border border-white/15 bg-black/30 px-3 py-2 text-sm text-text-primary"
-          />
-        </label>
-        <label className="block text-xs text-text-dim">
-          {t("relationship")}
-          <select
-            value={relationship}
-            onChange={(e) => setRelationship(e.target.value as StoredProfileRelationship)}
-            className="mt-1 w-full rounded-md border border-white/15 bg-black/30 px-3 py-2 text-sm text-text-primary"
-          >
-            {REL_OPTIONS.map((r) => (
-              <option key={r} value={r}>
-                {relLabel(r, t)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button
-          type="button"
-          className="rounded-full border border-cyan-300/40 bg-cyan-400/20 px-4 py-2 text-sm font-semibold text-cyan-100"
-          onClick={() => setShowBirth(true)}
-        >
-          {t("continue_to_birth")}
-        </button>
-        <div className="flex flex-wrap gap-2">
-          {allowSkip && onSkip ? (
-            <button type="button" className="text-sm text-text-secondary hover:underline" onClick={onSkip}>
-              {t("skip_for_now")}
-            </button>
-          ) : null}
-          {onCancel ? (
-            <button type="button" className="text-sm text-text-secondary hover:underline" onClick={onCancel}>
-              {t("cancel")}
-            </button>
-          ) : null}
-        </div>
-      </div>
-    );
   }
 
   return (
     <div className="space-y-4">
+      <div className="rounded-xl border border-white/10 bg-black/25 p-4">
+        <h2 className="text-lg font-semibold text-text-primary">{t("create_title")}</h2>
+        <p className="mt-1 text-sm text-text-secondary">{t("create_description")}</p>
+      </div>
       <BirthInfoForm
         context="profile"
         persistDefaultProfile={false}
@@ -454,86 +365,11 @@ function ProfileCreateView({
         allowSkip={allowSkip}
         onSkip={onSkip}
       />
-      <button type="button" className="text-sm text-text-secondary hover:underline" onClick={() => setShowBirth(false)}>
-        {t("back_to_list")}
-      </button>
-    </div>
-  );
-}
-
-function ProfileEditMetaView({
-  profileId,
-  onSaved,
-  onBack,
-}: {
-  profileId: string;
-  onSaved: () => void;
-  onBack: () => void;
-}) {
-  const t = useTranslations("profile_selector");
-  const [displayName, setDisplayName] = useState("");
-  const [relationship, setRelationship] = useState<StoredProfileRelationship>("self");
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    void (async () => {
-      const row = await getStoredProfileRecord(profileId);
-      if (row) {
-        setDisplayName(row.display_name);
-        setRelationship(row.relationship);
-      }
-      setLoading(false);
-    })();
-  }, [profileId]);
-
-  async function save() {
-    await updateStoredProfileMeta(profileId, {
-      display_name: displayName.trim(),
-      relationship,
-    });
-    onSaved();
-  }
-
-  if (loading) return <p className="text-sm text-text-secondary">{t("loading")}</p>;
-
-  return (
-    <div className="space-y-4 rounded-xl border border-white/10 bg-black/25 p-4">
-      <h2 className="text-lg font-semibold text-text-primary">{t("edit_meta_title")}</h2>
-      <p className="text-xs text-text-dim">{t("edit_meta_hint")}</p>
-      <label className="block text-xs text-text-dim">
-        {t("display_name")}
-        <input
-          value={displayName}
-          onChange={(e) => setDisplayName(e.target.value)}
-          className="mt-1 w-full rounded-md border border-white/15 bg-black/30 px-3 py-2 text-sm text-text-primary"
-        />
-      </label>
-      <label className="block text-xs text-text-dim">
-        {t("relationship")}
-        <select
-          value={relationship}
-          onChange={(e) => setRelationship(e.target.value as StoredProfileRelationship)}
-          className="mt-1 w-full rounded-md border border-white/15 bg-black/30 px-3 py-2 text-sm text-text-primary"
-        >
-          {REL_OPTIONS.map((r) => (
-            <option key={r} value={r}>
-              {relLabel(r, t)}
-            </option>
-          ))}
-        </select>
-      </label>
-      <div className="flex gap-2">
-        <button type="button" className="rounded-lg border border-white/20 px-3 py-2 text-sm" onClick={onBack}>
-          {t("edit_meta_back")}
+      {onCancel ? (
+        <button type="button" className="text-sm text-text-secondary hover:underline" onClick={onCancel}>
+          {t("cancel")}
         </button>
-        <button
-          type="button"
-          className="rounded-full border border-cyan-300/40 bg-cyan-400/20 px-4 py-2 text-sm font-semibold text-cyan-100"
-          onClick={() => void save()}
-        >
-          {t("save_meta")}
-        </button>
-      </div>
+      ) : null}
     </div>
   );
 }

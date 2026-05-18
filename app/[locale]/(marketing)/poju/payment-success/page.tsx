@@ -2,7 +2,8 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useLocale } from "next-intl";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { createPOJUSession } from "@/lib/poju/session-manager";
 import { clearPendingStoredProfileId, readPendingStoredProfileId } from "@/lib/poju/pending-stored-profile";
 
@@ -64,7 +65,7 @@ function PojuPaymentSuccessInner() {
         sessionStorage.removeItem("poju_pending_question");
         if (cancelled) return;
         setStatus("success");
-        router.replace(`/${locale}/poju/session/${sessionId}`);
+        router.replace(`/poju/session/${sessionId}/prepare`);
       } catch (e) {
         if (cancelled) return;
         setStatus("error");

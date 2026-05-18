@@ -10,7 +10,9 @@
     "start:public": "next start -H 0.0.0.0 -p 3000",
     "start:standalone": "node scripts/run-standalone.cjs",
     "lint": "next lint",
-    "copy:oracle-wind-cards": "node scripts/copy-oracle-wind-cards.cjs"
+    "copy:oracle-wind-cards": "node scripts/copy-oracle-wind-cards.cjs",
+    "test:poju-stepk": "tsx scripts/test-poju-v5-stepk.ts",
+    "test:poju-stepk:live": "tsx scripts/test-poju-v5-stepk.ts --live"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",
@@ -34,6 +36,7 @@
     "react": "19.2.5",
     "react-dom": "19.2.5",
     "react-hook-form": "^7.73.1",
+    "react-mobile-picker": "^1.2.0",
     "serwist": "^9.5.7",
     "shunshi-bazi-core": "^0.1.0",
     "zod": "^4.3.6",

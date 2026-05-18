@@ -71,6 +71,9 @@ importers:
       react-hook-form:
         specifier: ^7.73.1
         version: 7.73.1(react@19.2.5)
+      react-mobile-picker:
+        specifier: ^1.2.0
+        version: 1.2.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       serwist:
         specifier: ^9.5.7
         version: 9.5.7(browserslist@4.28.2)(typescript@5.9.3)
@@ -2317,6 +2320,12 @@ packages:
 
   react-merge-refs@2.1.1:
     resolution: {integrity: sha512-jLQXJ/URln51zskhgppGJ2ub7b2WFKGq3cl3NYKtlHoTG+dN2q7EzWrn3hN3EgPsTMvpR9tpq5ijdp7YwFZkag==}
+
+  react-mobile-picker@1.2.0:
+    resolution: {integrity: sha512-utIgq/rqJfDw+qL3CA6j5e3JqlAoc1kHucJi2vNiwspjaa1XJurJN/FKWBSgui1wV0gzS0BYutd2CbwcyR2eDA==}
+    peerDependencies:
+      react: ^18 || ^19
+      react-dom: ^18 || ^19
 
   react@19.2.5:
     resolution: {integrity: sha512-llUJLzz1zTUBrskt2pwZgLq59AemifIftw4aB7JxOqf1HY2FDaGDxgwpAPVzHU1kdWabH7FauP4i1oEeer2WCA==}
@@ -4883,6 +4892,11 @@ snapshots:
   react-is@16.13.1: {}
 
   react-merge-refs@2.1.1: {}
+
+  react-mobile-picker@1.2.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5):
+    dependencies:
+      react: 19.2.5
+      react-dom: 19.2.5(react@19.2.5)
 
   react@19.2.5: {}
 

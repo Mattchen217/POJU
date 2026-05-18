@@ -29,7 +29,14 @@ function mkSession(originalQuestion: string, messages: POJUMessage[], context: R
 
 const profile: UserProfile = {
   id: "u-step7",
-  birth: { year: 1977, month: 2, day: 17, hour: 3, minute: 0, gender: "male", city: "Shanghai" },
+  birth: {
+    year: 1977,
+    month: 2,
+    day: 17,
+    hour_period: "yin",
+    gender: "M",
+    timezone: "Asia/Shanghai",
+  },
   bazi: {
     yearPillar: "丁巳",
     monthPillar: "壬寅",

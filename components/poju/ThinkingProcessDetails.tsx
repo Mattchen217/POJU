@@ -45,7 +45,7 @@ export function ThinkingProcessDetails({
       open={open}
       className={`w-full overflow-hidden rounded-xl border border-white/10 bg-white/5 backdrop-blur-md ${className}`}
     >
-      <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 text-sm text-on-surface-variant">
+      <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 text-[0.9375rem] leading-6 text-on-surface-variant">
         <span
           className={`material-symbols-outlined text-primary text-[18px] ${pulseIcon && !displayLine ? "animate-pulse" : ""}`}
         >
@@ -54,12 +54,12 @@ export function ThinkingProcessDetails({
         <span>{t("thinking_process_title")}</span>
         <span className="material-symbols-outlined ml-auto text-[18px]">keyboard_arrow_down</span>
       </summary>
-      <div className="border-t border-white/10 bg-black/20 px-4 pb-4 pt-2 text-sm text-on-surface-variant">
+      <div className="border-t border-white/10 bg-black/20 px-4 pb-4 pt-2 text-[1rem] leading-7 text-on-surface-variant">
         {displayLine ? (
           <div className="space-y-2">
             <p
               ref={lineRef}
-              className="overflow-x-auto whitespace-nowrap font-mono text-xs leading-relaxed text-cyan-100/95 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              className="overflow-x-auto whitespace-nowrap font-mono text-[0.875rem] leading-relaxed text-cyan-100/95 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
               aria-live="polite"
             >
               <span className="inline-block min-w-full animate-pulse">{displayLine}</span>
@@ -74,9 +74,9 @@ export function ThinkingProcessDetails({
             ) : null}
           </div>
         ) : waitingLabel ? (
-          <p className="text-xs leading-relaxed text-on-surface-variant/90">{waitingLabel}</p>
+          <p className="text-[0.9375rem] leading-relaxed text-on-surface-variant/90">{waitingLabel}</p>
         ) : (
-          <ul className="list-disc space-y-1 pl-4 text-xs">
+          <ul className="list-disc space-y-1 pl-4 text-[0.9375rem] leading-relaxed">
             {fallbackStepKeys.map((key) => (
               <li key={key}>{t(key)}</li>
             ))}

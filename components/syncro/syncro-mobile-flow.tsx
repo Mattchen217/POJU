@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { SyncroDirectionRow } from "@/lib/ai/mock-syncro";
 import { getNextShichenBoundary } from "@/lib/calculations";
-import { getUserProfile } from "@/lib/profile/storage";
+import { getUserProfile } from "@/lib/profile/active-profile";
 import { directionRowsFromM6 } from "@/lib/syncro/direction-rows-from-m6";
 import type { ArchiveEntry } from "@/lib/archive/types";
 

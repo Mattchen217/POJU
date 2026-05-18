@@ -23,7 +23,7 @@ export type OpenRouterChatOptions = {
   max_tokens?: number;
   /** When true, sets response_format json_object (still instruct JSON in prompts). */
   json_mode?: boolean;
-  reasoning_effort?: "high" | "xhigh" | "off";
+  reasoning_effort?: "off" | "low" | "medium" | "high" | "xhigh";
 };
 
 export function isOpenRouterConfigured(): boolean {
@@ -36,11 +36,15 @@ export function getOpenRouterDefaultModel(): string {
 
 function resolveReasoningEffort(
   input: OpenRouterChatOptions["reasoning_effort"],
-): "high" | "xhigh" | "off" {
+): "off" | "low" | "medium" | "high" | "xhigh" {
   const fromEnv = process.env.OPENROUTER_REASONING_EFFORT?.trim().toLowerCase();
   if (fromEnv === "off" || fromEnv === "0" || fromEnv === "false") return "off";
   if (fromEnv === "xhigh") return "xhigh";
+  if (fromEnv === "low") return "low";
+  if (fromEnv === "medium") return "medium";
   if (input === "off") return "off";
+  if (input === "low") return "low";
+  if (input === "medium") return "medium";
   if (input === "xhigh") return "xhigh";
   if (input === "high") return "high";
   return "high";
@@ -50,6 +54,8 @@ export type OpenRouterCompletionResult = {
   text: string;
   model: string;
   tokens_used: number;
+  prompt_tokens: number;
+  completion_tokens: number;
   /** DeepSeek / OpenRouter reasoning tokens when `reasoning.effort` is enabled. */
   reasoning?: string;
   reasoning_details?: unknown;
@@ -139,11 +145,10 @@ export async function openRouterChatCompletion(
   const text = String(message?.content ?? "").trim();
   const modelOut = typeof data.model === "string" ? data.model : model;
   const u = data.usage;
+  const prompt_tokens = typeof u?.prompt_tokens === "number" ? u.prompt_tokens : 0;
+  const completion_tokens = typeof u?.completion_tokens === "number" ? u.completion_tokens : 0;
   const tokens_used =
-    typeof u?.total_tokens === "number"
-      ? u.total_tokens
-      : (typeof u?.prompt_tokens === "number" ? u.prompt_tokens : 0) +
-        (typeof u?.completion_tokens === "number" ? u.completion_tokens : 0);
+    typeof u?.total_tokens === "number" ? u.total_tokens : prompt_tokens + completion_tokens;
 
   const reasoning =
     typeof message?.reasoning === "string" && message.reasoning.trim()
@@ -154,6 +159,8 @@ export async function openRouterChatCompletion(
     text,
     model: modelOut,
     tokens_used,
+    prompt_tokens,
+    completion_tokens,
     reasoning,
     reasoning_details: message?.reasoning_details,
   };

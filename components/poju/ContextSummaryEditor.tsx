@@ -47,9 +47,9 @@ export function ContextSummaryEditor({ summary, busy, onConfirm, onCancel, onAdd
   }
 
   return (
-    <div className="rounded-2xl border border-amber-400/30 bg-amber-950/25 p-4 text-sm shadow-lg">
-      <h3 className="text-base font-semibold text-amber-100">{t("title")}</h3>
-      <p className="mt-1 text-xs text-on-surface-variant">{t("description")}</p>
+    <div className="rounded-2xl border border-amber-400/30 bg-amber-950/25 p-5 text-[1rem] leading-7 shadow-lg">
+      <h3 className="text-lg font-semibold text-amber-100">{t("title")}</h3>
+      <p className="mt-1 text-[0.9375rem] leading-6 text-on-surface-variant">{t("description")}</p>
       <div className="mt-4 space-y-4">
         {edited.sections.map((sec, sIdx) => (
           <div key={sec.section_id}>

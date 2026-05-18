@@ -1,6 +1,7 @@
 import type { SanitizerStateSlice } from "@/lib/llm/phases/types";
 
-export const HALLUCINATION_PATTERNS: RegExp[] = [
+/** No-profile greeting: personality / fortune-telling without chart data */
+export const NO_PROFILE_HALLUCINATION_PATTERNS: RegExp[] = [
   /(?:你|您).{0,5}(?:其实|本质上|天性|内在|实际上).{0,10}(?:是|有|具有|表现|展现)/,
   /(?:你|您)(?:的|本)(?:个人特质|天性|天然|本性|本质|内在|能量|气质|气场)/,
   /从你(?:的)?(?:个人|内在|表现|状态).{0,5}(?:看|来看)/,
@@ -14,11 +15,10 @@ export const HALLUCINATION_PATTERNS: RegExp[] = [
   /Your\s+(?:strength|gift|talent)\s+(?:is|lies)/i,
   /You\s+will\s+(?:succeed|fail|achieve|find|encounter)/i,
   /(?:你|您)?(?:将会|必将|肯定会|会).{0,10}(?:成功|失败|遇到|获得)/,
-  /(?:八字|五行|日主|大运|十神|卦|爻|用神|忌神)/,
-  /(?:bazi|wu\s*xing|day\s*master|da\s*yun|ten\s*gods|hexagram|yong\s*shen)/i,
 ];
 
-const METAPHYSICS_ONLY_PATTERNS = HALLUCINATION_PATTERNS.slice(-2);
+/** @deprecated use NO_PROFILE_HALLUCINATION_PATTERNS — kept for greeting-phase imports */
+export const HALLUCINATION_PATTERNS = NO_PROFILE_HALLUCINATION_PATTERNS;
 
 export function detectInitialLanguage(text: string): string {
   if (!text) return "Likely English.";
@@ -46,34 +46,30 @@ export function getSafeFallbackResponse(state: SanitizerStateSlice): string {
 }
 
 /**
- * 双层保护之一：无 profile 时严格拦截人格/命理幻觉；有 profile 后仅屏蔽术语暴露。
+ * Step I: 有命盘后不再清洗命理术语；无命盘时仅拦截明显人格/预言幻觉。
  */
 export function sanitizeResponse(response: string, state: SanitizerStateSlice): string {
-  if (!response) return response;
+  const trimmed = (response ?? "").trim();
+  if (!trimmed) return getSafeFallbackResponse(state);
 
-  const hasProfile = Boolean(state.selected_profile_id);
-  const skipped = state.profile_skipped;
-
-  if (hasProfile || skipped) {
-    let cleaned = response;
-    for (const pattern of METAPHYSICS_ONLY_PATTERNS) {
-      cleaned = cleaned.replace(pattern, "[modern translation needed]");
-    }
-    return cleaned;
+  if (state.selected_profile_id || state.profile_skipped) {
+    return trimmed;
   }
 
   let issues = 0;
-  for (const pattern of HALLUCINATION_PATTERNS) {
-    if (pattern.test(response)) issues += 1;
+  for (const pattern of NO_PROFILE_HALLUCINATION_PATTERNS) {
+    if (pattern.test(trimmed)) issues += 1;
   }
 
   if (issues >= 2) {
-    console.warn("[sanitizer] Too many hallucination patterns detected, replacing response");
+    console.warn("[sanitizer] Too many no-profile hallucination patterns, replacing response");
     return getSafeFallbackResponse(state);
   }
 
-  let cleaned = response;
-  for (const pattern of HALLUCINATION_PATTERNS) {
+  if (issues === 0) return trimmed;
+
+  let cleaned = trimmed;
+  for (const pattern of NO_PROFILE_HALLUCINATION_PATTERNS) {
     cleaned = cleaned.replace(pattern, "");
   }
 

@@ -1,0 +1,274 @@
+.chart-loader-page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #0a0a0f 0%, #1a1a25 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  color: #e5e5e5;
+}
+
+.chart-loader-loading {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0a0a0f;
+  color: #888;
+}
+
+.chart-loader-content {
+  max-width: 600px;
+  width: 100%;
+}
+
+.bazi-chart-display {
+  background: rgba(212, 175, 55, 0.05);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.chart-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.chart-header h3 {
+  color: #d4af37;
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+.birth-info-line {
+  color: #888;
+  font-size: 13px;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+.four-pillars {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.pillar-column {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 12px 8px;
+  text-align: center;
+}
+
+.pillar-column.day-master {
+  background: rgba(212, 175, 55, 0.1);
+  border-color: rgba(212, 175, 55, 0.4);
+}
+
+.pillar-label {
+  color: #888;
+  font-size: 11px;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.pillar-stem {
+  color: #d4af37;
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+}
+
+.pillar-branch {
+  color: #e5e5e5;
+  font-size: 20px;
+  font-weight: 600;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+}
+
+.chart-meta {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  font-size: 13px;
+}
+
+.meta-label {
+  color: #888;
+  flex-shrink: 0;
+}
+
+.meta-value {
+  color: #e5e5e5;
+  font-weight: 500;
+  text-align: right;
+}
+
+.meta-value.gold {
+  color: #d4af37;
+}
+
+.loader-status-section {
+  text-align: center;
+  padding: 32px 16px;
+}
+
+.streaming-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.streaming-spinner-container {
+  margin-bottom: 24px;
+}
+
+.streaming-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(212, 175, 55, 0.2);
+  border-top-color: #d4af37;
+  border-radius: 50%;
+  animation: chart-loader-spin 0.9s linear infinite;
+}
+
+@keyframes chart-loader-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.streaming-text-area {
+  min-height: 28px;
+  margin-bottom: 16px;
+  max-width: 100%;
+}
+
+.streaming-current-line {
+  color: #e5e5e5;
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: min(520px, 100vw - 48px);
+  animation: fadeInLine 0.6s ease-in;
+}
+
+@keyframes fadeInLine {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.streaming-hint {
+  color: #666;
+  font-size: 12px;
+  font-style: italic;
+}
+
+.done-view,
+.error-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.done-icon {
+  color: #4caf50;
+  font-size: 48px;
+  margin-bottom: 16px;
+  line-height: 1;
+}
+
+.error-view h3 {
+  color: #e5e5e5;
+  margin-bottom: 8px;
+}
+
+.error-icon {
+  color: #f44336;
+  font-size: 48px;
+  margin-bottom: 16px;
+  line-height: 1;
+}
+
+.error-details {
+  margin-top: 16px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #aaa;
+  max-width: 100%;
+  overflow-x: auto;
+  text-align: left;
+}
+
+.error-details pre {
+  margin: 8px 0 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.error-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.error-actions button {
+  padding: 12px 20px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.error-actions .primary {
+  background: #d4af37;
+  color: #0a0a0f;
+}
+
+.error-actions .secondary {
+  background: transparent;
+  color: #888;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.error-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+  .four-pillars {
+    gap: 4px;
+  }
+
+  .pillar-stem {
+    font-size: 20px;
+  }
+
+  .pillar-branch {
+    font-size: 17px;
+  }
+}

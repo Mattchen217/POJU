@@ -4,10 +4,10 @@ import type { POJUSessionState } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
 
 /**
- * POJU v4: phase-routed chat (`greeting` → `collecting` → `confirmation` → `tracking`).
+ * POJU v5: phase-routed chat (`opening` → `collecting` → `confirmation` → `delivered` → `tracking`).
  * Request body: `{ session, profile?, locale? }` (session must include `session_id`).
  */
-export const maxDuration = 90;
+export const maxDuration = 180;
 
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as {

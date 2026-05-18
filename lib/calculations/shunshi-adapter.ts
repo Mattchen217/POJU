@@ -1,10 +1,12 @@
 import type { GetBaziChartOutput } from "shunshi-bazi-core";
 import { getBaziChart } from "shunshi-bazi-core";
+import { representativeHour, shunshiParamsFromBirthInfo } from "@/lib/profile/birth-info-utils";
 import type { BirthInfo, UserProfile } from "@/lib/profile/types";
 
 function fallbackProfile(input: BirthInfo): UserProfile {
   const now = Date.now();
-  const id = `profile_${input.year}_${input.month}_${input.day}_${input.hour}`;
+  const hour = representativeHour(input);
+  const id = `profile_${input.year}_${input.month}_${input.day}_${hour}`;
   return {
     id,
     birth: input,
@@ -24,11 +26,6 @@ function fallbackProfile(input: BirthInfo): UserProfile {
     updatedAt: now,
     source: "fallback",
   };
-}
-
-function toShunshiGender(g: BirthInfo["gender"]): 0 | 1 {
-  if (g === "male") return 1;
-  return 0;
 }
 
 function parsePillars(chart: GetBaziChartOutput): {
@@ -53,19 +50,12 @@ function parsePillars(chart: GetBaziChartOutput): {
 
 export async function calculateProfileWithShunshi(input: BirthInfo): Promise<UserProfile> {
   const now = Date.now();
-  const id = `profile_${input.year}_${input.month}_${input.day}_${input.hour}`;
+  const params = shunshiParamsFromBirthInfo(input);
+  const id = `profile_${input.year}_${input.month}_${input.day}_${params.hour}`;
 
   try {
     const chart = getBaziChart({
-      year: input.year,
-      month: input.month,
-      day: input.day,
-      hour: input.hour,
-      minute: input.minute ?? 0,
-      gender: toShunshiGender(input.gender),
-      city: input.city,
-      latitude: input.latitude,
-      longitude: input.longitude,
+      ...params,
       useTrueSolarTime: true,
     });
     const pillars = parsePillars(chart);

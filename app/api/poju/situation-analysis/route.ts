@@ -3,7 +3,9 @@ import { buildSituationAnalysisPrompt, parseSituationAnalysisResponseText } from
 import { callLLM } from "@/lib/llm/router";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 import { computeSituationContextFingerprint } from "@/lib/poju/situation-context-fingerprint";
-import type { POJUAgentState } from "@/lib/poju/agent-state";
+import { normalizeAgentPhase, type POJUAgentState } from "@/lib/poju/agent-state";
+
+export const maxDuration = 180;
 
 function isRecord(x: unknown): x is Record<string, unknown> {
   return Boolean(x) && typeof x === "object" && !Array.isArray(x);
@@ -11,16 +13,7 @@ function isRecord(x: unknown): x is Record<string, unknown> {
 
 function isLooseAgentState(x: unknown): x is POJUAgentState {
   if (!isRecord(x)) return false;
-  const phases: POJUAgentState["current_phase"][] = [
-    "greeting",
-    "awaiting_profile",
-    "collecting_context",
-    "awaiting_confirmation",
-    "delivered",
-    "tracking",
-  ];
-  if (typeof x.current_phase !== "string" || !phases.includes(x.current_phase as POJUAgentState["current_phase"]))
-    return false;
+  if (typeof x.current_phase !== "string" || !normalizeAgentPhase(x.current_phase)) return false;
   if (!isRecord(x.context_collected)) return false;
   return true;
 }
@@ -90,11 +83,10 @@ export async function POST(req: Request) {
     });
 
     const result = await callLLM({
-      call_type: "poju_situation_analysis",
+      call_type: "deep_analysis",
       system,
       messages: [{ role: "user", content: user }],
       max_tokens: 15000,
-      thinking_effort: "high",
       response_format: "json",
     });
 
@@ -117,6 +109,8 @@ export async function POST(req: Request) {
       analysis,
       model: result.actual_model,
       tokens_used: result.meta.tokens_used,
+      latency_ms: result.meta.latency_ms,
+      cost_usd: result.meta.cost_usd,
       fingerprint,
     });
   } catch (e: unknown) {

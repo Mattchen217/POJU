@@ -10,8 +10,12 @@ import { useAppDialog } from "@/components/ui/app-dialog";
 import { ContextSummaryEditor } from "@/components/poju/ContextSummaryEditor";
 import type { ContextSummary } from "@/lib/poju/agent-state";
 import { MessageBubble } from "@/components/poju/MessageBubble";
-import { ThinkingProcessDetails } from "@/components/poju/ThinkingProcessDetails";
-import { reasoningToLiveLine } from "@/lib/llm/thinking-live-line";
+import { ThinkingStream } from "@/components/poju/ThinkingStream";
+import { getFallbackOpening } from "@/lib/poju/opening-fallback";
+import {
+  resolveThinkingStreamMode,
+  type ThinkingStreamMode,
+} from "@/lib/poju/thinking-stream-mode";
 import { ProfileSelector } from "@/components/profile/ProfileSelector";
 import { getPojuDb } from "@/lib/db/poju-db";
 import { createPOJUSession, loadPOJUSession, savePOJUSession, extendPOJUV4Session } from "@/lib/poju/session-manager";
@@ -20,14 +24,11 @@ import { runConfirmationPipeline, runPostTurnOrchestration } from "@/lib/poju/ag
 import { handleUserMessage, tryHandleRuleRejection } from "@/lib/poju/agent";
 import { appendBirthFlowMessage } from "@/lib/poju/birth-flow-messages";
 import {
-  appendConfirmationScriptMessage,
-  confirmationScriptText,
-} from "@/lib/poju/confirmation-flow-messages";
-import {
   downgradePrematureConfirmationPhase,
   shouldShowContextSummaryForm,
 } from "@/lib/poju/summary-readiness";
-import { getLastUserMessageContent } from "@/lib/poju/context-readiness";
+import { normalizeAgentPhase } from "@/lib/poju/agent-state";
+import { getLastUserMessageContent } from "@/lib/poju/context-helpers";
 import {
   clearBirthFormActionIfProfileBound,
   lastAssistantRequestsBirthForm,
@@ -45,6 +46,12 @@ import { computeSituationContextFingerprint } from "@/lib/poju/situation-context
 import { getCachedSituationAnalysis, requestSituationAnalysis } from "@/lib/llm/deepseek/situation-analysis";
 import { runFinalDeliveryForSession } from "@/lib/llm/pro/final-delivery";
 import { rewindSessionToUserMessage } from "@/lib/poju/session-rewind";
+import {
+  pojuChatColumn,
+  pojuChatComposerInput,
+  pojuChatComposerShell,
+  pojuChatMessageList,
+} from "@/lib/poju/chat-layout";
 
 interface Props {
   session: POJUSessionState;
@@ -117,8 +124,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const [showProfilePicker, setShowProfilePicker] = useState(false);
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [pipelineBusy, setPipelineBusy] = useState(false);
-  const [liveThinking, setLiveThinking] = useState("");
-  const [thinkingPanelOpen, setThinkingPanelOpen] = useState(false);
+  const [thinkingMode, setThinkingMode] = useState<ThinkingStreamMode | null>(null);
+  const openingInitRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const speechRef = useRef<SpeechRecognition | null>(null);
@@ -136,7 +143,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     });
   }, []);
 
-  const visibleMessages = session.messages.filter((m) => m.role !== "system");
+  const visibleMessages = session.messages.filter(
+    (m) => m.role !== "system" && !m.content.trim().startsWith("[SYSTEM:"),
+  );
   const hasUserMessage = visibleMessages.some((m) => m.role === "user");
   const shouldHideWelcomePanel = hasUserMessage;
   const birthFlowBlocking = birthFlowStage === "form" || birthFlowStage === "received" || birthFlowStage === "analyzing";
@@ -227,14 +236,21 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       return;
     }
 
-    if (summaryIntroAppendedRef.current) return;
     summaryIntroAppendedRef.current = true;
-
-    const withIntro = appendConfirmationScriptMessage(session, locale, "intro");
-    onSessionUpdate(withIntro);
-    void savePOJUSession(withIntro);
     scrollChatToBottom("smooth");
-  }, [session, locale, onSessionUpdate, scrollChatToBottom]);
+  }, [session, scrollChatToBottom]);
+
+  useEffect(() => {
+    if (openingInitRef.current) return;
+    if (!resolveSessionHasProfile(session)) return;
+    if (normalizeAgentPhase(session.agent_v2?.current_phase) !== "opening") return;
+    if (visibleMessages.length > 0) return;
+    if (sending || confirmBusy || pipelineBusy) return;
+
+    openingInitRef.current = true;
+    void triggerOpening();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per empty opening session
+  }, [session.session_id, session.agent_v2?.current_phase, visibleMessages.length]);
 
   useEffect(() => {
     if (!overlayFormOpen) return;
@@ -249,8 +265,59 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     sendAbortRef.current?.abort();
     sendAbortRef.current = null;
     setSending(false);
-    setThinkingPanelOpen(false);
-    setLiveThinking("");
+    setThinkingMode(null);
+  }
+
+  async function triggerOpening() {
+    const gen = ++sendGenerationRef.current;
+    const ac = new AbortController();
+    sendAbortRef.current = ac;
+    setSending(true);
+    setThinkingMode("flash");
+
+    try {
+      let updated = await handleUserMessage({
+        session: sessionRef.current,
+        userMessage: "__OPENING__",
+        locale,
+        signal: ac.signal,
+      });
+      if (ac.signal.aborted || gen !== sendGenerationRef.current) return;
+
+      const orch = await runPostTurnOrchestration(updated, { locale });
+      if (ac.signal.aborted || gen !== sendGenerationRef.current) return;
+
+      onSessionUpdate(orch.session);
+      await savePOJUSession(orch.session);
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      console.error("[poju] Opening failed:", err);
+      const base = sessionRef.current;
+      const fallbackMsg: POJUMessage = {
+        role: "assistant",
+        content: getFallbackOpening(base.original_question, locale),
+        timestamp: new Date().toISOString(),
+        meta: { current_state: "opening", user_intent: "greeting" },
+      };
+      const withFallback = {
+        ...base,
+        messages: [...base.messages, fallbackMsg],
+        agent_v2: base.agent_v2
+          ? {
+              ...base.agent_v2,
+              current_phase: "collecting_context" as const,
+            }
+          : base.agent_v2,
+      };
+      onSessionUpdate(withFallback);
+      await savePOJUSession(withFallback);
+    } finally {
+      if (sendAbortRef.current === ac) sendAbortRef.current = null;
+      if (gen === sendGenerationRef.current) {
+        setSending(false);
+        setThinkingMode(null);
+      }
+    }
   }
 
   async function runUserTurn(
@@ -262,8 +329,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     const ac = new AbortController();
     sendAbortRef.current = ac;
     setSending(true);
-    setLiveThinking("");
-    setThinkingPanelOpen(true);
+    setThinkingMode(resolveThinkingStreamMode(baseSession, userMessage));
     scrollChatToBottom("smooth");
 
     try {
@@ -306,12 +372,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       if (orch.ui.pipelineNotice) setSituationNotice(orch.ui.pipelineNotice);
       if (orch.ui.pipelineError) setSituationError(orch.ui.pipelineError);
       setPipelineBusy(orch.ui.pipelineBusy);
-      // Thinking lives on each assistant message (MessageBubble). Close the live panel so it
-      // does not duplicate the same reasoning block after the reply is persisted.
-      setLiveThinking("");
-      if (!birthFlowStage || birthFlowStage === "intro" || birthFlowStage === "form") {
-        setThinkingPanelOpen(false);
-      }
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return;
       console.error("[poju] Send failed:", err);
@@ -323,7 +383,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       await dialog.alert(t("dialog_connection_error"));
     } finally {
       if (sendAbortRef.current === ac) sendAbortRef.current = null;
-      if (gen === sendGenerationRef.current) setSending(false);
+      if (gen === sendGenerationRef.current) {
+        setSending(false);
+        setThinkingMode(null);
+      }
     }
   }
 
@@ -499,11 +562,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     let profile_id: string;
     let updatedSession: POJUSessionState;
     try {
-      ({ profile_id } = await importCalculatedProfileAsStored({
-        profile,
-        display_name: `${profile.birth.year}-${profile.birth.month}-${profile.birth.day}`,
-        relationship: "self",
-      }));
+      ({ profile_id } = await importCalculatedProfileAsStored({ profile }));
       await recordProfileUsage(profile_id, "poju");
 
       updatedSession = withSessionProfileFlags(
@@ -525,9 +584,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       );
 
       if (updatedSession.agent_v2) {
+        const agentPhase = normalizeAgentPhase(updatedSession.agent_v2.current_phase);
         const transitioned =
-          updatedSession.agent_v2.current_phase === "awaiting_profile" ||
-          updatedSession.agent_v2.current_phase === "greeting"
+          agentPhase === "opening" || agentPhase === "collecting_context"
             ? applyPhaseTransition(updatedSession.agent_v2, {
                 should_transition: true,
                 new_phase: "collecting_context",
@@ -555,21 +614,14 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     }
 
     setBirthFlowStage("analyzing");
-    setLiveThinking("");
-    setThinkingPanelOpen(true);
+    setThinkingMode("analyzing");
     onSessionUpdate(updatedSession);
     await savePOJUSession(updatedSession);
     scrollChatToBottom("smooth");
 
     let analysisFailed = false;
     try {
-      await generateBaseAnalysis(profile_id, {
-        onReasoning: (full) => setLiveThinking(full),
-        onContent: (full) => {
-          if (!full.trim()) return;
-          setLiveThinking((prev) => prev || reasoningToLiveLine(full) || t("thinking_analyzing_chart"));
-        },
-      });
+      await generateBaseAnalysis(profile_id);
       const cur = sessionRef.current;
       if (cur.agent_v2) {
         const withAnalysis = {
@@ -596,8 +648,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
 
     window.setTimeout(() => {
       setBirthFlowStage(null);
-      setThinkingPanelOpen(false);
-      setLiveThinking("");
+      setThinkingMode(null);
     }, 2400);
 
     try {
@@ -640,8 +691,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     );
     if (updatedSession.agent_v2) {
       const transitioned =
-        updatedSession.agent_v2.current_phase === "awaiting_profile" ||
-        updatedSession.agent_v2.current_phase === "greeting"
+        normalizeAgentPhase(updatedSession.agent_v2.current_phase) === "opening"
           ? applyPhaseTransition(updatedSession.agent_v2, {
               should_transition: true,
               new_phase: "collecting_context",
@@ -684,17 +734,16 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     setSummaryFormDismissed(true);
     setFinalError(null);
     setSituationError(null);
-    setLiveThinking(confirmationScriptText(locale, "generating"));
-    setThinkingPanelOpen(true);
+    setSending(true);
+    setThinkingMode("preparing_delivery");
     scrollChatToBottom("smooth");
 
     try {
       const base = sessionRef.current;
-      let withSummary: POJUSessionState = base.agent_v2
+      const withSummary: POJUSessionState = base.agent_v2
         ? { ...base, agent_v2: { ...base.agent_v2, current_summary: editedSummary } }
         : base;
 
-      withSummary = appendConfirmationScriptMessage(withSummary, locale, "confirmed");
       onSessionUpdate(withSummary);
       await savePOJUSession(withSummary);
 
@@ -702,13 +751,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       onSessionUpdate(next);
       await savePOJUSession(next);
       setSituationNotice(t("final_delivery_done"));
-      setThinkingPanelOpen(false);
-      setLiveThinking("");
     } catch (e) {
       setFinalError(e instanceof Error ? e.message : String(e));
       setSummaryFormDismissed(false);
     } finally {
       setConfirmBusy(false);
+      setSending(false);
+      setThinkingMode(null);
     }
   }
 
@@ -738,10 +787,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
 
   function agentPhaseKey(): string {
     const phase = session.agent_v2?.current_phase;
-    if (!phase) return "agent_phase_greeting";
+    if (!phase) return "agent_phase_opening";
     const map: Record<string, string> = {
-      greeting: "agent_phase_greeting",
-      awaiting_profile: "agent_phase_awaiting_profile",
+      opening: "agent_phase_opening",
+      greeting: "agent_phase_opening",
+      awaiting_profile: "agent_phase_collecting",
       collecting_context: "agent_phase_collecting",
       awaiting_confirmation: "agent_phase_confirm",
       delivered: "agent_phase_delivered",
@@ -981,8 +1031,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         </aside>
 
         <section className="relative flex min-w-0 flex-1 flex-col bg-background">
-          <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-outline-variant/30 bg-background/80 px-4 backdrop-blur-md md:px-8">
-            <div className="mx-auto flex w-full max-w-[800px] items-center justify-between gap-2">
+          <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-outline-variant/30 bg-background/80 px-4 backdrop-blur-md md:px-6">
+            <div className={`${pojuChatColumn} flex items-center justify-between gap-2`}>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -992,7 +1042,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                 >
                   <span className="material-symbols-outlined text-[20px] leading-none">menu</span>
                 </button>
-                <p className="truncate text-sm text-on-surface">
+                <p className="truncate text-[1rem] leading-6 text-on-surface">
                   {formatSessionListPrimaryLine(session.created_at, session.original_question, locale)}
                 </p>
               </div>
@@ -1011,10 +1061,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
             </div>
           </header>
 
-          <div className="flex-1 overflow-y-auto px-4 md:px-8">
-            <div
-              className={`mx-auto flex w-full max-w-[800px] flex-col gap-6 py-6 ${overlayFormOpen ? "pb-8" : "pb-36"}`}
-            >
+          <div className="flex-1 overflow-y-auto px-4 md:px-6">
+            <div className={`${pojuChatColumn} ${pojuChatMessageList} ${overlayFormOpen ? "pb-8" : "pb-40"}`}>
               <SessionExpiryNotice session={session} extending={extending} onExtend={() => void handleExtendSession()} />
 
               {session.agent_v2 ? (
@@ -1086,28 +1134,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                 />
               ) : null}
 
-              {thinkingPanelOpen || sending || birthFlowStage === "analyzing" || confirmBusy ? (
-                <ThinkingProcessDetails
-                  open
-                  pulseIcon={!liveThinking}
-                  liveLine={
-                    liveThinking
-                      ? reasoningToLiveLine(liveThinking)
-                      : birthFlowStage === "analyzing"
-                        ? t("thinking_analyzing_chart")
-                        : null
-                  }
-                  thinkingProcess={liveThinking || undefined}
-                  waitingLabel={
-                    !liveThinking && (sending || confirmBusy)
-                      ? confirmBusy
-                        ? t("context_summary_confirming")
-                        : t("thinking_waiting")
-                      : null
-                  }
-                />
-              ) : null}
-
               {birthFlowStage ? (
                 <div className="rounded-2xl border border-violet-300/20 bg-violet-950/30 p-3">
                   <BirthProfileFlow
@@ -1167,7 +1193,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
 
           {!overlayFormOpen ? (
           <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-20 flex justify-center bg-gradient-to-t from-background via-background/90 to-transparent p-4 md:p-6">
-            <div className="pointer-events-auto w-full max-w-[800px]">
+            <div className={`pointer-events-auto w-full ${pojuChatColumn}`}>
+              {(sending || confirmBusy) && thinkingMode ? (
+                <ThinkingStream mode={thinkingMode} locale={locale} />
+              ) : null}
               {composerImage ? (
                 <div className="mb-2 inline-flex items-center gap-2 rounded-lg border border-outline-variant/40 bg-surface-container-highest px-2 py-1 text-xs text-on-surface-variant">
                   <img src={composerImage.dataUrl} alt={composerImage.name} className="h-8 w-8 rounded object-cover" />
@@ -1177,7 +1206,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                   </button>
                 </div>
               ) : null}
-              <div className="flex items-end gap-2 rounded-2xl border border-outline-variant/40 bg-surface-container/60 p-2 backdrop-blur-xl">
+              <div className={pojuChatComposerShell}>
                 <button
                   type="button"
                   className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
@@ -1209,7 +1238,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                   placeholder={t("input_placeholder")}
                   disabled={sending}
                   rows={1}
-                  className="max-h-[150px] min-h-[42px] flex-1 resize-none bg-transparent px-2 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/50 outline-none"
+                  className={pojuChatComposerInput}
                 />
                 <button
                   type="button"
@@ -1226,13 +1255,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                   onClick={() => (sending ? handleStopGeneration() : void handleSend())}
                   disabled={!sending && !input.trim() && !composerImage}
                   aria-label={sending ? t("stop_generating") : t("send")}
-                  className={`inline-flex h-10 w-10 items-center justify-center rounded-xl text-on-primary transition-colors disabled:opacity-40 ${
+                  className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-on-primary transition-colors disabled:opacity-40 ${
                     sending
                       ? "bg-red-600 hover:bg-red-500"
                       : "bg-primary hover:bg-primary-container"
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[18px] leading-none">
+                  <span className="material-symbols-outlined text-[20px] leading-none">
                     {sending ? "stop" : "arrow_upward"}
                   </span>
                 </button>

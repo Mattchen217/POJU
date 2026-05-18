@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import type { BirthGender, BirthInfo, UserProfile } from "@/lib/profile/types";
-import { saveUserProfile } from "@/lib/profile/storage";
+import type { LegacyBirthFormInput, LegacyBirthGender, UserProfile } from "@/lib/profile/types";
+import { saveUserProfile } from "@/lib/profile/active-profile";
 
 export type BirthInfoFormProps = {
   /** Called after profile is calculated and saved locally. */
@@ -31,7 +31,7 @@ export function BirthInfoForm({
   const t = useTranslations("birthForm");
   const notifyReady = onComplete ?? onProfileReady;
 
-  const [form, setForm] = useState<BirthInfo>({
+  const [form, setForm] = useState<LegacyBirthFormInput>({
     year: 1990,
     month: 1,
     day: 1,
@@ -160,7 +160,7 @@ export function BirthInfoForm({
           ) : (
             <select
               value={form.gender}
-              onChange={(e) => setForm((p) => ({ ...p, gender: e.target.value as BirthGender }))}
+              onChange={(e) => setForm((p) => ({ ...p, gender: e.target.value as LegacyBirthGender }))}
               className="mt-1 w-full rounded-md border border-white/15 bg-black/30 px-2 py-2 text-sm text-text-primary"
             >
               <option value="male">{t("genderMale")}</option>

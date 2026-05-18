@@ -6,7 +6,7 @@
  */
 
 import { consumeFetchSse } from "@/lib/llm/consume-sse-client";
-import type { UserProfile } from "@/lib/profile/types";
+import { HOUR_PERIOD_INFO, type UserProfile } from "@/lib/profile/types";
 import { getStoredProfile, saveBaseAnalysis } from "@/lib/profile/stored-profiles-service";
 
 export type BaseAnalysisStreamCallbacks = {
@@ -107,13 +107,15 @@ export function buildBaseAnalysisPrompt(profile: UserProfile): { system: string;
     ? profile.diagnosis.challengingElements.join("、")
     : "（未标注）";
 
+  const periodLabel = HOUR_PERIOD_INFO[b.hour_period].zh_label;
+
   const user = `【八字与排盘摘要】
 
 ## 公历出生
 - 日期：${b.year} 年 ${b.month} 月 ${b.day} 日
-- 时间：${b.hour} 时 ${b.minute ?? 0} 分
+- 时辰：${periodLabel}
 - 性别：${b.gender}
-- 城市 / 坐标：${b.city ?? "未填"}（纬度 ${b.latitude ?? "—"}，经度 ${b.longitude ?? "—"}）
+- 时区：${b.timezone}
 
 ## 四柱（干支）
 - 年柱：${profile.bazi.yearPillar}

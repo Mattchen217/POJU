@@ -6,7 +6,11 @@ import pojuLogo from "@/assets/images/POJUlogo.png";
 import type { POJUAction, POJUMessage } from "@/lib/poju/types";
 import { MainDeliveryView } from "@/components/poju/MainDeliveryView";
 import { parseDeliveryContent, type DeliverySection } from "@/lib/poju/parse-delivery";
-import { ThinkingProcessDetails } from "@/components/poju/ThinkingProcessDetails";
+import {
+  pojuChatAssistantContent,
+  pojuChatMessageBody,
+  pojuChatUserBubble,
+} from "@/lib/poju/chat-layout";
 
 export interface MessageBubbleProps {
   message: POJUMessage;
@@ -40,12 +44,14 @@ export function MessageBubble({
             <span className="material-symbols-outlined text-[72px] leading-none">self_improvement</span>
           </div>
           <p className="text-3xl font-semibold text-on-surface sm:text-[48px]">Welcome to POJU</p>
-          <div className="mx-auto mt-4 max-w-[680px] space-y-5 text-base leading-9 text-on-surface-variant">
+          <div className={`mx-auto mt-4 max-w-[680px] space-y-5 ${pojuChatMessageBody} text-on-surface-variant`}>
             {paragraphs.map((p) => (
               <p key={p}>{p}</p>
             ))}
           </div>
-          <p className="mt-6 text-sm text-on-surface-variant/80">Type below to begin, or tap the microphone to speak.</p>
+          <p className="mt-6 text-[1rem] leading-7 text-on-surface-variant/80">
+            Type below to begin, or tap the microphone to speak.
+          </p>
         </div>
       </div>
     );
@@ -53,11 +59,13 @@ export function MessageBubble({
 
   if (message.role === "assistant" && message.meta?.contains_delivery) {
     return (
-      <div className="mb-4 flex justify-start gap-3">
-        <div className="mt-4 flex h-8 w-8 shrink-0 overflow-hidden rounded-full ring-1 ring-outline-variant">
+      <div className="flex w-full gap-4">
+        <div className="mt-0.5 flex h-8 w-8 shrink-0 overflow-hidden rounded-full ring-1 ring-outline-variant">
           <Image src={pojuLogo} alt="" width={32} height={32} className="object-cover" />
         </div>
-        <div className="min-w-0 max-w-[min(100%,42rem)] flex-1 rounded-2xl border border-amber-400/25 bg-gradient-to-br from-amber-500/[0.07] to-zinc-950/90 p-4 shadow-lg sm:p-5">
+        <div
+          className={`${pojuChatAssistantContent} rounded-2xl border border-amber-400/25 bg-gradient-to-br from-amber-500/[0.07] to-zinc-950/90 p-5 shadow-lg sm:p-6`}
+        >
           <MainDeliveryView
             fullText={message.content}
             actions={actions ?? []}
@@ -69,25 +77,15 @@ export function MessageBubble({
   }
 
   return (
-    <div className={`mb-6 flex items-start gap-3 ${isUser ? "justify-end" : "justify-start"}`}>
+    <div className={`flex w-full gap-4 ${isUser ? "justify-end" : ""}`}>
       {!isUser ? (
-        <div className="mt-6 flex h-8 w-8 shrink-0 overflow-hidden rounded-full ring-1 ring-outline-variant">
+        <div className="mt-0.5 flex h-8 w-8 shrink-0 overflow-hidden rounded-full ring-1 ring-outline-variant">
           <Image src={pojuLogo} alt="" width={32} height={32} className="object-cover" />
         </div>
       ) : null}
-      <div className={`flex max-w-[85%] flex-col gap-2 ${isUser ? "items-end" : "w-full items-start"}`}>
-        {isUser ? (
-          <p className="px-1 text-[11px] uppercase tracking-[0.12em] text-on-surface-variant">You</p>
-        ) : null}
-        {!isUser && !isWelcomePanel && message.meta?.thinking_process?.trim() ? (
-          <ThinkingProcessDetails thinkingProcess={message.meta.thinking_process} />
-        ) : null}
+      <div className={`flex flex-col gap-3 ${isUser ? "max-w-[min(85%,36rem)] items-end" : `${pojuChatAssistantContent} items-start`}`}>
         <div
-          className={`rounded-2xl px-5 py-4 text-sm leading-relaxed shadow-[0_8px_30px_rgba(0,0,0,0.2)] ring-1 ring-white/5 ${
-            isUser
-              ? "inline-block max-w-[42rem] rounded-tr-sm bg-surface-container-high text-on-surface"
-              : "w-full rounded-tl-sm border-t-2 border-primary bg-surface-container-low text-on-surface"
-          }`}
+          className={isUser ? `${pojuChatUserBubble} ${pojuChatMessageBody}` : pojuChatMessageBody}
         >
           {renderPlainContent(message.content)}
         </div>
@@ -96,18 +94,22 @@ export function MessageBubble({
             type="button"
             onClick={onEdit}
             disabled={editDisabled}
-            className="mr-1 text-xs text-on-surface-variant transition-colors hover:text-on-surface disabled:cursor-not-allowed disabled:opacity-40"
+            className="px-1 text-[0.875rem] text-on-surface-variant transition-colors hover:text-on-surface disabled:cursor-not-allowed disabled:opacity-40"
           >
             {editLabel ?? "Edit"}
           </button>
         ) : null}
         {!isUser ? (
-          <div className="ml-2 mt-1 flex items-center gap-1">
-            <button className="flex h-8 w-8 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface">
-              <span className="material-symbols-outlined text-[18px]">content_copy</span>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
+              aria-label="Copy"
+            >
+              <span className="material-symbols-outlined text-[20px]">content_copy</span>
             </button>
-            <button className="flex h-8 w-8 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface">
-              <span className="material-symbols-outlined text-[18px]">volume_up</span>
+            <button className="flex h-9 w-9 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface">
+              <span className="material-symbols-outlined text-[20px]">volume_up</span>
             </button>
           </div>
         ) : null}
@@ -135,7 +137,7 @@ function splitWelcomeParagraphs(content: string): string[] {
 function renderPlainContent(content: string) {
   const lines = content.split("\n");
   return lines.map((line, idx) => (
-    <p key={idx} className={idx === 0 ? "m-0" : "mt-2 mb-0"}>
+    <p key={idx} className={idx === 0 ? "m-0" : "mt-4 mb-0"}>
       {line || "\u00a0"}
     </p>
   ));

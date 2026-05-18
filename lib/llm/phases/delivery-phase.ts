@@ -1,37 +1,49 @@
 import type { AgentPhase } from "@/lib/poju/agent-state";
 import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseJson } from "@/lib/llm/phases/phase-transport";
+import { buildOrientalSystemPrompt } from "@/lib/llm/phases/oriental-prompt-context";
 import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
 
-function buildDeliverySystemPrompt(input: PhaseLLMInput): string {
-  return `# POJU — Post-delivery phase
+/**
+ * Post-delivery chat only. Main structured delivery runs via runConfirmationPipeline / final-delivery.
+ */
+function buildDeliveryTaskBlock(input: PhaseLLMInput): string {
+  return `# 当前任务：交付后简短对话
 
-The full structured delivery is shown in the UI card above this chat. Do NOT repeat the long analysis.
+完整破局交付已显示在界面上方的卡片里。你不要重复长文分析或三条行动全文。
 
-Original question: "${input.session.original_question}"
+## 原始问题
+"${input.session.original_question}"
 
-Rules:
-- Short acknowledgment (40-80 words).
-- Invite reflection or questions about the action cards.
-- No new ═══ ANALYSIS ═══ blocks.
-- suggested_phase: "tracking" or "delivered".
+## 你要做
 
-Output strict JSON:
+- 40-80 字（中文）/ 30-60 词（英文）承接
+- 邀请用户选一个行动开始，或追问哪一点还不清楚
+- 可简短用命理视角回应追问，但不要重新做完整推演
+- suggested_phase: "tracking"（默认）或 "delivered"
+
+## 输出 JSON
+
 { "response": "...", "suggested_phase": "tracking" | "delivered" | null, "context_updates": {} }`;
 }
 
 export async function callDeliveryPhase(input: PhaseLLMInput): Promise<PhaseLLMResult> {
-  const system = buildDeliverySystemPrompt(input);
+  const system = await buildOrientalSystemPrompt(input, buildDeliveryTaskBlock(input));
   const messages = formatPhaseMessageHistory(input.session.messages);
-  const result = await callPhaseJsonTransport(system, messages, { max_tokens: 800, temperature: 0.4 });
+  const result = await callPhaseJsonTransport(system, messages, {
+    call_type: "chat_flash",
+    max_tokens: 800,
+    temperature: 0.4,
+  });
 
   let parsed: Record<string, unknown>;
   try {
     parsed = parsePhaseJson(result.content);
   } catch {
     parsed = {
-      response:
-        "Your full reading is in the delivery card above. Tell me which action you want to start with, or what still feels unclear.",
+      response: input.locale.startsWith("zh")
+        ? "完整推演在上方的交付卡片里。你想先从哪一条行动开始，还是哪一点还想再抠一下？"
+        : "Your full reading is in the delivery card above. Which action do you want to start with—or what still feels unclear?",
       suggested_phase: "tracking",
     };
   }

@@ -4,14 +4,16 @@ import {
 } from "@/lib/poju/agent-state";
 import { formatContextForPrompt, formatMissingFieldsForPrompt } from "@/lib/poju/context-extractor";
 import type { AgentPhase } from "@/lib/poju/agent-state";
+import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseJson } from "@/lib/llm/phases/phase-transport";
+import { buildOrientalSystemPrompt } from "@/lib/llm/phases/oriental-prompt-context";
 import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
 import { sanitizeResponse } from "@/lib/llm/phases/response-sanitizer";
 import type { PojuV4ActionRequested } from "@/lib/poju/types";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
 import { sanitizerStateFromSession } from "@/lib/llm/phases/types";
 
-const VALID_SUGGESTED: AgentPhase[] = ["collecting_context", "awaiting_confirmation", "awaiting_profile"];
+const VALID_SUGGESTED: AgentPhase[] = ["collecting_context", "awaiting_confirmation"];
 const VALID_ACTIONS: PojuV4ActionRequested[] = [
   "continue_chat",
   "show_birth_form",
@@ -23,10 +25,10 @@ function formatFieldKey(key: string): string {
   return key.replace(/_/g, " ");
 }
 
-function buildCollectingSystemPrompt(input: PhaseLLMInput): string {
+function buildCollectingTaskBlock(input: PhaseLLMInput): string {
   const agent = input.agent_state;
   if (!agent) {
-    return buildCollectingSystemPromptFallback(input);
+    return `# 当前任务：深入问诊\n\n原始问题: "${input.session.original_question}"\n问一个具体跟进问题。输出 JSON：response, suggested_phase, context_updates。`;
   }
 
   const contextText = formatContextForPrompt(agent);
@@ -36,67 +38,71 @@ function buildCollectingSystemPrompt(input: PhaseLLMInput): string {
   const cat = agent.question_category;
   const requiredList = cat
     ? (REQUIRED_FIELDS_BY_CATEGORY[cat] ?? []).map((f) => `  - ${formatFieldKey(f)}`).join("\n")
-    : "  (Determine category first, then gather category-specific fields.)";
+    : "  (先判断问题类别，再收集该类别的关键字段。)";
 
-  const profileGate =
-    agent.current_phase === "awaiting_profile"
-      ? "\n# PROFILE REQUIRED\nBirth chart not linked yet. In your `response`, explain why birth details help (device-only storage). Set `action_requested` to \"show_birth_form\" when you are ready for the form UI — or \"continue_chat\" if you still need more context first. User may skip.\n"
-      : "";
+  const profileGate = !resolveSessionHasProfile(input.session)
+    ? `
+## 尚未关联命盘
+在 response 中说明为何需要出生信息（仅保存在本设备）。准备好后设 action_requested 为 "show_birth_form"；若还需先聊情境则 "continue_chat"。
+`
+    : "";
 
-  return `# YOU ARE POJU (Information Collection Phase)
+  return `# 当前任务：深入问诊（收集上下文）
+
+你已经主动开场，用户开始回应。现在要像【医生问诊 + 律师询问】那样深入了解具体处境。
 ${profileGate}
 
-You are a focused interviewer — like a doctor taking history or a lawyer learning the case. NOT a casual chatbot.
-
-The user paid for this session. Original question:
+## 用户的原始问题
 "${input.session.original_question}"
 
-Question category: ${cat ?? "not yet determined"}
-Completeness: ${(completeness * 100).toFixed(0)}%
-
-## Already collected
+## 已收集的信息
 ${contextText}
 
-## Still missing
+完成度: ${(completeness * 100).toFixed(0)}%
+
+## 还需要收集的字段
 ${missingText}
 
-## Required fields for this category
+## 本类别必填字段
 ${requiredList}
 
-# PRIMARY DIRECTIVE
-Ask the NEXT most important question(s) to fill missing fields.
-- Never repeat what is already collected
-- 1–2 specific questions per turn (50–120 words)
-- Reference what they said before
-- No final verdict, no ═══ ANALYSIS ═══ blocks, no BaZi/五行/用神 claims in user-facing text
+## 问诊原则
 
-# WHEN TO SET suggested_phase / action_requested
-- "awaiting_confirmation" when completeness ≥ 70% OR you have enough specifics for 3 concrete actions
-- When personalized BaZi is needed and no birth profile is linked: explain in \`response\`, set \`action_requested\` to "show_birth_form", and \`suggested_phase\` to "awaiting_profile"
-- Otherwise keep \`action_requested\` "continue_chat" and \`suggested_phase\` "collecting_context"
+1. 每轮做三件事：简短承接（1-2 句）→（可选）命盘线索与现实对应 → 问 1-2 个尖锐具体问题
+2. 命盘 ↔ 处境对应，不要空讲性格
+3. 不重复已知信息；一次不要问超过 3 个问题
+4. 只把用户【明确说过】的事实写入 context_updates，不要推断编造
 
-# OUTPUT (strict JSON)
+## 完成判断
+
+- 完成度 ≥ 70% 或信息已够支撑 3 条可执行行动 → suggested_phase: "awaiting_confirmation"
+- 用户说「差不多了 / 可以分析了」→ "awaiting_confirmation"
+- 否则 → "collecting_context"
+
+## 风格
+
+- 中文 80-200 字 / 英文 60-150 词
+- 2-4 段自然叙述，少用 bullet
+
+## 输出格式（严格 JSON，无 markdown 围栏）
+
 {
   "response": "...",
-  "suggested_phase": "collecting_context" | "awaiting_confirmation" | "awaiting_profile" | null,
+  "suggested_phase": "collecting_context" | "awaiting_confirmation" | null,
   "action_requested": "continue_chat" | "show_birth_form",
-  "context_updates": { },
-  "question_category": "career" | "relationship" | "wealth" | "health" | "family" | "decision" | "interpersonal" | "other" | null
-}
-
-Locale hint: ${input.locale}`;
-}
-
-function buildCollectingSystemPromptFallback(input: PhaseLLMInput): string {
-  return `# POJU — Context collection
-Original question: "${input.session.original_question}"
-Ask one focused follow-up. JSON only with response, suggested_phase, context_updates.`;
+  "question_category": "career" | "relationship" | "wealth" | "health" | "family" | "decision" | "interpersonal" | "other" | null,
+  "context_updates": { }
+}`;
 }
 
 export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLLMResult> {
-  const system = buildCollectingSystemPrompt(input);
+  const system = await buildOrientalSystemPrompt(input, buildCollectingTaskBlock(input));
   const messages = formatPhaseMessageHistory(input.session.messages);
-  const result = await callPhaseJsonTransport(system, messages, { max_tokens: 2000 });
+  const result = await callPhaseJsonTransport(system, messages, {
+    call_type: "collection_flash",
+    max_tokens: 2000,
+    temperature: 0.5,
+  });
 
   let parsed: Record<string, unknown>;
   try {
@@ -121,7 +127,7 @@ export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLL
     rawAction && VALID_ACTIONS.includes(rawAction as PojuV4ActionRequested)
       ? (rawAction as PojuV4ActionRequested)
       : null;
-  if (!action_requested && suggested_phase === "awaiting_profile") {
+  if (!action_requested && rawAction === "show_birth_form") {
     action_requested = "show_birth_form";
   }
 

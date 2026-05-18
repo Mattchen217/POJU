@@ -46,7 +46,7 @@ export function createBirthFlowAssistantMessage(locale: string, key: BirthFlowSc
     content: birthFlowScriptText(locale, key),
     timestamp: new Date().toISOString(),
     meta: {
-      current_state: "awaiting_profile",
+      current_state: "collecting_context",
       user_intent: "sharing_situation",
       action_requested: "continue_chat",
     },

@@ -1,24 +1,26 @@
-import { buildPOJUSystemPrompt } from "@/lib/llm/poju-prompts";
+import { buildPOJUSystemPrompt } from "@/lib/llm/prompts/legacy-poju-prompt";
 import { repairLLMOutput, validateLLMOutput } from "@/lib/llm/output-validator";
-import { applyPojuOutputPolicies } from "@/lib/poju/output-policy";
+import { applyPojuOutputPolicies } from "@/lib/poju/output-policy-pass";
 import {
   callGreetingPhase,
   shouldUseGreetingPhase,
 } from "@/lib/llm/phases/greeting-phase";
 import type { PhaseLLMResult } from "@/lib/llm/phases/types";
-import { callPhaseSpecificLLM, resolveActiveAgentPhase } from "@/lib/llm/poju-phase-router";
-import { mapPhaseResultToChatPayload } from "@/lib/poju/phase-llm-mapper";
+import { executeAgentPhaseLLM } from "@/lib/poju/agent-phase-runner";
 import {
   GEMINI_PRIMARY_MODEL,
   generateGeminiChatCompletion,
   getGeminiClient,
 } from "@/lib/llm/gemini-shared";
-import { getOpenRouterDefaultModel, isOpenRouterConfigured, openRouterChatCompletion } from "@/lib/llm/openrouter-shared";
+import { callLLM } from "@/lib/llm/router";
+import { getOpenRouterDefaultModel, isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 import {
   buildThinkingProcessDisplay,
   parseThoughtFromUnknown,
 } from "@/lib/llm/thinking-process";
-import { getLastUserMessageContent } from "@/lib/poju/context-readiness";
+import { normalizeAgentPhase } from "@/lib/poju/agent-state";
+import { getLastUserMessageContent } from "@/lib/poju/context-helpers";
+import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
 
@@ -41,6 +43,7 @@ export interface POJULLMResponse {
     | "unclear"
     | "off_topic";
   current_state:
+    | "opening"
     | "greeting"
     | "collecting_context"
     | "awaiting_profile"
@@ -68,16 +71,25 @@ export async function callPOJULLM(input: CallInput): Promise<POJULLMResponse> {
     return callPOJULLMGreetingPath(input);
   }
 
-  if (isOpenRouterConfigured() || getGeminiClient()) {
-  const hasUserTurns = session.messages.some((m) => m.role === "user" && !m.is_rejected);
-  if (hasUserTurns) {
+  if (shouldUseOpeningPhase(session)) {
     try {
       return await callPOJULLMPhasePath(input);
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
-      console.warn("[poju-llm] Phase path failed, falling back to legacy prompt:", msg);
+      console.warn("[poju-llm] Opening phase failed:", msg);
     }
   }
+
+  if (isOpenRouterConfigured() || getGeminiClient()) {
+    const hasUserTurns = session.messages.some((m) => m.role === "user" && !m.is_rejected);
+    if (hasUserTurns) {
+      try {
+        return await callPOJULLMPhasePath(input);
+      } catch (error: unknown) {
+        const msg = error instanceof Error ? error.message : String(error);
+        console.warn("[poju-llm] Phase path failed, falling back to legacy prompt:", msg);
+      }
+    }
   }
 
   return callPOJULLMLegacyPath(input);
@@ -87,31 +99,37 @@ async function callPOJULLMPhasePath(input: CallInput): Promise<POJULLMResponse> 
   const { session, profile, locale } = input;
   const fallbackModel = isOpenRouterConfigured() ? getOpenRouterDefaultModel() : GEMINI_PRIMARY_MODEL;
 
-  const { phase, activePhase } = await callPhaseSpecificLLM({ session, profile, locale });
-  const mapped = mapPhaseResultToChatPayload(phase, {
-    session,
-    profile,
-    locale,
-    fallbackPhase: activePhase,
-  });
+  const { phase, activePhase, ...mapped } = await executeAgentPhaseLLM({ session, profile, locale });
 
   return {
     response: String(mapped.response ?? phase.response),
     model: phase.model ?? fallbackModel,
     tokens_used: phase.tokens_used,
     user_intent: (mapped.user_intent as POJULLMResponse["user_intent"]) ?? "sharing_situation",
-    current_state: (mapped.current_state as POJULLMResponse["current_state"]) ?? "collecting_context",
+    current_state:
+      (mapped.current_state as POJULLMResponse["current_state"]) ??
+      (activePhase === "opening" ? "opening" : "collecting_context"),
     action_requested: mapped.action_requested as POJULLMResponse["action_requested"],
     topic_drift_detected: Boolean(mapped.topic_drift_detected),
     context_updates: (mapped.context_updates as Record<string, unknown>) ?? {},
     contains_delivery: Boolean(mapped.contains_delivery),
     main_delivery: mapped.main_delivery,
     new_actions: mapped.new_actions as unknown[] | undefined,
-    agent_suggested_phase: typeof mapped.agent_suggested_phase === "string" ? mapped.agent_suggested_phase : undefined,
+    agent_suggested_phase:
+      typeof mapped.agent_suggested_phase === "string" ? mapped.agent_suggested_phase : activePhase,
     current_summary: mapped.current_summary,
     question_category: typeof mapped.question_category === "string" ? mapped.question_category : null,
-    thinking_process: phase.thinking_process,
+    thinking_process: undefined,
   };
+}
+
+function shouldUseOpeningPhase(session: POJUSessionState): boolean {
+  if (!resolveSessionHasProfile(session)) return false;
+  const phase = normalizeAgentPhase(session.agent_v2?.current_phase);
+  if (phase !== "opening") return false;
+  const hasUser = session.messages.some((m) => m.role === "user" && !m.is_rejected);
+  if (!hasUser) return true;
+  return getLastUserMessageContent(session) === "__OPENING__";
 }
 
 async function callPOJULLMLegacyPath(input: CallInput): Promise<POJULLMResponse> {
@@ -151,20 +169,17 @@ async function callPOJULLMLegacyPath(input: CallInput): Promise<POJULLMResponse>
     let openRouterReasoningDetails: unknown;
 
     if (isOpenRouterConfigured()) {
-      const msgs = [
-        { role: "system" as const, content: systemPrompt },
-        ...conversationMessages.map((m) => ({ role: m.role, content: m.content })),
-      ];
-      const out = await openRouterChatCompletion({
-        messages: msgs,
+      const out = await callLLM({
+        call_type: "collection_flash",
+        system: systemPrompt,
+        messages: conversationMessages,
         temperature: 0.55,
         max_tokens: 4096,
-        json_mode: true,
-        reasoning_effort: "high",
+        response_format: "json",
       });
-      text = out.text;
-      modelUsed = out.model;
-      tokens_used = out.tokens_used;
+      text = out.content;
+      modelUsed = out.actual_model;
+      tokens_used = out.meta.tokens_used;
       openRouterReasoning = out.reasoning;
       openRouterReasoningDetails = out.reasoning_details;
     } else {
@@ -215,13 +230,13 @@ async function callPOJULLMLegacyPath(input: CallInput): Promise<POJULLMResponse>
 }
 
 function mapGreetingPhaseToPojuResponse(phase: PhaseLLMResult, model: string): POJULLMResponse {
-  const suggested = phase.suggested_phase;
-  let current_state: POJULLMResponse["current_state"] = "greeting";
+  const suggested = normalizeAgentPhase(phase.suggested_phase ?? undefined);
+  let current_state: POJULLMResponse["current_state"] = "opening";
   let action_requested: POJULLMResponse["action_requested"] = "continue_chat";
   let user_intent: POJULLMResponse["user_intent"] = "greeting";
 
-  if (suggested === "awaiting_profile") {
-    current_state = "awaiting_profile";
+  if (phase.action_requested === "show_birth_form") {
+    current_state = "collecting_context";
     action_requested = "show_birth_form";
     user_intent = "sharing_situation";
   } else if (suggested === "collecting_context") {
@@ -243,7 +258,7 @@ function mapGreetingPhaseToPojuResponse(phase: PhaseLLMResult, model: string): P
     contains_delivery: false,
     agent_suggested_phase: suggested ?? undefined,
     question_category: phase.question_category,
-    thinking_process: phase.thinking_process,
+    thinking_process: undefined,
   };
 }
 

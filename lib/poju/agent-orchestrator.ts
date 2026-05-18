@@ -76,7 +76,11 @@ export async function runPostTurnOrchestration(
   const ui: AgentOrchestratorUi = {
     showBirthForm: agentWantsBirthForm,
     showProfilePicker:
-      phase === "awaiting_profile" && !resolveSessionHasProfile(s) && !s.profile_skipped && !agentWantsBirthForm,
+      phase === "opening" &&
+      !resolveSessionHasProfile(s) &&
+      !s.profile_skipped &&
+      !agentWantsBirthForm &&
+      (s.messages.filter((m) => m.role === "user" && !m.is_rejected).length === 0),
     showContextSummary: false,
     pipelineBusy: false,
     pipelineNotice: null,

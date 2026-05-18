@@ -4,6 +4,8 @@ import { callLLM } from "@/lib/llm/router";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 import type { UserProfile } from "@/lib/profile/types";
 
+export const maxDuration = 180;
+
 function isRecord(x: unknown): x is Record<string, unknown> {
   return Boolean(x) && typeof x === "object" && !Array.isArray(x);
 }
@@ -49,11 +51,10 @@ export async function POST(req: Request) {
     const { system, user } = buildBaseAnalysisPrompt(profile);
 
     const result = await callLLM({
-      call_type: "poju_base_analysis",
+      call_type: "deep_analysis",
       system,
       messages: [{ role: "user", content: user }],
       max_tokens: 15000,
-      thinking_effort: "high",
       response_format: "json",
     });
 
@@ -76,6 +77,8 @@ export async function POST(req: Request) {
       analysis,
       model: result.actual_model,
       tokens_used: result.meta.tokens_used,
+      latency_ms: result.meta.latency_ms,
+      cost_usd: result.meta.cost_usd,
     });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Base analysis failed";

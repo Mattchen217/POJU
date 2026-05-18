@@ -107,6 +107,8 @@ export async function openRouterChatCompletionStream(
     let content = "";
     let modelOut = model;
     let tokens_used = 0;
+    let prompt_tokens = 0;
+    let completion_tokens = 0;
     let buffer = "";
 
     const reader = res.body.getReader();
@@ -129,8 +131,10 @@ export async function openRouterChatCompletionStream(
 
         if (typeof parsed.model === "string") modelOut = parsed.model;
         const usage = parsed.usage as Record<string, unknown> | undefined;
-        if (usage && typeof usage.total_tokens === "number") {
-          tokens_used = usage.total_tokens;
+        if (usage) {
+          if (typeof usage.total_tokens === "number") tokens_used = usage.total_tokens;
+          if (typeof usage.prompt_tokens === "number") prompt_tokens = usage.prompt_tokens;
+          if (typeof usage.completion_tokens === "number") completion_tokens = usage.completion_tokens;
         }
 
         const choice = (parsed.choices as Array<Record<string, unknown>> | undefined)?.[0];
@@ -160,6 +164,8 @@ export async function openRouterChatCompletionStream(
         text: content.trim(),
         model: modelOut,
         tokens_used,
+        prompt_tokens,
+        completion_tokens,
         reasoning: reasoning.trim() || undefined,
       },
     };

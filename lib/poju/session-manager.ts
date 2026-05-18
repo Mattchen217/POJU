@@ -68,7 +68,7 @@ export async function createPOJUSession(input: {
     renewals: [],
     tokens_used: 0,
     turn_count: 0,
-    current_state_hint: "greeting",
+    current_state_hint: "opening",
     main_delivery_done: false,
   });
 
@@ -118,9 +118,9 @@ function getCurrentStateHint(state: POJUSessionState): PojuV4StateHint {
   if (state.main_delivery_done) return "tracking";
   const phase = state.agent_v2?.current_phase;
   if (phase === "awaiting_confirmation") return "analyzing";
-  if (phase === "awaiting_profile") return "awaiting_profile";
-  if (state.messages.length === 0) return "greeting";
-  if (resolveSessionHasProfile(state)) return "analyzing";
+  if (phase === "opening") return "opening";
+  if (state.messages.length === 0) return "opening";
+  if (resolveSessionHasProfile(state)) return "collecting_context";
   return "collecting_context";
 }
 
@@ -153,4 +153,19 @@ export async function extendPOJUV4Session(sessionId: string): Promise<POJUSessio
 export async function listPOJUV4SessionRowsForDevice(deviceId: string) {
   const db = getPojuDb();
   return db.pojuSessionRecords.where("device_id").equals(deviceId).toArray();
+}
+
+export async function getPOJUSessionRecord(sessionId: string) {
+  if (typeof window === "undefined") return undefined;
+  return getPojuDb().pojuSessionRecords.get(sessionId);
+}
+
+/** Remove unused session row from this device (e.g. after refund). */
+export async function deletePOJUSession(sessionId: string): Promise<void> {
+  if (typeof window === "undefined") return;
+  const db = getPojuDb();
+  const row = await db.pojuSessionRecords.get(sessionId);
+  if (!row) return;
+  if (getPojuDeviceId() !== row.device_id) return;
+  await db.pojuSessionRecords.delete(sessionId);
 }

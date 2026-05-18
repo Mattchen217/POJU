@@ -1,0 +1,470 @@
+.session-prep-container {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #0a0a0f 0%, #1a1a25 100%);
+  color: #e5e5e5;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.session-prep-loading {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0a0a0f;
+  color: #888;
+}
+
+.welcome-section {
+  max-width: 600px;
+  text-align: center;
+  margin-bottom: 32px;
+  margin-top: 32px;
+}
+
+.poju-logo {
+  font-size: 32px;
+  font-weight: 700;
+  color: #d4af37;
+  letter-spacing: 8px;
+  margin-bottom: 16px;
+}
+
+.welcome-text {
+  color: #ccc;
+  line-height: 1.7;
+  margin-bottom: 24px;
+}
+
+.your-question {
+  background: rgba(212, 175, 55, 0.05);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.your-question .label {
+  color: #888;
+  font-size: 13px;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.your-question .question-text {
+  color: #e5e5e5;
+  font-style: italic;
+  margin: 0;
+}
+
+.prep-main {
+  width: 100%;
+  max-width: 600px;
+  margin-bottom: 32px;
+}
+
+.profile-list-view h2 {
+  color: #d4af37;
+  font-size: 1.25rem;
+  margin-bottom: 8px;
+}
+
+.profile-list-view > p {
+  color: #888;
+  font-size: 0.875rem;
+  margin-bottom: 16px;
+}
+
+.profiles-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+}
+
+.profile-card-button {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  width: 100%;
+}
+
+.profile-card-button:hover {
+  background: rgba(212, 175, 55, 0.05);
+  border-color: rgba(212, 175, 55, 0.4);
+}
+
+.display-name {
+  color: #e5e5e5;
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.card-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 13px;
+  color: #888;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.ready-badge {
+  background: rgba(76, 175, 80, 0.15);
+  color: #4caf50;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.usage-stats {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: #666;
+  flex-wrap: wrap;
+}
+
+.add-new-card-button {
+  background: transparent;
+  border: 2px dashed rgba(212, 175, 55, 0.3);
+  border-radius: 12px;
+  padding: 32px;
+  cursor: pointer;
+  color: #d4af37;
+  font-size: 16px;
+  transition: all 0.15s;
+  width: 100%;
+}
+
+.add-new-card-button:hover {
+  background: rgba(212, 175, 55, 0.05);
+  border-color: rgba(212, 175, 55, 0.5);
+}
+
+.plus-icon {
+  display: block;
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.birth-info-picker {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(212, 175, 55, 0.15);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.picker-title {
+  color: #d4af37;
+  margin-bottom: 8px;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.picker-description {
+  color: #888;
+  margin-bottom: 24px;
+  font-size: 0.875rem;
+}
+
+.picker-section {
+  margin-bottom: 24px;
+}
+
+.picker-section > label {
+  display: block;
+  color: #ccc;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.picker-section .hint {
+  color: #666;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+.picker-section .picker-column {
+  background: rgba(0, 0, 0, 0.3) !important;
+}
+
+.picker-section .picker-highlight {
+  border-top: 1px solid rgba(212, 175, 55, 0.3) !important;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.3) !important;
+}
+
+.gender-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.gender-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.gender-btn {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ccc;
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.gender-btn.active {
+  background: rgba(212, 175, 55, 0.15);
+  border-color: #d4af37;
+  color: #d4af37;
+}
+
+.timezone-display {
+  background: rgba(255, 255, 255, 0.02);
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  font-size: 13px;
+  color: #aaa;
+}
+
+.timezone-display .tz-value {
+  color: #87ceeb;
+  margin-left: 8px;
+}
+
+.picker-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.picker-actions button {
+  flex: 1;
+  padding: 14px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s;
+}
+
+.cancel-btn {
+  background: transparent;
+  color: #888;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.submit-btn {
+  background: #d4af37;
+  color: #0a0a0f;
+}
+
+.submit-btn:hover {
+  background: #e8c56f;
+}
+
+.refund-link-section {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  width: 100%;
+  max-width: 600px;
+  text-align: center;
+}
+
+.refund-link {
+  background: transparent;
+  border: none;
+  color: #666;
+  font-size: 13px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.refund-link:hover {
+  color: #aaa;
+}
+
+.confirm-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(10px);
+  padding: 16px;
+}
+
+.confirm-dialog {
+  background: #1a1a25;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 500px;
+  width: 100%;
+}
+
+.confirm-dialog h2 {
+  color: #d4af37;
+  margin-bottom: 12px;
+  font-size: 1.25rem;
+}
+
+.confirm-dialog .description {
+  color: #ccc;
+  margin-bottom: 24px;
+  line-height: 1.6;
+  font-size: 0.875rem;
+}
+
+.info-display {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-row .label {
+  color: #888;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.info-row .value {
+  color: #e5e5e5;
+  font-weight: 500;
+  text-align: right;
+  font-size: 14px;
+}
+
+.info-row .value-sub {
+  color: #888;
+  font-size: 13px;
+  font-weight: normal;
+}
+
+.info-row .value.tz {
+  color: #87ceeb;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+}
+
+.confirm-existing-name {
+  color: #d4af37;
+  font-size: 15px;
+  font-weight: 500;
+  margin: -8px 0 16px;
+  text-align: center;
+}
+
+.confirm-dialog .reassure {
+  background: rgba(135, 206, 235, 0.05);
+  border-left: 3px solid #87ceeb;
+  padding: 12px 16px;
+  margin-bottom: 24px;
+}
+
+.confirm-dialog .reassure p {
+  color: #87ceeb;
+  font-size: 13px;
+  margin: 0 0 4px;
+  line-height: 1.5;
+}
+
+.confirm-dialog .reassure p:last-child {
+  margin-bottom: 0;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.dialog-actions button {
+  flex: 1;
+  padding: 14px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: background 0.15s, color 0.15s;
+}
+
+.dialog-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dialog-actions .secondary {
+  background: transparent;
+  color: #888;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.dialog-actions .secondary:hover:not(:disabled) {
+  color: #ccc;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.dialog-actions .primary {
+  background: #d4af37;
+  color: #0a0a0f;
+}
+
+.dialog-actions .primary:hover:not(:disabled) {
+  background: #e8c56f;
+}
+
+.refund-page {
+  min-height: 100vh;
+  background: #0a0a0f;
+  color: #e5e5e5;
+  padding: 48px 24px;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.refund-page h1 {
+  color: #d4af37;
+  font-size: 1.5rem;
+  margin-bottom: 16px;
+}
+
+.refund-page p {
+  color: #aaa;
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.refund-page .back-link {
+  color: #87ceeb;
+  text-decoration: underline;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+}

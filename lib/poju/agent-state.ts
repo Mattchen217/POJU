@@ -1,17 +1,36 @@
 /**
- * POJU Agent 硬性状态机（POJU_v4.0_Agent_Implementation_Part1 · Step 4）
- * 阶段由代码 + LLM 建议共同约束；会话持久化字段见 `POJUSessionState.agent_v2`。
+ * POJU Agent state machine (v5 Step B: opening → collecting → confirmation → delivery → tracking).
  */
 
 import type { POJUAction } from "@/lib/poju/types";
 
 export type AgentPhase =
-  | "greeting"
-  | "awaiting_profile"
+  | "opening"
   | "collecting_context"
   | "awaiting_confirmation"
   | "delivered"
   | "tracking";
+
+/** Persisted v4 phase values normalized on read. */
+export type LegacyAgentPhase = "greeting" | "awaiting_profile";
+
+export function normalizeAgentPhase(phase: string | null | undefined): AgentPhase | null {
+  if (!phase) return null;
+  switch (phase) {
+    case "greeting":
+      return "opening";
+    case "awaiting_profile":
+      return "collecting_context";
+    case "opening":
+    case "collecting_context":
+    case "awaiting_confirmation":
+    case "delivered":
+    case "tracking":
+      return phase;
+    default:
+      return null;
+  }
+}
 
 export interface ContextCollection {
   duration: string | null;
@@ -149,12 +168,16 @@ function isFilled(v: unknown): boolean {
   return true;
 }
 
-export function createInitialAgentState(input: { original_question: string }): POJUAgentState {
+export function createInitialAgentState(input: {
+  original_question: string;
+  selected_profile_id?: string | null;
+}): POJUAgentState {
+  const selected_profile_id = input.selected_profile_id ?? null;
   return {
-    current_phase: "greeting",
+    current_phase: "opening",
     original_question: input.original_question,
-    selected_profile_id: null,
-    has_base_analysis: false,
+    selected_profile_id,
+    has_base_analysis: Boolean(selected_profile_id),
     profile_skipped: false,
     question_category: null,
     context_collected: {
@@ -225,7 +248,7 @@ export function findMissingFields(state: POJUAgentState): { general: string[]; c
 
 export interface PhaseTransitionInput {
   current_state: POJUAgentState;
-  llm_suggested_phase: AgentPhase | null;
+  llm_suggested_phase: AgentPhase | LegacyAgentPhase | null;
   user_message: string;
 }
 
@@ -236,22 +259,9 @@ export interface PhaseTransitionResult {
 }
 
 export function decidePhaseTransition(input: PhaseTransitionInput): PhaseTransitionResult {
-  const { current_state, llm_suggested_phase, user_message } = input;
-  const current = current_state.current_phase;
-
-  if (
-    /(?:want|like|let me|i'll).{0,30}(?:provide|add|fill|enter).{0,20}(?:birth|profile|info)|想.{0,5}(?:填|提供|输入).{0,5}(?:出生|八字|信息)/i.test(
-      user_message,
-    )
-  ) {
-    if (!current_state.selected_profile_id) {
-      return {
-        should_transition: true,
-        new_phase: "awaiting_profile",
-        reason: "User explicitly requested to provide birth info",
-      };
-    }
-  }
+  const { current_state, user_message } = input;
+  const llm_suggested_phase = normalizeAgentPhase(input.llm_suggested_phase ?? undefined);
+  const current = normalizeAgentPhase(current_state.current_phase) ?? current_state.current_phase;
 
   if (
     /(?:give|tell|show).{0,20}(?:analysis|reading|advice|recommendation)|现在.{0,5}(?:给我|告诉我).{0,5}(?:分析|建议|结论)/i.test(
@@ -268,44 +278,33 @@ export function decidePhaseTransition(input: PhaseTransitionInput): PhaseTransit
   }
 
   switch (current) {
-    case "greeting":
-      if (llm_suggested_phase === "awaiting_profile" || llm_suggested_phase === "collecting_context") {
-        if (!current_state.selected_profile_id && !current_state.profile_skipped) {
-          return {
-            should_transition: true,
-            new_phase: "awaiting_profile",
-            reason: "LLM detected substantive concern, requesting profile",
-          };
-        }
+    case "opening":
+      if (user_message !== "__OPENING__" && user_message.trim()) {
         return {
           should_transition: true,
           new_phase: "collecting_context",
-          reason: "Profile already exists or skipped, starting context collection",
-        };
-      }
-      break;
-
-    case "awaiting_profile":
-      if (current_state.selected_profile_id || current_state.profile_skipped) {
-        return {
-          should_transition: true,
-          new_phase: "collecting_context",
-          reason: "Profile selected or skipped, starting context collection",
+          reason: "User responded to opening, entering collection",
         };
       }
       break;
 
     case "collecting_context": {
       const complete = current_state.collection_completeness;
-      const profileReady = Boolean(current_state.selected_profile_id) || current_state.profile_skipped;
-      const llmReady =
-        llm_suggested_phase === "awaiting_confirmation" && complete >= 0.5 && profileReady;
-      const scoreReady = complete >= 0.72 && profileReady;
-      if (llmReady || scoreReady) {
+      if (complete >= 0.7) {
         return {
           should_transition: true,
           new_phase: "awaiting_confirmation",
           reason: `Collection sufficient (${(complete * 100).toFixed(0)}%)`,
+        };
+      }
+      if (
+        /(?:可以了|够了|生成|分析|建议|tell me|ready|enough|generate)/i.test(user_message) &&
+        complete >= 0.4
+      ) {
+        return {
+          should_transition: true,
+          new_phase: "awaiting_confirmation",
+          reason: "User requested early delivery, completeness OK",
         };
       }
       break;
@@ -352,14 +351,17 @@ export function decidePhaseTransition(input: PhaseTransitionInput): PhaseTransit
 export function applyPhaseTransition(state: POJUAgentState, transition: PhaseTransitionResult): POJUAgentState {
   if (!transition.should_transition) return state;
 
+  const from = normalizeAgentPhase(state.current_phase) ?? state.current_phase;
+  const to = transition.new_phase;
+
   return {
     ...state,
-    current_phase: transition.new_phase,
+    current_phase: to,
     phase_history: [
       ...state.phase_history,
       {
-        from_phase: state.current_phase,
-        to_phase: transition.new_phase,
+        from_phase: from,
+        to_phase: to,
         triggered_at: new Date().toISOString(),
         reason: transition.reason,
       },

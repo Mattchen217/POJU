@@ -8,7 +8,8 @@ import { loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
 import { setPOJUV4SessionStatus } from "@/lib/poju/v4-lifecycle";
 import { POJUChatUI } from "@/components/poju/POJUChatUI";
 import { AppDialogProvider } from "@/components/ui/app-dialog";
-import { getWelcomeMessage } from "@/lib/poju/welcome-messages";
+import { createInitialAgentState } from "@/lib/poju/agent-state";
+import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import type { POJUSessionState } from "@/lib/poju/types";
 import { Link, useRouter } from "@/i18n/navigation";
 
@@ -54,22 +55,22 @@ export default function PojuSessionDeepLinkPage() {
       return;
     }
 
-    if (local.messages.length === 0) {
-      local.messages.push({
-        role: "assistant",
-        content: getWelcomeMessage(locale),
-        timestamp: new Date().toISOString(),
-        meta: {
-          current_state: "greeting",
-          user_intent: "greeting",
-        },
+    if (!resolveSessionHasProfile(local) && !local.profile_skipped) {
+      router.replace(`/poju/session/${sessionId}/prepare`);
+      return;
+    }
+
+    if (!local.agent_v2 && resolveSessionHasProfile(local)) {
+      local.agent_v2 = createInitialAgentState({
+        original_question: local.original_question,
+        selected_profile_id: local.selected_stored_profile_id,
       });
       await savePOJUSession(local);
     }
 
     setSession(local);
     setLoading(false);
-  }, [locale, sessionId]);
+  }, [locale, router, sessionId]);
 
   useEffect(() => {
     void load();

@@ -6,7 +6,8 @@ import {
   generateGeminiChatCompletion,
   getGeminiClient,
 } from "@/lib/llm/gemini-shared";
-import { isOpenRouterConfigured, openRouterChatCompletion } from "@/lib/llm/openrouter-shared";
+import { callLLM } from "@/lib/llm/router";
+import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
 import {
   detectInitialLanguage,
@@ -18,17 +19,17 @@ import {
   type PhaseLLMResult,
   sanitizerStateFromSession,
 } from "@/lib/llm/phases/types";
-import type { AgentPhase } from "@/lib/poju/agent-state";
+import { normalizeAgentPhase, type AgentPhase } from "@/lib/poju/agent-state";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
 
-const VALID_SUGGESTED: AgentPhase[] = ["greeting", "awaiting_profile", "collecting_context"];
+const VALID_SUGGESTED: AgentPhase[] = ["opening", "collecting_context"];
 
 export function shouldUseGreetingPhase(session: POJUSessionState, profile: UserProfile | null): boolean {
   if (resolveSessionHasProfile(session) || profile || session.profile_skipped || session.main_delivery_done) return false;
-  const phase = session.agent_v2?.current_phase;
-  if (phase && phase !== "greeting") return false;
+  const phase = normalizeAgentPhase(session.agent_v2?.current_phase);
+  if (phase && phase !== "opening") return false;
   return true;
 }
 
@@ -55,7 +56,7 @@ You are at the EARLY STAGE of conversation. You do NOT have:
 1. Greet warmly if they say hello
 2. Listen attentively if they share concern
 3. Ask thoughtful, NEUTRAL questions to understand the situation
-4. When they've shared substantive concern → suggest moving to "awaiting_profile"
+4. When they've shared substantive concern → set \`suggested_phase\` to "collecting_context" and \`action_requested\` to "show_birth_form" when birth details may help
 
 # 🚨 ABSOLUTE FORBIDDEN BEHAVIORS
 
@@ -93,7 +94,7 @@ Session locale hint: ${locale}
 
 # 🔄 PHASE PROGRESSION
 
-When user has shared substantive concern (not just "hi") and personalized BaZi may help, explain in \`response\` why birth details help (device-only), set \`action_requested\` to "show_birth_form", and \`suggested_phase\` to "awaiting_profile".
+When user has shared substantive concern (not just "hi") and personalized BaZi may help, explain in \`response\` why birth details help (device-only), set \`action_requested\` to "show_birth_form", and \`suggested_phase\` to "collecting_context".
 Substantive concern means:
 - A specific area of life is mentioned (career, relationship, money, health, family, decision)
 - AND they express some level of difficulty or question
@@ -108,7 +109,7 @@ Be conservative — only extract what's EXPLICITLY stated.
 
 {
   "response": "Your reply. 50-150 words. Natural, warm, NEUTRAL. No personality claims.",
-  "suggested_phase": "greeting" | "awaiting_profile" | null,
+  "suggested_phase": "opening" | "collecting_context" | null,
   "action_requested": "continue_chat" | "show_birth_form",
   "question_category": "career" | "relationship" | "wealth" | "health" | "family" | "decision" | "interpersonal" | "other" | null,
   "context_updates": {}
@@ -148,8 +149,8 @@ function parseGreetingJson(rawText: string): Record<string, unknown> {
 
 function normalizeSuggestedPhase(raw: unknown): AgentPhase | null {
   if (typeof raw !== "string") return null;
-  const s = raw.trim() as AgentPhase;
-  return VALID_SUGGESTED.includes(s) ? s : null;
+  const normalized = normalizeAgentPhase(raw.trim());
+  return normalized && VALID_SUGGESTED.includes(normalized) ? normalized : null;
 }
 
 async function callGreetingTransport(
@@ -163,21 +164,18 @@ async function callGreetingTransport(
   reasoning_details?: unknown;
 }> {
   if (isOpenRouterConfigured()) {
-    const msgs = [
-      { role: "system" as const, content: system },
-      ...messages.map((m) => ({ role: m.role, content: m.content })),
-    ];
-    const out = await openRouterChatCompletion({
-      messages: msgs,
+    const out = await callLLM({
+      call_type: "chat_flash",
+      system,
+      messages,
       temperature: 0.45,
       max_tokens: 1500,
-      json_mode: true,
-      reasoning_effort: "high",
+      response_format: "json",
     });
     return {
-      content: out.text,
-      model: out.model,
-      tokens_used: out.tokens_used,
+      content: out.content,
+      model: out.actual_model,
+      tokens_used: out.meta.tokens_used,
       reasoning: out.reasoning,
       reasoning_details: out.reasoning_details,
     };
@@ -235,7 +233,7 @@ export async function callGreetingPhase(input: PhaseLLMInput): Promise<PhaseLLMR
   let action_requested: PojuV4ActionRequested | null =
     rawAction === "show_birth_form" || rawAction === "continue_chat" ? rawAction : null;
   const suggested = normalizeSuggestedPhase(parsed.suggested_phase);
-  if (!action_requested && suggested === "awaiting_profile") {
+  if (!action_requested && rawAction === "show_birth_form") {
     action_requested = "show_birth_form";
   }
 

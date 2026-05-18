@@ -27,7 +27,7 @@ export function MainDeliveryView({ fullText, actions, onActionUpdate }: Props) {
         <span className="inline-block rounded-full bg-amber-400/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-200">
           {tDelivery("badge")}
         </span>
-        <p className="mt-2 text-sm italic text-white/70">{tDelivery("intro")}</p>
+        <p className="mt-2 text-[1rem] leading-7 italic text-white/70">{tDelivery("intro")}</p>
       </header>
 
       {sections.map((section, idx) => (
@@ -45,7 +45,7 @@ export function MainDeliveryView({ fullText, actions, onActionUpdate }: Props) {
         </div>
       ) : null}
 
-      <p className="text-sm italic text-white/60">{tDelivery("reminder")}</p>
+      <p className="text-[1rem] leading-7 italic text-white/60">{tDelivery("reminder")}</p>
     </div>
   );
 }
@@ -62,7 +62,7 @@ function DeliverySectionView({ section }: { section: DeliverySection }) {
   return (
     <section className="space-y-2">
       {section.title ? <h3 className={`text-base font-semibold uppercase tracking-wide ${tone}`}>{section.title}</h3> : null}
-      <div className="space-y-3 text-sm leading-relaxed text-white/85">
+      <div className="space-y-4 text-[1rem] leading-[1.75] text-white/85">
         {section.paragraphs.map((p, i) => (
           <p key={i} className="m-0 whitespace-pre-wrap">
             {p}

@@ -37,6 +37,7 @@ export interface POJUSessionRecord {
   tokens_used: number;
   turn_count: number;
   current_state_hint:
+    | "opening"
     | "greeting"
     | "collecting_context"
     | "awaiting_profile"
@@ -86,17 +87,19 @@ export interface StoredProfileRecord {
   base_analysis_at?: Date;
 }
 
+/** v5: 时辰段 + 时区（无经纬度/地点名）。Legacy rows normalized on read. */
 export interface StoredProfileBirthInfo {
   year: number;
   month: number;
   day: number;
-  hour: number;
-  minute: number;
-  /** Stored for hashing / UI; maps to `BirthGender` when calling shunshi. */
+  hour_period?: import("@/lib/profile/types").HourPeriod;
+  /** @deprecated v4 legacy */
+  hour?: number;
+  minute?: number;
   gender: "M" | "F" | "X";
   timezone: string;
-  longitude: number;
-  latitude: number;
+  longitude?: number;
+  latitude?: number;
   location_name?: string;
 }
 

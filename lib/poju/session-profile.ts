@@ -2,7 +2,7 @@
  * Session-scoped profile semantics (v4): never infer BaZi profile from legacy `userProfiles` alone.
  */
 
-import { getUserProfile } from "@/lib/profile/storage";
+import { getUserProfile } from "@/lib/profile/active-profile";
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
