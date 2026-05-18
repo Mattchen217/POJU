@@ -7,6 +7,7 @@ import { getPojuDb } from "@/lib/db/poju-db";
 import { loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
 import { setPOJUV4SessionStatus } from "@/lib/poju/v4-lifecycle";
 import { POJUChatUI } from "@/components/poju/POJUChatUI";
+import { AppDialogProvider } from "@/components/ui/app-dialog";
 import { getWelcomeMessage } from "@/lib/poju/welcome-messages";
 import type { POJUSessionState } from "@/lib/poju/types";
 import { Link, useRouter } from "@/i18n/navigation";
@@ -121,5 +122,9 @@ export default function PojuSessionDeepLinkPage() {
     );
   }
 
-  return <POJUChatUI session={session} onSessionUpdate={setSession} locale={locale} />;
+  return (
+    <AppDialogProvider>
+      <POJUChatUI session={session} onSessionUpdate={setSession} locale={locale} />
+    </AppDialogProvider>
+  );
 }

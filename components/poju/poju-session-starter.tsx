@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "@/i18n/navigation";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useState, type ReactNode } from "react";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
 import { getActivePOJUSessionsByDevice } from "@/lib/poju/session-manager";
@@ -21,7 +21,9 @@ type Props = {
 export function PojuSessionStarter({ className, children }: Props) {
   const router = useRouter();
   const locale = useLocale();
+  const t = useTranslations("poju.chat");
   const [busy, setBusy] = useState(false);
+  const [resumePrompt, setResumePrompt] = useState<{ sessionId: string } | null>(null);
 
   async function onClick() {
     if (busy) return;
@@ -31,48 +33,89 @@ export function PojuSessionStarter({ className, children }: Props) {
       const v4Active = await getActivePOJUSessionsByDevice(deviceId);
       if (v4Active.length > 0) {
         v4Active.sort((a, b) => b.last_interaction_at.getTime() - a.last_interaction_at.getTime());
-        const sessionId = v4Active[0].session_id;
-        const go = window.confirm(
-          "You already have an active POJU session on this device. Open it now, or Cancel to stay on this page.",
-        );
-        if (go) {
-          queueMicrotask(() => {
-            router.push(`/poju/session/${sessionId}`);
-          });
-        }
+        setResumePrompt({ sessionId: v4Active[0].session_id });
         return;
       }
 
-      sessionStorage.setItem("poju_pending_question", MOCK_PENDING_QUESTION);
-      const returnUrl =
-        typeof window !== "undefined"
-          ? `${window.location.origin}/${locale}/poju/payment-success`
-          : `/${locale}/poju/payment-success`;
-      const pay = await fetch("/api/payments/create", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ product: "poju", locale, return_url: returnUrl }),
-      });
-      const p = (await pay.json()) as {
-        checkout_url?: string;
-        payment_url?: string;
-        order_id?: string;
-        ok?: boolean;
-      };
-      const target = p.payment_url ?? p.checkout_url;
-      if (target) {
-        if (p.order_id) sessionStorage.setItem("poju_pending_order_id", p.order_id);
-        window.location.href = target;
-        return;
-      }
+      await startNewSession();
     } finally {
       setBusy(false);
     }
   }
 
+  async function startNewSession() {
+    sessionStorage.setItem("poju_pending_question", MOCK_PENDING_QUESTION);
+    const returnUrl =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/${locale}/poju/payment-success`
+        : `/${locale}/poju/payment-success`;
+    const pay = await fetch("/api/payments/create", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ product: "poju", locale, return_url: returnUrl }),
+    });
+    const p = (await pay.json()) as {
+      checkout_url?: string;
+      payment_url?: string;
+      order_id?: string;
+      ok?: boolean;
+    };
+    const target = p.payment_url ?? p.checkout_url;
+    if (target) {
+      if (p.order_id) sessionStorage.setItem("poju_pending_order_id", p.order_id);
+      window.location.href = target;
+    }
+  }
+
+  function openExistingSession() {
+    if (!resumePrompt) return;
+    queueMicrotask(() => {
+      router.push(`/poju/session/${resumePrompt.sessionId}`);
+    });
+    setResumePrompt(null);
+  }
+
   return (
-    <button type="button" disabled={busy} onClick={() => void onClick()} className={className}>
-      {busy ? "…" : children}
-    </button>
+    <>
+      <button type="button" disabled={busy} onClick={() => void onClick()} className={className}>
+        {busy ? "…" : children}
+      </button>
+
+      {resumePrompt ? (
+        <div
+          className="fixed inset-0 z-[600] flex items-center justify-center bg-black/70 p-4"
+          role="presentation"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setResumePrompt(null);
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="w-full max-w-md rounded-2xl border border-white/10 bg-gradient-to-br from-[#221f33] to-[#1a1824] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.45)]"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-lg font-semibold text-on-surface">{t("active_session_title")}</h2>
+            <p className="mt-3 text-sm leading-relaxed text-on-surface-variant">{t("active_session_body")}</p>
+            <div className="mt-6 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                className="rounded-lg border border-white/15 px-4 py-2 text-sm text-on-surface-variant hover:bg-white/5"
+                onClick={() => setResumePrompt(null)}
+              >
+                {t("dialog_cancel")}
+              </button>
+              <button
+                type="button"
+                className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500"
+                onClick={openExistingSession}
+              >
+                {t("active_session_open")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }
