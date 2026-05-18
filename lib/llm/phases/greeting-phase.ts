@@ -12,6 +12,7 @@ import {
   detectInitialLanguage,
   sanitizeResponse,
 } from "@/lib/llm/phases/response-sanitizer";
+import type { PojuV4ActionRequested } from "@/lib/poju/types";
 import {
   type PhaseLLMInput,
   type PhaseLLMResult,
@@ -92,7 +93,7 @@ Session locale hint: ${locale}
 
 # 🔄 PHASE PROGRESSION
 
-When user has shared substantive concern (not just "hi"), set suggested_phase to "awaiting_profile".
+When user has shared substantive concern (not just "hi") and personalized BaZi may help, explain in \`response\` why birth details help (device-only), set \`action_requested\` to "show_birth_form", and \`suggested_phase\` to "awaiting_profile".
 Substantive concern means:
 - A specific area of life is mentioned (career, relationship, money, health, family, decision)
 - AND they express some level of difficulty or question
@@ -108,6 +109,7 @@ Be conservative — only extract what's EXPLICITLY stated.
 {
   "response": "Your reply. 50-150 words. Natural, warm, NEUTRAL. No personality claims.",
   "suggested_phase": "greeting" | "awaiting_profile" | null,
+  "action_requested": "continue_chat" | "show_birth_form",
   "question_category": "career" | "relationship" | "wealth" | "health" | "family" | "decision" | "interpersonal" | "other" | null,
   "context_updates": {}
 }
@@ -229,9 +231,18 @@ export async function callGreetingPhase(input: PhaseLLMInput): Promise<PhaseLLMR
     context_updates.question_category = question_category;
   }
 
+  const rawAction = typeof parsed.action_requested === "string" ? parsed.action_requested.trim() : null;
+  let action_requested: PojuV4ActionRequested | null =
+    rawAction === "show_birth_form" || rawAction === "continue_chat" ? rawAction : null;
+  const suggested = normalizeSuggestedPhase(parsed.suggested_phase);
+  if (!action_requested && suggested === "awaiting_profile") {
+    action_requested = "show_birth_form";
+  }
+
   return {
     response,
-    suggested_phase: normalizeSuggestedPhase(parsed.suggested_phase),
+    suggested_phase: suggested,
+    action_requested,
     context_updates,
     question_category,
     current_summary: null,

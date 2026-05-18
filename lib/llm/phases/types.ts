@@ -1,5 +1,5 @@
 import type { AgentPhase, POJUAgentState } from "@/lib/poju/agent-state";
-import type { POJUSessionState } from "@/lib/poju/types";
+import type { POJUSessionState, PojuV4ActionRequested } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
 
 /** Input for phase-specific LLM modules (Step 10+). */
@@ -14,6 +14,8 @@ export interface PhaseLLMInput {
 export interface PhaseLLMResult {
   response: string;
   suggested_phase: AgentPhase | null;
+  /** When the model wants the birth form UI, set together with an explanatory `response`. */
+  action_requested?: PojuV4ActionRequested | null;
   context_updates: Record<string, unknown> | null;
   question_category: string | null;
   current_summary: unknown | null;

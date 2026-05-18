@@ -79,8 +79,8 @@ export function MessageBubble({
         {isUser ? (
           <p className="px-1 text-[11px] uppercase tracking-[0.12em] text-on-surface-variant">You</p>
         ) : null}
-        {!isUser && !isWelcomePanel ? (
-          <ThinkingProcessDetails thinkingProcess={message.meta?.thinking_process} />
+        {!isUser && !isWelcomePanel && message.meta?.thinking_process?.trim() ? (
+          <ThinkingProcessDetails thinkingProcess={message.meta.thinking_process} />
         ) : null}
         <div
           className={`rounded-2xl px-5 py-4 text-sm leading-relaxed shadow-[0_8px_30px_rgba(0,0,0,0.2)] ring-1 ring-white/5 ${

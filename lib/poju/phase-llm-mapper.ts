@@ -1,7 +1,7 @@
 import type { AgentPhase } from "@/lib/poju/agent-state";
 import type { PhaseLLMResult } from "@/lib/llm/phases/types";
 import { applyPojuOutputPolicies } from "@/lib/poju/output-policy";
-import type { POJUSessionState } from "@/lib/poju/types";
+import type { POJUSessionState, PojuV4ActionRequested } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
 
 /** Maps phase-module JSON output → `/api/poju/chat` payload + agent transition hints. */
@@ -11,8 +11,18 @@ export function mapPhaseResultToChatPayload(
 ): Record<string, unknown> {
   const suggested = phase.suggested_phase ?? ctx.fallbackPhase;
   let current_state: string = "collecting_context";
-  let action_requested: string = "continue_chat";
+  let action_requested: PojuV4ActionRequested = "continue_chat";
   let user_intent = "sharing_situation";
+
+  const phaseAction = phase.action_requested;
+  if (
+    phaseAction === "continue_chat" ||
+    phaseAction === "show_birth_form" ||
+    phaseAction === "deliver_main" ||
+    phaseAction === "track_progress"
+  ) {
+    action_requested = phaseAction;
+  }
 
   switch (suggested) {
     case "greeting":
@@ -21,7 +31,7 @@ export function mapPhaseResultToChatPayload(
       break;
     case "awaiting_profile":
       current_state = "awaiting_profile";
-      action_requested = "show_birth_form";
+      if (action_requested === "continue_chat") action_requested = "show_birth_form";
       break;
     case "awaiting_confirmation":
       current_state = "awaiting_confirmation";

@@ -2,9 +2,8 @@ import {
   computeContextReadinessScore,
   countContextSignals,
   countUserTurns,
-  getLastUserMessageContent,
 } from "@/lib/poju/context-readiness";
-import { resolveSessionHasProfile, shouldForceBirthForm } from "@/lib/poju/session-profile";
+import { lastAssistantRequestsBirthForm, resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
 import { sanitizeResponse } from "@/lib/llm/phases/response-sanitizer";
@@ -61,7 +60,7 @@ function mainDeliveryAllowed(
 
 /**
  * Server-side agent policy: gates main delivery, blocks pre-profile trait hallucinations,
- * and forces birth form on deep topics when profile is missing.
+ * and blocks pre-profile delivery; birth form UI is opened only when the model sets `action_requested`.
  */
 export function applyPojuOutputPolicies<T extends Record<string, unknown>>(parsed: T, ctx: PolicyContext): T {
   const { session, profile, locale } = ctx;
@@ -70,17 +69,13 @@ export function applyPojuOutputPolicies<T extends Record<string, unknown>>(parse
   const userTurns = countUserTurns(session);
   const score = computeContextReadinessScore(session, hasProfile);
   const contextSignals = countContextSignals(session);
-  const lastUser = getLastUserMessageContent(session);
   const phase = session.agent_v2?.current_phase;
 
   const out = { ...parsed } as Record<string, unknown>;
   let response = String(out.response ?? "");
 
-  const forceBirthForm = shouldForceBirthForm(session, lastUser);
-
-  if (forceBirthForm) {
-    out.action_requested = "show_birth_form";
-  }
+  const modelWantsBirthForm = out.action_requested === "show_birth_form";
+  const askBirthInCopy = modelWantsBirthForm || lastAssistantRequestsBirthForm(session);
 
   const deliveryAllowed = mainDeliveryAllowed(hasProfile, profileSkipped, score, userTurns, contextSignals);
 
@@ -100,7 +95,7 @@ export function applyPojuOutputPolicies<T extends Record<string, unknown>>(parse
         response =
           phase === "awaiting_confirmation"
             ? traitGateResponse(locale, false)
-            : traitGateResponse(locale, forceBirthForm || (!hasProfile && !profileSkipped));
+            : traitGateResponse(locale, modelWantsBirthForm || (!hasProfile && !profileSkipped));
       }
     }
     if (out.action_requested === "deliver_main") {
@@ -113,7 +108,7 @@ export function applyPojuOutputPolicies<T extends Record<string, unknown>>(parse
       out.contains_delivery = false;
       out.main_delivery = null;
       out.new_actions = [];
-      out.action_requested = forceBirthForm ? "show_birth_form" : "continue_chat";
+      out.action_requested = modelWantsBirthForm ? "show_birth_form" : "continue_chat";
       if (DELIVERY_SECTION_RE.test(response)) {
         response = traitGateResponse(locale, true);
       }
@@ -122,18 +117,18 @@ export function applyPojuOutputPolicies<T extends Record<string, unknown>>(parse
       FORBIDDEN_PRE_PROFILE_TRAIT_RE.test(response) ||
       (!session.main_delivery_done && PREMATURE_DELIVERY_PROMISE_RE.test(response))
     ) {
-      response = traitGateResponse(locale, forceBirthForm || out.action_requested === "show_birth_form");
+      response = traitGateResponse(locale, modelWantsBirthForm);
       out.contains_delivery = false;
       out.main_delivery = null;
       out.new_actions = [];
       out.current_state = "collecting_context";
-      if (!forceBirthForm) out.action_requested = (out.action_requested as string) || "continue_chat";
+      if (!modelWantsBirthForm) out.action_requested = (out.action_requested as string) || "continue_chat";
     }
     response = sanitizeResponse(response, sanitizerStateFromSession(session));
   }
 
   if (!hasProfile && !profileSkipped && out.action_requested === "deliver_main") {
-    out.action_requested = forceBirthForm ? "show_birth_form" : "continue_chat";
+    out.action_requested = modelWantsBirthForm ? "show_birth_form" : "continue_chat";
   }
 
   if (out.contains_delivery && !deliveryAllowed) {
@@ -147,7 +142,7 @@ export function applyPojuOutputPolicies<T extends Record<string, unknown>>(parse
       out.current_state = hasProfile ? "analyzing" : profileSkipped ? "analyzing" : "collecting_context";
     }
     if (typeof response === "string" && DELIVERY_SECTION_RE.test(response)) {
-      response = traitGateResponse(locale, forceBirthForm || (!hasProfile && !profileSkipped));
+      response = traitGateResponse(locale, askBirthInCopy || (!hasProfile && !profileSkipped));
     }
   }
 

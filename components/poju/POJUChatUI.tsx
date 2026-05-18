@@ -30,8 +30,8 @@ import {
 import { getLastUserMessageContent } from "@/lib/poju/context-readiness";
 import {
   clearBirthFormActionIfProfileBound,
+  lastAssistantRequestsBirthForm,
   resolveSessionHasProfile,
-  shouldForceBirthForm,
   withSessionProfileFlags,
 } from "@/lib/poju/session-profile";
 import { applyPhaseTransition } from "@/lib/poju/agent-state";
@@ -97,8 +97,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const [sending, setSending] = useState(false);
   const [birthFlowStage, setBirthFlowStage] = useState<BirthProfileFlowStage | null>(null);
   const [birthAnalysisFailed, setBirthAnalysisFailed] = useState(false);
-  const birthFlowPendingRef = useRef(false);
-  const birthIntroAppendedRef = useRef(false);
   const summaryIntroAppendedRef = useRef(false);
   const [summaryFormDismissed, setSummaryFormDismissed] = useState(false);
   const [extending, setExtending] = useState(false);
@@ -200,33 +198,20 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   }, [session.session_id, session.original_question, session.agent_v2, session.context_collected]);
 
   useEffect(() => {
-    if (resolveSessionHasProfile(session)) {
+    if (resolveSessionHasProfile(session) || session.profile_skipped) {
       setBirthFlowStage(null);
-      birthFlowPendingRef.current = false;
-      birthIntroAppendedRef.current = false;
       return;
     }
-    if (session.profile_skipped || sending || birthFlowBlocking) return;
-
-    const lastAssistant = [...session.messages].reverse().find((m) => m.role === "assistant");
-    const lastUser = getLastUserMessageContent(session);
-    const wantsBirthFlow =
-      birthFlowPendingRef.current ||
-      lastAssistant?.meta?.action_requested === "show_birth_form" ||
-      shouldForceBirthForm(session, lastUser);
-
-    if (!wantsBirthFlow) return;
-
-    if (!birthFlowStage) {
-      if (!birthIntroAppendedRef.current) {
-        birthIntroAppendedRef.current = true;
-        const withIntro = clearBirthFormActionIfProfileBound(appendBirthFlowMessage(session, locale, "intro"));
-        onSessionUpdate(withIntro);
-        void savePOJUSession(withIntro);
-      }
-      setBirthFlowStage("intro");
+    if (sending || birthFlowStage === "received" || birthFlowStage === "analyzing" || birthFlowStage === "complete") {
+      return;
     }
-  }, [session, locale, sending, birthFlowStage, birthFlowBlocking]);
+
+    if (lastAssistantRequestsBirthForm(session)) {
+      setBirthFlowStage((prev) => (prev === "received" || prev === "analyzing" ? prev : "form"));
+    } else if (birthFlowStage === "form" || birthFlowStage === "intro") {
+      setBirthFlowStage(null);
+    }
+  }, [session, sending, birthFlowStage]);
 
   useEffect(() => {
     const downgraded = downgradePrematureConfirmationPhase(session);
@@ -315,18 +300,16 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       onSessionUpdate(orch.session);
       await savePOJUSession(orch.session);
       if (!resolveSessionHasProfile(orch.session)) {
-        if (orch.ui.showBirthForm) birthFlowPendingRef.current = true;
+        if (orch.ui.showBirthForm) setBirthFlowStage("form");
         if (orch.ui.showProfilePicker) setShowProfilePicker(true);
       }
       if (orch.ui.pipelineNotice) setSituationNotice(orch.ui.pipelineNotice);
       if (orch.ui.pipelineError) setSituationError(orch.ui.pipelineError);
       setPipelineBusy(orch.ui.pipelineBusy);
-      const lastAssistant = [...orch.session.messages].reverse().find((m) => m.role === "assistant");
-      const tp = lastAssistant?.meta?.thinking_process?.trim();
-      if (tp) {
-        setLiveThinking(tp);
-        setThinkingPanelOpen(true);
-      } else if (!birthFlowStage || birthFlowStage === "intro" || birthFlowStage === "form") {
+      // Thinking lives on each assistant message (MessageBubble). Close the live panel so it
+      // does not duplicate the same reasoning block after the reply is persisted.
+      setLiveThinking("");
+      if (!birthFlowStage || birthFlowStage === "intro" || birthFlowStage === "form") {
         setThinkingPanelOpen(false);
       }
     } catch (err) {
@@ -401,9 +384,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     setSummaryFormDismissed(false);
     summaryIntroAppendedRef.current = false;
     setBirthFlowStage(null);
-    birthFlowPendingRef.current = false;
-    birthIntroAppendedRef.current = false;
     setShowProfilePicker(false);
+    setBirthFlowStage(null);
 
     if (rejected) return;
 
@@ -612,9 +594,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     setBirthFlowStage("complete");
     scrollChatToBottom("smooth");
 
-    birthFlowPendingRef.current = false;
-    birthIntroAppendedRef.current = false;
-
     window.setTimeout(() => {
       setBirthFlowStage(null);
       setThinkingPanelOpen(false);
@@ -641,8 +620,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   async function handleStoredProfileSelected(profileId: string) {
     setShowProfilePicker(false);
     setBirthFlowStage(null);
-    birthFlowPendingRef.current = false;
-    birthIntroAppendedRef.current = false;
     const s = sessionRef.current;
     await recordProfileUsage(profileId, "poju");
     let updatedSession = withSessionProfileFlags(
@@ -776,8 +753,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   async function handleProfileSkipped() {
     const s = sessionRef.current;
     setBirthFlowStage(null);
-    birthFlowPendingRef.current = false;
-    birthIntroAppendedRef.current = false;
     setShowProfilePicker(false);
     const updatedSession: POJUSessionState = {
       ...s,

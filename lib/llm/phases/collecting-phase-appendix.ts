@@ -11,8 +11,8 @@ export function collectingPhaseSystemAppendix(session: POJUSessionState, profile
 - Gather facts: duration, trigger, emotions, what was tried, desired outcome, who is involved.
 - Do **not** output ═══ ANALYSIS ═══, ═══ CONCLUSION ═══, or full action-plan packages — Step 9 delivers those after the user confirms a summary.
 - Do **not** invent BaZi / 五行 / 用神 / personality-from-chart claims unless birth data is bound to **this** session.
-${hasProfile ? "- Birth profile is on file for this session: you may reference chart themes only at a high level; still no final delivery blocks in chat." : "- No birth profile for this session yet: stay generic; if the topic needs BaZi, set action_requested to show_birth_form."}
-- JSON only; keep \`contains_delivery\` false and \`action_requested\` continue_chat or show_birth_form.
+${hasProfile ? "- Birth profile is on file for this session: you may reference chart themes only at a high level; still no final delivery blocks in chat." : "- No birth profile yet: if this topic needs BaZi, explain why in your response and set `action_requested` to show_birth_form (the client opens the form). Do not assume the form is already open."}
+- JSON only; keep \`contains_delivery\` false; \`action_requested\` is continue_chat or show_birth_form.
 `.trim();
 }
 

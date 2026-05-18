@@ -10,8 +10,8 @@ import { createInitialAgentState } from "@/lib/poju/agent-state";
 import { buildFallbackContextSummary } from "@/lib/poju/context-summary-builder";
 import { computeSituationContextFingerprint } from "@/lib/poju/situation-context-fingerprint";
 import {
+  lastAssistantRequestsBirthForm,
   resolveSessionHasProfile,
-  shouldForceBirthForm,
   withSessionProfileFlags,
 } from "@/lib/poju/session-profile";
 import { downgradePrematureConfirmationPhase } from "@/lib/poju/summary-readiness";
@@ -67,16 +67,16 @@ export async function runPostTurnOrchestration(
   opts: { locale: string; lastUserMessage?: string; autoPipeline?: boolean },
 ): Promise<PostTurnOrchestrationResult> {
   const locale = opts.locale;
-  const lastUser = opts.lastUserMessage?.trim() ?? "";
   const auto = opts.autoPipeline !== false;
 
   let s = withSessionProfileFlags(ensureContextSummary(downgradePrematureConfirmationPhase(session)));
   const phase = s.agent_v2?.current_phase;
+  const agentWantsBirthForm = lastAssistantRequestsBirthForm(s);
 
   const ui: AgentOrchestratorUi = {
-    showBirthForm: shouldForceBirthForm(s, lastUser),
+    showBirthForm: agentWantsBirthForm,
     showProfilePicker:
-      phase === "awaiting_profile" && !resolveSessionHasProfile(s) && !s.profile_skipped && !shouldForceBirthForm(s, lastUser),
+      phase === "awaiting_profile" && !resolveSessionHasProfile(s) && !s.profile_skipped && !agentWantsBirthForm,
     showContextSummary: false,
     pipelineBusy: false,
     pipelineNotice: null,

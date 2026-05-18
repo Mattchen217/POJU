@@ -25,9 +25,17 @@ export function resolveSessionHasProfile(session: POJUSessionState): boolean {
   return false;
 }
 
+/** @deprecated UI uses `lastAssistantRequestsBirthForm` (model `action_requested`) only. */
 export function shouldForceBirthForm(session: POJUSessionState, lastUserMessage: string): boolean {
   if (resolveSessionHasProfile(session) || session.profile_skipped) return false;
   return lastUserMessage.trim().length > 0 && DEEP_LIFE_TOPIC_RE.test(lastUserMessage);
+}
+
+/** True when the latest assistant turn asked the client to open the birth form. */
+export function lastAssistantRequestsBirthForm(session: POJUSessionState): boolean {
+  if (resolveSessionHasProfile(session) || session.profile_skipped) return false;
+  const last = [...session.messages].reverse().find((m) => m.role === "assistant");
+  return last?.meta?.action_requested === "show_birth_form";
 }
 
 /** Sync legacy `has_profile` flag with resolver (call after profile bind). */
