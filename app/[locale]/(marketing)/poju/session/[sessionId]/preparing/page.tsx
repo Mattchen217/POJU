@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useParams, useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { ChartReadingLoader } from "@/components/poju/ChartReadingLoader";
+import { PreparingAnalyzingSpline } from "@/components/poju/PreparingAnalyzingSpline";
 import { createInitialAgentState } from "@/lib/poju/agent-state";
 import { generateBaseAnalysis } from "@/lib/llm/deepseek/base-analysis";
 import type { StoredProfileData } from "@/lib/db/poju-db";
@@ -17,8 +18,16 @@ import { loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
 import { withSessionProfileFlags } from "@/lib/poju/session-profile";
 import "@/styles/chart-loader.css";
 
+/** Spline analyzing scene must stay visible at least this long before entering chat. */
+const PREPARING_MIN_SPLINE_MS = 5000;
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitRemainingMinSpline(startedAt: number): Promise<void> {
+  const remaining = PREPARING_MIN_SPLINE_MS - (Date.now() - startedAt);
+  if (remaining > 0) await sleep(remaining);
 }
 
 function PreparingInner() {
@@ -75,6 +84,7 @@ function PreparingInner() {
   }
 
   async function startPreparation() {
+    const splineStartedAt = Date.now();
     try {
       setCurrentStep("loading");
       setError(null);
@@ -110,20 +120,22 @@ function PreparingInner() {
         const refreshed = await getStoredProfile(profileId);
         if (refreshed) setProfile(refreshed);
         await bindSessionWithBaseAnalysis(profileId);
-        await sleep(2000);
+        await waitRemainingMinSpline(splineStartedAt);
         router.replace(`/poju/session/${sessionId}`);
         return;
       }
 
       setCurrentStep("analyzing");
-      await generateBaseAnalysis(profileId);
+      await Promise.all([
+        generateBaseAnalysis(profileId),
+        waitRemainingMinSpline(splineStartedAt),
+      ]);
       await bindSessionWithBaseAnalysis(profileId);
 
       const refreshed = await getStoredProfile(profileId);
       if (refreshed) setProfile(refreshed);
 
       setCurrentStep("done");
-      await sleep(1000);
       router.replace(`/poju/session/${sessionId}`);
     } catch (err) {
       console.error("[preparing] Failed:", err);
@@ -173,7 +185,14 @@ function PreparingInner() {
   }
 
   if (!profile) {
-    return <div className="chart-loader-loading">{tPrep("preparing")}</div>;
+    return (
+      <div className="preparing-spline-page">
+        <PreparingAnalyzingSpline className="preparing-spline-page__scene" />
+        <div className="preparing-spline-page__overlay" role="status" aria-live="polite">
+          <p className="preparing-spline-page__status">{tPrep("preparing")}</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -191,7 +210,13 @@ function PreparingInner() {
 export default function PreparingPage() {
   const tPrep = useTranslations("session_prep");
   return (
-    <Suspense fallback={<div className="chart-loader-loading">{tPrep("preparing")}</div>}>
+    <Suspense
+      fallback={
+        <div className="preparing-spline-page">
+          <PreparingAnalyzingSpline className="preparing-spline-page__scene" />
+        </div>
+      }
+    >
       <PreparingInner />
     </Suspense>
   );
