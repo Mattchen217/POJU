@@ -295,15 +295,21 @@ export function decidePhaseTransition(input: PhaseTransitionInput): PhaseTransit
       }
       break;
 
-    case "collecting_context":
-      if (current_state.collection_completeness >= 0.7 || llm_suggested_phase === "awaiting_confirmation") {
+    case "collecting_context": {
+      const complete = current_state.collection_completeness;
+      const profileReady = Boolean(current_state.selected_profile_id) || current_state.profile_skipped;
+      const llmReady =
+        llm_suggested_phase === "awaiting_confirmation" && complete >= 0.5 && profileReady;
+      const scoreReady = complete >= 0.72 && profileReady;
+      if (llmReady || scoreReady) {
         return {
           should_transition: true,
           new_phase: "awaiting_confirmation",
-          reason: `Collection sufficient (${(current_state.collection_completeness * 100).toFixed(0)}%)`,
+          reason: `Collection sufficient (${(complete * 100).toFixed(0)}%)`,
         };
       }
       break;
+    }
 
     case "awaiting_confirmation":
       if (llm_suggested_phase === "collecting_context") {

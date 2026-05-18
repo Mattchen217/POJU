@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useAppDialog } from "@/components/ui/app-dialog";
 import type { ContextSummary } from "@/lib/poju/agent-state";
 
 type Props = {
@@ -14,6 +15,7 @@ type Props = {
 
 export function ContextSummaryEditor({ summary, busy, onConfirm, onCancel, onAddMore }: Props) {
   const t = useTranslations("poju.summary_editor");
+  const dialog = useAppDialog();
   const [edited, setEdited] = useState<ContextSummary>(() => JSON.parse(JSON.stringify(summary)) as ContextSummary);
   const [editingItem, setEditingItem] = useState<{ section: number; item: number } | null>(null);
   const [editingValue, setEditingValue] = useState("");
@@ -37,8 +39,8 @@ export function ContextSummaryEditor({ summary, busy, onConfirm, onCancel, onAdd
     setEditingValue("");
   }
 
-  function deleteItem(sectionIdx: number, itemIdx: number) {
-    if (!window.confirm(t("confirm_delete_item"))) return;
+  async function deleteItem(sectionIdx: number, itemIdx: number) {
+    if (!(await dialog.confirm(t("confirm_delete_item")))) return;
     const next = { ...edited, sections: edited.sections.map((s) => ({ ...s, items: [...s.items] })) };
     next.sections[sectionIdx].items.splice(itemIdx, 1);
     setEdited(next);
@@ -80,7 +82,12 @@ export function ContextSummaryEditor({ summary, busy, onConfirm, onCancel, onAdd
                         <button type="button" className="text-amber-200/90" onClick={() => startEdit(sIdx, iIdx)} aria-label="edit">
                           <span className="material-symbols-outlined text-[16px]">edit</span>
                         </button>
-                        <button type="button" className="text-red-300/90" onClick={() => deleteItem(sIdx, iIdx)} aria-label="delete">
+                        <button
+                          type="button"
+                          className="text-red-300/90"
+                          onClick={() => void deleteItem(sIdx, iIdx)}
+                          aria-label="delete"
+                        >
                           <span className="material-symbols-outlined text-[16px]">close</span>
                         </button>
                       </div>

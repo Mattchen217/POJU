@@ -23,12 +23,13 @@ function resolveSelectedProfileId(session: POJUSessionState, agent: POJUAgentSta
   return null;
 }
 
-interface HandleInput {
+export interface HandleInput {
   session: POJUSessionState;
   userMessage: string;
   locale: string;
   /** Session already includes this user turn (optimistic UI); skip rule re-check and duplicate append. */
   userAlreadyAppended?: boolean;
+  signal?: AbortSignal;
 }
 
 type LLMApiPayload = {
@@ -186,7 +187,7 @@ function normalizeNewActions(raw: unknown[] | undefined): POJUAction[] {
  * - appends assistant message
  */
 export async function handleUserMessage(input: HandleInput): Promise<POJUSessionState> {
-  const { session, userMessage, locale, userAlreadyAppended } = input;
+  const { session, userMessage, locale, userAlreadyAppended, signal } = input;
   const isSystemMessage = userMessage.startsWith("[SYSTEM:");
 
   if (!isSystemMessage && !userAlreadyAppended) {
@@ -220,6 +221,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     session: sessionForLlm,
     profile,
     locale,
+    signal,
   });
 
   const normalizedNewActions = normalizeNewActions(llmResponse.new_actions);
@@ -350,6 +352,7 @@ async function callLLMViaAPI(input: {
   session: POJUSessionState;
   profile: unknown;
   locale: string;
+  signal?: AbortSignal;
 }): Promise<{
   response: string;
   model: string;
@@ -375,6 +378,7 @@ async function callLLMViaAPI(input: {
       profile: input.profile,
       locale: input.locale,
     }),
+    signal: input.signal,
   });
 
   if (!response.ok) {

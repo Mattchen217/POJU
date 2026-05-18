@@ -11,6 +11,7 @@ import { ContextSummaryEditor } from "@/components/poju/ContextSummaryEditor";
 import type { ContextSummary } from "@/lib/poju/agent-state";
 import { MessageBubble } from "@/components/poju/MessageBubble";
 import { ThinkingProcessDetails } from "@/components/poju/ThinkingProcessDetails";
+import { reasoningToLiveLine } from "@/lib/llm/thinking-live-line";
 import { ProfileSelector } from "@/components/profile/ProfileSelector";
 import { getPojuDb } from "@/lib/db/poju-db";
 import { createPOJUSession, loadPOJUSession, savePOJUSession, extendPOJUV4Session } from "@/lib/poju/session-manager";
@@ -18,6 +19,14 @@ import { clearPendingStoredProfileId, readPendingStoredProfileId } from "@/lib/p
 import { runConfirmationPipeline, runPostTurnOrchestration } from "@/lib/poju/agent-orchestrator";
 import { handleUserMessage, tryHandleRuleRejection } from "@/lib/poju/agent";
 import { appendBirthFlowMessage } from "@/lib/poju/birth-flow-messages";
+import {
+  appendConfirmationScriptMessage,
+  confirmationScriptText,
+} from "@/lib/poju/confirmation-flow-messages";
+import {
+  downgradePrematureConfirmationPhase,
+  shouldShowContextSummaryForm,
+} from "@/lib/poju/summary-readiness";
 import { getLastUserMessageContent } from "@/lib/poju/context-readiness";
 import {
   clearBirthFormActionIfProfileBound,
@@ -35,6 +44,7 @@ import type { UserProfile } from "@/lib/profile/types";
 import { computeSituationContextFingerprint } from "@/lib/poju/situation-context-fingerprint";
 import { getCachedSituationAnalysis, requestSituationAnalysis } from "@/lib/llm/deepseek/situation-analysis";
 import { runFinalDeliveryForSession } from "@/lib/llm/pro/final-delivery";
+import { rewindSessionToUserMessage } from "@/lib/poju/session-rewind";
 
 interface Props {
   session: POJUSessionState;
@@ -89,6 +99,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const [birthAnalysisFailed, setBirthAnalysisFailed] = useState(false);
   const birthFlowPendingRef = useRef(false);
   const birthIntroAppendedRef = useRef(false);
+  const summaryIntroAppendedRef = useRef(false);
+  const [summaryFormDismissed, setSummaryFormDismissed] = useState(false);
   const [extending, setExtending] = useState(false);
   const [ending, setEnding] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -107,11 +119,15 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const [showProfilePicker, setShowProfilePicker] = useState(false);
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [pipelineBusy, setPipelineBusy] = useState(false);
+  const [liveThinking, setLiveThinking] = useState("");
+  const [thinkingPanelOpen, setThinkingPanelOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const speechRef = useRef<SpeechRecognition | null>(null);
   const sessionRef = useRef(session);
   sessionRef.current = session;
+  const sendAbortRef = useRef<AbortController | null>(null);
+  const sendGenerationRef = useRef(0);
   const router = useRouter();
 
   const scrollChatToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
@@ -126,10 +142,17 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const hasUserMessage = visibleMessages.some((m) => m.role === "user");
   const shouldHideWelcomePanel = hasUserMessage;
   const birthFlowBlocking = birthFlowStage === "form" || birthFlowStage === "received" || birthFlowStage === "analyzing";
-  const overlayFormOpen = birthFlowBlocking || showProfilePicker;
+  const showSummaryForm =
+    shouldShowContextSummaryForm(session) && !summaryFormDismissed && !session.main_delivery_done;
+  const overlayFormOpen = birthFlowBlocking || showProfilePicker || showSummaryForm;
   const lastDeliveryTs = [...visibleMessages]
     .reverse()
     .find((m) => m.role === "assistant" && m.meta?.contains_delivery)?.timestamp;
+
+  useEffect(() => {
+    setSummaryFormDismissed(false);
+    summaryIntroAppendedRef.current = false;
+  }, [session.session_id]);
 
   useEffect(() => {
     scrollChatToBottom("smooth");
@@ -206,12 +229,120 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   }, [session, locale, sending, birthFlowStage, birthFlowBlocking]);
 
   useEffect(() => {
+    const downgraded = downgradePrematureConfirmationPhase(session);
+    if (downgraded !== session) {
+      summaryIntroAppendedRef.current = false;
+      onSessionUpdate(downgraded);
+      void savePOJUSession(downgraded);
+      return;
+    }
+
+    if (!shouldShowContextSummaryForm(session)) {
+      summaryIntroAppendedRef.current = false;
+      return;
+    }
+
+    if (summaryIntroAppendedRef.current) return;
+    summaryIntroAppendedRef.current = true;
+
+    const withIntro = appendConfirmationScriptMessage(session, locale, "intro");
+    onSessionUpdate(withIntro);
+    void savePOJUSession(withIntro);
+    scrollChatToBottom("smooth");
+  }, [session, locale, onSessionUpdate, scrollChatToBottom]);
+
+  useEffect(() => {
     if (!overlayFormOpen) return;
     requestAnimationFrame(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
     });
   }, [overlayFormOpen]);
 
+
+  function handleStopGeneration() {
+    sendGenerationRef.current += 1;
+    sendAbortRef.current?.abort();
+    sendAbortRef.current = null;
+    setSending(false);
+    setThinkingPanelOpen(false);
+    setLiveThinking("");
+  }
+
+  async function runUserTurn(
+    baseSession: POJUSessionState,
+    userMessage: string,
+    errorRestore?: { rollbackSession: POJUSessionState; typed: string; image: ComposerImage | null },
+  ) {
+    const gen = ++sendGenerationRef.current;
+    const ac = new AbortController();
+    sendAbortRef.current = ac;
+    setSending(true);
+    setLiveThinking("");
+    setThinkingPanelOpen(true);
+    scrollChatToBottom("smooth");
+
+    try {
+      const updatedSession = await handleUserMessage({
+        session: baseSession,
+        userMessage,
+        locale,
+        userAlreadyAppended: true,
+        signal: ac.signal,
+      });
+      if (ac.signal.aborted || gen !== sendGenerationRef.current) return;
+
+      const userCount = updatedSession.messages.filter((m) => m.role === "user").length;
+      let toPersist = updatedSession;
+      if (userCount === 1 && updatedSession.original_question.trim() === DEFAULT_NEW_SESSION_TITLE) {
+        const topic = topicFromFirstUserMessage(userMessage);
+        if (topic) {
+          toPersist = { ...updatedSession, original_question: topic };
+          await getPojuDb().pojuSessionRecords.update(toPersist.session_id, {
+            original_question: topic,
+          });
+          setSessionRows((prev) =>
+            prev.map((x) => (x.session_id === toPersist.session_id ? { ...x, original_question: topic } : x)),
+          );
+        }
+      }
+
+      const orch = await runPostTurnOrchestration(toPersist, {
+        locale,
+        lastUserMessage: userMessage,
+      });
+      if (ac.signal.aborted || gen !== sendGenerationRef.current) return;
+
+      onSessionUpdate(orch.session);
+      await savePOJUSession(orch.session);
+      if (!resolveSessionHasProfile(orch.session)) {
+        if (orch.ui.showBirthForm) birthFlowPendingRef.current = true;
+        if (orch.ui.showProfilePicker) setShowProfilePicker(true);
+      }
+      if (orch.ui.pipelineNotice) setSituationNotice(orch.ui.pipelineNotice);
+      if (orch.ui.pipelineError) setSituationError(orch.ui.pipelineError);
+      setPipelineBusy(orch.ui.pipelineBusy);
+      const lastAssistant = [...orch.session.messages].reverse().find((m) => m.role === "assistant");
+      const tp = lastAssistant?.meta?.thinking_process?.trim();
+      if (tp) {
+        setLiveThinking(tp);
+        setThinkingPanelOpen(true);
+      } else if (!birthFlowStage || birthFlowStage === "intro" || birthFlowStage === "form") {
+        setThinkingPanelOpen(false);
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      console.error("[poju] Send failed:", err);
+      if (errorRestore) {
+        onSessionUpdate(errorRestore.rollbackSession);
+        setInput(errorRestore.typed);
+        if (errorRestore.image) setComposerImage(errorRestore.image);
+      }
+      await dialog.alert(t("dialog_connection_error"));
+    } finally {
+      if (sendAbortRef.current === ac) sendAbortRef.current = null;
+      if (gen === sendGenerationRef.current) setSending(false);
+    }
+  }
 
   async function handleSend() {
     if ((!input.trim() && !composerImage) || sending) return;
@@ -244,57 +375,39 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       messages: [...baseSession.messages, optimisticUser],
     };
     onSessionUpdate(withUser);
-    setSending(true);
-    scrollChatToBottom("smooth");
 
-    try {
-      const updatedSession = await handleUserMessage({
-        session: withUser,
-        userMessage,
-        locale,
-        userAlreadyAppended: true,
-      });
-      const userCount = updatedSession.messages.filter((m) => m.role === "user").length;
-      let toPersist = updatedSession;
-      if (
-        userCount === 1 &&
-        updatedSession.original_question.trim() === DEFAULT_NEW_SESSION_TITLE
-      ) {
-        const topic = topicFromFirstUserMessage(userMessage);
-        if (topic) {
-          toPersist = { ...updatedSession, original_question: topic };
-          await getPojuDb().pojuSessionRecords.update(toPersist.session_id, {
-            original_question: topic,
-          });
-          setSessionRows((prev) =>
-            prev.map((x) =>
-              x.session_id === toPersist.session_id ? { ...x, original_question: topic } : x,
-            ),
-          );
-        }
-      }
-      const orch = await runPostTurnOrchestration(toPersist, {
-        locale,
-        lastUserMessage: userMessage,
-      });
-      onSessionUpdate(orch.session);
-      await savePOJUSession(orch.session);
-      if (!resolveSessionHasProfile(orch.session)) {
-        if (orch.ui.showBirthForm) birthFlowPendingRef.current = true;
-        if (orch.ui.showProfilePicker) setShowProfilePicker(true);
-      }
-      if (orch.ui.pipelineNotice) setSituationNotice(orch.ui.pipelineNotice);
-      if (orch.ui.pipelineError) setSituationError(orch.ui.pipelineError);
-      setPipelineBusy(orch.ui.pipelineBusy);
-    } catch (err) {
-      console.error("[poju] Send failed:", err);
-      onSessionUpdate(baseSession);
-      setInput(typed);
-      if (savedComposerImage) setComposerImage(savedComposerImage);
-      await dialog.alert(t("dialog_connection_error"));
-    } finally {
-      setSending(false);
-    }
+    await runUserTurn(withUser, userMessage, {
+      rollbackSession: baseSession,
+      typed,
+      image: savedComposerImage,
+    });
+  }
+
+  async function handleEditUserMessage(fullIndex: number, currentContent: string) {
+    if (sending || confirmBusy || pipelineBusy) return;
+    const edited = await dialog.prompt(t("edit_message_prompt"), currentContent, t("edit_message_title"));
+    if (edited === null) return;
+    const newContent = edited.trim();
+    if (!newContent || newContent === currentContent.trim()) return;
+
+    handleStopGeneration();
+
+    const rewound = rewindSessionToUserMessage(sessionRef.current, fullIndex, newContent);
+    const rejected = tryHandleRuleRejection(rewound, newContent, locale);
+    const nextSession = rejected ?? rewound;
+
+    onSessionUpdate(nextSession);
+    await savePOJUSession(nextSession);
+    setSummaryFormDismissed(false);
+    summaryIntroAppendedRef.current = false;
+    setBirthFlowStage(null);
+    birthFlowPendingRef.current = false;
+    birthIntroAppendedRef.current = false;
+    setShowProfilePicker(false);
+
+    if (rejected) return;
+
+    await runUserTurn(rewound, newContent);
   }
 
   async function handleRenameSession(targetSessionId: string) {
@@ -460,14 +573,21 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     }
 
     setBirthFlowStage("analyzing");
-    let analyzingSession = appendBirthFlowMessage(updatedSession, locale, "analyzing");
-    onSessionUpdate(analyzingSession);
-    await savePOJUSession(analyzingSession);
+    setLiveThinking("");
+    setThinkingPanelOpen(true);
+    onSessionUpdate(updatedSession);
+    await savePOJUSession(updatedSession);
     scrollChatToBottom("smooth");
 
     let analysisFailed = false;
     try {
-      await generateBaseAnalysis(profile_id);
+      await generateBaseAnalysis(profile_id, {
+        onReasoning: (full) => setLiveThinking(full),
+        onContent: (full) => {
+          if (!full.trim()) return;
+          setLiveThinking((prev) => prev || reasoningToLiveLine(full) || t("thinking_analyzing_chart"));
+        },
+      });
       const cur = sessionRef.current;
       if (cur.agent_v2) {
         const withAnalysis = {
@@ -476,7 +596,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         };
         onSessionUpdate(withAnalysis);
         await savePOJUSession(withAnalysis);
-        analyzingSession = withAnalysis;
       }
     } catch (err) {
       console.warn("[poju] base analysis after birth submit:", err);
@@ -498,6 +617,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
 
     window.setTimeout(() => {
       setBirthFlowStage(null);
+      setThinkingPanelOpen(false);
+      setLiveThinking("");
     }, 2400);
 
     try {
@@ -583,26 +704,40 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
 
   async function handleConfirmSummary(editedSummary: ContextSummary) {
     setConfirmBusy(true);
+    setSummaryFormDismissed(true);
     setFinalError(null);
     setSituationError(null);
+    setLiveThinking(confirmationScriptText(locale, "generating"));
+    setThinkingPanelOpen(true);
+    scrollChatToBottom("smooth");
+
     try {
       const base = sessionRef.current;
-      const withSummary: POJUSessionState = base.agent_v2
+      let withSummary: POJUSessionState = base.agent_v2
         ? { ...base, agent_v2: { ...base.agent_v2, current_summary: editedSummary } }
         : base;
+
+      withSummary = appendConfirmationScriptMessage(withSummary, locale, "confirmed");
       onSessionUpdate(withSummary);
+      await savePOJUSession(withSummary);
+
       const next = await runConfirmationPipeline(withSummary, locale);
       onSessionUpdate(next);
       await savePOJUSession(next);
       setSituationNotice(t("final_delivery_done"));
+      setThinkingPanelOpen(false);
+      setLiveThinking("");
     } catch (e) {
       setFinalError(e instanceof Error ? e.message : String(e));
+      setSummaryFormDismissed(false);
     } finally {
       setConfirmBusy(false);
     }
   }
 
   async function handleSummaryAddMore(note: string) {
+    setSummaryFormDismissed(true);
+    summaryIntroAppendedRef.current = false;
     const s = sessionRef.current;
     const updated: POJUSessionState = {
       ...s,
@@ -918,17 +1053,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                 </div>
               ) : null}
 
-              {session.agent_v2?.current_phase === "awaiting_confirmation" &&
-              session.agent_v2.current_summary &&
-              !session.main_delivery_done ? (
-                <ContextSummaryEditor
-                  summary={session.agent_v2.current_summary}
-                  busy={confirmBusy || pipelineBusy}
-                  onConfirm={(edited) => void handleConfirmSummary(edited)}
-                  onAddMore={(note) => void handleSummaryAddMore(note)}
-                />
-              ) : null}
-
               {showProfilePicker ? (
                 <div className="rounded-2xl border border-violet-300/20 bg-violet-950/30 p-3">
                   <p className="text-sm font-medium text-on-surface">{t("profile_picker_in_chat_title")}</p>
@@ -953,7 +1077,75 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                 </p>
               ) : null}
 
-              {session.agent_v2 && !session.main_delivery_done ? (
+              {visibleMessages.map((msg, idx) => {
+                const fullIndex = session.messages.findIndex(
+                  (m) => m.timestamp === msg.timestamp && m.role === msg.role,
+                );
+                return (
+                  <MessageBubble
+                    key={`${msg.timestamp}-${idx}`}
+                    message={msg}
+                    hideWelcomePanel={shouldHideWelcomePanel}
+                    actions={
+                      msg.role === "assistant" && msg.meta?.contains_delivery && msg.timestamp === lastDeliveryTs
+                        ? session.actions
+                        : undefined
+                    }
+                    onActionUpdate={(id, st, fb) => void handleActionUpdate(id, st, fb)}
+                    onEdit={
+                      msg.role === "user" && !msg.is_rejected && fullIndex >= 0
+                        ? () => void handleEditUserMessage(fullIndex, msg.content)
+                        : undefined
+                    }
+                    editDisabled={sending || confirmBusy || pipelineBusy}
+                    editLabel={t("edit_message")}
+                  />
+                );
+              })}
+              {showSummaryForm && session.agent_v2?.current_summary ? (
+                <ContextSummaryEditor
+                  summary={session.agent_v2.current_summary}
+                  busy={confirmBusy}
+                  onConfirm={(edited) => void handleConfirmSummary(edited)}
+                  onAddMore={(note) => void handleSummaryAddMore(note)}
+                />
+              ) : null}
+
+              {thinkingPanelOpen || sending || birthFlowStage === "analyzing" || confirmBusy ? (
+                <ThinkingProcessDetails
+                  open
+                  pulseIcon={!liveThinking}
+                  liveLine={
+                    liveThinking
+                      ? reasoningToLiveLine(liveThinking)
+                      : birthFlowStage === "analyzing"
+                        ? t("thinking_analyzing_chart")
+                        : null
+                  }
+                  thinkingProcess={liveThinking || undefined}
+                  waitingLabel={
+                    !liveThinking && (sending || confirmBusy)
+                      ? confirmBusy
+                        ? t("context_summary_confirming")
+                        : t("thinking_waiting")
+                      : null
+                  }
+                />
+              ) : null}
+
+              {birthFlowStage ? (
+                <div className="rounded-2xl border border-violet-300/20 bg-violet-950/30 p-3">
+                  <BirthProfileFlow
+                    stage={birthFlowStage}
+                    analysisFailed={birthAnalysisFailed}
+                    onContinueToForm={() => setBirthFlowStage("form")}
+                    onComplete={(p) => void handleProfileSubmitted(p)}
+                    onSkip={() => void handleProfileSkipped()}
+                  />
+                </div>
+              ) : null}
+
+              {session.agent_v2 && !session.main_delivery_done && !showSummaryForm ? (
                 <details className="rounded-xl border border-cyan-500/20 bg-cyan-950/20 px-3 py-2 text-xs text-on-surface-variant">
                   <summary className="cursor-pointer text-on-surface">{t("advanced_pipeline")}</summary>
                   <p className="mt-2 text-on-surface">{t("situation_analysis_hint")}</p>
@@ -992,31 +1184,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                     ) : null}
                   </div>
                 </details>
-              ) : null}
-
-              {visibleMessages.map((msg, idx) => (
-                <MessageBubble
-                  key={`${msg.timestamp}-${idx}`}
-                  message={msg}
-                  hideWelcomePanel={shouldHideWelcomePanel}
-                  actions={msg.role === "assistant" && msg.meta?.contains_delivery && msg.timestamp === lastDeliveryTs ? session.actions : undefined}
-                  onActionUpdate={(id, st, fb) => void handleActionUpdate(id, st, fb)}
-                />
-              ))}
-              {sending ? (
-                <ThinkingProcessDetails open pulseIcon waitingLabel={t("thinking_waiting")} />
-              ) : null}
-
-              {birthFlowStage ? (
-                <div className="rounded-2xl border border-violet-300/20 bg-violet-950/30 p-3">
-                  <BirthProfileFlow
-                    stage={birthFlowStage}
-                    analysisFailed={birthAnalysisFailed}
-                    onContinueToForm={() => setBirthFlowStage("form")}
-                    onComplete={(p) => void handleProfileSubmitted(p)}
-                    onSkip={() => void handleProfileSkipped()}
-                  />
-                </div>
               ) : null}
 
               <div ref={messagesEndRef} />
@@ -1081,11 +1248,18 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => void handleSend()}
-                  disabled={(!input.trim() && !composerImage) || sending}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-on-primary transition-colors hover:bg-primary-container disabled:opacity-40"
+                  onClick={() => (sending ? handleStopGeneration() : void handleSend())}
+                  disabled={!sending && !input.trim() && !composerImage}
+                  aria-label={sending ? t("stop_generating") : t("send")}
+                  className={`inline-flex h-10 w-10 items-center justify-center rounded-xl text-on-primary transition-colors disabled:opacity-40 ${
+                    sending
+                      ? "bg-red-600 hover:bg-red-500"
+                      : "bg-primary hover:bg-primary-container"
+                  }`}
                 >
-                  <span className="material-symbols-outlined text-[18px] leading-none">arrow_upward</span>
+                  <span className="material-symbols-outlined text-[18px] leading-none">
+                    {sending ? "stop" : "arrow_upward"}
+                  </span>
                 </button>
               </div>
             </div>

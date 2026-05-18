@@ -13,9 +13,20 @@ export interface MessageBubbleProps {
   hideWelcomePanel?: boolean;
   actions?: POJUAction[];
   onActionUpdate?: (actionId: string, status: POJUAction["status"], feedback?: string) => void;
+  onEdit?: () => void;
+  editDisabled?: boolean;
+  editLabel?: string;
 }
 
-export function MessageBubble({ message, hideWelcomePanel = false, actions, onActionUpdate }: MessageBubbleProps) {
+export function MessageBubble({
+  message,
+  hideWelcomePanel = false,
+  actions,
+  onActionUpdate,
+  onEdit,
+  editDisabled = false,
+  editLabel,
+}: MessageBubbleProps) {
   const tChat = useTranslations("poju.chat");
   const isUser = message.role === "user";
   const isWelcomePanel = isAssistantWelcomeMessage(message);
@@ -80,6 +91,16 @@ export function MessageBubble({ message, hideWelcomePanel = false, actions, onAc
         >
           {renderPlainContent(message.content)}
         </div>
+        {isUser && onEdit && !message.is_rejected ? (
+          <button
+            type="button"
+            onClick={onEdit}
+            disabled={editDisabled}
+            className="mr-1 text-xs text-on-surface-variant transition-colors hover:text-on-surface disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {editLabel ?? "Edit"}
+          </button>
+        ) : null}
         {!isUser ? (
           <div className="ml-2 mt-1 flex items-center gap-1">
             <button className="flex h-8 w-8 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface">

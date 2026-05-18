@@ -5,8 +5,14 @@
  * 再由 `saveBaseAnalysis` 写回 `stored_profiles`。
  */
 
+import { consumeFetchSse } from "@/lib/llm/consume-sse-client";
 import type { UserProfile } from "@/lib/profile/types";
 import { getStoredProfile, saveBaseAnalysis } from "@/lib/profile/stored-profiles-service";
+
+export type BaseAnalysisStreamCallbacks = {
+  onReasoning?: (fullReasoning: string) => void;
+  onContent?: (fullContent: string) => void;
+};
 
 const BASE_ANALYSIS_SYSTEM = `# 角色
 
@@ -144,18 +150,63 @@ function assertBrowser(): void {
 /**
  * 读取缓存；若无则调用 `/api/profile/base-analysis` 生成并写入 `stored_profiles`。
  */
-export async function generateBaseAnalysis(profileId: string): Promise<unknown> {
-  assertBrowser();
-  const data = await getStoredProfile(profileId);
-  if (!data) throw new Error("Profile not found");
-  if (data.base_analysis?.content !== undefined && data.base_analysis.content !== null) {
-    return data.base_analysis.content;
+async function generateBaseAnalysisViaStream(
+  userProfile: UserProfile,
+  callbacks?: BaseAnalysisStreamCallbacks,
+): Promise<{ analysis: unknown; model: string; tokens_used: number }> {
+  const res = await fetch("/api/profile/base-analysis/stream", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_profile: userProfile }),
+  });
+
+  type DonePayload = { analysis?: unknown; model?: string; tokens_used?: number };
+  let donePayload: DonePayload | null = null;
+  let errMsg: string | null = null;
+
+  await consumeFetchSse(res, (ev) => {
+    const type = ev.type;
+    if (type === "reasoning" && typeof ev.text === "string") {
+      callbacks?.onReasoning?.(ev.text);
+    }
+    if (type === "content" && typeof ev.text === "string") {
+      callbacks?.onContent?.(ev.text);
+    }
+    if (type === "error" && typeof ev.message === "string") {
+      errMsg = ev.message;
+    }
+    if (type === "done" && ev.ok) {
+      donePayload = {
+        analysis: ev.analysis,
+        model: typeof ev.model === "string" ? ev.model : "unknown",
+        tokens_used: typeof ev.tokens_used === "number" ? ev.tokens_used : 0,
+      };
+    }
+  });
+
+  if (errMsg) throw new Error(errMsg);
+  if (!res.ok) throw new Error(`Base analysis stream failed (${res.status})`);
+  const finished = donePayload as DonePayload | null;
+  if (!finished || finished.analysis === undefined) {
+    throw new Error("Base analysis stream ended without result");
   }
 
+  return {
+    analysis: finished.analysis,
+    model: finished.model ?? "unknown",
+    tokens_used: finished.tokens_used ?? 0,
+  };
+}
+
+async function generateBaseAnalysisViaJson(userProfile: UserProfile): Promise<{
+  analysis: unknown;
+  model: string;
+  tokens_used: number;
+}> {
   const res = await fetch("/api/profile/base-analysis", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ user_profile: data.user_profile }),
+    body: JSON.stringify({ user_profile: userProfile }),
   });
 
   const payload = (await res.json().catch(() => ({}))) as {
@@ -170,12 +221,38 @@ export async function generateBaseAnalysis(profileId: string): Promise<unknown> 
     throw new Error(payload.error || `Base analysis request failed (${res.status})`);
   }
 
-  await saveBaseAnalysis(profileId, payload.analysis, {
+  return {
+    analysis: payload.analysis,
     model: typeof payload.model === "string" ? payload.model : "unknown",
     tokens_used: typeof payload.tokens_used === "number" ? payload.tokens_used : 0,
+  };
+}
+
+export async function generateBaseAnalysis(
+  profileId: string,
+  callbacks?: BaseAnalysisStreamCallbacks,
+): Promise<unknown> {
+  assertBrowser();
+  const data = await getStoredProfile(profileId);
+  if (!data) throw new Error("Profile not found");
+  if (data.base_analysis?.content !== undefined && data.base_analysis.content !== null) {
+    return data.base_analysis.content;
+  }
+
+  let result: { analysis: unknown; model: string; tokens_used: number };
+  try {
+    result = await generateBaseAnalysisViaStream(data.user_profile, callbacks);
+  } catch (streamErr) {
+    console.warn("[base-analysis] Stream failed, falling back to JSON:", streamErr);
+    result = await generateBaseAnalysisViaJson(data.user_profile);
+  }
+
+  await saveBaseAnalysis(profileId, result.analysis, {
+    model: result.model,
+    tokens_used: result.tokens_used,
   });
 
-  return payload.analysis;
+  return result.analysis;
 }
 
 export async function getBaseAnalysisOrGenerate(profileId: string): Promise<unknown> {

@@ -14,6 +14,7 @@ import {
   shouldForceBirthForm,
   withSessionProfileFlags,
 } from "@/lib/poju/session-profile";
+import { downgradePrematureConfirmationPhase } from "@/lib/poju/summary-readiness";
 import type { POJUSessionState } from "@/lib/poju/types";
 
 export type AgentOrchestratorUi = {
@@ -69,14 +70,14 @@ export async function runPostTurnOrchestration(
   const lastUser = opts.lastUserMessage?.trim() ?? "";
   const auto = opts.autoPipeline !== false;
 
-  let s = withSessionProfileFlags(ensureContextSummary(session));
+  let s = withSessionProfileFlags(ensureContextSummary(downgradePrematureConfirmationPhase(session)));
   const phase = s.agent_v2?.current_phase;
 
   const ui: AgentOrchestratorUi = {
     showBirthForm: shouldForceBirthForm(s, lastUser),
     showProfilePicker:
       phase === "awaiting_profile" && !resolveSessionHasProfile(s) && !s.profile_skipped && !shouldForceBirthForm(s, lastUser),
-    showContextSummary: phase === "awaiting_confirmation" && !s.main_delivery_done,
+    showContextSummary: false,
     pipelineBusy: false,
     pipelineNotice: null,
     pipelineError: null,
@@ -91,24 +92,7 @@ export async function runPostTurnOrchestration(
     }
   }
 
-  if (auto && phase === "awaiting_confirmation" && s.agent_v2 && !s.agent_v2.has_situation_analysis) {
-    try {
-      ui.pipelineBusy = true;
-      const out = await requestSituationAnalysis(s, locale, { force: false });
-      s = out.session;
-      ui.pipelineNotice = out.cache_hit
-        ? locale.startsWith("zh")
-          ? "已加载困境分析缓存。"
-          : "Loaded cached situation analysis."
-        : locale.startsWith("zh")
-          ? "困境分析已生成。"
-          : "Situation analysis generated.";
-    } catch (e) {
-      ui.pipelineError = e instanceof Error ? e.message : String(e);
-    } finally {
-      ui.pipelineBusy = false;
-    }
-  }
+  // Step 8/9 run only after user confirms the summary (runConfirmationPipeline), not while the form is open.
 
   return { session: s, ui };
 }
