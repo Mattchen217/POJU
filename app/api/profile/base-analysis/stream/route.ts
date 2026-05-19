@@ -7,7 +7,16 @@ import {
 } from "@/lib/llm/openrouter-stream";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 
-export const maxDuration = 180;
+export const maxDuration = 300;
+export const runtime = "nodejs";
+
+function baseAnalysisReasoningEffort(): "low" | "medium" | "high" | "xhigh" {
+  const raw = process.env.POJU_BASE_ANALYSIS_REASONING_EFFORT?.trim().toLowerCase();
+  if (raw === "low" || raw === "medium" || raw === "high" || raw === "xhigh") return raw;
+  // Vercel Hobby caps ~10–60s; high reasoning often exceeds that on Step 7.
+  if (process.env.VERCEL === "1" && process.env.VERCEL_ENV === "production") return "medium";
+  return "high";
+}
 
 function sseLine(obj: Record<string, unknown>): string {
   return `data: ${JSON.stringify(obj)}\n\n`;
@@ -49,7 +58,7 @@ export async function POST(req: Request) {
             max_tokens: 15000,
             temperature: 0.55,
             json_mode: true,
-            reasoning_effort: "high",
+            reasoning_effort: baseAnalysisReasoningEffort(),
           },
           {
             onReasoning: (full) => push({ type: "reasoning", text: full }),
@@ -70,17 +79,23 @@ export async function POST(req: Request) {
           return;
         }
 
-        const audit = await saveBaseAnalysisAudit({
-          user_profile: profile,
-          prompts: { system, user },
-          analysis,
-          model: result.model,
-          tokens_used: result.tokens_used,
-          stored_profile_id,
-          display_name,
-          reasoning: result.reasoning ?? "",
-          raw_model_text: result.text,
-        });
+        let auditId: string | null = null;
+        try {
+          const audit = await saveBaseAnalysisAudit({
+            user_profile: profile,
+            prompts: { system, user },
+            analysis,
+            model: result.model,
+            tokens_used: result.tokens_used,
+            stored_profile_id,
+            display_name,
+            reasoning: result.reasoning ?? "",
+            raw_model_text: result.text,
+          });
+          auditId = audit?.id ?? null;
+        } catch (auditErr) {
+          console.warn("[base-analysis/stream] Audit save skipped:", auditErr);
+        }
 
         push({
           type: "done",
@@ -89,7 +104,7 @@ export async function POST(req: Request) {
           model: result.model,
           tokens_used: result.tokens_used,
           reasoning: result.reasoning ?? "",
-          audit_id: audit?.id ?? null,
+          audit_id: auditId,
         });
       } catch (e: unknown) {
         push({

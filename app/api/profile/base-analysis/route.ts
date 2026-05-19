@@ -5,7 +5,8 @@ import { buildBaseAnalysisPrompt, parseBaseAnalysisResponseText } from "@/lib/ll
 import { callLLM } from "@/lib/llm/router";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 
-export const maxDuration = 180;
+export const maxDuration = 300;
+export const runtime = "nodejs";
 
 /**
  * Body: `{ user_profile: UserProfile }` — caller loads from IndexedDB and sends the computed chart.
@@ -48,18 +49,24 @@ export async function POST(req: Request) {
       );
     }
 
-    const audit = await saveBaseAnalysisAudit({
-      user_profile: profile,
-      prompts: { system, user },
-      analysis,
-      model: result.actual_model,
-      tokens_used: result.meta.tokens_used,
-      stored_profile_id,
-      display_name,
-      latency_ms: result.meta.latency_ms,
-      cost_usd: result.meta.cost_usd,
-      raw_model_text: result.content,
-    });
+    let auditId: string | null = null;
+    try {
+      const audit = await saveBaseAnalysisAudit({
+        user_profile: profile,
+        prompts: { system, user },
+        analysis,
+        model: result.actual_model,
+        tokens_used: result.meta.tokens_used,
+        stored_profile_id,
+        display_name,
+        latency_ms: result.meta.latency_ms,
+        cost_usd: result.meta.cost_usd,
+        raw_model_text: result.content,
+      });
+      auditId = audit?.id ?? null;
+    } catch (auditErr) {
+      console.warn("[base-analysis] Audit save skipped:", auditErr);
+    }
 
     return NextResponse.json({
       ok: true,
@@ -68,7 +75,7 @@ export async function POST(req: Request) {
       tokens_used: result.meta.tokens_used,
       latency_ms: result.meta.latency_ms,
       cost_usd: result.meta.cost_usd,
-      audit_id: audit?.id ?? null,
+      audit_id: auditId,
     });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Base analysis failed";
