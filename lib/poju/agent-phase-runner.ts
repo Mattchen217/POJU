@@ -67,9 +67,10 @@ async function dispatchPhase(
 export async function executeAgentPhaseLLM(input: {
   session: POJUSessionState;
   profile: UserProfile | null;
+  base_analysis?: unknown | null;
   locale: string;
 }): Promise<AgentPhaseLLMResult> {
-  const { session, profile, locale } = input;
+  const { session, profile, locale, base_analysis } = input;
 
   if (shouldUseGreetingPhase(session, profile)) {
     const phaseInput = buildPhaseInput(session, profile, locale);

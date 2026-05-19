@@ -20,11 +20,12 @@ export async function POST(req: Request) {
       );
     }
 
-    const body = (await req.json().catch(() => ({}))) as { user_profile?: unknown };
-    const profile = parseUserProfileForApi(body.user_profile);
-    if (!profile) {
+    const body = (await req.json().catch(() => ({}))) as unknown;
+    const parsed = parseBaseAnalysisAuditBody(body);
+    if (!parsed) {
       return NextResponse.json({ ok: false, error: "Invalid or missing user_profile" }, { status: 400 });
     }
+    const { user_profile: profile, stored_profile_id, display_name } = parsed;
     const { system, user } = buildBaseAnalysisPrompt(profile);
 
     const result = await callLLM({
