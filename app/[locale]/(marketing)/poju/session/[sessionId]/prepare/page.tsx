@@ -76,7 +76,6 @@ export default function PreparePage() {
   return (
     <SessionPreparation
       sessionId={sessionId}
-      originalQuestion={session.original_question}
       existingProfiles={profiles}
       onProfileSelected={handleProfileSelected}
       onRefund={handleRefund}

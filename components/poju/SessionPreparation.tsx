@@ -4,13 +4,12 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { BirthInfoPicker } from "@/components/poju/BirthInfoPicker";
 import { BirthInfoConfirmDialog } from "@/components/poju/BirthInfoConfirmDialog";
-import { getQuestionLabel, getWelcomeText } from "@/lib/poju/session-prep-copy";
+import { getWelcomeText } from "@/lib/poju/session-prep-copy";
 import { createStoredProfile, type StoredProfileSummary } from "@/lib/profile/stored-profiles-service";
 import type { BirthInfo } from "@/lib/profile/types";
 
 export interface SessionPreparationProps {
   sessionId: string;
-  originalQuestion: string;
   existingProfiles: StoredProfileSummary[];
   onProfileSelected: (profileId: string) => void;
   onRefund: () => void;
@@ -18,7 +17,6 @@ export interface SessionPreparationProps {
 }
 
 export function SessionPreparation({
-  originalQuestion,
   existingProfiles,
   onProfileSelected,
   onRefund,
@@ -73,7 +71,7 @@ export function SessionPreparation({
 
   return (
     <div className="session-prep-container">
-      <WelcomeSection locale={locale} originalQuestion={originalQuestion} />
+      <WelcomeSection locale={locale} />
 
       <div className="prep-main">
         {mode === "list" && existingProfiles.length > 0 ? (
@@ -116,18 +114,11 @@ export function SessionPreparation({
   );
 }
 
-function WelcomeSection({ locale, originalQuestion }: { locale: string; originalQuestion: string }) {
-  const welcomeText = getWelcomeText(locale);
-  const questionLabel = getQuestionLabel(locale);
-
+function WelcomeSection({ locale }: { locale: string }) {
   return (
     <div className="welcome-section">
       <div className="poju-logo">POJU</div>
-      <p className="welcome-text">{welcomeText}</p>
-      <div className="your-question">
-        <span className="label">{questionLabel}</span>
-        <p className="question-text">&ldquo;{originalQuestion}&rdquo;</p>
-      </div>
+      <p className="welcome-text">{getWelcomeText(locale)}</p>
     </div>
   );
 }

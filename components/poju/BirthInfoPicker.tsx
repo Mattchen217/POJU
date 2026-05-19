@@ -90,6 +90,7 @@ export function BirthInfoPicker({ onSubmit, onCancel, locale }: BirthInfoPickerP
           }}
           height={180}
           itemHeight={36}
+          wheelMode="natural"
         >
           <Picker.Column name="year">
             {years.map((y) => (
@@ -152,6 +153,7 @@ export function BirthInfoPicker({ onSubmit, onCancel, locale }: BirthInfoPickerP
           onChange={(value) => setHourPeriod(value.hour_period as HourPeriod)}
           height={180}
           itemHeight={36}
+          wheelMode="natural"
         >
           <Picker.Column name="hour_period">
             {HOUR_PERIODS.map((hp) => {

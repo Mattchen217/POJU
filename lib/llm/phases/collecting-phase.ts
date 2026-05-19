@@ -68,8 +68,8 @@ ${requiredList}
 
 ## 问诊原则
 
-1. 每轮做三件事：简短承接（1-2 句）→（可选）命盘线索与现实对应 → 问 1-2 个尖锐具体问题
-2. 命盘 ↔ 处境对应，不要空讲性格
+1. 每轮做三件事：承接用户情绪与事实（2-4 句）→ 命盘/大运与处境对应（必须引用命主基础分析中的具体点）→ 问 1-2 个尖锐具体问题
+2. 命盘 ↔ 处境对应，不要空讲性格；用户已表达多年不顺/重大压力时，命理解读要够具体、够展开
 3. 不重复已知信息；一次不要问超过 3 个问题
 4. 只把用户【明确说过】的事实写入 context_updates，不要推断编造
 
@@ -81,8 +81,9 @@ ${requiredList}
 
 ## 风格
 
-- 中文 80-200 字 / 英文 60-150 词
-- 2-4 段自然叙述，少用 bullet
+- 中文 220-520 字 / 英文 160-380 词
+- 4-6 段自然叙述，少用 bullet
+- 必须体现你已读过【完整】命主基础分析，至少点出 2 处与当前困境相关的命理结构（如大运、格局、用神、时间窗）
 
 ## 输出格式（严格 JSON，无 markdown 围栏）
 
@@ -100,7 +101,7 @@ export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLL
   const messages = formatPhaseMessageHistory(input.session.messages);
   const result = await callPhaseJsonTransport(system, messages, {
     call_type: "collection_flash",
-    max_tokens: 2000,
+    max_tokens: 3600,
     temperature: 0.5,
   });
 

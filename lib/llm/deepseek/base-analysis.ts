@@ -7,7 +7,12 @@
 
 import { consumeFetchSse } from "@/lib/llm/consume-sse-client";
 import { HOUR_PERIOD_INFO, type UserProfile } from "@/lib/profile/types";
-import { getStoredProfile, saveBaseAnalysis } from "@/lib/profile/stored-profiles-service";
+import {
+  getStoredProfile,
+  getStoredProfileRecord,
+  saveBaseAnalysis,
+} from "@/lib/profile/stored-profiles-service";
+import { userProfileForApiRequest } from "@/lib/profile/user-profile-api";
 
 export type BaseAnalysisStreamCallbacks = {
   onReasoning?: (fullReasoning: string) => void;
@@ -152,14 +157,24 @@ function assertBrowser(): void {
 /**
  * 读取缓存；若无则调用 `/api/profile/base-analysis` 生成并写入 `stored_profiles`。
  */
+function baseAnalysisApiBody(profileId: string, userProfile: UserProfile, displayName: string | null) {
+  return {
+    user_profile: userProfileForApiRequest(userProfile),
+    stored_profile_id: profileId,
+    display_name: displayName,
+  };
+}
+
 async function generateBaseAnalysisViaStream(
+  profileId: string,
   userProfile: UserProfile,
+  displayName: string | null,
   callbacks?: BaseAnalysisStreamCallbacks,
 ): Promise<{ analysis: unknown; model: string; tokens_used: number }> {
   const res = await fetch("/api/profile/base-analysis/stream", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ user_profile: userProfile }),
+    body: JSON.stringify(baseAnalysisApiBody(profileId, userProfile, displayName)),
   });
 
   type DonePayload = { analysis?: unknown; model?: string; tokens_used?: number };
@@ -200,7 +215,11 @@ async function generateBaseAnalysisViaStream(
   };
 }
 
-async function generateBaseAnalysisViaJson(userProfile: UserProfile): Promise<{
+async function generateBaseAnalysisViaJson(
+  profileId: string,
+  userProfile: UserProfile,
+  displayName: string | null,
+): Promise<{
   analysis: unknown;
   model: string;
   tokens_used: number;
@@ -208,7 +227,7 @@ async function generateBaseAnalysisViaJson(userProfile: UserProfile): Promise<{
   const res = await fetch("/api/profile/base-analysis", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ user_profile: userProfile }),
+    body: JSON.stringify(baseAnalysisApiBody(profileId, userProfile, displayName)),
   });
 
   const payload = (await res.json().catch(() => ({}))) as {
@@ -241,12 +260,15 @@ export async function generateBaseAnalysis(
     return data.base_analysis.content;
   }
 
+  const record = await getStoredProfileRecord(profileId);
+  const displayName = record?.display_name ?? null;
+
   let result: { analysis: unknown; model: string; tokens_used: number };
   try {
-    result = await generateBaseAnalysisViaStream(data.user_profile, callbacks);
+    result = await generateBaseAnalysisViaStream(profileId, data.user_profile, displayName, callbacks);
   } catch (streamErr) {
     console.warn("[base-analysis] Stream failed, falling back to JSON:", streamErr);
-    result = await generateBaseAnalysisViaJson(data.user_profile);
+    result = await generateBaseAnalysisViaJson(profileId, data.user_profile, displayName);
   }
 
   await saveBaseAnalysis(profileId, result.analysis, {

@@ -6,6 +6,8 @@ import type { UserProfile } from "@/lib/profile/types";
 export interface PhaseLLMInput {
   session: POJUSessionState;
   profile: UserProfile | null;
+  /** Step 7 cached analysis — sent from browser; server cannot read IndexedDB. */
+  base_analysis?: unknown | null;
   locale: string;
   user_message: string;
   agent_state?: POJUAgentState | null;

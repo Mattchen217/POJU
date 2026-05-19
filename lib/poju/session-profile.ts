@@ -66,14 +66,26 @@ export function clearBirthFormActionIfProfileBound(session: POJUSessionState): P
 }
 
 export async function loadSessionUserProfile(session: POJUSessionState): Promise<UserProfile | null> {
-  if (!resolveSessionHasProfile(session)) return null;
+  const bundle = await loadSessionProfileBundle(session);
+  return bundle.profile;
+}
+
+/** Browser-only: profile + Step 7 base analysis for `/api/poju/chat`. */
+export async function loadSessionProfileBundle(session: POJUSessionState): Promise<{
+  profile: UserProfile | null;
+  base_analysis: unknown | null;
+}> {
+  if (!resolveSessionHasProfile(session)) return { profile: null, base_analysis: null };
   const sid = session.selected_stored_profile_id?.trim();
   if (isValidStoredProfileId(sid)) {
     const data = await getStoredProfile(sid!);
-    return data?.user_profile ?? null;
+    return {
+      profile: data?.user_profile ?? null,
+      base_analysis: data?.base_analysis?.content ?? null,
+    };
   }
   if (session.birth_submitted_in_session) {
-    return getUserProfile();
+    return { profile: await getUserProfile(), base_analysis: null };
   }
-  return null;
+  return { profile: null, base_analysis: null };
 }

@@ -9,6 +9,10 @@ import {
 import type { PhaseLLMInput } from "@/lib/llm/phases/types";
 
 export async function loadBaseAnalysisForSession(input: PhaseLLMInput): Promise<unknown> {
+  if (input.base_analysis !== undefined && input.base_analysis !== null) {
+    return input.base_analysis;
+  }
+  if (typeof window === "undefined") return null;
   if (input.profile && input.session.selected_stored_profile_id) {
     const row = await getStoredProfile(input.session.selected_stored_profile_id);
     return row?.base_analysis?.content ?? null;

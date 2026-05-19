@@ -1,36 +1,13 @@
+import { saveBaseAnalysisAudit } from "@/lib/dev/base-analysis-audit";
+import { parseBaseAnalysisAuditBody } from "@/lib/dev/parse-base-analysis-audit-body";
 import { buildBaseAnalysisPrompt, parseBaseAnalysisResponseText } from "@/lib/llm/deepseek/base-analysis";
 import {
   buildOpenRouterMessages,
   openRouterChatCompletionStream,
 } from "@/lib/llm/openrouter-stream";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
-import type { UserProfile } from "@/lib/profile/types";
 
 export const maxDuration = 180;
-
-function isRecord(x: unknown): x is Record<string, unknown> {
-  return Boolean(x) && typeof x === "object" && !Array.isArray(x);
-}
-
-function isUserProfile(x: unknown): x is UserProfile {
-  if (!isRecord(x)) return false;
-  if (typeof x.id !== "string") return false;
-  if (!isRecord(x.birth)) return false;
-  if (typeof x.birth.year !== "number" || typeof x.birth.month !== "number" || typeof x.birth.day !== "number")
-    return false;
-  if (typeof x.birth.hour !== "number") return false;
-  if (x.birth.gender !== "male" && x.birth.gender !== "female" && x.birth.gender !== "other") return false;
-  if (!isRecord(x.bazi)) return false;
-  const z = x.bazi;
-  if (typeof z.yearPillar !== "string" || typeof z.monthPillar !== "string") return false;
-  if (typeof z.dayPillar !== "string" || typeof z.hourPillar !== "string") return false;
-  if (!isRecord(x.diagnosis)) return false;
-  if (typeof x.diagnosis.dayMaster !== "string") return false;
-  if (!Array.isArray(x.diagnosis.favorableElements) || !Array.isArray(x.diagnosis.challengingElements)) return false;
-  if (typeof x.diagnosis.patternSummary !== "string") return false;
-  if (x.source !== "shunshi" && x.source !== "fallback") return false;
-  return true;
-}
 
 function sseLine(obj: Record<string, unknown>): string {
   return `data: ${JSON.stringify(obj)}\n\n`;
@@ -47,15 +24,15 @@ export async function POST(req: Request) {
     );
   }
 
-  const body = (await req.json().catch(() => ({}))) as { user_profile?: unknown };
-  if (!isUserProfile(body.user_profile)) {
+  const body = (await req.json().catch(() => ({}))) as unknown;
+  const parsed = parseBaseAnalysisAuditBody(body);
+  if (!parsed) {
     return new Response(sseLine({ type: "error", message: "Invalid or missing user_profile" }), {
       status: 400,
       headers: { "Content-Type": "text/event-stream" },
     });
   }
-
-  const profile = body.user_profile;
+  const { user_profile: profile, stored_profile_id, display_name } = parsed;
   const { system, user } = buildBaseAnalysisPrompt(profile);
   const encoder = new TextEncoder();
 
@@ -93,6 +70,18 @@ export async function POST(req: Request) {
           return;
         }
 
+        const audit = await saveBaseAnalysisAudit({
+          user_profile: profile,
+          prompts: { system, user },
+          analysis,
+          model: result.model,
+          tokens_used: result.tokens_used,
+          stored_profile_id,
+          display_name,
+          reasoning: result.reasoning ?? "",
+          raw_model_text: result.text,
+        });
+
         push({
           type: "done",
           ok: true,
@@ -100,6 +89,7 @@ export async function POST(req: Request) {
           model: result.model,
           tokens_used: result.tokens_used,
           reasoning: result.reasoning ?? "",
+          audit_id: audit?.id ?? null,
         });
       } catch (e: unknown) {
         push({

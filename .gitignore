@@ -21,6 +21,9 @@
 /build
 dist/
 
+# local dev audit logs (base analysis plaintext)
+.data/
+
 # misc
 .DS_Store
 *.pem

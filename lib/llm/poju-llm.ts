@@ -27,6 +27,7 @@ import type { UserProfile } from "@/lib/profile/types";
 interface CallInput {
   session: POJUSessionState;
   profile: UserProfile | null;
+  base_analysis?: unknown | null;
   locale: string;
 }
 
@@ -99,7 +100,12 @@ async function callPOJULLMPhasePath(input: CallInput): Promise<POJULLMResponse> 
   const { session, profile, locale } = input;
   const fallbackModel = isOpenRouterConfigured() ? getOpenRouterDefaultModel() : GEMINI_PRIMARY_MODEL;
 
-  const { phase, activePhase, ...mapped } = await executeAgentPhaseLLM({ session, profile, locale });
+  const { phase, activePhase, ...mapped } = await executeAgentPhaseLLM({
+    session,
+    profile,
+    base_analysis: input.base_analysis,
+    locale,
+  });
 
   return {
     response: String(mapped.response ?? phase.response),

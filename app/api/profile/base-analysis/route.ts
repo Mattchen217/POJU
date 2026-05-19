@@ -1,34 +1,11 @@
 import { NextResponse } from "next/server";
+import { saveBaseAnalysisAudit } from "@/lib/dev/base-analysis-audit";
+import { parseBaseAnalysisAuditBody } from "@/lib/dev/parse-base-analysis-audit-body";
 import { buildBaseAnalysisPrompt, parseBaseAnalysisResponseText } from "@/lib/llm/deepseek/base-analysis";
 import { callLLM } from "@/lib/llm/router";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
-import type { UserProfile } from "@/lib/profile/types";
 
 export const maxDuration = 180;
-
-function isRecord(x: unknown): x is Record<string, unknown> {
-  return Boolean(x) && typeof x === "object" && !Array.isArray(x);
-}
-
-function isUserProfile(x: unknown): x is UserProfile {
-  if (!isRecord(x)) return false;
-  if (typeof x.id !== "string") return false;
-  if (!isRecord(x.birth)) return false;
-  if (typeof x.birth.year !== "number" || typeof x.birth.month !== "number" || typeof x.birth.day !== "number")
-    return false;
-  if (typeof x.birth.hour !== "number") return false;
-  if (x.birth.gender !== "male" && x.birth.gender !== "female" && x.birth.gender !== "other") return false;
-  if (!isRecord(x.bazi)) return false;
-  const z = x.bazi;
-  if (typeof z.yearPillar !== "string" || typeof z.monthPillar !== "string") return false;
-  if (typeof z.dayPillar !== "string" || typeof z.hourPillar !== "string") return false;
-  if (!isRecord(x.diagnosis)) return false;
-  if (typeof x.diagnosis.dayMaster !== "string") return false;
-  if (!Array.isArray(x.diagnosis.favorableElements) || !Array.isArray(x.diagnosis.challengingElements)) return false;
-  if (typeof x.diagnosis.patternSummary !== "string") return false;
-  if (x.source !== "shunshi" && x.source !== "fallback") return false;
-  return true;
-}
 
 /**
  * Body: `{ user_profile: UserProfile }` — caller loads from IndexedDB and sends the computed chart.
@@ -43,11 +20,10 @@ export async function POST(req: Request) {
     }
 
     const body = (await req.json().catch(() => ({}))) as { user_profile?: unknown };
-    if (!isUserProfile(body.user_profile)) {
+    const profile = parseUserProfileForApi(body.user_profile);
+    if (!profile) {
       return NextResponse.json({ ok: false, error: "Invalid or missing user_profile" }, { status: 400 });
     }
-
-    const profile = body.user_profile;
     const { system, user } = buildBaseAnalysisPrompt(profile);
 
     const result = await callLLM({
@@ -72,6 +48,19 @@ export async function POST(req: Request) {
       );
     }
 
+    const audit = await saveBaseAnalysisAudit({
+      user_profile: profile,
+      prompts: { system, user },
+      analysis,
+      model: result.actual_model,
+      tokens_used: result.meta.tokens_used,
+      stored_profile_id,
+      display_name,
+      latency_ms: result.meta.latency_ms,
+      cost_usd: result.meta.cost_usd,
+      raw_model_text: result.content,
+    });
+
     return NextResponse.json({
       ok: true,
       analysis,
@@ -79,6 +68,7 @@ export async function POST(req: Request) {
       tokens_used: result.meta.tokens_used,
       latency_ms: result.meta.latency_ms,
       cost_usd: result.meta.cost_usd,
+      audit_id: audit?.id ?? null,
     });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Base analysis failed";

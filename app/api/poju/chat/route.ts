@@ -15,6 +15,7 @@ export async function POST(req: Request) {
     userProfile?: UserProfile | null;
     session?: POJUSessionState;
     profile?: UserProfile | null;
+    base_analysis?: unknown | null;
   };
 
   if (!body.session || typeof body.session !== "object" || typeof body.session.session_id !== "string") {
@@ -27,6 +28,7 @@ export async function POST(req: Request) {
   const llm = await callPOJULLM({
     session: body.session,
     profile: body.profile ?? body.userProfile ?? null,
+    base_analysis: body.base_analysis === undefined ? null : body.base_analysis,
     locale: String(body.locale ?? "en"),
   });
   return NextResponse.json(llm);

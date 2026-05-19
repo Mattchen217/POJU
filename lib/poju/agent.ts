@@ -1,4 +1,4 @@
-import { loadSessionUserProfile, withSessionProfileFlags } from "@/lib/poju/session-profile";
+import { loadSessionProfileBundle, withSessionProfileFlags } from "@/lib/poju/session-profile";
 import type { POJUAction, POJUSessionState, POJUMessage } from "@/lib/poju/types";
 import { checkRuleViolation, getRuleRejectionMessage } from "@/lib/poju/rules";
 import {
@@ -226,11 +226,12 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       ],
     };
   }
-  const profile = await loadSessionUserProfile(sessionForLlm);
+  const { profile, base_analysis } = await loadSessionProfileBundle(sessionForLlm);
 
   const llmResponse = await callLLMViaAPI({
     session: sessionForLlm,
     profile,
+    base_analysis,
     locale,
     signal,
   });
@@ -361,6 +362,7 @@ function updateAbuseMetrics(metrics: POJUSessionState["abuse_metrics"], type: "t
 async function callLLMViaAPI(input: {
   session: POJUSessionState;
   profile: UserProfile | null;
+  base_analysis?: unknown | null;
   locale: string;
   signal?: AbortSignal;
 }): Promise<{
@@ -386,6 +388,7 @@ async function callLLMViaAPI(input: {
     body: JSON.stringify({
       session: input.session,
       profile: input.profile,
+      base_analysis: input.base_analysis ?? null,
       locale: input.locale,
     }),
     signal: input.signal,

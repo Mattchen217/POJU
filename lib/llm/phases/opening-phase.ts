@@ -35,9 +35,10 @@ function buildOpeningTaskBlock(input: PhaseLLMInput): string {
 
 ## 风格
 
-- 总字数 80-180 字（中文）/ 60-130 词（英文）
-- 2-3 个自然段，不要列要点
-- 不要说「我能帮你」之类的空承诺
+- 总字数 180-420 字（中文）/ 140-300 词（英文）
+- 3-5 个自然段：命盘结构 1-2 段 + 承接问题 + 尖锐追问
+- 必须引用命主基础分析中的至少 1 条具体结论（格局/大运/用神/亮点或隐忧），并白话解释
+- 不要列要点清单；不要说「我能帮你」之类的空承诺
 
 ## 输出格式（严格 JSON，无 markdown 围栏）
 
@@ -59,7 +60,7 @@ export async function callOpeningPhase(input: PhaseLLMInput): Promise<PhaseLLMRe
   const result = await callPhaseJsonTransport(system, messages, {
     call_type: "chat_flash",
     temperature: 0.55,
-    max_tokens: 1200,
+    max_tokens: 2800,
   });
 
   let parsed: Record<string, unknown>;

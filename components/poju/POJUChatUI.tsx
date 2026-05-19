@@ -1154,6 +1154,16 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                     <p className="mt-1 text-emerald-200/90">{t("situation_analysis_have_cache")}</p>
                   ) : null}
                   <p className="mt-2 text-[11px] text-white/50">{t("final_delivery_hint")}</p>
+                  <p className="mt-2">
+                    <a
+                      href="/base-analysis-audit"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-amber-300/90 underline underline-offset-2 hover:text-amber-200"
+                    >
+                      查看 Step 7 完整 DeepSeek 分析（审核台）
+                    </a>
+                  </p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <button
                       type="button"

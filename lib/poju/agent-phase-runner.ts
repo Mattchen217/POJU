@@ -26,11 +26,13 @@ function buildPhaseInput(
   session: POJUSessionState,
   profile: UserProfile | null,
   locale: string,
+  base_analysis?: unknown | null,
 ): PhaseLLMInput {
   const user_message = getLastUserMessageContent(session);
   return {
     session,
     profile,
+    base_analysis: base_analysis ?? null,
     locale,
     user_message,
     agent_state: session.agent_v2 ?? null,
@@ -82,7 +84,7 @@ export async function executeAgentPhaseLLM(input: {
   }
 
   const activePhase = resolveActiveAgentPhase(session);
-  const phaseInput = buildPhaseInput(session, profile, locale);
+  const phaseInput = buildPhaseInput(session, profile, locale, base_analysis);
   const phase = await dispatchPhase(activePhase, phaseInput, session);
   const mapped = mapPhaseResultToChatPayload(phase, {
     session,

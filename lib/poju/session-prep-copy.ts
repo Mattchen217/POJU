@@ -11,13 +11,3 @@ export function getWelcomeText(locale: string): string {
   return map[locale.split("-")[0]] ?? map.en;
 }
 
-export function getQuestionLabel(locale: string): string {
-  const map: Record<string, string> = {
-    en: "Your question for this session:",
-    zh: "你这次会话的问题：",
-    es: "Tu pregunta para esta sesión:",
-    fr: "Votre question pour cette session :",
-    de: "Ihre Frage für diese Sitzung:",
-  };
-  return map[locale.split("-")[0]] ?? map.en;
-}

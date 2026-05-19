@@ -1,6 +1,7 @@
 /**
  * POJU v5 Step I — 东方破局顾问基础人设（所有 phase 共用）
  */
+import { formatBaseAnalysisForPrompt } from "@/lib/llm/prompts/base-analysis-context";
 import type { UserProfile } from "@/lib/profile/types";
 import { splitPillar } from "@/lib/poju/chart-loader-display";
 
@@ -110,12 +111,7 @@ export function buildProfileContextSection(
   const h = splitPillar(bazi.hourPillar);
   const birth = profile.birth;
 
-  const analysisBlock =
-    baseAnalysis === undefined || baseAnalysis === null
-      ? "(命主基础分析尚未生成，可依据四柱与日主做推演。)"
-      : typeof baseAnalysis === "string"
-        ? baseAnalysis.slice(0, 4000)
-        : JSON.stringify(baseAnalysis, null, 2).slice(0, 4000);
+  const analysisBlock = formatBaseAnalysisForPrompt(baseAnalysis);
 
   return `# 用户的命盘信息（仅供你内部分析使用）
 
@@ -132,16 +128,17 @@ ${birth.year}-${String(birth.month).padStart(2, "0")}-${String(birth.day).padSta
 日主: ${profile.diagnosis.dayMaster}
 有利元素方向: ${profile.diagnosis.favorableElements.join(", ") || "—"}
 
-## 命主基础分析（资深命理师生成的缓存）
+## 命主基础分析（资深命理师生成的完整缓存 JSON）
 
 ${analysisBlock}
 
 ---
 
 ⚠️ 使用说明:
-- 以上是你的工作依据，要自然融入对话
-- 可以引用具体命理结论（如「你的日主是庚金」），并【简短解释】
-- 不要直接抛出大段 JSON 或命盘表格
+- 以上是【完整】命主基础分析，是你的首要依据；务必与当前大运、格局、用神等结论交叉使用
+- 回复中要体现你已读过这份分析（可引用格局、大运、命局亮点/隐忧中的具体点），并【用白话解释】
+- 不要在回复里粘贴 JSON 或命盘表格；把结论融入自然对话
+- 用户困境沉重时，允许写得更充分（见各阶段字数要求），不要为短而短
 - 行动建议必须基于这个命主结构`;
 }
 

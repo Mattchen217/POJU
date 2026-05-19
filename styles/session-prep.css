@@ -35,27 +35,7 @@
 .welcome-text {
   color: #ccc;
   line-height: 1.7;
-  margin-bottom: 24px;
-}
-
-.your-question {
-  background: rgba(212, 175, 55, 0.05);
-  border: 1px solid rgba(212, 175, 55, 0.2);
-  border-radius: 8px;
-  padding: 16px;
-}
-
-.your-question .label {
-  color: #888;
-  font-size: 13px;
-  display: block;
-  margin-bottom: 8px;
-}
-
-.your-question .question-text {
-  color: #e5e5e5;
-  font-style: italic;
-  margin: 0;
+  margin-bottom: 0;
 }
 
 .prep-main {
@@ -189,15 +169,6 @@
   color: #666;
   font-size: 12px;
   margin-top: 8px;
-}
-
-.picker-section .picker-column {
-  background: rgba(0, 0, 0, 0.3) !important;
-}
-
-.picker-section .picker-highlight {
-  border-top: 1px solid rgba(212, 175, 55, 0.3) !important;
-  border-bottom: 1px solid rgba(212, 175, 55, 0.3) !important;
 }
 
 .gender-section {
