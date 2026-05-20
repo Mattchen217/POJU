@@ -9,15 +9,11 @@ import {
 import { callLLM } from "@/lib/llm/router";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
-import {
-  detectInitialLanguage,
-  sanitizeResponse,
-} from "@/lib/llm/phases/response-sanitizer";
+import { detectInitialLanguage } from "@/lib/llm/phases/response-sanitizer";
 import type { PojuV4ActionRequested } from "@/lib/poju/types";
 import {
   type PhaseLLMInput,
   type PhaseLLMResult,
-  sanitizerStateFromSession,
 } from "@/lib/llm/phases/types";
 import { normalizeAgentPhase, type AgentPhase } from "@/lib/poju/agent-state";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
@@ -198,7 +194,6 @@ export async function callGreetingPhase(input: PhaseLLMInput): Promise<PhaseLLMR
     locale: input.locale,
   });
   const messages = formatMessageHistory(input);
-  const sanitizerState = sanitizerStateFromSession(input.session);
 
   const result = await callGreetingTransport(system, messages);
 
@@ -215,8 +210,7 @@ export async function callGreetingPhase(input: PhaseLLMInput): Promise<PhaseLLMR
     };
   }
 
-  let response = typeof parsed.response === "string" ? parsed.response : String(parsed.response ?? "");
-  response = sanitizeResponse(response, sanitizerState);
+  const response = typeof parsed.response === "string" ? parsed.response.trim() : String(parsed.response ?? "").trim();
 
   const context_updates =
     parsed.context_updates && typeof parsed.context_updates === "object" && !Array.isArray(parsed.context_updates)

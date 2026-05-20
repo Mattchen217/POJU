@@ -666,7 +666,7 @@
     "male": "Hombre",
     "female": "Mujer",
     "reassure_1": "Tus datos permanecen solo en este dispositivo, cifrados.",
-    "reassure_2": "Tras confirmar, la preparación tarda unos 30–60 segundos.",
+    "reassure_2": "Tras confirmar, la preparación tarda unos 2–5 minutos.",
     "go_back": "Volver y editar",
     "confirm_and_proceed": "Confirmar y comenzar",
     "processing": "Preparando…"
@@ -682,7 +682,7 @@
     "day_master_label": "Maestro del día",
     "strength_label": "Fuerza",
     "current_phase_label": "Fase actual (10 años)",
-    "hint_first_time": "Elaborando tu lectura detallada. Tarda 30-60 segundos. Solo esta vez.",
+    "hint_first_time": "Elaborando tu lectura detallada. Tarda 2–5 minutos. Solo esta vez.",
     "hint_using_cache": "Cargando tu carta ya analizada...",
     "done_message": "Listo. Entrando en tu sesión...",
     "error_title": "Preparación fallida",

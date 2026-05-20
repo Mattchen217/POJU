@@ -728,7 +728,7 @@
     "male": "男",
     "female": "女",
     "reassure_1": "你的数据只保存在本设备，已加密。",
-    "reassure_2": "确认后，准备过程约 30–60 秒。",
+    "reassure_2": "确认后，准备过程约 2–5 分钟。",
     "go_back": "返回修改",
     "confirm_and_proceed": "确认并开始",
     "processing": "准备中…"
@@ -744,7 +744,7 @@
     "day_master_label": "日主",
     "strength_label": "强弱",
     "current_phase_label": "当前大运",
-    "hint_first_time": "正在为你做完整命理推演，约 30-60 秒。仅本次需要等待。",
+    "hint_first_time": "正在为你做完整命理推演，约 2–5 分钟。仅本次需要等待。",
     "hint_using_cache": "正在加载已分析的命盘...",
     "done_message": "已就绪，即将进入对话...",
     "error_title": "准备失败",

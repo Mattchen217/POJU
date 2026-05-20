@@ -5,13 +5,11 @@ import {
 import { formatContextForPrompt, formatMissingFieldsForPrompt } from "@/lib/poju/context-extractor";
 import type { AgentPhase } from "@/lib/poju/agent-state";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
-import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseJson } from "@/lib/llm/phases/phase-transport";
+import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseResult } from "@/lib/llm/phases/phase-transport";
 import { buildOrientalSystemPrompt } from "@/lib/llm/phases/oriental-prompt-context";
 import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
-import { sanitizeResponse } from "@/lib/llm/phases/response-sanitizer";
 import type { PojuV4ActionRequested } from "@/lib/poju/types";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
-import { sanitizerStateFromSession } from "@/lib/llm/phases/types";
 
 const VALID_SUGGESTED: AgentPhase[] = ["collecting_context", "awaiting_confirmation"];
 const VALID_ACTIONS: PojuV4ActionRequested[] = [
@@ -73,6 +71,12 @@ ${requiredList}
 3. 不重复已知信息；一次不要问超过 3 个问题
 4. 只把用户【明确说过】的事实写入 context_updates，不要推断编造
 
+## 用户追问已给建议时（如「只放个水杯就行吗」「除了 X 还要做什么」）
+
+- ✗ 禁止退化成空泛倾听套话、重复追问上下文中用户已说清楚的事实
+- ✓ 在水杯/方位/物件/行动建议上【展开】：为什么有效、放哪里、什么材质/颜色、何时调整、还可叠加 1-2 个具体动作
+- ✓ 继续用命主基础分析 + 当前大运支撑，保持东方破局顾问口吻
+
 ## 完成判断
 
 - 完成度 ≥ 70% 或信息已够支撑 3 条可执行行动 → suggested_phase: "awaiting_confirmation"
@@ -105,15 +109,10 @@ export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLL
     temperature: 0.5,
   });
 
-  let parsed: Record<string, unknown>;
-  try {
-    parsed = parsePhaseJson(result.content);
-  } catch {
-    parsed = { response: result.content, suggested_phase: null, context_updates: {} };
+  const { parsed, response } = parsePhaseResult(result.content);
+  if (!response) {
+    console.warn("[collecting-phase] Empty response from model; raw length:", result.content.length);
   }
-
-  let response = typeof parsed.response === "string" ? parsed.response : String(parsed.response ?? "");
-  response = sanitizeResponse(response, sanitizerStateFromSession(input.session));
 
   const context_updates =
     parsed.context_updates && typeof parsed.context_updates === "object" && !Array.isArray(parsed.context_updates)

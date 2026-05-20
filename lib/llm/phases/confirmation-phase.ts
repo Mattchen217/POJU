@@ -1,11 +1,9 @@
 import { formatContextForPrompt } from "@/lib/poju/context-extractor";
 import type { AgentPhase, ContextSummary } from "@/lib/poju/agent-state";
-import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseJson } from "@/lib/llm/phases/phase-transport";
+import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseResult } from "@/lib/llm/phases/phase-transport";
 import { buildOrientalSystemPrompt } from "@/lib/llm/phases/oriental-prompt-context";
 import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
-import { sanitizeResponse } from "@/lib/llm/phases/response-sanitizer";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
-import { sanitizerStateFromSession } from "@/lib/llm/phases/types";
 
 const VALID_SUGGESTED: AgentPhase[] = ["awaiting_confirmation", "collecting_context", "delivered"];
 
@@ -56,67 +54,44 @@ ${contextText}
 }`;
 }
 
-function buildAmbiguousTaskBlock(input: PhaseLLMInput): string {
-  return `# 当前任务：确认阶段澄清
+async function handleConfirmProceed(input: PhaseLLMInput): Promise<PhaseLLMResult> {
+  const existingSummary = input.agent_state?.current_summary ?? null;
+  const system = await buildOrientalSystemPrompt(
+    input,
+    `# 当前任务：用户已确认汇总
 
-用户已对汇总做出回应，但意图不明确。用 1-2 句话问：是要补充信息，还是可以开始深度推演？
+用户已确认信息无误，准备进入深度破局交付。用 1-3 句自然承接（可提及将结合命盘与已收集信息），并设置 suggested_phase 为 "delivered"。不要输出完整交付正文。
 
-## 输出 JSON
-{ "response": "...", "suggested_phase": null, "context_updates": {} }`;
-}
+输出 JSON：response, suggested_phase, context_updates`,
+  );
+  const messages = formatPhaseMessageHistory(input.session.messages);
+  const result = await callPhaseJsonTransport(system, messages, {
+    call_type: "collection_flash",
+    max_tokens: 800,
+    temperature: 0.45,
+  });
 
-function handleAddMore(input: PhaseLLMInput): PhaseLLMResult {
-  const zh = input.locale.startsWith("zh");
+  const { parsed, response } = parsePhaseResult(result.content);
+  const rawPhase = typeof parsed.suggested_phase === "string" ? parsed.suggested_phase.trim() : null;
+  const suggested_phase =
+    rawPhase === "delivered" ? "delivered" : ("delivered" as const);
+
   return {
-    response: zh ? "好的，你想补充什么？" : "Of course. What would you like to add?",
-    suggested_phase: "collecting_context",
-    context_updates: {},
+    response,
+    suggested_phase,
+    context_updates:
+      parsed.context_updates && typeof parsed.context_updates === "object" && !Array.isArray(parsed.context_updates)
+        ? (parsed.context_updates as Record<string, unknown>)
+        : {},
     question_category: null,
-    current_summary: input.agent_state?.current_summary ?? null,
+    current_summary: existingSummary,
     main_delivery_data: null,
     actions: [],
-    tokens_used: 0,
+    tokens_used: result.tokens_used,
     total_cost: 0,
-    call_count: 0,
-    thinking_process: undefined,
-  };
-}
-
-function handleConfirmProceed(input: PhaseLLMInput): PhaseLLMResult {
-  const zh = input.locale.startsWith("zh");
-  return {
-    response: zh
-      ? "好。我现在结合你的命盘和你提供的所有信息，深度推演一遍。大约 30–60 秒，马上来。"
-      : "Good. Let me weave your chart with everything you shared. This takes about 30–60 seconds.",
-    suggested_phase: "delivered",
-    context_updates: {},
-    question_category: null,
-    current_summary: input.agent_state?.current_summary ?? null,
-    main_delivery_data: null,
-    actions: [],
-    tokens_used: 0,
-    total_cost: 0,
-    call_count: 0,
-    thinking_process: undefined,
-  };
-}
-
-function handleAmbiguous(input: PhaseLLMInput): PhaseLLMResult {
-  const zh = input.locale.startsWith("zh");
-  return {
-    response: zh
-      ? "想再补充一点，还是觉得信息已经够了可以让我开始分析？"
-      : "Want to add more, or are you ready for me to begin the analysis?",
-    suggested_phase: null,
-    context_updates: {},
-    question_category: null,
-    current_summary: input.agent_state?.current_summary ?? null,
-    main_delivery_data: null,
-    actions: [],
-    tokens_used: 0,
-    total_cost: 0,
-    call_count: 0,
-    thinking_process: undefined,
+    call_count: 1,
+    model: result.model,
+    thinking_process: thinkingFromPhaseTransport(result, parsed, input.locale),
   };
 }
 
@@ -133,20 +108,7 @@ async function generateSummaryPhase(input: PhaseLLMInput): Promise<PhaseLLMResul
     temperature: 0.45,
   });
 
-  let parsed: Record<string, unknown>;
-  try {
-    parsed = parsePhaseJson(result.content);
-  } catch {
-    parsed = {
-      response: input.locale.startsWith("zh")
-        ? "让我整理一下了解到的情况…"
-        : "Let me organize what I've gathered…",
-      current_summary: null,
-    };
-  }
-
-  let response = typeof parsed.response === "string" ? parsed.response : String(parsed.response ?? "");
-  response = sanitizeResponse(response, sanitizerStateFromSession(input.session));
+  const { parsed, response } = parsePhaseResult(result.content);
 
   const summary = normalizeSummary(parsed.current_summary);
   if (summary && !summary.generated_at) {
@@ -169,37 +131,6 @@ async function generateSummaryPhase(input: PhaseLLMInput): Promise<PhaseLLMResul
   };
 }
 
-async function handleAmbiguousLlm(input: PhaseLLMInput): Promise<PhaseLLMResult> {
-  const system = await buildOrientalSystemPrompt(input, buildAmbiguousTaskBlock(input));
-  const messages = formatPhaseMessageHistory(input.session.messages);
-  const result = await callPhaseJsonTransport(system, messages, { max_tokens: 600, temperature: 0.4 });
-
-  let parsed: Record<string, unknown>;
-  try {
-    parsed = parsePhaseJson(result.content);
-  } catch {
-    return handleAmbiguous(input);
-  }
-
-  let response = typeof parsed.response === "string" ? parsed.response : String(parsed.response ?? "");
-  response = sanitizeResponse(response, sanitizerStateFromSession(input.session));
-
-  return {
-    response,
-    suggested_phase: null,
-    context_updates: {},
-    question_category: null,
-    current_summary: input.agent_state?.current_summary ?? null,
-    main_delivery_data: null,
-    actions: [],
-    tokens_used: result.tokens_used,
-    total_cost: 0,
-    call_count: 1,
-    model: result.model,
-    thinking_process: thinkingFromPhaseTransport(result, parsed, input.locale),
-  };
-}
-
 export async function callConfirmationPhase(input: PhaseLLMInput): Promise<PhaseLLMResult> {
   const agent = input.agent_state;
   const userMsg = input.user_message.trim();
@@ -209,20 +140,8 @@ export async function callConfirmationPhase(input: PhaseLLMInput): Promise<Phase
     return generateSummaryPhase(input);
   }
 
-  if (/(?:还有|另外|补充|忘了|let me add|one more|also)/i.test(userMsg)) {
-    return handleAddMore(input);
-  }
-
-  if (/(?:确认|对|可以了|没问题|开始|生成|yes|confirm|correct|generate|proceed|go|ready)/i.test(userMsg.toLowerCase())) {
-    return handleConfirmProceed(input);
-  }
-
   if (userMsg.includes("confirmed summary") || userMsg.includes("[SYSTEM:")) {
-    return handleConfirmProceed(input);
-  }
-
-  if (!userMsg) {
-    return handleAmbiguous(input);
+    return await handleConfirmProceed(input);
   }
 
   const system = await buildOrientalSystemPrompt(
@@ -243,15 +162,7 @@ export async function callConfirmationPhase(input: PhaseLLMInput): Promise<Phase
     temperature: 0.45,
   });
 
-  let parsed: Record<string, unknown>;
-  try {
-    parsed = parsePhaseJson(result.content);
-  } catch {
-    return handleAmbiguousLlm(input);
-  }
-
-  let response = typeof parsed.response === "string" ? parsed.response : String(parsed.response ?? "");
-  response = sanitizeResponse(response, sanitizerStateFromSession(input.session));
+  const { parsed, response } = parsePhaseResult(result.content);
 
   const rawPhase = typeof parsed.suggested_phase === "string" ? parsed.suggested_phase.trim() : null;
   const suggested_phase =

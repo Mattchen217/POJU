@@ -31,19 +31,3 @@ export interface PhaseLLMResult {
   thinking_process?: string;
 }
 
-export interface SanitizerStateSlice {
-  original_question: string;
-  selected_profile_id: string | null;
-  profile_skipped: boolean;
-}
-
-export function sanitizerStateFromSession(session: POJUSessionState): SanitizerStateSlice {
-  return {
-    original_question: session.original_question,
-    selected_profile_id:
-      session.selected_stored_profile_id ??
-      session.agent_v2?.selected_profile_id ??
-      null,
-    profile_skipped: session.profile_skipped,
-  };
-}

@@ -1,5 +1,5 @@
 import type { AgentPhase } from "@/lib/poju/agent-state";
-import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseJson } from "@/lib/llm/phases/phase-transport";
+import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseResult } from "@/lib/llm/phases/phase-transport";
 import { buildOrientalSystemPrompt } from "@/lib/llm/phases/oriental-prompt-context";
 import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
@@ -52,18 +52,13 @@ export async function callTrackingPhase(input: PhaseLLMInput): Promise<PhaseLLMR
     temperature: 0.45,
   });
 
-  let parsed: Record<string, unknown>;
-  try {
-    parsed = parsePhaseJson(result.content);
-  } catch {
-    parsed = { response: result.content, suggested_phase: "tracking" };
-  }
+  const { parsed, response } = parsePhaseResult(result.content);
 
   const rawPhase = typeof parsed.suggested_phase === "string" ? parsed.suggested_phase.trim() : null;
   const suggested_phase: AgentPhase | null = rawPhase === "tracking" ? "tracking" : "tracking";
 
   return {
-    response: typeof parsed.response === "string" ? parsed.response : String(parsed.response ?? ""),
+    response,
     suggested_phase,
     context_updates: {},
     question_category: null,

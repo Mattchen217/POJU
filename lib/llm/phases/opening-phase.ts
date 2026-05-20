@@ -2,7 +2,7 @@
  * Step I — AI 主动开场（东方破局顾问定位）
  */
 import { normalizeAgentPhase, type AgentPhase } from "@/lib/poju/agent-state";
-import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseJson } from "@/lib/llm/phases/phase-transport";
+import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseResult } from "@/lib/llm/phases/phase-transport";
 import type { PojuV4ActionRequested } from "@/lib/poju/types";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
 import { buildOrientalSystemPrompt } from "@/lib/llm/phases/oriental-prompt-context";
@@ -63,14 +63,7 @@ export async function callOpeningPhase(input: PhaseLLMInput): Promise<PhaseLLMRe
     max_tokens: 2800,
   });
 
-  let parsed: Record<string, unknown>;
-  try {
-    parsed = parsePhaseJson(result.content);
-  } catch {
-    parsed = { response: result.content, suggested_phase: null, context_updates: {} };
-  }
-
-  const response = typeof parsed.response === "string" ? parsed.response : String(parsed.response ?? "");
+  const { parsed, response } = parsePhaseResult(result.content);
 
   const suggestedRaw = typeof parsed.suggested_phase === "string" ? parsed.suggested_phase : null;
   const suggested = suggestedRaw ? normalizeAgentPhase(suggestedRaw) : null;

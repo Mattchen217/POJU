@@ -339,13 +339,14 @@ function parseStep5LLMResponse(
   }
 }
 
+/** Infrastructure-only message when the LLM API fails entirely (not conversational coaching). */
 function getLLMFailureMessage(locale: string): string {
   const messages: Record<string, string> = {
-    en: "I'm having trouble connecting right now. Could you try again in a moment? Your session is saved.",
-    zh: "我现在连接有点问题,请稍后再试一下。你的会话已经保存。",
-    es: "Tengo problemas para conectarme en este momento. ¿Podrías intentarlo de nuevo en un momento? Tu sesión está guardada.",
-    fr: "J'ai des difficultés à me connecter en ce moment. Pourriez-vous réessayer dans un instant ? Votre session est sauvegardée.",
-    de: "Ich habe gerade Verbindungsprobleme. Könnten Sie es in einem Moment erneut versuchen? Ihre Sitzung ist gespeichert.",
+    en: "[POJU] Reply could not be generated. Please send again. Your session is saved.",
+    zh: "[POJU] 本轮回复未能生成，请重试发送。会话已保存。",
+    es: "[POJU] No se pudo generar la respuesta. Reintenta. Tu sesión está guardada.",
+    fr: "[POJU] Réponse non générée. Réessayez. Session enregistrée.",
+    de: "[POJU] Antwort konnte nicht erzeugt werden. Bitte erneut senden.",
   };
   const langCode = locale.split("-")[0];
   return messages[langCode] || messages.en;

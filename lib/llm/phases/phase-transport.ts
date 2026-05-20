@@ -61,6 +61,37 @@ export function parsePhaseJson(rawText: string): Record<string, unknown> {
   return JSON.parse(cleaned) as Record<string, unknown>;
 }
 
+/** Parse phase JSON; never substitute hardcoded conversational copy — use model text on failure. */
+export function parsePhaseResult(rawText: string): {
+  parsed: Record<string, unknown>;
+  response: string;
+} {
+  const cleaned = rawText.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
+  if (!cleaned) return { parsed: {}, response: "" };
+
+  try {
+    const parsed = parsePhaseJson(rawText);
+    const response =
+      typeof parsed.response === "string"
+        ? parsed.response.trim()
+        : typeof parsed.reply === "string"
+          ? parsed.reply.trim()
+          : cleaned;
+    return { parsed, response };
+  } catch {
+    const fieldMatch = cleaned.match(/"response"\s*:\s*"((?:\\.|[^"\\])*)"/);
+    if (fieldMatch?.[1]) {
+      try {
+        const unescaped = JSON.parse(`"${fieldMatch[1]}"`) as string;
+        return { parsed: {}, response: String(unescaped).trim() };
+      } catch {
+        return { parsed: {}, response: fieldMatch[1].replace(/\\n/g, "\n").trim() };
+      }
+    }
+    return { parsed: {}, response: cleaned };
+  }
+}
+
 export function formatPhaseMessageHistory(
   messages: Array<{ role: string; content: string; is_rejected?: boolean }>,
 ): Array<{ role: "user" | "assistant"; content: string }> {

@@ -1,5 +1,5 @@
 import type { AgentPhase } from "@/lib/poju/agent-state";
-import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseJson } from "@/lib/llm/phases/phase-transport";
+import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseResult } from "@/lib/llm/phases/phase-transport";
 import { buildOrientalSystemPrompt } from "@/lib/llm/phases/oriental-prompt-context";
 import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
@@ -36,24 +36,14 @@ export async function callDeliveryPhase(input: PhaseLLMInput): Promise<PhaseLLMR
     temperature: 0.4,
   });
 
-  let parsed: Record<string, unknown>;
-  try {
-    parsed = parsePhaseJson(result.content);
-  } catch {
-    parsed = {
-      response: input.locale.startsWith("zh")
-        ? "完整推演在上方的交付卡片里。你想先从哪一条行动开始，还是哪一点还想再抠一下？"
-        : "Your full reading is in the delivery card above. Which action do you want to start with—or what still feels unclear?",
-      suggested_phase: "tracking",
-    };
-  }
+  const { parsed, response } = parsePhaseResult(result.content);
 
   const rawPhase = typeof parsed.suggested_phase === "string" ? parsed.suggested_phase.trim() : null;
   const suggested_phase: AgentPhase | null =
     rawPhase === "tracking" || rawPhase === "delivered" ? rawPhase : "tracking";
 
   return {
-    response: typeof parsed.response === "string" ? parsed.response : String(parsed.response ?? ""),
+    response,
     suggested_phase,
     context_updates: {},
     question_category: null,

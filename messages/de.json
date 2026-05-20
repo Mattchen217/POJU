@@ -666,7 +666,7 @@
     "male": "Männlich",
     "female": "Weiblich",
     "reassure_1": "Ihre Daten bleiben nur auf diesem Gerät, verschlüsselt.",
-    "reassure_2": "Nach Bestätigung dauert die Vorbereitung ca. 30–60 Sekunden.",
+    "reassure_2": "Nach Bestätigung dauert die Vorbereitung ca. 2–5 Minuten.",
     "go_back": "Zurück & bearbeiten",
     "confirm_and_proceed": "Bestätigen & starten",
     "processing": "Wird vorbereitet…"
@@ -682,7 +682,7 @@
     "day_master_label": "Tagesmeister",
     "strength_label": "Stärke",
     "current_phase_label": "Aktuelle 10-Jahres-Phase",
-    "hint_first_time": "Deine ausführliche Deutung wird erstellt. 30–60 Sekunden. Nur dieses Mal.",
+    "hint_first_time": "Deine ausführliche Deutung wird erstellt. 2–5 Minuten. Nur dieses Mal.",
     "hint_using_cache": "Bereits analysiertes Chart wird geladen...",
     "done_message": "Bereit. Sitzung wird geöffnet...",
     "error_title": "Vorbereitung fehlgeschlagen",

@@ -7,7 +7,7 @@
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { getThinkingConfig, callLLM } from "@/lib/llm/router";
-import { sanitizeResponse } from "@/lib/llm/phases/response-sanitizer";
+import { parsePhaseResult } from "@/lib/llm/phases/phase-transport";
 import { buildRegionalPlatformGuidance } from "@/lib/llm/pro/final-delivery";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 
@@ -76,16 +76,9 @@ function staticChecks(): void {
   // 7 — no thinking_process in POJUChatUI
   assert("7 POJUChatUI hides raw thinking_process", !chatUi.includes("thinking_process"));
 
-  // 8 — sanitizer pass-through with profile
-  const withProfile = sanitizeResponse("你的日主为庚金，走偏印大运。", {
-    original_question: "test",
-    selected_profile_id: "p1",
-    profile_skipped: false,
-  });
-  assert(
-    "8 no [modern translation needed] with profile",
-    !withProfile.includes("[modern translation needed]") && withProfile.includes("庚金"),
-  );
+  // 8 — no hardcoded fallback: parsePhaseResult preserves model text
+  const passthrough = parsePhaseResult('{"response":"你的日主为庚金，走偏印大运。"}').response;
+  assert("8 parsePhaseResult preserves 命理 text", passthrough.includes("庚金"));
 
   // 9 — ContextSummaryEditor
   assert("9 ContextSummaryEditor wired", chatUi.includes("ContextSummaryEditor"));

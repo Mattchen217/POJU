@@ -96,7 +96,7 @@ export function repairLLMOutput(raw: any, fallbackLocale: string): any {
 
   return {
     thought,
-    response: raw?.response || getFallbackResponse(fallbackLocale),
+    response: String(raw?.response ?? raw?.reply ?? "").trim(),
     user_intent: raw?.user_intent || "unclear",
     current_state: raw?.current_state || "collecting_context",
     action_requested: raw?.action_requested || "continue_chat",
@@ -108,13 +108,3 @@ export function repairLLMOutput(raw: any, fallbackLocale: string): any {
   };
 }
 
-function getFallbackResponse(locale: string): string {
-  const messages: Record<string, string> = {
-    en: "Let me think about that more carefully. Could you tell me a bit more?",
-    zh: "让我再仔细想想。你能再多说一点吗?",
-    es: "Permíteme pensar en eso más cuidadosamente. ¿Podrías decirme un poco más?",
-    fr: "Laissez-moi réfléchir un peu plus. Pourriez-vous m'en dire un peu plus ?",
-    de: "Lassen Sie mich darüber sorgfältiger nachdenken. Könnten Sie mir etwas mehr erzählen?",
-  };
-  return messages[locale.split("-")[0]] || messages.en;
-}

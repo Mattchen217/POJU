@@ -11,7 +11,6 @@ import { ContextSummaryEditor } from "@/components/poju/ContextSummaryEditor";
 import type { ContextSummary } from "@/lib/poju/agent-state";
 import { MessageBubble } from "@/components/poju/MessageBubble";
 import { ThinkingStream } from "@/components/poju/ThinkingStream";
-import { getFallbackOpening } from "@/lib/poju/opening-fallback";
 import {
   resolveThinkingStreamMode,
   type ThinkingStreamMode,
@@ -292,25 +291,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return;
       console.error("[poju] Opening failed:", err);
-      const base = sessionRef.current;
-      const fallbackMsg: POJUMessage = {
-        role: "assistant",
-        content: getFallbackOpening(base.original_question, locale),
-        timestamp: new Date().toISOString(),
-        meta: { current_state: "opening", user_intent: "greeting" },
-      };
-      const withFallback = {
-        ...base,
-        messages: [...base.messages, fallbackMsg],
-        agent_v2: base.agent_v2
-          ? {
-              ...base.agent_v2,
-              current_phase: "collecting_context" as const,
-            }
-          : base.agent_v2,
-      };
-      onSessionUpdate(withFallback);
-      await savePOJUSession(withFallback);
     } finally {
       if (sendAbortRef.current === ac) sendAbortRef.current = null;
       if (gen === sendGenerationRef.current) {
