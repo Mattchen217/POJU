@@ -36,6 +36,9 @@ export interface POJUMessage {
     current_state?: PojuV4StateHint;
     action_requested?: PojuV4ActionRequested;
     topic_drift_detected?: boolean;
+    topic_drift_signal?: "none" | "edge" | "off_topic";
+    drift_reason?: string;
+    should_show_new_session_button?: boolean;
     contains_delivery?: boolean;
     /** DeepSeek / OpenRouter reasoning tokens + POJU thought digest for this turn. */
     thinking_process?: string;
@@ -104,6 +107,8 @@ export interface POJUSessionState {
   situation_analysis_by_fingerprint?: Record<string, SituationAnalysisCacheEntry>;
   /** 若从 `stored_profiles` 选人，写入 profile_id 以便挂载 Step 7 `base_analysis`。 */
   selected_stored_profile_id?: string | null;
+  /** IndexedDB archive row id for the main-delivery action plan (改进 3). */
+  action_plan_archive_id?: string | null;
   tokens_used: number;
   abuse_metrics: {
     long_input_count: number;

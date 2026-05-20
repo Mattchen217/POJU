@@ -9,7 +9,9 @@ import { loadPOJUSession } from "@/lib/poju/session-manager";
 import { listStoredProfiles, type StoredProfileSummary } from "@/lib/profile/stored-profiles-service";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import type { POJUSessionState } from "@/lib/poju/types";
+import { PreparingStatusOverlay } from "@/components/poju/PreparingStatusOverlay";
 import "@/styles/session-prep.css";
+import "@/styles/chart-loader.css";
 
 export default function PreparePage() {
   const params = useParams();
@@ -22,6 +24,7 @@ export default function PreparePage() {
   const [session, setSession] = useState<POJUSessionState | null>(null);
   const [profiles, setProfiles] = useState<StoredProfileSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [enteringPreparing, setEnteringPreparing] = useState(false);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -60,7 +63,8 @@ export default function PreparePage() {
   }, [sessionId, router]);
 
   function handleProfileSelected(profileId: string) {
-    router.push(`/poju/session/${sessionId}/preparing?profile=${encodeURIComponent(profileId)}`);
+    setEnteringPreparing(true);
+    router.replace(`/poju/session/${sessionId}/preparing?profile=${encodeURIComponent(profileId)}`);
   }
 
   function handleRefund() {
@@ -72,6 +76,16 @@ export default function PreparePage() {
   }
 
   if (!session) return null;
+
+  if (enteringPreparing) {
+    return (
+      <div className="preparing-spline-page preparing-spline-page--transition">
+        <PreparingStatusOverlay>
+          <p className="preparing-spline-page__status">{t("preparing")}</p>
+        </PreparingStatusOverlay>
+      </div>
+    );
+  }
 
   return (
     <SessionPreparation

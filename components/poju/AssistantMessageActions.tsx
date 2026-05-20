@@ -1,0 +1,124 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
+
+type AssistantMessageActionsProps = {
+  content: string;
+};
+
+async function copyTextToClipboard(text: string): Promise<boolean> {
+  if (!text) return false;
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    /* fallback below */
+  }
+
+  try {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.left = "-9999px";
+    document.body.appendChild(textarea);
+    textarea.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(textarea);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+export function AssistantMessageActions({ content }: AssistantMessageActionsProps) {
+  const t = useTranslations("poju.chat");
+  const [copied, setCopied] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  const plainText = content.trim();
+
+  useEffect(() => {
+    return () => {
+      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+      if (typeof window !== "undefined" && utteranceRef.current) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  const handleCopy = useCallback(async () => {
+    if (!plainText) return;
+    const ok = await copyTextToClipboard(plainText);
+    if (!ok) return;
+    setCopied(true);
+    if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+    copiedTimerRef.current = setTimeout(() => setCopied(false), 2000);
+  }, [plainText]);
+
+  const handleToggleRead = useCallback(() => {
+    if (typeof window === "undefined" || !plainText) return;
+
+    if (speaking) {
+      window.speechSynthesis.cancel();
+      utteranceRef.current = null;
+      setSpeaking(false);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(plainText);
+    utterance.lang = /[\u4e00-\u9fff]/.test(plainText) ? "zh-CN" : "en-US";
+    utterance.onend = () => {
+      utteranceRef.current = null;
+      setSpeaking(false);
+    };
+    utterance.onerror = () => {
+      utteranceRef.current = null;
+      setSpeaking(false);
+    };
+    utteranceRef.current = utterance;
+    setSpeaking(true);
+    window.speechSynthesis.speak(utterance);
+  }, [plainText, speaking]);
+
+  if (!plainText) return null;
+
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        type="button"
+        onClick={() => void handleCopy()}
+        className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors ${
+          copied
+            ? "bg-primary/20 text-primary"
+            : "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
+        }`}
+        aria-label={copied ? t("message_action_copied") : t("message_action_copy")}
+        title={copied ? t("message_action_copied") : t("message_action_copy")}
+      >
+        <span className="material-symbols-outlined text-[20px]">
+          {copied ? "check" : "content_copy"}
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={handleToggleRead}
+        className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors ${
+          speaking
+            ? "bg-primary/20 text-primary"
+            : "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
+        }`}
+        aria-label={speaking ? t("message_action_stop_reading") : t("message_action_read_aloud")}
+        title={speaking ? t("message_action_stop_reading") : t("message_action_read_aloud")}
+      >
+        <span className="material-symbols-outlined text-[20px]">{speaking ? "stop" : "volume_up"}</span>
+      </button>
+    </div>
+  );
+}

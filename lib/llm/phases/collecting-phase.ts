@@ -10,6 +10,7 @@ import { buildOrientalSystemPrompt } from "@/lib/llm/phases/oriental-prompt-cont
 import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
 import type { PojuV4ActionRequested } from "@/lib/poju/types";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
+import { parseTopicDriftFromParsed } from "@/lib/poju/topic-drift";
 
 const VALID_SUGGESTED: AgentPhase[] = ["collecting_context", "awaiting_confirmation"];
 const VALID_ACTIONS: PojuV4ActionRequested[] = [
@@ -89,6 +90,12 @@ ${requiredList}
 - 4-6 段自然叙述，少用 bullet
 - 必须体现你已读过【完整】命主基础分析，至少点出 2 处与当前困境相关的命理结构（如大运、格局、用神、时间窗）
 
+## 话题偏移检测（相对 original_question）
+
+- "none"：与本 Session 核心话题一致或紧密相关（类型 1）
+- "edge"：可能相关，你已在 response 里简短确认（类型 2）
+- "off_topic"：完全新维度，必须拒绝深入并在 response 中引导开新 Session（类型 3）
+
 ## 输出格式（严格 JSON，无 markdown 围栏）
 
 {
@@ -96,8 +103,13 @@ ${requiredList}
   "suggested_phase": "collecting_context" | "awaiting_confirmation" | null,
   "action_requested": "continue_chat" | "show_birth_form",
   "question_category": "career" | "relationship" | "wealth" | "health" | "family" | "decision" | "interpersonal" | "other" | null,
-  "context_updates": { }
-}`;
+  "context_updates": { },
+  "topic_drift_signal": "none" | "edge" | "off_topic",
+  "drift_reason": "若有偏离，一句话说明（无则空字符串）",
+  "should_show_new_session_button": false
+}
+
+判断：topic_drift_signal 为 "off_topic" 时 should_show_new_session_button 必须为 true；其他情况为 false。`;
 }
 
 export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLLMResult> {
@@ -131,6 +143,8 @@ export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLL
     action_requested = "show_birth_form";
   }
 
+  const drift = parseTopicDriftFromParsed(parsed);
+
   return {
     response,
     suggested_phase,
@@ -145,5 +159,6 @@ export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLL
     call_count: 1,
     model: result.model,
     thinking_process: thinkingFromPhaseTransport(result, parsed, input.locale),
+    ...drift,
   };
 }

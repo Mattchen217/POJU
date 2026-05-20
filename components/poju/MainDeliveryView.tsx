@@ -6,16 +6,18 @@
  */
 
 import { useTranslations } from "next-intl";
+import { ArchiveSavedHint } from "@/components/archive/archive-saved-hint";
 import type { POJUAction } from "@/lib/poju/types";
 import { parseDeliveryContent, type DeliverySection } from "@/lib/poju/parse-delivery";
 
 type Props = {
   fullText: string;
   actions: POJUAction[];
+  archiveId?: string | null;
   onActionUpdate?: (actionId: string, status: POJUAction["status"], feedback?: string) => void;
 };
 
-export function MainDeliveryView({ fullText, actions, onActionUpdate }: Props) {
+export function MainDeliveryView({ fullText, actions, archiveId, onActionUpdate }: Props) {
   const tDelivery = useTranslations("poju.delivery");
   const tActions = useTranslations("poju.actions");
   const tCard = useTranslations("poju.action_card");
@@ -46,6 +48,8 @@ export function MainDeliveryView({ fullText, actions, onActionUpdate }: Props) {
       ) : null}
 
       <p className="text-[1rem] leading-7 italic text-white/60">{tDelivery("reminder")}</p>
+
+      {archiveId ? <ArchiveSavedHint archiveId={archiveId} /> : null}
     </div>
   );
 }

@@ -1,0 +1,64 @@
+.topic-drift-prompt {
+  display: flex;
+  gap: 16px;
+  padding: 20px;
+  background: rgba(255, 165, 0, 0.08);
+  border: 1px solid rgba(255, 165, 0, 0.3);
+  border-radius: 12px;
+  margin: 16px 0;
+}
+
+.drift-icon {
+  font-size: 32px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.drift-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.drift-title {
+  color: #ffa500;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+
+.drift-reason {
+  color: #ccc;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0 0 12px;
+}
+
+.drift-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.drift-actions button {
+  padding: 10px 16px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.drift-actions .primary {
+  background: #ffa500;
+  color: #0a0a0f;
+}
+
+.drift-actions .secondary {
+  background: transparent;
+  color: #888;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.drift-actions .secondary:hover {
+  color: #ccc;
+  border-color: rgba(255, 255, 255, 0.35);
+}

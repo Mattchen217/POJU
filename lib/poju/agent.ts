@@ -43,6 +43,9 @@ type LLMApiPayload = {
   current_state?: string;
   action_requested?: string;
   topic_drift_detected?: boolean;
+  topic_drift_signal?: "none" | "edge" | "off_topic";
+  drift_reason?: string | null;
+  should_show_new_session_button?: boolean;
   context_updates?: Record<string, unknown>;
   contains_delivery?: boolean;
   main_delivery?: unknown;
@@ -228,10 +231,17 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   }
   const { profile, base_analysis } = await loadSessionProfileBundle(sessionForLlm);
 
+  let archive_data: import("@/lib/archive/archive-service").POJUActionRecommendationsData | null = null;
+  if (sessionForLlm.main_delivery_done && sessionForLlm.session_id) {
+    const { loadArchiveDataForSession } = await import("@/lib/archive/archive-service");
+    archive_data = await loadArchiveDataForSession(sessionForLlm.session_id);
+  }
+
   const llmResponse = await callLLMViaAPI({
     session: sessionForLlm,
     profile,
     base_analysis,
+    archive_data,
     locale,
     signal,
   });
@@ -270,6 +280,9 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       current_state: llmResponse.current_state,
       action_requested: llmResponse.action_requested,
       topic_drift_detected: llmResponse.topic_drift_detected,
+      topic_drift_signal: llmResponse.topic_drift_signal,
+      drift_reason: llmResponse.drift_reason ?? undefined,
+      should_show_new_session_button: llmResponse.should_show_new_session_button,
       contains_delivery: llmResponse.contains_delivery,
     },
   };
@@ -363,6 +376,7 @@ async function callLLMViaAPI(input: {
   session: POJUSessionState;
   profile: UserProfile | null;
   base_analysis?: unknown | null;
+  archive_data?: import("@/lib/archive/archive-service").POJUActionRecommendationsData | null;
   locale: string;
   signal?: AbortSignal;
 }): Promise<{
@@ -373,6 +387,9 @@ async function callLLMViaAPI(input: {
   current_state: NonNullable<POJUMessage["meta"]>["current_state"];
   action_requested: NonNullable<POJUMessage["meta"]>["action_requested"];
   topic_drift_detected: boolean;
+  topic_drift_signal?: "none" | "edge" | "off_topic";
+  drift_reason?: string | null;
+  should_show_new_session_button?: boolean;
   context_updates: Record<string, unknown>;
   contains_delivery: boolean;
   main_delivery?: unknown;
@@ -389,6 +406,7 @@ async function callLLMViaAPI(input: {
       session: input.session,
       profile: input.profile,
       base_analysis: input.base_analysis ?? null,
+      archive_data: input.archive_data ?? null,
       locale: input.locale,
     }),
     signal: input.signal,
@@ -419,6 +437,12 @@ async function callLLMViaAPI(input: {
     action_requested:
       (data.action_requested as NonNullable<POJUMessage["meta"]>["action_requested"]) ?? "continue_chat",
     topic_drift_detected: Boolean(data.topic_drift_detected),
+    topic_drift_signal:
+      data.topic_drift_signal === "edge" || data.topic_drift_signal === "off_topic"
+        ? data.topic_drift_signal
+        : "none",
+    drift_reason: typeof data.drift_reason === "string" ? data.drift_reason : null,
+    should_show_new_session_button: Boolean(data.should_show_new_session_button),
     context_updates: (data.context_updates as Record<string, unknown>) ?? {},
     contains_delivery: Boolean(data.contains_delivery),
     main_delivery: data.main_delivery,

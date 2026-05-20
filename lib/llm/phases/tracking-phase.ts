@@ -3,6 +3,7 @@ import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseResult } f
 import { buildOrientalSystemPrompt } from "@/lib/llm/phases/oriental-prompt-context";
 import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
+import { parseTopicDriftFromParsed } from "@/lib/poju/topic-drift";
 
 function buildTrackingTaskBlock(input: PhaseLLMInput): string {
   const agent = input.agent_state;
@@ -14,6 +15,24 @@ function buildTrackingTaskBlock(input: PhaseLLMInput): string {
           .join("\n")
       : "(交付行动列表暂不可用 — 根据对话追问具体进展。)";
 
+  const archiveCompleted =
+    input.archive_data?.actions
+      ?.filter((a) => a.status === "completed")
+      .map((a, i) => `${i + 1}. 【${a.title}】${a.user_feedback ? ` — 用户备注: ${a.user_feedback}` : ""}`)
+      .join("\n") ?? "";
+
+  const archiveBlock = archiveCompleted
+    ? `
+
+## 用户已在 Archive 中标记完成的行动
+
+${archiveCompleted}
+
+若有已完成行动，优先自然提及并追问可观察的微小变化或反馈，例如：
+✓ "你已经做了【${input.archive_data?.actions.find((a) => a.status === "completed")?.title ?? "…"}】，这周状态怎么样?"
+✗ 不要重复完整交付或三条行动全文`
+    : "";
+
   return `# 当前任务：追踪反馈
 
 主交付已完成。用户回来汇报进展、提问或收尾。这是【对话延伸】，不是新 Session 的完整分析。
@@ -23,6 +42,7 @@ function buildTrackingTaskBlock(input: PhaseLLMInput): string {
 
 ## 已给出的行动
 ${actionLines}
+${archiveBlock}
 
 ## 原则
 
@@ -38,9 +58,39 @@ ${actionLines}
 - 80 字以内（中文）/ 60 词以内（英文）
 - suggested_phase 保持 "tracking"
 
+## 追踪对话的术语与时间表述
+
+继承 oriental-counselor-base 中的术语规则：
+- 不用「方子」→ 用「方案」/「破局方案」
+- 不用「诊脉」→ 用「推演」/「看局」
+- 不用「调方」→ 用「调整方向」
+- 不用「病灶」「复诊」「开方」
+
+时间表述：
+- 不指定「几个月后」「几周后」「下周再来」
+- 用「随时回来」「有进展时」「遇到卡点立刻回来」
+- 可提醒 Session 30 天有效、期间可多次回来
+
+用户想结束时（说「谢谢」「好的」「我先去做」）：
+✓ 「好。去做，有进展或问题随时回来。」
+✓ 「你的 Session 30 天有效，随时进来。」
+✗ 「三个月后我们再调整。」
+✗ 「下次复诊见。」
+
+## 话题偏移（相对 original_question）
+
+同样识别 topic_drift_signal："none" | "edge" | "off_topic"。完全偏离时拒绝深入新话题，引导新 Session。
+
 ## 输出 JSON
 
-{ "response": "...", "suggested_phase": "tracking", "context_updates": {} }`;
+{
+  "response": "...",
+  "suggested_phase": "tracking",
+  "context_updates": {},
+  "topic_drift_signal": "none" | "edge" | "off_topic",
+  "drift_reason": "",
+  "should_show_new_session_button": false
+}`;
 }
 
 export async function callTrackingPhase(input: PhaseLLMInput): Promise<PhaseLLMResult> {
@@ -57,6 +107,8 @@ export async function callTrackingPhase(input: PhaseLLMInput): Promise<PhaseLLMR
   const rawPhase = typeof parsed.suggested_phase === "string" ? parsed.suggested_phase.trim() : null;
   const suggested_phase: AgentPhase | null = rawPhase === "tracking" ? "tracking" : "tracking";
 
+  const drift = parseTopicDriftFromParsed(parsed);
+
   return {
     response,
     suggested_phase,
@@ -70,5 +122,6 @@ export async function callTrackingPhase(input: PhaseLLMInput): Promise<PhaseLLMR
     call_count: 1,
     model: result.model,
     thinking_process: thinkingFromPhaseTransport(result, parsed, input.locale),
+    ...drift,
   };
 }

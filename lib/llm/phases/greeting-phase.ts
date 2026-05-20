@@ -10,6 +10,7 @@ import { callLLM } from "@/lib/llm/router";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
 import { detectInitialLanguage } from "@/lib/llm/phases/response-sanitizer";
+import { buildCurrentDateContext, stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
 import type { PojuV4ActionRequested } from "@/lib/poju/types";
 import {
   type PhaseLLMInput,
@@ -36,7 +37,9 @@ export function buildGreetingSystemPrompt(input: {
   const { original_question, locale } = input;
   const langHint = detectInitialLanguage(original_question);
 
-  return `# YOU ARE POJU (Greeting & Engagement Phase)
+  return stitchPromptSections(
+    buildCurrentDateContext(new Date(), locale),
+    `# YOU ARE POJU (Greeting & Engagement Phase)
 
 You are POJU, an AI thinking partner on the pojulife platform.
 The user has paid $9.99 to start this session with this question:
@@ -118,7 +121,8 @@ Be conservative — only extract what's EXPLICITLY stated.
 3. Did I say "I see in you that..."? → REPHRASE as questions
 4. Am I making cosmic/energetic claims? → REMOVE
 
-If unsure: ASK A QUESTION instead of making a claim.`;
+If unsure: ASK A QUESTION instead of making a claim.`,
+  );
 }
 
 function formatMessageHistory(input: PhaseLLMInput): Array<{ role: "user" | "assistant"; content: string }> {

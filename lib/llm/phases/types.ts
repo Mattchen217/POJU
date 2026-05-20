@@ -1,3 +1,4 @@
+import type { POJUActionRecommendationsData } from "@/lib/archive/archive-service";
 import type { AgentPhase, POJUAgentState } from "@/lib/poju/agent-state";
 import type { POJUSessionState, PojuV4ActionRequested } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
@@ -11,6 +12,8 @@ export interface PhaseLLMInput {
   locale: string;
   user_message: string;
   agent_state?: POJUAgentState | null;
+  /** Completed / skipped actions from IndexedDB archive (client → API for tracking). */
+  archive_data?: POJUActionRecommendationsData | null;
 }
 
 export interface PhaseLLMResult {
@@ -29,5 +32,8 @@ export interface PhaseLLMResult {
   model?: string;
   /** OpenRouter reasoning + optional structured thought, for UI "Thinking process". */
   thinking_process?: string;
+  topic_drift_signal?: "none" | "edge" | "off_topic";
+  drift_reason?: string | null;
+  should_show_new_session_button?: boolean;
 }
 

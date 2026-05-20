@@ -27,6 +27,7 @@ function buildPhaseInput(
   profile: UserProfile | null,
   locale: string,
   base_analysis?: unknown | null,
+  archive_data?: PhaseLLMInput["archive_data"],
 ): PhaseLLMInput {
   const user_message = getLastUserMessageContent(session);
   return {
@@ -36,6 +37,7 @@ function buildPhaseInput(
     locale,
     user_message,
     agent_state: session.agent_v2 ?? null,
+    archive_data: archive_data ?? null,
   };
 }
 
@@ -68,9 +70,10 @@ export async function executeAgentPhaseLLM(input: {
   session: POJUSessionState;
   profile: UserProfile | null;
   base_analysis?: unknown | null;
+  archive_data?: PhaseLLMInput["archive_data"];
   locale: string;
 }): Promise<AgentPhaseLLMResult> {
-  const { session, profile, locale, base_analysis } = input;
+  const { session, profile, locale, base_analysis, archive_data } = input;
 
   if (shouldUseGreetingPhase(session, profile)) {
     const phaseInput = buildPhaseInput(session, profile, locale);
@@ -85,7 +88,7 @@ export async function executeAgentPhaseLLM(input: {
   }
 
   const activePhase = resolveActiveAgentPhase(session);
-  const phaseInput = buildPhaseInput(session, profile, locale, base_analysis);
+  const phaseInput = buildPhaseInput(session, profile, locale, base_analysis, archive_data);
   const phase = await dispatchPhase(activePhase, phaseInput, session);
   const mapped = mapPhaseResultToChatPayload(phase, {
     session,

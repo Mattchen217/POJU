@@ -607,7 +607,21 @@
       "active_session_body": "You already have an active POJU session on this device. Open it now, or stay on this page.",
       "active_session_open": "Open session",
       "pipeline_busy": "Running analysis pipeline…",
-      "advanced_pipeline": "Advanced (manual steps)"
+      "advanced_pipeline": "Advanced (manual steps)",
+      "message_action_copy": "Copy message",
+      "message_action_copied": "Copied",
+      "message_action_read_aloud": "Read aloud",
+      "message_action_stop_reading": "Stop reading"
+    },
+    "topic_drift": {
+      "title": "Different topic detected",
+      "start_new_session": "Open a new POJU Session",
+      "continue_current": "Continue with the original topic"
+    },
+    "archive_hint": {
+      "saved_title": "Your action plan is saved",
+      "saved_text": "Find it anytime in Archive under POJU. We won't push notifications—you come back when you're ready.",
+      "view_in_archive": "View in Archive"
     },
     "summary_editor": {
       "title": "Review your information",
@@ -671,6 +685,32 @@
       "meta_expires": "Expires",
       "meta_status": "Status"
     }
+  },
+  "archiveVault": {
+    "section_title": "Saved action plans",
+    "title": "Your Archive",
+    "loading": "Loading…",
+    "empty_message": "Your completed POJU action plans will appear here.",
+    "filter_all": "All"
+  },
+  "archiveDetail": {
+    "title": "POJU Action Plan",
+    "loading": "Loading…",
+    "not_found": "This record was not found on this device.",
+    "original_question_label": "Original question",
+    "cat_traditional": "Traditional Adjustment",
+    "cat_decisive": "Decisive Action",
+    "cat_reflective": "Reflection",
+    "rationale_label": "Why this fits you",
+    "mark_done": "I did this",
+    "skip": "Skip",
+    "done": "Done",
+    "skipped": "Skipped",
+    "modified": "Modified",
+    "back_to_session": "Back to full conversation",
+    "back": "Back",
+    "delete": "Delete",
+    "confirm_delete": "Permanently delete this record?"
   },
   "session_prep": {
     "loading": "Loading…",

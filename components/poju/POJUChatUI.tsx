@@ -10,6 +10,7 @@ import { useAppDialog } from "@/components/ui/app-dialog";
 import { ContextSummaryEditor } from "@/components/poju/ContextSummaryEditor";
 import type { ContextSummary } from "@/lib/poju/agent-state";
 import { MessageBubble } from "@/components/poju/MessageBubble";
+import { OffTopicAction } from "@/components/poju/OffTopicAction";
 import { ThinkingStream } from "@/components/poju/ThinkingStream";
 import {
   resolveThinkingStreamMode,
@@ -51,6 +52,7 @@ import {
   pojuChatComposerShell,
   pojuChatMessageList,
 } from "@/lib/poju/chat-layout";
+import "@/styles/topic-drift.css";
 
 interface Props {
   session: POJUSessionState;
@@ -124,6 +126,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [pipelineBusy, setPipelineBusy] = useState(false);
   const [thinkingMode, setThinkingMode] = useState<ThinkingStreamMode | null>(null);
+  const [showOffTopicAction, setShowOffTopicAction] = useState(false);
+  const [driftReason, setDriftReason] = useState("");
   const openingInitRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -345,6 +349,18 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
 
       onSessionUpdate(orch.session);
       await savePOJUSession(orch.session);
+
+      const lastAssistant = [...orch.session.messages]
+        .reverse()
+        .find((m) => m.role === "assistant" && !m.is_rejected);
+      if (lastAssistant?.meta?.should_show_new_session_button) {
+        setShowOffTopicAction(true);
+        setDriftReason(lastAssistant.meta.drift_reason ?? "");
+      } else {
+        setShowOffTopicAction(false);
+        setDriftReason("");
+      }
+
       if (!resolveSessionHasProfile(orch.session)) {
         if (orch.ui.showBirthForm) setBirthFlowStage("form");
         if (orch.ui.showProfilePicker) setShowProfilePicker(true);
@@ -727,7 +743,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       onSessionUpdate(withSummary);
       await savePOJUSession(withSummary);
 
-      const next = await runConfirmationPipeline(withSummary, locale);
+      let next = await runConfirmationPipeline(withSummary, locale);
+      const { trySaveDeliveryActionsToArchive } = await import("@/lib/archive/archive-service");
+      next = await trySaveDeliveryActionsToArchive(next, locale);
+
       onSessionUpdate(next);
       await savePOJUSession(next);
       setSituationNotice(t("final_delivery_done"));
@@ -874,7 +893,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     setSituationError(null);
     setFinalBusy(true);
     try {
-      const next = await runFinalDeliveryForSession(sessionRef.current, locale);
+      let next = await runFinalDeliveryForSession(sessionRef.current, locale);
+      const { trySaveDeliveryActionsToArchive } = await import("@/lib/archive/archive-service");
+      next = await trySaveDeliveryActionsToArchive(next, locale);
       onSessionUpdate(next);
       await savePOJUSession(next);
       setSituationNotice(t("final_delivery_done"));
@@ -1094,6 +1115,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                         ? session.actions
                         : undefined
                     }
+                    actionPlanArchiveId={
+                      msg.role === "assistant" &&
+                      msg.meta?.contains_delivery &&
+                      msg.timestamp === lastDeliveryTs
+                        ? session.action_plan_archive_id
+                        : undefined
+                    }
                     onActionUpdate={(id, st, fb) => void handleActionUpdate(id, st, fb)}
                     onEdit={
                       msg.role === "user" && !msg.is_rejected && fullIndex >= 0
@@ -1105,6 +1133,18 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                   />
                 );
               })}
+
+              {showOffTopicAction ? (
+                <OffTopicAction
+                  driftReason={driftReason}
+                  onStartNewSession={() => router.push("/poju")}
+                  onContinueCurrent={() => {
+                    setShowOffTopicAction(false);
+                    setDriftReason("");
+                  }}
+                />
+              ) : null}
+
               {showSummaryForm && session.agent_v2?.current_summary ? (
                 <ContextSummaryEditor
                   summary={session.agent_v2.current_summary}

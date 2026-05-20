@@ -10,7 +10,7 @@ export const pojuChatMessageBody =
   "text-[1rem] leading-[1.75] tracking-normal text-on-surface [&_p]:m-0 [&_p+p]:mt-4";
 
 export const pojuChatUserBubble =
-  "max-w-[min(85%,36rem)] rounded-[1.25rem] bg-surface-container-high px-4 py-3 shadow-sm ring-1 ring-white/5";
+  "w-fit max-w-[min(85%,36rem)] shrink-0 rounded-[1.25rem] bg-surface-container-high px-4 py-3 text-left shadow-sm ring-1 ring-white/5 [overflow-wrap:anywhere] [word-break:normal]";
 
 export const pojuChatAssistantContent = "min-w-0 flex-1 max-w-none";
 

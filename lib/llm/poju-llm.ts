@@ -21,6 +21,7 @@ import {
 import { normalizeAgentPhase } from "@/lib/poju/agent-state";
 import { getLastUserMessageContent } from "@/lib/poju/context-helpers";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
+import type { POJUActionRecommendationsData } from "@/lib/archive/archive-service";
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
 
@@ -28,6 +29,7 @@ interface CallInput {
   session: POJUSessionState;
   profile: UserProfile | null;
   base_analysis?: unknown | null;
+  archive_data?: POJUActionRecommendationsData | null;
   locale: string;
 }
 
@@ -54,6 +56,9 @@ export interface POJULLMResponse {
     | "tracking";
   action_requested?: "continue_chat" | "show_birth_form" | "deliver_main" | "track_progress";
   topic_drift_detected: boolean;
+  topic_drift_signal?: "none" | "edge" | "off_topic";
+  drift_reason?: string | null;
+  should_show_new_session_button?: boolean;
   context_updates: Record<string, unknown>;
   contains_delivery: boolean;
   main_delivery?: unknown;
@@ -104,6 +109,7 @@ async function callPOJULLMPhasePath(input: CallInput): Promise<POJULLMResponse> 
     session,
     profile,
     base_analysis: input.base_analysis,
+    archive_data: input.archive_data,
     locale,
   });
 
@@ -117,6 +123,10 @@ async function callPOJULLMPhasePath(input: CallInput): Promise<POJULLMResponse> 
       (activePhase === "opening" ? "opening" : "collecting_context"),
     action_requested: mapped.action_requested as POJULLMResponse["action_requested"],
     topic_drift_detected: Boolean(mapped.topic_drift_detected),
+    topic_drift_signal:
+      (mapped.topic_drift_signal as POJULLMResponse["topic_drift_signal"]) ?? "none",
+    drift_reason: typeof mapped.drift_reason === "string" ? mapped.drift_reason : null,
+    should_show_new_session_button: Boolean(mapped.should_show_new_session_button),
     context_updates: (mapped.context_updates as Record<string, unknown>) ?? {},
     contains_delivery: Boolean(mapped.contains_delivery),
     main_delivery: mapped.main_delivery,

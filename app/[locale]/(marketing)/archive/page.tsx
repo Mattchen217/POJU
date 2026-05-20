@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { ArchiveActionPlansList } from "@/components/archive/archive-action-plans-list";
 import { ArchiveRuntimePreview } from "@/components/archive/archive-runtime-preview";
 import { WipeEverythingButton } from "@/components/archive/wipe-everything-button";
 
@@ -27,6 +28,7 @@ export default function ArchivePage() {
             </div>
 
             <div className="space-y-12">
+              <ArchiveActionPlansList />
               <ArchiveRuntimePreview />
             </div>
 

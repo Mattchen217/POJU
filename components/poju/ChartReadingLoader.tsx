@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { StoredProfileData } from "@/lib/db/poju-db";
-import { PreparingAnalyzingSpline } from "@/components/poju/PreparingAnalyzingSpline";
+import { PreparingStatusOverlay } from "@/components/poju/PreparingStatusOverlay";
 
 const STEP_COUNT = 9;
 
@@ -56,21 +56,18 @@ export function ChartReadingLoader({
     currentStep === "using_cache" ? t("hint_using_cache") : t("hint_first_time");
 
   return (
-    <div className="preparing-spline-page">
-      <PreparingAnalyzingSpline className="preparing-spline-page__scene" />
-      <div className="preparing-spline-page__overlay" role="status" aria-live="polite">
-        {currentStep !== "done" ? (
-          <>
-            <p key={statusLine} className="preparing-spline-page__status">
-              {statusLine}
-            </p>
-            <p className="preparing-spline-page__hint">{hint}</p>
-          </>
-        ) : (
-          <p className="preparing-spline-page__status">{t("done_message")}</p>
-        )}
-      </div>
-    </div>
+    <PreparingStatusOverlay>
+      {currentStep !== "done" ? (
+        <>
+          <p key={statusLine} className="preparing-spline-page__status">
+            {statusLine}
+          </p>
+          <p className="preparing-spline-page__hint">{hint}</p>
+        </>
+      ) : (
+        <p className="preparing-spline-page__status">{t("done_message")}</p>
+      )}
+    </PreparingStatusOverlay>
   );
 }
 
@@ -86,28 +83,27 @@ function ErrorView({
   const t = useTranslations("chart_loader");
 
   return (
-    <div className="chart-loader-page">
-      <div className="chart-loader-content">
-        <div className="error-view">
-          <div className="error-icon" aria-hidden>
-            ✕
-          </div>
-          <h3>{t("error_title")}</h3>
-          <p>{t("error_message")}</p>
-          <details className="error-details">
-            <summary>{t("error_details")}</summary>
-            <pre>{error}</pre>
-          </details>
-          <div className="error-actions">
-            <button type="button" onClick={onRetry} className="primary">
-              {t("retry")}
-            </button>
-            <button type="button" onClick={onRefund} className="secondary">
-              {t("refund_instead")}
-            </button>
-          </div>
+    <div className="preparing-spline-page__overlay preparing-spline-page__overlay--error" role="alert">
+      <div className="chart-loader-content error-view-inline">
+        <div className="error-icon" aria-hidden>
+          ✕
+        </div>
+        <h3>{t("error_title")}</h3>
+        <p>{t("error_message")}</p>
+        <details className="error-details">
+          <summary>{t("error_details")}</summary>
+          <pre>{error}</pre>
+        </details>
+        <div className="error-actions">
+          <button type="button" onClick={onRetry} className="primary">
+            {t("retry")}
+          </button>
+          <button type="button" onClick={onRefund} className="secondary">
+            {t("refund_instead")}
+          </button>
         </div>
       </div>
     </div>
   );
 }
+

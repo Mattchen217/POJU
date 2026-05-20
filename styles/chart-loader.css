@@ -26,6 +26,11 @@
   overflow: hidden;
 }
 
+/* Shown on /prepare while navigating — same backdrop as preparing layout, no WebGL yet */
+.preparing-spline-page--transition {
+  z-index: 50;
+}
+
 .preparing-analyzing-spline,
 .preparing-spline-page__scene {
   position: absolute;
@@ -50,6 +55,21 @@
   text-align: center;
   pointer-events: none;
   background: linear-gradient(180deg, transparent 0%, rgba(5, 5, 8, 0.75) 55%, rgba(5, 5, 8, 0.92) 100%);
+}
+
+.preparing-spline-page__overlay--error {
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  background: rgba(5, 5, 8, 0.88);
+}
+
+.error-view-inline {
+  max-width: 520px;
+  width: calc(100% - 32px);
+  pointer-events: auto;
 }
 
 .preparing-spline-page__status {

@@ -593,6 +593,11 @@
     "message": {
       "thinking": "POJU denkt nach…"
     },
+    "archive_hint": {
+      "saved_title": "Dein Aktionsplan ist gespeichert",
+      "saved_text": "Finde ihn jederzeit unter Archive → POJU. Keine Push-Benachrichtigungen — du kommst zurück, wenn du bereit bist.",
+      "view_in_archive": "In Archive ansehen"
+    },
     "archive": {
       "title": "POJU-Sessions",
       "subtitle": "Sessions werden verschlüsselt auf diesem Gerät gespeichert.",
@@ -609,6 +614,32 @@
       "meta_expires": "Läuft ab",
       "meta_status": "Status"
     }
+  },
+  "archiveVault": {
+    "section_title": "Gespeicherte Aktionspläne",
+    "title": "Dein Archive",
+    "loading": "Wird geladen…",
+    "empty_message": "Abgeschlossene POJU-Aktionspläne erscheinen hier.",
+    "filter_all": "Alle"
+  },
+  "archiveDetail": {
+    "title": "POJU-Aktionsplan",
+    "loading": "Wird geladen…",
+    "not_found": "Dieser Eintrag wurde auf diesem Gerät nicht gefunden.",
+    "original_question_label": "Ursprüngliche Frage",
+    "cat_traditional": "Traditionelle Anpassung",
+    "cat_decisive": "Entschlossene Aktion",
+    "cat_reflective": "Reflexion",
+    "rationale_label": "Warum das zu dir passt",
+    "mark_done": "Habe ich gemacht",
+    "skip": "Überspringen",
+    "done": "Erledigt",
+    "skipped": "Übersprungen",
+    "modified": "Angepasst",
+    "back_to_session": "Zurück zum Gespräch",
+    "back": "Zurück",
+    "delete": "Löschen",
+    "confirm_delete": "Diesen Eintrag dauerhaft löschen?"
   },
   "session_prep": {
     "loading": "Wird geladen…",

@@ -160,13 +160,28 @@ Then:
 
 ═══ COMING BACK ═══
 
+[60–100 words in the target language]
+
+COMING BACK requirements:
+- Use POJU terminology (方案 / 推演 / 看局 — NOT 方子 / 诊脉 / 调方 / 病灶 / 复诊)
+- Fuzzy timing only — never impose a fixed return date ("3 months later", "next week", "come back after you finish")
+- Encourage user-driven return; remind them the Session stays active for 30 days and they may return multiple times
+
+Good COMING BACK examples:
+"Go execute first. When you have progress or hit a new snag, come back anytime — we keep reading the situation together. Your Session stays live for 30 days; you can return as often as you need and I will help adjust direction from your chart."
+
+Bad COMING BACK examples (never write like this):
+"Follow this prescription for three months, then I will adjust it." ← TCM + fixed time
+"Come back in 3 months for a follow-up visit." ← imposed schedule
+
 # CRITICAL RULES
 
 1. **Language**: entire prose in the user's language (see above).
 2. Avoid unexplained jargon: do not say Bazi/八字/五行/用神/大运 as technical labels; use plain-life language in the target language.
-3. Actions must be specific (time + content + observable outcome).
+3. Actions must be specific (time + content + observable outcome) for WHAT TO DO steps — but COMING BACK must NOT impose when the user must return.
 4. No fortune-telling certainties; use conditional, grounded language.
-5. Total length about 1000–1500 words unless inputs are very thin.`;
+5. **Terminology & return timing**: never use TCM framing (方子/诊脉/调方/病灶/复诊); never schedule the user's next visit — only "anytime / when you have progress / within your 30-day Session".
+6. Total length about 1000–1500 words unless inputs are very thin.`;
 
   const contextText = formatContextForPrompt(agent_v2);
   const summaryStr = agent_v2.current_summary ? safeJsonSlice(agent_v2.current_summary, 4000) : "(No formal current_summary object — rely on context below.)";

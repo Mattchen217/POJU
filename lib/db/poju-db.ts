@@ -114,6 +114,20 @@ export interface StoredProfileData {
   };
 }
 
+/** POJU 改进 3 — encrypted action-plan vault rows. */
+export interface ArchiveRecord {
+  archive_id: string;
+  device_id: string;
+  type: "poju_action_recommendations" | "glyph_reading" | "syncro_task";
+  session_id?: string;
+  profile_id?: string;
+  title: string;
+  encrypted_data: string;
+  iv: string;
+  created_at: Date;
+  product: "poju" | "glyph" | "syncro";
+}
+
 export class PojuDb extends Dexie {
   userProfiles!: EntityTable<EncryptedRecord, "id">;
   glyphHistory!: EntityTable<EncryptedRecord, "id">;
@@ -124,6 +138,7 @@ export class PojuDb extends Dexie {
   pojuSessionRecords!: EntityTable<POJUSessionRecord, "session_id">;
   pojuSessionArchive!: EntityTable<POJUSessionArchiveRecord, "session_id">;
   stored_profiles!: EntityTable<StoredProfileRecord, "profile_id">;
+  archive!: EntityTable<ArchiveRecord, "archive_id">;
 
   constructor() {
     super("pojulife_v4");
@@ -160,6 +175,17 @@ export class PojuDb extends Dexie {
       pojuSessionRecords: "session_id, device_id, status, expires_at, last_interaction_at",
       pojuSessionArchive: "session_id, device_id, archived_at",
       stored_profiles: "profile_id, device_id, birth_info_hash, last_used_at, has_base_analysis",
+    });
+    this.version(5).stores({
+      userProfiles: "id, updatedAt",
+      glyphHistory: "id, updatedAt",
+      syncroCache: "id, updatedAt",
+      pojuSessions: "id, updatedAt",
+      usage: "id, dayKey, product, updatedAt",
+      pojuSessionRecords: "session_id, device_id, status, expires_at, last_interaction_at",
+      pojuSessionArchive: "session_id, device_id, archived_at",
+      stored_profiles: "profile_id, device_id, birth_info_hash, last_used_at, has_base_analysis",
+      archive: "archive_id, device_id, type, session_id, created_at, product",
     });
   }
 }

@@ -593,6 +593,11 @@
     "message": {
       "thinking": "POJU réfléchit…"
     },
+    "archive_hint": {
+      "saved_title": "Votre plan d’action est enregistré",
+      "saved_text": "Retrouvez-le dans Archive, section POJU. Pas de notifications : revenez quand vous êtes prêt.",
+      "view_in_archive": "Voir dans Archive"
+    },
     "archive": {
       "title": "Sessions POJU",
       "subtitle": "Les sessions sont stockées chiffrées sur cet appareil.",
@@ -609,6 +614,32 @@
       "meta_expires": "Expire",
       "meta_status": "Statut"
     }
+  },
+  "archiveVault": {
+    "section_title": "Plans d’action enregistrés",
+    "title": "Votre Archive",
+    "loading": "Chargement…",
+    "empty_message": "Les plans POJU terminés apparaîtront ici.",
+    "filter_all": "Tout"
+  },
+  "archiveDetail": {
+    "title": "Plan d’action POJU",
+    "loading": "Chargement…",
+    "not_found": "Enregistrement introuvable sur cet appareil.",
+    "original_question_label": "Question d’origine",
+    "cat_traditional": "Ajustement traditionnel",
+    "cat_decisive": "Action décisive",
+    "cat_reflective": "Réflexion",
+    "rationale_label": "Pourquoi cela vous convient",
+    "mark_done": "Je l’ai fait",
+    "skip": "Passer",
+    "done": "Fait",
+    "skipped": "Ignoré",
+    "modified": "Adapté",
+    "back_to_session": "Retour à la conversation",
+    "back": "Retour",
+    "delete": "Supprimer",
+    "confirm_delete": "Supprimer définitivement cet enregistrement ?"
   },
   "session_prep": {
     "loading": "Chargement…",

@@ -593,6 +593,11 @@
     "message": {
       "thinking": "POJU está pensando…"
     },
+    "archive_hint": {
+      "saved_title": "Tu plan de acción está guardado",
+      "saved_text": "Encuéntralo cuando quieras en Archive, en POJU. No enviamos avisos: vuelves cuando estés listo.",
+      "view_in_archive": "Ver en Archive"
+    },
     "archive": {
       "title": "Sesiones POJU",
       "subtitle": "Las sesiones se guardan cifradas en este dispositivo.",
@@ -609,6 +614,32 @@
       "meta_expires": "Vence",
       "meta_status": "Estado"
     }
+  },
+  "archiveVault": {
+    "section_title": "Planes de acción guardados",
+    "title": "Tu Archive",
+    "loading": "Cargando…",
+    "empty_message": "Los planes POJU completados aparecerán aquí.",
+    "filter_all": "Todo"
+  },
+  "archiveDetail": {
+    "title": "Plan de acción POJU",
+    "loading": "Cargando…",
+    "not_found": "No se encontró este registro en este dispositivo.",
+    "original_question_label": "Pregunta original",
+    "cat_traditional": "Ajuste tradicional",
+    "cat_decisive": "Acción decisiva",
+    "cat_reflective": "Reflexión",
+    "rationale_label": "Por qué encaja contigo",
+    "mark_done": "Lo hice",
+    "skip": "Omitir",
+    "done": "Hecho",
+    "skipped": "Omitido",
+    "modified": "Adaptado",
+    "back_to_session": "Volver a la conversación",
+    "back": "Atrás",
+    "delete": "Eliminar",
+    "confirm_delete": "¿Eliminar permanentemente este registro?"
   },
   "session_prep": {
     "loading": "Cargando…",

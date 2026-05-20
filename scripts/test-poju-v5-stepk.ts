@@ -10,6 +10,10 @@ import { getThinkingConfig, callLLM } from "@/lib/llm/router";
 import { parsePhaseResult } from "@/lib/llm/phases/phase-transport";
 import { buildRegionalPlatformGuidance } from "@/lib/llm/pro/final-delivery";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
+import {
+  buildCurrentDateContext,
+  calculateCurrentYearGanZhi,
+} from "@/lib/llm/prompts/oriental-counselor-base";
 
 const ROOT = resolve(__dirname, "..");
 
@@ -110,6 +114,13 @@ function staticChecks(): void {
   assert("J router getThinkingConfig", read("lib/llm/router.ts").includes("getThinkingConfig"));
   assert("J phase-transport uses callLLM", read("lib/llm/phases/phase-transport.ts").includes("callLLM"));
   assert("I oriental base", read("lib/llm/prompts/oriental-counselor-base.ts").includes("ORIENTAL_COUNSELOR_BASE"));
+  const may2026 = calculateCurrentYearGanZhi(new Date(2026, 4, 18));
+  assert("I date context 2026-05 = 丙午", may2026.gan_zhi === "丙午");
+  assert("I buildCurrentDateContext injected", buildCurrentDateContext(new Date(2026, 4, 18), "zh").includes("丙午"));
+  assert(
+    "I oriental-prompt injects date",
+    read("lib/llm/phases/oriental-prompt-context.ts").includes("buildCurrentDateContext"),
+  );
 }
 
 async function liveOpenRouterPing(): Promise<void> {

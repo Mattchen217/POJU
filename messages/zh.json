@@ -607,7 +607,21 @@
       "active_session_body": "本设备上已有一个进行中的 POJU 会话。现在打开，或留在当前页面。",
       "active_session_open": "打开会话",
       "pipeline_busy": "正在运行分析流水线…",
-      "advanced_pipeline": "高级（手动步骤）"
+      "advanced_pipeline": "高级（手动步骤）",
+      "message_action_copy": "复制",
+      "message_action_copied": "已复制",
+      "message_action_read_aloud": "朗读",
+      "message_action_stop_reading": "停止朗读"
+    },
+    "topic_drift": {
+      "title": "检测到话题转换",
+      "start_new_session": "开启新 Session 聊这个",
+      "continue_current": "回到原话题"
+    },
+    "archive_hint": {
+      "saved_title": "行动建议已存入 Archive",
+      "saved_text": "随时在 Archive 的 POJU 分类中查看。我们不会推送提醒——你准备好了再回来即可。",
+      "view_in_archive": "在 Archive 中查看"
     },
     "summary_editor": {
       "title": "请核对信息",
@@ -671,6 +685,32 @@
       "meta_expires": "到期",
       "meta_status": "状态"
     }
+  },
+  "archiveVault": {
+    "section_title": "已保存的行动建议",
+    "title": "你的 Archive",
+    "loading": "加载中…",
+    "empty_message": "完成主交付后，POJU 行动建议会显示在这里。",
+    "filter_all": "全部"
+  },
+  "archiveDetail": {
+    "title": "POJU 行动建议",
+    "loading": "加载中…",
+    "not_found": "本设备上未找到该记录。",
+    "original_question_label": "原始问题",
+    "cat_traditional": "传统调整",
+    "cat_decisive": "果断行动",
+    "cat_reflective": "反思练习",
+    "rationale_label": "命理依据",
+    "mark_done": "已完成",
+    "skip": "跳过",
+    "done": "已完成",
+    "skipped": "已跳过",
+    "modified": "已调整",
+    "back_to_session": "回到完整对话",
+    "back": "返回",
+    "delete": "删除",
+    "confirm_delete": "永久删除这条记录？"
   },
   "session_prep": {
     "loading": "加载中…",

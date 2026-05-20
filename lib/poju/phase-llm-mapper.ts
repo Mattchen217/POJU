@@ -1,6 +1,7 @@
 import type { AgentPhase } from "@/lib/poju/agent-state";
 import type { PhaseLLMResult } from "@/lib/llm/phases/types";
 import { normalizeAgentPhase } from "@/lib/poju/agent-state";
+import { topicDriftDetected } from "@/lib/poju/topic-drift";
 import { applyPojuOutputPolicies } from "@/lib/poju/output-policy-pass";
 import type { POJUSessionState, PojuV4ActionRequested } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
@@ -45,14 +46,19 @@ export function mapPhaseResultToChatPayload(
       current_state = "collecting_context";
   }
 
+  const driftSignal = phase.topic_drift_signal ?? "none";
+
   const base = {
     response: phase.response,
     model: phase.model ?? "poju-phase",
     tokens_used: phase.tokens_used,
-    user_intent,
+    user_intent: driftSignal === "off_topic" ? "off_topic" : user_intent,
     current_state,
     action_requested,
-    topic_drift_detected: false,
+    topic_drift_detected: topicDriftDetected(driftSignal),
+    topic_drift_signal: driftSignal,
+    drift_reason: phase.drift_reason ?? null,
+    should_show_new_session_button: Boolean(phase.should_show_new_session_button),
     context_updates: phase.context_updates ?? {},
     contains_delivery: false,
     agent_suggested_phase: suggested,

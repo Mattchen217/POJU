@@ -1,5 +1,6 @@
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 import {
+  buildCurrentDateContext,
   buildLanguageGuidance,
   buildNorthAmericaAdaptation,
   buildProfileContextSection,
@@ -30,6 +31,7 @@ export async function buildOrientalSystemPrompt(
   const baseAnalysis = await loadBaseAnalysisForSession(input);
   return stitchPromptSections(
     ORIENTAL_COUNSELOR_BASE,
+    buildCurrentDateContext(new Date(), input.locale),
     buildLanguageGuidance(input.locale, input.user_message),
     buildNorthAmericaAdaptation(input.locale),
     buildProfileContextSection(input.profile, baseAnalysis),

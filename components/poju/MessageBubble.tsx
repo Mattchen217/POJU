@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 import pojuLogo from "@/assets/images/POJUlogo.png";
 import type { POJUAction, POJUMessage } from "@/lib/poju/types";
+import { AssistantMessageActions } from "@/components/poju/AssistantMessageActions";
 import { MainDeliveryView } from "@/components/poju/MainDeliveryView";
 import { parseDeliveryContent, type DeliverySection } from "@/lib/poju/parse-delivery";
 import {
@@ -16,6 +17,7 @@ export interface MessageBubbleProps {
   message: POJUMessage;
   hideWelcomePanel?: boolean;
   actions?: POJUAction[];
+  actionPlanArchiveId?: string | null;
   onActionUpdate?: (actionId: string, status: POJUAction["status"], feedback?: string) => void;
   onEdit?: () => void;
   editDisabled?: boolean;
@@ -26,6 +28,7 @@ export function MessageBubble({
   message,
   hideWelcomePanel = false,
   actions,
+  actionPlanArchiveId,
   onActionUpdate,
   onEdit,
   editDisabled = false,
@@ -69,25 +72,33 @@ export function MessageBubble({
           <MainDeliveryView
             fullText={message.content}
             actions={actions ?? []}
+            archiveId={actionPlanArchiveId}
             onActionUpdate={onActionUpdate}
           />
+          <div className="mt-3 border-t border-white/5 pt-2">
+            <AssistantMessageActions content={message.content} />
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`flex w-full gap-4 ${isUser ? "justify-end" : ""}`}>
+    <div className={`flex w-full min-w-0 gap-4 ${isUser ? "justify-end" : ""}`}>
       {!isUser ? (
         <div className="mt-0.5 flex h-8 w-8 shrink-0 overflow-hidden rounded-full ring-1 ring-outline-variant">
           <Image src={pojuLogo} alt="" width={32} height={32} className="object-cover" />
         </div>
       ) : null}
-      <div className={`flex flex-col gap-3 ${isUser ? "max-w-[min(85%,36rem)] items-end" : `${pojuChatAssistantContent} items-start`}`}>
+      <div
+        className={`flex flex-col gap-3 ${
+          isUser ? "w-max max-w-[min(85%,36rem)] shrink-0 items-end" : `${pojuChatAssistantContent} items-start`
+        }`}
+      >
         <div
           className={isUser ? `${pojuChatUserBubble} ${pojuChatMessageBody}` : pojuChatMessageBody}
         >
-          {renderPlainContent(message.content)}
+          {renderPlainContent(message.content, isUser)}
         </div>
         {isUser && onEdit && !message.is_rejected ? (
           <button
@@ -99,20 +110,7 @@ export function MessageBubble({
             {editLabel ?? "Edit"}
           </button>
         ) : null}
-        {!isUser ? (
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
-              aria-label="Copy"
-            >
-              <span className="material-symbols-outlined text-[20px]">content_copy</span>
-            </button>
-            <button className="flex h-9 w-9 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface">
-              <span className="material-symbols-outlined text-[20px]">volume_up</span>
-            </button>
-          </div>
-        ) : null}
+        {!isUser ? <AssistantMessageActions content={message.content} /> : null}
       </div>
     </div>
   );
@@ -134,8 +132,13 @@ function splitWelcomeParagraphs(content: string): string[] {
   return blocks;
 }
 
-function renderPlainContent(content: string) {
-  const lines = content.split("\n");
+function renderPlainContent(content: string, isUser = false) {
+  const normalized = content.replace(/\r\n/g, "\n");
+  if (isUser && !normalized.includes("\n")) {
+    return <p className="m-0 whitespace-pre-wrap">{normalized}</p>;
+  }
+
+  const lines = normalized.split("\n");
   return lines.map((line, idx) => (
     <p key={idx} className={idx === 0 ? "m-0" : "mt-4 mb-0"}>
       {line || "\u00a0"}
