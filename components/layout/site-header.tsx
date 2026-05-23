@@ -11,6 +11,7 @@ const navItems = [
   { href: "/poju", label: "POJU" },
   { href: "/glyph", label: "Glyph" },
   { href: "/syncro", label: "Syncro" },
+  { href: "/match", label: "Match" },
   { href: "/archive", label: "Archive" },
 ];
 

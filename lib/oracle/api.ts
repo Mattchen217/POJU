@@ -1,6 +1,12 @@
+import type {
+  GlyphReadingContent,
+  GlyphReadingServiceResult,
+} from "@/lib/llm/services/glyph-reading-service";
+import type { UserProfile } from "@/lib/profile/types";
 import type { SignData, UserInput, FullReading } from "@/types/oracle";
 
 const inFlightFullReadingRequests = new Map<string, Promise<FullReading>>();
+const inFlightGlyphReadingRequests = new Map<string, Promise<GlyphReadingServiceResult>>();
 
 export async function generateFullReading({
   sign,
@@ -65,5 +71,78 @@ export async function generateFullReading({
   });
 
   inFlightFullReadingRequests.set(requestKey, requestPromise);
+  return requestPromise;
+}
+
+/** Glyph v5 — DeepSeek reading with POJU profile + base_analysis (browser sends bundle). */
+export async function generateGlyphFullReading({
+  sign,
+  question,
+  locale,
+  profile_id,
+  user_profile,
+  base_analysis,
+}: {
+  sign: SignData;
+  question: string;
+  locale: string;
+  profile_id: string;
+  user_profile: UserProfile;
+  base_analysis: unknown;
+}): Promise<GlyphReadingServiceResult> {
+  const requestPayload = {
+    sign_number: sign.sign_number,
+    level: sign.level,
+    user_question: question.trim(),
+    locale,
+    profile_id,
+    user_profile,
+    base_analysis,
+  };
+  const requestKey = `glyph:${JSON.stringify(requestPayload)}`;
+
+  const pending = inFlightGlyphReadingRequests.get(requestKey);
+  if (pending) return pending;
+
+  const requestPromise = (async () => {
+    const response = await fetch("/api/oracle/full-reading", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestPayload),
+    });
+
+    if (!response.ok) {
+      let errorMessage = `API error: ${response.status}`;
+      try {
+        const errorData = (await response.json()) as {
+          error?: string;
+          message?: string;
+        };
+        errorMessage = errorData.message || errorData.error || errorMessage;
+      } catch {
+        // keep status fallback
+      }
+      throw new Error(errorMessage);
+    }
+
+    const data = (await response.json()) as {
+      reading: GlyphReadingContent;
+      meta?: GlyphReadingServiceResult["meta"];
+    };
+
+    return {
+      reading: data.reading,
+      meta: data.meta ?? {
+        model: "unknown",
+        tokens_used: 0,
+        cost_usd: 0,
+        latency_ms: 0,
+      },
+    };
+  })().finally(() => {
+    inFlightGlyphReadingRequests.delete(requestKey);
+  });
+
+  inFlightGlyphReadingRequests.set(requestKey, requestPromise);
   return requestPromise;
 }

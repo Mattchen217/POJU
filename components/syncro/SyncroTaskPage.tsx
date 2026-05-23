@@ -1,0 +1,85 @@
+"use client";
+
+import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
+
+import { Link, useRouter } from "@/i18n/navigation";
+
+const MIN_LEN = 30;
+const MAX_LEN = 100;
+
+export function SyncroTaskPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const t = useTranslations("syncro.task");
+
+  const sessionType = searchParams.get("type") === "free" ? "free" : "paid";
+
+  const [task, setTask] = useState("");
+
+  const trimmedLen = task.trim().length;
+  const canContinue = trimmedLen >= MIN_LEN;
+
+  function handleContinue() {
+    if (!canContinue) return;
+
+    sessionStorage.setItem("syncro_task_pending", task.trim());
+    sessionStorage.setItem("syncro_session_type", sessionType);
+    router.push("/syncro/prepare");
+  }
+
+  return (
+    <main className="min-h-screen bg-bg-deep text-text-body">
+      <div className="syncro-task-page mx-auto w-full max-w-lg px-4 pb-12 pt-6">
+        <Link
+          href="/syncro"
+          className="inline-flex text-sm text-cyan-200/80 hover:text-cyan-100"
+        >
+          ← {t("back")}
+        </Link>
+
+        <div className="task-content mt-8">
+          <h1 className="text-2xl font-semibold text-text-primary">{t("title")}</h1>
+          <p className="mt-3 text-[15px] leading-8 text-text-secondary">{t("subtitle")}</p>
+
+          <textarea
+            value={task}
+            onChange={(e) => setTask(e.target.value.slice(0, MAX_LEN))}
+            placeholder={t("placeholder")}
+            rows={6}
+            autoFocus
+            className="mt-6 w-full resize-none rounded-xl border border-white/15 bg-black/30 px-4 py-3 text-[15px] leading-7 text-text-primary placeholder:text-text-dim focus:border-cyan-400/40 focus:outline-none focus:ring-1 focus:ring-cyan-400/30"
+          />
+
+          <div className="char-count mt-2 text-sm text-text-dim">
+            {task.length} / {MAX_LEN}
+            {trimmedLen < MIN_LEN ? (
+              <span className="hint text-amber-200/80"> · {t("min_chars", { min: MIN_LEN })}</span>
+            ) : null}
+          </div>
+
+          <div className="examples mt-8">
+            <h4 className="text-xs font-semibold uppercase tracking-[0.12em] text-text-dim">
+              {t("examples_title")}
+            </h4>
+            <ul className="mt-3 space-y-2 text-sm leading-7 text-text-secondary">
+              <li>· {t("example_1")}</li>
+              <li>· {t("example_2")}</li>
+              <li>· {t("example_3")}</li>
+            </ul>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleContinue}
+            disabled={!canContinue}
+            className="marketing-pill-outline-cta marketing-pill-outline-cta--cyan mt-10 inline-flex w-full justify-center px-8 py-3.5 text-[15px] font-semibold disabled:cursor-not-allowed disabled:opacity-40 hover:-translate-y-0.5 hover:scale-[1.02] motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100 active:scale-[0.99] disabled:hover:translate-y-0 disabled:hover:scale-100"
+          >
+            {t("continue")}
+          </button>
+        </div>
+      </div>
+    </main>
+  );
+}

@@ -2,7 +2,7 @@
 
 /**
  * Glyph v5 — profile picker shell (Step 3).
- * Step 3 will wire `SessionPreparation` + `productType="glyph"`.
+ * Glyph prepare uses `SessionPreparation` with `productType="glyph"` directly.
  * Until then, re-export POJU `ProfileSelector` for shared birth-info UX.
  */
 

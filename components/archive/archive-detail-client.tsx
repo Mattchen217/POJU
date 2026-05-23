@@ -1,14 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 
+import { GlyphArchiveDetail } from "@/components/archive/glyph-archive-detail";
+import { MatchArchiveDetail } from "@/components/archive/match-archive-detail";
+import { SyncroArchiveDetail } from "@/components/archive/syncro-archive-detail";
 import {
   deleteArchiveItem,
   loadArchiveItem,
+  loadGlyphReading,
+  loadMatchArchive,
+  loadSyncroArchive,
   updateArchiveActionStatus,
+  type GlyphReadingArchiveData,
+  type MatchArchiveData,
   type POJUActionRecommendationsData,
+  type SyncroTaskArchiveData,
 } from "@/lib/archive/archive-service";
 
 type Props = {
@@ -17,18 +26,56 @@ type Props = {
 
 export function ArchiveDetailClient({ archiveId }: Props) {
   const t = useTranslations("archiveDetail");
+  const locale = useLocale();
   const router = useRouter();
-  const [data, setData] = useState<POJUActionRecommendationsData | null>(null);
+  const [pojuData, setPojuData] = useState<POJUActionRecommendationsData | null>(null);
+  const [glyphData, setGlyphData] = useState<GlyphReadingArchiveData | null>(null);
+  const [syncroData, setSyncroData] = useState<SyncroTaskArchiveData | null>(null);
+  const [matchData, setMatchData] = useState<MatchArchiveData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let stop = false;
-    void loadArchiveItem(archiveId).then((d) => {
+    void (async () => {
+      const match = await loadMatchArchive(archiveId);
+      if (stop) return;
+      if (match) {
+        setMatchData(match);
+        setSyncroData(null);
+        setGlyphData(null);
+        setPojuData(null);
+        setLoading(false);
+        return;
+      }
+      const syncro = await loadSyncroArchive(archiveId);
+      if (stop) return;
+      if (syncro) {
+        setSyncroData(syncro);
+        setMatchData(null);
+        setGlyphData(null);
+        setPojuData(null);
+        setLoading(false);
+        return;
+      }
+      const glyph = await loadGlyphReading(archiveId);
+      if (stop) return;
+      if (glyph) {
+        setGlyphData(glyph);
+        setMatchData(null);
+        setSyncroData(null);
+        setPojuData(null);
+        setLoading(false);
+        return;
+      }
+      const poju = await loadArchiveItem(archiveId);
       if (!stop) {
-        setData(d);
+        setMatchData(null);
+        setSyncroData(null);
+        setGlyphData(null);
+        setPojuData(poju);
         setLoading(false);
       }
-    });
+    })();
     return () => {
       stop = true;
     };
@@ -41,7 +88,7 @@ export function ArchiveDetailClient({ archiveId }: Props) {
   ) {
     await updateArchiveActionStatus(archiveId, actionId, status, feedback);
     const updated = await loadArchiveItem(archiveId);
-    setData(updated);
+    setPojuData(updated);
   }
 
   async function handleDelete() {
@@ -53,9 +100,23 @@ export function ArchiveDetailClient({ archiveId }: Props) {
   if (loading) {
     return <p className="py-8 text-sm text-[#cbc3d7]/70">{t("loading")}</p>;
   }
-  if (!data) {
+  if (matchData) {
+    return <MatchArchiveDetail archiveId={archiveId} data={matchData} locale={locale} />;
+  }
+
+  if (glyphData) {
+    return <GlyphArchiveDetail archiveId={archiveId} data={glyphData} />;
+  }
+
+  if (syncroData) {
+    return <SyncroArchiveDetail archiveId={archiveId} data={syncroData} locale={locale} />;
+  }
+
+  if (!pojuData) {
     return <p className="py-8 text-sm text-[#cbc3d7]/70">{t("not_found")}</p>;
   }
+
+  const data = pojuData;
 
   return (
     <div className="archive-detail-page mx-auto max-w-2xl">

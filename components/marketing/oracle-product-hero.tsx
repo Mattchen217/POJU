@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { HeroSpline } from "@/components/marketing/hero-spline";
 import { PwaInlineOpenLink } from "@/components/marketing/pwa-inline-open-link";
 
@@ -15,7 +16,14 @@ export type OracleProductHeroCopy = {
  * - 主标题 + 副标题叙事 + 背景动效（其余内容在 Hero 外）
  * - 后续可直接替换 scene 为 Glyph 专属动画
  */
-export function OracleProductHero({ copy }: { copy: OracleProductHeroCopy }) {
+export function OracleProductHero({
+  copy,
+  cta,
+}: {
+  copy: OracleProductHeroCopy;
+  /** v5: `/glyph/prepare`; legacy pages may omit and use PWA reading link */
+  cta?: ReactNode;
+}) {
   return (
     <section className="relative">
       <div className="relative overflow-hidden pb-8 pt-8 sm:pb-10 sm:pt-10 md:pb-14 md:pt-14">
@@ -35,14 +43,16 @@ export function OracleProductHero({ copy }: { copy: OracleProductHeroCopy }) {
             </p>
             <p className="mx-auto mt-3 text-sm text-text-dim sm:text-[15px]">{copy.footnote}</p>
             <div className="mx-auto mt-8 flex flex-col items-center justify-center sm:mt-9 md:mt-10">
-              <PwaInlineOpenLink
-                href="/start?next=%2Fglyph%2Freading"
-                frameTitle="Glyph"
-                closeLabel="关闭"
-                className="marketing-pill-outline-cta marketing-pill-outline-cta--amber inline-flex min-w-[200px] px-8 py-3.5 text-[15px] hover:-translate-y-0.5 hover:scale-[1.04] motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100 active:scale-[0.99] md:px-10 md:py-4 md:text-base"
-              >
-                {copy.cta}
-              </PwaInlineOpenLink>
+              {cta ?? (
+                <PwaInlineOpenLink
+                  href="/start?next=%2Fglyph%2Freading"
+                  frameTitle="Glyph"
+                  closeLabel="关闭"
+                  className="marketing-pill-outline-cta marketing-pill-outline-cta--amber inline-flex min-w-[200px] px-8 py-3.5 text-[15px] hover:-translate-y-0.5 hover:scale-[1.04] motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100 active:scale-[0.99] md:px-10 md:py-4 md:text-base"
+                >
+                  {copy.cta}
+                </PwaInlineOpenLink>
+              )}
               <p className="mt-2 max-w-md px-2 text-center text-[12px] leading-5 text-white sm:text-[13px] sm:leading-5 md:text-[14px] md:leading-6">
                 {copy.ctaSubline}
               </p>

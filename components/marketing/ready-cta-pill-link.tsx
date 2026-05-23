@@ -1,12 +1,13 @@
 import { Link } from "@/i18n/navigation";
 
-type ReadyCtaVariant = "poju" | "glyph" | "syncro";
+type ReadyCtaVariant = "poju" | "glyph" | "syncro" | "match";
 
 /** 与 Glyph 透明描边胶囊一致：透明底、主题色描边 + 外发光，悬停铺满同色 */
 const variantModifier: Record<ReadyCtaVariant, string> = {
   poju: "marketing-pill-outline-cta--violet",
   glyph: "marketing-pill-outline-cta--amber",
   syncro: "marketing-pill-outline-cta--cyan",
+  match: "marketing-pill-outline-cta--rose",
 };
 
 const layoutClass =
@@ -21,7 +22,7 @@ export function ReadyCtaPillLink({
   title,
   ariaLabel,
 }: {
-  href: "/poju" | "/glyph" | "/syncro";
+  href: "/poju" | "/glyph" | "/syncro" | "/match";
   variant: ReadyCtaVariant;
   title: string;
   ariaLabel?: string;

@@ -7,7 +7,7 @@ import { Link } from "@/i18n/navigation";
 import { listArchive, type ArchiveSummary } from "@/lib/archive/archive-service";
 import { ARCHIVE_UPDATED_EVENT } from "@/lib/archive/runtime-archive";
 
-type FilterKey = "all" | "poju" | "glyph" | "syncro";
+type FilterKey = "all" | "poju" | "glyph" | "syncro" | "match";
 
 function dayLabel(ts: number): "Today" | "Yesterday" | "Earlier" {
   const d = new Date(ts);
@@ -114,7 +114,15 @@ export function ArchiveActionPlansList() {
 
 function ArchiveVaultCard({ item }: { item: ArchiveSummary }) {
   const icon =
-    item.product === "poju" ? "⭐" : item.product === "glyph" ? "🌿" : item.product === "syncro" ? "🧭" : "📄";
+    item.product === "poju"
+      ? "⭐"
+      : item.product === "glyph"
+        ? "🌿"
+        : item.product === "syncro"
+          ? "🧭"
+          : item.product === "match"
+            ? "👥"
+            : "📄";
 
   return (
     <Link

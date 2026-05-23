@@ -38,7 +38,7 @@ export interface StoredProfileSummary {
   timezone: string;
   relationship: import("@/lib/db/poju-db").StoredProfileRelationship;
   has_base_analysis: boolean;
-  used_in_products: { poju: number; glyph: number; syncro: number };
+  used_in_products: { poju: number; glyph: number; syncro: number; match: number };
   last_used_at: string;
   created_at: string;
 }
@@ -69,7 +69,12 @@ export async function listStoredProfiles(): Promise<StoredProfileSummary[]> {
         timezone: b.timezone,
         relationship: record.relationship,
         has_base_analysis: record.has_base_analysis,
-        used_in_products: record.used_in_products,
+        used_in_products: {
+          poju: record.used_in_products.poju ?? 0,
+          glyph: record.used_in_products.glyph ?? 0,
+          syncro: record.used_in_products.syncro ?? 0,
+          match: record.used_in_products.match ?? 0,
+        },
         last_used_at: record.last_used_at.toISOString(),
         created_at: record.created_at.toISOString(),
       });
@@ -124,7 +129,7 @@ export async function createStoredProfile(input: {
     iv: enc.iv,
     created_at: now,
     last_used_at: now,
-    used_in_products: { poju: 0, glyph: 0, syncro: 0 },
+    used_in_products: { poju: 0, glyph: 0, syncro: 0, match: 0 },
     has_base_analysis: false,
   });
 
@@ -209,14 +214,19 @@ export async function saveBaseAnalysis(
 
 export async function recordProfileUsage(
   profileId: string,
-  product: "poju" | "glyph" | "syncro",
+  product: "poju" | "glyph" | "syncro" | "match",
 ): Promise<void> {
   if (typeof window === "undefined") return;
   const db = getPojuDb();
   const record = await db.stored_profiles.get(profileId);
   if (!record) return;
-  const updated = { ...record.used_in_products };
-  updated[product] = (updated[product] || 0) + 1;
+  const updated = {
+    poju: record.used_in_products.poju ?? 0,
+    glyph: record.used_in_products.glyph ?? 0,
+    syncro: record.used_in_products.syncro ?? 0,
+    match: record.used_in_products.match ?? 0,
+  };
+  updated[product] += 1;
   await db.stored_profiles.update(profileId, {
     used_in_products: updated,
     last_used_at: new Date(),

@@ -4,16 +4,29 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { BirthInfoPicker } from "@/components/poju/BirthInfoPicker";
 import { BirthInfoConfirmDialog } from "@/components/poju/BirthInfoConfirmDialog";
-import { getWelcomeText } from "@/lib/poju/session-prep-copy";
+import {
+  getSessionPrepBrand,
+  getWelcomeText,
+  type MatchPrepPerson,
+  type SessionPrepProduct,
+} from "@/lib/poju/session-prep-copy";
 import { createStoredProfile, type StoredProfileSummary } from "@/lib/profile/stored-profiles-service";
 import type { BirthInfo } from "@/lib/profile/types";
 
 export interface SessionPreparationProps {
   sessionId: string;
+  originalQuestion?: string;
   existingProfiles: StoredProfileSummary[];
   onProfileSelected: (profileId: string) => void;
   onRefund: () => void;
   locale: string;
+  productType?: SessionPrepProduct;
+  /** Match: e.g. "Person A" / "命主 A" shown in the welcome block. */
+  customLabel?: string;
+  /** Match step A vs B welcome copy. */
+  matchPerson?: MatchPrepPerson;
+  /** Override cancel/refund link label (e.g. back to select-a). */
+  refundLabel?: string;
 }
 
 export function SessionPreparation({
@@ -21,8 +34,16 @@ export function SessionPreparation({
   onProfileSelected,
   onRefund,
   locale,
+  originalQuestion = "",
+  productType = "poju",
+  customLabel,
+  matchPerson = "a",
+  refundLabel,
 }: SessionPreparationProps) {
   const t = useTranslations("session_prep");
+  const tGlyph = useTranslations("glyph");
+  const tSyncro = useTranslations("syncro");
+  const tMatch = useTranslations("match");
 
   const [mode, setMode] = useState<"list" | "new">(existingProfiles.length > 0 ? "list" : "new");
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
@@ -71,7 +92,13 @@ export function SessionPreparation({
 
   return (
     <div className="session-prep-container">
-      <WelcomeSection locale={locale} />
+      <WelcomeSection
+        locale={locale}
+        productType={productType}
+        originalQuestion={originalQuestion}
+        customLabel={customLabel}
+        matchPerson={matchPerson}
+      />
 
       <div className="prep-main">
         {mode === "list" && existingProfiles.length > 0 ? (
@@ -93,7 +120,13 @@ export function SessionPreparation({
 
       <div className="refund-link-section">
         <button type="button" onClick={onRefund} className="refund-link">
-          {t("refund_link")}
+          {productType === "glyph"
+            ? tGlyph("back_to_home")
+            : productType === "syncro"
+              ? tSyncro("back_to_home")
+              : productType === "match"
+                ? refundLabel ?? tMatch("back_to_home")
+                : t("refund_link")}
         </button>
       </div>
 
@@ -114,11 +147,45 @@ export function SessionPreparation({
   );
 }
 
-function WelcomeSection({ locale }: { locale: string }) {
+function WelcomeSection({
+  locale,
+  productType,
+  originalQuestion,
+  customLabel,
+  matchPerson,
+}: {
+  locale: string;
+  productType: SessionPrepProduct;
+  originalQuestion: string;
+  customLabel?: string;
+  matchPerson: MatchPrepPerson;
+}) {
+  const tGlyph = useTranslations("glyph");
+  const tSyncro = useTranslations("syncro");
+
+  const questionLabel =
+    productType === "syncro" ? tSyncro("your_task_label") : tGlyph("your_question_label");
+
+  const brandClass =
+    productType === "glyph"
+      ? "glyph-brand"
+      : productType === "syncro"
+        ? "syncro-brand"
+        : productType === "match"
+          ? "match-brand"
+          : "";
+
   return (
     <div className="welcome-section">
-      <div className="poju-logo">POJU</div>
-      <p className="welcome-text">{getWelcomeText(locale)}</p>
+      <div className={`poju-logo ${brandClass}`}>{getSessionPrepBrand(productType)}</div>
+      {customLabel ? <p className="match-person-label">{customLabel}</p> : null}
+      <p className="welcome-text">{getWelcomeText(locale, productType, matchPerson)}</p>
+      {originalQuestion.trim() && questionLabel ? (
+        <div className="your-question">
+          <span className="label">{questionLabel}</span>
+          <p className="question-text">&ldquo;{originalQuestion}&rdquo;</p>
+        </div>
+      ) : null}
     </div>
   );
 }

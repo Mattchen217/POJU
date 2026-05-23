@@ -4,14 +4,11 @@ import {
   detectDangerousGlyphQuestion,
   formatReadingApiError,
   GLYPH_SAFETY_FALLBACK,
-  validateAndFinalizeReading,
 } from "@/lib/glyph/reading-response";
-import {
-  generateGlyphReading,
-  GLYPH_READING_NOT_WIRED,
-} from "@/lib/llm/services/glyph-reading-service";
+import { generateGlyphReading } from "@/lib/llm/services/glyph-reading-service";
 import { getLanguageDirective, parseAppLocale } from "@/lib/prompts/language-directive";
 import type { SignData } from "@/types/oracle";
+import type { UserProfile } from "@/lib/profile/types";
 
 export const maxDuration = 120;
 export const runtime = "nodejs";
@@ -20,16 +17,12 @@ const ALL_SIGNS = signsData as SignData[];
 
 interface RequestBody {
   sign_number: number;
-  level: string;
-  user_birth: {
-    year: number;
-    month: number;
-    day: number;
-    shichen: string;
-  };
+  level?: string;
   user_question: string;
   locale?: unknown;
   profile_id?: string;
+  user_profile?: UserProfile | null;
+  base_analysis?: unknown | null;
   conversation_history?: Array<{ role: string; content: string }>;
 }
 
@@ -47,6 +40,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "invalid_request" }, { status: 400 });
     }
 
+    if (!body.profile_id?.trim()) {
+      return NextResponse.json(
+        { error: "profile_id required (send user_profile + base_analysis from client)" },
+        { status: 400 },
+      );
+    }
+
     if (detectDangerousGlyphQuestion(body.user_question)) {
       return NextResponse.json({ reading: GLYPH_SAFETY_FALLBACK });
     }
@@ -56,17 +56,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Sign not found" }, { status: 404 });
     }
 
-    const { reading: rawReading, meta } = await generateGlyphReading({
+    const { reading, meta } = await generateGlyphReading({
       sign: signData,
       question: body.user_question.trim(),
       locale,
       profile_id: body.profile_id,
-      user_birth: body.user_birth,
-    });
-
-    const reading = validateAndFinalizeReading(rawReading, {
-      question: body.user_question,
-      locale,
+      user_profile: body.user_profile ?? null,
+      base_analysis: body.base_analysis ?? null,
     });
 
     return NextResponse.json({
@@ -78,29 +74,22 @@ export async function POST(req: Request) {
     const message = formatReadingApiError(error);
     console.error("[oracle/full-reading]", error);
 
-    if (message.includes(GLYPH_READING_NOT_WIRED)) {
+    if (message.includes("missing_openrouter_api_key")) {
       return NextResponse.json(
-        {
-          error: "glyph_reading_not_ready",
-          message:
-            "Glyph v5 DeepSeek reading is being migrated. Complete Step 5 to enable full readings.",
-        },
-        { status: 503 },
+        { error: "Server missing OPENROUTER_API_KEY for DeepSeek readings." },
+        { status: 500 },
       );
     }
 
-    if (message.includes("Invalid LLM response format")) {
+    if (message.includes("not valid JSON") || message.includes("missing required")) {
       return NextResponse.json(
-        { error: "Model returned non-JSON output. Please retry." },
+        { error: "Model response invalid. Please retry.", message },
         { status: 502 },
       );
     }
 
-    if (message.includes("missing required fields") || message.includes("word count out of range")) {
-      return NextResponse.json(
-        { error: "Model response missing required reading fields." },
-        { status: 502 },
-      );
+    if (message.includes("base_analysis")) {
+      return NextResponse.json({ error: "profile_not_ready", message }, { status: 400 });
     }
 
     return NextResponse.json({ error: `Failed to generate reading: ${message}` }, { status: 500 });

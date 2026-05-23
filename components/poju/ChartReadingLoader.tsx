@@ -14,6 +14,8 @@ export interface ChartReadingLoaderProps {
   onRetry: () => void;
   onRefund: () => void;
   locale: string;
+  /** e.g. Glyph full-reading wait copy */
+  hintOverride?: string;
 }
 
 export function ChartReadingLoader({
@@ -21,6 +23,7 @@ export function ChartReadingLoader({
   error,
   onRetry,
   onRefund,
+  hintOverride,
 }: ChartReadingLoaderProps) {
   const t = useTranslations("chart_loader");
   const steps = useMemo(
@@ -53,7 +56,8 @@ export function ChartReadingLoader({
 
   const statusLine = steps[animatedStep] ?? steps[0] ?? "";
   const hint =
-    currentStep === "using_cache" ? t("hint_using_cache") : t("hint_first_time");
+    hintOverride ??
+    (currentStep === "using_cache" ? t("hint_using_cache") : t("hint_first_time"));
 
   return (
     <PreparingStatusOverlay>

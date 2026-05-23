@@ -241,6 +241,10 @@ button {
     --cta-accent: 34 211 238;
   }
 
+  .marketing-pill-outline-cta--rose {
+    --cta-accent: 244 114 182;
+  }
+
   /* 琥珀悬停填色较亮，字改深色以保证对比 */
   .marketing-pill-outline-cta--amber:hover {
     color: rgb(15 10 8);

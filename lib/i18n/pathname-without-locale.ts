@@ -24,13 +24,14 @@ export function isChatRoute(pathname: string): boolean {
   return path === "/chat" || path.startsWith("/poju/session/");
 }
 
-export type SiteNavActive = "poju" | "glyph" | "syncro" | "archive";
+export type SiteNavActive = "poju" | "glyph" | "syncro" | "match" | "archive";
 
 export function getActiveNavFromPathname(pathname: string): SiteNavActive | null {
   const first = getFirstRouteSegment(pathname);
   if (!first) return null;
   if (first === "poju") return "poju";
   if (first === "syncro") return "syncro";
+  if (first === "match") return "match";
   if (first === "archive") return "archive";
   if (first === "glyph" || first === "oracle") return "glyph";
   return null;

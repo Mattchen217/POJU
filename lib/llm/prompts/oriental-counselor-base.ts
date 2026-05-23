@@ -1,5 +1,7 @@
 /**
- * POJU v5 Step I — 东方破局顾问基础人设（所有 phase 共用）
+ * 共享工具：日期/语言/命盘拼接、`stitchPromptSections`。
+ * POJU 各 phase 使用 `poju-base.ts` + `buildPojuSystemPrompt`（见 oriental-prompt-context.ts）。
+ * Glyph → `glyph-guanyin-base.ts`；Syncro/Match 暂用下方 `ORIENTAL_COUNSELOR_BASE`（Step C/D 将拆分）。
  */
 import { formatBaseAnalysisForPrompt } from "@/lib/llm/prompts/base-analysis-context";
 import type { UserProfile } from "@/lib/profile/types";

@@ -17,6 +17,14 @@ export interface SignData {
   raw_md_content: string;
   level_zh?: string;
   story_figure?: string;
+  jixiong_zh?: string;
+  palace_zh?: string;
+  jixiong_palace_full?: string;
+  palace_meta?: {
+    element?: string;
+    season?: string;
+    symbol?: string;
+  };
 }
 
 export interface UserInput {

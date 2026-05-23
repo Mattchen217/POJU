@@ -3,8 +3,13 @@ import { getPojuDb, type ArchiveRecord } from "@/lib/db/poju-db";
 import { ARCHIVE_UPDATED_EVENT } from "@/lib/archive/runtime-archive";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
 import { mapSessionActionsToArchiveActions } from "@/lib/archive/map-actions-for-archive";
+import type { GlyphReadingContent } from "@/lib/llm/services/glyph-reading-service";
+import { CURRENT_LEVELS, type CurrentLevel } from "@/lib/syncro/current-system";
+import type { MatchReport } from "@/lib/match/types";
+import type { SyncroMatrix } from "@/lib/syncro/types";
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { POJUAction } from "@/lib/poju/types";
+import type { SignData } from "@/types/oracle";
 
 const ARCHIVE_SECRET = "pojulife_v4_archive_vault";
 
@@ -33,6 +38,63 @@ export interface ArchiveSummary {
   product: ArchiveRecord["product"];
   session_id?: string;
   created_at: string;
+}
+
+export interface GlyphReadingArchiveData {
+  reading_id: string;
+  profile_id: string;
+  question: string;
+  sign_number: number;
+  sign_level: SignData["level"];
+  glyph_display_name: string;
+  wind_category: string;
+  delivered_at: string;
+  reading: GlyphReadingContent;
+}
+
+export interface SyncroTaskArchiveData {
+  syncro_session_id: string;
+  profile_id: string;
+  task_description: string;
+  created_at: string;
+  expires_at: string;
+  best_combination?: {
+    hour_period: string;
+    direction: string;
+    current_level: string;
+    short_advice: string;
+  };
+}
+
+export interface MatchArchiveData {
+  match_session_id: string;
+  a_profile_id: string;
+  b_profile_id: string;
+  relationship_description: string;
+  compatibility_level: string;
+  created_at: string;
+  summary: {
+    overall_summary: string;
+    a_summary: string;
+    b_summary: string;
+    top_actions: string[];
+  };
+}
+
+function scoreForCurrentLevel(level: string): number {
+  if (level in CURRENT_LEVELS) {
+    return CURRENT_LEVELS[level as CurrentLevel].score;
+  }
+  return 0;
+}
+
+function formatSyncroArchiveTitle(task: string, locale: string, now: Date): string {
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  const dateStr = `${y}-${m}-${d}`;
+  const snippet = task.length > 30 ? `${task.slice(0, 30)}…` : task;
+  return locale.startsWith("zh") ? `Syncro：${snippet} · ${dateStr}` : `Syncro: ${snippet} - ${dateStr}`;
 }
 
 function formatArchiveTitle(locale: string, now: Date): string {
@@ -119,6 +181,227 @@ export async function loadArchiveItem(archiveId: string): Promise<POJUActionReco
     });
   } catch (e) {
     console.error("[archive] Decrypt failed:", e);
+    return null;
+  }
+}
+
+function formatGlyphArchiveTitle(glyphName: string, locale: string, now: Date): string {
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  const dateStr = `${y}-${m}-${d}`;
+  return locale.startsWith("zh") ? `Glyph：${glyphName} · ${dateStr}` : `Glyph: ${glyphName} - ${dateStr}`;
+}
+
+export async function saveGlyphReadingToArchive(input: {
+  reading_id: string;
+  profile_id: string;
+  question: string;
+  sign: SignData;
+  wind_category: string;
+  reading: GlyphReadingContent;
+  locale?: string;
+}): Promise<string> {
+  const deviceId = getPojuDeviceId();
+  const archiveId = crypto.randomUUID();
+  const now = new Date();
+  const glyphName = input.sign.story_figure?.trim() || `Sign ${input.sign.sign_number}`;
+  const title = formatGlyphArchiveTitle(glyphName, input.locale ?? "en", now);
+
+  const data: GlyphReadingArchiveData = {
+    reading_id: input.reading_id,
+    profile_id: input.profile_id,
+    question: input.question,
+    sign_number: input.sign.sign_number,
+    sign_level: input.sign.level,
+    glyph_display_name: glyphName,
+    wind_category: input.wind_category,
+    delivered_at: now.toISOString(),
+    reading: input.reading,
+  };
+
+  const { cipher, iv } = await encryptJson(ARCHIVE_SECRET, data);
+
+  await getPojuDb().archive.put({
+    archive_id: archiveId,
+    device_id: deviceId,
+    type: "glyph_reading",
+    profile_id: input.profile_id,
+    title,
+    encrypted_data: cipher,
+    iv,
+    created_at: now,
+    product: "glyph",
+  });
+
+  notifyArchiveUpdated();
+  return archiveId;
+}
+
+export async function saveSyncroToArchive(input: {
+  syncro_session_id: string;
+  profile_id: string;
+  task_description: string;
+  matrix: SyncroMatrix;
+  expires_at: Date;
+  locale?: string;
+}): Promise<string> {
+  const deviceId = getPojuDeviceId();
+  const archiveId = crypto.randomUUID();
+  const now = new Date();
+  const title = formatSyncroArchiveTitle(input.task_description, input.locale ?? "en", now);
+
+  const bestCombo = Object.entries(input.matrix)
+    .map(([key, combo]) => {
+      const [hour, dir] = key.split("__");
+      return {
+        hour,
+        dir,
+        combo,
+        score: scoreForCurrentLevel(combo.current_level),
+      };
+    })
+    .sort((a, b) => b.score - a.score)[0];
+
+  const data: SyncroTaskArchiveData = {
+    syncro_session_id: input.syncro_session_id,
+    profile_id: input.profile_id,
+    task_description: input.task_description,
+    created_at: now.toISOString(),
+    expires_at: input.expires_at.toISOString(),
+    best_combination: bestCombo
+      ? {
+          hour_period: bestCombo.hour,
+          direction: bestCombo.dir,
+          current_level: bestCombo.combo.current_level,
+          short_advice: bestCombo.combo.short_advice,
+        }
+      : undefined,
+  };
+
+  const { cipher, iv } = await encryptJson(ARCHIVE_SECRET, data);
+
+  await getPojuDb().archive.put({
+    archive_id: archiveId,
+    device_id: deviceId,
+    type: "syncro_task",
+    session_id: input.syncro_session_id,
+    profile_id: input.profile_id,
+    title,
+    encrypted_data: cipher,
+    iv,
+    created_at: now,
+    product: "syncro",
+  });
+
+  notifyArchiveUpdated();
+  return archiveId;
+}
+
+function formatMatchArchiveTitle(relationship: string, locale: string, now: Date): string {
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  const dateStr = `${y}-${m}-${d}`;
+  const snippet = relationship.length > 30 ? `${relationship.slice(0, 30)}…` : relationship;
+  return locale.startsWith("zh") ? `Match：${snippet} · ${dateStr}` : `Match: ${snippet} - ${dateStr}`;
+}
+
+export async function saveMatchToArchive(input: {
+  match_id: string;
+  a_profile_id: string;
+  b_profile_id: string;
+  relationship_description: string;
+  report: MatchReport;
+  locale?: string;
+}): Promise<string> {
+  const deviceId = getPojuDeviceId();
+  const archiveId = crypto.randomUUID();
+  const now = new Date();
+  const title = formatMatchArchiveTitle(
+    input.relationship_description,
+    input.locale ?? "en",
+    now,
+  );
+
+  const data: MatchArchiveData = {
+    match_session_id: input.match_id,
+    a_profile_id: input.a_profile_id,
+    b_profile_id: input.b_profile_id,
+    relationship_description: input.relationship_description,
+    compatibility_level: input.report.conclusion?.compatibility_level ?? "neutral",
+    created_at: now.toISOString(),
+    summary: {
+      overall_summary: input.report.conclusion?.summary ?? "",
+      a_summary: input.report.analysis_a?.summary ?? "",
+      b_summary: input.report.analysis_b?.summary ?? "",
+      top_actions: (input.report.recommendations?.actions ?? [])
+        .slice(0, 3)
+        .map((a) => a.title)
+        .filter(Boolean),
+    },
+  };
+
+  const { cipher, iv } = await encryptJson(ARCHIVE_SECRET, data);
+
+  await getPojuDb().archive.put({
+    archive_id: archiveId,
+    device_id: deviceId,
+    type: "match_session",
+    session_id: input.match_id,
+    profile_id: input.a_profile_id,
+    title,
+    encrypted_data: cipher,
+    iv,
+    created_at: now,
+    product: "match",
+  });
+
+  notifyArchiveUpdated();
+  return archiveId;
+}
+
+export async function loadMatchArchive(archiveId: string): Promise<MatchArchiveData | null> {
+  const record = await getPojuDb().archive.get(archiveId);
+  if (!record || record.type !== "match_session") return null;
+
+  try {
+    return await decryptJson<MatchArchiveData>(ARCHIVE_SECRET, {
+      iv: record.iv,
+      cipher: record.encrypted_data,
+    });
+  } catch (e) {
+    console.error("[archive] Match decrypt failed:", e);
+    return null;
+  }
+}
+
+export async function loadSyncroArchive(archiveId: string): Promise<SyncroTaskArchiveData | null> {
+  const record = await getPojuDb().archive.get(archiveId);
+  if (!record || record.type !== "syncro_task") return null;
+
+  try {
+    return await decryptJson<SyncroTaskArchiveData>(ARCHIVE_SECRET, {
+      iv: record.iv,
+      cipher: record.encrypted_data,
+    });
+  } catch (e) {
+    console.error("[archive] Syncro decrypt failed:", e);
+    return null;
+  }
+}
+
+export async function loadGlyphReading(archiveId: string): Promise<GlyphReadingArchiveData | null> {
+  const record = await getPojuDb().archive.get(archiveId);
+  if (!record || record.type !== "glyph_reading") return null;
+
+  try {
+    return await decryptJson<GlyphReadingArchiveData>(ARCHIVE_SECRET, {
+      iv: record.iv,
+      cipher: record.encrypted_data,
+    });
+  } catch (e) {
+    console.error("[archive] Glyph decrypt failed:", e);
     return null;
   }
 }

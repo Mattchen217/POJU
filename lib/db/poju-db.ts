@@ -82,7 +82,7 @@ export interface StoredProfileRecord {
   iv: string;
   created_at: Date;
   last_used_at: Date;
-  used_in_products: { poju: number; glyph: number; syncro: number };
+  used_in_products: { poju: number; glyph: number; syncro: number; match: number };
   has_base_analysis: boolean;
   base_analysis_at?: Date;
 }
@@ -118,14 +118,49 @@ export interface StoredProfileData {
 export interface ArchiveRecord {
   archive_id: string;
   device_id: string;
-  type: "poju_action_recommendations" | "glyph_reading" | "syncro_task";
+  type: "poju_action_recommendations" | "glyph_reading" | "syncro_task" | "match_session";
   session_id?: string;
   profile_id?: string;
   title: string;
   encrypted_data: string;
   iv: string;
   created_at: Date;
-  product: "poju" | "glyph" | "syncro";
+  product: "poju" | "glyph" | "syncro" | "match";
+}
+
+/** Match v5 — encrypted match report row (plaintext index + encrypted blob). */
+export interface MatchSessionRecord {
+  match_id: string;
+  device_id: string;
+  a_profile_id: string;
+  b_profile_id: string;
+  encrypted_data: string;
+  iv: string;
+  created_at: Date;
+}
+
+/** Syncro v5 — encrypted 24h session row (plaintext index + encrypted blob). */
+export interface SyncroSessionRecord {
+  session_id: string;
+  device_id: string;
+  profile_id: string;
+  encrypted_data: string;
+  iv: string;
+  created_at: Date;
+  expires_at: Date;
+}
+
+/** Syncro v5 — per-device product usage (first free + paid sessions). */
+export interface DeviceUsageRecord {
+  /** `${device_id}__${product}` */
+  id: string;
+  device_id: string;
+  product: "glyph" | "syncro" | "match";
+  free_used: boolean;
+  free_used_at?: Date;
+  paid_count: number;
+  last_used_at: Date;
+  total_cost_usd: number;
 }
 
 export class PojuDb extends Dexie {
@@ -139,6 +174,9 @@ export class PojuDb extends Dexie {
   pojuSessionArchive!: EntityTable<POJUSessionArchiveRecord, "session_id">;
   stored_profiles!: EntityTable<StoredProfileRecord, "profile_id">;
   archive!: EntityTable<ArchiveRecord, "archive_id">;
+  device_usage!: EntityTable<DeviceUsageRecord, "id">;
+  syncro_sessions!: EntityTable<SyncroSessionRecord, "session_id">;
+  match_sessions!: EntityTable<MatchSessionRecord, "match_id">;
 
   constructor() {
     super("pojulife_v4");
@@ -186,6 +224,45 @@ export class PojuDb extends Dexie {
       pojuSessionArchive: "session_id, device_id, archived_at",
       stored_profiles: "profile_id, device_id, birth_info_hash, last_used_at, has_base_analysis",
       archive: "archive_id, device_id, type, session_id, created_at, product",
+    });
+    this.version(6).stores({
+      userProfiles: "id, updatedAt",
+      glyphHistory: "id, updatedAt",
+      syncroCache: "id, updatedAt",
+      pojuSessions: "id, updatedAt",
+      usage: "id, dayKey, product, updatedAt",
+      pojuSessionRecords: "session_id, device_id, status, expires_at, last_interaction_at",
+      pojuSessionArchive: "session_id, device_id, archived_at",
+      stored_profiles: "profile_id, device_id, birth_info_hash, last_used_at, has_base_analysis",
+      archive: "archive_id, device_id, type, session_id, created_at, product",
+      device_usage: "id, device_id, product, last_used_at",
+    });
+    this.version(7).stores({
+      userProfiles: "id, updatedAt",
+      glyphHistory: "id, updatedAt",
+      syncroCache: "id, updatedAt",
+      pojuSessions: "id, updatedAt",
+      usage: "id, dayKey, product, updatedAt",
+      pojuSessionRecords: "session_id, device_id, status, expires_at, last_interaction_at",
+      pojuSessionArchive: "session_id, device_id, archived_at",
+      stored_profiles: "profile_id, device_id, birth_info_hash, last_used_at, has_base_analysis",
+      archive: "archive_id, device_id, type, session_id, created_at, product",
+      device_usage: "id, device_id, product, last_used_at",
+      syncro_sessions: "session_id, device_id, profile_id, created_at, expires_at",
+    });
+    this.version(8).stores({
+      userProfiles: "id, updatedAt",
+      glyphHistory: "id, updatedAt",
+      syncroCache: "id, updatedAt",
+      pojuSessions: "id, updatedAt",
+      usage: "id, dayKey, product, updatedAt",
+      pojuSessionRecords: "session_id, device_id, status, expires_at, last_interaction_at",
+      pojuSessionArchive: "session_id, device_id, archived_at",
+      stored_profiles: "profile_id, device_id, birth_info_hash, last_used_at, has_base_analysis",
+      archive: "archive_id, device_id, type, session_id, created_at, product",
+      device_usage: "id, device_id, product, last_used_at",
+      syncro_sessions: "session_id, device_id, profile_id, created_at, expires_at",
+      match_sessions: "match_id, device_id, a_profile_id, b_profile_id, created_at",
     });
   }
 }

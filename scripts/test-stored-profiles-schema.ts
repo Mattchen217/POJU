@@ -30,7 +30,7 @@ export async function runStoredProfilesSchemaSelfTest(): Promise<void> {
     iv: "test-iv",
     created_at: new Date(),
     last_used_at: new Date(),
-    used_in_products: { poju: 0, glyph: 0, syncro: 0 },
+    used_in_products: { poju: 0, glyph: 0, syncro: 0, match: 0 },
     has_base_analysis: false,
   });
 

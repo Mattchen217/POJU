@@ -1,10 +1,10 @@
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
+import { buildPojuCorePromptSections } from "@/lib/llm/prompts/poju-base";
 import {
   buildCurrentDateContext,
   buildLanguageGuidance,
   buildNorthAmericaAdaptation,
   buildProfileContextSection,
-  ORIENTAL_COUNSELOR_BASE,
   stitchPromptSections,
 } from "@/lib/llm/prompts/oriental-counselor-base";
 import type { PhaseLLMInput } from "@/lib/llm/phases/types";
@@ -24,13 +24,11 @@ export async function loadBaseAnalysisForSession(input: PhaseLLMInput): Promise<
   return row?.base_analysis?.content ?? null;
 }
 
-export async function buildOrientalSystemPrompt(
-  input: PhaseLLMInput,
-  taskBlock: string,
-): Promise<string> {
+/** POJU phase system prompt：poju-base 模块 + 日期/语言/命盘 + 阶段任务块 */
+export async function buildPojuSystemPrompt(input: PhaseLLMInput, taskBlock: string): Promise<string> {
   const baseAnalysis = await loadBaseAnalysisForSession(input);
   return stitchPromptSections(
-    ORIENTAL_COUNSELOR_BASE,
+    ...buildPojuCorePromptSections(),
     buildCurrentDateContext(new Date(), input.locale),
     buildLanguageGuidance(input.locale, input.user_message),
     buildNorthAmericaAdaptation(input.locale),
@@ -38,3 +36,6 @@ export async function buildOrientalSystemPrompt(
     taskBlock,
   );
 }
+
+/** @deprecated 使用 buildPojuSystemPrompt；保留别名避免大范围重命名 */
+export const buildOrientalSystemPrompt = buildPojuSystemPrompt;

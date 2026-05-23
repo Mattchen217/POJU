@@ -10,6 +10,7 @@ const tabs = [
   { href: "/poju", label: "POJU" },
   { href: "/glyph", label: "Glyph" },
   { href: "/syncro", label: "Syncro" },
+  { href: "/match", label: "Match" },
   { href: "/archive", label: "✦" },
 ];
 
@@ -25,7 +26,7 @@ export function PwaTabbar() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-glass-border bg-bg-layer-1/95 px-2 py-2 backdrop-blur-xl md:hidden">
-      <ul className="mx-auto grid max-w-md grid-cols-5 gap-1 text-center text-xs">
+      <ul className="mx-auto grid max-w-md grid-cols-6 gap-1 text-center text-xs">
         {tabs.map((tab) => (
           <li key={tab.href}>
             <Link

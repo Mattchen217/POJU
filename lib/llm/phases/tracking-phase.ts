@@ -60,7 +60,7 @@ ${archiveBlock}
 
 ## 追踪对话的术语与时间表述
 
-继承 oriental-counselor-base 中的术语规则：
+继承 poju-base（POJU_SESSION_GUARDRAILS / POJU_OUTPUT_BRANDING）中的术语规则：
 - 不用「方子」→ 用「方案」/「破局方案」
 - 不用「诊脉」→ 用「推演」/「看局」
 - 不用「调方」→ 用「调整方向」

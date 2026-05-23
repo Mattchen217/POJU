@@ -52,10 +52,30 @@ const productCardStyles = [
     kind: "syncro",
     productKey: "syncro" as const,
   },
+  {
+    href: "/match",
+    // 黑为主 + 一角玫红（Match）
+    cardGradient:
+      "linear-gradient(118deg, rgba(244,114,182,0.42) 0%, transparent 18%), linear-gradient(145deg, #080506 0%, #10080c 40%, #140a10 100%)",
+    overlayGradient: "linear-gradient(180deg, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.06) 100%)",
+    kind: "match",
+    productKey: "match" as const,
+  },
 ];
 
 function ProductCardIcon({ kind }: { kind: string }) {
   const motion = "transition-transform duration-500 group-hover:scale-105";
+
+  if (kind === "match") {
+    return (
+      <span
+        className={`relative inline-flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full sm:h-11 sm:w-11 bg-gradient-to-br from-rose-400/50 to-fuchsia-950/60 shadow-[0_0_22px_rgba(244,114,182,0.35)] ${motion}`}
+        aria-hidden
+      >
+        <span className="text-[15px] font-semibold leading-none text-white sm:text-base">M</span>
+      </span>
+    );
+  }
 
   const cfg =
     kind === "poju"
@@ -160,6 +180,7 @@ export default async function LandingPage() {
     poju: firstExisting(LANDING_ASSETS.cardPoju),
     glyph: firstExisting(LANDING_ASSETS.cardGlyph),
     syncro: firstExisting(LANDING_ASSETS.cardSyncro),
+    match: null,
   };
 
   const productCards = productCardStyles.map((style) => ({
@@ -241,7 +262,7 @@ export default async function LandingPage() {
             <h2 className="text-center text-[26px] font-semibold leading-tight tracking-tight text-white sm:text-[30px] md:text-[32px]">
               {tHome("threeWays.heading")}
             </h2>
-            <div className="mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5 md:mt-24">
+            <div className="mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5 md:mt-24">
               {productCards.map((card, index) => {
                 const tex = cardTexture[card.kind];
                 return (
@@ -530,7 +551,7 @@ export default async function LandingPage() {
                 className="my-9 h-px w-full max-w-sm bg-gradient-to-r from-transparent via-white/25 to-transparent sm:my-10"
                 aria-hidden
               />
-              <div className="grid w-full max-w-5xl grid-cols-1 gap-8 sm:grid-cols-3 sm:gap-4 md:gap-6 lg:gap-8">
+              <div className="grid w-full max-w-5xl grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4 sm:gap-4 md:gap-6 lg:gap-8">
                 <div className="flex flex-col items-center gap-2.5 text-center">
                   <ReadyCtaPillLink
                     href="/poju"
@@ -562,6 +583,17 @@ export default async function LandingPage() {
                   />
                   <p className="max-w-[17rem] text-[13px] leading-snug text-white/72 sm:max-w-[13.5rem] sm:px-1 sm:text-[14px] md:max-w-none">
                     {tHome("finalCta.syncro.sub")}
+                  </p>
+                </div>
+                <div className="flex flex-col items-center gap-2.5 text-center">
+                  <ReadyCtaPillLink
+                    href="/match"
+                    variant="match"
+                    title={tHome("finalCta.match.title")}
+                    ariaLabel={`${tHome("finalCta.match.title")}. ${tHome("finalCta.match.sub")}`}
+                  />
+                  <p className="max-w-[17rem] text-[13px] leading-snug text-white/72 sm:max-w-[13.5rem] sm:px-1 sm:text-[14px] md:max-w-none">
+                    {tHome("finalCta.match.sub")}
                   </p>
                 </div>
               </div>

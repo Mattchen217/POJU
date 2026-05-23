@@ -46,6 +46,9 @@ export function SiteHeader() {
             <Link href="/syncro" className={`${cls("syncro")} pointer-events-auto inline-flex h-12 items-center leading-none`}>
               {tNav("syncro")}
             </Link>
+            <Link href="/match" className={`${cls("match")} pointer-events-auto inline-flex h-12 items-center leading-none`}>
+              {tNav("match")}
+            </Link>
           </nav>
 
           <div className="absolute right-3 top-1/2 z-[2000] flex h-12 -translate-y-1/2 items-center justify-end sm:right-4">
@@ -72,6 +75,9 @@ export function SiteHeader() {
             </Link>
             <Link href="/syncro" className={cls("syncro")}>
               {tNav("syncro")}
+            </Link>
+            <Link href="/match" className={cls("match")}>
+              {tNav("match")}
             </Link>
             <Link href="/archive" className={cls("archive")}>
               {tNav("archive")}

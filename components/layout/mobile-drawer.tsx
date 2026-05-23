@@ -94,6 +94,9 @@ export function MobileDrawer({ open, onClose }: MobileDrawerProps) {
               <MobileNavLink href="/syncro" onNavigate={onClose}>
                 {t("syncro")}
               </MobileNavLink>
+              <MobileNavLink href="/match" onNavigate={onClose}>
+                {t("match")}
+              </MobileNavLink>
               <MobileNavLink href="/archive" onNavigate={onClose}>
                 {t("archive")}
               </MobileNavLink>
@@ -155,7 +158,7 @@ function MobileNavLink({
   children,
   onNavigate,
 }: {
-  href: "/poju" | "/glyph" | "/syncro" | "/archive" | "/disclaimer" | "/privacy" | "/terms" | "/contact";
+  href: "/poju" | "/glyph" | "/syncro" | "/match" | "/archive" | "/disclaimer" | "/privacy" | "/terms" | "/contact";
   children: ReactNode;
   onNavigate: () => void;
 }) {

@@ -32,6 +32,11 @@
   margin-bottom: 16px;
 }
 
+.welcome-section .syncro-brand {
+  color: #67e8f9;
+  letter-spacing: 0.14em;
+}
+
 .welcome-text {
   color: #ccc;
   line-height: 1.7;

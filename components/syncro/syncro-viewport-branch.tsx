@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { detectDevice } from "@/lib/device-detection";
-import { SyncroDesktopGuide } from "@/components/syncro/syncro-desktop-guide";
+import { SyncroDesktopBanner } from "@/components/syncro/syncro-desktop-banner";
 import { SyncroIncompatible } from "@/components/syncro/syncro-incompatible";
 
 type SyncroViewportBranchProps = {
@@ -11,7 +11,7 @@ type SyncroViewportBranchProps = {
 };
 
 /**
- * 路由级分支：桌面 → 引导页；移动无罗盘 → 不兼容提示；否则渲染子内容（营销 + 浏览体验）。
+ * 路由级分支：桌面 → 顶部手机引导条 + 完整营销页；移动无罗盘 → 不兼容提示；否则渲染子内容。
  */
 export function SyncroViewportBranch({ children }: SyncroViewportBranchProps) {
   const [ready, setReady] = useState(false);
@@ -29,7 +29,11 @@ export function SyncroViewportBranch({ children }: SyncroViewportBranchProps) {
     return <div className="min-h-screen bg-bg-deep" aria-hidden />;
   }
 
-  if (mode === "desktop") return <SyncroDesktopGuide />;
   if (mode === "no_compass") return <SyncroIncompatible />;
-  return <>{children}</>;
+  return (
+    <>
+      {mode === "desktop" ? <SyncroDesktopBanner /> : null}
+      {children}
+    </>
+  );
 }

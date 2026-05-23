@@ -1,0 +1,51 @@
+/**
+ * Syncro v5 — per-device product usage (first free + paid sessions).
+ * @see docs/Syncro_v5.0_Refactor.md Step 4
+ */
+
+import { getPojuDb, type DeviceUsageRecord } from "@/lib/db/poju-db";
+import { getPojuDeviceId } from "@/lib/poju/client-device-id";
+
+export type SyncroProduct = DeviceUsageRecord["product"];
+
+function usageId(deviceId: string, product: SyncroProduct): string {
+  return `${deviceId}__${product}`;
+}
+
+export async function isFirstTimeFree(product: SyncroProduct): Promise<boolean> {
+  const deviceId = getPojuDeviceId();
+  const record = await getPojuDb().device_usage.get(usageId(deviceId, product));
+  return !record?.free_used;
+}
+
+export async function recordUsage(
+  product: SyncroProduct,
+  isFree: boolean,
+  costUsd: number,
+): Promise<void> {
+  const deviceId = getPojuDeviceId();
+  const id = usageId(deviceId, product);
+  const existing = await getPojuDb().device_usage.get(id);
+  const now = new Date();
+
+  const row: DeviceUsageRecord = {
+    id,
+    device_id: deviceId,
+    product,
+    free_used: Boolean(existing?.free_used) || isFree,
+    free_used_at:
+      isFree && !existing?.free_used_at ? now : existing?.free_used_at,
+    paid_count: (existing?.paid_count ?? 0) + (isFree ? 0 : 1),
+    last_used_at: now,
+    total_cost_usd: (existing?.total_cost_usd ?? 0) + costUsd,
+  };
+
+  await getPojuDb().device_usage.put(row);
+}
+
+export async function getProductUsage(
+  product: SyncroProduct,
+): Promise<DeviceUsageRecord | undefined> {
+  const deviceId = getPojuDeviceId();
+  return getPojuDb().device_usage.get(usageId(deviceId, product));
+}

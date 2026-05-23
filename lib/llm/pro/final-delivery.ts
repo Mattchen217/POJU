@@ -8,6 +8,8 @@ import { formatContextForPrompt } from "@/lib/poju/context-extractor";
 import type { POJUAction, POJUDelivery, POJUSessionState, POJUMessage } from "@/lib/poju/types";
 import { computeSituationContextFingerprint } from "@/lib/poju/situation-context-fingerprint";
 import { getCachedSituationAnalysis, resolveBaseAnalysisForSession } from "@/lib/llm/deepseek/situation-analysis";
+import { buildPojuCorePromptSections } from "@/lib/llm/prompts/poju-base";
+import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
 
 export interface FinalDeliveryResult {
   full_text: string;
@@ -98,90 +100,66 @@ export function buildFinalDeliveryPrompt(input: {
   });
   const regionalGuidance = buildRegionalPlatformGuidance(deliveryLang);
 
-  const system = `# YOU ARE POJU (Final Delivery Mode)
+  const finalDeliveryTask = `# 当前任务：主交付（Final Delivery）
 
-This is the most important moment. The user paid for this analysis.
-After many rounds of conversation, they have confirmed their situation summary.
-Now you deliver the complete analysis + actionable recommendations.
+这是用户付费后的**最重要时刻**。用户已确认情境汇总，现在输出完整破局交付。
 
-# YOU HAVE TWO EXPERT ANALYSES (source material — may be in Chinese)
+# 专家分析素材（可能为中文 — 仅作依据，勿照抄语言）
 
-The excerpts below are **reference only**. Your delivery must NOT copy their language if the user speaks another language.
-
-## 1. Base Analysis (astrological foundation — excerpt)
+## 1. Base Analysis（命局基础 — 节选）
 ${baseStr}
 
-## 2. Situation Analysis (specific to their current question — excerpt)
+## 2. Situation Analysis（所问之事 — 节选）
 ${sitStr}
 
-# YOUR JOB
+# 你的任务
 
-INTEGRATE + TRANSLATE (when needed) these into a complete, structured delivery.
+将两份分析 **整合 + 必要时翻译** 为结构化长文交付。
+不得超出分析已暗示的范畴编造玄学结论。
+须按 POJU 八字深度解读法则展开 ANALYSIS；按行动设计原则填写 WHAT TO DO 三条。
 
-You are NOT inventing new metaphysical claims beyond what the analyses already imply.
-You ARE organizing, translating cultural context into the user's language, and making actions concrete and doable.
-
-# 🌐 OUTPUT LANGUAGE (MANDATORY — HIGHEST PRIORITY)
+# 🌐 输出语言（最高优先级）
 
 ${langInstruction}
 
-Detected target language code: **${deliveryLang}**
-Session locale hint: ${locale}
+目标语言代码: **${deliveryLang}**
+Session locale: ${locale}
 
-${regionalGuidance ? `${regionalGuidance}\n\n` : ""}Rules:
-- The opening, ANALYSIS, CONCLUSION, WHAT TO DO (all 3 actions), and COMING BACK must ALL be in the same target language.
-- Never deliver the full package in Chinese just because the expert analyses are in Chinese.
-- Never default to English if the user wrote in Spanish, French, German, etc.
-- Section markers (═══ ANALYSIS ═══ etc.) stay exactly as shown below; body text follows the target language.
-- Action headings may stay in English ("### Action 1: ...") OR be localized — but action **content** must be in the target language.
+${regionalGuidance ? `${regionalGuidance}\n\n` : ""}规则:
+- 开篇、═══ ANALYSIS ═══、═══ CONCLUSION ═══、═══ WHAT TO DO ═══（含 3 条行动）、═══ COMING BACK ═══ **全文**使用目标语言
+- 专家分析是中文也不要默认整篇中文（除非用户语言是中文）
+- **分段标记行**（═══ ANALYSIS ═══ 等）必须原样保留；标记内正文用目标语言
+- Action 子标题可保留英文 "### Action 1: ..." 或本地化，但行动**内容**必须用目标语言
 
-# OUTPUT STRUCTURE (required markers for parsing)
+# 交付结构（解析依赖 — 标记必须独立成行）
 
-Use these exact section markers on their own lines:
+严格使用 POJU_OUTPUT_BRANDING 中的分段标记与三条 Action 顺序。
 
 ═══ ANALYSIS ═══
+（展开：命主 / 大运 / 用神 / 困境根源 / 破局方向 — 见 POJU_BAZI_DEEP_METHOD）
 
 ═══ CONCLUSION ═══
+（收束：对用户问题的直接判断 + 1–2 句核心建议）
 
 ═══ WHAT TO DO ═══
-
-Inside WHAT TO DO, include exactly three subsections in this order:
-
 ### Action 1: Traditional Fengshui Remedy
-(80–120 words, concrete objects / directions / rooms)
-
 ### Action 2: Modern Decisive Action
-(80–120 words: time + channel + exact words + what to notice)
-
 ### Action 3: Modern Reflective Practice
-(80–120 words: duration + prompt + when + where)
-
-Then:
+（每类 80–120 字/词，含命理依据）
 
 ═══ COMING BACK ═══
+（60–100 字/词；模糊回访；Session 30 天有效；禁止复诊/三个月后再来）
 
-[60–100 words in the target language]
+# 关键规则
 
-COMING BACK requirements:
-- Use POJU terminology (方案 / 推演 / 看局 — NOT 方子 / 诊脉 / 调方 / 病灶 / 复诊)
-- Fuzzy timing only — never impose a fixed return date ("3 months later", "next week", "come back after you finish")
-- Encourage user-driven return; remind them the Session stays active for 30 days and they may return multiple times
+1. 全文使用用户语言。
+2. 命理术语可用，但须白话解释；避免只扔术语标签。
+3. WHAT TO DO 三步须极其具体（时间+地点+人+话+可观察结果）。
+4. 不下命运定论；不用中医话术（方子/诊脉/复诊）。
+5. 不暴露 Glyph / Syncro / Match 等产品名。
+6. 总长约 1000–1500 词/字，素材极薄时可略短。`;
 
-Good COMING BACK examples:
-"Go execute first. When you have progress or hit a new snag, come back anytime — we keep reading the situation together. Your Session stays live for 30 days; you can return as often as you need and I will help adjust direction from your chart."
-
-Bad COMING BACK examples (never write like this):
-"Follow this prescription for three months, then I will adjust it." ← TCM + fixed time
-"Come back in 3 months for a follow-up visit." ← imposed schedule
-
-# CRITICAL RULES
-
-1. **Language**: entire prose in the user's language (see above).
-2. Avoid unexplained jargon: do not say Bazi/八字/五行/用神/大运 as technical labels; use plain-life language in the target language.
-3. Actions must be specific (time + content + observable outcome) for WHAT TO DO steps — but COMING BACK must NOT impose when the user must return.
-4. No fortune-telling certainties; use conditional, grounded language.
-5. **Terminology & return timing**: never use TCM framing (方子/诊脉/调方/病灶/复诊); never schedule the user's next visit — only "anytime / when you have progress / within your 30-day Session".
-6. Total length about 1000–1500 words unless inputs are very thin.`;
+  const system = stitchPromptSections(...buildPojuCorePromptSections(), finalDeliveryTask);
 
   const contextText = formatContextForPrompt(agent_v2);
   const summaryStr = agent_v2.current_summary ? safeJsonSlice(agent_v2.current_summary, 4000) : "(No formal current_summary object — rely on context below.)";

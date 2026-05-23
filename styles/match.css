@@ -1,0 +1,937 @@
+/* Match v5 — home + payment (report styles in Step 8) */
+
+.match-home {
+  min-height: 100dvh;
+  background: linear-gradient(180deg, #0f0a06 0%, #050308 100%);
+  color: #e8e2d8;
+  padding: 1.5rem 1rem 3rem;
+}
+
+.match-home--loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9a9288;
+}
+
+.match-home-inner {
+  width: 100%;
+  max-width: 28rem;
+  margin: 0 auto;
+}
+
+.match-hero {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.match-title {
+  margin: 0;
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: #d4af37;
+}
+
+.match-subtitle {
+  margin: 0.75rem 0 0;
+  font-size: 1.125rem;
+  color: #e8dcc0;
+}
+
+.match-description {
+  margin: 1rem 0 0;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: #9a9288;
+}
+
+.match-features {
+  margin-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.match-feature-row {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 1rem 1.1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(212, 175, 55, 0.12);
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.match-feature-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.match-feature-text h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #e8dcc0;
+}
+
+.match-feature-text p {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: #9a9288;
+}
+
+.match-use-cases {
+  margin-top: 2rem;
+}
+
+.match-use-cases h2 {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9a9288;
+}
+
+.match-use-cases ul {
+  margin: 0;
+  padding-left: 1.15rem;
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: #c4bcb0;
+}
+
+.match-use-cases li + li {
+  margin-top: 0.5rem;
+}
+
+.match-cta {
+  margin-top: 2.5rem;
+  text-align: center;
+}
+
+.match-primary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 20rem;
+  padding: 0.9rem 1.5rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  background: rgba(212, 175, 55, 0.15);
+  color: #f5ecd4;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: background 0.2s, transform 0.15s;
+}
+
+.match-primary-btn:hover:not(:disabled) {
+  background: rgba(212, 175, 55, 0.28);
+  transform: translateY(-1px);
+}
+
+.match-primary-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.match-cta-note {
+  margin: 1rem 0 0;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: #9a9288;
+}
+
+.match-payment-page {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.25rem;
+  text-align: center;
+  background: linear-gradient(180deg, #0f0a06 0%, #050308 100%);
+  color: #e8e2d8;
+}
+
+.match-payment-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #d4af37;
+}
+
+.match-payment-message {
+  margin: 1rem 0 0;
+  max-width: 22rem;
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: #9a9288;
+}
+
+.match-payment-back {
+  margin-top: 2rem;
+  font-size: 0.9rem;
+  color: #c4bcb0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.match-payment-back:hover {
+  color: #d4af37;
+}
+
+/* Step 3+ — profile selection */
+
+.match-select-page {
+  min-height: 100dvh;
+  background: linear-gradient(180deg, #0f0a06 0%, #050308 100%);
+  color: #e8e2d8;
+  padding: 1rem 0 3rem;
+}
+
+.match-select-page--loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9a9288;
+}
+
+.match-select-header {
+  max-width: 28rem;
+  margin: 0 auto;
+  padding: 0 1rem 1rem;
+  text-align: center;
+}
+
+.match-step-indicator {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #9a9288;
+}
+
+.match-select-header h1 {
+  margin: 0.5rem 0 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #d4af37;
+}
+
+.match-select-header p {
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #9a9288;
+}
+
+.welcome-section .match-brand {
+  color: #d4af37;
+  letter-spacing: 0.14em;
+}
+
+.match-person-label {
+  margin: 0.75rem 0 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #e8dcc0;
+}
+
+/* Step 5 — relationship input */
+
+.match-relationship-page {
+  min-height: 100dvh;
+  background: linear-gradient(180deg, #0f0a06 0%, #050308 100%);
+  color: #e8e2d8;
+  padding: 1.5rem 1rem 3rem;
+}
+
+.match-relationship-page--loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9a9288;
+}
+
+.match-relationship-content {
+  max-width: 28rem;
+  margin: 0 auto;
+}
+
+.match-relationship-content h1 {
+  margin: 0.5rem 0 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #d4af37;
+}
+
+.match-ab-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(212, 175, 55, 0.15);
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.match-person-mini {
+  flex: 1;
+  text-align: center;
+}
+
+.match-person-mini-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #d4af37;
+}
+
+.match-person-mini-name {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.95rem;
+  color: #e8dcc0;
+}
+
+.match-ab-vs {
+  font-size: 1.25rem;
+  color: #9a9288;
+  flex-shrink: 0;
+}
+
+.match-relationship-hint {
+  margin: 1.25rem 0 0;
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: #9a9288;
+}
+
+.match-relationship-textarea {
+  width: 100%;
+  margin-top: 1rem;
+  resize: vertical;
+  min-height: 7rem;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  background: rgba(0, 0, 0, 0.35);
+  color: #e8e2d8;
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.match-relationship-textarea:focus {
+  outline: none;
+  border-color: rgba(212, 175, 55, 0.45);
+}
+
+.match-relationship-textarea::placeholder {
+  color: #6b655c;
+}
+
+.match-relationship-char-count {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: #9a9288;
+}
+
+.match-relationship-min-hint {
+  color: #c9a227;
+}
+
+.match-relationship-examples {
+  margin-top: 1.75rem;
+}
+
+.match-relationship-examples h2 {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9a9288;
+}
+
+.match-relationship-examples ul {
+  margin: 0.75rem 0 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.match-relationship-examples li {
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: #c4bcb0;
+}
+
+.match-relationship-examples li + li {
+  margin-top: 0.5rem;
+}
+
+.match-relationship-submit {
+  margin-top: 2rem;
+  width: 100%;
+  max-width: none;
+}
+
+.match-language-hint {
+  margin: 1rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  text-align: center;
+  color: #9a9288;
+}
+
+.match-relationship-back {
+  display: block;
+  margin: 2rem auto 0;
+  background: none;
+  border: none;
+  font-size: 0.85rem;
+  color: #9a9288;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.match-relationship-back:hover {
+  color: #d4af37;
+}
+
+/* Step 7 — analyzing */
+
+.match-analyzing {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.25rem;
+  text-align: center;
+  background: linear-gradient(180deg, #0f0a06 0%, #050308 100%);
+  color: #e8e2d8;
+}
+
+.match-analyzing--loading {
+  color: #9a9288;
+}
+
+.match-analyzing-inner {
+  max-width: 22rem;
+}
+
+.match-dual-circles {
+  position: relative;
+  width: 5.5rem;
+  height: 3.5rem;
+  margin: 0 auto 2rem;
+}
+
+.match-circle {
+  position: absolute;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  border: 2px solid rgba(212, 175, 55, 0.45);
+  animation: match-pulse 2.4s ease-in-out infinite;
+}
+
+.match-circle-a {
+  left: 0;
+  background: rgba(212, 175, 55, 0.12);
+}
+
+.match-circle-b {
+  right: 0;
+  background: rgba(13, 115, 119, 0.2);
+  border-color: rgba(38, 166, 154, 0.5);
+  animation-delay: 0.6s;
+}
+
+@keyframes match-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
+.match-analyzing-step {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: #e8dcc0;
+  animation: match-fade-in 0.4s ease;
+}
+
+.match-analyzing-hint {
+  margin: 1rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: #9a9288;
+}
+
+@keyframes match-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.match-analyzing--error h2 {
+  margin: 1rem 0 0;
+  font-size: 1.25rem;
+  color: #d4af37;
+}
+
+.match-analyzing--error p {
+  margin: 1rem 0 0;
+  max-width: 22rem;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #9a9288;
+}
+
+.match-analyzing-error-icon {
+  font-size: 2rem;
+  color: #e57373;
+}
+
+.match-analyzing--error .match-primary-btn {
+  margin-top: 2rem;
+}
+
+/* Step 8 — full report */
+
+.match-result-loading,
+.match-error {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.25rem;
+  text-align: center;
+  background: linear-gradient(180deg, #0f0a06 0%, #050308 100%);
+  color: #9a9288;
+}
+
+.match-error p {
+  margin: 0 0 1.5rem;
+  color: #e8dcc0;
+}
+
+.match-report {
+  max-width: 50rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+  color: #e5e5e5;
+  background: linear-gradient(180deg, #0f0a06 0%, #050308 100%);
+  min-height: 100dvh;
+}
+
+.report-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.report-header h1 {
+  color: #d4af37;
+  font-size: 1.75rem;
+  margin: 0 0 0.5rem;
+  letter-spacing: 0.12em;
+}
+
+.relationship-line {
+  color: #9a9288;
+  font-style: italic;
+  font-size: 0.9rem;
+  max-width: 32rem;
+  margin: 0 auto;
+  line-height: 1.55;
+}
+
+.compatibility-badge-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.compatibility-badge {
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid;
+  border-radius: 1rem;
+  padding: 1.25rem 2rem;
+  text-align: center;
+  min-width: 17rem;
+}
+
+.badge-label {
+  display: block;
+  color: #9a9288;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.35rem;
+}
+
+.badge-level {
+  display: block;
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.badge-bars {
+  display: flex;
+  gap: 0.25rem;
+  justify-content: center;
+}
+
+.bar {
+  width: 2.25rem;
+  height: 0.25rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+.bar.filled {
+  opacity: 1;
+}
+
+.match-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.match-report-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-left: 4px solid #d4af37;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  transition: background 0.2s;
+}
+
+.match-report-card.expanded {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.match-report-card .card-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  color: inherit;
+}
+
+.match-report-card .card-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.match-report-card .card-header-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.match-report-card .card-header-text h3 {
+  color: #e5e5e5;
+  font-size: 1rem;
+  margin: 0 0 0.25rem;
+  font-weight: 600;
+}
+
+.match-report-card .card-summary {
+  color: #9a9288;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.match-report-card .card-toggle {
+  color: #9a9288;
+  font-size: 1.5rem;
+  font-weight: 300;
+  width: 1.5rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.match-report-card .card-body {
+  padding: 0 1.25rem 1.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  margin: 0 1rem;
+  padding-top: 1rem;
+}
+
+.card-content p {
+  color: #ccc;
+  line-height: 1.7;
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+}
+
+.card-content h4 {
+  color: #d4af37;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 1rem 0 0.5rem;
+  font-weight: 600;
+}
+
+.traits-list,
+.strengths-list,
+.challenges-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.traits-list li,
+.strengths-list li,
+.challenges-list li {
+  padding: 0.4rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 0.9rem;
+}
+
+.traits-list li {
+  color: #ccc;
+}
+
+.strengths-list li {
+  color: #81c784;
+}
+
+.challenges-list li {
+  color: #ffb74d;
+}
+
+.actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.action-item {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(76, 175, 80, 0.05);
+  border-radius: 0.5rem;
+}
+
+.action-number {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: #4caf50;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.action-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.action-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.action-icon {
+  font-size: 1rem;
+}
+
+.action-header h4 {
+  color: #4caf50 !important;
+  font-size: 0.9rem !important;
+  margin: 0 !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  font-weight: 600;
+}
+
+.action-detail {
+  color: #ccc;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.action-timing {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  color: #9a9288;
+}
+
+.timing-label {
+  color: #4caf50;
+}
+
+.report-footer {
+  text-align: center;
+  padding: 1.5rem 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.report-footer p {
+  color: #9a9288;
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+}
+
+.report-footer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.match-report-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.85rem 1.5rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  background: transparent;
+  color: #e8dcc0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.2s, color 0.2s;
+}
+
+.match-report-btn-secondary:hover {
+  background: rgba(212, 175, 55, 0.12);
+  color: #f5ecd4;
+}
+
+.report-footer-actions .match-primary-btn {
+  width: auto;
+  min-width: 12rem;
+}
+
+@media (max-width: 480px) {
+  .report-footer-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .report-footer-actions .match-primary-btn,
+  .match-report-btn-secondary {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+/* Step 9 — archive detail summary */
+
+.match-archive-detail .match-archive-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #9a9288;
+}
+
+.match-archive-relationship-text {
+  margin: 0.5rem 0 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  font-style: italic;
+  color: #e8dcc0;
+}
+
+.match-archive-compatibility-line {
+  margin: 1.5rem 0;
+  padding: 0.75rem 1rem;
+  border-left: 4px solid;
+  border-radius: 0.5rem;
+  background: rgba(0, 0, 0, 0.25);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.match-archive-summary-section {
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.match-archive-summary-section h2 {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #d4af37;
+}
+
+.match-archive-summary-section p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: #ccc;
+}
+
+.match-archive-actions-list {
+  margin: 0;
+  padding-left: 1.15rem;
+  color: #ccc;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.match-archive-view-full {
+  width: auto;
+  min-width: 12rem;
+}

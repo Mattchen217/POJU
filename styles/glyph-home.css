@@ -1,0 +1,389 @@
+.glyph-home-page {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.25rem;
+  background: linear-gradient(180deg, #0b0815 0%, #050308 100%);
+  color: #e7e0ed;
+}
+
+.glyph-home-inner {
+  width: 100%;
+  max-width: 28rem;
+  text-align: center;
+}
+
+.glyph-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #d0bcff;
+  margin: 0;
+}
+
+.glyph-subtitle {
+  margin-top: 0.75rem;
+  font-size: 1.125rem;
+  color: #cbc3d7;
+}
+
+.glyph-description {
+  margin-top: 1rem;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: #958ea0;
+}
+
+.glyph-actions {
+  margin-top: 2rem;
+}
+
+.glyph-primary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 20rem;
+  padding: 0.85rem 1.5rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(208, 188, 255, 0.35);
+  background: rgba(139, 92, 246, 0.22);
+  color: #f3e8ff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.glyph-primary-btn:hover:not(:disabled) {
+  background: rgba(139, 92, 246, 0.35);
+}
+
+.glyph-primary-btn:disabled {
+  opacity: 0.6;
+}
+
+.glyph-home-foot {
+  margin-top: 2.5rem;
+  font-size: 0.8rem;
+}
+
+.glyph-link-muted {
+  color: #958ea0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.glyph-link-muted:hover {
+  color: #d0bcff;
+}
+
+.glyph-draw-stub {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 2rem;
+  text-align: center;
+  background: #0b0815;
+  color: #e7e0ed;
+}
+
+.glyph-draw-stub__title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #d0bcff;
+}
+
+.glyph-draw-stub__meta {
+  font-size: 0.9rem;
+  color: #cbc3d7;
+}
+
+.glyph-draw-stub__hint {
+  max-width: 24rem;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: #958ea0;
+}
+
+.glyph-draw-stub__legacy {
+  margin-top: 1rem;
+  width: auto;
+}
+
+.glyph-draw-page {
+  min-height: 100dvh;
+  padding: 1.5rem 1.25rem 3rem;
+  max-width: 32rem;
+  margin: 0 auto;
+  background: linear-gradient(180deg, #0b0815 0%, #050308 100%);
+  color: #e7e0ed;
+}
+
+.glyph-draw-back {
+  display: inline-block;
+  margin-bottom: 1.5rem;
+  font-size: 0.85rem;
+  color: #958ea0;
+  text-decoration: none;
+}
+
+.glyph-draw-back:hover {
+  color: #d0bcff;
+}
+
+.profile-mini-display {
+  margin-bottom: 1.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.25);
+  font-size: 0.9rem;
+}
+
+.profile-mini-label {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #958ea0;
+}
+
+.profile-mini-value {
+  display: block;
+  margin-top: 0.35rem;
+  color: #e7e0ed;
+}
+
+.glyph-input-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: #f3e8ff;
+}
+
+.glyph-input-hint {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: #958ea0;
+}
+
+.glyph-question-input {
+  width: 100%;
+  resize: vertical;
+  min-height: 8rem;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(208, 188, 255, 0.25);
+  background: rgba(0, 0, 0, 0.35);
+  color: #e7e0ed;
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.glyph-question-input:focus {
+  outline: none;
+  border-color: rgba(208, 188, 255, 0.5);
+}
+
+.glyph-char-count {
+  margin-top: 0.5rem;
+  text-align: right;
+  font-size: 0.75rem;
+  color: #958ea0;
+}
+
+.glyph-draw-button {
+  margin-top: 1.5rem;
+}
+
+.glyph-draw-error {
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  color: #fca5a5;
+}
+
+.welcome-section .glyph-brand {
+  color: #d0bcff;
+  letter-spacing: 0.14em;
+}
+
+.welcome-section .your-question {
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.25);
+  text-align: left;
+}
+
+.welcome-section .your-question .label {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #958ea0;
+}
+
+.welcome-section .your-question .question-text {
+  margin: 0.5rem 0 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #e7e0ed;
+}
+
+.glyph-loading-page,
+.glyph-error-page {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  background: linear-gradient(180deg, #0b0815 0%, #050308 100%);
+  color: #e7e0ed;
+}
+
+.glyph-loading-page .hint,
+.glyph-error-page .error-detail {
+  margin-top: 0.75rem;
+  max-width: 22rem;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: #958ea0;
+}
+
+.glyph-reading-spinner {
+  width: 2.5rem;
+  height: 2.5rem;
+  margin: 0 auto 1.25rem;
+  border-radius: 50%;
+  border: 2px solid rgba(208, 188, 255, 0.2);
+  border-top-color: #d0bcff;
+  animation: glyph-spin 0.9s linear infinite;
+}
+
+@keyframes glyph-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.glyph-error-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.glyph-reading-page {
+  min-height: 100dvh;
+  padding: 1.5rem 1.25rem 3rem;
+  max-width: 36rem;
+  margin: 0 auto;
+  background: linear-gradient(180deg, #0b0815 0%, #050308 100%);
+  color: #e7e0ed;
+}
+
+.glyph-canvas {
+  margin-bottom: 2rem;
+}
+
+.glyph-report {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.glyph-report .section-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #958ea0;
+  margin-bottom: 0.5rem;
+}
+
+.glyph-report .report-section {
+  padding: 1rem 1.1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.glyph-report .wind-category h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+  color: #d0bcff;
+}
+
+.glyph-report .classical-text {
+  font-size: 1rem;
+  line-height: 1.65;
+  color: #e7e0ed;
+  font-style: italic;
+}
+
+.glyph-report .dual-view-card {
+  margin-top: 1rem;
+  padding: 0.85rem;
+  border-radius: 0.5rem;
+  background: rgba(139, 92, 246, 0.08);
+  border: 1px solid rgba(208, 188, 255, 0.15);
+}
+
+.glyph-report .dual-view-card h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  color: #d0bcff;
+}
+
+.glyph-report .dual-view-resonance {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #cbc3d7;
+}
+
+.glyph-report .exploration-card .explore-meta {
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+  color: #958ea0;
+}
+
+.glyph-report .reflection-question {
+  font-size: 1.05rem;
+  line-height: 1.55;
+  color: #f3e8ff;
+}
+
+.glyph-report .archive-saved-hint {
+  text-align: center;
+  padding: 1.25rem;
+  border-radius: 0.75rem;
+  border: 1px dashed rgba(208, 188, 255, 0.35);
+  background: rgba(139, 92, 246, 0.1);
+}
+
+.glyph-report-archive-btn {
+  margin-top: 1rem;
+  width: auto;
+  min-width: 12rem;
+}
+
+.glyph-reading-footer {
+  margin-top: 2.5rem;
+  text-align: center;
+}
+
+.archive-detail-page .glyph-report {
+  margin-top: 0.5rem;
+}
