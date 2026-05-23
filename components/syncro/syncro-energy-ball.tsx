@@ -10,12 +10,14 @@ type SyncroEnergyBallProps = {
   className?: string;
   /** Camera zoom after load (1 = default). */
   initialZoom?: number;
+  /** Hero 全屏背景：不裁切、无圆角 */
+  variant?: "default" | "hero";
 };
 
 /**
  * Syncro 能量球：直接加载 `public/spline/syncro-energy-ball.splinecode`（v4.0）。
  */
-export function SyncroEnergyBall({ className, initialZoom = 1 }: SyncroEnergyBallProps) {
+export function SyncroEnergyBall({ className, initialZoom = 1, variant = "default" }: SyncroEnergyBallProps) {
   const onLoad = useCallback(
     (app: Application) => {
       if (initialZoom == null || initialZoom <= 0) return;
@@ -27,8 +29,13 @@ export function SyncroEnergyBall({ className, initialZoom = 1 }: SyncroEnergyBal
     [initialZoom],
   );
 
+  const shellClass =
+    variant === "hero"
+      ? `overflow-visible [&_canvas]:!max-h-none [&_canvas]:!max-w-none ${className ?? ""}`
+      : `overflow-hidden rounded-2xl [&_canvas]:max-h-full [&_canvas]:max-w-full ${className ?? ""}`;
+
   return (
-    <div className={`overflow-hidden rounded-2xl [&_canvas]:max-h-full [&_canvas]:max-w-full ${className ?? ""}`.trim()}>
+    <div className={shellClass.trim()}>
       <Spline
         scene={SYNCRO_SCENE}
         className="h-full w-full"

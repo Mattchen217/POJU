@@ -1,0 +1,375 @@
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-4) var(--space-12);
+}
+
+.hero-section {
+  text-align: center;
+  padding: var(--space-10) 0 var(--space-8);
+}
+
+.hero-title {
+  font-size: clamp(48px, 10vw, 80px);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  margin-bottom: var(--space-4);
+  background: linear-gradient(135deg, var(--product-accent, #d4af37) 0%, var(--product-accent-light, #e8c56f) 50%, var(--product-accent, #d4af37) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-tagline {
+  font-size: 20px;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-3);
+}
+
+.hero-description {
+  font-size: 16px;
+  color: var(--text-tertiary);
+  max-width: 600px;
+  margin: 0 auto var(--space-6);
+  line-height: 1.7;
+}
+
+.features-section {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-10);
+}
+
+.feature-title {
+  color: var(--text-primary);
+  font-size: 18px;
+  margin-bottom: var(--space-2);
+}
+
+.feature-desc {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.how-section {
+  max-width: 800px;
+  margin: 0 auto var(--space-10);
+}
+
+.pricing-section {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.price-tag {
+  font-size: 56px;
+  font-weight: 700;
+  color: var(--product-accent, var(--gold-primary));
+  text-align: center;
+  margin-bottom: var(--space-1);
+}
+
+.price-unit {
+  text-align: center;
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-5);
+}
+
+.price-includes {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.price-includes li {
+  padding: var(--space-2) 0;
+  color: var(--text-secondary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.price-includes li::before {
+  content: "✓";
+  color: var(--product-accent, var(--gold-primary));
+  margin-right: var(--space-2);
+}
+
+.product-page--poju {
+  --product-accent: var(--color-poju);
+  --product-accent-light: var(--gold-light);
+}
+
+.product-page--glyph {
+  --product-accent: var(--color-glyph);
+  --product-accent-light: #a78bfa;
+}
+
+.product-page--syncro {
+  --product-accent: var(--color-syncro);
+  --product-accent-light: #5eead4;
+}
+
+.product-page--match {
+  --product-accent: var(--color-match);
+  --product-accent-light: #ffb3c7;
+}
+
+/* ============= 灰白玻璃板块内的彩色内容框（参考作品集饱和紫 / 宝蓝） ============= */
+
+.content-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 20px;
+  border: none;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.32);
+  transition:
+    transform var(--duration-base) var(--ease-smooth),
+    box-shadow var(--duration-base) var(--ease-smooth);
+}
+
+.content-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.38);
+}
+
+.content-card__media {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  width: 100%;
+  overflow: hidden;
+  flex-shrink: 0;
+  /* 图片区不加色罩，与下方纯色区硬切分 */
+}
+
+.content-card__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-5) var(--space-5) var(--space-5);
+  color: #ffffff;
+}
+
+.content-card__body p,
+.content-card--solid p,
+.content-card--solid li {
+  color: #ffffff;
+}
+
+.content-card__body p {
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+.content-card__cta {
+  margin-top: var(--space-5);
+  flex-shrink: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.content-card--solid {
+  color: #ffffff;
+}
+
+.content-card--solid p {
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.content-card--solid .content-card__title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+@media (min-width: 640px) {
+  .content-card__body p,
+  .content-card--solid p {
+    font-size: 17px;
+    line-height: 1.7;
+  }
+
+  .content-card--solid .content-card__title {
+    font-size: 21px;
+  }
+}
+
+@media (min-width: 640px) {
+  .content-card__body {
+    padding: var(--space-5) var(--space-6) var(--space-6);
+  }
+}
+
+/* 饱和紫（作品集主色） */
+.content-card--violet .content-card__body,
+.content-card--solid.content-card--violet {
+  background: linear-gradient(165deg, #b565f0 0%, #9333ea 38%, #6b21a8 100%);
+}
+
+/* 品红 / 洋红 */
+.content-card--magenta .content-card__body,
+.content-card--solid.content-card--magenta {
+  background: linear-gradient(165deg, #e879f9 0%, #c026d3 42%, #9d174d 100%);
+}
+
+/* 宝蓝（作品集副色） */
+.content-card--blue .content-card__body,
+.content-card--solid.content-card--blue {
+  background: linear-gradient(165deg, #60a5fa 0%, #2563eb 40%, #1e3a8a 100%);
+}
+
+/* 玫红 / 星云紫（第四张情境卡） */
+.content-card--fuchsia .content-card__body,
+.content-card--solid.content-card--fuchsia {
+  background: linear-gradient(165deg, #f472b6 0%, #db2777 45%, #9d174d 100%);
+}
+
+/* 琥珀金（承诺区第三条） */
+.content-card--gold .content-card__body,
+.content-card--solid.content-card--gold {
+  background: linear-gradient(165deg, #fbbf24 0%, #d97706 42%, #92400e 100%);
+}
+
+/* 叙事图上的文案条 */
+.content-card-caption {
+  border: none;
+  border-radius: 12px;
+  padding: var(--space-3) var(--space-4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  color: #ffffff;
+}
+
+.content-card-caption p {
+  color: #ffffff;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.content-card-caption .content-card-caption__title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+@media (min-width: 640px) {
+  .content-card-caption p {
+    font-size: 15px;
+    line-height: 1.7;
+  }
+
+  .content-card-caption .content-card-caption__title {
+    font-size: 19px;
+  }
+}
+
+.content-card-caption--violet {
+  background: linear-gradient(145deg, rgba(147, 51, 234, 0.92) 0%, rgba(107, 33, 168, 0.95) 100%);
+}
+
+.content-card-caption--blue {
+  background: linear-gradient(145deg, rgba(59, 130, 246, 0.92) 0%, rgba(30, 64, 175, 0.95) 100%);
+}
+
+.content-card-caption--magenta {
+  background: linear-gradient(145deg, rgba(217, 70, 239, 0.92) 0%, rgba(192, 38, 211, 0.95) 100%);
+}
+
+.content-card--solid {
+  padding: var(--space-5) var(--space-6);
+}
+
+@media (min-width: 640px) {
+  .content-card--solid {
+    padding: var(--space-6);
+  }
+}
+
+/* ============= 营销页区块标题（毛玻璃板上纯白字） ============= */
+
+.marketing-section-heading {
+  text-align: center;
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  font-weight: 600;
+  line-height: 1.2;
+  color: #ffffff;
+}
+
+.marketing-section-subheading {
+  margin-top: var(--space-4);
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 42rem;
+  text-align: center;
+  font-size: 17px;
+  line-height: 1.7;
+  color: #ffffff;
+}
+
+.marketing-section-intro {
+  color: #ffffff;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+@media (min-width: 640px) {
+  .marketing-section-subheading,
+  .marketing-section-intro {
+    font-size: 17px;
+  }
+}
+
+/* 与 product-hero.css 对齐（旧 class 兼容） */
+.hero-title-product,
+.product-hero__title.product-hero__title--gradient {
+  font-size: clamp(2.5rem, 5.2vw, 3.25rem);
+  font-weight: 600;
+  line-height: 1.1;
+  text-align: center;
+  background: linear-gradient(
+    135deg,
+    var(--product-accent, #d4af37) 0%,
+    var(--product-accent-light, #e8c56f) 50%,
+    var(--product-accent, #d4af37) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.marketing-accent-grid {
+  display: grid;
+  gap: var(--space-4);
+}
+
+@media (min-width: 640px) {
+  .marketing-accent-grid--2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .marketing-accent-grid--3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .marketing-accent-grid--5 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .marketing-accent-grid--5 {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .features-section {
+    grid-template-columns: 1fr;
+  }
+
+  .page-container {
+    padding-top: var(--space-6);
+  }
+}

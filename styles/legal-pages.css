@@ -1,0 +1,218 @@
+/* 法律页：灰白 glass-section + 无框黑底正文 */
+
+.legal-page__wrap {
+  width: 100%;
+  max-width: 52rem;
+  margin-inline: auto;
+  padding: var(--space-4) var(--space-3) var(--space-10);
+}
+
+@media (min-width: 640px) {
+  .legal-page__wrap {
+    padding: var(--space-6) var(--space-4) var(--space-12);
+  }
+}
+
+.legal-page__panel--md {
+  max-width: 44rem;
+  margin-inline: auto;
+}
+
+.legal-page__header {
+  text-align: center;
+  margin-bottom: var(--space-6);
+}
+
+.legal-page__version {
+  margin: 0 0 var(--space-2);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.legal-page__title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #ffffff;
+}
+
+@media (min-width: 640px) {
+  .legal-page__title {
+    font-size: 34px;
+  }
+}
+
+.legal-page__updated {
+  margin: var(--space-3) 0 0;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.legal-page__intro {
+  margin-top: var(--space-5);
+  font-size: 15px;
+  line-height: 1.75;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.legal-page__footer {
+  margin-top: var(--space-6);
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.legal-page__footer a {
+  color: #c4b5fd;
+}
+
+/* 黑框内长文 */
+.legal-page .legal-prose h2 {
+  margin: var(--space-6) 0 var(--space-3);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #ffffff;
+}
+
+.legal-page .legal-prose h2:first-child {
+  margin-top: 0;
+}
+
+.legal-page .legal-prose h3 {
+  margin: var(--space-5) 0 var(--space-2);
+  font-size: 17px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.legal-page .legal-prose p {
+  margin: 0 0 var(--space-3);
+  font-size: 15px;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.legal-page .legal-prose p:last-child {
+  margin-bottom: 0;
+}
+
+.legal-page .legal-prose ul {
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  list-style: none;
+}
+
+.legal-page .legal-prose li {
+  position: relative;
+  margin: 0 0 var(--space-2);
+  padding-left: 1.1rem;
+  font-size: 15px;
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.legal-page .legal-prose li::before {
+  content: "·";
+  position: absolute;
+  left: 0;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.legal-page .legal-prose strong {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.legal-page .legal-prose a {
+  color: #c4b5fd;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.legal-page .legal-prose a:hover {
+  color: #ddd6fe;
+}
+
+.legal-page .legal-prose hr {
+  margin: var(--space-6) 0;
+  border: none;
+  height: 0;
+}
+
+.legal-page .legal-prose code {
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.1em 0.45em;
+  font-size: 0.9em;
+  color: #e0f2fe;
+}
+
+.legal-page .legal-architecture {
+  margin: var(--space-6) 0;
+}
+
+.legal-page .legal-architecture__kicker {
+  margin: 0 0 var(--space-2);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.legal-page .legal-architecture__title {
+  margin: 0 0 var(--space-5);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #ffffff;
+}
+
+.legal-page .legal-architecture__item + .legal-architecture__item {
+  margin-top: var(--space-6);
+}
+
+.legal-page .legal-architecture__item-title {
+  margin: 0;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.legal-page .legal-architecture__item-body {
+  margin: var(--space-2) 0 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.legal-page .legal-architecture__verify {
+  margin: var(--space-2) 0 0;
+  font-size: 12px;
+  font-style: italic;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.legal-page .legal-architecture__closing {
+  margin-top: var(--space-6);
+  font-size: 14px;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.legal-page .legal-architecture__closing p + p {
+  margin-top: var(--space-3);
+}
+
+.legal-page .legal-prose__closing {
+  margin-top: var(--space-4);
+  text-align: center;
+  font-weight: 600;
+  color: #ffffff;
+}

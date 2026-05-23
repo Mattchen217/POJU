@@ -1,9 +1,15 @@
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
 import { getTranslations } from "next-intl/server";
 
 import { GlyphPrepareCta } from "@/components/glyph/GlyphPrepareCta";
+import {
+  MarketingPageHero,
+  MarketingPageLayout,
+  MarketingPageSections,
+} from "@/components/marketing/marketing-page-layout";
+import { MarketingSection } from "@/components/marketing/marketing-section";
 import { OracleProductHero } from "@/components/marketing/oracle-product-hero";
+import { cn } from "@/lib/utils/classnames";
 import { WindCardWithParticles, type WindCardParticleKey } from "@/components/oracle/wind-cards";
 import crosswind from "@/assets/images/crosswind.png";
 import divineTailwind from "@/assets/images/divine tailwind.png";
@@ -25,19 +31,30 @@ function linesFromGlyphDescription(description: string): string[] {
   return parts.length > 0 ? parts : [description];
 }
 
-function SectionShell({
-  id,
-  children,
-  className = "",
+const HOW_STEP_ACCENTS = ["fuchsia", "magenta", "violet"] as const;
+
+function WindText({
+  name,
+  lines,
+  align = "left",
 }: {
-  id?: string;
-  children: ReactNode;
-  className?: string;
+  name: string;
+  lines: string[];
+  align?: "left" | "right";
 }) {
   return (
-    <section id={id} className={`mx-auto w-full max-w-3xl px-4 py-10 md:px-6 md:py-12 ${className}`}>
-      {children}
-    </section>
+    <div className={cn("min-w-0 text-center", align === "right" ? "lg:text-right" : "lg:text-left")}>
+      <p className="whitespace-nowrap text-[20px] font-semibold leading-tight tracking-[0.01em] text-white sm:text-[22px] md:text-[23px]">
+        {name}
+      </p>
+      <div className="mt-1.5 space-y-1 text-[14px] leading-6 text-white/90 sm:text-[15px] sm:leading-7 md:text-[16px] md:leading-7">
+        {lines.map((line) => (
+          <p key={line} className="whitespace-normal break-words sm:whitespace-nowrap">
+            {line}
+          </p>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -93,17 +110,20 @@ export async function GlyphMarketingPage() {
   };
 
   return (
-    <main className="bg-bg-deep text-text-body">
-      <div className="w-full px-3 pb-10 pt-4 sm:px-4 sm:pt-6 md:px-6 md:pb-12">
+    <MarketingPageLayout theme="glyph">
+      <MarketingPageHero>
         <OracleProductHero copy={heroCopy} cta={<GlyphPrepareCta />} />
+      </MarketingPageHero>
 
-        <SectionShell id="five-winds" className="max-w-6xl scroll-mt-28">
-          <h2 className="text-center text-[24px] font-semibold text-text-primary sm:text-[28px] md:text-[30px]">
-            {t("five_winds.heading")}
-          </h2>
-          <p className="mx-auto mt-4 text-center text-sm leading-7 text-text-secondary sm:text-[15px] sm:leading-8">
-            {t("five_winds.description")}
-          </p>
+      <MarketingPageSections>
+        <MarketingSection
+          id="five-winds"
+          className="scroll-mt-28"
+          title={t("five_winds.heading")}
+          subtitle={t("five_winds.description")}
+          padding="lg"
+          allowOverflow
+        >
           <div className="mx-auto mt-10 max-w-6xl">
             <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:grid-rows-3 lg:gap-x-6 lg:gap-y-16">
               <div className="flex justify-center lg:col-start-1 lg:row-start-1 lg:justify-end lg:pr-1">
@@ -117,18 +137,7 @@ export async function GlyphMarketingPage() {
                       priority
                     />
                   </div>
-                  <div className="min-w-0 text-center lg:text-left">
-                    <p className="whitespace-nowrap text-[20px] font-semibold leading-tight tracking-[0.01em] text-text-primary sm:text-[22px] md:text-[23px]">
-                      {divine.name}
-                    </p>
-                    <div className="mt-1.5 space-y-1 text-[14px] leading-6 text-text-secondary sm:text-[15px] sm:leading-7 md:text-[16px] md:leading-7">
-                      {divine.lines.map((line) => (
-                        <p key={line} className="whitespace-normal break-words sm:whitespace-nowrap">
-                          {line}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
+                  <WindText name={divine.name} lines={divine.lines} />
                 </div>
               </div>
 
@@ -142,18 +151,7 @@ export async function GlyphMarketingPage() {
                       sizes="128px"
                     />
                   </div>
-                  <div className="min-w-0 text-center lg:text-left">
-                    <p className="whitespace-nowrap text-[20px] font-semibold leading-tight tracking-[0.01em] text-text-primary sm:text-[22px] md:text-[23px]">
-                      {still.name}
-                    </p>
-                    <div className="mt-1.5 space-y-1 text-[14px] leading-6 text-text-secondary sm:text-[15px] sm:leading-7 md:text-[16px] md:leading-7">
-                      {still.lines.map((line) => (
-                        <p key={line} className="whitespace-normal break-words sm:whitespace-nowrap">
-                          {line}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
+                  <WindText name={still.name} lines={still.lines} />
                 </div>
               </div>
 
@@ -167,35 +165,13 @@ export async function GlyphMarketingPage() {
                       sizes="128px"
                     />
                   </div>
-                  <div className="min-w-0 text-center lg:text-left">
-                    <p className="whitespace-nowrap text-[20px] font-semibold leading-tight tracking-[0.01em] text-text-primary sm:text-[22px] md:text-[23px]">
-                      {eye.name}
-                    </p>
-                    <div className="mt-1.5 space-y-1 text-[14px] leading-6 text-text-secondary sm:text-[15px] sm:leading-7 md:text-[16px] md:leading-7">
-                      {eye.lines.map((line) => (
-                        <p key={line} className="whitespace-normal break-words sm:whitespace-nowrap">
-                          {line}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
+                  <WindText name={eye.name} lines={eye.lines} />
                 </div>
               </div>
 
               <div className="flex justify-center lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:self-center lg:justify-start lg:pl-1">
                 <div className="grid w-full max-w-xl grid-cols-[minmax(0,1fr)_128px] items-center gap-4">
-                  <div className="min-w-0 text-center lg:text-right">
-                    <p className="whitespace-nowrap text-[20px] font-semibold leading-tight tracking-[0.01em] text-text-primary sm:text-[22px] md:text-[23px]">
-                      {fair.name}
-                    </p>
-                    <div className="mt-1.5 space-y-1 text-[14px] leading-6 text-text-secondary sm:text-[15px] sm:leading-7 md:text-[16px] md:leading-7">
-                      {fair.lines.map((line) => (
-                        <p key={line} className="whitespace-normal break-words sm:whitespace-nowrap">
-                          {line}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
+                  <WindText name={fair.name} lines={fair.lines} align="right" />
                   <div className="w-full max-w-[128px] justify-self-end">
                     <WindCardWithParticles src={fair.image} alt={fair.imageAlt} particleKey={fair.particleKey} sizes="128px" />
                   </div>
@@ -204,18 +180,7 @@ export async function GlyphMarketingPage() {
 
               <div className="flex justify-center lg:col-start-2 lg:row-start-2 lg:row-span-2 lg:self-center lg:justify-start lg:pl-1">
                 <div className="grid w-full max-w-xl grid-cols-[minmax(0,1fr)_128px] items-center gap-4">
-                  <div className="min-w-0 text-center lg:text-right">
-                    <p className="whitespace-nowrap text-[20px] font-semibold leading-tight tracking-[0.01em] text-text-primary sm:text-[22px] md:text-[23px]">
-                      {cross.name}
-                    </p>
-                    <div className="mt-1.5 space-y-1 text-[14px] leading-6 text-text-secondary sm:text-[15px] sm:leading-7 md:text-[16px] md:leading-7">
-                      {cross.lines.map((line) => (
-                        <p key={line} className="whitespace-normal break-words sm:whitespace-nowrap">
-                          {line}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
+                  <WindText name={cross.name} lines={cross.lines} align="right" />
                   <div className="w-full max-w-[128px] justify-self-end">
                     <WindCardWithParticles
                       src={cross.image}
@@ -228,65 +193,53 @@ export async function GlyphMarketingPage() {
               </div>
             </div>
           </div>
-          <div className="mx-auto mt-12 max-w-xl space-y-4 text-center text-sm leading-7 text-text-secondary sm:text-[15px] sm:leading-8">
-            <p className="font-semibold uppercase tracking-[0.08em] text-text-primary">{t("on_the_cards.heading")}</p>
+          <div className="mx-auto mt-12 max-w-xl space-y-4 text-center">
+            <p className="font-semibold uppercase tracking-[0.08em] text-white">{t("on_the_cards.heading")}</p>
             {onTheCardsParagraphs.map((para) => (
-              <p key={para}>{para}</p>
+              <p key={para} className="marketing-section-intro">
+                {para}
+              </p>
             ))}
           </div>
-        </SectionShell>
+        </MarketingSection>
 
-        <SectionShell id="glyph-how-it-works" className="max-w-6xl">
-          <h2 className="text-center text-[24px] font-semibold text-text-primary sm:text-[28px] md:text-[30px]">
-            {t("how_it_works.heading")}
-          </h2>
-          <div className="mx-auto mt-10 grid max-w-4xl gap-10 md:grid-cols-3 md:gap-6">
-            <div className="text-center">
-              <p className="text-4xl font-semibold leading-none text-fuchsia-300/90">1</p>
-              <p className="mt-4 text-[16px] font-semibold text-text-primary">{t("how_it_works.step_1.title")}</p>
-              <p className="mt-2 text-[14px] leading-7 text-text-secondary sm:text-[15px]">{t("how_it_works.step_1.description")}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-4xl font-semibold leading-none text-fuchsia-300/90">2</p>
-              <p className="mt-4 text-[16px] font-semibold text-text-primary">{t("how_it_works.step_2.title")}</p>
-              <p className="mt-2 text-[14px] leading-7 text-text-secondary sm:text-[15px]">{t("how_it_works.step_2.description")}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-4xl font-semibold leading-none text-fuchsia-300/90">3</p>
-              <p className="mt-4 text-[16px] font-semibold text-text-primary">{t("how_it_works.step_3.title")}</p>
-              <p className="mt-2 text-[14px] leading-7 text-text-secondary sm:text-[15px]">{t("how_it_works.step_3.description")}</p>
-            </div>
+        <MarketingSection id="glyph-how-it-works" title={t("how_it_works.heading")} padding="lg">
+          <div className="marketing-accent-grid marketing-accent-grid--3 mx-auto max-w-4xl">
+            {(["step_1", "step_2", "step_3"] as const).map((stepKey, idx) => {
+              const accent = HOW_STEP_ACCENTS[idx] ?? "fuchsia";
+              return (
+                <article
+                  key={stepKey}
+                  className={`content-card content-card--solid content-card--${accent} text-center`}
+                >
+                  <p className="text-4xl font-semibold leading-none">{idx + 1}</p>
+                  <p className="content-card__title mt-4">{t(`how_it_works.${stepKey}.title`)}</p>
+                  <p className="mt-2">{t(`how_it_works.${stepKey}.description`)}</p>
+                </article>
+              );
+            })}
           </div>
-          <ul className="mx-auto mt-10 max-w-2xl space-y-3 rounded-xl border border-white/10 bg-black/25 p-5 text-left sm:p-6">
+          <ul className="content-card content-card--solid content-card--magenta mx-auto mt-10 max-w-2xl space-y-3 text-left">
             {glyphUsageRules.map((rule) => (
-              <li key={rule} className="text-[14px] leading-8 text-text-secondary sm:text-[15px] sm:leading-8">
-                <span className="mr-2 text-fuchsia-200">◉</span>
+              <li key={rule}>
+                <span className="mr-2">◉</span>
                 {rule}
               </li>
             ))}
           </ul>
-          <p className="mx-auto mt-8 max-w-xl text-center text-sm leading-7 text-text-dim sm:text-[15px]">
-            {t("how_it_works.session_reminder")}
-          </p>
-        </SectionShell>
+          <p className="marketing-section-subheading mt-8 !mb-0">{t("how_it_works.session_reminder")}</p>
+        </MarketingSection>
 
-        <section
-          id="glyph-final-cta"
-          className="poju-cosmic-panel glyph-final-cta-gold-panel mx-auto mt-8 w-full max-w-6xl scroll-mt-24 px-4 py-8 text-center md:mt-10 md:px-8 md:py-10"
-        >
-          <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col items-center">
-            <h2 className="text-[30px] font-semibold text-text-primary sm:text-[34px] md:text-[38px]">
-              {t("final_cta.heading")}
-            </h2>
-            <p className="mt-4 max-w-2xl text-[15px] leading-8 text-amber-50/90 sm:text-base">{t("final_cta.subtitle")}</p>
+        <MarketingSection id="glyph-final-cta" className="scroll-mt-24" padding="lg">
+          <div className="flex flex-col items-center text-center">
+            <h2 className="marketing-section-heading">{t("final_cta.heading")}</h2>
+            <p className="marketing-section-subheading">{t("final_cta.subtitle")}</p>
             <GlyphPrepareCta variant="final" />
-            <p className="mt-2 max-w-md text-center text-[12px] leading-5 text-white sm:text-[13px] sm:leading-5 md:text-[14px] md:leading-6">
-              {t("final_cta.cta_subline")}
-            </p>
-            <p className="mt-6 max-w-2xl text-xs leading-6 text-amber-50/75 sm:mt-8 sm:text-sm">{tCommon("read_with_wink")}</p>
+            <p className="marketing-section-intro mt-2 max-w-md">{t("final_cta.cta_subline")}</p>
+            <p className="marketing-section-intro mt-6 max-w-2xl text-sm opacity-90">{tCommon("read_with_wink")}</p>
           </div>
-        </section>
-      </div>
-    </main>
+        </MarketingSection>
+      </MarketingPageSections>
+    </MarketingPageLayout>
   );
 }

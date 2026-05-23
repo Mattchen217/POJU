@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { BirthInfoPicker } from "@/components/poju/BirthInfoPicker";
 import { BirthInfoConfirmDialog } from "@/components/poju/BirthInfoConfirmDialog";
@@ -50,6 +50,17 @@ export function SessionPreparation({
   const [pendingBirthInfo, setPendingBirthInfo] = useState<BirthInfo | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [creating, setCreating] = useState(false);
+  const hadProfilesRef = useRef(existingProfiles.length > 0);
+
+  useEffect(() => {
+    if (existingProfiles.length > 0 && !hadProfilesRef.current) {
+      hadProfilesRef.current = true;
+      setMode("list");
+    } else if (existingProfiles.length === 0) {
+      hadProfilesRef.current = false;
+      setMode("new");
+    }
+  }, [existingProfiles.length]);
 
   function handleSelectExisting(profileId: string) {
     setSelectedProfileId(profileId);

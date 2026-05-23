@@ -1,0 +1,117 @@
+.main-nav-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--space-4) var(--space-4) 0;
+  padding-top: calc(var(--space-4) + env(safe-area-inset-top, 0px));
+  pointer-events: none;
+}
+
+.main-nav-wrapper > .glass-nav {
+  pointer-events: auto;
+}
+
+.main-nav {
+  max-width: 920px;
+  width: 100%;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  gap: var(--space-2);
+}
+
+.main-nav-menu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 44px;
+  min-height: 44px;
+  padding: var(--space-2);
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--duration-fast) var(--ease-smooth);
+}
+
+.main-nav-menu-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.nav-logo {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: var(--space-1) var(--space-2);
+  text-decoration: none;
+}
+
+.nav-items {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  flex: 1;
+  justify-content: center;
+}
+
+.main-nav-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.main-nav-actions details summary {
+  height: auto;
+  min-height: 0;
+  padding: var(--space-2);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* 导航链接：无图标，白字加粗 */
+.main-nav .glass-nav-item {
+  gap: 0;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.main-nav .glass-nav-item:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.main-nav .glass-nav-item.active {
+  color: #ffffff;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.site-chrome-main {
+  padding-top: calc(76px + env(safe-area-inset-top, 0px));
+}
+
+@media (max-width: 768px) {
+  .main-nav {
+    max-width: 100%;
+    gap: var(--space-1);
+  }
+
+  .nav-logo {
+    min-width: 0;
+    max-width: min(42vw, 9.5rem);
+    overflow: hidden;
+  }
+
+  .site-chrome-main {
+    padding-top: calc(68px + env(safe-area-inset-top, 0px));
+  }
+}

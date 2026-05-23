@@ -26,13 +26,13 @@ export function SyncroPageLayout({ marketing }: { marketing: ReactNode }) {
   }, []);
 
   if (!ready) {
-    return <div className="min-h-screen bg-bg-deep" aria-hidden />;
+    return <div className="min-h-screen" aria-hidden />;
   }
 
   if (mode === "no_compass") return <SyncroIncompatible />;
 
   return (
-    <main className="bg-bg-deep text-text-body">
+    <main className="text-text-body">
       {mode === "desktop" ? <SyncroDesktopBanner /> : null}
       {marketing}
       {mode === "desktop" ? <SyncroDesktopOnlyView embedded /> : <SyncroMobileStartSection />}

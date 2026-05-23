@@ -1,4 +1,12 @@
 @import "../styles/tokens.css";
+@import "../styles/design-tokens.css";
+@import "../styles/glass.css";
+@import "../styles/main-nav.css";
+@import "../styles/marketing-pages.css";
+@import "../styles/product-hero.css";
+@import "../styles/product-notes.css";
+@import "../styles/match-home.css";
+@import "../styles/legal-pages.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -24,13 +32,21 @@ html {
 }
 
 body {
-  background:
-    radial-gradient(circle at 82% 10%, rgba(168, 85, 247, 0.24), transparent 36%),
-    radial-gradient(circle at 15% 85%, rgba(59, 130, 246, 0.12), transparent 34%),
-    radial-gradient(circle at 50% -10%, rgba(124, 58, 237, 0.25), transparent 45%),
-    var(--bg-deep);
-  color: var(--text-body);
-  font-family: var(--font-primary);
+  margin: 0;
+  background: var(--bg-primary);
+  background-attachment: fixed;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+html,
+body,
+#__next,
+[data-nextjs-root-layout] {
+  min-height: 100vh;
 }
 
 a,
@@ -257,31 +273,62 @@ button {
   }
 
   .poju-glass-card {
-    @apply border border-glass-border bg-glass-tint backdrop-blur-xl shadow-card rounded-xl;
-    box-shadow:
-      0 12px 36px rgba(9, 7, 20, 0.45),
-      0 4px 18px rgba(139, 92, 246, 0.1),
-      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--glass-card-radius);
+    background: var(--glass-card-bg);
+    backdrop-filter: var(--glass-card-blur);
+    -webkit-backdrop-filter: var(--glass-card-blur);
+    border: var(--glass-card-border);
+    box-shadow: var(--glass-card-shadow);
   }
 
   .poju-button-primary {
-    @apply inline-flex items-center justify-center rounded-full border px-6 py-3 text-sm font-medium text-white hover:-translate-y-px;
-    border-color: rgba(212, 175, 55, 0.7);
-    background: linear-gradient(180deg, rgba(212, 175, 55, 0.12), rgba(212, 175, 55, 0.05));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-5);
+    border-radius: 999px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all var(--duration-fast) var(--ease-smooth);
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.9) 0%, rgba(232, 197, 111, 0.9) 100%);
+    color: #0a0510;
+    border: none;
     box-shadow:
-      0 0 0 1px rgba(212, 175, 55, 0.2) inset,
-      0 10px 30px rgba(212, 175, 55, 0.15);
+      0 4px 16px rgba(212, 175, 55, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
   }
 
   .poju-button-primary:hover {
-    background: linear-gradient(180deg, rgba(212, 175, 55, 0.34), rgba(212, 175, 55, 0.16));
-    box-shadow:
-      0 0 0 1px rgba(212, 175, 55, 0.35) inset,
-      0 12px 34px rgba(212, 175, 55, 0.24);
+    background: linear-gradient(135deg, rgba(232, 197, 111, 1) 0%, rgba(212, 175, 55, 1) 100%);
+    transform: translateY(-1px);
   }
 
   .poju-button-secondary {
-    @apply inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-medium text-text-body border border-glass-border bg-glass-tint hover:bg-purple-primary hover:bg-opacity-20 hover:-translate-y-px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-5);
+    border-radius: 999px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    transition: all var(--duration-fast) var(--ease-smooth);
+  }
+
+  .poju-button-secondary:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-1px);
   }
 
   .poju-section-title {
@@ -575,5 +622,36 @@ button {
   }
   to {
     opacity: 1;
+  }
+}
+
+/* Syncro task — Continue 字数不足时的移动端反馈 */
+.syncro-task-continue--inactive {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.syncro-task-continue--inactive:hover,
+.syncro-task-continue--inactive:active {
+  transform: none;
+  scale: 1;
+}
+
+.syncro-task-continue--pulse {
+  animation: syncroTaskContinuePulse 0.55s ease;
+}
+
+.syncro-task-char-count--warn .hint {
+  color: rgb(252 211 77);
+  font-weight: 600;
+}
+
+@keyframes syncroTaskContinuePulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 211, 238, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.45);
   }
 }

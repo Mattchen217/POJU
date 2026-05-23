@@ -1,0 +1,261 @@
+/* 产品介绍页 / Match / Archive — 统一 Hero 尺寸与排版 */
+
+.product-hero {
+  position: relative;
+  width: 100%;
+  overflow-x: clip;
+  overflow-y: visible;
+}
+
+.product-hero__shell {
+  position: relative;
+  /* 允许 Spline / 能量球超出壳层（-top、加宽等），避免裁切 */
+  overflow: visible;
+  padding: var(--space-8) 0;
+}
+
+@media (min-width: 640px) {
+  .product-hero__shell {
+    padding: var(--space-10) 0;
+  }
+}
+
+@media (min-width: 768px) {
+  .product-hero__shell {
+    padding: var(--space-12) 0 var(--space-10);
+  }
+}
+
+/* 动效 / Spline / 能量球等背景槽 — 须铺满 shell，子元素 absolute 才有参照宽高 */
+.product-hero__bg {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: visible;
+}
+
+.product-hero__bg--match {
+  /* 上传 Match 动效后在此层挂载 canvas / video / Spline */
+}
+
+.product-hero__stage {
+  position: relative;
+  z-index: 10;
+  margin-inline: auto;
+  display: flex;
+  width: 100%;
+  max-width: 72rem;
+  min-height: 360px;
+  align-items: center;
+  justify-content: center;
+  padding-inline: var(--space-2);
+}
+
+@media (min-width: 640px) {
+  .product-hero__stage {
+    min-height: 420px;
+    padding-inline: var(--space-4);
+  }
+}
+
+@media (min-width: 768px) {
+  .product-hero__stage {
+    min-height: 520px;
+    padding-inline: var(--space-6);
+  }
+}
+
+.product-hero__stage--align-start {
+  align-items: flex-start;
+}
+
+.product-hero__content {
+  width: 100%;
+  min-width: 0;
+  max-width: 42.5rem;
+  text-align: center;
+}
+
+.product-hero__content--wide {
+  max-width: 72rem;
+}
+
+.product-hero__content--left-md {
+  text-align: center;
+}
+
+@media (min-width: 768px) {
+  .product-hero__content--left-md {
+    text-align: left;
+  }
+}
+
+/* 主标题 */
+.product-hero__title {
+  margin: 0;
+  text-wrap: balance;
+  font-size: clamp(2.5rem, 5.2vw, 3.25rem);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.product-hero__title--gradient {
+  background: linear-gradient(
+    135deg,
+    var(--product-accent, #d4af37) 0%,
+    var(--product-accent-light, #e8c56f) 50%,
+    var(--product-accent, #d4af37) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.product-page--match .product-hero__title--gradient {
+  background: linear-gradient(135deg, #ff6b9d 0%, #ffb3c7 50%, #ff6b9d 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 0.12em;
+}
+
+/* 副标题 / tagline（产品色强调行） */
+.product-hero__accent {
+  margin: var(--space-4) auto 0;
+  max-width: 36rem;
+  font-size: clamp(1.125rem, 2.4vw, 1.25rem);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.product-page--glyph .product-hero__accent {
+  color: rgb(245 208 254 / 0.95);
+}
+
+.product-page--syncro .product-hero__accent {
+  color: rgb(207 250 254 / 0.95);
+}
+
+.product-page--poju .product-hero__accent,
+.product-page--match .product-hero__accent {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* 正文描述 */
+.product-hero__description {
+  margin: var(--space-5) auto 0;
+  max-width: 36rem;
+  padding-inline: var(--space-2);
+  font-size: clamp(0.875rem, 1.9vw, 1rem);
+  line-height: 1.75;
+  color: #e6e8f3;
+}
+
+@media (min-width: 768px) {
+  .product-hero__description {
+    padding-inline: 0;
+  }
+
+  .product-hero__content--left-md .product-hero__description {
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .product-hero__content--left-md .product-hero__accent {
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+
+/* 次要说明 / footnote */
+.product-hero__meta {
+  margin: var(--space-3) auto 0;
+  max-width: 36rem;
+  font-size: clamp(0.8125rem, 1.6vw, 0.9375rem);
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.product-hero__meta--bright {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* CTA 区 */
+.product-hero__actions {
+  margin: var(--space-8) auto 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+}
+
+@media (min-width: 640px) {
+  .product-hero__actions {
+    margin-top: var(--space-10);
+  }
+}
+
+.product-hero__content--left-md .product-hero__actions {
+  align-items: center;
+}
+
+@media (min-width: 768px) {
+  .product-hero__content--left-md .product-hero__actions {
+    align-items: flex-start;
+  }
+}
+
+.product-hero__actions-note {
+  max-width: 28rem;
+  text-align: center;
+  font-size: clamp(0.8125rem, 1.6vw, 0.875rem);
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.product-hero__cta-subline {
+  margin-top: var(--space-2);
+  max-width: 28rem;
+  text-align: center;
+  font-size: clamp(0.75rem, 1.4vw, 0.875rem);
+  line-height: 1.45;
+  color: #ffffff;
+}
+
+/* Syncro 双栏 */
+.product-hero__split {
+  display: grid;
+  width: 100%;
+  gap: var(--space-10);
+  align-items: start;
+}
+
+@media (min-width: 768px) {
+  .product-hero__split {
+    grid-template-columns: 1fr 22.5rem;
+    gap: var(--space-12);
+  }
+}
+
+.product-hero__badge {
+  margin: var(--space-5) auto 0;
+  display: inline-flex;
+  border-radius: 999px;
+  border: 1px solid rgb(253 230 138 / 0.3);
+  background: rgb(253 230 138 / 0.1);
+  padding: var(--space-1) var(--space-3);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: rgb(254 243 199);
+}
+
+@media (min-width: 768px) {
+  .product-hero__content--left-md .product-hero__badge {
+    margin-left: 0;
+  }
+}

@@ -2,9 +2,8 @@
 
 .match-home {
   min-height: 100dvh;
-  background: linear-gradient(180deg, #0f0a06 0%, #050308 100%);
-  color: #e8e2d8;
-  padding: 1.5rem 1rem 3rem;
+  background: transparent;
+  color: var(--text-primary);
 }
 
 .match-home--loading {
@@ -14,53 +13,16 @@
   color: #9a9288;
 }
 
-.match-home-inner {
-  width: 100%;
-  max-width: 28rem;
-  margin: 0 auto;
-}
-
-.match-hero {
-  margin-top: 1.5rem;
-  text-align: center;
-}
-
-.match-title {
-  margin: 0;
-  font-size: 2.25rem;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  color: #d4af37;
-}
-
-.match-subtitle {
-  margin: 0.75rem 0 0;
-  font-size: 1.125rem;
-  color: #e8dcc0;
-}
-
-.match-description {
-  margin: 1rem 0 0;
-  font-size: 0.95rem;
-  line-height: 1.7;
-  color: #9a9288;
-}
-
 .match-features {
-  margin-top: 2rem;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--space-4);
 }
 
 .match-feature-row {
   display: flex;
   gap: 1rem;
   align-items: flex-start;
-  padding: 1rem 1.1rem;
-  border-radius: 0.75rem;
-  border: 1px solid rgba(212, 175, 55, 0.12);
-  background: rgba(0, 0, 0, 0.28);
 }
 
 .match-feature-icon {
@@ -71,67 +33,19 @@
 
 .match-feature-text h3 {
   margin: 0;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #e8dcc0;
 }
 
 .match-feature-text p {
   margin: 0.35rem 0 0;
-  font-size: 0.85rem;
-  line-height: 1.55;
-  color: #9a9288;
-}
-
-.match-use-cases {
-  margin-top: 2rem;
-}
-
-.match-use-cases h2 {
-  margin: 0 0 0.75rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #9a9288;
-}
-
-.match-use-cases ul {
-  margin: 0;
-  padding-left: 1.15rem;
-  font-size: 0.9rem;
-  line-height: 1.65;
-  color: #c4bcb0;
-}
-
-.match-use-cases li + li {
-  margin-top: 0.5rem;
 }
 
 .match-cta {
-  margin-top: 2.5rem;
   text-align: center;
 }
 
 .match-primary-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   width: 100%;
   max-width: 20rem;
-  padding: 0.9rem 1.5rem;
-  border-radius: 9999px;
-  border: 1px solid rgba(212, 175, 55, 0.4);
-  background: rgba(212, 175, 55, 0.15);
-  color: #f5ecd4;
-  font-size: 0.95rem;
-  font-weight: 600;
-  transition: background 0.2s, transform 0.15s;
-}
-
-.match-primary-btn:hover:not(:disabled) {
-  background: rgba(212, 175, 55, 0.28);
-  transform: translateY(-1px);
 }
 
 .match-primary-btn:disabled {
@@ -142,9 +56,6 @@
 
 .match-cta-note {
   margin: 1rem 0 0;
-  font-size: 0.85rem;
-  line-height: 1.6;
-  color: #9a9288;
 }
 
 .match-payment-page {

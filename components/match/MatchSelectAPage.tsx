@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 
 import { SessionPreparation } from "@/components/poju/SessionPreparation";
 import { useRouter } from "@/i18n/navigation";
-import { listStoredProfiles, type StoredProfileSummary } from "@/lib/profile/stored-profiles-service";
+import { listStoredProfilesForSessionPrep, type StoredProfileSummary } from "@/lib/profile/stored-profiles-service";
 
 import "@/styles/match.css";
 import "@/styles/session-prep.css";
@@ -27,7 +27,7 @@ export function MatchSelectAPage() {
 
     void (async () => {
       try {
-        const list = await listStoredProfiles();
+        const list = await listStoredProfilesForSessionPrep();
         setProfiles(list);
       } catch (e) {
         console.error("[match/select-a]", e);

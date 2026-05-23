@@ -1,0 +1,111 @@
+/* ============= pojulife Spatial Glass Design Tokens ============= */
+
+:root {
+  /* ============= 背景层 ============= */
+  --bg-primary: linear-gradient(
+    180deg,
+    #1a0a2e 0%,
+    #14081f 40%,
+    #0a0510 100%
+  );
+  --bg-primary-solid: #14081f;
+
+  /* ============= 卡片层 (Glass) ============= */
+  --glass-card-bg: rgba(50, 35, 80, 0.4);
+  --glass-card-blur: blur(24px);
+  --glass-card-border: 1px solid rgba(255, 255, 255, 0.08);
+  --glass-card-radius: 24px;
+  --glass-card-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  --glass-card-bg-elevated: rgba(60, 45, 95, 0.5);
+
+  /* 落地页板块：灰白色毛玻璃（无边框） */
+  --glass-section-bg: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.2) 0%,
+    rgba(252, 252, 255, 0.14) 42%,
+    rgba(245, 245, 250, 0.1) 100%
+  );
+  --glass-section-blur: blur(32px) saturate(1.12);
+  --glass-section-border: none;
+  --glass-section-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+
+  --glass-input-bg: rgba(0, 0, 0, 0.25);
+  --glass-input-border: 1px solid rgba(255, 255, 255, 0.06);
+  --glass-input-radius: 14px;
+
+  /* ============= 导航 (胶囊形) ============= */
+  --glass-nav-bg: rgba(40, 30, 60, 0.5);
+  --glass-nav-blur: blur(20px);
+  --glass-nav-border: 1px solid rgba(255, 255, 255, 0.08);
+  --glass-nav-radius: 999px;
+
+  /* ============= 文字 ============= */
+  --text-primary: #f5f0ff;
+  --text-secondary: #b8b0c8;
+  --text-tertiary: #7a7290;
+  --text-muted: #5a5470;
+
+  /* ============= 品牌色 ============= */
+  --gold-primary: #d4af37;
+  --gold-light: #e8c56f;
+  --gold-glow: rgba(212, 175, 55, 0.3);
+
+  /* ============= 产品色 ============= */
+  --color-poju: #d4af37;
+  --color-glyph: #7b68ee;
+  --color-syncro: #00ced1;
+  --color-match: #ff6b9d;
+
+  /* ============= Current 系统 (Syncro) ============= */
+  --current-open: #0d7377;
+  --current-following: #26a69a;
+  --current-still: #90a4ae;
+  --current-cross: #f57c00;
+  --current-undertow: #c62828;
+
+  /* ============= 状态颜色 ============= */
+  --color-success: #4caf50;
+  --color-warning: #ff9800;
+  --color-error: #f44336;
+  --color-info: #87ceeb;
+
+  /* ============= Spacing (8px 基准) ============= */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-8: 48px;
+  --space-10: 64px;
+  --space-12: 80px;
+
+  /* ============= Typography ============= */
+  --font-display: var(--font-primary), "Noto Sans SC", system-ui, sans-serif;
+  --font-body: var(--font-primary), "Noto Sans SC", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", monospace;
+  --font-serif: "Noto Serif SC", "Cormorant Garamond", serif;
+
+  /* ============= 动效 ============= */
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-fast: 0.15s;
+  --duration-base: 0.3s;
+  --duration-slow: 0.5s;
+
+  /* ============= Legacy bridges (Tailwind / 现有组件) ============= */
+  --bg-deep: var(--bg-primary-solid);
+  --bg-layer-1: rgba(50, 35, 80, 0.55);
+  --bg-layer-2: rgba(60, 45, 95, 0.65);
+  --glass-tint: rgba(255, 255, 255, 0.04);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --text-body: var(--text-secondary);
+  --text-dim: var(--text-tertiary);
+  --text-accent: var(--gold-light);
+  --gold-rare: var(--gold-primary);
+  --purple-vivid: #c084fc;
+  --shadow-card: var(--glass-card-shadow);
+}

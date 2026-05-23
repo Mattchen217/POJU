@@ -1,0 +1,110 @@
+/* Match 介绍页 — Hero 排版见 product-hero.css；动效挂载 .product-hero__bg--match */
+
+.match-home .report-preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.match-home .preview-item {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+}
+
+.match-home .preview-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 16px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.match-home .preview-badge.a {
+  background: #d4af37;
+}
+.match-home .preview-badge.b {
+  background: #87ceeb;
+}
+.match-home .preview-badge.x {
+  background: #ff6b9d;
+}
+.match-home .preview-badge.c {
+  background: #4caf50;
+}
+.match-home .preview-badge.r {
+  background: #9c27b0;
+}
+
+.match-home .preview-content h4 {
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 var(--space-1);
+}
+
+.match-home .preview-content p {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.match-home .match-faq-wrap {
+  max-width: 44rem;
+  margin-inline: auto;
+}
+
+.match-home .faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.match-home .faq-item {
+  background: var(--glass-card-bg);
+  backdrop-filter: var(--glass-card-blur);
+  -webkit-backdrop-filter: var(--glass-card-blur);
+  border: var(--glass-card-border);
+  border-radius: 14px;
+  padding: var(--space-4) var(--space-5);
+}
+
+.match-home .faq-item summary {
+  color: var(--text-primary);
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+  position: relative;
+  padding-right: var(--space-6);
+}
+
+.match-home .faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.match-home .faq-item summary::after {
+  content: "+";
+  position: absolute;
+  right: 0;
+  top: 0;
+  font-size: 20px;
+  color: var(--text-tertiary);
+  transition: transform var(--duration-base);
+}
+
+.match-home .faq-item[open] summary::after {
+  transform: rotate(45deg);
+}
+
+.match-home .faq-item p {
+  color: var(--text-secondary);
+  margin-top: var(--space-3);
+  line-height: 1.7;
+  font-size: 15px;
+}

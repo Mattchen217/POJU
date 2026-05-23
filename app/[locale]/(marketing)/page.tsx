@@ -9,6 +9,7 @@ import { ProductCardSyncroSpline } from "@/components/marketing/product-card-syn
 import { PaymentCancelToast } from "@/components/marketing/payment-cancel-toast";
 import { HeroInstallCta } from "@/components/marketing/hero-install-cta";
 import { ReadyCtaPillLink } from "@/components/marketing/ready-cta-pill-link";
+import { GlassSection } from "@/components/ui/GlassSection";
 import { LANDING_ASSETS } from "@/lib/marketing/landing-assets";
 import { hasPublicFile } from "@/lib/marketing/has-public-file";
 import productCardIconG from "@/assets/icons/G.png";
@@ -195,15 +196,22 @@ export default async function LandingPage() {
     cta: tp(`${style.productKey}.cta`),
   }));
 
-  const meetsMomentCards = [
-    { key: "card1" as const, href: "/poju", imageSrc: "/animations/S1.jpg" as const },
-    { key: "card2" as const, href: "/glyph", imageSrc: "/animations/S2.jpg" as const },
-    { key: "card3" as const, href: "/syncro", imageSrc: "/animations/S3.jpg" as const },
-    { key: "card4" as const, href: "/poju", imageSrc: "/animations/S4.jpg" as const },
+  type ContentCardAccent = "violet" | "magenta" | "blue" | "fuchsia";
+
+  const meetsMomentCards: {
+    key: "card1" | "card2" | "card3" | "card4";
+    href: string;
+    imageSrc: "/animations/S1.jpg" | "/animations/S2.jpg" | "/animations/S3.jpg" | "/animations/S4.jpg";
+    accent: ContentCardAccent;
+  }[] = [
+    { key: "card1", href: "/poju", imageSrc: "/animations/S1.jpg", accent: "violet" },
+    { key: "card2", href: "/glyph", imageSrc: "/animations/S2.jpg", accent: "magenta" },
+    { key: "card3", href: "/syncro", imageSrc: "/animations/S3.jpg", accent: "blue" },
+    { key: "card4", href: "/match", imageSrc: "/animations/S4.jpg", accent: "fuchsia" },
   ];
 
   return (
-    <main className="bg-bg-deep text-text-body">
+    <main className="text-text-body">
       <Suspense fallback={<div className="min-h-screen bg-bg-deep" />}>
         <PaymentCancelToast />
 
@@ -254,15 +262,18 @@ export default async function LandingPage() {
               <HeroInstallCta />
             </div>
           </div>
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[11] h-6 bg-gradient-to-b from-transparent to-bg-deep" aria-hidden />
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-0 z-[11] h-16 bg-gradient-to-b from-transparent to-[#0a0510]"
+            aria-hidden
+          />
         </section>
 
-        <div className="w-full px-4 pb-16 pt-16 md:px-8 md:pb-24 md:pt-24">
-          <section id="products" className="relative mx-auto w-full max-w-6xl">
+        <div className="landing-sections">
+          <GlassSection id="products">
             <h2 className="text-center text-[26px] font-semibold leading-tight tracking-tight text-white sm:text-[30px] md:text-[32px]">
               {tHome("threeWays.heading")}
             </h2>
-            <div className="mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5 md:mt-24">
+            <div className="mt-10 grid gap-4 sm:grid-cols-2 md:mt-14 lg:grid-cols-4 lg:gap-5">
               {productCards.map((card, index) => {
                 const tex = cardTexture[card.kind];
                 return (
@@ -333,12 +344,13 @@ export default async function LandingPage() {
                 );
               })}
             </div>
+          </GlassSection>
 
-            <section className="mx-auto mt-20 w-full max-w-6xl pt-10 sm:pt-12 md:mt-28">
-              <div className="px-0">
-                <h3 className="text-center text-[26px] font-semibold leading-tight tracking-tight text-white sm:text-[30px] md:text-[32px]">
-                  What we built. Why it works.
-                </h3>
+          <GlassSection>
+            <div className="px-0">
+              <h3 className="text-center text-[26px] font-semibold leading-tight tracking-tight text-white sm:text-[30px] md:text-[32px]">
+                What we built. Why it works.
+              </h3>
                 <p className="mx-auto mt-5 max-w-3xl whitespace-pre-line text-center text-[16px] leading-8 text-white/88 sm:text-[17px]">
                   {"Two thousand years of human reflection on the questions \nthat matter. Confirmed by modern research. Translated \nby AI. All for one purpose: helping you see what you \ncouldn't see alone."}
                 </p>
@@ -353,11 +365,11 @@ export default async function LandingPage() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-l from-black/78 via-black/46 to-black/12" aria-hidden />
                 <div className="absolute inset-0 z-10 flex items-center justify-end p-7 sm:p-9 md:p-14">
-                  <div className="max-w-[min(94%,42rem)] rounded-md bg-black/45 px-3 py-2.5 text-white/95 backdrop-blur-[1px] sm:px-3.5 sm:py-3">
-                    <p className="text-[17px] font-semibold tracking-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)] sm:text-[18px]">
+                  <div className="content-card-caption content-card-caption--violet max-w-[min(94%,42rem)] sm:px-3.5 sm:py-3">
+                    <p className="content-card-caption__title drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)]">
                       Eastern Wisdom
                     </p>
-                    <p className="mt-3 whitespace-pre-line text-[13.5px] leading-6 text-white/95 drop-shadow-[0_1px_6px_rgba(0,0,0,0.55)] sm:text-[14px] sm:leading-7">
+                    <p className="mt-3 whitespace-pre-line drop-shadow-[0_1px_6px_rgba(0,0,0,0.55)]">
                       {"For two thousand years, Eastern philosophical\ntraditions have examined the questions humans\nkeep asking - about decision, direction, and\nthe patterns that shape a life.\n\nCareer. Love. Direction. Doubt.\n\nThese traditions weren't fortune-tellers.\nThey were frameworks for thinking - refined\nover 80 generations of human experience."}
                     </p>
                   </div>
@@ -373,11 +385,11 @@ export default async function LandingPage() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-r from-black/78 via-black/46 to-black/12" aria-hidden />
                 <div className="absolute inset-0 z-10 flex items-center justify-start p-7 sm:p-9 md:p-14">
-                  <div className="max-w-[min(94%,42rem)] rounded-md bg-black/45 px-3 py-2.5 text-white/95 backdrop-blur-[1px] sm:px-3.5 sm:py-3">
-                    <p className="text-[17px] font-semibold tracking-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)] sm:text-[18px]">
+                  <div className="content-card-caption content-card-caption--blue max-w-[min(94%,42rem)] sm:px-3.5 sm:py-3">
+                    <p className="content-card-caption__title drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)]">
                       Modern Science
                     </p>
-                    <p className="mt-3 whitespace-pre-line text-[13.5px] leading-6 text-white/95 drop-shadow-[0_1px_6px_rgba(0,0,0,0.55)] sm:text-[14px] sm:leading-7">
+                    <p className="mt-3 whitespace-pre-line drop-shadow-[0_1px_6px_rgba(0,0,0,0.55)]">
                       {"What ancient observation noticed, modern research \nis beginning to measure.\n\nCognitive science on how we frame decisions. \nSpatial psychology on attention. Circadian \nbiology on natural rhythm. Behavioral economics \non cognitive bias.\n\nThe frameworks that worked for millennia, now \nvalidated by research."}
                     </p>
                   </div>
@@ -393,40 +405,41 @@ export default async function LandingPage() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-l from-black/78 via-black/46 to-black/12" aria-hidden />
                 <div className="absolute inset-0 z-10 flex items-center justify-end p-7 sm:p-9 md:p-14">
-                  <div className="max-w-[min(94%,42rem)] rounded-md bg-black/45 px-3 py-2.5 text-white/95 backdrop-blur-[1px] sm:px-3.5 sm:py-3">
-                    <p className="text-[17px] font-semibold tracking-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)] sm:text-[18px]">
+                  <div className="content-card-caption content-card-caption--magenta max-w-[min(94%,42rem)] sm:px-3.5 sm:py-3">
+                    <p className="content-card-caption__title drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)]">
                       AI Translation
                     </p>
-                    <p className="mt-3 whitespace-pre-line text-[13.5px] leading-6 text-white/95 drop-shadow-[0_1px_6px_rgba(0,0,0,0.55)] sm:text-[14px] sm:leading-7">
+                    <p className="mt-3 whitespace-pre-line drop-shadow-[0_1px_6px_rgba(0,0,0,0.55)]">
                       {"We took the frameworks these traditions developed. \nWe added what modern science has confirmed.\n\nFrameworks. Patterns. Timing. Moments.\n\nWe gave it to AI - to respond to your specific \nquestion, in your specific moment. Not to replace \nyour judgment, but to return the conversation to you."}
                     </p>
                   </div>
                 </div>
               </div>
-              <div className="mt-10 pb-10 md:pb-14">
-                <h4 className="text-center text-[26px] font-semibold leading-tight tracking-tight text-white sm:text-[30px] md:text-[32px]">
-                  This is what pojulife is for.
-                </h4>
-                <p className="mx-auto mt-5 max-w-4xl whitespace-pre-line text-center text-[16px] leading-8 text-white/88 sm:text-[17px]">
-                  {"The questions that matter, met with the depth they \ndeserve - across two millennia of human reflection, \nthe rigor of modern research, and the immediacy of AI."}
-                </p>
-              </div>
+            <div className="mt-10 pb-4 md:pb-6">
+              <h4 className="text-center text-[26px] font-semibold leading-tight tracking-tight text-white sm:text-[30px] md:text-[32px]">
+                This is what pojulife is for.
+              </h4>
+              <p className="mx-auto mt-5 max-w-4xl whitespace-pre-line text-center text-[16px] leading-8 text-white/88 sm:text-[17px]">
+                {"The questions that matter, met with the depth they \ndeserve - across two millennia of human reflection, \nthe rigor of modern research, and the immediacy of AI."}
+              </p>
+            </div>
+          </GlassSection>
 
-              <div className="mt-16 md:mt-24">
-                <h4 className="text-center text-[26px] font-semibold leading-tight tracking-tight text-white sm:text-[30px] md:text-[32px]">
-                  {tHome("meetsMoment.heading")}
-                </h4>
-                <p className="mx-auto mt-5 max-w-3xl text-center text-[16px] leading-8 text-white/88 sm:text-[17px]">
-                  {tHome("meetsMoment.subtitle")}
-                </p>
-                <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-7 lg:grid-cols-4 lg:gap-6">
-                  {meetsMomentCards.map(({ key, href, imageSrc }) => (
+          <GlassSection>
+            <h4 className="text-center text-[26px] font-semibold leading-tight tracking-tight text-white sm:text-[30px] md:text-[32px]">
+              {tHome("meetsMoment.heading")}
+            </h4>
+            <p className="mx-auto mt-5 max-w-3xl text-center text-[17px] leading-8 text-white sm:text-[18px]">
+              {tHome("meetsMoment.subtitle")}
+            </p>
+            <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-7 lg:grid-cols-4 lg:gap-6">
+                  {meetsMomentCards.map(({ key, href, imageSrc, accent }) => (
                     <Link
                       key={key}
                       href={href}
-                      className="group flex flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] transition-colors hover:border-white/16 hover:bg-white/[0.05]"
+                      className={`content-card content-card--${accent} group`}
                     >
-                      <div className="relative aspect-[16/10] w-full overflow-hidden bg-gradient-to-br from-white/[0.08] via-white/[0.03] to-black/45">
+                      <div className="content-card__media">
                         <Image
                           src={imageSrc}
                           alt=""
@@ -434,100 +447,91 @@ export default async function LandingPage() {
                           className="object-cover object-center transition-transform duration-500 group-hover:scale-[1.04]"
                           sizes="(max-width:640px) 100vw, (max-width:1024px) 50vw, 25vw"
                         />
-                        <div
-                          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent"
-                          aria-hidden
-                        />
                       </div>
-                      <div className="flex min-h-0 flex-1 flex-col p-5 sm:p-6">
-                        <div className="min-h-0 flex-1 space-y-2 text-left text-[15px] leading-7 text-white/90 sm:text-[16px] sm:leading-8">
+                      <div className="content-card__body min-h-0">
+                        <div className="min-h-0 flex-1 space-y-2 text-left">
                           <p>{tHome(`meetsMoment.${key}.p1`)}</p>
                           <p>{tHome(`meetsMoment.${key}.p2`)}</p>
                           <p>{tHome(`meetsMoment.${key}.p3`)}</p>
                         </div>
-                        <p className="mt-5 shrink-0 text-[15px] font-medium text-white/95 transition-transform duration-300 group-hover:translate-x-1 sm:text-[16px]">
+                        <p className="content-card__cta transition-transform duration-300 group-hover:translate-x-1">
                           → {tHome(`meetsMoment.${key}.cta`)}
                         </p>
                       </div>
                     </Link>
                   ))}
-                </div>
-              </div>
-            </section>
-          </section>
+            </div>
+          </GlassSection>
 
-          <section className="relative mx-auto mt-16 w-full max-w-6xl overflow-hidden rounded-2xl px-4 py-12 md:mt-24 md:px-8 md:py-16">
+          <GlassSection className="glass-section--promises" padding="lg" allowOverflow>
             {promisesBg ? (
-              <div className="pointer-events-none absolute inset-0">
-                <Image src={promisesBg} alt="" fill className="object-cover object-center opacity-40" sizes="(max-width:1200px) 100vw, 1152px" />
+              <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]">
+                <Image src={promisesBg} alt="" fill className="object-cover object-center opacity-25" sizes="(max-width:1200px) 100vw, 1152px" />
               </div>
             ) : null}
-            <div
-              className="pointer-events-none absolute inset-0 bg-gradient-to-b from-bg-deep via-bg-deep/95 to-bg-deep"
-              aria-hidden
-            />
+            <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-white/[0.03]" aria-hidden />
             <div className="relative z-10">
-              <h2 className="text-center text-[28px] font-semibold leading-tight text-text-primary sm:text-[32px] md:text-[36px]">
+              <h2 className="text-center text-[28px] font-semibold leading-tight text-white sm:text-[32px] md:text-[36px]">
                 What we promise. What we won&apos;t do.
               </h2>
               <div className="mx-auto mt-10 w-full max-w-6xl md:mt-12">
                 <div className="grid gap-6 md:grid-cols-1">
-                  <article className="rounded-xl bg-black/50 p-5 sm:p-6">
+                  <article className="content-card content-card--solid content-card--violet">
                     <div className="flex items-start gap-4">
                       <PromiseIconBadge tone="violet">
                         <Lock className="h-5 w-5" strokeWidth={2} aria-hidden />
                       </PromiseIconBadge>
                       <div className="min-w-0">
-                        <p className="text-[19px] font-semibold tracking-tight text-white">Never stored</p>
-                        <p className="mt-3 text-[15px] leading-7 text-white/88">
+                        <p className="content-card__title">Never stored</p>
+                        <p className="mt-3">
                           Your conversations live encrypted on your device. Not on our servers. Not in our database.
                         </p>
-                        <p className="mt-3 text-[15px] leading-7 text-white/88">
+                        <p className="mt-3">
                           Even if we wanted to read them, we couldn&apos;t. Even if we were hacked, there&apos;d be nothing to leak.
                         </p>
-                        <p className="mt-3 text-[15px] leading-7 text-white/88">Your words stay yours.</p>
+                        <p className="mt-3">Your words stay yours.</p>
                       </div>
                     </div>
                   </article>
-                  <article className="rounded-xl bg-black/50 p-5 sm:p-6">
+                  <article className="content-card content-card--solid content-card--blue">
                     <div className="flex items-start gap-4">
                       <PromiseIconBadge tone="cyan">
                         <UserX className="h-5 w-5" strokeWidth={2} aria-hidden />
                       </PromiseIconBadge>
                       <div className="min-w-0">
-                        <p className="text-[19px] font-semibold tracking-tight text-white">Never required</p>
-                        <p className="mt-3 text-[15px] leading-7 text-white/88">No account. No login. No password.</p>
-                        <p className="mt-3 text-[15px] leading-7 text-white/88">
+                        <p className="content-card__title">Never required</p>
+                        <p className="mt-3">No account. No login. No password.</p>
+                        <p className="mt-3">
                           We ask for your email in two situations only: when you choose to purchase a session, or when you request a PDF of your reflection.
                         </p>
-                        <p className="mt-3 text-[15px] leading-7 text-white/88">
+                        <p className="mt-3">
                           In both cases, we send what you asked for — nothing more. No marketing. No newsletters. No drip campaigns. No sharing with third parties.
                         </p>
-                        <p className="mt-3 text-[15px] leading-7 text-white/88">Your inbox stays yours.</p>
+                        <p className="mt-3">Your inbox stays yours.</p>
                       </div>
                     </div>
                   </article>
-                  <article className="rounded-xl bg-black/50 p-5 sm:p-6">
+                  <article className="content-card content-card--solid content-card--gold">
                     <div className="flex items-start gap-4">
                       <PromiseIconBadge tone="amber">
                         <Scale className="h-5 w-5" strokeWidth={2} aria-hidden />
                       </PromiseIconBadge>
                       <div className="min-w-0">
-                        <p className="text-[19px] font-semibold tracking-tight text-white">Never manipulative</p>
-                        <p className="mt-3 text-[15px] leading-7 text-white/88">
+                        <p className="content-card__title">Never manipulative</p>
+                        <p className="mt-3">
                           No subscriptions. No auto-renewals. No hidden fees. No upsells. No dark patterns.
                         </p>
-                        <p className="mt-3 text-[15px] leading-7 text-white/88">
+                        <p className="mt-3">
                           Each use is a single, transparent choice. Free tools are clearly free. Paid tools are clearly priced — once, when you decide to use them.
                         </p>
-                        <p className="mt-3 text-[15px] leading-7 text-white/88">That&apos;s the entire business.</p>
+                        <p className="mt-3">That&apos;s the entire business.</p>
                       </div>
                     </div>
                   </article>
                 </div>
               </div>
               <div className="mx-auto mt-12 max-w-3xl text-center">
-                <p className="whitespace-pre-line text-[16px] leading-8 text-white/88 sm:text-[17px]">
+                <p className="whitespace-pre-line text-[17px] leading-8 text-white sm:text-[18px]">
                   {"We're not a company that sells data because we don't\ncollect data."}
                 </p>
                 <p className="mt-5">
@@ -537,10 +541,10 @@ export default async function LandingPage() {
                 </p>
               </div>
             </div>
-          </section>
+          </GlassSection>
 
-          <section className="relative mx-auto mt-16 w-full max-w-6xl px-4 md:mt-24 md:px-6">
-            <div className="flex flex-col items-center px-2 py-10 text-center sm:px-4 md:py-14">
+          <GlassSection padding="lg">
+            <div className="flex flex-col items-center px-2 text-center sm:px-4">
               <h2 className="max-w-2xl text-[26px] font-semibold leading-snug text-white sm:text-[30px] md:text-[34px]">
                 {tHome("finalCta.readyHeading")}
               </h2>
@@ -598,7 +602,7 @@ export default async function LandingPage() {
                 </div>
               </div>
             </div>
-          </section>
+          </GlassSection>
         </div>
       </Suspense>
     </main>

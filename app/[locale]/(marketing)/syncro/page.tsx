@@ -9,7 +9,7 @@ export const metadata = syncroMarketingMetadata;
 
 export default function SyncroPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-bg-deep" />}>
+    <Suspense fallback={<div className="min-h-screen" />}>
       <SyncroPageLayout marketing={<SyncroMarketingPage />} />
     </Suspense>
   );

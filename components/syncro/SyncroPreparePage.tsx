@@ -6,7 +6,11 @@ import { useLocale, useTranslations } from "next-intl";
 
 import { SessionPreparation } from "@/components/poju/SessionPreparation";
 import { useRouter } from "@/i18n/navigation";
-import { listStoredProfiles, type StoredProfileSummary } from "@/lib/profile/stored-profiles-service";
+import {
+  getStoredProfileRecord,
+  listStoredProfilesForSessionPrep,
+  type StoredProfileSummary,
+} from "@/lib/profile/stored-profiles-service";
 
 export function SyncroPreparePage() {
   const router = useRouter();
@@ -35,7 +39,7 @@ export function SyncroPreparePage() {
 
     void (async () => {
       try {
-        const list = await listStoredProfiles();
+        const list = await listStoredProfilesForSessionPrep();
         setProfiles(list);
       } catch (e) {
         console.error("[syncro/prepare]", e);
@@ -45,10 +49,16 @@ export function SyncroPreparePage() {
     })();
   }, [router, searchParams]);
 
-  function handleProfileSelected(profileId: string) {
+  async function handleProfileSelected(profileId: string) {
     sessionStorage.setItem("syncro_profile_id", profileId);
     sessionStorage.setItem("syncro_session_type", sessionType);
-    router.push("/syncro/location");
+
+    const record = await getStoredProfileRecord(profileId);
+    if (record?.has_base_analysis) {
+      router.push("/syncro/location");
+    } else {
+      router.push(`/syncro/preparing?profile=${encodeURIComponent(profileId)}`);
+    }
   }
 
   function handleCancel() {

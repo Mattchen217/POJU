@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { SessionPreparation } from "@/components/poju/SessionPreparation";
 import { loadPOJUSession } from "@/lib/poju/session-manager";
-import { listStoredProfiles, type StoredProfileSummary } from "@/lib/profile/stored-profiles-service";
+import { listStoredProfilesForSessionPrep, type StoredProfileSummary } from "@/lib/profile/stored-profiles-service";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import type { POJUSessionState } from "@/lib/poju/types";
 import { PreparingStatusOverlay } from "@/components/poju/PreparingStatusOverlay";
@@ -45,7 +45,7 @@ export default function PreparePage() {
           return;
         }
 
-        const profileList = await listStoredProfiles();
+        const profileList = await listStoredProfilesForSessionPrep();
         if (cancelled) return;
         setSession(sessionData);
         setProfiles(profileList);

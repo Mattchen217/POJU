@@ -1,4 +1,5 @@
 import type { POJUAgentState } from "@/lib/poju/agent-state";
+import { sha256HexAsync } from "@/lib/sha256";
 
 /** Payload shared by client + `/api/poju/situation-analysis` for deterministic hashing. */
 export type SituationFingerprintSource = {
@@ -43,9 +44,5 @@ export async function computeSituationContextFingerprint(src: SituationFingerpri
     context_flat: sortKeysDeep(src.context_collected ?? {}),
   });
 
-  const bytes = new TextEncoder().encode(canonical);
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+  return sha256HexAsync(new TextEncoder().encode(canonical));
 }

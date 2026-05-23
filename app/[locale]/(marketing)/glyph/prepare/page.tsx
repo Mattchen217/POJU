@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { SessionPreparation } from "@/components/poju/SessionPreparation";
-import { listStoredProfiles, type StoredProfileSummary } from "@/lib/profile/stored-profiles-service";
+import { listStoredProfilesForSessionPrep, type StoredProfileSummary } from "@/lib/profile/stored-profiles-service";
 import "@/styles/session-prep.css";
 
 function GlyphPrepareInner() {
@@ -22,7 +22,7 @@ function GlyphPrepareInner() {
   useEffect(() => {
     void (async () => {
       try {
-        const list = await listStoredProfiles();
+        const list = await listStoredProfilesForSessionPrep();
         setProfiles(list);
       } catch (e) {
         console.error("[glyph/prepare]", e);

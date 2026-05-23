@@ -3,6 +3,14 @@ import type { Metadata } from "next";
 import { ArchiveActionPlansList } from "@/components/archive/archive-action-plans-list";
 import { ArchiveRuntimePreview } from "@/components/archive/archive-runtime-preview";
 import { WipeEverythingButton } from "@/components/archive/wipe-everything-button";
+import { MarketingPageLayout, MarketingPageSections } from "@/components/marketing/marketing-page-layout";
+import { MarketingSection } from "@/components/marketing/marketing-section";
+import {
+  ProductHeroContent,
+  ProductHeroDescription,
+  ProductHeroTitle,
+  ProductMarketingHero,
+} from "@/components/marketing/product-marketing-hero";
 
 export const metadata: Metadata = {
   title: "The Archive — pojulife",
@@ -12,29 +20,27 @@ export const metadata: Metadata = {
 
 export default function ArchivePage() {
   return (
-    <main className="bg-bg-deep text-text-body">
-      <div className="w-full px-3 pb-10 pt-4 sm:px-4 sm:pt-6 md:px-6 md:pb-12">
-        <section className="relative mx-auto mt-2 w-full max-w-6xl overflow-hidden rounded-xl border border-white/10 bg-[#15121b] text-[#e7e0ed]">
-          <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(139,92,246,0.15),transparent_60%)]" />
+    <MarketingPageLayout theme="poju">
+      <ProductMarketingHero>
+        <ProductHeroContent>
+          <ProductHeroTitle gradient className="!tracking-[0.06em]">
+            ✦ THE ARCHIVE.
+          </ProductHeroTitle>
+          <ProductHeroDescription className="!text-white/85">
+            Everything here lives only on this device.
+          </ProductHeroDescription>
+        </ProductHeroContent>
+      </ProductMarketingHero>
 
-          <div className="relative z-10 w-full max-w-4xl px-6 pb-32 pt-8 md:pb-12 md:pt-12">
-            <div className="mb-10 text-center md:text-left">
-              <h1 className="mb-2 font-['Manrope'] text-[40px] font-bold leading-[1.2] tracking-[-0.02em] text-[#d0bcff]">
-                ✦ THE ARCHIVE.
-              </h1>
-              <p className="font-['Inter'] text-[18px] leading-[1.6] text-[#cbc3d7]/70">
-                Everything here lives only on this device.
-              </p>
-            </div>
+      <MarketingPageSections>
+        <MarketingSection padding="lg" allowOverflow>
+          <div className="space-y-12">
+            <ArchiveActionPlansList />
+            <ArchiveRuntimePreview />
+          </div>
 
-            <div className="space-y-12">
-              <ArchiveActionPlansList />
-              <ArchiveRuntimePreview />
-            </div>
-
-            <div className="mt-20 text-center md:text-left">
-              <WipeEverythingButton />
-            </div>
+          <div className="mt-16 text-center md:text-left">
+            <WipeEverythingButton />
           </div>
 
           <nav className="fixed bottom-0 left-0 z-40 flex w-full items-center justify-around rounded-t-2xl border-t border-white/10 bg-[#1E1E22]/60 px-4 pb-6 pt-3 backdrop-blur-2xl md:hidden">
@@ -50,15 +56,18 @@ export default function ArchivePage() {
               <span className="material-symbols-outlined mb-1">sync</span>
               <span className="font-['Manrope'] text-[10px] font-medium uppercase tracking-tight">Sync</span>
             </a>
-            <a className="flex scale-105 flex-col items-center justify-center rounded-xl bg-violet-500/10 px-3 py-1 text-violet-400 duration-200" href="#">
+            <a
+              className="flex scale-105 flex-col items-center justify-center rounded-xl bg-violet-500/10 px-3 py-1 text-violet-400 duration-200"
+              href="#"
+            >
               <span className="material-symbols-outlined mb-1" style={{ fontVariationSettings: "'FILL' 1" }}>
                 archive
               </span>
               <span className="font-['Manrope'] text-[10px] font-medium uppercase tracking-tight">Archive</span>
             </a>
           </nav>
-        </section>
-      </div>
-    </main>
+        </MarketingSection>
+      </MarketingPageSections>
+    </MarketingPageLayout>
   );
 }

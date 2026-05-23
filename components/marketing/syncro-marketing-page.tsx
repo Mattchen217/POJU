@@ -2,6 +2,12 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 
 import { ArchiveReturnBanner } from "@/components/archive/archive-return-banner";
+import {
+  MarketingPageHero,
+  MarketingPageLayout,
+  MarketingPageSections,
+} from "@/components/marketing/marketing-page-layout";
+import { MarketingSection } from "@/components/marketing/marketing-section";
 import { SyncroProductHero } from "@/components/marketing/syncro-product-hero";
 import { Link } from "@/i18n/navigation";
 
@@ -12,6 +18,7 @@ export const syncroMarketingMetadata: Metadata = {
 };
 
 const USE_CASE_KEYS = ["before_matters", "pace_off", "daily_rhythm", "traveling", "poju_companion"] as const;
+const USE_CASE_ACCENTS = ["blue", "violet", "magenta", "fuchsia", "blue"] as const;
 
 export async function SyncroMarketingPage() {
   const t = await getTranslations("marketingSite.syncro");
@@ -37,102 +44,92 @@ export async function SyncroMarketingPage() {
   };
 
   return (
-    <div className="w-full px-3 pb-10 pt-4 sm:px-4 sm:pt-6 md:px-6 md:pb-12">
-      <div className="mx-auto mt-2 w-full max-w-6xl px-4 md:px-8">
-        <ArchiveReturnBanner />
-      </div>
+    <MarketingPageLayout theme="syncro" component="div">
+      <MarketingPageHero>
+        <div className="mx-auto w-full max-w-6xl px-4 md:px-8">
+          <ArchiveReturnBanner />
+        </div>
+        <SyncroProductHero copy={heroCopy} />
+      </MarketingPageHero>
 
-      <SyncroProductHero copy={heroCopy} />
-
-      <section className="mx-auto mt-10 w-full max-w-6xl px-4 md:mt-14 md:px-8">
-        <h2 className="text-center text-[28px] font-semibold text-text-primary sm:text-[32px] md:text-[36px]">
-          {t("what_shows.heading")}
-        </h2>
-        <div className="mx-auto mt-8 flex max-w-lg flex-col items-center">
-          <div className="aspect-[9/19] w-full max-w-[280px] rounded-[2rem] border border-white/15 bg-gradient-to-b from-white/10 to-black/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-            <div className="flex h-full flex-col items-center justify-center px-6 text-center">
-              <p className="text-xs uppercase tracking-[0.16em] text-text-dim">{t("what_shows.preview_label")}</p>
-              <p className="mt-3 text-sm leading-7 text-text-secondary">{t("what_shows.preview_placeholder")}</p>
+      <MarketingPageSections>
+        <MarketingSection title={t("what_shows.heading")} padding="lg">
+          <div className="mx-auto flex max-w-lg flex-col items-center">
+            <div className="aspect-[9/19] w-full max-w-[280px] rounded-[2rem] border border-white/20 bg-gradient-to-b from-white/15 to-black/30 shadow-[0_14px_36px_rgba(0,0,0,0.32)]">
+              <div className="flex h-full flex-col items-center justify-center px-6 text-center">
+                <p className="text-xs uppercase tracking-[0.16em] text-white/70">{t("what_shows.preview_label")}</p>
+                <p className="marketing-section-intro mt-3">{t("what_shows.preview_placeholder")}</p>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="mx-auto mt-10 max-w-2xl space-y-4 text-center text-[15px] leading-8 text-text-secondary">
-          <p>{t("what_shows.intro")}</p>
-          <p className="text-left sm:text-center">
-            {t("what_shows.items_intro")}
-            <br />
-            {whatShowsItems.map((item) => (
-              <span key={item}>
-                ✦ {item}
-                <br />
-              </span>
-            ))}
-          </p>
-          <p>{t("what_shows.footnote")}</p>
-        </div>
-      </section>
-
-      <section id="syncro-use-cases" className="mx-auto mt-8 w-full max-w-6xl px-4 py-10 md:mt-10 md:px-8 md:py-12">
-        <h2 className="text-center text-[28px] font-semibold text-text-primary sm:text-[32px] md:text-[36px]">
-          {t("use_cases.heading")}
-        </h2>
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {USE_CASE_KEYS.map((key) => (
-            <article
-              key={key}
-              className="rounded-xl border border-white/10 bg-black/25 px-4 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
-            >
-              <p className="text-[15px] font-semibold text-cyan-100">{t(`use_cases.${key}.title`)}</p>
-              <p className="mt-2 whitespace-pre-line text-sm leading-7 text-text-secondary">
-                {t(`use_cases.${key}.description`)}
-              </p>
+          <div className="mx-auto mt-10 max-w-2xl space-y-4 text-center">
+            <p className="marketing-section-intro">{t("what_shows.intro")}</p>
+            <article className="content-card content-card--solid content-card--blue mx-auto max-w-xl text-left">
+              <p className="marketing-section-intro !text-left">{t("what_shows.items_intro")}</p>
+              <ul className="mt-4 space-y-2">
+                {whatShowsItems.map((item) => (
+                  <li key={item}>
+                    <span className="mr-1">✦</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
             </article>
-          ))}
-        </div>
-      </section>
+            <p className="marketing-section-intro">{t("what_shows.footnote")}</p>
+          </div>
+        </MarketingSection>
 
-      <section className="mx-auto mt-8 w-full max-w-6xl px-4 py-10 md:mt-10 md:px-8 md:py-12">
-        <h2 className="text-center text-[28px] font-semibold text-text-primary sm:text-[32px] md:text-[36px]">
-          {t("what_it_is.heading")}
-        </h2>
-        <div className="mx-auto mt-10 grid max-w-4xl gap-8 md:grid-cols-2 md:gap-10">
-          <article className="rounded-xl border border-white/10 bg-black/25 p-6 sm:p-7">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-dim">{t("what_it_is.shows.title")}</p>
-            <ul className="mt-5 space-y-3 text-[15px] leading-8 text-text-secondary">
-              {showsItems.map((item) => (
-                <li key={item}>
-                  <span className="text-cyan-200">✦</span> {item}
-                </li>
-              ))}
-            </ul>
-          </article>
-          <article className="rounded-xl border border-white/10 bg-black/25 p-6 sm:p-7">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-dim">{t("what_it_is.isnt.title")}</p>
-            <ul className="mt-5 space-y-3 text-[15px] leading-8 text-text-secondary">
-              {isntItems.map((item) => (
-                <li key={item}>
-                  <span className="text-red-300/90">✗</span> {item}
-                </li>
-              ))}
-            </ul>
-          </article>
-        </div>
-      </section>
+        <MarketingSection id="syncro-use-cases" title={t("use_cases.heading")} padding="lg">
+          <div className="marketing-accent-grid marketing-accent-grid--5">
+            {USE_CASE_KEYS.map((key, idx) => {
+              const accent = USE_CASE_ACCENTS[idx] ?? "blue";
+              return (
+                <article key={key} className={`content-card content-card--solid content-card--${accent}`}>
+                  <p className="content-card__title">{t(`use_cases.${key}.title`)}</p>
+                  <p className="mt-2 whitespace-pre-line">{t(`use_cases.${key}.description`)}</p>
+                </article>
+              );
+            })}
+          </div>
+        </MarketingSection>
 
-      <section className="poju-cosmic-panel syncro-cta-panel mx-auto mt-8 w-full max-w-6xl px-4 py-8 text-center md:mt-10 md:px-8 md:py-10">
-        <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col items-center">
-          <h2 className="text-[30px] font-semibold text-text-primary sm:text-[34px] md:text-[38px]">
-            {t("always_free.heading")}
-          </h2>
-          <p className="mt-4 max-w-2xl text-[15px] leading-8 text-text-secondary sm:text-base">{t("always_free.description")}</p>
-          <Link
-            href="#syncro-start"
-            className="mt-7 inline-flex w-full min-w-[220px] max-w-sm justify-center rounded-full border border-cyan-300/40 bg-cyan-400/20 px-8 py-3 text-sm font-semibold text-cyan-100 shadow-[0_10px_26px_rgba(34,211,238,0.2)] hover:bg-cyan-300/25 sm:w-auto sm:text-[15px] md:px-10 md:py-4 md:text-base"
-          >
-            {t("always_free.cta")}
-          </Link>
-        </div>
-      </section>
-    </div>
+        <MarketingSection title={t("what_it_is.heading")} padding="lg">
+          <div className="marketing-accent-grid marketing-accent-grid--2 mx-auto max-w-4xl">
+            <article className="content-card content-card--solid content-card--blue">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em]">{t("what_it_is.shows.title")}</p>
+              <ul className="mt-5 space-y-3">
+                {showsItems.map((item) => (
+                  <li key={item}>
+                    <span className="mr-1">✦</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </article>
+            <article className="content-card content-card--solid content-card--magenta">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em]">{t("what_it_is.isnt.title")}</p>
+              <ul className="mt-5 space-y-3">
+                {isntItems.map((item) => (
+                  <li key={item}>
+                    <span className="mr-1">✗</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </article>
+          </div>
+        </MarketingSection>
+
+        <MarketingSection padding="lg">
+          <div className="flex flex-col items-center text-center">
+            <h2 className="marketing-section-heading">{t("always_free.heading")}</h2>
+            <p className="marketing-section-subheading">{t("always_free.description")}</p>
+            <Link href="#syncro-start" className="glass-btn glass-btn-primary glass-btn-large mt-8">
+              {t("always_free.cta")}
+            </Link>
+          </div>
+        </MarketingSection>
+      </MarketingPageSections>
+    </MarketingPageLayout>
   );
 }

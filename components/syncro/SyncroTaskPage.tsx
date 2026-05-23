@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 
 import { Link, useRouter } from "@/i18n/navigation";
 
-const MIN_LEN = 30;
+const MIN_LEN = 6;
 const MAX_LEN = 100;
 
 export function SyncroTaskPage() {
@@ -17,12 +17,21 @@ export function SyncroTaskPage() {
   const sessionType = searchParams.get("type") === "free" ? "free" : "paid";
 
   const [task, setTask] = useState("");
+  const [showMinWarning, setShowMinWarning] = useState(false);
 
   const trimmedLen = task.trim().length;
   const canContinue = trimmedLen >= MIN_LEN;
+  const charsRemaining = Math.max(0, MIN_LEN - trimmedLen);
+
+  useEffect(() => {
+    if (canContinue) setShowMinWarning(false);
+  }, [canContinue]);
 
   function handleContinue() {
-    if (!canContinue) return;
+    if (!canContinue) {
+      setShowMinWarning(true);
+      return;
+    }
 
     sessionStorage.setItem("syncro_task_pending", task.trim());
     sessionStorage.setItem("syncro_session_type", sessionType);
@@ -52,12 +61,21 @@ export function SyncroTaskPage() {
             className="mt-6 w-full resize-none rounded-xl border border-white/15 bg-black/30 px-4 py-3 text-[15px] leading-7 text-text-primary placeholder:text-text-dim focus:border-cyan-400/40 focus:outline-none focus:ring-1 focus:ring-cyan-400/30"
           />
 
-          <div className="char-count mt-2 text-sm text-text-dim">
+          <div
+            className={`char-count mt-2 text-sm text-text-dim ${showMinWarning && !canContinue ? "syncro-task-char-count--warn" : ""}`}
+            role="status"
+            aria-live="polite"
+          >
             {task.length} / {MAX_LEN}
             {trimmedLen < MIN_LEN ? (
               <span className="hint text-amber-200/80"> · {t("min_chars", { min: MIN_LEN })}</span>
             ) : null}
           </div>
+          {showMinWarning && !canContinue ? (
+            <p className="mt-2 text-sm font-medium text-amber-200">
+              {t("min_chars_remaining", { remaining: charsRemaining })}
+            </p>
+          ) : null}
 
           <div className="examples mt-8">
             <h4 className="text-xs font-semibold uppercase tracking-[0.12em] text-text-dim">
@@ -73,8 +91,8 @@ export function SyncroTaskPage() {
           <button
             type="button"
             onClick={handleContinue}
-            disabled={!canContinue}
-            className="marketing-pill-outline-cta marketing-pill-outline-cta--cyan mt-10 inline-flex w-full justify-center px-8 py-3.5 text-[15px] font-semibold disabled:cursor-not-allowed disabled:opacity-40 hover:-translate-y-0.5 hover:scale-[1.02] motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100 active:scale-[0.99] disabled:hover:translate-y-0 disabled:hover:scale-100"
+            aria-disabled={!canContinue}
+            className={`marketing-pill-outline-cta marketing-pill-outline-cta--cyan mt-10 inline-flex w-full justify-center px-8 py-3.5 text-[15px] font-semibold touch-manipulation [-webkit-tap-highlight-color:transparent] hover:-translate-y-0.5 hover:scale-[1.02] motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100 active:scale-[0.99] ${!canContinue ? "syncro-task-continue--inactive" : ""} ${showMinWarning && !canContinue ? "syncro-task-continue--pulse" : ""}`}
           >
             {t("continue")}
           </button>

@@ -1,0 +1,208 @@
+/* 产品介绍页：灰白 glass-section + 无框黑底文字（Notes 参考） */
+
+.product-page-sections .marketing-section-heading,
+.product-page-sections .marketing-section-subheading {
+  position: relative;
+  z-index: 1;
+}
+
+/* 产品主图 — 像直接拍摄的画面，无边框 */
+.product-shot {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border: none;
+  border-radius: 18px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+}
+
+.product-shot--hero {
+  aspect-ratio: 16 / 10;
+  max-height: min(52vh, 440px);
+}
+
+.product-shot--card {
+  aspect-ratio: 4 / 3;
+}
+
+.product-shot img {
+  object-fit: cover;
+}
+
+.product-page-showcase {
+  margin-bottom: var(--space-6);
+}
+
+/* 黑底文字框 — 无边框线 */
+.notes-black-box {
+  background: rgba(0, 0, 0, 0.82);
+  border: none;
+  border-radius: 16px;
+  padding: var(--space-5) var(--space-5);
+  color: #ffffff;
+  box-shadow: none;
+}
+
+@media (min-width: 640px) {
+  .notes-black-box {
+    padding: var(--space-5) var(--space-6);
+  }
+}
+
+.notes-black-box__label {
+  margin: 0 0 var(--space-2);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.notes-black-box__title {
+  margin: 0 0 var(--space-3);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #ffffff;
+}
+
+@media (min-width: 640px) {
+  .notes-black-box__title {
+    font-size: 20px;
+  }
+}
+
+.notes-black-box p,
+.notes-black-box li {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.notes-black-box p + p,
+.notes-black-box li + li {
+  margin-top: var(--space-3);
+}
+
+.notes-black-box ul {
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.notes-black-box--center {
+  text-align: center;
+}
+
+.product-notes-grid {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.product-notes-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* glass-text-section 在 product 页：外层透明，正文进黑框 */
+.product-page-sections .glass-text-section {
+  background: transparent;
+  border: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  padding: 0;
+  box-shadow: none;
+}
+
+.product-page-sections .glass-text-section .section-title {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.product-page-sections .glass-text-section .section-headline {
+  color: #ffffff;
+  margin-bottom: var(--space-4);
+}
+
+.product-page-sections .glass-text-section .section-body {
+  background: rgba(0, 0, 0, 0.82);
+  border: none;
+  border-radius: 16px;
+  padding: var(--space-5) var(--space-6);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.product-page-sections .glass-text-section .section-body strong {
+  color: #ffffff;
+}
+
+/* FAQ / 定价 — 黑框、无边框 */
+.product-page-sections .notes-faq-item {
+  background: rgba(0, 0, 0, 0.82);
+  border: none;
+  border-radius: 14px;
+  padding: var(--space-4) var(--space-5);
+}
+
+.product-page-sections .notes-faq-item summary {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.product-page-sections .notes-faq-item p {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.product-page-sections .notes-pricing-box {
+  background: rgba(0, 0, 0, 0.82);
+  border: none;
+  border-radius: 18px;
+  padding: var(--space-6);
+  text-align: center;
+}
+
+.product-page-sections .notes-pricing-box .price-tag {
+  color: var(--product-accent, var(--color-match));
+}
+
+.product-page-sections .notes-pricing-box .price-unit,
+.product-page-sections .notes-pricing-box .price-includes li {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.product-page-sections .notes-pricing-box .price-divider {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.product-page-sections .notes-pricing-box .first-free-note {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.product-page-sections .report-preview .preview-item {
+  background: rgba(0, 0, 0, 0.55);
+  border: none;
+  border-radius: 12px;
+  padding: var(--space-4);
+}
+
+.product-page-sections .report-preview .preview-content h4 {
+  color: #ffffff;
+}
+
+.product-page-sections .report-preview .preview-content p {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.product-page-sections .notes-pricing-box,
+.product-page-sections .notes-report-shell {
+  max-width: 24rem;
+  margin-inline: auto;
+}
+
+.product-page-sections .notes-report-shell {
+  background: rgba(0, 0, 0, 0.82);
+  border: none;
+  border-radius: 18px;
+  padding: var(--space-5) var(--space-6);
+}

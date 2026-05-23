@@ -2,7 +2,9 @@
  * Multi-person BaZi profiles on device (POJU v5 Step B).
  */
 import { encryptJson, decryptJson } from "@/lib/crypto";
+import { sha256Hex } from "@/lib/sha256";
 import { calculateProfile } from "@/lib/calculations";
+import { getUserProfile } from "@/lib/profile/active-profile";
 import { getPojuDb } from "@/lib/db/poju-db";
 import type { StoredProfileData, StoredProfileRecord } from "@/lib/db/poju-db";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
@@ -22,11 +24,7 @@ function assertBrowser(): void {
 
 async function hashBirthInfo(birth: BirthInfo): Promise<string> {
   const canonical = `${birth.year}-${birth.month}-${birth.day}-${birth.hour_period}-${birth.gender}-${birth.timezone}`;
-  const data = new TextEncoder().encode(canonical);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(hashBuffer))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+  return sha256Hex(new TextEncoder().encode(canonical));
 }
 
 export interface StoredProfileSummary {
@@ -84,6 +82,26 @@ export async function listStoredProfiles(): Promise<StoredProfileSummary[]> {
   }
 
   return summaries;
+}
+
+/**
+ * Session prep (POJU / Glyph / Syncro / Match): shared multi-profile list.
+ * If v5 `stored_profiles` is empty but legacy `userProfiles` exists, import once.
+ */
+export async function listStoredProfilesForSessionPrep(): Promise<StoredProfileSummary[]> {
+  let list = await listStoredProfiles();
+  if (list.length > 0) return list;
+
+  const legacy = await getUserProfile();
+  if (!legacy?.birth?.year) return list;
+
+  try {
+    await importCalculatedProfileAsStored({ profile: legacy });
+    list = await listStoredProfiles();
+  } catch (e) {
+    console.warn("[stored-profiles] Legacy profile import failed:", e);
+  }
+  return list;
 }
 
 export async function createStoredProfile(input: {
