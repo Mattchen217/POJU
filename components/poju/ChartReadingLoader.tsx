@@ -16,6 +16,8 @@ export interface ChartReadingLoaderProps {
   locale: string;
   /** e.g. Glyph full-reading wait copy */
   hintOverride?: string;
+  /** 非 POJU 会话时用，例如 Syncro「返回」 */
+  secondaryActionLabel?: string;
 }
 
 export function ChartReadingLoader({
@@ -24,6 +26,7 @@ export function ChartReadingLoader({
   onRetry,
   onRefund,
   hintOverride,
+  secondaryActionLabel,
 }: ChartReadingLoaderProps) {
   const t = useTranslations("chart_loader");
   const steps = useMemo(
@@ -51,7 +54,14 @@ export function ChartReadingLoader({
   }, [currentStep, steps.length]);
 
   if (currentStep === "error" && error) {
-    return <ErrorView error={error} onRetry={onRetry} onRefund={onRefund} />;
+    return (
+      <ErrorView
+        error={error}
+        onRetry={onRetry}
+        onRefund={onRefund}
+        secondaryActionLabel={secondaryActionLabel}
+      />
+    );
   }
 
   const statusLine = steps[animatedStep] ?? steps[0] ?? "";
@@ -75,16 +85,26 @@ export function ChartReadingLoader({
   );
 }
 
+function formatChartLoaderError(error: string, t: (key: string) => string): string {
+  if (error === "NETWORK_LOAD_FAILED" || /load failed|failed to fetch/i.test(error)) {
+    return t("error_network");
+  }
+  return error;
+}
+
 function ErrorView({
   error,
   onRetry,
   onRefund,
+  secondaryActionLabel,
 }: {
   error: string;
   onRetry: () => void;
   onRefund: () => void;
+  secondaryActionLabel?: string;
 }) {
   const t = useTranslations("chart_loader");
+  const detail = formatChartLoaderError(error, t);
 
   return (
     <div className="preparing-spline-page__overlay preparing-spline-page__overlay--error" role="alert">
@@ -96,14 +116,14 @@ function ErrorView({
         <p>{t("error_message")}</p>
         <details className="error-details">
           <summary>{t("error_details")}</summary>
-          <pre>{error}</pre>
+          <pre>{detail}</pre>
         </details>
         <div className="error-actions">
           <button type="button" onClick={onRetry} className="primary">
             {t("retry")}
           </button>
           <button type="button" onClick={onRefund} className="secondary">
-            {t("refund_instead")}
+            {secondaryActionLabel ?? t("refund_instead")}
           </button>
         </div>
       </div>

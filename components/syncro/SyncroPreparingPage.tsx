@@ -33,6 +33,7 @@ export function SyncroPreparingPage() {
   const locale = useLocale();
   const searchParams = useSearchParams();
   const tPrep = useTranslations("session_prep");
+  const tSyncro = useTranslations("syncro");
 
   const profileId = searchParams.get("profile")?.trim() ?? "";
 
@@ -122,6 +123,7 @@ export function SyncroPreparingPage() {
       onRetry={handleRetry}
       onRefund={handleBack}
       locale={locale}
+      secondaryActionLabel={tSyncro("back_to_home")}
     />
   );
 }

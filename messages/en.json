@@ -861,6 +861,7 @@
     "error_details": "Technical details",
     "retry": "Try Again",
     "refund_instead": "Refund Instead",
+    "error_network": "Network connection was interrupted. Stay on this page, check Wi‑Fi or cellular, then tap Try Again.",
     "step_0": "Calibrating your birth moment...",
     "step_1": "Casting your four pillars...",
     "step_2": "Analyzing day master and five elements...",

@@ -790,6 +790,7 @@
     "error_details": "Détails techniques",
     "retry": "Réessayer",
     "refund_instead": "Demander un remboursement",
+    "error_network": "Connexion interrompue. Restez sur cette page et réessayez.",
     "step_0": "Calibrage de votre moment de naissance...",
     "step_1": "Formation de vos quatre piliers...",
     "step_2": "Analyse du maître du jour et des cinq éléments...",

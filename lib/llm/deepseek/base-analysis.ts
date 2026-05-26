@@ -165,17 +165,39 @@ function baseAnalysisApiBody(profileId: string, userProfile: UserProfile, displa
   };
 }
 
+function wrapFetchNetworkError(e: unknown): Error {
+  if (e instanceof TypeError) {
+    const msg = e.message.toLowerCase();
+    if (msg.includes("load failed") || msg.includes("failed to fetch") || msg.includes("networkerror")) {
+      return new Error("NETWORK_LOAD_FAILED");
+    }
+  }
+  return e instanceof Error ? e : new Error(String(e));
+}
+
+async function postBaseAnalysis(path: string, body: unknown): Promise<Response> {
+  try {
+    return await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      credentials: "same-origin",
+    });
+  } catch (e) {
+    throw wrapFetchNetworkError(e);
+  }
+}
+
 async function generateBaseAnalysisViaStream(
   profileId: string,
   userProfile: UserProfile,
   displayName: string | null,
   callbacks?: BaseAnalysisStreamCallbacks,
 ): Promise<{ analysis: unknown; model: string; tokens_used: number }> {
-  const res = await fetch("/api/profile/base-analysis/stream", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(baseAnalysisApiBody(profileId, userProfile, displayName)),
-  });
+  const res = await postBaseAnalysis(
+    "/api/profile/base-analysis/stream",
+    baseAnalysisApiBody(profileId, userProfile, displayName),
+  );
 
   type DonePayload = { analysis?: unknown; model?: string; tokens_used?: number };
   let donePayload: DonePayload | null = null;
@@ -224,11 +246,10 @@ async function generateBaseAnalysisViaJson(
   model: string;
   tokens_used: number;
 }> {
-  const res = await fetch("/api/profile/base-analysis", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(baseAnalysisApiBody(profileId, userProfile, displayName)),
-  });
+  const res = await postBaseAnalysis(
+    "/api/profile/base-analysis",
+    baseAnalysisApiBody(profileId, userProfile, displayName),
+  );
 
   const payload = (await res.json().catch(() => ({}))) as {
     ok?: boolean;
@@ -263,12 +284,24 @@ export async function generateBaseAnalysis(
   const record = await getStoredProfileRecord(profileId);
   const displayName = record?.display_name ?? null;
 
+  const wantsStream = Boolean(callbacks?.onReasoning || callbacks?.onContent);
+
   let result: { analysis: unknown; model: string; tokens_used: number };
-  try {
-    result = await generateBaseAnalysisViaStream(profileId, data.user_profile, displayName, callbacks);
-  } catch (streamErr) {
-    console.warn("[base-analysis] Stream failed, falling back to JSON:", streamErr);
-    result = await generateBaseAnalysisViaJson(profileId, data.user_profile, displayName);
+  if (wantsStream) {
+    try {
+      result = await generateBaseAnalysisViaStream(profileId, data.user_profile, displayName, callbacks);
+    } catch (streamErr) {
+      console.warn("[base-analysis] Stream failed, falling back to JSON:", streamErr);
+      result = await generateBaseAnalysisViaJson(profileId, data.user_profile, displayName);
+    }
+  } else {
+    // Preparing / Syncro / Glyph：无流式 UI；JSON 单次请求在 iOS Safari 上更稳（SSE 长连接易报 Load failed）
+    try {
+      result = await generateBaseAnalysisViaJson(profileId, data.user_profile, displayName);
+    } catch (jsonErr) {
+      console.warn("[base-analysis] JSON failed, trying stream:", jsonErr);
+      result = await generateBaseAnalysisViaStream(profileId, data.user_profile, displayName);
+    }
   }
 
   await saveBaseAnalysis(profileId, result.analysis, {

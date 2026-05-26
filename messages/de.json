@@ -790,6 +790,7 @@
     "error_details": "Technische Details",
     "retry": "Erneut versuchen",
     "refund_instead": "Stattdessen erstatten",
+    "error_network": "Netzwerkverbindung unterbrochen. Bleiben Sie auf dieser Seite und versuchen Sie es erneut.",
     "step_0": "Geburtsmoment wird kalibriert...",
     "step_1": "Vier Säulen werden gesetzt...",
     "step_2": "Tagesmeister und fünf Elemente werden analysiert...",

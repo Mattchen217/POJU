@@ -790,6 +790,7 @@
     "error_details": "Detalles técnicos",
     "retry": "Reintentar",
     "refund_instead": "Reembolsar en su lugar",
+    "error_network": "Se interrumpió la conexión. Permanezca en esta página e inténtelo de nuevo.",
     "step_0": "Calibrando tu momento de nacimiento...",
     "step_1": "Formando tus cuatro pilares...",
     "step_2": "Analizando el maestro del día y los cinco elementos...",
