@@ -1026,7 +1026,8 @@
       "go_back": "返回重试",
       "missing_data": "缺少任务、命盘或位置信息，请从 Syncro 重新开始。",
       "profile_not_ready": "命盘分析尚未就绪，请返回准备页等待 base analysis 完成。",
-      "compute_failed": "测算失败"
+      "compute_failed": "测算失败",
+      "error_timeout": "服务器响应超时或格式异常（手机端常见）。请检查网络后重试；若反复出现，可能是计算耗时过长，请稍后再试。"
     },
     "modes": {
       "aria_label": "Syncro 显示模式",

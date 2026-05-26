@@ -1011,7 +1011,8 @@
       "go_back": "Try again",
       "missing_data": "Missing task, profile, or location. Start again from Syncro.",
       "profile_not_ready": "Your chart analysis is not ready. Return to prepare and wait for base analysis.",
-      "compute_failed": "Computation failed"
+      "compute_failed": "Computation failed",
+      "error_timeout": "The server took too long or returned an invalid response. Check your network and try again. If this keeps happening, the API may be timing out — try again in a moment."
     },
     "modes": {
       "aria_label": "Syncro display mode",

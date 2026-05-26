@@ -329,35 +329,42 @@ export async function generateSyncroMatrix(
     `[syncro] Calling LLM for text (${keyBatches.length} batches × ~${Math.ceil(allKeys.length / keyBatches.length)} keys, levels locked)...`,
   );
 
-  for (let i = 0; i < keyBatches.length; i++) {
-    const batchKeys = keyBatches[i];
-    const subMatrix = pickSubMatrix(localMatrix, batchKeys);
-    try {
-      const batch = await fetchLlmAdviceBatch({
-        profile,
-        base_analysis,
-        task_description: input.task_description.trim(),
-        user_location: input.user_location,
-        locale: input.locale,
-        current_time: startTime,
-        subMatrix,
-        true_solar: trueSolarMeta,
-        batch_index: i + 1,
-        batch_total: keyBatches.length,
-      });
-      Object.assign(mergedAdvice, batch.advice);
-      totalTokens += batch.tokens_used;
-      totalCost += batch.cost_usd;
-      lastModel = batch.model;
-      console.log(
-        `[syncro] Batch ${i + 1}/${keyBatches.length} done — ${Object.keys(batch.advice).length} keys, ${batch.tokens_used} tokens`,
-      );
-    } catch (e) {
-      console.warn(
-        `[syncro] Batch ${i + 1}/${keyBatches.length} failed — fallbacks for ${batchKeys.length} keys:`,
-        e,
-      );
-    }
+  const batchResults = await Promise.all(
+    keyBatches.map(async (batchKeys, i) => {
+      const subMatrix = pickSubMatrix(localMatrix, batchKeys);
+      try {
+        const batch = await fetchLlmAdviceBatch({
+          profile,
+          base_analysis,
+          task_description: input.task_description.trim(),
+          user_location: input.user_location,
+          locale: input.locale,
+          current_time: startTime,
+          subMatrix,
+          true_solar: trueSolarMeta,
+          batch_index: i + 1,
+          batch_total: keyBatches.length,
+        });
+        console.log(
+          `[syncro] Batch ${i + 1}/${keyBatches.length} done — ${Object.keys(batch.advice).length} keys, ${batch.tokens_used} tokens`,
+        );
+        return batch;
+      } catch (e) {
+        console.warn(
+          `[syncro] Batch ${i + 1}/${keyBatches.length} failed — fallbacks for ${batchKeys.length} keys:`,
+          e,
+        );
+        return null;
+      }
+    }),
+  );
+
+  for (const batch of batchResults) {
+    if (!batch) continue;
+    Object.assign(mergedAdvice, batch.advice);
+    totalTokens += batch.tokens_used;
+    totalCost += batch.cost_usd;
+    lastModel = batch.model;
   }
 
   const matrix = mergeLocalMatrixWithLlmAdvice(localMatrix, mergedAdvice);

@@ -3,6 +3,7 @@
  * @see docs/Syncro_v5.0_Refactor.md Step 4
  */
 
+import { safeRandomUUID } from "@/lib/client/safe-crypto";
 import { decryptJson, encryptJson } from "@/lib/crypto";
 import { getPojuDb, type SyncroSessionRecord } from "@/lib/db/poju-db";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
@@ -49,7 +50,7 @@ function fromPayload(payload: SyncroSessionPayload): SyncroSession {
 
 export async function createSyncroSession(input: CreateSyncroSessionInput): Promise<string> {
   const deviceId = getPojuDeviceId();
-  const sessionId = crypto.randomUUID();
+  const sessionId = safeRandomUUID();
   const now = new Date();
   const expires = new Date(now.getTime() + TWENTY_FOUR_HOURS_MS);
 

@@ -11,14 +11,23 @@ export type SyncroStoredLocation = {
   city_name?: string;
 };
 
+function resolveClientTimezone(preferred?: string): string {
+  const candidate =
+    preferred?.trim() ||
+    (typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : "") ||
+    "UTC";
+  try {
+    Intl.DateTimeFormat("en-US", { timeZone: candidate });
+    return candidate;
+  } catch {
+    return "UTC";
+  }
+}
+
 export function buildSyncroStoredLocation(
   input: Omit<SyncroStoredLocation, "timezone"> & { timezone?: string },
 ): SyncroStoredLocation {
-  const timezone =
-    input.timezone?.trim() ||
-    (typeof Intl !== "undefined"
-      ? Intl.DateTimeFormat().resolvedOptions().timeZone
-      : "UTC");
+  const timezone = resolveClientTimezone(input.timezone);
 
   return {
     lat: input.lat,

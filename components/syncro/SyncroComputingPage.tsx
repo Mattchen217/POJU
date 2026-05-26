@@ -8,7 +8,21 @@ import { saveSyncroToArchive } from "@/lib/archive/archive-service";
 import { createSyncroSession } from "@/lib/syncro/syncro-session";
 import { recordUsage } from "@/lib/syncro/device-usage";
 import { getStoredProfile, recordProfileUsage } from "@/lib/profile/stored-profiles-service";
+import { readFetchJson } from "@/lib/client/fetch-json";
 import { parseSyncroStoredLocation } from "@/lib/syncro/syncro-location-storage";
+
+function formatComputeError(message: string, t: (key: string) => string): string {
+  if (message.includes("non_json_response") || message.includes("invalid_json_response")) {
+    return t("error_timeout");
+  }
+  if (message.includes("empty_response")) {
+    return t("error_timeout");
+  }
+  if (message.includes("The string did not match the expected pattern")) {
+    return t("error_timeout");
+  }
+  return message;
+}
 
 export function SyncroComputingPage() {
   const router = useRouter();
@@ -78,15 +92,19 @@ export function SyncroComputingPage() {
         }),
       });
 
-      const data = (await response.json()) as {
+      const data = await readFetchJson<{
         success?: boolean;
         matrix?: unknown;
         meta?: { cost_usd?: number; model?: string; tokens_used?: number; latency_ms?: number };
         message?: string;
         error?: string;
-      };
+      }>(response);
 
       if (!response.ok) {
+        throw new Error(data.message || data.error || t("compute_failed"));
+      }
+
+      if (!data.success || !data.matrix) {
         throw new Error(data.message || data.error || t("compute_failed"));
       }
 
@@ -137,8 +155,9 @@ export function SyncroComputingPage() {
 
       router.push(`/syncro/result/${sessionId}`);
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : String(e);
-      setError(message);
+      const raw = e instanceof Error ? e.message : String(e);
+      console.error("[syncro/computing]", e);
+      setError(formatComputeError(raw, t));
     }
   }
 
