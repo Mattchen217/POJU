@@ -1,0 +1,109 @@
+{
+  "meta": {
+    "title": "Refund Policy",
+    "version": "Version 1.0",
+    "updated": "Last updated: 2026-05-23"
+  },
+  "closing": "",
+  "blocks": [
+    { "kind": "h2", "text": "Our promise" },
+    {
+      "kind": "p",
+      "text": "We want every paid purchase on pojulife to be one you're glad you made. If something goes wrong, we work with you to make it right."
+    },
+    { "kind": "h2", "text": "When you're eligible for a full refund" },
+    { "kind": "p", "text": "We issue full refunds in the following situations:" },
+    { "kind": "h3", "text": "1. Technical failure" },
+    {
+      "kind": "p",
+      "text": "If a technical issue prevented you from accessing the session or reading you purchased, you're eligible for a full refund within 7 days of purchase."
+    },
+    { "kind": "p", "text": "Examples:" },
+    {
+      "kind": "ul",
+      "items": [
+        "AI service unavailable during your session",
+        "PDF delivery failed and could not be resolved",
+        "Payment processed but no access was granted"
+      ]
+    },
+    { "kind": "h3", "text": "2. Unused session" },
+    {
+      "kind": "p",
+      "text": "If you purchased a POJU session but have not started the conversation, you're eligible for a full refund within 24 hours of purchase."
+    },
+    {
+      "kind": "p",
+      "text": "For Glyph, Syncro, and Match, \"started\" means the AI has begun generating your reading. Refunds are not available once a reading has been generated."
+    },
+    { "kind": "h3", "text": "3. Duplicate charges" },
+    {
+      "kind": "p",
+      "text": "If you were charged more than once for the same purchase, we'll refund all duplicates immediately."
+    },
+    { "kind": "h3", "text": "4. Fraudulent or unauthorized charges" },
+    {
+      "kind": "p",
+      "text": "If a charge was made without your authorization, contact us immediately. We'll refund and work with you to secure your account."
+    },
+    { "kind": "h2", "text": "What is not refundable" },
+    { "kind": "p", "text": "We do not offer refunds for:" },
+    {
+      "kind": "ul",
+      "items": [
+        "Dissatisfaction with AI-generated content. AI outputs are inherently subjective and may not match every user's expectations.",
+        "Changes of mind after a session has been started or a reading has been generated. Once delivered, the service has been performed.",
+        "Requests submitted more than 7 days after purchase.",
+        "Free first-use of Glyph, Syncro, or Match. These carry no charge, so there's nothing to refund."
+      ]
+    },
+    { "kind": "h2", "text": "Subscription clarity" },
+    {
+      "kind": "p",
+      "text": "pojulife does not offer subscriptions. All paid purchases are single, one-time charges for a specific service:"
+    },
+    {
+      "kind": "ul",
+      "items": [
+        "POJU: $9.99 per session (30-day access)",
+        "Glyph: $4.99 per reading (after the first free)",
+        "Syncro: $4.99 per 24-hour live window (after the first free)",
+        "Match: $4.99 per reading (after the first free)"
+      ]
+    },
+    {
+      "kind": "p",
+      "text": "There are no auto-renewals, recurring charges, or hidden fees. Each purchase is a transparent, one-time transaction."
+    },
+    { "kind": "h2", "text": "How to request a refund" },
+    { "kind": "p", "text": "To request a refund:" },
+    {
+      "kind": "ul",
+      "items": [
+        "Email support@pojulife.com within the eligible window (typically 7 days).",
+        "Include: your payment confirmation ID (from your receipt email); the product name (POJU / Glyph / Syncro / Match); a brief description of why you're requesting a refund.",
+        "We'll review your request within 2 business days.",
+        "If approved, refunds are processed within 5-10 business days to your original payment method."
+      ]
+    },
+    { "kind": "h2", "text": "What happens after a refund" },
+    { "kind": "p", "text": "When a refund is approved:" },
+    {
+      "kind": "ul",
+      "items": [
+        "The session, reading, or window is deactivated.",
+        "Any associated local data on your device remains there unless you choose to delete it.",
+        "Any email we collected for PDF delivery is permanently deleted (as per our standard practice — see Privacy Policy)."
+      ]
+    },
+    { "kind": "h2", "text": "Chargebacks" },
+    {
+      "kind": "p",
+      "text": "If you dispute a charge directly with your bank or card provider (a chargeback) without first contacting us, we may be unable to provide our usual support process. We strongly encourage you to email support@pojulife.com first — we resolve most issues faster than chargeback processes."
+    },
+    { "kind": "h2", "text": "Questions" },
+    { "kind": "p", "text": "Questions about this Refund Policy:" },
+    { "kind": "contact", "lines": [{ "label": "", "email": "support@pojulife.com" }] },
+    { "kind": "p", "text": "We typically respond within 24 hours." }
+  ]
+}

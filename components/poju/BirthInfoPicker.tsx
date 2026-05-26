@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import Picker from "react-mobile-picker";
+import { BirthLocationStep } from "@/components/profile/BirthLocationStep";
+import { buildDefaultBirthLocation } from "@/lib/profile/birth-info-utils";
 import { HOUR_PERIOD_INFO, type BirthInfo, type HourPeriod } from "@/lib/profile/types";
 
 const HOUR_PERIODS: HourPeriod[] = [
@@ -33,6 +35,7 @@ interface BirthInfoPickerProps {
 export function BirthInfoPicker({ onSubmit, onCancel, locale }: BirthInfoPickerProps) {
   const t = useTranslations("birth_picker");
 
+  const [step, setStep] = useState<"birth" | "location">("birth");
   const [year, setYear] = useState(1990);
   const [month, setMonth] = useState(1);
   const [day, setDay] = useState(1);
@@ -63,15 +66,46 @@ export function BirthInfoPicker({ onSubmit, onCancel, locale }: BirthInfoPickerP
   const userTimezone =
     typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC" : "UTC";
 
-  function handleSubmit() {
-    onSubmit({
+  function buildDraftBirthInfo(): Omit<BirthInfo, "birth_location"> {
+    return {
       year,
       month,
       day,
       hour_period: hourPeriod,
       gender,
       timezone: userTimezone,
+    };
+  }
+
+  function handleBirthStepContinue() {
+    setStep("location");
+  }
+
+  function handleLocationComplete(birthLocation: BirthInfo["birth_location"]) {
+    onSubmit({
+      ...buildDraftBirthInfo(),
+      birth_location: birthLocation,
     });
+  }
+
+  function handleLocationSkip() {
+    onSubmit({
+      ...buildDraftBirthInfo(),
+      birth_location: buildDefaultBirthLocation(userTimezone),
+    });
+  }
+
+  if (step === "location") {
+    return (
+      <div className="birth-info-picker">
+        <BirthLocationStep
+          userTimezone={userTimezone}
+          onSelect={handleLocationComplete}
+          onSkip={handleLocationSkip}
+          onBack={() => setStep("birth")}
+        />
+      </div>
+    );
   }
 
   return (
@@ -204,7 +238,7 @@ export function BirthInfoPicker({ onSubmit, onCancel, locale }: BirthInfoPickerP
             {t("back_to_list")}
           </button>
         ) : null}
-        <button type="button" onClick={handleSubmit} className="submit-btn">
+        <button type="button" onClick={handleBirthStepContinue} className="submit-btn">
           {t("continue")}
         </button>
       </div>

@@ -1,0 +1,326 @@
+{
+  "meta": {
+    "title": "Terms of Service",
+    "version": "Version 1.0",
+    "updated": "Last updated: 2026-05-23"
+  },
+  "closing": "By using pojulife, you acknowledge that you have read, understood, and agreed to these Terms of Service, our Privacy Policy, our Refund Policy, and our Disclaimer.",
+  "blocks": [
+    {
+      "kind": "h2",
+      "text": "Operator"
+    },
+    {
+      "kind": "p",
+      "text": "pojulife (pojulife.com) is operated by Tonghui Chen, an individual developer based in the People's Republic of China. In these Terms, \"we\", \"us\", and \"our\" refer to Tonghui Chen operating pojulife. For direct correspondence with the operator, email founder@pojulife.com."
+    },
+    {
+      "kind": "h2",
+      "text": "1. Use of services"
+    },
+    {
+      "kind": "p",
+      "text": "By accessing or using pojulife and its products — POJU, Glyph, Syncro, and Match (collectively, \"the Services\") — you agree to these Terms of Service (\"Terms\")."
+    },
+    {
+      "kind": "p",
+      "text": "The Services provide AI-powered self-reflection and decision-support tools that draw on Eastern philosophical frameworks and modern psychology research. The Services are for lawful, personal use only and are intended for users 18 years of age or older."
+    },
+    {
+      "kind": "p",
+      "text": "You agree not to:"
+    },
+    {
+      "kind": "ul",
+      "items": [
+        "Use the Services for commercial purposes without prior written permission.",
+        "Attempt to reverse-engineer, scrape, decompile, or systematically access the Services.",
+        "Use the Services to harass, defame, or harm others.",
+        "Submit illegal, threatening, or harmful content.",
+        "Impersonate others or misrepresent your identity.",
+        "Use the Services in any way that violates applicable laws or regulations."
+      ]
+    },
+    {
+      "kind": "h2",
+      "text": "2. Nature of the services"
+    },
+    {
+      "kind": "p",
+      "text": "The Services produce reflective text using artificial intelligence. Outputs are designed for personal exploration and self-reflection. They do not constitute:"
+    },
+    {
+      "kind": "ul",
+      "items": [
+        "Medical, mental health, legal, financial, or other professional advice.",
+        "Predictions of future events or outcomes.",
+        "Guarantees of specific results."
+      ]
+    },
+    {
+      "kind": "linkP",
+      "before": "See our Disclaimer at ",
+      "linkHref": "/disclaimer",
+      "linkLabel": "Disclaimer",
+      "after": " for full details."
+    },
+    {
+      "kind": "p",
+      "text": "You acknowledge that AI-generated outputs are inherently probabilistic and may contain errors. You agree to apply your own judgment to anything the Services produce."
+    },
+    {
+      "kind": "h2",
+      "text": "3. Payments"
+    },
+    {
+      "kind": "h3",
+      "text": "Pricing"
+    },
+    {
+      "kind": "ul",
+      "items": [
+        "POJU: US$9.99 per session, charged once. Each session provides 30 days of access to your conversation.",
+        "Glyph: First reading is free. Each subsequent reading is US$4.99, charged once per reading.",
+        "Syncro: First 24-hour window is free. Each subsequent window is US$4.99, charged once per window.",
+        "Match: First reading is free. Each subsequent reading is US$4.99, charged once per reading."
+      ]
+    },
+    {
+      "kind": "h3",
+      "text": "No subscriptions"
+    },
+    {
+      "kind": "p",
+      "text": "All payments are one-time only. There are no subscriptions, no automatic renewals, and no recurring charges of any kind."
+    },
+    {
+      "kind": "h3",
+      "text": "Price changes"
+    },
+    {
+      "kind": "p",
+      "text": "Prices may change in the future. You will always see the current price before completing any payment."
+    },
+    {
+      "kind": "h3",
+      "text": "Payment processing"
+    },
+    {
+      "kind": "p",
+      "text": "Card and wallet payments are processed by Dodo Payments (or its affiliates) as the merchant of record. pojulife does not store your full payment card details. Your payment confirmation and receipt may list Dodo Payments as the seller of record for the transaction."
+    },
+    {
+      "kind": "h3",
+      "text": "What you receive"
+    },
+    {
+      "kind": "ul",
+      "items": [
+        "POJU: 30-day access to your conversation, saved locally on your device.",
+        "Glyph / Match: Your complete reading, displayed on screen and optionally delivered as a PDF.",
+        "Syncro: 24-hour live access to direction-by-hour guidance for one specified task."
+      ]
+    },
+    {
+      "kind": "h2",
+      "text": "4. Refunds"
+    },
+    {
+      "kind": "linkP",
+      "before": "We offer refunds under the conditions described in our Refund Policy: ",
+      "linkHref": "/refund",
+      "linkLabel": "Refund Policy",
+      "after": "."
+    },
+    {
+      "kind": "p",
+      "text": "In summary:"
+    },
+    {
+      "kind": "ul",
+      "items": [
+        "Full refund for technical failures (within 7 days).",
+        "Full refund for unused POJU sessions (within 24 hours).",
+        "Full refund for duplicate or unauthorized charges (any time).",
+        "No refunds for dissatisfaction with AI outputs or changes of mind after delivery."
+      ]
+    },
+    {
+      "kind": "p",
+      "text": "To request a refund, email support@pojulife.com."
+    },
+    {
+      "kind": "h2",
+      "text": "5. Intellectual property"
+    },
+    {
+      "kind": "h3",
+      "text": "Our property"
+    },
+    {
+      "kind": "p",
+      "text": "The pojulife brand, logos, taglines, written content, product interfaces, and the Five Wind cards (Divine Tailwind, Fair Sky, Still Water, Crosswind, Eye of Storm) and the Five Current categories (Open Current, Following Current, Stillwater, Crosscurrent, Undertow) are proprietary to pojulife. You may not copy, modify, or redistribute them."
+    },
+    {
+      "kind": "h3",
+      "text": "Your content"
+    },
+    {
+      "kind": "p",
+      "text": "Reflective text generated for your personal Session (e.g., AI responses, PDF reports) is yours to use personally. You may not:"
+    },
+    {
+      "kind": "ul",
+      "items": [
+        "Republish AI-generated outputs as your own work.",
+        "Use AI outputs for commercial purposes.",
+        "Mass-distribute AI outputs to others."
+      ]
+    },
+    {
+      "kind": "h3",
+      "text": "Public domain references"
+    },
+    {
+      "kind": "p",
+      "text": "Classical philosophical works referenced by the Services (e.g., the I Ching, traditional bazi commentary) are in the public domain. pojulife does not claim exclusive rights over traditional ideas or texts."
+    },
+    {
+      "kind": "h2",
+      "text": "6. Account and data"
+    },
+    {
+      "kind": "p",
+      "text": "The Services are designed to work without traditional user accounts:"
+    },
+    {
+      "kind": "ul",
+      "items": [
+        "No login is required to use the Services.",
+        "Your conversations and readings are encrypted and stored locally on your device."
+      ]
+    },
+    {
+      "kind": "linkP",
+      "before": "We collect minimal data — see our ",
+      "linkHref": "/privacy",
+      "linkLabel": "Privacy Policy",
+      "after": "."
+    },
+    {
+      "kind": "p",
+      "text": "You are responsible for the security of your device. We are not liable for loss of data resulting from device loss, damage, browser clearing, or similar events. You may export PDFs of important readings before such events."
+    },
+    {
+      "kind": "h2",
+      "text": "7. Limitation of liability"
+    },
+    {
+      "kind": "p",
+      "text": "To the maximum extent permitted by law:"
+    },
+    {
+      "kind": "ul",
+      "items": [
+        "The Services are provided \"as is\" and \"as available,\" without warranties of any kind.",
+        "We are not liable for any decisions, actions, or outcomes resulting from your use of the Services.",
+        "We are not liable for indirect, incidental, consequential, or punitive damages.",
+        "Our total cumulative liability in any claim is limited to the total amount you paid to pojulife in the preceding 12 months — typically US$9.99 to US$30.00."
+      ]
+    },
+    {
+      "kind": "p",
+      "text": "See our Disclaimer for additional limitations."
+    },
+    {
+      "kind": "h2",
+      "text": "8. Changes to these Terms"
+    },
+    {
+      "kind": "p",
+      "text": "We may update these Terms to reflect changes in our Services, technology, or applicable law."
+    },
+    {
+      "kind": "p",
+      "text": "For material changes (e.g., new fees, significant restrictions, changes to refund eligibility):"
+    },
+    {
+      "kind": "ul",
+      "items": [
+        "We will notify you via an in-app banner on your next visit.",
+        "Continued use after the change constitutes acceptance.",
+        "If you do not agree, you may discontinue use."
+      ]
+    },
+    {
+      "kind": "p",
+      "text": "For minor changes (typo corrections, clarifications):"
+    },
+    {
+      "kind": "ul",
+      "items": [
+        "We will update the \"Last updated\" date.",
+        "No active notification is required."
+      ]
+    },
+    {
+      "kind": "h2",
+      "text": "9. Governing law"
+    },
+    {
+      "kind": "p",
+      "text": "These Terms are governed by the laws of the People's Republic of China, without regard to conflict-of-law principles."
+    },
+    {
+      "kind": "p",
+      "text": "Any dispute arising from or related to these Terms or the Services shall be submitted to the courts with jurisdiction in the operator's place of residence in China, unless mandatory consumer protection laws in your jurisdiction require otherwise."
+    },
+    {
+      "kind": "p",
+      "text": "If you are located in the European Union, the United Kingdom, or another jurisdiction with mandatory consumer protection laws, your statutory rights remain intact."
+    },
+    {
+      "kind": "h2",
+      "text": "10. Termination"
+    },
+    {
+      "kind": "p",
+      "text": "We reserve the right to terminate or suspend access to the Services at our discretion, particularly for:"
+    },
+    {
+      "kind": "ul",
+      "items": [
+        "Violations of these Terms.",
+        "Fraudulent activity.",
+        "Use of the Services in a way that harms other users or the platform."
+      ]
+    },
+    {
+      "kind": "p",
+      "text": "Termination does not affect:"
+    },
+    {
+      "kind": "ul",
+      "items": [
+        "Refund obligations under our Refund Policy.",
+        "Your right to data deletion under our Privacy Policy."
+      ]
+    },
+    {
+      "kind": "h2",
+      "text": "11. Contact"
+    },
+    {
+      "kind": "contact",
+      "lines": [
+        { "label": "Questions about these Terms:", "email": "legal@pojulife.com" },
+        { "label": "General support:", "email": "support@pojulife.com" },
+        { "label": "Privacy and data:", "email": "privacy@pojulife.com" }
+      ]
+    },
+    {
+      "kind": "p",
+      "text": "We do not publish a physical mailing address on this website. Physical address: [Available upon request — email legal@pojulife.com]"
+    }
+  ]
+}

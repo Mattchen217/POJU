@@ -10,7 +10,21 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { buildMatchPrompt } from "../lib/llm/prompts/match-deepseek-prompt";
+import { calculateCompatibilityMatrix } from "../lib/match/calculate-compatibility";
 import { COMPATIBILITY_LEVELS } from "../lib/match/types";
+
+const e2eMatrix = calculateCompatibilityMatrix({
+  profileA: {
+    base_analysis: {
+      content: { bazi: { day_stem: "乙", day_branch: "子" }, gender: "M" },
+    },
+  },
+  profileB: {
+    base_analysis: {
+      content: { bazi: { day_stem: "庚", day_branch: "丑" }, gender: "F" },
+    },
+  },
+});
 
 const root = join(import.meta.dirname ?? __dirname, "..");
 
@@ -70,6 +84,7 @@ const enPrompt = buildMatchPrompt({
   relationship_description:
     "My business partner of 3 years. We're considering scaling but tension has built up.",
   locale: "zh",
+  compatibilityMatrix: e2eMatrix,
 });
 assert(enPrompt.detected_language === "English", "B: English from EN input");
 
@@ -80,6 +95,7 @@ const zhPrompt = buildMatchPrompt({
   b_base_analysis: null,
   relationship_description: "我和未婚妻交往 3 年了,准备明年结婚,但我家里反对。",
   locale: "en",
+  compatibilityMatrix: e2eMatrix,
 });
 assert(zhPrompt.detected_language.includes("Chinese"), "B: Chinese from ZH input");
 assert(zhPrompt.system.includes("极其重要"), "B: language instruction in prompt");

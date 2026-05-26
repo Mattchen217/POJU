@@ -1,10 +1,10 @@
 {
   "common": {
-    "brandWordmark": "Pojulife",
-    "brand": "Pojulife",
+    "brandWordmark": "pojulife",
+    "brand": "pojulife",
     "domain": "pojulife.com",
     "tagline": "Là où l'IA rencontre mille ans de sagesse.",
-    "footerTagline": "Pour la réflexion personnelle et le divertissement. pojulife offre des perspectives, pas des prédictions. Toutes les décisions vous appartiennent.",
+    "footerTagline": "pojulife offers perspectives, not predictions. Designed for self-reflection only. All decisions are yours alone.",
     "copyright": "© 2026 pojulife. Tous droits réservés.",
     "syncroFooterTagline": "Syncro est un outil de conscience de soi. Prenez ce qui résonne. Les décisions vous appartiennent.",
     "openNavigationMenu": "Ouvrir le menu de navigation"
@@ -23,7 +23,9 @@
     "mobileSheetTitle": "Menu",
     "mobileSheetClose": "Fermer le menu",
     "mobileNavPrimary": "Explorer",
-    "mobileNavLegal": "Mentions légales"
+    "mobileNavLegal": "Mentions légales",
+    "refund": "Politique de remboursement",
+    "cookies": "Politique des cookies"
   },
   "language": {
     "short": "Langue",
@@ -33,15 +35,12 @@
   },
   "home": {
     "hero": {
-      "brand": "Poju Life",
+      "brand": "pojulife",
       "headline": "Break through what won't let you go.",
       "descLine1": "Two thousand years of Eastern wisdom.",
       "descLine2": "Confirmed by modern science.",
       "descLine3": "Translated by AI — for you, today.",
       "trustLine": "No account · No subscription · Decisions are yours alone"
-    },
-    "threeWays": {
-      "heading": "Trois entrées. Un seul passage."
     },
     "cta": {
       "startSession": "Commencer une session POJU · $9.99",
@@ -63,14 +62,22 @@
       "youBody": "Votre contexte de naissance, votre moment, votre question."
     },
     "promises": {
-      "heading": "Trois promesses que nous tenons.",
-      "neverStoredTitle": "Jamais stocké",
-      "neverStoredBody": "Vos conversations vivent chiffrées sur votre appareil. Nous ne pouvons pas les lire. Personne ne le peut.",
-      "neverRequiredTitle": "Jamais requis",
-      "neverRequiredBody": "Pas de compte. Pas de connexion. Pas de mot de passe. Email seulement si vous voulez un PDF.",
-      "neverManipulativeTitle": "Jamais manipulateur",
-      "neverManipulativeBody": "Pas de schémas trompeurs. Pas de fausse urgence. Un seul prix : $9.99 quand vous en avez besoin.",
-      "readMore": "Lire l'architecture complète de la confidentialité →"
+      "heading": "What we promise. What we won't do.",
+      "neverStoredTitle": "Never stored",
+      "neverStoredP1": "Your conversations stay encrypted on your device. Not on our servers. Not in our database.",
+      "neverStoredP2": "Even if we wanted to read them, we couldn't. Even if we were breached, there's nothing to leak.",
+      "neverStoredP3": "Your words stay yours.",
+      "neverRequiredTitle": "Never required",
+      "neverRequiredP1": "No account. No login. No password.",
+      "neverRequiredP2": "We ask for your email in two situations only: when you choose to purchase, or when you request a PDF of your reading.",
+      "neverRequiredP3": "In both cases, we send what you asked for — nothing more. No marketing. No newsletters. No drip campaigns. No third-party sharing.",
+      "neverRequiredP4": "Your inbox stays yours.",
+      "neverManipulativeTitle": "Never manipulative",
+      "neverManipulativeP1": "No subscriptions. No auto-renewals. No hidden fees. No upsells. No dark patterns.",
+      "neverManipulativeP2": "Each use is a single, transparent choice. Free tools are clearly marked. Paid tools are clearly priced — once, when you decide to use them.",
+      "neverManipulativeP3": "That's the entire business.",
+      "dataLine": "We're not a company that sells data because we don't collect data.",
+      "readMore": "Read the full privacy architecture →"
     },
     "finalCta": {
       "heading": "Quand la question ne vous lâche pas.",
@@ -101,31 +108,32 @@
       "poju": {
         "name": "POJU",
         "line1": "Pour la question qui ne vous lâche pas.",
-        "line2": "Une seule conversation profonde, jusqu'à la traverser.",
+        "line2": "A 30-day deep conversation that walks with you until you see your way through.",
         "badge": "$9.99",
-        "cta": "Essayer →"
+        "cta": "Try POJU →"
       },
       "glyph": {
         "name": "Glyph",
         "line1": "Un miroir de poche pour votre moment.",
-        "line2": "Tenez une question. Tirez un motif. Lisez un reflet.",
+        "line2": "Hold a question. Draw a pattern. Read what comes back. 60 seconds.",
         "badgeFree": "GRATUIT",
         "badgeStruck": "$1.99",
-        "cta": "Essayer →"
+        "cta": "Try Glyph free →",
+        "badge": "Free first · then $4.99"
       },
       "syncro": {
         "name": "Syncro",
         "line1": "Voyez vos rythmes naturels.",
-        "line2": "Mis à jour toutes les deux heures, sur votre téléphone.",
-        "badge": "Gratuit",
-        "cta": "Essayer →"
+        "line2": "Eight directions, twelve hour-periods. A 24-hour live companion.",
+        "badge": "Free first · then $4.99",
+        "cta": "Try Syncro free →"
       },
       "match": {
         "name": "Match",
         "line1": "Deux cartes. Une relation.",
-        "line2": "Voyez comment vos énergies s'alignent — et quoi en faire.",
-        "badge": "$4.99",
-        "cta": "Essayer →"
+        "line2": "See how your energies align — and what to do about it.",
+        "badge": "Free first · then $4.99",
+        "cta": "Try Match free →"
       }
     },
     "meetsMoment": {
@@ -155,6 +163,21 @@
         "p3": "Voyez comment deux schémas énergétiques interagissent avant de trancher.",
         "cta": "Essayer Match"
       }
+    },
+    "fourWays": {
+      "heading": "Quatre entrées. Un seul passage."
+    },
+    "built": {
+      "heading": "What we built. Why it works.",
+      "intro": "Two thousand years of human reflection on the questions that matter, examined through modern research, made accessible through AI. All for one purpose: helping you see what you couldn't see alone.",
+      "easternTitle": "Eastern Frameworks",
+      "easternBody": "For two thousand years, Eastern philosophical traditions have examined the questions humans keep asking — about decision, direction, and the patterns that shape a life.\n\nCareer. Love. Direction. Doubt.\n\nThese traditions weren't fortune-tellers. They were frameworks for thinking — refined over eighty generations of human experience.",
+      "modernTitle": "Modern Research",
+      "modernBody": "What ancient observation noticed, modern research is beginning to measure.\n\nCognitive science on how we frame decisions. Spatial psychology on attention. Circadian biology on natural rhythm. Behavioral economics on cognitive bias.\n\nThe frameworks that worked for millennia, now examined through contemporary research.",
+      "aiTitle": "AI Translation",
+      "aiBody": "We took the frameworks these traditions developed. We added what modern research has examined. We gave it to AI — to respond to your specific question, in your specific moment.\n\nNot to replace your judgment. To return the conversation to you.\n\nThese tools are designed for self-reflection and personal exploration — not for predicting outcomes, diagnosing conditions, or providing professional advice.",
+      "closingHeading": "This is what pojulife is for.",
+      "closingBody": "The questions that matter, met with the depth they deserve — across two millennia of human reflection, the rigor of modern research, and the immediacy of AI."
     }
   },
   "legal": {
@@ -164,7 +187,7 @@
   "marketingSite": {
     "common": {
       "tagline": "Là où l'IA rencontre mille ans de sagesse.",
-      "footer_disclaimer": "Pour la réflexion personnelle et le divertissement. pojulife offre des perspectives, pas des prédictions. Toutes les décisions vous appartiennent.",
+      "footer_disclaimer": "pojulife offers perspectives, not predictions. Designed for self-reflection only. All decisions are yours alone.",
       "trust_line": "Pas de compte · Pas d'abonnement · À vous de décider",
       "read_with_wink": "Lisez avec un clin d'œil. Les motifs reflètent, ils ne prédisent pas."
     },
@@ -172,7 +195,8 @@
       "poju": "POJU",
       "glyph": "Glyph",
       "syncro": "Syncro",
-      "archive": "Archives"
+      "archive": "Archives",
+      "match": "Match"
     },
     "home": {
       "hero": {
@@ -400,11 +424,12 @@
         "intro": "Ouvrez Syncro pour une lecture rapide de ce pan de journée — ce qui est mis en avant et ce qu'il vaut mieux adoucir.",
         "items_intro": "Chaque direction montre :",
         "items": [
-          "Une brève description du motif actuel",
-          "À quoi cette période convient (par exemple, conversations lentes)",
-          "À quoi cette période ne convient pas (par exemple, attendre pour les grandes demandes)"
+          "Current 2-hour pattern for each direction",
+          "Eight directions with what they suit",
+          "Where to lean in, where to slow down",
+          "Updates every two hours through your 24-hour window"
         ],
-        "footnote": "Se met à jour au fil de la journée, avec votre contexte.",
+        "footnote": "Refreshes every two hours through your 24-hour window.",
         "preview_label": "Aperçu",
         "preview_placeholder": "Maquette téléphone provisoire — remplacer par une capture Syncro quand elle est prête."
       },
@@ -450,10 +475,52 @@
           ]
         }
       },
-      "always_free": {
-        "heading": "Gratuit.",
-        "description": "Syncro reste gratuit comme votre compagnon de rythme quotidien. Ouvrez-le quand vous avez besoin de clarté sur le moment.",
-        "cta": "Ouvrir Syncro sur mobile"
+      "pricing": {
+        "heading": "Pricing",
+        "description": "Your first Syncro is free. We want you to feel how spatial reflection works with no commitment. After that, $4.99 unlocks a 24-hour live window — guidance updating every two hours for one specific task. No subscription. No auto-renewal.",
+        "cta": "Open Syncro on mobile"
+      },
+      "how_it_works": {
+        "heading": "How Syncro works.",
+        "step_1_title": "Add or pick a bazi foundation",
+        "step_1_desc": "Birth date, time, and gender. Saved on your device for any future use.",
+        "step_2_title": "Describe what you're about to do",
+        "step_2_desc": "30–100 characters. The clearer, the better.",
+        "step_3_title": "Allow location & compass access",
+        "step_3_desc": "Your location stays on your device. Your phone's compass shows where each direction is.",
+        "step_4_title": "Hold your phone and turn",
+        "step_4_desc": "Each direction shows a short reflection for the current 2-hour period."
+      },
+      "five_currents": {
+        "heading": "The five currents",
+        "intro": "Each direction × hour combination is classified into one of five patterns:",
+        "footer": "These are reflective categories, not predictions.",
+        "items": [
+          {
+            "name": "Open Current · 顺势",
+            "desc": "Move with confidence."
+          },
+          {
+            "name": "Following Current · 应时",
+            "desc": "The way supports you, with effort."
+          },
+          {
+            "name": "Stillwater · 守静",
+            "desc": "Pause and observe."
+          },
+          {
+            "name": "Crosscurrent · 横阻",
+            "desc": "Reconsider this direction or moment."
+          },
+          {
+            "name": "Undertow · 险滞",
+            "desc": "Strong friction — choose another path."
+          }
+        ]
+      },
+      "why_mobile": {
+        "heading": "Why mobile only",
+        "body": "Syncro reads your phone's compass and (optionally) camera to align with real-world direction. This requires a mobile device. On desktop, we'll show you a QR code to open Syncro on your phone."
       }
     },
     "footer": {
@@ -468,7 +535,9 @@
         "disclaimer": "Avertissement",
         "privacy": "Politique de confidentialité",
         "terms": "Conditions d'utilisation",
-        "contact": "Contact"
+        "contact": "Contact",
+        "refund": "Politique de remboursement",
+        "cookies": "Politique des cookies"
       },
       "copyright": "© 2026 pojulife. Tous droits réservés."
     }
@@ -497,6 +566,39 @@
     "skipConfirmStay": "Remplir le formulaire",
     "skipConfirmLeave": "Continuer sans données",
     "close": "Fermer"
+  },
+  "profile": {
+    "birth_location": {
+      "title": "Birth location?",
+      "subtitle": "For precise chart calculation, tell us your birth city",
+      "why_link": "Why birth location matters?",
+      "explanation_1": "Astrological charts must use true solar time, not timezone average.",
+      "explanation_2": "True solar time depends on the longitude of birth location.",
+      "explanation_example": "Example: Urumqi uses Beijing time, but true solar time differs by 2 hours.",
+      "skip_use_default": "I'm not sure — use defaults",
+      "default_note": "Defaults use timezone center longitude ({timezone}).",
+      "confirm_city": "Use this city",
+      "back": "Back to birth details"
+    },
+    "upgrade": {
+      "title": "Update for precise calculations",
+      "description": "Your chart was generated without birth location.",
+      "current_chart": "Current chart",
+      "using_default_warning": "Used default longitude — may have hour pillar inaccuracy",
+      "upgrade_chart": "Update chart with this location",
+      "keep_old_for_now": "Keep current chart for now",
+      "badge_precise": "✓ Precise chart",
+      "badge_upgradeable": "🔄 Upgrade for accuracy",
+      "upgrading": "Updating…",
+      "upgrade_success": "Chart updated.",
+      "hour_pillar_changed": "Hour pillar: {old} → {new}",
+      "hour_pillar_unchanged": "Hour pillar: {pillar}",
+      "tst_diff_minutes": "Correction: {minutes} min",
+      "base_analysis_regenerated": "Base analysis regenerated.",
+      "done": "Done",
+      "male": "Male",
+      "female": "Female"
+    }
   },
   "profile_selector": {
     "loading": "Loading saved profiles…",
@@ -763,6 +865,8 @@
     "hour_label": "Heure de naissance",
     "gender_label": "Genre",
     "timezone_label": "Fuseau horaire",
+    "location_label": "Birth location",
+    "location_default": "Default (timezone center)",
     "male": "Homme",
     "female": "Femme",
     "reassure_1": "Vos données restent sur cet appareil, chiffrées.",
@@ -897,7 +1001,7 @@
       "description": "Match tisse les deux fondations bazi — la vôtre et la leur — pour révéler comment vos énergies s'alignent, où vous vous soutenez, où vous heurtez et quoi faire.",
       "cta_free": "Lancer un Match gratuit",
       "cta_paid": "Lancer un Match — $4.99",
-      "free_note": "Le premier Match est offert. Aucune carte requise pour voir comment ça marche.",
+      "free_note": "First Match free. After that, $4.99 per reading.",
       "paid_note": "Une lecture. Rapport complet. 5 sections.",
       "feature_two_charts_title": "Analyse à deux charts",
       "feature_two_charts_desc": "Lectures individuelles profondes des deux personnes, puis une analyse en couches de votre rencontre.",
@@ -954,7 +1058,14 @@
       "faq_q3": "Puis-je faire plus de deux personnes à la fois ?",
       "faq_a3": "Match se concentre sur les dynamiques à deux — pour garder une lecture profonde et claire. Pour des situations complexes (vous + conjoint + parent), nous suggérons des Matches séparés par relation.",
       "faq_q4": "En quoi Match diffère-t-il de POJU ?",
-      "faq_a4": "POJU est une conversation profonde de 30 jours sur votre situation. Match est une lecture ponctuelle à deux charts sur une relation précise. Outils différents — beaucoup utilisent les deux."
+      "faq_a4": "POJU est une conversation profonde de 30 jours sur votre situation. Match est une lecture ponctuelle à deux charts sur une relation précise. Outils différents — beaucoup utilisent les deux.",
+      "not_title": "What Match is not",
+      "not_items": [
+        "A predictor of relationship outcomes",
+        "A promise of compatibility results",
+        "A replacement for professional counseling"
+      ],
+      "not_footer": "Match offers perspectives, not predictions. What you do with them is entirely yours."
     },
     "subtitle": "Deux charts. Une relation. Une vraie clarté.",
     "description": "Match tisse les deux charts bazi — le vôtre et le leur — pour révéler comment vos énergies s'alignent, où vous vous soutenez, où vous heurtez et quoi faire.",

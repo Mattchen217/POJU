@@ -87,7 +87,7 @@ export interface StoredProfileRecord {
   base_analysis_at?: Date;
 }
 
-/** v5: 时辰段 + 时区（无经纬度/地点名）。Legacy rows normalized on read. */
+/** v5 birth + optional true solar time metadata. Legacy rows normalized on read. */
 export interface StoredProfileBirthInfo {
   year: number;
   month: number;
@@ -98,20 +98,28 @@ export interface StoredProfileBirthInfo {
   minute?: number;
   gender: "M" | "F" | "X";
   timezone: string;
+  birth_location?: import("@/lib/profile/types").BirthLocation;
+  tst_meta?: import("@/lib/profile/types").TstMeta;
+  /** @deprecated flat legacy — prefer birth_location */
   longitude?: number;
   latitude?: number;
   location_name?: string;
 }
 
+export interface StoredProfileBaseAnalysis {
+  generated_at: string;
+  model: string;
+  content: unknown;
+  tokens_used: number;
+  /** True when chart used user-provided birth coordinates. */
+  used_true_solar_time?: boolean;
+  tst_meta?: import("@/lib/profile/types").TstMeta;
+}
+
 export interface StoredProfileData {
   birth_info: StoredProfileBirthInfo;
   user_profile: UserProfile;
-  base_analysis?: {
-    generated_at: string;
-    model: string;
-    content: unknown;
-    tokens_used: number;
-  };
+  base_analysis?: StoredProfileBaseAnalysis;
 }
 
 /** POJU 改进 3 — encrypted action-plan vault rows. */

@@ -3,6 +3,7 @@
 import { Suspense } from "react";
 import { useTranslations } from "next-intl";
 
+import { SyncroGuardedRoute } from "@/components/syncro/SyncroGuardedRoute";
 import { SyncroPreparingPage } from "@/components/syncro/SyncroPreparingPage";
 import { PreparingStatusOverlay } from "@/components/poju/PreparingStatusOverlay";
 
@@ -18,7 +19,9 @@ function SyncroPreparingFallback() {
 export default function SyncroPreparingRoutePage() {
   return (
     <Suspense fallback={<SyncroPreparingFallback />}>
-      <SyncroPreparingPage />
+      <SyncroGuardedRoute>
+        <SyncroPreparingPage />
+      </SyncroGuardedRoute>
     </Suspense>
   );
 }

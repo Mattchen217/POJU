@@ -17,6 +17,8 @@ import { HOUR_PERIOD_INFO } from "@/lib/profile/types";
 import { normalizeStoredBirthInfo } from "@/lib/profile/birth-info-utils";
 import type { UserProfile } from "@/lib/profile/types";
 import { generateBaseAnalysis } from "@/lib/llm/deepseek/base-analysis";
+import { ProfileAccuracyBadge } from "@/components/profile/ProfileAccuracyBadge";
+import { ProfileUpgradeModal } from "@/components/profile/ProfileUpgradeModal";
 
 export interface ProfileSelectorProps {
   product: "poju" | "glyph" | "syncro";
@@ -63,6 +65,7 @@ export function ProfileSelector({ product, onSelected, onCancel, allowSkip, onSk
   const [profiles, setProfiles] = useState<StoredProfileSummary[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [upgradeTarget, setUpgradeTarget] = useState<StoredProfileSummary | null>(null);
 
   async function loadProfiles() {
     setLoading(true);
@@ -108,6 +111,7 @@ export function ProfileSelector({ product, onSelected, onCancel, allowSkip, onSk
           }}
           onAddNew={() => setStep("create")}
           onDelete={(id) => void handleDelete(id)}
+          onUpgrade={(p) => setUpgradeTarget(p)}
           onCancel={onCancel}
           allowSkip={allowSkip}
           onSkip={onSkip}
@@ -137,6 +141,14 @@ export function ProfileSelector({ product, onSelected, onCancel, allowSkip, onSk
         />
       ) : null}
 
+      {upgradeTarget ? (
+        <ProfileUpgradeModal
+          profile={upgradeTarget}
+          onClose={() => setUpgradeTarget(null)}
+          onUpgraded={() => void loadProfiles()}
+        />
+      ) : null}
+
     </div>
   );
 }
@@ -146,6 +158,7 @@ function ProfileListView({
   onSelect,
   onAddNew,
   onDelete,
+  onUpgrade,
   onCancel,
   allowSkip,
   onSkip,
@@ -154,6 +167,7 @@ function ProfileListView({
   onSelect: (id: string) => void;
   onAddNew: () => void;
   onDelete: (id: string) => void;
+  onUpgrade: (summary: StoredProfileSummary) => void;
   onCancel?: () => void;
   allowSkip?: boolean;
   onSkip?: () => void;
@@ -195,6 +209,9 @@ function ProfileListView({
                   {t("analyzed")}
                 </span>
               ) : null}
+              <div className="mt-2">
+                <ProfileAccuracyBadge profile={p} onUpgrade={() => onUpgrade(p)} />
+              </div>
             </button>
             <div className="mt-2 flex gap-2 border-t border-white/10 pt-2">
               <button type="button" className="text-xs text-red-300/90 hover:underline" onClick={() => onDelete(p.profile_id)}>
@@ -272,6 +289,10 @@ function ProfileConfirmView({
   if (loadingProfile || data === undefined) return <p className="text-sm text-text-secondary">{t("loading")}</p>;
   if (data === null) return <p className="text-sm text-red-300">Profile not found.</p>;
   const birth = normalizeStoredBirthInfo(data.birth_info as unknown as Record<string, unknown>);
+  const locationLabel =
+    birth.birth_location?.use_defaults === false
+      ? birth.birth_location.name
+      : birth.birth_location?.name ?? birth.timezone;
 
   return (
     <div className="space-y-4 rounded-xl border border-white/10 bg-black/25 p-4">
@@ -292,7 +313,7 @@ function ProfileConfirmView({
         </div>
         <div className="flex justify-between gap-4">
           <dt className="text-text-dim">{t("birth_location_label")}</dt>
-          <dd className="text-text-primary">{birth.timezone}</dd>
+          <dd className="text-text-primary">{locationLabel}</dd>
         </div>
         <div className="flex justify-between gap-4">
           <dt className="text-text-dim">{t("gender_label")}</dt>

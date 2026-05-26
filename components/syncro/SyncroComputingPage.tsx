@@ -8,6 +8,7 @@ import { saveSyncroToArchive } from "@/lib/archive/archive-service";
 import { createSyncroSession } from "@/lib/syncro/syncro-session";
 import { recordUsage } from "@/lib/syncro/device-usage";
 import { getStoredProfile, recordProfileUsage } from "@/lib/profile/stored-profiles-service";
+import { parseSyncroStoredLocation } from "@/lib/syncro/syncro-location-storage";
 
 export function SyncroComputingPage() {
   const router = useRouter();
@@ -51,7 +52,10 @@ export function SyncroComputingPage() {
         throw new Error(t("missing_data"));
       }
 
-      const location = JSON.parse(locationStr) as { lat: number; lng: number };
+      const location = parseSyncroStoredLocation(locationStr);
+      if (!location) {
+        throw new Error(t("missing_data"));
+      }
       const profileRow = await getStoredProfile(profileId);
       if (!profileRow?.user_profile || profileRow.base_analysis?.content == null) {
         throw new Error(t("profile_not_ready"));
@@ -66,7 +70,7 @@ export function SyncroComputingPage() {
           user_location: {
             latitude: location.lat,
             longitude: location.lng,
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            timezone: location.timezone,
           },
           locale,
           user_profile: profileRow.user_profile,
@@ -87,7 +91,7 @@ export function SyncroComputingPage() {
       }
 
       const llmMeta = data.meta ?? {};
-      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const timezone = location.timezone;
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
       const matrix = data.matrix as import("@/lib/syncro/types").SyncroMatrix;
 

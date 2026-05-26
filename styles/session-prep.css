@@ -139,6 +139,101 @@
   margin-bottom: 8px;
 }
 
+.profile-card-wrapper {
+  width: 100%;
+}
+
+.profile-badge {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.profile-badge-precise {
+  background: rgba(76, 175, 80, 0.15);
+  color: #81c784;
+  border: 1px solid rgba(76, 175, 80, 0.25);
+}
+
+.profile-badge-upgradeable {
+  background: rgba(255, 193, 7, 0.1);
+  color: #ffc107;
+  border: 1px solid rgba(255, 193, 7, 0.25);
+}
+
+.profile-badge-action {
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.profile-badge-action:hover {
+  background: rgba(255, 193, 7, 0.18);
+  border-color: rgba(255, 193, 7, 0.45);
+}
+
+.profile-upgrade-info-box {
+  background: rgba(255, 193, 7, 0.06);
+  border: 1px solid rgba(255, 193, 7, 0.2);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.profile-upgrade-info-box strong {
+  color: #ffc107;
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.profile-upgrade-info-box p {
+  color: #ccc;
+  font-size: 13px;
+  margin: 0 0 6px;
+  line-height: 1.5;
+}
+
+.profile-upgrade-info-box .warning {
+  color: #ffb74d;
+  font-size: 12px;
+}
+
+.profile-upgrade-success {
+  text-align: center;
+  padding: 8px 0;
+}
+
+.profile-upgrade-success p {
+  color: #ccc;
+  font-size: 14px;
+  margin: 0 0 8px;
+  line-height: 1.6;
+}
+
+.profile-upgrade-success .hour-change {
+  color: #ffc107;
+  font-weight: 600;
+}
+
+.profile-upgrade-success .diff-note {
+  color: #888;
+  font-size: 12px;
+}
+
+.profile-upgrade-error {
+  color: #ef5350;
+  font-size: 13px;
+  margin: 12px 0 0;
+}
+
+.profile-upgrade-modal .city-search {
+  margin-top: 0;
+}
+
 .birth-info-picker {
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(212, 175, 55, 0.15);
@@ -246,6 +341,104 @@
 
 .submit-btn:hover {
   background: #e8c56f;
+}
+
+.birth-location-step {
+  width: 100%;
+}
+
+.birth-location-step .why-link {
+  background: transparent;
+  border: none;
+  color: #87ceeb;
+  font-size: 13px;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 16px;
+}
+
+.birth-location-explanation {
+  background: rgba(135, 206, 235, 0.05);
+  border-left: 3px solid #87ceeb;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  border-radius: 0 8px 8px 0;
+}
+
+.birth-location-explanation p {
+  color: #aaa;
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 0 0 8px;
+}
+
+.birth-location-explanation .example {
+  color: #87ceeb;
+  font-size: 12px;
+}
+
+.birth-location-step .skip-button {
+  display: block;
+  width: 100%;
+  margin-top: 20px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #888;
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.birth-location-step .skip-button:hover {
+  color: #ccc;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.birth-location-step .default-note {
+  color: #666;
+  font-size: 12px;
+  margin-top: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.selected-city-preview {
+  margin-top: 16px;
+  padding: 16px;
+  background: rgba(212, 175, 55, 0.08);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.selected-city-name {
+  display: block;
+  color: #d4af37;
+  font-weight: 600;
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+.selected-city-coords {
+  display: block;
+  color: #888;
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  margin-bottom: 12px;
+}
+
+.confirm-city-btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+
+.location-back-actions {
+  margin-top: 16px;
 }
 
 .refund-link-section {

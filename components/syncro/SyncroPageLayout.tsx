@@ -3,11 +3,12 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 
+import { Suspense } from "react";
+
 import { SyncroDesktopBanner } from "@/components/syncro/syncro-desktop-banner";
-import { SyncroDesktopOnlyView } from "@/components/syncro/SyncroDesktopOnlyView";
 import { SyncroIncompatible } from "@/components/syncro/syncro-incompatible";
 import { SyncroMobileStartSection } from "@/components/syncro/SyncroMobileStartSection";
-import { detectDevice } from "@/lib/device-detection";
+import { detectDeviceCapability } from "@/lib/syncro/device-capability";
 
 /**
  * Wraps Syncro marketing content with device-specific footer:
@@ -18,11 +19,12 @@ export function SyncroPageLayout({ marketing }: { marketing: ReactNode }) {
   const [mode, setMode] = useState<"desktop" | "no_compass" | "mobile">("mobile");
 
   useEffect(() => {
-    const d = detectDevice();
-    if (d.type === "desktop") setMode("desktop");
-    else if (!d.hasCompass) setMode("no_compass");
-    else setMode("mobile");
-    setReady(true);
+    void detectDeviceCapability().then((cap) => {
+      if (cap.isDesktop) setMode("desktop");
+      else if (cap.isMobile && !cap.hasOrientationSensor) setMode("no_compass");
+      else setMode("mobile");
+      setReady(true);
+    });
   }, []);
 
   if (!ready) {
@@ -35,7 +37,15 @@ export function SyncroPageLayout({ marketing }: { marketing: ReactNode }) {
     <main className="text-text-body">
       {mode === "desktop" ? <SyncroDesktopBanner /> : null}
       {marketing}
-      {mode === "desktop" ? <SyncroDesktopOnlyView embedded /> : <SyncroMobileStartSection />}
+      <Suspense
+        fallback={
+          <section id="syncro-start" className="mx-auto w-full max-w-lg px-4 pb-16 pt-4 text-center text-text-secondary">
+            …
+          </section>
+        }
+      >
+        <SyncroMobileStartSection />
+      </Suspense>
     </main>
   );
 }

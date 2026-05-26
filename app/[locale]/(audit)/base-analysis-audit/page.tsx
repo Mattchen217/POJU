@@ -7,6 +7,7 @@ import type { BaseAnalysisAuditListItem } from "@/lib/dev/base-analysis-audit-ty
 export default function BaseAnalysisAuditListPage() {
   const [items, setItems] = useState<BaseAnalysisAuditListItem[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [hint, setHint] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -14,13 +15,20 @@ export default function BaseAnalysisAuditListPage() {
     setError(null);
     try {
       const res = await fetch("/api/dev/base-analysis-audit");
-      const data = (await res.json()) as { ok?: boolean; items?: BaseAnalysisAuditListItem[]; error?: string };
+      const data = (await res.json()) as {
+        ok?: boolean;
+        items?: BaseAnalysisAuditListItem[];
+        error?: string;
+        hint?: string | null;
+      };
       if (!res.ok || !data.ok) {
         setError(data.error || `HTTP ${res.status}`);
+        setHint(typeof data.hint === "string" ? data.hint : null);
         setItems([]);
         return;
       }
       setItems(data.items ?? []);
+      setHint(typeof data.hint === "string" ? data.hint : null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
@@ -37,7 +45,8 @@ export default function BaseAnalysisAuditListPage() {
       <header className="border-b border-white/10 px-6 py-5">
         <h1 className="text-xl font-semibold tracking-tight">命主基础分析 · 审核台</h1>
         <p className="mt-1 max-w-2xl text-sm text-white/55">
-          每次调用 DeepSeek 生成基础分析时，服务端会在此保存明文 JSON（仅本地开发默认开启）。
+          每次调用 DeepSeek 生成基础分析时，服务端会尝试保存明文 JSON。本地 <code className="text-white/70">pnpm dev</code>{" "}
+          默认可用；线上 pojulife.com 默认关闭或无法持久化，见下方说明。
         </p>
         <div className="mt-3 flex flex-wrap gap-3 text-sm">
           <button
@@ -56,9 +65,15 @@ export default function BaseAnalysisAuditListPage() {
         {error ? (
           <p className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">{error}</p>
         ) : null}
+        {hint ? (
+          <p className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100/90">
+            {hint}
+          </p>
+        ) : null}
         {!loading && !error && items.length === 0 ? (
           <p className="text-white/50">
-            暂无记录。请重新确认出生并走完 preparing（已有缓存的档案不会再次调用 API）。
+            暂无记录。若在本地开发：新建档案后走 POJU preparing / Glyph 抽牌前 / Profile 确认页「生成基础分析」会写入此目录。
+            已有 <code className="text-white/60">has_base_analysis</code> 的档案不会再次调 API。线上分析结果在浏览器 IndexedDB，不会出现在此列表。
           </p>
         ) : null}
 

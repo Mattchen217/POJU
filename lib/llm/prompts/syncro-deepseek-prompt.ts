@@ -1,124 +1,185 @@
-/**
- * Syncro v5 — DeepSeek 96-combination matrix prompt.
- * @see docs/Syncro_v5.0_Refactor.md Step 8
- */
-
-import {
-  buildSyncroCorePromptSections,
-} from "@/lib/llm/prompts/syncro-base";
-import {
-  buildCurrentDateContext,
-  buildLanguageGuidance,
-  buildNorthAmericaAdaptation,
-  buildProfileContextSection,
-  detectLanguage,
-  stitchPromptSections,
-} from "@/lib/llm/prompts/oriental-counselor-base";
-import { CURRENT_LEVELS, DIRECTIONS, type DirectionId } from "@/lib/syncro/current-system";
-import { generateNext12HourPeriodSlots } from "@/lib/syncro/hour-period-slots";
-import { HOUR_PERIODS, type HourPeriod } from "@/lib/syncro/types";
-import type { UserProfile } from "@/lib/profile/types";
-
-export type BuildSyncroPromptInput = {
-  profile: UserProfile | null;
-  base_analysis: unknown;
-  task_description: string;
-  user_location: { latitude: number; longitude: number; timezone: string };
-  locale: string;
-  current_time: Date;
-};
-
-const DIRECTION_IDS = Object.keys(DIRECTIONS) as DirectionId[];
-const CURRENT_LEVEL_IDS = Object.keys(CURRENT_LEVELS);
-
-export function buildSyncroPrompt(input: BuildSyncroPromptInput): {
-  system: string;
-  user: string;
-} {
-  const { profile, base_analysis, task_description, user_location, locale, current_time } = input;
-  const hourPeriodsList = generateNext12HourPeriodSlots(current_time);
-  const outputLang = detectLanguage(task_description, locale);
-  const isZh = outputLang.includes("Chinese") || locale.startsWith("zh");
-
-  const exampleKey = `${hourPeriodsList[0]?.hour_period ?? "mao"}__N`;
-
-  const periodsBlock = hourPeriodsList
-    .map(
-      (p, i) =>
-        `${i + 1}. ${isZh ? p.hour_period_name_zh : p.hour_period_name_en} (${p.hour_period}) — ${p.start_time} → ${p.end_time}`,
-    )
-    .join("\n");
-
-  const currentLevelsBlock = CURRENT_LEVEL_IDS.map((id) => {
-    const info = CURRENT_LEVELS[id as keyof typeof CURRENT_LEVELS];
-    return `- ${id}: ${info.name_en} / ${info.name_zh}`;
-  }).join("\n");
-
-  const taskBlock = `# 当前任务：Syncro 方位 × 时辰矩阵（24 小时陪伴窗口）
-
-用户即将要做的事：
-"${task_description.replace(/"/g, '\\"')}"
-
-用户当前位置：
-经度 ${user_location.longitude.toFixed(4)}，纬度 ${user_location.latitude.toFixed(4)}
-时区：${user_location.timezone}
-
-# 接下来 12 个时辰（用户本地时间，从当前时辰起连续 12 段）
-
-${periodsBlock}
-
-# Current 5 等级（对用户输出仅用此体系 — 禁止吉凶词）
-
-${currentLevelsBlock}
-
-# 你的工作
-
-为以上 12 个时辰 × 8 个方位 = **96** 个组合，每个都给出：
-
-1. **current_level**（严格使用上面 5 个 id 之一）
-2. **short_advice**（30–50 字${isZh ? "中文" : "英文"}）— 直接行动指引，扣住用户任务；不重复等级英文名
-3. **detailed_advice**（100–200 字）— 展开时机+方位+命局（须引日主/大运/用神至少一项）；具体行动
-4. **rationale**（100–200 字）— 天时地利人和为何合成该 Current；可用 Syncro 语言内化奇门推演，禁止写八门/奇门遁甲
-
-# 输出格式（严格 JSON）
-
-只输出一个 JSON 对象，无 markdown 围栏：
-
-{
-  "matrix": {
-    "${exampleKey}": {
-      "current_level": "open_current",
-      "short_advice": "...",
-      "detailed_advice": "...",
-      "rationale": "..."
-    }
-  }
-}
-
-# 关键规则
-
-1. **8 方位 ID** 仅限：${DIRECTION_IDS.join(", ")}
-2. **12 时辰 ID** 仅限：${Object.keys(HOUR_PERIODS).join(", ")}
-3. **key 格式**：\`{hour_period}__{direction_id}\`（例：mao__SE、wu__N）
-4. **必须输出全部 96 个 key**，缺一不可
-5. **不均匀分布**：按奇门时空推演 + 命局，禁止平均分配或全 open_current
-6. **命局关联**：detailed_advice / rationale 须体现日主、大运、用神
-7. **语言**：${outputLang}（short/detailed/rationale 全部同一语言）
-8. **品牌**：遵守 Syncro 输出品牌 — 禁奇门术语、禁吉凶词、禁 POJU/Glyph/Match`;
-
-  const system = stitchPromptSections(
-    ...buildSyncroCorePromptSections(),
-    buildCurrentDateContext(current_time, locale),
-    buildLanguageGuidance(locale, task_description),
-    buildNorthAmericaAdaptation(locale),
-    buildProfileContextSection(profile, base_analysis),
-    taskBlock,
-  );
-
-  const user = isZh
-    ? "请按 Syncro 时空顾问法则生成完整 96 组合 JSON（matrix 内 96 个 key）。Current 等级 + 奇门内化推演，用户可见处只用 Syncro 语言。"
-    : "Generate the complete 96-combination JSON (96 keys in matrix). Use Current levels only; apply Qimen logic internally, Syncro branding in all user-visible strings.";
-
-  return { system, user };
-}
-
+/**
+ * Syncro v5.1 — LLM prompt for 96-combination copy only (levels precomputed locally).
+ * @see docs/Syncro_Calculation_Engine.md Step 6
+ */
+
+import { buildSyncroCorePromptSections } from "@/lib/llm/prompts/syncro-base";
+import {
+  buildCurrentDateContext,
+  buildLanguageGuidance,
+  buildProfileContextSection,
+  detectLanguage,
+  stitchPromptSections,
+} from "@/lib/llm/prompts/oriental-counselor-base";
+import type { MatrixCell, SyncroMatrixMetadata } from "@/lib/syncro/calculate-matrix";
+import type { UserProfile } from "@/lib/profile/types";
+
+/** Slim payload for LLM — levels locked, no empty advice fields. */
+export function slimMatrixForLlm(
+  matrix: Record<string, MatrixCell>,
+): Record<string, unknown> {
+  const slim: Record<string, unknown> = {};
+  for (const [key, cell] of Object.entries(matrix)) {
+    slim[key] = {
+      hour_period: cell.hour_period,
+      direction_id: cell.direction_id,
+      current_level: cell.current_level,
+      total_score: cell._internal.total_score,
+      key_factors: cell._internal.key_factors,
+      qimen_data: cell._internal.qimen_data,
+    };
+  }
+  return slim;
+}
+
+export type BuildSyncroPromptInput = {
+  profile: UserProfile | null;
+  base_analysis: unknown;
+  task_description: string;
+  user_location: { latitude: number; longitude: number; timezone: string };
+  locale: string;
+  current_time?: Date;
+  /** Precomputed cells — includes current_level and _internal; LLM fills copy only */
+  matrix: Record<string, MatrixCell>;
+  true_solar?: SyncroMatrixMetadata;
+  batch_index?: number;
+  batch_total?: number;
+};
+
+export function buildSyncroPrompt(input: BuildSyncroPromptInput): {
+  system: string;
+  user: string;
+} {
+  const {
+    profile,
+    base_analysis,
+    task_description,
+    user_location,
+    locale,
+    matrix,
+  } = input;
+  const current_time = input.current_time ?? new Date();
+  const outputLanguage = detectLanguage(task_description, locale);
+  const escapedTask = task_description.replace(/"/g, '\\"');
+  const cellCount = Object.keys(matrix).length;
+  const slimMatrix = slimMatrixForLlm(matrix);
+  const batchNote =
+    input.batch_total && input.batch_total > 1
+      ? `\n本批为第 ${input.batch_index ?? 1}/${input.batch_total} 批，仅处理下列 ${cellCount} 个 key。\n`
+      : "";
+
+  const taskBlock = `# 当前任务：Syncro 96 组合文案生成
+${batchNote}
+
+用户即将要做的事情：
+"${escapedTask}"
+
+用户当前位置：
+经度 ${user_location.longitude.toFixed(4)}，纬度 ${user_location.latitude.toFixed(4)}
+时区：${user_location.timezone}
+${buildTrueSolarSection(input.true_solar)}
+
+# ⭐⭐⭐ 极其重要：矩阵已经计算好了
+
+后台已基于完整命理模型（奇门遁甲盘 + 用神方位 + 时辰天干 + 日主 + 任务偏好）精确计算每个组合的 **current_level**。
+
+5 个维度（已加权）：
+  1. 奇门遁甲盘信号（35%）— 八门 / 八神 / 九星 / 三奇六仪 / 空亡
+  2. 用神方位匹配（25%）
+  3. 时辰天干 vs 用神（20%）
+  4. 日主 vs 方位（10%）
+  5. 任务匹配方位含义（10%）
+
+# ⛔ 严格禁止
+
+你【绝不能】：
+  ✗ 修改任何 current_level（已是计算结果）
+  ✗ 重新判断哪个组合是 open_current
+  ✗ 质疑等级的准确性
+  ✗ 在输出 JSON 中包含 current_level、hour_start_iso、_internal 等字段
+
+你只需要：
+  ✓ 为每个组合写 short_advice（30–50 字/词）
+  ✓ 为每个组合写 detailed_advice（100–200 字/词）
+  ✓ 为每个组合写 rationale（100–200 字/词）
+
+# 组合数据（已计算 — 供你写文案参考）
+
+${JSON.stringify(slimMatrix, null, 2)}
+
+# 你的工作
+
+为 matrix 中每个 key（共 ${cellCount} 个），仅输出 short_advice / detailed_advice / rationale。
+
+写作要求：
+
+1. **short_advice**（30–50 字/词）
+   - 直接行动指引，符合该方位 × 时辰 × **已有** current_level
+   - 不重复等级英文名（Open Current 等）
+   - 英文建议动词开头：Move… / Wait… / Pause…
+
+2. **detailed_advice**（100–200 字/词）
+   - 展开命理依据 + 具体行动
+   - 引用用户命局（日主 / 用神 / 大运至少一项）
+   - 可内化 _internal.qimen_data 中的门星神信号，**用户可见处用 Syncro 语言**，不写八门/奇门遁甲
+
+3. **rationale**（100–200 字/词）
+   - 解释为何是该 current_level（等级已固定）
+   - 引用 _internal.key_factors 中的主导因素
+   - 把得分逻辑译成命理语言；**勿写 +28.5 等数字**
+   - 可用「水势汇聚」「三方助力」「主吉星当头」等表述
+
+# 关键规则
+
+1. **本批所有 key 必须全部填充**（共 ${cellCount} 个）
+2. **输出 JSON 每个 cell 仅含 3 个字段**：short_advice、detailed_advice、rationale
+3. **语言**：${outputLanguage}
+4. **品牌**：用户可见处只用 Syncro + Current 等级名；禁 POJU / Glyph / Match；禁吉凶词
+
+# 输出格式（严格 JSON）
+
+只输出 JSON，无 markdown 围栏：
+
+{
+  "matrix": {
+    "zi__N": {
+      "short_advice": "...",
+      "detailed_advice": "...",
+      "rationale": "..."
+    }
+  }
+}`;
+
+  const system = stitchPromptSections(
+    ...buildSyncroCorePromptSections(),
+    buildCurrentDateContext(current_time, locale),
+    buildLanguageGuidance(locale, task_description),
+    buildProfileContextSection(profile, base_analysis),
+    taskBlock,
+  );
+
+  const user = `请为已计算好的矩阵生成 short_advice / detailed_advice / rationale 文案（本批 ${cellCount} 个 key）。
+不要修改 current_level。${outputLanguage}。严格 JSON，matrix 内每个 key 缺一不可。`;
+
+  return { system, user };
+}
+
+function buildTrueSolarSection(meta: SyncroMatrixMetadata | undefined): string {
+  if (!meta) return "";
+
+  const sign = meta.diffMinutes > 0 ? "+" : "";
+  return `
+# ⭐ 真太阳时背景
+
+用户位置：经度 ${meta.longitude.toFixed(4)}°，纬度 ${meta.latitude.toFixed(4)}°
+用户本地时间：${meta.localTime}
+真太阳时：${meta.trueSolarTime}
+真太阳时与本地时间差：${sign}${meta.diffMinutes} 分钟（经度 ${meta.longitudeDiffMinutes}，时差方程 ${meta.eqOfTimeMinutes}）
+
+矩阵中的【时辰】已基于真太阳时计算，不是本地时区平均时。
+
+若在 rationale 中解释时辰，可写：
+「基于你所在位置的真太阳时（相对本地时间 ${sign}${meta.diffMinutes} 分钟）…」
+或简化为：「本时辰基于你的真实地理位置计算…」
+`;
+}

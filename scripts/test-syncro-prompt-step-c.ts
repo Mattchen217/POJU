@@ -8,6 +8,7 @@ import { resolve } from "node:path";
 
 import { calculateProfile } from "@/lib/calculations";
 import { buildSyncroPrompt } from "@/lib/llm/prompts/syncro-deepseek-prompt";
+import { calculateSyncroMatrix } from "@/lib/syncro/calculate-matrix";
 import {
   SYNCRO_OUTPUT_BRANDING,
   SYNCRO_QIMEN_DUNJIA_IDENTITY,
@@ -73,24 +74,41 @@ async function main(): Promise<void> {
   const profile = await calculateProfile(birth);
   profile.id = "syncro-step-c-test";
 
+  const base_analysis = {
+    bazi: { day_master: "丙" },
+    yong_shen: { primary_element: "木" },
+    current_major_luck: { period: "2018-2028", theme: "食神生财，创意变现" },
+  };
+  const task_description =
+    "我要今天下午去和客户谈合同签约，该往哪个方向走、什么时辰最合适？";
+  const current_time = new Date("2026-05-18T14:30:00-07:00");
+
+  const { matrix, metadata } = calculateSyncroMatrix({
+    profile: { base_analysis: { content: base_analysis }, user_profile: profile },
+    taskDescription: task_description,
+    startTime: current_time,
+    userTimezone: "America/Los_Angeles",
+    userLongitude: -118.24,
+    userLatitude: 34.05,
+  });
+
   const { system, user } = buildSyncroPrompt({
     profile,
-    base_analysis: {
-      day_master: { stem: "丙", element: "火" },
-      current_major_luck: { period: "2018-2028", theme: "食神生财，创意变现" },
-      useful_god: { primary: "木", note: "用神取木生火" },
-    },
-    task_description: "我要今天下午去和客户谈合同签约，该往哪个方向走、什么时辰最合适？",
+    base_analysis,
+    task_description,
     user_location: { latitude: 34.05, longitude: -118.24, timezone: "America/Los_Angeles" },
     locale: "zh",
-    current_time: new Date("2026-05-18T14:30:00-07:00"),
+    current_time,
+    matrix,
+    true_solar: metadata,
   });
 
   assert("system has 时空顾问", system.includes("时空顾问"));
   assert("system has 96 key rule", system.includes("96"));
-  assert("system has current_level", system.includes("current_level"));
-  assert("system has open_current levels list", system.includes("open_current"));
-  assert("system has 子时/mao or hour periods", system.includes("mao") || system.includes("午"));
+  assert("system has precomputed matrix block", system.includes("矩阵已经计算好了"));
+  assert("system forbids changing level", system.includes("绝不能"));
+  assert("system embeds matrix JSON", system.includes("zi__") || system.includes("__N"));
+  assert("system copy-only JSON schema", system.includes("short_advice"));
   assert("system NO ORIENTAL_COUNSELOR monolith", !system.includes("精通中国传统智慧的东方破局顾问"));
 
   const sample = [

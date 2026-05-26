@@ -1,10 +1,10 @@
 {
   "common": {
-    "brandWordmark": "Pojulife",
-    "brand": "Pojulife",
+    "brandWordmark": "pojulife",
+    "brand": "pojulife",
     "domain": "pojulife.com",
     "tagline": "Where AI meets a thousand years of wisdom.",
-    "footerTagline": "For self-reflection and entertainment. pojulife offers perspectives, not predictions. All decisions are yours alone.",
+    "footerTagline": "pojulife offers perspectives, not predictions. Designed for self-reflection only. All decisions are yours alone.",
     "copyright": "© 2026 pojulife. All rights reserved.",
     "syncroFooterTagline": "Syncro is a self-awareness tool. Take what resonates. Decisions are yours alone.",
     "openNavigationMenu": "Open navigation menu"
@@ -19,6 +19,8 @@
     "disclaimer": "Disclaimer",
     "privacy": "Privacy Policy",
     "terms": "Terms of Service",
+    "refund": "Refund Policy",
+    "cookies": "Cookie Policy",
     "contact": "Contact",
     "mobileSheetTitle": "Menu",
     "mobileSheetClose": "Close menu",
@@ -33,15 +35,15 @@
   },
   "home": {
     "hero": {
-      "brand": "Poju Life",
+      "brand": "pojulife",
       "headline": "Break through what won't let you go.",
-      "descLine1": "Two thousand years of Eastern wisdom.",
-      "descLine2": "Confirmed by modern science.",
+      "descLine1": "Two thousand years of Eastern frameworks.",
+      "descLine2": "Reframed by modern research.",
       "descLine3": "Translated by AI — for you, today.",
       "trustLine": "No account · No subscription · Decisions are yours alone"
     },
-    "threeWays": {
-      "heading": "Three ways in. One way through."
+    "fourWays": {
+      "heading": "Four ways in. One way through."
     },
     "cta": {
       "startSession": "Start a POJU session · $9.99",
@@ -62,14 +64,34 @@
       "youTitle": "YOU",
       "youBody": "Your birth context, moment, and question."
     },
+    "built": {
+      "heading": "What we built. Why it works.",
+      "intro": "Two thousand years of human reflection on the questions that matter, examined through modern research, made accessible through AI. All for one purpose: helping you see what you couldn't see alone.",
+      "easternTitle": "Eastern Frameworks",
+      "easternBody": "For two thousand years, Eastern philosophical traditions have examined the questions humans keep asking — about decision, direction, and the patterns that shape a life.\n\nCareer. Love. Direction. Doubt.\n\nThese traditions weren't fortune-tellers. They were frameworks for thinking — refined over eighty generations of human experience.",
+      "modernTitle": "Modern Research",
+      "modernBody": "What ancient observation noticed, modern research is beginning to measure.\n\nCognitive science on how we frame decisions. Spatial psychology on attention. Circadian biology on natural rhythm. Behavioral economics on cognitive bias.\n\nThe frameworks that worked for millennia, now examined through contemporary research.",
+      "aiTitle": "AI Translation",
+      "aiBody": "We took the frameworks these traditions developed. We added what modern research has examined. We gave it to AI — to respond to your specific question, in your specific moment.\n\nNot to replace your judgment. To return the conversation to you.\n\nThese tools are designed for self-reflection and personal exploration — not for predicting outcomes, diagnosing conditions, or providing professional advice.",
+      "closingHeading": "This is what pojulife is for.",
+      "closingBody": "The questions that matter, met with the depth they deserve — across two millennia of human reflection, the rigor of modern research, and the immediacy of AI."
+    },
     "promises": {
-      "heading": "Three promises we don't break.",
+      "heading": "What we promise. What we won't do.",
       "neverStoredTitle": "Never stored",
-      "neverStoredBody": "Your conversations live encrypted on your device. We can't read them. No one can.",
+      "neverStoredP1": "Your conversations stay encrypted on your device. Not on our servers. Not in our database.",
+      "neverStoredP2": "Even if we wanted to read them, we couldn't. Even if we were breached, there's nothing to leak.",
+      "neverStoredP3": "Your words stay yours.",
       "neverRequiredTitle": "Never required",
-      "neverRequiredBody": "No account. No login. No password. Email only when you want a PDF.",
+      "neverRequiredP1": "No account. No login. No password.",
+      "neverRequiredP2": "We ask for your email in two situations only: when you choose to purchase, or when you request a PDF of your reading.",
+      "neverRequiredP3": "In both cases, we send what you asked for — nothing more. No marketing. No newsletters. No drip campaigns. No third-party sharing.",
+      "neverRequiredP4": "Your inbox stays yours.",
       "neverManipulativeTitle": "Never manipulative",
-      "neverManipulativeBody": "No dark patterns. No fake urgency. One price: $9.99 when you need it.",
+      "neverManipulativeP1": "No subscriptions. No auto-renewals. No hidden fees. No upsells. No dark patterns.",
+      "neverManipulativeP2": "Each use is a single, transparent choice. Free tools are clearly marked. Paid tools are clearly priced — once, when you decide to use them.",
+      "neverManipulativeP3": "That's the entire business.",
+      "dataLine": "We're not a company that sells data because we don't collect data.",
       "readMore": "Read the full privacy architecture →"
     },
     "finalCta": {
@@ -79,53 +101,52 @@
       "primary": "Ask Your Question — $9.99",
       "secondary": "Or try Glyph for free first →",
       "readyHeading": "Ready to begin?",
-      "readySubheading": "Three ways in. Choose what fits this moment.",
+      "readySubheading": "Four ways in. Choose what fits this moment.",
       "poju": {
         "title": "Start a POJU session",
-        "sub": "$9.99 · For one question"
+        "sub": "$9.99 · one question · 30 days"
       },
       "glyph": {
         "title": "Try Glyph",
-        "sub": "First reading free daily — $1.99"
+        "sub": "First free · then $4.99 / reading"
       },
       "syncro": {
-        "title": "Open Syncro",
-        "sub": "Free · On your phone"
+        "title": "Try Syncro",
+        "sub": "First free · then $4.99 / day"
       },
       "match": {
         "title": "Start a Match",
-        "sub": "$4.99 · First one free"
+        "sub": "First free · then $4.99 / reading"
       }
     },
     "products": {
       "poju": {
         "name": "POJU",
         "line1": "For the question that won't let you go.",
-        "line2": "A deep conversation that walks with you until you see your way through.",
+        "line2": "A 30-day deep conversation that walks with you until you see your way through.",
         "badge": "$9.99",
-        "cta": "Try it →"
+        "cta": "Try POJU →"
       },
       "glyph": {
         "name": "Glyph",
         "line1": "A pocket-sized mirror for your moment.",
-        "line2": "Hold a question. Draw a pattern. Read what comes back.",
-        "badgeFree": "Free",
-        "badgeStruck": "$1.99",
-        "cta": "Try it →"
+        "line2": "Hold a question. Draw a pattern. Read what comes back. 60 seconds.",
+        "badge": "Free first · then $4.99",
+        "cta": "Try Glyph free →"
       },
       "syncro": {
         "name": "Syncro",
         "line1": "See your natural rhythms unfold.",
-        "line2": "A weather forecast for your inner life, updated through your day.",
-        "badge": "Free",
-        "cta": "Try it →"
+        "line2": "Eight directions, twelve hour-periods. A 24-hour live companion.",
+        "badge": "Free first · then $4.99",
+        "cta": "Try Syncro free →"
       },
       "match": {
         "name": "Match",
         "line1": "Two charts. One relationship.",
         "line2": "See how your energies align — and what to do about it.",
-        "badge": "$4.99",
-        "cta": "Try it →"
+        "badge": "Free first · then $4.99",
+        "cta": "Try Match free →"
       }
     },
     "meetsMoment": {
@@ -146,7 +167,7 @@
       "card3": {
         "p1": "You want to know your own rhythm.",
         "p2": "When do you have momentum? When does friction arrive?",
-        "p3": "Syncro maps it, updated through your day.",
+        "p3": "Syncro maps it, updated every two hours.",
         "cta": "Try Syncro"
       },
       "card4": {
@@ -164,7 +185,7 @@
   "marketingSite": {
     "common": {
       "tagline": "Where AI meets a thousand years of wisdom.",
-      "footer_disclaimer": "For self-reflection and entertainment. pojulife offers perspectives, not predictions. All decisions are yours alone.",
+      "footer_disclaimer": "pojulife offers perspectives, not predictions. Designed for self-reflection only. All decisions are yours alone.",
       "trust_line": "No account · No subscription · Yours to decide",
       "read_with_wink": "Read with a wink. The patterns mirror, they don't predict."
     },
@@ -172,6 +193,7 @@
       "poju": "POJU",
       "glyph": "Glyph",
       "syncro": "Syncro",
+      "match": "Match",
       "archive": "Archive"
     },
     "home": {
@@ -307,7 +329,7 @@
           ]
         },
         "tagline": "POJU is a thinking partner. The decisions remain yours.",
-        "cta": "Ask your question — $9.99",
+        "cta": "Start a POJU session — $9.99",
         "footnote": "One question · Unlimited depth · Deletes when you close"
       }
     },
@@ -316,9 +338,9 @@
         "heading": "Glyph",
         "subtitle": "A pocket-sized mirror.",
         "description": "Hold a question. Draw a pattern. Read a reflection.",
-        "footnote": "Free. No signup. Read with a wink.",
-        "cta": "Start Glyph",
-        "cta_subline": "First reading free daily — $1.99"
+        "footnote": "First reading free. After that, $4.99 each.",
+        "cta": "Try Glyph free",
+        "cta_subline": "First free · then $4.99 per reading"
       },
       "five_winds": {
         "heading": "Five winds — five archetypal patterns",
@@ -378,16 +400,22 @@
         "heading": "Hold one question.",
         "subtitle": "What you receive is not a verdict. It is an invitation to look more carefully.",
         "cta": "Start Glyph",
-        "cta_subline": "First reading free daily — $1.99"
+        "cta_subline": "First free · then $4.99 per reading"
+      },
+      "pricing": {
+        "heading": "Pricing",
+        "body": "Your first Glyph reading is free. We want you to experience the tool with no commitment. After that, each reading is $4.99 — a single transparent purchase. No subscription. No auto-renewal. No hidden fees. Each reading is delivered to your screen and optionally sent to your email as a PDF.",
+        "cta": "Try Glyph free",
+        "footnote": "Read with a wink. The patterns mirror, they don't predict."
       }
     },
     "syncro": {
       "hero": {
         "heading": "Syncro",
         "subtitle": "See your natural rhythms.",
-        "description": "Based on your birth context, Syncro reflects how the day's patterns align with you. Where to lean in. Where to slow down.",
-        "tagline": "A light rhythm map you can open anytime through your day.",
-        "footnote": "Free · Opens on mobile only",
+        "description": "Based on your bazi foundation, Syncro reflects how each 2-hour period and 8 directions align with your energy. Where to lean in. Where to slow down.",
+        "tagline": "A live companion for the next 24 hours.",
+        "footnote": "First Syncro free. After that, $4.99 per 24-hour window. Opens on mobile only.",
         "cta": "Open Syncro",
         "qr_label": "pojulife.com/syncro",
         "sms_label": "Text yourself the link",
@@ -395,16 +423,44 @@
         "sms_body": "Open Syncro on your phone: __SYNCRO_URL__",
         "phone_placeholder": "Phone number"
       },
+      "how_it_works": {
+        "heading": "How Syncro works.",
+        "step_1_title": "Add or pick a bazi foundation",
+        "step_1_desc": "Birth date, time, and gender. Saved on your device for any future use.",
+        "step_2_title": "Describe what you're about to do",
+        "step_2_desc": "30–100 characters. The clearer, the better.",
+        "step_3_title": "Allow location & compass access",
+        "step_3_desc": "Your location stays on your device. Your phone's compass shows where each direction is.",
+        "step_4_title": "Hold your phone and turn",
+        "step_4_desc": "Each direction shows a short reflection for the current 2-hour period."
+      },
+      "five_currents": {
+        "heading": "The five currents",
+        "intro": "Each direction × hour combination is classified into one of five patterns:",
+        "footer": "These are reflective categories, not predictions.",
+        "items": [
+          { "name": "Open Current · 顺势", "desc": "Move with confidence." },
+          { "name": "Following Current · 应时", "desc": "The way supports you, with effort." },
+          { "name": "Stillwater · 守静", "desc": "Pause and observe." },
+          { "name": "Crosscurrent · 横阻", "desc": "Reconsider this direction or moment." },
+          { "name": "Undertow · 险滞", "desc": "Strong friction — choose another path." }
+        ]
+      },
+      "why_mobile": {
+        "heading": "Why mobile only",
+        "body": "Syncro reads your phone's compass and (optionally) camera to align with real-world direction. This requires a mobile device. On desktop, we'll show you a QR code to open Syncro on your phone."
+      },
       "what_shows": {
         "heading": "What Syncro shows.",
         "intro": "Open Syncro for a quick read on this stretch of your day — what's emphasized, and what to ease off.",
         "items_intro": "Each direction shows:",
         "items": [
-          "A short description of the current pattern",
-          "What this period suits (for example, slow conversations)",
-          "What this period doesn't suit (for example, wait on big asks)"
+          "Current 2-hour pattern for each direction",
+          "Eight directions with what they suit",
+          "Where to lean in, where to slow down",
+          "Updates every two hours through your 24-hour window"
         ],
-        "footnote": "Refreshes as you move through the day, with your context.",
+        "footnote": "Refreshes every two hours through your 24-hour window.",
         "preview_label": "Preview",
         "preview_placeholder": "Phone mockup placeholder — replace with a Syncro screen capture when ready."
       },
@@ -450,9 +506,9 @@
           ]
         }
       },
-      "always_free": {
-        "heading": "Always free.",
-        "description": "Syncro stays free as your everyday rhythm companion. Open it whenever you need clarity on the moment.",
+      "pricing": {
+        "heading": "Pricing",
+        "description": "Your first Syncro is free. We want you to feel how spatial reflection works with no commitment. After that, $4.99 unlocks a 24-hour live window — guidance updating every two hours for one specific task. No subscription. No auto-renewal.",
         "cta": "Open Syncro on mobile"
       }
     },
@@ -468,6 +524,8 @@
         "disclaimer": "Disclaimer",
         "privacy": "Privacy Policy",
         "terms": "Terms of Service",
+        "refund": "Refund Policy",
+        "cookies": "Cookie Policy",
         "contact": "Contact"
       },
       "copyright": "© 2026 pojulife. All rights reserved."
@@ -497,6 +555,40 @@
     "skipConfirmStay": "Fill in the form",
     "skipConfirmLeave": "Continue without birth data",
     "close": "Close"
+  },
+  "profile": {
+    "birth_location": {
+      "title": "Birth location?",
+      "subtitle": "For precise chart calculation, tell us your birth city",
+      "why_link": "Why birth location matters?",
+      "explanation_1": "Astrological charts must use true solar time, not timezone average.",
+      "explanation_2": "True solar time depends on the longitude of birth location.",
+      "explanation_example": "Example: Urumqi (Xinjiang) uses Beijing time, but true solar time differs by 2 hours. Without correction, the hour pillar may be wrong.",
+      "skip_use_default": "I'm not sure — use defaults",
+      "default_note": "Defaults use timezone center longitude ({timezone}). Accurate for most cases.",
+      "confirm_city": "Use this city",
+      "back": "Back to birth details"
+    },
+    "upgrade": {
+      "title": "Update for precise calculations",
+      "description": "Your chart was generated without birth location, using default timezone center. Update with your actual birth city for accurate true solar time.",
+      "current_chart": "Current chart",
+      "using_default_warning": "Used default longitude — may have hour pillar inaccuracy",
+      "search_birth_city": "Search your birth city",
+      "upgrade_chart": "Update chart with this location",
+      "keep_old_for_now": "Keep current chart for now",
+      "badge_precise": "✓ Precise chart",
+      "badge_upgradeable": "🔄 Upgrade for accuracy",
+      "upgrading": "Updating…",
+      "upgrade_success": "Chart updated with true solar time.",
+      "hour_pillar_changed": "Hour pillar changed: {old} → {new}",
+      "hour_pillar_unchanged": "Hour pillar unchanged: {pillar}",
+      "tst_diff_minutes": "True solar time correction: {minutes} minutes",
+      "base_analysis_regenerated": "Base analysis regenerated with the new chart.",
+      "done": "Done",
+      "male": "Male",
+      "female": "Female"
+    }
   },
   "profile_selector": {
     "loading": "Loading saved profiles…",
@@ -834,6 +926,8 @@
     "hour_label": "Time of Birth",
     "gender_label": "Gender",
     "timezone_label": "Timezone",
+    "location_label": "Birth location",
+    "location_default": "Default (timezone center)",
     "male": "Male",
     "female": "Female",
     "reassure_1": "Your data stays only on this device, encrypted.",
@@ -873,6 +967,17 @@
     "step_8": "Almost done, just a moment..."
   },
   "syncro": {
+    "home": {
+      "cta_start": "Try Syncro free",
+      "desktop_modal": {
+        "title": "Open Syncro on your phone",
+        "description": "Syncro reads your phone's compass and orientation to align with real-world direction. This requires a mobile device.",
+        "step_1": "Open the camera app on your phone",
+        "step_2": "Scan this QR code",
+        "step_3": "Tap the link to open Syncro on your phone",
+        "why_mobile": "Why mobile only? Syncro needs your phone's compass, camera, and precise location — capabilities desktops don't have."
+      }
+    },
     "loading": "Loading…",
     "subtitle": "Live direction & timing guidance",
     "description": "Syncro is your real-time companion for the next 24 hours. Hold your phone like a compass — find the direction and moment that's open for what you're about to do.",
@@ -908,6 +1013,25 @@
       "profile_not_ready": "Your chart analysis is not ready. Return to prepare and wait for base analysis.",
       "compute_failed": "Computation failed"
     },
+    "modes": {
+      "aria_label": "Syncro display mode",
+      "compass": "Compass",
+      "ar": "AR",
+      "view": "View"
+    },
+    "progress": {
+      "aria_label": "Hour-period timeline",
+      "manual_selection": "Viewing a selected hour-period (not the live window).",
+      "state_past": "Past hour-period",
+      "state_live": "Live hour-period",
+      "state_selected": "Selected hour-period",
+      "state_upcoming": "Upcoming hour-period"
+    },
+    "view": {
+      "you": "YOU",
+      "recommended": "Best direction now",
+      "grid_subtitle": "8 directions"
+    },
     "main": {
       "current_hour": "this hour",
       "why_this": "Why this current",
@@ -938,14 +1062,25 @@
       "not_supported": "Camera is not available on this browser."
     },
     "location": {
-      "asking_title": "Allow location?",
-      "asking_message": "Syncro needs your current location to align your directions with the real-world compass.",
+      "asking_title": "Detecting your location...",
+      "asking_message": "Syncro uses your location for precise true solar time and direction.",
       "asking_privacy": "Used only for this session. Never stored on our servers.",
       "allow_location": "Allow location access",
       "granted_message": "Location received. Casting your field...",
-      "denied_title": "Location is required",
-      "denied_message": "Without your location, Syncro can't tell direction. Please allow location access in your browser settings and retry.",
-      "retry": "Retry"
+      "manual_title": "Choose your location",
+      "manual_description": "Search and select your current city for accurate timing.",
+      "city_search_placeholder": "Search city (e.g., New York, Beijing, Tokyo)",
+      "no_cities_found": "No cities found. Try a different spelling.",
+      "retry_geolocation": "Try detecting again",
+      "confirm_title": "Use this location?",
+      "confirm_hint": "Syncro will use this for accurate timing and direction.",
+      "confirm_use": "Use this location",
+      "change_location": "Choose a different location",
+      "accuracy_warning": "Detected position is approximate (~{meters}m). Consider searching your city for accuracy.",
+      "denied_title": "Location access denied",
+      "denied_message": "Without your location, Syncro can't calculate precise timing. Please allow location access or search your city manually.",
+      "retry": "Retry",
+      "search_manually": "Search city manually"
     },
     "task": {
       "back": "Back to Syncro",
@@ -968,7 +1103,7 @@
       "description": "Match weaves both bazi foundations together — yours and theirs — to reveal how your energies align, where you support each other, where you collide, and what to do about it.",
       "cta_free": "Run a free Match",
       "cta_paid": "Start a Match — $4.99",
-      "free_note": "First Match is on us. No card required to see how it works.",
+      "free_note": "First Match free. After that, $4.99 per reading.",
       "paid_note": "One reading. Complete report. 5 sections.",
       "feature_two_charts_title": "Two-Chart Analysis",
       "feature_two_charts_desc": "Deep individual readings of both people, then a layered analysis of how you meet.",
@@ -1025,7 +1160,14 @@
       "faq_q3": "Can I do more than two people at once?",
       "faq_a3": "Currently Match focuses on two-person dynamics — this keeps the reading deep and clear. For complex situations (e.g., you + spouse + parent), we suggest running separate Matches to map each relationship cleanly.",
       "faq_q4": "How is this different from POJU?",
-      "faq_a4": "POJU is a 30-day deep conversation about your situation. Match is a one-time, focused two-chart reading about a specific relationship. Different tools for different needs — many users use both."
+      "faq_a4": "POJU is a 30-day deep conversation about your situation. Match is a one-time, focused two-chart reading about a specific relationship. Different tools for different needs — many users use both.",
+      "not_title": "What Match is not",
+      "not_items": [
+        "A predictor of relationship outcomes",
+        "A promise of compatibility results",
+        "A replacement for professional counseling"
+      ],
+      "not_footer": "Match offers perspectives, not predictions. What you do with them is entirely yours."
     },
     "subtitle": "Two charts. One relationship. Real clarity.",
     "description": "Match weaves both bazi charts together — yours and theirs — to reveal how your energies align, where you support each other, where you collide, and what to do about it.",
@@ -1074,12 +1216,13 @@
     "analyzing": {
       "step_1": "Reading Person A's chart...",
       "step_2": "Reading Person B's chart...",
-      "step_3": "Mapping five-element dynamics...",
+      "step_3": "Computing compatibility matrix locally (six dimensions)...",
       "step_4": "Analyzing ten-god interactions...",
       "step_5": "Examining timing alignment...",
       "step_6": "Weaving the relationship pattern...",
       "step_7": "Almost ready...",
-      "hint": "Generating your full compatibility report. About 60–90 seconds.",
+      "hint": "Compatibility level is fixed by the local engine; AI is writing your report. About 60–90 seconds.",
+      "preview_level": "Local compatibility: {level} (score {score}) — now generating narrative…",
       "error_title": "Analysis failed",
       "go_back": "Try again",
       "missing_data": "Missing chart or relationship data. Start again from Match.",
@@ -1092,6 +1235,7 @@
     "report": {
       "title": "Match Report",
       "compatibility_label": "Overall Compatibility",
+      "engine_note": "Score from local chart engine: {score} (level is fixed before AI copy).",
       "key_traits": "Key Traits",
       "five_elements": "Five-Element Dynamic",
       "timing_dynamic": "Timing Alignment",

@@ -68,6 +68,14 @@ export interface MatchReport {
     generated_at: string;
     model: string;
     tokens_used: number;
+    /** Local engine debug (v5.1); not shown in user UI by default */
+    computation_meta?: {
+      weighted_total_score: number;
+      overall_level: CompatibilityLevel;
+      day_master_type: string;
+      day_branch_he: boolean;
+      day_branch_chong: boolean;
+    };
   };
 }
 
@@ -82,6 +90,9 @@ export interface MatchSession {
   is_free: boolean;
   cost_usd: number;
   locale: string;
+  /** v5.1 local engine score (-100…100), for display / debug */
+  compatibility_score?: number;
+  engine_version?: "v5.1";
 }
 
 /** JSON-serializable session blob (encrypted at rest). */

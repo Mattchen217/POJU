@@ -6,7 +6,27 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { calculateCompatibilityMatrix } from "../lib/match/calculate-compatibility";
 import { buildMatchPrompt } from "../lib/llm/prompts/match-deepseek-prompt";
+
+const sampleMatrix = calculateCompatibilityMatrix({
+  profileA: {
+    base_analysis: {
+      content: {
+        bazi: { day_stem: "甲", day_branch: "子" },
+        gender: "M",
+      },
+    },
+  },
+  profileB: {
+    base_analysis: {
+      content: {
+        bazi: { day_stem: "庚", day_branch: "午" },
+        gender: "F",
+      },
+    },
+  },
+});
 
 const root = join(import.meta.dirname ?? __dirname, "..");
 
@@ -24,12 +44,15 @@ const route = read("app/api/match/analyze/route.ts");
 
 assert(prompt.includes("buildMatchPrompt"), "buildMatchPrompt");
 assert(prompt.includes("detectLanguage"), "uses detectLanguage");
+assert(prompt.includes("compatibilityMatrix"), "requires compatibility matrix");
+assert(prompt.includes("已计算的契合度矩阵"), "injects computed matrix");
 assert(prompt.includes("analysis_a"), "5 sections in schema");
 assert(prompt.includes("compatibility_level"), "compatibility_level");
 
 assert(service.includes("generateMatchAnalysis"), "generateMatchAnalysis");
+assert(service.includes("calculateCompatibilityMatrix"), "local matrix compute");
 assert(service.includes("ensureBaseAnalysis"), "base analysis ensure");
-assert(service.includes("highly_compatible"), "validates levels");
+assert(service.includes("computation_meta"), "computation_meta");
 assert(service.includes('recordProfileUsage'), "records usage");
 
 assert(route.includes("maxDuration = 180"), "maxDuration");
@@ -42,6 +65,7 @@ const zh = buildMatchPrompt({
   b_base_analysis: null,
   relationship_description: "我们是合作伙伴，考虑扩大生意",
   locale: "en",
+  compatibilityMatrix: sampleMatrix,
 });
 assert(zh.detected_language.includes("Chinese"), "Chinese detection");
 assert(zh.system.includes("合作伙伴"), "relationship in prompt");
@@ -53,6 +77,7 @@ const en = buildMatchPrompt({
   b_base_analysis: null,
   relationship_description: "My fiance and I plan to marry next year.",
   locale: "zh",
+  compatibilityMatrix: sampleMatrix,
 });
 assert(en.detected_language === "English", "English detection despite zh locale");
 

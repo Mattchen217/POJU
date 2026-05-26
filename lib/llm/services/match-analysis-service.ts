@@ -1,5 +1,5 @@
 /**
- * Match v5 — DeepSeek 5-section compatibility report via `callLLM({ call_type: 'deep_analysis' })`.
+ * Match v5.1 — local compatibility matrix + DeepSeek report copy.
  */
 
 import {
@@ -9,6 +9,8 @@ import {
 } from "@/lib/llm/deepseek/base-analysis";
 import { buildMatchPrompt } from "@/lib/llm/prompts/match-deepseek-prompt";
 import { callLLM } from "@/lib/llm/router";
+import { calculateCompatibilityMatrix } from "@/lib/match/calculate-compatibility";
+import { wrapProfileForMatrix } from "@/lib/match/parse-profile-for-matrix";
 import type { CompatibilityLevel, MatchReport } from "@/lib/match/types";
 import {
   getStoredProfile,
@@ -59,6 +61,8 @@ export type MatchAnalysisServiceResult = {
     cost_usd: number;
     latency_ms: number;
     detected_language: string;
+    local_computation: boolean;
+    compatibility_score: number;
   };
 };
 
@@ -137,20 +141,14 @@ async function ensureBaseAnalysis(
   return { user_profile, base_analysis };
 }
 
+
 function asString(v: unknown): string {
   return typeof v === "string" ? v.trim() : "";
 }
 
-function asStringArray(v: unknown, min = 1): string[] {
+function asStringArray(v: unknown): string[] {
   if (!Array.isArray(v)) return [];
   return v.map((x) => asString(x)).filter(Boolean).slice(0, 8);
-}
-
-function normalizeCompatibilityLevel(level: unknown): CompatibilityLevel {
-  const s = asString(level) as CompatibilityLevel;
-  if (VALID_COMPATIBILITY_LEVELS.has(s)) return s;
-  console.warn("[match] Invalid compatibility_level, defaulting to neutral:", level);
-  return "neutral";
 }
 
 function validateAndNormalizeReport(
@@ -159,6 +157,8 @@ function validateAndNormalizeReport(
   detected_language: string,
   model: string,
   tokens_used: number,
+  computedLevel: CompatibilityLevel,
+  compatibilityMatrix: ReturnType<typeof calculateCompatibilityMatrix>,
 ): MatchReport {
   for (const key of REQUIRED_SECTIONS) {
     if (!parsed[key] || typeof parsed[key] !== "object") {
@@ -188,7 +188,7 @@ function validateAndNormalizeReport(
             timing: asString(row.timing) || undefined,
           };
         })
-        .filter((a) => a.title && a.detail)
+        .filter((act) => act.title && act.detail)
     : [];
 
   if (actions.length < 1) {
@@ -200,13 +200,13 @@ function validateAndNormalizeReport(
       title: asString(a.title) || "Person A",
       summary: asString(a.summary),
       detail: asString(a.detail),
-      key_traits: asStringArray(a.key_traits, 3),
+      key_traits: asStringArray(a.key_traits),
     },
     analysis_b: {
       title: asString(b.title) || "Person B",
       summary: asString(b.summary),
       detail: asString(b.detail),
-      key_traits: asStringArray(b.key_traits, 3),
+      key_traits: asStringArray(b.key_traits),
     },
     combined: {
       title: asString(combined.title) || "Together",
@@ -217,11 +217,11 @@ function validateAndNormalizeReport(
     },
     conclusion: {
       title: asString(conclusion.title) || "Conclusion",
-      compatibility_level: normalizeCompatibilityLevel(conclusion.compatibility_level),
+      compatibility_level: computedLevel,
       summary: asString(conclusion.summary),
       detail: asString(conclusion.detail),
-      strengths: asStringArray(conclusion.strengths, 3),
-      challenges: asStringArray(conclusion.challenges, 3),
+      strengths: asStringArray(conclusion.strengths),
+      challenges: asStringArray(conclusion.challenges),
     },
     recommendations: {
       title: asString(recommendations.title) || "Recommendations",
@@ -236,6 +236,13 @@ function validateAndNormalizeReport(
       generated_at: new Date().toISOString(),
       model,
       tokens_used,
+      computation_meta: {
+        weighted_total_score: compatibilityMatrix.weighted_total_score,
+        overall_level: compatibilityMatrix.overall_level,
+        day_master_type: compatibilityMatrix.day_master_interaction.type,
+        day_branch_he: compatibilityMatrix.branch_interactions.day_branch_he,
+        day_branch_chong: compatibilityMatrix.branch_interactions.day_branch_chong,
+      },
     },
   };
 }
@@ -266,6 +273,22 @@ export async function generateMatchAnalysis(
     ),
   ]);
 
+  console.log("[match] Computing compatibility matrix locally...");
+  const computeStart = Date.now();
+  const compatibilityMatrix = calculateCompatibilityMatrix({
+    profileA: wrapProfileForMatrix(aBundle.user_profile, aBundle.base_analysis),
+    profileB: wrapProfileForMatrix(bBundle.user_profile, bBundle.base_analysis),
+  });
+  const computeMs = Date.now() - computeStart;
+
+  console.log("[match] Computed:", {
+    overall_level: compatibilityMatrix.overall_level,
+    score: compatibilityMatrix.weighted_total_score,
+    strengths: compatibilityMatrix.key_insights.strengths.length,
+    challenges: compatibilityMatrix.key_insights.challenges.length,
+    compute_ms: computeMs,
+  });
+
   const { system, user, detected_language } = buildMatchPrompt({
     a_profile: aBundle.user_profile,
     a_base_analysis: aBundle.base_analysis,
@@ -273,9 +296,10 @@ export async function generateMatchAnalysis(
     b_base_analysis: bBundle.base_analysis,
     relationship_description: input.relationship_description.trim(),
     locale: input.locale,
+    compatibilityMatrix,
   });
 
-  console.log(`[match] Calling DeepSeek (deep_analysis)... Output language: ${detected_language}`);
+  console.log(`[match] Calling DeepSeek for report (language: ${detected_language})`);
   const startTime = Date.now();
 
   const result = await callLLM({
@@ -283,7 +307,7 @@ export async function generateMatchAnalysis(
     system,
     messages: [{ role: "user", content: user }],
     max_tokens: 15_000,
-    thinking_effort: "high",
+    thinking_effort: "medium",
     response_format: "json",
     temperature: 0.55,
   });
@@ -294,7 +318,24 @@ export async function generateMatchAnalysis(
   } catch (e) {
     console.error("[match] JSON parse failed:", e);
     console.error("[match] Raw (first 800):", result.content.slice(0, 800));
-    throw new Error("Match analysis output is not valid JSON");
+    throw new Error("Match report output is not valid JSON");
+  }
+
+  const computedLevel = compatibilityMatrix.overall_level;
+  if (
+    parsed.conclusion &&
+    typeof parsed.conclusion === "object" &&
+    (parsed.conclusion as Record<string, unknown>).compatibility_level !== computedLevel
+  ) {
+    console.warn(
+      "[match] LLM compatibility_level overridden:",
+      (parsed.conclusion as Record<string, unknown>).compatibility_level,
+      "→",
+      computedLevel,
+    );
+  }
+  if (parsed.conclusion && typeof parsed.conclusion === "object") {
+    (parsed.conclusion as Record<string, unknown>).compatibility_level = computedLevel;
   }
 
   const report = validateAndNormalizeReport(
@@ -306,6 +347,8 @@ export async function generateMatchAnalysis(
     detected_language,
     result.actual_model,
     result.meta.tokens_used,
+    computedLevel,
+    compatibilityMatrix,
   );
 
   if (typeof window !== "undefined") {
@@ -316,7 +359,7 @@ export async function generateMatchAnalysis(
   }
 
   const elapsedMs = Date.now() - startTime;
-  console.log(`[match] Done in ${elapsedMs}ms`);
+  console.log(`[match] Done in ${elapsedMs}ms (local compute ${computeMs}ms)`);
 
   return {
     report,
@@ -326,6 +369,8 @@ export async function generateMatchAnalysis(
       cost_usd: result.meta.cost_usd,
       latency_ms: elapsedMs,
       detected_language,
+      local_computation: true,
+      compatibility_score: compatibilityMatrix.weighted_total_score,
     },
   };
 }

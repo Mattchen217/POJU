@@ -175,6 +175,11 @@ export function MatchReport({ session, locale }: MatchReportProps) {
       </div>
 
       <footer className="report-footer">
+        {session.compatibility_score != null ? (
+          <p className="match-engine-note">
+            {t("engine_note", { score: session.compatibility_score.toFixed(1) })}
+          </p>
+        ) : null}
         <p>{t("saved_to_archive")}</p>
         <div className="report-footer-actions">
           <Link href="/archive" className="match-report-btn-secondary">

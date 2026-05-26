@@ -1,0 +1,130 @@
+{
+  "meta": {
+    "title": "Cookie Policy",
+    "version": "Version 1.0",
+    "updated": "Last updated: 2026-05-23"
+  },
+  "closing": "",
+  "blocks": [
+    { "kind": "h2", "text": "What are cookies?" },
+    {
+      "kind": "p",
+      "text": "Cookies are small text files placed on your device when you visit a website. They help the website remember information about your visit — like your language preference or your session state."
+    },
+    {
+      "kind": "p",
+      "text": "This Cookie Policy explains how pojulife uses cookies and similar technologies, and how you can control them."
+    },
+    { "kind": "h2", "text": "Our cookie philosophy" },
+    {
+      "kind": "p",
+      "text": "pojulife is designed to function with as few cookies as possible. We do not use cookies for tracking, advertising, or selling your data."
+    },
+    {
+      "kind": "p",
+      "text": "We use cookies only when strictly necessary or when they significantly improve your experience."
+    },
+    { "kind": "h2", "text": "Cookies we use" },
+    { "kind": "h3", "text": "1. Strictly necessary cookies" },
+    {
+      "kind": "p",
+      "text": "These cookies are essential for the website to function. They cannot be disabled."
+    },
+    {
+      "kind": "table",
+      "headers": ["Cookie name", "Purpose", "Duration"],
+      "rows": [
+        ["pojulife_locale", "Remembers your language preference", "1 year"],
+        ["pojulife_session", "Maintains your active session", "Session"],
+        ["cf_clearance", "Cloudflare security check", "30 days"]
+      ]
+    },
+    { "kind": "h3", "text": "2. Functional cookies" },
+    {
+      "kind": "p",
+      "text": "These cookies enhance your experience but are not strictly required."
+    },
+    {
+      "kind": "table",
+      "headers": ["Cookie name", "Purpose", "Duration"],
+      "rows": [
+        ["pojulife_theme", "Remembers your visual preferences", "1 year"],
+        ["pojulife_consent", "Remembers your cookie choices", "1 year"]
+      ]
+    },
+    { "kind": "h3", "text": "3. Local storage (similar to cookies)" },
+    {
+      "kind": "p",
+      "text": "We use browser local storage (IndexedDB) to store:"
+    },
+    {
+      "kind": "ul",
+      "items": [
+        "Your encrypted conversations",
+        "Your bazi foundation data (if you've entered any)",
+        "Your reading history (Archive)"
+      ]
+    },
+    {
+      "kind": "p",
+      "text": "This data stays on your device and is never sent to our servers in plain form."
+    },
+    { "kind": "h2", "text": "What we don't use" },
+    { "kind": "p", "text": "We do not use:" },
+    {
+      "kind": "ul",
+      "items": [
+        "Advertising cookies",
+        "Third-party tracking cookies",
+        "Social media tracking pixels",
+        "Cross-site tracking",
+        "Google Analytics or similar behavioral analytics"
+      ]
+    },
+    {
+      "kind": "p",
+      "text": "We may use Cloudflare for security and performance (DDoS protection, CDN). Cloudflare may set technical cookies for security purposes only."
+    },
+    { "kind": "h2", "text": "Managing your cookies" },
+    { "kind": "h3", "text": "In your browser" },
+    {
+      "kind": "p",
+      "text": "You can manage or delete cookies through your browser settings. See your browser's help documentation for cookie controls."
+    },
+    { "kind": "h3", "text": "Disabling cookies" },
+    {
+      "kind": "p",
+      "text": "You can disable cookies in your browser settings, but this may affect some functionality of pojulife (such as remembering your language)."
+    },
+    { "kind": "h3", "text": "Clearing your local data" },
+    {
+      "kind": "p",
+      "text": "To clear all locally stored conversations, readings, and data, use your browser's \"Clear site data\" option for pojulife.com, or use the \"End & Wipe\" button within our app."
+    },
+    { "kind": "h2", "text": "EU / UK users — your rights" },
+    {
+      "kind": "p",
+      "text": "If you're in the EU or UK, you have rights under GDPR / UK GDPR:"
+    },
+    {
+      "kind": "ul",
+      "items": [
+        "Consent: We ask for consent before setting non-essential cookies (functional cookies).",
+        "Withdraw consent: You can withdraw consent any time via the cookie banner.",
+        "Access: You can request information about cookies set on your device."
+      ]
+    },
+    {
+      "kind": "p",
+      "text": "To exercise these rights, contact privacy@pojulife.com."
+    },
+    { "kind": "h2", "text": "Changes to this policy" },
+    {
+      "kind": "p",
+      "text": "We may update this Cookie Policy as our practices evolve or as required by law. The \"Last updated\" date reflects the most recent revision."
+    },
+    { "kind": "h2", "text": "Questions" },
+    { "kind": "p", "text": "Privacy and cookie questions:" },
+    { "kind": "contact", "lines": [{ "label": "", "email": "privacy@pojulife.com" }] }
+  ]
+}

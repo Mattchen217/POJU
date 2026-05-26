@@ -1,3 +1,4 @@
+import { SyncroGuardedRoute } from "@/components/syncro/SyncroGuardedRoute";
 import { SyncroMobileFlow } from "@/components/syncro/syncro-mobile-flow";
 import { Suspense } from "react";
 
@@ -10,7 +11,9 @@ export default function SyncroLivePage() {
         </main>
       }
     >
-      <SyncroMobileFlow />
+      <SyncroGuardedRoute>
+        <SyncroMobileFlow />
+      </SyncroGuardedRoute>
     </Suspense>
   );
 }

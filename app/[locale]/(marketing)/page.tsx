@@ -143,33 +143,6 @@ function PromiseIconBadge({
   );
 }
 
-/** 对角划线划掉价格（左上 → 右下），细线避免盖住数字 */
-function StruckPrice({ children, className }: { children: ReactNode; className?: string }) {
-  return (
-    <span className={`relative inline-block ${className ?? ""}`}>
-      <span className="relative z-0">{children}</span>
-      <svg
-        className="pointer-events-none absolute -inset-x-0.5 -inset-y-0.5 z-10 h-[calc(100%+4px)] w-[calc(100%+4px)] overflow-visible"
-        viewBox="0 0 100 100"
-        preserveAspectRatio="none"
-        aria-hidden
-      >
-        <line
-          x1="5"
-          y1="16"
-          x2="95"
-          y2="84"
-          stroke="rgba(255, 248, 220, 0.92)"
-          strokeWidth="1.1"
-          strokeLinecap="round"
-          vectorEffect="non-scaling-stroke"
-        />
-      </svg>
-    </span>
-  );
-}
-
-
 export default async function LandingPage() {
   const tHome = await getTranslations("home");
   const tp = await getTranslations("home.products");
@@ -189,10 +162,7 @@ export default async function LandingPage() {
     name: tp(`${style.productKey}.name`),
     line1: tp(`${style.productKey}.line1`),
     line2: tp(`${style.productKey}.line2`),
-    badge: style.productKey === "glyph" ? null : tp(`${style.productKey}.badge`),
-    // 使用 home 命名空间完整路径：避免 getTranslations("home.products") 下嵌套键在部分版本中回退为原始 key
-    badgeFree: style.productKey === "glyph" ? tHome("products.glyph.badgeFree") : null,
-    badgeStruck: style.productKey === "glyph" ? tHome("products.glyph.badgeStruck") : null,
+    badge: tp(`${style.productKey}.badge`),
     cta: tp(`${style.productKey}.cta`),
   }));
 
@@ -241,11 +211,7 @@ export default async function LandingPage() {
 
           <div className="absolute inset-0 z-10 mx-auto flex min-h-0 w-full max-w-6xl flex-col items-center justify-center px-4 pb-16 pt-12 text-center sm:px-6 sm:pb-20 sm:pt-14 md:pb-24 md:pt-16">
             <div className="flex w-full max-w-[min(98vw,72rem)] flex-col items-center px-1">
-              {/* [1] 品牌名 · 单行 + 紫色纵渐变（clip）；投影压暗亮背景 */}
-              <p className="mx-auto max-w-none whitespace-nowrap bg-[linear-gradient(180deg,#ffffff_0%,#f5f3ff_12%,#ede9fe_28%,#d8b4fe_55%,#9333ea_85%,#7c3aed_100%)] bg-clip-text px-2 text-center font-primary text-[clamp(1.5rem,min(8.5vw,15vmin),7.75rem)] font-semibold uppercase leading-[0.95] tracking-[0.12em] text-transparent antialiased drop-shadow-[0_1px_1px_rgba(0,0,0,0.95)] drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] drop-shadow-[0_0_28px_rgba(139,92,246,0.45)] sm:text-[clamp(2.25rem,min(11vw,15vmin),7.75rem)] md:text-[clamp(2.75rem,min(13vw,15vmin),7.75rem)]">
-                {tHome("hero.brand")}
-              </p>
-              {/* [2] 主标题 · 大 */}
+              {/* 主标题 · 大 */}
               <h1 className="font-primary mt-5 max-w-[min(40rem,92vw)] text-[clamp(1.2rem,3.6vw,2.35rem)] font-medium leading-snug tracking-tight text-white drop-shadow-[0_2px_14px_rgba(0,0,0,0.85)] sm:mt-6 md:max-w-[44rem]">
                 {tHome("hero.headline")}
               </h1>
@@ -271,7 +237,7 @@ export default async function LandingPage() {
         <div className="landing-sections">
           <GlassSection id="products">
             <h2 className="text-center text-[26px] font-semibold leading-tight tracking-tight text-white sm:text-[30px] md:text-[32px]">
-              {tHome("threeWays.heading")}
+              {tHome("fourWays.heading")}
             </h2>
             <div className="mt-10 grid gap-4 sm:grid-cols-2 md:mt-14 lg:grid-cols-4 lg:gap-5">
               {productCards.map((card, index) => {
@@ -304,29 +270,20 @@ export default async function LandingPage() {
                     {card.kind === "glyph" ? <ProductCardGlyphSpline /> : null}
                     {card.kind === "syncro" ? <ProductCardSyncroSpline /> : null}
                     <div className="relative z-10 flex min-h-0 flex-1 flex-col text-left">
-                      <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2">
-                        <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <div className="grid shrink-0 grid-cols-[2.5rem_minmax(0,1fr)] items-start gap-x-3 gap-y-1.5 sm:grid-cols-[2.75rem_minmax(0,1fr)]">
+                        <div className="row-span-2 self-center">
                           <ProductCardIcon kind={card.kind} />
-                          <p className="min-w-0 text-[17px] font-semibold leading-tight text-white sm:text-[18px]">{card.name}</p>
                         </div>
-                        {card.kind === "glyph" && card.badgeFree != null && card.badgeStruck != null ? (
-                          <span className="flex shrink-0 items-center gap-2 text-[16px] font-semibold sm:text-[17px]">
-                            <span className="text-emerald-300">{card.badgeFree}</span>
-                            <StruckPrice className="text-[15px] text-amber-300 tabular-nums sm:text-[16px]">
-                              {card.badgeStruck}
-                            </StruckPrice>
-                          </span>
-                        ) : (
-                          <span
-                            className={
-                              index === 0
-                                ? "shrink-0 text-[16px] font-semibold text-amber-300 sm:text-[17px]"
-                                : "shrink-0 text-[16px] font-semibold text-sky-300 sm:text-[17px]"
-                            }
-                          >
-                            {card.badge}
-                          </span>
-                        )}
+                        <p className="min-w-0 text-[17px] font-semibold leading-tight text-white sm:text-[18px]">{card.name}</p>
+                        <p
+                          className={
+                            index === 0
+                              ? "min-w-0 text-[12px] font-semibold leading-snug text-amber-300 sm:text-[13px]"
+                              : "min-w-0 text-[12px] font-semibold leading-snug text-sky-300 sm:text-[13px]"
+                          }
+                        >
+                          {card.badge}
+                        </p>
                       </div>
                       <div className="flex min-h-0 flex-1 flex-col justify-center py-2 sm:py-3">
                         <div className="space-y-2 text-left text-[16px] leading-relaxed text-white/90 sm:text-[17px] sm:leading-8">
@@ -349,10 +306,10 @@ export default async function LandingPage() {
           <GlassSection>
             <div className="px-0">
               <h3 className="text-center text-[26px] font-semibold leading-tight tracking-tight text-white sm:text-[30px] md:text-[32px]">
-                What we built. Why it works.
+                {tHome("built.heading")}
               </h3>
                 <p className="mx-auto mt-5 max-w-3xl whitespace-pre-line text-center text-[16px] leading-8 text-white/88 sm:text-[17px]">
-                  {"Two thousand years of human reflection on the questions \nthat matter. Confirmed by modern research. Translated \nby AI. All for one purpose: helping you see what you \ncouldn't see alone."}
+                  {tHome("built.intro")}
                 </p>
               </div>
               <div className="relative mt-10 aspect-[10/4] overflow-hidden rounded-2xl">
@@ -367,10 +324,10 @@ export default async function LandingPage() {
                 <div className="absolute inset-0 z-10 flex items-center justify-end p-7 sm:p-9 md:p-14">
                   <div className="content-card-caption content-card-caption--violet max-w-[min(94%,42rem)] sm:px-3.5 sm:py-3">
                     <p className="content-card-caption__title drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)]">
-                      Eastern Wisdom
+                      {tHome("built.easternTitle")}
                     </p>
                     <p className="mt-3 whitespace-pre-line drop-shadow-[0_1px_6px_rgba(0,0,0,0.55)]">
-                      {"For two thousand years, Eastern philosophical\ntraditions have examined the questions humans\nkeep asking - about decision, direction, and\nthe patterns that shape a life.\n\nCareer. Love. Direction. Doubt.\n\nThese traditions weren't fortune-tellers.\nThey were frameworks for thinking - refined\nover 80 generations of human experience."}
+                      {tHome("built.easternBody")}
                     </p>
                   </div>
                 </div>
@@ -387,10 +344,10 @@ export default async function LandingPage() {
                 <div className="absolute inset-0 z-10 flex items-center justify-start p-7 sm:p-9 md:p-14">
                   <div className="content-card-caption content-card-caption--blue max-w-[min(94%,42rem)] sm:px-3.5 sm:py-3">
                     <p className="content-card-caption__title drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)]">
-                      Modern Science
+                      {tHome("built.modernTitle")}
                     </p>
                     <p className="mt-3 whitespace-pre-line drop-shadow-[0_1px_6px_rgba(0,0,0,0.55)]">
-                      {"What ancient observation noticed, modern research \nis beginning to measure.\n\nCognitive science on how we frame decisions. \nSpatial psychology on attention. Circadian \nbiology on natural rhythm. Behavioral economics \non cognitive bias.\n\nThe frameworks that worked for millennia, now \nvalidated by research."}
+                      {tHome("built.modernBody")}
                     </p>
                   </div>
                 </div>
@@ -407,20 +364,20 @@ export default async function LandingPage() {
                 <div className="absolute inset-0 z-10 flex items-center justify-end p-7 sm:p-9 md:p-14">
                   <div className="content-card-caption content-card-caption--magenta max-w-[min(94%,42rem)] sm:px-3.5 sm:py-3">
                     <p className="content-card-caption__title drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)]">
-                      AI Translation
+                      {tHome("built.aiTitle")}
                     </p>
                     <p className="mt-3 whitespace-pre-line drop-shadow-[0_1px_6px_rgba(0,0,0,0.55)]">
-                      {"We took the frameworks these traditions developed. \nWe added what modern science has confirmed.\n\nFrameworks. Patterns. Timing. Moments.\n\nWe gave it to AI - to respond to your specific \nquestion, in your specific moment. Not to replace \nyour judgment, but to return the conversation to you."}
+                      {tHome("built.aiBody")}
                     </p>
                   </div>
                 </div>
               </div>
             <div className="mt-10 pb-4 md:pb-6">
               <h4 className="text-center text-[26px] font-semibold leading-tight tracking-tight text-white sm:text-[30px] md:text-[32px]">
-                This is what pojulife is for.
+                {tHome("built.closingHeading")}
               </h4>
               <p className="mx-auto mt-5 max-w-4xl whitespace-pre-line text-center text-[16px] leading-8 text-white/88 sm:text-[17px]">
-                {"The questions that matter, met with the depth they \ndeserve - across two millennia of human reflection, \nthe rigor of modern research, and the immediacy of AI."}
+                {tHome("built.closingBody")}
               </p>
             </div>
           </GlassSection>
@@ -472,7 +429,7 @@ export default async function LandingPage() {
             <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-white/[0.03]" aria-hidden />
             <div className="relative z-10">
               <h2 className="text-center text-[28px] font-semibold leading-tight text-white sm:text-[32px] md:text-[36px]">
-                What we promise. What we won&apos;t do.
+                {tHome("promises.heading")}
               </h2>
               <div className="mx-auto mt-10 w-full max-w-6xl md:mt-12">
                 <div className="grid gap-6 md:grid-cols-1">
@@ -482,14 +439,10 @@ export default async function LandingPage() {
                         <Lock className="h-5 w-5" strokeWidth={2} aria-hidden />
                       </PromiseIconBadge>
                       <div className="min-w-0">
-                        <p className="content-card__title">Never stored</p>
-                        <p className="mt-3">
-                          Your conversations live encrypted on your device. Not on our servers. Not in our database.
-                        </p>
-                        <p className="mt-3">
-                          Even if we wanted to read them, we couldn&apos;t. Even if we were hacked, there&apos;d be nothing to leak.
-                        </p>
-                        <p className="mt-3">Your words stay yours.</p>
+                        <p className="content-card__title">{tHome("promises.neverStoredTitle")}</p>
+                        <p className="mt-3">{tHome("promises.neverStoredP1")}</p>
+                        <p className="mt-3">{tHome("promises.neverStoredP2")}</p>
+                        <p className="mt-3">{tHome("promises.neverStoredP3")}</p>
                       </div>
                     </div>
                   </article>
@@ -499,15 +452,11 @@ export default async function LandingPage() {
                         <UserX className="h-5 w-5" strokeWidth={2} aria-hidden />
                       </PromiseIconBadge>
                       <div className="min-w-0">
-                        <p className="content-card__title">Never required</p>
-                        <p className="mt-3">No account. No login. No password.</p>
-                        <p className="mt-3">
-                          We ask for your email in two situations only: when you choose to purchase a session, or when you request a PDF of your reflection.
-                        </p>
-                        <p className="mt-3">
-                          In both cases, we send what you asked for — nothing more. No marketing. No newsletters. No drip campaigns. No sharing with third parties.
-                        </p>
-                        <p className="mt-3">Your inbox stays yours.</p>
+                        <p className="content-card__title">{tHome("promises.neverRequiredTitle")}</p>
+                        <p className="mt-3">{tHome("promises.neverRequiredP1")}</p>
+                        <p className="mt-3">{tHome("promises.neverRequiredP2")}</p>
+                        <p className="mt-3">{tHome("promises.neverRequiredP3")}</p>
+                        <p className="mt-3">{tHome("promises.neverRequiredP4")}</p>
                       </div>
                     </div>
                   </article>
@@ -517,14 +466,10 @@ export default async function LandingPage() {
                         <Scale className="h-5 w-5" strokeWidth={2} aria-hidden />
                       </PromiseIconBadge>
                       <div className="min-w-0">
-                        <p className="content-card__title">Never manipulative</p>
-                        <p className="mt-3">
-                          No subscriptions. No auto-renewals. No hidden fees. No upsells. No dark patterns.
-                        </p>
-                        <p className="mt-3">
-                          Each use is a single, transparent choice. Free tools are clearly free. Paid tools are clearly priced — once, when you decide to use them.
-                        </p>
-                        <p className="mt-3">That&apos;s the entire business.</p>
+                        <p className="content-card__title">{tHome("promises.neverManipulativeTitle")}</p>
+                        <p className="mt-3">{tHome("promises.neverManipulativeP1")}</p>
+                        <p className="mt-3">{tHome("promises.neverManipulativeP2")}</p>
+                        <p className="mt-3">{tHome("promises.neverManipulativeP3")}</p>
                       </div>
                     </div>
                   </article>
@@ -532,11 +477,11 @@ export default async function LandingPage() {
               </div>
               <div className="mx-auto mt-12 max-w-3xl text-center">
                 <p className="whitespace-pre-line text-[17px] leading-8 text-white sm:text-[18px]">
-                  {"We're not a company that sells data because we don't\ncollect data."}
+                  {tHome("promises.dataLine")}
                 </p>
                 <p className="mt-5">
                   <Link href="/privacy" className="text-sm font-medium text-text-accent underline-offset-4 hover:text-purple-vivid hover:underline sm:text-[15px]">
-                    Read the full privacy architecture →
+                    {tHome("promises.readMore")}
                   </Link>
                 </p>
               </div>

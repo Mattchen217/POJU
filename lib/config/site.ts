@@ -5,5 +5,8 @@ export const siteConfig = {
   url: "https://pojulife.com",
   priceLabel: "$9.99",
   supportEmail: "support@pojulife.com",
+  privacyEmail: "privacy@pojulife.com",
+  legalEmail: "legal@pojulife.com",
+  founderEmail: "founder@pojulife.com",
   disclaimerVersion: "v1",
 } as const;

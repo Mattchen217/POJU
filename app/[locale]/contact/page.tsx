@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Link } from "@/i18n/navigation";
 
+import { siteConfig } from "@/lib/config/site";
 import { LegalPageShell } from "@/components/legal/legal-page-shell";
 
 export const dynamic = "force-dynamic";
@@ -14,30 +15,53 @@ export const metadata: Metadata = {
 function ContactContent() {
   return (
     <LegalPageShell title="Contact pojulife" maxWidth="md">
-      <p>We&apos;re a small team. Every email is read and answered by a real person.</p>
+      <p>We read every email. pojulife is a small operation — real humans respond as fast as we can.</p>
       <hr />
 
-      <h2>Reach us</h2>
+      <h2>Operator</h2>
       <p>
-        <strong>General questions / customer support</strong>
+        pojulife is operated by <strong>Tonghui Chen</strong>, an individual developer based in the People&apos;s
+        Republic of China.
         <br />
-        <code>support@pojulife.com</code>
-        <br />
-        <em>Response time: usually within 24 hours, often faster</em>
+        <strong>Operator contact:</strong>{" "}
+        <a href={`mailto:${siteConfig.founderEmail}`}>{siteConfig.founderEmail}</a>
       </p>
+
+      <hr />
+
+      <h2>Support</h2>
       <p>
-        <strong>Privacy or data requests</strong> (GDPR, CCPA, deletion)
+        For payments, refunds, and technical issues
         <br />
-        <code>privacy@pojulife.com</code>
+        <a href={`mailto:${siteConfig.supportEmail}`}>{siteConfig.supportEmail}</a>
         <br />
-        <em>Response time: 24-72 hours</em>
+        <em>We usually reply within 24 hours on business days.</em>
       </p>
+
+      <h2>Privacy</h2>
       <p>
-        <strong>Legal matters</strong> (Terms questions, disputes)
+        For data questions, CCPA/GDPR requests, and cookie preferences
         <br />
-        <code>legal@pojulife.com</code>
+        <a href={`mailto:${siteConfig.privacyEmail}`}>{siteConfig.privacyEmail}</a>
         <br />
-        <em>Response time: 2-5 business days</em>
+        <em>Privacy requests are typically answered within 48 hours.</em>
+      </p>
+
+      <h2>Legal</h2>
+      <p>
+        For legal matters, press inquiries, and physical address requests
+        <br />
+        <a href={`mailto:${siteConfig.legalEmail}`}>{siteConfig.legalEmail}</a>
+        <br />
+        <em>Legal inquiries are typically answered within 5 business days.</em>
+      </p>
+
+      <hr />
+
+      <h2>Payments</h2>
+      <p>
+        Card payments are processed by <strong>Dodo Payments</strong> as the merchant of record. pojulife does not store
+        your full payment card details.
       </p>
 
       <hr />
@@ -52,7 +76,13 @@ function ContactContent() {
           <Link href="/terms">Terms of Service</Link> — What you agree to
         </li>
         <li>
-          <Link href="/disclaimer">Disclaimer</Link> — What POJULIFE is and isn&apos;t
+          <Link href="/disclaimer">Disclaimer</Link> — What pojulife is and isn&apos;t
+        </li>
+        <li>
+          <Link href="/refund">Refund Policy</Link> — When refunds apply
+        </li>
+        <li>
+          <Link href="/cookies">Cookie Policy</Link> — How we use cookies
         </li>
       </ul>
 
@@ -68,7 +98,7 @@ function ContactContent() {
           findahelpline.com
         </a>
       </p>
-      <p>POJULIFE is not equipped to help with mental health crises. Please reach out to a human trained for this.</p>
+      <p>pojulife is not equipped to help with mental health crises. Please reach out to someone trained for this.</p>
 
       <hr />
 

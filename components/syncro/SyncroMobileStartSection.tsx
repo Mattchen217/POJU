@@ -1,10 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 
+import { buildSyncroMobileUrl, SyncroDesktopQRModal } from "@/components/syncro/SyncroDesktopQRModal";
 import { useRouter } from "@/i18n/navigation";
-import { detectDevice } from "@/lib/device-detection";
+import {
+  canUseSyncro,
+  detectDeviceCapability,
+  type DeviceCapability,
+} from "@/lib/syncro/device-capability";
 import { isFirstTimeFree } from "@/lib/syncro/device-usage";
 import { hasOrientationSensor, isMobileDevice } from "@/lib/syncro/device-check";
 
@@ -29,47 +35,68 @@ function FeatureCard({
   );
 }
 
-/** Mobile / tablet: v5 start CTA after the marketing intro. */
+/** Marketing footer CTA: desktop → QR modal; mobile/tablet → task or payment. */
 export function SyncroMobileStartSection() {
   const router = useRouter();
+  const locale = useLocale();
+  const searchParams = useSearchParams();
   const t = useTranslations("syncro");
+  const tHome = useTranslations("syncro.home");
 
-  const [canUse, setCanUse] = useState<{
-    isFreeAvailable: boolean;
-    isSupportedDevice: boolean;
-    checking: boolean;
-  }>({
-    isFreeAvailable: false,
-    isSupportedDevice: false,
-    checking: true,
-  });
+  const [capability, setCapability] = useState<DeviceCapability | null>(null);
+  const [showQR, setShowQR] = useState(false);
+  const [isFreeAvailable, setIsFreeAvailable] = useState(false);
+  const [isSupportedDevice, setIsSupportedDevice] = useState(false);
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    void checkAccess();
+    void init();
   }, []);
 
-  async function checkAccess() {
-    const free = await isFirstTimeFree("syncro");
-    const d = detectDevice();
-    const touchMobile = isMobileDevice() || d.type === "tablet";
-    const orientation = await hasOrientationSensor();
+  useEffect(() => {
+    if (searchParams.get("desktop") === "true" && capability?.isDesktop) {
+      setShowQR(true);
+    }
+  }, [searchParams, capability]);
 
-    setCanUse({
-      isFreeAvailable: free,
-      isSupportedDevice: touchMobile && orientation,
-      checking: false,
-    });
+  async function init() {
+    const [cap, free] = await Promise.all([detectDeviceCapability(), isFirstTimeFree("syncro")]);
+
+    const touchMobile = isMobileDevice() || cap.isTablet;
+    const orientation = cap.isTablet || (await hasOrientationSensor());
+
+    setCapability(cap);
+    setIsFreeAvailable(free);
+    setIsSupportedDevice(canUseSyncro(cap) && touchMobile && orientation);
+    setChecking(false);
   }
 
   function handleStart() {
-    if (canUse.isFreeAvailable) {
+    if (!capability) return;
+
+    if (!canUseSyncro(capability)) {
+      setShowQR(true);
+      return;
+    }
+
+    if (!isSupportedDevice) return;
+
+    if (isFreeAvailable) {
       router.push("/syncro/task?type=free");
     } else {
       router.push("/syncro/payment");
     }
   }
 
-  if (canUse.checking) {
+  const qrUrl = buildSyncroMobileUrl(locale);
+  const isDesktop = capability?.isDesktop ?? false;
+  const ctaLabel = isDesktop
+    ? tHome("cta_start")
+    : isFreeAvailable
+      ? t("start_free")
+      : t("start_paid");
+
+  if (checking) {
     return (
       <section id="syncro-start" className="mx-auto w-full max-w-lg px-4 pb-16 pt-4 text-center text-text-secondary">
         <p>{t("loading")}</p>
@@ -77,7 +104,7 @@ export function SyncroMobileStartSection() {
     );
   }
 
-  if (!canUse.isSupportedDevice) {
+  if (!isDesktop && !isSupportedDevice) {
     return (
       <section id="syncro-start" className="mx-auto w-full max-w-lg px-4 pb-16 pt-4 text-center">
         <p className="text-[15px] leading-8 text-text-secondary">{t("not_supported_device")}</p>
@@ -87,11 +114,15 @@ export function SyncroMobileStartSection() {
 
   return (
     <section id="syncro-start" className="mx-auto w-full max-w-lg px-4 pb-16 pt-2">
-      <div className="mt-6 grid gap-4">
-        <FeatureCard icon="🧭" titleKey="feature_realtime" descKey="feature_realtime_desc" />
-        <FeatureCard icon="⚡" titleKey="feature_directional" descKey="feature_directional_desc" />
-        <FeatureCard icon="📹" titleKey="feature_vr" descKey="feature_vr_desc" />
-      </div>
+      {!isDesktop ? (
+        <div className="mt-6 grid gap-4">
+          <FeatureCard icon="🧭" titleKey="feature_realtime" descKey="feature_realtime_desc" />
+          <FeatureCard icon="⚡" titleKey="feature_directional" descKey="feature_directional_desc" />
+          <FeatureCard icon="📹" titleKey="feature_vr" descKey="feature_vr_desc" />
+        </div>
+      ) : (
+        <p className="mt-6 text-center text-sm leading-7 text-text-secondary">{t("open_on_mobile_hint")}</p>
+      )}
 
       <div className="mt-10 text-center">
         <button
@@ -99,12 +130,16 @@ export function SyncroMobileStartSection() {
           onClick={handleStart}
           className="marketing-pill-outline-cta marketing-pill-outline-cta--cyan inline-flex w-full min-w-[220px] max-w-sm justify-center px-8 py-3.5 text-[15px] font-semibold hover:-translate-y-0.5 hover:scale-[1.02] motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100 active:scale-[0.99] sm:w-auto md:px-10 md:py-4 md:text-base"
         >
-          {canUse.isFreeAvailable ? t("start_free") : t("start_paid")}
+          {ctaLabel}
         </button>
-        <p className="mt-4 text-sm leading-7 text-text-dim">
-          {canUse.isFreeAvailable ? t("free_note") : t("paid_note")}
-        </p>
+        {!isDesktop ? (
+          <p className="mt-4 text-sm leading-7 text-text-dim">
+            {isFreeAvailable ? t("free_note") : t("paid_note")}
+          </p>
+        ) : null}
       </div>
+
+      {showQR ? <SyncroDesktopQRModal onClose={() => setShowQR(false)} url={qrUrl} /> : null}
     </section>
   );
 }

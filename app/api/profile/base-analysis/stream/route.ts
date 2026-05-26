@@ -1,6 +1,7 @@
 import { saveBaseAnalysisAudit } from "@/lib/dev/base-analysis-audit";
 import { parseBaseAnalysisAuditBody } from "@/lib/dev/parse-base-analysis-audit-body";
 import { buildBaseAnalysisPrompt, parseBaseAnalysisResponseText } from "@/lib/llm/deepseek/base-analysis";
+import { baseAnalysisReasoningEffort } from "@/lib/llm/base-analysis-reasoning";
 import {
   buildOpenRouterMessages,
   openRouterChatCompletionStream,
@@ -9,14 +10,6 @@ import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 
 export const maxDuration = 300;
 export const runtime = "nodejs";
-
-function baseAnalysisReasoningEffort(): "low" | "medium" | "high" | "xhigh" {
-  const raw = process.env.POJU_BASE_ANALYSIS_REASONING_EFFORT?.trim().toLowerCase();
-  if (raw === "low" || raw === "medium" || raw === "high" || raw === "xhigh") return raw;
-  // Vercel Hobby caps ~10–60s; high reasoning often exceeds that on Step 7.
-  if (process.env.VERCEL === "1" && process.env.VERCEL_ENV === "production") return "medium";
-  return "high";
-}
 
 function sseLine(obj: Record<string, unknown>): string {
   return `data: ${JSON.stringify(obj)}\n\n`;

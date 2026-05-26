@@ -18,6 +18,21 @@ export function isBaseAnalysisAuditEnabled(): boolean {
   return process.env.NODE_ENV !== "production" || process.env.POJU_BASE_ANALYSIS_AUDIT === "1";
 }
 
+/** Vercel/serverless 写入的 .data 不跨实例持久化，线上审核台常为空。 */
+export function isBaseAnalysisAuditEphemeralOnHost(): boolean {
+  return process.env.VERCEL === "1";
+}
+
+export function baseAnalysisAuditEnvironmentHint(): string | null {
+  if (!isBaseAnalysisAuditEnabled()) {
+    return "生产环境默认关闭审核落盘。需在 Vercel 设置 POJU_BASE_ANALYSIS_AUDIT=1，且仅适合调试；正式环境请用本地 pnpm dev 查看 .data/base-analysis-audit/。";
+  }
+  if (isBaseAnalysisAuditEphemeralOnHost()) {
+    return "当前部署在 Vercel：审核 JSON 只写在单次函数实例的临时磁盘，刷新列表可能看不到刚生成的记录。本地开发（pnpm dev）可稳定写入 pojulife/.data/base-analysis-audit/。";
+  }
+  return null;
+}
+
 export function baseAnalysisAuditPagePath(): string {
   return "/base-analysis-audit";
 }

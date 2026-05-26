@@ -390,10 +390,25 @@
   animation: match-fade-in 0.4s ease;
 }
 
+.match-analyzing-preview {
+  margin: 0.75rem 0 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #c9a227;
+  font-weight: 500;
+}
+
 .match-analyzing-hint {
   margin: 1rem 0 0;
   font-size: 0.8rem;
   line-height: 1.55;
+  color: #9a9288;
+}
+
+.match-engine-note {
+  margin: 0 0 0.75rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
   color: #9a9288;
 }
 

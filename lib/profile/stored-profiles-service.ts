@@ -12,7 +12,8 @@ import {
   generateDisplayName,
   normalizeStoredBirthInfo,
 } from "@/lib/profile/birth-info-utils";
-import type { BirthInfo, UserProfile } from "@/lib/profile/types";
+import { birthInfoToStoredRecord, tstMetaFromProfile } from "@/lib/profile/stored-birth-info";
+import type { BirthInfo, BirthLocation, UserProfile } from "@/lib/profile/types";
 
 const STORED_PROFILES_SECRET = "pojulife_v4_stored_profiles";
 
@@ -23,7 +24,12 @@ function assertBrowser(): void {
 }
 
 async function hashBirthInfo(birth: BirthInfo): Promise<string> {
-  const canonical = `${birth.year}-${birth.month}-${birth.day}-${birth.hour_period}-${birth.gender}-${birth.timezone}`;
+  const loc = birth.birth_location;
+  const locPart =
+    loc && !loc.use_defaults
+      ? `${loc.longitude}-${loc.latitude ?? 0}-${loc.name}`
+      : `default-${birth.timezone}`;
+  const canonical = `${birth.year}-${birth.month}-${birth.day}-${birth.hour_period}-${birth.gender}-${birth.timezone}-${locPart}`;
   return sha256Hex(new TextEncoder().encode(canonical));
 }
 
@@ -36,6 +42,7 @@ export interface StoredProfileSummary {
   timezone: string;
   relationship: import("@/lib/db/poju-db").StoredProfileRelationship;
   has_base_analysis: boolean;
+  used_true_solar_time?: boolean;
   used_in_products: { poju: number; glyph: number; syncro: number; match: number };
   last_used_at: string;
   created_at: string;
@@ -67,6 +74,10 @@ export async function listStoredProfiles(): Promise<StoredProfileSummary[]> {
         timezone: b.timezone,
         relationship: record.relationship,
         has_base_analysis: record.has_base_analysis,
+        used_true_solar_time:
+          data.user_profile?.used_true_solar_time ??
+          data.base_analysis?.used_true_solar_time ??
+          (b.birth_location ? !b.birth_location.use_defaults : undefined),
         used_in_products: {
           poju: record.used_in_products.poju ?? 0,
           glyph: record.used_in_products.glyph ?? 0,
@@ -127,9 +138,14 @@ export async function createStoredProfile(input: {
   }
 
   const userProfile = await calculateProfile(birth_info);
+  const storedBirth = birthInfoToStoredRecord({
+    ...birth_info,
+    tst_meta: userProfile.tst_meta ?? birth_info.tst_meta,
+    birth_location: userProfile.birth.birth_location ?? birth_info.birth_location,
+  });
 
   const payload: StoredProfileData = {
-    birth_info: birth_info as unknown as StoredProfileData["birth_info"],
+    birth_info: storedBirth,
     user_profile: userProfile,
   };
 
@@ -202,7 +218,12 @@ export async function getStoredProfileRecord(profileId: string): Promise<StoredP
 export async function saveBaseAnalysis(
   profileId: string,
   baseAnalysis: unknown,
-  meta: { model: string; tokens_used: number },
+  meta: {
+    model: string;
+    tokens_used: number;
+    used_true_solar_time?: boolean;
+    tst_meta?: import("@/lib/profile/types").TstMeta;
+  },
 ): Promise<void> {
   assertBrowser();
   const db = getPojuDb();
@@ -213,12 +234,28 @@ export async function saveBaseAnalysis(
     iv: record.iv,
     cipher: record.encrypted_data,
   });
+
+  const tst_meta =
+    meta.tst_meta ??
+    tstMetaFromProfile(
+      normalizeStoredBirthInfo(data.birth_info as unknown as Record<string, unknown>),
+      data.user_profile,
+    );
+  const used_true_solar_time =
+    meta.used_true_solar_time ?? data.user_profile.used_true_solar_time ?? false;
+
   data.base_analysis = {
     generated_at: new Date().toISOString(),
     model: meta.model,
     tokens_used: meta.tokens_used,
     content: baseAnalysis,
+    used_true_solar_time,
+    tst_meta,
   };
+
+  if (tst_meta && data.birth_info) {
+    data.birth_info.tst_meta = tst_meta;
+  }
 
   const enc = await encryptJson(STORED_PROFILES_SECRET, data);
   await db.stored_profiles.update(profileId, {
@@ -228,6 +265,52 @@ export async function saveBaseAnalysis(
     base_analysis_at: new Date(),
     last_used_at: new Date(),
   });
+}
+
+/**
+ * Recalculate chart with new birth location and clear cached base_analysis (Step 4/5 upgrade).
+ */
+export async function upgradeStoredProfileLocation(
+  profileId: string,
+  birthLocation: BirthLocation,
+): Promise<UserProfile> {
+  assertBrowser();
+  const db = getPojuDb();
+  const record = await db.stored_profiles.get(profileId);
+  if (!record) throw new Error("Profile not found");
+
+  const data = await decryptJson<StoredProfileData>(STORED_PROFILES_SECRET, {
+    iv: record.iv,
+    cipher: record.encrypted_data,
+  });
+
+  const birth = normalizeStoredBirthInfo(data.birth_info as unknown as Record<string, unknown>);
+  const updatedBirth: BirthInfo = {
+    ...birth,
+    birth_location: birthLocation,
+  };
+
+  const userProfile = await calculateProfile(updatedBirth);
+  const storedBirth = birthInfoToStoredRecord({
+    ...updatedBirth,
+    tst_meta: userProfile.tst_meta,
+    birth_location: userProfile.birth.birth_location ?? birthLocation,
+  });
+
+  data.birth_info = storedBirth;
+  data.user_profile = userProfile;
+  delete data.base_analysis;
+
+  const enc = await encryptJson(STORED_PROFILES_SECRET, data);
+  await db.stored_profiles.update(profileId, {
+    encrypted_data: enc.cipher,
+    iv: enc.iv,
+    has_base_analysis: false,
+    base_analysis_at: undefined,
+    last_used_at: new Date(),
+  });
+
+  return userProfile;
 }
 
 export async function recordProfileUsage(

@@ -8,6 +8,7 @@ import { resolve } from "node:path";
 
 import { calculateProfile } from "@/lib/calculations";
 import { buildMatchPrompt } from "@/lib/llm/prompts/match-deepseek-prompt";
+import { calculateCompatibilityMatrix } from "@/lib/match/calculate-compatibility";
 import {
   MATCH_BAZI_HEPAN_IDENTITY,
   MATCH_HEPAN_METHOD,
@@ -58,10 +59,10 @@ async function main(): Promise<void> {
   assert("branding 禁 POJU/Glyph/Syncro", MATCH_OUTPUT_BRANDING.includes("POJU"));
   assert("branding combined 十神", MATCH_OUTPUT_BRANDING.includes("combined"));
 
-  assert("deepseek uses match-base", deep.includes("buildMatchCorePromptSections"));
+  assert("deepseek uses match-base identity", deep.includes("MATCH_BAZI_HEPAN_IDENTITY"));
   assert("deepseek uses stitchPromptSections", deep.includes("stitchPromptSections"));
-  assert("deepseek NOT ORIENTAL_COUNSELOR_BASE", !deep.includes("ORIENTAL_COUNSELOR_BASE"));
-  assert("deepseek NOT 东方破局顾问", !deep.includes("东方破局顾问"));
+  assert("deepseek uses compatibilityMatrix", deep.includes("compatibilityMatrix"));
+  assert("deepseek injects computed matrix", deep.includes("已计算的契合度矩阵"));
 
   const birthA: BirthInfo = {
     year: 1988,
@@ -84,6 +85,45 @@ async function main(): Promise<void> {
   aProfile.id = "match-a-step-d";
   bProfile.id = "match-b-step-d";
 
+  const sampleMatrix = calculateCompatibilityMatrix({
+    profileA: {
+      base_analysis: {
+        content: {
+          bazi: {
+            day_stem: "戊",
+            day_branch: "午",
+            year_stem: "戊",
+            year_branch: "辰",
+            month_stem: "己",
+            month_branch: "未",
+            hour_stem: "壬",
+            hour_branch: "子",
+          },
+          gender: "M",
+          yong_shen: { primary_element: "火" },
+        },
+      },
+    },
+    profileB: {
+      base_analysis: {
+        content: {
+          bazi: {
+            day_stem: "庚",
+            day_branch: "申",
+            year_stem: "庚",
+            year_branch: "午",
+            month_stem: "丙",
+            month_branch: "戌",
+            hour_stem: "甲",
+            hour_branch: "子",
+          },
+          gender: "F",
+          yong_shen: { primary_element: "水" },
+        },
+      },
+    },
+  });
+
   const { system, user, detected_language } = buildMatchPrompt({
     a_profile: aProfile,
     a_base_analysis: {
@@ -98,6 +138,7 @@ async function main(): Promise<void> {
       useful_god: { primary: "水" },
     },
     relationship_description: "我们在考虑结婚，交往两年，家人对彩礼和定居城市有分歧，想知道长期是否契合。",
+    compatibilityMatrix: sampleMatrix,
     locale: "en",
   });
 

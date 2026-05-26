@@ -16,7 +16,7 @@ export function SiteHeader() {
   const active = getActiveNavFromPathname(pathname);
   const tNav = useTranslations("nav");
   const tCommon = useTranslations("common");
-  const brandLabel = tCommon("brand").replace(/^p/, "P");
+  const brandLabel = tCommon("brand");
 
   const cls = (key: SiteNavActive) =>
     active === key ? "text-white" : "transition-colors hover:text-white";

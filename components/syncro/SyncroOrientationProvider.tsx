@@ -13,6 +13,8 @@ import { requestOrientationPermission } from "@/lib/syncro/device-check";
 
 export type OrientationContextValue = {
   compassDegree: number;
+  /** Front-back tilt in degrees (DeviceOrientationEvent.beta). */
+  deviceTiltBeta: number | null;
   hasPermission: boolean;
   requestPermission: () => Promise<boolean>;
   isSupported: boolean;
@@ -30,6 +32,7 @@ export function useOrientation(): OrientationContextValue {
 
 export function SyncroOrientationProvider({ children }: { children: ReactNode }) {
   const [compassDegree, setCompassDegree] = useState(0);
+  const [deviceTiltBeta, setDeviceTiltBeta] = useState<number | null>(null);
   const [hasPermission, setHasPermission] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
 
@@ -48,6 +51,10 @@ export function SyncroOrientationProvider({ children }: { children: ReactNode })
     if (!hasPermission) return;
 
     function handler(e: DeviceOrientationEvent) {
+      if (e.beta != null && !Number.isNaN(e.beta)) {
+        setDeviceTiltBeta(e.beta);
+      }
+
       const ios = (e as DeviceOrientationEvent & { webkitCompassHeading?: number }).webkitCompassHeading;
 
       if (typeof ios === "number") {
@@ -90,6 +97,7 @@ export function SyncroOrientationProvider({ children }: { children: ReactNode })
     <OrientationContext.Provider
       value={{
         compassDegree,
+        deviceTiltBeta,
         hasPermission,
         requestPermission,
         isSupported,

@@ -139,6 +139,30 @@
   color: #ddd6fe;
 }
 
+.legal-page .legal-table-wrap {
+  margin: 1rem 0 1.25rem;
+  overflow-x: auto;
+}
+
+.legal-page .legal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.legal-page .legal-table th,
+.legal-page .legal-table td {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 0.5rem 0.65rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.legal-page .legal-table th {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+}
+
 .legal-page .legal-prose hr {
   margin: var(--space-6) 0;
   border: none;

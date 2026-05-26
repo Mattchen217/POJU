@@ -38,18 +38,20 @@ export default function PrivacyPage() {
     <LegalPageShell
       version="Version 1.0"
       title="Privacy Policy"
-      updated="Last updated: May 1, 2026"
+      updated="Last updated: 2026-05-23"
       intro={
-        <p>
-          POJULIFE was built differently.
-          <br />
-          <br />
-          Most products talk about &quot;respecting your privacy.&quot; We built a product that doesn&apos;t need your
-          data to work.
-          <br />
-          <br />
-          Here&apos;s the full picture.
-        </p>
+        <>
+          <p>
+            <strong>Operator:</strong> pojulife is operated by Tonghui Chen, an individual developer based in the
+            People&apos;s Republic of China. Operator contact:{" "}
+            <a href="mailto:privacy@pojulife.com">privacy@pojulife.com</a>.
+          </p>
+          <p>
+            pojulife and its products (POJU, Glyph, Syncro, Match) were built differently. Most products talk about
+            &quot;respecting your privacy.&quot; We built a product that doesn&apos;t need your data to work. Here&apos;s
+            the full picture.
+          </p>
+        </>
       }
       footer={
         <p>
@@ -130,7 +132,7 @@ export default function PrivacyPage() {
         <li>Conversations on your device: AES-256-GCM encryption</li>
         <li>Encryption key: generated on your device, never sent to us</li>
         <li>Transmission: HTTPS only (TLS 1.2+)</li>
-        <li>Payment: handled by our payment processor (PCI DSS compliant)</li>
+        <li>Payment: handled by Dodo Payments (merchant of record); we do not store your full card details</li>
       </ul>
       <p>Even if our servers were breached, there are no conversations to steal.</p>
 
@@ -157,8 +159,19 @@ export default function PrivacyPage() {
           </a>
         </li>
         <li>
-          <strong>Our payment processor (DodoPayments)</strong> — Processes payments; we never see your full card details.
-          See the processor&apos;s terms and privacy notice at checkout.
+          <strong>DeepSeek</strong> — AI processing for some products. We configure API use without training on your
+          content. Privacy:{" "}
+          <a href="https://www.deepseek.com/privacy" rel="noopener noreferrer" target="_blank">
+            deepseek.com/privacy
+          </a>
+        </li>
+        <li>
+          <strong>Dodo Payments</strong> — Card and wallet payments are processed by Dodo Payments as the merchant of
+          record. We never see your full card details. See Dodo&apos;s terms and privacy notice at checkout and on{" "}
+          <a href="https://dodopayments.com" rel="noopener noreferrer" target="_blank">
+            dodopayments.com
+          </a>
+          .
         </li>
         <li>
           <strong>Vercel</strong> — Hosting and edge delivery. Standard server logs may include IP and user agent. Privacy:{" "}
@@ -174,64 +187,46 @@ export default function PrivacyPage() {
 
       <h2>7. AI Model Data Handling</h2>
       <p>
-        To meet quality requirements, POJULIFE may call upon AI models from leading providers including
-        Anthropic&apos;s Claude, OpenAI&apos;s GPT, and Google&apos;s Gemini.
+        Your conversations are sent to AI providers including Anthropic (Claude) and DeepSeek (DeepSeek V4) for
+        processing. We&apos;ve configured our integrations to:
       </p>
-
-      <h3>What this means for your data</h3>
-      <p>
-        While POJULIFE does not store your conversations (they live encrypted on your device), your inputs are
-        transmitted to these AI providers for processing. This is unavoidable — the AI cannot generate responses without
-        receiving your inputs.
-      </p>
-
-      <h3>How we minimize this</h3>
       <ul>
         <li>
-          <strong>Zero Data Retention (ZDR)</strong> is enabled where supported. This is a paid contractual guarantee
-          that the provider does not save your API requests or responses, does not use them for training, and does not
-          allow human review.
+          <strong>Anthropic</strong>: Zero Data Retention (ZDR) enabled where supported.
         </li>
         <li>
-          <strong>No training on your data</strong>: We have opted out of any data sharing for AI model training across
-          all providers we use.
+          <strong>DeepSeek</strong>: No training on user data for our API use.
         </li>
         <li>
-          <strong>Minimum data principle</strong>: We send only what&apos;s needed for the specific task. Your name,
-          email, and other personal identifiers are never sent to AI providers.
+          <strong>No human review by default</strong> for API traffic we send.
         </li>
       </ul>
-
-      <h3>Third-party privacy policies</h3>
+      <p>Your conversations are not used to improve any AI model.</p>
       <p>
-        When POJULIFE uses an AI provider&apos;s service, that provider&apos;s privacy policy applies to the API
-        transaction:
+        While pojulife does not store your conversations (they live encrypted on your device), your inputs are
+        transmitted to these AI providers for processing. We send only what&apos;s needed for the specific task. Your
+        name, email, and other personal identifiers are never sent to AI providers.
       </p>
+      <p>Provider privacy policies:</p>
       <ul>
         <li>
-          Anthropic Privacy Policy:{" "}
+          Anthropic:{" "}
           <a href="https://www.anthropic.com/privacy" rel="noopener noreferrer" target="_blank">
-            https://www.anthropic.com/privacy
+            anthropic.com/privacy
           </a>
         </li>
         <li>
-          OpenAI Privacy Policy:{" "}
-          <a href="https://openai.com/privacy/" rel="noopener noreferrer" target="_blank">
-            https://openai.com/privacy/
-          </a>
-        </li>
-        <li>
-          Google Privacy Policy:{" "}
-          <a href="https://policies.google.com/privacy" rel="noopener noreferrer" target="_blank">
-            https://policies.google.com/privacy
+          DeepSeek:{" "}
+          <a href="https://www.deepseek.com/privacy" rel="noopener noreferrer" target="_blank">
+            deepseek.com/privacy
           </a>
         </li>
       </ul>
 
       <h2>8. Children&apos;s Privacy</h2>
-      <p>POJULIFE is not intended for users under 18.</p>
+      <p>pojulife is intended for users 18 years of age or older.</p>
       <p>
-        We do not knowingly collect data from minors. If you believe a minor has used POJULIFE, contact{" "}
+        We do not knowingly collect data from minors. If you believe a minor has used pojulife, contact{" "}
         <a href="mailto:privacy@pojulife.com">privacy@pojulife.com</a> and we&apos;ll delete any associated data
         immediately.
       </p>
@@ -270,9 +265,17 @@ export default function PrivacyPage() {
 
       <h2>11. Contact</h2>
       <p>
+        <strong>Operator:</strong> Tonghui Chen (individual developer, operating pojulife) —{" "}
+        <a href="mailto:founder@pojulife.com">founder@pojulife.com</a>
+      </p>
+      <p>
         <a href="mailto:privacy@pojulife.com">privacy@pojulife.com</a> (privacy) ·{" "}
         <a href="mailto:support@pojulife.com">support@pojulife.com</a> (support) ·{" "}
         <a href="mailto:legal@pojulife.com">legal@pojulife.com</a> (legal)
+      </p>
+      <p>
+        Physical address: [Available upon request — email{" "}
+        <a href="mailto:legal@pojulife.com">legal@pojulife.com</a>]
       </p>
 
       <h2>12. Updates to This Policy</h2>

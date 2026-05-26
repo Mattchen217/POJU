@@ -1,5 +1,5 @@
-import { legacyFormToBirthInfo } from "@/lib/profile/birth-info-utils";
-import type { BirthInfo, HourPeriod, LegacyBirthFormInput } from "@/lib/profile/types";
+import { buildDefaultBirthLocation, legacyFormToBirthInfo } from "@/lib/profile/birth-info-utils";
+import type { BirthInfo, BirthLocation, HourPeriod, LegacyBirthFormInput } from "@/lib/profile/types";
 
 /** API / form body: v5 `BirthInfo` or legacy hour/minute form (Step B bridge until Step C picker). */
 export type BirthInfoInput = Partial<BirthInfo> | Partial<LegacyBirthFormInput>;
@@ -13,10 +13,42 @@ type RawBirthInput = {
   hour_period?: HourPeriod;
   gender?: BirthInfo["gender"] | LegacyBirthFormInput["gender"];
   timezone?: string;
+  user_timezone?: string;
   city?: string;
   latitude?: number;
   longitude?: number;
+  location_name?: string;
+  use_defaults?: boolean;
+  birth_location?: Partial<BirthLocation>;
 };
+
+function parseBirthLocation(raw: RawBirthInput, timezone: string): BirthInfo["birth_location"] | undefined {
+  if (raw.use_defaults) {
+    return buildDefaultBirthLocation(timezone);
+  }
+
+  if (raw.birth_location && typeof raw.birth_location.longitude === "number") {
+    return {
+      name: raw.birth_location.name?.trim() || raw.location_name?.trim() || "Custom",
+      longitude: raw.birth_location.longitude,
+      latitude: raw.birth_location.latitude,
+      timezone: raw.birth_location.timezone?.trim() || timezone,
+      use_defaults: false,
+    };
+  }
+
+  if (raw.longitude != null && Number.isFinite(Number(raw.longitude))) {
+    return {
+      name: raw.city?.trim() || raw.location_name?.trim() || "Custom",
+      longitude: Number(raw.longitude),
+      latitude: raw.latitude != null ? Number(raw.latitude) : undefined,
+      timezone,
+      use_defaults: false,
+    };
+  }
+
+  return undefined;
+}
 
 export function normalizeBirthInfoInput(input: BirthInfoInput): BirthInfo {
   const raw = input as RawBirthInput;
@@ -27,13 +59,20 @@ export function normalizeBirthInfoInput(input: BirthInfoInput): BirthInfo {
     raw.day != null &&
     (raw.gender === "M" || raw.gender === "F")
   ) {
+    const timezone =
+      raw.timezone?.trim() ||
+      raw.user_timezone?.trim() ||
+      (typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : "Asia/Shanghai");
+    const birth_location = parseBirthLocation(raw, timezone);
+
     return {
       year: Number(raw.year),
       month: Number(raw.month),
       day: Number(raw.day),
       hour_period: raw.hour_period,
       gender: raw.gender,
-      timezone: raw.timezone?.trim() || "Asia/Shanghai",
+      timezone,
+      birth_location,
     };
   }
   return legacyFormToBirthInfo({

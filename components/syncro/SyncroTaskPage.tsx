@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 
 import { Link, useRouter } from "@/i18n/navigation";
+import { inferTaskTimeScope, SYNCRO_TASK_TIME_KEY } from "@/lib/syncro/syncro-view-helpers";
 
 const MIN_LEN = 6;
 const MAX_LEN = 100;
@@ -33,8 +34,10 @@ export function SyncroTaskPage() {
       return;
     }
 
-    sessionStorage.setItem("syncro_task_pending", task.trim());
+    const trimmed = task.trim();
+    sessionStorage.setItem("syncro_task_pending", trimmed);
     sessionStorage.setItem("syncro_session_type", sessionType);
+    sessionStorage.setItem(SYNCRO_TASK_TIME_KEY, inferTaskTimeScope(trimmed));
     router.push("/syncro/prepare");
   }
 

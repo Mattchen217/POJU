@@ -4,9 +4,10 @@ type MatchAnalyzingLoaderProps = {
   step: number;
   steps: string[];
   hint: string;
+  previewLine?: string | null;
 };
 
-export function MatchAnalyzingLoader({ step, steps, hint }: MatchAnalyzingLoaderProps) {
+export function MatchAnalyzingLoader({ step, steps, hint, previewLine }: MatchAnalyzingLoaderProps) {
   return (
     <div className="match-analyzing-inner">
       <div className="match-analyzing-icons" aria-hidden>
@@ -19,6 +20,10 @@ export function MatchAnalyzingLoader({ step, steps, hint }: MatchAnalyzingLoader
       <p key={step} className="match-analyzing-step">
         {steps[step] ?? steps[0]}
       </p>
+
+      {previewLine ? (
+        <p className="match-analyzing-preview">{previewLine}</p>
+      ) : null}
 
       <p className="match-analyzing-hint">{hint}</p>
     </div>

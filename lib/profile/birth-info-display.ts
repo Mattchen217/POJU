@@ -8,6 +8,8 @@ export interface BirthInfoDisplayRow {
   hour_period: HourPeriod;
   gender: "M" | "F";
   timezone: string;
+  birth_location_name?: string;
+  birth_location_defaults?: boolean;
 }
 
 export function parseStoredProfileSummaryForDisplay(p: StoredProfileSummary): BirthInfoDisplayRow {

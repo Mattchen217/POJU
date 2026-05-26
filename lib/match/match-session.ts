@@ -18,6 +18,8 @@ export type CreateMatchSessionInput = {
   is_free: boolean;
   cost_usd: number;
   locale: string;
+  compatibility_score?: number;
+  engine_version?: "v5.1";
 };
 
 export type MatchSessionListItem = {
@@ -57,6 +59,8 @@ export async function createMatchSession(input: CreateMatchSessionInput): Promis
     is_free: input.is_free,
     cost_usd: input.cost_usd,
     locale: input.locale,
+    compatibility_score: input.compatibility_score,
+    engine_version: input.engine_version ?? "v5.1",
   };
 
   const { cipher, iv } = await encryptJson(MATCH_SESSION_SECRET, toPayload(session));

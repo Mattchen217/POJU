@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
+import { SyncroGuardedRoute } from "@/components/syncro/SyncroGuardedRoute";
 import { SyncroMainView } from "@/components/syncro/SyncroMainView";
 import { SyncroOrientationProvider } from "@/components/syncro/SyncroOrientationProvider";
 import { Link } from "@/i18n/navigation";
@@ -14,7 +15,7 @@ import "@/styles/syncro.css";
 
 type Stage = "loading" | "ready" | "expired" | "error";
 
-export default function SyncroResultPage() {
+function SyncroResultPageContent() {
   const params = useParams();
   const locale = useLocale();
   const t = useTranslations("syncro.expired");
@@ -85,5 +86,13 @@ export default function SyncroResultPage() {
     <SyncroOrientationProvider>
       <SyncroMainView session={session} locale={locale} />
     </SyncroOrientationProvider>
+  );
+}
+
+export default function SyncroResultPage() {
+  return (
+    <SyncroGuardedRoute>
+      <SyncroResultPageContent />
+    </SyncroGuardedRoute>
   );
 }

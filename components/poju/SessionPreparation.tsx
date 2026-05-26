@@ -4,13 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { BirthInfoPicker } from "@/components/poju/BirthInfoPicker";
 import { BirthInfoConfirmDialog } from "@/components/poju/BirthInfoConfirmDialog";
+import { ProfileAccuracyBadge } from "@/components/profile/ProfileAccuracyBadge";
+import { ProfileUpgradeModal } from "@/components/profile/ProfileUpgradeModal";
 import {
   getSessionPrepBrand,
   getWelcomeText,
   type MatchPrepPerson,
   type SessionPrepProduct,
 } from "@/lib/poju/session-prep-copy";
-import { createStoredProfile, type StoredProfileSummary } from "@/lib/profile/stored-profiles-service";
+import { createStoredProfile, listStoredProfilesForSessionPrep, type StoredProfileSummary } from "@/lib/profile/stored-profiles-service";
 import type { BirthInfo } from "@/lib/profile/types";
 
 export interface SessionPreparationProps {
@@ -46,21 +48,33 @@ export function SessionPreparation({
   const tMatch = useTranslations("match");
 
   const [mode, setMode] = useState<"list" | "new">(existingProfiles.length > 0 ? "list" : "new");
+  const [profiles, setProfiles] = useState(existingProfiles);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [pendingBirthInfo, setPendingBirthInfo] = useState<BirthInfo | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [upgradeTarget, setUpgradeTarget] = useState<StoredProfileSummary | null>(null);
   const hadProfilesRef = useRef(existingProfiles.length > 0);
 
   useEffect(() => {
-    if (existingProfiles.length > 0 && !hadProfilesRef.current) {
+    setProfiles(existingProfiles);
+  }, [existingProfiles]);
+
+  async function refreshProfiles() {
+    const list = await listStoredProfilesForSessionPrep();
+    setProfiles(list);
+    return list;
+  }
+
+  useEffect(() => {
+    if (profiles.length > 0 && !hadProfilesRef.current) {
       hadProfilesRef.current = true;
       setMode("list");
-    } else if (existingProfiles.length === 0) {
+    } else if (profiles.length === 0) {
       hadProfilesRef.current = false;
       setMode("new");
     }
-  }, [existingProfiles.length]);
+  }, [profiles.length]);
 
   function handleSelectExisting(profileId: string) {
     setSelectedProfileId(profileId);
@@ -112,18 +126,19 @@ export function SessionPreparation({
       />
 
       <div className="prep-main">
-        {mode === "list" && existingProfiles.length > 0 ? (
+        {mode === "list" && profiles.length > 0 ? (
           <ProfileListView
-            profiles={existingProfiles}
+            profiles={profiles}
             onSelect={handleSelectExisting}
             onAddNew={() => setMode("new")}
+            onUpgrade={(p) => setUpgradeTarget(p)}
           />
         ) : null}
 
         {mode === "new" ? (
           <BirthInfoPicker
             onSubmit={handleBirthInfoSubmit}
-            onCancel={existingProfiles.length > 0 ? () => setMode("list") : undefined}
+            onCancel={profiles.length > 0 ? () => setMode("list") : undefined}
             locale={locale}
           />
         ) : null}
@@ -146,12 +161,20 @@ export function SessionPreparation({
           birthInfo={pendingBirthInfo}
           existingProfile={
             selectedProfileId
-              ? existingProfiles.find((p) => p.profile_id === selectedProfileId) ?? null
+              ? profiles.find((p) => p.profile_id === selectedProfileId) ?? null
               : null
           }
           onConfirm={() => void handleConfirmAndContinue()}
           onCancel={handleConfirmCancel}
           processing={creating}
+        />
+      ) : null}
+
+      {upgradeTarget ? (
+        <ProfileUpgradeModal
+          profile={upgradeTarget}
+          onClose={() => setUpgradeTarget(null)}
+          onUpgraded={() => void refreshProfiles()}
         />
       ) : null}
     </div>
@@ -205,10 +228,12 @@ function ProfileListView({
   profiles,
   onSelect,
   onAddNew,
+  onUpgrade,
 }: {
   profiles: StoredProfileSummary[];
   onSelect: (id: string, summary: StoredProfileSummary) => void;
   onAddNew: () => void;
+  onUpgrade: (summary: StoredProfileSummary) => void;
 }) {
   const t = useTranslations("session_prep");
 
@@ -218,23 +243,25 @@ function ProfileListView({
       <p>{t("list_description")}</p>
       <div className="profiles-grid">
         {profiles.map((p) => (
-          <button
-            key={p.profile_id}
-            type="button"
-            className="profile-card-button"
-            onClick={() => onSelect(p.profile_id, p)}
-          >
-            <div className="display-name">{p.display_name}</div>
-            <div className="card-meta">
-              <span>{p.gender === "M" ? t("male") : t("female")}</span>
-              {p.has_base_analysis ? <span className="ready-badge">{t("ready")}</span> : null}
-            </div>
-            <div className="usage-stats">
-              {p.used_in_products.poju > 0 ? <span>POJU {p.used_in_products.poju}×</span> : null}
-              {p.used_in_products.glyph > 0 ? <span>Glyph {p.used_in_products.glyph}×</span> : null}
-              {p.used_in_products.syncro > 0 ? <span>Syncro {p.used_in_products.syncro}×</span> : null}
-            </div>
-          </button>
+          <div key={p.profile_id} className="profile-card-wrapper">
+            <button
+              type="button"
+              className="profile-card-button"
+              onClick={() => onSelect(p.profile_id, p)}
+            >
+              <div className="display-name">{p.display_name}</div>
+              <div className="card-meta">
+                <span>{p.gender === "M" ? t("male") : t("female")}</span>
+                {p.has_base_analysis ? <span className="ready-badge">{t("ready")}</span> : null}
+              </div>
+              <ProfileAccuracyBadge profile={p} onUpgrade={() => onUpgrade(p)} />
+              <div className="usage-stats">
+                {p.used_in_products.poju > 0 ? <span>POJU {p.used_in_products.poju}×</span> : null}
+                {p.used_in_products.glyph > 0 ? <span>Glyph {p.used_in_products.glyph}×</span> : null}
+                {p.used_in_products.syncro > 0 ? <span>Syncro {p.used_in_products.syncro}×</span> : null}
+              </div>
+            </button>
+          </div>
         ))}
         <button type="button" className="add-new-card-button" onClick={onAddNew}>
           <span className="plus-icon">+</span>

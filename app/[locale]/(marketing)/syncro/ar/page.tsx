@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { SyncroGuardedRoute } from "@/components/syncro/SyncroGuardedRoute";
+
 const TASKS = ["Career move", "Relationship clarity", "Money pressure", "Home decision", "Custom"] as const;
 const RITUAL_STEPS = [
   "Lay phone flat",
@@ -17,7 +19,7 @@ const RITUAL_STEPS = [
   "Save 5-shichen window",
 ] as const;
 
-export default function SyncroARPage() {
+function SyncroARContent() {
   const [task, setTask] = useState<string>(TASKS[0]);
   const [custom, setCustom] = useState("");
   const [started, setStarted] = useState(false);
@@ -124,5 +126,13 @@ export default function SyncroARPage() {
         </section>
       ) : null}
     </main>
+  );
+}
+
+export default function SyncroARPage() {
+  return (
+    <SyncroGuardedRoute>
+      <SyncroARContent />
+    </SyncroGuardedRoute>
   );
 }

@@ -113,6 +113,16 @@ export function buildBaseAnalysisPrompt(profile: UserProfile): { system: string;
     : "（未标注）";
 
   const periodLabel = HOUR_PERIOD_INFO[b.hour_period].zh_label;
+  const tst = profile.tst_meta ?? b.tst_meta;
+  const tstBlock = tst
+    ? `
+## 真太阳时（排盘已校正）
+- 钟表时间：${tst.original_date} ${tst.original_time}
+- 真太阳时：${tst.true_solar_date} ${tst.true_solar_time}
+- 修正：${tst.diff_minutes} 分钟
+- 经度：${tst.longitude}°
+- 版本：${tst.computation_version}`
+    : "";
 
   const user = `【八字与排盘摘要】
 
@@ -120,7 +130,7 @@ export function buildBaseAnalysisPrompt(profile: UserProfile): { system: string;
 - 日期：${b.year} 年 ${b.month} 月 ${b.day} 日
 - 时辰：${periodLabel}
 - 性别：${b.gender}
-- 时区：${b.timezone}
+- 时区：${b.timezone}${b.birth_location?.name ? `\n- 出生地：${b.birth_location.name}` : ""}${tstBlock}
 
 ## 四柱（干支）
 - 年柱：${profile.bazi.yearPillar}
@@ -307,6 +317,8 @@ export async function generateBaseAnalysis(
   await saveBaseAnalysis(profileId, result.analysis, {
     model: result.model,
     tokens_used: result.tokens_used,
+    used_true_solar_time: data.user_profile.used_true_solar_time,
+    tst_meta: data.user_profile.tst_meta ?? data.user_profile.birth.tst_meta,
   });
 
   return result.analysis;

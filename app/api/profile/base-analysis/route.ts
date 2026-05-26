@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { saveBaseAnalysisAudit } from "@/lib/dev/base-analysis-audit";
 import { parseBaseAnalysisAuditBody } from "@/lib/dev/parse-base-analysis-audit-body";
+import { baseAnalysisReasoningEffort } from "@/lib/llm/base-analysis-reasoning";
 import { buildBaseAnalysisPrompt, parseBaseAnalysisResponseText } from "@/lib/llm/deepseek/base-analysis";
 import { callLLM } from "@/lib/llm/router";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
@@ -33,6 +34,7 @@ export async function POST(req: Request) {
       system,
       messages: [{ role: "user", content: user }],
       max_tokens: 15000,
+      thinking_effort: baseAnalysisReasoningEffort(),
       response_format: "json",
     });
 

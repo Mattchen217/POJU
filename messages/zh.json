@@ -1,10 +1,10 @@
 {
   "common": {
-    "brandWordmark": "Pojulife",
-    "brand": "Pojulife",
+    "brandWordmark": "pojulife",
+    "brand": "pojulife",
     "domain": "pojulife.com",
     "tagline": "AI 与千年智慧的相遇。",
-    "footerTagline": "pojulife 用于自我反思与启发。我们提供视角,而非预测。所有决定都由你自己做出。",
+    "footerTagline": "pojulife 提供视角，不提供预测。仅供自我反思使用。所有决定永远属于你。",
     "copyright": "© 2026 pojulife. 版权所有。",
     "syncroFooterTagline": "Syncro 是自我觉察工具。取走与你共鸣的。决定由你自己做出。",
     "openNavigationMenu": "打开导航菜单"
@@ -19,6 +19,8 @@
     "disclaimer": "免责声明",
     "privacy": "隐私政策",
     "terms": "服务条款",
+    "refund": "退款政策",
+    "cookies": "Cookie 政策",
     "contact": "联系我们",
     "mobileSheetTitle": "菜单",
     "mobileSheetClose": "关闭菜单",
@@ -33,15 +35,15 @@
   },
   "home": {
     "hero": {
-      "brand": "Poju Life",
-      "headline": "突破那些挥之不去的困扰。",
-      "descLine1": "两千年的东方智慧。",
-      "descLine2": "现代科学印证。",
-      "descLine3": "由 AI 为你呈现 —— 就在今天。",
-      "trustLine": "无需账户 · 无需订阅 · 决定权唯你所有"
+      "brand": "pojulife",
+      "headline": "突破让你放不下的事。",
+      "descLine1": "两千年东方思考框架。",
+      "descLine2": "现代研究重新审视。",
+      "descLine3": "AI 为你翻译——为此刻。",
+      "trustLine": "无需账号 · 无订阅 · 决定永远属于你"
     },
-    "threeWays": {
-      "heading": "三种入口。一种穿越。"
+    "fourWays": {
+      "heading": "四扇门。一条路。"
     },
     "cta": {
       "startSession": "开启 POJU 对话 · $9.99",
@@ -62,14 +64,34 @@
       "youTitle": "你",
       "youBody": "你的出生背景、当下、和问题。"
     },
+    "built": {
+      "heading": "我们做了什么。为什么有效。",
+      "intro": "两千年对人类根本问题的思考，经现代研究审视，由 AI 为你呈现。只为一个目的：帮你看清独自无法看见的事。",
+      "easternTitle": "东方框架",
+      "easternBody": "两千年来，东方哲学传统一直在审视人类反复追问的问题——关于抉择、方向，以及塑造人生的模式。\n\n事业。爱情。方向。迷惘。\n\n这些传统不是算命。它们是思考框架——在八十代人的经验中打磨而成。",
+      "modernTitle": "现代研究",
+      "modernBody": "古人观察到的，现代研究开始能够测量。\n\n决策如何被框定的认知科学。注意力的空间心理学。自然节律的昼夜生物学。认知偏差的行为经济学。\n\n千年有效的框架，如今经当代研究重新审视。",
+      "aiTitle": "AI 翻译",
+      "aiBody": "我们取这些传统发展出的框架，加上现代研究的审视，交给 AI——回应你此刻的具体问题。\n\n不是取代你的判断。是把对话还给你。\n\n这些工具用于自我反思与个人探索——不用于预测结果、诊断状况或提供专业建议。",
+      "closingHeading": "这就是 pojulife 的意义。",
+      "closingBody": "值得被认真对待的问题，配得上两千年人类反思、现代研究的严谨，以及 AI 的即时呈现。"
+    },
     "promises": {
-      "heading": "我们不会打破的三个承诺。",
+      "heading": "我们的承诺。我们不会做的事。",
       "neverStoredTitle": "从不存储",
-      "neverStoredBody": "你的对话以加密形式存在你的设备上。我们读不到。任何人都读不到。",
+      "neverStoredP1": "你的对话加密保存在你的设备上。不在我们的服务器。不在我们的数据库。",
+      "neverStoredP2": "即使我们想读也读不到。即使我们被入侵，也没有可泄露的内容。",
+      "neverStoredP3": "你的话永远属于你。",
       "neverRequiredTitle": "从不强制",
-      "neverRequiredBody": "无需账户。无需登录。无需密码。除非你想要 PDF,否则也不需要邮箱。",
+      "neverRequiredP1": "无需账户。无需登录。无需密码。",
+      "neverRequiredP2": "我们只在两种情况下询问邮箱：你选择购买时，或你请求 PDF 解读时。",
+      "neverRequiredP3": "这两种情况下，我们只发送你要求的内容——没有营销、没有通讯、没有自动化邮件、不与第三方共享。",
+      "neverRequiredP4": "你的收件箱永远属于你。",
       "neverManipulativeTitle": "从不操纵",
-      "neverManipulativeBody": "没有黑暗模式。没有虚假紧迫。一个价格:$9.99,在你需要时。",
+      "neverManipulativeP1": "无订阅。无自动续费。无隐藏费用。无追加销售。无黑暗模式。",
+      "neverManipulativeP2": "每次使用都是一次透明选择。免费工具清楚标注。付费工具在你决定使用时明码标价——一次性。",
+      "neverManipulativeP3": "这就是全部商业模式。",
+      "dataLine": "我们不是靠卖数据赚钱的公司，因为我们根本不收集数据。",
       "readMore": "阅读完整隐私架构 →"
     },
     "finalCta": {
@@ -79,53 +101,52 @@
       "primary": "提出你的问题 — $9.99",
       "secondary": "或者先免费试试 Glyph →",
       "readyHeading": "准备好开始了吗？",
-      "readySubheading": "三种入口。选择适合此刻的方式。",
+      "readySubheading": "四扇门。选择适合此刻的方式。",
       "poju": {
         "title": "开始 POJU 对话",
-        "sub": "$9.99 · 单次提问"
+        "sub": "$9.99 · 一个问题 · 30 天"
       },
       "glyph": {
         "title": "体验 Glyph",
-        "sub": "每日首次免费阅读 — $1.99"
+        "sub": "首次免费 · 之后 $4.99 / 次"
       },
       "syncro": {
-        "title": "打开 Syncro",
-        "sub": "免费 · 在手机上"
+        "title": "体验 Syncro",
+        "sub": "首次免费 · 之后 $4.99 / 天"
       },
       "match": {
         "title": "开始 Match",
-        "sub": "$4.99 · 首次免费"
+        "sub": "首次免费 · 之后 $4.99 / 次"
       }
     },
     "products": {
       "poju": {
         "name": "POJU",
         "line1": "为那个挥之不去的问题。",
-        "line2": "一次深入对话,直到你看清。",
+        "line2": "30 天深度对话，陪你走到看清为止。",
         "badge": "$9.99",
-        "cta": "试试看 →"
+        "cta": "开始 POJU →"
       },
       "glyph": {
         "name": "Glyph",
-        "line1": "随身可得的一面镜子。",
-        "line2": "握住问题。抽取图案。读一次反射。",
-        "badgeFree": "免费",
-        "badgeStruck": "$1.99",
-        "cta": "试试看 →"
+        "line1": "随身的反思之镜。",
+        "line2": "握住问题。抽取图案。读回回应。60 秒。",
+        "badge": "首次免费 · 之后 $4.99",
+        "cta": "免费体验 Glyph →"
       },
       "syncro": {
         "name": "Syncro",
-        "line1": "看见你的自然节奏。",
-        "line2": "每两小时更新一次,在你的手机上。",
-        "badge": "免费",
-        "cta": "试试看 →"
+        "line1": "看见你的自然节律。",
+        "line2": "八个方向，十二个时辰。24 小时实时陪伴。",
+        "badge": "首次免费 · 之后 $4.99",
+        "cta": "免费体验 Syncro →"
       },
       "match": {
         "name": "Match",
         "line1": "两张命盘，一段关系。",
         "line2": "看清彼此能量如何相合，以及如何应对。",
-        "badge": "$4.99",
-        "cta": "试试看 →"
+        "badge": "首次免费 · 之后 $4.99",
+        "cta": "免费体验 Match →"
       }
     },
     "meetsMoment": {
@@ -164,7 +185,7 @@
   "marketingSite": {
     "common": {
       "tagline": "AI 与千年智慧的相遇。",
-      "footer_disclaimer": "pojulife 用于自我反思与启发。我们提供视角,而非预测。所有决定都由你自己做出。",
+      "footer_disclaimer": "pojulife 提供视角，不提供预测。仅供自我反思使用。所有决定永远属于你。",
       "trust_line": "无需账户 · 无需订阅 · 由你决定",
       "read_with_wink": "带一丝玩味去读。这些图案是镜子,不是预言。"
     },
@@ -172,7 +193,8 @@
       "poju": "POJU",
       "glyph": "Glyph",
       "syncro": "Syncro",
-      "archive": "存档"
+      "archive": "存档",
+      "match": "Match"
     },
     "home": {
       "hero": {
@@ -307,7 +329,7 @@
           ]
         },
         "tagline": "POJU 是思考伙伴。决定永远是你的。",
-        "cta": "提出你的问题 — $9.99",
+        "cta": "开始 POJU 会话 — $9.99",
         "footnote": "一个问题 · 无限深度 · 关闭即删除"
       }
     },
@@ -316,9 +338,9 @@
         "heading": "Glyph",
         "subtitle": "随身可得的一面镜子。",
         "description": "握住一个问题。抽取一个图案。读一次反射。",
-        "footnote": "免费。无需注册。带一丝玩味去读。",
-        "cta": "开始 Glyph",
-        "cta_subline": "每日首次免费阅读 — $1.99"
+        "footnote": "首次解读免费。之后每次 $4.99。",
+        "cta": "免费体验 Glyph",
+        "cta_subline": "首次免费 · 之后 $4.99 / 次"
       },
       "five_winds": {
         "heading": "五种风 — 五种原型图案",
@@ -378,7 +400,13 @@
         "heading": "握住一个问题。",
         "subtitle": "你收到的不是判决。它是邀请,让你更仔细地看。",
         "cta": "开始 Glyph",
-        "cta_subline": "每日首次免费阅读 — $1.99"
+        "cta_subline": "首次免费 · 之后 $4.99 / 次"
+      },
+      "pricing": {
+        "heading": "定价",
+        "body": "你的首次 Glyph 解读免费。我们希望你在无承诺的情况下体验这个工具。之后每次解读 $4.99 —— 单次透明购买。无订阅、无自动续费、无隐藏费用。每次解读显示在屏幕上，并可选择以 PDF 发送到你的邮箱。",
+        "cta": "免费体验 Glyph",
+        "footnote": "带一丝玩味去读。图案是镜子，不是预言。"
       }
     },
     "syncro": {
@@ -387,7 +415,7 @@
         "subtitle": "看见你的自然节奏。",
         "description": "基于你的出生信息,Syncro 反映当日的能量如何与你对齐。哪里该投入,哪里该慢下来。",
         "tagline": "一份轻量的节奏地图,可以在一天里随时打开。",
-        "footnote": "免费 · 仅在手机上打开",
+        "footnote": "首次 Syncro 免费。之后每个 24 小时窗口 $4.99。仅在手机上打开。",
         "cta": "打开 Syncro",
         "qr_label": "pojulife.com/syncro",
         "sms_label": "把链接发给自己",
@@ -395,16 +423,59 @@
         "sms_body": "在手机上打开 Syncro：__SYNCRO_URL__",
         "phone_placeholder": "手机号码"
       },
+      "how_it_works": {
+        "heading": "Syncro 如何运作",
+        "step_1_title": "添加或选择八字基础",
+        "step_1_desc": "出生日期、时辰与性别。保存在你的设备上，供日后使用。",
+        "step_2_title": "描述你即将要做的事",
+        "step_2_desc": "30–100 字。越具体越好。",
+        "step_3_title": "允许位置与指南针权限",
+        "step_3_desc": "位置信息留在你的设备上。手机指南针显示各方向所在。",
+        "step_4_title": "举起手机并转动",
+        "step_4_desc": "每个方向显示当前 2 小时时段的简短反思。"
+      },
+      "five_currents": {
+        "heading": "五流",
+        "intro": "每个方向 × 时辰组合归入五种模式之一：",
+        "footer": "这些是反思类别，不是预测。",
+        "items": [
+          {
+            "name": "Open Current · 顺势",
+            "desc": "可自信前行。"
+          },
+          {
+            "name": "Following Current · 应时",
+            "desc": "路在支持你，仍需努力。"
+          },
+          {
+            "name": "Stillwater · 守静",
+            "desc": "暂停观察。"
+          },
+          {
+            "name": "Crosscurrent · 横阻",
+            "desc": "重新考虑这个方向或时刻。"
+          },
+          {
+            "name": "Undertow · 险滞",
+            "desc": "阻力很强——另择路径。"
+          }
+        ]
+      },
+      "why_mobile": {
+        "heading": "为什么仅限手机",
+        "body": "Syncro 读取手机指南针（可选摄像头）以与现实方向对齐。这需要移动设备。在桌面上，我们会显示二维码，方便你在手机上打开 Syncro。"
+      },
       "what_shows": {
         "heading": "Syncro 显示什么。",
         "intro": "打开 Syncro,快速读一读这段日程里什么被强调、什么适合放一放。",
         "items_intro": "每个方向显示:",
         "items": [
-          "当前图案的简短描述",
-          "这段时间适合什么(例如,缓慢的对话)",
-          "这段时间不适合什么(例如,等等再提大要求)"
+          "每个方向当前 2 小时时段的模式",
+          "八个方向各自适合什么",
+          "哪里该投入，哪里该慢下来",
+          "24 小时窗口内每两小时更新"
         ],
-        "footnote": "随着你度过一天而刷新,并结合你的背景。",
+        "footnote": "在你的 24 小时窗口内每两小时刷新。",
         "preview_label": "预览",
         "preview_placeholder": "手机示意图占位符 — 准备好后可替换为 Syncro 截图。"
       },
@@ -450,9 +521,9 @@
           ]
         }
       },
-      "always_free": {
-        "heading": "免费。",
-        "description": "Syncro 免费,作为你日常的节律同伴。当你需要对当下多一点清晰时,随时打开。",
+      "pricing": {
+        "heading": "定价",
+        "description": "你的首次 Syncro 免费。我们希望你在无承诺的情况下感受空间反思。之后 $4.99 解锁 24 小时实时窗口 —— 针对一项具体任务，每两小时更新指引。无订阅、无自动续费。",
         "cta": "在手机上打开 Syncro"
       }
     },
@@ -468,6 +539,8 @@
         "disclaimer": "免责声明",
         "privacy": "隐私政策",
         "terms": "服务条款",
+        "refund": "退款政策",
+        "cookies": "Cookie 政策",
         "contact": "联系我们"
       },
       "copyright": "© 2026 pojulife. 版权所有。"
@@ -497,6 +570,40 @@
     "skipConfirmStay": "返回填写",
     "skipConfirmLeave": "不填资料继续",
     "close": "关闭"
+  },
+  "profile": {
+    "birth_location": {
+      "title": "出生地？",
+      "subtitle": "为了精确的命盘计算，请告诉我们你的出生城市",
+      "why_link": "为什么需要出生地？",
+      "explanation_1": "命理排盘必须用【真太阳时】，而非时区平均时。",
+      "explanation_2": "真太阳时取决于出生地经度。",
+      "explanation_example": "例如，乌鲁木齐（新疆）使用北京时间，但真太阳时差 2 小时。如果不修正，时辰可能算错。",
+      "skip_use_default": "我不确定 — 用默认值",
+      "default_note": "默认会按时区中央经度（{timezone}）计算，适用于大多数情况。",
+      "confirm_city": "使用此城市",
+      "back": "返回出生信息"
+    },
+    "upgrade": {
+      "title": "升级以获得精确命盘",
+      "description": "你的命盘在生成时未使用出生地，仅按时区中央经度计算。填写实际出生城市以获得准确的真太阳时。",
+      "current_chart": "当前命盘",
+      "using_default_warning": "使用了默认经度 — 时柱可能有误差",
+      "search_birth_city": "搜索你的出生城市",
+      "upgrade_chart": "用此地点更新命盘",
+      "keep_old_for_now": "暂时保持当前命盘",
+      "badge_precise": "✓ 精确命盘",
+      "badge_upgradeable": "🔄 升级以提高精度",
+      "upgrading": "更新中…",
+      "upgrade_success": "命盘已按真太阳时更新。",
+      "hour_pillar_changed": "时柱已变化：{old} → {new}",
+      "hour_pillar_unchanged": "时柱未变化：{pillar}",
+      "tst_diff_minutes": "真太阳时修正：{minutes} 分钟",
+      "base_analysis_regenerated": "已用新命盘重新生成基础分析。",
+      "done": "完成",
+      "male": "男",
+      "female": "女"
+    }
   },
   "profile_selector": {
     "loading": "正在加载已保存的八字…",
@@ -834,6 +941,8 @@
     "hour_label": "出生时辰",
     "gender_label": "性别",
     "timezone_label": "时区",
+    "location_label": "出生地",
+    "location_default": "默认（时区中央经度）",
     "male": "男",
     "female": "女",
     "reassure_1": "你的数据只保存在本设备，已加密。",
@@ -873,6 +982,17 @@
     "step_8": "即将完成，请稍候..."
   },
   "syncro": {
+    "home": {
+      "cta_start": "免费试 Syncro",
+      "desktop_modal": {
+        "title": "请在手机上打开 Syncro",
+        "description": "Syncro 需要你手机的罗盘和方向感应器来对接真实世界方位。这必须在移动设备上。",
+        "step_1": "打开手机相机",
+        "step_2": "扫描这个二维码",
+        "step_3": "点击链接在手机上打开 Syncro",
+        "why_mobile": "为什么仅限手机？Syncro 需要罗盘、摄像头和精准定位——这些桌面没有。"
+      }
+    },
     "loading": "加载中…",
     "subtitle": "实时方位与时机指引",
     "description": "Syncro 是你未来 24 小时的实时陪伴。把手机当作罗盘——找到当下最适合你这件事的方位与时机。",
@@ -908,6 +1028,25 @@
       "profile_not_ready": "命盘分析尚未就绪，请返回准备页等待 base analysis 完成。",
       "compute_failed": "测算失败"
     },
+    "modes": {
+      "aria_label": "Syncro 显示模式",
+      "compass": "罗盘",
+      "ar": "AR",
+      "view": "总览"
+    },
+    "progress": {
+      "aria_label": "时辰时间轴",
+      "manual_selection": "正在查看所选时辰（非当前实时窗口）。",
+      "state_past": "已过的时辰",
+      "state_live": "当前时辰",
+      "state_selected": "已选时辰",
+      "state_upcoming": "即将到来的时辰"
+    },
+    "view": {
+      "you": "你",
+      "recommended": "此刻最佳方位",
+      "grid_subtitle": "八个方位"
+    },
     "main": {
       "current_hour": "本时辰",
       "why_this": "为什么是这个流",
@@ -938,14 +1077,25 @@
       "not_supported": "此浏览器不支持摄像头。"
     },
     "location": {
-      "asking_title": "允许定位？",
-      "asking_message": "Syncro 需要你的当前位置，才能将方位与真实世界的罗盘对齐。",
+      "asking_title": "正在获取你的位置…",
+      "asking_message": "Syncro 需要你的位置来计算真太阳时与方位。",
       "asking_privacy": "仅本次使用，从不上传到我们的服务器。",
       "allow_location": "允许定位",
       "granted_message": "已获取位置，正在为你测算…",
-      "denied_title": "需要定位",
-      "denied_message": "没有位置信息，Syncro 无法判断方位。请在浏览器设置中允许定位后重试。",
-      "retry": "重试"
+      "manual_title": "选择你的位置",
+      "manual_description": "搜索并选择你当前所在城市，以获得准确的时辰。",
+      "city_search_placeholder": "搜索城市（如：北京、纽约、东京）",
+      "no_cities_found": "未找到城市，请换个拼写试试。",
+      "retry_geolocation": "再次尝试自动定位",
+      "confirm_title": "使用这个位置？",
+      "confirm_hint": "Syncro 将据此计算准确的时辰与方位。",
+      "confirm_use": "使用此位置",
+      "change_location": "换一个位置",
+      "accuracy_warning": "定位精度较低（约 {meters} 米）。建议手动搜索你的城市以提高准确度。",
+      "denied_title": "无法获取定位",
+      "denied_message": "没有位置信息，Syncro 无法精确计算时辰。请允许定位，或手动搜索你的城市。",
+      "retry": "重试",
+      "search_manually": "手动搜索城市"
     },
     "task": {
       "back": "返回 Syncro",
@@ -968,7 +1118,7 @@
       "description": "Match 将两个八字命盘编织在一起——你的与对方的——揭示你们能量如何对接，何处相互成就，何处碰撞，以及该怎么做。",
       "cta_free": "免费体验 Match",
       "cta_paid": "开始 Match — $4.99",
-      "free_note": "首次 Match 由我们赠送。不需信用卡也能看效果。",
+      "free_note": "首次 Match 免费。之后每次 $4.99。",
       "paid_note": "一次解读。完整报告。5 大模块。",
       "feature_two_charts_title": "双盘深度解读",
       "feature_two_charts_desc": "深度解读两个人各自的命盘，再分层分析你们如何相遇。",
@@ -1025,7 +1175,14 @@
       "faq_q3": "可以一次匹配两人以上吗？",
       "faq_a3": "目前 Match 专注双人动力——这样解读才能保持深度和清晰。对于复杂情境（如你+配偶+父母），建议分别运行多次 Match，清晰地映射每段关系。",
       "faq_q4": "Match 跟 POJU 有什么区别？",
-      "faq_a4": "POJU 是关于你处境的 30 天深度对话。Match 是关于特定关系的一次性双盘解读。不同工具，不同需求——很多用户两个都用。"
+      "faq_a4": "POJU 是关于你处境的 30 天深度对话。Match 是关于特定关系的一次性双盘解读。不同工具，不同需求——很多用户两个都用。",
+      "not_title": "Match 不是什么",
+      "not_items": [
+        "关系结果的预测器",
+        "契合度结果的承诺",
+        "专业咨询的替代品"
+      ],
+      "not_footer": "Match 提供视角，不提供预测。你怎么做，完全由你决定。"
     },
     "subtitle": "两个命盘，一段关系，真正看清。",
     "description": "Match 将两个八字编织在一起——你的和对方的——揭示你们能量如何对接、何处相互成就、何处碰撞，以及该怎么做。",
@@ -1074,12 +1231,13 @@
     "analyzing": {
       "step_1": "正在解读命主 A 的命盘…",
       "step_2": "正在解读命主 B 的命盘…",
-      "step_3": "推演五行生克互动…",
+      "step_3": "本地计算六维契合度矩阵…",
       "step_4": "分析十神关系…",
       "step_5": "考察大运流年协同…",
       "step_6": "编织你们的关系结构…",
       "step_7": "即将完成…",
-      "hint": "正在生成完整合盘报告，约需 60–90 秒。",
+      "hint": "契合度等级已由本地引擎确定，AI 正在撰写报告文案，约需 60–90 秒。",
+      "preview_level": "本地契合度：{level}（{score} 分）— 正在生成报告…",
       "error_title": "分析失败",
       "go_back": "重试",
       "missing_data": "缺少命盘或关系描述，请从 Match 重新开始。",
@@ -1092,6 +1250,7 @@
     "report": {
       "title": "合盘报告",
       "compatibility_label": "整体契合度",
+      "engine_note": "本地引擎得分 {score}（等级在 AI 文案前已确定）。",
       "key_traits": "关键特质",
       "five_elements": "五行互动",
       "timing_dynamic": "大运流年协同",

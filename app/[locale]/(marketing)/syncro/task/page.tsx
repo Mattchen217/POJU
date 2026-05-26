@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 
+import { SyncroGuardedRoute } from "@/components/syncro/SyncroGuardedRoute";
 import { SyncroTaskPage } from "@/components/syncro/SyncroTaskPage";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +24,9 @@ export default function SyncroTaskRoutePage() {
         </div>
       }
     >
-      <SyncroTaskPage />
+      <SyncroGuardedRoute>
+        <SyncroTaskPage />
+      </SyncroGuardedRoute>
     </Suspense>
   );
 }

@@ -125,7 +125,27 @@ export const HOUR_PERIOD_INFO: Record<
   },
 };
 
-/** v5 birth payload (device-only; no lat/lng). */
+export interface BirthLocation {
+  name: string;
+  longitude: number;
+  latitude?: number;
+  timezone: string;
+  /** User chose "use defaults" instead of a specific city. */
+  use_defaults?: boolean;
+}
+
+export interface TstMeta {
+  original_date: string;
+  original_time: string;
+  true_solar_date: string;
+  true_solar_time: string;
+  diff_minutes: number;
+  longitude: number;
+  timezone: string;
+  computation_version: "v1" | "v2_with_tst";
+}
+
+/** v5 birth payload; optional birth_location enables precise true solar time. */
 export interface BirthInfo {
   year: number;
   month: number;
@@ -133,6 +153,8 @@ export interface BirthInfo {
   hour_period: HourPeriod;
   gender: "M" | "F";
   timezone: string;
+  birth_location?: BirthLocation;
+  tst_meta?: TstMeta;
 }
 
 /** Legacy chat form / API body until Step C picker ships. */
@@ -170,6 +192,9 @@ export interface UserProfile {
   createdAt: number;
   updatedAt: number;
   source: "shunshi" | "fallback";
+  /** True when chart used user-provided birth coordinates (not timezone defaults). */
+  used_true_solar_time?: boolean;
+  tst_meta?: TstMeta;
 }
 
 export interface DeepSeekAnalysis {

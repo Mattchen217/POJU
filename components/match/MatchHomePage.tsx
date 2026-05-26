@@ -199,6 +199,20 @@ export function MatchHomePage() {
           </GlassCard>
         </MarketingSection>
 
+        <MarketingSection title={t("not_title")} padding="lg">
+          <GlassCard padding="lg" variant="subtle" className="mx-auto max-w-2xl">
+            <ul className="space-y-3 text-sm text-text-secondary">
+              {(t.raw("not_items") as string[]).map((item) => (
+                <li key={item}>
+                  <span className="mr-2 text-text-dim">✗</span>
+                  {item}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-6 text-sm text-text-body">{t("not_footer")}</p>
+          </GlassCard>
+        </MarketingSection>
+
         <MarketingSection title={t("faq_title")} padding="lg">
           <div className="match-faq-wrap">
             <div className="faq-list">

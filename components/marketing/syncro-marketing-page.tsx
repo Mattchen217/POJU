@@ -14,7 +14,7 @@ import { Link } from "@/i18n/navigation";
 export const syncroMarketingMetadata: Metadata = {
   title: "Syncro — pojulife",
   description:
-    "Where AI meets a thousand years of wisdom. A light rhythm map you can open through your day — free on mobile.",
+    "See your natural rhythms. First Syncro free, then $4.99 per 24-hour window — mobile only.",
 };
 
 const USE_CASE_KEYS = ["before_matters", "pace_off", "daily_rhythm", "traveling", "poju_companion"] as const;
@@ -53,6 +53,37 @@ export async function SyncroMarketingPage() {
       </MarketingPageHero>
 
       <MarketingPageSections>
+        <MarketingSection id="syncro-how-it-works" title={t("how_it_works.heading")} padding="lg">
+          <div className="marketing-accent-grid marketing-accent-grid--4 mx-auto max-w-5xl">
+            {(["step_1", "step_2", "step_3", "step_4"] as const).map((stepKey, idx) => (
+              <article
+                key={stepKey}
+                className={`content-card content-card--solid content-card--${["blue", "violet", "magenta", "fuchsia"][idx] ?? "blue"}`}
+              >
+                <p className="text-3xl font-semibold leading-none">{idx + 1}</p>
+                <p className="content-card__title mt-4">{t(`how_it_works.${stepKey}_title`)}</p>
+                <p className="mt-2">{t(`how_it_works.${stepKey}_desc`)}</p>
+              </article>
+            ))}
+          </div>
+        </MarketingSection>
+
+        <MarketingSection id="syncro-five-currents" title={t("five_currents.heading")} padding="lg">
+          <p className="marketing-section-intro mx-auto max-w-2xl text-center">{t("five_currents.intro")}</p>
+          <ul className="mx-auto mt-8 max-w-2xl space-y-3">
+            {(t.raw("five_currents.items") as { name: string; desc: string }[]).map((item) => (
+              <li key={item.name} className="content-card content-card--solid content-card--blue px-4 py-3">
+                <strong>{item.name}</strong> — {item.desc}
+              </li>
+            ))}
+          </ul>
+          <p className="marketing-section-intro mx-auto mt-8 max-w-2xl text-center">{t("five_currents.footer")}</p>
+        </MarketingSection>
+
+        <MarketingSection id="syncro-why-mobile" title={t("why_mobile.heading")} padding="lg">
+          <p className="marketing-section-subheading mx-auto max-w-2xl text-center">{t("why_mobile.body")}</p>
+        </MarketingSection>
+
         <MarketingSection title={t("what_shows.heading")} padding="lg">
           <div className="mx-auto flex max-w-lg flex-col items-center">
             <div className="aspect-[9/19] w-full max-w-[280px] rounded-[2rem] border border-white/20 bg-gradient-to-b from-white/15 to-black/30 shadow-[0_14px_36px_rgba(0,0,0,0.32)]">
@@ -122,10 +153,10 @@ export async function SyncroMarketingPage() {
 
         <MarketingSection padding="lg">
           <div className="flex flex-col items-center text-center">
-            <h2 className="marketing-section-heading">{t("always_free.heading")}</h2>
-            <p className="marketing-section-subheading">{t("always_free.description")}</p>
+            <h2 className="marketing-section-heading">{t("pricing.heading")}</h2>
+            <p className="marketing-section-subheading">{t("pricing.description")}</p>
             <Link href="#syncro-start" className="glass-btn glass-btn-primary glass-btn-large mt-8">
-              {t("always_free.cta")}
+              {t("pricing.cta")}
             </Link>
           </div>
         </MarketingSection>

@@ -31,11 +31,21 @@ export async function POST(req: Request) {
 
     const { latitude, longitude, timezone } = body.user_location;
     if (
+      latitude == null ||
+      longitude == null ||
       typeof latitude !== "number" ||
       typeof longitude !== "number" ||
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
       !timezone?.trim()
     ) {
-      return NextResponse.json({ error: "invalid_location" }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: "invalid_location",
+          message: "Latitude, longitude, and timezone are required.",
+        },
+        { status: 400 },
+      );
     }
 
     const result = await generateSyncroMatrix({
@@ -50,7 +60,10 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       matrix: result.matrix,
-      meta: result.meta,
+      meta: {
+        ...result.meta,
+        true_solar_time_diff_minutes: result.meta.true_solar_time_diff_minutes,
+      },
     });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e);

@@ -6,8 +6,14 @@ import { useLocale, useTranslations } from "next-intl";
 import { MatchAnalyzingLoader } from "@/components/match/MatchAnalyzingLoader";
 import { useRouter } from "@/i18n/navigation";
 import { saveMatchToArchive } from "@/lib/archive/archive-service";
+import { calculateCompatibilityMatrix } from "@/lib/match/calculate-compatibility";
 import { createMatchSession } from "@/lib/match/match-session";
-import type { MatchReport } from "@/lib/match/types";
+import { wrapProfileForMatrix } from "@/lib/match/parse-profile-for-matrix";
+import {
+  COMPATIBILITY_LEVELS,
+  type CompatibilityLevel,
+  type MatchReport,
+} from "@/lib/match/types";
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 import { recordUsage } from "@/lib/syncro/device-usage";
 
@@ -22,6 +28,7 @@ export function MatchAnalyzingPage() {
 
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [previewLine, setPreviewLine] = useState<string | null>(null);
   const startedRef = useRef(false);
 
   const steps = useMemo(
@@ -36,6 +43,8 @@ export function MatchAnalyzingPage() {
     ],
     [t],
   );
+
+  const isZh = locale.startsWith("zh");
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -70,6 +79,21 @@ export function MatchAnalyzingPage() {
         throw new Error(t("profile_b_not_ready"));
       }
 
+      const profileA = wrapProfileForMatrix(aRow.user_profile, aRow.base_analysis.content);
+      const profileB = wrapProfileForMatrix(bRow.user_profile, bRow.base_analysis.content);
+
+      const matrix = calculateCompatibilityMatrix({ profileA, profileB });
+      const levelInfo =
+        COMPATIBILITY_LEVELS[matrix.overall_level as CompatibilityLevel] ??
+        COMPATIBILITY_LEVELS.neutral;
+      const levelName = isZh ? levelInfo.name_zh : levelInfo.name_en;
+      setPreviewLine(
+        t("preview_level", {
+          level: levelName,
+          score: matrix.weighted_total_score.toFixed(1),
+        }),
+      );
+
       const response = await fetch("/api/match/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -88,7 +112,11 @@ export function MatchAnalyzingPage() {
       const data = (await response.json()) as {
         success?: boolean;
         report?: MatchReport;
-        meta?: { cost_usd?: number };
+        meta?: {
+          cost_usd?: number;
+          compatibility_score?: number;
+          local_computation?: boolean;
+        };
         message?: string;
         error?: string;
       };
@@ -107,7 +135,21 @@ export function MatchAnalyzingPage() {
         throw new Error(t("analysis_failed"));
       }
 
+      if (
+        data.report.conclusion.compatibility_level !== matrix.overall_level &&
+        data.meta?.local_computation
+      ) {
+        console.warn(
+          "[match/ui] Level mismatch — using server report level:",
+          data.report.conclusion.compatibility_level,
+          "local was",
+          matrix.overall_level,
+        );
+      }
+
       const costUsd = data.meta?.cost_usd ?? 0;
+      const compatibilityScore =
+        data.meta?.compatibility_score ?? matrix.weighted_total_score;
       const isFree = sessionType === "free";
 
       const matchId = await createMatchSession({
@@ -118,6 +160,8 @@ export function MatchAnalyzingPage() {
         is_free: isFree,
         cost_usd: isFree ? 0 : costUsd,
         locale,
+        compatibility_score: compatibilityScore,
+        engine_version: "v5.1",
       });
 
       await recordUsage("match", isFree, isFree ? 0 : costUsd);
@@ -164,7 +208,12 @@ export function MatchAnalyzingPage() {
 
   return (
     <main className="match-analyzing">
-      <MatchAnalyzingLoader step={step} steps={steps} hint={t("hint")} />
+      <MatchAnalyzingLoader
+        step={step}
+        steps={steps}
+        hint={t("hint")}
+        previewLine={previewLine}
+      />
     </main>
   );
 }

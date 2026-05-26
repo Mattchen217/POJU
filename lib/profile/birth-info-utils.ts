@@ -1,4 +1,5 @@
-import { HOUR_PERIOD_INFO, type BirthInfo, type HourPeriod, type LegacyBirthFormInput } from "@/lib/profile/types";
+import { HOUR_PERIOD_INFO, type BirthInfo, type BirthLocation, type HourPeriod, type LegacyBirthFormInput } from "@/lib/profile/types";
+import { guessLongitudeFromTimezone, standardMeridianFromTimezone } from "@/lib/profile/location-utils";
 
 const HOUR_TO_PERIOD: Record<number, HourPeriod> = {
   0: "zi_early",
@@ -65,14 +66,52 @@ export function representativeHour(birth: BirthInfo): number {
   return HOUR_PERIOD_INFO[birth.hour_period].representative_hour;
 }
 
-/** Default coordinates by IANA timezone for shunshi (v5 drops user-entered lat/lng). */
+export function buildDefaultBirthLocation(userTimezone: string): BirthLocation {
+  return {
+    name: "Default",
+    longitude: guessLongitudeFromTimezone(userTimezone),
+    timezone: userTimezone,
+    use_defaults: true,
+  };
+}
+
+/** Default city labels by IANA timezone (fallback when user skips location). */
 const TZ_COORDS: Record<string, { latitude: number; longitude: number; city: string }> = {
-  "Asia/Shanghai": { latitude: 31.23, longitude: 121.47, city: "Shanghai" },
-  "Asia/Hong_Kong": { latitude: 22.32, longitude: 114.17, city: "Hong Kong" },
-  "America/New_York": { latitude: 40.71, longitude: -74.01, city: "New York" },
-  "America/Los_Angeles": { latitude: 34.05, longitude: -118.24, city: "Los Angeles" },
-  "Europe/London": { latitude: 51.51, longitude: -0.13, city: "London" },
+  "Asia/Shanghai": { latitude: 31.23, longitude: 120, city: "Default (China)" },
+  "Asia/Hong_Kong": { latitude: 22.32, longitude: 120, city: "Default (Hong Kong)" },
+  "America/New_York": { latitude: 40.71, longitude: -75, city: "Default (US East)" },
+  "America/Los_Angeles": { latitude: 34.05, longitude: -120, city: "Default (US West)" },
+  "Europe/London": { latitude: 51.51, longitude: 0, city: "Default (London)" },
 };
+
+export function resolveBirthCoordinates(birth: BirthInfo): {
+  longitude: number;
+  latitude?: number;
+  city?: string;
+  name: string;
+  use_defaults: boolean;
+} {
+  const loc = birth.birth_location;
+  if (loc && !loc.use_defaults) {
+    return {
+      longitude: loc.longitude,
+      latitude: loc.latitude,
+      name: loc.name,
+      use_defaults: false,
+    };
+  }
+
+  const timezone = loc?.timezone ?? birth.timezone;
+  const defaults = TZ_COORDS[timezone] ?? TZ_COORDS["Asia/Shanghai"];
+  const longitude = guessLongitudeFromTimezone(timezone);
+  return {
+    longitude,
+    latitude: defaults.latitude,
+    city: defaults.city,
+    name: loc?.name ?? defaults.city,
+    use_defaults: true,
+  };
+}
 
 export function shunshiParamsFromBirthInfo(birth: BirthInfo): {
   year: number;
@@ -84,8 +123,13 @@ export function shunshiParamsFromBirthInfo(birth: BirthInfo): {
   city?: string;
   latitude?: number;
   longitude?: number;
+  standardMeridian: number;
+  usedTrueSolarTime: boolean;
 } {
-  const coords = TZ_COORDS[birth.timezone] ?? TZ_COORDS["Asia/Shanghai"];
+  const coords = resolveBirthCoordinates(birth);
+  const birthDate = new Date(birth.year, birth.month - 1, birth.day, representativeHour(birth));
+  const timezone = birth.birth_location?.timezone ?? birth.timezone;
+
   return {
     year: birth.year,
     month: birth.month,
@@ -96,11 +140,35 @@ export function shunshiParamsFromBirthInfo(birth: BirthInfo): {
     city: coords.city,
     latitude: coords.latitude,
     longitude: coords.longitude,
+    standardMeridian: standardMeridianFromTimezone(timezone, birthDate),
+    usedTrueSolarTime: !coords.use_defaults,
   };
 }
 
 /** Normalize encrypted DB birth blob (v4 legacy or v5). */
 export function normalizeStoredBirthInfo(raw: Record<string, unknown>): BirthInfo {
+  const timezone = String(raw.timezone ?? "Asia/Shanghai");
+
+  let birth_location: BirthInfo["birth_location"];
+  if (raw.birth_location && typeof raw.birth_location === "object") {
+    const bl = raw.birth_location as Record<string, unknown>;
+    birth_location = {
+      name: String(bl.name ?? "Default"),
+      longitude: Number(bl.longitude),
+      latitude: bl.latitude != null ? Number(bl.latitude) : undefined,
+      timezone: String(bl.timezone ?? timezone),
+      use_defaults: Boolean(bl.use_defaults),
+    };
+  } else if (raw.longitude != null && raw.location_name) {
+    birth_location = {
+      name: String(raw.location_name),
+      longitude: Number(raw.longitude),
+      latitude: raw.latitude != null ? Number(raw.latitude) : undefined,
+      timezone,
+      use_defaults: false,
+    };
+  }
+
   if (typeof raw.hour_period === "string" && HOUR_PERIOD_INFO[raw.hour_period as HourPeriod]) {
     return {
       year: Number(raw.year),
@@ -108,7 +176,9 @@ export function normalizeStoredBirthInfo(raw: Record<string, unknown>): BirthInf
       day: Number(raw.day),
       hour_period: raw.hour_period as HourPeriod,
       gender: raw.gender === "F" || raw.gender === "female" ? "F" : "M",
-      timezone: String(raw.timezone ?? "Asia/Shanghai"),
+      timezone,
+      birth_location,
+      tst_meta: raw.tst_meta as BirthInfo["tst_meta"],
     };
   }
   const hour = typeof raw.hour === "number" ? raw.hour : 12;
@@ -121,6 +191,8 @@ export function normalizeStoredBirthInfo(raw: Record<string, unknown>): BirthInf
     day: Number(raw.day),
     hour_period: hourToHourPeriod(hour),
     gender,
-    timezone: String(raw.timezone ?? "Asia/Shanghai"),
+    timezone,
+    birth_location,
+    tst_meta: raw.tst_meta as BirthInfo["tst_meta"],
   };
 }

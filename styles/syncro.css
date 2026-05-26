@@ -347,3 +347,247 @@
   cursor: pointer;
   text-decoration: none;
 }
+
+/* Step 6 — hour progress + mode switcher + view grid */
+
+.syncro-main-view--view .syncro-timer-bar {
+  position: relative;
+}
+
+.syncro-hour-progress {
+  position: absolute;
+  top: 118px;
+  left: 0;
+  right: 0;
+  z-index: 12;
+  padding: 0 8px 8px;
+  pointer-events: auto;
+}
+
+.syncro-hour-progress-track {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+}
+
+.syncro-hour-progress-item {
+  flex: 0 0 auto;
+  min-width: 2.4rem;
+  padding: 6px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.35);
+  color: #888;
+  font-size: 11px;
+  cursor: pointer;
+  transition:
+    background 0.25s ease,
+    color 0.25s ease,
+    border-color 0.25s ease,
+    transform 0.25s ease;
+}
+
+.syncro-hour-progress-item--past {
+  opacity: 0.45;
+}
+
+.syncro-hour-progress-item--live {
+  border-color: rgba(198, 40, 40, 0.65);
+  color: #f5c6c6;
+  background: rgba(198, 40, 40, 0.15);
+}
+
+.syncro-hour-progress-item--selected {
+  border-color: #d4af37;
+  color: #f5e6b8;
+  background: rgba(212, 175, 55, 0.2);
+  transform: scale(1.05);
+}
+
+.syncro-hour-progress-item--upcoming {
+  color: #aaa;
+}
+
+.syncro-hour-progress-item--pulse {
+  animation: syncro-hour-pulse 0.8s ease-out 1;
+}
+
+@keyframes syncro-hour-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(198, 40, 40, 0.5);
+  }
+  70% {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 8px rgba(198, 40, 40, 0);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.syncro-hour-progress-hint {
+  margin: 6px 12px 0;
+  font-size: 11px;
+  color: #888;
+  text-align: center;
+}
+
+.syncro-mode-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+
+.syncro-main-view--view .syncro-mode-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 180px 12px 100px;
+  overflow-y: auto;
+}
+
+.syncro-mode-switcher {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 15;
+  display: flex;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  pointer-events: auto;
+}
+
+.syncro-mode-switcher-btn {
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: #aaa;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.syncro-mode-switcher-btn.active {
+  background: rgba(212, 175, 55, 0.25);
+  color: #f5e6b8;
+}
+
+.syncro-mode-switcher-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.syncro-ar-mode {
+  position: absolute;
+  inset: 0;
+}
+
+.syncro-main-view--ar .center-info {
+  z-index: 11;
+}
+
+.syncro-view-mode {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.syncro-view-mode-period {
+  text-align: center;
+  font-size: 15px;
+  color: #d4af37;
+  margin-bottom: 16px;
+}
+
+.syncro-view-mode-period-sub {
+  color: #888;
+  font-size: 12px;
+}
+
+.syncro-view-grid {
+  display: grid;
+  grid-template-areas:
+    "nw n ne"
+    "w c e"
+    "sw s se";
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.syncro-view-cell {
+  min-height: 72px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.45);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  color: #e5e5e5;
+}
+
+.syncro-view-cell.focused {
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.55);
+}
+
+.syncro-view-cell.recommended {
+  background: rgba(13, 115, 119, 0.2);
+}
+
+.syncro-view-cell--you {
+  cursor: default;
+  border-color: rgba(212, 175, 55, 0.5);
+  background: rgba(212, 175, 55, 0.12);
+}
+
+.syncro-view-you-label {
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  color: #d4af37;
+}
+
+.syncro-view-you-dir {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.syncro-view-you-hint {
+  font-size: 10px;
+  color: #888;
+}
+
+.syncro-view-dir {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.syncro-view-level {
+  font-size: 11px;
+}
+
+.syncro-view-detail {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.syncro-view-detail-advice {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #ddd;
+  text-align: center;
+}

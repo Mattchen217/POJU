@@ -230,6 +230,14 @@ export async function GlyphMarketingPage() {
           <p className="marketing-section-subheading mt-8 !mb-0">{t("how_it_works.session_reminder")}</p>
         </MarketingSection>
 
+        <MarketingSection id="glyph-pricing" title={t("pricing.heading")} padding="lg">
+          <p className="marketing-section-subheading mx-auto max-w-2xl">{t("pricing.body")}</p>
+          <div className="mt-8 flex flex-col items-center gap-3">
+            <GlyphPrepareCta />
+            <p className="marketing-section-intro max-w-md text-sm opacity-90">{t("pricing.footnote")}</p>
+          </div>
+        </MarketingSection>
+
         <MarketingSection id="glyph-final-cta" className="scroll-mt-24" padding="lg">
           <div className="flex flex-col items-center text-center">
             <h2 className="marketing-section-heading">{t("final_cta.heading")}</h2>

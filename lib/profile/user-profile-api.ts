@@ -2,7 +2,7 @@
  * Server API validation for UserProfile (v5 + legacy birth payloads).
  */
 import { representativeHour } from "@/lib/profile/birth-info-utils";
-import { HOUR_PERIOD_INFO, type BirthInfo, type HourPeriod, type UserProfile } from "@/lib/profile/types";
+import { HOUR_PERIOD_INFO, type BirthInfo, type BirthLocation, type HourPeriod, type TstMeta, type UserProfile } from "@/lib/profile/types";
 
 const HOUR_PERIODS = new Set<string>(Object.keys(HOUR_PERIOD_INFO));
 
@@ -33,6 +33,33 @@ function hourToPeriod(hour: number): HourPeriod {
   return best;
 }
 
+function normalizeBirthLocation(raw: unknown, timezone: string): BirthLocation | undefined {
+  if (!isRecord(raw)) return undefined;
+  if (typeof raw.longitude !== "number") return undefined;
+  return {
+    name: typeof raw.name === "string" ? raw.name : "Custom",
+    longitude: raw.longitude,
+    latitude: typeof raw.latitude === "number" ? raw.latitude : undefined,
+    timezone: typeof raw.timezone === "string" && raw.timezone.trim() ? raw.timezone.trim() : timezone,
+    use_defaults: Boolean(raw.use_defaults),
+  };
+}
+
+function normalizeTstMeta(raw: unknown): TstMeta | undefined {
+  if (!isRecord(raw)) return undefined;
+  if (typeof raw.original_date !== "string" || typeof raw.true_solar_date !== "string") return undefined;
+  return {
+    original_date: raw.original_date,
+    original_time: String(raw.original_time ?? ""),
+    true_solar_date: raw.true_solar_date,
+    true_solar_time: String(raw.true_solar_time ?? ""),
+    diff_minutes: typeof raw.diff_minutes === "number" ? raw.diff_minutes : 0,
+    longitude: typeof raw.longitude === "number" ? raw.longitude : 0,
+    timezone: String(raw.timezone ?? "UTC"),
+    computation_version: raw.computation_version === "v2_with_tst" ? "v2_with_tst" : "v1",
+  };
+}
+
 function normalizeBirth(raw: unknown): BirthInfo | null {
   if (!isRecord(raw)) return null;
   if (typeof raw.year !== "number" || typeof raw.month !== "number" || typeof raw.day !== "number") {
@@ -43,6 +70,8 @@ function normalizeBirth(raw: unknown): BirthInfo | null {
   if (!gender) return null;
 
   const timezone = typeof raw.timezone === "string" && raw.timezone.trim() ? raw.timezone.trim() : "UTC";
+  const birth_location = normalizeBirthLocation(raw.birth_location, timezone);
+  const tst_meta = normalizeTstMeta(raw.tst_meta);
 
   if (typeof raw.hour_period === "string" && HOUR_PERIODS.has(raw.hour_period)) {
     return {
@@ -52,6 +81,8 @@ function normalizeBirth(raw: unknown): BirthInfo | null {
       hour_period: raw.hour_period as HourPeriod,
       gender,
       timezone,
+      birth_location,
+      tst_meta,
     };
   }
 
@@ -63,6 +94,8 @@ function normalizeBirth(raw: unknown): BirthInfo | null {
       hour_period: hourToPeriod(raw.hour),
       gender,
       timezone,
+      birth_location,
+      tst_meta,
     };
     if (typeof raw.hour_period === "string" && HOUR_PERIODS.has(raw.hour_period)) {
       legacy.hour_period = raw.hour_period as HourPeriod;
@@ -116,6 +149,8 @@ export function parseUserProfileForApi(raw: unknown): UserProfile | null {
     createdAt: typeof raw.createdAt === "number" ? raw.createdAt : now,
     updatedAt: typeof raw.updatedAt === "number" ? raw.updatedAt : now,
     source,
+    used_true_solar_time: raw.used_true_solar_time === true,
+    tst_meta: normalizeTstMeta(raw.tst_meta) ?? birth.tst_meta,
   };
 }
 
