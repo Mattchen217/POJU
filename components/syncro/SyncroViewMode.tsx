@@ -27,9 +27,10 @@ export type SyncroViewModeProps = {
   session: SyncroSession;
   locale: string;
   hourPeriod: HourPeriod;
+  highlightMatrixKeys?: Set<string>;
 };
 
-export function SyncroViewMode({ session, locale, hourPeriod }: SyncroViewModeProps) {
+export function SyncroViewMode({ session, locale, hourPeriod, highlightMatrixKeys }: SyncroViewModeProps) {
   const t = useTranslations("syncro.view");
   const isZh = locale.startsWith("zh");
 
@@ -68,11 +69,14 @@ export function SyncroViewMode({ session, locale, hourPeriod }: SyncroViewModePr
           const isRecommended = dir === recommended;
           const isFocused = dir === focusedDirection;
 
+          const cellKey = matrixKey(hourPeriod, dir);
+          const llmUpdated = highlightMatrixKeys?.has(cellKey);
+
           return (
             <button
               key={dir}
               type="button"
-              className={`syncro-view-cell ${isFocused ? "focused" : ""} ${isRecommended ? "recommended" : ""}`}
+              className={`syncro-view-cell ${isFocused ? "focused" : ""} ${isRecommended ? "recommended" : ""} ${llmUpdated ? "syncro-llm-cell-updated" : ""}`}
               style={{ gridArea: slot.gridArea, borderColor: level.color_hex }}
               onClick={() => setFocusedDirection(dir)}
             >
@@ -86,7 +90,9 @@ export function SyncroViewMode({ session, locale, hourPeriod }: SyncroViewModePr
       </div>
 
       {focusedCell ? (
-        <div className="syncro-view-detail">
+        <div
+          className={`syncro-view-detail ${highlightMatrixKeys?.has(matrixKey(hourPeriod, focusedDirection)) ? "syncro-llm-cell-updated" : ""}`}
+        >
           <p className="syncro-view-detail-advice">{focusedCell.short_advice}</p>
         </div>
       ) : null}

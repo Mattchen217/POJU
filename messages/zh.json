@@ -1022,12 +1022,19 @@
       "step_5": "正在映射 96 个时空组合…",
       "step_6": "即将完成…",
       "hint": "正在测算未来 24 小时的能量场，约需 60–90 秒。",
+      "hint_local": "正在本地映射 96 个时空组合，几秒内即可查看；AI 文案将在后台陆续生成。",
       "error_title": "测算失败",
-      "go_back": "返回重试",
+      "go_back": "返回 Syncro",
+      "retry": "重试",
       "missing_data": "缺少任务、命盘或位置信息，请从 Syncro 重新开始。",
       "profile_not_ready": "命盘分析尚未就绪，请返回准备页等待 base analysis 完成。",
       "compute_failed": "测算失败",
       "error_timeout": "服务器响应超时或格式异常（手机端常见）。请检查网络后重试；若反复出现，可能是计算耗时过长，请稍后再试。"
+    },
+    "llm_progress": {
+      "in_progress": "AI 文案生成中 {done}/{total}…",
+      "complete": "AI 文案已全部生成",
+      "some_failed": "有 {count} 批未成功，对应格子仍显示默认文案。"
     },
     "modes": {
       "aria_label": "Syncro 显示模式",

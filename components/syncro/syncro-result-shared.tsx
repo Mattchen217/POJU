@@ -60,6 +60,7 @@ export function SyncroCenterInfo({
   onToggleDetail,
   compact,
   locale,
+  llmHighlight,
 }: {
   combination: SyncroCombination;
   directionId: DirectionId;
@@ -68,6 +69,7 @@ export function SyncroCenterInfo({
   onToggleDetail: () => void;
   compact?: boolean;
   locale: string;
+  llmHighlight?: boolean;
 }) {
   const t = useTranslations("syncro.main");
   const isZh = locale.startsWith("zh");
@@ -76,7 +78,9 @@ export function SyncroCenterInfo({
   const periodLabel = isZh ? HOUR_PERIODS[hourPeriod].name_zh : HOUR_PERIODS[hourPeriod].name_en;
 
   return (
-    <div className={`center-info ${compact ? "in-vr-frame" : ""}`}>
+    <div
+      className={`center-info ${compact ? "in-vr-frame" : ""} ${llmHighlight ? "syncro-llm-cell-updated" : ""}`}
+    >
       <div className="current-level-badge" style={{ color: levelInfo.color_hex }}>
         {isZh ? levelInfo.name_zh : levelInfo.name_en}
         <span className="dot" style={{ background: levelInfo.color_hex }} aria-hidden />

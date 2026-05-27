@@ -591,3 +591,23 @@
   color: #ddd;
   text-align: center;
 }
+
+@keyframes syncroLlmFade {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.55);
+    background-color: rgba(34, 211, 238, 0.12);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 211, 238, 0);
+    background-color: transparent;
+  }
+}
+
+.syncro-llm-cell-updated {
+  animation: syncroLlmFade 2.4s ease-out;
+}
+
+.syncro-main-view .syncro-llm-progress + .syncro-timer-bar,
+.syncro-main-view .syncro-llm-progress ~ * .syncro-timer-bar {
+  margin-top: 2.5rem;
+}

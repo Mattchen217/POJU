@@ -13,9 +13,15 @@ export type SyncroCompassModeProps = {
   session: SyncroSession;
   locale: string;
   hourPeriod: HourPeriod;
+  highlightMatrixKeys?: Set<string>;
 };
 
-export function SyncroCompassMode({ session, locale, hourPeriod }: SyncroCompassModeProps) {
+export function SyncroCompassMode({
+  session,
+  locale,
+  hourPeriod,
+  highlightMatrixKeys,
+}: SyncroCompassModeProps) {
   const t = useTranslations("syncro.main");
   const { compassDegree, hasPermission, requestPermission, isSupported } = useOrientation();
   const [showDetail, setShowDetail] = useState(false);
@@ -64,6 +70,7 @@ export function SyncroCompassMode({ session, locale, hourPeriod }: SyncroCompass
         showDetail={showDetail}
         onToggleDetail={() => setShowDetail((v) => !v)}
         locale={locale}
+        llmHighlight={highlightMatrixKeys?.has(matrixKey(hourPeriod, currentDirection))}
       />
     </>
   );

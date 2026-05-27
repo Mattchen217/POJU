@@ -17,6 +17,8 @@ export type OpenRouterChatMessage = {
   content: string;
 };
 
+const OPENROUTER_FETCH_TIMEOUT_MS = 90_000;
+
 export type OpenRouterChatOptions = {
   messages: OpenRouterChatMessage[];
   temperature?: number;
@@ -24,6 +26,8 @@ export type OpenRouterChatOptions = {
   /** When true, sets response_format json_object (still instruct JSON in prompts). */
   json_mode?: boolean;
   reasoning_effort?: "off" | "low" | "medium" | "high" | "xhigh";
+  /** Override default 90s abort (ms). */
+  timeout_ms?: number;
 };
 
 export function isOpenRouterConfigured(): boolean {
@@ -97,14 +101,28 @@ export async function openRouterChatCompletion(
   if (referer) headers["HTTP-Referer"] = referer;
   if (title) headers["X-Title"] = title;
 
+  const timeoutMs = options.timeout_ms ?? OPENROUTER_FETCH_TIMEOUT_MS;
+
   async function post(body: Record<string, unknown>) {
-    const res = await fetch(OPENROUTER_URL, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body),
-    });
-    const raw = await res.text();
-    return { res, raw };
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(OPENROUTER_URL, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+      const raw = await res.text();
+      return { res, raw };
+    } catch (e: unknown) {
+      if (e instanceof Error && e.name === "AbortError") {
+        throw new Error("llm_batch_timeout");
+      }
+      throw e;
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
   let includeReasoning = effort !== "off";

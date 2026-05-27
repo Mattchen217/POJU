@@ -85,6 +85,66 @@ export async function createSyncroSession(input: CreateSyncroSessionInput): Prom
   return sessionId;
 }
 
+/** Merge LLM batch copy into an existing session matrix (client-side IndexedDB). */
+export async function patchSyncroSessionMatrix(
+  sessionId: string,
+  advice: Record<
+    string,
+    Partial<{
+      short_advice: string;
+      detailed_advice: string;
+      rationale: string;
+    }>
+  >,
+  llmMeta?: Partial<SyncroSession["llm_meta"]> & { cost_usd_delta?: number },
+): Promise<SyncroSession | null> {
+  const record = await getPojuDb().syncro_sessions.get(sessionId);
+  if (!record) return null;
+
+  if (new Date(record.expires_at) < new Date()) {
+    return null;
+  }
+
+  try {
+    const payload = await decryptJson<SyncroSessionPayload>(SYNCRO_SESSION_SECRET, {
+      iv: record.iv,
+      cipher: record.encrypted_data,
+    });
+    const session = fromPayload(payload);
+
+    for (const [key, patch] of Object.entries(advice)) {
+      const cell = session.matrix[key];
+      if (!cell) continue;
+      if (patch.short_advice?.trim()) cell.short_advice = patch.short_advice.trim();
+      if (patch.detailed_advice?.trim()) cell.detailed_advice = patch.detailed_advice.trim();
+      if (patch.rationale?.trim()) cell.rationale = patch.rationale.trim();
+    }
+
+    if (llmMeta?.model) session.llm_meta.model = llmMeta.model;
+    if (typeof llmMeta?.tokens_used === "number") {
+      session.llm_meta.tokens_used += llmMeta.tokens_used;
+    }
+    if (typeof llmMeta?.latency_ms === "number") {
+      session.llm_meta.latency_ms += llmMeta.latency_ms;
+    }
+    if (typeof llmMeta?.cost_usd_delta === "number") {
+      session.cost_usd += llmMeta.cost_usd_delta;
+    }
+
+    const { cipher, iv } = await encryptJson(SYNCRO_SESSION_SECRET, toPayload(session));
+    await getPojuDb().syncro_sessions.put({
+      ...record,
+      encrypted_data: cipher,
+      iv,
+    });
+
+    return session;
+  } catch (e) {
+    console.error("[syncro-session] patch failed:", e);
+    return null;
+  }
+}
+
 export async function loadSyncroSession(sessionId: string): Promise<SyncroSession | null> {
   const record = await getPojuDb().syncro_sessions.get(sessionId);
   if (!record) return null;

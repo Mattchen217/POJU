@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
 import { SyncroGuardedRoute } from "@/components/syncro/SyncroGuardedRoute";
+import { SyncroLlmBatchRunner, type SyncroLlmProgress } from "@/components/syncro/SyncroLlmBatchRunner";
+import { SyncroLlmProgressBar } from "@/components/syncro/SyncroLlmProgressBar";
 import { SyncroMainView } from "@/components/syncro/SyncroMainView";
 import { SyncroOrientationProvider } from "@/components/syncro/SyncroOrientationProvider";
 import { Link } from "@/i18n/navigation";
@@ -25,9 +27,41 @@ function SyncroResultPageContent() {
 
   const [session, setSession] = useState<SyncroSession | null>(null);
   const [stage, setStage] = useState<Stage>("loading");
+  const [llmProgress, setLlmProgress] = useState<SyncroLlmProgress>({
+    completed: 0,
+    total: 6,
+    running: true,
+    failed: 0,
+  });
+  const [highlightKeys, setHighlightKeys] = useState<Set<string>>(() => new Set());
+
+  const handleSessionUpdate = useCallback((next: SyncroSession) => {
+    setSession(next);
+  }, []);
 
   useEffect(() => {
     void loadSession();
+  }, [sessionId]);
+
+  useEffect(() => {
+    function onPatch(ev: Event) {
+      const detail = (ev as CustomEvent<{ session_id: string; updated_keys: string[] }>).detail;
+      if (detail?.session_id !== sessionId) return;
+      setHighlightKeys((prev) => {
+        const next = new Set(prev);
+        for (const k of detail.updated_keys) next.add(k);
+        return next;
+      });
+      window.setTimeout(() => {
+        setHighlightKeys((prev) => {
+          const next = new Set(prev);
+          for (const k of detail.updated_keys) next.delete(k);
+          return next;
+        });
+      }, 2400);
+    }
+    window.addEventListener("syncro-matrix-patch", onPatch);
+    return () => window.removeEventListener("syncro-matrix-patch", onPatch);
   }, [sessionId]);
 
   async function loadSession() {
@@ -84,7 +118,17 @@ function SyncroResultPageContent() {
 
   return (
     <SyncroOrientationProvider>
-      <SyncroMainView session={session} locale={locale} />
+      <SyncroLlmProgressBar progress={llmProgress} />
+      <SyncroLlmBatchRunner
+        sessionId={sessionId}
+        onSessionUpdate={handleSessionUpdate}
+        onProgress={setLlmProgress}
+      />
+      <SyncroMainView
+        session={session}
+        locale={locale}
+        highlightMatrixKeys={highlightKeys}
+      />
     </SyncroOrientationProvider>
   );
 }

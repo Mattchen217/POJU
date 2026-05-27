@@ -45,8 +45,23 @@ export type SyncroMatrixServiceResult = {
   };
 };
 
-const SYNCRO_LLM_BATCH_COUNT = 6;
-const SYNCRO_LLM_MAX_TOKENS_PER_BATCH = 12_000;
+export type SyncroLocalMatrixResult = SyncroMatrixServiceResult & {
+  local_matrix: Record<string, MatrixCell>;
+  compute_started_at: string;
+  true_solar_meta: SyncroMatrixMetadata;
+};
+
+export type SyncroLlmBatchResult = {
+  batch_index: number;
+  batch_total: number;
+  advice: Record<string, { short_advice: string; detailed_advice: string; rationale: string }>;
+  model: string;
+  tokens_used: number;
+  cost_usd: number;
+};
+
+export const SYNCRO_LLM_BATCH_COUNT = 6;
+export const SYNCRO_LLM_MAX_TOKENS_PER_BATCH = 6000;
 
 function parseJsonContent(raw: string): unknown {
   const cleaned = raw
@@ -98,7 +113,7 @@ function toMatrixProfile(
   };
 }
 
-function computeDistribution(
+export function computeDistribution(
   matrix: Record<string, MatrixCell | { current_level: CurrentLevel }>,
 ): Record<CurrentLevel, number> {
   const dist: Record<CurrentLevel, number> = {
@@ -114,7 +129,7 @@ function computeDistribution(
   return dist;
 }
 
-function mergeLocalMatrixWithLlmAdvice(
+export function mergeLocalMatrixWithLlmAdvice(
   localMatrix: Record<string, MatrixCell>,
   llmMatrix: Record<string, unknown>,
 ): SyncroMatrix {
@@ -145,6 +160,10 @@ function mergeLocalMatrixWithLlmAdvice(
   return result;
 }
 
+export function matrixWithFallbacksOnly(localMatrix: Record<string, MatrixCell>): SyncroMatrix {
+  return mergeLocalMatrixWithLlmAdvice(localMatrix, {});
+}
+
 function validateMatrix(matrix: SyncroMatrix): void {
   const count = Object.keys(matrix).length;
   if (count < 96) {
@@ -158,7 +177,7 @@ function validateMatrix(matrix: SyncroMatrix): void {
   }
 }
 
-function generateFallbackShort(cell: MatrixCell): string {
+export function generateFallbackShort(cell: MatrixCell): string {
   const levelMap: Record<CurrentLevel, string> = {
     open_current: "Move with confidence — the current is fully with you.",
     following_current: "The current supports you, with some effort.",
@@ -169,25 +188,30 @@ function generateFallbackShort(cell: MatrixCell): string {
   return levelMap[cell.current_level] ?? "Take a measured approach.";
 }
 
-function generateFallbackDetailed(cell: MatrixCell): string {
+export function generateFallbackDetailed(cell: MatrixCell): string {
   return (
     generateFallbackShort(cell) +
     " This pattern emerges from the combination of your chart and the current moment."
   );
 }
 
-function generateFallbackRationale(cell: MatrixCell): string {
+export function generateFallbackRationale(cell: MatrixCell): string {
   const factors = cell._internal.key_factors.join(", ");
   return `This ${cell.current_level.replace(/_/g, " ")} level reflects your chart, favorable element, and this timing–direction pairing (key factors: ${factors}).`;
 }
 
-function chunkArray<T>(items: T[], parts: number): T[][] {
+export function chunkArray<T>(items: T[], parts: number): T[][] {
   const chunks: T[][] = [];
   const size = Math.ceil(items.length / parts);
   for (let i = 0; i < items.length; i += size) {
     chunks.push(items.slice(i, i + size));
   }
   return chunks;
+}
+
+export function getSyncroBatchKeyLists(localMatrix: Record<string, MatrixCell>): string[][] {
+  const allKeys = Object.keys(localMatrix).sort();
+  return chunkArray(allKeys, SYNCRO_LLM_BATCH_COUNT);
 }
 
 function pickSubMatrix(
@@ -201,7 +225,7 @@ function pickSubMatrix(
   return sub;
 }
 
-async function fetchLlmAdviceBatch(input: {
+export async function fetchLlmAdviceBatch(input: {
   profile: UserProfile;
   base_analysis: unknown;
   task_description: string;
@@ -236,7 +260,7 @@ async function fetchLlmAdviceBatch(input: {
     system,
     messages: [{ role: "user", content: user }],
     max_tokens: SYNCRO_LLM_MAX_TOKENS_PER_BATCH,
-    thinking_effort: "medium",
+    thinking_effort: "low",
     response_format: "json",
     temperature: 0.55,
   });
@@ -290,9 +314,27 @@ async function fetchLlmAdviceBatch(input: {
   };
 }
 
-export async function generateSyncroMatrix(
+function normalizeBatchAdvice(
+  raw: Record<string, unknown>,
+): Record<string, { short_advice: string; detailed_advice: string; rationale: string }> {
+  const out: Record<string, { short_advice: string; detailed_advice: string; rationale: string }> =
+    {};
+  for (const [key, val] of Object.entries(raw)) {
+    if (!val || typeof val !== "object" || Array.isArray(val)) continue;
+    const row = val as Record<string, unknown>;
+    const short_advice = asString(row.short_advice);
+    const detailed_advice = asString(row.detailed_advice);
+    const rationale = asString(row.rationale);
+    if (!short_advice && !detailed_advice && !rationale) continue;
+    out[key] = { short_advice, detailed_advice, rationale };
+  }
+  return out;
+}
+
+/** Local 96-cell matrix + fallback copy only (no LLM). Target &lt; 15s server-side. */
+export async function generateSyncroMatrixLocal(
   input: GenerateSyncroMatrixInput,
-): Promise<SyncroMatrixServiceResult> {
+): Promise<SyncroLocalMatrixResult> {
   if (!input.profile_id?.trim()) {
     throw new Error("profile_id is required");
   }
@@ -300,12 +342,12 @@ export async function generateSyncroMatrix(
     throw new Error("task_description is required");
   }
 
-  const llmStart = Date.now();
+  const startMs = Date.now();
   const { profile, base_analysis } = await resolveProfileBundle(input);
   const matrixProfile = toMatrixProfile(profile, base_analysis);
   const startTime = new Date();
 
-  console.log("[syncro] Computing 96 combinations locally...");
+  console.log("[syncro] Computing 96 combinations locally (no LLM)...");
   const { matrix: localMatrix, metadata: trueSolarMeta } = calculateSyncroMatrix({
     profile: matrixProfile,
     taskDescription: input.task_description.trim(),
@@ -316,84 +358,133 @@ export async function generateSyncroMatrix(
   });
 
   const distribution = computeDistribution(localMatrix);
-  console.log("[syncro] Local matrix distribution:", distribution);
-
-  const allKeys = Object.keys(localMatrix).sort();
-  const keyBatches = chunkArray(allKeys, SYNCRO_LLM_BATCH_COUNT);
-  const mergedAdvice: Record<string, unknown> = {};
-  let totalTokens = 0;
-  let totalCost = 0;
-  let lastModel = "";
-
-  console.log(
-    `[syncro] Calling LLM for text (${keyBatches.length} batches × ~${Math.ceil(allKeys.length / keyBatches.length)} keys, levels locked)...`,
-  );
-
-  const batchResults = await Promise.all(
-    keyBatches.map(async (batchKeys, i) => {
-      const subMatrix = pickSubMatrix(localMatrix, batchKeys);
-      try {
-        const batch = await fetchLlmAdviceBatch({
-          profile,
-          base_analysis,
-          task_description: input.task_description.trim(),
-          user_location: input.user_location,
-          locale: input.locale,
-          current_time: startTime,
-          subMatrix,
-          true_solar: trueSolarMeta,
-          batch_index: i + 1,
-          batch_total: keyBatches.length,
-        });
-        console.log(
-          `[syncro] Batch ${i + 1}/${keyBatches.length} done — ${Object.keys(batch.advice).length} keys, ${batch.tokens_used} tokens`,
-        );
-        return batch;
-      } catch (e) {
-        console.warn(
-          `[syncro] Batch ${i + 1}/${keyBatches.length} failed — fallbacks for ${batchKeys.length} keys:`,
-          e,
-        );
-        return null;
-      }
-    }),
-  );
-
-  for (const batch of batchResults) {
-    if (!batch) continue;
-    Object.assign(mergedAdvice, batch.advice);
-    totalTokens += batch.tokens_used;
-    totalCost += batch.cost_usd;
-    lastModel = batch.model;
-  }
-
-  const matrix = mergeLocalMatrixWithLlmAdvice(localMatrix, mergedAdvice);
+  const matrix = matrixWithFallbacksOnly(localMatrix);
   validateMatrix(matrix);
-
-  const incompleteKeys = Object.keys(matrix).filter(
-    (k) => !matrix[k].short_advice || !matrix[k].detailed_advice,
-  );
-  if (incompleteKeys.length > 0) {
-    console.warn("[syncro] Incomplete keys after merge:", incompleteKeys.length);
-  }
 
   if (typeof window !== "undefined") {
     await recordProfileUsage(input.profile_id, "syncro");
   }
 
+  const latency_ms = Date.now() - startMs;
+  console.log(`[syncro] Local matrix done in ${latency_ms}ms`);
+
   return {
     matrix,
+    local_matrix: localMatrix,
+    compute_started_at: startTime.toISOString(),
+    true_solar_meta: trueSolarMeta,
     meta: {
-      model: lastModel,
-      tokens_used: totalTokens,
-      cost_usd: totalCost,
-      latency_ms: Date.now() - llmStart,
+      model: "local",
+      tokens_used: 0,
+      cost_usd: 0,
+      latency_ms,
       local_computation: true,
       distribution,
-      llm_batches: keyBatches.length,
+      llm_batches: SYNCRO_LLM_BATCH_COUNT,
       local_time: trueSolarMeta.localTime,
       true_solar_time: trueSolarMeta.trueSolarTime,
       true_solar_time_diff_minutes: trueSolarMeta.diffMinutes,
+    },
+  };
+}
+
+/** Single LLM batch (0-based index). Used by `/api/syncro/llm_batch`. */
+export async function runSyncroLlmBatch(input: {
+  batch_index: number;
+  profile: UserProfile;
+  base_analysis: unknown;
+  task_description: string;
+  user_location: GenerateSyncroMatrixInput["user_location"];
+  locale: string;
+  local_matrix: Record<string, MatrixCell>;
+  compute_started_at: string;
+  true_solar?: SyncroMatrixMetadata;
+}): Promise<SyncroLlmBatchResult> {
+  const batches = getSyncroBatchKeyLists(input.local_matrix);
+  if (input.batch_index < 0 || input.batch_index >= batches.length) {
+    throw new Error(`batch_index must be 0..${batches.length - 1}`);
+  }
+
+  const batchKeys = batches[input.batch_index]!;
+  const subMatrix = pickSubMatrix(input.local_matrix, batchKeys);
+  const current_time = new Date(input.compute_started_at);
+
+  const batch = await fetchLlmAdviceBatch({
+    profile: input.profile,
+    base_analysis: input.base_analysis,
+    task_description: input.task_description.trim(),
+    user_location: input.user_location,
+    locale: input.locale,
+    current_time,
+    subMatrix,
+    true_solar: input.true_solar,
+    batch_index: input.batch_index + 1,
+    batch_total: batches.length,
+  });
+
+  return {
+    batch_index: input.batch_index,
+    batch_total: batches.length,
+    advice: normalizeBatchAdvice(batch.advice),
+    model: batch.model,
+    tokens_used: batch.tokens_used,
+    cost_usd: batch.cost_usd,
+  };
+}
+
+/** Legacy: local + all LLM batches in one request (tests / scripts). */
+export async function generateSyncroMatrix(
+  input: GenerateSyncroMatrixInput,
+): Promise<SyncroMatrixServiceResult> {
+  const llmStart = Date.now();
+  const localResult = await generateSyncroMatrixLocal(input);
+  const { profile, base_analysis } = await resolveProfileBundle(input);
+
+  const mergedAdvice: Record<string, unknown> = {};
+  let totalTokens = 0;
+  let totalCost = 0;
+  let lastModel = "";
+
+  const batches = getSyncroBatchKeyLists(localResult.local_matrix);
+  console.log(`[syncro] Calling LLM for text (${batches.length} batches, sequential)...`);
+
+  for (let i = 0; i < batches.length; i++) {
+    const batchKeys = batches[i]!;
+    const subMatrix = pickSubMatrix(localResult.local_matrix, batchKeys);
+    try {
+      const batch = await fetchLlmAdviceBatch({
+        profile,
+        base_analysis,
+        task_description: input.task_description.trim(),
+        user_location: input.user_location,
+        locale: input.locale,
+        current_time: new Date(localResult.compute_started_at),
+        subMatrix,
+        true_solar: localResult.true_solar_meta,
+        batch_index: i + 1,
+        batch_total: batches.length,
+      });
+      Object.assign(mergedAdvice, batch.advice);
+      totalTokens += batch.tokens_used;
+      totalCost += batch.cost_usd;
+      lastModel = batch.model;
+      console.log(`[syncro] Batch ${i + 1}/${batches.length} done`);
+    } catch (e) {
+      console.warn(`[syncro] Batch ${i + 1}/${batches.length} failed:`, e);
+    }
+  }
+
+  const matrix = mergeLocalMatrixWithLlmAdvice(localResult.local_matrix, mergedAdvice);
+  validateMatrix(matrix);
+
+  return {
+    matrix,
+    meta: {
+      ...localResult.meta,
+      model: lastModel || localResult.meta.model,
+      tokens_used: totalTokens,
+      cost_usd: totalCost,
+      latency_ms: Date.now() - llmStart,
     },
   };
 }

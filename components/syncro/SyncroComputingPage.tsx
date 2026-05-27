@@ -10,15 +10,23 @@ import { recordUsage } from "@/lib/syncro/device-usage";
 import { getStoredProfile, recordProfileUsage } from "@/lib/profile/stored-profiles-service";
 import { readFetchJson } from "@/lib/client/fetch-json";
 import { parseSyncroStoredLocation } from "@/lib/syncro/syncro-location-storage";
+import { saveSyncroLlmContext } from "@/lib/syncro/syncro-llm-context-storage";
+import type { MatrixCell } from "@/lib/syncro/calculate-matrix";
 
 function formatComputeError(message: string, t: (key: string) => string): string {
-  if (message.includes("non_json_response") || message.includes("invalid_json_response")) {
-    return t("error_timeout");
-  }
-  if (message.includes("empty_response")) {
-    return t("error_timeout");
-  }
-  if (message.includes("The string did not match the expected pattern")) {
+  const lower = message.toLowerCase();
+  if (
+    message.includes("non_json_response") ||
+    message.includes("invalid_json_response") ||
+    message.includes("empty_response") ||
+    message.includes("The string did not match the expected pattern") ||
+    lower.includes("load failed") ||
+    lower.includes("failed to fetch") ||
+    lower.includes("networkerror") ||
+    lower.includes("network error") ||
+    lower.includes("aborted") ||
+    lower.includes("timeout")
+  ) {
     return t("error_timeout");
   }
   return message;
@@ -75,7 +83,7 @@ export function SyncroComputingPage() {
         throw new Error(t("profile_not_ready"));
       }
 
-      const response = await fetch("/api/syncro/compute", {
+      const response = await fetch("/api/syncro/compute_local", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -95,6 +103,9 @@ export function SyncroComputingPage() {
       const data = await readFetchJson<{
         success?: boolean;
         matrix?: unknown;
+        local_matrix?: Record<string, MatrixCell>;
+        compute_started_at?: string;
+        true_solar_meta?: import("@/lib/syncro/calculate-matrix").SyncroMatrixMetadata;
         meta?: { cost_usd?: number; model?: string; tokens_used?: number; latency_ms?: number };
         message?: string;
         error?: string;
@@ -104,7 +115,7 @@ export function SyncroComputingPage() {
         throw new Error(data.message || data.error || t("compute_failed"));
       }
 
-      if (!data.success || !data.matrix) {
+      if (!data.success || !data.matrix || !data.local_matrix) {
         throw new Error(data.message || data.error || t("compute_failed"));
       }
 
@@ -126,10 +137,26 @@ export function SyncroComputingPage() {
         is_free: sessionType === "free",
         cost_usd: llmMeta.cost_usd ?? 0,
         llm_meta: {
-          model: llmMeta.model ?? "unknown",
+          model: llmMeta.model ?? "local",
           tokens_used: llmMeta.tokens_used ?? 0,
           latency_ms: llmMeta.latency_ms ?? 0,
         },
+      });
+
+      saveSyncroLlmContext(sessionId, {
+        profile_id: profileId,
+        task_description: task,
+        user_location: {
+          latitude: location.lat,
+          longitude: location.lng,
+          timezone,
+        },
+        locale,
+        user_profile: profileRow.user_profile,
+        base_analysis: profileRow.base_analysis.content,
+        local_matrix: data.local_matrix,
+        compute_started_at: data.compute_started_at ?? new Date().toISOString(),
+        true_solar: data.true_solar_meta,
       });
 
       await recordUsage("syncro", sessionType === "free", llmMeta.cost_usd ?? 0);
@@ -171,8 +198,19 @@ export function SyncroComputingPage() {
         <p className="mt-4 max-w-md text-sm leading-7 text-text-secondary">{error}</p>
         <button
           type="button"
+          onClick={() => {
+            setError(null);
+            startedRef.current = false;
+            void compute();
+          }}
+          className="marketing-pill-outline-cta marketing-pill-outline-cta--cyan mt-6 px-8 py-3 text-sm font-semibold"
+        >
+          {t("retry")}
+        </button>
+        <button
+          type="button"
           onClick={() => router.push("/syncro")}
-          className="marketing-pill-outline-cta marketing-pill-outline-cta--cyan mt-10 px-8 py-3 text-sm font-semibold"
+          className="mt-4 text-sm text-cyan-200 underline underline-offset-4"
         >
           {t("go_back")}
         </button>
@@ -191,7 +229,7 @@ export function SyncroComputingPage() {
         {steps[step]}
       </p>
 
-      <p className="computing-hint mt-4 max-w-xs text-sm text-text-dim">{t("hint")}</p>
+      <p className="computing-hint mt-4 max-w-xs text-sm text-text-dim">{t("hint_local")}</p>
     </main>
   );
 }

@@ -22,6 +22,8 @@ import { getCurrentHourPeriod, type HourPeriod, type SyncroSession } from "@/lib
 export type SyncroMainViewProps = {
   session: SyncroSession;
   locale: string;
+  /** Keys recently updated by LLM batches (fade-in highlight). */
+  highlightMatrixKeys?: Set<string>;
 };
 
 function readTaskTimeScope(): SyncroTaskTimeScope {
@@ -30,7 +32,7 @@ function readTaskTimeScope(): SyncroTaskTimeScope {
   return raw === "planning" ? "planning" : "now";
 }
 
-export function SyncroMainView({ session, locale }: SyncroMainViewProps) {
+export function SyncroMainView({ session, locale, highlightMatrixKeys }: SyncroMainViewProps) {
   const t = useTranslations("syncro.main");
   const { isSupported, deviceTiltBeta } = useOrientation();
 
@@ -109,13 +111,28 @@ export function SyncroMainView({ session, locale }: SyncroMainViewProps) {
 
       <div className="syncro-mode-stage">
         {uiMode === "compass" ? (
-          <SyncroCompassMode session={session} locale={locale} hourPeriod={effectivePeriod} />
+          <SyncroCompassMode
+            session={session}
+            locale={locale}
+            hourPeriod={effectivePeriod}
+            highlightMatrixKeys={highlightMatrixKeys}
+          />
         ) : null}
         {uiMode === "ar" ? (
-          <SyncroARMode session={session} locale={locale} hourPeriod={effectivePeriod} />
+          <SyncroARMode
+            session={session}
+            locale={locale}
+            hourPeriod={effectivePeriod}
+            highlightMatrixKeys={highlightMatrixKeys}
+          />
         ) : null}
         {uiMode === "view" ? (
-          <SyncroViewMode session={session} locale={locale} hourPeriod={effectivePeriod} />
+          <SyncroViewMode
+            session={session}
+            locale={locale}
+            hourPeriod={effectivePeriod}
+            highlightMatrixKeys={highlightMatrixKeys}
+          />
         ) : null}
       </div>
 

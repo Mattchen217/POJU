@@ -13,9 +13,10 @@ export type SyncroARModeProps = {
   session: SyncroSession;
   locale: string;
   hourPeriod: HourPeriod;
+  highlightMatrixKeys?: Set<string>;
 };
 
-export function SyncroARMode({ session, locale, hourPeriod }: SyncroARModeProps) {
+export function SyncroARMode({ session, locale, hourPeriod, highlightMatrixKeys }: SyncroARModeProps) {
   const { compassDegree } = useOrientation();
   const [showDetail, setShowDetail] = useState(false);
 
@@ -36,6 +37,7 @@ export function SyncroARMode({ session, locale, hourPeriod }: SyncroARModeProps)
         onToggleDetail={() => setShowDetail((v) => !v)}
         compact
         locale={locale}
+        llmHighlight={highlightMatrixKeys?.has(matrixKey(hourPeriod, currentDirection))}
       />
     </div>
   );

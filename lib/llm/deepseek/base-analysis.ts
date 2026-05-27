@@ -256,6 +256,9 @@ async function generateBaseAnalysisViaJson(
   model: string;
   tokens_used: number;
 }> {
+  const llmStart = Date.now();
+  console.log("[base-analysis] LLM call start (client → /api/profile/base-analysis)");
+
   const res = await postBaseAnalysis(
     "/api/profile/base-analysis",
     baseAnalysisApiBody(profileId, userProfile, displayName),
@@ -272,6 +275,12 @@ async function generateBaseAnalysisViaJson(
   if (!res.ok || !payload.ok || payload.analysis === undefined) {
     throw new Error(payload.error || `Base analysis request failed (${res.status})`);
   }
+
+  console.log("[base-analysis] LLM call end (client)", {
+    duration_ms: Date.now() - llmStart,
+    tokens: payload.tokens_used,
+    model: payload.model,
+  });
 
   return {
     analysis: payload.analysis,

@@ -1,7 +1,10 @@
 import { saveBaseAnalysisAudit } from "@/lib/dev/base-analysis-audit";
 import { parseBaseAnalysisAuditBody } from "@/lib/dev/parse-base-analysis-audit-body";
 import { buildBaseAnalysisPrompt, parseBaseAnalysisResponseText } from "@/lib/llm/deepseek/base-analysis";
-import { baseAnalysisReasoningEffort } from "@/lib/llm/base-analysis-reasoning";
+import {
+  BASE_ANALYSIS_MAX_TOKENS,
+  baseAnalysisReasoningEffort,
+} from "@/lib/llm/base-analysis-reasoning";
 import {
   buildOpenRouterMessages,
   openRouterChatCompletionStream,
@@ -45,10 +48,17 @@ export async function POST(req: Request) {
       };
 
       try {
+        const llmStart = Date.now();
+        console.log("[base-analysis] LLM stream start", {
+          profile_id: stored_profile_id ?? profile.id,
+          thinking: baseAnalysisReasoningEffort(),
+          max_tokens: BASE_ANALYSIS_MAX_TOKENS,
+        });
+
         const result = await openRouterChatCompletionStream(
           {
             messages: buildOpenRouterMessages(system, [{ role: "user", content: user }]),
-            max_tokens: 15000,
+            max_tokens: BASE_ANALYSIS_MAX_TOKENS,
             temperature: 0.55,
             json_mode: true,
             reasoning_effort: baseAnalysisReasoningEffort(),
@@ -89,6 +99,12 @@ export async function POST(req: Request) {
         } catch (auditErr) {
           console.warn("[base-analysis/stream] Audit save skipped:", auditErr);
         }
+
+        console.log("[base-analysis] LLM stream end", {
+          duration_ms: Date.now() - llmStart,
+          tokens: result.tokens_used,
+          model: result.model,
+        });
 
         push({
           type: "done",

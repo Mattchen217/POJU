@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { saveBaseAnalysisAudit } from "@/lib/dev/base-analysis-audit";
 import { parseBaseAnalysisAuditBody } from "@/lib/dev/parse-base-analysis-audit-body";
-import { baseAnalysisReasoningEffort } from "@/lib/llm/base-analysis-reasoning";
+import {
+  BASE_ANALYSIS_MAX_TOKENS,
+  baseAnalysisReasoningEffort,
+} from "@/lib/llm/base-analysis-reasoning";
 import { buildBaseAnalysisPrompt, parseBaseAnalysisResponseText } from "@/lib/llm/deepseek/base-analysis";
 import { callLLM } from "@/lib/llm/router";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
@@ -29,13 +32,26 @@ export async function POST(req: Request) {
     const { user_profile: profile, stored_profile_id, display_name } = parsed;
     const { system, user } = buildBaseAnalysisPrompt(profile);
 
+    const llmStart = Date.now();
+    console.log("[base-analysis] LLM call start", {
+      profile_id: stored_profile_id ?? profile.id,
+      thinking: baseAnalysisReasoningEffort(),
+      max_tokens: BASE_ANALYSIS_MAX_TOKENS,
+    });
+
     const result = await callLLM({
       call_type: "deep_analysis",
       system,
       messages: [{ role: "user", content: user }],
-      max_tokens: 15000,
+      max_tokens: BASE_ANALYSIS_MAX_TOKENS,
       thinking_effort: baseAnalysisReasoningEffort(),
       response_format: "json",
+    });
+
+    console.log("[base-analysis] LLM call end", {
+      duration_ms: Date.now() - llmStart,
+      tokens: result.meta.tokens_used,
+      model: result.actual_model,
     });
 
     let analysis: unknown;

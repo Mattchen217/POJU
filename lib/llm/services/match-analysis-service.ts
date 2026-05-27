@@ -86,8 +86,8 @@ async function generateBaseAnalysisOnServer(profile: UserProfile): Promise<unkno
     call_type: "deep_analysis",
     system,
     messages: [{ role: "user", content: user }],
-    max_tokens: 15_000,
-    thinking_effort: "high",
+    max_tokens: 10_000,
+    thinking_effort: "medium",
     response_format: "json",
   });
   return parseBaseAnalysisResponseText(result.content);
@@ -306,7 +306,7 @@ export async function generateMatchAnalysis(
     call_type: "deep_analysis",
     system,
     messages: [{ role: "user", content: user }],
-    max_tokens: 15_000,
+    max_tokens: 10_000,
     thinking_effort: "medium",
     response_format: "json",
     temperature: 0.55,
