@@ -2,22 +2,19 @@
 
 :root {
   /* ============= 背景层 ============= */
-  --bg-primary: linear-gradient(
-    180deg,
-    #1a0a2e 0%,
-    #14081f 40%,
-    #0a0510 100%
-  );
-  --bg-primary-solid: #14081f;
+  --bg-primary: linear-gradient(180deg, var(--pj-bg-mid) 0%, var(--pj-bg-deep) 100%);
+  --bg-primary-solid: var(--pj-bg-deep);
 
   /* ============= 卡片层 (Glass) ============= */
   --glass-card-bg: rgba(50, 35, 80, 0.4);
   --glass-card-blur: blur(24px);
-  --glass-card-border: 1px solid rgba(255, 255, 255, 0.08);
+  --glass-card-border: none;
+  --glass-card-edge: inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
   --glass-card-radius: 24px;
   --glass-card-shadow:
     0 8px 32px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    var(--glass-card-edge);
 
   --glass-card-bg-elevated: rgba(60, 45, 95, 0.5);
 
@@ -33,25 +30,27 @@
   --glass-section-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
 
   --glass-input-bg: rgba(0, 0, 0, 0.25);
-  --glass-input-border: 1px solid rgba(255, 255, 255, 0.06);
+  --glass-input-border: none;
+  --glass-input-edge: inset 0 0 0 0.5px rgba(255, 255, 255, 0.06);
   --glass-input-radius: 14px;
 
   /* ============= 导航 (胶囊形) ============= */
   --glass-nav-bg: rgba(40, 30, 60, 0.5);
   --glass-nav-blur: blur(20px);
-  --glass-nav-border: 1px solid rgba(255, 255, 255, 0.08);
+  --glass-nav-border: none;
+  --glass-nav-edge: inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
   --glass-nav-radius: 999px;
 
   /* ============= 文字 ============= */
-  --text-primary: #f5f0ff;
-  --text-secondary: #b8b0c8;
-  --text-tertiary: #7a7290;
-  --text-muted: #5a5470;
+  --text-primary: var(--pj-text-primary);
+  --text-secondary: var(--pj-text-secondary);
+  --text-tertiary: var(--pj-text-tertiary);
+  --text-muted: var(--pj-text-muted);
 
   /* ============= 品牌色 ============= */
-  --gold-primary: #d4af37;
-  --gold-light: #e8c56f;
-  --gold-glow: rgba(212, 175, 55, 0.3);
+  --gold-primary: var(--pj-gold);
+  --gold-light: var(--pj-gold-soft);
+  --gold-glow: rgba(212, 165, 116, 0.3);
 
   /* ============= 产品色 ============= */
   --color-poju: #d4af37;
@@ -60,11 +59,11 @@
   --color-match: #ff6b9d;
 
   /* ============= Current 系统 (Syncro) ============= */
-  --current-open: #0d7377;
-  --current-following: #26a69a;
-  --current-still: #90a4ae;
-  --current-cross: #f57c00;
-  --current-undertow: #c62828;
+  --current-open: var(--pj-open);
+  --current-following: var(--pj-following);
+  --current-still: var(--pj-still);
+  --current-cross: var(--pj-cross);
+  --current-undertow: var(--pj-under);
 
   /* ============= 状态颜色 ============= */
   --color-success: #4caf50;
@@ -86,7 +85,7 @@
   /* ============= Typography ============= */
   --font-display: var(--font-primary), "Noto Sans SC", system-ui, sans-serif;
   --font-body: var(--font-primary), "Noto Sans SC", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "SF Mono", monospace;
+  --font-mono: var(--pj-font-mono);
   --font-serif: "Noto Serif SC", "Cormorant Garamond", serif;
 
   /* ============= 动效 ============= */

@@ -1,3 +1,4 @@
+import { safeRandomUUID } from "@/lib/client/safe-crypto";
 import { decryptJson, encryptJson } from "@/lib/crypto";
 import { getPojuDb, type ArchiveRecord } from "@/lib/db/poju-db";
 import { ARCHIVE_UPDATED_EVENT } from "@/lib/archive/runtime-archive";
@@ -118,7 +119,7 @@ export async function saveActionRecommendationsToArchive(input: {
   locale?: string;
 }): Promise<string> {
   const deviceId = getPojuDeviceId();
-  const archiveId = crypto.randomUUID();
+  const archiveId = safeRandomUUID();
   const now = new Date();
   const title = formatArchiveTitle(input.locale ?? "en", now);
 
@@ -203,7 +204,7 @@ export async function saveGlyphReadingToArchive(input: {
   locale?: string;
 }): Promise<string> {
   const deviceId = getPojuDeviceId();
-  const archiveId = crypto.randomUUID();
+  const archiveId = safeRandomUUID();
   const now = new Date();
   const glyphName = input.sign.story_figure?.trim() || `Sign ${input.sign.sign_number}`;
   const title = formatGlyphArchiveTitle(glyphName, input.locale ?? "en", now);
@@ -247,7 +248,7 @@ export async function saveSyncroToArchive(input: {
   locale?: string;
 }): Promise<string> {
   const deviceId = getPojuDeviceId();
-  const archiveId = crypto.randomUUID();
+  const archiveId = safeRandomUUID();
   const now = new Date();
   const title = formatSyncroArchiveTitle(input.task_description, input.locale ?? "en", now);
 
@@ -316,7 +317,7 @@ export async function saveMatchToArchive(input: {
   locale?: string;
 }): Promise<string> {
   const deviceId = getPojuDeviceId();
-  const archiveId = crypto.randomUUID();
+  const archiveId = safeRandomUUID();
   const now = new Date();
   const title = formatMatchArchiveTitle(
     input.relationship_description,

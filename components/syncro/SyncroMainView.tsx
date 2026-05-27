@@ -4,13 +4,16 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { HourProgressBar } from "@/components/syncro/HourProgressBar";
-import { ModeSwitcher } from "@/components/syncro/ModeSwitcher";
+import { ModeToggle, type ModeToggleTab } from "@/components/syncro/ModeToggle";
 import { useOrientation } from "@/components/syncro/SyncroOrientationProvider";
 import { SyncroARMode } from "@/components/syncro/SyncroARMode";
 import { SyncroCompassMode } from "@/components/syncro/SyncroCompassMode";
-import { SyncroTimerBar } from "@/components/syncro/SyncroTimerBar";
-import { SyncroViewMode } from "@/components/syncro/SyncroViewMode";
+import { SyncroMapMode } from "@/components/syncro/SyncroMapMode";
+import type { SyncroLlmProgress } from "@/components/syncro/SyncroLlmBatchRunner";
+import type { DirectionId } from "@/lib/syncro/current-system";
+import { loadSyncroPermission, saveSyncroPermission } from "@/lib/syncro/permissions";
 import {
+  findBestDirectionForPeriod,
   getInitialSyncroUiMode,
   getOrderedHourPeriodsFromSession,
   tiltSuggestsMode,
@@ -19,11 +22,13 @@ import {
 } from "@/lib/syncro/syncro-view-helpers";
 import { getCurrentHourPeriod, type HourPeriod, type SyncroSession } from "@/lib/syncro/types";
 
+import "@/styles/syncro-hour-progress.css";
+
 export type SyncroMainViewProps = {
   session: SyncroSession;
   locale: string;
-  /** Keys recently updated by LLM batches (fade-in highlight). */
   highlightMatrixKeys?: Set<string>;
+  llmProgress?: SyncroLlmProgress;
 };
 
 function readTaskTimeScope(): SyncroTaskTimeScope {
@@ -32,17 +37,30 @@ function readTaskTimeScope(): SyncroTaskTimeScope {
   return raw === "planning" ? "planning" : "now";
 }
 
-export function SyncroMainView({ session, locale, highlightMatrixKeys }: SyncroMainViewProps) {
+export function SyncroMainView({
+  session,
+  locale,
+  highlightMatrixKeys,
+  llmProgress,
+}: SyncroMainViewProps) {
   const t = useTranslations("syncro.main");
   const { isSupported, deviceTiltBeta } = useOrientation();
 
   const orderedPeriods = useMemo(() => getOrderedHourPeriodsFromSession(session), [session]);
 
   const [liveHourPeriod, setLiveHourPeriod] = useState<HourPeriod>(() => getCurrentHourPeriod());
-  const [selectedHourPeriod, setSelectedHourPeriod] = useState<HourPeriod>(() => getCurrentHourPeriod());
+  const [activeHour, setActiveHour] = useState<HourPeriod>(() => getCurrentHourPeriod());
   const [uiMode, setUiMode] = useState<SyncroUiMode>("compass");
   const [modePinned, setModePinned] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [cameraGranted, setCameraGranted] = useState(false);
+  const [activeDirection, setActiveDirection] = useState<DirectionId>("E");
+
+  useEffect(() => {
+    void loadSyncroPermission().then((perms) => {
+      setCameraGranted(perms.camera);
+    });
+  }, []);
 
   useEffect(() => {
     const scope = readTaskTimeScope();
@@ -55,7 +73,7 @@ export function SyncroMainView({ session, locale, highlightMatrixKeys }: SyncroM
       const next = getCurrentHourPeriod();
       setLiveHourPeriod((prev) => {
         if (next !== prev) {
-          setSelectedHourPeriod((sel) => (sel === prev ? next : sel));
+          setActiveHour((sel) => (sel === prev ? next : sel));
         }
         return next;
       });
@@ -64,21 +82,41 @@ export function SyncroMainView({ session, locale, highlightMatrixKeys }: SyncroM
   }, []);
 
   useEffect(() => {
-    if (modePinned || uiMode === "view") return;
+    if (modePinned || uiMode === "map") return;
     const suggested = tiltSuggestsMode(deviceTiltBeta);
-    if (suggested && suggested !== uiMode) {
-      setUiMode(suggested);
-    }
-  }, [deviceTiltBeta, modePinned, uiMode]);
+    if (!suggested || suggested === uiMode) return;
+    if (suggested === "ar" && !cameraGranted) return;
+    setUiMode(suggested);
+  }, [deviceTiltBeta, modePinned, uiMode, cameraGranted]);
 
-  function handleModeChange(mode: SyncroUiMode) {
-    setModePinned(true);
-    setUiMode(mode);
+  useEffect(() => {
+    setActiveDirection(findBestDirectionForPeriod(session, activeHour));
+  }, [session, activeHour]);
+
+  async function requestCameraPermission() {
+    if (!navigator.mediaDevices?.getUserMedia) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+      });
+      stream.getTracks().forEach((track) => track.stop());
+      setCameraGranted(true);
+      await saveSyncroPermission("camera", true);
+    } catch (e) {
+      console.error("[syncro] camera permission denied", e);
+    }
   }
 
-  const effectivePeriod = orderedPeriods.includes(selectedHourPeriod)
-    ? selectedHourPeriod
-    : orderedPeriods[0] ?? liveHourPeriod;
+  function handleModeToggle(tab: ModeToggleTab) {
+    setModePinned(true);
+    setUiMode(tab);
+  }
+
+  const toggleTab: ModeToggleTab = uiMode === "map" ? "map" : "compass";
+
+  const effectivePeriod = orderedPeriods.includes(activeHour)
+    ? activeHour
+    : (orderedPeriods[0] ?? liveHourPeriod);
 
   if (!initialized) {
     return (
@@ -98,18 +136,25 @@ export function SyncroMainView({ session, locale, highlightMatrixKeys }: SyncroM
   }
 
   return (
-    <div className={`syncro-main-view syncro-main-view--${uiMode}`}>
-      <SyncroTimerBar currentHourPeriod={effectivePeriod} locale={locale} />
-
+    <div className={`syncro-main-view syncro-main syncro-main-view--${uiMode}`}>
       <HourProgressBar
+        matrix={session.matrix}
         orderedPeriods={orderedPeriods}
         livePeriod={liveHourPeriod}
-        selectedPeriod={effectivePeriod}
-        onSelectPeriod={setSelectedHourPeriod}
+        activeHour={effectivePeriod}
+        onSelect={setActiveHour}
         locale={locale}
+        progress={
+          llmProgress
+            ? {
+                completed_batches: llmProgress.completed,
+                total_batches: llmProgress.total,
+              }
+            : undefined
+        }
       />
 
-      <div className="syncro-mode-stage">
+      <div className="syncro-display syncro-mode-stage">
         {uiMode === "compass" ? (
           <SyncroCompassMode
             session={session}
@@ -118,29 +163,31 @@ export function SyncroMainView({ session, locale, highlightMatrixKeys }: SyncroM
             highlightMatrixKeys={highlightMatrixKeys}
           />
         ) : null}
+
         {uiMode === "ar" ? (
           <SyncroARMode
             session={session}
             locale={locale}
             hourPeriod={effectivePeriod}
             highlightMatrixKeys={highlightMatrixKeys}
+            cameraGranted={cameraGranted}
+            onRequestCamera={() => void requestCameraPermission()}
           />
         ) : null}
-        {uiMode === "view" ? (
-          <SyncroViewMode
+
+        {uiMode === "map" ? (
+          <SyncroMapMode
             session={session}
             locale={locale}
             hourPeriod={effectivePeriod}
+            activeDirection={activeDirection}
+            onSelectDirection={setActiveDirection}
             highlightMatrixKeys={highlightMatrixKeys}
           />
         ) : null}
       </div>
 
-      <ModeSwitcher
-        mode={uiMode}
-        onModeChange={handleModeChange}
-        compassAvailable={isSupported}
-      />
+      <ModeToggle mode={toggleTab} onChange={handleModeToggle} />
     </div>
   );
 }

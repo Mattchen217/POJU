@@ -47,7 +47,7 @@
   max-width: 20rem;
   padding: 0.85rem 1.5rem;
   border-radius: 9999px;
-  border: 1px solid rgba(208, 188, 255, 0.35);
+  box-shadow: inset 0 0 0 0.5px rgba(208, 188, 255, 0.35);
   background: rgba(139, 92, 246, 0.22);
   color: #f3e8ff;
   font-size: 0.9rem;
@@ -139,7 +139,7 @@
   margin-bottom: 1.5rem;
   padding: 0.75rem 1rem;
   border-radius: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.1);
   background: rgba(0, 0, 0, 0.25);
   font-size: 0.9rem;
 }
@@ -178,7 +178,7 @@
   min-height: 8rem;
   padding: 1rem;
   border-radius: 0.75rem;
-  border: 1px solid rgba(208, 188, 255, 0.25);
+  box-shadow: inset 0 0 0 0.5px rgba(208, 188, 255, 0.25);
   background: rgba(0, 0, 0, 0.35);
   color: #e7e0ed;
   font-size: 1rem;
@@ -187,7 +187,7 @@
 
 .glyph-question-input:focus {
   outline: none;
-  border-color: rgba(208, 188, 255, 0.5);
+  /* border-color removed (Step 1) */
 }
 
 .glyph-char-count {
@@ -216,7 +216,7 @@
   margin-top: 1.25rem;
   padding: 1rem;
   border-radius: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.1);
   background: rgba(0, 0, 0, 0.25);
   text-align: left;
 }
@@ -263,7 +263,7 @@
   height: 2.5rem;
   margin: 0 auto 1.25rem;
   border-radius: 50%;
-  border: 2px solid rgba(208, 188, 255, 0.2);
+  box-shadow: inset 0 0 0 1px rgba(208, 188, 255, 0.2);
   border-top-color: #d0bcff;
   animation: glyph-spin 0.9s linear infinite;
 }
@@ -313,7 +313,7 @@
 .glyph-report .report-section {
   padding: 1rem 1.1rem;
   border-radius: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
   background: rgba(0, 0, 0, 0.28);
 }
 
@@ -335,7 +335,7 @@
   padding: 0.85rem;
   border-radius: 0.5rem;
   background: rgba(139, 92, 246, 0.08);
-  border: 1px solid rgba(208, 188, 255, 0.15);
+  box-shadow: inset 0 0 0 0.5px rgba(208, 188, 255, 0.15);
 }
 
 .glyph-report .dual-view-card h4 {
@@ -369,7 +369,7 @@
   text-align: center;
   padding: 1.25rem;
   border-radius: 0.75rem;
-  border: 1px dashed rgba(208, 188, 255, 0.35);
+  outline: 1px dashed rgba(208, 188, 255, 0.35); outline-offset: -1px;
   background: rgba(139, 92, 246, 0.1);
 }
 

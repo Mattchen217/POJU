@@ -1,0 +1,130 @@
+.why-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: pj-fade-in var(--pj-duration-fast);
+}
+
+.why-modal {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: var(--pj-bg-elevated);
+  border-radius: var(--pj-radius-xl);
+  padding: 32px 24px 24px;
+  animation: pj-modal-pop var(--pj-duration-normal) var(--pj-ease-spring);
+  box-shadow: var(--pj-shadow-card);
+}
+
+.why-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pj-text-secondary);
+  cursor: pointer;
+  transition: background var(--pj-duration-fast) var(--pj-ease);
+}
+
+.why-modal-close:active {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.why-modal-tag {
+  font-size: 10px;
+  color: var(--pj-gold);
+  letter-spacing: 1.5px;
+  font-weight: var(--pj-weight-medium);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.why-level {
+  font-size: var(--pj-text-xl);
+  font-weight: var(--pj-weight-medium);
+  line-height: var(--pj-leading-tight);
+  margin-bottom: 8px;
+}
+
+.why-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: var(--pj-text-sm);
+  color: var(--pj-text-tertiary);
+}
+
+.why-meta .meta-divider {
+  color: var(--pj-text-muted);
+}
+
+.why-divider {
+  height: 0.5px;
+  background: var(--pj-divider);
+  margin: 18px 0;
+}
+
+.why-rationale {
+  font-size: var(--pj-text-sm);
+  color: var(--pj-text-primary);
+  line-height: var(--pj-leading-relaxed);
+}
+
+.why-action-card {
+  margin-top: 18px;
+  padding: 14px;
+  background: rgba(212, 165, 116, 0.08);
+  border-radius: var(--pj-radius-md);
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.why-action-icon {
+  color: var(--pj-gold);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.why-action-card span {
+  font-size: var(--pj-text-sm);
+  color: var(--pj-gold);
+  line-height: var(--pj-leading-normal);
+  text-align: left;
+}
+
+@keyframes pj-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pj-modal-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

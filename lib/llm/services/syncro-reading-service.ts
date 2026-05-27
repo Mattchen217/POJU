@@ -142,6 +142,11 @@ export function mergeLocalMatrixWithLlmAdvice(
         ? (llmMatrix[key] as Record<string, unknown>)
         : {};
 
+    const hasLlmAdvice =
+      Boolean(asString(advice.short_advice)) ||
+      Boolean(asString(advice.detailed_advice)) ||
+      Boolean(asString(advice.rationale));
+
     result[key] = {
       hour_period: local.hour_period,
       direction_id: local.direction_id,
@@ -154,6 +159,7 @@ export function mergeLocalMatrixWithLlmAdvice(
         asString(advice.detailed_advice) || generateFallbackDetailed(local),
       rationale:
         asString(advice.rationale) || generateFallbackRationale(local),
+      llm_pending: !hasLlmAdvice,
     };
   }
 

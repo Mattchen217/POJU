@@ -11,6 +11,8 @@ import {
 import { MarketingSection } from "@/components/marketing/marketing-section";
 import { PojuSessionStarter } from "@/components/poju/poju-session-starter";
 import { PojuProductHero } from "@/components/marketing/poju-product-hero";
+import { NotPWA } from "@/components/pwa/PWAConditional";
+import { PWAProductBeginCTA } from "@/components/pwa/PWAProductBeginCTA";
 import { PojuStep2Entry } from "@/components/poju/poju-step2-entry";
 
 export const metadata: Metadata = {
@@ -57,6 +59,7 @@ export default async function PojuProductPage() {
         <PojuProductHero copy={heroCopy} />
       </MarketingPageHero>
 
+      <NotPWA>
       <MarketingPageSections>
         <MarketingSection id="when-to-poju" title={t("when_to_come.heading")} padding="lg">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -140,6 +143,9 @@ export default async function PojuProductPage() {
           <PojuStep2Entry />
         </MarketingSection>
       </MarketingPageSections>
+      </NotPWA>
+
+      <PWAProductBeginCTA productId="poju" price="$9.99" />
     </MarketingPageLayout>
   );
 }

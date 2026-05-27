@@ -1,0 +1,267 @@
+.loading-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: linear-gradient(180deg, var(--pj-bg-mid) 0%, var(--pj-bg-deep) 100%);
+}
+
+.pwa-disclaimer-gate,
+.pwa-install-screen {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(180deg, var(--pj-bg-mid) 0%, var(--pj-bg-deep) 100%);
+  color: var(--pj-text-primary);
+  font-family: var(--pj-font-sans);
+  display: flex;
+  flex-direction: column;
+  z-index: 9999;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.disclaimer-content,
+.install-content {
+  padding: 48px 24px 32px;
+  max-width: 420px;
+  margin: 0 auto;
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.pwa-brand-mark {
+  width: 56px;
+  height: 56px;
+  margin: 32px auto 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pwa-brand-mark--lg {
+  width: 72px;
+  height: 72px;
+  margin: 28px auto 24px;
+}
+
+.pwa-brand-mark__img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.disclaimer-title,
+.install-title {
+  font-size: var(--pj-text-2xl);
+  font-weight: var(--pj-weight-medium);
+  letter-spacing: var(--pj-track-tight);
+  line-height: var(--pj-leading-tight);
+  margin: 0 0 12px;
+}
+
+.install-subtitle {
+  font-size: var(--pj-text-sm);
+  color: var(--pj-text-tertiary);
+  line-height: var(--pj-leading-normal);
+  margin: 0 0 32px;
+  padding: 0 12px;
+}
+
+.disclaimer-body {
+  font-size: var(--pj-text-sm);
+  color: var(--pj-text-secondary);
+  line-height: var(--pj-leading-relaxed);
+  text-align: left;
+  margin: 32px 0;
+  padding: 20px;
+  background: var(--pj-bg-card);
+  border-radius: var(--pj-radius-lg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: var(--pj-shadow-card);
+}
+
+.disclaimer-body p {
+  margin: 0 0 12px;
+}
+
+.disclaimer-body p.muted {
+  color: var(--pj-text-muted);
+  font-size: var(--pj-text-xs);
+  margin-top: 16px;
+}
+
+.checkbox-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: var(--pj-text-sm);
+  color: var(--pj-text-secondary);
+  margin: 20px 0;
+  cursor: pointer;
+  user-select: none;
+  text-align: left;
+}
+
+.checkbox-line input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--pj-gold);
+  flex-shrink: 0;
+}
+
+.primary-btn {
+  width: 100%;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, var(--pj-gold) 0%, var(--pj-gold-soft) 100%);
+  color: var(--pj-bg-deep);
+  font-family: inherit;
+  font-size: var(--pj-text-base);
+  font-weight: var(--pj-weight-medium);
+  border-radius: var(--pj-radius-lg);
+  cursor: pointer;
+  transition: transform var(--pj-duration-fast) var(--pj-ease);
+  box-shadow: var(--pj-shadow-glow-gold);
+}
+
+.primary-btn:disabled {
+  background: rgba(212, 165, 116, 0.2);
+  color: var(--pj-text-muted);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.primary-btn:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+.install-steps {
+  margin: 32px 0;
+  padding: 20px 16px;
+  background: var(--pj-bg-card);
+  border-radius: var(--pj-radius-lg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: var(--pj-shadow-card);
+}
+
+.steps-label {
+  font-size: var(--pj-text-xs);
+  color: var(--pj-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: var(--pj-track-widest);
+  margin-bottom: 18px;
+  text-align: center;
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.step-item:last-child {
+  margin-bottom: 0;
+}
+
+.step-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: rgba(78, 205, 196, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pj-teal);
+  flex-shrink: 0;
+}
+
+.step-icon svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.75;
+}
+
+.step-text {
+  font-size: var(--pj-text-sm);
+  color: var(--pj-text-primary);
+  line-height: var(--pj-leading-normal);
+}
+
+.step-text strong,
+.step-text b {
+  color: var(--pj-teal);
+  font-weight: var(--pj-weight-medium);
+}
+
+.install-direct {
+  margin: 32px 0;
+  text-align: center;
+}
+
+.install-btn-large {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px 32px;
+  background: linear-gradient(135deg, var(--pj-gold) 0%, var(--pj-gold-soft) 100%);
+  color: var(--pj-bg-deep);
+  font-family: inherit;
+  font-size: var(--pj-text-base);
+  font-weight: var(--pj-weight-medium);
+  border-radius: var(--pj-radius-pill);
+  cursor: pointer;
+  box-shadow: var(--pj-shadow-glow-gold);
+}
+
+.install-btn-large svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.75;
+}
+
+.install-direct-hint {
+  font-size: var(--pj-text-xs);
+  color: var(--pj-text-tertiary);
+  margin-top: 12px;
+}
+
+.post-install-tip {
+  margin: 32px 0;
+  padding: 16px;
+  background: rgba(212, 165, 116, 0.06);
+  border-radius: var(--pj-radius-lg);
+}
+
+.post-install-tip p {
+  margin: 0;
+  font-size: var(--pj-text-xs);
+  color: var(--pj-gold);
+  line-height: var(--pj-leading-normal);
+}
+
+.desktop-fallback {
+  margin-top: 40px;
+  padding-top: 24px;
+  box-shadow: inset 0 0.5px 0 0 var(--pj-divider);
+}
+
+.desktop-fallback p {
+  font-size: var(--pj-text-xs);
+  color: var(--pj-text-muted);
+  margin: 0 0 4px;
+}
+
+.desktop-link {
+  font-size: var(--pj-text-sm);
+  color: var(--pj-gold);
+  text-decoration: none;
+  letter-spacing: 0.2px;
+}
+
+.desktop-link:hover {
+  color: var(--pj-gold-soft);
+}

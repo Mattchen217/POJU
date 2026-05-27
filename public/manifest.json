@@ -1,13 +1,14 @@
 {
-  "name": "POJU",
-  "short_name": "POJU",
-  "description": "Ancient Eastern Wisdom, reinforced by modern science, delivered by AI Agent, personalized for you.",
-  "start_url": "/",
+  "name": "pojulife",
+  "short_name": "pojulife",
+  "description": "Eastern wisdom, modern translation",
+  "start_url": "/?source=pwa",
+  "scope": "/",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
-  "background_color": "#0b0815",
-  "theme_color": "#0b0815",
+  "background_color": "#07091A",
+  "theme_color": "#07091A",
   "icons": [
     {
       "src": "/api/pwa-icon?size=192",
@@ -27,5 +28,6 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ]
+  ],
+  "categories": ["lifestyle", "productivity"]
 }

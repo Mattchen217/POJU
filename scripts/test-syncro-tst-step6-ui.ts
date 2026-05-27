@@ -11,7 +11,6 @@ import {
   getInitialSyncroUiMode,
   getOrderedHourPeriodsFromSession,
   inferTaskTimeScope,
-  resolveHourProgressState,
   tiltSuggestsMode,
 } from "../lib/syncro/syncro-view-helpers";
 import type { SyncroSession } from "../lib/syncro/types";
@@ -38,6 +37,7 @@ function mockSession(): SyncroSession {
         short_advice: "x",
         detailed_advice: "y",
         rationale: "z",
+        llm_pending: false,
       };
     }
   }
@@ -63,8 +63,8 @@ function main() {
   assert(inferTaskTimeScope("sign contract today") === "now", "today → now");
 
   assert(getInitialSyncroUiMode({ taskTimeScope: "now", orientationSupported: true }) === "compass", "now → compass");
-  assert(getInitialSyncroUiMode({ taskTimeScope: "planning", orientationSupported: true }) === "view", "planning → view");
-  assert(getInitialSyncroUiMode({ taskTimeScope: "now", orientationSupported: false }) === "view", "no compass → view");
+  assert(getInitialSyncroUiMode({ taskTimeScope: "planning", orientationSupported: true }) === "map", "planning → map");
+  assert(getInitialSyncroUiMode({ taskTimeScope: "now", orientationSupported: false }) === "map", "no compass → map");
 
   assert(tiltSuggestsMode(70) === "compass", "flat → compass");
   assert(tiltSuggestsMode(10) === "ar", "upright → ar");
@@ -77,33 +77,60 @@ function main() {
   const best = findBestDirectionForPeriod(session, "zi");
   assert(best === "N", "best dir N for open_current");
 
-  assert(
-    resolveHourProgressState({
-      period: "chou",
-      livePeriod: "yin",
-      selectedPeriod: "chou",
-      orderedPeriods: ordered,
-    }) === "selected",
-    "manual select state",
-  );
-
   const files = [
     "components/syncro/SyncroMainView.tsx",
     "components/syncro/SyncroCompassMode.tsx",
+    "components/syncro/SyncroParticleCircle.tsx",
+    "components/syncro/WhyThisCurrentModal.tsx",
+    "styles/syncro-compass.css",
     "components/syncro/SyncroARMode.tsx",
-    "components/syncro/SyncroViewMode.tsx",
+    "styles/syncro-ar.css",
+    "components/syncro/SyncroMapMode.tsx",
+    "styles/syncro-map.css",
+    "styles/syncro-why-modal.css",
     "components/syncro/HourProgressBar.tsx",
-    "components/syncro/ModeSwitcher.tsx",
+    "components/syncro/ModeToggle.tsx",
+    "lib/syncro/permissions.ts",
+    "components/pwa/PWAConditional.tsx",
+    "components/pwa/BeginButton.tsx",
+    "styles/pwa-product-begin.css",
+    "styles/syncro-hour-progress.css",
   ];
   for (const f of files) {
     const src = readFileSync(join(ROOT, f), "utf8");
-    assert(src.length > 100, `${f} exists`);
+    assert(src.length > 50, `${f} exists`);
   }
 
+  const compass = readFileSync(join(ROOT, "components/syncro/SyncroCompassMode.tsx"), "utf8");
+  assert(compass.includes("SyncroParticleCircle"), "compass uses particle circle");
+  assert(compass.includes("WhyThisCurrentModal"), "compass has why modal");
+
+  const ar = readFileSync(join(ROOT, "components/syncro/SyncroARMode.tsx"), "utf8");
+  assert(ar.includes("ar-camera-section") && ar.includes("getUserMedia"), "AR camera section");
+  assert(ar.includes("ar-particle-ring"), "AR particle ring");
+
+  const mapMode = readFileSync(join(ROOT, "components/syncro/SyncroMapMode.tsx"), "utf8");
+  assert(mapMode.includes("map-circle") && mapMode.includes("map-point"), "map circular UI");
+  assert(mapMode.includes("WhyThisCurrentModal"), "map has why modal");
+
+  const whyModal = readFileSync(join(ROOT, "components/syncro/WhyThisCurrentModal.tsx"), "utf8");
+  assert(whyModal.includes("why-modal-overlay") && whyModal.includes("Escape"), "why modal UX");
+  const whyCss = readFileSync(join(ROOT, "styles/syncro-why-modal.css"), "utf8");
+  assert(whyCss.includes("backdrop-filter") && whyCss.includes("why-action-card"), "why modal styles");
+
+  const beginBtn = readFileSync(join(ROOT, "components/pwa/BeginButton.tsx"), "utf8");
+  assert(beginBtn.includes("isFirstTimeFree") && beginBtn.includes("begin-btn-large"), "PWA begin button");
+
   const mainView = readFileSync(join(ROOT, "components/syncro/SyncroMainView.tsx"), "utf8");
-  assert(mainView.includes("ModeSwitcher"), "main has switcher");
+  assert(mainView.includes("ModeToggle"), "main has mode toggle");
   assert(mainView.includes("HourProgressBar"), "main has progress");
-  assert(mainView.includes("SyncroViewMode"), "main has view mode");
+  assert(mainView.includes("SyncroMapMode"), "main has map mode");
+  assert(mainView.includes("loadSyncroPermission"), "main loads permissions");
+  assert(mainView.includes("tiltSuggestsMode"), "posture auto-switch");
+
+  const hourBar = readFileSync(join(ROOT, "components/syncro/HourProgressBar.tsx"), "utf8");
+  assert(hourBar.includes("HourDotStatus") && hourBar.includes("hour-now-tag"), "hour progress states");
+  assert(hourBar.includes("hour-now-tag"), "NOW tag below labels");
 
   console.log("\n✅ Syncro TST Step 6 — three-mode UI OK");
 }

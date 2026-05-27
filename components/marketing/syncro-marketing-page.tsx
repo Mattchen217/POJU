@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 
 import { ArchiveReturnBanner } from "@/components/archive/archive-return-banner";
+import { NotPWA } from "@/components/pwa/PWAConditional";
+import { PWAProductBeginCTA } from "@/components/pwa/PWAProductBeginCTA";
 import {
   MarketingPageHero,
   MarketingPageLayout,
@@ -52,6 +54,7 @@ export async function SyncroMarketingPage() {
         <SyncroProductHero copy={heroCopy} />
       </MarketingPageHero>
 
+      <NotPWA>
       <MarketingPageSections>
         <MarketingSection id="syncro-how-it-works" title={t("how_it_works.heading")} padding="lg">
           <div className="marketing-accent-grid marketing-accent-grid--4 mx-auto max-w-5xl">
@@ -161,6 +164,9 @@ export async function SyncroMarketingPage() {
           </div>
         </MarketingSection>
       </MarketingPageSections>
+      </NotPWA>
+
+      <PWAProductBeginCTA productId="syncro" price="$4.99" />
     </MarketingPageLayout>
   );
 }

@@ -1,0 +1,50 @@
+.pwa-product-begin {
+  display: flex;
+  justify-content: center;
+  padding: 0 24px max(32px, env(safe-area-inset-bottom));
+  margin-top: 8px;
+}
+
+.begin-btn-large {
+  width: 80%;
+  max-width: 280px;
+  padding: 18px 24px;
+  background: linear-gradient(135deg, var(--pj-gold) 0%, var(--pj-gold-soft) 100%);
+  color: var(--pj-bg-deep);
+  font-family: inherit;
+  border-radius: var(--pj-radius-lg);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transition: transform var(--pj-duration-fast) var(--pj-ease);
+  margin: 24px auto 0;
+}
+
+.begin-btn-large:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.begin-btn-large:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.begin-btn-main {
+  font-size: var(--pj-text-lg);
+  font-weight: var(--pj-weight-medium);
+  letter-spacing: 0.2px;
+}
+
+.begin-btn-price {
+  font-size: var(--pj-text-xs);
+  opacity: 0.75;
+}
+
+.pwa-mode .product-page--poju .marketing-page-sections,
+.pwa-mode .product-page--glyph .marketing-page-sections,
+.pwa-mode .product-page--syncro .marketing-page-sections,
+.pwa-mode .match-home .marketing-page-sections {
+  display: none;
+}

@@ -7,6 +7,7 @@ import {
   ProductHeroTitle,
   ProductMarketingHero,
 } from "@/components/marketing/product-marketing-hero";
+import { NotPWA } from "@/components/pwa/PWAConditional";
 import { PojuSessionStarter } from "@/components/poju/poju-session-starter";
 
 export type PojuProductHeroCopy = {
@@ -33,9 +34,11 @@ export function PojuProductHero({ copy }: { copy: PojuProductHeroCopy }) {
         <ProductHeroDescription>{copy.description}</ProductHeroDescription>
         <ProductHeroAccent>{copy.tagline}</ProductHeroAccent>
         <ProductHeroActions>
-          <PojuSessionStarter className="marketing-pill-outline-cta marketing-pill-outline-cta--violet inline-flex w-full min-w-0 px-8 py-3.5 text-[15px] hover:-translate-y-0.5 hover:scale-[1.02] motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100 active:scale-[0.99] sm:w-auto sm:min-w-[220px] md:px-10 md:py-4 md:text-base">
-            {copy.ctaPrimary}
-          </PojuSessionStarter>
+          <NotPWA>
+            <PojuSessionStarter className="marketing-pill-outline-cta marketing-pill-outline-cta--violet inline-flex w-full min-w-0 px-8 py-3.5 text-[15px] hover:-translate-y-0.5 hover:scale-[1.02] motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100 active:scale-[0.99] sm:w-auto sm:min-w-[220px] md:px-10 md:py-4 md:text-base">
+              {copy.ctaPrimary}
+            </PojuSessionStarter>
+          </NotPWA>
         </ProductHeroActions>
       </ProductHeroContent>
     </ProductMarketingHero>

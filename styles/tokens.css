@@ -1,9 +1,10 @@
+/* Legacy Tailwind tokens — bridge to pojulife-design-system (Step 1) */
 :root {
-  --bg-deep: #0b0815;
-  --bg-layer-1: #141029;
-  --bg-layer-2: #1c1735;
-  --glass-tint: rgba(139, 92, 246, 0.08);
-  --glass-border: rgba(167, 139, 250, 0.28);
+  --bg-deep: var(--pj-bg-deep);
+  --bg-layer-1: var(--pj-bg-mid);
+  --bg-layer-2: var(--pj-bg-elevated);
+  --glass-tint: rgba(255, 255, 255, 0.04);
+  --glass-border: var(--pj-divider);
 
   --purple-primary: #8b5cf6;
   --purple-bright: #a855f7;
@@ -11,40 +12,38 @@
   --purple-pink: #d946ef;
   --purple-deep: #6d28d9;
   --purple-glow: rgba(139, 92, 246, 0.45);
-  --gold-rare: #d4af37;
+  --gold-rare: var(--pj-gold);
 
-  --cyan-primary: #06b6d4;
-  --cyan-bright: #22d3ee;
+  --cyan-primary: var(--pj-teal);
+  --cyan-bright: var(--pj-teal-soft);
   --blue-soft: #3b82f6;
 
-  --text-primary: #ffffff;
-  --text-body: #e4e4e7;
-  --text-secondary: #a1a1aa;
-  --text-dim: #71717a;
-  --text-accent: #c084fc;
+  --text-primary: var(--pj-text-primary);
+  --text-body: var(--pj-text-secondary);
+  --text-secondary: var(--pj-text-secondary);
+  --text-dim: var(--pj-text-muted);
+  --text-accent: var(--pj-gold-soft);
 
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 16px;
-  --space-4: 24px;
-  --space-5: 32px;
-  --space-6: 48px;
+  --space-1: var(--pj-space-1);
+  --space-2: var(--pj-space-2);
+  --space-3: var(--pj-space-4);
+  --space-4: var(--pj-space-6);
+  --space-5: var(--pj-space-8);
+  --space-6: var(--pj-space-12);
   --space-7: 64px;
   --space-8: 96px;
 
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
-  --radius-full: 9999px;
+  --radius-sm: var(--pj-radius-sm);
+  --radius-md: var(--pj-radius-md);
+  --radius-lg: var(--pj-radius-lg);
+  --radius-xl: var(--pj-radius-xl);
+  --radius-full: var(--pj-radius-pill);
 
-  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
-  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-smooth: var(--pj-ease);
+  --ease-out: var(--pj-ease-out);
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
   --ease-ornate: cubic-bezier(0.22, 1, 0.36, 1);
 
-  --shadow-card:
-    0 8px 32px rgba(139, 92, 246, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  --shadow-glow: 0 10px 40px rgba(139, 92, 246, 0.26);
+  --shadow-card: var(--pj-shadow-card);
+  --shadow-glow: var(--pj-shadow-glow-gold);
 }

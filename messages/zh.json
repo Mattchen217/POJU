@@ -652,6 +652,10 @@
     "base_analysis_note": "可选：为本档案生成一次深度「命主基础分析」，结果永久缓存在本机；模型调用在服务端使用已配置的 OpenRouter。"
   },
   "poju": {
+    "begin": {
+      "start": "开始",
+      "free_first_time": "开始会话"
+    },
     "chat": {
       "question_label": "你的问题",
       "archive_link": "会话与归档",
@@ -839,6 +843,10 @@
     "syncro_active_until": "实时窗口有效至 {date}"
   },
   "glyph": {
+    "begin": {
+      "start": "开始",
+      "free_first_time": "首次免费"
+    },
     "subtitle": "60 秒签文指引",
     "description": "为你当下的处境抽一支签。命局 + 古典智慧 = 60 秒清明。",
     "start_free": "抽你的第一支签（免费）",
@@ -982,6 +990,10 @@
     "step_8": "即将完成，请稍候..."
   },
   "syncro": {
+    "begin": {
+      "start": "开始",
+      "free_first_time": "首次免费"
+    },
     "home": {
       "cta_start": "免费试 Syncro",
       "desktop_modal": {
@@ -1040,7 +1052,37 @@
       "aria_label": "Syncro 显示模式",
       "compass": "罗盘",
       "ar": "AR",
-      "view": "总览"
+      "map": "地图",
+      "view": "地图"
+    },
+    "hour": {
+      "aria_label": "时辰时间轴",
+      "now": "当前"
+    },
+    "why_this_current": "为何此时",
+    "why_modal": {
+      "close": "关闭"
+    },
+    "compass": {
+      "permission_title": "开启罗盘",
+      "permission_description": "Syncro 需要设备方向传感器，才能根据你面向的方位给出解读。",
+      "grant_access": "允许访问"
+    },
+    "ar": {
+      "permission_title": "开启摄像头",
+      "permission_description": "AR 模式在实时画面上叠加方位解读，需要摄像头权限。",
+      "grant_access": "允许摄像头",
+      "video_label": "实时摄像头画面"
+    },
+    "levels": {
+      "open": "顺势",
+      "following": "应时",
+      "still": "守静",
+      "cross": "逆流",
+      "under": "暗涌"
+    },
+    "map": {
+      "tap_hint": "点击圆环上的方位以查看解读"
     },
     "progress": {
       "aria_label": "时辰时间轴",
@@ -1120,6 +1162,10 @@
     }
   },
   "match": {
+    "begin": {
+      "start": "开始",
+      "free_first_time": "首次免费"
+    },
     "loading": "加载中…",
     "home": {
       "tagline": "两个命盘，一段关系，真正看清。",
@@ -1280,6 +1326,40 @@
       "overall": "总体",
       "top_actions": "重点行动",
       "view_full_report": "查看完整报告"
+    }
+  },
+  "pwa": {
+    "disclaimer": {
+      "title": "进入 pojulife 之前",
+      "para_1": "pojulife 设计为可安装应用，而非普通网站。",
+      "para_2": "这确保了稳定的性能、数据保留在你的设备上，以及完整的体验。",
+      "para_3": "继续即表示你已了解，并同意将 pojulife 安装到你的设备。",
+      "agree": "我已了解并同意",
+      "enter": "进入 pojulife"
+    },
+    "nav": {
+      "language": "语言",
+      "close": "关闭"
+    },
+    "install": {
+      "title": "安装 pojulife 后开始使用",
+      "subtitle": "完整功能和稳定体验需要将应用安装到主屏幕",
+      "after_install_tip": "安装后，从主屏幕的 pojulife 图标进入，不再通过浏览器。",
+      "want_explore": "想在电脑上探索？",
+      "ios": {
+        "label": "iPhone Safari",
+        "step_1": "点击底部的 <strong>分享</strong> 按钮",
+        "step_2": "选择 <strong>添加到主屏幕</strong>",
+        "step_3": "点击 <strong>添加</strong> 确认"
+      },
+      "android": {
+        "label_manual": "Android Chrome",
+        "install_button": "安装 pojulife",
+        "one_tap_hint": "一键安装 — 无需应用商店",
+        "step_1": "点击右上角菜单（3 个点）",
+        "step_2": "选择「添加到主屏幕」",
+        "step_3": "点击「安装」确认"
+      }
     }
   }
 }

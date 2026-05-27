@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { ArchiveReturnBanner } from "@/components/archive/archive-return-banner";
+import { NotPWA } from "@/components/pwa/PWAConditional";
+import { PWAProductBeginCTA } from "@/components/pwa/PWAProductBeginCTA";
 import {
   MarketingPageLayout,
   MarketingPageSections,
@@ -97,18 +99,23 @@ export function MatchHomePage() {
           <ProductHeroAccent>{t("tagline")}</ProductHeroAccent>
           <ProductHeroDescription>{t("description")}</ProductHeroDescription>
           <ProductHeroActions>
-            <button
-              type="button"
-              onClick={handleStart}
-              className="glass-btn glass-btn-primary glass-btn-large match-primary-btn"
-            >
-              {ctaLabel}
-            </button>
-            <p className="product-hero__actions-note">{heroNote}</p>
+            <NotPWA>
+              <button
+                type="button"
+                onClick={handleStart}
+                className="glass-btn glass-btn-primary glass-btn-large match-primary-btn"
+              >
+                {ctaLabel}
+              </button>
+              <p className="product-hero__actions-note">{heroNote}</p>
+            </NotPWA>
           </ProductHeroActions>
         </ProductHeroContent>
       </ProductMarketingHero>
 
+      <PWAProductBeginCTA productId="match" price="$4.99" />
+
+      <NotPWA>
       <MarketingPageSections>
         <MarketingSection padding="lg">
           <div className="features-section marketing-accent-grid marketing-accent-grid--3">
@@ -226,6 +233,7 @@ export function MatchHomePage() {
           </div>
         </MarketingSection>
       </MarketingPageSections>
+      </NotPWA>
     </MarketingPageLayout>
   );
 }

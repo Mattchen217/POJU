@@ -5,7 +5,7 @@ export const SYNCRO_TASK_TIME_KEY = "syncro_task_time";
 
 export type SyncroTaskTimeScope = "now" | "planning";
 
-export type SyncroUiMode = "compass" | "ar" | "view";
+export type SyncroUiMode = "compass" | "ar" | "map";
 
 const DIRECTION_ORDER: DirectionId[] = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
 
@@ -37,8 +37,8 @@ export function getInitialSyncroUiMode(input: {
   taskTimeScope: SyncroTaskTimeScope;
   orientationSupported: boolean;
 }): SyncroUiMode {
-  if (!input.orientationSupported) return "view";
-  return input.taskTimeScope === "now" ? "compass" : "view";
+  if (!input.orientationSupported) return "map";
+  return input.taskTimeScope === "now" ? "compass" : "map";
 }
 
 export function getOrderedHourPeriodsFromSession(session: SyncroSession): HourPeriod[] {

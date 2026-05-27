@@ -2,6 +2,9 @@ import type { ReactNode } from "react";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { PWAInstallGate } from "@/components/pwa/PWAInstallGate";
+import { PwaAppShell } from "@/components/pwa/PwaAppShell";
+import { PwaModeBootstrap } from "@/components/pwa/PwaModeBootstrap";
 import { SiteChrome } from "@/components/marketing/site-chrome";
 import { routing } from "@/i18n/routing";
 
@@ -21,7 +24,12 @@ export default async function LocaleLayout({ children, params }: Props) {
 
   return (
     <NextIntlClientProvider messages={messages}>
-      <SiteChrome>{children}</SiteChrome>
+      <PWAInstallGate>
+        <PwaModeBootstrap />
+        <PwaAppShell>
+          <SiteChrome>{children}</SiteChrome>
+        </PwaAppShell>
+      </PWAInstallGate>
     </NextIntlClientProvider>
   );
 }

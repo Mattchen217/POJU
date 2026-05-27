@@ -1153,5 +1153,39 @@
       "top_actions": "Acciones principales",
       "view_full_report": "Ver informe completo"
     }
+  },
+  "pwa": {
+    "disclaimer": {
+      "title": "Before you enter pojulife",
+      "para_1": "pojulife is designed as an installable app, not a regular website.",
+      "para_2": "This ensures reliable performance, your data stays on your device, and you get the full experience.",
+      "para_3": "By continuing, you acknowledge this and agree to install pojulife on your device.",
+      "agree": "I understand and agree",
+      "enter": "Enter pojulife"
+    },
+    "nav": {
+      "language": "Idioma",
+      "close": "Cerrar"
+    },
+    "install": {
+      "title": "Install pojulife to begin",
+      "subtitle": "Full features and reliable experience require installation on your home screen",
+      "after_install_tip": "Once installed, open pojulife from your home screen — never through Safari again.",
+      "want_explore": "Want to explore on desktop?",
+      "ios": {
+        "label": "On iPhone Safari",
+        "step_1": "Tap <strong>Share</strong> button below",
+        "step_2": "Select <strong>Add to Home Screen</strong>",
+        "step_3": "Tap <strong>Add</strong> to confirm"
+      },
+      "android": {
+        "label_manual": "On Android Chrome",
+        "install_button": "Install pojulife",
+        "one_tap_hint": "One tap to install — no app store needed",
+        "step_1": "Tap menu (3 dots) at top right",
+        "step_2": "Select Add to Home Screen",
+        "step_3": "Tap Install to confirm"
+      }
+    }
   }
 }

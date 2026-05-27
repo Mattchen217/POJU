@@ -5,8 +5,11 @@
 import {
   buildDeviceCapability,
   canUseSyncro,
+  computeCanInstallPWA,
+  detectBrowserName,
   detectDeviceCapability,
   detectOsFromUserAgent,
+  shouldForcePWAInstall,
 } from "../lib/syncro/device-capability";
 
 function assert(cond: boolean, msg: string) {
@@ -87,6 +90,32 @@ const touchLaptop = buildDeviceCapability({
   os: "windows",
 });
 assert(touchLaptop.type === "desktop", "touch laptop stays desktop");
+
+assert(detectBrowserName("Mozilla/5.0 (iPhone) Safari/604.1") === "safari", "iOS Safari");
+assert(
+  detectBrowserName("Mozilla/5.0 (Linux; Android) Chrome/120.0.0.0 Mobile") === "chrome",
+  "Android Chrome",
+);
+assert(detectBrowserName("Mozilla/5.0 Edg/120.0") === "edge", "Edge");
+
+assert(computeCanInstallPWA("ios", "safari", false), "iOS Safari can install");
+assert(!computeCanInstallPWA("ios", "safari", true), "already PWA");
+assert(computeCanInstallPWA("android", "chrome", false), "Android Chrome can install");
+assert(!computeCanInstallPWA("android", "firefox", false), "Android Firefox no install flag");
+
+const mobileBrowser = buildDeviceCapability({
+  isTabletUA: false,
+  isMobileUA: true,
+  hasTouch: true,
+  hasOrientationSensor: true,
+  hasCamera: true,
+  hasGeolocation: true,
+  os: "ios",
+  isPWA: false,
+  browserName: "safari",
+});
+assert(shouldForcePWAInstall(mobileBrowser), "mobile browser forces PWA");
+assert(!shouldForcePWAInstall({ ...mobileBrowser, isPWA: true }), "PWA mode no force");
 
 console.log("SSR capability:", ssr);
 console.log("Sample mobile:", iphone);

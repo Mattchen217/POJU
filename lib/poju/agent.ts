@@ -1,3 +1,4 @@
+import { safeRandomUUID } from "@/lib/client/safe-crypto";
 import { loadSessionProfileBundle, withSessionProfileFlags } from "@/lib/poju/session-profile";
 import type { POJUAction, POJUSessionState, POJUMessage } from "@/lib/poju/types";
 import { checkRuleViolation, getRuleRejectionMessage } from "@/lib/poju/rules";
@@ -170,7 +171,7 @@ function normalizeNewActions(raw: unknown[] | undefined): POJUAction[] {
       ? (a.status as POJUAction["status"])
       : "pending";
     return {
-      action_id: typeof a?.action_id === "string" && a.action_id ? a.action_id : crypto.randomUUID(),
+      action_id: typeof a?.action_id === "string" && a.action_id ? a.action_id : safeRandomUUID(),
       given_at: typeof a?.given_at === "string" ? a.given_at : now,
       text: String(a?.text ?? "—"),
       category,

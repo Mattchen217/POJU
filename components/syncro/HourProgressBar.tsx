@@ -1,87 +1,124 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 
-import {
-  resolveHourProgressState,
-  type HourProgressState,
-} from "@/lib/syncro/syncro-view-helpers";
-import { HOUR_PERIODS, type HourPeriod } from "@/lib/syncro/types";
+import { HOUR_PERIOD_RANGES, hourPeriodDisplayName } from "@/lib/syncro/hour-period-ranges";
+import { getCurrentHourPeriod, matrixKey, type HourPeriod, type SyncroMatrix } from "@/lib/syncro/types";
+import type { DirectionId } from "@/lib/syncro/current-system";
+
+const HOUR_SEQUENCE: HourPeriod[] = [
+  "zi",
+  "chou",
+  "yin",
+  "mao",
+  "chen",
+  "si",
+  "wu",
+  "wei",
+  "shen",
+  "you",
+  "xu",
+  "hai",
+];
+
+const DIRECTIONS: DirectionId[] = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+
+export type HourDotStatus = "now" | "done" | "generating" | "pending";
 
 export type HourProgressBarProps = {
+  matrix: SyncroMatrix;
   orderedPeriods: HourPeriod[];
   livePeriod: HourPeriod;
-  selectedPeriod: HourPeriod;
-  onSelectPeriod: (period: HourPeriod) => void;
+  activeHour: HourPeriod;
+  onSelect: (hourId: HourPeriod) => void;
   locale: string;
+  progress?: {
+    completed_batches: number;
+    total_batches: number;
+  };
 };
 
 export function HourProgressBar({
+  matrix,
   orderedPeriods,
   livePeriod,
-  selectedPeriod,
-  onSelectPeriod,
+  activeHour,
+  onSelect,
   locale,
 }: HourProgressBarProps) {
-  const t = useTranslations("syncro.progress");
-  const isZh = locale.startsWith("zh");
-  const prevLiveRef = useRef(livePeriod);
+  const t = useTranslations("syncro.hour");
 
-  useEffect(() => {
-    prevLiveRef.current = livePeriod;
-  }, [livePeriod]);
+  const currentHourPeriod = livePeriod;
+  const startIdx = HOUR_SEQUENCE.indexOf(currentHourPeriod);
+  const sortedPeriods =
+    startIdx >= 0
+      ? [...HOUR_SEQUENCE.slice(startIdx), ...HOUR_SEQUENCE.slice(0, startIdx)]
+      : orderedPeriods.length > 0
+        ? orderedPeriods
+        : HOUR_SEQUENCE;
 
-  const liveChanged = prevLiveRef.current !== livePeriod;
+  const activeIdx = sortedPeriods.findIndex((p) => p === activeHour);
+  const active = sortedPeriods[activeIdx >= 0 ? activeIdx : 0] ?? sortedPeriods[0]!;
+  const activeIsLive = active === livePeriod && activeIdx === 0;
+
+  function getStatus(hourIdx: number): HourDotStatus {
+    if (hourIdx === 0) return "now";
+
+    const period = sortedPeriods[hourIdx];
+    if (!period) return "pending";
+
+    const cells = DIRECTIONS.map((dir) => matrix[matrixKey(period, dir)]).filter(Boolean);
+    if (cells.length === 0) return "pending";
+
+    const allDone = cells.every((cell) => cell && !cell.llm_pending);
+    const someDone = cells.some((cell) => cell && !cell.llm_pending);
+
+    if (allDone) return "done";
+    if (someDone) return "generating";
+    return "pending";
+  }
 
   return (
-    <div className="syncro-hour-progress" role="tablist" aria-label={t("aria_label")}>
-      <div className="syncro-hour-progress-track">
-        {orderedPeriods.map((period) => {
-          const state = resolveHourProgressState({
-            period,
-            livePeriod,
-            selectedPeriod,
-            orderedPeriods,
-          });
-          const label = isZh ? HOUR_PERIODS[period].name_zh : HOUR_PERIODS[period].name_en;
+    <div className="hour-progress-bar" role="tablist" aria-label={t("aria_label")}>
+      <div className="hour-track">
+        <div className="hour-line" aria-hidden />
+        {sortedPeriods.map((period, idx) => {
+          const status = getStatus(idx);
+          const isActive = period === activeHour;
 
           return (
             <button
               key={period}
               type="button"
               role="tab"
-              aria-selected={period === selectedPeriod}
-              className={progressClass(state, period === livePeriod && liveChanged)}
-              onClick={() => onSelectPeriod(period)}
-              title={stateLabel(t, state)}
-            >
-              <span className="syncro-hour-progress-label">{label}</span>
-            </button>
+              aria-selected={isActive}
+              className={`hour-dot status-${status} ${isActive ? "selected" : ""}`}
+              onClick={() => onSelect(period)}
+              aria-label={`${hourPeriodDisplayName(period, locale)} · ${HOUR_PERIOD_RANGES[period]}`}
+            />
           );
         })}
       </div>
-      {selectedPeriod !== livePeriod ? (
-        <p className="syncro-hour-progress-hint">{t("manual_selection")}</p>
-      ) : null}
+
+      <div className="hour-display">
+        <span className={`hour-name ${activeIsLive ? "is-now" : ""}`}>
+          {hourPeriodDisplayName(active, locale)}
+        </span>
+        <span className="hour-divider">·</span>
+        <span className={`hour-range ${activeIsLive ? "is-now" : ""}`}>
+          {HOUR_PERIOD_RANGES[active]}
+        </span>
+        {activeIsLive ? (
+          <>
+            <span className="hour-divider is-now">·</span>
+            <span className="hour-now-tag">{t("now")}</span>
+          </>
+        ) : null}
+      </div>
     </div>
   );
 }
 
-function progressClass(state: HourProgressState, pulseLive: boolean): string {
-  const base = `syncro-hour-progress-item syncro-hour-progress-item--${state}`;
-  return pulseLive && state === "live" ? `${base} syncro-hour-progress-item--pulse` : base;
-}
-
-function stateLabel(t: (key: string) => string, state: HourProgressState): string {
-  switch (state) {
-    case "past":
-      return t("state_past");
-    case "live":
-      return t("state_live");
-    case "selected":
-      return t("state_selected");
-    default:
-      return t("state_upcoming");
-  }
+export function getCurrentHourPeriodId(date: Date = new Date()): HourPeriod {
+  return getCurrentHourPeriod(date);
 }

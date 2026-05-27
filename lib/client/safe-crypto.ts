@@ -1,6 +1,7 @@
 /**
- * Safari / older WebViews: crypto.randomUUID() can throw
- * "The string did not match the expected pattern" off secure origins.
+ * Safe ID for browser / PWA (POJU, Syncro, profiles, archive).
+ * - `crypto.randomUUID` is missing on HTTP (e.g. http://192.168.x.x LAN dev).
+ * - Safari can throw "The string did not match the expected pattern" off secure origins.
  */
 export function safeRandomUUID(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {

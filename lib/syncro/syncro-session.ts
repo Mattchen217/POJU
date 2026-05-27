@@ -118,6 +118,7 @@ export async function patchSyncroSessionMatrix(
       if (patch.short_advice?.trim()) cell.short_advice = patch.short_advice.trim();
       if (patch.detailed_advice?.trim()) cell.detailed_advice = patch.detailed_advice.trim();
       if (patch.rationale?.trim()) cell.rationale = patch.rationale.trim();
+      cell.llm_pending = false;
     }
 
     if (llmMeta?.model) session.llm_meta.model = llmMeta.model;

@@ -10,7 +10,6 @@
   background: var(--glass-card-bg);
   backdrop-filter: var(--glass-card-blur);
   -webkit-backdrop-filter: var(--glass-card-blur);
-  border: var(--glass-card-border);
   box-shadow: var(--glass-card-shadow);
 }
 
@@ -18,17 +17,17 @@
   background: var(--glass-card-bg-elevated);
   backdrop-filter: var(--glass-card-blur);
   -webkit-backdrop-filter: var(--glass-card-blur);
-  border: var(--glass-card-border);
   box-shadow:
     0 16px 48px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    var(--glass-card-edge);
 }
 
 .glass-card-subtle {
   background: rgba(40, 30, 60, 0.25);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.04);
 }
 
 .glass-card[role="button"]:hover,
@@ -55,7 +54,7 @@
 .glass-input {
   width: 100%;
   background: var(--glass-input-bg);
-  border: var(--glass-input-border);
+  box-shadow: var(--glass-input-edge);
   border-radius: var(--glass-input-radius);
   padding: var(--space-3) var(--space-4);
   color: var(--text-primary);
@@ -66,8 +65,9 @@
 
 .glass-input:focus {
   background: rgba(0, 0, 0, 0.35);
-  border-color: rgba(212, 175, 55, 0.4);
-  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+  box-shadow:
+    inset 0 0 0 0.5px rgba(212, 165, 116, 0.4),
+    0 0 0 3px rgba(212, 165, 116, 0.1);
 }
 
 .glass-input::placeholder {
@@ -84,7 +84,7 @@
   background: var(--glass-nav-bg);
   backdrop-filter: var(--glass-nav-blur);
   -webkit-backdrop-filter: var(--glass-nav-blur);
-  border: var(--glass-nav-border);
+  box-shadow: var(--glass-nav-edge);
   border-radius: var(--glass-nav-radius);
 }
 
@@ -123,7 +123,7 @@
   gap: var(--space-2);
   padding: var(--space-3) var(--space-5);
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.1);
   border-radius: 14px;
   color: var(--text-primary);
   font: inherit;
@@ -171,7 +171,7 @@
   background: var(--glass-card-bg);
   backdrop-filter: var(--glass-card-blur);
   -webkit-backdrop-filter: var(--glass-card-blur);
-  border: var(--glass-card-border);
+  box-shadow: var(--glass-card-shadow);
   border-radius: var(--glass-card-radius);
   padding: var(--space-6);
 }
@@ -235,8 +235,7 @@
   background: var(--glass-section-bg);
   backdrop-filter: var(--glass-section-blur);
   -webkit-backdrop-filter: var(--glass-section-blur);
-  border: var(--glass-section-border);
-  box-shadow: var(--glass-section-shadow);
+  box-shadow: var(--glass-section-shadow), var(--pj-shadow-card);
   outline: none;
   padding: var(--space-6) var(--space-4);
 }

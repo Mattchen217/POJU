@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
-import { EB_Garamond, Inter } from "next/font/google";
+import { EB_Garamond, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 
@@ -15,6 +15,11 @@ const garamond = EB_Garamond({
   subsets: ["latin"],
 });
 
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
+  subsets: ["latin"],
+});
+
 /** 移动端 / PWA：禁止手势缩放（与 manifest standalone 一致由同一文档加载） */
 export const viewport: Viewport = {
   width: "device-width",
@@ -22,6 +27,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
+  themeColor: "#07091A",
 };
 
 export const metadata: Metadata = {
@@ -48,10 +54,16 @@ export default function RootLayout({
     <html
       lang="en"
       translate="no"
-      className={`${GeistSans.variable} ${inter.variable} ${garamond.variable} h-full antialiased notranslate`}
+      className={`${GeistSans.variable} ${inter.variable} ${garamond.variable} ${jetbrainsMono.variable} h-full antialiased notranslate`}
     >
       <head>
         <meta name="google" content="notranslate" />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="pojulife" />
+        <link rel="apple-touch-icon" href="/api/pwa-icon?size=180" />
+        <meta name="theme-color" content="#07091A" />
         <link
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"

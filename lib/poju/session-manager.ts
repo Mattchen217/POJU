@@ -1,3 +1,4 @@
+import { safeRandomUUID } from "@/lib/client/safe-crypto";
 import { encryptJson, decryptJson } from "@/lib/crypto";
 import { getPojuDb } from "@/lib/db/poju-db";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
@@ -20,7 +21,7 @@ export async function createPOJUSession(input: {
   const db = getPojuDb();
   const deviceId = getPojuDeviceId();
   const now = new Date();
-  const sessionId = crypto.randomUUID();
+  const sessionId = safeRandomUUID();
   const expiresAt = new Date(now.getTime() + THIRTY_DAYS_MS);
 
   const storedId =

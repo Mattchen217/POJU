@@ -210,7 +210,7 @@ function scenario5PlanningTask(report: Report) {
   assert(
     s,
     "planning default View",
-    getInitialSyncroUiMode({ taskTimeScope: "planning", orientationSupported: true }) === "view",
+    getInitialSyncroUiMode({ taskTimeScope: "planning", orientationSupported: true }) === "map",
   );
   assert(
     s,
@@ -249,7 +249,7 @@ function scenario6Tablet(report: Report) {
   assert(
     s,
     "no compass → View default",
-    getInitialSyncroUiMode({ taskTimeScope: "now", orientationSupported: false }) === "view",
+    getInitialSyncroUiMode({ taskTimeScope: "now", orientationSupported: false }) === "map",
   );
 
   report.scenarios.S6_tablet = { type: ipad.type, canUse: canUseSyncro(ipad) };
@@ -322,7 +322,7 @@ function scenario8PromptAndUi(report: Report) {
   assert(s, "prompt includes diff minutes", system.includes(String(metadata.diffMinutes)));
 
   const mainView = readSrc("components/syncro/SyncroMainView.tsx");
-  assert(s, "three modes in main view", mainView.includes("SyncroCompassMode") && mainView.includes("SyncroViewMode"));
+  assert(s, "three modes in main view", mainView.includes("SyncroCompassMode") && mainView.includes("SyncroMapMode"));
   assert(s, "tilt auto-switch", mainView.includes("tiltSuggestsMode"));
   assert(s, "hour progress bar", mainView.includes("HourProgressBar"));
 

@@ -1,3 +1,4 @@
+import { safeRandomUUID } from "@/lib/client/safe-crypto";
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import type { SignData, UserInput, FullReading } from "@/types/oracle";
 
@@ -46,7 +47,7 @@ export async function saveOracleEntry({
   const db = await getDB();
 
   const entry: OracleArchiveEntry = {
-    id: crypto.randomUUID(),
+    id: safeRandomUUID(),
     sign,
     user_input: userInput,
     full_reading: fullReading,

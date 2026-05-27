@@ -31,7 +31,7 @@ export function MainNav() {
   const brandLabel = tCommon("brand").replace(/^p/, "P");
 
   return (
-    <nav className="main-nav-wrapper" aria-label={tNav("mobileSheetTitle")}>
+    <nav className="marketing-header main-nav-wrapper" aria-label={tNav("mobileSheetTitle")}>
       <div className="glass-nav main-nav">
         <Link
           href="/"

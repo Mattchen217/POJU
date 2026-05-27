@@ -1,3 +1,4 @@
+@import "../styles/pojulife-design-system.css";
 @import "../styles/tokens.css";
 @import "../styles/design-tokens.css";
 @import "../styles/glass.css";
@@ -33,12 +34,13 @@ html {
 
 body {
   margin: 0;
-  background: var(--bg-primary);
+  background: linear-gradient(180deg, var(--pj-bg-mid) 0%, var(--pj-bg-deep) 100%);
   background-attachment: fixed;
-  color: var(--text-primary);
-  font-family: var(--font-body);
-  font-size: 15px;
-  line-height: 1.6;
+  color: var(--pj-text-primary);
+  font-family: var(--pj-font-sans), var(--font-body);
+  font-size: var(--pj-text-base);
+  font-weight: var(--pj-weight-regular);
+  line-height: var(--pj-leading-relaxed);
   min-height: 100vh;
 }
 

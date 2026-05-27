@@ -198,3 +198,20 @@ export function compassToDirection(degree: number): {
     secondary_weight,
   };
 }
+
+/** Primary sector for a compass heading (0° = north). */
+export function compassDegreeToDirection(degree: number): DirectionId {
+  return compassToDirection(degree).primary;
+}
+
+const CURRENT_LEVEL_CSS: Record<CurrentLevel, string> = {
+  open_current: "open",
+  following_current: "following",
+  stillwater: "still",
+  crosscurrent: "cross",
+  undertow: "under",
+};
+
+export function currentLevelCssClass(level: CurrentLevel): string {
+  return `pj-text-${CURRENT_LEVEL_CSS[level]}`;
+}

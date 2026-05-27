@@ -3,6 +3,7 @@
  * 与 Step 7/8 同栈：`POST /api/poju/final-delivery` → `callLLM`。
  */
 
+import { safeRandomUUID } from "@/lib/client/safe-crypto";
 import type { POJUAgentState } from "@/lib/poju/agent-state";
 import { formatContextForPrompt } from "@/lib/poju/context-extractor";
 import type { POJUAction, POJUDelivery, POJUSessionState, POJUMessage } from "@/lib/poju/types";
@@ -225,7 +226,7 @@ export function extractActionsFromDelivery(fullText: string, situationAnalysis: 
     }
 
     actions.push({
-      action_id: crypto.randomUUID(),
+      action_id: safeRandomUUID(),
       given_at: now,
       text: block.slice(0, 4000),
       category: cat,

@@ -637,6 +637,10 @@
     "base_analysis_note": "Optional: run a one-time deep base reading for this chart. It is cached on this device and uses your OpenRouter key on the server."
   },
   "poju": {
+    "begin": {
+      "start": "Begin",
+      "free_first_time": "Start your session"
+    },
     "chat": {
       "question_label": "Your question",
       "archive_link": "Sessions & archive",
@@ -824,6 +828,10 @@
     "syncro_active_until": "Live window active until {date}"
   },
   "glyph": {
+    "begin": {
+      "start": "Begin",
+      "free_first_time": "Free first time"
+    },
     "subtitle": "60-second oracle reading",
     "description": "Draw a glyph for the moment you're in. Your chart + the classical wisdom = clarity in 60 seconds.",
     "start_free": "Draw your first glyph (free)",
@@ -967,6 +975,10 @@
     "step_8": "Almost done, just a moment..."
   },
   "syncro": {
+    "begin": {
+      "start": "Begin",
+      "free_first_time": "Free first time"
+    },
     "home": {
       "cta_start": "Try Syncro free",
       "desktop_modal": {
@@ -1025,7 +1037,37 @@
       "aria_label": "Syncro display mode",
       "compass": "Compass",
       "ar": "AR",
-      "view": "View"
+      "map": "Map",
+      "view": "Map"
+    },
+    "hour": {
+      "aria_label": "Hour-period timeline",
+      "now": "NOW"
+    },
+    "why_this_current": "Why this current",
+    "why_modal": {
+      "close": "Close"
+    },
+    "compass": {
+      "permission_title": "Enable compass",
+      "permission_description": "Syncro needs your device orientation to align readings with the direction you're facing.",
+      "grant_access": "Grant access"
+    },
+    "ar": {
+      "permission_title": "Enable camera",
+      "permission_description": "AR mode overlays live direction on your camera view. Camera access is required.",
+      "grant_access": "Allow camera",
+      "video_label": "Live camera view"
+    },
+    "levels": {
+      "open": "Open Current",
+      "following": "Following Current",
+      "still": "Stillwater",
+      "cross": "Crosscurrent",
+      "under": "Undertow"
+    },
+    "map": {
+      "tap_hint": "Tap a direction on the ring to explore"
     },
     "progress": {
       "aria_label": "Hour-period timeline",
@@ -1105,6 +1147,10 @@
     }
   },
   "match": {
+    "begin": {
+      "start": "Begin",
+      "free_first_time": "Free first time"
+    },
     "loading": "Loading…",
     "home": {
       "tagline": "Two charts. One relationship. Real clarity.",
@@ -1265,6 +1311,40 @@
       "overall": "Overall",
       "top_actions": "Top Actions",
       "view_full_report": "View full report"
+    }
+  },
+  "pwa": {
+    "disclaimer": {
+      "title": "Before you enter pojulife",
+      "para_1": "pojulife is designed as an installable app, not a regular website.",
+      "para_2": "This ensures reliable performance, your data stays on your device, and you get the full experience.",
+      "para_3": "By continuing, you acknowledge this and agree to install pojulife on your device.",
+      "agree": "I understand and agree",
+      "enter": "Enter pojulife"
+    },
+    "nav": {
+      "language": "Language",
+      "close": "Close"
+    },
+    "install": {
+      "title": "Install pojulife to begin",
+      "subtitle": "Full features and reliable experience require installation on your home screen",
+      "after_install_tip": "Once installed, open pojulife from your home screen — never through Safari again.",
+      "want_explore": "Want to explore on desktop?",
+      "ios": {
+        "label": "On iPhone Safari",
+        "step_1": "Tap <strong>Share</strong> button below",
+        "step_2": "Select <strong>Add to Home Screen</strong>",
+        "step_3": "Tap <strong>Add</strong> to confirm"
+      },
+      "android": {
+        "label_manual": "On Android Chrome",
+        "install_button": "Install pojulife",
+        "one_tap_hint": "One tap to install — no app store needed",
+        "step_1": "Tap menu (3 dots) at top right",
+        "step_2": "Select Add to Home Screen",
+        "step_3": "Tap Install to confirm"
+      }
     }
   }
 }

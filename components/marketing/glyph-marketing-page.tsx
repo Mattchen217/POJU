@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 
 import { GlyphPrepareCta } from "@/components/glyph/GlyphPrepareCta";
+import { NotPWA } from "@/components/pwa/PWAConditional";
+import { PWAProductBeginCTA } from "@/components/pwa/PWAProductBeginCTA";
 import {
   MarketingPageHero,
   MarketingPageLayout,
@@ -112,9 +114,17 @@ export async function GlyphMarketingPage() {
   return (
     <MarketingPageLayout theme="glyph">
       <MarketingPageHero>
-        <OracleProductHero copy={heroCopy} cta={<GlyphPrepareCta />} />
+        <OracleProductHero
+          copy={heroCopy}
+          cta={
+            <NotPWA>
+              <GlyphPrepareCta />
+            </NotPWA>
+          }
+        />
       </MarketingPageHero>
 
+      <NotPWA>
       <MarketingPageSections>
         <MarketingSection
           id="five-winds"
@@ -248,6 +258,9 @@ export async function GlyphMarketingPage() {
           </div>
         </MarketingSection>
       </MarketingPageSections>
+      </NotPWA>
+
+      <PWAProductBeginCTA productId="glyph" price="$1.99" />
     </MarketingPageLayout>
   );
 }

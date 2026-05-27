@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { Suspense } from "react";
 
+import { NotPWA } from "@/components/pwa/PWAConditional";
 import { SyncroDesktopBanner } from "@/components/syncro/syncro-desktop-banner";
 import { SyncroIncompatible } from "@/components/syncro/syncro-incompatible";
 import { SyncroMobileStartSection } from "@/components/syncro/SyncroMobileStartSection";
@@ -37,15 +38,17 @@ export function SyncroPageLayout({ marketing }: { marketing: ReactNode }) {
     <main className="text-text-body">
       {mode === "desktop" ? <SyncroDesktopBanner /> : null}
       {marketing}
-      <Suspense
-        fallback={
-          <section id="syncro-start" className="mx-auto w-full max-w-lg px-4 pb-16 pt-4 text-center text-text-secondary">
-            …
-          </section>
-        }
-      >
-        <SyncroMobileStartSection />
-      </Suspense>
+      <NotPWA>
+        <Suspense
+          fallback={
+            <section id="syncro-start" className="mx-auto w-full max-w-lg px-4 pb-16 pt-4 text-center text-text-secondary">
+              …
+            </section>
+          }
+        >
+          <SyncroMobileStartSection />
+        </Suspense>
+      </NotPWA>
     </main>
   );
 }

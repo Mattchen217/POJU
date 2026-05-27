@@ -57,6 +57,7 @@
     "@serwist/next": "^9.5.7",
     "@splinetool/react-spline": "^4.1.0",
     "@splinetool/runtime": "^1.12.90",
+    "@tabler/icons-react": "^3.44.0",
     "@vercel/kv": "^3.0.0",
     "buffer": "^6.0.3",
     "clsx": "^2.1.1",

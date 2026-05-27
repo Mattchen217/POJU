@@ -1,6 +1,7 @@
 /**
  * Multi-person BaZi profiles on device (POJU v5 Step B).
  */
+import { safeRandomUUID } from "@/lib/client/safe-crypto";
 import { encryptJson, decryptJson } from "@/lib/crypto";
 import { sha256Hex } from "@/lib/sha256";
 import { calculateProfile } from "@/lib/calculations";
@@ -150,7 +151,7 @@ export async function createStoredProfile(input: {
   };
 
   const enc = await encryptJson(STORED_PROFILES_SECRET, payload);
-  const profileId = crypto.randomUUID();
+  const profileId = safeRandomUUID();
   const now = new Date();
 
   await db.stored_profiles.put({

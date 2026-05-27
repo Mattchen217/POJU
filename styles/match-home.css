@@ -70,7 +70,7 @@
   background: var(--glass-card-bg);
   backdrop-filter: var(--glass-card-blur);
   -webkit-backdrop-filter: var(--glass-card-blur);
-  border: var(--glass-card-border);
+  box-shadow: var(--glass-card-shadow);
   border-radius: 14px;
   padding: var(--space-4) var(--space-5);
 }

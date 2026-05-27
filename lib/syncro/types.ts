@@ -28,6 +28,8 @@ export interface SyncroCombination {
   short_advice: string;
   detailed_advice: string;
   rationale: string;
+  /** True while background LLM batches have not updated this cell yet. */
+  llm_pending?: boolean;
 }
 
 export type SyncroMatrix = {

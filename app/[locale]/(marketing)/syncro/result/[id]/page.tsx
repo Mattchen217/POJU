@@ -128,6 +128,7 @@ function SyncroResultPageContent() {
         session={session}
         locale={locale}
         highlightMatrixKeys={highlightKeys}
+        llmProgress={llmProgress}
       />
     </SyncroOrientationProvider>
   );

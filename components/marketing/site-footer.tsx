@@ -28,7 +28,7 @@ export function SiteFooter() {
   const brandLabel = tCommon("brand");
 
   return (
-    <footer className="mt-16 w-full px-4 py-8 md:mt-24 md:px-8">
+    <footer className="marketing-footer mt-16 w-full px-4 py-8 md:mt-24 md:px-8">
       <div className="mx-auto max-w-6xl text-center">
         <div className="flex flex-col items-center gap-2">
           <Link href="/" className="inline-flex" aria-label={`${brandLabel} — ${tCommon("domain")}`}>

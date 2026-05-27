@@ -1,0 +1,215 @@
+.syncro-main-view--ar .syncro-mode-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 128px 0 88px;
+  overflow: hidden;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+
+.ar-mode {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  flex: 1;
+}
+
+.ar-camera-section {
+  position: relative;
+  width: 100%;
+  flex: 0 0 45%;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--pj-bg-deep);
+}
+
+.ar-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.ar-video-placeholder {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, var(--pj-bg-mid) 0%, var(--pj-bg-deep) 100%);
+  animation: ar-video-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes ar-video-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+.ar-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.ar-particle-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 120%;
+  height: 120%;
+  transform-origin: center center;
+  background: radial-gradient(
+    circle at center,
+    transparent 35%,
+    rgba(212, 165, 116, 0.15) 50%,
+    transparent 70%
+  );
+  border-radius: 50%;
+}
+
+.ar-direction-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  padding: 6px 14px;
+  background: rgba(7, 9, 26, 0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-radius: var(--pj-radius-pill);
+  color: var(--pj-gold);
+  font-size: var(--pj-text-sm);
+  font-weight: var(--pj-weight-medium);
+  letter-spacing: 1px;
+  z-index: 3;
+}
+
+.ar-content-section {
+  flex: 1;
+  min-height: 0;
+  padding: 28px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  background: linear-gradient(180deg, var(--pj-bg-deep) 0%, var(--pj-bg-mid) 100%);
+  overflow-y: auto;
+}
+
+.ar-content-section .current-level {
+  font-size: var(--pj-text-xl);
+  font-weight: var(--pj-weight-medium);
+  line-height: var(--pj-leading-tight);
+}
+
+.ar-content-section .cell-meta {
+  margin-top: 10px;
+  font-size: var(--pj-text-xs);
+  color: var(--pj-text-tertiary);
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ar-content-section .meta-divider {
+  color: var(--pj-text-muted);
+}
+
+.ar-content-section .short-advice {
+  margin-top: 20px;
+  font-size: var(--pj-text-base);
+  color: var(--pj-text-primary);
+  line-height: var(--pj-leading-relaxed);
+  flex: 1;
+}
+
+.ar-content-section .why-btn {
+  margin-top: 20px;
+  display: inline-block;
+  align-self: center;
+  padding: 8px 18px;
+  background: rgba(212, 165, 116, 0.08);
+  color: var(--pj-gold);
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.3px;
+  border-radius: var(--pj-radius-pill);
+  cursor: pointer;
+  transition: background var(--pj-duration-fast) var(--pj-ease);
+}
+
+.ar-content-section .why-btn:active {
+  background: rgba(212, 165, 116, 0.15);
+}
+
+.ar-permission-needed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 60px 32px;
+  height: 100%;
+  min-height: 50vh;
+}
+
+.ar-permission-needed .permission-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  background: rgba(212, 165, 116, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+  color: var(--pj-gold);
+}
+
+.ar-permission-needed h3 {
+  font-size: var(--pj-text-lg);
+  font-weight: var(--pj-weight-medium);
+  margin: 0 0 8px;
+  color: var(--pj-text-primary);
+}
+
+.ar-permission-needed p {
+  font-size: var(--pj-text-sm);
+  color: var(--pj-text-tertiary);
+  line-height: var(--pj-leading-normal);
+  margin: 0 0 24px;
+  max-width: 280px;
+}
+
+.ar-permission-needed .permission-btn {
+  padding: 14px 32px;
+  background: linear-gradient(135deg, var(--pj-gold), var(--pj-gold-soft));
+  color: var(--pj-bg-deep);
+  font-family: inherit;
+  font-size: var(--pj-text-base);
+  font-weight: var(--pj-weight-medium);
+  border-radius: var(--pj-radius-pill);
+  cursor: pointer;
+}
+
+.ar-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+  color: var(--pj-gold);
+}
+
+.ar-loading-spin {
+  animation: ar-loading-spin 1s linear infinite;
+}
+
+@keyframes ar-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

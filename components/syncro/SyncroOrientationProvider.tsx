@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import { requestOrientationPermission } from "@/lib/syncro/device-check";
+import { loadSyncroPermission, saveSyncroPermission } from "@/lib/syncro/permissions";
 
 export type OrientationContextValue = {
   compassDegree: number;
@@ -42,9 +43,18 @@ export function SyncroOrientationProvider({ children }: { children: ReactNode })
   useEffect(() => {
     setIsSupported(typeof DeviceOrientationEvent !== "undefined");
 
-    if (typeof (DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> }).requestPermission !== "function") {
-      setHasPermission(true);
-    }
+    void loadSyncroPermission().then((perms) => {
+      if (perms.orientation) {
+        setHasPermission(true);
+        return;
+      }
+      if (
+        typeof (DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> })
+          .requestPermission !== "function"
+      ) {
+        setHasPermission(true);
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -90,6 +100,9 @@ export function SyncroOrientationProvider({ children }: { children: ReactNode })
   async function requestPermission() {
     const granted = await requestOrientationPermission();
     setHasPermission(granted);
+    if (granted) {
+      await saveSyncroPermission("orientation", true);
+    }
     return granted;
   }
 

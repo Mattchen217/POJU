@@ -3,6 +3,7 @@
  * @see docs/Match_v5.0_New.md Step 1
  */
 
+import { safeRandomUUID } from "@/lib/client/safe-crypto";
 import { decryptJson, encryptJson } from "@/lib/crypto";
 import { getPojuDb, type MatchSessionRecord } from "@/lib/db/poju-db";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
@@ -45,7 +46,7 @@ function fromPayload(payload: MatchSessionPayload): MatchSession {
 
 export async function createMatchSession(input: CreateMatchSessionInput): Promise<string> {
   const deviceId = getPojuDeviceId();
-  const matchId = crypto.randomUUID();
+  const matchId = safeRandomUUID();
   const now = new Date();
 
   const session: MatchSession = {

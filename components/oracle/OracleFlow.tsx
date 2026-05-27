@@ -8,6 +8,7 @@ import { FullReading } from "@/components/oracle/FullReading";
 import { OracleInput } from "@/components/oracle/OracleInput";
 import { OracleIntro } from "@/components/oracle/OracleIntro";
 import { OracleSummon } from "@/components/oracle/OracleSummon";
+import { safeRandomUUID } from "@/lib/client/safe-crypto";
 import { appendRuntimeArchiveEntry } from "@/lib/archive/runtime-archive";
 import { saveOracleEntry } from "@/lib/oracle/saveToArchive";
 import { LEVEL_META, type SignData, type UserInput, type FullReading as FullReadingType } from "@/types/oracle";
@@ -100,7 +101,7 @@ export function OracleFlow({ showIntro = true }: OracleFlowProps) {
           fullReading: reading,
         });
         appendRuntimeArchiveEntry({
-          id: crypto.randomUUID(),
+          id: safeRandomUUID(),
           kind: "oracle",
           title: `${LEVEL_META[drawnSign.level].display_name} · Full reading`,
           subtitle: userInput.question,
