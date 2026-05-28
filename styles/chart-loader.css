@@ -26,36 +26,32 @@
   overflow: hidden;
 }
 
+.preparing-spline-page__scene-wrap {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
 /* Shown on /prepare while navigating — same backdrop as preparing layout, no WebGL yet */
 .preparing-spline-page--transition {
   z-index: 50;
 }
 
-.preparing-analyzing-spline,
-.preparing-spline-page__scene {
+.preparing-spline-page__scene-wrap .preparing-spline-page__scene,
+.preparing-spline-page__scene-wrap .preparing-analyzing-spline {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  left: 50%;
+  top: 42%;
+  width: min(120vmin, 760px);
+  height: min(120vmin, 760px);
+  transform: translate(-50%, -50%);
   opacity: 0;
   transition: opacity 0.45s ease;
 }
 
 .preparing-analyzing-spline--ready {
   opacity: 1;
-}
-
-.preparing-spline-page--compact .preparing-spline-page__scene {
-  inset: 0 0 auto;
-  height: min(58vh, 520px);
-}
-
-.preparing-spline-page--compact .preparing-spline-page__overlay {
-  top: auto;
-  min-height: 36vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
 }
 
 .preparing-spline-page--block-input {
@@ -71,22 +67,22 @@
   touch-action: none;
 }
 
-.preparing-analyzing-spline canvas,
-.preparing-spline-page__scene canvas {
+.preparing-spline-page__scene-wrap canvas {
   width: 100% !important;
   height: 100% !important;
 }
 
 .preparing-spline-page__overlay {
-  position: absolute;
+  position: fixed;
   left: 0;
   right: 0;
-  bottom: 0;
+  bottom: max(5.5rem, calc(env(safe-area-inset-bottom) + 4.5rem));
   z-index: 3;
-  padding: 24px 20px max(28px, env(safe-area-inset-bottom));
+  padding: 20px 20px 12px;
   text-align: center;
   pointer-events: none;
-  background: linear-gradient(180deg, transparent 0%, rgba(5, 5, 8, 0.75) 55%, rgba(5, 5, 8, 0.92) 100%);
+  background: linear-gradient(180deg, transparent 0%, rgba(5, 5, 8, 0.55) 40%, rgba(5, 5, 8, 0.88) 100%);
+  transform: none;
 }
 
 .preparing-spline-page__overlay--error {

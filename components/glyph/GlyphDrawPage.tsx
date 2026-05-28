@@ -193,7 +193,7 @@ export function GlyphDrawPage() {
   if (stage === "preparing") {
     if (!profile || loaderStep === "error") {
       return (
-        <PreparingSplineShell blockInteraction compactScene>
+        <PreparingSplineShell blockInteraction>
           {profile ? (
             <ChartReadingLoader
               profile={profile}
@@ -211,7 +211,7 @@ export function GlyphDrawPage() {
     }
 
     return (
-      <PreparingSplineShell blockInteraction compactScene>
+      <PreparingSplineShell blockInteraction>
         <ChartReadingLoader
           profile={profile}
           currentStep={loaderStep}

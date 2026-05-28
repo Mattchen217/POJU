@@ -179,16 +179,17 @@ export async function generateGlyphReading(
     locale: input.locale,
   });
 
-  console.log("[glyph-reading] Calling DeepSeek (deep_analysis, thinking: high)...");
+  console.log("[glyph-reading] Calling DeepSeek (deep_analysis, thinking: medium)...");
 
   const result = await callLLM({
     call_type: "deep_analysis",
     system,
     messages: [{ role: "user", content: user }],
-    max_tokens: 10_000,
-    thinking_effort: "high",
+    max_tokens: 8000,
+    thinking_effort: "medium",
     response_format: "json",
     temperature: 0.55,
+    timeout_ms: 180_000,
   });
 
   let parsed: Record<string, unknown>;

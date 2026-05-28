@@ -24,6 +24,9 @@
     },
     "app/api/syncro/compute/route.ts": {
       "maxDuration": 60
+    },
+    "app/api/oracle/full-reading/route.ts": {
+      "maxDuration": 300
     }
   }
 }

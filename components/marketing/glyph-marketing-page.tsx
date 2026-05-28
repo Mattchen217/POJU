@@ -260,7 +260,7 @@ export async function GlyphMarketingPage() {
       </MarketingPageSections>
       </NotPWA>
 
-      <PWAProductBeginCTA productId="glyph" price="$1.99" />
+      <PWAProductBeginCTA productId="glyph" price="$4.99" />
     </MarketingPageLayout>
   );
 }

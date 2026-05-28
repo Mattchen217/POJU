@@ -24,7 +24,7 @@ export async function POST(req: Request) {
 
   const amounts: Record<Product, number> = {
     poju: 9.99,
-    glyph: 1.99,
+    glyph: 4.99,
     syncro_ar: 1.99,
   };
 

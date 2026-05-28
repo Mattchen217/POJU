@@ -34,6 +34,8 @@ export interface CallLLMInput {
   thinking_effort?: ReasoningEffort;
   response_format?: "json" | "text";
   temperature?: number;
+  /** OpenRouter HTTP timeout (ms). Defaults to 90s; deep_analysis uses 180s. */
+  timeout_ms?: number;
 }
 
 export interface CallLLMResult {
@@ -141,12 +143,16 @@ export async function callLLM(input: CallLLMInput): Promise<CallLLMResult> {
     `[llm/router] ${input.call_type} → ${normalizedType} (thinking: ${thinkingEnabled ? effort : "off"}, max_tokens: ${max_tokens})`,
   );
 
+  const timeout_ms =
+    input.timeout_ms ?? (normalizedType === "deep_analysis" ? 180_000 : undefined);
+
   const out = await openRouterChatCompletion({
     messages: msgs,
     max_tokens,
     temperature: input.temperature ?? 0.55,
     json_mode: input.response_format === "json",
     reasoning_effort: effort,
+    timeout_ms,
   });
 
   const latency_ms = Date.now() - startTime;

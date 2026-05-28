@@ -173,14 +173,14 @@ export function OracleFlow({ showIntro = true }: OracleFlowProps) {
           <div className="w-full max-w-md rounded-2xl border border-white/15 bg-[#131221] p-6 text-center">
             <h3 className="text-xl font-semibold text-text-primary">Daily free reading used</h3>
             <p className="mt-3 text-sm leading-7 text-text-secondary">
-              You can still get another Glyph reading today for $1.99.
+              You can still get another Glyph reading today for $4.99.
             </p>
             <button
               type="button"
               onClick={handleConfirmPaid}
               className="mt-5 w-full rounded-full bg-fuchsia-500 px-5 py-3 text-sm font-semibold text-white hover:bg-fuchsia-600"
             >
-              Get another reading — $1.99
+              Get another reading — $4.99
             </button>
             <button
               type="button"

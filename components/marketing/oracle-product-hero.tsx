@@ -35,7 +35,7 @@ export function OracleProductHero({
         <HeroSpline
           scene="/animations/BAOZHAscene.splinecode"
           initialZoom={0.92}
-          className="absolute left-1/2 top-1/2 h-[460px] w-[108%] -translate-x-1/2 -translate-y-1/2 opacity-75 sm:h-[560px] md:h-[660px]"
+          className="glyph-hero-spline"
         />
       }
     >

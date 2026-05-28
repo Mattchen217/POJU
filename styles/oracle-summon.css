@@ -25,18 +25,23 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: visible;
   pointer-events: none;
 }
 
+/* 圆形粒子场居中铺满，不用方形 viewport 裁切 */
 .oracle-summon-scene-inner {
-  width: min(88vw, 400px);
-  height: min(50dvh, 460px);
-  max-height: 52vh;
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  width: min(120vmin, 760px);
+  height: min(120vmin, 760px);
+  transform: translate(-50%, -50%);
   transition: transform 1s ease-out, opacity 1s ease-out;
 }
 
 .oracle-summon-scene-inner--burst {
-  transform: scale(4.5);
+  transform: translate(-50%, -50%) scale(4.5);
   opacity: 0;
 }
 
@@ -57,12 +62,12 @@
 }
 
 .oracle-summon-hint {
-  position: absolute;
+  position: fixed;
   left: 50%;
   z-index: 4;
   width: min(92vw, 24rem);
   transform: translateX(-50%);
-  bottom: max(5.5rem, calc(env(safe-area-inset-bottom) + 4.25rem));
+  bottom: max(6.5rem, calc(env(safe-area-inset-bottom) + 5.25rem));
   pointer-events: none;
   text-align: center;
   color: rgba(255, 255, 255, 0.72);

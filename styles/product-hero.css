@@ -39,6 +39,27 @@
   /* 上传 Match 动效后在此层挂载 canvas / video / Spline */
 }
 
+/* Glyph — 圆形粒子场铺满 Hero 背景，不用固定高度方框裁切 */
+.product-page--glyph .product-hero__bg {
+  overflow: visible;
+}
+
+.glyph-hero-spline {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: min(118vmin, 720px);
+  height: min(118vmin, 720px);
+  transform: translate(-50%, -50%);
+  opacity: 0.82;
+  pointer-events: none;
+}
+
+.glyph-hero-spline canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
 .product-hero__stage {
   position: relative;
   z-index: 10;

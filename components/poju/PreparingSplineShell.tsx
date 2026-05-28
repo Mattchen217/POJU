@@ -22,34 +22,30 @@ type PreparingSplineShellProps = {
   children: ReactNode;
   /** Block mouse / touch until the next step (errors still use overlay buttons). */
   blockInteraction?: boolean;
-  /** Shrink scene so bottom status + hint stay on screen (Glyph draw prep). */
-  compactScene?: boolean;
   sceneZoom?: number;
 };
 
 export function PreparingSplineShell({
   children,
   blockInteraction = false,
-  compactScene = false,
-  sceneZoom,
+  sceneZoom = 1,
 }: PreparingSplineShellProps) {
-  const zoom = sceneZoom ?? (compactScene ? 0.72 : 1);
-
   return (
     <div
       className={clsx(
         "preparing-spline-page preparing-spline-page--transition",
         blockInteraction && "preparing-spline-page--block-input",
-        compactScene && "preparing-spline-page--compact",
       )}
     >
       {blockInteraction ? (
         <div className="preparing-spline-page__shield" aria-hidden tabIndex={-1} />
       ) : null}
-      <PreparingAnalyzingSpline
-        className="preparing-spline-page__scene"
-        initialZoom={zoom}
-      />
+      <div className="preparing-spline-page__scene-wrap" aria-hidden>
+        <PreparingAnalyzingSpline
+          className="preparing-spline-page__scene"
+          initialZoom={sceneZoom}
+        />
+      </div>
       {children}
     </div>
   );

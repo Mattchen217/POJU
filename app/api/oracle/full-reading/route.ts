@@ -10,7 +10,7 @@ import { getLanguageDirective, parseAppLocale } from "@/lib/prompts/language-dir
 import type { SignData } from "@/types/oracle";
 import type { UserProfile } from "@/lib/profile/types";
 
-export const maxDuration = 120;
+export const maxDuration = 300;
 export const runtime = "nodejs";
 
 const ALL_SIGNS = signsData as SignData[];
