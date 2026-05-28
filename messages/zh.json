@@ -944,7 +944,7 @@
   },
   "birth_confirm": {
     "title": "确认你的信息",
-    "description": "请核对以下信息。确认后，POJU 会立即排盘并准备你的解读。",
+    "description": "请核对以下信息。确认后，Pojulife 会立即排盘并准备你的解读。",
     "date_label": "出生日期",
     "hour_label": "出生时辰",
     "gender_label": "性别",
@@ -1023,7 +1023,8 @@
     "desktop_message_2": "它的核心是通过设备读取方位——这需要移动罗盘。",
     "open_on_mobile_hint": "请在手机上打开 pojulife.com 使用 Syncro。",
     "not_supported_device": "此设备不支持 Syncro 所需的罗盘传感器。请换用手机或浏览器重试。",
-    "payment_coming_soon": "付费 Syncro 结账将在后续步骤接入。在支持的手机上，首次仍可免费体验。",
+    "payment_coming_soon": "付费结账尚未接入，暂时跳过支付直接进入 Syncro。",
+    "payment_continue_without_checkout": "继续进入 Syncro →",
     "back_to_home": "返回 Syncro",
     "your_task_label": "你的任务",
     "computing": {

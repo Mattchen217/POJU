@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Spline from "@splinetool/react-spline";
 import type { UserInput } from "@/types/oracle";
 
+import "@/styles/oracle-summon.css";
+
 interface OracleSummonProps {
   userInput: UserInput;
   onComplete: () => void;
@@ -92,10 +94,23 @@ export function OracleSummon({ userInput: _userInput, onComplete }: OracleSummon
   }, []);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-b from-[#0B0815] to-black">
+    <div className="oracle-summon-page">
+      <div className="oracle-summon-shield" aria-hidden />
+
+      <div className="oracle-summon-scene" aria-hidden>
+        <div
+          className={`oracle-summon-scene-inner ${
+            phase === "burst" ? "oracle-summon-scene-inner--burst" : ""
+          }`}
+        >
+          <Spline scene="/spline/oracle-explosion.splinecode" className="h-full w-full" />
+        </div>
+      </div>
+
       <div
-        className={`absolute inset-0 select-none ${isPressing && phase === "idle" ? "cursor-none touch-none" : ""}`}
+        className={`oracle-summon-press-zone ${isPressing && phase === "idle" ? "oracle-summon-press-zone--pressing" : ""}`}
         onMouseDown={(e) => {
+          e.preventDefault();
           if (!isWithinCenterZone(e.clientX, e.clientY)) return;
           handlePressStart();
         }}
@@ -105,36 +120,26 @@ export function OracleSummon({ userInput: _userInput, onComplete }: OracleSummon
           const touch = e.touches[0];
           if (!touch) return;
           if (!isWithinCenterZone(touch.clientX, touch.clientY)) return;
+          e.preventDefault();
           handlePressStart();
         }}
         onTouchEnd={handlePressEnd}
         onTouchCancel={handlePressEnd}
-      >
-        <div
-          className={`absolute inset-0 transition-[transform,opacity] ease-out ${
-            phase === "burst" ? "scale-[5] opacity-0 duration-1000" : "scale-100 opacity-100 duration-150"
-          }`}
-        >
-          <Spline scene="/spline/oracle-explosion.splinecode" className="h-full w-full" />
-        </div>
-      </div>
+        onContextMenu={(e) => e.preventDefault()}
+      />
 
-      <div className="pointer-events-none absolute bottom-24 left-1/2 w-[90vw] max-w-md -translate-x-1/2 text-center text-white/70">
+      <div className="oracle-summon-hint">
         {phase === "burst" ? (
-          <p className="whitespace-nowrap text-lg italic">Glyph received...</p>
+          <p>Glyph received...</p>
         ) : isPressing ? (
-          <p className="whitespace-nowrap text-lg italic">
-            Hold steady... {Math.floor(holdProgress * 100)}%
-          </p>
+          <p>Hold steady... {Math.floor(holdProgress * 100)}%</p>
         ) : (
-          <p className="whitespace-nowrap text-lg italic">
-            Long press in the selected area to receive your glyph
-          </p>
+          <p>Long press in the center to receive your glyph</p>
         )}
         {phase === "idle" ? (
-          <div className="mx-auto mt-3 h-1.5 w-56 overflow-hidden rounded-full bg-white/15">
+          <div className="oracle-summon-progress">
             <div
-              className="h-full rounded-full bg-purple-300 transition-[width] duration-75"
+              className="oracle-summon-progress-bar"
               style={{ width: `${holdProgress * 100}%` }}
             />
           </div>

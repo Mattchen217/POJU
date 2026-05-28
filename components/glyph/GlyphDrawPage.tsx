@@ -12,6 +12,11 @@ import { saveGlyphDrawSession } from "@/lib/glyph/glyph-draw-session";
 import { formatGlyphProfileShort, hourPeriodToShichen } from "@/lib/glyph/profile-display";
 import { markGlyphFreeUsedLocal } from "@/lib/glyph/storage";
 import { generateBaseAnalysis } from "@/lib/llm/deepseek/base-analysis";
+import {
+  PREPARING_MIN_SPLINE_CACHE_MS,
+  PREPARING_MIN_SPLINE_MS,
+  waitRemainingMinSpline,
+} from "@/lib/poju/preparing-spline-timing";
 import type { StoredProfileData } from "@/lib/db/poju-db";
 import {
   getStoredProfile,
@@ -50,6 +55,8 @@ export function GlyphDrawPage() {
     setLoaderStep("loading");
     setStage("preparing");
 
+    const splineStartedAt = Date.now();
+
     try {
       const p = await getStoredProfile(profileId);
       if (!p) {
@@ -62,13 +69,16 @@ export function GlyphDrawPage() {
       const record = await getStoredProfileRecord(profileId);
       if (record?.has_base_analysis && p.base_analysis?.content) {
         setLoaderStep("using_cache");
-        await new Promise((r) => setTimeout(r, 800));
+        await waitRemainingMinSpline(splineStartedAt, PREPARING_MIN_SPLINE_CACHE_MS);
         setStage("input");
         return;
       }
 
       setLoaderStep("analyzing");
-      await generateBaseAnalysis(profileId);
+      await Promise.all([
+        generateBaseAnalysis(profileId),
+        waitRemainingMinSpline(splineStartedAt, PREPARING_MIN_SPLINE_MS),
+      ]);
       const updated = await getStoredProfile(profileId);
       setProfile(updated ?? p);
       setStage("input");
@@ -183,7 +193,7 @@ export function GlyphDrawPage() {
   if (stage === "preparing") {
     if (!profile || loaderStep === "error") {
       return (
-        <PreparingSplineShell>
+        <PreparingSplineShell blockInteraction compactScene>
           {profile ? (
             <ChartReadingLoader
               profile={profile}
@@ -201,7 +211,7 @@ export function GlyphDrawPage() {
     }
 
     return (
-      <PreparingSplineShell>
+      <PreparingSplineShell blockInteraction compactScene>
         <ChartReadingLoader
           profile={profile}
           currentStep={loaderStep}

@@ -65,7 +65,7 @@ export function SyncroHomePage() {
     if (canUse.isFreeAvailable) {
       router.push("/syncro/task?type=free");
     } else {
-      router.push("/syncro/payment");
+      router.push("/syncro/task?type=paid");
     }
   }
 

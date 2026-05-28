@@ -37,6 +37,38 @@
   inset: 0;
   width: 100%;
   height: 100%;
+  opacity: 0;
+  transition: opacity 0.45s ease;
+}
+
+.preparing-analyzing-spline--ready {
+  opacity: 1;
+}
+
+.preparing-spline-page--compact .preparing-spline-page__scene {
+  inset: 0 0 auto;
+  height: min(58vh, 520px);
+}
+
+.preparing-spline-page--compact .preparing-spline-page__overlay {
+  top: auto;
+  min-height: 36vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.preparing-spline-page--block-input {
+  touch-action: none;
+  user-select: none;
+}
+
+.preparing-spline-page__shield {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: auto;
+  touch-action: none;
 }
 
 .preparing-analyzing-spline canvas,
@@ -50,7 +82,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 2;
+  z-index: 3;
   padding: 24px 20px max(28px, env(safe-area-inset-bottom));
   text-align: center;
   pointer-events: none;

@@ -123,7 +123,7 @@ export function GlyphReadingPage() {
   if (stage === "loading") {
     if (!profile && loaderStep !== "error") {
       return (
-        <PreparingSplineShell>
+        <PreparingSplineShell blockInteraction compactScene>
           <div className="preparing-spline-page__overlay" role="status">
             <p className="preparing-spline-page__status">{t("reading_loading")}</p>
           </div>
@@ -133,7 +133,7 @@ export function GlyphReadingPage() {
 
     if (profile) {
       return (
-        <PreparingSplineShell>
+        <PreparingSplineShell blockInteraction compactScene>
           <ChartReadingLoader
             profile={profile}
             currentStep={loaderStep}

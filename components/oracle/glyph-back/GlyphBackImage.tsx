@@ -39,11 +39,11 @@ export function GlyphBackImage({
   return (
     <motion.div
       className="relative aspect-[9/16] w-full overflow-hidden rounded-[24px]"
-      initial={animate ? { opacity: 0, scale: 0.12 } : false}
-      animate={{ opacity: 1, scale: 1 }}
+      initial={animate ? { opacity: 0 } : false}
+      animate={{ opacity: 1 }}
       transition={{
-        duration: 1.35,
-        ease: [0.22, 1, 0.36, 1],
+        duration: 0.55,
+        ease: "easeOut",
       }}
       onAnimationComplete={onAnimationComplete}
     >
@@ -53,7 +53,7 @@ export function GlyphBackImage({
         particleKey={source.particleKey}
         sizes="(max-width: 768px) 100vw, 400px"
         priority
-        className="w-full"
+        className="block h-full w-full [&_img]:h-full [&_img]:w-full [&_img]:object-cover"
       />
     </motion.div>
   );

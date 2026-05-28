@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import Spline from "@splinetool/react-spline";
 import type { Application } from "@splinetool/runtime";
+import { clsx } from "clsx";
 
 /** `public/spline/Analyzing-scene.splinecode` */
 export const PREPARING_ANALYZING_SCENE = "/spline/Analyzing-scene.splinecode";
@@ -20,19 +21,30 @@ export function PreparingAnalyzingSpline({
   className,
   initialZoom = 1,
 }: PreparingAnalyzingSplineProps) {
+  const [sceneReady, setSceneReady] = useState(false);
+
   const onLoad = useCallback(
     (app: Application) => {
-      if (initialZoom == null || initialZoom <= 0) return;
-      const apply = () => app.setZoom(initialZoom);
-      apply();
-      requestAnimationFrame(apply);
-      window.setTimeout(apply, 120);
+      if (initialZoom != null && initialZoom > 0) {
+        const apply = () => app.setZoom(initialZoom);
+        apply();
+        requestAnimationFrame(apply);
+        window.setTimeout(apply, 120);
+      }
+      window.setTimeout(() => setSceneReady(true), 80);
     },
     [initialZoom],
   );
 
   return (
-    <div className={`preparing-analyzing-spline ${className ?? ""}`.trim()} aria-hidden>
+    <div
+      className={clsx(
+        "preparing-analyzing-spline",
+        sceneReady && "preparing-analyzing-spline--ready",
+        className,
+      )}
+      aria-hidden
+    >
       <Spline scene={PREPARING_ANALYZING_SCENE} className="h-full w-full" onLoad={onLoad} />
     </div>
   );

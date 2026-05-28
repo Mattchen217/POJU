@@ -198,7 +198,8 @@
 }
 
 .glyph-draw-button {
-  margin-top: 1.5rem;
+  display: block;
+  margin: 1.5rem auto 0;
 }
 
 .glyph-draw-error {
@@ -319,13 +320,20 @@
 
 .glyph-report .wind-category h3 {
   margin: 0 0 0.5rem;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   color: #d0bcff;
 }
 
-.glyph-report .classical-text {
-  font-size: 1rem;
+.glyph-report .wind-category p,
+.glyph-report .question-recap-text {
+  font-size: 1.05rem;
   line-height: 1.65;
+  color: #e7e0ed;
+}
+
+.glyph-report .classical-text {
+  font-size: 1.125rem;
+  line-height: 1.7;
   color: #e7e0ed;
   font-style: italic;
 }
@@ -340,16 +348,22 @@
 
 .glyph-report .dual-view-card h4 {
   margin: 0 0 0.5rem;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   color: #d0bcff;
+}
+
+.glyph-report .dual-view-card p {
+  font-size: 1.05rem;
+  line-height: 1.65;
+  color: #e7e0ed;
 }
 
 .glyph-report .dual-view-resonance {
   margin-top: 1rem;
   padding-top: 1rem;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
-  font-size: 0.9rem;
-  line-height: 1.6;
+  font-size: 1.05rem;
+  line-height: 1.65;
   color: #cbc3d7;
 }
 
@@ -360,9 +374,14 @@
 }
 
 .glyph-report .reflection-question {
-  font-size: 1.05rem;
-  line-height: 1.55;
+  font-size: 1.15rem;
+  line-height: 1.6;
   color: #f3e8ff;
+}
+
+.glyph-report .exploration-card p {
+  font-size: 1.05rem;
+  line-height: 1.65;
 }
 
 .glyph-report .archive-saved-hint {

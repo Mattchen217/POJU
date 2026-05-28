@@ -50,12 +50,14 @@ export async function POST(req: Request) {
   }
 
   if (product === "syncro_ar") {
+    const checkoutUrl = "/syncro/task?type=paid";
     return NextResponse.json({
       ok: true,
       product,
       amount: amounts.syncro_ar,
       currency: "USD",
-      checkout_url: "/start?next=%2Fsyncro%2Far",
+      checkout_url: checkoutUrl,
+      payment_url: checkoutUrl,
     });
   }
 

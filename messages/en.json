@@ -929,7 +929,7 @@
   },
   "birth_confirm": {
     "title": "Confirm Your Information",
-    "description": "Please verify the information below. Once confirmed, POJU will cast your chart and prepare your reading.",
+    "description": "Please verify the information below. Once confirmed, Pojulife will immediately cast your chart and prepare your reading.",
     "date_label": "Date of Birth",
     "hour_label": "Time of Birth",
     "gender_label": "Gender",
@@ -1008,7 +1008,8 @@
     "desktop_message_2": "Its core is reading directions through your device — that requires a mobile compass.",
     "open_on_mobile_hint": "Open pojulife.com on your phone to use Syncro.",
     "not_supported_device": "This device doesn't support the compass sensors Syncro needs. Try a different phone or browser.",
-    "payment_coming_soon": "Paid Syncro checkout is coming in the next release. Your first session can still be free on a supported phone.",
+    "payment_coming_soon": "Paid checkout is not connected yet — continuing into Syncro without payment for now.",
+    "payment_continue_without_checkout": "Continue to Syncro →",
     "back_to_home": "Back to Syncro",
     "your_task_label": "Your task",
     "computing": {
