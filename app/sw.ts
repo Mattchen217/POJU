@@ -10,6 +10,7 @@ declare const self: typeof globalThis & {
 
 installSerwist({
   precacheEntries: self.__SW_MANIFEST,
-  skipWaiting: true,
+  /** Avoid immediate takeover reload storms on iOS PWA after each deploy. */
+  skipWaiting: false,
   clientsClaim: true,
 });

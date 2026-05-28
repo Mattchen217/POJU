@@ -1,4 +1,4 @@
-import { isPwaStandalone } from "@/lib/client/pwa-standalone";
+import { isLikelyPwaContext } from "@/lib/client/pwa-standalone";
 
 const LEGACY_RESET_KEY = "pojulife_sw_legacy_reset_v1";
 
@@ -9,7 +9,7 @@ const LEGACY_RESET_KEY = "pojulife_sw_legacy_reset_v1";
 export async function runLegacyServiceWorkerResetOnce(): Promise<void> {
   if (typeof window === "undefined") return;
   if (!("serviceWorker" in navigator)) return;
-  if (isPwaStandalone()) return;
+  if (isLikelyPwaContext()) return;
 
   try {
     if (localStorage.getItem(LEGACY_RESET_KEY) === "1") return;

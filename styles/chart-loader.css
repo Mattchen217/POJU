@@ -47,6 +47,12 @@
   height: 100%;
 }
 
+.preparing-spline-page__scene--static,
+.spline-interactive-scene--static {
+  background: radial-gradient(ellipse 70% 55% at 50% 42%, rgba(88, 72, 140, 0.35), transparent 70%),
+    #050508;
+}
+
 .preparing-spline-page--block-input {
   touch-action: none;
   user-select: none;

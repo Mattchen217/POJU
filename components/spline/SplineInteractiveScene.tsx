@@ -5,6 +5,7 @@ import Spline from "@splinetool/react-spline";
 import type { Application } from "@splinetool/runtime";
 import { clsx } from "clsx";
 
+import { useAllowHeavyWebGL } from "@/lib/client/allow-heavy-webgl";
 import { bindSplinePointerBridge } from "@/lib/spline/spline-pointer-bridge";
 
 import "@/styles/spline-interactive.css";
@@ -26,6 +27,7 @@ export function SplineInteractiveScene({
   pointerFollow = true,
   onLoad,
 }: SplineInteractiveSceneProps) {
+  const allowWebGL = useAllowHeavyWebGL();
   const rootRef = useRef<HTMLDivElement>(null);
   const appRef = useRef<Application | null>(null);
 
@@ -50,9 +52,18 @@ export function SplineInteractiveScene({
   );
 
   useEffect(() => {
-    if (!pointerFollow) return;
+    if (!allowWebGL || !pointerFollow) return;
     return bindSplinePointerBridge(rootRef.current);
-  }, [pointerFollow, scene]);
+  }, [allowWebGL, pointerFollow, scene]);
+
+  if (!allowWebGL) {
+    return (
+      <div
+        className={clsx("spline-interactive-scene spline-interactive-scene--static", className)}
+        aria-hidden
+      />
+    );
+  }
 
   return (
     <div ref={rootRef} className={clsx("spline-interactive-scene", className)}>

@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import type { ReactNode } from "react";
 import { clsx } from "clsx";
 
+import { useAllowHeavyWebGL } from "@/lib/client/allow-heavy-webgl";
 import { PREPARING_ANALYZING_ZOOM } from "@/lib/poju/preparing-spline-timing";
 
 import "@/styles/chart-loader.css";
@@ -33,18 +34,25 @@ export function PreparingSplineShell({
   blockInteraction = false,
   sceneZoom = PREPARING_ANALYZING_ZOOM,
 }: PreparingSplineShellProps) {
+  const allowWebGL = useAllowHeavyWebGL();
+
   return (
     <div
       className={clsx(
         "preparing-spline-page preparing-spline-page--transition",
         blockInteraction && "preparing-spline-page--block-input",
+        !allowWebGL && "preparing-spline-page--no-webgl",
       )}
     >
       {blockInteraction ? (
         <div className="preparing-spline-page__shield" aria-hidden tabIndex={-1} />
       ) : null}
       <div className="preparing-spline-page__scene-wrap" aria-hidden>
-        <PreparingAnalyzingSpline className="preparing-spline-page__scene" initialZoom={sceneZoom} />
+        {allowWebGL ? (
+          <PreparingAnalyzingSpline className="preparing-spline-page__scene" initialZoom={sceneZoom} />
+        ) : (
+          <div className="preparing-spline-page__scene preparing-spline-page__scene--static" />
+        )}
       </div>
       {children}
     </div>

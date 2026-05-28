@@ -8,3 +8,15 @@ export function isPwaStandalone(): boolean {
     document.referrer.startsWith("android-app://")
   );
 }
+
+/** Installed PWA or launched from manifest `start_url` (?source=pwa). */
+export function isLikelyPwaContext(): boolean {
+  if (typeof window === "undefined") return false;
+  if (isPwaStandalone()) return true;
+  try {
+    if (new URLSearchParams(window.location.search).get("source") === "pwa") return true;
+  } catch {
+    // ignore
+  }
+  return false;
+}

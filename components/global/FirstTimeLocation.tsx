@@ -33,11 +33,18 @@ async function detectAndCacheLocation(): Promise<void> {
   // Installed PWA: IP-only on launch — auto GPS prompts correlate with iOS WKWebView crash loops
   // when combined with Serwist; user can still pick a city manually in birth forms.
   if (standalone) {
-    try {
-      const loc = await ipLocate();
-      cacheUserLocation({ ...loc, source: "ip", cached_at: Date.now() });
-    } catch {
-      // BirthLocationField falls back to timezone city
+    const runIp = async () => {
+      try {
+        const loc = await ipLocate();
+        cacheUserLocation({ ...loc, source: "ip", cached_at: Date.now() });
+      } catch {
+        // BirthLocationField falls back to timezone city
+      }
+    };
+    if (typeof requestIdleCallback !== "undefined") {
+      requestIdleCallback(() => void runIp(), { timeout: 8000 });
+    } else {
+      window.setTimeout(() => void runIp(), 2500);
     }
     return;
   }

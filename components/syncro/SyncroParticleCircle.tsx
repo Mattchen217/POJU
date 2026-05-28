@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef } from "react";
 import Spline from "@splinetool/react-spline";
 import type { Application } from "@splinetool/runtime";
 
+import { useAllowHeavyWebGL } from "@/lib/client/allow-heavy-webgl";
 import type { DirectionId } from "@/lib/syncro/current-system";
 import { SYNCRO_FANGWEI_SCENE } from "@/components/syncro/SyncroSplineCanvas";
 
@@ -56,6 +57,7 @@ const DIRECTION_LABELS: Array<{ id: DirectionId; label: string; angle: number }>
 ];
 
 export function SyncroParticleCircle({ rotation, activeDirection }: SyncroParticleCircleProps) {
+  const allowWebGL = useAllowHeavyWebGL();
   const splineRef = useRef<Application | null>(null);
   const smoothedRotationRef = useRef(rotation);
 
@@ -82,7 +84,11 @@ export function SyncroParticleCircle({ rotation, activeDirection }: SyncroPartic
 
   return (
     <div className="particle-circle">
-      <Spline scene={SYNCRO_FANGWEI_SCENE} className="syncro-particle-spline" onLoad={handleLoad} />
+      {allowWebGL ? (
+        <Spline scene={SYNCRO_FANGWEI_SCENE} className="syncro-particle-spline" onLoad={handleLoad} />
+      ) : (
+        <div className="syncro-particle-spline syncro-particle-spline--static" aria-hidden />
+      )}
       <DirectionLabels rotation={rotation} activeDirection={activeDirection} />
     </div>
   );

@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef } from "react";
 import Spline from "@splinetool/react-spline";
 import type { Application } from "@splinetool/runtime";
 
+import { useAllowHeavyWebGL } from "@/lib/client/allow-heavy-webgl";
+
 export const SYNCRO_FANGWEI_SCENE = "/spline/fangwei.splinecode";
 
 const ROTATION_OBJECT_NAMES = ["Compass", "compass", "Ring", "ring", "Fangwei", "fangwei", "Scene"];
@@ -30,6 +32,7 @@ function applyCompassRotation(app: Application, compassDegree: number): void {
 }
 
 export function SyncroSplineCanvas({ compassDegree, vrMode, onLoad }: SyncroSplineCanvasProps) {
+  const allowWebGL = useAllowHeavyWebGL();
   const splineRef = useRef<Application | null>(null);
 
   useEffect(() => {
@@ -45,6 +48,10 @@ export function SyncroSplineCanvas({ compassDegree, vrMode, onLoad }: SyncroSpli
     },
     [compassDegree, onLoad],
   );
+
+  if (!allowWebGL) {
+    return <div className={`syncro-spline-canvas syncro-spline-canvas--static ${vrMode ? "vr-mode" : ""}`} aria-hidden />;
+  }
 
   return (
     <div className={`syncro-spline-canvas ${vrMode ? "vr-mode" : ""}`}>
