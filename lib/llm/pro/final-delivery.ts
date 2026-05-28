@@ -7,6 +7,7 @@ import { safeRandomUUID } from "@/lib/client/safe-crypto";
 import type { POJUAgentState } from "@/lib/poju/agent-state";
 import { formatContextForPrompt } from "@/lib/poju/context-extractor";
 import type { POJUAction, POJUDelivery, POJUSessionState, POJUMessage } from "@/lib/poju/types";
+import { markCycleDelivered } from "@/lib/poju/cycle-manager";
 import { computeSituationContextFingerprint } from "@/lib/poju/situation-context-fingerprint";
 import { getCachedSituationAnalysis, resolveBaseAnalysisForSession } from "@/lib/llm/deepseek/situation-analysis";
 import { buildPojuCorePromptSections } from "@/lib/llm/prompts/poju-base";
@@ -384,7 +385,7 @@ export async function runFinalDeliveryForSession(session: POJUSessionState, loca
     },
   };
 
-  return {
+  let next: POJUSessionState = {
     ...session,
     messages: [...session.messages, assistantMessage],
     actions: mergedActions,
@@ -392,4 +393,21 @@ export async function runFinalDeliveryForSession(session: POJUSessionState, loca
     main_delivery: delivery,
     tokens_used: session.tokens_used + result.tokens_used,
   };
+
+  const cycleId = next.active_cycle_id;
+  if (cycleId) {
+    next = markCycleDelivered(
+      next,
+      cycleId,
+      mergedActions.map((a) => ({
+        action_id: a.action_id,
+        category: a.category,
+        text: a.text,
+        status: a.status,
+        timing: a.timing,
+      })),
+    );
+  }
+
+  return next;
 }

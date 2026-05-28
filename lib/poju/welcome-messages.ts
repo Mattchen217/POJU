@@ -3,7 +3,7 @@ const WELCOME: Record<string, string> = {
 
 This is a focused space for one question — the one you brought today. We will stay with it: clarifying what is actually at stake, what you have already tried, and what a grounded next step could look like.
 
-Before we begin, a few boundaries matter: I am an AI thinking partner, not a therapist, lawyer, doctor, or fortune teller. I do not predict fixed outcomes, and I do not decide for you. If you share birth details later, they are used only to deepen perspective — still not prophecy. Take what resonates; leave what does not. Every choice remains yours.
+Before we begin, a few boundaries matter: I am an AI thinking partner, not a therapist, lawyer, or doctor. I do not predict fixed outcomes, and I do not decide for you. If you share birth details later, they are used only to deepen perspective — still not prophecy. Take what resonates; leave what does not. Every choice remains yours.
 
 When you are ready, tell me in your own words what feels most stuck right now — the situation, the people involved, and what you are afraid might happen if nothing changes.`,
 
@@ -11,7 +11,7 @@ When you are ready, tell me in your own words what feels most stuck right now �
 
 这里只围绕你今天带来的那一个核心问题。我们会一起把它说清楚：真正卡住的点在哪里、你已经试过什么、以及下一步怎样更踏实。
 
-开始前请了解边界：我是 AI 思考伙伴，不是心理治疗、法律、医疗或算命服务。我不预言既定结局，也不替你做决定。若你之后愿意补充出生信息，只用于加深理解，而不是断言命运。请只取与你共鸣的部分，所有选择仍由你承担。
+开始前请了解边界：我是 AI 思考伙伴，不是心理治疗、法律或医疗服务。我不预言既定结局，也不替你做决定。若你之后愿意补充出生信息，只用于加深理解，而不是断言命运。请只取与你共鸣的部分，所有选择仍由你承担。
 
 准备好了，就用你自己的话告诉我：现在最让你卡住的是什么——情境、相关的人，以及你担心若一直不变可能发生什么。`,
 

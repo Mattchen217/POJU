@@ -1,6 +1,6 @@
 import type { POJUActionRecommendationsData } from "@/lib/archive/archive-service";
 import type { AgentPhase, POJUAgentState } from "@/lib/poju/agent-state";
-import type { POJUSessionState, PojuV4ActionRequested } from "@/lib/poju/types";
+import type { POJUSessionState, PojuV4ActionRequested, ToolSuggestionPayload } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
 
 /** Input for phase-specific LLM modules (Step 10+). */
@@ -14,6 +14,8 @@ export interface PhaseLLMInput {
   agent_state?: POJUAgentState | null;
   /** Completed / skipped actions from IndexedDB archive (client → API for tracking). */
   archive_data?: POJUActionRecommendationsData | null;
+  /** Step 5 — pending tool result context appended to system prompt once. */
+  tool_injection_context?: string | null;
 }
 
 export interface PhaseLLMResult {
@@ -35,5 +37,8 @@ export interface PhaseLLMResult {
   topic_drift_signal?: "none" | "edge" | "off_topic";
   drift_reason?: string | null;
   should_show_new_session_button?: boolean;
+  tool_suggestion?: ToolSuggestionPayload | null;
+  start_new_cycle?: boolean;
+  new_cycle_question?: string | null;
 }
 

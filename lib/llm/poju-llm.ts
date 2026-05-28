@@ -31,6 +31,7 @@ interface CallInput {
   base_analysis?: unknown | null;
   archive_data?: POJUActionRecommendationsData | null;
   locale: string;
+  tool_injection_context?: string | null;
 }
 
 export interface POJULLMResponse {
@@ -68,6 +69,9 @@ export interface POJULLMResponse {
   current_summary?: unknown;
   question_category?: string | null;
   thinking_process?: string;
+  tool_suggestion?: import("@/lib/poju/types").ToolSuggestionPayload | null;
+  start_new_cycle?: boolean;
+  new_cycle_question?: string | null;
 }
 
 export async function callPOJULLM(input: CallInput): Promise<POJULLMResponse> {
@@ -111,6 +115,7 @@ async function callPOJULLMPhasePath(input: CallInput): Promise<POJULLMResponse> 
     base_analysis: input.base_analysis,
     archive_data: input.archive_data,
     locale,
+    tool_injection_context: input.tool_injection_context ?? null,
   });
 
   return {
@@ -135,7 +140,11 @@ async function callPOJULLMPhasePath(input: CallInput): Promise<POJULLMResponse> 
       typeof mapped.agent_suggested_phase === "string" ? mapped.agent_suggested_phase : activePhase,
     current_summary: mapped.current_summary,
     question_category: typeof mapped.question_category === "string" ? mapped.question_category : null,
-    thinking_process: undefined,
+    thinking_process:
+      typeof phase.thinking_process === "string" ? phase.thinking_process : undefined,
+    tool_suggestion: phase.tool_suggestion ?? null,
+    start_new_cycle: Boolean(phase.start_new_cycle),
+    new_cycle_question: phase.new_cycle_question ?? null,
   };
 }
 

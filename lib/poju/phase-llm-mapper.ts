@@ -64,6 +64,9 @@ export function mapPhaseResultToChatPayload(
     agent_suggested_phase: suggested,
     current_summary: phase.current_summary ?? null,
     question_category: phase.question_category,
+    tool_suggestion: phase.tool_suggestion ?? null,
+    start_new_cycle: Boolean(phase.start_new_cycle),
+    new_cycle_question: phase.new_cycle_question ?? null,
   };
 
   return applyPojuOutputPolicies(base, {

@@ -47,6 +47,8 @@ export interface POJUSessionRecord {
     | "tracking";
   main_delivery_done: boolean;
   main_delivery_at?: Date;
+  /** Tool linking — index for active cycle (optional until session blob migrated). */
+  active_cycle_id?: string;
 }
 
 /** Snapshot row when a v4 POJU session is archived (Step 15). */
@@ -158,6 +160,29 @@ export interface SyncroSessionRecord {
   expires_at: Date;
 }
 
+/** Tool linking — cycle index row (Step 1). */
+export interface POJUCycleRecord {
+  cycle_id: string;
+  session_id: string;
+  device_id: string;
+  cycle_index: number;
+  is_active: boolean;
+  is_delivered: boolean;
+  started_at: Date;
+  delivery_completed_at?: Date;
+}
+
+/** Tool linking — tool suggestion index row (Step 1). */
+export interface POJUToolSuggestionRecord {
+  suggestion_id: string;
+  session_id: string;
+  cycle_id: string;
+  tool: "glyph" | "syncro" | "match";
+  user_action: "accepted" | "declined" | "pending";
+  suggested_at: Date;
+  tool_completed_at?: Date;
+}
+
 /** Syncro v5 — per-device product usage (first free + paid sessions). */
 export interface DeviceUsageRecord {
   /** `${device_id}__${product}` */
@@ -185,6 +210,8 @@ export class PojuDb extends Dexie {
   device_usage!: EntityTable<DeviceUsageRecord, "id">;
   syncro_sessions!: EntityTable<SyncroSessionRecord, "session_id">;
   match_sessions!: EntityTable<MatchSessionRecord, "match_id">;
+  poju_cycles!: EntityTable<POJUCycleRecord, "cycle_id">;
+  poju_tool_suggestions!: EntityTable<POJUToolSuggestionRecord, "suggestion_id">;
 
   constructor() {
     super("pojulife_v4");
@@ -271,6 +298,25 @@ export class PojuDb extends Dexie {
       device_usage: "id, device_id, product, last_used_at",
       syncro_sessions: "session_id, device_id, profile_id, created_at, expires_at",
       match_sessions: "match_id, device_id, a_profile_id, b_profile_id, created_at",
+    });
+    this.version(9).stores({
+      userProfiles: "id, updatedAt",
+      glyphHistory: "id, updatedAt",
+      syncroCache: "id, updatedAt",
+      pojuSessions: "id, updatedAt",
+      usage: "id, dayKey, product, updatedAt",
+      pojuSessionRecords:
+        "session_id, device_id, status, expires_at, last_interaction_at, active_cycle_id",
+      pojuSessionArchive: "session_id, device_id, archived_at",
+      stored_profiles: "profile_id, device_id, birth_info_hash, last_used_at, has_base_analysis",
+      archive: "archive_id, device_id, type, session_id, created_at, product",
+      device_usage: "id, device_id, product, last_used_at",
+      syncro_sessions: "session_id, device_id, profile_id, created_at, expires_at",
+      match_sessions: "match_id, device_id, a_profile_id, b_profile_id, created_at",
+      poju_cycles:
+        "cycle_id, session_id, device_id, cycle_index, is_active, is_delivered, started_at, delivery_completed_at",
+      poju_tool_suggestions:
+        "suggestion_id, session_id, cycle_id, tool, user_action, suggested_at, tool_completed_at",
     });
   }
 }

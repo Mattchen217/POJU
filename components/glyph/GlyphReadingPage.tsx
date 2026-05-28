@@ -14,6 +14,9 @@ import type { StoredProfileData } from "@/lib/db/poju-db";
 import type { GlyphReadingContent } from "@/lib/llm/services/glyph-reading-service";
 import { generateGlyphFullReading } from "@/lib/oracle/api";
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
+import { PojuDeepDiveCTA } from "@/components/cross-product/PojuDeepDiveCTA";
+import { ReturnToPojuCTA } from "@/components/poju/ReturnToPojuCTA";
+import { extractGlyphSummary } from "@/lib/poju/tool-result-summary";
 import { LEVEL_META, type SignData } from "@/types/oracle";
 
 type Stage = "loading" | "ready" | "error";
@@ -184,10 +187,30 @@ export function GlyphReadingPage() {
     return null;
   }
 
+  const glyphSummary = extractGlyphSummary({
+    reading_id: readingId,
+    question,
+    glyph,
+    reading,
+  });
+
   return (
     <div className="glyph-reading-page">
+      <ReturnToPojuCTA
+        tool="glyph"
+        resultId={readingId}
+        resultData={glyphSummary}
+        variant="banner"
+      />
       <GlyphCanvas glyph={glyph} animated={false} />
       <GlyphReport reading={reading} glyph={glyph} question={question} archiveId={archiveId} />
+      <ReturnToPojuCTA
+        tool="glyph"
+        resultId={readingId}
+        resultData={glyphSummary}
+        variant="footer"
+      />
+      <PojuDeepDiveCTA productId="glyph" result_id={readingId} result_data={glyphSummary} />
       <div className="glyph-reading-footer">
         <Link href="/glyph" className="glyph-link-muted">
           {t("back_to_glyph")}

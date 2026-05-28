@@ -5,7 +5,10 @@ import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 
 import { Link, useRouter } from "@/i18n/navigation";
+import { PojuToolHandoffBanner } from "@/components/poju/PojuToolHandoffBanner";
+import { usePojuToolHandoff } from "@/lib/poju/use-poju-tool-handoff";
 import { inferTaskTimeScope, SYNCRO_TASK_TIME_KEY } from "@/lib/syncro/syncro-view-helpers";
+import "@/styles/poju-tool-handoff.css";
 
 const MIN_LEN = 6;
 const MAX_LEN = 100;
@@ -15,7 +18,9 @@ export function SyncroTaskPage() {
   const searchParams = useSearchParams();
   const t = useTranslations("syncro.task");
 
-  const sessionType = searchParams.get("type") === "free" ? "free" : "paid";
+  const pojuHandoff = usePojuToolHandoff("syncro");
+  const sessionType =
+    pojuHandoff?.quota_free || searchParams.get("type") === "free" ? "free" : "paid";
 
   const [task, setTask] = useState("");
   const [showMinWarning, setShowMinWarning] = useState(false);
@@ -27,6 +32,12 @@ export function SyncroTaskPage() {
   useEffect(() => {
     if (canContinue) setShowMinWarning(false);
   }, [canContinue]);
+
+  useEffect(() => {
+    const prefill =
+      pojuHandoff?.prefill.task_description ?? searchParams.get("task_description");
+    if (prefill && !task) setTask(prefill);
+  }, [pojuHandoff, searchParams, task]);
 
   function handleContinue() {
     if (!canContinue) {
@@ -50,6 +61,8 @@ export function SyncroTaskPage() {
         >
           ← {t("back")}
         </Link>
+
+        {pojuHandoff ? <PojuToolHandoffBanner handoff={pojuHandoff} className="mt-6" /> : null}
 
         <div className="task-content mt-8">
           <h1 className="text-2xl font-semibold text-text-primary">{t("title")}</h1>

@@ -8,10 +8,11 @@ import { formatContextForPrompt } from "@/lib/poju/context-extractor";
 import type { POJUSessionState, SituationAnalysisCacheEntry } from "@/lib/poju/types";
 import { computeSituationContextFingerprint } from "@/lib/poju/situation-context-fingerprint";
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
+import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
 
 const SITUATION_SYSTEM = `# 角色
 
-你是中国传统命理学、风水与易经方向的资深顾问。
+你是中国传统命盘分析、空间方位与易经方向的资深顾问。
 你已阅读【命主基础分析】（可能为节选或为空）。请针对【用户当下具体困境】给出深度、可执行的回应。
 
 # 任务
@@ -106,7 +107,7 @@ ${contextText}
 输出上述 JSON 结构的困境深度分析（仅 JSON，中文）。
 _meta.question_category 填实际类别字符串。`;
 
-  return { system: SITUATION_SYSTEM, user };
+  return { system: stitchPromptSections(SITUATION_SYSTEM), user };
 }
 
 export function parseSituationAnalysisResponseText(raw: string): unknown {

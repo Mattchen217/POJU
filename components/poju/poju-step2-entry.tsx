@@ -12,6 +12,7 @@ import {
 } from "@/lib/poju/pending-stored-profile";
 import { listStoredProfiles } from "@/lib/profile/stored-profiles-service";
 import { ProfileSelector } from "@/components/profile/ProfileSelector";
+import { readFromToolPending } from "@/lib/cross-product/from-tool-pending";
 import { QuestionDialog } from "@/components/poju/QuestionDialog";
 
 type ActiveSession = {
@@ -160,6 +161,12 @@ export function PojuStep2Entry() {
       </button>
       {showQuestionDialog ? (
         <QuestionDialog
+          initialQuestion={
+            readFromToolPending()?.suggested_question ??
+            (typeof window !== "undefined"
+              ? sessionStorage.getItem("poju_pending_question") ?? ""
+              : "")
+          }
           onClose={() => {
             if (!loading) setShowQuestionDialog(false);
           }}

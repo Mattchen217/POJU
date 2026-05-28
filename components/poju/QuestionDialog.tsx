@@ -5,10 +5,11 @@ import { useState } from "react";
 interface Props {
   onClose: () => void;
   onSubmit: (question: string) => Promise<void> | void;
+  initialQuestion?: string;
 }
 
-export function QuestionDialog({ onClose, onSubmit }: Props) {
-  const [question, setQuestion] = useState("");
+export function QuestionDialog({ onClose, onSubmit, initialQuestion = "" }: Props) {
+  const [question, setQuestion] = useState(initialQuestion);
   const [submitting, setSubmitting] = useState(false);
   const minLength = 20;
   const maxLength = 300;

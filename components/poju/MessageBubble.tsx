@@ -3,9 +3,10 @@
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import pojuLogo from "@/assets/images/POJUlogo.png";
-import type { POJUAction, POJUMessage } from "@/lib/poju/types";
+import type { POJUAction, POJUMessage, ToolName } from "@/lib/poju/types";
 import { AssistantMessageActions } from "@/components/poju/AssistantMessageActions";
 import { MainDeliveryView } from "@/components/poju/MainDeliveryView";
+import { ToolSuggestionCard } from "@/components/poju/ToolSuggestionCard";
 import { parseDeliveryContent, type DeliverySection } from "@/lib/poju/parse-delivery";
 import {
   pojuChatAssistantContent,
@@ -22,6 +23,10 @@ export interface MessageBubbleProps {
   onEdit?: () => void;
   editDisabled?: boolean;
   editLabel?: string;
+  sessionId?: string;
+  cycleId?: string;
+  toolSuggestionResponse?: "accepted" | "declined" | null;
+  onToolResponse?: (tool: ToolName, action: "accepted" | "declined") => void;
 }
 
 export function MessageBubble({
@@ -33,6 +38,10 @@ export function MessageBubble({
   onEdit,
   editDisabled = false,
   editLabel,
+  sessionId,
+  cycleId,
+  toolSuggestionResponse = null,
+  onToolResponse,
 }: MessageBubbleProps) {
   const tChat = useTranslations("poju.chat");
   const isUser = message.role === "user";
@@ -100,6 +109,18 @@ export function MessageBubble({
         >
           {renderPlainContent(message.content, isUser)}
         </div>
+        {!isUser && message.meta?.tool_suggestion && sessionId && cycleId && onToolResponse ? (
+          <ToolSuggestionCard
+            suggestion={message.meta.tool_suggestion}
+            sessionId={sessionId}
+            cycleId={cycleId}
+            suggestionMessageId={
+              message.meta.tool_suggestion_message_id ?? message.timestamp
+            }
+            initialResponse={toolSuggestionResponse}
+            onResponse={(action) => onToolResponse(message.meta!.tool_suggestion!.tool, action)}
+          />
+        ) : null}
         {isUser && onEdit && !message.is_rejected ? (
           <button
             type="button"

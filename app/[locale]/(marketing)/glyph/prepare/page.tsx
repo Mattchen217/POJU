@@ -4,7 +4,10 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
+import { PojuToolHandoffBanner } from "@/components/poju/PojuToolHandoffBanner";
 import { SessionPreparation } from "@/components/poju/SessionPreparation";
+import { usePojuToolHandoff } from "@/lib/poju/use-poju-tool-handoff";
+import "@/styles/poju-tool-handoff.css";
 import { listStoredProfilesForSessionPrep, type StoredProfileSummary } from "@/lib/profile/stored-profiles-service";
 import "@/styles/session-prep.css";
 
@@ -14,7 +17,9 @@ function GlyphPrepareInner() {
   const locale = useLocale();
   const t = useTranslations("glyph");
 
-  const sessionType = searchParams.get("type") === "paid" ? "paid" : "free";
+  const pojuHandoff = usePojuToolHandoff("glyph");
+  const sessionType =
+    pojuHandoff?.quota_free || searchParams.get("type") !== "paid" ? "free" : "paid";
 
   const [profiles, setProfiles] = useState<StoredProfileSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,14 +50,21 @@ function GlyphPrepareInner() {
   }
 
   return (
-    <SessionPreparation
-      sessionId="glyph"
-      existingProfiles={profiles}
-      onProfileSelected={handleProfileSelected}
-      onRefund={handleBack}
-      locale={locale}
-      productType="glyph"
-    />
+    <>
+      {pojuHandoff ? (
+        <div className="mx-auto w-full max-w-lg px-4 pt-6">
+          <PojuToolHandoffBanner handoff={pojuHandoff} />
+        </div>
+      ) : null}
+      <SessionPreparation
+        sessionId="glyph"
+        existingProfiles={profiles}
+        onProfileSelected={handleProfileSelected}
+        onRefund={handleBack}
+        locale={locale}
+        productType="glyph"
+      />
+    </>
   );
 }
 

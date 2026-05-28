@@ -105,14 +105,16 @@ export function BirthInfoConfirmDialog({
             <span className="label">{t("timezone_label")}</span>
             <span className="value tz">{displayData.timezone}</span>
           </div>
-          {displayData.birth_location_name ? (
-            <div className="info-row">
-              <span className="label">{t("location_label")}</span>
-              <span className="value">
-                {displayData.birth_location_defaults ? t("location_default") : displayData.birth_location_name}
-              </span>
-            </div>
-          ) : null}
+          <div className="info-row">
+            <span className="label">{t("location_label")}</span>
+            <span className="value">
+              {displayData.birth_location_name
+                ? displayData.birth_location_defaults
+                  ? t("location_default")
+                  : displayData.birth_location_name
+                : t("location_default")}
+            </span>
+          </div>
         </div>
 
         <div className="reassure">

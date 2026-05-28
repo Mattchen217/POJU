@@ -40,6 +40,10 @@ export interface POJUMessage {
     drift_reason?: string;
     should_show_new_session_button?: boolean;
     contains_delivery?: boolean;
+    /** Tool_Linking Step 2 — pending tool card on this assistant turn. */
+    tool_suggestion?: ToolSuggestionPayload;
+    /** Correlates with `POJUCycle.tool_suggestions[].suggested_in_message_id`. */
+    tool_suggestion_message_id?: string;
     /** DeepSeek / OpenRouter reasoning tokens + POJU thought digest for this turn. */
     thinking_process?: string;
   };
@@ -74,6 +78,52 @@ export interface POJUDelivery {
   };
   actions: POJUAction[];
   invitation: string;
+}
+
+/** Tool linking — per-cycle tool recommendation (Step 1, Tool_Linking_Final). */
+export type ToolName = "glyph" | "syncro" | "match";
+
+/** LLM + UI payload for an in-chat tool recommendation. */
+export interface ToolSuggestionPayload {
+  tool: ToolName;
+  trigger_context: string;
+  value_prop?: string;
+  prefill?: Record<string, unknown>;
+}
+
+export interface ToolSuggestion {
+  tool: ToolName;
+  suggested_at: string;
+  suggested_in_message_id: string;
+  trigger_context: string;
+  user_action: "accepted" | "declined" | "pending";
+  tool_result_id?: string;
+  tool_result_data?: unknown;
+  tool_completed_at?: string;
+  injected_to_poju?: boolean;
+}
+
+export interface POJUCycleDeliveredAction {
+  action_id: string;
+  category: string;
+  text: string;
+  status: "pending" | "completed" | "skipped" | "modified";
+  timing?: string;
+}
+
+/** One breakthrough cycle inside a POJU session. */
+export interface POJUCycle {
+  cycle_id: string;
+  cycle_index: number;
+  original_question: string;
+  question_category: string;
+  current_summary: unknown | null;
+  started_at: string;
+  delivery_completed_at?: string;
+  tool_suggestions: ToolSuggestion[];
+  delivered_actions?: POJUCycleDeliveredAction[];
+  is_delivered: boolean;
+  is_active: boolean;
 }
 
 /** Step 8 困境分析单次缓存条目（按语境指纹存于 session）。 */
@@ -118,4 +168,10 @@ export interface POJUSessionState {
   created_at: string;
   last_interaction_at: string;
   expires_at: string;
+
+  /** Tool linking v1 — multiple breakthrough cycles per session. */
+  cycles?: POJUCycle[];
+  active_cycle_id?: string;
+  /** Cross-cycle shared context (e.g. profile refs); not Archive history. */
+  shared_context?: Record<string, unknown>;
 }

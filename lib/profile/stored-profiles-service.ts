@@ -15,6 +15,7 @@ import {
 } from "@/lib/profile/birth-info-utils";
 import { birthInfoToStoredRecord, tstMetaFromProfile } from "@/lib/profile/stored-birth-info";
 import type { BirthInfo, BirthLocation, UserProfile } from "@/lib/profile/types";
+import { validateBirthLocationRequired } from "@/lib/profile/validate-birth-location";
 
 const STORED_PROFILES_SECRET = "pojulife_v4_stored_profiles";
 
@@ -122,6 +123,7 @@ export async function createStoredProfile(input: {
   assertBrowser();
 
   const birth_info = input.birth_info;
+  validateBirthLocationRequired(birth_info);
   const deviceId = getPojuDeviceId();
   const db = getPojuDb();
   const hash = await hashBirthInfo(birth_info);

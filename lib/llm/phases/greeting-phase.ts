@@ -46,7 +46,7 @@ The user has paid $9.99 to start this session with this question:
 "${original_question}"
 
 You are at the EARLY STAGE of conversation. You do NOT have:
-- Their astrological profile (no birth info yet)
+- Their birth chart profile (no birth info yet)
 - Any deep analysis
 - Detailed knowledge of their situation
 

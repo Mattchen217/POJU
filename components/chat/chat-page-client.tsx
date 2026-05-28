@@ -780,7 +780,7 @@ export function ChatPageClient() {
               </button>
               <button
                 type="button"
-                title="Mystical tools"
+                title="POJU tools"
                 onClick={() => setMysticalToolsOpen((v) => !v)}
                 className="flex items-center justify-center rounded-full p-2 text-neutral-500 transition-colors hover:bg-violet-500/10 hover:text-neutral-200"
               >
@@ -966,7 +966,7 @@ export function ChatPageClient() {
           />
           <aside className="fixed right-0 top-0 z-[115] flex h-full w-[min(100vw,20rem)] flex-col border-l border-white/10 bg-neutral-950/85 shadow-2xl shadow-violet-900/20 backdrop-blur-3xl">
             <div className="border-b border-white/10 p-4">
-              <h2 className="text-lg font-semibold text-violet-100">Mystical Tools</h2>
+              <h2 className="text-lg font-semibold text-violet-100">POJU Tools</h2>
               <p className="text-xs text-violet-400">Enhance your session</p>
             </div>
             <nav className="flex flex-col gap-1 p-2 text-sm text-neutral-400">

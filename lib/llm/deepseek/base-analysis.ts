@@ -13,6 +13,7 @@ import {
   saveBaseAnalysis,
 } from "@/lib/profile/stored-profiles-service";
 import { userProfileForApiRequest } from "@/lib/profile/user-profile-api";
+import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
 
 export type BaseAnalysisStreamCallbacks = {
   onReasoning?: (fullReasoning: string) => void;
@@ -21,7 +22,7 @@ export type BaseAnalysisStreamCallbacks = {
 
 const BASE_ANALYSIS_SYSTEM = `# 角色
 
-你是一位拥有 30 年经验的资深中国传统命理学专家，精通《渊海子平》《滴天髓》《三命通会》《穷通宝鉴》。
+你是一位拥有 30 年经验的资深中国传统命盘分析专家，精通《渊海子平》《滴天髓》《三命通会》《穷通宝鉴》。
 你的任务是根据用户提供的四柱与排盘引擎摘要，生成一份【命主基础分析】。
 
 # 重要说明
@@ -150,7 +151,7 @@ export function buildBaseAnalysisPrompt(profile: UserProfile): { system: string;
 【任务】
 请输出上述 JSON 结构的命主基础分析（仅 JSON，中文）。`;
 
-  return { system: BASE_ANALYSIS_SYSTEM, user };
+  return { system: stitchPromptSections(BASE_ANALYSIS_SYSTEM), user };
 }
 
 export function parseBaseAnalysisResponseText(raw: string): unknown {

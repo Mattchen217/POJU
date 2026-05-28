@@ -68,7 +68,7 @@
       "heading": "What we built. Why it works.",
       "intro": "Two thousand years of human reflection on the questions that matter, examined through modern research, made accessible through AI. All for one purpose: helping you see what you couldn't see alone.",
       "easternTitle": "Eastern Frameworks",
-      "easternBody": "For two thousand years, Eastern philosophical traditions have examined the questions humans keep asking — about decision, direction, and the patterns that shape a life.\n\nCareer. Love. Direction. Doubt.\n\nThese traditions weren't fortune-tellers. They were frameworks for thinking — refined over eighty generations of human experience.",
+      "easternBody": "For two thousand years, Eastern philosophical traditions have examined the questions humans keep asking — about decision, direction, and the patterns that shape a life.\n\nCareer. Love. Direction. Doubt.\n\nThese traditions weren't about fixed predictions. They were frameworks for thinking — refined over eighty generations of human experience.",
       "modernTitle": "Modern Research",
       "modernBody": "What ancient observation noticed, modern research is beginning to measure.\n\nCognitive science on how we frame decisions. Spatial psychology on attention. Circadian biology on natural rhythm. Behavioral economics on cognitive bias.\n\nThe frameworks that worked for millennia, now examined through contemporary research.",
       "aiTitle": "AI Translation",
@@ -293,7 +293,7 @@
         },
         "direction": {
           "title": "You want direction, not prediction",
-          "description": "\"Will X happen\" is astrology. \"What should I do\" is POJU."
+          "description": "\"Will X happen\" asks for a fixed outcome. \"What should I do\" is POJU."
         }
       },
       "how_it_works": {
@@ -369,7 +369,7 @@
       "on_the_cards": {
         "heading": "On the cards.",
         "paragraphs": [
-          "The five glyphs are not labels of fortune. They are not \"good cards\" or \"bad cards.\"",
+          "The five glyphs are not luck labels. They are not \"good cards\" or \"bad cards.\"",
           "Each one is a lens — a way of reading this particular moment, for this particular question, held by this particular person.",
           "The same glyph can mean entirely different things on different days, for different people, about different questions.",
           "What you receive is not a verdict. It is a perspective — and an invitation to look more carefully."
@@ -561,11 +561,12 @@
       "title": "Birth location?",
       "subtitle": "For precise chart calculation, tell us your birth city",
       "why_link": "Why birth location matters?",
-      "explanation_1": "Astrological charts must use true solar time, not timezone average.",
+      "explanation_1": "pojulife uses true solar time for accuracy. Sun peaks vary by longitude — your birth location ensures the correct hour pillar.",
       "explanation_2": "True solar time depends on the longitude of birth location.",
       "explanation_example": "Example: Urumqi (Xinjiang) uses Beijing time, but true solar time differs by 2 hours. Without correction, the hour pillar may be wrong.",
       "skip_use_default": "I'm not sure — use defaults",
       "default_note": "Defaults use timezone center longitude ({timezone}). Accurate for most cases.",
+      "location_required_note": "Confirm your birth city or search for another. pojulife uses true solar time for an accurate hour pillar.",
       "confirm_city": "Use this city",
       "back": "Back to birth details"
     },
@@ -636,10 +637,55 @@
     "base_analysis_error": "Could not generate",
     "base_analysis_note": "Optional: run a one-time deep base reading for this chart. It is cached on this device and uses your OpenRouter key on the server."
   },
+  "cross_product": {
+    "match_to_poju": {
+      "title": "Want to go deeper into this relationship?",
+      "description": "This Match shows you the structure. POJU helps you find what to do about it.",
+      "value_prop": "Up to 30 days of deep analysis around this specific relationship",
+      "button": "Open POJU"
+    },
+    "syncro_to_poju": {
+      "title": "Want to think through this decision?",
+      "description": "Syncro tells you when. POJU helps you decide whether and how.",
+      "value_prop": "Up to 30 days of deep counseling around your situation",
+      "button": "Open POJU"
+    },
+    "glyph_to_poju": {
+      "title": "Want to unpack what this reflected?",
+      "description": "Glyph offered an image. POJU helps you understand and act on it.",
+      "value_prop": "Up to 30 days of deep conversation around what you're processing",
+      "button": "Open POJU"
+    },
+    "session_picker": {
+      "title": "How do you want to continue?",
+      "subtitle": "You have ongoing POJU sessions. This new analysis can join one of them, or start fresh.",
+      "existing_sessions": "Add to existing session",
+      "join_this": "Join this conversation",
+      "free": "Free",
+      "or": "OR",
+      "start_new": "Start a new POJU session",
+      "start_new_subtitle": "If this is a separate topic, give it its own session",
+      "days_left": "{count, plural, one {# day left} other {# days left}}"
+    },
+    "from_tool_entry": {
+      "continuing_from": "Continuing from {tool}",
+      "context_label": "Continuing this analysis",
+      "joining": "Adding your tool result to this session…"
+    }
+  },
   "poju": {
     "begin": {
       "start": "Begin",
       "free_first_time": "Start your session"
+    },
+    "tool_handoff": {
+      "banner_free": "From POJU · Free this time in your session",
+      "banner_paid": "From POJU · Standard tool pricing applies",
+      "return_banner": "Return to POJU with this result",
+      "return_footer": "Back to POJU · Continue conversation",
+      "returning": "Returning to POJU…",
+      "prefill_relationship": "About your relationship with: {name}",
+      "tool_result_resume_user": "I'm back from the tool — let's continue."
     },
     "chat": {
       "question_label": "Your question",
@@ -832,7 +878,7 @@
       "start": "Begin",
       "free_first_time": "Free first time"
     },
-    "subtitle": "60-second oracle reading",
+    "subtitle": "60-second Glyph reading",
     "description": "Draw a glyph for the moment you're in. Your chart + the classical wisdom = clarity in 60 seconds.",
     "start_free": "Draw your first glyph (free)",
     "start_paid": "Draw a new glyph — $4.99",
@@ -912,6 +958,18 @@
     "error_message": "We couldn't process your refund automatically. Please contact us.",
     "retry": "Retry",
     "contact_support": "Email support"
+  },
+  "birth_form": {
+    "birth_location": "Birth location",
+    "search_city": "Search city…",
+    "tap_to_enter_city": "Tap to enter your birth city",
+    "searching": "Searching…",
+    "cancel": "Cancel",
+    "why_we_ask": "Why we ask",
+    "why_explanation": "pojulife uses true solar time for accuracy. Sun peaks vary by longitude — your birth location ensures the correct hour pillar.",
+    "true_solar_offset": "True solar offset: {offset}",
+    "confirm_continue": "Continue with this location",
+    "location_required": "Please select or confirm your birth city."
   },
   "birth_picker": {
     "title": "Your Birth Information",
@@ -1313,6 +1371,28 @@
       "overall": "Overall",
       "top_actions": "Top Actions",
       "view_full_report": "View full report"
+    }
+  },
+  "tool_suggestion": {
+    "label": "Suggestion",
+    "free_in_session": "Free in this session",
+    "accepted_continue": "Opening the tool — you can return here anytime.",
+    "declined_continue": "Continuing the conversation…",
+    "match": {
+      "title": "Read this relationship together",
+      "accept": "Open Match",
+      "decline": "Skip · Continue",
+      "needs_info": "You'll need their birth date, time, and location"
+    },
+    "syncro": {
+      "title": "Find the right moment for this",
+      "accept": "Open Syncro",
+      "decline": "Skip · Continue"
+    },
+    "glyph": {
+      "title": "Look through an image",
+      "accept": "Draw a Glyph",
+      "decline": "Skip · Continue"
     }
   },
   "pwa": {

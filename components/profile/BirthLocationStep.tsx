@@ -2,8 +2,11 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { CitySearchBox, type CitySearchSelection } from "@/components/syncro/CitySearchBox";
-import { buildDefaultBirthLocation } from "@/lib/profile/birth-info-utils";
+
+import {
+  BirthLocationField,
+  resolveBirthLocationForSubmit,
+} from "@/components/forms/BirthLocationField";
 import type { BirthLocation } from "@/lib/profile/types";
 
 export type BirthLocationSelection = BirthLocation;
@@ -11,75 +14,44 @@ export type BirthLocationSelection = BirthLocation;
 interface BirthLocationStepProps {
   userTimezone: string;
   onSelect: (location: BirthLocationSelection) => void;
-  onSkip: () => void;
   onBack?: () => void;
 }
 
-export function BirthLocationStep({ userTimezone, onSelect, onSkip, onBack }: BirthLocationStepProps) {
-  const t = useTranslations("profile.birth_location");
-  const [showHelp, setShowHelp] = useState(false);
-  const [selectedCity, setSelectedCity] = useState<CitySearchSelection | null>(null);
+export function BirthLocationStep({ userTimezone, onSelect, onBack }: BirthLocationStepProps) {
+  const tProfile = useTranslations("profile.birth_location");
+  const tForm = useTranslations("birth_form");
+  const [birthLocation, setBirthLocation] = useState<BirthLocation | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  function handleCitySelect(city: CitySearchSelection) {
-    setSelectedCity(city);
-  }
-
-  function handleConfirmCity() {
-    if (!selectedCity) return;
-    onSelect({
-      name: selectedCity.name,
-      longitude: selectedCity.lng,
-      latitude: selectedCity.lat,
-      timezone: userTimezone,
-      use_defaults: false,
-    });
-  }
-
-  function handleSkip() {
-    onSkip();
+  function handleContinue() {
+    setError(null);
+    const resolved = resolveBirthLocationForSubmit(birthLocation, userTimezone);
+    if (!Number.isFinite(resolved.longitude)) {
+      setError(tForm("location_required"));
+      return;
+    }
+    onSelect(resolved);
   }
 
   return (
     <div className="birth-location-step">
-      <h2 className="picker-title">{t("title")}</h2>
-      <p className="picker-description">{t("subtitle")}</p>
+      <h2 className="picker-title">{tProfile("title")}</h2>
+      <p className="picker-description">{tProfile("subtitle")}</p>
 
-      <button type="button" className="why-link" onClick={() => setShowHelp((v) => !v)}>
-        {t("why_link")}
+      <BirthLocationField value={birthLocation} onChange={setBirthLocation} />
+
+      {error ? <p className="birth-location-step__error">{error}</p> : null}
+
+      <button type="button" onClick={handleContinue} className="submit-btn confirm-city-btn">
+        {tForm("confirm_continue")}
       </button>
 
-      {showHelp ? (
-        <div className="birth-location-explanation">
-          <p>{t("explanation_1")}</p>
-          <p>{t("explanation_2")}</p>
-          <p className="example">{t("explanation_example")}</p>
-        </div>
-      ) : null}
-
-      <CitySearchBox onSelect={handleCitySelect} />
-
-      {selectedCity ? (
-        <div className="selected-city-preview">
-          <span className="selected-city-name">{selectedCity.name}</span>
-          <span className="selected-city-coords">
-            {selectedCity.lat.toFixed(2)}, {selectedCity.lng.toFixed(2)}
-          </span>
-          <button type="button" onClick={handleConfirmCity} className="submit-btn confirm-city-btn">
-            {t("confirm_city")}
-          </button>
-        </div>
-      ) : null}
-
-      <button type="button" onClick={handleSkip} className="skip-button">
-        {t("skip_use_default")}
-      </button>
-
-      <p className="default-note">{t("default_note", { timezone: userTimezone })}</p>
+      <p className="default-note">{tProfile("location_required_note")}</p>
 
       {onBack ? (
         <div className="picker-actions location-back-actions">
           <button type="button" onClick={onBack} className="cancel-btn">
-            {t("back")}
+            {tProfile("back")}
           </button>
         </div>
       ) : null}

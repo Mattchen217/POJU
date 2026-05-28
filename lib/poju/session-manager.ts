@@ -2,6 +2,8 @@ import { safeRandomUUID } from "@/lib/client/safe-crypto";
 import { encryptJson, decryptJson } from "@/lib/crypto";
 import { getPojuDb } from "@/lib/db/poju-db";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
+import { syncSessionCyclesToDb } from "@/lib/poju/cycle-db-sync";
+import { createNewCycle, ensureSessionCycles } from "@/lib/poju/cycle-manager";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import type { POJUSessionState, PojuV4StateHint } from "@/lib/poju/types";
 
@@ -29,10 +31,18 @@ export async function createPOJUSession(input: {
       ? input.selected_stored_profile_id.trim()
       : null;
 
+  const firstCycle = createNewCycle({
+    original_question: input.original_question,
+    cycle_index: 1,
+  });
+
   const sessionState: POJUSessionState = {
     session_id: sessionId,
     device_id: deviceId,
     original_question: input.original_question.trim(),
+    cycles: [firstCycle],
+    active_cycle_id: firstCycle.cycle_id,
+    shared_context: {},
     messages: [],
     context_collected: {},
     has_profile: Boolean(storedId),
@@ -71,7 +81,10 @@ export async function createPOJUSession(input: {
     turn_count: 0,
     current_state_hint: "opening",
     main_delivery_done: false,
+    active_cycle_id: firstCycle.cycle_id,
   });
+
+  await syncSessionCyclesToDb(sessionState);
 
   return sessionId;
 }
@@ -81,10 +94,11 @@ export async function loadPOJUSession(sessionId: string): Promise<POJUSessionSta
   const row = await db.pojuSessionRecords.get(sessionId);
   if (!row) return null;
   try {
-    return await decryptJson<POJUSessionState>(SESSION_SECRET, {
+    const raw = await decryptJson<POJUSessionState>(SESSION_SECRET, {
       iv: row.iv,
       cipher: row.encrypted_data,
     });
+    return ensureSessionCycles(raw);
   } catch {
     return null;
   }
@@ -103,7 +117,9 @@ export async function savePOJUSession(state: POJUSessionState): Promise<void> {
     current_state_hint: getCurrentStateHint(state),
     main_delivery_done: state.main_delivery_done,
     main_delivery_at: state.main_delivery_done ? new Date() : undefined,
+    active_cycle_id: state.active_cycle_id,
   });
+  await syncSessionCyclesToDb(state);
 }
 
 export async function getActivePOJUSessionsByDevice(deviceId: string) {

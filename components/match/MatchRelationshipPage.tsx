@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
+import { PojuToolHandoffBanner } from "@/components/poju/PojuToolHandoffBanner";
 import { RelationshipInput } from "@/components/match/RelationshipInput";
+import { usePojuToolHandoff } from "@/lib/poju/use-poju-tool-handoff";
+import "@/styles/poju-tool-handoff.css";
 import { useRouter } from "@/i18n/navigation";
 import { formatBirthShort } from "@/lib/match/format-birth-short";
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
@@ -17,12 +20,22 @@ export function MatchRelationshipPage() {
 
   const [aProfile, setAProfile] = useState<StoredProfileData | null>(null);
   const [bProfile, setBProfile] = useState<StoredProfileData | null>(null);
+  const pojuHandoff = usePojuToolHandoff("match");
   const [relationship, setRelationship] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     void init();
   }, [router]);
+
+  useEffect(() => {
+    const prefill =
+      pojuHandoff?.prefill.partner_relationship ??
+      sessionStorage.getItem("match_relationship_prefill");
+    if (prefill && prefill.trim().length >= 10 && relationship.trim().length < 10) {
+      setRelationship(prefill.trim());
+    }
+  }, [pojuHandoff, relationship]);
 
   async function init() {
     const aId = sessionStorage.getItem("match_a_profile_id");
@@ -69,6 +82,7 @@ export function MatchRelationshipPage() {
 
   return (
     <main className="match-relationship-page">
+      {pojuHandoff ? <PojuToolHandoffBanner handoff={pojuHandoff} /> : null}
       <RelationshipInput
         aLabel={formatBirthShort(aProfile)}
         bLabel={formatBirthShort(bProfile)}

@@ -30,6 +30,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Invalid or missing user_profile" }, { status: 400 });
     }
     const { user_profile: profile, stored_profile_id, display_name } = parsed;
+    const loc = profile.birth?.birth_location;
+    if (!loc?.longitude || loc.use_defaults) {
+      return NextResponse.json(
+        { ok: false, error: "birth_location_required", message: "Profile chart must include birth city coordinates." },
+        { status: 400 },
+      );
+    }
     const { system, user } = buildBaseAnalysisPrompt(profile);
 
     const llmStart = Date.now();

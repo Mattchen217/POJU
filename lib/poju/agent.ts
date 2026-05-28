@@ -12,7 +12,11 @@ import {
   type ContextSummary,
   type POJUAgentState,
 } from "@/lib/poju/agent-state";
+import { ensureSessionCycles } from "@/lib/poju/cycle-manager";
+import { finalizeToolInjectionTurn, prepareToolInjectionTurn } from "@/lib/poju/prepare-tool-injection-turn";
 import { extractQuestionCategory, mergeContextUpdates, recordToLLMContextUpdates } from "@/lib/poju/context-extractor";
+import { applyToolLinkingFromLlm } from "@/lib/poju/tool-suggestion";
+import type { ToolSuggestionPayload } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -56,6 +60,9 @@ type LLMApiPayload = {
   current_summary?: ContextSummary | null;
   question_category?: string | null;
   thinking_process?: string;
+  tool_suggestion?: ToolSuggestionPayload | null;
+  start_new_cycle?: boolean;
+  new_cycle_question?: string | null;
 };
 
 function ensureAgentV2(session: POJUSessionState): POJUAgentState {
@@ -190,14 +197,20 @@ function normalizeNewActions(raw: unknown[] | undefined): POJUAction[] {
  * - appends assistant message
  */
 export async function handleUserMessage(input: HandleInput): Promise<POJUSessionState> {
-  const { session, userMessage, locale, userAlreadyAppended, signal } = input;
+  const { session: sessionIn, userMessage, locale, userAlreadyAppended, signal } = input;
+  const session = ensureSessionCycles(sessionIn);
   const isOpeningSignal = userMessage.trim() === "__OPENING__";
   const isSystemMessage = userMessage.startsWith("[SYSTEM:") || isOpeningSignal;
 
+  const injectionPrep = prepareToolInjectionTurn(session, {
+    skipWhenSystemTurn: isSystemMessage,
+  });
+  let sessionBase = injectionPrep.session;
+
   if (!isSystemMessage && !userAlreadyAppended) {
-    const ruleCheck = checkRuleViolation(userMessage, session);
+    const ruleCheck = checkRuleViolation(userMessage, sessionBase);
     if (ruleCheck.violated && ruleCheck.type) {
-      return handleRuleRejection(session, userMessage, ruleCheck.type, locale);
+      return handleRuleRejection(sessionBase, userMessage, ruleCheck.type, locale);
     }
   }
 
@@ -209,16 +222,16 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
 
   let messagesWithUser: POJUMessage[];
   if (isOpeningSignal) {
-    messagesWithUser = session.messages;
+    messagesWithUser = sessionBase.messages;
   } else if (!isSystemMessage && userAlreadyAppended) {
-    const last = session.messages[session.messages.length - 1];
+    const last = sessionBase.messages[sessionBase.messages.length - 1];
     if (last?.role === "user" && last.content.trim() === userMessage.trim()) {
-      messagesWithUser = session.messages;
+      messagesWithUser = sessionBase.messages;
     } else {
-      messagesWithUser = [...session.messages, newUserMessage];
+      messagesWithUser = [...sessionBase.messages, newUserMessage];
     }
   } else {
-    messagesWithUser = [...session.messages, newUserMessage];
+    messagesWithUser = [...sessionBase.messages, newUserMessage];
   }
   let sessionForLlm = withSessionProfileFlags({ ...session, messages: messagesWithUser });
   if (isOpeningSignal) {
@@ -238,6 +251,8 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     archive_data = await loadArchiveDataForSession(sessionForLlm.session_id);
   }
 
+  let workingSession = sessionBase;
+
   const llmResponse = await callLLMViaAPI({
     session: sessionForLlm,
     profile,
@@ -245,13 +260,32 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     archive_data,
     locale,
     signal,
+    tool_injection_context: injectionPrep.tool_injection_context,
   });
 
-  const normalizedNewActions = normalizeNewActions(llmResponse.new_actions);
-  const mergedActions =
-    normalizedNewActions.length > 0 ? [...session.actions, ...normalizedNewActions] : session.actions;
+  workingSession = finalizeToolInjectionTurn(workingSession, injectionPrep.pending);
 
-  const sessionForAgent: POJUSessionState = { ...session, messages: messagesWithUser };
+  const normalizedNewActions = normalizeNewActions(llmResponse.new_actions);
+  const assistantMessageId = safeRandomUUID();
+
+  const linking = applyToolLinkingFromLlm(
+    { ...workingSession, messages: messagesWithUser },
+    {
+      tool_suggestion: llmResponse.tool_suggestion ?? null,
+      start_new_cycle: llmResponse.start_new_cycle,
+      new_cycle_question: llmResponse.new_cycle_question ?? null,
+      question_category: llmResponse.question_category,
+    },
+    assistantMessageId,
+  );
+
+  workingSession = linking.session;
+  const mergedActions =
+    normalizedNewActions.length > 0
+      ? [...workingSession.actions, ...normalizedNewActions]
+      : workingSession.actions;
+
+  const sessionForAgent: POJUSessionState = { ...workingSession, messages: messagesWithUser };
   const agentCore = finalizeAgentV2(
     ensureAgentV2(sessionForAgent),
     sessionForAgent,
@@ -285,6 +319,9 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       drift_reason: llmResponse.drift_reason ?? undefined,
       should_show_new_session_button: llmResponse.should_show_new_session_button,
       contains_delivery: llmResponse.contains_delivery,
+      tool_suggestion: linking.tool_suggestion ?? undefined,
+      tool_suggestion_message_id: linking.tool_suggestion ? assistantMessageId : undefined,
+      thinking_process: llmResponse.thinking_process,
     },
   };
 
@@ -292,17 +329,18 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   const rollingExpiry = new Date(Date.now() + THIRTY_DAYS_MS).toISOString();
 
   return withSessionProfileFlags({
-    ...session,
+    ...workingSession,
     messages: [...messagesWithUser, assistantMessage],
     context_collected: {
-      ...session.context_collected,
+      ...sessionBase.context_collected,
       ...(llmResponse.context_updates ?? {}),
     },
     actions: mergedActions,
     agent_v2,
-    main_delivery_done: llmResponse.contains_delivery || session.main_delivery_done,
-    main_delivery: (llmResponse.main_delivery as POJUSessionState["main_delivery"]) || session.main_delivery,
-    tokens_used: session.tokens_used + (llmResponse.tokens_used || 0),
+    main_delivery_done: llmResponse.contains_delivery || workingSession.main_delivery_done,
+    main_delivery:
+      (llmResponse.main_delivery as POJUSessionState["main_delivery"]) || workingSession.main_delivery,
+    tokens_used: workingSession.tokens_used + (llmResponse.tokens_used || 0),
     last_interaction_at: nowIso,
     expires_at: rollingExpiry,
   });
@@ -380,6 +418,7 @@ async function callLLMViaAPI(input: {
   archive_data?: import("@/lib/archive/archive-service").POJUActionRecommendationsData | null;
   locale: string;
   signal?: AbortSignal;
+  tool_injection_context?: string | null;
 }): Promise<{
   response: string;
   model: string;
@@ -399,6 +438,9 @@ async function callLLMViaAPI(input: {
   current_summary?: ContextSummary | null;
   question_category?: string | null;
   thinking_process?: string;
+  tool_suggestion?: ToolSuggestionPayload | null;
+  start_new_cycle?: boolean;
+  new_cycle_question?: string | null;
 }> {
   const response = await fetch("/api/poju/chat", {
     method: "POST",
@@ -409,6 +451,7 @@ async function callLLMViaAPI(input: {
       base_analysis: input.base_analysis ?? null,
       archive_data: input.archive_data ?? null,
       locale: input.locale,
+      tool_injection_context: input.tool_injection_context ?? null,
     }),
     signal: input.signal,
   });
@@ -451,6 +494,30 @@ async function callLLMViaAPI(input: {
     agent_suggested_phase: data.agent_suggested_phase,
     current_summary: data.current_summary,
     question_category: data.question_category,
+    thinking_process:
+      typeof data.thinking_process === "string" ? data.thinking_process : undefined,
+    tool_suggestion: parseToolSuggestionPayload(data.tool_suggestion),
+    start_new_cycle: data.start_new_cycle === true,
+    new_cycle_question:
+      typeof data.new_cycle_question === "string" ? data.new_cycle_question : null,
+  };
+}
+
+function parseToolSuggestionPayload(raw: unknown): ToolSuggestionPayload | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const o = raw as Record<string, unknown>;
+  const tool = typeof o.tool === "string" ? o.tool.trim().toLowerCase() : "";
+  if (tool !== "glyph" && tool !== "syncro" && tool !== "match") return null;
+  const trigger_context = typeof o.trigger_context === "string" ? o.trigger_context.trim() : "";
+  if (!trigger_context) return null;
+  return {
+    tool: tool as ToolSuggestionPayload["tool"],
+    trigger_context,
+    value_prop: typeof o.value_prop === "string" ? o.value_prop : undefined,
+    prefill:
+      o.prefill && typeof o.prefill === "object" && !Array.isArray(o.prefill)
+        ? (o.prefill as Record<string, unknown>)
+        : undefined,
   };
 }
 

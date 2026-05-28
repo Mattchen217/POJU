@@ -3,6 +3,11 @@ import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseResult } f
 import { buildOrientalSystemPrompt } from "@/lib/llm/phases/oriental-prompt-context";
 import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
+import { buildToolSuggestionPhaseAppendix } from "@/lib/llm/phases/tool-suggestion-phase-appendix";
+import {
+  parseStartNewCycleFromParsed,
+  parseToolSuggestionFromParsed,
+} from "@/lib/poju/tool-suggestion";
 import { parseTopicDriftFromParsed } from "@/lib/poju/topic-drift";
 
 function buildTrackingTaskBlock(input: PhaseLLMInput): string {
@@ -90,7 +95,9 @@ ${archiveBlock}
   "topic_drift_signal": "none" | "edge" | "off_topic",
   "drift_reason": "",
   "should_show_new_session_button": false
-}`;
+}
+
+${buildToolSuggestionPhaseAppendix(input, { includeNewCycleDetection: true })}`;
 }
 
 export async function callTrackingPhase(input: PhaseLLMInput): Promise<PhaseLLMResult> {
@@ -108,12 +115,14 @@ export async function callTrackingPhase(input: PhaseLLMInput): Promise<PhaseLLMR
   const suggested_phase: AgentPhase | null = rawPhase === "tracking" ? "tracking" : "tracking";
 
   const drift = parseTopicDriftFromParsed(parsed);
+  const tool_suggestion = parseToolSuggestionFromParsed(parsed);
+  const { start_new_cycle, new_cycle_question } = parseStartNewCycleFromParsed(parsed);
 
   return {
     response,
     suggested_phase,
     context_updates: {},
-    question_category: null,
+    question_category: typeof parsed.question_category === "string" ? parsed.question_category : null,
     current_summary: null,
     main_delivery_data: null,
     actions: [],
@@ -122,6 +131,9 @@ export async function callTrackingPhase(input: PhaseLLMInput): Promise<PhaseLLMR
     call_count: 1,
     model: result.model,
     thinking_process: thinkingFromPhaseTransport(result, parsed, input.locale),
+    tool_suggestion,
+    start_new_cycle,
+    new_cycle_question,
     ...drift,
   };
 }

@@ -7,7 +7,10 @@ import { useLocale, useTranslations } from "next-intl";
 import { SyncroGuardedRoute } from "@/components/syncro/SyncroGuardedRoute";
 import { SyncroLlmBatchRunner, type SyncroLlmProgress } from "@/components/syncro/SyncroLlmBatchRunner";
 import { SyncroLlmProgressBar } from "@/components/syncro/SyncroLlmProgressBar";
+import { PojuDeepDiveCTA } from "@/components/cross-product/PojuDeepDiveCTA";
+import { ReturnToPojuCTA } from "@/components/poju/ReturnToPojuCTA";
 import { SyncroMainView } from "@/components/syncro/SyncroMainView";
+import { extractSyncroSummary } from "@/lib/poju/tool-result-summary";
 import { SyncroOrientationProvider } from "@/components/syncro/SyncroOrientationProvider";
 import { Link } from "@/i18n/navigation";
 import { isSyncroSessionExpired, loadSyncroSession } from "@/lib/syncro/syncro-session";
@@ -116,8 +119,18 @@ function SyncroResultPageContent() {
     );
   }
 
+  const syncroSummary = extractSyncroSummary(session);
+
   return (
     <SyncroOrientationProvider>
+      <div className="px-4 pt-4">
+        <ReturnToPojuCTA
+          tool="syncro"
+          resultId={sessionId}
+          resultData={syncroSummary}
+          variant="banner"
+        />
+      </div>
       <SyncroLlmProgressBar progress={llmProgress} />
       <SyncroLlmBatchRunner
         sessionId={sessionId}
@@ -130,6 +143,15 @@ function SyncroResultPageContent() {
         highlightMatrixKeys={highlightKeys}
         llmProgress={llmProgress}
       />
+      <div className="px-4 pb-8">
+        <PojuDeepDiveCTA productId="syncro" result_id={sessionId} result_data={syncroSummary} />
+        <ReturnToPojuCTA
+          tool="syncro"
+          resultId={sessionId}
+          resultData={syncroSummary}
+          variant="footer"
+        />
+      </div>
     </SyncroOrientationProvider>
   );
 }

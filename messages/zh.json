@@ -68,7 +68,7 @@
       "heading": "我们做了什么。为什么有效。",
       "intro": "两千年对人类根本问题的思考，经现代研究审视，由 AI 为你呈现。只为一个目的：帮你看清独自无法看见的事。",
       "easternTitle": "东方框架",
-      "easternBody": "两千年来，东方哲学传统一直在审视人类反复追问的问题——关于抉择、方向，以及塑造人生的模式。\n\n事业。爱情。方向。迷惘。\n\n这些传统不是算命。它们是思考框架——在八十代人的经验中打磨而成。",
+      "easternBody": "两千年来，东方哲学传统一直在审视人类反复追问的问题——关于抉择、方向，以及塑造人生的模式。\n\n事业。爱情。方向。迷惘。\n\n这些传统不是预测命运。它们是思考框架——在八十代人的经验中打磨而成。",
       "modernTitle": "现代研究",
       "modernBody": "古人观察到的，现代研究开始能够测量。\n\n决策如何被框定的认知科学。注意力的空间心理学。自然节律的昼夜生物学。认知偏差的行为经济学。\n\n千年有效的框架，如今经当代研究重新审视。",
       "aiTitle": "AI 翻译",
@@ -293,7 +293,7 @@
         },
         "direction": {
           "title": "你想要方向,而不是预测",
-          "description": "\"X 会发生吗\" 是占星。\"我该怎么做\" 是 POJU。"
+          "description": "\"X 会发生吗\" 在问固定结果。\"我该怎么做\" 是 POJU。"
         }
       },
       "how_it_works": {
@@ -576,11 +576,12 @@
       "title": "出生地？",
       "subtitle": "为了精确的命盘计算，请告诉我们你的出生城市",
       "why_link": "为什么需要出生地？",
-      "explanation_1": "命理排盘必须用【真太阳时】，而非时区平均时。",
+      "explanation_1": "pojulife 使用真太阳时确保精度。太阳过中天的时间随经度变化 —— 你的出生地保证时辰柱准确。",
       "explanation_2": "真太阳时取决于出生地经度。",
       "explanation_example": "例如，乌鲁木齐（新疆）使用北京时间，但真太阳时差 2 小时。如果不修正，时辰可能算错。",
       "skip_use_default": "我不确定 — 用默认值",
       "default_note": "默认会按时区中央经度（{timezone}）计算，适用于大多数情况。",
+      "location_required_note": "请确认出生城市，或搜索其他城市。pojulife 使用真太阳时以确保时辰柱准确。",
       "confirm_city": "使用此城市",
       "back": "返回出生信息"
     },
@@ -651,10 +652,55 @@
     "base_analysis_error": "生成失败",
     "base_analysis_note": "可选：为本档案生成一次深度「命主基础分析」，结果永久缓存在本机；模型调用在服务端使用已配置的 OpenRouter。"
   },
+  "cross_product": {
+    "match_to_poju": {
+      "title": "想更深入聊这段关系？",
+      "description": "Match 帮你看清结构，POJU 帮你想清楚接下来怎么做。",
+      "value_prop": "围绕这段关系，最多 30 天的深度分析",
+      "button": "打开 POJU"
+    },
+    "syncro_to_poju": {
+      "title": "想把这件事想透？",
+      "description": "Syncro 告诉你时机，POJU 帮你想清要不要做、怎么做。",
+      "value_prop": "围绕你的处境，最多 30 天的深度对话",
+      "button": "打开 POJU"
+    },
+    "glyph_to_poju": {
+      "title": "想拆开这次卦象在说什么？",
+      "description": "Glyph 给了一幅象，POJU 帮你想清含义与行动。",
+      "value_prop": "围绕你正在面对的事，最多 30 天的深度对话",
+      "button": "打开 POJU"
+    },
+    "session_picker": {
+      "title": "你想怎么继续？",
+      "subtitle": "你已有进行中的 POJU 会话。可以把这次分析并入其中，或另开新会话。",
+      "existing_sessions": "并入已有会话",
+      "join_this": "加入这场对话",
+      "free": "免费",
+      "or": "或",
+      "start_new": "开启新的 POJU 会话",
+      "start_new_subtitle": "若是另一个话题，建议单独开一场",
+      "days_left": "剩余 {count} 天"
+    },
+    "from_tool_entry": {
+      "continuing_from": "来自 {tool} 的延续",
+      "context_label": "延续这次分析",
+      "joining": "正在把工具结果加入本会话…"
+    }
+  },
   "poju": {
     "begin": {
       "start": "开始",
       "free_first_time": "开始会话"
+    },
+    "tool_handoff": {
+      "banner_free": "来自 POJU · 本次 Session 内免费",
+      "banner_paid": "来自 POJU · 按工具常规定价",
+      "return_banner": "带着这份结果回到 POJU",
+      "return_footer": "回到 POJU · 继续对话",
+      "returning": "正在返回 POJU…",
+      "prefill_relationship": "关于你与 {name} 的关系",
+      "tool_result_resume_user": "我从工具回来了，我们继续聊。"
     },
     "chat": {
       "question_label": "你的问题",
@@ -824,7 +870,7 @@
     "cat_traditional": "传统调整",
     "cat_decisive": "果断行动",
     "cat_reflective": "反思练习",
-    "rationale_label": "命理依据",
+    "rationale_label": "命盘依据",
     "mark_done": "已完成",
     "skip": "跳过",
     "done": "已完成",
@@ -858,10 +904,10 @@
     "your_question_label": "你的问题",
     "draw_missing_profile": "未选择命盘，请先选择或添加八字。",
     "back_to_prepare": "返回准备页",
-    "draw_stub_title": "命盘已就绪 — 下一步抽签",
+    "draw_stub_title": "命盘已就绪 — 下一步抽 Glyph",
     "draw_stub_profile": "命盘",
     "draw_stub_type": "类型",
-    "draw_stub_hint": "Step 4 将在此加入问题输入与抽签动画。暂时可进入旧版解读流程。",
+    "draw_stub_hint": "在此输入你的问题，然后抽一支 Glyph。",
     "draw_stub_legacy_reading": "进入旧版解读",
     "profile_not_found": "本设备上未找到该命盘。",
     "reading_for_label": "为",
@@ -869,7 +915,7 @@
     "input_hint": "描述你正面对的处境、困境或问题。10–200 字。",
     "input_placeholder": "例如：我现在在两个工作 offer 之间犹豫……",
     "draw_button": "抽出你的签",
-    "drawing_text": "正在抽签……",
+    "drawing_text": "正在抽取 Glyph……",
     "reading_loading": "正在为你推演……",
     "reading_loading_hint": "结合你的命局与签文，大约 3–5 分钟。",
     "reading_failed": "解读失败",
@@ -877,7 +923,7 @@
     "reading_profile_not_ready": "命盘分析尚未就绪。请返回准备页，等待命盘生成完成。",
     "reading_invalid_input": "未能从你的描述中读出明确问题。请用 10–200 字具体描述处境后重试。",
     "back_to_glyph": "返回 Glyph",
-    "reading_session_missing": "未找到本次解读记录，请从 Glyph 重新抽签。",
+    "reading_session_missing": "未找到本次解读记录，请从 Glyph 重新开始。",
     "section_classical": "签的意思",
     "section_dual_view": "双视角",
     "view_bazi_title": "从你的命局看",
@@ -928,6 +974,18 @@
     "retry": "重试",
     "contact_support": "邮件联系"
   },
+  "birth_form": {
+    "birth_location": "出生地点",
+    "search_city": "搜索城市…",
+    "tap_to_enter_city": "点击输入出生城市",
+    "searching": "搜索中…",
+    "cancel": "取消",
+    "why_we_ask": "为什么需要？",
+    "why_explanation": "pojulife 使用真太阳时确保精度。太阳过中天的时间随经度变化 —— 你的出生地保证时辰柱准确。",
+    "true_solar_offset": "真太阳时偏差：{offset}",
+    "confirm_continue": "使用此地点继续",
+    "location_required": "请选择或确认你的出生城市。"
+  },
   "birth_picker": {
     "title": "你的出生信息",
     "description": "这些信息让 POJU 能基于你独特的能量做出精准解读。",
@@ -970,7 +1028,7 @@
     "day_master_label": "日主",
     "strength_label": "强弱",
     "current_phase_label": "当前大运",
-    "hint_first_time": "正在为你做完整命理推演，约 2–5 分钟。仅本次需要等待。",
+    "hint_first_time": "正在为你做完整命盘分析，约 2–5 分钟。仅本次需要等待。",
     "hint_using_cache": "正在加载已分析的命盘...",
     "done_message": "已就绪，即将进入对话...",
     "error_title": "准备失败",
@@ -1010,7 +1068,7 @@
     "subtitle": "实时方位与时机指引",
     "description": "Syncro 是你未来 24 小时的实时陪伴。把手机当作罗盘——找到当下最适合你这件事的方位与时机。",
     "feature_realtime": "每个时辰实时更新",
-    "feature_realtime_desc": "能量场每 2 小时一变，Syncro 与你同步重新测算。",
+    "feature_realtime_desc": "能量场每 2 小时一变，Syncro 与你同步重新分析。",
     "feature_directional": "八方位全方位扫描",
     "feature_directional_desc": "为当下时辰扫描所有方位的能量状态。",
     "feature_vr": "VR 实景模式",
@@ -1035,14 +1093,14 @@
       "step_4": "正在读取接下来十二个时辰…",
       "step_5": "正在映射 96 个时空组合…",
       "step_6": "即将完成…",
-      "hint": "正在测算未来 24 小时的能量场，约需 60–90 秒。",
+      "hint": "正在分析未来 24 小时的能量场，约需 60–90 秒。",
       "hint_local": "正在本地映射 96 个时空组合，几秒内即可查看；AI 文案将在后台陆续生成。",
-      "error_title": "测算失败",
+      "error_title": "分析失败",
       "go_back": "返回 Syncro",
       "retry": "重试",
       "missing_data": "缺少任务、命盘或位置信息，请从 Syncro 重新开始。",
       "profile_not_ready": "命盘分析尚未就绪，请返回准备页等待 base analysis 完成。",
-      "compute_failed": "测算失败",
+      "compute_failed": "分析失败",
       "error_timeout": "服务器响应超时或格式异常（手机端常见）。请检查网络后重试；若反复出现，可能是计算耗时过长，请稍后再试。"
     },
     "llm_progress": {
@@ -1103,7 +1161,7 @@
       "current_hour": "本时辰",
       "why_this": "为什么是这个流",
       "detailed_label": "深读",
-      "rationale_label": "命理依据",
+      "rationale_label": "命盘依据",
       "collapse": "收起",
       "enable_compass": "开启罗盘",
       "enable_vr": "开启 VR 模式",
@@ -1133,7 +1191,7 @@
       "asking_message": "Syncro 需要你的位置来计算真太阳时与方位。",
       "asking_privacy": "仅本次使用，从不上传到我们的服务器。",
       "allow_location": "允许定位",
-      "granted_message": "已获取位置，正在为你测算…",
+      "granted_message": "已获取位置，正在为你分析…",
       "manual_title": "选择你的位置",
       "manual_description": "搜索并选择你当前所在城市，以获得准确的时辰。",
       "city_search_placeholder": "搜索城市（如：北京、纽约、东京）",
@@ -1328,6 +1386,28 @@
       "overall": "总体",
       "top_actions": "重点行动",
       "view_full_report": "查看完整报告"
+    }
+  },
+  "tool_suggestion": {
+    "label": "建议",
+    "free_in_session": "本次 Session 免费",
+    "accepted_continue": "正在打开工具 — 随时可回到这里继续聊。",
+    "declined_continue": "继续当前对话…",
+    "match": {
+      "title": "一起读这段关系",
+      "accept": "打开 Match",
+      "decline": "跳过 · 继续聊",
+      "needs_info": "需要对方的出生日期、时辰与地点"
+    },
+    "syncro": {
+      "title": "为这件事找合适时机",
+      "accept": "打开 Syncro",
+      "decline": "跳过 · 继续聊"
+    },
+    "glyph": {
+      "title": "借一个意象来看",
+      "accept": "抽一支 Glyph",
+      "decline": "跳过 · 继续聊"
     }
   },
   "pwa": {

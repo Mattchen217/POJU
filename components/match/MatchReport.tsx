@@ -3,6 +3,9 @@
 import { useTranslations } from "next-intl";
 
 import { MatchReportCard } from "@/components/match/MatchReportCard";
+import { PojuDeepDiveCTA } from "@/components/cross-product/PojuDeepDiveCTA";
+import { ReturnToPojuCTA } from "@/components/poju/ReturnToPojuCTA";
+import { extractMatchSummary } from "@/lib/poju/tool-result-summary";
 import { Link, useRouter } from "@/i18n/navigation";
 import {
   COMPATIBILITY_LEVELS,
@@ -65,8 +68,16 @@ export function MatchReport({ session, locale }: MatchReportProps) {
   const compatibilityInfo =
     COMPATIBILITY_LEVELS[levelKey as CompatibilityLevel] ?? COMPATIBILITY_LEVELS.neutral;
 
+  const matchSummary = extractMatchSummary(session);
+
   return (
     <main className="match-report">
+      <ReturnToPojuCTA
+        tool="match"
+        resultId={session.match_id}
+        resultData={matchSummary}
+        variant="banner"
+      />
       <header className="report-header">
         <h1>{t("title")}</h1>
         <p className="relationship-line">&ldquo;{session.relationship_description}&rdquo;</p>
@@ -174,7 +185,15 @@ export function MatchReport({ session, locale }: MatchReportProps) {
         </MatchReportCard>
       </div>
 
+      <PojuDeepDiveCTA productId="match" result_id={session.match_id} result_data={matchSummary} />
+
       <footer className="report-footer">
+        <ReturnToPojuCTA
+          tool="match"
+          resultId={session.match_id}
+          resultData={matchSummary}
+          variant="footer"
+        />
         {session.compatibility_score != null ? (
           <p className="match-engine-note">
             {t("engine_note", { score: session.compatibility_score.toFixed(1) })}

@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { getPojuDb } from "@/lib/db/poju-db";
 import { loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
 import { setPOJUV4SessionStatus } from "@/lib/poju/v4-lifecycle";
-import { POJUChatUI } from "@/components/poju/POJUChatUI";
+import { PojuSessionChatShell } from "@/components/poju/PojuSessionChatShell";
 import { AppDialogProvider } from "@/components/ui/app-dialog";
 import { createInitialAgentState } from "@/lib/poju/agent-state";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
@@ -125,7 +125,12 @@ export default function PojuSessionDeepLinkPage() {
 
   return (
     <AppDialogProvider>
-      <POJUChatUI session={session} onSessionUpdate={setSession} locale={locale} />
+      <PojuSessionChatShell
+        session={session}
+        onSessionUpdate={setSession}
+        locale={locale}
+        onReload={() => void load()}
+      />
     </AppDialogProvider>
   );
 }

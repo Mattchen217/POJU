@@ -4,6 +4,8 @@ import { Suspense, useEffect, useState } from "react";
 import { useLocale } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
+import { readFromToolPending, clearFromToolPending } from "@/lib/cross-product/from-tool-pending";
+import { injectToolResultToPoju } from "@/lib/poju/inject-tool-result";
 import { createPOJUSession } from "@/lib/poju/session-manager";
 import { clearPendingStoredProfileId, readPendingStoredProfileId } from "@/lib/poju/pending-stored-profile";
 
@@ -59,6 +61,16 @@ function PojuPaymentSuccessInner() {
           original_question: question,
           selected_stored_profile_id: pendingProfile,
         });
+        const fromTool = readFromToolPending();
+        if (fromTool) {
+          await injectToolResultToPoju({
+            session_id: sessionId,
+            tool: fromTool.tool,
+            result_id: fromTool.result_id,
+            result_data: fromTool.result_data,
+          });
+          clearFromToolPending();
+        }
         clearPendingStoredProfileId();
 
         sessionStorage.removeItem("poju_pending_order_id");

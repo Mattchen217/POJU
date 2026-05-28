@@ -20,8 +20,11 @@ import {
 } from "@/components/marketing/product-marketing-hero";
 import { MarketingSection } from "@/components/marketing/marketing-section";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { PojuToolHandoffBanner } from "@/components/poju/PojuToolHandoffBanner";
 import { useRouter } from "@/i18n/navigation";
+import { usePojuToolHandoff } from "@/lib/poju/use-poju-tool-handoff";
 import { isFirstTimeFree } from "@/lib/syncro/device-usage";
+import "@/styles/poju-tool-handoff.css";
 
 import "@/styles/match.css";
 
@@ -64,6 +67,7 @@ export function MatchHomePage() {
   const t = useTranslations("match.home");
   const tLoading = useTranslations("match");
 
+  const pojuHandoff = usePojuToolHandoff("match");
   const [canFree, setCanFree] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -71,12 +75,18 @@ export function MatchHomePage() {
   }, []);
 
   function handleStart() {
-    if (canFree === null) return;
-    sessionStorage.setItem("match_session_type", canFree ? "free" : "paid");
-    router.push(canFree ? "/match/select-a" : "/match/payment");
+    if (canFree === null && !pojuHandoff?.quota_free) return;
+    const useFree = pojuHandoff?.quota_free || canFree === true;
+    sessionStorage.setItem("match_session_type", useFree ? "free" : "paid");
+    if (pojuHandoff?.prefill.partner_relationship) {
+      sessionStorage.setItem("match_relationship_prefill", pojuHandoff.prefill.partner_relationship);
+    }
+    router.push(useFree ? "/match/select-a" : "/match/payment");
   }
 
-  if (canFree === null) {
+  const effectiveFree = pojuHandoff?.quota_free || canFree === true;
+
+  if (canFree === null && !pojuHandoff) {
     return (
       <main className="match-home match-home--loading">
         <p>{tLoading("loading")}</p>
@@ -84,13 +94,14 @@ export function MatchHomePage() {
     );
   }
 
-  const ctaLabel = canFree ? t("cta_free") : t("cta_paid");
-  const heroNote = canFree ? t("free_note") : t("paid_note");
+  const ctaLabel = effectiveFree ? t("cta_free") : t("cta_paid");
+  const heroNote = effectiveFree ? t("free_note") : t("paid_note");
 
   return (
     <MarketingPageLayout theme="match" className="match-home">
       <div className="w-full px-3 sm:px-4 md:px-6">
         <ArchiveReturnBanner />
+        {pojuHandoff ? <PojuToolHandoffBanner handoff={pojuHandoff} className="mt-4" /> : null}
       </div>
 
       <ProductMarketingHero theme="match" reserveBackgroundSlot backgroundClassName="product-hero__bg--match">

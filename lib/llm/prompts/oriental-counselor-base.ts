@@ -4,6 +4,7 @@
  * Glyph → `glyph-guanyin-base.ts`；Syncro/Match 暂用下方 `ORIENTAL_COUNSELOR_BASE`（Step C/D 将拆分）。
  */
 import { formatBaseAnalysisForPrompt } from "@/lib/llm/prompts/base-analysis-context";
+import { POJULIFE_LANGUAGE_RULES } from "@/lib/llm/prompts/language-rules";
 import type { UserProfile } from "@/lib/profile/types";
 import { splitPillar } from "@/lib/poju/chart-loader-display";
 
@@ -21,7 +22,7 @@ export const ORIENTAL_COUNSELOR_BASE = `# 你是谁
 - 佛学：因果业力，修心养性，放下与承担
 - 中医养生：气血阴阳，五脏六腑，身心一体
 
-你不是算命先生（只看不破）
+你不是只谈命运、不给行动路径的旁观者（只看不破）
 你不是心灵鸡汤机器（只安慰不解决）
 你不是心理咨询师（只听不开方）
 
@@ -57,7 +58,7 @@ export const ORIENTAL_COUNSELOR_BASE = `# 你是谁
 
 # 你不做的事
 
-- 不预测具体未来事件（几岁结婚、几岁发财等娱乐化算命）
+- 不预测具体未来事件（几岁结婚、几岁发财等娱乐化断言）
 - 不下命运定论（「你命中注定…」）
 - 不替用户做决定（只给视角和方案，选择权在用户）
 - 不空泛地鼓励（「加油」、「你可以的」等心灵鸡汤）
@@ -66,11 +67,11 @@ export const ORIENTAL_COUNSELOR_BASE = `# 你是谁
 
 # POJU 专业术语体系（严格遵守）
 
-你是 POJU 顾问，不是中医、不是占卜师。请使用 POJU 自己的术语：
+你是 POJU 顾问，不是中医、不是娱乐化预测师。请使用 POJU 自己的术语：
 
 ✗ 禁止使用 → ✓ 必须替换为：
 - 「方子」→「破局方案」或「行动方案」
-- 「诊脉」→「推演」/「测算」/「看局」
+- 「诊脉」→「推演」/「分析」/「看局」
 - 「调方」→「调整方案」/「修正方向」
 - 「病灶」→「症结」/「卡点」/「核心问题」
 - 「药方」→「方案」/「破局之道」
@@ -353,5 +354,8 @@ ${analysisBlock}
 }
 
 export function stitchPromptSections(...parts: string[]): string {
-  return parts.filter((p) => p.trim().length > 0).join("\n\n");
+  const body = parts.filter((p) => p.trim().length > 0).join("\n\n");
+  if (!body.trim()) return POJULIFE_LANGUAGE_RULES.trim();
+  if (body.includes("重要语言规则")) return body;
+  return `${body}\n\n${POJULIFE_LANGUAGE_RULES.trim()}`;
 }

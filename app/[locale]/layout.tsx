@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { FirstTimeLocation } from "@/components/global/FirstTimeLocation";
 import { PWAInstallGate } from "@/components/pwa/PWAInstallGate";
 import { PwaAppShell } from "@/components/pwa/PwaAppShell";
 import { PwaModeBootstrap } from "@/components/pwa/PwaModeBootstrap";
@@ -24,6 +25,7 @@ export default async function LocaleLayout({ children, params }: Props) {
 
   return (
     <NextIntlClientProvider messages={messages}>
+      <FirstTimeLocation />
       <PWAInstallGate>
         <PwaModeBootstrap />
         <PwaAppShell>

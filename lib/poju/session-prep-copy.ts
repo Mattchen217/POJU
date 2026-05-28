@@ -25,7 +25,7 @@ export function getWelcomeText(
   if (productType === "syncro") {
     const syncro: Record<string, string> = {
       en: `Welcome to Syncro. Syncro uses your chart to find optimal timing and direction for your actions. Please provide your foundational energy data below.`,
-      zh: `欢迎来到 Syncro。Syncro 用你的命局测算最适合行动的时辰与方位。请提供你的基础能量数据。`,
+      zh: `欢迎来到 Syncro。Syncro 用你的命盘分析最适合行动的时辰与方位。请提供你的基础能量数据。`,
       es: `Bienvenido a Syncro. Syncro usa tu carta para encontrar el momento y la dirección óptimos para tus acciones. Indica tus datos energéticos fundamentales.`,
       fr: `Bienvenue sur Syncro. Syncro utilise votre thème pour trouver le moment et la direction optimaux pour vos actions. Merci d'indiquer vos données énergétiques fondamentales.`,
       de: `Willkommen bei Syncro. Syncro nutzt Ihr Horoskop, um optimales Timing und die passende Richtung für Ihre Handlungen zu finden. Bitte geben Sie unten Ihre grundlegenden Energiedaten an.`,

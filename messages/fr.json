@@ -171,7 +171,7 @@
       "heading": "What we built. Why it works.",
       "intro": "Two thousand years of human reflection on the questions that matter, examined through modern research, made accessible through AI. All for one purpose: helping you see what you couldn't see alone.",
       "easternTitle": "Eastern Frameworks",
-      "easternBody": "For two thousand years, Eastern philosophical traditions have examined the questions humans keep asking — about decision, direction, and the patterns that shape a life.\n\nCareer. Love. Direction. Doubt.\n\nThese traditions weren't fortune-tellers. They were frameworks for thinking — refined over eighty generations of human experience.",
+      "easternBody": "For two thousand years, Eastern philosophical traditions have examined the questions humans keep asking — about decision, direction, and the patterns that shape a life.\n\nCareer. Love. Direction. Doubt.\n\nThese traditions weren't about fixed predictions. They were frameworks for thinking — refined over eighty generations of human experience.",
       "modernTitle": "Modern Research",
       "modernBody": "What ancient observation noticed, modern research is beginning to measure.\n\nCognitive science on how we frame decisions. Spatial psychology on attention. Circadian biology on natural rhythm. Behavioral economics on cognitive bias.\n\nThe frameworks that worked for millennia, now examined through contemporary research.",
       "aiTitle": "AI Translation",
@@ -295,7 +295,7 @@
         },
         "direction": {
           "title": "Vous voulez une direction, pas une prédiction",
-          "description": "\"Est-ce que X va arriver\" est de l'astrologie. \"Que devrais-je faire\" est POJU."
+          "description": "\"Est-ce que X va arriver\" demande un résultat fixe. \"Que devrais-je faire\" est POJU."
         }
       },
       "how_it_works": {
@@ -572,7 +572,7 @@
       "title": "Birth location?",
       "subtitle": "For precise chart calculation, tell us your birth city",
       "why_link": "Why birth location matters?",
-      "explanation_1": "Astrological charts must use true solar time, not timezone average.",
+      "explanation_1": "pojulife uses true solar time for accuracy. Sun peaks vary by longitude — your birth location ensures the correct hour pillar.",
       "explanation_2": "True solar time depends on the longitude of birth location.",
       "explanation_example": "Example: Urumqi uses Beijing time, but true solar time differs by 2 hours.",
       "skip_use_default": "I'm not sure — use defaults",

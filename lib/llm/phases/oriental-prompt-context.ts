@@ -27,12 +27,14 @@ export async function loadBaseAnalysisForSession(input: PhaseLLMInput): Promise<
 /** POJU phase system prompt：poju-base 模块 + 日期/语言/命盘 + 阶段任务块 */
 export async function buildPojuSystemPrompt(input: PhaseLLMInput, taskBlock: string): Promise<string> {
   const baseAnalysis = await loadBaseAnalysisForSession(input);
+  const injectionBlock = input.tool_injection_context?.trim();
   return stitchPromptSections(
     ...buildPojuCorePromptSections(),
     buildCurrentDateContext(new Date(), input.locale),
     buildLanguageGuidance(input.locale, input.user_message),
     buildNorthAmericaAdaptation(input.locale),
     buildProfileContextSection(input.profile, baseAnalysis),
+    injectionBlock ?? "",
     taskBlock,
   );
 }

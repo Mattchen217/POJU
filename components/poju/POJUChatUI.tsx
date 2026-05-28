@@ -40,7 +40,10 @@ import { generateBaseAnalysis } from "@/lib/llm/deepseek/base-analysis";
 import { importCalculatedProfileAsStored, recordProfileUsage } from "@/lib/profile/stored-profiles-service";
 import { markPOJUV4SessionResolved } from "@/lib/poju/v4-lifecycle";
 import { DEFAULT_NEW_SESSION_TITLE, formatSessionListPrimaryLine } from "@/lib/poju/session-list-label";
-import type { POJUSessionState, POJUAction, POJUMessage } from "@/lib/poju/types";
+import { getActiveCycle, recordUserResponse } from "@/lib/poju/cycle-manager";
+import { findPendingToolInjection } from "@/lib/poju/find-pending-tool-injection";
+import { getToolSuggestionResponseState } from "@/lib/poju/tool-suggestion";
+import type { POJUSessionState, POJUAction, POJUMessage, ToolName } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
 import { computeSituationContextFingerprint } from "@/lib/poju/situation-context-fingerprint";
 import { getCachedSituationAnalysis, requestSituationAnalysis } from "@/lib/llm/deepseek/situation-analysis";
@@ -53,6 +56,7 @@ import {
   pojuChatMessageList,
 } from "@/lib/poju/chat-layout";
 import "@/styles/topic-drift.css";
+import "@/styles/tool-suggestion.css";
 
 interface Props {
   session: POJUSessionState;
@@ -129,6 +133,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const [showOffTopicAction, setShowOffTopicAction] = useState(false);
   const [driftReason, setDriftReason] = useState("");
   const openingInitRef = useRef(false);
+  const toolResumeInitRef = useRef<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const speechRef = useRef<SpeechRecognition | null>(null);
@@ -254,6 +259,20 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     void triggerOpening();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per empty opening session
   }, [session.session_id, session.agent_v2?.current_phase, visibleMessages.length]);
+
+  useEffect(() => {
+    if (toolResumeInitRef.current === session.session_id) return;
+    if (!hasUserMessage) return;
+    if (sending || confirmBusy || pipelineBusy) return;
+    if (!findPendingToolInjection(session)) return;
+
+    toolResumeInitRef.current = session.session_id;
+    const resumeMsg = locale.startsWith("zh")
+      ? "我从工具回来了，我们继续聊。"
+      : "I'm back from the tool — let's continue.";
+    void runUserTurn(sessionRef.current, resumeMsg);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per session when tool result pending
+  }, [session.session_id, hasUserMessage, sending, confirmBusy, pipelineBusy, locale]);
 
   useEffect(() => {
     if (!overlayFormOpen) return;
@@ -825,6 +844,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     await savePOJUSession(finalSession);
   }
 
+  async function handleToolResponse(tool: ToolName, action: "accepted" | "declined") {
+    const s = sessionRef.current;
+    const next = recordUserResponse(s, tool, action);
+    onSessionUpdate(next);
+    await savePOJUSession(next);
+  }
+
   async function handleActionUpdate(actionId: string, status: POJUAction["status"], feedback?: string) {
     const s = sessionRef.current;
     const action = s.actions.find((a) => a.action_id === actionId);
@@ -1105,11 +1131,21 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                 const fullIndex = session.messages.findIndex(
                   (m) => m.timestamp === msg.timestamp && m.role === msg.role,
                 );
+                const activeCycleId =
+                  session.active_cycle_id ?? getActiveCycle(session)?.cycle_id ?? "";
+                const toolMsgId = msg.meta?.tool_suggestion_message_id ?? msg.timestamp;
+                const toolResponseState = msg.meta?.tool_suggestion
+                  ? getToolSuggestionResponseState(session, msg.meta.tool_suggestion.tool, toolMsgId)
+                  : null;
                 return (
                   <MessageBubble
                     key={`${msg.timestamp}-${idx}`}
                     message={msg}
                     hideWelcomePanel={shouldHideWelcomePanel}
+                    sessionId={session.session_id}
+                    cycleId={activeCycleId}
+                    toolSuggestionResponse={toolResponseState}
+                    onToolResponse={(tool, action) => void handleToolResponse(tool, action)}
                     actions={
                       msg.role === "assistant" && msg.meta?.contains_delivery && msg.timestamp === lastDeliveryTs
                         ? session.actions

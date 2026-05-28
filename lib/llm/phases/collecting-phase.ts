@@ -10,6 +10,8 @@ import { buildOrientalSystemPrompt } from "@/lib/llm/phases/oriental-prompt-cont
 import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
 import type { PojuV4ActionRequested } from "@/lib/poju/types";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
+import { buildToolSuggestionPhaseAppendix } from "@/lib/llm/phases/tool-suggestion-phase-appendix";
+import { parseToolSuggestionFromParsed } from "@/lib/poju/tool-suggestion";
 import { parseTopicDriftFromParsed } from "@/lib/poju/topic-drift";
 
 const VALID_SUGGESTED: AgentPhase[] = ["collecting_context", "awaiting_confirmation"];
@@ -109,7 +111,9 @@ ${requiredList}
   "should_show_new_session_button": false
 }
 
-判断：topic_drift_signal 为 "off_topic" 时 should_show_new_session_button 必须为 true；其他情况为 false。`;
+判断：topic_drift_signal 为 "off_topic" 时 should_show_new_session_button 必须为 true；其他情况为 false。
+
+${buildToolSuggestionPhaseAppendix(input, { includeNewCycleDetection: false })}`;
 }
 
 export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLLMResult> {
@@ -144,6 +148,7 @@ export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLL
   }
 
   const drift = parseTopicDriftFromParsed(parsed);
+  const tool_suggestion = parseToolSuggestionFromParsed(parsed);
 
   return {
     response,
@@ -159,6 +164,9 @@ export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLL
     call_count: 1,
     model: result.model,
     thinking_process: thinkingFromPhaseTransport(result, parsed, input.locale),
+    tool_suggestion,
+    start_new_cycle: false,
+    new_cycle_question: null,
     ...drift,
   };
 }

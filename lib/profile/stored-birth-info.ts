@@ -1,7 +1,5 @@
 import type { BirthInfo, BirthLocation, TstMeta } from "@/lib/profile/types";
 import type { StoredProfileBirthInfo } from "@/lib/db/poju-db";
-import { buildDefaultBirthLocation } from "@/lib/profile/birth-info-utils";
-
 /** Serialize v5 BirthInfo for encrypted stored_profiles blob. */
 export function birthInfoToStoredRecord(birth: BirthInfo): StoredProfileBirthInfo {
   const loc = birth.birth_location;
@@ -47,6 +45,9 @@ export function parseRegenerateChartBody(body: unknown): { birth: BirthInfo } | 
   if (!isRecord(body)) return { error: "invalid_body" };
 
   const useDefaults = Boolean(body.use_defaults);
+  if (useDefaults) {
+    return { error: "birth_location_required" };
+  }
   const timezone =
     (typeof body.timezone === "string" && body.timezone.trim()) ||
     (typeof body.user_timezone === "string" && body.user_timezone.trim()) ||
@@ -80,19 +81,17 @@ export function parseRegenerateChartBody(body: unknown): { birth: BirthInfo } | 
 
   if (isRecord(body.birth_location)) {
     const bl = body.birth_location;
-    if (!useDefaults && typeof bl.longitude !== "number") {
+    if (typeof bl.longitude !== "number") {
       return { error: "invalid_location" };
     }
-    if (!useDefaults) {
-      birth_location = {
-        name: typeof bl.name === "string" ? bl.name : String(body.location_name ?? "Custom"),
-        longitude: Number(bl.longitude),
-        latitude: typeof bl.latitude === "number" ? bl.latitude : undefined,
-        timezone: typeof bl.timezone === "string" ? bl.timezone : timezone,
-        use_defaults: false,
-      };
-    }
-  } else if (!useDefaults) {
+    birth_location = {
+      name: typeof bl.name === "string" ? bl.name : String(body.location_name ?? "Custom"),
+      longitude: Number(bl.longitude),
+      latitude: typeof bl.latitude === "number" ? bl.latitude : undefined,
+      timezone: typeof bl.timezone === "string" ? bl.timezone : timezone,
+      use_defaults: false,
+    };
+  } else {
     if (typeof body.longitude !== "number" || !Number.isFinite(body.longitude)) {
       return { error: "invalid_location" };
     }
@@ -105,10 +104,8 @@ export function parseRegenerateChartBody(body: unknown): { birth: BirthInfo } | 
     };
   }
 
-  if (useDefaults) {
-    birth_location = buildDefaultBirthLocation(timezone);
-  } else if (!birth_location) {
-    return { error: "invalid_location" };
+  if (!birth_location) {
+    return { error: "birth_location_required" };
   }
 
   return {

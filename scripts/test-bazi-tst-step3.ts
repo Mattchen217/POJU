@@ -20,25 +20,30 @@ function main() {
   const locationStep = read("components/profile/BirthLocationStep.tsx");
   const en = read("messages/en.json");
   const zh = read("messages/zh.json");
+  const validate = read("lib/profile/validate-birth-location.ts");
+  const stored = read("lib/profile/stored-profiles-service.ts");
 
-  assert(locationStep.includes("BirthLocationStep"), "BirthLocationStep component exists");
-  assert(locationStep.includes("CitySearchBox"), "CitySearchBox integrated");
-  assert(locationStep.includes("skip_use_default"), "Skip option");
-  assert(locationStep.includes("why_link"), "Why link");
-  assert(locationStep.includes("buildDefaultBirthLocation") || picker.includes("buildDefaultBirthLocation"), "Default builder");
+  assert(locationStep.includes("BirthLocationField"), "BirthLocationField integrated");
+  assert(!locationStep.includes("onSkip"), "Skip removed from location step");
+  assert(!picker.includes("handleLocationSkip"), "Skip removed from picker");
+  assert(locationStep.includes("resolveBirthLocationForSubmit"), "Resolves GPS/IP/search on continue");
+
+  assert(validate.includes("validateBirthLocationRequired"), "Validation helper");
+  assert(stored.includes("validateBirthLocationRequired"), "createStoredProfile validates location");
 
   assert(picker.includes('useState<"birth" | "location">'), "Two-step flow");
-  assert(picker.includes("BirthLocationStep"), "Picker integrates location step");
   assert(picker.includes("birth_location"), "birth_location passed on submit");
 
-  assert(en.includes('"profile"'), "en profile namespace");
-  assert(en.includes('"birth_location"'), "en birth_location keys");
-  assert(zh.includes("出生地"), "zh birth location title");
+  assert(en.includes('"birth_form"'), "en birth_form namespace");
+  assert(zh.includes("出生地点"), "zh birth location label");
 
   const confirm = read("components/poju/BirthInfoConfirmDialog.tsx");
   assert(confirm.includes("location_label"), "Confirm dialog shows location");
 
-  console.log("✅ Bazi TST Step 3 — birth location UI OK");
+  const parseBody = read("lib/profile/stored-birth-info.ts");
+  assert(parseBody.includes("birth_location_required"), "API rejects use_defaults");
+
+  console.log("test-bazi-tst-step3: OK");
 }
 
 main();

@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import Picker from "react-mobile-picker";
+import { resolveBirthLocationForSubmit } from "@/components/forms/BirthLocationField";
 import { BirthLocationStep } from "@/components/profile/BirthLocationStep";
-import { buildDefaultBirthLocation } from "@/lib/profile/birth-info-utils";
 import { HOUR_PERIOD_INFO, type BirthInfo, type HourPeriod } from "@/lib/profile/types";
 
 const HOUR_PERIODS: HourPeriod[] = [
@@ -82,16 +82,10 @@ export function BirthInfoPicker({ onSubmit, onCancel, locale }: BirthInfoPickerP
   }
 
   function handleLocationComplete(birthLocation: BirthInfo["birth_location"]) {
+    const resolved = birthLocation ?? resolveBirthLocationForSubmit(null, userTimezone);
     onSubmit({
       ...buildDraftBirthInfo(),
-      birth_location: birthLocation,
-    });
-  }
-
-  function handleLocationSkip() {
-    onSubmit({
-      ...buildDraftBirthInfo(),
-      birth_location: buildDefaultBirthLocation(userTimezone),
+      birth_location: resolved,
     });
   }
 
@@ -101,7 +95,6 @@ export function BirthInfoPicker({ onSubmit, onCancel, locale }: BirthInfoPickerP
         <BirthLocationStep
           userTimezone={userTimezone}
           onSelect={handleLocationComplete}
-          onSkip={handleLocationSkip}
           onBack={() => setStep("birth")}
         />
       </div>

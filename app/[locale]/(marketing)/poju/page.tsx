@@ -13,6 +13,7 @@ import { PojuSessionStarter } from "@/components/poju/poju-session-starter";
 import { PojuProductHero } from "@/components/marketing/poju-product-hero";
 import { NotPWA } from "@/components/pwa/PWAConditional";
 import { PWAProductBeginCTA } from "@/components/pwa/PWAProductBeginCTA";
+import { PojuFromToolEntry } from "@/components/cross-product/PojuFromToolEntry";
 import { PojuStep2Entry } from "@/components/poju/poju-step2-entry";
 
 export const metadata: Metadata = {
@@ -140,7 +141,9 @@ export default async function PojuProductPage() {
             </PojuSessionStarter>
             <p className="marketing-section-subheading mt-6 !max-w-2xl">{t("two_columns.footnote")}</p>
           </div>
-          <PojuStep2Entry />
+          <PojuFromToolEntry>
+            <PojuStep2Entry />
+          </PojuFromToolEntry>
         </MarketingSection>
       </MarketingPageSections>
       </NotPWA>

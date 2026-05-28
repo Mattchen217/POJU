@@ -4,12 +4,8 @@
  */
 
 import type { CompatibilityMatrix } from "@/lib/match/calculate-compatibility";
+import { buildMatchCorePromptSections } from "@/lib/llm/prompts/match-base";
 import {
-  MATCH_BAZI_HEPAN_IDENTITY,
-  MATCH_OUTPUT_BRANDING,
-} from "@/lib/llm/prompts/match-base";
-import {
-  ORIENTAL_COUNSELOR_BASE,
   buildCurrentDateContext,
   buildProfileContextSection,
   detectLanguage,
@@ -56,9 +52,7 @@ export function buildMatchPrompt(input: BuildMatchPromptInput): BuildMatchPrompt
   const level = compatibilityMatrix.overall_level;
 
   const system = stitchPromptSections(
-    MATCH_BAZI_HEPAN_IDENTITY,
-    MATCH_OUTPUT_BRANDING,
-    ORIENTAL_COUNSELOR_BASE,
+    ...buildMatchCorePromptSections(),
     buildCurrentDateContext(new Date(), locale),
 
     `# 命主 A 的完整命盘
