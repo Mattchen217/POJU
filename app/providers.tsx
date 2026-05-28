@@ -7,6 +7,7 @@ import { DisclaimerModal } from "@/components/disclaimer/disclaimer-modal";
 import { PwaInstallProvider } from "@/components/pwa/pwa-install-context";
 import { siteConfig } from "@/lib/config/site";
 import { initApp } from "@/lib/init";
+import { runLegacyServiceWorkerResetOnce } from "@/lib/pwa/legacy-sw-reset";
 
 /** Client-only tab bar — avoids SSR edge cases alongside webpack path normalization */
 const PwaTabbar = dynamic(
@@ -22,25 +23,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // Temporary hard reset for mobile stale bundles:
-    // unregister old PWA service workers and clear runtime caches.
-    if (typeof window === "undefined") return;
-    if (!("serviceWorker" in navigator)) return;
-    void (async () => {
-      try {
-        const regs = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(regs.map((reg) => reg.unregister()));
-      } catch {
-        // ignore
-      }
-      try {
-        if (!("caches" in window)) return;
-        const keys = await caches.keys();
-        await Promise.all(keys.map((key) => caches.delete(key)));
-      } catch {
-        // ignore
-      }
-    })();
+    void runLegacyServiceWorkerResetOnce();
   }, []);
 
   useEffect(() => {

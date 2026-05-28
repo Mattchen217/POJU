@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 
+import { isPwaStandalone } from "@/lib/client/pwa-standalone";
 import {
   cacheUserLocation,
   loadCachedUserLocation,
@@ -26,6 +27,20 @@ export function getCurrentLocation(): UserLocation | null {
 async function detectAndCacheLocation(): Promise<void> {
   const cached = loadCachedUserLocation();
   if (cached) return;
+
+  const standalone = isPwaStandalone();
+
+  // Installed PWA: IP-only on launch — auto GPS prompts correlate with iOS WKWebView crash loops
+  // when combined with Serwist; user can still pick a city manually in birth forms.
+  if (standalone) {
+    try {
+      const loc = await ipLocate();
+      cacheUserLocation({ ...loc, source: "ip", cached_at: Date.now() });
+    } catch {
+      // BirthLocationField falls back to timezone city
+    }
+    return;
+  }
 
   if (typeof navigator !== "undefined" && "geolocation" in navigator) {
     try {
