@@ -34,7 +34,7 @@ export function PreparingSplineShell({
   blockInteraction = false,
   sceneZoom = PREPARING_ANALYZING_ZOOM,
 }: PreparingSplineShellProps) {
-  const allowWebGL = useAllowHeavyWebGL();
+  const allowWebGL = useAllowHeavyWebGL("preparing");
 
   return (
     <div

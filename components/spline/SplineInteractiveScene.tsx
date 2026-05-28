@@ -5,7 +5,10 @@ import Spline from "@splinetool/react-spline";
 import type { Application } from "@splinetool/runtime";
 import { clsx } from "clsx";
 
-import { useAllowHeavyWebGL } from "@/lib/client/allow-heavy-webgl";
+import {
+  type HeavyWebGLContext,
+  useAllowHeavyWebGL,
+} from "@/lib/client/allow-heavy-webgl";
 import { bindSplinePointerBridge } from "@/lib/spline/spline-pointer-bridge";
 
 import "@/styles/spline-interactive.css";
@@ -17,6 +20,8 @@ type SplineInteractiveSceneProps = {
   initialZoom?: number;
   /** Route pointer / touch to the WebGL canvas (mobile follow). */
   pointerFollow?: boolean;
+  /** `preparing` keeps WebGL in installed PWA (single scene); default skips marketing WebGL in PWA. */
+  webGLContext?: HeavyWebGLContext;
   onLoad?: (app: Application) => void;
 };
 
@@ -25,9 +30,10 @@ export function SplineInteractiveScene({
   className,
   initialZoom = 1,
   pointerFollow = true,
+  webGLContext = "marketing",
   onLoad,
 }: SplineInteractiveSceneProps) {
-  const allowWebGL = useAllowHeavyWebGL();
+  const allowWebGL = useAllowHeavyWebGL(webGLContext);
   const rootRef = useRef<HTMLDivElement>(null);
   const appRef = useRef<Application | null>(null);
 

@@ -16,7 +16,17 @@ export type LLMCallType =
   | "deep_analysis"
   | "main_delivery"
   | "tracking_flash"
-  /** @deprecated use deep_analysis */
+  /** 命主基础分析 — medium / 8000 */
+  | "base_analysis"
+  /** POJU 对话回合 — low / 2500 */
+  | "poju_reply"
+  /** Syncro 单批 16 cell — low / 6000 */
+  | "syncro_batch"
+  /** Match 合盘报告 — medium / 10000 */
+  | "match_report"
+  /** Glyph 全篇解读 — low / 3000 */
+  | "glyph_reading"
+  /** @deprecated use base_analysis */
   | "poju_base_analysis"
   /** @deprecated use deep_analysis */
   | "poju_situation_analysis"
@@ -57,20 +67,47 @@ const DEFAULT_MODEL = "deepseek/deepseek-v4-pro";
 
 function normalizeCallType(callType: LLMCallType): Exclude<
   LLMCallType,
-  "poju_base_analysis" | "poju_situation_analysis" | "poju_final_delivery"
+  | "poju_base_analysis"
+  | "poju_situation_analysis"
+  | "poju_final_delivery"
+  | "base_analysis"
+  | "poju_reply"
+  | "syncro_batch"
+  | "match_report"
+  | "glyph_reading"
 > {
   switch (callType) {
     case "poju_base_analysis":
+    case "base_analysis":
+      return "deep_analysis";
     case "poju_situation_analysis":
       return "deep_analysis";
     case "poju_final_delivery":
       return "main_delivery";
+    case "poju_reply":
+      return "collection_flash";
+    case "syncro_batch":
+    case "match_report":
+    case "glyph_reading":
+      return "deep_analysis";
     default:
       return callType;
   }
 }
 
 export function getThinkingConfig(callType: LLMCallType): { enabled: boolean; effort: ReasoningEffort } {
+  switch (callType) {
+    case "base_analysis":
+    case "match_report":
+      return { enabled: true, effort: "medium" };
+    case "poju_reply":
+    case "syncro_batch":
+    case "glyph_reading":
+      return { enabled: true, effort: "low" };
+    default:
+      break;
+  }
+
   const t = normalizeCallType(callType);
   switch (t) {
     case "chat_flash":
@@ -79,7 +116,7 @@ export function getThinkingConfig(callType: LLMCallType): { enabled: boolean; ef
     case "collection_flash":
       return { enabled: true, effort: "low" };
     case "deep_analysis":
-      return { enabled: true, effort: "high" };
+      return { enabled: true, effort: "medium" };
     case "main_delivery":
       return { enabled: true, effort: "xhigh" };
     default:
@@ -144,7 +181,14 @@ export async function callLLM(input: CallLLMInput): Promise<CallLLMResult> {
   );
 
   const timeout_ms =
-    input.timeout_ms ?? (normalizedType === "deep_analysis" ? 180_000 : undefined);
+    input.timeout_ms ??
+    (input.call_type === "syncro_batch"
+      ? 90_000
+      : input.call_type === "base_analysis"
+        ? 180_000
+        : normalizedType === "deep_analysis"
+          ? 180_000
+          : undefined);
 
   const out = await openRouterChatCompletion({
     messages: msgs,

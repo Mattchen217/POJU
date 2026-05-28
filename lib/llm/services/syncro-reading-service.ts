@@ -284,13 +284,14 @@ export async function fetchLlmAdviceBatch(input: {
   });
 
   let result = await callLLM({
-    call_type: "deep_analysis",
+    call_type: "syncro_batch",
     system,
     messages: [{ role: "user", content: user }],
     max_tokens: SYNCRO_LLM_MAX_TOKENS_PER_BATCH,
     thinking_effort: "low",
     response_format: "json",
     temperature: 0.55,
+    timeout_ms: 90_000,
   });
 
   let parsed: Record<string, unknown>;
@@ -310,7 +311,7 @@ export async function fetchLlmAdviceBatch(input: {
         : "Your previous reply was truncated or invalid JSON. Return ONLY valid JSON for this batch. Keep detailed_advice and rationale concise (under 120 words each).";
 
     result = await callLLM({
-      call_type: "deep_analysis",
+      call_type: "syncro_batch",
       system,
       messages: [
         { role: "user", content: user },
@@ -323,6 +324,7 @@ export async function fetchLlmAdviceBatch(input: {
       thinking_effort: "low",
       response_format: "json",
       temperature: 0.4,
+      timeout_ms: 90_000,
     });
     try {
       parsed = parseJsonContent(result.content) as Record<string, unknown>;

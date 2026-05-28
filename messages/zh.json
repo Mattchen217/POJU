@@ -1101,7 +1101,17 @@
       "missing_data": "缺少任务、命盘或位置信息，请从 Syncro 重新开始。",
       "profile_not_ready": "命盘分析尚未就绪，请返回准备页等待 base analysis 完成。",
       "compute_failed": "分析失败",
-      "error_timeout": "服务器响应超时或格式异常（手机端常见）。请检查网络后重试；若反复出现，可能是计算耗时过长，请稍后再试。"
+      "error_timeout": "服务器响应超时或格式异常（手机端常见）。请检查网络后重试；若反复出现，可能是计算耗时过长，请稍后再试。",
+      "error": {
+        "network_title": "网络连接失败",
+        "network_message": "无法连接服务器。请检查网络或 VPN 后重试。",
+        "timeout_title": "请求超时",
+        "timeout_message": "服务器响应过慢或格式异常。请保持在本页、网络稳定后点「重试」。",
+        "location_title": "需要位置信息",
+        "location_message": "Syncro 需要你的当前位置。请返回上一步设置位置后再试。",
+        "generic_title": "分析失败",
+        "generic_message": "生成矩阵时出现问题，请稍后再试。"
+      }
     },
     "llm_progress": {
       "in_progress": "AI 文案生成中 {done}/{total}…",

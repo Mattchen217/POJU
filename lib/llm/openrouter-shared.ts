@@ -41,17 +41,17 @@ export function getOpenRouterDefaultModel(): string {
 function resolveReasoningEffort(
   input: OpenRouterChatOptions["reasoning_effort"],
 ): "off" | "low" | "medium" | "high" | "xhigh" {
+  if (input === "off" || input === "low" || input === "medium" || input === "high" || input === "xhigh") {
+    return input;
+  }
+
   const fromEnv = process.env.OPENROUTER_REASONING_EFFORT?.trim().toLowerCase();
   if (fromEnv === "off" || fromEnv === "0" || fromEnv === "false") return "off";
   if (fromEnv === "xhigh") return "xhigh";
   if (fromEnv === "low") return "low";
   if (fromEnv === "medium") return "medium";
-  if (input === "off") return "off";
-  if (input === "low") return "low";
-  if (input === "medium") return "medium";
-  if (input === "xhigh") return "xhigh";
-  if (input === "high") return "high";
-  return "high";
+  if (fromEnv === "high") return "high";
+  return "medium";
 }
 
 export type OpenRouterCompletionResult = {
@@ -117,7 +117,7 @@ export async function openRouterChatCompletion(
       return { res, raw };
     } catch (e: unknown) {
       if (e instanceof Error && e.name === "AbortError") {
-        throw new Error("llm_batch_timeout");
+        throw new Error("llm_timeout");
       }
       throw e;
     } finally {

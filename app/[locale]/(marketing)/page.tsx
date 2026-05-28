@@ -3,9 +3,7 @@ import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { Suspense, type ReactNode } from "react";
 import { Lock, Scale, UserX } from "lucide-react";
-import { ProductCardGlyphSpline } from "@/components/marketing/product-card-glyph-spline";
-import { ProductCardPojuSpline } from "@/components/marketing/product-card-poju-spline";
-import { ProductCardSyncroSpline } from "@/components/marketing/product-card-syncro-spline";
+import { ProductCardSpline } from "@/components/marketing/product-card-spline";
 import { PaymentCancelToast } from "@/components/marketing/payment-cancel-toast";
 import { HeroInstallCta } from "@/components/marketing/hero-install-cta";
 import { ReadyCtaPillLink } from "@/components/marketing/ready-cta-pill-link";
@@ -266,9 +264,7 @@ export default async function LandingPage() {
                       <div className="absolute -inset-10 bg-[radial-gradient(circle_at_70%_70%,rgba(255,255,255,0.16),transparent_55%)]" />
                     </div>
                     <ProductCardEffect kind={card.kind} />
-                    {card.kind === "poju" ? <ProductCardPojuSpline /> : null}
-                    {card.kind === "glyph" ? <ProductCardGlyphSpline /> : null}
-                    {card.kind === "syncro" ? <ProductCardSyncroSpline /> : null}
+                    <ProductCardSpline kind={card.kind} />
                     <div className="relative z-10 flex min-h-0 flex-1 flex-col text-left">
                       <div className="grid shrink-0 grid-cols-[2.5rem_minmax(0,1fr)] items-start gap-x-3 gap-y-1.5 sm:grid-cols-[2.75rem_minmax(0,1fr)]">
                         <div className="row-span-2 self-center">

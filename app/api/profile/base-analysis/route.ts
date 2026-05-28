@@ -47,12 +47,13 @@ export async function POST(req: Request) {
     });
 
     const result = await callLLM({
-      call_type: "deep_analysis",
+      call_type: "base_analysis",
       system,
       messages: [{ role: "user", content: user }],
       max_tokens: BASE_ANALYSIS_MAX_TOKENS,
       thinking_effort: baseAnalysisReasoningEffort(),
       response_format: "json",
+      timeout_ms: 180_000,
     });
 
     console.log("[base-analysis] LLM call end", {

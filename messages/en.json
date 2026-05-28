@@ -1086,7 +1086,17 @@
       "missing_data": "Missing task, profile, or location. Start again from Syncro.",
       "profile_not_ready": "Your chart analysis is not ready. Return to prepare and wait for base analysis.",
       "compute_failed": "Computation failed",
-      "error_timeout": "The server took too long or returned an invalid response. Check your network and try again. If this keeps happening, the API may be timing out — try again in a moment."
+      "error_timeout": "The server took too long or returned an invalid response. Check your network and try again. If this keeps happening, the API may be timing out — try again in a moment.",
+      "error": {
+        "network_title": "Connection problem",
+        "network_message": "Could not reach the server. Check your network or VPN, then try again.",
+        "timeout_title": "Request timed out",
+        "timeout_message": "The server took too long or returned an invalid response. Stay on this page with a stable connection and tap Try again.",
+        "location_title": "Location required",
+        "location_message": "Syncro needs your current position. Go back and set your location, then try again.",
+        "generic_title": "Computation failed",
+        "generic_message": "Something went wrong while building your matrix. Please try again in a moment."
+      }
     },
     "llm_progress": {
       "in_progress": "AI copy generating {done}/{total}…",

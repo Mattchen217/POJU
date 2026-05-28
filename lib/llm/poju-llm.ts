@@ -195,11 +195,12 @@ async function callPOJULLMLegacyPath(input: CallInput): Promise<POJULLMResponse>
 
     if (isOpenRouterConfigured()) {
       const out = await callLLM({
-        call_type: "collection_flash",
+        call_type: "poju_reply",
         system: systemPrompt,
         messages: conversationMessages,
         temperature: 0.55,
-        max_tokens: 4096,
+        max_tokens: 2500,
+        thinking_effort: "low",
         response_format: "json",
       });
       text = out.content;

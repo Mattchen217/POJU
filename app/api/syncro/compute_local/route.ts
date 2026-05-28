@@ -35,7 +35,12 @@ export async function POST(req: Request) {
       local_matrix: result.local_matrix,
       compute_started_at: result.compute_started_at,
       true_solar_meta: result.true_solar_meta,
-      meta: result.meta,
+      meta: {
+        ...result.meta,
+        llm_status: "pending",
+        total_batches: result.meta.llm_batches ?? 6,
+        completed_batches: 0,
+      },
     });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e);

@@ -1,5 +1,5 @@
 /**
- * Glyph v5 — DeepSeek full reading via `callLLM({ call_type: 'deep_analysis' })`.
+ * Glyph v5 — full reading via `callLLM({ call_type: 'glyph_reading' })`.
  */
 
 import { signDataToPromptGlyph } from "@/lib/glyph/sign-to-prompt";
@@ -182,11 +182,11 @@ export async function generateGlyphReading(
   console.log("[glyph-reading] Calling DeepSeek (deep_analysis, thinking: medium)...");
 
   const result = await callLLM({
-    call_type: "deep_analysis",
+    call_type: "glyph_reading",
     system,
     messages: [{ role: "user", content: user }],
-    max_tokens: 8000,
-    thinking_effort: "medium",
+    max_tokens: 3000,
+    thinking_effort: "low",
     response_format: "json",
     temperature: 0.55,
     timeout_ms: 180_000,

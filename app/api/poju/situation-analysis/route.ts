@@ -86,8 +86,10 @@ export async function POST(req: Request) {
       call_type: "deep_analysis",
       system,
       messages: [{ role: "user", content: user }],
-      max_tokens: 15000,
+      max_tokens: 8000,
+      thinking_effort: "medium",
       response_format: "json",
+      timeout_ms: 120_000,
     });
 
     let analysis: unknown;

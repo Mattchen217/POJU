@@ -12,25 +12,10 @@ import { readFetchJson } from "@/lib/client/fetch-json";
 import { parseSyncroStoredLocation } from "@/lib/syncro/syncro-location-storage";
 import { saveSyncroLlmContext } from "@/lib/syncro/syncro-llm-context-storage";
 import type { MatrixCell } from "@/lib/syncro/calculate-matrix";
-
-function formatComputeError(message: string, t: (key: string) => string): string {
-  const lower = message.toLowerCase();
-  if (
-    message.includes("non_json_response") ||
-    message.includes("invalid_json_response") ||
-    message.includes("empty_response") ||
-    message.includes("The string did not match the expected pattern") ||
-    lower.includes("load failed") ||
-    lower.includes("failed to fetch") ||
-    lower.includes("networkerror") ||
-    lower.includes("network error") ||
-    lower.includes("aborted") ||
-    lower.includes("timeout")
-  ) {
-    return t("error_timeout");
-  }
-  return message;
-}
+import {
+  formatSyncroComputeError,
+  type SyncroComputeErrorView,
+} from "@/components/syncro/syncro-compute-errors";
 
 export function SyncroComputingPage() {
   const router = useRouter();
@@ -38,7 +23,7 @@ export function SyncroComputingPage() {
   const t = useTranslations("syncro.computing");
 
   const [step, setStep] = useState(0);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<SyncroComputeErrorView | null>(null);
   const startedRef = useRef(false);
 
   const steps = [
@@ -184,7 +169,7 @@ export function SyncroComputingPage() {
     } catch (e: unknown) {
       const raw = e instanceof Error ? e.message : String(e);
       console.error("[syncro/computing]", e);
-      setError(formatComputeError(raw, t));
+      setError(formatSyncroComputeError(raw, t));
     }
   }
 
@@ -194,8 +179,8 @@ export function SyncroComputingPage() {
         <div className="error-icon text-4xl text-red-300/90" aria-hidden>
           ✕
         </div>
-        <h2 className="mt-6 text-xl font-semibold text-text-primary">{t("error_title")}</h2>
-        <p className="mt-4 max-w-md text-sm leading-7 text-text-secondary">{error}</p>
+        <h2 className="mt-6 text-xl font-semibold text-text-primary">{error.title}</h2>
+        <p className="mt-4 max-w-md text-sm leading-7 text-text-secondary">{error.message}</p>
         <button
           type="button"
           onClick={() => {

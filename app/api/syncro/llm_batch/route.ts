@@ -100,8 +100,12 @@ export async function POST(req: Request) {
     const message = e instanceof Error ? e.message : String(e);
     console.error("[api/syncro/llm_batch] error:", e);
 
-    if (message.includes("llm_batch_timeout") || message.includes("AbortError")) {
-      return NextResponse.json({ error: "llm_batch_timeout", message }, { status: 504 });
+    if (
+      message.includes("llm_timeout") ||
+      message.includes("llm_batch_timeout") ||
+      message.includes("AbortError")
+    ) {
+      return NextResponse.json({ error: "llm_timeout", message }, { status: 504 });
     }
 
     if (message.includes("missing_openrouter")) {

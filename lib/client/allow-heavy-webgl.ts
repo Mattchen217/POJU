@@ -2,21 +2,24 @@
 
 import { useEffect, useState } from "react";
 
-import { isLikelyPwaContext } from "@/lib/client/pwa-standalone";
+/** `marketing` — homepage cards; `preparing` — full-screen analyzing scene. */
+export type HeavyWebGLContext = "marketing" | "preparing";
+
+export function shouldAllowHeavyWebGL(context: HeavyWebGLContext = "marketing"): boolean {
+  if (typeof window === "undefined") return true;
+  // Homepage cards use viewport lazy mount + concurrent slot cap (marketing-spline-slots).
+  return true;
+}
 
 /**
- * iOS installed PWA + multiple Spline WebGL scenes → WKWebView OOM and reload crash loops.
- * Marketing / preparing pages skip WebGL when this is false.
+ * Preparing pages always allow WebGL. Marketing cards gate mount timing / concurrency separately.
  */
-export function useAllowHeavyWebGL(): boolean {
-  const [allow, setAllow] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return !isLikelyPwaContext();
-  });
+export function useAllowHeavyWebGL(context: HeavyWebGLContext = "marketing"): boolean {
+  const [allow, setAllow] = useState(() => shouldAllowHeavyWebGL(context));
 
   useEffect(() => {
-    setAllow(!isLikelyPwaContext());
-  }, []);
+    setAllow(shouldAllowHeavyWebGL(context));
+  }, [context]);
 
   return allow;
 }

@@ -30,6 +30,7 @@ export function PreparingAnalyzingSpline({
       className={className}
       initialZoom={initialZoom}
       pointerFollow
+      webGLContext="preparing"
       onLoad={onLoad}
     />
   );

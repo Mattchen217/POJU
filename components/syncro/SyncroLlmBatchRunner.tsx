@@ -25,6 +25,10 @@ type Props = {
   onProgress: (progress: SyncroLlmProgress) => void;
 };
 
+/**
+ * After `compute_local`, loads 6 LLM batches in parallel (each capped at 90s server-side).
+ * Failed batches keep fallback copy from the initial matrix.
+ */
 export function SyncroLlmBatchRunner({ sessionId, onSessionUpdate, onProgress }: Props) {
   const startedRef = useRef(false);
 
@@ -34,6 +38,68 @@ export function SyncroLlmBatchRunner({ sessionId, onSessionUpdate, onProgress }:
     void runBatches();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per session mount
   }, [sessionId]);
+
+  async function loadBatch(
+    batch_index: number,
+    ctx: NonNullable<ReturnType<typeof loadSyncroLlmContext>>,
+  ): Promise<"ok" | "fail"> {
+    try {
+      const response = await fetch("/api/syncro/llm_batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          session_id: sessionId,
+          batch_index,
+          profile_id: ctx.profile_id,
+          task_description: ctx.task_description,
+          user_location: ctx.user_location,
+          locale: ctx.locale,
+          user_profile: ctx.user_profile,
+          base_analysis: ctx.base_analysis,
+          local_matrix: ctx.local_matrix,
+          compute_started_at: ctx.compute_started_at,
+          true_solar_meta: ctx.true_solar,
+        }),
+      });
+
+      const data = await readFetchJson<{
+        success?: boolean;
+        advice?: Record<
+          string,
+          { short_advice: string; detailed_advice: string; rationale: string }
+        >;
+        model?: string;
+        tokens_used?: number;
+        cost_usd?: number;
+        error?: string;
+        message?: string;
+      }>(response);
+
+      if (!response.ok || !data.success || !data.advice) {
+        console.warn(`[syncro/llm_batch] batch ${batch_index} failed:`, data.error ?? data.message);
+        return "fail";
+      }
+
+      const updated = await patchSyncroSessionMatrix(sessionId, data.advice, {
+        model: data.model,
+        tokens_used: data.tokens_used ?? 0,
+        cost_usd_delta: data.cost_usd ?? 0,
+      });
+      if (updated) {
+        onSessionUpdate(updated);
+        dispatchSyncroMatrixPatch({
+          session_id: sessionId,
+          batch_index,
+          batch_total: SYNCRO_LLM_BATCH_COUNT,
+          updated_keys: Object.keys(data.advice),
+        });
+      }
+      return "ok";
+    } catch (e) {
+      console.warn(`[syncro/llm_batch] batch ${batch_index} error:`, e);
+      return "fail";
+    }
+  }
 
   async function runBatches() {
     const ctx = loadSyncroLlmContext(sessionId);
@@ -47,70 +113,13 @@ export function SyncroLlmBatchRunner({ sessionId, onSessionUpdate, onProgress }:
     let failed = 0;
     onProgress({ completed, total, running: true, failed });
 
-    for (let batch_index = 0; batch_index < total; batch_index++) {
-      try {
-        const response = await fetch("/api/syncro/llm_batch", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            session_id: sessionId,
-            batch_index,
-            profile_id: ctx.profile_id,
-            task_description: ctx.task_description,
-            user_location: ctx.user_location,
-            locale: ctx.locale,
-            user_profile: ctx.user_profile,
-            base_analysis: ctx.base_analysis,
-            local_matrix: ctx.local_matrix,
-            compute_started_at: ctx.compute_started_at,
-            true_solar_meta: ctx.true_solar,
-          }),
-        });
+    const results = await Promise.allSettled(
+      Array.from({ length: total }, (_, batch_index) => loadBatch(batch_index, ctx)),
+    );
 
-        const data = await readFetchJson<{
-          success?: boolean;
-          advice?: Record<
-            string,
-            { short_advice: string; detailed_advice: string; rationale: string }
-          >;
-          model?: string;
-          tokens_used?: number;
-          cost_usd?: number;
-          error?: string;
-          message?: string;
-        }>(response);
-
-        if (!response.ok || !data.success || !data.advice) {
-          failed++;
-          console.warn(`[syncro/llm_batch] batch ${batch_index} failed:`, data.error ?? data.message);
-        } else {
-          const updated = await patchSyncroSessionMatrix(sessionId, data.advice, {
-            model: data.model,
-            tokens_used: data.tokens_used ?? 0,
-            cost_usd_delta: data.cost_usd ?? 0,
-          });
-          if (updated) {
-            onSessionUpdate(updated);
-            dispatchSyncroMatrixPatch({
-              session_id: sessionId,
-              batch_index,
-              batch_total: total,
-              updated_keys: Object.keys(data.advice),
-            });
-          }
-          completed++;
-        }
-      } catch (e) {
-        failed++;
-        console.warn(`[syncro/llm_batch] batch ${batch_index} error:`, e);
-      }
-
-      onProgress({
-        completed,
-        total,
-        running: batch_index + 1 < total,
-        failed,
-      });
+    for (const r of results) {
+      if (r.status === "fulfilled" && r.value === "ok") completed++;
+      else failed++;
     }
 
     onProgress({ completed, total, running: false, failed });

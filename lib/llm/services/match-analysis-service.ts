@@ -83,7 +83,7 @@ function parseJsonContent(raw: string): unknown {
 async function generateBaseAnalysisOnServer(profile: UserProfile): Promise<unknown> {
   const { system, user } = buildBaseAnalysisPrompt(profile);
   const result = await callLLM({
-    call_type: "deep_analysis",
+    call_type: "match_report",
     system,
     messages: [{ role: "user", content: user }],
     max_tokens: 10_000,
@@ -303,7 +303,7 @@ export async function generateMatchAnalysis(
   const startTime = Date.now();
 
   const result = await callLLM({
-    call_type: "deep_analysis",
+    call_type: "match_report",
     system,
     messages: [{ role: "user", content: user }],
     max_tokens: 10_000,

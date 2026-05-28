@@ -24,7 +24,7 @@ export async function callPhaseJsonTransport(
 ): Promise<PhaseTransportResult> {
   const temperature = options?.temperature ?? 0.5;
   const max_tokens = options?.max_tokens ?? 2500;
-  const call_type = options?.call_type ?? "collection_flash";
+  const call_type = options?.call_type ?? "poju_reply";
 
   if (isOpenRouterConfigured()) {
     const result = await callLLM({

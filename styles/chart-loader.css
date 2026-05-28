@@ -49,8 +49,62 @@
 
 .preparing-spline-page__scene--static,
 .spline-interactive-scene--static {
+  position: relative;
+  overflow: hidden;
   background: radial-gradient(ellipse 70% 55% at 50% 42%, rgba(88, 72, 140, 0.35), transparent 70%),
     #050508;
+}
+
+/* CSS-only fallback when WebGL is unavailable (not the PWA preparing path). */
+.preparing-spline-page__scene--static::before,
+.preparing-spline-page__scene--static::after,
+.spline-interactive-scene--static::before,
+.spline-interactive-scene--static::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.preparing-spline-page__scene--static::before,
+.spline-interactive-scene--static::before {
+  width: min(72vw, 320px);
+  height: min(72vw, 320px);
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(140, 120, 220, 0.45) 0%, rgba(88, 72, 140, 0.12) 55%, transparent 72%);
+  animation: preparing-orb-breathe 3.2s ease-in-out infinite;
+}
+
+.preparing-spline-page__scene--static::after,
+.spline-interactive-scene--static::after {
+  width: min(42vw, 180px);
+  height: min(42vw, 180px);
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 48px 12px rgba(180, 160, 255, 0.18);
+  background: radial-gradient(circle, rgba(220, 210, 255, 0.35) 0%, transparent 68%);
+  animation: preparing-orb-spin 14s linear infinite;
+}
+
+@keyframes preparing-orb-breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: translate(-50%, -50%) scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.06);
+  }
+}
+
+@keyframes preparing-orb-spin {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
 }
 
 .preparing-spline-page--block-input {
