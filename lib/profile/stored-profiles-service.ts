@@ -316,6 +316,15 @@ export async function upgradeStoredProfileLocation(
   return userProfile;
 }
 
+/** Whether IndexedDB has a completed 命主基础分析 for this profile. */
+export async function profileHasBaseAnalysis(profileId: string): Promise<boolean> {
+  assertBrowser();
+  const record = await getStoredProfileRecord(profileId);
+  if (record?.has_base_analysis) return true;
+  const data = await getStoredProfile(profileId);
+  return data?.base_analysis?.content !== undefined && data.base_analysis.content !== null;
+}
+
 export async function recordProfileUsage(
   profileId: string,
   product: "poju" | "glyph" | "syncro" | "match",

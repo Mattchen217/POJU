@@ -5,6 +5,11 @@
 
 import { buildSyncroPrompt } from "@/lib/llm/prompts/syncro-deepseek-prompt";
 import { callLLM } from "@/lib/llm/router";
+import {
+  parseAppLocale,
+  resolveSyncroOutputLocale,
+  type AppLocale,
+} from "@/lib/prompts/language-directive";
 import { getStoredProfile, recordProfileUsage } from "@/lib/profile/stored-profiles-service";
 import type { UserProfile } from "@/lib/profile/types";
 import {
@@ -132,6 +137,7 @@ export function computeDistribution(
 export function mergeLocalMatrixWithLlmAdvice(
   localMatrix: Record<string, MatrixCell>,
   llmMatrix: Record<string, unknown>,
+  outputLocale: AppLocale = "en",
 ): SyncroMatrix {
   const result: SyncroMatrix = {};
 
@@ -154,11 +160,11 @@ export function mergeLocalMatrixWithLlmAdvice(
       hour_end_iso: local.hour_end_iso,
       current_level: local.current_level,
       short_advice:
-        asString(advice.short_advice) || generateFallbackShort(local),
+        asString(advice.short_advice) || generateFallbackShort(local, outputLocale),
       detailed_advice:
-        asString(advice.detailed_advice) || generateFallbackDetailed(local),
+        asString(advice.detailed_advice) || generateFallbackDetailed(local, outputLocale),
       rationale:
-        asString(advice.rationale) || generateFallbackRationale(local),
+        asString(advice.rationale) || generateFallbackRationale(local, outputLocale),
       llm_pending: !hasLlmAdvice,
     };
   }
@@ -166,8 +172,11 @@ export function mergeLocalMatrixWithLlmAdvice(
   return result;
 }
 
-export function matrixWithFallbacksOnly(localMatrix: Record<string, MatrixCell>): SyncroMatrix {
-  return mergeLocalMatrixWithLlmAdvice(localMatrix, {});
+export function matrixWithFallbacksOnly(
+  localMatrix: Record<string, MatrixCell>,
+  outputLocale: AppLocale = "en",
+): SyncroMatrix {
+  return mergeLocalMatrixWithLlmAdvice(localMatrix, {}, outputLocale);
 }
 
 function validateMatrix(matrix: SyncroMatrix): void {
@@ -183,26 +192,38 @@ function validateMatrix(matrix: SyncroMatrix): void {
   }
 }
 
-export function generateFallbackShort(cell: MatrixCell): string {
-  const levelMap: Record<CurrentLevel, string> = {
+export function generateFallbackShort(cell: MatrixCell, outputLocale: AppLocale = "en"): string {
+  const en: Record<CurrentLevel, string> = {
     open_current: "Move with confidence — the current is fully with you.",
     following_current: "The current supports you, with some effort.",
     stillwater: "The water is still. Pause and observe.",
     crosscurrent: "Crosscurrent. Reconsider this direction.",
     undertow: "Strong undertow. Hold back, choose another path.",
   };
-  return levelMap[cell.current_level] ?? "Take a measured approach.";
+  const zh: Record<CurrentLevel, string> = {
+    open_current: "顺势而动——此刻能量与你同行。",
+    following_current: "有助力，但仍需你主动配合。",
+    stillwater: "水势静止，先观察再行动。",
+    crosscurrent: "横流扰动，宜暂缓或改向。",
+    undertow: "暗流较强，不宜硬推，另择时机或方位。",
+  };
+  const map = outputLocale === "zh" ? zh : en;
+  return map[cell.current_level] ?? (outputLocale === "zh" ? "谨慎推进。" : "Take a measured approach.");
 }
 
-export function generateFallbackDetailed(cell: MatrixCell): string {
-  return (
-    generateFallbackShort(cell) +
-    " This pattern emerges from the combination of your chart and the current moment."
-  );
+export function generateFallbackDetailed(cell: MatrixCell, outputLocale: AppLocale = "en"): string {
+  const tail =
+    outputLocale === "zh"
+      ? " 这一判断来自你的命盘与当下时空格局的综合作用。"
+      : " This pattern emerges from the combination of your chart and the current moment.";
+  return generateFallbackShort(cell, outputLocale) + tail;
 }
 
-export function generateFallbackRationale(cell: MatrixCell): string {
+export function generateFallbackRationale(cell: MatrixCell, outputLocale: AppLocale = "en"): string {
   const factors = cell._internal.key_factors.join(", ");
+  if (outputLocale === "zh") {
+    return `此组合为 ${cell.current_level.replace(/_/g, " ")} 档，综合命盘、用神与此刻时辰×方位的作用（主要因素：${factors}）。`;
+  }
   return `This ${cell.current_level.replace(/_/g, " ")} level reflects your chart, favorable element, and this timing–direction pairing (key factors: ${factors}).`;
 }
 
@@ -242,6 +263,7 @@ export async function fetchLlmAdviceBatch(input: {
   true_solar?: SyncroMatrixMetadata;
   batch_index: number;
   batch_total: number;
+  output_locale?: AppLocale;
 }): Promise<{
   advice: Record<string, unknown>;
   model: string;
@@ -279,6 +301,14 @@ export async function fetchLlmAdviceBatch(input: {
       `[syncro] JSON parse retry batch ${input.batch_index}/${input.batch_total}:`,
       firstError,
     );
+    const outputLocale =
+      input.output_locale ??
+      resolveSyncroOutputLocale(parseAppLocale(input.locale), input.task_description);
+    const retryHint =
+      outputLocale === "zh"
+        ? "上次回复被截断或不是合法 JSON。请只返回本批合法 JSON。detailed_advice 与 rationale 各控制在约 120 字以内。"
+        : "Your previous reply was truncated or invalid JSON. Return ONLY valid JSON for this batch. Keep detailed_advice and rationale concise (under 120 words each).";
+
     result = await callLLM({
       call_type: "deep_analysis",
       system,
@@ -286,8 +316,7 @@ export async function fetchLlmAdviceBatch(input: {
         { role: "user", content: user },
         {
           role: "user",
-          content:
-            "Your previous reply was truncated or invalid JSON. Return ONLY valid JSON for this batch. Keep detailed_advice and rationale concise (under 120 words each).",
+          content: retryHint,
         },
       ],
       max_tokens: SYNCRO_LLM_MAX_TOKENS_PER_BATCH,
@@ -363,8 +392,13 @@ export async function generateSyncroMatrixLocal(
     userLatitude: input.user_location.latitude,
   });
 
+  const outputLocale = resolveSyncroOutputLocale(
+    parseAppLocale(input.locale),
+    input.task_description.trim(),
+  );
+
   const distribution = computeDistribution(localMatrix);
-  const matrix = matrixWithFallbacksOnly(localMatrix);
+  const matrix = matrixWithFallbacksOnly(localMatrix, outputLocale);
   validateMatrix(matrix);
 
   if (typeof window !== "undefined") {
@@ -414,6 +448,10 @@ export async function runSyncroLlmBatch(input: {
   const batchKeys = batches[input.batch_index]!;
   const subMatrix = pickSubMatrix(input.local_matrix, batchKeys);
   const current_time = new Date(input.compute_started_at);
+  const outputLocale = resolveSyncroOutputLocale(
+    parseAppLocale(input.locale),
+    input.task_description,
+  );
 
   const batch = await fetchLlmAdviceBatch({
     profile: input.profile,
@@ -426,6 +464,7 @@ export async function runSyncroLlmBatch(input: {
     true_solar: input.true_solar,
     batch_index: input.batch_index + 1,
     batch_total: batches.length,
+    output_locale: outputLocale,
   });
 
   return {
@@ -480,7 +519,15 @@ export async function generateSyncroMatrix(
     }
   }
 
-  const matrix = mergeLocalMatrixWithLlmAdvice(localResult.local_matrix, mergedAdvice);
+  const outputLocale = resolveSyncroOutputLocale(
+    parseAppLocale(input.locale),
+    input.task_description.trim(),
+  );
+  const matrix = mergeLocalMatrixWithLlmAdvice(
+    localResult.local_matrix,
+    mergedAdvice,
+    outputLocale,
+  );
   validateMatrix(matrix);
 
   return {

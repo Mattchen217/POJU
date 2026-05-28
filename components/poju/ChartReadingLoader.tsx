@@ -89,7 +89,10 @@ function formatChartLoaderError(error: string, t: (key: string) => string): stri
   if (error === "NETWORK_LOAD_FAILED" || /load failed|failed to fetch/i.test(error)) {
     return t("error_network");
   }
-  if (/llm_batch_timeout|AbortError|timed?\s*out/i.test(error)) {
+  if (
+    error === "BASE_ANALYSIS_CLIENT_TIMEOUT" ||
+    /llm_batch_timeout|AbortError|timed?\s*out/i.test(error)
+  ) {
     return t("error_timeout");
   }
   return error;

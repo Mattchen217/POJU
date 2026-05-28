@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { runSyncroLlmBatch } from "@/lib/llm/services/syncro-reading-service";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
+import { parseAppLocale } from "@/lib/prompts/language-directive";
 import type { MatrixCell } from "@/lib/syncro/calculate-matrix";
 import type { UserProfile } from "@/lib/profile/types";
 
@@ -72,8 +73,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "invalid_location" }, { status: 400 });
     }
 
-    const locale =
-      typeof body.locale === "string" && body.locale.trim() ? body.locale.trim() : "en";
+    const locale = parseAppLocale(body.locale ?? "en");
 
     const result = await runSyncroLlmBatch({
       batch_index: body.batch_index,

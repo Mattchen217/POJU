@@ -10,6 +10,7 @@ import { HOUR_PERIOD_INFO, type UserProfile } from "@/lib/profile/types";
 import {
   getStoredProfile,
   getStoredProfileRecord,
+  profileHasBaseAnalysis,
   saveBaseAnalysis,
 } from "@/lib/profile/stored-profiles-service";
 import { userProfileForApiRequest } from "@/lib/profile/user-profile-api";
@@ -19,6 +20,9 @@ export type BaseAnalysisStreamCallbacks = {
   onReasoning?: (fullReasoning: string) => void;
   onContent?: (fullContent: string) => void;
 };
+
+/** Slightly under Vercel `maxDuration` (300s) so the client aborts before the edge kills the socket. */
+export const BASE_ANALYSIS_CLIENT_TIMEOUT_MS = 280_000;
 
 const BASE_ANALYSIS_SYSTEM = `# 角色
 
@@ -186,17 +190,37 @@ function wrapFetchNetworkError(e: unknown): Error {
   return e instanceof Error ? e : new Error(String(e));
 }
 
-async function postBaseAnalysis(path: string, body: unknown): Promise<Response> {
+async function postBaseAnalysis(
+  path: string,
+  body: unknown,
+  signal?: AbortSignal,
+): Promise<Response> {
   try {
     return await fetch(path, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
       credentials: "same-origin",
+      signal,
     });
   } catch (e) {
+    if (e instanceof Error && e.name === "AbortError") {
+      throw new Error("BASE_ANALYSIS_CLIENT_TIMEOUT");
+    }
     throw wrapFetchNetworkError(e);
   }
+}
+
+async function readCachedBaseAnalysis(profileId: string): Promise<unknown | null> {
+  const data = await getStoredProfile(profileId);
+  if (data?.base_analysis?.content !== undefined && data.base_analysis.content !== null) {
+    return data.base_analysis.content;
+  }
+  if (await profileHasBaseAnalysis(profileId)) {
+    const again = await getStoredProfile(profileId);
+    if (again?.base_analysis?.content != null) return again.base_analysis.content;
+  }
+  return null;
 }
 
 async function generateBaseAnalysisViaStream(
@@ -208,6 +232,7 @@ async function generateBaseAnalysisViaStream(
   const res = await postBaseAnalysis(
     "/api/profile/base-analysis/stream",
     baseAnalysisApiBody(profileId, userProfile, displayName),
+    undefined,
   );
 
   type DonePayload = { analysis?: unknown; model?: string; tokens_used?: number };
@@ -260,10 +285,19 @@ async function generateBaseAnalysisViaJson(
   const llmStart = Date.now();
   console.log("[base-analysis] LLM call start (client → /api/profile/base-analysis)");
 
-  const res = await postBaseAnalysis(
-    "/api/profile/base-analysis",
-    baseAnalysisApiBody(profileId, userProfile, displayName),
-  );
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), BASE_ANALYSIS_CLIENT_TIMEOUT_MS);
+
+  let res: Response;
+  try {
+    res = await postBaseAnalysis(
+      "/api/profile/base-analysis",
+      baseAnalysisApiBody(profileId, userProfile, displayName),
+      controller.signal,
+    );
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
 
   const payload = (await res.json().catch(() => ({}))) as {
     ok?: boolean;
@@ -319,8 +353,22 @@ export async function generateBaseAnalysis(
     try {
       result = await generateBaseAnalysisViaJson(profileId, data.user_profile, displayName);
     } catch (jsonErr) {
+      const cached = await readCachedBaseAnalysis(profileId);
+      if (cached != null) {
+        return cached;
+      }
+      const msg = jsonErr instanceof Error ? jsonErr.message : String(jsonErr);
+      if (msg === "BASE_ANALYSIS_CLIENT_TIMEOUT" || msg === "NETWORK_LOAD_FAILED") {
+        throw jsonErr instanceof Error ? jsonErr : new Error(msg);
+      }
       console.warn("[base-analysis] JSON failed, trying stream:", jsonErr);
-      result = await generateBaseAnalysisViaStream(profileId, data.user_profile, displayName);
+      try {
+        result = await generateBaseAnalysisViaStream(profileId, data.user_profile, displayName);
+      } catch (streamErr) {
+        const cachedAfter = await readCachedBaseAnalysis(profileId);
+        if (cachedAfter != null) return cachedAfter;
+        throw streamErr;
+      }
     }
   }
 

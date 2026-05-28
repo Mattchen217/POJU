@@ -141,6 +141,67 @@ function detectLanguage(text: string): AppLocale | null {
   return "en";
 }
 
+/** Detect primary locale from free text (defaults to English when ambiguous). */
+export function detectAppLocaleFromText(text: string): AppLocale {
+  const trimmed = text.trim();
+  if (trimmed.length < 2) return "en";
+  return detectLanguage(trimmed) ?? "en";
+}
+
+/**
+ * Syncro: matrix copy follows the **task question** language (Priority 2),
+ * not the website UI locale when they differ.
+ */
+export function resolveSyncroOutputLocale(
+  locale: AppLocale,
+  taskDescription: string,
+): AppLocale {
+  const task = taskDescription.trim();
+  if (!task) return locale;
+
+  for (const pattern of switchPatterns) {
+    const match = task.match(pattern);
+    if (match?.[1]) {
+      const mapped = mapToLocale(match[1]);
+      if (mapped) return mapped;
+    }
+  }
+
+  if (task.length >= 3) {
+    const fromTask = detectLanguage(task);
+    if (fromTask) return fromTask;
+  }
+
+  return locale;
+}
+
+export function getSyncroLanguageDirective(
+  locale: AppLocale,
+  taskDescription: string,
+): LanguageDirectiveOutput {
+  const outputLocale = resolveSyncroOutputLocale(locale, taskDescription);
+  const language = localeNames[outputLocale];
+  const taskPreview = taskDescription.trim().replace(/"/g, '\\"').slice(0, 400);
+
+  return {
+    outputLanguage: language,
+    directive: `
+# SYNCRO OUTPUT LANGUAGE (task-driven)
+
+The user described what they plan to do in the next ~24 hours:
+"${taskPreview}"
+
+Write **every** user-visible string in this response in **${language}**:
+- short_advice, detailed_advice, rationale for each matrix key
+
+Match the **language of the task description** (e.g. English task → English advice; Chinese task → Chinese advice).
+The website UI locale is ${localeNames[locale]} — use that only if the task has no clear language signal.
+
+You may read 命主基础分析 JSON in whatever language it was stored; express insights for the user in **${language}**.
+${buildDirective(language, "priority_1")}`,
+  };
+}
+
 function buildDirective(
   language: string,
   priorityType: "priority_1" | "priority_1_with_input_note" | "priority_3",

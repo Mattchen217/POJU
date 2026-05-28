@@ -6,11 +6,15 @@
 import { buildSyncroCorePromptSections } from "@/lib/llm/prompts/syncro-base";
 import {
   buildCurrentDateContext,
-  buildLanguageGuidance,
+  buildNorthAmericaAdaptation,
   buildProfileContextSection,
-  detectLanguage,
   stitchPromptSections,
 } from "@/lib/llm/prompts/oriental-counselor-base";
+import {
+  getSyncroLanguageDirective,
+  parseAppLocale,
+  resolveSyncroOutputLocale,
+} from "@/lib/prompts/language-directive";
 import type { MatrixCell, SyncroMatrixMetadata } from "@/lib/syncro/calculate-matrix";
 import type { UserProfile } from "@/lib/profile/types";
 
@@ -59,7 +63,10 @@ export function buildSyncroPrompt(input: BuildSyncroPromptInput): {
     matrix,
   } = input;
   const current_time = input.current_time ?? new Date();
-  const outputLanguage = detectLanguage(task_description, locale);
+  const appLocale = parseAppLocale(locale);
+  const outputLocale = resolveSyncroOutputLocale(appLocale, task_description);
+  const langDirective = getSyncroLanguageDirective(appLocale, task_description);
+  const outputLanguage = langDirective.outputLanguage;
   const escapedTask = task_description.replace(/"/g, '\\"');
   const cellCount = Object.keys(matrix).length;
   const slimMatrix = slimMatrixForLlm(matrix);
@@ -153,13 +160,18 @@ ${JSON.stringify(slimMatrix, null, 2)}
   const system = stitchPromptSections(
     ...buildSyncroCorePromptSections(),
     buildCurrentDateContext(current_time, locale),
-    buildLanguageGuidance(locale, task_description),
+    langDirective.directive,
+    buildNorthAmericaAdaptation(outputLocale),
     buildProfileContextSection(profile, base_analysis),
     taskBlock,
   );
 
-  const user = `请为已计算好的矩阵生成 short_advice / detailed_advice / rationale 文案（本批 ${cellCount} 个 key）。
-不要修改 current_level。${outputLanguage}。严格 JSON，matrix 内每个 key 缺一不可。`;
+  const user =
+    outputLocale === "zh"
+      ? `请为已计算好的矩阵生成 short_advice / detailed_advice / rationale 文案（本批 ${cellCount} 个 key）。
+不要修改 current_level。全部使用${outputLanguage}。严格 JSON，matrix 内每个 key 缺一不可。`
+      : `Generate short_advice, detailed_advice, and rationale for the precomputed matrix (${cellCount} keys in this batch).
+Do not change current_level. Write entirely in ${outputLanguage}. Strict JSON only; every key in matrix is required.`;
 
   return { system, user };
 }

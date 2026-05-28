@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
@@ -9,11 +9,17 @@ import { PreparingStatusOverlay } from "@/components/poju/PreparingStatusOverlay
 import { useRouter } from "@/i18n/navigation";
 import type { StoredProfileData } from "@/lib/db/poju-db";
 import { generateBaseAnalysis } from "@/lib/llm/deepseek/base-analysis";
-import { getStoredProfile, getStoredProfileRecord } from "@/lib/profile/stored-profiles-service";
+import {
+  getStoredProfile,
+  profileHasBaseAnalysis,
+} from "@/lib/profile/stored-profiles-service";
+import { replaceSyncroPreparingWithLocation } from "@/lib/syncro/syncro-preparing-nav";
 
 /** 与 POJU preparing 一致：首次分析至少展示 Spline 时长 */
 const PREPARING_MIN_SPLINE_MS = 5000;
 const PREPARING_MIN_SPLINE_CACHE_MS = 10_000;
+/** 若 LLM 已完成但导航失败，轮询 IndexedDB 恢复前进 */
+const ANALYSIS_POLL_MS = 8000;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -25,8 +31,7 @@ async function waitRemainingMinSpline(startedAt: number, minMs: number): Promise
 }
 
 /**
- * 选中命主后：本地已有排盘（createStoredProfile 时 calculateProfile），
- * 若无缓存的命主基础分析则调用 /api/profile/base-analysis（DeepSeek）并写入 IndexedDB。
+ * 选中命主后：若无缓存的命主基础分析则调用 /api/profile/base-analysis 并写入 IndexedDB。
  */
 export function SyncroPreparingPage() {
   const router = useRouter();
@@ -41,23 +46,21 @@ export function SyncroPreparingPage() {
   const [currentStep, setCurrentStep] = useState("loading");
   const [error, setError] = useState<string | null>(null);
   const hasStartedRef = useRef(false);
+  const navigatedRef = useRef(false);
 
-  useEffect(() => {
-    if (!profileId) {
-      router.replace("/syncro/prepare");
-      return;
-    }
-    if (hasStartedRef.current) return;
-    hasStartedRef.current = true;
-    void startPreparation();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once per mount
-  }, [profileId]);
+  const goToLocation = useCallback(() => {
+    if (navigatedRef.current) return;
+    navigatedRef.current = true;
+    setCurrentStep("done");
+    replaceSyncroPreparingWithLocation(router);
+  }, [router]);
 
-  async function startPreparation() {
+  const startPreparation = useCallback(async () => {
     const splineStartedAt = Date.now();
     try {
       setCurrentStep("loading");
       setError(null);
+      navigatedRef.current = false;
 
       const profileData = await getStoredProfile(profileId);
       if (!profileData) {
@@ -66,15 +69,12 @@ export function SyncroPreparingPage() {
       }
       setProfile(profileData);
 
-      const record = await getStoredProfileRecord(profileId);
-      const hasCache =
-        Boolean(record?.has_base_analysis) ||
-        (profileData.base_analysis?.content !== undefined && profileData.base_analysis?.content !== null);
+      const hasCache = await profileHasBaseAnalysis(profileId);
 
       if (hasCache) {
         setCurrentStep("using_cache");
         await waitRemainingMinSpline(splineStartedAt, PREPARING_MIN_SPLINE_CACHE_MS);
-        router.replace("/syncro/location");
+        goToLocation();
         return;
       }
 
@@ -84,17 +84,46 @@ export function SyncroPreparingPage() {
         waitRemainingMinSpline(splineStartedAt, PREPARING_MIN_SPLINE_MS),
       ]);
 
-      setCurrentStep("done");
-      router.replace("/syncro/location");
+      goToLocation();
     } catch (e) {
       console.error("[syncro/preparing]", e);
+      if (await profileHasBaseAnalysis(profileId)) {
+        goToLocation();
+        return;
+      }
       setError(e instanceof Error ? e.message : String(e));
       setCurrentStep("error");
     }
-  }
+  }, [profileId, router, goToLocation]);
+
+  useEffect(() => {
+    if (!profileId) {
+      router.replace("/syncro/prepare");
+      return;
+    }
+    if (hasStartedRef.current) return;
+    hasStartedRef.current = true;
+    void startPreparation();
+  }, [profileId, router, startPreparation]);
+
+  useEffect(() => {
+    if (currentStep !== "analyzing" || !profileId) return;
+
+    const interval = window.setInterval(() => {
+      void (async () => {
+        if (navigatedRef.current) return;
+        if (await profileHasBaseAnalysis(profileId)) {
+          goToLocation();
+        }
+      })();
+    }, ANALYSIS_POLL_MS);
+
+    return () => window.clearInterval(interval);
+  }, [currentStep, profileId, goToLocation]);
 
   function handleRetry() {
     setError(null);
+    navigatedRef.current = false;
     hasStartedRef.current = false;
     void startPreparation();
   }
