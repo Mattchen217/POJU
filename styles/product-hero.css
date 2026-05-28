@@ -39,25 +39,38 @@
   /* 上传 Match 动效后在此层挂载 canvas / video / Spline */
 }
 
-/* Glyph — 圆形粒子场铺满 Hero 背景，不用固定高度方框裁切 */
+/* Glyph — 圆形粒子场：缩小 zoom + 全屏层，避免方框裁切 */
+.pwa-mode .product-page--glyph .product-hero {
+  overflow: visible;
+}
+
 .product-page--glyph .product-hero__bg {
+  overflow: visible;
+}
+
+.product-page--glyph .product-hero__shell {
   overflow: visible;
 }
 
 .glyph-hero-spline {
   position: absolute;
   left: 50%;
-  top: 46%;
-  width: min(118vmin, 720px);
-  height: min(118vmin, 720px);
+  top: 40%;
+  width: min(100vw, 100vh);
+  height: min(100vw, 100vh);
+  max-width: 640px;
+  max-height: 640px;
   transform: translate(-50%, -50%);
-  opacity: 0.82;
-  pointer-events: none;
+  opacity: 0.88;
+  pointer-events: auto;
 }
 
-.glyph-hero-spline canvas {
-  width: 100% !important;
-  height: 100% !important;
+.pwa-mode .glyph-hero-spline {
+  top: 38%;
+  width: min(92vmin, 92vw);
+  height: min(92vmin, 92vw);
+  max-width: 520px;
+  max-height: 520px;
 }
 
 .product-hero__stage {

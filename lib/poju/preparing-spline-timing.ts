@@ -1,3 +1,6 @@
+/** Wider camera so the circular analyzing particles fit on mobile without square clipping. */
+export const PREPARING_ANALYZING_ZOOM = 0.52;
+
 /** Minimum Spline analyzing scene duration (fresh LLM base analysis). */
 export const PREPARING_MIN_SPLINE_MS = 5000;
 

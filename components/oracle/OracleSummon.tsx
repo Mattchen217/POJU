@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Spline from "@splinetool/react-spline";
 import type { UserInput } from "@/types/oracle";
 
+import { SplineInteractiveScene } from "@/components/spline/SplineInteractiveScene";
+import { forwardPointerToSplineCanvas } from "@/lib/spline/spline-pointer-bridge";
+
 import "@/styles/oracle-summon.css";
+import "@/styles/spline-interactive.css";
 
 interface OracleSummonProps {
   userInput: UserInput;
@@ -13,16 +16,24 @@ interface OracleSummonProps {
 
 const HOLD_MS = 3000;
 const BURST_MS = 1000;
+const ORACLE_SUMMON_ZOOM = 0.48;
 
 export function OracleSummon({ userInput: _userInput, onComplete }: OracleSummonProps) {
   const [isPressing, setIsPressing] = useState(false);
   const [holdProgress, setHoldProgress] = useState(0);
   const [phase, setPhase] = useState<"idle" | "burst">("idle");
 
+  const sceneRef = useRef<HTMLDivElement>(null);
   const holdStartRef = useRef<number | null>(null);
   const holdTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const holdTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const burstTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const forwardTouch = (clientX: number, clientY: number) => {
+    const canvas = sceneRef.current?.querySelector("canvas");
+    if (!canvas) return;
+    forwardPointerToSplineCanvas(canvas, clientX, clientY, "pointermove");
+  };
 
   const isWithinCenterZone = (clientX: number, clientY: number): boolean => {
     if (typeof window === "undefined") return false;
@@ -57,8 +68,9 @@ export function OracleSummon({ userInput: _userInput, onComplete }: OracleSummon
     }, BURST_MS);
   };
 
-  const handlePressStart = () => {
+  const handlePressStart = (clientX: number, clientY: number) => {
     if (phase !== "idle") return;
+    forwardTouch(clientX, clientY);
     clearHoldTimers();
     holdStartRef.current = Date.now();
     setIsPressing(true);
@@ -97,31 +109,41 @@ export function OracleSummon({ userInput: _userInput, onComplete }: OracleSummon
     <div className="oracle-summon-page">
       <div className="oracle-summon-shield" aria-hidden />
 
-      <div className="oracle-summon-scene" aria-hidden>
-        <div
-          className={`oracle-summon-scene-inner ${
-            phase === "burst" ? "oracle-summon-scene-inner--burst" : ""
-          }`}
-        >
-          <Spline scene="/spline/oracle-explosion.splinecode" className="h-full w-full" />
-        </div>
+      <div
+        ref={sceneRef}
+        className={`oracle-summon-scene ${phase === "burst" ? "oracle-summon-scene--burst" : ""}`}
+        aria-hidden
+      >
+        <SplineInteractiveScene
+          scene="/spline/oracle-explosion.splinecode"
+          initialZoom={ORACLE_SUMMON_ZOOM}
+          pointerFollow
+        />
       </div>
 
       <div
         className={`oracle-summon-press-zone ${isPressing && phase === "idle" ? "oracle-summon-press-zone--pressing" : ""}`}
         onMouseDown={(e) => {
           e.preventDefault();
+          forwardTouch(e.clientX, e.clientY);
           if (!isWithinCenterZone(e.clientX, e.clientY)) return;
-          handlePressStart();
+          handlePressStart(e.clientX, e.clientY);
         }}
+        onMouseMove={(e) => forwardTouch(e.clientX, e.clientY)}
         onMouseUp={handlePressEnd}
         onMouseLeave={handlePressEnd}
         onTouchStart={(e) => {
           const touch = e.touches[0];
           if (!touch) return;
+          forwardTouch(touch.clientX, touch.clientY);
           if (!isWithinCenterZone(touch.clientX, touch.clientY)) return;
           e.preventDefault();
-          handlePressStart();
+          handlePressStart(touch.clientX, touch.clientY);
+        }}
+        onTouchMove={(e) => {
+          const touch = e.touches[0];
+          if (!touch) return;
+          forwardTouch(touch.clientX, touch.clientY);
         }}
         onTouchEnd={handlePressEnd}
         onTouchCancel={handlePressEnd}

@@ -4,7 +4,10 @@ import dynamic from "next/dynamic";
 import type { ReactNode } from "react";
 import { clsx } from "clsx";
 
+import { PREPARING_ANALYZING_ZOOM } from "@/lib/poju/preparing-spline-timing";
+
 import "@/styles/chart-loader.css";
+import "@/styles/spline-interactive.css";
 
 const PreparingAnalyzingSpline = dynamic(
   () =>
@@ -28,7 +31,7 @@ type PreparingSplineShellProps = {
 export function PreparingSplineShell({
   children,
   blockInteraction = false,
-  sceneZoom = 1,
+  sceneZoom = PREPARING_ANALYZING_ZOOM,
 }: PreparingSplineShellProps) {
   return (
     <div
@@ -41,10 +44,7 @@ export function PreparingSplineShell({
         <div className="preparing-spline-page__shield" aria-hidden tabIndex={-1} />
       ) : null}
       <div className="preparing-spline-page__scene-wrap" aria-hidden>
-        <PreparingAnalyzingSpline
-          className="preparing-spline-page__scene"
-          initialZoom={sceneZoom}
-        />
+        <PreparingAnalyzingSpline className="preparing-spline-page__scene" initialZoom={sceneZoom} />
       </div>
       {children}
     </div>

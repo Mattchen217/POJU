@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 
 import { HeroSpline } from "@/components/marketing/hero-spline";
+
+import "@/styles/spline-interactive.css";
 import {
   ProductHeroActions,
   ProductHeroAccent,
@@ -34,8 +36,9 @@ export function OracleProductHero({
       background={
         <HeroSpline
           scene="/animations/BAOZHAscene.splinecode"
-          initialZoom={0.92}
+          initialZoom={0.44}
           className="glyph-hero-spline"
+          pointerFollow
         />
       }
     >

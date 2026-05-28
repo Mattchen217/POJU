@@ -27,8 +27,9 @@
 }
 
 .preparing-spline-page__scene-wrap {
-  position: absolute;
+  position: fixed;
   inset: 0;
+  z-index: 0;
   overflow: visible;
   pointer-events: none;
 }
@@ -39,19 +40,11 @@
 }
 
 .preparing-spline-page__scene-wrap .preparing-spline-page__scene,
-.preparing-spline-page__scene-wrap .preparing-analyzing-spline {
+.preparing-spline-page__scene-wrap .spline-interactive-scene {
   position: absolute;
-  left: 50%;
-  top: 42%;
-  width: min(120vmin, 760px);
-  height: min(120vmin, 760px);
-  transform: translate(-50%, -50%);
-  opacity: 0;
-  transition: opacity 0.45s ease;
-}
-
-.preparing-analyzing-spline--ready {
-  opacity: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .preparing-spline-page--block-input {
@@ -67,10 +60,6 @@
   touch-action: none;
 }
 
-.preparing-spline-page__scene-wrap canvas {
-  width: 100% !important;
-  height: 100% !important;
-}
 
 .preparing-spline-page__overlay {
   position: fixed;

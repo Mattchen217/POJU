@@ -1,0 +1,13 @@
+.spline-interactive-scene {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  touch-action: none;
+}
+
+.spline-interactive-scene canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
