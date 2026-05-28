@@ -112,6 +112,8 @@ export interface StoredProfileBaseAnalysis {
   generated_at: string;
   model: string;
   content: unknown;
+  /** Full model output (for viewer when JSON is large or parse used fallback). */
+  raw_text?: string;
   tokens_used: number;
   /** True when chart used user-provided birth coordinates. */
   used_true_solar_time?: boolean;

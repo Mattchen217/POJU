@@ -104,7 +104,8 @@ const BASE_ANALYSIS_SYSTEM = `# 角色
 # 写作要求
 
 - 全部中文输出
-- 总字数约 5000-8000 字（在 JSON 字符串内完成）
+- 内容尽量完整、具体；若篇幅与 JSON 合法性冲突，**优先保证合法 JSON 且不要被截断**
+- 单字段可适当精炼，但核心维度必须齐全
 - 严格合法 JSON：双引号、逗号、无尾逗号、字符串内换行需 \\n
 - 不要输出 markdown，只输出 JSON 对象`;
 
@@ -158,9 +159,36 @@ export function buildBaseAnalysisPrompt(profile: UserProfile): { system: string;
   return { system: stitchPromptSections(BASE_ANALYSIS_SYSTEM), user };
 }
 
+function stripJsonFences(raw: string): string {
+  return raw
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/```\s*$/g, "")
+    .trim();
+}
+
+function extractJsonObjectSubstring(raw: string): string | null {
+  const start = raw.indexOf("{");
+  const end = raw.lastIndexOf("}");
+  if (start < 0 || end <= start) return null;
+  return raw.slice(start, end + 1);
+}
+
 export function parseBaseAnalysisResponseText(raw: string): unknown {
-  const cleaned = raw.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
-  return JSON.parse(cleaned) as unknown;
+  const candidates = [raw, stripJsonFences(raw), extractJsonObjectSubstring(raw) ?? ""].filter(
+    (s) => s.length > 0,
+  );
+  const unique = [...new Set(candidates)];
+
+  let lastError: unknown;
+  for (const candidate of unique) {
+    try {
+      return JSON.parse(candidate) as unknown;
+    } catch (e) {
+      lastError = e;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("Model output is not valid JSON");
 }
 
 function assertBrowser(): void {
@@ -279,6 +307,7 @@ async function generateBaseAnalysisViaJson(
   displayName: string | null,
 ): Promise<{
   analysis: unknown;
+  raw_text?: string;
   model: string;
   tokens_used: number;
 }> {
@@ -302,6 +331,7 @@ async function generateBaseAnalysisViaJson(
   const payload = (await res.json().catch(() => ({}))) as {
     ok?: boolean;
     analysis?: unknown;
+    raw_text?: string;
     model?: string;
     tokens_used?: number;
     error?: string;
@@ -319,6 +349,7 @@ async function generateBaseAnalysisViaJson(
 
   return {
     analysis: payload.analysis,
+    raw_text: typeof payload.raw_text === "string" ? payload.raw_text : undefined,
     model: typeof payload.model === "string" ? payload.model : "unknown",
     tokens_used: typeof payload.tokens_used === "number" ? payload.tokens_used : 0,
   };
@@ -340,7 +371,7 @@ export async function generateBaseAnalysis(
 
   const wantsStream = Boolean(callbacks?.onReasoning || callbacks?.onContent);
 
-  let result: { analysis: unknown; model: string; tokens_used: number };
+  let result: { analysis: unknown; raw_text?: string; model: string; tokens_used: number };
   if (wantsStream) {
     try {
       result = await generateBaseAnalysisViaStream(profileId, data.user_profile, displayName, callbacks);
@@ -375,9 +406,13 @@ export async function generateBaseAnalysis(
   await saveBaseAnalysis(profileId, result.analysis, {
     model: result.model,
     tokens_used: result.tokens_used,
+    raw_text: result.raw_text,
     used_true_solar_time: data.user_profile.used_true_solar_time,
     tst_meta: data.user_profile.tst_meta ?? data.user_profile.birth.tst_meta,
   });
+
+  const { clearPendingBaseAnalysisProfile } = await import("@/lib/profile/pending-base-analysis");
+  clearPendingBaseAnalysisProfile();
 
   return result.analysis;
 }

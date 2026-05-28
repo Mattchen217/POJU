@@ -53,7 +53,7 @@ export async function POST(req: Request) {
       max_tokens: BASE_ANALYSIS_MAX_TOKENS,
       thinking_effort: baseAnalysisReasoningEffort(),
       response_format: "json",
-      timeout_ms: 180_000,
+      timeout_ms: 240_000,
     });
 
     console.log("[base-analysis] LLM call end", {
@@ -63,17 +63,38 @@ export async function POST(req: Request) {
     });
 
     let analysis: unknown;
+    let contentForParse = result.content;
     try {
-      analysis = parseBaseAnalysisResponseText(result.content);
-    } catch {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "Model output is not valid JSON",
-          preview: result.content.slice(0, 400),
-        },
-        { status: 422 },
-      );
+      analysis = parseBaseAnalysisResponseText(contentForParse);
+    } catch (firstParseErr) {
+      console.warn("[base-analysis] JSON parse failed, retrying once:", firstParseErr);
+      const repair = await callLLM({
+        call_type: "base_analysis",
+        system,
+        messages: [
+          { role: "user", content: user },
+          { role: "assistant", content: result.content },
+          {
+            role: "user",
+            content:
+              "Your previous reply was not valid JSON. Return ONLY one valid JSON object matching the schema. No markdown fences, no commentary.",
+          },
+        ],
+        max_tokens: BASE_ANALYSIS_MAX_TOKENS,
+        thinking_effort: "low",
+        response_format: "json",
+        timeout_ms: 120_000,
+      });
+      contentForParse = repair.content;
+      try {
+        analysis = parseBaseAnalysisResponseText(contentForParse);
+      } catch {
+        console.warn("[base-analysis] Saving raw model text after JSON parse failure");
+        analysis = {
+          _meta: { version: "v1.0", storage: "raw_fallback", parse_ok: false },
+          展示文本: contentForParse.trim(),
+        };
+      }
     }
 
     let auditId: string | null = null;
@@ -98,6 +119,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       ok: true,
       analysis,
+      raw_text: contentForParse,
       model: result.actual_model,
       tokens_used: result.meta.tokens_used,
       latency_ms: result.meta.latency_ms,

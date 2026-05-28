@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { BirthInfoPicker } from "@/components/poju/BirthInfoPicker";
 import { BirthInfoConfirmDialog } from "@/components/poju/BirthInfoConfirmDialog";
+import { BaseAnalysisViewModal } from "@/components/profile/BaseAnalysisViewModal";
 import { ProfileAccuracyBadge } from "@/components/profile/ProfileAccuracyBadge";
 import { ProfileUpgradeModal } from "@/components/profile/ProfileUpgradeModal";
 import {
@@ -12,6 +13,7 @@ import {
   type MatchPrepPerson,
   type SessionPrepProduct,
 } from "@/lib/poju/session-prep-copy";
+import { markPendingBaseAnalysisProfile } from "@/lib/profile/pending-base-analysis";
 import { createStoredProfile, listStoredProfilesForSessionPrep, type StoredProfileSummary } from "@/lib/profile/stored-profiles-service";
 import type { BirthInfo } from "@/lib/profile/types";
 
@@ -54,6 +56,7 @@ export function SessionPreparation({
   const [showConfirm, setShowConfirm] = useState(false);
   const [creating, setCreating] = useState(false);
   const [upgradeTarget, setUpgradeTarget] = useState<StoredProfileSummary | null>(null);
+  const [viewAnalysisProfile, setViewAnalysisProfile] = useState<StoredProfileSummary | null>(null);
   const hadProfilesRef = useRef(existingProfiles.length > 0);
 
   useEffect(() => {
@@ -99,6 +102,7 @@ export function SessionPreparation({
       setCreating(true);
       try {
         const result = await createStoredProfile({ birth_info: pendingBirthInfo });
+        markPendingBaseAnalysisProfile(result.profile_id);
         setShowConfirm(false);
         onProfileSelected(result.profile_id);
       } catch (err) {
@@ -132,6 +136,7 @@ export function SessionPreparation({
             onSelect={handleSelectExisting}
             onAddNew={() => setMode("new")}
             onUpgrade={(p) => setUpgradeTarget(p)}
+            onViewAnalysis={(p) => setViewAnalysisProfile(p)}
           />
         ) : null}
 
@@ -175,6 +180,14 @@ export function SessionPreparation({
           profile={upgradeTarget}
           onClose={() => setUpgradeTarget(null)}
           onUpgraded={() => void refreshProfiles()}
+        />
+      ) : null}
+
+      {viewAnalysisProfile ? (
+        <BaseAnalysisViewModal
+          profileId={viewAnalysisProfile.profile_id}
+          displayName={viewAnalysisProfile.display_name}
+          onClose={() => setViewAnalysisProfile(null)}
         />
       ) : null}
     </div>
@@ -229,11 +242,13 @@ function ProfileListView({
   onSelect,
   onAddNew,
   onUpgrade,
+  onViewAnalysis,
 }: {
   profiles: StoredProfileSummary[];
   onSelect: (id: string, summary: StoredProfileSummary) => void;
   onAddNew: () => void;
   onUpgrade: (summary: StoredProfileSummary) => void;
+  onViewAnalysis: (summary: StoredProfileSummary) => void;
 }) {
   const t = useTranslations("session_prep");
 
@@ -261,6 +276,18 @@ function ProfileListView({
                 {p.used_in_products.syncro > 0 ? <span>Syncro {p.used_in_products.syncro}×</span> : null}
               </div>
             </button>
+            {p.has_base_analysis ? (
+              <button
+                type="button"
+                className="mt-2 w-full text-left text-xs font-medium text-cyan-200/90 underline underline-offset-2 hover:text-cyan-100"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onViewAnalysis(p);
+                }}
+              >
+                {t("view_analysis")}
+              </button>
+            ) : null}
           </div>
         ))}
         <button type="button" className="add-new-card-button" onClick={onAddNew}>

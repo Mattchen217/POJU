@@ -6,9 +6,10 @@ import { useLocale, useTranslations } from "next-intl";
 
 import { SessionPreparation } from "@/components/poju/SessionPreparation";
 import { useRouter } from "@/i18n/navigation";
+import { markPendingBaseAnalysisProfile } from "@/lib/profile/pending-base-analysis";
 import {
-  getStoredProfileRecord,
   listStoredProfilesForSessionPrep,
+  profileHasBaseAnalysis,
   type StoredProfileSummary,
 } from "@/lib/profile/stored-profiles-service";
 
@@ -53,10 +54,10 @@ export function SyncroPreparePage() {
     sessionStorage.setItem("syncro_profile_id", profileId);
     sessionStorage.setItem("syncro_session_type", sessionType);
 
-    const record = await getStoredProfileRecord(profileId);
-    if (record?.has_base_analysis) {
+    if (await profileHasBaseAnalysis(profileId)) {
       router.push("/syncro/location");
     } else {
+      markPendingBaseAnalysisProfile(profileId);
       router.push(`/syncro/preparing?profile=${encodeURIComponent(profileId)}`);
     }
   }

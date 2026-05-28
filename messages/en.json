@@ -610,6 +610,7 @@
     "female": "Female",
     "other_gender": "Other",
     "analyzed": "Base analysis cached",
+    "view_analysis": "View chart analysis",
     "edit": "Rename",
     "delete": "Delete",
     "confirm_title": "Confirm this profile",
@@ -937,8 +938,15 @@
     "male": "Male",
     "female": "Female",
     "ready": "Analyzed",
+    "view_analysis": "View chart analysis",
     "refund_link": "I don't want to share — refund my session",
     "error_create_profile": "Failed to save your information. Please try again."
+  },
+  "base_analysis_view": {
+    "title": "Foundation reading (full text)",
+    "close": "Close",
+    "loading": "Loading…",
+    "not_found": "No saved analysis found."
   },
   "refund": {
     "title": "Refund Your Session",

@@ -6,7 +6,12 @@ import { useParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { SessionPreparation } from "@/components/poju/SessionPreparation";
 import { loadPOJUSession } from "@/lib/poju/session-manager";
-import { listStoredProfilesForSessionPrep, type StoredProfileSummary } from "@/lib/profile/stored-profiles-service";
+import { markPendingBaseAnalysisProfile } from "@/lib/profile/pending-base-analysis";
+import {
+  listStoredProfilesForSessionPrep,
+  profileHasBaseAnalysis,
+  type StoredProfileSummary,
+} from "@/lib/profile/stored-profiles-service";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import type { POJUSessionState } from "@/lib/poju/types";
 import { PreparingStatusOverlay } from "@/components/poju/PreparingStatusOverlay";
@@ -62,8 +67,11 @@ export default function PreparePage() {
     };
   }, [sessionId, router]);
 
-  function handleProfileSelected(profileId: string) {
+  async function handleProfileSelected(profileId: string) {
     setEnteringPreparing(true);
+    if (!(await profileHasBaseAnalysis(profileId))) {
+      markPendingBaseAnalysisProfile(profileId);
+    }
     router.replace(`/poju/session/${sessionId}/preparing?profile=${encodeURIComponent(profileId)}`);
   }
 

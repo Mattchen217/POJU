@@ -185,7 +185,7 @@ export async function callLLM(input: CallLLMInput): Promise<CallLLMResult> {
     (input.call_type === "syncro_batch"
       ? 90_000
       : input.call_type === "base_analysis"
-        ? 180_000
+        ? 240_000
         : normalizedType === "deep_analysis"
           ? 180_000
           : undefined);

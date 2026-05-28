@@ -1,6 +1,6 @@
 /**
  * Shared OpenRouter reasoning tier for 命主基础分析（JSON + SSE 一致）。
- * Target: thinking=medium, max_tokens=8000 on all environments.
+ * Target: thinking=medium, max_tokens=16000 on all environments (long 命主基础分析 JSON).
  */
 export function baseAnalysisReasoningEffort(): "low" | "medium" | "high" | "xhigh" {
   const raw = process.env.POJU_BASE_ANALYSIS_REASONING_EFFORT?.trim().toLowerCase();
@@ -8,4 +8,4 @@ export function baseAnalysisReasoningEffort(): "low" | "medium" | "high" | "xhig
   return "medium";
 }
 
-export const BASE_ANALYSIS_MAX_TOKENS = 8000;
+export const BASE_ANALYSIS_MAX_TOKENS = 16_000;

@@ -625,6 +625,7 @@
     "female": "女",
     "other_gender": "其他",
     "analyzed": "已缓存命主基础分析",
+    "view_analysis": "查看命盘分析",
     "edit": "改名",
     "delete": "删除",
     "confirm_title": "确认使用该档案",
@@ -952,8 +953,15 @@
     "male": "男",
     "female": "女",
     "ready": "已分析",
+    "view_analysis": "查看命盘分析",
     "refund_link": "我不想分享 — 退款",
     "error_create_profile": "保存失败，请重试。"
+  },
+  "base_analysis_view": {
+    "title": "命主基础分析（全文）",
+    "close": "关闭",
+    "loading": "正在加载…",
+    "not_found": "未找到已保存的分析。"
   },
   "refund": {
     "title": "退款",

@@ -12,6 +12,7 @@ import { saveGlyphDrawSession } from "@/lib/glyph/glyph-draw-session";
 import { formatGlyphProfileShort, hourPeriodToShichen } from "@/lib/glyph/profile-display";
 import { markGlyphFreeUsedLocal } from "@/lib/glyph/storage";
 import { generateBaseAnalysis } from "@/lib/llm/deepseek/base-analysis";
+import { discardIncompletePendingProfile } from "@/lib/profile/stored-profiles-service";
 import {
   PREPARING_MIN_SPLINE_CACHE_MS,
   PREPARING_MIN_SPLINE_MS,
@@ -83,6 +84,9 @@ export function GlyphDrawPage() {
       setProfile(updated ?? p);
       setStage("input");
     } catch (e) {
+      if (profileId) {
+        await discardIncompletePendingProfile(profileId);
+      }
       setError(e instanceof Error ? e.message : String(e));
       setLoaderStep("error");
     }

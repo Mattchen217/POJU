@@ -7,6 +7,7 @@ import {
   clearMarketingSplineVisibility,
   marketingSplineSlotGranted,
   marketingSplineStaggerMs,
+  pinMarketingSplineLoaded,
   setMarketingSplineVisibility,
   subscribeMarketingSplineSlots,
 } from "@/lib/client/marketing-spline-slots";
@@ -21,8 +22,8 @@ type ProductCardSplineFrameProps = {
 };
 
 /**
- * Mounts heavy Spline only when the card is on-screen; staggers startup; limits
- * concurrent WebGL in narrow PWA to avoid iOS WKWebView OOM (see marketing-spline-slots).
+ * Lazy-mounts Spline when the card first enters the viewport (staggered, slot-capped on PWA).
+ * After the first load, the scene stays mounted — scrolling away does not destroy WebGL.
  */
 export function ProductCardSplineFrame({
   cardKey,
@@ -31,9 +32,10 @@ export function ProductCardSplineFrame({
   children,
 }: ProductCardSplineFrameProps) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const everMountedRef = useRef(false);
   const [inView, setInView] = useState(false);
   const [hasSlot, setHasSlot] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const [showScene, setShowScene] = useState(false);
 
   useEffect(() => {
     const el = rootRef.current;
@@ -46,7 +48,9 @@ export function ProductCardSplineFrame({
         const ratio = entry.isIntersecting ? entry.intersectionRatio : 0;
         const visible = ratio > 0.1;
         setInView(visible);
-        setMarketingSplineVisibility(cardKey, visible ? ratio : 0);
+        if (!everMountedRef.current) {
+          setMarketingSplineVisibility(cardKey, visible ? ratio : 0);
+        }
       },
       { rootMargin: "64px 0px", threshold: [0, 0.1, 0.25, 0.5, 0.75] },
     );
@@ -54,11 +58,17 @@ export function ProductCardSplineFrame({
     observer.observe(el);
     return () => {
       observer.disconnect();
-      clearMarketingSplineVisibility(cardKey);
+      if (!everMountedRef.current) {
+        clearMarketingSplineVisibility(cardKey);
+      }
     };
   }, [cardKey]);
 
   useEffect(() => {
+    if (everMountedRef.current) {
+      setHasSlot(true);
+      return;
+    }
     if (!inView) {
       setHasSlot(false);
       return;
@@ -69,12 +79,15 @@ export function ProductCardSplineFrame({
   }, [inView, cardKey]);
 
   useEffect(() => {
-    if (!hasSlot) {
-      setMounted(false);
-      return;
-    }
+    if (everMountedRef.current) return;
+    if (!hasSlot) return;
+
     const delay = marketingSplineStaggerMs(cardKey);
-    const timer = window.setTimeout(() => setMounted(true), delay);
+    const timer = window.setTimeout(() => {
+      everMountedRef.current = true;
+      pinMarketingSplineLoaded(cardKey);
+      setShowScene(true);
+    }, delay);
     return () => window.clearTimeout(timer);
   }, [hasSlot, cardKey]);
 
@@ -87,7 +100,7 @@ export function ProductCardSplineFrame({
       )}
       aria-hidden
     >
-      {mounted ? (
+      {showScene ? (
         <div className={innerClassName}>{children}</div>
       ) : (
         <div className="preparing-spline-page__scene preparing-spline-page__scene--static absolute inset-0" />

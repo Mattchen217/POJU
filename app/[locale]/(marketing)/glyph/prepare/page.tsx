@@ -8,7 +8,12 @@ import { PojuToolHandoffBanner } from "@/components/poju/PojuToolHandoffBanner";
 import { SessionPreparation } from "@/components/poju/SessionPreparation";
 import { usePojuToolHandoff } from "@/lib/poju/use-poju-tool-handoff";
 import "@/styles/poju-tool-handoff.css";
-import { listStoredProfilesForSessionPrep, type StoredProfileSummary } from "@/lib/profile/stored-profiles-service";
+import { markPendingBaseAnalysisProfile } from "@/lib/profile/pending-base-analysis";
+import {
+  listStoredProfilesForSessionPrep,
+  profileHasBaseAnalysis,
+  type StoredProfileSummary,
+} from "@/lib/profile/stored-profiles-service";
 import "@/styles/session-prep.css";
 
 function GlyphPrepareInner() {
@@ -37,7 +42,10 @@ function GlyphPrepareInner() {
     })();
   }, []);
 
-  function handleProfileSelected(profileId: string) {
+  async function handleProfileSelected(profileId: string) {
+    if (!(await profileHasBaseAnalysis(profileId))) {
+      markPendingBaseAnalysisProfile(profileId);
+    }
     router.push(`/glyph/draw?profile=${encodeURIComponent(profileId)}&type=${sessionType}`);
   }
 

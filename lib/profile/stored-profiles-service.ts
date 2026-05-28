@@ -103,6 +103,8 @@ export async function listStoredProfiles(): Promise<StoredProfileSummary[]> {
  */
 export async function listStoredProfilesForSessionPrep(): Promise<StoredProfileSummary[]> {
   let list = await listStoredProfiles();
+  /** Only show profiles with a completed 命主基础分析 — no "empty shell" rows after failed LLM. */
+  list = list.filter((p) => p.has_base_analysis);
   if (list.length > 0) return list;
 
   const legacy = await getUserProfile();
@@ -224,6 +226,7 @@ export async function saveBaseAnalysis(
   meta: {
     model: string;
     tokens_used: number;
+    raw_text?: string;
     used_true_solar_time?: boolean;
     tst_meta?: import("@/lib/profile/types").TstMeta;
   },
@@ -252,6 +255,7 @@ export async function saveBaseAnalysis(
     model: meta.model,
     tokens_used: meta.tokens_used,
     content: baseAnalysis,
+    raw_text: meta.raw_text?.trim() || undefined,
     used_true_solar_time,
     tst_meta,
   };
@@ -320,9 +324,32 @@ export async function upgradeStoredProfileLocation(
 export async function profileHasBaseAnalysis(profileId: string): Promise<boolean> {
   assertBrowser();
   const record = await getStoredProfileRecord(profileId);
-  if (record?.has_base_analysis) return true;
+  if (!record?.has_base_analysis) return false;
   const data = await getStoredProfile(profileId);
-  return data?.base_analysis?.content !== undefined && data.base_analysis.content !== null;
+  const ba = data?.base_analysis;
+  if (!ba) return false;
+  const content = ba.content;
+  if (content !== undefined && content !== null) return true;
+  return Boolean(ba.raw_text && ba.raw_text.trim().length > 80);
+}
+
+/**
+ * Remove a profile that was created for analysis but never got a successful base_analysis.
+ * Only deletes when it matches the session "pending" marker (new birth this flow).
+ */
+export async function discardIncompletePendingProfile(profileId: string): Promise<boolean> {
+  assertBrowser();
+  const { getPendingBaseAnalysisProfileId, clearPendingBaseAnalysisProfile } = await import(
+    "@/lib/profile/pending-base-analysis"
+  );
+  if (getPendingBaseAnalysisProfileId() !== profileId) return false;
+  if (await profileHasBaseAnalysis(profileId)) {
+    clearPendingBaseAnalysisProfile();
+    return false;
+  }
+  await deleteStoredProfile(profileId);
+  clearPendingBaseAnalysisProfile();
+  return true;
 }
 
 export async function recordProfileUsage(

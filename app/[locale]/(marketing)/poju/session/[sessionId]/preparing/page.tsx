@@ -9,9 +9,12 @@ import { PreparingStatusOverlay } from "@/components/poju/PreparingStatusOverlay
 import { createInitialAgentState } from "@/lib/poju/agent-state";
 import { generateBaseAnalysis } from "@/lib/llm/deepseek/base-analysis";
 import type { StoredProfileData } from "@/lib/db/poju-db";
+import { clearPendingBaseAnalysisProfile } from "@/lib/profile/pending-base-analysis";
 import {
+  discardIncompletePendingProfile,
   getStoredProfile,
   getStoredProfileRecord,
+  profileHasBaseAnalysis,
   recordProfileUsage,
 } from "@/lib/profile/stored-profiles-service";
 import { loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
@@ -136,10 +139,15 @@ function PreparingInner() {
       const refreshed = await getStoredProfile(profileId);
       if (refreshed) setProfile(refreshed);
 
+      clearPendingBaseAnalysisProfile();
       setCurrentStep("done");
       router.replace(`/poju/session/${sessionId}`);
     } catch (err) {
       console.error("[preparing] Failed:", err);
+      const pid = profileIdFromUrl?.trim() || (await loadPOJUSession(sessionId))?.selected_stored_profile_id;
+      if (pid && !(await profileHasBaseAnalysis(pid))) {
+        await discardIncompletePendingProfile(pid);
+      }
       setError(err instanceof Error ? err.message : String(err));
       setCurrentStep("error");
     }

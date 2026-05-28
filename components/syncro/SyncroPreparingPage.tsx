@@ -9,17 +9,23 @@ import { PreparingStatusOverlay } from "@/components/poju/PreparingStatusOverlay
 import { useRouter } from "@/i18n/navigation";
 import type { StoredProfileData } from "@/lib/db/poju-db";
 import { generateBaseAnalysis } from "@/lib/llm/deepseek/base-analysis";
+import { clearPendingBaseAnalysisProfile } from "@/lib/profile/pending-base-analysis";
 import {
+  discardIncompletePendingProfile,
   getStoredProfile,
+  getStoredProfileRecord,
   profileHasBaseAnalysis,
 } from "@/lib/profile/stored-profiles-service";
-import { replaceSyncroPreparingWithLocation } from "@/lib/syncro/syncro-preparing-nav";
+import {
+  isOnSyncroPreparingRoute,
+  replaceSyncroPreparingWithLocation,
+} from "@/lib/syncro/syncro-preparing-nav";
 
 /** 与 POJU preparing 一致：首次分析至少展示 Spline 时长 */
 const PREPARING_MIN_SPLINE_MS = 5000;
 const PREPARING_MIN_SPLINE_CACHE_MS = 10_000;
-/** 若 LLM 已完成但导航失败，轮询 IndexedDB 恢复前进 */
-const ANALYSIS_POLL_MS = 8000;
+/** 若 LLM 已完成但导航失败，轮询 IndexedDB 并重复尝试跳转 */
+const NAV_WATCHDOG_MS = 2500;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -46,21 +52,20 @@ export function SyncroPreparingPage() {
   const [currentStep, setCurrentStep] = useState("loading");
   const [error, setError] = useState<string | null>(null);
   const hasStartedRef = useRef(false);
-  const navigatedRef = useRef(false);
 
   const goToLocation = useCallback(() => {
-    if (navigatedRef.current) return;
-    navigatedRef.current = true;
+    if (!profileId) return;
+    sessionStorage.setItem("syncro_profile_id", profileId);
+    clearPendingBaseAnalysisProfile();
     setCurrentStep("done");
     replaceSyncroPreparingWithLocation(router);
-  }, [router]);
+  }, [router, profileId]);
 
   const startPreparation = useCallback(async () => {
     const splineStartedAt = Date.now();
     try {
       setCurrentStep("loading");
       setError(null);
-      navigatedRef.current = false;
 
       const profileData = await getStoredProfile(profileId);
       if (!profileData) {
@@ -68,8 +73,14 @@ export function SyncroPreparingPage() {
         return;
       }
       setProfile(profileData);
+      sessionStorage.setItem("syncro_profile_id", profileId);
 
-      const hasCache = await profileHasBaseAnalysis(profileId);
+      const record = await getStoredProfileRecord(profileId);
+      const hasCache =
+        Boolean(record?.has_base_analysis) ||
+        (profileData.base_analysis?.content !== undefined &&
+          profileData.base_analysis?.content !== null) ||
+        (await profileHasBaseAnalysis(profileId));
 
       if (hasCache) {
         setCurrentStep("using_cache");
@@ -91,6 +102,7 @@ export function SyncroPreparingPage() {
         goToLocation();
         return;
       }
+      await discardIncompletePendingProfile(profileId);
       setError(e instanceof Error ? e.message : String(e));
       setCurrentStep("error");
     }
@@ -107,28 +119,34 @@ export function SyncroPreparingPage() {
   }, [profileId, router, startPreparation]);
 
   useEffect(() => {
-    if (currentStep !== "analyzing" || !profileId) return;
+    if (!profileId || currentStep === "loading" || currentStep === "error") return;
 
     const interval = window.setInterval(() => {
       void (async () => {
-        if (navigatedRef.current) return;
-        if (await profileHasBaseAnalysis(profileId)) {
+        if (!isOnSyncroPreparingRoute()) return;
+
+        const ready =
+          currentStep === "using_cache" ||
+          currentStep === "done" ||
+          (await profileHasBaseAnalysis(profileId));
+
+        if (ready) {
           goToLocation();
         }
       })();
-    }, ANALYSIS_POLL_MS);
+    }, NAV_WATCHDOG_MS);
 
     return () => window.clearInterval(interval);
   }, [currentStep, profileId, goToLocation]);
 
   function handleRetry() {
     setError(null);
-    navigatedRef.current = false;
     hasStartedRef.current = false;
     void startPreparation();
   }
 
-  function handleBack() {
+  async function handleBack() {
+    await discardIncompletePendingProfile(profileId);
     router.push("/syncro/prepare");
   }
 

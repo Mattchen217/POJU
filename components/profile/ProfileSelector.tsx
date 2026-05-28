@@ -17,6 +17,7 @@ import { HOUR_PERIOD_INFO } from "@/lib/profile/types";
 import { normalizeStoredBirthInfo } from "@/lib/profile/birth-info-utils";
 import type { UserProfile } from "@/lib/profile/types";
 import { generateBaseAnalysis } from "@/lib/llm/deepseek/base-analysis";
+import { BaseAnalysisViewModal } from "@/components/profile/BaseAnalysisViewModal";
 import { ProfileAccuracyBadge } from "@/components/profile/ProfileAccuracyBadge";
 import { ProfileUpgradeModal } from "@/components/profile/ProfileUpgradeModal";
 
@@ -66,6 +67,7 @@ export function ProfileSelector({ product, onSelected, onCancel, allowSkip, onSk
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [upgradeTarget, setUpgradeTarget] = useState<StoredProfileSummary | null>(null);
+  const [viewAnalysisProfile, setViewAnalysisProfile] = useState<StoredProfileSummary | null>(null);
 
   async function loadProfiles() {
     setLoading(true);
@@ -112,6 +114,7 @@ export function ProfileSelector({ product, onSelected, onCancel, allowSkip, onSk
           onAddNew={() => setStep("create")}
           onDelete={(id) => void handleDelete(id)}
           onUpgrade={(p) => setUpgradeTarget(p)}
+          onViewAnalysis={(p) => setViewAnalysisProfile(p)}
           onCancel={onCancel}
           allowSkip={allowSkip}
           onSkip={onSkip}
@@ -149,6 +152,14 @@ export function ProfileSelector({ product, onSelected, onCancel, allowSkip, onSk
         />
       ) : null}
 
+      {viewAnalysisProfile ? (
+        <BaseAnalysisViewModal
+          profileId={viewAnalysisProfile.profile_id}
+          displayName={viewAnalysisProfile.display_name}
+          onClose={() => setViewAnalysisProfile(null)}
+        />
+      ) : null}
+
     </div>
   );
 }
@@ -159,6 +170,7 @@ function ProfileListView({
   onAddNew,
   onDelete,
   onUpgrade,
+  onViewAnalysis,
   onCancel,
   allowSkip,
   onSkip,
@@ -168,6 +180,7 @@ function ProfileListView({
   onAddNew: () => void;
   onDelete: (id: string) => void;
   onUpgrade: (summary: StoredProfileSummary) => void;
+  onViewAnalysis: (summary: StoredProfileSummary) => void;
   onCancel?: () => void;
   allowSkip?: boolean;
   onSkip?: () => void;
@@ -213,7 +226,16 @@ function ProfileListView({
                 <ProfileAccuracyBadge profile={p} onUpgrade={() => onUpgrade(p)} />
               </div>
             </button>
-            <div className="mt-2 flex gap-2 border-t border-white/10 pt-2">
+            <div className="mt-2 flex flex-wrap gap-3 border-t border-white/10 pt-2">
+              {p.has_base_analysis ? (
+                <button
+                  type="button"
+                  className="text-xs text-cyan-200/90 hover:underline"
+                  onClick={() => onViewAnalysis(p)}
+                >
+                  {t("view_analysis")}
+                </button>
+              ) : null}
               <button type="button" className="text-xs text-red-300/90 hover:underline" onClick={() => onDelete(p.profile_id)}>
                 {t("delete")}
               </button>

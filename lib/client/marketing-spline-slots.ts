@@ -1,9 +1,11 @@
 import { isLikelyPwaContext } from "@/lib/client/pwa-standalone";
 
-/** Visibility ratio per homepage product card (0 = off-screen / unmounted). */
+/** Visibility ratio per homepage product card (only used before first load). */
 const visibility = new Map<string, number>();
 const subscribers = new Set<() => void>();
 let granted = new Set<string>();
+/** Cards that finished loading — never unmount on scroll-away. */
+const pinnedLoaded = new Set<string>();
 
 const CARD_STAGGER_MS: Record<string, number> = {
   poju: 0,
@@ -28,9 +30,10 @@ export function maxMarketingSplineSlots(): number {
 function recomputeGranted(): Set<string> {
   const max = maxMarketingSplineSlots();
   const ranked = [...visibility.entries()]
-    .filter(([, ratio]) => ratio > 0.08)
+    .filter(([id, ratio]) => ratio > 0.08 && !pinnedLoaded.has(id))
     .sort((a, b) => b[1] - a[1]);
-  return new Set(ranked.slice(0, max).map(([id]) => id));
+  const loading = ranked.slice(0, max).map(([id]) => id);
+  return new Set([...pinnedLoaded, ...loading]);
 }
 
 function notifyIfChanged(next: Set<string>) {
@@ -42,18 +45,29 @@ function notifyIfChanged(next: Set<string>) {
 }
 
 export function setMarketingSplineVisibility(cardKey: string, ratio: number) {
+  if (pinnedLoaded.has(cardKey)) return;
   if (ratio <= 0) visibility.delete(cardKey);
   else visibility.set(cardKey, ratio);
   notifyIfChanged(recomputeGranted());
 }
 
 export function clearMarketingSplineVisibility(cardKey: string) {
+  if (pinnedLoaded.has(cardKey)) return;
   visibility.delete(cardKey);
   notifyIfChanged(recomputeGranted());
 }
 
+/** Call once Spline has mounted — keeps scene alive when user scrolls away. */
+export function pinMarketingSplineLoaded(cardKey: string) {
+  if (pinnedLoaded.has(cardKey)) return;
+  pinnedLoaded.add(cardKey);
+  visibility.delete(cardKey);
+  granted = new Set([...granted, cardKey]);
+  subscribers.forEach((fn) => fn());
+}
+
 export function marketingSplineSlotGranted(cardKey: string): boolean {
-  return granted.has(cardKey);
+  return pinnedLoaded.has(cardKey) || granted.has(cardKey);
 }
 
 export function subscribeMarketingSplineSlots(listener: () => void): () => void {
