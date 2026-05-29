@@ -71,6 +71,8 @@ export async function createSyncroSession(input: CreateSyncroSessionInput): Prom
 
   const { cipher, iv } = await encryptJson(SYNCRO_SESSION_SECRET, toPayload(session));
 
+  await revokeActiveSyncroSessionsForProfile(input.profile_id);
+
   const row: SyncroSessionRecord = {
     session_id: sessionId,
     device_id: deviceId,
@@ -186,4 +188,84 @@ export async function listUserSyncroSessions(): Promise<SyncroSessionListItem[]>
       is_expired: new Date(r.expires_at).getTime() < now,
     }))
     .sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
+}
+
+function isRecordActive(record: SyncroSessionRecord, now: number): boolean {
+  return new Date(record.expires_at).getTime() > now;
+}
+
+function sortRecordsByCreatedDesc(records: SyncroSessionRecord[]): SyncroSessionRecord[] {
+  return [...records].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  );
+}
+
+async function loadActiveSessionFromRecord(
+  record: SyncroSessionRecord,
+): Promise<SyncroSession | null> {
+  const session = await loadSyncroSession(record.session_id);
+  if (!session || Object.keys(session.matrix).length === 0) return null;
+  return session;
+}
+
+/** Most recent non-expired session for a profile (24h window). */
+export async function findActiveSyncroSession(profileId: string): Promise<SyncroSession | null> {
+  const now = Date.now();
+  const records = sortRecordsByCreatedDesc(
+    await getPojuDb().syncro_sessions.where("profile_id").equals(profileId).toArray(),
+  );
+
+  for (const record of records) {
+    if (!isRecordActive(record, now)) continue;
+    const session = await loadActiveSessionFromRecord(record);
+    if (session) return session;
+  }
+
+  return null;
+}
+
+/** Most recent non-expired session on this device (any profile). */
+export async function findLatestActiveSyncroSessionForDevice(): Promise<SyncroSession | null> {
+  const deviceId = getPojuDeviceId();
+  const now = Date.now();
+  const records = sortRecordsByCreatedDesc(
+    await getPojuDb().syncro_sessions.where("device_id").equals(deviceId).toArray(),
+  );
+
+  for (const record of records) {
+    if (!isRecordActive(record, now)) continue;
+    const session = await loadActiveSessionFromRecord(record);
+    if (session) return session;
+  }
+
+  return null;
+}
+
+/** Delete expired rows from IndexedDB. */
+export async function cleanupExpiredSyncroSessions(): Promise<number> {
+  const now = Date.now();
+  const expired = await getPojuDb()
+    .syncro_sessions.filter((row) => new Date(row.expires_at).getTime() <= now)
+    .toArray();
+
+  for (const row of expired) {
+    await getPojuDb().syncro_sessions.delete(row.session_id);
+  }
+
+  return expired.length;
+}
+
+/** Remove other active sessions for the same profile when starting a new reading. */
+async function revokeActiveSyncroSessionsForProfile(
+  profileId: string,
+  exceptSessionId?: string,
+): Promise<void> {
+  const now = Date.now();
+  const records = await getPojuDb().syncro_sessions.where("profile_id").equals(profileId).toArray();
+
+  for (const record of records) {
+    if (record.session_id === exceptSessionId) continue;
+    if (!isRecordActive(record, now)) continue;
+    await getPojuDb().syncro_sessions.delete(record.session_id);
+  }
 }

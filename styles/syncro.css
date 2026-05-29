@@ -399,6 +399,43 @@
   cursor: not-allowed;
 }
 
+.three-mode-toggle {
+  position: absolute;
+  bottom: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 15;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 20px;
+  pointer-events: auto;
+}
+
+.three-mode-toggle .mode-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 18px;
+  background: transparent;
+  color: var(--pj-text-muted);
+  font-family: inherit;
+  font-size: 10px;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all var(--pj-duration-fast);
+}
+
+.three-mode-toggle .mode-tab.active {
+  background: rgba(212, 165, 116, 0.18);
+  color: var(--pj-gold);
+}
+
 /* AR layout — see styles/syncro-ar.css */
 
 .syncro-view-mode {
@@ -516,4 +553,25 @@
 .syncro-main-view .syncro-llm-progress + .syncro-timer-bar,
 .syncro-main-view .syncro-llm-progress ~ * .syncro-timer-bar {
   margin-top: 2.5rem;
+}
+
+.syncro-existing-session-prompt .logo-mark {
+  font-size: 28px;
+  color: var(--pj-gold);
+  line-height: 1;
+}
+
+.syncro-existing-session-prompt .task-preview {
+  font-style: italic;
+}
+
+.syncro-existing-session-prompt .session-meta {
+  color: var(--pj-text-tertiary);
+}
+
+.syncro-existing-session-prompt .new-task-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
 }

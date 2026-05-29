@@ -83,14 +83,19 @@ export function SyncroParticleCircle({ rotation, activeDirection }: SyncroPartic
   );
 
   return (
-    <div className="particle-circle">
-      {allowWebGL ? (
-        <Spline scene={SYNCRO_FANGWEI_SCENE} className="syncro-particle-spline" onLoad={handleLoad} />
-      ) : (
-        <div className="syncro-particle-spline syncro-particle-spline--static" aria-hidden />
-      )}
-      <DirectionLabels rotation={rotation} activeDirection={activeDirection} />
-    </div>
+    <>
+      <div className="syncro-bg-full" aria-hidden>
+        {allowWebGL ? (
+          <Spline scene={SYNCRO_FANGWEI_SCENE} className="syncro-particle-spline" onLoad={handleLoad} />
+        ) : (
+          <div className="syncro-particle-spline syncro-particle-spline--static" />
+        )}
+      </div>
+
+      <div className="particle-circle">
+        <DirectionLabels rotation={rotation} activeDirection={activeDirection} />
+      </div>
+    </>
   );
 }
 

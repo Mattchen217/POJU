@@ -163,3 +163,39 @@ export const ORIENTAL_SHARED_GUARDRAILS = `# 共用伦理与语言（Glyph 解�
 
 - 不指定「三个月后再来」「下周再来」等固定回访。
 - 可说「若情况有变，可再抽一支签观照」（Glyph 为单次阅读，非 POJU Session）。`;
+
+/** Strict user-visible language rules — appended to all Glyph LLM prompts. */
+export const GLYPH_LANGUAGE_RULES = `
+# 语言规则（严格 · 用户可见 JSON 字段）
+
+⛔ 严格禁止以下词汇:
+
+中文:
+- "签" / "签文" / "抽签" / "卜签" / "求签" / "解签"
+- "占卜" / "算命" / "命理学"
+- "卦" / "卜卦" / "算卦"
+
+英文:
+- "fortune slip" / "divine slip" / "lot drawing"
+- "divination" / "oracle bone" / "casting lots"
+
+✓ 必须使用:
+- "Glyph" / "意象"
+- "Glyph reading" / "意象解读"
+- "Glyph pattern" / "意象图案"
+- "reflection" / "reflective image" / "反思"
+
+⭐ Glyph 的定位:
+Glyph 是 pocket-sized mirror — 持一个问题,画一个图案,读一段反思。
+不是占卜工具,是反思镜。
+
+例:
+  ❌ "你抽到的签是..."
+  ✅ "你画出的 Glyph 是..."
+
+  ❌ "这支签的含义是..."
+  ✅ "这个意象映出的是..."
+
+  ❌ "签文告诉我们..."
+  ✅ "这个 Glyph 反射出..."
+`;

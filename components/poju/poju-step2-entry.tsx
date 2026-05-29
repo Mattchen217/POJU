@@ -110,8 +110,7 @@ export function PojuStep2Entry() {
       <div className="mt-5 rounded-xl border border-cyan-500/15 bg-cyan-950/15 p-4">
         <p className="text-sm font-medium text-cyan-100">Optional: link a saved birth chart</p>
         <p className="mt-1 text-xs text-white/60">
-          Link a device-saved profile so Step 8 situation analysis can load Step 7 base analysis from that profile when
-          your new session starts.
+          Link a saved chart so your new session can use its base analysis from the start.
         </p>
         {linkedProfileId ? (
           <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-emerald-100">

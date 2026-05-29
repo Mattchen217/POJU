@@ -89,7 +89,7 @@ function main() {
     "styles/syncro-map.css",
     "styles/syncro-why-modal.css",
     "components/syncro/HourProgressBar.tsx",
-    "components/syncro/ModeToggle.tsx",
+    "components/syncro/ThreeModeToggle.tsx",
     "lib/syncro/permissions.ts",
     "components/pwa/PWAConditional.tsx",
     "components/pwa/BeginButton.tsx",
@@ -122,11 +122,12 @@ function main() {
   assert(beginBtn.includes("isFirstTimeFree") && beginBtn.includes("begin-btn-large"), "PWA begin button");
 
   const mainView = readFileSync(join(ROOT, "components/syncro/SyncroMainView.tsx"), "utf8");
-  assert(mainView.includes("ModeToggle"), "main has mode toggle");
+  assert(mainView.includes("ThreeModeToggle"), "main has three-mode toggle");
   assert(mainView.includes("HourProgressBar"), "main has progress");
   assert(mainView.includes("SyncroMapMode"), "main has map mode");
+  assert(mainView.includes("SyncroARMode"), "main has AR mode");
   assert(mainView.includes("loadSyncroPermission"), "main loads permissions");
-  assert(mainView.includes("tiltSuggestsMode"), "posture auto-switch");
+  assert(!mainView.includes("tiltSuggestsMode"), "no posture auto-switch");
 
   const hourBar = readFileSync(join(ROOT, "components/syncro/HourProgressBar.tsx"), "utf8");
   assert(hourBar.includes("HourDotStatus") && hourBar.includes("hour-now-tag"), "hour progress states");

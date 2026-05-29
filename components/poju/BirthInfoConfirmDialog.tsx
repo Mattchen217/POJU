@@ -1,8 +1,10 @@
 ﻿"use client";
 
 import { useEffect, useId, useRef } from "react";
+import { IconLock } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
 import {
+  formatBirthLocationLabel,
   formatHourPeriodBilingual,
   parseStoredProfileSummaryForDisplay,
   type BirthInfoDisplayRow,
@@ -39,6 +41,7 @@ export function BirthInfoConfirmDialog({
   processing = false,
 }: BirthInfoConfirmDialogProps) {
   const t = useTranslations("birth_confirm");
+  const tForm = useTranslations("birth_form");
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -59,6 +62,19 @@ export function BirthInfoConfirmDialog({
   useEffect(() => {
     panelRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    if (existingProfile) {
+      console.log("[profile-card] read birth_location:", {
+        profile_id: existingProfile.profile_id,
+        birth_location_name: existingProfile.birth_location_name,
+        birth_location_use_defaults: existingProfile.birth_location_use_defaults,
+      });
+    }
+    if (birthInfo?.birth_location) {
+      console.log("[profile-card] read birth_location:", birthInfo.birth_location);
+    }
+  }, [birthInfo, existingProfile]);
 
   if (!displayData) return null;
 
@@ -108,18 +124,25 @@ export function BirthInfoConfirmDialog({
           <div className="info-row">
             <span className="label">{t("location_label")}</span>
             <span className="value">
-              {displayData.birth_location_name
-                ? displayData.birth_location_defaults
-                  ? t("location_default")
-                  : displayData.birth_location_name
-                : t("location_default")}
+              {formatBirthLocationLabel(
+                displayData.birth_location_name
+                  ? {
+                      name: displayData.birth_location_name,
+                      use_defaults: displayData.birth_location_defaults,
+                    }
+                  : birthInfo?.birth_location,
+                t("location_default"),
+              )}
             </span>
           </div>
         </div>
 
         <div className="reassure">
           <p>{t("reassure_1")}</p>
-          <p>{t("reassure_2")}</p>
+          <p className="privacy-note">
+            <IconLock size={14} stroke={1.75} aria-hidden />
+            {tForm("confirm_privacy_note")}
+          </p>
         </div>
 
         <div className="dialog-actions">

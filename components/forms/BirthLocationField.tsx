@@ -88,7 +88,9 @@ export function BirthLocationField({ value, onChange }: Props) {
   const offsetMinutes = calculateOffsetMinutes(effectiveLongitude, timezone);
 
   function handleCitySelect(city: CitySuggestionType) {
-    onChange(suggestionToBirthLocation(city, timezone));
+    const loc = suggestionToBirthLocation(city, timezone);
+    console.log("[BirthLocation] submit:", loc);
+    onChange(loc);
   }
 
   return (

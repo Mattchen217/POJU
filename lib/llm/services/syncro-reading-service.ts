@@ -220,11 +220,11 @@ export function generateFallbackDetailed(cell: MatrixCell, outputLocale: AppLoca
 }
 
 export function generateFallbackRationale(cell: MatrixCell, outputLocale: AppLocale = "en"): string {
-  const factors = cell._internal.key_factors.join(", ");
+  const levelLabel = cell.current_level.replace(/_/g, " ");
   if (outputLocale === "zh") {
-    return `此组合为 ${cell.current_level.replace(/_/g, " ")} 档，综合命盘、用神与此刻时辰×方位的作用（主要因素：${factors}）。`;
+    return `就你此刻要做的事来说，这个时辰与方位的组合呈现出「${levelLabel}」的节奏——把意图对准这件事，顺势而行比硬撑更有效。`;
   }
-  return `This ${cell.current_level.replace(/_/g, " ")} level reflects your chart, favorable element, and this timing–direction pairing (key factors: ${factors}).`;
+  return `For what you're about to do, this hour-and-direction pairing carries a ${levelLabel} rhythm—align with the task rather than forcing the moment.`;
 }
 
 export function chunkArray<T>(items: T[], parts: number): T[][] {

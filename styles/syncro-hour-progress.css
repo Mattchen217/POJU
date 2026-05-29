@@ -39,29 +39,42 @@
   border: none;
 }
 
-.hour-dot.status-done {
-  background: var(--pj-teal);
-  opacity: 0.7;
-}
-
-.hour-dot.status-generating {
-  background: var(--pj-teal);
-  opacity: 0.4;
-  animation: pj-pulse 1.5s infinite ease-in-out;
-}
-
-.hour-dot.status-pending {
-  background: var(--pj-text-disabled);
+.hour-dot:disabled {
+  cursor: not-allowed;
 }
 
 .hour-dot.status-now {
-  width: 9px;
-  height: 9px;
+  width: 10px;
+  height: 10px;
   background: var(--pj-gold);
-  box-shadow: 0 0 16px var(--pj-gold-glow);
+  box-shadow: 0 0 12px var(--pj-gold-glow);
+}
+
+.hour-dot.status-done {
+  width: 6px;
+  height: 6px;
+  background: var(--pj-following);
+  cursor: pointer;
+}
+
+.hour-dot.status-done:active:not(:disabled) {
+  transform: scale(1.3);
+}
+
+.hour-dot.status-pending {
+  width: 5px;
+  height: 5px;
+  background: var(--pj-text-disabled);
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .hour-dot.selected:not(.status-now) {
+  outline: 2px solid var(--pj-gold);
+  outline-offset: 3px;
+}
+
+.hour-dot.selected.status-done {
   outline: 2px solid var(--pj-gold);
   outline-offset: 3px;
 }
@@ -103,14 +116,45 @@
   font-weight: var(--pj-weight-medium);
 }
 
-@keyframes pj-pulse {
-  0%,
-  100% {
-    opacity: 0.4;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.8;
-    transform: scale(1.15);
-  }
+.hour-legend {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  margin-top: 10px;
+  font-size: 10px;
+  color: var(--pj-text-muted);
+  letter-spacing: 0.2px;
+}
+
+.hour-legend .legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.hour-legend .legend-dot {
+  display: inline-block;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.hour-legend .legend-dot.status-now {
+  width: 8px;
+  height: 8px;
+  background: var(--pj-gold);
+  box-shadow: 0 0 8px var(--pj-gold-glow);
+}
+
+.hour-legend .legend-dot.status-done {
+  width: 6px;
+  height: 6px;
+  background: var(--pj-following);
+}
+
+.hour-legend .legend-dot.status-pending {
+  width: 5px;
+  height: 5px;
+  background: var(--pj-text-disabled);
+  opacity: 0.6;
 }

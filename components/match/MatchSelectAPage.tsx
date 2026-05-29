@@ -58,8 +58,10 @@ export function MatchSelectAPage() {
     <main className="match-select-page">
       <header className="match-select-header">
         <span className="match-step-indicator">{t("step_indicator", { step: 1, total: 3 })}</span>
-        <h1>{t("select_a_title")}</h1>
-        <p>{t("select_a_subtitle")}</p>
+        <div className="selector-label">
+          <span className="label-letter">A</span>
+          <span className="label-text">{t("select_first_person")}</span>
+        </div>
       </header>
 
       <SessionPreparation
@@ -70,7 +72,7 @@ export function MatchSelectAPage() {
         onRefund={handleCancel}
         locale={locale}
         productType="match"
-        customLabel={t("select_a_label")}
+        suppressMatchWelcomeCopy
       />
     </main>
   );

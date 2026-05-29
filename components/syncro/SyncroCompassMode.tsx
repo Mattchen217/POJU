@@ -90,31 +90,33 @@ export function SyncroCompassMode({
   const dirInfo = DIRECTIONS[currentDirection];
 
   return (
-    <div className={`compass-mode ${llmHighlight ? "syncro-llm-cell-updated" : ""}`}>
-      <div className="particle-container">
-        <SyncroParticleCircle rotation={-compassDegree} activeDirection={currentDirection} />
+    <div className={`syncro-immersive compass-mode ${llmHighlight ? "syncro-llm-cell-updated" : ""}`}>
+      <div className="syncro-content-overlay">
+        <div className="compass-particle-area">
+          <SyncroParticleCircle rotation={-compassDegree} activeDirection={currentDirection} />
 
-        <div className="center-info">
-          <div className={`current-level ${currentLevelCssClass(cell.current_level)}`}>
-            <div className="level-line">{levelTitle}</div>
-          </div>
+          <div className="center-info">
+            <div className={`current-level ${currentLevelCssClass(cell.current_level)}`}>
+              <div className="level-line">{levelTitle}</div>
+            </div>
 
-          <div className="cell-meta">
-            <span>{isZh ? dirInfo.name_zh : dirInfo.name_en}</span>
-            <span className="meta-divider">·</span>
-            <span>
-              {hourPeriodDisplayName(hourPeriod, resolvedLocale)} · {HOUR_PERIOD_RANGES[hourPeriod]}
-            </span>
+            <div className="cell-meta">
+              <span>{isZh ? dirInfo.name_zh : dirInfo.name_en}</span>
+              <span className="meta-divider">·</span>
+              <span>
+                {hourPeriodDisplayName(hourPeriod, resolvedLocale)} · {HOUR_PERIOD_RANGES[hourPeriod]}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="compass-footer">
-        <p className="short-advice">{cell.short_advice}</p>
+        <div className="compass-footer syncro-info-bottom">
+          <p className="short-advice">{cell.short_advice}</p>
 
-        <button type="button" className="why-btn" onClick={() => setWhyModalOpen(true)}>
-          {t("why_this_current")}
-        </button>
+          <button type="button" className="why-btn" onClick={() => setWhyModalOpen(true)}>
+            {t("why_this_current")}
+          </button>
+        </div>
       </div>
 
       {whyModalOpen ? (

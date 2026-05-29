@@ -6,6 +6,7 @@ import { BirthInfoPicker } from "@/components/poju/BirthInfoPicker";
 import { BirthInfoConfirmDialog } from "@/components/poju/BirthInfoConfirmDialog";
 import { BaseAnalysisViewModal } from "@/components/profile/BaseAnalysisViewModal";
 import { ProfileAccuracyBadge } from "@/components/profile/ProfileAccuracyBadge";
+import { formatBirthLocationLabel } from "@/lib/profile/birth-info-display";
 import { ProfileUpgradeModal } from "@/components/profile/ProfileUpgradeModal";
 import {
   getSessionPrepBrand,
@@ -27,6 +28,8 @@ export interface SessionPreparationProps {
   productType?: SessionPrepProduct;
   /** Match: e.g. "Person A" / "命主 A" shown in the welcome block. */
   customLabel?: string;
+  /** Match select pages: page header already has person label — hide duplicate welcome copy. */
+  suppressMatchWelcomeCopy?: boolean;
   /** Match step A vs B welcome copy. */
   matchPerson?: MatchPrepPerson;
   /** Override cancel/refund link label (e.g. back to select-a). */
@@ -41,6 +44,7 @@ export function SessionPreparation({
   originalQuestion = "",
   productType = "poju",
   customLabel,
+  suppressMatchWelcomeCopy = false,
   matchPerson = "a",
   refundLabel,
 }: SessionPreparationProps) {
@@ -126,6 +130,7 @@ export function SessionPreparation({
         productType={productType}
         originalQuestion={originalQuestion}
         customLabel={customLabel}
+        suppressMatchWelcomeCopy={suppressMatchWelcomeCopy}
         matchPerson={matchPerson}
       />
 
@@ -200,12 +205,14 @@ function WelcomeSection({
   originalQuestion,
   customLabel,
   matchPerson,
+  suppressMatchWelcomeCopy,
 }: {
   locale: string;
   productType: SessionPrepProduct;
   originalQuestion: string;
   customLabel?: string;
   matchPerson: MatchPrepPerson;
+  suppressMatchWelcomeCopy?: boolean;
 }) {
   const tGlyph = useTranslations("glyph");
   const tSyncro = useTranslations("syncro");
@@ -225,8 +232,12 @@ function WelcomeSection({
   return (
     <div className="welcome-section">
       <div className={`poju-logo ${brandClass}`}>{getSessionPrepBrand(productType)}</div>
-      {customLabel ? <p className="match-person-label">{customLabel}</p> : null}
-      <p className="welcome-text">{getWelcomeText(locale, productType, matchPerson)}</p>
+      {!suppressMatchWelcomeCopy && customLabel ? (
+        <p className="match-person-label">{customLabel}</p>
+      ) : null}
+      {!suppressMatchWelcomeCopy ? (
+        <p className="welcome-text">{getWelcomeText(locale, productType, matchPerson)}</p>
+      ) : null}
       {originalQuestion.trim() && questionLabel ? (
         <div className="your-question">
           <span className="label">{questionLabel}</span>
@@ -251,6 +262,7 @@ function ProfileListView({
   onViewAnalysis: (summary: StoredProfileSummary) => void;
 }) {
   const t = useTranslations("session_prep");
+  const tConfirm = useTranslations("birth_confirm");
 
   return (
     <div className="profile-list-view">
@@ -267,6 +279,17 @@ function ProfileListView({
               <div className="display-name">{p.display_name}</div>
               <div className="card-meta">
                 <span>{p.gender === "M" ? t("male") : t("female")}</span>
+                {p.birth_location_name ? (
+                  <span className="card-location">
+                    {formatBirthLocationLabel(
+                      {
+                        name: p.birth_location_name,
+                        use_defaults: p.birth_location_use_defaults,
+                      },
+                      tConfirm("location_default"),
+                    )}
+                  </span>
+                ) : null}
                 {p.has_base_analysis ? <span className="ready-badge">{t("ready")}</span> : null}
               </div>
               <ProfileAccuracyBadge profile={p} onUpgrade={() => onUpgrade(p)} />

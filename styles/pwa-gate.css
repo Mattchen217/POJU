@@ -184,6 +184,20 @@
   stroke-width: 1.75;
 }
 
+.step-num {
+  font-size: var(--pj-text-sm);
+  font-weight: var(--pj-weight-semibold, 600);
+  color: var(--pj-teal);
+  line-height: 1;
+}
+
+.step-text p {
+  margin: 6px 0 0;
+  font-size: var(--pj-text-xs);
+  color: var(--pj-text-tertiary);
+  line-height: var(--pj-leading-normal);
+}
+
 .step-text {
   font-size: var(--pj-text-sm);
   color: var(--pj-text-primary);
@@ -264,4 +278,80 @@
 
 .desktop-link:hover {
   color: var(--pj-gold-soft);
+}
+
+.chrome-steps {
+  margin: 32px 0;
+  padding: 20px 16px;
+  background: var(--pj-bg-card);
+  border-radius: var(--pj-radius-lg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: var(--pj-shadow-card);
+  text-align: left;
+}
+
+.chrome-steps .step-text p {
+  margin: 4px 0 0;
+  font-size: var(--pj-text-xs);
+  color: var(--pj-text-tertiary);
+  line-height: var(--pj-leading-normal);
+}
+
+.copy-url-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 10px 16px;
+  background: rgba(78, 205, 196, 0.1);
+  border: 0.5px solid rgba(78, 205, 196, 0.25);
+  border-radius: 10px;
+  color: var(--pj-teal);
+  font-family: inherit;
+  font-size: var(--pj-text-sm);
+  font-weight: var(--pj-weight-medium, 500);
+  cursor: pointer;
+  transition: all var(--pj-duration-fast, 0.15s) var(--pj-ease, ease);
+}
+
+.copy-url-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.copy-url-btn.copied {
+  background: rgba(0, 217, 184, 0.15);
+  color: var(--pj-open, #00d9b8);
+  border-color: rgba(0, 217, 184, 0.3);
+}
+
+.copy-url-btn:active {
+  transform: scale(0.98);
+}
+
+.install-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 24px;
+  padding: 14px 16px;
+  background: rgba(212, 165, 116, 0.06);
+  border-radius: var(--pj-radius-lg);
+  text-align: left;
+}
+
+.install-note svg {
+  width: 18px;
+  height: 18px;
+  color: var(--pj-gold);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.install-note p {
+  margin: 0;
+  font-size: var(--pj-text-xs);
+  color: var(--pj-text-tertiary);
+  line-height: var(--pj-leading-normal);
 }

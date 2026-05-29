@@ -130,11 +130,21 @@ ${JSON.stringify(slimMatrix, null, 2)}
    - 引用用户命局（日主 / 用神 / 大运至少一项）
    - 可内化 _internal.qimen_data 中的门星神信号，**用户可见处用 Syncro 语言**，不写八门/奇门遁甲
 
-3. **rationale**（100–200 字/词）
-   - 解释为何是该 current_level（等级已固定）
-   - 引用 _internal.key_factors 中的主导因素
-   - 把得分逻辑译成命理语言；**勿写 +28.5 等数字**
-   - 可用「水势汇聚」「三方助力」「主吉星当头」等表述
+3. **rationale**（100–150 字/词）
+   - ⚠️ 针对用户【具体任务】解释为何此时此向适合（或不适合）去做这件事
+   - 把 _internal.key_factors 当作内心依据，**禁止**在文案中写出原始字段名（如 qimen、yong_shen_direction、day_master_direction、hour_yong_shen、task_direction）
+   - **禁止**「主要因素：…」或「Key factors: …」及逗号罗列内部 key 的句式
+   - 用大白话说明对用户任务的含义，不堆术语、不写八门/奇门/用神等词
+
+   ❌ 错误：
+   - 「主要因素:qimen, yong_shen_direction」
+   - 「yong_shen_direction 对当前 hour pillar 有 sheng 关系」
+
+   ✅ 正确（用户问会议谈判）：
+   - 「会议谈判需要你的气场稳定且能影响对方。这个时辰和方位的组合让你既有底气，又不咄咄逼人。」
+
+   ✅ 正确（用户问签合同）：
+   - 「签合同需要清醒判断。这个组合让你头脑清晰，避开了情绪化决策的时段。」
 
 # 关键规则
 
@@ -169,9 +179,11 @@ ${JSON.stringify(slimMatrix, null, 2)}
   const user =
     outputLocale === "zh"
       ? `请为已计算好的矩阵生成 short_advice / detailed_advice / rationale 文案（本批 ${cellCount} 个 key）。
-不要修改 current_level。全部使用${outputLanguage}。严格 JSON，matrix 内每个 key 缺一不可。`
+不要修改 current_level。全部使用${outputLanguage}。严格 JSON，matrix 内每个 key 缺一不可。
+rationale 必须紧扣用户任务「${escapedTask}」，绝不写出 qimen / yong_shen_direction / day_master 等内部字段名。`
       : `Generate short_advice, detailed_advice, and rationale for the precomputed matrix (${cellCount} keys in this batch).
-Do not change current_level. Write entirely in ${outputLanguage}. Strict JSON only; every key in matrix is required.`;
+Do not change current_level. Write entirely in ${outputLanguage}. Strict JSON only; every key in matrix is required.
+Each rationale must speak to the user's task ("${escapedTask}") in plain language—never expose internal factor keys like qimen or yong_shen_direction.`;
 
   return { system, user };
 }

@@ -11,6 +11,7 @@ import {
   type DirectionId,
 } from "@/lib/syncro/current-system";
 import { HOUR_PERIOD_RANGES, hourPeriodDisplayName } from "@/lib/syncro/hour-period-ranges";
+import { sanitizeSyncroRationale } from "@/lib/syncro/sanitize-rationale";
 import type { HourPeriod, SyncroCombination } from "@/lib/syncro/types";
 
 import "@/styles/syncro-why-modal.css";
@@ -54,7 +55,10 @@ export function WhyThisCurrentModal({ cell, direction, hourId, onClose }: WhyThi
     }
   })();
 
-  const rationaleText = cell.rationale?.trim() || cell.detailed_advice?.trim() || "";
+  const rationaleText = sanitizeSyncroRationale(
+    cell.rationale?.trim() || cell.detailed_advice?.trim() || "",
+    locale,
+  );
   const detailedText = cell.detailed_advice?.trim() || "";
   const showActionCard = Boolean(detailedText && cell.rationale?.trim());
 

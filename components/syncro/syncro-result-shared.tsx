@@ -2,6 +2,8 @@
 
 import { useTranslations } from "next-intl";
 
+import { sanitizeSyncroRationale } from "@/lib/syncro/sanitize-rationale";
+
 import {
   CURRENT_LEVELS,
   DIRECTIONS,
@@ -107,7 +109,7 @@ export function SyncroCenterInfo({
           <h4>{t("detailed_label")}</h4>
           <p>{combination.detailed_advice}</p>
           <h4>{t("rationale_label")}</h4>
-          <p>{combination.rationale}</p>
+          <p>{sanitizeSyncroRationale(combination.rationale, locale)}</p>
           <button type="button" onClick={onToggleDetail} className="collapse-button">
             {t("collapse")} ↑
           </button>

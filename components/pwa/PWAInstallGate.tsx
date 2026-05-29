@@ -11,6 +11,13 @@ import {
 import { useTranslations } from "next-intl";
 
 import { PwaBrandMark } from "@/components/pwa/PwaBrandMark";
+import { OpenInChromeGuide } from "@/components/pwa/OpenInChromeGuide";
+import { OpenInSafariGuide } from "@/components/pwa/OpenInSafariGuide";
+import {
+  detectInstallCapability,
+  POJULIFE_SITE_URL,
+  type CapabilityResult,
+} from "@/lib/pwa/install-capability";
 import {
   detectDeviceCapability,
   type DeviceCapability,
@@ -35,7 +42,9 @@ export function PWAInstallGate({ children }: { children: React.ReactNode }) {
 
     const handler = (e: Event) => {
       e.preventDefault();
-      setInstallPrompt(e as BeforeInstallPromptEvent);
+      const ev = e as BeforeInstallPromptEvent;
+      setInstallPrompt(ev);
+      window._deferredInstallPrompt = ev;
     };
     window.addEventListener("beforeinstallprompt", handler);
 
@@ -74,7 +83,7 @@ export function PWAInstallGate({ children }: { children: React.ReactNode }) {
       );
     }
 
-    return <PWAInstallScreen capability={capability} installPrompt={installPrompt} />;
+    return <PWAInstallScreen installPrompt={installPrompt} />;
   }
 
   return <>{children}</>;
@@ -115,55 +124,137 @@ function DisclaimerGate({ onAccept }: { onAccept: () => void }) {
 }
 
 function PWAInstallScreen({
-  capability,
   installPrompt,
 }: {
-  capability: DeviceCapability;
   installPrompt: BeforeInstallPromptEvent | null;
 }) {
   const t = useTranslations("pwa.install");
+  const [installCap, setInstallCap] = useState<CapabilityResult | null>(null);
 
-  async function handleAndroidInstall() {
-    if (!installPrompt) return;
+  useEffect(() => {
+    setInstallCap(detectInstallCapability());
+  }, []);
+
+  if (!installCap) {
+    return <div className="loading-fullscreen" aria-busy="true" />;
+  }
+
+  switch (installCap.capability) {
+    case "pwa_installed":
+    case "desktop":
+      return null;
+
+    case "ios_other_browser":
+      return (
+        <div className="pwa-install-screen">
+          <OpenInSafariGuide browserName={installCap.browser_name} />
+        </div>
+      );
+
+    case "ios_safari":
+      return (
+        <div className="pwa-install-screen">
+          <div className="install-content">
+            <PwaBrandMark size="lg" />
+            <h1 className="install-title">{t("title")}</h1>
+            <p className="install-subtitle">{t("subtitle")}</p>
+            <IOSInstallSteps />
+            <PostInstallFooter />
+          </div>
+        </div>
+      );
+
+    case "android_other_browser":
+      return (
+        <div className="pwa-install-screen">
+          <OpenInChromeGuide browserName={installCap.browser_name} />
+        </div>
+      );
+
+    case "android_chrome":
+      if (installPrompt) {
+        return (
+          <div className="pwa-install-screen">
+            <div className="install-content">
+              <PwaBrandMark size="lg" />
+              <h1 className="install-title">{t("title")}</h1>
+              <p className="install-subtitle">{t("subtitle")}</p>
+              <AndroidOneTapInstall prompt={installPrompt} />
+              <PostInstallFooter />
+            </div>
+          </div>
+        );
+      }
+      return (
+        <div className="pwa-install-screen">
+          <div className="install-content">
+            <PwaBrandMark size="lg" />
+            <h1 className="install-title">{t("title")}</h1>
+            <p className="install-subtitle">{t("subtitle")}</p>
+            <ChromeMenuInstallSteps />
+            <PostInstallFooter />
+          </div>
+        </div>
+      );
+
+    default:
+      return (
+        <div className="pwa-install-screen">
+          <OpenInChromeGuide browserName={installCap.browser_name} />
+        </div>
+      );
+  }
+}
+
+function AndroidOneTapInstall({ prompt }: { prompt: BeforeInstallPromptEvent }) {
+  const t = useTranslations("pwa.install.android");
+
+  async function handleInstall() {
     try {
-      await installPrompt.prompt();
-      await installPrompt.userChoice;
+      await prompt.prompt();
+      await prompt.userChoice;
     } catch (e) {
       console.warn("[pwa] install prompt failed:", e);
     }
   }
 
-  const desktopUrl = "https://pojulife.com";
+  return (
+    <div className="install-direct">
+      <button type="button" className="install-btn-large" onClick={() => void handleInstall()}>
+        <IconDownload aria-hidden />
+        {t("install_button")}
+      </button>
+      <p className="install-direct-hint">{t("one_tap_hint")}</p>
+    </div>
+  );
+}
+
+function ChromeMenuInstallSteps() {
+  const t = useTranslations("pwa.install.android");
 
   return (
-    <div className="pwa-install-screen">
-      <div className="install-content">
-        <PwaBrandMark size="lg" />
+    <div className="install-steps">
+      <div className="steps-label">{t("label_manual")}</div>
 
-        <h1 className="install-title">{t("title")}</h1>
-        <p className="install-subtitle">{t("subtitle")}</p>
-
-        {capability.os === "ios" ? <IOSInstallSteps /> : null}
-        {capability.os === "android" ? (
-          <AndroidInstallSteps
-            canDirectInstall={Boolean(installPrompt)}
-            onInstall={() => void handleAndroidInstall()}
-          />
-        ) : null}
-        {capability.os !== "ios" && capability.os !== "android" ? (
-          <AndroidInstallSteps canDirectInstall={false} onInstall={() => {}} />
-        ) : null}
-
-        <div className="post-install-tip">
-          <p>{t("after_install_tip")}</p>
+      <div className="step-item">
+        <div className="step-icon">
+          <IconDotsVertical aria-hidden />
         </div>
+        <div className="step-text">{t("step_1")}</div>
+      </div>
 
-        <div className="desktop-fallback">
-          <p className="muted">{t("want_explore")}</p>
-          <a href={desktopUrl} className="desktop-link" rel="noopener noreferrer">
-            pojulife.com
-          </a>
+      <div className="step-item">
+        <div className="step-icon">
+          <IconSquareRoundedPlus aria-hidden />
         </div>
+        <div className="step-text">{t("step_2")}</div>
+      </div>
+
+      <div className="step-item">
+        <div className="step-icon">
+          <IconCheck aria-hidden />
+        </div>
+        <div className="step-text">{t("step_3")}</div>
       </div>
     </div>
   );
@@ -209,51 +300,21 @@ function IOSInstallSteps() {
   );
 }
 
-function AndroidInstallSteps({
-  canDirectInstall,
-  onInstall,
-}: {
-  canDirectInstall: boolean;
-  onInstall: () => void;
-}) {
-  const t = useTranslations("pwa.install.android");
-
-  if (canDirectInstall) {
-    return (
-      <div className="install-direct">
-        <button type="button" className="install-btn-large" onClick={onInstall}>
-          <IconDownload aria-hidden />
-          {t("install_button")}
-        </button>
-        <p className="install-direct-hint">{t("one_tap_hint")}</p>
-      </div>
-    );
-  }
+function PostInstallFooter() {
+  const t = useTranslations("pwa.install");
 
   return (
-    <div className="install-steps">
-      <div className="steps-label">{t("label_manual")}</div>
-
-      <div className="step-item">
-        <div className="step-icon">
-          <IconDotsVertical aria-hidden />
-        </div>
-        <div className="step-text">{t("step_1")}</div>
+    <>
+      <div className="post-install-tip">
+        <p>{t("after_install_tip")}</p>
       </div>
 
-      <div className="step-item">
-        <div className="step-icon">
-          <IconSquareRoundedPlus aria-hidden />
-        </div>
-        <div className="step-text">{t("step_2")}</div>
+      <div className="desktop-fallback">
+        <p className="muted">{t("want_explore")}</p>
+        <a href={POJULIFE_SITE_URL} className="desktop-link" rel="noopener noreferrer">
+          pojulife.com
+        </a>
       </div>
-
-      <div className="step-item">
-        <div className="step-icon">
-          <IconCheck aria-hidden />
-        </div>
-        <div className="step-text">{t("step_3")}</div>
-      </div>
-    </div>
+    </>
   );
 }

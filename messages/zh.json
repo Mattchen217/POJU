@@ -633,6 +633,7 @@
     "birth_date_label": "出生日期",
     "birth_time_label": "出生时间",
     "birth_location_label": "地点",
+    "birth_location_default": "默认（时区中央经度）",
     "gender_label": "性别",
     "confirm_reassure": "之后仍可在此界面切换档案。",
     "back_to_list": "返回",
@@ -763,7 +764,7 @@
       "birth_flow_analysis_done_short": "分析完成",
       "birth_flow_analysis_partial": "已保存，分析将稍后重试",
       "birth_flow_step_received": "已收到并保存在本机的出生信息",
-      "birth_flow_step_analyzing": "正在进行命主基础分析（Step 7）",
+      "birth_flow_step_analyzing": "正在进行命主基础分析",
       "birth_flow_step_done": "可以继续在对话中补充细节",
       "dialog_ok": "确定",
       "dialog_cancel": "取消",
@@ -992,7 +993,8 @@
     "why_explanation": "pojulife 使用真太阳时确保精度。太阳过中天的时间随经度变化 —— 你的出生地保证时辰柱准确。",
     "true_solar_offset": "真太阳时偏差：{offset}",
     "confirm_continue": "使用此地点继续",
-    "location_required": "请选择或确认你的出生城市。"
+    "location_required": "请选择或确认你的出生城市。",
+    "confirm_privacy_note": "你的数据只会加密后保存在本地设备，pojulife 不会也无法获取，请放心使用。"
   },
   "birth_picker": {
     "title": "你的出生信息",
@@ -1100,6 +1102,12 @@
     "payment_coming_soon": "付费结账尚未接入，暂时跳过支付直接进入 Syncro。",
     "payment_continue_without_checkout": "继续进入 Syncro →",
     "back_to_home": "返回 Syncro",
+    "existing_session": {
+      "title": "继续上次的解读？",
+      "valid_for_hours": "还剩 {hours} 小时有效",
+      "continue": "继续这次解读",
+      "start_new": "改为开始新的解读"
+    },
     "your_task_label": "你的任务",
     "computing": {
       "step_1": "正在排布你的命局…",
@@ -1142,7 +1150,12 @@
     },
     "hour": {
       "aria_label": "时辰时间轴",
-      "now": "当前"
+      "now": "当前",
+      "legend": {
+        "now": "当前",
+        "done": "已生成",
+        "pending": "未生成"
+      }
     },
     "why_this_current": "为何此时",
     "why_modal": {
@@ -1345,9 +1358,11 @@
     "step_indicator": "第 {step} / {total} 步",
     "select_a_title": "命主 A",
     "select_a_subtitle": "选择或添加第一个人的八字信息。",
+    "select_first_person": "选择或添加第一个人的八字",
     "select_a_label": "命主 A",
     "select_b_title": "命主 B",
     "select_b_subtitle": "选择或添加第二个人的八字信息。会自动保存到你的命主库。",
+    "select_second_person": "选择或添加第二个人的八字（会保存到命主库）",
     "select_b_label": "命主 B",
     "cannot_match_self": "命主 B 不能与命主 A 相同。",
     "back_to_select_a": "返回命主 A",
@@ -1364,6 +1379,10 @@
       "example_3": "我成年的儿子。我们已经没法好好说话了。",
       "example_4": "一个我正在考虑录用为副手的候选人。",
       "analyze_button": "开始 Match",
+      "begin_match": "开始 Match",
+      "checking": "正在检查命盘…",
+      "preparing_b": "正在准备命主 B 的命盘…",
+      "starting": "正在启动 Match…",
       "language_hint": "请用你自己的语言书写——报告会用同样的语言返回。",
       "back": "返回命主 B"
     },
@@ -1466,6 +1485,42 @@
         "step_1": "点击右上角菜单（3 个点）",
         "step_2": "选择「添加到主屏幕」",
         "step_3": "点击「安装」确认"
+      },
+      "chrome_required": {
+        "title": "请使用 Chrome 安装",
+        "subtitle_huawei": "{browser} 不支持 pojulife 的完整应用安装，请用 Chrome 打开此页面安装。",
+        "step_1_title": "安装 Chrome",
+        "step_1_desc": "如果还没有，从应用商店下载",
+        "step_2_title": "在 Chrome 中打开 pojulife.com",
+        "step_2_desc": "复制下方链接，粘贴到 Chrome 地址栏",
+        "step_3_title": "点击「安装」",
+        "step_3_desc": "Chrome 会显示安装按钮，点击即可将 pojulife 添加到桌面",
+        "why_chrome": "Chrome 完整支持 PWA 应用安装。其他浏览器可能只会创建快捷方式，无法提供完整的 pojulife 体验。",
+        "copy_done": "已复制"
+      },
+      "open_in_safari": {
+        "title": "请用 Safari 打开",
+        "subtitle": "iOS 只支持通过 Safari 安装 pojulife，{browser} 无法完成安装。",
+        "label": "在 iPhone 上",
+        "step_1_title": "复制链接",
+        "copied": "已复制",
+        "step_2_title": "打开 Safari",
+        "step_2_desc": "将链接粘贴到 Safari 地址栏",
+        "step_3_title": "在 Safari 中安装",
+        "step_3_desc": "点击分享 → 添加到主屏幕 → 添加",
+        "why_safari": "iOS 将安装功能保留给 Safari，这是 Apple 的限制，不是 pojulife 的问题。"
+      },
+      "open_in_chrome": {
+        "title": "请用 Chrome 打开",
+        "subtitle": "{browser} 不完整支持安装 pojulife，请使用 Chrome。",
+        "label": "在 Android 上",
+        "step_1_title": "复制链接",
+        "copied": "已复制",
+        "step_2_title": "打开 Chrome",
+        "step_2_desc": "将链接粘贴到 Chrome 地址栏",
+        "step_3_title": "在 Chrome 中安装",
+        "step_3_desc": "点击菜单 → 安装 pojulife → 安装",
+        "why_chrome": "Chrome 支持完整的 PWA 安装。其他浏览器可能只创建快捷方式。"
       }
     }
   }

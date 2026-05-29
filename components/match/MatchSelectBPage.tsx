@@ -68,8 +68,10 @@ export function MatchSelectBPage() {
     <main className="match-select-page">
       <header className="match-select-header">
         <span className="match-step-indicator">{t("step_indicator", { step: 2, total: 3 })}</span>
-        <h1>{t("select_b_title")}</h1>
-        <p>{t("select_b_subtitle")}</p>
+        <div className="selector-label">
+          <span className="label-letter">B</span>
+          <span className="label-text">{t("select_second_person")}</span>
+        </div>
       </header>
 
       <SessionPreparation
@@ -81,7 +83,7 @@ export function MatchSelectBPage() {
         locale={locale}
         productType="match"
         matchPerson="b"
-        customLabel={t("select_b_label")}
+        suppressMatchWelcomeCopy
         refundLabel={t("back_to_select_a")}
       />
     </main>

@@ -2,6 +2,7 @@ import {
   GLYPH_GUANYIN_100_LOTS_IDENTITY,
   GLYPH_GUANYIN_INTERPRETATION_METHOD,
   GLYPH_OUTPUT_BRANDING,
+  GLYPH_LANGUAGE_RULES,
   ORIENTAL_SHARED_GUARDRAILS,
 } from "@/lib/llm/prompts/glyph-guanyin-base";
 import {
@@ -145,6 +146,7 @@ ${windCategoryToneBlock(glyph.wind_category)}
     GLYPH_GUANYIN_100_LOTS_IDENTITY,
     GLYPH_GUANYIN_INTERPRETATION_METHOD,
     GLYPH_OUTPUT_BRANDING,
+    GLYPH_LANGUAGE_RULES,
     ORIENTAL_SHARED_GUARDRAILS,
     buildCurrentDateContext(new Date(), locale),
     buildProfileContextSection(profile, base_analysis),

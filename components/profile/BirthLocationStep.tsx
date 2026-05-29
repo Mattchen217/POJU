@@ -30,6 +30,7 @@ export function BirthLocationStep({ userTimezone, onSelect, onBack }: BirthLocat
       setError(tForm("location_required"));
       return;
     }
+    console.log("[BirthLocation] submit:", resolved);
     onSelect(resolved);
   }
 

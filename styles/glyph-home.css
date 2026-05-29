@@ -300,6 +300,40 @@
   display: flex;
   flex-direction: column;
   gap: 1.75rem;
+  font-family: var(--pj-font-sans);
+}
+
+.glyph-report,
+.glyph-report p,
+.glyph-report h1,
+.glyph-report h2,
+.glyph-report h3,
+.glyph-report h4,
+.glyph-report li,
+.glyph-report blockquote {
+  font-family: var(--pj-font-sans) !important;
+}
+
+.glyph-report h1 {
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.glyph-report h2 {
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.glyph-report h3 {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.glyph-report p,
+.glyph-report li {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--pj-text-primary, #e7e0ed);
 }
 
 .glyph-report .section-label {

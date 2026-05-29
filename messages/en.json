@@ -618,6 +618,7 @@
     "birth_date_label": "Birth date",
     "birth_time_label": "Birth time",
     "birth_location_label": "Location",
+    "birth_location_default": "Default (timezone meridian)",
     "gender_label": "Gender",
     "confirm_reassure": "You can switch profiles later from this screen.",
     "back_to_list": "Back",
@@ -748,7 +749,7 @@
       "birth_flow_analysis_done_short": "Analysis complete",
       "birth_flow_analysis_partial": "Saved — analysis will retry later",
       "birth_flow_step_received": "Birth details received and saved on this device",
-      "birth_flow_step_analyzing": "Running base chart analysis (Step 7)",
+      "birth_flow_step_analyzing": "Running base chart analysis",
       "birth_flow_step_done": "Ready to continue the conversation",
       "dialog_ok": "OK",
       "dialog_cancel": "Cancel",
@@ -977,7 +978,8 @@
     "why_explanation": "pojulife uses true solar time for accuracy. Sun peaks vary by longitude — your birth location ensures the correct hour pillar.",
     "true_solar_offset": "True solar offset: {offset}",
     "confirm_continue": "Continue with this location",
-    "location_required": "Please select or confirm your birth city."
+    "location_required": "Please select or confirm your birth city.",
+    "confirm_privacy_note": "Your data is encrypted and stored only on your device. pojulife cannot access it."
   },
   "birth_picker": {
     "title": "Your Birth Information",
@@ -1085,6 +1087,12 @@
     "payment_coming_soon": "Paid checkout is not connected yet — continuing into Syncro without payment for now.",
     "payment_continue_without_checkout": "Continue to Syncro →",
     "back_to_home": "Back to Syncro",
+    "existing_session": {
+      "title": "Continue your reading?",
+      "valid_for_hours": "Valid for {hours} more hours",
+      "continue": "Continue this reading",
+      "start_new": "Start a new reading instead"
+    },
     "your_task_label": "Your task",
     "computing": {
       "step_1": "Casting your chart...",
@@ -1127,7 +1135,12 @@
     },
     "hour": {
       "aria_label": "Hour-period timeline",
-      "now": "NOW"
+      "now": "NOW",
+      "legend": {
+        "now": "Now",
+        "done": "Ready",
+        "pending": "Pending"
+      }
     },
     "why_this_current": "Why this current",
     "why_modal": {
@@ -1330,9 +1343,11 @@
     "step_indicator": "Step {step} of {total}",
     "select_a_title": "Person A",
     "select_a_subtitle": "Choose or add the first person's bazi information.",
+    "select_first_person": "Choose or add the first person's chart",
     "select_a_label": "Person A",
     "select_b_title": "Person B",
     "select_b_subtitle": "Choose or add the second person's bazi information. This will be saved to your profile library.",
+    "select_second_person": "Choose or add the second person's chart — saved to your library",
     "select_b_label": "Person B",
     "cannot_match_self": "Person B must be different from Person A.",
     "back_to_select_a": "Back to Person A",
@@ -1349,6 +1364,10 @@
       "example_3": "My adult son. We don't talk easily anymore.",
       "example_4": "A candidate I'm considering hiring as my second-in-command.",
       "analyze_button": "Run the Match",
+      "begin_match": "Begin Match",
+      "checking": "Checking charts…",
+      "preparing_b": "Preparing Person B's chart…",
+      "starting": "Starting Match…",
       "language_hint": "Write in your own language — your report will come back in the same language.",
       "back": "Back to Person B"
     },
@@ -1451,6 +1470,42 @@
         "step_1": "Tap menu (3 dots) at top right",
         "step_2": "Select Add to Home Screen",
         "step_3": "Tap Install to confirm"
+      },
+      "chrome_required": {
+        "title": "Use Chrome to install",
+        "subtitle_huawei": "{browser} doesn't support pojulife's full app installation. Please open this page in Chrome to install.",
+        "step_1_title": "Install Chrome",
+        "step_1_desc": "Get it from your app store if you don't have it",
+        "step_2_title": "Open pojulife.com in Chrome",
+        "step_2_desc": "Copy the link below, then paste it into Chrome's address bar",
+        "step_3_title": "Tap 'Install'",
+        "step_3_desc": "Chrome will show an install button — tap to add pojulife to your home screen",
+        "why_chrome": "Chrome supports proper Progressive Web App installation. Other browsers may only create a shortcut, which won't give you the full pojulife experience.",
+        "copy_done": "Copied!"
+      },
+      "open_in_safari": {
+        "title": "Please open in Safari",
+        "subtitle": "iOS only supports installing pojulife through Safari. {browser} cannot complete the installation.",
+        "label": "On iPhone",
+        "step_1_title": "Copy this link",
+        "copied": "Copied!",
+        "step_2_title": "Open Safari",
+        "step_2_desc": "Paste the link into Safari's address bar",
+        "step_3_title": "Install from Safari",
+        "step_3_desc": "Tap Share → Add to Home Screen → Add",
+        "why_safari": "iOS reserves the install feature for Safari. This is an Apple limitation, not pojulife's."
+      },
+      "open_in_chrome": {
+        "title": "Please open in Chrome",
+        "subtitle": "{browser} doesn't fully support installing pojulife. Please use Chrome.",
+        "label": "On Android",
+        "step_1_title": "Copy this link",
+        "copied": "Copied!",
+        "step_2_title": "Open Chrome",
+        "step_2_desc": "Paste the link into Chrome's address bar",
+        "step_3_title": "Install from Chrome",
+        "step_3_desc": "Tap menu → Install pojulife → Install",
+        "why_chrome": "Chrome supports proper PWA installation. Other browsers may only create a shortcut."
       }
     }
   }

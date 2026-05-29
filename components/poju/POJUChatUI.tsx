@@ -48,6 +48,9 @@ import type { UserProfile } from "@/lib/profile/types";
 import { computeSituationContextFingerprint } from "@/lib/poju/situation-context-fingerprint";
 import { getCachedSituationAnalysis, requestSituationAnalysis } from "@/lib/llm/deepseek/situation-analysis";
 import { runFinalDeliveryForSession } from "@/lib/llm/pro/final-delivery";
+
+/** Internal pipeline / phase UI — development only. */
+const POJU_DEV_DEBUG = process.env.NODE_ENV === "development";
 import { rewindSessionToUserMessage } from "@/lib/poju/session-rewind";
 import {
   pojuChatColumn,
@@ -1092,7 +1095,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
             <div className={`${pojuChatColumn} ${pojuChatMessageList} ${overlayFormOpen ? "pb-8" : "pb-40"}`}>
               <SessionExpiryNotice session={session} extending={extending} onExtend={() => void handleExtendSession()} />
 
-              {session.agent_v2 ? (
+              {POJU_DEV_DEBUG && session.agent_v2 ? (
                 <div className="flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-surface-container-low px-3 py-2 text-xs">
                   <span className="text-on-surface-variant">{t("agent_phase_label")}:</span>
                   <span className="rounded-md bg-primary/20 px-2 py-0.5 font-medium text-primary">{t(agentPhaseKey())}</span>
@@ -1202,7 +1205,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                 </div>
               ) : null}
 
-              {session.agent_v2 && !session.main_delivery_done && !showSummaryForm ? (
+              {POJU_DEV_DEBUG && session.agent_v2 && !session.main_delivery_done && !showSummaryForm ? (
                 <details className="rounded-xl border border-cyan-500/20 bg-cyan-950/20 px-3 py-2 text-xs text-on-surface-variant">
                   <summary className="cursor-pointer text-on-surface">{t("advanced_pipeline")}</summary>
                   <p className="mt-2 text-on-surface">{t("situation_analysis_hint")}</p>

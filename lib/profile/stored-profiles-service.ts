@@ -45,6 +45,8 @@ export interface StoredProfileSummary {
   relationship: import("@/lib/db/poju-db").StoredProfileRelationship;
   has_base_analysis: boolean;
   used_true_solar_time?: boolean;
+  birth_location_name?: string;
+  birth_location_use_defaults?: boolean;
   used_in_products: { poju: number; glyph: number; syncro: number; match: number };
   last_used_at: string;
   created_at: string;
@@ -67,6 +69,7 @@ export async function listStoredProfiles(): Promise<StoredProfileSummary[]> {
         cipher: record.encrypted_data,
       });
       const b = normalizeStoredBirthInfo(data.birth_info as unknown as Record<string, unknown>);
+      const loc = b.birth_location;
       summaries.push({
         profile_id: record.profile_id,
         display_name: record.display_name,
@@ -79,7 +82,9 @@ export async function listStoredProfiles(): Promise<StoredProfileSummary[]> {
         used_true_solar_time:
           data.user_profile?.used_true_solar_time ??
           data.base_analysis?.used_true_solar_time ??
-          (b.birth_location ? !b.birth_location.use_defaults : undefined),
+          (loc ? !loc.use_defaults : undefined),
+        birth_location_name: loc?.name,
+        birth_location_use_defaults: loc?.use_defaults,
         used_in_products: {
           poju: record.used_in_products.poju ?? 0,
           glyph: record.used_in_products.glyph ?? 0,
@@ -153,6 +158,12 @@ export async function createStoredProfile(input: {
     birth_info: storedBirth,
     user_profile: userProfile,
   };
+
+  console.log("[createStoredProfile] writing birth_location:", {
+    profile_id: "(new)",
+    birth_info: storedBirth.birth_location,
+    user_profile: userProfile.birth.birth_location,
+  });
 
   const enc = await encryptJson(STORED_PROFILES_SECRET, payload);
   const profileId = safeRandomUUID();
@@ -250,6 +261,9 @@ export async function saveBaseAnalysisFromStream(input: {
     );
   const used_true_solar_time = data.user_profile.used_true_solar_time ?? false;
 
+  // Preserve birth_location — only update base_analysis (+ tst_meta on birth_info).
+  const preservedBirthLocation = data.user_profile.birth?.birth_location ?? data.birth_info.birth_location;
+
   data.base_analysis = {
     generated_at: input.generated_at,
     model: "v3_streaming",
@@ -266,6 +280,16 @@ export async function saveBaseAnalysisFromStream(input: {
   if (tst_meta && data.birth_info) {
     data.birth_info.tst_meta = tst_meta;
   }
+
+  if (preservedBirthLocation) {
+    data.birth_info.birth_location = preservedBirthLocation;
+    data.user_profile.birth = {
+      ...data.user_profile.birth,
+      birth_location: preservedBirthLocation,
+    };
+  }
+
+  console.log("[saveBaseAnalysisFromStream] preserving birth_location:", preservedBirthLocation);
 
   const enc = await encryptJson(STORED_PROFILES_SECRET, data);
   await db.stored_profiles.update(input.profile_id, {

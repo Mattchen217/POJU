@@ -15,6 +15,7 @@ import {
 } from "@/lib/profile/stored-profiles-service";
 import { HOUR_PERIOD_INFO } from "@/lib/profile/types";
 import { normalizeStoredBirthInfo } from "@/lib/profile/birth-info-utils";
+import { formatBirthLocationLabel } from "@/lib/profile/birth-info-display";
 import type { UserProfile } from "@/lib/profile/types";
 import { generateBaseAnalysis } from "@/lib/llm/deepseek/base-analysis";
 import { BaseAnalysisViewModal } from "@/components/profile/BaseAnalysisViewModal";
@@ -311,10 +312,7 @@ function ProfileConfirmView({
   if (loadingProfile || data === undefined) return <p className="text-sm text-text-secondary">{t("loading")}</p>;
   if (data === null) return <p className="text-sm text-red-300">Profile not found.</p>;
   const birth = normalizeStoredBirthInfo(data.birth_info as unknown as Record<string, unknown>);
-  const locationLabel =
-    birth.birth_location?.use_defaults === false
-      ? birth.birth_location.name
-      : birth.birth_location?.name ?? birth.timezone;
+  const locationLabel = formatBirthLocationLabel(birth.birth_location, t("birth_location_default"));
 
   return (
     <div className="space-y-4 rounded-xl border border-white/10 bg-black/25 p-4">

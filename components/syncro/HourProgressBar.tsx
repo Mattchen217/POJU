@@ -23,7 +23,7 @@ const HOUR_SEQUENCE: HourPeriod[] = [
 
 const DIRECTIONS: DirectionId[] = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
 
-export type HourDotStatus = "now" | "done" | "generating" | "pending";
+export type HourDotStatus = "now" | "done" | "pending";
 
 export type HourProgressBarProps = {
   matrix: SyncroMatrix;
@@ -61,39 +61,36 @@ export function HourProgressBar({
   const active = sortedPeriods[activeIdx >= 0 ? activeIdx : 0] ?? sortedPeriods[0]!;
   const activeIsLive = active === livePeriod && activeIdx === 0;
 
-  function getStatus(hourIdx: number): HourDotStatus {
-    if (hourIdx === 0) return "now";
-
-    const period = sortedPeriods[hourIdx];
-    if (!period) return "pending";
+  function getHourStatus(period: HourPeriod): HourDotStatus {
+    if (period === livePeriod) return "now";
 
     const cells = DIRECTIONS.map((dir) => matrix[matrixKey(period, dir)]).filter(Boolean);
     if (cells.length === 0) return "pending";
 
     const allDone = cells.every((cell) => cell && !cell.llm_pending);
-    const someDone = cells.some((cell) => cell && !cell.llm_pending);
-
-    if (allDone) return "done";
-    if (someDone) return "generating";
-    return "pending";
+    return allDone ? "done" : "pending";
   }
 
   return (
     <div className="hour-progress-bar" role="tablist" aria-label={t("aria_label")}>
       <div className="hour-track">
         <div className="hour-line" aria-hidden />
-        {sortedPeriods.map((period, idx) => {
-          const status = getStatus(idx);
-          const isActive = period === activeHour;
+        {sortedPeriods.map((period) => {
+          const status = getHourStatus(period);
+          const isSelected = period === activeHour;
+          const isClickable = status !== "pending";
 
           return (
             <button
               key={period}
               type="button"
               role="tab"
-              aria-selected={isActive}
-              className={`hour-dot status-${status} ${isActive ? "selected" : ""}`}
-              onClick={() => onSelect(period)}
+              aria-selected={isSelected}
+              disabled={!isClickable}
+              className={`hour-dot status-${status} ${isSelected ? "selected" : ""}`}
+              onClick={() => {
+                if (isClickable) onSelect(period);
+              }}
               aria-label={`${hourPeriodDisplayName(period, locale)} · ${HOUR_PERIOD_RANGES[period]}`}
             />
           );
@@ -114,6 +111,21 @@ export function HourProgressBar({
             <span className="hour-now-tag">{t("now")}</span>
           </>
         ) : null}
+      </div>
+
+      <div className="hour-legend" aria-hidden>
+        <span className="legend-item">
+          <span className="legend-dot status-now" />
+          {t("legend.now")}
+        </span>
+        <span className="legend-item">
+          <span className="legend-dot status-done" />
+          {t("legend.done")}
+        </span>
+        <span className="legend-item">
+          <span className="legend-dot status-pending" />
+          {t("legend.pending")}
+        </span>
       </div>
     </div>
   );

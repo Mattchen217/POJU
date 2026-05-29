@@ -2,6 +2,8 @@
 
 import { useTranslations } from "next-intl";
 
+import { MatchStartGlassButton } from "@/components/match/MatchStartButton";
+
 export const MATCH_RELATIONSHIP_MIN_LEN = 10;
 export const MATCH_RELATIONSHIP_MAX_LEN = 200;
 
@@ -12,6 +14,8 @@ type RelationshipInputProps = {
   onRelationshipChange: (value: string) => void;
   onContinue: () => void;
   onBack?: () => void;
+  continueLabel?: string;
+  continueDisabled?: boolean;
 };
 
 export function RelationshipInput({
@@ -21,11 +25,13 @@ export function RelationshipInput({
   onRelationshipChange,
   onContinue,
   onBack,
+  continueLabel,
+  continueDisabled = false,
 }: RelationshipInputProps) {
   const t = useTranslations("match.relationship");
 
   const trimmedLen = relationship.trim().length;
-  const canContinue = trimmedLen >= MATCH_RELATIONSHIP_MIN_LEN;
+  const canContinue = trimmedLen >= MATCH_RELATIONSHIP_MIN_LEN && !continueDisabled;
 
   return (
     <div className="match-relationship-content">
@@ -79,14 +85,9 @@ export function RelationshipInput({
         </ul>
       </div>
 
-      <button
-        type="button"
-        onClick={onContinue}
-        disabled={!canContinue}
-        className="match-primary-btn match-relationship-submit"
-      >
-        {t("analyze_button")}
-      </button>
+      <MatchStartGlassButton onClick={onContinue} disabled={!canContinue}>
+        {continueLabel ?? t("begin_match")}
+      </MatchStartGlassButton>
 
       <p className="match-language-hint">{t("language_hint")}</p>
 

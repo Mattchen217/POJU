@@ -1,47 +1,57 @@
-.streaming-analysis {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  padding: 24px 20px;
-  font-family: var(--pj-font-sans);
+/* Fixed compact stream panel — above bottom nav, leaves Spline background visible */
+.streaming-analysis-bottom {
+  position: fixed;
+  bottom: max(80px, calc(56px + env(safe-area-inset-bottom)));
+  left: 16px;
+  right: 16px;
+  z-index: 50;
+  max-height: 35vh;
+  pointer-events: auto;
 }
 
-.status-line {
+.streaming-container {
+  background: rgba(7, 9, 26, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 16px;
+  padding: 16px 14px;
+  max-height: 30vh;
+  overflow: hidden;
+}
+
+.thinking-phase {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: var(--pj-text-xs);
-  color: var(--pj-text-tertiary);
-  letter-spacing: 0.3px;
-  margin-bottom: 18px;
+  padding: 12px 8px;
 }
 
-.status-dot {
+.thinking-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-}
-
-.status-dot.connecting {
-  background: var(--pj-text-tertiary);
-  animation: streaming-pulse 1.2s infinite ease-in-out;
-}
-
-.status-dot.streaming {
   background: var(--pj-gold);
   box-shadow: 0 0 8px var(--pj-gold-glow);
   animation: streaming-pulse 1.2s infinite ease-in-out;
+  flex-shrink: 0;
 }
 
-.status-dot.done {
-  background: var(--pj-following);
+.thinking-text {
+  font-size: var(--pj-text-sm);
+  color: var(--pj-text-primary);
+  letter-spacing: 0.3px;
+  animation: thinking-fade-in 0.4s ease;
 }
 
-.bytes {
-  margin-left: auto;
-  color: var(--pj-text-muted);
-  font-size: 10px;
-  font-family: var(--pj-font-mono);
+@keyframes thinking-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes streaming-pulse {
@@ -56,42 +66,36 @@
   }
 }
 
-.streaming-content {
-  flex: 1;
-  background: var(--pj-bg-card);
-  border-radius: var(--pj-radius-lg);
-  padding: 20px 18px;
+.streaming-content-compact {
+  max-height: 25vh;
   overflow-y: auto;
-  max-height: 60vh;
   scroll-behavior: smooth;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
 }
 
-.streaming-content::-webkit-scrollbar {
+.streaming-content-compact::-webkit-scrollbar {
   width: 4px;
 }
 
-.streaming-content::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
+.streaming-content-compact::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 2px;
 }
 
-.content-text {
+.streaming-content-compact .content-text {
   font-family: var(--pj-font-sans);
-  font-size: var(--pj-text-sm);
-  line-height: var(--pj-leading-relaxed);
+  font-size: 13px;
+  line-height: 1.6;
   color: var(--pj-text-primary);
   white-space: pre-wrap;
   word-wrap: break-word;
   margin: 0;
-  letter-spacing: 0.1px;
 }
 
 .cursor {
   display: inline-block;
   color: var(--pj-gold);
-  font-weight: var(--pj-weight-medium);
   margin-left: 2px;
   animation: streaming-blink 1s infinite step-end;
 }
@@ -107,30 +111,39 @@
   }
 }
 
-.placeholder {
-  color: var(--pj-text-muted);
-  font-size: var(--pj-text-sm);
+.bottom-hint-white {
+  margin-top: 8px;
   text-align: center;
-  padding: 40px 0;
-  font-style: italic;
+  font-size: 11px;
+  color: var(--pj-text-primary);
+  letter-spacing: 0.3px;
+  padding: 0 12px;
 }
 
-.bottom-hint {
-  margin-top: 14px;
-  text-align: center;
-  font-size: 10px;
-  color: var(--pj-text-muted);
-  letter-spacing: 0.5px;
+.preparing-page {
+  position: relative;
+  height: 100vh;
+  overflow: hidden;
+  pointer-events: none;
 }
 
 .base-analysis-stream-preparing {
   position: relative;
-  z-index: 2;
-  width: 100%;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.base-analysis-stream-preparing .preparing-stream-error {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 51;
+  width: calc(100% - 32px);
   max-width: 520px;
-  margin: 0 auto;
+  pointer-events: auto;
 }
 
 .preparing-stream-error {
-  margin-top: 16px;
+  margin-top: 0;
 }

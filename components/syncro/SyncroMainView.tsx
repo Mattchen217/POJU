@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { HourProgressBar } from "@/components/syncro/HourProgressBar";
-import { ModeToggle, type ModeToggleTab } from "@/components/syncro/ModeToggle";
+import { ThreeModeToggle } from "@/components/syncro/ThreeModeToggle";
 import { useOrientation } from "@/components/syncro/SyncroOrientationProvider";
 import { SyncroARMode } from "@/components/syncro/SyncroARMode";
 import { SyncroCompassMode } from "@/components/syncro/SyncroCompassMode";
@@ -14,9 +14,8 @@ import type { DirectionId } from "@/lib/syncro/current-system";
 import { loadSyncroPermission, saveSyncroPermission } from "@/lib/syncro/permissions";
 import {
   findBestDirectionForPeriod,
-  getInitialSyncroUiMode,
   getOrderedHourPeriodsFromSession,
-  tiltSuggestsMode,
+  getInitialSyncroUiMode,
   type SyncroTaskTimeScope,
   type SyncroUiMode,
 } from "@/lib/syncro/syncro-view-helpers";
@@ -44,14 +43,13 @@ export function SyncroMainView({
   llmProgress,
 }: SyncroMainViewProps) {
   const t = useTranslations("syncro.main");
-  const { isSupported, deviceTiltBeta } = useOrientation();
+  const { isSupported } = useOrientation();
 
   const orderedPeriods = useMemo(() => getOrderedHourPeriodsFromSession(session), [session]);
 
   const [liveHourPeriod, setLiveHourPeriod] = useState<HourPeriod>(() => getCurrentHourPeriod());
   const [activeHour, setActiveHour] = useState<HourPeriod>(() => getCurrentHourPeriod());
   const [uiMode, setUiMode] = useState<SyncroUiMode>("compass");
-  const [modePinned, setModePinned] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [cameraGranted, setCameraGranted] = useState(false);
   const [activeDirection, setActiveDirection] = useState<DirectionId>("E");
@@ -82,14 +80,6 @@ export function SyncroMainView({
   }, []);
 
   useEffect(() => {
-    if (modePinned || uiMode === "map") return;
-    const suggested = tiltSuggestsMode(deviceTiltBeta);
-    if (!suggested || suggested === uiMode) return;
-    if (suggested === "ar" && !cameraGranted) return;
-    setUiMode(suggested);
-  }, [deviceTiltBeta, modePinned, uiMode, cameraGranted]);
-
-  useEffect(() => {
     setActiveDirection(findBestDirectionForPeriod(session, activeHour));
   }, [session, activeHour]);
 
@@ -107,12 +97,9 @@ export function SyncroMainView({
     }
   }
 
-  function handleModeToggle(tab: ModeToggleTab) {
-    setModePinned(true);
-    setUiMode(tab);
+  function handleModeChange(mode: SyncroUiMode) {
+    setUiMode(mode);
   }
-
-  const toggleTab: ModeToggleTab = uiMode === "map" ? "map" : "compass";
 
   const effectivePeriod = orderedPeriods.includes(activeHour)
     ? activeHour
@@ -187,7 +174,7 @@ export function SyncroMainView({
         ) : null}
       </div>
 
-      <ModeToggle mode={toggleTab} onChange={handleModeToggle} />
+      <ThreeModeToggle mode={uiMode} onChange={handleModeChange} />
     </div>
   );
 }

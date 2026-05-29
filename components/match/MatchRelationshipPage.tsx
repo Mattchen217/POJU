@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 
 import { PojuToolHandoffBanner } from "@/components/poju/PojuToolHandoffBanner";
 import { RelationshipInput } from "@/components/match/RelationshipInput";
+import { useMatchStartFlow } from "@/components/match/MatchStartButton";
 import { usePojuToolHandoff } from "@/lib/poju/use-poju-tool-handoff";
 import "@/styles/poju-tool-handoff.css";
 import { useRouter } from "@/i18n/navigation";
@@ -23,6 +24,7 @@ export function MatchRelationshipPage() {
   const pojuHandoff = usePojuToolHandoff("match");
   const [relationship, setRelationship] = useState("");
   const [loading, setLoading] = useState(true);
+  const { startMatch, buttonLabel, isBusy } = useMatchStartFlow();
 
   useEffect(() => {
     void init();
@@ -62,10 +64,18 @@ export function MatchRelationshipPage() {
     }
   }
 
-  function handleContinue() {
-    if (relationship.trim().length < 10) return;
+  async function handleContinue() {
+    if (relationship.trim().length < 10 || isBusy) return;
     sessionStorage.setItem("match_relationship", relationship.trim());
-    router.push("/match/analyzing");
+
+    const aId = sessionStorage.getItem("match_a_profile_id");
+    const bId = sessionStorage.getItem("match_b_profile_id");
+    if (!aId || !bId) {
+      router.replace("/match/select-a");
+      return;
+    }
+
+    await startMatch(aId, bId);
   }
 
   function handleBack() {
@@ -88,8 +98,10 @@ export function MatchRelationshipPage() {
         bLabel={formatBirthShort(bProfile)}
         relationship={relationship}
         onRelationshipChange={setRelationship}
-        onContinue={handleContinue}
+        onContinue={() => void handleContinue()}
         onBack={handleBack}
+        continueLabel={buttonLabel}
+        continueDisabled={isBusy}
       />
     </main>
   );

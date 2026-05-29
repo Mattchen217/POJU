@@ -575,6 +575,22 @@
   margin-bottom: 0;
 }
 
+.confirm-dialog .reassure .privacy-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: var(--pj-text-xs);
+  color: var(--pj-text-tertiary);
+  line-height: var(--pj-leading-normal);
+  margin-top: 8px;
+}
+
+.confirm-dialog .reassure .privacy-note svg {
+  flex-shrink: 0;
+  color: var(--pj-following);
+  margin-top: 2px;
+}
+
 .dialog-actions {
   display: flex;
   gap: 12px;
