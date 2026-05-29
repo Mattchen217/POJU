@@ -1,0 +1,50 @@
+export type BaseAnalysisJobStatus = "pending" | "streaming" | "completed" | "failed";
+
+export interface BaseAnalysisJob {
+  job_id: string;
+  profile_id: string;
+  locale: string;
+
+  status: BaseAnalysisJobStatus;
+
+  /** Streamed LLM content (markdown narrative). */
+  accumulated_content: string;
+
+  /** Parsed from trailing `---META---` JSON block. */
+  meta?: {
+    day_master_element?: string;
+    favorable_elements?: string[];
+    unfavorable_elements?: string[];
+    [key: string]: unknown;
+  };
+
+  error?: string;
+  error_detail?: string;
+
+  created_at: number;
+  updated_at: number;
+  completed_at?: number;
+
+  local_data: {
+    four_pillars: unknown;
+    true_solar_time: unknown;
+    yong_shen: string;
+    profile_basics: unknown;
+  };
+}
+
+export function generateJobId(profile_id: string): string {
+  return `ba_${profile_id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export function jobKey(job_id: string): string {
+  return `base-analysis:job:${job_id}`;
+}
+
+export function profileLockKey(profile_id: string): string {
+  return `base-analysis:lock:${profile_id}`;
+}
+
+export function profileLatestKey(profile_id: string): string {
+  return `base-analysis:latest:${profile_id}`;
+}

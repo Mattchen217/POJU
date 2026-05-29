@@ -1056,6 +1056,13 @@
     "step_7": "整理命主基础画像...",
     "step_8": "即将完成，请稍候..."
   },
+  "analysis_loader": {
+    "connecting": "正在连接…",
+    "reading_chart": "正在解读你的命盘",
+    "complete": "解读完成",
+    "warming_up": "准备中…",
+    "keep_screen_on": "解读期间请保持此页面在前台"
+  },
   "syncro": {
     "begin": {
       "start": "开始",

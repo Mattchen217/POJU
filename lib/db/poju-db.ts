@@ -118,6 +118,10 @@ export interface StoredProfileBaseAnalysis {
   /** True when chart used user-provided birth coordinates. */
   used_true_solar_time?: boolean;
   tst_meta?: import("@/lib/profile/types").TstMeta;
+  /** Parsed from stream `---META---` block (v3 streaming). */
+  stream_meta?: Record<string, unknown>;
+  locale?: string;
+  computation_version?: string;
 }
 
 export interface StoredProfileData {

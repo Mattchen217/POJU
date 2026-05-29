@@ -192,3 +192,112 @@ export function buildOpenRouterMessages(
 ): StreamProxyMessage[] {
   return [{ role: "system", content: system }, ...messages];
 }
+
+export type OpenRouterStreamInput = {
+  system: string;
+  user: string;
+  model?: string;
+  max_tokens?: number;
+  temperature?: number;
+  signal?: AbortSignal;
+  onChunk: (chunk: string) => Promise<void> | void;
+  onDone: () => Promise<void> | void;
+  onError: (error: string) => Promise<void> | void;
+};
+
+/**
+ * Stream OpenRouter chat completions — content deltas only (no reasoning_content).
+ * Used by base_analysis KV + SSE pipeline.
+ */
+export async function openRouterStream(input: OpenRouterStreamInput): Promise<void> {
+  const apiKey = process.env.OPENROUTER_API_KEY?.trim();
+  if (!apiKey) {
+    await input.onError("OPENROUTER_API_KEY not set");
+    return;
+  }
+
+  const model = input.model ?? getOpenRouterDefaultModel();
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${apiKey}`,
+    "Content-Type": "application/json",
+  };
+  const referer = process.env.OPENROUTER_HTTP_REFERER?.trim() || "https://pojulife.com";
+  const title = process.env.OPENROUTER_APP_TITLE?.trim() || "Pojulife";
+  headers["HTTP-Referer"] = referer;
+  headers["X-Title"] = title;
+
+  const response = await fetch(OPENROUTER_URL, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      model,
+      stream: true,
+      max_tokens: input.max_tokens ?? 8000,
+      temperature: input.temperature ?? 0.7,
+      messages: [
+        { role: "system", content: input.system },
+        { role: "user", content: input.user },
+      ],
+    }),
+    signal: input.signal,
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    await input.onError(`OpenRouter ${response.status}: ${errText.slice(0, 900)}`);
+    return;
+  }
+
+  if (!response.body) {
+    await input.onError("Response body is null");
+    return;
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith("data:")) continue;
+
+        const data = trimmed.slice(5).trim();
+        if (data === "[DONE]") {
+          await input.onDone();
+          return;
+        }
+
+        try {
+          const parsed = JSON.parse(data) as {
+            choices?: Array<{ delta?: { content?: string } }>;
+          };
+          const content = parsed.choices?.[0]?.delta?.content;
+          if (content) {
+            await input.onChunk(content);
+          }
+        } catch {
+          console.warn("[openrouter-stream] parse chunk failed:", data.slice(0, 100));
+        }
+      }
+    }
+
+    await input.onDone();
+  } catch (e: unknown) {
+    if (e instanceof Error && e.name === "AbortError") {
+      console.log("[openrouter-stream] aborted");
+      return;
+    }
+    await input.onError(e instanceof Error ? e.message : "Stream error");
+  } finally {
+    reader.releaseLock();
+  }
+}

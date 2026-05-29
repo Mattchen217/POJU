@@ -1,0 +1,136 @@
+.streaming-analysis {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 24px 20px;
+  font-family: var(--pj-font-sans);
+}
+
+.status-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--pj-text-xs);
+  color: var(--pj-text-tertiary);
+  letter-spacing: 0.3px;
+  margin-bottom: 18px;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.status-dot.connecting {
+  background: var(--pj-text-tertiary);
+  animation: streaming-pulse 1.2s infinite ease-in-out;
+}
+
+.status-dot.streaming {
+  background: var(--pj-gold);
+  box-shadow: 0 0 8px var(--pj-gold-glow);
+  animation: streaming-pulse 1.2s infinite ease-in-out;
+}
+
+.status-dot.done {
+  background: var(--pj-following);
+}
+
+.bytes {
+  margin-left: auto;
+  color: var(--pj-text-muted);
+  font-size: 10px;
+  font-family: var(--pj-font-mono);
+}
+
+@keyframes streaming-pulse {
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+.streaming-content {
+  flex: 1;
+  background: var(--pj-bg-card);
+  border-radius: var(--pj-radius-lg);
+  padding: 20px 18px;
+  overflow-y: auto;
+  max-height: 60vh;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+}
+
+.streaming-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.streaming-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+}
+
+.content-text {
+  font-family: var(--pj-font-sans);
+  font-size: var(--pj-text-sm);
+  line-height: var(--pj-leading-relaxed);
+  color: var(--pj-text-primary);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin: 0;
+  letter-spacing: 0.1px;
+}
+
+.cursor {
+  display: inline-block;
+  color: var(--pj-gold);
+  font-weight: var(--pj-weight-medium);
+  margin-left: 2px;
+  animation: streaming-blink 1s infinite step-end;
+}
+
+@keyframes streaming-blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.placeholder {
+  color: var(--pj-text-muted);
+  font-size: var(--pj-text-sm);
+  text-align: center;
+  padding: 40px 0;
+  font-style: italic;
+}
+
+.bottom-hint {
+  margin-top: 14px;
+  text-align: center;
+  font-size: 10px;
+  color: var(--pj-text-muted);
+  letter-spacing: 0.5px;
+}
+
+.base-analysis-stream-preparing {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.preparing-stream-error {
+  margin-top: 16px;
+}

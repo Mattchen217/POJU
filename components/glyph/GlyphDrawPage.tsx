@@ -6,18 +6,16 @@ import { useLocale, useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { DrawSequence } from "@/components/oracle/DrawSequence";
 import { OracleSummon } from "@/components/oracle/OracleSummon";
-import { ChartReadingLoader } from "@/components/poju/ChartReadingLoader";
+import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
 import { PreparingSplineShell } from "@/components/poju/PreparingSplineShell";
 import { saveGlyphDrawSession } from "@/lib/glyph/glyph-draw-session";
 import { formatGlyphProfileShort, hourPeriodToShichen } from "@/lib/glyph/profile-display";
 import { markGlyphFreeUsedLocal } from "@/lib/glyph/storage";
-import { generateBaseAnalysis } from "@/lib/llm/deepseek/base-analysis";
-import { discardIncompletePendingProfile } from "@/lib/profile/stored-profiles-service";
 import {
   PREPARING_MIN_SPLINE_CACHE_MS,
-  PREPARING_MIN_SPLINE_MS,
   waitRemainingMinSpline,
 } from "@/lib/poju/preparing-spline-timing";
+import { discardIncompletePendingProfile } from "@/lib/profile/stored-profiles-service";
 import type { StoredProfileData } from "@/lib/db/poju-db";
 import {
   getStoredProfile,
@@ -40,8 +38,9 @@ export function GlyphDrawPage() {
 
   const [profile, setProfile] = useState<StoredProfileData | null>(null);
   const [stage, setStage] = useState<Stage>("preparing");
-  const [loaderStep, setLoaderStep] = useState("loading");
+  const [prepPhase, setPrepPhase] = useState<"loading" | "cache" | "streaming" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
+  const cacheSplineStartedRef = useRef(0);
   const [question, setQuestion] = useState("");
   const [drawnSign, setDrawnSign] = useState<SignData | null>(null);
   const [readingId, setReadingId] = useState<string | null>(null);
@@ -53,44 +52,42 @@ export function GlyphDrawPage() {
   const initializeProfile = useCallback(async () => {
     if (!profileId) return;
     setError(null);
-    setLoaderStep("loading");
+    setPrepPhase("loading");
     setStage("preparing");
-
-    const splineStartedAt = Date.now();
 
     try {
       const p = await getStoredProfile(profileId);
       if (!p) {
         setError(t("profile_not_found"));
-        setLoaderStep("error");
+        setPrepPhase("error");
         return;
       }
       setProfile(p);
 
       const record = await getStoredProfileRecord(profileId);
       if (record?.has_base_analysis && p.base_analysis?.content) {
-        setLoaderStep("using_cache");
-        await waitRemainingMinSpline(splineStartedAt, PREPARING_MIN_SPLINE_CACHE_MS);
-        setStage("input");
+        cacheSplineStartedRef.current = Date.now();
+        setPrepPhase("cache");
         return;
       }
 
-      setLoaderStep("analyzing");
-      await Promise.all([
-        generateBaseAnalysis(profileId),
-        waitRemainingMinSpline(splineStartedAt, PREPARING_MIN_SPLINE_MS),
-      ]);
-      const updated = await getStoredProfile(profileId);
-      setProfile(updated ?? p);
-      setStage("input");
+      setPrepPhase("streaming");
     } catch (e) {
       if (profileId) {
         await discardIncompletePendingProfile(profileId);
       }
       setError(e instanceof Error ? e.message : String(e));
-      setLoaderStep("error");
+      setPrepPhase("error");
     }
   }, [profileId, t]);
+
+  useEffect(() => {
+    if (prepPhase !== "cache" || !profileId) return;
+    void (async () => {
+      await waitRemainingMinSpline(cacheSplineStartedRef.current, PREPARING_MIN_SPLINE_CACHE_MS);
+      setStage("input");
+    })();
+  }, [prepPhase, profileId]);
 
   useEffect(() => {
     if (!profileId) {
@@ -195,34 +192,55 @@ export function GlyphDrawPage() {
   }
 
   if (stage === "preparing") {
-    if (!profile || loaderStep === "error") {
+    if (!profile || prepPhase === "loading") {
       return (
         <PreparingSplineShell blockInteraction>
-          {profile ? (
-            <ChartReadingLoader
-              profile={profile}
-              currentStep="error"
-              error={error}
-              onRetry={() => void initializeProfile()}
-              onRefund={() => router.push("/glyph")}
-              locale={locale}
-            />
-          ) : (
-            <div className="preparing-spline-page__overlay session-prep-loading">{t("loading")}</div>
-          )}
+          <div className="preparing-spline-page__overlay session-prep-loading">{t("loading")}</div>
+        </PreparingSplineShell>
+      );
+    }
+
+    if (prepPhase === "cache") {
+      return (
+        <PreparingSplineShell blockInteraction>
+          <div className="preparing-spline-page__overlay session-prep-loading">{t("loading")}</div>
+        </PreparingSplineShell>
+      );
+    }
+
+    if (prepPhase === "error") {
+      return (
+        <PreparingSplineShell blockInteraction>
+          <div className="preparing-spline-page__overlay preparing-spline-page__overlay--error" role="alert">
+            <p>{error}</p>
+            <button type="button" onClick={() => void initializeProfile()}>
+              {t("reading_retry")}
+            </button>
+            <button type="button" onClick={() => router.push("/glyph")}>
+              {t("back_to_home")}
+            </button>
+          </div>
         </PreparingSplineShell>
       );
     }
 
     return (
       <PreparingSplineShell blockInteraction>
-        <ChartReadingLoader
+        <BaseAnalysisStreamPreparing
           profile={profile}
-          currentStep={loaderStep}
-          error={error}
-          onRetry={() => void initializeProfile()}
-          onRefund={() => router.push("/glyph")}
+          profileId={profileId}
           locale={locale}
+          logLabel="GlyphPreparing"
+          onComplete={async () => {
+            const updated = await getStoredProfile(profileId);
+            setProfile(updated ?? profile);
+            setStage("input");
+          }}
+          onError={async (err) => {
+            await discardIncompletePendingProfile(profileId);
+            setError(err);
+            setPrepPhase("error");
+          }}
         />
       </PreparingSplineShell>
     );

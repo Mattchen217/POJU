@@ -1,126 +1,208 @@
-import { saveBaseAnalysisAudit } from "@/lib/dev/base-analysis-audit";
-import { parseBaseAnalysisAuditBody } from "@/lib/dev/parse-base-analysis-audit-body";
-import { buildBaseAnalysisPrompt, parseBaseAnalysisResponseText } from "@/lib/llm/deepseek/base-analysis";
-import {
-  BASE_ANALYSIS_MAX_TOKENS,
-  baseAnalysisReasoningEffort,
-} from "@/lib/llm/base-analysis-reasoning";
-import {
-  buildOpenRouterMessages,
-  openRouterChatCompletionStream,
-} from "@/lib/llm/openrouter-stream";
-import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
+import { NextRequest } from "next/server";
 
-export const maxDuration = 300;
+import { extractMetaFromStreamContent } from "@/lib/base-analysis/extract-meta";
+import type { BaseAnalysisJob } from "@/lib/base-analysis/job-types";
+import {
+  acquireLock,
+  appendChunk,
+  createJob,
+  failJob,
+  finalizeJob,
+  findLatestJobForProfile,
+  getJob,
+  releaseLock,
+  updateJobStatus,
+} from "@/lib/base-analysis/job-store";
+import { buildBaseAnalysisStreamPrompt } from "@/lib/llm/prompts/base-analysis-stream-prompt";
+import { openRouterStream } from "@/lib/llm/openrouter-stream";
+import { getOpenRouterDefaultModel, isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
+
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
-function sseLine(obj: Record<string, unknown>): string {
-  return `data: ${JSON.stringify(obj)}\n\n`;
+type RequestBody = {
+  profile_id: string;
+  locale: string;
+  local_data: BaseAnalysisJob["local_data"];
+  resume_job_id?: string;
+};
+
+function sseEncode(encoder: TextEncoder, type: string, data: Record<string, unknown>): Uint8Array {
+  return encoder.encode(`data: ${JSON.stringify({ type, ...data })}\n\n`);
 }
 
-/**
- * SSE stream: `reasoning` events (full text so far) → `done` with parsed analysis JSON.
- */
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   if (!isOpenRouterConfigured()) {
-    return new Response(
-      sseLine({ type: "error", message: "OpenRouter is not configured (OPENROUTER_API_KEY)." }),
-      { status: 503, headers: { "Content-Type": "text/event-stream" } },
-    );
+    return new Response("OpenRouter is not configured", { status: 503 });
   }
 
-  const body = (await req.json().catch(() => ({}))) as unknown;
-  const parsed = parseBaseAnalysisAuditBody(body);
-  if (!parsed) {
-    return new Response(sseLine({ type: "error", message: "Invalid or missing user_profile" }), {
-      status: 400,
-      headers: { "Content-Type": "text/event-stream" },
-    });
+  let body: RequestBody;
+  try {
+    body = (await req.json()) as RequestBody;
+  } catch {
+    return new Response("Invalid JSON", { status: 400 });
   }
-  const { user_profile: profile, stored_profile_id, display_name } = parsed;
-  const { system, user } = buildBaseAnalysisPrompt(profile);
+
+  if (!body.profile_id?.trim() || !body.locale?.trim() || !body.local_data) {
+    return new Response("Missing required fields: profile_id, locale, local_data", { status: 400 });
+  }
+
+  const profileId = body.profile_id.trim();
+  const locale = body.locale.trim();
+
+  console.log("[base-analysis/stream] request:", {
+    profile_id: profileId,
+    locale,
+    has_resume_id: Boolean(body.resume_job_id),
+    local_data_preview: {
+      four_pillars: body.local_data.four_pillars,
+      true_solar_time: body.local_data.true_solar_time,
+      yong_shen: body.local_data.yong_shen,
+    },
+  });
+
+  let job: BaseAnalysisJob | null = null;
+  let lockHeld = false;
+
+  if (body.resume_job_id) {
+    const candidate = await getJob(body.resume_job_id);
+    if (candidate && candidate.profile_id === profileId) {
+      job = candidate;
+      console.log(`[base-analysis/stream] resuming job ${job.job_id}, status=${job.status}`);
+    }
+  }
+
+  if (!job) {
+    const latest = await findLatestJobForProfile(profileId);
+    if (latest && (latest.status === "streaming" || latest.status === "completed")) {
+      job = latest;
+      console.log(`[base-analysis/stream] auto-resuming job ${job.job_id}, status=${job.status}`);
+    }
+  }
+
+  if (!job) {
+    const locked = await acquireLock(profileId);
+    if (!locked) {
+      return new Response("Another analysis is in progress", { status: 409 });
+    }
+    lockHeld = true;
+
+    try {
+      job = await createJob({
+        profile_id: profileId,
+        locale,
+        local_data: body.local_data,
+      });
+      console.log(`[base-analysis/stream] created new job ${job.job_id}`);
+    } catch (e: unknown) {
+      await releaseLock(profileId);
+      const message = e instanceof Error ? e.message : "Create job failed";
+      return new Response(`Create job failed: ${message}`, { status: 500 });
+    }
+  }
+
   const encoder = new TextEncoder();
+  const activeJob = job;
 
-  const stream = new ReadableStream<Uint8Array>({
+  const stream = new ReadableStream({
     async start(controller) {
-      const push = (obj: Record<string, unknown>) => {
-        controller.enqueue(encoder.encode(sseLine(obj)));
+      let closed = false;
+
+      const send = (type: string, data: Record<string, unknown>) => {
+        if (closed) return;
+        try {
+          controller.enqueue(sseEncode(encoder, type, data));
+        } catch {
+          // client disconnected
+        }
       };
 
       try {
-        const llmStart = Date.now();
-        console.log("[base-analysis] LLM stream start", {
-          profile_id: stored_profile_id ?? profile.id,
-          thinking: baseAnalysisReasoningEffort(),
-          max_tokens: BASE_ANALYSIS_MAX_TOKENS,
-        });
-
-        const result = await openRouterChatCompletionStream(
-          {
-            messages: buildOpenRouterMessages(system, [{ role: "user", content: user }]),
-            max_tokens: BASE_ANALYSIS_MAX_TOKENS,
-            temperature: 0.55,
-            json_mode: true,
-            reasoning_effort: baseAnalysisReasoningEffort(),
-          },
-          {
-            onReasoning: (full) => push({ type: "reasoning", text: full }),
-            onContent: (full) => push({ type: "content", text: full }),
-          },
-        );
-
-        let analysis: unknown;
-        try {
-          analysis = parseBaseAnalysisResponseText(result.text);
-        } catch {
-          push({
-            type: "error",
-            message: "Model output is not valid JSON",
-            preview: result.text.slice(0, 400),
+        if (activeJob.status === "completed") {
+          send("resumed", {
+            job_id: activeJob.job_id,
+            from_kv: true,
+            accumulated: activeJob.accumulated_content,
+            meta: activeJob.meta,
           });
-          controller.close();
+          send("done", { job_id: activeJob.job_id });
           return;
         }
 
-        let auditId: string | null = null;
-        try {
-          const audit = await saveBaseAnalysisAudit({
-            user_profile: profile,
-            prompts: { system, user },
-            analysis,
-            model: result.model,
-            tokens_used: result.tokens_used,
-            stored_profile_id,
-            display_name,
-            reasoning: result.reasoning ?? "",
-            raw_model_text: result.text,
+        if (activeJob.status === "streaming") {
+          send("resumed_partial", {
+            job_id: activeJob.job_id,
+            accumulated: activeJob.accumulated_content,
+            poll_only: true,
           });
-          auditId = audit?.id ?? null;
-        } catch (auditErr) {
-          console.warn("[base-analysis/stream] Audit save skipped:", auditErr);
+          return;
         }
 
-        console.log("[base-analysis] LLM stream end", {
-          duration_ms: Date.now() - llmStart,
-          tokens: result.tokens_used,
-          model: result.model,
+        send("start", { job_id: activeJob.job_id });
+
+        const resetContent = activeJob.status === "failed" || activeJob.status === "pending";
+        await updateJobStatus(activeJob.job_id, "streaming", {
+          ...(resetContent ? { accumulated_content: "", error: undefined, error_detail: undefined } : {}),
         });
 
-        push({
-          type: "done",
-          ok: true,
-          analysis,
-          model: result.model,
-          tokens_used: result.tokens_used,
-          reasoning: result.reasoning ?? "",
-          audit_id: auditId,
+        const { system, user } = buildBaseAnalysisStreamPrompt({
+          locale,
+          local_data: body.local_data,
+        });
+
+        await openRouterStream({
+          system,
+          user,
+          model: getOpenRouterDefaultModel(),
+          max_tokens: 8000,
+          temperature: 0.7,
+
+          onChunk: async (chunk: string) => {
+            send("chunk", { text: chunk });
+            try {
+              await appendChunk(activeJob.job_id, chunk);
+            } catch (e) {
+              console.error("[base-analysis/stream] KV append failed:", e);
+            }
+          },
+
+          onDone: async () => {
+            const finalJob = await getJob(activeJob.job_id);
+            if (!finalJob) return;
+
+            const fullContent = finalJob.accumulated_content;
+            const meta = extractMetaFromStreamContent(fullContent);
+
+            await finalizeJob(activeJob.job_id, meta);
+
+            send("done", {
+              job_id: activeJob.job_id,
+              meta,
+              final_length: fullContent.length,
+            });
+
+            console.log(
+              `[base-analysis/stream] completed ${activeJob.job_id}, length=${fullContent.length}`,
+            );
+          },
+
+          onError: async (error: string) => {
+            await failJob(activeJob.job_id, "llm_error", error);
+            send("error", { error });
+            console.error(`[base-analysis/stream] failed ${activeJob.job_id}: ${error}`);
+          },
         });
       } catch (e: unknown) {
-        push({
-          type: "error",
-          message: e instanceof Error ? e.message : "Base analysis stream failed",
-        });
+        const message = e instanceof Error ? e.message : "stream_error";
+        console.error("[base-analysis/stream] outer error:", e);
+        await failJob(activeJob.job_id, "stream_error", message);
+        send("error", { error: message });
       } finally {
+        if (lockHeld) {
+          await releaseLock(profileId).catch(() => {});
+        }
+        closed = true;
         controller.close();
       }
     },
@@ -131,6 +213,7 @@ export async function POST(req: Request) {
       "Content-Type": "text/event-stream; charset=utf-8",
       "Cache-Control": "no-cache, no-transform",
       Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
     },
   });
 }

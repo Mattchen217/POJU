@@ -1,28 +1,22 @@
 /**
- * Step 7 — 命主基础分析（DeepSeek / OpenRouter，一次生成，IndexedDB 永久缓存）
- *
- * 客户端 IndexedDB 无法被服务端读取，因此 LLM 调用走 `POST /api/profile/base-analysis`，
- * 再由 `saveBaseAnalysis` 写回 `stored_profiles`。
+ * 命主基础分析 — v3 流式架构（KV + SSE），客户端写入 IndexedDB。
  */
 
-import { consumeFetchSse } from "@/lib/llm/consume-sse-client";
+import { buildStreamLocalDataFromProfile } from "@/lib/base-analysis/build-stream-local-data";
+import { resolveClientLocale } from "@/lib/base-analysis/resolve-client-locale";
+import { consumeBaseAnalysisStream } from "@/lib/base-analysis/stream-sse-client";
 import { HOUR_PERIOD_INFO, type UserProfile } from "@/lib/profile/types";
 import {
   getStoredProfile,
-  getStoredProfileRecord,
   profileHasBaseAnalysis,
-  saveBaseAnalysis,
+  saveBaseAnalysisFromStream,
 } from "@/lib/profile/stored-profiles-service";
-import { userProfileForApiRequest } from "@/lib/profile/user-profile-api";
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
 
 export type BaseAnalysisStreamCallbacks = {
   onReasoning?: (fullReasoning: string) => void;
   onContent?: (fullContent: string) => void;
 };
-
-/** Slightly under Vercel `maxDuration` (300s) so the client aborts before the edge kills the socket. */
-export const BASE_ANALYSIS_CLIENT_TIMEOUT_MS = 280_000;
 
 const BASE_ANALYSIS_SYSTEM = `# 角色
 
@@ -153,8 +147,7 @@ export function buildBaseAnalysisPrompt(profile: UserProfile): { system: string;
 ## 数据来源
 - source：${profile.source}
 
-【任务】
-请输出上述 JSON 结构的命主基础分析（仅 JSON，中文）。`;
+【任务】请输出上述 JSON 结构的命主基础分析（仅 JSON，中文）。`;
 
   return { system: stitchPromptSections(BASE_ANALYSIS_SYSTEM), user };
 }
@@ -197,48 +190,6 @@ function assertBrowser(): void {
   }
 }
 
-/**
- * 读取缓存；若无则调用 `/api/profile/base-analysis` 生成并写入 `stored_profiles`。
- */
-function baseAnalysisApiBody(profileId: string, userProfile: UserProfile, displayName: string | null) {
-  return {
-    user_profile: userProfileForApiRequest(userProfile),
-    stored_profile_id: profileId,
-    display_name: displayName,
-  };
-}
-
-function wrapFetchNetworkError(e: unknown): Error {
-  if (e instanceof TypeError) {
-    const msg = e.message.toLowerCase();
-    if (msg.includes("load failed") || msg.includes("failed to fetch") || msg.includes("networkerror")) {
-      return new Error("NETWORK_LOAD_FAILED");
-    }
-  }
-  return e instanceof Error ? e : new Error(String(e));
-}
-
-async function postBaseAnalysis(
-  path: string,
-  body: unknown,
-  signal?: AbortSignal,
-): Promise<Response> {
-  try {
-    return await fetch(path, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-      credentials: "same-origin",
-      signal,
-    });
-  } catch (e) {
-    if (e instanceof Error && e.name === "AbortError") {
-      throw new Error("BASE_ANALYSIS_CLIENT_TIMEOUT");
-    }
-    throw wrapFetchNetworkError(e);
-  }
-}
-
 async function readCachedBaseAnalysis(profileId: string): Promise<unknown | null> {
   const data = await getStoredProfile(profileId);
   if (data?.base_analysis?.content !== undefined && data.base_analysis.content !== null) {
@@ -251,113 +202,13 @@ async function readCachedBaseAnalysis(profileId: string): Promise<unknown | null
   return null;
 }
 
-async function generateBaseAnalysisViaStream(
-  profileId: string,
-  userProfile: UserProfile,
-  displayName: string | null,
-  callbacks?: BaseAnalysisStreamCallbacks,
-): Promise<{ analysis: unknown; model: string; tokens_used: number }> {
-  const res = await postBaseAnalysis(
-    "/api/profile/base-analysis/stream",
-    baseAnalysisApiBody(profileId, userProfile, displayName),
-    undefined,
-  );
-
-  type DonePayload = { analysis?: unknown; model?: string; tokens_used?: number };
-  let donePayload: DonePayload | null = null;
-  let errMsg: string | null = null;
-
-  await consumeFetchSse(res, (ev) => {
-    const type = ev.type;
-    if (type === "reasoning" && typeof ev.text === "string") {
-      callbacks?.onReasoning?.(ev.text);
-    }
-    if (type === "content" && typeof ev.text === "string") {
-      callbacks?.onContent?.(ev.text);
-    }
-    if (type === "error" && typeof ev.message === "string") {
-      errMsg = ev.message;
-    }
-    if (type === "done" && ev.ok) {
-      donePayload = {
-        analysis: ev.analysis,
-        model: typeof ev.model === "string" ? ev.model : "unknown",
-        tokens_used: typeof ev.tokens_used === "number" ? ev.tokens_used : 0,
-      };
-    }
-  });
-
-  if (errMsg) throw new Error(errMsg);
-  if (!res.ok) throw new Error(`Base analysis stream failed (${res.status})`);
-  const finished = donePayload as DonePayload | null;
-  if (!finished || finished.analysis === undefined) {
-    throw new Error("Base analysis stream ended without result");
-  }
-
-  return {
-    analysis: finished.analysis,
-    model: finished.model ?? "unknown",
-    tokens_used: finished.tokens_used ?? 0,
-  };
-}
-
-async function generateBaseAnalysisViaJson(
-  profileId: string,
-  userProfile: UserProfile,
-  displayName: string | null,
-): Promise<{
-  analysis: unknown;
-  raw_text?: string;
-  model: string;
-  tokens_used: number;
-}> {
-  const llmStart = Date.now();
-  console.log("[base-analysis] LLM call start (client → /api/profile/base-analysis)");
-
-  const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), BASE_ANALYSIS_CLIENT_TIMEOUT_MS);
-
-  let res: Response;
-  try {
-    res = await postBaseAnalysis(
-      "/api/profile/base-analysis",
-      baseAnalysisApiBody(profileId, userProfile, displayName),
-      controller.signal,
-    );
-  } finally {
-    window.clearTimeout(timeoutId);
-  }
-
-  const payload = (await res.json().catch(() => ({}))) as {
-    ok?: boolean;
-    analysis?: unknown;
-    raw_text?: string;
-    model?: string;
-    tokens_used?: number;
-    error?: string;
-  };
-
-  if (!res.ok || !payload.ok || payload.analysis === undefined) {
-    throw new Error(payload.error || `Base analysis request failed (${res.status})`);
-  }
-
-  console.log("[base-analysis] LLM call end (client)", {
-    duration_ms: Date.now() - llmStart,
-    tokens: payload.tokens_used,
-    model: payload.model,
-  });
-
-  return {
-    analysis: payload.analysis,
-    raw_text: typeof payload.raw_text === "string" ? payload.raw_text : undefined,
-    model: typeof payload.model === "string" ? payload.model : "unknown",
-    tokens_used: typeof payload.tokens_used === "number" ? payload.tokens_used : 0,
-  };
-}
-
+/**
+ * 读取缓存；若无则调用流式 `/api/profile/base-analysis/stream` 并写入 IndexedDB。
+ */
 export async function generateBaseAnalysis(
   profileId: string,
   callbacks?: BaseAnalysisStreamCallbacks,
+  locale?: string,
 ): Promise<unknown> {
   assertBrowser();
   const data = await getStoredProfile(profileId);
@@ -366,63 +217,41 @@ export async function generateBaseAnalysis(
     return data.base_analysis.content;
   }
 
-  const record = await getStoredProfileRecord(profileId);
-  const displayName = record?.display_name ?? null;
+  const outputLocale = locale ?? resolveClientLocale();
+  const local_data = buildStreamLocalDataFromProfile(data.user_profile);
 
-  const wantsStream = Boolean(callbacks?.onReasoning || callbacks?.onContent);
+  const result = await consumeBaseAnalysisStream({
+    profile_id: profileId,
+    locale: outputLocale,
+    local_data,
+    callbacks: {
+      onChunk: (_text, accumulated) => {
+        callbacks?.onContent?.(accumulated);
+      },
+    },
+  });
 
-  let result: { analysis: unknown; raw_text?: string; model: string; tokens_used: number };
-  if (wantsStream) {
-    try {
-      result = await generateBaseAnalysisViaStream(profileId, data.user_profile, displayName, callbacks);
-    } catch (streamErr) {
-      console.warn("[base-analysis] Stream failed, falling back to JSON:", streamErr);
-      result = await generateBaseAnalysisViaJson(profileId, data.user_profile, displayName);
-    }
-  } else {
-    // Preparing / Syncro / Glyph：无流式 UI；JSON 单次请求在 iOS Safari 上更稳（SSE 长连接易报 Load failed）
-    try {
-      result = await generateBaseAnalysisViaJson(profileId, data.user_profile, displayName);
-    } catch (jsonErr) {
-      const cached = await readCachedBaseAnalysis(profileId);
-      if (cached != null) {
-        return cached;
-      }
-      const msg = jsonErr instanceof Error ? jsonErr.message : String(jsonErr);
-      if (msg === "BASE_ANALYSIS_CLIENT_TIMEOUT" || msg === "NETWORK_LOAD_FAILED") {
-        throw jsonErr instanceof Error ? jsonErr : new Error(msg);
-      }
-      console.warn("[base-analysis] JSON failed, trying stream:", jsonErr);
-      try {
-        result = await generateBaseAnalysisViaStream(profileId, data.user_profile, displayName);
-      } catch (streamErr) {
-        const cachedAfter = await readCachedBaseAnalysis(profileId);
-        if (cachedAfter != null) return cachedAfter;
-        throw streamErr;
-      }
-    }
-  }
-
-  await saveBaseAnalysis(profileId, result.analysis, {
-    model: result.model,
-    tokens_used: result.tokens_used,
-    raw_text: result.raw_text,
-    used_true_solar_time: data.user_profile.used_true_solar_time,
-    tst_meta: data.user_profile.tst_meta ?? data.user_profile.birth.tst_meta,
+  await saveBaseAnalysisFromStream({
+    profile_id: profileId,
+    content: result.content,
+    meta: (result.meta as Record<string, unknown>) ?? {},
+    locale: outputLocale,
+    generated_at: new Date().toISOString(),
   });
 
   const { clearPendingBaseAnalysisProfile } = await import("@/lib/profile/pending-base-analysis");
   clearPendingBaseAnalysisProfile();
 
-  return result.analysis;
+  const saved = await getStoredProfile(profileId);
+  return saved?.base_analysis?.content ?? result.content;
 }
 
-export async function getBaseAnalysisOrGenerate(profileId: string): Promise<unknown> {
+export async function getBaseAnalysisOrGenerate(
+  profileId: string,
+  locale?: string,
+): Promise<unknown> {
   assertBrowser();
-  const data = await getStoredProfile(profileId);
-  if (!data) throw new Error("Profile not found");
-  if (data.base_analysis?.content !== undefined && data.base_analysis.content !== null) {
-    return data.base_analysis.content;
-  }
-  return generateBaseAnalysis(profileId);
+  const cached = await readCachedBaseAnalysis(profileId);
+  if (cached != null) return cached;
+  return generateBaseAnalysis(profileId, undefined, locale);
 }

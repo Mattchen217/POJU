@@ -1,13 +1,13 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useParams, useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
-import { ChartReadingLoader } from "@/components/poju/ChartReadingLoader";
+import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
 import { PreparingStatusOverlay } from "@/components/poju/PreparingStatusOverlay";
+import { PreparingSplineShell } from "@/components/poju/PreparingSplineShell";
 import { createInitialAgentState } from "@/lib/poju/agent-state";
-import { generateBaseAnalysis } from "@/lib/llm/deepseek/base-analysis";
 import type { StoredProfileData } from "@/lib/db/poju-db";
 import { clearPendingBaseAnalysisProfile } from "@/lib/profile/pending-base-analysis";
 import {
@@ -20,9 +20,6 @@ import {
 import { loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
 import { withSessionProfileFlags } from "@/lib/poju/session-profile";
 
-/** First-time base analysis — Spline visible at least this long before chat. */
-const PREPARING_MIN_SPLINE_MS = 5000;
-/** Cached base_analysis JSON — skip LLM but keep scene longer for pacing. */
 const PREPARING_MIN_SPLINE_CACHE_MS = 10_000;
 
 function sleep(ms: number): Promise<void> {
@@ -34,166 +31,136 @@ async function waitRemainingMinSpline(startedAt: number, minMs: number): Promise
   if (remaining > 0) await sleep(remaining);
 }
 
+type Phase = "loading" | "cache" | "streaming" | "error";
+
 function PreparingInner() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
   const locale = useLocale();
   const tPrep = useTranslations("session_prep");
+  const tChart = useTranslations("chart_loader");
 
   const sessionId = typeof params.sessionId === "string" ? params.sessionId : "";
   const profileIdFromUrl = searchParams.get("profile");
 
   const [profile, setProfile] = useState<StoredProfileData | null>(null);
-  const [currentStep, setCurrentStep] = useState("loading");
+  const [profileId, setProfileId] = useState<string>("");
+  const [phase, setPhase] = useState<Phase>("loading");
   const [error, setError] = useState<string | null>(null);
+  const cacheSplineStartedRef = useRef(0);
+  const initRef = useRef(false);
 
-  const hasStartedRef = useRef(false);
+  const bindSessionWithBaseAnalysis = useCallback(
+    async (pid: string) => {
+      const session = await loadPOJUSession(sessionId);
+      if (!session) return;
+
+      const agentBase =
+        session.agent_v2 ??
+        createInitialAgentState({
+          original_question: session.original_question,
+          selected_profile_id: pid,
+        });
+
+      const updated = withSessionProfileFlags(
+        {
+          ...session,
+          selected_stored_profile_id: pid,
+          profile_skipped: false,
+          agent_v2: {
+            ...agentBase,
+            selected_profile_id: pid,
+            has_base_analysis: true,
+            current_phase: "opening",
+          },
+        },
+        { selected_stored_profile_id: pid },
+      );
+
+      await savePOJUSession(updated);
+      await recordProfileUsage(pid, "poju");
+    },
+    [sessionId],
+  );
+
+  const finishToSession = useCallback(async () => {
+    clearPendingBaseAnalysisProfile();
+    router.replace(`/poju/session/${sessionId}`);
+  }, [router, sessionId]);
 
   useEffect(() => {
-    if (!sessionId || hasStartedRef.current) return;
-    hasStartedRef.current = true;
-    void startPreparation();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once per mount
-  }, [sessionId]);
+    if (!sessionId || initRef.current) return;
+    initRef.current = true;
 
-  async function bindSessionProfile(profileId: string) {
-    const session = await loadPOJUSession(sessionId);
-    if (!session) return null;
+    void (async () => {
+      try {
+        const session = await loadPOJUSession(sessionId);
+        if (!session) {
+          router.replace("/poju");
+          return;
+        }
 
-    const agentBase =
-      session.agent_v2 ??
-      createInitialAgentState({
-        original_question: session.original_question,
-        selected_profile_id: profileId,
-      });
+        const pid = profileIdFromUrl?.trim() || session.selected_stored_profile_id?.trim();
+        if (!pid) {
+          router.replace(`/poju/session/${sessionId}/prepare`);
+          return;
+        }
+        setProfileId(pid);
 
-    const updated = withSessionProfileFlags(
-      {
-        ...session,
-        selected_stored_profile_id: profileId,
-        profile_skipped: false,
-        agent_v2: {
-          ...agentBase,
-          selected_profile_id: profileId,
-          current_phase: "opening",
-        },
-      },
-      { selected_stored_profile_id: profileId },
-    );
+        const profileData = await getStoredProfile(pid);
+        if (!profileData) {
+          throw new Error("Profile not found");
+        }
+        setProfile(profileData);
+        await bindSessionWithBaseAnalysis(pid);
 
-    await savePOJUSession(updated);
-    await recordProfileUsage(profileId, "poju");
-    return updated;
-  }
+        const record = await getStoredProfileRecord(pid);
+        const hasCache =
+          Boolean(record?.has_base_analysis) ||
+          (profileData.base_analysis?.content !== undefined &&
+            profileData.base_analysis?.content !== null);
 
-  async function startPreparation() {
-    const splineStartedAt = Date.now();
-    try {
-      setCurrentStep("loading");
-      setError(null);
+        if (hasCache) {
+          cacheSplineStartedRef.current = Date.now();
+          setPhase("cache");
+          return;
+        }
 
-      const session = await loadPOJUSession(sessionId);
-      if (!session) {
-        router.replace("/poju");
-        return;
+        setPhase("streaming");
+      } catch (err) {
+        console.error("[poju/preparing]", err);
+        setError(err instanceof Error ? err.message : String(err));
+        setPhase("error");
       }
+    })();
+  }, [sessionId, profileIdFromUrl, router, bindSessionWithBaseAnalysis]);
 
-      const profileId = profileIdFromUrl?.trim() || session.selected_stored_profile_id?.trim();
-      if (!profileId) {
-        router.replace(`/poju/session/${sessionId}/prepare`);
-        return;
-      }
+  useEffect(() => {
+    if (phase !== "cache" || !profileId) return;
+    void (async () => {
+      await waitRemainingMinSpline(cacheSplineStartedRef.current, PREPARING_MIN_SPLINE_CACHE_MS);
+      await finishToSession();
+    })();
+  }, [phase, profileId, finishToSession]);
 
-      const profileData = await getStoredProfile(profileId);
-      if (!profileData) {
-        throw new Error("Profile not found");
-      }
-
-      setProfile(profileData);
-      await bindSessionProfile(profileId);
-
-      const record = await getStoredProfileRecord(profileId);
-      const hasCache =
-        Boolean(record?.has_base_analysis) ||
-        (profileData.base_analysis?.content !== undefined &&
-          profileData.base_analysis?.content !== null);
-
-      if (hasCache) {
-        setCurrentStep("using_cache");
-        const refreshed = await getStoredProfile(profileId);
-        if (refreshed) setProfile(refreshed);
-        await bindSessionWithBaseAnalysis(profileId);
-        await waitRemainingMinSpline(splineStartedAt, PREPARING_MIN_SPLINE_CACHE_MS);
-        router.replace(`/poju/session/${sessionId}`);
-        return;
-      }
-
-      setCurrentStep("analyzing");
-      await Promise.all([
-        generateBaseAnalysis(profileId),
-        waitRemainingMinSpline(splineStartedAt, PREPARING_MIN_SPLINE_MS),
-      ]);
-      await bindSessionWithBaseAnalysis(profileId);
-
-      const refreshed = await getStoredProfile(profileId);
-      if (refreshed) setProfile(refreshed);
-
-      clearPendingBaseAnalysisProfile();
-      setCurrentStep("done");
-      router.replace(`/poju/session/${sessionId}`);
-    } catch (err) {
-      console.error("[preparing] Failed:", err);
-      const pid = profileIdFromUrl?.trim() || (await loadPOJUSession(sessionId))?.selected_stored_profile_id;
-      if (pid && !(await profileHasBaseAnalysis(pid))) {
-        await discardIncompletePendingProfile(pid);
-      }
-      setError(err instanceof Error ? err.message : String(err));
-      setCurrentStep("error");
+  async function handleStreamError(err: string) {
+    if (profileId && (await profileHasBaseAnalysis(profileId))) {
+      await finishToSession();
+      return;
     }
-  }
-
-  async function bindSessionWithBaseAnalysis(profileId: string) {
-    const session = await loadPOJUSession(sessionId);
-    if (!session) return;
-
-    const agentBase =
-      session.agent_v2 ??
-      createInitialAgentState({
-        original_question: session.original_question,
-        selected_profile_id: profileId,
-      });
-
-    const updated = withSessionProfileFlags(
-      {
-        ...session,
-        selected_stored_profile_id: profileId,
-        profile_skipped: false,
-        agent_v2: {
-          ...agentBase,
-          selected_profile_id: profileId,
-          has_base_analysis: true,
-          current_phase: "opening",
-        },
-      },
-      { selected_stored_profile_id: profileId },
-    );
-
-    await savePOJUSession(updated);
-  }
-
-  function handleRetry() {
-    setError(null);
-    setCurrentStep("loading");
-    hasStartedRef.current = false;
-    void startPreparation();
+    if (profileId) {
+      await discardIncompletePendingProfile(profileId);
+    }
+    setError(err);
+    setPhase("error");
   }
 
   function handleRefund() {
     router.push(`/poju/session/${sessionId}/refund`);
   }
 
-  if (!profile) {
+  if (!profile || phase === "loading") {
     return (
       <PreparingStatusOverlay>
         <p className="preparing-spline-page__status">{tPrep("preparing")}</p>
@@ -201,15 +168,48 @@ function PreparingInner() {
     );
   }
 
+  if (phase === "cache") {
+    return (
+      <PreparingSplineShell blockInteraction>
+        <PreparingStatusOverlay>
+          <p className="preparing-spline-page__status">{tPrep("preparing_done")}</p>
+        </PreparingStatusOverlay>
+      </PreparingSplineShell>
+    );
+  }
+
+  if (phase === "error") {
+    return (
+      <PreparingSplineShell blockInteraction>
+        <div className="preparing-spline-page__overlay preparing-spline-page__overlay--error" role="alert">
+          <p className="preparing-spline-page__status">{error}</p>
+          <div className="error-actions">
+            <button type="button" className="primary" onClick={() => setPhase("streaming")}>
+              {tChart("retry")}
+            </button>
+            <button type="button" className="secondary" onClick={handleRefund}>
+              {tChart("refund_instead")}
+            </button>
+          </div>
+        </div>
+      </PreparingSplineShell>
+    );
+  }
+
   return (
-    <ChartReadingLoader
-      profile={profile}
-      currentStep={currentStep}
-      error={error}
-      onRetry={handleRetry}
-      onRefund={handleRefund}
-      locale={locale}
-    />
+    <PreparingSplineShell blockInteraction>
+      <BaseAnalysisStreamPreparing
+        profile={profile}
+        profileId={profileId}
+        locale={locale}
+        logLabel="POJUPreparing"
+        onComplete={async () => {
+          await bindSessionWithBaseAnalysis(profileId);
+          await finishToSession();
+        }}
+        onError={handleStreamError}
+      />
+    </PreparingSplineShell>
   );
 }
 

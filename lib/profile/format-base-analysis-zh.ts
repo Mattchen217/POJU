@@ -54,6 +54,9 @@ export function formatBaseAnalysisForDisplay(input: {
   raw_text?: string | null;
 }): string {
   const raw = input.raw_text?.trim() ?? "";
+  if (typeof input.content === "string" && input.content.trim()) {
+    return input.content.trim();
+  }
   const root = asRecord(input.content);
 
   if (!root) {

@@ -1041,6 +1041,13 @@
     "step_7": "Composing your foundational reading...",
     "step_8": "Almost done, just a moment..."
   },
+  "analysis_loader": {
+    "connecting": "Connecting…",
+    "reading_chart": "Reading your chart",
+    "complete": "Reading complete",
+    "warming_up": "Warming up…",
+    "keep_screen_on": "Please keep this screen on while the reading is being prepared"
+  },
   "syncro": {
     "begin": {
       "start": "Begin",

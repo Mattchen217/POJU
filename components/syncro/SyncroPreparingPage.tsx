@@ -4,11 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
-import { ChartReadingLoader } from "@/components/poju/ChartReadingLoader";
+import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
 import { PreparingStatusOverlay } from "@/components/poju/PreparingStatusOverlay";
+import { PreparingSplineShell } from "@/components/poju/PreparingSplineShell";
 import { useRouter } from "@/i18n/navigation";
 import type { StoredProfileData } from "@/lib/db/poju-db";
-import { generateBaseAnalysis } from "@/lib/llm/deepseek/base-analysis";
 import { clearPendingBaseAnalysisProfile } from "@/lib/profile/pending-base-analysis";
 import {
   discardIncompletePendingProfile,
@@ -21,10 +21,7 @@ import {
   replaceSyncroPreparingWithLocation,
 } from "@/lib/syncro/syncro-preparing-nav";
 
-/** 与 POJU preparing 一致：首次分析至少展示 Spline 时长 */
-const PREPARING_MIN_SPLINE_MS = 5000;
 const PREPARING_MIN_SPLINE_CACHE_MS = 10_000;
-/** 若 LLM 已完成但导航失败，轮询 IndexedDB 并重复尝试跳转 */
 const NAV_WATCHDOG_MS = 2500;
 
 function sleep(ms: number): Promise<void> {
@@ -36,37 +33,40 @@ async function waitRemainingMinSpline(startedAt: number, minMs: number): Promise
   if (remaining > 0) await sleep(remaining);
 }
 
-/**
- * 选中命主后：若无缓存的命主基础分析则调用 /api/profile/base-analysis 并写入 IndexedDB。
- */
+type Phase = "loading" | "cache" | "streaming" | "error";
+
 export function SyncroPreparingPage() {
   const router = useRouter();
   const locale = useLocale();
   const searchParams = useSearchParams();
   const tPrep = useTranslations("session_prep");
   const tSyncro = useTranslations("syncro");
+  const tChart = useTranslations("chart_loader");
 
   const profileId = searchParams.get("profile")?.trim() ?? "";
 
   const [profile, setProfile] = useState<StoredProfileData | null>(null);
-  const [currentStep, setCurrentStep] = useState("loading");
+  const [phase, setPhase] = useState<Phase>("loading");
   const [error, setError] = useState<string | null>(null);
-  const hasStartedRef = useRef(false);
+  const cacheSplineStartedRef = useRef(0);
+  const initRef = useRef(false);
 
   const goToLocation = useCallback(() => {
     if (!profileId) return;
     sessionStorage.setItem("syncro_profile_id", profileId);
     clearPendingBaseAnalysisProfile();
-    setCurrentStep("done");
     replaceSyncroPreparingWithLocation(router);
   }, [router, profileId]);
 
-  const startPreparation = useCallback(async () => {
-    const splineStartedAt = Date.now();
-    try {
-      setCurrentStep("loading");
-      setError(null);
+  useEffect(() => {
+    if (!profileId) {
+      router.replace("/syncro/prepare");
+      return;
+    }
+    if (initRef.current) return;
+    initRef.current = true;
 
+    void (async () => {
       const profileData = await getStoredProfile(profileId);
       if (!profileData) {
         router.replace("/syncro/prepare");
@@ -83,66 +83,46 @@ export function SyncroPreparingPage() {
         (await profileHasBaseAnalysis(profileId));
 
       if (hasCache) {
-        setCurrentStep("using_cache");
-        await waitRemainingMinSpline(splineStartedAt, PREPARING_MIN_SPLINE_CACHE_MS);
-        goToLocation();
+        cacheSplineStartedRef.current = Date.now();
+        setPhase("cache");
         return;
       }
 
-      setCurrentStep("analyzing");
-      await Promise.all([
-        generateBaseAnalysis(profileId),
-        waitRemainingMinSpline(splineStartedAt, PREPARING_MIN_SPLINE_MS),
-      ]);
+      setPhase("streaming");
+    })();
+  }, [profileId, router]);
 
+  useEffect(() => {
+    if (phase !== "cache") return;
+    void (async () => {
+      await waitRemainingMinSpline(cacheSplineStartedRef.current, PREPARING_MIN_SPLINE_CACHE_MS);
       goToLocation();
-    } catch (e) {
-      console.error("[syncro/preparing]", e);
-      if (await profileHasBaseAnalysis(profileId)) {
-        goToLocation();
-        return;
-      }
-      await discardIncompletePendingProfile(profileId);
-      setError(e instanceof Error ? e.message : String(e));
-      setCurrentStep("error");
-    }
-  }, [profileId, router, goToLocation]);
+    })();
+  }, [phase, goToLocation]);
 
   useEffect(() => {
-    if (!profileId) {
-      router.replace("/syncro/prepare");
-      return;
-    }
-    if (hasStartedRef.current) return;
-    hasStartedRef.current = true;
-    void startPreparation();
-  }, [profileId, router, startPreparation]);
-
-  useEffect(() => {
-    if (!profileId || currentStep === "loading" || currentStep === "error") return;
+    if (!profileId || phase === "loading" || phase === "error" || phase === "streaming") return;
 
     const interval = window.setInterval(() => {
       void (async () => {
         if (!isOnSyncroPreparingRoute()) return;
-
-        const ready =
-          currentStep === "using_cache" ||
-          currentStep === "done" ||
-          (await profileHasBaseAnalysis(profileId));
-
-        if (ready) {
+        if (await profileHasBaseAnalysis(profileId)) {
           goToLocation();
         }
       })();
     }, NAV_WATCHDOG_MS);
 
     return () => window.clearInterval(interval);
-  }, [currentStep, profileId, goToLocation]);
+  }, [phase, profileId, goToLocation]);
 
-  function handleRetry() {
-    setError(null);
-    hasStartedRef.current = false;
-    void startPreparation();
+  async function handleStreamError(err: string) {
+    if (await profileHasBaseAnalysis(profileId)) {
+      goToLocation();
+      return;
+    }
+    await discardIncompletePendingProfile(profileId);
+    setError(err);
+    setPhase("error");
   }
 
   async function handleBack() {
@@ -154,7 +134,7 @@ export function SyncroPreparingPage() {
     return null;
   }
 
-  if (!profile) {
+  if (!profile || phase === "loading") {
     return (
       <PreparingStatusOverlay>
         <p className="preparing-spline-page__status">{tPrep("preparing")}</p>
@@ -162,15 +142,44 @@ export function SyncroPreparingPage() {
     );
   }
 
+  if (phase === "cache") {
+    return (
+      <PreparingSplineShell blockInteraction>
+        <PreparingStatusOverlay>
+          <p className="preparing-spline-page__status">{tPrep("preparing_done")}</p>
+        </PreparingStatusOverlay>
+      </PreparingSplineShell>
+    );
+  }
+
+  if (phase === "error") {
+    return (
+      <PreparingSplineShell blockInteraction>
+        <div className="preparing-spline-page__overlay preparing-spline-page__overlay--error" role="alert">
+          <p className="preparing-spline-page__status">{error}</p>
+          <div className="error-actions">
+            <button type="button" className="primary" onClick={() => setPhase("streaming")}>
+              {tChart("retry")}
+            </button>
+            <button type="button" className="secondary" onClick={() => void handleBack()}>
+              {tSyncro("back_to_home")}
+            </button>
+          </div>
+        </div>
+      </PreparingSplineShell>
+    );
+  }
+
   return (
-    <ChartReadingLoader
-      profile={profile}
-      currentStep={currentStep}
-      error={error}
-      onRetry={handleRetry}
-      onRefund={handleBack}
-      locale={locale}
-      secondaryActionLabel={tSyncro("back_to_home")}
-    />
+    <PreparingSplineShell blockInteraction>
+      <BaseAnalysisStreamPreparing
+        profile={profile}
+        profileId={profileId}
+        locale={locale}
+        logLabel="SyncroPreparing"
+        onComplete={goToLocation}
+        onError={handleStreamError}
+      />
+    </PreparingSplineShell>
   );
 }

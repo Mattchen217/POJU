@@ -220,6 +220,65 @@ export async function getStoredProfileRecord(profileId: string): Promise<StoredP
   return (await getPojuDb().stored_profiles.get(profileId)) ?? null;
 }
 
+export function stripMetaSectionForStorage(content: string): string {
+  const idx = content.lastIndexOf("---META---");
+  return idx === -1 ? content : content.slice(0, idx).trim();
+}
+
+export async function saveBaseAnalysisFromStream(input: {
+  profile_id: string;
+  content: string;
+  meta: Record<string, unknown>;
+  locale: string;
+  generated_at: string;
+}): Promise<void> {
+  assertBrowser();
+  const db = getPojuDb();
+  const record = await db.stored_profiles.get(input.profile_id);
+  if (!record) throw new Error("profile not found");
+
+  const data = await decryptJson<StoredProfileData>(STORED_PROFILES_SECRET, {
+    iv: record.iv,
+    cipher: record.encrypted_data,
+  });
+
+  const visibleContent = stripMetaSectionForStorage(input.content);
+  const tst_meta =
+    tstMetaFromProfile(
+      normalizeStoredBirthInfo(data.birth_info as unknown as Record<string, unknown>),
+      data.user_profile,
+    );
+  const used_true_solar_time = data.user_profile.used_true_solar_time ?? false;
+
+  data.base_analysis = {
+    generated_at: input.generated_at,
+    model: "v3_streaming",
+    tokens_used: 0,
+    content: visibleContent,
+    raw_text: input.content.trim() !== visibleContent ? input.content : undefined,
+    used_true_solar_time,
+    tst_meta,
+    stream_meta: input.meta,
+    locale: input.locale,
+    computation_version: "v3_streaming",
+  };
+
+  if (tst_meta && data.birth_info) {
+    data.birth_info.tst_meta = tst_meta;
+  }
+
+  const enc = await encryptJson(STORED_PROFILES_SECRET, data);
+  await db.stored_profiles.update(input.profile_id, {
+    encrypted_data: enc.cipher,
+    iv: enc.iv,
+    has_base_analysis: true,
+    base_analysis_at: new Date(),
+    last_used_at: new Date(),
+  });
+
+  console.log("[saveBaseAnalysisFromStream] saved profile", input.profile_id);
+}
+
 export async function saveBaseAnalysis(
   profileId: string,
   baseAnalysis: unknown,
