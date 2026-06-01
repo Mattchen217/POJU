@@ -2,8 +2,8 @@
 .compass-page {
   position: relative;
   width: 100%;
-  min-height: calc(100vh - 200px);
-  padding-top: 200px;
+  min-height: calc(100vh - 160px);
+  padding-top: 80px;
   padding-bottom: 130px;
 }
 

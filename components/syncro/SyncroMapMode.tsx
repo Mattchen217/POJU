@@ -18,6 +18,7 @@ import {
   SYNCRO_MAP_POINT_RADIUS,
   SYNCRO_MAP_POINT_SIZE,
   SYNCRO_PARTICLE_SIZE,
+  SYNCRO_RING_MARGIN_TOP,
   SYNCRO_RING_SIZE,
   SYNCRO_WHY_BUTTON_MARGIN_TOP,
 } from "@/lib/syncro/syncro-ring-layout";
@@ -87,7 +88,8 @@ export function SyncroMapMode({
           position: "relative",
           width: SYNCRO_RING_SIZE,
           height: SYNCRO_RING_SIZE,
-          margin: "0 auto",
+          margin: `${SYNCRO_RING_MARGIN_TOP}px auto 0`,
+          overflow: "visible",
         }}
       >
         <div

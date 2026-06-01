@@ -123,10 +123,12 @@ function main() {
   assert(compass.includes("PostureHintOverlay") && compass.includes("deviceTiltBeta"), "compass posture overlay");
   const ringLayout = readFileSync(join(ROOT, "lib/syncro/syncro-ring-layout.ts"), "utf8");
   assert(
-    ringLayout.includes("rotate3d") && compass.includes("syncroRotateTransform"),
-    "compass GPU rotate via layout helper",
+    compass.includes("rotate(${-alpha}deg)") && compass.includes("counterRotateDeg={alpha}"),
+    "simple rotate + upright labels",
   );
-  assert(ringLayout.includes("SYNCRO_RING_SIZE = 420"), "polish v3 ring 420");
+  assert(!ringLayout.includes("rotate3d"), "no GPU rotate helper");
+  assert(ringLayout.includes("SYNCRO_PARTICLE_SIZE = 520"), "particle canvas 520");
+  assert(ringLayout.includes("SYNCRO_RING_MARGIN_TOP = 80"), "ring margin 80");
   assert(compass.includes("SyncroParticleCore bare"), "particle without mask");
   assert(compass.includes("SyncroCellAdvice"), "compass uses real LLM advice gate");
   assert(!compass.includes("phone-position-hint"), "no layout phone hint bar");
@@ -206,8 +208,9 @@ function main() {
   const preparing = readFileSync(join(ROOT, "components/syncro/SyncroPreparingLiveHour.tsx"), "utf8");
   assert(preparing.includes("SyncroPreparingLiveHour"), "live hour gate before compass");
 
-  assert(compass.includes("SYNCRO_WHY_BUTTON_MARGIN_TOP"), "why CTA margin polish v3");
-  assert(compassCss.includes("padding-top: 200px"), "compass page padding polish v3");
+  assert(compass.includes("SYNCRO_WHY_BUTTON_MARGIN_TOP"), "why CTA margin");
+  assert(compassCss.includes("padding-top: 80px"), "compass page padding 80");
+  assert(compass.includes('overflow: "visible"'), "compass-area no clip");
 
   assert(SYNCRO_LLM_BATCH_COUNT === 12, "12 LLM batches");
 

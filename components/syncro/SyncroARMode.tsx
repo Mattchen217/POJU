@@ -18,12 +18,10 @@ import { compassDegreeToDirection, type CurrentLevel } from "@/lib/syncro/curren
 import { isSyncroLlmReady } from "@/lib/syncro/llm-cell-display";
 import {
   SYNCRO_AR_CAMERA_SIZE,
-  SYNCRO_CENTER_INFO_WIDTH,
   SYNCRO_PARTICLE_SIZE,
+  SYNCRO_RING_MARGIN_TOP,
   SYNCRO_RING_SIZE,
-  SYNCRO_ROTATE_LAYER_STYLE,
   SYNCRO_WHY_BUTTON_MARGIN_TOP,
-  syncroRotateTransform,
 } from "@/lib/syncro/syncro-ring-layout";
 import { matrixKey, type HourPeriod, type SyncroSession } from "@/lib/syncro/types";
 
@@ -172,7 +170,8 @@ export function SyncroARMode({
           position: "relative",
           width: SYNCRO_RING_SIZE,
           height: SYNCRO_RING_SIZE,
-          margin: "0 auto",
+          margin: `${SYNCRO_RING_MARGIN_TOP}px auto 0`,
+          overflow: "visible",
         }}
       >
         <div
@@ -182,8 +181,8 @@ export function SyncroARMode({
             left: 0,
             width: "100%",
             height: "100%",
-            transform: syncroRotateTransform(alpha),
-            ...SYNCRO_ROTATE_LAYER_STYLE,
+            transform: `rotate(${-alpha}deg)`,
+            transformOrigin: "center center",
           }}
         >
           <div
@@ -199,9 +198,9 @@ export function SyncroARMode({
           >
             <SyncroParticleCore bare />
           </div>
-        </div>
 
-        <SyncroDirectionLabels highlightId={direction} />
+          <SyncroDirectionLabels highlightId={direction} counterRotateDeg={alpha} />
+        </div>
 
         <div
           style={{

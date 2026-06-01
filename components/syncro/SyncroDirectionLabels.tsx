@@ -16,13 +16,19 @@ const DIRECTIONS = [
 type Props = {
   highlightId: string;
   labelRadius?: number;
+  /** Counter-rotate so labels stay upright inside a rotating parent (pass compass alpha). */
+  counterRotateDeg?: number;
 };
 
-/** Upright direction labels on the ring; highlightId is gold, others white. */
+/** Direction labels on the ring; gold = current, white = others. */
 export function SyncroDirectionLabels({
   highlightId,
   labelRadius = SYNCRO_LABEL_RADIUS,
+  counterRotateDeg,
 }: Props) {
+  const upright =
+    counterRotateDeg !== undefined ? ` rotate(${counterRotateDeg}deg)` : "";
+
   return (
     <>
       {DIRECTIONS.map((dir) => {
@@ -38,17 +44,15 @@ export function SyncroDirectionLabels({
               position: "absolute",
               top: "50%",
               left: "50%",
-              transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,
+              transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))${upright}`,
               fontSize: 14,
               fontWeight: isHighlight ? 600 : 500,
               color: isHighlight ? "#D4A574" : "#FFFFFF",
-              opacity: isHighlight ? 1 : 0.65,
+              opacity: isHighlight ? 1 : 0.7,
               textShadow: isHighlight
-                ? "0 0 12px rgba(212, 165, 116, 0.6), 0 0 24px rgba(212, 165, 116, 0.3)"
+                ? "0 0 12px rgba(212, 165, 116, 0.6)"
                 : "none",
               letterSpacing: 1.5,
-              transition:
-                "color 400ms ease, opacity 400ms ease, text-shadow 400ms ease, font-weight 400ms ease",
               pointerEvents: "none",
               userSelect: "none",
               zIndex: 3,
