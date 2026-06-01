@@ -113,36 +113,27 @@ function main() {
   }
 
   const compassCss = readFileSync(join(ROOT, "styles/syncro-compass.css"), "utf8");
-  assert(compassCss.includes("85vmin") && compassCss.includes("width: 92%"), "full-screen concentric + particle");
+  assert(compassCss.includes(".compass-page"), "compass page container");
 
   const compass = readFileSync(join(ROOT, "components/syncro/SyncroCompassMode.tsx"), "utf8");
-  assert(compass.includes("concentric-system"), "compass uses concentric layout");
-  assert(compass.includes("SyncroDirectionRing"), "compass uses direction ring");
+  assert(compass.includes("RING_SIZE = 380") && compass.includes("LABEL_RADIUS = 170"), "fixed px compass");
   assert(compass.includes("PostureHintOverlay") && compass.includes("deviceTiltBeta"), "compass posture overlay");
-  assert(
-    compass.includes("rotating-layer") &&
-      compass.includes("-compassDegree") &&
-      compass.includes("labelUprightDeg={compassDegree}"),
-    "compass rotates ring + upright labels",
-  );
+  assert(compass.includes("rotate(${-alpha}deg)"), "compass rotates with phone");
+  assert(compass.includes("SyncroParticleCore bare"), "particle without mask");
   assert(compass.includes("SyncroCellAdvice"), "compass uses real LLM advice gate");
   assert(!compass.includes("phone-position-hint"), "no layout phone hint bar");
   assert(!compass.includes("requestPermission"), "compass permission only at gate");
   assert(compass.includes("WhyThisCurrentModal"), "compass has why modal");
 
   const ar = readFileSync(join(ROOT, "components/syncro/SyncroARMode.tsx"), "utf8");
-  assert(ar.includes("concentric-system"), "AR uses concentric layout");
-  assert(ar.includes("ar-camera-window") && ar.includes("getUserMedia"), "AR camera window");
-  assert(ar.includes("SyncroDirectionRing") && ar.includes("PostureHintOverlay"), "AR direction ring + posture");
+  assert(ar.includes("CAMERA_WINDOW_SIZE = 150") && ar.includes("getUserMedia"), "AR camera window");
+  assert(ar.includes("RING_SIZE = 380") && ar.includes("PostureHintOverlay"), "AR fixed px layout + posture");
   assert(!ar.includes("phone-position-hint"), "AR no layout phone hint bar");
 
   const mapMode = readFileSync(join(ROOT, "components/syncro/SyncroMapMode.tsx"), "utf8");
-  assert(
-    mapMode.includes("concentric-system") && mapMode.includes("SYNCRO_DIRECTION_RING_RADIUS_PCT"),
-    "map uses full-size concentric layout",
-  );
-  assert(mapMode.includes("SyncroDirectionRing") && mapMode.includes("SyncroParticleCore"), "map shared layers");
-  assert(mapMode.includes("map-point") && mapMode.includes("why-btn-prominent"), "map points + CTA");
+  assert(mapMode.includes("POINT_SIZE = 12"), "map point size per final fix");
+  assert(mapMode.includes("RING_SIZE = 380") && mapMode.includes("POINT_RADIUS = 140"), "map fixed px layout");
+  assert(mapMode.includes("POINT_RADIUS") && mapMode.includes("why-btn-prominent"), "map points + CTA");
   assert(mapMode.includes("WhyThisCurrentModal"), "map has why modal");
 
   const whyModal = readFileSync(join(ROOT, "components/syncro/WhyThisCurrentModal.tsx"), "utf8");
@@ -199,11 +190,12 @@ function main() {
   assert(runner.includes("rebuildSyncroLlmContext"), "rebuild ctx when missing");
   assert(runner.includes("resolveSyncroLlmContext"), "loads ctx from IndexedDB");
   assert(runner.includes("sortedHourPeriodsFromLive"), "sequential batches from live hour");
+  assert(runner.includes("/api/syncro/llm_hour"), "llm_hour serial API");
 
   const preparing = readFileSync(join(ROOT, "components/syncro/SyncroPreparingLiveHour.tsx"), "utf8");
   assert(preparing.includes("SyncroPreparingLiveHour"), "live hour gate before compass");
 
-  assert(compass.includes("compass-footer") && compass.includes("compass-stage"), "compass footer below ring");
+  assert(compass.includes("marginTop: 80"), "why CTA below ring per final fix");
 
   assert(SYNCRO_LLM_BATCH_COUNT === 12, "12 LLM batches");
 

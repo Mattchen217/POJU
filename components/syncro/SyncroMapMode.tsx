@@ -1,30 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 import { SyncroCellAdvice } from "@/components/syncro/SyncroCellAdvice";
-import {
-  SYNCRO_DIRECTION_RING_RADIUS_PCT,
-  SyncroDirectionRing,
-} from "@/components/syncro/SyncroDirectionRing";
 import { SyncroParticleCore } from "@/components/syncro/SyncroParticleCore";
-import { isSyncroLlmReady } from "@/lib/syncro/llm-cell-display";
 import { WhyThisCurrentModal } from "@/components/syncro/WhyThisCurrentModal";
 import {
-  currentLevelMapPointStatusClass,
   getCurrentLevelFallbackLabel,
   getCurrentLevelI18nKey,
 } from "@/lib/syncro/compass-display";
-import { currentLevelCssClass, type DirectionId } from "@/lib/syncro/current-system";
-import { findBestDirectionForPeriod } from "@/lib/syncro/syncro-view-helpers";
-import { HOUR_PERIOD_RANGES, hourPeriodDisplayName } from "@/lib/syncro/hour-period-ranges";
+import type { CurrentLevel, DirectionId } from "@/lib/syncro/current-system";
+import { isSyncroLlmReady } from "@/lib/syncro/llm-cell-display";
 import { matrixKey, type HourPeriod, type SyncroSession } from "@/lib/syncro/types";
 
 import "@/styles/syncro-compass.css";
-import "@/styles/syncro-map.css";
 
-const DIRECTIONS_ON_CIRCLE: Array<{ id: DirectionId; angle: number }> = [
+const RING_SIZE = 380;
+const PARTICLE_SIZE = 380;
+const LABEL_RADIUS = 170;
+const POINT_RADIUS = 140;
+const POINT_SIZE = 12;
+
+const DIRECTIONS = [
   { id: "N", angle: 0 },
   { id: "NE", angle: 45 },
   { id: "E", angle: 90 },
@@ -33,7 +31,15 @@ const DIRECTIONS_ON_CIRCLE: Array<{ id: DirectionId; angle: number }> = [
   { id: "SW", angle: 225 },
   { id: "W", angle: 270 },
   { id: "NW", angle: 315 },
-];
+] as const;
+
+const POINT_COLORS: Record<CurrentLevel, string> = {
+  open_current: "#00D9B8",
+  following_current: "#4ECDC4",
+  stillwater: "#8A8AA0",
+  crosscurrent: "#E89F4D",
+  undertow: "#C85A5A",
+};
 
 export type SyncroMapModeProps = {
   session: SyncroSession;
@@ -44,139 +50,178 @@ export type SyncroMapModeProps = {
   highlightMatrixKeys?: Set<string>;
 };
 
-function MapDirectionPoints({
-  session,
-  hourPeriod,
-  activeDirection,
-  onSelectDirection,
-}: {
-  session: SyncroSession;
-  hourPeriod: HourPeriod;
-  activeDirection: DirectionId;
-  onSelectDirection: (dir: DirectionId) => void;
-}) {
-  return (
-    <>
-      {DIRECTIONS_ON_CIRCLE.map((dir) => {
-        const cell = session.matrix[matrixKey(hourPeriod, dir.id)];
-        const isActive = dir.id === activeDirection;
-        const statusClass = currentLevelMapPointStatusClass(cell?.current_level ?? "stillwater");
-        const rad = ((dir.angle - 90) * Math.PI) / 180;
-        const r = SYNCRO_DIRECTION_RING_RADIUS_PCT - 4;
-        const x = Math.cos(rad) * r;
-        const y = Math.sin(rad) * r;
-
-        return (
-          <button
-            key={dir.id}
-            type="button"
-            className={`map-point status-${statusClass} ${isActive ? "active" : ""}`}
-            style={{
-              transform: `translate(calc(-50% + ${x}%), calc(-50% + ${y}%))`,
-            }}
-            onClick={() => onSelectDirection(dir.id)}
-            aria-label={dir.id}
-            aria-pressed={isActive}
-          />
-        );
-      })}
-    </>
-  );
-}
-
 export function SyncroMapMode({
   session,
   locale,
   hourPeriod,
-  activeDirection,
-  onSelectDirection,
+  activeDirection: selectedDir,
+  onSelectDirection: setSelectedDir,
   highlightMatrixKeys,
 }: SyncroMapModeProps) {
   const t = useTranslations("syncro");
   const tLevels = useTranslations("syncro.levels");
-  const resolvedLocale = useLocale();
   const isZh = locale.startsWith("zh");
+  const [whyOpen, setWhyOpen] = useState(false);
 
-  const [whyModalOpen, setWhyModalOpen] = useState(false);
+  const cellKey = matrixKey(hourPeriod, selectedDir);
+  const cell = session.matrix[cellKey];
+  const llmHighlight = highlightMatrixKeys?.has(cellKey);
 
-  const recommended = findBestDirectionForPeriod(session, hourPeriod);
-  const activeCell = session.matrix[matrixKey(hourPeriod, activeDirection)];
-  const activeKey = matrixKey(hourPeriod, activeDirection);
-  const llmHighlight = highlightMatrixKeys?.has(activeKey);
-
-  useEffect(() => {
-    if (!session.matrix[matrixKey(hourPeriod, activeDirection)]) {
-      onSelectDirection(recommended);
-    }
-  }, [hourPeriod, activeDirection, recommended, session.matrix, onSelectDirection]);
-
+  const levelKey = cell ? getCurrentLevelI18nKey(cell.current_level) : null;
   let levelTitle = "";
-  if (activeCell) {
-    const levelKey = getCurrentLevelI18nKey(activeCell.current_level);
+  if (cell && levelKey) {
     try {
       levelTitle = tLevels(levelKey);
     } catch {
-      levelTitle = getCurrentLevelFallbackLabel(activeCell.current_level, isZh);
+      levelTitle = getCurrentLevelFallbackLabel(cell.current_level, isZh);
     }
   }
 
-  const hourMeta = `${hourPeriodDisplayName(hourPeriod, resolvedLocale)} · ${HOUR_PERIOD_RANGES[hourPeriod]}`;
-
   return (
-    <div className={`map-mode ${llmHighlight ? "syncro-llm-cell-updated" : ""}`}>
-      <div className="map-mode-body">
-        <div className="concentric-system map-larger">
-          <SyncroParticleCore />
-          <SyncroDirectionRing activeDirection={activeDirection} />
-
-          <div className="map-center-layer">
-            <MapDirectionPoints
-              session={session}
-              hourPeriod={hourPeriod}
-              activeDirection={activeDirection}
-              onSelectDirection={onSelectDirection}
-            />
-
-            <div className="map-center-card">
-              <div className="map-center-direction">{activeDirection}</div>
-              {activeCell ? (
-                <>
-                  <div className={`map-center-level ${currentLevelCssClass(activeCell.current_level)}`}>
-                    {levelTitle}
-                  </div>
-                  <div className="map-center-meta">{hourMeta}</div>
-                </>
-              ) : null}
-            </div>
-          </div>
+    <div className={`compass-page ${llmHighlight ? "syncro-llm-cell-updated" : ""}`}>
+      <div
+        style={{
+          position: "relative",
+          width: RING_SIZE,
+          height: RING_SIZE,
+          margin: "40px auto 0",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            width: PARTICLE_SIZE,
+            height: PARTICLE_SIZE,
+            transform: "translate(-50%, -50%)",
+            opacity: 0.5,
+            pointerEvents: "none",
+          }}
+        >
+          <SyncroParticleCore bare />
         </div>
 
-        {activeCell ? (
-          <SyncroCellAdvice cell={activeCell} llmMeta={session.llm_meta} />
-        ) : null}
-
-        <div className="map-hint">{t("map.tap_hint")}</div>
-
-        {activeCell ? (
-          <div className="compass-bottom-cta">
-            <button
-              type="button"
-              className="why-btn-prominent"
-              disabled={!isSyncroLlmReady(activeCell, session.llm_meta)}
-              onClick={() => setWhyModalOpen(true)}
+        {DIRECTIONS.map((dir) => {
+          const rad = ((dir.angle - 90) * Math.PI) / 180;
+          const x = Math.cos(rad) * LABEL_RADIUS;
+          const y = Math.sin(rad) * LABEL_RADIUS;
+          return (
+            <div
+              key={dir.id}
+              style={{
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,
+                fontSize: 14,
+                fontWeight: 500,
+                color: "rgba(160, 164, 184, 0.85)",
+                letterSpacing: 1.5,
+                pointerEvents: "none",
+              }}
             >
-              {t("why_this_current")}
-            </button>
+              {dir.id}
+            </div>
+          );
+        })}
+
+        {DIRECTIONS.map((dir) => {
+          const rad = ((dir.angle - 90) * Math.PI) / 180;
+          const x = Math.cos(rad) * POINT_RADIUS;
+          const y = Math.sin(rad) * POINT_RADIUS;
+          const dirCell = session.matrix[matrixKey(hourPeriod, dir.id as DirectionId)];
+          const color = POINT_COLORS[dirCell?.current_level ?? "stillwater"];
+          const isSelected = dir.id === selectedDir;
+
+          return (
+            <button
+              key={dir.id}
+              type="button"
+              onClick={() => setSelectedDir(dir.id as DirectionId)}
+              style={{
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                width: isSelected ? POINT_SIZE + 4 : POINT_SIZE,
+                height: isSelected ? POINT_SIZE + 4 : POINT_SIZE,
+                borderRadius: "50%",
+                background: isSelected ? "#D4A574" : color,
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+                transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,
+                boxShadow: isSelected
+                  ? "0 0 20px rgba(212, 165, 116, 0.5)"
+                  : `0 0 8px ${color}`,
+                transition: "all 200ms ease",
+                zIndex: 3,
+              }}
+              aria-label={dir.id}
+            />
+          );
+        })}
+
+        <div
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: 130,
+            textAlign: "center",
+            zIndex: 5,
+            pointerEvents: "none",
+          }}
+        >
+          <div style={{ fontSize: 10, color: "#D4A574", letterSpacing: 2, marginBottom: 6 }}>
+            {selectedDir}
           </div>
-        ) : null}
+          {cell ? (
+            <div style={{ fontSize: 18, fontWeight: 500, color: POINT_COLORS[cell.current_level] }}>
+              {levelTitle}
+            </div>
+          ) : null}
+        </div>
       </div>
 
-      {whyModalOpen && activeCell && isSyncroLlmReady(activeCell, session.llm_meta) ? (
+      <div style={{ textAlign: "center", fontSize: 10, color: "#8A8AA0", marginTop: 16 }}>
+        {t("map.tap_hint")}
+      </div>
+
+      {cell ? (
+        <div style={{ maxWidth: 320, margin: "16px auto 0", padding: "0 20px" }}>
+          <SyncroCellAdvice cell={cell} llmMeta={session.llm_meta} />
+        </div>
+      ) : null}
+
+      <div style={{ textAlign: "center", marginTop: 40 }}>
+        <button
+          type="button"
+          className="why-btn-prominent"
+          disabled={!cell || !isSyncroLlmReady(cell, session.llm_meta)}
+          onClick={() => setWhyOpen(true)}
+          style={{
+            padding: "8px 18px",
+            background: "rgba(212, 165, 116, 0.12)",
+            color: "#D4A574",
+            fontSize: 11,
+            border: "none",
+            borderRadius: 20,
+            cursor: "pointer",
+            fontFamily: "inherit",
+          }}
+        >
+          {t("why_this_current")}
+        </button>
+      </div>
+
+      {whyOpen && cell && isSyncroLlmReady(cell, session.llm_meta) ? (
         <WhyThisCurrentModal
-          cell={activeCell}
-          direction={activeDirection}
+          cell={cell}
+          direction={selectedDir}
           hourId={hourPeriod}
-          onClose={() => setWhyModalOpen(false)}
+          onClose={() => setWhyOpen(false)}
         />
       ) : null}
     </div>

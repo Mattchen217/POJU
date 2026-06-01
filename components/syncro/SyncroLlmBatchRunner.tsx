@@ -3,12 +3,10 @@
 import { useEffect, useRef } from "react";
 
 import { readFetchJson } from "@/lib/client/fetch-json";
-import {
-  SYNCRO_LLM_BATCH_COUNT,
-  getSyncroBatchKeyLists,
-} from "@/lib/llm/services/syncro-reading-service";
+import { SYNCRO_LLM_BATCH_COUNT } from "@/lib/llm/services/syncro-reading-service";
 import { isHourPeriodLlmReady } from "@/lib/syncro/hour-llm-ready";
 import { HOUR_ORDER, sortedHourPeriodsFromLive } from "@/lib/syncro/hour-order";
+import { hourPeriodDisplayName, HOUR_PERIOD_RANGES } from "@/lib/syncro/hour-period-ranges";
 import { rebuildSyncroLlmContext } from "@/lib/syncro/rebuild-syncro-llm-context";
 import { getCurrentHourPeriod, type HourPeriod } from "@/lib/syncro/types";
 import {
@@ -61,40 +59,56 @@ export function SyncroLlmBatchRunner({ sessionId, session, onSessionUpdate, onPr
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per session mount
   }, [sessionId]);
 
+  function buildProfileSummary(ctx: SyncroLlmContext): string {
+    const ba = ctx.base_analysis;
+    if (typeof ba === "string") return ba.slice(0, 4000);
+    try {
+      return JSON.stringify(ba).slice(0, 4000);
+    } catch {
+      return ctx.task_description;
+    }
+  }
+
   async function loadHourBatch(
     hourId: HourPeriod,
     hourIdx: number,
-    cellKeys: string[],
     ctx: SyncroLlmContext,
   ): Promise<"ok" | "fail"> {
+    const cellKeys = Object.keys(ctx.local_matrix).filter((k) => k.startsWith(`${hourId}__`));
     if (cellKeys.length === 0) {
       console.warn(`[Syncro] ⚠️ ${hourId} 时辰没有 cells`);
       return "fail";
     }
 
+    const cells = cellKeys.map((key) => {
+      const [, direction] = key.split("__");
+      const local = ctx.local_matrix[key];
+      return {
+        key,
+        direction: direction ?? "N",
+        current_level: local?.current_level ?? "stillwater",
+      };
+    });
+
     console.log(
-      `[Syncro] [${hourIdx + 1}/${SYNCRO_LLM_BATCH_COUNT}] ${hourId} 时辰开始 LLM 调用, cells: ${cellKeys.length}`,
+      `[Syncro] [${hourIdx + 1}/${SYNCRO_LLM_BATCH_COUNT}] ${hourId} 时辰开始 LLM 调用, cells: ${cells.length}`,
     );
     const startTime = Date.now();
 
     try {
-      const response = await fetch("/api/syncro/llm_batch", {
+      const response = await fetch("/api/syncro/llm_hour", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          session_id: sessionId,
-          batch_index: hourIdx,
           hour_id: hourId,
-          profile_id: ctx.profile_id,
+          hour_label: hourPeriodDisplayName(hourId, ctx.locale),
+          hour_range: HOUR_PERIOD_RANGES[hourId],
+          cells,
           task_description: ctx.task_description,
-          user_location: ctx.user_location,
+          profile_summary: buildProfileSummary(ctx),
           locale: ctx.locale,
-          user_profile: ctx.user_profile,
-          base_analysis: ctx.base_analysis,
-          local_matrix: ctx.local_matrix,
-          compute_started_at: ctx.compute_started_at,
-          true_solar_meta: ctx.true_solar,
         }),
+        signal: AbortSignal.timeout(60_000),
       });
 
       if (!response.ok) {
@@ -184,11 +198,10 @@ export function SyncroLlmBatchRunner({ sessionId, session, onSessionUpdate, onPr
       return;
     }
 
-    const batchKeyLists = getSyncroBatchKeyLists(ctx.local_matrix);
     const livePeriod = getCurrentHourPeriod();
     const hourSequence = sortedHourPeriodsFromLive(livePeriod);
 
-    console.log("[Syncro] 开始按序加载 12 时辰 (从当前时辰起):", hourSequence);
+    console.log("[Syncro] 串行生成顺序:", hourSequence);
 
     let completed = 0;
     let failed = 0;
@@ -196,11 +209,10 @@ export function SyncroLlmBatchRunner({ sessionId, session, onSessionUpdate, onPr
 
     for (const hourId of hourSequence) {
       const hourIdx = HOUR_ORDER.indexOf(hourId);
-      const cellKeys = batchKeyLists[hourIdx] ?? [];
 
       onProgress({ completed, total, running: true, failed, current_hour: hourId });
 
-      const result = await loadHourBatch(hourId, hourIdx, cellKeys, ctx);
+      const result = await loadHourBatch(hourId, hourIdx, ctx);
       if (result === "ok") completed++;
       else failed++;
 

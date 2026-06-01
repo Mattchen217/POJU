@@ -2,30 +2,54 @@
 
 import { useEffect, useRef, useState } from "react";
 import { IconCamera, IconLoader2 } from "@tabler/icons-react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 
 import { PostureHintOverlay } from "@/components/syncro/PostureHintOverlay";
 import { SyncroCellAdvice } from "@/components/syncro/SyncroCellAdvice";
-import { SyncroDirectionRing } from "@/components/syncro/SyncroDirectionRing";
-import { isSyncroLlmReady } from "@/lib/syncro/llm-cell-display";
 import { SyncroParticleCore } from "@/components/syncro/SyncroParticleCore";
 import { WhyThisCurrentModal } from "@/components/syncro/WhyThisCurrentModal";
 import { useOrientation } from "@/components/syncro/SyncroOrientationProvider";
-import { getArHaloColors } from "@/lib/syncro/ar-halo-colors";
 import {
   getCurrentLevelFallbackLabel,
   getCurrentLevelI18nKey,
 } from "@/lib/syncro/compass-display";
-import {
-  compassDegreeToDirection,
-  currentLevelCssClass,
-  type DirectionId,
-} from "@/lib/syncro/current-system";
-import { HOUR_PERIOD_RANGES, hourPeriodDisplayName } from "@/lib/syncro/hour-period-ranges";
+import { compassDegreeToDirection, type CurrentLevel, type DirectionId } from "@/lib/syncro/current-system";
+import { isSyncroLlmReady } from "@/lib/syncro/llm-cell-display";
 import { matrixKey, type HourPeriod, type SyncroSession } from "@/lib/syncro/types";
 
 import "@/styles/syncro-compass.css";
-import "@/styles/syncro-ar.css";
+
+const RING_SIZE = 380;
+const PARTICLE_SIZE = 380;
+const LABEL_RADIUS = 170;
+const CAMERA_WINDOW_SIZE = 150;
+
+const DIRECTIONS = [
+  { id: "N", angle: 0 },
+  { id: "NE", angle: 45 },
+  { id: "E", angle: 90 },
+  { id: "SE", angle: 135 },
+  { id: "S", angle: 180 },
+  { id: "SW", angle: 225 },
+  { id: "W", angle: 270 },
+  { id: "NW", angle: 315 },
+] as const;
+
+const HALO_COLORS: Record<CurrentLevel, string> = {
+  open_current: "rgba(0, 217, 184, 0.7)",
+  following_current: "rgba(78, 205, 196, 0.6)",
+  stillwater: "rgba(138, 138, 160, 0.4)",
+  crosscurrent: "rgba(232, 159, 77, 0.6)",
+  undertow: "rgba(200, 90, 90, 0.6)",
+};
+
+const LEVEL_COLORS: Record<CurrentLevel, string> = {
+  open_current: "#00D9B8",
+  following_current: "#4ECDC4",
+  stillwater: "#8A8AA0",
+  crosscurrent: "#E89F4D",
+  undertow: "#C85A5A",
+};
 
 export type SyncroARModeProps = {
   session: SyncroSession;
@@ -46,19 +70,19 @@ export function SyncroARMode({
 }: SyncroARModeProps) {
   const t = useTranslations("syncro");
   const tLevels = useTranslations("syncro.levels");
-  const resolvedLocale = useLocale();
   const isZh = locale.startsWith("zh");
 
-  const { compassDegree, deviceTiltBeta } = useOrientation();
+  const { compassDegree: alpha, deviceTiltBeta: beta } = useOrientation();
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [streamReady, setStreamReady] = useState(false);
-  const [whyModalOpen, setWhyModalOpen] = useState(false);
+  const [whyOpen, setWhyOpen] = useState(false);
 
-  const currentDirection: DirectionId = compassDegreeToDirection(compassDegree);
-  const cellKey = matrixKey(hourPeriod, currentDirection);
+  const direction = compassDegreeToDirection(alpha);
+  const cellKey = matrixKey(hourPeriod, direction);
   const cell = session.matrix[cellKey];
   const llmHighlight = highlightMatrixKeys?.has(cellKey);
+  const haloColor = HALO_COLORS[cell?.current_level ?? "stillwater"];
 
   useEffect(() => {
     if (!cameraGranted) {
@@ -73,11 +97,7 @@ export function SyncroARMode({
 
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: "environment",
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
+          video: { facingMode: "environment" },
           audio: false,
         });
 
@@ -90,13 +110,11 @@ export function SyncroARMode({
         const video = videoRef.current;
         if (video) {
           video.srcObject = stream;
-          await video.play().catch(() => {
-            /* autoplay policy */
-          });
+          await video.play().catch(() => undefined);
           setStreamReady(true);
         }
       } catch (e) {
-        console.error("[syncro/ar] camera start failed", e);
+        console.error("[AR] camera failed:", e);
         setStreamReady(false);
       }
     }
@@ -107,36 +125,12 @@ export function SyncroARMode({
       cancelled = true;
       streamRef.current?.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
-      }
-      setStreamReady(false);
     };
   }, [cameraGranted]);
 
-  if (!cameraGranted) {
-    return (
-      <div className="ar-permission-needed">
-        <div className="permission-icon">
-          <IconCamera aria-hidden size={32} stroke={1.5} />
-        </div>
-        <h3>{t("ar.permission_title")}</h3>
-        <p>{t("ar.permission_description")}</p>
-        <button type="button" className="permission-btn" onClick={onRequestCamera}>
-          {t("ar.grant_access")}
-        </button>
-      </div>
-    );
-  }
-
-  const halo = getArHaloColors(cell?.current_level);
-  const haloStyle = {
-    boxShadow: `0 0 32px ${halo.glow1}, 0 0 64px ${halo.glow2}, inset 0 0 0 2px ${halo.border}`,
-  } as const;
-
+  const levelKey = cell ? getCurrentLevelI18nKey(cell.current_level) : null;
   let levelTitle = "";
-  if (cell) {
-    const levelKey = getCurrentLevelI18nKey(cell.current_level);
+  if (cell && levelKey) {
     try {
       levelTitle = tLevels(levelKey);
     } catch {
@@ -144,91 +138,197 @@ export function SyncroARMode({
     }
   }
 
-  return (
-    <div className={`syncro-immersive ar-mode ${llmHighlight ? "syncro-llm-cell-updated" : ""}`}>
-      <PostureHintOverlay mode="ar" beta={deviceTiltBeta} />
-
-      <div className="syncro-content-overlay ar-mode-body">
-        <div className="compass-stage">
-          <div className="concentric-system">
-            <div
-              className="rotating-layer"
+  if (!cameraGranted) {
+    return (
+      <div className="compass-page">
+        <PostureHintOverlay mode="ar" beta={beta} />
+        <div style={{ textAlign: "center", marginTop: 120, padding: "0 24px" }}>
+          <IconCamera aria-hidden size={32} stroke={1.5} style={{ color: "#D4A574" }} />
+          <p style={{ marginTop: 16, fontSize: 13, color: "#A0A4B8" }}>{t("ar.permission_description")}</p>
+          {onRequestCamera ? (
+            <button
+              type="button"
+              onClick={onRequestCamera}
               style={{
-                transform: `rotate(${-compassDegree}deg)`,
-                transition: "transform 200ms ease-out",
+                marginTop: 16,
+                padding: "8px 18px",
+                background: "rgba(212, 165, 116, 0.12)",
+                color: "#D4A574",
+                fontSize: 11,
+                border: "none",
+                borderRadius: 20,
+                cursor: "pointer",
+                fontFamily: "inherit",
               }}
             >
-              <SyncroParticleCore />
-              <SyncroDirectionRing
-                activeDirection={currentDirection}
-                labelUprightDeg={compassDegree}
-              />
-            </div>
+              {t("ar.permission_title")}
+            </button>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
 
-            <div className="ar-window-layer">
-              <div className="ar-camera-window" style={haloStyle}>
-                <video
-                  ref={videoRef}
-                  className="ar-video"
-                  playsInline
-                  muted
-                  autoPlay
-                  aria-label={t("ar.video_label")}
-                />
-                {!streamReady ? <div className="ar-video-placeholder" aria-hidden /> : null}
+  return (
+    <div className={`compass-page ${llmHighlight ? "syncro-llm-cell-updated" : ""}`}>
+      <PostureHintOverlay mode="ar" beta={beta} />
 
-                {cell ? (
-                  <div className="ar-info-overlay">
-                    <div className={`ar-level ${currentLevelCssClass(cell.current_level)}`}>
-                      {levelTitle}
-                    </div>
-                    <div className="ar-meta">
-                      <span>{currentDirection}</span>
-                      <span className="meta-divider">·</span>
-                      <span>
-                        {hourPeriodDisplayName(hourPeriod, resolvedLocale)} ·{" "}
-                        {HOUR_PERIOD_RANGES[hourPeriod]}
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="ar-info-overlay ar-info-overlay--loading" aria-busy="true">
-                    <IconLoader2 aria-hidden size={20} stroke={1.5} className="ar-loading-spin" />
-                    <span>{t("generating")}</span>
-                  </div>
-                )}
-              </div>
-            </div>
+      <div
+        style={{
+          position: "relative",
+          width: RING_SIZE,
+          height: RING_SIZE,
+          margin: "40px auto 0",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            transform: `rotate(${-alpha}deg)`,
+            transition: "transform 200ms ease-out",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              width: PARTICLE_SIZE,
+              height: PARTICLE_SIZE,
+              transform: "translate(-50%, -50%)",
+              pointerEvents: "none",
+            }}
+          >
+            <SyncroParticleCore bare />
           </div>
+
+          {DIRECTIONS.map((dir) => {
+            const rad = ((dir.angle - 90) * Math.PI) / 180;
+            const x = Math.cos(rad) * LABEL_RADIUS;
+            const y = Math.sin(rad) * LABEL_RADIUS;
+            return (
+              <div
+                key={dir.id}
+                style={{
+                  position: "absolute",
+                  top: "50%",
+                  left: "50%",
+                  transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  color: "rgba(160, 164, 184, 0.85)",
+                  letterSpacing: 1.5,
+                  pointerEvents: "none",
+                }}
+              >
+                {dir.id}
+              </div>
+            );
+          })}
         </div>
 
-        {cell ? (
-          <div className="compass-footer">
-            <SyncroCellAdvice
-              cell={cell}
-              llmMeta={session.llm_meta}
-              className="compass-short-advice ar-short-advice"
-            />
-            <div className="compass-bottom-cta">
-              <button
-                type="button"
-                className="why-btn-prominent"
-                disabled={!isSyncroLlmReady(cell, session.llm_meta)}
-                onClick={() => setWhyModalOpen(true)}
-              >
-                {t("why_this_current")}
-              </button>
+        <div
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: CAMERA_WINDOW_SIZE,
+            height: CAMERA_WINDOW_SIZE,
+            borderRadius: "50%",
+            overflow: "hidden",
+            boxShadow: `0 0 32px ${haloColor}, 0 0 64px ${haloColor.replace(/0\.\d+/, "0.25")}, inset 0 0 0 2px ${haloColor}`,
+            transition: "box-shadow 600ms ease",
+            zIndex: 5,
+          }}
+        >
+          <video
+            ref={videoRef}
+            playsInline
+            muted
+            autoPlay
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
+          {!streamReady ? (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "rgba(7,9,26,0.6)",
+              }}
+            >
+              <IconLoader2 aria-hidden size={20} stroke={1.5} className="syncro-advice-spin" />
             </div>
-          </div>
-        ) : null}
+          ) : null}
+
+          {cell ? (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "radial-gradient(circle, rgba(7,9,26,0.5) 0%, transparent 70%)",
+                color: "#fff",
+                textShadow: "0 1px 4px rgba(0,0,0,0.8)",
+                pointerEvents: "none",
+              }}
+            >
+              <div style={{ fontSize: 14, fontWeight: 500, color: LEVEL_COLORS[cell.current_level] }}>
+                {levelTitle}
+              </div>
+            </div>
+          ) : null}
+        </div>
       </div>
 
-      {whyModalOpen && cell && isSyncroLlmReady(cell, session.llm_meta) ? (
+      {cell ? (
+        <div style={{ maxWidth: 320, margin: "24px auto 0", padding: "0 20px" }}>
+          <SyncroCellAdvice
+            cell={cell}
+            llmMeta={session.llm_meta}
+            className="compass-short-advice ar-short-advice"
+          />
+        </div>
+      ) : null}
+
+      <div style={{ textAlign: "center", marginTop: 80 }}>
+        <button
+          type="button"
+          className="why-btn-prominent"
+          disabled={!cell || !isSyncroLlmReady(cell, session.llm_meta)}
+          onClick={() => setWhyOpen(true)}
+          style={{
+            padding: "8px 18px",
+            background: "rgba(212, 165, 116, 0.12)",
+            color: "#D4A574",
+            fontSize: 11,
+            fontWeight: 500,
+            border: "none",
+            borderRadius: 20,
+            cursor: "pointer",
+            fontFamily: "inherit",
+          }}
+        >
+          {t("why_this_current")}
+        </button>
+      </div>
+
+      {whyOpen && cell && isSyncroLlmReady(cell, session.llm_meta) ? (
         <WhyThisCurrentModal
           cell={cell}
-          direction={currentDirection}
+          direction={direction}
           hourId={hourPeriod}
-          onClose={() => setWhyModalOpen(false)}
+          onClose={() => setWhyOpen(false)}
         />
       ) : null}
     </div>

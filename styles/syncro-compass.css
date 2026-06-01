@@ -1,101 +1,31 @@
-/* Mode stage layout — styles/syncro-layout.css (Part 6) */
-
-.syncro-immersive {
+/* 整个罗盘页:简单的全屏容器 */
+.compass-page {
   position: relative;
   width: 100%;
-  height: 100%;
-  overflow: hidden;
+  min-height: calc(100vh - 200px);
+  padding-top: 0;
+  padding-bottom: 130px;
 }
 
-.syncro-content-overlay {
-  position: relative;
-  z-index: 2;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  pointer-events: none;
+/* 不要给 .compass-area 加任何样式,所有样式都用 inline style */
+/* 不要加 overflow: hidden 到任何地方 */
+/* 不要加 border-radius: 50% 到粒子层(仅 AR 摄像头窗口允许) */
+
+.syncro-particle-spline,
+.syncro-particle-spline canvas {
+  width: 100% !important;
+  height: 100% !important;
 }
 
-.syncro-content-overlay > * {
-  pointer-events: auto;
-}
-
-/* === Compass mode (Part 2: three concentric layers) === */
-
-.compass-mode,
-.ar-mode,
-.map-mode {
-  position: relative;
+.syncro-particle-spline--static {
   width: 100%;
   height: 100%;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 0;
+  background: radial-gradient(circle, rgba(108, 52, 172, 0.25) 0%, transparent 70%);
 }
 
-.concentric-system {
-  position: relative;
-  width: min(85vmin, 500px);
-  height: min(85vmin, 500px);
-  margin: 0 auto;
-  flex-shrink: 0;
-}
-
-.rotating-layer {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.direction-ring {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.direction-ring {
-  z-index: 3;
-}
-
-.direction-label {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  pointer-events: none;
-  transition: color var(--pj-duration-normal) var(--pj-ease);
-}
-
-.direction-label-text {
-  display: inline-block;
-  font-size: 10px;
-  font-weight: var(--pj-weight-medium);
-  letter-spacing: 1px;
-  color: var(--pj-text-secondary);
-  white-space: nowrap;
-  transition:
-    color var(--pj-duration-normal) var(--pj-ease),
-    transform 200ms ease-out;
-}
-
-.direction-label.active .direction-label-text {
-  color: var(--pj-gold);
-  font-size: 11px;
-}
-
-.particle-layer {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 92%;
-  height: 92%;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  overflow: hidden;
-  border-radius: 50%;
+.why-btn-prominent:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .syncro-advice--loading,
@@ -116,188 +46,6 @@
 }
 
 @keyframes syncro-advice-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.why-btn-prominent:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.particle-layer .syncro-particle-spline,
-.particle-layer .syncro-particle-spline canvas {
-  width: 100% !important;
-  height: 100% !important;
-}
-
-.syncro-particle-spline--static {
-  width: 100%;
-  height: 100%;
-  background: radial-gradient(circle, rgba(108, 52, 172, 0.25) 0%, transparent 70%);
-}
-
-.center-info-layer,
-.center-static-layer {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 35%;
-  min-width: 120px;
-  max-width: 200px;
-  text-align: center;
-  z-index: 5;
-  pointer-events: none;
-}
-
-.current-display {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.current-level {
-  font-size: 18px;
-  font-weight: var(--pj-weight-medium);
-  line-height: var(--pj-leading-tight);
-  letter-spacing: 0.2px;
-}
-
-.level-line {
-  margin: 4px 0;
-}
-
-.current-meta {
-  font-size: 10px;
-  color: var(--pj-text-tertiary);
-  letter-spacing: 0.3px;
-  margin-top: 4px;
-  display: flex;
-  justify-content: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.meta-divider {
-  color: var(--pj-text-muted);
-}
-
-.compass-short-advice {
-  font-size: var(--pj-text-sm);
-  color: var(--pj-text-primary);
-  line-height: var(--pj-leading-relaxed);
-}
-
-.compass-bottom-cta {
-  display: flex;
-  justify-content: center;
-}
-
-.why-btn-prominent {
-  padding: 8px 16px;
-  background: rgba(212, 165, 116, 0.12);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  color: var(--pj-gold);
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: var(--pj-weight-medium);
-  letter-spacing: 0.3px;
-  border: none;
-  border-radius: 20px;
-  cursor: pointer;
-  box-shadow:
-    0 0 24px rgba(212, 165, 116, 0.15),
-    inset 0 0 0 0.5px rgba(212, 165, 116, 0.3);
-  transition: all var(--pj-duration-fast) var(--pj-ease);
-}
-
-.why-btn-prominent:active {
-  transform: scale(0.96);
-  background: rgba(212, 165, 116, 0.2);
-}
-
-.no-data {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  color: var(--pj-text-tertiary);
-  font-size: 11px;
-}
-
-.no-data-spin {
-  animation: syncro-compass-spin 1s linear infinite;
-  color: var(--pj-gold);
-}
-
-.syncro-particle-circle-legacy {
-  position: relative;
-  width: min(85vmin, 500px);
-  height: min(85vmin, 500px);
-}
-
-/* === Permission / loading === */
-
-.compass-permission-needed {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 60px 32px;
-  height: 100%;
-  min-height: 50vh;
-}
-
-.compass-unsupported {
-  font-size: var(--pj-text-sm);
-  color: var(--pj-text-secondary);
-}
-
-.permission-icon {
-  width: 64px;
-  height: 64px;
-  border-radius: 18px;
-  background: rgba(212, 165, 116, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 24px;
-  color: var(--pj-gold);
-}
-
-.compass-permission-needed h3 {
-  font-size: var(--pj-text-lg);
-  font-weight: var(--pj-weight-medium);
-  margin: 0 0 8px;
-  color: var(--pj-text-primary);
-}
-
-.compass-permission-needed p {
-  font-size: var(--pj-text-sm);
-  color: var(--pj-text-tertiary);
-  line-height: var(--pj-leading-normal);
-  margin: 0 0 24px;
-  max-width: 280px;
-}
-
-.permission-btn {
-  padding: 14px 32px;
-  background: linear-gradient(135deg, var(--pj-gold), var(--pj-gold-soft));
-  color: var(--pj-bg-deep);
-  font-family: inherit;
-  font-size: var(--pj-text-base);
-  font-weight: var(--pj-weight-medium);
-  border: none;
-  border-radius: var(--pj-radius-pill);
-  cursor: pointer;
-}
-
-@keyframes syncro-compass-spin {
   to {
     transform: rotate(360deg);
   }
