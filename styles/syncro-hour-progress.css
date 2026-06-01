@@ -1,42 +1,60 @@
 .hour-progress-bar {
   position: absolute;
-  top: max(8px, env(safe-area-inset-top, 0px));
+  top: env(safe-area-inset-top, 0px);
   left: 0;
   right: 0;
   z-index: 12;
-  padding: 14px 18px 8px;
+  padding: 14px 0 8px;
   pointer-events: auto;
+  background: linear-gradient(
+    to bottom,
+    rgba(7, 9, 26, 0.9) 0%,
+    rgba(7, 9, 26, 0.55) 70%,
+    rgba(7, 9, 26, 0) 100%
+  );
 }
 
 .hour-track {
   position: relative;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  height: 24px;
-  padding: 0 6px;
+  gap: 24px;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+  padding: 0 calc(50vw - 12px);
+  scrollbar-width: none;
+}
+
+.hour-track::-webkit-scrollbar {
+  display: none;
 }
 
 .hour-line {
   position: absolute;
   top: 50%;
-  left: 6px;
-  right: 6px;
+  left: 0;
+  right: 0;
   height: 0.5px;
-  background: var(--pj-divider);
+  background: rgba(255, 255, 255, 0.06);
+  z-index: 0;
+  pointer-events: none;
 }
 
 .hour-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--pj-text-disabled);
   position: relative;
   z-index: 2;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--pj-text-disabled);
   cursor: pointer;
-  transition: all var(--pj-duration-fast) var(--pj-ease);
-  padding: 0;
+  flex-shrink: 0;
+  scroll-snap-align: center;
   border: none;
+  padding: 0;
+  transition: all var(--pj-duration-fast) var(--pj-ease);
 }
 
 .hour-dot:disabled {
@@ -44,39 +62,51 @@
 }
 
 .hour-dot.status-now {
-  width: 10px;
-  height: 10px;
+  width: 22px;
+  height: 22px;
   background: var(--pj-gold);
-  box-shadow: 0 0 12px var(--pj-gold-glow);
-}
-
-.hour-dot.status-done {
-  width: 6px;
-  height: 6px;
-  background: var(--pj-following);
+  box-shadow: 0 0 20px var(--pj-gold-glow);
   cursor: pointer;
 }
 
-.hour-dot.status-done:active:not(:disabled) {
-  transform: scale(1.3);
+.hour-dot.status-done {
+  background: #4ecdc4;
+  box-shadow: 0 0 6px rgba(78, 205, 196, 0.4);
+  cursor: pointer;
 }
 
 .hour-dot.status-pending {
-  width: 5px;
-  height: 5px;
   background: var(--pj-text-disabled);
+  opacity: 0.5;
   cursor: not-allowed;
+}
+
+.hour-dot.status-failed {
+  background: var(--pj-under);
   opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .hour-dot.selected:not(.status-now) {
   outline: 2px solid var(--pj-gold);
-  outline-offset: 3px;
+  outline-offset: 4px;
 }
 
-.hour-dot.selected.status-done {
-  outline: 2px solid var(--pj-gold);
-  outline-offset: 3px;
+.hour-dot-label {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  color: var(--pj-text-tertiary);
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.hour-dot.status-now .hour-dot-label {
+  top: 28px;
+  color: var(--pj-gold);
 }
 
 .hour-display {
@@ -84,7 +114,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  margin-top: 14px;
+  margin-top: 28px;
   font-size: var(--pj-text-xs);
   color: var(--pj-text-secondary);
   letter-spacing: 0.3px;
@@ -149,7 +179,7 @@
 .hour-legend .legend-dot.status-done {
   width: 6px;
   height: 6px;
-  background: var(--pj-following);
+  background: #4ecdc4;
 }
 
 .hour-legend .legend-dot.status-pending {
@@ -157,4 +187,11 @@
   height: 5px;
   background: var(--pj-text-disabled);
   opacity: 0.6;
+}
+
+.hour-legend .legend-dot.status-failed {
+  width: 6px;
+  height: 6px;
+  background: var(--pj-under);
+  opacity: 0.7;
 }

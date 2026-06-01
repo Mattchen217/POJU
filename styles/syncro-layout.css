@@ -5,12 +5,11 @@
 
 .syncro-main-view {
   --syncro-nav-reserve: max(60px, calc(48px + env(safe-area-inset-bottom, 0px)));
-  --syncro-toggle-bottom: 75px;
-  --syncro-why-bottom: 130px;
-  --syncro-bottom-reserve: 160px;
-  --syncro-hour-top: max(8px, env(safe-area-inset-top, 0px));
-  --syncro-phone-hint-top: 100px;
-  --syncro-stage-top: 136px;
+  --syncro-toggle-bottom: 78px;
+  --syncro-why-bottom: 128px;
+  --syncro-bottom-reserve: 120px;
+  --syncro-hour-top: env(safe-area-inset-top, 0px);
+  --syncro-stage-top: 100px;
 }
 
 /* Hour progress — top band */
@@ -44,7 +43,8 @@
   justify-content: center;
   width: 100%;
   min-height: 0;
-  padding-bottom: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
 .syncro-main-view .concentric-system {
@@ -54,14 +54,6 @@
 }
 
 /* Phone posture hint — below hour bar */
-.syncro-main-view .phone-position-hint {
-  top: var(--syncro-phone-hint-top);
-  z-index: 5;
-  max-width: min(320px, 92vw);
-  text-align: center;
-  line-height: 1.35;
-}
-
 .syncro-compass-gate-stage {
   position: absolute;
   left: 0;

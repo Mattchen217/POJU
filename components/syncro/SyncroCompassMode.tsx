@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { IconDeviceMobile, IconLoader2 } from "@tabler/icons-react";
+import { IconLoader2 } from "@tabler/icons-react";
 import { useLocale, useTranslations } from "next-intl";
 
+import { PostureHintOverlay } from "@/components/syncro/PostureHintOverlay";
 import { SyncroDirectionRing } from "@/components/syncro/SyncroDirectionRing";
 import { SyncroParticleCore } from "@/components/syncro/SyncroParticleCore";
 import { WhyThisCurrentModal } from "@/components/syncro/WhyThisCurrentModal";
@@ -29,16 +30,6 @@ export type SyncroCompassModeProps = {
   hourPeriod: HourPeriod;
   highlightMatrixKeys?: Set<string>;
 };
-
-function FlatPhoneHint() {
-  const t = useTranslations("syncro.compass");
-  return (
-    <div className="phone-position-hint">
-      <IconDeviceMobile aria-hidden size={14} stroke={1.75} className="phone-position-hint-icon" />
-      <span>{t("hold_phone_flat")}</span>
-    </div>
-  );
-}
 
 function CenterCurrentDisplay({
   cell,
@@ -82,7 +73,7 @@ export function SyncroCompassMode({
   const tLevels = useTranslations("syncro.levels");
   const isZh = locale.startsWith("zh");
 
-  const { compassDegree, receivingHeading, isSupported } = useOrientation();
+  const { compassDegree, deviceTiltBeta, receivingHeading, isSupported } = useOrientation();
   const [whyModalOpen, setWhyModalOpen] = useState(false);
 
   const currentDirection: DirectionId = compassDegreeToDirection(compassDegree);
@@ -122,7 +113,7 @@ export function SyncroCompassMode({
 
   return (
     <div className={`syncro-immersive compass-mode ${llmHighlight ? "syncro-llm-cell-updated" : ""}`}>
-      <FlatPhoneHint />
+      {receivingHeading ? <PostureHintOverlay mode="compass" beta={deviceTiltBeta} /> : null}
 
       <div className="syncro-content-overlay compass-mode-body">
         <div className="concentric-system">

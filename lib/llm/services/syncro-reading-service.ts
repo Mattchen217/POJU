@@ -19,6 +19,7 @@ import {
   type SyncroMatrixProfile,
 } from "@/lib/syncro/calculate-matrix";
 import type { CurrentLevel } from "@/lib/syncro/current-system";
+import { HOUR_ORDER } from "@/lib/syncro/hour-order";
 import type { SyncroMatrix } from "@/lib/syncro/types";
 
 export type GenerateSyncroMatrixInput = {
@@ -65,7 +66,7 @@ export type SyncroLlmBatchResult = {
   cost_usd: number;
 };
 
-export const SYNCRO_LLM_BATCH_COUNT = 6;
+export const SYNCRO_LLM_BATCH_COUNT = 12;
 export const SYNCRO_LLM_MAX_TOKENS_PER_BATCH = 6000;
 
 function parseJsonContent(raw: string): unknown {
@@ -252,8 +253,11 @@ export function chunkArray<T>(items: T[], parts: number): T[][] {
 }
 
 export function getSyncroBatchKeyLists(localMatrix: Record<string, MatrixCell>): string[][] {
-  const allKeys = Object.keys(localMatrix).sort();
-  return chunkArray(allKeys, SYNCRO_LLM_BATCH_COUNT);
+  return HOUR_ORDER.map((hourId) =>
+    Object.keys(localMatrix)
+      .filter((key) => key.startsWith(`${hourId}__`))
+      .sort(),
+  );
 }
 
 function pickSubMatrix(

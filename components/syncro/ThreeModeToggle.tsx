@@ -22,7 +22,7 @@ export function ThreeModeToggle({ mode, onChange }: ThreeModeToggleProps) {
         className={`mode-tab ${mode === "compass" ? "active" : ""}`}
         onClick={() => onChange("compass")}
       >
-        <IconCompass size={13} stroke={1.75} aria-hidden />
+        <IconCompass size={12} stroke={1.75} aria-hidden />
         <span>{t("compass")}</span>
       </button>
 
@@ -44,7 +44,7 @@ export function ThreeModeToggle({ mode, onChange }: ThreeModeToggleProps) {
         className={`mode-tab ${mode === "map" ? "active" : ""}`}
         onClick={() => onChange("map")}
       >
-        <IconMap2 size={13} stroke={1.75} aria-hidden />
+        <IconMap2 size={12} stroke={1.75} aria-hidden />
         <span>{t("map")}</span>
       </button>
     </div>

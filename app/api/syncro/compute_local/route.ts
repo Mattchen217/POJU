@@ -50,7 +50,7 @@ export async function POST(req: Request) {
       meta: {
         ...result.meta,
         llm_status: "pending",
-        total_batches: result.meta.llm_batches ?? 6,
+        total_batches: result.meta.llm_batches ?? 12,
         completed_batches: 0,
       },
     });

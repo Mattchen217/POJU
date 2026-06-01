@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
-import { SyncroDirectionRing } from "@/components/syncro/SyncroDirectionRing";
+import {
+  SYNCRO_DIRECTION_RING_RADIUS_PCT,
+  SyncroDirectionRing,
+} from "@/components/syncro/SyncroDirectionRing";
 import { SyncroParticleCore } from "@/components/syncro/SyncroParticleCore";
 import { WhyThisCurrentModal } from "@/components/syncro/WhyThisCurrentModal";
 import {
@@ -18,8 +21,6 @@ import { matrixKey, type HourPeriod, type SyncroSession } from "@/lib/syncro/typ
 
 import "@/styles/syncro-compass.css";
 import "@/styles/syncro-map.css";
-
-const MAP_POINT_RADIUS = 145;
 
 const DIRECTIONS_ON_CIRCLE: Array<{ id: DirectionId; angle: number }> = [
   { id: "N", angle: 0 },
@@ -59,8 +60,9 @@ function MapDirectionPoints({
         const isActive = dir.id === activeDirection;
         const statusClass = currentLevelMapPointStatusClass(cell?.current_level ?? "stillwater");
         const rad = ((dir.angle - 90) * Math.PI) / 180;
-        const x = Math.cos(rad) * MAP_POINT_RADIUS;
-        const y = Math.sin(rad) * MAP_POINT_RADIUS;
+        const r = SYNCRO_DIRECTION_RING_RADIUS_PCT - 4;
+        const x = Math.cos(rad) * r;
+        const y = Math.sin(rad) * r;
 
         return (
           <button
@@ -68,7 +70,7 @@ function MapDirectionPoints({
             type="button"
             className={`map-point status-${statusClass} ${isActive ? "active" : ""}`}
             style={{
-              transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,
+              transform: `translate(calc(-50% + ${x}%), calc(-50% + ${y}%))`,
             }}
             onClick={() => onSelectDirection(dir.id)}
             aria-label={dir.id}

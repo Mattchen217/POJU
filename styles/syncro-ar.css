@@ -10,10 +10,6 @@
   min-height: 0;
 }
 
-.ar-phone-hint .phone-position-hint-icon {
-  transform: none;
-}
-
 /* === AR circular camera window (center, does not rotate) === */
 
 .ar-window-layer {
@@ -21,8 +17,10 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 160px;
-  height: 160px;
+  width: 32%;
+  height: 32%;
+  min-width: 140px;
+  max-width: 200px;
   z-index: 5;
   pointer-events: none;
 }

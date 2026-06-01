@@ -1154,7 +1154,8 @@
       "legend": {
         "now": "当前",
         "done": "已生成",
-        "pending": "未生成"
+        "pending": "未生成",
+        "failed": "生成失败"
       }
     },
     "why_this_current": "为何此时",
@@ -1174,6 +1175,12 @@
       "skip": "暂不开启",
       "denied_alert": "罗盘权限被拒绝。罗盘不会旋转，但其他功能仍可使用。",
       "skipped_notice": "罗盘未开启，方位不会随手机转动。可刷新页面重新授权。"
+    },
+    "posture": {
+      "hold_flat_title": "请将手机平放",
+      "hold_flat_desc": "手机屏幕朝上，与地面平行",
+      "hold_upright_title": "请竖立手机",
+      "hold_upright_desc": "手机垂直竖起，正面朝向你"
     },
     "compass": {
       "permission_title": "开启罗盘",

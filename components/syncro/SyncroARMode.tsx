@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { IconCamera, IconDeviceMobile, IconLoader2 } from "@tabler/icons-react";
+import { IconCamera, IconLoader2 } from "@tabler/icons-react";
 import { useLocale, useTranslations } from "next-intl";
 
+import { PostureHintOverlay } from "@/components/syncro/PostureHintOverlay";
 import { SyncroDirectionRing } from "@/components/syncro/SyncroDirectionRing";
 import { SyncroParticleCore } from "@/components/syncro/SyncroParticleCore";
 import { WhyThisCurrentModal } from "@/components/syncro/WhyThisCurrentModal";
@@ -33,16 +34,6 @@ export type SyncroARModeProps = {
   onRequestCamera?: () => void;
 };
 
-function UprightPhoneHint() {
-  const t = useTranslations("syncro.ar");
-  return (
-    <div className="phone-position-hint ar-phone-hint">
-      <IconDeviceMobile aria-hidden size={14} stroke={1.75} className="phone-position-hint-icon" />
-      <span>{t("hold_phone_upright")}</span>
-    </div>
-  );
-}
-
 export function SyncroARMode({
   session,
   locale,
@@ -56,7 +47,7 @@ export function SyncroARMode({
   const resolvedLocale = useLocale();
   const isZh = locale.startsWith("zh");
 
-  const { compassDegree } = useOrientation();
+  const { compassDegree, deviceTiltBeta } = useOrientation();
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [streamReady, setStreamReady] = useState(false);
@@ -153,7 +144,7 @@ export function SyncroARMode({
 
   return (
     <div className={`syncro-immersive ar-mode ${llmHighlight ? "syncro-llm-cell-updated" : ""}`}>
-      <UprightPhoneHint />
+      <PostureHintOverlay mode="ar" beta={deviceTiltBeta} />
 
       <div className="syncro-content-overlay ar-mode-body">
         <div className="concentric-system">

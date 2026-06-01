@@ -22,43 +22,23 @@
 
 /* === Compass mode (Part 2: three concentric layers) === */
 
-.compass-mode {
+.compass-mode,
+.ar-mode,
+.map-mode {
   position: relative;
   width: 100%;
   height: 100%;
+  overflow: hidden;
   display: flex;
-  flex-direction: column;
   align-items: center;
+  justify-content: center;
   min-height: 0;
-}
-
-.phone-position-hint {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  background: rgba(212, 165, 116, 0.08);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-radius: 20px;
-  font-size: 11px;
-  color: var(--pj-gold);
-  letter-spacing: 0.5px;
-  pointer-events: none;
-}
-
-.phone-position-hint-icon {
-  transform: rotate(90deg);
-  flex-shrink: 0;
 }
 
 .concentric-system {
   position: relative;
-  width: min(320px, 88vw);
-  height: min(320px, 88vw);
+  width: min(85vmin, 500px);
+  height: min(85vmin, 500px);
   margin: 0 auto;
   flex-shrink: 0;
 }
@@ -81,26 +61,25 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: var(--pj-weight-medium);
   letter-spacing: 1.5px;
   color: var(--pj-text-secondary);
-  transform-origin: center center;
   white-space: nowrap;
   transition: color var(--pj-duration-normal) var(--pj-ease);
 }
 
 .direction-label.active {
   color: var(--pj-gold);
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .particle-layer {
-  width: 220px;
-  height: 220px;
   position: absolute;
   top: 50%;
   left: 50%;
+  width: 75%;
+  height: 75%;
   transform: translate(-50%, -50%);
   pointer-events: none;
   overflow: hidden;
@@ -119,12 +98,15 @@
   background: radial-gradient(circle, rgba(108, 52, 172, 0.25) 0%, transparent 70%);
 }
 
-.center-info-layer {
+.center-info-layer,
+.center-static-layer {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 140px;
+  width: 35%;
+  min-width: 120px;
+  max-width: 200px;
   text-align: center;
   z-index: 5;
   pointer-events: none;
@@ -175,7 +157,7 @@
 }
 
 .why-btn-prominent {
-  padding: 10px 20px;
+  padding: 8px 16px;
   background: rgba(212, 165, 116, 0.12);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -214,8 +196,8 @@
 
 .syncro-particle-circle-legacy {
   position: relative;
-  width: min(320px, 88vw);
-  height: min(320px, 88vw);
+  width: min(85vmin, 500px);
+  height: min(85vmin, 500px);
 }
 
 /* === Permission / loading === */

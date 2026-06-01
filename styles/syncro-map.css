@@ -10,21 +10,14 @@
   min-height: 0;
 }
 
-/* Part 4: enlarged concentric system (shared skeleton with Compass / AR) */
-
+/* MAP: same full-size ring; softer particle background */
 .concentric-system.map-larger {
-  width: min(360px, 92vw);
-  height: min(360px, 92vw);
+  width: min(85vmin, 500px);
+  height: min(85vmin, 500px);
 }
 
 .map-larger .particle-layer {
-  width: 260px;
-  height: 260px;
   opacity: 0.6;
-}
-
-.map-larger .direction-label {
-  font-size: 13px;
 }
 
 .map-center-layer {
@@ -95,7 +88,9 @@
   left: 50%;
   transform: translate(-50%, -50%);
   text-align: center;
-  width: 130px;
+  width: 35%;
+  min-width: 120px;
+  max-width: 200px;
   pointer-events: none;
   z-index: 3;
 }

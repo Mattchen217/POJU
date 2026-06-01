@@ -30,6 +30,8 @@ export interface SyncroCombination {
   rationale: string;
   /** True while background LLM batches have not updated this cell yet. */
   llm_pending?: boolean;
+  /** Set when the hour's LLM batch failed (keeps fallback copy). */
+  llm_failed?: boolean;
 }
 
 export type SyncroMatrix = {

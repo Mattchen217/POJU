@@ -1,29 +1,17 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 
+import { sortedHourPeriodsFromLive } from "@/lib/syncro/hour-order";
+import {
+  getHourDotStatus,
+  type HourDotStatus,
+} from "@/lib/syncro/hour-progress-status";
 import { HOUR_PERIOD_RANGES, hourPeriodDisplayName } from "@/lib/syncro/hour-period-ranges";
-import { getCurrentHourPeriod, matrixKey, type HourPeriod, type SyncroMatrix } from "@/lib/syncro/types";
-import type { DirectionId } from "@/lib/syncro/current-system";
+import { getCurrentHourPeriod, type HourPeriod, type SyncroMatrix } from "@/lib/syncro/types";
 
-const HOUR_SEQUENCE: HourPeriod[] = [
-  "zi",
-  "chou",
-  "yin",
-  "mao",
-  "chen",
-  "si",
-  "wu",
-  "wei",
-  "shen",
-  "you",
-  "xu",
-  "hai",
-];
-
-const DIRECTIONS: DirectionId[] = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
-
-export type HourDotStatus = "now" | "done" | "pending";
+export type { HourDotStatus };
 
 export type HourProgressBarProps = {
   matrix: SyncroMatrix;
@@ -40,59 +28,54 @@ export type HourProgressBarProps = {
 
 export function HourProgressBar({
   matrix,
-  orderedPeriods,
   livePeriod,
   activeHour,
   onSelect,
   locale,
 }: HourProgressBarProps) {
   const t = useTranslations("syncro.hour");
+  const currentRef = useRef<HTMLButtonElement>(null);
 
-  const currentHourPeriod = livePeriod;
-  const startIdx = HOUR_SEQUENCE.indexOf(currentHourPeriod);
-  const sortedPeriods =
-    startIdx >= 0
-      ? [...HOUR_SEQUENCE.slice(startIdx), ...HOUR_SEQUENCE.slice(0, startIdx)]
-      : orderedPeriods.length > 0
-        ? orderedPeriods
-        : HOUR_SEQUENCE;
+  const sortedPeriods = sortedHourPeriodsFromLive(livePeriod);
 
   const activeIdx = sortedPeriods.findIndex((p) => p === activeHour);
   const active = sortedPeriods[activeIdx >= 0 ? activeIdx : 0] ?? sortedPeriods[0]!;
   const activeIsLive = active === livePeriod && activeIdx === 0;
 
-  function getHourStatus(period: HourPeriod): HourDotStatus {
-    if (period === livePeriod) return "now";
-
-    const cells = DIRECTIONS.map((dir) => matrix[matrixKey(period, dir)]).filter(Boolean);
-    if (cells.length === 0) return "pending";
-
-    const allDone = cells.every((cell) => cell && !cell.llm_pending);
-    return allDone ? "done" : "pending";
-  }
+  useEffect(() => {
+    currentRef.current?.scrollIntoView({
+      behavior: "smooth",
+      inline: "center",
+      block: "nearest",
+    });
+  }, [livePeriod]);
 
   return (
     <div className="hour-progress-bar" role="tablist" aria-label={t("aria_label")}>
       <div className="hour-track">
         <div className="hour-line" aria-hidden />
         {sortedPeriods.map((period) => {
-          const status = getHourStatus(period);
+          const status = getHourDotStatus(period, livePeriod, matrix, sortedPeriods);
           const isSelected = period === activeHour;
-          const isClickable = status !== "pending";
+          const canClick = status === "done" || status === "now";
+          const shortName = hourPeriodDisplayName(period, locale);
 
           return (
             <button
               key={period}
+              ref={period === livePeriod ? currentRef : undefined}
               type="button"
               role="tab"
               aria-selected={isSelected}
-              disabled={!isClickable}
+              disabled={!canClick}
               className={`hour-dot status-${status} ${isSelected ? "selected" : ""}`}
               onClick={() => {
-                if (isClickable) onSelect(period);
+                if (canClick) onSelect(period);
               }}
-              aria-label={`${hourPeriodDisplayName(period, locale)} · ${HOUR_PERIOD_RANGES[period]}`}
-            />
+              aria-label={`${shortName} · ${HOUR_PERIOD_RANGES[period]}`}
+            >
+              <span className="hour-dot-label">{shortName}</span>
+            </button>
           );
         })}
       </div>
@@ -125,6 +108,10 @@ export function HourProgressBar({
         <span className="legend-item">
           <span className="legend-dot status-pending" />
           {t("legend.pending")}
+        </span>
+        <span className="legend-item">
+          <span className="legend-dot status-failed" />
+          {t("legend.failed")}
         </span>
       </div>
     </div>

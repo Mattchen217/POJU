@@ -121,6 +121,7 @@ export async function patchSyncroSessionMatrix(
       if (patch.detailed_advice?.trim()) cell.detailed_advice = patch.detailed_advice.trim();
       if (patch.rationale?.trim()) cell.rationale = patch.rationale.trim();
       cell.llm_pending = false;
+      cell.llm_failed = false;
     }
 
     if (llmMeta?.model) session.llm_meta.model = llmMeta.model;
@@ -144,6 +145,46 @@ export async function patchSyncroSessionMatrix(
     return session;
   } catch (e) {
     console.error("[syncro-session] patch failed:", e);
+    return null;
+  }
+}
+
+/** Mark cells as LLM batch failed (fallback copy remains). */
+export async function patchSyncroSessionMatrixFailure(
+  sessionId: string,
+  keys: string[],
+): Promise<SyncroSession | null> {
+  const record = await getPojuDb().syncro_sessions.get(sessionId);
+  if (!record) return null;
+
+  if (new Date(record.expires_at) < new Date()) {
+    return null;
+  }
+
+  try {
+    const payload = await decryptJson<SyncroSessionPayload>(SYNCRO_SESSION_SECRET, {
+      iv: record.iv,
+      cipher: record.encrypted_data,
+    });
+    const session = fromPayload(payload);
+
+    for (const key of keys) {
+      const cell = session.matrix[key];
+      if (!cell) continue;
+      cell.llm_pending = false;
+      cell.llm_failed = true;
+    }
+
+    const { cipher, iv } = await encryptJson(SYNCRO_SESSION_SECRET, toPayload(session));
+    await getPojuDb().syncro_sessions.put({
+      ...record,
+      encrypted_data: cipher,
+      iv,
+    });
+
+    return session;
+  } catch (e) {
+    console.error("[syncro-session] patch failure failed:", e);
     return null;
   }
 }

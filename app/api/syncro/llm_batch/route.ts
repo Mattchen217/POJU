@@ -12,6 +12,7 @@ export const maxDuration = 120;
 type LlmBatchBody = {
   session_id?: string;
   batch_index?: number;
+  hour_id?: string;
   profile_id?: string;
   task_description?: string;
   user_location?: {
@@ -84,6 +85,7 @@ export async function POST(req: Request) {
 
     console.log("[llm_batch] received:", {
       batch_index: body.batch_index,
+      hour_id: body.hour_id,
       slice_size: Object.keys(matrixSlice).length,
       slice_hour_periods: [
         ...new Set(Object.keys(matrixSlice).map((k) => k.split("__")[0]).filter(Boolean)),
