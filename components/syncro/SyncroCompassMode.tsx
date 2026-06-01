@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 
 import { PostureHintOverlay } from "@/components/syncro/PostureHintOverlay";
 import { SyncroCellAdvice } from "@/components/syncro/SyncroCellAdvice";
+import { SyncroDirectionLabels } from "@/components/syncro/SyncroDirectionLabels";
 import { SyncroParticleCore } from "@/components/syncro/SyncroParticleCore";
 import { WhyThisCurrentModal } from "@/components/syncro/WhyThisCurrentModal";
 import { useOrientation } from "@/components/syncro/SyncroOrientationProvider";
@@ -18,25 +19,17 @@ import {
   type DirectionId,
 } from "@/lib/syncro/current-system";
 import { isSyncroLlmReady } from "@/lib/syncro/llm-cell-display";
+import {
+  SYNCRO_CENTER_INFO_WIDTH,
+  SYNCRO_PARTICLE_SIZE,
+  SYNCRO_RING_SIZE,
+  SYNCRO_ROTATE_LAYER_STYLE,
+  SYNCRO_WHY_BUTTON_MARGIN_TOP,
+  syncroRotateTransform,
+} from "@/lib/syncro/syncro-ring-layout";
 import { matrixKey, type HourPeriod, type SyncroCombination, type SyncroSession } from "@/lib/syncro/types";
 
 import "@/styles/syncro-compass.css";
-
-const RING_SIZE = 380;
-const PARTICLE_SIZE = 380;
-const LABEL_RADIUS = 170;
-const CENTER_INFO_WIDTH = 140;
-
-const DIRECTIONS = [
-  { id: "N", angle: 0 },
-  { id: "NE", angle: 45 },
-  { id: "E", angle: 90 },
-  { id: "SE", angle: 135 },
-  { id: "S", angle: 180 },
-  { id: "SW", angle: 225 },
-  { id: "W", angle: 270 },
-  { id: "NW", angle: 315 },
-] as const;
 
 const LEVEL_COLORS: Record<CurrentLevel, string> = {
   open_current: "#00D9B8",
@@ -90,9 +83,9 @@ export function SyncroCompassMode({
         className="compass-area"
         style={{
           position: "relative",
-          width: RING_SIZE,
-          height: RING_SIZE,
-          margin: "40px auto 0",
+          width: SYNCRO_RING_SIZE,
+          height: SYNCRO_RING_SIZE,
+          margin: "0 auto",
         }}
       >
         <div
@@ -102,9 +95,8 @@ export function SyncroCompassMode({
             left: 0,
             width: "100%",
             height: "100%",
-            transform: `rotate(${-alpha}deg)`,
-            transition: "transform 200ms cubic-bezier(0.2, 0, 0.2, 1)",
-            transformOrigin: "center center",
+            transform: syncroRotateTransform(alpha),
+            ...SYNCRO_ROTATE_LAYER_STYLE,
           }}
         >
           <div
@@ -112,42 +104,17 @@ export function SyncroCompassMode({
               position: "absolute",
               top: "50%",
               left: "50%",
-              width: PARTICLE_SIZE,
-              height: PARTICLE_SIZE,
+              width: SYNCRO_PARTICLE_SIZE,
+              height: SYNCRO_PARTICLE_SIZE,
               transform: "translate(-50%, -50%)",
               pointerEvents: "none",
             }}
           >
             <SyncroParticleCore bare />
           </div>
-
-          {DIRECTIONS.map((dir) => {
-            const rad = ((dir.angle - 90) * Math.PI) / 180;
-            const x = Math.cos(rad) * LABEL_RADIUS;
-            const y = Math.sin(rad) * LABEL_RADIUS;
-            const isActive = dir.id === currentDirection;
-
-            return (
-              <div
-                key={dir.id}
-                style={{
-                  position: "absolute",
-                  top: "50%",
-                  left: "50%",
-                  transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,
-                  fontSize: 14,
-                  fontWeight: 500,
-                  color: isActive ? "#D4A574" : "rgba(160, 164, 184, 0.85)",
-                  letterSpacing: 1.5,
-                  pointerEvents: "none",
-                  userSelect: "none",
-                }}
-              >
-                {dir.id}
-              </div>
-            );
-          })}
         </div>
+
+        <SyncroDirectionLabels highlightId={currentDirection} />
 
         <div
           style={{
@@ -155,7 +122,7 @@ export function SyncroCompassMode({
             top: "50%",
             left: "50%",
             transform: "translate(-50%, -50%)",
-            width: CENTER_INFO_WIDTH,
+            width: SYNCRO_CENTER_INFO_WIDTH,
             textAlign: "center",
             zIndex: 5,
             pointerEvents: "none",
@@ -175,7 +142,7 @@ export function SyncroCompassMode({
         </div>
       ) : null}
 
-      <div style={{ textAlign: "center", marginTop: 80 }}>
+      <div style={{ textAlign: "center", marginTop: SYNCRO_WHY_BUTTON_MARGIN_TOP }}>
         <button
           type="button"
           className="why-btn-prominent"

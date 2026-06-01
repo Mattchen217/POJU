@@ -27,6 +27,13 @@ type DeviceOrientationEventWithIOS = DeviceOrientationEvent & {
   webkitCompassHeading?: number;
 };
 
+function smoothAlpha(prev: number, current: number): number {
+  let diff = current - prev;
+  if (diff > 180) diff -= 360;
+  if (diff < -180) diff += 360;
+  return (prev + diff * 0.7 + 360) % 360;
+}
+
 function readCompassAlpha(e: DeviceOrientationEvent): number | null {
   const ios = (e as DeviceOrientationEventWithIOS).webkitCompassHeading;
   if (typeof ios === "number" && !Number.isNaN(ios)) {
@@ -56,20 +63,28 @@ export function useCompassPermission() {
   const handlerRef = useRef<((e: DeviceOrientationEvent) => void) | null>(null);
   const attachedRef = useRef(false);
   const receivedHeadingRef = useRef(false);
+  const lastUpdateRef = useRef(0);
+  const alphaRef = useRef(0);
 
   const attachListener = useCallback(() => {
     if (typeof window === "undefined" || attachedRef.current) return;
 
     receivedHeadingRef.current = false;
+    lastUpdateRef.current = 0;
 
     const handler = (e: DeviceOrientationEvent) => {
-      const alpha = readCompassAlpha(e);
-      if (alpha !== null) {
+      const now = Date.now();
+      if (now - lastUpdateRef.current < 100) return;
+      lastUpdateRef.current = now;
+
+      const rawAlpha = readCompassAlpha(e);
+      if (rawAlpha !== null) {
         receivedHeadingRef.current = true;
+        alphaRef.current = smoothAlpha(alphaRef.current, rawAlpha);
         setState((s) => ({
           ...s,
           receivingHeading: true,
-          alpha,
+          alpha: alphaRef.current,
         }));
       }
       setState((s) => ({

@@ -27,7 +27,7 @@ export async function POST(req: Request) {
 
   if (!isOpenRouterConfigured()) {
     return NextResponse.json(
-      { error: "missing_openrouter", message: "OPENROUTER_API_KEY not configured." },
+      { error: "missing_openrouter", message: "OPENROUTER_API_KEY not configured.", retryable: false },
       { status: 503 },
     );
   }
@@ -36,12 +36,12 @@ export async function POST(req: Request) {
   try {
     body = (await req.json()) as LlmHourBody;
   } catch {
-    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
+    return NextResponse.json({ error: "invalid_json", retryable: false }, { status: 400 });
   }
 
   const hourId = body.hour_id?.trim();
   if (!hourId || !body.cells?.length || !body.task_description?.trim()) {
-    return NextResponse.json({ error: "invalid_request" }, { status: 400 });
+    return NextResponse.json({ error: "invalid_request", retryable: false }, { status: 400 });
   }
 
   const locale = parseAppLocale(body.locale ?? "en");
@@ -102,19 +102,27 @@ Generate advice for all 8 directions. Output JSON only.`;
     const raw = llm.content?.trim();
     if (!raw) {
       console.error(`[llm_hour] ${hourId} no content`);
-      return NextResponse.json({ error: "no_content" }, { status: 500 });
+      return NextResponse.json({ error: "no_content", retryable: true }, { status: 500 });
     }
 
     let parsed: { advice?: Record<string, { short?: string; detailed?: string; rationale?: string }> };
     try {
       parsed = JSON.parse(raw) as typeof parsed;
     } catch {
-      console.error(`[llm_hour] ${hourId} JSON parse failed:`, raw.slice(0, 200));
-      return NextResponse.json({ error: "parse_failed" }, { status: 500 });
+      console.error(`[llm_hour] ${hourId} JSON parse failed`);
+      console.error(`[llm_hour] ${hourId} raw content:`, raw.slice(0, 500));
+      return NextResponse.json(
+        {
+          error: "parse_failed",
+          detail: `LLM 输出非合法 JSON: ${raw.slice(0, 100)}`,
+          retryable: true,
+        },
+        { status: 500 },
+      );
     }
 
     if (!parsed.advice) {
-      return NextResponse.json({ error: "missing_advice" }, { status: 500 });
+      return NextResponse.json({ error: "missing_advice", retryable: true }, { status: 500 });
     }
 
     const adviceByKey: Record<
@@ -148,6 +156,12 @@ Generate advice for all 8 directions. Output JSON only.`;
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     console.error(`[llm_hour] ${hourId} exception:`, message);
-    return NextResponse.json({ error: "exception", message }, { status: 500 });
+    const retryable =
+      message.includes("timeout") ||
+      message.includes("429") ||
+      message.includes("500") ||
+      message.includes("502") ||
+      message.includes("503");
+    return NextResponse.json({ error: "exception", message, retryable }, { status: 500 });
   }
 }

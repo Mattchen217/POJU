@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { SyncroCellAdvice } from "@/components/syncro/SyncroCellAdvice";
+import { SyncroDirectionLabels } from "@/components/syncro/SyncroDirectionLabels";
 import { SyncroParticleCore } from "@/components/syncro/SyncroParticleCore";
 import { WhyThisCurrentModal } from "@/components/syncro/WhyThisCurrentModal";
 import {
@@ -12,15 +13,17 @@ import {
 } from "@/lib/syncro/compass-display";
 import type { CurrentLevel, DirectionId } from "@/lib/syncro/current-system";
 import { isSyncroLlmReady } from "@/lib/syncro/llm-cell-display";
+import {
+  SYNCRO_CENTER_INFO_WIDTH,
+  SYNCRO_MAP_POINT_RADIUS,
+  SYNCRO_MAP_POINT_SIZE,
+  SYNCRO_PARTICLE_SIZE,
+  SYNCRO_RING_SIZE,
+  SYNCRO_WHY_BUTTON_MARGIN_TOP,
+} from "@/lib/syncro/syncro-ring-layout";
 import { matrixKey, type HourPeriod, type SyncroSession } from "@/lib/syncro/types";
 
 import "@/styles/syncro-compass.css";
-
-const RING_SIZE = 380;
-const PARTICLE_SIZE = 380;
-const LABEL_RADIUS = 170;
-const POINT_RADIUS = 140;
-const POINT_SIZE = 12;
 
 const DIRECTIONS = [
   { id: "N", angle: 0 },
@@ -82,9 +85,9 @@ export function SyncroMapMode({
       <div
         style={{
           position: "relative",
-          width: RING_SIZE,
-          height: RING_SIZE,
-          margin: "40px auto 0",
+          width: SYNCRO_RING_SIZE,
+          height: SYNCRO_RING_SIZE,
+          margin: "0 auto",
         }}
       >
         <div
@@ -92,8 +95,8 @@ export function SyncroMapMode({
             position: "absolute",
             top: "50%",
             left: "50%",
-            width: PARTICLE_SIZE,
-            height: PARTICLE_SIZE,
+            width: SYNCRO_PARTICLE_SIZE,
+            height: SYNCRO_PARTICLE_SIZE,
             transform: "translate(-50%, -50%)",
             opacity: 0.5,
             pointerEvents: "none",
@@ -102,34 +105,12 @@ export function SyncroMapMode({
           <SyncroParticleCore bare />
         </div>
 
-        {DIRECTIONS.map((dir) => {
-          const rad = ((dir.angle - 90) * Math.PI) / 180;
-          const x = Math.cos(rad) * LABEL_RADIUS;
-          const y = Math.sin(rad) * LABEL_RADIUS;
-          return (
-            <div
-              key={dir.id}
-              style={{
-                position: "absolute",
-                top: "50%",
-                left: "50%",
-                transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,
-                fontSize: 14,
-                fontWeight: 500,
-                color: "rgba(160, 164, 184, 0.85)",
-                letterSpacing: 1.5,
-                pointerEvents: "none",
-              }}
-            >
-              {dir.id}
-            </div>
-          );
-        })}
+        <SyncroDirectionLabels highlightId={selectedDir} />
 
         {DIRECTIONS.map((dir) => {
           const rad = ((dir.angle - 90) * Math.PI) / 180;
-          const x = Math.cos(rad) * POINT_RADIUS;
-          const y = Math.sin(rad) * POINT_RADIUS;
+          const x = Math.cos(rad) * SYNCRO_MAP_POINT_RADIUS;
+          const y = Math.sin(rad) * SYNCRO_MAP_POINT_RADIUS;
           const dirCell = session.matrix[matrixKey(hourPeriod, dir.id as DirectionId)];
           const color = POINT_COLORS[dirCell?.current_level ?? "stillwater"];
           const isSelected = dir.id === selectedDir;
@@ -143,8 +124,8 @@ export function SyncroMapMode({
                 position: "absolute",
                 top: "50%",
                 left: "50%",
-                width: isSelected ? POINT_SIZE + 4 : POINT_SIZE,
-                height: isSelected ? POINT_SIZE + 4 : POINT_SIZE,
+                width: isSelected ? SYNCRO_MAP_POINT_SIZE + 4 : SYNCRO_MAP_POINT_SIZE,
+                height: isSelected ? SYNCRO_MAP_POINT_SIZE + 4 : SYNCRO_MAP_POINT_SIZE,
                 borderRadius: "50%",
                 background: isSelected ? "#D4A574" : color,
                 border: "none",
@@ -155,7 +136,7 @@ export function SyncroMapMode({
                   ? "0 0 20px rgba(212, 165, 116, 0.5)"
                   : `0 0 8px ${color}`,
                 transition: "all 200ms ease",
-                zIndex: 3,
+                zIndex: 4,
               }}
               aria-label={dir.id}
             />
@@ -168,7 +149,7 @@ export function SyncroMapMode({
             top: "50%",
             left: "50%",
             transform: "translate(-50%, -50%)",
-            width: 130,
+            width: SYNCRO_CENTER_INFO_WIDTH,
             textAlign: "center",
             zIndex: 5,
             pointerEvents: "none",
@@ -195,7 +176,7 @@ export function SyncroMapMode({
         </div>
       ) : null}
 
-      <div style={{ textAlign: "center", marginTop: 40 }}>
+      <div style={{ textAlign: "center", marginTop: SYNCRO_WHY_BUTTON_MARGIN_TOP }}>
         <button
           type="button"
           className="why-btn-prominent"

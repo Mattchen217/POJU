@@ -121,6 +121,24 @@
   opacity: 0.6;
 }
 
+.hour-dot.status-failed:not(:disabled) {
+  cursor: pointer;
+}
+
+.hour-dot.is-retrying .hour-dot-core {
+  animation: syncro-hour-retry-pulse 1s ease-in-out infinite;
+}
+
+@keyframes syncro-hour-retry-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 .hour-dot.selected:not(.status-now) .hour-dot-core {
   outline: 2px solid var(--pj-gold);
   outline-offset: 4px;

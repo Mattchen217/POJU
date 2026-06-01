@@ -15,8 +15,17 @@ import { extractSyncroSummary } from "@/lib/poju/tool-result-summary";
 import { isLiveHourPeriodLlmReady } from "@/lib/syncro/hour-llm-ready";
 import { SyncroOrientationProvider } from "@/components/syncro/SyncroOrientationProvider";
 import { Link } from "@/i18n/navigation";
-import { isSyncroSessionExpired, loadSyncroSession } from "@/lib/syncro/syncro-session";
-import { getCurrentHourPeriod, type SyncroSession } from "@/lib/syncro/types";
+import { generateSyncroHourWithRetry } from "@/lib/syncro/generate-syncro-hour-with-retry";
+import { HOUR_ORDER } from "@/lib/syncro/hour-order";
+import { dispatchSyncroMatrixPatch } from "@/lib/syncro/syncro-llm-events";
+import { resolveSyncroLlmContext } from "@/lib/syncro/syncro-llm-context-storage";
+import {
+  isSyncroSessionExpired,
+  loadSyncroSession,
+  patchSyncroSessionMatrix,
+  patchSyncroSessionMatrixFailure,
+} from "@/lib/syncro/syncro-session";
+import { getCurrentHourPeriod, type HourPeriod, type SyncroSession } from "@/lib/syncro/types";
 
 import "@/styles/syncro.css";
 import "@/styles/syncro-preparing-live.css";
@@ -40,10 +49,54 @@ function SyncroResultPageContent() {
     failed: 0,
   });
   const [highlightKeys, setHighlightKeys] = useState<Set<string>>(() => new Set());
+  const [retryingHour, setRetryingHour] = useState<HourPeriod | null>(null);
 
   const handleSessionUpdate = useCallback((next: SyncroSession) => {
     setSession(next);
   }, []);
+
+  const handleRetryHour = useCallback(
+    async (hourId: HourPeriod) => {
+      if (!session) return;
+      setRetryingHour(hourId);
+      try {
+        const ctx = await resolveSyncroLlmContext(sessionId);
+        if (!ctx) {
+          console.error("[Syncro] retry: no llm context");
+          return;
+        }
+
+        const result = await generateSyncroHourWithRetry(hourId, ctx);
+        const cellKeys = Object.keys(ctx.local_matrix).filter((k) =>
+          k.startsWith(`${hourId}__`),
+        );
+        const hourIdx = HOUR_ORDER.indexOf(hourId);
+
+        if (result.success && result.advice) {
+          const updated = await patchSyncroSessionMatrix(sessionId, result.advice, {
+            model: result.model,
+            tokens_used: result.tokens_used ?? 0,
+            cost_usd_delta: 0,
+          });
+          if (updated) {
+            handleSessionUpdate(updated);
+            dispatchSyncroMatrixPatch({
+              session_id: sessionId,
+              batch_index: hourIdx,
+              batch_total: 12,
+              updated_keys: Object.keys(result.advice),
+            });
+          }
+        } else {
+          const updated = await patchSyncroSessionMatrixFailure(sessionId, cellKeys);
+          if (updated) handleSessionUpdate(updated);
+        }
+      } finally {
+        setRetryingHour(null);
+      }
+    },
+    [session, sessionId, handleSessionUpdate],
+  );
 
   useEffect(() => {
     void loadSession();
@@ -150,6 +203,8 @@ function SyncroResultPageContent() {
           highlightMatrixKeys={highlightKeys}
           llmProgress={llmProgress}
           liveHourReady
+          onRetryHour={handleRetryHour}
+          retryingHour={retryingHour}
         />
       ) : (
         <SyncroPreparingLiveHour

@@ -2,11 +2,10 @@
 
 import { useEffect, useRef } from "react";
 
-import { readFetchJson } from "@/lib/client/fetch-json";
+import { generateSyncroHourWithRetry } from "@/lib/syncro/generate-syncro-hour-with-retry";
 import { SYNCRO_LLM_BATCH_COUNT } from "@/lib/llm/services/syncro-reading-service";
 import { isHourPeriodLlmReady } from "@/lib/syncro/hour-llm-ready";
 import { HOUR_ORDER, sortedHourPeriodsFromLive } from "@/lib/syncro/hour-order";
-import { hourPeriodDisplayName, HOUR_PERIOD_RANGES } from "@/lib/syncro/hour-period-ranges";
 import { rebuildSyncroLlmContext } from "@/lib/syncro/rebuild-syncro-llm-context";
 import { getCurrentHourPeriod, type HourPeriod } from "@/lib/syncro/types";
 import {
@@ -26,7 +25,6 @@ export type SyncroLlmProgress = {
   total: number;
   running: boolean;
   failed: number;
-  /** Hour currently being generated (timeline order from live period). */
   current_hour?: HourPeriod;
   context_missing?: boolean;
 };
@@ -47,7 +45,7 @@ function countLlmReadyHours(session: SyncroSession): number {
 }
 
 /**
- * Loads 12 LLM batches sequentially (live hour first), one hour at a time.
+ * Loads 12 LLM hours sequentially (live hour first), with per-hour retry.
  */
 export function SyncroLlmBatchRunner({ sessionId, session, onSessionUpdate, onProgress }: Props) {
   const startedRef = useRef(false);
@@ -59,99 +57,19 @@ export function SyncroLlmBatchRunner({ sessionId, session, onSessionUpdate, onPr
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per session mount
   }, [sessionId]);
 
-  function buildProfileSummary(ctx: SyncroLlmContext): string {
-    const ba = ctx.base_analysis;
-    if (typeof ba === "string") return ba.slice(0, 4000);
-    try {
-      return JSON.stringify(ba).slice(0, 4000);
-    } catch {
-      return ctx.task_description;
-    }
-  }
-
-  async function loadHourBatch(
+  async function applyHourResult(
     hourId: HourPeriod,
     hourIdx: number,
     ctx: SyncroLlmContext,
+    result: Awaited<ReturnType<typeof generateSyncroHourWithRetry>>,
   ): Promise<"ok" | "fail"> {
     const cellKeys = Object.keys(ctx.local_matrix).filter((k) => k.startsWith(`${hourId}__`));
-    if (cellKeys.length === 0) {
-      console.warn(`[Syncro] ⚠️ ${hourId} 时辰没有 cells`);
-      return "fail";
-    }
 
-    const cells = cellKeys.map((key) => {
-      const [, direction] = key.split("__");
-      const local = ctx.local_matrix[key];
-      return {
-        key,
-        direction: direction ?? "N",
-        current_level: local?.current_level ?? "stillwater",
-      };
-    });
-
-    console.log(
-      `[Syncro] [${hourIdx + 1}/${SYNCRO_LLM_BATCH_COUNT}] ${hourId} 时辰开始 LLM 调用, cells: ${cells.length}`,
-    );
-    const startTime = Date.now();
-
-    try {
-      const response = await fetch("/api/syncro/llm_hour", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          hour_id: hourId,
-          hour_label: hourPeriodDisplayName(hourId, ctx.locale),
-          hour_range: HOUR_PERIOD_RANGES[hourId],
-          cells,
-          task_description: ctx.task_description,
-          profile_summary: buildProfileSummary(ctx),
-          locale: ctx.locale,
-        }),
-        signal: AbortSignal.timeout(60_000),
-      });
-
-      if (!response.ok) {
-        const errText = await response.text().catch(() => "");
-        console.error(
-          `[Syncro] ❌ ${hourId} 时辰 batch 失败:`,
-          response.status,
-          errText.slice(0, 200),
-        );
-        const updated = await patchSyncroSessionMatrixFailure(sessionId, cellKeys);
-        if (updated) onSessionUpdate(updated);
-        return "fail";
-      }
-
-      const data = await readFetchJson<{
-        success?: boolean;
-        advice?: Record<
-          string,
-          { short_advice: string; detailed_advice: string; rationale: string }
-        >;
-        model?: string;
-        tokens_used?: number;
-        cost_usd?: number;
-        error?: string;
-        message?: string;
-      }>(response);
-
-      if (!data.success || !data.advice) {
-        console.error(`[Syncro] ❌ ${hourId} 时辰 batch 无 advice:`, data.error ?? data.message);
-        const updated = await patchSyncroSessionMatrixFailure(sessionId, cellKeys);
-        if (updated) onSessionUpdate(updated);
-        return "fail";
-      }
-
-      const elapsed = Date.now() - startTime;
-      console.log(
-        `[Syncro] ✅ ${hourId} 时辰完成, 耗时 ${elapsed}ms, cells: ${Object.keys(data.advice).length}`,
-      );
-
-      const updated = await patchSyncroSessionMatrix(sessionId, data.advice, {
-        model: data.model,
-        tokens_used: data.tokens_used ?? 0,
-        cost_usd_delta: data.cost_usd ?? 0,
+    if (result.success && result.advice) {
+      const updated = await patchSyncroSessionMatrix(sessionId, result.advice, {
+        model: result.model,
+        tokens_used: result.tokens_used ?? 0,
+        cost_usd_delta: 0,
       });
       if (updated) {
         onSessionUpdate(updated);
@@ -159,16 +77,15 @@ export function SyncroLlmBatchRunner({ sessionId, session, onSessionUpdate, onPr
           session_id: sessionId,
           batch_index: hourIdx,
           batch_total: SYNCRO_LLM_BATCH_COUNT,
-          updated_keys: Object.keys(data.advice),
+          updated_keys: Object.keys(result.advice),
         });
       }
       return "ok";
-    } catch (e) {
-      console.error(`[Syncro] ❌ ${hourId} 时辰异常:`, e);
-      const updated = await patchSyncroSessionMatrixFailure(sessionId, cellKeys);
-      if (updated) onSessionUpdate(updated);
-      return "fail";
     }
+
+    const updated = await patchSyncroSessionMatrixFailure(sessionId, cellKeys);
+    if (updated) onSessionUpdate(updated);
+    return "fail";
   }
 
   async function runBatches() {
@@ -209,11 +126,12 @@ export function SyncroLlmBatchRunner({ sessionId, session, onSessionUpdate, onPr
 
     for (const hourId of hourSequence) {
       const hourIdx = HOUR_ORDER.indexOf(hourId);
-
       onProgress({ completed, total, running: true, failed, current_hour: hourId });
 
-      const result = await loadHourBatch(hourId, hourIdx, ctx);
-      if (result === "ok") completed++;
+      console.log(`[Syncro] [${hourIdx + 1}/${total}] ${hourId} 时辰开始`);
+      const result = await generateSyncroHourWithRetry(hourId, ctx);
+      const status = await applyHourResult(hourId, hourIdx, ctx, result);
+      if (status === "ok") completed++;
       else failed++;
 
       onProgress({ completed, total, running: true, failed, current_hour: hourId });

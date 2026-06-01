@@ -1163,7 +1163,8 @@
         "done": "已生成",
         "pending": "未生成",
         "failed": "生成失败"
-      }
+      },
+      "retry_failed": "点击重新生成"
     },
     "why_this_current": "为何此时",
     "generating": "正在生成解读…",

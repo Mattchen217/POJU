@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 
 import { PostureHintOverlay } from "@/components/syncro/PostureHintOverlay";
 import { SyncroCellAdvice } from "@/components/syncro/SyncroCellAdvice";
+import { SyncroDirectionLabels } from "@/components/syncro/SyncroDirectionLabels";
 import { SyncroParticleCore } from "@/components/syncro/SyncroParticleCore";
 import { WhyThisCurrentModal } from "@/components/syncro/WhyThisCurrentModal";
 import { useOrientation } from "@/components/syncro/SyncroOrientationProvider";
@@ -13,27 +14,20 @@ import {
   getCurrentLevelFallbackLabel,
   getCurrentLevelI18nKey,
 } from "@/lib/syncro/compass-display";
-import { compassDegreeToDirection, type CurrentLevel, type DirectionId } from "@/lib/syncro/current-system";
+import { compassDegreeToDirection, type CurrentLevel } from "@/lib/syncro/current-system";
 import { isSyncroLlmReady } from "@/lib/syncro/llm-cell-display";
+import {
+  SYNCRO_AR_CAMERA_SIZE,
+  SYNCRO_CENTER_INFO_WIDTH,
+  SYNCRO_PARTICLE_SIZE,
+  SYNCRO_RING_SIZE,
+  SYNCRO_ROTATE_LAYER_STYLE,
+  SYNCRO_WHY_BUTTON_MARGIN_TOP,
+  syncroRotateTransform,
+} from "@/lib/syncro/syncro-ring-layout";
 import { matrixKey, type HourPeriod, type SyncroSession } from "@/lib/syncro/types";
 
 import "@/styles/syncro-compass.css";
-
-const RING_SIZE = 380;
-const PARTICLE_SIZE = 380;
-const LABEL_RADIUS = 170;
-const CAMERA_WINDOW_SIZE = 150;
-
-const DIRECTIONS = [
-  { id: "N", angle: 0 },
-  { id: "NE", angle: 45 },
-  { id: "E", angle: 90 },
-  { id: "SE", angle: 135 },
-  { id: "S", angle: 180 },
-  { id: "SW", angle: 225 },
-  { id: "W", angle: 270 },
-  { id: "NW", angle: 315 },
-] as const;
 
 const HALO_COLORS: Record<CurrentLevel, string> = {
   open_current: "rgba(0, 217, 184, 0.7)",
@@ -176,9 +170,9 @@ export function SyncroARMode({
       <div
         style={{
           position: "relative",
-          width: RING_SIZE,
-          height: RING_SIZE,
-          margin: "40px auto 0",
+          width: SYNCRO_RING_SIZE,
+          height: SYNCRO_RING_SIZE,
+          margin: "0 auto",
         }}
       >
         <div
@@ -188,8 +182,8 @@ export function SyncroARMode({
             left: 0,
             width: "100%",
             height: "100%",
-            transform: `rotate(${-alpha}deg)`,
-            transition: "transform 200ms ease-out",
+            transform: syncroRotateTransform(alpha),
+            ...SYNCRO_ROTATE_LAYER_STYLE,
           }}
         >
           <div
@@ -197,39 +191,17 @@ export function SyncroARMode({
               position: "absolute",
               top: "50%",
               left: "50%",
-              width: PARTICLE_SIZE,
-              height: PARTICLE_SIZE,
+              width: SYNCRO_PARTICLE_SIZE,
+              height: SYNCRO_PARTICLE_SIZE,
               transform: "translate(-50%, -50%)",
               pointerEvents: "none",
             }}
           >
             <SyncroParticleCore bare />
           </div>
-
-          {DIRECTIONS.map((dir) => {
-            const rad = ((dir.angle - 90) * Math.PI) / 180;
-            const x = Math.cos(rad) * LABEL_RADIUS;
-            const y = Math.sin(rad) * LABEL_RADIUS;
-            return (
-              <div
-                key={dir.id}
-                style={{
-                  position: "absolute",
-                  top: "50%",
-                  left: "50%",
-                  transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,
-                  fontSize: 14,
-                  fontWeight: 500,
-                  color: "rgba(160, 164, 184, 0.85)",
-                  letterSpacing: 1.5,
-                  pointerEvents: "none",
-                }}
-              >
-                {dir.id}
-              </div>
-            );
-          })}
         </div>
+
+        <SyncroDirectionLabels highlightId={direction} />
 
         <div
           style={{
@@ -237,8 +209,8 @@ export function SyncroARMode({
             top: "50%",
             left: "50%",
             transform: "translate(-50%, -50%)",
-            width: CAMERA_WINDOW_SIZE,
-            height: CAMERA_WINDOW_SIZE,
+            width: SYNCRO_AR_CAMERA_SIZE,
+            height: SYNCRO_AR_CAMERA_SIZE,
             borderRadius: "50%",
             overflow: "hidden",
             boxShadow: `0 0 32px ${haloColor}, 0 0 64px ${haloColor.replace(/0\.\d+/, "0.25")}, inset 0 0 0 2px ${haloColor}`,
@@ -301,7 +273,7 @@ export function SyncroARMode({
         </div>
       ) : null}
 
-      <div style={{ textAlign: "center", marginTop: 80 }}>
+      <div style={{ textAlign: "center", marginTop: SYNCRO_WHY_BUTTON_MARGIN_TOP }}>
         <button
           type="button"
           className="why-btn-prominent"

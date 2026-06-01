@@ -31,6 +31,8 @@ export type SyncroMainViewProps = {
   llmProgress?: SyncroLlmProgress;
   /** Live hour LLM copy is ready — compass/AR allowed. */
   liveHourReady?: boolean;
+  onRetryHour?: (hourId: HourPeriod) => void;
+  retryingHour?: HourPeriod | null;
 };
 
 function readTaskTimeScope(): SyncroTaskTimeScope {
@@ -45,6 +47,8 @@ export function SyncroMainView({
   highlightMatrixKeys,
   llmProgress,
   liveHourReady = true,
+  onRetryHour,
+  retryingHour = null,
 }: SyncroMainViewProps) {
   const t = useTranslations("syncro.main");
   const { isSupported, receivingHeading, requestPermissionFromUserGesture } = useOrientation();
@@ -184,6 +188,8 @@ export function SyncroMainView({
         livePeriod={liveHourPeriod}
         activeHour={effectivePeriod}
         onSelect={handleHourSelect}
+        onRetryHour={onRetryHour}
+        retryingHour={retryingHour}
         locale={locale}
         progress={
           llmProgress

@@ -116,9 +116,17 @@ function main() {
   assert(compassCss.includes(".compass-page"), "compass page container");
 
   const compass = readFileSync(join(ROOT, "components/syncro/SyncroCompassMode.tsx"), "utf8");
-  assert(compass.includes("RING_SIZE = 380") && compass.includes("LABEL_RADIUS = 170"), "fixed px compass");
+  assert(
+    compass.includes("SYNCRO_RING_SIZE") && compass.includes("SyncroDirectionLabels"),
+    "polish v3 ring + static labels",
+  );
   assert(compass.includes("PostureHintOverlay") && compass.includes("deviceTiltBeta"), "compass posture overlay");
-  assert(compass.includes("rotate(${-alpha}deg)"), "compass rotates with phone");
+  const ringLayout = readFileSync(join(ROOT, "lib/syncro/syncro-ring-layout.ts"), "utf8");
+  assert(
+    ringLayout.includes("rotate3d") && compass.includes("syncroRotateTransform"),
+    "compass GPU rotate via layout helper",
+  );
+  assert(ringLayout.includes("SYNCRO_RING_SIZE = 420"), "polish v3 ring 420");
   assert(compass.includes("SyncroParticleCore bare"), "particle without mask");
   assert(compass.includes("SyncroCellAdvice"), "compass uses real LLM advice gate");
   assert(!compass.includes("phone-position-hint"), "no layout phone hint bar");
@@ -126,14 +134,13 @@ function main() {
   assert(compass.includes("WhyThisCurrentModal"), "compass has why modal");
 
   const ar = readFileSync(join(ROOT, "components/syncro/SyncroARMode.tsx"), "utf8");
-  assert(ar.includes("CAMERA_WINDOW_SIZE = 150") && ar.includes("getUserMedia"), "AR camera window");
-  assert(ar.includes("RING_SIZE = 380") && ar.includes("PostureHintOverlay"), "AR fixed px layout + posture");
+  assert(ar.includes("SYNCRO_AR_CAMERA_SIZE") && ar.includes("getUserMedia"), "AR camera 200px");
+  assert(ar.includes("SYNCRO_RING_SIZE") && ar.includes("PostureHintOverlay"), "AR shared ring layout + posture");
   assert(!ar.includes("phone-position-hint"), "AR no layout phone hint bar");
 
   const mapMode = readFileSync(join(ROOT, "components/syncro/SyncroMapMode.tsx"), "utf8");
-  assert(mapMode.includes("POINT_SIZE = 12"), "map point size per final fix");
-  assert(mapMode.includes("RING_SIZE = 380") && mapMode.includes("POINT_RADIUS = 140"), "map fixed px layout");
-  assert(mapMode.includes("POINT_RADIUS") && mapMode.includes("why-btn-prominent"), "map points + CTA");
+  assert(mapMode.includes("SYNCRO_MAP_POINT_SIZE") && mapMode.includes("SyncroDirectionLabels"), "map shared layout + labels");
+  assert(mapMode.includes("SYNCRO_RING_SIZE") && mapMode.includes("why-btn-prominent"), "map ring + CTA");
   assert(mapMode.includes("WhyThisCurrentModal"), "map has why modal");
 
   const whyModal = readFileSync(join(ROOT, "components/syncro/WhyThisCurrentModal.tsx"), "utf8");
@@ -167,6 +174,7 @@ function main() {
   assert(!mainView.includes("SyncroPermissionGate"), "no manual compass gate");
   assert(mainView.includes("ThreeModeToggle"), "main has three-mode toggle");
   assert(mainView.includes("HourProgressBar"), "main has progress");
+  assert(mainView.includes("onRetryHour"), "main wires hour retry");
   assert(mainView.includes("SyncroMapMode"), "main has map mode");
   assert(mainView.includes("SyncroARMode"), "main has AR mode");
   assert(mainView.includes("loadSyncroPermission"), "main loads permissions");
@@ -175,6 +183,7 @@ function main() {
   const hourBar = readFileSync(join(ROOT, "components/syncro/HourProgressBar.tsx"), "utf8");
   assert(hourBar.includes("getHourDotStatus") && hourBar.includes("hour-now-tag"), "hour progress states");
   assert(hourBar.includes("hour-track-viewport") && hourBar.includes("hour-dot-slot"), "hour bar fixed rail slots");
+  assert(hourBar.includes("onRetryHour") && hourBar.includes("retry_failed"), "failed hour tap retry");
 
   const hourCss = readFileSync(join(ROOT, "styles/syncro-hour-progress.css"), "utf8");
   assert(
@@ -185,17 +194,20 @@ function main() {
   );
 
   const runner = readFileSync(join(ROOT, "components/syncro/SyncroLlmBatchRunner.tsx"), "utf8");
-  assert(runner.includes("HOUR_ORDER") && runner.includes("hour_id"), "12-hour LLM batches");
+  assert(runner.includes("HOUR_ORDER") && runner.includes("generateSyncroHourWithRetry"), "12-hour serial LLM");
   assert(runner.includes("patchSyncroSessionMatrixFailure"), "marks failed hour cells");
   assert(runner.includes("rebuildSyncroLlmContext"), "rebuild ctx when missing");
   assert(runner.includes("resolveSyncroLlmContext"), "loads ctx from IndexedDB");
   assert(runner.includes("sortedHourPeriodsFromLive"), "sequential batches from live hour");
-  assert(runner.includes("/api/syncro/llm_hour"), "llm_hour serial API");
+  const retryHelper = readFileSync(join(ROOT, "lib/syncro/generate-syncro-hour-with-retry.ts"), "utf8");
+  assert(retryHelper.includes("/api/syncro/llm_hour"), "llm_hour API with retry");
+  assert(retryHelper.includes("MAX_ATTEMPTS = 3"), "hour retry helper");
 
   const preparing = readFileSync(join(ROOT, "components/syncro/SyncroPreparingLiveHour.tsx"), "utf8");
   assert(preparing.includes("SyncroPreparingLiveHour"), "live hour gate before compass");
 
-  assert(compass.includes("marginTop: 80"), "why CTA below ring per final fix");
+  assert(compass.includes("SYNCRO_WHY_BUTTON_MARGIN_TOP"), "why CTA margin polish v3");
+  assert(compassCss.includes("padding-top: 200px"), "compass page padding polish v3");
 
   assert(SYNCRO_LLM_BATCH_COUNT === 12, "12 LLM batches");
 

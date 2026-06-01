@@ -3,7 +3,7 @@
   position: relative;
   width: 100%;
   min-height: calc(100vh - 200px);
-  padding-top: 0;
+  padding-top: 200px;
   padding-bottom: 130px;
 }
 

@@ -28,6 +28,8 @@ export type HourProgressBarProps = {
   livePeriod: HourPeriod;
   activeHour: HourPeriod;
   onSelect: (hourId: HourPeriod) => void;
+  onRetryHour?: (hourId: HourPeriod) => void;
+  retryingHour?: HourPeriod | null;
   locale: string;
   progress?: {
     completed_batches: number;
@@ -41,6 +43,8 @@ export function HourProgressBar({
   livePeriod,
   activeHour,
   onSelect,
+  onRetryHour,
+  retryingHour = null,
   locale,
 }: HourProgressBarProps) {
   const t = useTranslations("syncro.hour");
@@ -84,7 +88,10 @@ export function HourProgressBar({
           {sortedPeriods.map((period) => {
             const status = getHourDotStatus(period, livePeriod, matrix, sortedPeriods, llmMeta);
             const isSelected = period === activeHour;
-            const canClick = status === "done" || status === "now";
+            const canSelect = status === "done" || status === "now";
+            const canRetry = status === "failed" && Boolean(onRetryHour);
+            const canClick = canSelect || canRetry;
+            const isRetrying = retryingHour === period;
             const shortName = hourPeriodDisplayName(period, locale);
 
             return (
@@ -100,10 +107,12 @@ export function HourProgressBar({
                   type="button"
                   role="tab"
                   aria-selected={isSelected}
-                  disabled={!canClick}
-                  className={`hour-dot status-${status} ${isSelected ? "selected" : ""}`}
+                  disabled={!canClick || isRetrying}
+                  className={`hour-dot status-${status} ${isSelected ? "selected" : ""} ${isRetrying ? "is-retrying" : ""}`}
+                  title={canRetry ? t("retry_failed") : undefined}
                   onClick={() => {
-                    if (canClick) onSelect(period);
+                    if (canRetry && onRetryHour) onRetryHour(period);
+                    else if (canSelect) onSelect(period);
                   }}
                   aria-label={`${shortName} · ${HOUR_PERIOD_RANGES[period]}`}
                 >

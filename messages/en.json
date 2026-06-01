@@ -1148,7 +1148,8 @@
         "done": "Ready",
         "pending": "Pending",
         "failed": "Failed"
-      }
+      },
+      "retry_failed": "Tap to retry generation"
     },
     "why_this_current": "Why this current",
     "generating": "Generating reading…",
