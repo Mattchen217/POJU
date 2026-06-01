@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { IconCompass, IconDeviceMobile, IconLoader2 } from "@tabler/icons-react";
+import { IconDeviceMobile, IconLoader2 } from "@tabler/icons-react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { SyncroDirectionRing } from "@/components/syncro/SyncroDirectionRing";
@@ -82,7 +82,7 @@ export function SyncroCompassMode({
   const tLevels = useTranslations("syncro.levels");
   const isZh = locale.startsWith("zh");
 
-  const { compassDegree, hasPermission, requestPermission, isSupported } = useOrientation();
+  const { compassDegree, hasPermission, isSupported } = useOrientation();
   const [whyModalOpen, setWhyModalOpen] = useState(false);
 
   const currentDirection: DirectionId = compassDegreeToDirection(compassDegree);
@@ -95,33 +95,17 @@ export function SyncroCompassMode({
     console.log("[Compass] cell lookup:", {
       activeHour: hourPeriod,
       currentDirection,
+      compassDegree: Math.round(compassDegree),
+      hasPermission,
       cellKey,
       found: !!cell,
-      has_llm_advice: !!cell?.short_advice && !cell.short_advice.startsWith("[FALLBACK]"),
-      is_fallback: cell?.llm_pending ?? !cell,
-      cell_data: cell,
     });
-  }, [hourPeriod, currentDirection, cellKey, cell]);
+  }, [hourPeriod, currentDirection, cellKey, cell, compassDegree, hasPermission]);
 
   if (!isSupported) {
     return (
       <div className="compass-permission-needed">
         <p className="compass-unsupported">{t("main.not_supported")}</p>
-      </div>
-    );
-  }
-
-  if (!hasPermission) {
-    return (
-      <div className="compass-permission-needed">
-        <div className="permission-icon">
-          <IconCompass aria-hidden size={32} stroke={1.5} />
-        </div>
-        <h3>{t("compass.permission_title")}</h3>
-        <p>{t("compass.permission_description")}</p>
-        <button type="button" className="permission-btn" onClick={() => void requestPermission()}>
-          {t("compass.grant_access")}
-        </button>
       </div>
     );
   }
@@ -140,6 +124,10 @@ export function SyncroCompassMode({
     <div className={`syncro-immersive compass-mode ${llmHighlight ? "syncro-llm-cell-updated" : ""}`}>
       <FlatPhoneHint />
 
+      {!hasPermission ? (
+        <p className="compass-static-notice">{t("permission.skipped_notice")}</p>
+      ) : null}
+
       <div className="syncro-content-overlay compass-mode-body">
         <div className="concentric-system">
           <div
@@ -153,7 +141,7 @@ export function SyncroCompassMode({
             <SyncroDirectionRing activeDirection={currentDirection} />
           </div>
 
-          <div className="center-info-layer">
+          <div className="center-info-layer center-static-layer">
             {!cell ? (
               <div className="no-data" aria-busy="true">
                 <IconLoader2 aria-hidden size={20} stroke={1.5} className="no-data-spin" />

@@ -1162,6 +1162,15 @@
     "why_modal": {
       "close": "关闭"
     },
+    "permission": {
+      "title": "开启罗盘",
+      "description": "Syncro 需要使用设备罗盘，让方位显示能跟随你的移动准确变化。",
+      "enable": "开启罗盘",
+      "requesting": "请求中…",
+      "skip": "暂不开启",
+      "denied_alert": "罗盘权限被拒绝。罗盘不会旋转，但其他功能仍可使用。",
+      "skipped_notice": "罗盘未开启，方位不会随手机转动。可刷新页面重新授权。"
+    },
     "compass": {
       "permission_title": "开启罗盘",
       "permission_description": "Syncro 需要设备方向传感器，才能根据你面向的方位给出解读。",

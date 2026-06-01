@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { HourProgressBar } from "@/components/syncro/HourProgressBar";
+import { SyncroPermissionGate } from "@/components/syncro/SyncroPermissionGate";
 import { ThreeModeToggle } from "@/components/syncro/ThreeModeToggle";
 import { useOrientation } from "@/components/syncro/SyncroOrientationProvider";
 import { SyncroARMode } from "@/components/syncro/SyncroARMode";
@@ -44,7 +45,8 @@ export function SyncroMainView({
   llmProgress,
 }: SyncroMainViewProps) {
   const t = useTranslations("syncro.main");
-  const { isSupported } = useOrientation();
+  const { isSupported, hasPermission, needsUserGesture } = useOrientation();
+  const [compassGateDone, setCompassGateDone] = useState(false);
 
   const orderedPeriods = useMemo(() => getOrderedHourPeriodsFromSession(session), [session]);
 
@@ -60,6 +62,18 @@ export function SyncroMainView({
       setCameraGranted(perms.camera);
     });
   }, []);
+
+  useEffect(() => {
+    if (!isSupported) {
+      setCompassGateDone(true);
+    }
+  }, [isSupported]);
+
+  useEffect(() => {
+    if (hasPermission) {
+      setCompassGateDone(true);
+    }
+  }, [hasPermission]);
 
   useEffect(() => {
     const scope = readTaskTimeScope();
@@ -119,6 +133,19 @@ export function SyncroMainView({
     return (
       <div className="syncro-error flex min-h-screen items-center justify-center bg-bg-deep px-4 text-center text-text-secondary">
         <p>{t("combination_not_found")}</p>
+      </div>
+    );
+  }
+
+  const showCompassGate = isSupported && needsUserGesture && !compassGateDone && !hasPermission;
+
+  if (showCompassGate) {
+    return (
+      <div className="syncro-main-view syncro-main">
+        <SyncroPermissionGate
+          onGranted={() => setCompassGateDone(true)}
+          onSkip={() => setCompassGateDone(true)}
+        />
       </div>
     );
   }

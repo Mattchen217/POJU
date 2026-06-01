@@ -9,8 +9,7 @@ import {
   type ReactNode,
 } from "react";
 
-import { requestOrientationPermission } from "@/lib/syncro/device-check";
-import { loadSyncroPermission, saveSyncroPermission } from "@/lib/syncro/permissions";
+import { useCompassPermission } from "@/lib/syncro/useCompassPermission";
 
 export type OrientationContextValue = {
   compassDegree: number;
@@ -19,6 +18,7 @@ export type OrientationContextValue = {
   hasPermission: boolean;
   requestPermission: () => Promise<boolean>;
   isSupported: boolean;
+  needsUserGesture: boolean;
 };
 
 const OrientationContext = createContext<OrientationContextValue | null>(null);
@@ -32,88 +32,54 @@ export function useOrientation(): OrientationContextValue {
 }
 
 export function SyncroOrientationProvider({ children }: { children: ReactNode }) {
+  const { granted, supported, alpha, beta, requestPermission, needsUserGesture } =
+    useCompassPermission();
+
   const [compassDegree, setCompassDegree] = useState(0);
-  const [deviceTiltBeta, setDeviceTiltBeta] = useState<number | null>(null);
-  const [hasPermission, setHasPermission] = useState(false);
-  const [isSupported, setIsSupported] = useState(false);
-
   const smoothedRef = useRef(0);
-  const rawValueRef = useRef(0);
+  const compassDegreeRef = useRef(0);
 
   useEffect(() => {
-    setIsSupported(typeof DeviceOrientationEvent !== "undefined");
-
-    void loadSyncroPermission().then((perms) => {
-      if (perms.orientation) {
-        setHasPermission(true);
-        return;
-      }
-      if (
-        typeof (DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> })
-          .requestPermission !== "function"
-      ) {
-        setHasPermission(true);
-      }
-    });
-  }, []);
+    if (!granted) return;
+    smoothedRef.current = alpha;
+  }, [alpha, granted]);
 
   useEffect(() => {
-    if (!hasPermission) return;
-
-    function handler(e: DeviceOrientationEvent) {
-      if (e.beta != null && !Number.isNaN(e.beta)) {
-        setDeviceTiltBeta(e.beta);
-      }
-
-      const ios = (e as DeviceOrientationEvent & { webkitCompassHeading?: number }).webkitCompassHeading;
-
-      if (typeof ios === "number") {
-        rawValueRef.current = ios;
-      } else if (e.alpha !== null && e.alpha !== undefined) {
-        rawValueRef.current = (360 - e.alpha) % 360;
-      }
-    }
-
-    window.addEventListener("deviceorientationabsolute", handler);
-    window.addEventListener("deviceorientation", handler);
+    if (!granted) return;
 
     const interval = window.setInterval(() => {
-      const target = rawValueRef.current;
-      const current = smoothedRef.current;
+      const target = smoothedRef.current;
+      const current = compassDegreeRef.current;
 
       let diff = target - current;
       if (diff > 180) diff -= 360;
       if (diff < -180) diff += 360;
 
       const smoothed = (current + diff * 0.15 + 360) % 360;
-      smoothedRef.current = smoothed;
+      compassDegreeRef.current = smoothed;
       setCompassDegree(smoothed);
     }, 16);
 
-    return () => {
-      window.removeEventListener("deviceorientationabsolute", handler);
-      window.removeEventListener("deviceorientation", handler);
-      window.clearInterval(interval);
-    };
-  }, [hasPermission]);
+    return () => window.clearInterval(interval);
+  }, [granted]);
 
-  async function requestPermission() {
-    const granted = await requestOrientationPermission();
-    setHasPermission(granted);
-    if (granted) {
-      await saveSyncroPermission("orientation", true);
-    }
-    return granted;
-  }
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development" || !granted) return;
+    const id = window.setInterval(() => {
+      console.log("[Compass] compassDegree:", Math.round(compassDegreeRef.current));
+    }, 2000);
+    return () => window.clearInterval(id);
+  }, [granted]);
 
   return (
     <OrientationContext.Provider
       value={{
-        compassDegree,
-        deviceTiltBeta,
-        hasPermission,
+        compassDegree: granted ? compassDegree : 0,
+        deviceTiltBeta: granted && beta != null ? beta : null,
+        hasPermission: granted,
         requestPermission,
-        isSupported,
+        isSupported: supported,
+        needsUserGesture,
       }}
     >
       {children}

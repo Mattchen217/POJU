@@ -1,0 +1,71 @@
+.permission-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px max(32px, env(safe-area-inset-bottom));
+  background: radial-gradient(circle at center, #0a0a1a 0%, #000 100%);
+}
+
+.permission-gate-card {
+  max-width: 320px;
+  text-align: center;
+}
+
+.permission-gate-card h2 {
+  font-size: var(--pj-text-lg);
+  font-weight: var(--pj-weight-medium);
+  color: var(--pj-text-primary);
+  margin: 0 0 12px;
+}
+
+.permission-gate-card > p {
+  font-size: var(--pj-text-sm);
+  color: var(--pj-text-tertiary);
+  line-height: var(--pj-leading-normal);
+  margin: 0 0 24px;
+}
+
+.permission-denied-msg {
+  font-size: var(--pj-text-xs);
+  color: #fca5a5;
+  margin: -12px 0 16px !important;
+}
+
+.permission-btn-primary {
+  display: block;
+  width: 100%;
+  padding: 14px 32px;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, var(--pj-gold), var(--pj-gold-soft));
+  color: var(--pj-bg-deep);
+  font-family: inherit;
+  font-size: var(--pj-text-base);
+  font-weight: var(--pj-weight-medium);
+  border: none;
+  border-radius: var(--pj-radius-pill);
+  cursor: pointer;
+}
+
+.permission-btn-primary:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.permission-btn-skip {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  background: transparent;
+  color: var(--pj-text-muted);
+  font-family: inherit;
+  font-size: var(--pj-text-sm);
+  border: none;
+  cursor: pointer;
+}
+
+.permission-btn-skip:active {
+  color: var(--pj-text-secondary);
+}
