@@ -1149,7 +1149,11 @@
     },
     "permission": {
       "title": "Enable Compass",
-      "description": "Syncro needs your device's compass to show directions accurately as you move.",
+      "description": "Syncro needs motion & orientation access so the compass ring follows how you face. This is separate from location/GPS.",
+      "not_location_hint": "If iOS asks, choose Allow for motion & orientation — not the same as the location prompt you saw earlier.",
+      "settings_hint": "If no popup appears: Settings → Safari → Motion & Orientation Access → Allow for this site, then tap Enable Compass again.",
+      "use_map_instead": "Or switch to Map below — Map works without compass rotation.",
+      "unsupported": "This device does not support compass rotation. Use Map mode instead.",
       "enable": "Enable Compass",
       "requesting": "Requesting…",
       "skip": "Continue without compass",

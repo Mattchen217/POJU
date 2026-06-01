@@ -13,10 +13,12 @@ import { useCompassPermission } from "@/lib/syncro/useCompassPermission";
 
 export type OrientationContextValue = {
   compassDegree: number;
-  /** Front-back tilt in degrees (DeviceOrientationEvent.beta). */
   deviceTiltBeta: number | null;
   hasPermission: boolean;
+  /** True after at least one deviceorientation heading event. */
+  receivingHeading: boolean;
   requestPermission: () => Promise<boolean>;
+  requestPermissionFromUserGesture: () => Promise<boolean>;
   isSupported: boolean;
   needsUserGesture: boolean;
 };
@@ -32,8 +34,16 @@ export function useOrientation(): OrientationContextValue {
 }
 
 export function SyncroOrientationProvider({ children }: { children: ReactNode }) {
-  const { granted, supported, alpha, beta, requestPermission, needsUserGesture } =
-    useCompassPermission();
+  const {
+    granted,
+    supported,
+    alpha,
+    beta,
+    receivingHeading,
+    requestPermission,
+    requestPermissionFromUserGesture,
+    needsUserGesture,
+  } = useCompassPermission();
 
   const [compassDegree, setCompassDegree] = useState(0);
   const smoothedRef = useRef(0);
@@ -45,7 +55,7 @@ export function SyncroOrientationProvider({ children }: { children: ReactNode })
   }, [alpha, granted]);
 
   useEffect(() => {
-    if (!granted) return;
+    if (!granted || !receivingHeading) return;
 
     const interval = window.setInterval(() => {
       const target = smoothedRef.current;
@@ -61,23 +71,27 @@ export function SyncroOrientationProvider({ children }: { children: ReactNode })
     }, 16);
 
     return () => window.clearInterval(interval);
-  }, [granted]);
+  }, [granted, receivingHeading]);
 
   useEffect(() => {
     if (process.env.NODE_ENV !== "development" || !granted) return;
     const id = window.setInterval(() => {
-      console.log("[Compass] compassDegree:", Math.round(compassDegreeRef.current));
-    }, 2000);
+      console.log("[Compass] compassDegree:", Math.round(compassDegreeRef.current), {
+        receivingHeading,
+      });
+    }, 3000);
     return () => window.clearInterval(id);
-  }, [granted]);
+  }, [granted, receivingHeading]);
 
   return (
     <OrientationContext.Provider
       value={{
-        compassDegree: granted ? compassDegree : 0,
+        compassDegree: granted && receivingHeading ? compassDegree : 0,
         deviceTiltBeta: granted && beta != null ? beta : null,
         hasPermission: granted,
+        receivingHeading,
         requestPermission,
+        requestPermissionFromUserGesture,
         isSupported: supported,
         needsUserGesture,
       }}

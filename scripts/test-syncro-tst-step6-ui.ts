@@ -92,7 +92,6 @@ function main() {
     "styles/syncro-why-modal.css",
     "components/syncro/HourProgressBar.tsx",
     "components/syncro/ThreeModeToggle.tsx",
-    "components/syncro/SyncroPermissionGate.tsx",
     "lib/syncro/useCompassPermission.ts",
     "styles/syncro-permission-gate.css",
     "lib/syncro/permissions.ts",
@@ -146,14 +145,18 @@ function main() {
   assert(layoutCss.includes("padding-top: var(--syncro-stage-top)"), "stage clears top chrome");
 
   const compassHook = readFileSync(join(ROOT, "lib/syncro/useCompassPermission.ts"), "utf8");
+  const compassIos = readFileSync(join(ROOT, "lib/syncro/compass-permission-ios.ts"), "utf8");
   assert(
-    compassHook.includes("requestPermission") && compassHook.includes("webkitCompassHeading"),
+    compassHook.includes("requestPermissionFromUserGesture") && compassHook.includes("webkitCompassHeading"),
     "compass hook iOS + gesture API",
   );
-  assert(compassHook.includes("pj_compass_granted"), "compass cache key");
-
+  assert(
+    compassIos.includes("requestDeviceOrientationPermission") && compassIos.includes("pj_compass_granted"),
+    "iOS motion permission helper",
+  );
   const mainView = readFileSync(join(ROOT, "components/syncro/SyncroMainView.tsx"), "utf8");
-  assert(mainView.includes("SyncroPermissionGate"), "main shows compass permission gate");
+  assert(mainView.includes("tryActivateCompass") && mainView.includes("pointerdown"), "auto compass on touch");
+  assert(!mainView.includes("SyncroPermissionGate"), "no manual compass gate");
   assert(mainView.includes("ThreeModeToggle"), "main has three-mode toggle");
   assert(mainView.includes("HourProgressBar"), "main has progress");
   assert(mainView.includes("SyncroMapMode"), "main has map mode");

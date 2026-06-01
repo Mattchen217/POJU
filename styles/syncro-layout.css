@@ -57,6 +57,30 @@
 .syncro-main-view .phone-position-hint {
   top: var(--syncro-phone-hint-top);
   z-index: 5;
+  max-width: min(320px, 92vw);
+  text-align: center;
+  line-height: 1.35;
+}
+
+.syncro-compass-gate-stage {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: var(--syncro-stage-top);
+  bottom: var(--syncro-bottom-reserve);
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px 16px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.syncro-main-view--compass-blocked .syncro-mode-stage {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 /* Short advice — above Why CTA */

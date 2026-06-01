@@ -2,14 +2,21 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { loadSyncroPermission, saveSyncroPermission } from "@/lib/syncro/permissions";
+import {
+  deviceOrientationRequiresPermissionPrompt,
+  isIosDevice,
+  markCompassGrantedInStorage,
+  PJ_COMPASS_GRANTED_KEY,
+  requestDeviceOrientationPermission,
+} from "@/lib/syncro/compass-permission-ios";
+import { loadSyncroPermission } from "@/lib/syncro/permissions";
 
-/** iOS Safari + legacy cache key (Strict Fix v2 Part 1). */
-export const PJ_COMPASS_GRANTED_KEY = "pj_compass_granted";
+export { PJ_COMPASS_GRANTED_KEY };
 
 export type CompassPermissionState = {
   granted: boolean;
   supported: boolean;
+  receivingHeading: boolean;
   alpha: number;
   beta: number;
   gamma: number;
@@ -31,21 +38,15 @@ function readCompassAlpha(e: DeviceOrientationEvent): number | null {
   return null;
 }
 
-function iosRequestPermissionAvailable(): boolean {
-  return (
-    typeof (DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> })
-      .requestPermission === "function"
-  );
-}
-
 /**
  * Compass permission + live heading (P0 Part 1).
- * `requestPermission` MUST be invoked from a user click handler on iOS 13+.
+ * iOS: motion/orientation dialog via `DeviceOrientationEvent.requestPermission()` in a tap handler.
  */
 export function useCompassPermission() {
   const [state, setState] = useState<CompassPermissionState>({
     granted: false,
     supported: false,
+    receivingHeading: false,
     alpha: 0,
     beta: 0,
     gamma: 0,
@@ -54,15 +55,25 @@ export function useCompassPermission() {
 
   const handlerRef = useRef<((e: DeviceOrientationEvent) => void) | null>(null);
   const attachedRef = useRef(false);
+  const receivedHeadingRef = useRef(false);
 
   const attachListener = useCallback(() => {
     if (typeof window === "undefined" || attachedRef.current) return;
 
+    receivedHeadingRef.current = false;
+
     const handler = (e: DeviceOrientationEvent) => {
       const alpha = readCompassAlpha(e);
+      if (alpha !== null) {
+        receivedHeadingRef.current = true;
+        setState((s) => ({
+          ...s,
+          receivingHeading: true,
+          alpha,
+        }));
+      }
       setState((s) => ({
         ...s,
-        ...(alpha !== null ? { alpha } : {}),
         beta: e.beta ?? s.beta,
         gamma: e.gamma ?? s.gamma,
       }));
@@ -82,83 +93,69 @@ export function useCompassPermission() {
     window.removeEventListener("deviceorientation", handler);
     handlerRef.current = null;
     attachedRef.current = false;
+    receivedHeadingRef.current = false;
     console.log("[Compass] deviceorientation listener detached");
   }, []);
 
+  const applyGranted = useCallback(async () => {
+    setState((s) => ({ ...s, granted: true }));
+    await markCompassGrantedInStorage();
+    attachListener();
+  }, [attachListener]);
+
   useEffect(() => {
     const supported = typeof DeviceOrientationEvent !== "undefined";
-    const needsUserGesture = iosRequestPermissionAvailable();
+    const needsUserGesture = deviceOrientationRequiresPermissionPrompt();
 
     setState((s) => ({ ...s, supported, needsUserGesture }));
 
     if (!supported) return;
 
     void (async () => {
+      console.log("[Compass] auto-enable: attach listener");
+      attachListener();
+      setState((s) => ({ ...s, granted: true }));
+
+      if (!needsUserGesture && !isIosDevice()) {
+        await markCompassGrantedInStorage();
+        return;
+      }
+
       const perms = await loadSyncroPermission();
       const cached =
         (typeof localStorage !== "undefined" && localStorage.getItem(PJ_COMPASS_GRANTED_KEY) === "1") ||
         perms.orientation;
 
-      if (needsUserGesture) {
-        if (cached) {
-          console.log("[Compass] restored granted from cache");
-          setState((s) => ({ ...s, granted: true }));
-          attachListener();
-        }
-        return;
+      if (cached) {
+        await markCompassGrantedInStorage();
+      } else if (needsUserGesture || isIosDevice()) {
+        console.log("[Compass] iOS — will request motion permission on first interaction");
       }
-
-      console.log("[Compass] non-iOS: auto-grant orientation");
-      setState((s) => ({ ...s, granted: true }));
-      if (typeof localStorage !== "undefined") {
-        localStorage.setItem(PJ_COMPASS_GRANTED_KEY, "1");
-      }
-      await saveSyncroPermission("orientation", true);
-      attachListener();
     })();
 
     return () => detachListener();
   }, [attachListener, detachListener]);
 
-  const requestPermission = useCallback(async (): Promise<boolean> => {
-    console.log("[Compass] requestPermission called");
+  const requestPermissionFromUserGesture = useCallback((): Promise<boolean> => {
+    console.log("[Compass] auto request motion/orientation permission");
 
-    if (!state.supported) {
-      console.warn("[Compass] requestPermission: not supported");
-      return false;
-    }
+    const permPromise = requestDeviceOrientationPermission();
 
-    if (iosRequestPermissionAvailable()) {
-      try {
-        const result = await (
-          DeviceOrientationEvent as unknown as { requestPermission: () => Promise<string> }
-        ).requestPermission();
-        console.log("[Compass] iOS permission result:", result);
-
-        if (result === "granted") {
-          setState((s) => ({ ...s, granted: true }));
-          if (typeof localStorage !== "undefined") {
-            localStorage.setItem(PJ_COMPASS_GRANTED_KEY, "1");
-          }
-          await saveSyncroPermission("orientation", true);
-          attachListener();
-          return true;
-        }
-        return false;
-      } catch (e) {
-        console.error("[Compass] iOS permission error:", e);
+    return permPromise.then(async (status) => {
+      if (status === "denied" || status === "unsupported") {
         return false;
       }
-    }
+      await applyGranted();
+      return true;
+    });
+  }, [applyGranted]);
 
-    setState((s) => ({ ...s, granted: true }));
-    if (typeof localStorage !== "undefined") {
-      localStorage.setItem(PJ_COMPASS_GRANTED_KEY, "1");
-    }
-    await saveSyncroPermission("orientation", true);
-    attachListener();
-    return true;
-  }, [attachListener, state.supported]);
+  const requestPermission = requestPermissionFromUserGesture;
 
-  return { ...state, requestPermission };
+  return {
+    ...state,
+    requestPermission,
+    requestPermissionFromUserGesture,
+    applyGranted,
+  };
 }

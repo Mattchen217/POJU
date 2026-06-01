@@ -9,69 +9,77 @@ import { useOrientation } from "@/components/syncro/SyncroOrientationProvider";
 import "@/styles/syncro-permission-gate.css";
 
 export type SyncroPermissionGateProps = {
-  onGranted: () => void;
-  onSkip?: () => void;
+  /** Called when heading events are flowing (compass actually works). */
+  onReady?: () => void;
+  layout?: "fullscreen" | "inline";
 };
 
-export function SyncroPermissionGate({ onGranted, onSkip }: SyncroPermissionGateProps) {
+export function SyncroPermissionGate({ onReady, layout = "inline" }: SyncroPermissionGateProps) {
   const t = useTranslations("syncro.permission");
-  const { requestPermission, hasPermission, isSupported } = useOrientation();
+  const { requestPermissionFromUserGesture, isSupported, receivingHeading } = useOrientation();
   const [requesting, setRequesting] = useState(false);
   const [deniedMessage, setDeniedMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isSupported) {
-      onGranted();
-      return;
+    if (receivingHeading) {
+      onReady?.();
     }
-    if (hasPermission) {
-      onGranted();
-    }
-  }, [hasPermission, isSupported, onGranted]);
+  }, [receivingHeading, onReady]);
 
-  async function handleEnable() {
+  function handleEnable() {
     setDeniedMessage(null);
     setRequesting(true);
-    const ok = await requestPermission();
-    setRequesting(false);
 
-    if (ok) {
-      onGranted();
-    } else {
-      setDeniedMessage(t("denied_alert"));
-    }
+    requestPermissionFromUserGesture()
+      .then((ok) => {
+        setRequesting(false);
+        if (!ok) {
+          setDeniedMessage(t("denied_alert"));
+        }
+      })
+      .catch(() => {
+        setRequesting(false);
+        setDeniedMessage(t("denied_alert"));
+      });
   }
 
-  if (!isSupported || hasPermission) {
+  if (!isSupported) {
+    return (
+      <div className={`permission-gate permission-gate--${layout}`}>
+        <div className="permission-gate-card">
+          <p className="permission-unsupported">{t("unsupported")}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (receivingHeading) {
     return null;
   }
 
   return (
-    <div className="permission-gate">
+    <div className={`permission-gate permission-gate--${layout}`}>
       <div className="permission-gate-card">
         <div className="permission-icon">
-          <IconCompass aria-hidden size={36} stroke={1.5} />
+          <IconCompass aria-hidden size={40} stroke={1.5} />
         </div>
 
         <h2>{t("title")}</h2>
-        <p>{t("description")}</p>
+        <p className="permission-lead">{t("description")}</p>
+        <p className="permission-not-location">{t("not_location_hint")}</p>
 
         {deniedMessage ? <p className="permission-denied-msg">{deniedMessage}</p> : null}
 
         <button
           type="button"
           className="permission-btn-primary"
-          onClick={() => void handleEnable()}
+          onClick={handleEnable}
           disabled={requesting}
         >
           {requesting ? t("requesting") : t("enable")}
         </button>
 
-        {onSkip ? (
-          <button type="button" className="permission-btn-skip" onClick={onSkip}>
-            {t("skip")}
-          </button>
-        ) : null}
+        <p className="permission-settings-hint">{t("settings_hint")}</p>
       </div>
     </div>
   );

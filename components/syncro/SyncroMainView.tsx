@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { HourProgressBar } from "@/components/syncro/HourProgressBar";
-import { SyncroPermissionGate } from "@/components/syncro/SyncroPermissionGate";
 import { ThreeModeToggle } from "@/components/syncro/ThreeModeToggle";
 import { useOrientation } from "@/components/syncro/SyncroOrientationProvider";
 import { SyncroARMode } from "@/components/syncro/SyncroARMode";
@@ -45,8 +44,8 @@ export function SyncroMainView({
   llmProgress,
 }: SyncroMainViewProps) {
   const t = useTranslations("syncro.main");
-  const { isSupported, hasPermission, needsUserGesture } = useOrientation();
-  const [compassGateDone, setCompassGateDone] = useState(false);
+  const { isSupported, receivingHeading, requestPermissionFromUserGesture } = useOrientation();
+  const rootRef = useRef<HTMLDivElement>(null);
 
   const orderedPeriods = useMemo(() => getOrderedHourPeriodsFromSession(session), [session]);
 
@@ -57,6 +56,11 @@ export function SyncroMainView({
   const [cameraGranted, setCameraGranted] = useState(false);
   const [activeDirection, setActiveDirection] = useState<DirectionId>("E");
 
+  const tryActivateCompass = useCallback(() => {
+    if (!isSupported || receivingHeading) return;
+    void requestPermissionFromUserGesture();
+  }, [isSupported, receivingHeading, requestPermissionFromUserGesture]);
+
   useEffect(() => {
     void loadSyncroPermission().then((perms) => {
       setCameraGranted(perms.camera);
@@ -64,22 +68,25 @@ export function SyncroMainView({
   }, []);
 
   useEffect(() => {
-    if (!isSupported) {
-      setCompassGateDone(true);
-    }
-  }, [isSupported]);
-
-  useEffect(() => {
-    if (hasPermission) {
-      setCompassGateDone(true);
-    }
-  }, [hasPermission]);
-
-  useEffect(() => {
     const scope = readTaskTimeScope();
     setUiMode(getInitialSyncroUiMode({ taskTimeScope: scope, orientationSupported: isSupported }));
     setInitialized(true);
   }, [isSupported]);
+
+  /** Auto-enable compass: Android on mount; iOS on mount attempt + any touch on Syncro. */
+  useEffect(() => {
+    if (!isSupported || receivingHeading) return;
+    tryActivateCompass();
+  }, [isSupported, receivingHeading, tryActivateCompass]);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root || receivingHeading) return;
+
+    const onPointerDown = () => tryActivateCompass();
+    root.addEventListener("pointerdown", onPointerDown, { capture: true });
+    return () => root.removeEventListener("pointerdown", onPointerDown, { capture: true });
+  }, [receivingHeading, tryActivateCompass]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -113,7 +120,15 @@ export function SyncroMainView({
   }
 
   function handleModeChange(mode: SyncroUiMode) {
+    if (mode === "compass" || mode === "ar") {
+      tryActivateCompass();
+    }
     setUiMode(mode);
+  }
+
+  function handleHourSelect(period: HourPeriod) {
+    tryActivateCompass();
+    setActiveHour(period);
   }
 
   const effectivePeriod = orderedPeriods.includes(activeHour)
@@ -137,27 +152,17 @@ export function SyncroMainView({
     );
   }
 
-  const showCompassGate = isSupported && needsUserGesture && !compassGateDone && !hasPermission;
-
-  if (showCompassGate) {
-    return (
-      <div className="syncro-main-view syncro-main">
-        <SyncroPermissionGate
-          onGranted={() => setCompassGateDone(true)}
-          onSkip={() => setCompassGateDone(true)}
-        />
-      </div>
-    );
-  }
-
   return (
-    <div className={`syncro-main-view syncro-main syncro-main-view--${uiMode}`}>
+    <div
+      ref={rootRef}
+      className={`syncro-main-view syncro-main syncro-main-view--${uiMode}`}
+    >
       <HourProgressBar
         matrix={session.matrix}
         orderedPeriods={orderedPeriods}
         livePeriod={liveHourPeriod}
         activeHour={effectivePeriod}
-        onSelect={setActiveHour}
+        onSelect={handleHourSelect}
         locale={locale}
         progress={
           llmProgress

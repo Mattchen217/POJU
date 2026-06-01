@@ -6,6 +6,11 @@ import { useTranslations } from "next-intl";
 import { CitySearchBox, type CitySearchSelection } from "@/components/syncro/CitySearchBox";
 import { useRouter } from "@/i18n/navigation";
 import {
+  deviceOrientationRequiresPermissionPrompt,
+  markCompassGrantedInStorage,
+  requestDeviceOrientationPermission,
+} from "@/lib/syncro/compass-permission-ios";
+import {
   SYNCRO_LOCATION_STORAGE_KEY,
   buildSyncroStoredLocation,
   type SyncroStoredLocation,
@@ -86,7 +91,20 @@ export function SyncroLocationPage() {
   function handleConfirm() {
     if (!location) return;
     sessionStorage.setItem(SYNCRO_LOCATION_STORAGE_KEY, JSON.stringify(location));
-    router.push("/syncro/computing");
+
+    const goComputing = () => router.push("/syncro/computing");
+
+    if (deviceOrientationRequiresPermissionPrompt()) {
+      requestDeviceOrientationPermission().then((status) => {
+        if (status === "granted") {
+          void markCompassGrantedInStorage();
+        }
+        goComputing();
+      });
+      return;
+    }
+
+    goComputing();
   }
 
   return (

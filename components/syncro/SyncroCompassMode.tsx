@@ -82,7 +82,7 @@ export function SyncroCompassMode({
   const tLevels = useTranslations("syncro.levels");
   const isZh = locale.startsWith("zh");
 
-  const { compassDegree, hasPermission, isSupported } = useOrientation();
+  const { compassDegree, receivingHeading, isSupported } = useOrientation();
   const [whyModalOpen, setWhyModalOpen] = useState(false);
 
   const currentDirection: DirectionId = compassDegreeToDirection(compassDegree);
@@ -96,11 +96,11 @@ export function SyncroCompassMode({
       activeHour: hourPeriod,
       currentDirection,
       compassDegree: Math.round(compassDegree),
-      hasPermission,
+      receivingHeading,
       cellKey,
       found: !!cell,
     });
-  }, [hourPeriod, currentDirection, cellKey, cell, compassDegree, hasPermission]);
+  }, [hourPeriod, currentDirection, cellKey, cell, compassDegree, receivingHeading]);
 
   if (!isSupported) {
     return (
@@ -123,10 +123,6 @@ export function SyncroCompassMode({
   return (
     <div className={`syncro-immersive compass-mode ${llmHighlight ? "syncro-llm-cell-updated" : ""}`}>
       <FlatPhoneHint />
-
-      {!hasPermission ? (
-        <p className="compass-static-notice">{t("permission.skipped_notice")}</p>
-      ) : null}
 
       <div className="syncro-content-overlay compass-mode-body">
         <div className="concentric-system">
