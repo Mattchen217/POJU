@@ -1,13 +1,10 @@
-import { isSyncroLlmReady } from "@/lib/syncro/llm-cell-display";
-import {
-  matrixKey,
-  type HourPeriod,
-  type SyncroMatrix,
-  type SyncroSession,
-} from "@/lib/syncro/types";
+import { isHourPeriodLlmReady } from "@/lib/syncro/hour-llm-ready";
+import { matrixKey, type HourPeriod, type SyncroMatrix, type SyncroSession } from "@/lib/syncro/types";
 import type { DirectionId } from "@/lib/syncro/current-system";
 
 import { sortedHourPeriodsFromLive } from "@/lib/syncro/hour-order";
+
+export { isHourPeriodLlmReady } from "@/lib/syncro/hour-llm-ready";
 
 const DIRECTIONS: DirectionId[] = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
 
@@ -17,30 +14,10 @@ function cellsForHour(matrix: SyncroMatrix, hourId: HourPeriod) {
   return DIRECTIONS.map((dir) => matrix[matrixKey(hourId, dir)]).filter(Boolean);
 }
 
-function isHourComplete(
-  matrix: SyncroMatrix,
-  hourId: HourPeriod,
-  llmMeta?: SyncroSession["llm_meta"],
-): boolean {
-  const cells = cellsForHour(matrix, hourId);
-  if (cells.length === 0) return false;
-  return cells.every((c) => isSyncroLlmReady(c, llmMeta) || c.llm_failed);
-}
-
 function isHourFailed(matrix: SyncroMatrix, hourId: HourPeriod): boolean {
   const cells = cellsForHour(matrix, hourId);
   if (cells.length === 0) return false;
   return cells.every((c) => c.llm_failed);
-}
-
-function isHourReadyDone(
-  matrix: SyncroMatrix,
-  hourId: HourPeriod,
-  llmMeta?: SyncroSession["llm_meta"],
-): boolean {
-  const cells = cellsForHour(matrix, hourId);
-  if (cells.length === 0) return false;
-  return cells.every((c) => isSyncroLlmReady(c, llmMeta));
 }
 
 /**
@@ -62,11 +39,12 @@ export function getHourDotStatus(
 
   for (let i = 0; i < idx; i++) {
     const prev = order[i]!;
-    if (prev === livePeriod) continue;
-    if (!isHourComplete(matrix, prev, llmMeta)) return "pending";
+    if (!isHourPeriodLlmReady(matrix, prev, llmMeta) && !isHourFailed(matrix, prev)) {
+      return "pending";
+    }
   }
 
   if (isHourFailed(matrix, hourId)) return "failed";
-  if (isHourReadyDone(matrix, hourId, llmMeta)) return "done";
+  if (isHourPeriodLlmReady(matrix, hourId, llmMeta)) return "done";
   return "pending";
 }

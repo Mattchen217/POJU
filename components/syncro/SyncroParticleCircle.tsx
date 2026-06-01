@@ -24,7 +24,10 @@ export function SyncroParticleCircle({ rotation, activeDirection }: SyncroPartic
       }}
     >
       <SyncroParticleCore />
-      <SyncroDirectionRing activeDirection={activeDirection} />
+      <SyncroDirectionRing
+        activeDirection={activeDirection}
+        labelUprightDeg={-rotation}
+      />
     </div>
   );
 }

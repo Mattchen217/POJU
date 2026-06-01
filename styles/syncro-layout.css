@@ -75,18 +75,61 @@
   pointer-events: none;
 }
 
-/* Short advice — above Why CTA */
-.syncro-main-view .compass-short-advice {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: calc(var(--syncro-why-bottom) + 44px);
-  margin: 0;
+/* Compass / AR: advice + Why in footer below particle ring (in-flow, not over concentric) */
+.syncro-main-view .compass-mode-body,
+.syncro-main-view .ar-mode-body {
+  justify-content: space-between;
+}
+
+.syncro-main-view .compass-stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  width: 100%;
+  padding-top: 4px;
+}
+
+.syncro-main-view .compass-stage .concentric-system {
+  width: min(78vmin, 460px);
+  height: min(78vmin, 460px);
+}
+
+.syncro-main-view .compass-footer {
+  flex-shrink: 0;
+  width: 100%;
   max-width: 28rem;
-  padding: 0 24px;
+  margin: 0 auto;
+  padding: 4px 20px 2px;
+  text-align: center;
+}
+
+.syncro-main-view .compass-mode-body .compass-short-advice,
+.syncro-main-view .compass-mode-body .compass-bottom-cta,
+.syncro-main-view .ar-mode-body .compass-short-advice,
+.syncro-main-view .ar-mode-body .compass-bottom-cta {
+  position: static;
+  left: auto;
+  bottom: auto;
+  transform: none;
+  margin: 0 auto;
+  pointer-events: auto;
+}
+
+.syncro-main-view .compass-mode-body .compass-short-advice {
+  padding: 0 4px 8px;
+}
+
+.syncro-main-view .compass-mode-body .compass-bottom-cta {
+  padding-bottom: 4px;
+}
+
+/* Map mode keeps absolute hint placement */
+.syncro-main-view .compass-short-advice {
+  max-width: 28rem;
   text-align: center;
   z-index: 8;
-  pointer-events: none;
 }
 
 .syncro-main-view .map-hint {

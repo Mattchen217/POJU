@@ -29,6 +29,8 @@ export type SyncroMainViewProps = {
   locale: string;
   highlightMatrixKeys?: Set<string>;
   llmProgress?: SyncroLlmProgress;
+  /** Live hour LLM copy is ready — compass/AR allowed. */
+  liveHourReady?: boolean;
 };
 
 function readTaskTimeScope(): SyncroTaskTimeScope {
@@ -42,10 +44,12 @@ export function SyncroMainView({
   locale,
   highlightMatrixKeys,
   llmProgress,
+  liveHourReady = true,
 }: SyncroMainViewProps) {
   const t = useTranslations("syncro.main");
   const { isSupported, receivingHeading, requestPermissionFromUserGesture } = useOrientation();
   const rootRef = useRef<HTMLDivElement>(null);
+  const autoCompassOnceRef = useRef(false);
 
   const orderedPeriods = useMemo(() => getOrderedHourPeriodsFromSession(session), [session]);
 
@@ -69,9 +73,24 @@ export function SyncroMainView({
 
   useEffect(() => {
     const scope = readTaskTimeScope();
-    setUiMode(getInitialSyncroUiMode({ taskTimeScope: scope, orientationSupported: isSupported }));
+    const preferred = getInitialSyncroUiMode({ taskTimeScope: scope, orientationSupported: isSupported });
+    setUiMode(liveHourReady ? preferred : "map");
     setInitialized(true);
-  }, [isSupported]);
+  }, [isSupported, liveHourReady]);
+
+  useEffect(() => {
+    if (!liveHourReady) {
+      autoCompassOnceRef.current = false;
+      if (uiMode === "compass" || uiMode === "ar") setUiMode("map");
+      return;
+    }
+    if (autoCompassOnceRef.current) return;
+    const scope = readTaskTimeScope();
+    if (scope === "now" && isSupported) {
+      setUiMode("compass");
+      autoCompassOnceRef.current = true;
+    }
+  }, [liveHourReady, isSupported, uiMode]);
 
   /** Auto-enable compass: Android on mount; iOS on mount attempt + any touch on Syncro. */
   useEffect(() => {
@@ -120,6 +139,7 @@ export function SyncroMainView({
   }
 
   function handleModeChange(mode: SyncroUiMode) {
+    if ((mode === "compass" || mode === "ar") && !liveHourReady) return;
     if (mode === "compass" || mode === "ar") {
       tryActivateCompass();
     }
@@ -208,7 +228,12 @@ export function SyncroMainView({
         ) : null}
       </div>
 
-      <ThreeModeToggle mode={uiMode} onChange={handleModeChange} />
+      <ThreeModeToggle
+        mode={uiMode}
+        onChange={handleModeChange}
+        compassDisabled={!liveHourReady}
+        arDisabled={!liveHourReady}
+      />
     </div>
   );
 }

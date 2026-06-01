@@ -8,9 +8,16 @@ import type { SyncroUiMode } from "@/lib/syncro/syncro-view-helpers";
 export type ThreeModeToggleProps = {
   mode: SyncroUiMode;
   onChange: (mode: SyncroUiMode) => void;
+  compassDisabled?: boolean;
+  arDisabled?: boolean;
 };
 
-export function ThreeModeToggle({ mode, onChange }: ThreeModeToggleProps) {
+export function ThreeModeToggle({
+  mode,
+  onChange,
+  compassDisabled = false,
+  arDisabled = false,
+}: ThreeModeToggleProps) {
   const t = useTranslations("syncro.modes");
 
   return (
@@ -19,6 +26,7 @@ export function ThreeModeToggle({ mode, onChange }: ThreeModeToggleProps) {
         type="button"
         role="tab"
         aria-selected={mode === "compass"}
+        disabled={compassDisabled}
         className={`mode-tab ${mode === "compass" ? "active" : ""}`}
         onClick={() => onChange("compass")}
       >
@@ -30,6 +38,7 @@ export function ThreeModeToggle({ mode, onChange }: ThreeModeToggleProps) {
         type="button"
         role="tab"
         aria-selected={mode === "ar"}
+        disabled={arDisabled}
         className={`mode-tab ${mode === "ar" ? "active" : ""}`}
         onClick={() => onChange("ar")}
       >

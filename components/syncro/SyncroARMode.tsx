@@ -149,57 +149,61 @@ export function SyncroARMode({
       <PostureHintOverlay mode="ar" beta={deviceTiltBeta} />
 
       <div className="syncro-content-overlay ar-mode-body">
-        <div className="concentric-system">
-          <div
-            className="rotating-layer rotating-layer--particles-only"
-            style={{
-              transform: `rotate(${-compassDegree}deg)`,
-              transition: "transform 200ms ease-out",
-            }}
-          >
-            <SyncroParticleCore />
-          </div>
-
-          <SyncroDirectionRing activeDirection={currentDirection} />
-
-          <div className="ar-window-layer">
-            <div className="ar-camera-window" style={haloStyle}>
-              <video
-                ref={videoRef}
-                className="ar-video"
-                playsInline
-                muted
-                autoPlay
-                aria-label={t("ar.video_label")}
+        <div className="compass-stage">
+          <div className="concentric-system">
+            <div
+              className="rotating-layer"
+              style={{
+                transform: `rotate(${-compassDegree}deg)`,
+                transition: "transform 200ms ease-out",
+              }}
+            >
+              <SyncroParticleCore />
+              <SyncroDirectionRing
+                activeDirection={currentDirection}
+                labelUprightDeg={compassDegree}
               />
-              {!streamReady ? <div className="ar-video-placeholder" aria-hidden /> : null}
+            </div>
 
-              {cell ? (
-                <div className="ar-info-overlay">
-                  <div className={`ar-level ${currentLevelCssClass(cell.current_level)}`}>
-                    {levelTitle}
+            <div className="ar-window-layer">
+              <div className="ar-camera-window" style={haloStyle}>
+                <video
+                  ref={videoRef}
+                  className="ar-video"
+                  playsInline
+                  muted
+                  autoPlay
+                  aria-label={t("ar.video_label")}
+                />
+                {!streamReady ? <div className="ar-video-placeholder" aria-hidden /> : null}
+
+                {cell ? (
+                  <div className="ar-info-overlay">
+                    <div className={`ar-level ${currentLevelCssClass(cell.current_level)}`}>
+                      {levelTitle}
+                    </div>
+                    <div className="ar-meta">
+                      <span>{currentDirection}</span>
+                      <span className="meta-divider">·</span>
+                      <span>
+                        {hourPeriodDisplayName(hourPeriod, resolvedLocale)} ·{" "}
+                        {HOUR_PERIOD_RANGES[hourPeriod]}
+                      </span>
+                    </div>
                   </div>
-                  <div className="ar-meta">
-                    <span>{currentDirection}</span>
-                    <span className="meta-divider">·</span>
-                    <span>
-                      {hourPeriodDisplayName(hourPeriod, resolvedLocale)} ·{" "}
-                      {HOUR_PERIOD_RANGES[hourPeriod]}
-                    </span>
+                ) : (
+                  <div className="ar-info-overlay ar-info-overlay--loading" aria-busy="true">
+                    <IconLoader2 aria-hidden size={20} stroke={1.5} className="ar-loading-spin" />
+                    <span>{t("generating")}</span>
                   </div>
-                </div>
-              ) : (
-                <div className="ar-info-overlay ar-info-overlay--loading" aria-busy="true">
-                  <IconLoader2 aria-hidden size={20} stroke={1.5} className="ar-loading-spin" />
-                  <span>{t("generating")}</span>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </div>
 
         {cell ? (
-          <>
+          <div className="compass-footer">
             <SyncroCellAdvice
               cell={cell}
               llmMeta={session.llm_meta}
@@ -215,7 +219,7 @@ export function SyncroARMode({
                 {t("why_this_current")}
               </button>
             </div>
-          </>
+          </div>
         ) : null}
       </div>
 

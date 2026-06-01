@@ -1143,6 +1143,11 @@
       "context_missing": "无法启动 AI 批次，请从档案重新走一遍 Syncro 测算。",
       "all_failed": "12 个时辰批次均失败，请查看控制台日志与 API 配置。"
     },
+    "preparing_live": {
+      "title": "正在生成当前时辰「{hour}」解读…",
+      "hint": "当前时辰完成后才会进入罗盘；其余时辰将按顺序逐个生成。",
+      "progress": "正在生成 {hour} · 已完成 {done}/{total}"
+    },
     "modes": {
       "aria_label": "Syncro 显示模式",
       "compass": "罗盘",

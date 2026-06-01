@@ -118,39 +118,43 @@ export function SyncroCompassMode({
       {receivingHeading ? <PostureHintOverlay mode="compass" beta={deviceTiltBeta} /> : null}
 
       <div className="syncro-content-overlay compass-mode-body">
-        <div className="concentric-system">
-          <div
-            className="rotating-layer rotating-layer--particles-only"
-            style={{
-              transform: `rotate(${-compassDegree}deg)`,
-              transition: "transform 200ms ease-out",
-            }}
-          >
-            <SyncroParticleCore />
-          </div>
-
-          <SyncroDirectionRing activeDirection={currentDirection} />
-
-          <div className="center-info-layer center-static-layer">
-            {!cell ? (
-              <div className="no-data" aria-busy="true">
-                <IconLoader2 aria-hidden size={20} stroke={1.5} className="no-data-spin" />
-                <span>{t("generating")}</span>
-              </div>
-            ) : (
-              <CenterCurrentDisplay
-                cell={cell}
-                hourPeriod={hourPeriod}
-                currentDirection={currentDirection}
-                isZh={isZh}
-                levelTitle={levelTitle}
+        <div className="compass-stage">
+          <div className="concentric-system">
+            <div
+              className="rotating-layer"
+              style={{
+                transform: `rotate(${-compassDegree}deg)`,
+                transition: "transform 200ms ease-out",
+              }}
+            >
+              <SyncroParticleCore />
+              <SyncroDirectionRing
+                activeDirection={currentDirection}
+                labelUprightDeg={compassDegree}
               />
-            )}
+            </div>
+
+            <div className="center-info-layer center-static-layer">
+              {!cell ? (
+                <div className="no-data" aria-busy="true">
+                  <IconLoader2 aria-hidden size={20} stroke={1.5} className="no-data-spin" />
+                  <span>{t("generating")}</span>
+                </div>
+              ) : (
+                <CenterCurrentDisplay
+                  cell={cell}
+                  hourPeriod={hourPeriod}
+                  currentDirection={currentDirection}
+                  isZh={isZh}
+                  levelTitle={levelTitle}
+                />
+              )}
+            </div>
           </div>
         </div>
 
         {cell ? (
-          <>
+          <div className="compass-footer">
             <SyncroCellAdvice cell={cell} llmMeta={session.llm_meta} />
             <div className="compass-bottom-cta">
               <button
@@ -162,7 +166,7 @@ export function SyncroCompassMode({
                 {t("why_this_current")}
               </button>
             </div>
-          </>
+          </div>
         ) : null}
       </div>
 

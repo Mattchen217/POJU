@@ -450,6 +450,11 @@
   color: var(--pj-text-secondary);
 }
 
+.three-mode-toggle .mode-tab:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 /* Why CTA sits above mode switcher (Part 5 spacing) */
 .syncro-main-view .compass-bottom-cta {
   position: absolute;

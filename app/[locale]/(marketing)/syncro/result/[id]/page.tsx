@@ -10,13 +10,16 @@ import { SyncroLlmProgressBar } from "@/components/syncro/SyncroLlmProgressBar";
 import { PojuDeepDiveCTA } from "@/components/cross-product/PojuDeepDiveCTA";
 import { ReturnToPojuCTA } from "@/components/poju/ReturnToPojuCTA";
 import { SyncroMainView } from "@/components/syncro/SyncroMainView";
+import { SyncroPreparingLiveHour } from "@/components/syncro/SyncroPreparingLiveHour";
 import { extractSyncroSummary } from "@/lib/poju/tool-result-summary";
+import { isLiveHourPeriodLlmReady } from "@/lib/syncro/hour-llm-ready";
 import { SyncroOrientationProvider } from "@/components/syncro/SyncroOrientationProvider";
 import { Link } from "@/i18n/navigation";
 import { isSyncroSessionExpired, loadSyncroSession } from "@/lib/syncro/syncro-session";
-import type { SyncroSession } from "@/lib/syncro/types";
+import { getCurrentHourPeriod, type SyncroSession } from "@/lib/syncro/types";
 
 import "@/styles/syncro.css";
+import "@/styles/syncro-preparing-live.css";
 
 type Stage = "loading" | "ready" | "expired" | "error";
 
@@ -120,6 +123,8 @@ function SyncroResultPageContent() {
   }
 
   const syncroSummary = extractSyncroSummary(session);
+  const livePeriod = getCurrentHourPeriod();
+  const liveHourReady = isLiveHourPeriodLlmReady(session, livePeriod);
 
   return (
     <SyncroOrientationProvider>
@@ -138,21 +143,33 @@ function SyncroResultPageContent() {
         onSessionUpdate={handleSessionUpdate}
         onProgress={setLlmProgress}
       />
-      <SyncroMainView
-        session={session}
-        locale={locale}
-        highlightMatrixKeys={highlightKeys}
-        llmProgress={llmProgress}
-      />
-      <div className="px-4 pb-8">
-        <PojuDeepDiveCTA productId="syncro" result_id={sessionId} result_data={syncroSummary} />
-        <ReturnToPojuCTA
-          tool="syncro"
-          resultId={sessionId}
-          resultData={syncroSummary}
-          variant="footer"
+      {liveHourReady ? (
+        <SyncroMainView
+          session={session}
+          locale={locale}
+          highlightMatrixKeys={highlightKeys}
+          llmProgress={llmProgress}
+          liveHourReady
         />
-      </div>
+      ) : (
+        <SyncroPreparingLiveHour
+          session={session}
+          locale={locale}
+          livePeriod={livePeriod}
+          progress={llmProgress}
+        />
+      )}
+      {liveHourReady ? (
+        <div className="px-4 pb-8">
+          <PojuDeepDiveCTA productId="syncro" result_id={sessionId} result_data={syncroSummary} />
+          <ReturnToPojuCTA
+            tool="syncro"
+            resultId={sessionId}
+            resultData={syncroSummary}
+            variant="footer"
+          />
+        </div>
+      ) : null}
     </SyncroOrientationProvider>
   );
 }

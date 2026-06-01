@@ -18,12 +18,20 @@ const DIRECTION_RING: Array<{ id: DirectionId; label: string; angle: number }> =
 
 export type SyncroDirectionRingProps = {
   activeDirection: DirectionId;
+  /**
+   * Degrees to counter-rotate each label so text stays upright.
+   * Pass `compassDegree` when this ring sits inside `.rotating-layer` (`rotate(-compassDegree)`).
+   */
+  labelUprightDeg?: number;
 };
 
 /**
- * Layer 1 — eight compass labels on the outer ring (inside `.rotating-layer`).
+ * Eight compass labels on the outer ring (inside `.rotating-layer` with particles).
  */
-export function SyncroDirectionRing({ activeDirection }: SyncroDirectionRingProps) {
+export function SyncroDirectionRing({
+  activeDirection,
+  labelUprightDeg = 0,
+}: SyncroDirectionRingProps) {
   const radius = SYNCRO_DIRECTION_RING_RADIUS_PCT;
 
   return (
@@ -38,11 +46,15 @@ export function SyncroDirectionRing({ activeDirection }: SyncroDirectionRingProp
             key={dir.id}
             className={`direction-label ${dir.id === activeDirection ? "active" : ""}`}
             style={{
-              left: `calc(50% + ${x}%)`,
-              top: `calc(50% + ${y}%)`,
+              transform: `translate(calc(-50% + ${x}%), calc(-50% + ${y}%))`,
             }}
           >
-            {dir.label}
+            <span
+              className="direction-label-text"
+              style={{ transform: `rotate(${labelUprightDeg}deg)` }}
+            >
+              {dir.label}
+            </span>
           </div>
         );
       })}

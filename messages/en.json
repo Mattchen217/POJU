@@ -1128,6 +1128,11 @@
       "complete": "AI copy complete",
       "some_failed": "{count} hour batch(es) failed."
     },
+    "preparing_live": {
+      "title": "Generating reading for {hour} (current hour)…",
+      "hint": "Compass opens when this hour is ready. Later hours follow one by one.",
+      "progress": "Now generating {hour} · {done}/{total} complete"
+    },
     "modes": {
       "aria_label": "Syncro display mode",
       "compass": "Compass",

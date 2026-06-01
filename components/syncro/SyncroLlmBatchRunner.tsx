@@ -7,10 +7,10 @@ import {
   SYNCRO_LLM_BATCH_COUNT,
   getSyncroBatchKeyLists,
 } from "@/lib/llm/services/syncro-reading-service";
-import { isSyncroLlmReady } from "@/lib/syncro/llm-cell-display";
-import { HOUR_ORDER } from "@/lib/syncro/hour-order";
+import { isHourPeriodLlmReady } from "@/lib/syncro/hour-llm-ready";
+import { HOUR_ORDER, sortedHourPeriodsFromLive } from "@/lib/syncro/hour-order";
 import { rebuildSyncroLlmContext } from "@/lib/syncro/rebuild-syncro-llm-context";
-import type { HourPeriod } from "@/lib/syncro/types";
+import { getCurrentHourPeriod, type HourPeriod } from "@/lib/syncro/types";
 import {
   clearSyncroLlmContext,
   resolveSyncroLlmContext,
@@ -28,7 +28,8 @@ export type SyncroLlmProgress = {
   total: number;
   running: boolean;
   failed: number;
-  /** Could not load or rebuild batch context (profile / compute_local). */
+  /** Hour currently being generated (timeline order from live period). */
+  current_hour?: HourPeriod;
   context_missing?: boolean;
 };
 
@@ -42,20 +43,13 @@ type Props = {
 function countLlmReadyHours(session: SyncroSession): number {
   let ready = 0;
   for (const hourId of HOUR_ORDER) {
-    const keys = Object.keys(session.matrix).filter((k) => k.startsWith(`${hourId}__`));
-    if (
-      keys.length > 0 &&
-      keys.every((k) => isSyncroLlmReady(session.matrix[k], session.llm_meta))
-    ) {
-      ready++;
-    }
+    if (isHourPeriodLlmReady(session.matrix, hourId, session.llm_meta)) ready++;
   }
   return ready;
 }
 
 /**
- * Loads 12 LLM batches (one per hour period), in parallel.
- * Hour dots light in timeline order via HourProgressBar sequential logic.
+ * Loads 12 LLM batches sequentially (live hour first), one hour at a time.
  */
 export function SyncroLlmBatchRunner({ sessionId, session, onSessionUpdate, onProgress }: Props) {
   const startedRef = useRef(false);
@@ -191,30 +185,26 @@ export function SyncroLlmBatchRunner({ sessionId, session, onSessionUpdate, onPr
     }
 
     const batchKeyLists = getSyncroBatchKeyLists(ctx.local_matrix);
+    const livePeriod = getCurrentHourPeriod();
+    const hourSequence = sortedHourPeriodsFromLive(livePeriod);
 
-    console.log("[Syncro] 开始加载 12 时辰数据");
-    console.log("[Syncro] 当前 matrix 总 cell 数:", Object.keys(ctx.local_matrix).length);
-
-    const keysByHour: Record<string, number> = {};
-    for (const hour of HOUR_ORDER) {
-      keysByHour[hour] = batchKeyLists[HOUR_ORDER.indexOf(hour)]?.length ?? 0;
-    }
-    console.log("[Syncro] 按时辰分组:", keysByHour);
+    console.log("[Syncro] 开始按序加载 12 时辰 (从当前时辰起):", hourSequence);
 
     let completed = 0;
     let failed = 0;
-    onProgress({ completed, total, running: true, failed });
+    onProgress({ completed, total, running: true, failed, current_hour: hourSequence[0] });
 
-    const results = await Promise.allSettled(
-      HOUR_ORDER.map((hourId, hourIdx) => {
-        const cellKeys = batchKeyLists[hourIdx] ?? [];
-        return loadHourBatch(hourId, hourIdx, cellKeys, ctx!);
-      }),
-    );
+    for (const hourId of hourSequence) {
+      const hourIdx = HOUR_ORDER.indexOf(hourId);
+      const cellKeys = batchKeyLists[hourIdx] ?? [];
 
-    for (const r of results) {
-      if (r.status === "fulfilled" && r.value === "ok") completed++;
+      onProgress({ completed, total, running: true, failed, current_hour: hourId });
+
+      const result = await loadHourBatch(hourId, hourIdx, cellKeys, ctx);
+      if (result === "ok") completed++;
       else failed++;
+
+      onProgress({ completed, total, running: true, failed, current_hour: hourId });
     }
 
     console.log("[Syncro] 所有 batch 完成", { completed, failed, total });

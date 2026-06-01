@@ -65,17 +65,23 @@
   position: absolute;
   top: 50%;
   left: 50%;
+  pointer-events: none;
+  transition: color var(--pj-duration-normal) var(--pj-ease);
+}
+
+.direction-label-text {
+  display: inline-block;
   font-size: 10px;
   font-weight: var(--pj-weight-medium);
   letter-spacing: 1px;
   color: var(--pj-text-secondary);
   white-space: nowrap;
-  transition: color var(--pj-duration-normal) var(--pj-ease);
-  transform: translate(-50%, -50%);
-  /* Upright labels — ring is static; compass rotation is particles only */
+  transition:
+    color var(--pj-duration-normal) var(--pj-ease),
+    transform 200ms ease-out;
 }
 
-.direction-label.active {
+.direction-label.active .direction-label-text {
   color: var(--pj-gold);
   font-size: 11px;
 }
