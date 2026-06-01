@@ -31,7 +31,7 @@ export function MarketingPageLayout({
   );
 }
 
-/** 与首页 landing-sections 相同的灰白毛玻璃板块栈 */
+/** 与首页 landing-sections 相同的导航款毛玻璃板块栈 */
 export function MarketingPageSections({ children, className }: { children: ReactNode; className?: string }) {
   return <div className={cn("landing-sections marketing-page-sections", className)}>{children}</div>;
 }

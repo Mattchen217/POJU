@@ -22,6 +22,7 @@ import {
 import { getCurrentHourPeriod, type HourPeriod, type SyncroSession } from "@/lib/syncro/types";
 
 import "@/styles/syncro-hour-progress.css";
+import "@/styles/syncro-layout.css";
 
 export type SyncroMainViewProps = {
   session: SyncroSession;

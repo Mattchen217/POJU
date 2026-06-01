@@ -399,41 +399,65 @@
   cursor: not-allowed;
 }
 
+/* Part 5 — compact three-mode switcher */
 .three-mode-toggle {
   position: absolute;
-  bottom: 70px;
+  bottom: var(--syncro-toggle-bottom, 75px);
   left: 50%;
   transform: translateX(-50%);
-  z-index: 15;
+  z-index: 9;
   display: flex;
-  gap: 4px;
-  padding: 4px;
-  background: rgba(255, 255, 255, 0.05);
+  gap: 2px;
+  padding: 3px;
+  background: rgba(255, 255, 255, 0.04);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-radius: 20px;
+  border-radius: 16px;
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.06);
   pointer-events: auto;
 }
 
 .three-mode-toggle .mode-tab {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 2px;
-  padding: 8px 18px;
+  gap: 5px;
+  padding: 6px 14px;
   background: transparent;
   color: var(--pj-text-muted);
   font-family: inherit;
   font-size: 10px;
+  font-weight: var(--pj-weight-medium);
+  letter-spacing: 0.3px;
   border: none;
-  border-radius: 16px;
+  border-radius: 13px;
   cursor: pointer;
-  transition: all var(--pj-duration-fast);
+  transition: all var(--pj-duration-fast) var(--pj-ease);
+}
+
+.three-mode-toggle .mode-tab svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
 }
 
 .three-mode-toggle .mode-tab.active {
-  background: rgba(212, 165, 116, 0.18);
+  background: rgba(212, 165, 116, 0.15);
   color: var(--pj-gold);
+}
+
+.three-mode-toggle .mode-tab:not(.active):active {
+  color: var(--pj-text-secondary);
+}
+
+/* Why CTA sits above mode switcher (Part 5 spacing) */
+.syncro-main-view .compass-bottom-cta {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: var(--syncro-why-bottom, 130px);
+  margin-top: 0;
+  z-index: 8;
 }
 
 /* AR layout — see styles/syncro-ar.css */

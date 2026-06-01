@@ -2,32 +2,31 @@
 
 :root {
   /* ============= 背景层 ============= */
-  --bg-primary: linear-gradient(180deg, var(--pj-bg-mid) 0%, var(--pj-bg-deep) 100%);
+  --bg-primary: var(--pj-bg-ambient);
   --bg-primary-solid: var(--pj-bg-deep);
 
+  /* ============= 共享毛玻璃面板（与导航栏 capsule 一致，略增透明） ============= */
+  --glass-panel-bg: rgba(52, 34, 82, 0.36);
+  --glass-panel-blur: blur(20px);
+  --glass-panel-edge: inset 0 0 0 0.5px rgba(255, 255, 255, 0.07);
+  --glass-panel-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
+
   /* ============= 卡片层 (Glass) ============= */
-  --glass-card-bg: rgba(50, 35, 80, 0.4);
-  --glass-card-blur: blur(24px);
+  --glass-card-bg: var(--glass-panel-bg);
+  --glass-card-blur: var(--glass-panel-blur);
   --glass-card-border: none;
-  --glass-card-edge: inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
+  --glass-card-edge: var(--glass-panel-edge);
   --glass-card-radius: 24px;
-  --glass-card-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    var(--glass-card-edge);
+  --glass-card-shadow: var(--glass-panel-shadow), var(--glass-panel-edge);
 
-  --glass-card-bg-elevated: rgba(60, 45, 95, 0.5);
+  --glass-card-bg-elevated: rgba(52, 34, 82, 0.46);
 
-  /* 落地页板块：灰白色毛玻璃（无边框） */
-  --glass-section-bg: linear-gradient(
-    145deg,
-    rgba(255, 255, 255, 0.2) 0%,
-    rgba(252, 252, 255, 0.14) 42%,
-    rgba(245, 245, 250, 0.1) 100%
-  );
-  --glass-section-blur: blur(32px) saturate(1.12);
+  /* 落地页板块：与导航栏同款毛玻璃 */
+  --glass-section-bg: var(--glass-panel-bg);
+  --glass-section-blur: var(--glass-panel-blur);
   --glass-section-border: none;
-  --glass-section-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+  --glass-section-edge: var(--glass-panel-edge);
+  --glass-section-shadow: var(--glass-panel-shadow);
 
   --glass-input-bg: rgba(0, 0, 0, 0.25);
   --glass-input-border: none;
@@ -35,10 +34,10 @@
   --glass-input-radius: 14px;
 
   /* ============= 导航 (胶囊形) ============= */
-  --glass-nav-bg: rgba(40, 30, 60, 0.5);
-  --glass-nav-blur: blur(20px);
+  --glass-nav-bg: var(--glass-panel-bg);
+  --glass-nav-blur: var(--glass-panel-blur);
   --glass-nav-border: none;
-  --glass-nav-edge: inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
+  --glass-nav-edge: var(--glass-panel-edge);
   --glass-nav-radius: 999px;
 
   /* ============= 文字 ============= */

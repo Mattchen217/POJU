@@ -80,6 +80,8 @@ function main() {
   const files = [
     "components/syncro/SyncroMainView.tsx",
     "components/syncro/SyncroCompassMode.tsx",
+    "components/syncro/SyncroParticleCore.tsx",
+    "components/syncro/SyncroDirectionRing.tsx",
     "components/syncro/SyncroParticleCircle.tsx",
     "components/syncro/WhyThisCurrentModal.tsx",
     "styles/syncro-compass.css",
@@ -95,6 +97,7 @@ function main() {
     "components/pwa/BeginButton.tsx",
     "styles/pwa-product-begin.css",
     "styles/syncro-hour-progress.css",
+    "styles/syncro-layout.css",
   ];
   for (const f of files) {
     const src = readFileSync(join(ROOT, f), "utf8");
@@ -102,15 +105,22 @@ function main() {
   }
 
   const compass = readFileSync(join(ROOT, "components/syncro/SyncroCompassMode.tsx"), "utf8");
-  assert(compass.includes("SyncroParticleCircle"), "compass uses particle circle");
+  assert(compass.includes("concentric-system"), "compass uses concentric layout");
+  assert(compass.includes("SyncroDirectionRing"), "compass uses direction ring");
   assert(compass.includes("WhyThisCurrentModal"), "compass has why modal");
 
   const ar = readFileSync(join(ROOT, "components/syncro/SyncroARMode.tsx"), "utf8");
-  assert(ar.includes("ar-camera-section") && ar.includes("getUserMedia"), "AR camera section");
-  assert(ar.includes("ar-particle-ring"), "AR particle ring");
+  assert(ar.includes("concentric-system"), "AR uses concentric layout");
+  assert(ar.includes("ar-camera-window") && ar.includes("getUserMedia"), "AR camera window");
+  assert(ar.includes("SyncroDirectionRing"), "AR direction ring");
 
   const mapMode = readFileSync(join(ROOT, "components/syncro/SyncroMapMode.tsx"), "utf8");
-  assert(mapMode.includes("map-circle") && mapMode.includes("map-point"), "map circular UI");
+  assert(
+    mapMode.includes("concentric-system") && mapMode.includes("map-larger"),
+    "map uses enlarged concentric layout",
+  );
+  assert(mapMode.includes("SyncroDirectionRing") && mapMode.includes("SyncroParticleCore"), "map shared layers");
+  assert(mapMode.includes("map-point") && mapMode.includes("why-btn-prominent"), "map points + CTA");
   assert(mapMode.includes("WhyThisCurrentModal"), "map has why modal");
 
   const whyModal = readFileSync(join(ROOT, "components/syncro/WhyThisCurrentModal.tsx"), "utf8");
@@ -120,6 +130,15 @@ function main() {
 
   const beginBtn = readFileSync(join(ROOT, "components/pwa/BeginButton.tsx"), "utf8");
   assert(beginBtn.includes("isFirstTimeFree") && beginBtn.includes("begin-btn-large"), "PWA begin button");
+
+  const syncroCss = readFileSync(join(ROOT, "styles/syncro.css"), "utf8");
+  assert(syncroCss.includes("flex-direction: row"), "compact mode toggle");
+  assert(syncroCss.includes("--syncro-why-bottom"), "why CTA uses layout token");
+
+  const layoutCss = readFileSync(join(ROOT, "styles/syncro-layout.css"), "utf8");
+  assert(layoutCss.includes("--syncro-bottom-reserve: 160px"), "bottom reserve band");
+  assert(layoutCss.includes("--syncro-phone-hint-top: 100px"), "phone hint below hour bar");
+  assert(layoutCss.includes("padding-top: var(--syncro-stage-top)"), "stage clears top chrome");
 
   const mainView = readFileSync(join(ROOT, "components/syncro/SyncroMainView.tsx"), "utf8");
   assert(mainView.includes("ThreeModeToggle"), "main has three-mode toggle");

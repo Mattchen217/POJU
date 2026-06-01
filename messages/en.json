@@ -1143,19 +1143,22 @@
       }
     },
     "why_this_current": "Why this current",
+    "generating": "Generating reading…",
     "why_modal": {
       "close": "Close"
     },
     "compass": {
       "permission_title": "Enable compass",
       "permission_description": "Syncro needs your device orientation to align readings with the direction you're facing.",
-      "grant_access": "Grant access"
+      "grant_access": "Grant access",
+      "hold_phone_flat": "Hold your phone flat, screen facing up"
     },
     "ar": {
       "permission_title": "Enable camera",
       "permission_description": "AR mode overlays live direction on your camera view. Camera access is required.",
       "grant_access": "Allow camera",
-      "video_label": "Live camera view"
+      "video_label": "Live camera view",
+      "hold_phone_upright": "Hold your phone upright, facing forward"
     },
     "levels": {
       "open": "Open Current",

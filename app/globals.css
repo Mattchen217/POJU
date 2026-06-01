@@ -37,7 +37,7 @@ html {
 
 body {
   margin: 0;
-  background: linear-gradient(180deg, var(--pj-bg-mid) 0%, var(--pj-bg-deep) 100%);
+  background: var(--bg-primary);
   background-attachment: fixed;
   color: var(--pj-text-primary);
   font-family: var(--pj-font-sans), var(--font-body);
@@ -94,7 +94,9 @@ button {
   }
 
   .aura-bg {
-    background: radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.15), transparent 60%);
+    background:
+      radial-gradient(circle at 50% 20%, rgba(108, 52, 172, 0.22), transparent 62%),
+      radial-gradient(circle at 80% 80%, rgba(76, 38, 132, 0.12), transparent 55%);
   }
 
   .glass-panel {

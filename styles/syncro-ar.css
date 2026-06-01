@@ -1,30 +1,50 @@
-.syncro-main-view--ar .syncro-mode-stage {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: flex-start;
-  padding: 128px 0 88px;
-  overflow: hidden;
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-}
+/* Mode stage layout — styles/syncro-layout.css (Part 6) */
 
 .ar-mode {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
-  flex: 1;
-}
-
-.ar-camera-section {
   position: relative;
   width: 100%;
-  flex: 0 0 45%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   min-height: 0;
+}
+
+.ar-phone-hint .phone-position-hint-icon {
+  transform: none;
+}
+
+/* === AR circular camera window (center, does not rotate) === */
+
+.ar-window-layer {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 160px;
+  height: 160px;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.ar-camera-window {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
   overflow: hidden;
-  background: var(--pj-bg-deep);
+  position: relative;
+  transition: box-shadow 600ms ease;
+  animation: ar-halo-breathe 3s ease-in-out infinite;
+}
+
+@keyframes ar-halo-breathe {
+  0%,
+  100% {
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 .ar-video {
@@ -37,7 +57,7 @@
 .ar-video-placeholder {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, var(--pj-bg-mid) 0%, var(--pj-bg-deep) 100%);
+  background: var(--pj-bg-deep);
   animation: ar-video-pulse 1.2s ease-in-out infinite;
 }
 
@@ -51,101 +71,54 @@
   }
 }
 
-.ar-particles {
+.ar-info-overlay {
   position: absolute;
   inset: 0;
-  pointer-events: none;
-}
-
-.ar-particle-ring {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 120%;
-  height: 120%;
-  transform-origin: center center;
-  background: radial-gradient(
-    circle at center,
-    transparent 35%,
-    rgba(212, 165, 116, 0.15) 50%,
-    transparent 70%
-  );
-  border-radius: 50%;
-}
-
-.ar-direction-badge {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  padding: 6px 14px;
-  background: rgba(7, 9, 26, 0.7);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-radius: var(--pj-radius-pill);
-  color: var(--pj-gold);
-  font-size: var(--pj-text-sm);
-  font-weight: var(--pj-weight-medium);
-  letter-spacing: 1px;
-  z-index: 3;
-}
-
-.ar-content-section {
-  flex: 1;
-  min-height: 0;
-  padding: 28px 24px 24px;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(
+    circle at center,
+    rgba(7, 5, 15, 0.55) 0%,
+    rgba(7, 5, 15, 0.2) 60%,
+    transparent 100%
+  );
+  pointer-events: none;
   text-align: center;
-  background: linear-gradient(180deg, var(--pj-bg-deep) 0%, var(--pj-bg-mid) 100%);
-  overflow-y: auto;
+  padding: 8px;
 }
 
-.ar-content-section .current-level {
-  font-size: var(--pj-text-xl);
-  font-weight: var(--pj-weight-medium);
-  line-height: var(--pj-leading-tight);
-}
-
-.ar-content-section .cell-meta {
-  margin-top: 10px;
-  font-size: var(--pj-text-xs);
+.ar-info-overlay--loading {
+  gap: 8px;
+  font-size: 11px;
   color: var(--pj-text-tertiary);
+}
+
+.ar-level {
+  font-size: 14px;
+  font-weight: var(--pj-weight-medium);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
+  line-height: 1.2;
+}
+
+.ar-meta {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.88);
+  letter-spacing: 0.3px;
+  margin-top: 4px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
   display: flex;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
   flex-wrap: wrap;
 }
 
-.ar-content-section .meta-divider {
-  color: var(--pj-text-muted);
-}
-
-.ar-content-section .short-advice {
+.ar-short-advice {
   margin-top: 20px;
-  font-size: var(--pj-text-base);
-  color: var(--pj-text-primary);
-  line-height: var(--pj-leading-relaxed);
-  flex: 1;
 }
 
-.ar-content-section .why-btn {
-  margin-top: 20px;
-  display: inline-block;
-  align-self: center;
-  padding: 8px 18px;
-  background: rgba(212, 165, 116, 0.08);
-  color: var(--pj-gold);
-  font-family: inherit;
-  font-size: 10px;
-  letter-spacing: 0.3px;
-  border-radius: var(--pj-radius-pill);
-  cursor: pointer;
-  transition: background var(--pj-duration-fast) var(--pj-ease);
-}
-
-.ar-content-section .why-btn:active {
-  background: rgba(212, 165, 116, 0.15);
-}
+/* === Permission / loading (full screen) === */
 
 .ar-permission-needed {
   display: flex;
@@ -192,20 +165,14 @@
   font-family: inherit;
   font-size: var(--pj-text-base);
   font-weight: var(--pj-weight-medium);
+  border: none;
   border-radius: var(--pj-radius-pill);
   cursor: pointer;
 }
 
-.ar-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 50vh;
-  color: var(--pj-gold);
-}
-
 .ar-loading-spin {
   animation: ar-loading-spin 1s linear infinite;
+  color: var(--pj-gold);
 }
 
 @keyframes ar-loading-spin {

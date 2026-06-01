@@ -27,5 +27,12 @@ export function getCurrentLevelFallbackLabel(level: CurrentLevel, isZh: boolean)
 
 /** CSS status class suffix for map points (e.g. `status-open`). */
 export function currentLevelMapPointStatusClass(level: CurrentLevel): string {
-  return level.replace("_current", "").replace(/_/g, "-");
+  const MAP_STATUS: Record<CurrentLevel, string> = {
+    open_current: "open",
+    following_current: "following",
+    stillwater: "still",
+    crosscurrent: "cross",
+    undertow: "under",
+  };
+  return MAP_STATUS[level];
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { runSyncroLlmBatch } from "@/lib/llm/services/syncro-reading-service";
+import { runSyncroLlmBatch, getSyncroBatchKeyLists } from "@/lib/llm/services/syncro-reading-service";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 import { parseAppLocale } from "@/lib/prompts/language-directive";
 import type { MatrixCell } from "@/lib/syncro/calculate-matrix";
@@ -75,6 +75,21 @@ export async function POST(req: Request) {
 
     const locale = parseAppLocale(body.locale ?? "en");
 
+    const batchKeyLists = getSyncroBatchKeyLists(body.local_matrix);
+    const sliceKeys = batchKeyLists[body.batch_index] ?? [];
+    const matrixSlice: Record<string, MatrixCell> = {};
+    for (const key of sliceKeys) {
+      matrixSlice[key] = body.local_matrix[key];
+    }
+
+    console.log("[llm_batch] received:", {
+      batch_index: body.batch_index,
+      slice_size: Object.keys(matrixSlice).length,
+      slice_hour_periods: [
+        ...new Set(Object.keys(matrixSlice).map((k) => k.split("__")[0]).filter(Boolean)),
+      ],
+    });
+
     const result = await runSyncroLlmBatch({
       batch_index: body.batch_index,
       profile: body.user_profile,
@@ -85,6 +100,13 @@ export async function POST(req: Request) {
       local_matrix: body.local_matrix,
       compute_started_at: body.compute_started_at ?? new Date().toISOString(),
       true_solar: body.true_solar_meta,
+    });
+
+    const sampleAdvice = Object.values(result.advice)[0];
+    console.log("[llm_batch] LLM returned:", {
+      batch_index: body.batch_index,
+      cells_with_advice: Object.keys(result.advice).length,
+      sample_advice: sampleAdvice,
     });
 
     console.log(

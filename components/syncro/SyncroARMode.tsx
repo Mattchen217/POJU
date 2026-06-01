@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { IconCamera, IconLoader2 } from "@tabler/icons-react";
+import { IconCamera, IconDeviceMobile, IconLoader2 } from "@tabler/icons-react";
 import { useLocale, useTranslations } from "next-intl";
 
+import { SyncroDirectionRing } from "@/components/syncro/SyncroDirectionRing";
+import { SyncroParticleCore } from "@/components/syncro/SyncroParticleCore";
 import { WhyThisCurrentModal } from "@/components/syncro/WhyThisCurrentModal";
 import { useOrientation } from "@/components/syncro/SyncroOrientationProvider";
+import { getArHaloColors } from "@/lib/syncro/ar-halo-colors";
 import {
   getCurrentLevelFallbackLabel,
   getCurrentLevelI18nKey,
@@ -13,12 +16,12 @@ import {
 import {
   compassDegreeToDirection,
   currentLevelCssClass,
-  DIRECTIONS,
   type DirectionId,
 } from "@/lib/syncro/current-system";
 import { HOUR_PERIOD_RANGES, hourPeriodDisplayName } from "@/lib/syncro/hour-period-ranges";
 import { matrixKey, type HourPeriod, type SyncroSession } from "@/lib/syncro/types";
 
+import "@/styles/syncro-compass.css";
 import "@/styles/syncro-ar.css";
 
 export type SyncroARModeProps = {
@@ -29,6 +32,16 @@ export type SyncroARModeProps = {
   cameraGranted?: boolean;
   onRequestCamera?: () => void;
 };
+
+function UprightPhoneHint() {
+  const t = useTranslations("syncro.ar");
+  return (
+    <div className="phone-position-hint ar-phone-hint">
+      <IconDeviceMobile aria-hidden size={14} stroke={1.75} className="phone-position-hint-icon" />
+      <span>{t("hold_phone_upright")}</span>
+    </div>
+  );
+}
 
 export function SyncroARMode({
   session,
@@ -123,66 +136,87 @@ export function SyncroARMode({
     );
   }
 
-  if (!cell) {
-    return (
-      <div className="ar-loading" aria-busy="true">
-        <IconLoader2 aria-hidden size={28} stroke={1.5} className="ar-loading-spin" />
-      </div>
-    );
-  }
+  const halo = getArHaloColors(cell?.current_level);
+  const haloStyle = {
+    boxShadow: `0 0 32px ${halo.glow1}, 0 0 64px ${halo.glow2}, inset 0 0 0 2px ${halo.border}`,
+  } as const;
 
-  const levelKey = getCurrentLevelI18nKey(cell.current_level);
-  let levelTitle: string;
-  try {
-    levelTitle = tLevels(levelKey);
-  } catch {
-    levelTitle = getCurrentLevelFallbackLabel(cell.current_level, isZh);
+  let levelTitle = "";
+  if (cell) {
+    const levelKey = getCurrentLevelI18nKey(cell.current_level);
+    try {
+      levelTitle = tLevels(levelKey);
+    } catch {
+      levelTitle = getCurrentLevelFallbackLabel(cell.current_level, isZh);
+    }
   }
-
-  const dirInfo = DIRECTIONS[currentDirection];
 
   return (
-    <div className={`ar-mode ${llmHighlight ? "syncro-llm-cell-updated" : ""}`}>
-      <div className="ar-camera-section">
-        <video
-          ref={videoRef}
-          className="ar-video"
-          playsInline
-          muted
-          autoPlay
-          aria-label={t("ar.video_label")}
-        />
-        {!streamReady ? <div className="ar-video-placeholder" aria-hidden /> : null}
+    <div className={`syncro-immersive ar-mode ${llmHighlight ? "syncro-llm-cell-updated" : ""}`}>
+      <UprightPhoneHint />
 
-        <div className="ar-particles" aria-hidden>
+      <div className="syncro-content-overlay ar-mode-body">
+        <div className="concentric-system">
           <div
-            className="ar-particle-ring"
-            style={{ transform: `translate(-50%, -50%) rotate(${-compassDegree}deg)` }}
-          />
+            className="rotating-layer"
+            style={{
+              transform: `rotate(${-compassDegree}deg)`,
+              transition: "transform 200ms ease-out",
+            }}
+          >
+            <SyncroParticleCore />
+            <SyncroDirectionRing activeDirection={currentDirection} />
+          </div>
+
+          <div className="ar-window-layer">
+            <div className="ar-camera-window" style={haloStyle}>
+              <video
+                ref={videoRef}
+                className="ar-video"
+                playsInline
+                muted
+                autoPlay
+                aria-label={t("ar.video_label")}
+              />
+              {!streamReady ? <div className="ar-video-placeholder" aria-hidden /> : null}
+
+              {cell ? (
+                <div className="ar-info-overlay">
+                  <div className={`ar-level ${currentLevelCssClass(cell.current_level)}`}>
+                    {levelTitle}
+                  </div>
+                  <div className="ar-meta">
+                    <span>{currentDirection}</span>
+                    <span className="meta-divider">·</span>
+                    <span>
+                      {hourPeriodDisplayName(hourPeriod, resolvedLocale)} ·{" "}
+                      {HOUR_PERIOD_RANGES[hourPeriod]}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="ar-info-overlay ar-info-overlay--loading" aria-busy="true">
+                  <IconLoader2 aria-hidden size={20} stroke={1.5} className="ar-loading-spin" />
+                  <span>{t("generating")}</span>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
-        <div className="ar-direction-badge">{currentDirection}</div>
+        {cell ? (
+          <>
+            <p className="compass-short-advice ar-short-advice">{cell.short_advice}</p>
+            <div className="compass-bottom-cta">
+              <button type="button" className="why-btn-prominent" onClick={() => setWhyModalOpen(true)}>
+                {t("why_this_current")}
+              </button>
+            </div>
+          </>
+        ) : null}
       </div>
 
-      <div className="ar-content-section">
-        <div className={`current-level ${currentLevelCssClass(cell.current_level)}`}>{levelTitle}</div>
-
-        <div className="cell-meta">
-          <span>{isZh ? dirInfo.name_zh : dirInfo.name_en}</span>
-          <span className="meta-divider">·</span>
-          <span>
-            {hourPeriodDisplayName(hourPeriod, resolvedLocale)} · {HOUR_PERIOD_RANGES[hourPeriod]}
-          </span>
-        </div>
-
-        <p className="short-advice">{cell.short_advice}</p>
-
-        <button type="button" className="why-btn" onClick={() => setWhyModalOpen(true)}>
-          {t("why_this_current")}
-        </button>
-      </div>
-
-      {whyModalOpen ? (
+      {whyModalOpen && cell ? (
         <WhyThisCurrentModal
           cell={cell}
           direction={currentDirection}

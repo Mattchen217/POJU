@@ -4,15 +4,6 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { BrandLockup } from "@/components/marketing/brand-lockup";
 
-const PRODUCT_LINKS = [
-  { href: "/", key: "home" as const },
-  { href: "/poju", key: "poju" as const },
-  { href: "/glyph", key: "glyph" as const },
-  { href: "/syncro", key: "syncro" as const },
-  { href: "/match", key: "match" as const },
-  { href: "/archive", key: "archive" as const },
-] as const;
-
 const LEGAL_LINKS = [
   { href: "/disclaimer", key: "disclaimer" as const },
   { href: "/privacy", key: "privacy" as const },
@@ -31,21 +22,12 @@ export function SiteFooter() {
     <footer className="marketing-footer mt-16 w-full px-4 py-8 md:mt-24 md:px-8">
       <div className="mx-auto max-w-6xl text-center">
         <div className="flex flex-col items-center gap-2">
-          <Link href="/" className="inline-flex" aria-label={`${brandLabel} — ${tCommon("domain")}`}>
+          <Link href="/" className="inline-flex" aria-label={brandLabel}>
             <BrandLockup label={brandLabel} size="footer" />
           </Link>
-          <p className="text-xs text-text-dim">{tCommon("domain")}</p>
         </div>
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm text-text-secondary">
-          {PRODUCT_LINKS.map(({ href, key }) => (
-            <Link key={key} href={href} className="hover:text-text-primary">
-              {tNav(key)}
-            </Link>
-          ))}
-        </div>
-
-        <div className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm text-text-secondary">
           {LEGAL_LINKS.map(({ href, key }) => (
             <Link key={key} href={href} className="hover:text-text-primary">
               {tNav(key)}

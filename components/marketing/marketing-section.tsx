@@ -13,7 +13,7 @@ type MarketingSectionProps = {
   subtitle?: string;
 };
 
-/** 灰白毛玻璃板块 + 可选居中标题（与首页 GlassSection 一致） */
+/** 导航款毛玻璃板块 + 可选居中标题（与首页 GlassSection 一致） */
 export function MarketingSection({
   children,
   id,

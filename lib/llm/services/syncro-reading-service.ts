@@ -192,7 +192,14 @@ function validateMatrix(matrix: SyncroMatrix): void {
   }
 }
 
-export function generateFallbackShort(cell: MatrixCell, outputLocale: AppLocale = "en"): string {
+function devFallbackTag(text: string): string {
+  if (process.env.NODE_ENV === "development") {
+    return `[FALLBACK] ${text}`;
+  }
+  return text;
+}
+
+function fallbackShortText(cell: MatrixCell, outputLocale: AppLocale): string {
   const en: Record<CurrentLevel, string> = {
     open_current: "Move with confidence — the current is fully with you.",
     following_current: "The current supports you, with some effort.",
@@ -211,20 +218,28 @@ export function generateFallbackShort(cell: MatrixCell, outputLocale: AppLocale 
   return map[cell.current_level] ?? (outputLocale === "zh" ? "谨慎推进。" : "Take a measured approach.");
 }
 
+export function generateFallbackShort(cell: MatrixCell, outputLocale: AppLocale = "en"): string {
+  return devFallbackTag(fallbackShortText(cell, outputLocale));
+}
+
 export function generateFallbackDetailed(cell: MatrixCell, outputLocale: AppLocale = "en"): string {
   const tail =
     outputLocale === "zh"
       ? " 这一判断来自你的命盘与当下时空格局的综合作用。"
       : " This pattern emerges from the combination of your chart and the current moment.";
-  return generateFallbackShort(cell, outputLocale) + tail;
+  return devFallbackTag(fallbackShortText(cell, outputLocale) + tail);
 }
 
 export function generateFallbackRationale(cell: MatrixCell, outputLocale: AppLocale = "en"): string {
   const levelLabel = cell.current_level.replace(/_/g, " ");
   if (outputLocale === "zh") {
-    return `就你此刻要做的事来说，这个时辰与方位的组合呈现出「${levelLabel}」的节奏——把意图对准这件事，顺势而行比硬撑更有效。`;
+    return devFallbackTag(
+      `就你此刻要做的事来说，这个时辰与方位的组合呈现出「${levelLabel}」的节奏——把意图对准这件事，顺势而行比硬撑更有效。`,
+    );
   }
-  return `For what you're about to do, this hour-and-direction pairing carries a ${levelLabel} rhythm—align with the task rather than forcing the moment.`;
+  return devFallbackTag(
+    `For what you're about to do, this hour-and-direction pairing carries a ${levelLabel} rhythm—align with the task rather than forcing the moment.`,
+  );
 }
 
 export function chunkArray<T>(items: T[], parts: number): T[][] {

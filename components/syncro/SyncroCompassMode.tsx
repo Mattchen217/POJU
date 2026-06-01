@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { IconCompass, IconLoader2 } from "@tabler/icons-react";
+import { useEffect, useState } from "react";
+import { IconCompass, IconDeviceMobile, IconLoader2 } from "@tabler/icons-react";
 import { useLocale, useTranslations } from "next-intl";
 
-import { SyncroParticleCircle } from "@/components/syncro/SyncroParticleCircle";
+import { SyncroDirectionRing } from "@/components/syncro/SyncroDirectionRing";
+import { SyncroParticleCore } from "@/components/syncro/SyncroParticleCore";
 import { WhyThisCurrentModal } from "@/components/syncro/WhyThisCurrentModal";
 import { useOrientation } from "@/components/syncro/SyncroOrientationProvider";
 import {
@@ -18,7 +19,7 @@ import {
   getCurrentLevelI18nKey,
 } from "@/lib/syncro/compass-display";
 import { HOUR_PERIOD_RANGES, hourPeriodDisplayName } from "@/lib/syncro/hour-period-ranges";
-import { matrixKey, type HourPeriod, type SyncroSession } from "@/lib/syncro/types";
+import { matrixKey, type HourPeriod, type SyncroCombination, type SyncroSession } from "@/lib/syncro/types";
 
 import "@/styles/syncro-compass.css";
 
@@ -29,6 +30,48 @@ export type SyncroCompassModeProps = {
   highlightMatrixKeys?: Set<string>;
 };
 
+function FlatPhoneHint() {
+  const t = useTranslations("syncro.compass");
+  return (
+    <div className="phone-position-hint">
+      <IconDeviceMobile aria-hidden size={14} stroke={1.75} className="phone-position-hint-icon" />
+      <span>{t("hold_phone_flat")}</span>
+    </div>
+  );
+}
+
+function CenterCurrentDisplay({
+  cell,
+  hourPeriod,
+  currentDirection,
+  isZh,
+  levelTitle,
+}: {
+  cell: SyncroCombination;
+  hourPeriod: HourPeriod;
+  currentDirection: DirectionId;
+  isZh: boolean;
+  levelTitle: string;
+}) {
+  const resolvedLocale = useLocale();
+  const dirInfo = DIRECTIONS[currentDirection];
+
+  return (
+    <div className="current-display">
+      <div className={`current-level ${currentLevelCssClass(cell.current_level)}`}>
+        <div className="level-line">{levelTitle}</div>
+      </div>
+      <div className="current-meta">
+        <span>{isZh ? dirInfo.name_zh : dirInfo.name_en}</span>
+        <span className="meta-divider">·</span>
+        <span>
+          {hourPeriodDisplayName(hourPeriod, resolvedLocale)} · {HOUR_PERIOD_RANGES[hourPeriod]}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export function SyncroCompassMode({
   session,
   locale,
@@ -37,7 +80,6 @@ export function SyncroCompassMode({
 }: SyncroCompassModeProps) {
   const t = useTranslations("syncro");
   const tLevels = useTranslations("syncro.levels");
-  const resolvedLocale = useLocale();
   const isZh = locale.startsWith("zh");
 
   const { compassDegree, hasPermission, requestPermission, isSupported } = useOrientation();
@@ -47,6 +89,19 @@ export function SyncroCompassMode({
   const cellKey = matrixKey(hourPeriod, currentDirection);
   const cell = session.matrix[cellKey];
   const llmHighlight = highlightMatrixKeys?.has(cellKey);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development") return;
+    console.log("[Compass] cell lookup:", {
+      activeHour: hourPeriod,
+      currentDirection,
+      cellKey,
+      found: !!cell,
+      has_llm_advice: !!cell?.short_advice && !cell.short_advice.startsWith("[FALLBACK]"),
+      is_fallback: cell?.llm_pending ?? !cell,
+      cell_data: cell,
+    });
+  }, [hourPeriod, currentDirection, cellKey, cell]);
 
   if (!isSupported) {
     return (
@@ -71,55 +126,64 @@ export function SyncroCompassMode({
     );
   }
 
-  if (!cell) {
-    return (
-      <div className="compass-loading" aria-busy="true">
-        <IconLoader2 aria-hidden size={28} stroke={1.5} className="compass-loading-spin" />
-      </div>
-    );
+  const levelKey = cell ? getCurrentLevelI18nKey(cell.current_level) : null;
+  let levelTitle = "";
+  if (cell && levelKey) {
+    try {
+      levelTitle = tLevels(levelKey);
+    } catch {
+      levelTitle = getCurrentLevelFallbackLabel(cell.current_level, isZh);
+    }
   }
-
-  const levelKey = getCurrentLevelI18nKey(cell.current_level);
-  let levelTitle: string;
-  try {
-    levelTitle = tLevels(levelKey);
-  } catch {
-    levelTitle = getCurrentLevelFallbackLabel(cell.current_level, isZh);
-  }
-
-  const dirInfo = DIRECTIONS[currentDirection];
 
   return (
     <div className={`syncro-immersive compass-mode ${llmHighlight ? "syncro-llm-cell-updated" : ""}`}>
-      <div className="syncro-content-overlay">
-        <div className="compass-particle-area">
-          <SyncroParticleCircle rotation={-compassDegree} activeDirection={currentDirection} />
+      <FlatPhoneHint />
 
-          <div className="center-info">
-            <div className={`current-level ${currentLevelCssClass(cell.current_level)}`}>
-              <div className="level-line">{levelTitle}</div>
-            </div>
+      <div className="syncro-content-overlay compass-mode-body">
+        <div className="concentric-system">
+          <div
+            className="rotating-layer"
+            style={{
+              transform: `rotate(${-compassDegree}deg)`,
+              transition: "transform 200ms ease-out",
+            }}
+          >
+            <SyncroParticleCore />
+            <SyncroDirectionRing activeDirection={currentDirection} />
+          </div>
 
-            <div className="cell-meta">
-              <span>{isZh ? dirInfo.name_zh : dirInfo.name_en}</span>
-              <span className="meta-divider">·</span>
-              <span>
-                {hourPeriodDisplayName(hourPeriod, resolvedLocale)} · {HOUR_PERIOD_RANGES[hourPeriod]}
-              </span>
-            </div>
+          <div className="center-info-layer">
+            {!cell ? (
+              <div className="no-data" aria-busy="true">
+                <IconLoader2 aria-hidden size={20} stroke={1.5} className="no-data-spin" />
+                <span>{t("generating")}</span>
+              </div>
+            ) : (
+              <CenterCurrentDisplay
+                cell={cell}
+                hourPeriod={hourPeriod}
+                currentDirection={currentDirection}
+                isZh={isZh}
+                levelTitle={levelTitle}
+              />
+            )}
           </div>
         </div>
 
-        <div className="compass-footer syncro-info-bottom">
-          <p className="short-advice">{cell.short_advice}</p>
-
-          <button type="button" className="why-btn" onClick={() => setWhyModalOpen(true)}>
-            {t("why_this_current")}
-          </button>
-        </div>
+        {cell ? (
+          <>
+            <p className="compass-short-advice">{cell.short_advice}</p>
+            <div className="compass-bottom-cta">
+              <button type="button" className="why-btn-prominent" onClick={() => setWhyModalOpen(true)}>
+                {t("why_this_current")}
+              </button>
+            </div>
+          </>
+        ) : null}
       </div>
 
-      {whyModalOpen ? (
+      {whyModalOpen && cell ? (
         <WhyThisCurrentModal
           cell={cell}
           direction={currentDirection}

@@ -2,14 +2,14 @@
   position: fixed;
   inset: 0;
   z-index: 9998;
-  background: linear-gradient(180deg, var(--pj-bg-mid) 0%, var(--pj-bg-deep) 100%);
+  background: var(--bg-primary);
 }
 
 .pwa-disclaimer-gate,
 .pwa-install-screen {
   position: fixed;
   inset: 0;
-  background: linear-gradient(180deg, var(--pj-bg-mid) 0%, var(--pj-bg-deep) 100%);
+  background: var(--bg-primary);
   color: var(--pj-text-primary);
   font-family: var(--pj-font-sans);
   display: flex;

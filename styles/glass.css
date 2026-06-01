@@ -17,22 +17,19 @@
   background: var(--glass-card-bg-elevated);
   backdrop-filter: var(--glass-card-blur);
   -webkit-backdrop-filter: var(--glass-card-blur);
-  box-shadow:
-    0 16px 48px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    var(--glass-card-edge);
+  box-shadow: var(--glass-card-shadow);
 }
 
 .glass-card-subtle {
-  background: rgba(40, 30, 60, 0.25);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.04);
+  background: var(--glass-panel-bg);
+  backdrop-filter: var(--glass-panel-blur);
+  -webkit-backdrop-filter: var(--glass-panel-blur);
+  box-shadow: var(--glass-panel-edge);
 }
 
 .glass-card[role="button"]:hover,
 .glass-card-elevated[role="button"]:hover {
-  background: rgba(60, 45, 95, 0.5);
+  background: var(--glass-card-bg-elevated);
   transform: translateY(-1px);
   transition: all var(--duration-base) var(--ease-smooth);
 }
@@ -192,7 +189,10 @@
 }
 
 .glass-text-section .section-body {
-  background: var(--glass-input-bg);
+  background: var(--glass-panel-bg);
+  backdrop-filter: var(--glass-panel-blur);
+  -webkit-backdrop-filter: var(--glass-panel-blur);
+  box-shadow: var(--glass-panel-edge);
   border-radius: var(--glass-input-radius);
   padding: var(--space-4);
   color: var(--text-secondary);
@@ -207,7 +207,7 @@
   margin-bottom: 0;
 }
 
-/* ============= Landing / 营销大板块毛玻璃底板 ============= */
+/* ============= Landing / 营销大板块毛玻璃底板（与导航栏一致） ============= */
 
 .landing-sections {
   display: flex;
@@ -235,24 +235,9 @@
   background: var(--glass-section-bg);
   backdrop-filter: var(--glass-section-blur);
   -webkit-backdrop-filter: var(--glass-section-blur);
-  box-shadow: var(--glass-section-shadow), var(--pj-shadow-card);
+  box-shadow: var(--glass-section-shadow), var(--glass-section-edge);
   outline: none;
   padding: var(--space-6) var(--space-4);
-}
-
-/* 极淡高光，强化「灰白磨砂」而非暗色蒙层 */
-.glass-section::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  background: radial-gradient(
-    ellipse 120% 80% at 50% -20%,
-    rgba(255, 255, 255, 0.18) 0%,
-    transparent 55%
-  );
 }
 
 .glass-section > * {

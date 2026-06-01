@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 
 import { readFetchJson } from "@/lib/client/fetch-json";
-import { SYNCRO_LLM_BATCH_COUNT } from "@/lib/llm/services/syncro-reading-service";
+import { SYNCRO_LLM_BATCH_COUNT, getSyncroBatchKeyLists } from "@/lib/llm/services/syncro-reading-service";
 import {
   clearSyncroLlmContext,
   loadSyncroLlmContext,
@@ -43,6 +43,10 @@ export function SyncroLlmBatchRunner({ sessionId, onSessionUpdate, onProgress }:
     batch_index: number,
     ctx: NonNullable<ReturnType<typeof loadSyncroLlmContext>>,
   ): Promise<"ok" | "fail"> {
+    const batchKeyLists = getSyncroBatchKeyLists(ctx.local_matrix);
+    const batchKeysForSlice = batchKeyLists[batch_index] ?? [];
+    console.log(`[batch ${batch_index}] starting, keys:`, batchKeysForSlice);
+
     try {
       const response = await fetch("/api/syncro/llm_batch", {
         method: "POST",
@@ -80,6 +84,14 @@ export function SyncroLlmBatchRunner({ sessionId, onSessionUpdate, onProgress }:
         return "fail";
       }
 
+      const firstAdvice = Object.values(data.advice)[0];
+      console.log(`[batch ${batch_index}] received:`, {
+        advice_keys: Object.keys(data.advice),
+        has_short: !!firstAdvice?.short_advice,
+        has_detailed: !!firstAdvice?.detailed_advice,
+        has_rationale: !!firstAdvice?.rationale,
+      });
+
       const updated = await patchSyncroSessionMatrix(sessionId, data.advice, {
         model: data.model,
         tokens_used: data.tokens_used ?? 0,
@@ -92,6 +104,12 @@ export function SyncroLlmBatchRunner({ sessionId, onSessionUpdate, onProgress }:
           batch_index,
           batch_total: SYNCRO_LLM_BATCH_COUNT,
           updated_keys: Object.keys(data.advice),
+        });
+        const matrix = updated.matrix;
+        console.log(`[batch ${batch_index}] after merge, matrix stats:`, {
+          total: Object.keys(matrix).length,
+          with_llm: Object.values(matrix).filter((c) => !c.llm_pending).length,
+          pending: Object.values(matrix).filter((c) => c.llm_pending).length,
         });
       }
       return "ok";

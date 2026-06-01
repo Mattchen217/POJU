@@ -210,7 +210,7 @@ export default async function LandingPage() {
           <div className="absolute inset-0 z-10 mx-auto flex min-h-0 w-full max-w-6xl flex-col items-center justify-center px-4 pb-16 pt-12 text-center sm:px-6 sm:pb-20 sm:pt-14 md:pb-24 md:pt-16">
             <div className="flex w-full max-w-[min(98vw,72rem)] flex-col items-center px-1">
               {/* 主标题 · 大 */}
-              <h1 className="font-primary mt-5 max-w-[min(40rem,92vw)] text-[clamp(1.2rem,3.6vw,2.35rem)] font-medium leading-snug tracking-tight text-white drop-shadow-[0_2px_14px_rgba(0,0,0,0.85)] sm:mt-6 md:max-w-[44rem]">
+              <h1 className="product-hero__title font-primary mt-5 max-w-[min(40rem,92vw)] text-white drop-shadow-[0_2px_14px_rgba(0,0,0,0.85)] sm:mt-6 md:max-w-[44rem]">
                 {tHome("hero.headline")}
               </h1>
               {/* [3] 副描述 · 中 */}

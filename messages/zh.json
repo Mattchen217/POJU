@@ -1158,19 +1158,22 @@
       }
     },
     "why_this_current": "为何此时",
+    "generating": "正在生成解读…",
     "why_modal": {
       "close": "关闭"
     },
     "compass": {
       "permission_title": "开启罗盘",
       "permission_description": "Syncro 需要设备方向传感器，才能根据你面向的方位给出解读。",
-      "grant_access": "允许访问"
+      "grant_access": "允许访问",
+      "hold_phone_flat": "请将手机平放，屏幕朝上"
     },
     "ar": {
       "permission_title": "开启摄像头",
       "permission_description": "AR 模式在实时画面上叠加方位解读，需要摄像头权限。",
       "grant_access": "允许摄像头",
-      "video_label": "实时摄像头画面"
+      "video_label": "实时摄像头画面",
+      "hold_phone_upright": "请将手机竖立，正对前方"
     },
     "levels": {
       "open": "顺势",

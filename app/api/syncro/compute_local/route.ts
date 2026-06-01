@@ -27,6 +27,18 @@ export async function POST(req: Request) {
       base_analysis: parsed.data.base_analysis,
     });
 
+    const matrixKeys = Object.keys(result.matrix);
+    const hourPeriods = [
+      ...new Set(matrixKeys.map((k) => k.split("__")[0]).filter(Boolean)),
+    ];
+    console.log("[compute_local] matrix generated:", {
+      total_cells: matrixKeys.length,
+      expected: 96,
+      sample_keys: matrixKeys.slice(0, 5),
+      all_hour_periods: hourPeriods,
+      llm_pending_count: Object.values(result.matrix).filter((c) => c.llm_pending).length,
+    });
+
     console.log(`[api/syncro/compute_local] ok in ${Date.now() - started}ms`);
 
     return NextResponse.json({

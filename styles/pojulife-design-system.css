@@ -4,13 +4,13 @@
    ============================================ */
 
 :root {
-  /* === 背景色(深空渐变)=== */
-  --pj-bg-deep: #07091a;
-  --pj-bg-mid: #0f1428;
-  --pj-bg-elevated: #131736;
+  /* === 背景色（黑紫渐变，紫韵可见、底仍偏黑）=== */
+  --pj-bg-deep: #07050f;
+  --pj-bg-mid: #1a102c;
+  --pj-bg-elevated: #1e1630;
   --pj-bg-card: rgba(255, 255, 255, 0.04);
   --pj-bg-card-hover: rgba(255, 255, 255, 0.07);
-  --pj-bg-overlay: rgba(7, 9, 26, 0.85);
+  --pj-bg-overlay: rgba(7, 5, 15, 0.88);
 
   /* === 文字色(柔和层次)=== */
   --pj-text-primary: #e8e8f0;
@@ -102,7 +102,12 @@
   --pj-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 
   /* === Legacy bridge (existing CSS / Tailwind aliases) === */
-  --bg-primary: linear-gradient(180deg, var(--pj-bg-mid) 0%, var(--pj-bg-deep) 100%);
+  --pj-bg-ambient:
+    radial-gradient(ellipse 110% 75% at 50% -8%, rgba(108, 52, 172, 0.34) 0%, transparent 56%),
+    radial-gradient(ellipse 80% 60% at 12% 92%, rgba(76, 38, 132, 0.22) 0%, transparent 54%),
+    radial-gradient(ellipse 65% 50% at 88% 38%, rgba(90, 45, 150, 0.14) 0%, transparent 52%),
+    linear-gradient(180deg, #24163c 0%, #1a102e 26%, #120c22 52%, #0a0716 78%, var(--pj-bg-deep) 100%);
+  --bg-primary: var(--pj-bg-ambient);
   --bg-primary-solid: var(--pj-bg-deep);
   --text-primary: var(--pj-text-primary);
   --text-secondary: var(--pj-text-secondary);
@@ -121,7 +126,7 @@
 
 /* === 重要:全站默认背景 === */
 body {
-  background: linear-gradient(180deg, var(--pj-bg-mid) 0%, var(--pj-bg-deep) 100%);
+  background: var(--bg-primary);
   background-attachment: fixed;
   color: var(--pj-text-primary);
   font-family: var(--pj-font-sans);

@@ -1,0 +1,85 @@
+/**
+ * Part 6 — Syncro vertical stack (bottom → top).
+ * Nav (fixed z-100) → mode toggle → Why CTA → concentric → hour bar → phone hint.
+ */
+
+.syncro-main-view {
+  --syncro-nav-reserve: max(60px, calc(48px + env(safe-area-inset-bottom, 0px)));
+  --syncro-toggle-bottom: 75px;
+  --syncro-why-bottom: 130px;
+  --syncro-bottom-reserve: 160px;
+  --syncro-hour-top: max(8px, env(safe-area-inset-top, 0px));
+  --syncro-phone-hint-top: 100px;
+  --syncro-stage-top: 136px;
+}
+
+/* Hour progress — top band */
+.syncro-main-view .hour-progress-bar {
+  top: var(--syncro-hour-top);
+  z-index: 12;
+}
+
+/* Mode stage — reserved top (hour + hint) and bottom (nav + toggle + why) */
+.syncro-main-view .syncro-mode-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  overflow: hidden;
+  padding-top: var(--syncro-stage-top);
+  padding-bottom: var(--syncro-bottom-reserve);
+}
+
+/* Concentric compass / AR / MAP — centered in middle band */
+.syncro-main-view .compass-mode-body,
+.syncro-main-view .ar-mode-body,
+.syncro-main-view .map-mode-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 0;
+  padding-bottom: 0;
+}
+
+.syncro-main-view .concentric-system {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+}
+
+/* Phone posture hint — below hour bar */
+.syncro-main-view .phone-position-hint {
+  top: var(--syncro-phone-hint-top);
+  z-index: 5;
+}
+
+/* Short advice — above Why CTA */
+.syncro-main-view .compass-short-advice {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(var(--syncro-why-bottom) + 44px);
+  margin: 0;
+  max-width: 28rem;
+  padding: 0 24px;
+  text-align: center;
+  z-index: 8;
+  pointer-events: none;
+}
+
+.syncro-main-view .map-hint {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(var(--syncro-why-bottom) + 44px);
+  margin-top: 0;
+  z-index: 7;
+  width: max-content;
+  max-width: 90%;
+}

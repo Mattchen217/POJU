@@ -1,35 +1,10 @@
-.syncro-main-view--compass .syncro-mode-stage {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: flex-start;
-  padding: 0 0 100px;
-  overflow: hidden;
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-}
+/* Mode stage layout — styles/syncro-layout.css (Part 6) */
 
 .syncro-immersive {
   position: relative;
   width: 100%;
   height: 100%;
   overflow: hidden;
-}
-
-.syncro-immersive .syncro-bg-full {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1;
-  pointer-events: none;
-}
-
-.syncro-immersive .syncro-bg-full .syncro-particle-spline,
-.syncro-immersive .syncro-bg-full .syncro-particle-spline canvas {
-  width: 100% !important;
-  height: 100% !important;
 }
 
 .syncro-content-overlay {
@@ -45,82 +20,139 @@
   pointer-events: auto;
 }
 
+/* === Compass mode (Part 2: three concentric layers) === */
+
 .compass-mode {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
-}
-
-.compass-particle-area {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 30px;
-  position: relative;
-  min-height: 0;
-  pointer-events: none;
-}
-
-.compass-particle-area .center-info {
-  pointer-events: none;
-}
-
-.particle-container {
   position: relative;
   width: 100%;
-  max-width: 360px;
-  margin: 0 auto;
-  margin-top: 20px;
-  height: 280px;
+  height: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+  min-height: 0;
 }
 
-.particle-circle {
-  width: min(260px, 70vw);
-  height: min(260px, 70vw);
-  position: relative;
-  flex-shrink: 0;
+.phone-position-hint {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: rgba(212, 165, 116, 0.08);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 20px;
+  font-size: 11px;
+  color: var(--pj-gold);
+  letter-spacing: 0.5px;
   pointer-events: none;
 }
 
-.syncro-particle-spline,
-.syncro-particle-spline canvas {
-  width: 100% !important;
-  height: 100% !important;
+.phone-position-hint-icon {
+  transform: rotate(90deg);
+  flex-shrink: 0;
 }
 
-.center-info {
+.concentric-system {
+  position: relative;
+  width: min(320px, 88vw);
+  height: min(320px, 88vw);
+  margin: 0 auto;
+  flex-shrink: 0;
+}
+
+.rotating-layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.direction-ring {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.direction-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  font-size: 12px;
+  font-weight: var(--pj-weight-medium);
+  letter-spacing: 1.5px;
+  color: var(--pj-text-secondary);
+  transform-origin: center center;
+  white-space: nowrap;
+  transition: color var(--pj-duration-normal) var(--pj-ease);
+}
+
+.direction-label.active {
+  color: var(--pj-gold);
+  font-size: 13px;
+}
+
+.particle-layer {
+  width: 220px;
+  height: 220px;
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  text-align: center;
   pointer-events: none;
-  width: 80%;
-  z-index: 4;
+  overflow: hidden;
+  border-radius: 50%;
+}
+
+.particle-layer .syncro-particle-spline,
+.particle-layer .syncro-particle-spline canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.syncro-particle-spline--static {
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(108, 52, 172, 0.25) 0%, transparent 70%);
+}
+
+.center-info-layer {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 140px;
+  text-align: center;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.current-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
 
 .current-level {
-  font-size: var(--pj-text-lg);
+  font-size: 18px;
   font-weight: var(--pj-weight-medium);
-  letter-spacing: 0.2px;
   line-height: var(--pj-leading-tight);
+  letter-spacing: 0.2px;
 }
 
 .level-line {
   margin: 4px 0;
 }
 
-.cell-meta {
+.current-meta {
   font-size: 10px;
   color: var(--pj-text-tertiary);
-  margin-top: 12px;
   letter-spacing: 0.3px;
+  margin-top: 4px;
   display: flex;
   justify-content: center;
   gap: 6px;
@@ -131,59 +163,62 @@
   color: var(--pj-text-muted);
 }
 
-.direction-labels {
-  position: absolute;
-  inset: -20px;
-  pointer-events: none;
-}
-
-.dir-label {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  font-size: var(--pj-text-xs);
-  color: var(--pj-text-muted);
-  letter-spacing: 1.5px;
-  font-weight: var(--pj-weight-medium);
-  transition: color var(--pj-duration-normal) var(--pj-ease);
-  white-space: nowrap;
-}
-
-.dir-label.active {
-  color: var(--pj-gold);
-  font-size: var(--pj-text-sm);
-}
-
-.compass-footer {
-  margin-top: auto;
-  padding: 0 32px 8px;
-  text-align: center;
-  flex-shrink: 0;
-}
-
-.compass-mode .short-advice {
+.compass-short-advice {
   font-size: var(--pj-text-sm);
   color: var(--pj-text-primary);
   line-height: var(--pj-leading-relaxed);
-  margin: 0 0 16px;
 }
 
-.why-btn {
-  display: inline-block;
-  padding: 8px 18px;
-  background: rgba(212, 165, 116, 0.08);
+.compass-bottom-cta {
+  display: flex;
+  justify-content: center;
+}
+
+.why-btn-prominent {
+  padding: 10px 20px;
+  background: rgba(212, 165, 116, 0.12);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   color: var(--pj-gold);
   font-family: inherit;
-  font-size: 10px;
+  font-size: 11px;
+  font-weight: var(--pj-weight-medium);
   letter-spacing: 0.3px;
-  border-radius: var(--pj-radius-pill);
+  border: none;
+  border-radius: 20px;
   cursor: pointer;
-  transition: background var(--pj-duration-fast) var(--pj-ease);
+  box-shadow:
+    0 0 24px rgba(212, 165, 116, 0.15),
+    inset 0 0 0 0.5px rgba(212, 165, 116, 0.3);
+  transition: all var(--pj-duration-fast) var(--pj-ease);
 }
 
-.why-btn:active {
-  background: rgba(212, 165, 116, 0.15);
+.why-btn-prominent:active {
+  transform: scale(0.96);
+  background: rgba(212, 165, 116, 0.2);
 }
+
+.no-data {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--pj-text-tertiary);
+  font-size: 11px;
+}
+
+.no-data-spin {
+  animation: syncro-compass-spin 1s linear infinite;
+  color: var(--pj-gold);
+}
+
+.syncro-particle-circle-legacy {
+  position: relative;
+  width: min(320px, 88vw);
+  height: min(320px, 88vw);
+}
+
+/* === Permission / loading === */
 
 .compass-permission-needed {
   display: flex;
@@ -235,20 +270,9 @@
   font-family: inherit;
   font-size: var(--pj-text-base);
   font-weight: var(--pj-weight-medium);
+  border: none;
   border-radius: var(--pj-radius-pill);
   cursor: pointer;
-}
-
-.compass-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 50vh;
-  color: var(--pj-gold);
-}
-
-.compass-loading-spin {
-  animation: syncro-compass-spin 1s linear infinite;
 }
 
 @keyframes syncro-compass-spin {
