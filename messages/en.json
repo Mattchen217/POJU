@@ -1123,8 +1123,10 @@
     },
     "llm_progress": {
       "in_progress": "AI copy generating {done}/{total}…",
+      "context_missing": "Could not start AI batches. Re-run Syncro from your profile.",
+      "all_failed": "All 12 hour batches failed. Check console logs and API key.",
       "complete": "AI copy complete",
-      "some_failed": "{count} batch(es) skipped — showing fallback text for those cells."
+      "some_failed": "{count} hour batch(es) failed."
     },
     "modes": {
       "aria_label": "Syncro display mode",
@@ -1145,6 +1147,7 @@
     },
     "why_this_current": "Why this current",
     "generating": "Generating reading…",
+    "llm_copy_failed": "AI copy failed for this direction. Try a new Syncro reading.",
     "why_modal": {
       "close": "Close"
     },

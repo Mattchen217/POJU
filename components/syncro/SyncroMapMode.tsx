@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
+import { SyncroCellAdvice } from "@/components/syncro/SyncroCellAdvice";
 import {
   SYNCRO_DIRECTION_RING_RADIUS_PCT,
   SyncroDirectionRing,
 } from "@/components/syncro/SyncroDirectionRing";
 import { SyncroParticleCore } from "@/components/syncro/SyncroParticleCore";
+import { isSyncroLlmReady } from "@/lib/syncro/llm-cell-display";
 import { WhyThisCurrentModal } from "@/components/syncro/WhyThisCurrentModal";
 import {
   currentLevelMapPointStatusClass,
@@ -149,20 +151,27 @@ export function SyncroMapMode({
           </div>
         </div>
 
-        {activeCell ? <p className="compass-short-advice">{activeCell.short_advice}</p> : null}
+        {activeCell ? (
+          <SyncroCellAdvice cell={activeCell} llmMeta={session.llm_meta} />
+        ) : null}
 
         <div className="map-hint">{t("map.tap_hint")}</div>
 
         {activeCell ? (
           <div className="compass-bottom-cta">
-            <button type="button" className="why-btn-prominent" onClick={() => setWhyModalOpen(true)}>
+            <button
+              type="button"
+              className="why-btn-prominent"
+              disabled={!isSyncroLlmReady(activeCell, session.llm_meta)}
+              onClick={() => setWhyModalOpen(true)}
+            >
               {t("why_this_current")}
             </button>
           </div>
         ) : null}
       </div>
 
-      {whyModalOpen && activeCell ? (
+      {whyModalOpen && activeCell && isSyncroLlmReady(activeCell, session.llm_meta) ? (
         <WhyThisCurrentModal
           cell={activeCell}
           direction={activeDirection}

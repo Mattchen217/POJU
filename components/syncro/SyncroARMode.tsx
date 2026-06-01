@@ -5,7 +5,9 @@ import { IconCamera, IconLoader2 } from "@tabler/icons-react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { PostureHintOverlay } from "@/components/syncro/PostureHintOverlay";
+import { SyncroCellAdvice } from "@/components/syncro/SyncroCellAdvice";
 import { SyncroDirectionRing } from "@/components/syncro/SyncroDirectionRing";
+import { isSyncroLlmReady } from "@/lib/syncro/llm-cell-display";
 import { SyncroParticleCore } from "@/components/syncro/SyncroParticleCore";
 import { WhyThisCurrentModal } from "@/components/syncro/WhyThisCurrentModal";
 import { useOrientation } from "@/components/syncro/SyncroOrientationProvider";
@@ -149,15 +151,16 @@ export function SyncroARMode({
       <div className="syncro-content-overlay ar-mode-body">
         <div className="concentric-system">
           <div
-            className="rotating-layer"
+            className="rotating-layer rotating-layer--particles-only"
             style={{
               transform: `rotate(${-compassDegree}deg)`,
               transition: "transform 200ms ease-out",
             }}
           >
             <SyncroParticleCore />
-            <SyncroDirectionRing activeDirection={currentDirection} />
           </div>
+
+          <SyncroDirectionRing activeDirection={currentDirection} />
 
           <div className="ar-window-layer">
             <div className="ar-camera-window" style={haloStyle}>
@@ -197,9 +200,18 @@ export function SyncroARMode({
 
         {cell ? (
           <>
-            <p className="compass-short-advice ar-short-advice">{cell.short_advice}</p>
+            <SyncroCellAdvice
+              cell={cell}
+              llmMeta={session.llm_meta}
+              className="compass-short-advice ar-short-advice"
+            />
             <div className="compass-bottom-cta">
-              <button type="button" className="why-btn-prominent" onClick={() => setWhyModalOpen(true)}>
+              <button
+                type="button"
+                className="why-btn-prominent"
+                disabled={!isSyncroLlmReady(cell, session.llm_meta)}
+                onClick={() => setWhyModalOpen(true)}
+              >
                 {t("why_this_current")}
               </button>
             </div>
@@ -207,7 +219,7 @@ export function SyncroARMode({
         ) : null}
       </div>
 
-      {whyModalOpen && cell ? (
+      {whyModalOpen && cell && isSyncroLlmReady(cell, session.llm_meta) ? (
         <WhyThisCurrentModal
           cell={cell}
           direction={currentDirection}

@@ -32,7 +32,7 @@ function SyncroResultPageContent() {
   const [stage, setStage] = useState<Stage>("loading");
   const [llmProgress, setLlmProgress] = useState<SyncroLlmProgress>({
     completed: 0,
-    total: 6,
+    total: 12,
     running: true,
     failed: 0,
   });
@@ -134,6 +134,7 @@ function SyncroResultPageContent() {
       <SyncroLlmProgressBar progress={llmProgress} />
       <SyncroLlmBatchRunner
         sessionId={sessionId}
+        session={session}
         onSessionUpdate={handleSessionUpdate}
         onProgress={setLlmProgress}
       />

@@ -57,33 +57,67 @@
   pointer-events: none;
 }
 
+.direction-ring {
+  z-index: 3;
+}
+
 .direction-label {
   position: absolute;
   top: 50%;
   left: 50%;
-  font-size: 14px;
+  font-size: 10px;
   font-weight: var(--pj-weight-medium);
-  letter-spacing: 1.5px;
+  letter-spacing: 1px;
   color: var(--pj-text-secondary);
   white-space: nowrap;
   transition: color var(--pj-duration-normal) var(--pj-ease);
+  transform: translate(-50%, -50%);
+  /* Upright labels — ring is static; compass rotation is particles only */
 }
 
 .direction-label.active {
   color: var(--pj-gold);
-  font-size: 15px;
+  font-size: 11px;
 }
 
 .particle-layer {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 75%;
-  height: 75%;
+  width: 92%;
+  height: 92%;
   transform: translate(-50%, -50%);
   pointer-events: none;
   overflow: hidden;
   border-radius: 50%;
+}
+
+.syncro-advice--loading,
+.syncro-advice--failed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 2.5rem;
+}
+
+.syncro-advice--failed {
+  color: var(--pj-under);
+}
+
+.syncro-advice-spin {
+  animation: syncro-advice-spin 1s linear infinite;
+}
+
+@keyframes syncro-advice-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.why-btn-prominent:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .particle-layer .syncro-particle-spline,

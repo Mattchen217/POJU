@@ -5,8 +5,10 @@ import { IconLoader2 } from "@tabler/icons-react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { PostureHintOverlay } from "@/components/syncro/PostureHintOverlay";
+import { SyncroCellAdvice } from "@/components/syncro/SyncroCellAdvice";
 import { SyncroDirectionRing } from "@/components/syncro/SyncroDirectionRing";
 import { SyncroParticleCore } from "@/components/syncro/SyncroParticleCore";
+import { isSyncroLlmReady } from "@/lib/syncro/llm-cell-display";
 import { WhyThisCurrentModal } from "@/components/syncro/WhyThisCurrentModal";
 import { useOrientation } from "@/components/syncro/SyncroOrientationProvider";
 import {
@@ -118,15 +120,16 @@ export function SyncroCompassMode({
       <div className="syncro-content-overlay compass-mode-body">
         <div className="concentric-system">
           <div
-            className="rotating-layer"
+            className="rotating-layer rotating-layer--particles-only"
             style={{
               transform: `rotate(${-compassDegree}deg)`,
               transition: "transform 200ms ease-out",
             }}
           >
             <SyncroParticleCore />
-            <SyncroDirectionRing activeDirection={currentDirection} />
           </div>
+
+          <SyncroDirectionRing activeDirection={currentDirection} />
 
           <div className="center-info-layer center-static-layer">
             {!cell ? (
@@ -148,9 +151,14 @@ export function SyncroCompassMode({
 
         {cell ? (
           <>
-            <p className="compass-short-advice">{cell.short_advice}</p>
+            <SyncroCellAdvice cell={cell} llmMeta={session.llm_meta} />
             <div className="compass-bottom-cta">
-              <button type="button" className="why-btn-prominent" onClick={() => setWhyModalOpen(true)}>
+              <button
+                type="button"
+                className="why-btn-prominent"
+                disabled={!isSyncroLlmReady(cell, session.llm_meta)}
+                onClick={() => setWhyModalOpen(true)}
+              >
                 {t("why_this_current")}
               </button>
             </div>
@@ -158,7 +166,7 @@ export function SyncroCompassMode({
         ) : null}
       </div>
 
-      {whyModalOpen && cell ? (
+      {whyModalOpen && cell && isSyncroLlmReady(cell, session.llm_meta) ? (
         <WhyThisCurrentModal
           cell={cell}
           direction={currentDirection}

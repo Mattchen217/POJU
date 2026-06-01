@@ -2,8 +2,8 @@
 
 import type { DirectionId } from "@/lib/syncro/current-system";
 
-/** Label radius as % of concentric container (outer ring). */
-export const SYNCRO_DIRECTION_RING_RADIUS_PCT = 47;
+/** Label radius as % of concentric container — outside particle disc. */
+export const SYNCRO_DIRECTION_RING_RADIUS_PCT = 52;
 
 const DIRECTION_RING: Array<{ id: DirectionId; label: string; angle: number }> = [
   { id: "N", label: "N", angle: 0 },
@@ -38,7 +38,8 @@ export function SyncroDirectionRing({ activeDirection }: SyncroDirectionRingProp
             key={dir.id}
             className={`direction-label ${dir.id === activeDirection ? "active" : ""}`}
             style={{
-              transform: `translate(calc(-50% + ${x}%), calc(-50% + ${y}%))`,
+              left: `calc(50% + ${x}%)`,
+              top: `calc(50% + ${y}%)`,
             }}
           >
             {dir.label}

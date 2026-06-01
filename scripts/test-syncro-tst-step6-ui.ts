@@ -113,13 +113,17 @@ function main() {
   }
 
   const compassCss = readFileSync(join(ROOT, "styles/syncro-compass.css"), "utf8");
-  assert(compassCss.includes("85vmin") && compassCss.includes("width: 75%"), "full-screen concentric + particle");
+  assert(compassCss.includes("85vmin") && compassCss.includes("width: 92%"), "full-screen concentric + particle");
 
   const compass = readFileSync(join(ROOT, "components/syncro/SyncroCompassMode.tsx"), "utf8");
   assert(compass.includes("concentric-system"), "compass uses concentric layout");
   assert(compass.includes("SyncroDirectionRing"), "compass uses direction ring");
   assert(compass.includes("PostureHintOverlay") && compass.includes("deviceTiltBeta"), "compass posture overlay");
-  assert(compass.includes("rotating-layer") && compass.includes("-compassDegree"), "compass rotates parent layer");
+  assert(
+    compass.includes("rotating-layer--particles-only") && compass.includes("-compassDegree"),
+    "compass rotates particles only",
+  );
+  assert(compass.includes("SyncroCellAdvice"), "compass uses real LLM advice gate");
   assert(!compass.includes("phone-position-hint"), "no layout phone hint bar");
   assert(!compass.includes("requestPermission"), "compass permission only at gate");
   assert(compass.includes("WhyThisCurrentModal"), "compass has why modal");
@@ -177,14 +181,21 @@ function main() {
 
   const hourBar = readFileSync(join(ROOT, "components/syncro/HourProgressBar.tsx"), "utf8");
   assert(hourBar.includes("getHourDotStatus") && hourBar.includes("hour-now-tag"), "hour progress states");
-  assert(hourBar.includes("scrollIntoView"), "hour bar scrolls live period to center");
+  assert(hourBar.includes("hour-track-viewport") && hourBar.includes("hour-dot-slot"), "hour bar fixed rail slots");
 
   const hourCss = readFileSync(join(ROOT, "styles/syncro-hour-progress.css"), "utf8");
-  assert(hourCss.includes("scroll-snap-type") && hourCss.includes("status-failed"), "hour bar scroll + failed");
+  assert(
+    hourCss.includes("hour-track-viewport") &&
+      hourCss.includes("flex-wrap: nowrap") &&
+      hourCss.includes("status-failed"),
+    "hour bar horizontal rail + failed",
+  );
 
   const runner = readFileSync(join(ROOT, "components/syncro/SyncroLlmBatchRunner.tsx"), "utf8");
   assert(runner.includes("HOUR_ORDER") && runner.includes("hour_id"), "12-hour LLM batches");
   assert(runner.includes("patchSyncroSessionMatrixFailure"), "marks failed hour cells");
+  assert(runner.includes("rebuildSyncroLlmContext"), "rebuild ctx when missing");
+  assert(runner.includes("resolveSyncroLlmContext"), "loads ctx from IndexedDB");
 
   assert(SYNCRO_LLM_BATCH_COUNT === 12, "12 LLM batches");
 
@@ -207,19 +218,26 @@ function main() {
     }
   }
   const dirs = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"] as const;
-  const clearHourPending = (h: (typeof HOUR_ORDER)[number]) => {
-    for (const d of dirs) matrix[matrixKey(h, d)]!.llm_pending = false;
+  const llmMeta = { model: "gpt", tokens_used: 1000, latency_ms: 0 };
+  const markLlmReady = (h: (typeof HOUR_ORDER)[number]) => {
+    for (const d of dirs) {
+      const c = matrix[matrixKey(h, d)]!;
+      c.llm_pending = false;
+      c.short_advice = `LLM ${h} ${d}`;
+      c.detailed_advice = "detail";
+      c.rationale = "why";
+    }
   };
 
-  assert(getHourDotStatus(live, live, matrix, [...order]) === "now", "live hour is now");
-  assert(getHourDotStatus("wei", live, matrix, [...order]) === "pending", "wei still pending");
+  assert(getHourDotStatus(live, live, matrix, [...order], llmMeta) === "now", "live hour is now");
+  assert(getHourDotStatus("wei", live, matrix, [...order], llmMeta) === "pending", "wei still pending");
   for (const h of HOUR_ORDER) {
     if (h === live || h === "wei") continue;
-    clearHourPending(h);
+    markLlmReady(h);
   }
-  assert(getHourDotStatus("shen", live, matrix, [...order]) === "pending", "shen waits for wei");
-  clearHourPending("wei");
-  assert(getHourDotStatus("shen", live, matrix, [...order]) === "done", "shen done after wei completes");
+  assert(getHourDotStatus("shen", live, matrix, [...order], llmMeta) === "pending", "shen waits for wei");
+  markLlmReady("wei");
+  assert(getHourDotStatus("shen", live, matrix, [...order], llmMeta) === "done", "shen done after wei completes");
 
   console.log("\n✅ Syncro TST Step 6 — three-mode UI OK");
 }

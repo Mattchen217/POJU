@@ -160,24 +160,46 @@ export function mergeLocalMatrixWithLlmAdvice(
       hour_start_iso: local.hour_start_iso,
       hour_end_iso: local.hour_end_iso,
       current_level: local.current_level,
-      short_advice:
-        asString(advice.short_advice) || generateFallbackShort(local, outputLocale),
-      detailed_advice:
-        asString(advice.detailed_advice) || generateFallbackDetailed(local, outputLocale),
-      rationale:
-        asString(advice.rationale) || generateFallbackRationale(local, outputLocale),
+      short_advice: asString(advice.short_advice),
+      detailed_advice: asString(advice.detailed_advice),
+      rationale: asString(advice.rationale),
       llm_pending: !hasLlmAdvice,
+      llm_failed: false,
     };
   }
 
   return result;
 }
 
+/** Initial session matrix: levels only, empty copy until LLM batches complete. */
+export function matrixFromLocalPending(localMatrix: Record<string, MatrixCell>): SyncroMatrix {
+  const result: SyncroMatrix = {};
+
+  for (const key of Object.keys(localMatrix)) {
+    const local = localMatrix[key];
+    result[key] = {
+      hour_period: local.hour_period,
+      direction_id: local.direction_id,
+      hour_start_iso: local.hour_start_iso,
+      hour_end_iso: local.hour_end_iso,
+      current_level: local.current_level,
+      short_advice: "",
+      detailed_advice: "",
+      rationale: "",
+      llm_pending: true,
+      llm_failed: false,
+    };
+  }
+
+  return result;
+}
+
+/** @deprecated Use matrixFromLocalPending — no placeholder copy in stored matrix. */
 export function matrixWithFallbacksOnly(
   localMatrix: Record<string, MatrixCell>,
-  outputLocale: AppLocale = "en",
+  _outputLocale: AppLocale = "en",
 ): SyncroMatrix {
-  return mergeLocalMatrixWithLlmAdvice(localMatrix, {}, outputLocale);
+  return matrixFromLocalPending(localMatrix);
 }
 
 function validateMatrix(matrix: SyncroMatrix): void {
@@ -187,6 +209,7 @@ function validateMatrix(matrix: SyncroMatrix): void {
   }
 
   for (const [key, combo] of Object.entries(matrix)) {
+    if (combo.llm_pending) continue;
     if (!combo.short_advice || !combo.detailed_advice || !combo.rationale) {
       throw new Error(`Matrix entry ${key} missing advice fields`);
     }
@@ -419,7 +442,7 @@ export async function generateSyncroMatrixLocal(
   );
 
   const distribution = computeDistribution(localMatrix);
-  const matrix = matrixWithFallbacksOnly(localMatrix, outputLocale);
+  const matrix = matrixFromLocalPending(localMatrix);
   validateMatrix(matrix);
 
   if (typeof window !== "undefined") {

@@ -1139,7 +1139,9 @@
     "llm_progress": {
       "in_progress": "AI 文案生成中 {done}/{total}…",
       "complete": "AI 文案已全部生成",
-      "some_failed": "有 {count} 批未成功，对应格子仍显示默认文案。"
+      "some_failed": "有 {count} 个时辰批次未成功。",
+      "context_missing": "无法启动 AI 批次，请从档案重新走一遍 Syncro 测算。",
+      "all_failed": "12 个时辰批次均失败，请查看控制台日志与 API 配置。"
     },
     "modes": {
       "aria_label": "Syncro 显示模式",
@@ -1160,6 +1162,7 @@
     },
     "why_this_current": "为何此时",
     "generating": "正在生成解读…",
+    "llm_copy_failed": "该方位 AI 文案生成失败，请重新测算 Syncro。",
     "why_modal": {
       "close": "关闭"
     },

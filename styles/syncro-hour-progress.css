@@ -4,7 +4,7 @@
   left: 0;
   right: 0;
   z-index: 12;
-  padding: 14px 0 8px;
+  padding: 10px 0 6px;
   pointer-events: auto;
   background: linear-gradient(
     to bottom,
@@ -14,98 +14,134 @@
   );
 }
 
-.hour-track {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 24px;
+/* Fixed viewport: only horizontal scroll, no vertical drift */
+.hour-track-viewport {
+  width: 100%;
+  max-width: 100%;
   overflow-x: auto;
-  overflow-y: visible;
+  overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x;
   scroll-snap-type: x mandatory;
-  padding: 0 calc(50vw - 12px);
   scrollbar-width: none;
 }
 
-.hour-track::-webkit-scrollbar {
+.hour-track-viewport::-webkit-scrollbar {
   display: none;
+}
+
+/* Rail: 12 fixed slots in one row — dots never reflow or float */
+.hour-track-rail {
+  position: relative;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  width: max-content;
+  min-height: 54px;
+  margin: 0;
+  padding: 6px 50vw 2px;
+  box-sizing: content-box;
 }
 
 .hour-line {
   position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
+  top: 17px;
+  left: calc(var(--hour-slot-width, 44px) / 2);
+  right: calc(var(--hour-slot-width, 44px) / 2);
   height: 0.5px;
   background: rgba(255, 255, 255, 0.06);
   z-index: 0;
   pointer-events: none;
 }
 
-.hour-dot {
+.hour-dot-slot {
+  flex: 0 0 var(--hour-slot-width, 44px);
+  width: var(--hour-slot-width, 44px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  scroll-snap-align: center;
   position: relative;
   z-index: 2;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--pj-text-disabled);
+}
+
+.hour-dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--hour-slot-width, 44px);
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
   cursor: pointer;
   flex-shrink: 0;
-  scroll-snap-align: center;
-  border: none;
-  padding: 0;
-  transition: all var(--pj-duration-fast) var(--pj-ease);
+  transition: opacity var(--pj-duration-fast) var(--pj-ease);
 }
 
 .hour-dot:disabled {
   cursor: not-allowed;
 }
 
-.hour-dot.status-now {
+.hour-dot-core {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--pj-text-disabled);
+  transition:
+    width var(--pj-duration-fast) var(--pj-ease),
+    height var(--pj-duration-fast) var(--pj-ease),
+    background var(--pj-duration-fast) var(--pj-ease),
+    box-shadow var(--pj-duration-fast) var(--pj-ease);
+}
+
+.hour-dot.status-now .hour-dot-core {
   width: 22px;
   height: 22px;
   background: var(--pj-gold);
   box-shadow: 0 0 20px var(--pj-gold-glow);
-  cursor: pointer;
 }
 
-.hour-dot.status-done {
+.hour-dot.status-done .hour-dot-core {
   background: #4ecdc4;
   box-shadow: 0 0 6px rgba(78, 205, 196, 0.4);
-  cursor: pointer;
 }
 
-.hour-dot.status-pending {
-  background: var(--pj-text-disabled);
+.hour-dot.status-pending .hour-dot-core {
   opacity: 0.5;
-  cursor: not-allowed;
 }
 
-.hour-dot.status-failed {
+.hour-dot.status-failed .hour-dot-core {
   background: var(--pj-under);
   opacity: 0.6;
-  cursor: not-allowed;
 }
 
-.hour-dot.selected:not(.status-now) {
+.hour-dot.selected:not(.status-now) .hour-dot-core {
   outline: 2px solid var(--pj-gold);
   outline-offset: 4px;
 }
 
 .hour-dot-label {
-  position: absolute;
-  top: 24px;
-  left: 50%;
-  transform: translateX(-50%);
+  position: static;
+  transform: none;
   font-size: 9px;
+  line-height: 1.2;
   color: var(--pj-text-tertiary);
   letter-spacing: 0.5px;
   white-space: nowrap;
+  text-align: center;
   pointer-events: none;
+  max-width: var(--hour-slot-width, 44px);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.hour-dot.status-now .hour-dot-label {
-  top: 28px;
+.hour-dot-label.is-now {
   color: var(--pj-gold);
 }
 
@@ -114,7 +150,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  margin-top: 28px;
+  margin-top: 8px;
   font-size: var(--pj-text-xs);
   color: var(--pj-text-secondary);
   letter-spacing: 0.3px;

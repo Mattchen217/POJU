@@ -9,12 +9,21 @@ import {
   type HourDotStatus,
 } from "@/lib/syncro/hour-progress-status";
 import { HOUR_PERIOD_RANGES, hourPeriodDisplayName } from "@/lib/syncro/hour-period-ranges";
-import { getCurrentHourPeriod, type HourPeriod, type SyncroMatrix } from "@/lib/syncro/types";
+import {
+  getCurrentHourPeriod,
+  type HourPeriod,
+  type SyncroMatrix,
+  type SyncroSession,
+} from "@/lib/syncro/types";
 
 export type { HourDotStatus };
 
+/** Fixed width per hour slot on the scroll rail (px). */
+const HOUR_SLOT_WIDTH_PX = 44;
+
 export type HourProgressBarProps = {
   matrix: SyncroMatrix;
+  llmMeta: SyncroSession["llm_meta"];
   orderedPeriods: HourPeriod[];
   livePeriod: HourPeriod;
   activeHour: HourPeriod;
@@ -28,13 +37,15 @@ export type HourProgressBarProps = {
 
 export function HourProgressBar({
   matrix,
+  llmMeta,
   livePeriod,
   activeHour,
   onSelect,
   locale,
 }: HourProgressBarProps) {
   const t = useTranslations("syncro.hour");
-  const currentRef = useRef<HTMLButtonElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const slotRefs = useRef<Partial<Record<HourPeriod, HTMLDivElement>>>({});
 
   const sortedPeriods = sortedHourPeriodsFromLive(livePeriod);
 
@@ -42,42 +53,69 @@ export function HourProgressBar({
   const active = sortedPeriods[activeIdx >= 0 ? activeIdx : 0] ?? sortedPeriods[0]!;
   const activeIsLive = active === livePeriod && activeIdx === 0;
 
+  function scrollHourToCenter(period: HourPeriod, behavior: ScrollBehavior = "smooth") {
+    const viewport = viewportRef.current;
+    const slot = slotRefs.current[period];
+    if (!viewport || !slot) return;
+    const target =
+      slot.offsetLeft + slot.offsetWidth / 2 - viewport.clientWidth / 2;
+    viewport.scrollTo({ left: Math.max(0, target), behavior });
+  }
+
   useEffect(() => {
-    currentRef.current?.scrollIntoView({
-      behavior: "smooth",
-      inline: "center",
-      block: "nearest",
-    });
+    scrollHourToCenter(livePeriod, "smooth");
   }, [livePeriod]);
+
+  useEffect(() => {
+    if (activeHour !== livePeriod) {
+      scrollHourToCenter(activeHour, "smooth");
+    }
+  }, [activeHour, livePeriod]);
 
   return (
     <div className="hour-progress-bar" role="tablist" aria-label={t("aria_label")}>
-      <div className="hour-track">
-        <div className="hour-line" aria-hidden />
-        {sortedPeriods.map((period) => {
-          const status = getHourDotStatus(period, livePeriod, matrix, sortedPeriods);
-          const isSelected = period === activeHour;
-          const canClick = status === "done" || status === "now";
-          const shortName = hourPeriodDisplayName(period, locale);
+      <div
+        ref={viewportRef}
+        className="hour-track-viewport"
+        style={{ ["--hour-slot-width" as string]: `${HOUR_SLOT_WIDTH_PX}px` }}
+      >
+        <div className="hour-track-rail">
+          <div className="hour-line" aria-hidden />
+          {sortedPeriods.map((period) => {
+            const status = getHourDotStatus(period, livePeriod, matrix, sortedPeriods, llmMeta);
+            const isSelected = period === activeHour;
+            const canClick = status === "done" || status === "now";
+            const shortName = hourPeriodDisplayName(period, locale);
 
-          return (
-            <button
-              key={period}
-              ref={period === livePeriod ? currentRef : undefined}
-              type="button"
-              role="tab"
-              aria-selected={isSelected}
-              disabled={!canClick}
-              className={`hour-dot status-${status} ${isSelected ? "selected" : ""}`}
-              onClick={() => {
-                if (canClick) onSelect(period);
-              }}
-              aria-label={`${shortName} · ${HOUR_PERIOD_RANGES[period]}`}
-            >
-              <span className="hour-dot-label">{shortName}</span>
-            </button>
-          );
-        })}
+            return (
+              <div
+                key={period}
+                ref={(el) => {
+                  if (el) slotRefs.current[period] = el;
+                  else delete slotRefs.current[period];
+                }}
+                className="hour-dot-slot"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={isSelected}
+                  disabled={!canClick}
+                  className={`hour-dot status-${status} ${isSelected ? "selected" : ""}`}
+                  onClick={() => {
+                    if (canClick) onSelect(period);
+                  }}
+                  aria-label={`${shortName} · ${HOUR_PERIOD_RANGES[period]}`}
+                >
+                  <span className="hour-dot-core" aria-hidden />
+                </button>
+                <span className={`hour-dot-label ${status === "now" ? "is-now" : ""}`}>
+                  {shortName}
+                </span>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <div className="hour-display">

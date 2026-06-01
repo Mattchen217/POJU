@@ -159,6 +159,7 @@ export function SyncroMainView({
     >
       <HourProgressBar
         matrix={session.matrix}
+        llmMeta={session.llm_meta}
         orderedPeriods={orderedPeriods}
         livePeriod={liveHourPeriod}
         activeHour={effectivePeriod}
