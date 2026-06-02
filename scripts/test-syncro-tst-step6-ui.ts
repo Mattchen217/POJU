@@ -204,6 +204,17 @@ function main() {
   assert(retryHelper.includes("/api/syncro/llm_hour"), "llm_hour API with retry");
   assert(retryHelper.includes("MAX_ATTEMPTS = 3"), "hour retry helper");
 
+  const pageLayout = readFileSync(join(ROOT, "components/syncro/SyncroPageLayout.tsx"), "utf8");
+  assert(pageLayout.includes("SyncroRecentSessionsList"), "recent sessions on browser syncro home");
+
+  const pwaFooter = readFileSync(join(ROOT, "components/syncro/SyncroPwaHomeFooter.tsx"), "utf8");
+  assert(pwaFooter.includes("PWAOnly") && pwaFooter.includes("SyncroPwaContinuePrimary"), "PWA syncro resume footer");
+  const marketing = readFileSync(join(ROOT, "components/marketing/syncro-marketing-page.tsx"), "utf8");
+  assert(marketing.includes("SyncroPwaHomeFooter"), "marketing wires PWA syncro footer");
+
+  const taskPage = readFileSync(join(ROOT, "components/syncro/SyncroTaskPage.tsx"), "utf8");
+  assert(taskPage.includes("SyncroExistingSessionPrompt"), "task page resume prompt");
+
   const preparing = readFileSync(join(ROOT, "components/syncro/SyncroPreparingLiveHour.tsx"), "utf8");
   assert(preparing.includes("runStreamHoursWithRetry"), "SSE stream for priority hour");
   assert(preparing.includes("SyncroPreparingLiveHour"), "live hour gate before compass");

@@ -932,7 +932,11 @@
       "loading": "Lesungen werden geladen…",
       "progress": "{done}/{total} Zeitfenster bereit",
       "status_complete": "12/12 bereit · Kompass öffnen",
-      "expires": "Endet {when}"
+      "expires": "Endet {when}",
+      "pwa_continue_label": "Letzte Lesung fortsetzen",
+      "pwa_storage_hint": "Lesungen bleiben 24 Stunden auf diesem Gerät—du kannst zu POJU wechseln und hier fortsetzen.",
+      "start_new_link": "Neue Lesung starten",
+      "empty_pwa": "Noch keine laufende Lesung. Nach dem ersten Syncro-Lauf erscheint sie hier."
     },
     "your_task_label": "Deine Aufgabe",
     "computing": {

@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 
 import { ArchiveReturnBanner } from "@/components/archive/archive-return-banner";
 import { NotPWA } from "@/components/pwa/PWAConditional";
-import { PWAProductBeginCTA } from "@/components/pwa/PWAProductBeginCTA";
+import { SyncroPwaHomeFooter } from "@/components/syncro/SyncroPwaHomeFooter";
 import {
   MarketingPageHero,
   MarketingPageLayout,
@@ -166,7 +166,7 @@ export async function SyncroMarketingPage() {
       </MarketingPageSections>
       </NotPWA>
 
-      <PWAProductBeginCTA productId="syncro" price="$4.99" />
+      <SyncroPwaHomeFooter />
     </MarketingPageLayout>
   );
 }

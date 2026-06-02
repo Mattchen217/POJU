@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
 import { buildSyncroMobileUrl, SyncroDesktopQRModal } from "@/components/syncro/SyncroDesktopQRModal";
-import { SyncroRecentSessionsList } from "@/components/syncro/SyncroRecentSessionsList";
 import { useRouter } from "@/i18n/navigation";
 import {
   canUseSyncro,
@@ -133,8 +132,6 @@ export function SyncroMobileStartSection() {
           </p>
         ) : null}
       </div>
-
-      <SyncroRecentSessionsList />
 
       {!isDesktop ? (
         <div className="mt-10 grid gap-4">

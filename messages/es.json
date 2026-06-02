@@ -932,7 +932,11 @@
       "loading": "Cargando tus lecturas…",
       "progress": "{done}/{total} períodos listos",
       "status_complete": "12/12 listos · abrir brújula",
-      "expires": "Termina {when}"
+      "expires": "Termina {when}",
+      "pwa_continue_label": "Continuar la última lectura",
+      "pwa_storage_hint": "Las lecturas se guardan en este dispositivo 24 h—puedes ir a POJU y volver aquí.",
+      "start_new_link": "Nueva lectura",
+      "empty_pwa": "No hay lectura en curso. Tras tu primer Syncro, aparecerá aquí."
     },
     "your_task_label": "Tu tarea",
     "computing": {

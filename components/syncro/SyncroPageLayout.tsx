@@ -9,6 +9,7 @@ import { NotPWA } from "@/components/pwa/PWAConditional";
 import { SyncroDesktopBanner } from "@/components/syncro/syncro-desktop-banner";
 import { SyncroIncompatible } from "@/components/syncro/syncro-incompatible";
 import { SyncroMobileStartSection } from "@/components/syncro/SyncroMobileStartSection";
+import { SyncroRecentSessionsList } from "@/components/syncro/SyncroRecentSessionsList";
 import { detectDeviceCapability } from "@/lib/syncro/device-capability";
 
 /**
@@ -48,6 +49,9 @@ export function SyncroPageLayout({ marketing }: { marketing: ReactNode }) {
         >
           <SyncroMobileStartSection />
         </Suspense>
+        <section className="mx-auto w-full max-w-lg px-4 pb-16">
+          <SyncroRecentSessionsList />
+        </section>
       </NotPWA>
     </main>
   );

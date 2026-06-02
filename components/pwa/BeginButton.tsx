@@ -102,7 +102,9 @@ export function BeginButton({ productId, price, freeFirstTime = true }: BeginBut
 
       switch (productId) {
         case "syncro":
-          router.push(free ? "/syncro/task?type=free" : "/syncro/task?type=paid");
+          router.push(
+            free ? "/syncro/task?type=free&new=1" : "/syncro/task?type=paid&new=1",
+          );
           break;
         case "glyph":
           router.push(free ? "/glyph/prepare?type=free" : "/glyph/prepare?type=paid");

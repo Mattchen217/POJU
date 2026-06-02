@@ -1099,7 +1099,11 @@
       "loading": "Loading your readings…",
       "progress": "{done}/{total} hour-periods ready",
       "status_complete": "12/12 ready · open compass",
-      "expires": "Ends {when}"
+      "expires": "Ends {when}",
+      "pwa_continue_label": "Continue your last reading",
+      "pwa_storage_hint": "Readings stay on this device for 24 hours—you can leave for POJU or other tools and resume here.",
+      "start_new_link": "Start a brand-new reading",
+      "empty_pwa": "No in-progress reading yet. After you run Syncro once, it will show up here."
     },
     "your_task_label": "Your task",
     "computing": {

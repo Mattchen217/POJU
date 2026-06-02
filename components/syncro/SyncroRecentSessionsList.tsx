@@ -29,7 +29,12 @@ function truncateTask(text: string, max = 72): string {
   return `${t.slice(0, max - 1)}…`;
 }
 
-export function SyncroRecentSessionsList() {
+type Props = {
+  /** PWA home: explain local storage when the list is empty */
+  showEmptyHint?: boolean;
+};
+
+export function SyncroRecentSessionsList({ showEmptyHint = false }: Props) {
   const router = useRouter();
   const locale = useLocale();
   const t = useTranslations("syncro.recent_sessions");
@@ -76,6 +81,15 @@ export function SyncroRecentSessionsList() {
   }
 
   if (items.length === 0) {
+    if (!showEmptyHint) return null;
+    return (
+      <p className="syncro-recent-sessions-empty mt-6 text-center text-sm leading-6 text-text-dim">
+        {t("empty_pwa")}
+      </p>
+    );
+  }
+
+  if (items.length === 1 && showEmptyHint) {
     return null;
   }
 

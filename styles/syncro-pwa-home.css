@@ -1,0 +1,25 @@
+/* PWA Syncro home — keep resume + list near Begin (below compact hero) */
+
+.pwa-mode .product-page--syncro .product-hero__stage {
+  min-height: min(42vh, 320px);
+}
+
+.pwa-mode .product-page--syncro .product-hero__title {
+  font-size: clamp(1.5rem, 6vw, 2rem);
+}
+
+.pwa-mode .product-page--syncro .product-hero__description {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pwa-mode .syncro-pwa-home {
+  margin-top: -8px;
+}
+
+.pwa-mode .syncro-pwa-home .pwa-product-begin {
+  margin-top: 16px;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+}

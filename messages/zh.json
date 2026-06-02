@@ -1114,7 +1114,11 @@
       "loading": "正在加载你的解读…",
       "progress": "已就绪 {done}/{total} 时辰",
       "status_complete": "12/12 已就绪 · 打开罗盘",
-      "expires": "剩余 {when}"
+      "expires": "剩余 {when}",
+      "pwa_continue_label": "继续上次解读",
+      "pwa_storage_hint": "解读保存在本机（24 小时内有效），切换 POJU 等功能后再回来仍可继续。",
+      "start_new_link": "开始全新解读",
+      "empty_pwa": "暂无进行中的解读。完成一次计算后，会出现在上方。"
     },
     "your_task_label": "你的任务",
     "computing": {

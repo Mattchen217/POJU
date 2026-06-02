@@ -25,6 +25,21 @@ function countReadyHours(session: SyncroSession): number {
   return ready;
 }
 
+export function syncroSessionToSummary(session: SyncroSession): SyncroSessionSummary {
+  const sequence = getOrderedHourPeriodsFromSession(session);
+  return {
+    session_id: session.session_id,
+    profile_id: session.profile_id,
+    created_at: session.created_at,
+    expires_at: session.expires_at,
+    is_expired: session.expires_at.getTime() <= Date.now(),
+    task_description: session.task_description,
+    hours_ready: countReadyHours(session),
+    hours_total: sequence.length || 12,
+    locale: session.locale,
+  };
+}
+
 /** Non-expired Syncro sessions on this device, newest first, with copy progress. */
 export async function listActiveSyncroSessionSummariesForDevice(): Promise<
   SyncroSessionSummary[]
@@ -47,18 +62,17 @@ export async function listActiveSyncroSessionSummariesForDevice(): Promise<
     const session = await loadSyncroSession(record.session_id);
     if (!session || Object.keys(session.matrix).length === 0) continue;
 
-    const sequence = getOrderedHourPeriodsFromSession(session);
-    summaries.push({
-      session_id: session.session_id,
-      profile_id: session.profile_id,
-      created_at: session.created_at,
-      expires_at: session.expires_at,
-      is_expired: false,
-      task_description: session.task_description,
-      hours_ready: countReadyHours(session),
-      hours_total: sequence.length || 12,
-      locale: session.locale,
-    });
+    summaries.push(syncroSessionToSummary(session));
+  }
+
+  if (summaries.length === 0 && typeof window !== "undefined") {
+    const lastId = sessionStorage.getItem("syncro_last_session_id")?.trim();
+    if (lastId) {
+      const session = await loadSyncroSession(lastId);
+      if (session && session.expires_at.getTime() > now) {
+        summaries.push(syncroSessionToSummary(session));
+      }
+    }
   }
 
   return summaries;

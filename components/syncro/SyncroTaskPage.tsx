@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 
+import { SyncroExistingSessionPrompt } from "@/components/syncro/SyncroExistingSessionPrompt";
 import { Link, useRouter } from "@/i18n/navigation";
 import { PojuToolHandoffBanner } from "@/components/poju/PojuToolHandoffBanner";
 import { usePojuToolHandoff } from "@/lib/poju/use-poju-tool-handoff";
@@ -21,6 +22,7 @@ export function SyncroTaskPage() {
   const pojuHandoff = usePojuToolHandoff("syncro");
   const sessionType =
     pojuHandoff?.quota_free || searchParams.get("type") === "free" ? "free" : "paid";
+  const forceNew = searchParams.get("new") === "1";
 
   const [task, setTask] = useState("");
   const [showMinWarning, setShowMinWarning] = useState(false);
@@ -63,6 +65,16 @@ export function SyncroTaskPage() {
         </Link>
 
         {pojuHandoff ? <PojuToolHandoffBanner handoff={pojuHandoff} className="mt-6" /> : null}
+
+        {!forceNew ? (
+          <SyncroExistingSessionPrompt
+            onStartNew={() => {
+              const params = new URLSearchParams(searchParams.toString());
+              params.set("new", "1");
+              router.replace(`/syncro/task?${params.toString()}`);
+            }}
+          />
+        ) : null}
 
         <div className="task-content mt-8">
           <h1 className="text-2xl font-semibold text-text-primary">{t("title")}</h1>

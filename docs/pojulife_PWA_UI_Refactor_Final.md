@@ -3545,6 +3545,25 @@ export function WhyThisCurrentModal({ cell, direction, hourId, onClose }: Props)
     显示完整页面
   }
 
+### Syncro PWA：24 小时内解读的本地保存（实现说明）
+
+Syncro **仅手机/PWA** 使用。离开 Syncro 再回来不应「从头开始」——数据不在服务端会话里，而在本机：
+
+| 存储 | 内容 | 有效期 |
+|------|------|--------|
+| IndexedDB `syncro_sessions` | 加密完整 matrix + 任务文案 | 创建后 **24 小时** |
+| `sessionStorage.syncro_last_session_id` | 最近一次 session id（列表兜底） | 浏览器标签会话 |
+| Archive `type: syncro_task` | 摘要 + 跳转 `syncro_session_id` | 同 24h 窗口 |
+
+**PWA `/syncro` 首页 UI（`SyncroPwaHomeFooter`）：**
+
+1. **继续上次解读** — 大按钮，读 IndexedDB 最近未过期 session → `/syncro/result/{id}`
+2. **24 小时内的解读** — 列表（多条时显示；单条时仅大按钮）
+3. **Begin** — 明确 **新解读**（`/syncro/task?…&new=1`）
+4. 文案提示：数据在本机，切换 POJU 等功能后可回来继续
+
+**勿**把最近列表放在 `<NotPWA>` 内（PWA 下整块不渲染）。实现文件：`components/syncro/SyncroPwaHomeFooter.tsx`、`SyncroPwaContinuePrimary.tsx`、`lib/syncro/syncro-session-summary.ts`。
+
 代码:
 ```
 
