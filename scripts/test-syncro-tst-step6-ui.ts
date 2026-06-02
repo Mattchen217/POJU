@@ -129,7 +129,8 @@ function main() {
     "simple rotate + upright labels",
   );
   assert(!ringLayout.includes("rotate3d"), "no GPU rotate helper");
-  assert(ringLayout.includes("SYNCRO_PARTICLE_OFFSET_X"), "particle visual center nudge");
+  assert(ringLayout.includes("SYNCRO_PARTICLE_DISPLAY_SCALE"), "particle scale for canvas margin");
+  assert(ringLayout.includes("SYNCRO_PARTICLE_OFFSET_X = 5"), "particle +5px nudge");
   assert(ringLayout.includes("getSyncroParticleFieldStyle"), "particle size on spline root");
   assert(ringLayout.includes("SYNCRO_RING_MARGIN_TOP = 80"), "ring margin 80");
   assert(compass.includes("SyncroParticleCore bare"), "particle without mask");

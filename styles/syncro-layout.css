@@ -5,11 +5,11 @@
 
 .syncro-main-view {
   --syncro-nav-reserve: max(60px, calc(48px + env(safe-area-inset-bottom, 0px)));
-  --syncro-toggle-bottom: 78px;
-  --syncro-why-bottom: 128px;
-  --syncro-bottom-reserve: 120px;
+  --syncro-toggle-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  --syncro-bottom-reserve: calc(52px + env(safe-area-inset-bottom, 0px));
   --syncro-hour-top: env(safe-area-inset-top, 0px);
-  --syncro-stage-top: 100px;
+  /* Hour rail + name/range + Now/Ready legend */
+  --syncro-stage-top: calc(env(safe-area-inset-top, 0px) + 118px);
 }
 
 /* Hour progress — top band */
@@ -27,14 +27,27 @@
   flex-direction: column;
   align-items: stretch;
   justify-content: flex-start;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding-top: var(--syncro-stage-top);
   padding-bottom: var(--syncro-bottom-reserve);
 }
 
 /* Concentric compass / AR / MAP — centered in middle band */
 .syncro-main-view .compass-mode-body,
-.syncro-main-view .ar-mode-body,
+.syncro-main-view .ar-mode-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 0;
+  padding: 0;
+  overflow: visible;
+}
+
 .syncro-main-view .map-mode-body {
   flex: 1;
   display: flex;
@@ -78,22 +91,23 @@
 /* Compass / AR: advice + Why in footer below particle ring (in-flow, not over concentric) */
 .syncro-main-view .compass-mode-body,
 .syncro-main-view .ar-mode-body {
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 0;
 }
 
 .syncro-main-view .compass-stage {
-  flex: 1;
+  flex: 0 0 auto;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  min-height: 0;
   width: 100%;
-  padding-top: 4px;
+  padding: 2px 0 0;
+  min-height: 0;
 }
 
-.syncro-main-view .compass-stage .concentric-system {
-  width: min(78vmin, 460px);
-  height: min(78vmin, 460px);
+.syncro-main-view .compass-stage .concentric-system,
+.syncro-main-view .compass-stage .compass-area {
+  flex-shrink: 0;
 }
 
 .syncro-main-view .compass-footer {
@@ -101,8 +115,12 @@
   width: 100%;
   max-width: 28rem;
   margin: 0 auto;
-  padding: 4px 20px 2px;
+  padding: 6px 20px 4px;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
 }
 
 .syncro-main-view .compass-mode-body .compass-short-advice,

@@ -99,3 +99,47 @@
   line-height: 1.5;
   color: var(--pj-text-dim, #6b7280);
 }
+
+/* In-flow compact panel — below「为何此时」on compass stack */
+.syncro-bg-stream--inline {
+  position: static;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  z-index: auto;
+}
+
+.syncro-bg-stream--compact {
+  border-radius: 10px;
+  padding: 0;
+}
+
+.syncro-bg-stream__status-line {
+  margin: 0 0 4px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--pj-gold, #d4af37);
+  text-align: left;
+}
+
+.syncro-bg-stream__box--compact {
+  max-height: calc(2 * 1.45em + 12px);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  padding: 6px 10px;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.syncro-bg-stream__retry--compact {
+  margin-top: 4px;
+  padding: 4px 10px;
+  font-size: 10px;
+}

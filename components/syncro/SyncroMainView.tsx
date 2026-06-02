@@ -20,8 +20,6 @@ import {
   type SyncroUiMode,
 } from "@/lib/syncro/syncro-view-helpers";
 import { getRealtimeHourPeriodForSession } from "@/lib/syncro/syncro-submission-schedule";
-import { SyncroBackgroundStreamPanel } from "@/components/syncro/SyncroBackgroundStreamPanel";
-import { SyncroCloudProgressPanel } from "@/components/syncro/SyncroCloudProgressPanel";
 import type { SyncroBackgroundStreamState } from "@/lib/syncro/use-syncro-background-stream";
 import type { HourPeriod, SyncroSession } from "@/lib/syncro/types";
 
@@ -218,6 +216,8 @@ export function SyncroMainView({
             locale={locale}
             hourPeriod={effectivePeriod}
             highlightMatrixKeys={highlightMatrixKeys}
+            llmProgress={llmProgress}
+            backgroundStream={backgroundStream}
           />
         ) : null}
 

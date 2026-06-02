@@ -1,15 +1,36 @@
-/* 整个罗盘页:简单的全屏容器 */
+/* Legacy full-page wrapper (unsupported state) */
 .compass-page {
   position: relative;
   width: 100%;
-  min-height: calc(100vh - 160px);
-  padding-top: 80px;
-  padding-bottom: 130px;
+  overflow: visible;
+}
+
+.compass-center-meta {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  line-height: 1.35;
+  letter-spacing: 0.3px;
+  color: var(--pj-text-secondary, #a8b0c8);
+}
+
+.compass-center-direction {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pj-gold, #d4a574);
+  letter-spacing: 1px;
+}
+
+.compass-center-hour {
+  color: var(--pj-text-dim, #8a8aa0);
+  white-space: nowrap;
 }
 
 /* 不要给 .compass-area 加任何样式,所有样式都用 inline style */
-/* 不要加 overflow: hidden 到任何地方 */
-/* 不要加 border-radius: 50% 到粒子层(仅 AR 摄像头窗口允许) */
+/* 不要加 overflow: hidden 到罗盘粒子区域(仅 AR 摄像头窗口允许 hidden) */
 
 /* Legacy .particle-layer — full bleed inside rotating ring */
 .particle-layer .syncro-particle-spline,
@@ -18,20 +39,54 @@
   height: 100% !important;
 }
 
-/* bare: width/height set inline on .syncro-particle-field (see syncro-ring-layout.ts) */
+/**
+ * bare 模式: 尺寸在 syncro-ring-layout.ts（canvas 520 × scale → 约 400px 视觉）
+ * 正方形边线来自 WebGL canvas 边界,不是额外背景框; scale 留出边距减轻裁切感
+ */
+.syncro-particle-field,
+.syncro-particle-field > div {
+  overflow: visible !important;
+}
+
 .syncro-particle-field canvas {
   width: 100% !important;
   height: 100% !important;
   display: block;
+  background: transparent !important;
 }
 
 .syncro-particle-field.syncro-particle-spline--static {
   background: radial-gradient(circle, rgba(108, 52, 172, 0.25) 0%, transparent 70%);
 }
 
+.why-btn-prominent {
+  padding: 8px 18px;
+  background: rgba(212, 165, 116, 0.12);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  color: #d4a574;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  border: none;
+  border-radius: 20px;
+  box-shadow: inset 0 0 0 0.5px rgba(212, 165, 116, 0.3);
+  cursor: pointer;
+  font-family: inherit;
+}
+
 .why-btn-prominent:disabled {
-  opacity: 0.45;
+  opacity: 0.72;
   cursor: not-allowed;
+}
+
+.syncro-main-view .compass-mode-body .compass-short-advice {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--pj-text-secondary, #a8b0c8);
+  max-height: 4.5em;
+  overflow: hidden;
 }
 
 .syncro-advice--loading,

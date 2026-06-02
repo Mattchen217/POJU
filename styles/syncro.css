@@ -455,8 +455,9 @@
   cursor: not-allowed;
 }
 
-/* Why CTA sits above mode switcher (Part 5 spacing) */
-.syncro-main-view .compass-bottom-cta {
+/* Why CTA — in-flow inside .compass-footer (compass-mode-body); legacy map uses absolute */
+.syncro-main-view .map-mode-body .compass-bottom-cta,
+.syncro-main-view .compass-page .compass-bottom-cta {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
