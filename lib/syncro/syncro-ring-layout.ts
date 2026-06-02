@@ -8,7 +8,8 @@ export const SYNCRO_PARTICLE_DISPLAY_SIZE = 440;
 export const SYNCRO_PARTICLE_CANVAS_SIZE = 520;
 export const SYNCRO_PARTICLE_DISPLAY_SCALE =
   SYNCRO_PARTICLE_DISPLAY_SIZE / SYNCRO_PARTICLE_CANVAS_SIZE;
-export const SYNCRO_PARTICLE_OFFSET_X = 0;
+/** Nudge right — Spline asset visual center sits ~12px left of ring center. */
+export const SYNCRO_PARTICLE_OFFSET_X = 12;
 export const SYNCRO_PARTICLE_OFFSET_Y = 0;
 export const SYNCRO_CENTER_INFO_WIDTH = 140;
 export const SYNCRO_AR_CAMERA_SIZE = 200;
