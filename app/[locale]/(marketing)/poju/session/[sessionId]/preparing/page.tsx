@@ -5,8 +5,8 @@ import { useLocale, useTranslations } from "next-intl";
 import { useParams, useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
+import { usePreparingBlockInput } from "@/components/poju/preparing-spline-control";
 import { PreparingStatusOverlay } from "@/components/poju/PreparingStatusOverlay";
-import { PreparingSplineShell } from "@/components/poju/PreparingSplineShell";
 import { createInitialAgentState } from "@/lib/poju/agent-state";
 import type { StoredProfileData } from "@/lib/db/poju-db";
 import { clearPendingBaseAnalysisProfile } from "@/lib/profile/pending-base-analysis";
@@ -89,6 +89,25 @@ function PreparingInner() {
     router.replace(`/poju/session/${sessionId}`);
   }, [router, sessionId]);
 
+  const handleStreamError = useCallback(
+    async (err: string) => {
+      if (profileId && (await profileHasBaseAnalysis(profileId))) {
+        await finishToSession();
+        return;
+      }
+      if (profileId) {
+        await discardIncompletePendingProfile(profileId);
+      }
+      setError(err);
+      setPhase("error");
+    },
+    [profileId, finishToSession],
+  );
+
+  function handleRefund() {
+    router.push(`/poju/session/${sessionId}/refund`);
+  }
+
   useEffect(() => {
     if (!sessionId || initRef.current) return;
     initRef.current = true;
@@ -136,30 +155,6 @@ function PreparingInner() {
     })();
   }, [sessionId, profileIdFromUrl, router, bindSessionWithBaseAnalysis]);
 
-  useEffect(() => {
-    if (phase !== "cache" || !profileId) return;
-    void (async () => {
-      await waitRemainingMinSpline(cacheSplineStartedRef.current, PREPARING_MIN_SPLINE_CACHE_MS);
-      await finishToSession();
-    })();
-  }, [phase, profileId, finishToSession]);
-
-  async function handleStreamError(err: string) {
-    if (profileId && (await profileHasBaseAnalysis(profileId))) {
-      await finishToSession();
-      return;
-    }
-    if (profileId) {
-      await discardIncompletePendingProfile(profileId);
-    }
-    setError(err);
-    setPhase("error");
-  }
-
-  function handleRefund() {
-    router.push(`/poju/session/${sessionId}/refund`);
-  }
-
   if (!profile || phase === "loading") {
     return (
       <PreparingStatusOverlay>
@@ -170,46 +165,111 @@ function PreparingInner() {
 
   if (phase === "cache") {
     return (
-      <PreparingSplineShell blockInteraction>
-        <PreparingStatusOverlay>
-          <p className="preparing-spline-page__status">{tPrep("preparing_done")}</p>
-        </PreparingStatusOverlay>
-      </PreparingSplineShell>
+      <CachePhaseOverlay finishToSession={finishToSession} startedAt={cacheSplineStartedRef.current} />
     );
   }
 
   if (phase === "error") {
     return (
-      <PreparingSplineShell blockInteraction>
-        <div className="preparing-spline-page__overlay preparing-spline-page__overlay--error" role="alert">
-          <p className="preparing-spline-page__status">{error}</p>
-          <div className="error-actions">
-            <button type="button" className="primary" onClick={() => setPhase("streaming")}>
-              {tChart("retry")}
-            </button>
-            <button type="button" className="secondary" onClick={handleRefund}>
-              {tChart("refund_instead")}
-            </button>
-          </div>
-        </div>
-      </PreparingSplineShell>
+      <ErrorPhaseOverlay
+        error={error}
+        onRetry={() => setPhase("streaming")}
+        onRefund={handleRefund}
+        tChart={tChart}
+      />
     );
   }
 
   return (
-    <PreparingSplineShell blockInteraction>
-      <BaseAnalysisStreamPreparing
-        profile={profile}
-        profileId={profileId}
-        locale={locale}
-        logLabel="POJUPreparing"
-        onComplete={async () => {
-          await bindSessionWithBaseAnalysis(profileId);
-          await finishToSession();
-        }}
-        onError={handleStreamError}
-      />
-    </PreparingSplineShell>
+    <StreamingPhase
+      profile={profile}
+      profileId={profileId}
+      locale={locale}
+      onComplete={async () => {
+        await bindSessionWithBaseAnalysis(profileId);
+        await finishToSession();
+      }}
+      onError={handleStreamError}
+    />
+  );
+}
+
+function CachePhaseOverlay({
+  startedAt,
+  finishToSession,
+}: {
+  startedAt: number;
+  finishToSession: () => Promise<void>;
+}) {
+  const tPrep = useTranslations("session_prep");
+  usePreparingBlockInput(true);
+
+  useEffect(() => {
+    void (async () => {
+      await waitRemainingMinSpline(startedAt, PREPARING_MIN_SPLINE_CACHE_MS);
+      await finishToSession();
+    })();
+  }, [startedAt, finishToSession]);
+
+  return (
+    <PreparingStatusOverlay>
+      <p className="preparing-spline-page__status">{tPrep("preparing_done")}</p>
+    </PreparingStatusOverlay>
+  );
+}
+
+function ErrorPhaseOverlay({
+  error,
+  onRetry,
+  onRefund,
+  tChart,
+}: {
+  error: string | null;
+  onRetry: () => void;
+  onRefund: () => void;
+  tChart: ReturnType<typeof useTranslations>;
+}) {
+  usePreparingBlockInput(true);
+
+  return (
+    <div className="preparing-spline-page__overlay preparing-spline-page__overlay--error" role="alert">
+      <p className="preparing-spline-page__status">{error}</p>
+      <div className="error-actions">
+        <button type="button" className="primary" onClick={onRetry}>
+          {tChart("retry")}
+        </button>
+        <button type="button" className="secondary" onClick={onRefund}>
+          {tChart("refund_instead")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function StreamingPhase({
+  profile,
+  profileId,
+  locale,
+  onComplete,
+  onError,
+}: {
+  profile: StoredProfileData;
+  profileId: string;
+  locale: string;
+  onComplete: () => void | Promise<void>;
+  onError: (error: string) => void;
+}) {
+  usePreparingBlockInput(true);
+
+  return (
+    <BaseAnalysisStreamPreparing
+      profile={profile}
+      profileId={profileId}
+      locale={locale}
+      logLabel="POJUPreparing"
+      onComplete={onComplete}
+      onError={onError}
+    />
   );
 }
 

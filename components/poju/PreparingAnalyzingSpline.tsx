@@ -3,6 +3,7 @@
 import type { Application } from "@splinetool/runtime";
 
 import { SplineInteractiveScene } from "@/components/spline/SplineInteractiveScene";
+import { getPreparingDeviceProfile } from "@/lib/client/preparing-device-profile";
 import { PREPARING_ANALYZING_ZOOM } from "@/lib/poju/preparing-spline-timing";
 
 /** `public/spline/Analyzing-scene.splinecode` */
@@ -24,12 +25,15 @@ export function PreparingAnalyzingSpline({
   initialZoom = PREPARING_ANALYZING_ZOOM,
   onLoad,
 }: PreparingAnalyzingSplineProps) {
+  const profile = getPreparingDeviceProfile();
+
   return (
     <SplineInteractiveScene
       scene={PREPARING_ANALYZING_SCENE}
       className={className}
       initialZoom={initialZoom}
-      pointerFollow
+      pointerFollow={profile.pointerFollow}
+      renderScale={profile.renderScale}
       webGLContext="preparing"
       onLoad={onLoad}
     />

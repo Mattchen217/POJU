@@ -22,6 +22,8 @@ type SplineInteractiveSceneProps = {
   pointerFollow?: boolean;
   /** `preparing` keeps WebGL in installed PWA (single scene); default skips marketing WebGL in PWA. */
   webGLContext?: HeavyWebGLContext;
+  /** Lower internal canvas resolution while keeping full-screen CSS size. */
+  renderScale?: number;
   onLoad?: (app: Application) => void;
 };
 
@@ -31,6 +33,7 @@ export function SplineInteractiveScene({
   initialZoom = 1,
   pointerFollow = true,
   webGLContext = "marketing",
+  renderScale = 1,
   onLoad,
 }: SplineInteractiveSceneProps) {
   const allowWebGL = useAllowHeavyWebGL(webGLContext);
@@ -47,6 +50,15 @@ export function SplineInteractiveScene({
         window.setTimeout(apply, 120);
         window.setTimeout(apply, 400);
       }
+      if (renderScale > 0 && renderScale < 1 && typeof window !== "undefined") {
+        const w = Math.max(320, Math.floor(window.innerWidth * renderScale));
+        const h = Math.max(480, Math.floor(window.innerHeight * renderScale));
+        try {
+          app.setSize(w, h);
+        } catch {
+          // optional
+        }
+      }
       try {
         app.setBackgroundColor("transparent");
       } catch {
@@ -54,7 +66,7 @@ export function SplineInteractiveScene({
       }
       onLoad?.(app);
     },
-    [initialZoom, onLoad],
+    [initialZoom, onLoad, renderScale],
   );
 
   useEffect(() => {
@@ -73,7 +85,7 @@ export function SplineInteractiveScene({
 
   return (
     <div ref={rootRef} className={clsx("spline-interactive-scene", className)}>
-      <Spline scene={scene} className="h-full w-full" onLoad={handleLoad} />
+      <Spline scene={scene} className="h-full w-full" renderOnDemand onLoad={handleLoad} />
     </div>
   );
 }

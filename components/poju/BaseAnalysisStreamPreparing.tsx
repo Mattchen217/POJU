@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslations } from "next-intl";
 
 import { StreamingAnalysisView } from "@/components/poju/StreamingAnalysisView";
+import { usePreparingSplineControl } from "@/components/poju/preparing-spline-control";
 import { buildStreamLocalDataFromProfile } from "@/lib/base-analysis/build-stream-local-data";
 import { useStreamingAnalysis } from "@/lib/base-analysis/useStreamingAnalysis";
 import type { StoredProfileData } from "@/lib/db/poju-db";
@@ -42,6 +43,7 @@ export function BaseAnalysisStreamPreparing({
   resumeJobId,
 }: BaseAnalysisStreamPreparingProps) {
   const tChart = useTranslations("chart_loader");
+  const splineControl = usePreparingSplineControl();
   const localData = useMemo(
     () => buildStreamLocalDataFromProfile(profile.user_profile),
     [profile.user_profile],
@@ -65,6 +67,10 @@ export function BaseAnalysisStreamPreparing({
   const handleComplete = useCallback(
     async (content: string, meta: Record<string, unknown> | undefined) => {
       try {
+        splineControl?.pauseScene();
+        await new Promise<void>((resolve) => {
+          window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve()));
+        });
         await saveBaseAnalysisFromStream({
           profile_id: profileId,
           content,
@@ -79,7 +85,7 @@ export function BaseAnalysisStreamPreparing({
         onErrorRef.current?.(msg);
       }
     },
-    [profileId, locale, logLabel],
+    [profileId, locale, logLabel, splineControl],
   );
 
   const { state, start, stop } = useStreamingAnalysis({
