@@ -129,7 +129,8 @@ function main() {
     "simple rotate + upright labels",
   );
   assert(!ringLayout.includes("rotate3d"), "no GPU rotate helper");
-  assert(ringLayout.includes("SYNCRO_PARTICLE_SIZE = 520"), "particle canvas 520");
+  assert(ringLayout.includes("SYNCRO_PARTICLE_OFFSET_X"), "particle visual center nudge");
+  assert(ringLayout.includes("getSyncroParticleLayerStyle"), "shared particle layer style");
   assert(ringLayout.includes("SYNCRO_RING_MARGIN_TOP = 80"), "ring margin 80");
   assert(compass.includes("SyncroParticleCore bare"), "particle without mask");
   assert(compass.includes("SyncroCellAdvice"), "compass uses real LLM advice gate");

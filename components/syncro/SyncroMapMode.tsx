@@ -17,7 +17,7 @@ import {
   SYNCRO_CENTER_INFO_WIDTH,
   SYNCRO_MAP_POINT_RADIUS,
   SYNCRO_MAP_POINT_SIZE,
-  SYNCRO_PARTICLE_SIZE,
+  getSyncroParticleLayerStyle,
   SYNCRO_RING_MARGIN_TOP,
   SYNCRO_RING_SIZE,
   SYNCRO_WHY_BUTTON_MARGIN_TOP,
@@ -92,18 +92,7 @@ export function SyncroMapMode({
           overflow: "visible",
         }}
       >
-        <div
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            width: SYNCRO_PARTICLE_SIZE,
-            height: SYNCRO_PARTICLE_SIZE,
-            transform: "translate(-50%, -50%)",
-            opacity: 0.5,
-            pointerEvents: "none",
-          }}
-        >
+        <div style={getSyncroParticleLayerStyle({ opacity: 0.5 })}>
           <SyncroParticleCore bare />
         </div>
 
