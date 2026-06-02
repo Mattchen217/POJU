@@ -442,7 +442,7 @@ async function streamOpenRouterCompletion(
 
   callbacks?.onConnecting?.();
 
-  console.log(`[syncro-llm-core] ${input.hour_id} start, model=${model}`);
+  console.log(`[helper] ${input.hour_id} start fetch, model=${model}`);
 
   let llmRes = await fetch(openRouterUrl, {
     method: "POST",
@@ -480,6 +480,7 @@ async function streamOpenRouterCompletion(
   let inReasoning = false;
   let writingPhaseSent = false;
   let chunkCount = 0;
+  let firstContentChunkLogged = false;
 
   callbacks?.onReasoning?.();
 
@@ -523,6 +524,10 @@ async function streamOpenRouterCompletion(
           }
           accumContent += delta.content;
           chunkCount++;
+          if (!firstContentChunkLogged) {
+            firstContentChunkLogged = true;
+            console.log(`[helper] ${input.hour_id} first content chunk`);
+          }
           callbacks?.onContentChunk?.(delta.content);
           void appendToStream(input.session_id, input.hour_id, delta.content).catch((e) => {
             console.warn(`[syncro-llm-core] ${input.hour_id} appendToStream failed:`, e);
@@ -576,10 +581,16 @@ export async function generateSyncroHourAdvice(
   let adviceByKey: Record<string, SyncroHourAdviceCell>;
   try {
     adviceByKey = parseAdviceJson(accumContent, input);
+    console.log(
+      `[helper] ${input.hour_id} parse success, advice keys = ${Object.keys(adviceByKey).length}`,
+    );
   } catch (e) {
-    if (e instanceof SyncroParseError) throw e;
+    if (e instanceof SyncroParseError) {
+      console.error(`[helper] ${input.hour_id} parse failed:`, e.message);
+      throw e;
+    }
     const message = e instanceof Error ? e.message : String(e);
-    console.error(`[syncro-llm-core] ${input.hour_id} JSON parse failed:`, accumContent.slice(0, 300));
+    console.error(`[helper] ${input.hour_id} parse failed:`, message, accumContent.slice(0, 300));
     throw new SyncroParseError(accumContent, message);
   }
 

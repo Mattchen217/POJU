@@ -6,21 +6,14 @@ import { useEffect, useRef, useState } from "react";
 import { HourProgressBar } from "@/components/syncro/HourProgressBar";
 import type { SyncroLlmProgress } from "@/components/syncro/SyncroLlmBatchRunner";
 import { SYNCRO_LLM_BATCH_COUNT } from "@/lib/llm/services/syncro-reading-service";
-import {
-  cellsForHourFromContext,
-  type SyncroHourCellInput,
-} from "@/lib/syncro/generate-syncro-hour-with-retry";
-import { HOUR_ORDER } from "@/lib/syncro/hour-order";
+import { buildHourPairsFromLive, getNextHourPeriod } from "@/lib/syncro/syncro-hour-pairs";
+import { buildSyncroLlmHoursInput } from "@/lib/syncro/syncro-llm-batch-core";
 import { hourPeriodDisplayName, HOUR_PERIOD_RANGES } from "@/lib/syncro/hour-period-ranges";
 import { rebuildSyncroLlmContext } from "@/lib/syncro/rebuild-syncro-llm-context";
 import { dispatchSyncroMatrixPatch } from "@/lib/syncro/syncro-llm-events";
-import {
-  resolveSyncroLlmContext,
-  type SyncroLlmContext,
-} from "@/lib/syncro/syncro-llm-context-storage";
+import { resolveSyncroLlmContext } from "@/lib/syncro/syncro-llm-context-storage";
 import { patchSyncroSessionMatrix } from "@/lib/syncro/syncro-session";
-import { runStreamHourWithRetry } from "@/lib/syncro/syncro-stream-hour-runner";
-import type { StreamHourBody } from "@/lib/syncro/streaming-runner";
+import { runStreamHoursWithRetry } from "@/lib/syncro/syncro-stream-hours-runner";
 import { getOrderedHourPeriodsFromSession } from "@/lib/syncro/syncro-view-helpers";
 import type { HourPeriod, SyncroSession } from "@/lib/syncro/types";
 
@@ -39,50 +32,8 @@ type StreamPhase =
   | "done"
   | "error";
 
-function buildProfileSummary(ctx: SyncroLlmContext): string {
-  const ba = ctx.base_analysis;
-  if (typeof ba === "string") return ba.slice(0, 4000);
-  try {
-    return JSON.stringify(ba).slice(0, 4000);
-  } catch {
-    return ctx.task_description;
-  }
-}
-
-function buildStreamBody(
-  sessionId: string,
-  livePeriod: HourPeriod,
-  locale: string,
-  ctx: SyncroLlmContext,
-): StreamHourBody {
-  const cells: StreamHourBody["cells"] = cellsForHourFromContext(ctx, livePeriod).map((cell) => {
-    const local = ctx.local_matrix[cell.key];
-    const hints = local?._internal?.key_factors;
-    return {
-      ...cell,
-      key_hints: hints?.length ? hints : undefined,
-    };
-  });
-
-  return {
-    session_id: sessionId,
-    hour_id: livePeriod,
-    hour_label: hourPeriodDisplayName(livePeriod, locale),
-    hour_range: HOUR_PERIOD_RANGES[livePeriod],
-    cells,
-    task_description: ctx.task_description,
-    profile_summary: buildProfileSummary(ctx),
-    locale,
-  };
-}
-
-/** Merge patched hour cells into the in-memory session (parent state) for liveHourReady. */
-function mergeLiveHourIntoSession(
-  target: SyncroSession,
-  patched: SyncroSession,
-  updatedKeys: string[],
-): void {
-  for (const key of updatedKeys) {
+function mergeAdviceIntoSession(target: SyncroSession, patched: SyncroSession, keys: string[]): void {
+  for (const key of keys) {
     const src = patched.matrix[key];
     const dst = target.matrix[key];
     if (!src || !dst) continue;
@@ -95,13 +46,15 @@ function mergeLiveHourIntoSession(
   target.llm_meta = { ...target.llm_meta, ...patched.llm_meta };
 }
 
-/** Full-screen wait: stream live hour LLM, then parent switches to compass when matrix is ready. */
+/** Full-screen wait: stream first pair (live + next), then compass. */
 export function SyncroPreparingLiveHour({ session, locale, livePeriod, progress }: Props) {
   const params = useParams();
   const sessionId = typeof params.id === "string" ? params.id : "";
 
+  const nextPeriod = getNextHourPeriod(livePeriod);
   const orderedPeriods = getOrderedHourPeriodsFromSession(session);
   const hourName = hourPeriodDisplayName(livePeriod, locale);
+  const nextName = hourPeriodDisplayName(nextPeriod, locale);
   const hourRange = HOUR_PERIOD_RANGES[livePeriod];
 
   const [streamText, setStreamText] = useState("");
@@ -152,11 +105,14 @@ export function SyncroPreparingLiveHour({ session, locale, livePeriod, progress 
         return;
       }
 
-      const body = buildStreamBody(sessionId, livePeriod, locale, ctx);
+      const pairs = buildHourPairsFromLive(livePeriod);
+      const [firstHour, secondHour] = pairs[0]!;
+      const hoursInput = buildSyncroLlmHoursInput(sessionId, [firstHour, secondHour], ctx);
+
       setStreamPhase("connecting");
 
-      const result = await runStreamHourWithRetry(
-        body,
+      const result = await runStreamHoursWithRetry(
+        hoursInput,
         {
           onProgress: (phase) => {
             setStreamPhase(phase);
@@ -185,18 +141,29 @@ export function SyncroPreparingLiveHour({ session, locale, livePeriod, progress 
 
       if (result.success && result.advice) {
         setStreamPhase("done");
-        const hourIdx = HOUR_ORDER.indexOf(livePeriod);
         const updated = await patchSyncroSessionMatrix(sessionId, result.advice, {
           cost_usd_delta: 0,
         });
         if (updated) {
           const keys = Object.keys(result.advice);
-          mergeLiveHourIntoSession(session, updated, keys);
+          mergeAdviceIntoSession(session, updated, keys);
           dispatchSyncroMatrixPatch({
             session_id: sessionId,
-            batch_index: hourIdx >= 0 ? hourIdx : 0,
+            batch_index: 0,
             batch_total: SYNCRO_LLM_BATCH_COUNT,
             updated_keys: keys,
+          });
+
+          void fetch("/api/syncro/trigger-background", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              session_id: sessionId,
+              live_period: livePeriod,
+              llm_context: ctx,
+            }),
+          }).catch((e) => {
+            console.warn("[SyncroPreparingLiveHour] trigger-background failed:", e);
           });
         } else {
           setStreamPhase("error");
@@ -234,7 +201,7 @@ export function SyncroPreparingLiveHour({ session, locale, livePeriod, progress 
         </h2>
 
         <p className="syncro-preparing-live-hint" style={{ maxWidth: "28rem" }}>
-          ◐ 当前时辰:{hourName}（{hourRange}）
+          ◐ 首批:{hourName}、{nextName}（{hourRange} 起）· 共 6 次 LLM,每次 2 时辰
         </p>
 
         {streamPhase === "reasoning" ? (
@@ -285,12 +252,7 @@ export function SyncroPreparingLiveHour({ session, locale, livePeriod, progress 
               生成失败:{streamError ?? "未知错误"}
               {ctxMissing ? "（上下文缺失）" : ""}
             </p>
-            <button
-              type="button"
-              className="primary"
-              style={{ marginTop: 8 }}
-              onClick={handleRetry}
-            >
+            <button type="button" className="primary" style={{ marginTop: 8 }} onClick={handleRetry}>
               重试
             </button>
           </div>
@@ -302,19 +264,18 @@ export function SyncroPreparingLiveHour({ session, locale, livePeriod, progress 
           </p>
         ) : null}
 
-        {progress.running && progress.current_hour ? (
+        {progress.running ? (
           <p className="syncro-preparing-live-progress">
-            后台批次:{progress.completed}/{progress.total} 时辰已完成
+            后台 Inngest:{progress.completed}/{progress.total} 时辰已完成
           </p>
         ) : null}
 
         <p className="syncro-preparing-live-hint" style={{ marginTop: 20 }}>
           准确分析需要时间,请耐心等待
           <br />
-          使用 V4 Pro 深度推理,通常 1-3 分钟
+          使用 V4 Pro 深度推理,首批约 2-4 分钟
         </p>
       </div>
-
     </div>
   );
 }

@@ -1,8 +1,8 @@
 import { serve } from "inngest/next";
 import { inngest } from "@/lib/inngest/client";
+import { syncroGenerateRemaining } from "@/lib/inngest/functions/syncro-generate-remaining";
 
-// Step B will register syncroGenerateAllHours; empty until then.
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [],
+  functions: [syncroGenerateRemaining],
 });

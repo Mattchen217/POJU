@@ -12,7 +12,7 @@ import { ReturnToPojuCTA } from "@/components/poju/ReturnToPojuCTA";
 import { SyncroMainView } from "@/components/syncro/SyncroMainView";
 import { SyncroPreparingLiveHour } from "@/components/syncro/SyncroPreparingLiveHour";
 import { extractSyncroSummary } from "@/lib/poju/tool-result-summary";
-import { isLiveHourPeriodLlmReady } from "@/lib/syncro/hour-llm-ready";
+import { isInitialSyncroGateReady } from "@/lib/syncro/hour-llm-ready";
 import { SyncroOrientationProvider } from "@/components/syncro/SyncroOrientationProvider";
 import { Link } from "@/i18n/navigation";
 import { generateSyncroHourWithRetry } from "@/lib/syncro/generate-syncro-hour-with-retry";
@@ -177,7 +177,7 @@ function SyncroResultPageContent() {
 
   const syncroSummary = extractSyncroSummary(session);
   const livePeriod = getCurrentHourPeriod();
-  const liveHourReady = isLiveHourPeriodLlmReady(session, livePeriod);
+  const liveHourReady = isInitialSyncroGateReady(session, livePeriod);
 
   return (
     <SyncroOrientationProvider>

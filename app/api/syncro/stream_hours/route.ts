@@ -2,11 +2,11 @@ import { NextRequest } from "next/server";
 
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 import {
-  generateSyncroHourAdviceFromBatch,
+  generateSyncroHoursAdvice,
   SyncroLlmHttpError,
   SyncroParseError,
+  type SyncroLlmHoursInput,
 } from "@/lib/syncro/syncro-llm-batch-core";
-import type { SyncroLlmHourInput } from "@/lib/syncro/syncro-llm-core";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -21,17 +21,27 @@ export async function POST(req: NextRequest) {
     return new Response("OPENROUTER_API_KEY not configured", { status: 503 });
   }
 
-  let body: SyncroLlmHourInput;
+  let body: SyncroLlmHoursInput;
   try {
-    body = (await req.json()) as SyncroLlmHourInput;
+    body = (await req.json()) as SyncroLlmHoursInput;
   } catch {
     return new Response("Invalid JSON", { status: 400 });
   }
 
   const session_id = body.session_id?.trim();
-  const hour_id = body.hour_id?.trim();
-  if (!session_id || !hour_id || !body.cells?.length || !body.task_description?.trim()) {
+  if (
+    !session_id ||
+    !body.hours?.length ||
+    body.hours.length > 2 ||
+    !body.task_description?.trim()
+  ) {
     return new Response("Invalid request", { status: 400 });
+  }
+
+  for (const hour of body.hours) {
+    if (!hour.hour_id?.trim() || !hour.cells?.length) {
+      return new Response("Invalid hour block", { status: 400 });
+    }
   }
 
   const stream = new ReadableStream({
@@ -46,7 +56,7 @@ export async function POST(req: NextRequest) {
       };
 
       try {
-        const result = await generateSyncroHourAdviceFromBatch(body, {
+        const result = await generateSyncroHoursAdvice(body, {
           onConnecting: () => send("progress", { phase: "connecting" }),
           onReasoning: () => send("progress", { phase: "reasoning" }),
           onWriting: () => send("progress", { phase: "writing" }),
@@ -54,12 +64,8 @@ export async function POST(req: NextRequest) {
           onContentChunk: (text) => send("chunk", { text }),
         });
 
-        if (result.from_cache) {
-          console.log(`[stream_hour] ${hour_id} 命中 output 缓存,直接返回`);
-        }
-
         console.log(
-          `[stream_hour] ${hour_id} sending complete with ${Object.keys(result.advice).length} cells, from_cache=${result.from_cache}`,
+          `[stream_hours] sending complete with ${Object.keys(result.advice).length} cells, from_cache=${result.from_cache}`,
         );
         send("complete", { advice: result.advice, from_cache: result.from_cache });
         controller.close();
@@ -81,7 +87,6 @@ export async function POST(req: NextRequest) {
         }
 
         if (e instanceof SyncroParseError) {
-          console.error(`[stream_hour] ${hour_id} JSON parse failed:`, e.raw_content.slice(0, 300));
           send("error", {
             error: "parse_failed",
             retryable: true,
@@ -92,13 +97,6 @@ export async function POST(req: NextRequest) {
         }
 
         const message = e instanceof Error ? e.message : String(e);
-        console.error("═══ [stream_hour] EXCEPTION ═══");
-        console.error("Session:", session_id);
-        console.error("Hour:", hour_id);
-        console.error("Error:", message);
-        console.error("Stack:", e instanceof Error ? e.stack?.slice(0, 500) : "");
-        console.error("═══════════════════════════════");
-
         send("error", {
           error: "exception",
           retryable: true,
