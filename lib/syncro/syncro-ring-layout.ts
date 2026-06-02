@@ -3,9 +3,9 @@ import type { CSSProperties } from "react";
 /** Syncro ring layout — fixed px (change only with product doc). */
 export const SYNCRO_RING_SIZE = 420;
 /** Particle canvas — slightly inside label ring (420); nudge via offsets below. */
-export const SYNCRO_PARTICLE_SIZE = 458;
+export const SYNCRO_PARTICLE_SIZE = 440;
 /** Visual center correction (Spline art reads left of geometric center). */
-export const SYNCRO_PARTICLE_OFFSET_X = 18;
+export const SYNCRO_PARTICLE_OFFSET_X = 10;
 export const SYNCRO_PARTICLE_OFFSET_Y = 0;
 export const SYNCRO_LABEL_RADIUS = 195;
 export const SYNCRO_CENTER_INFO_WIDTH = 140;
