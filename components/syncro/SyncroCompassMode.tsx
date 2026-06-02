@@ -20,7 +20,6 @@ import {
 import { isSyncroLlmReady } from "@/lib/syncro/llm-cell-display";
 import {
   SYNCRO_CENTER_INFO_WIDTH,
-  getSyncroParticleLayerStyle,
   SYNCRO_RING_MARGIN_TOP,
   SYNCRO_RING_SIZE,
   SYNCRO_WHY_BUTTON_MARGIN_TOP,
@@ -98,9 +97,7 @@ export function SyncroCompassMode({
             transformOrigin: "center center",
           }}
         >
-          <div style={getSyncroParticleLayerStyle()}>
-            <SyncroParticleCore bare />
-          </div>
+          <SyncroParticleCore bare />
 
           <SyncroDirectionLabels
             highlightId={currentDirection}

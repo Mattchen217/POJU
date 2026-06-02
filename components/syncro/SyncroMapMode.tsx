@@ -17,7 +17,6 @@ import {
   SYNCRO_CENTER_INFO_WIDTH,
   SYNCRO_MAP_POINT_RADIUS,
   SYNCRO_MAP_POINT_SIZE,
-  getSyncroParticleLayerStyle,
   SYNCRO_RING_MARGIN_TOP,
   SYNCRO_RING_SIZE,
   SYNCRO_WHY_BUTTON_MARGIN_TOP,
@@ -92,9 +91,7 @@ export function SyncroMapMode({
           overflow: "visible",
         }}
       >
-        <div style={getSyncroParticleLayerStyle({ opacity: 0.5 })}>
-          <SyncroParticleCore bare />
-        </div>
+        <SyncroParticleCore bare opacity={0.5} />
 
         <SyncroDirectionLabels highlightId={selectedDir} />
 

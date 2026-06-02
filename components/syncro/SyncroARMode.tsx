@@ -18,7 +18,6 @@ import { compassDegreeToDirection, type CurrentLevel } from "@/lib/syncro/curren
 import { isSyncroLlmReady } from "@/lib/syncro/llm-cell-display";
 import {
   SYNCRO_AR_CAMERA_SIZE,
-  getSyncroParticleLayerStyle,
   SYNCRO_RING_MARGIN_TOP,
   SYNCRO_RING_SIZE,
   SYNCRO_WHY_BUTTON_MARGIN_TOP,
@@ -185,9 +184,7 @@ export function SyncroARMode({
             transformOrigin: "center center",
           }}
         >
-          <div style={getSyncroParticleLayerStyle()}>
-            <SyncroParticleCore bare />
-          </div>
+          <SyncroParticleCore bare />
 
           <SyncroDirectionLabels highlightId={direction} counterRotateDeg={alpha} />
         </div>

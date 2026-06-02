@@ -11,15 +11,21 @@
 /* 不要加 overflow: hidden 到任何地方 */
 /* 不要加 border-radius: 50% 到粒子层(仅 AR 摄像头窗口允许) */
 
-.syncro-particle-spline,
-.syncro-particle-spline canvas {
+/* Legacy .particle-layer — full bleed inside rotating ring */
+.particle-layer .syncro-particle-spline,
+.particle-layer .syncro-particle-spline canvas {
   width: 100% !important;
   height: 100% !important;
 }
 
-.syncro-particle-spline--static {
-  width: 100%;
-  height: 100%;
+/* bare: width/height set inline on .syncro-particle-field (see syncro-ring-layout.ts) */
+.syncro-particle-field canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+.syncro-particle-field.syncro-particle-spline--static {
   background: radial-gradient(circle, rgba(108, 52, 172, 0.25) 0%, transparent 70%);
 }
 
