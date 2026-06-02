@@ -26,11 +26,6 @@ export function buildHourPairsFromSubmission(session: SyncroSession): SyncroHour
   return buildHourPairsFromSequence(getSubmissionHourSequence(session));
 }
 
-export function getFirstSubmissionBatchPair(session: SyncroSession): SyncroHourPair {
-  const pairs = buildHourPairsFromSubmission(session);
-  return pairs[0] ?? [getSubmissionAnchorPeriod(session), getSubmissionAnchorPeriod(session)];
-}
-
 /** Wall-clock 时辰 in the user's session timezone. */
 export function getRealtimeHourPeriodForSession(
   session: SyncroSession,

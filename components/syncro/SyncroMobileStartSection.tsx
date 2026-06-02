@@ -134,7 +134,7 @@ export function SyncroMobileStartSection() {
         ) : null}
       </div>
 
-      {!isDesktop ? <SyncroRecentSessionsList /> : null}
+      <SyncroRecentSessionsList />
 
       {!isDesktop ? (
         <div className="mt-10 grid gap-4">

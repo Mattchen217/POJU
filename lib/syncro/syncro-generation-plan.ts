@@ -5,14 +5,16 @@ import type { HourPeriod } from "@/lib/syncro/types";
 export type SyncroGenerationStep = HourPeriod[];
 
 /**
- * 1) Priority hour (wall-clock NOW) — unlock compass.
+ * 1) Priority hour (wall-clock NOW) — unlock compass (skipped when `skipPriority`).
  * 2) Remaining hours along submission timeline (pairs, skipping already scheduled).
  */
 export function buildSyncroGenerationSteps(
   hourOrder: HourPeriod[],
   priorityHour: HourPeriod,
+  options?: { skipPriority?: boolean },
 ): SyncroGenerationStep[] {
-  const steps: SyncroGenerationStep[] = [[priorityHour]];
+  const steps: SyncroGenerationStep[] = options?.skipPriority ? [] : [[priorityHour]];
+  // When client already streamed priority, still mark it scheduled so pairs stay 2-by-2 on the rest.
   const scheduled = new Set<HourPeriod>([priorityHour]);
 
   for (const [a, b] of buildHourPairsFromSequence(hourOrder)) {

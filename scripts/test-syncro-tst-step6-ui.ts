@@ -14,6 +14,8 @@ import {
   inferTaskTimeScope,
   tiltSuggestsMode,
 } from "../lib/syncro/syncro-view-helpers";
+import { isSyncroLlmReady } from "../lib/syncro/llm-cell-display";
+import { isHourPeriodLlmReady } from "../lib/syncro/hour-llm-ready";
 import { getHourDotStatus } from "../lib/syncro/hour-progress-status";
 import { HOUR_ORDER } from "../lib/syncro/hour-order";
 import { SYNCRO_LLM_BATCH_COUNT } from "../lib/llm/services/syncro-reading-service";
@@ -195,17 +197,15 @@ function main() {
     "hour bar horizontal rail + failed",
   );
 
-  const runner = readFileSync(join(ROOT, "components/syncro/SyncroLlmBatchRunner.tsx"), "utf8");
-  assert(runner.includes("HOUR_ORDER") && runner.includes("generateSyncroHourWithRetry"), "12-hour serial LLM");
-  assert(runner.includes("patchSyncroSessionMatrixFailure"), "marks failed hour cells");
-  assert(runner.includes("rebuildSyncroLlmContext"), "rebuild ctx when missing");
-  assert(runner.includes("resolveSyncroLlmContext"), "loads ctx from IndexedDB");
-  assert(runner.includes("sortedHourPeriodsFromLive"), "sequential batches from live hour");
+  const inngestJob = readFileSync(join(ROOT, "lib/syncro/use-syncro-inngest-job.ts"), "utf8");
+  assert(inngestJob.includes("remaining_only"), "background Inngest after compass");
+  assert(inngestJob.includes("/api/syncro/status"), "poll KV for hour advice");
   const retryHelper = readFileSync(join(ROOT, "lib/syncro/generate-syncro-hour-with-retry.ts"), "utf8");
   assert(retryHelper.includes("/api/syncro/llm_hour"), "llm_hour API with retry");
   assert(retryHelper.includes("MAX_ATTEMPTS = 3"), "hour retry helper");
 
   const preparing = readFileSync(join(ROOT, "components/syncro/SyncroPreparingLiveHour.tsx"), "utf8");
+  assert(preparing.includes("runStreamHoursWithRetry"), "SSE stream for priority hour");
   assert(preparing.includes("SyncroPreparingLiveHour"), "live hour gate before compass");
 
   assert(compass.includes("SYNCRO_WHY_BUTTON_MARGIN_TOP"), "why CTA margin");
@@ -213,6 +213,42 @@ function main() {
   assert(compass.includes('overflow: "visible"'), "compass-area no clip");
 
   assert(SYNCRO_LLM_BATCH_COUNT === 12, "12 LLM batches");
+
+  const localMeta = { model: "local", tokens_used: 0, latency_ms: 0 };
+  const gateCell = {
+    hour_period: "wu" as const,
+    direction_id: "N" as const,
+    hour_start_iso: "2024-01-01T00:00:00.000Z",
+    hour_end_iso: "2024-01-01T02:00:00.000Z",
+    current_level: "open_current" as const,
+    short_advice: "LLM wu",
+    detailed_advice: "detail",
+    rationale: "why",
+    llm_pending: false,
+    llm_failed: false,
+  };
+  assert(isSyncroLlmReady(gateCell, localMeta), "LLM cells ready after patch even if meta still local");
+  const gateSession: SyncroSession = {
+    session_id: "gate",
+    device_id: "d",
+    profile_id: "p",
+    task_description: "t",
+    user_location: { latitude: 0, longitude: 0, timezone: "Asia/Shanghai" },
+    matrix: {},
+    locale: "zh",
+    is_free: false,
+    cost_usd: 0,
+    llm_meta: localMeta,
+    created_at: new Date(),
+    expires_at: new Date(Date.now() + 86400000),
+  };
+  for (const d of ["N", "NE", "E", "SE", "S", "SW", "W", "NW"] as const) {
+    gateSession.matrix[matrixKey("wu", d)] = { ...gateCell, direction_id: d };
+  }
+  assert(
+    isHourPeriodLlmReady(gateSession.matrix, "wu", localMeta),
+    "compass gate hour ready when 8 cells patched (model may stay local)",
+  );
 
   const live: (typeof HOUR_ORDER)[number] = "wu";
   const order = ["wu", "wei", "shen", "you", "xu", "hai", "zi", "chou", "yin", "mao", "chen", "si"] as const;

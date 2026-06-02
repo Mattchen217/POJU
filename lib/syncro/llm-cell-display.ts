@@ -12,7 +12,7 @@ export function isSyncroLlmReady(
 
 export function getSyncroCellDisplayState(
   cell: SyncroCombination | undefined,
-  llmMeta?: SyncroSession["llm_meta"],
+  _llmMeta?: SyncroSession["llm_meta"],
 ): SyncroCellDisplayState {
   if (!cell) return "loading";
   if (cell.llm_failed) return "failed";
@@ -23,15 +23,6 @@ export function getSyncroCellDisplayState(
     Boolean(cell.rationale?.trim());
 
   if (cell.llm_pending) return "loading";
-
-  const llmNeverRan =
-    (llmMeta?.tokens_used ?? 0) === 0 &&
-    (llmMeta?.model === "local" || !llmMeta?.model?.trim());
-
-  if (llmNeverRan && hasCopy) {
-    return "loading";
-  }
-
   if (!hasCopy) return "loading";
   return "ready";
 }

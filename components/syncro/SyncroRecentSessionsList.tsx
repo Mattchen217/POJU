@@ -49,16 +49,21 @@ export function SyncroRecentSessionsList() {
       }
     })();
 
-    const onFocus = () => {
+    const refresh = () => {
       void listActiveSyncroSessionSummariesForDevice().then((list) => {
         if (!cancelled) setItems(list);
       });
     };
-    window.addEventListener("focus", onFocus);
+    window.addEventListener("focus", refresh);
+    window.addEventListener("pageshow", refresh);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") refresh();
+    });
 
     return () => {
       cancelled = true;
-      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("pageshow", refresh);
     };
   }, []);
 

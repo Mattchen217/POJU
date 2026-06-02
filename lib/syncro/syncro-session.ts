@@ -294,17 +294,3 @@ export async function cleanupExpiredSyncroSessions(): Promise<number> {
   return expired.length;
 }
 
-/** Remove other active sessions for the same profile when starting a new reading. */
-async function revokeActiveSyncroSessionsForProfile(
-  profileId: string,
-  exceptSessionId?: string,
-): Promise<void> {
-  const now = Date.now();
-  const records = await getPojuDb().syncro_sessions.where("profile_id").equals(profileId).toArray();
-
-  for (const record of records) {
-    if (record.session_id === exceptSessionId) continue;
-    if (!isRecordActive(record, now)) continue;
-    await getPojuDb().syncro_sessions.delete(record.session_id);
-  }
-}

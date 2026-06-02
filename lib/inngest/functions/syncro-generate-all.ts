@@ -23,6 +23,8 @@ export type SyncroGenerateAllEvent = {
     session_id: string;
     hour_order: HourPeriod[];
     priority_hour: HourPeriod;
+    /** Client already streamed priority hour — only generate the rest. */
+    remaining_only?: boolean;
   };
 };
 
@@ -53,8 +55,10 @@ export const syncroGenerateAll = inngest.createFunction(
     triggers: [{ event: "syncro/generate-all" }],
   },
   async ({ event, step }) => {
-    const { session_id, hour_order, priority_hour } = event.data;
-    const steps = buildSyncroGenerationSteps(hour_order, priority_hour);
+    const { session_id, hour_order, priority_hour, remaining_only } = event.data;
+    const steps = buildSyncroGenerationSteps(hour_order, priority_hour, {
+      skipPriority: Boolean(remaining_only),
+    });
 
     await step.run("load-ctx", async () => {
       const c = await getSyncroLlmContextKv(session_id);

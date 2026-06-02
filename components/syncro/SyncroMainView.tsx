@@ -9,7 +9,7 @@ import { useOrientation } from "@/components/syncro/SyncroOrientationProvider";
 import { SyncroARMode } from "@/components/syncro/SyncroARMode";
 import { SyncroCompassMode } from "@/components/syncro/SyncroCompassMode";
 import { SyncroMapMode } from "@/components/syncro/SyncroMapMode";
-import type { SyncroLlmProgress } from "@/components/syncro/SyncroLlmBatchRunner";
+import type { SyncroLlmProgress } from "@/lib/syncro/syncro-llm-progress";
 import type { DirectionId } from "@/lib/syncro/current-system";
 import { loadSyncroPermission, saveSyncroPermission } from "@/lib/syncro/permissions";
 import {

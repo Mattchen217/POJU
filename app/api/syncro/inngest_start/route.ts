@@ -26,6 +26,8 @@ type StartBody = {
   hour_order?: HourPeriod[];
   llm_context: SyncroLlmContext;
   device_id?: string;
+  /** true = do not LLM-call priority hour again (after client SSE + compass). */
+  remaining_only?: boolean;
 };
 
 export async function POST(req: NextRequest) {
@@ -45,11 +47,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invalid_request" }, { status: 400 });
   }
 
-  if (!isSyncroKvConfigured()) {
-    console.error("[inngest_start] KV not configured — progress cannot sync to clients");
-    return NextResponse.json({ error: "kv_not_configured" }, { status: 503 });
+  const kv_configured = isSyncroKvConfigured();
+  if (!kv_configured) {
+    console.warn("[inngest_start] KV not configured — clients cannot poll cloud progress");
   }
 
+  const remaining_only = Boolean(body.remaining_only);
   const hour_order =
     body.hour_order?.length === 12
       ? body.hour_order
@@ -130,6 +133,8 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     ok: true,
     started: true,
+    kv_configured,
+    remaining_only,
     status: await getSyncroStatus(session_id),
     job,
   });

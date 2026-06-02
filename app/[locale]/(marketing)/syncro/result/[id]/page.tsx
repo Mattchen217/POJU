@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
 import { SyncroGuardedRoute } from "@/components/syncro/SyncroGuardedRoute";
-import type { SyncroLlmProgress } from "@/components/syncro/SyncroLlmBatchRunner";
+import type { SyncroLlmProgress } from "@/lib/syncro/syncro-llm-progress";
 import { SyncroLlmProgressBar } from "@/components/syncro/SyncroLlmProgressBar";
 import { PojuDeepDiveCTA } from "@/components/cross-product/PojuDeepDiveCTA";
 import { ReturnToPojuCTA } from "@/components/poju/ReturnToPojuCTA";
@@ -106,10 +106,14 @@ function SyncroResultPageContent() {
     void loadSession();
   }, [sessionId]);
 
+  const liveHourReady =
+    stage === "ready" && session !== null && isSyncroCompassGateReady(session);
+
   useSyncroInngestJob({
     sessionId,
     session,
     enabled: stage === "ready" && session !== null,
+    startBackground: liveHourReady,
     onSessionUpdate: handleSessionUpdate,
     onProgress: setLlmProgress,
   });
@@ -202,7 +206,6 @@ function SyncroResultPageContent() {
 
   const syncroSummary = extractSyncroSummary(session);
   const realtimePeriod = getRealtimeHourPeriodForSession(session);
-  const liveHourReady = isSyncroCompassGateReady(session);
 
   return (
     <SyncroOrientationProvider>
@@ -231,6 +234,7 @@ function SyncroResultPageContent() {
           locale={locale}
           realtimePeriod={realtimePeriod}
           progress={llmProgress}
+          onSessionUpdate={handleSessionUpdate}
         />
       )}
       {liveHourReady ? (

@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 
-import type { SyncroLlmProgress } from "@/components/syncro/SyncroLlmBatchRunner";
+import type { SyncroLlmProgress } from "@/lib/syncro/syncro-llm-progress";
 
 type Props = {
   progress: SyncroLlmProgress;
