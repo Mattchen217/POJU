@@ -16,6 +16,7 @@ import {
   getRealtimeHourPeriodForSession,
   isSyncroCompassGateReady,
 } from "@/lib/syncro/syncro-submission-schedule";
+import { useSyncroBackgroundStream } from "@/lib/syncro/use-syncro-background-stream";
 import { useSyncroInngestJob } from "@/lib/syncro/use-syncro-inngest-job";
 import { SyncroOrientationProvider } from "@/components/syncro/SyncroOrientationProvider";
 import { Link } from "@/i18n/navigation";
@@ -108,6 +109,16 @@ function SyncroResultPageContent() {
 
   const liveHourReady =
     stage === "ready" && session !== null && isSyncroCompassGateReady(session);
+
+  /** Optional on-page SSE; cloud batches (Inngest) run regardless via useSyncroInngestJob. */
+  const backgroundStream = useSyncroBackgroundStream({
+    sessionId,
+    session,
+    locale,
+    enabled: false,
+    onSessionUpdate: handleSessionUpdate,
+    onProgress: setLlmProgress,
+  });
 
   useSyncroInngestJob({
     sessionId,
@@ -225,6 +236,7 @@ function SyncroResultPageContent() {
           highlightMatrixKeys={highlightKeys}
           llmProgress={llmProgress}
           liveHourReady
+          backgroundStream={backgroundStream}
           onRetryHour={handleRetryHour}
           retryingHour={retryingHour}
         />

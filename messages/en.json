@@ -1093,6 +1093,21 @@
       "continue": "Continue this reading",
       "start_new": "Start a new reading instead"
     },
+    "background_stream": {
+      "aria_label": "Background AI generation",
+      "title_running": "Generating remaining hours {step}/{total}",
+      "title_error": "Some hour batches failed",
+      "title_done": "Generation paused",
+      "step": "Current batch: {hours}",
+      "reasoning": "AI reasoning…",
+      "connecting": "Connecting to AI…",
+      "failed": "Failed: {detail}",
+      "retry": "Resume remaining hours",
+      "footnote": "Each batch uses its own connection (avoids Vercel 5‑minute total timeout). Keep this page open.",
+      "title_cloud": "Cloud generation {done}/{total} hours (batch {step})",
+      "footnote_cloud": "Queued on the server—you can switch apps or lock the phone. Reopen this page to refresh; valid 24h.",
+      "cloud_failed": "{count} hour batch(es) failed — tap a red dot on the timeline to retry"
+    },
     "recent_sessions": {
       "heading": "Your readings (24h window)",
       "hint": "Tap to open the compass. Each task stays available until its 24-hour window ends — even after all 12 hour-periods are ready.",

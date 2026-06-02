@@ -926,6 +926,21 @@
     "not_supported_device": "Dieses Gerät unterstützt die Kompass-Sensoren von Syncro nicht.",
     "payment_coming_soon": "Bezahltes Syncro folgt im nächsten Schritt. Auf einem unterstützten Handy ist die erste Session weiterhin gratis.",
     "back_to_home": "Zurück zu Syncro",
+    "background_stream": {
+      "aria_label": "Hintergrund-KI-Generierung",
+      "title_running": "Verbleibende Zeitfenster {step}/{total}",
+      "title_error": "Einige Batches fehlgeschlagen",
+      "title_done": "Generierung pausiert",
+      "step": "Aktueller Batch: {hours}",
+      "reasoning": "KI analysiert…",
+      "connecting": "Verbinde mit KI…",
+      "failed": "Fehler: {detail}",
+      "retry": "Verbleibende Zeitfenster fortsetzen",
+      "footnote": "Jeder Batch eigene Verbindung (Vercel 5‑Min.-Gesamtlimit). Seite geöffnet lassen.",
+      "title_cloud": "Cloud-Generierung {done}/{total} ({step})",
+      "footnote_cloud": "In der Server-Warteschlange — App wechseln oder sperren OK. Seite später öffnen zum Aktualisieren.",
+      "cloud_failed": "{count} Batch(es) fehlgeschlagen — roten Punkt tippen zum Wiederholen"
+    },
     "recent_sessions": {
       "heading": "Deine Lesungen (24 h)",
       "hint": "Tippen zum Öffnen. Jede Aufgabe bleibt bis zum Ende des 24-Stunden-Fensters verfügbar — auch wenn alle 12 Zeitfenster fertig sind.",

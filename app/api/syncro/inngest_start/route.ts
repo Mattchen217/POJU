@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { inngest } from "@/lib/inngest/client";
+import { buildSyncroGenerationSteps } from "@/lib/syncro/syncro-generation-plan";
+import { isSyncroHourKvComplete } from "@/lib/syncro/syncro-hour-kv-complete";
 import { sortedHourPeriodsFromLive } from "@/lib/syncro/hour-order";
+import { getSyncroHour } from "@/lib/syncro/syncro-status-kv";
 import {
   getSyncroJob,
   indexSyncroJobForDevice,
@@ -115,11 +118,45 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  try {
-    await inngest.send({
-      name: "syncro/generate-all",
-      data: { session_id, hour_order, priority_hour },
+  const steps = buildSyncroGenerationSteps(hour_order, priority_hour, {
+    skipPriority: remaining_only,
+  });
+
+  const pendingSteps: { hour_ids: HourPeriod[]; step_index: number }[] = [];
+  for (let i = 0; i < steps.length; i++) {
+    const hour_ids = steps[i]!;
+    let needs = false;
+    for (const h of hour_ids) {
+      const data = await getSyncroHour(session_id, h);
+      if (!isSyncroHourKvComplete(data)) {
+        needs = true;
+        break;
+      }
+    }
+    if (needs) pendingSteps.push({ hour_ids, step_index: i });
+  }
+
+  if (pendingSteps.length === 0) {
+    return NextResponse.json({
+      ok: true,
+      already_done: true,
+      status: await getSyncroStatus(session_id),
     });
+  }
+
+  try {
+    await inngest.send(
+      pendingSteps.map(({ hour_ids, step_index }) => ({
+        name: "syncro/generate-batch" as const,
+        data: {
+          session_id,
+          hour_order,
+          hour_ids,
+          step_index,
+          step_total: steps.length,
+        },
+      })),
+    );
   } catch (e) {
     console.error("[inngest_start] send failed:", e);
     return NextResponse.json({ error: "inngest_send_failed" }, { status: 503 });
@@ -127,7 +164,7 @@ export async function POST(req: NextRequest) {
 
   const job = await getSyncroJob(session_id);
   console.log(
-    `[inngest_start] ${session_id} anchor=${submission_anchor} priority=${priority_hour} completed=${completed}/12`,
+    `[inngest_start] ${session_id} anchor=${submission_anchor} priority=${priority_hour} completed=${completed}/12 batches=${pendingSteps.length}`,
   );
 
   return NextResponse.json({
@@ -135,6 +172,7 @@ export async function POST(req: NextRequest) {
     started: true,
     kv_configured,
     remaining_only,
+    batches_queued: pendingSteps.length,
     status: await getSyncroStatus(session_id),
     job,
   });

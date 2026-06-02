@@ -1108,6 +1108,21 @@
       "continue": "继续这次解读",
       "start_new": "改为开始新的解读"
     },
+    "background_stream": {
+      "aria_label": "后台 AI 生成进度",
+      "title_running": "正在生成剩余时辰 {step}/{total}",
+      "title_error": "部分时辰生成失败",
+      "title_done": "生成已暂停",
+      "step": "当前批次：{hours}",
+      "reasoning": "AI 深度推理中…",
+      "connecting": "正在连接 AI…",
+      "failed": "失败：{detail}",
+      "retry": "继续生成剩余时辰",
+      "footnote": "每批单独连接，避免 Vercel 5 分钟总超时。请保持本页在前台。",
+      "title_cloud": "云端生成中 {done}/{total} 时辰（批次 {step}）",
+      "footnote_cloud": "已提交云端队列，可切换 App 或锁屏。回来打开本页会自动刷新；24 小时内有效。",
+      "cloud_failed": "{count} 个时辰批次失败，可点进度条红点重试"
+    },
     "recent_sessions": {
       "heading": "24 小时内的解读",
       "hint": "点击进入罗盘。每条任务在创建后 24 小时内都可查看——12 个时辰全部生成完成后也不会提前消失。",

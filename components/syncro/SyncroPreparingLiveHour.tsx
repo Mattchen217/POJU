@@ -205,7 +205,7 @@ export function SyncroPreparingLiveHour({
           ◐ 正在生成当前时辰 {hourName}（{hourRange}）· 完成后进入罗盘
         </p>
         <p className="syncro-preparing-live-hint" style={{ maxWidth: "28rem", opacity: 0.85 }}>
-          其余 11 个时辰在进入罗盘后由后台继续生成（Inngest）
+          其余时辰在进入罗盘后由云端队列生成（可离开 App，回来自动刷新）
         </p>
 
         {streamPhase === "reasoning" ? (

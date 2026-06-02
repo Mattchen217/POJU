@@ -45,15 +45,15 @@ export type UseSyncroInngestJobOptions = {
   sessionId: string;
   session: SyncroSession | null;
   enabled: boolean;
-  /** Start Inngest for hours after priority (only when true = compass gate passed). */
+  /** Queue cloud batches (Inngest) + poll KV — works when user leaves the app. */
   startBackground: boolean;
   onSessionUpdate: (session: SyncroSession) => void;
   onProgress: (progress: SyncroLlmProgress) => void;
 };
 
 /**
- * Poll KV after compass; trigger Inngest `remaining_only` once.
- * Priority hour SSE runs in SyncroPreparingLiveHour (not here).
+ * 1) Fan-out Inngest batch jobs (one LLM call per invocation, avoids 300s total cap).
+ * 2) Poll KV and merge advice into IndexedDB for live UI.
  */
 export function useSyncroInngestJob({
   sessionId,
@@ -155,14 +155,14 @@ export function useSyncroInngestJob({
       onProgress({
         completed,
         total: 12,
-        running: startBackground || completed > 0,
+        running: startBackground && completed < 12,
         failed,
         kv_unavailable: kvUnavailable,
       });
       return true;
     };
 
-    const startRemainingInngest = async () => {
+    const startCloudBatches = async () => {
       if (backgroundStartedRef.current) return;
       backgroundStartedRef.current = true;
 
@@ -171,7 +171,14 @@ export function useSyncroInngestJob({
         ctx = await rebuildSyncroLlmContext(workingSessionRef.current ?? activeSession);
       }
       if (!ctx) {
-        console.warn("[useSyncroInngestJob] no ctx for background");
+        console.warn("[useSyncroInngestJob] no ctx for cloud batches");
+        onProgress({
+          completed: countLlmReadyHours(workingSessionRef.current ?? activeSession),
+          total: 12,
+          running: false,
+          failed: 0,
+          context_missing: true,
+        });
         return;
       }
 
@@ -201,7 +208,7 @@ export function useSyncroInngestJob({
 
     void (async () => {
       if (startBackground) {
-        await startRemainingInngest();
+        await startCloudBatches();
       }
       if (cancelled) return;
       if (!(await tick())) return;

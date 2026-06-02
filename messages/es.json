@@ -926,6 +926,21 @@
     "not_supported_device": "Este dispositivo no admite los sensores de brújula que Syncro necesita.",
     "payment_coming_soon": "El pago de Syncro llegará en el siguiente paso. La primera sesión sigue siendo gratis en un teléfono compatible.",
     "back_to_home": "Volver a Syncro",
+    "background_stream": {
+      "aria_label": "Generación IA en segundo plano",
+      "title_running": "Generando horas restantes {step}/{total}",
+      "title_error": "Algunos lotes fallaron",
+      "title_done": "Generación en pausa",
+      "step": "Lote actual: {hours}",
+      "reasoning": "Razonamiento IA…",
+      "connecting": "Conectando con IA…",
+      "failed": "Error: {detail}",
+      "retry": "Reanudar horas restantes",
+      "footnote": "Cada lote usa su propia conexión (evita el límite de 5 min de Vercel). Mantén esta página abierta.",
+      "title_cloud": "Generación en la nube {done}/{total} (lote {step})",
+      "footnote_cloud": "En cola en el servidor — puedes salir de la app. Vuelve a abrir esta página para actualizar.",
+      "cloud_failed": "{count} lote(s) fallidos — toca el punto rojo para reintentar"
+    },
     "recent_sessions": {
       "heading": "Tus lecturas (24 h)",
       "hint": "Toca para abrir la brújula. Cada tarea sigue disponible hasta que termine su ventana de 24 horas, incluso con los 12 períodos listos.",

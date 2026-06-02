@@ -1,0 +1,101 @@
+.syncro-bg-stream {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(var(--syncro-toggle-bottom, 78px) + 52px + env(safe-area-inset-bottom, 0px));
+  z-index: 20;
+  max-width: 28rem;
+  margin: 0 auto;
+  border-radius: 12px;
+  border: 1px solid rgba(212, 175, 55, 0.22);
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+}
+
+.syncro-bg-stream__toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+  text-align: left;
+  font: inherit;
+  color: var(--pj-text-secondary, #a8b0c8);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.syncro-bg-stream__toggle-title {
+  font-size: var(--pj-text-xs, 0.75rem);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--pj-gold, #d4af37);
+}
+
+.syncro-bg-stream__toggle-chevron {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.syncro-bg-stream__body {
+  padding: 0 14px 14px;
+}
+
+.syncro-bg-stream__step {
+  margin: 0 0 8px;
+  font-size: var(--pj-text-sm, 0.875rem);
+  color: var(--pj-text-primary, #e8ecf4);
+}
+
+.syncro-bg-stream__hint {
+  margin: 0 0 8px;
+  font-size: var(--pj-text-xs, 0.75rem);
+  color: var(--pj-text-dim, #6b7280);
+}
+
+.syncro-bg-stream__box {
+  max-height: 160px;
+  overflow: auto;
+  padding: 10px 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--pj-text-xs, 0.75rem);
+  line-height: 1.55;
+  color: var(--pj-text-secondary, #a8b0c8);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.syncro-bg-stream__cursor {
+  display: inline-block;
+  margin-left: 2px;
+  color: var(--pj-gold, #d4af37);
+}
+
+.syncro-bg-stream__error {
+  margin-top: 10px;
+  font-size: var(--pj-text-sm, 0.875rem);
+  color: #f87171;
+}
+
+.syncro-bg-stream__retry {
+  margin-top: 8px;
+  padding: 6px 12px;
+  font-size: var(--pj-text-xs, 0.75rem);
+  border-radius: 8px;
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  background: transparent;
+  color: #fecaca;
+  cursor: pointer;
+}
+
+.syncro-bg-stream__footnote {
+  margin: 10px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--pj-text-dim, #6b7280);
+}

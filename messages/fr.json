@@ -926,6 +926,21 @@
     "not_supported_device": "Cet appareil ne prend pas en charge les capteurs de boussole requis par Syncro.",
     "payment_coming_soon": "Le paiement Syncro arrive à l'étape suivante. La première session reste gratuite sur un téléphone compatible.",
     "back_to_home": "Retour à Syncro",
+    "background_stream": {
+      "aria_label": "Génération IA en arrière-plan",
+      "title_running": "Génération des heures restantes {step}/{total}",
+      "title_error": "Certains lots ont échoué",
+      "title_done": "Génération en pause",
+      "step": "Lot actuel : {hours}",
+      "reasoning": "Raisonnement IA…",
+      "connecting": "Connexion à l’IA…",
+      "failed": "Échec : {detail}",
+      "retry": "Reprendre les heures restantes",
+      "footnote": "Chaque lot = une connexion (évite la limite Vercel 5 min). Gardez cette page ouverte.",
+      "title_cloud": "Génération cloud {done}/{total} (lot {step})",
+      "footnote_cloud": "File serveur — vous pouvez quitter l’app. Rouvrez cette page pour actualiser.",
+      "cloud_failed": "{count} lot(s) en échec — touchez le point rouge pour réessayer"
+    },
     "recent_sessions": {
       "heading": "Vos lectures (24 h)",
       "hint": "Appuyez pour ouvrir la boussole. Chaque tâche reste disponible jusqu'à la fin de sa fenêtre de 24 h — même lorsque les 12 périodes sont prêtes.",

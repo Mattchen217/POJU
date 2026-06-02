@@ -47,6 +47,7 @@ async function persistHourAdvice(
   return Object.keys(hourAdvice).length;
 }
 
+/** @deprecated Client uses compass SSE (`useSyncroBackgroundStream`). Kept for manual/event replay; Vercel caps one `/api/inngest` run at 300s. */
 export const syncroGenerateAll = inngest.createFunction(
   {
     id: "syncro-generate-all",

@@ -3564,6 +3564,13 @@ Syncro **仅手机/PWA** 使用。离开 Syncro 再回来不应「从头开始�
 
 **勿**把最近列表放在 `<NotPWA>` 内（PWA 下整块不渲染）。实现文件：`components/syncro/SyncroPwaHomeFooter.tsx`、`SyncroPwaContinuePrimary.tsx`、`lib/syncro/syncro-session-summary.ts`。
 
+### Syncro 后台 LLM（离开页面仍继续）
+
+- 进罗盘后 `POST /api/syncro/inngest_start` 按批次 **fan-out** 多条 `syncro/generate-batch` 事件（每批 1 次 LLM，**每次 Inngest 调用独立 ≤300s**，避免旧版 `generate-all` 单次跑满 300s）。
+- 文案与进度写入 **Upstash KV**；客户端轮询 `/api/syncro/status` 合并进 IndexedDB。
+- 用户锁屏/切 App 后云端仍跑；**2 小时后回来**打开 `/syncro/result/{id}` 或首页「继续上次」应看到 12/12（若队列未失败）。
+- 依赖：`INNGEST_EVENT_KEY`、KV、Inngest 与 Vercel `/api/inngest` 已注册 `syncroGenerateBatch`。
+
 代码:
 ```
 

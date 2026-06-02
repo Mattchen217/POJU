@@ -20,6 +20,9 @@ import {
   type SyncroUiMode,
 } from "@/lib/syncro/syncro-view-helpers";
 import { getRealtimeHourPeriodForSession } from "@/lib/syncro/syncro-submission-schedule";
+import { SyncroBackgroundStreamPanel } from "@/components/syncro/SyncroBackgroundStreamPanel";
+import { SyncroCloudProgressPanel } from "@/components/syncro/SyncroCloudProgressPanel";
+import type { SyncroBackgroundStreamState } from "@/lib/syncro/use-syncro-background-stream";
 import type { HourPeriod, SyncroSession } from "@/lib/syncro/types";
 
 import "@/styles/syncro-hour-progress.css";
@@ -32,6 +35,7 @@ export type SyncroMainViewProps = {
   llmProgress?: SyncroLlmProgress;
   /** Live hour LLM copy is ready — compass/AR allowed. */
   liveHourReady?: boolean;
+  backgroundStream?: SyncroBackgroundStreamState;
   onRetryHour?: (hourId: HourPeriod) => void;
   retryingHour?: HourPeriod | null;
 };
@@ -48,6 +52,7 @@ export function SyncroMainView({
   highlightMatrixKeys,
   llmProgress,
   liveHourReady = true,
+  backgroundStream,
   onRetryHour,
   retryingHour = null,
 }: SyncroMainViewProps) {
@@ -238,6 +243,12 @@ export function SyncroMainView({
           />
         ) : null}
       </div>
+
+      {backgroundStream && backgroundStream.running ? (
+        <SyncroBackgroundStreamPanel stream={backgroundStream} />
+      ) : llmProgress?.running ? (
+        <SyncroCloudProgressPanel progress={llmProgress} />
+      ) : null}
 
       <ThreeModeToggle
         mode={uiMode}
