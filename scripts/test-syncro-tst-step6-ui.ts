@@ -132,10 +132,10 @@ function main() {
   );
   assert(!ringLayout.includes("rotate3d"), "no GPU rotate helper");
   assert(ringLayout.includes("SYNCRO_PARTICLE_DISPLAY_SCALE"), "particle scale for canvas margin");
-  assert(ringLayout.includes("SYNCRO_PARTICLE_OFFSET_X = 5"), "particle +5px nudge");
+  assert(ringLayout.includes("SYNCRO_PARTICLE_OFFSET_X = 0"), "particle centered");
   assert(ringLayout.includes("getSyncroParticleFieldStyle"), "particle size on spline root");
   assert(ringLayout.includes("SYNCRO_RING_SIZE = 380"), "ring size AR reference");
-  assert(ringLayout.includes("0.95"), "particle ~95% of label ring");
+  assert(ringLayout.includes("SYNCRO_PARTICLE_DISPLAY_SIZE = 440"), "particle display 440px");
   assert(compass.includes("SyncroParticleCore bare"), "particle without mask");
   assert(compass.includes("SyncroCellAdvice"), "advice below ring");
   assert(!compass.includes("phone-position-hint"), "no layout phone hint bar");
@@ -149,6 +149,7 @@ function main() {
 
   const mapMode = readFileSync(join(ROOT, "components/syncro/SyncroMapMode.tsx"), "utf8");
   assert(mapMode.includes("compass-page") && mapMode.includes("SyncroLevelHub"), "map AR page layout");
+  assert(mapMode.includes("SyncroCellAdvice"), "map shows short advice");
   assert(mapMode.includes("WhyThisCurrentModal"), "map has why modal");
 
   const whyModal = readFileSync(join(ROOT, "components/syncro/WhyThisCurrentModal.tsx"), "utf8");
@@ -166,6 +167,7 @@ function main() {
   const layoutCss = readFileSync(join(ROOT, "styles/syncro-layout.css"), "utf8");
   assert(layoutCss.includes("--syncro-nav-reserve"), "bottom chrome clears PWA nav");
   assert(layoutCss.includes("padding-top: var(--syncro-stage-top)"), "stage clears top chrome");
+  assert(layoutCss.includes("color: #ffffff"), "short advice white in all modes");
 
   const compassHook = readFileSync(join(ROOT, "lib/syncro/useCompassPermission.ts"), "utf8");
   const compassIos = readFileSync(join(ROOT, "lib/syncro/compass-permission-ios.ts"), "utf8");
@@ -178,8 +180,8 @@ function main() {
     "iOS motion permission helper",
   );
   const mainView = readFileSync(join(ROOT, "components/syncro/SyncroMainView.tsx"), "utf8");
-  assert(mainView.includes("tryActivateCompass") && mainView.includes("pointerdown"), "auto compass on touch");
-  assert(!mainView.includes("SyncroPermissionGate"), "no manual compass gate");
+  assert(mainView.includes("SyncroPermissionGate"), "permission gate on compass entry");
+  assert(mainView.includes("getSyncroPermissionStatus"), "main checks cached permissions");
   assert(mainView.includes("ThreeModeToggle"), "main has three-mode toggle");
   assert(mainView.includes("HourProgressBar"), "main has progress");
   assert(mainView.includes("onRetryHour"), "main wires hour retry");

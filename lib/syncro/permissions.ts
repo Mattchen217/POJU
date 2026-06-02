@@ -1,4 +1,5 @@
 const PERMISSION_KEY = "pojulife_syncro_permissions";
+const COMPASS_GRANTED_FLAG = "pj_compass_granted";
 
 export interface SyncroPermissions {
   orientation: boolean;
@@ -42,5 +43,47 @@ export async function saveSyncroPermission(
     localStorage.setItem(PERMISSION_KEY, JSON.stringify(next));
   } catch (e) {
     console.error("[syncro] save permission failed", e);
+  }
+}
+
+export type SyncroPermissionStatus = {
+  orientation: boolean;
+  camera: boolean;
+  /** Both compass + camera were granted at least once on this device. */
+  allGranted: boolean;
+};
+
+export async function getSyncroPermissionStatus(): Promise<SyncroPermissionStatus> {
+  const perms = await loadSyncroPermission();
+  const compassFlag =
+    typeof localStorage !== "undefined" && localStorage.getItem(COMPASS_GRANTED_FLAG) === "1";
+  const orientation = perms.orientation || compassFlag;
+  const camera = perms.camera;
+  return {
+    orientation,
+    camera,
+    allGranted: orientation && camera,
+  };
+}
+
+/** Request camera for AR; stops tracks immediately after grant. */
+export async function requestSyncroCameraPermission(): Promise<boolean> {
+  if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+    await saveSyncroPermission("camera", false);
+    return false;
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" },
+      audio: false,
+    });
+    stream.getTracks().forEach((track) => track.stop());
+    await saveSyncroPermission("camera", true);
+    return true;
+  } catch (e) {
+    console.warn("[syncro] camera permission denied", e);
+    await saveSyncroPermission("camera", false);
+    return false;
   }
 }

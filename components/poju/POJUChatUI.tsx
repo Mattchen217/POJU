@@ -60,6 +60,7 @@ import {
 } from "@/lib/poju/chat-layout";
 import "@/styles/topic-drift.css";
 import "@/styles/tool-suggestion.css";
+import "@/styles/poju-chat-pwa.css";
 
 interface Props {
   session: POJUSessionState;
@@ -948,7 +949,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   }
 
   return (
-    <div className="flex h-[100dvh] w-full overflow-hidden bg-background text-on-surface">
+    <div className="poju-chat-shell flex h-[100dvh] w-full overflow-hidden bg-background text-on-surface">
       {sidebarOpenMobile ? (
         <button
           type="button"
@@ -960,13 +961,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
 
       <div className="flex h-full w-full">
         <aside
-          className={`${
+          className={`poju-chat-sidebar ${
             sidebarCollapsed ? "md:w-20" : "md:w-[280px]"
-          } fixed left-0 top-0 z-40 flex h-full w-[86%] max-w-sm flex-col border-r border-outline-variant bg-surface shadow-[1px_0_15px_rgba(0,0,0,0.2)] transition-all duration-200 md:static md:max-w-none ${
+          } fixed left-0 z-40 flex w-[86%] max-w-sm flex-col border-r border-outline-variant bg-surface shadow-[1px_0_15px_rgba(0,0,0,0.2)] transition-all duration-200 md:static md:h-full md:max-w-none ${
             sidebarOpenMobile ? "translate-x-0" : "-translate-x-full md:translate-x-0"
           }`}
         >
-          <div className="flex h-16 items-center justify-between border-b border-outline-variant/50 px-4">
+          <div className="flex h-16 shrink-0 items-center justify-between border-b border-outline-variant/50 px-4">
             <div className={`${sidebarCollapsed ? "md:hidden" : ""}`}>
               <div className="flex items-center gap-2">
                 <span className="relative flex h-8 w-8 shrink-0 overflow-hidden rounded-lg ring-1 ring-white/15">
@@ -1061,7 +1062,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         </aside>
 
         <section className="relative flex min-w-0 flex-1 flex-col bg-background">
-          <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-outline-variant/30 bg-background/80 px-4 backdrop-blur-md md:px-6">
+          <header className="poju-chat-header sticky top-0 z-20 flex shrink-0 items-center justify-between border-b border-outline-variant/30 bg-background/80 px-4 backdrop-blur-md md:px-6">
             <div className={`${pojuChatColumn} flex items-center justify-between gap-2`}>
               <div className="flex items-center gap-2">
                 <button
@@ -1092,7 +1093,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           </header>
 
           <div className="flex-1 overflow-y-auto px-4 md:px-6">
-            <div className={`${pojuChatColumn} ${pojuChatMessageList} ${overlayFormOpen ? "pb-8" : "pb-40"}`}>
+            <div className={`${pojuChatColumn} ${pojuChatMessageList} poju-chat-messages-scroll ${overlayFormOpen ? "!pb-8" : ""}`}>
               <SessionExpiryNotice session={session} extending={extending} onExtend={() => void handleExtendSession()} />
 
               {POJU_DEV_DEBUG && session.agent_v2 ? (
@@ -1261,7 +1262,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           </div>
 
           {!overlayFormOpen ? (
-          <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-20 flex justify-center bg-gradient-to-t from-background via-background/90 to-transparent p-4 md:p-6">
+          <div className="poju-chat-composer-wrap pointer-events-none absolute bottom-0 left-0 right-0 z-20 flex justify-center bg-gradient-to-t from-background via-background/90 to-transparent p-4 md:p-6">
             <div className={`pointer-events-auto w-full ${pojuChatColumn}`}>
               {(sending || confirmBusy) && thinkingMode ? (
                 <ThinkingStream mode={thinkingMode} locale={locale} />

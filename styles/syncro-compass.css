@@ -7,9 +7,6 @@
 
 .compass-page .compass-short-advice {
   margin: 0;
-  font-size: 13px;
-  line-height: 1.55;
-  color: var(--pj-text-secondary, #a8b0c8);
 }
 
 .syncro-particle-field,

@@ -3,12 +3,12 @@ import type { CSSProperties } from "react";
 /** Syncro ring layout — fixed px (AR fig.1 reference). */
 export const SYNCRO_RING_SIZE = 380;
 export const SYNCRO_LABEL_RADIUS = 172;
-/** Particle diameter ≈ 95% of direction-label ring. */
-export const SYNCRO_PARTICLE_DISPLAY_SIZE = Math.round(SYNCRO_LABEL_RADIUS * 2 * 0.95);
+/** Particle display diameter — larger than ring so Spline cloud reaches direction labels. */
+export const SYNCRO_PARTICLE_DISPLAY_SIZE = 440;
 export const SYNCRO_PARTICLE_CANVAS_SIZE = 520;
 export const SYNCRO_PARTICLE_DISPLAY_SCALE =
   SYNCRO_PARTICLE_DISPLAY_SIZE / SYNCRO_PARTICLE_CANVAS_SIZE;
-export const SYNCRO_PARTICLE_OFFSET_X = 5;
+export const SYNCRO_PARTICLE_OFFSET_X = 0;
 export const SYNCRO_PARTICLE_OFFSET_Y = 0;
 export const SYNCRO_CENTER_INFO_WIDTH = 140;
 export const SYNCRO_AR_CAMERA_SIZE = 200;

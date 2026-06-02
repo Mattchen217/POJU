@@ -1186,17 +1186,21 @@
       "close": "Close"
     },
     "permission": {
-      "title": "Enable Compass",
-      "description": "Syncro needs motion & orientation access so the compass ring follows how you face. This is separate from location/GPS.",
+      "title": "Enable Compass & Camera",
+      "description": "Syncro needs motion & orientation for the live compass, and camera access for AR mode. Permissions are saved on this device after you allow once.",
       "not_location_hint": "If iOS asks, choose Allow for motion & orientation — not the same as the location prompt you saw earlier.",
-      "settings_hint": "If no popup appears: Settings → Safari → Motion & Orientation Access → Allow for this site, then tap Enable Compass again.",
+      "settings_hint": "If no popup appears: Settings → Safari → Motion & Orientation Access → Allow for this site, then tap Enable again.",
       "use_map_instead": "Or switch to Map below — Map works without compass rotation.",
       "unsupported": "This device does not support compass rotation. Use Map mode instead.",
-      "enable": "Enable Compass",
+      "enable": "Enable Compass & Camera",
       "requesting": "Requesting…",
       "skip": "Continue without compass",
       "denied_alert": "Compass permission was denied. The compass won't rotate, but other features still work.",
-      "skipped_notice": "Compass is off — enable it from Syncro settings or reload to allow rotation."
+      "camera_denied": "Camera was denied. AR mode will ask again when you open it.",
+      "skipped_notice": "Compass is off — enable it from Syncro settings or reload to allow rotation.",
+      "resume_title": "Continue to Syncro",
+      "resume_description": "Tap once to activate compass and AR on this visit. You already allowed access on this device.",
+      "resume_enable": "Continue"
     },
     "posture": {
       "hold_flat_title": "Hold phone flat",

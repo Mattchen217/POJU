@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { HourProgressBar } from "@/components/syncro/HourProgressBar";
+import { SyncroPermissionGate } from "@/components/syncro/SyncroPermissionGate";
 import { ThreeModeToggle } from "@/components/syncro/ThreeModeToggle";
 import { useOrientation } from "@/components/syncro/SyncroOrientationProvider";
 import { SyncroARMode } from "@/components/syncro/SyncroARMode";
@@ -11,7 +12,11 @@ import { SyncroCompassMode } from "@/components/syncro/SyncroCompassMode";
 import { SyncroMapMode } from "@/components/syncro/SyncroMapMode";
 import type { SyncroLlmProgress } from "@/lib/syncro/syncro-llm-progress";
 import type { DirectionId } from "@/lib/syncro/current-system";
-import { loadSyncroPermission, saveSyncroPermission } from "@/lib/syncro/permissions";
+import {
+  getSyncroPermissionStatus,
+  requestSyncroCameraPermission,
+} from "@/lib/syncro/permissions";
+import { deviceOrientationRequiresPermissionPrompt } from "@/lib/syncro/compass-permission-ios";
 import {
   findBestDirectionForPeriod,
   getOrderedHourPeriodsFromSession,
@@ -25,6 +30,7 @@ import type { HourPeriod, SyncroSession } from "@/lib/syncro/types";
 
 import "@/styles/syncro-hour-progress.css";
 import "@/styles/syncro-layout.css";
+import "@/styles/syncro-compass.css";
 
 export type SyncroMainViewProps = {
   session: SyncroSession;
@@ -71,6 +77,8 @@ export function SyncroMainView({
   const [initialized, setInitialized] = useState(false);
   const [cameraGranted, setCameraGranted] = useState(false);
   const [activeDirection, setActiveDirection] = useState<DirectionId>("E");
+  const [permissionGate, setPermissionGate] = useState<"hidden" | "initial" | "resume">("hidden");
+  const permissionsCheckedRef = useRef(false);
 
   const tryActivateCompass = useCallback(() => {
     if (!isSupported || receivingHeading) return;
@@ -78,10 +86,31 @@ export function SyncroMainView({
   }, [isSupported, receivingHeading, requestPermissionFromUserGesture]);
 
   useEffect(() => {
-    void loadSyncroPermission().then((perms) => {
-      setCameraGranted(perms.camera);
+    if (permissionsCheckedRef.current) return;
+    permissionsCheckedRef.current = true;
+
+    void getSyncroPermissionStatus().then((status) => {
+      setCameraGranted(status.camera);
+
+      if (!isSupported) {
+        setPermissionGate("hidden");
+        return;
+      }
+
+      if (status.allGranted) {
+        setPermissionGate(deviceOrientationRequiresPermissionPrompt() ? "resume" : "hidden");
+        return;
+      }
+
+      setPermissionGate("initial");
     });
-  }, []);
+  }, [isSupported]);
+
+  useEffect(() => {
+    if (receivingHeading && permissionGate !== "hidden") {
+      setPermissionGate("hidden");
+    }
+  }, [receivingHeading, permissionGate]);
 
   useEffect(() => {
     const scope = readTaskTimeScope();
@@ -104,20 +133,14 @@ export function SyncroMainView({
     }
   }, [liveHourReady, isSupported, uiMode]);
 
-  /** Auto-enable compass: Android on mount; iOS on mount attempt + any touch on Syncro. */
-  useEffect(() => {
-    if (!isSupported || receivingHeading) return;
-    tryActivateCompass();
-  }, [isSupported, receivingHeading, tryActivateCompass]);
-
   useEffect(() => {
     const root = rootRef.current;
-    if (!root || receivingHeading) return;
+    if (!root || receivingHeading || permissionGate === "hidden") return;
 
     const onPointerDown = () => tryActivateCompass();
     root.addEventListener("pointerdown", onPointerDown, { capture: true });
     return () => root.removeEventListener("pointerdown", onPointerDown, { capture: true });
-  }, [receivingHeading, tryActivateCompass]);
+  }, [receivingHeading, permissionGate, tryActivateCompass]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -137,21 +160,22 @@ export function SyncroMainView({
   }, [session, activeHour]);
 
   async function requestCameraPermission() {
-    if (!navigator.mediaDevices?.getUserMedia) return;
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
-      });
-      stream.getTracks().forEach((track) => track.stop());
-      setCameraGranted(true);
-      await saveSyncroPermission("camera", true);
-    } catch (e) {
-      console.error("[syncro] camera permission denied", e);
-    }
+    const ok = await requestSyncroCameraPermission();
+    setCameraGranted(ok);
+  }
+
+  function handlePermissionGateReady(result: { cameraGranted: boolean }) {
+    setCameraGranted(result.cameraGranted);
+    setPermissionGate("hidden");
   }
 
   function handleModeChange(mode: SyncroUiMode) {
     if ((mode === "compass" || mode === "ar") && !liveHourReady) return;
+    if ((mode === "compass" || mode === "ar") && !receivingHeading && isSupported && permissionGate === "hidden") {
+      void getSyncroPermissionStatus().then((status) => {
+        setPermissionGate(status.allGranted ? "resume" : "initial");
+      });
+    }
     if (mode === "compass" || mode === "ar") {
       tryActivateCompass();
     }
@@ -189,6 +213,14 @@ export function SyncroMainView({
       ref={rootRef}
       className={`syncro-main-view syncro-main syncro-main-view--${uiMode}`}
     >
+      {permissionGate !== "hidden" ? (
+        <SyncroPermissionGate
+          layout="fullscreen"
+          variant={permissionGate}
+          onReady={handlePermissionGateReady}
+        />
+      ) : null}
+
       <HourProgressBar
         matrix={session.matrix}
         llmMeta={session.llm_meta}

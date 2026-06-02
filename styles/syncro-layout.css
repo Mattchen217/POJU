@@ -107,11 +107,16 @@
 
 /* Legacy compass-mode-body — unused after UI调整5 revert */
 
-/* Map mode keeps absolute hint placement */
+/* Short advice — compass / AR / map */
 .syncro-main-view .compass-short-advice {
+  margin: 0;
   max-width: 28rem;
   text-align: center;
   z-index: 8;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.55;
+  color: #ffffff;
 }
 
 .syncro-main-view .map-hint {

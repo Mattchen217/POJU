@@ -1201,17 +1201,21 @@
       "close": "关闭"
     },
     "permission": {
-      "title": "开启罗盘",
-      "description": "Syncro 需要「运动与方向」权限，罗盘外圈才会随你面向转动；这与定位/GPS 不是同一项权限。",
+      "title": "开启罗盘与摄像头",
+      "description": "Syncro 需要「运动与方向」权限驱动实时罗盘，并需要摄像头用于 AR 模式。允许一次后会保存在本设备，下次无需重复授权。",
       "not_location_hint": "若系统弹窗，请选择允许「运动与方向」——与先前看到的「定位」权限不是同一个。",
-      "settings_hint": "若没有弹窗：设置 → Safari → 运动与方向访问 → 允许此网站，再点一次「开启罗盘」。",
+      "settings_hint": "若没有弹窗：设置 → Safari → 运动与方向访问 → 允许此网站，再点一次「开启」。",
       "use_map_instead": "也可先点底部「地图」模式——无需罗盘也能查看八个方位。",
       "unsupported": "此设备不支持罗盘旋转，请使用底部的「地图」模式。",
-      "enable": "开启罗盘",
+      "enable": "开启罗盘与摄像头",
       "requesting": "请求中…",
       "skip": "暂不开启",
       "denied_alert": "罗盘权限被拒绝。罗盘不会旋转，但其他功能仍可使用。",
-      "skipped_notice": "罗盘未开启，方位不会随手机转动。可刷新页面重新授权。"
+      "camera_denied": "摄像头被拒绝。进入 AR 模式时会再次询问。",
+      "skipped_notice": "罗盘未开启，方位不会随手机转动。可刷新页面重新授权。",
+      "resume_title": "继续进入 Syncro",
+      "resume_description": "点一下即可在本页激活罗盘与 AR。你已在此设备上允许过相关权限。",
+      "resume_enable": "继续"
     },
     "posture": {
       "hold_flat_title": "请将手机平放",

@@ -1,0 +1,57 @@
+/**
+ * POJU session chat — PWA safe areas (status bar + bottom product nav).
+ */
+
+.poju-chat-shell {
+  --poju-chat-nav-reserve: 0px;
+}
+
+.pwa-mode .poju-chat-shell {
+  --poju-chat-nav-reserve: max(72px, calc(56px + env(safe-area-inset-bottom, 0px)));
+  height: calc(100dvh - var(--poju-chat-nav-reserve));
+  max-height: calc(100dvh - var(--poju-chat-nav-reserve));
+}
+
+.pwa-mode .pwa-page:has(.poju-chat-shell) {
+  padding-bottom: 0;
+}
+
+.poju-chat-header {
+  padding-top: env(safe-area-inset-top, 0px);
+  min-height: calc(4rem + env(safe-area-inset-top, 0px));
+}
+
+.poju-chat-sidebar {
+  top: env(safe-area-inset-top, 0px);
+  height: calc(100dvh - env(safe-area-inset-top, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@media (min-width: 768px) {
+  .poju-chat-sidebar {
+    top: auto;
+    height: auto;
+    padding-bottom: 0;
+  }
+}
+
+.pwa-mode .poju-chat-sidebar {
+  height: calc(100dvh - env(safe-area-inset-top, 0px) - var(--poju-chat-nav-reserve));
+  padding-bottom: max(0px, env(safe-area-inset-bottom, 0px));
+}
+
+.poju-chat-composer-wrap {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+}
+
+.pwa-mode .poju-chat-composer-wrap {
+  padding-bottom: 0.75rem;
+}
+
+.poju-chat-messages-scroll {
+  padding-bottom: 10rem;
+}
+
+.pwa-mode .poju-chat-messages-scroll {
+  padding-bottom: calc(10rem + env(safe-area-inset-bottom, 0px));
+}

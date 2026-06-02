@@ -149,7 +149,7 @@ export function SyncroMapMode({
       </div>
 
       {cell ? (
-        <div style={{ maxWidth: 320, margin: "16px auto 0", padding: "0 20px" }}>
+        <div style={{ maxWidth: 320, margin: "24px auto 0", padding: "0 20px" }}>
           <SyncroCellAdvice cell={cell} llmMeta={session.llm_meta} className="compass-short-advice" />
         </div>
       ) : null}
