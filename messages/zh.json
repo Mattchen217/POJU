@@ -1108,6 +1108,14 @@
       "continue": "继续这次解读",
       "start_new": "改为开始新的解读"
     },
+    "recent_sessions": {
+      "heading": "24 小时内的解读",
+      "hint": "点击进入罗盘。每条任务在创建后 24 小时内都可查看——12 个时辰全部生成完成后也不会提前消失。",
+      "loading": "正在加载你的解读…",
+      "progress": "已就绪 {done}/{total} 时辰",
+      "status_complete": "12/12 已就绪 · 打开罗盘",
+      "expires": "剩余 {when}"
+    },
     "your_task_label": "你的任务",
     "computing": {
       "step_1": "正在排布你的命局…",

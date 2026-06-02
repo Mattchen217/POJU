@@ -41,28 +41,8 @@ export function getRealtimeHourPeriodForSession(
   return getCurrentHourPeriod(date);
 }
 
-export type SyncroCompassGateOptions = {
-  /** Hours in the in-flight LLM request (prompt). OR gate while first batch is streaming. */
-  activeLlmHours?: HourPeriod[];
-};
-
-/**
- * Compass entry:
- * - Primary: real-time hour (user TZ) has LLM copy.
- * - OR: every hour named in the current LLM prompt is ready (first-batch wait).
- */
-export function isSyncroCompassGateReady(
-  session: SyncroSession,
-  options?: SyncroCompassGateOptions,
-): boolean {
+/** Compass entry: real-time hour (user TZ) has full LLM copy. */
+export function isSyncroCompassGateReady(session: SyncroSession): boolean {
   const realtime = getRealtimeHourPeriodForSession(session);
-  if (isHourPeriodLlmReady(session.matrix, realtime, session.llm_meta)) {
-    return true;
-  }
-
-  const active = options?.activeLlmHours;
-  if (!active?.length) return false;
-  return active.every((h) =>
-    isHourPeriodLlmReady(session.matrix, h, session.llm_meta),
-  );
+  return isHourPeriodLlmReady(session.matrix, realtime, session.llm_meta);
 }

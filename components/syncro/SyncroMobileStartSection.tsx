@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
 import { buildSyncroMobileUrl, SyncroDesktopQRModal } from "@/components/syncro/SyncroDesktopQRModal";
+import { SyncroRecentSessionsList } from "@/components/syncro/SyncroRecentSessionsList";
 import { useRouter } from "@/i18n/navigation";
 import {
   canUseSyncro,
@@ -82,9 +83,9 @@ export function SyncroMobileStartSection() {
     if (!isSupportedDevice) return;
 
     if (isFreeAvailable) {
-      router.push("/syncro/task?type=free");
+      router.push("/syncro/task?type=free&new=1");
     } else {
-      router.push("/syncro/task?type=paid");
+      router.push("/syncro/task?type=paid&new=1");
     }
   }
 
@@ -114,17 +115,11 @@ export function SyncroMobileStartSection() {
 
   return (
     <section id="syncro-start" className="mx-auto w-full max-w-lg px-4 pb-16 pt-2">
-      {!isDesktop ? (
-        <div className="mt-6 grid gap-4">
-          <FeatureCard icon="🧭" titleKey="feature_realtime" descKey="feature_realtime_desc" />
-          <FeatureCard icon="⚡" titleKey="feature_directional" descKey="feature_directional_desc" />
-          <FeatureCard icon="📹" titleKey="feature_vr" descKey="feature_vr_desc" />
-        </div>
-      ) : (
+      {isDesktop ? (
         <p className="mt-6 text-center text-sm leading-7 text-text-secondary">{t("open_on_mobile_hint")}</p>
-      )}
+      ) : null}
 
-      <div className="mt-10 text-center">
+      <div className={isDesktop ? "mt-10 text-center" : "mt-6 text-center"}>
         <button
           type="button"
           onClick={handleStart}
@@ -138,6 +133,16 @@ export function SyncroMobileStartSection() {
           </p>
         ) : null}
       </div>
+
+      {!isDesktop ? <SyncroRecentSessionsList /> : null}
+
+      {!isDesktop ? (
+        <div className="mt-10 grid gap-4">
+          <FeatureCard icon="🧭" titleKey="feature_realtime" descKey="feature_realtime_desc" />
+          <FeatureCard icon="⚡" titleKey="feature_directional" descKey="feature_directional_desc" />
+          <FeatureCard icon="📹" titleKey="feature_vr" descKey="feature_vr_desc" />
+        </div>
+      ) : null}
 
       {showQR ? <SyncroDesktopQRModal onClose={() => setShowQR(false)} url={qrUrl} /> : null}
     </section>

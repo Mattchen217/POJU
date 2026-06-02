@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
 import { SyncroGuardedRoute } from "@/components/syncro/SyncroGuardedRoute";
-import { SyncroLlmBatchRunner, type SyncroLlmProgress } from "@/components/syncro/SyncroLlmBatchRunner";
+import type { SyncroLlmProgress } from "@/components/syncro/SyncroLlmBatchRunner";
 import { SyncroLlmProgressBar } from "@/components/syncro/SyncroLlmProgressBar";
 import { PojuDeepDiveCTA } from "@/components/cross-product/PojuDeepDiveCTA";
 import { ReturnToPojuCTA } from "@/components/poju/ReturnToPojuCTA";
@@ -16,6 +16,7 @@ import {
   getRealtimeHourPeriodForSession,
   isSyncroCompassGateReady,
 } from "@/lib/syncro/syncro-submission-schedule";
+import { useSyncroInngestJob } from "@/lib/syncro/use-syncro-inngest-job";
 import { SyncroOrientationProvider } from "@/components/syncro/SyncroOrientationProvider";
 import { Link } from "@/i18n/navigation";
 import { generateSyncroHourWithRetry } from "@/lib/syncro/generate-syncro-hour-with-retry";
@@ -53,8 +54,6 @@ function SyncroResultPageContent() {
   });
   const [highlightKeys, setHighlightKeys] = useState<Set<string>>(() => new Set());
   const [retryingHour, setRetryingHour] = useState<HourPeriod | null>(null);
-  /** Hours in the in-flight first LLM batch (for OR gate while waiting). */
-  const [activeLlmHours, setActiveLlmHours] = useState<HourPeriod[]>([]);
 
   const handleSessionUpdate = useCallback((next: SyncroSession) => {
     setSession(next);
@@ -107,6 +106,14 @@ function SyncroResultPageContent() {
     void loadSession();
   }, [sessionId]);
 
+  useSyncroInngestJob({
+    sessionId,
+    session,
+    enabled: stage === "ready" && session !== null,
+    onSessionUpdate: handleSessionUpdate,
+    onProgress: setLlmProgress,
+  });
+
   useEffect(() => {
     function onPatch(ev: Event) {
       const detail = (ev as CustomEvent<{ session_id: string; updated_keys: string[] }>).detail;
@@ -144,6 +151,13 @@ function SyncroResultPageContent() {
 
       setSession(s);
       setStage("ready");
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.setItem("syncro_last_session_id", sessionId);
+        } catch {
+          // ignore
+        }
+      }
     } catch {
       setStage("error");
     }
@@ -173,7 +187,13 @@ function SyncroResultPageContent() {
     return (
       <div className="syncro-error flex min-h-screen flex-col items-center justify-center bg-bg-deep px-4 text-center">
         <p className="text-text-secondary">{tError("session_not_found")}</p>
-        <Link href="/syncro" className="mt-6 text-cyan-200 underline">
+        <p className="mt-2 text-sm text-text-dim">
+          本地记录可能已清除。可在 Archive 中打开最近的 Syncro 任务继续查看。
+        </p>
+        <Link href="/archive" className="mt-4 text-cyan-200 underline">
+          Archive
+        </Link>
+        <Link href="/syncro" className="mt-6 block text-cyan-200 underline">
           {t("cta")}
         </Link>
       </div>
@@ -182,9 +202,7 @@ function SyncroResultPageContent() {
 
   const syncroSummary = extractSyncroSummary(session);
   const realtimePeriod = getRealtimeHourPeriodForSession(session);
-  const liveHourReady = isSyncroCompassGateReady(session, {
-    activeLlmHours: activeLlmHours.length ? activeLlmHours : undefined,
-  });
+  const liveHourReady = isSyncroCompassGateReady(session);
 
   return (
     <SyncroOrientationProvider>
@@ -197,12 +215,6 @@ function SyncroResultPageContent() {
         />
       </div>
       <SyncroLlmProgressBar progress={llmProgress} />
-      <SyncroLlmBatchRunner
-        sessionId={sessionId}
-        session={session}
-        onSessionUpdate={handleSessionUpdate}
-        onProgress={setLlmProgress}
-      />
       {liveHourReady ? (
         <SyncroMainView
           session={session}
@@ -219,7 +231,6 @@ function SyncroResultPageContent() {
           locale={locale}
           realtimePeriod={realtimePeriod}
           progress={llmProgress}
-          onActiveLlmHours={setActiveLlmHours}
         />
       )}
       {liveHourReady ? (

@@ -926,6 +926,14 @@
     "not_supported_device": "Este dispositivo no admite los sensores de brújula que Syncro necesita.",
     "payment_coming_soon": "El pago de Syncro llegará en el siguiente paso. La primera sesión sigue siendo gratis en un teléfono compatible.",
     "back_to_home": "Volver a Syncro",
+    "recent_sessions": {
+      "heading": "Tus lecturas (24 h)",
+      "hint": "Toca para abrir la brújula. Cada tarea sigue disponible hasta que termine su ventana de 24 horas, incluso con los 12 períodos listos.",
+      "loading": "Cargando tus lecturas…",
+      "progress": "{done}/{total} períodos listos",
+      "status_complete": "12/12 listos · abrir brújula",
+      "expires": "Termina {when}"
+    },
     "your_task_label": "Tu tarea",
     "computing": {
       "step_1": "Calculando tu carta…",

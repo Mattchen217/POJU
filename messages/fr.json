@@ -926,6 +926,14 @@
     "not_supported_device": "Cet appareil ne prend pas en charge les capteurs de boussole requis par Syncro.",
     "payment_coming_soon": "Le paiement Syncro arrive à l'étape suivante. La première session reste gratuite sur un téléphone compatible.",
     "back_to_home": "Retour à Syncro",
+    "recent_sessions": {
+      "heading": "Vos lectures (24 h)",
+      "hint": "Appuyez pour ouvrir la boussole. Chaque tâche reste disponible jusqu'à la fin de sa fenêtre de 24 h — même lorsque les 12 périodes sont prêtes.",
+      "loading": "Chargement de vos lectures…",
+      "progress": "{done}/{total} périodes prêtes",
+      "status_complete": "12/12 prêtes · ouvrir la boussole",
+      "expires": "Se termine {when}"
+    },
     "your_task_label": "Votre tâche",
     "computing": {
       "step_1": "Calcul de votre thème…",

@@ -71,8 +71,6 @@ export async function createSyncroSession(input: CreateSyncroSessionInput): Prom
 
   const { cipher, iv } = await encryptJson(SYNCRO_SESSION_SECRET, toPayload(session));
 
-  await revokeActiveSyncroSessionsForProfile(input.profile_id);
-
   const row: SyncroSessionRecord = {
     session_id: sessionId,
     device_id: deviceId,

@@ -5,6 +5,9 @@ import { useLocale, useTranslations } from "next-intl";
 
 import { useRouter } from "@/i18n/navigation";
 import { saveSyncroToArchive } from "@/lib/archive/archive-service";
+import { getPojuDeviceId } from "@/lib/poju/client-device-id";
+import { sortedHourPeriodsFromLive } from "@/lib/syncro/hour-order";
+import { getCurrentHourPeriodInTimezone } from "@/lib/syncro/types";
 import { createSyncroSession } from "@/lib/syncro/syncro-session";
 import { recordUsage } from "@/lib/syncro/device-usage";
 import { getStoredProfile, recordProfileUsage } from "@/lib/profile/stored-profiles-service";
@@ -128,7 +131,7 @@ export function SyncroComputingPage() {
         },
       });
 
-      saveSyncroLlmContext(sessionId, {
+      const llmCtx = {
         profile_id: profileId,
         task_description: task,
         user_location: {
@@ -142,7 +145,9 @@ export function SyncroComputingPage() {
         local_matrix: data.local_matrix,
         compute_started_at: data.compute_started_at ?? new Date().toISOString(),
         true_solar: data.true_solar_meta,
-      });
+      };
+
+      saveSyncroLlmContext(sessionId, llmCtx);
 
       await recordUsage("syncro", sessionType === "free", llmMeta.cost_usd ?? 0);
       await recordProfileUsage(profileId, "syncro");
@@ -159,6 +164,29 @@ export function SyncroComputingPage() {
       } catch (e) {
         console.error("[syncro/computing] Archive save failed:", e);
       }
+
+      const submission_anchor = getCurrentHourPeriodInTimezone(timezone);
+      const hour_order = sortedHourPeriodsFromLive(submission_anchor);
+
+      try {
+        sessionStorage.setItem("syncro_last_session_id", sessionId);
+      } catch {
+        // ignore
+      }
+
+      void fetch("/api/syncro/inngest_start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          session_id: sessionId,
+          submission_anchor,
+          hour_order,
+          llm_context: llmCtx,
+          device_id: getPojuDeviceId(),
+        }),
+      }).catch((e) => {
+        console.warn("[syncro/computing] inngest_start failed:", e);
+      });
 
       sessionStorage.removeItem("syncro_task_pending");
       sessionStorage.removeItem("syncro_session_type");

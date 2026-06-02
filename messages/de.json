@@ -926,6 +926,14 @@
     "not_supported_device": "Dieses Gerät unterstützt die Kompass-Sensoren von Syncro nicht.",
     "payment_coming_soon": "Bezahltes Syncro folgt im nächsten Schritt. Auf einem unterstützten Handy ist die erste Session weiterhin gratis.",
     "back_to_home": "Zurück zu Syncro",
+    "recent_sessions": {
+      "heading": "Deine Lesungen (24 h)",
+      "hint": "Tippen zum Öffnen. Jede Aufgabe bleibt bis zum Ende des 24-Stunden-Fensters verfügbar — auch wenn alle 12 Zeitfenster fertig sind.",
+      "loading": "Lesungen werden geladen…",
+      "progress": "{done}/{total} Zeitfenster bereit",
+      "status_complete": "12/12 bereit · Kompass öffnen",
+      "expires": "Endet {when}"
+    },
     "your_task_label": "Deine Aufgabe",
     "computing": {
       "step_1": "Dein Horoskop wird gesetzt…",

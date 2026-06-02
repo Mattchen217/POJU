@@ -6,65 +6,28 @@ import { useTranslations } from "next-intl";
 
 import { Link, useRouter } from "@/i18n/navigation";
 import { PojuToolHandoffBanner } from "@/components/poju/PojuToolHandoffBanner";
-import { SyncroExistingSessionPrompt } from "@/components/syncro/SyncroExistingSessionPrompt";
 import { usePojuToolHandoff } from "@/lib/poju/use-poju-tool-handoff";
-import {
-  cleanupExpiredSyncroSessions,
-  findLatestActiveSyncroSessionForDevice,
-} from "@/lib/syncro/syncro-session";
 import { inferTaskTimeScope, SYNCRO_TASK_TIME_KEY } from "@/lib/syncro/syncro-view-helpers";
-import type { SyncroSession } from "@/lib/syncro/types";
 import "@/styles/poju-tool-handoff.css";
 
 const MIN_LEN = 6;
 const MAX_LEN = 100;
 
-type EntryPhase = "checking" | "prompt" | "form";
-
 export function SyncroTaskPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const t = useTranslations("syncro.task");
-  const tRoot = useTranslations("syncro");
 
   const pojuHandoff = usePojuToolHandoff("syncro");
   const sessionType =
     pojuHandoff?.quota_free || searchParams.get("type") === "free" ? "free" : "paid";
 
-  const [entryPhase, setEntryPhase] = useState<EntryPhase>("checking");
-  const [activeSession, setActiveSession] = useState<SyncroSession | null>(null);
   const [task, setTask] = useState("");
   const [showMinWarning, setShowMinWarning] = useState(false);
 
   const trimmedLen = task.trim().length;
   const canContinue = trimmedLen >= MIN_LEN;
   const charsRemaining = Math.max(0, MIN_LEN - trimmedLen);
-
-  useEffect(() => {
-    if (searchParams.get("new") === "1") {
-      setEntryPhase("form");
-      return;
-    }
-
-    let cancelled = false;
-
-    void (async () => {
-      await cleanupExpiredSyncroSessions();
-      const session = await findLatestActiveSyncroSessionForDevice();
-      if (cancelled) return;
-
-      if (session) {
-        setActiveSession(session);
-        setEntryPhase("prompt");
-      } else {
-        setEntryPhase("form");
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [searchParams]);
 
   useEffect(() => {
     if (canContinue) setShowMinWarning(false);
@@ -87,26 +50,6 @@ export function SyncroTaskPage() {
     sessionStorage.setItem("syncro_session_type", sessionType);
     sessionStorage.setItem(SYNCRO_TASK_TIME_KEY, inferTaskTimeScope(trimmed));
     router.push("/syncro/prepare");
-  }
-
-  if (entryPhase === "checking") {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-bg-deep text-text-secondary">
-        <p>{tRoot("loading")}</p>
-      </main>
-    );
-  }
-
-  if (entryPhase === "prompt" && activeSession) {
-    return (
-      <SyncroExistingSessionPrompt
-        session={activeSession}
-        onStartNew={() => {
-          setActiveSession(null);
-          setEntryPhase("form");
-        }}
-      />
-    );
   }
 
   return (

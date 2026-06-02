@@ -1093,6 +1093,14 @@
       "continue": "Continue this reading",
       "start_new": "Start a new reading instead"
     },
+    "recent_sessions": {
+      "heading": "Your readings (24h window)",
+      "hint": "Tap to open the compass. Each task stays available until its 24-hour window ends — even after all 12 hour-periods are ready.",
+      "loading": "Loading your readings…",
+      "progress": "{done}/{total} hour-periods ready",
+      "status_complete": "12/12 ready · open compass",
+      "expires": "Ends {when}"
+    },
     "your_task_label": "Your task",
     "computing": {
       "step_1": "Casting your chart...",
