@@ -10,7 +10,7 @@ import {
 } from "@/lib/syncro/syncro-kv";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
