@@ -13,8 +13,16 @@ import { SyncroMainView } from "@/components/syncro/SyncroMainView";
 import { SyncroPreparingLiveHour } from "@/components/syncro/SyncroPreparingLiveHour";
 import { extractSyncroSummary } from "@/lib/poju/tool-result-summary";
 import {
-  getRealtimeHourPeriodForSession,
+  deleteSyncroSession,
+  isSyncroSessionExpired,
+  loadSyncroSession,
+  patchSyncroSessionMatrix,
+  patchSyncroSessionMatrixFailure,
+} from "@/lib/syncro/syncro-session";
+import {
+  getLivePeriodInSubmissionTimeline,
   isSyncroCompassGateReady,
+  isSubmissionTimelineComplete,
 } from "@/lib/syncro/syncro-submission-schedule";
 import { useSyncroBackgroundStream } from "@/lib/syncro/use-syncro-background-stream";
 import { useSyncroInngestJob } from "@/lib/syncro/use-syncro-inngest-job";
@@ -22,14 +30,9 @@ import { SyncroOrientationProvider } from "@/components/syncro/SyncroOrientation
 import { Link } from "@/i18n/navigation";
 import { generateSyncroHourWithRetry } from "@/lib/syncro/generate-syncro-hour-with-retry";
 import { HOUR_ORDER } from "@/lib/syncro/hour-order";
+import { getOrderedHourPeriodsFromSession } from "@/lib/syncro/syncro-view-helpers";
 import { dispatchSyncroMatrixPatch } from "@/lib/syncro/syncro-llm-events";
 import { resolveSyncroLlmContext } from "@/lib/syncro/syncro-llm-context-storage";
-import {
-  isSyncroSessionExpired,
-  loadSyncroSession,
-  patchSyncroSessionMatrix,
-  patchSyncroSessionMatrixFailure,
-} from "@/lib/syncro/syncro-session";
 import type { HourPeriod, SyncroSession } from "@/lib/syncro/types";
 
 import "@/styles/syncro.css";
@@ -129,6 +132,24 @@ function SyncroResultPageContent() {
     onProgress: setLlmProgress,
   });
 
+  const handleTimelineComplete = useCallback(() => {
+    void isSyncroSessionExpired(sessionId).then((expired) => {
+      if (expired) setStage("expired");
+    });
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (stage !== "ready" || !sessionId) return;
+
+    const interval = window.setInterval(() => {
+      void isSyncroSessionExpired(sessionId).then((expired) => {
+        if (expired) setStage("expired");
+      });
+    }, 60_000);
+
+    return () => window.clearInterval(interval);
+  }, [stage, sessionId]);
+
   useEffect(() => {
     function onPatch(ev: Event) {
       const detail = (ev as CustomEvent<{ session_id: string; updated_keys: string[] }>).detail;
@@ -161,6 +182,12 @@ function SyncroResultPageContent() {
       const s = await loadSyncroSession(sessionId);
       if (!s) {
         setStage("error");
+        return;
+      }
+
+      if (isSubmissionTimelineComplete(s)) {
+        await deleteSyncroSession(sessionId);
+        setStage("expired");
         return;
       }
 
@@ -216,7 +243,10 @@ function SyncroResultPageContent() {
   }
 
   const syncroSummary = extractSyncroSummary(session);
-  const realtimePeriod = getRealtimeHourPeriodForSession(session);
+  const timelineLivePeriod =
+    getLivePeriodInSubmissionTimeline(session) ??
+    getOrderedHourPeriodsFromSession(session)[0] ??
+    "zi";
 
   return (
     <SyncroOrientationProvider>
@@ -246,12 +276,13 @@ function SyncroResultPageContent() {
             backgroundStream={backgroundStream}
             onRetryHour={handleRetryHour}
             retryingHour={retryingHour}
+            onTimelineComplete={handleTimelineComplete}
           />
         ) : (
           <SyncroPreparingLiveHour
             session={session}
             locale={locale}
-            realtimePeriod={realtimePeriod}
+            realtimePeriod={timelineLivePeriod}
             progress={llmProgress}
             onSessionUpdate={handleSessionUpdate}
           />

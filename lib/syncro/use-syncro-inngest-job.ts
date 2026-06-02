@@ -7,9 +7,10 @@ import { isHourPeriodLlmReady } from "@/lib/syncro/hour-llm-ready";
 import { rebuildSyncroLlmContext } from "@/lib/syncro/rebuild-syncro-llm-context";
 import { dispatchSyncroMatrixPatch } from "@/lib/syncro/syncro-llm-events";
 import {
-  getRealtimeHourPeriodForSession,
+  getLivePeriodInSubmissionTimeline,
   getSubmissionAnchorPeriod,
   getSubmissionHourSequence,
+  isSubmissionTimelineComplete,
 } from "@/lib/syncro/syncro-submission-schedule";
 import {
   clearSyncroLlmContext,
@@ -200,6 +201,24 @@ export function useSyncroInngestJob({
 
     const startCloudBatches = async () => {
       if (backgroundStartedRef.current) return;
+
+      const baseSession = workingSessionRef.current ?? activeSession;
+      if (isSubmissionTimelineComplete(baseSession)) {
+        backgroundStartedRef.current = true;
+        return;
+      }
+      if (countLlmReadyHours(baseSession) >= 12) {
+        backgroundStartedRef.current = true;
+        onProgress({
+          completed: 12,
+          total: 12,
+          running: false,
+          failed: 0,
+        });
+        clearSyncroLlmContext(sessionId);
+        return;
+      }
+
       backgroundStartedRef.current = true;
 
       let ctx = await resolveSyncroLlmContext(sessionId);
@@ -218,7 +237,9 @@ export function useSyncroInngestJob({
         return;
       }
 
-      const priorityHour = getRealtimeHourPeriodForSession(workingSessionRef.current ?? activeSession);
+      const priorityHour =
+        getLivePeriodInSubmissionTimeline(workingSessionRef.current ?? activeSession) ??
+        getSubmissionAnchorPeriod(workingSessionRef.current ?? activeSession);
 
       try {
         const res = await fetch("/api/syncro/inngest_start", {

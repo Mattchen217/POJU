@@ -4,6 +4,7 @@ import {
   loadSyncroSession,
   type SyncroSessionListItem,
 } from "@/lib/syncro/syncro-session";
+import { isSubmissionTimelineComplete } from "@/lib/syncro/syncro-submission-timeline";
 import { getOrderedHourPeriodsFromSession } from "@/lib/syncro/syncro-view-helpers";
 import { getPojuDb } from "@/lib/db/poju-db";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
@@ -27,12 +28,13 @@ function countReadyHours(session: SyncroSession): number {
 
 export function syncroSessionToSummary(session: SyncroSession): SyncroSessionSummary {
   const sequence = getOrderedHourPeriodsFromSession(session);
+  const timelineDone = isSubmissionTimelineComplete(session);
   return {
     session_id: session.session_id,
     profile_id: session.profile_id,
     created_at: session.created_at,
     expires_at: session.expires_at,
-    is_expired: session.expires_at.getTime() <= Date.now(),
+    is_expired: timelineDone || session.expires_at.getTime() <= Date.now(),
     task_description: session.task_description,
     hours_ready: countReadyHours(session),
     hours_total: sequence.length || 12,
@@ -61,6 +63,7 @@ export async function listActiveSyncroSessionSummariesForDevice(): Promise<
 
     const session = await loadSyncroSession(record.session_id);
     if (!session || Object.keys(session.matrix).length === 0) continue;
+    if (isSubmissionTimelineComplete(session)) continue;
 
     summaries.push(syncroSessionToSummary(session));
   }

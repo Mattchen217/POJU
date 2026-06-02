@@ -3,6 +3,10 @@ import {
   buildHourPairsFromSequence,
   type SyncroHourPair,
 } from "@/lib/syncro/syncro-hour-pairs";
+import {
+  getLivePeriodInSubmissionTimeline,
+  isSubmissionTimelineComplete,
+} from "@/lib/syncro/syncro-submission-timeline";
 import { getOrderedHourPeriodsFromSession } from "@/lib/syncro/syncro-view-helpers";
 import {
   getCurrentHourPeriod,
@@ -10,6 +14,16 @@ import {
   type HourPeriod,
   type SyncroSession,
 } from "@/lib/syncro/types";
+
+export {
+  computeSyncroSessionExpiresAt,
+  getLivePeriodInSubmissionTimeline,
+  getPeriodTimeRange,
+  getSubmissionTimelineBounds,
+  getSubmissionTimelineState,
+  isSubmissionTimelineComplete,
+  type SubmissionTimelineState,
+} from "@/lib/syncro/syncro-submission-timeline";
 
 /** 12-hour timeline anchored at user submission (matrix slot order). */
 export function getSubmissionHourSequence(session: SyncroSession): HourPeriod[] {
@@ -36,8 +50,10 @@ export function getRealtimeHourPeriodForSession(
   return getCurrentHourPeriod(date);
 }
 
-/** Compass entry: real-time hour (user TZ) has full LLM copy. */
+/** Compass entry: current submission slot has full LLM copy. */
 export function isSyncroCompassGateReady(session: SyncroSession): boolean {
-  const realtime = getRealtimeHourPeriodForSession(session);
-  return isHourPeriodLlmReady(session.matrix, realtime, session.llm_meta);
+  if (isSubmissionTimelineComplete(session)) return false;
+  const live = getLivePeriodInSubmissionTimeline(session);
+  if (!live) return false;
+  return isHourPeriodLlmReady(session.matrix, live, session.llm_meta);
 }

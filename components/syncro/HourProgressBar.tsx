@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 
-import { sortedHourPeriodsFromLive } from "@/lib/syncro/hour-order";
 import {
   getHourDotStatus,
   type HourDotStatus,
@@ -25,7 +24,7 @@ export type HourProgressBarProps = {
   matrix: SyncroMatrix;
   llmMeta: SyncroSession["llm_meta"];
   orderedPeriods: HourPeriod[];
-  livePeriod: HourPeriod;
+  livePeriod: HourPeriod | null;
   activeHour: HourPeriod;
   onSelect: (hourId: HourPeriod) => void;
   onRetryHour?: (hourId: HourPeriod) => void;
@@ -41,6 +40,7 @@ export type HourProgressBarProps = {
 export function HourProgressBar({
   matrix,
   llmMeta,
+  orderedPeriods,
   livePeriod,
   activeHour,
   onSelect,
@@ -53,11 +53,11 @@ export function HourProgressBar({
   const viewportRef = useRef<HTMLDivElement>(null);
   const slotRefs = useRef<Partial<Record<HourPeriod, HTMLDivElement>>>({});
 
-  const sortedPeriods = sortedHourPeriodsFromLive(livePeriod);
+  const timelinePeriods = orderedPeriods.length > 0 ? orderedPeriods : [];
 
-  const activeIdx = sortedPeriods.findIndex((p) => p === activeHour);
-  const active = sortedPeriods[activeIdx >= 0 ? activeIdx : 0] ?? sortedPeriods[0]!;
-  const activeIsLive = active === livePeriod && activeIdx === 0;
+  const activeIdx = timelinePeriods.findIndex((p) => p === activeHour);
+  const active = timelinePeriods[activeIdx >= 0 ? activeIdx : 0] ?? timelinePeriods[0]!;
+  const activeIsLive = livePeriod !== null && active === livePeriod;
 
   function scrollHourToCenter(period: HourPeriod, behavior: ScrollBehavior = "smooth") {
     const viewport = viewportRef.current;
@@ -69,11 +69,11 @@ export function HourProgressBar({
   }
 
   useEffect(() => {
-    scrollHourToCenter(livePeriod, "smooth");
-  }, [livePeriod]);
+    if (livePeriod) scrollHourToCenter(livePeriod, "smooth");
+  }, [livePeriod, timelinePeriods.join(",")]);
 
   useEffect(() => {
-    if (activeHour !== livePeriod) {
+    if (livePeriod && activeHour !== livePeriod) {
       scrollHourToCenter(activeHour, "smooth");
     }
   }, [activeHour, livePeriod]);
@@ -87,12 +87,12 @@ export function HourProgressBar({
       >
         <div className="hour-track-rail">
           <div className="hour-line" aria-hidden />
-          {sortedPeriods.map((period) => {
+          {timelinePeriods.map((period) => {
             const status = getHourDotStatus(
               period,
               livePeriod,
               matrix,
-              sortedPeriods,
+              timelinePeriods,
               llmMeta,
               failedHourIds,
             );

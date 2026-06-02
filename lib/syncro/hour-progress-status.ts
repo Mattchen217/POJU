@@ -2,8 +2,6 @@ import { isHourPeriodLlmReady } from "@/lib/syncro/hour-llm-ready";
 import { matrixKey, type HourPeriod, type SyncroMatrix, type SyncroSession } from "@/lib/syncro/types";
 import type { DirectionId } from "@/lib/syncro/current-system";
 
-import { sortedHourPeriodsFromLive } from "@/lib/syncro/hour-order";
-
 export { isHourPeriodLlmReady } from "@/lib/syncro/hour-llm-ready";
 
 const DIRECTIONS: DirectionId[] = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
@@ -26,21 +24,26 @@ function isHourFailed(
 }
 
 /**
- * Per-hour dot status from matrix + optional KV failed_hours (not blocked by earlier hours).
+ * Per-hour dot status on the fixed submission timeline (not wall-clock rotation).
  */
 export function getHourDotStatus(
   hourId: HourPeriod,
-  livePeriod: HourPeriod,
+  livePeriod: HourPeriod | null,
   matrix: SyncroMatrix,
-  sortedPeriods?: HourPeriod[],
+  orderedPeriods: HourPeriod[],
   llmMeta?: SyncroSession["llm_meta"],
   failedHourIds?: HourPeriod[],
 ): HourDotStatus {
-  const order = sortedPeriods ?? sortedHourPeriodsFromLive(livePeriod);
-  if (order.indexOf(hourId) < 0) return "pending";
+  const idx = orderedPeriods.indexOf(hourId);
+  if (idx < 0) return "pending";
 
-  if (hourId === livePeriod) return "now";
+  if (livePeriod && hourId === livePeriod) return "now";
+
+  const liveIdx =
+    livePeriod !== null ? orderedPeriods.indexOf(livePeriod) : orderedPeriods.length;
+
   if (isHourFailed(matrix, hourId, failedHourIds)) return "failed";
   if (isHourPeriodLlmReady(matrix, hourId, llmMeta)) return "done";
+  if (liveIdx >= 0 && idx < liveIdx) return "pending";
   return "pending";
 }

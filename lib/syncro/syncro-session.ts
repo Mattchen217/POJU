@@ -8,10 +8,12 @@ import { decryptJson, encryptJson } from "@/lib/crypto";
 import { getPojuDb, type SyncroSessionRecord } from "@/lib/db/poju-db";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
 import type { SyncroSession, SyncroSessionPayload } from "./types";
+import {
+  computeSyncroSessionExpiresAt,
+  isSubmissionTimelineComplete,
+} from "./syncro-submission-timeline";
 
 const SYNCRO_SESSION_SECRET = "pojulife_v5_syncro_session";
-
-const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
 
 export type CreateSyncroSessionInput = {
   profile_id: string;
@@ -52,7 +54,7 @@ export async function createSyncroSession(input: CreateSyncroSessionInput): Prom
   const deviceId = getPojuDeviceId();
   const sessionId = safeRandomUUID();
   const now = new Date();
-  const expires = new Date(now.getTime() + TWENTY_FOUR_HOURS_MS);
+  const expires = computeSyncroSessionExpiresAt(input.matrix, now);
 
   const session: SyncroSession = {
     session_id: sessionId,
@@ -207,10 +209,25 @@ export async function loadSyncroSession(sessionId: string): Promise<SyncroSessio
   }
 }
 
+export async function deleteSyncroSession(sessionId: string): Promise<void> {
+  await getPojuDb().syncro_sessions.delete(sessionId);
+}
+
 export async function isSyncroSessionExpired(sessionId: string): Promise<boolean> {
   const record = await getPojuDb().syncro_sessions.get(sessionId);
   if (!record) return true;
-  return new Date(record.expires_at) < new Date();
+  if (new Date(record.expires_at) < new Date()) {
+    await deleteSyncroSession(sessionId);
+    return true;
+  }
+
+  const session = await loadSyncroSession(sessionId);
+  if (session && isSubmissionTimelineComplete(session)) {
+    await deleteSyncroSession(sessionId);
+    return true;
+  }
+
+  return false;
 }
 
 export async function listUserSyncroSessions(): Promise<SyncroSessionListItem[]> {
@@ -231,6 +248,10 @@ export async function listUserSyncroSessions(): Promise<SyncroSessionListItem[]>
 
 function isRecordActive(record: SyncroSessionRecord, now: number): boolean {
   return new Date(record.expires_at).getTime() > now;
+}
+
+async function isSessionTimelineActive(session: SyncroSession): Promise<boolean> {
+  return !isSubmissionTimelineComplete(session);
 }
 
 function sortRecordsByCreatedDesc(records: SyncroSessionRecord[]): SyncroSessionRecord[] {
@@ -257,6 +278,12 @@ export async function findActiveSyncroSession(profileId: string): Promise<Syncro
   for (const record of records) {
     if (!isRecordActive(record, now)) continue;
     const session = await loadActiveSessionFromRecord(record);
+    if (!session || !(await isSessionTimelineActive(session))) {
+      if (session && isSubmissionTimelineComplete(session)) {
+        await deleteSyncroSession(record.session_id);
+      }
+      continue;
+    }
     if (session) return session;
   }
 
@@ -274,23 +301,39 @@ export async function findLatestActiveSyncroSessionForDevice(): Promise<SyncroSe
   for (const record of records) {
     if (!isRecordActive(record, now)) continue;
     const session = await loadActiveSessionFromRecord(record);
+    if (!session || !(await isSessionTimelineActive(session))) {
+      if (session && isSubmissionTimelineComplete(session)) {
+        await deleteSyncroSession(record.session_id);
+      }
+      continue;
+    }
     if (session) return session;
   }
 
   return null;
 }
 
-/** Delete expired rows from IndexedDB. */
+/** Delete expired rows and finished 12-slot timelines from IndexedDB. */
 export async function cleanupExpiredSyncroSessions(): Promise<number> {
   const now = Date.now();
-  const expired = await getPojuDb()
-    .syncro_sessions.filter((row) => new Date(row.expires_at).getTime() <= now)
-    .toArray();
+  const rows = await getPojuDb().syncro_sessions.toArray();
+  let removed = 0;
 
-  for (const row of expired) {
-    await getPojuDb().syncro_sessions.delete(row.session_id);
+  for (const row of rows) {
+    const expiresMs = new Date(row.expires_at).getTime();
+    if (expiresMs <= now) {
+      await deleteSyncroSession(row.session_id);
+      removed++;
+      continue;
+    }
+
+    const session = await loadSyncroSession(row.session_id);
+    if (session && isSubmissionTimelineComplete(session)) {
+      await deleteSyncroSession(row.session_id);
+      removed++;
+    }
   }
 
-  return expired.length;
+  return removed;
 }
 

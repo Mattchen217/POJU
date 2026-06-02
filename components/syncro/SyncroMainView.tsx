@@ -24,7 +24,11 @@ import {
   type SyncroTaskTimeScope,
   type SyncroUiMode,
 } from "@/lib/syncro/syncro-view-helpers";
-import { getRealtimeHourPeriodForSession } from "@/lib/syncro/syncro-submission-schedule";
+import {
+  getLivePeriodInSubmissionTimeline,
+  getSubmissionTimelineState,
+  isSubmissionTimelineComplete,
+} from "@/lib/syncro/syncro-submission-schedule";
 import type { SyncroBackgroundStreamState } from "@/lib/syncro/use-syncro-background-stream";
 import type { HourPeriod, SyncroSession } from "@/lib/syncro/types";
 
@@ -42,6 +46,8 @@ export type SyncroMainViewProps = {
   backgroundStream?: SyncroBackgroundStreamState;
   onRetryHour?: (hourId: HourPeriod) => void;
   retryingHour?: HourPeriod | null;
+  /** Fired once when the 12-slot submission window has ended. */
+  onTimelineComplete?: () => void;
 };
 
 function readTaskTimeScope(): SyncroTaskTimeScope {
@@ -59,6 +65,7 @@ export function SyncroMainView({
   backgroundStream,
   onRetryHour,
   retryingHour = null,
+  onTimelineComplete,
 }: SyncroMainViewProps) {
   const t = useTranslations("syncro.main");
   const { isSupported, receivingHeading, requestPermissionFromUserGesture } = useOrientation();
@@ -67,12 +74,16 @@ export function SyncroMainView({
 
   const orderedPeriods = useMemo(() => getOrderedHourPeriodsFromSession(session), [session]);
 
-  const [liveHourPeriod, setLiveHourPeriod] = useState<HourPeriod>(() =>
-    getRealtimeHourPeriodForSession(session),
+  const initialTimeline = useMemo(() => getSubmissionTimelineState(session), [session]);
+
+  const [liveHourPeriod, setLiveHourPeriod] = useState<HourPeriod | null>(
+    () => initialTimeline.livePeriod,
   );
-  const [activeHour, setActiveHour] = useState<HourPeriod>(() =>
-    getRealtimeHourPeriodForSession(session),
-  );
+  const [activeHour, setActiveHour] = useState<HourPeriod>(() => {
+    const live = initialTimeline.livePeriod;
+    if (live && orderedPeriods.includes(live)) return live;
+    return orderedPeriods[0] ?? "zi";
+  });
   const [uiMode, setUiMode] = useState<SyncroUiMode>("compass");
   const [initialized, setInitialized] = useState(false);
   const [cameraGranted, setCameraGranted] = useState(false);
@@ -144,16 +155,24 @@ export function SyncroMainView({
 
   useEffect(() => {
     const interval = window.setInterval(() => {
-      const next = getRealtimeHourPeriodForSession(session);
+      if (isSubmissionTimelineComplete(session)) {
+        onTimelineComplete?.();
+        return;
+      }
+
+      const next = getLivePeriodInSubmissionTimeline(session);
       setLiveHourPeriod((prev) => {
         if (next !== prev) {
-          setActiveHour((sel) => (sel === prev ? next : sel));
+          setActiveHour((sel) => {
+            if (prev !== null && sel === prev && next) return next;
+            return sel;
+          });
         }
         return next;
       });
     }, 60_000);
     return () => window.clearInterval(interval);
-  }, [session]);
+  }, [session, onTimelineComplete]);
 
   useEffect(() => {
     setActiveDirection(findBestDirectionForPeriod(session, activeHour));
@@ -189,7 +208,9 @@ export function SyncroMainView({
 
   const effectivePeriod = orderedPeriods.includes(activeHour)
     ? activeHour
-    : (orderedPeriods[0] ?? liveHourPeriod);
+    : (liveHourPeriod && orderedPeriods.includes(liveHourPeriod)
+        ? liveHourPeriod
+        : (orderedPeriods[0] ?? "zi"));
 
   if (!initialized) {
     return (

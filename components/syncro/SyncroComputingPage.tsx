@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { saveSyncroToArchive } from "@/lib/archive/archive-service";
 import { createSyncroSession } from "@/lib/syncro/syncro-session";
+import { computeSyncroSessionExpiresAt } from "@/lib/syncro/syncro-submission-timeline";
 import { recordUsage } from "@/lib/syncro/device-usage";
 import { getStoredProfile, recordProfileUsage } from "@/lib/profile/stored-profiles-service";
 import { readFetchJson } from "@/lib/client/fetch-json";
@@ -106,8 +107,8 @@ export function SyncroComputingPage() {
 
       const llmMeta = data.meta ?? {};
       const timezone = location.timezone;
-      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
       const matrix = data.matrix as import("@/lib/syncro/types").SyncroMatrix;
+      const expiresAt = computeSyncroSessionExpiresAt(matrix);
 
       const sessionId = await createSyncroSession({
         profile_id: profileId,
