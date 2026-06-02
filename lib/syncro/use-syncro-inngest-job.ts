@@ -6,10 +6,13 @@ import type { SyncroLlmProgress } from "@/components/syncro/SyncroLlmBatchRunner
 import { isHourPeriodLlmReady } from "@/lib/syncro/hour-llm-ready";
 import { rebuildSyncroLlmContext } from "@/lib/syncro/rebuild-syncro-llm-context";
 import { dispatchSyncroMatrixPatch } from "@/lib/syncro/syncro-llm-events";
+import { buildSyncroLlmHoursInput } from "@/lib/syncro/syncro-llm-batch-core";
 import {
+  getRealtimeHourPeriodForSession,
   getSubmissionAnchorPeriod,
   getSubmissionHourSequence,
 } from "@/lib/syncro/syncro-submission-schedule";
+import { runStreamHoursWithRetry } from "@/lib/syncro/syncro-stream-hours-runner";
 import {
   clearSyncroLlmContext,
   resolveSyncroLlmContext,
@@ -28,6 +31,7 @@ type StatusResponse = {
     done: boolean;
   } | null;
   hours: Record<string, SyncroHourData | null>;
+  kv_configured?: boolean;
 };
 
 function countLlmReadyHours(session: SyncroSession): number {
@@ -48,8 +52,8 @@ export type UseSyncroInngestJobOptions = {
 };
 
 /**
- * Start Inngest generate-all (idempotent) and poll KV → merge into IndexedDB.
- * Safe to leave the page; cloud job continues.
+ * 1) Stream priority hour (NOW) to IndexedDB → compass gate.
+ * 2) Start Inngest for all hours; poll KV → merge.
  */
 export function useSyncroInngestJob({
   sessionId,
@@ -59,6 +63,7 @@ export function useSyncroInngestJob({
   onProgress,
 }: UseSyncroInngestJobOptions): void {
   const startedRef = useRef(false);
+  const priorityStartedRef = useRef(false);
   const appliedHoursRef = useRef<Set<string>>(new Set());
   const workingSessionRef = useRef(session);
 
@@ -72,6 +77,8 @@ export function useSyncroInngestJob({
 
     let cancelled = false;
     let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    const priorityHour = getRealtimeHourPeriodForSession(activeSession);
 
     const applyHourFromKv = async (hourId: string, hourData: SyncroHourData) => {
       if (appliedHoursRef.current.has(hourId)) return;
@@ -93,8 +100,10 @@ export function useSyncroInngestJob({
     const tick = async (): Promise<boolean> => {
       if (cancelled) return false;
 
-      let completed = countLlmReadyHours(workingSessionRef.current ?? activeSession);
+      const base = workingSessionRef.current ?? activeSession;
+      let completed = countLlmReadyHours(base);
       let failed = 0;
+      let kvUnavailable = false;
 
       try {
         const res = await fetch(
@@ -102,6 +111,10 @@ export function useSyncroInngestJob({
         );
         if (res.ok) {
           const data = (await res.json()) as StatusResponse;
+
+          if (data.kv_configured === false) {
+            kvUnavailable = true;
+          }
 
           if (data.status) {
             failed = data.status.failed_hours.length;
@@ -119,6 +132,7 @@ export function useSyncroInngestJob({
                 running: false,
                 failed,
                 current_hour: (data.status.current_hour as HourPeriod) ?? undefined,
+                kv_unavailable: kvUnavailable,
               });
               clearSyncroLlmContext(sessionId);
               return false;
@@ -130,6 +144,15 @@ export function useSyncroInngestJob({
               running: true,
               failed,
               current_hour: (data.status.current_hour as HourPeriod) ?? undefined,
+              kv_unavailable: kvUnavailable,
+            });
+          } else if (kvUnavailable) {
+            onProgress({
+              completed,
+              total: 12,
+              running: true,
+              failed,
+              kv_unavailable: true,
             });
           }
         }
@@ -139,7 +162,7 @@ export function useSyncroInngestJob({
 
       completed = countLlmReadyHours(workingSessionRef.current ?? activeSession);
       if (completed >= 12) {
-        onProgress({ completed: 12, total: 12, running: false, failed });
+        onProgress({ completed: 12, total: 12, running: false, failed, kv_unavailable: kvUnavailable });
         clearSyncroLlmContext(sessionId);
         return false;
       }
@@ -149,8 +172,50 @@ export function useSyncroInngestJob({
         total: 12,
         running: true,
         failed,
+        kv_unavailable: kvUnavailable,
       });
       return true;
+    };
+
+    const runPriorityStream = async (ctx: NonNullable<Awaited<ReturnType<typeof resolveSyncroLlmContext>>>) => {
+      if (priorityStartedRef.current) return;
+      if (isHourPeriodLlmReady(activeSession.matrix, priorityHour, activeSession.llm_meta)) {
+        return;
+      }
+      priorityStartedRef.current = true;
+
+      onProgress({
+        completed: countLlmReadyHours(workingSessionRef.current ?? activeSession),
+        total: 12,
+        running: true,
+        failed: 0,
+        priority_generating: true,
+        current_hour: priorityHour,
+      });
+
+      const hoursInput = buildSyncroLlmHoursInput(sessionId, [priorityHour], ctx);
+      const result = await runStreamHoursWithRetry(hoursInput, {}, { maxAttempts: 2 });
+
+      if (cancelled) return;
+
+      if (result.success && result.advice) {
+        const updated = await patchSyncroSessionMatrix(sessionId, result.advice, {
+          cost_usd_delta: 0,
+        });
+        if (updated) {
+          appliedHoursRef.current.add(priorityHour);
+          workingSessionRef.current = updated;
+          onSessionUpdate(updated);
+          dispatchSyncroMatrixPatch({
+            session_id: sessionId,
+            batch_index: getSubmissionHourSequence(activeSession).indexOf(priorityHour),
+            batch_total: 12,
+            updated_keys: Object.keys(result.advice),
+          });
+        }
+      } else {
+        console.warn("[useSyncroInngestJob] priority stream failed:", result.lastError);
+      }
     };
 
     const ensureStarted = async () => {
@@ -172,6 +237,8 @@ export function useSyncroInngestJob({
         return;
       }
 
+      void runPriorityStream(ctx);
+
       const submission_anchor = getSubmissionAnchorPeriod(workingSessionRef.current ?? activeSession);
       const hour_order = getSubmissionHourSequence(workingSessionRef.current ?? activeSession);
 
@@ -182,13 +249,29 @@ export function useSyncroInngestJob({
           body: JSON.stringify({
             session_id: sessionId,
             submission_anchor,
+            priority_hour: priorityHour,
             hour_order,
             llm_context: ctx,
             device_id: getPojuDeviceId(),
           }),
         });
         if (!res.ok) {
-          console.warn("[useSyncroInngestJob] inngest_start http", res.status);
+          const body = (await res.json().catch(() => ({}))) as { error?: string };
+          if (body.error === "kv_not_configured") {
+            onProgress({
+              completed: countLlmReadyHours(workingSessionRef.current ?? activeSession),
+              total: 12,
+              running: true,
+              failed: 0,
+              kv_unavailable: true,
+              priority_generating: !isHourPeriodLlmReady(
+                workingSessionRef.current?.matrix ?? activeSession.matrix,
+                priorityHour,
+                activeSession.llm_meta,
+              ),
+            });
+          }
+          console.warn("[useSyncroInngestJob] inngest_start http", res.status, body);
         }
       } catch (e) {
         console.warn("[useSyncroInngestJob] inngest_start failed:", e);

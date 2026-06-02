@@ -1131,6 +1131,7 @@
     },
     "llm_progress": {
       "in_progress": "AI copy generating {done}/{total}…",
+      "kv_missing": "Cloud sync unavailable — generating current hour on device…",
       "context_missing": "Could not start AI batches. Re-run Syncro from your profile.",
       "all_failed": "All 12 hour batches failed. Check console logs and API key.",
       "complete": "AI copy complete",

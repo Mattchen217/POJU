@@ -1146,6 +1146,7 @@
     },
     "llm_progress": {
       "in_progress": "AI 文案生成中 {done}/{total}…",
+      "kv_missing": "云端进度未同步，正在本机生成当前时辰…",
       "complete": "AI 文案已全部生成",
       "some_failed": "有 {count} 个时辰批次未成功。",
       "context_missing": "无法启动 AI 批次，请从档案重新走一遍 Syncro 测算。",

@@ -3,7 +3,9 @@
 import { HourProgressBar } from "@/components/syncro/HourProgressBar";
 import type { SyncroLlmProgress } from "@/components/syncro/SyncroLlmBatchRunner";
 import { hourPeriodDisplayName, HOUR_PERIOD_RANGES } from "@/lib/syncro/hour-period-ranges";
-import { getFirstSubmissionBatchPair } from "@/lib/syncro/syncro-submission-schedule";
+import {
+  getRealtimeHourPeriodForSession,
+} from "@/lib/syncro/syncro-submission-schedule";
 import { getOrderedHourPeriodsFromSession } from "@/lib/syncro/syncro-view-helpers";
 import type { HourPeriod, SyncroSession } from "@/lib/syncro/types";
 
@@ -23,11 +25,11 @@ export function SyncroPreparingLiveHour({
   realtimePeriod,
   progress,
 }: Props) {
-  const [firstHour, secondHour] = getFirstSubmissionBatchPair(session);
+  const priorityHour = realtimePeriod;
   const orderedPeriods = getOrderedHourPeriodsFromSession(session);
-  const hourName = hourPeriodDisplayName(firstHour, locale);
-  const nextName = hourPeriodDisplayName(secondHour, locale);
-  const hourRange = HOUR_PERIOD_RANGES[firstHour];
+  const hourName = hourPeriodDisplayName(priorityHour, locale);
+  const hourRange = HOUR_PERIOD_RANGES[priorityHour];
+  const wallNow = getRealtimeHourPeriodForSession(session);
 
   const currentLabel = progress.current_hour
     ? hourPeriodDisplayName(progress.current_hour, locale)
@@ -51,13 +53,21 @@ export function SyncroPreparingLiveHour({
         </h2>
 
         <p className="syncro-preparing-live-hint" style={{ maxWidth: "28rem" }}>
-          已提交 12 时辰任务（从 {hourName} 起）。可离开本页，完成后回来即可继续。
+          先完成当前时辰（{hourName}），即可进入罗盘；其余 11 个时辰在云端继续生成。
         </p>
 
         <p className="syncro-preparing-live-progress">
-          进度：{progress.completed}/12 时辰
-          {currentLabel ? ` · 正在处理 ${currentLabel}` : ""}
+          {progress.priority_generating
+            ? `正在生成当前时辰 ${hourName}…`
+            : `总进度：${progress.completed}/12 时辰`}
+          {currentLabel && !progress.priority_generating ? ` · 后台 ${currentLabel}` : ""}
         </p>
+
+        {progress.kv_unavailable ? (
+          <p className="syncro-preparing-live-progress" style={{ color: "#fbbf24" }}>
+            云端进度同步未配置（KV）。当前时辰仍可通过直连 LLM 生成；请确认 Vercel 已配置 Upstash。
+          </p>
+        ) : null}
 
         {progress.context_missing ? (
           <p className="syncro-preparing-live-progress" style={{ color: "#f87171" }}>
@@ -72,9 +82,7 @@ export function SyncroPreparingLiveHour({
         ) : null}
 
         <p className="syncro-preparing-live-hint" style={{ maxWidth: "28rem", opacity: 0.85 }}>
-          时间轴 NOW = {realtimePeriod}（{hourPeriodDisplayName(realtimePeriod, locale)}）
-          <br />
-          首批序列：{firstHour} + {secondHour}（{hourRange}）
+          时间轴 NOW = {wallNow}（{hourRange}）· 可离开本页，后台 Inngest 会继续
         </p>
 
         <p className="syncro-preparing-live-hint" style={{ marginTop: 20 }}>

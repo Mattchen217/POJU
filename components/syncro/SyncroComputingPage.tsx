@@ -180,6 +180,7 @@ export function SyncroComputingPage() {
         body: JSON.stringify({
           session_id: sessionId,
           submission_anchor,
+          priority_hour: submission_anchor,
           hour_order,
           llm_context: llmCtx,
           device_id: getPojuDeviceId(),

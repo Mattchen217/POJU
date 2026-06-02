@@ -24,10 +24,14 @@ export type SyncroHourData = {
   completed_at: number;
 };
 
-function isKvConfigured(): boolean {
+export function isSyncroKvConfigured(): boolean {
   return Boolean(
     process.env.UPSTASH_REDIS_REST_URL?.trim() || process.env.KV_REST_API_URL?.trim(),
   );
+}
+
+function isKvConfigured(): boolean {
+  return isSyncroKvConfigured();
 }
 
 function statusKey(sessionId: string): string {

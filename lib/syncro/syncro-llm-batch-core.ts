@@ -207,6 +207,15 @@ function normalizeAdviceByHour(
   const missing = expectedIds.filter((id) => !normalized[id]);
   if (missing.length > 0) {
     const returned = Object.keys(raw);
+    if (returned.length === expectedIds.length) {
+      console.warn(
+        `[syncro-llm-batch] hour_id positional fallback: expected [${expectedIds.join(", ")}], got keys [${returned.join(", ")}]`,
+      );
+      for (let i = 0; i < expectedIds.length; i++) {
+        normalized[expectedIds[i]!] = raw[returned[i]!]!;
+      }
+      return normalized;
+    }
     console.error(
       `[syncro-llm-batch] hour_id mismatch: expected [${expectedIds.join(", ")}], got [${returned.join(", ")}]`,
     );

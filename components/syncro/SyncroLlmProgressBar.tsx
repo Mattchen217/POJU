@@ -11,6 +11,17 @@ type Props = {
 export function SyncroLlmProgressBar({ progress }: Props) {
   const t = useTranslations("syncro.llm_progress");
 
+  if (progress.kv_unavailable && progress.completed === 0) {
+    return (
+      <div
+        className="syncro-llm-progress fixed left-0 right-0 top-0 z-50 border-b border-amber-400/30 bg-bg-deep/95 px-4 py-2 text-center text-xs text-amber-100/90 backdrop-blur-sm"
+        role="alert"
+      >
+        <p>{t("kv_missing")}</p>
+      </div>
+    );
+  }
+
   if (progress.context_missing) {
     return (
       <div

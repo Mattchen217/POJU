@@ -9,7 +9,7 @@ import {
 } from "@/lib/syncro/syncro-job-kv";
 import { setSyncroLlmContextKv } from "@/lib/syncro/syncro-llm-context-kv";
 import { countCompletedInKv } from "@/lib/syncro/syncro-status-helpers";
-import { getSyncroStatus, setSyncroStatus } from "@/lib/syncro/syncro-status-kv";
+import { getSyncroStatus, isSyncroKvConfigured, setSyncroStatus } from "@/lib/syncro/syncro-status-kv";
 import type { SyncroLlmContext } from "@/lib/syncro/syncro-llm-context-storage";
 import type { HourPeriod } from "@/lib/syncro/types";
 
@@ -21,6 +21,8 @@ const STALE_MS = 45 * 60 * 1000;
 type StartBody = {
   session_id: string;
   submission_anchor: HourPeriod;
+  /** Wall-clock hour to generate first (compass gate). */
+  priority_hour: HourPeriod;
   hour_order?: HourPeriod[];
   llm_context: SyncroLlmContext;
   device_id?: string;
@@ -36,10 +38,16 @@ export async function POST(req: NextRequest) {
 
   const session_id = body.session_id?.trim();
   const submission_anchor = body.submission_anchor;
+  const priority_hour = body.priority_hour ?? submission_anchor;
   const llm_context = body.llm_context;
 
-  if (!session_id || !submission_anchor || !llm_context?.local_matrix) {
+  if (!session_id || !submission_anchor || !priority_hour || !llm_context?.local_matrix) {
     return NextResponse.json({ error: "invalid_request" }, { status: 400 });
+  }
+
+  if (!isSyncroKvConfigured()) {
+    console.error("[inngest_start] KV not configured — progress cannot sync to clients");
+    return NextResponse.json({ error: "kv_not_configured" }, { status: 503 });
   }
 
   const hour_order =
@@ -107,7 +115,7 @@ export async function POST(req: NextRequest) {
   try {
     await inngest.send({
       name: "syncro/generate-all",
-      data: { session_id, hour_order },
+      data: { session_id, hour_order, priority_hour },
     });
   } catch (e) {
     console.error("[inngest_start] send failed:", e);
@@ -115,7 +123,9 @@ export async function POST(req: NextRequest) {
   }
 
   const job = await getSyncroJob(session_id);
-  console.log(`[inngest_start] ${session_id} anchor=${submission_anchor} completed=${completed}/12`);
+  console.log(
+    `[inngest_start] ${session_id} anchor=${submission_anchor} priority=${priority_hour} completed=${completed}/12`,
+  );
 
   return NextResponse.json({
     ok: true,

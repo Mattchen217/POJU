@@ -24,6 +24,9 @@ export type SyncroLlmProgress = {
   failed: number;
   current_hour?: HourPeriod;
   context_missing?: boolean;
+  kv_unavailable?: boolean;
+  /** Client is streaming the priority (NOW) hour before compass. */
+  priority_generating?: boolean;
 };
 
 type Props = {
