@@ -2,9 +2,9 @@ import type { CSSProperties } from "react";
 
 /** Reference ring diameter (px); on screen uses min(76vmin, 400px) via CSS. */
 export const SYNCRO_RING_SIZE = 400;
-/** Direction labels sit on ~92% of ring radius; particle fills ~84% (inside label ring). */
-export const SYNCRO_LABEL_RADIUS = Math.round(SYNCRO_RING_SIZE * 0.46);
-export const SYNCRO_PARTICLE_DISPLAY_SIZE = Math.round(SYNCRO_RING_SIZE * 0.84);
+/** Labels on outer ring; particle ~94% of label diameter (just inside). */
+export const SYNCRO_LABEL_RADIUS = Math.round(SYNCRO_RING_SIZE * 0.48);
+export const SYNCRO_PARTICLE_DISPLAY_SIZE = Math.round(SYNCRO_RING_SIZE * 0.92);
 /**
  * Spline renders into a square WebGL canvas — edges clip in a rectangle, not a circle.
  */

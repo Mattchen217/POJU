@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 
+import { SyncroCenterLevel } from "@/components/syncro/SyncroCenterLevel";
 import { SyncroModeFooter } from "@/components/syncro/SyncroModeFooter";
 import { SyncroRingStage } from "@/components/syncro/SyncroRingStage";
 import { WhyThisCurrentModal } from "@/components/syncro/WhyThisCurrentModal";
@@ -12,11 +13,7 @@ import {
 } from "@/lib/syncro/compass-display";
 import type { CurrentLevel, DirectionId } from "@/lib/syncro/current-system";
 import { isSyncroLlmReady } from "@/lib/syncro/llm-cell-display";
-import {
-  SYNCRO_CENTER_INFO_WIDTH,
-  SYNCRO_MAP_POINT_RADIUS,
-  SYNCRO_MAP_POINT_SIZE,
-} from "@/lib/syncro/syncro-ring-layout";
+import { SYNCRO_MAP_POINT_RADIUS, SYNCRO_MAP_POINT_SIZE } from "@/lib/syncro/syncro-ring-layout";
 import { matrixKey, type HourPeriod, type SyncroSession } from "@/lib/syncro/types";
 
 import "@/styles/syncro-compass.css";
@@ -122,24 +119,19 @@ export function SyncroMapMode({
   );
 
   return (
-    <div className={`compass-mode-body map-mode-body ${llmHighlight ? "syncro-llm-cell-updated" : ""}`}>
+    <div className={`syncro-ar-layout ${llmHighlight ? "syncro-llm-cell-updated" : ""}`}>
       <SyncroRingStage
         highlightId={selectedDir}
         enableRotation={false}
         particleOpacity={0.5}
         ringOverlay={mapPoints}
         center={
-          <div style={{ width: SYNCRO_CENTER_INFO_WIDTH }}>
-            <div className="compass-center-direction">{selectedDir}</div>
-            {cell ? (
-              <div
-                className="compass-center-level"
-                style={{ color: POINT_COLORS[cell.current_level], marginTop: 4 }}
-              >
-                {levelTitle}
-              </div>
-            ) : null}
-          </div>
+          cell ? (
+            <SyncroCenterLevel
+              title={levelTitle}
+              color={POINT_COLORS[cell.current_level]}
+            />
+          ) : null
         }
       />
 

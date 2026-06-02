@@ -45,16 +45,8 @@
 }
 
 /* Concentric compass / AR / MAP — centered in middle band */
-.syncro-main-view .compass-mode-body,
-.syncro-main-view .ar-mode-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+.syncro-main-view .syncro-ar-layout {
   width: 100%;
-  min-height: 0;
-  padding: 0;
   overflow: visible;
 }
 
@@ -99,61 +91,25 @@
   pointer-events: none;
 }
 
-/* Compass / AR: advice + Why in footer below particle ring (in-flow, not over concentric) */
-.syncro-main-view .compass-mode-body,
-.syncro-main-view .ar-mode-body {
-  justify-content: flex-start;
-  gap: 0;
-}
-
-.syncro-main-view .compass-stage {
-  flex: 0 0 auto;
+/* AR fig.1 layout — all modes use .syncro-ar-layout */
+.syncro-main-view .syncro-ar-layout .compass-stage {
   display: flex;
   align-items: flex-start;
   justify-content: center;
   width: 100%;
-  padding: 2px 0 0;
-  min-height: 0;
+  padding: 0;
 }
 
-.syncro-main-view .compass-stage .concentric-system,
-.syncro-main-view .compass-stage .compass-area {
-  flex-shrink: 0;
+.syncro-main-view .syncro-ar-layout .concentric-system,
+.syncro-main-view .syncro-ar-layout .compass-area {
   width: min(76vmin, 400px);
   height: min(76vmin, 400px);
-}
-
-.syncro-main-view .compass-footer {
   flex-shrink: 0;
-  width: 100%;
-  max-width: 28rem;
-  margin: 0 auto;
-  padding: 6px 20px 4px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
 }
 
-.syncro-main-view .compass-mode-body .compass-short-advice,
-.syncro-main-view .compass-mode-body .compass-bottom-cta,
-.syncro-main-view .ar-mode-body .compass-short-advice,
-.syncro-main-view .ar-mode-body .compass-bottom-cta {
-  position: static;
-  left: auto;
-  bottom: auto;
-  transform: none;
-  margin: 0 auto;
-  pointer-events: auto;
-}
-
-.syncro-main-view .compass-mode-body .compass-short-advice {
-  padding: 0 4px 8px;
-}
-
-.syncro-main-view .compass-mode-body .compass-bottom-cta {
-  padding-bottom: 4px;
+.syncro-main-view .syncro-ar-layout .compass-short-advice {
+  margin: 0;
+  padding: 0;
 }
 
 /* Map mode keeps absolute hint placement */

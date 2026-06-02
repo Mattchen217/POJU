@@ -11,12 +11,11 @@ type Props = {
   llmMeta: SyncroSession["llm_meta"];
   canOpenWhy: boolean;
   onWhyClick: () => void;
-  /** Map mode hint above advice. */
   hint?: ReactNode;
   extra?: ReactNode;
 };
 
-/** Advice +「为何此时」— shared across compass / AR / map. */
+/** Advice +「为何此时」— spacing matches AR (fig 1). */
 export function SyncroModeFooter({
   cell,
   llmMeta,
@@ -28,10 +27,17 @@ export function SyncroModeFooter({
   const t = useTranslations("syncro");
 
   return (
-    <div className="compass-footer">
-      {hint}
-      <SyncroCellAdvice cell={cell} llmMeta={llmMeta} className="compass-short-advice" />
-      <div className="compass-bottom-cta">
+    <>
+      {cell ? (
+        <div className="syncro-mode-advice">
+          {hint}
+          <SyncroCellAdvice cell={cell} llmMeta={llmMeta} className="compass-short-advice" />
+        </div>
+      ) : hint ? (
+        <div className="syncro-mode-advice">{hint}</div>
+      ) : null}
+
+      <div className="syncro-mode-why">
         <button
           type="button"
           className="why-btn-prominent"
@@ -43,7 +49,8 @@ export function SyncroModeFooter({
           {t("why_this_current")}
         </button>
       </div>
-      {extra}
-    </div>
+
+      {extra ? <div className="syncro-mode-extra">{extra}</div> : null}
+    </>
   );
 }

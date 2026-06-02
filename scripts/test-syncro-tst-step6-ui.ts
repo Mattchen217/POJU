@@ -119,8 +119,8 @@ function main() {
 
   const compass = readFileSync(join(ROOT, "components/syncro/SyncroCompassMode.tsx"), "utf8");
   assert(
-    compass.includes("SyncroRingStage") && compass.includes("SyncroModeFooter"),
-    "shared ring stage + footer",
+    compass.includes("syncro-ar-layout") && compass.includes("SyncroCenterLevel"),
+    "AR reference layout on compass",
   );
   const ringStage = readFileSync(join(ROOT, "components/syncro/SyncroRingStage.tsx"), "utf8");
   assert(ringStage.includes("SyncroDirectionLabels"), "ring stage has direction labels");
@@ -136,7 +136,7 @@ function main() {
   assert(ringLayout.includes("SYNCRO_PARTICLE_OFFSET_X = 5"), "particle +5px nudge");
   assert(ringLayout.includes("getSyncroParticleFieldStyle"), "particle size on spline root");
   assert(ringLayout.includes("SYNCRO_RING_SIZE = 400"), "ring size ~fig3");
-  assert(ringLayout.includes("SYNCRO_PARTICLE_DISPLAY_SIZE"), "particle fills label ring");
+  assert(ringLayout.includes("SYNCRO_RING_SIZE * 0.92"), "particle fills label ring");
   assert(ringStage.includes("SyncroParticleCore bare"), "particle without mask");
   assert(compass.includes("SyncroModeFooter"), "compass uses shared footer");
   assert(!compass.includes("phone-position-hint"), "no layout phone hint bar");
@@ -145,12 +145,12 @@ function main() {
 
   const ar = readFileSync(join(ROOT, "components/syncro/SyncroARMode.tsx"), "utf8");
   assert(ar.includes("SYNCRO_AR_CAMERA_SIZE") && ar.includes("getUserMedia"), "AR camera 200px");
-  assert(ar.includes("SyncroRingStage") && ar.includes("PostureHintOverlay"), "AR shared ring layout + posture");
+  assert(ar.includes("syncro-ar-layout") && ar.includes("PostureHintOverlay"), "AR reference layout + posture");
   assert(!ar.includes("phone-position-hint"), "AR no layout phone hint bar");
 
   const mapMode = readFileSync(join(ROOT, "components/syncro/SyncroMapMode.tsx"), "utf8");
   assert(mapMode.includes("SYNCRO_MAP_POINT_SIZE") && mapMode.includes("SyncroRingStage"), "map shared layout + labels");
-  assert(mapMode.includes("SyncroRingStage") && mapMode.includes("SyncroModeFooter"), "map ring + CTA");
+  assert(mapMode.includes("syncro-ar-layout") && mapMode.includes("SyncroCenterLevel"), "map AR layout");
   assert(mapMode.includes("WhyThisCurrentModal"), "map has why modal");
 
   const whyModal = readFileSync(join(ROOT, "components/syncro/WhyThisCurrentModal.tsx"), "utf8");
@@ -226,8 +226,8 @@ function main() {
   assert(preparing.includes("SyncroPreparingLiveHour"), "live hour gate before compass");
 
   const modeFooter = readFileSync(join(ROOT, "components/syncro/SyncroModeFooter.tsx"), "utf8");
-  assert(modeFooter.includes("compass-bottom-cta"), "why CTA in footer stack");
-  assert(modeFooter.includes("compass-footer"), "compass footer stack");
+  assert(modeFooter.includes("syncro-mode-why"), "why CTA AR spacing");
+  assert(modeFooter.includes("syncro-mode-advice"), "advice AR spacing");
   assert(ringStage.includes("concentric-system"), "compass-area no clip");
 
   assert(SYNCRO_LLM_BATCH_COUNT === 12, "12 LLM batches");

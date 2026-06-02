@@ -129,7 +129,7 @@ export function SyncroARMode({
 
   if (!cameraGranted) {
     return (
-      <div className="compass-page ar-mode-body">
+      <div className="compass-page">
         <PostureHintOverlay mode="ar" beta={beta} />
         <div style={{ textAlign: "center", marginTop: 120, padding: "0 24px" }}>
           <IconCamera aria-hidden size={32} stroke={1.5} style={{ color: "#D4A574" }} />
@@ -145,7 +145,7 @@ export function SyncroARMode({
   }
 
   return (
-    <div className={`compass-mode-body ar-mode-body ${llmHighlight ? "syncro-llm-cell-updated" : ""}`}>
+    <div className={`syncro-ar-layout ${llmHighlight ? "syncro-llm-cell-updated" : ""}`}>
       <PostureHintOverlay mode="ar" beta={beta} />
 
       <SyncroRingStage

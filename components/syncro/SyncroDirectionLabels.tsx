@@ -45,7 +45,7 @@ export function SyncroDirectionLabels({
               position: "absolute",
               top: "50%",
               left: "50%",
-              transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))${upright}${isHighlight ? " scale(1.2)" : ""}`,
+              transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))${upright}`,
             }}
           >
             {dir.id}

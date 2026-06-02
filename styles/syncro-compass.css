@@ -42,15 +42,12 @@
 }
 
 .syncro-direction-label.is-active {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
   color: #d4a574;
   opacity: 1;
-  text-shadow:
-    0 0 6px rgba(212, 165, 116, 0.95),
-    0 0 14px rgba(212, 165, 116, 0.75),
-    0 0 28px rgba(212, 165, 116, 0.45);
-  filter: drop-shadow(0 0 4px rgba(212, 165, 116, 0.9));
+  text-shadow: none;
+  filter: none;
 }
 
 .compass-center-level {
@@ -60,30 +57,56 @@
   line-height: 1.25;
 }
 
-.compass-center-meta {
-  margin-top: 6px;
+/* AR fig.1 reference layout — compass / AR / map share this shell */
+.syncro-ar-layout {
+  position: relative;
+  width: 100%;
+  overflow: visible;
+}
+
+.syncro-ar-layout .compass-stage {
+  padding: 0;
+}
+
+.syncro-center-level-hub {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 3px;
-  font-size: 10px;
-  line-height: 1.35;
-  letter-spacing: 0.3px;
-  color: var(--pj-text-secondary, #a8b0c8);
-  max-width: 160px;
+  justify-content: center;
+  pointer-events: none;
 }
 
-.compass-center-direction {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--pj-gold, #d4a574);
-  letter-spacing: 2px;
+.syncro-center-level-overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  background: radial-gradient(circle, rgba(7, 9, 26, 0.5) 0%, transparent 72%);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
 }
 
-.compass-center-hour {
-  color: var(--pj-text-dim, #8a8aa0);
-  white-space: nowrap;
+.syncro-mode-advice {
+  max-width: 320px;
+  margin: 24px auto 0;
+  padding: 0 20px;
+  text-align: center;
+}
+
+.syncro-mode-why {
+  text-align: center;
+  margin-top: 8px;
+}
+
+.syncro-mode-extra {
+  max-width: 320px;
+  margin: 8px auto 0;
+  padding: 0 20px;
+  width: 100%;
+}
+
+.syncro-map-hint {
   font-size: 10px;
+  color: #8a8aa0;
+  margin: 0 0 8px;
 }
 
 .syncro-ar-camera {
@@ -168,13 +191,11 @@
   cursor: not-allowed;
 }
 
-.syncro-main-view .compass-mode-body .compass-short-advice {
+.syncro-main-view .syncro-ar-layout .compass-short-advice {
   margin: 0;
   font-size: 12px;
   line-height: 1.5;
   color: var(--pj-text-secondary, #a8b0c8);
-  max-height: 4.5em;
-  overflow: hidden;
 }
 
 .syncro-advice--loading,

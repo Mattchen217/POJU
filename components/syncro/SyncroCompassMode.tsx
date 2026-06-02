@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 
 import { PostureHintOverlay } from "@/components/syncro/PostureHintOverlay";
 import { SyncroBackgroundStreamPanel } from "@/components/syncro/SyncroBackgroundStreamPanel";
+import { SyncroCenterLevel } from "@/components/syncro/SyncroCenterLevel";
 import { SyncroCloudProgressPanel } from "@/components/syncro/SyncroCloudProgressPanel";
 import { SyncroModeFooter } from "@/components/syncro/SyncroModeFooter";
 import { SyncroRingStage } from "@/components/syncro/SyncroRingStage";
@@ -18,10 +19,8 @@ import {
   compassDegreeToDirection,
   type CurrentLevel,
 } from "@/lib/syncro/current-system";
-import { HOUR_PERIOD_RANGES, hourPeriodDisplayName } from "@/lib/syncro/hour-period-ranges";
 import { isSyncroLlmReady } from "@/lib/syncro/llm-cell-display";
 import type { SyncroLlmProgress } from "@/lib/syncro/syncro-llm-progress";
-import { SYNCRO_CENTER_INFO_WIDTH } from "@/lib/syncro/syncro-ring-layout";
 import type { SyncroBackgroundStreamState } from "@/lib/syncro/use-syncro-background-stream";
 import { matrixKey, type HourPeriod, type SyncroCombination, type SyncroSession } from "@/lib/syncro/types";
 
@@ -64,8 +63,6 @@ export function SyncroCompassMode({
   const cellKey = matrixKey(hourPeriod, currentDirection);
   const cell = session.matrix[cellKey];
   const llmHighlight = highlightMatrixKeys?.has(cellKey);
-  const hourLabel = hourPeriodDisplayName(hourPeriod, locale);
-  const hourRange = HOUR_PERIOD_RANGES[hourPeriod];
 
   const whyReady = Boolean(cell && isSyncroLlmReady(cell, session.llm_meta));
   const whyHasRationale = Boolean(cell?.rationale?.trim());
@@ -82,6 +79,8 @@ export function SyncroCompassMode({
   const showCloudProgress =
     !showClientStream && llmProgress?.running && llmProgress.completed < llmProgress.total;
 
+  const levelTitle = cell ? resolveLevelTitle(cell, isZh, tLevels) : "";
+
   if (!isSupported) {
     return (
       <div className="compass-page">
@@ -93,26 +92,21 @@ export function SyncroCompassMode({
   }
 
   return (
-    <div className={`compass-mode-body ${llmHighlight ? "syncro-llm-cell-updated" : ""}`}>
+    <div className={`syncro-ar-layout ${llmHighlight ? "syncro-llm-cell-updated" : ""}`}>
       {receivingHeading ? <PostureHintOverlay mode="compass" beta={beta} /> : null}
 
       <SyncroRingStage
         highlightId={currentDirection}
         rotationDeg={alpha}
         center={
-          <div style={{ width: SYNCRO_CENTER_INFO_WIDTH }}>
-            {cell ? (
-              <CurrentDisplay cell={cell} isZh={isZh} tLevels={tLevels} />
-            ) : (
-              <div style={{ color: "#8A8AA0", fontSize: 11 }}>{t("generating")}</div>
-            )}
-            <div className="compass-center-meta">
-              <span className="compass-center-direction">{currentDirection}</span>
-              <span className="compass-center-hour">
-                {hourLabel} · {hourRange}
-              </span>
-            </div>
-          </div>
+          cell ? (
+            <SyncroCenterLevel
+              title={levelTitle}
+              color={LEVEL_COLORS[cell.current_level] || "#A0A4B8"}
+            />
+          ) : (
+            <div style={{ color: "#8A8AA0", fontSize: 11 }}>{t("generating")}</div>
+          )
         }
       />
 
@@ -145,29 +139,15 @@ export function SyncroCompassMode({
   );
 }
 
-function CurrentDisplay({
-  cell,
-  isZh,
-  tLevels,
-}: {
-  cell: SyncroCombination;
-  isZh: boolean;
-  tLevels: (key: string) => string;
-}) {
+function resolveLevelTitle(
+  cell: SyncroCombination,
+  isZh: boolean,
+  tLevels: (key: string) => string,
+): string {
   const levelKey = getCurrentLevelI18nKey(cell.current_level);
-  let levelTitle = "";
   try {
-    levelTitle = tLevels(levelKey);
+    return tLevels(levelKey);
   } catch {
-    levelTitle = getCurrentLevelFallbackLabel(cell.current_level, isZh);
+    return getCurrentLevelFallbackLabel(cell.current_level, isZh);
   }
-
-  return (
-    <div
-      className="compass-center-level"
-      style={{ color: LEVEL_COLORS[cell.current_level] || "#A0A4B8" }}
-    >
-      {levelTitle}
-    </div>
-  );
 }
