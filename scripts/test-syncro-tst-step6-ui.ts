@@ -119,38 +119,36 @@ function main() {
 
   const compass = readFileSync(join(ROOT, "components/syncro/SyncroCompassMode.tsx"), "utf8");
   assert(
-    compass.includes("syncro-ar-layout") && compass.includes("SyncroCenterLevel"),
-    "AR reference layout on compass",
+    compass.includes("compass-page") && compass.includes("SyncroLevelHub"),
+    "compass uses AR page layout",
   );
-  const ringStage = readFileSync(join(ROOT, "components/syncro/SyncroRingStage.tsx"), "utf8");
-  assert(ringStage.includes("SyncroDirectionLabels"), "ring stage has direction labels");
+  assert(!compass.includes("compass-center-meta"), "no direction/hour overlay on particles");
+  assert(compass.includes("margin: \"24px auto 0\""), "advice below ring like AR");
   assert(compass.includes("PostureHintOverlay") && compass.includes("deviceTiltBeta"), "compass posture overlay");
   const ringLayout = readFileSync(join(ROOT, "lib/syncro/syncro-ring-layout.ts"), "utf8");
   assert(
-    ringStage.includes("rotate(${-rotationDeg}deg)") &&
-      ringStage.includes("counterRotateDeg={enableRotation ? rotationDeg : undefined}"),
+    compass.includes("rotate(${-alpha}deg)") && compass.includes("counterRotateDeg={alpha}"),
     "simple rotate + upright labels",
   );
   assert(!ringLayout.includes("rotate3d"), "no GPU rotate helper");
   assert(ringLayout.includes("SYNCRO_PARTICLE_DISPLAY_SCALE"), "particle scale for canvas margin");
   assert(ringLayout.includes("SYNCRO_PARTICLE_OFFSET_X = 5"), "particle +5px nudge");
   assert(ringLayout.includes("getSyncroParticleFieldStyle"), "particle size on spline root");
-  assert(ringLayout.includes("SYNCRO_RING_SIZE = 400"), "ring size ~fig3");
-  assert(ringLayout.includes("SYNCRO_RING_SIZE * 0.92"), "particle fills label ring");
-  assert(ringStage.includes("SyncroParticleCore bare"), "particle without mask");
-  assert(compass.includes("SyncroModeFooter"), "compass uses shared footer");
+  assert(ringLayout.includes("SYNCRO_RING_SIZE = 380"), "ring size AR reference");
+  assert(ringLayout.includes("0.95"), "particle ~95% of label ring");
+  assert(compass.includes("SyncroParticleCore bare"), "particle without mask");
+  assert(compass.includes("SyncroCellAdvice"), "advice below ring");
   assert(!compass.includes("phone-position-hint"), "no layout phone hint bar");
   assert(!compass.includes("requestPermission"), "compass permission only at gate");
   assert(compass.includes("WhyThisCurrentModal"), "compass has why modal");
 
   const ar = readFileSync(join(ROOT, "components/syncro/SyncroARMode.tsx"), "utf8");
   assert(ar.includes("SYNCRO_AR_CAMERA_SIZE") && ar.includes("getUserMedia"), "AR camera 200px");
-  assert(ar.includes("syncro-ar-layout") && ar.includes("PostureHintOverlay"), "AR reference layout + posture");
+  assert(ar.includes("compass-page") && ar.includes("PostureHintOverlay"), "AR page layout + posture");
   assert(!ar.includes("phone-position-hint"), "AR no layout phone hint bar");
 
   const mapMode = readFileSync(join(ROOT, "components/syncro/SyncroMapMode.tsx"), "utf8");
-  assert(mapMode.includes("SYNCRO_MAP_POINT_SIZE") && mapMode.includes("SyncroRingStage"), "map shared layout + labels");
-  assert(mapMode.includes("syncro-ar-layout") && mapMode.includes("SyncroCenterLevel"), "map AR layout");
+  assert(mapMode.includes("compass-page") && mapMode.includes("SyncroLevelHub"), "map AR page layout");
   assert(mapMode.includes("WhyThisCurrentModal"), "map has why modal");
 
   const whyModal = readFileSync(join(ROOT, "components/syncro/WhyThisCurrentModal.tsx"), "utf8");
@@ -225,10 +223,7 @@ function main() {
   assert(preparing.includes("runStreamHoursWithRetry"), "SSE stream for priority hour");
   assert(preparing.includes("SyncroPreparingLiveHour"), "live hour gate before compass");
 
-  const modeFooter = readFileSync(join(ROOT, "components/syncro/SyncroModeFooter.tsx"), "utf8");
-  assert(modeFooter.includes("syncro-mode-why"), "why CTA AR spacing");
-  assert(modeFooter.includes("syncro-mode-advice"), "advice AR spacing");
-  assert(ringStage.includes("concentric-system"), "compass-area no clip");
+  assert(compass.includes("why-btn-prominent"), "why CTA on compass page");
 
   assert(SYNCRO_LLM_BATCH_COUNT === 12, "12 LLM batches");
 

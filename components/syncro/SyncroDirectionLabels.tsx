@@ -20,7 +20,7 @@ type Props = {
   counterRotateDeg?: number;
 };
 
-/** Direction labels on the ring; active = gold, larger, glow. */
+/** Direction labels on the ring; active = gold + larger (no glow). */
 export function SyncroDirectionLabels({
   highlightId,
   labelRadius = SYNCRO_LABEL_RADIUS,
@@ -40,12 +40,20 @@ export function SyncroDirectionLabels({
         return (
           <div
             key={dir.id}
-            className={`syncro-direction-label ${isHighlight ? "is-active" : ""}`}
             style={{
               position: "absolute",
               top: "50%",
               left: "50%",
               transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))${upright}`,
+              fontSize: isHighlight ? 24 : 16,
+              fontWeight: isHighlight ? 700 : 500,
+              color: isHighlight ? "#D4A574" : "#FFFFFF",
+              opacity: isHighlight ? 1 : 0.7,
+              letterSpacing: 1.5,
+              pointerEvents: "none",
+              userSelect: "none",
+              zIndex: 3,
+              lineHeight: 1,
             }}
           >
             {dir.id}

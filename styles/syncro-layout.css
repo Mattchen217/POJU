@@ -45,8 +45,16 @@
 }
 
 /* Concentric compass / AR / MAP — centered in middle band */
-.syncro-main-view .syncro-ar-layout {
+.syncro-main-view .compass-mode-body,
+.syncro-main-view .ar-mode-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
   width: 100%;
+  min-height: 0;
+  padding: 0;
   overflow: visible;
 }
 
@@ -91,26 +99,13 @@
   pointer-events: none;
 }
 
-/* AR fig.1 layout — all modes use .syncro-ar-layout */
-.syncro-main-view .syncro-ar-layout .compass-stage {
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
+/* compass-page modes (AR layout reference) sit in mode stage */
+.syncro-main-view .compass-page {
   width: 100%;
-  padding: 0;
+  overflow: visible;
 }
 
-.syncro-main-view .syncro-ar-layout .concentric-system,
-.syncro-main-view .syncro-ar-layout .compass-area {
-  width: min(76vmin, 400px);
-  height: min(76vmin, 400px);
-  flex-shrink: 0;
-}
-
-.syncro-main-view .syncro-ar-layout .compass-short-advice {
-  margin: 0;
-  padding: 0;
-}
+/* Legacy compass-mode-body — unused after UI调整5 revert */
 
 /* Map mode keeps absolute hint placement */
 .syncro-main-view .compass-short-advice {

@@ -1,159 +1,17 @@
-/* Legacy full-page wrapper (unsupported state) */
+/* AR fig.1 page shell — compass / AR / map */
 .compass-page {
   position: relative;
   width: 100%;
   overflow: visible;
 }
 
-.syncro-ring-rotate {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  transform-origin: center center;
+.compass-page .compass-short-advice {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--pj-text-secondary, #a8b0c8);
 }
 
-.syncro-ring-center {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 5;
-  pointer-events: none;
-  text-align: center;
-}
-
-.syncro-direction-label {
-  font-size: 15px;
-  font-weight: 500;
-  color: #ffffff;
-  opacity: 0.72;
-  letter-spacing: 1.5px;
-  pointer-events: none;
-  user-select: none;
-  z-index: 3;
-  line-height: 1;
-  transition:
-    color 200ms ease,
-    opacity 200ms ease,
-    transform 200ms ease,
-    text-shadow 200ms ease;
-}
-
-.syncro-direction-label.is-active {
-  font-size: 24px;
-  font-weight: 700;
-  color: #d4a574;
-  opacity: 1;
-  text-shadow: none;
-  filter: none;
-}
-
-.compass-center-level {
-  font-size: 14px;
-  font-weight: 500;
-  letter-spacing: 0.5px;
-  line-height: 1.25;
-}
-
-/* AR fig.1 reference layout — compass / AR / map share this shell */
-.syncro-ar-layout {
-  position: relative;
-  width: 100%;
-  overflow: visible;
-}
-
-.syncro-ar-layout .compass-stage {
-  padding: 0;
-}
-
-.syncro-center-level-hub {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-}
-
-.syncro-center-level-overlay {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px 12px;
-  background: radial-gradient(circle, rgba(7, 9, 26, 0.5) 0%, transparent 72%);
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
-}
-
-.syncro-mode-advice {
-  max-width: 320px;
-  margin: 24px auto 0;
-  padding: 0 20px;
-  text-align: center;
-}
-
-.syncro-mode-why {
-  text-align: center;
-  margin-top: 8px;
-}
-
-.syncro-mode-extra {
-  max-width: 320px;
-  margin: 8px auto 0;
-  padding: 0 20px;
-  width: 100%;
-}
-
-.syncro-map-hint {
-  font-size: 10px;
-  color: #8a8aa0;
-  margin: 0 0 8px;
-}
-
-.syncro-ar-camera {
-  border-radius: 50%;
-  overflow: hidden;
-  transition: box-shadow 600ms ease;
-}
-
-.syncro-ar-camera video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.syncro-ar-camera-level {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: radial-gradient(circle, rgba(7, 9, 26, 0.5) 0%, transparent 70%);
-  color: #fff;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
-  pointer-events: none;
-}
-
-.syncro-map-hint {
-  font-size: 10px;
-  color: #8a8aa0;
-  margin: 0 0 4px;
-}
-
-/* 不要给 .compass-area 加任何样式,所有样式都用 inline style */
-/* 不要加 overflow: hidden 到罗盘粒子区域(仅 AR 摄像头窗口允许 hidden) */
-
-/* Legacy .particle-layer — full bleed inside rotating ring */
-.particle-layer .syncro-particle-spline,
-.particle-layer .syncro-particle-spline canvas {
-  width: 100% !important;
-  height: 100% !important;
-}
-
-/**
- * bare 模式: 尺寸在 syncro-ring-layout.ts（canvas 520 × scale → 约 400px 视觉）
- * 正方形边线来自 WebGL canvas 边界,不是额外背景框; scale 留出边距减轻裁切感
- */
 .syncro-particle-field,
 .syncro-particle-field > div {
   overflow: visible !important;
@@ -189,13 +47,6 @@
 .why-btn-prominent:disabled {
   opacity: 0.72;
   cursor: not-allowed;
-}
-
-.syncro-main-view .syncro-ar-layout .compass-short-advice {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--pj-text-secondary, #a8b0c8);
 }
 
 .syncro-advice--loading,
