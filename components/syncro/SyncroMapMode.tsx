@@ -3,9 +3,8 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 
-import { SyncroCellAdvice } from "@/components/syncro/SyncroCellAdvice";
-import { SyncroDirectionLabels } from "@/components/syncro/SyncroDirectionLabels";
-import { SyncroParticleCore } from "@/components/syncro/SyncroParticleCore";
+import { SyncroModeFooter } from "@/components/syncro/SyncroModeFooter";
+import { SyncroRingStage } from "@/components/syncro/SyncroRingStage";
 import { WhyThisCurrentModal } from "@/components/syncro/WhyThisCurrentModal";
 import {
   getCurrentLevelFallbackLabel,
@@ -17,9 +16,6 @@ import {
   SYNCRO_CENTER_INFO_WIDTH,
   SYNCRO_MAP_POINT_RADIUS,
   SYNCRO_MAP_POINT_SIZE,
-  SYNCRO_RING_MARGIN_TOP,
-  SYNCRO_RING_SIZE,
-  SYNCRO_WHY_BUTTON_MARGIN_TOP,
 } from "@/lib/syncro/syncro-ring-layout";
 import { matrixKey, type HourPeriod, type SyncroSession } from "@/lib/syncro/types";
 
@@ -70,6 +66,10 @@ export function SyncroMapMode({
   const cell = session.matrix[cellKey];
   const llmHighlight = highlightMatrixKeys?.has(cellKey);
 
+  const whyReady = Boolean(cell && isSyncroLlmReady(cell, session.llm_meta));
+  const whyHasRationale = Boolean(cell?.rationale?.trim());
+  const canOpenWhy = whyReady || whyHasRationale;
+
   const levelKey = cell ? getCurrentLevelI18nKey(cell.current_level) : null;
   let levelTitle = "";
   if (cell && levelKey) {
@@ -80,112 +80,78 @@ export function SyncroMapMode({
     }
   }
 
+  const mapPoints = (
+    <>
+      {DIRECTIONS.map((dir) => {
+        const rad = ((dir.angle - 90) * Math.PI) / 180;
+        const x = Math.cos(rad) * SYNCRO_MAP_POINT_RADIUS;
+        const y = Math.sin(rad) * SYNCRO_MAP_POINT_RADIUS;
+        const dirCell = session.matrix[matrixKey(hourPeriod, dir.id as DirectionId)];
+        const color = POINT_COLORS[dirCell?.current_level ?? "stillwater"];
+        const isSelected = dir.id === selectedDir;
+
+        return (
+          <button
+            key={dir.id}
+            type="button"
+            onClick={() => setSelectedDir(dir.id as DirectionId)}
+            className={`syncro-map-point ${isSelected ? "is-selected" : ""}`}
+            style={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              width: isSelected ? SYNCRO_MAP_POINT_SIZE + 4 : SYNCRO_MAP_POINT_SIZE,
+              height: isSelected ? SYNCRO_MAP_POINT_SIZE + 4 : SYNCRO_MAP_POINT_SIZE,
+              borderRadius: "50%",
+              background: isSelected ? "#D4A574" : color,
+              border: "none",
+              cursor: "pointer",
+              padding: 0,
+              transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,
+              boxShadow: isSelected
+                ? "0 0 20px rgba(212, 165, 116, 0.5)"
+                : `0 0 8px ${color}`,
+              transition: "all 200ms ease",
+              zIndex: 4,
+            }}
+            aria-label={dir.id}
+          />
+        );
+      })}
+    </>
+  );
+
   return (
-    <div className={`compass-page ${llmHighlight ? "syncro-llm-cell-updated" : ""}`}>
-      <div
-        style={{
-          position: "relative",
-          width: SYNCRO_RING_SIZE,
-          height: SYNCRO_RING_SIZE,
-          margin: `${SYNCRO_RING_MARGIN_TOP}px auto 0`,
-          overflow: "visible",
-        }}
-      >
-        <SyncroParticleCore bare opacity={0.5} />
-
-        <SyncroDirectionLabels highlightId={selectedDir} />
-
-        {DIRECTIONS.map((dir) => {
-          const rad = ((dir.angle - 90) * Math.PI) / 180;
-          const x = Math.cos(rad) * SYNCRO_MAP_POINT_RADIUS;
-          const y = Math.sin(rad) * SYNCRO_MAP_POINT_RADIUS;
-          const dirCell = session.matrix[matrixKey(hourPeriod, dir.id as DirectionId)];
-          const color = POINT_COLORS[dirCell?.current_level ?? "stillwater"];
-          const isSelected = dir.id === selectedDir;
-
-          return (
-            <button
-              key={dir.id}
-              type="button"
-              onClick={() => setSelectedDir(dir.id as DirectionId)}
-              style={{
-                position: "absolute",
-                top: "50%",
-                left: "50%",
-                width: isSelected ? SYNCRO_MAP_POINT_SIZE + 4 : SYNCRO_MAP_POINT_SIZE,
-                height: isSelected ? SYNCRO_MAP_POINT_SIZE + 4 : SYNCRO_MAP_POINT_SIZE,
-                borderRadius: "50%",
-                background: isSelected ? "#D4A574" : color,
-                border: "none",
-                cursor: "pointer",
-                padding: 0,
-                transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,
-                boxShadow: isSelected
-                  ? "0 0 20px rgba(212, 165, 116, 0.5)"
-                  : `0 0 8px ${color}`,
-                transition: "all 200ms ease",
-                zIndex: 4,
-              }}
-              aria-label={dir.id}
-            />
-          );
-        })}
-
-        <div
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            width: SYNCRO_CENTER_INFO_WIDTH,
-            textAlign: "center",
-            zIndex: 5,
-            pointerEvents: "none",
-          }}
-        >
-          <div style={{ fontSize: 10, color: "#D4A574", letterSpacing: 2, marginBottom: 6 }}>
-            {selectedDir}
+    <div className={`compass-mode-body map-mode-body ${llmHighlight ? "syncro-llm-cell-updated" : ""}`}>
+      <SyncroRingStage
+        highlightId={selectedDir}
+        enableRotation={false}
+        particleOpacity={0.5}
+        ringOverlay={mapPoints}
+        center={
+          <div style={{ width: SYNCRO_CENTER_INFO_WIDTH }}>
+            <div className="compass-center-direction">{selectedDir}</div>
+            {cell ? (
+              <div
+                className="compass-center-level"
+                style={{ color: POINT_COLORS[cell.current_level], marginTop: 4 }}
+              >
+                {levelTitle}
+              </div>
+            ) : null}
           </div>
-          {cell ? (
-            <div style={{ fontSize: 18, fontWeight: 500, color: POINT_COLORS[cell.current_level] }}>
-              {levelTitle}
-            </div>
-          ) : null}
-        </div>
-      </div>
+        }
+      />
 
-      <div style={{ textAlign: "center", fontSize: 10, color: "#8A8AA0", marginTop: 16 }}>
-        {t("map.tap_hint")}
-      </div>
+      <SyncroModeFooter
+        cell={cell}
+        llmMeta={session.llm_meta}
+        canOpenWhy={canOpenWhy}
+        onWhyClick={() => setWhyOpen(true)}
+        hint={<p className="syncro-map-hint">{t("map.tap_hint")}</p>}
+      />
 
-      {cell ? (
-        <div style={{ maxWidth: 320, margin: "16px auto 0", padding: "0 20px" }}>
-          <SyncroCellAdvice cell={cell} llmMeta={session.llm_meta} />
-        </div>
-      ) : null}
-
-      <div style={{ textAlign: "center", marginTop: SYNCRO_WHY_BUTTON_MARGIN_TOP }}>
-        <button
-          type="button"
-          className="why-btn-prominent"
-          disabled={!cell || !isSyncroLlmReady(cell, session.llm_meta)}
-          onClick={() => setWhyOpen(true)}
-          style={{
-            padding: "8px 18px",
-            background: "rgba(212, 165, 116, 0.12)",
-            color: "#D4A574",
-            fontSize: 11,
-            border: "none",
-            borderRadius: 20,
-            cursor: "pointer",
-            fontFamily: "inherit",
-          }}
-        >
-          {t("why_this_current")}
-        </button>
-      </div>
-
-      {whyOpen && cell && isSyncroLlmReady(cell, session.llm_meta) ? (
+      {whyOpen && cell && canOpenWhy ? (
         <WhyThisCurrentModal
           cell={cell}
           direction={selectedDir}

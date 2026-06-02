@@ -5,9 +5,8 @@ import { IconCamera, IconLoader2 } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
 
 import { PostureHintOverlay } from "@/components/syncro/PostureHintOverlay";
-import { SyncroCellAdvice } from "@/components/syncro/SyncroCellAdvice";
-import { SyncroDirectionLabels } from "@/components/syncro/SyncroDirectionLabels";
-import { SyncroParticleCore } from "@/components/syncro/SyncroParticleCore";
+import { SyncroModeFooter } from "@/components/syncro/SyncroModeFooter";
+import { SyncroRingStage } from "@/components/syncro/SyncroRingStage";
 import { WhyThisCurrentModal } from "@/components/syncro/WhyThisCurrentModal";
 import { useOrientation } from "@/components/syncro/SyncroOrientationProvider";
 import {
@@ -16,12 +15,7 @@ import {
 } from "@/lib/syncro/compass-display";
 import { compassDegreeToDirection, type CurrentLevel } from "@/lib/syncro/current-system";
 import { isSyncroLlmReady } from "@/lib/syncro/llm-cell-display";
-import {
-  SYNCRO_AR_CAMERA_SIZE,
-  SYNCRO_RING_MARGIN_TOP,
-  SYNCRO_RING_SIZE,
-  SYNCRO_WHY_BUTTON_MARGIN_TOP,
-} from "@/lib/syncro/syncro-ring-layout";
+import { SYNCRO_AR_CAMERA_SIZE } from "@/lib/syncro/syncro-ring-layout";
 import { matrixKey, type HourPeriod, type SyncroSession } from "@/lib/syncro/types";
 
 import "@/styles/syncro-compass.css";
@@ -74,6 +68,10 @@ export function SyncroARMode({
   const cell = session.matrix[cellKey];
   const llmHighlight = highlightMatrixKeys?.has(cellKey);
   const haloColor = HALO_COLORS[cell?.current_level ?? "stillwater"];
+
+  const whyReady = Boolean(cell && isSyncroLlmReady(cell, session.llm_meta));
+  const whyHasRationale = Boolean(cell?.rationale?.trim());
+  const canOpenWhy = whyReady || whyHasRationale;
 
   useEffect(() => {
     if (!cameraGranted) {
@@ -131,27 +129,13 @@ export function SyncroARMode({
 
   if (!cameraGranted) {
     return (
-      <div className="compass-page">
+      <div className="compass-page ar-mode-body">
         <PostureHintOverlay mode="ar" beta={beta} />
         <div style={{ textAlign: "center", marginTop: 120, padding: "0 24px" }}>
           <IconCamera aria-hidden size={32} stroke={1.5} style={{ color: "#D4A574" }} />
           <p style={{ marginTop: 16, fontSize: 13, color: "#A0A4B8" }}>{t("ar.permission_description")}</p>
           {onRequestCamera ? (
-            <button
-              type="button"
-              onClick={onRequestCamera}
-              style={{
-                marginTop: 16,
-                padding: "8px 18px",
-                background: "rgba(212, 165, 116, 0.12)",
-                color: "#D4A574",
-                fontSize: 11,
-                border: "none",
-                borderRadius: 20,
-                cursor: "pointer",
-                fontFamily: "inherit",
-              }}
-            >
+            <button type="button" className="why-btn-prominent" onClick={onRequestCamera}>
               {t("ar.permission_title")}
             </button>
           ) : null}
@@ -161,127 +145,58 @@ export function SyncroARMode({
   }
 
   return (
-    <div className={`compass-page ${llmHighlight ? "syncro-llm-cell-updated" : ""}`}>
+    <div className={`compass-mode-body ar-mode-body ${llmHighlight ? "syncro-llm-cell-updated" : ""}`}>
       <PostureHintOverlay mode="ar" beta={beta} />
 
-      <div
-        style={{
-          position: "relative",
-          width: SYNCRO_RING_SIZE,
-          height: SYNCRO_RING_SIZE,
-          margin: `${SYNCRO_RING_MARGIN_TOP}px auto 0`,
-          overflow: "visible",
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            transform: `rotate(${-alpha}deg)`,
-            transformOrigin: "center center",
-          }}
-        >
-          <SyncroParticleCore bare />
-
-          <SyncroDirectionLabels highlightId={direction} counterRotateDeg={alpha} />
-        </div>
-
-        <div
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            width: SYNCRO_AR_CAMERA_SIZE,
-            height: SYNCRO_AR_CAMERA_SIZE,
-            borderRadius: "50%",
-            overflow: "hidden",
-            boxShadow: `0 0 32px ${haloColor}, 0 0 64px ${haloColor.replace(/0\.\d+/, "0.25")}, inset 0 0 0 2px ${haloColor}`,
-            transition: "box-shadow 600ms ease",
-            zIndex: 5,
-          }}
-        >
-          <video
-            ref={videoRef}
-            playsInline
-            muted
-            autoPlay
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          />
-          {!streamReady ? (
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "rgba(7,9,26,0.6)",
-              }}
-            >
-              <IconLoader2 aria-hidden size={20} stroke={1.5} className="syncro-advice-spin" />
-            </div>
-          ) : null}
-
-          {cell ? (
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "radial-gradient(circle, rgba(7,9,26,0.5) 0%, transparent 70%)",
-                color: "#fff",
-                textShadow: "0 1px 4px rgba(0,0,0,0.8)",
-                pointerEvents: "none",
-              }}
-            >
-              <div style={{ fontSize: 14, fontWeight: 500, color: LEVEL_COLORS[cell.current_level] }}>
-                {levelTitle}
+      <SyncroRingStage
+        highlightId={direction}
+        rotationDeg={alpha}
+        center={
+          <div
+            className="syncro-ar-camera"
+            style={{
+              width: SYNCRO_AR_CAMERA_SIZE,
+              height: SYNCRO_AR_CAMERA_SIZE,
+              boxShadow: `0 0 32px ${haloColor}, 0 0 64px ${haloColor.replace(/0\.\d+/, "0.25")}, inset 0 0 0 2px ${haloColor}`,
+            }}
+          >
+            <video ref={videoRef} playsInline muted autoPlay />
+            {!streamReady ? (
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "rgba(7,9,26,0.6)",
+                }}
+              >
+                <IconLoader2 aria-hidden size={20} stroke={1.5} className="syncro-advice-spin" />
               </div>
-            </div>
-          ) : null}
-        </div>
-      </div>
+            ) : null}
+            {cell ? (
+              <div className="syncro-ar-camera-level">
+                <div
+                  className="compass-center-level"
+                  style={{ color: LEVEL_COLORS[cell.current_level] }}
+                >
+                  {levelTitle}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        }
+      />
 
-      {cell ? (
-        <div style={{ maxWidth: 320, margin: "24px auto 0", padding: "0 20px" }}>
-          <SyncroCellAdvice
-            cell={cell}
-            llmMeta={session.llm_meta}
-            className="compass-short-advice ar-short-advice"
-          />
-        </div>
-      ) : null}
+      <SyncroModeFooter
+        cell={cell}
+        llmMeta={session.llm_meta}
+        canOpenWhy={canOpenWhy}
+        onWhyClick={() => setWhyOpen(true)}
+      />
 
-      <div style={{ textAlign: "center", marginTop: SYNCRO_WHY_BUTTON_MARGIN_TOP }}>
-        <button
-          type="button"
-          className="why-btn-prominent"
-          disabled={!cell || !isSyncroLlmReady(cell, session.llm_meta)}
-          onClick={() => setWhyOpen(true)}
-          style={{
-            padding: "8px 18px",
-            background: "rgba(212, 165, 116, 0.12)",
-            color: "#D4A574",
-            fontSize: 11,
-            fontWeight: 500,
-            border: "none",
-            borderRadius: 20,
-            cursor: "pointer",
-            fontFamily: "inherit",
-          }}
-        >
-          {t("why_this_current")}
-        </button>
-      </div>
-
-      {whyOpen && cell && isSyncroLlmReady(cell, session.llm_meta) ? (
+      {whyOpen && cell && canOpenWhy ? (
         <WhyThisCurrentModal
           cell={cell}
           direction={direction}

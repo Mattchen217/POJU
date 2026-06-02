@@ -5,10 +5,9 @@ import { useTranslations } from "next-intl";
 
 import { PostureHintOverlay } from "@/components/syncro/PostureHintOverlay";
 import { SyncroBackgroundStreamPanel } from "@/components/syncro/SyncroBackgroundStreamPanel";
-import { SyncroCellAdvice } from "@/components/syncro/SyncroCellAdvice";
 import { SyncroCloudProgressPanel } from "@/components/syncro/SyncroCloudProgressPanel";
-import { SyncroDirectionLabels } from "@/components/syncro/SyncroDirectionLabels";
-import { SyncroParticleCore } from "@/components/syncro/SyncroParticleCore";
+import { SyncroModeFooter } from "@/components/syncro/SyncroModeFooter";
+import { SyncroRingStage } from "@/components/syncro/SyncroRingStage";
 import { WhyThisCurrentModal } from "@/components/syncro/WhyThisCurrentModal";
 import { useOrientation } from "@/components/syncro/SyncroOrientationProvider";
 import {
@@ -97,47 +96,11 @@ export function SyncroCompassMode({
     <div className={`compass-mode-body ${llmHighlight ? "syncro-llm-cell-updated" : ""}`}>
       {receivingHeading ? <PostureHintOverlay mode="compass" beta={beta} /> : null}
 
-      <div className="compass-stage">
-        <div
-          className="compass-area concentric-system"
-          style={{
-            position: "relative",
-            margin: "0 auto",
-            overflow: "visible",
-          }}
-        >
-          <div
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              width: "100%",
-              height: "100%",
-              transform: `rotate(${-alpha}deg)`,
-              transformOrigin: "center center",
-            }}
-          >
-            <SyncroParticleCore bare />
-
-            <SyncroDirectionLabels
-              highlightId={currentDirection}
-              counterRotateDeg={alpha}
-            />
-          </div>
-
-          <div
-            className="compass-center-info"
-            style={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-              width: SYNCRO_CENTER_INFO_WIDTH,
-              textAlign: "center",
-              zIndex: 5,
-              pointerEvents: "none",
-            }}
-          >
+      <SyncroRingStage
+        highlightId={currentDirection}
+        rotationDeg={alpha}
+        center={
+          <div style={{ width: SYNCRO_CENTER_INFO_WIDTH }}>
             {cell ? (
               <CurrentDisplay cell={cell} isZh={isZh} tLevels={tLevels} />
             ) : (
@@ -150,36 +113,25 @@ export function SyncroCompassMode({
               </span>
             </div>
           </div>
-        </div>
-      </div>
+        }
+      />
 
-      <div className="compass-footer">
-        <SyncroCellAdvice
-          cell={cell}
-          llmMeta={session.llm_meta}
-          className="compass-short-advice"
-        />
-
-        <div className="compass-bottom-cta">
-          <button
-            type="button"
-            className="why-btn-prominent"
-            disabled={!canOpenWhy}
-            onClick={() => {
-              if (canOpenWhy) setWhyModalOpen(true);
-            }}
-          >
-            {t("why_this_current")}
-          </button>
-        </div>
-
-        {showClientStream && backgroundStream ? (
-          <SyncroBackgroundStreamPanel stream={backgroundStream} compact />
-        ) : null}
-        {showCloudProgress && llmProgress ? (
-          <SyncroCloudProgressPanel progress={llmProgress} compact />
-        ) : null}
-      </div>
+      <SyncroModeFooter
+        cell={cell}
+        llmMeta={session.llm_meta}
+        canOpenWhy={canOpenWhy}
+        onWhyClick={() => setWhyModalOpen(true)}
+        extra={
+          <>
+            {showClientStream && backgroundStream ? (
+              <SyncroBackgroundStreamPanel stream={backgroundStream} compact />
+            ) : null}
+            {showCloudProgress && llmProgress ? (
+              <SyncroCloudProgressPanel progress={llmProgress} compact />
+            ) : null}
+          </>
+        }
+      />
 
       {whyModalOpen && cell && canOpenWhy ? (
         <WhyThisCurrentModal
@@ -212,13 +164,8 @@ function CurrentDisplay({
 
   return (
     <div
-      style={{
-        fontSize: 18,
-        fontWeight: 500,
-        color: LEVEL_COLORS[cell.current_level] || "#A0A4B8",
-        letterSpacing: 0.5,
-        lineHeight: 1.2,
-      }}
+      className="compass-center-level"
+      style={{ color: LEVEL_COLORS[cell.current_level] || "#A0A4B8" }}
     >
       {levelTitle}
     </div>

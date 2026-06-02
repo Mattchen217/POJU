@@ -1,23 +1,22 @@
 import type { CSSProperties } from "react";
 
-/** Syncro ring layout — fixed px (change only with product doc). */
-/** On-screen ring diameter (px) — ~图3 scale, slightly smaller than legacy 420. */
-export const SYNCRO_RING_SIZE = 380;
+/** Reference ring diameter (px); on screen uses min(76vmin, 400px) via CSS. */
+export const SYNCRO_RING_SIZE = 400;
+/** Direction labels sit on ~92% of ring radius; particle fills ~84% (inside label ring). */
+export const SYNCRO_LABEL_RADIUS = Math.round(SYNCRO_RING_SIZE * 0.46);
+export const SYNCRO_PARTICLE_DISPLAY_SIZE = Math.round(SYNCRO_RING_SIZE * 0.84);
 /**
  * Spline renders into a square WebGL canvas — edges clip in a rectangle, not a circle.
- * We draw larger then scale down so the cloud sits inside the canvas with margin.
  */
 export const SYNCRO_PARTICLE_CANVAS_SIZE = 520;
-/** Target visual diameter on screen (px). */
-export const SYNCRO_PARTICLE_DISPLAY_SIZE = 260;
 export const SYNCRO_PARTICLE_DISPLAY_SCALE =
   SYNCRO_PARTICLE_DISPLAY_SIZE / SYNCRO_PARTICLE_CANVAS_SIZE;
 export const SYNCRO_PARTICLE_OFFSET_X = 5;
 export const SYNCRO_PARTICLE_OFFSET_Y = 0;
-export const SYNCRO_LABEL_RADIUS = 172;
-export const SYNCRO_CENTER_INFO_WIDTH = 140;
-export const SYNCRO_AR_CAMERA_SIZE = 200;
-export const SYNCRO_MAP_POINT_RADIUS = 140;
+export const SYNCRO_CENTER_INFO_WIDTH = 160;
+/** AR live camera circle (~52% of ring). */
+export const SYNCRO_AR_CAMERA_SIZE = Math.round(SYNCRO_RING_SIZE * 0.52);
+export const SYNCRO_MAP_POINT_RADIUS = Math.round(SYNCRO_RING_SIZE * 0.38);
 export const SYNCRO_MAP_POINT_SIZE = 12;
 export const SYNCRO_RING_MARGIN_TOP = 0;
 export const SYNCRO_COMPASS_PAGE_PADDING_TOP = 0;

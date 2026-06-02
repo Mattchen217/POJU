@@ -5,6 +5,61 @@
   overflow: visible;
 }
 
+.syncro-ring-rotate {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transform-origin: center center;
+}
+
+.syncro-ring-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  pointer-events: none;
+  text-align: center;
+}
+
+.syncro-direction-label {
+  font-size: 15px;
+  font-weight: 500;
+  color: #ffffff;
+  opacity: 0.72;
+  letter-spacing: 1.5px;
+  pointer-events: none;
+  user-select: none;
+  z-index: 3;
+  line-height: 1;
+  transition:
+    color 200ms ease,
+    opacity 200ms ease,
+    transform 200ms ease,
+    text-shadow 200ms ease;
+}
+
+.syncro-direction-label.is-active {
+  font-size: 22px;
+  font-weight: 700;
+  color: #d4a574;
+  opacity: 1;
+  text-shadow:
+    0 0 6px rgba(212, 165, 116, 0.95),
+    0 0 14px rgba(212, 165, 116, 0.75),
+    0 0 28px rgba(212, 165, 116, 0.45);
+  filter: drop-shadow(0 0 4px rgba(212, 165, 116, 0.9));
+}
+
+.compass-center-level {
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  line-height: 1.25;
+}
+
 .compass-center-meta {
   margin-top: 6px;
   display: flex;
@@ -15,18 +70,51 @@
   line-height: 1.35;
   letter-spacing: 0.3px;
   color: var(--pj-text-secondary, #a8b0c8);
+  max-width: 160px;
 }
 
 .compass-center-direction {
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 600;
   color: var(--pj-gold, #d4a574);
-  letter-spacing: 1px;
+  letter-spacing: 2px;
 }
 
 .compass-center-hour {
   color: var(--pj-text-dim, #8a8aa0);
   white-space: nowrap;
+  font-size: 10px;
+}
+
+.syncro-ar-camera {
+  border-radius: 50%;
+  overflow: hidden;
+  transition: box-shadow 600ms ease;
+}
+
+.syncro-ar-camera video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.syncro-ar-camera-level {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle, rgba(7, 9, 26, 0.5) 0%, transparent 70%);
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
+
+.syncro-map-hint {
+  font-size: 10px;
+  color: #8a8aa0;
+  margin: 0 0 4px;
 }
 
 /* 不要给 .compass-area 加任何样式,所有样式都用 inline style */
