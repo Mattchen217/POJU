@@ -12,7 +12,10 @@ import { ReturnToPojuCTA } from "@/components/poju/ReturnToPojuCTA";
 import { SyncroMainView } from "@/components/syncro/SyncroMainView";
 import { SyncroPreparingLiveHour } from "@/components/syncro/SyncroPreparingLiveHour";
 import { extractSyncroSummary } from "@/lib/poju/tool-result-summary";
-import { isInitialSyncroGateReady } from "@/lib/syncro/hour-llm-ready";
+import {
+  getRealtimeHourPeriodForSession,
+  isSyncroCompassGateReady,
+} from "@/lib/syncro/syncro-submission-schedule";
 import { SyncroOrientationProvider } from "@/components/syncro/SyncroOrientationProvider";
 import { Link } from "@/i18n/navigation";
 import { generateSyncroHourWithRetry } from "@/lib/syncro/generate-syncro-hour-with-retry";
@@ -25,7 +28,7 @@ import {
   patchSyncroSessionMatrix,
   patchSyncroSessionMatrixFailure,
 } from "@/lib/syncro/syncro-session";
-import { getCurrentHourPeriod, type HourPeriod, type SyncroSession } from "@/lib/syncro/types";
+import type { HourPeriod, SyncroSession } from "@/lib/syncro/types";
 
 import "@/styles/syncro.css";
 import "@/styles/syncro-preparing-live.css";
@@ -50,6 +53,8 @@ function SyncroResultPageContent() {
   });
   const [highlightKeys, setHighlightKeys] = useState<Set<string>>(() => new Set());
   const [retryingHour, setRetryingHour] = useState<HourPeriod | null>(null);
+  /** Hours in the in-flight first LLM batch (for OR gate while waiting). */
+  const [activeLlmHours, setActiveLlmHours] = useState<HourPeriod[]>([]);
 
   const handleSessionUpdate = useCallback((next: SyncroSession) => {
     setSession(next);
@@ -176,8 +181,10 @@ function SyncroResultPageContent() {
   }
 
   const syncroSummary = extractSyncroSummary(session);
-  const livePeriod = getCurrentHourPeriod();
-  const liveHourReady = isInitialSyncroGateReady(session, livePeriod);
+  const realtimePeriod = getRealtimeHourPeriodForSession(session);
+  const liveHourReady = isSyncroCompassGateReady(session, {
+    activeLlmHours: activeLlmHours.length ? activeLlmHours : undefined,
+  });
 
   return (
     <SyncroOrientationProvider>
@@ -210,8 +217,9 @@ function SyncroResultPageContent() {
         <SyncroPreparingLiveHour
           session={session}
           locale={locale}
-          livePeriod={livePeriod}
+          realtimePeriod={realtimePeriod}
           progress={llmProgress}
+          onActiveLlmHours={setActiveLlmHours}
         />
       )}
       {liveHourReady ? (

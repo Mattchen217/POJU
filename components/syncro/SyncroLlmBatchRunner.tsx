@@ -14,7 +14,8 @@ import {
 import { patchSyncroSessionMatrix } from "@/lib/syncro/syncro-session";
 import type { SyncroSession } from "@/lib/syncro/types";
 import type { SyncroHourData } from "@/lib/syncro/syncro-status-kv";
-import { getCurrentHourPeriod, type HourPeriod } from "@/lib/syncro/types";
+import { getSubmissionAnchorPeriod } from "@/lib/syncro/syncro-submission-schedule";
+import type { HourPeriod } from "@/lib/syncro/types";
 
 export type SyncroLlmProgress = {
   completed: number;
@@ -181,7 +182,7 @@ export function SyncroLlmBatchRunner({ sessionId, session, onSessionUpdate, onPr
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             session_id: sessionId,
-            live_period: getCurrentHourPeriod(),
+            live_period: getSubmissionAnchorPeriod(workingSessionRef.current),
             llm_context: ctx,
           }),
         });

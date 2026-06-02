@@ -90,9 +90,7 @@ export const HOUR_PERIODS: Record<HourPeriod, HourPeriodInfo> = {
   hai: { id: "hai", name_zh: "亥时", name_en: "Hai", start_hour: 21, end_hour: 23 },
 };
 
-export function getCurrentHourPeriod(date: Date = new Date()): HourPeriod {
-  const hour = date.getHours();
-
+export function hourPeriodFromHourOfDay(hour: number): HourPeriod {
   if (hour >= 23 || hour < 1) return "zi";
   if (hour < 3) return "chou";
   if (hour < 5) return "yin";
@@ -105,6 +103,27 @@ export function getCurrentHourPeriod(date: Date = new Date()): HourPeriod {
   if (hour < 19) return "you";
   if (hour < 21) return "xu";
   return "hai";
+}
+
+export function getHourOfDayInTimezone(date: Date, timezone: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    hour: "numeric",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const hourPart = parts.find((p) => p.type === "hour")?.value;
+  return parseInt(hourPart ?? String(date.getHours()), 10);
+}
+
+export function getCurrentHourPeriodInTimezone(
+  timezone: string,
+  date: Date = new Date(),
+): HourPeriod {
+  return hourPeriodFromHourOfDay(getHourOfDayInTimezone(date, timezone));
+}
+
+export function getCurrentHourPeriod(date: Date = new Date()): HourPeriod {
+  return hourPeriodFromHourOfDay(date.getHours());
 }
 
 /** Seconds until the current 2-hour hour-period boundary (local time). */

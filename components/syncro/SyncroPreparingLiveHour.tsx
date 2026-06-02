@@ -6,7 +6,10 @@ import { useEffect, useRef, useState } from "react";
 import { HourProgressBar } from "@/components/syncro/HourProgressBar";
 import type { SyncroLlmProgress } from "@/components/syncro/SyncroLlmBatchRunner";
 import { SYNCRO_LLM_BATCH_COUNT } from "@/lib/llm/services/syncro-reading-service";
-import { buildHourPairsFromLive, getNextHourPeriod } from "@/lib/syncro/syncro-hour-pairs";
+import {
+  getFirstSubmissionBatchPair,
+  getSubmissionAnchorPeriod,
+} from "@/lib/syncro/syncro-submission-schedule";
 import { buildSyncroLlmHoursInput } from "@/lib/syncro/syncro-llm-batch-core";
 import { hourPeriodDisplayName, HOUR_PERIOD_RANGES } from "@/lib/syncro/hour-period-ranges";
 import { rebuildSyncroLlmContext } from "@/lib/syncro/rebuild-syncro-llm-context";
@@ -20,8 +23,10 @@ import type { HourPeriod, SyncroSession } from "@/lib/syncro/types";
 type Props = {
   session: SyncroSession;
   locale: string;
-  livePeriod: HourPeriod;
+  /** User-timezone wall-clock hour (compass NOW marker). */
+  realtimePeriod: HourPeriod;
   progress: SyncroLlmProgress;
+  onActiveLlmHours: (hours: HourPeriod[]) => void;
 };
 
 type StreamPhase =
@@ -47,15 +52,21 @@ function mergeAdviceIntoSession(target: SyncroSession, patched: SyncroSession, k
 }
 
 /** Full-screen wait: stream first pair (live + next), then compass. */
-export function SyncroPreparingLiveHour({ session, locale, livePeriod, progress }: Props) {
+export function SyncroPreparingLiveHour({
+  session,
+  locale,
+  realtimePeriod,
+  progress,
+  onActiveLlmHours,
+}: Props) {
   const params = useParams();
   const sessionId = typeof params.id === "string" ? params.id : "";
 
-  const nextPeriod = getNextHourPeriod(livePeriod);
+  const [firstHour, secondHour] = getFirstSubmissionBatchPair(session);
   const orderedPeriods = getOrderedHourPeriodsFromSession(session);
-  const hourName = hourPeriodDisplayName(livePeriod, locale);
-  const nextName = hourPeriodDisplayName(nextPeriod, locale);
-  const hourRange = HOUR_PERIOD_RANGES[livePeriod];
+  const hourName = hourPeriodDisplayName(firstHour, locale);
+  const nextName = hourPeriodDisplayName(secondHour, locale);
+  const hourRange = HOUR_PERIOD_RANGES[firstHour];
 
   const [streamText, setStreamText] = useState("");
   const [streamPhase, setStreamPhase] = useState<StreamPhase>("idle");
@@ -67,6 +78,11 @@ export function SyncroPreparingLiveHour({ session, locale, livePeriod, progress 
   const startedRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
   const [cursorVisible, setCursorVisible] = useState(true);
+
+  useEffect(() => {
+    onActiveLlmHours([firstHour, secondHour]);
+    return () => onActiveLlmHours([]);
+  }, [firstHour, secondHour, onActiveLlmHours]);
 
   useEffect(() => {
     if (streamPhase !== "writing" && streamPhase !== "reasoning") return;
@@ -105,8 +121,6 @@ export function SyncroPreparingLiveHour({ session, locale, livePeriod, progress 
         return;
       }
 
-      const pairs = buildHourPairsFromLive(livePeriod);
-      const [firstHour, secondHour] = pairs[0]!;
       const hoursInput = buildSyncroLlmHoursInput(sessionId, [firstHour, secondHour], ctx);
 
       setStreamPhase("connecting");
@@ -159,7 +173,7 @@ export function SyncroPreparingLiveHour({ session, locale, livePeriod, progress 
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               session_id: sessionId,
-              live_period: livePeriod,
+              live_period: getSubmissionAnchorPeriod(session),
               llm_context: ctx,
             }),
           }).catch((e) => {
@@ -181,7 +195,7 @@ export function SyncroPreparingLiveHour({ session, locale, livePeriod, progress 
     return () => {
       abort.abort();
     };
-  }, [sessionId, livePeriod, locale, session, retryKey]);
+  }, [sessionId, firstHour, secondHour, locale, session, retryKey]);
 
   return (
     <div className="syncro-preparing-live">
@@ -189,8 +203,8 @@ export function SyncroPreparingLiveHour({ session, locale, livePeriod, progress 
         matrix={session.matrix}
         llmMeta={session.llm_meta}
         orderedPeriods={orderedPeriods}
-        livePeriod={livePeriod}
-        activeHour={livePeriod}
+        livePeriod={realtimePeriod}
+        activeHour={realtimePeriod}
         onSelect={() => {}}
         locale={locale}
       />
@@ -201,7 +215,10 @@ export function SyncroPreparingLiveHour({ session, locale, livePeriod, progress 
         </h2>
 
         <p className="syncro-preparing-live-hint" style={{ maxWidth: "28rem" }}>
-          ◐ 首批:{hourName}、{nextName}（{hourRange} 起）· 共 6 次 LLM,每次 2 时辰
+          ◐ 第 1 次 LLM 正在生成提交序列前两时辰:{hourName}、{nextName}（{hourRange} 起）· JSON 键 {firstHour}/{secondHour}
+        </p>
+        <p className="syncro-preparing-live-hint" style={{ maxWidth: "28rem", opacity: 0.85 }}>
+          时间轴 NOW = 当前钟点（{realtimePeriod}）；进入罗盘需当前时辰文案就绪，或本批 {firstHour}+{secondHour} 全部就绪
         </p>
 
         {streamPhase === "reasoning" ? (

@@ -131,7 +131,8 @@ function buildPromptForHours(input: SyncroLlmHoursInput): { system: string; user
 
   const hourIds = input.hours.map((h) => h.hour_id).join(", ");
 
-  const rulesZh = `你是 pojulife Syncro 资深分析师。本次需为【${input.hours.length} 个时辰、共 ${input.hours.reduce((n, h) => n + h.cells.length, 0)} 个方位】生成文案。
+  const hourIdList = input.hours.map((h) => `"${h.hour_id}"`).join("、");
+  const rulesZh = `你是 pojulife Syncro 资深分析师。本次 LLM 调用【仅】生成以下 ${input.hours.length} 个时辰（hour_id 必须完全一致）:${hourIdList}。共 ${input.hours.reduce((n, h) => n + h.cells.length, 0)} 个方位。
 
 用户任务:"${input.task_description}"
 命局摘要:${input.profile_summary}
@@ -154,9 +155,10 @@ ${hoursSections}
   }
 }
 
-必须包含 hour_id: ${hourIds} 的全部时辰,每时辰 8 方向。只输出 JSON。`;
+必须包含 hour_id: ${hourIds} 的全部时辰,每时辰 8 方向。
+advice_by_hour 的键必须且只能是上述 hour_id 字符串（与【hour_id=】完全一致,禁止申/午/Wu 等别名或其他时辰）。只输出 JSON。`;
 
-  const rulesEn = `You are a pojulife Syncro analyst. Generate copy for ${input.hours.length} hours (${input.hours.reduce((n, h) => n + h.cells.length, 0)} direction cells).
+  const rulesEn = `You are a pojulife Syncro analyst. This call generates ONLY these hour_id values: ${hourIdList}. (${input.hours.reduce((n, h) => n + h.cells.length, 0)} direction cells.)
 
 Task: "${input.task_description}"
 Profile: ${input.profile_summary}
@@ -175,7 +177,7 @@ Strict JSON:
   }
 }
 
-Include all hour_ids: ${hourIds}. JSON only.`;
+Include all hour_ids: ${hourIds}. advice_by_hour keys MUST match those hour_id strings exactly (no aliases). JSON only.`;
 
   const system = isZh ? rulesZh : rulesEn;
   const user = isZh
@@ -185,6 +187,38 @@ Include all hour_ids: ${hourIds}. JSON only.`;
   return { system, user };
 }
 
+function normalizeAdviceByHour(
+  raw: Record<string, Record<string, DirectionAdvice>>,
+  input: SyncroLlmHoursInput,
+): Record<string, Record<string, DirectionAdvice>> {
+  const expectedIds = input.hours.map((h) => h.hour_id);
+  const normalized: Record<string, Record<string, DirectionAdvice>> = {};
+
+  for (const hour of input.hours) {
+    if (raw[hour.hour_id]) {
+      normalized[hour.hour_id] = raw[hour.hour_id]!;
+      continue;
+    }
+    const lower = hour.hour_id.toLowerCase();
+    const matchKey = Object.keys(raw).find((k) => k.toLowerCase() === lower);
+    if (matchKey) normalized[hour.hour_id] = raw[matchKey]!;
+  }
+
+  const missing = expectedIds.filter((id) => !normalized[id]);
+  if (missing.length > 0) {
+    const returned = Object.keys(raw);
+    console.error(
+      `[syncro-llm-batch] hour_id mismatch: expected [${expectedIds.join(", ")}], got [${returned.join(", ")}]`,
+    );
+    throw new SyncroParseError(
+      JSON.stringify({ expected: expectedIds, returned }),
+      `hour_id mismatch: expected ${expectedIds.join(",")}, got ${returned.join(",")}`,
+    );
+  }
+
+  return normalized;
+}
+
 function parseAdviceByHourJson(
   accumContent: string,
   input: SyncroLlmHoursInput,
@@ -192,11 +226,12 @@ function parseAdviceByHourJson(
   const parsed = JSON.parse(accumContent) as {
     advice_by_hour?: Record<string, Record<string, DirectionAdvice>>;
   };
-  const byHour = parsed.advice_by_hour;
-  if (!byHour) {
+  const byHourRaw = parsed.advice_by_hour;
+  if (!byHourRaw) {
     throw new SyncroParseError(accumContent, "missing advice_by_hour field");
   }
 
+  const byHour = normalizeAdviceByHour(byHourRaw, input);
   const adviceByKey: Record<string, SyncroHourAdviceCell> = {};
 
   for (const hour of input.hours) {
@@ -213,9 +248,24 @@ function parseAdviceByHourJson(
     }
   }
 
+  for (const hour of input.hours) {
+    const need = hour.cells.length;
+    const got = hour.cells.filter((c) => adviceByKey[c.key]?.short_advice?.trim()).length;
+    if (got < need) {
+      throw new SyncroParseError(
+        accumContent,
+        `incomplete hour ${hour.hour_id}: ${got}/${need} cells`,
+      );
+    }
+  }
+
   if (Object.keys(adviceByKey).length === 0) {
     throw new SyncroParseError(accumContent, "no cell advice parsed");
   }
+
+  console.log(
+    `[syncro-llm-batch] parsed hours=[${input.hours.map((h) => h.hour_id).join(", ")}] cells=${Object.keys(adviceByKey).length}`,
+  );
 
   return adviceByKey;
 }

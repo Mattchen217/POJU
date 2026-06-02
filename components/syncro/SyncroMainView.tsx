@@ -19,7 +19,8 @@ import {
   type SyncroTaskTimeScope,
   type SyncroUiMode,
 } from "@/lib/syncro/syncro-view-helpers";
-import { getCurrentHourPeriod, type HourPeriod, type SyncroSession } from "@/lib/syncro/types";
+import { getRealtimeHourPeriodForSession } from "@/lib/syncro/syncro-submission-schedule";
+import type { HourPeriod, SyncroSession } from "@/lib/syncro/types";
 
 import "@/styles/syncro-hour-progress.css";
 import "@/styles/syncro-layout.css";
@@ -57,8 +58,12 @@ export function SyncroMainView({
 
   const orderedPeriods = useMemo(() => getOrderedHourPeriodsFromSession(session), [session]);
 
-  const [liveHourPeriod, setLiveHourPeriod] = useState<HourPeriod>(() => getCurrentHourPeriod());
-  const [activeHour, setActiveHour] = useState<HourPeriod>(() => getCurrentHourPeriod());
+  const [liveHourPeriod, setLiveHourPeriod] = useState<HourPeriod>(() =>
+    getRealtimeHourPeriodForSession(session),
+  );
+  const [activeHour, setActiveHour] = useState<HourPeriod>(() =>
+    getRealtimeHourPeriodForSession(session),
+  );
   const [uiMode, setUiMode] = useState<SyncroUiMode>("compass");
   const [initialized, setInitialized] = useState(false);
   const [cameraGranted, setCameraGranted] = useState(false);
@@ -113,7 +118,7 @@ export function SyncroMainView({
 
   useEffect(() => {
     const interval = window.setInterval(() => {
-      const next = getCurrentHourPeriod();
+      const next = getRealtimeHourPeriodForSession(session);
       setLiveHourPeriod((prev) => {
         if (next !== prev) {
           setActiveHour((sel) => (sel === prev ? next : sel));
@@ -122,7 +127,7 @@ export function SyncroMainView({
       });
     }, 60_000);
     return () => window.clearInterval(interval);
-  }, []);
+  }, [session]);
 
   useEffect(() => {
     setActiveDirection(findBestDirectionForPeriod(session, activeHour));
