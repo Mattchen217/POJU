@@ -244,12 +244,6 @@ export function SyncroMainView({
         ) : null}
       </div>
 
-      {backgroundStream && backgroundStream.running ? (
-        <SyncroBackgroundStreamPanel stream={backgroundStream} />
-      ) : llmProgress?.running ? (
-        <SyncroCloudProgressPanel progress={llmProgress} />
-      ) : null}
-
       <ThreeModeToggle
         mode={uiMode}
         onChange={handleModeChange}
