@@ -21,6 +21,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
+/** If KV job has not progressed this long, treat as zombie and restart LLM. */
+const STALE_STREAMING_MS = 3 * 60 * 1000;
+
 type RequestBody = {
   profile_id: string;
   locale: string;
@@ -131,12 +134,25 @@ export async function POST(req: NextRequest) {
         }
 
         if (activeJob.status === "streaming") {
-          send("resumed_partial", {
-            job_id: activeJob.job_id,
-            accumulated: activeJob.accumulated_content,
-            poll_only: true,
+          const staleFor = Date.now() - activeJob.updated_at;
+          if (staleFor <= STALE_STREAMING_MS) {
+            send("resumed_partial", {
+              job_id: activeJob.job_id,
+              accumulated: activeJob.accumulated_content,
+              poll_only: true,
+            });
+            return;
+          }
+
+          console.warn(
+            `[base-analysis/stream] stale streaming job ${activeJob.job_id} (${Math.round(staleFor / 1000)}s idle), restarting`,
+          );
+          await failJob(activeJob.job_id, "stale_stream", "Job stalled without progress");
+          await updateJobStatus(activeJob.job_id, "pending", {
+            accumulated_content: "",
+            error: undefined,
+            error_detail: undefined,
           });
-          return;
         }
 
         send("start", { job_id: activeJob.job_id });

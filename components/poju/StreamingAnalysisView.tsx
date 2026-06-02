@@ -9,6 +9,8 @@ interface Props {
   content: string;
   status: 'idle' | 'connecting' | 'streaming' | 'completed' | 'failed';
   bytes_received: number;
+  /** Preparing pages: keep thinking animation only — never render growing stream text. */
+  thinkingOnly?: boolean;
 }
 
 const THINKING_PHRASES_ZH = [
@@ -27,7 +29,12 @@ const THINKING_PHRASES_EN = [
   'Please wait...',
 ];
 
-export function StreamingAnalysisView({ content, status, bytes_received }: Props) {
+export function StreamingAnalysisView({
+  content,
+  status,
+  bytes_received,
+  thinkingOnly = false,
+}: Props) {
   const t = useTranslations('analysis_loader');
   const locale = useLocale();
   const contentRef = useRef<HTMLDivElement>(null);
@@ -35,7 +42,9 @@ export function StreamingAnalysisView({ content, status, bytes_received }: Props
 
   const phrases = locale.startsWith('zh') ? THINKING_PHRASES_ZH : THINKING_PHRASES_EN;
   const isThinking =
-    (status === 'connecting' || status === 'streaming') && bytes_received === 0;
+    thinkingOnly
+      ? status === 'connecting' || status === 'streaming'
+      : (status === 'connecting' || status === 'streaming') && bytes_received === 0;
 
   useEffect(() => {
     if (!isThinking) return;
@@ -48,10 +57,11 @@ export function StreamingAnalysisView({ content, status, bytes_received }: Props
   }, [isThinking, phrases.length]);
 
   useEffect(() => {
+    if (isThinking || thinkingOnly) return;
     if (contentRef.current) {
       contentRef.current.scrollTop = contentRef.current.scrollHeight;
     }
-  }, [content]);
+  }, [content, isThinking, thinkingOnly]);
 
   const visibleContent = stripMetaSection(content);
 

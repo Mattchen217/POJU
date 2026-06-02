@@ -32,11 +32,19 @@ function parseSseEvents(buffer: string): { events: SseEvent[]; rest: string } {
   return { events, rest };
 }
 
+const POLL_INTERVAL_MS = 3000;
+/** Slightly above server `maxDuration` (300s) + reconnect slack. */
+const POLL_MAX_MS = 320_000;
+
 async function pollJobUntilDone(
   job_id: string,
   callbacks?: StreamSseCallbacks,
 ): Promise<StreamSseResult> {
+  const startedAt = Date.now();
   while (true) {
+    if (Date.now() - startedAt > POLL_MAX_MS) {
+      throw new Error("BASE_ANALYSIS_POLL_TIMEOUT");
+    }
     const res = await fetch(`/api/profile/base-analysis/status?job_id=${job_id}`);
     if (!res.ok) {
       throw new Error(`status poll failed (${res.status})`);
@@ -56,7 +64,7 @@ async function pollJobUntilDone(
       throw new Error(String(data.error || "base analysis job failed"));
     }
 
-    await new Promise((r) => setTimeout(r, 3000));
+    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
   }
 }
 

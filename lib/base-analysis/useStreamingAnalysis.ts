@@ -28,6 +28,9 @@ export function stripMetaSection(content: string): string {
   return idx === -1 ? content : content.slice(0, idx).trim();
 }
 
+/** Throttle React updates during SSE — full content stays in a ref until complete. */
+const STREAM_UI_TICK_MS = 500;
+
 export function useStreamingAnalysis(opts: UseStreamingAnalysisOptions) {
   const [state, setState] = useState<StreamingState>({
     status: 'idle',
@@ -39,7 +42,21 @@ export function useStreamingAnalysis(opts: UseStreamingAnalysisOptions) {
 
   const abortRef = useRef<AbortController | null>(null);
   const optsRef = useRef(opts);
+  const contentRef = useRef('');
+  const lastUiTickRef = useRef(0);
   optsRef.current = opts;
+
+  const bumpStreamProgress = useCallback((accumulated: string) => {
+    contentRef.current = accumulated;
+    const now = Date.now();
+    if (now - lastUiTickRef.current < STREAM_UI_TICK_MS) return;
+    lastUiTickRef.current = now;
+    setState((prev) => ({
+      ...prev,
+      status: 'streaming',
+      bytes_received: accumulated.length,
+    }));
+  }, []);
 
   const stop = useCallback(() => {
     if (abortRef.current) {
@@ -51,6 +68,8 @@ export function useStreamingAnalysis(opts: UseStreamingAnalysisOptions) {
   const start = useCallback(async () => {
     stop();
 
+    contentRef.current = '';
+    lastUiTickRef.current = 0;
     setState({
       status: 'connecting',
       content: '',
@@ -78,24 +97,15 @@ export function useStreamingAnalysis(opts: UseStreamingAnalysisOptions) {
             }));
           },
           onChunk: (_text, accumulated) => {
-            setState((prev) => ({
-              ...prev,
-              status: 'streaming',
-              content: accumulated,
-              bytes_received: accumulated.length,
-            }));
+            bumpStreamProgress(accumulated);
           },
           onPollContent: (accumulated) => {
-            setState((prev) => ({
-              ...prev,
-              status: 'streaming',
-              content: accumulated,
-              bytes_received: accumulated.length,
-            }));
+            bumpStreamProgress(accumulated);
           },
         },
       });
 
+      contentRef.current = result.content;
       setState((prev) => ({
         ...prev,
         status: 'completed',
@@ -113,7 +123,7 @@ export function useStreamingAnalysis(opts: UseStreamingAnalysisOptions) {
       setState((prev) => ({ ...prev, status: 'failed', error: message }));
       optsRef.current.onError(message);
     }
-  }, [stop]);
+  }, [stop, bumpStreamProgress]);
 
   useEffect(() => {
     return () => stop();

@@ -9,7 +9,6 @@ import { useStreamingAnalysis } from "@/lib/base-analysis/useStreamingAnalysis";
 import type { StoredProfileData } from "@/lib/db/poju-db";
 import {
   saveBaseAnalysisFromStream,
-  stripMetaSectionForStorage,
 } from "@/lib/profile/stored-profiles-service";
 
 export type BaseAnalysisStreamPreparingProps = {
@@ -110,6 +109,7 @@ export function BaseAnalysisStreamPreparing({
         content={state.content}
         status={state.status}
         bytes_received={state.bytes_received}
+        thinkingOnly
       />
 
       {state.status === "failed" && displayError ? (
