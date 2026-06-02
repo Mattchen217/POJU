@@ -67,6 +67,7 @@
     "geist": "^1.7.0",
     "howler": "^2.2.4",
     "idb": "^8.0.3",
+    "inngest": "^4.5.0",
     "lucide-react": "^1.14.0",
     "lunar-typescript": "^1.8.6",
     "next": "16.2.4",
