@@ -6,6 +6,7 @@ export type SyncroLlmProgress = {
   total: number;
   running: boolean;
   failed: number;
+  failed_hours?: HourPeriod[];
   current_hour?: HourPeriod;
   context_missing?: boolean;
   kv_unavailable?: boolean;

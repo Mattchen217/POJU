@@ -15,7 +15,11 @@ import {
   clearSyncroLlmContext,
   resolveSyncroLlmContext,
 } from "@/lib/syncro/syncro-llm-context-storage";
-import { patchSyncroSessionMatrix } from "@/lib/syncro/syncro-session";
+import {
+  patchSyncroSessionMatrix,
+  patchSyncroSessionMatrixFailure,
+} from "@/lib/syncro/syncro-session";
+import { isSyncroHourKvComplete } from "@/lib/syncro/syncro-hour-kv-complete";
 import type { SyncroHourData } from "@/lib/syncro/syncro-status-kv";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
 import type { HourPeriod, SyncroSession } from "@/lib/syncro/types";
@@ -31,6 +35,12 @@ type StatusResponse = {
   hours: Record<string, SyncroHourData | null>;
   kv_configured?: boolean;
 };
+
+function isHourFailedInMatrix(session: SyncroSession, hourId: HourPeriod): boolean {
+  const keys = Object.keys(session.matrix).filter((k) => k.startsWith(`${hourId}__`));
+  if (keys.length === 0) return false;
+  return keys.every((k) => session.matrix[k]?.llm_failed === true);
+}
 
 function countLlmReadyHours(session: SyncroSession): number {
   const sequence = getSubmissionHourSequence(session);
@@ -79,7 +89,12 @@ export function useSyncroInngestJob({
     let intervalId: ReturnType<typeof setInterval> | null = null;
 
     const applyHourFromKv = async (hourId: string, hourData: SyncroHourData) => {
-      if (appliedHoursRef.current.has(hourId)) return;
+      if (!isSyncroHourKvComplete(hourData)) return;
+      const base = workingSessionRef.current ?? activeSession;
+      if (isHourPeriodLlmReady(base.matrix, hourId as HourPeriod, base.llm_meta)) {
+        appliedHoursRef.current.add(hourId);
+        return;
+      }
       const updated = await patchSyncroSessionMatrix(sessionId, hourData.advice, {
         cost_usd_delta: 0,
       });
@@ -93,6 +108,17 @@ export function useSyncroInngestJob({
         batch_total: 12,
         updated_keys: Object.keys(hourData.advice),
       });
+    };
+
+    const applyFailedHourFromKv = async (hourId: string) => {
+      const base = workingSessionRef.current ?? activeSession;
+      if (isHourFailedInMatrix(base, hourId as HourPeriod)) return;
+      const keys = Object.keys(base.matrix).filter((k) => k.startsWith(`${hourId}__`));
+      if (keys.length === 0) return;
+      const updated = await patchSyncroSessionMatrixFailure(sessionId, keys);
+      if (!updated) return;
+      workingSessionRef.current = updated;
+      onSessionUpdate(updated);
     };
 
     const tick = async (): Promise<boolean> => {
@@ -111,12 +137,20 @@ export function useSyncroInngestJob({
           if (data.kv_configured === false) kvUnavailable = true;
 
           if (data.status) {
-            failed = data.status.failed_hours.length;
+            const failedHourIds = data.status.failed_hours as HourPeriod[];
+            failed = failedHourIds.length;
             completed = Math.max(completed, data.status.completed);
 
             for (const [hourId, hourData] of Object.entries(data.hours)) {
               if (!hourData?.advice) continue;
               await applyHourFromKv(hourId, hourData);
+            }
+
+            for (const hourId of failedHourIds) {
+              const hourData = data.hours[hourId];
+              if (!hourData || !isSyncroHourKvComplete(hourData)) {
+                await applyFailedHourFromKv(hourId);
+              }
             }
 
             if (data.status.done) {
@@ -125,6 +159,7 @@ export function useSyncroInngestJob({
                 total: 12,
                 running: false,
                 failed,
+                failed_hours: failedHourIds,
                 kv_unavailable: kvUnavailable,
               });
               clearSyncroLlmContext(sessionId);
@@ -136,6 +171,7 @@ export function useSyncroInngestJob({
               total: 12,
               running: true,
               failed,
+              failed_hours: failedHourIds,
               current_hour: (data.status.current_hour as HourPeriod) ?? undefined,
               kv_unavailable: kvUnavailable,
             });

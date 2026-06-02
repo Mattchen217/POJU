@@ -14,14 +14,19 @@ function cellsForHour(matrix: SyncroMatrix, hourId: HourPeriod) {
   return DIRECTIONS.map((dir) => matrix[matrixKey(hourId, dir)]).filter(Boolean);
 }
 
-function isHourFailed(matrix: SyncroMatrix, hourId: HourPeriod): boolean {
+function isHourFailed(
+  matrix: SyncroMatrix,
+  hourId: HourPeriod,
+  failedHourIds?: HourPeriod[],
+): boolean {
+  if (failedHourIds?.includes(hourId)) return true;
   const cells = cellsForHour(matrix, hourId);
   if (cells.length === 0) return false;
   return cells.every((c) => c.llm_failed);
 }
 
 /**
- * Sequential hour-dot status: later hours stay pending until earlier ones finish LLM.
+ * Per-hour dot status from matrix + optional KV failed_hours (not blocked by earlier hours).
  */
 export function getHourDotStatus(
   hourId: HourPeriod,
@@ -29,22 +34,13 @@ export function getHourDotStatus(
   matrix: SyncroMatrix,
   sortedPeriods?: HourPeriod[],
   llmMeta?: SyncroSession["llm_meta"],
+  failedHourIds?: HourPeriod[],
 ): HourDotStatus {
   const order = sortedPeriods ?? sortedHourPeriodsFromLive(livePeriod);
+  if (order.indexOf(hourId) < 0) return "pending";
 
   if (hourId === livePeriod) return "now";
-
-  const idx = order.indexOf(hourId);
-  if (idx < 0) return "pending";
-
-  for (let i = 0; i < idx; i++) {
-    const prev = order[i]!;
-    if (!isHourPeriodLlmReady(matrix, prev, llmMeta) && !isHourFailed(matrix, prev)) {
-      return "pending";
-    }
-  }
-
-  if (isHourFailed(matrix, hourId)) return "failed";
+  if (isHourFailed(matrix, hourId, failedHourIds)) return "failed";
   if (isHourPeriodLlmReady(matrix, hourId, llmMeta)) return "done";
   return "pending";
 }

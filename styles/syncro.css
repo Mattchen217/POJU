@@ -405,7 +405,7 @@
   bottom: var(--syncro-toggle-bottom, 75px);
   left: 50%;
   transform: translateX(-50%);
-  z-index: 9;
+  z-index: 30;
   display: flex;
   gap: 2px;
   padding: 3px;

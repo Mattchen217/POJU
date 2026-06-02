@@ -1,8 +1,8 @@
 import type { CSSProperties } from "react";
 
 /** Syncro ring layout — fixed px (change only with product doc). */
-/** On-screen ring diameter (px) — compact for single-page compass stack. */
-export const SYNCRO_RING_SIZE = 300;
+/** On-screen ring diameter (px) — ~图3 scale, slightly smaller than legacy 420. */
+export const SYNCRO_RING_SIZE = 380;
 /**
  * Spline renders into a square WebGL canvas — edges clip in a rectangle, not a circle.
  * We draw larger then scale down so the cloud sits inside the canvas with margin.
@@ -14,7 +14,7 @@ export const SYNCRO_PARTICLE_DISPLAY_SCALE =
   SYNCRO_PARTICLE_DISPLAY_SIZE / SYNCRO_PARTICLE_CANVAS_SIZE;
 export const SYNCRO_PARTICLE_OFFSET_X = 5;
 export const SYNCRO_PARTICLE_OFFSET_Y = 0;
-export const SYNCRO_LABEL_RADIUS = 138;
+export const SYNCRO_LABEL_RADIUS = 172;
 export const SYNCRO_CENTER_INFO_WIDTH = 140;
 export const SYNCRO_AR_CAMERA_SIZE = 200;
 export const SYNCRO_MAP_POINT_RADIUS = 140;

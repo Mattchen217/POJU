@@ -109,7 +109,13 @@
 
 .hour-dot.status-done .hour-dot-core {
   background: #4ecdc4;
-  box-shadow: 0 0 6px rgba(78, 205, 196, 0.4);
+  opacity: 1;
+  box-shadow: 0 0 10px rgba(78, 205, 196, 0.55);
+}
+
+.hour-dot.status-done:not(:disabled) .hour-dot-core {
+  width: 16px;
+  height: 16px;
 }
 
 .hour-dot.status-pending .hour-dot-core {
@@ -117,8 +123,14 @@
 }
 
 .hour-dot.status-failed .hour-dot-core {
-  background: var(--pj-under);
-  opacity: 0.6;
+  background: #e85a5a;
+  opacity: 1;
+  box-shadow: 0 0 8px rgba(232, 90, 90, 0.45);
+}
+
+.hour-dot.status-failed:not(:disabled) .hour-dot-core {
+  width: 16px;
+  height: 16px;
 }
 
 .hour-dot.status-failed:not(:disabled) {

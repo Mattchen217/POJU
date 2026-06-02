@@ -22,10 +22,7 @@ import {
 import { HOUR_PERIOD_RANGES, hourPeriodDisplayName } from "@/lib/syncro/hour-period-ranges";
 import { isSyncroLlmReady } from "@/lib/syncro/llm-cell-display";
 import type { SyncroLlmProgress } from "@/lib/syncro/syncro-llm-progress";
-import {
-  SYNCRO_CENTER_INFO_WIDTH,
-  SYNCRO_RING_SIZE,
-} from "@/lib/syncro/syncro-ring-layout";
+import { SYNCRO_CENTER_INFO_WIDTH } from "@/lib/syncro/syncro-ring-layout";
 import type { SyncroBackgroundStreamState } from "@/lib/syncro/use-syncro-background-stream";
 import { matrixKey, type HourPeriod, type SyncroCombination, type SyncroSession } from "@/lib/syncro/types";
 
@@ -105,8 +102,6 @@ export function SyncroCompassMode({
           className="compass-area concentric-system"
           style={{
             position: "relative",
-            width: SYNCRO_RING_SIZE,
-            height: SYNCRO_RING_SIZE,
             margin: "0 auto",
             overflow: "visible",
           }}

@@ -199,6 +199,7 @@ export function SyncroMainView({
         onRetryHour={onRetryHour}
         retryingHour={retryingHour}
         locale={locale}
+        failedHourIds={llmProgress?.failed_hours}
         progress={
           llmProgress
             ? {

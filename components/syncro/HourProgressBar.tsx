@@ -35,6 +35,7 @@ export type HourProgressBarProps = {
     completed_batches: number;
     total_batches: number;
   };
+  failedHourIds?: HourPeriod[];
 };
 
 export function HourProgressBar({
@@ -46,6 +47,7 @@ export function HourProgressBar({
   onRetryHour,
   retryingHour = null,
   locale,
+  failedHourIds = [],
 }: HourProgressBarProps) {
   const t = useTranslations("syncro.hour");
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -86,7 +88,14 @@ export function HourProgressBar({
         <div className="hour-track-rail">
           <div className="hour-line" aria-hidden />
           {sortedPeriods.map((period) => {
-            const status = getHourDotStatus(period, livePeriod, matrix, sortedPeriods, llmMeta);
+            const status = getHourDotStatus(
+              period,
+              livePeriod,
+              matrix,
+              sortedPeriods,
+              llmMeta,
+              failedHourIds,
+            );
             const isSelected = period === activeHour;
             const canSelect = status === "done" || status === "now";
             const canRetry = status === "failed" && Boolean(onRetryHour);

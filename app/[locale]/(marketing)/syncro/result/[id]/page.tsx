@@ -228,27 +228,35 @@ function SyncroResultPageContent() {
           variant="banner"
         />
       </div>
-      <SyncroLlmProgressBar progress={llmProgress} />
-      {liveHourReady ? (
-        <SyncroMainView
-          session={session}
-          locale={locale}
-          highlightMatrixKeys={highlightKeys}
-          llmProgress={llmProgress}
-          liveHourReady
-          backgroundStream={backgroundStream}
-          onRetryHour={handleRetryHour}
-          retryingHour={retryingHour}
-        />
-      ) : (
-        <SyncroPreparingLiveHour
-          session={session}
-          locale={locale}
-          realtimePeriod={realtimePeriod}
-          progress={llmProgress}
-          onSessionUpdate={handleSessionUpdate}
-        />
-      )}
+      <div
+        className={
+          llmProgress.running || llmProgress.failed > 0
+            ? "syncro-result-shell--progress"
+            : undefined
+        }
+      >
+        <SyncroLlmProgressBar progress={llmProgress} />
+        {liveHourReady ? (
+          <SyncroMainView
+            session={session}
+            locale={locale}
+            highlightMatrixKeys={highlightKeys}
+            llmProgress={llmProgress}
+            liveHourReady
+            backgroundStream={backgroundStream}
+            onRetryHour={handleRetryHour}
+            retryingHour={retryingHour}
+          />
+        ) : (
+          <SyncroPreparingLiveHour
+            session={session}
+            locale={locale}
+            realtimePeriod={realtimePeriod}
+            progress={llmProgress}
+            onSessionUpdate={handleSessionUpdate}
+          />
+        )}
+      </div>
       {liveHourReady ? (
         <div className="px-4 pb-8">
           <PojuDeepDiveCTA productId="syncro" result_id={sessionId} result_data={syncroSummary} />

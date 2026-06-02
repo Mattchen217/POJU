@@ -4,12 +4,22 @@
  */
 
 .syncro-main-view {
-  --syncro-nav-reserve: max(60px, calc(48px + env(safe-area-inset-bottom, 0px)));
-  --syncro-toggle-bottom: max(12px, env(safe-area-inset-bottom, 0px));
-  --syncro-bottom-reserve: calc(52px + env(safe-area-inset-bottom, 0px));
+  /* PWA bottom product nav (~56px + safe area) */
+  --syncro-nav-reserve: max(72px, calc(56px + env(safe-area-inset-bottom, 0px)));
+  --syncro-toggle-bottom: var(--syncro-nav-reserve);
+  --syncro-bottom-reserve: calc(var(--syncro-nav-reserve) + 52px);
   --syncro-hour-top: env(safe-area-inset-top, 0px);
   /* Hour rail + name/range + Now/Ready legend */
   --syncro-stage-top: calc(env(safe-area-inset-top, 0px) + 118px);
+}
+
+/* Result page: fixed LLM progress strip above hour bar */
+.syncro-result-shell--progress .hour-progress-bar {
+  top: calc(env(safe-area-inset-top, 0px) + 40px);
+}
+
+.syncro-result-shell--progress .syncro-main-view {
+  --syncro-stage-top: calc(env(safe-area-inset-top, 0px) + 158px);
 }
 
 /* Hour progress — top band */
@@ -108,6 +118,8 @@
 .syncro-main-view .compass-stage .concentric-system,
 .syncro-main-view .compass-stage .compass-area {
   flex-shrink: 0;
+  width: min(76vmin, 400px);
+  height: min(76vmin, 400px);
 }
 
 .syncro-main-view .compass-footer {

@@ -119,7 +119,7 @@ function main() {
 
   const compass = readFileSync(join(ROOT, "components/syncro/SyncroCompassMode.tsx"), "utf8");
   assert(
-    compass.includes("SYNCRO_RING_SIZE") && compass.includes("SyncroDirectionLabels"),
+    compass.includes("concentric-system") && compass.includes("SyncroDirectionLabels"),
     "polish v3 ring + static labels",
   );
   assert(compass.includes("PostureHintOverlay") && compass.includes("deviceTiltBeta"), "compass posture overlay");
@@ -132,7 +132,7 @@ function main() {
   assert(ringLayout.includes("SYNCRO_PARTICLE_DISPLAY_SCALE"), "particle scale for canvas margin");
   assert(ringLayout.includes("SYNCRO_PARTICLE_OFFSET_X = 5"), "particle +5px nudge");
   assert(ringLayout.includes("getSyncroParticleFieldStyle"), "particle size on spline root");
-  assert(ringLayout.includes("SYNCRO_RING_MARGIN_TOP = 80"), "ring margin 80");
+  assert(ringLayout.includes("SYNCRO_RING_SIZE = 380"), "ring size ~fig3");
   assert(compass.includes("SyncroParticleCore bare"), "particle without mask");
   assert(compass.includes("SyncroCellAdvice"), "compass uses real LLM advice gate");
   assert(!compass.includes("phone-position-hint"), "no layout phone hint bar");
@@ -162,7 +162,7 @@ function main() {
   assert(syncroCss.includes("--syncro-why-bottom"), "why CTA uses layout token");
 
   const layoutCss = readFileSync(join(ROOT, "styles/syncro-layout.css"), "utf8");
-  assert(layoutCss.includes("--syncro-bottom-reserve: 120px"), "compact bottom chrome for large ring");
+  assert(layoutCss.includes("--syncro-nav-reserve"), "bottom chrome clears PWA nav");
   assert(layoutCss.includes("padding-top: var(--syncro-stage-top)"), "stage clears top chrome");
 
   const compassHook = readFileSync(join(ROOT, "lib/syncro/useCompassPermission.ts"), "utf8");
@@ -221,8 +221,8 @@ function main() {
   assert(preparing.includes("runStreamHoursWithRetry"), "SSE stream for priority hour");
   assert(preparing.includes("SyncroPreparingLiveHour"), "live hour gate before compass");
 
-  assert(compass.includes("SYNCRO_WHY_BUTTON_MARGIN_TOP"), "why CTA margin");
-  assert(compassCss.includes("padding-top: 80px"), "compass page padding 80");
+  assert(compass.includes("compass-bottom-cta"), "why CTA in footer stack");
+  assert(compass.includes("compass-footer"), "compass footer stack");
   assert(compass.includes('overflow: "visible"'), "compass-area no clip");
 
   assert(SYNCRO_LLM_BATCH_COUNT === 12, "12 LLM batches");
@@ -295,12 +295,18 @@ function main() {
 
   assert(getHourDotStatus(live, live, matrix, [...order], llmMeta) === "now", "live hour is now");
   assert(getHourDotStatus("wei", live, matrix, [...order], llmMeta) === "pending", "wei still pending");
-  assert(getHourDotStatus("shen", live, matrix, [...order], llmMeta) === "pending", "shen waits for live wu");
-  markLlmReady(live);
-  assert(getHourDotStatus("shen", live, matrix, [...order], llmMeta) === "pending", "shen waits for wei");
-  markLlmReady("wei");
   markLlmReady("shen");
-  assert(getHourDotStatus("shen", live, matrix, [...order], llmMeta) === "done", "shen done after predecessors");
+  assert(
+    getHourDotStatus("shen", live, matrix, [...order], llmMeta) === "done",
+    "shen done without waiting for wei",
+  );
+  markLlmReady(live);
+  markLlmReady("wei");
+  assert(getHourDotStatus("wei", live, matrix, [...order], llmMeta) === "done", "wei done when patched");
+  assert(
+    getHourDotStatus("zi", live, matrix, [...order], llmMeta, ["zi"]) === "failed",
+    "failed_hours marks red dot",
+  );
 
   console.log("\n✅ Syncro TST Step 6 — three-mode UI OK");
 }

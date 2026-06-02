@@ -45,7 +45,7 @@ export function SyncroDirectionLabels({
               top: "50%",
               left: "50%",
               transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))${upright}`,
-              fontSize: 14,
+              fontSize: 16,
               fontWeight: isHighlight ? 600 : 500,
               color: isHighlight ? "#D4A574" : "#FFFFFF",
               opacity: isHighlight ? 1 : 0.7,
