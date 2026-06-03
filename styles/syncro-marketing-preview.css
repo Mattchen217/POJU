@@ -44,70 +44,79 @@
   width: 100%;
   height: 100%;
   min-height: var(--syncro-preview-height, 844px);
-  --syncro-nav-reserve: 8px;
-  --syncro-toggle-bottom: 8px;
-  --syncro-bottom-reserve: 56px;
+  --syncro-nav-reserve: 10px;
+  --syncro-toggle-bottom: 10px;
+  --syncro-bottom-reserve: 58px;
   --syncro-hour-top: 0px;
-  --syncro-stage-top: 118px;
+  /* Push mode content below hour rail + legend */
+  --syncro-stage-top: 148px;
 }
 
 .syncro-main-view--marketing .hour-progress-bar {
-  padding-top: 4px;
+  padding-top: 2px;
+  padding-bottom: 2px;
 }
 
 .syncro-main-view--marketing .syncro-mode-stage {
-  padding-bottom: 58px;
+  padding-bottom: 62px;
   overflow: hidden;
 }
 
 .syncro-main-view--marketing .compass-page {
-  padding-top: 4px;
+  padding-top: 0;
 }
 
-/* Shrink + drop ring so it clears hour bar */
+/* Larger ring, shifted down — only nudge position, not tiny scale */
 .syncro-main-view--marketing .syncro-marketing-ring-shell {
-  transform: scale(0.58);
+  transform: scale(0.76);
   transform-origin: center top;
-  margin-top: 10px;
+  margin-top: 28px;
   margin-left: auto;
   margin-right: auto;
 }
 
 .syncro-main-view--marketing .syncro-ar-ring.syncro-marketing-ring-shell {
-  --ar-camera-size: 168px;
-  --ar-particle-clip-size: 300px;
+  --ar-camera-size: 188px;
+  --ar-particle-clip-size: 340px;
 }
 
 .syncro-main-view--marketing .syncro-marketing-advice-block {
-  margin-top: 6px !important;
+  margin-top: 18px !important;
   padding-top: 0 !important;
 }
 
 .syncro-main-view--marketing .compass-short-advice {
-  font-size: 14px;
-  line-height: 1.42;
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1.5;
 }
 
 .syncro-main-view--marketing .syncro-center-level-title {
-  font-size: 17px;
+  font-size: 20px;
 }
 
 .syncro-main-view--marketing .syncro-marketing-why-block {
-  margin-top: 12px;
+  margin-top: 18px;
   text-align: center;
 }
 
 .syncro-main-view--marketing .syncro-marketing-why-block .why-btn-prominent {
   pointer-events: auto;
+  padding: 10px 22px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .syncro-main-view--marketing .three-mode-toggle {
-  bottom: 8px;
+  bottom: 10px;
   z-index: 40;
 }
 
 .syncro-main-view--marketing .three-mode-toggle .mode-tab {
   pointer-events: auto;
+  font-size: 11px;
+  padding: 6px 14px;
 }
 
 .syncro-ar-marketing-placeholder {

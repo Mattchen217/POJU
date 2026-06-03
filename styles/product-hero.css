@@ -36,7 +36,7 @@
 }
 
 .product-hero__bg--match {
-  /* Match hero — full-bleed spline via `.match-hero-spline` */
+  /* Match hero — fixed-size centered spline via `.match-hero-spline-wrap` */
 }
 
 .product-page--match .product-hero,
@@ -45,52 +45,61 @@
   overflow: visible;
 }
 
-.match-hero-spline {
+/* Fixed square viewport — scene zoom shrinks the two circles, no oval clip */
+.match-hero-spline-wrap {
   position: absolute;
   left: 50%;
-  top: 52%;
-  width: min(480px, 86vw);
-  height: min(480px, 50vh);
-  max-width: 480px;
-  max-height: 480px;
+  top: 54%;
+  width: min(300px, 68vw);
+  height: min(300px, 36vh);
+  max-width: 300px;
+  max-height: 300px;
   transform: translate(-50%, -50%);
-  opacity: 0.82;
-  pointer-events: auto;
-  overflow: hidden;
+  pointer-events: none;
+  overflow: visible;
 }
 
-.pwa-mode .match-hero-spline {
-  width: min(440px, 84vw);
-  height: min(440px, 46vh);
-  max-width: 440px;
-  max-height: 440px;
+.match-hero-spline {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  opacity: 0.82;
+  overflow: visible;
+}
+
+.pwa-mode .match-hero-spline-wrap {
+  width: min(280px, 64vw);
+  height: min(280px, 34vh);
+  max-width: 280px;
+  max-height: 280px;
 }
 
 .match-spline-scene--hero,
 .match-spline-scene--hero canvas {
   overflow: visible !important;
-  max-width: none !important;
-  max-height: none !important;
 }
 
-/* Homepage Match card — fixed centered scene, not full-bleed tile */
+/* Homepage Match card — square viewport, zoom shows both circles (no oval mask) */
 .match-card-spline-inner {
   position: absolute;
   left: 50%;
-  top: 50%;
-  width: 52%;
-  height: 52%;
-  max-width: 168px;
-  max-height: 168px;
+  top: 44%;
+  width: min(88%, 220px);
+  aspect-ratio: 1;
+  height: auto;
   transform: translate(-50%, -50%);
+  overflow: visible;
   filter: brightness(1.16) contrast(1.12) saturate(1.08);
-  overflow: hidden;
-  border-radius: 999px;
 }
 
 .match-spline-scene--card {
   width: 100%;
   height: 100%;
+  overflow: visible;
+}
+
+.match-spline-scene--card canvas {
+  overflow: visible !important;
 }
 
 .match-spline-scene.spline-interactive-scene--static {
