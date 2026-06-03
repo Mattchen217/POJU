@@ -17,7 +17,7 @@ import {
 import { compassDegreeToDirection, type CurrentLevel } from "@/lib/syncro/current-system";
 import { isSyncroLlmReady } from "@/lib/syncro/llm-cell-display";
 import {
-  SYNCRO_AR_CAMERA_SIZE,
+  SYNCRO_PARTICLE_DISPLAY_SIZE,
   SYNCRO_RING_MARGIN_TOP,
   SYNCRO_RING_SIZE,
   SYNCRO_WHY_BUTTON_MARGIN_TOP,
@@ -29,6 +29,11 @@ import {
 import { matrixKey, type HourPeriod, type SyncroSession } from "@/lib/syncro/types";
 
 import "@/styles/syncro-compass.css";
+import "@/styles/syncro-ar.css";
+
+/** AR-only layout — compass / map use shared ring-layout constants. */
+const SYNCRO_AR_CAMERA_VIEW_SIZE = 228;
+const SYNCRO_AR_PARTICLE_CLIP_SIZE = SYNCRO_PARTICLE_DISPLAY_SIZE;
 
 const HALO_COLORS: Record<CurrentLevel, string> = {
   open_current: "rgba(0, 217, 184, 0.7)",
@@ -180,12 +185,15 @@ export function SyncroARMode({
       <PostureHintOverlay mode="ar" beta={beta} />
 
       <div
+        className="syncro-ar-ring"
         style={{
           position: "relative",
           width: SYNCRO_RING_SIZE,
           height: SYNCRO_RING_SIZE,
           margin: `${SYNCRO_RING_MARGIN_TOP}px auto 0`,
           overflow: "visible",
+          ["--ar-particle-clip-size" as string]: `${SYNCRO_AR_PARTICLE_CLIP_SIZE}px`,
+          ["--ar-camera-size" as string]: `${SYNCRO_AR_CAMERA_VIEW_SIZE}px`,
         }}
       >
         <div
@@ -199,24 +207,18 @@ export function SyncroARMode({
             transformOrigin: "center center",
           }}
         >
-          <SyncroParticleCore bare />
+          <div className="ar-particle-clip" aria-hidden>
+            <SyncroParticleCore bare />
+          </div>
 
           <SyncroDirectionLabels highlightId={direction} counterRotateDeg={alpha} />
         </div>
 
         <div
+          className="ar-camera-hub"
           style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            width: SYNCRO_AR_CAMERA_SIZE,
-            height: SYNCRO_AR_CAMERA_SIZE,
-            borderRadius: "50%",
-            overflow: "hidden",
             boxShadow: `0 0 32px ${haloColor}, 0 0 64px ${haloColor.replace(/0\.\d+/, "0.25")}, inset 0 0 0 2px ${haloColor}`,
             transition: "box-shadow 600ms ease",
-            zIndex: 5,
           }}
         >
           <video

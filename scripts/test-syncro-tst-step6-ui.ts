@@ -145,7 +145,8 @@ function main() {
   assert(compass.includes("WhyThisCurrentModal"), "compass has why modal");
 
   const ar = readFileSync(join(ROOT, "components/syncro/SyncroARMode.tsx"), "utf8");
-  assert(ar.includes("SYNCRO_AR_CAMERA_SIZE") && ar.includes("getUserMedia"), "AR camera 200px");
+  assert(ar.includes("SYNCRO_AR_CAMERA_VIEW_SIZE") && ar.includes("acquireSyncroCameraStream"), "AR camera viewport");
+  assert(ar.includes("ar-particle-clip") && ar.includes("ar-camera-hub"), "AR particle clip + camera hub");
   assert(ar.includes("compass-page") && ar.includes("PostureHintOverlay"), "AR page layout + posture");
   assert(!ar.includes("phone-position-hint"), "AR no layout phone hint bar");
 

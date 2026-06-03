@@ -10,6 +10,41 @@
   min-height: 0;
 }
 
+/* === AR ring hub — particle clip + camera (SyncroARMode only) === */
+
+.syncro-ar-ring {
+  --ar-particle-clip-size: 440px;
+  --ar-camera-size: 228px;
+}
+
+.ar-particle-clip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--ar-particle-clip-size);
+  height: var(--ar-particle-clip-size);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  clip-path: circle(50% at 50% 50%);
+  -webkit-clip-path: circle(50% at 50% 50%);
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.ar-camera-hub {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: var(--ar-camera-size);
+  height: var(--ar-camera-size);
+  border-radius: 50%;
+  overflow: hidden;
+  z-index: 5;
+  pointer-events: none;
+}
+
 /* === AR circular camera window (center, does not rotate) === */
 
 .ar-window-layer {
