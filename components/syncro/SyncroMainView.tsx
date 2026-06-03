@@ -154,7 +154,7 @@ export function SyncroMainView({
   }, [receivingHeading, permissionGate, tryActivateCompass]);
 
   useEffect(() => {
-    const interval = window.setInterval(() => {
+    const syncLiveHour = () => {
       if (isSubmissionTimelineComplete(session)) {
         onTimelineComplete?.();
         return;
@@ -170,8 +170,20 @@ export function SyncroMainView({
         }
         return next;
       });
-    }, 60_000);
-    return () => window.clearInterval(interval);
+    };
+
+    syncLiveHour();
+
+    const interval = window.setInterval(syncLiveHour, 60_000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") syncLiveHour();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [session, onTimelineComplete]);
 
   useEffect(() => {

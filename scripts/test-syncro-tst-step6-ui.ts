@@ -132,7 +132,8 @@ function main() {
   );
   assert(!ringLayout.includes("rotate3d"), "no GPU rotate helper");
   assert(ringLayout.includes("SYNCRO_PARTICLE_DISPLAY_SCALE"), "particle scale for canvas margin");
-  assert(ringLayout.includes("SYNCRO_PARTICLE_OFFSET_X = 12"), "particle +12px right nudge");
+  assert(ringLayout.includes("SYNCRO_PARTICLE_OFFSET_X = 17"), "particle +17px right nudge");
+  assert(ringLayout.includes("SYNCRO_PARTICLE_OFFSET_Y = 5"), "particle +5px down nudge");
   assert(ringLayout.includes("getSyncroParticleFieldStyle"), "particle size on spline root");
   assert(ringLayout.includes("SYNCRO_RING_SIZE = 380"), "ring size AR reference");
   assert(ringLayout.includes("SYNCRO_PARTICLE_DISPLAY_SIZE = 440"), "particle display 440px");

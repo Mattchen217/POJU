@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 
 import {
@@ -58,25 +58,32 @@ export function HourProgressBar({
   const activeIdx = timelinePeriods.findIndex((p) => p === activeHour);
   const active = timelinePeriods[activeIdx >= 0 ? activeIdx : 0] ?? timelinePeriods[0]!;
   const activeIsLive = livePeriod !== null && active === livePeriod;
+  const centerPeriod = livePeriod ?? activeHour;
+  const firstScrollRef = useRef(true);
 
-  function scrollHourToCenter(period: HourPeriod, behavior: ScrollBehavior = "smooth") {
-    const viewport = viewportRef.current;
-    const slot = slotRefs.current[period];
-    if (!viewport || !slot) return;
-    const target =
-      slot.offsetLeft + slot.offsetWidth / 2 - viewport.clientWidth / 2;
-    viewport.scrollTo({ left: Math.max(0, target), behavior });
+  function scrollPeriodToCenter(period: HourPeriod | null, behavior: ScrollBehavior = "smooth") {
+    const slot = period ? slotRefs.current[period] : null;
+    if (!slot) return;
+    slot.scrollIntoView({ behavior, inline: "center", block: "nearest" });
   }
 
-  useEffect(() => {
-    if (livePeriod) scrollHourToCenter(livePeriod, "smooth");
-  }, [livePeriod, timelinePeriods.join(",")]);
+  useLayoutEffect(() => {
+    if (!centerPeriod) return;
+    const behavior: ScrollBehavior = firstScrollRef.current ? "auto" : "smooth";
+    firstScrollRef.current = false;
+    requestAnimationFrame(() => scrollPeriodToCenter(centerPeriod, behavior));
+  }, [centerPeriod, timelinePeriods.join(",")]);
 
-  useEffect(() => {
-    if (livePeriod && activeHour !== livePeriod) {
-      scrollHourToCenter(activeHour, "smooth");
-    }
-  }, [activeHour, livePeriod]);
+  useLayoutEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+
+    const ro = new ResizeObserver(() => {
+      if (centerPeriod) scrollPeriodToCenter(centerPeriod, "auto");
+    });
+    ro.observe(viewport);
+    return () => ro.disconnect();
+  }, [centerPeriod, timelinePeriods.join(",")]);
 
   return (
     <div className="hour-progress-bar" role="tablist" aria-label={t("aria_label")}>

@@ -12,12 +12,15 @@ export function formatSessionListDateTime(d: Date | string, locale: string): str
   const date = typeof d === "string" ? new Date(d) : d;
   if (Number.isNaN(date.getTime())) return "—";
   const tag = locale.replace(/_/g, "-");
+  const timeZone =
+    typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : undefined;
   try {
     return new Intl.DateTimeFormat(tag, {
       month: "short",
       day: "numeric",
       hour: "numeric",
       minute: "2-digit",
+      ...(timeZone ? { timeZone } : {}),
     }).format(date);
   } catch {
     return date.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });

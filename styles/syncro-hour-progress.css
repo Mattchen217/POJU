@@ -31,7 +31,7 @@
   display: none;
 }
 
-/* Rail: 12 fixed slots in one row — dots never reflow or float */
+/* Rail: 12 fixed slots — side padding lets any slot scroll to horizontal center */
 .hour-track-rail {
   position: relative;
   display: flex;
@@ -40,7 +40,8 @@
   width: max-content;
   min-height: 54px;
   margin: 0;
-  padding: 6px 50vw 2px;
+  padding-block: 6px 2px;
+  padding-inline: calc(50% - var(--hour-slot-width, 44px) / 2);
   box-sizing: content-box;
 }
 

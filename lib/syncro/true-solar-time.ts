@@ -87,3 +87,91 @@ export function getDayOfYear(date: Date): number {
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
+
+export type ZonedCalendarParts = {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  second: number;
+};
+
+/** Wall-clock fields for `date` in an IANA timezone (device/PC civil time). */
+export function getZonedCalendarParts(date: Date, timeZone: string): ZonedCalendarParts {
+  if (!timeZone || timeZone === "UTC") {
+    return {
+      year: date.getUTCFullYear(),
+      month: date.getUTCMonth() + 1,
+      day: date.getUTCDate(),
+      hour: date.getUTCHours(),
+      minute: date.getUTCMinutes(),
+      second: date.getUTCSeconds(),
+    };
+  }
+
+  try {
+    const dtf = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
+    const parts: Record<string, string> = {};
+    for (const part of dtf.formatToParts(date)) {
+      if (part.type !== "literal") parts[part.type] = part.value;
+    }
+    return {
+      year: parseInt(parts.year ?? "1970", 10),
+      month: parseInt(parts.month ?? "1", 10),
+      day: parseInt(parts.day ?? "1", 10),
+      hour: parseInt(parts.hour ?? "0", 10),
+      minute: parseInt(parts.minute ?? "0", 10),
+      second: parseInt(parts.second ?? "0", 10),
+    };
+  } catch {
+    return {
+      year: date.getFullYear(),
+      month: date.getMonth() + 1,
+      day: date.getDate(),
+      hour: date.getHours(),
+      minute: date.getMinutes(),
+      second: date.getSeconds(),
+    };
+  }
+}
+
+/** UTC instant for a civil datetime in `timeZone` (works on server UTC or client local). */
+export function zonedLocalToUtc(
+  local: {
+    year: number;
+    month: number;
+    day: number;
+    hour: number;
+    minute?: number;
+    second?: number;
+  },
+  timeZone: string,
+): Date {
+  const minute = local.minute ?? 0;
+  const second = local.second ?? 0;
+
+  if (!timeZone || timeZone === "UTC") {
+    return new Date(
+      Date.UTC(local.year, local.month - 1, local.day, local.hour, minute, second),
+    );
+  }
+
+  let utcMs = Date.UTC(local.year, local.month - 1, local.day, local.hour, minute, second);
+  for (let i = 0; i < 4; i++) {
+    const offsetMin = getTimezoneOffsetMinutes(timeZone, new Date(utcMs));
+    utcMs =
+      Date.UTC(local.year, local.month - 1, local.day, local.hour, minute, second) -
+      offsetMin * 60 * 1000;
+  }
+  return new Date(utcMs);
+}

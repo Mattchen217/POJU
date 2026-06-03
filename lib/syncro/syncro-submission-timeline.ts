@@ -1,9 +1,20 @@
 import type { DirectionId } from "@/lib/syncro/current-system";
 import { matrixKey, type HourPeriod, type SyncroSession } from "@/lib/syncro/types";
+import {
+  getCurrentHourPeriod,
+  getCurrentHourPeriodInTimezone,
+} from "@/lib/syncro/types";
 
 import { getOrderedHourPeriodsFromSession } from "@/lib/syncro/syncro-view-helpers";
 
 const SAMPLE_DIRECTION: DirectionId = "N";
+const SLOT_MS = 2 * 60 * 60 * 1000;
+
+function getWallClockPeriod(session: SyncroSession, date: Date): HourPeriod {
+  const tz = session.user_location?.timezone?.trim();
+  if (tz) return getCurrentHourPeriodInTimezone(tz, date);
+  return getCurrentHourPeriod(date);
+}
 
 export type SubmissionTimelineState = {
   orderedPeriods: HourPeriod[];
@@ -54,18 +65,24 @@ export function getSubmissionTimelineBounds(session: SyncroSession): {
   return { startMs: first.startMs, endMs: last.endMs };
 }
 
+function getTimelineEndMs(session: SyncroSession): number {
+  const bounds = getSubmissionTimelineBounds(session);
+  const expiresMs = session.expires_at.getTime();
+  return Math.max(bounds?.endMs ?? 0, expiresMs);
+}
+
 export function isSubmissionTimelineComplete(
   session: SyncroSession,
   date: Date = new Date(),
 ): boolean {
-  const bounds = getSubmissionTimelineBounds(session);
-  if (!bounds) return false;
-  return date.getTime() >= bounds.endMs;
+  const endMs = getTimelineEndMs(session);
+  if (endMs <= 0) return false;
+  return date.getTime() >= endMs;
 }
 
 /**
- * Which submission slot is active now (by hour_start / hour_end), not wall-clock rotation.
- * Returns null once the last slot has ended.
+ * Which submission slot is active now — uses device clock (`Date.now`) vs slot boundaries.
+ * Falls back to wall-clock 时辰 + elapsed slots (fixes legacy matrix timestamps from UTC server).
  */
 export function getLivePeriodInSubmissionTimeline(
   session: SyncroSession,
@@ -76,16 +93,35 @@ export function getLivePeriodInSubmissionTimeline(
 
   const now = date.getTime();
   const bounds = getSubmissionTimelineBounds(session);
-  if (bounds && now >= bounds.endMs) return null;
+  const timelineEndMs = getTimelineEndMs(session);
+  if (timelineEndMs > 0 && now >= timelineEndMs) return null;
+  if (bounds && now < bounds.startMs) return ordered[0] ?? null;
 
-  for (const period of ordered) {
+  let rangeIdx = -1;
+  for (let i = 0; i < ordered.length; i++) {
+    const period = ordered[i]!;
     const range = getPeriodTimeRange(session, period);
     if (!range) continue;
-    if (now >= range.startMs && now < range.endMs) return period;
+    if (now >= range.startMs && now < range.endMs) {
+      rangeIdx = i;
+      break;
+    }
   }
 
-  if (bounds && now < bounds.startMs) {
-    return ordered[0] ?? null;
+  const minIdx = Math.max(0, Math.floor((now - session.created_at.getTime()) / SLOT_MS));
+  const wallIdx = ordered.indexOf(getWallClockPeriod(session, date));
+
+  if (rangeIdx >= 0) {
+    if (rangeIdx >= minIdx) return ordered[rangeIdx] ?? null;
+    if (wallIdx >= minIdx && wallIdx >= 0) return ordered[wallIdx] ?? null;
+    return ordered[Math.min(Math.max(rangeIdx, minIdx), ordered.length - 1)] ?? null;
+  }
+
+  if (wallIdx >= minIdx && wallIdx >= 0) return ordered[wallIdx] ?? null;
+
+  if (bounds && now >= bounds.startMs && now < bounds.endMs) {
+    const idx = Math.min(Math.floor((now - bounds.startMs) / SLOT_MS), ordered.length - 1);
+    return ordered[Math.max(minIdx, idx)] ?? null;
   }
 
   return null;

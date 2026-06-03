@@ -5,7 +5,7 @@
  */
 
 import { Lunar } from "lunar-typescript";
-import { calculateTrueSolarTime } from "./true-solar-time";
+import { calculateTrueSolarTime, getZonedCalendarParts, zonedLocalToUtc } from "./true-solar-time";
 import { QimenUtil } from "@/lib/qimen/QimenUtil";
 import {
   calculateCombinationScore,
@@ -250,52 +250,30 @@ function hourToPeriodIndex(hour: number): number {
 
 export function generateNext12HourPeriods(
   startTime: Date,
-  userTimezone = "UTC"
+  userTimezone = "UTC",
 ): Array<{ id: HourPeriod; start: Date; end: Date }> {
   const currentHour = getClockHour(startTime, userTimezone);
   const currentIdx = hourToPeriodIndex(currentHour);
   const baseHour = PERIOD_BASE_HOUR[currentIdx];
 
-  const currentStart = new Date(startTime.getTime());
-  if (userTimezone === "UTC") {
-    if (baseHour === -1) {
-      if (currentHour >= 23) {
-        currentStart.setUTCHours(23, 0, 0, 0);
-      } else {
-        currentStart.setUTCDate(currentStart.getUTCDate() - 1);
-        currentStart.setUTCHours(23, 0, 0, 0);
-      }
-    } else {
-      currentStart.setUTCHours(baseHour, 0, 0, 0);
-    }
-  } else if (baseHour === -1) {
-    if (currentHour >= 23) {
-      currentStart.setHours(23, 0, 0, 0);
-    } else {
-      currentStart.setDate(currentStart.getDate() - 1);
-      currentStart.setHours(23, 0, 0, 0);
-    }
-  } else {
-    currentStart.setHours(baseHour, 0, 0, 0);
+  let { year, month, day } = getZonedCalendarParts(startTime, userTimezone);
+  let startHour = baseHour === -1 ? 23 : baseHour;
+
+  if (baseHour === -1 && currentHour < 1) {
+    ({ year, month, day } = addCalendarDays({ year, month, day }, -1));
   }
 
+  const period0Start = zonedLocalToUtc(
+    { year, month, day, hour: startHour, minute: 0, second: 0 },
+    userTimezone,
+  );
+
   const periods: Array<{ id: HourPeriod; start: Date; end: Date }> = [];
+  const slotMs = 2 * 60 * 60 * 1000;
 
   for (let i = 0; i < 12; i++) {
-    const periodStart = new Date(currentStart.getTime());
-    if (userTimezone === "UTC") {
-      periodStart.setUTCHours(periodStart.getUTCHours() + i * 2);
-    } else {
-      periodStart.setHours(periodStart.getHours() + i * 2);
-    }
-
-    const periodEnd = new Date(periodStart.getTime());
-    if (userTimezone === "UTC") {
-      periodEnd.setUTCHours(periodEnd.getUTCHours() + 2);
-    } else {
-      periodEnd.setHours(periodEnd.getHours() + 2);
-    }
-
+    const periodStart = new Date(period0Start.getTime() + i * slotMs);
+    const periodEnd = new Date(periodStart.getTime() + slotMs);
     const idx = (currentIdx + i) % 12;
     periods.push({
       id: HOUR_PERIOD_ORDER[idx],
@@ -305,4 +283,16 @@ export function generateNext12HourPeriods(
   }
 
   return periods;
+}
+
+function addCalendarDays(
+  parts: { year: number; month: number; day: number },
+  delta: number,
+): { year: number; month: number; day: number } {
+  const dt = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + delta));
+  return {
+    year: dt.getUTCFullYear(),
+    month: dt.getUTCMonth() + 1,
+    day: dt.getUTCDate(),
+  };
 }
