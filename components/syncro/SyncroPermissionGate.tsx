@@ -5,7 +5,10 @@ import { IconCamera, IconCompass } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
 
 import { useOrientation } from "@/components/syncro/SyncroOrientationProvider";
-import { requestSyncroCameraPermission } from "@/lib/syncro/permissions";
+import {
+  readSyncroPermissionSync,
+  requestSyncroCameraPermission,
+} from "@/lib/syncro/permissions";
 
 import "@/styles/syncro-permission-gate.css";
 
@@ -36,7 +39,13 @@ export function SyncroPermissionGate({
         return;
       }
 
-      const cameraOk = await requestSyncroCameraPermission();
+      if (isResume) {
+        onReady?.({ cameraGranted: readSyncroPermissionSync().camera });
+        return;
+      }
+
+      const cached = readSyncroPermissionSync();
+      const cameraOk = cached.camera || (await requestSyncroCameraPermission());
       if (!cameraOk) {
         setDeniedMessage(t("camera_denied"));
       }

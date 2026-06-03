@@ -14,7 +14,9 @@ import type { SyncroLlmProgress } from "@/lib/syncro/syncro-llm-progress";
 import type { DirectionId } from "@/lib/syncro/current-system";
 import {
   getSyncroPermissionStatus,
+  readSyncroPermissionSync,
   requestSyncroCameraPermission,
+  syncCameraPermissionFromBrowser,
 } from "@/lib/syncro/permissions";
 import { deviceOrientationRequiresPermissionPrompt } from "@/lib/syncro/compass-permission-ios";
 import {
@@ -86,7 +88,9 @@ export function SyncroMainView({
   });
   const [uiMode, setUiMode] = useState<SyncroUiMode>("compass");
   const [initialized, setInitialized] = useState(false);
-  const [cameraGranted, setCameraGranted] = useState(false);
+  const [cameraGranted, setCameraGranted] = useState(
+    () => readSyncroPermissionSync().camera,
+  );
   const [activeDirection, setActiveDirection] = useState<DirectionId>("E");
   const [permissionGate, setPermissionGate] = useState<"hidden" | "initial" | "resume">("hidden");
   const permissionsCheckedRef = useRef(false);
@@ -100,6 +104,10 @@ export function SyncroMainView({
     if (permissionsCheckedRef.current) return;
     permissionsCheckedRef.current = true;
 
+    void syncCameraPermissionFromBrowser().then((cameraOk) => {
+      if (cameraOk) setCameraGranted(true);
+    });
+
     void getSyncroPermissionStatus().then((status) => {
       setCameraGranted(status.camera);
 
@@ -110,6 +118,11 @@ export function SyncroMainView({
 
       if (status.allGranted) {
         setPermissionGate(deviceOrientationRequiresPermissionPrompt() ? "resume" : "hidden");
+        return;
+      }
+
+      if (status.orientation && status.camera) {
+        setPermissionGate("hidden");
         return;
       }
 
@@ -202,9 +215,30 @@ export function SyncroMainView({
 
   function handleModeChange(mode: SyncroUiMode) {
     if ((mode === "compass" || mode === "ar") && !liveHourReady) return;
+
+    if (mode === "ar") {
+      const cachedCamera = readSyncroPermissionSync().camera;
+      if (cachedCamera) {
+        setCameraGranted(true);
+      }
+    }
+
     if ((mode === "compass" || mode === "ar") && !receivingHeading && isSupported && permissionGate === "hidden") {
       void getSyncroPermissionStatus().then((status) => {
-        setPermissionGate(status.allGranted ? "resume" : "initial");
+        if (mode === "ar" && status.camera) {
+          setCameraGranted(true);
+          return;
+        }
+        if (status.orientation && mode === "ar") {
+          return;
+        }
+        if (status.allGranted) {
+          setPermissionGate(deviceOrientationRequiresPermissionPrompt() ? "resume" : "hidden");
+          return;
+        }
+        if (!status.orientation) {
+          setPermissionGate("initial");
+        }
       });
     }
     if (mode === "compass" || mode === "ar") {

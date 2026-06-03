@@ -7,15 +7,11 @@ export interface SyncroPermissions {
   granted_at?: number;
 }
 
-export async function loadSyncroPermission(): Promise<SyncroPermissions> {
-  if (typeof localStorage === "undefined") {
-    return { orientation: false, camera: false };
-  }
+const EMPTY: SyncroPermissions = { orientation: false, camera: false };
 
+function parseStoredPermissions(raw: string | null): SyncroPermissions {
+  if (!raw) return { ...EMPTY };
   try {
-    const raw = localStorage.getItem(PERMISSION_KEY);
-    if (!raw) return { orientation: false, camera: false };
-
     const data = JSON.parse(raw) as Partial<SyncroPermissions>;
     return {
       orientation: !!data.orientation,
@@ -23,8 +19,18 @@ export async function loadSyncroPermission(): Promise<SyncroPermissions> {
       granted_at: data.granted_at,
     };
   } catch {
-    return { orientation: false, camera: false };
+    return { ...EMPTY };
   }
+}
+
+/** Synchronous read — use for initial React state (client only). */
+export function readSyncroPermissionSync(): SyncroPermissions {
+  if (typeof localStorage === "undefined") return { ...EMPTY };
+  return parseStoredPermissions(localStorage.getItem(PERMISSION_KEY));
+}
+
+export async function loadSyncroPermission(): Promise<SyncroPermissions> {
+  return readSyncroPermissionSync();
 }
 
 export async function saveSyncroPermission(
@@ -34,11 +40,11 @@ export async function saveSyncroPermission(
   if (typeof localStorage === "undefined") return;
 
   try {
-    const current = await loadSyncroPermission();
+    const current = readSyncroPermissionSync();
     const next: SyncroPermissions = {
       ...current,
       [type]: granted,
-      granted_at: Date.now(),
+      granted_at: granted ? Date.now() : current.granted_at,
     };
     localStorage.setItem(PERMISSION_KEY, JSON.stringify(next));
   } catch (e) {
@@ -54,7 +60,7 @@ export type SyncroPermissionStatus = {
 };
 
 export async function getSyncroPermissionStatus(): Promise<SyncroPermissionStatus> {
-  const perms = await loadSyncroPermission();
+  const perms = readSyncroPermissionSync();
   const compassFlag =
     typeof localStorage !== "undefined" && localStorage.getItem(COMPASS_GRANTED_FLAG) === "1";
   const orientation = perms.orientation || compassFlag;
@@ -66,11 +72,45 @@ export async function getSyncroPermissionStatus(): Promise<SyncroPermissionStatu
   };
 }
 
-/** Request camera for AR; stops tracks immediately after grant. */
+function isPermissionDeniedError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const name = (error as { name?: string }).name ?? "";
+  return name === "NotAllowedError" || name === "PermissionDeniedError";
+}
+
+/** If the browser already granted camera, mirror that into localStorage (PWA revisit). */
+export async function syncCameraPermissionFromBrowser(): Promise<boolean> {
+  if (typeof navigator === "undefined" || !navigator.permissions?.query) {
+    return readSyncroPermissionSync().camera;
+  }
+
+  try {
+    const status = await navigator.permissions.query({
+      name: "camera" as PermissionName,
+    });
+    if (status.state === "granted") {
+      await saveSyncroPermission("camera", true);
+      return true;
+    }
+    if (status.state === "denied") {
+      await saveSyncroPermission("camera", false);
+      return false;
+    }
+  } catch {
+    // permissions.query unsupported for camera on some WebKit builds
+  }
+
+  return readSyncroPermissionSync().camera;
+}
+
+/** Request camera for AR; stops tracks immediately after grant. Persists in localStorage. */
 export async function requestSyncroCameraPermission(): Promise<boolean> {
   if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
-    await saveSyncroPermission("camera", false);
     return false;
+  }
+
+  if (readSyncroPermissionSync().camera) {
+    return true;
   }
 
   try {
@@ -83,7 +123,31 @@ export async function requestSyncroCameraPermission(): Promise<boolean> {
     return true;
   } catch (e) {
     console.warn("[syncro] camera permission denied", e);
-    await saveSyncroPermission("camera", false);
+    if (isPermissionDeniedError(e)) {
+      await saveSyncroPermission("camera", false);
+    }
     return false;
+  }
+}
+
+/** Start AR camera stream — no prompt if OS permission + local cache already granted. */
+export async function acquireSyncroCameraStream(): Promise<MediaStream | null> {
+  if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+    return null;
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" },
+      audio: false,
+    });
+    await saveSyncroPermission("camera", true);
+    return stream;
+  } catch (e) {
+    console.warn("[syncro] camera stream failed", e);
+    if (isPermissionDeniedError(e)) {
+      await saveSyncroPermission("camera", false);
+    }
+    return null;
   }
 }

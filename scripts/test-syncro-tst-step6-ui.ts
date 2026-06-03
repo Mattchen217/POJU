@@ -188,7 +188,7 @@ function main() {
   assert(mainView.includes("onRetryHour"), "main wires hour retry");
   assert(mainView.includes("SyncroMapMode"), "main has map mode");
   assert(mainView.includes("SyncroARMode"), "main has AR mode");
-  assert(mainView.includes("loadSyncroPermission"), "main loads permissions");
+  assert(mainView.includes("readSyncroPermissionSync"), "main loads cached permissions");
   assert(!mainView.includes("tiltSuggestsMode"), "no posture auto-switch");
 
   const hourBar = readFileSync(join(ROOT, "components/syncro/HourProgressBar.tsx"), "utf8");

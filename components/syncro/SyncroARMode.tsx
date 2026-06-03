@@ -22,6 +22,10 @@ import {
   SYNCRO_RING_SIZE,
   SYNCRO_WHY_BUTTON_MARGIN_TOP,
 } from "@/lib/syncro/syncro-ring-layout";
+import {
+  acquireSyncroCameraStream,
+  readSyncroPermissionSync,
+} from "@/lib/syncro/permissions";
 import { matrixKey, type HourPeriod, type SyncroSession } from "@/lib/syncro/types";
 
 import "@/styles/syncro-compass.css";
@@ -68,6 +72,21 @@ export function SyncroARMode({
   const streamRef = useRef<MediaStream | null>(null);
   const [streamReady, setStreamReady] = useState(false);
   const [whyOpen, setWhyOpen] = useState(false);
+  const [cachedCameraGranted, setCachedCameraGranted] = useState(
+    () => cameraGranted || readSyncroPermissionSync().camera,
+  );
+
+  const effectiveCameraGranted = cameraGranted || cachedCameraGranted;
+
+  useEffect(() => {
+    if (cameraGranted) setCachedCameraGranted(true);
+  }, [cameraGranted]);
+
+  useEffect(() => {
+    if (readSyncroPermissionSync().camera) {
+      setCachedCameraGranted(true);
+    }
+  }, []);
 
   const direction = compassDegreeToDirection(alpha);
   const cellKey = matrixKey(hourPeriod, direction);
@@ -76,7 +95,7 @@ export function SyncroARMode({
   const haloColor = HALO_COLORS[cell?.current_level ?? "stillwater"];
 
   useEffect(() => {
-    if (!cameraGranted) {
+    if (!effectiveCameraGranted) {
       setStreamReady(false);
       return;
     }
@@ -84,29 +103,25 @@ export function SyncroARMode({
     let cancelled = false;
 
     async function startCamera() {
-      if (!navigator.mediaDevices?.getUserMedia) return;
-
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" },
-          audio: false,
-        });
-
-        if (cancelled) {
-          stream.getTracks().forEach((track) => track.stop());
-          return;
-        }
-
-        streamRef.current = stream;
-        const video = videoRef.current;
-        if (video) {
-          video.srcObject = stream;
-          await video.play().catch(() => undefined);
-          setStreamReady(true);
-        }
-      } catch (e) {
-        console.error("[AR] camera failed:", e);
+      const stream = await acquireSyncroCameraStream();
+      if (!stream) {
+        setCachedCameraGranted(false);
         setStreamReady(false);
+        return;
+      }
+
+      if (cancelled) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+
+      setCachedCameraGranted(true);
+      streamRef.current = stream;
+      const video = videoRef.current;
+      if (video) {
+        video.srcObject = stream;
+        await video.play().catch(() => undefined);
+        setStreamReady(true);
       }
     }
 
@@ -117,7 +132,7 @@ export function SyncroARMode({
       streamRef.current?.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     };
-  }, [cameraGranted]);
+  }, [effectiveCameraGranted]);
 
   const levelKey = cell ? getCurrentLevelI18nKey(cell.current_level) : null;
   let levelTitle = "";
@@ -129,7 +144,7 @@ export function SyncroARMode({
     }
   }
 
-  if (!cameraGranted) {
+  if (!effectiveCameraGranted) {
     return (
       <div className="compass-page">
         <PostureHintOverlay mode="ar" beta={beta} />
