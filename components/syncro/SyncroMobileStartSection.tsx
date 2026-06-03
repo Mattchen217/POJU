@@ -41,7 +41,6 @@ export function SyncroMobileStartSection() {
   const locale = useLocale();
   const searchParams = useSearchParams();
   const t = useTranslations("syncro");
-  const tHome = useTranslations("syncro.home");
 
   const [capability, setCapability] = useState<DeviceCapability | null>(null);
   const [showQR, setShowQR] = useState(false);
@@ -89,12 +88,7 @@ export function SyncroMobileStartSection() {
   }
 
   const qrUrl = buildSyncroMobileUrl(locale);
-  const isDesktop = capability?.isDesktop ?? false;
-  const ctaLabel = isDesktop
-    ? tHome("cta_start")
-    : isFreeAvailable
-      ? t("start_free")
-      : t("start_paid");
+  const ctaLabel = isFreeAvailable ? t("start_free") : t("start_paid");
 
   if (checking) {
     return (
@@ -104,7 +98,11 @@ export function SyncroMobileStartSection() {
     );
   }
 
-  if (!isDesktop && !isSupportedDevice) {
+  if (capability?.isDesktop) {
+    return null;
+  }
+
+  if (!isSupportedDevice) {
     return (
       <section id="syncro-start" className="mx-auto w-full max-w-lg px-4 pb-16 pt-4 text-center">
         <p className="text-[15px] leading-8 text-text-secondary">{t("not_supported_device")}</p>
@@ -114,11 +112,7 @@ export function SyncroMobileStartSection() {
 
   return (
     <section id="syncro-start" className="mx-auto w-full max-w-lg px-4 pb-16 pt-2">
-      {isDesktop ? (
-        <p className="mt-6 text-center text-sm leading-7 text-text-secondary">{t("open_on_mobile_hint")}</p>
-      ) : null}
-
-      <div className={isDesktop ? "mt-10 text-center" : "mt-6 text-center"}>
+      <div className="mt-6 text-center">
         <button
           type="button"
           onClick={handleStart}
@@ -126,20 +120,16 @@ export function SyncroMobileStartSection() {
         >
           {ctaLabel}
         </button>
-        {!isDesktop ? (
-          <p className="mt-4 text-sm leading-7 text-text-dim">
-            {isFreeAvailable ? t("free_note") : t("paid_note")}
-          </p>
-        ) : null}
+        <p className="mt-4 text-sm leading-7 text-text-dim">
+          {isFreeAvailable ? t("free_note") : t("paid_note")}
+        </p>
       </div>
 
-      {!isDesktop ? (
-        <div className="mt-10 grid gap-4">
-          <FeatureCard icon="🧭" titleKey="feature_realtime" descKey="feature_realtime_desc" />
-          <FeatureCard icon="⚡" titleKey="feature_directional" descKey="feature_directional_desc" />
-          <FeatureCard icon="📹" titleKey="feature_vr" descKey="feature_vr_desc" />
-        </div>
-      ) : null}
+      <div className="mt-10 grid gap-4">
+        <FeatureCard icon="🧭" titleKey="feature_realtime" descKey="feature_realtime_desc" />
+        <FeatureCard icon="⚡" titleKey="feature_directional" descKey="feature_directional_desc" />
+        <FeatureCard icon="📹" titleKey="feature_vr" descKey="feature_vr_desc" />
+      </div>
 
       {showQR ? <SyncroDesktopQRModal onClose={() => setShowQR(false)} url={qrUrl} /> : null}
     </section>

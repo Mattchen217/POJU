@@ -25,6 +25,8 @@ export type OrientationContextValue = {
 
 const OrientationContext = createContext<OrientationContextValue | null>(null);
 
+export { OrientationContext };
+
 export function useOrientation(): OrientationContextValue {
   const ctx = useContext(OrientationContext);
   if (!ctx) {

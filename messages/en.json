@@ -462,7 +462,8 @@
         ],
         "footnote": "Refreshes every two hours through your 24-hour window.",
         "preview_label": "Preview",
-        "preview_placeholder": "Phone mockup placeholder — replace with a Syncro screen capture when ready."
+        "preview_placeholder": "Phone mockup placeholder — replace with a Syncro screen capture when ready.",
+        "preview_mode_hint": "Tap Compass / AR / Map below to switch views — same as the installed app."
       },
       "use_cases": {
         "heading": "Where Syncro fits.",
@@ -510,6 +511,19 @@
         "heading": "Pricing",
         "description": "Your first Syncro is free. We want you to feel how spatial reflection works with no commitment. After that, $4.99 unlocks a 24-hour live window — guidance updating every two hours for one specific task. No subscription. No auto-renewal.",
         "cta": "Open Syncro on mobile"
+      },
+      "pwa_guide": {
+        "title": "Install Syncro on your phone",
+        "subtitle": "Syncro only works as an installed app on your home screen. Follow the steps for your phone below.",
+        "ios_browser_note": "Open pojulife.com/syncro in Safari only — other browsers on iPhone cannot install the app.",
+        "android_browser_note": "Open pojulife.com/syncro in Chrome only — other Android browsers cannot install the full app.",
+        "ios_step_4": "Leave Safari and open pojulife from your Home Screen icon.",
+        "android_step_1": "Tap the Share button in Chrome (or the menu ⋮ if Share is inside it).",
+        "android_step_2": "Choose Add to Home screen or Install app.",
+        "android_step_3": "Tap Install or Add to confirm.",
+        "android_step_4": "Leave Chrome and open pojulife from your Home Screen icon.",
+        "footer_note": "After installing, always open Syncro from the pojulife icon on your home screen — not from a browser tab.",
+        "close": "Got it"
       }
     },
     "footer": {
@@ -846,6 +860,7 @@
     "section_title": "Saved action plans",
     "title": "Your Archive",
     "loading": "Loading…",
+    "load_error": "Could not read your local archive. Close and reopen the app, then try again.",
     "empty_message": "Your POJU action plans, Glyph readings, Syncro sessions, and Match readings will appear here.",
     "filter_all": "All"
   },

@@ -1,6 +1,6 @@
 import { safeRandomUUID } from "@/lib/client/safe-crypto";
 import { decryptJson, encryptJson } from "@/lib/crypto";
-import { getPojuDb, type ArchiveRecord } from "@/lib/db/poju-db";
+import { getPojuDb, ensurePojuDbReady, type ArchiveRecord } from "@/lib/db/poju-db";
 import { ARCHIVE_UPDATED_EVENT } from "@/lib/archive/runtime-archive";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
 import { mapSessionActionsToArchiveActions } from "@/lib/archive/map-actions-for-archive";
@@ -111,6 +111,16 @@ function notifyArchiveUpdated(): void {
   window.dispatchEvent(new CustomEvent(ARCHIVE_UPDATED_EVENT));
 }
 
+function archiveCreatedMs(created: Date | string | number): number {
+  if (created instanceof Date) return created.getTime();
+  const ms = new Date(created).getTime();
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+function normalizeArchiveCreatedAt(created: Date | string | number): string {
+  return new Date(archiveCreatedMs(created)).toISOString();
+}
+
 export async function saveActionRecommendationsToArchive(input: {
   session_id: string;
   profile_id: string;
@@ -155,19 +165,20 @@ export async function listArchive(filter?: {
   product?: ArchiveRecord["product"];
 }): Promise<ArchiveSummary[]> {
   const deviceId = getPojuDeviceId();
-  const records = await getPojuDb().archive.where("device_id").equals(deviceId).toArray();
+  const db = await ensurePojuDbReady();
+  const records = await db.archive.where("device_id").equals(deviceId).toArray();
 
   return records
     .filter((r) => !filter?.type || r.type === filter.type)
     .filter((r) => !filter?.product || r.product === filter.product)
-    .sort((a, b) => b.created_at.getTime() - a.created_at.getTime())
+    .sort((a, b) => archiveCreatedMs(b.created_at) - archiveCreatedMs(a.created_at))
     .map((r) => ({
       archive_id: r.archive_id,
       type: r.type,
       title: r.title,
       product: r.product,
       session_id: r.session_id,
-      created_at: r.created_at.toISOString(),
+      created_at: normalizeArchiveCreatedAt(r.created_at),
     }));
 }
 

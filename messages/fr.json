@@ -733,6 +733,7 @@
     "section_title": "Plans d’action enregistrés",
     "title": "Votre Archive",
     "loading": "Chargement…",
+    "load_error": "Impossible de lire l’archive locale. Fermez et rouvrez l’app.",
     "empty_message": "Plans POJU, lectures Glyph, sessions Syncro et lectures Match apparaîtront ici.",
     "filter_all": "Tout"
   },

@@ -58,6 +58,7 @@ export type SyncroARModeProps = {
   highlightMatrixKeys?: Set<string>;
   cameraGranted?: boolean;
   onRequestCamera?: () => void;
+  marketingPreview?: boolean;
 };
 
 export function SyncroARMode({
@@ -67,6 +68,7 @@ export function SyncroARMode({
   highlightMatrixKeys,
   cameraGranted = false,
   onRequestCamera,
+  marketingPreview = false,
 }: SyncroARModeProps) {
   const t = useTranslations("syncro");
   const tLevels = useTranslations("syncro.levels");
@@ -81,7 +83,7 @@ export function SyncroARMode({
     () => cameraGranted || readSyncroPermissionSync().camera,
   );
 
-  const effectiveCameraGranted = cameraGranted || cachedCameraGranted;
+  const effectiveCameraGranted = marketingPreview || cameraGranted || cachedCameraGranted;
 
   useEffect(() => {
     if (cameraGranted) setCachedCameraGranted(true);
@@ -100,6 +102,7 @@ export function SyncroARMode({
   const haloColor = HALO_COLORS[cell?.current_level ?? "stillwater"];
 
   useEffect(() => {
+    if (marketingPreview) return;
     if (!effectiveCameraGranted) {
       setStreamReady(false);
       return;
@@ -137,7 +140,7 @@ export function SyncroARMode({
       streamRef.current?.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     };
-  }, [effectiveCameraGranted]);
+  }, [effectiveCameraGranted, marketingPreview]);
 
   const levelKey = cell ? getCurrentLevelI18nKey(cell.current_level) : null;
   let levelTitle = "";
@@ -149,7 +152,7 @@ export function SyncroARMode({
     }
   }
 
-  if (!effectiveCameraGranted) {
+  if (!effectiveCameraGranted && !marketingPreview) {
     return (
       <div className="compass-page">
         <PostureHintOverlay mode="ar" beta={beta} />
@@ -226,9 +229,21 @@ export function SyncroARMode({
             playsInline
             muted
             autoPlay
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            style={{ width: "100%", height: "100%", objectFit: "cover", display: marketingPreview ? "none" : "block" }}
           />
-          {!streamReady ? (
+          {marketingPreview ? (
+            <div
+              className="syncro-ar-marketing-placeholder"
+              aria-hidden
+              style={{
+                position: "absolute",
+                inset: 0,
+                background:
+                  "linear-gradient(145deg, #1a2840 0%, #3d2a52 35%, #6b4a7a 55%, #2a3d5c 100%)",
+              }}
+            />
+          ) : null}
+          {!marketingPreview && !streamReady ? (
             <div
               style={{
                 position: "absolute",
@@ -279,29 +294,31 @@ export function SyncroARMode({
         </div>
       ) : null}
 
-      <div style={{ textAlign: "center", marginTop: SYNCRO_WHY_BUTTON_MARGIN_TOP }}>
-        <button
-          type="button"
-          className="why-btn-prominent"
-          disabled={!cell || !isSyncroLlmReady(cell, session.llm_meta)}
-          onClick={() => setWhyOpen(true)}
-          style={{
-            padding: "8px 18px",
-            background: "rgba(212, 165, 116, 0.12)",
-            color: "#D4A574",
-            fontSize: 11,
-            fontWeight: 500,
-            border: "none",
-            borderRadius: 20,
-            cursor: "pointer",
-            fontFamily: "inherit",
-          }}
-        >
-          {t("why_this_current")}
-        </button>
-      </div>
+      {marketingPreview ? null : (
+        <div style={{ textAlign: "center", marginTop: SYNCRO_WHY_BUTTON_MARGIN_TOP }}>
+          <button
+            type="button"
+            className="why-btn-prominent"
+            disabled={!cell || !isSyncroLlmReady(cell, session.llm_meta)}
+            onClick={() => setWhyOpen(true)}
+            style={{
+              padding: "8px 18px",
+              background: "rgba(212, 165, 116, 0.12)",
+              color: "#D4A574",
+              fontSize: 11,
+              fontWeight: 500,
+              border: "none",
+              borderRadius: 20,
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            {t("why_this_current")}
+          </button>
+        </div>
+      )}
 
-      {whyOpen && cell && isSyncroLlmReady(cell, session.llm_meta) ? (
+      {!marketingPreview && whyOpen && cell && isSyncroLlmReady(cell, session.llm_meta) ? (
         <WhyThisCurrentModal
           cell={cell}
           direction={direction}

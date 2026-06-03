@@ -34,7 +34,7 @@ const CARD_SPLINES: Partial<Record<string, CardSplineConfig>> = {
   },
   match: {
     scene: MATCH_SPLINE_SCENE,
-    initialZoom: 0.36,
+    initialZoom: 0.22,
     innerClassName: "match-card-spline-inner",
   },
 };

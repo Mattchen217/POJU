@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 
 import { listArchive, type ArchiveSummary } from "@/lib/archive/archive-service";
@@ -22,29 +22,58 @@ function dayLabel(ts: number): "Today" | "Yesterday" | "Earlier" {
 
 export function ArchiveActionPlansList() {
   const t = useTranslations("archiveVault");
+  const locale = useLocale();
   const [items, setItems] = useState<ArchiveSummary[]>([]);
   const [filter, setFilter] = useState<FilterKey>("all");
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const list = await listArchive({
+  const load = useCallback(async () => {
+    setLoading(true);
+    setLoadError(false);
+    try {
+      let list = await listArchive({
+        product: filter === "all" ? undefined : filter,
+      });
+      if (list.length === 0) {
+        await new Promise((r) => window.setTimeout(r, 150));
+        list = await listArchive({
           product: filter === "all" ? undefined : filter,
         });
-        setItems(list);
-      } catch (e) {
-        console.error(e);
-        setItems([]);
-      } finally {
-        setLoading(false);
       }
-    };
-    void load();
-    window.addEventListener(ARCHIVE_UPDATED_EVENT, load);
-    return () => window.removeEventListener(ARCHIVE_UPDATED_EVENT, load);
+      setItems(list);
+    } catch (e) {
+      console.error("[archive] list failed:", e);
+      setItems([]);
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
   }, [filter]);
+
+  useEffect(() => {
+    void load();
+  }, [load, locale]);
+
+  useEffect(() => {
+    const onRefresh = () => {
+      void load();
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void load();
+    };
+
+    window.addEventListener(ARCHIVE_UPDATED_EVENT, onRefresh);
+    window.addEventListener("focus", onRefresh);
+    window.addEventListener("pageshow", onRefresh);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener(ARCHIVE_UPDATED_EVENT, onRefresh);
+      window.removeEventListener("focus", onRefresh);
+      window.removeEventListener("pageshow", onRefresh);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [load]);
 
   const grouped = useMemo(() => {
     const buckets: Record<"Today" | "Yesterday" | "Earlier", ArchiveSummary[]> = {
@@ -58,7 +87,13 @@ export function ArchiveActionPlansList() {
     return buckets;
   }, [items]);
 
-  if (!loading && items.length === 0) return null;
+  const filterOptions = [
+    { key: "all" as const, label: t("filter_all") },
+    { key: "poju" as const, label: "POJU" },
+    { key: "glyph" as const, label: "Glyph" },
+    { key: "syncro" as const, label: "Syncro" },
+    { key: "match" as const, label: "Match" },
+  ];
 
   return (
     <section className="archive-vault-section mb-12">
@@ -67,14 +102,7 @@ export function ArchiveActionPlansList() {
       </h2>
 
       <div className="mb-4 flex flex-wrap gap-2">
-        {(
-          [
-            { key: "all", label: t("filter_all") },
-            { key: "poju", label: "POJU" },
-            { key: "glyph", label: "Glyph" },
-            { key: "syncro", label: "Syncro" },
-          ] as const
-        ).map((opt) => (
+        {filterOptions.map((opt) => (
           <button
             key={opt.key}
             type="button"
@@ -92,6 +120,10 @@ export function ArchiveActionPlansList() {
 
       {loading ? (
         <p className="text-sm text-[#cbc3d7]/70">{t("loading")}</p>
+      ) : loadError ? (
+        <p className="text-sm text-amber-200/90">{t("load_error")}</p>
+      ) : items.length === 0 ? (
+        <p className="text-sm leading-relaxed text-[#cbc3d7]/80">{t("empty_message")}</p>
       ) : (
         <div className="space-y-8">
           {(["Today", "Yesterday", "Earlier"] as const).map((bucket) =>

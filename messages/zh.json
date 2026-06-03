@@ -477,7 +477,8 @@
         ],
         "footnote": "在你的 24 小时窗口内每两小时刷新。",
         "preview_label": "预览",
-        "preview_placeholder": "手机示意图占位符 — 准备好后可替换为 Syncro 截图。"
+        "preview_placeholder": "手机示意图占位符 — 准备好后可替换为 Syncro 截图。",
+        "preview_mode_hint": "点击底部切换罗盘 / AR / 地图 — 与安装后的应用相同。"
       },
       "use_cases": {
         "heading": "Syncro 适合放在哪里。",
@@ -525,6 +526,19 @@
         "heading": "定价",
         "description": "你的首次 Syncro 免费。我们希望你在无承诺的情况下感受空间反思。之后 $4.99 解锁 24 小时实时窗口 —— 针对一项具体任务，每两小时更新指引。无订阅、无自动续费。",
         "cta": "在手机上打开 Syncro"
+      },
+      "pwa_guide": {
+        "title": "在手机上安装 Syncro",
+        "subtitle": "Syncro 只能通过安装到主屏幕的 PWA 使用。请根据你的手机，按下方步骤操作。",
+        "ios_browser_note": "请仅用 Safari 打开 pojulife.com/syncro —— iPhone 上其他浏览器无法完成安装。",
+        "android_browser_note": "请仅用 Chrome 打开 pojulife.com/syncro —— Android 上其他浏览器无法安装完整应用。",
+        "ios_step_4": "退出 Safari，从主屏幕的 pojulife 图标进入。",
+        "android_step_1": "在 Chrome 中点击分享按钮（或在菜单 ⋮ 里找到分享）。",
+        "android_step_2": "选择「添加到主屏幕」或「安装应用」。",
+        "android_step_3": "点击「安装」或「添加」确认。",
+        "android_step_4": "退出 Chrome，从主屏幕的 pojulife 图标进入。",
+        "footer_note": "安装完成后，请始终从主屏幕的 pojulife 图标打开 Syncro，不要从浏览器标签页进入。",
+        "close": "知道了"
       }
     },
     "footer": {
@@ -861,6 +875,7 @@
     "section_title": "已保存的行动建议",
     "title": "你的 Archive",
     "loading": "加载中…",
+    "load_error": "无法读取本机 Archive，请关闭并重新打开应用后再试。",
     "empty_message": "POJU 行动建议、Glyph 解读、Syncro 会话与 Match 合盘会显示在这里。",
     "filter_all": "全部"
   },

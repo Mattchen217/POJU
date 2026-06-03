@@ -333,3 +333,12 @@ export function getPojuDb(): PojuDb {
   if (!singleton) singleton = new PojuDb();
   return singleton;
 }
+
+/** Wait for Dexie open — avoids empty archive list on first PWA paint / locale remount. */
+export async function ensurePojuDbReady(): Promise<PojuDb> {
+  const db = getPojuDb();
+  if (!db.isOpen()) {
+    await db.open();
+  }
+  return db;
+}

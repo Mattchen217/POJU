@@ -1,0 +1,78 @@
+/* Marketing page — scaled live Syncro UI inside phone mockup */
+
+.syncro-marketing-phone-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.syncro-marketing-phone-preview__frame {
+  --syncro-preview-scale: calc(280 / 390);
+  width: 280px;
+  height: calc(var(--syncro-preview-height, 844px) * var(--syncro-preview-scale));
+  overflow: hidden;
+  border-radius: 2rem;
+  border: 1px solid rgb(255 255 255 / 0.2);
+  background: radial-gradient(circle at center, #0a0a1a 0%, #000 100%);
+  box-shadow:
+    0 14px 36px rgb(0 0 0 / 0.32),
+    inset 0 1px 0 rgb(255 255 255 / 0.08);
+}
+
+.syncro-marketing-phone-preview__viewport {
+  width: var(--syncro-preview-width, 390px);
+  height: var(--syncro-preview-height, 844px);
+  transform: scale(var(--syncro-preview-scale));
+  transform-origin: top left;
+  pointer-events: auto;
+}
+
+.syncro-marketing-phone-preview__hint {
+  margin-top: 0.875rem;
+  max-width: 18rem;
+  text-align: center;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: rgb(255 255 255 / 0.55);
+}
+
+/* Override fixed PWA layout for embedded preview */
+.syncro-main-view.syncro-main-view--marketing {
+  position: relative;
+  inset: auto;
+  width: 100%;
+  height: 100%;
+  min-height: var(--syncro-preview-height, 844px);
+  --syncro-nav-reserve: 8px;
+  --syncro-toggle-bottom: 8px;
+  --syncro-bottom-reserve: 48px;
+  --syncro-hour-top: 0px;
+  --syncro-stage-top: 96px;
+}
+
+.syncro-main-view--marketing .hour-progress-bar {
+  padding-top: 6px;
+}
+
+.syncro-main-view--marketing .syncro-mode-stage {
+  padding-bottom: 52px;
+}
+
+.syncro-main-view--marketing .compass-short-advice {
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.syncro-main-view--marketing .syncro-center-level-title {
+  font-size: 18px;
+}
+
+.syncro-main-view--marketing .three-mode-toggle {
+  bottom: 8px;
+  z-index: 40;
+}
+
+.syncro-main-view--marketing .three-mode-toggle .mode-tab {
+  pointer-events: auto;
+}

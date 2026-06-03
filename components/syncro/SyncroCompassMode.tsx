@@ -45,6 +45,8 @@ export type SyncroCompassModeProps = {
   highlightMatrixKeys?: Set<string>;
   llmProgress?: SyncroLlmProgress;
   backgroundStream?: SyncroBackgroundStreamState;
+  /** Marketing phone preview — skip device checks, hide Why CTA. */
+  marketingPreview?: boolean;
 };
 
 /** Same page shell as AR (compass-page): ring + advice below, not overlaid on particles. */
@@ -55,6 +57,7 @@ export function SyncroCompassMode({
   highlightMatrixKeys,
   llmProgress,
   backgroundStream,
+  marketingPreview = false,
 }: SyncroCompassModeProps) {
   const t = useTranslations("syncro");
   const tLevels = useTranslations("syncro.levels");
@@ -94,7 +97,7 @@ export function SyncroCompassMode({
     }
   }
 
-  if (!isSupported) {
+  if (!isSupported && !marketingPreview) {
     return (
       <div className="compass-page">
         <p style={{ textAlign: "center", color: "#8A8AA0", marginTop: 80 }}>
@@ -161,18 +164,20 @@ export function SyncroCompassMode({
         </div>
       ) : null}
 
-      <div style={{ textAlign: "center", marginTop: SYNCRO_WHY_BUTTON_MARGIN_TOP }}>
-        <button
-          type="button"
-          className="why-btn-prominent"
-          disabled={!canOpenWhy}
-          onClick={() => {
-            if (canOpenWhy) setWhyModalOpen(true);
-          }}
-        >
-          {t("why_this_current")}
-        </button>
-      </div>
+      {marketingPreview ? null : (
+        <div style={{ textAlign: "center", marginTop: SYNCRO_WHY_BUTTON_MARGIN_TOP }}>
+          <button
+            type="button"
+            className="why-btn-prominent"
+            disabled={!canOpenWhy}
+            onClick={() => {
+              if (canOpenWhy) setWhyModalOpen(true);
+            }}
+          >
+            {t("why_this_current")}
+          </button>
+        </div>
+      )}
 
       {showClientStream && backgroundStream ? (
         <div style={{ maxWidth: 320, margin: "8px auto 0", padding: "0 20px" }}>
@@ -185,7 +190,7 @@ export function SyncroCompassMode({
         </div>
       ) : null}
 
-      {whyModalOpen && cell && canOpenWhy ? (
+      {!marketingPreview && whyModalOpen && cell && canOpenWhy ? (
         <WhyThisCurrentModal
           cell={cell}
           direction={currentDirection}

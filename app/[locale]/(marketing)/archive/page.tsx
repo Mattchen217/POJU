@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { ArchiveActionPlansList } from "@/components/archive/archive-action-plans-list";
+import { NotPWA } from "@/components/pwa/PWAConditional";
 import { ArchiveRuntimePreview } from "@/components/archive/archive-runtime-preview";
 import { WipeEverythingButton } from "@/components/archive/wipe-everything-button";
 import { MarketingPageLayout, MarketingPageSections } from "@/components/marketing/marketing-page-layout";
@@ -36,36 +37,14 @@ export default function ArchivePage() {
         <MarketingSection padding="lg" allowOverflow>
           <div className="space-y-12">
             <ArchiveActionPlansList />
-            <ArchiveRuntimePreview />
+            <NotPWA>
+              <ArchiveRuntimePreview />
+            </NotPWA>
           </div>
 
           <div className="mt-16 text-center md:text-left">
             <WipeEverythingButton />
           </div>
-
-          <nav className="fixed bottom-0 left-0 z-40 flex w-full items-center justify-around rounded-t-2xl border-t border-white/10 bg-[#1E1E22]/60 px-4 pb-6 pt-3 backdrop-blur-2xl md:hidden">
-            <a className="flex flex-col items-center justify-center px-3 py-1 text-white/30 transition-all hover:bg-white/5" href="#">
-              <span className="material-symbols-outlined mb-1">inventory_2</span>
-              <span className="font-['Manrope'] text-[10px] font-medium uppercase tracking-tight">Vault</span>
-            </a>
-            <a className="flex flex-col items-center justify-center px-3 py-1 text-white/30 transition-all hover:bg-white/5" href="#">
-              <span className="material-symbols-outlined mb-1">auto_awesome</span>
-              <span className="font-['Manrope'] text-[10px] font-medium uppercase tracking-tight">Glyph</span>
-            </a>
-            <a className="flex flex-col items-center justify-center px-3 py-1 text-white/30 transition-all hover:bg-white/5" href="#">
-              <span className="material-symbols-outlined mb-1">sync</span>
-              <span className="font-['Manrope'] text-[10px] font-medium uppercase tracking-tight">Sync</span>
-            </a>
-            <a
-              className="flex scale-105 flex-col items-center justify-center rounded-xl bg-violet-500/10 px-3 py-1 text-violet-400 duration-200"
-              href="#"
-            >
-              <span className="material-symbols-outlined mb-1" style={{ fontVariationSettings: "'FILL' 1" }}>
-                archive
-              </span>
-              <span className="font-['Manrope'] text-[10px] font-medium uppercase tracking-tight">Archive</span>
-            </a>
-          </nav>
         </MarketingSection>
       </MarketingPageSections>
     </MarketingPageLayout>

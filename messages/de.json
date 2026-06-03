@@ -733,6 +733,7 @@
     "section_title": "Gespeicherte Aktionspläne",
     "title": "Dein Archive",
     "loading": "Wird geladen…",
+    "load_error": "Lokales Archiv konnte nicht gelesen werden. App schließen und erneut öffnen.",
     "empty_message": "POJU-Aktionspläne, Glyph-Lesungen, Syncro-Sessions und Match-Lesungen erscheinen hier.",
     "filter_all": "Alle"
   },

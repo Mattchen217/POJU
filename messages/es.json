@@ -733,6 +733,7 @@
     "section_title": "Planes de acción guardados",
     "title": "Tu Archive",
     "loading": "Cargando…",
+    "load_error": "No se pudo leer tu archivo local. Cierra y vuelve a abrir la app.",
     "empty_message": "Planes POJU, lecturas Glyph, sesiones Syncro y lecturas Match aparecerán aquí.",
     "filter_all": "Todo"
   },

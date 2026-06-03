@@ -52,6 +52,7 @@ export type SyncroMapModeProps = {
   activeDirection: DirectionId;
   onSelectDirection: (dir: DirectionId) => void;
   highlightMatrixKeys?: Set<string>;
+  marketingPreview?: boolean;
 };
 
 export function SyncroMapMode({
@@ -61,6 +62,7 @@ export function SyncroMapMode({
   activeDirection: selectedDir,
   onSelectDirection: setSelectedDir,
   highlightMatrixKeys,
+  marketingPreview = false,
 }: SyncroMapModeProps) {
   const t = useTranslations("syncro");
   const tLevels = useTranslations("syncro.levels");
@@ -154,20 +156,22 @@ export function SyncroMapMode({
         </div>
       ) : null}
 
-      <div style={{ textAlign: "center", marginTop: SYNCRO_WHY_BUTTON_MARGIN_TOP }}>
-        <button
-          type="button"
-          className="why-btn-prominent"
-          disabled={!canOpenWhy}
-          onClick={() => {
-            if (canOpenWhy) setWhyOpen(true);
-          }}
-        >
-          {t("why_this_current")}
-        </button>
-      </div>
+      {marketingPreview ? null : (
+        <div style={{ textAlign: "center", marginTop: SYNCRO_WHY_BUTTON_MARGIN_TOP }}>
+          <button
+            type="button"
+            className="why-btn-prominent"
+            disabled={!canOpenWhy}
+            onClick={() => {
+              if (canOpenWhy) setWhyOpen(true);
+            }}
+          >
+            {t("why_this_current")}
+          </button>
+        </div>
+      )}
 
-      {whyOpen && cell && canOpenWhy ? (
+      {!marketingPreview && whyOpen && cell && canOpenWhy ? (
         <WhyThisCurrentModal
           cell={cell}
           direction={selectedDir}
