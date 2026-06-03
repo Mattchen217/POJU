@@ -34,9 +34,8 @@ const CARD_SPLINES: Partial<Record<string, CardSplineConfig>> = {
   },
   match: {
     scene: MATCH_SPLINE_SCENE,
-    initialZoom: 0.55,
-    innerClassName:
-      "absolute inset-x-0 top-1/2 min-h-0 h-[108%] w-full -translate-y-1/2 [filter:brightness(1.18)_contrast(1.15)_saturate(1.1)]",
+    initialZoom: 0.36,
+    innerClassName: "match-card-spline-inner",
   },
 };
 

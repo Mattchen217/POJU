@@ -39,7 +39,12 @@ export function MatchSplineScene({
   return (
     <SplineInteractiveScene
       scene={MATCH_SPLINE_SCENE}
-      className={cn("match-spline-scene", className)}
+      className={cn(
+        "match-spline-scene",
+        variant === "hero" && "match-spline-scene--hero",
+        variant === "card" && "match-spline-scene--card",
+        className,
+      )}
       initialZoom={zoom}
       pointerFollow={follow}
       webGLContext={variant === "analyzing" ? "preparing" : "marketing"}

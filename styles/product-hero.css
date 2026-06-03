@@ -36,28 +36,55 @@
 }
 
 .product-hero__bg--match {
-  /* legacy slot — Match hero uses `background` prop + `.match-hero-spline` */
+  /* Match hero — full-bleed spline via `.match-hero-spline` */
+}
+
+.product-page--match .product-hero,
+.product-page--match .product-hero__bg,
+.product-page--match .product-hero__shell {
+  overflow: visible;
 }
 
 .match-hero-spline {
   position: absolute;
   left: 50%;
-  top: 42%;
-  width: min(100vw, 92vh);
-  height: min(100vw, 92vh);
-  max-width: 680px;
-  max-height: 680px;
+  top: 50%;
+  width: 140%;
+  height: min(780px, 96vh);
+  min-height: 420px;
   transform: translate(-50%, -50%);
-  opacity: 0.78;
+  opacity: 0.82;
   pointer-events: auto;
+  overflow: visible;
 }
 
 .pwa-mode .match-hero-spline {
-  top: 40%;
-  width: min(92vmin, 92vw);
-  height: min(92vmin, 92vw);
-  max-width: 560px;
-  max-height: 560px;
+  width: 132%;
+  height: min(680px, 92vh);
+  min-height: 360px;
+}
+
+.match-spline-scene--hero,
+.match-spline-scene--hero canvas {
+  overflow: visible !important;
+  max-width: none !important;
+  max-height: none !important;
+}
+
+/* Homepage Match card — shrink scene so both circles fit inside card */
+.match-card-spline-inner {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 92%;
+  height: 92%;
+  transform: translate(-50%, -50%);
+  filter: brightness(1.16) contrast(1.12) saturate(1.08);
+}
+
+.match-spline-scene--card {
+  width: 100%;
+  height: 100%;
 }
 
 .match-spline-scene.spline-interactive-scene--static {
