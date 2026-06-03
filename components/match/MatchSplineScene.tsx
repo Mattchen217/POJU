@@ -3,11 +3,14 @@
 import { SplineInteractiveScene } from "@/components/spline/SplineInteractiveScene";
 import {
   MATCH_SPLINE_ANALYZING_ZOOM,
+  MATCH_SPLINE_CARD_DISPLAY_SCALE,
   MATCH_SPLINE_CARD_ZOOM,
+  MATCH_SPLINE_HERO_DISPLAY_SCALE,
   MATCH_SPLINE_HERO_ZOOM,
   MATCH_SPLINE_SCENE,
 } from "@/lib/match/match-spline-scene";
 import { cn } from "@/lib/utils/classnames";
+import type { CSSProperties } from "react";
 
 import "@/styles/spline-interactive.css";
 
@@ -26,6 +29,11 @@ type MatchSplineSceneProps = {
   pointerFollow?: boolean;
 };
 
+const DISPLAY_SCALE_BY_VARIANT: Partial<Record<MatchSplineVariant, number>> = {
+  card: MATCH_SPLINE_CARD_DISPLAY_SCALE,
+  hero: MATCH_SPLINE_HERO_DISPLAY_SCALE,
+};
+
 /** Match particle field — shared across marketing card, hero, and LLM wait. */
 export function MatchSplineScene({
   className,
@@ -35,6 +43,7 @@ export function MatchSplineScene({
 }: MatchSplineSceneProps) {
   const zoom = initialZoom ?? ZOOM_BY_VARIANT[variant];
   const follow = pointerFollow ?? variant === "hero";
+  const displayScale = DISPLAY_SCALE_BY_VARIANT[variant];
 
   return (
     <SplineInteractiveScene
@@ -45,6 +54,11 @@ export function MatchSplineScene({
         variant === "card" && "match-spline-scene--card",
         className,
       )}
+      style={
+        displayScale != null && displayScale !== 1
+          ? ({ ["--match-spline-display-scale" as string]: String(displayScale) } as CSSProperties)
+          : undefined
+      }
       initialZoom={zoom}
       pointerFollow={follow}
       webGLContext={variant === "analyzing" ? "preparing" : "marketing"}

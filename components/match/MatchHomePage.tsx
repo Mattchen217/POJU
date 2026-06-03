@@ -107,11 +107,7 @@ export function MatchHomePage() {
 
       <ProductMarketingHero
         theme="match"
-        background={
-          <div className="match-hero-spline-wrap" aria-hidden>
-            <MatchSplineScene variant="hero" className="match-hero-spline" pointerFollow={false} />
-          </div>
-        }
+        background={<MatchSplineScene variant="hero" className="match-hero-spline" pointerFollow={false} />}
       >
         <ProductHeroContent>
           <ProductHeroTitle gradient>MATCH</ProductHeroTitle>

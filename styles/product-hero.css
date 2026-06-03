@@ -36,7 +36,7 @@
 }
 
 .product-hero__bg--match {
-  /* Match hero — fixed-size centered spline via `.match-hero-spline-wrap` */
+  overflow: visible;
 }
 
 .product-page--match .product-hero,
@@ -45,50 +45,38 @@
   overflow: visible;
 }
 
-/* Fixed square viewport — scene zoom shrinks the two circles, no oval clip */
-.match-hero-spline-wrap {
-  position: absolute;
-  left: 50%;
-  top: 54%;
-  width: min(300px, 68vw);
-  height: min(300px, 36vh);
-  max-width: 300px;
-  max-height: 300px;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  overflow: visible;
-}
-
+/*
+ * Match hero — full-bleed Spline on background.
+ * Camera zoom (JS) frames the whole scene; --match-spline-display-scale shrinks on page.
+ * No fixed viewport box — avoids cropping to center only.
+ */
 .match-hero-spline {
-  position: relative;
+  --match-spline-display-scale: 0.62;
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   opacity: 0.82;
   overflow: visible;
-}
-
-.pwa-mode .match-hero-spline-wrap {
-  width: min(280px, 64vw);
-  height: min(280px, 34vh);
-  max-width: 280px;
-  max-height: 280px;
+  transform: scale(var(--match-spline-display-scale, 1));
+  transform-origin: center 48%;
 }
 
 .match-spline-scene--hero,
 .match-spline-scene--hero canvas {
   overflow: visible !important;
+  width: 100% !important;
+  height: 100% !important;
 }
 
-/* Homepage Match card — square viewport, zoom shows both circles (no oval mask) */
+/* Homepage Match card — full card background, same zoom + scale pattern */
 .match-card-spline-inner {
+  --match-spline-display-scale: 0.88;
   position: absolute;
-  left: 50%;
-  top: 44%;
-  width: min(88%, 220px);
-  aspect-ratio: 1;
-  height: auto;
-  transform: translate(-50%, -50%);
+  inset: 0;
   overflow: visible;
+  transform: scale(var(--match-spline-display-scale, 1));
+  transform-origin: center 42%;
   filter: brightness(1.16) contrast(1.12) saturate(1.08);
 }
 
@@ -100,6 +88,8 @@
 
 .match-spline-scene--card canvas {
   overflow: visible !important;
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .match-spline-scene.spline-interactive-scene--static {

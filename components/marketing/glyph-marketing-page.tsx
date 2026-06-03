@@ -62,7 +62,6 @@ function WindText({
 
 export async function GlyphMarketingPage() {
   const t = await getTranslations("marketingSite.glyph");
-  const tCommon = await getTranslations("marketingSite.common");
   const glyphUsageRules = t.raw("how_it_works.rules") as string[];
   const onTheCardsParagraphs = t.raw("on_the_cards.paragraphs") as string[];
 
@@ -245,16 +244,6 @@ export async function GlyphMarketingPage() {
           <div className="mt-8 flex flex-col items-center gap-3">
             <GlyphPrepareCta />
             <p className="marketing-section-intro max-w-md text-sm opacity-90">{t("pricing.footnote")}</p>
-          </div>
-        </MarketingSection>
-
-        <MarketingSection id="glyph-final-cta" className="scroll-mt-24" padding="lg">
-          <div className="flex flex-col items-center text-center">
-            <h2 className="marketing-section-heading">{t("final_cta.heading")}</h2>
-            <p className="marketing-section-subheading">{t("final_cta.subtitle")}</p>
-            <GlyphPrepareCta variant="final" />
-            <p className="marketing-section-intro mt-2 max-w-md">{t("final_cta.cta_subline")}</p>
-            <p className="marketing-section-intro mt-6 max-w-2xl text-sm opacity-90">{tCommon("read_with_wink")}</p>
           </div>
         </MarketingSection>
       </MarketingPageSections>

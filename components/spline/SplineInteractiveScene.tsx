@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, type CSSProperties } from "react";
 import Spline from "@splinetool/react-spline";
 import type { Application } from "@splinetool/runtime";
 import { clsx } from "clsx";
@@ -16,6 +16,7 @@ import "@/styles/spline-interactive.css";
 type SplineInteractiveSceneProps = {
   scene: string;
   className?: string;
+  style?: CSSProperties;
   /** Camera zoom after load (smaller = wider framing, circle fits on screen). */
   initialZoom?: number;
   /** Route pointer / touch to the WebGL canvas (mobile follow). */
@@ -30,6 +31,7 @@ type SplineInteractiveSceneProps = {
 export function SplineInteractiveScene({
   scene,
   className,
+  style,
   initialZoom = 1,
   pointerFollow = true,
   webGLContext = "marketing",
@@ -78,13 +80,14 @@ export function SplineInteractiveScene({
     return (
       <div
         className={clsx("spline-interactive-scene spline-interactive-scene--static", className)}
+        style={style}
         aria-hidden
       />
     );
   }
 
   return (
-    <div ref={rootRef} className={clsx("spline-interactive-scene", className)}>
+    <div ref={rootRef} className={clsx("spline-interactive-scene", className)} style={style}>
       <Spline scene={scene} className="h-full w-full" renderOnDemand onLoad={handleLoad} />
     </div>
   );
