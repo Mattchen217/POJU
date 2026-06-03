@@ -1,8 +1,8 @@
 import { defineRouting } from "next-intl/routing";
 
 export const routing = defineRouting({
-  /** 默认 `en`；顺序与语言下拉一致（不影响 URL，仅作类型与枚举参考） */
-  locales: ["en", "es", "de", "fr", "zh"],
+  /** 暂时只上线 en / zh；de / es / fr 翻译文件保留，补全后再启用 */
+  locales: ["en", "zh"],
   defaultLocale: "en",
   localePrefix: "as-needed",
   /**

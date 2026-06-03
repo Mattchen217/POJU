@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Match — pojulife",
   description:
-    "Two bazi charts, one relationship. Deep compatibility reading for couples, partners, family, and teams.",
+    "Two personality profiles, one relationship. Deep compatibility reading for couples, partners, family, and teams.",
 };
 
 export default function MatchPage() {

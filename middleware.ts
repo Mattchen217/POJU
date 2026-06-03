@@ -7,7 +7,7 @@ export default createMiddleware(routing);
 export const config = {
   matcher: [
     "/",
-    "/(es|zh|fr|de)/:path*",
+    "/(zh|es|de|fr)/:path*",
     "/((?!api|_next|_vercel|oracle-test|oracle-fronts-preview|unsubscribe|.*\\..*).*)",
   ],
 };

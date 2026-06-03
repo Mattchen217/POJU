@@ -1,8 +1,8 @@
 {
-  "subtitle": "两个命盘，一段关系，真正看清。",
-  "description": "Match 将两个八字编织在一起——你的和对方的——揭示你们能量如何对接、何处相互成就、何处碰撞，以及该怎么做。",
-  "feature_two_charts": "双盘解读",
-  "feature_two_charts_desc": "深度解读两个人的命盘，再看他们如何相遇。",
+  "subtitle": "两份画像，一段关系，真正看清。",
+  "description": "Match 将两份性格画像编织在一起——你的和对方的——揭示你们能量如何对接、何处相互成就、何处碰撞，以及该怎么做。",
+  "feature_two_charts": "双画像解读",
+  "feature_two_charts_desc": "深度解读两个人的性格画像，再看他们如何相遇。",
   "feature_relationship": "任何关系",
   "feature_relationship_desc": "婚姻、合伙、朋友、家庭——你描述，我们解读。",
   "feature_report": "完整报告",
@@ -17,12 +17,12 @@
   "free_note": "首次 Match 由我们赠送。",
   "paid_note": "$4.99 = 完整双盘解读。",
   "step_indicator": "第 {step} / {total} 步",
-  "select_a_title": "命主 A",
-  "select_a_subtitle": "选择或添加第一个人的八字信息。",
-  "select_a_label": "命主 A",
-  "select_b_title": "命主 B",
-  "select_b_subtitle": "选择或添加第二个人的八字信息。会自动保存到你的命主库。",
-  "select_b_label": "命主 B",
-  "cannot_match_self": "命主 B 不能与命主 A 相同。",
-  "back_to_select_a": "返回命主 A"
+  "select_a_title": "对象 A",
+  "select_a_subtitle": "选择或添加第一个人的性格信息。",
+  "select_a_label": "对象 A",
+  "select_b_title": "对象 B",
+  "select_b_subtitle": "选择或添加第二个人的性格信息。会自动保存到你的档案库。",
+  "select_b_label": "对象 B",
+  "cannot_match_self": "对象 B 不能与对象 A 相同。",
+  "back_to_select_a": "返回对象 A"
 }

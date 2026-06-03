@@ -1,11 +1,14 @@
 "use client";
 
+import { useIsPwaMode } from "@/components/pwa/PWAConditional";
 import { SplineInteractiveScene } from "@/components/spline/SplineInteractiveScene";
 import {
   MATCH_SPLINE_ANALYZING_ZOOM,
   MATCH_SPLINE_CARD_DISPLAY_SCALE,
   MATCH_SPLINE_CARD_ZOOM,
   MATCH_SPLINE_HERO_DISPLAY_SCALE,
+  MATCH_SPLINE_HERO_PWA_DISPLAY_SCALE,
+  MATCH_SPLINE_HERO_PWA_ZOOM,
   MATCH_SPLINE_HERO_ZOOM,
   MATCH_SPLINE_SCENE,
 } from "@/lib/match/match-spline-scene";
@@ -41,9 +44,16 @@ export function MatchSplineScene({
   initialZoom,
   pointerFollow,
 }: MatchSplineSceneProps) {
-  const zoom = initialZoom ?? ZOOM_BY_VARIANT[variant];
+  const isPwa = useIsPwaMode();
+  const heroPwa = variant === "hero" && isPwa === true;
+  const zoom =
+    initialZoom ??
+    (heroPwa ? MATCH_SPLINE_HERO_PWA_ZOOM : ZOOM_BY_VARIANT[variant]);
   const follow = pointerFollow ?? variant === "hero";
-  const displayScale = DISPLAY_SCALE_BY_VARIANT[variant];
+  const displayScale =
+    heroPwa && variant === "hero"
+      ? MATCH_SPLINE_HERO_PWA_DISPLAY_SCALE
+      : DISPLAY_SCALE_BY_VARIANT[variant];
 
   return (
     <SplineInteractiveScene

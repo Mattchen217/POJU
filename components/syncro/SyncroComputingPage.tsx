@@ -10,6 +10,10 @@ import { computeSyncroSessionExpiresAt } from "@/lib/syncro/syncro-submission-ti
 import { recordUsage } from "@/lib/syncro/device-usage";
 import { getStoredProfile, recordProfileUsage } from "@/lib/profile/stored-profiles-service";
 import { readFetchJson } from "@/lib/client/fetch-json";
+import {
+  hasBaseAnalysisPayload,
+  normalizeBaseAnalysisInput,
+} from "@/lib/llm/prompts/base-analysis-context";
 import { parseSyncroStoredLocation } from "@/lib/syncro/syncro-location-storage";
 import { saveSyncroLlmContext } from "@/lib/syncro/syncro-llm-context-storage";
 import type { MatrixCell } from "@/lib/syncro/calculate-matrix";
@@ -65,7 +69,8 @@ export function SyncroComputingPage() {
         throw new Error(t("missing_data"));
       }
       const profileRow = await getStoredProfile(profileId);
-      if (!profileRow?.user_profile || profileRow.base_analysis?.content == null) {
+      const baseAnalysis = profileRow?.base_analysis;
+      if (!profileRow?.user_profile || !hasBaseAnalysisPayload(normalizeBaseAnalysisInput(baseAnalysis))) {
         throw new Error(t("profile_not_ready"));
       }
 
@@ -82,7 +87,7 @@ export function SyncroComputingPage() {
           },
           locale,
           user_profile: profileRow.user_profile,
-          base_analysis: profileRow.base_analysis.content,
+          base_analysis: baseAnalysis,
         }),
       });
 
@@ -139,7 +144,7 @@ export function SyncroComputingPage() {
         },
         locale,
         user_profile: profileRow.user_profile,
-        base_analysis: profileRow.base_analysis.content,
+        base_analysis: baseAnalysis,
         local_matrix: data.local_matrix,
         compute_started_at: data.compute_started_at ?? new Date().toISOString(),
         true_solar: data.true_solar_meta,

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import signsData from "../../../../public/oracle/data/signs.json";
+import signsData from "@/lib/glyph/data/signs.json";
 import {
   detectDangerousGlyphQuestion,
   formatReadingApiError,

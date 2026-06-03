@@ -16,12 +16,12 @@ export async function loadBaseAnalysisForSession(input: PhaseLLMInput): Promise<
   if (typeof window === "undefined") return null;
   if (input.profile && input.session.selected_stored_profile_id) {
     const row = await getStoredProfile(input.session.selected_stored_profile_id);
-    return row?.base_analysis?.content ?? null;
+    return row?.base_analysis ?? null;
   }
   const id = input.session.selected_stored_profile_id?.trim();
   if (!id) return null;
   const row = await getStoredProfile(id);
-  return row?.base_analysis?.content ?? null;
+  return row?.base_analysis ?? null;
 }
 
 /** POJU phase system prompt：poju-base 模块 + 日期/语言/命盘 + 阶段任务块 */

@@ -1,4 +1,4 @@
-import signsData from "../../public/oracle/data/signs.json";
+import signsData from "@/lib/glyph/data/signs.json";
 import { LEVEL_META } from "@/types/oracle";
 import type { SignData } from "@/types/oracle";
 

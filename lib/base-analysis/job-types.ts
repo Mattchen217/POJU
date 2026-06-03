@@ -26,10 +26,8 @@ export interface BaseAnalysisJob {
   completed_at?: number;
 
   local_data: {
-    four_pillars: unknown;
-    true_solar_time: unknown;
-    yong_shen: string;
-    profile_basics: unknown;
+    structured: import("@/lib/calculations/build-profile-structured").ProfileStructured;
+    output_language: "zh" | "en";
   };
 }
 

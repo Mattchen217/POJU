@@ -7,6 +7,10 @@ import {
   generateBaseAnalysis,
   parseBaseAnalysisResponseText,
 } from "@/lib/llm/deepseek/base-analysis";
+import {
+  hasBaseAnalysisPayload,
+  normalizeBaseAnalysisInput,
+} from "@/lib/llm/prompts/base-analysis-context";
 import { buildMatchPrompt } from "@/lib/llm/prompts/match-deepseek-prompt";
 import { callLLM } from "@/lib/llm/router";
 import { calculateCompatibilityMatrix } from "@/lib/match/calculate-compatibility";
@@ -108,13 +112,13 @@ async function ensureBaseAnalysis(
       throw new Error(`Profile not found: ${profileId}`);
     }
 
-    if (row.base_analysis?.content == null) {
+    if (!hasBaseAnalysisPayload(normalizeBaseAnalysisInput(row.base_analysis))) {
       console.log(`[match] Generating base_analysis for ${profileId} (client)...`);
       await generateBaseAnalysis(profileId);
       row = await getStoredProfile(profileId);
     }
 
-    if (!row?.user_profile || row.base_analysis?.content == null) {
+    if (!row?.user_profile || !hasBaseAnalysisPayload(normalizeBaseAnalysisInput(row.base_analysis))) {
       throw new Error(
         `Profile has no base_analysis (${profileId}). Complete profile preparation first.`,
       );
@@ -122,7 +126,7 @@ async function ensureBaseAnalysis(
 
     return {
       user_profile: row.user_profile,
-      base_analysis: row.base_analysis.content,
+      base_analysis: row.base_analysis,
     };
   }
 

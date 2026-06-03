@@ -48,11 +48,15 @@ function formatNestedObject(obj: Record<string, unknown>, indent = ""): string {
   return lines.filter(Boolean).join("\n");
 }
 
-/** Prefer structured JSON; fall back to raw model text. Default locale: zh. */
+/** Prefer display_text / structured JSON; fall back to legacy content. */
 export function formatBaseAnalysisForDisplay(input: {
   content: unknown;
+  display_text?: string | null;
   raw_text?: string | null;
 }): string {
+  if (input.display_text?.trim()) {
+    return input.display_text.trim();
+  }
   const raw = input.raw_text?.trim() ?? "";
   if (typeof input.content === "string" && input.content.trim()) {
     return input.content.trim();

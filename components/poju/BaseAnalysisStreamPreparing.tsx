@@ -57,15 +57,14 @@ export function BaseAnalysisStreamPreparing({
   useEffect(() => {
     console.group(`[${logLabel}] Local computation result`);
     console.log("Profile ID:", profileId);
-    console.log("Four Pillars:", localData.four_pillars);
-    console.log("True Solar Time:", localData.true_solar_time);
-    console.log("Yong Shen:", localData.yong_shen);
-    console.log("Locale (output language):", locale);
+    console.log("Structured:", localData.structured);
+    console.log("Output language (user input / browser):", localData.output_language);
+    console.log("URL locale (routing only):", locale);
     console.groupEnd();
   }, [profileId, localData, locale, logLabel]);
 
   const handleComplete = useCallback(
-    async (content: string, meta: Record<string, unknown> | undefined) => {
+    async (displayText: string, meta: Record<string, unknown> | undefined) => {
       try {
         splineControl?.pauseScene();
         await new Promise<void>((resolve) => {
@@ -73,7 +72,8 @@ export function BaseAnalysisStreamPreparing({
         });
         await saveBaseAnalysisFromStream({
           profile_id: profileId,
-          content,
+          display_text: displayText,
+          structured: localData.structured,
           meta: meta ?? {},
           locale,
           generated_at: new Date().toISOString(),
@@ -85,7 +85,7 @@ export function BaseAnalysisStreamPreparing({
         onErrorRef.current?.(msg);
       }
     },
-    [profileId, locale, logLabel, splineControl],
+    [profileId, locale, logLabel, splineControl, localData.structured],
   );
 
   const { state, start, stop } = useStreamingAnalysis({

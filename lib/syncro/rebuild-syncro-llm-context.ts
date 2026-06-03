@@ -1,4 +1,8 @@
 import { readFetchJson } from "@/lib/client/fetch-json";
+import {
+  hasBaseAnalysisPayload,
+  normalizeBaseAnalysisInput,
+} from "@/lib/llm/prompts/base-analysis-context";
 import type { MatrixCell } from "@/lib/syncro/calculate-matrix";
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 import {
@@ -12,7 +16,8 @@ export async function rebuildSyncroLlmContext(
   session: SyncroSession,
 ): Promise<SyncroLlmContext | null> {
   const profileRow = await getStoredProfile(session.profile_id);
-  if (!profileRow?.user_profile || profileRow.base_analysis?.content == null) {
+  const baseAnalysis = profileRow?.base_analysis;
+  if (!profileRow?.user_profile || !hasBaseAnalysisPayload(normalizeBaseAnalysisInput(baseAnalysis))) {
     console.error("[Syncro] rebuild ctx: profile or base_analysis missing");
     return null;
   }
@@ -27,7 +32,7 @@ export async function rebuildSyncroLlmContext(
         user_location: session.user_location,
         locale: session.locale,
         user_profile: profileRow.user_profile,
-        base_analysis: profileRow.base_analysis.content,
+        base_analysis: baseAnalysis,
       }),
     });
 
@@ -51,7 +56,7 @@ export async function rebuildSyncroLlmContext(
       user_location: session.user_location,
       locale: session.locale,
       user_profile: profileRow.user_profile,
-      base_analysis: profileRow.base_analysis.content,
+      base_analysis: baseAnalysis,
       local_matrix: data.local_matrix,
       compute_started_at: data.compute_started_at ?? new Date().toISOString(),
       true_solar: data.true_solar_meta,

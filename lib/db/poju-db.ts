@@ -112,6 +112,10 @@ export interface StoredProfileBaseAnalysis {
   generated_at: string;
   model: string;
   content: unknown;
+  /** LLM 白榜正文（v4 structured + display） */
+  display_text?: string;
+  /** 代码计算的术语 JSON（四柱/大运/喜忌等） */
+  structured?: import("@/lib/calculations/build-profile-structured").ProfileStructured;
   /** Full model output (for viewer when JSON is large or parse used fallback). */
   raw_text?: string;
   tokens_used: number;

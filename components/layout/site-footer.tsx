@@ -15,7 +15,7 @@ export function SiteFooter() {
         </div>
         <p>© 2026 pojulife. All rights reserved.</p>
         <p className="text-xs">
-          pojulife offers perspectives, not predictions. Designed for self-reflection only. All decisions are yours alone.
+          pojulife offers perspective and insight. Designed for self-reflection only. All decisions are yours alone.
         </p>
       </div>
     </footer>

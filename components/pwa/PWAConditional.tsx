@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import { detectDeviceCapability } from "@/lib/syncro/device-capability";
 
-function useIsPwaMode(): boolean | null {
+export function useIsPwaMode(): boolean | null {
   const [isPWA, setIsPWA] = useState<boolean | null>(null);
 
   useEffect(() => {

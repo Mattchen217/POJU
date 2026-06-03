@@ -5,6 +5,10 @@
 import { signDataToPromptGlyph } from "@/lib/glyph/sign-to-prompt";
 import { loadGlyphBySignData } from "@/lib/glyph/load-glyph";
 import { buildGlyphReadingPrompt } from "@/lib/llm/prompts/glyph-deepseek-prompt";
+import {
+  hasBaseAnalysisPayload,
+  normalizeBaseAnalysisInput,
+} from "@/lib/llm/prompts/base-analysis-context";
 import { callLLM } from "@/lib/llm/router";
 import {
   getStoredProfile,
@@ -76,10 +80,10 @@ async function resolveProfileBundle(input: GenerateGlyphReadingInput): Promise<{
 
   if (typeof window !== "undefined" && input.profile_id) {
     const row = await getStoredProfile(input.profile_id);
-    if (row?.user_profile && row.base_analysis?.content != null) {
+    if (row?.user_profile && hasBaseAnalysisPayload(normalizeBaseAnalysisInput(row.base_analysis))) {
       return {
         user_profile: row.user_profile,
-        base_analysis: row.base_analysis.content,
+        base_analysis: row.base_analysis,
       };
     }
   }

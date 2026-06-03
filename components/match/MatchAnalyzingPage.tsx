@@ -6,6 +6,10 @@ import { useLocale, useTranslations } from "next-intl";
 import { MatchAnalyzingLoader } from "@/components/match/MatchAnalyzingLoader";
 import { useRouter } from "@/i18n/navigation";
 import { saveMatchToArchive } from "@/lib/archive/archive-service";
+import {
+  hasBaseAnalysisPayload,
+  normalizeBaseAnalysisInput,
+} from "@/lib/llm/prompts/base-analysis-context";
 import { calculateCompatibilityMatrix } from "@/lib/match/calculate-compatibility";
 import { createMatchSession } from "@/lib/match/match-session";
 import { wrapProfileForMatrix } from "@/lib/match/parse-profile-for-matrix";
@@ -72,15 +76,15 @@ export function MatchAnalyzingPage() {
 
       const [aRow, bRow] = await Promise.all([getStoredProfile(aId), getStoredProfile(bId)]);
 
-      if (!aRow?.user_profile || aRow.base_analysis?.content == null) {
+      if (!aRow?.user_profile || !hasBaseAnalysisPayload(normalizeBaseAnalysisInput(aRow.base_analysis))) {
         throw new Error(t("profile_a_not_ready"));
       }
-      if (!bRow?.user_profile || bRow.base_analysis?.content == null) {
+      if (!bRow?.user_profile || !hasBaseAnalysisPayload(normalizeBaseAnalysisInput(bRow.base_analysis))) {
         throw new Error(t("profile_b_not_ready"));
       }
 
-      const profileA = wrapProfileForMatrix(aRow.user_profile, aRow.base_analysis.content);
-      const profileB = wrapProfileForMatrix(bRow.user_profile, bRow.base_analysis.content);
+      const profileA = wrapProfileForMatrix(aRow.user_profile, aRow.base_analysis);
+      const profileB = wrapProfileForMatrix(bRow.user_profile, bRow.base_analysis);
 
       const matrix = calculateCompatibilityMatrix({ profileA, profileB });
       const levelInfo =
@@ -103,9 +107,9 @@ export function MatchAnalyzingPage() {
           relationship_description: relationship,
           locale,
           a_user_profile: aRow.user_profile,
-          a_base_analysis: aRow.base_analysis.content,
+          a_base_analysis: aRow.base_analysis,
           b_user_profile: bRow.user_profile,
-          b_base_analysis: bRow.base_analysis.content,
+          b_base_analysis: bRow.base_analysis,
         }),
       });
 

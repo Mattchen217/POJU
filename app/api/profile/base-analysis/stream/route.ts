@@ -59,9 +59,9 @@ export async function POST(req: NextRequest) {
     locale,
     has_resume_id: Boolean(body.resume_job_id),
     local_data_preview: {
-      four_pillars: body.local_data.four_pillars,
-      true_solar_time: body.local_data.true_solar_time,
-      yong_shen: body.local_data.yong_shen,
+      output_language: body.local_data.output_language,
+      day_master: body.local_data.structured?.day_master,
+      da_yun_count: body.local_data.structured?.da_yun?.length,
     },
   });
 
@@ -163,7 +163,6 @@ export async function POST(req: NextRequest) {
         });
 
         const { system, user } = buildBaseAnalysisStreamPrompt({
-          locale,
           local_data: body.local_data,
         });
 

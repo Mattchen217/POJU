@@ -1,7 +1,7 @@
 {
-  "subtitle": "Two charts. One relationship. Real clarity.",
-  "description": "Match weaves both bazi charts together — yours and theirs — to reveal how your energies align, where you support each other, where you collide, and what to do about it.",
-  "feature_two_charts": "Two-Chart Analysis",
+  "subtitle": "Two profiles. One relationship. Real clarity.",
+  "description": "Match weaves both personality profiles together — yours and theirs — to reveal how your energies align, where you support each other, where you collide, and what to do about it.",
+  "feature_two_charts": "Two-Profile Analysis",
   "feature_two_charts_desc": "Deep individual readings of both people, then how they meet.",
   "feature_relationship": "Any Relationship",
   "feature_relationship_desc": "Marriage, partnership, friendship, family — you describe it, we read it.",
@@ -18,10 +18,10 @@
   "paid_note": "$4.99 for a complete two-chart reading.",
   "step_indicator": "Step {step} of {total}",
   "select_a_title": "Person A",
-  "select_a_subtitle": "Choose or add the first person's bazi information.",
+  "select_a_subtitle": "Choose or add the first person's personality profile.",
   "select_a_label": "Person A",
   "select_b_title": "Person B",
-  "select_b_subtitle": "Choose or add the second person's bazi information. This will be saved to your profile library.",
+  "select_b_subtitle": "Choose or add the second person's personality profile. This will be saved to your profile library.",
   "select_b_label": "Person B",
   "cannot_match_self": "Person B must be different from Person A.",
   "back_to_select_a": "Back to Person A"

@@ -1,4 +1,8 @@
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
+import {
+  hasBaseAnalysisPayload,
+  normalizeBaseAnalysisInput,
+} from "@/lib/llm/prompts/base-analysis-context";
 
 export type MatchPrepareRedirect = {
   profile_id: string;
@@ -12,7 +16,7 @@ export type MatchStartCheckResult =
 function hasBaseAnalysis(
   profile: Awaited<ReturnType<typeof getStoredProfile>>,
 ): boolean {
-  return profile?.base_analysis?.content != null && profile.base_analysis.content !== "";
+  return hasBaseAnalysisPayload(normalizeBaseAnalysisInput(profile?.base_analysis));
 }
 
 /**

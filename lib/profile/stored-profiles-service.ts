@@ -238,10 +238,13 @@ export function stripMetaSectionForStorage(content: string): string {
 
 export async function saveBaseAnalysisFromStream(input: {
   profile_id: string;
-  content: string;
-  meta: Record<string, unknown>;
+  display_text: string;
+  structured: import("@/lib/calculations/build-profile-structured").ProfileStructured;
+  meta?: Record<string, unknown>;
   locale: string;
   generated_at: string;
+  /** @deprecated legacy — defaults to display_text */
+  content?: string;
 }): Promise<void> {
   assertBrowser();
   const db = getPojuDb();
@@ -253,7 +256,7 @@ export async function saveBaseAnalysisFromStream(input: {
     cipher: record.encrypted_data,
   });
 
-  const visibleContent = stripMetaSectionForStorage(input.content);
+  const displayText = input.display_text.trim();
   const tst_meta =
     tstMetaFromProfile(
       normalizeStoredBirthInfo(data.birth_info as unknown as Record<string, unknown>),
@@ -266,15 +269,16 @@ export async function saveBaseAnalysisFromStream(input: {
 
   data.base_analysis = {
     generated_at: input.generated_at,
-    model: "v3_streaming",
+    model: "v4_structured_display",
     tokens_used: 0,
-    content: visibleContent,
-    raw_text: input.content.trim() !== visibleContent ? input.content : undefined,
+    structured: input.structured,
+    display_text: displayText,
+    content: input.content?.trim() || displayText,
     used_true_solar_time,
     tst_meta,
     stream_meta: input.meta,
     locale: input.locale,
-    computation_version: "v3_streaming",
+    computation_version: "v4_structured_display",
   };
 
   if (tst_meta && data.birth_info) {

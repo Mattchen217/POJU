@@ -7,10 +7,10 @@
  *   转换为 POJU 项目使用的标准 JSON 格式
  * 
  * 输入：
- *   public/oracle/data/signs.md   (你的 MD 数据源文件)
+ *   lib/glyph/data/signs.md   (你的 MD 数据源文件)
  * 
  * 输出:
- *   public/oracle/data/signs.json  (Cursor 项目使用的 JSON 数据)
+ *   lib/glyph/data/signs.json  (Cursor 项目使用的 JSON 数据)
  * 
  * 用法:
  *   node scripts/parse-signs-md-to-json.js
@@ -26,8 +26,8 @@ const path = require('path');
 // 配置
 // ──────────────────────────────────────────────────────────
 
-const INPUT_PATH = path.join(__dirname, '..', 'public', 'oracle', 'data', 'signs.md');
-const OUTPUT_PATH = path.join(__dirname, '..', 'public', 'oracle', 'data', 'signs.json');
+const INPUT_PATH = path.join(__dirname, '..', 'lib', 'glyph', 'data', 'signs.md');
+const OUTPUT_PATH = path.join(__dirname, '..', 'lib', 'glyph', 'data', 'signs.json');
 
 // 命令行参数
 const args = process.argv.slice(2);
@@ -558,7 +558,7 @@ function main() {
   // 1. 检查输入文件
   if (!fs.existsSync(INPUT_PATH)) {
     error(`Input file not found: ${INPUT_PATH}`);
-    error(`Expected MD file at: public/oracle/data/signs.md`);
+    error(`Expected MD file at: lib/glyph/data/signs.md`);
     process.exit(1);
   }
   

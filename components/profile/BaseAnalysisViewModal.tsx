@@ -35,6 +35,7 @@ export function BaseAnalysisViewModal({ profileId, displayName, onClose }: BaseA
           setText(
             formatBaseAnalysisForDisplay({
               content: ba.content,
+              display_text: ba.display_text,
               raw_text: ba.raw_text,
             }),
           );

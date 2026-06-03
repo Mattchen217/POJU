@@ -35,10 +35,17 @@ async function main() {
     profile_id: profileId,
     locale: "zh",
     local_data: {
-      four_pillars: { year: "甲子" },
-      true_solar_time: { diff_minutes: 12 },
-      yong_shen: "木",
-      profile_basics: { year: 1990 },
+      output_language: "zh",
+      structured: {
+        day_master: "甲",
+        pattern: "test",
+        yong_shen: "木",
+        xi_shen: [],
+        ji_shen: [],
+        strength: "balanced",
+        four_pillars: { year: "甲子", month: "乙丑", day: "丙寅", hour: "丁卯" },
+        da_yun: [{ start_age: 5, start_year: 1995, ganzhi: "戊辰" }],
+      },
     },
   });
   console.log("[step1] createJob OK", job.job_id);
@@ -66,10 +73,17 @@ async function main() {
     profile_id: failProfile,
     locale: "en",
     local_data: {
-      four_pillars: {},
-      true_solar_time: {},
-      yong_shen: "",
-      profile_basics: {},
+      output_language: "en",
+      structured: {
+        day_master: "J",
+        pattern: "test",
+        yong_shen: "wood",
+        xi_shen: [],
+        ji_shen: [],
+        strength: "balanced",
+        four_pillars: { year: "?", month: "?", day: "?", hour: "?" },
+        da_yun: [],
+      },
     },
   });
   await failJob(failJobRow.job_id, "test_error", "detail");

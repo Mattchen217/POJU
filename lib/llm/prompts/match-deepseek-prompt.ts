@@ -43,10 +43,10 @@ export function buildMatchPrompt(input: BuildMatchPromptInput): BuildMatchPrompt
   const detectedLanguage = detectLanguage(relationship_description, locale);
   const aBaseAnalysis =
     a_base_analysis ??
-    (a_profile as { base_analysis?: { content?: unknown } } | null)?.base_analysis?.content;
+    (a_profile as { base_analysis?: unknown } | null)?.base_analysis;
   const bBaseAnalysis =
     b_base_analysis ??
-    (b_profile as { base_analysis?: { content?: unknown } } | null)?.base_analysis?.content;
+    (b_profile as { base_analysis?: unknown } | null)?.base_analysis;
 
   const relEscaped = relationship_description.replace(/"/g, '\\"');
   const level = compatibilityMatrix.overall_level;

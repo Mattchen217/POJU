@@ -630,7 +630,7 @@ export function ChatPageClient() {
           className="mt-1 flex items-center justify-between text-left text-xs uppercase tracking-wider text-on-surface-variant transition-colors hover:text-primary"
           onClick={() => setDrawer("oracle")}
         >
-          <span>Oracle →</span>
+          <span>Glyph →</span>
         </button>
       </div>
     </div>

@@ -190,14 +190,17 @@ function assertBrowser(): void {
   }
 }
 
-async function readCachedBaseAnalysis(profileId: string): Promise<unknown | null> {
+async function readCachedBaseAnalysis(profileId: string): Promise<string | null> {
   const data = await getStoredProfile(profileId);
-  if (data?.base_analysis?.content !== undefined && data.base_analysis.content !== null) {
-    return data.base_analysis.content;
-  }
+  const ba = data?.base_analysis;
+  if (ba?.display_text?.trim()) return ba.display_text.trim();
+  if (typeof ba?.content === "string" && ba.content.trim()) return ba.content.trim();
   if (await profileHasBaseAnalysis(profileId)) {
     const again = await getStoredProfile(profileId);
-    if (again?.base_analysis?.content != null) return again.base_analysis.content;
+    if (again?.base_analysis?.display_text?.trim()) return again.base_analysis.display_text.trim();
+    if (typeof again?.base_analysis?.content === "string" && again.base_analysis.content.trim()) {
+      return again.base_analysis.content.trim();
+    }
   }
   return null;
 }
@@ -209,16 +212,18 @@ export async function generateBaseAnalysis(
   profileId: string,
   callbacks?: BaseAnalysisStreamCallbacks,
   locale?: string,
-): Promise<unknown> {
+  options?: { user_input?: string },
+): Promise<string> {
   assertBrowser();
   const data = await getStoredProfile(profileId);
   if (!data) throw new Error("Profile not found");
-  if (data.base_analysis?.content !== undefined && data.base_analysis.content !== null) {
-    return data.base_analysis.content;
-  }
+  const cached = await readCachedBaseAnalysis(profileId);
+  if (cached) return cached;
 
   const outputLocale = locale ?? resolveClientLocale();
-  const local_data = buildStreamLocalDataFromProfile(data.user_profile);
+  const local_data = buildStreamLocalDataFromProfile(data.user_profile, {
+    user_input: options?.user_input,
+  });
 
   const result = await consumeBaseAnalysisStream({
     profile_id: profileId,
@@ -231,9 +236,11 @@ export async function generateBaseAnalysis(
     },
   });
 
+  const displayText = result.content.trim();
   await saveBaseAnalysisFromStream({
     profile_id: profileId,
-    content: result.content,
+    display_text: displayText,
+    structured: local_data.structured,
     meta: (result.meta as Record<string, unknown>) ?? {},
     locale: outputLocale,
     generated_at: new Date().toISOString(),
@@ -243,15 +250,16 @@ export async function generateBaseAnalysis(
   clearPendingBaseAnalysisProfile();
 
   const saved = await getStoredProfile(profileId);
-  return saved?.base_analysis?.content ?? result.content;
+  return saved?.base_analysis?.display_text?.trim() ?? saved?.base_analysis?.content?.toString() ?? displayText;
 }
 
 export async function getBaseAnalysisOrGenerate(
   profileId: string,
   locale?: string,
-): Promise<unknown> {
+  options?: { user_input?: string },
+): Promise<string> {
   assertBrowser();
   const cached = await readCachedBaseAnalysis(profileId);
   if (cached != null) return cached;
-  return generateBaseAnalysis(profileId, undefined, locale);
+  return generateBaseAnalysis(profileId, undefined, locale, options);
 }

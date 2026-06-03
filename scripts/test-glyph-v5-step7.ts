@@ -120,7 +120,7 @@ function staticChecks(): void {
   assert("Step5 dual view output", prompt.includes("命理双视角"));
   assert("Step5 raw_md in prompt", prompt.includes("raw_md_content") || prompt.includes("classical_text"));
 
-  const signs = JSON.parse(read("public/oracle/data/signs.json")) as SignData[];
+  const signs = JSON.parse(read("lib/glyph/data/signs.json")) as SignData[];
   assert("100 signs in JSON", signs.length === 100);
   const withMd = signs.filter((s) => (s.raw_md_content?.length ?? 0) > 500);
   assert("signs have full raw_md_content", withMd.length >= 95, `${withMd.length}/100`);
@@ -162,7 +162,7 @@ async function liveGlyphReading(serverBase?: string): Promise<Record<string, unk
   }
 
   const { profile } = await buildScenarioAProfile();
-  const signs = JSON.parse(read("public/oracle/data/signs.json")) as SignData[];
+  const signs = JSON.parse(read("lib/glyph/data/signs.json")) as SignData[];
   const sign = signs.find((s) => s.sign_number === 1) ?? signs[0];
   const question = "I'm caught between two paths and need clarity";
 

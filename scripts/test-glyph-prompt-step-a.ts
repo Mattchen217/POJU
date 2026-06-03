@@ -71,7 +71,7 @@ async function main(): Promise<void> {
   const profile = await calculateProfile(birth);
   profile.id = "glyph-step-a-test";
 
-  const signs = JSON.parse(read("public/oracle/data/signs.json")) as SignData[];
+  const signs = JSON.parse(read("lib/glyph/data/signs.json")) as SignData[];
   const signStub = signs.find((s) => s.sign_number === 42) ?? signs[0]!;
 
   const mockBaseAnalysis = {

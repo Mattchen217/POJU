@@ -17,6 +17,8 @@ import { STEM_TO_WUXING, type WuXing } from "./wuxing-utils";
 import { DIRECTION_TO_QIMEN_PALACE } from "./qimen-direction-map";
 import { DIRECTIONS, type CurrentLevel, type DirectionId } from "./current-system";
 import { matrixKey, type HourPeriod } from "./types";
+import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
+import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import type { UserProfile } from "@/lib/profile/types";
 
 export interface MatrixCell {
@@ -52,6 +54,7 @@ export interface SyncroMatrixMetadata {
 
 export interface SyncroMatrixProfile {
   base_analysis?: {
+    structured?: ProfileStructured;
     content?: {
       bazi?: { day_master?: string };
       yong_shen?: { primary_element?: string };
@@ -199,6 +202,12 @@ function extractKeyFactors(factors: ScoreFactors): string[] {
 }
 
 function extractYongShenWuXing(profile: SyncroMatrixProfile): WuXing {
+  const structuredYs = profile.base_analysis?.structured?.yong_shen;
+  if (structuredYs) {
+    if (STEM_TO_WUXING[structuredYs]) return STEM_TO_WUXING[structuredYs];
+    if (WUXING_VALUES.includes(structuredYs as WuXing)) return structuredYs as WuXing;
+  }
+
   const userYs = (profile.user_profile as { yong_shen?: { primary?: string } } | null)
     ?.yong_shen?.primary;
   const ys =
@@ -210,6 +219,11 @@ function extractYongShenWuXing(profile: SyncroMatrixProfile): WuXing {
 }
 
 function extractDayMasterWuXing(profile: SyncroMatrixProfile): WuXing {
+  const structuredDm = profile.base_analysis?.structured?.day_master;
+  if (structuredDm && STEM_TO_WUXING[structuredDm]) {
+    return STEM_TO_WUXING[structuredDm];
+  }
+
   const userDm = (profile.user_profile as { bazi?: { day_master?: string } } | null)
     ?.bazi?.day_master;
   const dm = profile.base_analysis?.content?.bazi?.day_master ?? userDm ?? "甲";

@@ -1,5 +1,5 @@
 import type { SignData, GlyphLevel, UserInput, DrawResult } from "@/types/oracle";
-import signsData from "../../public/oracle/data/signs.json";
+import signsData from "@/lib/glyph/data/signs.json";
 
 const ALL_SIGNS = signsData as SignData[];
 

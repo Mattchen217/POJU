@@ -6,6 +6,10 @@ import { useLocale, useTranslations } from "next-intl";
 
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { getActiveNavFromPathname } from "@/lib/i18n/pathname-without-locale";
+import {
+  MARKETING_LOCALE_COMPACT_LABEL,
+  MARKETING_LOCALE_OPTIONS,
+} from "@/lib/i18n/marketing-locale-options";
 import { routing } from "@/i18n/routing";
 
 import "@/styles/pwa-nav.css";
@@ -17,13 +21,11 @@ const PRODUCTS = [
   { id: "match" as const, name: "Match", path: "/match" },
 ];
 
-const LOCALES = [
-  { code: "en", label: "EN", name: "English" },
-  { code: "zh", label: "ZH", name: "中文" },
-  { code: "es", label: "ES", name: "Español" },
-  { code: "fr", label: "FR", name: "Français" },
-  { code: "de", label: "DE", name: "Deutsch" },
-] as const;
+const LOCALES = MARKETING_LOCALE_OPTIONS.map(({ code, label }) => ({
+  code,
+  label: MARKETING_LOCALE_COMPACT_LABEL[code],
+  name: label,
+}));
 
 export function PWABottomNav() {
   const router = useRouter();

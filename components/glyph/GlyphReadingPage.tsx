@@ -78,7 +78,7 @@ export function GlyphReadingPage() {
         locale: session.locale || locale,
         profile_id: session.profile_id,
         user_profile: stored.user_profile,
-        base_analysis: stored.base_analysis.content,
+        base_analysis: stored.base_analysis,
       });
 
       console.info("[glyph-reading] DeepSeek full reading complete", {

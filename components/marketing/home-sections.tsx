@@ -148,7 +148,7 @@ export function HomeSections() {
         </ul>
         <div className="poju-divider" />
         <p className="text-sm text-text-secondary">Eastern traditions named these forces two thousand years ago.</p>
-        <p className="mt-4 text-sm text-text-accent">QI · BAZI · XUAN · YUAN</p>
+        <p className="mt-4 text-sm text-text-accent">QI · YI · DAO · YUAN</p>
       </section>
 
       <section className="poju-glass-card p-6 md:p-8">

@@ -4,6 +4,10 @@
  */
 
 import { buildSyncroPrompt } from "@/lib/llm/prompts/syncro-deepseek-prompt";
+import {
+  hasBaseAnalysisPayload,
+  normalizeBaseAnalysisInput,
+} from "@/lib/llm/prompts/base-analysis-context";
 import { callLLM } from "@/lib/llm/router";
 import {
   parseAppLocale,
@@ -88,10 +92,10 @@ async function resolveProfileBundle(input: GenerateSyncroMatrixInput): Promise<{
 
   if (typeof window !== "undefined" && input.profile_id) {
     const row = await getStoredProfile(input.profile_id);
-    if (row?.user_profile && row.base_analysis?.content != null) {
+    if (row?.user_profile && hasBaseAnalysisPayload(normalizeBaseAnalysisInput(row.base_analysis))) {
       return {
         profile: row.user_profile,
-        base_analysis: row.base_analysis.content,
+        base_analysis: row.base_analysis,
       };
     }
   }
@@ -109,10 +113,12 @@ function toMatrixProfile(
   profile: UserProfile,
   base_analysis: unknown,
 ): SyncroMatrixProfile {
+  const bundle = normalizeBaseAnalysisInput(base_analysis);
   return {
     user_profile: profile,
     base_analysis: {
-      content: base_analysis as NonNullable<
+      structured: bundle.structured,
+      content: bundle.content as NonNullable<
         SyncroMatrixProfile["base_analysis"]
       >["content"],
     },

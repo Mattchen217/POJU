@@ -71,7 +71,7 @@
 
 /* Homepage Match card — full card background, same zoom + scale pattern */
 .match-card-spline-inner {
-  --match-spline-display-scale: 0.88;
+  --match-spline-display-scale: 0.55;
   position: absolute;
   inset: 0;
   overflow: visible;
@@ -94,6 +94,40 @@
 
 .match-spline-scene.spline-interactive-scene--static {
   background: radial-gradient(circle, rgba(180, 80, 160, 0.28) 0%, rgba(120, 40, 140, 0.1) 50%, transparent 70%);
+}
+
+/*
+ * PWA Match hero — break bg out of hero shell so Spline is not boxed to stage rect.
+ * Camera zoom + display scale are tuned in match-spline-scene.ts (PWA constants).
+ */
+.pwa-mode .product-page--match .product-hero {
+  overflow: visible;
+}
+
+.pwa-mode .product-page--match .product-hero__shell {
+  overflow: visible;
+  padding-top: max(var(--space-6), env(safe-area-inset-top, 0px));
+  padding-bottom: var(--space-4);
+}
+
+.pwa-mode .product-page--match .product-hero__bg {
+  position: absolute;
+  left: 50%;
+  right: auto;
+  top: -22%;
+  bottom: -32%;
+  width: 100vw;
+  height: auto;
+  transform: translateX(-50%);
+  overflow: visible;
+}
+
+.pwa-mode .product-page--match .product-hero__stage {
+  min-height: min(48vh, 400px);
+}
+
+.pwa-mode .match-hero-spline {
+  transform-origin: center 40%;
 }
 
 /* Glyph — 圆形粒子场：缩小 zoom + 全屏层，避免方框裁切 */

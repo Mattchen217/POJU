@@ -1,44 +1,44 @@
-import type { BaseAnalysisStreamLocalData } from "@/lib/llm/prompts/base-analysis-stream-prompt";
-import { HOUR_PERIOD_INFO, type UserProfile } from "@/lib/profile/types";
+import { getBaziChart } from "shunshi-bazi-core";
 
-/** Build `local_data` for POST /api/profile/base-analysis/stream from a calculated profile. */
-export function buildStreamLocalDataFromProfile(profile: UserProfile): BaseAnalysisStreamLocalData {
-  const b = profile.birth;
-  const tst = profile.tst_meta ?? b.tst_meta;
-  const favorable = profile.diagnosis.favorableElements ?? [];
+import {
+  buildProfileStructured,
+  type ProfileStructured,
+} from "@/lib/calculations/build-profile-structured";
+import type { BaseAnalysisStreamLocalData } from "@/lib/llm/prompts/base-analysis-stream-prompt";
+import { shunshiParamsFromBirthInfo } from "@/lib/profile/birth-info-utils";
+import type { UserProfile } from "@/lib/profile/types";
+
+import { resolveBaseAnalysisOutputLanguage } from "./resolve-output-language";
+
+/** Build POST body for `/api/profile/base-analysis/stream` (structured computed locally). */
+export function buildStreamLocalDataFromProfile(
+  profile: UserProfile,
+  options?: { user_input?: string; output_language?: "zh" | "en" },
+): BaseAnalysisStreamLocalData {
+  const params = shunshiParamsFromBirthInfo(profile.birth);
+  const chart = getBaziChart({
+    year: params.year,
+    month: params.month,
+    day: params.day,
+    hour: params.hour,
+    minute: params.minute,
+    gender: params.gender,
+    city: params.city,
+    latitude: params.latitude,
+    longitude: params.longitude,
+    standardMeridian: params.standardMeridian,
+    useTrueSolarTime: true,
+    sect: 1,
+  });
+
+  const structured = buildProfileStructured({ profile, chart });
+  const output_language =
+    options?.output_language ?? resolveBaseAnalysisOutputLanguage(options?.user_input);
 
   return {
-    four_pillars: {
-      year: profile.bazi.yearPillar,
-      month: profile.bazi.monthPillar,
-      day: profile.bazi.dayPillar,
-      hour: profile.bazi.hourPillar,
-      day_master: profile.diagnosis.dayMaster,
-      pattern_summary: profile.diagnosis.patternSummary,
-      favorable_elements: favorable,
-      challenging_elements: profile.diagnosis.challengingElements ?? [],
-    },
-    true_solar_time: tst
-      ? {
-          original_date: tst.original_date,
-          original_time: tst.original_time,
-          true_solar_date: tst.true_solar_date,
-          true_solar_time: tst.true_solar_time,
-          diff_minutes: tst.diff_minutes,
-          longitude: tst.longitude,
-          computation_version: tst.computation_version,
-        }
-      : { used: profile.used_true_solar_time ?? false },
-    yong_shen: favorable[0] ?? profile.diagnosis.dayMaster ?? "",
-    profile_basics: {
-      year: b.year,
-      month: b.month,
-      day: b.day,
-      hour_period: b.hour_period,
-      hour_label: HOUR_PERIOD_INFO[b.hour_period]?.zh_label,
-      gender: b.gender,
-      timezone: b.timezone,
-      birth_location: b.birth_location?.name,
-    },
+    structured,
+    output_language,
   };
 }
+
+export type { ProfileStructured };

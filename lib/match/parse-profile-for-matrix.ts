@@ -4,6 +4,11 @@
  */
 
 import { splitPillar } from "@/lib/poju/chart-loader-display";
+import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
+import {
+  normalizeBaseAnalysisInput,
+  type BaseAnalysisBundle,
+} from "@/lib/llm/prompts/base-analysis-context";
 import type { UserProfile } from "@/lib/profile/types";
 import {
   BRANCHES,
@@ -90,6 +95,45 @@ function wuxingDistributionFromPillars(
   return dist;
 }
 
+function yongShenFromStructured(structured?: ProfileStructured): WuXing | undefined {
+  if (!structured?.yong_shen) return undefined;
+  return mapWuXing(structured.yong_shen);
+}
+
+function yongShenSecondaryFromStructured(structured?: ProfileStructured): WuXing | undefined {
+  const secondary = structured?.xi_shen?.[0];
+  if (!secondary) return undefined;
+  return mapWuXing(secondary);
+}
+
+function daYunFromStructured(
+  structured?: ProfileStructured,
+  birthYear?: number,
+): {
+  stem?: string;
+  branch?: string;
+  is_favorable?: boolean;
+} {
+  const cycles = structured?.da_yun;
+  if (!cycles?.length) return {};
+
+  const currentYear = new Date().getFullYear();
+  let current = cycles[0]!;
+  for (const cycle of cycles) {
+    if (cycle.start_year <= currentYear) current = cycle;
+    else break;
+  }
+
+  const gz = current.ganzhi.trim();
+  if (gz.length < 2) return {};
+
+  return {
+    stem: gz[0],
+    branch: gz[1],
+    is_favorable: birthYear != null ? current.start_year >= birthYear : undefined,
+  };
+}
+
 function yongShenFromContent(content: Record<string, unknown>, profile?: UserProfile): WuXing {
   const flat = content.yong_shen;
   if (isRecord(flat)) {
@@ -168,22 +212,24 @@ function flatBaziFromContent(content: Record<string, unknown>): Record<string, s
 export function wrapProfileForMatrix(
   user_profile: UserProfile,
   base_analysis: unknown,
-): { user_profile: UserProfile; base_analysis: { content: unknown } } {
+): { user_profile: UserProfile; base_analysis: BaseAnalysisBundle } {
   return {
     user_profile,
-    base_analysis: { content: base_analysis },
+    base_analysis: normalizeBaseAnalysisInput(base_analysis),
   };
 }
 
 export function parseProfileForMatrix(profile: unknown): MatrixProfileInput {
   const p = profile as {
-    base_analysis?: { content?: unknown };
+    base_analysis?: BaseAnalysisBundle;
     user_profile?: UserProfile;
   };
 
   const userProfile = p.user_profile;
-  const content = isRecord(p.base_analysis?.content)
-    ? p.base_analysis.content
+  const bundle = p.base_analysis ?? normalizeBaseAnalysisInput(undefined);
+  const structured = bundle.structured;
+  const content = isRecord(bundle.content)
+    ? bundle.content
     : isRecord(p.user_profile)
       ? {}
       : isRecord(profile)
@@ -230,13 +276,17 @@ export function parseProfileForMatrix(profile: unknown): MatrixProfileInput {
       ? (content.wuxing_distribution as Record<WuXing, number>)
       : null) ?? wuxingDistributionFromPillars(stems, branches);
 
-  const daYun = daYunFromContent(content);
+  const daYun =
+    daYunFromStructured(structured, userProfile?.birth.year) || daYunFromContent(content);
 
   return {
     dayMaster: stems.day,
     gender,
-    yongShen: yongShenFromContent(content, userProfile),
-    yongShenSecondary: yongShenSecondaryFromContent(content),
+    yongShen:
+      yongShenFromStructured(structured) ??
+      yongShenFromContent(content, userProfile),
+    yongShenSecondary:
+      yongShenSecondaryFromStructured(structured) ?? yongShenSecondaryFromContent(content),
     branches,
     stems,
     wuxingDistribution,

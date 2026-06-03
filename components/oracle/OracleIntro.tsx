@@ -71,7 +71,7 @@ export function OracleIntro({ onStart }: OracleIntroProps) {
         </button>
 
         <p className="mt-10 text-center text-xs text-white/40">
-          Read with a wink. The patterns mirror, they don&apos;t predict. Decisions are yours alone.
+          Read with a wink. The patterns mirror what&apos;s happening — they offer reflection and insight. Decisions are yours alone.
         </p>
       </div>
     </div>

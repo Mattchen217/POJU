@@ -10,20 +10,17 @@ import {
   type ReactNode,
 } from "react";
 
-export type MarketingLocale = "en" | "es" | "de" | "fr" | "zh";
+export type MarketingLocale = "en" | "zh";
 
 const STORAGE_KEY = "poju-marketing-locale";
 
 export const MARKETING_LOCALES: { code: MarketingLocale; label: string }[] = [
   { code: "en", label: "English" },
-  { code: "es", label: "Español" },
-  { code: "de", label: "Deutsch" },
-  { code: "fr", label: "Français" },
   { code: "zh", label: "中文" },
 ];
 
 function isMarketingLocale(v: string | null): v is MarketingLocale {
-  return v === "en" || v === "es" || v === "de" || v === "fr" || v === "zh";
+  return v === "en" || v === "zh";
 }
 
 function htmlLangFor(locale: MarketingLocale): string {

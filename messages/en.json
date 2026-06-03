@@ -4,7 +4,7 @@
     "brand": "pojulife",
     "domain": "pojulife.com",
     "tagline": "Where AI meets a thousand years of wisdom.",
-    "footerTagline": "pojulife offers perspectives, not predictions. Designed for self-reflection only. All decisions are yours alone.",
+    "footerTagline": "pojulife offers perspectives and insight. Designed for self-reflection only. All decisions are yours alone.",
     "copyright": "© 2026 pojulife. All rights reserved.",
     "syncroFooterTagline": "Syncro is a self-awareness tool. Take what resonates. Decisions are yours alone.",
     "openNavigationMenu": "Open navigation menu"
@@ -68,11 +68,11 @@
       "heading": "What we built. Why it works.",
       "intro": "Two thousand years of human reflection on the questions that matter, examined through modern research, made accessible through AI. All for one purpose: helping you see what you couldn't see alone.",
       "easternTitle": "Eastern Frameworks",
-      "easternBody": "For two thousand years, Eastern philosophical traditions have examined the questions humans keep asking — about decision, direction, and the patterns that shape a life.\n\nCareer. Love. Direction. Doubt.\n\nThese traditions weren't about fixed predictions. They were frameworks for thinking — refined over eighty generations of human experience.",
+      "easternBody": "For two thousand years, Eastern philosophical traditions have examined the questions humans keep asking — about decision, direction, and the patterns that shape a life.\n\nCareer. Love. Direction. Doubt.\n\nThese traditions help you think through choices and decisions. They were frameworks for thinking — refined over eighty generations of human experience.",
       "modernTitle": "Modern Research",
       "modernBody": "What ancient observation noticed, modern research is beginning to measure.\n\nCognitive science on how we frame decisions. Spatial psychology on attention. Circadian biology on natural rhythm. Behavioral economics on cognitive bias.\n\nThe frameworks that worked for millennia, now examined through contemporary research.",
       "aiTitle": "AI Translation",
-      "aiBody": "We took the frameworks these traditions developed. We added what modern research has examined. We gave it to AI — to respond to your specific question, in your specific moment.\n\nNot to replace your judgment. To return the conversation to you.\n\nThese tools are designed for self-reflection and personal exploration — not for predicting outcomes, diagnosing conditions, or providing professional advice.",
+      "aiBody": "We took the frameworks these traditions developed. We added what modern research has examined. We gave it to AI — to respond to your specific question, in your specific moment.\n\nNot to replace your judgment. To return the conversation to you.\n\nThese tools are designed for self-reflection and personal exploration — for reference only, not a substitute for professional diagnosis or advice.",
       "closingHeading": "This is what pojulife is for.",
       "closingBody": "The questions that matter, met with the depth they deserve — across two millennia of human reflection, the rigor of modern research, and the immediacy of AI."
     },
@@ -185,9 +185,9 @@
   "marketingSite": {
     "common": {
       "tagline": "Where AI meets a thousand years of wisdom.",
-      "footer_disclaimer": "pojulife offers perspectives, not predictions. Designed for self-reflection only. All decisions are yours alone.",
+      "footer_disclaimer": "pojulife offers perspectives. Designed for self-reflection only. All decisions are yours alone.",
       "trust_line": "No account · No subscription · Yours to decide",
-      "read_with_wink": "Read with a wink. The patterns mirror, they don't predict."
+      "read_with_wink": "Read with a wink. The patterns mirror what's happening."
     },
     "nav": {
       "poju": "POJU",
@@ -292,7 +292,7 @@
           "description": "No one around you has the distance to see clearly."
         },
         "direction": {
-          "title": "You want direction, not prediction",
+          "title": "You want direction, not fixed answers",
           "description": "\"Will X happen\" asks for a fixed outcome. \"What should I do\" is POJU."
         }
       },
@@ -323,7 +323,7 @@
         "not_included": {
           "title": "What it's not",
           "items": [
-            "Does not predict your future",
+            "Helps you find direction and see the present clearly",
             "Does not replace professional advice",
             "Does not make decisions for you"
           ]
@@ -344,7 +344,7 @@
       },
       "five_winds": {
         "heading": "Five winds — five archetypal patterns",
-        "description": "The five patterns are mirrors, not predictions. Each one describes a human situation and helps you frame what is already happening.",
+        "description": "The five patterns are mirrors of what's happening. Each one describes a human situation and helps you frame what is already happening.",
         "divine_tailwind": {
           "name": "Divine Tailwind",
           "description": "The rare grace of full alignment. Everything you need is already moving toward you."
@@ -406,14 +406,14 @@
         "heading": "Pricing",
         "body": "Your first Glyph reading is free. We want you to experience the tool with no commitment. After that, each reading is $4.99 — a single transparent purchase. No subscription. No auto-renewal. No hidden fees. Each reading is delivered to your screen and optionally sent to your email as a PDF.",
         "cta": "Try Glyph free",
-        "footnote": "Read with a wink. The patterns mirror, they don't predict."
+        "footnote": "Read with a wink. The patterns mirror what's happening."
       }
     },
     "syncro": {
       "hero": {
         "heading": "Syncro",
         "subtitle": "See your natural rhythms.",
-        "description": "Based on your bazi foundation, Syncro reflects how each 2-hour period and 8 directions align with your energy. Where to lean in. Where to slow down.",
+        "description": "Based on your personality profile, Syncro reflects how each 2-hour period and 8 directions align with your energy. Where to lean in. Where to slow down.",
         "tagline": "A live companion for the next 24 hours.",
         "footnote": "First Syncro free. After that, $4.99 per 24-hour window. Opens on mobile only.",
         "cta": "Open Syncro",
@@ -425,7 +425,7 @@
       },
       "how_it_works": {
         "heading": "How Syncro works.",
-        "step_1_title": "Add or pick a bazi foundation",
+        "step_1_title": "Add or pick a personality profile",
         "step_1_desc": "Birth date, time, and gender. Saved on your device for any future use.",
         "step_2_title": "Describe what you're about to do",
         "step_2_desc": "30–100 characters. The clearer, the better.",
@@ -437,7 +437,7 @@
       "five_currents": {
         "heading": "The five currents",
         "intro": "Each direction × hour combination is classified into one of five patterns:",
-        "footer": "These are reflective categories, not predictions.",
+        "footer": "These are reflective categories, not definitive labels.",
         "items": [
           { "name": "Open Current · 顺势", "desc": "Move with confidence." },
           { "name": "Following Current · 应时", "desc": "The way supports you, with effort." },
@@ -501,7 +501,7 @@
         "isnt": {
           "title": "What it isn't",
           "items": [
-            "A predictor of events",
+            "A guarantee of outcomes",
             "A promiser of outcomes",
             "A replacement for your own judgment"
           ]
@@ -528,9 +528,9 @@
     },
     "footer": {
       "disclaimers": {
-        "home": "For self-reflection and entertainment. pojulife offers perspectives, not predictions. All decisions are yours alone.",
-        "poju": "POJU is a thinking partner. It offers perspectives, not prophecies. All decisions are yours alone.",
-        "glyph": "Read with a wink. The patterns mirror, they don't predict. All decisions are yours alone.",
+        "home": "For self-reflection and entertainment. pojulife offers insight and perspective. All decisions are yours alone.",
+        "poju": "POJU is a thinking partner. It offers perspectives, not assertions. All decisions are yours alone.",
+        "glyph": "Read with a wink. The patterns mirror what's happening. All decisions are yours alone.",
         "syncro": "Syncro is a self-awareness tool. Take what resonates. Decisions are yours alone."
       },
       "links": {
@@ -754,7 +754,7 @@
       "profile_picker_in_chat_title": "Link a birth profile for this session",
       "profile_picker_in_chat_hint": "Choose a saved chart or add birth info. Analysis stays on this device.",
       "birth_flow_intro_title": "Personal details for deeper guidance",
-      "birth_flow_intro_body": "To understand your situation more precisely, I need birth date, time, and gender for a BaZi chart.\n\nYour data is stored only on this device—not on our servers.",
+      "birth_flow_intro_body": "To understand your situation more precisely, I need birth date, time, and gender for a personality profile.\n\nYour data is stored only on this device—not on our servers.",
       "birth_flow_privacy_badge": "Saved locally on your device only",
       "birth_flow_intro_cta_hint": "When you've read POJU's message above, continue here to enter birth details (saved on this device only).",
       "birth_flow_continue": "Continue to form",
@@ -918,7 +918,7 @@
     "input_placeholder": "e.g., I'm caught between two job offers and need to decide…",
     "draw_button": "Draw your glyph",
     "drawing_text": "Drawing your glyph…",
-    "reading_loading": "Casting your reading…",
+    "reading_loading": "Preparing your reading…",
     "reading_loading_hint": "Weaving your chart with the glyph. Takes about 3–5 minutes.",
     "reading_failed": "Reading failed",
     "reading_retry": "Try again",
@@ -927,8 +927,8 @@
     "back_to_glyph": "Back to Glyph",
     "reading_session_missing": "Reading session not found. Please draw again from Glyph.",
     "section_classical": "What this glyph says",
-    "section_dual_view": "Two views",
-    "view_bazi_title": "From your chart",
+    "section_dual_view": "Dual perspective analysis",
+    "view_bazi_title": "From your profile",
     "view_glyph_title": "From the glyph",
     "section_meaning": "For your question",
     "section_hidden": "What you may not see",
@@ -1028,14 +1028,14 @@
     "processing": "Preparing…"
   },
   "chart_loader": {
-    "your_chart_title": "Your Four Pillars",
+    "your_chart_title": "Your Personality Structure",
     "male": "Male",
     "female": "Female",
     "pillar_year": "Year",
     "pillar_month": "Month",
     "pillar_day": "Day (Self)",
     "pillar_hour": "Hour",
-    "day_master_label": "Day Master",
+    "day_master_label": "Core Nature",
     "strength_label": "Strength",
     "current_phase_label": "Current 10-Year Phase",
     "hint_first_time": "Building your full chart reading. This requires heavy computation and usually takes 3–5 minutes or longer. Please stay on this screen…",
@@ -1049,11 +1049,11 @@
     "error_network": "Network connection was interrupted. Stay on this page, check Wi‑Fi or cellular, then tap Try Again.",
     "error_timeout": "Analysis took longer than expected. Stay on this page with a stable connection and tap Try Again — it often succeeds on the second attempt.",
     "step_0": "Calibrating your birth moment...",
-    "step_1": "Casting your four pillars...",
-    "step_2": "Analyzing day master and five elements...",
+    "step_1": "Mapping your personality structure...",
+    "step_2": "Analyzing core nature and five elements...",
     "step_3": "Determining your pattern and favorable element...",
     "step_4": "Mapping life phases and current cycle...",
-    "step_5": "Reading auspicious stars and dynamics...",
+    "step_5": "Identifying favorable patterns and dynamics...",
     "step_6": "Understanding your current energy phase...",
     "step_7": "Composing your foundational reading...",
     "step_8": "Almost done, just a moment..."
@@ -1331,7 +1331,7 @@
     "loading": "Loading…",
     "home": {
       "tagline": "Two charts. One relationship. Real clarity.",
-      "description": "Match weaves both bazi foundations together — yours and theirs — to reveal how your energies align, where you support each other, where you collide, and what to do about it.",
+      "description": "Match weaves both personality profiles together — yours and theirs — to reveal how your energies align, where you support each other, where you collide, and what to do about it.",
       "cta_free": "Run a free Match",
       "cta_paid": "Start a Match — $4.99",
       "free_note": "First Match free. After that, $4.99 per reading.",
@@ -1345,7 +1345,7 @@
       "how_label": "How Match works",
       "how_title": "From two charts to one clear path — in 4 steps.",
       "how_step_1_title": "Pick Person A's chart",
-      "how_step_1_desc": "Choose a bazi from your library or add a new one. Just date, time, and gender.",
+      "how_step_1_desc": "Choose a personality profile from your library or add a new one. Just date, time, and gender.",
       "how_step_2_title": "Pick Person B's chart",
       "how_step_2_desc": "Same flow. B's chart is saved to your library so you can run more matches later.",
       "how_step_3_title": "Describe the relationship",
@@ -1371,14 +1371,14 @@
       "preview_b_title": "About B",
       "preview_b_desc": "Same depth for the other person — their patterns in this kind of connection.",
       "preview_combined_title": "Together",
-      "preview_combined_desc": "Five-element interactions, ten-god dynamics, timing alignment — the full layered analysis.",
+      "preview_combined_desc": "Five-element interactions, relational dynamics, timing alignment — the full layered analysis.",
       "preview_conclusion_title": "Conclusion",
       "preview_conclusion_desc": "Overall compatibility level (1 of 5 tiers), plus your strengths and challenges together.",
       "preview_actions_title": "What to do",
       "preview_actions_desc": "4-6 specific, actionable recommendations — communication, timing, boundaries, growth.",
       "per_reading": "per complete reading",
-      "include_1": "Full bazi analysis of both people",
-      "include_2": "Five-element & ten-god interaction map",
+      "include_1": "Full personality profile analysis of both people",
+      "include_2": "Five-element & relational dynamics interaction map",
       "include_3": "Compatibility tier with reasoning",
       "include_4": "4-6 actionable recommendations",
       "include_5": "Saved to Archive — return anytime",
@@ -1394,14 +1394,14 @@
       "faq_a4": "POJU is a 30-day deep conversation about your situation. Match is a one-time, focused two-chart reading about a specific relationship. Different tools for different needs — many users use both.",
       "not_title": "What Match is not",
       "not_items": [
-        "A predictor of relationship outcomes",
+        "A guarantee of relationship outcomes",
         "A promise of compatibility results",
         "A replacement for professional counseling"
       ],
-      "not_footer": "Match offers perspectives, not predictions. What you do with them is entirely yours."
+      "not_footer": "Match offers insight and perspective. What you do with them is entirely yours."
     },
     "subtitle": "Two charts. One relationship. Real clarity.",
-    "description": "Match weaves both bazi charts together — yours and theirs — to reveal how your energies align, where you support each other, where you collide, and what to do about it.",
+    "description": "Match weaves both personality profiles together — yours and theirs — to reveal how your energies align, where you support each other, where you collide, and what to do about it.",
     "feature_two_charts": "Two-Chart Analysis",
     "feature_two_charts_desc": "Deep individual readings of both people, then how they meet.",
     "feature_relationship": "Any Relationship",
@@ -1421,11 +1421,11 @@
     "back_to_home": "Back to Match",
     "step_indicator": "Step {step} of {total}",
     "select_a_title": "Person A",
-    "select_a_subtitle": "Choose or add the first person's bazi information.",
+    "select_a_subtitle": "Choose or add the first person's personality profile information.",
     "select_first_person": "Choose or add the first person's chart",
     "select_a_label": "Person A",
     "select_b_title": "Person B",
-    "select_b_subtitle": "Choose or add the second person's bazi information. This will be saved to your profile library.",
+    "select_b_subtitle": "Choose or add the second person's personality profile information. This will be saved to your profile library.",
     "select_second_person": "Choose or add the second person's chart — saved to your library",
     "select_b_label": "Person B",
     "cannot_match_self": "Person B must be different from Person A.",
@@ -1454,7 +1454,7 @@
       "step_1": "Reading Person A's chart...",
       "step_2": "Reading Person B's chart...",
       "step_3": "Computing compatibility matrix locally (six dimensions)...",
-      "step_4": "Analyzing ten-god interactions...",
+      "step_4": "Analyzing interaction dynamics...",
       "step_5": "Examining timing alignment...",
       "step_6": "Weaving the relationship pattern...",
       "step_7": "Almost ready...",
