@@ -258,7 +258,10 @@ export function SyncroARMode({
                 pointerEvents: "none",
               }}
             >
-              <div style={{ fontSize: 14, fontWeight: 500, color: LEVEL_COLORS[cell.current_level] }}>
+              <div
+                className="syncro-center-level-title"
+                style={{ color: LEVEL_COLORS[cell.current_level] }}
+              >
                 {levelTitle}
               </div>
             </div>

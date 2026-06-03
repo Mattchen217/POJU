@@ -220,3 +220,8 @@ select {
 .pwa-mode .marketing-footer {
   display: none !important;
 }
+
+/* 顶栏已隐藏 — 去掉为 fixed nav 预留的 padding-top（见 main-nav.css） */
+.pwa-mode .site-chrome-main {
+  padding-top: 0;
+}

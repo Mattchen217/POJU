@@ -36,7 +36,7 @@ export function SyncroLevelHub({
           textShadow: "0 1px 4px rgba(0, 0, 0, 0.8)",
         }}
       >
-        <div style={{ fontSize: 14, fontWeight: 500, color, textAlign: "center", padding: "0 8px" }}>
+        <div className="syncro-center-level-title" style={{ color }}>
           {title}
         </div>
       </div>

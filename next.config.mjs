@@ -46,6 +46,11 @@ const nextConfig = {
   async redirects() {
     return [
       {
+        source: "/favicon.ico",
+        destination: "/api/pwa-icon?size=32",
+        permanent: false,
+      },
+      {
         source: "/oracle",
         destination: "/glyph",
         permanent: true,

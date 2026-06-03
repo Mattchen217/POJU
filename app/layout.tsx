@@ -37,11 +37,12 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   icons: {
     icon: [
+      { url: "/api/pwa-icon?size=32", sizes: "32x32", type: "image/png" },
       { url: "/api/pwa-icon?size=192", sizes: "192x192", type: "image/png" },
       { url: "/api/pwa-icon?size=512", sizes: "512x512", type: "image/png" },
     ],
     apple: [{ url: "/api/pwa-icon?size=180", sizes: "180x180", type: "image/png" }],
-    shortcut: ["/api/pwa-icon?size=192"],
+    shortcut: ["/api/pwa-icon?size=32"],
   },
 };
 

@@ -36,7 +36,32 @@
 }
 
 .product-hero__bg--match {
-  /* 上传 Match 动效后在此层挂载 canvas / video / Spline */
+  /* legacy slot — Match hero uses `background` prop + `.match-hero-spline` */
+}
+
+.match-hero-spline {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  width: min(100vw, 92vh);
+  height: min(100vw, 92vh);
+  max-width: 680px;
+  max-height: 680px;
+  transform: translate(-50%, -50%);
+  opacity: 0.78;
+  pointer-events: auto;
+}
+
+.pwa-mode .match-hero-spline {
+  top: 40%;
+  width: min(92vmin, 92vw);
+  height: min(92vmin, 92vw);
+  max-width: 560px;
+  max-height: 560px;
+}
+
+.match-spline-scene.spline-interactive-scene--static {
+  background: radial-gradient(circle, rgba(180, 80, 160, 0.28) 0%, rgba(120, 40, 140, 0.1) 50%, transparent 70%);
 }
 
 /* Glyph — 圆形粒子场：缩小 zoom + 全屏层，避免方框裁切 */

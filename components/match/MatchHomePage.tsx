@@ -19,6 +19,7 @@ import {
   ProductMarketingHero,
 } from "@/components/marketing/product-marketing-hero";
 import { MarketingSection } from "@/components/marketing/marketing-section";
+import { MatchSplineScene } from "@/components/match/MatchSplineScene";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { PojuToolHandoffBanner } from "@/components/poju/PojuToolHandoffBanner";
 import { useRouter } from "@/i18n/navigation";
@@ -104,7 +105,10 @@ export function MatchHomePage() {
         {pojuHandoff ? <PojuToolHandoffBanner handoff={pojuHandoff} className="mt-4" /> : null}
       </div>
 
-      <ProductMarketingHero theme="match" reserveBackgroundSlot backgroundClassName="product-hero__bg--match">
+      <ProductMarketingHero
+        theme="match"
+        background={<MatchSplineScene variant="hero" className="match-hero-spline" />}
+      >
         <ProductHeroContent>
           <ProductHeroTitle gradient>MATCH</ProductHeroTitle>
           <ProductHeroAccent>{t("tagline")}</ProductHeroAccent>

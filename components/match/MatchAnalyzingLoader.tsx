@@ -1,5 +1,7 @@
 "use client";
 
+import { MatchSplineScene } from "@/components/match/MatchSplineScene";
+
 type MatchAnalyzingLoaderProps = {
   step: number;
   steps: string[];
@@ -10,11 +12,8 @@ type MatchAnalyzingLoaderProps = {
 export function MatchAnalyzingLoader({ step, steps, hint, previewLine }: MatchAnalyzingLoaderProps) {
   return (
     <div className="match-analyzing-inner">
-      <div className="match-analyzing-icons" aria-hidden>
-        <div className="match-dual-circles">
-          <div className="match-circle match-circle-a" />
-          <div className="match-circle match-circle-b" />
-        </div>
+      <div className="match-analyzing-spline" aria-hidden>
+        <MatchSplineScene variant="analyzing" className="match-analyzing-spline__scene" pointerFollow={false} />
       </div>
 
       <p key={step} className="match-analyzing-step">

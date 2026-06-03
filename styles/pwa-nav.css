@@ -193,6 +193,29 @@
   padding-bottom: max(80px, calc(56px + env(safe-area-inset-bottom)));
 }
 
+/* PWA 无顶栏 — 页面顶到屏幕（padding-top: 0 见 pojulife-design-system.css） */
 .pwa-mode .site-chrome-main {
   padding-bottom: max(72px, calc(48px + env(safe-area-inset-bottom)));
+}
+
+.pwa-mode .session-prep-container {
+  padding-top: max(24px, env(safe-area-inset-top, 0px));
+}
+
+.pwa-mode .match-select-page,
+.pwa-mode .glyph-home-page {
+  padding-top: max(1rem, env(safe-area-inset-top, 0px));
+}
+
+.pwa-mode .syncro-task-page {
+  padding-top: max(1.5rem, env(safe-area-inset-top, 0px));
+}
+
+.pwa-mode .match-analyzing {
+  padding-top: max(2rem, env(safe-area-inset-top, 0px));
+}
+
+/* 产品介绍页 Hero — 去掉 shell 顶部大留白，背景可贴顶 */
+.pwa-mode .product-hero__shell {
+  padding-top: env(safe-area-inset-top, 0px);
 }
