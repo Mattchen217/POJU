@@ -100,6 +100,9 @@ export function SyncroARMode({
   const cell = session.matrix[cellKey];
   const llmHighlight = highlightMatrixKeys?.has(cellKey);
   const haloColor = HALO_COLORS[cell?.current_level ?? "stillwater"];
+  const whyReady = Boolean(cell && isSyncroLlmReady(cell, session.llm_meta));
+  const whyHasRationale = Boolean(cell?.rationale?.trim());
+  const canOpenWhy = whyReady || whyHasRationale;
 
   useEffect(() => {
     if (marketingPreview) return;
@@ -185,10 +188,10 @@ export function SyncroARMode({
 
   return (
     <div className={`compass-page ${llmHighlight ? "syncro-llm-cell-updated" : ""}`}>
-      <PostureHintOverlay mode="ar" beta={beta} />
+      {!marketingPreview ? <PostureHintOverlay mode="ar" beta={beta} /> : null}
 
       <div
-        className="syncro-ar-ring"
+        className={`syncro-ar-ring${marketingPreview ? " syncro-marketing-ring-shell" : ""}`}
         style={{
           position: "relative",
           width: SYNCRO_RING_SIZE,
@@ -232,16 +235,7 @@ export function SyncroARMode({
             style={{ width: "100%", height: "100%", objectFit: "cover", display: marketingPreview ? "none" : "block" }}
           />
           {marketingPreview ? (
-            <div
-              className="syncro-ar-marketing-placeholder"
-              aria-hidden
-              style={{
-                position: "absolute",
-                inset: 0,
-                background:
-                  "linear-gradient(145deg, #1a2840 0%, #3d2a52 35%, #6b4a7a 55%, #2a3d5c 100%)",
-              }}
-            />
+            <div className="syncro-ar-marketing-placeholder" aria-hidden />
           ) : null}
           {!marketingPreview && !streamReady ? (
             <div
@@ -285,7 +279,10 @@ export function SyncroARMode({
       </div>
 
       {cell ? (
-        <div style={{ maxWidth: 320, margin: "24px auto 0", padding: "0 20px" }}>
+        <div
+          className={marketingPreview ? "syncro-marketing-advice-block" : undefined}
+          style={{ maxWidth: 320, margin: "24px auto 0", padding: "0 20px" }}
+        >
           <SyncroCellAdvice
             cell={cell}
             llmMeta={session.llm_meta}
@@ -294,31 +291,38 @@ export function SyncroARMode({
         </div>
       ) : null}
 
-      {marketingPreview ? null : (
-        <div style={{ textAlign: "center", marginTop: SYNCRO_WHY_BUTTON_MARGIN_TOP }}>
-          <button
-            type="button"
-            className="why-btn-prominent"
-            disabled={!cell || !isSyncroLlmReady(cell, session.llm_meta)}
-            onClick={() => setWhyOpen(true)}
-            style={{
-              padding: "8px 18px",
-              background: "rgba(212, 165, 116, 0.12)",
-              color: "#D4A574",
-              fontSize: 11,
-              fontWeight: 500,
-              border: "none",
-              borderRadius: 20,
-              cursor: "pointer",
-              fontFamily: "inherit",
-            }}
-          >
-            {t("why_this_current")}
-          </button>
-        </div>
-      )}
+      <div
+        className={marketingPreview ? "syncro-marketing-why-block" : undefined}
+        style={{ textAlign: "center", marginTop: SYNCRO_WHY_BUTTON_MARGIN_TOP }}
+      >
+        <button
+          type="button"
+          className="why-btn-prominent"
+          disabled={!cell || !canOpenWhy}
+          onClick={() => {
+            if (cell && canOpenWhy) setWhyOpen(true);
+          }}
+          style={
+            marketingPreview
+              ? undefined
+              : {
+                  padding: "8px 18px",
+                  background: "rgba(212, 165, 116, 0.12)",
+                  color: "#D4A574",
+                  fontSize: 11,
+                  fontWeight: 500,
+                  border: "none",
+                  borderRadius: 20,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }
+          }
+        >
+          {t("why_this_current")}
+        </button>
+      </div>
 
-      {!marketingPreview && whyOpen && cell && isSyncroLlmReady(cell, session.llm_meta) ? (
+      {whyOpen && cell && canOpenWhy ? (
         <WhyThisCurrentModal
           cell={cell}
           direction={direction}

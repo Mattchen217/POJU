@@ -48,7 +48,7 @@ function SyncroMarketingPreviewInner() {
         }
       >
         <div className="syncro-marketing-phone-preview__viewport">
-          <SyncroMarketingOrientationProvider>
+          <SyncroMarketingOrientationProvider uiMode={uiMode}>
             <div className={`syncro-main-view syncro-main syncro-main-view--marketing syncro-main-view--${uiMode}`}>
               <HourProgressBar
                 matrix={session.matrix}

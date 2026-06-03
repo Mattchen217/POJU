@@ -45,7 +45,7 @@ export type SyncroCompassModeProps = {
   highlightMatrixKeys?: Set<string>;
   llmProgress?: SyncroLlmProgress;
   backgroundStream?: SyncroBackgroundStreamState;
-  /** Marketing phone preview — skip device checks, hide Why CTA. */
+  /** Marketing phone preview — skip device checks. */
   marketingPreview?: boolean;
 };
 
@@ -112,6 +112,7 @@ export function SyncroCompassMode({
       {receivingHeading ? <PostureHintOverlay mode="compass" beta={beta} /> : null}
 
       <div
+        className={marketingPreview ? "syncro-marketing-ring-shell" : undefined}
         style={{
           position: "relative",
           width: SYNCRO_RING_SIZE,
@@ -159,25 +160,29 @@ export function SyncroCompassMode({
       </div>
 
       {cell ? (
-        <div style={{ maxWidth: 320, margin: "24px auto 0", padding: "0 20px" }}>
+        <div
+          className={marketingPreview ? "syncro-marketing-advice-block" : undefined}
+          style={{ maxWidth: 320, margin: "24px auto 0", padding: "0 20px" }}
+        >
           <SyncroCellAdvice cell={cell} llmMeta={session.llm_meta} className="compass-short-advice" />
         </div>
       ) : null}
 
-      {marketingPreview ? null : (
-        <div style={{ textAlign: "center", marginTop: SYNCRO_WHY_BUTTON_MARGIN_TOP }}>
-          <button
-            type="button"
-            className="why-btn-prominent"
-            disabled={!canOpenWhy}
-            onClick={() => {
-              if (canOpenWhy) setWhyModalOpen(true);
-            }}
-          >
-            {t("why_this_current")}
-          </button>
-        </div>
-      )}
+      <div
+        className={marketingPreview ? "syncro-marketing-why-block" : undefined}
+        style={{ textAlign: "center", marginTop: SYNCRO_WHY_BUTTON_MARGIN_TOP }}
+      >
+        <button
+          type="button"
+          className="why-btn-prominent"
+          disabled={!canOpenWhy}
+          onClick={() => {
+            if (canOpenWhy) setWhyModalOpen(true);
+          }}
+        >
+          {t("why_this_current")}
+        </button>
+      </div>
 
       {showClientStream && backgroundStream ? (
         <div style={{ maxWidth: 320, margin: "8px auto 0", padding: "0 20px" }}>
@@ -190,7 +195,7 @@ export function SyncroCompassMode({
         </div>
       ) : null}
 
-      {!marketingPreview && whyModalOpen && cell && canOpenWhy ? (
+      {whyModalOpen && cell && canOpenWhy ? (
         <WhyThisCurrentModal
           cell={cell}
           direction={currentDirection}

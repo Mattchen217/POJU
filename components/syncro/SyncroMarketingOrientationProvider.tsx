@@ -6,9 +6,16 @@ import {
   OrientationContext,
   type OrientationContextValue,
 } from "@/components/syncro/SyncroOrientationProvider";
+import type { SyncroUiMode } from "@/lib/syncro/syncro-view-helpers";
 
 /** Slow compass rotation for marketing preview — no device sensors. */
-export function SyncroMarketingOrientationProvider({ children }: { children: ReactNode }) {
+export function SyncroMarketingOrientationProvider({
+  children,
+  uiMode = "compass",
+}: {
+  children: ReactNode;
+  uiMode?: SyncroUiMode;
+}) {
   const [compassDegree, setCompassDegree] = useState(48);
   const degreeRef = useRef(48);
 
@@ -27,9 +34,11 @@ export function SyncroMarketingOrientationProvider({ children }: { children: Rea
     return () => cancelAnimationFrame(raf);
   }, []);
 
+  const deviceTiltBeta = uiMode === "ar" ? 82 : 18;
+
   const value: OrientationContextValue = {
     compassDegree,
-    deviceTiltBeta: 18,
+    deviceTiltBeta,
     hasPermission: true,
     receivingHeading: false,
     requestPermission: async () => true,

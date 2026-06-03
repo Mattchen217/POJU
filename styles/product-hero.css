@@ -48,20 +48,22 @@
 .match-hero-spline {
   position: absolute;
   left: 50%;
-  top: 50%;
-  width: 140%;
-  height: min(780px, 96vh);
-  min-height: 420px;
+  top: 52%;
+  width: min(480px, 86vw);
+  height: min(480px, 50vh);
+  max-width: 480px;
+  max-height: 480px;
   transform: translate(-50%, -50%);
   opacity: 0.82;
   pointer-events: auto;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .pwa-mode .match-hero-spline {
-  width: 132%;
-  height: min(680px, 92vh);
-  min-height: 360px;
+  width: min(440px, 84vw);
+  height: min(440px, 46vh);
+  max-width: 440px;
+  max-height: 440px;
 }
 
 .match-spline-scene--hero,
@@ -71,15 +73,19 @@
   max-height: none !important;
 }
 
-/* Homepage Match card — shrink scene so both circles fit inside card */
+/* Homepage Match card — fixed centered scene, not full-bleed tile */
 .match-card-spline-inner {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 78%;
-  height: 78%;
+  width: 52%;
+  height: 52%;
+  max-width: 168px;
+  max-height: 168px;
   transform: translate(-50%, -50%);
   filter: brightness(1.16) contrast(1.12) saturate(1.08);
+  overflow: hidden;
+  border-radius: 999px;
 }
 
 .match-spline-scene--card {

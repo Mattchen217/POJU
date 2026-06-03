@@ -46,26 +46,59 @@
   min-height: var(--syncro-preview-height, 844px);
   --syncro-nav-reserve: 8px;
   --syncro-toggle-bottom: 8px;
-  --syncro-bottom-reserve: 48px;
+  --syncro-bottom-reserve: 56px;
   --syncro-hour-top: 0px;
-  --syncro-stage-top: 96px;
+  --syncro-stage-top: 118px;
 }
 
 .syncro-main-view--marketing .hour-progress-bar {
-  padding-top: 6px;
+  padding-top: 4px;
 }
 
 .syncro-main-view--marketing .syncro-mode-stage {
-  padding-bottom: 52px;
+  padding-bottom: 58px;
+  overflow: hidden;
+}
+
+.syncro-main-view--marketing .compass-page {
+  padding-top: 4px;
+}
+
+/* Shrink + drop ring so it clears hour bar */
+.syncro-main-view--marketing .syncro-marketing-ring-shell {
+  transform: scale(0.58);
+  transform-origin: center top;
+  margin-top: 10px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.syncro-main-view--marketing .syncro-ar-ring.syncro-marketing-ring-shell {
+  --ar-camera-size: 168px;
+  --ar-particle-clip-size: 300px;
+}
+
+.syncro-main-view--marketing .syncro-marketing-advice-block {
+  margin-top: 6px !important;
+  padding-top: 0 !important;
 }
 
 .syncro-main-view--marketing .compass-short-advice {
-  font-size: 15px;
-  line-height: 1.45;
+  font-size: 14px;
+  line-height: 1.42;
 }
 
 .syncro-main-view--marketing .syncro-center-level-title {
-  font-size: 18px;
+  font-size: 17px;
+}
+
+.syncro-main-view--marketing .syncro-marketing-why-block {
+  margin-top: 12px;
+  text-align: center;
+}
+
+.syncro-main-view--marketing .syncro-marketing-why-block .why-btn-prominent {
+  pointer-events: auto;
 }
 
 .syncro-main-view--marketing .three-mode-toggle {
@@ -75,4 +108,14 @@
 
 .syncro-main-view--marketing .three-mode-toggle .mode-tab {
   pointer-events: auto;
+}
+
+.syncro-ar-marketing-placeholder {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgb(7 9 26 / 0.18), rgb(7 9 26 / 0.28)),
+    url("/marketing/syncro-ar-office.jpg");
+  background-size: cover;
+  background-position: center;
 }

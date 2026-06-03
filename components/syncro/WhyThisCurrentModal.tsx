@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { IconBulb, IconX } from "@tabler/icons-react";
 import { useLocale, useTranslations } from "next-intl";
 
@@ -62,7 +63,9 @@ export function WhyThisCurrentModal({ cell, direction, hourId, onClose }: WhyThi
   const detailedText = cell.detailed_advice?.trim() || "";
   const showActionCard = Boolean(detailedText && cell.rationale?.trim());
 
-  return (
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <div className="why-modal-overlay" role="presentation" onClick={onClose}>
       <div
         className="why-modal"
@@ -100,6 +103,7 @@ export function WhyThisCurrentModal({ cell, direction, hourId, onClose }: WhyThi
           </div>
         ) : null}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

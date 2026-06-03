@@ -90,6 +90,7 @@ export function SyncroMapMode({
   return (
     <div className={`compass-page ${llmHighlight ? "syncro-llm-cell-updated" : ""}`}>
       <div
+        className={marketingPreview ? "syncro-marketing-ring-shell" : undefined}
         style={{
           position: "relative",
           width: SYNCRO_RING_SIZE,
@@ -151,27 +152,31 @@ export function SyncroMapMode({
       </div>
 
       {cell ? (
-        <div style={{ maxWidth: 320, margin: "24px auto 0", padding: "0 20px" }}>
+        <div
+          className={marketingPreview ? "syncro-marketing-advice-block" : undefined}
+          style={{ maxWidth: 320, margin: "24px auto 0", padding: "0 20px" }}
+        >
           <SyncroCellAdvice cell={cell} llmMeta={session.llm_meta} className="compass-short-advice" />
         </div>
       ) : null}
 
-      {marketingPreview ? null : (
-        <div style={{ textAlign: "center", marginTop: SYNCRO_WHY_BUTTON_MARGIN_TOP }}>
-          <button
-            type="button"
-            className="why-btn-prominent"
-            disabled={!canOpenWhy}
-            onClick={() => {
-              if (canOpenWhy) setWhyOpen(true);
-            }}
-          >
-            {t("why_this_current")}
-          </button>
-        </div>
-      )}
+      <div
+        className={marketingPreview ? "syncro-marketing-why-block" : undefined}
+        style={{ textAlign: "center", marginTop: SYNCRO_WHY_BUTTON_MARGIN_TOP }}
+      >
+        <button
+          type="button"
+          className="why-btn-prominent"
+          disabled={!canOpenWhy}
+          onClick={() => {
+            if (canOpenWhy) setWhyOpen(true);
+          }}
+        >
+          {t("why_this_current")}
+        </button>
+      </div>
 
-      {!marketingPreview && whyOpen && cell && canOpenWhy ? (
+      {whyOpen && cell && canOpenWhy ? (
         <WhyThisCurrentModal
           cell={cell}
           direction={selectedDir}
