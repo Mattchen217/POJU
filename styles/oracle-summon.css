@@ -24,16 +24,21 @@
   pointer-events: none;
 }
 
-.oracle-summon-scene .spline-interactive-scene {
+.oracle-summon-scene .spline-interactive-scene,
+.oracle-summon-scene .oracle-summon-spline {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
+  overflow: visible;
+  transform: scale(var(--oracle-summon-display-scale, 1));
+  transform-origin: center 44%;
 }
 
-.oracle-summon-scene--burst .spline-interactive-scene {
+.oracle-summon-scene--burst .spline-interactive-scene,
+.oracle-summon-scene--burst .oracle-summon-spline {
   transition: transform 1s ease-out, opacity 1s ease-out;
-  transform: scale(4.5);
+  transform: scale(calc(var(--oracle-summon-display-scale, 1) * 4.5));
   opacity: 0;
 }
 

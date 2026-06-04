@@ -84,14 +84,14 @@ export function MatchRelationshipPage() {
 
   if (loading) {
     return (
-      <main className="match-relationship-page match-relationship-page--loading">
+      <main className="match-relationship-page match-relationship-page--loading browser-flow-page">
         <p>{t("loading")}</p>
       </main>
     );
   }
 
   return (
-    <main className="match-relationship-page">
+    <main className="match-relationship-page browser-flow-page">
       {pojuHandoff ? <PojuToolHandoffBanner handoff={pojuHandoff} /> : null}
       <RelationshipInput
         aLabel={formatBirthShort(aProfile)}

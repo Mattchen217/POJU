@@ -286,7 +286,7 @@ export function GlyphDrawPage() {
   const canDraw = qLen >= 10 && qLen <= 200 && !drawBusy;
 
   return (
-    <main className="glyph-draw-page">
+    <main className="glyph-draw-page browser-flow-page">
       <Link href="/glyph/prepare" className="glyph-draw-back">
         ← {t("back_to_prepare")}
       </Link>

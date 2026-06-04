@@ -58,7 +58,7 @@ function GlyphPrepareInner() {
   }
 
   return (
-    <>
+    <div className="browser-flow-page">
       {pojuHandoff ? (
         <div className="mx-auto w-full max-w-lg px-4 pt-6">
           <PojuToolHandoffBanner handoff={pojuHandoff} />
@@ -72,7 +72,7 @@ function GlyphPrepareInner() {
         locale={locale}
         productType="glyph"
       />
-    </>
+    </div>
   );
 }
 

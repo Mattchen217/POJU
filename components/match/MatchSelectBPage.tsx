@@ -58,14 +58,14 @@ export function MatchSelectBPage() {
 
   if (loading || !aProfileId) {
     return (
-      <main className="match-select-page match-select-page--loading">
+      <main className="match-select-page match-select-page--loading browser-flow-page">
         <p>{t("loading")}</p>
       </main>
     );
   }
 
   return (
-    <main className="match-select-page">
+    <main className="match-select-page browser-flow-page">
       <header className="match-select-header">
         <span className="match-step-indicator">{t("step_indicator", { step: 2, total: 3 })}</span>
         <div className="selector-label">

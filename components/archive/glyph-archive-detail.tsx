@@ -35,7 +35,7 @@ export function GlyphArchiveDetail({ archiveId, data }: Props) {
   }
 
   return (
-    <div className="archive-detail-page mx-auto max-w-2xl">
+    <div className="archive-detail-page browser-flow-page mx-auto max-w-2xl">
       <div className="detail-header mb-8">
         <Link href="/archive" className="text-sm text-violet-300 hover:text-white">
           ← {t("back")}

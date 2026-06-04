@@ -56,7 +56,7 @@ export function GlyphHomePage() {
   }
 
   return (
-    <main className="glyph-home-page">
+    <main className="glyph-home-page browser-flow-page">
       <div className="glyph-home-inner">
         <div className="glyph-hero">
           <h1 className="glyph-title">GLYPH</h1>

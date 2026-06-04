@@ -56,7 +56,7 @@ export function SyncroTaskPage() {
 
   return (
     <main className="min-h-screen bg-bg-deep text-text-body">
-      <div className="syncro-task-page mx-auto w-full max-w-lg px-4 pb-12 pt-6">
+      <div className="syncro-task-page browser-flow-page mx-auto w-full max-w-lg px-4 pb-12 pt-6">
         <Link
           href="/syncro"
           className="inline-flex text-sm text-cyan-200/80 hover:text-cyan-100"

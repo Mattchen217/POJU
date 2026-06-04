@@ -3,12 +3,30 @@
  * Complements browser-desktop.css (html:not(.pwa-mode)).
  */
 
-.pwa-mode .glyph-draw-page {
+.pwa-mode .browser-flow-page {
   max-width: 32rem;
+  width: 100%;
+  margin-inline: auto;
+  box-sizing: border-box;
 }
 
+.pwa-mode .match-report.browser-flow-page {
+  max-width: 100%;
+}
+
+.pwa-mode .glyph-draw-page {
+  max-width: 32rem;
+  margin-inline: auto;
+}
+
+.pwa-mode .glyph-reading-page.browser-flow-page,
 .pwa-mode .glyph-reading-page {
   max-width: 36rem;
+  margin-inline: auto;
+}
+
+.pwa-mode .session-prep-container {
+  align-items: center;
 }
 
 .pwa-mode .glyph-report .report-section {
@@ -36,15 +54,17 @@
   max-width: 20rem;
 }
 
-.pwa-mode .session-prep-container .max-w-lg,
+.pwa-mode .browser-flow-page .max-w-lg,
 .pwa-mode .welcome-section,
 .pwa-mode .prep-main {
   max-width: 600px;
+  width: 100%;
 }
 
 .pwa-mode .match-select-header,
 .pwa-mode .match-relationship-content {
   max-width: 28rem;
+  margin-inline: auto;
 }
 
 .pwa-mode .streaming-analysis-bottom {

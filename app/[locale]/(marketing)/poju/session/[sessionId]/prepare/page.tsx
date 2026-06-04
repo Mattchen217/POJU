@@ -96,12 +96,14 @@ export default function PreparePage() {
   }
 
   return (
-    <SessionPreparation
-      sessionId={sessionId}
-      existingProfiles={profiles}
-      onProfileSelected={handleProfileSelected}
-      onRefund={handleRefund}
-      locale={locale}
-    />
+    <div className="browser-flow-page">
+      <SessionPreparation
+        sessionId={sessionId}
+        existingProfiles={profiles}
+        onProfileSelected={handleProfileSelected}
+        onRefund={handleRefund}
+        locale={locale}
+      />
+    </div>
   );
 }

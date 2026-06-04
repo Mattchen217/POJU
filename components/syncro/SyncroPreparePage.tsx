@@ -71,14 +71,16 @@ export function SyncroPreparePage() {
   }
 
   return (
-    <SessionPreparation
-      sessionId="syncro-temp"
-      originalQuestion={task}
-      existingProfiles={profiles}
-      onProfileSelected={handleProfileSelected}
-      onRefund={handleCancel}
-      locale={locale}
-      productType="syncro"
-    />
+    <div className="browser-flow-page">
+      <SessionPreparation
+        sessionId="syncro-temp"
+        originalQuestion={task}
+        existingProfiles={profiles}
+        onProfileSelected={handleProfileSelected}
+        onRefund={handleCancel}
+        locale={locale}
+        productType="syncro"
+      />
+    </div>
   );
 }

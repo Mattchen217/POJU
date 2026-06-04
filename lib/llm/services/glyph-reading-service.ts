@@ -6,7 +6,6 @@ import { signDataToPromptGlyph } from "@/lib/glyph/sign-to-prompt";
 import { loadGlyphBySignData } from "@/lib/glyph/load-glyph";
 import {
   auditGlyphReadingContent,
-  GLYPH_REGENERATION_USER_SUFFIX,
   logGlyphOutputViolations,
   sanitizeGlyphReadingContent,
 } from "@/lib/glyph/sanitize-output";
@@ -201,38 +200,19 @@ function parseReadingRecord(raw: string): Record<string, unknown> {
   return parseJsonContent(raw) as Record<string, unknown>;
 }
 
-async function finalizeGlyphReading(
+function finalizeGlyphReading(
   reading: GlyphReadingContent,
   locale: string,
-  initialMeta: GlyphReadingServiceResult["meta"],
-  system: string,
-  user: string,
-): Promise<{ reading: GlyphReadingContent; meta: GlyphReadingServiceResult["meta"] }> {
-  const violations = auditGlyphReadingContent(reading);
+): GlyphReadingContent {
+  const violations = auditGlyphReadingContent(reading, locale);
   if (violations.length === 0) {
-    return { reading, meta: initialMeta };
+    return reading;
   }
-
   logGlyphOutputViolations(violations, "glyph-reading");
-  console.warn("[glyph-reading] Regenerating once due to OUTPUT FRAMING violations...");
-
-  const retry = await requestGlyphReadingJson(system, user + GLYPH_REGENERATION_USER_SUFFIX);
-  let retryReading = validateReading(parseReadingRecord(retry.content));
-  const retryViolations = auditGlyphReadingContent(retryReading);
-  if (retryViolations.length > 0) {
-    logGlyphOutputViolations(retryViolations, "glyph-reading-retry");
-    retryReading = sanitizeGlyphReadingContent(retryReading, locale);
-  }
-
-  return {
-    reading: retryReading,
-    meta: {
-      model: retry.meta.model,
-      tokens_used: initialMeta.tokens_used + retry.meta.tokens_used,
-      cost_usd: initialMeta.cost_usd + retry.meta.cost_usd,
-      latency_ms: initialMeta.latency_ms + retry.meta.latency_ms,
-    },
-  };
+  console.warn(
+    "[glyph-reading] Applying text-only compliance sanitize (no LLM retry).",
+  );
+  return sanitizeGlyphReadingContent(reading, locale);
 }
 
 export async function generateGlyphReading(
@@ -268,8 +248,7 @@ export async function generateGlyphReading(
   }
 
   let reading = validateReading(parsed);
-  const finalized = await finalizeGlyphReading(reading, input.locale, llm.meta, system, user);
-  reading = finalized.reading;
+  reading = finalizeGlyphReading(reading, input.locale);
 
   if (typeof window !== "undefined") {
     await recordProfileUsage(input.profile_id, "glyph");
@@ -277,6 +256,6 @@ export async function generateGlyphReading(
 
   return {
     reading,
-    meta: finalized.meta,
+    meta: llm.meta,
   };
 }

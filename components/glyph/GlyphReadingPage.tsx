@@ -195,7 +195,7 @@ export function GlyphReadingPage() {
   });
 
   return (
-    <div className="glyph-reading-page">
+    <div className="glyph-reading-page browser-flow-page">
       <ReturnToPojuCTA
         tool="glyph"
         resultId={readingId}

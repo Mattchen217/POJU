@@ -71,7 +71,7 @@ export function MatchReport({ session, locale }: MatchReportProps) {
   const matchSummary = extractMatchSummary(session);
 
   return (
-    <main className="match-report">
+    <main className="match-report browser-flow-page">
       <ReturnToPojuCTA
         tool="match"
         resultId={session.match_id}

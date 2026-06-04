@@ -65,9 +65,14 @@ function main() {
   const violations = auditGlyphReadingContent(leakyRemarriageReading);
   const labels = new Set(violations.map((v) => v.label));
   assert(violations.length > 0, `leaky reading has ${violations.length} violations`);
-  assert(labels.has("wuxing_yongxi_combo"), "catches 喜土金 (wuxing_yongxi_combo)");
   assert(
-    labels.has("guiren_term") || violations.some((v) => v.snippet.includes("贵人")),
+    labels.has("wuxing_yongxi") ||
+      labels.has("term:喜土金") ||
+      violations.some((v) => v.snippet.includes("喜土金")),
+    "catches 喜土金",
+  );
+  assert(
+    labels.has("guiren") || violations.some((v) => v.snippet.includes("贵人")),
     "catches 贵人",
   );
 
@@ -82,8 +87,8 @@ function main() {
   assert(!merged.includes("喜土金"), "sanitized: no 喜土金");
   assert(!merged.includes("贵人"), "sanitized: no 贵人");
   assert(
-    merged.includes("稳定感") || merged.includes("补充的能量"),
-    "sanitized: 喜土金 → psychology phrasing",
+    merged.includes("稳定") || merged.includes("结构判断"),
+    "sanitized: 喜土金 → compliance phrasing",
   );
   assert(merged.includes("外部"), "sanitized: 贵人 → 外部助力 phrasing");
 
