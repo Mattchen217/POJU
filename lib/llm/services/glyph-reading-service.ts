@@ -23,6 +23,11 @@ import {
 import type { SignData } from "@/types/oracle";
 import type { UserProfile } from "@/lib/profile/types";
 
+/** Prior cap 3000 caused finish_reason:length — truncated JSON, client retry + double billing. */
+export const GLYPH_READING_MAX_TOKENS = 15_000;
+/** Match Vercel route maxDuration (300s); leave headroom for parse + JSON response. */
+export const GLYPH_READING_TIMEOUT_MS = 290_000;
+
 export type GlyphDualViewReading = {
   命理看此事: string;
   签文看此事: string;
@@ -206,11 +211,11 @@ async function requestGlyphReadingJson(
     call_type: "glyph_reading",
     system,
     messages: [{ role: "user", content: user }],
-    max_tokens: 8000,
+    max_tokens: GLYPH_READING_MAX_TOKENS,
     thinking_effort: "low",
     response_format: "json",
     temperature: 0.55,
-    timeout_ms: 240_000,
+    timeout_ms: GLYPH_READING_TIMEOUT_MS,
   });
 
   console.info("[glyph-reading] LLM complete", {
@@ -281,7 +286,9 @@ export async function generateGlyphReading(
     locale: input.locale,
   });
 
-  console.log("[glyph-reading] Calling DeepSeek (glyph_reading, max_tokens: 8000)...");
+  console.log(
+    `[glyph-reading] Calling DeepSeek (glyph_reading, max_tokens: ${GLYPH_READING_MAX_TOKENS}, timeout_ms: ${GLYPH_READING_TIMEOUT_MS})...`,
+  );
 
   const llm = await requestGlyphReadingJson(system, user, input.reading_id);
 

@@ -17,7 +17,7 @@ const EXPECTED: Record<
   poju_reply: { thinking: "low", max_tokens: 2500, call_type: "poju_reply" },
   syncro_batch: { thinking: "low", max_tokens: 6000, call_type: "syncro_batch" },
   match_report: { thinking: "medium", max_tokens: 10000, call_type: "match_report" },
-  glyph_reading: { thinking: "low", max_tokens: 3000, call_type: "glyph_reading" },
+  glyph_reading: { thinking: "low", max_tokens: 15_000, call_type: "glyph_reading" },
 };
 
 function walk(dir: string, acc: string[] = []): string[] {

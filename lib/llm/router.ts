@@ -24,7 +24,7 @@ export type LLMCallType =
   | "syncro_batch"
   /** Match 合盘报告 — medium / 10000 */
   | "match_report"
-  /** Glyph 全篇解读 — low / 3000 */
+  /** Glyph 全篇解读 — low / 15000 */
   | "glyph_reading"
   /** @deprecated use base_analysis */
   | "poju_base_analysis"
