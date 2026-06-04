@@ -193,6 +193,36 @@ export const GLYPH_OUTPUT_DEFENSE_PREDICTION = `# 防线 3 — 预测规避（�
 - 预测未来事件（如「今年会遇到」「甘雨即将降临」「转机就要到来」）
 - 对未来结果的断言（「一定会」「迟早会」「不久将」）
 
+⛔ **【绝对禁止的句式】**（整句不得出现）
+
+中文：
+- 「会遇到 / 将会出现 / 就要结婚 / 何时…」等对未来具体人生事件的断言
+
+英文：
+- **will + 未来人生事件**
+  · you will meet someone / a partner will appear / will be seen / will get married
+- **going to + 未来事件**
+  · is going to happen / going to meet you next month
+- **next month / next year + 未来断言**
+- 任何对未来**具体事件**的断言（不是「will help you reflect」这类非预测用法）
+
+✓ **【改用】**（整句通顺、现在时 / 条件句 / 当下导向）
+
+- 现在时 / 现在进行时：
+  · is becoming clearer / is taking shape / the connection is forming
+  · 正在变得清晰 / 正在成形
+- 条件句：
+  · when you are ready, … / as the fog thins, …
+  · 当你准备好时… / 当迷雾渐散…
+- 当下导向：
+  · right now / in this moment / your present readiness
+  · 此刻 / 当下 / 你现在的准备度
+
+**英文示例**
+❌ A figure will be seen / you will meet someone next month
+✅ What was hidden is becoming visible.
+✅ The emphasis is on your present readiness, not a schedule.
+
 ✓ **改成当下心理 / 行为时机评估 + 反思**：
 - 「何时再婚」→ 「建立长期稳定关系的【当下时机评估】：你此刻的心理准备与行为模式…」
 - 「甘雨会来」→ 「这面【认知反思镜】提示你能否敏锐识别当下信号，而非断言未来何时降临」
@@ -207,8 +237,8 @@ export const GLYPH_OUTPUT_SELF_CHECK = `# 生成前自检（写每一段字符�
    → 全部翻译成心理学 / 系统动力学描述；五行改能量描述，贵人改「外部助力」（防线 1）
 2. **有没有签诗原文 / 具体历史人物 / 「签」字样？**
    → 抽象成「经典东方叙事原型」与情境主题（防线 2）
-3. **有没有预测「何时 / 将会 / 即将 / 会遇到」？**
-   → 改成【当下时机评估】与认知反思，不断言未来（防线 3）
+3. **有没有预测句？**（何时 / 将会 / 会遇到 / will meet / will be seen / going to + 未来事件 / next month + 断言）
+   → 整句改成【当下时机评估】；用现在时 / 条件句 / present readiness，不断言未来（防线 3）
 
 三段自检全部通过后再写入 JSON。`;
 

@@ -2,6 +2,11 @@ import type {
   GlyphReadingContent,
   GlyphReadingServiceResult,
 } from "@/lib/llm/services/glyph-reading-service";
+import {
+  loadCachedGlyphReadingResult,
+  saveCachedGlyphReadingResult,
+} from "@/lib/glyph/glyph-reading-result-cache";
+import { readFetchJson } from "@/lib/client/fetch-json";
 import type { UserProfile } from "@/lib/profile/types";
 import type { SignData, UserInput, FullReading } from "@/types/oracle";
 
@@ -80,6 +85,7 @@ export async function generateGlyphFullReading({
   question,
   locale,
   profile_id,
+  reading_id,
   user_profile,
   base_analysis,
 }: {
@@ -87,19 +93,28 @@ export async function generateGlyphFullReading({
   question: string;
   locale: string;
   profile_id: string;
+  reading_id?: string;
   user_profile: UserProfile;
   base_analysis: unknown;
 }): Promise<GlyphReadingServiceResult> {
+  if (reading_id) {
+    const cached = loadCachedGlyphReadingResult(reading_id);
+    if (cached) return cached;
+  }
+
   const requestPayload = {
     sign_number: sign.sign_number,
     level: sign.level,
     user_question: question.trim(),
     locale,
     profile_id,
+    reading_id,
     user_profile,
     base_analysis,
   };
-  const requestKey = `glyph:${JSON.stringify(requestPayload)}`;
+  const requestKey = reading_id
+    ? `glyph:${reading_id}`
+    : `glyph:${JSON.stringify({ sign_number: sign.sign_number, profile_id, question: question.trim() })}`;
 
   const pending = inFlightGlyphReadingRequests.get(requestKey);
   if (pending) return pending;
@@ -114,10 +129,10 @@ export async function generateGlyphFullReading({
     if (!response.ok) {
       let errorMessage = `API error: ${response.status}`;
       try {
-        const errorData = (await response.json()) as {
+        const errorData = await readFetchJson<{
           error?: string;
           message?: string;
-        };
+        }>(response);
         errorMessage = errorData.message || errorData.error || errorMessage;
       } catch {
         // keep status fallback
@@ -125,12 +140,12 @@ export async function generateGlyphFullReading({
       throw new Error(errorMessage);
     }
 
-    const data = (await response.json()) as {
+    const data = await readFetchJson<{
       reading: GlyphReadingContent;
       meta?: GlyphReadingServiceResult["meta"];
-    };
+    }>(response);
 
-    return {
+    const result = {
       reading: data.reading,
       meta: data.meta ?? {
         model: "unknown",
@@ -139,6 +154,12 @@ export async function generateGlyphFullReading({
         latency_ms: 0,
       },
     };
+
+    if (reading_id) {
+      saveCachedGlyphReadingResult(reading_id, result);
+    }
+
+    return result;
   })().finally(() => {
     inFlightGlyphReadingRequests.delete(requestKey);
   });

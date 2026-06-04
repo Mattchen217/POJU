@@ -21,6 +21,7 @@ interface RequestBody {
   user_question: string;
   locale?: unknown;
   profile_id?: string;
+  reading_id?: string;
   user_profile?: UserProfile | null;
   base_analysis?: unknown | null;
   conversation_history?: Array<{ role: string; content: string }>;
@@ -61,6 +62,7 @@ export async function POST(req: Request) {
       question: body.user_question.trim(),
       locale,
       profile_id: body.profile_id,
+      reading_id: body.reading_id?.trim() || undefined,
       user_profile: body.user_profile ?? null,
       base_analysis: body.base_analysis ?? null,
     });
@@ -83,8 +85,19 @@ export async function POST(req: Request) {
 
     if (message.includes("not valid JSON") || message.includes("missing required")) {
       return NextResponse.json(
-        { error: "Model response invalid. Please retry.", message },
+        {
+          error: "Model response invalid. Please retry.",
+          message,
+          code: message.includes("not valid JSON") ? "invalid_json" : "missing_fields",
+        },
         { status: 502 },
+      );
+    }
+
+    if (message.includes("llm_timeout")) {
+      return NextResponse.json(
+        { error: "Reading timed out. Please retry.", message, code: "llm_timeout" },
+        { status: 504 },
       );
     }
 

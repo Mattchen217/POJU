@@ -9,6 +9,7 @@ import {
   logGlyphOutputViolations,
   sanitizeGlyphReadingContent,
 } from "@/lib/glyph/sanitize-output";
+import { normalizeGlyphReadingShape } from "@/lib/glyph/reading-response";
 import { buildGlyphReadingPrompt } from "@/lib/llm/prompts/glyph-deepseek-prompt";
 import {
   hasBaseAnalysisPayload,
@@ -51,6 +52,8 @@ export type GenerateGlyphReadingInput = {
   question: string;
   locale: string;
   profile_id: string;
+  /** Idempotency / logging — same draw session should not re-bill on client retry. */
+  reading_id?: string;
   /** Required for server API — client loads from IndexedDB and sends. */
   user_profile?: UserProfile | null;
   base_analysis?: unknown | null;
@@ -73,6 +76,20 @@ function parseJsonContent(raw: string): unknown {
     .replace(/```\s*$/g, "")
     .trim();
   return JSON.parse(cleaned) as unknown;
+}
+
+function extractJsonObject(raw: string): string {
+  const cleaned = raw
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/```\s*$/g, "")
+    .trim();
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  if (start >= 0 && end > start) {
+    return cleaned.slice(start, end + 1);
+  }
+  return cleaned;
 }
 
 async function resolveProfileBundle(input: GenerateGlyphReadingInput): Promise<{
@@ -162,6 +179,17 @@ function validateReading(parsed: Record<string, unknown>): GlyphReadingContent {
       !reading.exploration.text ||
       !reading.reflection_question
     ) {
+      console.error("[glyph-reading] validateReading missing fields", {
+        classical_voice: Boolean(reading.classical_voice),
+        dual_bazi: Boolean(reading.命理双视角.命理看此事),
+        dual_glyph: Boolean(reading.命理双视角.签文看此事),
+        dual_resonance: Boolean(reading.命理双视角.两者印证或冲突),
+        meaning: Boolean(reading.meaning_for_question),
+        hidden: Boolean(reading.hidden_tension),
+        moment: Boolean(reading.your_moment),
+        exploration: Boolean(reading.exploration.text),
+        reflection: Boolean(reading.reflection_question),
+      });
       throw new Error("Glyph reading missing required fields");
     }
   }
@@ -172,16 +200,25 @@ function validateReading(parsed: Record<string, unknown>): GlyphReadingContent {
 async function requestGlyphReadingJson(
   system: string,
   user: string,
+  readingId?: string,
 ): Promise<{ content: string; actual_model: string; meta: GlyphReadingServiceResult["meta"] }> {
   const result = await callLLM({
     call_type: "glyph_reading",
     system,
     messages: [{ role: "user", content: user }],
-    max_tokens: 3000,
+    max_tokens: 8000,
     thinking_effort: "low",
     response_format: "json",
     temperature: 0.55,
-    timeout_ms: 180_000,
+    timeout_ms: 240_000,
+  });
+
+  console.info("[glyph-reading] LLM complete", {
+    reading_id: readingId ?? null,
+    model: result.actual_model,
+    tokens_used: result.meta.tokens_used,
+    latency_ms: result.meta.latency_ms,
+    content_chars: result.content.length,
   });
 
   return {
@@ -197,7 +234,17 @@ async function requestGlyphReadingJson(
 }
 
 function parseReadingRecord(raw: string): Record<string, unknown> {
-  return parseJsonContent(raw) as Record<string, unknown>;
+  try {
+    return normalizeGlyphReadingShape(parseJsonContent(raw) as Record<string, unknown>);
+  } catch (firstError) {
+    try {
+      return normalizeGlyphReadingShape(
+        parseJsonContent(extractJsonObject(raw)) as Record<string, unknown>,
+      );
+    } catch {
+      throw firstError;
+    }
+  }
 }
 
 function finalizeGlyphReading(
@@ -234,9 +281,9 @@ export async function generateGlyphReading(
     locale: input.locale,
   });
 
-  console.log("[glyph-reading] Calling DeepSeek (deep_analysis, thinking: medium)...");
+  console.log("[glyph-reading] Calling DeepSeek (glyph_reading, max_tokens: 8000)...");
 
-  const llm = await requestGlyphReadingJson(system, user);
+  const llm = await requestGlyphReadingJson(system, user, input.reading_id);
 
   let parsed: Record<string, unknown>;
   try {
@@ -244,6 +291,7 @@ export async function generateGlyphReading(
   } catch (e) {
     console.error("[glyph-reading] JSON parse failed:", e);
     console.error("[glyph-reading] Raw (first 800):", llm.content.slice(0, 800));
+    console.error("[glyph-reading] Raw (last 400):", llm.content.slice(-400));
     throw new Error("Glyph reading output is not valid JSON");
   }
 

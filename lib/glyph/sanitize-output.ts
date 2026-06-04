@@ -5,6 +5,10 @@ import {
   COMPLIANCE_MASK,
   detectComplianceViolations,
 } from "@/lib/llm/sanitize/compliance-terms";
+import {
+  detectPredictionSentences,
+  sanitizePredictionSentences,
+} from "@/lib/glyph/sanitize-prediction-sentences";
 
 export type GlyphOutputViolationCategory =
   | "bazi_term"
@@ -20,24 +24,6 @@ export type GlyphOutputViolation = {
 };
 
 const SIGN_POEM_PAIR = /[\u4e00-\u9fff]{5,8}[，,；;][\u4e00-\u9fff]{5,8}/g;
-
-const PREDICTION_ZH =
-  /何时|什么时候|几时|何时会|何时能|何时才|即将|就要|快要|会遇到|将会|一定会|迟早|不久[就便]?会|就要到来|就要发生|甘雨.*(?:降|来|至)|转机.*(?:来|至|到)/g;
-const PREDICTION_EN =
-  /\b(?:when will|will happen|will meet|about to|soon you will|going to happen|is coming|will arrive)\b/gi;
-
-const GLYPH_PREDICTION_REPLACEMENTS_ZH: Array<[RegExp, string]> = [
-  [/何时/g, "当下"],
-  [/即将/g, "此刻可觉察的"],
-  [/会遇到/g, "可留意的当下信号"],
-];
-
-const GLYPH_PREDICTION_REPLACEMENTS_EN: Array<[RegExp, string]> = [
-  [/\bwhen will\b/gi, "your present readiness for"],
-  [/\bwill happen\b/gi, "may be reflected in your present patterns"],
-  [/\babout to\b/gi, "you may notice in the present"],
-  [/\bwill meet\b/gi, "you may notice signals for"],
-];
 
 const STORY_FIGURE_PHRASES = [
   ...new Set(
@@ -143,8 +129,13 @@ export function detectGlyphOutputViolations(text: string, locale = "zh"): GlyphO
 
   collectRegexViolations(text, "sign_narrative", SIGN_POEM_PAIR, "classical_verse_pair", violations);
   collectFigureViolations(text, violations);
-  collectRegexViolations(text, "prediction", PREDICTION_ZH, "prediction_zh", violations);
-  collectRegexViolations(text, "prediction", PREDICTION_EN, "prediction_en", violations);
+  for (const hit of detectPredictionSentences(text, locale)) {
+    violations.push({
+      category: "prediction",
+      label: hit.label,
+      snippet: hit.sentence.slice(0, 120),
+    });
+  }
 
   const seen = new Set<string>();
   return violations.filter((v) => {
@@ -156,13 +147,14 @@ export function detectGlyphOutputViolations(text: string, locale = "zh"): GlyphO
 }
 
 function applyGlyphSpecificReplacements(text: string, locale: string): string {
-  let result = text;
-  const predictionMap = locale.startsWith("zh")
-    ? GLYPH_PREDICTION_REPLACEMENTS_ZH
-    : GLYPH_PREDICTION_REPLACEMENTS_EN;
-  for (const [pattern, replacement] of predictionMap) {
-    result = result.replace(pattern, replacement);
+  const { text: predictionSanitized, replaced } = sanitizePredictionSentences(text, locale);
+  if (replaced.length > 0) {
+    console.error(
+      `[glyph-sanitize] Replaced ${replaced.length} prediction sentence(s):`,
+      replaced.map((r) => r.sentence),
+    );
   }
+  let result = predictionSanitized;
   for (const phrase of STORY_FIGURE_PHRASES) {
     if (result.includes(phrase)) {
       result = result.split(phrase).join("经典东方叙事原型");

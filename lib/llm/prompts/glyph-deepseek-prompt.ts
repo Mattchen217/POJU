@@ -177,7 +177,7 @@ ${GLYPH_OUTPUT_SELF_CHECK}`;
 ⛔ 输出合规（最高优先级）: OUTPUT FRAMING + 三道防线
   · 防线1: 禁干支/十神/日主/大运/用神 → 心理学/系统动力学翻译
   · 防线2: 禁签诗原文/历史人物/签字样 → 抽象叙事原型
-  · 防线3: 禁「何时/即将/会遇到」→ 当下时机评估 + 反思
+  · 防线3: 禁 will meet / will be seen / going to + 未来事件 / next month 断言 → 整句用 present readiness / 现在时
 ✓ 语言: 跟随用户实际输入（${outputLang}）。
 ✓ 内容: 命理看此事须体现人格架构+10年周期+认知偏好（翻译表述）；隐喻解读用抽象原型；不得抄写 modern_translation。
 ✓ 写每段前执行三道自检。invalid_input 时所有字段仍填中性引导，禁止空字符串。`;

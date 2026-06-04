@@ -147,6 +147,66 @@ export function normalizeLegacyReadingShape(raw: Record<string, unknown>): Recor
   return o;
 }
 
+function asRecord(v: unknown): Record<string, unknown> | null {
+  return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
+}
+
+function pickString(...values: unknown[]): string {
+  for (const v of values) {
+    const s = typeof v === "string" ? v.trim() : "";
+    if (s) return s;
+  }
+  return "";
+}
+
+/** Glyph v5 JSON — legacy keys, English aliases, dual-view field mapping. */
+export function normalizeGlyphReadingShape(raw: Record<string, unknown>): Record<string, unknown> {
+  const o = normalizeLegacyReadingShape(raw);
+
+  let dual = asRecord(o.命理双视角);
+  if (!dual) {
+    dual =
+      asRecord(o.dual_view) ??
+      asRecord(o.dualView) ??
+      asRecord(o.dual_perspective) ??
+      asRecord(o.bazi_glyph_dual_view);
+    if (dual) o.命理双视角 = dual;
+  }
+
+  dual = asRecord(o.命理双视角);
+  if (dual) {
+    o.命理双视角 = {
+      ...dual,
+      命理看此事: pickString(
+        dual.命理看此事,
+        dual["命理看此事"],
+        dual.bazi_view,
+        dual.from_bazi,
+        dual.chart_view,
+        dual.personality_view,
+      ),
+      签文看此事: pickString(
+        dual.签文看此事,
+        dual["签文看此事"],
+        dual.glyph_view,
+        dual.sign_view,
+        dual.from_glyph,
+        dual.from_sign,
+      ),
+      两者印证或冲突: pickString(
+        dual.两者印证或冲突,
+        dual["两者印证或冲突"],
+        dual.resonance,
+        dual.synthesis,
+        dual.conflict,
+        dual.alignment,
+      ),
+    };
+  }
+
+  return o;
+}
+
 export function validateAndFinalizeReading(
   reading: Record<string, unknown>,
   opts: { question: string; locale: string },

@@ -77,6 +77,7 @@ export function GlyphReadingPage() {
         question: session.question,
         locale: session.locale || locale,
         profile_id: session.profile_id,
+        reading_id: readingId,
         user_profile: stored.user_profile,
         base_analysis: stored.base_analysis,
       });
