@@ -3,6 +3,8 @@
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { sanitizeGlyphReadingContent } from "@/lib/glyph/sanitize-output";
+import { pojuChatMessageBody } from "@/lib/poju/chat-layout";
+import { cn } from "@/lib/utils/classnames";
 import type { GlyphReadingContent } from "@/lib/llm/services/glyph-reading-service";
 import { LEVEL_META, type SignData } from "@/types/oracle";
 
@@ -32,7 +34,7 @@ export function GlyphReport({ reading, glyph, question, archiveId }: Props) {
 
   if (safeReading.invalid_input) {
     return (
-      <div className="glyph-report">
+      <div className={cn("glyph-report", pojuChatMessageBody)}>
         <div className="report-section meaning">
           <p>{t("reading_invalid_input")}</p>
         </div>
@@ -41,7 +43,7 @@ export function GlyphReport({ reading, glyph, question, archiveId }: Props) {
   }
 
   return (
-    <div className="glyph-report">
+    <div className={cn("glyph-report", pojuChatMessageBody)}>
       <div className="report-section question-recap">
         <div className="section-label">{t("your_question_label")}</div>
         <p className="question-recap-text">{question}</p>

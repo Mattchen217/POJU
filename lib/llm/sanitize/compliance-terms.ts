@@ -212,6 +212,22 @@ export const EN_FAVORABLE_ELEMENT_REGEX =
 export const EN_UNFAVORABLE_ELEMENT_REGEX =
   /\bUnfavorable\s+(?:Wood|Fire|Earth|Metal|Water|Element|Elements)\b/gi;
 
+/** EN Defense 2 — quoted maxims / sign-poem English (audit). */
+export const EN_QUOTED_MAXIM_PREFIX_REGEX =
+  /(?:ancient wisdom|the saying|classical verse|old maxim|quoted maxim|the verse|sign poem|the line reads)[:\s,—-]+['"]/gi;
+
+export const EN_QUOTED_STRING_REGEX = /['"][^'"]{10,}['"]/g;
+
+/** EN Defense 2 — warrior/figure story sequence (audit). */
+export const EN_WARRIOR_WHO_REGEX =
+  /\b(?:a|the)\s+(?:warrior|figure|hero|general|soldier|scholar|monk|sage|emperor|minister|lord)\s+who\b/gi;
+
+export const EN_STORY_SEQUENCE_VERB_REGEX =
+  /\bwho\s+(?:was|were|had been)\s+(?:defeated|captured|imprisoned|exiled|recalled|rescued|escaped|banished)/gi;
+
+export const EN_STORY_SEQUENCE_NARRATIVE_REGEX =
+  /\b(?:defeat(?:ed)?|capture(?:d)?|escape(?:d)?|recall(?:ed)?|exile(?:d)?).{0,80}(?:defeat|capture|escape|recall|exile|return)/gi;
+
 export type ComplianceViolation = {
   label: string;
   snippet: string;
@@ -308,6 +324,11 @@ export function detectComplianceViolations(text: string, locale: string): Compli
     pushRegex(EN_FAVORABLE_ELEMENT_REGEX, "favorable_element");
     pushRegex(EN_UNFAVORABLE_ELEMENT_REGEX, "unfavorable_element");
     pushRegex(EN_WUXING_ELEMENT_COMBO_REGEX, "wuxing_combo");
+    pushRegex(EN_QUOTED_MAXIM_PREFIX_REGEX, "quoted_maxim_prefix");
+    pushRegex(EN_QUOTED_STRING_REGEX, "quoted_string");
+    pushRegex(EN_WARRIOR_WHO_REGEX, "warrior_who_narrative");
+    pushRegex(EN_STORY_SEQUENCE_VERB_REGEX, "story_sequence_verb");
+    pushRegex(EN_STORY_SEQUENCE_NARRATIVE_REGEX, "story_sequence_narrative");
     for (const [term] of sortedMapEntries(EN_TERM_MAP)) {
       const re = new RegExp(`\\b${escapeRegExp(term)}\\b`, "i");
       const m = re.exec(text);

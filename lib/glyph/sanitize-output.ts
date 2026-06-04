@@ -6,9 +6,14 @@ import {
   detectComplianceViolations,
 } from "@/lib/llm/sanitize/compliance-terms";
 import {
+  detectNarrativeSentences,
+  sanitizeNarrativeSentences,
+} from "@/lib/glyph/sanitize-narrative-sentences";
+import {
   detectPredictionSentences,
   sanitizePredictionSentences,
 } from "@/lib/glyph/sanitize-prediction-sentences";
+import { polishSanitizedText } from "@/lib/glyph/sanitize-sentence-utils";
 
 export type GlyphOutputViolationCategory =
   | "bazi_term"
@@ -129,6 +134,13 @@ export function detectGlyphOutputViolations(text: string, locale = "zh"): GlyphO
 
   collectRegexViolations(text, "sign_narrative", SIGN_POEM_PAIR, "classical_verse_pair", violations);
   collectFigureViolations(text, violations);
+  for (const hit of detectNarrativeSentences(text, locale)) {
+    violations.push({
+      category: "sign_narrative",
+      label: hit.label,
+      snippet: hit.sentence.slice(0, 120),
+    });
+  }
   for (const hit of detectPredictionSentences(text, locale)) {
     violations.push({
       category: "prediction",
@@ -146,15 +158,8 @@ export function detectGlyphOutputViolations(text: string, locale = "zh"): GlyphO
   });
 }
 
-function applyGlyphSpecificReplacements(text: string, locale: string): string {
-  const { text: predictionSanitized, replaced } = sanitizePredictionSentences(text, locale);
-  if (replaced.length > 0) {
-    console.error(
-      `[glyph-sanitize] Replaced ${replaced.length} prediction sentence(s):`,
-      replaced.map((r) => r.sentence),
-    );
-  }
-  let result = predictionSanitized;
+function applyFigureAndSignReplacements(text: string): string {
+  let result = text;
   for (const phrase of STORY_FIGURE_PHRASES) {
     if (result.includes(phrase)) {
       result = result.split(phrase).join("经典东方叙事原型");
@@ -166,7 +171,7 @@ function applyGlyphSpecificReplacements(text: string, locale: string): string {
     }
   }
   result = result.replace(SIGN_POEM_PAIR, COMPLIANCE_MASK);
-  return result.replace(/\s{2,}/g, " ").trim();
+  return result;
 }
 
 function collectReadingStrings(reading: GlyphReadingContent): string[] {
@@ -214,9 +219,29 @@ export function sanitizeGlyphOutput(text: string, locale: string): string {
     logGlyphOutputViolations(before, "glyph-sanitize-before");
   }
 
+  // Whole-sentence replacements first — before compliance partial masks
+  const { text: narrativeSanitized, replaced: narrativeReplaced } =
+    sanitizeNarrativeSentences(text, locale);
+  if (narrativeReplaced.length > 0) {
+    console.error(
+      `[glyph-sanitize] Replaced ${narrativeReplaced.length} narrative sentence(s):`,
+      narrativeReplaced.map((r) => r.sentence),
+    );
+  }
+
+  const { text: predictionSanitized, replaced: predictionReplaced } =
+    sanitizePredictionSentences(narrativeSanitized, locale);
+  if (predictionReplaced.length > 0) {
+    console.error(
+      `[glyph-sanitize] Replaced ${predictionReplaced.length} prediction sentence(s):`,
+      predictionReplaced.map((r) => r.sentence),
+    );
+  }
+
   const { text: complianceText, violationsAfter: complianceRemaining } =
-    applyComplianceSanitize(text, locale);
-  let result = applyGlyphSpecificReplacements(complianceText, locale);
+    applyComplianceSanitize(predictionSanitized, locale);
+  let result = applyFigureAndSignReplacements(complianceText);
+  result = polishSanitizedText(result);
 
   const after = detectGlyphOutputViolations(result, locale);
   if (after.length > 0 || complianceRemaining.length > 0) {
@@ -231,14 +256,9 @@ export function sanitizeGlyphOutput(text: string, locale: string): string {
       ],
       "glyph-sanitize-after",
     );
-    for (const v of after) {
-      if (v.snippet.length > 3 && result.includes(v.snippet)) {
-        result = result.split(v.snippet).join(COMPLIANCE_MASK);
-      }
-    }
   }
 
-  return result.replace(/\s{2,}/g, " ").trim();
+  return result;
 }
 
 export function sanitizeGlyphReadingContent(

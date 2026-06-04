@@ -16,7 +16,9 @@ import { generateGlyphFullReading } from "@/lib/oracle/api";
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 import { PojuDeepDiveCTA } from "@/components/cross-product/PojuDeepDiveCTA";
 import { ReturnToPojuCTA } from "@/components/poju/ReturnToPojuCTA";
+import { pojuChatColumn } from "@/lib/poju/chat-layout";
 import { extractGlyphSummary } from "@/lib/poju/tool-result-summary";
+import { cn } from "@/lib/utils/classnames";
 import { LEVEL_META, type SignData } from "@/types/oracle";
 
 type Stage = "loading" | "ready" | "error";
@@ -196,7 +198,7 @@ export function GlyphReadingPage() {
   });
 
   return (
-    <div className="glyph-reading-page browser-flow-page">
+    <div className={cn("glyph-reading-page browser-flow-page", pojuChatColumn, "px-4 md:px-6")}>
       <ReturnToPojuCTA
         tool="glyph"
         resultId={readingId}

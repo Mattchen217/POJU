@@ -169,20 +169,36 @@ ${buildComplianceTranslationPromptBlock()}
 内部 structured 数据仅供你分析，输出须 100% 翻译为行为蓝图 / 人格架构语言。`;
 
 /** 防线 2 — 叙事抽象：输出禁签诗原文与具体历史人物 */
-export const GLYPH_OUTPUT_DEFENSE_NARRATIVE = `# 防线 2 — 叙事抽象（去签诗原文 + 去历史人物 · 输出强制）
+export const GLYPH_OUTPUT_DEFENSE_NARRATIVE = `# 防线 2 — 叙事抽象（去签诗原文 + 去历史人物 · 输出强制 · 中英文同等）
 
 ⛔ **JSON 所有字符串字段绝对禁止**：
-- 引用签诗原文（如「旱时田里皆枯藁，谢天甘雨落淋淋」及任意连续古文诗句）
+
+中文：
+- 引用签诗原文（如「旱时田里皆枯藁…」及任意连续古文诗句）
 - 具体历史 / 宗教人物名（杨六郎、钟离权、孔子、观音、菩萨、苏秦 等）
 - 「签 / 解签 / 抽签 / 签文 / 灵签」及 OUTPUT FRAMING 所列禁词
 
-✓ **改成抽象「经典东方叙事原型」**：
-- 签诗意象 → 抽象情境主题
-  · 例：「久旱逢甘霖」→ 「干涸后迎来转机的系统性情境模式」
-- 人物典故 → 不点名，只保留故事内核
-  · 例：杨六郎典故 → 「经典东方叙事原型：困境中的意外救援 (The Unexpected Rescue in Adversity)」
+英文（同等严格）：
+1. **复述任何历史/传说人物的【故事情节序列】**（即使不点名）：
+   · ❌ a warrior defeated and captured, escaped, recalled…
+   · ❌ 任何 defeated / captured / escaped / exiled / recalled / retreated 的叙事序列
+2. **引用带引号的格言/诗句（签诗英译）**：
+   · ❌ ancient wisdom: 'Widen your heart…'
+   · ❌ 任何 quoted maxim / classical verse / the saying: "…"
+3. **禁止** a warrior who… / a figure who… 然后展开情节
 
-保留隐喻的「故事内核」，去掉「签」的痕迹与具体人名。
+✓ **改用（只提抽象主题，不展开故事 / 不引原句）**：
+
+- 叙事原型 = 一个**主题词**（endurance / hidden worth / patience through adversity），**NOT** 一个故事
+- 中文：经典东方叙事原型：困境中的意外救援
+- 英文：a classic Eastern theme of resilience and patient re-emergence
+- 转述含义：the principle of widening one's perspective（**不用引号**）
+
+**英文示例**
+❌ This mirrors a warrior who lay still after defeat, escaped, and was recalled…
+✅ This mirrors a classic Eastern theme: resilience that ripens in stillness, re-emerging stronger after adversity.
+
+保留隐喻的「故事内核」，去掉「签」的痕迹、具体人名、引号格言与情节展开。
 System 输入的 classical_text / story_figure **仅供内部分析**，不得抄写到输出。`;
 
 /** 防线 3 — 预测规避：不答「何时」，不断言未来 */
@@ -235,8 +251,8 @@ export const GLYPH_OUTPUT_SELF_CHECK = `# 生成前自检（写每一段字符�
 
 1. **有没有干支 / 十神 / 日主 / 大运 / 流年 / 用神 / 八字 / 四柱？有没有五行字（金木水火土）？有没有「贵人」？**
    → 全部翻译成心理学 / 系统动力学描述；五行改能量描述，贵人改「外部助力」（防线 1）
-2. **有没有签诗原文 / 具体历史人物 / 「签」字样？**
-   → 抽象成「经典东方叙事原型」与情境主题（防线 2）
+2. **有没有签诗原文 / 具体历史人物 / 英文故事情节 / 引号格言？**（a warrior who… / ancient wisdom: '…' / "classical verse"）
+   → 抽象成「经典东方叙事原型」主题词；不引原句、不展开情节（防线 2）
 3. **有没有预测句？**（何时 / 将会 / 会遇到 / will meet / will be seen / going to + 未来事件 / next month + 断言）
    → 整句改成【当下时机评估】；用现在时 / 条件句 / present readiness，不断言未来（防线 3）
 

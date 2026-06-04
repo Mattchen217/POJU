@@ -1,7 +1,4 @@
-/**
- * Sentence-level prediction sanitization for Glyph output.
- * Replaces entire prediction sentences — never mechanical word swaps (avoids broken English).
- */
+import { polishSanitizedText, splitIntoSentences } from "@/lib/glyph/sanitize-sentence-utils";
 
 export const EN_PREDICTION_REPLACEMENT =
   "The emphasis is on your present readiness, not a schedule.";
@@ -45,12 +42,7 @@ function replacementForLocale(locale: string): string {
   return locale.startsWith("zh") ? ZH_PREDICTION_REPLACEMENT : EN_PREDICTION_REPLACEMENT;
 }
 
-/** Split on sentence boundaries (Latin + CJK punctuation). */
-export function splitIntoSentences(text: string): string[] {
-  if (!text.trim()) return [];
-  const parts = text.match(/[^.!?。！？；…]+[.!?。！？；…]?/g);
-  return parts ?? [text];
-}
+export { splitIntoSentences };
 
 export function isPredictionSentence(sentence: string, locale: string): boolean {
   const trimmed = sentence.trim();
@@ -88,17 +80,16 @@ export function sanitizePredictionSentences(
 
   const replacement = replacementForLocale(locale);
   const replaced: PredictionSentenceHit[] = [];
-  const sentences = splitIntoSentences(text);
   const out: string[] = [];
 
-  for (const sentence of sentences) {
+  for (const sentence of splitIntoSentences(text)) {
     if (isPredictionSentence(sentence, locale)) {
       replaced.push({
         sentence: sentence.trim(),
         label: locale.startsWith("zh") ? "prediction_zh_sentence" : "prediction_en_sentence",
       });
-      const trailingSpace = sentence.match(/\s+$/)?.[0] ?? "";
-      out.push(replacement + trailingSpace);
+      const needsSpace = out.length > 0 && !/\s$/.test(out[out.length - 1] ?? "");
+      out.push((needsSpace ? " " : "") + replacement + " ");
     } else {
       out.push(sentence);
     }
@@ -106,6 +97,6 @@ export function sanitizePredictionSentences(
 
   let joined = out.join("");
   joined = joined.replace(/([.!?。！？])([^\s])/g, "$1 $2");
-  joined = joined.replace(/\s{2,}/g, " ").replace(/\s+([,.;:!?])/g, "$1").trim();
+  joined = polishSanitizedText(joined);
   return { text: joined, replaced };
 }

@@ -286,8 +286,10 @@
 .glyph-reading-page {
   min-height: 100dvh;
   padding: 1.5rem 1.25rem 3rem;
-  max-width: 36rem;
+  width: 100%;
+  max-width: 48rem;
   margin: 0 auto;
+  box-sizing: border-box;
   background: linear-gradient(180deg, #0b0815 0%, #050308 100%);
   color: #e7e0ed;
 }
@@ -331,8 +333,8 @@
 
 .glyph-report p,
 .glyph-report li {
-  font-size: 14px;
-  line-height: 1.7;
+  font-size: 1rem;
+  line-height: 1.75;
   color: var(--pj-text-primary, #e7e0ed);
 }
 
@@ -360,14 +362,14 @@
 
 .glyph-report .wind-category p,
 .glyph-report .question-recap-text {
-  font-size: 1.05rem;
-  line-height: 1.65;
+  font-size: 1rem;
+  line-height: 1.75;
   color: #e7e0ed;
 }
 
 .glyph-report .classical-text {
-  font-size: 1.125rem;
-  line-height: 1.7;
+  font-size: 1rem;
+  line-height: 1.75;
   color: #e7e0ed;
   font-style: italic;
 }
@@ -387,8 +389,8 @@
 }
 
 .glyph-report .dual-view-card p {
-  font-size: 1.05rem;
-  line-height: 1.65;
+  font-size: 1rem;
+  line-height: 1.75;
   color: #e7e0ed;
 }
 
@@ -396,8 +398,8 @@
   margin-top: 1rem;
   padding-top: 1rem;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
-  font-size: 1.05rem;
-  line-height: 1.65;
+  font-size: 1rem;
+  line-height: 1.75;
   color: #cbc3d7;
 }
 
@@ -414,8 +416,8 @@
 }
 
 .glyph-report .exploration-card p {
-  font-size: 1.05rem;
-  line-height: 1.65;
+  font-size: 1rem;
+  line-height: 1.75;
 }
 
 .glyph-report .archive-saved-hint {

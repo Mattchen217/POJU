@@ -21,8 +21,9 @@
 
 .pwa-mode .glyph-reading-page.browser-flow-page,
 .pwa-mode .glyph-reading-page {
-  max-width: 36rem;
+  max-width: 48rem;
   margin-inline: auto;
+  padding-inline: 1rem;
 }
 
 .pwa-mode .session-prep-container {

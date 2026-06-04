@@ -10,6 +10,9 @@
     --browser-flow-max-width-wide: 52rem;
     --browser-flow-max-width-narrow: 44rem;
     --browser-flow-body-size: 1.125rem;
+    /* Same as POJU chat (`max-w-3xl`). */
+    --poju-chat-column-max: 48rem;
+    --glyph-reading-max-width: var(--poju-chat-column-max);
   }
 
   /* ── Shared centered column shells ── */
@@ -30,8 +33,8 @@
   }
 
   html:not(.pwa-mode) .glyph-reading-page,
-  html:not(.pwa-mode) .archive-detail-page {
-    max-width: var(--browser-flow-max-width-narrow);
+  html:not(.pwa-mode) .archive-detail-page.browser-flow-page {
+    max-width: var(--glyph-reading-max-width);
   }
 
   html:not(.pwa-mode) .match-report {
@@ -151,17 +154,18 @@
     line-height: 1.75;
   }
 
-  /* ── Glyph reading + report ── */
+  /* ── Glyph reading + report — match POJU chat column & prose ── */
   html:not(.pwa-mode) .glyph-reading-page {
-    --glyph-report-body-size: 1.25rem;
     min-height: auto;
     background: transparent;
-    padding: 2rem 2.5rem 4rem;
+    padding-top: 2rem;
+    padding-bottom: 4rem;
   }
 
   html:not(.pwa-mode) .glyph-report {
-    --glyph-report-body-size: 1.25rem;
     gap: 2rem;
+    width: 100%;
+    max-width: none;
   }
 
   html:not(.pwa-mode) .glyph-report .report-section {
@@ -194,30 +198,34 @@
 
   html:not(.pwa-mode) .glyph-report h1,
   html:not(.pwa-mode) .glyph-report h2,
-  html:not(.pwa-mode) .glyph-report h3,
-  html:not(.pwa-mode) .glyph-report h4,
   html:not(.pwa-mode) .glyph-report p,
   html:not(.pwa-mode) .glyph-report li,
-  html:not(.pwa-mode) .glyph-report .section-label,
   html:not(.pwa-mode) .glyph-report .question-recap-text,
   html:not(.pwa-mode) .glyph-report .classical-text,
-  html:not(.pwa-mode) .glyph-report .wind-category h3,
   html:not(.pwa-mode) .glyph-report .wind-category p,
-  html:not(.pwa-mode) .glyph-report .dual-view-card h4,
   html:not(.pwa-mode) .glyph-report .dual-view-card p,
   html:not(.pwa-mode) .glyph-report .dual-view-resonance,
   html:not(.pwa-mode) .glyph-report .dual-view-resonance p,
   html:not(.pwa-mode) .glyph-report .exploration-card p,
-  html:not(.pwa-mode) .glyph-report .exploration-card .explore-meta,
   html:not(.pwa-mode) .glyph-report .reflection-question {
-    font-size: var(--glyph-report-body-size);
+    font-size: 1rem;
     line-height: 1.75;
     font-weight: 400;
   }
 
-  html:not(.pwa-mode) .glyph-report .section-label {
+  html:not(.pwa-mode) .glyph-report h3,
+  html:not(.pwa-mode) .glyph-report h4,
+  html:not(.pwa-mode) .glyph-report .wind-category h3,
+  html:not(.pwa-mode) .glyph-report .dual-view-card h4 {
+    font-size: 1.0625rem;
+    line-height: 1.75;
     font-weight: 600;
-    letter-spacing: 0.06em;
+  }
+
+  html:not(.pwa-mode) .glyph-report .section-label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: #958ea0;
   }
@@ -238,6 +246,8 @@
   }
 
   html:not(.pwa-mode) .glyph-report .exploration-card .explore-meta {
+    font-size: 0.875rem;
+    line-height: 1.6;
     color: #958ea0;
   }
 

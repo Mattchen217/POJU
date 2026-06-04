@@ -8,6 +8,8 @@ import {
   deleteArchiveItem,
   type GlyphReadingArchiveData,
 } from "@/lib/archive/archive-service";
+import { pojuChatColumn } from "@/lib/poju/chat-layout";
+import { cn } from "@/lib/utils/classnames";
 import type { SignData } from "@/types/oracle";
 
 type Props = {
@@ -35,7 +37,7 @@ export function GlyphArchiveDetail({ archiveId, data }: Props) {
   }
 
   return (
-    <div className="archive-detail-page browser-flow-page mx-auto max-w-2xl">
+    <div className={cn("archive-detail-page browser-flow-page px-4 md:px-6", pojuChatColumn)}>
       <div className="detail-header mb-8">
         <Link href="/archive" className="text-sm text-violet-300 hover:text-white">
           ← {t("back")}
