@@ -1,5 +1,5 @@
 /**
- * compliance-terms + daily-word safety checks.
+ * compliance-terms audit-only checks.
  * Run: pnpm tsx scripts/test-compliance-terms.ts
  */
 import {
@@ -23,12 +23,11 @@ function main() {
   assert(Object.keys(EN_TERM_MAP).length > 40, `EN_TERM_MAP ${Object.keys(EN_TERM_MAP).length} entries`);
   assert(Object.keys(ZH_TERM_MAP).length > 40, `ZH_TERM_MAP ${Object.keys(ZH_TERM_MAP).length} entries`);
 
-  console.log("\n=== ZH bazi combos ===");
-  const zh = applyComplianceSanitize("命局喜土金，贵人显，日主乙木", "zh");
-  assert(!zh.text.includes("喜土金"), "no 喜土金");
-  assert(!zh.text.includes("贵人"), "no 贵人");
-  assert(!zh.text.includes("日主"), "no 日主");
-  assert(!zh.text.includes("乙木"), "no 乙木");
+  console.log("\n=== ZH bazi combos — detect only, text unchanged ===");
+  const zhInput = "命局喜土金，贵人显，日主乙木";
+  const zh = applyComplianceSanitize(zhInput, "zh");
+  assert(zh.text === zhInput, "zh text unchanged");
+  assert(zh.violationsBefore.length > 0, "zh violations detected");
 
   console.log("\n=== daily words preserved ===");
   assert(
@@ -40,11 +39,11 @@ function main() {
     "en daily wood/fire ok",
   );
 
-  console.log("\n=== EN bazi combos ===");
-  const en = applyComplianceSanitize("Your Day Master is Yi Wood with favorable Metal.", "en");
-  assert(!/Day Master/i.test(en.text), "no Day Master");
-  assert(!/Yi Wood/i.test(en.text), "no Yi Wood");
-  assert(!/favorable Metal/i.test(en.text), "no favorable Metal");
+  console.log("\n=== EN bazi combos — detect only, text unchanged ===");
+  const enInput = "Your Day Master is Yi Wood with favorable Metal.";
+  const en = applyComplianceSanitize(enInput, "en");
+  assert(en.text === enInput, "en text unchanged");
+  assert(en.violationsBefore.length > 0, "en violations detected");
 
   if (process.exitCode) process.exit(1);
   console.log("\nAll compliance-terms checks passed.");

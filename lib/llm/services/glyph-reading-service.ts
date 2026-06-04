@@ -7,7 +7,6 @@ import { loadGlyphBySignData } from "@/lib/glyph/load-glyph";
 import {
   auditGlyphReadingContent,
   logGlyphOutputViolations,
-  sanitizeGlyphReadingContent,
 } from "@/lib/glyph/sanitize-output";
 import { normalizeGlyphReadingShape } from "@/lib/glyph/reading-response";
 import { buildGlyphReadingPrompt } from "@/lib/llm/prompts/glyph-deepseek-prompt";
@@ -257,14 +256,10 @@ function finalizeGlyphReading(
   locale: string,
 ): GlyphReadingContent {
   const violations = auditGlyphReadingContent(reading, locale);
-  if (violations.length === 0) {
-    return reading;
+  if (violations.length > 0) {
+    logGlyphOutputViolations(violations, "glyph-reading");
   }
-  logGlyphOutputViolations(violations, "glyph-reading");
-  console.warn(
-    "[glyph-reading] Applying text-only compliance sanitize (no LLM retry).",
-  );
-  return sanitizeGlyphReadingContent(reading, locale);
+  return reading;
 }
 
 export async function generateGlyphReading(

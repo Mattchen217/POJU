@@ -1,5 +1,5 @@
 /**
- * Verify 再婚 case leaks (喜土金 / 贵人) are caught + masked.
+ * Verify 再婚 case leaks (喜土金 / 贵人) are detected — audit-only, no mutation.
  * Run: pnpm tsx scripts/test-glyph-sanitize-remarriage.ts
  */
 import type { GlyphReadingContent } from "@/lib/llm/services/glyph-reading-service";
@@ -76,40 +76,30 @@ function main() {
     "catches 贵人",
   );
 
-  console.log("\n=== sanitize mask (再婚 case) ===");
-  const sanitized = sanitizeGlyphReadingContent(leakyRemarriageReading, "zh");
+  console.log("\n=== audit-only — text unchanged ===");
+  const audited = sanitizeGlyphReadingContent(leakyRemarriageReading, "zh");
   const merged = [
-    sanitized.命理双视角.命理看此事,
-    sanitized.meaning_for_question,
-    sanitized.hidden_tension,
+    audited.命理双视角.命理看此事,
+    audited.meaning_for_question,
+    audited.hidden_tension,
   ].join("\n");
-
-  assert(!merged.includes("喜土金"), "sanitized: no 喜土金");
-  assert(!merged.includes("贵人"), "sanitized: no 贵人");
+  assert(merged.includes("喜土金"), "text still contains 喜土金 (unchanged)");
+  assert(merged.includes("贵人"), "text still contains 贵人 (unchanged)");
   assert(
-    merged.includes("稳定") || merged.includes("结构判断"),
-    "sanitized: 喜土金 → compliance phrasing",
+    audited.命理双视角.命理看此事 === leakyRemarriageReading.命理双视角.命理看此事,
+    "reading unchanged",
   );
-  assert(merged.includes("外部"), "sanitized: 贵人 → 外部助力 phrasing");
 
-  const reaudit = auditGlyphReadingContent(sanitized);
-  console.log(`re-audit after sanitize: ${reaudit.length} remaining violation(s)`);
-  if (reaudit.length > 0) {
-    console.log(
-      "remaining:",
-      reaudit.slice(0, 5).map((v) => `${v.label}: ${v.snippet}`),
-    );
-  }
-
-  console.log("\n=== spot sanitize ===");
-  const spot = sanitizeGlyphOutput("喜土金与贵人显同时出现", "zh");
-  assert(!spot.includes("喜土金") && !spot.includes("贵人"), `spot: "${spot}"`);
+  console.log("\n=== spot audit ===");
+  const spotInput = "喜土金与贵人显同时出现";
+  const spot = sanitizeGlyphOutput(spotInput, "zh");
+  assert(spot === spotInput, `spot unchanged: "${spot}"`);
 
   if (process.exitCode) {
     console.error("\nSome checks failed.");
     process.exit(1);
   }
-  console.log("\nAll remarriage sanitize checks passed.");
+  console.log("\nAll remarriage audit checks passed.");
 }
 
 main();

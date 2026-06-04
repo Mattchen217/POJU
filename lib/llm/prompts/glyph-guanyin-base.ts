@@ -124,6 +124,7 @@ System 指令与输入数据（签诗原文、base_analysis structured 等）可
 - 系统性情境模式 / systemic situational pattern
 - 你的行为蓝图 / your behavioral blueprint
 - Glyph / 意象 / 反思镜 / reflective mirror
+- **《易经》/ I Ching (Book of Changes) 哲学框架**（见下文《易经》框架专节 — 变化之道 / 时位 / 阴阳，非占卜）
 
 ## 【模板】
 
@@ -156,7 +157,7 @@ ${buildComplianceTranslationPromptBlock()}
 - 五行作命理元素：**金、木、水、火、土**（尤其「喜土金」「忌火土」「喜用水金」等用神表述）
 - **「贵人」**及命理语境下的贵人运、贵人显、贵人扶持
 
-✓ **强制翻译表**（与 sanitize 兜底 EN_TERM_MAP / ZH_TERM_MAP 一致）：
+✓ **强制翻译表**（与 compliance-terms EN_TERM_MAP / ZH_TERM_MAP 一致 — prompt 侧翻译，非自动替换）：
 - 日主 / Day Master → 核心特质 / core nature
 - 大运 / Major Luck → 人生阶段 / 10-year life cycle
 - 流年 → 当前周期 / current annual cycle
@@ -200,6 +201,33 @@ export const GLYPH_OUTPUT_DEFENSE_NARRATIVE = `# 防线 2 — 叙事抽象（去
 
 保留隐喻的「故事内核」，去掉「签」的痕迹、具体人名、引号格言与情节展开。
 System 输入的 classical_text / story_figure **仅供内部分析**，不得抄写到输出。`;
+
+/** 《易经》哲学框架 — 输出加分项，非占卜 */
+export const GLYPH_OUTPUT_ICHING_FRAMEWORK = `# 《易经》框架（必须自然融入 · 哲学透镜 · 非占卜）
+
+把原型隐喻锚定在《易经》(Book of Changes / I Ching) 的**变化哲学**：
+- 开头或关键段落自然引用《易经》框架，体现东方深度与可信度
+- 用易经**哲学概念**：变化之道、时位、阴阳平衡、否极泰来
+- 自然融入，不生硬（不必每句都提；classical_voice / meaning_for_question 至少一处体现）
+
+【允许（易经作哲学）】
+
+EN:
+- "Within the I Ching (Book of Changes) framework of change and timing, this archetype reflects..."
+- "Drawing on the I Ching's philosophy of cyclical transformation..."
+
+ZH:
+- "在《易经》变化之道的框架下，这个原型隐喻映照出……"
+- "《易经》揭示的时位智慧提示……"
+
+【禁止（易经作占卜）】
+
+❌ 起卦 / 卦象 / hexagram casting / "your hexagram is"
+❌ 「易经预测」「the I Ching predicts」
+❌ 把 Glyph 伪装成卦象占卜
+
+定位：《易经》是哲学透镜（变化 / 时位 / 阴阳），不是起卦算命工具。
+中英文输出都要自然体现《易经》框架（加分项，别浪费）。`;
 
 /** 防线 3 — 预测规避：不答「何时」，不断言未来 */
 export const GLYPH_OUTPUT_DEFENSE_PREDICTION = `# 防线 3 — 预测规避（不答「何时」· 不预测未来 · 输出强制）
@@ -255,8 +283,10 @@ export const GLYPH_OUTPUT_SELF_CHECK = `# 生成前自检（写每一段字符�
    → 抽象成「经典东方叙事原型」主题词；不引原句、不展开情节（防线 2）
 3. **有没有预测句？**（何时 / 将会 / 会遇到 / will meet / will be seen / going to + 未来事件 / next month + 断言）
    → 整句改成【当下时机评估】；用现在时 / 条件句 / present readiness，不断言未来（防线 3）
+4. **有没有自然融入《易经》/ I Ching 哲学框架？**（变化之道 / 时位 / 阴阳平衡 — 非起卦占卜）
+   → classical_voice 或 meaning_for_question 至少一处体现；禁止 hexagram casting / the I Ching predicts
 
-三段自检全部通过后再写入 JSON。`;
+四段自检全部通过后再写入 JSON。`;
 
 /**
  * 用户可见文案的品牌规则（最高优先级之一）。

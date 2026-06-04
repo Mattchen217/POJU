@@ -1,5 +1,5 @@
 /**
- * English prediction sentence sanitize — no broken mid-sentence word swaps.
+ * English prediction audit — detect-only at pipeline level.
  * Run: pnpm tsx scripts/test-glyph-prediction-sanitize-en.ts
  */
 import {
@@ -50,14 +50,6 @@ function assert(cond: boolean, msg: string): void {
   }
 }
 
-function looksBroken(text: string): boolean {
-  return (
-    /\b(you you|will will|for for|the the)\b/i.test(text) ||
-    /\byour present readiness for someone\b/i.test(text) ||
-    /\byou may notice signals for someone\b/i.test(text)
-  );
-}
-
 function main() {
   const samples = [
     "A figure will be seen on your path next month.",
@@ -76,38 +68,24 @@ function main() {
   assert(detectPredictionSentences(samples[2]!, "en").length === 0, "allows will help (non-prediction)");
   assert(detectPredictionSentences(samples[3]!, "en").length === 0, "allows planning next month alone");
 
-  console.log("\n=== sentence sanitize (before → after) ===");
-  for (const s of [samples[0]!, samples[1]!]) {
-    const { text } = sanitizePredictionSentences(s, "en");
-    console.log("BEFORE:", s);
-    console.log("AFTER: ", text);
-    assert(!looksBroken(text), `no broken grammar: "${text}"`);
-    assert(!/\bwill meet\b/i.test(text), "no will meet after sanitize");
-  }
+  console.log("\n=== module-level sentence sanitize (direct call only) ===");
+  const { text } = sanitizePredictionSentences(samples[0]!, "en");
+  assert(text !== samples[0], "direct module call can still replace");
 
-  console.log("\n=== full English reading sanitize ===");
-  const sanitized = sanitizeGlyphReadingContent(leakyEnglish, "en");
-  const merged = [
-    sanitized.命理双视角.签文看此事,
-    sanitized.命理双视角.两者印证或冲突,
-    sanitized.meaning_for_question,
-    sanitized.your_moment,
-  ].join("\n\n");
+  console.log("\n=== audit-only pipeline — reading unchanged ===");
+  const audited = sanitizeGlyphReadingContent(leakyEnglish, "en");
+  assert(
+    audited.命理双视角.两者印证或冲突 === leakyEnglish.命理双视角.两者印证或冲突,
+    "text unchanged by pipeline",
+  );
 
-  console.log("\n--- English output (sanitized) ---\n");
-  console.log(merged);
-
-  assert(!looksBroken(merged), "full reading has no broken phrases");
-  assert(!/\bwill meet\b/i.test(merged), "no will meet in output");
-  assert(!/\bwill be seen\b/i.test(merged), "no will be seen in output");
-  assert(!/\bnext month if you\b/i.test(merged), "no next month prediction");
-
-  const remaining = auditGlyphReadingContent(sanitized, "en");
-  const predictionLeft = remaining.filter((v) => v.category === "prediction");
-  console.log(`\nre-audit prediction violations: ${predictionLeft.length}`);
+  const violations = auditGlyphReadingContent(leakyEnglish, "en");
+  const predictionLeft = violations.filter((v) => v.category === "prediction");
+  assert(predictionLeft.length > 0, "audit flags prediction violations");
+  console.log(`prediction violations: ${predictionLeft.length}`);
 
   if (process.exitCode) process.exit(1);
-  console.log("\nAll English prediction sanitize checks passed.");
+  console.log("\nAll English prediction audit checks passed.");
 }
 
 main();

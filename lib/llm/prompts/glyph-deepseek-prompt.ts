@@ -5,6 +5,7 @@ import {
   GLYPH_OUTPUT_FRAMING,
   GLYPH_OUTPUT_DEFENSE_TERMS,
   GLYPH_OUTPUT_DEFENSE_NARRATIVE,
+  GLYPH_OUTPUT_ICHING_FRAMEWORK,
   GLYPH_OUTPUT_DEFENSE_PREDICTION,
   GLYPH_OUTPUT_SELF_CHECK,
   GLYPH_LANGUAGE_RULES,
@@ -103,7 +104,7 @@ ${windCategoryToneBlock(glyph.wind_category)}
 
 {
   "wind_category_blurb": "30-50 字。介绍这个风类的整体氛围（白榜用语，禁止吉/凶/auspicious/ominous）",
-  "classical_voice": "50-80 字。用 Glyph 口吻点出原型隐喻核心（抽象叙事原型，禁止签诗原文/历史人物/OUTPUT FRAMING 禁词）",
+  "classical_voice": "50-80 字。用 Glyph 口吻点出原型隐喻核心（抽象叙事原型，禁止签诗原文/历史人物/OUTPUT FRAMING 禁词；自然融入《易经》/ I Ching 哲学框架）",
   "命理双视角": {
     "命理看此事": "200-400 字。从行为蓝图 / 人格架构看此事；**须体现** structured 中三项（人格核心架构、当前10年生命周期、认知资源偏好），但**禁写**日主/大运/用神/干支/十神/八字/命理等词，全部用防线1心理学翻译",
     "签文看此事": "200-400 字。从 Glyph 原型隐喻解读：用抽象情境主题 + 经典东方叙事原型（禁签诗原文/人名/签字样）；禁止 modern_translation 抄入",
@@ -132,7 +133,7 @@ ${windCategoryToneBlock(glyph.wind_category)}
 
 1. **全部字段填充**（JSON 不能缺字段；**禁止空字符串**；invalid_input 时也用中性引导填满）
 2. **使用语言**: ${outputLang}（跟随用户实际输入语言；输出禁干支/十神/命理术语）
-3. **OUTPUT FRAMING + 三道防线**: 术语翻译 + 叙事抽象 + 预测规避（见上文）；允许原型隐喻/行为蓝图/系统性情境模式
+3. **OUTPUT FRAMING + 三道防线 + 《易经》框架**: 术语翻译 + 叙事抽象 + 预测规避 + I Ching 哲学透镜（非占卜）；允许原型隐喻/行为蓝图/系统性情境模式
 4. **人格依据**: 「命理看此事」须体现人格架构 + 10年生命周期 + 认知资源偏好（防线1翻译，禁写日主/大运/用神）
 5. **隐喻依据**: 抽象情境主题 + 经典东方叙事原型；禁止签诗原文/历史人物/签字样
 6. **结构必备**: 命理双视角 + 原型隐喻意象 + exploration 内观练习 三者缺一不可
@@ -156,6 +157,7 @@ ${GLYPH_OUTPUT_SELF_CHECK}`;
     GLYPH_OUTPUT_FRAMING,
     GLYPH_OUTPUT_DEFENSE_TERMS,
     GLYPH_OUTPUT_DEFENSE_NARRATIVE,
+    GLYPH_OUTPUT_ICHING_FRAMEWORK,
     GLYPH_OUTPUT_DEFENSE_PREDICTION,
     GLYPH_OUTPUT_BRANDING,
     GLYPH_LANGUAGE_RULES,
@@ -167,17 +169,18 @@ ${GLYPH_OUTPUT_SELF_CHECK}`;
     `# 当前任务：本次 Glyph 解读
 
 用户触发了一个原型隐喻（内部对应观音百签 #${glyph.id}）。你要结合【命主 base_analysis structured + display_text】+【完整签文原文（仅内部分析用）】+【用户问题】，按上文解签法则做一次【深度双视角解读】。
-输出 JSON 字符串必须 100% 遵守 OUTPUT FRAMING + 三道防线（术语翻译 / 叙事抽象 / 预测规避）。`,
+输出 JSON 字符串必须 100% 遵守 OUTPUT FRAMING + 三道防线（术语翻译 / 叙事抽象 / 预测规避）+ 《易经》哲学框架。`,
     signBlock,
     outputSchema,
   );
 
   const user = `请按解签法则生成解读 JSON。
 
-⛔ 输出合规（最高优先级）: OUTPUT FRAMING + 三道防线
+⛔ 输出合规（最高优先级）: OUTPUT FRAMING + 三道防线 + 《易经》框架
   · 防线1: 禁干支/十神/日主/大运/用神 → 心理学/系统动力学翻译
   · 防线2: 禁签诗原文/历史人物/签字样 → 抽象叙事原型
   · 防线3: 禁 will meet / will be seen / going to + 未来事件 / next month 断言 → 整句用 present readiness / 现在时
+  · 《易经》: 自然融入 I Ching 变化之道/时位/阴阳（非起卦占卜）
 ✓ 语言: 跟随用户实际输入（${outputLang}）。
 ✓ 内容: 命理看此事须体现人格架构+10年周期+认知偏好（翻译表述）；隐喻解读用抽象原型；不得抄写 modern_translation。
 ✓ 写每段前执行三道自检。invalid_input 时所有字段仍填中性引导，禁止空字符串。`;

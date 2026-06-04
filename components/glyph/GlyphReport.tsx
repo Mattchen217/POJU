@@ -1,8 +1,7 @@
 "use client";
 
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
-import { sanitizeGlyphReadingContent } from "@/lib/glyph/sanitize-output";
 import { pojuChatMessageBody } from "@/lib/poju/chat-layout";
 import { cn } from "@/lib/utils/classnames";
 import type { GlyphReadingContent } from "@/lib/llm/services/glyph-reading-service";
@@ -27,8 +26,7 @@ const TIMEFRAME_KEYS: Record<
 
 export function GlyphReport({ reading, glyph, question, archiveId }: Props) {
   const t = useTranslations("glyph");
-  const locale = useLocale();
-  const safeReading = sanitizeGlyphReadingContent(reading, locale);
+  const safeReading = reading;
   const windLabel = LEVEL_META[glyph.level]?.display_name ?? glyph.level;
   const timeframeKey = TIMEFRAME_KEYS[safeReading.exploration.timeframe] ?? "explore_time_today";
 

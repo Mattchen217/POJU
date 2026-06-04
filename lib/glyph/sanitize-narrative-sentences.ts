@@ -1,7 +1,6 @@
 import { polishSanitizedText, splitIntoSentences } from "@/lib/glyph/sanitize-sentence-utils";
 import {
   EN_QUOTED_MAXIM_PREFIX_REGEX,
-  EN_QUOTED_STRING_REGEX,
   EN_STORY_SEQUENCE_NARRATIVE_REGEX,
   EN_STORY_SEQUENCE_VERB_REGEX,
   EN_WARRIOR_WHO_REGEX,
@@ -14,11 +13,8 @@ export const EN_QUOTED_MAXIM_REPLACEMENT =
 export const ZH_NARRATIVE_REPLACEMENT =
   "这映照出经典东方叙事原型：在静守中沉淀、于逆境后再度浮现的韧性。";
 
-/** English: quoted maxims / sign-poem English renderings. */
-const EN_QUOTED_MAXIM_PATTERNS: RegExp[] = [
-  EN_QUOTED_MAXIM_PREFIX_REGEX,
-  EN_QUOTED_STRING_REGEX,
-];
+/** English: quoted maxims / sign-poem English renderings (prefix only — not rhetorical quotes). */
+const EN_QUOTED_MAXIM_PATTERNS: RegExp[] = [EN_QUOTED_MAXIM_PREFIX_REGEX];
 
 /** English: historical story sequence (even without names). */
 const EN_STORY_SEQUENCE_PATTERNS: RegExp[] = [
@@ -46,11 +42,10 @@ function narrativePatterns(locale: string): RegExp[] {
 
 function replacementForHit(sentence: string, locale: string): string {
   if (locale.startsWith("zh")) return ZH_NARRATIVE_REPLACEMENT;
-  const isQuoted =
-    EN_QUOTED_MAXIM_PATTERNS.some((p) => {
-      p.lastIndex = 0;
-      return p.test(sentence);
-    }) || /['"][^'"]{10,}['"]/.test(sentence);
+  const isQuoted = EN_QUOTED_MAXIM_PATTERNS.some((p) => {
+    p.lastIndex = 0;
+    return p.test(sentence);
+  });
   return isQuoted ? EN_QUOTED_MAXIM_REPLACEMENT : EN_NARRATIVE_REPLACEMENT;
 }
 

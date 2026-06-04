@@ -212,10 +212,11 @@ export const EN_FAVORABLE_ELEMENT_REGEX =
 export const EN_UNFAVORABLE_ELEMENT_REGEX =
   /\bUnfavorable\s+(?:Wood|Fire|Earth|Metal|Water|Element|Elements)\b/gi;
 
-/** EN Defense 2 — quoted maxims / sign-poem English (audit). */
+/** EN Defense 2 — quoted maxims after wisdom prefix (audit). */
 export const EN_QUOTED_MAXIM_PREFIX_REGEX =
   /(?:ancient wisdom|the saying|classical verse|old maxim|quoted maxim|the verse|sign poem|the line reads)[:\s,—-]+['"]/gi;
 
+/** @deprecated Too many false positives on English possessives — use EN_QUOTED_MAXIM_PREFIX_REGEX only. */
 export const EN_QUOTED_STRING_REGEX = /['"][^'"]{10,}['"]/g;
 
 /** EN Defense 2 — warrior/figure story sequence (audit). */
@@ -325,7 +326,6 @@ export function detectComplianceViolations(text: string, locale: string): Compli
     pushRegex(EN_UNFAVORABLE_ELEMENT_REGEX, "unfavorable_element");
     pushRegex(EN_WUXING_ELEMENT_COMBO_REGEX, "wuxing_combo");
     pushRegex(EN_QUOTED_MAXIM_PREFIX_REGEX, "quoted_maxim_prefix");
-    pushRegex(EN_QUOTED_STRING_REGEX, "quoted_string");
     pushRegex(EN_WARRIOR_WHO_REGEX, "warrior_who_narrative");
     pushRegex(EN_STORY_SEQUENCE_VERB_REGEX, "story_sequence_verb");
     pushRegex(EN_STORY_SEQUENCE_NARRATIVE_REGEX, "story_sequence_narrative");
@@ -350,7 +350,7 @@ export function detectComplianceViolations(text: string, locale: string): Compli
   });
 }
 
-/** Mask remaining violation spans in text. */
+/** Mask remaining violation spans in text. @deprecated Audit-only mode — no longer used. */
 function maskRemainingViolations(
   text: string,
   violations: ComplianceViolation[],
@@ -379,27 +379,21 @@ export type ComplianceSanitizeResult = {
 };
 
 /**
- * Pure text replacement — no LLM. Applies shared term maps + bazi-context regexes.
+ * Audit-only — detects black-word hits, returns text unchanged.
+ * EN_TERM_MAP / ZH_TERM_MAP remain as prompt translation suggestions (not auto-applied).
  */
 export function applyComplianceSanitize(text: string, locale: string): ComplianceSanitizeResult {
   const violationsBefore = detectComplianceViolations(text, locale);
-  let result = text;
+  const violationsAfter = violationsBefore;
 
-  if (locale.startsWith("zh")) {
-    result = applyZhRegexReplacements(result);
-    result = applyTermMap(result, ZH_TERM_MAP, locale);
-  } else {
-    result = applyEnRegexReplacements(result);
-    result = applyTermMap(result, EN_TERM_MAP, locale);
+  if (violationsBefore.length > 0) {
+    console.error(
+      `[compliance-audit] Black-word hits (${violationsBefore.length}, locale=${locale}):`,
+      violationsBefore,
+    );
   }
 
-  let violationsAfter = detectComplianceViolations(result, locale);
-  if (violationsAfter.length > 0) {
-    result = maskRemainingViolations(result, violationsAfter, locale);
-    violationsAfter = detectComplianceViolations(result, locale);
-  }
-
-  return { text: result, violationsBefore, violationsAfter };
+  return { text, violationsBefore, violationsAfter };
 }
 
 /** Prompt block: reference shared compliance maps (Glyph OUTPUT FRAMING 防线 1). */
@@ -417,9 +411,9 @@ export function buildComplianceTranslationPromptBlock(): string {
     "Noble Person → key supporter",
     "Four Pillars → personality structure",
   ];
-  return `# 共享合规翻译表（与 sanitize 兜底同一份 compliance-terms）
+  return `# 共享合规翻译表（prompt 强制翻译 · compliance-audit 仅检测告警）
 
-输出 JSON 须将下列黑词译为白榜（完整表见 lib/llm/sanitize/compliance-terms.ts）：
+输出 JSON 须将下列黑词译为白榜（完整映射见 lib/llm/sanitize/compliance-terms.ts，**不自动替换**）：
 
 中文示例：${zhSamples.join("；")}
 英文示例：${enSamples.join("; ")}
