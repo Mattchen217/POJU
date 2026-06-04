@@ -18,16 +18,25 @@ export const SYNCRO_MAP_POINT_SIZE = 12;
 export const SYNCRO_RING_MARGIN_TOP = 0;
 export const SYNCRO_COMPASS_PAGE_PADDING_TOP = 0;
 export const SYNCRO_WHY_BUTTON_MARGIN_TOP = 8;
+/** Wait page mini compass ring diameter. */
+export const SYNCRO_PREPARING_RING_SIZE = 132;
 
 /** Styles on Spline host — no extra product wrapper div. */
-export function getSyncroParticleFieldStyle(options?: { opacity?: number }): CSSProperties {
+export function getSyncroParticleFieldStyle(options?: {
+  opacity?: number;
+  /** Ring container size in px — scales particle field (default full compass). */
+  ringSize?: number;
+}): CSSProperties {
+  const ringSize = options?.ringSize ?? SYNCRO_RING_SIZE;
+  const scale =
+    (SYNCRO_PARTICLE_DISPLAY_SIZE / SYNCRO_PARTICLE_CANVAS_SIZE) * (ringSize / SYNCRO_RING_SIZE);
   return {
     position: "absolute",
     top: "50%",
     left: "50%",
     width: SYNCRO_PARTICLE_CANVAS_SIZE,
     height: SYNCRO_PARTICLE_CANVAS_SIZE,
-    transform: `translate(calc(-50% + ${SYNCRO_PARTICLE_OFFSET_X}px), calc(-50% + ${SYNCRO_PARTICLE_OFFSET_Y}px)) scale(${SYNCRO_PARTICLE_DISPLAY_SCALE})`,
+    transform: `translate(calc(-50% + ${SYNCRO_PARTICLE_OFFSET_X}px), calc(-50% + ${SYNCRO_PARTICLE_OFFSET_Y}px)) scale(${scale})`,
     transformOrigin: "center center",
     overflow: "visible",
     pointerEvents: "none",

@@ -1,6 +1,9 @@
 import { kv } from "@/lib/kv/client";
+import type { AppLocale } from "@/lib/prompts/language-directive";
 import { HOUR_ORDER } from "@/lib/syncro/hour-order";
 import type { HourPeriod } from "@/lib/syncro/types";
+
+const OUTPUT_LOCALE_VARIANTS: AppLocale[] = ["en", "es", "zh", "fr", "de"];
 
 const TTL_INPUT = 30 * 60;
 const TTL_OUTPUT = 10 * 60;
@@ -21,8 +24,8 @@ function inputKey(sessionId: string, hourId: string): string {
   return `syncro:input:${sessionId}:${hourId}`;
 }
 
-function outputKey(sessionId: string, hourId: string): string {
-  return `syncro:output:${sessionId}:${hourId}`;
+function outputKey(sessionId: string, outputLocale: string, hourId: string): string {
+  return `syncro:output:${sessionId}:${outputLocale}:${hourId}`;
 }
 
 export async function cacheLlmInput(
@@ -44,22 +47,24 @@ export async function getCachedInput(
 
 export async function cacheLlmOutput(
   sessionId: string,
+  outputLocale: string,
   hourId: string,
   advice: Record<string, { short_advice: string; detailed_advice: string; rationale: string }>,
 ): Promise<void> {
   if (!isKvConfigured()) return;
-  await kv.set(outputKey(sessionId, hourId), advice, { ex: TTL_OUTPUT });
+  await kv.set(outputKey(sessionId, outputLocale, hourId), advice, { ex: TTL_OUTPUT });
 }
 
 export async function getCachedOutput(
   sessionId: string,
+  outputLocale: string,
   hourId: string,
 ): Promise<Record<string, { short_advice: string; detailed_advice: string; rationale: string }> | null> {
   if (!isKvConfigured()) return null;
   return (
     (await kv.get<
       Record<string, { short_advice: string; detailed_advice: string; rationale: string }>
-    >(outputKey(sessionId, hourId))) ?? null
+    >(outputKey(sessionId, outputLocale, hourId))) ?? null
   );
 }
 
@@ -67,7 +72,7 @@ export async function clearHourCache(sessionId: string, hourId: string): Promise
   if (!isKvConfigured()) return;
   await Promise.all([
     kv.del(inputKey(sessionId, hourId)),
-    kv.del(outputKey(sessionId, hourId)),
+    ...OUTPUT_LOCALE_VARIANTS.map((loc) => kv.del(outputKey(sessionId, loc, hourId))),
     kv.del(`syncro:stream:${sessionId}:${hourId}`),
   ]);
 }
@@ -76,7 +81,7 @@ export async function clearSessionCache(sessionId: string): Promise<void> {
   if (!isKvConfigured()) return;
   const keys = HOUR_ORDER.flatMap((hourId) => [
     inputKey(sessionId, hourId),
-    outputKey(sessionId, hourId),
+    ...OUTPUT_LOCALE_VARIANTS.map((loc) => outputKey(sessionId, loc, hourId)),
     `syncro:stream:${sessionId}:${hourId}`,
   ]);
   if (keys.length > 0) await kv.del(...keys);

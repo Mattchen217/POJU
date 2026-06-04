@@ -5,7 +5,9 @@ import {
   getOpenRouterDefaultModel,
   isOpenRouterConfigured,
 } from "@/lib/llm/openrouter-shared";
-import { parseAppLocale } from "@/lib/prompts/language-directive";
+import { buildSyncroSingleHourRetryPrompt } from "@/lib/syncro/syncro-batch-prompt";
+import { buildSyncroProfileSummary } from "@/lib/syncro/syncro-profile-summary";
+import { sanitizeSyncroHourAdvice } from "@/lib/syncro/sanitize-output";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -90,49 +92,25 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid_request", retryable: false }, { status: 400 });
   }
 
-  const locale = parseAppLocale(body.locale ?? "en");
-  const langInstruction =
-    locale === "zh" ? "用简体中文输出。" : "Output in English.";
+  const locale = body.locale ?? "en";
+  const profileSummary = buildSyncroProfileSummary(
+    body.profile_summary,
+    body.task_description?.trim() ?? "",
+  );
 
-  console.log(`[llm_hour] ${hourId} start, cells=${body.cells.length}, model=${model}`);
+  const { system, user: userMsg, outputLocale } = buildSyncroSingleHourRetryPrompt({
+    task_description: body.task_description.trim(),
+    profile_summary: profileSummary,
+    locale,
+    hour_label: body.hour_label ?? hourId,
+    hour_range: body.hour_range ?? "",
+    cells: body.cells.map((c) => ({
+      direction: c.direction,
+      current_level: c.current_level,
+    })),
+  });
 
-  const system = `You are Syncro analyzer. For the given hour and 8 directions, generate practical guidance.
-
-# User task
-"${body.task_description.trim()}"
-
-# Output JSON ONLY - no preamble, no explanation:
-{
-  "advice": {
-    "N": {
-      "short": "<50-80 chars,one-sentence direct advice>",
-      "detailed": "<150-200 chars,2-3 sentences action advice>",
-      "rationale": "<100-150 chars,why this for the user's task>"
-    },
-    "NE": { ... },
-    "E": { ... },
-    "SE": { ... },
-    "S": { ... },
-    "SW": { ... },
-    "W": { ... },
-    "NW": { ... }
-  }
-}
-
-# Rules
-${langInstruction}
-- All 8 directions MUST be included
-- DO NOT use: astrology, divination, fortune-telling, 占卜, 算命, 命理
-- Use: pojulife / reading / analysis / 解读 / 分析`;
-
-  const userMsg = `Hour: ${body.hour_label ?? hourId} (${body.hour_range ?? ""})
-
-The 8 directions for this hour have these current levels (already computed):
-${body.cells.map((c) => `  ${c.direction}: ${c.current_level}`).join("\n")}
-
-Profile context: ${(body.profile_summary ?? "").slice(0, 4000)}
-
-Generate advice for all 8 directions. Output JSON only.`;
+  console.log(`[llm_hour] ${hourId} start, cells=${body.cells.length}, model=${model}, outputLocale=${outputLocale}`);
 
   try {
     console.log(`[llm_hour] Using model: ${model}`);
@@ -192,6 +170,8 @@ Generate advice for all 8 directions. Output JSON only.`;
         rationale: (dirAdvice.rationale ?? "").trim(),
       };
     }
+
+    sanitizeSyncroHourAdvice(adviceByKey, outputLocale);
 
     const elapsed = Date.now() - startTime;
     console.log(

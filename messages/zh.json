@@ -1187,6 +1187,19 @@
       "all_failed": "12 个时辰批次均失败，请查看控制台日志与 API 配置。"
     },
     "preparing_live": {
+      "analyzing_title": "正在深度分析中…",
+      "live_hour_hint": "◐ 正在生成当前时辰 {hour}（{range}）· 完成后进入罗盘",
+      "background_hint": "其余时辰在进入罗盘后由云端队列生成（可离开 App，回来自动刷新）",
+      "reasoning": "深度推理中…",
+      "connecting": "正在连接…",
+      "ctx_missing": "无法加载 LLM 上下文",
+      "gen_failed": "生成失败：{error}",
+      "ctx_missing_suffix": "（上下文缺失）",
+      "save_failed": "保存结果失败",
+      "retry": "重试",
+      "retrying": "正在重试（{current}/{max}）",
+      "background_progress": "后台已完成 {done}/12 时辰",
+      "patience_hint": "准确分析需要时间，请耐心等待，大约需要 1–3 分钟",
       "title": "正在生成当前时辰「{hour}」解读…",
       "hint": "当前时辰完成后才会进入罗盘；其余时辰将按顺序逐个生成。",
       "progress": "正在生成 {hour} · 已完成 {done}/{total}"

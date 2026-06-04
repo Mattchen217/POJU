@@ -1,6 +1,7 @@
 import { getOpenRouterDefaultModel } from "@/lib/llm/openrouter-shared";
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
 import { buildSyncroOutputDefenseSections } from "@/lib/llm/prompts/syncro-base";
+import { resolveSyncroBatchOutputLocale } from "@/lib/syncro/syncro-batch-prompt";
 import { sanitizeSyncroHourAdvice } from "@/lib/syncro/sanitize-output";
 import {
   appendToStream,
@@ -561,11 +562,12 @@ export async function generateSyncroHourAdvice(
   callbacks?: SyncroLlmHourCallbacks,
   signal?: AbortSignal,
 ): Promise<SyncroLlmHourResult> {
-  const cached = await getCachedOutput(input.session_id, input.hour_id);
+  const outputLocale = resolveSyncroBatchOutputLocale(input.locale, input.task_description);
+  const cached = await getCachedOutput(input.session_id, outputLocale, input.hour_id);
   if (cached) {
     console.log(`[syncro-llm-core] ${input.hour_id} 命中 output 缓存,直接返回`);
     return {
-      advice: sanitizeSyncroHourAdvice(cached, input.locale),
+      advice: sanitizeSyncroHourAdvice(cached, outputLocale),
       raw_content: "",
       from_cache: true,
     };
@@ -605,10 +607,10 @@ export async function generateSyncroHourAdvice(
     throw new SyncroParseError(accumContent, message);
   }
 
-  await cacheLlmOutput(input.session_id, input.hour_id, adviceByKey);
+  await cacheLlmOutput(input.session_id, outputLocale, input.hour_id, adviceByKey);
   await clearStream(input.session_id, input.hour_id);
 
-  const finalized = sanitizeSyncroHourAdvice(adviceByKey, input.locale);
+  const finalized = sanitizeSyncroHourAdvice(adviceByKey, outputLocale);
 
   return {
     advice: finalized,

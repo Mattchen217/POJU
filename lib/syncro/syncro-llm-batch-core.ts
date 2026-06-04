@@ -1,5 +1,11 @@
 import { getOpenRouterDefaultModel } from "@/lib/llm/openrouter-shared";
 import {
+  buildSyncroBatchPromptForHours,
+  resolveSyncroBatchOutputLocale,
+} from "@/lib/syncro/syncro-batch-prompt";
+import { buildSyncroProfileSummary } from "@/lib/syncro/syncro-profile-summary";
+import { sanitizeSyncroHourAdvice } from "@/lib/syncro/sanitize-output";
+import {
   cacheLlmInput,
   cacheLlmOutput,
   clearStream,
@@ -110,81 +116,32 @@ function extractReasoningDelta(delta: Record<string, unknown> | undefined): stri
   return "";
 }
 
-function buildPromptForHours(input: SyncroLlmHoursInput): { system: string; user: string } {
-  const isZh = input.locale === "zh";
-  const now = new Date();
-  const dateStr = isZh
-    ? `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日`
-    : now.toISOString().split("T")[0];
-
-  const hoursSections = input.hours
-    .map((hour) => {
-      const cellsDesc = hour.cells
-        .map((c) => {
-          const hints = c.key_hints?.length ? ` · 关键信号: ${c.key_hints.join("、")}` : "";
-          return `    ${c.direction}: ${c.current_level}${hints}`;
-        })
-        .join("\n");
-      return `【${hour.hour_label} ${hour.hour_range} · hour_id=${hour.hour_id}】\n${cellsDesc}`;
-    })
-    .join("\n\n");
-
-  const hourIds = input.hours.map((h) => h.hour_id).join(", ");
-
-  const hourIdList = input.hours.map((h) => `"${h.hour_id}"`).join("、");
-  const rulesZh = `你是 pojulife Syncro 资深分析师。本次 LLM 调用【仅】生成以下 ${input.hours.length} 个时辰（hour_id 必须完全一致）:${hourIdList}。共 ${input.hours.reduce((n, h) => n + h.cells.length, 0)} 个方位。
-
-用户任务:"${input.task_description}"
-命局摘要:${input.profile_summary}
-日期:${dateStr}
-
-各时辰方位状态(严禁改 current_level):
-${hoursSections}
-
-每个时辰 8 方位各 3 字段:short(15-25字)、detailed(100-150字)、rationale(80-120字,必须紧扣用户任务)。
-语言跟随用户任务实际语言,不看 locale。
-禁用:占卜/算命/奇门/八字/用神等术语;用 Syncro/解读/分析。
-
-严格 JSON:
-{
-  "advice_by_hour": {
-    "${input.hours[0]?.hour_id ?? "zi"}": {
-      "N": { "short": "...", "detailed": "...", "rationale": "..." },
-      "NE": { ... }, "E": { ... }, "SE": { ... }, "S": { ... }, "SW": { ... }, "W": { ... }, "NW": { ... }
-    }${input.hours[1] ? `,\n    "${input.hours[1].hour_id}": { ... 8 directions ... }` : ""}
-  }
+function buildPromptForHours(input: SyncroLlmHoursInput): ReturnType<typeof buildSyncroBatchPromptForHours> {
+  return buildSyncroBatchPromptForHours({
+    hours: input.hours,
+    task_description: input.task_description,
+    profile_summary: input.profile_summary,
+    locale: input.locale,
+  });
 }
 
-必须包含 hour_id: ${hourIds} 的全部时辰,每时辰 8 方向。
-advice_by_hour 的键必须且只能是上述 hour_id 字符串（与【hour_id=】完全一致,禁止申/午/Wu 等别名或其他时辰）。只输出 JSON。`;
-
-  const rulesEn = `You are a pojulife Syncro analyst. This call generates ONLY these hour_id values: ${hourIdList}. (${input.hours.reduce((n, h) => n + h.cells.length, 0)} direction cells.)
-
-Task: "${input.task_description}"
-Profile: ${input.profile_summary}
-Date: ${dateStr}
-
-Precomputed states:
-${hoursSections}
-
-Per direction: short(40-60 chars), detailed(220-300), rationale(180-260, tie to task).
-Output language must match the task language.
-
-Strict JSON:
-{
-  "advice_by_hour": {
-    "<hour_id>": { "N": { "short", "detailed", "rationale" }, ... 8 directions }
+async function splitAndCachePerHour(
+  sessionId: string,
+  outputLocale: string,
+  input: SyncroLlmHoursInput,
+  adviceByKey: Record<string, SyncroHourAdviceCell>,
+): Promise<void> {
+  for (const hour of input.hours) {
+    const hourAdvice: Record<string, SyncroHourAdviceCell> = {};
+    for (const cell of hour.cells) {
+      const patch = adviceByKey[cell.key];
+      if (patch) hourAdvice[cell.key] = patch;
+    }
+    if (Object.keys(hourAdvice).length > 0) {
+      await cacheLlmOutput(sessionId, outputLocale, hour.hour_id, hourAdvice);
+      await clearStream(sessionId, hour.hour_id);
+    }
   }
-}
-
-Include all hour_ids: ${hourIds}. advice_by_hour keys MUST match those hour_id strings exactly (no aliases). JSON only.`;
-
-  const system = isZh ? rulesZh : rulesEn;
-  const user = isZh
-    ? `请为上述 ${input.hours.length} 个时辰生成文案,严格 JSON,按 advice_by_hour 结构。`
-    : `Generate for all listed hours. Strict JSON with advice_by_hour.`;
-
-  return { system, user };
 }
 
 function normalizeAdviceByHour(
@@ -277,24 +234,6 @@ function parseAdviceByHourJson(
   );
 
   return adviceByKey;
-}
-
-async function splitAndCachePerHour(
-  sessionId: string,
-  input: SyncroLlmHoursInput,
-  adviceByKey: Record<string, SyncroHourAdviceCell>,
-): Promise<void> {
-  for (const hour of input.hours) {
-    const hourAdvice: Record<string, SyncroHourAdviceCell> = {};
-    for (const cell of hour.cells) {
-      const patch = adviceByKey[cell.key];
-      if (patch) hourAdvice[cell.key] = patch;
-    }
-    if (Object.keys(hourAdvice).length > 0) {
-      await cacheLlmOutput(sessionId, hour.hour_id, hourAdvice);
-      await clearStream(sessionId, hour.hour_id);
-    }
-  }
 }
 
 async function streamOpenRouter(
@@ -402,11 +341,12 @@ export async function generateSyncroHoursAdvice(
   callbacks?: SyncroLlmHourCallbacks,
   signal?: AbortSignal,
 ): Promise<SyncroLlmHoursResult> {
+  const outputLocale = resolveSyncroBatchOutputLocale(input.locale, input.task_description);
   const merged: Record<string, SyncroHourAdviceCell> = {};
   let allCached = true;
 
   for (const hour of input.hours) {
-    const cached = await getCachedOutput(input.session_id, hour.hour_id);
+    const cached = await getCachedOutput(input.session_id, outputLocale, hour.hour_id);
     if (!cached) {
       allCached = false;
       break;
@@ -415,7 +355,8 @@ export async function generateSyncroHoursAdvice(
   }
 
   if (allCached && Object.keys(merged).length > 0) {
-    console.log(`[syncro-llm-batch] ${pairLabel(input.hours.map((h) => h.hour_id))} cache hit`);
+    console.log(`[syncro-llm-batch] ${pairLabel(input.hours.map((h) => h.hour_id))} cache hit (${outputLocale})`);
+    sanitizeSyncroHourAdvice(merged, outputLocale);
     return { advice: merged, raw_content: "", from_cache: true };
   }
 
@@ -437,7 +378,8 @@ export async function generateSyncroHoursAdvice(
   );
 
   const adviceByKey = parseAdviceByHourJson(accumContent, input);
-  await splitAndCachePerHour(input.session_id, input, adviceByKey);
+  sanitizeSyncroHourAdvice(adviceByKey, outputLocale);
+  await splitAndCachePerHour(input.session_id, outputLocale, input, adviceByKey);
 
   return {
     advice: adviceByKey,
@@ -468,16 +410,7 @@ export function buildSyncroLlmHoursInput(
       }),
     })),
     task_description: ctx.task_description,
-    profile_summary:
-      typeof ctx.base_analysis === "string"
-        ? ctx.base_analysis.slice(0, 4000)
-        : (() => {
-            try {
-              return JSON.stringify(ctx.base_analysis).slice(0, 4000);
-            } catch {
-              return ctx.task_description;
-            }
-          })(),
+    profile_summary: buildSyncroProfileSummary(ctx.base_analysis, ctx.task_description),
     locale,
   };
 }

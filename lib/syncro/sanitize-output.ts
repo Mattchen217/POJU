@@ -45,6 +45,18 @@ const EN_PREDICTION_PATTERNS: RegExp[] = [
   /\bfortune\s+favors\b/i,
 ];
 
+const ZH_BRANCHES = "子丑寅卯辰巳午未申酉戌亥";
+const ZH_WUXING = "金木水火土";
+
+/** Branch + element combos (e.g. 午火) — must not appear in user-visible copy. */
+const ZH_BRANCH_ELEMENT_REGEX = new RegExp(`[${ZH_BRANCHES}][${ZH_WUXING}]`, "g");
+/** Qimen palace names (e.g. 坤宫). */
+const ZH_PALACE_REGEX = /[乾坤艮震巽坎离兑][宫]/g;
+/** Ten-god / seal strength (e.g. 印旺). */
+const ZH_YIN_STRENGTH_REGEX = /印旺|印弱|偏印|正印/g;
+/** 忌神 — unfavorable element label in bazi copy. */
+const ZH_JISHEN_REGEX = /忌神/g;
+
 const ZH_PREDICTION_PATTERNS: RegExp[] = [
   /会成功|必将成功|一定成功|必成|带来好运|带来吉利|财运亨通|必定顺利/,
   /此时.*必|此向.*必/,
@@ -145,6 +157,12 @@ export function detectSyncroOutputViolations(text: string, locale = "en"): Syncr
   }
 
   collectInternalKeyViolations(text, violations);
+
+  // Cross-locale: black bazi/qimen terms must not appear in any user-visible output.
+  pushRegex(text, ZH_BRANCH_ELEMENT_REGEX, "compliance", "branch_element", violations);
+  pushRegex(text, ZH_PALACE_REGEX, "compliance", "qimen_palace", violations);
+  pushRegex(text, ZH_YIN_STRENGTH_REGEX, "compliance", "ten_god_yin", violations);
+  pushRegex(text, ZH_JISHEN_REGEX, "compliance", "jishen", violations);
 
   const seen = new Set<string>();
   return violations.filter((v) => {

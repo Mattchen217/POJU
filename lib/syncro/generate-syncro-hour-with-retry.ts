@@ -1,5 +1,6 @@
 import { readFetchJson } from "@/lib/client/fetch-json";
 import { hourPeriodDisplayName, HOUR_PERIOD_RANGES } from "@/lib/syncro/hour-period-ranges";
+import { buildSyncroProfileSummary } from "@/lib/syncro/syncro-profile-summary";
 import type { HourPeriod } from "@/lib/syncro/types";
 import type { SyncroLlmContext } from "@/lib/syncro/syncro-llm-context-storage";
 
@@ -21,16 +22,6 @@ export type GenerateSyncroHourResult = {
 };
 
 const MAX_ATTEMPTS = 3;
-
-function buildProfileSummary(ctx: SyncroLlmContext): string {
-  const ba = ctx.base_analysis;
-  if (typeof ba === "string") return ba.slice(0, 4000);
-  try {
-    return JSON.stringify(ba).slice(0, 4000);
-  } catch {
-    return ctx.task_description;
-  }
-}
 
 export function cellsForHourFromContext(
   ctx: SyncroLlmContext,
@@ -75,7 +66,7 @@ export async function generateSyncroHourWithRetry(
           hour_range: HOUR_PERIOD_RANGES[hourId],
           cells,
           task_description: ctx.task_description,
-          profile_summary: buildProfileSummary(ctx),
+          profile_summary: buildSyncroProfileSummary(ctx.base_analysis, ctx.task_description),
           locale: ctx.locale,
         }),
         signal: AbortSignal.timeout(60_000),

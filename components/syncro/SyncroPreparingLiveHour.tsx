@@ -2,8 +2,11 @@
 
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 
 import { HourProgressBar } from "@/components/syncro/HourProgressBar";
+import { SyncroPreparingLiveCompassMini } from "@/components/syncro/SyncroPreparingLiveCompassMini";
+import { SyncroPreparingLiveStreamTicker } from "@/components/syncro/SyncroPreparingLiveStreamTicker";
 import type { SyncroLlmProgress } from "@/lib/syncro/syncro-llm-progress";
 import { SYNCRO_LLM_BATCH_COUNT } from "@/lib/llm/services/syncro-reading-service";
 import { hourPeriodDisplayName, HOUR_PERIOD_RANGES } from "@/lib/syncro/hour-period-ranges";
@@ -17,6 +20,8 @@ import { getOpenRouterDefaultModel } from "@/lib/llm/openrouter-shared";
 import { runStreamHoursWithRetry } from "@/lib/syncro/syncro-stream-hours-runner";
 import { getOrderedHourPeriodsFromSession } from "@/lib/syncro/syncro-view-helpers";
 import type { HourPeriod, SyncroSession } from "@/lib/syncro/types";
+
+import "@/styles/syncro-preparing-live.css";
 
 type Props = {
   session: SyncroSession;
@@ -59,6 +64,7 @@ export function SyncroPreparingLiveHour({
   progress,
   onSessionUpdate,
 }: Props) {
+  const t = useTranslations("syncro.preparing_live");
   const params = useParams();
   const sessionId = typeof params.id === "string" ? params.id : "";
 
@@ -73,16 +79,14 @@ export function SyncroPreparingLiveHour({
   const [streamError, setStreamError] = useState<string | null>(null);
   const [ctxMissing, setCtxMissing] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
-  const [cursorVisible, setCursorVisible] = useState(true);
 
   const startedRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    if (streamPhase !== "writing" && streamPhase !== "reasoning") return;
-    const id = window.setInterval(() => setCursorVisible((v) => !v), 500);
-    return () => window.clearInterval(id);
-  }, [streamPhase]);
+  const streamActive =
+    streamPhase === "connecting" ||
+    streamPhase === "reasoning" ||
+    streamPhase === "writing";
 
   const handleRetry = () => {
     abortRef.current?.abort();
@@ -115,7 +119,7 @@ export function SyncroPreparingLiveHour({
       if (!ctx) {
         setCtxMissing(true);
         setStreamPhase("error");
-        setStreamError("无法加载 LLM 上下文");
+        setStreamError(t("ctx_missing"));
         return;
       }
 
@@ -128,8 +132,9 @@ export function SyncroPreparingLiveHour({
           onProgress: (phase) => {
             setStreamPhase(phase);
           },
-          onReasoningChunk: () => {
+          onReasoningChunk: (text) => {
             setStreamPhase((prev) => (prev === "writing" ? prev : "reasoning"));
+            setStreamText((prev) => prev + text);
           },
           onContentChunk: (text) => {
             setStreamText((prev) => prev + text);
@@ -168,7 +173,7 @@ export function SyncroPreparingLiveHour({
           });
         } else {
           setStreamPhase("error");
-          setStreamError("保存结果失败");
+          setStreamError(t("save_failed"));
         }
         return;
       }
@@ -176,13 +181,13 @@ export function SyncroPreparingLiveHour({
       if (result.lastError === "aborted") return;
 
       setStreamPhase("error");
-      setStreamError(result.lastError ?? "生成失败");
+      setStreamError(result.lastError ?? t("gen_failed", { error: "unknown" }));
     })();
 
     return () => {
       abort.abort();
     };
-  }, [sessionId, priorityHour, locale, session, retryKey, onSessionUpdate]);
+  }, [sessionId, priorityHour, locale, session, retryKey, onSessionUpdate, t]);
 
   return (
     <div className="syncro-preparing-live">
@@ -197,91 +202,59 @@ export function SyncroPreparingLiveHour({
       />
 
       <div className="syncro-preparing-live-body">
-        <h2 className="syncro-preparing-live-title" style={{ marginTop: 0 }}>
-          AI 正在深度分析中…
-        </h2>
+        <SyncroPreparingLiveCompassMini />
 
-        <p className="syncro-preparing-live-hint" style={{ maxWidth: "28rem" }}>
-          ◐ 正在生成当前时辰 {hourName}（{hourRange}）· 完成后进入罗盘
+        <h2 className="syncro-preparing-live-title">{t("analyzing_title")}</h2>
+
+        <p className="syncro-preparing-live-hint syncro-preparing-live-hint--wide">
+          {t("live_hour_hint", { hour: hourName, range: hourRange })}
         </p>
-        <p className="syncro-preparing-live-hint" style={{ maxWidth: "28rem", opacity: 0.85 }}>
-          其余时辰在进入罗盘后由云端队列生成（可离开 App，回来自动刷新）
+        <p className="syncro-preparing-live-hint syncro-preparing-live-hint--wide syncro-preparing-live-hint--muted">
+          {t("background_hint")}
         </p>
 
-        {streamPhase === "reasoning" ? (
-          <p className="syncro-preparing-live-progress">AI 在深度推理…</p>
-        ) : null}
-
-        {streamText ? (
-          <div
-            className="syncro-preparing-live-stream-box"
-            style={{
-              marginTop: 16,
-              maxWidth: "28rem",
-              maxHeight: 220,
-              overflow: "auto",
-              padding: "12px 14px",
-              textAlign: "left",
-              fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-              fontSize: "var(--pj-text-sm, 0.875rem)",
-              lineHeight: 1.6,
-              color: "var(--pj-text-secondary, #a8b0c8)",
-              background: "rgba(255, 255, 255, 0.04)",
-              border: "1px solid rgba(212, 175, 55, 0.2)",
-              borderRadius: 8,
-              whiteSpace: "pre-wrap",
-              wordBreak: "break-word",
-            }}
-          >
-            {streamText}
-            {streamPhase === "writing" || streamPhase === "reasoning" ? (
-              <span
-                aria-hidden
-                style={{
-                  display: "inline-block",
-                  marginLeft: 2,
-                  color: "var(--pj-gold, #d4af37)",
-                  opacity: cursorVisible ? 1 : 0,
-                }}
-              >
-                ▊
-              </span>
-            ) : null}
+        {(streamActive || streamText.length > 0) ? (
+          <div className="syncro-preparing-live-stream-slot">
+            <SyncroPreparingLiveStreamTicker
+              text={streamText}
+              active={streamActive}
+              placeholder={
+                streamPhase === "connecting"
+                  ? t("connecting")
+                  : streamPhase === "reasoning"
+                    ? t("reasoning")
+                    : "…"
+              }
+            />
           </div>
-        ) : streamPhase === "connecting" ? (
-          <p className="syncro-preparing-live-progress" style={{ marginTop: 16 }}>
-            正在连接 AI…
-          </p>
         ) : null}
 
         {streamPhase === "error" ? (
-          <div style={{ marginTop: 12 }}>
-            <p className="syncro-preparing-live-progress" style={{ color: "#f87171" }}>
-              生成失败：{streamError ?? "未知错误"}
-              {ctxMissing ? "（上下文缺失）" : ""}
+          <div className="syncro-preparing-live-error">
+            <p className="syncro-preparing-live-progress syncro-preparing-live-progress--error">
+              {t("gen_failed", { error: streamError ?? "unknown" })}
+              {ctxMissing ? t("ctx_missing_suffix") : ""}
             </p>
-            <button type="button" className="primary" style={{ marginTop: 8 }} onClick={handleRetry}>
-              重试
+            <button type="button" className="primary" onClick={handleRetry}>
+              {t("retry")}
             </button>
           </div>
         ) : null}
 
         {attemptInfo && attemptInfo.current > 1 ? (
           <p className="syncro-preparing-live-progress">
-            正在重试（{attemptInfo.current}/{attemptInfo.max}）
+            {t("retrying", { current: attemptInfo.current, max: attemptInfo.max })}
           </p>
         ) : null}
 
         {progress.running && progress.completed > 0 ? (
           <p className="syncro-preparing-live-progress">
-            后台已完成 {progress.completed}/12 时辰
+            {t("background_progress", { done: progress.completed })}
           </p>
         ) : null}
 
-        <p className="syncro-preparing-live-hint" style={{ marginTop: 20 }}>
-          准确分析需要时间，请耐心等待
-          <br />
-          使用 V4 Pro 深度推理，当前时辰约 1–3 分钟
+        <p className="syncro-preparing-live-hint syncro-preparing-live-hint--footer">
+          {t("patience_hint")}
         </p>
       </div>
     </div>

@@ -1,5 +1,5 @@
 /**
- * Live EN Syncro hour — sign a business contract (minimal imports).
+ * Live EN Syncro hour via batch-core (production path) — salary increase task.
  * Run: pnpm tsx scripts/test-syncro-live-en-contract.ts
  */
 import { existsSync, readFileSync } from "node:fs";
@@ -21,6 +21,9 @@ function loadEnvLocal(): void {
   }
 }
 
+const BLACK_TERMS =
+  /午火|忌神|坤宫|印旺|水元素|奇门|八字|用神|qimen|auspicious|unlucky|good luck/i;
+
 async function main(): Promise<void> {
   loadEnvLocal();
   const { isOpenRouterConfigured } = await import("@/lib/llm/openrouter-shared");
@@ -29,7 +32,8 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const { generateSyncroHourAdvice } = await import("@/lib/syncro/syncro-llm-core");
+  const { generateSyncroHoursAdvice } = await import("@/lib/syncro/syncro-llm-batch-core");
+  const { detectSyncroOutputViolations } = await import("@/lib/syncro/sanitize-output");
 
   const directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"] as const;
   const levels = [
@@ -50,38 +54,72 @@ async function main(): Promise<void> {
     key_hints: ["resonance alignment", "task fit"],
   }));
 
-  const result = await generateSyncroHourAdvice({
+  const profileSummary = JSON.stringify({
+    day_master: "Geng",
+    yong_shen: "Water",
+    life_phase: "visibility cycle",
+    core_traits: ["structured", "decisive"],
+  });
+
+  const result = await generateSyncroHoursAdvice({
     session_id: `syncro-live-${Date.now()}`,
-    hour_id: "wu",
-    hour_label: "Wu",
-    hour_range: "11:00–13:00",
-    cells,
-    task_description: "sign a business contract",
-    profile_summary:
-      "Core nature: expressive, structured decision-making. Current 10-year life cycle emphasizes visibility and negotiation skill. Key supporting energy favors clarity and steady pacing in formal agreements.",
+    hours: [
+      {
+        hour_id: "wu",
+        hour_label: "Wu",
+        hour_range: "11:00–13:00",
+        cells,
+      },
+    ],
+    task_description: "negotiate a salary increase with my manager tomorrow afternoon",
+    profile_summary: profileSummary,
     locale: "en",
   });
 
-  console.log("\n--- EN Syncro output (Wu hour, 8 directions) ---\n");
+  console.log("\n--- EN Syncro batch output (Wu hour, 8 directions) ---\n");
+
+  let sampleRationale = "";
+  let sampleDetailed = "";
 
   for (const cell of cells) {
     const a = result.advice[cell.key];
     if (!a) continue;
     console.log(`\n### ${cell.direction} (${cell.current_level})\n`);
     console.log("**short:**", a.short_advice);
-    console.log("\n**rationale:**", a.rationale);
+    console.log("\n**rationale (WHY THIS CURRENT):**", a.rationale);
+    console.log("\n**detailed:**", a.detailed_advice);
+    if (!sampleRationale) {
+      sampleRationale = a.rationale;
+      sampleDetailed = a.detailed_advice;
+    }
   }
 
   const merged = Object.values(result.advice)
     .flatMap((c) => [c.short_advice, c.detailed_advice, c.rationale])
     .join("\n");
 
+  console.log("\n--- WHY THIS CURRENT modal sample ---");
+  console.log("rationale:", sampleRationale);
+  console.log("detailed:", sampleDetailed);
+
   console.log("\n--- quick checks ---");
   console.log("has Syncro:", /\bSyncro\b/i.test(merged));
-  console.log("has I Ching:", /I Ching|Book of Changes|timing and position/i.test(merged));
+  console.log("has I Ching:", /I Ching|Book of Changes|timing and position|时位/i.test(merged));
   console.log("has Qimen:", /\bqimen\b/i.test(merged));
   console.log("has will succeed:", /\bwill\s+succeed\b/i.test(merged));
   console.log("has luck:", /\b(?:good\s+)?luck\b/i.test(merged));
+  console.log("has black terms:", BLACK_TERMS.test(merged));
+  console.log("mostly English (no CJK run):", !/[\u4e00-\u9fff]{4,}/.test(merged));
+
+  const violations = detectSyncroOutputViolations(merged, "en");
+  console.log("audit violations:", violations.length);
+  if (violations.length > 0) {
+    console.log(violations.slice(0, 8));
+  }
+
+  if (BLACK_TERMS.test(merged) || /[\u4e00-\u9fff]{4,}/.test(merged)) {
+    process.exit(1);
+  }
 }
 
 void main();

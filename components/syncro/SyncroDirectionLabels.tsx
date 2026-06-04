@@ -18,6 +18,8 @@ type Props = {
   labelRadius?: number;
   /** Counter-rotate so labels stay upright inside a rotating parent (pass compass alpha). */
   counterRotateDeg?: number;
+  /** Scale label font sizes (mini compass on wait page). */
+  labelScale?: number;
 };
 
 /** Direction labels on the ring; active = gold + larger (no glow). */
@@ -25,9 +27,12 @@ export function SyncroDirectionLabels({
   highlightId,
   labelRadius = SYNCRO_LABEL_RADIUS,
   counterRotateDeg,
+  labelScale = 1,
 }: Props) {
   const upright =
     counterRotateDeg !== undefined ? ` rotate(${counterRotateDeg}deg)` : "";
+  const highlightSize = Math.round(24 * labelScale);
+  const baseSize = Math.round(16 * labelScale);
 
   return (
     <>
@@ -45,7 +50,7 @@ export function SyncroDirectionLabels({
               top: "50%",
               left: "50%",
               transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))${upright}`,
-              fontSize: isHighlight ? 24 : 16,
+              fontSize: isHighlight ? highlightSize : baseSize,
               fontWeight: isHighlight ? 700 : 500,
               color: isHighlight ? "#D4A574" : "#FFFFFF",
               opacity: isHighlight ? 1 : 0.7,

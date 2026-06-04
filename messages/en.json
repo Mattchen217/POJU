@@ -1172,6 +1172,19 @@
       "some_failed": "{count} hour batch(es) failed."
     },
     "preparing_live": {
+      "analyzing_title": "Deep analysis in progress…",
+      "live_hour_hint": "◐ Generating the current hour {hour} ({range}) · compass opens when done",
+      "background_hint": "Remaining hours are generated in the cloud queue after you enter the compass (you can leave the app — results refresh when you return).",
+      "reasoning": "Reasoning…",
+      "connecting": "Connecting…",
+      "ctx_missing": "Could not load LLM context",
+      "gen_failed": "Generation failed: {error}",
+      "ctx_missing_suffix": " (context missing)",
+      "save_failed": "Failed to save results",
+      "retry": "Retry",
+      "retrying": "Retrying ({current}/{max})",
+      "background_progress": "Background: {done}/12 hours complete",
+      "patience_hint": "Accurate analysis takes time — please wait patiently. This usually takes about 1–3 minutes.",
       "title": "Generating reading for {hour} (current hour)…",
       "hint": "Compass opens when this hour is ready. Later hours follow one by one.",
       "progress": "Now generating {hour} · {done}/{total} complete"

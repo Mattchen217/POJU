@@ -12,11 +12,13 @@ type Props = {
    */
   bare?: boolean;
   opacity?: number;
+  /** Scale particle field to a smaller ring (e.g. wait page mini compass). */
+  ringSize?: number;
 };
 
-export function SyncroParticleCore({ bare = false, opacity }: Props) {
+export function SyncroParticleCore({ bare = false, opacity, ringSize }: Props) {
   const allowWebGL = useAllowHeavyWebGL();
-  const fieldStyle = bare ? getSyncroParticleFieldStyle({ opacity }) : undefined;
+  const fieldStyle = bare ? getSyncroParticleFieldStyle({ opacity, ringSize }) : undefined;
   const className = bare
     ? "syncro-particle-spline syncro-particle-field"
     : "syncro-particle-spline";
