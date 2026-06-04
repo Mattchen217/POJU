@@ -109,17 +109,22 @@ System 指令与输入数据（签诗原文、base_analysis structured 等）可
 
 英文：lot, divination, Guan Yin, Bodhisattva, temple, deity,
       blessing, prayer, oracle, fortune, sacred, worship,
-      auspicious, ominous
+      auspicious, ominous, sign, lot
+
+（secular 语境也禁 blessing → 改用 grace / gift / warmth）
 
 ## 【改写映射】
 
-- 100 签 / 100 lots → 100 个原型隐喻 / 100 archetypal metaphors
-- 抽签 / drawing a lot → 你直觉触发的隐喻 / the metaphor you intuitively engaged with
-- 观音赐签 → 这个原型隐喻映照出 / this archetypal metaphor reflects
+- 100 签 / 100 lots → 100 个 Glyph / 100 Glyphs
+- 抽签 / drawing a lot → 你触发的 Glyph / the Glyph you engaged with
+- 签文 / sign text → Glyph 文 / the Glyph text
+- 观音赐签 → 这个 Glyph 映照出 / this Glyph reflects
 
 ## 【允许使用（加分）】
 
-- 原型隐喻 / archetypal metaphor（荣格心理学）
+- **Glyph**（中英文统一产品名）
+- 原型隐喻 / archetypal metaphor（**仅开篇定位一次**，其后用 Glyph）
+- Glyph 文 / the Glyph text
 - 东方哲学情境 / Eastern philosophical situation
 - 系统性情境模式 / systemic situational pattern
 - 你的行为蓝图 / your behavioral blueprint
@@ -128,20 +133,45 @@ System 指令与输入数据（签诗原文、base_analysis structured 等）可
 
 ## 【模板】
 
-「你直觉触发的这个原型隐喻，映照出一种系统性情境模式。
-  结合你的性格画像，它指向……」
+「你触发的这个原型隐喻 (archetypal metaphor) — 即本次 Glyph — 映照出一种系统性情境模式。
+  结合你的性格画像，Glyph 文指向……」
 
 ## 【示例】
 
-❌ 「这支观音签是吉签，菩萨保佑你。」
-✅ 「这个原型隐喻映照出『耐心耕耘、静待收获』的模式。
-    结合你的性格画像，它提示你……」
+❌ 「这支观音签是吉签，菩萨保佑你。」 / 「The sign says…」
+✅ 「这个 Glyph 映照出『耐心耕耘、静待收获』的模式。
+    结合你的性格画像，Glyph 文提示你……」
 
 这是反思性心理工具，绝不带宗教色彩。
 
 ## 输出语言
 
 跟随用户实际输入语言（中文输入 → 中文白榜；英文输入 → 英文白榜）。`;
+
+/** 措辞统一：输出用 Glyph 指代，禁签/sign/lot */
+export const GLYPH_OUTPUT_WORDING = `# Glyph 措辞统一（输出 JSON 字符串 · 必须遵守）
+
+## 指代规则
+
+- **用户抽到的对象**：统一称 **Glyph**（中英文均写 Glyph）
+- **禁止**：签、签文、签诗、sign、lot、divination lot、这支签、the sign、oracle sign
+
+## 中英文对应
+
+| 概念 | 中文输出 | 英文输出 |
+|------|----------|----------|
+| 签文 / 签的内容 | Glyph 文 / 这个 Glyph | the Glyph text / this Glyph |
+| 整体 | 这次 Glyph | this Glyph |
+
+## 原型隐喻 / archetypal metaphor
+
+- **仅开头一次**作定位（建议 classical_voice 首句）：「你触发的这个原型隐喻 (archetypal metaphor)…」
+- **之后全文**改用 Glyph / this Glyph / the Glyph text / Glyph 文，**不再**重复 archetypal metaphor
+
+## 示例
+
+❌ 「这支签告诉你…」 / 「签文意象…」 / 「The sign suggests…」 / 「this lot means…」
+✅ 「这个 Glyph 映照出…」 / 「Glyph 文的核心意象…」 / 「This Glyph reflects…」 / 「The Glyph text points to…」`;
 
 import { buildComplianceTranslationPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
 
@@ -170,14 +200,20 @@ ${buildComplianceTranslationPromptBlock()}
 内部 structured 数据仅供你分析，输出须 100% 翻译为行为蓝图 / 人格架构语言。`;
 
 /** 防线 2 — 叙事抽象：输出禁签诗原文与具体历史人物 */
-export const GLYPH_OUTPUT_DEFENSE_NARRATIVE = `# 防线 2 — 叙事抽象（去签诗原文 + 去历史人物 · 输出强制 · 中英文同等）
+export const GLYPH_OUTPUT_DEFENSE_NARRATIVE = `# 防线 2 — 叙事抽象 + Glyph 文处理（输出强制 · 中英文同等）
+
+## Glyph 文 / 诗句处理（⏳ 选项 A/B/C 待产品确认 · 当前默认 A 意象化）
+
+- **A 意象化（当前）**：保留 Glyph 文诗句的**画面意境**，用现代语言描述意象；**不逐字引用**整句古文/原文
+- B 保留原文：待定
+- C 纯抽象：待定
 
 ⛔ **JSON 所有字符串字段绝对禁止**：
 
 中文：
-- 引用签诗原文（如「旱时田里皆枯藁…」及任意连续古文诗句）
+- **逐字引用** Glyph 文/签诗原文（如「旱时田里皆枯藁…」及任意连续古文诗句）
 - 具体历史 / 宗教人物名（杨六郎、钟离权、孔子、观音、菩萨、苏秦 等）
-- 「签 / 解签 / 抽签 / 签文 / 灵签」及 OUTPUT FRAMING 所列禁词
+- 「签 / 解签 / 抽签 / 签文 / 灵签 / sign / lot」及 OUTPUT FRAMING 所列禁词
 
 英文（同等严格）：
 1. **复述任何历史/传说人物的【故事情节序列】**（即使不点名）：
@@ -285,8 +321,10 @@ export const GLYPH_OUTPUT_SELF_CHECK = `# 生成前自检（写每一段字符�
    → 整句改成【当下时机评估】；用现在时 / 条件句 / present readiness，不断言未来（防线 3）
 4. **有没有自然融入《易经》/ I Ching 哲学框架？**（变化之道 / 时位 / 阴阳平衡 — 非起卦占卜）
    → classical_voice 或 meaning_for_question 至少一处体现；禁止 hexagram casting / the I Ching predicts
+5. **有没有用 Glyph 指代？有没有「签 / sign / lot」？** archetypal metaphor 是否只在开篇出现一次？
+   → 之后全文用 Glyph / this Glyph / Glyph 文 / the Glyph text（见 GLYPH_OUTPUT_WORDING）
 
-四段自检全部通过后再写入 JSON。`;
+五段自检全部通过后再写入 JSON。`;
 
 /**
  * 用户可见文案的品牌规则（最高优先级之一）。
@@ -299,7 +337,9 @@ export const GLYPH_OUTPUT_BRANDING = `# ⚠️ 输出品牌（用户可见文案
 ## 必须使用的称呼（输出白榜）
 
 - 产品名：**Glyph**（中英文均用 Glyph）
-- 核心框架：**原型隐喻 / archetypal metaphor**、**系统性情境模式**、**行为蓝图**
+- 指代：**Glyph / this Glyph / Glyph 文 / the Glyph text**
+- 定位词：**原型隐喻 / archetypal metaphor**（仅开篇一次，其后用 Glyph）
+- 核心框架：**系统性情境模式**、**行为蓝图**
 - 五风类用产品已有英文名或中文营销名（如 Divine Tailwind / 顺风）——描述气势，**禁止**用吉/凶/auspicious/ominous
 
 ## 禁止出现在用户可见文案中
@@ -311,8 +351,9 @@ export const GLYPH_OUTPUT_BRANDING = `# ⚠️ 输出品牌（用户可见文案
 - 气势**只**用 **五风类** 表述
 
 ✓ **正确替换示例**：
-- ✗ 「这支观音签是吉签，菩萨保佑你」→ ✓ 「这个原型隐喻映照出『耐心耕耘、静待收获』的模式」
-- ✗ 「抽签结果告诉你…」→ ✓ 「你直觉触发的这个隐喻，映照出一种系统性情境模式…」
+- ✗ 「这支观音签是吉签，菩萨保佑你」→ ✓ 「这个 Glyph 映照出『耐心耕耘、静待收获』的模式」
+- ✗ 「抽签结果告诉你…」 / 「The sign says…」→ ✓ 「你触发的这个 Glyph…」 / 「This Glyph reflects…」
+- ✗ 「签文告诉我们…」→ ✓ 「Glyph 文指向…」 / 「The Glyph text points to…」
 - ✗ 「按命理看你今年…」→ ✓ 「结合你的行为蓝图，当前阶段…」
 - ✗ 「这是一支上吉签」→ ✓ 「五风类为 Fair Sky，气势偏顺但仍须你迈步」
 
@@ -365,24 +406,25 @@ export const GLYPH_LANGUAGE_RULES = `
 中文: 签、签文、抽签、求签、灵签、观音、菩萨、神明、寺庙、保佑、祈福、
       占卜、算命、命理、神灵、求神、吉、凶
 英文: lot, divination, Guan Yin, Bodhisattva, temple, deity, blessing, prayer,
-      oracle, fortune, sacred, worship, auspicious, ominous
+      oracle, fortune, sacred, worship, auspicious, ominous, sign, lot
 
 ✓ 输出白榜（优先使用）:
-- 原型隐喻 / archetypal metaphor
+- **Glyph** / this Glyph / Glyph 文 / the Glyph text
+- 原型隐喻 / archetypal metaphor（**仅开篇定位一次**）
 - 系统性情境模式 / systemic situational pattern
 - 行为蓝图 / behavioral blueprint
 - 东方哲学情境 / Eastern philosophical situation
-- Glyph / 反思镜 / reflective mirror
+- 反思镜 / reflective mirror
 
-⭐ Glyph 定位: pocket-sized mirror — 持一个问题，触发一个原型隐喻，读一段反思。不是占卜工具。
+⭐ Glyph 定位: pocket-sized mirror — 持一个问题，触发一个 Glyph，读一段反思。不是占卜工具。
 
 例:
-  ❌ "你抽到的签是..."
-  ✅ "你直觉触发的这个原型隐喻是..."
+  ❌ "你抽到的签是..." / "The sign you drew..."
+  ✅ "你触发的这个 Glyph 是..." / "The Glyph you engaged with..."
 
   ❌ "这支观音签是吉签..."
-  ✅ "这个原型隐喻映照出『耐心耕耘、静待收获』的模式..."
+  ✅ "这个 Glyph 映照出『耐心耕耘、静待收获』的模式..."
 
-  ❌ "签文告诉我们..."
-  ✅ "结合你的行为蓝图，这个隐喻指向..."
+  ❌ "签文告诉我们..." / "The sign text says..."
+  ✅ "Glyph 文指向..." / "The Glyph text points to..."
 `;

@@ -3,7 +3,10 @@
  * @see docs/Syncro_Calculation_Engine.md Step 6
  */
 
-import { buildSyncroCorePromptSections } from "@/lib/llm/prompts/syncro-base";
+import {
+  buildSyncroFullPromptSections,
+  SYNCRO_OUTPUT_SELF_CHECK,
+} from "@/lib/llm/prompts/syncro-base";
 import {
   buildCurrentDateContext,
   buildNorthAmericaAdaptation,
@@ -151,7 +154,9 @@ ${JSON.stringify(slimMatrix, null, 2)}
 1. **本批所有 key 必须全部填充**（共 ${cellCount} 个）
 2. **输出 JSON 每个 cell 仅含 3 个字段**：short_advice、detailed_advice、rationale
 3. **语言**：${outputLanguage}
-4. **品牌**：用户可见处只用 Syncro + Current 等级名；禁 POJU / Glyph / Match；禁吉凶词
+4. **品牌 + 四道防线**：用户可见处只用 Syncro + Current 五流 + 共振/效率语言；禁奇门/风水/吉凶/预测成功；须 I Ching 时位框架
+
+${SYNCRO_OUTPUT_SELF_CHECK}
 
 # 输出格式（严格 JSON）
 
@@ -168,7 +173,7 @@ ${JSON.stringify(slimMatrix, null, 2)}
 }`;
 
   const system = stitchPromptSections(
-    ...buildSyncroCorePromptSections(),
+    ...buildSyncroFullPromptSections(),
     buildCurrentDateContext(current_time, locale),
     langDirective.directive,
     buildNorthAmericaAdaptation(outputLocale),

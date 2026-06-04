@@ -37,7 +37,8 @@ async function main(): Promise<void> {
   console.log("\n=== Step C: Syncro modularization static checks ===\n");
 
   assert("syncro-base.ts exists", existsSync(resolve(ROOT, "lib/llm/prompts/syncro-base.ts")));
-  assert("4 core exports", buildSyncroCorePromptSections().length === 4);
+  assert("4+ core exports", buildSyncroCorePromptSections().length >= 4);
+  assert("output framing export", existsSync(resolve(ROOT, "lib/llm/prompts/syncro-base.ts")) && read("lib/llm/prompts/syncro-base.ts").includes("SYNCRO_OUTPUT_FRAMING"));
 
   assert("identity 奇门遁甲", SYNCRO_QIMEN_DUNJIA_IDENTITY.includes("奇门遁甲"));
   assert("identity 何时去何方", SYNCRO_QIMEN_DUNJIA_IDENTITY.includes("何时"));
@@ -57,9 +58,9 @@ async function main(): Promise<void> {
   assert("branding Current 等级", SYNCRO_OUTPUT_BRANDING.includes("Current"));
   assert("branding 禁八门", SYNCRO_OUTPUT_BRANDING.includes("八门"));
   assert("branding 禁吉凶", SYNCRO_OUTPUT_BRANDING.includes("吉"));
-  assert("branding 保留日主用神", SYNCRO_OUTPUT_BRANDING.includes("日主"));
+  assert("branding compliance 翻译", SYNCRO_OUTPUT_BRANDING.includes("核心特质"));
 
-  assert("deepseek uses syncro-base", deep.includes("buildSyncroCorePromptSections"));
+  assert("deepseek uses syncro-base", deep.includes("buildSyncroFullPromptSections"));
   assert("deepseek uses stitchPromptSections", deep.includes("stitchPromptSections"));
   assert("deepseek NOT ORIENTAL_COUNSELOR_BASE", !deep.includes("ORIENTAL_COUNSELOR_BASE"));
 

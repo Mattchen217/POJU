@@ -1,4 +1,7 @@
 import { getOpenRouterDefaultModel } from "@/lib/llm/openrouter-shared";
+import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
+import { buildSyncroOutputDefenseSections } from "@/lib/llm/prompts/syncro-base";
+import { sanitizeSyncroHourAdvice } from "@/lib/syncro/sanitize-output";
 import {
   appendToStream,
   cacheLlmInput,
@@ -109,6 +112,8 @@ function buildPrompt(body: SyncroLlmHourInput) {
     })
     .join("\n");
 
+  const defenseBlock = stitchPromptSections(...buildSyncroOutputDefenseSections());
+
   const systemZh = `你是 pojulife Syncro 的资深分析师,为用户即将要做的事情,基于【当前时辰】8 个方位的状态,生成精准贴合命局的指导文案。
 
 ═══════════════════════════════════════
@@ -191,6 +196,7 @@ ${cellsDesc}
 
 针对性 MUST:
   - rationale【必须】明确提及用户要做的事(如"谈判""签约""见面")
+  - rationale【必须】至少一次提到 Syncro / 这个 Syncro
   - 不要写通用文案,要让用户感觉"这是为我写的"
 
 禁用词:
@@ -333,6 +339,7 @@ All 8 directions (N/NE/E/SE/S/SW/W/NW) MUST be included.
 
 Specificity MUST:
   - rationale MUST mention what the user is about to do
+  - rationale MUST mention Syncro / this Syncro at least once per direction
   - No generic copy
 
 Forbidden:
@@ -355,7 +362,7 @@ Level names (use these in copy):
   }
 }`;
 
-  const system = isZh ? systemZh : systemEn;
+  const system = isZh ? `${systemZh}\n\n${defenseBlock}` : `${systemEn}\n\n${defenseBlock}`;
 
   const userMsg = isZh
     ? `请为${body.hour_label}时辰(${body.hour_range})的 8 个方位生成文案,严格按字数约束,内容紧扣用户当前要做的事。只输出 JSON,不输出其他文字。`
@@ -557,7 +564,11 @@ export async function generateSyncroHourAdvice(
   const cached = await getCachedOutput(input.session_id, input.hour_id);
   if (cached) {
     console.log(`[syncro-llm-core] ${input.hour_id} 命中 output 缓存,直接返回`);
-    return { advice: cached, raw_content: "", from_cache: true };
+    return {
+      advice: sanitizeSyncroHourAdvice(cached, input.locale),
+      raw_content: "",
+      from_cache: true,
+    };
   }
 
   const { system, user } = buildPrompt(input);
@@ -597,8 +608,10 @@ export async function generateSyncroHourAdvice(
   await cacheLlmOutput(input.session_id, input.hour_id, adviceByKey);
   await clearStream(input.session_id, input.hour_id);
 
+  const finalized = sanitizeSyncroHourAdvice(adviceByKey, input.locale);
+
   return {
-    advice: adviceByKey,
+    advice: finalized,
     raw_content: accumContent,
     from_cache: false,
   };

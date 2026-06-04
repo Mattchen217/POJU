@@ -1,7 +1,11 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
+import {
+  glyphReportSectionLabels,
+  resolveGlyphOutputLanguage,
+} from "@/lib/glyph/report-section-labels";
 import { pojuChatMessageBody } from "@/lib/poju/chat-layout";
 import { cn } from "@/lib/utils/classnames";
 import type { GlyphReadingContent } from "@/lib/llm/services/glyph-reading-service";
@@ -26,6 +30,9 @@ const TIMEFRAME_KEYS: Record<
 
 export function GlyphReport({ reading, glyph, question, archiveId }: Props) {
   const t = useTranslations("glyph");
+  const pageLocale = useLocale();
+  const outputLang = resolveGlyphOutputLanguage(reading, pageLocale);
+  const sectionLabels = glyphReportSectionLabels(outputLang);
   const safeReading = reading;
   const windLabel = LEVEL_META[glyph.level]?.display_name ?? glyph.level;
   const timeframeKey = TIMEFRAME_KEYS[safeReading.exploration.timeframe] ?? "explore_time_today";
@@ -53,20 +60,20 @@ export function GlyphReport({ reading, glyph, question, archiveId }: Props) {
       </div>
 
       <div className="report-section classical">
-        <div className="section-label">{t("section_classical")}</div>
+        <div className="section-label">{sectionLabels.section_classical}</div>
         <p className="classical-text">{safeReading.classical_voice}</p>
       </div>
 
       <div className="report-section dual-view">
-        <div className="section-label">{t("section_dual_view")}</div>
+        <div className="section-label">{sectionLabels.section_dual_view}</div>
 
         <div className="dual-view-card view-bazi">
-          <h4>{t("view_bazi_title")}</h4>
+          <h4>{sectionLabels.view_bazi_title}</h4>
           <p>{safeReading.命理双视角.命理看此事}</p>
         </div>
 
         <div className="dual-view-card view-glyph">
-          <h4>{t("view_glyph_title")}</h4>
+          <h4>{sectionLabels.view_glyph_title}</h4>
           <p>{safeReading.命理双视角.签文看此事}</p>
         </div>
 
@@ -76,22 +83,22 @@ export function GlyphReport({ reading, glyph, question, archiveId }: Props) {
       </div>
 
       <div className="report-section meaning">
-        <div className="section-label">{t("section_meaning")}</div>
+        <div className="section-label">{sectionLabels.section_meaning}</div>
         <p>{safeReading.meaning_for_question}</p>
       </div>
 
       <div className="report-section tension">
-        <div className="section-label">{t("section_hidden")}</div>
+        <div className="section-label">{sectionLabels.section_hidden}</div>
         <p>{safeReading.hidden_tension}</p>
       </div>
 
       <div className="report-section moment">
-        <div className="section-label">{t("section_moment")}</div>
+        <div className="section-label">{sectionLabels.section_moment}</div>
         <p>{safeReading.your_moment}</p>
       </div>
 
       <div className="report-section exploration">
-        <div className="section-label">{t("section_exploration")}</div>
+        <div className="section-label">{sectionLabels.section_exploration}</div>
         <div className="exploration-card">
           <p className="explore-text">{safeReading.exploration.text}</p>
           <div className="explore-meta">
@@ -109,7 +116,7 @@ export function GlyphReport({ reading, glyph, question, archiveId }: Props) {
       </div>
 
       <div className="report-section reflection">
-        <div className="section-label">{t("section_reflection")}</div>
+        <div className="section-label">{sectionLabels.section_reflection}</div>
         <p className="reflection-question">{safeReading.reflection_question}</p>
       </div>
 

@@ -1,0 +1,2 @@
+
+D:\POJU\pojulife>  "C:\Users\13306\AppData\Local\pnpm\.tools\pnpm\10.33.2\bin\\node.exe"  "C:\Users\13306\AppData\Local\pnpm\.tools\pnpm\10.33.2\bin\\..\node_modules\pnpm\bin\pnpm.cjs" tsx -e import('@/lib/syncro/sanitize-output').then(async (m) =

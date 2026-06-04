@@ -88,6 +88,19 @@ function collectRegexViolations(
   }
 }
 
+/** Divination "sign/lot" — not idioms like "cosmic sign" or "design". */
+const GLYPH_FORBIDDEN_SIGN_REGEX =
+  /\b(?:the|this|a|an|oracle|divination|fortune)\s+sign\b|\blot\b/gi;
+const GLYPH_FORBIDDEN_ZH_QIAN_REGEX = /签(?:文|诗|意|号|筒)?|抽签|求签|灵签|解签/g;
+
+function collectGlyphWordingViolations(text: string, locale: string, out: GlyphOutputViolation[]): void {
+  if (locale.startsWith("zh")) {
+    collectRegexViolations(text, "legacy_framing", GLYPH_FORBIDDEN_ZH_QIAN_REGEX, "forbidden_qian", out);
+  } else {
+    collectRegexViolations(text, "legacy_framing", GLYPH_FORBIDDEN_SIGN_REGEX, "forbidden_sign_lot", out);
+  }
+}
+
 function collectFigureViolations(text: string, out: GlyphOutputViolation[]): void {
   for (const phrase of STORY_FIGURE_PHRASES) {
     if (!text.includes(phrase)) continue;
@@ -123,6 +136,7 @@ export function detectGlyphOutputViolations(text: string, locale = "zh"): GlyphO
 
   collectRegexViolations(text, "sign_narrative", SIGN_POEM_PAIR, "classical_verse_pair", violations);
   collectFigureViolations(text, violations);
+  collectGlyphWordingViolations(text, locale, violations);
   for (const hit of detectNarrativeSentences(text, locale)) {
     violations.push({
       category: "sign_narrative",
