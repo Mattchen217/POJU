@@ -1,7 +1,7 @@
-/* Fixed compact stream panel — above bottom nav, leaves Spline background visible */
+/* Fixed compact stream panel — above bottom nav in PWA; lower on desktop browser */
 .streaming-analysis-bottom {
   position: fixed;
-  bottom: max(80px, calc(56px + env(safe-area-inset-bottom)));
+  bottom: 16px;
   left: 16px;
   right: 16px;
   z-index: 50;

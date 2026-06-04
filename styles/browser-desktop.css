@@ -1,0 +1,259 @@
+/**
+ * PC browser layout — installed PWA excluded via html:not(.pwa-mode).
+ * Base CSS in product files = mobile / PWA-first; this file = desktop browser only.
+ */
+
+@media (min-width: 768px) {
+  /* ── Glyph draw (question input) ── */
+  html:not(.pwa-mode) .glyph-draw-page {
+    max-width: 48rem;
+    min-height: auto;
+    background: transparent;
+    padding: 2.5rem 3rem 4rem;
+  }
+
+  html:not(.pwa-mode) .glyph-draw-back {
+    font-size: 1rem;
+  }
+
+  html:not(.pwa-mode) .glyph-input-title {
+    font-size: 1.75rem;
+  }
+
+  html:not(.pwa-mode) .glyph-input-hint,
+  html:not(.pwa-mode) .glyph-question-input,
+  html:not(.pwa-mode) .glyph-char-count,
+  html:not(.pwa-mode) .glyph-draw-error,
+  html:not(.pwa-mode) .profile-mini-display,
+  html:not(.pwa-mode) .profile-mini-label,
+  html:not(.pwa-mode) .profile-mini-value {
+    font-size: 1.125rem;
+    line-height: 1.75;
+  }
+
+  html:not(.pwa-mode) .glyph-question-input {
+    min-height: 10rem;
+    padding: 1.25rem;
+  }
+
+  html:not(.pwa-mode) .profile-mini-display {
+    background: rgba(255, 255, 255, 0.04);
+    padding: 1rem 1.25rem;
+  }
+
+  html:not(.pwa-mode) .glyph-primary-btn {
+    width: auto;
+    min-width: 16rem;
+    max-width: none;
+    font-size: 1.0625rem;
+    padding: 1rem 2rem;
+  }
+
+  /* ── Glyph home ── */
+  html:not(.pwa-mode) .glyph-home-page {
+    min-height: auto;
+    background: transparent;
+    padding: 3rem 2.5rem 4rem;
+  }
+
+  html:not(.pwa-mode) .glyph-home-inner {
+    max-width: 40rem;
+  }
+
+  html:not(.pwa-mode) .glyph-title {
+    font-size: 3rem;
+  }
+
+  html:not(.pwa-mode) .glyph-subtitle,
+  html:not(.pwa-mode) .glyph-description {
+    font-size: 1.125rem;
+    line-height: 1.75;
+  }
+
+  /* ── Glyph reading + report ── */
+  html:not(.pwa-mode) .glyph-reading-page {
+    --glyph-report-body-size: 1.25rem;
+    background: transparent;
+    max-width: 44rem;
+    min-height: auto;
+    padding: 2rem 2.5rem 4rem;
+  }
+
+  html:not(.pwa-mode) .glyph-report {
+    --glyph-report-body-size: 1.25rem;
+    gap: 2rem;
+  }
+
+  html:not(.pwa-mode) .glyph-report .report-section {
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  html:not(.pwa-mode) .glyph-report .dual-view-card {
+    margin-top: 1.25rem;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  html:not(.pwa-mode) .glyph-report .dual-view-resonance {
+    margin-top: 1.25rem;
+    padding-top: 0;
+    border-top: none;
+  }
+
+  html:not(.pwa-mode) .glyph-report .archive-saved-hint {
+    padding: 0;
+    border-radius: 0;
+    outline: none;
+    background: transparent;
+  }
+
+  html:not(.pwa-mode) .glyph-report h1,
+  html:not(.pwa-mode) .glyph-report h2,
+  html:not(.pwa-mode) .glyph-report h3,
+  html:not(.pwa-mode) .glyph-report h4,
+  html:not(.pwa-mode) .glyph-report p,
+  html:not(.pwa-mode) .glyph-report li,
+  html:not(.pwa-mode) .glyph-report .section-label,
+  html:not(.pwa-mode) .glyph-report .question-recap-text,
+  html:not(.pwa-mode) .glyph-report .classical-text,
+  html:not(.pwa-mode) .glyph-report .wind-category h3,
+  html:not(.pwa-mode) .glyph-report .wind-category p,
+  html:not(.pwa-mode) .glyph-report .dual-view-card h4,
+  html:not(.pwa-mode) .glyph-report .dual-view-card p,
+  html:not(.pwa-mode) .glyph-report .dual-view-resonance,
+  html:not(.pwa-mode) .glyph-report .dual-view-resonance p,
+  html:not(.pwa-mode) .glyph-report .exploration-card p,
+  html:not(.pwa-mode) .glyph-report .exploration-card .explore-meta,
+  html:not(.pwa-mode) .glyph-report .reflection-question {
+    font-size: var(--glyph-report-body-size);
+    line-height: 1.75;
+    font-weight: 400;
+  }
+
+  html:not(.pwa-mode) .glyph-report .section-label {
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #958ea0;
+  }
+
+  html:not(.pwa-mode) .glyph-report .wind-category h3,
+  html:not(.pwa-mode) .glyph-report .dual-view-card h4 {
+    margin: 0 0 0.75rem;
+    color: #d0bcff;
+  }
+
+  html:not(.pwa-mode) .glyph-report .classical-text {
+    font-style: italic;
+  }
+
+  html:not(.pwa-mode) .glyph-report .dual-view-resonance,
+  html:not(.pwa-mode) .glyph-report .dual-view-resonance p {
+    color: #cbc3d7;
+  }
+
+  html:not(.pwa-mode) .glyph-report .exploration-card .explore-meta {
+    color: #958ea0;
+  }
+
+  html:not(.pwa-mode) .glyph-report .reflection-question {
+    color: #f3e8ff;
+  }
+
+  html:not(.pwa-mode) .archive-detail-page {
+    max-width: 44rem;
+  }
+
+  /* ── Session prep (Glyph / Match / Syncro / POJU) ── */
+  html:not(.pwa-mode) .session-prep-container {
+    min-height: auto;
+    background: transparent;
+    padding: 3rem 2.5rem 4rem;
+    align-items: stretch;
+  }
+
+  html:not(.pwa-mode) .session-prep-container .max-w-lg {
+    max-width: 48rem;
+  }
+
+  html:not(.pwa-mode) .welcome-section,
+  html:not(.pwa-mode) .prep-main {
+    max-width: 48rem;
+  }
+
+  html:not(.pwa-mode) .welcome-text,
+  html:not(.pwa-mode) .profile-list-view > p,
+  html:not(.pwa-mode) .profile-list-view h2 {
+    font-size: 1.125rem;
+    line-height: 1.75;
+  }
+
+  html:not(.pwa-mode) .poju-logo {
+    font-size: 2.5rem;
+  }
+
+  /* ── Match flow ── */
+  html:not(.pwa-mode) .match-select-page,
+  html:not(.pwa-mode) .match-relationship-page,
+  html:not(.pwa-mode) .match-analyzing,
+  html:not(.pwa-mode) .match-report,
+  html:not(.pwa-mode) .match-payment-page {
+    min-height: auto;
+    background: transparent;
+  }
+
+  html:not(.pwa-mode) .match-select-header,
+  html:not(.pwa-mode) .match-relationship-content {
+    max-width: 44rem;
+  }
+
+  html:not(.pwa-mode) .match-select-header h1,
+  html:not(.pwa-mode) .match-relationship-content h1 {
+    font-size: 1.75rem;
+  }
+
+  html:not(.pwa-mode) .match-select-header p,
+  html:not(.pwa-mode) .match-select-header .label-text,
+  html:not(.pwa-mode) .match-step-indicator,
+  html:not(.pwa-mode) .match-person-label {
+    font-size: 1.0625rem;
+    line-height: 1.75;
+  }
+
+  html:not(.pwa-mode) .match-primary-btn {
+    width: auto;
+    min-width: 16rem;
+    max-width: none;
+  }
+
+  html:not(.pwa-mode) .match-report {
+    max-width: 52rem;
+    padding: 2rem 2.5rem 4rem;
+  }
+
+  html:not(.pwa-mode) .relationship-line {
+    max-width: none;
+    font-size: 1.0625rem;
+  }
+
+  /* ── Syncro in-app task / home (not marketing) ── */
+  html:not(.pwa-mode) .syncro-task-page,
+  html:not(.pwa-mode) .syncro-pwa-home {
+    max-width: 44rem;
+  }
+
+  /* ── Chart loader during profile prep ── */
+  html:not(.pwa-mode) .chart-loader-content {
+    max-width: 42rem;
+  }
+
+  html:not(.pwa-mode) .preparing-spline-page__hint {
+    max-width: 36rem;
+    font-size: 1rem;
+  }
+}

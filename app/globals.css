@@ -12,6 +12,8 @@
 @import "../styles/tool-suggestion.css";
 @import "../styles/poju-tool-handoff.css";
 @import "../styles/streaming-analysis.css";
+@import "../styles/pwa-flow.css";
+@import "../styles/browser-desktop.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

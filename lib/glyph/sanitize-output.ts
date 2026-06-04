@@ -16,7 +16,7 @@ export type GlyphOutputViolation = {
 export const GLYPH_REGENERATION_USER_SUFFIX = `
 
 ⛔ 上一轮 JSON 违反 OUTPUT FRAMING 三道防线。请完整重写：
-1. 禁干支/十神/日主/大运/流年/用神/八字/四柱 → 全部翻译成心理学/系统动力学描述
+1. 禁干支/十神/日主/大运/流年/用神/八字/四柱/五行元素(金木水火土)/贵人 → 全部翻译成心理学/系统动力学描述
 2. 禁签诗原文/具体历史人物/「签」字样 → 抽象为「经典东方叙事原型」
 3. 禁「何时/即将/会遇到/将会」等未来预测 → 改为【当下时机评估】与认知反思
 写每段前执行三道自检。`;
@@ -31,6 +31,23 @@ const BAZI_FRAME_TERMS =
 
 const STEM_ELEMENT = new RegExp(`[${STEMS}][木火土金水]`, "g");
 const STEM_BRANCH = new RegExp(`[${STEMS}][${BRANCHES}]`, "g");
+
+const WUXING = "金|木|水|火|土";
+
+/** 喜/忌/用 + 五行组合，如 喜土金、忌火、喜用水金 */
+const WUXING_YONGXI_COMBO = new RegExp(
+  `(?:喜用|喜|忌|用)[用]?[${WUXING}]{1,4}`,
+  "g",
+);
+
+/** 五行作命理元素的单字语境 */
+const WUXING_ELEMENT_CONTEXT = new RegExp(
+  `(?:五行|[补缺旺弱偏轻重][${WUXING}]|[${WUXING}](?:元素|行|气|旺|弱|重|轻|偏多|偏少|不足|过重))`,
+  "g",
+);
+
+/** 命理术语「贵人」 */
+const GUIRen_TERM = /贵人(?:运|星|显|扶持|相助|助力|出现|临门|照命|帮身)?/g;
 
 const LEGACY_FRAMING_ZH =
   /签文|灵签|求签|抽签|解签|卜签|庙签|观音|菩萨|佛祖|神明|神灵|占卜|算命|命理|保佑|祈福|寺庙|求神/g;
@@ -292,6 +309,21 @@ export function detectGlyphOutputViolations(text: string): GlyphOutputViolation[
     "shishen",
     violations,
   );
+  collectRegexViolations(
+    text,
+    "bazi_term",
+    WUXING_YONGXI_COMBO,
+    "wuxing_yongxi_combo",
+    violations,
+  );
+  collectRegexViolations(
+    text,
+    "bazi_term",
+    WUXING_ELEMENT_CONTEXT,
+    "wuxing_element_context",
+    violations,
+  );
+  collectRegexViolations(text, "bazi_term", GUIRen_TERM, "guiren_term", violations);
 
   collectRegexViolations(
     text,
@@ -403,6 +435,19 @@ const REPLACEMENT_MAP_ZH: Array<[RegExp, string]> = [
   [/伤官/g, "突破表达力"],
   [/偏印/g, "隐性洞察"],
   [/正印/g, "滋养性支持"],
+  [/喜用水金/g, "需补充:沉静的智慧与决断力"],
+  [/喜土金/g, "你需要补充的能量:稳定感与清晰的结构判断"],
+  [/忌火土/g, "需警惕:急躁与固执"],
+  [/喜用[金木水火土]{1,4}/g, "需补充的认知资源"],
+  [/喜[金木水火土]{1,4}/g, "你需要补充的能量"],
+  [/忌[金木水火土]{1,4}/g, "需警惕的耗能模式"],
+  [/用[金木水火土]/g, "认知资源偏好"],
+  [/五行/g, "能量维度"],
+  [/[金木水火土]元素/g, "能量特质"],
+  [/[金木水火土]行/g, "能量倾向"],
+  [/贵人扶持/g, "来自外界的助力"],
+  [/贵人显/g, "外部支持增强的阶段"],
+  [/贵人/g, "外部助力"],
   [/何时/g, "当下"],
   [/即将/g, "此刻可觉察的"],
   [/会遇到/g, "可留意的当下信号"],
