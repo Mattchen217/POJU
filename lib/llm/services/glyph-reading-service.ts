@@ -4,6 +4,12 @@
 
 import { signDataToPromptGlyph } from "@/lib/glyph/sign-to-prompt";
 import { loadGlyphBySignData } from "@/lib/glyph/load-glyph";
+import {
+  auditGlyphReadingContent,
+  GLYPH_REGENERATION_USER_SUFFIX,
+  logGlyphOutputViolations,
+  sanitizeGlyphReadingContent,
+} from "@/lib/glyph/sanitize-output";
 import { buildGlyphReadingPrompt } from "@/lib/llm/prompts/glyph-deepseek-prompt";
 import {
   hasBaseAnalysisPayload,
@@ -164,6 +170,71 @@ function validateReading(parsed: Record<string, unknown>): GlyphReadingContent {
   return reading;
 }
 
+async function requestGlyphReadingJson(
+  system: string,
+  user: string,
+): Promise<{ content: string; actual_model: string; meta: GlyphReadingServiceResult["meta"] }> {
+  const result = await callLLM({
+    call_type: "glyph_reading",
+    system,
+    messages: [{ role: "user", content: user }],
+    max_tokens: 3000,
+    thinking_effort: "low",
+    response_format: "json",
+    temperature: 0.55,
+    timeout_ms: 180_000,
+  });
+
+  return {
+    content: result.content,
+    actual_model: result.actual_model,
+    meta: {
+      model: result.actual_model,
+      tokens_used: result.meta.tokens_used,
+      cost_usd: result.meta.cost_usd,
+      latency_ms: result.meta.latency_ms,
+    },
+  };
+}
+
+function parseReadingRecord(raw: string): Record<string, unknown> {
+  return parseJsonContent(raw) as Record<string, unknown>;
+}
+
+async function finalizeGlyphReading(
+  reading: GlyphReadingContent,
+  locale: string,
+  initialMeta: GlyphReadingServiceResult["meta"],
+  system: string,
+  user: string,
+): Promise<{ reading: GlyphReadingContent; meta: GlyphReadingServiceResult["meta"] }> {
+  const violations = auditGlyphReadingContent(reading);
+  if (violations.length === 0) {
+    return { reading, meta: initialMeta };
+  }
+
+  logGlyphOutputViolations(violations, "glyph-reading");
+  console.warn("[glyph-reading] Regenerating once due to OUTPUT FRAMING violations...");
+
+  const retry = await requestGlyphReadingJson(system, user + GLYPH_REGENERATION_USER_SUFFIX);
+  let retryReading = validateReading(parseReadingRecord(retry.content));
+  const retryViolations = auditGlyphReadingContent(retryReading);
+  if (retryViolations.length > 0) {
+    logGlyphOutputViolations(retryViolations, "glyph-reading-retry");
+    retryReading = sanitizeGlyphReadingContent(retryReading, locale);
+  }
+
+  return {
+    reading: retryReading,
+    meta: {
+      model: retry.meta.model,
+      tokens_used: initialMeta.tokens_used + retry.meta.tokens_used,
+      cost_usd: initialMeta.cost_usd + retry.meta.cost_usd,
+      latency_ms: initialMeta.latency_ms + retry.meta.latency_ms,
+    },
+  };
+}
+
 export async function generateGlyphReading(
   input: GenerateGlyphReadingInput,
 ): Promise<GlyphReadingServiceResult> {
@@ -185,27 +256,20 @@ export async function generateGlyphReading(
 
   console.log("[glyph-reading] Calling DeepSeek (deep_analysis, thinking: medium)...");
 
-  const result = await callLLM({
-    call_type: "glyph_reading",
-    system,
-    messages: [{ role: "user", content: user }],
-    max_tokens: 3000,
-    thinking_effort: "low",
-    response_format: "json",
-    temperature: 0.55,
-    timeout_ms: 180_000,
-  });
+  const llm = await requestGlyphReadingJson(system, user);
 
   let parsed: Record<string, unknown>;
   try {
-    parsed = parseJsonContent(result.content) as Record<string, unknown>;
+    parsed = parseReadingRecord(llm.content);
   } catch (e) {
     console.error("[glyph-reading] JSON parse failed:", e);
-    console.error("[glyph-reading] Raw (first 800):", result.content.slice(0, 800));
+    console.error("[glyph-reading] Raw (first 800):", llm.content.slice(0, 800));
     throw new Error("Glyph reading output is not valid JSON");
   }
 
-  const reading = validateReading(parsed);
+  let reading = validateReading(parsed);
+  const finalized = await finalizeGlyphReading(reading, input.locale, llm.meta, system, user);
+  reading = finalized.reading;
 
   if (typeof window !== "undefined") {
     await recordProfileUsage(input.profile_id, "glyph");
@@ -213,11 +277,6 @@ export async function generateGlyphReading(
 
   return {
     reading,
-    meta: {
-      model: result.actual_model,
-      tokens_used: result.meta.tokens_used,
-      cost_usd: result.meta.cost_usd,
-      latency_ms: result.meta.latency_ms,
-    },
+    meta: finalized.meta,
   };
 }
