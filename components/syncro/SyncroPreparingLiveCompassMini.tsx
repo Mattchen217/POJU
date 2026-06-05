@@ -43,7 +43,7 @@ export function SyncroPreparingLiveCompassMini() {
         position: "relative",
         width: SYNCRO_PREPARING_RING_SIZE,
         height: SYNCRO_PREPARING_RING_SIZE,
-        margin: "0 auto 12px",
+        margin: "8px auto 12px",
         overflow: "visible",
       }}
     >

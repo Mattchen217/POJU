@@ -1,7 +1,15 @@
 /**
  * Shared blacklist → whitelist term maps for LLM output compliance.
- * Used by Glyph prompts (primary) and sanitize fallback (text replace only, no LLM).
+ * Prompt translation suggestions + audit detection (audit-only, no mutation).
+ * @see lib/llm/compliance/output-policy.ts — prompt defense blocks
+ * @see lib/llm/compliance/audit-output.ts — detection rules
  */
+
+import {
+  auditOutputPolicyText,
+  detectOutputPolicyViolations,
+} from "@/lib/llm/compliance/audit-output";
+import { buildOutputPolicyCoreBlock } from "@/lib/llm/compliance/output-policy";
 
 export const EN_TERM_MAP: Record<string, string> = {
   // A. 八字/排盘
@@ -289,11 +297,32 @@ function applyTermMap(text: string, map: Record<string, string>, locale: string)
   return result.replace(/\s{2,}/g, " ").replace(/\s+([,.;:!?])/g, "$1").trim();
 }
 
-/** Detect terms still present after sanitization (for logging + mask). */
+/** Terms allowed as Five-Elements personality language — do not audit. */
+const AUDIT_SKIP_TERMS = new Set([
+  "Five Elements",
+  "Wu Xing",
+  "五行",
+  "Fate",
+  "Destiny",
+  "Karma",
+  "karmic",
+  "Prediction",
+  "predict",
+  "forecast",
+  "运势",
+  "预测",
+  "预言",
+]);
+
+/** Detect policy + bazi fingerprint terms (audit-only). Does NOT flag bare Wood/Fire/Yin-Yang. */
 export function detectComplianceViolations(text: string, locale: string): ComplianceViolation[] {
   if (!text?.trim()) return [];
   const violations: ComplianceViolation[] = [];
   const isZh = locale.startsWith("zh");
+
+  for (const v of detectOutputPolicyViolations(text, locale)) {
+    violations.push({ label: `${v.category}:${v.label}`, snippet: v.snippet });
+  }
 
   const pushRegex = (regex: RegExp, label: string) => {
     regex.lastIndex = 0;
@@ -308,12 +337,10 @@ export function detectComplianceViolations(text: string, locale: string): Compli
 
   if (isZh) {
     pushRegex(ZH_STEM_ELEMENT_REGEX, "stem_element");
-    pushRegex(ZH_STEM_BRANCH_REGEX, "stem_branch");
     pushRegex(ZH_WUXING_YONGXI_REGEX, "wuxing_yongxi");
-    pushRegex(ZH_WUXING_ELEMENT_CONTEXT_REGEX, "wuxing_element");
     pushRegex(ZH_GUIRen_REGEX, "guiren");
     for (const term of sortedMapEntries(ZH_TERM_MAP).map(([k]) => k)) {
-      if (term.length < 2) continue;
+      if (term.length < 2 || AUDIT_SKIP_TERMS.has(term)) continue;
       if (text.includes(term)) {
         violations.push({
           label: `term:${term}`,
@@ -322,14 +349,12 @@ export function detectComplianceViolations(text: string, locale: string): Compli
       }
     }
   } else {
-    pushRegex(EN_FAVORABLE_ELEMENT_REGEX, "favorable_element");
-    pushRegex(EN_UNFAVORABLE_ELEMENT_REGEX, "unfavorable_element");
-    pushRegex(EN_WUXING_ELEMENT_COMBO_REGEX, "wuxing_combo");
     pushRegex(EN_QUOTED_MAXIM_PREFIX_REGEX, "quoted_maxim_prefix");
     pushRegex(EN_WARRIOR_WHO_REGEX, "warrior_who_narrative");
     pushRegex(EN_STORY_SEQUENCE_VERB_REGEX, "story_sequence_verb");
     pushRegex(EN_STORY_SEQUENCE_NARRATIVE_REGEX, "story_sequence_narrative");
     for (const [term] of sortedMapEntries(EN_TERM_MAP)) {
+      if (AUDIT_SKIP_TERMS.has(term)) continue;
       const re = new RegExp(`\\b${escapeRegExp(term)}\\b`, "i");
       const m = re.exec(text);
       if (m) {
@@ -396,28 +421,17 @@ export function applyComplianceSanitize(text: string, locale: string): Complianc
   return { text, violationsBefore, violationsAfter };
 }
 
-/** Prompt block: reference shared compliance maps (Glyph OUTPUT FRAMING 防线 1). */
+/** Prompt block: soften bazi terms; Five Elements as personality allowed. */
 export function buildComplianceTranslationPromptBlock(): string {
-  const zhSamples = [
-    "日主 → 核心特质",
-    "大运 → 人生阶段",
-    "喜土金 → 稳定与结构判断",
-    "贵人 → 外部助力",
-    "八字/四柱 → 性格画像/性格结构",
-  ];
-  const enSamples = [
-    "Day Master → core nature",
-    "Major Luck → 10-year life cycle",
-    "Noble Person → key supporter",
-    "Four Pillars → personality structure",
-  ];
-  return `# 共享合规翻译表（prompt 强制翻译 · compliance-audit 仅检测告警）
+  return `# 共享合规（见 lib/llm/compliance/output-policy.ts · audit 仅告警）
 
-输出 JSON 须将下列黑词译为白榜（完整映射见 lib/llm/sanitize/compliance-terms.ts，**不自动替换**）：
+${buildOutputPolicyCoreBlock()}
 
-中文示例：${zhSamples.join("；")}
-英文示例：${enSamples.join("; ")}
-
-⚠️ 五行字（金木水火土 / Wood-Fire-Earth-Metal-Water）**仅**在命理组合（喜土金、favorable Wood、your Water 等）中禁止；
-日常用语（木桌、fire alarm）不在此列。`;
+术语映射表（输出须翻译，完整见 compliance-terms.ts EN_TERM_MAP / ZH_TERM_MAP）：
+· Day Master / 日主 → core nature / 核心特质
+· Yong Shen / 用神 → balancing element / 关键平衡能量
+· chart / 命盘 → profile / 性格画像
+· ✅ Wood/Fire/Earth/Metal/Water 作性格能量 — **保留**`;
 }
+
+export { auditOutputPolicyText, detectOutputPolicyViolations };

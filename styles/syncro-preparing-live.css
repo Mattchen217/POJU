@@ -2,6 +2,12 @@
   position: relative;
   min-height: 100dvh;
   background: var(--pj-bg-deep, #07091a);
+  /* Clear fixed hour rail + name/range/legend (matches syncro-layout stage-top) */
+  --syncro-preparing-body-top: calc(env(safe-area-inset-top, 0px) + 118px);
+}
+
+.syncro-result-shell--progress .syncro-preparing-live {
+  --syncro-preparing-body-top: calc(env(safe-area-inset-top, 0px) + 158px);
 }
 
 .syncro-preparing-live-body {
@@ -9,12 +15,15 @@
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding: 8px 32px 120px;
+  padding: 16px 32px 120px;
+  padding-top: var(--syncro-preparing-body-top);
   text-align: center;
 }
 
 .syncro-preparing-live-compass {
   flex-shrink: 0;
+  overflow: hidden;
+  contain: layout paint;
 }
 
 .syncro-preparing-live-title {
@@ -98,9 +107,9 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 10px;
   line-height: 1.45;
-  color: var(--pj-text-secondary, #a8b0c8);
-  opacity: 0.28;
-  filter: blur(2.5px);
+  color: #ffffff;
+  opacity: 0.92;
+  filter: blur(1px);
   white-space: pre-wrap;
   word-break: break-all;
   user-select: none;

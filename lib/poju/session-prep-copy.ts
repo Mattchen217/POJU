@@ -13,8 +13,8 @@ export function getWelcomeText(
 
   if (productType === "glyph") {
     const glyph: Record<string, string> = {
-      en: `Welcome to Glyph. Glyph weaves your bazi foundation with classical oracle wisdom to illuminate your present moment. Please provide your foundational energy data below.`,
-      zh: `欢迎来到 Glyph。Glyph 结合你的八字命局与古典签文，为你抽出当下处境的指引。请提供你的基础能量数据。`,
+      en: `Welcome to Glyph. Glyph weaves your energy foundation with timeless Eastern wisdom to illuminate your present moment. Please provide your foundational energy data below.`,
+      zh: `欢迎来到 Glyph。Glyph 结合你的能量根基与恒久的东方智慧，为你照亮当下的处境。请提供你的基础能量数据。`,
       es: `Bienvenido a Glyph. Glyph entrelaza tu base del bazi con la sabiduría clásica del oráculo para iluminar tu momento presente. Indica tus datos energéticos fundamentales.`,
       fr: `Bienvenue sur Glyph. Glyph associe votre fondation bazi à la sagesse classique de l'oracle pour éclairer l'instant présent. Merci d'indiquer vos données énergétiques fondamentales.`,
       de: `Willkommen bei Glyph. Glyph verbindet Ihre Bazi-Grundlage mit klassischer Orakelweisheit, um Ihren gegenwärtigen Moment zu beleuchten. Bitte geben Sie unten Ihre grundlegenden Energiedaten an.`,

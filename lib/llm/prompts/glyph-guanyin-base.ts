@@ -82,7 +82,7 @@ export const GLYPH_GUANYIN_INTERPRETATION_METHOD = `# 观音百签 · 解签法�
 ## 4. 五风类在本体系中的位置
 
 五风类是 pojulife 对百签气势的**现代分层**（非古代原典分类名）：
-- Divine Tailwind：大吉、顺遂、天时与人事相合。
+- Divine Tailwind / Soaring Tailwind：顺势、对齐、时机已熟。
 - Fair Sky：吉中有为，路开但仍须人行。
 - Still Water：守成、待时、以静制动。
 - Crosswind：左右牵动、宜听辨不宜硬冲。
@@ -174,30 +174,27 @@ export const GLYPH_OUTPUT_WORDING = `# Glyph 措辞统一（输出 JSON 字符�
 ✅ 「这个 Glyph 映照出…」 / 「Glyph 文的核心意象…」 / 「This Glyph reflects…」 / 「The Glyph text points to…」`;
 
 import { buildComplianceTranslationPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
+import { buildOutputPolicyForGlyph } from "@/lib/llm/compliance/output-policy";
 
-/** 防线 1 — 术语翻译：输出禁干支/十神/命理术语，强制心理学/系统动力学包装 */
-export const GLYPH_OUTPUT_DEFENSE_TERMS = `# 防线 1 — 术语翻译（心理学 / 系统动力学 · 输出强制）
+/** 防线 1 — 术语软化：八字专有术语禁裸写；五行作性格能量可保留 */
+export const GLYPH_OUTPUT_DEFENSE_TERMS = `# 防线 1 — 术语软化（OUTPUT POLICY · 输出强制）
+
+${buildOutputPolicyForGlyph()}
 
 ${buildComplianceTranslationPromptBlock()}
 
-⛔ **JSON 所有字符串字段绝对禁止出现**（含同义改写，完整映射见 compliance-terms.ts）：
-- 干支组合：乙木、丁酉、丙午、戊子、甲子 等任意天干地支及其五行标注
-- 十神：食神、七杀、正官、偏财、正财、比肩、劫财、伤官、偏印、正印 等
-- 命理框架词：日主、大运、流年、用神、忌神、调候、透出、坐地、格局、八字、四柱
-- 五行作命理元素：**金、木、水、火、土**（尤其「喜土金」「忌火土」「喜用水金」等用神表述）
-- **「贵人」**及命理语境下的贵人运、贵人显、贵人扶持
+⛔ **JSON 字符串禁止裸写**（须翻译为 profile / core nature / life cycle / balancing element）：
+- 干支组合：乙木、丁酉、丙午 等
+- 十神：食神、七杀、正官 等
+- 命理框架词：日主、大运、流年、用神、忌神、八字、四柱、命盘、chart / birth chart
+- **「贵人」**及命理语境贵人运
 
-✓ **强制翻译表**（与 compliance-terms EN_TERM_MAP / ZH_TERM_MAP 一致 — prompt 侧翻译，非自动替换）：
-- 日主 / Day Master → 核心特质 / core nature
-- 大运 / Major Luck → 人生阶段 / 10-year life cycle
-- 流年 → 当前周期 / current annual cycle
-- 喜土金 → 稳定与结构判断
-- 忌火土 → 急躁与固执
-- 喜用水金 → 沉静智慧与决断力
-- 贵人 / Noble Person → 外部助力 / key supporter
+✓ **允许保留**（作性格 / 能量模型）：
+- **Wood / Fire / Earth / Metal / Water** 及 金木水火土
+- Yin-Yang / 阴阳
+- 「your Wood-like nature」「 excess Fire energy — balance with Earth」
 
-⚠️ **五行字（金木水火土 / Wood-Fire-Earth-Metal-Water）仅**在命理组合中禁止；日常 wood table、fire alarm、木桌 不在此列。
-内部 structured 数据仅供你分析，输出须 100% 翻译为行为蓝图 / 人格架构语言。`;
+内部 structured 仅供分析，输出须遵守 OUTPUT POLICY。`;
 
 /** 防线 2 — 叙事抽象：输出禁签诗原文与具体历史人物 */
 export const GLYPH_OUTPUT_DEFENSE_NARRATIVE = `# 防线 2 — 叙事抽象 + Glyph 文处理（输出强制 · 中英文同等）
@@ -313,8 +310,9 @@ export const GLYPH_OUTPUT_DEFENSE_PREDICTION = `# 防线 3 — 预测规避（�
 /** 生成每段前的三道自检（prompt 末尾） */
 export const GLYPH_OUTPUT_SELF_CHECK = `# 生成前自检（写每一段字符串前必做 · 不合格则重写该段）
 
-1. **有没有干支 / 十神 / 日主 / 大运 / 流年 / 用神 / 八字 / 四柱？有没有五行字（金木水火土）？有没有「贵人」？**
-   → 全部翻译成心理学 / 系统动力学描述；五行改能量描述，贵人改「外部助力」（防线 1）
+1. **有没有干支 / 十神 / 日主 / chart / Day Master / Yong Shen / 八字 / 四柱？有没有「贵人」？**
+   → 翻译成 profile / core nature / life cycle / balancing element（防线 1）
+   → **五行 Wood/Fire/Earth/Metal/Water 作性格 — 可保留**
 2. **有没有签诗原文 / 具体历史人物 / 英文故事情节 / 引号格言？**（a warrior who… / ancient wisdom: '…' / "classical verse"）
    → 抽象成「经典东方叙事原型」主题词；不引原句、不展开情节（防线 2）
 3. **有没有预测句？**（何时 / 将会 / 会遇到 / will meet / will be seen / going to + 未来事件 / next month + 断言）
@@ -340,7 +338,7 @@ export const GLYPH_OUTPUT_BRANDING = `# ⚠️ 输出品牌（用户可见文案
 - 指代：**Glyph / this Glyph / Glyph 文 / the Glyph text**
 - 定位词：**原型隐喻 / archetypal metaphor**（仅开篇一次，其后用 Glyph）
 - 核心框架：**系统性情境模式**、**行为蓝图**
-- 五风类用产品已有英文名或中文营销名（如 Divine Tailwind / 顺风）——描述气势，**禁止**用吉/凶/auspicious/ominous
+- 五风类用产品已有英文名或中文营销名（如 Soaring Tailwind / 顺风）——描述气势，**禁止**用吉/凶/auspicious/ominous
 
 ## 禁止出现在用户可见文案中
 

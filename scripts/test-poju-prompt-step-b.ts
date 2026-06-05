@@ -42,16 +42,15 @@ async function main(): Promise<void> {
   console.log("\n=== Step B: POJU modularization static checks ===\n");
 
   assert("poju-base.ts exists", existsSync(resolve(ROOT, "lib/llm/prompts/poju-base.ts")));
-  assert("5 core exports", buildPojuCorePromptSections().length === 5);
+  assert("6 core exports (incl output policy)", buildPojuCorePromptSections().length === 6);
 
   assert("identity 破局顾问", POJU_BREAKTHROUGH_COUNSELOR_IDENTITY.includes("破局顾问"));
   assert("identity 不是签文(Glyph)", POJU_BREAKTHROUGH_COUNSELOR_IDENTITY.includes("Glyph"));
   assert("identity 不是方位(Syncro)", POJU_BREAKTHROUGH_COUNSELOR_IDENTITY.includes("Syncro"));
   assert("identity 不是合盘(Match)", POJU_BREAKTHROUGH_COUNSELOR_IDENTITY.includes("Match"));
 
-  assert("bazi 日主", POJU_BAZI_DEEP_METHOD.includes("日主"));
-  assert("bazi 大运", POJU_BAZI_DEEP_METHOD.includes("大运"));
-  assert("bazi 用神", POJU_BAZI_DEEP_METHOD.includes("用神"));
+  assert("identity 我是 POJU / I am POJU", POJU_BREAKTHROUGH_COUNSELOR_IDENTITY.includes("我是 POJU"));
+  assert("identity output policy wired", buildPojuCorePromptSections().some((s) => s.includes("POJULIFE OUTPUT POLICY")));
 
   assert("action 3类", POJU_ACTION_DESIGN_PRINCIPLES.includes("Action 1"));
   assert("action 风水调候", POJU_ACTION_DESIGN_PRINCIPLES.includes("传统调候"));

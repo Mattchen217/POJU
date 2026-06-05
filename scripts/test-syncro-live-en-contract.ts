@@ -22,7 +22,7 @@ function loadEnvLocal(): void {
 }
 
 const BLACK_TERMS =
-  /午火|忌神|坤宫|印旺|水元素|奇门|八字|用神|qimen|auspicious|unlucky|good luck/i;
+  /午火|忌神|坤宫|印旺|奇门|八字|用神|Day Master|Yong Shen|birth chart|in your chart|qimen|auspicious|unlucky|good luck|will succeed|will marry/i;
 
 async function main(): Promise<void> {
   loadEnvLocal();

@@ -39,11 +39,19 @@ function main() {
     "en daily wood/fire ok",
   );
 
-  console.log("\n=== EN bazi combos — detect only, text unchanged ===");
+  console.log("\n=== EN bazi combos — detect only ===");
   const enInput = "Your Day Master is Yi Wood with favorable Metal.";
   const en = applyComplianceSanitize(enInput, "en");
   assert(en.text === enInput, "en text unchanged");
-  assert(en.violationsBefore.length > 0, "en violations detected");
+  assert(en.violationsBefore.length > 0, "en Day Master violations detected");
+
+  console.log("\n=== EN Five Elements personality — allowed ===");
+  const woodInput =
+    "Your Wood-like nature seeks growth; balance excess Fire with grounding Earth.";
+  assert(
+    detectComplianceViolations(woodInput, "en").length === 0,
+    "en Wood/Fire/Earth personality ok",
+  );
 
   if (process.exitCode) process.exit(1);
   console.log("\nAll compliance-terms checks passed.");

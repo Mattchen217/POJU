@@ -6709,7 +6709,7 @@ My heart and yours in perfect harmony lie.
 
 此卦孩儿见母之象。诸事贵人大吉也。
 
-"Your basic security is already guaranteed; stop letting the static of external opinions disrupt your inner frequency, and you will find that the support you need is as certain as a mother returning to her child."
+"Your basic security is already present; stop letting the static of external opinions disrupt your inner frequency, and you will find that the support you need is as natural as a mother returning to her child."
 
 观音灵签: 解曰
 

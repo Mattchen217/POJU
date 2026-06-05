@@ -79,7 +79,7 @@ export interface LevelMeta {
 export const LEVEL_META: Record<GlyphLevel, LevelMeta> = {
   divine_tailwind: {
     level: "divine_tailwind",
-    display_name: "Divine Tailwind",
+    display_name: "Soaring Tailwind",
     subtitle: "Pattern of Alignment",
     top_symbol: "✦ ✦ ✦ ✦ ✦",
     primary_color: "#FFD700",

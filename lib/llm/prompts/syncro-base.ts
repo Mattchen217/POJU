@@ -1,7 +1,8 @@
 /**
- * Syncro v5 — 奇门遁甲时空顾问专属 prompt 模块（与 POJU / Glyph / Match 分离）。
+ * Syncro v5 — 时空效率矩阵专属 prompt 模块（与 POJU / Glyph / Match 分离）。
  */
 
+import { buildOutputPolicyForSyncro } from "@/lib/llm/compliance/output-policy";
 import { buildComplianceTranslationPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
 
 export const SYNCRO_OUTPUT_FRAMING = `# SYNCRO OUTPUT FRAMING — 输出合规（必须遵守 · 最高优先级）
@@ -42,10 +43,13 @@ ${buildComplianceTranslationPromptBlock()}
 - 方位（吉凶义）→ 矢量 / direction / vector
 - 罗盘 / 奇门盘 → **禁止**；用 Syncro 矩阵
 
-**共享命理黑词（须翻译，见 compliance-terms）**
-- 用神 / 日主 / 大运 / 八字 / 四柱 / 十神 / 喜忌五行组合 → 关键能量 / 核心特质 / 人生阶段 等
+**共享命理术语（须翻译，见 compliance-terms · 五行 Wood/Fire 作能量 — 可保留）**
+- 用神 / 日主 / 大运 / 八字 / 四柱 / 十神 → 关键能量 / 核心特质 / 人生阶段 / profile
+- chart / birth chart / natal chart → profile
+- 奇门 / Qimen / 风水 / Feng Shui → 时空能量分析（输出省略框架名）
 
-✓ 五流 Current 等级 **id 不变**；用户可见描述用水流隐喻 + 共振/效率语言。`;
+✓ 五流 Current 等级 **id 不变**；用户可见描述用水流隐喻 + 共振/效率语言。
+✓ **Fire / Metal / Wood / Water / Earth** 作 energy model / personality — **允许**。`;
 
 export const SYNCRO_OUTPUT_DEFENSE_PREDICTION = `# 防线 2 — 预测规避（Syncro 最关键 · 输出强制）
 
@@ -146,14 +150,14 @@ export const SYNCRO_QIMEN_INTERPRETATION_METHOD = `# 奇门遁甲简化运用（
 3. **八卦方位 + 用神 + 用户命局**：该方向对此刻任务是顺、逆、静、险
 4. **综合 → Current 等级**：映射到 5 档 Current（见 SYNCRO_TIMESPACE_FRAMEWORK）
 
-## 命局必引（detailed_advice / rationale 中）
+## 命局必引（detailed_advice / rationale 中 — 用户可见须软化）
 
-每个组合的 detailed_advice 或 rationale **至少一处**关联用户命局：
-- **日主**（天干及五行倾向）
-- **当前大运** 主题
-- **用神 / 喜忌** 与此时辰、此方位的互动
+每个组合的 detailed_advice 或 rationale **至少一处**关联用户 profile：
+- **core nature**（五行气质倾向 — Wood/Fire 等 **可写**）
+- **当前 life cycle** 主题
+- **balancing element** 与此时段、此方向的互动
 
-禁止 96 格全部同一等级或同一套空话。
+禁止 96 格全部同一等级或同一套空话。禁 chart / Day Master / Yong Shen 裸写。
 
 ## 用户可见禁忌
 
@@ -165,9 +169,9 @@ export const SYNCRO_TIMESPACE_FRAMEWORK = `# 时空对行动的三层影响 + Cu
 
 ## 三层影响（内化于 rationale）
 
-1. **天时**（时辰能量）：此刻段五行气势、对用户用神/日主是生是克
-2. **地利**（方位能量）：该方向在此时辰是否助力任务
-3. **人和**（用户命局）：日主、大运、用神能否「承得住」此时此向
+1. **天时**（时段能量）：此刻段五行气势、对用户 balancing element 是支持还是摩擦
+2. **地利**（方向能量）：该方向在此时段是否助力任务
+3. **人和**（用户 profile）：core nature、life cycle 能否「承得住」此时此向
 
 ## Current 5 等级（**唯一**允许对用户输出的气势标签）
 
@@ -197,7 +201,7 @@ export const SYNCRO_OUTPUT_BRANDING = `# ⚠️ Syncro 输出品牌（JSON matri
 
 - 产品：**Syncro**，**24 小时时空效率矩阵**
 - 显示：**Current 五流等级** + **行动建议**（共振/效率语言，禁吉凶/运气）
-- 命局信息须 **compliance 白榜翻译**（核心特质 / 关键能量 / 人生阶段），禁裸写日主/用神/大运
+- 命局信息须 **OUTPUT POLICY 白榜翻译**（core nature / balancing element / life cycle / profile），禁裸写 chart / Day Master / Yong Shen
 - 方位 N/NE/E…；时段用 peak window / 时段
 
 ## 禁止暴露
@@ -220,6 +224,7 @@ export const SYNCRO_OUTPUT_BRANDING = `# ⚠️ Syncro 输出品牌（JSON matri
 /** Syncro matrix + hour-stream prompt 共用的输出防线（顺序固定） */
 export function buildSyncroOutputDefenseSections(): string[] {
   return [
+    buildOutputPolicyForSyncro(),
     SYNCRO_OUTPUT_FRAMING,
     SYNCRO_OUTPUT_DEFENSE_TERMS,
     SYNCRO_OUTPUT_DEFENSE_PREDICTION,
