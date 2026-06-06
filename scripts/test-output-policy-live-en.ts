@@ -140,10 +140,10 @@ async function runMatch(): Promise<void> {
     gender: "M",
     timezone: "America/New_York",
   });
-  const matrix = calculateCompatibilityMatrix(
-    wrapProfileForMatrix(profileA, null),
-    wrapProfileForMatrix(profileB, null),
-  );
+  const matrix = calculateCompatibilityMatrix({
+    profileA: wrapProfileForMatrix(profileA, null),
+    profileB: wrapProfileForMatrix(profileB, null),
+  });
   const { system, user } = buildMatchPrompt({
     a_profile: profileA,
     b_profile: profileB,
