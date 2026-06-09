@@ -55,6 +55,7 @@ import { runFinalDeliveryForSession } from "@/lib/llm/pro/final-delivery";
 const POJU_DEV_DEBUG = process.env.NODE_ENV === "development";
 import { rewindSessionToUserMessage } from "@/lib/poju/session-rewind";
 import { useAutoResizeTextarea } from "@/lib/hooks/use-auto-resize-textarea";
+import "@/styles/poju-chat-v2.css";
 import "@/styles/topic-drift.css";
 import "@/styles/tool-suggestion.css";
 
@@ -1088,8 +1089,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           </div>
         </header>
 
-        <div className="pchat__scroll">
-          <div className="pchat__messages">
+        <div className="pchat__column">
+          <div className="pchat__scroll">
+            <div className="pchat__messages">
               <SessionExpiryNotice session={session} extending={extending} onExtend={() => void handleExtendSession()} />
 
               {POJU_DEV_DEBUG && session.agent_v2 ? (
@@ -1262,11 +1264,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
               ) : null}
 
               <div ref={messagesEndRef} />
+            </div>
           </div>
-        </div>
 
-        {!overlayFormOpen ? (
-          <div className="pchat__inputbar">
+          {!overlayFormOpen ? (
+            <div className="pchat__inputbar">
             {(sending || confirmBusy) && thinkingMode ? (
               liveThinkingLine ? (
                 <LiveThinkingTicker line={liveThinkingLine} waitingLabel={t("thinking_wait")} />
@@ -1331,8 +1333,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                 <span className="material-symbols-outlined">{sending ? "stop" : "arrow_upward"}</span>
               </button>
             </div>
-          </div>
-        ) : null}
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
   );

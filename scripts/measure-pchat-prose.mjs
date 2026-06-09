@@ -18,11 +18,15 @@ const tw = `.prose{color:#ddd;max-width:65ch}.prose p{margin:1.25em 0}`;
 function shell(inner) {
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${tw}\n${v2}</style></head>
 <body style="margin:0;font-family:system-ui,sans-serif">
-<div class="pchat" style="width:1280px;height:900px">
+<div class="pchat">
   <aside class="pchat__sidebar"><div class="pchat__sidebar-body">S</div></aside>
   <div class="pchat__main">
-    <div class="pchat__scroll">
-      <div class="pchat__messages">${inner}</div>
+    <header class="pchat__header"><p class="pchat__header-title">Title</p></header>
+    <div class="pchat__column">
+      <div class="pchat__scroll">
+        <div class="pchat__messages">${inner}</div>
+      </div>
+      <div class="pchat__inputbar"><div class="pchat__inputwrap"><textarea class="pchat__textarea" rows="1"></textarea></div></div>
     </div>
   </div>
 </div></body></html>`;
@@ -52,7 +56,9 @@ async function measure(label, html) {
     };
     return {
       sidebar: pick(".pchat__sidebar"),
+      column: pick(".pchat__column"),
       messages: pick(".pchat__messages"),
+      inputwrap: pick(".pchat__inputwrap"),
       msgAi: pick(".pchat__msg--ai"),
       paragraph: pick(".pchat__msg--ai p"),
       prose: pick(".prose"),
