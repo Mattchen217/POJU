@@ -56,9 +56,12 @@ const POJU_DEV_DEBUG = process.env.NODE_ENV === "development";
 import { rewindSessionToUserMessage } from "@/lib/poju/session-rewind";
 import {
   pojuChatColumn,
+  pojuChatComposerAttachBtn,
   pojuChatComposerInput,
+  pojuChatComposerMicBtn,
   pojuChatComposerShell,
   pojuChatMessageList,
+  pojuChatSendBtn,
 } from "@/lib/poju/chat-layout";
 import { useAutoResizeTextarea } from "@/lib/hooks/use-auto-resize-textarea";
 import "@/styles/topic-drift.css";
@@ -1003,9 +1006,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
 
       <div className="flex h-full w-full">
         <aside
-          className={`poju-chat-sidebar poju-chat-sidebar-panel ${
-            sidebarCollapsed ? "md:w-[4.5rem]" : "md:w-[260px]"
-          } fixed left-0 z-40 flex w-[86%] max-w-sm flex-col border-r border-outline-variant/60 bg-[#141416] shadow-none transition-all duration-200 md:static md:h-full md:max-w-none ${
+          className={`poju-chat-sidebar ${
+            sidebarCollapsed ? "md:w-20" : "md:w-[280px]"
+          } fixed left-0 z-40 flex w-[86%] max-w-sm flex-col border-r border-outline-variant bg-surface shadow-[1px_0_15px_rgba(0,0,0,0.2)] transition-all duration-200 md:static md:h-full md:max-w-none ${
             sidebarOpenMobile ? "translate-x-0" : "-translate-x-full md:translate-x-0"
           }`}
         >
@@ -1046,7 +1049,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
               </button>
             </div>
 
-            <p className="poju-chat-sidebar-section-label mb-2 px-2 text-on-surface-variant">Sessions</p>
+            <p className="mb-2 px-2 text-[11px] uppercase tracking-[0.16em] text-on-surface-variant">Sessions</p>
             <div className="flex flex-col gap-1">
               {sessionRows.map((row) => (
                 <div
@@ -1066,7 +1069,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                         setSidebarOpenMobile(false);
                       }}
                     >
-                      <p className="poju-chat-sidebar-item-text truncate text-on-surface">
+                      <p className="truncate text-on-surface">
                         {formatSessionListPrimaryLine(row.created_at, row.original_question, locale)}
                       </p>
                     </button>
@@ -1103,9 +1106,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           </div>
         </aside>
 
-        <section className="poju-chat-main-pane relative flex min-w-0 flex-1 flex-col bg-[#0b0b0d]">
-          <header className="poju-chat-header poju-chat-header-bar sticky top-0 z-20 flex shrink-0 items-center justify-between border-b border-outline-variant/30 bg-background/80 px-4 backdrop-blur-md md:px-6">
-            <div className={`${pojuChatColumn} flex items-center justify-between gap-2`}>
+        <section className="relative flex min-w-0 flex-1 flex-col bg-background">
+          <header className="poju-chat-header poju-chat-header-bar sticky top-0 z-20 flex shrink-0 items-center border-b border-outline-variant/30 bg-background/80 backdrop-blur-md">
+            <div className={`${pojuChatColumn} flex w-full items-center justify-between gap-2`}>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -1115,7 +1118,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                 >
                   <span className="material-symbols-outlined text-[20px] leading-none">menu</span>
                 </button>
-                <p className="poju-chat-header-title truncate text-[1rem] leading-6 text-on-surface">
+                <p className="poju-chat-header-title truncate">
                   {formatSessionListPrimaryLine(session.created_at, session.original_question, locale)}
                 </p>
               </div>
@@ -1134,7 +1137,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
             </div>
           </header>
 
-          <div className="poju-chat-messages-pane flex-1 overflow-y-auto px-4 md:px-6">
+          <div className="poju-chat-messages-pane flex-1 overflow-y-auto">
             <div className={`${pojuChatColumn} ${pojuChatMessageList} poju-chat-messages-scroll ${overlayFormOpen ? "!pb-8" : ""}`}>
               <SessionExpiryNotice session={session} extending={extending} onExtend={() => void handleExtendSession()} />
 
@@ -1312,7 +1315,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           </div>
 
           {!overlayFormOpen ? (
-          <div className="poju-chat-composer-wrap pointer-events-none absolute bottom-0 left-0 right-0 z-20 flex justify-center bg-gradient-to-t from-background via-background/90 to-transparent p-4 md:p-6">
+          <div className="poju-chat-composer-wrap pointer-events-none absolute bottom-0 left-0 right-0 z-20 flex justify-center bg-gradient-to-t from-background via-background/90 to-transparent">
             <div className={`pointer-events-auto w-full ${pojuChatColumn}`}>
               {(sending || confirmBusy) && thinkingMode ? (
                 liveThinkingLine ? (
@@ -1333,7 +1336,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
               <div className={pojuChatComposerShell}>
                 <button
                   type="button"
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
+                  className={pojuChatComposerAttachBtn}
                   onClick={() => fileRef.current?.click()}
                   aria-label="Attach image"
                 >
@@ -1367,9 +1370,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                 />
                 <button
                   type="button"
-                  className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${
-                    recognizing ? "text-red-300" : "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
-                  }`}
+                  className={pojuChatComposerMicBtn}
                   onClick={toggleSpeechInput}
                   aria-label="Voice input"
                 >
@@ -1380,7 +1381,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                   onClick={() => (sending ? handleStopGeneration() : void handleSend())}
                   disabled={!sending && !input.trim() && !composerImage}
                   aria-label={sending ? t("stop_generating") : t("send")}
-                  className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-on-primary transition-colors disabled:opacity-40 ${
+                  className={`${pojuChatSendBtn} text-on-primary transition-colors disabled:opacity-40 ${
                     sending
                       ? "bg-red-600 hover:bg-red-500"
                       : "bg-primary hover:bg-primary-container"

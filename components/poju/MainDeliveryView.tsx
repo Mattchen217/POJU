@@ -38,7 +38,7 @@ export function MainDeliveryView({ fullText, actions, archiveId, onActionUpdate 
 
       {actions.length > 0 ? (
         <div className="border-t border-amber-400/15 pt-6">
-          <h3 className="poju-chat-delivery-heading mb-3 text-base font-semibold uppercase tracking-wide text-amber-100 md:text-lg">{tActions("title")}</h3>
+          <h3 className="mb-3 text-base font-semibold uppercase tracking-wide text-amber-100">{tActions("title")}</h3>
           <div className="flex flex-col gap-4">
             {actions.map((action, idx) => (
               <ActionRow key={action.action_id} action={action} index={idx + 1} tCard={tCard} onUpdate={onActionUpdate} />
@@ -65,8 +65,8 @@ function DeliverySectionView({ section }: { section: DeliverySection }) {
 
   return (
     <section className="space-y-2">
-      {section.title ?           <h3 className={`poju-chat-delivery-heading text-base font-semibold uppercase tracking-wide md:text-lg ${tone}`}>{section.title}</h3> : null}
-      <div className="space-y-4 poju-chat-delivery-prose text-white/85">
+      {section.title ? <h3 className={`text-base font-semibold uppercase tracking-wide ${tone}`}>{section.title}</h3> : null}
+      <div className="poju-chat-delivery-prose text-white/85">
         {section.paragraphs.map((p, i) => (
           <p key={i} className="m-0 whitespace-pre-wrap">
             {p}
