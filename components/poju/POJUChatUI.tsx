@@ -1,19 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import { useTranslations } from "next-intl";
-import { Link, useRouter } from "@/i18n/navigation";
-import pojuLogo from "@/assets/images/POJUlogo.png";
+import { useRouter } from "@/i18n/navigation";
 import { BirthProfileFlow, type BirthProfileFlowStage } from "@/components/poju/BirthProfileFlow";
+import PojuChat from "@/components/poju/PojuChat";
 import { useAppDialog } from "@/components/ui/app-dialog";
 import { ContextSummaryEditor } from "@/components/poju/ContextSummaryEditor";
 import type { ContextSummary } from "@/lib/poju/agent-state";
-import { MessageBubble } from "@/components/poju/MessageBubble";
 import { OffTopicAction } from "@/components/poju/OffTopicAction";
-import { ThinkingStream } from "@/components/poju/ThinkingStream";
-import { LiveThinkingTicker } from "@/components/poju/LiveThinkingTicker";
-import { StreamingAssistantBubble } from "@/components/poju/StreamingAssistantBubble";
 import {
   resolveThinkingStreamMode,
   type ThinkingStreamMode,
@@ -53,11 +48,7 @@ import { runFinalDeliveryForSession } from "@/lib/llm/pro/final-delivery";
 
 /** Internal pipeline / phase UI — development only. */
 const POJU_DEV_DEBUG = process.env.NODE_ENV === "development";
-import { rewindSessionToUserMessage } from "@/lib/poju/session-rewind";
-import { useAutoResizeTextarea } from "@/lib/hooks/use-auto-resize-textarea";
-import "@/styles/poju-chat-v2.css";
 import "@/styles/topic-drift.css";
-import "@/styles/tool-suggestion.css";
 
 interface Props {
   session: POJUSessionState;
@@ -114,9 +105,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const [summaryFormDismissed, setSummaryFormDismissed] = useState(false);
   const [extending, setExtending] = useState(false);
   const [ending, setEnding] = useState(false);
-  const [sidebarOpenMobile, setSidebarOpenMobile] = useState(false);
   const [sessionRows, setSessionRows] = useState<SessionListRow[]>([]);
-  const [sessionMenuId, setSessionMenuId] = useState<string | null>(null);
   const [recognizing, setRecognizing] = useState(false);
   const [composerImage, setComposerImage] = useState<ComposerImage | null>(null);
   const [creatingSession, setCreatingSession] = useState(false);
@@ -137,8 +126,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const [driftReason, setDriftReason] = useState("");
   const openingInitRef = useRef(false);
   const toolResumeInitRef = useRef<string | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const composerTextareaRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const speechRef = useRef<SpeechRecognition | null>(null);
   const sessionRef = useRef(session);
@@ -147,28 +134,18 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const sendGenerationRef = useRef(0);
   const router = useRouter();
 
-  useAutoResizeTextarea(composerTextareaRef, input, 200);
-
-  const scrollChatToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior, block: "end" });
-      });
-    });
+  const scrollChatToBottom = useCallback((_behavior: ScrollBehavior = "smooth") => {
+    /* PojuChat scrolls internally */
   }, []);
 
   const visibleMessages = session.messages.filter(
     (m) => m.role !== "system" && !m.content.trim().startsWith("[SYSTEM:"),
   );
   const hasUserMessage = visibleMessages.some((m) => m.role === "user");
-  const shouldHideWelcomePanel = hasUserMessage;
   const birthFlowBlocking = birthFlowStage === "form" || birthFlowStage === "received" || birthFlowStage === "analyzing";
   const showSummaryForm =
     shouldShowContextSummaryForm(session) && !summaryFormDismissed && !session.main_delivery_done;
   const overlayFormOpen = birthFlowBlocking || showProfilePicker || showSummaryForm;
-  const lastDeliveryTs = [...visibleMessages]
-    .reverse()
-    .find((m) => m.role === "assistant" && m.meta?.contains_delivery)?.timestamp;
 
   useEffect(() => {
     setSummaryFormDismissed(false);
@@ -282,9 +259,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
 
   useEffect(() => {
     if (!overlayFormOpen) return;
-    requestAnimationFrame(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-    });
   }, [overlayFormOpen]);
 
 
@@ -444,9 +418,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     }
   }
 
-  async function handleSend() {
-    if ((!input.trim() && !composerImage) || sending) return;
-    const typed = input.trim();
+  async function handlePojuSend(text: string) {
+    const typed = text.trim();
+    if (!typed || sending) return;
     const imageNote = composerImage ? `[Image attached: ${composerImage.name}]` : "";
     const userMessage = typed || imageNote;
     const baseSession = sessionRef.current;
@@ -483,61 +457,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     });
   }
 
-  async function handleEditUserMessage(fullIndex: number, currentContent: string) {
-    if (sending || confirmBusy || pipelineBusy) return;
-    const edited = await dialog.prompt(t("edit_message_prompt"), currentContent, t("edit_message_title"));
-    if (edited === null) return;
-    const newContent = edited.trim();
-    if (!newContent || newContent === currentContent.trim()) return;
-
-    handleStopGeneration();
-
-    const rewound = rewindSessionToUserMessage(sessionRef.current, fullIndex, newContent);
-    const rejected = tryHandleRuleRejection(rewound, newContent, locale);
-    const nextSession = rejected ?? rewound;
-
-    onSessionUpdate(nextSession);
-    await savePOJUSession(nextSession);
-    setSummaryFormDismissed(false);
-    summaryIntroAppendedRef.current = false;
-    setBirthFlowStage(null);
-    setShowProfilePicker(false);
-    setBirthFlowStage(null);
-
-    if (rejected) return;
-
-    await runUserTurn(rewound, newContent);
-  }
-
-  async function handleRenameSession(targetSessionId: string) {
-    const row = sessionRows.find((s) => s.session_id === targetSessionId);
-    const nextQuestion = await dialog.prompt(
-      t("dialog_rename_session"),
-      row?.original_question ?? "",
-      t("dialog_rename_placeholder"),
-    );
-    if (!nextQuestion) return;
-    const value = nextQuestion.trim();
-    if (!value) return;
-
-    await getPojuDb().pojuSessionRecords.update(targetSessionId, { original_question: value });
-    const state = await loadPOJUSession(targetSessionId);
-    if (state) {
-      state.original_question = value;
-      await savePOJUSession(state);
-      if (targetSessionId === sessionRef.current.session_id) {
-        onSessionUpdate({ ...state });
-      }
-    }
-    setSessionRows((prev) => prev.map((x) => (x.session_id === targetSessionId ? { ...x, original_question: value } : x)));
-    setSessionMenuId(null);
-  }
-
   async function handleDeleteSession(targetSessionId: string) {
     if (!(await dialog.confirm(t("dialog_delete_session")))) return;
     await getPojuDb().pojuSessionRecords.delete(targetSessionId);
     setSessionRows((prev) => prev.filter((x) => x.session_id !== targetSessionId));
-    setSessionMenuId(null);
     if (targetSessionId === sessionRef.current.session_id) {
       router.push("/poju");
     }
@@ -598,7 +521,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       });
       clearPendingStoredProfileId();
       router.push(`/poju/session/${newSessionId}`);
-      setSidebarOpenMobile(false);
     } catch (err) {
       console.error("[poju] create session failed", err);
       await dialog.alert(t("dialog_create_session_error"));
@@ -983,358 +905,174 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     }
   }
 
+  const pojuSessions = sessionRows.map((row) => ({
+    id: row.session_id,
+    title: formatSessionListPrimaryLine(row.created_at, row.original_question, locale),
+  }));
+
+  const pojuMessages = visibleMessages.map((m) => ({
+    id: m.timestamp,
+    role: m.role as "user" | "assistant",
+    content: m.content,
+  }));
+
+  const streaming = sending || confirmBusy;
+  const thinkingLine =
+    streaming && (liveThinkingLine ?? (thinkingMode ? t("thinking_wait") : undefined));
+
   return (
-    <div className="pchat">
-      {sidebarOpenMobile ? (
-        <button
-          type="button"
-          className="pchat__overlay"
-          onClick={() => setSidebarOpenMobile(false)}
-          aria-label="Close sidebar"
-        />
+    <>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp,image/heic"
+        hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) void handleAttachFile(f);
+        }}
+      />
+      <PojuChat
+        sessions={pojuSessions}
+        currentSessionId={session.session_id}
+        messages={pojuMessages}
+        isStreaming={streaming}
+        streamingText={streamingReply ?? undefined}
+        thinkingText={thinkingLine || undefined}
+        inputPlaceholder={t("input_placeholder")}
+        composerText={input}
+        onComposerTextChange={setInput}
+        onSend={(text) => void handlePojuSend(text)}
+        onNewSession={() => void handleCreateNewSession()}
+        onSelectSession={(id) => router.push(`/poju/session/${id}`)}
+        onDeleteSession={(id) => void handleDeleteSession(id)}
+        onCopy={(text) => void copyChatText(text)}
+        onSpeak={(text) => speakChatText(text)}
+        onAttach={() => fileRef.current?.click()}
+        onVoice={toggleSpeechInput}
+        onStop={handleStopGeneration}
+        newSessionDisabled={creatingSession}
+      />
+
+      <div
+        style={{
+          position: "fixed",
+          top: 72,
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: 50,
+          width: "min(768px, calc(100vw - 32px))",
+        }}
+      >
+        <SessionExpiryNotice session={session} extending={extending} onExtend={() => void handleExtendSession()} />
+      </div>
+
+      {showOffTopicAction ? (
+        <div
+          className="topic-drift-prompt"
+          style={{
+            position: "fixed",
+            bottom: 120,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 55,
+            width: "min(768px, calc(100vw - 32px))",
+          }}
+        >
+          <OffTopicAction
+            driftReason={driftReason}
+            onStartNewSession={() => router.push("/poju")}
+            onContinueCurrent={() => {
+              setShowOffTopicAction(false);
+              setDriftReason("");
+            }}
+          />
+        </div>
       ) : null}
 
-      <aside className={`pchat__sidebar${sidebarOpenMobile ? " is-open" : ""}`}>
-        <div className="pchat__sidebar-top">
-          <div className="pchat__sidebar-brand">
-            <span className="pchat__sidebar-logo">
-              <Image src={pojuLogo} alt="" width={32} height={32} className="object-cover" />
-            </span>
-            <span>POJU</span>
-          </div>
-        </div>
-
-        <div className="pchat__sidebar-body">
-          <button
-            type="button"
-            className="pchat__new-btn"
-            onClick={() => void handleCreateNewSession()}
-            disabled={creatingSession}
-          >
-            <span className="pchat__new-btn-row">
-              <span>{creatingSession ? "Creating..." : "+ New POJU"}</span>
-              <span className="pchat__new-btn-price">$9.99</span>
-            </span>
-          </button>
-
-          <p className="pchat__sessions-label">Sessions</p>
-          <div>
-            {sessionRows.map((row) => (
-              <div
-                key={row.session_id}
-                className={`pchat__session-item${
-                  row.session_id === session.session_id ? " is-active" : ""
-                }`}
-              >
-                <div className="pchat__session-row">
-                  <button
-                    type="button"
-                    className="pchat__session-link"
-                    onClick={() => {
-                      router.push(`/poju/session/${row.session_id}`);
-                      setSidebarOpenMobile(false);
-                    }}
-                  >
-                    {formatSessionListPrimaryLine(row.created_at, row.original_question, locale)}
-                  </button>
-                  <button
-                    type="button"
-                    className="pchat__session-menu-btn"
-                    onClick={() => setSessionMenuId((prev) => (prev === row.session_id ? null : row.session_id))}
-                    aria-label="Open session menu"
-                  >
-                    <span className="material-symbols-outlined">more_horiz</span>
-                  </button>
-                </div>
-                {sessionMenuId === row.session_id ? (
-                  <div className="pchat__session-menu">
-                    <button type="button" onClick={() => void handleRenameSession(row.session_id)}>
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      className="is-danger"
-                      onClick={() => void handleDeleteSession(row.session_id)}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        </div>
-      </aside>
-
-      <div className="pchat__main">
-        <header className="pchat__header">
-          <button
-            type="button"
-            className="pchat__menu-btn"
-            onClick={() => setSidebarOpenMobile(true)}
-            aria-label="Open sidebar"
-          >
-            <span className="material-symbols-outlined">menu</span>
-          </button>
-          <p className="pchat__header-title">
-            {formatSessionListPrimaryLine(session.created_at, session.original_question, locale)}
-          </p>
-          <div className="pchat__header-actions">
-            <button type="button" className="icon-btn" aria-label="Share">
-              <span className="material-symbols-outlined">share</span>
-            </button>
-            <Link href="/poju" className="icon-btn" aria-label="Close session">
-              <span className="material-symbols-outlined">close</span>
-            </Link>
-          </div>
-        </header>
-
-        <div className="pchat__body">
-              <SessionExpiryNotice session={session} extending={extending} onExtend={() => void handleExtendSession()} />
-
-              {POJU_DEV_DEBUG && session.agent_v2 ? (
-                <div className="flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-surface-container-low px-3 py-2 text-xs">
-                  <span className="text-on-surface-variant">{t("agent_phase_label")}:</span>
-                  <span className="rounded-md bg-primary/20 px-2 py-0.5 font-medium text-primary">{t(agentPhaseKey())}</span>
-                  {session.agent_v2.has_base_analysis ? <span className="text-emerald-300/90">Step 7 ✓</span> : null}
-                  {session.agent_v2.has_situation_analysis ? <span className="text-cyan-300/90">Step 8 ✓</span> : null}
-                  {session.main_delivery_done ? <span className="text-violet-300/90">Step 9 ✓</span> : null}
-                  {pipelineBusy || confirmBusy ? <span className="text-amber-200/90">{t("pipeline_busy")}</span> : null}
-                </div>
-              ) : null}
-
-              {showProfilePicker ? (
-                <div className="rounded-2xl border border-violet-300/20 bg-violet-950/30 p-3">
-                  <p className="text-sm font-medium text-on-surface">{t("profile_picker_in_chat_title")}</p>
-                  <p className="mt-1 text-xs text-on-surface-variant">{t("profile_picker_in_chat_hint")}</p>
-                  <div className="mt-3">
-                    <ProfileSelector
-                      product="poju"
-                      allowSkip
-                      onSelected={(id) => void handleStoredProfileSelected(id)}
-                      onSkip={() => void handleProfileSkipped()}
-                      onCancel={() => setShowProfilePicker(false)}
-                    />
-                  </div>
-                </div>
-              ) : null}
-
-              {situationNotice || situationError || finalError ? (
-                <p className="text-xs text-on-surface-variant">
-                  {situationNotice ? <span className="text-cyan-200/90">{situationNotice} </span> : null}
-                  {situationError ? <span className="text-red-300">{situationError} </span> : null}
-                  {finalError ? <span className="text-red-300">{finalError}</span> : null}
-                </p>
-              ) : null}
-
-              {visibleMessages.map((msg, idx) => {
-                const fullIndex = session.messages.findIndex(
-                  (m) => m.timestamp === msg.timestamp && m.role === msg.role,
-                );
-                const activeCycleId =
-                  session.active_cycle_id ?? getActiveCycle(session)?.cycle_id ?? "";
-                const toolMsgId = msg.meta?.tool_suggestion_message_id ?? msg.timestamp;
-                const toolResponseState = msg.meta?.tool_suggestion
-                  ? getToolSuggestionResponseState(session, msg.meta.tool_suggestion.tool, toolMsgId)
-                  : null;
-                return (
-                  <MessageBubble
-                    key={`${msg.timestamp}-${idx}`}
-                    message={msg}
-                    hideWelcomePanel={shouldHideWelcomePanel}
-                    sessionId={session.session_id}
-                    cycleId={activeCycleId}
-                    toolSuggestionResponse={toolResponseState}
-                    onToolResponse={(tool, action) => void handleToolResponse(tool, action)}
-                    actions={
-                      msg.role === "assistant" && msg.meta?.contains_delivery && msg.timestamp === lastDeliveryTs
-                        ? session.actions
-                        : undefined
-                    }
-                    actionPlanArchiveId={
-                      msg.role === "assistant" &&
-                      msg.meta?.contains_delivery &&
-                      msg.timestamp === lastDeliveryTs
-                        ? session.action_plan_archive_id
-                        : undefined
-                    }
-                    onActionUpdate={(id, st, fb) => void handleActionUpdate(id, st, fb)}
-                    onEdit={
-                      msg.role === "user" && !msg.is_rejected && fullIndex >= 0
-                        ? () => void handleEditUserMessage(fullIndex, msg.content)
-                        : undefined
-                    }
-                    editDisabled={sending || confirmBusy || pipelineBusy}
-                    editLabel={t("edit_message")}
-                  />
-                );
-              })}
-
-              {generationStopped ? (
-                <p className="pchat__notice">{t("generation_stopped")}</p>
-              ) : null}
-
-              {showOffTopicAction ? (
-                <OffTopicAction
-                  driftReason={driftReason}
-                  onStartNewSession={() => router.push("/poju")}
-                  onContinueCurrent={() => {
-                    setShowOffTopicAction(false);
-                    setDriftReason("");
-                  }}
+      {overlayFormOpen ? (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 60,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+            background: "rgba(0,0,0,0.65)",
+            overflowY: "auto",
+          }}
+        >
+          {showProfilePicker ? (
+            <div className="w-full max-w-lg rounded-2xl border border-violet-300/20 bg-violet-950/95 p-3">
+              <p className="text-sm font-medium text-on-surface">{t("profile_picker_in_chat_title")}</p>
+              <p className="mt-1 text-xs text-on-surface-variant">{t("profile_picker_in_chat_hint")}</p>
+              <div className="mt-3">
+                <ProfileSelector
+                  product="poju"
+                  allowSkip
+                  onSelected={(id) => void handleStoredProfileSelected(id)}
+                  onSkip={() => void handleProfileSkipped()}
+                  onCancel={() => setShowProfilePicker(false)}
                 />
-              ) : null}
-
-              {showSummaryForm && session.agent_v2?.current_summary ? (
-                <ContextSummaryEditor
-                  summary={session.agent_v2.current_summary}
-                  busy={confirmBusy}
-                  onConfirm={(edited) => void handleConfirmSummary(edited)}
-                  onAddMore={(note) => void handleSummaryAddMore(note)}
-                />
-              ) : null}
-
-              {birthFlowStage ? (
-                <div className="rounded-2xl border border-violet-300/20 bg-violet-950/30 p-3">
-                  <BirthProfileFlow
-                    stage={birthFlowStage}
-                    analysisFailed={birthAnalysisFailed}
-                    onContinueToForm={() => setBirthFlowStage("form")}
-                    onComplete={(p) => void handleProfileSubmitted(p)}
-                    onSkip={() => void handleProfileSkipped()}
-                  />
-                </div>
-              ) : null}
-
-              {POJU_DEV_DEBUG && session.agent_v2 && !session.main_delivery_done && !showSummaryForm ? (
-                <details className="rounded-xl border border-cyan-500/20 bg-cyan-950/20 px-3 py-2 text-xs text-on-surface-variant">
-                  <summary className="cursor-pointer text-on-surface">{t("advanced_pipeline")}</summary>
-                  <p className="mt-2 text-on-surface">{t("situation_analysis_hint")}</p>
-                  {situationFp && getCachedSituationAnalysis(session, situationFp) ? (
-                    <p className="mt-1 text-emerald-200/90">{t("situation_analysis_have_cache")}</p>
-                  ) : null}
-                  <p className="mt-2 text-[11px] text-white/50">{t("final_delivery_hint")}</p>
-                  <p className="mt-2">
-                    <a
-                      href="/base-analysis-audit"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-amber-300/90 underline underline-offset-2 hover:text-amber-200"
-                    >
-                      查看 Step 7 完整 DeepSeek 分析（审核台）
-                    </a>
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      disabled={situationBusy}
-                      className="rounded-lg border border-cyan-400/40 bg-cyan-500/15 px-3 py-1.5 text-xs font-medium text-cyan-100 disabled:opacity-50"
-                      onClick={() => void handleSituationAnalysis(false)}
-                    >
-                      {situationBusy ? t("situation_analysis_running") : t("situation_analysis_run")}
-                    </button>
-                    {situationFp && getCachedSituationAnalysis(session, situationFp) ? (
-                      <button
-                        type="button"
-                        disabled={situationBusy}
-                        className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-on-surface-variant disabled:opacity-50"
-                        onClick={() => void handleSituationAnalysis(true)}
-                      >
-                        {t("situation_analysis_force")}
-                      </button>
-                    ) : null}
-                    {situationFp && getCachedSituationAnalysis(session, situationFp) && !session.main_delivery_done ? (
-                      <button
-                        type="button"
-                        disabled={finalBusy || situationBusy}
-                        className="rounded-lg border border-violet-400/40 bg-violet-500/15 px-3 py-1.5 text-xs font-medium text-violet-100 disabled:opacity-50"
-                        onClick={() => void handleFinalDelivery()}
-                      >
-                        {finalBusy ? t("final_delivery_running") : t("final_delivery_run")}
-                      </button>
-                    ) : null}
-                  </div>
-                </details>
-              ) : null}
-
-              {(sending || confirmBusy) && streamingReply ? (
-                <StreamingAssistantBubble content={streamingReply} />
-              ) : null}
-
-              <div ref={messagesEndRef} />
-        </div>
-
-        {!overlayFormOpen ? (
-          <div className="pchat__composer">
-            {(sending || confirmBusy) && thinkingMode ? (
-              liveThinkingLine ? (
-                <LiveThinkingTicker line={liveThinkingLine} waitingLabel={t("thinking_wait")} />
-              ) : (
-                <ThinkingStream mode={thinkingMode} locale={locale} />
-              )
-            ) : null}
-            {composerImage ? (
-              <div className="pchat__composer-attachment">
-                <img src={composerImage.dataUrl} alt={composerImage.name} />
-                <span>{composerImage.name}</span>
-                <button type="button" onClick={() => setComposerImage(null)} aria-label="Remove attachment">
-                  ×
-                </button>
               </div>
-            ) : null}
-            <div className="pchat__inputwrap">
-              <button
-                type="button"
-                className="icon-btn"
-                onClick={() => fileRef.current?.click()}
-                aria-label="Attach image"
-              >
-                <span className="material-symbols-outlined">attach_file</span>
-              </button>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/png,image/jpeg,image/webp,image/heic"
-                className="pchat__hidden-input"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) void handleAttachFile(f);
-                }}
-              />
-
-              <textarea
-                ref={composerTextareaRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    void handleSend();
-                  }
-                }}
-                placeholder={t("input_placeholder")}
-                disabled={sending}
-                rows={1}
-                className="pchat__textarea"
-              />
-              <button type="button" className="icon-btn" onClick={toggleSpeechInput} aria-label="Voice input">
-                <span className="material-symbols-outlined">mic</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => (sending ? handleStopGeneration() : void handleSend())}
-                disabled={!sending && !input.trim() && !composerImage}
-                aria-label={sending ? t("stop_generating") : t("send")}
-                className={`icon-btn pchat__send-btn${sending ? " pchat__send-btn--stop" : ""}`}
-              >
-                <span className="material-symbols-outlined">{sending ? "stop" : "arrow_upward"}</span>
-              </button>
             </div>
-          </div>
-        ) : null}
-      </div>
-    </div>
+          ) : null}
+
+          {showSummaryForm && session.agent_v2?.current_summary ? (
+            <ContextSummaryEditor
+              summary={session.agent_v2.current_summary}
+              busy={confirmBusy}
+              onConfirm={(edited) => void handleConfirmSummary(edited)}
+              onAddMore={(note) => void handleSummaryAddMore(note)}
+            />
+          ) : null}
+
+          {birthFlowStage ? (
+            <div className="w-full max-w-lg rounded-2xl border border-violet-300/20 bg-violet-950/95 p-3">
+              <BirthProfileFlow
+                stage={birthFlowStage}
+                analysisFailed={birthAnalysisFailed}
+                onContinueToForm={() => setBirthFlowStage("form")}
+                onComplete={(p) => void handleProfileSubmitted(p)}
+                onSkip={() => void handleProfileSkipped()}
+              />
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </>
   );
+}
+
+async function copyChatText(text: string): Promise<void> {
+  if (!text) return;
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+  } catch {
+    /* fallback below */
+  }
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand("copy");
+  document.body.removeChild(textarea);
+}
+
+function speakChatText(text: string): void {
+  if (typeof window === "undefined" || !text.trim()) return;
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text.trim());
+  utterance.lang = /[\u4e00-\u9fff]/.test(text) ? "zh-CN" : "en-US";
+  window.speechSynthesis.speak(utterance);
 }
 
 function topicFromFirstUserMessage(raw: string): string {
