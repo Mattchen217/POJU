@@ -6,12 +6,6 @@ import { AssistantMessageActions } from "@/components/poju/AssistantMessageActio
 import { MainDeliveryView } from "@/components/poju/MainDeliveryView";
 import { ToolSuggestionCard } from "@/components/poju/ToolSuggestionCard";
 import { parseDeliveryContent, type DeliverySection } from "@/lib/poju/parse-delivery";
-import {
-  pojuChatAssistantContent,
-  pojuChatAssistantProse,
-  pojuChatMessageBlock,
-  pojuChatUserBubble,
-} from "@/lib/poju/chat-layout";
 
 export interface MessageBubbleProps {
   message: POJUMessage;
@@ -48,20 +42,13 @@ export function MessageBubble({
   if (isWelcomePanel) {
     const paragraphs = splitWelcomeParagraphs(message.content);
     return (
-      <div className={`${pojuChatMessageBlock} poju-chat-message-block--assistant`}>
-        <div className="w-full rounded-[22px] border border-white/10 bg-gradient-to-br from-[#221f33] to-[#1d1b27] px-6 py-8 text-center shadow-[0_10px_34px_rgba(0,0,0,0.25)]">
-          <div className="mx-auto mb-5 flex justify-center text-primary">
-            <span className="material-symbols-outlined text-[72px] leading-none">self_improvement</span>
-          </div>
-          <p className="text-3xl font-semibold text-on-surface sm:text-[48px]">Welcome to POJU</p>
-          <div className={`mx-auto mt-4 max-w-[680px] space-y-5 ${pojuChatAssistantProse} text-on-surface-variant`}>
-            {paragraphs.map((p) => (
-              <p key={p}>{p}</p>
-            ))}
-          </div>
-          <p className="mt-6 text-[16px] leading-[1.6] text-on-surface-variant/80">
-            Type below to begin, or tap the microphone to speak.
-          </p>
+      <div className="pchat__msg pchat__msg--ai">
+        <div className="pchat__panel">
+          <p className="pchat__welcome-title">Welcome to POJU</p>
+          {paragraphs.map((p) => (
+            <p key={p}>{p}</p>
+          ))}
+          <p>Type below to begin, or tap the microphone to speak.</p>
         </div>
       </div>
     );
@@ -69,58 +56,45 @@ export function MessageBubble({
 
   if (message.role === "assistant" && message.meta?.contains_delivery) {
     return (
-      <div className={`${pojuChatMessageBlock} poju-chat-message-block--assistant`}>
-        <div className={`${pojuChatAssistantContent} ${pojuChatAssistantProse} poju-chat-delivery-block`}>
-          <MainDeliveryView
-            fullText={message.content}
-            actions={actions ?? []}
-            archiveId={actionPlanArchiveId}
-            onActionUpdate={onActionUpdate}
-          />
-          <div className="mt-3 pt-2">
-            <AssistantMessageActions content={message.content} />
-          </div>
-        </div>
+      <div className="pchat__msg pchat__msg--ai">
+        <MainDeliveryView
+          fullText={message.content}
+          actions={actions ?? []}
+          archiveId={actionPlanArchiveId}
+          onActionUpdate={onActionUpdate}
+        />
+        <AssistantMessageActions content={message.content} />
       </div>
     );
   }
 
   if (isUser) {
     return (
-      <div className={`${pojuChatMessageBlock} poju-chat-message-block--user`}>
-        <div className="flex flex-col items-end gap-2">
-          <div className={pojuChatUserBubble}>{renderPlainContent(message.content)}</div>
-          {onEdit && !message.is_rejected ? (
-            <button
-              type="button"
-              onClick={onEdit}
-              disabled={editDisabled}
-              className="px-1 text-[14px] text-on-surface-variant transition-colors hover:text-on-surface disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {editLabel ?? "Edit"}
-            </button>
-          ) : null}
-        </div>
+      <div className="pchat__msg pchat__msg--user">
+        <div className="pchat__bubble">{renderPlainContent(message.content)}</div>
+        {onEdit && !message.is_rejected ? (
+          <button type="button" onClick={onEdit} disabled={editDisabled} className="pchat__msg-edit">
+            {editLabel ?? "Edit"}
+          </button>
+        ) : null}
       </div>
     );
   }
 
   return (
-    <div className={`${pojuChatMessageBlock} poju-chat-message-block--assistant`}>
-      <div className={`flex w-full flex-col gap-2 ${pojuChatAssistantContent}`}>
-        <div className={pojuChatAssistantProse}>{renderPlainContent(message.content)}</div>
-        {message.meta?.tool_suggestion && sessionId && cycleId && onToolResponse ? (
-          <ToolSuggestionCard
-            suggestion={message.meta.tool_suggestion}
-            sessionId={sessionId}
-            cycleId={cycleId}
-            suggestionMessageId={message.meta.tool_suggestion_message_id ?? message.timestamp}
-            initialResponse={toolSuggestionResponse}
-            onResponse={(action) => onToolResponse(message.meta!.tool_suggestion!.tool, action)}
-          />
-        ) : null}
-        <AssistantMessageActions content={message.content} />
-      </div>
+    <div className="pchat__msg pchat__msg--ai">
+      {renderPlainContent(message.content)}
+      {message.meta?.tool_suggestion && sessionId && cycleId && onToolResponse ? (
+        <ToolSuggestionCard
+          suggestion={message.meta.tool_suggestion}
+          sessionId={sessionId}
+          cycleId={cycleId}
+          suggestionMessageId={message.meta.tool_suggestion_message_id ?? message.timestamp}
+          initialResponse={toolSuggestionResponse}
+          onResponse={(action) => onToolResponse(message.meta!.tool_suggestion!.tool, action)}
+        />
+      ) : null}
+      <AssistantMessageActions content={message.content} />
     </div>
   );
 }

@@ -90,34 +90,24 @@ export function AssistantMessageActions({ content }: AssistantMessageActionsProp
   if (!plainText) return null;
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="pchat__msg-actions">
       <button
         type="button"
         onClick={() => void handleCopy()}
-        className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors ${
-          copied
-            ? "bg-primary/20 text-primary"
-            : "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
-        }`}
+        className={`icon-btn${copied ? " is-active" : ""}`}
         aria-label={copied ? t("message_action_copied") : t("message_action_copy")}
         title={copied ? t("message_action_copied") : t("message_action_copy")}
       >
-        <span className="material-symbols-outlined text-[20px]">
-          {copied ? "check" : "content_copy"}
-        </span>
+        <span className="material-symbols-outlined">{copied ? "check" : "content_copy"}</span>
       </button>
       <button
         type="button"
         onClick={handleToggleRead}
-        className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors ${
-          speaking
-            ? "bg-primary/20 text-primary"
-            : "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
-        }`}
+        className={`icon-btn${speaking ? " is-active" : ""}`}
         aria-label={speaking ? t("message_action_stop_reading") : t("message_action_read_aloud")}
         title={speaking ? t("message_action_stop_reading") : t("message_action_read_aloud")}
       >
-        <span className="material-symbols-outlined text-[20px]">{speaking ? "stop" : "volume_up"}</span>
+        <span className="material-symbols-outlined">{speaking ? "stop" : "volume_up"}</span>
       </button>
     </div>
   );

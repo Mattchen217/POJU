@@ -1,11 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  getThinkingStreamLines,
-} from "@/lib/poju/thinking-stream-lines";
+import { getThinkingStreamLines } from "@/lib/poju/thinking-stream-lines";
 import type { ThinkingStreamMode } from "@/lib/poju/thinking-stream-mode";
-import "@/styles/thinking-stream.css";
 
 export interface ThinkingStreamProps {
   mode: ThinkingStreamMode | null;
@@ -35,11 +32,13 @@ export function ThinkingStream({ mode, locale }: ThinkingStreamProps) {
   if (!mode || lines.length === 0) return null;
 
   return (
-    <div className="thinking-stream-bar" role="status" aria-live="polite">
-      <div className="thinking-spinner-mini" aria-hidden />
-      <p key={`${mode}-${lineIndex}`} className="thinking-stream-line">
-        {currentLine}
-      </p>
+    <div className="pchat__thinking" role="status" aria-live="polite">
+      <div className="pchat__thinking-bar">
+        <div className="pchat__thinking-spinner" aria-hidden />
+        <p key={`${mode}-${lineIndex}`} className="pchat__thinking-line">
+          {currentLine}
+        </p>
+      </div>
     </div>
   );
 }

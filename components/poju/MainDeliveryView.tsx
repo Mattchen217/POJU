@@ -24,12 +24,10 @@ export function MainDeliveryView({ fullText, actions, archiveId, onActionUpdate 
   const sections = parseDeliveryContent(fullText);
 
   return (
-    <div className="space-y-6">
-      <header className="border-b border-amber-400/15 pb-4">
-        <span className="inline-block rounded-full bg-amber-400/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-200">
-          {tDelivery("badge")}
-        </span>
-        <p className="mt-2 poju-chat-delivery-prose italic text-white/70">{tDelivery("intro")}</p>
+    <div className="pchat__delivery">
+      <header className="pchat__delivery-header">
+        <span className="pchat__delivery-badge">{tDelivery("badge")}</span>
+        <p className="pchat__delivery-intro">{tDelivery("intro")}</p>
       </header>
 
       {sections.map((section, idx) => (
@@ -37,8 +35,8 @@ export function MainDeliveryView({ fullText, actions, archiveId, onActionUpdate 
       ))}
 
       {actions.length > 0 ? (
-        <div className="border-t border-amber-400/15 pt-6">
-          <h3 className="mb-3 text-base font-semibold uppercase tracking-wide text-amber-100">{tActions("title")}</h3>
+        <div className="pchat__delivery-actions">
+          <h3 className="pchat__delivery-section-title">{tActions("title")}</h3>
           <div className="flex flex-col gap-4">
             {actions.map((action, idx) => (
               <ActionRow key={action.action_id} action={action} index={idx + 1} tCard={tCard} onUpdate={onActionUpdate} />
@@ -47,7 +45,7 @@ export function MainDeliveryView({ fullText, actions, archiveId, onActionUpdate 
         </div>
       ) : null}
 
-      <p className="poju-chat-delivery-prose italic text-white/60">{tDelivery("reminder")}</p>
+      <p className="pchat__delivery-intro">{tDelivery("reminder")}</p>
 
       {archiveId ? <ArchiveSavedHint archiveId={archiveId} /> : null}
     </div>
@@ -56,21 +54,13 @@ export function MainDeliveryView({ fullText, actions, archiveId, onActionUpdate 
 
 function DeliverySectionView({ section }: { section: DeliverySection }) {
   if (section.type === "opening" && section.paragraphs.length === 0) return null;
-  const tone =
-    section.type === "analysis"
-      ? "text-amber-100"
-      : section.type === "conclusion"
-        ? "text-amber-50/95"
-        : "text-white/85";
 
   return (
-    <section className="space-y-2">
-      {section.title ? <h3 className={`text-base font-semibold uppercase tracking-wide ${tone}`}>{section.title}</h3> : null}
-      <div className="poju-chat-delivery-prose text-white/85">
+    <section>
+      {section.title ? <h3 className="pchat__delivery-section-title">{section.title}</h3> : null}
+      <div>
         {section.paragraphs.map((p, i) => (
-          <p key={i} className="m-0 whitespace-pre-wrap">
-            {p}
-          </p>
+          <p key={i}>{p}</p>
         ))}
       </div>
     </section>
@@ -101,11 +91,11 @@ function ActionRow({
         : "border-l-sky-400";
 
   return (
-    <div className={`rounded-xl border border-white/10 bg-black/25 p-4 border-l-4 ${border}`}>
-      <p className="text-[11px] font-medium uppercase tracking-wide text-on-surface-variant">
+    <div className="pchat__delivery-action">
+      <p className="pchat__delivery-action-label">
         {index}. {categoryLabels[action.category]}
       </p>
-      <p className="mt-2 poju-chat-delivery-prose text-on-surface">{action.text}</p>
+      <p>{action.text}</p>
       {onUpdate && action.status === "pending" ? (
         <div className="mt-3 flex flex-wrap gap-2">
           <button

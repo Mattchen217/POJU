@@ -54,22 +54,10 @@ import { runFinalDeliveryForSession } from "@/lib/llm/pro/final-delivery";
 /** Internal pipeline / phase UI — development only. */
 const POJU_DEV_DEBUG = process.env.NODE_ENV === "development";
 import { rewindSessionToUserMessage } from "@/lib/poju/session-rewind";
-import {
-  pojuChatColumn,
-  pojuChatComposerAttachBtn,
-  pojuChatComposerInput,
-  pojuChatComposerMicBtn,
-  pojuChatComposerShell,
-  pojuChatLayoutRow,
-  pojuChatMainPane,
-  pojuChatMessageList,
-  pojuChatSendBtn,
-  pojuChatSidebar,
-} from "@/lib/poju/chat-layout";
 import { useAutoResizeTextarea } from "@/lib/hooks/use-auto-resize-textarea";
 import "@/styles/topic-drift.css";
 import "@/styles/tool-suggestion.css";
-import "@/styles/poju-chat-pwa.css";
+import "@/styles/poju-chat-v2.css";
 
 interface Props {
   session: POJUSessionState;
@@ -126,7 +114,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const [summaryFormDismissed, setSummaryFormDismissed] = useState(false);
   const [extending, setExtending] = useState(false);
   const [ending, setEnding] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarOpenMobile, setSidebarOpenMobile] = useState(false);
   const [sessionRows, setSessionRows] = useState<SessionListRow[]>([]);
   const [sessionMenuId, setSessionMenuId] = useState<string | null>(null);
@@ -997,149 +984,113 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   }
 
   return (
-    <div className="poju-chat-shell flex h-[100dvh] w-full flex-col overflow-hidden bg-background text-on-surface">
+    <div className="pchat">
       {sidebarOpenMobile ? (
         <button
           type="button"
-          className="fixed inset-0 z-30 bg-black/50 md:hidden"
+          className="pchat__overlay"
           onClick={() => setSidebarOpenMobile(false)}
           aria-label="Close sidebar"
         />
       ) : null}
 
-      <div className={`${pojuChatLayoutRow} min-h-0 flex-1`}>
-        <aside
-          className={`${pojuChatSidebar} flex flex-col bg-surface ${
-            sidebarCollapsed ? "poju-chat-sidebar--collapsed" : ""
-          } ${sidebarOpenMobile ? "poju-chat-sidebar--open" : ""}`}
-        >
-          <div className="flex h-16 shrink-0 items-center justify-between border-b border-outline-variant/50 px-4">
-            <div className={`${sidebarCollapsed ? "md:hidden" : ""}`}>
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-8 w-8 shrink-0 overflow-hidden rounded-lg ring-1 ring-white/15">
-                  <Image src={pojuLogo} alt="" width={64} height={64} className="object-cover" />
-                </span>
-                <p className="text-base font-semibold tracking-tight text-white">POJU</p>
-              </div>
-            </div>
-            <button
-              type="button"
-              className="hidden rounded-lg p-1.5 text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface md:inline-flex"
-              onClick={() => setSidebarCollapsed((v) => !v)}
-              aria-label="Toggle sidebar"
-            >
-              <span className="material-symbols-outlined text-[18px] leading-none">menu</span>
-            </button>
+      <aside className={`pchat__sidebar${sidebarOpenMobile ? " is-open" : ""}`}>
+        <div className="pchat__sidebar-top">
+          <div className="pchat__sidebar-brand">
+            <span className="pchat__sidebar-logo">
+              <Image src={pojuLogo} alt="" width={32} height={32} className="object-cover" />
+            </span>
+            <span>POJU</span>
           </div>
+        </div>
 
-          <div className="poju-chat-sidebar-scroll flex-1 overflow-y-auto p-3 py-4">
-            <div className="mb-6 px-2">
-              <button
-                type="button"
-                className={`w-full rounded-xl bg-gradient-to-r from-[#d831ff] via-[#8a3ffc] to-[#0f62fe] px-4 py-3 shadow-lg shadow-[#6b21a8]/25 transition-opacity hover:opacity-95 ${
-                  sidebarCollapsed ? "md:px-0" : ""
+        <div className="pchat__sidebar-body">
+          <button
+            type="button"
+            className="pchat__new-btn"
+            onClick={() => void handleCreateNewSession()}
+            disabled={creatingSession}
+          >
+            <span className="pchat__new-btn-row">
+              <span>{creatingSession ? "Creating..." : "+ New POJU"}</span>
+              <span className="pchat__new-btn-price">$9.99</span>
+            </span>
+          </button>
+
+          <p className="pchat__sessions-label">Sessions</p>
+          <div>
+            {sessionRows.map((row) => (
+              <div
+                key={row.session_id}
+                className={`pchat__session-item${
+                  row.session_id === session.session_id ? " is-active" : ""
                 }`}
-                onClick={() => void handleCreateNewSession()}
-                disabled={creatingSession}
               >
-                <div className={`flex items-center justify-between ${sidebarCollapsed ? "md:hidden" : ""}`}>
-                  <span className="text-sm font-bold text-white">{creatingSession ? "Creating..." : "+ New POJU"}</span>
-                  <span className="rounded bg-primary px-2 py-1 text-xs font-bold text-on-primary">$9.99</span>
+                <div className="pchat__session-row">
+                  <button
+                    type="button"
+                    className="pchat__session-link"
+                    onClick={() => {
+                      router.push(`/poju/session/${row.session_id}`);
+                      setSidebarOpenMobile(false);
+                    }}
+                  >
+                    {formatSessionListPrimaryLine(row.created_at, row.original_question, locale)}
+                  </button>
+                  <button
+                    type="button"
+                    className="pchat__session-menu-btn"
+                    onClick={() => setSessionMenuId((prev) => (prev === row.session_id ? null : row.session_id))}
+                    aria-label="Open session menu"
+                  >
+                    <span className="material-symbols-outlined">more_horiz</span>
+                  </button>
                 </div>
-                <span className="hidden md:inline">{sidebarCollapsed ? (creatingSession ? "…" : "+") : ""}</span>
-              </button>
-            </div>
-
-            <p className="mb-2 px-2 text-[11px] uppercase tracking-[0.16em] text-on-surface-variant">Sessions</p>
-            <div className="flex flex-col gap-1">
-              {sessionRows.map((row) => (
-                <div
-                  key={row.session_id}
-                  className={`rounded-lg ${
-                    row.session_id === session.session_id
-                      ? "border border-primary/30 bg-surface-container-high"
-                      : "border border-transparent hover:border-outline-variant hover:bg-surface-container-low"
-                  }`}
-                >
-                  <div className="flex items-center gap-2 p-2">
-                    <button
-                      type="button"
-                      className="min-w-0 flex-1 text-left"
-                      onClick={() => {
-                        router.push(`/poju/session/${row.session_id}`);
-                        setSidebarOpenMobile(false);
-                      }}
-                    >
-                      <p className="truncate text-on-surface">
-                        {formatSessionListPrimaryLine(row.created_at, row.original_question, locale)}
-                      </p>
+                {sessionMenuId === row.session_id ? (
+                  <div className="pchat__session-menu">
+                    <button type="button" onClick={() => void handleRenameSession(row.session_id)}>
+                      Edit
                     </button>
                     <button
                       type="button"
-                      className="rounded-md p-1 text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
-                      onClick={() => setSessionMenuId((prev) => (prev === row.session_id ? null : row.session_id))}
-                      aria-label="Open session menu"
+                      className="is-danger"
+                      onClick={() => void handleDeleteSession(row.session_id)}
                     >
-                      <span className="material-symbols-outlined text-[18px] leading-none">more_horiz</span>
+                      Delete
                     </button>
                   </div>
-                  {sessionMenuId === row.session_id ? (
-                    <div className="mx-2 mb-2 grid gap-1 rounded-lg border border-outline-variant bg-surface-container-low p-1.5 text-xs">
-                      <button
-                        type="button"
-                        className="rounded-md px-2 py-1.5 text-left text-on-surface-variant hover:bg-surface-container-high"
-                        onClick={() => void handleRenameSession(row.session_id)}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-md px-2 py-1.5 text-left text-red-300 hover:bg-red-500/10"
-                        onClick={() => void handleDeleteSession(row.session_id)}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
-              ))}
-            </div>
+                ) : null}
+              </div>
+            ))}
           </div>
-        </aside>
+        </div>
+      </aside>
 
-        <section className={`${pojuChatMainPane} relative bg-background`}>
-          <header className="poju-chat-header poju-chat-header-bar sticky top-0 z-20 shrink-0">
-            <div className={`${pojuChatColumn} flex w-full items-center justify-between gap-2`}>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSidebarOpenMobile(true)}
-                  className="rounded-full p-2 text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface md:hidden"
-                  aria-label="Open sidebar"
-                >
-                  <span className="material-symbols-outlined text-[20px] leading-none">menu</span>
-                </button>
-                <p className="poju-chat-header-title truncate">
-                  {formatSessionListPrimaryLine(session.created_at, session.original_question, locale)}
-                </p>
-              </div>
-              <div className="flex items-center gap-1">
-                <button className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface">
-                  <span className="material-symbols-outlined text-[20px] leading-none">share</span>
-                </button>
-                <Link
-                  href="/poju"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
-                  aria-label="Close session"
-                >
-                  <span className="material-symbols-outlined text-[20px] leading-none">close</span>
-                </Link>
-              </div>
-            </div>
-          </header>
+      <div className="pchat__main">
+        <header className="pchat__header">
+          <button
+            type="button"
+            className="pchat__menu-btn"
+            onClick={() => setSidebarOpenMobile(true)}
+            aria-label="Open sidebar"
+          >
+            <span className="material-symbols-outlined">menu</span>
+          </button>
+          <p className="pchat__header-title">
+            {formatSessionListPrimaryLine(session.created_at, session.original_question, locale)}
+          </p>
+          <div className="pchat__header-actions">
+            <button type="button" className="icon-btn" aria-label="Share">
+              <span className="material-symbols-outlined">share</span>
+            </button>
+            <Link href="/poju" className="icon-btn" aria-label="Close session">
+              <span className="material-symbols-outlined">close</span>
+            </Link>
+          </div>
+        </header>
 
-          <div className="poju-chat-messages-pane flex-1 overflow-y-auto">
-            <div className={`${pojuChatColumn} ${pojuChatMessageList} poju-chat-messages-scroll ${overlayFormOpen ? "!pb-8" : ""}`}>
+        <div className="pchat__scroll">
+          <div className="pchat__messages">
               <SessionExpiryNotice session={session} extending={extending} onExtend={() => void handleExtendSession()} />
 
               {POJU_DEV_DEBUG && session.agent_v2 ? (
@@ -1221,7 +1172,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
               })}
 
               {generationStopped ? (
-                <p className="mb-2 text-center text-xs text-on-surface-variant/80">{t("generation_stopped")}</p>
+                <p className="pchat__notice">{t("generation_stopped")}</p>
               ) : null}
 
               {showOffTopicAction ? (
@@ -1312,91 +1263,77 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
               ) : null}
 
               <div ref={messagesEndRef} />
-            </div>
           </div>
+        </div>
 
-          {!overlayFormOpen ? (
-          <div className="poju-chat-composer-wrap pointer-events-none absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-background via-background/90 to-transparent">
-            <div className={`${pojuChatColumn} pointer-events-auto w-full`}>
-              {(sending || confirmBusy) && thinkingMode ? (
-                liveThinkingLine ? (
-                  <LiveThinkingTicker line={liveThinkingLine} waitingLabel={t("thinking_wait")} />
-                ) : (
-                  <ThinkingStream mode={thinkingMode} locale={locale} />
-                )
-              ) : null}
-              {composerImage ? (
-                <div className="mb-2 inline-flex items-center gap-2 rounded-lg border border-outline-variant/40 bg-surface-container-highest px-2 py-1 text-xs text-on-surface-variant">
-                  <img src={composerImage.dataUrl} alt={composerImage.name} className="h-8 w-8 rounded object-cover" />
-                  <span className="max-w-40 truncate">{composerImage.name}</span>
-                  <button type="button" className="text-on-surface-variant hover:text-on-surface" onClick={() => setComposerImage(null)}>
-                    ×
-                  </button>
-                </div>
-              ) : null}
-              <div className={pojuChatComposerShell}>
-                <button
-                  type="button"
-                  className={pojuChatComposerAttachBtn}
-                  onClick={() => fileRef.current?.click()}
-                  aria-label="Attach image"
-                >
-                  <span className="material-symbols-outlined text-[20px] leading-none">attach_file</span>
-                </button>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp,image/heic"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) void handleAttachFile(f);
-                  }}
-                />
-
-                <textarea
-                  ref={composerTextareaRef}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      void handleSend();
-                    }
-                  }}
-                  placeholder={t("input_placeholder")}
-                  disabled={sending}
-                  rows={1}
-                  className={pojuChatComposerInput}
-                />
-                <button
-                  type="button"
-                  className={pojuChatComposerMicBtn}
-                  onClick={toggleSpeechInput}
-                  aria-label="Voice input"
-                >
-                  <span className="material-symbols-outlined text-[20px] leading-none">mic</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => (sending ? handleStopGeneration() : void handleSend())}
-                  disabled={!sending && !input.trim() && !composerImage}
-                  aria-label={sending ? t("stop_generating") : t("send")}
-                  className={`${pojuChatSendBtn} text-on-primary transition-colors disabled:opacity-40 ${
-                    sending
-                      ? "bg-red-600 hover:bg-red-500"
-                      : "bg-primary hover:bg-primary-container"
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[20px] leading-none">
-                    {sending ? "stop" : "arrow_upward"}
-                  </span>
+        {!overlayFormOpen ? (
+          <div className="pchat__inputbar">
+            {(sending || confirmBusy) && thinkingMode ? (
+              liveThinkingLine ? (
+                <LiveThinkingTicker line={liveThinkingLine} waitingLabel={t("thinking_wait")} />
+              ) : (
+                <ThinkingStream mode={thinkingMode} locale={locale} />
+              )
+            ) : null}
+            {composerImage ? (
+              <div className="pchat__composer-attachment">
+                <img src={composerImage.dataUrl} alt={composerImage.name} />
+                <span>{composerImage.name}</span>
+                <button type="button" onClick={() => setComposerImage(null)} aria-label="Remove attachment">
+                  ×
                 </button>
               </div>
+            ) : null}
+            <div className="pchat__inputwrap">
+              <button
+                type="button"
+                className="icon-btn"
+                onClick={() => fileRef.current?.click()}
+                aria-label="Attach image"
+              >
+                <span className="material-symbols-outlined">attach_file</span>
+              </button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/heic"
+                className="pchat__hidden-input"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void handleAttachFile(f);
+                }}
+              />
+
+              <textarea
+                ref={composerTextareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    void handleSend();
+                  }
+                }}
+                placeholder={t("input_placeholder")}
+                disabled={sending}
+                rows={1}
+                className="pchat__textarea"
+              />
+              <button type="button" className="icon-btn" onClick={toggleSpeechInput} aria-label="Voice input">
+                <span className="material-symbols-outlined">mic</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => (sending ? handleStopGeneration() : void handleSend())}
+                disabled={!sending && !input.trim() && !composerImage}
+                aria-label={sending ? t("stop_generating") : t("send")}
+                className={`icon-btn pchat__send-btn${sending ? " pchat__send-btn--stop" : ""}`}
+              >
+                <span className="material-symbols-outlined">{sending ? "stop" : "arrow_upward"}</span>
+              </button>
             </div>
           </div>
-          ) : null}
-        </section>
+        ) : null}
       </div>
     </div>
   );
