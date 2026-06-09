@@ -1,6 +1,6 @@
 import { isLikelyPwaContext } from "@/lib/client/pwa-standalone";
 
-const LEGACY_RESET_KEY = "pojulife_sw_legacy_reset_v3";
+const LEGACY_RESET_KEY = "pojulife_sw_legacy_reset_v4";
 
 /**
  * One-time cleanup for browser-tab users stuck on a pre-Serwist service worker.

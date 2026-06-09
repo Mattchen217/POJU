@@ -1,3 +1,5 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+.prose{max-width:65ch;color:#ccc}
 /* ============================================================
    poju-chat.css  —  POJU 聊天页样式(Claude 规格)
    作用域:全部挂在 .pchat 根类下,不依赖任何旧 CSS / Tailwind prose
@@ -185,3 +187,20 @@
 .pwa-mode .pchat__inputbar {
   padding-bottom: calc(24px + env(safe-area-inset-bottom));
 }
+
+</style></head><body>
+<div class="pchat">
+  <aside class="pchat__sidebar"><div class="pchat__brand">POJU</div></aside>
+  <main class="pchat__main">
+    <header class="pchat__header"><span class="pchat__header-title">Test</span></header>
+    <div class="pchat__scroll">
+      <div class="pchat__messages">
+        <div class="pchat__msg pchat__msg--ai">
+          <div class="pchat__ai"><p id="probe">Measurement paragraph for width proof.</p></div>
+        </div>
+      </div>
+    </div>
+    <div class="pchat__inputbar"><div class="pchat__inputwrap"><textarea class="pchat__textarea"></textarea></div></div>
+  </main>
+</div>
+</body></html>
