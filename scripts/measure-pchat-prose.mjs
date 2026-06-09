@@ -1,5 +1,5 @@
 /**
- * Simulates POJU chat DOM + Tailwind .prose (65ch) to measure width killers.
+ * Measures POJU flat chat layout (.pchat__body scroll on main pane).
  * Run: node scripts/measure-pchat-prose.mjs
  */
 import { readFileSync } from "node:fs";
@@ -12,7 +12,6 @@ const EDGE =
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const v2 = readFileSync(join(__dirname, "../styles/poju-chat-v2.css"), "utf8");
-/** Minimal Tailwind Typography .prose rule (65ch killer) */
 const tw = `.prose{color:#ddd;max-width:65ch}.prose p{margin:1.25em 0}`;
 
 function shell(inner) {
@@ -22,12 +21,8 @@ function shell(inner) {
   <aside class="pchat__sidebar"><div class="pchat__sidebar-body">S</div></aside>
   <div class="pchat__main">
     <header class="pchat__header"><p class="pchat__header-title">Title</p></header>
-    <div class="pchat__column">
-      <div class="pchat__scroll">
-        <div class="pchat__messages">${inner}</div>
-      </div>
-      <div class="pchat__inputbar"><div class="pchat__inputwrap"><textarea class="pchat__textarea" rows="1"></textarea></div></div>
-    </div>
+    <div class="pchat__body">${inner}</div>
+    <div class="pchat__composer"><div class="pchat__inputwrap"><textarea class="pchat__textarea" rows="1"></textarea></div></div>
   </div>
 </div></body></html>`;
 }
@@ -50,18 +45,23 @@ async function measure(label, html) {
       return {
         width: Math.round(r.width),
         maxWidth: cs.maxWidth,
+        overflowY: cs.overflowY,
         fontSize: cs.fontSize,
         className: el.className,
       };
     };
+    const main = document.querySelector(".pchat__main");
+    const body = document.querySelector(".pchat__body");
+    const mainRect = main?.getBoundingClientRect();
+    const bodyRect = body?.getBoundingClientRect();
     return {
       sidebar: pick(".pchat__sidebar"),
-      column: pick(".pchat__column"),
-      messages: pick(".pchat__messages"),
-      inputwrap: pick(".pchat__inputwrap"),
-      msgAi: pick(".pchat__msg--ai"),
+      mainWidth: mainRect ? Math.round(mainRect.width) : null,
+      body: pick(".pchat__body"),
+      bodyVsMainSameWidth:
+        mainRect && bodyRect ? Math.round(mainRect.width) === Math.round(bodyRect.width) : null,
       paragraph: pick(".pchat__msg--ai p"),
-      prose: pick(".prose"),
+      inputwrap: pick(".pchat__inputwrap"),
     };
   });
   await browser.close();
@@ -70,21 +70,9 @@ async function measure(label, html) {
   return result;
 }
 
-const withProse = shell(`
-  <div class="pchat__msg pchat__msg--ai">
-    <div class="prose"><p>### Action 1: Traditional Fengshui Remedy</p></div>
-  </div>`);
-
-const withoutProse = shell(`
+const plain = shell(`
   <div class="pchat__msg pchat__msg--ai">
     <p>### Action 1: Traditional Fengshui Remedy</p>
   </div>`);
 
-const legacyProse = shell(`
-  <div class="pchat__msg pchat__msg--ai">
-    <div class="poju-chat-assistant-prose"><p>### Action 1</p></div>
-  </div>`);
-
-await measure("WITH Tailwind .prose (suspected killer)", withProse);
-await measure("WITHOUT .prose (plain p)", withoutProse);
-await measure("Legacy poju-chat-assistant-prose class", legacyProse);
+await measure("Flat body (plain p)", plain);

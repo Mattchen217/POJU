@@ -1089,9 +1089,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           </div>
         </header>
 
-        <div className="pchat__column">
-          <div className="pchat__scroll">
-            <div className="pchat__messages">
+        <div className="pchat__body">
               <SessionExpiryNotice session={session} extending={extending} onExtend={() => void handleExtendSession()} />
 
               {POJU_DEV_DEBUG && session.agent_v2 ? (
@@ -1264,11 +1262,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
               ) : null}
 
               <div ref={messagesEndRef} />
-            </div>
-          </div>
+        </div>
 
-          {!overlayFormOpen ? (
-            <div className="pchat__inputbar">
+        {!overlayFormOpen ? (
+          <div className="pchat__composer">
             {(sending || confirmBusy) && thinkingMode ? (
               liveThinkingLine ? (
                 <LiveThinkingTicker line={liveThinkingLine} waitingLabel={t("thinking_wait")} />
@@ -1333,9 +1330,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                 <span className="material-symbols-outlined">{sending ? "stop" : "arrow_upward"}</span>
               </button>
             </div>
-            </div>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

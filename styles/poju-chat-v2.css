@@ -1,13 +1,14 @@
 /**
- * POJU chat — Claude-style layout (scoped under .pchat only).
- * Sidebar 280px · content column 760px · body 16px · input 56px min-height.
+ * POJU chat — flat Claude layout under .pchat only.
+ * One scroll surface (.pchat__body) on the main pane background.
+ * No nested message columns or inner scroll boxes.
  */
 
 .pchat {
   --pchat-nav-reserve: 0px;
   --pchat-sidebar-width: 280px;
-  --pchat-column-max: 760px;
-  --pchat-column-pad-x: 16px;
+  --pchat-read-max: 760px;
+  --pchat-read-pad: max(16px, calc(50% - 380px));
   --pchat-body-size: 16px;
   --pchat-sidebar-size: 16px;
   --pchat-line: 1.625;
@@ -42,7 +43,7 @@
   height: auto;
 }
 
-/* ── Sidebar (Claude-scale nav) ── */
+/* ── Sidebar ── */
 
 .pchat__sidebar {
   width: var(--pchat-sidebar-width);
@@ -220,13 +221,14 @@
   color: #fca5a5;
 }
 
-/* ── Main + Claude content column ── */
+/* ── Main pane: header + full-width scroll + composer ── */
 
 .pchat__main {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
   background: var(--pchat-bg);
 }
 
@@ -291,36 +293,26 @@
   display: none;
 }
 
-/** Single Claude-width column: messages + composer share exact width */
-.pchat__column {
+/** Only scroll surface — scrollbar at main-pane edge, not beside text column */
+.pchat__body {
   flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
   min-height: 0;
   width: 100%;
-  max-width: var(--pchat-column-max);
-  margin: 0 auto;
-  padding: 0 var(--pchat-column-pad-x);
-  box-sizing: border-box;
-}
-
-.pchat__scroll {
-  flex: 1 1 auto;
+  overflow-x: hidden;
   overflow-y: auto;
-  min-height: 0;
-  width: 100%;
-  padding: 28px 0 24px;
-}
-
-.pchat__messages {
-  width: 100%;
-  max-width: none;
-  margin: 0;
-  padding: 0;
+  padding: 28px var(--pchat-read-pad) 48px;
   box-sizing: border-box;
 }
 
-/* ── Messages (Claude body scale) ── */
+.pchat__composer {
+  flex-shrink: 0;
+  width: 100%;
+  padding: 12px var(--pchat-read-pad) 24px;
+  box-sizing: border-box;
+  background: linear-gradient(transparent, var(--pchat-bg) 35%);
+}
+
+/* ── Messages (direct children of .pchat__body) ── */
 
 .pchat__msg {
   margin-bottom: 28px;
@@ -344,7 +336,6 @@
   font-size: var(--pchat-body-size);
   line-height: var(--pchat-line);
   color: var(--pchat-text);
-  box-sizing: border-box;
 }
 
 .pchat__msg--user .pchat__bubble p {
@@ -352,8 +343,6 @@
 }
 
 .pchat__msg--ai {
-  width: 100%;
-  max-width: none;
   font-size: var(--pchat-body-size);
   line-height: var(--pchat-line);
   color: #e8e8e8;
@@ -361,8 +350,6 @@
 
 .pchat__msg--ai p {
   margin: 0 0 16px;
-  width: 100%;
-  max-width: none;
 }
 
 .pchat__msg--ai p:last-child {
@@ -456,19 +443,9 @@
   text-align: center;
 }
 
-/* ── Composer (Claude input bar) ── */
-
-.pchat__inputbar {
-  flex-shrink: 0;
-  width: 100%;
-  padding: 0 0 24px;
-  box-sizing: border-box;
-}
+/* ── Composer input ── */
 
 .pchat__inputwrap {
-  width: 100%;
-  max-width: none;
-  margin: 0;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -553,7 +530,6 @@
 }
 
 .pchat__composer-attachment {
-  width: 100%;
   margin: 0 0 10px;
   display: inline-flex;
   align-items: center;
@@ -564,7 +540,6 @@
   background: rgba(255, 255, 255, 0.05);
   font-size: 14px;
   color: var(--pchat-text-muted);
-  box-sizing: border-box;
 }
 
 .pchat__composer-attachment img {
@@ -581,11 +556,8 @@
   cursor: pointer;
 }
 
-/* ── Thinking indicator ── */
-
 .pchat__thinking {
   margin-bottom: 10px;
-  width: 100%;
 }
 
 .pchat__thinking-bar {
@@ -625,7 +597,7 @@
   }
 }
 
-/* ── Delivery view ── */
+/* ── Delivery ── */
 
 .pchat__delivery-header {
   margin-bottom: 16px;
@@ -719,31 +691,33 @@
   }
 }
 
-/* ── Scrollbars ── */
-
 .pchat__sidebar-body,
-.pchat__scroll,
+.pchat__body,
 .pchat__textarea {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
 }
 
 .pchat__sidebar-body::-webkit-scrollbar,
-.pchat__scroll::-webkit-scrollbar,
+.pchat__body::-webkit-scrollbar,
 .pchat__textarea::-webkit-scrollbar {
-  width: 5px;
+  width: 8px;
 }
 
 .pchat__sidebar-body::-webkit-scrollbar-thumb,
-.pchat__scroll::-webkit-scrollbar-thumb,
+.pchat__body::-webkit-scrollbar-thumb,
 .pchat__textarea::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.28);
+  background-color: rgba(255, 255, 255, 0.22);
   border-radius: 999px;
 }
 
 /* ── Mobile ── */
 
 @media (max-width: 767px) {
+  .pchat {
+    --pchat-read-pad: 12px;
+  }
+
   .pchat__sidebar {
     position: fixed;
     top: 0;
@@ -792,16 +766,11 @@
     flex-shrink: 0;
   }
 
-  .pchat__column {
-    max-width: 100%;
-    padding: 0 12px;
-  }
-
   .pchat__msg--user .pchat__bubble {
     max-width: 88%;
   }
 
-  .pchat__inputbar {
+  .pchat__composer {
     padding-bottom: 16px;
   }
 
@@ -811,7 +780,7 @@
   }
 }
 
-.pwa-mode .pchat__inputbar {
+.pwa-mode .pchat__composer {
   padding-bottom: calc(16px + env(safe-area-inset-bottom));
 }
 
@@ -820,60 +789,43 @@
 }
 
 @media (min-width: 768px) {
-  .pwa-mode .pchat__inputbar {
+  .pwa-mode .pchat__composer {
     padding-bottom: calc(24px + env(safe-area-inset-bottom));
   }
 }
 
-/* ── Claude layout lock: beat Tailwind / globals / .prose 65ch ── */
+/* ── Kill all inner width / font limits (Tailwind .prose 65ch, text-sm, etc.) ── */
 
 .pchat .prose,
 .pchat [class*="prose"] {
   max-width: none !important;
-  width: 100% !important;
+  width: auto !important;
   font-size: var(--pchat-body-size) !important;
   line-height: var(--pchat-line) !important;
 }
 
-.pchat .prose p,
-.pchat .pchat__msg--ai,
-.pchat .pchat__msg--ai p,
-.pchat .pchat__msg--ai li,
-.pchat .pchat__msg--ai div,
-.pchat .pchat__delivery,
-.pchat .pchat__delivery p,
-.pchat .pchat__delivery li,
-.pchat .pchat__delivery-action,
-.pchat .pchat__delivery-action p,
-.pchat .pchat__panel,
-.pchat .pchat__panel p,
-.pchat .pchat__streaming-line,
-.pchat .pchat__messages .archive-saved-hint p,
-.pchat .pchat__messages .tool-suggestion-card .tsc-title,
-.pchat .pchat__messages .tool-suggestion-card .tsc-value-prop {
+.pchat__body .pchat__msg--ai,
+.pchat__body .pchat__msg--ai p,
+.pchat__body .pchat__msg--ai li,
+.pchat__body .pchat__delivery,
+.pchat__body .pchat__delivery p,
+.pchat__body .pchat__delivery-action,
+.pchat__body .pchat__delivery-action p,
+.pchat__body .pchat__panel,
+.pchat__body .pchat__panel p,
+.pchat__body .pchat__streaming-line,
+.pchat__body .archive-saved-hint p,
+.pchat__body .tool-suggestion-card .tsc-title,
+.pchat__body .tool-suggestion-card .tsc-value-prop,
+.pchat .prose p {
   font-size: var(--pchat-body-size) !important;
   line-height: var(--pchat-line) !important;
-  max-width: none !important;
-}
-
-.pchat .pchat__column {
-  max-width: var(--pchat-column-max) !important;
-  width: 100% !important;
-}
-
-.pchat .pchat__msg--ai,
-.pchat .pchat__msg--ai > *,
-.pchat .pchat__delivery,
-.pchat .pchat__delivery > * {
-  width: 100% !important;
   max-width: none !important;
 }
 
 .pchat__sidebar {
   width: var(--pchat-sidebar-width) !important;
   flex: 0 0 var(--pchat-sidebar-width) !important;
-  min-width: var(--pchat-sidebar-width) !important;
-  max-width: var(--pchat-sidebar-width) !important;
 }
 
 .pchat__session-link,

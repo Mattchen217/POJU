@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
 import { EB_Garamond, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import "../styles/poju-chat-v2.css";
 import { Providers } from "./providers";
 
 /** UI：Geist Sans 为主，Inter 作回退（与建议一致） */
