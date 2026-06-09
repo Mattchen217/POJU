@@ -55,3 +55,54 @@
 .pwa-mode .poju-chat-messages-scroll {
   padding-bottom: calc(10rem + env(safe-area-inset-bottom, 0px));
 }
+
+/* ── Minimal pill scrollbar (transparent track, no arrow buttons) ── */
+.poju-minimal-scrollbar,
+.poju-chat-sidebar-scroll,
+.poju-chat-composer-input {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
+}
+
+.poju-minimal-scrollbar::-webkit-scrollbar,
+.poju-chat-sidebar-scroll::-webkit-scrollbar,
+.poju-chat-composer-input::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.poju-minimal-scrollbar::-webkit-scrollbar-track,
+.poju-chat-sidebar-scroll::-webkit-scrollbar-track,
+.poju-chat-composer-input::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.poju-minimal-scrollbar::-webkit-scrollbar-thumb,
+.poju-chat-sidebar-scroll::-webkit-scrollbar-thumb,
+.poju-chat-composer-input::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  min-height: 2.5rem;
+}
+
+.poju-minimal-scrollbar::-webkit-scrollbar-thumb:hover,
+.poju-chat-sidebar-scroll::-webkit-scrollbar-thumb:hover,
+.poju-chat-composer-input::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.42);
+}
+
+.poju-minimal-scrollbar::-webkit-scrollbar-button,
+.poju-chat-sidebar-scroll::-webkit-scrollbar-button,
+.poju-chat-composer-input::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.poju-minimal-scrollbar::-webkit-scrollbar-corner,
+.poju-chat-sidebar-scroll::-webkit-scrollbar-corner,
+.poju-chat-composer-input::-webkit-scrollbar-corner {
+  background: transparent;
+}

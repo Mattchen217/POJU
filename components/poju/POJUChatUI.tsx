@@ -1028,7 +1028,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-3 py-4">
+          <div className="poju-chat-sidebar-scroll flex-1 overflow-y-auto p-3 py-4">
             <div className="mb-6 px-2">
               <button
                 type="button"
@@ -1104,7 +1104,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         </aside>
 
         <section className="relative flex min-w-0 flex-1 flex-col bg-background">
-          <header className="poju-chat-header sticky top-0 z-20 flex shrink-0 items-center justify-between border-b border-outline-variant/30 bg-background/80 px-4 backdrop-blur-md md:px-6">
+          <header className="poju-chat-header poju-chat-header-bar sticky top-0 z-20 flex shrink-0 items-center justify-between border-b border-outline-variant/30 bg-background/80 px-4 backdrop-blur-md md:px-6">
             <div className={`${pojuChatColumn} flex items-center justify-between gap-2`}>
               <div className="flex items-center gap-2">
                 <button
@@ -1115,7 +1115,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                 >
                   <span className="material-symbols-outlined text-[20px] leading-none">menu</span>
                 </button>
-                <p className="truncate text-[1rem] leading-6 text-on-surface">
+                <p className="poju-chat-header-title truncate text-[1rem] leading-6 text-on-surface">
                   {formatSessionListPrimaryLine(session.created_at, session.original_question, locale)}
                 </p>
               </div>
@@ -1134,7 +1134,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
             </div>
           </header>
 
-          <div className="flex-1 overflow-y-auto px-4 md:px-6">
+          <div className="poju-chat-messages-pane flex-1 overflow-y-auto px-4 md:px-6">
             <div className={`${pojuChatColumn} ${pojuChatMessageList} poju-chat-messages-scroll ${overlayFormOpen ? "!pb-8" : ""}`}>
               <SessionExpiryNotice session={session} extending={extending} onExtend={() => void handleExtendSession()} />
 

@@ -66,7 +66,7 @@ function DeliverySectionView({ section }: { section: DeliverySection }) {
   return (
     <section className="space-y-2">
       {section.title ? <h3 className={`text-base font-semibold uppercase tracking-wide ${tone}`}>{section.title}</h3> : null}
-      <div className="space-y-4 text-[1rem] leading-[1.75] text-white/85">
+      <div className="space-y-4 poju-chat-delivery-prose text-[1rem] leading-[1.75] text-white/85">
         {section.paragraphs.map((p, i) => (
           <p key={i} className="m-0 whitespace-pre-wrap">
             {p}

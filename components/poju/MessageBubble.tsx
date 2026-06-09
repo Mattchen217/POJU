@@ -10,7 +10,9 @@ import { ToolSuggestionCard } from "@/components/poju/ToolSuggestionCard";
 import { parseDeliveryContent, type DeliverySection } from "@/lib/poju/parse-delivery";
 import {
   pojuChatAssistantContent,
+  pojuChatAvatar,
   pojuChatMessageBody,
+  pojuChatMessageRow,
   pojuChatUserBubble,
 } from "@/lib/poju/chat-layout";
 
@@ -50,7 +52,7 @@ export function MessageBubble({
   if (isWelcomePanel) {
     const paragraphs = splitWelcomeParagraphs(message.content);
     return (
-      <div className="mb-8 flex justify-center">
+      <div className={`${pojuChatMessageRow} justify-center`}>
         <div className="w-full rounded-[22px] border border-white/10 bg-gradient-to-br from-[#221f33] to-[#1d1b27] px-6 py-8 text-center shadow-[0_10px_34px_rgba(0,0,0,0.25)]">
           <div className="mx-auto mb-5 flex justify-center text-primary">
             <span className="material-symbols-outlined text-[72px] leading-none">self_improvement</span>
@@ -71,9 +73,9 @@ export function MessageBubble({
 
   if (message.role === "assistant" && message.meta?.contains_delivery) {
     return (
-      <div className="flex w-full gap-4">
-        <div className="mt-0.5 flex h-8 w-8 shrink-0 overflow-hidden rounded-full ring-1 ring-outline-variant">
-          <Image src={pojuLogo} alt="" width={32} height={32} className="object-cover" />
+      <div className={pojuChatMessageRow}>
+        <div className={pojuChatAvatar}>
+          <Image src={pojuLogo} alt="" width={36} height={36} className="h-full w-full object-cover" />
         </div>
         <div
           className={`${pojuChatAssistantContent} rounded-2xl border border-amber-400/25 bg-gradient-to-br from-amber-500/[0.07] to-zinc-950/90 p-5 shadow-lg sm:p-6`}
@@ -93,10 +95,10 @@ export function MessageBubble({
   }
 
   return (
-    <div className={`flex w-full min-w-0 gap-4 ${isUser ? "justify-end" : ""}`}>
+    <div className={`${pojuChatMessageRow} ${isUser ? "justify-end" : ""}`}>
       {!isUser ? (
-        <div className="mt-0.5 flex h-8 w-8 shrink-0 overflow-hidden rounded-full ring-1 ring-outline-variant">
-          <Image src={pojuLogo} alt="" width={32} height={32} className="object-cover" />
+        <div className={pojuChatAvatar}>
+          <Image src={pojuLogo} alt="" width={36} height={36} className="h-full w-full object-cover" />
         </div>
       ) : null}
       <div
