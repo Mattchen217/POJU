@@ -138,16 +138,16 @@ ${regionalGuidance ? `${regionalGuidance}\n\n` : ""}规则:
 严格使用 POJU_OUTPUT_BRANDING 中的分段标记与三条 Action 顺序。
 
 ═══ ANALYSIS ═══
-（展开：命主 / 大运 / 用神 / 困境根源 / 破局方向 — 见 POJU_BAZI_DEEP_METHOD）
+（展开：profile / core nature / life cycle / balancing element / 困境根源 / 破局方向 — 见 POJU_BAZI_DEEP_METHOD；禁 chart/合婚排盘术语）
 
 ═══ CONCLUSION ═══
 （收束：对用户问题的直接判断 + 1–2 句核心建议）
 
 ═══ WHAT TO DO ═══
-### Action 1: Traditional Fengshui Remedy
+### Action 1: Environmental Alignment
 ### Action 2: Modern Decisive Action
 ### Action 3: Modern Reflective Practice
-（每类 80–120 字/词，含命理依据）
+（每类 80–120 字/词，含 profile 依据；Action 1 须三步洗白：spatial harmony + 具体动作 + 环境心理学；禁招财/催运/Amulet/lucky direction）
 
 ═══ COMING BACK ═══
 （60–100 字/词；模糊回访；Session 30 天有效；禁止复诊/三个月后再来）
@@ -155,7 +155,7 @@ ${regionalGuidance ? `${regionalGuidance}\n\n` : ""}规则:
 # 关键规则
 
 1. 全文使用用户语言。
-2. 命理术语可用，但须白话解释；避免只扔术语标签。
+2. 用户可见须软化术语 + **禁合婚排盘术语 + 超自然承诺（招财/催运/lucky direction）**；五行/I Ching 可保留；Action 1 风水手段三步洗白。
 3. WHAT TO DO 三步须极其具体（时间+地点+人+话+可观察结果）。
 4. 不下命运定论；不用中医话术（方子/诊脉/复诊）。
 5. 不暴露 Glyph / Syncro / Match 等产品名。
@@ -183,7 +183,9 @@ ${contextText}
 
 Required delivery language: ${DELIVERY_LANGUAGE_NAMES[deliveryLang]} (${deliveryLang})
 
-Generate the complete delivery now. Use the markers exactly as specified. All body text in ${DELIVERY_LANGUAGE_NAMES[deliveryLang]}.`;
+Generate the complete delivery now. Use the markers exactly as specified. All body text in ${DELIVERY_LANGUAGE_NAMES[deliveryLang]}.
+
+Action 1 must use Environmental Alignment (3-step whitewash): spatial harmony context + concrete placement/action + environmental psychology rationale. No wealth/luck/amulet promises.`;
 
   return { system, user };
 }

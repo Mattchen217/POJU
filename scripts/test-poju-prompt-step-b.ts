@@ -53,7 +53,7 @@ async function main(): Promise<void> {
   assert("identity output policy wired", buildPojuCorePromptSections().some((s) => s.includes("POJULIFE OUTPUT POLICY")));
 
   assert("action 3类", POJU_ACTION_DESIGN_PRINCIPLES.includes("Action 1"));
-  assert("action 风水调候", POJU_ACTION_DESIGN_PRINCIPLES.includes("传统调候"));
+  assert("action Environmental Alignment", POJU_ACTION_DESIGN_PRINCIPLES.includes("Environmental Alignment"));
   assert("action 决策", POJU_ACTION_DESIGN_PRINCIPLES.includes("决策行动"));
   assert("action 反思", POJU_ACTION_DESIGN_PRINCIPLES.includes("反思练习"));
 

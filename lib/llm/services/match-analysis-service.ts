@@ -43,6 +43,8 @@ const VALID_ACTION_CATEGORIES = new Set([
   "timing",
   "boundary",
   "growth",
+  "environment",
+  /** @deprecated LLM may still emit; normalized to environment */
   "fengshui",
 ]);
 
@@ -182,7 +184,8 @@ function validateAndNormalizeReport(
         .filter((item) => item && typeof item === "object")
         .map((item) => {
           const row = item as Record<string, unknown>;
-          const category = asString(row.category);
+          let category = asString(row.category);
+          if (category === "fengshui") category = "environment";
           return {
             category: (VALID_ACTION_CATEGORIES.has(category)
               ? category

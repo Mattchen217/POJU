@@ -26,7 +26,8 @@ const CATEGORY_ICONS: Record<string, string> = {
   timing: "⏰",
   boundary: "⊞",
   growth: "🌱",
-  fengshui: "🏯",
+  environment: "🌿",
+  fengshui: "🌿",
 };
 
 function ActionItem({

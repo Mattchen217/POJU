@@ -53,7 +53,7 @@ export interface MatchReport {
     title: string;
     summary: string;
     actions: Array<{
-      category: "communication" | "timing" | "boundary" | "growth" | "fengshui";
+      category: "communication" | "timing" | "boundary" | "growth" | "environment";
       title: string;
       detail: string;
       timing?: string;

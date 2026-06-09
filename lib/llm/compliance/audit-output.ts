@@ -5,6 +5,8 @@
 
 export type OutputPolicyViolationCategory =
   | "bazi_term"
+  | "marriage_chart_term"
+  | "supernatural_promise"
   | "prediction"
   | "jixiong"
   | "divination"
@@ -61,12 +63,54 @@ const EN_BAZI_TERMS: Array<[RegExp, string]> = [
   [/\b(?:Heavenly Stem|Earthly Branch|natal chart|birth chart)\b/gi, "chart_en_term"],
   [/\bin your chart\b/gi, "in_your_chart"],
   [/\b(?:qimen|dunjia)\b/gi, "qimen"],
-  [/\bfeng\s*shui\b/gi, "feng_shui"],
   [/\bfortune[- ]telling\b/gi, "fortune_telling"],
 ];
 
+/** Match / marriage charting terms — translate to synergy/tension language in output. */
+const EN_MARRIAGE_CHART_TERMS: Array<[RegExp, string]> = [
+  [/\b(?:Liu He|Six Harmonies?|six harmony)\b/gi, "liu_he"],
+  [/\b(?:Six Clash|Liu Chong|clash pattern)\b/gi, "chong"],
+  [/\bheavenly connection\b/gi, "heavenly_connection"],
+  [/\b(?:Liu Hai|Six Harms?)\b/gi, "liu_hai"],
+  [/\b(?:San Xing|punishment star|Xing star)\b/gi, "xing_star"],
+  [/\b(?:year|day|month|hour)\s+stem\b/gi, "stem_en"],
+  [/\b(?:year|day|month|hour)\s+branch\b/gi, "branch_en"],
+  [/\b(?:in (?:your|their|the) charts?|compatibility charts?)\b/gi, "charts_en"],
+  [/\b(?:Heavenly Stem|Earthly Branch)\b/gi, "ganzhi_en"],
+  [/\b(?:Year|Day|Month|Hour)\s+(?:Pillar|Stem|Branch)\b/gi, "pillar_en"],
+  [/\b(?:year|day|month|hour)\s+pillar\b/gi, "pillar_en"],
+  [/\b(?:stem[- ]branch|branch[- ]stem)\b/gi, "stem_branch_en"],
+  [/\b(?:Jia|Yi|Bing|Ding|Wu|Ji|Geng|Xin|Ren|Gui)\s+(?:Zi|Chou|Yin|Mao|Chen|Si|Wu|Wei|Shen|You|Xu|Hai)\b/g, "stem_branch_pair"],
+];
+
+/** Supernatural outcome promises — red line (NOT bare spatial harmony / env-psych feng shui). */
+const EN_SUPERNATURAL_PROMISE: Array<[RegExp, string]> = [
+  [/\b(?:attract|draw|bring)\s+(?:wealth|fortune|money|prosperity)\b/gi, "attract_wealth"],
+  [/\bwealth\s+activation\b/gi, "wealth_activation"],
+  [/\b(?:boost|enhance|activate)\s+(?:your\s+)?(?:luck|fortune)\b/gi, "boost_luck"],
+  [/\b(?:lucky|auspicious)\s+direction\b/gi, "lucky_direction"],
+  [/\bamulet\b/gi, "amulet"],
+  [/\bward\s+off\s+(?:evil|bad\s+luck|misfortune|disaster|calamity)\b/gi, "ward_off_evil"],
+  [/\b(?:neutralize|dispel|counter)\s+(?:sha|negative\s+energy|bad\s+energy)\b/gi, "neutralize_sha"],
+  [/\b(?:fish\s+tank|water\s+feature).{0,40}\b(?:boost|attract|bring|activate)\s+(?:wealth|fortune|luck|prosperity)\b/gi, "fish_tank_fortune"],
+  [/\b(?:boost|attract|activate).{0,30}\b(?:wood|fire|earth|metal|water)\s+energy.{0,20}\b(?:fortune|wealth|luck|prosperity)\b/gi, "element_fortune_boost"],
+  [/\b(?:will|going\s+to)\s+(?:get\s+rich|become\s+wealthy|attract\s+wealth)\b/gi, "future_wealth_promise"],
+];
+
+const ZH_SUPERNATURAL_PROMISE: Array<[RegExp, string]> = [
+  [/招财|催运|催財|催水|催木|催火|催土|催金|避邪|化煞|挡灾|辟邪/g, "cui_yun_zh"],
+  [/财位|文昌位|吉利方位|幸运方位/g, "lucky_sector_zh"],
+  [/(?:放|摆|置).{0,12}(?:东|西|南|北|西北|东北|东南|西南).{0,20}(?:催|旺|招财|发财)/g, "directional_fortune_zh"],
+  [/下(?:个)?月.{0,8}(?:发财|暴富|转运)/g, "future_fortune_zh"],
+];
+
+const ZH_MARRIAGE_CHART_TERMS: Array<[RegExp, string]> = [
+  [/六合|六害|三刑|刑冲|合冲|刑害|宜婚|不宜婚/g, "marriage_zh"],
+  [/年柱|月柱|日柱|时柱|干支/g, "pillar_zh"],
+];
+
 const ZH_BAZI_TERMS: Array<[RegExp, string]> = [
-  [/八字|四柱|日主|用神|忌神|大运|流年|十神|七杀|食神|伤官|命盘|命局|奇门|遁甲|风水|算命|命理/g, "bazi_zh_term"],
+  [/八字|四柱|日主|用神|忌神|大运|流年|十神|七杀|食神|伤官|命盘|命局|奇门|遁甲|算命|命理/g, "bazi_zh_term"],
   [/天干|地支/g, "ganzhi"],
 ];
 
@@ -117,6 +161,13 @@ export function detectOutputPolicyViolations(
     for (const [regex, label] of ZH_BAZI_TERMS) {
       pushRegex(text, regex, "bazi_term", label, violations);
     }
+    for (const item of ZH_MARRIAGE_CHART_TERMS) {
+      const [regex, label] = typeof item === "string" ? [item, "marriage_zh"] as const : item;
+      pushRegex(text, regex, "marriage_chart_term", label, violations);
+    }
+    for (const [regex, label] of ZH_SUPERNATURAL_PROMISE) {
+      pushRegex(text, regex, "supernatural_promise", label, violations);
+    }
     pushPatterns(text, ZH_PREDICTION_PATTERNS, "prediction", "prediction_zh", violations);
     pushRegex(text, ZH_JIXIONG_REGEX, "jixiong", "jixiong_zh", violations);
     pushRegex(text, ZH_DIVINATION_REGEX, "divination", "divination_zh", violations);
@@ -127,6 +178,12 @@ export function detectOutputPolicyViolations(
         ? "chart_fingerprint"
         : "bazi_term";
       pushRegex(text, regex, category, label, violations);
+    }
+    for (const [regex, label] of EN_MARRIAGE_CHART_TERMS) {
+      pushRegex(text, regex, "marriage_chart_term", label, violations);
+    }
+    for (const [regex, label] of EN_SUPERNATURAL_PROMISE) {
+      pushRegex(text, regex, "supernatural_promise", label, violations);
     }
     pushPatterns(text, EN_PREDICTION_PATTERNS, "prediction", "prediction_en", violations);
     pushRegex(text, EN_JIXIONG_REGEX, "jixiong", "jixiong_en", violations);
