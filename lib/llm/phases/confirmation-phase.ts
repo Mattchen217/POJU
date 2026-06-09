@@ -1,6 +1,6 @@
 import { formatContextForPrompt } from "@/lib/poju/context-extractor";
 import type { AgentPhase, ContextSummary } from "@/lib/poju/agent-state";
-import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseResult } from "@/lib/llm/phases/phase-transport";
+import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseResult, withPhaseStreamOpts } from "@/lib/llm/phases/phase-transport";
 import { buildOrientalSystemPrompt } from "@/lib/llm/phases/oriental-prompt-context";
 import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
@@ -65,11 +65,15 @@ async function handleConfirmProceed(input: PhaseLLMInput): Promise<PhaseLLMResul
 输出 JSON：response, suggested_phase, context_updates`,
   );
   const messages = formatPhaseMessageHistory(input.session.messages);
-  const result = await callPhaseJsonTransport(system, messages, {
-    call_type: "collection_flash",
-    max_tokens: 800,
-    temperature: 0.45,
-  });
+  const result = await callPhaseJsonTransport(
+    system,
+    messages,
+    withPhaseStreamOpts(input, {
+      call_type: "collection_flash",
+      max_tokens: 800,
+      temperature: 0.45,
+    }),
+  );
 
   const { parsed, response } = parsePhaseResult(result.content);
   const rawPhase = typeof parsed.suggested_phase === "string" ? parsed.suggested_phase.trim() : null;
@@ -102,11 +106,15 @@ async function generateSummaryPhase(input: PhaseLLMInput): Promise<PhaseLLMResul
     input.user_message.trim() ||
     (input.locale.startsWith("zh") ? "请基于以上信息生成汇总。" : "Generate the confirmation summary from our conversation.");
 
-  const result = await callPhaseJsonTransport(system, [...messages, { role: "user", content: trigger }], {
-    call_type: "collection_flash",
-    max_tokens: 3000,
-    temperature: 0.45,
-  });
+  const result = await callPhaseJsonTransport(
+    system,
+    [...messages, { role: "user", content: trigger }],
+    withPhaseStreamOpts(input, {
+      call_type: "collection_flash",
+      max_tokens: 3000,
+      temperature: 0.45,
+    }),
+  );
 
   const { parsed, response } = parsePhaseResult(result.content);
 
@@ -156,11 +164,15 @@ export async function callConfirmationPhase(input: PhaseLLMInput): Promise<Phase
 不要在此阶段输出完整破局交付。输出 JSON：response, suggested_phase, context_updates`,
   );
   const messages = formatPhaseMessageHistory(input.session.messages);
-  const result = await callPhaseJsonTransport(system, messages, {
-    call_type: "collection_flash",
-    max_tokens: 1200,
-    temperature: 0.45,
-  });
+  const result = await callPhaseJsonTransport(
+    system,
+    messages,
+    withPhaseStreamOpts(input, {
+      call_type: "collection_flash",
+      max_tokens: 1200,
+      temperature: 0.45,
+    }),
+  );
 
   const { parsed, response } = parsePhaseResult(result.content);
 

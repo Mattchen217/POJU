@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { callPOJULLM } from "@/lib/llm/poju-llm";
+import { createPojuChatStreamResponse } from "@/lib/poju/poju-chat-stream";
 import type { POJUActionRecommendationsData } from "@/lib/archive/archive-service";
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
@@ -11,6 +12,9 @@ import type { UserProfile } from "@/lib/profile/types";
 export const maxDuration = 180;
 
 export async function POST(req: Request) {
+  const url = new URL(req.url);
+  const streamMode = url.searchParams.get("stream") === "1";
+
   const body = (await req.json().catch(() => ({}))) as {
     locale?: string;
     userProfile?: UserProfile | null;
@@ -26,6 +30,10 @@ export async function POST(req: Request) {
       { error: "v4 session required: send { session: POJUSessionState, profile?, locale? }" },
       { status: 400 },
     );
+  }
+
+  if (streamMode) {
+    return createPojuChatStreamResponse(body, req.signal);
   }
 
   const llm = await callPOJULLM({

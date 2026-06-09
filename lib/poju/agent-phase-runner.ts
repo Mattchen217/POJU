@@ -29,6 +29,8 @@ function buildPhaseInput(
   base_analysis?: unknown | null,
   archive_data?: PhaseLLMInput["archive_data"],
   tool_injection_context?: string | null,
+  stream_hooks?: PhaseLLMInput["stream_hooks"],
+  signal?: AbortSignal,
 ): PhaseLLMInput {
   const user_message = getLastUserMessageContent(session);
   return {
@@ -40,6 +42,8 @@ function buildPhaseInput(
     agent_state: session.agent_v2 ?? null,
     archive_data: archive_data ?? null,
     tool_injection_context: tool_injection_context ?? null,
+    stream_hooks,
+    signal,
   };
 }
 
@@ -75,11 +79,31 @@ export async function executeAgentPhaseLLM(input: {
   archive_data?: PhaseLLMInput["archive_data"];
   locale: string;
   tool_injection_context?: string | null;
+  stream_hooks?: PhaseLLMInput["stream_hooks"];
+  signal?: AbortSignal;
 }): Promise<AgentPhaseLLMResult> {
-  const { session, profile, locale, base_analysis, archive_data, tool_injection_context } = input;
+  const {
+    session,
+    profile,
+    locale,
+    base_analysis,
+    archive_data,
+    tool_injection_context,
+    stream_hooks,
+    signal,
+  } = input;
 
   if (shouldUseGreetingPhase(session, profile)) {
-    const phaseInput = buildPhaseInput(session, profile, locale, base_analysis, archive_data, tool_injection_context);
+    const phaseInput = buildPhaseInput(
+      session,
+      profile,
+      locale,
+      base_analysis,
+      archive_data,
+      tool_injection_context,
+      stream_hooks,
+      signal,
+    );
     const phase = await callGreetingPhase(phaseInput);
     const mapped = mapPhaseResultToChatPayload(phase, {
       session,
@@ -98,6 +122,8 @@ export async function executeAgentPhaseLLM(input: {
     base_analysis,
     archive_data,
     tool_injection_context,
+    stream_hooks,
+    signal,
   );
   const phase = await dispatchPhase(activePhase, phaseInput, session);
   const mapped = mapPhaseResultToChatPayload(phase, {

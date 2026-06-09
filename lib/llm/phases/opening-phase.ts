@@ -2,7 +2,7 @@
  * Step I — AI 主动开场（东方破局顾问定位）
  */
 import { normalizeAgentPhase, type AgentPhase } from "@/lib/poju/agent-state";
-import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseResult } from "@/lib/llm/phases/phase-transport";
+import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseResult, withPhaseStreamOpts } from "@/lib/llm/phases/phase-transport";
 import type { PojuV4ActionRequested } from "@/lib/poju/types";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
 import { buildOrientalSystemPrompt } from "@/lib/llm/phases/oriental-prompt-context";
@@ -57,11 +57,15 @@ export async function callOpeningPhase(input: PhaseLLMInput): Promise<PhaseLLMRe
     messages = [{ role: "user", content: "__OPENING__" }];
   }
 
-  const result = await callPhaseJsonTransport(system, messages, {
-    call_type: "chat_flash",
-    temperature: 0.55,
-    max_tokens: 2800,
-  });
+  const result = await callPhaseJsonTransport(
+    system,
+    messages,
+    withPhaseStreamOpts(input, {
+      call_type: "chat_flash",
+      temperature: 0.55,
+      max_tokens: 2800,
+    }),
+  );
 
   const { parsed, response } = parsePhaseResult(result.content);
 

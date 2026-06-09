@@ -121,8 +121,10 @@ export async function runConfirmationPipeline(session: POJUSessionState, locale:
   }
 
   const delivered = await runFinalDeliveryForSession(s, locale);
-  return patchAgent(delivered, {
+  const patched = patchAgent(delivered, {
     current_phase: "delivered",
     main_delivery_at: new Date().toISOString(),
   });
+  const { trySaveDeliveryActionsToArchive } = await import("@/lib/archive/archive-service");
+  return trySaveDeliveryActionsToArchive(patched, locale);
 }

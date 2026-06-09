@@ -37,6 +37,10 @@ export interface HandleInput {
   /** Session already includes this user turn (optimistic UI); skip rule re-check and duplicate append. */
   userAlreadyAppended?: boolean;
   signal?: AbortSignal;
+  onStream?: {
+    onReasoning?: (text: string) => void;
+    onPartialResponse?: (text: string) => void;
+  };
 }
 
 type LLMApiPayload = {
@@ -197,7 +201,7 @@ function normalizeNewActions(raw: unknown[] | undefined): POJUAction[] {
  * - appends assistant message
  */
 export async function handleUserMessage(input: HandleInput): Promise<POJUSessionState> {
-  const { session: sessionIn, userMessage, locale, userAlreadyAppended, signal } = input;
+  const { session: sessionIn, userMessage, locale, userAlreadyAppended, signal, onStream } = input;
   const session = ensureSessionCycles(sessionIn);
   const isOpeningSignal = userMessage.trim() === "__OPENING__";
   const isSystemMessage = userMessage.startsWith("[SYSTEM:") || isOpeningSignal;
@@ -261,6 +265,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     locale,
     signal,
     tool_injection_context: injectionPrep.tool_injection_context,
+    onStream,
   });
 
   workingSession = finalizeToolInjectionTurn(workingSession, injectionPrep.pending);
@@ -419,6 +424,7 @@ async function callLLMViaAPI(input: {
   locale: string;
   signal?: AbortSignal;
   tool_injection_context?: string | null;
+  onStream?: HandleInput["onStream"];
 }): Promise<{
   response: string;
   model: string;
@@ -442,17 +448,79 @@ async function callLLMViaAPI(input: {
   start_new_cycle?: boolean;
   new_cycle_question?: string | null;
 }> {
+  const body = JSON.stringify({
+    session: input.session,
+    profile: input.profile,
+    base_analysis: input.base_analysis ?? null,
+    archive_data: input.archive_data ?? null,
+    locale: input.locale,
+    tool_injection_context: input.tool_injection_context ?? null,
+  });
+
+  if (input.onStream) {
+    const response = await fetch("/api/poju/chat?stream=1", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body,
+      signal: input.signal,
+    });
+    if (!response.ok) {
+      throw new Error(`/api/poju/chat stream returned HTTP ${response.status}`);
+    }
+    if (!response.body) {
+      throw new Error("missing stream body from /api/poju/chat");
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let complete: LLMApiPayload | null = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split("\n\n");
+      buffer = parts.pop() ?? "";
+
+      for (const part of parts) {
+        const line = part.trim();
+        if (!line.startsWith("data:")) continue;
+        const raw = line.slice(5).trim();
+        if (!raw) continue;
+        let event: Record<string, unknown>;
+        try {
+          event = JSON.parse(raw) as Record<string, unknown>;
+        } catch {
+          continue;
+        }
+        const type = event.type;
+        if (type === "reasoning" && typeof event.text === "string") {
+          input.onStream.onReasoning?.(event.text);
+        } else if (type === "content" && typeof event.text === "string") {
+          input.onStream.onPartialResponse?.(event.text);
+        } else if (type === "complete") {
+          complete = event as LLMApiPayload;
+        } else if (type === "error") {
+          throw new Error(String(event.message ?? "stream_error"));
+        } else if (type === "aborted") {
+          const err = new Error("AbortError");
+          err.name = "AbortError";
+          throw err;
+        }
+      }
+    }
+
+    if (!complete) {
+      throw new Error("stream ended without complete payload");
+    }
+    return mapLlmApiPayload(complete, input.session);
+  }
+
   const response = await fetch("/api/poju/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      session: input.session,
-      profile: input.profile,
-      base_analysis: input.base_analysis ?? null,
-      archive_data: input.archive_data ?? null,
-      locale: input.locale,
-      tool_injection_context: input.tool_injection_context ?? null,
-    }),
+    body,
     signal: input.signal,
   });
 
@@ -464,7 +532,13 @@ async function callLLMViaAPI(input: {
   if (data.error) {
     throw new Error(String(data.error));
   }
+  return mapLlmApiPayload(data, input.session);
+}
 
+function mapLlmApiPayload(
+  data: LLMApiPayload,
+  session: POJUSessionState,
+): Awaited<ReturnType<typeof callLLMViaAPI>> {
   const text = data.response ?? data.reply;
   if (!text || typeof text !== "string") {
     throw new Error("missing `response` in /api/poju/chat JSON");
@@ -476,7 +550,7 @@ async function callLLMViaAPI(input: {
     tokens_used: typeof data.tokens_used === "number" ? data.tokens_used : 0,
     user_intent: (data.user_intent as NonNullable<POJUMessage["meta"]>["user_intent"]) ?? "unclear",
     current_state: (data.current_state as NonNullable<POJUMessage["meta"]>["current_state"]) ?? sessionStateHint(
-      input.session,
+      session,
     ),
     action_requested:
       (data.action_requested as NonNullable<POJUMessage["meta"]>["action_requested"]) ?? "continue_chat",

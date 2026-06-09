@@ -132,6 +132,13 @@ export function ArchiveDetailClient({ archiveId }: Props) {
         <p className="mt-2 text-[15px] leading-relaxed text-[#e7e0ed]">{data.original_question}</p>
       </div>
 
+      {data.delivery_excerpt ? (
+        <div className="delivery-excerpt mb-8 rounded-xl border border-white/10 bg-black/20 p-4">
+          <span className="text-[11px] font-medium uppercase tracking-wide text-[#958ea0]">{t("delivery_excerpt_label")}</span>
+          <p className="mt-2 whitespace-pre-wrap text-[15px] leading-relaxed text-[#e7e0ed]">{data.delivery_excerpt}</p>
+        </div>
+      ) : null}
+
       <div className="actions-list space-y-4">
         {data.actions.map((action, idx) => (
           <ArchiveActionCard

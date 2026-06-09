@@ -33,7 +33,7 @@ export async function buildPojuSystemPrompt(input: PhaseLLMInput, taskBlock: str
     buildCurrentDateContext(new Date(), input.locale),
     buildLanguageGuidance(input.locale, input.user_message),
     buildNorthAmericaAdaptation(input.locale),
-    buildProfileContextSection(input.profile, baseAnalysis),
+    buildProfileContextSection(input.profile, baseAnalysis, input.locale),
     injectionBlock ?? "",
     taskBlock,
   );

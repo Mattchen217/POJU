@@ -48,3 +48,23 @@
     transform: translateY(0);
   }
 }
+
+.live-thinking-ticker {
+  overflow: hidden;
+}
+
+.live-thinking-ticker__line {
+  filter: blur(0.6px);
+  opacity: 0.72;
+  animation: live-thinking-scroll 12s linear infinite;
+  mask-image: linear-gradient(90deg, transparent 0%, #000 12%, #000 88%, transparent 100%);
+}
+
+@keyframes live-thinking-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-8%);
+  }
+}

@@ -12,6 +12,8 @@ import type { ContextSummary } from "@/lib/poju/agent-state";
 import { MessageBubble } from "@/components/poju/MessageBubble";
 import { OffTopicAction } from "@/components/poju/OffTopicAction";
 import { ThinkingStream } from "@/components/poju/ThinkingStream";
+import { LiveThinkingTicker } from "@/components/poju/LiveThinkingTicker";
+import { StreamingAssistantBubble } from "@/components/poju/StreamingAssistantBubble";
 import {
   resolveThinkingStreamMode,
   type ThinkingStreamMode,
@@ -58,6 +60,7 @@ import {
   pojuChatComposerShell,
   pojuChatMessageList,
 } from "@/lib/poju/chat-layout";
+import { useAutoResizeTextarea } from "@/lib/hooks/use-auto-resize-textarea";
 import "@/styles/topic-drift.css";
 import "@/styles/tool-suggestion.css";
 import "@/styles/poju-chat-pwa.css";
@@ -134,11 +137,15 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [pipelineBusy, setPipelineBusy] = useState(false);
   const [thinkingMode, setThinkingMode] = useState<ThinkingStreamMode | null>(null);
+  const [liveThinkingLine, setLiveThinkingLine] = useState<string | null>(null);
+  const [streamingReply, setStreamingReply] = useState<string | null>(null);
+  const [generationStopped, setGenerationStopped] = useState(false);
   const [showOffTopicAction, setShowOffTopicAction] = useState(false);
   const [driftReason, setDriftReason] = useState("");
   const openingInitRef = useRef(false);
   const toolResumeInitRef = useRef<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const composerTextareaRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const speechRef = useRef<SpeechRecognition | null>(null);
   const sessionRef = useRef(session);
@@ -146,6 +153,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const sendAbortRef = useRef<AbortController | null>(null);
   const sendGenerationRef = useRef(0);
   const router = useRouter();
+
+  useAutoResizeTextarea(composerTextareaRef, input, 200);
 
   const scrollChatToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     requestAnimationFrame(() => {
@@ -292,6 +301,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     sendAbortRef.current = null;
     setSending(false);
     setThinkingMode(null);
+    setLiveThinkingLine(null);
+    setStreamingReply(null);
+    setGenerationStopped(true);
   }
 
   async function triggerOpening() {
@@ -300,6 +312,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     sendAbortRef.current = ac;
     setSending(true);
     setThinkingMode("flash");
+    setLiveThinkingLine(null);
+    setStreamingReply("");
+    setGenerationStopped(false);
 
     try {
       let updated = await handleUserMessage({
@@ -307,6 +322,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         userMessage: "__OPENING__",
         locale,
         signal: ac.signal,
+        onStream: {
+          onReasoning: (text) => setLiveThinkingLine(text),
+          onPartialResponse: (text) => {
+            setStreamingReply(text);
+            scrollChatToBottom("auto");
+          },
+        },
       });
       if (ac.signal.aborted || gen !== sendGenerationRef.current) return;
 
@@ -323,6 +345,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       if (gen === sendGenerationRef.current) {
         setSending(false);
         setThinkingMode(null);
+        setLiveThinkingLine(null);
+        setStreamingReply(null);
       }
     }
   }
@@ -337,6 +361,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     sendAbortRef.current = ac;
     setSending(true);
     setThinkingMode(resolveThinkingStreamMode(baseSession, userMessage));
+    setLiveThinkingLine(null);
+    setStreamingReply("");
+    setGenerationStopped(false);
     scrollChatToBottom("smooth");
 
     try {
@@ -346,6 +373,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         locale,
         userAlreadyAppended: true,
         signal: ac.signal,
+        onStream: {
+          onReasoning: (text) => setLiveThinkingLine(text),
+          onPartialResponse: (text) => {
+            setStreamingReply(text);
+            scrollChatToBottom("auto");
+          },
+        },
       });
       if (ac.signal.aborted || gen !== sendGenerationRef.current) return;
 
@@ -370,10 +404,16 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       });
       if (ac.signal.aborted || gen !== sendGenerationRef.current) return;
 
-      onSessionUpdate(orch.session);
-      await savePOJUSession(orch.session);
+      let finalSession = orch.session;
+      if (finalSession.main_delivery_done && !finalSession.action_plan_archive_id) {
+        const { trySaveDeliveryActionsToArchive } = await import("@/lib/archive/archive-service");
+        finalSession = await trySaveDeliveryActionsToArchive(finalSession, locale);
+      }
 
-      const lastAssistant = [...orch.session.messages]
+      onSessionUpdate(finalSession);
+      await savePOJUSession(finalSession);
+
+      const lastAssistant = [...finalSession.messages]
         .reverse()
         .find((m) => m.role === "assistant" && !m.is_rejected);
       if (lastAssistant?.meta?.should_show_new_session_button) {
@@ -384,7 +424,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         setDriftReason("");
       }
 
-      if (!resolveSessionHasProfile(orch.session)) {
+      if (!resolveSessionHasProfile(finalSession)) {
         if (orch.ui.showBirthForm) setBirthFlowStage("form");
         if (orch.ui.showProfilePicker) setShowProfilePicker(true);
       }
@@ -405,6 +445,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       if (gen === sendGenerationRef.current) {
         setSending(false);
         setThinkingMode(null);
+        setLiveThinkingLine(null);
+        setStreamingReply(null);
       }
     }
   }
@@ -1174,6 +1216,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                 );
               })}
 
+              {generationStopped ? (
+                <p className="mb-2 text-center text-xs text-on-surface-variant/80">{t("generation_stopped")}</p>
+              ) : null}
+
               {showOffTopicAction ? (
                 <OffTopicAction
                   driftReason={driftReason}
@@ -1257,6 +1303,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                 </details>
               ) : null}
 
+              {(sending || confirmBusy) && streamingReply ? (
+                <StreamingAssistantBubble content={streamingReply} />
+              ) : null}
+
               <div ref={messagesEndRef} />
             </div>
           </div>
@@ -1265,7 +1315,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           <div className="poju-chat-composer-wrap pointer-events-none absolute bottom-0 left-0 right-0 z-20 flex justify-center bg-gradient-to-t from-background via-background/90 to-transparent p-4 md:p-6">
             <div className={`pointer-events-auto w-full ${pojuChatColumn}`}>
               {(sending || confirmBusy) && thinkingMode ? (
-                <ThinkingStream mode={thinkingMode} locale={locale} />
+                liveThinkingLine ? (
+                  <LiveThinkingTicker line={liveThinkingLine} waitingLabel={t("thinking_wait")} />
+                ) : (
+                  <ThinkingStream mode={thinkingMode} locale={locale} />
+                )
               ) : null}
               {composerImage ? (
                 <div className="mb-2 inline-flex items-center gap-2 rounded-lg border border-outline-variant/40 bg-surface-container-highest px-2 py-1 text-xs text-on-surface-variant">
@@ -1297,6 +1351,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                 />
 
                 <textarea
+                  ref={composerTextareaRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => {

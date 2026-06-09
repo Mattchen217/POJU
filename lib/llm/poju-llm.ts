@@ -32,6 +32,8 @@ interface CallInput {
   archive_data?: POJUActionRecommendationsData | null;
   locale: string;
   tool_injection_context?: string | null;
+  stream_hooks?: import("@/lib/llm/phases/phase-transport").PhaseStreamHooks;
+  signal?: AbortSignal;
 }
 
 export interface POJULLMResponse {
@@ -116,6 +118,8 @@ async function callPOJULLMPhasePath(input: CallInput): Promise<POJULLMResponse> 
     archive_data: input.archive_data,
     locale,
     tool_injection_context: input.tool_injection_context ?? null,
+    stream_hooks: input.stream_hooks,
+    signal: input.signal,
   });
 
   return {

@@ -5,6 +5,7 @@
  */
 import { formatBaseAnalysisForPrompt } from "@/lib/llm/prompts/base-analysis-context";
 import { POJULIFE_LANGUAGE_RULES } from "@/lib/llm/prompts/language-rules";
+import { buildBirthIdentityGroundTruthBlock } from "@/lib/profile/birth-identity";
 import type { UserProfile } from "@/lib/profile/types";
 import { splitPillar } from "@/lib/poju/chart-loader-display";
 
@@ -310,6 +311,7 @@ export function buildNorthAmericaAdaptation(locale: string): string {
 export function buildProfileContextSection(
   profile: UserProfile | null,
   baseAnalysis: unknown,
+  locale = "en",
 ): string {
   if (!profile) {
     return "# 用户的命盘信息\n\n(用户尚未提供命盘信息 — 不要编造八字结论，只问情境问题。)";
@@ -323,8 +325,11 @@ export function buildProfileContextSection(
   const birth = profile.birth;
 
   const analysisBlock = formatBaseAnalysisForPrompt(baseAnalysis);
+  const identityBlock = buildBirthIdentityGroundTruthBlock(birth, locale);
 
   return `# 用户的命盘信息（仅供你内部分析使用）
+
+${identityBlock}
 
 ## 八字四柱
 - 年柱: ${y.stem}${y.branch} (${bazi.yearPillar})

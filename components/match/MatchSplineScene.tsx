@@ -4,6 +4,7 @@ import { useIsPwaMode } from "@/components/pwa/PWAConditional";
 import { SplineInteractiveScene } from "@/components/spline/SplineInteractiveScene";
 import {
   MATCH_SPLINE_ANALYZING_ZOOM,
+  MATCH_SPLINE_ANALYZING_DISPLAY_SCALE,
   MATCH_SPLINE_CARD_DISPLAY_SCALE,
   MATCH_SPLINE_CARD_ZOOM,
   MATCH_SPLINE_HERO_DISPLAY_SCALE,
@@ -35,6 +36,7 @@ type MatchSplineSceneProps = {
 const DISPLAY_SCALE_BY_VARIANT: Partial<Record<MatchSplineVariant, number>> = {
   card: MATCH_SPLINE_CARD_DISPLAY_SCALE,
   hero: MATCH_SPLINE_HERO_DISPLAY_SCALE,
+  analyzing: MATCH_SPLINE_ANALYZING_DISPLAY_SCALE,
 };
 
 /** Match particle field — shared across marketing card, hero, and LLM wait. */

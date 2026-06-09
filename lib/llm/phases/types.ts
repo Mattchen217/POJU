@@ -16,6 +16,9 @@ export interface PhaseLLMInput {
   archive_data?: POJUActionRecommendationsData | null;
   /** Step 5 — pending tool result context appended to system prompt once. */
   tool_injection_context?: string | null;
+  /** Live UI hooks while OpenRouter streams reasoning + JSON content. */
+  stream_hooks?: import("@/lib/llm/phases/phase-transport").PhaseStreamHooks;
+  signal?: AbortSignal;
 }
 
 export interface PhaseLLMResult {

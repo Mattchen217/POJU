@@ -5,7 +5,7 @@ import {
 import { formatContextForPrompt, formatMissingFieldsForPrompt } from "@/lib/poju/context-extractor";
 import type { AgentPhase } from "@/lib/poju/agent-state";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
-import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseResult } from "@/lib/llm/phases/phase-transport";
+import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseResult, withPhaseStreamOpts } from "@/lib/llm/phases/phase-transport";
 import { buildOrientalSystemPrompt } from "@/lib/llm/phases/oriental-prompt-context";
 import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
 import type { PojuV4ActionRequested } from "@/lib/poju/types";
@@ -119,11 +119,15 @@ ${buildToolSuggestionPhaseAppendix(input, { includeNewCycleDetection: false })}`
 export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLLMResult> {
   const system = await buildOrientalSystemPrompt(input, buildCollectingTaskBlock(input));
   const messages = formatPhaseMessageHistory(input.session.messages);
-  const result = await callPhaseJsonTransport(system, messages, {
-    call_type: "collection_flash",
-    max_tokens: 3600,
-    temperature: 0.5,
-  });
+  const result = await callPhaseJsonTransport(
+    system,
+    messages,
+    withPhaseStreamOpts(input, {
+      call_type: "collection_flash",
+      max_tokens: 3600,
+      temperature: 0.5,
+    }),
+  );
 
   const { parsed, response } = parsePhaseResult(result.content);
   if (!response) {

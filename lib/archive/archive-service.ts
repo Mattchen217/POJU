@@ -19,6 +19,8 @@ export interface POJUActionRecommendationsData {
   profile_id: string;
   original_question: string;
   delivered_at: string;
+  /** Excerpt from main delivery for archive detail view. */
+  delivery_excerpt?: string;
   actions: Array<{
     action_id: string;
     category: "traditional_fengshui" | "modern_decisive" | "modern_reflective";
@@ -126,6 +128,7 @@ export async function saveActionRecommendationsToArchive(input: {
   profile_id: string;
   original_question: string;
   actions: POJUActionRecommendationsData["actions"];
+  delivery_excerpt?: string;
   locale?: string;
 }): Promise<string> {
   const deviceId = getPojuDeviceId();
@@ -138,6 +141,7 @@ export async function saveActionRecommendationsToArchive(input: {
     profile_id: input.profile_id,
     original_question: input.original_question,
     delivered_at: now.toISOString(),
+    delivery_excerpt: input.delivery_excerpt,
     actions: input.actions,
   };
 
@@ -460,19 +464,36 @@ export async function trySaveDeliveryActionsToArchive(
   locale: string,
 ): Promise<POJUSessionState> {
   if (session.action_plan_archive_id) return session;
-  const deliveryActions = session.main_delivery?.actions ?? [];
-  if (deliveryActions.length < 3) return session;
+  const deliveryActions = session.main_delivery?.actions?.length
+    ? session.main_delivery.actions
+    : session.actions;
+  if (deliveryActions.length < 1 && !session.main_delivery?.analysis) return session;
+
+  const md = session.main_delivery;
+  const deliveryExcerpt = md
+    ? [
+        md.analysis?.user_situation_summary,
+        md.conclusion?.core_message,
+      ]
+        .filter(Boolean)
+        .join("\n\n")
+        .slice(0, 4000)
+    : "";
 
   try {
     const profileId = session.selected_stored_profile_id ?? session.agent_v2?.selected_profile_id ?? "";
+    const mapped = mapSessionActionsToArchiveActions(deliveryActions.slice(0, 3));
+    if (mapped.length < 1 && !deliveryExcerpt) return session;
+
     const archiveId = await saveActionRecommendationsToArchive({
       session_id: session.session_id,
       profile_id: profileId,
       original_question: session.original_question,
-      actions: mapSessionActionsToArchiveActions(deliveryActions.slice(0, 3)),
+      actions: mapped.length > 0 ? mapped : [],
+      delivery_excerpt: deliveryExcerpt || undefined,
       locale,
     });
-    console.log("[delivery] Action plan saved to archive:", archiveId);
+    console.log("[delivery] Session saved to archive:", archiveId);
     return { ...session, action_plan_archive_id: archiveId };
   } catch (e) {
     console.error("[delivery] Archive save failed:", e);

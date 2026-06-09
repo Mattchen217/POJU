@@ -3,7 +3,13 @@ import {
   getGeminiClient,
 } from "@/lib/llm/gemini-shared";
 import { callLLM, type LLMCallType } from "@/lib/llm/router";
-import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
+import { openRouterChatCompletionStream } from "@/lib/llm/openrouter-stream";
+import { getOpenRouterDefaultModel, isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
+
+export type PhaseStreamHooks = {
+  onReasoning?: (fullReasoning: string) => void;
+  onContent?: (fullContent: string) => void;
+};
 
 export type PhaseTransportResult = {
   content: string;
@@ -20,13 +26,42 @@ export async function callPhaseJsonTransport(
     temperature?: number;
     max_tokens?: number;
     call_type?: LLMCallType;
+    stream_hooks?: PhaseStreamHooks;
+    signal?: AbortSignal;
   },
 ): Promise<PhaseTransportResult> {
   const temperature = options?.temperature ?? 0.5;
   const max_tokens = options?.max_tokens ?? 2500;
   const call_type = options?.call_type ?? "poju_reply";
+  const streamHooks = options?.stream_hooks;
 
   if (isOpenRouterConfigured()) {
+    if (streamHooks) {
+      const chatMessages = [
+        { role: "system" as const, content: system },
+        ...messages.map((m) => ({ role: m.role, content: m.content })),
+      ];
+      const streamed = await openRouterChatCompletionStream(
+        {
+          messages: chatMessages,
+          max_tokens,
+          temperature,
+          json_mode: true,
+          reasoning_effort: call_type === "collection_flash" ? "medium" : "medium",
+        },
+        {
+          onReasoning: streamHooks.onReasoning,
+          onContent: streamHooks.onContent,
+        },
+      );
+      return {
+        content: streamed.text,
+        model: streamed.model ?? getOpenRouterDefaultModel(),
+        tokens_used: streamed.tokens_used ?? 0,
+        reasoning: streamed.reasoning,
+      };
+    }
+
     const result = await callLLM({
       call_type,
       system,
@@ -102,4 +137,22 @@ export function formatPhaseMessageHistory(
       role: m.role as "user" | "assistant",
       content: m.content,
     }));
+}
+
+/** Pass stream hooks + abort signal from phase input into transport options. */
+export function withPhaseStreamOpts<
+  T extends {
+    temperature?: number;
+    max_tokens?: number;
+    call_type?: import("@/lib/llm/router").LLMCallType;
+  },
+>(
+  input: { stream_hooks?: PhaseStreamHooks; signal?: AbortSignal },
+  opts: T,
+): T & { stream_hooks?: PhaseStreamHooks; signal?: AbortSignal } {
+  return {
+    ...opts,
+    stream_hooks: input.stream_hooks,
+    signal: input.signal,
+  };
 }

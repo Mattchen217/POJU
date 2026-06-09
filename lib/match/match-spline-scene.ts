@@ -10,4 +10,5 @@ export const MATCH_SPLINE_HERO_DISPLAY_SCALE = 0.62;
 export const MATCH_SPLINE_HERO_PWA_DISPLAY_SCALE = 0.45;
 /** CSS scale on card scene root — card viewport is small; zoom + scale both pull back to show both circles. */
 export const MATCH_SPLINE_CARD_DISPLAY_SCALE = 0.55;
-export const MATCH_SPLINE_ANALYZING_ZOOM = 0.52;
+export const MATCH_SPLINE_ANALYZING_ZOOM = 0.11;
+export const MATCH_SPLINE_ANALYZING_DISPLAY_SCALE = 0.62;
