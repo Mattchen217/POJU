@@ -1,9 +1,13 @@
 /**
- * POJU session chat — PWA safe areas (status bar + bottom product nav).
+ * POJU session chat — narrow (<768px) vs wide (≥768px) layout specs.
+ * PWA safe-area overlays narrow rules only (.pwa-mode).
  */
 
 .poju-chat-shell {
   --poju-chat-nav-reserve: 0px;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, "PingFang SC", "Microsoft YaHei",
+    sans-serif;
 }
 
 .pwa-mode .poju-chat-shell {
@@ -16,51 +20,7 @@
   padding-bottom: 0;
 }
 
-.poju-chat-header {
-  padding-top: env(safe-area-inset-top, 0px);
-}
-
-.pwa-mode .poju-chat-shell .poju-chat-header-bar {
-  min-height: calc(56px + env(safe-area-inset-top, 0px));
-  height: auto;
-}
-
-.poju-chat-sidebar {
-  top: env(safe-area-inset-top, 0px);
-  height: calc(100dvh - env(safe-area-inset-top, 0px));
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-}
-
-@media (min-width: 768px) {
-  .poju-chat-sidebar {
-    top: auto;
-    height: auto;
-    padding-bottom: 0;
-  }
-}
-
-.pwa-mode .poju-chat-sidebar {
-  height: calc(100dvh - env(safe-area-inset-top, 0px) - var(--poju-chat-nav-reserve));
-  padding-bottom: max(0px, env(safe-area-inset-bottom, 0px));
-}
-
-.poju-chat-composer-wrap {
-  padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
-}
-
-.pwa-mode .poju-chat-composer-wrap {
-  padding-bottom: 0.75rem;
-}
-
-.poju-chat-messages-scroll {
-  padding-bottom: 0;
-}
-
-.pwa-mode .poju-chat-messages-scroll {
-  padding-bottom: 0;
-}
-
-/* ── Minimal pill scrollbar (transparent track, no arrow buttons) ── */
+/* ── Minimal pill scrollbar ── */
 .poju-minimal-scrollbar,
 .poju-chat-sidebar-scroll,
 .poju-chat-composer-input {
@@ -111,193 +71,441 @@
   background: transparent;
 }
 
-/* ═══ POJU chat — Claude layout spec (exact values) ═══ */
+/* ═══════════════════════════════════════════
+   NARROW spec — viewport < 768px
+   ═══════════════════════════════════════════ */
 
-.poju-chat-shell {
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, "PingFang SC", "Microsoft YaHei",
-    sans-serif;
+@media (max-width: 767px) {
+  .poju-chat-shell .poju-chat-layout-row {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .poju-chat-shell .poju-chat-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 40;
+    width: 86%;
+    max-width: 24rem;
+    height: 100dvh;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    border-right: 1px solid rgba(255, 255, 255, 0.12);
+    font-size: 14px;
+    box-shadow: 1px 0 15px rgba(0, 0, 0, 0.2);
+  }
+
+  .poju-chat-shell .poju-chat-sidebar.poju-chat-sidebar--open {
+    transform: translateX(0);
+  }
+
+  .poju-chat-shell .poju-chat-main-pane {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .poju-chat-shell .poju-chat-header-bar {
+    min-height: 56px;
+    height: 56px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .poju-chat-shell .poju-chat-header-title {
+    font-size: 16px;
+    line-height: 1.5;
+    font-weight: 500;
+    color: #ececec;
+  }
+
+  .poju-chat-shell .poju-chat-column {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0 16px;
+    box-sizing: border-box;
+  }
+
+  .poju-chat-shell .poju-chat-message-list {
+    display: flex;
+    flex-direction: column;
+    padding-top: 24px;
+    padding-bottom: 140px;
+  }
+
+  .poju-chat-shell .poju-chat-message-block {
+    margin-bottom: 24px;
+  }
+
+  .poju-chat-shell .poju-chat-message-block:last-child {
+    margin-bottom: 0;
+  }
+
+  .poju-chat-shell .poju-chat-user-bubble {
+    margin-left: auto;
+    max-width: 85%;
+    background: rgba(255, 255, 255, 0.07);
+    border-radius: 18px;
+    padding: 10px 16px;
+    font-size: 16px;
+    line-height: 1.6;
+    color: #ececec;
+    box-sizing: border-box;
+  }
+
+  .poju-chat-shell .poju-chat-user-bubble p {
+    margin: 0;
+  }
+
+  .poju-chat-shell .poju-chat-assistant-content {
+    width: 100%;
+  }
+
+  .poju-chat-shell .poju-chat-assistant-prose {
+    width: 100%;
+    background: none;
+    padding: 0;
+    font-size: 16px;
+    line-height: 1.6;
+    color: #e3e3e3;
+    text-align: left;
+  }
+
+  .poju-chat-shell .poju-chat-assistant-prose p {
+    margin: 0 0 14px 0;
+  }
+
+  .poju-chat-shell .poju-chat-assistant-prose p:last-child {
+    margin-bottom: 0;
+  }
+
+  .poju-chat-shell .poju-chat-delivery-block .poju-chat-delivery-prose p {
+    margin: 0 0 14px 0;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  .poju-chat-shell .poju-chat-delivery-block .poju-chat-delivery-prose p:last-child {
+    margin-bottom: 0;
+  }
+
+  .poju-chat-shell .poju-chat-composer-wrap {
+    padding: 12px 16px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  }
+
+  .poju-chat-shell .poju-chat-composer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 56px;
+    border-radius: 24px;
+    padding: 0 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-sizing: border-box;
+  }
+
+  .poju-chat-shell .poju-chat-composer-input {
+    flex: 1;
+    min-height: 44px;
+    max-height: 200px;
+    padding: 12px 8px;
+    margin: 0;
+    border: none;
+    background: transparent;
+    font-size: 16px;
+    line-height: 1.5;
+    color: #ececec;
+    resize: none;
+    outline: none;
+    box-sizing: border-box;
+  }
+
+  .poju-chat-shell .poju-chat-composer-input::placeholder {
+    color: #888;
+  }
+
+  .poju-chat-shell .poju-chat-composer-attach-btn,
+  .poju-chat-shell .poju-chat-composer-mic-btn,
+  .poju-chat-shell .poju-chat-send-btn {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+
+  .poju-chat-shell .poju-chat-composer-attach-btn,
+  .poju-chat-shell .poju-chat-composer-mic-btn {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.55);
+  }
+
+  .poju-chat-shell .poju-chat-send-btn .material-symbols-outlined {
+    font-size: 20px;
+  }
+
+  /* PWA overlays on narrow */
+  .pwa-mode .poju-chat-shell .poju-chat-header {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .pwa-mode .poju-chat-shell .poju-chat-header-bar {
+    min-height: calc(56px + env(safe-area-inset-top, 0px));
+    height: auto;
+  }
+
+  .pwa-mode .poju-chat-shell .poju-chat-sidebar {
+    height: calc(100dvh - env(safe-area-inset-top, 0px) - var(--poju-chat-nav-reserve));
+    padding-bottom: max(0px, env(safe-area-inset-bottom, 0px));
+  }
+
+  .pwa-mode .poju-chat-shell .poju-chat-composer-wrap {
+    padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  }
 }
 
-/* §1 Content column — centered 740px */
-.poju-chat-shell .poju-chat-column {
-  max-width: 740px;
-  margin: 0 auto;
-  width: 100%;
-  padding: 0 24px;
-  box-sizing: border-box;
-}
+/* ═══════════════════════════════════════════
+   WIDE spec — viewport ≥ 768px (Claude)
+   ═══════════════════════════════════════════ */
 
-/* §2 Message list */
-.poju-chat-shell .poju-chat-message-list {
-  display: flex;
-  flex-direction: column;
-  padding-top: 24px;
-  padding-bottom: 140px;
-}
+@media (min-width: 768px) {
+  .poju-chat-shell .poju-chat-layout-row {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+  }
 
-.poju-chat-shell .poju-chat-message-block {
-  margin-bottom: 24px;
-}
+  /* Sidebar in flex flow — fixes centering (was fixed + full-viewport margin:auto) */
+  .poju-chat-shell .poju-chat-sidebar {
+    position: static;
+    flex: 0 0 280px;
+    width: 280px;
+    min-width: 280px;
+    max-width: 280px;
+    height: auto;
+    transform: none;
+    z-index: auto;
+    font-size: 14px;
+    border-right: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: none;
+  }
 
-.poju-chat-shell .poju-chat-message-block:last-child {
-  margin-bottom: 0;
-}
+  .poju-chat-shell .poju-chat-sidebar.poju-chat-sidebar--collapsed {
+    flex: 0 0 80px;
+    width: 80px;
+    min-width: 80px;
+    max-width: 80px;
+  }
 
-/* §3 User message bubble */
-.poju-chat-shell .poju-chat-user-bubble {
-  margin-left: auto;
-  max-width: 80%;
-  background: rgba(255, 255, 255, 0.07);
-  border-radius: 18px;
-  padding: 10px 16px;
-  font-size: 16px;
-  line-height: 1.6;
-  color: #ececec;
-  box-sizing: border-box;
-}
+  .poju-chat-shell .poju-chat-sidebar-scroll,
+  .poju-chat-shell .poju-chat-sidebar-scroll p,
+  .poju-chat-shell .poju-chat-sidebar-scroll button {
+    font-size: 14px;
+  }
 
-.poju-chat-shell .poju-chat-user-bubble p {
-  margin: 0;
-}
+  .poju-chat-shell .poju-chat-main-pane {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    width: auto;
+  }
 
-/* §4 AI message — plain text, no bubble */
-.poju-chat-shell .poju-chat-assistant-content {
-  width: 100%;
-}
+  .poju-chat-shell .poju-chat-header-bar {
+    display: flex;
+    align-items: center;
+    min-height: 56px;
+    height: 56px;
+    width: 100%;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(12px);
+  }
 
-.poju-chat-shell .poju-chat-assistant-prose {
-  width: 100%;
-  background: none;
-  padding: 0;
-  font-size: 16px;
-  line-height: 1.7;
-  color: #e3e3e3;
-  text-align: left;
-}
+  .poju-chat-shell .poju-chat-header-title {
+    font-size: 16px;
+    line-height: 1.5;
+    font-weight: 500;
+    color: #ececec;
+  }
 
-.poju-chat-shell .poju-chat-assistant-prose p {
-  margin: 0 0 16px 0;
-}
+  .poju-chat-shell .poju-chat-messages-pane {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+    overflow-y: auto;
+  }
 
-.poju-chat-shell .poju-chat-assistant-prose p:last-child {
-  margin-bottom: 0;
-}
+  .poju-chat-shell .poju-chat-column {
+    max-width: 740px;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+    padding-left: 24px;
+    padding-right: 24px;
+    box-sizing: border-box;
+  }
 
-.poju-chat-shell .poju-chat-delivery-block .poju-chat-delivery-prose p {
-  margin: 0 0 16px 0;
-  font-size: 16px;
-  line-height: 1.7;
-}
+  .poju-chat-shell .poju-chat-message-list {
+    display: flex;
+    flex-direction: column;
+    padding-top: 24px;
+    padding-bottom: 140px;
+  }
 
-.poju-chat-shell .poju-chat-delivery-block .poju-chat-delivery-prose p:last-child {
-  margin-bottom: 0;
-}
+  .poju-chat-shell .poju-chat-message-block {
+    margin-bottom: 24px;
+  }
 
-/* §6 Composer — bottom centered, same 740px column */
-.poju-chat-shell .poju-chat-composer-wrap {
-  padding-bottom: 24px;
-}
+  .poju-chat-shell .poju-chat-message-block:last-child {
+    margin-bottom: 0;
+  }
 
-.poju-chat-shell .poju-chat-composer {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  min-height: 56px;
-  border-radius: 24px;
-  padding: 0 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-sizing: border-box;
-  box-shadow: none;
-  backdrop-filter: none;
-}
+  .poju-chat-shell .poju-chat-user-bubble {
+    margin-left: auto;
+    max-width: 80%;
+    background: rgba(255, 255, 255, 0.07);
+    border-radius: 18px;
+    padding: 10px 16px;
+    font-size: 16px;
+    line-height: 1.6;
+    color: #ececec;
+    box-sizing: border-box;
+  }
 
-.poju-chat-shell .poju-chat-composer-input {
-  flex: 1;
-  min-height: 56px;
-  max-height: 200px;
-  padding: 14px 18px;
-  margin: 0;
-  border: none;
-  background: transparent;
-  font-size: 16px;
-  line-height: 1.5;
-  color: #ececec;
-  resize: none;
-  outline: none;
-  box-sizing: border-box;
-}
+  .poju-chat-shell .poju-chat-user-bubble p {
+    margin: 0;
+  }
 
-.poju-chat-shell .poju-chat-composer-input::placeholder {
-  color: #888;
-}
+  .poju-chat-shell .poju-chat-assistant-content {
+    width: 100%;
+  }
 
-.poju-chat-shell .poju-chat-composer-attach-btn,
-.poju-chat-shell .poju-chat-composer-mic-btn {
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.55);
-  cursor: pointer;
-}
+  .poju-chat-shell .poju-chat-assistant-prose {
+    width: 100%;
+    background: none;
+    padding: 0;
+    font-size: 16px;
+    line-height: 1.7;
+    color: #e3e3e3;
+    text-align: left;
+  }
 
-.poju-chat-shell .poju-chat-composer-attach-btn:hover,
-.poju-chat-shell .poju-chat-composer-mic-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.85);
-}
+  .poju-chat-shell .poju-chat-assistant-prose p {
+    margin: 0 0 16px 0;
+  }
 
-.poju-chat-shell .poju-chat-send-btn {
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-}
+  .poju-chat-shell .poju-chat-assistant-prose p:last-child {
+    margin-bottom: 0;
+  }
 
-.poju-chat-shell .poju-chat-send-btn .material-symbols-outlined {
-  font-size: 20px;
-}
+  .poju-chat-shell .poju-chat-delivery-block .poju-chat-delivery-prose p {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    line-height: 1.7;
+  }
 
-/* §7 Sidebar */
-.poju-chat-shell .poju-chat-sidebar {
-  width: 280px;
-  font-size: 14px;
-  border-right: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: none;
-}
+  .poju-chat-shell .poju-chat-delivery-block .poju-chat-delivery-prose p:last-child {
+    margin-bottom: 0;
+  }
 
-.poju-chat-shell .poju-chat-sidebar-scroll,
-.poju-chat-shell .poju-chat-sidebar-scroll p,
-.poju-chat-shell .poju-chat-sidebar-scroll button {
-  font-size: 14px;
-}
+  .poju-chat-shell .poju-chat-composer-wrap {
+    width: 100%;
+    padding-bottom: 24px;
+  }
 
-/* §8 Header */
-.poju-chat-shell .poju-chat-header-bar {
-  min-height: 56px;
-  height: 56px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(12px);
-}
+  .poju-chat-shell .poju-chat-composer-wrap .poju-chat-column {
+    pointer-events: auto;
+  }
 
-.poju-chat-shell .poju-chat-header-title {
-  font-size: 16px;
-  line-height: 1.5;
-  font-weight: 500;
-  color: #ececec;
+  .poju-chat-shell .poju-chat-composer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 56px;
+    border-radius: 24px;
+    padding: 0 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-sizing: border-box;
+  }
+
+  .poju-chat-shell .poju-chat-composer-input {
+    flex: 1;
+    min-height: 56px;
+    max-height: 200px;
+    padding: 14px 18px;
+    margin: 0;
+    border: none;
+    background: transparent;
+    font-size: 16px;
+    line-height: 1.5;
+    color: #ececec;
+    resize: none;
+    outline: none;
+    box-sizing: border-box;
+  }
+
+  .poju-chat-shell .poju-chat-composer-input::placeholder {
+    color: #888;
+  }
+
+  .poju-chat-shell .poju-chat-composer-attach-btn,
+  .poju-chat-shell .poju-chat-composer-mic-btn {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.55);
+    cursor: pointer;
+  }
+
+  .poju-chat-shell .poju-chat-composer-attach-btn:hover,
+  .poju-chat-shell .poju-chat-composer-mic-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  .poju-chat-shell .poju-chat-send-btn {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+
+  .poju-chat-shell .poju-chat-send-btn .material-symbols-outlined {
+    font-size: 20px;
+  }
 }

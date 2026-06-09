@@ -1,4 +1,10 @@
-/** POJU chat layout — sizes in styles/poju-chat-pwa.css (Claude spec, exact px). */
+/** POJU chat — semantic hooks; sizes in styles/poju-chat-pwa.css (narrow vs wide @768px). */
+export const pojuChatLayoutRow = "poju-chat-layout-row";
+
+export const pojuChatSidebar = "poju-chat-sidebar";
+
+export const pojuChatMainPane = "poju-chat-main-pane";
+
 export const pojuChatColumn = "poju-chat-column";
 
 export const pojuChatMessageList = "poju-chat-message-list";

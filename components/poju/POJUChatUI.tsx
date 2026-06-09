@@ -60,8 +60,11 @@ import {
   pojuChatComposerInput,
   pojuChatComposerMicBtn,
   pojuChatComposerShell,
+  pojuChatLayoutRow,
+  pojuChatMainPane,
   pojuChatMessageList,
   pojuChatSendBtn,
+  pojuChatSidebar,
 } from "@/lib/poju/chat-layout";
 import { useAutoResizeTextarea } from "@/lib/hooks/use-auto-resize-textarea";
 import "@/styles/topic-drift.css";
@@ -994,7 +997,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   }
 
   return (
-    <div className="poju-chat-shell flex h-[100dvh] w-full overflow-hidden bg-background text-on-surface">
+    <div className="poju-chat-shell flex h-[100dvh] w-full flex-col overflow-hidden bg-background text-on-surface">
       {sidebarOpenMobile ? (
         <button
           type="button"
@@ -1004,13 +1007,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         />
       ) : null}
 
-      <div className="flex h-full w-full">
+      <div className={`${pojuChatLayoutRow} min-h-0 flex-1`}>
         <aside
-          className={`poju-chat-sidebar ${
-            sidebarCollapsed ? "md:w-20" : "md:w-[280px]"
-          } fixed left-0 z-40 flex w-[86%] max-w-sm flex-col border-r border-outline-variant bg-surface shadow-[1px_0_15px_rgba(0,0,0,0.2)] transition-all duration-200 md:static md:h-full md:max-w-none ${
-            sidebarOpenMobile ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-          }`}
+          className={`${pojuChatSidebar} flex flex-col bg-surface ${
+            sidebarCollapsed ? "poju-chat-sidebar--collapsed" : ""
+          } ${sidebarOpenMobile ? "poju-chat-sidebar--open" : ""}`}
         >
           <div className="flex h-16 shrink-0 items-center justify-between border-b border-outline-variant/50 px-4">
             <div className={`${sidebarCollapsed ? "md:hidden" : ""}`}>
@@ -1106,8 +1107,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           </div>
         </aside>
 
-        <section className="relative flex min-w-0 flex-1 flex-col bg-background">
-          <header className="poju-chat-header poju-chat-header-bar sticky top-0 z-20 flex shrink-0 items-center border-b border-outline-variant/30 bg-background/80 backdrop-blur-md">
+        <section className={`${pojuChatMainPane} relative bg-background`}>
+          <header className="poju-chat-header poju-chat-header-bar sticky top-0 z-20 shrink-0">
             <div className={`${pojuChatColumn} flex w-full items-center justify-between gap-2`}>
               <div className="flex items-center gap-2">
                 <button
@@ -1315,8 +1316,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           </div>
 
           {!overlayFormOpen ? (
-          <div className="poju-chat-composer-wrap pointer-events-none absolute bottom-0 left-0 right-0 z-20 flex justify-center bg-gradient-to-t from-background via-background/90 to-transparent">
-            <div className={`pointer-events-auto w-full ${pojuChatColumn}`}>
+          <div className="poju-chat-composer-wrap pointer-events-none absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-background via-background/90 to-transparent">
+            <div className={`${pojuChatColumn} pointer-events-auto w-full`}>
               {(sending || confirmBusy) && thinkingMode ? (
                 liveThinkingLine ? (
                   <LiveThinkingTicker line={liveThinkingLine} waitingLabel={t("thinking_wait")} />
