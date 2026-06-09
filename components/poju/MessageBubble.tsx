@@ -9,6 +9,7 @@ import { MainDeliveryView } from "@/components/poju/MainDeliveryView";
 import { ToolSuggestionCard } from "@/components/poju/ToolSuggestionCard";
 import { parseDeliveryContent, type DeliverySection } from "@/lib/poju/parse-delivery";
 import {
+  pojuChatAssistantCard,
   pojuChatAssistantContent,
   pojuChatAvatar,
   pojuChatMessageBody,
@@ -78,7 +79,7 @@ export function MessageBubble({
           <Image src={pojuLogo} alt="" width={36} height={36} className="h-full w-full object-cover" />
         </div>
         <div
-          className={`${pojuChatAssistantContent} rounded-2xl border border-amber-400/25 bg-gradient-to-br from-amber-500/[0.07] to-zinc-950/90 p-5 shadow-lg sm:p-6`}
+          className={`${pojuChatAssistantContent} ${pojuChatAssistantCard} border-amber-400/20 bg-gradient-to-br from-amber-500/[0.06] to-white/[0.02] shadow-none`}
         >
           <MainDeliveryView
             fullText={message.content}
@@ -102,12 +103,18 @@ export function MessageBubble({
         </div>
       ) : null}
       <div
-        className={`flex flex-col gap-3 ${
-          isUser ? "w-max max-w-[min(85%,36rem)] shrink-0 items-end" : `${pojuChatAssistantContent} items-start`
+        className={`flex flex-col gap-2 md:gap-3 ${
+          isUser
+            ? "w-max max-w-[min(92%,40rem)] shrink-0 items-end"
+            : `${pojuChatAssistantContent} w-full items-start`
         }`}
       >
         <div
-          className={isUser ? `${pojuChatUserBubble} ${pojuChatMessageBody}` : pojuChatMessageBody}
+          className={
+            isUser
+              ? `${pojuChatUserBubble} ${pojuChatMessageBody}`
+              : `${pojuChatAssistantCard} ${pojuChatMessageBody}`
+          }
         >
           {renderPlainContent(message.content, isUser)}
         </div>

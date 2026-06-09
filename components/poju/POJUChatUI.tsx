@@ -1003,9 +1003,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
 
       <div className="flex h-full w-full">
         <aside
-          className={`poju-chat-sidebar ${
-            sidebarCollapsed ? "md:w-20" : "md:w-[280px]"
-          } fixed left-0 z-40 flex w-[86%] max-w-sm flex-col border-r border-outline-variant bg-surface shadow-[1px_0_15px_rgba(0,0,0,0.2)] transition-all duration-200 md:static md:h-full md:max-w-none ${
+          className={`poju-chat-sidebar poju-chat-sidebar-panel ${
+            sidebarCollapsed ? "md:w-[4.5rem]" : "md:w-[260px]"
+          } fixed left-0 z-40 flex w-[86%] max-w-sm flex-col border-r border-outline-variant/60 bg-[#141416] shadow-none transition-all duration-200 md:static md:h-full md:max-w-none ${
             sidebarOpenMobile ? "translate-x-0" : "-translate-x-full md:translate-x-0"
           }`}
         >
@@ -1046,7 +1046,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
               </button>
             </div>
 
-            <p className="mb-2 px-2 text-[11px] uppercase tracking-[0.16em] text-on-surface-variant">Sessions</p>
+            <p className="poju-chat-sidebar-section-label mb-2 px-2 text-on-surface-variant">Sessions</p>
             <div className="flex flex-col gap-1">
               {sessionRows.map((row) => (
                 <div
@@ -1066,7 +1066,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                         setSidebarOpenMobile(false);
                       }}
                     >
-                      <p className="truncate text-sm text-on-surface">
+                      <p className="poju-chat-sidebar-item-text truncate text-on-surface">
                         {formatSessionListPrimaryLine(row.created_at, row.original_question, locale)}
                       </p>
                     </button>
@@ -1103,7 +1103,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           </div>
         </aside>
 
-        <section className="relative flex min-w-0 flex-1 flex-col bg-background">
+        <section className="poju-chat-main-pane relative flex min-w-0 flex-1 flex-col bg-[#0b0b0d]">
           <header className="poju-chat-header poju-chat-header-bar sticky top-0 z-20 flex shrink-0 items-center justify-between border-b border-outline-variant/30 bg-background/80 px-4 backdrop-blur-md md:px-6">
             <div className={`${pojuChatColumn} flex items-center justify-between gap-2`}>
               <div className="flex items-center gap-2">
