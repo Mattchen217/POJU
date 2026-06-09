@@ -138,6 +138,48 @@
   margin-bottom: 0;
 }
 
+/* Lock message typography — beats Tailwind text-sm / body 15px inside chat */
+.pchat .pchat__messages .pchat__msg--ai,
+.pchat .pchat__messages .pchat__msg--ai p,
+.pchat .pchat__messages .pchat__msg--ai li,
+.pchat .pchat__messages .pchat__msg--user .pchat__bubble,
+.pchat .pchat__messages .pchat__msg--user .pchat__bubble p,
+.pchat .pchat__messages .pchat__delivery,
+.pchat .pchat__messages .pchat__delivery p,
+.pchat .pchat__messages .pchat__delivery li,
+.pchat .pchat__messages .pchat__delivery-action,
+.pchat .pchat__messages .pchat__delivery-action p,
+.pchat .pchat__messages .pchat__panel,
+.pchat .pchat__messages .pchat__panel p,
+.pchat .pchat__messages .pchat__streaming-line {
+  font-size: 16px;
+}
+
+.pchat .pchat__messages .pchat__msg--ai,
+.pchat .pchat__messages .pchat__msg--ai p,
+.pchat .pchat__messages .pchat__delivery p,
+.pchat .pchat__messages .pchat__delivery-action p,
+.pchat .pchat__messages .pchat__panel p,
+.pchat .pchat__messages .pchat__streaming-line {
+  line-height: 1.65;
+}
+
+.pchat .pchat__scroll > .pchat__messages {
+  max-width: 760px;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+}
+
+.pchat .pchat__inputbar .pchat__inputwrap {
+  max-width: 760px;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+}
+
 .pchat__inputbar {
   position: sticky;
   bottom: 0;
@@ -650,6 +692,39 @@
   border-left: 4px solid #fbbf24;
 }
 
+.pchat__delivery-action-btns {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pchat__delivery-action-btns button {
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(124, 58, 237, 0.8);
+  color: #fff;
+}
+
+.pchat__delivery-action-btns button.is-secondary {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.pchat .pchat__messages .tool-suggestion-card .tsc-title,
+.pchat .pchat__messages .tool-suggestion-card .tsc-value-prop {
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+.pchat .pchat__messages .archive-saved-hint p {
+  font-size: 16px;
+  line-height: 1.65;
+}
+
 .pchat__sidebar-body,
 .pchat__scroll,
 .pchat__textarea {
@@ -777,4 +852,59 @@
   .pwa-mode .pchat__inputbar {
     padding-bottom: calc(24px + env(safe-area-inset-bottom));
   }
+}
+
+/* ── Inner width killers: Tailwind .prose = max-width 65ch (~540px) ── */
+
+.pchat .prose,
+.pchat [class*="prose"] {
+  max-width: none !important;
+  font-size: 16px !important;
+  line-height: 1.65 !important;
+}
+
+.pchat .prose p {
+  font-size: 16px !important;
+}
+
+.pchat .pchat__scroll > .pchat__messages,
+.pchat__messages {
+  max-width: 760px !important;
+  width: 100% !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.pchat .pchat__msg--ai {
+  max-width: none !important;
+  width: 100% !important;
+  font-size: 16px !important;
+}
+
+.pchat__sidebar {
+  width: 280px !important;
+  flex: 0 0 280px !important;
+}
+
+.pchat__sidebar * {
+  font-size: 14px;
+}
+
+.pchat__sidebar-brand,
+.pchat__sidebar-brand span,
+.pchat__new-btn,
+.pchat__new-btn-price {
+  font-size: inherit;
+}
+
+.pchat__sidebar-brand {
+  font-size: 16px;
+}
+
+.pchat__new-btn {
+  font-size: 14px;
+}
+
+.pchat__sessions-label {
+  font-size: 11px;
 }

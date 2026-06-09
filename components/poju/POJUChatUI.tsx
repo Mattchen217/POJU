@@ -57,7 +57,6 @@ import { rewindSessionToUserMessage } from "@/lib/poju/session-rewind";
 import { useAutoResizeTextarea } from "@/lib/hooks/use-auto-resize-textarea";
 import "@/styles/topic-drift.css";
 import "@/styles/tool-suggestion.css";
-import "@/styles/poju-chat-v2.css";
 
 interface Props {
   session: POJUSessionState;

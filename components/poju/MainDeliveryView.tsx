@@ -97,19 +97,11 @@ function ActionRow({
       </p>
       <p>{action.text}</p>
       {onUpdate && action.status === "pending" ? (
-        <div className="mt-3 flex flex-wrap gap-2">
-          <button
-            type="button"
-            className="rounded-lg bg-primary/80 px-3 py-1 text-xs"
-            onClick={() => onUpdate(action.action_id, "completed")}
-          >
+        <div className="pchat__delivery-action-btns">
+          <button type="button" onClick={() => onUpdate(action.action_id, "completed")}>
             {tCard("mark_completed")}
           </button>
-          <button
-            type="button"
-            className="rounded-lg border border-white/20 px-3 py-1 text-xs"
-            onClick={() => onUpdate(action.action_id, "skipped")}
-          >
+          <button type="button" className="is-secondary" onClick={() => onUpdate(action.action_id, "skipped")}>
             {tCard("mark_skipped")}
           </button>
         </div>
