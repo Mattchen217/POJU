@@ -4,14 +4,17 @@ import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { useRouter } from "@/i18n/navigation";
+import { PojuSessionPickerModal } from "@/components/poju/PojuSessionPickerModal";
 import { checkGlyphUsage } from "@/lib/glyph/storage";
-import { getPojuDeviceId } from "@/lib/poju/client-device-id";
-import { getActivePOJUSessionsByDevice } from "@/lib/poju/session-manager";
+import {
+  listActivePojuSessionsForPicker,
+  type ActivePojuSessionPickerRow,
+} from "@/lib/cross-product/list-active-poju-sessions-for-picker";
+import { redirectToPojuPayment } from "@/lib/poju/start-poju-payment";
+import { runPOJUV4SessionMaintenance } from "@/lib/poju/v4-lifecycle";
 import { isFirstTimeFree, type SyncroProduct } from "@/lib/syncro/device-usage";
 
 import "@/styles/pwa-product-begin.css";
-
-const MOCK_PENDING_QUESTION = "I'd like to begin a POJU session.";
 
 export type BeginProductId = "poju" | "glyph" | "syncro" | "match";
 
@@ -29,6 +32,8 @@ export function BeginButton({ productId, price, freeFirstTime = true }: BeginBut
   const [canUseFree, setCanUseFree] = useState(false);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [pickerSessions, setPickerSessions] = useState<ActivePojuSessionPickerRow[] | null>(null);
+  const [paying, setPaying] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,34 +69,30 @@ export function BeginButton({ productId, price, freeFirstTime = true }: BeginBut
   }, [productId, freeFirstTime]);
 
   async function startPoju() {
-    const deviceId = getPojuDeviceId();
-    const active = await getActivePOJUSessionsByDevice(deviceId);
-    if (active.length > 0) {
-      active.sort((a, b) => b.last_interaction_at.getTime() - a.last_interaction_at.getTime());
-      router.push(`/poju/session/${active[0]!.session_id}`);
+    await runPOJUV4SessionMaintenance();
+    const sessions = await listActivePojuSessionsForPicker();
+    if (sessions.length === 0) {
+      await redirectToPojuPayment(locale);
       return;
     }
+    setPickerSessions(sessions);
+  }
 
-    sessionStorage.setItem("poju_pending_question", MOCK_PENDING_QUESTION);
-    const returnUrl =
-      typeof window !== "undefined"
-        ? `${window.location.origin}/${locale}/poju/payment-success`
-        : `/${locale}/poju/payment-success`;
-    const pay = await fetch("/api/payments/create", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ product: "poju", locale, return_url: returnUrl }),
-    });
-    const p = (await pay.json()) as {
-      checkout_url?: string;
-      payment_url?: string;
-      order_id?: string;
-    };
-    const target = p.payment_url ?? p.checkout_url;
-    if (target) {
-      if (p.order_id) sessionStorage.setItem("poju_pending_order_id", p.order_id);
-      window.location.href = target;
+  async function startPojuPaymentFromPicker() {
+    if (paying) return;
+    setPaying(true);
+    try {
+      await redirectToPojuPayment(locale);
+    } finally {
+      setPaying(false);
     }
+  }
+
+  function openPojuSession(sessionId: string) {
+    setPickerSessions(null);
+    queueMicrotask(() => {
+      router.push(`/poju/session/${sessionId}`);
+    });
   }
 
   async function handleClick() {
@@ -127,14 +128,26 @@ export function BeginButton({ productId, price, freeFirstTime = true }: BeginBut
   const priceLabel = freeFirstTime && canUseFree ? t("free_first_time") : price;
 
   return (
-    <button
-      type="button"
-      className="begin-btn-large"
-      disabled={!ready || busy}
-      onClick={() => void handleClick()}
-    >
-      <span className="begin-btn-main">{busy ? "…" : t("start")}</span>
-      {ready ? <span className="begin-btn-price">{priceLabel}</span> : null}
-    </button>
+    <>
+      <button
+        type="button"
+        className="begin-btn-large"
+        disabled={!ready || busy}
+        onClick={() => void handleClick()}
+      >
+        <span className="begin-btn-main">{busy ? "…" : t("start")}</span>
+        {ready ? <span className="begin-btn-price">{priceLabel}</span> : null}
+      </button>
+
+      {productId === "poju" && pickerSessions ? (
+        <PojuSessionPickerModal
+          sessions={pickerSessions}
+          onClose={() => setPickerSessions(null)}
+          onNewSession={() => void startPojuPaymentFromPicker()}
+          onSelectSession={openPojuSession}
+          newSessionBusy={paying}
+        />
+      ) : null}
+    </>
   );
 }

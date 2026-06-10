@@ -825,7 +825,14 @@
       "attach_menu_label": "添加附件",
       "attach_menu_document": "添加文档",
       "attach_menu_image": "添加图片",
-      "attach_menu_pdf": "添加 PDF"
+      "attach_menu_pdf": "添加 PDF",
+      "session_picker": {
+        "close": "关闭",
+        "new_poju": "+ New POJU",
+        "price": "$9.99",
+        "existing_label": "进行中的会话",
+        "days_left": "剩余 {count} 天"
+      }
     },
     "topic_drift": {
       "title": "检测到话题转换",

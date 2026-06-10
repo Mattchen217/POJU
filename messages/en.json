@@ -810,7 +810,14 @@
       "attach_menu_label": "Attach file",
       "attach_menu_document": "Document",
       "attach_menu_image": "Image",
-      "attach_menu_pdf": "PDF"
+      "attach_menu_pdf": "PDF",
+      "session_picker": {
+        "close": "Close",
+        "new_poju": "+ New POJU",
+        "price": "$9.99",
+        "existing_label": "Your active sessions",
+        "days_left": "{count, plural, one {# day left} other {# days left}}"
+      }
     },
     "topic_drift": {
       "title": "Different topic detected",
