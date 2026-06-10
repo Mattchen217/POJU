@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { BirthProfileFlow, type BirthProfileFlowStage } from "@/components/poju/BirthProfileFlow";
 import PojuChat from "@/components/poju/PojuChat";
+import { EditMessageDialog } from "@/components/poju/EditMessageDialog";
 import { useAppDialog } from "@/components/ui/app-dialog";
 import { ContextSummaryEditor } from "@/components/poju/ContextSummaryEditor";
 import type { ContextSummary } from "@/lib/poju/agent-state";
@@ -125,6 +126,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const [generationStopped, setGenerationStopped] = useState(false);
   const [showOffTopicAction, setShowOffTopicAction] = useState(false);
   const [driftReason, setDriftReason] = useState("");
+  const [editDialog, setEditDialog] = useState<{ messageId: string; content: string } | null>(null);
   const openingInitRef = useRef(false);
   const toolResumeInitRef = useRef<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -276,9 +278,14 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
 
   async function handleEditUserMessage(messageId: string, currentContent: string) {
     if (sending || confirmBusy || pipelineBusy) return;
-    const edited = await dialog.prompt(t("edit_message_prompt"), currentContent, t("edit_message_title"));
-    if (edited === null) return;
-    const newContent = edited.trim();
+    setEditDialog({ messageId, content: currentContent });
+  }
+
+  async function confirmEditUserMessage(newContent: string) {
+    if (!editDialog) return;
+    const { messageId, content: currentContent } = editDialog;
+    setEditDialog(null);
+
     if (!newContent || newContent === currentContent.trim()) return;
 
     const fullIndex = sessionRef.current.messages.findIndex(
@@ -988,6 +995,30 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         onEditMessage={(id, content) => void handleEditUserMessage(id, content)}
         editDisabled={streaming}
         editLabel={t("edit_message")}
+        onClose={() => router.push("/poju")}
+        inlineNotice={
+          showOffTopicAction ? (
+            <OffTopicAction
+              driftReason={driftReason}
+              onStartNewSession={() => router.push("/poju")}
+              onContinueCurrent={() => {
+                setShowOffTopicAction(false);
+                setDriftReason("");
+              }}
+            />
+          ) : null
+        }
+      />
+
+      <EditMessageDialog
+        open={editDialog !== null}
+        title={t("edit_message_title")}
+        description={t("edit_message_prompt")}
+        defaultValue={editDialog?.content ?? ""}
+        confirmLabel="OK"
+        cancelLabel="Cancel"
+        onConfirm={(value) => void confirmEditUserMessage(value)}
+        onCancel={() => setEditDialog(null)}
       />
 
       <div
@@ -1002,29 +1033,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       >
         <SessionExpiryNotice session={session} extending={extending} onExtend={() => void handleExtendSession()} />
       </div>
-
-      {showOffTopicAction ? (
-        <div
-          className="topic-drift-prompt"
-          style={{
-            position: "fixed",
-            bottom: 120,
-            left: "50%",
-            transform: "translateX(-50%)",
-            zIndex: 55,
-            width: "min(1100px, calc(100vw - 32px))",
-          }}
-        >
-          <OffTopicAction
-            driftReason={driftReason}
-            onStartNewSession={() => router.push("/poju")}
-            onContinueCurrent={() => {
-              setShowOffTopicAction(false);
-              setDriftReason("");
-            }}
-          />
-        </div>
-      ) : null}
 
       {overlayFormOpen ? (
         <div

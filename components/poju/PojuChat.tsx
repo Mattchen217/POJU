@@ -56,6 +56,8 @@ export interface PojuChatProps {
   onEditMessage?: (messageId: string, currentContent: string) => void;
   editDisabled?: boolean;
   editLabel?: string;
+  onClose?: () => void;
+  inlineNotice?: ReactNode;
   newSessionDisabled?: boolean;
   composerText?: string;
   onComposerTextChange?: (value: string) => void;
@@ -134,6 +136,8 @@ export default function PojuChat(props: PojuChatProps) {
     onEditMessage,
     editDisabled,
     editLabel,
+    onClose,
+    inlineNotice,
     newSessionDisabled,
     composerText,
     onComposerTextChange,
@@ -143,6 +147,7 @@ export default function PojuChat(props: PojuChatProps) {
   const textareaValue = composerText ?? input;
   const setTextareaValue = onComposerTextChange ?? setInput;
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -158,7 +163,7 @@ export default function PojuChat(props: PojuChatProps) {
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTo({ top: el.scrollHeight });
-  }, [messages, streamingText, thinkingMode, liveThinkingLine]);
+  }, [messages, streamingText, thinkingMode, liveThinkingLine, inlineNotice]);
 
   const send = () => {
     const t = textareaValue.trim();
@@ -171,7 +176,7 @@ export default function PojuChat(props: PojuChatProps) {
     sessions.find((s) => s.id === currentSessionId)?.title || "POJU";
 
   return (
-    <div className="pchat">
+    <div className={`pchat${sidebarCollapsed ? " pchat--sidebar-collapsed" : ""}`}>
       {/* 移动端抽屉遮罩 */}
       <div
         className={`pchat__overlay ${sidebarOpen ? "is-open" : ""}`}
@@ -225,8 +230,25 @@ export default function PojuChat(props: PojuChatProps) {
           >
             ☰
           </button>
+          <button
+            type="button"
+            className="pchat__sidebar-toggle icon-btn"
+            onClick={() => setSidebarCollapsed((v) => !v)}
+            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-expanded={!sidebarCollapsed}
+          >
+            <span className="material-symbols-outlined">
+              {sidebarCollapsed ? "dock_to_right" : "dock_to_left"}
+            </span>
+          </button>
           <span className="pchat__header-title">{activeTitle}</span>
-          <span style={{ width: 36 }} />
+          {onClose ? (
+            <button type="button" className="pchat__close-btn icon-btn" onClick={onClose} aria-label="Close">
+              <span className="material-symbols-outlined">close</span>
+            </button>
+          ) : (
+            <span className="pchat__header-spacer" aria-hidden />
+          )}
         </header>
 
         <div className="pchat__scroll" ref={scrollRef}>
@@ -244,11 +266,12 @@ export default function PojuChat(props: PojuChatProps) {
                     {m.editable && onEditMessage ? (
                       <button
                         type="button"
-                        className="pchat__msg-edit"
+                        className="pchat__msg-edit icon-btn"
                         disabled={editDisabled}
                         onClick={() => onEditMessage(m.id, m.content)}
+                        aria-label={editLabel ?? "Edit"}
                       >
-                        {editLabel ?? "Edit"}
+                        <span className="material-symbols-outlined">edit</span>
                       </button>
                     ) : null}
                   </>
@@ -267,6 +290,8 @@ export default function PojuChat(props: PojuChatProps) {
                 )}
               </div>
             ))}
+
+            {inlineNotice ? <div className="pchat__inline-notice">{inlineNotice}</div> : null}
 
             {/* 流式:正式回答(逐字) */}
             {isStreaming && streamingText ? (
