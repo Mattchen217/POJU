@@ -18,33 +18,42 @@ const WHAT_IS_IMAGE: Record<ProductWhatIsId, StaticImageData> = {
   match: matchWhatIsBg,
 };
 
-/** Hero 下方 — What is POJU / Glyph / Syncro / Match（毛玻璃框 · 左图右文） */
+/** Hero 下方 — What is POJU / Glyph / Syncro / Match（DS WhatIs · 左图右文） */
 export function ProductWhatIsSection({ product }: { product: ProductWhatIsId }) {
   const ns = product === "match" ? "match.home" : `marketingSite.${product}`;
   const t = useTranslations(ns);
 
   return (
     <div className="w-full px-3 sm:px-4 md:px-6">
-      <MarketingSection
-        id={`${product}-what-is`}
-        title={t("what_is.title")}
-        subtitle={t("what_is.subtitle")}
-        padding="default"
-      >
-        <div className="product-what-is mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-8 md:grid-cols-[minmax(0,360px)_minmax(0,1fr)] md:gap-10 lg:gap-12">
-          <div className="product-what-is__media relative mx-auto aspect-square w-full max-w-[360px] overflow-hidden rounded-2xl md:mx-0 md:max-w-none">
-            <Image
-              src={WHAT_IS_IMAGE[product]}
-              alt=""
-              fill
-              className="object-cover object-center"
-              sizes="(max-width:768px) min(360px, 92vw), 360px"
-            />
-          </div>
-          <div className="product-what-is__copy min-w-0">
-            <p className="whitespace-pre-line text-left text-[17px] leading-[1.8] text-white sm:text-[18px] md:text-[19px] md:leading-[1.85]">
-              {t("what_is.body")}
-            </p>
+      <MarketingSection id={`${product}-what-is`} padding="default">
+        <div className={`product-what-is product-what-is--${product}`}>
+          <p className="product-what-is__kicker">{t("what_is.subtitle")}</p>
+          <h2 className="product-what-is__title">{t("what_is.title")}</h2>
+
+          <div className="product-what-is__grid">
+            <div className="product-what-is__media-wrap">
+              <span className="product-what-is__glow" aria-hidden />
+              <span className="product-what-is__ring" aria-hidden />
+              <div className="product-what-is__frame">
+                <Image
+                  src={WHAT_IS_IMAGE[product]}
+                  alt=""
+                  fill
+                  className="product-what-is__image object-cover object-center"
+                  sizes="(max-width:768px) min(380px, 92vw), 380px"
+                />
+                <span className="product-what-is__sheen" aria-hidden />
+                <span className="product-what-is__vignette" aria-hidden />
+              </div>
+              <span className="product-what-is__orbit" aria-hidden>
+                <span className="product-what-is__orbit-dot" />
+              </span>
+            </div>
+
+            <div className="product-what-is__copy">
+              <span className="product-what-is__accent-bar" aria-hidden />
+              <p className="product-what-is__body">{t("what_is.body")}</p>
+            </div>
           </div>
         </div>
       </MarketingSection>

@@ -1,0 +1,10 @@
+/* App-specific rules layered on top of the Design System */
+
+.pwa-mode .marketing-header,
+.pwa-mode .marketing-footer {
+  display: none !important;
+}
+
+.pwa-mode .site-chrome-main {
+  padding-top: 0;
+}

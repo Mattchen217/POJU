@@ -1,0 +1,105 @@
+/* ============================================================
+   pojulife · Color tokens
+   Source of truth: styles/pojulife-design-system.css + design-tokens.css
+   A dark, cosmic-glass palette: black-violet voids, frosted glass,
+   gold + teal brand accents, and four product signature colors.
+   ============================================================ */
+
+:root {
+  /* ===== Background — black with a visible violet undertow ===== */
+  --pj-bg-deep: #07050f;      /* the true floor, near-black violet */
+  --pj-bg-mid: #1a102c;       /* mid nebula */
+  --pj-bg-elevated: #1e1630;  /* raised surfaces */
+  --pj-bg-card: rgba(255, 255, 255, 0.04);
+  --pj-bg-card-hover: rgba(255, 255, 255, 0.07);
+  --pj-bg-overlay: rgba(7, 5, 15, 0.88);
+
+  /* Full-page ambient gradient — the signature cosmic backdrop */
+  --pj-bg-ambient:
+    radial-gradient(ellipse 110% 75% at 50% -8%, rgba(108, 52, 172, 0.34) 0%, transparent 56%),
+    radial-gradient(ellipse 80% 60% at 12% 92%, rgba(76, 38, 132, 0.22) 0%, transparent 54%),
+    radial-gradient(ellipse 65% 50% at 88% 38%, rgba(90, 45, 150, 0.14) 0%, transparent 52%),
+    linear-gradient(180deg, #24163c 0%, #1a102e 26%, #120c22 52%, #0a0716 78%, var(--pj-bg-deep) 100%);
+
+  /* ===== Text — soft, layered, never pure white on body ===== */
+  --pj-text-primary: #e8e8f0;
+  --pj-text-secondary: #a0a4b8;
+  --pj-text-tertiary: #8a8aa0;
+  --pj-text-muted: #5a5f75;
+  --pj-text-disabled: #3a3e50;
+
+  /* ===== Brand accents — gold + teal ===== */
+  --pj-gold: #d4a574;
+  --pj-gold-soft: #f2c994;
+  --pj-gold-glow: rgba(212, 165, 116, 0.7);
+  --pj-teal: #4ecdc4;
+  --pj-teal-soft: #7fe0d9;
+
+  /* The richer "rare gold" used on buttons / dividers */
+  --pj-gold-rich: #d4af37;
+  --pj-gold-rich-light: #e8c56f;
+
+  /* ===== Purple scale (Tailwind bridge / glow accents) ===== */
+  --purple-primary: #8b5cf6;
+  --purple-bright: #a855f7;
+  --purple-vivid: #c084fc;
+  --purple-pink: #d946ef;
+  --purple-deep: #6d28d9;
+  --purple-glow: rgba(139, 92, 246, 0.45);
+
+  /* ===== Product signature colors ===== */
+  --color-poju: #d4af37;   /* gold  — the deep break-through session */
+  --color-glyph: #7b68ee;  /* violet — the pocket mirror */
+  --color-syncro: #00ced1; /* cyan  — spatial rhythm */
+  --color-match: #ff6b9d;  /* rose  — relationship */
+
+  /* ===== "Five currents" — Syncro state scale ===== */
+  --pj-open: #00d9b8;       /* Open Wind */
+  --pj-following: #4ecdc4;  /* Following Wind */
+  --pj-still: #8a8aa0;      /* Still Air */
+  --pj-cross: #e89f4d;      /* Cross Wind */
+  --pj-under: #c85a5a;      /* Undertow */
+
+  /* ===== Status ===== */
+  --color-success: #4caf50;
+  --color-warning: #ff9800;
+  --color-error: #f44336;
+  --color-info: #87ceeb;
+
+  /* ===== Dividers (used instead of borders) ===== */
+  --pj-divider: rgba(255, 255, 255, 0.08);
+  --pj-divider-strong: rgba(255, 255, 255, 0.12);
+
+  /* ===== Semantic aliases ===== */
+  --bg-primary: var(--pj-bg-ambient);
+  --bg-primary-solid: var(--pj-bg-deep);
+  --bg-deep: var(--pj-bg-deep);
+  --bg-layer-1: var(--pj-bg-mid);
+  --bg-layer-2: var(--pj-bg-elevated);
+
+  --text-primary: var(--pj-text-primary);
+  --text-secondary: var(--pj-text-secondary);
+  --text-body: var(--pj-text-secondary);
+  --text-tertiary: var(--pj-text-tertiary);
+  --text-dim: var(--pj-text-muted);
+  --text-muted: var(--pj-text-muted);
+  --text-accent: var(--pj-gold-soft);
+
+  --gold-primary: var(--pj-gold);
+  --gold-light: var(--pj-gold-soft);
+  --gold-glow: var(--pj-gold-glow);
+  --gold-rare: var(--pj-gold);
+
+  --cyan-primary: var(--pj-teal);
+  --cyan-bright: var(--pj-teal-soft);
+
+  --glass-tint: rgba(255, 255, 255, 0.04);
+  --glass-border: var(--pj-divider);
+  --glass-divider: var(--pj-divider);
+
+  --current-open: var(--pj-open);
+  --current-following: var(--pj-following);
+  --current-still: var(--pj-still);
+  --current-cross: var(--pj-cross);
+  --current-undertow: var(--pj-under);
+}

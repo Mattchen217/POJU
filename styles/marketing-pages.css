@@ -278,15 +278,6 @@
 }
 
 /* What is …? — 毛玻璃框内左图右文 */
-.product-what-is__media {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
-}
-
-.product-what-is__copy p {
-  color: #ffffff;
-}
-
 .content-card--solid {
   padding: var(--space-5) var(--space-6);
 }

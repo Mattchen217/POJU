@@ -1,0 +1,44 @@
+/* ============================================================
+   pojulife · Spacing & radius tokens
+   8px base rhythm. Radii run from 8 → 24, plus a 999px pill.
+   ============================================================ */
+
+:root {
+  /* ===== Spacing (8px base) ===== */
+  --pj-space-1: 4px;
+  --pj-space-2: 8px;
+  --pj-space-3: 12px;
+  --pj-space-4: 16px;
+  --pj-space-5: 20px;
+  --pj-space-6: 24px;
+  --pj-space-8: 32px;
+  --pj-space-10: 40px;
+  --pj-space-12: 48px;
+  --pj-space-16: 64px;
+  --pj-space-20: 80px;
+
+  /* ===== Radius ===== */
+  --pj-radius-sm: 8px;
+  --pj-radius-md: 12px;
+  --pj-radius-lg: 16px;
+  --pj-radius-xl: 20px;
+  --pj-radius-2xl: 24px;   /* glass cards */
+  --pj-radius-pill: 999px;
+
+  /* ===== Semantic aliases ===== */
+  --space-1: var(--pj-space-1);
+  --space-2: var(--pj-space-2);
+  --space-3: var(--pj-space-3);
+  --space-4: var(--pj-space-4);
+  --space-5: var(--pj-space-6);
+  --space-6: var(--pj-space-8);
+  --space-8: var(--pj-space-12);
+  --space-10: var(--pj-space-16);
+  --space-12: var(--pj-space-20);
+
+  --radius-sm: var(--pj-radius-sm);
+  --radius-md: var(--pj-radius-md);
+  --radius-lg: var(--pj-radius-lg);
+  --radius-xl: var(--pj-radius-xl);
+  --radius-full: var(--pj-radius-pill);
+}

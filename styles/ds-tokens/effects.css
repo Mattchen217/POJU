@@ -1,0 +1,63 @@
+/* ============================================================
+   pojulife · Effects — glass, shadow, motion tokens
+   The system uses NO borders. Depth comes from frosted glass,
+   inset hairline shadows, and soft outer glows.
+   ============================================================ */
+
+:root {
+  /* ===== Frosted glass ===== */
+  --glass-panel-bg: rgba(52, 34, 82, 0.36);
+  --glass-panel-blur: blur(20px); /* @kind other */
+  --glass-panel-edge: inset 0 0 0 0.5px rgba(255, 255, 255, 0.07); /* @kind shadow */
+  --glass-panel-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
+
+  --glass-card-bg: var(--glass-panel-bg);
+  --glass-card-bg-elevated: rgba(52, 34, 82, 0.46);
+  --glass-card-blur: var(--glass-panel-blur);
+  --glass-card-radius: 24px;
+  --glass-card-shadow: var(--glass-panel-shadow), var(--glass-panel-edge);
+
+  --glass-section-bg: var(--glass-panel-bg);
+  --glass-section-blur: var(--glass-panel-blur);
+  --glass-section-edge: var(--glass-panel-edge);
+  --glass-section-shadow: var(--glass-panel-shadow);
+
+  --glass-input-bg: rgba(0, 0, 0, 0.25);
+  --glass-input-edge: inset 0 0 0 0.5px rgba(255, 255, 255, 0.06); /* @kind shadow */
+  --glass-input-radius: 14px;
+
+  --glass-nav-bg: var(--glass-panel-bg);
+  --glass-nav-blur: var(--glass-panel-blur);
+  --glass-nav-edge: var(--glass-panel-edge);
+  --glass-nav-radius: 999px;
+
+  /* ===== Shadows / glows ===== */
+  --pj-shadow-card: inset 0 0 0 0.5px rgba(255, 255, 255, 0.06);
+  --pj-shadow-soft: 0 14px 36px rgba(0, 0, 0, 0.32);
+  --pj-shadow-lift: 0 24px 60px rgba(0, 0, 0, 0.35);
+  --pj-shadow-glow-gold: 0 0 32px rgba(212, 165, 116, 0.25);
+  --pj-shadow-glow-teal: 0 0 32px rgba(78, 205, 196, 0.2);
+  --pj-shadow-glow-violet: 0 8px 30px rgba(139, 92, 246, 0.22);
+
+  --shadow-card: var(--pj-shadow-card);
+  --shadow-glow: var(--pj-shadow-glow-gold);
+
+  /* ===== Motion ===== */
+  --pj-duration-fast: 180ms; /* @kind other */
+  --pj-duration-normal: 300ms; /* @kind other */
+  --pj-duration-slow: 600ms; /* @kind other */
+  --pj-duration-slower: 1000ms; /* @kind other */
+  --pj-ease: cubic-bezier(0.4, 0, 0.2, 1); /* @kind other */
+  --pj-ease-out: cubic-bezier(0, 0, 0.2, 1); /* @kind other */
+  --pj-ease-in: cubic-bezier(0.4, 0, 1, 1); /* @kind other */
+  --pj-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* @kind other */
+  --pj-ease-ornate: cubic-bezier(0.22, 1, 0.36, 1); /* @kind other */
+
+  --duration-fast: var(--pj-duration-fast);
+  --duration-base: var(--pj-duration-normal);
+  --duration-slow: var(--pj-duration-slow);
+  --ease-smooth: var(--pj-ease);
+  --ease-out: var(--pj-ease-out);
+  --ease-spring: var(--pj-ease-spring);
+  --ease-ornate: var(--pj-ease-ornate);
+}

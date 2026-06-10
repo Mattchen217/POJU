@@ -1,0 +1,49 @@
+/* ============================================================
+   pojulife · Typography tokens
+   Two weights only (400 / 500–600), tight tracking on display,
+   wide tracking on small kickers/labels.
+   ============================================================ */
+
+:root {
+  /* ===== Size scale (px) ===== */
+  --pj-text-xs: 11px;
+  --pj-text-sm: 13px;
+  --pj-text-base: 15px;
+  --pj-text-lg: 18px;
+  --pj-text-xl: 22px;
+  --pj-text-2xl: 28px;
+  --pj-text-3xl: 36px;
+  --pj-text-display: 48px;
+
+  /* Marketing hero — fluid */
+  --pj-text-hero: clamp(2.25rem, 5.2vw, 3.5rem);
+  --pj-text-section: clamp(1.5rem, 4vw, 2rem);
+
+  /* ===== Weights — restraint is the rule ===== */
+  --pj-weight-regular: 400;
+  --pj-weight-medium: 500;
+  --pj-weight-semibold: 600;
+  --pj-weight-bold: 700;
+
+  /* ===== Line height ===== */
+  --pj-leading-tight: 1.2;
+  --pj-leading-snug: 1.35;
+  --pj-leading-normal: 1.5;
+  --pj-leading-relaxed: 1.7;
+
+  /* ===== Letter spacing ===== */
+  --pj-track-tight: -0.4px;
+  --pj-track-normal: 0; /* @kind other */
+  --pj-track-wide: 0.5px;
+  --pj-track-wider: 1px;
+  --pj-track-widest: 1.5px;
+  /* Kicker / eyebrow tracking (uppercase micro-labels) */
+  --pj-track-kicker: 0.22em;
+
+  /* ===== Semantic aliases ===== */
+  --text-size-xs: var(--pj-text-xs);
+  --text-size-sm: var(--pj-text-sm);
+  --text-size-base: var(--pj-text-base);
+  --text-size-lg: var(--pj-text-lg);
+  --text-size-display: var(--pj-text-display);
+}

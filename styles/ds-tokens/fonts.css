@@ -1,0 +1,28 @@
+/* ============================================================
+   pojulife · Webfonts
+   Loaded from Google Fonts. These @font-face rules ship to consumers.
+   - Geist        → primary UI typeface
+   - Inter        → UI fallback
+   - EB Garamond  → "verse" serif (quotes, reflective copy)
+   - JetBrains Mono → mono (data, timing, code)
+   - Noto Serif SC → CJK logo / 易经 glyphs
+   ============================================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+SC:wght@400;500;600;700&display=swap");
+
+:root {
+  /* Base font stacks (mirror app/globals.css + design-tokens.css) */
+  --pj-font-sans: "Geist", "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Display",
+    "PingFang SC", "Helvetica Neue", system-ui, sans-serif;
+  --pj-font-mono: "JetBrains Mono", "SF Mono", Menlo, Monaco, monospace;
+  --pj-font-verse: "EB Garamond", Georgia, "Times New Roman", serif;
+  --pj-font-serif-cjk: "Noto Serif SC", "Source Han Serif SC", serif;
+
+  /* Semantic aliases used across components */
+  --font-primary: var(--pj-font-sans);
+  --font-display: var(--pj-font-sans);
+  --font-body: var(--pj-font-sans);
+  --font-mono: var(--pj-font-mono);
+  --font-verse: var(--pj-font-verse);
+  --font-logo-zh: var(--pj-font-serif-cjk);
+}
