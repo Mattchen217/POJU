@@ -776,6 +776,7 @@
       "voice_input_start": "Start voice input",
       "voice_input_stop": "Stop voice input",
       "dialog_delete_session": "Delete this session?",
+      "dialog_delete_session_confirm": "Permanently delete this session from this device? This cannot be undone.",
       "dialog_delete_session_bilingual": "Permanently delete this session from this device? This cannot be undone.\n\n从本设备永久删除该会话？此操作不可撤销。",
       "dialog_rename_session": "Edit session title",
       "dialog_rename_placeholder": "Session title",

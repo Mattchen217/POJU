@@ -482,15 +482,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     });
   }
 
-  async function handleRenameSession(targetSessionId: string) {
-    const row = sessionRows.find((s) => s.session_id === targetSessionId);
-    const nextQuestion = await dialog.prompt(
-      t("dialog_rename_session"),
-      row?.original_question ?? "",
-      t("dialog_rename_placeholder"),
-    );
-    if (!nextQuestion) return;
-    const value = nextQuestion.trim();
+  async function handleRenameSession(targetSessionId: string, newTitle: string) {
+    const value = newTitle.trim();
     if (!value) return;
 
     await getPojuDb().pojuSessionRecords.update(targetSessionId, { original_question: value });
@@ -508,7 +501,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   }
 
   async function handleDeleteSession(targetSessionId: string) {
-    if (!(await dialog.confirm(t("dialog_delete_session_bilingual")))) return;
     await getPojuDb().pojuSessionRecords.delete(targetSessionId);
     setSessionRows((prev) => prev.filter((x) => x.session_id !== targetSessionId));
     if (targetSessionId === sessionRef.current.session_id) {
@@ -1005,11 +997,19 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         onSend={(text) => void handlePojuSend(text)}
         onNewSession={() => void handleCreateNewSession()}
         onSelectSession={(id) => router.push(`/poju/session/${id}`)}
-        onRenameSession={(id) => void handleRenameSession(id)}
+        onRenameSession={(id, title) => void handleRenameSession(id, title)}
         onDeleteSession={(id) => void handleDeleteSession(id)}
         renameLabel={t("session_menu_rename")}
         deleteLabel={t("session_menu_delete")}
         sessionMenuLabel={t("session_menu_label")}
+        sessionDialogLabels={{
+          renameTitle: t("dialog_rename_placeholder"),
+          renameMessage: t("dialog_rename_session"),
+          deleteTitle: t("session_menu_delete"),
+          deleteMessage: t("dialog_delete_session_confirm"),
+          cancel: t("dialog_cancel"),
+          ok: t("dialog_ok"),
+        }}
         onAttachPick={handleAttachPick}
         attachMenuLabel={t("attach_menu_label")}
         attachMenuLabels={{

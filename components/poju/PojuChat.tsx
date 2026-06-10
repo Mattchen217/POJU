@@ -15,6 +15,10 @@ import { ThinkingStream } from "@/components/poju/ThinkingStream";
 import { LiveThinkingTicker } from "@/components/poju/LiveThinkingTicker";
 import { StreamingAssistantBubble } from "@/components/poju/StreamingAssistantBubble";
 import { EditMessageDialog } from "@/components/poju/EditMessageDialog";
+import {
+  SessionSidebarDialog,
+  type SessionSidebarDialogState,
+} from "@/components/poju/SessionSidebarDialog";
 import type { ThinkingStreamMode } from "@/lib/poju/thinking-stream-mode";
 import "./poju-chat.css";
 
@@ -49,11 +53,19 @@ export interface PojuChatProps {
   onSend: (text: string) => void;
   onNewSession: () => void;
   onSelectSession: (id: string) => void;
-  onRenameSession?: (id: string) => void;
-  onDeleteSession?: (id: string) => void;
+  onRenameSession?: (sessionId: string, newTitle: string) => void | Promise<void>;
+  onDeleteSession?: (sessionId: string) => void | Promise<void>;
   renameLabel?: string;
   deleteLabel?: string;
   sessionMenuLabel?: string;
+  sessionDialogLabels?: {
+    renameTitle: string;
+    renameMessage: string;
+    deleteTitle: string;
+    deleteMessage: string;
+    cancel: string;
+    ok: string;
+  };
   inputPlaceholder?: string;
   onAttachPick?: (kind: PojuAttachKind) => void;
   attachMenuLabels?: {
@@ -143,6 +155,7 @@ export default function PojuChat(props: PojuChatProps) {
     renameLabel,
     deleteLabel,
     sessionMenuLabel,
+    sessionDialogLabels,
     inputPlaceholder,
     onAttachPick,
     attachMenuLabels,
@@ -171,6 +184,8 @@ export default function PojuChat(props: PojuChatProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [openMenuSessionId, setOpenMenuSessionId] = useState<string | null>(null);
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
+  const [sessionDialog, setSessionDialog] = useState<SessionSidebarDialogState | null>(null);
+  const menuBtnRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const taRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -226,6 +241,23 @@ export default function PojuChat(props: PojuChatProps) {
   const activeTitle =
     sessions.find((s) => s.id === currentSessionId)?.title || "POJU";
 
+  function openSessionDialog(kind: "rename" | "delete", session: PojuSession) {
+    const btn = menuBtnRefs.current.get(session.id);
+    const anchor = btn?.getBoundingClientRect();
+    if (!anchor) return;
+    setOpenMenuSessionId(null);
+    if (kind === "rename") {
+      setSessionDialog({
+        kind: "rename",
+        sessionId: session.id,
+        defaultValue: session.title,
+        anchor,
+      });
+      return;
+    }
+    setSessionDialog({ kind: "delete", sessionId: session.id, anchor });
+  }
+
   return (
     <div className={`pchat${sidebarCollapsed ? " pchat--sidebar-collapsed" : ""}`}>
       {/* 移动端抽屉遮罩 */}
@@ -262,6 +294,10 @@ export default function PojuChat(props: PojuChatProps) {
                     className="pchat__session-menu-btn"
                     aria-label={sessionMenuLabel ?? "Session menu"}
                     aria-expanded={openMenuSessionId === s.id}
+                    ref={(el) => {
+                      if (el) menuBtnRefs.current.set(s.id, el);
+                      else menuBtnRefs.current.delete(s.id);
+                    }}
                     onClick={(e) => {
                       e.stopPropagation();
                       setOpenMenuSessionId((prev) => (prev === s.id ? null : s.id));
@@ -282,8 +318,7 @@ export default function PojuChat(props: PojuChatProps) {
                       type="button"
                       role="menuitem"
                       onClick={() => {
-                        setOpenMenuSessionId(null);
-                        onRenameSession(s.id);
+                        openSessionDialog("rename", s);
                       }}
                     >
                       <span className="material-symbols-outlined">edit</span>
@@ -296,8 +331,7 @@ export default function PojuChat(props: PojuChatProps) {
                       role="menuitem"
                       className="is-danger"
                       onClick={() => {
-                        setOpenMenuSessionId(null);
-                        onDeleteSession(s.id);
+                        openSessionDialog("delete", s);
                       }}
                     >
                       <span className="material-symbols-outlined">delete</span>
@@ -310,6 +344,30 @@ export default function PojuChat(props: PojuChatProps) {
           ))}
         </div>
       </aside>
+
+      {sessionDialog && sessionDialogLabels ? (
+        <SessionSidebarDialog
+          dialog={sessionDialog}
+          renameTitle={sessionDialogLabels.renameTitle}
+          renameMessage={sessionDialogLabels.renameMessage}
+          deleteTitle={sessionDialogLabels.deleteTitle}
+          deleteMessage={sessionDialogLabels.deleteMessage}
+          cancelLabel={sessionDialogLabels.cancel}
+          okLabel={sessionDialogLabels.ok}
+          onCancel={() => setSessionDialog(null)}
+          onConfirmRename={(value) => {
+            if (!value) return;
+            void Promise.resolve(onRenameSession?.(sessionDialog.sessionId, value)).finally(() =>
+              setSessionDialog(null),
+            );
+          }}
+          onConfirmDelete={() => {
+            void Promise.resolve(onDeleteSession?.(sessionDialog.sessionId)).finally(() =>
+              setSessionDialog(null),
+            );
+          }}
+        />
+      ) : null}
 
       {/* 主区 */}
       <main className="pchat__main">

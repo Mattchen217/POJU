@@ -146,6 +146,95 @@
   color: #f87171;
 }
 
+.pchat__session-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 650;
+  background: transparent;
+}
+
+.pchat__session-dialog {
+  position: fixed;
+  z-index: 660;
+  width: min(320px, calc(100vw - 24px));
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(to bottom right, #221f33, #1a1824);
+  padding: 18px 20px 16px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  box-sizing: border-box;
+}
+
+.pchat__session-dialog__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #f3f1f8;
+}
+
+.pchat__session-dialog__desc {
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #a8a3b8;
+}
+
+.pchat__session-dialog__input {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.28);
+  padding: 11px 12px;
+  color: #fff;
+  font-size: 16px;
+  line-height: 1.5;
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.pchat__session-dialog__input:focus {
+  box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.45);
+}
+
+.pchat__session-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.pchat__session-dialog__cancel,
+.pchat__session-dialog__confirm {
+  border: none;
+  border-radius: 9px;
+  padding: 9px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.pchat__session-dialog__cancel {
+  background: rgba(255, 255, 255, 0.06);
+  color: #c9c5d6;
+}
+
+.pchat__session-dialog__confirm {
+  background: #7c3aed;
+  color: #fff;
+}
+
+.pchat__session-dialog__confirm.is-danger {
+  background: #dc2626;
+}
+
+.pchat__session-dialog__confirm:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 /* ---------- 主区 ---------- */
 .pchat__main {
   flex: 1 1 auto !important;
@@ -280,19 +369,6 @@
   width: 100%;
 }
 
-.pchat__ai-avatar-wrap {
-  flex: 0 0 auto;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  padding: 2px;
-  background: linear-gradient(90deg, #7c5cff, #b15cff);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-}
-
 .pchat__ai-avatar {
   flex: 0 0 auto;
   width: 40px !important;
@@ -302,7 +378,6 @@
   border: none !important;
   outline: none;
   box-shadow: none;
-  background: #14101c;
 }
 
 .pchat__ai {

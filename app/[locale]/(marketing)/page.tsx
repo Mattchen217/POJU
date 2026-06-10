@@ -11,6 +11,7 @@ import { GlassSection } from "@/components/ui/GlassSection";
 import { LANDING_ASSETS } from "@/lib/marketing/landing-assets";
 import { hasPublicFile } from "@/lib/marketing/has-public-file";
 import productCardIconG from "@/assets/icons/G.png";
+import productCardIconM from "@/assets/icons/match.png";
 import productCardIconP from "@/assets/icons/P.png";
 import productCardIconS from "@/assets/icons/S.png";
 
@@ -65,17 +66,6 @@ const productCardStyles = [
 function ProductCardIcon({ kind }: { kind: string }) {
   const motion = "transition-transform duration-500 group-hover:scale-105";
 
-  if (kind === "match") {
-    return (
-      <span
-        className={`relative inline-flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full sm:h-11 sm:w-11 bg-gradient-to-br from-rose-400/50 to-fuchsia-950/60 shadow-[0_0_22px_rgba(244,114,182,0.35)] ${motion}`}
-        aria-hidden
-      >
-        <span className="text-[15px] font-semibold leading-none text-white sm:text-base">M</span>
-      </span>
-    );
-  }
-
   const cfg =
     kind === "poju"
       ? {
@@ -89,11 +79,17 @@ function ProductCardIcon({ kind }: { kind: string }) {
             ring:
               "bg-gradient-to-br from-amber-400/35 via-orange-500/25 to-fuchsia-950/55 shadow-[0_0_22px_rgba(251,191,36,0.28)]",
           }
-        : {
-            src: productCardIconS,
-            ring:
-              "bg-gradient-to-br from-cyan-500/45 to-blue-950/60 shadow-[0_0_22px_rgba(34,211,238,0.35)]",
-          };
+        : kind === "match"
+          ? {
+              src: productCardIconM,
+              ring:
+                "bg-gradient-to-br from-rose-400/50 to-fuchsia-950/60 shadow-[0_0_22px_rgba(244,114,182,0.35)]",
+            }
+          : {
+              src: productCardIconS,
+              ring:
+                "bg-gradient-to-br from-cyan-500/45 to-blue-950/60 shadow-[0_0_22px_rgba(34,211,238,0.35)]",
+            };
 
   return (
     <span

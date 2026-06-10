@@ -791,6 +791,7 @@
       "voice_input_start": "开始语音输入",
       "voice_input_stop": "停止语音输入",
       "dialog_delete_session": "确定删除此会话？",
+      "dialog_delete_session_confirm": "从本设备永久删除该会话？此操作不可撤销。",
       "dialog_delete_session_bilingual": "从本设备永久删除该会话？此操作不可撤销。\n\nPermanently delete this session from this device? This cannot be undone.",
       "dialog_rename_session": "编辑会话标题",
       "dialog_rename_placeholder": "会话标题",
