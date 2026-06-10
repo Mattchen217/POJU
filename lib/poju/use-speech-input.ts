@@ -32,6 +32,14 @@ type UseSpeechInputOptions = {
   onPermissionDenied?: () => void;
 };
 
+function getSpeechRecognitionCtor(): (new () => BrowserSpeechRecognition) | null {
+  const w = window as Window & {
+    SpeechRecognition?: new () => BrowserSpeechRecognition;
+    webkitSpeechRecognition?: new () => BrowserSpeechRecognition;
+  };
+  return w.SpeechRecognition || w.webkitSpeechRecognition || null;
+}
+
 export function useSpeechInput(
   value: string,
   onChange: (value: string) => void,
@@ -67,7 +75,7 @@ export function useSpeechInput(
   }, []);
 
   const start = useCallback(() => {
-    const Ctor = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const Ctor = getSpeechRecognitionCtor();
     if (!Ctor) {
       options?.onUnsupported?.();
       return;
@@ -145,11 +153,4 @@ export function useSpeechInput(
   useEffect(() => () => stop(), [stop]);
 
   return { active, start, stop, toggle };
-}
-
-declare global {
-  interface Window {
-    SpeechRecognition?: new () => BrowserSpeechRecognition;
-    webkitSpeechRecognition?: new () => BrowserSpeechRecognition;
-  }
 }
