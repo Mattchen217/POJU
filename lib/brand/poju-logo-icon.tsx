@@ -32,6 +32,7 @@ export async function pojuLogoImageResponse(size: number) {
         style={{
           width: "100%",
           height: "100%",
+          display: "flex",
           position: "relative",
           overflow: "hidden",
           background: "transparent",
