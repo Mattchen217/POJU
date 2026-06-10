@@ -16,6 +16,10 @@
   --pchat-space-bottom: #0a0612;
   --pchat-space-sidebar: rgba(12, 7, 22, 0.82);
   --pchat-space-fade: rgba(10, 6, 18, 0.92);
+  --pchat-user-bubble-max-lines: 8;
+  --pchat-user-bubble-max-height: calc(
+    var(--pchat-body-size) * var(--pchat-line) * var(--pchat-user-bubble-max-lines) + 24px
+  );
   --pchat-scrollbar-size: 7px;
   --pchat-scrollbar-thumb: rgba(255, 255, 255, 0.16);
   --pchat-scrollbar-thumb-hover: rgba(255, 255, 255, 0.32);
@@ -377,6 +381,9 @@
   max-width: 70% !important;
   width: fit-content;
   align-self: flex-end;
+  max-height: var(--pchat-user-bubble-max-height);
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 .pchat__bubble {
   background: rgba(255, 255, 255, 0.07); border-radius: 18px;
@@ -586,27 +593,31 @@
 /* ---------- 滚动条(侧栏 / 输入框 / 聊天区) — 透明轨道、圆头竖条、毛玻璃 thumb ---------- */
 .pchat__sessions,
 .pchat__textarea,
-.pchat__scroll {
+.pchat__scroll,
+.pchat__msg--user .pchat__bubble {
   scrollbar-width: thin;
   scrollbar-color: var(--pchat-scrollbar-thumb) transparent;
 }
 
 .pchat__sessions::-webkit-scrollbar,
 .pchat__textarea::-webkit-scrollbar,
-.pchat__scroll::-webkit-scrollbar {
+.pchat__scroll::-webkit-scrollbar,
+.pchat__msg--user .pchat__bubble::-webkit-scrollbar {
   width: var(--pchat-scrollbar-size);
   height: var(--pchat-scrollbar-size);
 }
 
 .pchat__sessions::-webkit-scrollbar-track,
 .pchat__textarea::-webkit-scrollbar-track,
-.pchat__scroll::-webkit-scrollbar-track {
+.pchat__scroll::-webkit-scrollbar-track,
+.pchat__msg--user .pchat__bubble::-webkit-scrollbar-track {
   background: transparent;
 }
 
 .pchat__sessions::-webkit-scrollbar-thumb,
 .pchat__textarea::-webkit-scrollbar-thumb,
-.pchat__scroll::-webkit-scrollbar-thumb {
+.pchat__scroll::-webkit-scrollbar-thumb,
+.pchat__msg--user .pchat__bubble::-webkit-scrollbar-thumb {
   background: var(--pchat-scrollbar-thumb-glass);
   border-radius: 999px;
   border: 1px solid var(--pchat-scrollbar-thumb-border);
@@ -618,7 +629,8 @@
 
 .pchat__sessions::-webkit-scrollbar-thumb:hover,
 .pchat__textarea::-webkit-scrollbar-thumb:hover,
-.pchat__scroll::-webkit-scrollbar-thumb:hover {
+.pchat__scroll::-webkit-scrollbar-thumb:hover,
+.pchat__msg--user .pchat__bubble::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(
     180deg,
     rgba(255, 255, 255, 0.38) 0%,
@@ -630,15 +642,19 @@
 .pchat__sessions::-webkit-scrollbar-button,
 .pchat__textarea::-webkit-scrollbar-button,
 .pchat__scroll::-webkit-scrollbar-button,
+.pchat__msg--user .pchat__bubble::-webkit-scrollbar-button,
 .pchat__sessions::-webkit-scrollbar-button:single-button,
 .pchat__textarea::-webkit-scrollbar-button:single-button,
 .pchat__scroll::-webkit-scrollbar-button:single-button,
+.pchat__msg--user .pchat__bubble::-webkit-scrollbar-button:single-button,
 .pchat__sessions::-webkit-scrollbar-button:vertical:start:decrement,
 .pchat__sessions::-webkit-scrollbar-button:vertical:end:increment,
 .pchat__textarea::-webkit-scrollbar-button:vertical:start:decrement,
 .pchat__textarea::-webkit-scrollbar-button:vertical:end:increment,
 .pchat__scroll::-webkit-scrollbar-button:vertical:start:decrement,
-.pchat__scroll::-webkit-scrollbar-button:vertical:end:increment {
+.pchat__scroll::-webkit-scrollbar-button:vertical:end:increment,
+.pchat__msg--user .pchat__bubble::-webkit-scrollbar-button:vertical:start:decrement,
+.pchat__msg--user .pchat__bubble::-webkit-scrollbar-button:vertical:end:increment {
   display: none;
   width: 0;
   height: 0;
@@ -646,7 +662,8 @@
 
 .pchat__sessions::-webkit-scrollbar-corner,
 .pchat__textarea::-webkit-scrollbar-corner,
-.pchat__scroll::-webkit-scrollbar-corner {
+.pchat__scroll::-webkit-scrollbar-corner,
+.pchat__msg--user .pchat__bubble::-webkit-scrollbar-corner {
   background: transparent;
 }
 
@@ -857,7 +874,11 @@
     color: #fff; cursor: pointer; font-size: 18px;
   }
   .pchat__messages { max-width: 100% !important; padding: 20px 16px 140px; }
-  .pchat__msg--user .pchat__bubble { max-width: 70% !important; }
+  .pchat__msg--user .pchat__bubble {
+    max-width: 70% !important;
+    max-height: var(--pchat-user-bubble-max-height);
+    overflow-y: auto;
+  }
   .pchat__inputbar { padding: 12px 12px calc(12px + env(safe-area-inset-bottom)); }
   .pchat__inputwrap { max-width: 100% !important; }
   .pchat__inputbar .pchat__thinking { max-width: 100% !important; }
@@ -941,6 +962,9 @@
   max-width: 70% !important;
   width: fit-content;
   align-self: flex-end;
+  max-height: var(--pchat-user-bubble-max-height);
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .pchat__messages,
