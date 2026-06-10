@@ -799,8 +799,24 @@
   height: calc(56px + env(safe-area-inset-top));
   flex-basis: calc(56px + env(safe-area-inset-top));
 }
+
+/* PWA：正文字号 20px（PC 保持 25px）；聊天区高度扣除底栏，输入框贴 Tab 上方 */
+.pwa-mode .pchat {
+  --pchat-body-size: 20px;
+  height: calc(100dvh - var(--pwa-bottom-nav-height));
+  max-height: calc(100dvh - var(--pwa-bottom-nav-height));
+}
+
 .pwa-mode .pchat__inputbar {
-  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  position: sticky;
+  bottom: 0;
+  z-index: 90;
+  padding: 12px 12px 12px;
+  background: linear-gradient(transparent, #1a1523 40%, #1a1523 100%);
+}
+
+.pwa-mode .pchat__messages {
+  padding-bottom: 120px;
 }
 
 /* ── 甩开 Tailwind prose / text-sm / body 15px 等全局限制 ── */

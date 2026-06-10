@@ -86,8 +86,8 @@
 }
 
 /*
- * PWA Match hero — break bg out of hero shell so Spline is not boxed to stage rect.
- * Camera zoom + display scale are tuned in match-spline-scene.ts (PWA constants).
+ * PWA Match hero — full-bleed Spline (no boxed bg rect, no CSS scale shrink).
+ * Camera zoom in match-spline-scene.ts pulls back so both circles fit.
  */
 .pwa-mode .product-page--match .product-hero {
   overflow: visible;
@@ -97,17 +97,20 @@
   overflow: visible;
   padding-top: max(var(--space-6), env(safe-area-inset-top, 0px));
   padding-bottom: var(--space-4);
+  min-height: min(56vh, 480px);
 }
 
-.pwa-mode .product-page--match .product-hero__bg {
+.pwa-mode .product-page--match .product-hero__bg,
+.pwa-mode .product-page--match .product-hero__bg--match {
   position: absolute;
-  left: 50%;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  left: auto;
   right: auto;
-  top: -22%;
-  bottom: -32%;
-  width: 100vw;
-  height: auto;
-  transform: translateX(-50%);
+  top: auto;
+  bottom: auto;
+  transform: none;
   overflow: visible;
 }
 
@@ -116,7 +119,14 @@
 }
 
 .pwa-mode .match-hero-spline {
-  transform-origin: center 40%;
+  --match-spline-display-scale: 1;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: none;
+  transform-origin: center 42%;
+  opacity: 0.88;
 }
 
 /* Glyph — 圆形粒子场：缩小 zoom + 全屏层，避免方框裁切 */

@@ -195,7 +195,9 @@ export function GlyphDrawPage() {
     if (!profile || prepPhase === "loading") {
       return (
         <PreparingSplineShell blockInteraction>
-          <div className="preparing-spline-page__overlay session-prep-loading">{t("loading")}</div>
+          <div className="preparing-spline-page__overlay" role="status" aria-live="polite">
+            <p className="preparing-spline-page__status">{t("loading")}</p>
+          </div>
         </PreparingSplineShell>
       );
     }
@@ -203,7 +205,9 @@ export function GlyphDrawPage() {
     if (prepPhase === "cache") {
       return (
         <PreparingSplineShell blockInteraction>
-          <div className="preparing-spline-page__overlay session-prep-loading">{t("loading")}</div>
+          <div className="preparing-spline-page__overlay" role="status" aria-live="polite">
+            <p className="preparing-spline-page__status">{t("loading")}</p>
+          </div>
         </PreparingSplineShell>
       );
     }
