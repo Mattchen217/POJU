@@ -23,7 +23,7 @@ export async function pojuLogoImageResponse(size: number) {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#000000",
+          background: "transparent",
         }}
       >
         <img
