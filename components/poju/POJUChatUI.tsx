@@ -917,8 +917,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   }));
 
   const streaming = sending || confirmBusy;
-  const thinkingLine =
-    streaming && (liveThinkingLine ?? (thinkingMode ? t("thinking_wait") : undefined));
 
   return (
     <>
@@ -938,7 +936,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         messages={pojuMessages}
         isStreaming={streaming}
         streamingText={streamingReply ?? undefined}
-        thinkingText={thinkingLine || undefined}
+        thinkingMode={streaming ? thinkingMode : null}
+        thinkingLocale={locale}
+        liveThinkingLine={liveThinkingLine}
+        thinkingWaitLabel={t("thinking_wait")}
         inputPlaceholder={t("input_placeholder")}
         composerText={input}
         onComposerTextChange={setInput}

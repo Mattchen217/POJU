@@ -93,10 +93,16 @@
 
 /* POJU 消息:无气泡纯文本(不用 prose) */
 .pchat__ai {
-  font-size: 16px !important; line-height: 1.7; color: #e3e1ea;
-  max-width: none !important;   /* 关键:不被任何 65ch 限制 */
+  font-size: 16px !important;
+  line-height: 1.7 !important;
+  color: #e3e1ea;
+  max-width: none !important;
 }
-.pchat__ai p { margin: 0 0 16px !important; font-size: 16px !important; }
+.pchat__ai p {
+  margin: 0 0 1em !important;
+  font-size: 16px !important;
+}
+.pchat__ai p:last-child { margin-bottom: 0 !important; }
 .pchat__ai h3 {
   font-size: 17px; font-weight: 600; margin: 24px 0 12px; color: #fff;
 }
@@ -105,9 +111,18 @@
   letter-spacing: 0.1em; margin: 24px 0; text-transform: uppercase;
 }
 .pchat__msg-actions { display: flex; gap: 12px; margin-top: 8px; }
-.pchat__msg-actions button {
+.pchat__msg-actions .icon-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; padding: 0;
   background: none; border: none; color: #8a849c; cursor: pointer;
-  padding: 4px; display: flex; align-items: center; font-size: 15px;
+  border-radius: 8px;
+}
+.pchat__msg-actions .icon-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+}
+.pchat__msg-actions .icon-btn .material-symbols-outlined {
+  font-size: 20px; line-height: 1;
 }
 
 /* ---------- 输入框 ---------- */
@@ -117,18 +132,40 @@
 }
 .pchat__inputwrap {
   max-width: 960px !important; margin: 0 auto;
-  display: flex; align-items: flex-end; gap: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 24px; padding: 8px 12px;
+  display: flex; align-items: center; gap: 8px;
+  min-height: 56px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 26px; padding: 10px 14px;
 }
-.pchat__iconbtn {
-  flex: 0 0 auto; width: 36px; height: 36px;
-  display: flex; align-items: center; justify-content: center;  /* 图标居中 */
+.pchat__inputwrap .icon-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; padding: 0;
   background: none; border: none; color: #9d97ad; cursor: pointer;
-  border-radius: 50%; font-size: 16px;
+  border-radius: 50%; flex: 0 0 auto;
 }
-.pchat__iconbtn:hover { background: rgba(255, 255, 255, 0.08); }
+.pchat__inputwrap .icon-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+}
+.pchat__inputwrap .icon-btn .material-symbols-outlined {
+  font-size: 22px; line-height: 1;
+}
+.pchat__send-btn {
+  background: #7c3aed; color: #fff;
+}
+.pchat__send-btn:hover {
+  background: #6d28d9; color: #fff;
+}
+.pchat__send-btn:disabled {
+  opacity: 0.4; cursor: not-allowed;
+}
+.pchat__send-btn--stop {
+  background: #dc2626;
+}
+.pchat__send-btn--stop:hover {
+  background: #ef4444;
+}
 .pchat__textarea {
   flex: 1 1 auto; min-height: 40px; max-height: 200px;
   border: none; background: none; outline: none; resize: none;
@@ -136,13 +173,46 @@
   padding: 9px 4px; font-family: inherit;
 }
 .pchat__textarea::placeholder { color: #6f6982; }
-.pchat__send {
-  flex: 0 0 auto; width: 36px; height: 36px; border-radius: 50%;
-  background: #7c5cff; color: #fff; border: none;
-  display: flex; align-items: center; justify-content: center;  /* 图标居中 */
-  cursor: pointer; font-size: 16px;
+
+/* THINKING 流式(输入框上方) */
+.pchat__inputbar .pchat__thinking {
+  max-width: 960px !important;
+  margin: 0 auto 10px;
 }
-.pchat__send:disabled { opacity: 0.4; cursor: default; }
+.pchat__thinking-bar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px; border-radius: 12px;
+  background: rgba(212, 175, 55, 0.06);
+  border: 1px solid rgba(212, 175, 55, 0.15);
+  min-height: 44px;
+}
+.pchat__thinking-line {
+  margin: 0; font-size: 14px; font-style: italic; color: #d4af37;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pchat__thinking-spinner {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid rgba(212, 175, 55, 0.2);
+  border-top-color: #d4af37;
+  animation: pchat-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes pchat-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 回答流式(逐字 + 光标) */
+.pchat__streaming-line {
+  margin: 0; white-space: pre-wrap;
+  font-size: 16px !important; line-height: 1.7 !important;
+}
+.pchat__streaming-cursor {
+  margin-left: 2px; color: #a78bfa;
+  animation: pchat-blink 1s step-end infinite;
+}
+@keyframes pchat-blink {
+  50% { opacity: 0; }
+}
 
 /* 移动端抽屉遮罩 */
 .pchat__overlay { display: none; }
@@ -172,6 +242,8 @@
   .pchat__ai { line-height: 1.6; }
   .pchat__inputbar { padding: 12px 12px calc(12px + env(safe-area-inset-bottom)); }
   .pchat__inputwrap { max-width: 100% !important; }
+  .pchat__inputbar .pchat__thinking { max-width: 100% !important; }
+  .pchat__inputwrap .icon-btn { width: 44px; height: 44px; }
 }
 
 /* ============================================================

@@ -9,6 +9,10 @@
    ============================================================ */
 
 import { useState, useRef, useEffect, type JSX } from "react";
+import { ThinkingStream } from "@/components/poju/ThinkingStream";
+import { LiveThinkingTicker } from "@/components/poju/LiveThinkingTicker";
+import { StreamingAssistantBubble } from "@/components/poju/StreamingAssistantBubble";
+import type { ThinkingStreamMode } from "@/lib/poju/thinking-stream-mode";
 import "./poju-chat.css";
 
 /* ---------- 数据类型(若项目已有同义类型,用现有的)---------- */
@@ -32,7 +36,10 @@ export interface PojuChatProps {
   messages: PojuMessage[];
   isStreaming?: boolean;
   streamingText?: string; // 正在流式输出的正文(逐块更新)
-  thinkingText?: string;  // THINKING 单行滚动文本(可选)
+  thinkingMode?: ThinkingStreamMode | null;
+  thinkingLocale?: string;
+  liveThinkingLine?: string | null;
+  thinkingWaitLabel?: string;
   onSend: (text: string) => void;
   onNewSession: () => void;
   onSelectSession: (id: string) => void;
@@ -85,7 +92,8 @@ function renderAiContent(text: string): JSX.Element[] {
 export default function PojuChat(props: PojuChatProps) {
   const {
     sessions, currentSessionId, messages,
-    isStreaming, streamingText, thinkingText,
+    isStreaming, streamingText,
+    thinkingMode, thinkingLocale, liveThinkingLine, thinkingWaitLabel,
     onSend,
     onNewSession,
     onSelectSession,
@@ -120,7 +128,7 @@ export default function PojuChat(props: PojuChatProps) {
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTo({ top: el.scrollHeight });
-  }, [messages, streamingText, thinkingText]);
+  }, [messages, streamingText, thinkingMode, liveThinkingLine]);
 
   const send = () => {
     const t = textareaValue.trim();
@@ -206,11 +214,11 @@ export default function PojuChat(props: PojuChatProps) {
                   <div className="pchat__ai">
                     {renderAiContent(m.content)}
                     <div className="pchat__msg-actions">
-                      <button onClick={() => onCopy?.(m.content)} aria-label="Copy">
-                        ⧉
+                      <button type="button" className="icon-btn" onClick={() => onCopy?.(m.content)} aria-label="Copy">
+                        <span className="material-symbols-outlined">content_copy</span>
                       </button>
-                      <button onClick={() => onSpeak?.(m.content)} aria-label="Speak">
-                        🔊
+                      <button type="button" className="icon-btn" onClick={() => onSpeak?.(m.content)} aria-label="Speak">
+                        <span className="material-symbols-outlined">volume_up</span>
                       </button>
                     </div>
                   </div>
@@ -218,38 +226,25 @@ export default function PojuChat(props: PojuChatProps) {
               </div>
             ))}
 
-            {/* 流式:THINKING 单行滚动(看得到在输出,看不清内容) */}
-            {isStreaming && thinkingText && (
-              <div className="pchat__msg pchat__msg--ai">
-                <div
-                  style={{
-                    fontSize: 13,
-                    color: "#8a849c",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    opacity: 0.7,
-                  }}
-                >
-                  {thinkingText}
-                </div>
-              </div>
-            )}
-
-            {/* 流式:正式回答(逐块) */}
-            {isStreaming && streamingText && (
-              <div className="pchat__msg pchat__msg--ai">
-                <div className="pchat__ai">{renderAiContent(streamingText)}</div>
-              </div>
-            )}
+            {/* 流式:正式回答(逐字) */}
+            {isStreaming && streamingText ? (
+              <StreamingAssistantBubble content={streamingText} />
+            ) : null}
           </div>
         </div>
 
         {/* 输入框 */}
         <div className="pchat__inputbar">
+          {isStreaming && thinkingMode ? (
+            liveThinkingLine ? (
+              <LiveThinkingTicker line={liveThinkingLine} waitingLabel={thinkingWaitLabel} />
+            ) : (
+              <ThinkingStream mode={thinkingMode} locale={thinkingLocale ?? "en"} />
+            )
+          ) : null}
           <div className="pchat__inputwrap">
-            <button type="button" className="pchat__iconbtn" aria-label="Attach" onClick={onAttach}>
-              📎
+            <button type="button" className="icon-btn" aria-label="Attach" onClick={onAttach}>
+              <span className="material-symbols-outlined">attach_file</span>
             </button>
             <textarea
               ref={taRef}
@@ -257,6 +252,7 @@ export default function PojuChat(props: PojuChatProps) {
               rows={1}
               placeholder={inputPlaceholder ?? "Type your message..."}
               value={textareaValue}
+              disabled={isStreaming}
               onChange={(e) => setTextareaValue(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
@@ -265,12 +261,12 @@ export default function PojuChat(props: PojuChatProps) {
                 }
               }}
             />
-            <button type="button" className="pchat__iconbtn" aria-label="Voice" onClick={onVoice}>
-              🎤
+            <button type="button" className="icon-btn" aria-label="Voice" onClick={onVoice}>
+              <span className="material-symbols-outlined">mic</span>
             </button>
             <button
               type="button"
-              className="pchat__send"
+              className={`icon-btn pchat__send-btn${isStreaming ? " pchat__send-btn--stop" : ""}`}
               onClick={() => {
                 if (isStreaming && onStop) {
                   onStop();
@@ -281,7 +277,7 @@ export default function PojuChat(props: PojuChatProps) {
               disabled={!isStreaming && !textareaValue.trim()}
               aria-label={isStreaming ? "Stop" : "Send"}
             >
-              {isStreaming ? "■" : "↑"}
+              <span className="material-symbols-outlined">{isStreaming ? "stop" : "arrow_upward"}</span>
             </button>
           </div>
         </div>
