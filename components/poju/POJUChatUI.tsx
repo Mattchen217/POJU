@@ -45,6 +45,7 @@ import type { UserProfile } from "@/lib/profile/types";
 import { computeSituationContextFingerprint } from "@/lib/poju/situation-context-fingerprint";
 import { getCachedSituationAnalysis, requestSituationAnalysis } from "@/lib/llm/deepseek/situation-analysis";
 import { runFinalDeliveryForSession } from "@/lib/llm/pro/final-delivery";
+import { rewindSessionToUserMessage } from "@/lib/poju/session-rewind";
 
 /** Internal pipeline / phase UI — development only. */
 const POJU_DEV_DEBUG = process.env.NODE_ENV === "development";
@@ -271,6 +272,36 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     setLiveThinkingLine(null);
     setStreamingReply(null);
     setGenerationStopped(true);
+  }
+
+  async function handleEditUserMessage(messageId: string, currentContent: string) {
+    if (sending || confirmBusy || pipelineBusy) return;
+    const edited = await dialog.prompt(t("edit_message_prompt"), currentContent, t("edit_message_title"));
+    if (edited === null) return;
+    const newContent = edited.trim();
+    if (!newContent || newContent === currentContent.trim()) return;
+
+    const fullIndex = sessionRef.current.messages.findIndex(
+      (m) => m.timestamp === messageId && m.role === "user",
+    );
+    if (fullIndex < 0) return;
+
+    handleStopGeneration();
+
+    const rewound = rewindSessionToUserMessage(sessionRef.current, fullIndex, newContent);
+    const rejected = tryHandleRuleRejection(rewound, newContent, locale);
+    const nextSession = rejected ?? rewound;
+
+    onSessionUpdate(nextSession);
+    await savePOJUSession(nextSession);
+    setSummaryFormDismissed(false);
+    summaryIntroAppendedRef.current = false;
+    setBirthFlowStage(null);
+    setShowProfilePicker(false);
+
+    if (rejected) return;
+
+    await runUserTurn(rewound, newContent);
   }
 
   async function triggerOpening() {
@@ -914,6 +945,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     id: m.timestamp,
     role: m.role as "user" | "assistant",
     content: m.content,
+    editable: m.role === "user" && !m.is_rejected,
   }));
 
   const streaming = sending || confirmBusy;
@@ -953,6 +985,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         onVoice={toggleSpeechInput}
         onStop={handleStopGeneration}
         newSessionDisabled={creatingSession}
+        onEditMessage={(id, content) => void handleEditUserMessage(id, content)}
+        editDisabled={streaming}
+        editLabel={t("edit_message")}
       />
 
       <div

@@ -22,6 +22,7 @@ export interface PojuMessage {
   id: string;
   role: "user" | "assistant";
   content: string; // assistant 内容可能含 "### 标题" 和 "═══ 分隔 ═══"
+  editable?: boolean;
 }
 export interface PojuSession {
   id: string;
@@ -52,6 +53,9 @@ export interface PojuChatProps {
   onAttach?: () => void;
   onVoice?: () => void;
   onStop?: () => void;
+  onEditMessage?: (messageId: string, currentContent: string) => void;
+  editDisabled?: boolean;
+  editLabel?: string;
   newSessionDisabled?: boolean;
   composerText?: string;
   onComposerTextChange?: (value: string) => void;
@@ -127,6 +131,9 @@ export default function PojuChat(props: PojuChatProps) {
     onAttach,
     onVoice,
     onStop,
+    onEditMessage,
+    editDisabled,
+    editLabel,
     newSessionDisabled,
     composerText,
     onComposerTextChange,
@@ -232,7 +239,19 @@ export default function PojuChat(props: PojuChatProps) {
                 }`}
               >
                 {m.role === "user" ? (
-                  <div className="pchat__bubble">{m.content}</div>
+                  <>
+                    <div className="pchat__bubble">{m.content}</div>
+                    {m.editable && onEditMessage ? (
+                      <button
+                        type="button"
+                        className="pchat__msg-edit"
+                        disabled={editDisabled}
+                        onClick={() => onEditMessage(m.id, m.content)}
+                      >
+                        {editLabel ?? "Edit"}
+                      </button>
+                    ) : null}
+                  </>
                 ) : (
                   <AiReplyShell>
                     {renderAiContent(m.content)}
