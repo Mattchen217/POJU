@@ -10,6 +10,7 @@ import {
 } from "@/components/marketing/marketing-page-layout";
 import { MarketingSection } from "@/components/marketing/marketing-section";
 import { PojuSessionStarter } from "@/components/poju/poju-session-starter";
+import { ProductWhatIsSection } from "@/components/marketing/product-what-is-section";
 import { PojuProductHero } from "@/components/marketing/poju-product-hero";
 import { NotPWA } from "@/components/pwa/PWAConditional";
 import { PWAProductBeginCTA } from "@/components/pwa/PWAProductBeginCTA";
@@ -59,6 +60,8 @@ export default async function PojuProductPage() {
       <MarketingPageHero>
         <PojuProductHero copy={heroCopy} />
       </MarketingPageHero>
+
+      <ProductWhatIsSection product="poju" />
 
       <NotPWA>
       <MarketingPageSections>

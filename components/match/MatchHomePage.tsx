@@ -19,6 +19,7 @@ import {
   ProductMarketingHero,
 } from "@/components/marketing/product-marketing-hero";
 import { MarketingSection } from "@/components/marketing/marketing-section";
+import { ProductWhatIsSection } from "@/components/marketing/product-what-is-section";
 import { MatchSplineScene } from "@/components/match/MatchSplineScene";
 import { PojuToolHandoffBanner } from "@/components/poju/PojuToolHandoffBanner";
 import { useRouter } from "@/i18n/navigation";
@@ -161,6 +162,8 @@ export function MatchHomePage() {
           </ProductHeroActions>
         </ProductHeroContent>
       </ProductMarketingHero>
+
+      <ProductWhatIsSection product="match" />
 
       <PWAProductBeginCTA productId="match" price="$4.99" />
 

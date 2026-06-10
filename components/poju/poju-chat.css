@@ -870,3 +870,17 @@
 .pchat__inputbar .pchat__thinking {
   max-width: var(--pchat-read-max) !important;
 }
+
+/* PWA 输入框 — 独立字号，placeholder 单行不换行撑高 */
+.pwa-mode .pchat .pchat__inputwrap {
+  min-height: 52px;
+  padding: 8px 14px;
+}
+
+.pwa-mode .pchat .pchat__textarea {
+  font-size: 15px !important;
+  line-height: 1.25 !important;
+  min-height: 0;
+  max-height: 160px;
+  padding: 7px 2px;
+}

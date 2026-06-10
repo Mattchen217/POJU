@@ -14,6 +14,7 @@ import {
   MarketingPageSections,
 } from "@/components/marketing/marketing-page-layout";
 import { MarketingSection } from "@/components/marketing/marketing-section";
+import { ProductWhatIsSection } from "@/components/marketing/product-what-is-section";
 import { SyncroProductHero } from "@/components/marketing/syncro-product-hero";
 
 export const syncroMarketingMetadata: Metadata = {
@@ -48,6 +49,8 @@ export async function SyncroMarketingPage() {
           </div>
           <SyncroProductHero copy={heroCopy} />
         </MarketingPageHero>
+
+        <ProductWhatIsSection product="syncro" />
 
         <NotPWA>
           <MarketingPageSections>

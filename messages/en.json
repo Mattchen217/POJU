@@ -273,6 +273,11 @@
         "cta_primary": "Start your session — $9.99",
         "cta_secondary": "See how it works ↓"
       },
+      "what_is": {
+        "title": "What is POJU?",
+        "subtitle": "The Dialogue Agent",
+        "body": "POJU is a conversational AI cognitive partner grounded in the framework of Eastern Five Elements Theory (Wu Xing) and the I Ching. Translating over 2,000 years of systemic logic into a modern analytical model, POJU calculates your personalized spatiotemporal blueprint using your birth coordinates and true solar time. When faced with a core dilemma, POJU serves as your strategic decision dashboard, cross-referencing your elemental profile with your specific situation. The system provides deep behavioral analysis, strategic breakthroughs, and actionable environmental adjustment suggestions, accompanied by a 30-day continuous support loop to facilitate dynamic calibration as your situation evolves."
+      },
       "when_to_come": {
         "heading": "When to come to POJU.",
         "stuck": {
@@ -341,6 +346,11 @@
         "footnote": "First reading free. After that, $4.99 each.",
         "cta": "Try Glyph free",
         "cta_subline": "First free · then $4.99 per reading"
+      },
+      "what_is": {
+        "title": "What is Glyph?",
+        "subtitle": "The Metaphorical Mirror",
+        "body": "Glyph is an archetypal reflection tool rooted in the I Ching's 64-hexagram situational taxonomy and the Five Elements energy matrix. After mapping your foundational spatiotemporal blueprint, Glyph utilizes a random chaos matrix—aligned with the psychological principle of Synchronicity—via an immersive particle-explosion interface to align your subconscious state with one of 100 classical situational metaphors from Eastern philosophical texts. A deep LLM architecture then seamlessly deconstructs the connection between the metaphor and your personal profile. Glyph strictly avoids deterministic forecasting; instead, it serves as a structured cognitive mirror to transform internal chaos into clear, actionable self-awareness."
       },
       "five_winds": {
         "heading": "Five winds — five archetypal patterns",
@@ -422,6 +432,11 @@
         "sms_button": "Text me the link",
         "sms_body": "Open Syncro on your phone: __SYNCRO_URL__",
         "phone_placeholder": "Phone number"
+      },
+      "what_is": {
+        "title": "What is Syncro?",
+        "subtitle": "The Efficiency Map",
+        "body": "Syncro is a spatiotemporal efficiency matrix based on the directional logic of the I Ching and the Five Elements framework. By analyzing the energetic alignment between your personal profile and an upcoming task, Syncro charts a comprehensive efficiency map for the next 24 hours. Across 8 spatial directions, it decodes environmental resonance and friction, classifying them into Five Core Currents: Open Current (Move with confidence), Following Current (The way supports you, with effort), Stillwater (Pause and observe), Crosscurrent (Reconsider this direction or moment), and Undertow (Strong friction — recommended to adjust paths). Functioning as a high-precision spatiotemporal weather map, Syncro helps optimize the timing and orientation of crucial endeavors to minimize environmental friction."
       },
       "how_it_works": {
         "heading": "How Syncro works.",
@@ -1364,6 +1379,11 @@
       "cta_paid": "Start a Match — $4.99",
       "free_note": "First Match free. After that, $4.99 per reading.",
       "paid_note": "One reading. Complete report. 5 sections.",
+      "what_is": {
+        "title": "What is Match?",
+        "subtitle": "The Relational Matrix",
+        "body": "Match is an analytical relational matrix grounded in Eastern elemental polarity and Yin-Yang structural balancing. Resolutely rejecting fatalistic compatibility verdicts and fortune-telling, Match deep-dives into the subtle systemic interplay between two independent spatiotemporal blueprints. Applied to specific real-world relationship dynamics—such as core communication styles, professional partnerships, or long-term domestic cooperation—Match maps out mutual resonance zones and potential friction nodes. It operates as a rational coaching framework designed to provide tools for mutual empathy, enabling both parties to build sustainable, constructive structural alignment."
+      },
       "feature_two_charts_title": "Two-Chart Analysis",
       "feature_two_charts_desc": "Deep individual readings of both people, then a layered analysis of how you meet.",
       "feature_any_relationship_title": "Any Relationship Type",

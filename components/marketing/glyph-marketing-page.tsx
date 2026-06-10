@@ -10,6 +10,7 @@ import {
   MarketingPageSections,
 } from "@/components/marketing/marketing-page-layout";
 import { MarketingSection } from "@/components/marketing/marketing-section";
+import { ProductWhatIsSection } from "@/components/marketing/product-what-is-section";
 import { OracleProductHero } from "@/components/marketing/oracle-product-hero";
 import { cn } from "@/lib/utils/classnames";
 import { WindCardWithParticles, type WindCardParticleKey } from "@/components/oracle/wind-cards";
@@ -122,6 +123,8 @@ export async function GlyphMarketingPage() {
           }
         />
       </MarketingPageHero>
+
+      <ProductWhatIsSection product="glyph" />
 
       <NotPWA>
       <MarketingPageSections>
