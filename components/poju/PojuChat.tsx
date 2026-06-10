@@ -9,13 +9,16 @@
    ============================================================ */
 
 import { useState, useRef, useEffect, type JSX, type ReactNode } from "react";
-import Image from "next/image";
-import pojuAvatar from "@/assets/icons/P.png";
+import { AssistantMessageActions } from "@/components/poju/AssistantMessageActions";
+import { PojuAiAvatar } from "@/components/poju/PojuAiAvatar";
 import { ThinkingStream } from "@/components/poju/ThinkingStream";
 import { LiveThinkingTicker } from "@/components/poju/LiveThinkingTicker";
 import { StreamingAssistantBubble } from "@/components/poju/StreamingAssistantBubble";
+import { EditMessageDialog } from "@/components/poju/EditMessageDialog";
 import type { ThinkingStreamMode } from "@/lib/poju/thinking-stream-mode";
 import "./poju-chat.css";
+
+export type PojuAttachKind = "image" | "document" | "pdf";
 
 /* ---------- 数据类型(若项目已有同义类型,用现有的)---------- */
 export interface PojuMessage {
@@ -46,21 +49,42 @@ export interface PojuChatProps {
   onSend: (text: string) => void;
   onNewSession: () => void;
   onSelectSession: (id: string) => void;
+  onRenameSession?: (id: string) => void;
   onDeleteSession?: (id: string) => void;
-  onCopy?: (text: string) => void;
-  onSpeak?: (text: string) => void;
+  renameLabel?: string;
+  deleteLabel?: string;
+  sessionMenuLabel?: string;
   inputPlaceholder?: string;
-  onAttach?: () => void;
+  onAttachPick?: (kind: PojuAttachKind) => void;
+  attachMenuLabels?: {
+    document: string;
+    image: string;
+    pdf: string;
+  };
+  attachMenuLabel?: string;
   onVoice?: () => void;
+  voiceActive?: boolean;
+  voiceStartLabel?: string;
+  voiceStopLabel?: string;
   onStop?: () => void;
   onEditMessage?: (messageId: string, currentContent: string) => void;
   editDisabled?: boolean;
   editLabel?: string;
   onClose?: () => void;
   inlineNotice?: ReactNode;
+  editDialog?: {
+    title: string;
+    description: string;
+    defaultValue: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    onConfirm: (value: string) => void;
+    onCancel: () => void;
+  } | null;
   newSessionDisabled?: boolean;
   composerText?: string;
   onComposerTextChange?: (value: string) => void;
+  composerHasAttachment?: boolean;
 }
 
 /* ---------- AI 文本渲染(不用 Tailwind prose,避免 65ch 限制)----------
@@ -97,18 +121,6 @@ function renderAiContent(text: string): JSX.Element[] {
   return out;
 }
 
-function PojuAiAvatar() {
-  return (
-    <Image
-      src={pojuAvatar}
-      alt=""
-      width={40}
-      height={40}
-      className="pchat__ai-avatar"
-    />
-  );
-}
-
 function AiReplyShell({ children }: { children: ReactNode }) {
   return (
     <div className="pchat__ai-row">
@@ -126,21 +138,30 @@ export default function PojuChat(props: PojuChatProps) {
     onSend,
     onNewSession,
     onSelectSession,
+    onRenameSession,
     onDeleteSession,
-    onCopy,
-    onSpeak,
+    renameLabel,
+    deleteLabel,
+    sessionMenuLabel,
     inputPlaceholder,
-    onAttach,
+    onAttachPick,
+    attachMenuLabels,
+    attachMenuLabel,
     onVoice,
+    voiceActive,
+    voiceStartLabel,
+    voiceStopLabel,
     onStop,
     onEditMessage,
     editDisabled,
     editLabel,
     onClose,
     inlineNotice,
+    editDialog,
     newSessionDisabled,
     composerText,
     onComposerTextChange,
+    composerHasAttachment,
   } = props;
 
   const [input, setInput] = useState("");
@@ -148,6 +169,8 @@ export default function PojuChat(props: PojuChatProps) {
   const setTextareaValue = onComposerTextChange ?? setInput;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [openMenuSessionId, setOpenMenuSessionId] = useState<string | null>(null);
+  const [attachMenuOpen, setAttachMenuOpen] = useState(false);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -164,6 +187,34 @@ export default function PojuChat(props: PojuChatProps) {
     const el = scrollRef.current;
     if (el) el.scrollTo({ top: el.scrollHeight });
   }, [messages, streamingText, thinkingMode, liveThinkingLine, inlineNotice]);
+
+  useEffect(() => {
+    if (!openMenuSessionId) return;
+    const close = () => setOpenMenuSessionId(null);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    document.addEventListener("click", close);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("click", close);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [openMenuSessionId]);
+
+  useEffect(() => {
+    if (!attachMenuOpen) return;
+    const close = () => setAttachMenuOpen(false);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    document.addEventListener("click", close);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("click", close);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [attachMenuOpen]);
 
   const send = () => {
     const t = textareaValue.trim();
@@ -193,28 +244,68 @@ export default function PojuChat(props: PojuChatProps) {
         <div className="pchat__sessions-label">Sessions</div>
         <div className="pchat__sessions">
           {sessions.map((s) => (
-            <div
-              key={s.id}
-              className={`pchat__session ${
-                s.id === currentSessionId ? "is-active" : ""
-              }`}
-              onClick={() => {
-                onSelectSession(s.id);
-                setSidebarOpen(false);
-              }}
-            >
-              <span className="pchat__session-title">{s.title}</span>
-              {onDeleteSession && (
-                <button
-                  className="pchat__session-del"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDeleteSession(s.id);
-                  }}
+            <div key={s.id} className="pchat__session-wrap">
+              <div
+                className={`pchat__session ${
+                  s.id === currentSessionId ? "is-active" : ""
+                }`}
+                onClick={() => {
+                  onSelectSession(s.id);
+                  setSidebarOpen(false);
+                  setOpenMenuSessionId(null);
+                }}
+              >
+                <span className="pchat__session-title">{s.title}</span>
+                {(onRenameSession || onDeleteSession) && (
+                  <button
+                    type="button"
+                    className="pchat__session-menu-btn"
+                    aria-label={sessionMenuLabel ?? "Session menu"}
+                    aria-expanded={openMenuSessionId === s.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenMenuSessionId((prev) => (prev === s.id ? null : s.id));
+                    }}
+                  >
+                    <span className="material-symbols-outlined">more_horiz</span>
+                  </button>
+                )}
+              </div>
+              {openMenuSessionId === s.id && (onRenameSession || onDeleteSession) ? (
+                <div
+                  className="pchat__session-menu"
+                  role="menu"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  ⋯
-                </button>
-              )}
+                  {onRenameSession ? (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setOpenMenuSessionId(null);
+                        onRenameSession(s.id);
+                      }}
+                    >
+                      <span className="material-symbols-outlined">edit</span>
+                      {renameLabel ?? "Rename"}
+                    </button>
+                  ) : null}
+                  {onDeleteSession ? (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="is-danger"
+                      onClick={() => {
+                        setOpenMenuSessionId(null);
+                        onDeleteSession(s.id);
+                      }}
+                    >
+                      <span className="material-symbols-outlined">delete</span>
+                      {deleteLabel ?? "Delete"}
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           ))}
         </div>
@@ -278,14 +369,7 @@ export default function PojuChat(props: PojuChatProps) {
                 ) : (
                   <AiReplyShell>
                     {renderAiContent(m.content)}
-                    <div className="pchat__msg-actions">
-                      <button type="button" className="icon-btn" onClick={() => onCopy?.(m.content)} aria-label="Copy">
-                        <span className="material-symbols-outlined">content_copy</span>
-                      </button>
-                      <button type="button" className="icon-btn" onClick={() => onSpeak?.(m.content)} aria-label="Speak">
-                        <span className="material-symbols-outlined">volume_up</span>
-                      </button>
-                    </div>
+                    <AssistantMessageActions content={m.content} />
                   </AiReplyShell>
                 )}
               </div>
@@ -310,9 +394,63 @@ export default function PojuChat(props: PojuChatProps) {
             )
           ) : null}
           <div className="pchat__inputwrap">
-            <button type="button" className="icon-btn" aria-label="Attach" onClick={onAttach}>
-              <span className="material-symbols-outlined">attach_file</span>
-            </button>
+            {onAttachPick ? (
+              <div className="pchat__attach-wrap">
+                <button
+                  type="button"
+                  className="icon-btn pchat__composer-btn"
+                  aria-label={attachMenuLabel ?? "Attach"}
+                  aria-expanded={attachMenuOpen}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setAttachMenuOpen((v) => !v);
+                  }}
+                >
+                  <span className="material-symbols-outlined">attach_file</span>
+                </button>
+                {attachMenuOpen ? (
+                  <div
+                    className="pchat__attach-menu"
+                    role="menu"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setAttachMenuOpen(false);
+                        onAttachPick("document");
+                      }}
+                    >
+                      <span className="material-symbols-outlined">description</span>
+                      {attachMenuLabels?.document ?? "Document"}
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setAttachMenuOpen(false);
+                        onAttachPick("image");
+                      }}
+                    >
+                      <span className="material-symbols-outlined">image</span>
+                      {attachMenuLabels?.image ?? "Image"}
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setAttachMenuOpen(false);
+                        onAttachPick("pdf");
+                      }}
+                    >
+                      <span className="material-symbols-outlined">picture_as_pdf</span>
+                      {attachMenuLabels?.pdf ?? "PDF"}
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
             <textarea
               ref={taRef}
               className="pchat__textarea"
@@ -328,12 +466,18 @@ export default function PojuChat(props: PojuChatProps) {
                 }
               }}
             />
-            <button type="button" className="icon-btn" aria-label="Voice" onClick={onVoice}>
-              <span className="material-symbols-outlined">mic</span>
+            <button
+              type="button"
+              className={`icon-btn pchat__composer-btn${voiceActive ? " pchat__composer-btn--voice-active" : ""}`}
+              aria-label={voiceActive ? (voiceStopLabel ?? "Stop voice input") : (voiceStartLabel ?? "Start voice input")}
+              aria-pressed={voiceActive}
+              onClick={onVoice}
+            >
+              <span className="material-symbols-outlined">{voiceActive ? "mic_off" : "mic"}</span>
             </button>
             <button
               type="button"
-              className={`icon-btn pchat__send-btn${isStreaming ? " pchat__send-btn--stop" : ""}`}
+              className={`icon-btn pchat__composer-btn pchat__send-btn${isStreaming ? " pchat__send-btn--stop" : ""}`}
               onClick={() => {
                 if (isStreaming && onStop) {
                   onStop();
@@ -341,13 +485,15 @@ export default function PojuChat(props: PojuChatProps) {
                 }
                 send();
               }}
-              disabled={!isStreaming && !textareaValue.trim()}
+              disabled={!isStreaming && !textareaValue.trim() && !composerHasAttachment}
               aria-label={isStreaming ? "Stop" : "Send"}
             >
               <span className="material-symbols-outlined">{isStreaming ? "stop" : "arrow_upward"}</span>
             </button>
           </div>
         </div>
+
+        {editDialog ? <EditMessageDialog open {...editDialog} /> : null}
       </main>
     </div>
   );

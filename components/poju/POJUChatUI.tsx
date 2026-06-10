@@ -5,7 +5,6 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { BirthProfileFlow, type BirthProfileFlowStage } from "@/components/poju/BirthProfileFlow";
 import PojuChat from "@/components/poju/PojuChat";
-import { EditMessageDialog } from "@/components/poju/EditMessageDialog";
 import { useAppDialog } from "@/components/ui/app-dialog";
 import { ContextSummaryEditor } from "@/components/poju/ContextSummaryEditor";
 import type { ContextSummary } from "@/lib/poju/agent-state";
@@ -47,6 +46,7 @@ import { computeSituationContextFingerprint } from "@/lib/poju/situation-context
 import { getCachedSituationAnalysis, requestSituationAnalysis } from "@/lib/llm/deepseek/situation-analysis";
 import { runFinalDeliveryForSession } from "@/lib/llm/pro/final-delivery";
 import { rewindSessionToUserMessage } from "@/lib/poju/session-rewind";
+import { useSpeechInput } from "@/lib/poju/use-speech-input";
 
 /** Internal pipeline / phase UI — development only. */
 const POJU_DEV_DEBUG = process.env.NODE_ENV === "development";
@@ -66,35 +66,11 @@ type SessionListRow = {
   last_interaction_at: Date;
 };
 
-type ComposerImage = {
+type ComposerAttachment = {
   name: string;
-  dataUrl: string;
+  kind: "image" | "document" | "pdf";
+  dataUrl?: string;
 };
-
-type SpeechRecognition = {
-  lang: string;
-  interimResults: boolean;
-  continuous: boolean;
-  onresult: ((event: SpeechRecognitionEvent) => void) | null;
-  onerror: (() => void) | null;
-  onend: (() => void) | null;
-  start: () => void;
-  stop: () => void;
-};
-
-type SpeechRecognitionEvent = {
-  results: ArrayLike<{
-    isFinal: boolean;
-    0: { transcript: string };
-  }>;
-};
-
-declare global {
-  interface Window {
-    SpeechRecognition?: new () => SpeechRecognition;
-    webkitSpeechRecognition?: new () => SpeechRecognition;
-  }
-}
 
 export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const t = useTranslations("poju.chat");
@@ -108,8 +84,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const [extending, setExtending] = useState(false);
   const [ending, setEnding] = useState(false);
   const [sessionRows, setSessionRows] = useState<SessionListRow[]>([]);
-  const [recognizing, setRecognizing] = useState(false);
-  const [composerImage, setComposerImage] = useState<ComposerImage | null>(null);
+  const [composerAttachment, setComposerAttachment] = useState<ComposerAttachment | null>(null);
   const [creatingSession, setCreatingSession] = useState(false);
   const [situationFp, setSituationFp] = useState<string | null>(null);
   const [situationBusy, setSituationBusy] = useState(false);
@@ -130,12 +105,23 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const openingInitRef = useRef(false);
   const toolResumeInitRef = useRef<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
-  const speechRef = useRef<SpeechRecognition | null>(null);
+  const documentFileRef = useRef<HTMLInputElement | null>(null);
+  const pdfFileRef = useRef<HTMLInputElement | null>(null);
   const sessionRef = useRef(session);
   sessionRef.current = session;
   const sendAbortRef = useRef<AbortController | null>(null);
   const sendGenerationRef = useRef(0);
   const router = useRouter();
+  const speechLang = locale.startsWith("zh") ? "zh-CN" : locale.startsWith("fr") ? "fr-FR" : "en-US";
+  const {
+    active: voiceActive,
+    stop: stopVoiceInput,
+    toggle: toggleVoiceInput,
+  } = useSpeechInput(input, setInput, {
+    lang: speechLang,
+    onUnsupported: () => void dialog.alert(t("dialog_speech_unsupported")),
+    onPermissionDenied: () => void dialog.alert(t("dialog_speech_denied")),
+  });
 
   const scrollChatToBottom = useCallback((_behavior: ScrollBehavior = "smooth") => {
     /* PojuChat scrolls internally */
@@ -359,7 +345,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   async function runUserTurn(
     baseSession: POJUSessionState,
     userMessage: string,
-    errorRestore?: { rollbackSession: POJUSessionState; typed: string; image: ComposerImage | null },
+    errorRestore?: { rollbackSession: POJUSessionState; typed: string; attachment: ComposerAttachment | null },
   ) {
     const gen = ++sendGenerationRef.current;
     const ac = new AbortController();
@@ -442,7 +428,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       if (errorRestore) {
         onSessionUpdate(errorRestore.rollbackSession);
         setInput(errorRestore.typed);
-        if (errorRestore.image) setComposerImage(errorRestore.image);
+        if (errorRestore.attachment) setComposerAttachment(errorRestore.attachment);
       }
       await dialog.alert(t("dialog_connection_error"));
     } finally {
@@ -457,24 +443,25 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   }
 
   async function handlePojuSend(text: string) {
+    stopVoiceInput();
     const typed = text.trim();
-    if (!typed || sending) return;
-    const imageNote = composerImage ? `[Image attached: ${composerImage.name}]` : "";
-    const userMessage = typed || imageNote;
+    if ((!typed && !composerAttachment) || sending) return;
+    const attachNote = buildAttachmentNote(composerAttachment);
+    const userMessage = typed || attachNote;
     const baseSession = sessionRef.current;
 
     const rejected = tryHandleRuleRejection(baseSession, userMessage, locale);
     if (rejected) {
       setInput("");
-      setComposerImage(null);
+      setComposerAttachment(null);
       onSessionUpdate(rejected);
       await savePOJUSession(rejected);
       return;
     }
 
-    const savedComposerImage = composerImage;
+    const savedComposerAttachment = composerAttachment;
     setInput("");
-    setComposerImage(null);
+    setComposerAttachment(null);
 
     const nowIso = new Date().toISOString();
     const optimisticUser: POJUMessage = {
@@ -491,12 +478,37 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     await runUserTurn(withUser, userMessage, {
       rollbackSession: baseSession,
       typed,
-      image: savedComposerImage,
+      attachment: savedComposerAttachment,
     });
   }
 
+  async function handleRenameSession(targetSessionId: string) {
+    const row = sessionRows.find((s) => s.session_id === targetSessionId);
+    const nextQuestion = await dialog.prompt(
+      t("dialog_rename_session"),
+      row?.original_question ?? "",
+      t("dialog_rename_placeholder"),
+    );
+    if (!nextQuestion) return;
+    const value = nextQuestion.trim();
+    if (!value) return;
+
+    await getPojuDb().pojuSessionRecords.update(targetSessionId, { original_question: value });
+    const state = await loadPOJUSession(targetSessionId);
+    if (state) {
+      state.original_question = value;
+      await savePOJUSession(state);
+      if (targetSessionId === sessionRef.current.session_id) {
+        onSessionUpdate({ ...state });
+      }
+    }
+    setSessionRows((prev) =>
+      prev.map((x) => (x.session_id === targetSessionId ? { ...x, original_question: value } : x)),
+    );
+  }
+
   async function handleDeleteSession(targetSessionId: string) {
-    if (!(await dialog.confirm(t("dialog_delete_session")))) return;
+    if (!(await dialog.confirm(t("dialog_delete_session_bilingual")))) return;
     await getPojuDb().pojuSessionRecords.delete(targetSessionId);
     setSessionRows((prev) => prev.filter((x) => x.session_id !== targetSessionId));
     if (targetSessionId === sessionRef.current.session_id) {
@@ -504,39 +516,23 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     }
   }
 
-  function toggleSpeechInput() {
-    const Ctor = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!Ctor) {
-      void dialog.alert(t("dialog_speech_unsupported"));
-      return;
-    }
-    if (recognizing && speechRef.current) {
-      speechRef.current.stop();
-      return;
-    }
-    const rec = new Ctor();
-    rec.lang = navigator.language || "en-US";
-    rec.interimResults = true;
-    rec.continuous = false;
-    rec.onresult = (evt) => {
-      let acc = "";
-      for (let i = 0; i < evt.results.length; i += 1) acc += evt.results[i][0].transcript;
-      setInput(acc);
-    };
-    rec.onend = () => setRecognizing(false);
-    rec.onerror = () => setRecognizing(false);
-    speechRef.current = rec;
-    setRecognizing(true);
-    rec.start();
-  }
-
-  async function handleAttachFile(file: File) {
+  function handleAttachImageFile(file: File) {
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = String(reader.result || "");
-      setComposerImage({ name: file.name, dataUrl });
+      setComposerAttachment({ name: file.name, kind: "image", dataUrl });
     };
     reader.readAsDataURL(file);
+  }
+
+  function handleAttachNamedFile(file: File, kind: "document" | "pdf") {
+    setComposerAttachment({ name: file.name, kind });
+  }
+
+  function handleAttachPick(kind: "image" | "document" | "pdf") {
+    if (kind === "image") fileRef.current?.click();
+    else if (kind === "document") documentFileRef.current?.click();
+    else pdfFileRef.current?.click();
   }
 
   async function handleCreateNewSession() {
@@ -966,7 +962,30 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         hidden
         onChange={(e) => {
           const f = e.target.files?.[0];
-          if (f) void handleAttachFile(f);
+          if (f) handleAttachImageFile(f);
+          e.target.value = "";
+        }}
+      />
+      <input
+        ref={documentFileRef}
+        type="file"
+        accept=".doc,.docx,.txt,.md,.rtf,.odt,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+        hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) handleAttachNamedFile(f, "document");
+          e.target.value = "";
+        }}
+      />
+      <input
+        ref={pdfFileRef}
+        type="file"
+        accept="application/pdf,.pdf"
+        hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) handleAttachNamedFile(f, "pdf");
+          e.target.value = "";
         }}
       />
       <PojuChat
@@ -982,14 +1001,26 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         inputPlaceholder={t("input_placeholder")}
         composerText={input}
         onComposerTextChange={setInput}
+        composerHasAttachment={composerAttachment !== null}
         onSend={(text) => void handlePojuSend(text)}
         onNewSession={() => void handleCreateNewSession()}
         onSelectSession={(id) => router.push(`/poju/session/${id}`)}
+        onRenameSession={(id) => void handleRenameSession(id)}
         onDeleteSession={(id) => void handleDeleteSession(id)}
-        onCopy={(text) => void copyChatText(text)}
-        onSpeak={(text) => speakChatText(text)}
-        onAttach={() => fileRef.current?.click()}
-        onVoice={toggleSpeechInput}
+        renameLabel={t("session_menu_rename")}
+        deleteLabel={t("session_menu_delete")}
+        sessionMenuLabel={t("session_menu_label")}
+        onAttachPick={handleAttachPick}
+        attachMenuLabel={t("attach_menu_label")}
+        attachMenuLabels={{
+          document: t("attach_menu_document"),
+          image: t("attach_menu_image"),
+          pdf: t("attach_menu_pdf"),
+        }}
+        onVoice={toggleVoiceInput}
+        voiceActive={voiceActive}
+        voiceStartLabel={t("voice_input_start")}
+        voiceStopLabel={t("voice_input_stop")}
         onStop={handleStopGeneration}
         newSessionDisabled={creatingSession}
         onEditMessage={(id, content) => void handleEditUserMessage(id, content)}
@@ -1008,17 +1039,19 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
             />
           ) : null
         }
-      />
-
-      <EditMessageDialog
-        open={editDialog !== null}
-        title={t("edit_message_title")}
-        description={t("edit_message_prompt")}
-        defaultValue={editDialog?.content ?? ""}
-        confirmLabel="OK"
-        cancelLabel="Cancel"
-        onConfirm={(value) => void confirmEditUserMessage(value)}
-        onCancel={() => setEditDialog(null)}
+        editDialog={
+          editDialog
+            ? {
+                title: t("edit_message_title"),
+                description: t("edit_message_prompt"),
+                defaultValue: editDialog.content,
+                confirmLabel: "OK",
+                cancelLabel: "Cancel",
+                onConfirm: (value) => void confirmEditUserMessage(value),
+                onCancel: () => setEditDialog(null),
+              }
+            : null
+        }
       />
 
       <div
@@ -1028,7 +1061,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           left: "50%",
           transform: "translateX(-50%)",
           zIndex: 50,
-          width: "min(1100px, calc(100vw - 32px))",
+          width: "min(1080px, calc(100vw - 32px))",
         }}
       >
         <SessionExpiryNotice session={session} extending={extending} onExtend={() => void handleExtendSession()} />
@@ -1090,39 +1123,19 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   );
 }
 
-async function copyChatText(text: string): Promise<void> {
-  if (!text) return;
-  try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-      return;
-    }
-  } catch {
-    /* fallback below */
-  }
-  const textarea = document.createElement("textarea");
-  textarea.value = text;
-  textarea.setAttribute("readonly", "");
-  textarea.style.position = "fixed";
-  textarea.style.left = "-9999px";
-  document.body.appendChild(textarea);
-  textarea.select();
-  document.execCommand("copy");
-  document.body.removeChild(textarea);
-}
-
-function speakChatText(text: string): void {
-  if (typeof window === "undefined" || !text.trim()) return;
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text.trim());
-  utterance.lang = /[\u4e00-\u9fff]/.test(text) ? "zh-CN" : "en-US";
-  window.speechSynthesis.speak(utterance);
+function buildAttachmentNote(attachment: ComposerAttachment | null): string {
+  if (!attachment) return "";
+  if (attachment.kind === "image") return `[Image attached: ${attachment.name}]`;
+  if (attachment.kind === "pdf") return `[PDF attached: ${attachment.name}]`;
+  return `[Document attached: ${attachment.name}]`;
 }
 
 function topicFromFirstUserMessage(raw: string): string {
   const t = raw.trim();
   if (!t) return "";
   if (t.startsWith("[Image attached:")) return "Image";
+  if (t.startsWith("[PDF attached:")) return "PDF";
+  if (t.startsWith("[Document attached:")) return "Document";
   const max = 72;
   return t.length > max ? `${t.slice(0, max - 1)}…` : t;
 }

@@ -93,7 +93,7 @@ export function AppDialogProvider({ children }: { children: ReactNode }) {
                 {request.title}
               </h2>
             ) : null}
-            <p id={descId} className={`text-sm leading-relaxed text-on-surface-variant ${request.title ? "mt-3" : ""}`}>
+            <p id={descId} className={`whitespace-pre-line text-sm leading-relaxed text-on-surface-variant ${request.title ? "mt-3" : ""}`}>
               {request.message}
             </p>
             {isPrompt ? (

@@ -6,7 +6,8 @@
 .pchat {
   /* 布局尺度 — 改这里即可,与 Claude 桌面阅读感对齐 */
   --pchat-sidebar-width: 500px;
-  --pchat-read-max: min(1100px, calc(100vw - var(--pchat-sidebar-width) - 64px));
+  --pchat-content-width: 1080px;
+  --pchat-read-max: min(var(--pchat-content-width), calc(100vw - var(--pchat-sidebar-width) - 64px));
   --pchat-body-size: 25px;
   --pchat-sidebar-font: 20px;
   --pchat-line: 1.75;
@@ -61,16 +62,88 @@
   display: flex; align-items: center; justify-content: space-between;
   padding: 12px 14px; border-radius: 10px;
   font-size: var(--pchat-sidebar-font) !important; line-height: 1.5;
-  color: #c9c5d6; cursor: pointer; margin-bottom: 4px;
+  color: #c9c5d6; cursor: pointer;
 }
 .pchat__session:hover { background: rgba(255, 255, 255, 0.05); }
 .pchat__session.is-active { background: rgba(255, 255, 255, 0.09); color: #fff; }
 .pchat__session-title {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;
 }
-.pchat__session-del {
-  background: none; border: none; color: #8a849c; cursor: pointer;
-  padding: 2px 6px; font-size: var(--pchat-sidebar-font) !important; flex: 0 0 auto;
+
+.pchat__session-wrap {
+  position: relative;
+  margin-bottom: 4px;
+}
+
+.pchat__session-menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: none;
+  padding: 0;
+  color: #8a849c;
+  cursor: pointer;
+  border-radius: 8px;
+  flex: 0 0 auto;
+}
+
+.pchat__session-menu-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.pchat__session-menu-btn .material-symbols-outlined {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.pchat__session-menu {
+  position: absolute;
+  top: calc(100% - 2px);
+  right: 10px;
+  z-index: 30;
+  min-width: 168px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(20, 16, 28, 0.96);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+.pchat__session-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 10px 12px;
+  text-align: left;
+  font-size: var(--pchat-sidebar-font) !important;
+  color: rgba(255, 255, 255, 0.78);
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.pchat__session-menu button:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.pchat__session-menu button .material-symbols-outlined {
+  font-size: 18px;
+  line-height: 1;
+  color: #9d97ad;
+}
+
+.pchat__session-menu button.is-danger {
+  color: #fca5a5;
+}
+
+.pchat__session-menu button.is-danger .material-symbols-outlined {
+  color: #f87171;
 }
 
 /* ---------- 主区 ---------- */
@@ -144,12 +217,17 @@
   padding: 32px 28px 160px;
   box-sizing: border-box;
 }
-.pchat__msg { margin-bottom: 44px; }
+.pchat__msg { margin-bottom: 48px; }
 
 .pchat__msg--user {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
+  margin-bottom: 56px;
+}
+
+.pchat__msg--user + .pchat__msg--ai {
+  padding-top: 32px;
 }
 .pchat__msg--user .pchat__bubble {
   max-width: 70% !important;
@@ -201,6 +279,20 @@
   gap: 14px;
   width: 100%;
 }
+
+.pchat__ai-avatar-wrap {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  padding: 2px;
+  background: linear-gradient(90deg, #7c5cff, #b15cff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
 .pchat__ai-avatar {
   flex: 0 0 auto;
   width: 40px !important;
@@ -210,6 +302,7 @@
   border: none !important;
   outline: none;
   box-shadow: none;
+  background: #14101c;
 }
 
 .pchat__ai {
@@ -249,6 +342,11 @@
   font-size: 22px; line-height: 1;
 }
 
+.pchat__msg-actions .icon-btn.is-active {
+  color: #c4b5fd;
+  background: rgba(124, 92, 255, 0.14);
+}
+
 /* ---------- 输入框 ---------- */
 .pchat__inputbar {
   position: sticky; bottom: 0; padding: 16px 28px 24px;
@@ -257,31 +355,93 @@
 .pchat__inputwrap {
   max-width: var(--pchat-read-max) !important;
   margin: 0 auto;
-  display: flex; align-items: center; gap: 8px;
-  min-height: 56px;
+  display: flex; align-items: center; gap: 10px;
+  min-height: 64px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 26px; padding: 10px 14px;
+  border-radius: 28px; padding: 10px 16px;
   box-sizing: border-box;
 }
-.pchat__inputwrap .icon-btn {
+
+.pchat__attach-wrap {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.pchat__attach-menu {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 0;
+  z-index: 40;
+  min-width: 188px;
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(20, 16, 28, 0.96);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+.pchat__attach-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 11px 12px;
+  text-align: left;
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.82);
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.pchat__attach-menu button:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.pchat__attach-menu button .material-symbols-outlined {
+  font-size: 20px;
+  line-height: 1;
+  color: #9d97ad;
+}
+
+.pchat__inputwrap .icon-btn,
+.pchat__inputwrap .pchat__composer-btn {
   display: flex; align-items: center; justify-content: center;
-  width: 36px; height: 36px; padding: 0;
+  width: 44px; height: 44px; padding: 0;
   background: none; border: none; color: #9d97ad; cursor: pointer;
   border-radius: 50%; flex: 0 0 auto;
 }
-.pchat__inputwrap .icon-btn:hover {
+.pchat__inputwrap .icon-btn:hover,
+.pchat__inputwrap .pchat__composer-btn:hover {
   background: rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.85);
 }
-.pchat__inputwrap .icon-btn .material-symbols-outlined {
-  font-size: 22px; line-height: 1;
+.pchat__inputwrap .icon-btn .material-symbols-outlined,
+.pchat__inputwrap .pchat__composer-btn .material-symbols-outlined {
+  font-size: 26px; line-height: 1;
 }
 .pchat__send-btn { background: #7c3aed; color: #fff; }
 .pchat__send-btn:hover { background: #6d28d9; color: #fff; }
 .pchat__send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.pchat__send-btn--stop { background: #dc2626; }
+.pchat__send-btn--stop { background: #dc2626; color: #fff; }
 .pchat__send-btn--stop:hover { background: #ef4444; }
+
+.pchat__composer-btn--voice-active {
+  color: #f87171 !important;
+  background: rgba(248, 113, 113, 0.16) !important;
+}
+
+.pchat__composer-btn--voice-active .material-symbols-outlined {
+  animation: pchat-voice-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pchat-voice-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
 .pchat__textarea {
   flex: 1 1 auto; min-height: 40px; max-height: 200px;
   border: none; background: none; outline: none; resize: none;
@@ -378,25 +538,31 @@
   margin: 8px 0 24px;
 }
 
-/* ---------- 编辑消息弹窗 ---------- */
-.pchat-edit-overlay {
+/* ---------- 编辑消息弹窗(与主聊天列同轴居中) ---------- */
+.pchat .pchat-edit-overlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: var(--pchat-sidebar-width);
   z-index: 600;
   display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(0, 0, 0, 0.7);
-  padding: 24px;
+  padding: 24px 28px;
+  box-sizing: border-box;
 }
 
 .pchat-edit-panel {
-  width: min(960px, calc(100vw - 48px));
+  width: min(var(--pchat-content-width), 100%);
+  max-width: var(--pchat-read-max);
   border: none;
   border-radius: 16px;
   background: linear-gradient(to bottom right, #221f33, #1a1824);
   padding: 28px 32px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  box-sizing: border-box;
 }
 
 .pchat-edit-panel__title {
@@ -509,6 +675,10 @@
     pointer-events: none;
     border-right: none;
   }
+
+  .pchat--sidebar-collapsed .pchat-edit-overlay {
+    left: 0;
+  }
 }
 
 @media (max-width: 767px) {
@@ -537,7 +707,16 @@
   .pchat__inputbar { padding: 12px 12px calc(12px + env(safe-area-inset-bottom)); }
   .pchat__inputwrap { max-width: 100% !important; }
   .pchat__inputbar .pchat__thinking { max-width: 100% !important; }
-  .pchat__inputwrap .icon-btn { width: 44px; height: 44px; }
+  .pchat__inputwrap .icon-btn,
+  .pchat__inputwrap .pchat__composer-btn { width: 48px; height: 48px; }
+  .pchat__inputwrap .icon-btn .material-symbols-outlined,
+  .pchat__inputwrap .pchat__composer-btn .material-symbols-outlined {
+    font-size: 28px;
+  }
+
+  .pchat .pchat-edit-overlay {
+    left: 0;
+  }
 }
 
 .pwa-mode .pchat__header {
@@ -564,7 +743,8 @@
 .pchat__sidebar .pchat__sessions-label,
 .pchat__sidebar .pchat__session,
 .pchat__sidebar .pchat__session-title,
-.pchat__sidebar .pchat__session-del,
+.pchat__sidebar .pchat__session-menu-btn,
+.pchat__sidebar .pchat__session-menu button,
 .pchat__sidebar .pchat__newbtn {
   font-size: var(--pchat-sidebar-font) !important;
 }

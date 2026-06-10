@@ -107,7 +107,7 @@ export function AssistantMessageActions({ content }: AssistantMessageActionsProp
         aria-label={speaking ? t("message_action_stop_reading") : t("message_action_read_aloud")}
         title={speaking ? t("message_action_stop_reading") : t("message_action_read_aloud")}
       >
-        <span className="material-symbols-outlined">{speaking ? "stop" : "volume_up"}</span>
+        <span className="material-symbols-outlined">{speaking ? "volume_off" : "volume_up"}</span>
       </button>
     </div>
   );

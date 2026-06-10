@@ -1,7 +1,6 @@
 "use client";
 
-import Image from "next/image";
-import pojuAvatar from "@/assets/icons/P.png";
+import { PojuAiAvatar } from "@/components/poju/PojuAiAvatar";
 
 type StreamingAssistantBubbleProps = {
   content: string;
@@ -13,13 +12,7 @@ export function StreamingAssistantBubble({ content }: StreamingAssistantBubblePr
   return (
     <div className="pchat__msg pchat__msg--ai">
       <div className="pchat__ai-row">
-        <Image
-          src={pojuAvatar}
-          alt=""
-          width={40}
-          height={40}
-          className="pchat__ai-avatar"
-        />
+        <PojuAiAvatar />
         <div className="pchat__ai">
           <p className="pchat__streaming-line">
             {content}
