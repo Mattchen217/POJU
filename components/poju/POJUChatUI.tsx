@@ -962,7 +962,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           left: "50%",
           transform: "translateX(-50%)",
           zIndex: 50,
-          width: "min(960px, calc(100vw - 32px))",
+          width: "min(1100px, calc(100vw - 32px))",
         }}
       >
         <SessionExpiryNotice session={session} extending={extending} onExtend={() => void handleExtendSession()} />
@@ -977,7 +977,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
             left: "50%",
             transform: "translateX(-50%)",
             zIndex: 55,
-            width: "min(960px, calc(100vw - 32px))",
+            width: "min(1100px, calc(100vw - 32px))",
           }}
         >
           <OffTopicAction

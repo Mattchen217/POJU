@@ -1,10 +1,16 @@
 /* ============================================================
-   poju-chat.css  —  POJU 聊天页样式(Claude 规格)
-   作用域:全部挂在 .pchat 根类下,不依赖任何旧 CSS / Tailwind prose
-   关键:消息容器 960px(PC)、字号 16px,均加 !important 甩开残留旧规则
+   poju-chat.css  —  POJU 聊天页样式(Claude 阅读尺度)
+   作用域:.pchat 根类 + 末尾 override,甩开 Tailwind / body 15px
    ============================================================ */
 
 .pchat {
+  /* 布局尺度 — 改这里即可,与 Claude 桌面阅读感对齐 */
+  --pchat-sidebar-width: 360px;
+  --pchat-read-max: min(1100px, calc(100vw - var(--pchat-sidebar-width) - 64px));
+  --pchat-body-size: 17px;
+  --pchat-sidebar-font: 16px;
+  --pchat-line: 1.75;
+
   display: flex;
   height: 100vh;
   height: 100dvh;
@@ -12,39 +18,46 @@
   color: #e8e6ee;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
                "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: var(--pchat-body-size) !important;
+  line-height: var(--pchat-line);
+  -webkit-text-size-adjust: 100%;
   overflow: hidden;
 }
 
-/* ---------- 侧栏(PC:固定 280px)---------- */
+/* ---------- 侧栏(PC)---------- */
 .pchat__sidebar {
-  width: 280px !important;
-  flex: 0 0 280px !important;
+  width: var(--pchat-sidebar-width) !important;
+  flex: 0 0 var(--pchat-sidebar-width) !important;
+  min-width: var(--pchat-sidebar-width) !important;
+  max-width: var(--pchat-sidebar-width) !important;
   background: #14101c;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  font-size: var(--pchat-sidebar-font) !important;
 }
 .pchat__brand {
   display: flex; align-items: center; gap: 8px;
-  padding: 16px; font-size: 16px; font-weight: 600; color: #fff;
+  padding: 18px 20px; font-size: 18px !important; font-weight: 600; color: #fff;
 }
 .pchat__newbtn {
-  margin: 0 12px 12px; height: 44px; border-radius: 12px;
+  margin: 0 16px 14px; height: 48px; border-radius: 12px;
   background: linear-gradient(90deg, #7c5cff, #b15cff);
-  color: #fff; font-size: 14px; font-weight: 600; border: none;
+  color: #fff; font-size: var(--pchat-sidebar-font) !important; font-weight: 600; border: none;
   cursor: pointer; display: flex; align-items: center;
-  justify-content: space-between; padding: 0 14px;
+  justify-content: space-between; padding: 0 16px;
 }
 .pchat__sessions-label {
-  padding: 8px 16px; font-size: 12px; letter-spacing: 0.08em;
+  padding: 8px 20px; font-size: 14px !important; letter-spacing: 0.08em;
   color: #8a849c; text-transform: uppercase;
 }
-.pchat__sessions { flex: 1; overflow-y: auto; padding: 0 8px 16px; }
+.pchat__sessions { flex: 1; overflow-y: auto; padding: 0 12px 16px; }
 .pchat__session {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 12px; border-radius: 10px; font-size: 14px;
-  color: #c9c5d6; cursor: pointer; margin-bottom: 2px;
+  padding: 12px 14px; border-radius: 10px;
+  font-size: var(--pchat-sidebar-font) !important; line-height: 1.5;
+  color: #c9c5d6; cursor: pointer; margin-bottom: 4px;
 }
 .pchat__session:hover { background: rgba(255, 255, 255, 0.05); }
 .pchat__session.is-active { background: rgba(255, 255, 255, 0.09); color: #fff; }
@@ -53,19 +66,19 @@
 }
 .pchat__session-del {
   background: none; border: none; color: #8a849c; cursor: pointer;
-  padding: 2px 6px; font-size: 14px; flex: 0 0 auto;
+  padding: 2px 6px; font-size: 18px !important; flex: 0 0 auto;
 }
 
 /* ---------- 主区 ---------- */
 .pchat__main {
-  flex: 1 1 auto !important;   /* 占满侧栏外全部,不靠右 */
-  min-width: 0 !important;     /* 防止 flex 子项溢出 */
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
   display: flex; flex-direction: column;
 }
 .pchat__header {
   height: 56px; flex: 0 0 56px; display: flex; align-items: center;
   justify-content: center; border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  font-size: 14px; color: #b5b0c4; padding: 0 16px; gap: 8px;
+  font-size: var(--pchat-sidebar-font) !important; color: #b5b0c4; padding: 0 20px; gap: 8px;
 }
 .pchat__header-title {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -75,39 +88,41 @@
 /* ---------- 消息滚动区 ---------- */
 .pchat__scroll { flex: 1 1 auto; overflow-y: auto; }
 .pchat__messages {
-  max-width: 960px !important;   /* PC 宽屏内容列(比 Claude 768 宽 25%) */
+  max-width: var(--pchat-read-max) !important;
   width: 100% !important;
-  margin: 0 auto !important;     /* 真居中 */
-  padding: 32px 24px 160px;
+  margin: 0 auto !important;
+  padding: 32px 28px 160px;
+  box-sizing: border-box;
 }
 .pchat__msg { margin-bottom: 28px; }
 
-/* 用户消息:右对齐浅气泡 */
 .pchat__msg--user { display: flex; justify-content: flex-end; }
 .pchat__bubble {
   background: rgba(255, 255, 255, 0.07); border-radius: 18px;
-  padding: 12px 16px; max-width: 80%;
-  font-size: 16px !important; line-height: 1.6; color: #ececec;
+  padding: 12px 18px; max-width: 85%;
+  font-size: var(--pchat-body-size) !important;
+  line-height: var(--pchat-line) !important; color: #ececec;
   white-space: pre-wrap; word-break: break-word;
 }
 
-/* POJU 消息:无气泡纯文本(不用 prose) */
 .pchat__ai {
-  font-size: 16px !important;
-  line-height: 1.7 !important;
+  font-size: var(--pchat-body-size) !important;
+  line-height: var(--pchat-line) !important;
   color: #e3e1ea;
   max-width: none !important;
 }
 .pchat__ai p {
   margin: 0 0 1em !important;
-  font-size: 16px !important;
+  font-size: var(--pchat-body-size) !important;
+  line-height: var(--pchat-line) !important;
 }
 .pchat__ai p:last-child { margin-bottom: 0 !important; }
 .pchat__ai h3 {
-  font-size: 17px; font-weight: 600; margin: 24px 0 12px; color: #fff;
+  font-size: calc(var(--pchat-body-size) + 2px) !important;
+  font-weight: 600; margin: 24px 0 12px; color: #fff;
 }
 .pchat__divider {
-  text-align: center; color: #8a849c; font-size: 13px;
+  text-align: center; color: #8a849c; font-size: 14px !important;
   letter-spacing: 0.1em; margin: 24px 0; text-transform: uppercase;
 }
 .pchat__msg-actions { display: flex; gap: 12px; margin-top: 8px; }
@@ -122,21 +137,23 @@
   color: rgba(255, 255, 255, 0.85);
 }
 .pchat__msg-actions .icon-btn .material-symbols-outlined {
-  font-size: 20px; line-height: 1;
+  font-size: 22px; line-height: 1;
 }
 
 /* ---------- 输入框 ---------- */
 .pchat__inputbar {
-  position: sticky; bottom: 0; padding: 16px 24px 24px;
+  position: sticky; bottom: 0; padding: 16px 28px 24px;
   background: linear-gradient(transparent, #1a1523 35%);
 }
 .pchat__inputwrap {
-  max-width: 960px !important; margin: 0 auto;
+  max-width: var(--pchat-read-max) !important;
+  margin: 0 auto;
   display: flex; align-items: center; gap: 8px;
   min-height: 56px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 26px; padding: 10px 14px;
+  box-sizing: border-box;
 }
 .pchat__inputwrap .icon-btn {
   display: flex; align-items: center; justify-content: center;
@@ -151,32 +168,23 @@
 .pchat__inputwrap .icon-btn .material-symbols-outlined {
   font-size: 22px; line-height: 1;
 }
-.pchat__send-btn {
-  background: #7c3aed; color: #fff;
-}
-.pchat__send-btn:hover {
-  background: #6d28d9; color: #fff;
-}
-.pchat__send-btn:disabled {
-  opacity: 0.4; cursor: not-allowed;
-}
-.pchat__send-btn--stop {
-  background: #dc2626;
-}
-.pchat__send-btn--stop:hover {
-  background: #ef4444;
-}
+.pchat__send-btn { background: #7c3aed; color: #fff; }
+.pchat__send-btn:hover { background: #6d28d9; color: #fff; }
+.pchat__send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.pchat__send-btn--stop { background: #dc2626; }
+.pchat__send-btn--stop:hover { background: #ef4444; }
 .pchat__textarea {
   flex: 1 1 auto; min-height: 40px; max-height: 200px;
   border: none; background: none; outline: none; resize: none;
-  color: #fff; font-size: 16px !important; line-height: 1.5;
+  color: #fff;
+  font-size: var(--pchat-body-size) !important;
+  line-height: var(--pchat-line) !important;
   padding: 9px 4px; font-family: inherit;
 }
 .pchat__textarea::placeholder { color: #6f6982; }
 
-/* THINKING 流式(输入框上方) */
 .pchat__inputbar .pchat__thinking {
-  max-width: 960px !important;
+  max-width: var(--pchat-read-max) !important;
   margin: 0 auto 10px;
 }
 .pchat__thinking-bar {
@@ -187,7 +195,7 @@
   min-height: 44px;
 }
 .pchat__thinking-line {
-  margin: 0; font-size: 14px; font-style: italic; color: #d4af37;
+  margin: 0; font-size: 15px !important; font-style: italic; color: #d4af37;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .pchat__thinking-spinner {
@@ -197,30 +205,26 @@
   animation: pchat-spin 0.8s linear infinite;
   flex-shrink: 0;
 }
-@keyframes pchat-spin {
-  to { transform: rotate(360deg); }
-}
+@keyframes pchat-spin { to { transform: rotate(360deg); } }
 
-/* 回答流式(逐字 + 光标) */
 .pchat__streaming-line {
   margin: 0; white-space: pre-wrap;
-  font-size: 16px !important; line-height: 1.7 !important;
+  font-size: var(--pchat-body-size) !important;
+  line-height: var(--pchat-line) !important;
 }
 .pchat__streaming-cursor {
   margin-left: 2px; color: #a78bfa;
   animation: pchat-blink 1s step-end infinite;
 }
-@keyframes pchat-blink {
-  50% { opacity: 0; }
-}
+@keyframes pchat-blink { 50% { opacity: 0; } }
 
-/* 移动端抽屉遮罩 */
 .pchat__overlay { display: none; }
 
-/* ============================================================
-   手机端(<768px):抽屉侧栏 + 全宽 + 贴底输入框
-   ============================================================ */
 @media (max-width: 767px) {
+  .pchat {
+    --pchat-sidebar-width: 300px;
+    --pchat-read-max: 100%;
+  }
   .pchat__sidebar {
     position: fixed; top: 0; left: 0; bottom: 0; z-index: 50;
     transform: translateX(-100%); transition: transform 0.25s ease;
@@ -238,17 +242,13 @@
     color: #fff; cursor: pointer; font-size: 18px;
   }
   .pchat__messages { max-width: 100% !important; padding: 20px 16px 140px; }
-  .pchat__bubble { max-width: 85%; }
-  .pchat__ai { line-height: 1.6; }
+  .pchat__bubble { max-width: 88%; }
   .pchat__inputbar { padding: 12px 12px calc(12px + env(safe-area-inset-bottom)); }
   .pchat__inputwrap { max-width: 100% !important; }
   .pchat__inputbar .pchat__thinking { max-width: 100% !important; }
   .pchat__inputwrap .icon-btn { width: 44px; height: 44px; }
 }
 
-/* ============================================================
-   PWA 已安装模式:顶部/底部安全区(在手机布局上叠加)
-   ============================================================ */
 .pwa-mode .pchat__header {
   padding-top: env(safe-area-inset-top);
   height: calc(56px + env(safe-area-inset-top));
@@ -256,4 +256,38 @@
 }
 .pwa-mode .pchat__inputbar {
   padding-bottom: calc(24px + env(safe-area-inset-bottom));
+}
+
+/* ── 甩开 Tailwind prose / text-sm / body 15px 等全局限制 ── */
+.pchat .prose,
+.pchat [class*="prose"],
+.pchat [class*="text-sm"],
+.pchat [class*="text-xs"] {
+  max-width: none !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
+
+.pchat__sidebar,
+.pchat__sidebar .pchat__session,
+.pchat__sidebar .pchat__session-title,
+.pchat__sidebar .pchat__newbtn {
+  font-size: var(--pchat-sidebar-font) !important;
+}
+
+.pchat__ai,
+.pchat__ai p,
+.pchat__ai h3,
+.pchat__bubble,
+.pchat__streaming-line,
+.pchat__textarea {
+  font-size: var(--pchat-body-size) !important;
+  line-height: var(--pchat-line) !important;
+  max-width: none !important;
+}
+
+.pchat__messages,
+.pchat__inputwrap,
+.pchat__inputbar .pchat__thinking {
+  max-width: var(--pchat-read-max) !important;
 }

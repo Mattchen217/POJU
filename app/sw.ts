@@ -14,5 +14,5 @@ installSerwist({
   skipWaiting: true,
   clientsClaim: true,
   /** Bump cache namespace when precache contents change (e.g. poju-chat.css 960px). */
-  cacheId: "pojulife-chat960-v1",
+  cacheId: "pojulife-chat-layout-v2",
 });
