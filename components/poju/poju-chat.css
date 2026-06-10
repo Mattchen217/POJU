@@ -4,21 +4,38 @@
    ============================================================ */
 
 .pchat {
-  /* 布局尺度 — 改这里即可,与 Claude 桌面阅读感对齐 */
-  --pchat-sidebar-width: 500px;
+  /* 布局尺度 */
+  --pchat-sidebar-width: 400px;
   --pchat-content-width: 1080px;
   --pchat-read-max: min(var(--pchat-content-width), calc(100vw - var(--pchat-sidebar-width) - 64px));
-  --pchat-body-size: 25px;
+  --pchat-body-size: 20px;
   --pchat-sidebar-font: 20px;
   --pchat-line: 1.75;
-  --pchat-scrollbar-size: 6px;
-  --pchat-scrollbar-thumb: rgba(196, 200, 210, 0.42);
-  --pchat-scrollbar-thumb-hover: rgba(210, 214, 224, 0.62);
+  --pchat-space-top: #24143c;
+  --pchat-space-mid: #12081f;
+  --pchat-space-bottom: #0a0612;
+  --pchat-space-sidebar: rgba(12, 7, 22, 0.82);
+  --pchat-space-fade: rgba(10, 6, 18, 0.92);
+  --pchat-scrollbar-size: 7px;
+  --pchat-scrollbar-thumb: rgba(255, 255, 255, 0.16);
+  --pchat-scrollbar-thumb-hover: rgba(255, 255, 255, 0.32);
+  --pchat-scrollbar-thumb-glass: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.28) 0%,
+    rgba(255, 255, 255, 0.1) 100%
+  );
+  --pchat-scrollbar-thumb-border: rgba(255, 255, 255, 0.1);
 
   display: flex;
+  position: relative;
+  isolation: isolate;
   height: 100vh;
   height: 100dvh;
-  background: #1a1523;
+  background-color: var(--pchat-space-bottom);
+  background-image:
+    radial-gradient(ellipse 90% 70% at 12% 8%, rgba(74, 36, 118, 0.35) 0%, transparent 58%),
+    radial-gradient(ellipse 85% 75% at 88% 95%, rgba(0, 0, 0, 0.55) 0%, transparent 52%),
+    linear-gradient(148deg, var(--pchat-space-top) 0%, var(--pchat-space-mid) 45%, var(--pchat-space-bottom) 100%);
   color: #e8e6ee;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
                "PingFang SC", "Microsoft YaHei", sans-serif;
@@ -28,19 +45,53 @@
   overflow: hidden;
 }
 
+/* 星空层 — 固定平铺，滚动时内容动、星空不动 */
+.pchat::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.9;
+  background-image: url("/pchat-starfield.svg");
+  background-size: 600px 600px;
+  background-repeat: repeat;
+  background-attachment: local;
+}
+
+.pchat::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(255, 255, 255, 0.04) 2px,
+    rgba(255, 255, 255, 0.04) 3px
+  );
+}
+
 /* ---------- 侧栏(PC)---------- */
 .pchat__sidebar {
   width: var(--pchat-sidebar-width) !important;
   flex: 0 0 var(--pchat-sidebar-width) !important;
   min-width: var(--pchat-sidebar-width) !important;
   max-width: var(--pchat-sidebar-width) !important;
-  background: #14101c;
+  background: var(--pchat-space-sidebar);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border-right: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   font-size: var(--pchat-sidebar-font) !important;
   transition: width 0.25s ease, min-width 0.25s ease, max-width 0.25s ease, opacity 0.2s ease;
+  position: relative;
+  z-index: 1;
 }
 .pchat__brand {
   display: flex; align-items: center; gap: 8px;
@@ -239,7 +290,11 @@
 .pchat__main {
   flex: 1 1 auto !important;
   min-width: 0 !important;
-  display: flex; flex-direction: column;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
+  background: transparent;
 }
 .pchat__header {
   height: 56px;
@@ -425,7 +480,7 @@
 /* ---------- 输入框 ---------- */
 .pchat__inputbar {
   position: sticky; bottom: 0; padding: 16px 28px 24px;
-  background: linear-gradient(transparent, #1a1523 35%);
+  background: linear-gradient(transparent, rgba(10, 6, 18, 0.55) 28%, var(--pchat-space-fade) 100%);
 }
 .pchat__inputwrap {
   max-width: var(--pchat-read-max) !important;
@@ -528,46 +583,70 @@
 }
 .pchat__textarea::placeholder { color: #6f6982; }
 
-/* ---------- 滚动条(侧栏列表 / 输入框) — 细圆角、透明轨道 ---------- */
+/* ---------- 滚动条(侧栏 / 输入框 / 聊天区) — 透明轨道、圆头竖条、毛玻璃 thumb ---------- */
 .pchat__sessions,
-.pchat__textarea {
+.pchat__textarea,
+.pchat__scroll {
   scrollbar-width: thin;
   scrollbar-color: var(--pchat-scrollbar-thumb) transparent;
 }
 
 .pchat__sessions::-webkit-scrollbar,
-.pchat__textarea::-webkit-scrollbar {
+.pchat__textarea::-webkit-scrollbar,
+.pchat__scroll::-webkit-scrollbar {
   width: var(--pchat-scrollbar-size);
   height: var(--pchat-scrollbar-size);
 }
 
 .pchat__sessions::-webkit-scrollbar-track,
-.pchat__textarea::-webkit-scrollbar-track {
+.pchat__textarea::-webkit-scrollbar-track,
+.pchat__scroll::-webkit-scrollbar-track {
   background: transparent;
 }
 
 .pchat__sessions::-webkit-scrollbar-thumb,
-.pchat__textarea::-webkit-scrollbar-thumb {
-  background-color: var(--pchat-scrollbar-thumb);
+.pchat__textarea::-webkit-scrollbar-thumb,
+.pchat__scroll::-webkit-scrollbar-thumb {
+  background: var(--pchat-scrollbar-thumb-glass);
   border-radius: 999px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
+  border: 1px solid var(--pchat-scrollbar-thumb-border);
+  backdrop-filter: blur(12px) saturate(1.35);
+  -webkit-backdrop-filter: blur(12px) saturate(1.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  min-height: 48px;
 }
 
 .pchat__sessions::-webkit-scrollbar-thumb:hover,
-.pchat__textarea::-webkit-scrollbar-thumb:hover {
-  background-color: var(--pchat-scrollbar-thumb-hover);
+.pchat__textarea::-webkit-scrollbar-thumb:hover,
+.pchat__scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.38) 0%,
+    rgba(255, 255, 255, 0.18) 100%
+  );
+  border-color: rgba(255, 255, 255, 0.16);
 }
 
 .pchat__sessions::-webkit-scrollbar-button,
-.pchat__textarea::-webkit-scrollbar-button {
+.pchat__textarea::-webkit-scrollbar-button,
+.pchat__scroll::-webkit-scrollbar-button,
+.pchat__sessions::-webkit-scrollbar-button:single-button,
+.pchat__textarea::-webkit-scrollbar-button:single-button,
+.pchat__scroll::-webkit-scrollbar-button:single-button,
+.pchat__sessions::-webkit-scrollbar-button:vertical:start:decrement,
+.pchat__sessions::-webkit-scrollbar-button:vertical:end:increment,
+.pchat__textarea::-webkit-scrollbar-button:vertical:start:decrement,
+.pchat__textarea::-webkit-scrollbar-button:vertical:end:increment,
+.pchat__scroll::-webkit-scrollbar-button:vertical:start:decrement,
+.pchat__scroll::-webkit-scrollbar-button:vertical:end:increment {
   display: none;
   width: 0;
   height: 0;
 }
 
 .pchat__sessions::-webkit-scrollbar-corner,
-.pchat__textarea::-webkit-scrollbar-corner {
+.pchat__textarea::-webkit-scrollbar-corner,
+.pchat__scroll::-webkit-scrollbar-corner {
   background: transparent;
 }
 
@@ -800,9 +879,8 @@
   flex-basis: calc(56px + env(safe-area-inset-top));
 }
 
-/* PWA：正文字号 20px（PC 保持 25px）；聊天区高度扣除底栏，输入框贴 Tab 上方 */
+/* PWA：聊天区高度扣除底栏，输入框贴 Tab 上方 */
 .pwa-mode .pchat {
-  --pchat-body-size: 20px;
   height: calc(100dvh - var(--pwa-bottom-nav-height));
   max-height: calc(100dvh - var(--pwa-bottom-nav-height));
 }
@@ -812,7 +890,7 @@
   bottom: 0;
   z-index: 90;
   padding: 12px 12px 12px;
-  background: linear-gradient(transparent, #1a1523 40%, #1a1523 100%);
+  background: linear-gradient(transparent, rgba(10, 6, 18, 0.72) 38%, var(--pchat-space-fade) 100%);
 }
 
 .pwa-mode .pchat__messages {
