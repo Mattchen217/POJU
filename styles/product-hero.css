@@ -69,17 +69,6 @@
   height: 100% !important;
 }
 
-/* Homepage Match card — full card background, same zoom + scale pattern */
-.match-card-spline-inner {
-  --match-spline-display-scale: 0.55;
-  position: absolute;
-  inset: 0;
-  overflow: visible;
-  transform: scale(var(--match-spline-display-scale, 1));
-  transform-origin: center 42%;
-  filter: brightness(1.16) contrast(1.12) saturate(1.08);
-}
-
 .match-spline-scene--card {
   width: 100%;
   height: 100%;

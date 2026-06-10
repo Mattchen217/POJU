@@ -353,12 +353,20 @@
     grid-template-columns: repeat(3, 1fr);
   }
 
+  .marketing-accent-grid--4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   .marketing-accent-grid--5 {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (min-width: 1024px) {
+  .marketing-accent-grid--4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
   .marketing-accent-grid--5 {
     grid-template-columns: repeat(5, 1fr);
   }

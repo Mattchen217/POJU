@@ -1,58 +1,161 @@
-/* Match 介绍页 — Hero 排版见 product-hero.css；动效挂载 .product-hero__bg--match */
+/* Match 介绍页 — Hero 见 product-hero.css；区块卡片与 Glyph / Syncro 共用 content-card */
 
-.match-home .report-preview {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.match-home .preview-item {
-  display: flex;
-  gap: var(--space-4);
-  align-items: flex-start;
-}
-
-.match-home .preview-badge {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
+.match-marketing-media {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  width: 100%;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
+  background:
+    radial-gradient(circle at 30% 40%, rgba(244, 114, 182, 0.35) 0%, transparent 55%),
+    radial-gradient(circle at 72% 62%, rgba(192, 38, 211, 0.28) 0%, transparent 50%),
+    linear-gradient(145deg, #1a0a14 0%, #0c0610 100%);
+}
+
+.match-marketing-media--report {
+  aspect-ratio: 10 / 14;
+  max-height: 420px;
+  border-radius: 20px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+.match-marketing-media__label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.match-marketing-media__rings {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.match-marketing-media__rings::before,
+.match-marketing-media__rings::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+}
+
+.match-marketing-media__rings::before {
+  width: 38%;
+  height: 38%;
+  left: 22%;
+  top: 28%;
+  background: radial-gradient(circle, rgba(244, 114, 182, 0.35) 0%, transparent 70%);
+}
+
+.match-marketing-media__rings::after {
+  width: 34%;
+  height: 34%;
+  right: 18%;
+  top: 32%;
+  background: radial-gradient(circle, rgba(217, 70, 239, 0.3) 0%, transparent 70%);
+}
+
+.match-home .match-report-preview-grid {
+  display: grid;
+  gap: var(--space-4);
+}
+
+@media (min-width: 1024px) {
+  .match-home .match-report-preview-grid {
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+    align-items: start;
+    gap: var(--space-6);
+  }
+}
+
+.match-home .match-report-sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.match-home .match-report-section-card {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.match-home .match-report-badge {
+  display: flex;
+  height: 2.5rem;
+  width: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  font-size: 15px;
   font-weight: 700;
-  font-size: 16px;
   color: #fff;
   flex-shrink: 0;
 }
 
-.match-home .preview-badge.a {
-  background: #d4af37;
-}
-.match-home .preview-badge.b {
-  background: #87ceeb;
-}
-.match-home .preview-badge.x {
-  background: #ff6b9d;
-}
-.match-home .preview-badge.c {
-  background: #4caf50;
-}
-.match-home .preview-badge.r {
-  background: #9c27b0;
+.match-home .match-report-badge--a {
+  background: linear-gradient(145deg, #fbbf24 0%, #d97706 100%);
 }
 
-.match-home .preview-content h4 {
-  color: var(--text-primary);
+.match-home .match-report-badge--b {
+  background: linear-gradient(145deg, #67e8f9 0%, #0891b2 100%);
+}
+
+.match-home .match-report-badge--x {
+  background: linear-gradient(145deg, #f472b6 0%, #db2777 100%);
+}
+
+.match-home .match-report-badge--c {
+  background: linear-gradient(145deg, #86efac 0%, #16a34a 100%);
+}
+
+.match-home .match-report-badge--r {
+  background: linear-gradient(145deg, #c084fc 0%, #7e22ce 100%);
+}
+
+.match-home .match-pricing-card {
+  max-width: 28rem;
+  margin-inline: auto;
+  text-align: center;
+}
+
+.match-home .match-pricing-price {
+  font-size: clamp(2.75rem, 8vw, 3.5rem);
+  font-weight: 700;
+  line-height: 1;
+  color: #ffffff;
+}
+
+.match-home .match-pricing-unit {
+  margin-top: var(--space-2);
+  font-size: 17px;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.match-home .match-pricing-includes {
+  margin-top: var(--space-5);
+  list-style: none;
+  padding: 0;
+  text-align: left;
+}
+
+.match-home .match-pricing-includes li {
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ffffff;
   font-size: 16px;
-  font-weight: 600;
-  margin: 0 0 var(--space-1);
+  line-height: 1.6;
 }
 
-.match-home .preview-content p {
-  color: var(--text-secondary);
-  font-size: 14px;
-  line-height: 1.6;
-  margin: 0;
+.match-home .match-pricing-includes li::before {
+  content: "✓";
+  margin-right: var(--space-2);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .match-home .match-faq-wrap {
@@ -60,51 +163,50 @@
   margin-inline: auto;
 }
 
-.match-home .faq-list {
+.match-home .match-faq-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 
-.match-home .faq-item {
-  background: var(--glass-card-bg);
-  backdrop-filter: var(--glass-card-blur);
-  -webkit-backdrop-filter: var(--glass-card-blur);
-  box-shadow: var(--glass-card-shadow);
-  border-radius: 14px;
-  padding: var(--space-4) var(--space-5);
+.match-home .match-faq-item {
+  border-radius: 20px;
+  overflow: hidden;
 }
 
-.match-home .faq-item summary {
-  color: var(--text-primary);
-  font-weight: 600;
+.match-home .match-faq-item summary {
   cursor: pointer;
   list-style: none;
+  font-weight: 600;
+  font-size: 17px;
+  line-height: 1.5;
+  color: #ffffff;
   position: relative;
   padding-right: var(--space-6);
 }
 
-.match-home .faq-item summary::-webkit-details-marker {
+.match-home .match-faq-item summary::-webkit-details-marker {
   display: none;
 }
 
-.match-home .faq-item summary::after {
+.match-home .match-faq-item summary::after {
   content: "+";
   position: absolute;
   right: 0;
   top: 0;
-  font-size: 20px;
-  color: var(--text-tertiary);
+  font-size: 22px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.75);
   transition: transform var(--duration-base);
 }
 
-.match-home .faq-item[open] summary::after {
+.match-home .match-faq-item[open] summary::after {
   transform: rotate(45deg);
 }
 
-.match-home .faq-item p {
-  color: var(--text-secondary);
+.match-home .match-faq-item p {
   margin-top: var(--space-3);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 16px;
   line-height: 1.7;
-  font-size: 15px;
 }
