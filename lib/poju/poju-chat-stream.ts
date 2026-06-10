@@ -45,8 +45,10 @@ export function createPojuChatStreamResponse(body: ChatBody, reqSignal?: AbortSi
             typeof body.tool_injection_context === "string" ? body.tool_injection_context : null,
           stream_hooks: {
             onReasoning: (text) => send({ type: "reasoning", text }),
-            onContent: (raw) =>
-              send({ type: "content", text: extractStreamingResponseText(raw), raw_length: raw.length }),
+            onContent: (raw) => {
+              const text = extractStreamingResponseText(raw);
+              if (text) send({ type: "content", text, raw_length: raw.length });
+            },
           },
           signal: reqSignal,
         });

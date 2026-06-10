@@ -1,18 +1,20 @@
-import { parsePhaseResult } from "@/lib/llm/phases/phase-transport";
+function unwrapMarkdownJson(raw: string): string {
+  return raw.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
+}
 
-/** Best-effort extract of the `response` field while JSON is still streaming. */
-export function extractStreamingResponseText(raw: string): string {
-  const trimmed = raw.trim();
-  if (!trimmed) return "";
-
+function extractFromCompleteJson(trimmed: string): string | null {
   try {
-    const { response } = parsePhaseResult(trimmed);
-    if (response) return response;
+    const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+    if (typeof parsed.response === "string") return parsed.response;
+    if (typeof parsed.reply === "string") return parsed.reply;
+    return null;
   } catch {
-    // partial JSON — fall through
+    return null;
   }
+}
 
-  const keyIdx = trimmed.indexOf('"response"');
+function extractJsonStringField(trimmed: string, field: "response" | "reply"): string {
+  const keyIdx = trimmed.indexOf(`"${field}"`);
   if (keyIdx < 0) return "";
 
   const colonIdx = trimmed.indexOf(":", keyIdx);
@@ -43,4 +45,18 @@ export function extractStreamingResponseText(raw: string): string {
     out += ch;
   }
   return out;
+}
+
+/** Best-effort extract of the `response` field while JSON is still streaming. */
+export function extractStreamingResponseText(raw: string): string {
+  const trimmed = unwrapMarkdownJson(raw);
+  if (!trimmed) return "";
+
+  const complete = extractFromCompleteJson(trimmed);
+  if (complete !== null) return complete;
+
+  const response = extractJsonStringField(trimmed, "response");
+  if (response) return response;
+
+  return extractJsonStringField(trimmed, "reply");
 }

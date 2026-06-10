@@ -8,7 +8,9 @@
    图标用 emoji 占位,可替换成 lucide-react 等现有图标库。
    ============================================================ */
 
-import { useState, useRef, useEffect, type JSX } from "react";
+import { useState, useRef, useEffect, type JSX, type ReactNode } from "react";
+import Image from "next/image";
+import pojuAvatar from "@/assets/icons/P.png";
 import { ThinkingStream } from "@/components/poju/ThinkingStream";
 import { LiveThinkingTicker } from "@/components/poju/LiveThinkingTicker";
 import { StreamingAssistantBubble } from "@/components/poju/StreamingAssistantBubble";
@@ -87,6 +89,27 @@ function renderAiContent(text: string): JSX.Element[] {
   });
   flush("pEnd");
   return out;
+}
+
+function PojuAiAvatar() {
+  return (
+    <Image
+      src={pojuAvatar}
+      alt=""
+      width={40}
+      height={40}
+      className="pchat__ai-avatar"
+    />
+  );
+}
+
+function AiReplyShell({ children }: { children: ReactNode }) {
+  return (
+    <div className="pchat__ai-row">
+      <PojuAiAvatar />
+      <div className="pchat__ai">{children}</div>
+    </div>
+  );
 }
 
 export default function PojuChat(props: PojuChatProps) {
@@ -211,7 +234,7 @@ export default function PojuChat(props: PojuChatProps) {
                 {m.role === "user" ? (
                   <div className="pchat__bubble">{m.content}</div>
                 ) : (
-                  <div className="pchat__ai">
+                  <AiReplyShell>
                     {renderAiContent(m.content)}
                     <div className="pchat__msg-actions">
                       <button type="button" className="icon-btn" onClick={() => onCopy?.(m.content)} aria-label="Copy">
@@ -221,7 +244,7 @@ export default function PojuChat(props: PojuChatProps) {
                         <span className="material-symbols-outlined">volume_up</span>
                       </button>
                     </div>
-                  </div>
+                  </AiReplyShell>
                 )}
               </div>
             ))}
