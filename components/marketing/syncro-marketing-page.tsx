@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 
+import { DsSyncroFitCard, DsSyncroFlow } from "@/components/ds/marketing/DsProductFlows";
+import { DsGlassCard, DsMutedCard } from "@/components/ds/primitives";
 import { ArchiveReturnBanner } from "@/components/archive/archive-return-banner";
 import { NotPWA } from "@/components/pwa/PWAConditional";
 import { SyncroDesktopQrSection } from "@/components/marketing/syncro-desktop-qr-section";
@@ -24,7 +26,6 @@ export const syncroMarketingMetadata: Metadata = {
 };
 
 const USE_CASE_KEYS = ["before_matters", "pace_off", "daily_rhythm", "traveling", "poju_companion"] as const;
-const USE_CASE_ACCENTS = ["blue", "violet", "magenta", "fuchsia", "blue"] as const;
 
 export async function SyncroMarketingPage() {
   const t = await getTranslations("marketingSite.syncro");
@@ -38,7 +39,15 @@ export async function SyncroMarketingPage() {
     description: t("hero.description"),
     tagline: t("hero.tagline"),
     footnote: t("hero.footnote"),
+    cta: t("hero.cta"),
   };
+
+  const syncroSteps = [
+    { title: t("how_it_works.step_1_title"), desc: t("how_it_works.step_1_desc") },
+    { title: t("how_it_works.step_2_title"), desc: t("how_it_works.step_2_desc") },
+    { title: t("how_it_works.step_3_title"), desc: t("how_it_works.step_3_desc") },
+    { title: t("how_it_works.step_4_title"), desc: t("how_it_works.step_4_desc") },
+  ];
 
   return (
     <SyncroPwaInstallProvider>
@@ -50,33 +59,35 @@ export async function SyncroMarketingPage() {
           <SyncroProductHero copy={heroCopy} />
         </MarketingPageHero>
 
-        <ProductWhatIsSection product="syncro" />
+        <MarketingPageSections>
+          <ProductWhatIsSection product="syncro" />
 
-        <NotPWA>
-          <MarketingPageSections>
+          <NotPWA>
             <MarketingSection id="syncro-how-it-works" title={t("how_it_works.heading")} padding="lg">
-              <div className="marketing-accent-grid marketing-accent-grid--4 mx-auto max-w-5xl">
-                {(["step_1", "step_2", "step_3", "step_4"] as const).map((stepKey, idx) => (
-                  <article
-                    key={stepKey}
-                    className={`content-card content-card--solid content-card--${["blue", "violet", "magenta", "fuchsia"][idx] ?? "blue"}`}
-                  >
-                    <p className="text-3xl font-semibold leading-none">{idx + 1}</p>
-                    <p className="content-card__title mt-4">{t(`how_it_works.${stepKey}_title`)}</p>
-                    <p className="mt-2">{t(`how_it_works.${stepKey}_desc`)}</p>
-                  </article>
-                ))}
+              <p className="marketing-section-intro mx-auto max-w-2xl text-center">{t("how_it_works.intro")}</p>
+              <div className="mt-9">
+                <DsSyncroFlow steps={syncroSteps} />
               </div>
             </MarketingSection>
 
             <MarketingSection id="syncro-five-currents" title={t("five_currents.heading")} padding="lg">
               <p className="marketing-section-intro mx-auto max-w-2xl text-center">{t("five_currents.intro")}</p>
               <ul className="mx-auto mt-8 max-w-2xl space-y-3">
-                {(t.raw("five_currents.items") as { name: string; desc: string }[]).map((item) => (
-                  <li key={item.name} className="content-card content-card--solid content-card--blue px-4 py-3">
-                    <strong>{item.name}</strong> — {item.desc}
-                  </li>
-                ))}
+                {(t.raw("five_currents.items") as { name: string; desc: string }[]).map((item, idx) => {
+                  const colors = ["var(--pj-open)", "var(--pj-following)", "var(--pj-still)", "var(--pj-cross)", "var(--pj-under)"];
+                  const dotColor = colors[idx] ?? "var(--pj-teal)";
+                  return (
+                    <li key={item.name} className="ds-current-row">
+                      <span
+                        className="ds-current-row__dot"
+                        style={{ background: dotColor, boxShadow: `0 0 12px ${dotColor}` }}
+                        aria-hidden
+                      />
+                      <span className="ds-current-row__name">{item.name}</span>
+                      <span className="ds-current-row__desc">{item.desc}</span>
+                    </li>
+                  );
+                })}
               </ul>
               <p className="marketing-section-intro mx-auto mt-8 max-w-2xl text-center">{t("five_currents.footer")}</p>
             </MarketingSection>
@@ -92,9 +103,9 @@ export async function SyncroMarketingPage() {
               </div>
               <div className="mx-auto mt-10 max-w-2xl space-y-4 text-center">
                 <p className="marketing-section-intro">{t("what_shows.intro")}</p>
-                <article className="content-card content-card--solid content-card--blue mx-auto max-w-xl text-left">
-                  <p className="marketing-section-intro !text-left">{t("what_shows.items_intro")}</p>
-                  <ul className="mt-4 space-y-2">
+                <DsGlassCard className="mx-auto max-w-xl text-left">
+                  <p className="text-[var(--pj-text-secondary)]">{t("what_shows.items_intro")}</p>
+                  <ul className="mt-4 space-y-2 text-[var(--pj-text-secondary)]">
                     {whatShowsItems.map((item) => (
                       <li key={item}>
                         <span className="mr-1">✦</span>
@@ -102,28 +113,27 @@ export async function SyncroMarketingPage() {
                       </li>
                     ))}
                   </ul>
-                </article>
+                </DsGlassCard>
                 <p className="marketing-section-intro">{t("what_shows.footnote")}</p>
               </div>
             </MarketingSection>
 
             <MarketingSection id="syncro-use-cases" title={t("use_cases.heading")} padding="lg">
-              <div className="marketing-accent-grid marketing-accent-grid--5">
-                {USE_CASE_KEYS.map((key, idx) => {
-                  const accent = USE_CASE_ACCENTS[idx] ?? "blue";
-                  return (
-                    <article key={key} className={`content-card content-card--solid content-card--${accent}`}>
-                      <p className="content-card__title">{t(`use_cases.${key}.title`)}</p>
-                      <p className="mt-2 whitespace-pre-line">{t(`use_cases.${key}.description`)}</p>
-                    </article>
-                  );
-                })}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {USE_CASE_KEYS.map((key, idx) => (
+                  <DsSyncroFitCard
+                    key={key}
+                    index={idx}
+                    title={t(`use_cases.${key}.title`)}
+                    description={t(`use_cases.${key}.description`)}
+                  />
+                ))}
               </div>
             </MarketingSection>
 
             <MarketingSection title={t("what_it_is.heading")} padding="lg">
               <div className="marketing-accent-grid marketing-accent-grid--2 mx-auto max-w-4xl">
-                <article className="content-card content-card--solid content-card--blue">
+                <DsMutedCard accent="blue">
                   <p className="text-xs font-semibold uppercase tracking-[0.14em]">{t("what_it_is.shows.title")}</p>
                   <ul className="mt-5 space-y-3">
                     {showsItems.map((item) => (
@@ -133,8 +143,8 @@ export async function SyncroMarketingPage() {
                       </li>
                     ))}
                   </ul>
-                </article>
-                <article className="content-card content-card--solid content-card--magenta">
+                </DsMutedCard>
+                <DsMutedCard accent="magenta">
                   <p className="text-xs font-semibold uppercase tracking-[0.14em]">{t("what_it_is.isnt.title")}</p>
                   <ul className="mt-5 space-y-3">
                     {isntItems.map((item) => (
@@ -144,7 +154,7 @@ export async function SyncroMarketingPage() {
                       </li>
                     ))}
                   </ul>
-                </article>
+                </DsMutedCard>
               </div>
             </MarketingSection>
 
@@ -155,8 +165,8 @@ export async function SyncroMarketingPage() {
                 <SyncroPricingCta label={t("pricing.cta")} />
               </div>
             </MarketingSection>
-          </MarketingPageSections>
-        </NotPWA>
+          </NotPWA>
+        </MarketingPageSections>
 
         <SyncroPwaHomeFooter />
       </MarketingPageLayout>

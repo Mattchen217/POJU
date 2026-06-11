@@ -6,6 +6,9 @@
 @import "../styles/pwa-nav.css";
 @import "../styles/marketing-pages.css";
 @import "../styles/product-what-is.css";
+@import "../styles/ds-website.css";
+@import "../styles/ds-marketing-sections.css";
+@import "../styles/marketing-ds-surfaces.css";
 @import "../styles/product-hero.css";
 @import "../styles/product-notes.css";
 @import "../styles/match-home.css";
@@ -49,6 +52,19 @@ body {
   font-weight: var(--pj-weight-regular);
   line-height: var(--pj-leading-relaxed);
   min-height: 100vh;
+}
+
+/* Subtle star field over site background — fixed, non-interactive */
+.site-starry-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.38;
+  background-image: url("/pchat-starfield.svg");
+  background-size: 520px 520px;
+  background-repeat: repeat;
+  animation: pjStarTwinkle 10s ease-in-out infinite alternate;
 }
 
 html,

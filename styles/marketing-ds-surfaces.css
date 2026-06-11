@@ -1,0 +1,437 @@
+/* ============================================================
+   Marketing pages — DS surface migration
+   Maps legacy content-card / glass-section to pojulife DS visuals
+   ============================================================ */
+
+/* Glass sections = DS pj-glass-section */
+.glass-section.pj-glass-section {
+  border-radius: var(--glass-card-radius);
+  padding: var(--pj-space-8) var(--pj-space-6);
+  box-shadow: var(--glass-section-shadow), var(--glass-section-edge);
+}
+
+@media (min-width: 768px) {
+  .glass-section.pj-glass-section {
+    padding: var(--pj-space-8) var(--pj-space-6);
+  }
+
+  .glass-section.pj-glass-section.glass-section--pad-lg {
+    padding: var(--pj-space-10) var(--pj-space-8);
+  }
+}
+
+/* Section headings — DS SectionHeading */
+.marketing-section-heading {
+  font-size: clamp(26px, 4vw, 32px);
+  font-weight: var(--pj-weight-semibold);
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.marketing-section-subheading {
+  color: var(--pj-text-secondary);
+}
+
+.marketing-section-intro {
+  color: var(--pj-text-secondary);
+}
+
+/* ===== Frosted glass card (DS pj-glass-card) ===== */
+.marketing-glass-card,
+.pj-glass-card.marketing-glass-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--glass-card-radius);
+  background: var(--glass-card-bg);
+  backdrop-filter: var(--glass-card-blur);
+  -webkit-backdrop-filter: var(--glass-card-blur);
+  box-shadow: var(--glass-card-shadow);
+  padding: 22px;
+  transition:
+    transform var(--duration-base) var(--ease-smooth),
+    box-shadow var(--duration-base) var(--ease-smooth);
+}
+
+.marketing-glass-card:hover {
+  transform: translateY(-2px);
+}
+
+.marketing-glass-card__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: var(--pj-weight-semibold);
+  line-height: 1.4;
+  color: var(--pj-text-primary);
+}
+
+.marketing-glass-card__body {
+  margin: 12px 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--pj-text-secondary);
+}
+
+.marketing-glass-card__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.marketing-glass-card--included {
+  box-shadow: var(--glass-card-shadow), 0 0 32px rgba(212, 165, 116, 0.18);
+}
+
+.marketing-glass-card--included .marketing-glass-card__heading {
+  margin: 0;
+  font-size: 18px;
+  font-weight: var(--pj-weight-semibold);
+  color: var(--pj-gold-soft);
+}
+
+/* Icon chip */
+.marketing-icon-chip {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+
+.marketing-icon-chip--sm {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+}
+
+.marketing-icon-chip--gold {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.22), rgba(139, 92, 246, 0.14));
+  color: #f2c994;
+}
+
+.marketing-icon-chip--violet {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.22), rgba(109, 77, 255, 0.14));
+  color: #ddd6fe;
+}
+
+.marketing-icon-chip--glyph {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.22), rgba(217, 70, 239, 0.14));
+  color: #ddd6fe;
+}
+
+.marketing-icon-chip--cyan {
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.2), rgba(59, 130, 246, 0.16));
+  color: #99f6e4;
+}
+
+.marketing-icon-chip--rose {
+  background: linear-gradient(135deg, rgba(255, 107, 157, 0.22), rgba(192, 132, 252, 0.16));
+  color: #ffd0de;
+}
+
+/* Muted accent cards (DS PJ.muted) */
+.marketing-muted-card {
+  border-radius: 16px;
+  padding: 22px;
+  color: #fff;
+  box-shadow: var(--pj-shadow-soft), inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
+  transition:
+    transform var(--duration-base) var(--ease-smooth),
+    box-shadow var(--duration-base) var(--ease-smooth);
+}
+
+.marketing-muted-card:hover {
+  transform: translateY(-3px);
+}
+
+.marketing-muted-card--violet {
+  background: linear-gradient(165deg, rgba(181, 101, 240, 0.85) 0%, rgba(10, 8, 24, 0.5) 62%);
+}
+
+.marketing-muted-card--magenta {
+  background: linear-gradient(165deg, rgba(232, 121, 249, 0.85) 0%, rgba(10, 8, 24, 0.5) 62%);
+}
+
+.marketing-muted-card--blue {
+  background: linear-gradient(165deg, rgba(96, 165, 250, 0.85) 0%, rgba(10, 8, 24, 0.5) 62%);
+}
+
+.marketing-muted-card--fuchsia {
+  background: linear-gradient(165deg, rgba(244, 114, 182, 0.85) 0%, rgba(10, 8, 24, 0.5) 62%);
+}
+
+.marketing-muted-card--gold {
+  background: linear-gradient(165deg, rgba(217, 160, 91, 0.85) 0%, rgba(10, 8, 24, 0.5) 62%);
+}
+
+.marketing-muted-card--cyan {
+  background: linear-gradient(165deg, rgba(56, 189, 248, 0.85) 0%, rgba(10, 8, 24, 0.5) 62%);
+}
+
+.marketing-muted-card--rose {
+  background: linear-gradient(165deg, rgba(244, 114, 182, 0.85) 0%, rgba(10, 8, 24, 0.5) 62%);
+}
+
+/* Product page sections — default solid cards → frosted glass */
+.marketing-page-sections .content-card--solid:not(.marketing-step-card):not(.marketing-muted-card):not(.match-pricing-card) {
+  background: var(--glass-card-bg);
+  backdrop-filter: var(--glass-card-blur);
+  -webkit-backdrop-filter: var(--glass-card-blur);
+  box-shadow: var(--glass-card-shadow);
+}
+
+.marketing-page-sections .content-card--solid:not(.marketing-step-card):not(.marketing-muted-card):not(.match-pricing-card) p,
+.marketing-page-sections .content-card--solid:not(.marketing-step-card):not(.marketing-muted-card):not(.match-pricing-card) li {
+  color: var(--pj-text-secondary);
+}
+
+.marketing-page-sections .content-card--solid:not(.marketing-step-card):not(.marketing-muted-card):not(.match-pricing-card) .content-card__title,
+.marketing-page-sections .content-card--solid:not(.marketing-step-card):not(.marketing-muted-card):not(.match-pricing-card) > p.text-xs {
+  color: var(--pj-text-primary);
+}
+
+/* Feature cards with media — glass body */
+.marketing-page-sections .content-card:not(.content-card--solid) {
+  background: var(--glass-card-bg);
+  backdrop-filter: var(--glass-card-blur);
+  -webkit-backdrop-filter: var(--glass-card-blur);
+  box-shadow: var(--glass-card-shadow);
+}
+
+.marketing-page-sections .content-card:not(.content-card--solid) .content-card__body {
+  background: transparent;
+}
+
+.marketing-page-sections .content-card:not(.content-card--solid) .content-card__body p {
+  color: var(--pj-text-secondary);
+}
+
+.marketing-page-sections .content-card:not(.content-card--solid) .content-card__title {
+  color: #ffd0de;
+}
+
+/* Step cards — muted gradients */
+.marketing-page-sections .marketing-step-card {
+  text-align: center;
+}
+
+.marketing-page-sections .marketing-step-card.content-card--violet {
+  background: linear-gradient(165deg, rgba(181, 101, 240, 0.85) 0%, rgba(10, 8, 24, 0.5) 62%);
+}
+
+.marketing-page-sections .marketing-step-card.content-card--magenta {
+  background: linear-gradient(165deg, rgba(232, 121, 249, 0.85) 0%, rgba(10, 8, 24, 0.5) 62%);
+}
+
+.marketing-page-sections .marketing-step-card.content-card--blue {
+  background: linear-gradient(165deg, rgba(96, 165, 250, 0.85) 0%, rgba(10, 8, 24, 0.5) 62%);
+}
+
+.marketing-page-sections .marketing-step-card.content-card--fuchsia {
+  background: linear-gradient(165deg, rgba(244, 114, 182, 0.85) 0%, rgba(10, 8, 24, 0.5) 62%);
+}
+
+.marketing-page-sections .marketing-step-card p,
+.marketing-page-sections .marketing-step-card li {
+  color: #fff;
+}
+
+/* Is / isn't dual cards */
+.marketing-page-sections .marketing-accent-grid--2 .content-card--solid.content-card--blue {
+  background: linear-gradient(165deg, rgba(96, 165, 250, 0.85) 0%, rgba(10, 8, 24, 0.5) 62%);
+}
+
+.marketing-page-sections .marketing-accent-grid--2 .content-card--solid.content-card--magenta {
+  background: linear-gradient(165deg, rgba(232, 121, 249, 0.85) 0%, rgba(10, 8, 24, 0.5) 62%);
+}
+
+/* Syncro five currents — DS row style */
+.ds-current-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.06);
+}
+
+.ds-current-row__dot {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+}
+
+.ds-current-row__name {
+  min-width: 0;
+  flex: 0 0 auto;
+  font-size: 15px;
+  font-weight: var(--pj-weight-semibold);
+  color: var(--pj-text-primary);
+}
+
+@media (min-width: 640px) {
+  .ds-current-row__name {
+    min-width: 200px;
+  }
+}
+
+.ds-current-row__desc {
+  font-size: 14px;
+  color: var(--pj-text-secondary);
+}
+
+/* Homepage product cards — no borders, DS inset edge */
+.home-product-card {
+  border: none !important;
+  box-shadow:
+    var(--glass-card-shadow),
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.08),
+    0 24px 60px rgba(0, 0, 0, 0.35);
+}
+
+.home-product-card:hover {
+  box-shadow:
+    var(--glass-card-shadow),
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.12),
+    0 28px 70px rgba(6, 10, 28, 0.5);
+}
+
+/* Homepage promises — muted cards */
+.landing-sections:not(.marketing-page-sections) .content-card--solid.content-card--violet {
+  background: linear-gradient(165deg, rgba(181, 101, 240, 0.85) 0%, rgba(10, 8, 24, 0.5) 62%);
+}
+
+.landing-sections:not(.marketing-page-sections) .content-card--solid.content-card--blue {
+  background: linear-gradient(165deg, rgba(96, 165, 250, 0.85) 0%, rgba(10, 8, 24, 0.5) 62%);
+}
+
+.landing-sections:not(.marketing-page-sections) .content-card--solid.content-card--gold {
+  background: linear-gradient(165deg, rgba(217, 160, 91, 0.85) 0%, rgba(10, 8, 24, 0.5) 62%);
+}
+
+/* Archive — DS glass cards & filter pills */
+.archive-vault-section h2 {
+  margin: 0 0 16px;
+  font-size: var(--pj-text-xs);
+  font-weight: var(--pj-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--pj-track-kicker);
+  color: var(--pj-text-muted);
+  border: none;
+  padding: 0;
+}
+
+.archive-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 16px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: var(--pj-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  background: transparent;
+  color: #fff;
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.12);
+  transition: background var(--duration-fast) var(--ease-smooth);
+}
+
+.archive-filter-pill:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.archive-filter-pill.active {
+  background: rgba(255, 255, 255, 0.12);
+  font-weight: var(--pj-weight-bold);
+}
+
+.archive-card {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  gap: 12px;
+  border-radius: var(--glass-card-radius);
+  padding: 16px;
+  text-align: left;
+  background: var(--glass-card-bg);
+  backdrop-filter: var(--glass-card-blur);
+  -webkit-backdrop-filter: var(--glass-card-blur);
+  box-shadow: var(--glass-card-shadow);
+  transition:
+    transform var(--duration-base) var(--ease-smooth),
+    background var(--duration-fast) var(--ease-smooth);
+}
+
+.archive-card:hover {
+  transform: translateY(-2px);
+  background: rgba(52, 34, 82, 0.46);
+}
+
+.archive-card__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 18px;
+  color: var(--pj-text-primary);
+}
+
+.archive-card__meta {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--pj-text-muted);
+}
+
+.archive-bucket-heading {
+  margin-bottom: 12px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--pj-text-muted);
+}
+
+/* Match FAQ — glass, not gradient */
+.match-home .match-faq-item.content-card--solid {
+  background: var(--glass-card-bg);
+  backdrop-filter: var(--glass-card-blur);
+  -webkit-backdrop-filter: var(--glass-card-blur);
+  box-shadow: var(--glass-card-shadow);
+}
+
+.match-home .match-faq-item summary,
+.match-home .match-faq-item p {
+  color: var(--pj-text-primary);
+}
+
+.match-home .match-faq-item p {
+  color: var(--pj-text-secondary);
+}
+
+/* Match pricing — muted rose */
+.match-home .match-pricing-card.content-card--solid {
+  background: linear-gradient(165deg, rgba(244, 114, 182, 0.85) 0%, rgba(10, 8, 24, 0.5) 62%);
+}
+
+.match-home .match-pricing-card p,
+.match-home .match-pricing-card li {
+  color: #fff;
+}
+
+/* Nav — align with DS pj-nav */
+.main-nav.pj-nav .glass-nav-item,
+.main-nav.pj-nav .pj-nav-item {
+  color: #fff;
+  font-weight: var(--pj-weight-semibold);
+}
+
+.main-nav.pj-nav .glass-nav-item.active,
+.main-nav.pj-nav .pj-nav-item.active {
+  color: #fff;
+  font-weight: var(--pj-weight-bold);
+  background: rgba(255, 255, 255, 0.12);
+}

@@ -24,6 +24,10 @@ export function isChatRoute(pathname: string): boolean {
   return path === "/chat" || path.startsWith("/poju/session/");
 }
 
+export function isHomeRoute(pathname: string): boolean {
+  return getPathnameWithoutLocale(pathname) === "/";
+}
+
 export type SiteNavActive = "poju" | "glyph" | "syncro" | "match" | "archive";
 
 export function getActiveNavFromPathname(pathname: string): SiteNavActive | null {

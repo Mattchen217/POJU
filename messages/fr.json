@@ -302,14 +302,35 @@
         "heading": "Comment POJU fonctionne",
         "subtitle": "Pas une seule réponse — une boucle de percée continue.",
         "steps": {
-          "1": "Identification du problème",
-          "2": "Collecte d'informations",
-          "3": "Analyse des motifs",
-          "4": "Analyse centrale",
-          "5": "Génération d'actions",
-          "6": "Suivi de mise en œuvre"
+          "1": {
+            "title": "Presenting Your Dilemma",
+            "description": "Share Your Current Dilemma. Present the specific challenge, confusion, or decision that is weighing on your mind right now."
+          },
+          "2": {
+            "title": "Deep Collaborative Dialogue",
+            "description": "Engage in Deep Dialogue. Interact through a reflective multi-turn conversation as POJU guides you to align the full context of your situation."
+          },
+          "3": {
+            "title": "Trajectory Profiling",
+            "description": "Dynamic Visual Trajectory Tracking. The system locks into your personal energetic blueprint, mapping and tracking your real-time state with custom metaphorical visual patterns."
+          },
+          "4": {
+            "title": "Core Structural Analysis",
+            "description": "Deep Core Structural Analysis. Leveraging the algorithmic matrix of the I Ching and Five Elements (Wu Xing), the system performs deep chronological calculation and systemic analysis, seamlessly cross-referencing your personal spatiotemporal blueprint with the full context of your real-world challenge."
+          },
+          "5": {
+            "title": "Strategy & Actionable Deliverables",
+            "description": "Receive Your Synthesis Report & Guidance. Get a comprehensive breakthrough report containing deep behavioral analysis, strategic solutions, and actionable practical recommendations."
+          },
+          "6": {
+            "title": "Evolutionary Tracking",
+            "description": "Progress Tracking & Feedback Adaptation. As you put the strategies into practice, POJU tracks your evolutionary progress, standing ready to adjust and recalibrate based on your real-world feedback."
+          }
         },
-        "footer": "Vous agissez. Vous revenez. Le chemin s'ajuste. Jusqu'à ce que vous traversiez."
+        "footer": {
+          "title": "30-Day Single-Focus Sanctuary",
+          "description": "Real breakthroughs take time. For the specific challenge you present today, you unlock a dedicated 30-day coaching window. As your real-world situation unfolds or shifts, you can return to this dynamic dialogue at any time to log updates and refine your strategy. We are in this together, layer by layer."
+        }
       },
       "two_columns": {
         "heading": "Deux colonnes, une promesse.",
@@ -368,6 +389,26 @@
           "description": "La profonde immobilité au centre d'une tempête. Quand tout l'extérieur est turbulent, la clarté habite le seul endroit que rien ne peut atteindre."
         }
       },
+      "when_to_come": {
+        "heading": "When to come to Glyph.",
+        "intro": "A light touch for the moments that don't need a 30-day conversation.",
+        "quick_read": {
+          "title": "You need a read, not a deep-dive",
+          "description": "One question, sixty seconds. For when POJU is more than this moment asks for."
+        },
+        "circling": {
+          "title": "Something's circling and won't name itself",
+          "description": "A vague unease. A decision that won't settle. Hold it up to the mirror."
+        },
+        "fresh_angle": {
+          "title": "You want a fresh angle",
+          "description": "You've turned it over a dozen times. A new lens to break the loop."
+        },
+        "new_start": {
+          "title": "At the start of something",
+          "description": "A new project, a new chapter. Set an intention and read the wind."
+        }
+      },
       "on_the_cards": {
         "heading": "À propos des cartes.",
         "paragraphs": [
@@ -379,6 +420,7 @@
       },
       "how_it_works": {
         "heading": "Comment Glyph fonctionne.",
+        "intro": "Tenez une question, tirez un motif, lisez le reflet.",
         "step_1": {
           "title": "Tenez votre question.",
           "description": "Compressez-la à 60 caractères. La compression commence la réponse."
@@ -482,6 +524,7 @@
       },
       "how_it_works": {
         "heading": "How Syncro works.",
+        "intro": "Four steps to a live 24-hour reading.",
         "step_1_title": "Add or pick a bazi foundation",
         "step_1_desc": "Birth date, time, and gender. Saved on your device for any future use.",
         "step_2_title": "Describe what you're about to do",

@@ -18,7 +18,7 @@ function assert(cond: boolean, msg: string) {
 }
 
 const archive = read("lib/archive/archive-service.ts");
-const list = read("components/archive/archive-action-plans-list.tsx");
+const list = read("components/ds/DsArchiveVaultGrid.tsx");
 const detail = read("components/archive/archive-detail-client.tsx");
 const matchDetail = read("components/archive/match-archive-detail.tsx");
 
@@ -27,7 +27,7 @@ assert(archive.includes("loadMatchArchive"), "loadMatchArchive");
 assert(archive.includes('type: "match_session"'), "match_session type");
 
 assert(list.includes('"match"'), "match filter");
-assert(list.includes("👥"), "match icon");
+assert(list.includes("matchIcon"), "match icon");
 
 assert(detail.includes("loadMatchArchive"), "detail loads match");
 assert(detail.includes("MatchArchiveDetail"), "MatchArchiveDetail");

@@ -292,9 +292,11 @@
 
 .marketing-section-heading {
   text-align: center;
-  font-size: clamp(1.5rem, 4vw, 2rem);
+  font-size: clamp(26px, 4vw, 32px);
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
   color: #ffffff;
 }
 

@@ -184,6 +184,9 @@ a {
 .pj-pill-outline--violet { box-shadow: inset 0 0 0 1px rgb(109 77 255 / 0.55), 0 10px 28px rgb(109 77 255 / 0.32); }
 .pj-pill-outline--violet:hover { background-color: rgb(109 77 255 / 0.94); box-shadow: inset 0 0 0 1px rgb(109 77 255 / 0.92), 0 10px 26px rgb(109 77 255 / 0.48); }
 
+.pj-pill-outline--gold { box-shadow: inset 0 0 0 1px rgb(212 175 55 / 0.6), 0 10px 28px rgb(212 175 55 / 0.3); }
+.pj-pill-outline--gold:hover { background-color: rgb(212 175 55 / 0.95); color: rgb(15 10 8); box-shadow: inset 0 0 0 1px rgb(212 175 55 / 0.95), 0 10px 26px rgb(212 175 55 / 0.5); }
+
 .pj-pill-outline--amber { box-shadow: inset 0 0 0 1px rgb(245 158 11 / 0.55), 0 10px 28px rgb(245 158 11 / 0.32); }
 .pj-pill-outline--amber:hover { background-color: rgb(245 158 11 / 0.94); color: rgb(15 10 8); box-shadow: inset 0 0 0 1px rgb(245 158 11 / 0.92), 0 10px 26px rgb(245 158 11 / 0.48); }
 

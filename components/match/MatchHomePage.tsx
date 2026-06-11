@@ -1,9 +1,30 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  Award,
+  Briefcase,
+  Coffee,
+  Compass,
+  Heart,
+  Home,
+  Link2,
+  User,
+  Users,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { ArchiveReturnBanner } from "@/components/archive/archive-return-banner";
+import {
+  DsBand,
+  DsGlassCard,
+  DsGradientTitle,
+  DsIconChip,
+  DsKicker,
+  DsMutedCard,
+  DsSectionHeading,
+} from "@/components/ds/primitives";
+import { DsMatchFlow, DsMatchUseCard } from "@/components/ds/marketing/DsProductFlows";
 import { NotPWA } from "@/components/pwa/PWAConditional";
 import { PWAProductBeginCTA } from "@/components/pwa/PWAProductBeginCTA";
 import {
@@ -15,71 +36,46 @@ import {
   ProductHeroActions,
   ProductHeroContent,
   ProductHeroDescription,
-  ProductHeroTitle,
   ProductMarketingHero,
 } from "@/components/marketing/product-marketing-hero";
-import { MarketingSection } from "@/components/marketing/marketing-section";
 import { ProductWhatIsSection } from "@/components/marketing/product-what-is-section";
 import { MatchSplineScene } from "@/components/match/MatchSplineScene";
 import { PojuToolHandoffBanner } from "@/components/poju/PojuToolHandoffBanner";
 import { useRouter } from "@/i18n/navigation";
 import { usePojuToolHandoff } from "@/lib/poju/use-poju-tool-handoff";
-import { cn } from "@/lib/utils/classnames";
 import { isFirstTimeFree } from "@/lib/syncro/device-usage";
-import "@/styles/poju-tool-handoff.css";
 
-import "@/styles/match.css";
+const FEATURE_KEYS = [
+  "feature_two_charts_title",
+  "feature_any_relationship_title",
+  "feature_5_sections_title",
+] as const;
+const FEATURE_DESC_KEYS = [
+  "feature_two_charts_desc",
+  "feature_any_relationship_desc",
+  "feature_5_sections_desc",
+] as const;
 
-type Accent = "fuchsia" | "magenta" | "violet";
+const HOW_STEPS = ["how_step_1", "how_step_2", "how_step_3", "how_step_4"] as const;
 
-const FEATURES: { titleKey: string; descKey: string; accent: Accent; mediaLabel: string }[] = [
-  {
-    titleKey: "feature_two_charts_title",
-    descKey: "feature_two_charts_desc",
-    accent: "fuchsia",
-    mediaLabel: "Two charts",
-  },
-  {
-    titleKey: "feature_any_relationship_title",
-    descKey: "feature_any_relationship_desc",
-    accent: "magenta",
-    mediaLabel: "Any relationship",
-  },
-  {
-    titleKey: "feature_5_sections_title",
-    descKey: "feature_5_sections_desc",
-    accent: "violet",
-    mediaLabel: "Full report",
-  },
-];
+const USE_CASES = [
+  { titleKey: "use_case_marriage_title", descKey: "use_case_marriage_desc", icon: Heart },
+  { titleKey: "use_case_partnership_title", descKey: "use_case_partnership_desc", icon: Briefcase },
+  { titleKey: "use_case_family_title", descKey: "use_case_family_desc", icon: Home },
+  { titleKey: "use_case_hiring_title", descKey: "use_case_hiring_desc", icon: Users },
+  { titleKey: "use_case_relationship_title", descKey: "use_case_relationship_desc", icon: Link2 },
+  { titleKey: "use_case_friendship_title", descKey: "use_case_friendship_desc", icon: Coffee },
+] as const;
 
-const HOW_STEP_ACCENTS: Accent[] = ["fuchsia", "magenta", "violet", "fuchsia"];
-
-const USE_CASES: { titleKey: string; descKey: string; accent: Accent }[] = [
-  { titleKey: "use_case_marriage_title", descKey: "use_case_marriage_desc", accent: "fuchsia" },
-  { titleKey: "use_case_partnership_title", descKey: "use_case_partnership_desc", accent: "magenta" },
-  { titleKey: "use_case_family_title", descKey: "use_case_family_desc", accent: "violet" },
-  { titleKey: "use_case_hiring_title", descKey: "use_case_hiring_desc", accent: "fuchsia" },
-  { titleKey: "use_case_relationship_title", descKey: "use_case_relationship_desc", accent: "magenta" },
-  { titleKey: "use_case_friendship_title", descKey: "use_case_friendship_desc", accent: "violet" },
-];
-
-const REPORT_PREVIEW: {
-  badge: string;
-  badgeClass: "a" | "b" | "x" | "c" | "r";
-  titleKey: string;
-  descKey: string;
-  accent: Accent;
-}[] = [
-  { badge: "A", badgeClass: "a", titleKey: "preview_a_title", descKey: "preview_a_desc", accent: "fuchsia" },
-  { badge: "B", badgeClass: "b", titleKey: "preview_b_title", descKey: "preview_b_desc", accent: "magenta" },
-  { badge: "×", badgeClass: "x", titleKey: "preview_combined_title", descKey: "preview_combined_desc", accent: "violet" },
-  { badge: "◎", badgeClass: "c", titleKey: "preview_conclusion_title", descKey: "preview_conclusion_desc", accent: "fuchsia" },
-  { badge: "→", badgeClass: "r", titleKey: "preview_actions_title", descKey: "preview_actions_desc", accent: "magenta" },
-];
+const REPORT_PREVIEW = [
+  { badge: "A", titleKey: "preview_a_title", descKey: "preview_a_desc", icon: User },
+  { badge: "B", titleKey: "preview_b_title", descKey: "preview_b_desc", icon: User },
+  { badge: "×", titleKey: "preview_combined_title", descKey: "preview_combined_desc", icon: Users },
+  { badge: "◎", titleKey: "preview_conclusion_title", descKey: "preview_conclusion_desc", icon: Award },
+  { badge: "→", titleKey: "preview_actions_title", descKey: "preview_actions_desc", icon: Compass },
+] as const;
 
 const PRICE_INCLUDES = ["include_1", "include_2", "include_3", "include_4", "include_5"] as const;
-
 const FAQ_ITEMS = [
   { q: "faq_q1", a: "faq_a1" },
   { q: "faq_q2", a: "faq_a2" },
@@ -87,19 +83,8 @@ const FAQ_ITEMS = [
   { q: "faq_q4", a: "faq_a4" },
 ] as const;
 
-const HOW_STEPS = ["how_step_1", "how_step_2", "how_step_3", "how_step_4"] as const;
-
 const MATCH_CTA_CLASS =
-  "marketing-pill-outline-cta marketing-pill-outline-cta--rose inline-flex min-w-[220px] justify-center px-8 py-3.5 text-[15px] font-semibold hover:-translate-y-0.5 hover:scale-[1.02] motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100 active:scale-[0.99] md:px-10 md:py-4 md:text-base";
-
-function MatchMediaPlaceholder({ label, report }: { label: string; report?: boolean }) {
-  return (
-    <div className={cn("match-marketing-media", report && "match-marketing-media--report")} aria-hidden>
-      <div className="match-marketing-media__rings" />
-      <span className="match-marketing-media__label">{label}</span>
-    </div>
-  );
-}
+  "pj-pill-outline pj-pill-outline--rose inline-flex min-w-[220px] justify-center px-8 py-3.5 text-[15px] font-semibold md:px-10 md:py-4 md:text-base";
 
 export function MatchHomePage() {
   const router = useRouter();
@@ -149,7 +134,9 @@ export function MatchHomePage() {
         background={<MatchSplineScene variant="hero" className="match-hero-spline" pointerFollow={false} />}
       >
         <ProductHeroContent>
-          <ProductHeroTitle gradient>MATCH</ProductHeroTitle>
+          <DsGradientTitle from="#ff6b9d" to="#ffb3c7" spaced>
+            Match
+          </DsGradientTitle>
           <ProductHeroAccent>{t("tagline")}</ProductHeroAccent>
           <ProductHeroDescription>{t("description")}</ProductHeroDescription>
           <ProductHeroActions>
@@ -163,144 +150,105 @@ export function MatchHomePage() {
         </ProductHeroContent>
       </ProductMarketingHero>
 
-      <ProductWhatIsSection product="match" />
+      <MarketingPageSections>
+        <ProductWhatIsSection product="match" />
 
-      <PWAProductBeginCTA productId="match" price="$4.99" />
+        <PWAProductBeginCTA productId="match" price="$4.99" />
 
-      <NotPWA>
-        <MarketingPageSections>
-          <MarketingSection padding="lg">
-            <div className="marketing-accent-grid marketing-accent-grid--3 mx-auto max-w-6xl">
-              {FEATURES.map((feature) => (
-                <article key={feature.titleKey} className={`content-card content-card--${feature.accent}`}>
-                  <MatchMediaPlaceholder label={feature.mediaLabel} />
-                  <div className="content-card__body">
-                    <p className="content-card__title">{t(feature.titleKey)}</p>
-                    <p className="mt-2">{t(feature.descKey)}</p>
-                  </div>
-                </article>
+        <NotPWA>
+          <DsBand>
+            <div className="ds-grid-auto-240">
+              {FEATURE_KEYS.map((titleKey, i) => (
+                <DsGlassCard key={titleKey} roseGlow>
+                  <p className="ds-glass-card__title--rose">{t(titleKey)}</p>
+                  <p className="ds-glass-card__body">{t(FEATURE_DESC_KEYS[i])}</p>
+                </DsGlassCard>
               ))}
             </div>
-          </MarketingSection>
+          </DsBand>
 
-          <MarketingSection id="match-how-it-works" title={t("how_title")} subtitle={t("how_label")} padding="lg">
-            <div className="marketing-accent-grid marketing-accent-grid--4 mx-auto max-w-5xl">
-              {HOW_STEPS.map((step, idx) => {
-                const accent = HOW_STEP_ACCENTS[idx] ?? "fuchsia";
-                return (
-                  <article
-                    key={step}
-                    className={`content-card content-card--solid content-card--${accent} text-center`}
-                  >
-                    <p className="text-3xl font-semibold leading-none">{idx + 1}</p>
-                    <p className="content-card__title mt-4">{t(`${step}_title`)}</p>
-                    <p className="mt-2">{t(`${step}_desc`)}</p>
-                  </article>
-                );
-              })}
+          <DsBand>
+            <DsKicker color="#ffb3c7">{t("how_label")}</DsKicker>
+            <DsSectionHeading className="mt-2">{t("how_title")}</DsSectionHeading>
+            <div className="mt-9">
+              <DsMatchFlow
+                steps={HOW_STEPS.map((step) => ({
+                  title: t(`${step}_title`),
+                  desc: t(`${step}_desc`),
+                }))}
+              />
             </div>
-          </MarketingSection>
+          </DsBand>
 
-          <MarketingSection id="match-use-cases" title={t("use_cases_title")} padding="lg">
-            <div className="marketing-accent-grid md:grid-cols-2 lg:grid-cols-3">
-              {USE_CASES.map((item) => (
-                <article key={item.titleKey} className={`content-card content-card--solid content-card--${item.accent}`}>
-                  <p className="content-card__title">{t(item.titleKey)}</p>
-                  <p className="mt-2">{t(item.descKey)}</p>
-                </article>
+          <DsBand>
+            <DsSectionHeading>{t("use_cases_title")}</DsSectionHeading>
+            <div className="mt-9 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {USE_CASES.map(({ titleKey, descKey, icon: Icon }, idx) => (
+                <DsMatchUseCard
+                  key={titleKey}
+                  index={idx + 1}
+                  icon={<Icon className="h-5 w-5" strokeWidth={2} aria-hidden />}
+                  title={t(titleKey)}
+                  description={t(descKey)}
+                />
               ))}
             </div>
-          </MarketingSection>
+          </DsBand>
 
-          <MarketingSection id="match-report-preview" title={t("whatyouget_title")} padding="lg">
-            <div className="match-report-preview-grid mx-auto max-w-5xl">
-              <div className="mx-auto w-full max-w-sm lg:max-w-none">
-                <MatchMediaPlaceholder label="Report preview" report />
-              </div>
-              <div className="match-report-sections">
-                {REPORT_PREVIEW.map((item) => (
-                  <article
-                    key={item.titleKey}
-                    className={`content-card content-card--solid content-card--${item.accent} match-report-section-card`}
-                  >
-                    <span className={`match-report-badge match-report-badge--${item.badgeClass}`}>{item.badge}</span>
-                    <div className="min-w-0">
-                      <p className="content-card__title">{t(item.titleKey)}</p>
-                      <p className="mt-2">{t(item.descKey)}</p>
+          <DsBand>
+            <DsSectionHeading>{t("whatyouget_title")}</DsSectionHeading>
+            <div className="ds-grid-auto-240 ds-mt-36">
+              {REPORT_PREVIEW.map(({ badge, titleKey, descKey, icon: Icon }) => (
+                <DsGlassCard key={titleKey}>
+                  <div className="ds-glass-card__row">
+                    <DsIconChip>
+                      <Icon className="h-5 w-5 text-[#ffd0de]" strokeWidth={2} />
+                    </DsIconChip>
+                    <div>
+                      <p className="text-xs font-mono text-[#ffb3c7]">{badge}</p>
+                      <p className="ds-glass-card__title mt-1">{t(titleKey)}</p>
+                      <p className="ds-glass-card__body">{t(descKey)}</p>
                     </div>
-                  </article>
-                ))}
-              </div>
-            </div>
-          </MarketingSection>
-
-          <MarketingSection id="match-pricing" padding="lg">
-            <div className="flex flex-col items-center text-center">
-              <h2 className="marketing-section-heading">$4.99</h2>
-              <p className="marketing-section-subheading">
-                {t("per_reading")} · {heroNote}
-              </p>
-              <article className="content-card content-card--solid content-card--fuchsia match-pricing-card mt-10">
-                <ul className="match-pricing-includes">
+                  </div>
+                </DsGlassCard>
+              ))}
+              <DsMutedCard accent="rose" className="flex flex-col justify-center">
+                <p className="m-0 text-[13px] uppercase tracking-[0.12em] opacity-90">
+                  {t("whatyouget_title")}
+                </p>
+                <ul className="mt-3 list-none space-y-2 p-0">
                   {PRICE_INCLUDES.map((key) => (
-                    <li key={key}>{t(key)}</li>
-                  ))}
-                </ul>
-                <button type="button" onClick={handleStart} className={cn(MATCH_CTA_CLASS, "mt-8 w-full")}>
-                  {ctaLabel}
-                </button>
-                {effectiveFree ? (
-                  <p className="marketing-section-intro mt-4 text-sm opacity-90">{t("first_free_emphasized")}</p>
-                ) : null}
-              </article>
-            </div>
-          </MarketingSection>
-
-          <MarketingSection title={t("not_title")} padding="lg">
-            <div className="marketing-accent-grid marketing-accent-grid--2 mx-auto max-w-4xl">
-              <article className="content-card content-card--solid content-card--magenta">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em]">{t("not_title")}</p>
-                <ul className="mt-5 space-y-3">
-                  {(t.raw("not_items") as string[]).map((item) => (
-                    <li key={item}>
-                      <span className="mr-1">✗</span>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </article>
-              <article className="content-card content-card--solid content-card--fuchsia">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em]">{t("whatyouget_title")}</p>
-                <ul className="mt-5 space-y-3">
-                  {PRICE_INCLUDES.slice(0, 4).map((key) => (
-                    <li key={key}>
-                      <span className="mr-1">✦</span>
+                    <li key={key} className="flex gap-2 text-[13.5px] leading-snug">
+                      <span>✓</span>
                       {t(key)}
                     </li>
                   ))}
                 </ul>
-                <p className="mt-6 text-sm leading-relaxed opacity-95">{t("not_footer")}</p>
-              </article>
+              </DsMutedCard>
             </div>
-          </MarketingSection>
+            <p className="mx-auto mt-8 max-w-xl text-center text-[17px] text-white">
+              {effectiveFree ? t("first_free_emphasized") : heroNote}
+            </p>
+            <div className="ds-cta-col ds-mt-36">
+              <button type="button" onClick={handleStart} className={MATCH_CTA_CLASS}>
+                {ctaLabel}
+              </button>
+            </div>
+          </DsBand>
 
-          <MarketingSection id="match-faq" title={t("faq_title")} padding="lg">
-            <div className="match-faq-wrap">
-              <div className="match-faq-list">
-                {FAQ_ITEMS.map((item, idx) => (
-                  <details
-                    key={item.q}
-                    className={`match-faq-item content-card content-card--solid content-card--${idx % 2 === 0 ? "violet" : "magenta"}`}
-                  >
-                    <summary>{t(item.q)}</summary>
-                    <p>{t(item.a)}</p>
-                  </details>
-                ))}
-              </div>
+          <DsBand>
+            <DsSectionHeading>{t("faq_title")}</DsSectionHeading>
+            <div className="mx-auto mt-8 flex max-w-3xl flex-col gap-3.5">
+              {FAQ_ITEMS.map(({ q, a }) => (
+                <DsGlassCard key={q}>
+                  <p className="ds-glass-card__title">{t(q)}</p>
+                  <p className="ds-glass-card__body mt-2.5">{t(a)}</p>
+                </DsGlassCard>
+              ))}
             </div>
-          </MarketingSection>
-        </MarketingPageSections>
-      </NotPWA>
+          </DsBand>
+        </NotPWA>
+      </MarketingPageSections>
     </MarketingPageLayout>
   );
 }

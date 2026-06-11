@@ -43,7 +43,7 @@ export function HeroInstallCta() {
     <button
       type="button"
       onClick={handleClick}
-      className="mt-6 inline-flex items-center justify-center rounded-full border border-[#7c3aed]/60 bg-black px-6 py-3 text-sm font-semibold text-white shadow-[0_0_24px_rgba(124,58,237,0.35)] transition hover:border-[#a855f7] hover:bg-[#7c3aed] hover:shadow-[0_0_30px_rgba(168,85,247,0.55)]"
+      className="pj-btn pj-btn-primary mt-6 px-8 py-3 text-sm font-semibold"
     >
       {copy}
     </button>

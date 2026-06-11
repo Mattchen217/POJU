@@ -9,6 +9,7 @@ import { BrandLockup } from "@/components/marketing/brand-lockup";
 import { MarketingLanguageSwitcher } from "@/components/marketing/marketing-language-switcher";
 import { Link } from "@/i18n/navigation";
 import { getActiveNavFromPathname, type SiteNavActive } from "@/lib/i18n/pathname-without-locale";
+import { cn } from "@/lib/utils/classnames";
 
 const NAV_ITEMS: { href: string; key: SiteNavActive }[] = [
   { href: "/poju", key: "poju" },
@@ -18,7 +19,7 @@ const NAV_ITEMS: { href: string; key: SiteNavActive }[] = [
   { href: "/archive", key: "archive" },
 ];
 
-export function MainNav() {
+export function MainNav({ homeHero = false }: { homeHero?: boolean }) {
   const pathname = usePathname();
   const active = getActiveNavFromPathname(pathname);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -31,8 +32,11 @@ export function MainNav() {
   const brandLabel = tCommon("brand").replace(/^p/, "P");
 
   return (
-    <nav className="marketing-header main-nav-wrapper" aria-label={tNav("mobileSheetTitle")}>
-      <div className="glass-nav main-nav">
+    <nav
+      className={cn("marketing-header main-nav-wrapper", homeHero && "main-nav-wrapper--home-hero")}
+      aria-label={tNav("mobileSheetTitle")}
+    >
+      <div className="glass-nav pj-nav main-nav">
         <Link
           href="/"
           className="nav-logo"
@@ -48,7 +52,7 @@ export function MainNav() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`glass-nav-item ${isActive ? "active" : ""}`}
+                className={`glass-nav-item pj-nav-item ${isActive ? "active" : ""}`}
               >
                 {tNav(item.key)}
               </Link>

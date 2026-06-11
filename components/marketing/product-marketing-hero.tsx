@@ -3,26 +3,21 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils/classnames";
 
 import type { ProductPageTheme } from "./marketing-page-layout";
+import { ProductHeroStarrySky } from "./product-hero-starry-sky";
 
 type ProductMarketingHeroProps = {
   children: ReactNode;
-  /** Spline / 能量球 / 后续 Match 动效 */
+  /** Spline / 能量球 / Match 动效 — 保留项目现有动效，不用 DS energyField */
   background?: ReactNode;
   className?: string;
   shellClassName?: string;
-  /** 双栏（Syncro QR 区） */
   layout?: "centered" | "split";
-  /** 背景层额外 class（定位尺寸） */
   backgroundClassName?: string;
-  /** 无 background 时也保留背景槽（如 Match 待上传动效） */
   reserveBackgroundSlot?: boolean;
-  theme?: ProductPageTheme;
+  theme?: ProductPageTheme | "archive";
 };
 
-/**
- * 各产品介绍页统一 Hero 外壳：相同 min-height、内边距与标题/正文尺度。
- * Match 动效：传入 `background` 或后续在 `.product-hero__bg--match` 内挂载。
- */
+/** DS ProductHero shell（chrome.jsx）— 动效层 + 暗角叠层 + 居中内容 */
 export function ProductMarketingHero({
   children,
   background,
@@ -36,7 +31,10 @@ export function ProductMarketingHero({
   const showBg = Boolean(background) || reserveBackgroundSlot;
 
   return (
-    <section className={cn("product-hero", theme && `product-page--${theme}`, className)} data-product-hero={theme}>
+    <section
+      className={cn("product-hero", theme && theme !== "archive" && `product-page--${theme}`, className)}
+      data-product-hero={theme}
+    >
       <div className={cn("product-hero__shell", shellClassName)}>
         {showBg ? (
           <div className={cn("product-hero__bg", backgroundClassName)} aria-hidden>
@@ -44,13 +42,17 @@ export function ProductMarketingHero({
           </div>
         ) : null}
 
+        <ProductHeroStarrySky />
+
+        <div className="product-hero__vignette" aria-hidden />
+
         <div
           className={cn(
             "product-hero__stage",
             layout === "split" && "product-hero__stage--align-start",
           )}
         >
-          {children}
+          <div className="product-hero__stage-inner ds-fade-in">{children}</div>
         </div>
       </div>
     </section>
@@ -82,6 +84,7 @@ export function ProductHeroContent({
   );
 }
 
+/** @deprecated Prefer DsGradientTitle in hero — kept for non-hero usage */
 export function ProductHeroTitle({
   children,
   gradient,
@@ -109,20 +112,48 @@ export function ProductHeroDescription({ children, className }: { children: Reac
 export function ProductHeroMeta({
   children,
   bright,
+  bold,
   className,
 }: {
   children: ReactNode;
   bright?: boolean;
+  bold?: boolean;
   className?: string;
 }) {
-  return <p className={cn("product-hero__meta", bright && "product-hero__meta--bright", className)}>{children}</p>;
+  return (
+    <p
+      className={cn(
+        "product-hero__meta",
+        bright && "product-hero__meta--bright",
+        bold && "product-hero__meta--bold",
+        className,
+      )}
+    >
+      {children}
+    </p>
+  );
 }
 
 export function ProductHeroActions({ children, className }: { children: ReactNode; className?: string }) {
   return <div className={cn("product-hero__actions", className)}>{children}</div>;
 }
 
+export function ProductHeroSecondaryLink({
+  href,
+  children,
+  className,
+}: {
+  href: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <a href={href} className={cn("product-hero__secondary-link", className)}>
+      {children}
+    </a>
+  );
+}
+
 export function ProductHeroSplit({ children, className }: { children: ReactNode; className?: string }) {
   return <div className={cn("product-hero__split", className)}>{children}</div>;
 }
-

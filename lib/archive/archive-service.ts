@@ -167,12 +167,14 @@ export async function saveActionRecommendationsToArchive(input: {
 export async function listArchive(filter?: {
   type?: ArchiveRecord["type"];
   product?: ArchiveRecord["product"];
+  /** Max rows after sort (newest first). */
+  limit?: number;
 }): Promise<ArchiveSummary[]> {
   const deviceId = getPojuDeviceId();
   const db = await ensurePojuDbReady();
   const records = await db.archive.where("device_id").equals(deviceId).toArray();
 
-  return records
+  const sorted = records
     .filter((r) => !filter?.type || r.type === filter.type)
     .filter((r) => !filter?.product || r.product === filter.product)
     .sort((a, b) => archiveCreatedMs(b.created_at) - archiveCreatedMs(a.created_at))
@@ -184,6 +186,11 @@ export async function listArchive(filter?: {
       session_id: r.session_id,
       created_at: normalizeArchiveCreatedAt(r.created_at),
     }));
+
+  if (filter?.limit != null && filter.limit > 0) {
+    return sorted.slice(0, filter.limit);
+  }
+  return sorted;
 }
 
 export async function loadArchiveItem(archiveId: string): Promise<POJUActionRecommendationsData | null> {

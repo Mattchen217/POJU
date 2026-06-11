@@ -1,4 +1,4 @@
-/* 产品介绍页 / Match / Archive — 统一 Hero 尺寸与排版 */
+/* 产品介绍页 / Match / Archive — DS ProductHero shell + 项目动效背景 */
 
 .product-hero {
   position: relative;
@@ -9,24 +9,23 @@
 
 .product-hero__shell {
   position: relative;
-  /* 允许 Spline / 能量球超出壳层（-top、加宽等），避免裁切 */
   overflow: visible;
-  padding: var(--space-8) 0;
+  min-height: min(56vh, 520px);
+  padding: clamp(64px, 12vw, 84px) 24px 44px;
+}
+
+.product-hero__shell--archive {
+  min-height: min(34vh, 300px);
+  padding: clamp(36px, 7vw, 52px) 24px 24px;
 }
 
 @media (min-width: 640px) {
   .product-hero__shell {
-    padding: var(--space-10) 0;
+    padding-inline: 24px;
   }
 }
 
-@media (min-width: 768px) {
-  .product-hero__shell {
-    padding: var(--space-12) 0 var(--space-10);
-  }
-}
-
-/* 动效 / Spline / 能量球等背景槽 — 须铺满 shell，子元素 absolute 才有参照宽高 */
+/* 动效 / Spline / 能量球等背景槽 */
 .product-hero__bg {
   pointer-events: none;
   position: absolute;
@@ -35,7 +34,23 @@
   overflow: visible;
 }
 
+/* DS ProductHero 暗角叠层 */
+.product-hero__vignette {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: radial-gradient(ellipse 70% 60% at 50% 42%, transparent 30%, rgba(7, 5, 15, 0.4) 100%);
+}
+
+/* Symmetric vertical breakout — keeps bg + spline centered in hero shell. */
 .product-hero__bg--match {
+  inset: auto;
+  left: 0;
+  right: 0;
+  top: -24%;
+  bottom: -24%;
+  height: auto;
   overflow: visible;
 }
 
@@ -46,36 +61,28 @@
 }
 
 /*
- * Match hero — full-bleed Spline on background.
- * Camera zoom (JS) frames the whole scene; --match-spline-display-scale shrinks on page.
- * No fixed viewport box — avoids cropping to center only.
+ * Match hero — pre-expand shell then scale (same pattern as match-card-spline-shell).
+ * Scaling inset:0 directly crops top/bottom; expand canvas first, then scale down.
  */
 .match-hero-spline {
-  --match-spline-display-scale: 0.62;
+  --match-hero-shell-scale: var(--match-spline-display-scale, 0.8);
+  --match-hero-shell-height-ratio: 1.38;
+  --match-hero-shell-offset-y: 0%;
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  left: 50%;
+  top: 50%;
+  width: calc(100% / var(--match-hero-shell-scale));
+  height: calc(100% * var(--match-hero-shell-height-ratio) / var(--match-hero-shell-scale));
+  min-height: 0;
+  transform: translate(-50%, calc(-50% + var(--match-hero-shell-offset-y, 0px)))
+    scale(var(--match-hero-shell-scale));
+  transform-origin: center center;
   opacity: 0.82;
   overflow: visible;
-  transform: scale(var(--match-spline-display-scale, 1));
-  transform-origin: center 48%;
 }
 
 .match-spline-scene--hero,
 .match-spline-scene--hero canvas {
-  overflow: visible !important;
-  width: 100% !important;
-  height: 100% !important;
-}
-
-.match-spline-scene--card {
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-
-.match-spline-scene--card canvas {
   overflow: visible !important;
   width: 100% !important;
   height: 100% !important;
@@ -86,9 +93,51 @@
 }
 
 /*
- * PWA Match hero — full-bleed Spline (no boxed bg rect, no CSS scale shrink).
- * Camera zoom in match-spline-scene.ts pulls back so both circles fit.
+ * Match homepage card — setZoom + orbit radius pull (see MATCH_SPLINE_CARD_RADIUS_FACTOR).
  */
+.match-card-spline-shell {
+  --match-card-shell-scale: 0.3;
+  --match-card-shell-offset-x: 14px;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(100% / var(--match-card-shell-scale));
+  height: calc(108% / var(--match-card-shell-scale));
+  min-height: 0;
+  transform: translate(calc(-50% + var(--match-card-shell-offset-x)), -50%)
+    scale(var(--match-card-shell-scale));
+  transform-origin: center center;
+  filter: brightness(1.22) contrast(1.2) saturate(1.12);
+}
+
+.match-card-spline-scene canvas {
+  mix-blend-mode: screen;
+}
+
+/* POJU hero — wireframe figure vertically centered in hero shell (was -top-* pushing it up). */
+.poju-hero-spline {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100%;
+  max-width: 920px;
+  height: min(68vh, 520px);
+  transform: translate(-50%, -50%);
+  opacity: 0.75;
+}
+
+@media (min-width: 640px) {
+  .poju-hero-spline {
+    height: min(72vh, 600px);
+  }
+}
+
+@media (min-width: 768px) {
+  .poju-hero-spline {
+    height: min(75vh, 660px);
+  }
+}
+
 .pwa-mode .product-page--match .product-hero {
   overflow: visible;
 }
@@ -96,36 +145,16 @@
 .pwa-mode .product-page--match .product-hero__shell {
   overflow: visible;
   padding-top: max(var(--space-6), env(safe-area-inset-top, 0px));
-  padding-bottom: var(--space-4);
-  min-height: min(56vh, 480px);
 }
 
-.pwa-mode .product-page--match .product-hero__bg,
-.pwa-mode .product-page--match .product-hero__bg--match {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  left: auto;
+.pwa-mode .product-hero__bg--match {
+  left: 50%;
   right: auto;
-  top: auto;
-  bottom: auto;
-  transform: none;
-  overflow: visible;
-}
-
-.pwa-mode .product-page--match .product-hero__stage {
-  min-height: min(48vh, 400px);
+  width: 100vw;
+  transform: translateX(-50%);
 }
 
 .pwa-mode .match-hero-spline {
-  --match-spline-display-scale: 1;
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  transform: none;
-  transform-origin: center 42%;
   opacity: 0.88;
 }
 
@@ -142,52 +171,97 @@
   overflow: visible;
 }
 
+/* Glyph hero — same vertical centering + sizing pattern as POJU hero spline. */
 .glyph-hero-spline {
   position: absolute;
   left: 50%;
-  top: 40%;
-  width: min(100vw, 100vh);
-  height: min(100vw, 100vh);
-  max-width: 640px;
-  max-height: 640px;
+  top: 50%;
+  width: 100%;
+  max-width: 920px;
+  height: min(68vh, 520px);
   transform: translate(-50%, -50%);
   opacity: 0.88;
   pointer-events: auto;
 }
 
-.pwa-mode .glyph-hero-spline {
-  top: 38%;
-  width: min(92vmin, 92vw);
-  height: min(92vmin, 92vw);
-  max-width: 520px;
-  max-height: 520px;
-}
-
-.product-hero__stage {
-  position: relative;
-  z-index: 10;
-  margin-inline: auto;
-  display: flex;
-  width: 100%;
-  max-width: 72rem;
-  min-height: 360px;
-  align-items: center;
-  justify-content: center;
-  padding-inline: var(--space-2);
-}
-
 @media (min-width: 640px) {
-  .product-hero__stage {
-    min-height: 420px;
-    padding-inline: var(--space-4);
+  .glyph-hero-spline {
+    height: min(72vh, 600px);
   }
 }
 
 @media (min-width: 768px) {
-  .product-hero__stage {
-    min-height: 520px;
-    padding-inline: var(--space-6);
+  .glyph-hero-spline {
+    height: min(75vh, 660px);
   }
+}
+
+.pwa-mode .glyph-hero-spline {
+  height: min(64vh, 480px);
+}
+
+@media (min-width: 640px) {
+  .pwa-mode .glyph-hero-spline {
+    height: min(68vh, 520px);
+  }
+}
+
+/* Syncro hero — same vertical centering + sizing as POJU / Glyph hero splines. */
+.product-page--syncro .product-hero__bg,
+.product-page--syncro .product-hero__shell {
+  overflow: visible;
+}
+
+.syncro-hero-spline {
+  /* Vertical nudge only — do not combine with scale() or the whole scene shrinks. */
+  --syncro-hero-offset-y: 10px;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100%;
+  max-width: 920px;
+  height: min(68vh, 520px);
+  transform: translate(-50%, calc(-50% + var(--syncro-hero-offset-y)));
+  opacity: 0.8;
+}
+
+@media (min-width: 640px) {
+  .syncro-hero-spline {
+    height: min(72vh, 600px);
+  }
+}
+
+@media (min-width: 768px) {
+  .syncro-hero-spline {
+    height: min(75vh, 660px);
+  }
+}
+
+.pwa-mode .syncro-hero-spline {
+  height: min(64vh, 480px);
+}
+
+@media (min-width: 640px) {
+  .pwa-mode .syncro-hero-spline {
+    height: min(68vh, 520px);
+  }
+}
+
+.product-hero__stage {
+  position: relative;
+  z-index: 2;
+  margin-inline: auto;
+  display: flex;
+  width: 100%;
+  max-width: 44rem;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.product-hero__stage-inner {
+  width: 100%;
 }
 
 .product-hero__stage--align-start {
@@ -197,7 +271,7 @@
 .product-hero__content {
   width: 100%;
   min-width: 0;
-  max-width: 42.5rem;
+  max-width: 44rem;
   text-align: center;
 }
 
@@ -246,11 +320,11 @@
   letter-spacing: 0.12em;
 }
 
-/* 副标题 / tagline（产品色强调行） */
+/* 副标题 / tagline（产品色强调行 — DS 第一行 accent） */
 .product-hero__accent {
-  margin: var(--space-4) auto 0;
+  margin: 16px auto 0;
   max-width: 36rem;
-  font-size: clamp(1.125rem, 2.4vw, 1.25rem);
+  font-size: clamp(1.05rem, 2.4vw, 1.25rem);
   font-weight: 500;
   line-height: 1.4;
 }
@@ -267,16 +341,23 @@
 .product-page--match .product-hero__accent {
   color: #ffffff;
   font-weight: 600;
+  max-width: 34rem;
+  font-size: clamp(1.05rem, 2.2vw, 1.2rem);
 }
 
 /* 正文描述 */
 .product-hero__description {
-  margin: var(--space-5) auto 0;
+  margin: 20px auto 0;
   max-width: 36rem;
-  padding-inline: var(--space-2);
-  font-size: clamp(0.875rem, 1.9vw, 1rem);
+  padding-inline: 0;
+  font-size: clamp(0.95rem, 1.9vw, 1.05rem);
   line-height: 1.75;
   color: #e6e8f3;
+}
+
+.product-page--syncro .product-hero__description,
+.product-page--match .product-hero__description {
+  max-width: 37rem;
 }
 
 @media (min-width: 768px) {
@@ -308,20 +389,38 @@
   color: rgba(255, 255, 255, 0.8);
 }
 
+.product-hero__meta--bold {
+  margin-top: 16px;
+  max-width: 32rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #fff;
+}
+
+.product-page--syncro .product-hero__meta:not(.product-hero__meta--bold) {
+  margin-top: 10px;
+  font-size: 0.85rem;
+}
+
 /* CTA 区 */
 .product-hero__actions {
-  margin: var(--space-8) auto 0;
+  margin: 34px auto 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--space-3);
+  gap: 12px;
 }
 
-@media (min-width: 640px) {
-  .product-hero__actions {
-    margin-top: var(--space-10);
-  }
+.product-page--glyph .product-hero__actions,
+.product-page--match .product-hero__actions {
+  margin-top: 20px;
+  gap: 10px;
+}
+
+.product-page--syncro .product-hero__actions {
+  margin-top: 30px;
+  gap: 0;
 }
 
 .product-hero__content--left-md .product-hero__actions {
@@ -343,12 +442,33 @@
 }
 
 .product-hero__cta-subline {
-  margin-top: var(--space-2);
+  margin: 0;
   max-width: 28rem;
   text-align: center;
-  font-size: clamp(0.75rem, 1.4vw, 0.875rem);
+  font-size: 13px;
   line-height: 1.45;
-  color: #ffffff;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.product-hero__secondary-link {
+  font-size: 14px;
+  color: var(--pj-text-secondary);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+.product-hero__secondary-link:hover {
+  color: var(--pj-text-primary);
+}
+
+.product-hero__lock-note {
+  margin-top: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--pj-text-tertiary);
 }
 
 /* Syncro 双栏 */

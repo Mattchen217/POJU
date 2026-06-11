@@ -1,17 +1,10 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 
-import { ArchiveActionPlansList } from "@/components/archive/archive-action-plans-list";
-import { NotPWA } from "@/components/pwa/PWAConditional";
-import { ArchiveRuntimePreview } from "@/components/archive/archive-runtime-preview";
-import { WipeEverythingButton } from "@/components/archive/wipe-everything-button";
-import { MarketingPageLayout, MarketingPageSections } from "@/components/marketing/marketing-page-layout";
-import { MarketingSection } from "@/components/marketing/marketing-section";
-import {
-  ProductHeroContent,
-  ProductHeroDescription,
-  ProductHeroTitle,
-  ProductMarketingHero,
-} from "@/components/marketing/product-marketing-hero";
+import { ArchiveProductHero } from "@/components/marketing/archive-product-hero";
+import { DsArchiveVaultGrid } from "@/components/ds/DsArchiveVaultGrid";
+import { DsPageStack } from "@/components/ds/primitives";
+import { MarketingPageLayout } from "@/components/marketing/marketing-page-layout";
 
 export const metadata: Metadata = {
   title: "The Archive — pojulife",
@@ -19,34 +12,22 @@ export const metadata: Metadata = {
     "Everything here lives only on this device. Your POJU sessions, Glyph reflections, and Syncro readings in one local vault.",
 };
 
-export default function ArchivePage() {
+export default async function ArchivePage() {
+  const t = await getTranslations("archiveVault");
+
   return (
     <MarketingPageLayout theme="poju">
-      <ProductMarketingHero>
-        <ProductHeroContent>
-          <ProductHeroTitle gradient className="!tracking-[0.06em]">
-            ✦ THE ARCHIVE.
-          </ProductHeroTitle>
-          <ProductHeroDescription className="!text-white/85">
-            Everything here lives only on this device.
-          </ProductHeroDescription>
-        </ProductHeroContent>
-      </ProductMarketingHero>
+      <ArchiveProductHero
+        copy={{
+          title: t("title"),
+          subtitle: t("hero_subtitle"),
+          encryptedNote: t("encrypted_note"),
+        }}
+      />
 
-      <MarketingPageSections>
-        <MarketingSection padding="lg" allowOverflow>
-          <div className="space-y-12">
-            <ArchiveActionPlansList />
-            <NotPWA>
-              <ArchiveRuntimePreview />
-            </NotPWA>
-          </div>
-
-          <div className="mt-16 text-center md:text-left">
-            <WipeEverythingButton />
-          </div>
-        </MarketingSection>
-      </MarketingPageSections>
+      <DsPageStack className="px-3 sm:px-4 md:px-6">
+        <DsArchiveVaultGrid />
+      </DsPageStack>
     </MarketingPageLayout>
   );
 }

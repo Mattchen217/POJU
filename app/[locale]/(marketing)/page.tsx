@@ -1,547 +1,168 @@
-import { Link } from "@/i18n/navigation";
-import Image from "next/image";
 import { getTranslations } from "next-intl/server";
-import { Suspense, type ReactNode } from "react";
-import { Lock, Scale, UserX } from "lucide-react";
-import { ProductCardSpline } from "@/components/marketing/product-card-spline";
+import { Suspense } from "react";
+
+import { DsHomePage, DS_HOME_PRODUCT_ICONS, type DsHomeCopy } from "@/components/ds/DsHomePage";
 import { PaymentCancelToast } from "@/components/marketing/payment-cancel-toast";
-import { HeroInstallCta } from "@/components/marketing/hero-install-cta";
-import { ReadyCtaPillLink } from "@/components/marketing/ready-cta-pill-link";
-import { GlassSection } from "@/components/ui/GlassSection";
-import { LANDING_ASSETS } from "@/lib/marketing/landing-assets";
-import { hasPublicFile } from "@/lib/marketing/has-public-file";
-import productCardIconG from "@/assets/icons/G.png";
-import productCardIconM from "@/assets/icons/match.png";
-import productCardIconP from "@/assets/icons/P.png";
-import productCardIconS from "@/assets/icons/S.png";
 
 export const dynamic = "force-dynamic";
 
-function firstExisting(...paths: string[]): string | null {
-  for (const p of paths) {
-    if (hasPublicFile(p)) return p;
-  }
-  return null;
-}
-
-const productCardStyles = [
+const PRODUCT_STYLES = [
   {
     href: "/poju",
-    // 黑为主 + 一角亮紫；主体实色黑略带紫底，少叠雾
-    cardGradient:
-      "linear-gradient(122deg, rgba(150,105,245,0.45) 0%, transparent 18%), linear-gradient(145deg, #050508 0%, #0a0712 40%, #0c0a16 100%)",
-    overlayGradient: "linear-gradient(180deg, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.06) 100%)",
     kind: "poju",
     productKey: "poju" as const,
+    cardGradient:
+      "linear-gradient(122deg, rgba(150,105,245,0.45) 0%, transparent 18%), linear-gradient(145deg, #050508 0%, #0a0712 40%, #0c0a16 100%)",
+    ringStyle: "linear-gradient(135deg, #8b5cf6, #6d28d9)",
+    glowColor: "rgba(139,92,246,0.45)",
+    badgeColor: "#fcd34d",
   },
   {
     href: "/glyph",
-    // 黑为主 + 一角橙；衬 BAOZHA
-    cardGradient:
-      "linear-gradient(118deg, rgba(235,120,55,0.45) 0%, transparent 18%), linear-gradient(145deg, #050505 0%, #0b0806 40%, #0f0c0a 100%)",
-    overlayGradient: "linear-gradient(180deg, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.06) 100%)",
     kind: "glyph",
     productKey: "glyph" as const,
+    cardGradient:
+      "linear-gradient(118deg, rgba(235,120,55,0.45) 0%, transparent 18%), linear-gradient(145deg, #050505 0%, #0b0806 40%, #0f0c0a 100%)",
+    ringStyle: "linear-gradient(135deg, rgba(251,191,36,0.5), rgba(217,70,239,0.55))",
+    glowColor: "rgba(251,191,36,0.32)",
+    badgeColor: "#7dd3fc",
   },
   {
     href: "/syncro",
-    // 黑为主 + 一角青绿（Syncro）
-    cardGradient:
-      "linear-gradient(120deg, rgba(50,200,195,0.4) 0%, transparent 18%), linear-gradient(145deg, #050708 0%, #081012 40%, #0a1416 100%)",
-    overlayGradient: "linear-gradient(180deg, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.06) 100%)",
     kind: "syncro",
     productKey: "syncro" as const,
+    cardGradient:
+      "linear-gradient(120deg, rgba(50,200,195,0.4) 0%, transparent 18%), linear-gradient(145deg, #050708 0%, #081012 40%, #0a1416 100%)",
+    ringStyle: "linear-gradient(135deg, rgba(34,211,238,0.6), rgba(30,58,138,0.7))",
+    glowColor: "rgba(34,211,238,0.4)",
+    badgeColor: "#7dd3fc",
   },
   {
     href: "/match",
-    // 黑为主 + 一角玫红（Match）
-    cardGradient:
-      "linear-gradient(118deg, rgba(244,114,182,0.42) 0%, transparent 18%), linear-gradient(145deg, #080506 0%, #10080c 40%, #140a10 100%)",
-    overlayGradient: "linear-gradient(180deg, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.06) 100%)",
     kind: "match",
     productKey: "match" as const,
+    cardGradient:
+      "linear-gradient(118deg, rgba(244,114,182,0.42) 0%, transparent 18%), linear-gradient(145deg, #080506 0%, #10080c 40%, #140a10 100%)",
+    ringStyle: "linear-gradient(135deg, rgba(244,114,182,0.6), rgba(157,23,77,0.7))",
+    glowColor: "rgba(244,114,182,0.4)",
+    badgeColor: "#7dd3fc",
   },
-];
-
-function ProductCardIcon({ kind }: { kind: string }) {
-  const motion = "transition-transform duration-500 group-hover:scale-105";
-
-  const cfg =
-    kind === "poju"
-      ? {
-          src: productCardIconP,
-          ring:
-            "bg-gradient-to-br from-violet-500 to-purple-800 shadow-[0_0_22px_rgba(139,92,246,0.45)]",
-        }
-      : kind === "glyph"
-        ? {
-            src: productCardIconG,
-            ring:
-              "bg-gradient-to-br from-amber-400/35 via-orange-500/25 to-fuchsia-950/55 shadow-[0_0_22px_rgba(251,191,36,0.28)]",
-          }
-        : kind === "match"
-          ? {
-              src: productCardIconM,
-              ring:
-                "bg-gradient-to-br from-rose-400/50 to-fuchsia-950/60 shadow-[0_0_22px_rgba(244,114,182,0.35)]",
-            }
-          : {
-              src: productCardIconS,
-              ring:
-                "bg-gradient-to-br from-cyan-500/45 to-blue-950/60 shadow-[0_0_22px_rgba(34,211,238,0.35)]",
-            };
-
-  return (
-    <span
-      className={`relative inline-flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full sm:h-11 sm:w-11 ${cfg.ring} ${motion}`}
-      aria-hidden
-    >
-      <Image
-        src={cfg.src}
-        alt=""
-        width={88}
-        height={88}
-        className="h-[72%] w-[72%] object-contain object-center"
-      />
-    </span>
-  );
-}
-
-function ProductCardEffect({ kind }: { kind: string }) {
-  return null;
-}
-
-function PromiseIconBadge({
-  tone,
-  children,
-}: {
-  tone: "violet" | "cyan" | "amber";
-  children: ReactNode;
-}) {
-  const toneCls =
-    tone === "violet"
-      ? "from-violet-500/32 via-violet-400/16 to-fuchsia-500/12 text-violet-100 shadow-[0_0_24px_rgba(167,139,250,0.35)]"
-      : tone === "cyan"
-        ? "from-cyan-500/30 via-sky-400/14 to-teal-500/12 text-cyan-100 shadow-[0_0_24px_rgba(34,211,238,0.3)]"
-        : "from-amber-500/30 via-orange-400/14 to-yellow-500/12 text-amber-100 shadow-[0_0_24px_rgba(251,191,36,0.3)]";
-
-  return (
-    <div
-      className={`relative mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/16 bg-gradient-to-br ${toneCls}`}
-      aria-hidden
-    >
-      <div className="absolute inset-[2px] rounded-[10px] border border-white/14" />
-      <div className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-white/60 blur-[0.5px]" />
-      <div className="relative z-10">{children}</div>
-    </div>
-  );
-}
+] as const;
 
 export default async function LandingPage() {
   const tHome = await getTranslations("home");
   const tp = await getTranslations("home.products");
 
-  const heroBg = hasPublicFile(LANDING_ASSETS.hero) ? LANDING_ASSETS.hero : null;
-  const promisesBg = firstExisting(LANDING_ASSETS.promises);
-
-  const cardTexture: Record<(typeof productCardStyles)[number]["kind"], string | null> = {
-    poju: firstExisting(LANDING_ASSETS.cardPoju),
-    glyph: firstExisting(LANDING_ASSETS.cardGlyph),
-    syncro: firstExisting(LANDING_ASSETS.cardSyncro),
-    match: null,
+  const copy: DsHomeCopy = {
+    hero: {
+      headline: tHome("hero.headline"),
+      descLines: [tHome("hero.descLine1"), tHome("hero.descLine2"), tHome("hero.descLine3")],
+      trustLine: tHome("hero.trustLine"),
+    },
+    fourWays: { heading: tHome("fourWays.heading") },
+    products: PRODUCT_STYLES.map((style) => ({
+      ...style,
+      name: tp(`${style.productKey}.name`),
+      badge: tp(`${style.productKey}.badge`),
+      line1: tp(`${style.productKey}.line1`),
+      line2: tp(`${style.productKey}.line2`),
+      cta: tp(`${style.productKey}.cta`),
+      icon: DS_HOME_PRODUCT_ICONS[style.kind],
+    })),
+    built: {
+      heading: tHome("built.heading"),
+      intro: tHome("built.intro"),
+      easternTitle: tHome("built.easternTitle"),
+      easternBody: tHome("built.easternBody"),
+      modernTitle: tHome("built.modernTitle"),
+      modernBody: tHome("built.modernBody"),
+      aiTitle: tHome("built.aiTitle"),
+      aiBody: tHome("built.aiBody"),
+      closingHeading: tHome("built.closingHeading"),
+      closingBody: tHome("built.closingBody"),
+    },
+    meetsMoment: {
+      heading: tHome("meetsMoment.heading"),
+      subtitle: tHome("meetsMoment.subtitle"),
+      cards: (
+        [
+          { key: "card1" as const, href: "/poju", imageSrc: "/animations/S1.jpg", accent: "violet" as const },
+          { key: "card2" as const, href: "/glyph", imageSrc: "/animations/S2.jpg", accent: "magenta" as const },
+          { key: "card3" as const, href: "/syncro", imageSrc: "/animations/S3.jpg", accent: "blue" as const },
+          { key: "card4" as const, href: "/match", imageSrc: "/animations/S4.jpg", accent: "fuchsia" as const },
+        ] as const
+      ).map(({ key, href, imageSrc, accent }) => ({
+        href,
+        imageSrc,
+        accent,
+        lines: [
+          tHome(`meetsMoment.${key}.p1`),
+          tHome(`meetsMoment.${key}.p2`),
+          tHome(`meetsMoment.${key}.p3`),
+        ],
+        cta: tHome(`meetsMoment.${key}.cta`),
+      })),
+    },
+    promises: {
+      heading: tHome("promises.heading"),
+      neverStoredTitle: tHome("promises.neverStoredTitle"),
+      neverStoredParas: [
+        tHome("promises.neverStoredP1"),
+        tHome("promises.neverStoredP2"),
+        tHome("promises.neverStoredP3"),
+      ],
+      neverRequiredTitle: tHome("promises.neverRequiredTitle"),
+      neverRequiredParas: [
+        tHome("promises.neverRequiredP1"),
+        tHome("promises.neverRequiredP2"),
+        tHome("promises.neverRequiredP3"),
+        tHome("promises.neverRequiredP4"),
+      ],
+      neverManipulativeTitle: tHome("promises.neverManipulativeTitle"),
+      neverManipulativeParas: [
+        tHome("promises.neverManipulativeP1"),
+        tHome("promises.neverManipulativeP2"),
+        tHome("promises.neverManipulativeP3"),
+      ],
+      dataLine: tHome("promises.dataLine"),
+      readMore: tHome("promises.readMore"),
+    },
+    finalCta: {
+      readyHeading: tHome("finalCta.readyHeading"),
+      readySubheading: tHome("finalCta.readySubheading"),
+      items: [
+        {
+          href: "/poju",
+          title: tHome("finalCta.poju.title"),
+          sub: tHome("finalCta.poju.sub"),
+          variant: "gold" as const,
+        },
+        {
+          href: "/glyph",
+          title: tHome("finalCta.glyph.title"),
+          sub: tHome("finalCta.glyph.sub"),
+          variant: "violet" as const,
+        },
+        {
+          href: "/syncro",
+          title: tHome("finalCta.syncro.title"),
+          sub: tHome("finalCta.syncro.sub"),
+          variant: "cyan" as const,
+        },
+        {
+          href: "/match",
+          title: tHome("finalCta.match.title"),
+          sub: tHome("finalCta.match.sub"),
+          variant: "rose" as const,
+        },
+      ],
+    },
   };
 
-  const productCards = productCardStyles.map((style) => ({
-    ...style,
-    name: tp(`${style.productKey}.name`),
-    line1: tp(`${style.productKey}.line1`),
-    line2: tp(`${style.productKey}.line2`),
-    badge: tp(`${style.productKey}.badge`),
-    cta: tp(`${style.productKey}.cta`),
-  }));
-
-  type ContentCardAccent = "violet" | "magenta" | "blue" | "fuchsia";
-
-  const meetsMomentCards: {
-    key: "card1" | "card2" | "card3" | "card4";
-    href: string;
-    imageSrc: "/animations/S1.jpg" | "/animations/S2.jpg" | "/animations/S3.jpg" | "/animations/S4.jpg";
-    accent: ContentCardAccent;
-  }[] = [
-    { key: "card1", href: "/poju", imageSrc: "/animations/S1.jpg", accent: "violet" },
-    { key: "card2", href: "/glyph", imageSrc: "/animations/S2.jpg", accent: "magenta" },
-    { key: "card3", href: "/syncro", imageSrc: "/animations/S3.jpg", accent: "blue" },
-    { key: "card4", href: "/match", imageSrc: "/animations/S4.jpg", accent: "fuchsia" },
-  ];
-
   return (
-    <main className="text-text-body">
-      <Suspense fallback={<div className="min-h-screen bg-bg-deep" />}>
-        <PaymentCancelToast />
-
-        {/* Hero — 背景满铺；整体高度随视口抬高（min-height），横图 cover 裁切 */}
-        <section className="relative w-full overflow-x-hidden overflow-y-visible">
-          {heroBg ? (
-            <>
-              <div className="relative w-full min-h-[min(62vh,720px)] sm:min-h-[min(58vh,760px)] md:min-h-[min(65vh,840px)] lg:min-h-[min(68vh,920px)]">
-                <Image
-                  src={heroBg}
-                  alt=""
-                  fill
-                  priority
-                  sizes="100vw"
-                  className="object-cover object-[80%_42%] sm:object-cover sm:object-[center_38%]"
-                />
-              </div>
-              {/* 压暗背景亮度，减轻亮部星云刺眼，叠在图上、文案下 */}
-              <div
-                className="pointer-events-none absolute inset-0 z-[5] bg-gradient-to-b from-black/48 via-black/32 to-black/42"
-                aria-hidden
-              />
-            </>
-          ) : (
-            <div className="min-h-[min(62vh,720px)] w-full bg-bg-deep sm:min-h-[min(58vh,760px)] md:min-h-[min(65vh,840px)]" aria-hidden />
-          )}
-
-          <div className="absolute inset-0 z-10 mx-auto flex min-h-0 w-full max-w-6xl flex-col items-center justify-center px-4 pb-16 pt-12 text-center sm:px-6 sm:pb-20 sm:pt-14 md:pb-24 md:pt-16">
-            <div className="flex w-full max-w-[min(98vw,72rem)] flex-col items-center px-1">
-              {/* 主标题 · 大 */}
-              <h1 className="product-hero__title font-primary mt-5 max-w-[min(40rem,92vw)] text-white drop-shadow-[0_2px_14px_rgba(0,0,0,0.85)] sm:mt-6 md:max-w-[44rem]">
-                {tHome("hero.headline")}
-              </h1>
-              {/* [3] 副描述 · 中 */}
-              <div className="font-primary mt-6 max-w-[min(36rem,92vw)] space-y-2 text-[clamp(0.9rem,2.15vw,1.125rem)] font-medium leading-relaxed text-[#f4f4f8] drop-shadow-[0_1px_10px_rgba(0,0,0,0.78)] sm:mt-7 sm:space-y-2.5 md:text-[1.0625rem] md:leading-8">
-                <p>{tHome("hero.descLine1")}</p>
-                <p>{tHome("hero.descLine2")}</p>
-                <p>{tHome("hero.descLine3")}</p>
-              </div>
-              {/* [4] 信任标语 · 小（避免 text-dim 在深色背景上发绿/看不见） */}
-              <p className="font-primary mt-8 max-w-xl text-[11px] font-normal leading-relaxed text-white/78 drop-shadow-[0_1px_8px_rgba(0,0,0,0.75)] sm:mt-9 sm:text-xs md:text-[13px]">
-                {tHome("hero.trustLine")}
-              </p>
-              <HeroInstallCta />
-            </div>
-          </div>
-          <div
-            className="pointer-events-none absolute inset-x-0 bottom-0 z-[11] h-16 bg-gradient-to-b from-transparent to-[#0a0510]"
-            aria-hidden
-          />
-        </section>
-
-        <div className="landing-sections">
-          <GlassSection id="products">
-            <h2 className="text-center text-[26px] font-semibold leading-tight tracking-tight text-white sm:text-[30px] md:text-[32px]">
-              {tHome("fourWays.heading")}
-            </h2>
-            <div className="mt-10 grid gap-4 sm:grid-cols-2 md:mt-14 lg:grid-cols-4 lg:gap-5">
-              {productCards.map((card, index) => {
-                const tex = cardTexture[card.kind];
-                return (
-                  <Link
-                    key={card.kind}
-                    href={card.href}
-                    aria-label={`${card.name} · ${card.cta}`}
-                    className="group relative flex min-h-[300px] w-full flex-col overflow-hidden rounded-2xl border border-white/[0.08] p-4 text-left shadow-[0_24px_60px_rgba(0,0,0,0.35)] transition-all duration-500 hover:-translate-y-1 hover:border-white/15 hover:shadow-[0_28px_70px_rgba(6,10,28,0.5)] sm:min-h-[320px] sm:p-5"
-                  >
-                    <div
-                      className="absolute inset-0 transition-transform duration-700 group-hover:scale-[1.04]"
-                      style={{ backgroundImage: card.cardGradient }}
-                    />
-                    {tex && card.kind !== "glyph" && card.kind !== "syncro" ? (
-                      <div className="absolute inset-0 opacity-[0.22] mix-blend-soft-light">
-                        <Image src={tex} alt="" fill className="object-cover object-center" sizes="(max-width:640px) 100vw, 33vw" />
-                      </div>
-                    ) : null}
-                    <div
-                      className="absolute inset-0 transition-opacity duration-500 group-hover:opacity-90"
-                      style={{ backgroundImage: card.overlayGradient }}
-                    />
-                    <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100">
-                      <div className="absolute -inset-10 bg-[radial-gradient(circle_at_70%_70%,rgba(255,255,255,0.16),transparent_55%)]" />
-                    </div>
-                    <ProductCardEffect kind={card.kind} />
-                    <ProductCardSpline kind={card.kind} />
-                    <div className="relative z-10 flex min-h-0 flex-1 flex-col text-left">
-                      <div className="grid shrink-0 grid-cols-[2.5rem_minmax(0,1fr)] items-start gap-x-3 gap-y-1.5 sm:grid-cols-[2.75rem_minmax(0,1fr)]">
-                        <div className="row-span-2 self-center">
-                          <ProductCardIcon kind={card.kind} />
-                        </div>
-                        <p className="min-w-0 text-[17px] font-semibold leading-tight text-white sm:text-[18px]">{card.name}</p>
-                        <p
-                          className={
-                            index === 0
-                              ? "min-w-0 text-[12px] font-semibold leading-snug text-amber-300 sm:text-[13px]"
-                              : "min-w-0 text-[12px] font-semibold leading-snug text-sky-300 sm:text-[13px]"
-                          }
-                        >
-                          {card.badge}
-                        </p>
-                      </div>
-                      <div className="flex min-h-0 flex-1 flex-col justify-center py-2 sm:py-3">
-                        <div className="space-y-2 text-left text-[16px] leading-relaxed text-white/90 sm:text-[17px] sm:leading-8">
-                          <p>{card.line1}</p>
-                          <p>{card.line2}</p>
-                        </div>
-                      </div>
-                      <div className="flex shrink-0 justify-start pt-2 sm:pt-3">
-                        <span className="whitespace-nowrap text-[16px] font-medium text-white/95 transition-all duration-300 group-hover:translate-x-1 sm:text-[17px]">
-                          {card.cta}
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </GlassSection>
-
-          <GlassSection>
-            <div className="px-0">
-              <h3 className="text-center text-[26px] font-semibold leading-tight tracking-tight text-white sm:text-[30px] md:text-[32px]">
-                {tHome("built.heading")}
-              </h3>
-                <p className="mx-auto mt-5 max-w-3xl whitespace-pre-line text-center text-[16px] leading-8 text-white/88 sm:text-[17px]">
-                  {tHome("built.intro")}
-                </p>
-              </div>
-              <div className="relative mt-10 aspect-[10/4] overflow-hidden rounded-2xl">
-                <Image
-                  src="/animations/P2V1.jpg"
-                  alt=""
-                  fill
-                  className="object-cover object-center scale-100"
-                  sizes="(max-width:1200px) 100vw, 1152px"
-                />
-                <div className="absolute inset-0 bg-gradient-to-l from-black/78 via-black/46 to-black/12" aria-hidden />
-                <div className="absolute inset-0 z-10 flex items-center justify-end p-7 sm:p-9 md:p-14">
-                  <div className="content-card-caption content-card-caption--violet max-w-[min(94%,42rem)] sm:px-3.5 sm:py-3">
-                    <p className="content-card-caption__title drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)]">
-                      {tHome("built.easternTitle")}
-                    </p>
-                    <p className="mt-3 whitespace-pre-line drop-shadow-[0_1px_6px_rgba(0,0,0,0.55)]">
-                      {tHome("built.easternBody")}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="relative mt-8 aspect-[10/4] overflow-hidden rounded-2xl">
-                <Image
-                  src="/animations/P3.jpg"
-                  alt=""
-                  fill
-                  className="object-cover object-center scale-100"
-                  sizes="(max-width:1200px) 100vw, 1152px"
-                />
-                <div className="absolute inset-0 bg-gradient-to-r from-black/78 via-black/46 to-black/12" aria-hidden />
-                <div className="absolute inset-0 z-10 flex items-center justify-start p-7 sm:p-9 md:p-14">
-                  <div className="content-card-caption content-card-caption--blue max-w-[min(94%,42rem)] sm:px-3.5 sm:py-3">
-                    <p className="content-card-caption__title drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)]">
-                      {tHome("built.modernTitle")}
-                    </p>
-                    <p className="mt-3 whitespace-pre-line drop-shadow-[0_1px_6px_rgba(0,0,0,0.55)]">
-                      {tHome("built.modernBody")}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="relative mt-8 aspect-[10/4] overflow-hidden rounded-2xl">
-                <Image
-                  src="/animations/P3-1.jpg"
-                  alt=""
-                  fill
-                  className="object-cover object-center scale-100"
-                  sizes="(max-width:1200px) 100vw, 1152px"
-                />
-                <div className="absolute inset-0 bg-gradient-to-l from-black/78 via-black/46 to-black/12" aria-hidden />
-                <div className="absolute inset-0 z-10 flex items-center justify-end p-7 sm:p-9 md:p-14">
-                  <div className="content-card-caption content-card-caption--magenta max-w-[min(94%,42rem)] sm:px-3.5 sm:py-3">
-                    <p className="content-card-caption__title drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)]">
-                      {tHome("built.aiTitle")}
-                    </p>
-                    <p className="mt-3 whitespace-pre-line drop-shadow-[0_1px_6px_rgba(0,0,0,0.55)]">
-                      {tHome("built.aiBody")}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            <div className="mt-10 pb-4 md:pb-6">
-              <h4 className="text-center text-[26px] font-semibold leading-tight tracking-tight text-white sm:text-[30px] md:text-[32px]">
-                {tHome("built.closingHeading")}
-              </h4>
-              <p className="mx-auto mt-5 max-w-4xl whitespace-pre-line text-center text-[16px] leading-8 text-white/88 sm:text-[17px]">
-                {tHome("built.closingBody")}
-              </p>
-            </div>
-          </GlassSection>
-
-          <GlassSection>
-            <h4 className="text-center text-[26px] font-semibold leading-tight tracking-tight text-white sm:text-[30px] md:text-[32px]">
-              {tHome("meetsMoment.heading")}
-            </h4>
-            <p className="mx-auto mt-5 max-w-3xl text-center text-[17px] leading-8 text-white sm:text-[18px]">
-              {tHome("meetsMoment.subtitle")}
-            </p>
-            <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-7 lg:grid-cols-4 lg:gap-6">
-                  {meetsMomentCards.map(({ key, href, imageSrc, accent }) => (
-                    <Link
-                      key={key}
-                      href={href}
-                      className={`content-card content-card--${accent} group`}
-                    >
-                      <div className="content-card__media">
-                        <Image
-                          src={imageSrc}
-                          alt=""
-                          fill
-                          className="object-cover object-center transition-transform duration-500 group-hover:scale-[1.04]"
-                          sizes="(max-width:640px) 100vw, (max-width:1024px) 50vw, 25vw"
-                        />
-                      </div>
-                      <div className="content-card__body min-h-0">
-                        <div className="min-h-0 flex-1 space-y-2 text-left">
-                          <p>{tHome(`meetsMoment.${key}.p1`)}</p>
-                          <p>{tHome(`meetsMoment.${key}.p2`)}</p>
-                          <p>{tHome(`meetsMoment.${key}.p3`)}</p>
-                        </div>
-                        <p className="content-card__cta transition-transform duration-300 group-hover:translate-x-1">
-                          → {tHome(`meetsMoment.${key}.cta`)}
-                        </p>
-                      </div>
-                    </Link>
-                  ))}
-            </div>
-          </GlassSection>
-
-          <GlassSection className="glass-section--promises" padding="lg" allowOverflow>
-            {promisesBg ? (
-              <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]">
-                <Image src={promisesBg} alt="" fill className="object-cover object-center opacity-25" sizes="(max-width:1200px) 100vw, 1152px" />
-              </div>
-            ) : null}
-            <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-white/[0.03]" aria-hidden />
-            <div className="relative z-10">
-              <h2 className="text-center text-[28px] font-semibold leading-tight text-white sm:text-[32px] md:text-[36px]">
-                {tHome("promises.heading")}
-              </h2>
-              <div className="mx-auto mt-10 w-full max-w-6xl md:mt-12">
-                <div className="grid gap-6 md:grid-cols-1">
-                  <article className="content-card content-card--solid content-card--violet">
-                    <div className="flex items-start gap-4">
-                      <PromiseIconBadge tone="violet">
-                        <Lock className="h-5 w-5" strokeWidth={2} aria-hidden />
-                      </PromiseIconBadge>
-                      <div className="min-w-0">
-                        <p className="content-card__title">{tHome("promises.neverStoredTitle")}</p>
-                        <p className="mt-3">{tHome("promises.neverStoredP1")}</p>
-                        <p className="mt-3">{tHome("promises.neverStoredP2")}</p>
-                        <p className="mt-3">{tHome("promises.neverStoredP3")}</p>
-                      </div>
-                    </div>
-                  </article>
-                  <article className="content-card content-card--solid content-card--blue">
-                    <div className="flex items-start gap-4">
-                      <PromiseIconBadge tone="cyan">
-                        <UserX className="h-5 w-5" strokeWidth={2} aria-hidden />
-                      </PromiseIconBadge>
-                      <div className="min-w-0">
-                        <p className="content-card__title">{tHome("promises.neverRequiredTitle")}</p>
-                        <p className="mt-3">{tHome("promises.neverRequiredP1")}</p>
-                        <p className="mt-3">{tHome("promises.neverRequiredP2")}</p>
-                        <p className="mt-3">{tHome("promises.neverRequiredP3")}</p>
-                        <p className="mt-3">{tHome("promises.neverRequiredP4")}</p>
-                      </div>
-                    </div>
-                  </article>
-                  <article className="content-card content-card--solid content-card--gold">
-                    <div className="flex items-start gap-4">
-                      <PromiseIconBadge tone="amber">
-                        <Scale className="h-5 w-5" strokeWidth={2} aria-hidden />
-                      </PromiseIconBadge>
-                      <div className="min-w-0">
-                        <p className="content-card__title">{tHome("promises.neverManipulativeTitle")}</p>
-                        <p className="mt-3">{tHome("promises.neverManipulativeP1")}</p>
-                        <p className="mt-3">{tHome("promises.neverManipulativeP2")}</p>
-                        <p className="mt-3">{tHome("promises.neverManipulativeP3")}</p>
-                      </div>
-                    </div>
-                  </article>
-                </div>
-              </div>
-              <div className="mx-auto mt-12 max-w-3xl text-center">
-                <p className="whitespace-pre-line text-[17px] leading-8 text-white sm:text-[18px]">
-                  {tHome("promises.dataLine")}
-                </p>
-                <p className="mt-5">
-                  <Link href="/privacy" className="text-sm font-medium text-text-accent underline-offset-4 hover:text-purple-vivid hover:underline sm:text-[15px]">
-                    {tHome("promises.readMore")}
-                  </Link>
-                </p>
-              </div>
-            </div>
-          </GlassSection>
-
-          <GlassSection padding="lg">
-            <div className="flex flex-col items-center px-2 text-center sm:px-4">
-              <h2 className="max-w-2xl text-[26px] font-semibold leading-snug text-white sm:text-[30px] md:text-[34px]">
-                {tHome("finalCta.readyHeading")}
-              </h2>
-              <p className="mx-auto mt-4 max-w-xl text-[15px] leading-relaxed text-white/80 sm:text-[16px]">
-                {tHome("finalCta.readySubheading")}
-              </p>
-              <div
-                className="my-9 h-px w-full max-w-sm bg-gradient-to-r from-transparent via-white/25 to-transparent sm:my-10"
-                aria-hidden
-              />
-              <div className="grid w-full max-w-5xl grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4 sm:gap-4 md:gap-6 lg:gap-8">
-                <div className="flex flex-col items-center gap-2.5 text-center">
-                  <ReadyCtaPillLink
-                    href="/poju"
-                    variant="poju"
-                    title={tHome("finalCta.poju.title")}
-                    ariaLabel={`${tHome("finalCta.poju.title")}. ${tHome("finalCta.poju.sub")}`}
-                  />
-                  <p className="max-w-[17rem] text-[13px] leading-snug text-white/72 sm:max-w-[13.5rem] sm:px-1 sm:text-[14px] md:max-w-none">
-                    {tHome("finalCta.poju.sub")}
-                  </p>
-                </div>
-                <div className="flex flex-col items-center gap-2.5 text-center">
-                  <ReadyCtaPillLink
-                    href="/glyph"
-                    variant="glyph"
-                    title={tHome("finalCta.glyph.title")}
-                    ariaLabel={`${tHome("finalCta.glyph.title")}. ${tHome("finalCta.glyph.sub")}`}
-                  />
-                  <p className="max-w-[17rem] text-[13px] leading-snug text-white/72 sm:max-w-[13.5rem] sm:px-1 sm:text-[14px] md:max-w-none">
-                    {tHome("finalCta.glyph.sub")}
-                  </p>
-                </div>
-                <div className="flex flex-col items-center gap-2.5 text-center">
-                  <ReadyCtaPillLink
-                    href="/syncro"
-                    variant="syncro"
-                    title={tHome("finalCta.syncro.title")}
-                    ariaLabel={`${tHome("finalCta.syncro.title")}. ${tHome("finalCta.syncro.sub")}`}
-                  />
-                  <p className="max-w-[17rem] text-[13px] leading-snug text-white/72 sm:max-w-[13.5rem] sm:px-1 sm:text-[14px] md:max-w-none">
-                    {tHome("finalCta.syncro.sub")}
-                  </p>
-                </div>
-                <div className="flex flex-col items-center gap-2.5 text-center">
-                  <ReadyCtaPillLink
-                    href="/match"
-                    variant="match"
-                    title={tHome("finalCta.match.title")}
-                    ariaLabel={`${tHome("finalCta.match.title")}. ${tHome("finalCta.match.sub")}`}
-                  />
-                  <p className="max-w-[17rem] text-[13px] leading-snug text-white/72 sm:max-w-[13.5rem] sm:px-1 sm:text-[14px] md:max-w-none">
-                    {tHome("finalCta.match.sub")}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </GlassSection>
-        </div>
-      </Suspense>
-    </main>
+    <Suspense fallback={<div className="min-h-screen bg-[var(--pj-bg-deep)]" />}>
+      <PaymentCancelToast />
+      <DsHomePage copy={copy} />
+    </Suspense>
   );
 }

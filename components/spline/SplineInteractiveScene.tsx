@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, type CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import Spline from "@splinetool/react-spline";
 import type { Application } from "@splinetool/runtime";
 import { clsx } from "clsx";
@@ -10,6 +10,7 @@ import {
   useAllowHeavyWebGL,
 } from "@/lib/client/allow-heavy-webgl";
 import { bindSplinePointerBridge } from "@/lib/spline/spline-pointer-bridge";
+import { applySplineZoom } from "@/lib/spline/apply-spline-zoom";
 
 import "@/styles/spline-interactive.css";
 
@@ -25,7 +26,9 @@ type SplineInteractiveSceneProps = {
   webGLContext?: HeavyWebGLContext;
   /** Lower internal canvas resolution while keeping full-screen CSS size. */
   renderScale?: number;
-  onLoad?: (app: Application) => void;
+  /** When false, keeps rendering so camera framing updates apply (Match card). */
+  renderOnDemand?: boolean;
+  onLoad?: (app: Application, root: HTMLDivElement | null) => void;
 };
 
 export function SplineInteractiveScene({
@@ -36,21 +39,24 @@ export function SplineInteractiveScene({
   pointerFollow = true,
   webGLContext = "marketing",
   renderScale = 1,
+  renderOnDemand = true,
   onLoad,
 }: SplineInteractiveSceneProps) {
   const allowWebGL = useAllowHeavyWebGL(webGLContext);
   const rootRef = useRef<HTMLDivElement>(null);
   const appRef = useRef<Application | null>(null);
+  const [sceneReady, setSceneReady] = useState(false);
+
+  useEffect(() => {
+    setSceneReady(false);
+    appRef.current = null;
+  }, [scene]);
 
   const handleLoad = useCallback(
     (app: Application) => {
       appRef.current = app;
       if (initialZoom > 0) {
-        const apply = () => app.setZoom(initialZoom);
-        apply();
-        requestAnimationFrame(apply);
-        window.setTimeout(apply, 120);
-        window.setTimeout(apply, 400);
+        applySplineZoom(app, initialZoom);
       }
       if (renderScale > 0 && renderScale < 1 && typeof window !== "undefined") {
         const w = Math.max(320, Math.floor(window.innerWidth * renderScale));
@@ -66,10 +72,22 @@ export function SplineInteractiveScene({
       } catch {
         // optional
       }
-      onLoad?.(app);
+      onLoad?.(app, rootRef.current);
+      setSceneReady(true);
     },
     [initialZoom, onLoad, renderScale],
   );
+
+  useEffect(() => {
+    const root = rootRef.current;
+    const app = appRef.current;
+    if (!allowWebGL || !sceneReady || !root || !app || initialZoom <= 0) return;
+
+    const reapply = () => applySplineZoom(app, initialZoom);
+    const observer = new ResizeObserver(reapply);
+    observer.observe(root);
+    return () => observer.disconnect();
+  }, [allowWebGL, initialZoom, scene, sceneReady]);
 
   useEffect(() => {
     if (!allowWebGL || !pointerFollow) return;
@@ -88,7 +106,7 @@ export function SplineInteractiveScene({
 
   return (
     <div ref={rootRef} className={clsx("spline-interactive-scene", className)} style={style}>
-      <Spline scene={scene} className="h-full w-full" renderOnDemand onLoad={handleLoad} />
+      <Spline scene={scene} className="h-full w-full" renderOnDemand={renderOnDemand} onLoad={handleLoad} />
     </div>
   );
 }

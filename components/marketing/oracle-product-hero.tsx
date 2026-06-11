@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { HeroSpline } from "@/components/marketing/hero-spline";
+import { DsGradientTitle } from "@/components/ds/primitives";
 
 import "@/styles/spline-interactive.css";
 import {
@@ -9,7 +10,6 @@ import {
   ProductHeroContent,
   ProductHeroDescription,
   ProductHeroMeta,
-  ProductHeroTitle,
   ProductMarketingHero,
 } from "@/components/marketing/product-marketing-hero";
 import { PwaInlineOpenLink } from "@/components/marketing/pwa-inline-open-link";
@@ -36,14 +36,16 @@ export function OracleProductHero({
       background={
         <HeroSpline
           scene="/animations/BAOZHAscene.splinecode"
-          initialZoom={0.44}
+          initialZoom={0.66}
           className="glyph-hero-spline"
           pointerFollow
         />
       }
     >
       <ProductHeroContent>
-        <ProductHeroTitle>{copy.heading}</ProductHeroTitle>
+        <DsGradientTitle from="#a78bfa" to="#d8b4fe">
+          {copy.heading}
+        </DsGradientTitle>
         <ProductHeroAccent>{copy.subtitle}</ProductHeroAccent>
         <ProductHeroDescription>{copy.description}</ProductHeroDescription>
         <ProductHeroMeta>{copy.footnote}</ProductHeroMeta>
@@ -53,7 +55,7 @@ export function OracleProductHero({
               href="/start?next=%2Fglyph%2Freading"
               frameTitle="Glyph"
               closeLabel="关闭"
-              className="marketing-pill-outline-cta marketing-pill-outline-cta--amber inline-flex min-w-[200px] px-8 py-3.5 text-[15px] hover:-translate-y-0.5 hover:scale-[1.04] motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100 active:scale-[0.99] md:px-10 md:py-4 md:text-base"
+              className="pj-pill-outline pj-pill-outline--violet inline-flex px-[30px] py-3.5 text-[15px]"
             >
               {copy.cta}
             </PwaInlineOpenLink>

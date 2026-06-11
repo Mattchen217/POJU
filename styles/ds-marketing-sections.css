@@ -1,0 +1,288 @@
+/* DS marketing sections — When cards, flows, fit/use cards, starry hero */
+
+/* ===== Starry product hero sky ===== */
+.product-hero-stars {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.55;
+  background-image:
+    radial-gradient(1px 1px at 10% 20%, rgba(255, 255, 255, 0.45), transparent),
+    radial-gradient(1px 1px at 25% 65%, rgba(255, 255, 255, 0.35), transparent),
+    radial-gradient(1.5px 1.5px at 42% 18%, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1px 1px at 58% 42%, rgba(255, 255, 255, 0.3), transparent),
+    radial-gradient(1px 1px at 72% 78%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(1.5px 1.5px at 88% 28%, rgba(255, 255, 255, 0.45), transparent),
+    radial-gradient(1px 1px at 15% 88%, rgba(255, 255, 255, 0.25), transparent),
+    radial-gradient(1px 1px at 35% 35%, rgba(255, 255, 255, 0.35), transparent),
+    radial-gradient(1px 1px at 65% 12%, rgba(255, 255, 255, 0.3), transparent),
+    radial-gradient(1px 1px at 92% 62%, rgba(255, 255, 255, 0.35), transparent);
+  animation: pjStarTwinkle 8s ease-in-out infinite alternate;
+}
+
+@keyframes pjStarTwinkle {
+  from {
+    opacity: 0.42;
+  }
+  to {
+    opacity: 0.62;
+  }
+}
+
+/* ===== When product card (POJU / Glyph / Syncro / Match) ===== */
+.ds-when-product-card {
+  --ds-when-accent-rgb: 212, 175, 55;
+  --ds-when-accent-soft: var(--pj-gold-soft);
+  --ds-when-bg-start: rgba(212, 175, 55, 0.09);
+  --ds-when-hover-ring: rgba(212, 175, 55, 0.42);
+  --ds-when-hover-glow: rgba(212, 165, 116, 0.14);
+
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  padding: 24px 22px;
+  background: linear-gradient(165deg, var(--ds-when-bg-start), rgba(255, 255, 255, 0.018));
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.06);
+  transition:
+    transform 0.3s var(--pj-ease),
+    box-shadow 0.3s var(--pj-ease);
+}
+
+.ds-when-product-card--glyph {
+  --ds-when-accent-rgb: 167, 139, 250;
+  --ds-when-accent-soft: #ddd6fe;
+  --ds-when-bg-start: rgba(167, 139, 250, 0.09);
+  --ds-when-hover-ring: rgba(167, 139, 250, 0.42);
+  --ds-when-hover-glow: rgba(167, 139, 250, 0.14);
+}
+
+.ds-when-product-card--syncro {
+  --ds-when-accent-rgb: 34, 211, 238;
+  --ds-when-accent-soft: #67e8f9;
+  --ds-when-bg-start: rgba(34, 211, 238, 0.08);
+  --ds-when-hover-ring: rgba(34, 211, 238, 0.42);
+  --ds-when-hover-glow: rgba(34, 211, 238, 0.13);
+}
+
+.ds-when-product-card--match {
+  --ds-when-accent-rgb: 244, 114, 182;
+  --ds-when-accent-soft: #ffb3c7;
+  --ds-when-bg-start: rgba(244, 114, 182, 0.08);
+  --ds-when-hover-ring: rgba(244, 114, 182, 0.42);
+  --ds-when-hover-glow: rgba(244, 114, 182, 0.13);
+}
+
+.ds-when-product-card:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    inset 0 0 0 0.5px var(--ds-when-hover-ring),
+    0 18px 40px rgba(0, 0, 0, 0.35),
+    0 0 30px var(--ds-when-hover-glow);
+}
+
+.ds-when-product-card__ghost {
+  position: absolute;
+  top: -14px;
+  right: 6px;
+  font-family: var(--pj-font-mono);
+  font-size: 68px;
+  font-weight: 700;
+  line-height: 1;
+  color: rgba(var(--ds-when-accent-rgb), 0.1);
+  pointer-events: none;
+}
+
+.ds-when-product-card__rail {
+  position: absolute;
+  left: 0;
+  top: 22px;
+  bottom: 22px;
+  width: 3px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgb(var(--ds-when-accent-rgb)), transparent);
+  opacity: 0.55;
+  transition: opacity 0.3s;
+}
+
+.ds-when-product-card:hover .ds-when-product-card__rail {
+  opacity: 1;
+}
+
+.ds-when-product-card__divider {
+  margin: 14px 0;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(var(--ds-when-accent-rgb), 0.34), transparent);
+}
+
+/* ===== Flow step row (Glyph / Syncro / Match) ===== */
+.ds-flow-step-row {
+  margin-top: 22px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.ds-flow-step-chip {
+  flex: 1 1 180px;
+  max-width: 240px;
+  min-width: 150px;
+  border-radius: 14px;
+  padding: 16px;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.05);
+  transition: all 0.45s var(--pj-ease);
+}
+
+.ds-flow-step-chip--active {
+  transform: translateY(-2px);
+}
+
+.ds-flow-step-chip__index {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--pj-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  transition: all 0.45s;
+}
+
+/* ===== Glyph how-works explosion (BAOZHA spline) ===== */
+.glyph-how-explosion {
+  position: relative;
+  width: 100%;
+  max-width: 620px;
+  height: clamp(260px, 38vw, 340px);
+  margin: 20px auto 0;
+  overflow: visible;
+}
+
+.glyph-how-explosion__stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.glyph-how-explosion__scene {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(100%, 520px);
+  height: min(100%, 520px);
+  transform: translate(-50%, -50%) scale(0.72);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.glyph-how-explosion__scene--burst {
+  animation: glyphHowBurstOnce var(--glyph-how-burst-duration, 1.35s)
+    cubic-bezier(0.33, 1, 0.68, 1) forwards;
+}
+
+@keyframes glyphHowBurstOnce {
+  0% {
+    transform: translate(-50%, -50%) scale(0.78);
+    opacity: 0.95;
+  }
+  12% {
+    transform: translate(-50%, -50%) scale(0.78);
+    opacity: 1;
+  }
+  26% {
+    transform: translate(-50%, -50%) scale(0.56);
+    opacity: 1;
+  }
+  38% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 1;
+  }
+  52% {
+    transform: translate(-50%, -50%) scale(1.28);
+    opacity: 1;
+  }
+  64% {
+    transform: translate(-50%, -50%) scale(1.42);
+    opacity: 0.95;
+  }
+  78% {
+    transform: translate(-50%, -50%) scale(1.5);
+    opacity: 0.2;
+  }
+  88%,
+  100% {
+    transform: translate(-50%, -50%) scale(1.55);
+    opacity: 0;
+  }
+}
+
+.glyph-how-explosion__card {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.glyph-how-explosion__card--visible {
+  animation: glyphHowCardIn var(--glyph-how-card-in-duration, 0.38s)
+    cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.glyph-how-explosion__card-art {
+  width: 148px;
+  max-width: 148px;
+}
+
+@keyframes glyphHowCardIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glyph-how-explosion__scene--burst {
+    animation: none;
+    transform: translate(-50%, -50%) scale(0.75);
+    opacity: 0.85;
+  }
+
+  .glyph-how-explosion__card--visible {
+    animation: none;
+  }
+}
+
+/* Flow canvas hosts */
+.ds-syncro-flow-canvas,
+.ds-match-flow-canvas {
+  position: relative;
+  width: 100%;
+  margin-inline: auto;
+  overflow: hidden;
+}
+
+.ds-syncro-flow-canvas {
+  max-width: 660px;
+  height: clamp(150px, 24vw, 190px);
+  margin-top: 20px;
+}
+
+.ds-match-flow-canvas {
+  max-width: 620px;
+  height: clamp(240px, 36vw, 320px);
+  margin-top: 16px;
+}

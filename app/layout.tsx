@@ -56,6 +56,7 @@ export default function RootLayout({
     <html
       lang="en"
       translate="no"
+      suppressHydrationWarning
       className={`${GeistSans.variable} ${inter.variable} ${garamond.variable} ${jetbrainsMono.variable} h-full antialiased notranslate`}
     >
       <head>
@@ -71,9 +72,10 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         />
       </head>
-      <body className="min-h-full">
+      <body className="min-h-full" suppressHydrationWarning>
+        <div className="site-starry-bg" aria-hidden />
         <Providers>
-          <div className="min-h-screen">{children}</div>
+          <div className="relative z-[1] min-h-screen">{children}</div>
         </Providers>
       </body>
     </html>

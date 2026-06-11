@@ -2,13 +2,17 @@
 
 import { useIsPwaMode } from "@/components/pwa/PWAConditional";
 import { SplineInteractiveScene } from "@/components/spline/SplineInteractiveScene";
+import { configureMatchSplineFraming } from "@/lib/match/configure-match-spline-framing";
 import {
   MATCH_SPLINE_ANALYZING_ZOOM,
   MATCH_SPLINE_ANALYZING_DISPLAY_SCALE,
+  MATCH_SPLINE_CARD_RADIUS_FACTOR,
   MATCH_SPLINE_CARD_ZOOM,
   MATCH_SPLINE_HERO_DISPLAY_SCALE,
   MATCH_SPLINE_HERO_PWA_DISPLAY_SCALE,
   MATCH_SPLINE_HERO_PWA_ZOOM,
+  MATCH_SPLINE_HERO_SHELL_HEIGHT_RATIO,
+  MATCH_SPLINE_HERO_SHELL_OFFSET_Y,
   MATCH_SPLINE_HERO_ZOOM,
   MATCH_SPLINE_SCENE,
 } from "@/lib/match/match-spline-scene";
@@ -47,8 +51,7 @@ export function MatchSplineScene({
   const isPwa = useIsPwaMode();
   const heroPwa = variant === "hero" && isPwa === true;
   const zoom =
-    initialZoom ??
-    (heroPwa ? MATCH_SPLINE_HERO_PWA_ZOOM : ZOOM_BY_VARIANT[variant]);
+    initialZoom ?? (heroPwa ? MATCH_SPLINE_HERO_PWA_ZOOM : ZOOM_BY_VARIANT[variant]);
   const follow = pointerFollow ?? variant === "hero";
   const displayScale =
     heroPwa && variant === "hero"
@@ -61,17 +64,31 @@ export function MatchSplineScene({
       className={cn(
         "match-spline-scene",
         variant === "hero" && "match-spline-scene--hero",
-        variant === "card" && "match-spline-scene--card",
+        variant === "card" && "match-card-spline-scene",
         className,
       )}
       style={
-        displayScale != null && displayScale !== 1
-          ? ({ ["--match-spline-display-scale" as string]: String(displayScale) } as CSSProperties)
-          : undefined
+        variant === "hero"
+          ? ({
+              ["--match-spline-display-scale" as string]: String(displayScale ?? 1),
+              ["--match-hero-shell-height-ratio" as string]: String(
+                MATCH_SPLINE_HERO_SHELL_HEIGHT_RATIO,
+              ),
+              ["--match-hero-shell-offset-y" as string]: MATCH_SPLINE_HERO_SHELL_OFFSET_Y,
+            } as CSSProperties)
+          : displayScale != null && displayScale !== 1
+            ? ({ ["--match-spline-display-scale" as string]: String(displayScale) } as CSSProperties)
+            : undefined
       }
       initialZoom={zoom}
       pointerFollow={follow}
       webGLContext={variant === "analyzing" ? "preparing" : "marketing"}
+      renderOnDemand={variant === "analyzing"}
+      onLoad={
+        variant === "card"
+          ? (app) => configureMatchSplineFraming(app, zoom, MATCH_SPLINE_CARD_RADIUS_FACTOR)
+          : undefined
+      }
     />
   );
 }

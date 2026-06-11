@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { GlassSection } from "@/components/ui/GlassSection";
+import { DsBand, DsSectionHeading } from "@/components/ds/primitives";
 import { cn } from "@/lib/utils/classnames";
 
 type MarketingSectionProps = {
@@ -11,23 +11,38 @@ type MarketingSectionProps = {
   allowOverflow?: boolean;
   title?: string;
   subtitle?: string;
+  center?: boolean;
 };
 
-/** 导航款毛玻璃板块 + 可选居中标题（与首页 GlassSection 一致） */
+/** DS Band — frosted glass section (pj-glass-section) */
 export function MarketingSection({
   children,
   id,
   className,
-  padding = "default",
+  padding,
   allowOverflow,
   title,
   subtitle,
+  center,
 }: MarketingSectionProps) {
+  const padClass =
+    padding === "lg"
+      ? "py-10 md:py-12"
+      : padding === "sm"
+        ? "py-6"
+        : padding === "none"
+          ? "p-0"
+          : undefined;
+
   return (
-    <GlassSection id={id} className={className} padding={padding} allowOverflow={allowOverflow}>
-      {title ? <h2 className="marketing-section-heading">{title}</h2> : null}
-      {subtitle ? <p className="marketing-section-subheading">{subtitle}</p> : null}
-      <div className={cn(title || subtitle ? "mt-8 md:mt-10" : undefined)}>{children}</div>
-    </GlassSection>
+    <DsBand
+      id={id}
+      center={center}
+      className={cn(padClass, allowOverflow && "overflow-visible", className)}
+    >
+      {title ? <DsSectionHeading>{title}</DsSectionHeading> : null}
+      {subtitle ? <p className="marketing-section-subheading ds-mt-36">{subtitle}</p> : null}
+      <div className={cn(title || subtitle ? "ds-mt-36" : undefined)}>{children}</div>
+    </DsBand>
   );
 }

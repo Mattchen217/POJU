@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 
+import { DsWhenGlyphCard, type GlyphWhenIconKey } from "@/components/ds/marketing/DsWhenGlyphCard";
+import { GlyphHowWorksExplosion } from "@/components/ds/marketing/GlyphHowWorksExplosion";
 import { GlyphPrepareCta } from "@/components/glyph/GlyphPrepareCta";
 import { NotPWA } from "@/components/pwa/PWAConditional";
 import { PWAProductBeginCTA } from "@/components/pwa/PWAProductBeginCTA";
@@ -12,6 +14,7 @@ import {
 import { MarketingSection } from "@/components/marketing/marketing-section";
 import { ProductWhatIsSection } from "@/components/marketing/product-what-is-section";
 import { OracleProductHero } from "@/components/marketing/oracle-product-hero";
+import { DsMutedCard } from "@/components/ds/primitives";
 import { cn } from "@/lib/utils/classnames";
 import { WindCardWithParticles, type WindCardParticleKey } from "@/components/oracle/wind-cards";
 import crosswind from "@/assets/images/crosswind.png";
@@ -34,7 +37,10 @@ function linesFromGlyphDescription(description: string): string[] {
   return parts.length > 0 ? parts : [description];
 }
 
-const HOW_STEP_ACCENTS = ["fuchsia", "magenta", "violet"] as const;
+
+const GLYPH_WHEN_KEYS = ["quick_read", "circling", "fresh_angle", "new_start"] as const satisfies readonly GlyphWhenIconKey[];
+
+const GLYPH_FIVE_WINDS_CARD_PX = 168;
 
 function WindText({
   name,
@@ -110,6 +116,7 @@ export async function GlyphMarketingPage() {
     name: t("five_winds.eye_of_storm.name"),
     lines: linesFromGlyphDescription(t("five_winds.eye_of_storm.description")),
   };
+  const windCardsForHowItWorks = [divine, fair, still, cross, eye];
 
   return (
     <MarketingPageLayout theme="glyph">
@@ -124,10 +131,59 @@ export async function GlyphMarketingPage() {
         />
       </MarketingPageHero>
 
-      <ProductWhatIsSection product="glyph" />
-
-      <NotPWA>
       <MarketingPageSections>
+        <ProductWhatIsSection product="glyph" />
+
+        <NotPWA>
+          <MarketingSection id="when-to-glyph" title={t("when_to_come.heading")} padding="lg">
+            <p className="marketing-section-intro mx-auto max-w-2xl text-center">{t("when_to_come.intro")}</p>
+            <div className="mt-9 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-2">
+              {GLYPH_WHEN_KEYS.map((key, idx) => (
+                  <DsWhenGlyphCard
+                    key={key}
+                    index={idx + 1}
+                    iconKey={key}
+                    title={t(`when_to_come.${key}.title`)}
+                    description={t(`when_to_come.${key}.description`)}
+                  />
+              ))}
+            </div>
+          </MarketingSection>
+
+        <MarketingSection id="glyph-how-it-works" title={t("how_it_works.heading")} padding="lg">
+          <p className="marketing-section-intro mx-auto max-w-2xl text-center">{t("how_it_works.intro")}</p>
+          <div className="mt-9">
+            <GlyphHowWorksExplosion
+              windCards={windCardsForHowItWorks}
+              steps={[
+                {
+                  title: t("how_it_works.step_1.title"),
+                  desc: t("how_it_works.step_1.description"),
+                },
+                {
+                  title: t("how_it_works.step_2.title"),
+                  desc: t("how_it_works.step_2.description"),
+                },
+                {
+                  title: t("how_it_works.step_3.title"),
+                  desc: t("how_it_works.step_3.description"),
+                },
+              ]}
+            />
+          </div>
+          <DsMutedCard accent="magenta" className="mx-auto mt-10 max-w-2xl">
+            <ul className="list-none space-y-3 p-0 text-left">
+              {glyphUsageRules.map((rule) => (
+                <li key={rule}>
+                  <span className="mr-2">◉</span>
+                  {rule}
+                </li>
+              ))}
+            </ul>
+          </DsMutedCard>
+          <p className="marketing-section-subheading mt-8 !mb-0">{t("how_it_works.session_reminder")}</p>
+        </MarketingSection>
+
         <MarketingSection
           id="five-winds"
           className="scroll-mt-28"
@@ -139,13 +195,16 @@ export async function GlyphMarketingPage() {
           <div className="mx-auto mt-10 max-w-6xl">
             <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:grid-rows-3 lg:gap-x-6 lg:gap-y-16">
               <div className="flex justify-center lg:col-start-1 lg:row-start-1 lg:justify-end lg:pr-1">
-                <div className="grid w-full max-w-xl grid-cols-[128px_minmax(0,1fr)] items-center gap-4">
-                  <div className="w-full max-w-[128px]">
+                <div
+                  className="grid w-full max-w-xl items-center gap-5"
+                  style={{ gridTemplateColumns: `${GLYPH_FIVE_WINDS_CARD_PX}px minmax(0, 1fr)` }}
+                >
+                  <div className="w-full" style={{ maxWidth: GLYPH_FIVE_WINDS_CARD_PX }}>
                     <WindCardWithParticles
                       src={divine.image}
                       alt={divine.imageAlt}
                       particleKey={divine.particleKey}
-                      sizes="128px"
+                      sizes={`${GLYPH_FIVE_WINDS_CARD_PX}px`}
                       priority
                     />
                   </div>
@@ -154,13 +213,16 @@ export async function GlyphMarketingPage() {
               </div>
 
               <div className="flex justify-center lg:col-start-1 lg:row-start-2 lg:justify-end lg:pr-1">
-                <div className="grid w-full max-w-xl grid-cols-[128px_minmax(0,1fr)] items-center gap-4">
-                  <div className="w-full max-w-[128px]">
+                <div
+                  className="grid w-full max-w-xl items-center gap-5"
+                  style={{ gridTemplateColumns: `${GLYPH_FIVE_WINDS_CARD_PX}px minmax(0, 1fr)` }}
+                >
+                  <div className="w-full" style={{ maxWidth: GLYPH_FIVE_WINDS_CARD_PX }}>
                     <WindCardWithParticles
                       src={still.image}
                       alt={still.imageAlt}
                       particleKey={still.particleKey}
-                      sizes="128px"
+                      sizes={`${GLYPH_FIVE_WINDS_CARD_PX}px`}
                     />
                   </div>
                   <WindText name={still.name} lines={still.lines} />
@@ -168,13 +230,16 @@ export async function GlyphMarketingPage() {
               </div>
 
               <div className="flex justify-center lg:col-start-1 lg:row-start-3 lg:justify-end lg:pr-1">
-                <div className="grid w-full max-w-xl grid-cols-[128px_minmax(0,1fr)] items-center gap-4">
-                  <div className="w-full max-w-[128px]">
+                <div
+                  className="grid w-full max-w-xl items-center gap-5"
+                  style={{ gridTemplateColumns: `${GLYPH_FIVE_WINDS_CARD_PX}px minmax(0, 1fr)` }}
+                >
+                  <div className="w-full" style={{ maxWidth: GLYPH_FIVE_WINDS_CARD_PX }}>
                     <WindCardWithParticles
                       src={eye.image}
                       alt={eye.imageAlt}
                       particleKey={eye.particleKey}
-                      sizes="128px"
+                      sizes={`${GLYPH_FIVE_WINDS_CARD_PX}px`}
                     />
                   </div>
                   <WindText name={eye.name} lines={eye.lines} />
@@ -182,23 +247,34 @@ export async function GlyphMarketingPage() {
               </div>
 
               <div className="flex justify-center lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:self-center lg:justify-start lg:pl-1">
-                <div className="grid w-full max-w-xl grid-cols-[minmax(0,1fr)_128px] items-center gap-4">
+                <div
+                  className="grid w-full max-w-xl items-center gap-5"
+                  style={{ gridTemplateColumns: `minmax(0, 1fr) ${GLYPH_FIVE_WINDS_CARD_PX}px` }}
+                >
                   <WindText name={fair.name} lines={fair.lines} align="right" />
-                  <div className="w-full max-w-[128px] justify-self-end">
-                    <WindCardWithParticles src={fair.image} alt={fair.imageAlt} particleKey={fair.particleKey} sizes="128px" />
+                  <div className="w-full justify-self-end" style={{ maxWidth: GLYPH_FIVE_WINDS_CARD_PX }}>
+                    <WindCardWithParticles
+                      src={fair.image}
+                      alt={fair.imageAlt}
+                      particleKey={fair.particleKey}
+                      sizes={`${GLYPH_FIVE_WINDS_CARD_PX}px`}
+                    />
                   </div>
                 </div>
               </div>
 
               <div className="flex justify-center lg:col-start-2 lg:row-start-2 lg:row-span-2 lg:self-center lg:justify-start lg:pl-1">
-                <div className="grid w-full max-w-xl grid-cols-[minmax(0,1fr)_128px] items-center gap-4">
+                <div
+                  className="grid w-full max-w-xl items-center gap-5"
+                  style={{ gridTemplateColumns: `minmax(0, 1fr) ${GLYPH_FIVE_WINDS_CARD_PX}px` }}
+                >
                   <WindText name={cross.name} lines={cross.lines} align="right" />
-                  <div className="w-full max-w-[128px] justify-self-end">
+                  <div className="w-full justify-self-end" style={{ maxWidth: GLYPH_FIVE_WINDS_CARD_PX }}>
                     <WindCardWithParticles
                       src={cross.image}
                       alt={cross.imageAlt}
                       particleKey={cross.particleKey}
-                      sizes="128px"
+                      sizes={`${GLYPH_FIVE_WINDS_CARD_PX}px`}
                     />
                   </div>
                 </div>
@@ -215,33 +291,6 @@ export async function GlyphMarketingPage() {
           </div>
         </MarketingSection>
 
-        <MarketingSection id="glyph-how-it-works" title={t("how_it_works.heading")} padding="lg">
-          <div className="marketing-accent-grid marketing-accent-grid--3 mx-auto max-w-4xl">
-            {(["step_1", "step_2", "step_3"] as const).map((stepKey, idx) => {
-              const accent = HOW_STEP_ACCENTS[idx] ?? "fuchsia";
-              return (
-                <article
-                  key={stepKey}
-                  className={`content-card content-card--solid content-card--${accent} text-center`}
-                >
-                  <p className="text-4xl font-semibold leading-none">{idx + 1}</p>
-                  <p className="content-card__title mt-4">{t(`how_it_works.${stepKey}.title`)}</p>
-                  <p className="mt-2">{t(`how_it_works.${stepKey}.description`)}</p>
-                </article>
-              );
-            })}
-          </div>
-          <ul className="content-card content-card--solid content-card--magenta mx-auto mt-10 max-w-2xl space-y-3 text-left">
-            {glyphUsageRules.map((rule) => (
-              <li key={rule}>
-                <span className="mr-2">◉</span>
-                {rule}
-              </li>
-            ))}
-          </ul>
-          <p className="marketing-section-subheading mt-8 !mb-0">{t("how_it_works.session_reminder")}</p>
-        </MarketingSection>
-
         <MarketingSection id="glyph-pricing" title={t("pricing.heading")} padding="lg">
           <p className="marketing-section-subheading mx-auto max-w-2xl">{t("pricing.body")}</p>
           <div className="mt-8 flex flex-col items-center gap-3">
@@ -249,8 +298,8 @@ export async function GlyphMarketingPage() {
             <p className="marketing-section-intro max-w-md text-sm opacity-90">{t("pricing.footnote")}</p>
           </div>
         </MarketingSection>
+        </NotPWA>
       </MarketingPageSections>
-      </NotPWA>
 
       <PWAProductBeginCTA productId="glyph" price="$4.99" />
     </MarketingPageLayout>

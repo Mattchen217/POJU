@@ -2,6 +2,11 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
+import {
+  POJU_HOW_RING_RADIUS_VB,
+  POJU_HOW_WORKS_VB,
+} from "@/lib/poju/poju-how-works-layout";
+
 function mulberry32(seed: number) {
   return function () {
     let t = (seed += 0x6d2b79f5);
@@ -175,8 +180,8 @@ function buildFrameEdgePts(count: number, rnd: () => number, cr: number, cg: num
   return pts;
 }
 
-const VB = 400;
-const R_RING_VB = 112;
+const VB = POJU_HOW_WORKS_VB;
+const R_RING_VB = POJU_HOW_RING_RADIUS_VB;
 
 type PojuHowWorksGoldRingProps = {
   reduceMotion: boolean;

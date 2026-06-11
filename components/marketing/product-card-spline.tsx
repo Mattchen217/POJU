@@ -1,9 +1,8 @@
 "use client";
 
+import { MatchCardSpline } from "@/components/marketing/MatchCardSpline";
 import { HeroSpline } from "@/components/marketing/hero-spline";
 import { ProductCardSplineFrame } from "@/components/marketing/ProductCardSplineFrame";
-import { MatchSplineScene } from "@/components/match/MatchSplineScene";
-import { MATCH_SPLINE_SCENE } from "@/lib/match/match-spline-scene";
 
 type CardSplineConfig = {
   scene: string;
@@ -12,6 +11,9 @@ type CardSplineConfig = {
   innerClassName: string;
   pointerFollow?: boolean;
 };
+
+const CARD_SPLINE_INNER =
+  "absolute inset-x-0 top-1/2 min-h-0 h-[108%] w-full -translate-y-1/2 [filter:brightness(1.22)_contrast(1.2)_saturate(1.12)]";
 
 const CARD_SPLINES: Partial<Record<string, CardSplineConfig>> = {
   poju: {
@@ -23,20 +25,17 @@ const CARD_SPLINES: Partial<Record<string, CardSplineConfig>> = {
   glyph: {
     scene: "/animations/BAOZHAscene.splinecode",
     initialZoom: 0.42,
-    innerClassName:
-      "absolute inset-x-0 top-1/2 min-h-0 h-[108%] w-full -translate-y-1/2 [filter:brightness(1.22)_contrast(1.2)_saturate(1.12)]",
+    innerClassName: CARD_SPLINE_INNER,
   },
   syncro: {
     scene: "/animations/FWscene.splinecode",
     initialZoom: 0.48,
-    innerClassName:
-      "absolute inset-x-0 top-1/2 min-h-0 h-[108%] w-full -translate-y-1/2 [filter:brightness(1.22)_contrast(1.2)_saturate(1.12)]",
+    innerClassName: CARD_SPLINE_INNER,
   },
   match: {
-    scene: MATCH_SPLINE_SCENE,
-    initialZoom: 0.018,
-    innerClassName:
-      "absolute left-1/2 top-1/2 min-h-0 h-[135%] w-[135%] -translate-x-1/2 -translate-y-1/2 [filter:brightness(1.16)_contrast(1.12)_saturate(1.08)]",
+    scene: "",
+    initialZoom: 0,
+    innerClassName: "match-card-spline-shell",
   },
 };
 
@@ -52,12 +51,7 @@ export function ProductCardSpline({ kind }: ProductCardSplineProps) {
   return (
     <ProductCardSplineFrame cardKey={kind} className={cfg.frameClassName} innerClassName={cfg.innerClassName}>
       {kind === "match" ? (
-        <MatchSplineScene
-          variant="card"
-          initialZoom={cfg.initialZoom}
-          className="h-full w-full min-h-0 min-w-0"
-          pointerFollow={false}
-        />
+        <MatchCardSpline />
       ) : (
         <HeroSpline
           scene={cfg.scene}

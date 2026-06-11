@@ -105,10 +105,10 @@ assert(home.includes("/match/payment"), "C: paid → payment");
 assert(existsSync(join(root, "app/[locale]/(marketing)/match/payment/page.tsx")), "C: payment page");
 
 // Scenario D — archive
-const archiveList = read("components/archive/archive-action-plans-list.tsx");
+const archiveList = read("components/ds/DsArchiveVaultGrid.tsx");
 const archiveDetail = read("components/archive/archive-detail-client.tsx");
 assert(archiveList.includes('"match"'), "D: archive filter");
-assert(archiveList.includes("👥"), "D: archive icon");
+assert(archiveList.includes("matchIcon"), "D: archive icon");
 assert(archiveDetail.includes("loadMatchArchive"), "D: load match archive");
 assert(read("components/archive/match-archive-detail.tsx").includes("/match/result/"), "D: full report link");
 

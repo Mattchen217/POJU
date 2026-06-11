@@ -33,8 +33,8 @@ export function GlyphPrepareCta({ className = "", variant = "hero" }: Props) {
 
   const pillClass =
     variant === "final"
-      ? "marketing-pill-outline-cta marketing-pill-outline-cta--amber mt-7 inline-flex w-full min-w-[220px] max-w-sm px-8 py-3.5 text-[15px] hover:-translate-y-0.5 hover:scale-[1.04] motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100 active:scale-[0.99] sm:w-auto md:px-10 md:py-4 md:text-base"
-      : "marketing-pill-outline-cta marketing-pill-outline-cta--amber inline-flex min-w-[200px] px-8 py-3.5 text-[15px] hover:-translate-y-0.5 hover:scale-[1.04] motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100 active:scale-[0.99] md:px-10 md:py-4 md:text-base";
+      ? "pj-pill-outline pj-pill-outline--violet mt-7 inline-flex w-full min-w-[220px] max-w-sm justify-center px-8 py-3.5 text-[15px] md:px-10 md:py-4 md:text-base"
+      : "pj-pill-outline pj-pill-outline--violet inline-flex min-w-[200px] justify-center px-8 py-3.5 text-[15px] md:px-10 md:py-4 md:text-base";
 
   function handleStartFree() {
     router.push("/glyph/prepare?type=free");

@@ -1,10 +1,11 @@
 import { HeroSpline } from "@/components/marketing/hero-spline";
+import { DsGradientTitle } from "@/components/ds/primitives";
 import {
   ProductHeroAccent,
   ProductHeroActions,
   ProductHeroContent,
   ProductHeroDescription,
-  ProductHeroTitle,
+  ProductHeroSecondaryLink,
   ProductMarketingHero,
 } from "@/components/marketing/product-marketing-hero";
 import { NotPWA } from "@/components/pwa/PWAConditional";
@@ -15,6 +16,7 @@ export type PojuProductHeroCopy = {
   description: string;
   tagline: string;
   ctaPrimary: string;
+  ctaSecondary: string;
 };
 
 export function PojuProductHero({ copy }: { copy: PojuProductHeroCopy }) {
@@ -25,19 +27,22 @@ export function PojuProductHero({ copy }: { copy: PojuProductHeroCopy }) {
         <HeroSpline
           scene="/animations/POJURENscene.splinecode"
           initialZoom={0.62}
-          className="absolute -top-16 left-0 right-0 h-[430px] opacity-75 sm:-top-20 sm:h-[520px] md:-top-28 md:h-[660px]"
+          className="poju-hero-spline"
         />
       }
     >
       <ProductHeroContent>
-        <ProductHeroTitle>{`POJU · ${copy.heading}`}</ProductHeroTitle>
+        <DsGradientTitle from="#d4af37" to="#e8c56f">
+          {copy.heading}
+        </DsGradientTitle>
         <ProductHeroDescription>{copy.description}</ProductHeroDescription>
         <ProductHeroAccent>{copy.tagline}</ProductHeroAccent>
         <ProductHeroActions>
           <NotPWA>
-            <PojuSessionStarter className="marketing-pill-outline-cta marketing-pill-outline-cta--violet inline-flex w-full min-w-0 px-8 py-3.5 text-[15px] hover:-translate-y-0.5 hover:scale-[1.02] motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100 active:scale-[0.99] sm:w-auto sm:min-w-[220px] md:px-10 md:py-4 md:text-base">
+            <PojuSessionStarter className="pj-pill-outline pj-pill-outline--gold px-[30px] py-3.5 text-[15px]">
               {copy.ctaPrimary}
             </PojuSessionStarter>
+            <ProductHeroSecondaryLink href="#how-poju-works">{copy.ctaSecondary}</ProductHeroSecondaryLink>
           </NotPWA>
         </ProductHeroActions>
       </ProductHeroContent>

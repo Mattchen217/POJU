@@ -30,7 +30,7 @@ export function GlassSection({
     <section
       id={id}
       className={cn(
-        "glass-section",
+        "glass-section pj-glass-section",
         paddingClass,
         allowOverflow && "glass-section--overflow-visible",
         className,

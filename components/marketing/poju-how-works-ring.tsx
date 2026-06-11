@@ -7,36 +7,42 @@ import {
   PojuHowWorksFrameParticles,
   PojuHowWorksGoldRing,
 } from "@/components/marketing/poju-how-works-particles";
+import {
+  POJU_HOW_RING_RADIUS_VB,
+  POJU_HOW_WORKS_VB,
+} from "@/lib/poju/poju-how-works-layout";
 
 type Accent = "purple" | "cyan" | "pink";
 
+export type PojuHowWorksStep = {
+  title: string;
+  description: string;
+};
+
 const accents: Accent[] = ["purple", "cyan", "pink", "purple", "cyan", "pink"];
 
-/** 背板圆；节点中心与圆线重合 */
-const R_RING = 112;
+/** 沿节点外法线方向推出文本框；左右两步略远，避免被圆点光晕遮挡 */
+const OUTWARD_DIST_INACTIVE_REM = [7, 8.5, 8.5, 7, 9.25, 9.25] as const;
+const OUTWARD_DIST_ACTIVE_REM = [9, 10.75, 10.75, 9, 11.5, 11.5] as const;
 
-/**
- * 线框中心相对亮点的平移（rem）：
- * 半框 + 节点半宽（h-9 / sm:h-10 及描边光晕）+ 空隙，避免左右框内侧仍压住亮点。
- */
-const NODE_OUTSET_REM = 1.4;
-const LABEL_GAP_REM = 1.05;
-const SIDE_SHIFT_X = `calc(8rem + ${NODE_OUTSET_REM}rem + ${LABEL_GAP_REM}rem)`; // 16rem 半宽 + 节点 + 空隙
-const VERT_SHIFT_Y = `calc(4.875rem / 2 + ${NODE_OUTSET_REM}rem + ${LABEL_GAP_REM}rem)`;
-
-function labelOffsetTransform(i: number, cos: number): string {
-  const c = "translate(-50%, -50%)";
-  if (i === 0) return `${c} translateY(calc(-1 * (${VERT_SHIFT_Y})))`;
-  if (i === 3) return `${c} translateY(${VERT_SHIFT_Y})`;
-  if (cos >= 0) return `${c} translateX(${SIDE_SHIFT_X})`;
-  return `${c} translateX(calc(-1 * (${SIDE_SHIFT_X})))`;
+function labelOutwardTransform(cos: number, sin: number, stepIndex: number, active: boolean): string {
+  const dist = active ? OUTWARD_DIST_ACTIVE_REM[stepIndex]! : OUTWARD_DIST_INACTIVE_REM[stepIndex]!;
+  return `translate(-50%, -50%) translate(calc(${cos} * ${dist}rem), calc(${sin} * ${dist}rem))`;
 }
 
-/** 线框本体（描边由 canvas 粒子承担） */
-const combinedFrameShell = (active: boolean) =>
-  `relative overflow-visible pointer-events-auto flex min-h-0 h-[4.625rem] w-[15rem] shrink-0 flex-col justify-center gap-1.5 rounded-[6px] bg-black/22 px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] sm:h-[4.875rem] sm:w-[16rem] sm:px-2.5 sm:py-2 ${
-    active ? "bg-black/30" : ""
+function labelAlign(cos: number): "center" | "left" | "right" {
+  if (cos > 0.28) return "left";
+  if (cos < -0.28) return "right";
+  return "center";
+}
+
+function combinedFrameShell(active: boolean) {
+  return `relative overflow-visible pointer-events-auto flex min-h-0 shrink-0 flex-col justify-center rounded-[6px] bg-black/22 px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] sm:px-3.5 sm:py-3 ${
+    active
+      ? "min-h-[9.5rem] w-[15.5rem] gap-2 bg-black/30 sm:min-h-[10.25rem] sm:w-[17rem] sm:gap-2.5"
+      : "h-[4.5rem] w-[12.5rem] gap-1 sm:h-[4.75rem] sm:w-[13.5rem]"
   }`;
+}
 
 function ringGlowClass(accent: Accent, active: boolean) {
   const base =
@@ -57,41 +63,34 @@ function ringGlowClass(accent: Accent, active: boolean) {
   return `${base} ${ring} ${active ? activeGlow : dim}`;
 }
 
-function stepTitleClass(accent: Accent, active: boolean, align: "center" | "left" | "right") {
+function stepTitleClass(active: boolean, align: "center" | "left" | "right") {
   const alignCls =
     align === "center" ? "text-center" : align === "left" ? "text-left" : "text-right";
-  const base = `${alignCls} min-w-0 truncate whitespace-nowrap text-sm font-bold uppercase tracking-[0.14em] transition-colors duration-500 sm:text-base sm:tracking-[0.16em]`;
-  if (!active) return `${base} text-text-dim/88`;
-  if (accent === "purple") return `${base} text-[#c4b5fd]`;
-  if (accent === "cyan") return `${base} text-[#7ee8f7]`;
-  return `${base} text-[#fbcfe8]`;
+  return `${alignCls} min-w-0 text-[13px] font-semibold leading-snug text-[#e6e8f4] transition-opacity duration-500 sm:text-[15px] ${
+    active ? "opacity-100" : "opacity-78 line-clamp-2"
+  }`;
 }
 
 function stepBodyClass(active: boolean, align: "center" | "left" | "right") {
   const alignCls =
     align === "center" ? "text-center" : align === "left" ? "text-left" : "text-right";
-  return `${alignCls} min-w-0 truncate whitespace-nowrap text-[15px] font-medium leading-none text-[#e6e8f4] transition-opacity duration-500 sm:text-[17px] ${
-    active ? "opacity-100" : "opacity-52"
+  return `${alignCls} min-w-0 text-[12px] font-normal leading-[1.55] text-[#c8cbdc] transition-all duration-500 sm:text-[13.5px] sm:leading-[1.6] ${
+    active ? "opacity-100" : "pointer-events-none h-0 overflow-hidden opacity-0"
   }`;
 }
 
-/** 线框中心在射线外点；框内文字仍按象限左/右/中对齐 */
-function labelLayout(i: number): { align: "center" | "left" | "right" } {
-  if (i === 0 || i === 3) return { align: "center" };
-  if (i === 1 || i === 2) return { align: "left" };
-  return { align: "right" };
-}
-
 type PojuHowWorksRingProps = {
-  steps: readonly string[];
+  steps: readonly PojuHowWorksStep[];
 };
 
-const VB = 400;
-const CX = 200;
-const CY = 200;
+const VB = POJU_HOW_WORKS_VB;
+const CX = VB / 2;
+const CY = VB / 2;
+const R_RING = POJU_HOW_RING_RADIUS_VB;
 
 export function PojuHowWorksRing({ steps }: PojuHowWorksRingProps) {
   const [tick, setTick] = useState(0);
+  const [paused, setPaused] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
 
   useEffect(() => {
@@ -103,82 +102,101 @@ export function PojuHowWorksRing({ steps }: PojuHowWorksRingProps) {
   }, []);
 
   useEffect(() => {
-    if (reduceMotion) return;
+    if (reduceMotion || paused) return;
     const t = window.setInterval(() => {
       setTick((k) => k + 1);
-    }, 2400);
+    }, 4200);
     return () => window.clearInterval(t);
-  }, [reduceMotion]);
+  }, [reduceMotion, paused]);
 
   const activeIndex = reduceMotion ? 0 : tick % steps.length;
 
   const points = useMemo(() => {
-    return steps.map((label, i) => {
+    return steps.map((step, i) => {
       const angle = -Math.PI / 2 + (2 * Math.PI * i) / steps.length;
       const cos = Math.cos(angle);
       const sin = Math.sin(angle);
       const nx = CX + R_RING * cos;
       const ny = CY + R_RING * sin;
-      const layout = labelLayout(i);
-      return { label, i, nx, ny, cos, accent: accents[i % accents.length]!, align: layout.align };
+      return {
+        step,
+        i,
+        nx,
+        ny,
+        cos,
+        sin,
+        accent: accents[i % accents.length]!,
+        align: labelAlign(cos),
+      };
     });
   }, [steps]);
 
+  const activeStep = steps[activeIndex];
+
   return (
-    <div className="relative mx-auto mt-8 w-full max-w-[min(100%,580px)] overflow-visible sm:mt-10 md:max-w-[640px]">
+    <div className="relative mx-auto w-full max-w-[min(100%,920px)] overflow-visible">
       <span className="sr-only" aria-live="polite" aria-atomic="true">
-        Current step: {activeIndex + 1}. {steps[activeIndex]}.
+        Current step: {activeIndex + 1}. {activeStep?.title}. {activeStep?.description}
       </span>
 
-      <div className="relative mx-auto aspect-square w-full max-w-[min(100%,540px)] overflow-visible sm:max-w-[560px]">
-        <PojuHowWorksGoldRing reduceMotion={reduceMotion} />
+      <div className="relative mx-auto w-full max-w-[min(100%,920px)] overflow-visible px-1 pb-16 pt-12 sm:px-2 sm:pb-20 sm:pt-14">
+        <div className="relative mx-auto aspect-square w-full max-w-[min(100%,540px)] overflow-visible sm:max-w-[580px]">
+          <PojuHowWorksGoldRing reduceMotion={reduceMotion} />
 
-        <div className="pointer-events-none absolute inset-0 z-[3] overflow-visible">
-          {points.map(({ label, i, nx, ny, cos, accent, align }) => {
-            const active = i === activeIndex;
-            return (
-              <div key={label}>
-                <div
-                  className="absolute z-[5]"
-                  style={{
-                    left: `${(nx / VB) * 100}%`,
-                    top: `${(ny / VB) * 100}%`,
-                    transform: labelOffsetTransform(i, cos),
-                  }}
-                >
-                  <div className={combinedFrameShell(active)} title={`Step ${i + 1}: ${label}`}>
-                    <PojuHowWorksFrameParticles
-                      stepIndex={i}
-                      rgb={POJU_HOW_STEP_PARTICLE_RGB[i]!}
-                      active={active}
-                      reduceMotion={reduceMotion}
-                    />
-                    <div className="relative z-[1] flex min-h-0 min-w-0 flex-col justify-center gap-1.5">
-                      <p className={stepTitleClass(accent, active, align)}>✦ Step {i + 1}</p>
-                      <p className={stepBodyClass(active, align)}>{label}</p>
+          <div className="pointer-events-none absolute inset-0 z-[3] overflow-visible">
+            {points.map(({ step, i, nx, ny, cos, sin, accent, align }) => {
+              const active = i === activeIndex;
+              return (
+                <div key={i}>
+                  <div
+                    className={`absolute ${active ? "z-[30] pointer-events-auto" : "z-[5] pointer-events-none"}`}
+                    style={{
+                      left: `${(nx / VB) * 100}%`,
+                      top: `${(ny / VB) * 100}%`,
+                      transform: labelOutwardTransform(cos, sin, i, active),
+                    }}
+                    onMouseEnter={active ? () => setPaused(true) : undefined}
+                    onMouseLeave={active ? () => setPaused(false) : undefined}
+                  >
+                    <div
+                      className={combinedFrameShell(active)}
+                      title={`Step ${i + 1}: ${step.title}. ${step.description}`}
+                    >
+                      <PojuHowWorksFrameParticles
+                        stepIndex={i}
+                        rgb={POJU_HOW_STEP_PARTICLE_RGB[i]!}
+                        active={active}
+                        reduceMotion={reduceMotion}
+                      />
+                      <div className="relative z-[1] flex min-h-0 min-w-0 flex-col justify-center">
+                        <p className={stepTitleClass(active, align)}>{step.title}</p>
+                        <p className={stepBodyClass(active, align)}>{step.description}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    className="pointer-events-none absolute z-20"
+                    style={{
+                      left: `${(nx / VB) * 100}%`,
+                      top: `${(ny / VB) * 100}%`,
+                      transform: "translate(-50%, -50%)",
+                    }}
+                  >
+                    <div className={ringGlowClass(accent, active)} aria-hidden>
+                      {active ? (
+                        <span className="text-[13px] font-bold leading-none text-white sm:text-[15px]">
+                          {i + 1}
+                        </span>
+                      ) : (
+                        <span className="h-2 w-2 rounded-full bg-white/90 transition-all duration-500" />
+                      )}
                     </div>
                   </div>
                 </div>
-
-                <div
-                  className="absolute z-20"
-                  style={{
-                    left: `${(nx / VB) * 100}%`,
-                    top: `${(ny / VB) * 100}%`,
-                    transform: "translate(-50%, -50%)",
-                  }}
-                >
-                  <div className={ringGlowClass(accent, active)} aria-hidden>
-                    <span
-                      className={`rounded-full bg-white/90 transition-all duration-500 ${
-                        active ? "h-2.5 w-2.5 shadow-[0_0_14px_rgba(255,255,255,0.92)]" : "h-2 w-2"
-                      }`}
-                    />
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>

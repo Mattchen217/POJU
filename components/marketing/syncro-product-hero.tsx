@@ -1,11 +1,12 @@
 import { SyncroEnergyBall } from "@/components/syncro/syncro-energy-ball";
 import { SyncroPwaInstallTrigger } from "@/components/syncro/SyncroPwaInstallGuide";
+import { DsGradientTitle } from "@/components/ds/primitives";
 import {
   ProductHeroAccent,
+  ProductHeroActions,
   ProductHeroContent,
   ProductHeroDescription,
   ProductHeroMeta,
-  ProductHeroTitle,
   ProductMarketingHero,
 } from "@/components/marketing/product-marketing-hero";
 
@@ -15,6 +16,7 @@ export type SyncroProductHeroCopy = {
   description: string;
   tagline: string;
   footnote: string;
+  cta: string;
 };
 
 export function SyncroProductHero({ copy }: { copy: SyncroProductHeroCopy }) {
@@ -22,21 +24,25 @@ export function SyncroProductHero({ copy }: { copy: SyncroProductHeroCopy }) {
     <ProductMarketingHero
       theme="syncro"
       background={
-        <SyncroEnergyBall
-          variant="hero"
-          initialZoom={1.05}
-          className="absolute left-1/2 top-1/2 h-[600px] w-[132%] -translate-x-1/2 -translate-y-1/2 opacity-80 sm:h-[700px] md:h-[860px]"
-        />
+        <SyncroEnergyBall variant="hero" initialZoom={0.82} className="syncro-hero-spline" />
       }
     >
       <ProductHeroContent>
-        <ProductHeroTitle>{copy.heading}</ProductHeroTitle>
+        <DsGradientTitle from="#5eead4" to="#22d3ee" spaced>
+          {copy.heading}
+        </DsGradientTitle>
         <ProductHeroAccent>{copy.subtitle}</ProductHeroAccent>
         <ProductHeroDescription>{copy.description}</ProductHeroDescription>
-        <ProductHeroMeta bright className="!text-text-secondary">
-          {copy.tagline}
-        </ProductHeroMeta>
-        <SyncroPwaInstallTrigger>{copy.footnote}</SyncroPwaInstallTrigger>
+        <ProductHeroMeta bold>{copy.tagline}</ProductHeroMeta>
+        <ProductHeroMeta>{copy.footnote}</ProductHeroMeta>
+        <ProductHeroActions>
+          <SyncroPwaInstallTrigger
+            variant="button"
+            className="pj-pill-outline pj-pill-outline--cyan inline-flex px-[30px] py-3.5 text-[15px]"
+          >
+            {copy.cta}
+          </SyncroPwaInstallTrigger>
+        </ProductHeroActions>
       </ProductHeroContent>
     </ProductMarketingHero>
   );
