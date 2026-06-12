@@ -48,10 +48,10 @@ export function GlyphFront({ sign, animate = true, compact = false }: GlyphFront
   const maxVerseLen = Math.max(...sign.verse_lines_en.map((line) => line.length), 1);
   const verseSizeClass = compact
     ? maxVerseLen > 62
-      ? "text-[0.78rem]"
+      ? "text-[0.68rem] leading-[1.28]"
       : maxVerseLen > 54
-        ? "text-[0.84rem]"
-        : "text-[0.9rem]"
+        ? "text-[0.72rem] leading-[1.3]"
+        : "text-[0.76rem] leading-[1.32]"
     : maxVerseLen > 62
       ? "text-[1rem] md:text-[1.06rem]"
       : maxVerseLen > 54
@@ -94,14 +94,14 @@ export function GlyphFront({ sign, animate = true, compact = false }: GlyphFront
         }`}
       >
         <motion.div
-          className={compact ? "pt-[4%]" : "pt-[7%]"}
+          className={compact ? "shrink-0 pt-[3%]" : "pt-[7%]"}
           initial={animate ? { opacity: 0, y: -10 } : false}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
           <h2
             className={`font-verse mb-0.5 tracking-wide ${
-              compact ? "text-[1.35rem]" : "text-3xl md:text-4xl"
+              compact ? "text-[1.2rem]" : "text-3xl md:text-4xl"
             }`}
             style={{ color: toneColor }}
           >
@@ -109,7 +109,7 @@ export function GlyphFront({ sign, animate = true, compact = false }: GlyphFront
           </h2>
 
           <p
-            className={`italic opacity-70 ${compact ? "mb-2 text-[0.68rem]" : "mb-4 text-sm md:text-base"}`}
+            className={`italic opacity-70 ${compact ? "mb-1.5 text-[0.62rem]" : "mb-4 text-sm md:text-base"}`}
             style={{ color: toneColor }}
           >
             {meta.subtitle}
@@ -117,7 +117,7 @@ export function GlyphFront({ sign, animate = true, compact = false }: GlyphFront
 
           <div
             className={`tracking-[0.2em] text-white ${
-              compact ? "mb-2 text-[0.52rem] tracking-[0.16em]" : "text-[0.65rem] md:text-[0.72rem]"
+              compact ? "mb-1 text-[0.5rem] tracking-[0.14em]" : "text-[0.65rem] md:text-[0.72rem]"
             }`}
           >
             GLYPH No. {String(sign.sign_number).padStart(3, "0")}
@@ -125,25 +125,31 @@ export function GlyphFront({ sign, animate = true, compact = false }: GlyphFront
         </motion.div>
 
         <motion.div
-          className={`mx-auto w-[88%] overflow-hidden ${compact ? "mt-0.5 h-[36%] shrink-0" : "-mt-2 h-[46%]"}`}
+          className={`mx-auto w-[88%] ${compact ? "min-h-0 flex-1" : "-mt-2 h-[46%] overflow-hidden"}`}
           initial={animate ? { opacity: 0 } : false}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.5 }}
         >
           <div
-            className={`font-verse flex h-full flex-col justify-center italic ${compact ? "gap-1" : "gap-2"} ${verseSizeClass}`}
+            className={`font-verse flex h-full flex-col justify-center italic ${
+              compact ? "gap-0.5" : "gap-2"
+            } ${verseSizeClass}`}
             style={{ color: toneColor }}
           >
             {sign.verse_lines_en.map((line, idx) => (
               <motion.p
                 key={idx}
-                className="leading-[1.45] text-justify"
-                style={{
-                  display: "-webkit-box",
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: "vertical",
-                  overflow: "hidden",
-                }}
+                className={compact ? "leading-[1.28] text-center" : "leading-[1.45] text-justify"}
+                style={
+                  compact
+                    ? undefined
+                    : {
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                      }
+                }
                 initial={animate ? { opacity: 0 } : false}
                 animate={{ opacity: 1 }}
                 transition={{
@@ -158,8 +164,8 @@ export function GlyphFront({ sign, animate = true, compact = false }: GlyphFront
         </motion.div>
 
         <motion.div
-          className={`relative z-30 ${
-            compact ? "mt-auto px-1 pb-[11%] pt-2" : "mt-2 min-h-[16%] px-2"
+          className={`relative z-30 shrink-0 ${
+            compact ? "mt-1 px-1 pb-[10%] pt-1" : "mt-2 min-h-[16%] px-2"
           }`}
           initial={animate ? { opacity: 0 } : false}
           animate={{ opacity: 1 }}

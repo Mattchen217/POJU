@@ -422,7 +422,29 @@
 .match-analyzing-inner {
   position: relative;
   z-index: 2;
-  max-width: 22rem;
+  width: 100%;
+  max-width: 26rem;
+}
+
+.match-analyzing-orbs-loop {
+  width: min(92vw, 24rem);
+  margin: 0 auto 1.75rem;
+}
+
+.match-orbs-spline {
+  position: relative;
+  width: 100%;
+  overflow: visible;
+}
+
+.match-analyzing-orbs {
+  height: clamp(200px, 48vw, 280px);
+}
+
+.match-how-works-orbs {
+  max-width: 720px;
+  height: clamp(260px, 38vw, 360px);
+  margin-inline: auto;
 }
 
 .match-analyzing__bg {

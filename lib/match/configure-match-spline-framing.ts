@@ -7,6 +7,7 @@ type OrbitControlsLike = {
   spherical?: { radius: number };
   initialSphericalRadius?: number;
   update?: () => void;
+  target?: { x: number; y: number; z: number };
   object?: {
     isOrthographicCamera?: boolean;
     zoom?: number;
@@ -17,6 +18,7 @@ type OrbitControlsLike = {
 
 const cameraPosBase = new WeakMap<object, { x: number; y: number; z: number }>();
 const orbitRadiusBase = new WeakMap<object, number>();
+const orbitTargetBase = new WeakMap<object, { x: number; y: number; z: number }>();
 
 const CAMERA_NAMES = [
   "personal camera",
@@ -42,12 +44,39 @@ function getOrbitControls(app: Application): OrbitControlsLike | undefined {
   return undefined;
 }
 
+/** Pan orbit pivot — positive target X shifts scene content right on screen. */
+function panOrbitTarget(oc: OrbitControlsLike, offsetX: number, offsetY: number): void {
+  const target = oc.target;
+  if (!target) return;
+
+  const key = oc as object;
+  const base =
+    orbitTargetBase.get(key) ??
+    ({
+      x: typeof target.x === "number" ? target.x : 0,
+      y: typeof target.y === "number" ? target.y : 0,
+      z: typeof target.z === "number" ? target.z : 0,
+    } satisfies { x: number; y: number; z: number });
+  orbitTargetBase.set(key, base);
+  target.x = base.x + offsetX;
+  target.y = base.y + offsetY;
+
+  try {
+    oc.update?.();
+  } catch {
+    // optional
+  }
+}
+
 /** Pull Match camera back — card uses zoom / radiusFactor + orbit radius. */
 export function pullMatchCameraBack(
   app: Application,
   zoom: number,
   radiusFactor = 1,
   cameraOffsetX = 0,
+  cameraOffsetY = 0,
+  targetOffsetX = 0,
+  targetOffsetY = 0,
 ): void {
   const effectiveZoom = zoom / Math.max(radiusFactor, 1);
 
@@ -83,6 +112,10 @@ export function pullMatchCameraBack(
     } catch {
       // optional
     }
+
+    if (targetOffsetX !== 0 || targetOffsetY !== 0) {
+      panOrbitTarget(oc, targetOffsetX, targetOffsetY);
+    }
   }
 
   for (const name of CAMERA_NAMES) {
@@ -102,7 +135,7 @@ export function pullMatchCameraBack(
         } satisfies { x: number; y: number; z: number });
       cameraPosBase.set(key, base);
       obj.position.x = base.x + cameraOffsetX;
-      obj.position.y = base.y;
+      obj.position.y = base.y + cameraOffsetY;
       obj.position.z = base.z * Math.max(radiusFactor, 1);
     } catch {
       // optional
@@ -122,8 +155,20 @@ export function configureMatchSplineFraming(
   zoom: number,
   radiusFactor: number,
   cameraOffsetX = 0,
+  cameraOffsetY = 0,
+  targetOffsetX = 0,
+  targetOffsetY = 0,
 ): void {
-  const apply = () => pullMatchCameraBack(app, zoom, radiusFactor, cameraOffsetX);
+  const apply = () =>
+    pullMatchCameraBack(
+      app,
+      zoom,
+      radiusFactor,
+      cameraOffsetX,
+      cameraOffsetY,
+      targetOffsetX,
+      targetOffsetY,
+    );
 
   apply();
   requestAnimationFrame(apply);

@@ -24,7 +24,8 @@ import {
   DsMutedCard,
   DsSectionHeading,
 } from "@/components/ds/primitives";
-import { DsMatchFlow, DsMatchUseCard } from "@/components/ds/marketing/DsProductFlows";
+import { DsMatchUseCard } from "@/components/ds/marketing/DsProductFlows";
+import { MatchHowWorksSection } from "@/components/match/MatchHowWorksSection";
 import { ProductPricingSection } from "@/components/marketing/product-pricing-section";
 import { NotPWA } from "@/components/pwa/PWAConditional";
 import { PWAProductBeginCTA } from "@/components/pwa/PWAProductBeginCTA";
@@ -169,17 +170,19 @@ export function MatchHomePage() {
             </div>
           </DsBand>
 
-          <DsBand>
-            <DsKicker color="#ffb3c7">{t("how_label")}</DsKicker>
-            <DsSectionHeading className="mt-2">{t("how_title")}</DsSectionHeading>
-            <div className="mt-9">
-              <DsMatchFlow
-                steps={HOW_STEPS.map((step) => ({
-                  title: t(`${step}_title`),
-                  desc: t(`${step}_desc`),
-                }))}
-              />
-            </div>
+          <DsBand className="match-how-works-band">
+            <MatchHowWorksSection
+              header={
+                <>
+                  <DsKicker color="#ffb3c7">{t("how_label")}</DsKicker>
+                  <DsSectionHeading className="mt-2">{t("how_title")}</DsSectionHeading>
+                </>
+              }
+              steps={HOW_STEPS.map((step) => ({
+                title: t(`${step}_title`),
+                desc: t(`${step}_desc`),
+              }))}
+            />
           </DsBand>
 
           <DsBand>

@@ -1,4 +1,5 @@
 import {
+  GLYPH_EXPLORATION_GUIDANCE,
   GLYPH_GUANYIN_100_LOTS_IDENTITY,
   GLYPH_GUANYIN_INTERPRETATION_METHOD,
   GLYPH_OUTPUT_BRANDING,
@@ -95,7 +96,8 @@ ${windCategoryToneBlock(glyph.wind_category)}
 - **所有字符串字段仍须填写**，用中性引导文案（禁止留空字符串 ""）
 - wind_category_blurb：礼貌说明问题暂无法精准对焦，邀请换一句更具体的事
 - 命理双视角三字段：各写 2–4 句中性说明（可泛述五风类气势 + 内观方向，不硬断）
-- meaning_for_question / hidden_tension / your_moment / reflection_question / exploration.text：给出通用内观引导（聚焦、暂停、写下真正想问的一句）
+- meaning_for_question / hidden_tension / your_moment / reflection_question：给出通用反思引导（聚焦、暂停、写下真正想问的一句）
+- exploration.text：仍须具体 Solo 微练习，但形态从 GLYPH_EXPLORATION_GUIDANCE 中选，禁止默认静坐+书写套路
 - classical_voice：用抽象叙事原型描述意象，**禁止**引用输入原文诗句或历史人物名
 
 # 输出格式（严格 JSON，无 markdown 围栏）
@@ -115,7 +117,7 @@ ${windCategoryToneBlock(glyph.wind_category)}
   "hidden_tension": "100-160 字。用户可能看不到的张力或盲点（当下视角）",
   "your_moment": "120-180 字。当前年度周期内的当下能量 + 与原型隐喻的互动（禁写流年/预测即将发生）",
   "exploration": {
-    "text": "100-160 字。一个具体的内观练习。Solo。具体到时间/场地/做什么",
+    "text": "100-160 字。Solo 微练习（见 exploration 专节）：何时+场景+动作链+尽量有产出物；形态多样，禁止默认「安静坐下闭眼+纸上书写」",
     "timeframe": "today | tonight | within_24h | this_week",
     "duration_estimate": "X minutes",
     "is_solo": true
@@ -137,7 +139,7 @@ ${windCategoryToneBlock(glyph.wind_category)}
 3. **OUTPUT FRAMING + 三道防线 + 《易经》框架**: 术语翻译 + 叙事抽象 + 预测规避 + I Ching 哲学透镜（非占卜）；允许原型隐喻/行为蓝图/系统性情境模式
 4. **人格依据**: 「命理看此事」须体现人格架构 + 10年生命周期 + 认知资源偏好（防线1翻译，禁写日主/大运/用神）
 5. **隐喻依据**: 抽象情境主题 + 经典东方叙事原型；禁止签诗原文/历史人物/签字样
-6. **结构必备**: 命理双视角 + 原型隐喻意象 + exploration 内观练习 三者缺一不可
+6. **结构必备**: 命理双视角 + 原型隐喻意象 + exploration 微练习 三者缺一不可；exploration 须遵守 GLYPH_EXPLORATION_GUIDANCE（多样形态，忌模板化静坐书写）
 7. **总字数**: 中文约 2200-4000 字 / 英文约 1800-3200 词（各字符串字段合计；宁详略短，但不得违反各字段上限）
 8. **严格 JSON**: 不要用 \`\`\`json 包裹
 
@@ -155,6 +157,7 @@ ${GLYPH_OUTPUT_SELF_CHECK}`;
   const system = stitchPromptSections(
     GLYPH_GUANYIN_100_LOTS_IDENTITY,
     GLYPH_GUANYIN_INTERPRETATION_METHOD,
+    GLYPH_EXPLORATION_GUIDANCE,
     GLYPH_OUTPUT_FRAMING,
     GLYPH_OUTPUT_DEFENSE_TERMS,
     GLYPH_OUTPUT_DEFENSE_NARRATIVE,
@@ -186,7 +189,8 @@ ${GLYPH_OUTPUT_SELF_CHECK}`;
   · 《易经》: 自然融入 I Ching 变化之道/时位/阴阳（非起卦占卜）
 ✓ 语言: 跟随用户实际输入（${outputLang}）。
 ✓ 内容: 命理看此事须体现人格架构+10年周期+认知偏好（翻译表述）；隐喻解读用抽象原型；不得抄写 modern_translation。
-✓ 写每段前执行三道自检。invalid_input 时所有字段仍填中性引导，禁止空字符串。`;
+✓ 写每段前执行三道自检。invalid_input 时所有字段仍填中性引导，禁止空字符串。
+✓ exploration：按 GLYPH_EXPLORATION_GUIDANCE 选 **一种** 练习形态，勿次次「安静地方+闭眼+纸上写」。`;
 
   return { system, user };
 }

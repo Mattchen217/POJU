@@ -1,6 +1,27 @@
 /** Match Spline scene — homepage card, hero, analyzing wait. */
 export const MATCH_SPLINE_SCENE = "/spline/Match.splinecode";
 
+/** How Match works band — red/green orbs convergence. */
+export const MATCH_HOW_WORKS_SPLINE_SCENE = "/spline/Red%20and%20green%20balls.splinecode";
+/** Smaller zoom = wider framing / camera farther back. */
+export const MATCH_HOW_WORKS_SPLINE_ZOOM = 0.118;
+export const MATCH_HOW_WORKS_SPLINE_RADIUS_FACTOR = 3.2;
+/** Shift all scene objects (+X) — may be overridden by Spline animation; use SCENE_PAN_X for display. */
+export const MATCH_HOW_WORKS_SPLINE_CONTENT_OFFSET_X = 750;
+export const MATCH_HOW_WORKS_SPLINE_CONTENT_OFFSET_Y = 0;
+/** Canvas wrapper pan — primary horizontal positioning control (screen pixels). */
+export const MATCH_HOW_WORKS_SPLINE_SCENE_PAN_X = "150px";
+/** Scale canvas around center — does not change pan offset. */
+export const MATCH_HOW_WORKS_SPLINE_SCENE_SCALE = 1.1;
+/**
+ * Pre-expand shell then scale down (see `.match-how-works-spline__shell`).
+ * Avoids clipping wisps at container edges.
+ */
+export const MATCH_HOW_WORKS_SPLINE_DISPLAY_SCALE = 0.58;
+export const MATCH_HOW_WORKS_SPLINE_SHELL_HEIGHT_RATIO = 1.62;
+export const MATCH_HOW_WORKS_SPLINE_SHELL_OFFSET_X = "0px";
+export const MATCH_HOW_WORKS_SPLINE_SHELL_OFFSET_Y = "-2%";
+
 /** Smaller zoom = wider framing (smaller orbs in frame). */
 export const MATCH_SPLINE_CARD_ZOOM = 0.05;
 /** Multiplier on orbit radius — card ~300px needs camera much farther than hero. */
