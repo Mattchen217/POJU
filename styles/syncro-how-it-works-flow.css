@@ -1,0 +1,152 @@
+/* How Syncro works — mobile spline ring + scan overlay */
+
+.syncro-how-works-flow {
+  width: 100%;
+  max-width: 960px;
+  margin-inline: auto;
+}
+
+.syncro-how-works-flow__stage {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+  min-height: clamp(250px, 36vw, 300px);
+}
+
+.syncro-how-works-flow__ring {
+  position: relative;
+  margin-inline: auto;
+  overflow: visible;
+}
+
+.syncro-how-works-flow__rotate {
+  position: absolute;
+  inset: 0;
+  transform-origin: center center;
+}
+
+/* Radar ring + scan — scaled up; particle spline underneath stays original size */
+.syncro-how-works-flow__rotate .syncro-particle-spline,
+.syncro-how-works-flow__rotate .syncro-particle-spline--static {
+  z-index: 0 !important;
+}
+
+.syncro-how-works-flow__radar {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  transform: scale(var(--syncro-radar-scale, 1.22));
+  transform-origin: center center;
+  pointer-events: none;
+}
+
+.syncro-how-works-flow__scan {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.syncro-how-works-flow__labels {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.syncro-how-works-flow__center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46%;
+  min-height: 3.5rem;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  text-align: center;
+}
+
+.syncro-how-works-flow__center-label {
+  margin: 0;
+  font-size: clamp(13px, 3vw, 17px);
+  font-weight: var(--pj-weight-semibold);
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+  transition: opacity 0.35s ease;
+  text-shadow:
+    0 0 16px currentColor,
+    0 0 32px rgba(34, 211, 238, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .syncro-how-works-flow__center-label {
+    transition: none;
+  }
+
+  .syncro-how-works-flow__current-desc {
+    transition: none;
+  }
+}
+
+.syncro-how-works-flow__current-caption {
+  margin-top: 10px;
+  min-height: 2.75rem;
+  padding: 0 1.25rem;
+  text-align: center;
+}
+
+.syncro-how-works-flow__current-desc {
+  margin: 0;
+  max-width: 28rem;
+  margin-inline: auto;
+  font-size: clamp(14px, 2.8vw, 16px);
+  font-weight: var(--pj-weight-medium);
+  line-height: 1.55;
+  letter-spacing: 0.01em;
+  transition: opacity 0.35s ease;
+}
+
+/* Four step cards — single horizontal row, synced to scan */
+.syncro-how-works-flow .ds-flow-step-row {
+  flex-wrap: nowrap;
+  justify-content: stretch;
+  gap: 8px;
+  margin-top: 22px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.syncro-how-works-flow .ds-flow-step-row::-webkit-scrollbar {
+  display: none;
+}
+
+.syncro-how-works-flow .ds-flow-step-chip {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: none;
+  padding: 14px 12px;
+}
+
+.syncro-how-works-flow .ds-flow-step-chip .text-sm {
+  font-size: 13px;
+}
+
+.syncro-how-works-flow .ds-flow-step-chip .text-\[12\.5px\] {
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+@media (max-width: 640px) {
+  .syncro-how-works-flow .ds-flow-step-row {
+    gap: 6px;
+  }
+
+  .syncro-how-works-flow .ds-flow-step-chip {
+    flex: 0 0 calc(25% - 5px);
+    min-width: 148px;
+  }
+}

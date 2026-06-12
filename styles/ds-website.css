@@ -3,26 +3,30 @@
    Layout + surface classes ported from chrome.jsx / *page.jsx
    ============================================================ */
 
-/* Page stacks */
+/* Page stacks — shared marketing rhythm */
+:root {
+  --marketing-hero-min-height: min(64vh, 640px);
+  --marketing-page-stack-gap: 32px;
+  --marketing-hero-section-gap: 32px;
+}
+
 .ds-page-stack {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: var(--marketing-page-stack-gap);
   width: 100%;
   max-width: 72rem;
   margin-inline: auto;
   padding: 0 24px 80px;
 }
 
-.ds-page-stack--home {
-  max-width: 76rem;
-  padding-top: 32px;
+.ds-page-stack--home,
+.ds-page-stack--after-hero {
+  padding-top: var(--marketing-hero-section-gap);
 }
 
-@media (min-width: 768px) {
-  .ds-page-stack--home {
-    padding-top: 32px;
-  }
+.ds-page-stack--home {
+  max-width: 76rem;
 }
 
 /* Band = pj-glass-section */
@@ -256,7 +260,7 @@
 
 .ds-home-hero__media {
   position: relative;
-  min-height: min(64vh, 640px);
+  min-height: var(--marketing-hero-min-height);
   background: #050508;
   isolation: isolate;
 }

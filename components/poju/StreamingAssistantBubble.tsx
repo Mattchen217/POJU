@@ -16,7 +16,7 @@ export function StreamingAssistantBubble({ content }: StreamingAssistantBubblePr
         <div className="pchat__ai">
           <p className="pchat__streaming-line">
             {content}
-            <span className="pchat__streaming-cursor">▊</span>
+            <span className="pchat__streaming-cursor">▍</span>
           </p>
         </div>
       </div>

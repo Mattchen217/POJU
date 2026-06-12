@@ -53,12 +53,16 @@ export async function runPOJUV4SessionMaintenance(): Promise<{ archivedIds: stri
   return { archivedIds, expiringSoonIds };
 }
 
-export async function restorePOJUV4ArchivedSession(sessionId: string): Promise<boolean> {
+export async function restorePOJUV4ArchivedSession(
+  sessionId: string,
+  paymentId: string,
+): Promise<boolean> {
   const db = getPojuDb();
   const arch = await db.pojuSessionArchive.get(sessionId);
   const row = await db.pojuSessionRecords.get(sessionId);
   if (!arch || !row || row.status !== "archived") return false;
   if (getPojuDeviceId() !== row.device_id) return false;
+  if (!paymentId.trim()) return false;
 
   const now = new Date();
   const exp = new Date(now.getTime() + THIRTY_DAYS_MS);
@@ -66,6 +70,10 @@ export async function restorePOJUV4ArchivedSession(sessionId: string): Promise<b
     status: "active",
     expires_at: exp,
     last_interaction_at: now,
+    renewals: [
+      ...row.renewals,
+      { extended_at: now, reason: "paid_restore", payment_id: paymentId.trim() },
+    ],
   });
   await db.pojuSessionArchive.delete(sessionId);
 

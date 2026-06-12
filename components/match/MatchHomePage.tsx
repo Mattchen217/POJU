@@ -25,9 +25,11 @@ import {
   DsSectionHeading,
 } from "@/components/ds/primitives";
 import { DsMatchFlow, DsMatchUseCard } from "@/components/ds/marketing/DsProductFlows";
+import { ProductPricingSection } from "@/components/marketing/product-pricing-section";
 import { NotPWA } from "@/components/pwa/PWAConditional";
 import { PWAProductBeginCTA } from "@/components/pwa/PWAProductBeginCTA";
 import {
+  MarketingPageHero,
   MarketingPageLayout,
   MarketingPageSections,
 } from "@/components/marketing/marketing-page-layout";
@@ -128,32 +130,32 @@ export function MatchHomePage() {
         {pojuHandoff ? <PojuToolHandoffBanner handoff={pojuHandoff} className="mt-4" /> : null}
       </div>
 
-      <ProductMarketingHero
-        theme="match"
-        backgroundClassName="product-hero__bg--match"
-        background={<MatchSplineScene variant="hero" className="match-hero-spline" pointerFollow={false} />}
-      >
-        <ProductHeroContent>
-          <DsGradientTitle from="#ff6b9d" to="#ffb3c7" spaced>
-            Match
-          </DsGradientTitle>
-          <ProductHeroAccent>{t("tagline")}</ProductHeroAccent>
-          <ProductHeroDescription>{t("description")}</ProductHeroDescription>
-          <ProductHeroActions>
-            <NotPWA>
-              <button type="button" onClick={handleStart} className={MATCH_CTA_CLASS}>
-                {ctaLabel}
-              </button>
-              <p className="product-hero__actions-note">{heroNote}</p>
-            </NotPWA>
-          </ProductHeroActions>
-        </ProductHeroContent>
-      </ProductMarketingHero>
+      <MarketingPageHero>
+        <ProductMarketingHero
+          theme="match"
+          backgroundClassName="product-hero__bg--match"
+          background={<MatchSplineScene variant="hero" className="match-hero-spline" pointerFollow={false} />}
+        >
+          <ProductHeroContent>
+            <DsGradientTitle from="#ff6b9d" to="#ffb3c7" spaced>
+              Match
+            </DsGradientTitle>
+            <ProductHeroAccent>{t("tagline")}</ProductHeroAccent>
+            <ProductHeroDescription>{t("description")}</ProductHeroDescription>
+            <ProductHeroActions>
+              <NotPWA>
+                <button type="button" onClick={handleStart} className={MATCH_CTA_CLASS}>
+                  {ctaLabel}
+                </button>
+                <p className="product-hero__actions-note">{heroNote}</p>
+              </NotPWA>
+            </ProductHeroActions>
+          </ProductHeroContent>
+        </ProductMarketingHero>
+      </MarketingPageHero>
 
       <MarketingPageSections>
         <ProductWhatIsSection product="match" />
-
-        <PWAProductBeginCTA productId="match" price="$4.99" />
 
         <NotPWA>
           <DsBand>
@@ -229,11 +231,6 @@ export function MatchHomePage() {
             <p className="mx-auto mt-8 max-w-xl text-center text-[17px] text-white">
               {effectiveFree ? t("first_free_emphasized") : heroNote}
             </p>
-            <div className="ds-cta-col ds-mt-36">
-              <button type="button" onClick={handleStart} className={MATCH_CTA_CLASS}>
-                {ctaLabel}
-              </button>
-            </div>
           </DsBand>
 
           <DsBand>
@@ -247,8 +244,16 @@ export function MatchHomePage() {
               ))}
             </div>
           </DsBand>
+
+          <ProductPricingSection
+            product="match"
+            matchCtaLabel={ctaLabel}
+            onMatchStart={handleStart}
+          />
         </NotPWA>
       </MarketingPageSections>
+
+      <PWAProductBeginCTA productId="match" price="$4.99" />
     </MarketingPageLayout>
   );
 }

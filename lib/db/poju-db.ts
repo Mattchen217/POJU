@@ -33,6 +33,7 @@ export interface POJUSessionRecord {
   renewals: Array<{
     extended_at: Date;
     reason: string;
+    payment_id?: string;
   }>;
   tokens_used: number;
   turn_count: number;

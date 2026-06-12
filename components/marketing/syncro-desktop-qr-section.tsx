@@ -26,19 +26,19 @@ export function SyncroDesktopQrSection({ qrLabel, qrAlt }: SyncroDesktopQrSectio
   if (!isDesktop) return null;
 
   return (
-    <div className="mx-auto mt-10 flex max-w-sm flex-col items-center">
-      <div className="w-full rounded-2xl border border-white/12 bg-black/35 p-5 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-sm sm:p-6">
-        <div className="mx-auto inline-flex rounded-lg border border-white/12 bg-white p-3">
+    <div className="mx-auto mt-10 flex max-w-xs flex-col items-center">
+      <div className="rounded-2xl border border-white/12 bg-black/35 px-5 py-4 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-sm sm:px-6 sm:py-5">
+        <div className="mx-auto inline-flex rounded-lg border border-white/12 bg-white p-2">
           <QRCodeCanvas
             value={syncroUrl}
-            size={240}
+            size={160}
             bgColor="#ffffff"
             fgColor="#1a0a2e"
             level="M"
             aria-label={qrAlt}
           />
         </div>
-        <p className="mt-4 text-[11px] uppercase tracking-[0.14em] text-text-dim">{qrLabel}</p>
+        <p className="mt-3 text-[11px] uppercase tracking-[0.14em] text-text-dim">{qrLabel}</p>
       </div>
     </div>
   );

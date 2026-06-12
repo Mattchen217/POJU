@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 
 import { DsBand } from "@/components/ds/primitives";
+import { isPwaStandalone } from "@/lib/client/pwa-standalone";
 import { listArchive, type ArchiveSummary } from "@/lib/archive/archive-service";
 import { ARCHIVE_UPDATED_EVENT } from "@/lib/archive/runtime-archive";
 import pIcon from "@/assets/icons/P.png";
@@ -57,6 +58,12 @@ const PRODUCT_META: Record<Exclude<FilterKey, "all">, ProductMeta> = {
   },
 };
 
+function isSyncroFilterBlockedOnDesktop(): boolean {
+  if (typeof window === "undefined") return false;
+  if (isPwaStandalone()) return false;
+  return window.matchMedia("(min-width: 768px)").matches;
+}
+
 /** DS archive.jsx — filter pills + product ring card grid */
 export function DsArchiveVaultGrid() {
   const t = useTranslations("archiveVault");
@@ -65,6 +72,7 @@ export function DsArchiveVaultGrid() {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [syncroPcNotice, setSyncroPcNotice] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -120,11 +128,33 @@ export function DsArchiveVaultGrid() {
         { key: "all" as const, label: t("filter_all") },
         { key: "poju" as const, label: "POJU" },
         { key: "glyph" as const, label: "Glyph" },
-        { key: "syncro" as const, label: "Syncro" },
         { key: "match" as const, label: "Match" },
+        { key: "syncro" as const, label: "Syncro" },
       ] as const,
     [t],
   );
+
+  function handleFilterClick(key: FilterKey) {
+    if (key === "syncro" && isSyncroFilterBlockedOnDesktop()) {
+      setSyncroPcNotice(true);
+      return;
+    }
+    setSyncroPcNotice(false);
+    setFilter(key);
+  }
+
+  const activeFilterKey = syncroPcNotice ? "syncro" : filter;
+
+  const emptyMessageKey =
+    activeFilterKey === "all"
+      ? "empty_all"
+      : activeFilterKey === "poju"
+        ? "empty_poju"
+        : activeFilterKey === "glyph"
+          ? "empty_glyph"
+          : activeFilterKey === "match"
+            ? "empty_match"
+            : "empty_syncro";
 
   return (
     <DsBand id="archive-vault-ds">
@@ -133,20 +163,24 @@ export function DsArchiveVaultGrid() {
           <button
             key={opt.key}
             type="button"
-            onClick={() => setFilter(opt.key)}
-            className={`pj-nav-item ${filter === opt.key ? "active" : ""}`}
+            onClick={() => handleFilterClick(opt.key)}
+            className={`pj-nav-item ${activeFilterKey === opt.key ? "active" : ""}`}
           >
             {opt.label}
           </button>
         ))}
       </div>
 
-      {loading ? (
+      {syncroPcNotice ? (
+        <p className="mt-4 text-sm leading-relaxed text-amber-200/90" role="status">
+          {t("syncro_mobile_only")}
+        </p>
+      ) : loading ? (
         <p className="mt-7 text-sm text-[var(--pj-text-muted)]">{t("loading")}</p>
       ) : loadError ? (
         <p className="mt-7 text-sm text-amber-200/90">{t("load_error")}</p>
       ) : items.length === 0 ? (
-        <p className="mt-7 text-sm leading-relaxed text-[var(--pj-text-secondary)]">{t("empty_message")}</p>
+        <p className="mt-7 text-sm leading-relaxed text-[var(--pj-text-secondary)]">{t(emptyMessageKey)}</p>
       ) : (
         <div className="ds-grid-auto-260 mt-7">
           {items.map((item) => (

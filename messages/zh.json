@@ -357,6 +357,21 @@
         "tagline": "POJU 是思考伙伴。决定永远是你的。",
         "cta": "开始 POJU 会话 — $9.99",
         "footnote": "一个问题 · 无限深度 · 关闭即删除"
+      },
+      "pricing": {
+        "heading": "定价",
+        "body": "一个聚焦的问题解锁 30 天专属对话周期 —— 不是订阅。每次会话一次性支付 $9.99，30 天内可随时回来更新进展、调整策略。无自动续费，无隐藏费用。",
+        "price": "$9.99",
+        "price_unit": "每个 30 天会话",
+        "features_heading": "包含功能",
+        "features": [
+          "单次会话中无限的深度",
+          "明天就能开始的行动计划",
+          "可以静思的反思提示",
+          "30 天会话访问"
+        ],
+        "cta": "开始 POJU 会话 — $9.99",
+        "footnote": "一个问题 · 无限深度 · 关闭即删除"
       }
     },
     "glyph": {
@@ -456,7 +471,16 @@
       },
       "pricing": {
         "heading": "定价",
-        "body": "你的首次 Glyph 解读免费。我们希望你在无承诺的情况下体验这个工具。之后每次解读 $4.99 —— 单次透明购买。无订阅、无自动续费、无隐藏费用。每次解读显示在屏幕上，并可选择以 PDF 发送到你的邮箱。",
+        "body": "你的首次 Glyph 解读免费。我们希望你在无承诺的情况下体验这个工具。之后每次解读 $4.99 —— 单次透明购买。无订阅、无自动续费、无隐藏费用。",
+        "price": "$4.99",
+        "price_unit": "每次解读 · 首次解读免费",
+        "features_heading": "包含功能",
+        "features": [
+          "每次解读一个问题",
+          "沉浸式粒子界面抽取原型图案",
+          "深度解读，连接隐喻与你的个人画像",
+          "屏幕展示，可选 PDF 发送至邮箱"
+        ],
         "cta": "免费体验 Glyph",
         "footnote": "带一丝玩味去读。图案是镜子，照见正在发生的事。"
       }
@@ -582,7 +606,16 @@
       },
       "pricing": {
         "heading": "定价",
-        "description": "你的首次 Syncro 免费。我们希望你在无承诺的情况下感受空间反思。之后 $4.99 解锁 24 小时实时窗口 —— 针对一项具体任务，每两小时更新指引。无订阅、无自动续费。",
+        "body": "你的首次 Syncro 免费。我们希望你在无承诺的情况下感受空间反思。之后 $4.99 解锁 24 小时实时窗口 —— 针对一项具体任务，每两小时更新指引。无订阅、无自动续费。",
+        "price": "$4.99",
+        "price_unit": "每个 24 小时窗口 · 首次 Syncro 免费",
+        "features_heading": "包含功能",
+        "features": [
+          "针对一项具体任务的 24 小时实时指引",
+          "基于能量地图，每两小时更新",
+          "手机端八方位空间反思",
+          "根据你的个性画像个性化呈现"
+        ],
         "cta": "在手机上打开 Syncro"
       },
       "pwa_guide": {
@@ -844,6 +877,7 @@
       "dialog_cancel": "取消",
       "dialog_connection_error": "连接异常，请稍后重试。",
       "dialog_create_session_error": "暂时无法创建新会话，请稍后重试。",
+      "dialog_payment_redirect_failed": "无法打开支付页面，请稍后再试。",
       "dialog_speech_unsupported": "当前浏览器不支持语音输入。",
       "dialog_speech_denied": "未获得麦克风权限。请在浏览器设置中允许麦克风后再试。",
       "voice_input_start": "开始语音输入",
@@ -856,6 +890,9 @@
       "session_menu_label": "会话选项",
       "session_menu_rename": "重命名",
       "session_menu_delete": "删除",
+      "sidebar_brand_name": "POJU",
+      "sidebar_sessions_label": "最近会话",
+      "sidebar_session_active": "当前会话",
       "active_session_title": "继续已有会话",
       "active_session_body": "本设备上已有一个进行中的 POJU 会话。现在打开，或留在当前页面。",
       "active_session_open": "打开会话",
@@ -904,7 +941,16 @@
     "expiry": {
       "expires_in": "本会话窗口还剩约 {days} 天。",
       "extend_30": "延长 30 天",
-      "extending": "延长中…"
+      "extending": "延长中…",
+      "price": "$9.99",
+      "dialog_title_warning": "会话即将到期",
+      "dialog_title_expired": "会话已到期",
+      "dialog_body_warning": "本会话还剩 {days} 天到期。到期后将无法就此问题继续对话。若想在 30 天窗口结束后继续讨论同一问题，需支付 {price} 延长 30 天。",
+      "dialog_body_expired": "本会话已到期，无法就此问题继续对话。支付 {price} 可延长 30 天并继续之前的讨论。",
+      "extend_30_paid": "延长 30 天 {price}",
+      "acknowledge": "我知道了",
+      "dont_remind": "不再提醒",
+      "redirecting_payment": "正在跳转支付…"
     },
     "delivery": {
       "badge": "POJU 解读",
@@ -944,6 +990,7 @@
       "continue": "继续",
       "pause": "暂停",
       "restore": "恢复",
+      "restore_paid": "继续会话 — $9.99",
       "delete_forever": "永久删除",
       "delete_confirm": "从本设备永久删除该会话？此操作不可撤销。",
       "meta_expires": "到期",
@@ -953,12 +1000,21 @@
   "archiveVault": {
     "section_title": "已保存的行动建议",
     "title": "你的 Archive",
-    "hero_subtitle": "这里的一切只保存在本设备上。",
-    "encrypted_note": "以加密形式存储在本设备。",
+    "hero_intro": "这里是您的本地加密档案馆。您的所有探索记录已自动转化为本地 AES 加密数据，完全锁存在这台设备上。",
+    "hero_points": [
+      { "icon": "lock", "text": "绝对隐私：没有账户系统，我们的服务器不存储任何数据。" },
+      { "icon": "alert", "text": "切勿跨端：更换手机、电脑或换个浏览器，将无法看到旧记录。" },
+      { "icon": "erase", "text": "清理即失：清空浏览器数据、隐私模式访问、或卸载应用（PWA）会导致数据被物理擦除，无法找回。" }
+    ],
     "loading": "加载中…",
     "load_error": "无法读取本机 Archive，请关闭并重新打开应用后再试。",
-    "empty_message": "POJU 行动建议、Glyph 解读、Syncro 会话与 Match 合盘会显示在这里。",
-    "filter_all": "全部"
+    "empty_all": "POJU 的记录和行动建议、Glyph 解读、Syncro 会话与 Match 分析会显示在这里。",
+    "empty_poju": "完成 POJU 会话交付、收到行动建议后，会显示在这里。",
+    "empty_glyph": "Glyph 解读记录会显示在这里。",
+    "empty_match": "Match 分析记录会显示在这里。",
+    "empty_syncro": "Syncro 会话会显示在这里。",
+    "filter_all": "全部",
+    "syncro_mobile_only": "Syncro 只能在手机上使用，因此相关记录也只有在手机上才能查看。"
   },
   "archiveDetail": {
     "title": "POJU 行动建议",
@@ -1498,6 +1554,21 @@
       "include_4": "4-6 条可执行行动建议",
       "include_5": "自动存入 Archive，随时回看",
       "first_free_emphasized": "首次 Match 免费。无需绑定信用卡。",
+      "pricing": {
+        "heading": "定价",
+        "body": "首次 Match 免费 —— 无需绑定信用卡。我们希望你在付费前先体验完整报告。之后每次完整解读 $4.99。一次购买，一份报告。无订阅、无自动续费。",
+        "price": "$4.99",
+        "price_unit": "每次完整解读 · 首次 Match 免费",
+        "features_heading": "包含功能",
+        "features": [
+          "双方完整个性画像分析",
+          "能量结构与关系动态交互图",
+          "契合度层级及理由说明",
+          "4–6 条可执行建议",
+          "保存至 Archive，随时回看"
+        ],
+        "footnote": "一次解读 · 完整报告 · 5 个板块"
+      },
       "faq_title": "常见问题",
       "faq_q1": "如果不知道对方的出生时辰怎么办？",
       "faq_a1": "可以使用大致时辰运行 Match——精度略降但核心分析依然有价值。我们使用 2 小时为一个时辰（中国传统时辰段），即使估算也能用。",

@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 
-import { ArchiveProductHero } from "@/components/marketing/archive-product-hero";
+import { ArchiveProductHero, type ArchiveHeroPointIcon } from "@/components/marketing/archive-product-hero";
 import { DsArchiveVaultGrid } from "@/components/ds/DsArchiveVaultGrid";
-import { DsPageStack } from "@/components/ds/primitives";
-import { MarketingPageLayout } from "@/components/marketing/marketing-page-layout";
+import {
+  MarketingPageHero,
+  MarketingPageLayout,
+  MarketingPageSections,
+} from "@/components/marketing/marketing-page-layout";
 
 export const metadata: Metadata = {
   title: "The Archive — pojulife",
@@ -14,20 +17,23 @@ export const metadata: Metadata = {
 
 export default async function ArchivePage() {
   const t = await getTranslations("archiveVault");
+  const heroPoints = t.raw("hero_points") as Array<{ icon: ArchiveHeroPointIcon; text: string }>;
 
   return (
-    <MarketingPageLayout theme="poju">
-      <ArchiveProductHero
-        copy={{
-          title: t("title"),
-          subtitle: t("hero_subtitle"),
-          encryptedNote: t("encrypted_note"),
-        }}
-      />
+    <MarketingPageLayout theme="archive">
+      <MarketingPageHero>
+        <ArchiveProductHero
+          copy={{
+            title: t("title"),
+            intro: t("hero_intro"),
+            points: heroPoints,
+          }}
+        />
+      </MarketingPageHero>
 
-      <DsPageStack className="px-3 sm:px-4 md:px-6">
+      <MarketingPageSections>
         <DsArchiveVaultGrid />
-      </DsPageStack>
+      </MarketingPageSections>
     </MarketingPageLayout>
   );
 }

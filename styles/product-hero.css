@@ -10,13 +10,8 @@
 .product-hero__shell {
   position: relative;
   overflow: visible;
-  min-height: min(56vh, 520px);
+  min-height: var(--marketing-hero-min-height);
   padding: clamp(64px, 12vw, 84px) 24px 44px;
-}
-
-.product-hero__shell--archive {
-  min-height: min(34vh, 300px);
-  padding: clamp(36px, 7vw, 52px) 24px 24px;
 }
 
 @media (min-width: 640px) {
@@ -469,6 +464,44 @@
   gap: 8px;
   font-size: 13px;
   color: var(--pj-text-tertiary);
+}
+
+.archive-hero__intro {
+  margin: 16px auto 0;
+  max-width: 38rem;
+  font-size: clamp(0.9375rem, 1.8vw, 1.0625rem);
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.archive-hero__points {
+  margin: 20px auto 0;
+  max-width: 38rem;
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+}
+
+.archive-hero__point {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: clamp(0.8125rem, 1.5vw, 0.9375rem);
+  line-height: 1.6;
+  color: var(--pj-text-secondary);
+}
+
+.archive-hero__icon {
+  flex-shrink: 0;
+  width: 1.35rem;
+  margin-top: 0.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.78);
 }
 
 /* Syncro 双栏 */

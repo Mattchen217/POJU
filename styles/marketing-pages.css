@@ -63,6 +63,28 @@
   margin: 0 auto;
 }
 
+.product-pricing-block {
+  text-align: center;
+}
+
+.product-pricing-block .price-tag {
+  line-height: 1.1;
+}
+
+.product-pricing-block .price-unit {
+  margin-bottom: 0;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.product-pricing-features.ds-glass-card {
+  box-shadow: var(--glass-card-shadow);
+}
+
+.product-pricing-features .price-includes li {
+  color: var(--pj-text-secondary);
+}
+
 .price-tag {
   font-size: 56px;
   font-weight: 700;

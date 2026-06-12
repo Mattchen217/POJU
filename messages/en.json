@@ -357,6 +357,21 @@
         "tagline": "POJU is a thinking partner. The decisions remain yours.",
         "cta": "Start a POJU session — $9.99",
         "footnote": "One question · Unlimited depth · Deletes when you close"
+      },
+      "pricing": {
+        "heading": "Pricing",
+        "body": "One focused question unlocks a 30-day coaching window — not a subscription. Pay once per session ($9.99), return anytime within 30 days to log updates and refine your strategy. No auto-renewal. No hidden fees.",
+        "price": "$9.99",
+        "price_unit": "per 30-day session",
+        "features_heading": "What's included",
+        "features": [
+          "Unlimited depth in a single session",
+          "Action plan you can act on tomorrow",
+          "Reflection prompts to sit with",
+          "30-day session access"
+        ],
+        "cta": "Start a POJU session — $9.99",
+        "footnote": "One question · Unlimited depth · Deletes when you close"
       }
     },
     "glyph": {
@@ -456,7 +471,16 @@
       },
       "pricing": {
         "heading": "Pricing",
-        "body": "Your first Glyph reading is free. We want you to experience the tool with no commitment. After that, each reading is $4.99 — a single transparent purchase. No subscription. No auto-renewal. No hidden fees. Each reading is delivered to your screen and optionally sent to your email as a PDF.",
+        "body": "Your first Glyph reading is free. We want you to experience the tool with no commitment. After that, each reading is $4.99 — a single transparent purchase. No subscription. No auto-renewal. No hidden fees.",
+        "price": "$4.99",
+        "price_unit": "per reading · first reading free",
+        "features_heading": "What's included",
+        "features": [
+          "One question per reading session",
+          "Archetypal pattern drawn via immersive particle interface",
+          "Deep reflection connecting metaphor to your profile",
+          "On-screen delivery with optional PDF to your email"
+        ],
         "cta": "Try Glyph free",
         "footnote": "Read with a wink. The patterns mirror what's happening."
       }
@@ -567,7 +591,16 @@
       },
       "pricing": {
         "heading": "Pricing",
-        "description": "Your first Syncro is free. We want you to feel how spatial reflection works with no commitment. After that, $4.99 unlocks a 24-hour live window — guidance updating every two hours for one specific task. No subscription. No auto-renewal.",
+        "body": "Your first Syncro is free. We want you to feel how spatial reflection works with no commitment. After that, $4.99 unlocks a 24-hour live window — guidance updating every two hours for one specific task. No subscription. No auto-renewal.",
+        "price": "$4.99",
+        "price_unit": "per 24-hour window · first Syncro free",
+        "features_heading": "What's included",
+        "features": [
+          "24-hour live guidance for one specific task",
+          "Updates every two hours based on your energy map",
+          "Eight-direction spatial reflection on mobile",
+          "Personalized to your personality profile"
+        ],
         "cta": "Open Syncro on mobile"
       },
       "pwa_guide": {
@@ -829,6 +862,7 @@
       "dialog_cancel": "Cancel",
       "dialog_connection_error": "Connection issue. Please try again.",
       "dialog_create_session_error": "Unable to create a new session right now. Please try again.",
+      "dialog_payment_redirect_failed": "Could not open the payment page. Please try again.",
       "dialog_speech_unsupported": "Speech input is not supported in this browser.",
       "dialog_speech_denied": "Microphone access was denied. Allow the microphone in browser settings to use voice input.",
       "voice_input_start": "Start voice input",
@@ -841,6 +875,9 @@
       "session_menu_label": "Session options",
       "session_menu_rename": "Rename",
       "session_menu_delete": "Delete",
+      "sidebar_brand_name": "POJU",
+      "sidebar_sessions_label": "Recent Sessions",
+      "sidebar_session_active": "ACTIVE NOW",
       "active_session_title": "Resume POJU session",
       "active_session_body": "You already have an active POJU session on this device. Open it now, or stay on this page.",
       "active_session_open": "Open session",
@@ -889,7 +926,16 @@
     "expiry": {
       "expires_in": "{days} days left in this session window.",
       "extend_30": "Extend 30 days",
-      "extending": "Extending…"
+      "extending": "Extending…",
+      "price": "$9.99",
+      "dialog_title_warning": "Session expiring soon",
+      "dialog_title_expired": "Session expired",
+      "dialog_body_warning": "This session has {days} days left. After it expires, you won't be able to continue this conversation on the same topic. To keep talking about this question after the 30-day window ends, pay {price} to extend for 30 more days.",
+      "dialog_body_expired": "This session has expired. You can no longer continue this conversation on the same topic. Pay {price} to extend for 30 more days and pick up where you left off.",
+      "extend_30_paid": "Extend 30 days {price}",
+      "acknowledge": "I understand",
+      "dont_remind": "Don't remind me again",
+      "redirecting_payment": "Redirecting to payment…"
     },
     "delivery": {
       "badge": "POJU reading",
@@ -929,6 +975,7 @@
       "continue": "Continue",
       "pause": "Pause",
       "restore": "Restore",
+      "restore_paid": "Continue — $9.99",
       "delete_forever": "Delete forever",
       "delete_confirm": "Permanently delete this session from this device? This cannot be undone.",
       "meta_expires": "Expires",
@@ -938,12 +985,21 @@
   "archiveVault": {
     "section_title": "Saved action plans",
     "title": "Your Archive",
-    "hero_subtitle": "Everything here lives only on this device.",
-    "encrypted_note": "Stored on this device in encrypted form.",
+    "hero_intro": "Welcome to your private, encrypted Vault. All your journey records have been converted into local AES-encrypted data, tied exclusively to this active device.",
+    "hero_points": [
+      { "icon": "lock", "text": "Zero Cloud: No accounts. Our servers store absolutely zero data." },
+      { "icon": "alert", "text": "Device-Locked: Switching phones, PCs, or browsers will result in an empty vault (no sync)." },
+      { "icon": "erase", "text": "Erase Warning: Clearing browser data, browsing via Incognito, or removing the PWA app will permanently wipe your records. They cannot be recovered." }
+    ],
     "loading": "Loading…",
     "load_error": "Could not read your local archive. Close and reopen the app, then try again.",
-    "empty_message": "Your POJU action plans, Glyph readings, Syncro sessions, and Match readings will appear here.",
-    "filter_all": "All"
+    "empty_all": "POJU records and action plans, Glyph readings, Syncro sessions, and Match analyses will appear here.",
+    "empty_poju": "After your POJU session delivery is complete and you receive your action plan, it will appear here.",
+    "empty_glyph": "Glyph readings will appear here.",
+    "empty_match": "Match analyses will appear here.",
+    "empty_syncro": "Syncro sessions will appear here.",
+    "filter_all": "All",
+    "syncro_mobile_only": "Syncro is mobile-only, so its records can only be viewed on a phone."
   },
   "archiveDetail": {
     "title": "POJU Action Plan",
@@ -1483,6 +1539,21 @@
       "include_4": "4-6 actionable recommendations",
       "include_5": "Saved to Archive — return anytime",
       "first_free_emphasized": "Your first Match is free. No card required.",
+      "pricing": {
+        "heading": "Pricing",
+        "body": "Your first Match is free — no card required. We want you to experience the full report before you pay. After that, each complete reading is $4.99. One purchase, one report. No subscription. No auto-renewal.",
+        "price": "$4.99",
+        "price_unit": "per complete reading · first Match free",
+        "features_heading": "What's included",
+        "features": [
+          "Full personality profile analysis of both people",
+          "Energy structure & relational dynamics interaction map",
+          "Compatibility tier with reasoning",
+          "4–6 actionable recommendations",
+          "Saved to Archive — return anytime"
+        ],
+        "footnote": "One reading. Complete report. 5 sections."
+      },
       "faq_title": "Common questions",
       "faq_q1": "What if I don't know the other person's birth time?",
       "faq_a1": "You can still run a Match with approximate time — accuracy is slightly reduced but the core analysis remains valuable. We use 2-hour windows (Chinese hour periods), so even a rough estimate works.",

@@ -91,11 +91,11 @@ export function MobileDrawer({ open, onClose }: MobileDrawerProps) {
               <MobileNavLink href="/glyph" onNavigate={onClose}>
                 {t("glyph")}
               </MobileNavLink>
-              <MobileNavLink href="/syncro" onNavigate={onClose}>
-                {t("syncro")}
-              </MobileNavLink>
               <MobileNavLink href="/match" onNavigate={onClose}>
                 {t("match")}
+              </MobileNavLink>
+              <MobileNavLink href="/syncro" onNavigate={onClose}>
+                {t("syncro")}
               </MobileNavLink>
               <MobileNavLink href="/archive" onNavigate={onClose}>
                 {t("archive")}

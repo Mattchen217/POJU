@@ -9,7 +9,7 @@ import {
   MarketingPageSections,
 } from "@/components/marketing/marketing-page-layout";
 import { MarketingSection } from "@/components/marketing/marketing-section";
-import { PojuSessionStarter } from "@/components/poju/poju-session-starter";
+import { ProductPricingSection } from "@/components/marketing/product-pricing-section";
 import { ProductWhatIsSection } from "@/components/marketing/product-what-is-section";
 import { PojuProductHero } from "@/components/marketing/poju-product-hero";
 import { NotPWA } from "@/components/pwa/PWAConditional";
@@ -117,13 +117,9 @@ export default async function PojuProductPage() {
               </article>
             </div>
             <p className="marketing-section-subheading mt-8">{t("two_columns.tagline")}</p>
-            <div className="mt-10 flex flex-col items-center text-center">
-              <PojuSessionStarter className="pj-pill-outline pj-pill-outline--gold px-[30px] py-3.5 text-[15px] md:px-10 md:py-4 md:text-base">
-                {t("two_columns.cta")}
-              </PojuSessionStarter>
-              <p className="marketing-section-subheading mt-6 !max-w-2xl">{t("two_columns.footnote")}</p>
-            </div>
           </MarketingSection>
+
+          <ProductPricingSection product="poju" />
         </NotPWA>
       </MarketingPageSections>
 

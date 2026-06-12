@@ -24,7 +24,7 @@ export function SyncroMarketingOrientationProvider({
     const start = performance.now();
 
     const tick = (now: number) => {
-      const next = (48 + ((now - start) / 1000) * 10) % 360;
+      const next = (48 + ((now - start) / 1000) * 5) % 360;
       degreeRef.current = next;
       setCompassDegree(next);
       raf = requestAnimationFrame(tick);

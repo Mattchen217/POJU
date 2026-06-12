@@ -15,7 +15,7 @@ import {
 } from "@/lib/poju/thinking-stream-mode";
 import { ProfileSelector } from "@/components/profile/ProfileSelector";
 import { getPojuDb } from "@/lib/db/poju-db";
-import { createPOJUSession, loadPOJUSession, savePOJUSession, extendPOJUV4Session } from "@/lib/poju/session-manager";
+import { createPOJUSession, loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
 import { clearPendingStoredProfileId, readPendingStoredProfileId } from "@/lib/poju/pending-stored-profile";
 import { runConfirmationPipeline, runPostTurnOrchestration } from "@/lib/poju/agent-orchestrator";
 import { handleUserMessage, tryHandleRuleRejection } from "@/lib/poju/agent";
@@ -36,7 +36,11 @@ import { applyPhaseTransition } from "@/lib/poju/agent-state";
 import { generateBaseAnalysis } from "@/lib/llm/deepseek/base-analysis";
 import { importCalculatedProfileAsStored, recordProfileUsage } from "@/lib/profile/stored-profiles-service";
 import { markPOJUV4SessionResolved } from "@/lib/poju/v4-lifecycle";
-import { DEFAULT_NEW_SESSION_TITLE, formatSessionListPrimaryLine } from "@/lib/poju/session-list-label";
+import {
+  DEFAULT_NEW_SESSION_TITLE,
+  formatSessionListDateTime,
+  sessionListTopicLine,
+} from "@/lib/poju/session-list-label";
 import { getActiveCycle, recordUserResponse } from "@/lib/poju/cycle-manager";
 import { findPendingToolInjection } from "@/lib/poju/find-pending-tool-injection";
 import { getToolSuggestionResponseState } from "@/lib/poju/tool-suggestion";
@@ -47,6 +51,13 @@ import { getCachedSituationAnalysis, requestSituationAnalysis } from "@/lib/llm/
 import { runFinalDeliveryForSession } from "@/lib/llm/pro/final-delivery";
 import { rewindSessionToUserMessage } from "@/lib/poju/session-rewind";
 import { useSpeechInput } from "@/lib/poju/use-speech-input";
+import { SessionExpiryDialog } from "@/components/poju/SessionExpiryDialog";
+import {
+  isSessionExpired,
+  setExpiryReminderSnoozed,
+  shouldShowExpiryWarning,
+} from "@/lib/poju/expiry-reminder";
+import { redirectToPojuSessionPayment } from "@/lib/poju/start-poju-session-payment";
 
 /** Internal pipeline / phase UI — development only. */
 const POJU_DEV_DEBUG = process.env.NODE_ENV === "development";
@@ -81,7 +92,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const [birthAnalysisFailed, setBirthAnalysisFailed] = useState(false);
   const summaryIntroAppendedRef = useRef(false);
   const [summaryFormDismissed, setSummaryFormDismissed] = useState(false);
-  const [extending, setExtending] = useState(false);
+  const [expiryDialogOpen, setExpiryDialogOpen] = useState(false);
+  const [expiryPaymentBusy, setExpiryPaymentBusy] = useState(false);
   const [ending, setEnding] = useState(false);
   const [sessionRows, setSessionRows] = useState<SessionListRow[]>([]);
   const [composerAttachment, setComposerAttachment] = useState<ComposerAttachment | null>(null);
@@ -131,10 +143,19 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     (m) => m.role !== "system" && !m.content.trim().startsWith("[SYSTEM:"),
   );
   const hasUserMessage = visibleMessages.some((m) => m.role === "user");
+  const expired = isSessionExpired(session.expires_at);
   const birthFlowBlocking = birthFlowStage === "form" || birthFlowStage === "received" || birthFlowStage === "analyzing";
   const showSummaryForm =
     shouldShowContextSummaryForm(session) && !summaryFormDismissed && !session.main_delivery_done;
   const overlayFormOpen = birthFlowBlocking || showProfilePicker || showSummaryForm;
+
+  useEffect(() => {
+    if (expired) {
+      setExpiryDialogOpen(true);
+      return;
+    }
+    setExpiryDialogOpen(shouldShowExpiryWarning(session.session_id, session.expires_at));
+  }, [session.session_id, session.expires_at, expired]);
 
   useEffect(() => {
     setSummaryFormDismissed(false);
@@ -443,6 +464,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   }
 
   async function handlePojuSend(text: string) {
+    if (expired) return;
     stopVoiceInput();
     const typed = text.trim();
     if ((!typed && !composerAttachment) || sending) return;
@@ -871,17 +893,28 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     }
   }
 
-  async function handleExtendSession() {
-    const sid = sessionRef.current.session_id;
-    setExtending(true);
+  async function handleExtendSessionPayment(snooze: boolean) {
+    setExpiryPaymentBusy(true);
     try {
-      const next = await extendPOJUV4Session(sid);
-      if (next) {
-        onSessionUpdate(next);
+      const ok = await redirectToPojuSessionPayment({
+        action: "extend",
+        sessionId: sessionRef.current.session_id,
+        locale,
+        snoozeReminder: snooze,
+      });
+      if (!ok) {
+        await dialog.alert(t("dialog_payment_redirect_failed"));
+        setExpiryPaymentBusy(false);
       }
-    } finally {
-      setExtending(false);
+    } catch {
+      await dialog.alert(t("dialog_payment_redirect_failed"));
+      setExpiryPaymentBusy(false);
     }
+  }
+
+  function handleExpiryDismiss({ snooze }: { snooze: boolean }) {
+    if (snooze) setExpiryReminderSnoozed(sessionRef.current.session_id);
+    setExpiryDialogOpen(false);
   }
 
   async function handleSituationAnalysis(force: boolean) {
@@ -933,7 +966,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
 
   const pojuSessions = sessionRows.map((row) => ({
     id: row.session_id,
-    title: formatSessionListPrimaryLine(row.created_at, row.original_question, locale),
+    title: sessionListTopicLine(row.original_question),
+    updatedAt: row.last_interaction_at.toISOString(),
+    meta: formatSessionListDateTime(row.created_at, locale),
   }));
 
   const pojuMessages = visibleMessages.map((m) => ({
@@ -985,6 +1020,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         currentSessionId={session.session_id}
         messages={pojuMessages}
         isStreaming={streaming}
+        composerDisabled={expired}
         streamingText={streamingReply ?? undefined}
         thinkingMode={streaming ? thinkingMode : null}
         thinkingLocale={locale}
@@ -1027,6 +1063,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         editDisabled={streaming}
         editLabel={t("edit_message")}
         onClose={() => router.push("/poju")}
+        brandName={t("sidebar_brand_name")}
+        sessionsLabel={t("sidebar_sessions_label")}
+        newSessionLabel={t("session_picker.new_poju")}
+        newSessionPriceLabel={t("session_picker.price")}
         inlineNotice={
           showOffTopicAction ? (
             <OffTopicAction
@@ -1054,18 +1094,15 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         }
       />
 
-      <div
-        style={{
-          position: "fixed",
-          top: 72,
-          left: "50%",
-          transform: "translateX(-50%)",
-          zIndex: 50,
-          width: "min(1080px, calc(100vw - 32px))",
-        }}
-      >
-        <SessionExpiryNotice session={session} extending={extending} onExtend={() => void handleExtendSession()} />
-      </div>
+      <SessionExpiryDialog
+        sessionId={session.session_id}
+        expiresAt={session.expires_at}
+        open={expiryDialogOpen}
+        mode={expired ? "expired" : "warning"}
+        paymentBusy={expiryPaymentBusy}
+        onDismiss={handleExpiryDismiss}
+        onExtend={({ snooze }) => void handleExtendSessionPayment(snooze)}
+      />
 
       {overlayFormOpen ? (
         <div
@@ -1148,38 +1185,5 @@ function buildActionUpdateSystemNote(actionText: string, status: string, feedbac
   };
   const verb = map[status] ?? "updated this action";
   return `[SYSTEM: User ${verb}: "${actionText}"${feedback ? `. Feedback: "${feedback}"` : ""}. Please acknowledge and continue.]`;
-}
-
-function SessionExpiryNotice({
-  session,
-  extending,
-  onExtend,
-}: {
-  session: POJUSessionState;
-  extending: boolean;
-  onExtend: () => void;
-}) {
-  const tExpiry = useTranslations("poju.expiry");
-  const now = Date.now();
-  const expiresAt = new Date(session.expires_at).getTime();
-  const msLeft = expiresAt - now;
-  const daysLeft = Math.ceil(msLeft / (24 * 60 * 60 * 1000));
-  if (daysLeft > 7 || daysLeft <= 0) return null;
-
-  return (
-    <div className="rounded-xl border border-amber-400/30 bg-amber-950/25 px-4 py-3 text-sm text-amber-50/95">
-      <p className="m-0">{tExpiry("expires_in", { days: daysLeft })}</p>
-      <div className="mt-2 flex flex-wrap gap-2">
-        <button
-          type="button"
-          disabled={extending}
-          onClick={onExtend}
-          className="rounded-lg bg-amber-400 px-3 py-1.5 text-xs font-semibold text-zinc-900 disabled:opacity-50"
-        >
-          {extending ? tExpiry("extending") : tExpiry("extend_30")}
-        </button>
-      </div>
-    </div>
-  );
 }
 

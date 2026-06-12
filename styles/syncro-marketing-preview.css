@@ -1,5 +1,69 @@
 /* Marketing page — scaled live Syncro UI inside phone mockup */
 
+.syncro-what-shows-layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2.5rem;
+  width: 100%;
+}
+
+.syncro-what-shows-layout__phone {
+  display: flex;
+  flex-shrink: 0;
+  justify-content: center;
+}
+
+.syncro-what-shows-layout__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: min(100%, 26rem);
+  max-width: 26rem;
+  text-align: center;
+  color: #fff;
+}
+
+.syncro-what-shows-layout__copy .marketing-section-intro {
+  color: #fff;
+}
+
+.syncro-what-shows-layout__copy .ds-glass-card,
+.syncro-what-shows-layout__copy .ds-glass-card p,
+.syncro-what-shows-layout__copy .ds-glass-card li {
+  color: #fff;
+}
+
+@media (min-width: 1024px) {
+  .syncro-what-shows-layout {
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 7rem;
+  }
+
+  .syncro-what-shows-layout__phone {
+    justify-content: flex-end;
+    padding-left: 0;
+  }
+
+  .syncro-what-shows-layout__phone .syncro-marketing-phone-preview {
+    width: auto;
+    max-width: 220px;
+  }
+
+  .syncro-what-shows-layout__copy {
+    flex: 0 0 auto;
+    width: 26rem;
+    max-width: 26rem;
+    text-align: left;
+  }
+
+  .syncro-what-shows-layout__phone .syncro-marketing-phone-preview__hint {
+    text-align: left;
+  }
+}
+
 .syncro-marketing-phone-preview {
   display: flex;
   flex-direction: column;
@@ -8,8 +72,8 @@
 }
 
 .syncro-marketing-phone-preview__frame {
-  --syncro-preview-scale: calc(280 / 390);
-  width: 280px;
+  --syncro-preview-scale: calc(220 / 390);
+  width: 220px;
   height: calc(var(--syncro-preview-height, 844px) * var(--syncro-preview-scale));
   overflow: hidden;
   border-radius: 2rem;
@@ -47,14 +111,88 @@
   --syncro-nav-reserve: 10px;
   --syncro-toggle-bottom: 10px;
   --syncro-bottom-reserve: 58px;
-  --syncro-hour-top: 0px;
-  /* Push mode content below hour rail + legend */
-  --syncro-stage-top: 148px;
+  --syncro-hour-top: 18px;
+  --syncro-marketing-stack-gap: 14px;
+  /* Space between compass visual and advice copy */
+  --syncro-marketing-advice-gap: 30px;
+  /* Extra air between hour legend and compass — sits mid-band above advice text */
+  --syncro-marketing-ring-gap: 26px;
+  /* Collapse layout box left by scale(0.76) so advice sits under visual ring */
+  --syncro-marketing-ring-layout-trim: -91px;
+  /* Clear hour rail + name/range + legend */
+  --syncro-stage-top: 126px;
 }
 
+/* Compact hour progress — smaller and inset from top edge */
 .syncro-main-view--marketing .hour-progress-bar {
-  padding-top: 2px;
-  padding-bottom: 2px;
+  padding: 6px 0 4px;
+}
+
+.syncro-main-view--marketing .hour-track-viewport {
+  --hour-slot-width: 36px;
+}
+
+.syncro-main-view--marketing .hour-track-rail {
+  min-height: 42px;
+  padding-block: 4px 0;
+}
+
+.syncro-main-view--marketing .hour-line {
+  top: 14px;
+}
+
+.syncro-main-view--marketing .hour-dot {
+  height: 22px;
+}
+
+.syncro-main-view--marketing .hour-dot-core {
+  width: 11px;
+  height: 11px;
+}
+
+.syncro-main-view--marketing .hour-dot.status-now .hour-dot-core {
+  width: 17px;
+  height: 17px;
+  box-shadow: 0 0 14px var(--pj-gold-glow);
+}
+
+.syncro-main-view--marketing .hour-dot.status-done:not(:disabled) .hour-dot-core,
+.syncro-main-view--marketing .hour-dot.status-failed:not(:disabled) .hour-dot-core {
+  width: 13px;
+  height: 13px;
+}
+
+.syncro-main-view--marketing .hour-dot-label {
+  font-size: 8px;
+  gap: 4px;
+}
+
+.syncro-main-view--marketing .hour-display {
+  margin-top: 6px;
+  font-size: 10px;
+  gap: 4px;
+}
+
+.syncro-main-view--marketing .hour-now-tag {
+  font-size: 9px;
+}
+
+.syncro-main-view--marketing .hour-legend {
+  margin-top: 6px;
+  gap: 6px 10px;
+  font-size: 9px;
+}
+
+.syncro-main-view--marketing .hour-legend .legend-dot.status-now {
+  width: 7px;
+  height: 7px;
+}
+
+.syncro-main-view--marketing .hour-legend .legend-dot.status-done,
+.syncro-main-view--marketing .hour-legend .legend-dot.status-pending,
+.syncro-main-view--marketing .hour-legend .legend-dot.status-failed {
+  width: 6px;
+  height: 6px;
 }
 
 .syncro-main-view--marketing .syncro-mode-stage {
@@ -64,15 +202,19 @@
 
 .syncro-main-view--marketing .compass-page {
   padding-top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-/* Larger ring, shifted down — only nudge position, not tiny scale */
+/* Unified vertical rhythm below hour bar */
 .syncro-main-view--marketing .syncro-marketing-ring-shell {
   transform: scale(0.76);
   transform-origin: center top;
-  margin-top: 28px;
-  margin-left: auto;
-  margin-right: auto;
+  margin-top: var(--syncro-marketing-ring-gap) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  margin-bottom: var(--syncro-marketing-ring-layout-trim) !important;
 }
 
 .syncro-main-view--marketing .syncro-ar-ring.syncro-marketing-ring-shell {
@@ -81,7 +223,8 @@
 }
 
 .syncro-main-view--marketing .syncro-marketing-advice-block {
-  margin-top: 18px !important;
+  margin-top: var(--syncro-marketing-advice-gap) !important;
+  margin-bottom: 0 !important;
   padding-top: 0 !important;
 }
 
@@ -96,7 +239,7 @@
 }
 
 .syncro-main-view--marketing .syncro-marketing-why-block {
-  margin-top: 18px;
+  margin-top: var(--syncro-marketing-stack-gap) !important;
   text-align: center;
 }
 

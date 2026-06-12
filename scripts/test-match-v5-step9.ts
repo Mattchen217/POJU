@@ -38,10 +38,10 @@ assert(matchDetail.includes("COMPATIBILITY_LEVELS"), "compatibility display");
 for (const loc of locales) {
   const json = JSON.parse(read(`messages/${loc}.json`)) as {
     match?: { archive?: Record<string, string> };
-    archiveVault?: { empty_message?: string };
+    archiveVault?: { empty_all?: string };
   };
   assert(Boolean(json.match?.archive?.view_full_report), `${loc}: view_full_report`);
-  assert(json.archiveVault?.empty_message?.includes("Match") ?? false, `${loc}: empty mentions Match`);
+  assert(json.archiveVault?.empty_all?.includes("Match") ?? false, `${loc}: empty_all mentions Match`);
 }
 
 console.log("Match v5 Step 9: static checks passed.");

@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 
@@ -12,9 +13,9 @@ import {
   MarketingPageSections,
 } from "@/components/marketing/marketing-page-layout";
 import { MarketingSection } from "@/components/marketing/marketing-section";
+import { ProductPricingSection } from "@/components/marketing/product-pricing-section";
 import { ProductWhatIsSection } from "@/components/marketing/product-what-is-section";
 import { OracleProductHero } from "@/components/marketing/oracle-product-hero";
-import { DsMutedCard } from "@/components/ds/primitives";
 import { cn } from "@/lib/utils/classnames";
 import { WindCardWithParticles, type WindCardParticleKey } from "@/components/oracle/wind-cards";
 import crosswind from "@/assets/images/crosswind.png";
@@ -41,27 +42,66 @@ function linesFromGlyphDescription(description: string): string[] {
 const GLYPH_WHEN_KEYS = ["quick_read", "circling", "fresh_angle", "new_start"] as const satisfies readonly GlyphWhenIconKey[];
 
 const GLYPH_FIVE_WINDS_CARD_PX = 168;
+const GLYPH_FIVE_WINDS_BODY_W = "22rem";
+const GLYPH_FIVE_WINDS_LEFT_COL_W = "22rem";
+const GLYPH_FIVE_WINDS_RIGHT_COL_W = `calc(${GLYPH_FIVE_WINDS_BODY_W} + 1.75rem + ${GLYPH_FIVE_WINDS_CARD_PX}px)`;
+const GLYPH_FIVE_WINDS_GRID_STYLE = {
+  "--glyph-five-winds-left-col": GLYPH_FIVE_WINDS_LEFT_COL_W,
+  "--glyph-five-winds-right-col": GLYPH_FIVE_WINDS_RIGHT_COL_W,
+} as CSSProperties;
 
 function WindText({
   name,
   lines,
   align = "left",
+  className,
+  style,
+  bodyAsLines = false,
 }: {
   name: string;
   lines: string[];
   align?: "left" | "right";
+  className?: string;
+  style?: CSSProperties;
+  /** Render each entry as one visual line (Fair Sky ×2, Crosswind ×3) */
+  bodyAsLines?: boolean;
 }) {
   return (
-    <div className={cn("min-w-0 text-center", align === "right" ? "lg:text-right" : "lg:text-left")}>
+    <div
+      className={cn(
+        "min-w-0 text-center",
+        align === "right" ? "lg:text-right" : "lg:text-left",
+        className,
+      )}
+      style={style}
+    >
       <p className="whitespace-nowrap text-[20px] font-semibold leading-tight tracking-[0.01em] text-white sm:text-[22px] md:text-[23px]">
         {name}
       </p>
-      <div className="mt-1.5 space-y-1 text-[14px] leading-6 text-white/90 sm:text-[15px] sm:leading-7 md:text-[16px] md:leading-7">
-        {lines.map((line) => (
-          <p key={line} className="whitespace-normal break-words sm:whitespace-nowrap">
-            {line}
-          </p>
-        ))}
+      <div className="mt-1.5 text-[14px] leading-6 text-white/90 sm:text-[15px] sm:leading-7 md:text-[16px] md:leading-7">
+        {bodyAsLines ? (
+          <div className="space-y-0">
+            {lines.map((line) => (
+              <p key={line} className="whitespace-normal break-words lg:whitespace-nowrap">
+                {line}
+              </p>
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {lines.map((line) => (
+              <p
+                key={line}
+                className={cn(
+                  "whitespace-normal break-words",
+                  align === "left" && "sm:whitespace-nowrap",
+                )}
+              >
+                {line}
+              </p>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -69,7 +109,6 @@ function WindText({
 
 export async function GlyphMarketingPage() {
   const t = await getTranslations("marketingSite.glyph");
-  const glyphUsageRules = t.raw("how_it_works.rules") as string[];
   const onTheCardsParagraphs = t.raw("on_the_cards.paragraphs") as string[];
 
   const heroCopy = {
@@ -171,16 +210,6 @@ export async function GlyphMarketingPage() {
               ]}
             />
           </div>
-          <DsMutedCard accent="magenta" className="mx-auto mt-10 max-w-2xl">
-            <ul className="list-none space-y-3 p-0 text-left">
-              {glyphUsageRules.map((rule) => (
-                <li key={rule}>
-                  <span className="mr-2">◉</span>
-                  {rule}
-                </li>
-              ))}
-            </ul>
-          </DsMutedCard>
           <p className="marketing-section-subheading mt-8 !mb-0">{t("how_it_works.session_reminder")}</p>
         </MarketingSection>
 
@@ -192,11 +221,14 @@ export async function GlyphMarketingPage() {
           padding="lg"
           allowOverflow
         >
-          <div className="mx-auto mt-10 max-w-6xl">
-            <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:grid-rows-3 lg:gap-x-6 lg:gap-y-16">
-              <div className="flex justify-center lg:col-start-1 lg:row-start-1 lg:justify-end lg:pr-1">
+          <div className="mx-auto mt-10 w-fit max-w-full px-4 sm:px-6">
+            <div
+              className="grid grid-cols-1 gap-10 lg:grid-cols-[var(--glyph-five-winds-left-col)_var(--glyph-five-winds-right-col)] lg:grid-rows-3 lg:gap-x-10 lg:gap-y-16"
+              style={GLYPH_FIVE_WINDS_GRID_STYLE}
+            >
+              <div className="flex justify-center lg:col-start-1 lg:row-start-1 lg:justify-end">
                 <div
-                  className="grid w-full max-w-xl items-center gap-5"
+                  className="grid w-full max-w-md items-center gap-5 lg:w-[22rem] lg:max-w-[22rem]"
                   style={{ gridTemplateColumns: `${GLYPH_FIVE_WINDS_CARD_PX}px minmax(0, 1fr)` }}
                 >
                   <div className="w-full" style={{ maxWidth: GLYPH_FIVE_WINDS_CARD_PX }}>
@@ -212,9 +244,9 @@ export async function GlyphMarketingPage() {
                 </div>
               </div>
 
-              <div className="flex justify-center lg:col-start-1 lg:row-start-2 lg:justify-end lg:pr-1">
+              <div className="flex justify-center lg:col-start-1 lg:row-start-2 lg:justify-end">
                 <div
-                  className="grid w-full max-w-xl items-center gap-5"
+                  className="grid w-full max-w-md items-center gap-5 lg:w-[22rem] lg:max-w-[22rem]"
                   style={{ gridTemplateColumns: `${GLYPH_FIVE_WINDS_CARD_PX}px minmax(0, 1fr)` }}
                 >
                   <div className="w-full" style={{ maxWidth: GLYPH_FIVE_WINDS_CARD_PX }}>
@@ -229,9 +261,9 @@ export async function GlyphMarketingPage() {
                 </div>
               </div>
 
-              <div className="flex justify-center lg:col-start-1 lg:row-start-3 lg:justify-end lg:pr-1">
+              <div className="flex justify-center lg:col-start-1 lg:row-start-3 lg:justify-end">
                 <div
-                  className="grid w-full max-w-xl items-center gap-5"
+                  className="grid w-full max-w-md items-center gap-5 lg:w-[22rem] lg:max-w-[22rem]"
                   style={{ gridTemplateColumns: `${GLYPH_FIVE_WINDS_CARD_PX}px minmax(0, 1fr)` }}
                 >
                   <div className="w-full" style={{ maxWidth: GLYPH_FIVE_WINDS_CARD_PX }}>
@@ -246,13 +278,17 @@ export async function GlyphMarketingPage() {
                 </div>
               </div>
 
-              <div className="flex justify-center lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:self-center lg:justify-start lg:pl-1">
-                <div
-                  className="grid w-full max-w-xl items-center gap-5"
-                  style={{ gridTemplateColumns: `minmax(0, 1fr) ${GLYPH_FIVE_WINDS_CARD_PX}px` }}
-                >
-                  <WindText name={fair.name} lines={fair.lines} align="right" />
-                  <div className="w-full justify-self-end" style={{ maxWidth: GLYPH_FIVE_WINDS_CARD_PX }}>
+              <div className="flex justify-center lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:self-center lg:justify-start">
+                <div className="flex w-full max-w-md items-center gap-7 lg:w-auto lg:max-w-none">
+                  <WindText
+                    name={fair.name}
+                    lines={fair.lines}
+                    align="right"
+                    bodyAsLines
+                    className="relative z-10 shrink-0 pr-1"
+                    style={{ width: GLYPH_FIVE_WINDS_BODY_W, maxWidth: GLYPH_FIVE_WINDS_BODY_W }}
+                  />
+                  <div className="relative z-0 shrink-0" style={{ width: GLYPH_FIVE_WINDS_CARD_PX }}>
                     <WindCardWithParticles
                       src={fair.image}
                       alt={fair.imageAlt}
@@ -263,13 +299,17 @@ export async function GlyphMarketingPage() {
                 </div>
               </div>
 
-              <div className="flex justify-center lg:col-start-2 lg:row-start-2 lg:row-span-2 lg:self-center lg:justify-start lg:pl-1">
-                <div
-                  className="grid w-full max-w-xl items-center gap-5"
-                  style={{ gridTemplateColumns: `minmax(0, 1fr) ${GLYPH_FIVE_WINDS_CARD_PX}px` }}
-                >
-                  <WindText name={cross.name} lines={cross.lines} align="right" />
-                  <div className="w-full justify-self-end" style={{ maxWidth: GLYPH_FIVE_WINDS_CARD_PX }}>
+              <div className="flex justify-center lg:col-start-2 lg:row-start-2 lg:row-span-2 lg:self-center lg:justify-start">
+                <div className="flex w-full max-w-md items-center gap-7 lg:w-auto lg:max-w-none">
+                  <WindText
+                    name={cross.name}
+                    lines={cross.lines}
+                    align="right"
+                    bodyAsLines
+                    className="relative z-10 shrink-0 pr-1"
+                    style={{ width: GLYPH_FIVE_WINDS_BODY_W, maxWidth: GLYPH_FIVE_WINDS_BODY_W }}
+                  />
+                  <div className="relative z-0 shrink-0" style={{ width: GLYPH_FIVE_WINDS_CARD_PX }}>
                     <WindCardWithParticles
                       src={cross.image}
                       alt={cross.imageAlt}
@@ -291,13 +331,7 @@ export async function GlyphMarketingPage() {
           </div>
         </MarketingSection>
 
-        <MarketingSection id="glyph-pricing" title={t("pricing.heading")} padding="lg">
-          <p className="marketing-section-subheading mx-auto max-w-2xl">{t("pricing.body")}</p>
-          <div className="mt-8 flex flex-col items-center gap-3">
-            <GlyphPrepareCta />
-            <p className="marketing-section-intro max-w-md text-sm opacity-90">{t("pricing.footnote")}</p>
-          </div>
-        </MarketingSection>
+        <ProductPricingSection product="glyph" />
         </NotPWA>
       </MarketingPageSections>
 

@@ -222,7 +222,7 @@ export function DsHomePage({ copy }: { copy: DsHomeCopy }) {
   const heroBg = hasPublicFile(LANDING_ASSETS.hero) ? `${LANDING_ASSETS.hero}?v=${HERO_ASSET_VERSION}` : null;
 
   return (
-    <main className="text-[var(--pj-text-secondary)]">
+    <main className="pj-page pj-page--home text-[var(--pj-text-secondary)]">
       <section className="ds-home-hero">
         <div className="ds-home-hero__media">
           {heroBg ? (
@@ -241,7 +241,7 @@ export function DsHomePage({ copy }: { copy: DsHomeCopy }) {
               <div className="ds-home-hero__overlay" aria-hidden />
             </>
           ) : (
-            <div className="h-full min-h-[min(64vh,640px)] bg-[var(--pj-bg-deep)]" aria-hidden />
+            <div className="h-full min-h-[var(--marketing-hero-min-height)] bg-[var(--pj-bg-deep)]" aria-hidden />
           )}
           <div className="ds-home-hero__content">
             <DsFadeIn>

@@ -9,6 +9,8 @@
    ============================================================ */
 
 import { useState, useRef, useEffect, type JSX, type ReactNode } from "react";
+import Image from "next/image";
+import pojuLogo from "@/assets/images/POJUlogo.png";
 import { AssistantMessageActions } from "@/components/poju/AssistantMessageActions";
 import { PojuAiAvatar } from "@/components/poju/PojuAiAvatar";
 import { ThinkingStream } from "@/components/poju/ThinkingStream";
@@ -35,6 +37,8 @@ export interface PojuSession {
   id: string;
   title: string;
   updatedAt?: string;
+  /** Secondary line under title in sidebar (e.g. ACTIVE NOW / 2h ago) */
+  meta?: string;
 }
 
 /* ---------- Props:数据接入点 ----------
@@ -97,6 +101,11 @@ export interface PojuChatProps {
   composerText?: string;
   onComposerTextChange?: (value: string) => void;
   composerHasAttachment?: boolean;
+  composerDisabled?: boolean;
+  brandName?: string;
+  sessionsLabel?: string;
+  newSessionLabel?: string;
+  newSessionPriceLabel?: string;
 }
 
 /* ---------- AI 文本渲染(不用 Tailwind prose,避免 65ch 限制)----------
@@ -175,6 +184,11 @@ export default function PojuChat(props: PojuChatProps) {
     composerText,
     onComposerTextChange,
     composerHasAttachment,
+    composerDisabled,
+    brandName = "POJU",
+    sessionsLabel = "Recent Sessions",
+    newSessionLabel = "+ New POJU",
+    newSessionPriceLabel = "$9.99",
   } = props;
 
   const [input, setInput] = useState("");
@@ -233,7 +247,7 @@ export default function PojuChat(props: PojuChatProps) {
 
   const send = () => {
     const t = textareaValue.trim();
-    if (!t || isStreaming) return;
+    if (!t || isStreaming || composerDisabled) return;
     onSend(t);
     setTextareaValue("");
   };
@@ -268,12 +282,32 @@ export default function PojuChat(props: PojuChatProps) {
 
       {/* 侧栏 */}
       <aside className={`pchat__sidebar ${sidebarOpen ? "is-open" : ""}`}>
-        <div className="pchat__brand">POJU</div>
-        <button className="pchat__newbtn" onClick={onNewSession} disabled={newSessionDisabled}>
-          <span>+ New POJU</span>
-          <span>$9.99</span>
+        <div className="pchat__brand">
+          <span className="pchat__brand-mark" aria-hidden>
+            <Image
+              src={pojuLogo}
+              alt=""
+              width={256}
+              height={256}
+              className="pchat__brand-mark-img"
+            />
+          </span>
+          <span className="pchat__brand-text">
+            <span className="pchat__brand-name">{brandName}</span>
+          </span>
+        </div>
+        <button
+          className="poju-new-session-btn poju-new-session-btn--sidebar"
+          onClick={onNewSession}
+          disabled={newSessionDisabled}
+        >
+          <span>{newSessionLabel}</span>
+          <span className="poju-new-session-btn__sep" aria-hidden>
+            —
+          </span>
+          <span className="poju-new-session-btn__price">{newSessionPriceLabel}</span>
         </button>
-        <div className="pchat__sessions-label">Sessions</div>
+        <div className="pchat__sessions-label">{sessionsLabel}</div>
         <div className="pchat__sessions">
           {sessions.map((s) => (
             <div key={s.id} className="pchat__session-wrap">
@@ -287,7 +321,10 @@ export default function PojuChat(props: PojuChatProps) {
                   setOpenMenuSessionId(null);
                 }}
               >
-                <span className="pchat__session-title">{s.title}</span>
+                <div className="pchat__session-main">
+                  <span className="pchat__session-title">{s.title}</span>
+                  {s.meta ? <span className="pchat__session-meta">{s.meta}</span> : null}
+                </div>
                 {(onRenameSession || onDeleteSession) && (
                   <button
                     type="button"
@@ -515,7 +552,7 @@ export default function PojuChat(props: PojuChatProps) {
               rows={1}
               placeholder={inputPlaceholder ?? "Type your message..."}
               value={textareaValue}
-              disabled={isStreaming}
+              disabled={isStreaming || composerDisabled}
               onChange={(e) => setTextareaValue(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
@@ -543,7 +580,7 @@ export default function PojuChat(props: PojuChatProps) {
                 }
                 send();
               }}
-              disabled={!isStreaming && !textareaValue.trim() && !composerHasAttachment}
+              disabled={(!isStreaming && !textareaValue.trim() && !composerHasAttachment) || composerDisabled}
               aria-label={isStreaming ? "Stop" : "Send"}
             >
               <span className="material-symbols-outlined">{isStreaming ? "stop" : "arrow_upward"}</span>

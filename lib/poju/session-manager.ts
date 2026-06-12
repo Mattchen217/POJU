@@ -141,13 +141,17 @@ function getCurrentStateHint(state: POJUSessionState): PojuV4StateHint {
   return "collecting_context";
 }
 
-/** Extend active session by 30 days from now (client-side IndexedDB). */
-export async function extendPOJUV4Session(sessionId: string): Promise<POJUSessionState | null> {
+/** Extend active session by 30 days after a paid renewal. */
+export async function extendPOJUV4Session(
+  sessionId: string,
+  paymentId: string,
+): Promise<POJUSessionState | null> {
   const db = getPojuDb();
   const row = await db.pojuSessionRecords.get(sessionId);
   const state = await loadPOJUSession(sessionId);
   if (!row || !state || row.status !== "active") return null;
   if (getPojuDeviceId() !== state.device_id) return null;
+  if (!paymentId.trim()) return null;
 
   const now = new Date();
   const exp = new Date(now.getTime() + THIRTY_DAYS_MS);
@@ -160,7 +164,10 @@ export async function extendPOJUV4Session(sessionId: string): Promise<POJUSessio
   await db.pojuSessionRecords.update(sessionId, {
     expires_at: exp,
     last_interaction_at: now,
-    renewals: [...row.renewals, { extended_at: now, reason: "user_request" }],
+    renewals: [
+      ...row.renewals,
+      { extended_at: now, reason: "paid_extension", payment_id: paymentId.trim() },
+    ],
   });
 
   await savePOJUSession(next);

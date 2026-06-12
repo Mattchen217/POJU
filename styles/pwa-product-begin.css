@@ -48,3 +48,8 @@
 .pwa-mode .match-home .marketing-page-sections {
   display: none;
 }
+
+/* Syncro — always show “How Syncro works” in PWA */
+.pwa-mode .product-page--syncro .syncro-how-it-works-band {
+  display: block;
+}

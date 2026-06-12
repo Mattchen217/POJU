@@ -1,15 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import type { POJUSessionRecord } from "@/lib/db/poju-db";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
 import { listPOJUV4SessionRowsForDevice } from "@/lib/poju/session-manager";
-import { permanentlyDeletePOJUV4Session, restorePOJUV4ArchivedSession, runPOJUV4SessionMaintenance, setPOJUV4SessionStatus } from "@/lib/poju/v4-lifecycle";
+import { permanentlyDeletePOJUV4Session, runPOJUV4SessionMaintenance, setPOJUV4SessionStatus } from "@/lib/poju/v4-lifecycle";
+import { redirectToPojuSessionPayment } from "@/lib/poju/start-poju-session-payment";
 
 export default function PojuArchivePage() {
   const t = useTranslations("poju.archive");
+  const locale = useLocale();
   const [rows, setRows] = useState<POJUSessionRecord[]>([]);
 
   const reload = useCallback(async () => {
@@ -38,10 +40,10 @@ export default function PojuArchivePage() {
         </Link>
       </p>
 
-      <SessionSection title={`${t("section_active")} (${active.length})`} rows={active} onChange={reload} t={t} />
-      <SessionSection title={`${t("section_paused")} (${paused.length})`} rows={paused} onChange={reload} t={t} />
-      <SessionSection title={`${t("section_resolved")} (${resolved.length})`} rows={resolved} onChange={reload} t={t} />
-      <SessionSection title={`${t("section_archived")} (${archived.length})`} rows={archived} onChange={reload} t={t} />
+      <SessionSection title={`${t("section_active")} (${active.length})`} rows={active} onChange={reload} locale={locale} t={t} />
+      <SessionSection title={`${t("section_paused")} (${paused.length})`} rows={paused} onChange={reload} locale={locale} t={t} />
+      <SessionSection title={`${t("section_resolved")} (${resolved.length})`} rows={resolved} onChange={reload} locale={locale} t={t} />
+      <SessionSection title={`${t("section_archived")} (${archived.length})`} rows={archived} onChange={reload} locale={locale} t={t} />
     </main>
   );
 }
@@ -50,11 +52,13 @@ function SessionSection({
   title,
   rows,
   onChange,
+  locale,
   t,
 }: {
   title: string;
   rows: POJUSessionRecord[];
   onChange: () => void;
+  locale: string;
   t: (key: string, values?: Record<string, string | number>) => string;
 }) {
   if (rows.length === 0) return null;
@@ -94,9 +98,9 @@ function SessionSection({
                   <button
                     type="button"
                     className="rounded-lg border border-white/20 px-3 py-1.5 text-xs text-white/85"
-                    onClick={() => void restoreRow(row.session_id, onChange)}
+                    onClick={() => void restoreRow(row.session_id, locale)}
                   >
-                    {t("restore")}
+                    {t("restore_paid")}
                   </button>
                   <button
                     type="button"
@@ -129,9 +133,8 @@ async function pauseRow(sessionId: string, onChange: () => void) {
   onChange();
 }
 
-async function restoreRow(sessionId: string, onChange: () => void) {
-  await restorePOJUV4ArchivedSession(sessionId);
-  onChange();
+async function restoreRow(sessionId: string, locale: string) {
+  await redirectToPojuSessionPayment({ action: "restore", sessionId, locale });
 }
 
 async function deleteRow(sessionId: string, onChange: () => void, t: (key: string) => string) {

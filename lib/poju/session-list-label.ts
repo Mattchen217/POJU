@@ -4,7 +4,6 @@ export const DEFAULT_NEW_SESSION_TITLE = "I'd like to begin a POJU session.";
 export function sessionListTopicLine(original_question: string): string {
   const q = original_question?.trim() || "";
   if (!q || q === DEFAULT_NEW_SESSION_TITLE) return "New session";
-  if (q.length > 48) return `${q.slice(0, 45)}…`;
   return q;
 }
 

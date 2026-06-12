@@ -6,8 +6,21 @@ import { useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { readFromToolPending, clearFromToolPending } from "@/lib/cross-product/from-tool-pending";
 import { injectToolResultToPoju } from "@/lib/poju/inject-tool-result";
-import { createPOJUSession } from "@/lib/poju/session-manager";
+import {
+  clearExpiryReminderSnooze,
+  setExpiryReminderSnoozed,
+} from "@/lib/poju/expiry-reminder";
+import { createPOJUSession, extendPOJUV4Session } from "@/lib/poju/session-manager";
 import { clearPendingStoredProfileId, readPendingStoredProfileId } from "@/lib/poju/pending-stored-profile";
+import {
+  clearPojuPendingPaymentStorage,
+  POJU_PENDING_ACTION_KEY,
+  POJU_PENDING_EXTEND_SESSION_KEY,
+  POJU_PENDING_ORDER_KEY,
+  POJU_PENDING_RESTORE_SESSION_KEY,
+  readPendingPaymentSnoozeFlag,
+} from "@/lib/poju/start-poju-session-payment";
+import { restorePOJUV4ArchivedSession } from "@/lib/poju/v4-lifecycle";
 
 type StepStatus = "verifying" | "creating" | "success" | "error";
 
@@ -22,26 +35,10 @@ function PojuPaymentSuccessInner() {
     let cancelled = false;
     void (async () => {
       try {
-        const orderId = sessionStorage.getItem("poju_pending_order_id") ?? params.get("order_id") ?? "";
-        const fromRaw = params.get("q")?.trim();
-        let fromQuery = "";
-        if (fromRaw) {
-          try {
-            fromQuery = decodeURIComponent(fromRaw);
-          } catch {
-            fromQuery = fromRaw;
-          }
-        }
-        let question =
-          sessionStorage.getItem("poju_pending_question")?.trim() || fromQuery;
-        const isMockOrder =
-          orderId.startsWith("mockpoju_") || orderId.startsWith("mock-");
-        if (!question && isMockOrder) {
-          question = "I'd like to begin a POJU session.";
-        }
-        if (!orderId || !question) {
-          throw new Error("Missing order context");
-        }
+        const action =
+          sessionStorage.getItem(POJU_PENDING_ACTION_KEY) ?? params.get("action") ?? "create";
+        const orderId =
+          sessionStorage.getItem(POJU_PENDING_ORDER_KEY) ?? params.get("order_id") ?? "";
 
         setStatus("verifying");
         const verifyRes = await fetch("/api/payments/verify", {
@@ -55,6 +52,54 @@ function PojuPaymentSuccessInner() {
         }
 
         setStatus("creating");
+
+        if (action === "extend") {
+          const sessionId = sessionStorage.getItem(POJU_PENDING_EXTEND_SESSION_KEY);
+          if (!orderId || !sessionId) throw new Error("Missing extend context");
+          const next = await extendPOJUV4Session(sessionId, orderId);
+          if (!next) throw new Error("Unable to extend session");
+          if (readPendingPaymentSnoozeFlag()) {
+            setExpiryReminderSnoozed(sessionId);
+          } else {
+            clearExpiryReminderSnooze(sessionId);
+          }
+          clearPojuPendingPaymentStorage();
+          if (cancelled) return;
+          setStatus("success");
+          router.replace(`/poju/session/${sessionId}`);
+          return;
+        }
+
+        if (action === "restore") {
+          const sessionId = sessionStorage.getItem(POJU_PENDING_RESTORE_SESSION_KEY);
+          if (!orderId || !sessionId) throw new Error("Missing restore context");
+          const ok = await restorePOJUV4ArchivedSession(sessionId, orderId);
+          if (!ok) throw new Error("Unable to restore session");
+          clearPojuPendingPaymentStorage();
+          if (cancelled) return;
+          setStatus("success");
+          router.replace(`/poju/session/${sessionId}`);
+          return;
+        }
+
+        const fromRaw = params.get("q")?.trim();
+        let fromQuery = "";
+        if (fromRaw) {
+          try {
+            fromQuery = decodeURIComponent(fromRaw);
+          } catch {
+            fromQuery = fromRaw;
+          }
+        }
+        let question = sessionStorage.getItem("poju_pending_question")?.trim() || fromQuery;
+        const isMockOrder = orderId.startsWith("mockpoju_") || orderId.startsWith("mock-");
+        if (!question && isMockOrder) {
+          question = "I'd like to begin a POJU session.";
+        }
+        if (!orderId || !question) {
+          throw new Error("Missing order context");
+        }
+
         const pendingProfile = readPendingStoredProfileId();
         const sessionId = await createPOJUSession({
           payment_id: orderId,
@@ -73,7 +118,7 @@ function PojuPaymentSuccessInner() {
         }
         clearPendingStoredProfileId();
 
-        sessionStorage.removeItem("poju_pending_order_id");
+        sessionStorage.removeItem(POJU_PENDING_ORDER_KEY);
         sessionStorage.removeItem("poju_pending_question");
         if (cancelled) return;
         setStatus("success");

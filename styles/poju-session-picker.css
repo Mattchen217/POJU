@@ -1,3 +1,5 @@
+@import "./poju-new-session-btn.css";
+
 .poju-session-picker-overlay {
   position: fixed;
   inset: 0;
@@ -30,6 +32,7 @@
   position: absolute;
   top: 14px;
   right: 14px;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -46,38 +49,6 @@
 .poju-session-picker-close:hover {
   background: rgba(255, 255, 255, 0.1);
   color: #fff;
-}
-
-.poju-session-picker-newbtn {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  margin-top: 8px;
-  padding: 16px 20px;
-  border: none;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
-  color: #fff;
-  font-size: 17px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow:
-    0 0 24px rgba(124, 58, 237, 0.45),
-    0 8px 24px rgba(0, 0, 0, 0.25);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.poju-session-picker-newbtn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow:
-    0 0 32px rgba(124, 58, 237, 0.55),
-    0 10px 28px rgba(0, 0, 0, 0.3);
-}
-
-.poju-session-picker-newbtn:disabled {
-  opacity: 0.65;
-  cursor: wait;
 }
 
 .poju-session-picker-body {
@@ -132,6 +103,9 @@
   font-weight: 500;
   line-height: 1.45;
   color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .poju-session-picker-item__meta {

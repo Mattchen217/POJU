@@ -1,0 +1,56 @@
+/* ============================================================
+   Per-page glass tints — from pojulife-site.html / ui_kits/website
+   Same frosted material; each route carries a subtle product tint.
+   ============================================================ */
+
+.pj-page {
+  transition: none;
+}
+
+/* Home — neutral brand indigo */
+.pj-page--home {
+  --glass-section-bg: rgba(40, 36, 82, 0.09);
+  --glass-card-bg: rgba(44, 40, 88, 0.07);
+  --glass-card-bg-elevated: rgba(48, 44, 94, 0.15);
+  --glass-panel-edge: inset 0 0 0 0.5px rgba(176, 170, 255, 0.09);
+}
+
+/* POJU — warm gold / amber */
+.pj-page--poju {
+  --glass-section-bg: rgba(64, 50, 34, 0.09);
+  --glass-card-bg: rgba(70, 55, 38, 0.07);
+  --glass-card-bg-elevated: rgba(78, 60, 40, 0.15);
+  --glass-panel-edge: inset 0 0 0 0.5px rgba(242, 201, 148, 0.11);
+}
+
+/* Glyph — violet */
+.pj-page--glyph {
+  --glass-section-bg: rgba(56, 40, 92, 0.1);
+  --glass-card-bg: rgba(60, 44, 98, 0.08);
+  --glass-card-bg-elevated: rgba(66, 48, 104, 0.16);
+  --glass-panel-edge: inset 0 0 0 0.5px rgba(196, 181, 253, 0.11);
+}
+
+/* Syncro — cyan / teal */
+.pj-page--syncro {
+  --glass-section-bg: rgba(26, 52, 64, 0.1);
+  --glass-card-bg: rgba(28, 56, 68, 0.08);
+  --glass-card-bg-elevated: rgba(30, 62, 74, 0.16);
+  --glass-panel-edge: inset 0 0 0 0.5px rgba(125, 224, 217, 0.11);
+}
+
+/* Match — rose */
+.pj-page--match {
+  --glass-section-bg: rgba(74, 38, 54, 0.1);
+  --glass-card-bg: rgba(80, 42, 58, 0.08);
+  --glass-card-bg-elevated: rgba(88, 46, 64, 0.16);
+  --glass-panel-edge: inset 0 0 0 0.5px rgba(255, 179, 199, 0.11);
+}
+
+/* Archive — cool neutral slate */
+.pj-page--archive {
+  --glass-section-bg: rgba(38, 40, 56, 0.11);
+  --glass-card-bg: rgba(42, 44, 60, 0.09);
+  --glass-card-bg-elevated: rgba(46, 48, 66, 0.17);
+  --glass-panel-edge: inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
+}
