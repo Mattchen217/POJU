@@ -46,12 +46,26 @@ export function GlyphFront({ sign, animate = true, compact = false }: GlyphFront
   };
   const toneColor = topTextColorByLevel[sign.level];
   const maxVerseLen = Math.max(...sign.verse_lines_en.map((line) => line.length), 1);
-  const verseSizeClass =
-    maxVerseLen > 62
+  const verseSizeClass = compact
+    ? maxVerseLen > 62
+      ? "text-[0.78rem]"
+      : maxVerseLen > 54
+        ? "text-[0.84rem]"
+        : "text-[0.9rem]"
+    : maxVerseLen > 62
       ? "text-[1rem] md:text-[1.06rem]"
       : maxVerseLen > 54
         ? "text-[1.08rem] md:text-[1.14rem]"
         : "text-[1.16rem] md:text-[1.22rem]";
+
+  const summaryLen = sign.summary_line_en.length;
+  const summarySizeClass = compact
+    ? summaryLen > 130
+      ? "text-[0.66rem] leading-[1.32]"
+      : summaryLen > 100
+        ? "text-[0.72rem] leading-[1.35]"
+        : "text-[0.78rem] leading-[1.38]"
+    : "text-[0.96rem] leading-[1.45] md:text-[1.02rem]";
 
   return (
     <motion.div
@@ -75,45 +89,49 @@ export function GlyphFront({ sign, animate = true, compact = false }: GlyphFront
       <WindBorderParticlesOverlay particleKey={particleKeyByLevel[sign.level]} />
 
       <div
-        className="relative z-20 flex h-full flex-col px-[11%] py-[13%] text-center"
-        style={
-          compact
-            ? {
-                transform: "scale(0.84)",
-                transformOrigin: "top center",
-              }
-            : undefined
-        }
+        className={`relative z-20 flex h-full flex-col text-center ${
+          compact ? "px-[10%] py-[11%]" : "px-[11%] py-[13%]"
+        }`}
       >
         <motion.div
-          className="pt-[7%]"
+          className={compact ? "pt-[4%]" : "pt-[7%]"}
           initial={animate ? { opacity: 0, y: -10 } : false}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
-          <h2 className="font-verse mb-1 text-3xl tracking-wide md:text-4xl" style={{ color: toneColor }}>
+          <h2
+            className={`font-verse mb-0.5 tracking-wide ${
+              compact ? "text-[1.35rem]" : "text-3xl md:text-4xl"
+            }`}
+            style={{ color: toneColor }}
+          >
             {meta.display_name}
           </h2>
 
-          <p className="mb-4 text-sm italic opacity-70 md:text-base" style={{ color: toneColor }}>
+          <p
+            className={`italic opacity-70 ${compact ? "mb-2 text-[0.68rem]" : "mb-4 text-sm md:text-base"}`}
+            style={{ color: toneColor }}
+          >
             {meta.subtitle}
           </p>
 
           <div
-            className={`text-[0.65rem] tracking-[0.2em] text-white md:text-[0.72rem] ${compact ? "mt-1 mb-4" : ""}`}
+            className={`tracking-[0.2em] text-white ${
+              compact ? "mb-2 text-[0.52rem] tracking-[0.16em]" : "text-[0.65rem] md:text-[0.72rem]"
+            }`}
           >
             GLYPH No. {String(sign.sign_number).padStart(3, "0")}
           </div>
         </motion.div>
 
         <motion.div
-          className={`mx-auto h-[46%] w-[88%] overflow-hidden ${compact ? "mt-1" : "-mt-2"}`}
+          className={`mx-auto w-[88%] overflow-hidden ${compact ? "mt-0.5 h-[40%]" : "-mt-2 h-[46%]"}`}
           initial={animate ? { opacity: 0 } : false}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.5 }}
         >
           <div
-            className={`font-verse flex h-full flex-col justify-center gap-2 italic ${verseSizeClass}`}
+            className={`font-verse flex h-full flex-col justify-center italic ${compact ? "gap-1" : "gap-2"} ${verseSizeClass}`}
             style={{ color: toneColor }}
           >
             {sign.verse_lines_en.map((line, idx) => (
@@ -140,20 +158,20 @@ export function GlyphFront({ sign, animate = true, compact = false }: GlyphFront
         </motion.div>
 
         <motion.div
-          className="mt-2 min-h-[16%] px-2"
+          className={`px-1 ${compact ? "mt-1 min-h-[18%]" : "mt-2 min-h-[16%] px-2"}`}
           initial={animate ? { opacity: 0 } : false}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 1.2 }}
         >
-          <p className="text-[0.96rem] italic leading-[1.45] text-[#E5E5E5] md:text-[1.02rem]">
+          <p className={`italic text-[#E5E5E5] ${summarySizeClass}`}>
             &ldquo;{sign.summary_line_en}&rdquo;
           </p>
         </motion.div>
       </div>
 
       <p
-        className={`absolute left-1/2 z-30 -translate-x-1/2 rounded-full px-3 py-1 text-xs tracking-[0.3em] ${
-          compact ? "bottom-[3.8%]" : "bottom-[7%]"
+        className={`absolute left-1/2 z-30 -translate-x-1/2 rounded-full tracking-[0.3em] ${
+          compact ? "bottom-[3.5%] px-2 py-0.5 text-[0.58rem]" : "bottom-[7%] px-3 py-1 text-xs"
         }`}
         style={{
           color: toneColor,
