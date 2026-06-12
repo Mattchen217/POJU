@@ -122,7 +122,13 @@ function PojuPaymentSuccessInner() {
         sessionStorage.removeItem("poju_pending_question");
         if (cancelled) return;
         setStatus("success");
-        router.replace(`/poju/session/${sessionId}/prepare`);
+        if (pendingProfile?.trim()) {
+          router.replace(
+            `/poju/session/${sessionId}/preparing?profile=${encodeURIComponent(pendingProfile.trim())}`,
+          );
+        } else {
+          router.replace(`/poju/session/${sessionId}/prepare`);
+        }
       } catch (e) {
         if (cancelled) return;
         setStatus("error");

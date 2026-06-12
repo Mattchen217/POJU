@@ -34,6 +34,7 @@ export function prepareToolInjectionTurn(
     tool: pending.tool,
     result_data: summary,
     original_question,
+    delivery_handoff: pending.delivery_handoff,
   });
 
   const injectionMessage: POJUMessage = {

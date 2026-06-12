@@ -14,6 +14,7 @@ import {
 } from "@/lib/poju/agent-state";
 import { ensureSessionCycles } from "@/lib/poju/cycle-manager";
 import { finalizeToolInjectionTurn, prepareToolInjectionTurn } from "@/lib/poju/prepare-tool-injection-turn";
+import { findPendingToolInjection } from "@/lib/poju/find-pending-tool-injection";
 import { extractQuestionCategory, mergeContextUpdates, recordToLLMContextUpdates } from "@/lib/poju/context-extractor";
 import { applyToolLinkingFromLlm } from "@/lib/poju/tool-suggestion";
 import type { ToolSuggestionPayload } from "@/lib/poju/types";
@@ -206,8 +207,9 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   const isOpeningSignal = userMessage.trim() === "__OPENING__";
   const isSystemMessage = userMessage.startsWith("[SYSTEM:") || isOpeningSignal;
 
+  const externalHandoffPending = findPendingToolInjection(session);
   const injectionPrep = prepareToolInjectionTurn(session, {
-    skipWhenSystemTurn: isSystemMessage,
+    skipWhenSystemTurn: isSystemMessage && !externalHandoffPending,
   });
   let sessionBase = injectionPrep.session;
 

@@ -3,6 +3,7 @@ import { loadMatchSession } from "@/lib/match/match-session";
 import type { ToolName } from "@/lib/poju/types";
 import {
   extractGlyphSummary,
+  extractMatchHandoffPayload,
   extractMatchSummary,
   extractSyncroSummary,
 } from "@/lib/poju/tool-result-summary";
@@ -19,7 +20,7 @@ export async function getToolResult(
   switch (tool) {
     case "match": {
       const session = await loadMatchSession(resultId);
-      return session ? extractMatchSummary(session) : null;
+      return session ? await extractMatchHandoffPayload(session) : null;
     }
     case "syncro": {
       const session = await loadSyncroSession(resultId);
@@ -43,4 +44,16 @@ export async function getToolResult(
 /** Rebuild full glyph summary when draw session + reading content are available in memory. */
 export function getGlyphToolResultFromReading(input: Parameters<typeof extractGlyphSummary>[0]) {
   return extractGlyphSummary(input);
+}
+
+/** Lightweight summary for archive / previews. */
+export async function getToolResultSummary(
+  tool: ToolName,
+  resultId: string,
+): Promise<Record<string, unknown> | null> {
+  if (tool === "match") {
+    const session = await loadMatchSession(resultId);
+    return session ? extractMatchSummary(session) : null;
+  }
+  return getToolResult(tool, resultId);
 }

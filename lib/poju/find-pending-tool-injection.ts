@@ -5,6 +5,7 @@ export type PendingToolInjection = {
   tool: ToolName;
   tool_result_id: string;
   tool_result_data: unknown;
+  delivery_handoff?: boolean;
 };
 
 export function findPendingToolInjection(state: POJUSessionState): PendingToolInjection | null {
@@ -25,5 +26,6 @@ export function findPendingToolInjection(state: POJUSessionState): PendingToolIn
     tool: row.tool,
     tool_result_id: row.tool_result_id,
     tool_result_data: row.tool_result_data,
+    delivery_handoff: row.suggested_in_message_id === "external-from-tool",
   };
 }

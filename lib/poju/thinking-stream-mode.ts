@@ -1,4 +1,5 @@
 import { normalizeAgentPhase } from "@/lib/poju/agent-state";
+import { findPendingToolInjection } from "@/lib/poju/find-pending-tool-injection";
 import type { POJUSessionState } from "@/lib/poju/types";
 
 export type ThinkingStreamMode =
@@ -12,7 +13,11 @@ export function resolveThinkingStreamMode(
   userMessage: string,
   options?: { confirmPipeline?: boolean },
 ): ThinkingStreamMode {
-  if (userMessage === "__OPENING__") return "flash";
+  if (userMessage === "__OPENING__") {
+    const pending = findPendingToolInjection(session);
+    if (pending?.delivery_handoff) return "collecting";
+    return "flash";
+  }
   if (options?.confirmPipeline) return "preparing_delivery";
 
   const phase = normalizeAgentPhase(session.agent_v2?.current_phase);

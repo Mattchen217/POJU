@@ -11,6 +11,40 @@ const VALID_SUGGESTED: AgentPhase[] = ["opening", "collecting_context"];
 
 function buildOpeningTaskBlock(input: PhaseLLMInput): string {
   const q = input.session.original_question;
+  const deliveryHandoff = Boolean(input.tool_injection_context?.includes("交付页延续"));
+
+  if (deliveryHandoff) {
+    return `# 当前任务：交付页转入 · 主动开场
+
+用户刚从工具交付页（Match / Glyph / Syncro）付费进入 POJU，并已看过完整交付内容。
+系统注入块里已有合盘/卦象/时机等全部资料；下方「原始问题」是用户想深入的方向。
+
+## 用户的原始问题
+"${q}"
+
+## 你的开场要做到
+
+1. **先深度思考**（在 JSON 的 response 里体现整合，勿输出思考过程本身）
+2. **简要总结**交付页里最关键的结构或张力（1–2 点，勿复述全文）
+3. **承接到 POJU**：表明你已在这些资料前提下准备好继续
+4. **给出引导**：1 个尖锐、可行动的问题，让用户选下一步焦点
+
+## 风格
+
+- 总字数 180–420 字（中文）/ 140–300 词（英文）
+- 3–5 个自然段；可引用命盘或工具结论中的至少 1 条具体细节
+- 不要列要点清单；不要说「我能帮你」之类的空承诺
+
+## 输出格式（严格 JSON，无 markdown 围栏）
+
+{
+  "response": "你的主动开场消息",
+  "suggested_phase": null,
+  "action_requested": "continue_chat",
+  "context_updates": {}
+}`;
+  }
+
   return `# 当前任务：主动开场
 
 用户刚刚完成八字录入，你已经看过他/她的完整命盘。

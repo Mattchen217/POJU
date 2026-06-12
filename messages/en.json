@@ -749,7 +749,9 @@
       "title": "Want to go deeper into this relationship?",
       "description": "This Match shows you the structure. POJU helps you find what to do about it.",
       "value_prop": "Up to 30 days of deep analysis around this specific relationship",
-      "button": "Open POJU"
+      "button": "Open POJU",
+      "starting": "Starting…",
+      "payment_failed": "Could not start payment. Please try again."
     },
     "syncro_to_poju": {
       "title": "Want to think through this decision?",
@@ -761,7 +763,9 @@
       "title": "Want to unpack what this reflected?",
       "description": "Glyph offered an image. POJU helps you understand and act on it.",
       "value_prop": "Up to 30 days of deep conversation around what you're processing",
-      "button": "Open POJU"
+      "button": "Open POJU",
+      "starting": "Starting…",
+      "payment_failed": "Could not start payment. Please try again."
     },
     "session_picker": {
       "title": "How do you want to continue?",

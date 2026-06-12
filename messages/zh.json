@@ -764,7 +764,9 @@
       "title": "想更深入聊这段关系？",
       "description": "Match 帮你看清结构，POJU 帮你想清楚接下来怎么做。",
       "value_prop": "围绕这段关系，最多 30 天的深度分析",
-      "button": "打开 POJU"
+      "button": "打开 POJU",
+      "starting": "正在启动…",
+      "payment_failed": "无法启动支付，请稍后重试。"
     },
     "syncro_to_poju": {
       "title": "想把这件事想透？",
@@ -776,7 +778,9 @@
       "title": "想拆开这次卦象在说什么？",
       "description": "Glyph 给了一幅象，POJU 帮你想清含义与行动。",
       "value_prop": "围绕你正在面对的事，最多 30 天的深度对话",
-      "button": "打开 POJU"
+      "button": "打开 POJU",
+      "starting": "正在启动…",
+      "payment_failed": "无法启动支付，请稍后重试。"
     },
     "session_picker": {
       "title": "你想怎么继续？",
