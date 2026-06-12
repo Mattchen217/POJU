@@ -7,6 +7,28 @@
   --whatis-chip-fg: #f2c994;
 }
 
+/* POJU — orbit hugs the Earth in POJU.png (object-cover / object-center) */
+.product-what-is--poju {
+  --whatis-orbit-cx: 50%;
+  --whatis-orbit-cy: 25%;
+  --whatis-orbit-diameter: 48%;
+}
+
+.product-what-is--poju .product-what-is__orbit {
+  inset: auto;
+  width: var(--whatis-orbit-diameter);
+  height: var(--whatis-orbit-diameter);
+  left: calc(var(--whatis-orbit-cx) - var(--whatis-orbit-diameter) / 2);
+  top: calc(var(--whatis-orbit-cy) - var(--whatis-orbit-diameter) / 2);
+  border-radius: 50%;
+  z-index: 3;
+}
+
+.product-what-is--poju .product-what-is__orbit-dot {
+  top: -3px;
+  left: calc(50% - 3.5px);
+}
+
 .product-what-is--glyph {
   --whatis-from: #d8b4fe;
   --whatis-to: #a78bfa;
@@ -19,6 +41,20 @@
   --whatis-to: #22d3ee;
   --whatis-glow: 34, 211, 238;
   --whatis-chip-fg: #a5f3fc;
+}
+
+.product-what-is__syncro-beam {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.product-what-is__syncro-beam-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .product-what-is--match {
@@ -136,6 +172,20 @@
   border-radius: 999px;
   background: var(--whatis-from);
   box-shadow: 0 0 12px var(--whatis-from);
+}
+
+.product-what-is__card-glow {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.product-what-is__card-glow-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .product-what-is__copy {

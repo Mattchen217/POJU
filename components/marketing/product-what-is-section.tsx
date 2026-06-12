@@ -4,6 +4,8 @@ import Image, { type StaticImageData } from "next/image";
 import { useTranslations } from "next-intl";
 
 import { DsBand } from "@/components/ds/primitives";
+import { ProductWhatIsCardGlow } from "@/components/marketing/product-what-is-card-glow";
+import { SyncroWhatIsLightBeam } from "@/components/marketing/syncro-what-is-light-beam";
 import pojuWhatIsBg from "@/assets/images/POJU.png";
 import glyphWhatIsBg from "@/assets/images/glyph.png";
 import syncroWhatIsBg from "@/assets/images/syncro.png";
@@ -18,10 +20,16 @@ const WHAT_IS_IMAGE: Record<ProductWhatIsId, StaticImageData> = {
   match: matchWhatIsBg,
 };
 
+const WHAT_IS_CARD_GLOW: Partial<Record<ProductWhatIsId, { originY: number }>> = {
+  glyph: { originY: 0.6 },
+  match: { originY: 0.4 },
+};
+
 /** Hero 下方 — What is POJU / Glyph / Syncro / Match（左 3:4 图 · 右标题+文案） */
 export function ProductWhatIsSection({ product }: { product: ProductWhatIsId }) {
   const ns = product === "match" ? "match.home" : `marketingSite.${product}`;
   const t = useTranslations(ns);
+  const glow = WHAT_IS_CARD_GLOW[product];
 
   return (
     <DsBand id={`${product}-what-is`} className="ds-what-is-band">
@@ -41,9 +49,13 @@ export function ProductWhatIsSection({ product }: { product: ProductWhatIsId }) 
               <span className="product-what-is__sheen" aria-hidden />
               <span className="product-what-is__vignette" aria-hidden />
             </div>
-            <span className="product-what-is__orbit" aria-hidden>
-              <span className="product-what-is__orbit-dot" />
-            </span>
+            {glow ? <ProductWhatIsCardGlow originY={glow.originY} /> : null}
+            {product === "syncro" ? <SyncroWhatIsLightBeam /> : null}
+            {product === "poju" ? (
+              <span className="product-what-is__orbit" aria-hidden>
+                <span className="product-what-is__orbit-dot" />
+              </span>
+            ) : null}
           </div>
 
           <div className="product-what-is__copy">
