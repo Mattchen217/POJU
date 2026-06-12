@@ -11,14 +11,24 @@ interface GlyphCardProps {
   side: "back" | "front";
   onCardClick?: () => void;
   onFlipComplete?: () => void;
+  /** Smaller face layout for delivery / reading page. */
+  compact?: boolean;
+  animate?: boolean;
 }
 
-export function GlyphCard({ sign, side, onCardClick, onFlipComplete }: GlyphCardProps) {
+export function GlyphCard({
+  sign,
+  side,
+  onCardClick,
+  onFlipComplete,
+  compact = false,
+  animate = true,
+}: GlyphCardProps) {
   const isFlipped = side === "front";
 
   return (
     <div
-      className="relative mx-auto w-full max-w-[400px] cursor-pointer select-none"
+      className={`relative mx-auto w-full select-none ${compact ? "glyph-card--compact max-w-[240px]" : "max-w-[400px] cursor-pointer"}`}
       style={{ perspective: "2000px" }}
       onClick={onCardClick}
     >
@@ -50,7 +60,7 @@ export function GlyphCard({ sign, side, onCardClick, onFlipComplete }: GlyphCard
             transform: "rotateY(180deg)",
           }}
         >
-          <GlyphFront sign={sign} animate={isFlipped} />
+          <GlyphFront sign={sign} animate={animate && isFlipped} compact={compact} />
         </div>
       </motion.div>
 

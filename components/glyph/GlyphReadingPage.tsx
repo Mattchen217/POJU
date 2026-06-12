@@ -37,7 +37,6 @@ export function GlyphReadingPage() {
   const [glyph, setGlyph] = useState<SignData | null>(null);
   const [question, setQuestion] = useState("");
   const [reading, setReading] = useState<GlyphReadingContent | null>(null);
-  const [archiveId, setArchiveId] = useState<string | undefined>();
   const [error, setError] = useState<string | null>(null);
   const startedRef = useRef(false);
 
@@ -98,7 +97,7 @@ export function GlyphReadingPage() {
       if (!content.invalid_input) {
         const windCategory = LEVEL_META[session.sign.level]?.display_name ?? session.sign.level;
         try {
-          const savedId = await saveGlyphReadingToArchive({
+          await saveGlyphReadingToArchive({
             reading_id: readingId,
             profile_id: session.profile_id,
             question: session.question,
@@ -107,7 +106,6 @@ export function GlyphReadingPage() {
             reading: content,
             locale: session.locale || locale,
           });
-          setArchiveId(savedId);
         } catch (e) {
           console.error("[glyph-reading] Archive save failed:", e);
         }
@@ -209,8 +207,8 @@ export function GlyphReadingPage() {
         resultData={glyphSummary}
         variant="banner"
       />
-      <GlyphCanvas glyph={glyph} animated={false} />
-      <GlyphReport reading={reading} glyph={glyph} question={question} archiveId={archiveId} />
+      <GlyphCanvas glyph={glyph} animated={false} compact />
+      <GlyphReport reading={reading} glyph={glyph} question={question} />
       <ReturnToPojuCTA
         tool="glyph"
         resultId={readingId}

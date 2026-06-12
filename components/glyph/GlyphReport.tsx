@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Archive,
   Columns2,
   Eye,
   Feather,
@@ -12,7 +11,6 @@ import {
   Target,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
 
 import { GlyphSectionLabel } from "@/components/glyph/GlyphSectionLabel";
 import {
@@ -27,7 +25,6 @@ type Props = {
   reading: GlyphReadingContent;
   glyph: SignData;
   question: string;
-  archiveId?: string;
 };
 
 const TIMEFRAME_KEYS: Record<
@@ -40,7 +37,7 @@ const TIMEFRAME_KEYS: Record<
   this_week: "explore_time_week",
 };
 
-export function GlyphReport({ reading, glyph, question, archiveId }: Props) {
+export function GlyphReport({ reading, glyph, question }: Props) {
   const t = useTranslations("glyph");
   const pageLocale = useLocale();
   const outputLang = resolveGlyphOutputLanguage(reading, pageLocale);
@@ -132,15 +129,6 @@ export function GlyphReport({ reading, glyph, question, archiveId }: Props) {
         <p className="reflection-question">{safeReading.reflection_question}</p>
       </div>
 
-      {archiveId ? (
-        <div className="archive-saved-hint">
-          <p>{t("saved_to_archive")}</p>
-          <Link href={`/archive/${archiveId}`} className="glyph-primary-btn glyph-report-archive-btn">
-            <Archive size={18} strokeWidth={2} aria-hidden />
-            {t("view_in_archive")}
-          </Link>
-        </div>
-      ) : null}
     </div>
   );
 }
