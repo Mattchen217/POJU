@@ -14,8 +14,9 @@ import {
 import { buildMatchPrompt } from "@/lib/llm/prompts/match-deepseek-prompt";
 import { callLLM } from "@/lib/llm/router";
 import { calculateCompatibilityMatrix } from "@/lib/match/calculate-compatibility";
+import { normalizeSynergyType } from "@/lib/match/synergy-normalize";
 import { wrapProfileForMatrix } from "@/lib/match/parse-profile-for-matrix";
-import type { CompatibilityLevel, MatchReport } from "@/lib/match/types";
+import type { MatchReport, SynergyType } from "@/lib/match/types";
 import {
   getStoredProfile,
   recordProfileUsage,
@@ -30,12 +31,12 @@ const REQUIRED_SECTIONS = [
   "recommendations",
 ] as const;
 
-const VALID_COMPATIBILITY_LEVELS = new Set<CompatibilityLevel>([
-  "highly_compatible",
-  "compatible_with_effort",
-  "neutral",
-  "challenging",
-  "highly_challenging",
+const VALID_SYNERGY_TYPES = new Set<SynergyType>([
+  "full_resonance",
+  "complementary_flow",
+  "adaptive_balance",
+  "dynamic_tension",
+  "structural_undertow",
 ]);
 
 const VALID_ACTION_CATEGORIES = new Set([
@@ -68,7 +69,7 @@ export type MatchAnalysisServiceResult = {
     latency_ms: number;
     detected_language: string;
     local_computation: boolean;
-    compatibility_score: number;
+    resonance_index: number;
   };
 };
 
@@ -163,7 +164,7 @@ function validateAndNormalizeReport(
   detected_language: string,
   model: string,
   tokens_used: number,
-  computedLevel: CompatibilityLevel,
+  computedSynergyType: SynergyType,
   compatibilityMatrix: ReturnType<typeof calculateCompatibilityMatrix>,
 ): MatchReport {
   for (const key of REQUIRED_SECTIONS) {
@@ -224,7 +225,7 @@ function validateAndNormalizeReport(
     },
     conclusion: {
       title: asString(conclusion.title) || "Conclusion",
-      compatibility_level: computedLevel,
+      synergy_type: computedSynergyType,
       summary: asString(conclusion.summary),
       detail: asString(conclusion.detail),
       strengths: asStringArray(conclusion.strengths),
@@ -244,8 +245,8 @@ function validateAndNormalizeReport(
       model,
       tokens_used,
       computation_meta: {
-        weighted_total_score: compatibilityMatrix.weighted_total_score,
-        overall_level: compatibilityMatrix.overall_level,
+        resonance_index: compatibilityMatrix.resonance_index,
+        synergy_type: compatibilityMatrix.synergy_type,
         day_master_type: compatibilityMatrix.day_master_interaction.type,
         day_branch_he: compatibilityMatrix.branch_interactions.day_branch_he,
         day_branch_chong: compatibilityMatrix.branch_interactions.day_branch_chong,
@@ -289,8 +290,8 @@ export async function generateMatchAnalysis(
   const computeMs = Date.now() - computeStart;
 
   console.log("[match] Computed:", {
-    overall_level: compatibilityMatrix.overall_level,
-    score: compatibilityMatrix.weighted_total_score,
+    synergy_type: compatibilityMatrix.synergy_type,
+    resonance_index: compatibilityMatrix.resonance_index,
     strengths: compatibilityMatrix.key_insights.strengths.length,
     challenges: compatibilityMatrix.key_insights.challenges.length,
     compute_ms: computeMs,
@@ -328,21 +329,19 @@ export async function generateMatchAnalysis(
     throw new Error("Match report output is not valid JSON");
   }
 
-  const computedLevel = compatibilityMatrix.overall_level;
-  if (
-    parsed.conclusion &&
-    typeof parsed.conclusion === "object" &&
-    (parsed.conclusion as Record<string, unknown>).compatibility_level !== computedLevel
-  ) {
-    console.warn(
-      "[match] LLM compatibility_level overridden:",
-      (parsed.conclusion as Record<string, unknown>).compatibility_level,
-      "→",
-      computedLevel,
-    );
-  }
+  const computedSynergyType = compatibilityMatrix.synergy_type;
   if (parsed.conclusion && typeof parsed.conclusion === "object") {
-    (parsed.conclusion as Record<string, unknown>).compatibility_level = computedLevel;
+    const conclusion = parsed.conclusion as Record<string, unknown>;
+    const llmType = normalizeSynergyType(conclusion.synergy_type ?? conclusion.compatibility_level);
+    if (llmType !== computedSynergyType) {
+      console.warn(
+        "[match] LLM synergy_type overridden:",
+        conclusion.synergy_type ?? conclusion.compatibility_level,
+        "→",
+        computedSynergyType,
+      );
+    }
+    conclusion.synergy_type = computedSynergyType;
   }
 
   const report = validateAndNormalizeReport(
@@ -354,7 +353,7 @@ export async function generateMatchAnalysis(
     detected_language,
     result.actual_model,
     result.meta.tokens_used,
-    computedLevel,
+    computedSynergyType,
     compatibilityMatrix,
   );
 
@@ -377,7 +376,7 @@ export async function generateMatchAnalysis(
       latency_ms: elapsedMs,
       detected_language,
       local_computation: true,
-      compatibility_score: compatibilityMatrix.weighted_total_score,
+      resonance_index: compatibilityMatrix.resonance_index,
     },
   };
 }

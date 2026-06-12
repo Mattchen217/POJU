@@ -11,7 +11,7 @@ import { join } from "node:path";
 
 import { buildMatchPrompt } from "../lib/llm/prompts/match-deepseek-prompt";
 import { calculateCompatibilityMatrix } from "../lib/match/calculate-compatibility";
-import { COMPATIBILITY_LEVELS } from "../lib/match/types";
+import { SYNERGY_TYPES } from "../lib/match/types";
 
 const e2eMatrix = calculateCompatibilityMatrix({
   profileA: {
@@ -73,7 +73,7 @@ assert(analyzing.includes("createMatchSession"), "A: session");
 assert(analyzing.includes('recordUsage("match"'), "A: device_usage");
 assert(analyzing.includes("saveMatchToArchive"), "A: archive");
 assert(report.includes("MatchReportCard"), "A: 5 cards");
-assert(report.includes("badge-bars"), "A: compatibility bars");
+assert(report.includes("synergy-signal-track"), "A: signal track bars");
 
 // Scenario B — language detection
 const enPrompt = buildMatchPrompt({
@@ -120,10 +120,10 @@ assert(api.includes("same_profile"), "F: API same_profile");
 assert(analyzing.includes("error_title"), "F: analyzing error UI");
 assert(api.includes("profile_not_ready"), "F: profile_not_ready");
 
-assert(Object.keys(COMPATIBILITY_LEVELS).length === 5, "5 compatibility levels");
+assert(Object.keys(SYNERGY_TYPES).length === 5, "5 synergy types");
 
 console.log("Match v5 Step 10: static E2E wiring audit passed.");
-console.log("Compatibility levels:", Object.keys(COMPATIBILITY_LEVELS).join(", "));
+console.log("Synergy types:", Object.keys(SYNERGY_TYPES).join(", "));
 
 const live = process.argv.includes("--live");
 if (live) {

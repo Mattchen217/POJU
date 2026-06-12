@@ -12,8 +12,7 @@ export function extractToolSummary(tool: ToolName, raw_data: unknown): Record<st
   switch (tool) {
     case "match":
       return {
-        compatibility_level: data.compatibility_level,
-        compatibility_score: data.compatibility_score,
+        synergy_type: data.synergy_type ?? data.compatibility_level,
         summary: data.summary,
         key_strengths: Array.isArray(data.strengths) ? data.strengths : data.key_strengths,
         key_challenges: Array.isArray(data.challenges) ? data.challenges : data.key_challenges,

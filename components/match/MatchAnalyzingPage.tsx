@@ -14,9 +14,9 @@ import { calculateCompatibilityMatrix } from "@/lib/match/calculate-compatibilit
 import { createMatchSession } from "@/lib/match/match-session";
 import { wrapProfileForMatrix } from "@/lib/match/parse-profile-for-matrix";
 import {
-  COMPATIBILITY_LEVELS,
-  type CompatibilityLevel,
+  SYNERGY_TYPES,
   type MatchReport,
+  type SynergyType,
 } from "@/lib/match/types";
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 import { recordUsage } from "@/lib/syncro/device-usage";
@@ -87,14 +87,12 @@ export function MatchAnalyzingPage() {
       const profileB = wrapProfileForMatrix(bRow.user_profile, bRow.base_analysis);
 
       const matrix = calculateCompatibilityMatrix({ profileA, profileB });
-      const levelInfo =
-        COMPATIBILITY_LEVELS[matrix.overall_level as CompatibilityLevel] ??
-        COMPATIBILITY_LEVELS.neutral;
-      const levelName = isZh ? levelInfo.name_zh : levelInfo.name_en;
+      const synergyInfo =
+        SYNERGY_TYPES[matrix.synergy_type as SynergyType] ?? SYNERGY_TYPES.adaptive_balance;
+      const synergyName = isZh ? synergyInfo.name_zh : synergyInfo.name_en;
       setPreviewLine(
-        t("preview_level", {
-          level: levelName,
-          score: matrix.weighted_total_score.toFixed(1),
+        t("preview_synergy", {
+          type: synergyName,
         }),
       );
 
@@ -118,7 +116,7 @@ export function MatchAnalyzingPage() {
         report?: MatchReport;
         meta?: {
           cost_usd?: number;
-          compatibility_score?: number;
+          resonance_index?: number;
           local_computation?: boolean;
         };
         message?: string;
@@ -140,20 +138,19 @@ export function MatchAnalyzingPage() {
       }
 
       if (
-        data.report.conclusion.compatibility_level !== matrix.overall_level &&
+        data.report.conclusion.synergy_type !== matrix.synergy_type &&
         data.meta?.local_computation
       ) {
         console.warn(
-          "[match/ui] Level mismatch — using server report level:",
-          data.report.conclusion.compatibility_level,
+          "[match/ui] Synergy type mismatch — using server report type:",
+          data.report.conclusion.synergy_type,
           "local was",
-          matrix.overall_level,
+          matrix.synergy_type,
         );
       }
 
       const costUsd = data.meta?.cost_usd ?? 0;
-      const compatibilityScore =
-        data.meta?.compatibility_score ?? matrix.weighted_total_score;
+      const resonanceIndex = data.meta?.resonance_index ?? matrix.resonance_index;
       const isFree = sessionType === "free";
 
       const matchId = await createMatchSession({
@@ -164,7 +161,7 @@ export function MatchAnalyzingPage() {
         is_free: isFree,
         cost_usd: isFree ? 0 : costUsd,
         locale,
-        compatibility_score: compatibilityScore,
+        resonance_index: resonanceIndex,
         engine_version: "v5.1",
       });
 

@@ -51,7 +51,7 @@ async function main(): Promise<void> {
   assert("method 大运同频", MATCH_HEPAN_METHOD.includes("大运同频"));
   assert("method 配偶星", MATCH_HEPAN_METHOD.includes("配偶星"));
 
-  assert("framework highly_compatible", MATCH_RELATIONSHIP_FRAMEWORK.includes("highly_compatible"));
+  assert("framework full_resonance", MATCH_RELATIONSHIP_FRAMEWORK.includes("full_resonance"));
   assert("framework 权重 30%", MATCH_RELATIONSHIP_FRAMEWORK.includes("30%"));
   assert("framework 天作之合", MATCH_RELATIONSHIP_FRAMEWORK.includes("天作之合"));
 
@@ -145,7 +145,7 @@ async function main(): Promise<void> {
   assert("detected Chinese from relationship text", detected_language.includes("Chinese"));
   assert("system has 合盘", system.includes("合盘"));
   assert("system has analysis_a/b keys", system.includes("analysis_a") && system.includes("analysis_b"));
-  assert("system has compatibility_level", system.includes("compatibility_level"));
+  assert("system has synergy_type", system.includes("synergy_type"));
   assert("system has five_elements_interaction", system.includes("five_elements_interaction"));
   assert("system has 十神", system.includes("十神"));
   assert("system has both profiles", system.includes("命主 A") && system.includes("命主 B"));

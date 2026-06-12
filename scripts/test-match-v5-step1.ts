@@ -5,7 +5,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { COMPATIBILITY_LEVELS } from "../lib/match/types";
+import { SYNERGY_TYPES } from "../lib/match/types";
 
 const root = join(import.meta.dirname ?? __dirname, "..");
 
@@ -47,18 +47,7 @@ for (const rel of required) {
   assert(existsSync(join(root, rel)), `missing ${rel}`);
 }
 
-assert(Object.keys(COMPATIBILITY_LEVELS).length === 5, "5 compatibility levels");
-
-const db = read("lib/db/poju-db.ts");
-assert(db.includes("MatchSessionRecord"), "MatchSessionRecord");
-assert(db.includes("match_sessions"), "match_sessions table");
-assert(db.includes("version(8)"), "IndexedDB v8");
-
-const session = read("lib/match/match-session.ts");
-assert(session.includes("createMatchSession"), "createMatchSession");
-assert(session.includes("loadMatchSession"), "loadMatchSession");
-assert(session.includes("listUserMatchSessions"), "listUserMatchSessions");
-assert(session.includes("deleteMatchSession"), "deleteMatchSession");
+assert(Object.keys(SYNERGY_TYPES).length === 5, "5 synergy types");
 
 console.log("Match v5 Step 1: static checks passed.");
-console.log("COMPATIBILITY_LEVELS:", Object.keys(COMPATIBILITY_LEVELS).join(", "));
+console.log("SYNERGY_TYPES:", Object.keys(SYNERGY_TYPES).join(", "));

@@ -23,8 +23,8 @@ const result = read("components/match/MatchResultPage.tsx");
 const css = read("styles/match.css");
 
 assert(report.includes("MatchReportCard"), "uses cards");
-assert(report.includes("COMPATIBILITY_LEVELS"), "compatibility badge");
-assert(report.includes("badge-bars"), "score bars");
+assert(report.includes("SYNERGY_TYPES"), "synergy signal panel");
+assert(report.includes("synergy-signal-track"), "signal track bars");
 assert(report.includes("ActionItem"), "action items");
 assert(report.includes("/archive"), "archive link");
 

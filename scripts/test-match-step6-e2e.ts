@@ -15,7 +15,7 @@ import { buildMatchPrompt } from "@/lib/llm/prompts/match-deepseek-prompt";
 import { BRANCHES, STEMS, type WuXing } from "@/lib/match/data/stems-branches";
 import { splitPillar } from "@/lib/poju/chart-loader-display";
 import type { UserProfile } from "@/lib/profile/types";
-import type { CompatibilityLevel } from "@/lib/match/types";
+import type { SynergyType } from "@/lib/match/types";
 
 const ROOT = resolve(__dirname, "..");
 const REPORT_PATH = resolve(ROOT, ".data", "match-step6-report.json");
@@ -248,8 +248,8 @@ async function runLocal(report: Report): Promise<void> {
   assert("S1 day_branch_he", c1.branch_interactions.day_branch_he);
   assert(
     "S1 level high",
-    ["highly_compatible", "compatible_with_effort"].includes(c1.overall_level),
-    c1.overall_level,
+    ["full_resonance", "complementary_flow"].includes(c1.synergy_type),
+    c1.synergy_type,
   );
   assert("S1 marriage_palace_bond", c1.key_insights.strengths.includes("marriage_palace_bond"));
 
@@ -259,8 +259,8 @@ async function runLocal(report: Report): Promise<void> {
   assert("S2 day_branch_chong", c2.branch_interactions.day_branch_chong);
   assert(
     "S2 level low",
-    ["challenging", "highly_challenging"].includes(c2.overall_level),
-    c2.overall_level,
+    ["dynamic_tension", "structural_undertow"].includes(c2.synergy_type),
+    c2.synergy_type,
   );
   assert("S2 marriage_palace_clash", c2.key_insights.challenges.includes("marriage_palace_clash"));
 
@@ -269,17 +269,17 @@ async function runLocal(report: Report): Promise<void> {
   const c3 = calculateCompatibilityMatrix({ profileA: neutralA, profileB: neutralB });
   assert(
     "S3 level mid",
-    ["compatible_with_effort", "neutral", "highly_compatible"].includes(c3.overall_level),
-    `${c3.overall_level} score=${c3.weighted_total_score}`,
+    ["complementary_flow", "adaptive_balance", "full_resonance"].includes(c3.synergy_type),
+    `${c3.synergy_type} score=${c3.resonance_index}`,
   );
 
   // Scenario 6 — determinism (3 runs)
   const scores = [0, 1, 2].map(() =>
-    calculateCompatibilityMatrix({ profileA: classicalA, profileB: classicalB }).weighted_total_score,
+    calculateCompatibilityMatrix({ profileA: classicalA, profileB: classicalB }).resonance_index,
   );
   assert("S6 deterministic score", scores.every((s) => s === scores[0]), scores.join(", "));
   const levels = [0, 1, 2].map(() =>
-    calculateCompatibilityMatrix({ profileA: classicalA, profileB: classicalB }).overall_level,
+    calculateCompatibilityMatrix({ profileA: classicalA, profileB: classicalB }).synergy_type,
   );
   assert("S6 deterministic level", levels.every((l) => l === levels[0]));
 
@@ -315,12 +315,12 @@ async function runLocal(report: Report): Promise<void> {
   assert("S5 English detect", enP.detected_language === "English");
 
   // Distribution sample (20 random-ish pairs)
-  const dist: Record<CompatibilityLevel, number> = {
-    highly_compatible: 0,
-    compatible_with_effort: 0,
-    neutral: 0,
-    challenging: 0,
-    highly_challenging: 0,
+  const dist: Record<SynergyType, number> = {
+    full_resonance: 0,
+    complementary_flow: 0,
+    adaptive_balance: 0,
+    dynamic_tension: 0,
+    structural_undertow: 0,
   };
   const pairs = [
     [classicalA, classicalB],
@@ -332,13 +332,13 @@ async function runLocal(report: Report): Promise<void> {
   for (let i = 0; i < 20; i++) {
     const [pa, pb] = pairs[i % pairs.length]!;
     const r = calculateCompatibilityMatrix({ profileA: pa, profileB: pb });
-    dist[r.overall_level]++;
+    dist[r.synergy_type]++;
   }
 
   report.local = {
-    scenario1: { level: c1.overall_level, score: c1.weighted_total_score },
-    scenario2: { level: c2.overall_level, score: c2.weighted_total_score },
-    scenario3: { level: c3.overall_level, score: c3.weighted_total_score },
+    scenario1: { level: c1.synergy_type, score: c1.resonance_index },
+    scenario2: { level: c2.synergy_type, score: c2.resonance_index },
+    scenario3: { level: c3.synergy_type, score: c3.resonance_index },
     determinism_score: scores[0],
     avg_compute_ms: Number(avgMs.toFixed(3)),
     level_distribution_20: dist,
@@ -369,7 +369,7 @@ async function runLive(report: Report): Promise<void> {
     pb: typeof classicalB,
     relationship: string,
     locale: string,
-    expectedLevel?: CompatibilityLevel[],
+    expectedSynergyType?: SynergyType[],
   ) {
     console.log(`\n  --- Live: ${name} ---`);
     const matrix = calculateCompatibilityMatrix({ profileA: pa, profileB: pb });
@@ -388,14 +388,14 @@ async function runLive(report: Report): Promise<void> {
     const { report: rpt, meta } = result;
 
     const levelOk =
-      !expectedLevel || expectedLevel.includes(rpt.conclusion.compatibility_level);
+      !expectedSynergyType || expectedSynergyType.includes(rpt.conclusion.synergy_type);
     assert(
       `${name} level locked`,
-      rpt.conclusion.compatibility_level === matrix.overall_level &&
-        rpt._meta.computation_meta?.overall_level === matrix.overall_level,
-      `report=${rpt.conclusion.compatibility_level} matrix=${matrix.overall_level}`,
+      rpt.conclusion.synergy_type === matrix.synergy_type &&
+        rpt._meta.computation_meta?.synergy_type === matrix.synergy_type,
+      `report=${rpt.conclusion.synergy_type} matrix=${matrix.synergy_type}`,
     );
-    assert(`${name} expected band`, levelOk, rpt.conclusion.compatibility_level);
+    assert(`${name} expected band`, levelOk, rpt.conclusion.synergy_type);
 
     const sections = ["analysis_a", "analysis_b", "combined", "conclusion", "recommendations"] as const;
     for (const s of sections) {
@@ -410,18 +410,18 @@ async function runLive(report: Report): Promise<void> {
     assert(`${name} cites chart`, mentionsChart);
 
     liveResults[name] = {
-      matrix_level: matrix.overall_level,
-      matrix_score: matrix.weighted_total_score,
-      report_level: rpt.conclusion.compatibility_level,
+      matrix_level: matrix.synergy_type,
+      matrix_score: matrix.resonance_index,
+      report_level: rpt.conclusion.synergy_type,
       latency_ms: elapsed,
       tokens: meta.tokens_used,
       cost_usd: meta.cost_usd,
       detected_language: meta.detected_language,
       local_computation: meta.local_computation,
-      compatibility_score: meta.compatibility_score,
+      resonance_index: meta.resonance_index,
     };
     console.log(
-      `  Done ${(elapsed / 1000).toFixed(1)}s | level=${rpt.conclusion.compatibility_level} | tokens=${meta.tokens_used}`,
+      `  Done ${(elapsed / 1000).toFixed(1)}s | level=${rpt.conclusion.synergy_type} | tokens=${meta.tokens_used}`,
     );
   }
 
@@ -431,7 +431,7 @@ async function runLive(report: Report): Promise<void> {
     classicalB,
     "We're getting engaged next month and want to know if our charts support a lasting marriage.",
     "en",
-    ["highly_compatible", "compatible_with_effort"],
+    ["full_resonance", "complementary_flow"],
   );
 
   await runCase(
@@ -440,7 +440,7 @@ async function runLive(report: Report): Promise<void> {
     clashB,
     "We've been arguing more lately about money and where to live — is this a bad match?",
     "en",
-    ["challenging", "highly_challenging"],
+    ["dynamic_tension", "structural_undertow"],
   );
 
   await runCase(

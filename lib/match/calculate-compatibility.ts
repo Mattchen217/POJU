@@ -14,14 +14,14 @@ import type { ShenShaResonanceResult } from './calculations/shensha-resonance';
 import type { LuckCycleSyncResult } from './calculations/luck-cycle-sync';
 import { parseProfileForMatrix } from './parse-profile-for-matrix';
 
-export type CompatibilityLevel =
-  | 'highly_compatible'
-  | 'compatible_with_effort'
-  | 'neutral'
-  | 'challenging'
-  | 'highly_challenging';
+export type SynergyType =
+  | 'full_resonance'
+  | 'complementary_flow'
+  | 'adaptive_balance'
+  | 'dynamic_tension'
+  | 'structural_undertow';
 
-export interface CompatibilityMatrix {
+export interface ResonanceMatrix {
   day_master_interaction: DayMasterInteractionResult;
   yong_shen_match: YongShenMatchResult;
   branch_interactions: BranchInteractionsResult;
@@ -29,8 +29,8 @@ export interface CompatibilityMatrix {
   shensha_resonance: ShenShaResonanceResult;
   luck_cycle_sync: LuckCycleSyncResult;
 
-  weighted_total_score: number;
-  overall_level: CompatibilityLevel;
+  resonance_index: number;
+  synergy_type: SynergyType;
 
   key_insights: {
     strengths: string[];
@@ -56,7 +56,7 @@ const WEIGHTS = {
 export function calculateCompatibilityMatrix(input: {
   profileA: unknown;
   profileB: unknown;
-}): CompatibilityMatrix {
+}): ResonanceMatrix {
 
   const a = parseProfileForMatrix(input.profileA);
   const b = parseProfileForMatrix(input.profileB);
@@ -112,7 +112,7 @@ export function calculateCompatibilityMatrix(input: {
     luckSync.score * WEIGHTS.luck_cycle * 5;
 
   const finalScore = Math.max(-100, Math.min(100, weightedTotal));
-  const level = scoreToCompatibilityLevel(finalScore);
+  const level = resonanceIndexToSynergyType(finalScore);
 
   const strengths: string[] = [];
   const challenges: string[] = [];
@@ -145,8 +145,8 @@ export function calculateCompatibilityMatrix(input: {
     spouse_star: spouseStar,
     shensha_resonance: shenshaRes,
     luck_cycle_sync: luckSync,
-    weighted_total_score: Math.round(finalScore * 10) / 10,
-    overall_level: level,
+    resonance_index: Math.round(finalScore * 10) / 10,
+    synergy_type: level,
     key_insights: {
       strengths,
       challenges
@@ -159,11 +159,14 @@ export function calculateCompatibilityMatrix(input: {
   };
 }
 
-export function scoreToCompatibilityLevel(score: number): CompatibilityLevel {
-  if (score >= 40) return 'highly_compatible';
-  if (score >= 15) return 'compatible_with_effort';
-  if (score >= -15) return 'neutral';
-  if (score >= -40) return 'challenging';
-  return 'highly_challenging';
+export function resonanceIndexToSynergyType(resonanceIndex: number): SynergyType {
+  if (resonanceIndex >= 40) return 'full_resonance';
+  if (resonanceIndex >= 15) return 'complementary_flow';
+  if (resonanceIndex >= -15) return 'adaptive_balance';
+  if (resonanceIndex >= -40) return 'dynamic_tension';
+  return 'structural_undertow';
 }
+
+/** @deprecated Use resonanceIndexToSynergyType */
+export const scoreToCompatibilityLevel = resonanceIndexToSynergyType;
 

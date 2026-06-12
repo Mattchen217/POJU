@@ -7,6 +7,7 @@ import { safeRandomUUID } from "@/lib/client/safe-crypto";
 import { decryptJson, encryptJson } from "@/lib/crypto";
 import { getPojuDb, type MatchSessionRecord } from "@/lib/db/poju-db";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
+import { normalizeMatchSessionPayload } from "./synergy-normalize";
 import type { MatchReport, MatchSession, MatchSessionPayload } from "./types";
 
 const MATCH_SESSION_SECRET = "pojulife_v5_match_session";
@@ -19,7 +20,7 @@ export type CreateMatchSessionInput = {
   is_free: boolean;
   cost_usd: number;
   locale: string;
-  compatibility_score?: number;
+  resonance_index?: number;
   engine_version?: "v5.1";
 };
 
@@ -38,9 +39,10 @@ function toPayload(session: MatchSession): MatchSessionPayload {
 }
 
 function fromPayload(payload: MatchSessionPayload): MatchSession {
+  const normalized = normalizeMatchSessionPayload(payload);
   return {
-    ...payload,
-    created_at: new Date(payload.created_at),
+    ...normalized,
+    created_at: new Date(normalized.created_at),
   };
 }
 
@@ -60,7 +62,7 @@ export async function createMatchSession(input: CreateMatchSessionInput): Promis
     is_free: input.is_free,
     cost_usd: input.cost_usd,
     locale: input.locale,
-    compatibility_score: input.compatibility_score,
+    resonance_index: input.resonance_index,
     engine_version: input.engine_version ?? "v5.1",
   };
 

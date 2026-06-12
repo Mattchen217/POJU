@@ -24,11 +24,11 @@ const serviceSrc = read("lib/llm/services/match-analysis-service.ts");
 
 assert(promptSrc.includes("compatibilityMatrix"), "prompt requires matrix");
 assert(promptSrc.includes("绝不能"), "prompt forbids overriding level");
-assert(promptSrc.includes("已计算的契合度矩阵"), "matrix injected in prompt");
+assert(promptSrc.includes("已计算的系统动力学矩阵"), "matrix injected in prompt");
 assert(promptSrc.includes("MATCH_BAZI_HEPAN_IDENTITY"), "match identity");
 
 assert(serviceSrc.includes("calculateCompatibilityMatrix"), "service computes locally");
-assert(serviceSrc.includes("compatibility_level = computedLevel"), "force override level");
+assert(serviceSrc.includes("synergy_type = computedSynergyType"), "force override synergy type");
 assert(serviceSrc.includes("thinking_effort: \"medium\""), "medium thinking");
 assert(serviceSrc.includes("computation_meta"), "computation_meta in report");
 assert(serviceSrc.includes("local_computation: true"), "meta local_computation");
@@ -76,10 +76,10 @@ const { system, user, detected_language } = buildMatchPrompt({
   compatibilityMatrix: matrix,
 });
 
-assert(system.includes(matrix.overall_level), "system embeds computed level");
-assert(system.includes("weighted_total_score"), "system embeds matrix JSON");
+assert(system.includes(matrix.synergy_type), "system embeds computed synergy type");
+assert(system.includes("resonance_index"), "system embeds matrix JSON");
 assert(system.includes("day_master_interaction"), "matrix dimensions in prompt");
-assert(user.includes(matrix.overall_level), "user message locks level");
+assert(user.includes(matrix.synergy_type), "user message locks synergy type");
 assert(detected_language === "English", "English relationship text");
 
 const zh = buildMatchPrompt({
@@ -94,6 +94,6 @@ const zh = buildMatchPrompt({
 assert(zh.detected_language.includes("Chinese"), "Chinese detection");
 
 console.log("✓ Step 5 static: prompt + service wired");
-console.log("✓ Matrix level:", matrix.overall_level, "score:", matrix.weighted_total_score);
+console.log("✓ Matrix type:", matrix.synergy_type, "index:", matrix.resonance_index);
 console.log("✓ Prompt length:", system.length, "chars");
 console.log("\nMatch Step 5 — all checks passed.");

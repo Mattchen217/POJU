@@ -45,9 +45,9 @@ const route = read("app/api/match/analyze/route.ts");
 assert(prompt.includes("buildMatchPrompt"), "buildMatchPrompt");
 assert(prompt.includes("detectLanguage"), "uses detectLanguage");
 assert(prompt.includes("compatibilityMatrix"), "requires compatibility matrix");
-assert(prompt.includes("已计算的契合度矩阵"), "injects computed matrix");
+assert(prompt.includes("已计算的系统动力学矩阵"), "injects computed matrix");
 assert(prompt.includes("analysis_a"), "5 sections in schema");
-assert(prompt.includes("compatibility_level"), "compatibility_level");
+assert(prompt.includes("synergy_type"), "synergy_type");
 
 assert(service.includes("generateMatchAnalysis"), "generateMatchAnalysis");
 assert(service.includes("calculateCompatibilityMatrix"), "local matrix compute");

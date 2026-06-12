@@ -1,6 +1,5 @@
 /**
- * Match v5 — report + session types.
- * @see docs/Match_v5.0_New.md Step 1
+ * Match v5 — report + session types (synergy / resonance naming for product surface).
  */
 
 export type MatchSection =
@@ -10,12 +9,12 @@ export type MatchSection =
   | "conclusion"
   | "recommendations";
 
-export type CompatibilityLevel =
-  | "highly_compatible"
-  | "compatible_with_effort"
-  | "neutral"
-  | "challenging"
-  | "highly_challenging";
+export type SynergyType =
+  | "full_resonance"
+  | "complementary_flow"
+  | "adaptive_balance"
+  | "dynamic_tension"
+  | "structural_undertow";
 
 export interface MatchReport {
   analysis_a: {
@@ -42,7 +41,7 @@ export interface MatchReport {
 
   conclusion: {
     title: string;
-    compatibility_level: CompatibilityLevel;
+    synergy_type: SynergyType;
     summary: string;
     detail: string;
     strengths: string[];
@@ -68,10 +67,9 @@ export interface MatchReport {
     generated_at: string;
     model: string;
     tokens_used: number;
-    /** Local engine debug (v5.1); not shown in user UI by default */
     computation_meta?: {
-      weighted_total_score: number;
-      overall_level: CompatibilityLevel;
+      resonance_index: number;
+      synergy_type: SynergyType;
       day_master_type: string;
       day_branch_he: boolean;
       day_branch_chong: boolean;
@@ -90,8 +88,7 @@ export interface MatchSession {
   is_free: boolean;
   cost_usd: number;
   locale: string;
-  /** v5.1 local engine score (-100…100), for display / debug */
-  compatibility_score?: number;
+  resonance_index?: number;
   engine_version?: "v5.1";
 }
 
@@ -100,48 +97,48 @@ export type MatchSessionPayload = Omit<MatchSession, "created_at"> & {
   created_at: string;
 };
 
-export interface CompatibilityLevelInfo {
-  level: CompatibilityLevel;
+export interface SynergyTypeInfo {
+  type: SynergyType;
   name_en: string;
   name_zh: string;
   color_hex: string;
-  score: number;
+  signal_segments: number;
 }
 
-export const COMPATIBILITY_LEVELS: Record<CompatibilityLevel, CompatibilityLevelInfo> = {
-  highly_compatible: {
-    level: "highly_compatible",
-    name_en: "Highly Compatible",
-    name_zh: "高度契合",
+export const SYNERGY_TYPES: Record<SynergyType, SynergyTypeInfo> = {
+  full_resonance: {
+    type: "full_resonance",
+    name_en: "Full Resonance",
+    name_zh: "完全共鸣",
     color_hex: "#0D7377",
-    score: 5,
+    signal_segments: 5,
   },
-  compatible_with_effort: {
-    level: "compatible_with_effort",
-    name_en: "Compatible with Effort",
-    name_zh: "相辅相成",
+  complementary_flow: {
+    type: "complementary_flow",
+    name_en: "Complementary Flow",
+    name_zh: "互补流动",
     color_hex: "#26A69A",
-    score: 4,
+    signal_segments: 4,
   },
-  neutral: {
-    level: "neutral",
-    name_en: "Neutral",
-    name_zh: "中和并存",
+  adaptive_balance: {
+    type: "adaptive_balance",
+    name_en: "Adaptive Balance",
+    name_zh: "适应性平衡",
     color_hex: "#90A4AE",
-    score: 3,
+    signal_segments: 3,
   },
-  challenging: {
-    level: "challenging",
-    name_en: "Challenging",
-    name_zh: "相互磨合",
+  dynamic_tension: {
+    type: "dynamic_tension",
+    name_en: "Dynamic Tension",
+    name_zh: "动态张力",
     color_hex: "#F57C00",
-    score: 2,
+    signal_segments: 2,
   },
-  highly_challenging: {
-    level: "highly_challenging",
-    name_en: "Highly Challenging",
-    name_zh: "困难重重",
+  structural_undertow: {
+    type: "structural_undertow",
+    name_en: "Structural Undertow",
+    name_zh: "结构性险滞",
     color_hex: "#C62828",
-    score: 1,
+    signal_segments: 1,
   },
 };

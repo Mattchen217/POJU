@@ -26,8 +26,7 @@ function buildMatchInjection(data: Record<string, unknown>, originalQuestion: st
 ## 核心数据
 
 - 关系描述：${String(data.relationship_description ?? "—")}
-- 整体契合度：${String(data.compatibility_level ?? "—")}
-- 契合分数：${data.compatibility_score != null ? String(data.compatibility_score) : "—"}
+- 协同类型：${String(data.synergy_type ?? data.compatibility_level ?? "—")}
 
 ## 关键优势
 ${strengths || "（见摘要）"}

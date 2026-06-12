@@ -4,9 +4,10 @@ import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 
 import { deleteArchiveItem, type MatchArchiveData } from "@/lib/archive/archive-service";
+import { normalizeMatchArchiveSynergyType } from "@/lib/match/synergy-normalize";
 import {
-  COMPATIBILITY_LEVELS,
-  type CompatibilityLevel,
+  SYNERGY_TYPES,
+  type SynergyType,
 } from "@/lib/match/types";
 
 import "@/styles/match.css";
@@ -23,9 +24,8 @@ export function MatchArchiveDetail({ archiveId, data, locale }: Props) {
   const router = useRouter();
   const isZh = locale.startsWith("zh");
 
-  const levelKey = data.compatibility_level as CompatibilityLevel;
-  const compatibility =
-    COMPATIBILITY_LEVELS[levelKey] ?? COMPATIBILITY_LEVELS.neutral;
+  const synergyType = normalizeMatchArchiveSynergyType(data.synergy_type);
+  const synergy = SYNERGY_TYPES[synergyType as SynergyType] ?? SYNERGY_TYPES.adaptive_balance;
 
   async function handleDelete() {
     if (!confirm(tDetail("confirm_delete"))) return;
@@ -48,13 +48,13 @@ export function MatchArchiveDetail({ archiveId, data, locale }: Props) {
       </div>
 
       <div
-        className="match-archive-compatibility-line"
+        className="match-archive-synergy-line"
         style={{
-          borderColor: compatibility.color_hex,
-          color: compatibility.color_hex,
+          borderColor: synergy.color_hex,
+          color: synergy.color_hex,
         }}
       >
-        {isZh ? compatibility.name_zh : compatibility.name_en}
+        {isZh ? synergy.name_zh : synergy.name_en}
       </div>
 
       <section className="match-archive-summary-section">

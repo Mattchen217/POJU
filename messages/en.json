@@ -1642,8 +1642,8 @@
     },
     "report": {
       "title": "Match Report",
-      "compatibility_label": "Overall Compatibility",
-      "engine_note": "Score from local chart engine: {score} (level is fixed before AI copy).",
+      "resonance_label": "Dynamic Resonance",
+      "preview_synergy": "System dynamics: {type} — generating narrative…",
       "key_traits": "Key Traits",
       "five_elements": "Energy Interaction",
       "timing_dynamic": "Timing Alignment",

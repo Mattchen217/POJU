@@ -7,6 +7,7 @@ import { mapSessionActionsToArchiveActions } from "@/lib/archive/map-actions-for
 import type { GlyphReadingContent } from "@/lib/llm/services/glyph-reading-service";
 import { CURRENT_LEVELS, type CurrentLevel } from "@/lib/syncro/current-system";
 import type { MatchReport } from "@/lib/match/types";
+import { normalizeMatchArchiveSynergyType } from "@/lib/match/synergy-normalize";
 import type { SyncroMatrix } from "@/lib/syncro/types";
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { POJUAction } from "@/lib/poju/types";
@@ -74,7 +75,7 @@ export interface MatchArchiveData {
   a_profile_id: string;
   b_profile_id: string;
   relationship_description: string;
-  compatibility_level: string;
+  synergy_type: string;
   created_at: string;
   summary: {
     overall_summary: string;
@@ -352,7 +353,7 @@ export async function saveMatchToArchive(input: {
     a_profile_id: input.a_profile_id,
     b_profile_id: input.b_profile_id,
     relationship_description: input.relationship_description,
-    compatibility_level: input.report.conclusion?.compatibility_level ?? "neutral",
+    synergy_type: normalizeMatchArchiveSynergyType(input.report.conclusion?.synergy_type),
     created_at: now.toISOString(),
     summary: {
       overall_summary: input.report.conclusion?.summary ?? "",
@@ -389,10 +390,17 @@ export async function loadMatchArchive(archiveId: string): Promise<MatchArchiveD
   if (!record || record.type !== "match_session") return null;
 
   try {
-    return await decryptJson<MatchArchiveData>(ARCHIVE_SECRET, {
-      iv: record.iv,
-      cipher: record.encrypted_data,
-    });
+    const data = await decryptJson<MatchArchiveData & { compatibility_level?: string }>(
+      ARCHIVE_SECRET,
+      {
+        iv: record.iv,
+        cipher: record.encrypted_data,
+      },
+    );
+    return {
+      ...data,
+      synergy_type: normalizeMatchArchiveSynergyType(data.synergy_type ?? data.compatibility_level),
+    };
   } catch (e) {
     console.error("[archive] Match decrypt failed:", e);
     return null;

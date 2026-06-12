@@ -7,11 +7,12 @@ import { PojuDeepDiveCTA } from "@/components/cross-product/PojuDeepDiveCTA";
 import { ReturnToPojuCTA } from "@/components/poju/ReturnToPojuCTA";
 import { extractMatchSummary } from "@/lib/poju/tool-result-summary";
 import { Link, useRouter } from "@/i18n/navigation";
+import { normalizeSynergyType } from "@/lib/match/synergy-normalize";
 import {
-  COMPATIBILITY_LEVELS,
-  type CompatibilityLevel,
+  SYNERGY_TYPES,
   type MatchReport as MatchReportData,
   type MatchSession,
+  type SynergyType,
 } from "@/lib/match/types";
 
 import "@/styles/match.css";
@@ -65,9 +66,8 @@ export function MatchReport({ session, locale }: MatchReportProps) {
   const { report } = session;
   const isZh = locale.startsWith("zh");
 
-  const levelKey = report.conclusion.compatibility_level;
-  const compatibilityInfo =
-    COMPATIBILITY_LEVELS[levelKey as CompatibilityLevel] ?? COMPATIBILITY_LEVELS.neutral;
+  const synergyType = normalizeSynergyType(report.conclusion.synergy_type);
+  const synergyInfo = SYNERGY_TYPES[synergyType as SynergyType] ?? SYNERGY_TYPES.adaptive_balance;
 
   const matchSummary = extractMatchSummary(session);
 
@@ -84,26 +84,26 @@ export function MatchReport({ session, locale }: MatchReportProps) {
         <p className="relationship-line">&ldquo;{session.relationship_description}&rdquo;</p>
       </header>
 
-      <div className="compatibility-badge-wrapper">
+      <div className="synergy-signal-panel-wrapper">
         <div
-          className="compatibility-badge"
+          className="synergy-signal-panel"
           style={{
-            borderColor: compatibilityInfo.color_hex,
-            color: compatibilityInfo.color_hex,
+            borderColor: synergyInfo.color_hex,
+            color: synergyInfo.color_hex,
           }}
         >
-          <span className="badge-label">{t("compatibility_label")}</span>
-          <span className="badge-level">
-            {isZh ? compatibilityInfo.name_zh : compatibilityInfo.name_en}
+          <span className="signal-label">{t("resonance_label")}</span>
+          <span className="signal-state-label">
+            {isZh ? synergyInfo.name_zh : synergyInfo.name_en}
           </span>
-          <div className="badge-bars">
+          <div className="synergy-signal-track">
             {[1, 2, 3, 4, 5].map((i) => (
               <span
                 key={i}
-                className={`bar ${i <= compatibilityInfo.score ? "filled" : ""}`}
+                className={`signal-segment ${i <= synergyInfo.signal_segments ? "active" : ""}`}
                 style={
-                  i <= compatibilityInfo.score
-                    ? { background: compatibilityInfo.color_hex }
+                  i <= synergyInfo.signal_segments
+                    ? { background: synergyInfo.color_hex }
                     : undefined
                 }
               />
@@ -151,7 +151,7 @@ export function MatchReport({ session, locale }: MatchReportProps) {
           icon="🎯"
           title={report.conclusion.title}
           summary={report.conclusion.summary}
-          color={compatibilityInfo.color_hex}
+          color={synergyInfo.color_hex}
         >
           <div className="card-content">
             <p>{report.conclusion.detail}</p>
@@ -195,11 +195,6 @@ export function MatchReport({ session, locale }: MatchReportProps) {
           resultData={matchSummary}
           variant="footer"
         />
-        {session.compatibility_score != null ? (
-          <p className="match-engine-note">
-            {t("engine_note", { score: session.compatibility_score.toFixed(1) })}
-          </p>
-        ) : null}
         <p>{t("saved_to_archive")}</p>
         <div className="report-footer-actions">
           <Link href="/archive" className="match-report-btn-secondary">

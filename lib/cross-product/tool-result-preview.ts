@@ -3,9 +3,9 @@ import type { ToolName } from "@/lib/poju/types";
 export function renderToolPreviewText(tool: ToolName, data: Record<string, unknown>): string {
   switch (tool) {
     case "match": {
-      const level = data.compatibility_level ?? "—";
+      const synergyType = data.synergy_type ?? data.compatibility_level ?? "—";
       const summary = typeof data.summary === "string" ? data.summary : "";
-      return summary ? `${String(level)} · ${summary.slice(0, 120)}` : String(level);
+      return summary ? `${String(synergyType)} · ${summary.slice(0, 120)}` : String(synergyType);
     }
     case "syncro": {
       const task = typeof data.task_description === "string" ? data.task_description : "";

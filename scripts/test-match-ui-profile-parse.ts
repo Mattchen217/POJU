@@ -55,7 +55,7 @@ async function main() {
 
   console.log("A 日主:", parsedA.stems.day + parsedA.branches.day);
   console.log("B 日主:", parsedB.stems.day + parsedB.branches.day);
-  console.log("Matrix level:", matrix.overall_level, "score:", matrix.weighted_total_score);
+  console.log("Matrix type:", matrix.synergy_type, "index:", matrix.resonance_index);
   console.log("\nMatch UI profile parse — OK");
 }
 

@@ -1,14 +1,13 @@
-import type { GlyphReadingContent } from "@/lib/llm/services/glyph-reading-service";
 import type { MatchSession } from "@/lib/match/types";
 import type { SyncroSession } from "@/lib/syncro/types";
+import type { GlyphReadingContent } from "@/lib/llm/services/glyph-reading-service";
 import type { SignData } from "@/types/oracle";
 
 export function extractMatchSummary(session: MatchSession): Record<string, unknown> {
   const r = session.report;
   return {
     match_id: session.match_id,
-    compatibility_level: r.conclusion.compatibility_level,
-    compatibility_score: session.compatibility_score,
+    synergy_type: r.conclusion.synergy_type,
     summary: r.conclusion.summary,
     strengths: r.conclusion.strengths.slice(0, 3),
     challenges: r.conclusion.challenges.slice(0, 3),

@@ -1657,8 +1657,8 @@
     },
     "report": {
       "title": "合盘报告",
-      "compatibility_label": "整体契合度",
-      "engine_note": "本地引擎得分 {score}（等级在 AI 文案前已确定）。",
+      "resonance_label": "动态共振",
+      "preview_synergy": "系统动力学：{type} — 正在生成报告…",
       "key_traits": "关键特质",
       "five_elements": "能量互动",
       "timing_dynamic": "人生阶段协同",

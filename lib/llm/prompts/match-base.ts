@@ -49,17 +49,17 @@ export const MATCH_HEPAN_METHOD = `# 合盘核心要素（推演必遵 · 内部
 - **禁止**：超自然承诺（招财/催运/避邪/lucky direction）；框成 **this Match** + compatibility/synergy
 - **environment 建议**：三步洗白 — spatial harmony + 具体动作 + 环境心理学（鱼缸/植物/材质可保留）`;
 
-export const MATCH_RELATIONSHIP_FRAMEWORK = `# Compatibility 5 等级 + 判定权重
+export const MATCH_RELATIONSHIP_FRAMEWORK = `# Synergy 5 类型 + 判定权重
 
-## 5 个等级（conclusion.compatibility_level 严格五选一）
+## 5 个协同类型（conclusion.synergy_type 严格五选一）
 
 | id | 英文名 | 中文名 | 含义 |
 |----|--------|--------|------|
-| highly_compatible | Highly Compatible | 天作之合 | 结构互补、冲突可控、life cycle 多同频 |
-| compatible_with_effort | Compatible with Effort | 相辅相成 | 有张力但可转化，需双方刻意经营 |
-| neutral | Neutral | 中和并存 | 各守各道，需明确分工与边界 |
-| challenging | Challenging | 磨合期 | 多处 energy friction，需长期调整 |
-| highly_challenging | Highly Challenging | 深度冲突 | 核心结构多 friction — 如实但不诅咒 |
+| full_resonance | Full Resonance | 完全共鸣 | 结构互补、冲突可控、life cycle 多同频 |
+| complementary_flow | Complementary Flow | 互补流动 | 有张力但可转化，需双方刻意经营 |
+| adaptive_balance | Adaptive Balance | 适应性平衡 | 各守各道，需明确分工与边界 |
+| dynamic_tension | Dynamic Tension | 动态张力 | 多处 energy friction，需长期调整 |
+| structural_undertow | Structural Undertow | 结构性险滞 | 核心结构多 friction — 如实但不诅咒 |
 
 ## 等级判定权重（内化，可写在 conclusion.detail）
 
@@ -87,7 +87,7 @@ export const MATCH_OUTPUT_BRANDING = `# ⚠️ Match 输出品牌（JSON 5 段 �
 - 结构：**5 段卡片** — analysis_a / analysis_b / combined / conclusion / recommendations
 - 用户可见须软化 chart / Day Master / Yong Shen → profile / core nature / balancing element
 - **五行 Wood/Fire/Earth/Metal/Water** 作能量互动 — **可保留**
-- compatibility_level 用英文 id + 用户语言的等级名（Highly Compatible / 相辅相成 等）
+- synergy_type 用英文 id + 用户语言的类型名（Full Resonance / 完全共鸣 等）
 - **《易经》**阴阳互补、变化之道 — 至少一处（非占卜）
 
 ## 禁止暴露
@@ -103,7 +103,7 @@ export const MATCH_OUTPUT_BRANDING = `# ⚠️ Match 输出品牌（JSON 5 段 �
 1. **analysis_a** — A 在此关系中的天然倾向（200–400 字 detail + 3–5 key_traits）
 2. **analysis_b** — B 在此关系中会怎样（同上）
 3. **combined** — 五行能量互动 + affinity/tension/friction（400–600 字 detail；含 five_elements_interaction、timing_dynamic）
-4. **conclusion** — compatibility_level + strengths 3–5 + challenges 3–5
+4. **conclusion** — synergy_type + strengths 3–5 + challenges 3–5
 5. **recommendations** — 4–6 条可执行建议（communication / timing / boundary / growth / environment）
    · **environment** = 三步洗白的空间建议（水景/绿植/材质/方位调理可保留）
    · 须含环境心理学解释；禁招财/催运/避邪/lucky direction 类超自然承诺

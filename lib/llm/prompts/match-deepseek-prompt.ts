@@ -3,7 +3,7 @@
  * @see docs/Match_Calculation_Engine.md Step 5
  */
 
-import type { CompatibilityMatrix } from "@/lib/match/calculate-compatibility";
+import type { ResonanceMatrix } from "@/lib/match/calculate-compatibility";
 import { buildMatchCorePromptSections } from "@/lib/llm/prompts/match-base";
 import {
   buildCurrentDateContext,
@@ -20,7 +20,7 @@ export type BuildMatchPromptInput = {
   b_base_analysis?: unknown;
   relationship_description: string;
   locale: string;
-  compatibilityMatrix: CompatibilityMatrix;
+  compatibilityMatrix: ResonanceMatrix;
 };
 
 export type BuildMatchPromptResult = {
@@ -49,7 +49,7 @@ export function buildMatchPrompt(input: BuildMatchPromptInput): BuildMatchPrompt
     (b_profile as { base_analysis?: unknown } | null)?.base_analysis;
 
   const relEscaped = relationship_description.replace(/"/g, '\\"');
-  const level = compatibilityMatrix.overall_level;
+  const level = compatibilityMatrix.synergy_type;
 
   const system = stitchPromptSections(
     ...buildMatchCorePromptSections(),
@@ -69,17 +69,17 @@ ${buildProfileContextSection(b_profile, bBaseAnalysis)}
 
 "${relEscaped}"
 
-# ⭐⭐⭐ 极其重要:契合度已经计算好了
+# ⭐⭐⭐ 极其重要:协同类型已经计算好了
 
-后台已基于 6 个能量维度精确计算了两个 profile 的 compatibility（JSON 矩阵见下）。
+后台已基于 6 个能量维度精确计算了两个 profile 的系统动力学（JSON 矩阵见下）。
 
 # ⛔ 严格禁止（用户可见 JSON 输出）
 
 你【绝不能】:
-  ✗ 修改 overall_level(已计算)
-  ✗ 修改 weighted_total_score
-  ✗ 重新判断契合度
-  ✗ 输出"我觉得他们契合度更高"等推翻计算的话
+  ✗ 修改 synergy_type(已计算)
+  ✗ 修改 resonance_index
+  ✗ 重新判断协同类型
+  ✗ 输出"我觉得他们协同更高"等推翻计算的话
   ✗ **裸写排盘/合婚术语**：Liu He / 六合 / Xing / Hai / Chong / stem / branch / pillar / 干支名 / charts
   ✗ **超自然承诺**：招财/催运/避邪/lucky direction/Amulet/Wealth activation
 
@@ -88,7 +88,7 @@ ${buildProfileContextSection(b_profile, bBaseAnalysis)}
   ✓ 把 key_insights 展开为具体叙述（用 natural affinity / friction，不用合冲刑害裸写）
   ✓ 基于用户描述的关系,给出针对性的建议
 
-# 已计算的契合度矩阵（内部分析用 — 用户可见 JSON 须翻译术语）
+# 已计算的系统动力学矩阵（内部分析用 — 用户可见 JSON 须翻译术语）
 
 \`\`\`json
 ${JSON.stringify(compatibilityMatrix, null, 2)}
@@ -114,7 +114,7 @@ ${JSON.stringify(compatibilityMatrix, null, 2)}
 - 至少一处 **《易经》** 互补/变化之道
 
 ## 4. conclusion(结论)
-- compatibility_level 必须用【已计算的 overall_level】(绝不修改!)
+- synergy_type 必须用【已计算的 synergy_type】(绝不修改!)
 - 简短结论 50-100 字
 - 详细 200-400 字
 - 优势 3-5 条(展开 key_insights.strengths)
@@ -149,7 +149,7 @@ ${JSON.stringify(compatibilityMatrix, null, 2)}
   },
   "conclusion": {
     "title": "...",
-    "compatibility_level": "${level}",
+    "synergy_type": "${level}",
     "summary": "...",
     "detail": "...",
     "strengths": ["...", "...", "..."],
@@ -166,8 +166,8 @@ ${JSON.stringify(compatibilityMatrix, null, 2)}
 
 # 关键规则
 
-1. **compatibility_level 必须用 "${level}"**
-   (从已计算的 overall_level 复制,绝不修改)
+1. **synergy_type 必须用 "${level}"**
+   (从已计算的 synergy_type 复制,绝不修改)
 
 2. **引用计算结果 — 只输出能量语言**:
    - day_master_interaction → core nature synergy / tension（禁 type 字段名裸写）
@@ -179,13 +179,13 @@ ${JSON.stringify(compatibilityMatrix, null, 2)}
 
 4. **不预测具体未来事件**；**不下定论"你们一定…/绝不…"**
 
-5. **产品指代**：this Match + compatibility/synergy 框架
+5. **产品指代**：this Match + synergy / systemic dynamics 框架
 
 # 严格 JSON,无 markdown 围栏`,
   );
 
-  const user = `请基于已计算好的契合度矩阵 + 关系描述,生成完整 5 段报告 JSON。
-不修改 compatibility_level(必须用 "${level}")。
+  const user = `请基于已计算好的系统动力学矩阵 + 关系描述,生成完整 5 段报告 JSON。
+不修改 synergy_type(必须用 "${level}")。
 ${detectedLanguage}。
 严格 JSON。`;
 

@@ -33,7 +33,7 @@ assert(detail.includes("loadMatchArchive"), "detail loads match");
 assert(detail.includes("MatchArchiveDetail"), "MatchArchiveDetail");
 
 assert(matchDetail.includes("/match/result/"), "view full report link");
-assert(matchDetail.includes("COMPATIBILITY_LEVELS"), "compatibility display");
+assert(matchDetail.includes("SYNERGY_TYPES"), "synergy display");
 
 for (const loc of locales) {
   const json = JSON.parse(read(`messages/${loc}.json`)) as {
