@@ -1,3 +1,5 @@
+import { isPaymentGatewayEnabled } from "@/lib/payments/gateway-enabled";
+
 const GLYPH_FREE_USED_KEY = "pojulife_glyph_free_used_v1";
 
 export type GlyphUsageSnapshot = {
@@ -7,6 +9,9 @@ export type GlyphUsageSnapshot = {
 
 /** Client-side free/paid quota (mirrors `/api/glyph/quota` when available). */
 export async function checkGlyphUsage(): Promise<GlyphUsageSnapshot> {
+  if (!isPaymentGatewayEnabled()) {
+    return { has_used_free: false, can_use_free: true };
+  }
   if (typeof window === "undefined") {
     return { has_used_free: false, can_use_free: true };
   }

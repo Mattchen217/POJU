@@ -43,12 +43,12 @@
 }
 
 .poju-new-session-btn--modal {
-  margin-top: 8px;
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 36px;
   padding: 10px 18px;
   font-size: 14px;
   line-height: 1.35;
-  width: fit-content;
-  max-width: calc(100% - 48px);
 }
 
 .poju-new-session-btn--sidebar {

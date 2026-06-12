@@ -5,6 +5,7 @@
 
 import { getPojuDb, type DeviceUsageRecord } from "@/lib/db/poju-db";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
+import { isPaymentGatewayEnabled } from "@/lib/payments/gateway-enabled";
 
 export type SyncroProduct = DeviceUsageRecord["product"];
 
@@ -13,6 +14,7 @@ function usageId(deviceId: string, product: SyncroProduct): string {
 }
 
 export async function isFirstTimeFree(product: SyncroProduct): Promise<boolean> {
+  if (!isPaymentGatewayEnabled()) return true;
   const deviceId = getPojuDeviceId();
   const record = await getPojuDb().device_usage.get(usageId(deviceId, product));
   return !record?.free_used;
