@@ -6,6 +6,8 @@ import { createPortal } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
 
 import { Link, usePathname } from "@/i18n/navigation";
+import { ArchiveNavLabel } from "@/components/archive/ArchiveUnreadDot";
+import { useArchiveUnread } from "@/components/archive/use-archive-unread";
 import { MARKETING_LOCALE_OPTIONS } from "@/lib/i18n/marketing-locale-options";
 import { cn } from "@/lib/utils/classnames";
 
@@ -25,6 +27,7 @@ export function MobileDrawer({ open, onClose }: MobileDrawerProps) {
   const locale = useLocale();
   const t = useTranslations("nav");
   const tLang = useTranslations("language");
+  const { hasUnread: hasUnreadArchive } = useArchiveUnread();
 
   useEffect(() => {
     if (!open) return;
@@ -98,7 +101,7 @@ export function MobileDrawer({ open, onClose }: MobileDrawerProps) {
                 {t("syncro")}
               </MobileNavLink>
               <MobileNavLink href="/archive" onNavigate={onClose}>
-                {t("archive")}
+                <ArchiveNavLabel label={t("archive")} showDot={hasUnreadArchive} />
               </MobileNavLink>
 
               <hr className="my-3 border-white/[0.08]" />

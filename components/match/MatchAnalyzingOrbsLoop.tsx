@@ -49,7 +49,11 @@ export function MatchAnalyzingOrbsLoop() {
       }}
       aria-hidden
     >
-      <MatchOrbsSpline className="match-analyzing-orbs" webGLContext="preparing" />
+      <MatchOrbsSpline
+        className="match-analyzing-orbs"
+        variant="analyzing"
+        webGLContext="preparing"
+      />
     </div>
   );
 }

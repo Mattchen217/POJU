@@ -1,6 +1,7 @@
 import { safeRandomUUID } from "@/lib/client/safe-crypto";
 import { decryptJson, encryptJson } from "@/lib/crypto";
 import { getPojuDb, ensurePojuDbReady, type ArchiveRecord } from "@/lib/db/poju-db";
+import { markArchiveRead } from "@/lib/archive/archive-unread";
 import { ARCHIVE_UPDATED_EVENT } from "@/lib/archive/runtime-archive";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
 import { mapSessionActionsToArchiveActions } from "@/lib/archive/map-actions-for-archive";
@@ -469,6 +470,7 @@ export async function updateArchiveActionStatus(
 
 export async function deleteArchiveItem(archiveId: string): Promise<void> {
   await getPojuDb().archive.delete(archiveId);
+  markArchiveRead(archiveId);
   notifyArchiveUpdated();
 }
 

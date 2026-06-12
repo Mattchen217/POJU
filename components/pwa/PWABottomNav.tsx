@@ -5,6 +5,8 @@ import { IconCheck, IconX } from "@tabler/icons-react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { usePathname, useRouter } from "@/i18n/navigation";
+import { ArchiveNavLabel } from "@/components/archive/ArchiveUnreadDot";
+import { useArchiveUnread } from "@/components/archive/use-archive-unread";
 import { getActiveNavFromPathname } from "@/lib/i18n/pathname-without-locale";
 import {
   MARKETING_LOCALE_COMPACT_LABEL,
@@ -32,6 +34,7 @@ export function PWABottomNav() {
   const pathname = usePathname();
   const locale = useLocale();
   const [langOpen, setLangOpen] = useState(false);
+  const { hasUnread: hasUnreadArchive } = useArchiveUnread();
 
   const activeProduct = getActiveNavFromPathname(pathname);
   const currentLocaleLabel = LOCALES.find((l) => l.code === locale)?.label ?? "EN";
@@ -75,8 +78,13 @@ export function PWABottomNav() {
           ))}
         </div>
 
-        <button type="button" className="nav-aux" onClick={goToArchive} aria-label="Archive">
-          A
+        <button
+          type="button"
+          className="nav-aux archive-nav-aux"
+          onClick={goToArchive}
+          aria-label="Archive"
+        >
+          <ArchiveNavLabel label="A" showDot={hasUnreadArchive} className="archive-nav-label--pwa" />
         </button>
       </nav>
 

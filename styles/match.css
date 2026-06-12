@@ -412,7 +412,7 @@
   text-align: center;
   background: linear-gradient(180deg, #0f0a06 0%, #050308 100%);
   color: #e8e2d8;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .match-analyzing--loading {
@@ -427,8 +427,9 @@
 }
 
 .match-analyzing-orbs-loop {
-  width: min(92vw, 24rem);
+  width: min(100vw, 36rem);
   margin: 0 auto 1.75rem;
+  overflow: visible;
 }
 
 .match-orbs-spline {

@@ -6,6 +6,8 @@ import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 
 import { DsBand } from "@/components/ds/primitives";
+import { ArchiveUnreadDot } from "@/components/archive/ArchiveUnreadDot";
+import { useArchiveUnread } from "@/components/archive/use-archive-unread";
 import { isPwaStandalone } from "@/lib/client/pwa-standalone";
 import { listArchive, type ArchiveSummary } from "@/lib/archive/archive-service";
 import { ARCHIVE_UPDATED_EVENT } from "@/lib/archive/runtime-archive";
@@ -193,6 +195,8 @@ export function DsArchiveVaultGrid() {
 }
 
 function DsArchiveCard({ item }: { item: ArchiveSummary }) {
+  const { isUnread } = useArchiveUnread();
+  const unread = isUnread(item.archive_id);
   const meta = PRODUCT_META[item.product as Exclude<FilterKey, "all">] ?? PRODUCT_META.poju;
   const dateLabel = new Date(item.created_at).toLocaleDateString(undefined, {
     month: "short",
@@ -202,6 +206,7 @@ function DsArchiveCard({ item }: { item: ArchiveSummary }) {
 
   return (
     <Link href={`/archive/${item.archive_id}`} className="ds-glass-card ds-archive-card">
+      {unread ? <ArchiveUnreadDot className="ds-archive-card__unread" /> : null}
       <div className="ds-archive-card__top">
         <span className="ds-archive-card__product">
           <span

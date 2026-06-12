@@ -1255,6 +1255,7 @@
       "step_6": "Tejiendo el patrón de la relación…",
       "step_7": "Casi listo…",
       "hint": "Generando tu informe de compatibilidad completo. Unos 60–90 segundos.",
+      "preview_synergy": "Dinámica del sistema: {type} — generando el relato…",
       "error_title": "Análisis fallido",
       "go_back": "Reintentar",
       "missing_data": "Faltan datos de carta o relación. Empieza de nuevo desde Match.",

@@ -600,6 +600,7 @@
 }
 
 .ds-archive-card {
+  position: relative;
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -647,6 +648,39 @@
 .ds-archive-card__open {
   font-size: 13px;
   font-weight: 500;
+}
+
+.ds-archive-card__unread {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+}
+
+.archive-nav-label {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.archive-nav-label--pwa {
+  min-width: 1rem;
+  justify-content: center;
+}
+
+.archive-unread-dot {
+  position: absolute;
+  top: -3px;
+  right: -7px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.75);
+}
+
+.archive-nav-aux .archive-unread-dot {
+  top: 0;
+  right: -2px;
 }
 
 /* What is band — same width as other page-stack bands */

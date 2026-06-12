@@ -6,6 +6,12 @@ import type { Application } from "@splinetool/runtime";
 import { SplineInteractiveScene } from "@/components/spline/SplineInteractiveScene";
 import { configureMatchHowWorksSplineFraming } from "@/lib/match/configure-match-how-works-spline-framing";
 import {
+  MATCH_ANALYZING_ORBS_DISPLAY_SCALE,
+  MATCH_ANALYZING_ORBS_SCENE_PAN_X,
+  MATCH_ANALYZING_ORBS_SCENE_SCALE,
+  MATCH_ANALYZING_ORBS_SHELL_HEIGHT_RATIO,
+  MATCH_ANALYZING_ORBS_SHELL_OFFSET_X,
+  MATCH_ANALYZING_ORBS_SHELL_OFFSET_Y,
   MATCH_HOW_WORKS_SPLINE_DISPLAY_SCALE,
   MATCH_HOW_WORKS_SPLINE_SCENE,
   MATCH_HOW_WORKS_SPLINE_SCENE_PAN_X,
@@ -18,26 +24,54 @@ import {
 import { type HeavyWebGLContext } from "@/lib/client/allow-heavy-webgl";
 import { cn } from "@/lib/utils/classnames";
 
+type MatchOrbsSplineVariant = "howWorks" | "analyzing";
+
 type Props = {
   className?: string;
+  variant?: MatchOrbsSplineVariant;
   webGLContext?: HeavyWebGLContext;
 };
 
+const ORBS_VARIANT_CONFIG = {
+  howWorks: {
+    displayScale: MATCH_HOW_WORKS_SPLINE_DISPLAY_SCALE,
+    heightRatio: MATCH_HOW_WORKS_SPLINE_SHELL_HEIGHT_RATIO,
+    offsetX: MATCH_HOW_WORKS_SPLINE_SHELL_OFFSET_X,
+    offsetY: MATCH_HOW_WORKS_SPLINE_SHELL_OFFSET_Y,
+    panX: MATCH_HOW_WORKS_SPLINE_SCENE_PAN_X,
+    sceneScale: MATCH_HOW_WORKS_SPLINE_SCENE_SCALE,
+  },
+  analyzing: {
+    displayScale: MATCH_ANALYZING_ORBS_DISPLAY_SCALE,
+    heightRatio: MATCH_ANALYZING_ORBS_SHELL_HEIGHT_RATIO,
+    offsetX: MATCH_ANALYZING_ORBS_SHELL_OFFSET_X,
+    offsetY: MATCH_ANALYZING_ORBS_SHELL_OFFSET_Y,
+    panX: MATCH_ANALYZING_ORBS_SCENE_PAN_X,
+    sceneScale: MATCH_ANALYZING_ORBS_SCENE_SCALE,
+  },
+} as const;
+
 /** Red / green orbs Spline — shared by How Match works + analyzing wait. */
-export function MatchOrbsSpline({ className, webGLContext = "marketing" }: Props) {
+export function MatchOrbsSpline({
+  className,
+  variant = "howWorks",
+  webGLContext = "marketing",
+}: Props) {
+  const config = ORBS_VARIANT_CONFIG[variant];
+
   const handleSplineLoad = useCallback((app: Application) => {
     configureMatchHowWorksSplineFraming(app);
   }, []);
 
   const shellStyle = {
-    ["--match-how-spline-display-scale" as string]: String(MATCH_HOW_WORKS_SPLINE_DISPLAY_SCALE),
-    ["--match-how-spline-height-ratio" as string]: String(MATCH_HOW_WORKS_SPLINE_SHELL_HEIGHT_RATIO),
-    ["--match-how-spline-offset-x" as string]: MATCH_HOW_WORKS_SPLINE_SHELL_OFFSET_X,
-    ["--match-how-spline-offset-y" as string]: MATCH_HOW_WORKS_SPLINE_SHELL_OFFSET_Y,
+    ["--match-how-spline-display-scale" as string]: String(config.displayScale),
+    ["--match-how-spline-height-ratio" as string]: String(config.heightRatio),
+    ["--match-how-spline-offset-x" as string]: config.offsetX,
+    ["--match-how-spline-offset-y" as string]: config.offsetY,
   } as CSSProperties;
 
   const scenePanStyle = {
-    transform: `translateX(${MATCH_HOW_WORKS_SPLINE_SCENE_PAN_X}) scale(${MATCH_HOW_WORKS_SPLINE_SCENE_SCALE})`,
+    transform: `translateX(${config.panX}) scale(${config.sceneScale})`,
     transformOrigin: "center center",
   } as CSSProperties;
 

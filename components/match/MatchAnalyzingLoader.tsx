@@ -11,16 +11,18 @@ type MatchAnalyzingLoaderProps = {
 
 export function MatchAnalyzingLoader({ step, steps, hint, previewLine }: MatchAnalyzingLoaderProps) {
   return (
-    <div className="match-analyzing-inner">
+    <>
       <MatchAnalyzingOrbsLoop />
 
-      <p key={step} className="match-analyzing-step">
-        {steps[step] ?? steps[0]}
-      </p>
+      <div className="match-analyzing-inner">
+        <p key={step} className="match-analyzing-step">
+          {steps[step] ?? steps[0]}
+        </p>
 
-      {previewLine ? <p className="match-analyzing-preview">{previewLine}</p> : null}
+        {previewLine ? <p className="match-analyzing-preview">{previewLine}</p> : null}
 
-      <p className="match-analyzing-hint">{hint}</p>
-    </div>
+        <p className="match-analyzing-hint">{hint}</p>
+      </div>
+    </>
   );
 }

@@ -6,6 +6,8 @@ import { Link, usePathname } from "@/i18n/navigation";
 import { getActiveNavFromPathname, type SiteNavActive } from "@/lib/i18n/pathname-without-locale";
 import { BrandLockup } from "@/components/marketing/brand-lockup";
 import { MarketingLanguageSwitcher } from "@/components/marketing/marketing-language-switcher";
+import { ArchiveNavLabel } from "@/components/archive/ArchiveUnreadDot";
+import { useArchiveUnread } from "@/components/archive/use-archive-unread";
 
 /** 与下方占位条一致：安全区 + 顶栏内容区 3rem（h-12） */
 export const MOBILE_HEADER_OFFSET_CLASS =
@@ -17,6 +19,7 @@ export function SiteHeader() {
   const tNav = useTranslations("nav");
   const tCommon = useTranslations("common");
   const brandLabel = tCommon("brand");
+  const { hasUnread: hasUnreadArchive } = useArchiveUnread();
 
   const cls = (key: SiteNavActive) =>
     active === key ? "text-white" : "transition-colors hover:text-white";
@@ -80,7 +83,7 @@ export function SiteHeader() {
               {tNav("match")}
             </Link>
             <Link href="/archive" className={cls("archive")}>
-              {tNav("archive")}
+              <ArchiveNavLabel label={tNav("archive")} showDot={hasUnreadArchive} />
             </Link>
           </nav>
 

@@ -10,6 +10,7 @@ import { GlyphReport } from "@/components/glyph/GlyphReport";
 import { ChartReadingLoader } from "@/components/poju/ChartReadingLoader";
 import { PreparingSplineShell } from "@/components/poju/PreparingSplineShell";
 import { saveGlyphReadingToArchive } from "@/lib/archive/archive-service";
+import { markArchiveUnread } from "@/lib/archive/archive-unread";
 import { loadGlyphDrawSession } from "@/lib/glyph/glyph-draw-session";
 import type { StoredProfileData } from "@/lib/db/poju-db";
 import type { GlyphReadingContent } from "@/lib/llm/services/glyph-reading-service";
@@ -39,6 +40,14 @@ export function GlyphReadingPage() {
   const [reading, setReading] = useState<GlyphReadingContent | null>(null);
   const [error, setError] = useState<string | null>(null);
   const startedRef = useRef(false);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const runReading = useCallback(async () => {
     if (!readingId) {
@@ -97,7 +106,7 @@ export function GlyphReadingPage() {
       if (!content.invalid_input) {
         const windCategory = LEVEL_META[session.sign.level]?.display_name ?? session.sign.level;
         try {
-          await saveGlyphReadingToArchive({
+          const archiveId = await saveGlyphReadingToArchive({
             reading_id: readingId,
             profile_id: session.profile_id,
             question: session.question,
@@ -106,6 +115,9 @@ export function GlyphReadingPage() {
             reading: content,
             locale: session.locale || locale,
           });
+          if (!mountedRef.current) {
+            markArchiveUnread(archiveId, "glyph");
+          }
         } catch (e) {
           console.error("[glyph-reading] Archive save failed:", e);
         }

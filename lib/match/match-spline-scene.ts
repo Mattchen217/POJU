@@ -22,6 +22,14 @@ export const MATCH_HOW_WORKS_SPLINE_SHELL_HEIGHT_RATIO = 1.62;
 export const MATCH_HOW_WORKS_SPLINE_SHELL_OFFSET_X = "0px";
 export const MATCH_HOW_WORKS_SPLINE_SHELL_OFFSET_Y = "-2%";
 
+/** Analyzing wait — narrower container; less pan so green orb is not clipped. */
+export const MATCH_ANALYZING_ORBS_SCENE_PAN_X = "95px";
+export const MATCH_ANALYZING_ORBS_SCENE_SCALE = 1.05;
+export const MATCH_ANALYZING_ORBS_DISPLAY_SCALE = 0.52;
+export const MATCH_ANALYZING_ORBS_SHELL_HEIGHT_RATIO = 1.62;
+export const MATCH_ANALYZING_ORBS_SHELL_OFFSET_X = "0px";
+export const MATCH_ANALYZING_ORBS_SHELL_OFFSET_Y = "-2%";
+
 /** Smaller zoom = wider framing (smaller orbs in frame). */
 export const MATCH_SPLINE_CARD_ZOOM = 0.05;
 /** Multiplier on orbit radius — card ~300px needs camera much farther than hero. */

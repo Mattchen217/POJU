@@ -1255,6 +1255,7 @@
       "step_6": "Tissage du motif relationnel…",
       "step_7": "Presque prêt…",
       "hint": "Génération du rapport de compatibilité complet. Environ 60–90 secondes.",
+      "preview_synergy": "Dynamique systémique : {type} — génération du récit…",
       "error_title": "Échec de l'analyse",
       "go_back": "Réessayer",
       "missing_data": "Données de thème ou de relation manquantes. Recommencez depuis Match.",

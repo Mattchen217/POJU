@@ -19,6 +19,7 @@ import {
   type POJUActionRecommendationsData,
   type SyncroTaskArchiveData,
 } from "@/lib/archive/archive-service";
+import { markArchiveRead } from "@/lib/archive/archive-unread";
 
 type Props = {
   archiveId: string;
@@ -33,6 +34,10 @@ export function ArchiveDetailClient({ archiveId }: Props) {
   const [syncroData, setSyncroData] = useState<SyncroTaskArchiveData | null>(null);
   const [matchData, setMatchData] = useState<MatchArchiveData | null>(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    markArchiveRead(archiveId);
+  }, [archiveId]);
 
   useEffect(() => {
     let stop = false;

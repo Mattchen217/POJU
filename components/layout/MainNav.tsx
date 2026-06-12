@@ -5,6 +5,8 @@ import { useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
 
 import { MobileDrawer } from "@/components/layout/mobile-drawer";
+import { ArchiveNavLabel } from "@/components/archive/ArchiveUnreadDot";
+import { useArchiveUnread } from "@/components/archive/use-archive-unread";
 import { BrandLockup } from "@/components/marketing/brand-lockup";
 import { MarketingLanguageSwitcher } from "@/components/marketing/marketing-language-switcher";
 import { Link } from "@/i18n/navigation";
@@ -30,6 +32,7 @@ export function MainNav({ homeHero = false }: { homeHero?: boolean }) {
   }, [pathname]);
   const tCommon = useTranslations("common");
   const brandLabel = tCommon("brand").replace(/^p/, "P");
+  const { hasUnread: hasUnreadArchive } = useArchiveUnread();
 
   return (
     <nav
@@ -54,7 +57,11 @@ export function MainNav({ homeHero = false }: { homeHero?: boolean }) {
                 href={item.href}
                 className={`glass-nav-item pj-nav-item ${isActive ? "active" : ""}`}
               >
-                {tNav(item.key)}
+                {item.key === "archive" ? (
+                  <ArchiveNavLabel label={tNav(item.key)} showDot={hasUnreadArchive} />
+                ) : (
+                  tNav(item.key)
+                )}
               </Link>
             );
           })}

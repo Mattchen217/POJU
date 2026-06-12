@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { MatchAnalyzingLoader } from "@/components/match/MatchAnalyzingLoader";
 import { useRouter } from "@/i18n/navigation";
 import { saveMatchToArchive } from "@/lib/archive/archive-service";
+import { markArchiveUnread } from "@/lib/archive/archive-unread";
 import {
   hasBaseAnalysisPayload,
   normalizeBaseAnalysisInput,
@@ -34,6 +35,14 @@ export function MatchAnalyzingPage() {
   const [error, setError] = useState<string | null>(null);
   const [previewLine, setPreviewLine] = useState<string | null>(null);
   const startedRef = useRef(false);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const steps = useMemo(
     () => [
@@ -168,7 +177,7 @@ export function MatchAnalyzingPage() {
       await recordUsage("match", isFree, isFree ? 0 : costUsd);
 
       try {
-        await saveMatchToArchive({
+        const archiveId = await saveMatchToArchive({
           match_id: matchId,
           a_profile_id: aId,
           b_profile_id: bId,
@@ -176,6 +185,9 @@ export function MatchAnalyzingPage() {
           report: data.report,
           locale,
         });
+        if (!mountedRef.current) {
+          markArchiveUnread(archiveId, "match");
+        }
       } catch (e) {
         console.error("[match/analyzing] Archive save failed:", e);
       }

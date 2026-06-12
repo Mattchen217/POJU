@@ -1255,6 +1255,7 @@
       "step_6": "Beziehungsmuster wird gewoben…",
       "step_7": "Fast fertig…",
       "hint": "Vollständiger Kompatibilitätsbericht wird erstellt. Etwa 60–90 Sekunden.",
+      "preview_synergy": "Systemdynamik: {type} — Bericht wird erstellt…",
       "error_title": "Analyse fehlgeschlagen",
       "go_back": "Erneut versuchen",
       "missing_data": "Chart- oder Beziehungsdaten fehlen. Bitte von Match neu starten.",
