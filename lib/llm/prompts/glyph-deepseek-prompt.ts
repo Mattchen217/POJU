@@ -104,23 +104,23 @@ ${windCategoryToneBlock(glyph.wind_category)}
   const outputSchema = `
 
 {
-  "wind_category_blurb": "30-50 字。介绍这个风类的整体氛围（白榜用语，禁止吉/凶/auspicious/ominous）",
-  "classical_voice": "50-80 字。开篇可一次点出 archetypal metaphor，其后用 Glyph/Glyph 文；抽象意象（A 意象化：不逐字引原文）；自然融入《易经》/ I Ching",
+  "wind_category_blurb": "40-70 字。介绍这个风类的整体氛围（白榜用语，禁止吉/凶/auspicious/ominous）",
+  "classical_voice": "120-200 字。开篇可一次点出 archetypal metaphor，其后用 Glyph/Glyph 文；抽象意象（A 意象化：不逐字引原文）；自然融入《易经》/ I Ching",
   "命理双视角": {
-    "命理看此事": "200-400 字。从行为蓝图 / 人格架构看此事；须体现 structured 三项；禁日主/大运/用神/干支；用 Glyph 指代，禁签/sign/lot",
-    "签文看此事": "200-400 字。从 Glyph 文解读：抽象情境主题 + 经典东方叙事原型（A 意象化，禁逐字原文/人名）；全文用 Glyph/Glyph 文，禁 sign/lot",
-    "两者印证或冲突": "100-200 字。印证还是冲突（白榜用语，禁未来预测；用 Glyph 指代）"
+    "命理看此事": "280-500 字。从行为蓝图 / 人格架构看此事；须体现 structured 三项；禁日主/大运/用神/干支；用 Glyph 指代，禁签/sign/lot",
+    "签文看此事": "280-500 字。从 Glyph 文解读：抽象情境主题 + 经典东方叙事原型（A 意象化，禁逐字原文/人名）；全文用 Glyph/Glyph 文，禁 sign/lot",
+    "两者印证或冲突": "140-260 字。印证还是冲突（白榜用语，禁未来预测；用 Glyph 指代）"
   },
-  "meaning_for_question": "180-280 字。深度解读 = Glyph × 性格画像 × 用户具体问题（禁答「何时」，禁断言未来；用 Glyph 非 sign）",
-  "hidden_tension": "60-100 字。用户可能看不到的张力或盲点（当下视角）",
-  "your_moment": "80-120 字。当前年度周期内的当下能量 + 与原型隐喻的互动（禁写流年/预测即将发生）",
+  "meaning_for_question": "280-450 字。深度解读 = Glyph × 性格画像 × 用户具体问题（禁答「何时」，禁断言未来；用 Glyph 非 sign）",
+  "hidden_tension": "100-160 字。用户可能看不到的张力或盲点（当下视角）",
+  "your_moment": "120-180 字。当前年度周期内的当下能量 + 与原型隐喻的互动（禁写流年/预测即将发生）",
   "exploration": {
-    "text": "60-90 字。一个具体的内观练习。Solo。具体到时间/场地/做什么",
+    "text": "100-160 字。一个具体的内观练习。Solo。具体到时间/场地/做什么",
     "timeframe": "today | tonight | within_24h | this_week",
     "duration_estimate": "X minutes",
     "is_solo": true
   },
-  "reflection_question": "40-60 字。一个深思的问题（邀请，不是命令）",
+  "reflection_question": "60-90 字。一个深思的问题（邀请，不是命令）",
   "invalid_input": false,
   "_meta": {
     "glyph_id": ${glyph.id},
@@ -138,7 +138,7 @@ ${windCategoryToneBlock(glyph.wind_category)}
 4. **人格依据**: 「命理看此事」须体现人格架构 + 10年生命周期 + 认知资源偏好（防线1翻译，禁写日主/大运/用神）
 5. **隐喻依据**: 抽象情境主题 + 经典东方叙事原型；禁止签诗原文/历史人物/签字样
 6. **结构必备**: 命理双视角 + 原型隐喻意象 + exploration 内观练习 三者缺一不可
-7. **总字数**: 中文约 1500-3000 字 / 英文约 1200-2400 词（各字符串字段合计）
+7. **总字数**: 中文约 2200-4000 字 / 英文约 1800-3200 词（各字符串字段合计；宁详略短，但不得违反各字段上限）
 8. **严格 JSON**: 不要用 \`\`\`json 包裹
 
 # 不要做的事

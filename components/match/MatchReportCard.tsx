@@ -1,6 +1,13 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { Award, ChevronDown, Compass, Infinity, type LucideIcon } from "lucide-react";
+import { useState, type CSSProperties, type ReactNode } from "react";
+
+const CARD_LUCIDE: Record<string, LucideIcon> = {
+  infinity: Infinity,
+  award: Award,
+  compass: Compass,
+};
 
 type MatchReportCardProps = {
   icon: string;
@@ -20,11 +27,13 @@ export function MatchReportCard({
   children,
 }: MatchReportCardProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
+  const isMonogram = icon.length === 1;
+  const LucideGlyph = !isMonogram ? CARD_LUCIDE[icon] : null;
 
   return (
     <div
       className={`match-report-card ${expanded ? "expanded" : ""}`}
-      style={{ borderLeftColor: color }}
+      style={{ "--c": color } as CSSProperties}
     >
       <button
         type="button"
@@ -32,15 +41,15 @@ export function MatchReportCard({
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
       >
-        <div className="card-icon" style={{ background: color }}>
-          {icon}
+        <div className="card-icon">
+          {isMonogram ? icon : LucideGlyph ? <LucideGlyph size={20} strokeWidth={2} /> : icon}
         </div>
         <div className="card-header-text">
           <h3>{title}</h3>
           <p className="card-summary">{summary}</p>
         </div>
         <div className="card-toggle" aria-hidden>
-          {expanded ? "−" : "+"}
+          <ChevronDown size={18} strokeWidth={2} />
         </div>
       </button>
 

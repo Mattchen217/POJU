@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { GlyphCanvas } from "@/components/glyph/GlyphCanvas";
+import { glyphWindAccentStyle } from "@/lib/glyph/glyph-wind-accents";
 import { GlyphReport } from "@/components/glyph/GlyphReport";
 import { ChartReadingLoader } from "@/components/poju/ChartReadingLoader";
 import { PreparingSplineShell } from "@/components/poju/PreparingSplineShell";
@@ -16,9 +17,9 @@ import { generateGlyphFullReading } from "@/lib/oracle/api";
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 import { PojuDeepDiveCTA } from "@/components/cross-product/PojuDeepDiveCTA";
 import { ReturnToPojuCTA } from "@/components/poju/ReturnToPojuCTA";
-import { pojuChatColumn } from "@/lib/poju/chat-layout";
 import { extractGlyphSummary } from "@/lib/poju/tool-result-summary";
 import { cn } from "@/lib/utils/classnames";
+import type { CSSProperties } from "react";
 import { LEVEL_META, type SignData } from "@/types/oracle";
 
 type Stage = "loading" | "ready" | "error";
@@ -198,7 +199,10 @@ export function GlyphReadingPage() {
   });
 
   return (
-    <div className={cn("glyph-reading-page browser-flow-page", pojuChatColumn, "px-4 md:px-6")}>
+    <div
+      className={cn("glyph-reading-page browser-flow-page")}
+      style={glyphWindAccentStyle(glyph.level) as CSSProperties}
+    >
       <ReturnToPojuCTA
         tool="glyph"
         resultId={readingId}

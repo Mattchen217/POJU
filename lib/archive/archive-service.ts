@@ -209,12 +209,20 @@ export async function loadArchiveItem(archiveId: string): Promise<POJUActionReco
   }
 }
 
-function formatGlyphArchiveTitle(glyphName: string, locale: string, now: Date): string {
+function glyphQuestionSnippet(question: string, maxLen: number, locale: string): string {
+  const q = question.trim().replace(/\s+/g, " ");
+  if (!q) return locale.startsWith("zh") ? "未填写问题" : "No question entered";
+  return q.length > maxLen ? `${q.slice(0, maxLen)}…` : q;
+}
+
+/** Archive list title — user question only (no sign / story figure naming). */
+function formatGlyphArchiveTitle(question: string, locale: string, now: Date): string {
   const y = now.getFullYear();
   const m = String(now.getMonth() + 1).padStart(2, "0");
   const d = String(now.getDate()).padStart(2, "0");
   const dateStr = `${y}-${m}-${d}`;
-  return locale.startsWith("zh") ? `Glyph：${glyphName} · ${dateStr}` : `Glyph: ${glyphName} - ${dateStr}`;
+  const snippet = glyphQuestionSnippet(question, 36, locale);
+  return locale.startsWith("zh") ? `Glyph：${snippet} · ${dateStr}` : `Glyph: ${snippet} - ${dateStr}`;
 }
 
 export async function saveGlyphReadingToArchive(input: {
@@ -229,8 +237,9 @@ export async function saveGlyphReadingToArchive(input: {
   const deviceId = getPojuDeviceId();
   const archiveId = safeRandomUUID();
   const now = new Date();
-  const glyphName = input.sign.story_figure?.trim() || `Sign ${input.sign.sign_number}`;
-  const title = formatGlyphArchiveTitle(glyphName, input.locale ?? "en", now);
+  const locale = input.locale ?? "en";
+  const questionLabel = glyphQuestionSnippet(input.question, 72, locale);
+  const title = formatGlyphArchiveTitle(input.question, locale, now);
 
   const data: GlyphReadingArchiveData = {
     reading_id: input.reading_id,
@@ -238,7 +247,7 @@ export async function saveGlyphReadingToArchive(input: {
     question: input.question,
     sign_number: input.sign.sign_number,
     sign_level: input.sign.level,
-    glyph_display_name: glyphName,
+    glyph_display_name: questionLabel,
     wind_category: input.wind_category,
     delivered_at: now.toISOString(),
     reading: input.reading,

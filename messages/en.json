@@ -1656,7 +1656,8 @@
       "timing": "When",
       "saved_to_archive": "Saved to your Archive.",
       "view_archive": "View in Archive",
-      "new_match": "Run another Match"
+      "new_match": "Run another Match",
+      "back_to_match": "Back to Match"
     },
     "result": {
       "loading": "Loading report…",

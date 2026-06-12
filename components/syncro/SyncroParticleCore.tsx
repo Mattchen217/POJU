@@ -1,9 +1,21 @@
 "use client";
 
+import { useCallback } from "react";
+import Spline from "@splinetool/react-spline";
+import type { Application } from "@splinetool/runtime";
+
 import { useAllowHeavyWebGL } from "@/lib/client/allow-heavy-webgl";
 import { SYNCRO_FANGWEI_SCENE } from "@/components/syncro/SyncroSplineCanvas";
 import { getSyncroParticleFieldStyle } from "@/lib/syncro/syncro-ring-layout";
-import Spline from "@splinetool/react-spline";
+
+function preventSplineCanvasFocus(app: Application) {
+  const canvas = (app as Application & { canvas?: HTMLCanvasElement }).canvas;
+  if (!canvas) return;
+  canvas.tabIndex = -1;
+  if (document.activeElement === canvas) {
+    canvas.blur();
+  }
+}
 
 type Props = {
   /**
@@ -18,6 +30,9 @@ type Props = {
 
 export function SyncroParticleCore({ bare = false, opacity, ringSize }: Props) {
   const allowWebGL = useAllowHeavyWebGL();
+  const onSplineLoad = useCallback((app: Application) => {
+    preventSplineCanvasFocus(app);
+  }, []);
   const fieldStyle = bare ? getSyncroParticleFieldStyle({ opacity, ringSize }) : undefined;
   const className = bare
     ? "syncro-particle-spline syncro-particle-field"
@@ -25,7 +40,12 @@ export function SyncroParticleCore({ bare = false, opacity, ringSize }: Props) {
 
   if (bare) {
     return allowWebGL ? (
-      <Spline scene={SYNCRO_FANGWEI_SCENE} className={className} style={fieldStyle} />
+      <Spline
+        scene={SYNCRO_FANGWEI_SCENE}
+        className={className}
+        style={fieldStyle}
+        onLoad={onSplineLoad}
+      />
     ) : (
       <div
         className={`${className} syncro-particle-spline--static`}
@@ -36,7 +56,7 @@ export function SyncroParticleCore({ bare = false, opacity, ringSize }: Props) {
   }
 
   const spline = allowWebGL ? (
-    <Spline scene={SYNCRO_FANGWEI_SCENE} className="syncro-particle-spline" />
+    <Spline scene={SYNCRO_FANGWEI_SCENE} className="syncro-particle-spline" onLoad={onSplineLoad} />
   ) : (
     <div className="syncro-particle-spline syncro-particle-spline--static" />
   );

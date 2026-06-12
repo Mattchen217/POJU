@@ -1,12 +1,22 @@
 "use client";
 
+import {
+  ArrowLeft,
+  Circle,
+  Clock,
+  Leaf,
+  MessageCircle,
+  Shield,
+  Sprout,
+  type LucideIcon,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { MatchReportCard } from "@/components/match/MatchReportCard";
 import { PojuDeepDiveCTA } from "@/components/cross-product/PojuDeepDiveCTA";
 import { ReturnToPojuCTA } from "@/components/poju/ReturnToPojuCTA";
 import { extractMatchSummary } from "@/lib/poju/tool-result-summary";
-import { Link, useRouter } from "@/i18n/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { normalizeSynergyType } from "@/lib/match/synergy-normalize";
 import {
   SYNERGY_TYPES,
@@ -22,13 +32,13 @@ type MatchReportProps = {
   locale: string;
 };
 
-const CATEGORY_ICONS: Record<string, string> = {
-  communication: "💬",
-  timing: "⏰",
-  boundary: "⊞",
-  growth: "🌱",
-  environment: "🌿",
-  fengshui: "🌿",
+const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  communication: MessageCircle,
+  timing: Clock,
+  boundary: Shield,
+  growth: Sprout,
+  environment: Leaf,
+  fengshui: Leaf,
 };
 
 function ActionItem({
@@ -39,13 +49,16 @@ function ActionItem({
   index: number;
 }) {
   const t = useTranslations("match.report");
+  const CategoryIcon = CATEGORY_ICONS[action.category] ?? Circle;
 
   return (
     <div className="action-item">
       <div className="action-number">{index}</div>
       <div className="action-body">
         <div className="action-header">
-          <span className="action-icon">{CATEGORY_ICONS[action.category] ?? "•"}</span>
+          <span className="action-icon">
+            <CategoryIcon size={15} strokeWidth={2} />
+          </span>
           <h4>{action.title}</h4>
         </div>
         <p className="action-detail">{action.detail}</p>
@@ -85,13 +98,7 @@ export function MatchReport({ session, locale }: MatchReportProps) {
       </header>
 
       <div className="synergy-signal-panel-wrapper">
-        <div
-          className="synergy-signal-panel"
-          style={{
-            borderColor: synergyInfo.color_hex,
-            color: synergyInfo.color_hex,
-          }}
-        >
+        <div className="synergy-signal-panel" style={{ color: synergyInfo.color_hex }}>
           <span className="signal-label">{t("resonance_label")}</span>
           <span className="signal-state-label">
             {isZh ? synergyInfo.name_zh : synergyInfo.name_en}
@@ -101,11 +108,6 @@ export function MatchReport({ session, locale }: MatchReportProps) {
               <span
                 key={i}
                 className={`signal-segment ${i <= synergyInfo.signal_segments ? "active" : ""}`}
-                style={
-                  i <= synergyInfo.signal_segments
-                    ? { background: synergyInfo.color_hex }
-                    : undefined
-                }
               />
             ))}
           </div>
@@ -113,7 +115,7 @@ export function MatchReport({ session, locale }: MatchReportProps) {
       </div>
 
       <div className="match-cards">
-        <MatchReportCard icon="A" title={report.analysis_a.title} summary={report.analysis_a.summary} color="#D4AF37">
+        <MatchReportCard icon="A" title={report.analysis_a.title} summary={report.analysis_a.summary} color="#ff7eb0">
           <div className="card-content">
             <p>{report.analysis_a.detail}</p>
             <h4>{t("key_traits")}</h4>
@@ -125,7 +127,7 @@ export function MatchReport({ session, locale }: MatchReportProps) {
           </div>
         </MatchReportCard>
 
-        <MatchReportCard icon="B" title={report.analysis_b.title} summary={report.analysis_b.summary} color="#87CEEB">
+        <MatchReportCard icon="B" title={report.analysis_b.title} summary={report.analysis_b.summary} color="#b08cff">
           <div className="card-content">
             <p>{report.analysis_b.detail}</p>
             <h4>{t("key_traits")}</h4>
@@ -137,7 +139,7 @@ export function MatchReport({ session, locale }: MatchReportProps) {
           </div>
         </MatchReportCard>
 
-        <MatchReportCard icon="×" title={report.combined.title} summary={report.combined.summary} color="#E91E63">
+        <MatchReportCard icon="infinity" title={report.combined.title} summary={report.combined.summary} color="#e879f9">
           <div className="card-content">
             <p>{report.combined.detail}</p>
             <h4>{t("five_elements")}</h4>
@@ -148,7 +150,7 @@ export function MatchReport({ session, locale }: MatchReportProps) {
         </MatchReportCard>
 
         <MatchReportCard
-          icon="🎯"
+          icon="award"
           title={report.conclusion.title}
           summary={report.conclusion.summary}
           color={synergyInfo.color_hex}
@@ -158,23 +160,23 @@ export function MatchReport({ session, locale }: MatchReportProps) {
             <h4>{t("strengths")}</h4>
             <ul className="strengths-list">
               {report.conclusion.strengths.map((s, i) => (
-                <li key={i}>✓ {s}</li>
+                <li key={i}>{s}</li>
               ))}
             </ul>
             <h4>{t("challenges")}</h4>
             <ul className="challenges-list">
               {report.conclusion.challenges.map((c, i) => (
-                <li key={i}>⚠ {c}</li>
+                <li key={i}>{c}</li>
               ))}
             </ul>
           </div>
         </MatchReportCard>
 
         <MatchReportCard
-          icon="📋"
+          icon="compass"
           title={report.recommendations.title}
           summary={report.recommendations.summary}
-          color="#4CAF50"
+          color="#8b9cff"
         >
           <div className="card-content">
             <div className="actions-list">
@@ -196,12 +198,10 @@ export function MatchReport({ session, locale }: MatchReportProps) {
           variant="footer"
         />
         <p>{t("saved_to_archive")}</p>
-        <div className="report-footer-actions">
-          <Link href="/archive" className="match-report-btn-secondary">
-            {t("view_archive")}
-          </Link>
+        <div className="report-footer-actions report-footer-actions--single">
           <button type="button" onClick={() => router.push("/match")} className="match-primary-btn">
-            {t("new_match")}
+            <ArrowLeft size={18} strokeWidth={2} aria-hidden />
+            {t("back_to_match")}
           </button>
         </div>
       </footer>

@@ -1275,7 +1275,8 @@
       "timing": "Cuándo",
       "saved_to_archive": "Guardado en tu Archive.",
       "view_archive": "Ver en Archive",
-      "new_match": "Hacer otro Match"
+      "new_match": "Hacer otro Match",
+      "back_to_match": "Volver a Match"
     },
     "result": {
       "loading": "Cargando informe…",

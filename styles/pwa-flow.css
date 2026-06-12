@@ -30,25 +30,6 @@
   align-items: center;
 }
 
-.pwa-mode .glyph-report .report-section {
-  padding: 1rem 1.1rem;
-  border-radius: 0.75rem;
-  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
-  background: rgba(0, 0, 0, 0.28);
-}
-
-.pwa-mode .glyph-report .dual-view-card {
-  padding: 0.85rem;
-  border-radius: 0.5rem;
-  background: rgba(139, 92, 246, 0.08);
-  box-shadow: inset 0 0 0 0.5px rgba(208, 188, 255, 0.15);
-}
-
-.pwa-mode .glyph-report .dual-view-resonance {
-  padding-top: 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-
 .pwa-mode .glyph-primary-btn,
 .pwa-mode .match-primary-btn {
   width: 100%;

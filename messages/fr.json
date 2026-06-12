@@ -1275,7 +1275,8 @@
       "timing": "Quand",
       "saved_to_archive": "Enregistré dans votre Archive.",
       "view_archive": "Voir dans l'Archive",
-      "new_match": "Lancer un autre Match"
+      "new_match": "Lancer un autre Match",
+      "back_to_match": "Retour à Match"
     },
     "result": {
       "loading": "Chargement du rapport…",

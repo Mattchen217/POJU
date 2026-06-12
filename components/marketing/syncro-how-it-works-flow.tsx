@@ -56,6 +56,37 @@ const CURRENT_RGB: Record<(typeof CURRENT_KEYS)[number], string> = {
   under: "200,90,90",
 };
 
+/** Defer heavy WebGL + rAF until the band is near the viewport — avoids load-time scroll jumps. */
+function useNearViewportOnce(rootMargin = "180px") {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (visible) return;
+    const node = ref.current;
+    if (!node) return;
+
+    if (typeof IntersectionObserver === "undefined") {
+      setVisible(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) return;
+        setVisible(true);
+        observer.disconnect();
+      },
+      { rootMargin },
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [visible, rootMargin]);
+
+  return { ref, visible };
+}
+
 function sectorAngles(dirIdx: number) {
   const centerDeg = dirIdx * 45;
   const halfRad = (22.5 * Math.PI) / 180;
@@ -394,7 +425,7 @@ function SyncroHowItWorksRing({
         </div>
       </div>
 
-      <div className="syncro-how-works-flow__center" aria-live="polite">
+      <div className="syncro-how-works-flow__center" aria-hidden>
         <p
           className="syncro-how-works-flow__center-label"
           style={{ color: activeColor, opacity: labelVisible ? 1 : 0 }}
@@ -435,7 +466,7 @@ function SyncroHowItWorksCurrentCaption({
     <p
       className="syncro-how-works-flow__current-desc"
       style={{ color: activeColor, opacity: visible ? 1 : 0 }}
-      aria-live="polite"
+      aria-hidden
     >
       {currentDescs[activeCurrentIdx]}
     </p>
@@ -481,11 +512,17 @@ function SyncroHowItWorksFlowInner({ steps }: { steps: FlowStep[] }) {
 
 /** How Syncro works — mobile fangwei spline + directional scan + five currents */
 export function SyncroHowItWorksFlow({ steps }: { steps: FlowStep[] }) {
+  const { ref, visible } = useNearViewportOnce();
+
   return (
-    <div className="syncro-how-works-flow">
-      <SyncroMarketingOrientationProvider>
-        <SyncroHowItWorksFlowInner steps={steps} />
-      </SyncroMarketingOrientationProvider>
+    <div ref={ref} className="syncro-how-works-flow">
+      {visible ? (
+        <SyncroMarketingOrientationProvider>
+          <SyncroHowItWorksFlowInner steps={steps} />
+        </SyncroMarketingOrientationProvider>
+      ) : (
+        <div className="syncro-how-works-flow__placeholder" aria-hidden />
+      )}
     </div>
   );
 }

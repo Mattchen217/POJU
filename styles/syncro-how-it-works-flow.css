@@ -4,6 +4,15 @@
   width: 100%;
   max-width: 960px;
   margin-inline: auto;
+  overflow-anchor: none;
+}
+
+.syncro-how-it-works-band {
+  overflow-anchor: none;
+}
+
+.syncro-how-works-flow__placeholder {
+  min-height: clamp(380px, 52vw, 440px);
 }
 
 .syncro-how-works-flow__stage {

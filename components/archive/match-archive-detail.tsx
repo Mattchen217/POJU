@@ -85,18 +85,11 @@ export function MatchArchiveDetail({ archiveId, data, locale }: Props) {
         </section>
       ) : null}
 
-      <div className="detail-footer mt-10 flex flex-wrap gap-3">
-        <Link
-          href={`/match/result/${data.match_session_id}`}
-          className="match-primary-btn match-archive-view-full"
-        >
+      <div className="match-archive-detail-footer">
+        <Link href={`/match/result/${data.match_session_id}`} className="match-archive-view-full-link">
           {t("view_full_report")}
         </Link>
-        <button
-          type="button"
-          onClick={() => void handleDelete()}
-          className="rounded-lg border border-red-400/30 px-5 py-2 text-sm text-red-300 hover:bg-red-500/10"
-        >
+        <button type="button" onClick={() => void handleDelete()} className="match-archive-delete-btn">
           {tDetail("delete")}
         </button>
       </div>

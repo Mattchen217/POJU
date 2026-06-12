@@ -43,9 +43,13 @@ export function GlyphArchiveDetail({ archiveId, data }: Props) {
           ← {t("back")}
         </Link>
         <h1 className="mt-4 font-['Manrope'] text-2xl font-bold text-[#d0bcff]">
-          {tGlyph("archive_detail_title", { name: data.glyph_display_name })}
+          {tGlyph("archive_detail_title", {
+            name: data.question?.trim() || data.glyph_display_name,
+          })}
         </h1>
-        <p className="mt-1 text-sm text-[#958ea0]">{data.wind_category}</p>
+        <p className="mt-1 text-sm text-[#958ea0]">
+          {new Date(data.delivered_at).toLocaleString()}
+        </p>
       </div>
 
       <GlyphReport

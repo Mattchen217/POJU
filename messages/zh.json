@@ -1671,7 +1671,8 @@
       "timing": "时机",
       "saved_to_archive": "已保存到你的 Archive。",
       "view_archive": "在 Archive 中查看",
-      "new_match": "再做一次 Match"
+      "new_match": "再做一次 Match",
+      "back_to_match": "返回 Match"
     },
     "result": {
       "loading": "加载报告中…",

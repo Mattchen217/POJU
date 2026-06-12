@@ -23,6 +23,11 @@ export function SyncroEnergyBall({ className, initialZoom = 1, variant = "defaul
   const allowWebGL = useAllowHeavyWebGL();
   const onLoad = useCallback(
     (app: Application) => {
+      const canvas = (app as Application & { canvas?: HTMLCanvasElement }).canvas;
+      if (canvas) {
+        canvas.tabIndex = -1;
+        if (document.activeElement === canvas) canvas.blur();
+      }
       if (initialZoom == null || initialZoom <= 0) return;
       const apply = () => app.setZoom(initialZoom);
       apply();

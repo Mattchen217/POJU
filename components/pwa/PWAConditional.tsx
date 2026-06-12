@@ -30,12 +30,12 @@ export function useIsPwaMode(): boolean | null {
 
 export function PWAOnly({ children }: { children: ReactNode }) {
   const isPWA = useIsPwaMode();
-  if (isPWA === null) return null;
-  return isPWA ? <>{children}</> : null;
+  if (isPWA !== true) return null;
+  return <>{children}</>;
 }
 
 export function NotPWA({ children }: { children: ReactNode }) {
   const isPWA = useIsPwaMode();
-  if (isPWA === null) return null;
-  return !isPWA ? <>{children}</> : null;
+  if (isPWA === true) return null;
+  return <>{children}</>;
 }
