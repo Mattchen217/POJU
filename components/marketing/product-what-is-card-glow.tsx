@@ -159,18 +159,18 @@ export function ProductWhatIsCardGlow({
       const dt = Math.min((now - last) / 1000, 0.08);
       last = now;
 
-      const nw = wrap.clientWidth;
-      const nh = wrap.clientHeight;
+      const nw = wrap!.clientWidth;
+      const nh = wrap!.clientHeight;
       if (nw < 2 || nh < 2) {
         if (!reduceMotion) rafId = requestAnimationFrame(paint);
         return;
       }
 
-      ctx.clearRect(0, 0, nw, nh);
+      ctx!.clearRect(0, 0, nw, nh);
       drawGlow(nw, nh, now);
 
-      ctx.save();
-      ctx.globalCompositeOperation = "lighter";
+      ctx!.save();
+      ctx!.globalCompositeOperation = "lighter";
 
       const t = now * 0.001;
       for (const p of particles) {
@@ -186,13 +186,13 @@ export function ProductWhatIsCardGlow({
         const fade = Math.max(0, 1 - p.r / p.rMax);
         const alpha = (0.08 + fade * 0.42) * (reduceMotion ? 0.85 : 1);
 
-        ctx.fillStyle = `rgba(${p.cr},${p.cg},${p.cb},${alpha})`;
-        ctx.beginPath();
-        ctx.arc(x, y, p.size * (0.55 + fade * 0.65), 0, Math.PI * 2);
-        ctx.fill();
+        ctx!.fillStyle = `rgba(${p.cr},${p.cg},${p.cb},${alpha})`;
+        ctx!.beginPath();
+        ctx!.arc(x, y, p.size * (0.55 + fade * 0.65), 0, Math.PI * 2);
+        ctx!.fill();
       }
 
-      ctx.restore();
+      ctx!.restore();
 
       if (!reduceMotion) rafId = requestAnimationFrame(paint);
     }
