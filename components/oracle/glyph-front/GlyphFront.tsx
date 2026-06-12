@@ -125,7 +125,7 @@ export function GlyphFront({ sign, animate = true, compact = false }: GlyphFront
         </motion.div>
 
         <motion.div
-          className={`mx-auto w-[88%] overflow-hidden ${compact ? "mt-0.5 h-[40%]" : "-mt-2 h-[46%]"}`}
+          className={`mx-auto w-[88%] overflow-hidden ${compact ? "mt-0.5 h-[36%] shrink-0" : "-mt-2 h-[46%]"}`}
           initial={animate ? { opacity: 0 } : false}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.5 }}
@@ -158,7 +158,9 @@ export function GlyphFront({ sign, animate = true, compact = false }: GlyphFront
         </motion.div>
 
         <motion.div
-          className={`px-1 ${compact ? "mt-1 min-h-[18%]" : "mt-2 min-h-[16%] px-2"}`}
+          className={`relative z-30 ${
+            compact ? "mt-auto px-1 pb-[11%] pt-2" : "mt-2 min-h-[16%] px-2"
+          }`}
           initial={animate ? { opacity: 0 } : false}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 1.2 }}
