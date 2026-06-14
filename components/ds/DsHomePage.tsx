@@ -4,6 +4,7 @@ import { Lock, Scale, UserX } from "lucide-react";
 
 import { HeroInstallCta } from "@/components/marketing/hero-install-cta";
 import { NotPWA } from "@/components/pwa/PWAConditional";
+import { AppModeProductTopBar } from "@/components/pwa/AppModeProductTopBar";
 import { ProductCardSpline } from "@/components/marketing/product-card-spline";
 import { HERO_ASSET_VERSION, HERO_PNG, LANDING_ASSETS } from "@/lib/marketing/landing-assets";
 import { hasPublicFile } from "@/lib/marketing/has-public-file";
@@ -224,6 +225,7 @@ export function DsHomePage({ copy }: { copy: DsHomeCopy }) {
 
   return (
     <main className="pj-page pj-page--home text-[var(--pj-text-secondary)]">
+      <AppModeProductTopBar />
       <section className="ds-home-hero">
         <div className="ds-home-hero__media">
           {heroBg ? (

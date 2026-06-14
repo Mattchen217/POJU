@@ -10,9 +10,13 @@ import {
   MATCH_SPLINE_CARD_ZOOM,
   MATCH_SPLINE_HERO_DISPLAY_SCALE,
   MATCH_SPLINE_HERO_PWA_DISPLAY_SCALE,
+  MATCH_SPLINE_HERO_PWA_RADIUS_FACTOR,
+  MATCH_SPLINE_HERO_PWA_SHELL_WIDTH_RATIO,
   MATCH_SPLINE_HERO_PWA_ZOOM,
+  MATCH_SPLINE_HERO_RADIUS_FACTOR,
   MATCH_SPLINE_HERO_SHELL_HEIGHT_RATIO,
   MATCH_SPLINE_HERO_SHELL_OFFSET_Y,
+  MATCH_SPLINE_HERO_SHELL_WIDTH_RATIO,
   MATCH_SPLINE_HERO_ZOOM,
   MATCH_SPLINE_SCENE,
 } from "@/lib/match/match-spline-scene";
@@ -57,6 +61,11 @@ export function MatchSplineScene({
     heroPwa && variant === "hero"
       ? MATCH_SPLINE_HERO_PWA_DISPLAY_SCALE
       : DISPLAY_SCALE_BY_VARIANT[variant];
+  const shellWidthRatio =
+    heroPwa && variant === "hero"
+      ? MATCH_SPLINE_HERO_PWA_SHELL_WIDTH_RATIO
+      : MATCH_SPLINE_HERO_SHELL_WIDTH_RATIO;
+  const heroRadiusFactor = heroPwa ? MATCH_SPLINE_HERO_PWA_RADIUS_FACTOR : MATCH_SPLINE_HERO_RADIUS_FACTOR;
 
   return (
     <SplineInteractiveScene
@@ -74,6 +83,7 @@ export function MatchSplineScene({
               ["--match-hero-shell-height-ratio" as string]: String(
                 MATCH_SPLINE_HERO_SHELL_HEIGHT_RATIO,
               ),
+              ["--match-hero-shell-width-ratio" as string]: String(shellWidthRatio),
               ["--match-hero-shell-offset-y" as string]: MATCH_SPLINE_HERO_SHELL_OFFSET_Y,
             } as CSSProperties)
           : displayScale != null && displayScale !== 1
@@ -87,7 +97,9 @@ export function MatchSplineScene({
       onLoad={
         variant === "card"
           ? (app) => configureMatchSplineFraming(app, zoom, MATCH_SPLINE_CARD_RADIUS_FACTOR)
-          : undefined
+          : variant === "hero"
+            ? (app) => configureMatchSplineFraming(app, zoom, heroRadiusFactor)
+            : undefined
       }
     />
   );

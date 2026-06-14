@@ -11,7 +11,7 @@ export function AppModeHeroActions(props: BeginButtonProps) {
   return (
     <PWAOnly>
       <div className="app-mode-hero-actions">
-        <BeginButton {...props} />
+        <BeginButton {...props} useMarketingLabels />
         <AddToHomeCta />
       </div>
     </PWAOnly>

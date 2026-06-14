@@ -27,7 +27,7 @@ import {
 import { DsMatchUseCard } from "@/components/ds/marketing/DsProductFlows";
 import { MatchHowWorksSection } from "@/components/match/MatchHowWorksSection";
 import { ProductPricingSection } from "@/components/marketing/product-pricing-section";
-import { NotPWA } from "@/components/pwa/PWAConditional";
+import { NotPWA, PWAOnly } from "@/components/pwa/PWAConditional";
 import { AppModeDesktopHint } from "@/components/pwa/AppModeDesktopHint";
 import { AppModeHeroActions } from "@/components/pwa/AppModeHeroActions";
 import { AppModeProductTopBar } from "@/components/pwa/AppModeProductTopBar";
@@ -41,6 +41,7 @@ import {
   ProductHeroActions,
   ProductHeroContent,
   ProductHeroDescription,
+  ProductHeroMeta,
   ProductMarketingHero,
 } from "@/components/marketing/product-marketing-hero";
 import { ProductWhatIsSection } from "@/components/marketing/product-what-is-section";
@@ -148,6 +149,9 @@ export function MatchHomePage() {
             </DsGradientTitle>
             <ProductHeroAccent>{t("tagline")}</ProductHeroAccent>
             <ProductHeroDescription>{t("description")}</ProductHeroDescription>
+            <PWAOnly>
+              <ProductHeroMeta bright>{t("free_note")}</ProductHeroMeta>
+            </PWAOnly>
             <ProductHeroActions>
               <NotPWA>
                 <button type="button" onClick={handleStart} className={MATCH_CTA_CLASS}>

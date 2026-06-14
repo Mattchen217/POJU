@@ -1,5 +1,13 @@
 /* App-mode product marketing landings — sticky top bar, hero CTAs, desktop hint */
 
+html.pwa-mode {
+  overscroll-behavior-y: none;
+}
+
+html.pwa-mode body {
+  overscroll-behavior-y: none;
+}
+
 .app-mode-product-topbar {
   position: sticky;
   top: 0;
@@ -8,8 +16,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: max(8px, env(safe-area-inset-top)) 12px 10px;
-  background: rgba(7, 5, 15, 0.88);
+  margin-top: calc(-1 * env(safe-area-inset-top, 0px));
+  padding: env(safe-area-inset-top, 0px) 12px 8px;
+  min-height: calc(44px + env(safe-area-inset-top, 0px));
+  background: rgba(7, 5, 15, 0.92);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
@@ -22,11 +32,20 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.pwa-mode .product-page--poju .product-hero__shell,
-.pwa-mode .product-page--glyph .product-hero__shell,
-.pwa-mode .product-page--syncro .product-hero__shell,
-.pwa-mode .product-page--match .product-hero__shell {
-  padding-top: clamp(28px, 6vw, 48px);
+.pwa-mode .site-chrome-main {
+  padding-top: 0 !important;
+}
+
+.pwa-mode .product-page--poju > div,
+.pwa-mode .product-page--glyph > div,
+.pwa-mode .product-page--syncro > div,
+.pwa-mode .product-page--match > div,
+.pwa-mode .match-home > div:first-of-type {
+  padding-top: 0;
+}
+
+.pwa-mode .pj-page--home .ds-home-hero {
+  margin-top: 0;
 }
 
 .app-mode-hero-actions {

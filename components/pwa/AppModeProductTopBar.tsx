@@ -9,7 +9,7 @@ import { PWAOnly } from "@/components/pwa/PWAConditional";
 
 import "@/styles/app-mode-product.css";
 
-/** Sticky logo + language switcher on product marketing landings (app mode only). */
+/** Sticky logo + language switcher (app mode — home + product landings). */
 export function AppModeProductTopBar() {
   const t = useTranslations("common");
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { useRouter } from "@/i18n/navigation";
@@ -23,12 +23,24 @@ export type BeginButtonProps = {
   price: string;
   /** When true, show free label if the device has not used the free tier yet. */
   freeFirstTime?: boolean;
+  /** Match desktop marketing hero CTA copy instead of generic Begin / free_first_time. */
+  useMarketingLabels?: boolean;
 };
 
-export function BeginButton({ productId, price, freeFirstTime = true }: BeginButtonProps) {
+export function BeginButton({
+  productId,
+  price,
+  freeFirstTime = true,
+  useMarketingLabels = false,
+}: BeginButtonProps) {
   const router = useRouter();
   const locale = useLocale();
-  const t = useTranslations(`${productId}.begin`);
+  const tBegin = useTranslations(`${productId}.begin`);
+  const tPojuHero = useTranslations("marketingSite.poju.hero");
+  const tGlyphHero = useTranslations("marketingSite.glyph.hero");
+  const tGlyphProduct = useTranslations("glyph");
+  const tSyncroHero = useTranslations("marketingSite.syncro.hero");
+  const tMatchHome = useTranslations("match.home");
   const [canUseFree, setCanUseFree] = useState(false);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -67,6 +79,48 @@ export function BeginButton({ productId, price, freeFirstTime = true }: BeginBut
       cancelled = true;
     };
   }, [productId, freeFirstTime]);
+
+  const labels = useMemo(() => {
+    const eligibleFree = freeFirstTime && canUseFree;
+
+    if (!useMarketingLabels) {
+      return {
+        main: tBegin("start"),
+        sub: eligibleFree ? tBegin("free_first_time") : price,
+      };
+    }
+
+    switch (productId) {
+      case "poju":
+        return { main: tPojuHero("cta_primary"), sub: null as string | null };
+      case "glyph":
+        return {
+          main: eligibleFree ? tGlyphHero("cta") : tGlyphProduct("start_paid"),
+          sub: tGlyphHero("cta_subline"),
+        };
+      case "syncro":
+        return { main: tSyncroHero("cta"), sub: null as string | null };
+      case "match":
+        return {
+          main: eligibleFree ? tMatchHome("cta_free") : tMatchHome("cta_paid"),
+          sub: eligibleFree ? tMatchHome("free_note") : tMatchHome("paid_note"),
+        };
+      default:
+        return { main: tBegin("start"), sub: price };
+    }
+  }, [
+    canUseFree,
+    freeFirstTime,
+    price,
+    productId,
+    tBegin,
+    tGlyphHero,
+    tGlyphProduct,
+    tMatchHome,
+    tPojuHero,
+    tSyncroHero,
+    useMarketingLabels,
+  ]);
 
   async function startPoju() {
     await runPOJUV4SessionMaintenance();
@@ -125,8 +179,6 @@ export function BeginButton({ productId, price, freeFirstTime = true }: BeginBut
     }
   }
 
-  const priceLabel = freeFirstTime && canUseFree ? t("free_first_time") : price;
-
   return (
     <>
       <button
@@ -135,8 +187,8 @@ export function BeginButton({ productId, price, freeFirstTime = true }: BeginBut
         disabled={!ready || busy}
         onClick={() => void handleClick()}
       >
-        <span className="begin-btn-main">{busy ? "…" : t("start")}</span>
-        {ready ? <span className="begin-btn-price">{priceLabel}</span> : null}
+        <span className="begin-btn-main">{busy ? "…" : labels.main}</span>
+        {ready && labels.sub ? <span className="begin-btn-price">{labels.sub}</span> : null}
       </button>
 
       {productId === "poju" && pickerSessions ? (

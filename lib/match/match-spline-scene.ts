@@ -41,15 +41,19 @@ export const MATCH_SPLINE_CARD_OFFSET_X_PX = 14;
 
 /** Camera zoom — smaller = wider framing (less top/bottom crop in canvas). */
 export const MATCH_SPLINE_HERO_ZOOM = 0.1;
-export const MATCH_SPLINE_HERO_PWA_ZOOM = 0.092;
+export const MATCH_SPLINE_HERO_PWA_ZOOM = 0.078;
+export const MATCH_SPLINE_HERO_RADIUS_FACTOR = 1.15;
+export const MATCH_SPLINE_HERO_PWA_RADIUS_FACTOR = 2.8;
 /**
  * Pre-expand shell scale (see `.match-hero-spline`) — must match CSS var.
  * Larger = bigger on page; do not scale inset:0 directly (clips top/bottom).
  */
 export const MATCH_SPLINE_HERO_DISPLAY_SCALE = 0.8;
-export const MATCH_SPLINE_HERO_PWA_DISPLAY_SCALE = 0.72;
+export const MATCH_SPLINE_HERO_PWA_DISPLAY_SCALE = 0.68;
 /** Extra vertical room in shell before scale — keeps particle wisps uncropped. */
 export const MATCH_SPLINE_HERO_SHELL_HEIGHT_RATIO = 1.38;
+export const MATCH_SPLINE_HERO_SHELL_WIDTH_RATIO = 1.35;
+export const MATCH_SPLINE_HERO_PWA_SHELL_WIDTH_RATIO = 1.55;
 /** Vertical nudge after centering — negative moves up. */
 export const MATCH_SPLINE_HERO_SHELL_OFFSET_Y = "0%";
 

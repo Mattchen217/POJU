@@ -2,9 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { useIsPwaMode } from "@/components/pwa/PWAConditional";
+
 const SHOW_AFTER_PX = 360;
 
 export function ScrollToTopButton() {
+  const isAppMode = useIsPwaMode();
   const [visible, setVisible] = useState(false);
 
   const update = useCallback(() => {
@@ -21,7 +24,7 @@ export function ScrollToTopButton() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
-  if (!visible) return null;
+  if (isAppMode !== false || !visible) return null;
 
   return (
     <button

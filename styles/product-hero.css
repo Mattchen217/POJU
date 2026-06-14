@@ -62,11 +62,12 @@
 .match-hero-spline {
   --match-hero-shell-scale: var(--match-spline-display-scale, 0.8);
   --match-hero-shell-height-ratio: 1.38;
+  --match-hero-shell-width-ratio: 1.35;
   --match-hero-shell-offset-y: 0%;
   position: absolute;
   left: 50%;
   top: 50%;
-  width: calc(100% / var(--match-hero-shell-scale));
+  width: calc(100% * var(--match-hero-shell-width-ratio, 1.35) / var(--match-hero-shell-scale));
   height: calc(100% * var(--match-hero-shell-height-ratio) / var(--match-hero-shell-scale));
   min-height: 0;
   transform: translate(-50%, calc(-50% + var(--match-hero-shell-offset-y, 0px)))
@@ -135,22 +136,27 @@
 
 .pwa-mode .product-page--match .product-hero {
   overflow: visible;
+  overflow-x: visible;
 }
 
 .pwa-mode .product-page--match .product-hero__shell {
   overflow: visible;
-  padding-top: max(var(--space-6), env(safe-area-inset-top, 0px));
+  padding-top: clamp(12px, 3vw, 24px);
 }
 
 .pwa-mode .product-hero__bg--match {
   left: 50%;
   right: auto;
   width: 100vw;
+  max-width: none;
   transform: translateX(-50%);
+  overflow: visible;
 }
 
 .pwa-mode .match-hero-spline {
   opacity: 0.88;
+  --match-hero-shell-width-ratio: 1.55;
+  --match-hero-shell-height-ratio: 1.48;
 }
 
 /* Glyph — 圆形粒子场：缩小 zoom + 全屏层，避免方框裁切 */
