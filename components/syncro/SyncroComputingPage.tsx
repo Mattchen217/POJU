@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 
 import { useRouter } from "@/i18n/navigation";
 import { saveSyncroToArchive } from "@/lib/archive/archive-service";
-import { markArchiveUnread } from "@/lib/archive/archive-unread";
+import { registerPendingDeliveryArchive } from "@/lib/archive/archive-delivery-pending";
 import { createSyncroSession } from "@/lib/syncro/syncro-session";
 import { computeSyncroSessionExpiresAt } from "@/lib/syncro/syncro-submission-timeline";
 import { recordUsage } from "@/lib/syncro/device-usage";
@@ -31,14 +31,6 @@ export function SyncroComputingPage() {
   const [step, setStep] = useState(0);
   const [error, setError] = useState<SyncroComputeErrorView | null>(null);
   const startedRef = useRef(false);
-  const mountedRef = useRef(true);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
 
   const steps = [
     t("step_1"),
@@ -173,9 +165,12 @@ export function SyncroComputingPage() {
           expires_at: expiresAt,
           locale,
         });
-        if (!mountedRef.current) {
-          markArchiveUnread(archiveId, "syncro");
-        }
+        registerPendingDeliveryArchive({
+          archive_id: archiveId,
+          product: "syncro",
+          session_id: sessionId,
+          created_at: new Date().toISOString(),
+        });
       } catch (e) {
         console.error("[syncro/computing] Archive save failed:", e);
       }

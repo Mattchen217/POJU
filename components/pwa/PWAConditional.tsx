@@ -2,8 +2,14 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 
-import { detectDeviceCapability } from "@/lib/syncro/device-capability";
+import { detectDeviceCapability, isAppMode } from "@/lib/syncro/device-capability";
 
+/**
+ * `useIsPwaMode` reports “app mode” (installed PWA OR mobile/tablet browser),
+ * matching the `pwa-mode` class on <html>. PWAOnly / NotPWA therefore treat a
+ * mobile browser exactly like the installed PWA — e.g. the product Begin button
+ * (PWAOnly) shows and the long marketing intro (NotPWA) hides on both.
+ */
 export function useIsPwaMode(): boolean | null {
   const [isPWA, setIsPWA] = useState<boolean | null>(null);
 
@@ -13,7 +19,7 @@ export function useIsPwaMode(): boolean | null {
     }
 
     void detectDeviceCapability().then((cap) => {
-      setIsPWA(cap.isPWA);
+      setIsPWA(isAppMode(cap));
     });
 
     syncFromDom();

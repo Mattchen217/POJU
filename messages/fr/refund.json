@@ -1,0 +1,174 @@
+{
+  "meta": {
+    "title": "Politique de remboursement",
+    "version": "Version 1.0",
+    "updated": "Last updated: 2026-05-23"
+  },
+  "closing": "",
+  "blocks": [
+    {
+      "kind": "h2",
+      "text": "Notre promesse"
+    },
+    {
+      "kind": "p",
+      "text": "Nous voulons que chaque achat payant sur pojulife soit un achat que vous êtes heureux d'avoir fait. En cas de problème, nous travaillons avec vous pour le résoudre."
+    },
+    {
+      "kind": "h2",
+      "text": "Quand vous avez droit à un remboursement intégral"
+    },
+    {
+      "kind": "p",
+      "text": "Nous accordons un remboursement intégral dans les situations suivantes :"
+    },
+    {
+      "kind": "h3",
+      "text": "1. Défaillance technique"
+    },
+    {
+      "kind": "p",
+      "text": "Si un problème technique vous a empêché d'accéder à la session ou à la lecture achetée, vous avez droit à un remboursement intégral dans les 7 jours suivant l'achat."
+    },
+    {
+      "kind": "p",
+      "text": "Exemples :"
+    },
+    {
+      "kind": "ul",
+      "items": [
+        "Service d'IA indisponible pendant votre session",
+        "L'envoi du PDF a échoué et n'a pas pu être résolu",
+        "Paiement traité mais aucun accès accordé"
+      ]
+    },
+    {
+      "kind": "h3",
+      "text": "2. Session non utilisée"
+    },
+    {
+      "kind": "p",
+      "text": "Si vous avez acheté une session POJU mais n'avez pas commencé la conversation, vous avez droit à un remboursement intégral dans les 24 heures suivant l'achat."
+    },
+    {
+      "kind": "p",
+      "text": "Pour Glyph, Syncro et Match, « commencé » signifie que l'IA a entamé la génération de votre lecture. Aucun remboursement n'est possible une fois la lecture générée."
+    },
+    {
+      "kind": "h3",
+      "text": "3. Débits en double"
+    },
+    {
+      "kind": "p",
+      "text": "Si vous avez été débité plusieurs fois pour le même achat, nous rembourserons immédiatement tous les doublons."
+    },
+    {
+      "kind": "h3",
+      "text": "4. Débits frauduleux ou non autorisés"
+    },
+    {
+      "kind": "p",
+      "text": "Si un débit a été effectué sans votre autorisation, contactez-nous immédiatement. Nous procéderons au remboursement et vous aiderons à sécuriser votre compte."
+    },
+    {
+      "kind": "h2",
+      "text": "Ce qui n'est pas remboursable"
+    },
+    {
+      "kind": "p",
+      "text": "Nous n'accordons pas de remboursement pour :"
+    },
+    {
+      "kind": "ul",
+      "items": [
+        "L'insatisfaction à l'égard du contenu généré par l'IA. Les résultats de l'IA sont par nature subjectifs et peuvent ne pas correspondre aux attentes de chaque utilisateur.",
+        "Un changement d'avis après le début d'une session ou la génération d'une lecture. Une fois délivré, le service a été exécuté.",
+        "Les demandes soumises plus de 7 jours après l'achat.",
+        "La première utilisation gratuite de Glyph, Syncro ou Match. Elles sont sans frais, il n'y a donc rien à rembourser."
+      ]
+    },
+    {
+      "kind": "h2",
+      "text": "Clarté sur les abonnements"
+    },
+    {
+      "kind": "p",
+      "text": "pojulife ne propose pas d'abonnements. Tous les achats payants sont des paiements uniques pour un service précis :"
+    },
+    {
+      "kind": "ul",
+      "items": [
+        "POJU : $9.99 par session (accès de 30 jours)",
+        "Glyph : $4.99 par lecture (après la première gratuite)",
+        "Syncro : $4.99 par fenêtre en direct de 24 heures (après la première gratuite)",
+        "Match : $4.99 par lecture (après la première gratuite)"
+      ]
+    },
+    {
+      "kind": "p",
+      "text": "Il n'y a ni renouvellement automatique, ni frais récurrents, ni frais cachés. Chaque achat est une transaction unique et transparente."
+    },
+    {
+      "kind": "h2",
+      "text": "Comment demander un remboursement"
+    },
+    {
+      "kind": "p",
+      "text": "Pour demander un remboursement :"
+    },
+    {
+      "kind": "ul",
+      "items": [
+        "Écrivez à support@pojulife.com dans le délai applicable (généralement 7 jours).",
+        "Indiquez : l'identifiant de confirmation de votre paiement (figurant sur l'e-mail de reçu) ; le nom du produit (POJU / Glyph / Syncro / Match) ; et une brève description de la raison de votre demande de remboursement.",
+        "Nous examinerons votre demande sous 2 jours ouvrés.",
+        "En cas d'approbation, les remboursements sont traités sous 5 à 10 jours ouvrés sur votre moyen de paiement d'origine."
+      ]
+    },
+    {
+      "kind": "h2",
+      "text": "Ce qui se passe après un remboursement"
+    },
+    {
+      "kind": "p",
+      "text": "Lorsqu'un remboursement est approuvé :"
+    },
+    {
+      "kind": "ul",
+      "items": [
+        "La session, la lecture ou la fenêtre est désactivée.",
+        "Les éventuelles données locales associées sur votre appareil y restent, sauf si vous choisissez de les supprimer.",
+        "Tout e-mail recueilli pour l'envoi du PDF est définitivement supprimé (conformément à notre pratique habituelle — voir la Politique de confidentialité)."
+      ]
+    },
+    {
+      "kind": "h2",
+      "text": "Rétrofacturations"
+    },
+    {
+      "kind": "p",
+      "text": "Si vous contestez un débit directement auprès de votre banque ou de votre fournisseur de carte (une rétrofacturation) sans nous contacter au préalable, il se peut que nous ne puissions pas vous offrir notre processus d'assistance habituel. Nous vous encourageons vivement à écrire d'abord à support@pojulife.com — nous résolvons la plupart des problèmes plus vite que les procédures de rétrofacturation."
+    },
+    {
+      "kind": "h2",
+      "text": "Questions"
+    },
+    {
+      "kind": "p",
+      "text": "Questions sur cette Politique de remboursement :"
+    },
+    {
+      "kind": "contact",
+      "lines": [
+        {
+          "label": "",
+          "email": "support@pojulife.com"
+        }
+      ]
+    },
+    {
+      "kind": "p",
+      "text": "Nous répondons généralement sous 24 heures."
+    }
+  ]
+}

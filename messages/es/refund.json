@@ -1,0 +1,174 @@
+{
+  "meta": {
+    "title": "Política de reembolsos",
+    "version": "Version 1.0",
+    "updated": "Last updated: 2026-05-23"
+  },
+  "closing": "",
+  "blocks": [
+    {
+      "kind": "h2",
+      "text": "Nuestra promesa"
+    },
+    {
+      "kind": "p",
+      "text": "Queremos que cada compra de pago en pojulife sea una de la que te alegres. Si algo sale mal, colaboramos contigo para solucionarlo."
+    },
+    {
+      "kind": "h2",
+      "text": "Cuándo tienes derecho a un reembolso completo"
+    },
+    {
+      "kind": "p",
+      "text": "Emitimos reembolsos completos en las siguientes situaciones:"
+    },
+    {
+      "kind": "h3",
+      "text": "1. Fallo técnico"
+    },
+    {
+      "kind": "p",
+      "text": "Si un problema técnico te impidió acceder a la sesión o lectura que compraste, tienes derecho a un reembolso completo dentro de los 7 días posteriores a la compra."
+    },
+    {
+      "kind": "p",
+      "text": "Ejemplos:"
+    },
+    {
+      "kind": "ul",
+      "items": [
+        "El servicio de IA no estuvo disponible durante tu sesión",
+        "La entrega del PDF falló y no pudo resolverse",
+        "Se procesó el pago pero no se concedió el acceso"
+      ]
+    },
+    {
+      "kind": "h3",
+      "text": "2. Sesión no utilizada"
+    },
+    {
+      "kind": "p",
+      "text": "Si compraste una sesión de POJU pero no has iniciado la conversación, tienes derecho a un reembolso completo dentro de las 24 horas posteriores a la compra."
+    },
+    {
+      "kind": "p",
+      "text": "En el caso de Glyph, Syncro y Match, «iniciado» significa que la IA ha empezado a generar tu lectura. No hay reembolsos una vez generada una lectura."
+    },
+    {
+      "kind": "h3",
+      "text": "3. Cargos duplicados"
+    },
+    {
+      "kind": "p",
+      "text": "Si se te cobró más de una vez por la misma compra, reembolsaremos todos los duplicados de inmediato."
+    },
+    {
+      "kind": "h3",
+      "text": "4. Cargos fraudulentos o no autorizados"
+    },
+    {
+      "kind": "p",
+      "text": "Si se realizó un cargo sin tu autorización, contáctanos de inmediato. Te reembolsaremos y colaboraremos contigo para proteger tu cuenta."
+    },
+    {
+      "kind": "h2",
+      "text": "Qué no es reembolsable"
+    },
+    {
+      "kind": "p",
+      "text": "No ofrecemos reembolsos por:"
+    },
+    {
+      "kind": "ul",
+      "items": [
+        "Insatisfacción con el contenido generado por IA. Los resultados de la IA son intrínsecamente subjetivos y pueden no coincidir con las expectativas de cada usuario.",
+        "Cambios de opinión después de iniciar una sesión o de generar una lectura. Una vez entregado, el servicio ya se ha prestado.",
+        "Solicitudes presentadas más de 7 días después de la compra.",
+        "El primer uso gratuito de Glyph, Syncro o Match. No conllevan ningún cargo, así que no hay nada que reembolsar."
+      ]
+    },
+    {
+      "kind": "h2",
+      "text": "Claridad sobre las suscripciones"
+    },
+    {
+      "kind": "p",
+      "text": "pojulife no ofrece suscripciones. Todas las compras de pago son cargos únicos por un servicio concreto:"
+    },
+    {
+      "kind": "ul",
+      "items": [
+        "POJU: $9.99 por sesión (acceso de 30 días)",
+        "Glyph: $4.99 por lectura (tras la primera gratuita)",
+        "Syncro: $4.99 por ventana en vivo de 24 horas (tras la primera gratuita)",
+        "Match: $4.99 por lectura (tras la primera gratuita)"
+      ]
+    },
+    {
+      "kind": "p",
+      "text": "No hay renovaciones automáticas, cargos recurrentes ni comisiones ocultas. Cada compra es una transacción única y transparente."
+    },
+    {
+      "kind": "h2",
+      "text": "Cómo solicitar un reembolso"
+    },
+    {
+      "kind": "p",
+      "text": "Para solicitar un reembolso:"
+    },
+    {
+      "kind": "ul",
+      "items": [
+        "Escribe a support@pojulife.com dentro del plazo aplicable (normalmente 7 días).",
+        "Incluye: el ID de confirmación de tu pago (del correo de recibo); el nombre del producto (POJU / Glyph / Syncro / Match); y una breve descripción del motivo por el que solicitas el reembolso.",
+        "Revisaremos tu solicitud en un plazo de 2 días hábiles.",
+        "Si se aprueba, los reembolsos se procesan en un plazo de 5 a 10 días hábiles a tu método de pago original."
+      ]
+    },
+    {
+      "kind": "h2",
+      "text": "Qué ocurre tras un reembolso"
+    },
+    {
+      "kind": "p",
+      "text": "Cuando se aprueba un reembolso:"
+    },
+    {
+      "kind": "ul",
+      "items": [
+        "La sesión, la lectura o la ventana se desactiva.",
+        "Cualquier dato local asociado en tu dispositivo permanece ahí salvo que decidas eliminarlo.",
+        "Cualquier correo que recopilamos para la entrega del PDF se elimina de forma permanente (según nuestra práctica habitual; consulta la Política de privacidad)."
+      ]
+    },
+    {
+      "kind": "h2",
+      "text": "Contracargos"
+    },
+    {
+      "kind": "p",
+      "text": "Si disputas un cargo directamente con tu banco o emisor de tarjeta (un contracargo) sin contactarnos primero, es posible que no podamos ofrecerte nuestro proceso de soporte habitual. Te recomendamos encarecidamente que escribas primero a support@pojulife.com: resolvemos la mayoría de los problemas más rápido que los procesos de contracargo."
+    },
+    {
+      "kind": "h2",
+      "text": "Preguntas"
+    },
+    {
+      "kind": "p",
+      "text": "Preguntas sobre esta Política de reembolsos:"
+    },
+    {
+      "kind": "contact",
+      "lines": [
+        {
+          "label": "",
+          "email": "support@pojulife.com"
+        }
+      ]
+    },
+    {
+      "kind": "p",
+      "text": "Solemos responder en un plazo de 24 horas."
+    }
+  ]
+}

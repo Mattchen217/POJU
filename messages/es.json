@@ -369,6 +369,11 @@
         ],
         "cta": "Start a POJU session — $9.99",
         "footnote": "One question · Unlimited depth · Deletes when you close"
+      },
+      "what_is": {
+        "title": "¿Qué es POJU?",
+        "subtitle": "El agente de diálogo",
+        "body": "POJU es un compañero cognitivo de IA conversacional basado en el marco de la Teoría de los Cinco Elementos de Oriente (Wu Xing) y el I Ching. Traduciendo más de 2000 años de lógica sistémica a un modelo analítico moderno, POJU calcula tu plano espaciotemporal personalizado a partir de tus coordenadas de nacimiento y tu hora solar verdadera. Ante un dilema central, POJU actúa como tu panel de decisión estratégica, cruzando tu perfil elemental con tu situación concreta. El sistema ofrece un análisis profundo del comportamiento, vías de avance estratégicas y sugerencias prácticas de ajuste del entorno, acompañado de un ciclo de apoyo continuo de 30 días que facilita una calibración dinámica a medida que tu situación evoluciona."
       }
     },
     "glyph": {
@@ -475,6 +480,11 @@
         ],
         "cta": "Try Glyph free",
         "footnote": "Read with a wink. The patterns mirror what's happening."
+      },
+      "what_is": {
+        "title": "¿Qué es Glyph?",
+        "subtitle": "El espejo metafórico",
+        "body": "Glyph es una herramienta de reflexión arquetípica enraizada en la taxonomía situacional de los 64 hexagramas del I Ching y en la matriz energética de los Cinco Elementos. Tras trazar tu plano espaciotemporal de base, Glyph emplea una matriz de caos aleatorio —alineada con el principio psicológico de la sincronicidad— a través de una interfaz inmersiva de explosión de partículas para alinear tu estado subconsciente con una de las 100 metáforas situacionales clásicas de los textos filosóficos de Oriente. Una arquitectura LLM profunda deconstruye después la conexión entre la metáfora y tu perfil personal. Glyph evita rigurosamente cualquier pronóstico determinista; en su lugar, funciona como un espejo cognitivo estructurado que transforma el caos interno en una autoconciencia clara y accionable."
       }
     },
     "syncro": {
@@ -503,7 +513,8 @@
         ],
         "footnote": "Refreshes every two hours through your 24-hour window.",
         "preview_label": "Vista previa",
-        "preview_placeholder": "Marcador de posición del mockup del teléfono — sustituir por una captura de Syncro cuando esté listo."
+        "preview_placeholder": "Marcador de posición del mockup del teléfono — sustituir por una captura de Syncro cuando esté listo.",
+        "preview_mode_hint": "Toca Brújula / RA / Mapa abajo para cambiar de vista — igual que en la app instalada."
       },
       "use_cases": {
         "heading": "Dónde encaja Syncro.",
@@ -603,6 +614,24 @@
       "why_mobile": {
         "heading": "Why mobile only",
         "body": "Syncro reads your phone's compass and (optionally) camera to align with real-world direction. This requires a mobile device. On desktop, we'll show you a QR code to open Syncro on your phone."
+      },
+      "what_is": {
+        "title": "¿Qué es Syncro?",
+        "subtitle": "El mapa de eficiencia",
+        "body": "Syncro es una matriz de eficiencia espaciotemporal basada en la lógica direccional del I Ching y el marco de los Cinco Elementos. Al analizar la alineación energética entre tu perfil personal y una tarea próxima, Syncro traza un mapa de eficiencia completo para las próximas 24 horas. A lo largo de 8 direcciones espaciales, descodifica la resonancia y la fricción del entorno y las clasifica en cinco corrientes esenciales: Corriente Abierta (avanza con confianza), Corriente Favorable (el camino te apoya, con esfuerzo), Aguas Quietas (detente y observa), Contracorriente (reconsidera esta dirección o este momento) y Resaca (fricción intensa: se recomienda cambiar de rumbo). A modo de mapa meteorológico espaciotemporal de alta precisión, Syncro ayuda a optimizar el momento y la orientación de los empeños importantes para minimizar la fricción del entorno."
+      },
+      "pwa_guide": {
+        "title": "Instala Syncro en tu teléfono",
+        "subtitle": "Syncro solo funciona como app instalada en tu pantalla de inicio. Sigue los pasos para tu teléfono más abajo.",
+        "ios_browser_note": "Abre pojulife.com/syncro solo en Safari — los demás navegadores del iPhone no pueden instalar la app.",
+        "android_browser_note": "Abre pojulife.com/syncro solo en Chrome — los demás navegadores de Android no pueden instalar la app completa.",
+        "ios_step_4": "Sal de Safari y abre pojulife desde el icono de tu pantalla de inicio.",
+        "android_step_1": "Toca el botón Compartir en Chrome (o el menú ⋮ si Compartir está dentro).",
+        "android_step_2": "Elige Añadir a la pantalla de inicio o Instalar app.",
+        "android_step_3": "Toca Instalar o Añadir para confirmar.",
+        "android_step_4": "Sal de Chrome y abre pojulife desde el icono de tu pantalla de inicio.",
+        "footer_note": "Tras instalarla, abre Syncro siempre desde el icono de pojulife en tu pantalla de inicio, no desde una pestaña del navegador.",
+        "close": "Entendido"
       }
     },
     "footer": {
@@ -660,7 +689,8 @@
       "skip_use_default": "I'm not sure — use defaults",
       "default_note": "Defaults use timezone center longitude ({timezone}).",
       "confirm_city": "Use this city",
-      "back": "Back to birth details"
+      "back": "Back to birth details",
+      "location_required_note": "Confirma tu ciudad de nacimiento o busca otra. pojulife usa la hora solar verdadera para un pilar horario preciso."
     },
     "upgrade": {
       "title": "Update for precise calculations",
@@ -679,7 +709,8 @@
       "base_analysis_regenerated": "Base analysis regenerated.",
       "done": "Done",
       "male": "Male",
-      "female": "Female"
+      "female": "Female",
+      "search_birth_city": "Busca tu ciudad de nacimiento"
     }
   },
   "profile_selector": {
@@ -726,7 +757,9 @@
     "generating_base_analysis": "Generating… this may take a few minutes.",
     "base_analysis_ready": "Saved base analysis is already on this device.",
     "base_analysis_error": "Could not generate",
-    "base_analysis_note": "Optional: run a one-time deep base reading for this chart. It is cached on this device and uses your OpenRouter key on the server."
+    "base_analysis_note": "Optional: run a one-time deep base reading for this chart. It is cached on this device and uses your OpenRouter key on the server.",
+    "view_analysis": "Ver análisis del perfil",
+    "birth_location_default": "Predeterminado (meridiano de la zona horaria)"
   },
   "poju": {
     "chat": {
@@ -755,12 +788,98 @@
       "final_delivery_hint": "Step 9: after Step 8 cache exists, generate the long-form delivery in your language (same DeepSeek model as Steps 7–8). Requires OPENROUTER_API_KEY on the server.",
       "final_delivery_run": "Final delivery",
       "final_delivery_running": "Generating delivery…",
-      "final_delivery_done": "Final delivery saved to this session."
+      "final_delivery_done": "Final delivery saved to this session.",
+      "stop_generating": "Detener",
+      "generation_stopped": "Generación detenida.",
+      "thinking_wait": "POJU está pensando…",
+      "edit_message": "Editar",
+      "edit_message_title": "Editar mensaje",
+      "edit_message_prompt": "Cambia tu mensaje. Todo lo posterior se eliminará y la conversación continuará desde aquí.",
+      "thinking_process_full": "Ver el razonamiento completo",
+      "thinking_analyzing_chart": "DeepSeek está analizando tu perfil de base…",
+      "profile_save_failed": "No se pudo guardar tu perfil de nacimiento en este dispositivo. Prueba con otro navegador, desactiva el modo privado o libera espacio y vuelve a intentarlo.",
+      "profile_saved_chat_failed": "Tu perfil de nacimiento se guardó en este dispositivo, pero POJU no pudo enviar el mensaje de seguimiento. Revisa tu conexión y envía cualquier mensaje para continuar.",
+      "agent_phase_label": "Fase del agente",
+      "agent_phase_opening": "Apertura",
+      "agent_phase_greeting": "Saludo",
+      "agent_phase_awaiting_profile": "Esperando el perfil de nacimiento",
+      "agent_phase_collecting": "Recopilando contexto",
+      "agent_phase_confirm": "Confirmar resumen",
+      "agent_phase_delivered": "Entregado",
+      "agent_phase_tracking": "Seguimiento",
+      "context_summary_title": "Confirma lo que entendimos",
+      "context_summary_hint": "Revisa los datos de abajo. Al confirmar, POJU realiza un análisis profundo y entrega tu lectura completa.",
+      "context_summary_confirm": "Confirmar y generar la lectura",
+      "context_summary_confirming": "Generando tu lectura…",
+      "context_summary_edit_chat": "Añadir detalles en el chat",
+      "profile_picker_in_chat_title": "Vincula un perfil de nacimiento a esta sesión",
+      "profile_picker_in_chat_hint": "Elige un perfil guardado o añade datos de nacimiento. El análisis permanece en este dispositivo.",
+      "birth_flow_intro_title": "Datos personales para una guía más profunda",
+      "birth_flow_intro_body": "Para entender mejor tu situación, necesito la fecha, la hora y el género de nacimiento para crear un perfil de personalidad.\n\nTus datos se guardan solo en este dispositivo, no en nuestros servidores.",
+      "birth_flow_privacy_badge": "Guardado solo localmente en tu dispositivo",
+      "birth_flow_intro_cta_hint": "Cuando hayas leído el mensaje de POJU de arriba, continúa aquí para introducir los datos de nacimiento (se guardan solo en este dispositivo).",
+      "birth_flow_continue": "Continuar al formulario",
+      "birth_flow_skip": "Omitir por ahora",
+      "birth_flow_analyzing_title": "Analizando tu perfil…",
+      "birth_flow_analysis_done_short": "Análisis completo",
+      "birth_flow_analysis_partial": "Guardado — el análisis se reintentará más tarde",
+      "birth_flow_step_received": "Datos de nacimiento recibidos y guardados en este dispositivo",
+      "birth_flow_step_analyzing": "Ejecutando el análisis del perfil de base",
+      "birth_flow_step_done": "Listo para continuar la conversación",
+      "dialog_ok": "Aceptar",
+      "dialog_cancel": "Cancelar",
+      "dialog_connection_error": "Problema de conexión. Inténtalo de nuevo.",
+      "dialog_create_session_error": "No se puede crear una nueva sesión en este momento. Inténtalo de nuevo.",
+      "dialog_payment_redirect_failed": "No se pudo abrir la página de pago. Inténtalo de nuevo.",
+      "dialog_speech_unsupported": "La entrada de voz no es compatible con este navegador.",
+      "dialog_speech_denied": "Se denegó el acceso al micrófono. Permite el micrófono en los ajustes del navegador para usar la entrada de voz.",
+      "voice_input_start": "Iniciar entrada de voz",
+      "voice_input_stop": "Detener entrada de voz",
+      "dialog_delete_session": "¿Eliminar esta sesión?",
+      "dialog_delete_session_confirm": "¿Eliminar permanentemente esta sesión de este dispositivo? Esto no se puede deshacer.",
+      "dialog_delete_session_bilingual": "¿Eliminar permanentemente esta sesión de este dispositivo? Esto no se puede deshacer.\n\n从本设备永久删除该会话？此操作不可撤销。",
+      "dialog_rename_session": "Editar el título de la sesión",
+      "dialog_rename_placeholder": "Título de la sesión",
+      "session_menu_label": "Opciones de la sesión",
+      "session_menu_rename": "Cambiar nombre",
+      "session_menu_delete": "Eliminar",
+      "sidebar_brand_name": "POJU",
+      "sidebar_sessions_label": "Sesiones recientes",
+      "sidebar_session_active": "ACTIVA AHORA",
+      "active_session_title": "Reanudar la sesión de POJU",
+      "active_session_body": "Ya tienes una sesión de POJU activa en este dispositivo. Ábrela ahora o quédate en esta página.",
+      "active_session_open": "Abrir sesión",
+      "pipeline_busy": "Ejecutando el flujo de análisis…",
+      "advanced_pipeline": "Avanzado (pasos manuales)",
+      "message_action_copy": "Copiar mensaje",
+      "message_action_copied": "Copiado",
+      "message_action_read_aloud": "Leer en voz alta",
+      "message_action_stop_reading": "Detener lectura",
+      "attach_menu_label": "Adjuntar archivo",
+      "attach_menu_document": "Documento",
+      "attach_menu_image": "Imagen",
+      "attach_menu_pdf": "PDF",
+      "session_picker": {
+        "close": "Cerrar",
+        "new_poju": "+ New POJU",
+        "price": "$9.99",
+        "existing_label": "Tus sesiones activas",
+        "days_left": "{count, plural, one {# día restante} other {# días restantes}}"
+      }
     },
     "expiry": {
       "expires_in": "Quedan unos {days} días en la ventana de esta sesión.",
       "extend_30": "Ampliar 30 días",
-      "extending": "Ampliando…"
+      "extending": "Ampliando…",
+      "price": "$9.99",
+      "dialog_title_warning": "La sesión caduca pronto",
+      "dialog_title_expired": "Sesión caducada",
+      "dialog_body_warning": "A esta sesión le quedan {days} días. Cuando caduque, no podrás continuar esta conversación sobre el mismo tema. Para seguir hablando de esta cuestión tras la ventana de 30 días, paga {price} y amplíala otros 30 días.",
+      "dialog_body_expired": "Esta sesión ha caducado. Ya no puedes continuar esta conversación sobre el mismo tema. Paga {price} para ampliarla otros 30 días y retomar donde lo dejaste.",
+      "extend_30_paid": "Ampliar 30 días {price}",
+      "acknowledge": "Entendido",
+      "dont_remind": "No volver a recordármelo",
+      "redirecting_payment": "Redirigiendo al pago…"
     },
     "delivery": {
       "badge": "Lectura POJU",
@@ -808,7 +927,40 @@
       "delete_forever": "Borrar para siempre",
       "delete_confirm": "¿Eliminar permanentemente esta sesión de este dispositivo? No se puede deshacer.",
       "meta_expires": "Vence",
-      "meta_status": "Estado"
+      "meta_status": "Estado",
+      "restore_paid": "Continuar — $9.99"
+    },
+    "begin": {
+      "start": "Empezar",
+      "free_first_time": "Inicia tu sesión"
+    },
+    "tool_handoff": {
+      "banner_free": "Desde POJU · Gratis esta vez en tu sesión",
+      "banner_paid": "Desde POJU · Se aplica el precio estándar de la herramienta",
+      "return_banner": "Vuelve a POJU con este resultado",
+      "return_footer": "Volver a POJU · Continuar la conversación",
+      "returning": "Volviendo a POJU…",
+      "prefill_relationship": "Sobre tu relación con: {name}",
+      "tool_result_resume_user": "Ya volví de la herramienta — sigamos."
+    },
+    "topic_drift": {
+      "title": "Se detectó un tema diferente",
+      "start_new_session": "Abrir una nueva sesión de POJU",
+      "continue_current": "Continuar con el tema original"
+    },
+    "summary_editor": {
+      "title": "Revisa tu información",
+      "description": "Revisa cada punto de abajo. Edita lo que no sea del todo correcto o añade lo que falte.",
+      "save": "Guardar",
+      "cancel": "Cancelar",
+      "confirm_delete_item": "¿Quitar este elemento?",
+      "additional_note_placeholder": "Cualquier otra cosa que debamos saber…",
+      "add_and_continue": "Añadir y continuar",
+      "add_something": "Añadir algo que falte",
+      "back_to_conversation": "Volver al chat",
+      "confirm_generate_analysis": "Confirmar y generar la lectura",
+      "confirming": "Generando tu lectura…",
+      "note_about_processing": "Tras confirmar, POJU ejecuta un análisis profundo en este dispositivo (pasos 8–9). Esto puede tardar un minuto."
     }
   },
   "archiveVault": {
@@ -816,9 +968,18 @@
     "title": "Your Archive",
     "hero_intro": "Welcome to your private, encrypted Vault. All your journey records have been converted into local AES-encrypted data, tied exclusively to this active device.",
     "hero_points": [
-      { "icon": "lock", "text": "Zero Cloud: No accounts. Our servers store absolutely zero data." },
-      { "icon": "alert", "text": "Device-Locked: Switching phones, PCs, or browsers will result in an empty vault (no sync)." },
-      { "icon": "erase", "text": "Erase Warning: Clearing browser data, browsing via Incognito, or removing the PWA app will permanently wipe your records. They cannot be recovered." }
+      {
+        "icon": "lock",
+        "text": "Zero Cloud: No accounts. Our servers store absolutely zero data."
+      },
+      {
+        "icon": "alert",
+        "text": "Device-Locked: Switching phones, PCs, or browsers will result in an empty vault (no sync)."
+      },
+      {
+        "icon": "erase",
+        "text": "Erase Warning: Clearing browser data, browsing via Incognito, or removing the PWA app will permanently wipe your records. They cannot be recovered."
+      }
     ],
     "loading": "Cargando…",
     "load_error": "No se pudo leer tu archivo local. Cierra y vuelve a abrir la app.",
@@ -854,7 +1015,8 @@
     "syncro_open_live": "Abrir brújula en vivo",
     "syncro_start_new": "Iniciar un nuevo Syncro",
     "syncro_expired": "Esta ventana de 24 h ha terminado.",
-    "syncro_active_until": "Ventana activa hasta {date}"
+    "syncro_active_until": "Ventana activa hasta {date}",
+    "delivery_excerpt_label": "Extracto del análisis"
   },
   "glyph": {
     "subtitle": "Lectura del oráculo en 60 segundos",
@@ -904,7 +1066,11 @@
     "explore_solo": "En solitario",
     "saved_to_archive": "Esta lectura se guardó en tu Archive",
     "view_in_archive": "Ver en Archive",
-    "archive_detail_title": "Glyph: {name}"
+    "archive_detail_title": "Glyph: {name}",
+    "begin": {
+      "start": "Empezar",
+      "free_first_time": "Primera vez gratis"
+    }
   },
   "session_prep": {
     "loading": "Cargando…",
@@ -917,7 +1083,8 @@
     "female": "Mujer",
     "ready": "Analizado",
     "refund_link": "No quiero compartir — reembolsar sesión",
-    "error_create_profile": "No se pudo guardar. Inténtalo de nuevo."
+    "error_create_profile": "No se pudo guardar. Inténtalo de nuevo.",
+    "view_analysis": "Ver análisis del perfil"
   },
   "refund": {
     "title": "Reembolso de tu sesión",
@@ -997,7 +1164,8 @@
     "step_5": "Leyendo estrellas auspiciosas y dinámicas...",
     "step_6": "Comprendiendo tu fase energética actual...",
     "step_7": "Componiendo tu lectura fundamental...",
-    "step_8": "Casi listo, un momento..."
+    "step_8": "Casi listo, un momento...",
+    "error_timeout": "El análisis tardó más de lo esperado. Quédate en esta página con una conexión estable y toca Reintentar: suele funcionar al segundo intento."
   },
   "syncro": {
     "loading": "Cargando…",
@@ -1060,7 +1228,20 @@
       "go_back": "Reintentar",
       "missing_data": "Faltan tarea, perfil o ubicación. Empieza de nuevo desde Syncro.",
       "profile_not_ready": "El análisis base no está listo. Vuelve a preparar.",
-      "compute_failed": "Error en el cálculo"
+      "compute_failed": "Error en el cálculo",
+      "hint_local": "Mapeando 96 combinaciones localmente. Verás los resultados en unos segundos; el texto de la IA se refina en segundo plano.",
+      "retry": "Reintentar",
+      "error_timeout": "El servidor tardó demasiado o devolvió una respuesta no válida. Revisa tu red y vuelve a intentarlo. Si sigue ocurriendo, puede que la API esté agotando el tiempo: inténtalo en un momento.",
+      "error": {
+        "network_title": "Problema de conexión",
+        "network_message": "No se pudo contactar con el servidor. Revisa tu red o VPN y vuelve a intentarlo.",
+        "timeout_title": "Se agotó el tiempo de la solicitud",
+        "timeout_message": "El servidor tardó demasiado o devolvió una respuesta no válida. Quédate en esta página con una conexión estable y toca Reintentar.",
+        "location_title": "Se requiere ubicación",
+        "location_message": "Syncro necesita tu posición actual. Vuelve atrás, define tu ubicación e inténtalo de nuevo.",
+        "generic_title": "Error de cálculo",
+        "generic_message": "Algo salió mal al construir tu matriz. Inténtalo de nuevo en un momento."
+      }
     },
     "main": {
       "current_hour": "este periodo",
@@ -1099,7 +1280,18 @@
       "granted_message": "Ubicación recibida. Calculando tu campo…",
       "denied_title": "Se requiere ubicación",
       "denied_message": "Sin ubicación, Syncro no puede indicar la dirección. Permítela en los ajustes del navegador e inténtalo de nuevo.",
-      "retry": "Reintentar"
+      "retry": "Reintentar",
+      "manual_title": "Elige tu ubicación",
+      "manual_description": "Busca y selecciona tu ciudad actual para una sincronización precisa.",
+      "city_search_placeholder": "Buscar ciudad (p. ej., Madrid, Nueva York, Tokio)",
+      "no_cities_found": "No se encontraron ciudades. Prueba con otra ortografía.",
+      "retry_geolocation": "Intentar detectar de nuevo",
+      "confirm_title": "¿Usar esta ubicación?",
+      "confirm_hint": "Syncro la usará para calcular el momento y la dirección con precisión.",
+      "confirm_use": "Usar esta ubicación",
+      "change_location": "Elegir otra ubicación",
+      "accuracy_warning": "La posición detectada es aproximada (~{meters} m). Considera buscar tu ciudad para mayor precisión.",
+      "search_manually": "Buscar ciudad manualmente"
     },
     "task": {
       "back": "Volver a Syncro",
@@ -1113,6 +1305,137 @@
       "example_2": "Hoy debo tener una conversación difícil con mi pareja.",
       "example_3": "Esta semana firmo un contrato comercial.",
       "continue": "Continuar"
+    },
+    "begin": {
+      "start": "Empezar",
+      "free_first_time": "Primera vez gratis"
+    },
+    "home": {
+      "cta_start": "Prueba Syncro gratis",
+      "desktop_modal": {
+        "title": "Abre Syncro en tu teléfono",
+        "description": "Syncro lee la brújula y la orientación de tu teléfono para alinearse con la dirección del mundo real. Esto requiere un dispositivo móvil.",
+        "step_1": "Abre la cámara en tu teléfono",
+        "step_2": "Escanea este código QR",
+        "step_3": "Toca el enlace para abrir Syncro en tu teléfono",
+        "why_mobile": "¿Por qué solo en móvil? Syncro necesita la brújula, la cámara y la ubicación precisa de tu teléfono, funciones que los ordenadores no tienen."
+      }
+    },
+    "payment_continue_without_checkout": "Continuar a Syncro →",
+    "existing_session": {
+      "title": "¿Continuar tu lectura?",
+      "valid_for_hours": "Válida {hours} horas más",
+      "continue": "Continuar esta lectura",
+      "start_new": "Empezar una nueva lectura"
+    },
+    "llm_progress": {
+      "in_progress": "Generando texto de IA {done}/{total}…",
+      "kv_missing": "Sincronización en la nube no disponible — generando la hora actual en el dispositivo…",
+      "context_missing": "No se pudieron iniciar los lotes de IA. Vuelve a ejecutar Syncro desde tu perfil.",
+      "all_failed": "Fallaron los 12 lotes horarios. Revisa los registros de la consola y la clave de la API.",
+      "complete": "Texto de IA completo",
+      "some_failed": "Fallaron {count} lote(s) horario(s)."
+    },
+    "preparing_live": {
+      "analyzing_title": "Análisis profundo en curso…",
+      "live_hour_hint": "◐ Generando la hora actual {hour} ({range}) · la brújula se abre al terminar",
+      "background_hint": "Las horas restantes se generan en la cola de la nube después de entrar en la brújula (puedes salir de la app: los resultados se actualizan al volver).",
+      "reasoning": "Razonando…",
+      "connecting": "Conectando…",
+      "ctx_missing": "No se pudo cargar el contexto del LLM",
+      "gen_failed": "Falló la generación: {error}",
+      "ctx_missing_suffix": " (falta el contexto)",
+      "save_failed": "No se pudieron guardar los resultados",
+      "retry": "Reintentar",
+      "retrying": "Reintentando ({current}/{max})",
+      "background_progress": "En segundo plano: {done}/12 horas completadas",
+      "patience_hint": "Un análisis preciso lleva tiempo: espera con paciencia. Esto suele tardar entre 1 y 3 minutos.",
+      "title": "Generando la lectura de {hour} (hora actual)…",
+      "hint": "La brújula se abre cuando esta hora esté lista. Las horas siguientes llegan una a una.",
+      "progress": "Generando ahora {hour} · {done}/{total} completadas"
+    },
+    "modes": {
+      "aria_label": "Modo de visualización de Syncro",
+      "compass": "Brújula",
+      "ar": "RA",
+      "map": "Mapa",
+      "view": "Mapa"
+    },
+    "hour": {
+      "aria_label": "Línea temporal de periodos horarios",
+      "now": "AHORA",
+      "legend": {
+        "now": "Ahora",
+        "done": "Lista",
+        "pending": "Pendiente",
+        "failed": "Fallida"
+      },
+      "retry_failed": "Toca para reintentar la generación"
+    },
+    "why_this_current": "Por qué esta corriente",
+    "generating": "Generando la lectura…",
+    "llm_copy_failed": "Falló el texto de IA para esta dirección. Prueba con una nueva lectura de Syncro.",
+    "why_modal": {
+      "close": "Cerrar"
+    },
+    "permission": {
+      "title": "Activar brújula y cámara",
+      "description": "Syncro necesita el movimiento y la orientación para la brújula en vivo, y acceso a la cámara para el modo RA. Los permisos se guardan en este dispositivo después de concederlos una vez.",
+      "not_location_hint": "Si iOS lo pregunta, elige Permitir para movimiento y orientación: no es lo mismo que el aviso de ubicación que viste antes.",
+      "settings_hint": "Si no aparece ningún aviso: Ajustes → Safari → Acceso a movimiento y orientación → Permitir para este sitio, y vuelve a tocar Activar.",
+      "use_map_instead": "O cambia al Mapa abajo: el Mapa funciona sin la rotación de la brújula.",
+      "unsupported": "Este dispositivo no admite la rotación de la brújula. Usa el modo Mapa.",
+      "enable": "Activar brújula y cámara",
+      "requesting": "Solicitando…",
+      "skip": "Continuar sin brújula",
+      "denied_alert": "Se denegó el permiso de la brújula. La brújula no rotará, pero las demás funciones siguen disponibles.",
+      "camera_denied": "Se denegó la cámara. El modo RA volverá a preguntar cuando lo abras.",
+      "skipped_notice": "La brújula está desactivada: actívala desde los ajustes de Syncro o recarga para permitir la rotación.",
+      "resume_title": "Continuar a Syncro",
+      "resume_description": "Toca una vez para activar la brújula y la RA en esta visita. Ya concediste el acceso en este dispositivo.",
+      "resume_enable": "Continuar"
+    },
+    "posture": {
+      "hold_flat_title": "Sostén el teléfono plano",
+      "hold_flat_desc": "Coloca el teléfono boca arriba, paralelo al suelo",
+      "hold_upright_title": "Sostén el teléfono en vertical",
+      "hold_upright_desc": "Sostén el teléfono verticalmente, de frente"
+    },
+    "compass": {
+      "permission_title": "Activar brújula",
+      "permission_description": "Syncro necesita la orientación de tu dispositivo para alinear las lecturas con la dirección hacia la que miras.",
+      "grant_access": "Conceder acceso",
+      "hold_phone_flat": "Sostén el teléfono plano, con la pantalla hacia arriba"
+    },
+    "ar": {
+      "permission_title": "Activar cámara",
+      "permission_description": "El modo RA superpone la dirección en vivo sobre la vista de tu cámara. Se requiere acceso a la cámara.",
+      "grant_access": "Permitir cámara",
+      "video_label": "Vista de cámara en vivo",
+      "hold_phone_upright": "Sostén el teléfono en vertical, de frente"
+    },
+    "levels": {
+      "open": "Corriente Abierta",
+      "following": "Corriente Favorable",
+      "still": "Aguas Quietas",
+      "cross": "Contracorriente",
+      "under": "Resaca"
+    },
+    "map": {
+      "tap_hint": "Toca una dirección del anillo para explorarla"
+    },
+    "progress": {
+      "aria_label": "Línea temporal de periodos horarios",
+      "manual_selection": "Viendo un periodo horario seleccionado (no la ventana en vivo).",
+      "state_past": "Periodo horario pasado",
+      "state_live": "Periodo horario en vivo",
+      "state_selected": "Periodo horario seleccionado",
+      "state_upcoming": "Periodo horario próximo"
+    },
+    "view": {
+      "you": "TÚ",
+      "recommended": "Mejor dirección ahora",
+      "grid_subtitle": "8 direcciones"
     }
   },
   "match": {
@@ -1201,7 +1524,12 @@
         "A promise of compatibility results",
         "A replacement for professional counseling"
       ],
-      "not_footer": "Match offers perspectives, not predictions. What you do with them is entirely yours."
+      "not_footer": "Match offers perspectives, not predictions. What you do with them is entirely yours.",
+      "what_is": {
+        "title": "¿Qué es Match?",
+        "subtitle": "La matriz relacional",
+        "body": "Match es una matriz analítica de relaciones basada en la polaridad elemental de Oriente y el equilibrio estructural del Yin-Yang. Rechazando con firmeza los veredictos fatalistas de compatibilidad y la adivinación, Match ahonda en la sutil interacción sistémica entre dos planos espaciotemporales independientes. Aplicada a dinámicas relacionales concretas del mundo real —como los estilos de comunicación esenciales, las asociaciones profesionales o la convivencia doméstica a largo plazo—, Match traza las zonas de resonancia mutua y los posibles nodos de fricción. Funciona como un marco racional de acompañamiento diseñado para ofrecer herramientas de empatía mutua, que permiten a ambas partes construir una alineación estructural sostenible y constructiva."
+      }
     },
     "subtitle": "Dos cartas. Una relación. Claridad real.",
     "description": "Match entrelaza ambos charts bazi — el tuyo y el suyo — para mostrar cómo se alinean sus energías, dónde se apoyan, dónde chocan y qué hacer.",
@@ -1244,7 +1572,12 @@
       "example_4": "Un candidato que estoy considerando contratar como segundo al mando.",
       "analyze_button": "Ejecutar el Match",
       "language_hint": "Escribe en tu idioma — el informe volverá en el mismo idioma.",
-      "back": "Volver a la persona B"
+      "back": "Volver a la persona B",
+      "min_chars_remaining": "Añade {remaining} carácter(es) más para continuar",
+      "begin_match": "Empezar Match",
+      "checking": "Comprobando perfiles…",
+      "preparing_b": "Preparando el perfil de la Persona B…",
+      "starting": "Iniciando Match…"
     },
     "analyzing": {
       "step_1": "Leyendo la carta de la persona A…",
@@ -1255,7 +1588,6 @@
       "step_6": "Tejiendo el patrón de la relación…",
       "step_7": "Casi listo…",
       "hint": "Generando tu informe de compatibilidad completo. Unos 60–90 segundos.",
-      "preview_synergy": "Dinámica del sistema: {type} — generando el relato…",
       "error_title": "Análisis fallido",
       "go_back": "Reintentar",
       "missing_data": "Faltan datos de carta o relación. Empieza de nuevo desde Match.",
@@ -1263,7 +1595,8 @@
       "profile_b_not_ready": "El análisis base de la persona B no está listo.",
       "profile_not_ready": "El análisis base no está listo. Completa la preparación primero.",
       "same_profile": "Las personas A y B deben ser distintas.",
-      "analysis_failed": "El análisis Match falló. Inténtalo de nuevo."
+      "analysis_failed": "El análisis Match falló. Inténtalo de nuevo.",
+      "preview_level": "Compatibilidad local: {level} (puntuación {score}) — generando la narrativa…"
     },
     "report": {
       "title": "Informe Match",
@@ -1277,7 +1610,9 @@
       "saved_to_archive": "Guardado en tu Archive.",
       "view_archive": "Ver en Archive",
       "new_match": "Hacer otro Match",
-      "back_to_match": "Volver a Match"
+      "back_to_match": "Volver a Match",
+      "resonance_label": "Resonancia dinámica",
+      "preview_synergy": "Dinámica del sistema: {type} — generando la narrativa…"
     },
     "result": {
       "loading": "Cargando informe…",
@@ -1290,7 +1625,13 @@
       "overall": "Global",
       "top_actions": "Acciones principales",
       "view_full_report": "Ver informe completo"
-    }
+    },
+    "begin": {
+      "start": "Empezar",
+      "free_first_time": "Primera vez gratis"
+    },
+    "select_first_person": "Elige o añade el perfil de la primera persona",
+    "select_second_person": "Elige o añade el perfil de la segunda persona — se guarda en tu biblioteca"
   },
   "pwa": {
     "disclaimer": {
@@ -1323,7 +1664,131 @@
         "step_1": "Tap menu (3 dots) at top right",
         "step_2": "Select Add to Home Screen",
         "step_3": "Tap Install to confirm"
+      },
+      "chrome_required": {
+        "title": "Usa Chrome para instalar",
+        "subtitle_huawei": "{browser} no admite la instalación completa de la app de pojulife. Abre esta página en Chrome para instalarla.",
+        "step_1_title": "Instala Chrome",
+        "step_1_desc": "Descárgalo de tu tienda de apps si no lo tienes",
+        "step_2_title": "Abre pojulife.com en Chrome",
+        "step_2_desc": "Copia el enlace de abajo y pégalo en la barra de direcciones de Chrome",
+        "step_3_title": "Toca «Instalar»",
+        "step_3_desc": "Chrome mostrará un botón de instalar: tócalo para añadir pojulife a tu pantalla de inicio",
+        "why_chrome": "Chrome admite la instalación completa de aplicaciones web progresivas (PWA). Otros navegadores quizá solo creen un acceso directo, que no ofrece la experiencia completa de pojulife.",
+        "copy_done": "¡Copiado!"
+      },
+      "open_in_safari": {
+        "title": "Ábrelo en Safari",
+        "subtitle": "iOS solo permite instalar pojulife a través de Safari. {browser} no puede completar la instalación.",
+        "label": "En el iPhone",
+        "step_1_title": "Copia este enlace",
+        "copied": "¡Copiado!",
+        "step_2_title": "Abre Safari",
+        "step_2_desc": "Pega el enlace en la barra de direcciones de Safari",
+        "step_3_title": "Instala desde Safari",
+        "step_3_desc": "Toca Compartir → Añadir a pantalla de inicio → Añadir",
+        "why_safari": "iOS reserva la función de instalación para Safari. Es una limitación de Apple, no de pojulife."
+      },
+      "open_in_chrome": {
+        "title": "Ábrelo en Chrome",
+        "subtitle": "{browser} no admite del todo la instalación de pojulife. Usa Chrome.",
+        "label": "En Android",
+        "step_1_title": "Copia este enlace",
+        "copied": "¡Copiado!",
+        "step_2_title": "Abre Chrome",
+        "step_2_desc": "Pega el enlace en la barra de direcciones de Chrome",
+        "step_3_title": "Instala desde Chrome",
+        "step_3_desc": "Toca el menú → Instalar pojulife → Instalar",
+        "why_chrome": "Chrome admite la instalación completa de PWA. Otros navegadores quizá solo creen un acceso directo."
       }
+    }
+  },
+  "cross_product": {
+    "match_to_poju": {
+      "title": "¿Quieres profundizar en esta relación?",
+      "description": "Match te muestra la estructura. POJU te ayuda a decidir qué hacer al respecto.",
+      "value_prop": "Hasta 30 días de análisis profundo en torno a esta relación concreta",
+      "button": "Abrir POJU",
+      "starting": "Iniciando…",
+      "payment_failed": "No se pudo iniciar el pago. Inténtalo de nuevo."
+    },
+    "syncro_to_poju": {
+      "title": "¿Quieres pensar bien esta decisión?",
+      "description": "Syncro te dice cuándo. POJU te ayuda a decidir si hacerlo y cómo.",
+      "value_prop": "Hasta 30 días de acompañamiento profundo en torno a tu situación",
+      "button": "Abrir POJU"
+    },
+    "glyph_to_poju": {
+      "title": "¿Quieres desentrañar lo que esto reflejó?",
+      "description": "Glyph te ofreció una imagen. POJU te ayuda a entenderla y a actuar sobre ella.",
+      "value_prop": "Hasta 30 días de conversación profunda en torno a lo que estás procesando",
+      "button": "Abrir POJU",
+      "starting": "Iniciando…",
+      "payment_failed": "No se pudo iniciar el pago. Inténtalo de nuevo."
+    },
+    "session_picker": {
+      "title": "¿Cómo quieres continuar?",
+      "subtitle": "Tienes sesiones de POJU en curso. Este nuevo análisis puede unirse a una de ellas o empezar de cero.",
+      "existing_sessions": "Añadir a una sesión existente",
+      "join_this": "Unirse a esta conversación",
+      "free": "Gratis",
+      "or": "O",
+      "start_new": "Iniciar una nueva sesión de POJU",
+      "start_new_subtitle": "Si es un tema aparte, dale su propia sesión",
+      "days_left": "{count, plural, one {# día restante} other {# días restantes}}"
+    },
+    "from_tool_entry": {
+      "continuing_from": "Continuando desde {tool}",
+      "context_label": "Continuando este análisis",
+      "joining": "Añadiendo el resultado de tu herramienta a esta sesión…"
+    }
+  },
+  "base_analysis_view": {
+    "title": "Lectura de base (texto completo)",
+    "close": "Cerrar",
+    "loading": "Cargando…",
+    "not_found": "No se encontró ningún análisis guardado."
+  },
+  "birth_form": {
+    "birth_location": "Lugar de nacimiento",
+    "search_city": "Buscar ciudad…",
+    "tap_to_enter_city": "Toca para introducir tu ciudad de nacimiento",
+    "searching": "Buscando…",
+    "cancel": "Cancelar",
+    "why_we_ask": "Por qué lo pedimos",
+    "why_explanation": "pojulife usa la hora solar verdadera para mayor precisión. El mediodía solar varía según la longitud: tu lugar de nacimiento garantiza el pilar horario correcto.",
+    "true_solar_offset": "Desfase solar verdadero: {offset}",
+    "confirm_continue": "Continuar con este lugar",
+    "location_required": "Selecciona o confirma tu ciudad de nacimiento.",
+    "confirm_privacy_note": "Tus datos se cifran y se guardan solo en tu dispositivo. pojulife no puede acceder a ellos."
+  },
+  "analysis_loader": {
+    "connecting": "Conectando…",
+    "reading_chart": "Leyendo tu perfil",
+    "complete": "Lectura completa",
+    "warming_up": "Preparando…",
+    "keep_screen_on": "Mantén esta pantalla encendida mientras se prepara la lectura"
+  },
+  "tool_suggestion": {
+    "label": "Sugerencia",
+    "free_in_session": "Gratis en esta sesión",
+    "accepted_continue": "Abriendo la herramienta — puedes volver aquí cuando quieras.",
+    "declined_continue": "Continuando la conversación…",
+    "match": {
+      "title": "Leed juntos esta relación",
+      "accept": "Abrir Match",
+      "decline": "Omitir · Continuar",
+      "needs_info": "Necesitarás su fecha, hora y lugar de nacimiento"
+    },
+    "syncro": {
+      "title": "Encuentra el momento adecuado para esto",
+      "accept": "Abrir Syncro",
+      "decline": "Omitir · Continuar"
+    },
+    "glyph": {
+      "title": "Míralo a través de una imagen",
+      "accept": "Sacar un Glyph",
+      "decline": "Omitir · Continuar"
     }
   }
 }

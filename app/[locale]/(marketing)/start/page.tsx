@@ -3,19 +3,13 @@
 import { useEffect } from "react";
 import { useRouter } from "@/i18n/navigation";
 
-function isMobileDevice(): boolean {
-  if (typeof navigator === "undefined") return false;
-  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-}
-
-function isStandaloneMode(): boolean {
-  if (typeof window === "undefined") return false;
-  return (
-    window.matchMedia("(display-mode: standalone)").matches ||
-    (window.navigator as Navigator & { standalone?: boolean }).standalone === true
-  );
-}
-
+/**
+ * /start — thin redirect to `?next=` (default "/").
+ *
+ * Previously this gate forced mobile-browser visitors to /modal-pwa-install
+ * before they could continue. We no longer block on PWA install: a mobile
+ * browser gets the same experience as the PWA, so just forward to the target.
+ */
 export default function StartGatePage() {
   const router = useRouter();
 
@@ -25,12 +19,6 @@ export default function StartGatePage() {
         ? new URLSearchParams(window.location.search).get("next") ?? "/"
         : "/";
     const nextPath = rawNext.startsWith("/") ? rawNext : "/";
-    const shouldRequirePwaInstall = isMobileDevice() && !isStandaloneMode();
-
-    if (shouldRequirePwaInstall) {
-      router.replace(`/modal-pwa-install?next=${encodeURIComponent(nextPath)}`);
-      return;
-    }
 
     router.replace(nextPath);
   }, [router]);

@@ -1,0 +1,214 @@
+{
+  "meta": {
+    "title": "Cookie-Richtlinie",
+    "version": "Version 1.0",
+    "updated": "Last updated: 2026-05-23"
+  },
+  "closing": "",
+  "blocks": [
+    {
+      "kind": "h2",
+      "text": "Was sind Cookies?"
+    },
+    {
+      "kind": "p",
+      "text": "Cookies sind kleine Textdateien, die beim Besuch einer Website auf deinem Gerät abgelegt werden. Sie helfen der Website, Informationen über deinen Besuch zu merken – etwa deine Sprachpräferenz oder deinen Sitzungsstatus."
+    },
+    {
+      "kind": "p",
+      "text": "Diese Cookie-Richtlinie erklärt, wie pojulife Cookies und ähnliche Technologien einsetzt und wie du sie steuern kannst."
+    },
+    {
+      "kind": "h2",
+      "text": "Unsere Cookie-Philosophie"
+    },
+    {
+      "kind": "p",
+      "text": "pojulife ist so gestaltet, dass es mit so wenigen Cookies wie möglich funktioniert. Wir verwenden keine Cookies für Tracking, Werbung oder den Verkauf deiner Daten."
+    },
+    {
+      "kind": "p",
+      "text": "Wir verwenden Cookies nur, wenn sie unbedingt erforderlich sind oder dein Erlebnis deutlich verbessern."
+    },
+    {
+      "kind": "h2",
+      "text": "Cookies, die wir verwenden"
+    },
+    {
+      "kind": "h3",
+      "text": "1. Unbedingt erforderliche Cookies"
+    },
+    {
+      "kind": "p",
+      "text": "Diese Cookies sind für das Funktionieren der Website unerlässlich. Sie können nicht deaktiviert werden."
+    },
+    {
+      "kind": "table",
+      "headers": [
+        "Cookie-Name",
+        "Zweck",
+        "Dauer"
+      ],
+      "rows": [
+        [
+          "pojulife_locale",
+          "Merkt sich deine Sprachpräferenz",
+          "1 Jahr"
+        ],
+        [
+          "pojulife_session",
+          "Hält deine aktive Sitzung aufrecht",
+          "Sitzung"
+        ],
+        [
+          "cf_clearance",
+          "Cloudflare-Sicherheitsprüfung",
+          "30 Tage"
+        ]
+      ]
+    },
+    {
+      "kind": "h3",
+      "text": "2. Funktionale Cookies"
+    },
+    {
+      "kind": "p",
+      "text": "Diese Cookies verbessern dein Erlebnis, sind aber nicht zwingend erforderlich."
+    },
+    {
+      "kind": "table",
+      "headers": [
+        "Cookie-Name",
+        "Zweck",
+        "Dauer"
+      ],
+      "rows": [
+        [
+          "pojulife_theme",
+          "Merkt sich deine visuellen Einstellungen",
+          "1 Jahr"
+        ],
+        [
+          "pojulife_consent",
+          "Merkt sich deine Cookie-Entscheidungen",
+          "1 Jahr"
+        ]
+      ]
+    },
+    {
+      "kind": "h3",
+      "text": "3. Lokaler Speicher (ähnlich wie Cookies)"
+    },
+    {
+      "kind": "p",
+      "text": "Wir nutzen den lokalen Browser-Speicher (IndexedDB), um Folgendes zu speichern:"
+    },
+    {
+      "kind": "ul",
+      "items": [
+        "Deine verschlüsselten Gespräche",
+        "Die Daten deines Persönlichkeitsprofils (falls eingegeben)",
+        "Dein Auswertungsverlauf (Archiv)"
+      ]
+    },
+    {
+      "kind": "p",
+      "text": "Diese Daten bleiben auf deinem Gerät und werden niemals im Klartext an unsere Server gesendet."
+    },
+    {
+      "kind": "h2",
+      "text": "Was wir nicht verwenden"
+    },
+    {
+      "kind": "p",
+      "text": "Wir verwenden nicht:"
+    },
+    {
+      "kind": "ul",
+      "items": [
+        "Werbe-Cookies",
+        "Tracking-Cookies von Drittanbietern",
+        "Tracking-Pixel sozialer Medien",
+        "Seitenübergreifendes Tracking",
+        "Google Analytics oder ähnliche Verhaltensanalysen"
+      ]
+    },
+    {
+      "kind": "p",
+      "text": "Wir können Cloudflare für Sicherheit und Leistung einsetzen (DDoS-Schutz, CDN). Cloudflare kann ausschließlich zu Sicherheitszwecken technische Cookies setzen."
+    },
+    {
+      "kind": "h2",
+      "text": "Deine Cookies verwalten"
+    },
+    {
+      "kind": "h3",
+      "text": "In deinem Browser"
+    },
+    {
+      "kind": "p",
+      "text": "Du kannst Cookies in den Einstellungen deines Browsers verwalten oder löschen. Hinweise zu den Cookie-Steuerungen findest du in der Hilfe deines Browsers."
+    },
+    {
+      "kind": "h3",
+      "text": "Cookies deaktivieren"
+    },
+    {
+      "kind": "p",
+      "text": "Du kannst Cookies in den Einstellungen deines Browsers deaktivieren, dies kann jedoch einige Funktionen von pojulife beeinträchtigen (z. B. das Merken deiner Sprache)."
+    },
+    {
+      "kind": "h3",
+      "text": "Deine lokalen Daten löschen"
+    },
+    {
+      "kind": "p",
+      "text": "Um alle lokal gespeicherten Gespräche, Auswertungen und Daten zu löschen, verwende die Option „Websitedaten löschen“ deines Browsers für pojulife.com oder die Schaltfläche „Beenden & Löschen“ in unserer App."
+    },
+    {
+      "kind": "h2",
+      "text": "Nutzer in der EU / im Vereinigten Königreich – deine Rechte"
+    },
+    {
+      "kind": "p",
+      "text": "Wenn du dich in der EU oder im Vereinigten Königreich befindest, hast du Rechte nach der DSGVO / UK-DSGVO:"
+    },
+    {
+      "kind": "ul",
+      "items": [
+        "Einwilligung: Wir holen deine Einwilligung ein, bevor wir nicht notwendige Cookies (funktionale Cookies) setzen.",
+        "Einwilligung widerrufen: Du kannst deine Einwilligung jederzeit über das Cookie-Banner widerrufen.",
+        "Auskunft: Du kannst Informationen über die auf deinem Gerät gesetzten Cookies anfordern."
+      ]
+    },
+    {
+      "kind": "p",
+      "text": "Um diese Rechte auszuüben, wende dich an privacy@pojulife.com."
+    },
+    {
+      "kind": "h2",
+      "text": "Änderungen dieser Richtlinie"
+    },
+    {
+      "kind": "p",
+      "text": "Wir können diese Cookie-Richtlinie aktualisieren, wenn sich unsere Praktiken weiterentwickeln oder dies gesetzlich erforderlich ist. Das Datum „Zuletzt aktualisiert“ gibt die jüngste Überarbeitung wieder."
+    },
+    {
+      "kind": "h2",
+      "text": "Fragen"
+    },
+    {
+      "kind": "p",
+      "text": "Fragen zu Datenschutz und Cookies:"
+    },
+    {
+      "kind": "contact",
+      "lines": [
+        {
+          "label": "",
+          "email": "privacy@pojulife.com"
+        }
+      ]
+    }
+  ]
+}

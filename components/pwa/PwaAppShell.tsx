@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 
 import { PWABottomNav } from "@/components/pwa/PWABottomNav";
-import { detectDeviceCapability } from "@/lib/syncro/device-capability";
+import { detectDeviceCapability, isAppMode } from "@/lib/syncro/device-capability";
 
 export function PwaAppShell({ children }: { children: ReactNode }) {
   const [isPWA, setIsPWA] = useState(false);
@@ -14,7 +14,7 @@ export function PwaAppShell({ children }: { children: ReactNode }) {
     }
 
     void detectDeviceCapability().then((cap) => {
-      setIsPWA(cap.isPWA);
+      setIsPWA(isAppMode(cap));
     });
 
     syncFromDom();

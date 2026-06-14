@@ -27,6 +27,7 @@ import {
 import { useSyncroBackgroundStream } from "@/lib/syncro/use-syncro-background-stream";
 import { useSyncroInngestJob } from "@/lib/syncro/use-syncro-inngest-job";
 import { SyncroOrientationProvider } from "@/components/syncro/SyncroOrientationProvider";
+import { acknowledgeDeliveryViewed } from "@/lib/archive/archive-delivery-pending";
 import { Link } from "@/i18n/navigation";
 import { generateSyncroHourWithRetry } from "@/lib/syncro/generate-syncro-hour-with-retry";
 import { HOUR_ORDER } from "@/lib/syncro/hour-order";
@@ -47,6 +48,11 @@ function SyncroResultPageContent() {
   const tError = useTranslations("syncro.main");
 
   const sessionId = params.id as string;
+
+  useEffect(() => {
+    if (!sessionId) return;
+    acknowledgeDeliveryViewed(sessionId);
+  }, [sessionId]);
 
   const [session, setSession] = useState<SyncroSession | null>(null);
   const [stage, setStage] = useState<Stage>("loading");

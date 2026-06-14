@@ -9,6 +9,7 @@ import {
   detectBrowserName,
   detectDeviceCapability,
   detectOsFromUserAgent,
+  isAppMode,
   shouldForcePWAInstall,
 } from "../lib/syncro/device-capability";
 
@@ -114,8 +115,11 @@ const mobileBrowser = buildDeviceCapability({
   isPWA: false,
   browserName: "safari",
 });
-assert(shouldForcePWAInstall(mobileBrowser), "mobile browser forces PWA");
+assert(!shouldForcePWAInstall(mobileBrowser), "mobile browser no longer forced to install");
 assert(!shouldForcePWAInstall({ ...mobileBrowser, isPWA: true }), "PWA mode no force");
+assert(isAppMode(mobileBrowser), "mobile browser is app mode");
+assert(isAppMode({ ...mobileBrowser, isPWA: true }), "installed PWA is app mode");
+assert(!isAppMode(pc), "desktop is not app mode");
 
 console.log("SSR capability:", ssr);
 console.log("Sample mobile:", iphone);

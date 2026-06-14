@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
 import { MatchReport } from "@/components/match/MatchReport";
+import { acknowledgeDeliveryViewed } from "@/lib/archive/archive-delivery-pending";
 import { useRouter } from "@/i18n/navigation";
 import { loadMatchSession } from "@/lib/match/match-session";
 import type { MatchSession } from "@/lib/match/types";
@@ -19,6 +20,11 @@ export function MatchResultPage() {
 
   const matchId = typeof params.id === "string" ? params.id : "";
   const [session, setSession] = useState<MatchSession | null | undefined>(undefined);
+
+  useEffect(() => {
+    if (!matchId) return;
+    acknowledgeDeliveryViewed(matchId);
+  }, [matchId]);
 
   useEffect(() => {
     if (!matchId) {

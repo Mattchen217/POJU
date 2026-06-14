@@ -3,6 +3,7 @@ import { Link } from "@/i18n/navigation";
 import { Lock, Scale, UserX } from "lucide-react";
 
 import { HeroInstallCta } from "@/components/marketing/hero-install-cta";
+import { NotPWA } from "@/components/pwa/PWAConditional";
 import { ProductCardSpline } from "@/components/marketing/product-card-spline";
 import { HERO_ASSET_VERSION, HERO_PNG, LANDING_ASSETS } from "@/lib/marketing/landing-assets";
 import { hasPublicFile } from "@/lib/marketing/has-public-file";
@@ -277,6 +278,10 @@ export function DsHomePage({ copy }: { copy: DsHomeCopy }) {
           </div>
         </DsBand>
 
+        {/* Project intro / marketing storytelling — desktop site only.
+            In app mode (installed PWA or mobile browser) the home is
+            feature-first: hero + the four product entry cards above. */}
+        <NotPWA>
         <DsBand>
           <DsSectionHeading>{copy.built.heading}</DsSectionHeading>
           <p className="ds-prose-center max-w-3xl ds-mt-36">{copy.built.intro}</p>
@@ -365,6 +370,7 @@ export function DsHomePage({ copy }: { copy: DsHomeCopy }) {
             ))}
           </div>
         </DsBand>
+        </NotPWA>
       </DsPageStack>
     </main>
   );

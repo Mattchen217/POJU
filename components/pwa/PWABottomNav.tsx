@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { IconCheck, IconX } from "@tabler/icons-react";
+import { IconCheck, IconDownload, IconX } from "@tabler/icons-react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { usePathname, useRouter } from "@/i18n/navigation";
+import { usePwaInstall } from "@/components/pwa/pwa-install-context";
 import { ArchiveNavLabel } from "@/components/archive/ArchiveUnreadDot";
 import { useArchiveUnread } from "@/components/archive/use-archive-unread";
 import { getActiveNavFromPathname } from "@/lib/i18n/pathname-without-locale";
@@ -35,6 +36,12 @@ export function PWABottomNav() {
   const locale = useLocale();
   const [langOpen, setLangOpen] = useState(false);
   const { hasUnread: hasUnreadArchive } = useArchiveUnread();
+  // Install nudge — shown only in a real browser tab (not standalone). Once the
+  // PWA is installed `standalone` flips true and this disappears, so the only
+  // visible difference between the mobile browser and the PWA is this button
+  // (and the home-screen icon the PWA adds).
+  const { clientReady, standalone, requestInstall } = usePwaInstall();
+  const showInstall = clientReady && !standalone;
 
   const activeProduct = getActiveNavFromPathname(pathname);
   const currentLocaleLabel = LOCALES.find((l) => l.code === locale)?.label ?? "EN";
@@ -56,14 +63,27 @@ export function PWABottomNav() {
   return (
     <>
       <nav className="pwa-bottom-nav" aria-label="Product navigation">
-        <button
-          type="button"
-          className="nav-aux"
-          onClick={() => setLangOpen(true)}
-          aria-label="Language"
-        >
-          {currentLocaleLabel}
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          {showInstall ? (
+            <button
+              type="button"
+              className="nav-aux"
+              onClick={() => void requestInstall()}
+              aria-label="Install app"
+              style={{ display: "inline-flex", alignItems: "center", color: "var(--pj-gold)" }}
+            >
+              <IconDownload size={17} stroke={1.75} aria-hidden />
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="nav-aux"
+            onClick={() => setLangOpen(true)}
+            aria-label="Language"
+          >
+            {currentLocaleLabel}
+          </button>
+        </div>
 
         <div className="nav-products">
           {PRODUCTS.map((product) => (

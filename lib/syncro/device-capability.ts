@@ -167,10 +167,25 @@ export async function detectDeviceCapability(): Promise<DeviceCapability> {
 }
 
 /**
- * Mobile/tablet in browser (not installed PWA) → show install guide before product flows.
+ * “App mode” = the feature-first, chromeless experience (bottom nav, Begin
+ * buttons, marketing intro hidden). True for the installed PWA AND for any
+ * mobile / tablet visitor in a normal browser tab. The ONLY runtime difference
+ * between an installed PWA and a mobile browser is the home-screen icon
+ * (`isPWA` / standalone) — not the UI. Desktop browsers stay on the full
+ * marketing site.
  */
-export function shouldForcePWAInstall(capability: DeviceCapability): boolean {
-  return (capability.isMobile || capability.isTablet) && !capability.isPWA;
+export function isAppMode(capability: DeviceCapability): boolean {
+  return capability.isPWA || capability.isMobile || capability.isTablet;
+}
+
+/**
+ * Deprecated: we no longer force a PWA install before letting people use the
+ * product. Mobile browsers get the same experience as the PWA (see isAppMode).
+ * Kept as a no-op so any remaining callers compile; install is now an optional
+ * prompt, never a gate.
+ */
+export function shouldForcePWAInstall(_capability: DeviceCapability): boolean {
+  return false;
 }
 
 /**
