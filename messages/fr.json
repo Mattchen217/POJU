@@ -1701,6 +1701,12 @@
         "step_3_desc": "Touchez le menu → Installer pojulife → Installer",
         "why_chrome": "Chrome prend en charge l'installation complète des PWA. D'autres navigateurs ne créent parfois qu'un raccourci."
       }
+    },
+    "app_mode": {
+      "desktop_hint": "Sur mobile, pojulife se concentre sur l'utilisation de POJU, Glyph, Syncro et Match avec un bref aperçu. Pour les guides détaillés, la politique de confidentialité, les conditions d'utilisation, la politique de remboursement, la politique de cookies et les autres informations légales, consultez pojulife.com sur un ordinateur.",
+      "add_to_home_title": "Ajouter à l'écran d'accueil",
+      "add_to_home_title_ios": "Ajouter à l'écran d'accueil",
+      "add_to_home_desc": "Ajoutez pojulife à l'écran d'accueil de votre téléphone pour moins d'interruptions et un accès plus rapide la prochaine fois."
     }
   },
   "cross_product": {

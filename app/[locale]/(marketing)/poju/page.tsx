@@ -13,7 +13,8 @@ import { ProductPricingSection } from "@/components/marketing/product-pricing-se
 import { ProductWhatIsSection } from "@/components/marketing/product-what-is-section";
 import { PojuProductHero } from "@/components/marketing/poju-product-hero";
 import { NotPWA } from "@/components/pwa/PWAConditional";
-import { PWAProductBeginCTA } from "@/components/pwa/PWAProductBeginCTA";
+import { AppModeDesktopHint } from "@/components/pwa/AppModeDesktopHint";
+import { AppModeProductTopBar } from "@/components/pwa/AppModeProductTopBar";
 
 export const metadata: Metadata = {
   title: "pojulife — Break your deadlock",
@@ -44,9 +45,11 @@ export default async function PojuProductPage() {
 
   return (
     <MarketingPageLayout theme="poju">
+      <AppModeProductTopBar />
       <MarketingPageHero>
         <PojuProductHero copy={heroCopy} />
       </MarketingPageHero>
+      <AppModeDesktopHint />
 
       <MarketingPageSections>
         <ProductWhatIsSection product="poju" />
@@ -122,8 +125,6 @@ export default async function PojuProductPage() {
           <ProductPricingSection product="poju" />
         </NotPWA>
       </MarketingPageSections>
-
-      <PWAProductBeginCTA productId="poju" price="$9.99" />
     </MarketingPageLayout>
   );
 }

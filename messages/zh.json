@@ -1778,6 +1778,12 @@
         "step_3_desc": "点击菜单 → 安装 pojulife → 安装",
         "why_chrome": "Chrome 支持完整的 PWA 安装。其他浏览器可能只创建快捷方式。"
       }
+    },
+    "app_mode": {
+      "desktop_hint": "手机端 pojulife 专注于 POJU、Glyph、Syncro、Match 的使用入口与简要说明。详细的功能介绍、隐私政策、用户协议、退款政策、Cookie 政策及其他法律信息，请使用电脑访问 pojulife.com 查看。",
+      "add_to_home_title": "添加到主屏幕",
+      "add_to_home_title_ios": "添加到主屏幕",
+      "add_to_home_desc": "将 pojulife 添加到手机桌面，减少干扰，方便下次快速打开。"
     }
   }
 }

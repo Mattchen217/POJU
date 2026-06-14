@@ -28,7 +28,9 @@ import { DsMatchUseCard } from "@/components/ds/marketing/DsProductFlows";
 import { MatchHowWorksSection } from "@/components/match/MatchHowWorksSection";
 import { ProductPricingSection } from "@/components/marketing/product-pricing-section";
 import { NotPWA } from "@/components/pwa/PWAConditional";
-import { PWAProductBeginCTA } from "@/components/pwa/PWAProductBeginCTA";
+import { AppModeDesktopHint } from "@/components/pwa/AppModeDesktopHint";
+import { AppModeHeroActions } from "@/components/pwa/AppModeHeroActions";
+import { AppModeProductTopBar } from "@/components/pwa/AppModeProductTopBar";
 import {
   MarketingPageHero,
   MarketingPageLayout,
@@ -126,10 +128,13 @@ export function MatchHomePage() {
 
   return (
     <MarketingPageLayout theme="match" className="match-home">
+      <AppModeProductTopBar />
+      <NotPWA>
       <div className="w-full px-3 sm:px-4 md:px-6">
         <ArchiveReturnBanner />
         {pojuHandoff ? <PojuToolHandoffBanner handoff={pojuHandoff} className="mt-4" /> : null}
       </div>
+      </NotPWA>
 
       <MarketingPageHero>
         <ProductMarketingHero
@@ -150,10 +155,12 @@ export function MatchHomePage() {
                 </button>
                 <p className="product-hero__actions-note">{heroNote}</p>
               </NotPWA>
+              <AppModeHeroActions productId="match" price="$4.99" />
             </ProductHeroActions>
           </ProductHeroContent>
         </ProductMarketingHero>
       </MarketingPageHero>
+      <AppModeDesktopHint />
 
       <MarketingPageSections>
         <ProductWhatIsSection product="match" />
@@ -255,8 +262,6 @@ export function MatchHomePage() {
           />
         </NotPWA>
       </MarketingPageSections>
-
-      <PWAProductBeginCTA productId="match" price="$4.99" />
     </MarketingPageLayout>
   );
 }

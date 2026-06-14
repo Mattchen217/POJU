@@ -278,9 +278,7 @@ export function DsHomePage({ copy }: { copy: DsHomeCopy }) {
           </div>
         </DsBand>
 
-        {/* Project intro / marketing storytelling — desktop site only.
-            In app mode (installed PWA or mobile browser) the home is
-            feature-first: hero + the four product entry cards above. */}
+        {/* Project intro — desktop site only. App mode: hero + four cards + promises. */}
         <NotPWA>
         <DsBand>
           <DsSectionHeading>{copy.built.heading}</DsSectionHeading>
@@ -321,6 +319,7 @@ export function DsHomePage({ copy }: { copy: DsHomeCopy }) {
             ))}
           </div>
         </DsBand>
+        </NotPWA>
 
         <DsBand>
           <DsSectionHeading>{copy.promises.heading}</DsSectionHeading>
@@ -354,6 +353,7 @@ export function DsHomePage({ copy }: { copy: DsHomeCopy }) {
           </p>
         </DsBand>
 
+        <NotPWA>
         <DsBand center>
           <DsSectionHeading style={{ maxWidth: "40rem", marginInline: "auto" }}>
             {copy.finalCta.readyHeading}

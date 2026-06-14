@@ -5,12 +5,13 @@ import { DsSyncroFitCard } from "@/components/ds/marketing/DsProductFlows";
 import { DsGlassCard, DsMutedCard } from "@/components/ds/primitives";
 import { ArchiveReturnBanner } from "@/components/archive/archive-return-banner";
 import { NotPWA } from "@/components/pwa/PWAConditional";
+import { AppModeDesktopHint } from "@/components/pwa/AppModeDesktopHint";
+import { AppModeProductTopBar } from "@/components/pwa/AppModeProductTopBar";
 import { SyncroDesktopQrSection } from "@/components/marketing/syncro-desktop-qr-section";
 import { ProductPricingSection } from "@/components/marketing/product-pricing-section";
 import { SyncroHowItWorksSection } from "@/components/marketing/syncro-how-it-works-section";
 import { SyncroMarketingPhonePreview } from "@/components/marketing/syncro-marketing-phone-preview";
 import { SyncroPwaInstallProvider } from "@/components/syncro/SyncroPwaInstallGuide";
-import { SyncroPwaHomeFooter } from "@/components/syncro/SyncroPwaHomeFooter";
 import {
   MarketingPageHero,
   MarketingPageLayout,
@@ -53,12 +54,16 @@ export async function SyncroMarketingPage() {
   return (
     <SyncroPwaInstallProvider>
       <MarketingPageLayout theme="syncro" component="div">
+        <AppModeProductTopBar />
         <MarketingPageHero>
+          <NotPWA>
           <div className="mx-auto w-full max-w-6xl px-4 md:px-8">
             <ArchiveReturnBanner />
           </div>
+          </NotPWA>
           <SyncroProductHero copy={heroCopy} />
         </MarketingPageHero>
+        <AppModeDesktopHint />
 
         <MarketingPageSections>
           <ProductWhatIsSection product="syncro" />
@@ -78,11 +83,13 @@ export async function SyncroMarketingPage() {
             </MarketingSection>
           </NotPWA>
 
+          <NotPWA>
           <SyncroHowItWorksSection
             heading={t("how_it_works.heading")}
             intro={t("how_it_works.intro")}
             steps={syncroSteps}
           />
+          </NotPWA>
 
           <NotPWA>
             <MarketingSection title={t("what_shows.heading")} padding="lg">
@@ -143,8 +150,6 @@ export async function SyncroMarketingPage() {
             <ProductPricingSection product="syncro" />
           </NotPWA>
         </MarketingPageSections>
-
-        <SyncroPwaHomeFooter />
       </MarketingPageLayout>
     </SyncroPwaInstallProvider>
   );

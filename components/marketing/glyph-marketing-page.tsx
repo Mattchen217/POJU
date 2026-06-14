@@ -6,7 +6,8 @@ import { DsWhenGlyphCard, type GlyphWhenIconKey } from "@/components/ds/marketin
 import { GlyphHowWorksExplosion } from "@/components/ds/marketing/GlyphHowWorksExplosion";
 import { GlyphPrepareCta } from "@/components/glyph/GlyphPrepareCta";
 import { NotPWA } from "@/components/pwa/PWAConditional";
-import { PWAProductBeginCTA } from "@/components/pwa/PWAProductBeginCTA";
+import { AppModeDesktopHint } from "@/components/pwa/AppModeDesktopHint";
+import { AppModeProductTopBar } from "@/components/pwa/AppModeProductTopBar";
 import {
   MarketingPageHero,
   MarketingPageLayout,
@@ -159,6 +160,7 @@ export async function GlyphMarketingPage() {
 
   return (
     <MarketingPageLayout theme="glyph">
+      <AppModeProductTopBar />
       <MarketingPageHero>
         <OracleProductHero
           copy={heroCopy}
@@ -169,6 +171,7 @@ export async function GlyphMarketingPage() {
           }
         />
       </MarketingPageHero>
+      <AppModeDesktopHint />
 
       <MarketingPageSections>
         <ProductWhatIsSection product="glyph" />
@@ -334,8 +337,6 @@ export async function GlyphMarketingPage() {
         <ProductPricingSection product="glyph" />
         </NotPWA>
       </MarketingPageSections>
-
-      <PWAProductBeginCTA productId="glyph" price="$4.99" />
     </MarketingPageLayout>
   );
 }

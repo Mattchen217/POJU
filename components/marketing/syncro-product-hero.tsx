@@ -1,5 +1,7 @@
 import { SyncroEnergyBall } from "@/components/syncro/syncro-energy-ball";
 import { SyncroPwaInstallTrigger } from "@/components/syncro/SyncroPwaInstallGuide";
+import { NotPWA } from "@/components/pwa/PWAConditional";
+import { AppModeHeroActions } from "@/components/pwa/AppModeHeroActions";
 import { DsGradientTitle } from "@/components/ds/primitives";
 import {
   ProductHeroAccent,
@@ -36,12 +38,15 @@ export function SyncroProductHero({ copy }: { copy: SyncroProductHeroCopy }) {
         <ProductHeroMeta bold>{copy.tagline}</ProductHeroMeta>
         <ProductHeroMeta>{copy.footnote}</ProductHeroMeta>
         <ProductHeroActions>
-          <SyncroPwaInstallTrigger
-            variant="button"
-            className="pj-pill-outline pj-pill-outline--cyan inline-flex px-[30px] py-3.5 text-[15px]"
-          >
-            {copy.cta}
-          </SyncroPwaInstallTrigger>
+          <NotPWA>
+            <SyncroPwaInstallTrigger
+              variant="button"
+              className="pj-pill-outline pj-pill-outline--cyan inline-flex px-[30px] py-3.5 text-[15px]"
+            >
+              {copy.cta}
+            </SyncroPwaInstallTrigger>
+          </NotPWA>
+          <AppModeHeroActions productId="syncro" price="$4.99" />
         </ProductHeroActions>
       </ProductHeroContent>
     </ProductMarketingHero>

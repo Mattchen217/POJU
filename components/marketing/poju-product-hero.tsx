@@ -9,6 +9,7 @@ import {
   ProductMarketingHero,
 } from "@/components/marketing/product-marketing-hero";
 import { NotPWA } from "@/components/pwa/PWAConditional";
+import { AppModeHeroActions } from "@/components/pwa/AppModeHeroActions";
 import { PojuSessionStarter } from "@/components/poju/poju-session-starter";
 
 export type PojuProductHeroCopy = {
@@ -44,6 +45,7 @@ export function PojuProductHero({ copy }: { copy: PojuProductHeroCopy }) {
             </PojuSessionStarter>
             <ProductHeroSecondaryLink href="#how-poju-works">{copy.ctaSecondary}</ProductHeroSecondaryLink>
           </NotPWA>
+          <AppModeHeroActions productId="poju" price="$9.99" />
         </ProductHeroActions>
       </ProductHeroContent>
     </ProductMarketingHero>

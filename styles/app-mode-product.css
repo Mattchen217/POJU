@@ -1,0 +1,101 @@
+/* App-mode product marketing landings — sticky top bar, hero CTAs, desktop hint */
+
+.app-mode-product-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 55;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: max(8px, env(safe-area-inset-top)) 12px 10px;
+  background: rgba(7, 5, 15, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.app-mode-product-topbar__logo {
+  display: inline-flex;
+  min-width: 0;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pwa-mode .product-page--poju .product-hero__shell,
+.pwa-mode .product-page--glyph .product-hero__shell,
+.pwa-mode .product-page--syncro .product-hero__shell,
+.pwa-mode .product-page--match .product-hero__shell {
+  padding-top: clamp(28px, 6vw, 48px);
+}
+
+.app-mode-hero-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.app-mode-hero-actions .begin-btn-large {
+  margin: 12px auto 0;
+  width: min(280px, 88%);
+}
+
+.app-mode-add-home {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  max-width: 300px;
+  padding: 10px 16px;
+  background: transparent;
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  border-radius: var(--pj-radius-lg);
+  color: var(--pj-gold-soft);
+  cursor: pointer;
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--pj-duration-fast) var(--pj-ease);
+}
+
+.app-mode-add-home:active {
+  background: rgba(212, 175, 55, 0.08);
+}
+
+.app-mode-add-home__row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.app-mode-add-home__icon {
+  flex-shrink: 0;
+  color: var(--pj-gold);
+}
+
+.app-mode-add-home__title {
+  font-size: var(--pj-text-sm);
+  font-weight: var(--pj-weight-medium);
+}
+
+.app-mode-add-home__desc {
+  font-size: var(--pj-text-xs);
+  line-height: 1.45;
+  color: var(--pj-text-dim);
+}
+
+.app-mode-desktop-hint {
+  max-width: 36rem;
+  margin: 0 auto;
+  padding: 0 20px 28px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--pj-text-dim);
+}
+
+.pwa-mode .syncro-pwa-home {
+  display: none !important;
+}

@@ -12,6 +12,8 @@ import {
   ProductHeroMeta,
   ProductMarketingHero,
 } from "@/components/marketing/product-marketing-hero";
+import { NotPWA } from "@/components/pwa/PWAConditional";
+import { AppModeHeroActions } from "@/components/pwa/AppModeHeroActions";
 import { PwaInlineOpenLink } from "@/components/marketing/pwa-inline-open-link";
 
 export type OracleProductHeroCopy = {
@@ -51,16 +53,21 @@ export function OracleProductHero({
         <ProductHeroMeta>{copy.footnote}</ProductHeroMeta>
         <ProductHeroActions>
           {cta ?? (
-            <PwaInlineOpenLink
-              href="/start?next=%2Fglyph%2Freading"
-              frameTitle="Glyph"
-              closeLabel="关闭"
-              className="pj-pill-outline pj-pill-outline--violet inline-flex px-[30px] py-3.5 text-[15px]"
-            >
-              {copy.cta}
-            </PwaInlineOpenLink>
+            <NotPWA>
+              <PwaInlineOpenLink
+                href="/start?next=%2Fglyph%2Freading"
+                frameTitle="Glyph"
+                closeLabel="关闭"
+                className="pj-pill-outline pj-pill-outline--violet inline-flex px-[30px] py-3.5 text-[15px]"
+              >
+                {copy.cta}
+              </PwaInlineOpenLink>
+            </NotPWA>
           )}
-          <p className="product-hero__cta-subline">{copy.ctaSubline}</p>
+          <NotPWA>
+            <p className="product-hero__cta-subline">{copy.ctaSubline}</p>
+          </NotPWA>
+          <AppModeHeroActions productId="glyph" price="$4.99" />
         </ProductHeroActions>
       </ProductHeroContent>
     </ProductMarketingHero>

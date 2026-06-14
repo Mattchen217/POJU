@@ -1763,6 +1763,12 @@
         "step_3_desc": "Tap menu → Install pojulife → Install",
         "why_chrome": "Chrome supports proper PWA installation. Other browsers may only create a shortcut."
       }
+    },
+    "app_mode": {
+      "desktop_hint": "On mobile, pojulife focuses on using POJU, Glyph, Syncro, and Match with a brief overview. For detailed feature guides, privacy policy, terms of service, refund policy, cookie policy, and other legal information, please visit pojulife.com on a desktop or laptop computer.",
+      "add_to_home_title": "Add to home screen",
+      "add_to_home_title_ios": "Add to Home Screen",
+      "add_to_home_desc": "Add pojulife to your phone's home screen for fewer interruptions and quicker access next time."
     }
   }
 }
