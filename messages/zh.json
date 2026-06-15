@@ -1157,15 +1157,17 @@
     "title": "你的出生信息",
     "description": "这些信息让 POJU 能基于你独特的能量做出精准解读。",
     "birth_date": "出生日期",
-    "birth_hour": "出生时辰",
-    "hour_hint": "不知道准确时辰？选最接近的估计。",
+    "birth_hour": "出生时间",
+    "hour_hint": "不知道准确时间？选最接近的估计。",
+    "shichen_preview": "对应时辰 · {period}",
     "gender": "性别",
     "male": "男",
     "female": "女",
     "timezone_label": "你的时区（自动识别）",
     "timezone_hint": "仅用于内部精确计算。",
     "back_to_list": "返回列表",
-    "continue": "继续"
+    "continue": "继续",
+    "submit": "确认并继续"
   },
   "birth_confirm": {
     "title": "确认你的信息",

@@ -265,9 +265,56 @@
   margin-bottom: 8px;
 }
 
+.picker-shichen-preview {
+  margin: 10px 0 0;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: rgba(212, 175, 55, 0.82);
+  text-align: center;
+}
+
 .picker-section .hint {
   color: #666;
   font-size: 12px;
+  margin-top: 8px;
+}
+
+/* react-mobile-picker — golden selection frame */
+.picker-section :global(.picker) {
+  position: relative;
+}
+
+.picker-section :global(.picker-column) {
+  flex: 1;
+}
+
+.picker-section--time :global(.picker-column) {
+  flex: 1;
+  max-width: 50%;
+}
+
+.picker-section :global(.picker-highlight) {
+  background: transparent !important;
+  box-shadow:
+    inset 0 1px 0 rgba(212, 175, 55, 0.45),
+    inset 0 -1px 0 rgba(212, 175, 55, 0.45);
+  border-radius: 0;
+}
+
+.picker-cell--selected {
+  font-weight: 600;
+}
+
+.picker-section--location {
+  margin-bottom: 20px;
+}
+
+.birth-info-picker .birth-location-field {
+  margin: 0;
+}
+
+.picker-section--location .birth-location-step__error {
   margin-top: 8px;
 }
 
@@ -341,6 +388,15 @@
 
 .submit-btn:hover {
   background: #e8c56f;
+}
+
+.submit-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.submit-btn:disabled:hover {
+  background: #d4af37;
 }
 
 .birth-location-step {

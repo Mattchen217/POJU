@@ -1111,13 +1111,15 @@
     "birth_date": "Date de naissance",
     "birth_hour": "Heure de naissance",
     "hour_hint": "Heure inconnue ? Choisissez la meilleure estimation.",
+    "shichen_preview": "Période traditionnelle · {period}",
     "gender": "Genre",
     "male": "Homme",
     "female": "Femme",
     "timezone_label": "Fuseau horaire (détecté)",
     "timezone_hint": "Utilisé en interne pour le calcul.",
     "back_to_list": "Retour à la liste",
-    "continue": "Continuer"
+    "continue": "Continuer",
+    "submit": "Confirmer et continuer"
   },
   "birth_confirm": {
     "title": "Confirmez vos informations",

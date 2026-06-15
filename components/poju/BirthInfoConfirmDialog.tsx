@@ -5,11 +5,11 @@ import { IconLock } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
 import {
   formatBirthLocationLabel,
-  formatHourPeriodBilingual,
+  formatBirthTimeDisplay,
   parseStoredProfileSummaryForDisplay,
   type BirthInfoDisplayRow,
 } from "@/lib/profile/birth-info-display";
-import type { BirthInfo, HourPeriod } from "@/lib/profile/types";
+import type { BirthInfo } from "@/lib/profile/types";
 import type { StoredProfileSummary } from "@/lib/profile/stored-profiles-service";
 
 export interface BirthInfoConfirmDialogProps {
@@ -26,6 +26,8 @@ function birthInfoToDisplay(birth: BirthInfo): BirthInfoDisplayRow {
     month: birth.month,
     day: birth.day,
     hour_period: birth.hour_period,
+    hour: birth.hour,
+    minute: birth.minute,
     gender: birth.gender,
     timezone: birth.timezone,
     birth_location_name: birth.birth_location?.name,
@@ -78,7 +80,7 @@ export function BirthInfoConfirmDialog({
 
   if (!displayData) return null;
 
-  const hour = formatHourPeriodBilingual(displayData.hour_period as HourPeriod);
+  const timeDisplay = formatBirthTimeDisplay(displayData);
 
   return (
     <div
@@ -109,8 +111,8 @@ export function BirthInfoConfirmDialog({
           <div className="info-row">
             <span className="label">{t("hour_label")}</span>
             <span className="value">
-              {hour.primary}
-              <span className="value-sub"> ({hour.secondary})</span>
+              {timeDisplay.primary}
+              <span className="value-sub"> ({timeDisplay.secondary})</span>
             </span>
           </div>
           <div className="info-row">

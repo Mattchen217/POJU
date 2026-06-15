@@ -6,6 +6,8 @@ export interface BirthInfoDisplayRow {
   month: number;
   day: number;
   hour_period: HourPeriod;
+  hour?: number;
+  minute?: number;
   gender: "M" | "F";
   timezone: string;
   birth_location_name?: string;
@@ -58,4 +60,23 @@ export function formatHourPeriodBilingual(hourPeriod: HourPeriod): {
     primary: info.en_label,
     secondary: `${info.zh_label} · ${info.chinese_name}`,
   };
+}
+
+function padClock(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+/** Precise HH:MM when available; otherwise falls back to 时辰 bilingual labels. */
+export function formatBirthTimeDisplay(row: Pick<BirthInfoDisplayRow, "hour" | "minute" | "hour_period">): {
+  primary: string;
+  secondary: string;
+} {
+  if (row.hour != null && row.minute != null) {
+    const period = formatHourPeriodBilingual(row.hour_period);
+    return {
+      primary: `${padClock(row.hour)}:${padClock(row.minute)}`,
+      secondary: period.secondary,
+    };
+  }
+  return formatHourPeriodBilingual(row.hour_period);
 }

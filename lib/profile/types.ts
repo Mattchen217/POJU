@@ -151,6 +151,10 @@ export interface BirthInfo {
   month: number;
   day: number;
   hour_period: HourPeriod;
+  /** Precise clock hour (0–23) when collected via minute wheel. */
+  hour?: number;
+  /** Precise clock minute (0–59). */
+  minute?: number;
   gender: "M" | "F";
   timezone: string;
   birth_location?: BirthLocation;

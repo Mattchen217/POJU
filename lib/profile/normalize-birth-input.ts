@@ -70,6 +70,8 @@ export function normalizeBirthInfoInput(input: BirthInfoInput): BirthInfo {
       month: Number(raw.month),
       day: Number(raw.day),
       hour_period: raw.hour_period,
+      hour: raw.hour != null ? Number(raw.hour) : undefined,
+      minute: raw.minute != null ? Number(raw.minute) : undefined,
       gender: raw.gender,
       timezone,
       birth_location,

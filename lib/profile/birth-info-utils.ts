@@ -127,15 +127,17 @@ export function shunshiParamsFromBirthInfo(birth: BirthInfo): {
   usedTrueSolarTime: boolean;
 } {
   const coords = resolveBirthCoordinates(birth);
-  const birthDate = new Date(birth.year, birth.month - 1, birth.day, representativeHour(birth));
+  const clockHour = birth.hour ?? representativeHour(birth);
+  const clockMinute = birth.minute ?? 0;
+  const birthDate = new Date(birth.year, birth.month - 1, birth.day, clockHour, clockMinute);
   const timezone = birth.birth_location?.timezone ?? birth.timezone;
 
   return {
     year: birth.year,
     month: birth.month,
     day: birth.day,
-    hour: representativeHour(birth),
-    minute: 0,
+    hour: clockHour,
+    minute: clockMinute,
     gender: birth.gender === "M" ? 1 : 0,
     city: coords.city,
     latitude: coords.latitude,
@@ -175,6 +177,8 @@ export function normalizeStoredBirthInfo(raw: Record<string, unknown>): BirthInf
       month: Number(raw.month),
       day: Number(raw.day),
       hour_period: raw.hour_period as HourPeriod,
+      hour: typeof raw.hour === "number" ? raw.hour : undefined,
+      minute: typeof raw.minute === "number" ? raw.minute : undefined,
       gender: raw.gender === "F" || raw.gender === "female" ? "F" : "M",
       timezone,
       birth_location,

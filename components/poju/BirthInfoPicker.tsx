@@ -1,29 +1,36 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import Picker from "react-mobile-picker";
-import { resolveBirthLocationForSubmit } from "@/components/forms/BirthLocationField";
-import { BirthLocationStep } from "@/components/profile/BirthLocationStep";
-import { HOUR_PERIOD_INFO, type BirthInfo, type HourPeriod } from "@/lib/profile/types";
 
-const HOUR_PERIODS: HourPeriod[] = [
-  "zi_early",
-  "chou",
-  "yin",
-  "mao",
-  "chen",
-  "si",
-  "wu",
-  "wei",
-  "shen",
-  "you",
-  "xu",
-  "hai",
-];
+import { BirthLocationField } from "@/components/forms/BirthLocationField";
+import { hourToHourPeriod } from "@/lib/profile/birth-info-utils";
+import { isBirthLocationComplete } from "@/lib/profile/validate-birth-location";
+import { HOUR_PERIOD_INFO, type BirthInfo, type BirthLocation } from "@/lib/profile/types";
 
 function monthEnglishName(m: number): string {
   return ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][m - 1] ?? String(m);
+}
+
+function padClock(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+function PickerCell({ selected, children }: { selected: boolean; children: ReactNode }) {
+  return (
+    <div
+      className={`picker-cell${selected ? " picker-cell--selected" : ""}`}
+      style={{
+        color: selected ? "#D4AF37" : "rgba(148, 163, 184, 0.45)",
+        fontSize: selected ? 18 : 16,
+        textAlign: "center",
+        fontVariantNumeric: "tabular-nums",
+      }}
+    >
+      {children}
+    </div>
+  );
 }
 
 interface BirthInfoPickerProps {
@@ -34,13 +41,16 @@ interface BirthInfoPickerProps {
 
 export function BirthInfoPicker({ onSubmit, onCancel, locale }: BirthInfoPickerProps) {
   const t = useTranslations("birth_picker");
+  const tForm = useTranslations("birth_form");
 
-  const [step, setStep] = useState<"birth" | "location">("birth");
   const [year, setYear] = useState(1990);
   const [month, setMonth] = useState(1);
   const [day, setDay] = useState(1);
-  const [hourPeriod, setHourPeriod] = useState<HourPeriod>("wu");
+  const [hour, setHour] = useState(12);
+  const [minute, setMinute] = useState(0);
   const [gender, setGender] = useState<"M" | "F">("M");
+  const [birthLocation, setBirthLocation] = useState<BirthLocation | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   const years = useMemo(() => {
     const arr: number[] = [];
@@ -57,6 +67,9 @@ export function BirthInfoPicker({ onSubmit, onCancel, locale }: BirthInfoPickerP
     return arr;
   }, [year, month]);
 
+  const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
+  const minutes = useMemo(() => Array.from({ length: 60 }, (_, i) => i), []);
+
   useEffect(() => {
     const max = days.length;
     if (day > max) setDay(max);
@@ -66,39 +79,36 @@ export function BirthInfoPicker({ onSubmit, onCancel, locale }: BirthInfoPickerP
   const userTimezone =
     typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC" : "UTC";
 
-  function buildDraftBirthInfo(): Omit<BirthInfo, "birth_location"> {
-    return {
+  const canSubmit = isBirthLocationComplete(birthLocation);
+
+  const shichenPreview = useMemo(() => {
+    const period = hourToHourPeriod(hour);
+    const info = HOUR_PERIOD_INFO[period];
+    return localeKey === "zh" ? info.zh_label : info.en_label;
+  }, [hour, localeKey]);
+
+  function handleLocationChange(loc: BirthLocation) {
+    setBirthLocation(loc);
+    if (isBirthLocationComplete(loc)) setLocationError(null);
+  }
+
+  function handleSubmit() {
+    if (!isBirthLocationComplete(birthLocation)) {
+      setLocationError(tForm("location_required"));
+      return;
+    }
+
+    onSubmit({
       year,
       month,
       day,
-      hour_period: hourPeriod,
+      hour,
+      minute,
+      hour_period: hourToHourPeriod(hour),
       gender,
       timezone: userTimezone,
-    };
-  }
-
-  function handleBirthStepContinue() {
-    setStep("location");
-  }
-
-  function handleLocationComplete(birthLocation: BirthInfo["birth_location"]) {
-    const resolved = birthLocation ?? resolveBirthLocationForSubmit(null, userTimezone);
-    onSubmit({
-      ...buildDraftBirthInfo(),
-      birth_location: resolved,
+      birth_location: birthLocation!,
     });
-  }
-
-  if (step === "location") {
-    return (
-      <div className="birth-info-picker">
-        <BirthLocationStep
-          userTimezone={userTimezone}
-          onSelect={handleLocationComplete}
-          onBack={() => setStep("birth")}
-        />
-      </div>
-    );
   }
 
   return (
@@ -122,17 +132,7 @@ export function BirthInfoPicker({ onSubmit, onCancel, locale }: BirthInfoPickerP
           <Picker.Column name="year">
             {years.map((y) => (
               <Picker.Item key={y} value={y}>
-                {({ selected }) => (
-                  <div
-                    style={{
-                      color: selected ? "#D4AF37" : "#888",
-                      fontSize: selected ? 18 : 16,
-                      textAlign: "center",
-                    }}
-                  >
-                    {y}
-                  </div>
-                )}
+                {({ selected }) => <PickerCell selected={selected}>{y}</PickerCell>}
               </Picker.Item>
             ))}
           </Picker.Column>
@@ -140,15 +140,9 @@ export function BirthInfoPicker({ onSubmit, onCancel, locale }: BirthInfoPickerP
             {months.map((m) => (
               <Picker.Item key={m} value={m}>
                 {({ selected }) => (
-                  <div
-                    style={{
-                      color: selected ? "#D4AF37" : "#888",
-                      fontSize: selected ? 18 : 16,
-                      textAlign: "center",
-                    }}
-                  >
+                  <PickerCell selected={selected}>
                     {localeKey === "zh" ? `${m} 月` : monthEnglishName(m)}
-                  </div>
+                  </PickerCell>
                 )}
               </Picker.Item>
             ))}
@@ -157,15 +151,7 @@ export function BirthInfoPicker({ onSubmit, onCancel, locale }: BirthInfoPickerP
             {days.map((d) => (
               <Picker.Item key={d} value={d}>
                 {({ selected }) => (
-                  <div
-                    style={{
-                      color: selected ? "#D4AF37" : "#888",
-                      fontSize: selected ? 18 : 16,
-                      textAlign: "center",
-                    }}
-                  >
-                    {localeKey === "zh" ? `${d} 日` : d}
-                  </div>
+                  <PickerCell selected={selected}>{localeKey === "zh" ? `${d} 日` : d}</PickerCell>
                 )}
               </Picker.Item>
             ))}
@@ -173,38 +159,42 @@ export function BirthInfoPicker({ onSubmit, onCancel, locale }: BirthInfoPickerP
         </Picker>
       </div>
 
-      <div className="picker-section">
+      <div className="picker-section picker-section--time">
         <label>{t("birth_hour")}</label>
         <Picker
-          value={{ hour_period: hourPeriod }}
-          onChange={(value) => setHourPeriod(value.hour_period as HourPeriod)}
+          value={{ hour, minute }}
+          onChange={(value) => {
+            setHour(Number(value.hour));
+            setMinute(Number(value.minute));
+          }}
           height={180}
           itemHeight={36}
           wheelMode="natural"
         >
-          <Picker.Column name="hour_period">
-            {HOUR_PERIODS.map((hp) => {
-              const info = HOUR_PERIOD_INFO[hp];
-              return (
-                <Picker.Item key={hp} value={hp}>
-                  {({ selected }) => (
-                    <div
-                      style={{
-                        color: selected ? "#D4AF37" : "#888",
-                        fontSize: selected ? 14 : 13,
-                        textAlign: "center",
-                        padding: "0 4px",
-                      }}
-                    >
-                      {localeKey === "zh" ? info.zh_label : info.en_label}
-                    </div>
-                  )}
-                </Picker.Item>
-              );
-            })}
+          <Picker.Column name="hour">
+            {hours.map((h) => (
+              <Picker.Item key={h} value={h}>
+                {({ selected }) => <PickerCell selected={selected}>{padClock(h)}</PickerCell>}
+              </Picker.Item>
+            ))}
+          </Picker.Column>
+          <Picker.Column name="minute">
+            {minutes.map((m) => (
+              <Picker.Item key={m} value={m}>
+                {({ selected }) => <PickerCell selected={selected}>{padClock(m)}</PickerCell>}
+              </Picker.Item>
+            ))}
           </Picker.Column>
         </Picker>
+        <p className="picker-shichen-preview" aria-live="polite">
+          {t("shichen_preview", { period: shichenPreview })}
+        </p>
         <p className="hint">{t("hour_hint")}</p>
+      </div>
+
+      <div className="picker-section picker-section--location">
+        <BirthLocationField value={birthLocation} onChange={handleLocationChange} />
+        {locationError ? <p className="birth-location-step__error">{locationError}</p> : null}
       </div>
 
       <div className="picker-section gender-section">
@@ -231,8 +221,14 @@ export function BirthInfoPicker({ onSubmit, onCancel, locale }: BirthInfoPickerP
             {t("back_to_list")}
           </button>
         ) : null}
-        <button type="button" onClick={handleBirthStepContinue} className="submit-btn">
-          {t("continue")}
+        <button
+          type="button"
+          onClick={handleSubmit}
+          className="submit-btn"
+          disabled={!canSubmit}
+          aria-disabled={!canSubmit}
+        >
+          {t("submit")}
         </button>
       </div>
     </div>

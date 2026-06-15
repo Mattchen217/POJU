@@ -31,14 +31,21 @@ function main() {
   assert(validate.includes("validateBirthLocationRequired"), "Validation helper");
   assert(stored.includes("validateBirthLocationRequired"), "createStoredProfile validates location");
 
-  assert(picker.includes('useState<"birth" | "location">'), "Two-step flow");
+  assert(!picker.includes('useState<"birth" | "location">'), "Single-page flow (no step wizard)");
+  assert(!picker.includes("BirthLocationStep"), "Location embedded in picker");
+  assert(picker.includes("BirthLocationField"), "BirthLocationField embedded in picker");
+  assert(picker.includes('name="hour"'), "Hour wheel column");
+  assert(picker.includes('name="minute"'), "Minute wheel column");
+  assert(picker.includes("isBirthLocationComplete"), "Location validated on submit");
   assert(picker.includes("birth_location"), "birth_location passed on submit");
 
   assert(en.includes('"birth_form"'), "en birth_form namespace");
   assert(zh.includes("出生地点"), "zh birth location label");
+  assert(zh.includes("出生时间"), "zh birth time label");
 
   const confirm = read("components/poju/BirthInfoConfirmDialog.tsx");
   assert(confirm.includes("location_label"), "Confirm dialog shows location");
+  assert(confirm.includes("formatBirthTimeDisplay"), "Confirm dialog shows precise time");
 
   const parseBody = read("lib/profile/stored-birth-info.ts");
   assert(parseBody.includes("birth_location_required"), "API rejects use_defaults");

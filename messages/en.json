@@ -1144,13 +1144,15 @@
     "birth_date": "Date of Birth",
     "birth_hour": "Time of Birth",
     "hour_hint": "Don't know the exact time? Choose your best estimate.",
+    "shichen_preview": "Traditional period · {period}",
     "gender": "Gender",
     "male": "Male",
     "female": "Female",
     "timezone_label": "Your timezone (auto-detected)",
     "timezone_hint": "Used internally for precise calculation.",
     "back_to_list": "Back to list",
-    "continue": "Continue"
+    "continue": "Continue",
+    "submit": "Confirm & Continue"
   },
   "birth_confirm": {
     "title": "Confirm Your Information",
