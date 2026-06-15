@@ -16,6 +16,9 @@
     "app/api/poju/final-delivery/route.ts": {
       "maxDuration": 300
     },
+    "app/api/poju/matrix-narrative/route.ts": {
+      "maxDuration": 60
+    },
     "app/api/syncro/compute_local/route.ts": {
       "maxDuration": 60
     },
