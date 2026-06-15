@@ -1136,6 +1136,50 @@
     "confirm_and_proceed": "Bestätigen & starten",
     "processing": "Wird vorbereitet…"
   },
+  "bazi": {
+    "gender": {
+      "qian": "Männliches Horoskop (乾造)",
+      "kun": "Weibliches Horoskop (坤造)"
+    },
+    "strength": {
+      "strong": "Stark (身旺)",
+      "weak": "Schwach (身弱)",
+      "balanced": "Ausgeglichen (中和)"
+    },
+    "element": {
+      "wood": "Holz",
+      "fire": "Feuer",
+      "earth": "Erde",
+      "metal": "Metall",
+      "water": "Wasser"
+    },
+    "life_stage": {
+      "changsheng": "Geburt (长生)",
+      "muyu": "Bad (沐浴)",
+      "guandai": "Krone (冠带)",
+      "linguan": "Beamter (临官)",
+      "diwang": "Gipfel (帝旺)",
+      "shuai": "Abnahme (衰)",
+      "bing": "Krankheit (病)",
+      "si": "Tod (死)",
+      "mu": "Grab (墓)",
+      "jue": "Erlöschen (绝)",
+      "tai": "Embryo (胎)",
+      "yang": "Pflege (养)"
+    },
+    "shensha": {
+      "tian_yi_gui_ren": "Himmlischer Edler (天乙贵人)",
+      "lu_shen": "Wohlstandsstern (禄神)",
+      "fei_ren": "Fliegende Klinge (飞刃)",
+      "wen_chang": "Literarischer Stern (文昌)",
+      "tao_hua": "Pfirsichblüte (桃花)",
+      "yi_ma": "Reisepferd (驿马)",
+      "hua_gai": "Baldachinstern (华盖)",
+      "gu_chen": "Einsamer Stern (孤辰)",
+      "gua_su": "Witwenstern (寡宿)"
+    },
+    "yongshen_label": "Nützlicher Gott (喜用神)"
+  },
   "chart_loader": {
     "your_chart_title": "Deine vier Säulen",
     "male": "Männlich",

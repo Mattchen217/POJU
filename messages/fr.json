@@ -1136,6 +1136,50 @@
     "confirm_and_proceed": "Confirmer et commencer",
     "processing": "Préparation…"
   },
+  "bazi": {
+    "gender": {
+      "qian": "Thème masculin (乾造)",
+      "kun": "Thème féminin (坤造)"
+    },
+    "strength": {
+      "strong": "Fort (身旺)",
+      "weak": "Faible (身弱)",
+      "balanced": "Équilibré (中和)"
+    },
+    "element": {
+      "wood": "Bois",
+      "fire": "Feu",
+      "earth": "Terre",
+      "metal": "Métal",
+      "water": "Eau"
+    },
+    "life_stage": {
+      "changsheng": "Naissance (长生)",
+      "muyu": "Bain (沐浴)",
+      "guandai": "Couronne (冠带)",
+      "linguan": "Officier (临官)",
+      "diwang": "Sommet (帝旺)",
+      "shuai": "Déclin (衰)",
+      "bing": "Maladie (病)",
+      "si": "Mort (死)",
+      "mu": "Tombe (墓)",
+      "jue": "Extinction (绝)",
+      "tai": "Embryon (胎)",
+      "yang": "Nourriture (养)"
+    },
+    "shensha": {
+      "tian_yi_gui_ren": "Noble céleste (天乙贵人)",
+      "lu_shen": "Étoile de prospérité (禄神)",
+      "fei_ren": "Lame volante (飞刃)",
+      "wen_chang": "Étoile littéraire (文昌)",
+      "tao_hua": "Fleur de pêcher (桃花)",
+      "yi_ma": "Cheval voyageur (驿马)",
+      "hua_gai": "Étoile dais (华盖)",
+      "gu_chen": "Étoile solitaire (孤辰)",
+      "gua_su": "Étoile veuve (寡宿)"
+    },
+    "yongshen_label": "Dieu utile (喜用神)"
+  },
   "chart_loader": {
     "your_chart_title": "Vos quatre piliers",
     "male": "Homme",

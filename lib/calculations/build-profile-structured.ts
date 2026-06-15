@@ -1,11 +1,23 @@
 import type { GetBaziChartOutput } from "shunshi-bazi-core";
 
 import {
+  computeLocalShenShaForPillars,
+  mergeShenSha,
+  shenShaListToI18nKeys,
+  type PillarKey,
+} from "@/lib/calculations/bazi-shensha-local";
+import { getLifeStage, getLifeStageI18nKey } from "@/lib/calculations/chang-sheng";
+import {
   calcDaYun,
   lunarGenderFromBirth,
   parseTrueSolarTimeString,
   type DaYunEntry,
 } from "@/lib/calculations/lunar-dayun";
+import {
+  computeYongshenAnalysis,
+  yongshenToDiagnosisElements,
+  type YongshenAnalysis,
+} from "@/lib/calculations/yongshen-heuristic";
 import type { UserProfile } from "@/lib/profile/types";
 
 export type ProfileStrength = "strong" | "balanced" | "weak";
@@ -17,6 +29,23 @@ export type PillarDetail = {
   ten_god: string;
   hidden_stems: string[];
   shen_sha: string[];
+  /** 十二长生 i18n key, e.g. bazi.life_stage.changsheng */
+  life_stage?: string;
+  /** 十二长生 Han label for fallback display */
+  life_stage_han?: string;
+  /** 神煞 i18n keys aligned with shen_sha */
+  stars?: string[];
+};
+
+export type BaziPillarEnrichment = {
+  life_stage: string;
+  stars: string[];
+};
+
+export type BaziEnrichment = {
+  gender_label: string;
+  pillars: Record<PillarKey, BaziPillarEnrichment>;
+  yongshen_analysis: YongshenAnalysis;
 };
 
 export type ProfileStructured = {
@@ -32,7 +61,7 @@ export type ProfileStructured = {
     day: string;
     hour: string;
   };
-  /** Per-pillar 十神 / 藏干 / 神煞 from shunshi chart. */
+  /** Per-pillar 十神 / 藏干 / 神煞 from shunshi chart + local enrichment. */
   pillars_detail?: {
     year: PillarDetail;
     month: PillarDetail;
@@ -40,6 +69,8 @@ export type ProfileStructured = {
     hour: PillarDetail;
   };
   da_yun: DaYunEntry[];
+  /** Gender, life stages, merged 神煞, 喜用神 — i18n-keyed payload for UI/LLM. */
+  bazi_enrichment?: BaziEnrichment;
 };
 
 const WU_XING_KEYS = ["金", "木", "水", "火", "土"] as const;
@@ -63,6 +94,10 @@ export function extractStrengthFromShunshiChart(chart: GetBaziChartOutput): Prof
   if (dmScore >= avg * 1.15) return "strong";
   if (dmScore <= avg * 0.85) return "weak";
   return "balanced";
+}
+
+export function genderLabelKey(gender: "M" | "F"): string {
+  return gender === "M" ? "bazi.gender.qian" : "bazi.gender.kun";
 }
 
 function resolveTrueSolarTime(
@@ -106,14 +141,85 @@ function extractPillarsDetail(chart?: GetBaziChartOutput): ProfileStructured["pi
   return { year, month, day, hour };
 }
 
-/** Pure-code structured payload: shunshi 四柱/诊断 + lunar 大运. */
+function enrichPillarsWithBaziFields(
+  pillars: NonNullable<ProfileStructured["pillars_detail"]>,
+  dayMasterStem: string,
+): NonNullable<ProfileStructured["pillars_detail"]> {
+  const branches = {
+    year: pillars.year.branch,
+    month: pillars.month.branch,
+    day: pillars.day.branch,
+    hour: pillars.hour.branch,
+  };
+
+  const localShenSha = computeLocalShenShaForPillars({
+    dayMasterStem,
+    branches,
+    yearBranch: pillars.year.branch,
+    dayBranch: pillars.day.branch,
+  });
+
+  const keys: PillarKey[] = ["year", "month", "day", "hour"];
+  const enriched = { ...pillars };
+
+  for (const key of keys) {
+    const p = enriched[key];
+    const stageHan = getLifeStage(dayMasterStem, p.branch);
+    const stageKey = getLifeStageI18nKey(dayMasterStem, p.branch);
+    const mergedSha = mergeShenSha(p.shen_sha, localShenSha[key]);
+    enriched[key] = {
+      ...p,
+      life_stage: stageKey ?? undefined,
+      life_stage_han: stageHan ?? undefined,
+      shen_sha: mergedSha,
+      stars: shenShaListToI18nKeys(mergedSha),
+    };
+  }
+
+  return enriched;
+}
+
+function buildBaziEnrichment(
+  profile: UserProfile,
+  pillars: NonNullable<ProfileStructured["pillars_detail"]>,
+  yongshen: YongshenAnalysis,
+): BaziEnrichment {
+  const keys: PillarKey[] = ["year", "month", "day", "hour"];
+  const pillarEnrichment = {} as Record<PillarKey, BaziPillarEnrichment>;
+
+  for (const key of keys) {
+    const p = pillars[key];
+    pillarEnrichment[key] = {
+      life_stage: p.life_stage ?? "",
+      stars: p.stars ?? [],
+    };
+  }
+
+  return {
+    gender_label: genderLabelKey(profile.birth.gender),
+    pillars: pillarEnrichment,
+    yongshen_analysis: yongshen,
+  };
+}
+
+/** Pure-code structured payload: shunshi 四柱/诊断 + lunar 大运 + local Bazi enrichment. */
 export function buildProfileStructured(input: {
   profile: UserProfile;
   chart?: GetBaziChartOutput;
 }): ProfileStructured {
   const { profile, chart } = input;
-  const favorable = profile.diagnosis.favorableElements ?? [];
-  const challenging = profile.diagnosis.challengingElements ?? [];
+
+  const yongshen = chart ? computeYongshenAnalysis(chart) : null;
+  const yongshenDiag = yongshen ? yongshenToDiagnosisElements(yongshen) : null;
+
+  const favorable =
+    yongshenDiag?.favorableElements.length
+      ? yongshenDiag.favorableElements
+      : (profile.diagnosis.favorableElements ?? []);
+  const challenging =
+    yongshenDiag?.challengingElements.length
+      ? yongshenDiag.challengingElements
+      : (profile.diagnosis.challengingElements ?? []);
 
   const trueSolar = resolveTrueSolarTime(profile, chart);
   const da_yun =
@@ -124,20 +230,47 @@ export function buildProfileStructured(input: {
         })
       : [];
 
+  let pillars_detail = extractPillarsDetail(chart);
+  const dayMasterStem =
+    pillars_detail?.day.stem ?? profile.diagnosis.dayMaster.charAt(0) ?? profile.bazi.dayPillar.charAt(0);
+
+  if (pillars_detail && dayMasterStem) {
+    pillars_detail = enrichPillarsWithBaziFields(pillars_detail, dayMasterStem);
+  }
+
+  const strength: ProfileStrength = yongshen?.status_strength ?? (chart ? extractStrengthFromShunshiChart(chart) : "balanced");
+
+  const bazi_enrichment =
+    pillars_detail && yongshen
+      ? buildBaziEnrichment(profile, pillars_detail, yongshen)
+      : chart && yongshen
+        ? {
+            gender_label: genderLabelKey(profile.birth.gender),
+            pillars: {
+              year: { life_stage: "", stars: [] },
+              month: { life_stage: "", stars: [] },
+              day: { life_stage: "", stars: [] },
+              hour: { life_stage: "", stars: [] },
+            },
+            yongshen_analysis: yongshen,
+          }
+        : undefined;
+
   return {
     day_master: profile.diagnosis.dayMaster,
     pattern: profile.diagnosis.patternSummary,
     yong_shen: favorable[0] ?? profile.diagnosis.dayMaster,
     xi_shen: favorable.length > 1 ? favorable.slice(1) : favorable,
     ji_shen: challenging,
-    strength: chart ? extractStrengthFromShunshiChart(chart) : "balanced",
+    strength,
     four_pillars: {
       year: profile.bazi.yearPillar,
       month: profile.bazi.monthPillar,
       day: profile.bazi.dayPillar,
       hour: profile.bazi.hourPillar,
     },
-    pillars_detail: extractPillarsDetail(chart),
+    pillars_detail,
     da_yun,
+    bazi_enrichment,
   };
 }

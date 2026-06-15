@@ -23,6 +23,8 @@ export type MatrixPillarDisplay = PillarDetail & {
   ten_god_en: string;
   hidden_display: string;
   star_label: string | null;
+  life_stage_label: string | null;
+  star_labels: string[];
 };
 
 export type MatrixDisplayData = {
@@ -45,6 +47,8 @@ export type MatrixDisplayData = {
   current_age: number;
   current_dayun_index: number;
   dayun_hub: { theme: string; age_range: string; start_year: number };
+  /** template = local fallback; llm = DeepSeek matrix narrative */
+  narrative_source?: "template" | "llm";
 };
 
 const JIEQI_EN: Record<string, string> = {
@@ -136,6 +140,8 @@ function enrichPillar(p: PillarDetail, locale: string): MatrixPillarDisplay {
           ? "藏干: —"
           : "Hidden: —",
     star_label: p.shen_sha[0] ? `✦ ${p.shen_sha[0]}` : null,
+    life_stage_label: p.life_stage_han ?? null,
+    star_labels: p.shen_sha,
   };
 }
 
@@ -364,5 +370,6 @@ export function buildMatrixDisplayData(input: {
           start_year: currentDy.start_year,
         }
       : { theme, age_range: "—", start_year: b.year },
+    narrative_source: "template",
   };
 }

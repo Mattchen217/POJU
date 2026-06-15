@@ -1169,6 +1169,50 @@
     "confirm_and_proceed": "Confirm & Begin",
     "processing": "Preparing…"
   },
+  "bazi": {
+    "gender": {
+      "qian": "Male Chart (乾造)",
+      "kun": "Female Chart (坤造)"
+    },
+    "strength": {
+      "strong": "Strong (身旺)",
+      "weak": "Weak (身弱)",
+      "balanced": "Balanced (中和)"
+    },
+    "element": {
+      "wood": "Wood",
+      "fire": "Fire",
+      "earth": "Earth",
+      "metal": "Metal",
+      "water": "Water"
+    },
+    "life_stage": {
+      "changsheng": "Birth (长生)",
+      "muyu": "Bathing (沐浴)",
+      "guandai": "Crown (冠带)",
+      "linguan": "Officer (临官)",
+      "diwang": "Peak (帝旺)",
+      "shuai": "Decline (衰)",
+      "bing": "Sickness (病)",
+      "si": "Death (死)",
+      "mu": "Tomb (墓)",
+      "jue": "Extinction (绝)",
+      "tai": "Embryo (胎)",
+      "yang": "Nurture (养)"
+    },
+    "shensha": {
+      "tian_yi_gui_ren": "Heavenly Noble (天乙贵人)",
+      "lu_shen": "Prosperity Star (禄神)",
+      "fei_ren": "Flying Blade (飞刃)",
+      "wen_chang": "Literary Star (文昌)",
+      "tao_hua": "Peach Blossom (桃花)",
+      "yi_ma": "Travel Horse (驿马)",
+      "hua_gai": "Canopy Star (华盖)",
+      "gu_chen": "Solitary Star (孤辰)",
+      "gua_su": "Widow Star (寡宿)"
+    },
+    "yongshen_label": "Useful God (喜用神)"
+  },
   "chart_loader": {
     "your_chart_title": "Your Personality Structure",
     "male": "Male",

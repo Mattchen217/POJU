@@ -2,12 +2,14 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useRef } from "react";
+import { useTranslations } from "next-intl";
 
 import { PojuDaYunDial } from "@/components/poju/PojuDaYunDial";
 import pojuAvatar from "@/assets/icons/P.png";
 import { elementCssClass } from "@/lib/poju/bazi-matrix-mappings";
 import { buildMatrixDisplayData } from "@/lib/poju/build-matrix-display";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
+import { resolveBaziLabel, shenshaHanToSubKey } from "@/lib/poju/resolve-bazi-i18n";
 import type { UserProfile } from "@/lib/profile/types";
 import "@/styles/poju-energy-matrix.css";
 
@@ -140,6 +142,7 @@ function RadarChart({ scores }: { scores: PojuMatrixPayload["wuxing_scores"] }) 
 export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
   const { structured, user_profile, wuxing_scores, strength, matrix_id } = payload;
   const zh = locale.startsWith("zh");
+  const tb = useTranslations("bazi");
 
   const display = useMemo(
     () =>
@@ -165,6 +168,12 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
   const dominant = sorted[0];
   const deficit = sorted[sorted.length - 1];
   const tst = user_profile.tst_meta ?? user_profile.birth.tst_meta;
+
+  const genderLabel = structured.bazi_enrichment?.gender_label
+    ? resolveBaziLabel(structured.bazi_enrichment.gender_label, tb)
+    : user_profile.birth.gender === "M"
+      ? tb("gender.qian")
+      : tb("gender.kun");
 
   const pillarLabels: Record<string, string> = {
     year: zh ? "年柱" : "Year",
@@ -228,7 +237,15 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
             <div className="v">
               {display.calendar.gregorian} <small>{zh ? "公历" : "Gregorian"}</small>
             </div>
-            <div className="mid">{display.calendar.headline}</div>
+            <div className="mid">
+              {display.calendar.headline}
+              {genderLabel ? (
+                <>
+                  {" · "}
+                  <i>{genderLabel}</i>
+                </>
+              ) : null}
+            </div>
             <div className="s">{display.calendar.lunar || display.calendar.mid}</div>
           </div>
 
@@ -442,11 +459,31 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
                   <div className="en">{pl.branch_en}</div>
                   <div className="sub">
                     {pl.branch} {pl.branch_pinyin}
+                    {pl.life_stage_label || payload.structured.pillars_detail?.[key]?.life_stage ? (
+                      <>
+                        {" · "}
+                        {resolveBaziLabel(
+                          payload.structured.pillars_detail?.[key]?.life_stage,
+                          tb,
+                          pl.life_stage_label ?? undefined,
+                        )}
+                      </>
+                    ) : null}
                   </div>
                 </div>
                 <div className="meta">
                   {pl.hidden_display}
-                  {pl.star_label ? (
+                  {pl.star_labels.length > 0 ? (
+                    <>
+                      <br />
+                      {pl.star_labels.map((star) => (
+                        <span key={star} className="star">
+                          ✦{" "}
+                          {resolveBaziLabel(`bazi.${shenshaHanToSubKey(star)}`, tb, star)}
+                        </span>
+                      ))}
+                    </>
+                  ) : pl.star_label ? (
                     <>
                       <br />
                       <span className="star">{pl.star_label}</span>
@@ -467,9 +504,17 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
           <div className="pojumsg__body">
             <div className="pojumsg__who">POJU</div>
             <div className="pojumsg__bubble">
-              <p>{renderRichText(display.synopsis.archetype)}</p>
-              <p>{renderRichText(display.synopsis.friction)}</p>
-              <p className="ask">{synopsisPrompt}</p>
+              {display.narrative_source === "llm" ? (
+                <>
+                  <p>{renderRichText(display.synopsis.archetype)}</p>
+                  <p>{renderRichText(display.synopsis.friction)}</p>
+                  <p className="ask">{synopsisPrompt}</p>
+                </>
+              ) : (
+                <p className="pem__narrative-loading">
+                  {zh ? "POJU 正在读取你的能量结构…" : "POJU is reading your energy structure…"}
+                </p>
+              )}
             </div>
           </div>
         </div>

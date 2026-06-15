@@ -26,6 +26,8 @@ export type LLMCallType =
   | "match_report"
   /** Glyph 全篇解读 — low / 15000 */
   | "glyph_reading"
+  /** Energy Matrix 三段文案 — no thinking / fast JSON */
+  | "matrix_narrative"
   /** @deprecated use base_analysis */
   | "poju_base_analysis"
   /** @deprecated use deep_analysis */
@@ -90,6 +92,8 @@ function normalizeCallType(callType: LLMCallType): Exclude<
     case "match_report":
     case "glyph_reading":
       return "deep_analysis";
+    case "matrix_narrative":
+      return "chat_flash";
     default:
       return callType;
   }
@@ -97,6 +101,8 @@ function normalizeCallType(callType: LLMCallType): Exclude<
 
 export function getThinkingConfig(callType: LLMCallType): { enabled: boolean; effort: ReasoningEffort } {
   switch (callType) {
+    case "matrix_narrative":
+      return { enabled: false, effort: "off" };
     case "base_analysis":
     case "match_report":
       return { enabled: true, effort: "medium" };

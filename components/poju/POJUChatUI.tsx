@@ -61,6 +61,8 @@ import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
 import { PojuPaywallInline } from "@/components/poju/PojuPaywallInline";
 import { PojuUnlockAnalysisOverlay } from "@/components/poju/PojuUnlockAnalysisOverlay";
 import { formatSituationOpeningText } from "@/lib/poju/format-situation-opening";
+import { requestMatrixNarrative } from "@/lib/llm/deepseek/matrix-narrative";
+import { applyMatrixNarrativeToPayload } from "@/lib/poju/apply-matrix-narrative";
 import {
   createEnergyMatrixMessage,
   createPaywallMessage,
@@ -135,6 +137,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const [unlockBusy, setUnlockBusy] = useState(false);
   const openingInitRef = useRef(false);
   const previewMatrixInitRef = useRef<string | null>(null);
+  const matrixNarrativeRef = useRef<string | null>(null);
   const unlockReturnInitRef = useRef<string | null>(null);
   const toolResumeInitRef = useRef<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -298,6 +301,57 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     locale,
     onSessionUpdate,
   ]);
+
+  useEffect(() => {
+    if (!isPreviewSession(session)) return;
+    if (!hasPreviewMatrixMessage(session)) return;
+
+    const matrixIdx = session.messages.findIndex((m) => m.meta?.kind === "energy_matrix");
+    if (matrixIdx < 0) return;
+
+    const matrixMsg = session.messages[matrixIdx];
+    const payload = matrixMsg?.meta?.matrix_payload;
+    if (!payload?.display) return;
+    if (payload.display.narrative_source === "llm") return;
+
+    const fetchKey = `${session.session_id}:${locale}`;
+    if (matrixNarrativeRef.current === fetchKey) return;
+    matrixNarrativeRef.current = fetchKey;
+
+    const ac = new AbortController();
+    void (async () => {
+      try {
+        const narrative = await requestMatrixNarrative({
+          matrix_payload: payload,
+          locale,
+          signal: ac.signal,
+        });
+        const updatedPayload = applyMatrixNarrativeToPayload(payload, narrative);
+        const current = sessionRef.current;
+        const messages = [...current.messages];
+        messages[matrixIdx] = {
+          ...messages[matrixIdx]!,
+          meta: {
+            ...messages[matrixIdx]!.meta,
+            matrix_payload: updatedPayload,
+          },
+        };
+        const next: POJUSessionState = {
+          ...current,
+          messages,
+          matrix_payload: updatedPayload,
+        };
+        onSessionUpdate(next);
+        await savePOJUSession(next);
+      } catch (e) {
+        if (ac.signal.aborted) return;
+        console.warn("[poju] matrix narrative LLM failed, keeping template copy:", e);
+        matrixNarrativeRef.current = null;
+      }
+    })();
+
+    return () => ac.abort();
+  }, [session, locale, onSessionUpdate]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;

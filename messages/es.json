@@ -1136,6 +1136,50 @@
     "confirm_and_proceed": "Confirmar y comenzar",
     "processing": "Preparando…"
   },
+  "bazi": {
+    "gender": {
+      "qian": "Carta masculina (乾造)",
+      "kun": "Carta femenina (坤造)"
+    },
+    "strength": {
+      "strong": "Fuerte (身旺)",
+      "weak": "Débil (身弱)",
+      "balanced": "Equilibrado (中和)"
+    },
+    "element": {
+      "wood": "Madera",
+      "fire": "Fuego",
+      "earth": "Tierra",
+      "metal": "Metal",
+      "water": "Agua"
+    },
+    "life_stage": {
+      "changsheng": "Nacimiento (长生)",
+      "muyu": "Baño (沐浴)",
+      "guandai": "Corona (冠带)",
+      "linguan": "Oficial (临官)",
+      "diwang": "Cima (帝旺)",
+      "shuai": "Declive (衰)",
+      "bing": "Enfermedad (病)",
+      "si": "Muerte (死)",
+      "mu": "Tumba (墓)",
+      "jue": "Extinción (绝)",
+      "tai": "Embrión (胎)",
+      "yang": "Crianza (养)"
+    },
+    "shensha": {
+      "tian_yi_gui_ren": "Noble celestial (天乙贵人)",
+      "lu_shen": "Estrella de prosperidad (禄神)",
+      "fei_ren": "Hoja voladora (飞刃)",
+      "wen_chang": "Estrella literaria (文昌)",
+      "tao_hua": "Flor de melocotón (桃花)",
+      "yi_ma": "Caballo viajero (驿马)",
+      "hua_gai": "Estrella dosel (华盖)",
+      "gu_chen": "Estrella solitaria (孤辰)",
+      "gua_su": "Estrella viuda (寡宿)"
+    },
+    "yongshen_label": "Dios útil (喜用神)"
+  },
   "chart_loader": {
     "your_chart_title": "Tus cuatro pilares",
     "male": "Hombre",

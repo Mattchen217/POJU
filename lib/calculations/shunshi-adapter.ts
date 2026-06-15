@@ -1,5 +1,9 @@
 import type { GetBaziChartOutput } from "shunshi-bazi-core";
 import { getBaziChart } from "shunshi-bazi-core";
+import {
+  computeYongshenAnalysis,
+  yongshenToDiagnosisElements,
+} from "@/lib/calculations/yongshen-heuristic";
 import { representativeHour, shunshiParamsFromBirthInfo } from "@/lib/profile/birth-info-utils";
 import type { BirthInfo, TstMeta, UserProfile } from "@/lib/profile/types";
 
@@ -91,7 +95,6 @@ export async function calculateProfileWithShunshi(input: BirthInfo): Promise<Use
       useTrueSolarTime: true,
     });
     const pillars = parsePillars(chart);
-    const dominant = chart.八字?.五行分值?.日主五行 ?? "未知";
     const tst_meta = extractTstMeta(chart, input, params.longitude!);
 
     if (tst_meta) {
@@ -100,14 +103,17 @@ export async function calculateProfileWithShunshi(input: BirthInfo): Promise<Use
       console.log("[bazi] Diff:", tst_meta.diff_minutes, "minutes");
     }
 
+    const yongshen = computeYongshenAnalysis(chart);
+    const { favorableElements, challengingElements } = yongshenToDiagnosisElements(yongshen);
+
     return {
       id,
       birth: { ...input, tst_meta },
       bazi: pillars,
       diagnosis: {
         dayMaster: chart.八字?.日主 ?? "unknown",
-        favorableElements: [String(dominant)],
-        challengingElements: [],
+        favorableElements,
+        challengingElements,
         patternSummary: `日主 ${chart.八字?.日主 ?? "unknown"}，四柱 ${pillars.yearPillar} ${pillars.monthPillar} ${pillars.dayPillar} ${pillars.hourPillar}。`,
       },
       createdAt: now,

@@ -1184,6 +1184,50 @@
     "confirm_and_proceed": "确认并开始",
     "processing": "准备中…"
   },
+  "bazi": {
+    "gender": {
+      "qian": "乾造",
+      "kun": "坤造"
+    },
+    "strength": {
+      "strong": "身旺",
+      "weak": "身弱",
+      "balanced": "中和"
+    },
+    "element": {
+      "wood": "木",
+      "fire": "火",
+      "earth": "土",
+      "metal": "金",
+      "water": "水"
+    },
+    "life_stage": {
+      "changsheng": "长生",
+      "muyu": "沐浴",
+      "guandai": "冠带",
+      "linguan": "临官",
+      "diwang": "帝旺",
+      "shuai": "衰",
+      "bing": "病",
+      "si": "死",
+      "mu": "墓",
+      "jue": "绝",
+      "tai": "胎",
+      "yang": "养"
+    },
+    "shensha": {
+      "tian_yi_gui_ren": "天乙贵人",
+      "lu_shen": "禄神",
+      "fei_ren": "飞刃",
+      "wen_chang": "文昌",
+      "tao_hua": "桃花",
+      "yi_ma": "驿马",
+      "hua_gai": "华盖",
+      "gu_chen": "孤辰",
+      "gua_su": "寡宿"
+    },
+    "yongshen_label": "喜用神"
+  },
   "chart_loader": {
     "your_chart_title": "你的性格结构",
     "male": "男",
