@@ -32,6 +32,7 @@ export interface PojuMessage {
   role: "user" | "assistant";
   content: string; // assistant 内容可能含 "### 标题" 和 "═══ 分隔 ═══"
   editable?: boolean;
+  showGuideAfterSlot?: boolean;
 }
 export interface PojuSession {
   id: string;
@@ -106,6 +107,8 @@ export interface PojuChatProps {
   sessionsLabel?: string;
   newSessionLabel?: string;
   newSessionPriceLabel?: string;
+  /** Rich assistant slots keyed by message id (energy matrix, paywall, report). */
+  messageSlots?: Record<string, ReactNode>;
 }
 
 /* ---------- AI 文本渲染(不用 Tailwind prose,避免 65ch 限制)----------
@@ -189,6 +192,7 @@ export default function PojuChat(props: PojuChatProps) {
     sessionsLabel = "Recent Sessions",
     newSessionLabel = "+ New POJU",
     newSessionPriceLabel = "$9.99",
+    messageSlots,
   } = props;
 
   const [input, setInput] = useState("");
@@ -463,8 +467,17 @@ export default function PojuChat(props: PojuChatProps) {
                   </>
                 ) : (
                   <AiReplyShell>
-                    {renderAiContent(m.content)}
-                    <AssistantMessageActions content={m.content} />
+                    {messageSlots?.[m.id] ? (
+                      <>
+                        {messageSlots[m.id]}
+                        {m.showGuideAfterSlot && m.content.trim() ? (
+                          <p className="pem__guide">{m.content}</p>
+                        ) : null}
+                      </>
+                    ) : (
+                      renderAiContent(m.content)
+                    )}
+                    {!messageSlots?.[m.id] ? <AssistantMessageActions content={m.content} /> : null}
                   </AiReplyShell>
                 )}
               </div>

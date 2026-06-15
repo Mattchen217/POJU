@@ -18,9 +18,11 @@ export type BaseAnalysisStreamPreparingProps = {
   locale: string;
   /** Console label, e.g. SyncroPreparing */
   logLabel: string;
-  onComplete: () => void | Promise<void>;
+  onComplete: (displayText: string, meta?: Record<string, unknown>) => void | Promise<void>;
   onError?: (error: string) => void;
   resumeJobId?: string;
+  /** `replay` skips SSE (handled by overlay); default `live` consumes stream. */
+  mode?: "replay" | "live";
 };
 
 function formatStreamError(error: string, t: (key: string) => string): string {
@@ -41,6 +43,7 @@ export function BaseAnalysisStreamPreparing({
   onComplete,
   onError,
   resumeJobId,
+  mode = "live",
 }: BaseAnalysisStreamPreparingProps) {
   const tChart = useTranslations("chart_loader");
   const splineControl = usePreparingSplineControl();
@@ -78,7 +81,7 @@ export function BaseAnalysisStreamPreparing({
           locale,
           generated_at: new Date().toISOString(),
         });
-        await onCompleteRef.current();
+        await onCompleteRef.current(displayText, meta);
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         console.error(`[${logLabel}] save failed:`, e);
@@ -102,10 +105,11 @@ export function BaseAnalysisStreamPreparing({
 
   useEffect(() => {
     if (startedRef.current) return;
+    if (mode === "replay") return;
     startedRef.current = true;
     void start();
     return () => stop();
-  }, [start, stop]);
+  }, [start, stop, mode]);
 
   const displayError = state.error ? formatStreamError(state.error, tChart) : null;
 

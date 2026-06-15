@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { BirthProfileFlow, type BirthProfileFlowStage } from "@/components/poju/BirthProfileFlow";
@@ -57,11 +57,26 @@ import {
   setExpiryReminderSnoozed,
   shouldShowExpiryWarning,
 } from "@/lib/poju/expiry-reminder";
-import { redirectToPojuSessionPayment } from "@/lib/poju/start-poju-session-payment";
+import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
+import { PojuPaywallInline } from "@/components/poju/PojuPaywallInline";
+import { PojuUnlockAnalysisOverlay } from "@/components/poju/PojuUnlockAnalysisOverlay";
+import { formatSituationOpeningText } from "@/lib/poju/format-situation-opening";
+import {
+  createEnergyMatrixMessage,
+  createPaywallMessage,
+  createReportMessage,
+  hasPaywallMessage,
+  hasPreviewMatrixMessage,
+  isPreviewSession,
+  POJU_RUN_UNLOCK_FLAG,
+} from "@/lib/poju/preview-unlock";
+import { profileHasBaseAnalysis } from "@/lib/profile/stored-profiles-service";
 
 /** Internal pipeline / phase UI — development only. */
 const POJU_DEV_DEBUG = process.env.NODE_ENV === "development";
 import "@/styles/topic-drift.css";
+import "@/styles/poju-energy-matrix.css";
+import { redirectToPojuSessionPayment } from "@/lib/poju/start-poju-session-payment";
 
 interface Props {
   session: POJUSessionState;
@@ -114,7 +129,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const [showOffTopicAction, setShowOffTopicAction] = useState(false);
   const [driftReason, setDriftReason] = useState("");
   const [editDialog, setEditDialog] = useState<{ messageId: string; content: string } | null>(null);
+  const [unlockOverlay, setUnlockOverlay] = useState<{ profileId: string; mode: "replay" | "live" } | null>(
+    null,
+  );
+  const [unlockBusy, setUnlockBusy] = useState(false);
   const openingInitRef = useRef(false);
+  const previewMatrixInitRef = useRef<string | null>(null);
+  const unlockReturnInitRef = useRef<string | null>(null);
   const toolResumeInitRef = useRef<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const documentFileRef = useRef<HTMLInputElement | null>(null);
@@ -144,6 +165,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   );
   const hasUserMessage = visibleMessages.some((m) => m.role === "user");
   const expired = isSessionExpired(session.expires_at);
+  const previewComposerBlocked = isPreviewSession(session) && hasPaywallMessage(session);
+  const composerLocked = expired || previewComposerBlocked || unlockOverlay !== null || unlockBusy;
   const birthFlowBlocking = birthFlowStage === "form" || birthFlowStage === "received" || birthFlowStage === "analyzing";
   const showSummaryForm =
     shouldShowContextSummaryForm(session) && !summaryFormDismissed && !session.main_delivery_done;
@@ -244,6 +267,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   useEffect(() => {
     if (openingInitRef.current) return;
     if (!resolveSessionHasProfile(session)) return;
+    if (isPreviewSession(session)) return;
     if (normalizeAgentPhase(session.agent_v2?.current_phase) !== "opening") return;
     if (visibleMessages.length > 0) return;
     if (sending || confirmBusy || pipelineBusy) return;
@@ -252,6 +276,39 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     void triggerOpening();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per empty opening session
   }, [session.session_id, session.agent_v2?.current_phase, visibleMessages.length]);
+
+  useEffect(() => {
+    if (previewMatrixInitRef.current === session.session_id) return;
+    if (!isPreviewSession(session)) return;
+    if (!resolveSessionHasProfile(session)) return;
+    if (hasPreviewMatrixMessage(session)) return;
+    if (!session.matrix_payload) return;
+
+    previewMatrixInitRef.current = session.session_id;
+    const withMatrix: POJUSessionState = {
+      ...session,
+      messages: [...session.messages, createEnergyMatrixMessage(session.matrix_payload, locale)],
+    };
+    onSessionUpdate(withMatrix);
+    void savePOJUSession(withMatrix);
+  }, [
+    session,
+    session.session_id,
+    session.matrix_payload,
+    locale,
+    onSessionUpdate,
+  ]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (unlockReturnInitRef.current === session.session_id) return;
+    const flag = sessionStorage.getItem(POJU_RUN_UNLOCK_FLAG);
+    if (flag !== session.session_id) return;
+    unlockReturnInitRef.current = session.session_id;
+    sessionStorage.removeItem(POJU_RUN_UNLOCK_FLAG);
+    void handlePreviewUnlock("payment");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- payment return once per session
+  }, [session.session_id]);
 
   useEffect(() => {
     if (toolResumeInitRef.current === session.session_id) return;
@@ -463,7 +520,79 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     }
   }
 
+  async function handlePreviewUnlock(via: "payment" | "code") {
+    if (unlockBusy) return;
+    const base = sessionRef.current;
+    const profileId = base.selected_stored_profile_id?.trim();
+    if (!profileId) return;
+
+    setUnlockBusy(true);
+    try {
+      const pendingQ = base.pending_question?.trim();
+      const unlocked: POJUSessionState = {
+        ...base,
+        unlock_status: "unlocked",
+        unlock_via: via,
+        original_question: pendingQ || base.original_question,
+      };
+      onSessionUpdate(unlocked);
+      await savePOJUSession(unlocked);
+
+      const cached = await profileHasBaseAnalysis(profileId);
+      setUnlockOverlay({ profileId, mode: cached ? "replay" : "live" });
+    } catch (e) {
+      console.error("[poju] preview unlock failed:", e);
+      await dialog.alert(t("dialog_connection_error"));
+    } finally {
+      setUnlockBusy(false);
+    }
+  }
+
+  async function handleUnlockAnalysisComplete(reportText: string) {
+    setUnlockOverlay(null);
+    const profileId = sessionRef.current.selected_stored_profile_id?.trim() ?? "";
+    let cur = sessionRef.current;
+
+    cur = {
+      ...cur,
+      messages: [...cur.messages, createReportMessage({ reportText, profileId })],
+      agent_v2: cur.agent_v2
+        ? { ...cur.agent_v2, has_base_analysis: true, selected_profile_id: profileId }
+        : cur.agent_v2,
+    };
+    onSessionUpdate(cur);
+    await savePOJUSession(cur);
+
+    try {
+      const situation = await requestSituationAnalysis(cur, locale, { force: true });
+      const entry = situation.session.situation_analysis_by_fingerprint?.[situation.fingerprint];
+      const openingText = formatSituationOpeningText(entry?.content ?? null, locale);
+      const openingMsg: POJUMessage = {
+        role: "assistant",
+        content: openingText,
+        timestamp: new Date().toISOString(),
+      };
+      const finalSession: POJUSessionState = {
+        ...situation.session,
+        messages: [...situation.session.messages, openingMsg],
+        agent_v2: situation.session.agent_v2
+          ? {
+              ...situation.session.agent_v2,
+              has_situation_analysis: true,
+              current_phase: "collecting_context",
+            }
+          : situation.session.agent_v2,
+      };
+      onSessionUpdate(finalSession);
+      await savePOJUSession(finalSession);
+    } catch (e) {
+      console.error("[poju] situation opening after unlock:", e);
+      await dialog.alert(t("dialog_connection_error"));
+    }
+  }
+
   async function handlePojuSend(text: string) {
+    if (composerLocked && !expired) return;
     if (expired) return;
     stopVoiceInput();
     const typed = text.trim();
@@ -484,6 +613,27 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     const savedComposerAttachment = composerAttachment;
     setInput("");
     setComposerAttachment(null);
+
+    if (isPreviewSession(baseSession)) {
+      const nowIso = new Date().toISOString();
+      const optimisticUser: POJUMessage = {
+        role: "user",
+        content: userMessage,
+        timestamp: nowIso,
+      };
+      const messages = [...baseSession.messages, optimisticUser];
+      if (!hasPaywallMessage(baseSession)) {
+        messages.push(createPaywallMessage());
+      }
+      const withPaywall: POJUSessionState = {
+        ...baseSession,
+        pending_question: userMessage,
+        messages,
+      };
+      onSessionUpdate(withPaywall);
+      await savePOJUSession(withPaywall);
+      return;
+    }
 
     const nowIso = new Date().toISOString();
     const optimisticUser: POJUMessage = {
@@ -976,7 +1126,48 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     role: m.role as "user" | "assistant",
     content: m.content,
     editable: m.role === "user" && !m.is_rejected,
+    showGuideAfterSlot: m.meta?.kind === "energy_matrix",
   }));
+
+  const messageSlots = useMemo(() => {
+    const slots: Record<string, ReactNode> = {};
+    for (const m of visibleMessages) {
+      if (m.meta?.kind === "energy_matrix" && m.meta.matrix_payload) {
+        slots[m.timestamp] = (
+          <PojuEnergyMatrix payload={m.meta.matrix_payload} locale={locale} compact />
+        );
+      }
+      if (m.meta?.kind === "paywall") {
+        slots[m.timestamp] = (
+          <PojuPaywallInline
+            sessionId={session.session_id}
+            locale={locale}
+            pendingQuestion={session.pending_question ?? session.original_question}
+            busy={unlockBusy}
+            onUnlocked={(via) => void handlePreviewUnlock(via)}
+          />
+        );
+      }
+      if (m.meta?.kind === "report") {
+        slots[m.timestamp] = (
+          <div className="pchat__report">
+            <div className="pchat__report-k">
+              {locale.startsWith("zh") ? "八字基础分析" : "Base Analysis Report"}
+            </div>
+            {m.meta.report_text ?? m.content}
+          </div>
+        );
+      }
+    }
+    return slots;
+  }, [
+    visibleMessages,
+    locale,
+    session.session_id,
+    session.pending_question,
+    session.original_question,
+    unlockBusy,
+  ]);
 
   const streaming = sending || confirmBusy;
 
@@ -1020,7 +1211,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         currentSessionId={session.session_id}
         messages={pojuMessages}
         isStreaming={streaming}
-        composerDisabled={expired}
+        composerDisabled={composerLocked}
+        messageSlots={messageSlots}
         streamingText={streamingReply ?? undefined}
         thinkingMode={streaming ? thinkingMode : null}
         thinkingLocale={locale}
@@ -1103,6 +1295,28 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         onDismiss={handleExpiryDismiss}
         onExtend={({ snooze }) => void handleExtendSessionPayment(snooze)}
       />
+
+      {unlockOverlay ? (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 70,
+            background: "rgba(0,0,0,0.85)",
+          }}
+        >
+          <PojuUnlockAnalysisOverlay
+            profileId={unlockOverlay.profileId}
+            locale={locale}
+            mode={unlockOverlay.mode}
+            onComplete={(text) => void handleUnlockAnalysisComplete(text)}
+            onError={(err) => {
+              setUnlockOverlay(null);
+              void dialog.alert(err);
+            }}
+          />
+        </div>
+      ) : null}
 
       {overlayFormOpen ? (
         <div

@@ -1,0 +1,131 @@
+.pwall {
+  margin-top: 8px;
+  border-radius: 20px;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.025));
+  backdrop-filter: blur(24px) saturate(160%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 0 40px rgba(227, 192, 105, 0.06);
+  padding: 24px 20px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.pwall__lab {
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #f4d493;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.pwall__title {
+  font-size: clamp(18px, 3.5vw, 24px);
+  font-weight: 600;
+  line-height: 1.35;
+  margin: 0;
+}
+
+.pwall__gold { color: #f4d493; }
+
+.pwall__sub {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.72);
+  max-width: 480px;
+  margin: 10px auto 0;
+  line-height: 1.6;
+}
+
+.pwall__price {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+  margin: 18px 0 4px;
+}
+
+.pwall__cur { font-size: 20px; color: #f4d493; }
+.pwall__num { font-size: 44px; font-weight: 600; line-height: 1; }
+.pwall__unit { font-family: ui-monospace, monospace; font-size: 12px; color: rgba(255, 255, 255, 0.55); }
+
+.pwall__trust {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin: 10px 0 18px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.pwall__trust b { color: #5cc3a2; }
+
+.pwall__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.pwall__cta {
+  border: none;
+  cursor: pointer;
+  border-radius: 999px;
+  padding: 14px 28px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #241402;
+  background: linear-gradient(135deg, #f4d98a, #e0b94a 50%, #d4af37);
+  box-shadow: 0 8px 24px rgba(212, 175, 55, 0.38);
+  width: 100%;
+}
+
+.pwall__cta:disabled { opacity: 0.65; cursor: wait; }
+
+.pwall__code-toggle {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.pwall__codebox {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.pwall__codebox input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.4);
+  border: none;
+  border-radius: 10px;
+  padding: 12px;
+  color: #fff;
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  outline: none;
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.14);
+}
+
+.pwall__codebox button {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9);
+  border: none;
+  border-radius: 10px;
+  padding: 0 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pwall__codebox button:disabled { opacity: 0.5; cursor: not-allowed; }

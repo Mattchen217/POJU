@@ -46,6 +46,11 @@ export interface POJUMessage {
     tool_suggestion_message_id?: string;
     /** DeepSeek / OpenRouter reasoning tokens + POJU thought digest for this turn. */
     thinking_process?: string;
+    /** Preview-unlock flow — special in-chat message kinds (zero LLM for matrix/paywall). */
+    kind?: "energy_matrix" | "paywall" | "report";
+    matrix_payload?: import("./build-matrix-payload").PojuMatrixPayload;
+    report_text?: string;
+    report_profile_id?: string;
   };
   is_rejected?: boolean;
   rejection_type?: "too_long" | "jailbreak" | "spam";
@@ -174,4 +179,12 @@ export interface POJUSessionState {
   active_cycle_id?: string;
   /** Cross-cycle shared context (e.g. profile refs); not Archive history. */
   shared_context?: Record<string, unknown>;
+
+  /** Preview-unlock flow: chat-first, pay in-thread. */
+  unlock_status?: "preview" | "unlocked";
+  unlock_via?: "payment" | "code";
+  /** User question captured at paywall (before unlock). */
+  pending_question?: string;
+  /** Local chart data for Energy Matrix (no LLM). */
+  matrix_payload?: import("./build-matrix-payload").PojuMatrixPayload;
 }

@@ -10,7 +10,7 @@ import {
   clearExpiryReminderSnooze,
   setExpiryReminderSnoozed,
 } from "@/lib/poju/expiry-reminder";
-import { createPOJUSession, extendPOJUV4Session } from "@/lib/poju/session-manager";
+import { createPOJUSession, extendPOJUV4Session, loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
 import { clearPendingStoredProfileId, readPendingStoredProfileId } from "@/lib/poju/pending-stored-profile";
 import {
   clearPojuPendingPaymentStorage,
@@ -20,6 +20,11 @@ import {
   POJU_PENDING_RESTORE_SESSION_KEY,
   readPendingPaymentSnoozeFlag,
 } from "@/lib/poju/start-poju-session-payment";
+import {
+  bindPreviewProfileToSession,
+  POJU_PENDING_UNLOCK_SESSION_KEY,
+  POJU_RUN_UNLOCK_FLAG,
+} from "@/lib/poju/preview-unlock";
 import { restorePOJUV4ArchivedSession } from "@/lib/poju/v4-lifecycle";
 
 type StepStatus = "verifying" | "creating" | "success" | "error";
@@ -82,6 +87,21 @@ function PojuPaymentSuccessInner() {
           return;
         }
 
+        if (action === "unlock") {
+          const sessionId =
+            sessionStorage.getItem(POJU_PENDING_UNLOCK_SESSION_KEY) ?? params.get("session_id") ?? "";
+          if (!orderId || !sessionId) throw new Error("Missing unlock context");
+          sessionStorage.setItem(POJU_RUN_UNLOCK_FLAG, sessionId);
+          sessionStorage.removeItem(POJU_PENDING_UNLOCK_SESSION_KEY);
+          sessionStorage.removeItem(POJU_PENDING_ORDER_KEY);
+          sessionStorage.removeItem("poju_pending_question");
+          sessionStorage.removeItem(POJU_PENDING_ACTION_KEY);
+          if (cancelled) return;
+          setStatus("success");
+          router.replace(`/poju/session/${sessionId}`);
+          return;
+        }
+
         const fromRaw = params.get("q")?.trim();
         let fromQuery = "";
         if (fromRaw) {
@@ -123,9 +143,12 @@ function PojuPaymentSuccessInner() {
         if (cancelled) return;
         setStatus("success");
         if (pendingProfile?.trim()) {
-          router.replace(
-            `/poju/session/${sessionId}/preparing?profile=${encodeURIComponent(pendingProfile.trim())}`,
-          );
+          const local = await loadPOJUSession(sessionId);
+          if (local) {
+            const bound = await bindPreviewProfileToSession(local, pendingProfile.trim());
+            await savePOJUSession(bound);
+          }
+          router.replace(`/poju/session/${sessionId}`);
         } else {
           router.replace(`/poju/session/${sessionId}/prepare`);
         }

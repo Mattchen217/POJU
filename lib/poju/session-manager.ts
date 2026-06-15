@@ -61,6 +61,7 @@ export async function createPOJUSession(input: {
     created_at: now.toISOString(),
     last_interaction_at: now.toISOString(),
     expires_at: expiresAt.toISOString(),
+    unlock_status: "preview",
   };
 
   const payload = await encryptJson(SESSION_SECRET, sessionState);

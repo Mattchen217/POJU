@@ -53,6 +53,9 @@ importers:
       dexie:
         specifier: ^4.4.2
         version: 4.4.2
+      echarts:
+        specifier: ^5.6.0
+        version: 5.6.0
       framer-motion:
         specifier: ^12.38.0
         version: 12.38.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
@@ -97,7 +100,7 @@ importers:
         version: 1.2.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       serwist:
         specifier: ^9.5.7
-        version: 9.5.7(browserslist@4.28.2)(typescript@5.9.3)
+        version: 9.5.7(browserslist@4.28.1)(typescript@5.9.3)
       shunshi-bazi-core:
         specifier: ^0.1.0
         version: 0.1.0
@@ -2183,6 +2186,9 @@ packages:
   eastasianwidth@0.2.0:
     resolution: {integrity: sha512-I88TYZWc9XiYHRQ4/3c5rjjfgkjhLyW2luGIheGERbNQ6OY7yTybanSpDXZa8y7VUP9YmDcYa+eyq4ca7iLqWA==}
 
+  echarts@5.6.0:
+    resolution: {integrity: sha512-oTbVTsXfKuEhxftHqL5xprgLoc0k7uScAwtryCgWF6hPYFLRwOUHiFmHGCBKP5NPFNkDVopOieyUqYGH8Fa3kA==}
+
   electron-to-chromium@1.5.343:
     resolution: {integrity: sha512-YHnQ3MXI08icvL9ZKnEBy05F2EQ8ob01UaMOuMbM8l+4UcAq6MPPbBTJBbsBUg3H8JeZNt+O4fjsoWth3p6IFg==}
 
@@ -3658,6 +3664,9 @@ packages:
   tsconfig-paths@3.15.0:
     resolution: {integrity: sha512-2Ac2RgzDe/cn48GvOe3M+o82pEFewD3UPbyoUHHdKasHwJKjds4fLXWf/Ux5kATBKN20oaFGu+jbElp1pos0mg==}
 
+  tslib@2.3.0:
+    resolution: {integrity: sha512-N82ooyxVNm6h1riLCoyS9e3fuJ3AMG2zIZs2Gd1ATcSFjSA23Q0fzjjZeh0jbJvWVDZ0cJT8yaNNaaXHzueNjg==}
+
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
 
@@ -3852,6 +3861,9 @@ packages:
 
   zod@4.3.6:
     resolution: {integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==}
+
+  zrender@5.6.1:
+    resolution: {integrity: sha512-OFXkDJKcrlx5su2XbzJvj/34Q3m6PvyCZkVPHGYpcCJ52ek4U/ymZyfuV1nKE23AyBJ51E/6Yr0mhZ7xGTO4ag==}
 
   zustand@5.0.12:
     resolution: {integrity: sha512-i77ae3aZq4dhMlRhJVCYgMLKuSiZAaUPAct2AksxQ+gOtimhGMdXljRT21P5BNpeT4kXlLIckvkPM029OljD7g==}
@@ -5177,10 +5189,6 @@ snapshots:
     optionalDependencies:
       browserslist: 4.28.1
 
-  '@serwist/utils@9.5.7(browserslist@4.28.2)':
-    optionalDependencies:
-      browserslist: 4.28.2
-
   '@serwist/webpack-plugin@9.5.7(browserslist@4.28.1)(typescript@5.9.3)':
     dependencies:
       '@serwist/build': 9.5.7(browserslist@4.28.1)(typescript@5.9.3)
@@ -5949,6 +5957,11 @@ snapshots:
       gopd: 1.2.0
 
   eastasianwidth@0.2.0: {}
+
+  echarts@5.6.0:
+    dependencies:
+      tslib: 2.3.0
+      zrender: 5.6.1
 
   electron-to-chromium@1.5.343: {}
 
@@ -7432,15 +7445,6 @@ snapshots:
     transitivePeerDependencies:
       - browserslist
 
-  serwist@9.5.7(browserslist@4.28.2)(typescript@5.9.3):
-    dependencies:
-      '@serwist/utils': 9.5.7(browserslist@4.28.2)
-      idb: 8.0.3
-    optionalDependencies:
-      typescript: 5.9.3
-    transitivePeerDependencies:
-      - browserslist
-
   set-function-length@1.2.2:
     dependencies:
       define-data-property: 1.1.4
@@ -7778,6 +7782,8 @@ snapshots:
       minimist: 1.2.8
       strip-bom: 3.0.0
 
+  tslib@2.3.0: {}
+
   tslib@2.8.1: {}
 
   tsx@4.21.0:
@@ -8028,6 +8034,10 @@ snapshots:
   zod@3.23.8: {}
 
   zod@4.3.6: {}
+
+  zrender@5.6.1:
+    dependencies:
+      tslib: 2.3.0
 
   zustand@5.0.12(@types/react@19.2.14)(react@19.2.5)(use-sync-external-store@1.6.0(react@19.2.5)):
     optionalDependencies:

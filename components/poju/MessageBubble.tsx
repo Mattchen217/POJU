@@ -4,7 +4,9 @@ import { useTranslations } from "next-intl";
 import type { POJUAction, POJUMessage, ToolName } from "@/lib/poju/types";
 import { AssistantMessageActions } from "@/components/poju/AssistantMessageActions";
 import { MainDeliveryView } from "@/components/poju/MainDeliveryView";
+import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
 import { ToolSuggestionCard } from "@/components/poju/ToolSuggestionCard";
+import "@/styles/poju-energy-matrix.css";
 import { parseDeliveryContent, type DeliverySection } from "@/lib/poju/parse-delivery";
 
 export interface MessageBubbleProps {
@@ -39,6 +41,27 @@ export function MessageBubble({
   const isUser = message.role === "user";
   const isWelcomePanel = isAssistantWelcomeMessage(message);
   if (isWelcomePanel && hideWelcomePanel) return null;
+  if (message.role === "assistant" && message.meta?.kind === "energy_matrix" && message.meta.matrix_payload) {
+    return (
+      <div className="pchat__msg pchat__msg--ai">
+        <PojuEnergyMatrix payload={message.meta.matrix_payload} locale="en" compact />
+        {message.content.trim() ? <p className="pem__guide">{message.content}</p> : null}
+      </div>
+    );
+  }
+  if (message.role === "assistant" && message.meta?.kind === "paywall") {
+    return null;
+  }
+  if (message.role === "assistant" && message.meta?.kind === "report") {
+    return (
+      <div className="pchat__msg pchat__msg--ai">
+        <div className="pchat__report">
+          <div className="pchat__report-k">Base Analysis Report</div>
+          {message.meta.report_text ?? message.content}
+        </div>
+      </div>
+    );
+  }
   if (isWelcomePanel) {
     const paragraphs = splitWelcomeParagraphs(message.content);
     return (

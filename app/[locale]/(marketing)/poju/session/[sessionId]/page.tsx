@@ -48,7 +48,7 @@ export default function PojuSessionDeepLinkPage() {
       return;
     }
 
-    const local = await loadPOJUSession(sessionId);
+    let local = await loadPOJUSession(sessionId);
     if (!local) {
       setError("session_not_found");
       setLoading(false);
@@ -66,6 +66,21 @@ export default function PojuSessionDeepLinkPage() {
         selected_profile_id: local.selected_stored_profile_id,
       });
       await savePOJUSession(local);
+    }
+
+    if (
+      local.selected_stored_profile_id &&
+      !local.matrix_payload &&
+      local.unlock_status !== "unlocked" &&
+      !local.agent_v2?.has_base_analysis
+    ) {
+      try {
+        const { bindPreviewProfileToSession } = await import("@/lib/poju/preview-unlock");
+        local = await bindPreviewProfileToSession(local, local.selected_stored_profile_id);
+        await savePOJUSession(local);
+      } catch (e) {
+        console.warn("[poju/session] matrix payload bootstrap failed:", e);
+      }
     }
 
     setSession(local);
