@@ -1,11 +1,14 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useRef } from "react";
 
 import { PojuDaYunDial } from "@/components/poju/PojuDaYunDial";
+import pojuAvatar from "@/assets/icons/P.png";
 import { elementCssClass } from "@/lib/poju/bazi-matrix-mappings";
 import { buildMatrixDisplayData } from "@/lib/poju/build-matrix-display";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
+import type { UserProfile } from "@/lib/profile/types";
 import "@/styles/poju-energy-matrix.css";
 
 type Props = {
@@ -22,18 +25,22 @@ const ELEMENT_CLASS: Record<string, string> = {
   Water: "el-water",
 };
 
+const ELEMENT_BAR_CLASS: Record<string, string> = {
+  Wood: "ebar-fill--wood",
+  Fire: "ebar-fill--fire",
+  Earth: "ebar-fill--earth",
+  Metal: "ebar-fill--metal",
+  Water: "ebar-fill--water",
+};
+
 function renderRichText(text: string) {
   const parts = text.split(/\*\*(.+?)\*\*/g);
   return parts.map((part, i) =>
-    i % 2 === 1 ? (
-      <strong key={i}>{part}</strong>
-    ) : (
-      <span key={i}>{part}</span>
-    ),
+    i % 2 === 1 ? <b key={i}>{part}</b> : <span key={i}>{part}</span>,
   );
 }
 
-function formatBirthSubject(profile: PojuMatrixPayload["user_profile"], locale: string): string {
+function formatBornLine(profile: UserProfile): string {
   const b = profile.birth;
   const pad = (n: number) => String(n).padStart(2, "0");
   const time =
@@ -41,11 +48,19 @@ function formatBirthSubject(profile: PojuMatrixPayload["user_profile"], locale: 
     profile.birth.tst_meta?.original_time ??
     "";
   const date = `${b.year} · ${pad(b.month)} · ${pad(b.day)}`;
-  const loc = b.birth_location?.name ?? b.timezone;
-  if (locale.startsWith("zh")) {
-    return `生于 ${date}${time ? ` — ${time}` : ""} · ${loc}`;
+  return time ? `${date} — ${time}` : date;
+}
+
+function formatCoordinates(profile: UserProfile, locale: string): string {
+  const loc = profile.birth.birth_location;
+  const tstLon = profile.tst_meta?.longitude ?? profile.birth.tst_meta?.longitude;
+  const lon = loc?.longitude ?? tstLon;
+  if (loc?.name && lon != null && !loc.use_defaults) {
+    const dir = lon >= 0 ? "E" : "W";
+    return `${loc.name} ${Math.abs(lon).toFixed(2)}°${dir}`;
   }
-  return `BORN ${date}${time ? ` — ${time}` : ""} · ${loc}`;
+  if (loc?.name && !loc.use_defaults) return loc.name;
+  return profile.birth.timezone || (locale.startsWith("zh") ? "默认时区" : "Default timezone");
 }
 
 function strengthLabel(strength: PojuMatrixPayload["strength"], locale: string): string {
@@ -86,10 +101,10 @@ function RadarChart({ scores }: { scores: PojuMatrixPayload["wuxing_scores"] }) 
           radius: "72%",
           startAngle: 90,
           splitNumber: 3,
-          axisName: { color: "#c9c4dc", fontSize: 10.5 },
+          axisName: { color: "#c9c4dc", fontSize: 10.5, fontFamily: "Inter" },
           splitLine: { lineStyle: { color: "rgba(255,255,255,0.13)" } },
           splitArea: { areaStyle: { color: ["rgba(255,255,255,0.02)", "rgba(255,255,255,0.05)"] } },
-          axisLine: { lineStyle: { color: "rgba(255, 255, 255, 0.15)" } },
+          axisLine: { lineStyle: { color: "rgba(255,255,255,0.15)" } },
           indicator: scores.map((s) => ({ name: s.element, max: max * 1.1 })),
         },
         series: [
@@ -119,7 +134,7 @@ function RadarChart({ scores }: { scores: PojuMatrixPayload["wuxing_scores"] }) 
     };
   }, [scores]);
 
-  return <div className="pem-radar" ref={ref} aria-hidden />;
+  return <div className="radar" ref={ref} aria-hidden />;
 }
 
 export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
@@ -139,6 +154,12 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
     [payload.display, user_profile, structured, strength, wuxing_scores, locale],
   );
 
+  const synopsisPrompt =
+    display.synopsis.prompt ??
+    (zh
+      ? "把你反复掂量、又迟迟定不下来的那个问题告诉我——发在下面，我会结合你的命盘，和你一步步拆开。"
+      : "Tell me the question or dilemma you keep weighing and cannot settle — share it below, and I'll walk through it with you, grounded in your chart.");
+
   const maxCount = Math.max(...wuxing_scores.map((s) => s.count), 1);
   const sorted = [...wuxing_scores].sort((a, b) => b.pct - a.pct);
   const dominant = sorted[0];
@@ -154,18 +175,20 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
 
   return (
     <div className={`pem${compact ? " pem--compact" : ""}`}>
-      <header className="pem__head">
-        <div className="pem__eyebrow">{zh ? "时空对齐" : "Spatio-Temporal Alignment"}</div>
-        <h2 className="pem__title">{zh ? "时空能量矩阵" : "The Space-Time Matrix"}</h2>
-        <p className="pem__tag">
+      <header className="rhead">
+        <div className="eyebrow">{zh ? "时空对齐" : "Spatio-Temporal Alignment"}</div>
+        <h2>{zh ? "时空能量矩阵" : "The Space-Time Matrix"}</h2>
+        <p className="tag">
           {zh
             ? "基于出生坐标的能量结构快照，用于更清晰的决策。"
             : "A psycho-spatial alignment of your birth coordinates — for clearer decision-making."}
         </p>
-        <div className="pem__subject">
-          <span>{formatBirthSubject(user_profile, locale)}</span>
+        <div className="subject">
           <span>
-            {zh ? "坐标" : "COORDINATES"} <b>{user_profile.birth.birth_location?.name ?? user_profile.birth.timezone}</b>
+            {zh ? "生于" : "BORN"} <b>{formatBornLine(user_profile)}</b>
+          </span>
+          <span>
+            {zh ? "坐标" : "COORDINATES"} <b>{formatCoordinates(user_profile, locale)}</b>
           </span>
           <span>
             {zh ? "矩阵 ID" : "MATRIX ID"} <b>{matrix_id}</b>
@@ -173,167 +196,175 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
         </div>
       </header>
 
-      <section className="pem__device">
-        <span className="pem__reg pem__reg--tl" />
-        <span className="pem__reg pem__reg--tr" />
-        <span className="pem__reg pem__reg--bl" />
-        <span className="pem__reg pem__reg--br" />
+      <section className="device">
+        <span className="reg tl" />
+        <span className="reg tr" />
+        <span className="reg bl" />
+        <span className="reg br" />
 
-        <div className="pem__dev-head">
-          <div className="pem__dev-title">
-            {zh ? "宇宙能量矩阵 · 实时读数" : "Cosmic Energy Matrix · Live Reading"}
-          </div>
-          <div className="pem__dev-id">{zh ? "引擎 v4 · 本地计算" : "ENGINE v4 · Local Compute"}</div>
+        <div className="dev-head">
+          <div className="t">{zh ? "宇宙能量矩阵 · 实时读数" : "Cosmic Energy Matrix · Live Reading"}</div>
+          <div className="id">{zh ? "引擎 v4 · 本地计算" : "ENGINE v4 · Local Compute"}</div>
         </div>
 
-        {/* Top band: zodiac + calendar + TST + solar term */}
-        <div className="pem__topband">
-          <div className="pem__tcard pem__zsign">
-            <div className="pem__zsign-art">
+        <div className="topband">
+          <div className="tcard zsign">
+            <div className="zsign__art">
               <span>{display.zodiac.han || display.zodiac.branch}</span>
             </div>
-            <div className="pem__zsign-en">{display.zodiac.en}</div>
-            <div className="pem__zsign-cn">
+            <div className="zsign__en">{display.zodiac.en}</div>
+            <div className="zsign__cn">
               {display.zodiac.branch} · {display.zodiac.pinyin}
             </div>
-            <div className="pem__zsign-tag">{zh ? "你的生肖 · Your Sign" : "Your Sign · 生肖"}</div>
-            <div className="pem__zsign-note">{display.zodiac.note}</div>
+            <div className="zsign__tag">{zh ? "你的生肖 · Your Sign" : "Your Sign · 生肖"}</div>
+            <div className="zsign__note">{display.zodiac.note}</div>
           </div>
 
-          <div className="pem__tcard pem__astro">
-            <div className="pem__astro-k">
-              {zh ? "历法对齐" : "Calendar Alignment"} <em>· {zh ? "历法" : "calendar"}</em>
+          <div className="tcard a">
+            <div className="k">
+              <span className="bull" />
+              {zh ? "历法对齐" : "Calendar Alignment"} <em>· {zh ? "历法对齐" : "calendar"}</em>
             </div>
-            <div className="pem__astro-v">
+            <div className="v">
               {display.calendar.gregorian} <small>{zh ? "公历" : "Gregorian"}</small>
             </div>
-            <div className="pem__astro-mid">{display.calendar.headline}</div>
-            <div className="pem__astro-s">{display.calendar.lunar || display.calendar.mid}</div>
+            <div className="mid">{display.calendar.headline}</div>
+            <div className="s">{display.calendar.lunar || display.calendar.mid}</div>
           </div>
 
-          <div className="pem__tcard pem__astro">
-            <div className="pem__astro-k">
-              {zh ? "真太阳时校准" : "True Solar Time"} <em>· TST</em>
+          <div className="tcard a">
+            <div className="k">
+              <span className="bull" />
+              {zh ? "真太阳时校准" : "True Solar Time"} <em>· {zh ? "真太阳时校准" : "TST"}</em>
             </div>
             {tst ? (
               <>
-                <div className="pem__tst">
-                  <div className="pem__tst-col">
-                    <div className="pem__tst-vv">{tst.original_time}</div>
-                    <div className="pem__tst-kk">{zh ? "标准时" : "Standard"}</div>
+                <div className="tst">
+                  <div className="t">
+                    <div className="vv">{tst.original_time}</div>
+                    <div className="kk">{zh ? "标准时" : "Standard"}</div>
                   </div>
-                  <div className="pem__tst-arr">→</div>
-                  <div className="pem__tst-col">
-                    <div className="pem__tst-vv pem__tst-gold">{tst.true_solar_time}</div>
-                    <div className="pem__tst-kk">{zh ? "真太阳时" : "True Solar"}</div>
+                  <div className="arr">→</div>
+                  <div className="t">
+                    <div className="vv gold">{tst.true_solar_time}</div>
+                    <div className="kk">{zh ? "真太阳时" : "True Solar"}</div>
                   </div>
                   {tst.diff_minutes !== 0 ? (
-                    <div className="pem__tst-chip">
-                      {tst.diff_minutes > 0 ? "+" : ""}
-                      {tst.diff_minutes}m
+                    <div className="chip">
+                      {tst.diff_minutes > 0 ? "+" : "−"}
+                      {Math.abs(tst.diff_minutes)}m
                     </div>
                   ) : null}
                 </div>
-                <div className="pem__astro-s">
+                <div className="s">
                   {zh ? "经度修正" : "Longitude correction"} · {tst.diff_minutes}m
                 </div>
               </>
             ) : (
-              <div className="pem__astro-v">—</div>
+              <div className="v">—</div>
             )}
           </div>
 
-          <div className="pem__tcard pem__astro">
-            <div className="pem__astro-k">
+          <div className="tcard a">
+            <div className="k">
+              <span className="bull" />
               {zh ? "节气交接" : "Solar Term"} <em>· {zh ? "节气" : "jieqi"}</em>
             </div>
-            <div className="pem__astro-v">
+            <div className="v">
               {display.solar_term.name_en} <small>{display.solar_term.name}</small>
             </div>
-            <div className="pem__astro-mid">{display.solar_term.season}</div>
-            <div className="pem__astro-s">
+            <div className="mid">{display.solar_term.season}</div>
+            <div className="s">
               {zh ? "下一节气" : "Next"}: {display.solar_term.next_name}
             </div>
-            <div className="pem__term">
+            <div className="term">
               <i style={{ width: `${display.solar_term.progress_pct}%` }} />
             </div>
           </div>
         </div>
 
-        {/* Block A: radar + elemental readouts */}
-        <div className="pem__block pem__block--spread">
-          <div className="pem__radarpanel">
-            <div className="pem__panel-k">
+        <div className="block block--spread">
+          <div className="radarpanel">
+            <div className="rp__k">
               {zh ? "五行能量谱" : "Elemental Signature"} <em>· {zh ? "五行" : "wuxing"}</em>
             </div>
             <RadarChart scores={wuxing_scores} />
           </div>
-          <div className="pem__side">
-            <div className="pem__ro">
-              <div className="pem__ro-k">{zh ? "五行分布" : "Elemental Breakdown"}</div>
-              <div className="pem__elist">
+          <div className="side">
+            <div className="ro">
+              <div className="ro__k">{zh ? "五行分布" : "Elemental Breakdown · 五行分布"}</div>
+              <div className="elist">
                 {wuxing_scores.map((row) => (
-                  <div className="pem__erow" key={row.element}>
-                    <span className={`pem__ename ${ELEMENT_CLASS[row.element] ?? ""}`}>{row.element}</span>
-                    <span className="pem__ecn">{row.element_zh}</span>
-                    <span className="pem__ebar">
+                  <div className="erow" key={row.element}>
+                    <span className={`ename ${ELEMENT_CLASS[row.element] ?? ""}`}>{row.element}</span>
+                    <span className="ecn">{row.element_zh}</span>
+                    <span className="ebar">
                       <i
                         style={{ width: `${Math.round((row.count / maxCount) * 100)}%` }}
-                        className={`pem__ebar-fill pem__ebar-fill--${row.element.toLowerCase()}`}
+                        className={ELEMENT_BAR_CLASS[row.element] ?? ""}
                       />
                     </span>
-                    <span className="pem__ecount">{row.count}</span>
+                    <span className="ecount">{row.count}</span>
                   </div>
                 ))}
               </div>
-              <div className="pem__enote">
+              <div className="enote">
                 {zh ? "日主" : "Day Master"} <b>{display.day_master.en}</b>
-                {zh ? "，生于" : ", born in"} {structured.pattern !== display.pattern_line ? display.pattern_line : display.day_master.element}
-                {zh ? "月" : " month"} — {display.day_master.element}
-                {zh ? "气" : " energy"}.
+                {zh ? "，五行以" : ", with "}
+                <b>{dominant?.element}</b>
+                {zh ? "偏盛、" : " surplus and "}
+                <b>{deficit?.element}</b>
+                {zh ? "偏薄——这是当前能量场的主线。" : " deficit — the main line in your field right now."}
               </div>
             </div>
-            <div className="pem__ro">
-              <div className="pem__ro-k">{zh ? "核心活力" : "Core Vitality · Daymaster"}</div>
-              <div className="pem__ro-v">{strengthLabel(strength, locale)}</div>
-              <div className="pem__vtrack">
-                <div className="pem__vtrack-mid" />
-                <div className="pem__vtrack-pin" style={{ left: vitalityPin(strength) }} />
+            <div className="ro">
+              <div className="ro__k">{zh ? "核心活力" : "Core Vitality · Daymaster"}</div>
+              <div className="ro__v">{strengthLabel(strength, locale)}</div>
+              <div className="vtrack">
+                <div className="mid" />
+                <div className="pin" style={{ left: vitalityPin(strength) }} />
               </div>
-              <div className="pem__vscale">
+              <div className="vscale">
                 <span>{zh ? "偏弱" : "Receptive"}</span>
                 <span>{zh ? "平衡" : "Dynamic Balance"}</span>
                 <span>{zh ? "偏强" : "Dominant"}</span>
               </div>
             </div>
-            <div className="pem__ro">
-              <div className="pem__ro-k">{zh ? "五行均衡" : "Elemental Equilibrium"}</div>
-              <div className="pem__ro-v">
-                <span className={ELEMENT_CLASS[dominant.element] ?? ""}>{dominant.element}</span>
-                <span className="pem__pct">
-                  {zh ? "盈余" : "Surplus"} · {dominant.pct}%
-                </span>
-              </div>
-              <div className="pem__ro-tag pem__ro-tag--up">
-                ▲ {zh ? "主导向量" : "Dominant vector"} · {dominant.element.toLowerCase()}
-              </div>
-              <div className="pem__ro-v pem__ro-v--gap">
-                <span className={ELEMENT_CLASS[deficit.element] ?? ""}>{deficit.element}</span>
-                <span className="pem__pct">
-                  {zh ? "不足" : "Deficit"} · {deficit.pct}%
-                </span>
-              </div>
-              <div className="pem__ro-tag pem__ro-tag--down">
-                ▼ {zh ? "关键缺口" : "Key gap"} · {deficit.element.toLowerCase()}
-              </div>
+            <div className="ro">
+              <div className="ro__k">{zh ? "五行均衡" : "Elemental Equilibrium"}</div>
+              {dominant ? (
+                <>
+                  <div className="ro__v">
+                    <span className={ELEMENT_CLASS[dominant.element] ?? ""}>{dominant.element}</span>
+                    <span className="pct">
+                      {zh ? "盈余" : "Surplus"} · {dominant.pct}%
+                    </span>
+                  </div>
+                  <div className="ro__tag up">
+                    ▲ {zh ? "主导向量" : "Dominant vector"} · {dominant.element.toLowerCase()}
+                  </div>
+                </>
+              ) : null}
+              {deficit ? (
+                <>
+                  <div className="ro__v" style={{ marginTop: 12 }}>
+                    <span className={ELEMENT_CLASS[deficit.element] ?? ""}>{deficit.element}</span>
+                    <span className="pct">
+                      {zh ? "不足" : "Deficit"} · {deficit.pct}%
+                    </span>
+                  </div>
+                  <div className="ro__tag down">
+                    ▼ {zh ? "关键缺口" : "Key gap"} · {deficit.element.toLowerCase()}
+                  </div>
+                </>
+              ) : null}
             </div>
           </div>
         </div>
 
-        {/* Block B: dayun dial + dynamics */}
-        <div className="pem__block pem__block--fill">
-          <div className="pem__dialpanel">
-            <div className="pem__panel-k">
+        <div className="block block--fill">
+          <div className="dialpanel">
+            <div className="rp__k">
               {zh ? "大运能量场" : "Macro-Lifecycle Field"} <em>· {zh ? "大运" : "dayun"}</em>
             </div>
             <PojuDaYunDial
@@ -344,82 +375,81 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
               locale={locale}
             />
           </div>
-          <div className="pem__side">
-            <div className="pem__ro pem__ro--friction">
-              <div className="pem__ro-k">{zh ? "结构动力学" : "Structural Dynamics"}</div>
-              <div className="pem__fr">
-                <span className="pem__fk pem__fk--res">RESONANCE</span>
+          <div className="side">
+            <div className="ro ro__friction">
+              <div className="ro__k">{zh ? "结构动力学" : "Structural Dynamics"}</div>
+              <div className="fr">
+                <span className="fk res">RESONANCE</span>
                 <span>{display.structural_dynamics.resonance}</span>
               </div>
-              <div className="pem__fr">
-                <span className="pem__fk pem__fk--ten">TENSION</span>
+              <div className="fr">
+                <span className="fk ten">TENSION</span>
                 <span>{display.structural_dynamics.tension}</span>
               </div>
-              <div className="pem__fr">
-                <span className="pem__fk pem__fk--neu">READING</span>
+              <div className="fr">
+                <span className="fk neu">READING</span>
                 <span>{display.structural_dynamics.reading}</span>
               </div>
             </div>
-            <div className="pem__ro">
-              <div className="pem__ro-k">
+            <div className="ro">
+              <div className="ro__k">
                 {zh ? "流年" : "Annual Transit"} · {display.annual_transit.year}
               </div>
-              <div className="pem__ro-v">
+              <div className="ro__v">
                 <span className={elementCssClass(display.annual_transit.stem_en.split(" ")[1] ?? "")}>
                   {display.annual_transit.stem_en}
                 </span>
-                <span className="pem__pct pem__pct--block">
+                <span className="pct" style={{ flexBasis: "100%" }}>
                   {display.annual_transit.ganzhi} · {display.annual_transit.pinyin}
                 </span>
               </div>
-              <p className="pem__transit-note">{display.annual_transit.narrative}</p>
-              <div className="pem__tprog">
-                <div className="pem__tprog-bar">
+              <p className="transit-note">{display.annual_transit.narrative}</p>
+              <div className="tprog">
+                <div className="tprog__bar">
                   <i style={{ width: `${display.annual_transit.progress_pct}%` }} />
                 </div>
-                <div className="pem__tprog-lab">
+                <div className="tprog__lab">
                   <span>
                     {display.annual_transit.year} {zh ? "流年进度" : "Transit Progress"}
                   </span>
-                  <span className="pem__tprog-blink">{display.annual_transit.progress_pct}% ▮</span>
+                  <span className="blink">{display.annual_transit.progress_pct}% ▮</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Four pillars */}
-        <div className="pem__pillars">
+        <div className="pillars">
           {display.pillars.map((pl, idx) => {
             const keys = ["year", "month", "day", "hour"] as const;
             const key = keys[idx] ?? "year";
             const isDay = key === "day";
             return (
-              <div key={key} className={`pem__pl${isDay ? " pem__pl--day" : ""}`}>
-                <div className="pem__pl-cap">{pillarLabels[key]}</div>
-                <div className="pem__pl-role">
+              <div key={key} className={`pl${isDay ? " day" : ""}`}>
+                <div className="cap">{pillarLabels[key]}</div>
+                <div className="role" style={isDay ? { color: "var(--gold-soft)" } : undefined}>
                   {pl.ten_god_en}
-                  <span className="pem__pl-role-cn">{pl.ten_god}</span>
+                  <span className="cn">{pl.ten_god}</span>
                 </div>
-                <div className="pem__pl-stem">
-                  <div className={`pem__pl-stem-en ${elementCssClass(pl.stem_element)}`}>{pl.stem_en}</div>
-                  <div className="pem__pl-stem-sub">
-                    <span className="pem__pl-seal">{pl.stem}</span>
-                    <span className="pem__pl-pin">{pl.stem_pinyin}</span>
+                <div className="stem">
+                  <div className={`en ${elementCssClass(pl.stem_element)}`}>{pl.stem_en}</div>
+                  <div className="sub">
+                    <span className="seal">{pl.stem}</span>
+                    <span className="pin">{pl.stem_pinyin}</span>
                   </div>
                 </div>
-                <div className="pem__pl-branch">
-                  <div className="pem__pl-branch-en">{pl.branch_en}</div>
-                  <div className="pem__pl-branch-sub">
+                <div className="branch">
+                  <div className="en">{pl.branch_en}</div>
+                  <div className="sub">
                     {pl.branch} {pl.branch_pinyin}
                   </div>
                 </div>
-                <div className="pem__pl-meta">
+                <div className="meta">
                   {pl.hidden_display}
                   {pl.star_label ? (
                     <>
                       <br />
-                      <span className="pem__pl-star">{pl.star_label}</span>
+                      <span className="star">{pl.star_label}</span>
                     </>
                   ) : null}
                 </div>
@@ -427,33 +457,19 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
             );
           })}
         </div>
+      </section>
 
-        {/* Synopsis */}
-        <div className="pem__below">
-          <div className="pem__sectitle">
-            <span className="pem__sectitle-no">›</span>
-            <span className="pem__sectitle-en">{zh ? "能量读数摘要" : "The Synopsis"}</span>
-            <span className="pem__sectitle-s">{zh ? "免费预览" : "Energetic read-out · free preview"}</span>
+      <section className="below">
+        <div className="pojumsg">
+          <div className="pojumsg__avatar">
+            <Image src={pojuAvatar} alt="POJU" width={40} height={40} />
           </div>
-          <div className="pem__synopsis">
-            <div className="pem__syn">
-              <div className="pem__syn-no">A · {zh ? "原型" : "The Archetype"}</div>
-              <div className="pem__syn-t">{zh ? "结构上的你是谁" : "Who you are, structurally"}</div>
-              <div className="pem__syn-body">{renderRichText(display.synopsis.archetype)}</div>
-            </div>
-            <div className="pem__syn">
-              <div className="pem__syn-no">B · {zh ? "核心张力" : "The Core Friction"}</div>
-              <div className="pem__syn-t">{zh ? "正在作用的张力" : "The tension in play"}</div>
-              <div className="pem__syn-body">{renderRichText(display.synopsis.friction)}</div>
-            </div>
-            <div className="pem__syn pem__syn--locked">
-              <div className="pem__syn-no">C · {zh ? "催化剂" : "The Catalyst"}</div>
-              <div className="pem__syn-t">{zh ? "POJU 开场解读" : "POJU's opening read"}</div>
-              <div className="pem__syn-body">
-                {zh
-                  ? "这一对齐揭示了为何选择像压力锅一样——解锁后，我会顺着你的问题把它拆到底。"
-                  : "This alignment reveals why the choice feels like a pressure cooker. Your preparation is complete, but the gateway needs a specific key to open without burnout…"}
-              </div>
+          <div className="pojumsg__body">
+            <div className="pojumsg__who">POJU</div>
+            <div className="pojumsg__bubble">
+              <p>{renderRichText(display.synopsis.archetype)}</p>
+              <p>{renderRichText(display.synopsis.friction)}</p>
+              <p className="ask">{synopsisPrompt}</p>
             </div>
           </div>
         </div>

@@ -31,7 +31,7 @@ export type MatrixDisplayData = {
   solar_term: { name: string; name_en: string; season: string; progress_pct: number; next_name: string };
   pattern_line: string;
   day_master: { han: string; en: string; pinyin: string; element: string };
-  synopsis: { archetype: string; friction: string };
+  synopsis: { archetype: string; friction: string; prompt: string };
   structural_dynamics: { resonance: string; tension: string; reading: string };
   annual_transit: {
     year: number;
@@ -255,7 +255,12 @@ function buildSynopsis(
     : `Your inner ${dmElement.toLowerCase()} vision sits under active **structural tension** from ${monthBranch?.element?.toLowerCase() ?? "external"} demands — ${dominant} surplus and ${deficit} deficit make the choice feel pulled two ways at once.`;
 
   void strength;
-  return { archetype, friction };
+
+  const prompt = locale.startsWith("zh")
+    ? "把你反复掂量、又迟迟定不下来的那个问题告诉我——发在下面，我会结合你的命盘，和你一步步拆开。"
+    : "Tell me the question or dilemma you keep weighing and cannot settle — share it below, and I'll walk through it with you, grounded in your chart.";
+
+  return { archetype, friction, prompt };
 }
 
 export function buildMatrixDisplayData(input: {

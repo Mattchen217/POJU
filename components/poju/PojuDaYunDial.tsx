@@ -63,8 +63,8 @@ export function PojuDaYunDial({ daYun, currentIndex, hub, currentAge, locale }: 
   const zh = locale.startsWith("zh");
 
   return (
-    <div className="pem__dial">
-      <svg className="pem__dial-svg" viewBox="0 0 420 420" aria-hidden>
+    <div className="dial">
+      <svg viewBox="0 0 420 420" aria-hidden>
         <circle cx={CX} cy={CY} r={R_IN - 1} fill="rgba(10,8,18,0.55)" />
         <circle cx={CX} cy={CY} r={R_IN} fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth={1} />
         <circle cx={CX} cy={CY} r={R_OUT} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={1} />
@@ -89,7 +89,7 @@ export function PojuDaYunDial({ daYun, currentIndex, hub, currentAge, locale }: 
               fill={phase.isNow ? "rgba(227,192,105,0.18)" : "rgba(255,255,255,0.025)"}
               stroke={phase.isNow ? "rgba(244,212,147,0.7)" : "rgba(255,255,255,0.08)"}
               strokeWidth={phase.isNow ? 1.6 : 1}
-              className={phase.isNow ? "pem__dial-seg--now" : undefined}
+              className={phase.isNow ? "dial-seg--now" : undefined}
             />
           );
         })}
@@ -103,26 +103,24 @@ export function PojuDaYunDial({ daYun, currentIndex, hub, currentAge, locale }: 
         return (
           <div
             key={`label-${i}`}
-            className={`pem__phase${phase.isNow ? " pem__phase--now" : ""}`}
+            className={`phase${phase.isNow ? " now" : ""}`}
             style={{ left: `${leftPct}%`, top: `${topPct}%` }}
           >
-            <div className="pem__phase-age">{ageLabel(phase.entry, phase.next)}</div>
-            <div className="pem__phase-theme">{phase.theme}</div>
-            <div className="pem__phase-gz">{phase.entry.ganzhi}</div>
+            <div className="age">{ageLabel(phase.entry, phase.next)}</div>
+            <div className="theme">{phase.theme}</div>
+            <div className="gz">{phase.entry.ganzhi}</div>
             {phase.isNow ? (
-              <div className="pem__phase-nowtag">{zh ? "当前大运" : "Current decade"}</div>
+              <div className="nowtag">{zh ? "当前大运" : "Current decade"}</div>
             ) : null}
           </div>
         );
       })}
 
-      <div className="pem__dialhub">
-        <div className="pem__hubtag">{zh ? "◆ 你在此" : "◆ You Are Here"}</div>
-        <div className="pem__hubage">
-          {zh ? `年龄 ${currentAge}` : `Age ${currentAge}`}
-        </div>
-        <div className="pem__hubphase">{hub.theme}</div>
-        <div className="pem__hubsub">
+      <div className="dialhub dm">
+        <div className="hubtag">{zh ? "◆ 你在此" : "◆ You Are Here"}</div>
+        <div className="hubage">{zh ? `年龄 ${currentAge}` : `Age ${currentAge}`}</div>
+        <div className="hubphase">{hub.theme}</div>
+        <div className="hubsub">
           {zh ? "大运" : "Decade"} {hub.age_range} · {new Date().getFullYear()}
         </div>
       </div>
