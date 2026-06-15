@@ -5,6 +5,8 @@ import {
   extractStrengthFromShunshiChart,
   type ProfileStructured,
 } from "@/lib/calculations/build-profile-structured";
+import { buildMatrixDisplayData, type MatrixDisplayData } from "@/lib/poju/build-matrix-display";
+import { getStemInfo } from "@/lib/poju/bazi-matrix-mappings";
 import { shunshiParamsFromBirthInfo } from "@/lib/profile/birth-info-utils";
 import type { UserProfile } from "@/lib/profile/types";
 
@@ -26,6 +28,7 @@ export type PojuMatrixPayload = {
   strength: "strong" | "balanced" | "weak";
   day_master_en: string;
   matrix_id: string;
+  display?: MatrixDisplayData;
 };
 
 function shortMatrixId(profileId: string): string {
@@ -53,7 +56,7 @@ function countElementsFromPillars(profile: UserProfile): Record<string, number> 
 export function buildMatrixPayloadFromProfile(
   profileId: string,
   profile: UserProfile,
-  options?: { display_name?: string },
+  options?: { display_name?: string; locale?: string },
 ): PojuMatrixPayload {
   const params = shunshiParamsFromBirthInfo(profile.birth);
   const chart = getBaziChart({
@@ -73,6 +76,8 @@ export function buildMatrixPayloadFromProfile(
 
   const structured = buildProfileStructured({ profile, chart });
   const strength = extractStrengthFromShunshiChart(chart);
+  const dmStem = structured.pillars_detail?.day.stem ?? structured.day_master.charAt(0);
+  const dmInfo = getStemInfo(dmStem);
 
   const scoresRaw = chart.八字?.五行分值 as
     | Partial<Record<(typeof WU_XING_KEYS)[number], { 分值: number; 占比?: string }>>
@@ -98,6 +103,15 @@ export function buildMatrixPayloadFromProfile(
     }));
   }
 
+  const display = buildMatrixDisplayData({
+    profile,
+    structured,
+    chart,
+    strength,
+    wuxing_scores,
+    locale: options?.locale ?? "en",
+  });
+
   return {
     profile_id: profileId,
     display_name: options?.display_name,
@@ -105,7 +119,8 @@ export function buildMatrixPayloadFromProfile(
     user_profile: profile,
     wuxing_scores,
     strength,
-    day_master_en: profile.diagnosis.dayMaster,
+    day_master_en: dmInfo?.en ?? profile.diagnosis.dayMaster,
     matrix_id: shortMatrixId(profileId),
+    display,
   };
 }

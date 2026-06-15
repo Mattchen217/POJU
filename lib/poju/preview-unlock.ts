@@ -78,6 +78,7 @@ export function createReportMessage(input: {
 export async function bindPreviewProfileToSession(
   session: POJUSessionState,
   profileId: string,
+  locale = "en",
 ): Promise<POJUSessionState> {
   const stored = await getStoredProfile(profileId);
   if (!stored?.user_profile) {
@@ -86,6 +87,7 @@ export async function bindPreviewProfileToSession(
 
   const matrix_payload = buildMatrixPayloadFromProfile(profileId, stored.user_profile, {
     display_name: stored.user_profile.birth.birth_location?.name,
+    locale,
   });
 
   const agentBase =

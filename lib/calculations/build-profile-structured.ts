@@ -10,6 +10,15 @@ import type { UserProfile } from "@/lib/profile/types";
 
 export type ProfileStrength = "strong" | "balanced" | "weak";
 
+export type PillarDetail = {
+  ganzhi: string;
+  stem: string;
+  branch: string;
+  ten_god: string;
+  hidden_stems: string[];
+  shen_sha: string[];
+};
+
 export type ProfileStructured = {
   day_master: string;
   pattern: string;
@@ -22,6 +31,13 @@ export type ProfileStructured = {
     month: string;
     day: string;
     hour: string;
+  };
+  /** Per-pillar 十神 / 藏干 / 神煞 from shunshi chart. */
+  pillars_detail?: {
+    year: PillarDetail;
+    month: PillarDetail;
+    day: PillarDetail;
+    hour: PillarDetail;
   };
   da_yun: DaYunEntry[];
 };
@@ -64,6 +80,32 @@ function resolveTrueSolarTime(
   return null;
 }
 
+function extractPillarDetail(raw: unknown): PillarDetail | null {
+  if (!raw || typeof raw !== "object") return null;
+  const p = raw as Record<string, unknown>;
+  const ganzhi = String(p.干支 ?? "");
+  if (!ganzhi) return null;
+  return {
+    ganzhi,
+    stem: String(p.天干 ?? ganzhi.charAt(0)),
+    branch: String(p.地支 ?? ganzhi.charAt(1)),
+    ten_god: String(p.主星 ?? ""),
+    hidden_stems: Array.isArray(p.藏干) ? p.藏干.map(String) : [],
+    shen_sha: Array.isArray(p.神煞) ? p.神煞.map(String) : [],
+  };
+}
+
+function extractPillarsDetail(chart?: GetBaziChartOutput): ProfileStructured["pillars_detail"] {
+  const raw = chart?.八字?.柱位详细 as Record<string, unknown> | undefined;
+  if (!raw) return undefined;
+  const year = extractPillarDetail(raw.年柱);
+  const month = extractPillarDetail(raw.月柱);
+  const day = extractPillarDetail(raw.日柱);
+  const hour = extractPillarDetail(raw.时柱);
+  if (!year || !month || !day || !hour) return undefined;
+  return { year, month, day, hour };
+}
+
 /** Pure-code structured payload: shunshi 四柱/诊断 + lunar 大运. */
 export function buildProfileStructured(input: {
   profile: UserProfile;
@@ -95,6 +137,7 @@ export function buildProfileStructured(input: {
       day: profile.bazi.dayPillar,
       hour: profile.bazi.hourPillar,
     },
+    pillars_detail: extractPillarsDetail(chart),
     da_yun,
   };
 }
