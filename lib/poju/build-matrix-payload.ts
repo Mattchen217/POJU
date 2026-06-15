@@ -52,7 +52,6 @@ function countElementsFromPillars(profile: UserProfile): Record<string, number> 
   return counts;
 }
 
-/** Build local-only matrix payload from a stored profile (zero LLM). */
 export function buildMatrixPayloadFromProfile(
   profileId: string,
   profile: UserProfile,
@@ -123,4 +122,13 @@ export function buildMatrixPayloadFromProfile(
     matrix_id: shortMatrixId(profileId),
     display,
   };
+}
+
+/** Recompute local chart + enrichment. Preserves matrix_id; resets narrative to template. */
+export function refreshMatrixPayload(payload: PojuMatrixPayload, locale: string): PojuMatrixPayload {
+  const fresh = buildMatrixPayloadFromProfile(payload.profile_id, payload.user_profile, {
+    locale,
+    display_name: payload.display_name,
+  });
+  return { ...fresh, matrix_id: payload.matrix_id };
 }

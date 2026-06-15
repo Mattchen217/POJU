@@ -1211,7 +1211,8 @@
       "gu_chen": "Solitary Star (孤辰)",
       "gua_su": "Widow Star (寡宿)"
     },
-    "yongshen_label": "Useful God (喜用神)"
+    "yongshen_label": "Useful God (喜用神)",
+    "optimizing_vector": "Optimizing Vector (用神):"
   },
   "chart_loader": {
     "your_chart_title": "Your Personality Structure",

@@ -62,7 +62,8 @@ import { PojuPaywallInline } from "@/components/poju/PojuPaywallInline";
 import { PojuUnlockAnalysisOverlay } from "@/components/poju/PojuUnlockAnalysisOverlay";
 import { formatSituationOpeningText } from "@/lib/poju/format-situation-opening";
 import { requestMatrixNarrative } from "@/lib/llm/deepseek/matrix-narrative";
-import { applyMatrixNarrativeToPayload } from "@/lib/poju/apply-matrix-narrative";
+import { applyMatrixNarrativeToPayload, markMatrixNarrativeFailed } from "@/lib/poju/apply-matrix-narrative";
+import { refreshMatrixPayload } from "@/lib/poju/build-matrix-payload";
 import {
   createEnergyMatrixMessage,
   createPaywallMessage,
@@ -302,14 +303,16 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     onSessionUpdate,
   ]);
 
+  const matrixMessageReady = hasPreviewMatrixMessage(session);
+
   useEffect(() => {
     if (!isPreviewSession(session)) return;
-    if (!hasPreviewMatrixMessage(session)) return;
+    if (!matrixMessageReady) return;
 
-    const matrixIdx = session.messages.findIndex((m) => m.meta?.kind === "energy_matrix");
+    const matrixIdx = sessionRef.current.messages.findIndex((m) => m.meta?.kind === "energy_matrix");
     if (matrixIdx < 0) return;
 
-    const matrixMsg = session.messages[matrixIdx];
+    const matrixMsg = sessionRef.current.messages[matrixIdx];
     const payload = matrixMsg?.meta?.matrix_payload;
     if (!payload?.display) return;
     if (payload.display.narrative_source === "llm") return;
@@ -321,20 +324,36 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     const ac = new AbortController();
     void (async () => {
       try {
+        const refreshed = refreshMatrixPayload(payload, locale);
+
+        const preMessages = [...sessionRef.current.messages];
+        preMessages[matrixIdx] = {
+          ...preMessages[matrixIdx]!,
+          meta: { ...preMessages[matrixIdx]!.meta, matrix_payload: refreshed },
+        };
+        const preSession: POJUSessionState = {
+          ...sessionRef.current,
+          messages: preMessages,
+          matrix_payload: refreshed,
+        };
+        onSessionUpdate(preSession);
+
         const narrative = await requestMatrixNarrative({
-          matrix_payload: payload,
+          matrix_payload: refreshed,
           locale,
           signal: ac.signal,
         });
-        const updatedPayload = applyMatrixNarrativeToPayload(payload, narrative);
+        if (ac.signal.aborted) return;
+
+        const updatedPayload = applyMatrixNarrativeToPayload(refreshed, narrative);
         const current = sessionRef.current;
+        const msgIdx = current.messages.findIndex((m) => m.meta?.kind === "energy_matrix");
+        if (msgIdx < 0) return;
+
         const messages = [...current.messages];
-        messages[matrixIdx] = {
-          ...messages[matrixIdx]!,
-          meta: {
-            ...messages[matrixIdx]!.meta,
-            matrix_payload: updatedPayload,
-          },
+        messages[msgIdx] = {
+          ...messages[msgIdx]!,
+          meta: { ...messages[msgIdx]!.meta, matrix_payload: updatedPayload },
         };
         const next: POJUSessionState = {
           ...current,
@@ -345,13 +364,27 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         await savePOJUSession(next);
       } catch (e) {
         if (ac.signal.aborted) return;
-        console.warn("[poju] matrix narrative LLM failed, keeping template copy:", e);
+        console.warn("[poju] matrix narrative LLM failed:", e);
         matrixNarrativeRef.current = null;
+
+        const current = sessionRef.current;
+        const msgIdx = current.messages.findIndex((m) => m.meta?.kind === "energy_matrix");
+        if (msgIdx < 0) return;
+        const failedPayload = markMatrixNarrativeFailed(
+          current.messages[msgIdx]?.meta?.matrix_payload ?? payload,
+        );
+        const messages = [...current.messages];
+        messages[msgIdx] = {
+          ...messages[msgIdx]!,
+          meta: { ...messages[msgIdx]!.meta, matrix_payload: failedPayload },
+        };
+        onSessionUpdate({ ...current, messages, matrix_payload: failedPayload });
+        await savePOJUSession({ ...current, messages, matrix_payload: failedPayload });
       }
     })();
 
     return () => ac.abort();
-  }, [session, locale, onSessionUpdate]);
+  }, [session.session_id, locale, matrixMessageReady, onSessionUpdate]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;

@@ -1178,7 +1178,8 @@
       "gu_chen": "Étoile solitaire (孤辰)",
       "gua_su": "Étoile veuve (寡宿)"
     },
-    "yongshen_label": "Dieu utile (喜用神)"
+    "yongshen_label": "Dieu utile (喜用神)",
+    "optimizing_vector": "Vecteur d'optimisation (用神):"
   },
   "chart_loader": {
     "your_chart_title": "Vos quatre piliers",

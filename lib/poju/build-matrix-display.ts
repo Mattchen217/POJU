@@ -47,8 +47,12 @@ export type MatrixDisplayData = {
   current_age: number;
   current_dayun_index: number;
   dayun_hub: { theme: string; age_range: string; start_year: number };
+  /** LLM-generated caption for Elemental Breakdown (replaces enote template). */
+  enote_caption?: string;
   /** template = local fallback; llm = DeepSeek matrix narrative */
   narrative_source?: "template" | "llm";
+  /** Set when LLM fetch failed — UI may show template fallbacks */
+  narrative_failed?: boolean;
 };
 
 const JIEQI_EN: Record<string, string> = {

@@ -1178,7 +1178,8 @@
       "gu_chen": "Einsamer Stern (孤辰)",
       "gua_su": "Witwenstern (寡宿)"
     },
-    "yongshen_label": "Nützlicher Gott (喜用神)"
+    "yongshen_label": "Nützlicher Gott (喜用神)",
+    "optimizing_vector": "Optimierungsvektor (用神):"
   },
   "chart_loader": {
     "your_chart_title": "Deine vier Säulen",

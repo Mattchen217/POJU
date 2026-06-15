@@ -19,44 +19,48 @@ To comply with global payment gateway policies (Stripe, PayPal, App Store) regar
 4. EMPHASIZE FREE WILL & AGENCY: Always position the user as the ultimate author of their destiny. Bazi is presented as the "initial weather report," but how they navigate it using free will determines the outcome.
 
 # EXECUTION RULES
-1. NO THINKING/REASONING PROCESS: Do not generate any internal thoughts, <think> tags, or explanations. Start outputting the requested JSON payload directly.
-2. LANGUAGE COMPLIANCE: Detect the \`user_language\` variable provided in the input and generate ALL descriptive text in THAT exact language.
-3. TONE: Cyber-cosmic, emotionally grounded, sophisticated, and empowering.
+1. NO THINKING/REASONING PROCESS: Do not generate any internal thoughts, redacted_thinking tags, or explanations. Start outputting the requested JSON payload directly.
+2. LANGUAGE COMPLIANCE: Detect the user_language variable provided in the input and generate ALL descriptive text in THAT exact language.
+3. NO RAW MARKDOWN IN JSON: Avoid emitting raw markdown characters like '**' or '__' inside string values unless specifically asked.
 
-# OUTPUT JSON FORMAT REQUIRED (STRICT COMPLIANCE CHECKED)
-You must respond ONLY with a valid JSON matching this schema. Ensure all generated strings inherently pass payment gateway compliance checks.
+# OUTPUT JSON SPECIFICATION
+You must respond ONLY with a valid JSON matching this exact schema. Each string must be generated completely dynamically based on the input payload, serving as a replacement for old hardcoded fallback templates:
 
 {
+  "elemental_breakdown": {
+    "caption": "[Replace static template. Generate a poetic yet behaviorally accurate 1-sentence description of their current elemental setup based on their Day Master, surplus, and deficits.]"
+  },
   "structural_dynamics": {
-    "resonance": "[Generate a 1-sentence summary of how their Day Master anchors their behavioral archetype to others based on the profile. No fortune-telling.]",
-    "tension": "[Analyze their primary elemental clash/tension in 1 sentence, framing it as a constructive psychological paradox or behavioral habit to build awareness around.]",
-    "reading": "[Provide a tactical 1-sentence self-coaching mindset on how they can consciously channel this energy under pressure.]"
+    "resonance": "[Analyze the input heavenly stem interactions/clashes in 1 elegant sentence. Frame it as how their archetype anchors their conscious surface identity. Do not use raw technical code-speak.]",
+    "tension": "[Analyze the input branch-layer combinations, clashes, or hidden harmonies in 1 sentence. Frame it as a workable psychological paradox or behavioral habit to build awareness around.]",
+    "reading": "[Provide a tactical 1-sentence self-coaching behavioral directive on how they can consciously channel this systemic blueprint when navigating pressure.]"
   },
   "annual_transit_2026": {
-    "title": "[The localized name of the 2026 Transit Element, e.g., 'Yang Fire / 丙午']",
-    "description": "[A 2-sentence macro analysis of how 2026's cosmic weather interacts with their energetic blueprint. Frame the current year's Fire as an invitation to lean into creative expression or balance out internal themes, completely avoiding absolute event predictions.]"
+    "title": "[The localized native name of the 2026 Element, e.g., 'Yang Fire / 丙午']",
+    "description": "[A masterful 2-sentence macro-environmental analysis of how the 2026 transit energy interacts with their specific chart balance. Frame the year's elements as a changing seasonal climate inviting them to lean into specific alignment paths, entirely avoiding absolute event predictions.]"
   },
   "poju_onboarding": {
-    "archetype_intro": "[A powerful 1-sentence psychological archetype mapping based on their Day Master and status. E.g., 'You possess the traits of a Receptive Vine — adaptive, perceptive...']",
-    "core_conflict": "[A 1-sentence description of their current internal energetic tension or focus area. Why might they feel an analytical or emotional pull in two directions?]",
-    "call_to_action": "[A comforting, philosophical invitation asking them to share the current personal growth challenge, career alignment question, or decision they are weighing so we can explore perspectives together.]"
+    "archetype_intro": "[A powerful 1-sentence psychological archetype introduction tailored to their Day Master and energetic state.]",
+    "core_conflict": "[A 1-sentence description of their current internal elemental pull or deficit. Explain why they might feel an analytical or emotional tug-of-war right now in daily life.]",
+    "call_to_action": "[A comforting, philosophical open-ended invitation asking them to share the current personal growth challenge, career alignment question, or decision they are weighing so you can unwrap perspectives together.]"
   }
 }
 
-Ensure the strings contain no raw markdown formatting. Output raw minified or pretty JSON only.`;
+Output raw minified or pretty JSON only. Do not wrap in markdown code blocks.`;
 
 export type MatrixNarrativeInput = {
   user_language: string;
   day_master: string;
   chart_status: string;
   clashes_tensions: string[];
-  current_year_2026: string;
+  current_year_transit: string;
   yongshen: string[];
   gender_label?: string;
   strength?: ProfileStrength;
 };
 
 export type MatrixNarrativeResponse = {
+  elemental_breakdown: { caption: string };
   structural_dynamics: {
     resonance: string;
     tension: string;
@@ -113,6 +117,7 @@ export function buildMatrixNarrativeInput(
 
   const chartStatus = `${strengthLabel(strength, locale)} / ${dominant?.element ?? "—"} Surplus (${dominant?.pct ?? 0}%) / ${deficit?.element ?? "—"} Deficit (${deficit?.pct ?? 0}%)`;
 
+  const transitYear = payload.display?.annual_transit.year ?? new Date().getFullYear();
   const transitGz = payload.display?.annual_transit.ganzhi ?? "—";
   const transitStem = payload.display?.annual_transit.stem_en ?? "—";
 
@@ -126,7 +131,7 @@ export function buildMatrixNarrativeInput(
     day_master: `${day_master_en} (${dmHan})`,
     chart_status: chartStatus,
     clashes_tensions: extractClashes(chart),
-    current_year_2026: `${transitGz} (${transitStem})`,
+    current_year_transit: `${transitYear} · ${transitGz} (${transitStem})`,
     yongshen,
     gender_label: structured.bazi_enrichment?.gender_label,
     strength,
@@ -151,15 +156,19 @@ export function parseMatrixNarrativeResponseText(text: string): MatrixNarrativeR
   if (fence?.[1]) raw = fence[1].trim();
 
   const parsed = JSON.parse(raw) as Record<string, unknown>;
+  const eb = parsed.elemental_breakdown as Record<string, unknown> | undefined;
   const sd = parsed.structural_dynamics as Record<string, unknown> | undefined;
   const at = parsed.annual_transit_2026 as Record<string, unknown> | undefined;
   const po = parsed.poju_onboarding as Record<string, unknown> | undefined;
 
-  if (!sd || !at || !po) {
+  if (!eb || !sd || !at || !po) {
     throw new Error("Response missing required top-level sections");
   }
 
   return {
+    elemental_breakdown: {
+      caption: requireString(eb, "caption"),
+    },
     structural_dynamics: {
       resonance: requireString(sd, "resonance"),
       tension: requireString(sd, "tension"),

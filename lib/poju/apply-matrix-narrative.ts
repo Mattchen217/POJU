@@ -8,6 +8,7 @@ export function applyMatrixNarrativeToDisplay(
 ): MatrixDisplayData {
   return {
     ...display,
+    enote_caption: narrative.elemental_breakdown.caption,
     structural_dynamics: narrative.structural_dynamics,
     annual_transit: {
       ...display.annual_transit,
@@ -20,6 +21,7 @@ export function applyMatrixNarrativeToDisplay(
       prompt: narrative.poju_onboarding.call_to_action,
     },
     narrative_source: "llm",
+    narrative_failed: false,
   };
 }
 
@@ -32,5 +34,16 @@ export function applyMatrixNarrativeToPayload(
   return {
     ...payload,
     display: applyMatrixNarrativeToDisplay(display, narrative),
+  };
+}
+
+export function markMatrixNarrativeFailed(payload: PojuMatrixPayload): PojuMatrixPayload {
+  if (!payload.display) return payload;
+  return {
+    ...payload,
+    display: {
+      ...payload.display,
+      narrative_failed: true,
+    },
   };
 }

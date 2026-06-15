@@ -1178,7 +1178,8 @@
       "gu_chen": "Estrella solitaria (孤辰)",
       "gua_su": "Estrella viuda (寡宿)"
     },
-    "yongshen_label": "Dios útil (喜用神)"
+    "yongshen_label": "Dios útil (喜用神)",
+    "optimizing_vector": "Vector optimizador (用神):"
   },
   "chart_loader": {
     "your_chart_title": "Tus cuatro pilares",

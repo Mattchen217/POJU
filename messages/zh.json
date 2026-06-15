@@ -1226,7 +1226,8 @@
       "gu_chen": "孤辰",
       "gua_su": "寡宿"
     },
-    "yongshen_label": "喜用神"
+    "yongshen_label": "喜用神",
+    "optimizing_vector": "优化向量 (用神):"
   },
   "chart_loader": {
     "your_chart_title": "你的性格结构",

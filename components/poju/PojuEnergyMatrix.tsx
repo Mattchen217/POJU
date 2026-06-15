@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { PojuDaYunDial } from "@/components/poju/PojuDaYunDial";
@@ -9,6 +9,8 @@ import pojuAvatar from "@/assets/icons/P.png";
 import { elementCssClass } from "@/lib/poju/bazi-matrix-mappings";
 import { buildMatrixDisplayData } from "@/lib/poju/build-matrix-display";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
+import { activePillarByAge } from "@/lib/poju/matrix-life-segment";
+import { computeYearTransitProgress } from "@/lib/poju/matrix-transit-progress";
 import { resolveBaziLabel, shenshaHanToSubKey } from "@/lib/poju/resolve-bazi-i18n";
 import type { UserProfile } from "@/lib/profile/types";
 import "@/styles/poju-energy-matrix.css";
@@ -34,6 +36,27 @@ const ELEMENT_BAR_CLASS: Record<string, string> = {
   Metal: "ebar-fill--metal",
   Water: "ebar-fill--water",
 };
+
+const MAJOR_SHENSHA = new Set(["天乙贵人", "禄神"]);
+
+function formatLifeStageBranch(
+  pl: { branch_en: string; life_stage_label: string | null },
+  lifeStageKey: string | undefined,
+  tb: (key: string) => string,
+): string {
+  const stageLabel = resolveBaziLabel(lifeStageKey, tb, pl.life_stage_label ?? undefined);
+  if (!stageLabel) return pl.branch_en;
+  const han = pl.life_stage_label ?? "";
+  return han && !stageLabel.includes(han) ? `${pl.branch_en} · ${stageLabel} (${han})` : `${pl.branch_en} · ${stageLabel}`;
+}
+
+function NarrativePlaceholder({ zh }: { zh: boolean }) {
+  return (
+    <span className="pem__narrative-loading">
+      {zh ? "POJU 正在读取…" : "POJU is reading…"}
+    </span>
+  );
+}
 
 function renderRichText(text: string) {
   const parts = text.split(/\*\*(.+?)\*\*/g);
@@ -175,6 +198,23 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
       ? tb("gender.qian")
       : tb("gender.kun");
 
+  const isLlmNarrative = display.narrative_source === "llm";
+  const showTemplateFallback = display.narrative_failed === true;
+  const narrativeLoading = !isLlmNarrative && !showTemplateFallback;
+
+  const [transitProgress, setTransitProgress] = useState(() => computeYearTransitProgress());
+  useEffect(() => {
+    setTransitProgress(computeYearTransitProgress());
+    const id = window.setInterval(() => setTransitProgress(computeYearTransitProgress()), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const lifeSegmentPillar = activePillarByAge(display.current_age);
+  const yongshenElements =
+    structured.bazi_enrichment?.yongshen_analysis.elements_en ??
+    structured.bazi_enrichment?.yongshen_analysis.elements_han?.map(String) ??
+    [];
+
   const pillarLabels: Record<string, string> = {
     year: zh ? "年柱" : "Year",
     month: zh ? "月柱" : "Month",
@@ -239,12 +279,7 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
             </div>
             <div className="mid">
               {display.calendar.headline}
-              {genderLabel ? (
-                <>
-                  {" · "}
-                  <i>{genderLabel}</i>
-                </>
-              ) : null}
+              {genderLabel ? <span className="pem__gender-tag">{genderLabel}</span> : null}
             </div>
             <div className="s">{display.calendar.lunar || display.calendar.mid}</div>
           </div>
@@ -325,13 +360,36 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
                   </div>
                 ))}
               </div>
+              {yongshenElements.length > 0 ? (
+                <div className="pem__yongshen-row">
+                  <span className="pem__yongshen-label">{tb("optimizing_vector")}</span>
+                  <span className="pem__yongshen-chips">
+                    {yongshenElements.map((el) => (
+                      <span
+                        key={el}
+                        className={`pem__yongshen-chip ${ELEMENT_CLASS[el] ?? ""}`}
+                      >
+                        {el}
+                      </span>
+                    ))}
+                  </span>
+                </div>
+              ) : null}
               <div className="enote">
-                {zh ? "日主" : "Day Master"} <b>{display.day_master.en}</b>
-                {zh ? "，五行以" : ", with "}
-                <b>{dominant?.element}</b>
-                {zh ? "偏盛、" : " surplus and "}
-                <b>{deficit?.element}</b>
-                {zh ? "偏薄——这是当前能量场的主线。" : " deficit — the main line in your field right now."}
+                {narrativeLoading ? (
+                  <NarrativePlaceholder zh={zh} />
+                ) : isLlmNarrative && display.enote_caption ? (
+                  display.enote_caption
+                ) : showTemplateFallback ? (
+                  <>
+                    {zh ? "日主" : "Day Master"} <b>{display.day_master.en}</b>
+                    {zh ? "，五行以" : ", with "}
+                    <b>{dominant?.element}</b>
+                    {zh ? "偏盛、" : " surplus and "}
+                    <b>{deficit?.element}</b>
+                    {zh ? "偏薄。" : " deficit."}
+                  </>
+                ) : null}
               </div>
             </div>
             <div className="ro">
@@ -395,18 +453,24 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
           <div className="side">
             <div className="ro ro__friction">
               <div className="ro__k">{zh ? "结构动力学" : "Structural Dynamics"}</div>
-              <div className="fr">
-                <span className="fk res">RESONANCE</span>
-                <span>{display.structural_dynamics.resonance}</span>
-              </div>
-              <div className="fr">
-                <span className="fk ten">TENSION</span>
-                <span>{display.structural_dynamics.tension}</span>
-              </div>
-              <div className="fr">
-                <span className="fk neu">READING</span>
-                <span>{display.structural_dynamics.reading}</span>
-              </div>
+              {narrativeLoading ? (
+                <NarrativePlaceholder zh={zh} />
+              ) : (
+                <>
+                  <div className="fr">
+                    <span className="fk res">RESONANCE</span>
+                    <span>{display.structural_dynamics.resonance}</span>
+                  </div>
+                  <div className="fr">
+                    <span className="fk ten">TENSION</span>
+                    <span>{display.structural_dynamics.tension}</span>
+                  </div>
+                  <div className="fr">
+                    <span className="fk neu">READING</span>
+                    <span>{display.structural_dynamics.reading}</span>
+                  </div>
+                </>
+              )}
             </div>
             <div className="ro">
               <div className="ro__k">
@@ -420,16 +484,18 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
                   {display.annual_transit.ganzhi} · {display.annual_transit.pinyin}
                 </span>
               </div>
-              <p className="transit-note">{display.annual_transit.narrative}</p>
+              <p className="transit-note">
+                {narrativeLoading ? <NarrativePlaceholder zh={zh} /> : display.annual_transit.narrative}
+              </p>
               <div className="tprog">
                 <div className="tprog__bar">
-                  <i style={{ width: `${display.annual_transit.progress_pct}%` }} />
+                  <i style={{ width: `${transitProgress}%` }} />
                 </div>
                 <div className="tprog__lab">
                   <span>
                     {display.annual_transit.year} {zh ? "流年进度" : "Transit Progress"}
                   </span>
-                  <span className="blink">{display.annual_transit.progress_pct}% ▮</span>
+                  <span className="blink">{transitProgress}% ▮</span>
                 </div>
               </div>
             </div>
@@ -441,8 +507,12 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
             const keys = ["year", "month", "day", "hour"] as const;
             const key = keys[idx] ?? "year";
             const isDay = key === "day";
+            const isLifeSegment = lifeSegmentPillar === key;
             return (
-              <div key={key} className={`pl${isDay ? " day" : ""}`}>
+              <div
+                key={key}
+                className={`pl${isDay ? " day" : ""}${isLifeSegment ? " pl--segment-active" : ""}`}
+              >
                 <div className="cap">{pillarLabels[key]}</div>
                 <div className="role" style={isDay ? { color: "var(--gold-soft)" } : undefined}>
                   {pl.ten_god_en}
@@ -456,19 +526,15 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
                   </div>
                 </div>
                 <div className="branch">
-                  <div className="en">{pl.branch_en}</div>
+                  <div className="en">
+                    {formatLifeStageBranch(
+                      pl,
+                      payload.structured.pillars_detail?.[key]?.life_stage,
+                      tb,
+                    )}
+                  </div>
                   <div className="sub">
                     {pl.branch} {pl.branch_pinyin}
-                    {pl.life_stage_label || payload.structured.pillars_detail?.[key]?.life_stage ? (
-                      <>
-                        {" · "}
-                        {resolveBaziLabel(
-                          payload.structured.pillars_detail?.[key]?.life_stage,
-                          tb,
-                          pl.life_stage_label ?? undefined,
-                        )}
-                      </>
-                    ) : null}
                   </div>
                 </div>
                 <div className="meta">
@@ -477,16 +543,13 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
                     <>
                       <br />
                       {pl.star_labels.map((star) => (
-                        <span key={star} className="star">
-                          ✦{" "}
-                          {resolveBaziLabel(`bazi.${shenshaHanToSubKey(star)}`, tb, star)}
+                        <span
+                          key={star}
+                          className={`star${MAJOR_SHENSHA.has(star) ? " star--major" : ""}`}
+                        >
+                          ✦ {resolveBaziLabel(`bazi.${shenshaHanToSubKey(star)}`, tb, star)}
                         </span>
                       ))}
-                    </>
-                  ) : pl.star_label ? (
-                    <>
-                      <br />
-                      <span className="star">{pl.star_label}</span>
                     </>
                   ) : null}
                 </div>
@@ -504,17 +567,23 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
           <div className="pojumsg__body">
             <div className="pojumsg__who">POJU</div>
             <div className="pojumsg__bubble">
-              {display.narrative_source === "llm" ? (
+              {narrativeLoading ? (
+                <p className="pem__narrative-loading">
+                  {zh ? "POJU 正在读取你的能量结构…" : "POJU is reading your energy structure…"}
+                </p>
+              ) : isLlmNarrative ? (
+                <>
+                  <p>{display.synopsis.archetype}</p>
+                  <p>{display.synopsis.friction}</p>
+                  <p className="ask">{display.synopsis.prompt}</p>
+                </>
+              ) : showTemplateFallback ? (
                 <>
                   <p>{renderRichText(display.synopsis.archetype)}</p>
                   <p>{renderRichText(display.synopsis.friction)}</p>
                   <p className="ask">{synopsisPrompt}</p>
                 </>
-              ) : (
-                <p className="pem__narrative-loading">
-                  {zh ? "POJU 正在读取你的能量结构…" : "POJU is reading your energy structure…"}
-                </p>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
