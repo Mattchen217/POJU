@@ -93,7 +93,7 @@ function ActionRow({
   return (
     <div className="pchat__delivery-action">
       <p className="pchat__delivery-action-label">
-        {index}. {categoryLabels[action.category]}
+        {index}. {action.title?.trim() || categoryLabels[action.category]}
       </p>
       <p>{action.text}</p>
       {onUpdate && action.status === "pending" ? (

@@ -41,6 +41,8 @@ export interface HandleInput {
   signal?: AbortSignal;
   onStream?: {
     onReasoning?: (text: string) => void;
+    /** First JSON/content byte from the model (reasoning phase ended). */
+    onContentStreamStart?: () => void;
     onPartialResponse?: (text: string) => void;
   };
 }
@@ -188,6 +190,7 @@ function normalizeNewActions(raw: unknown[] | undefined): POJUAction[] {
       action_id: typeof a?.action_id === "string" && a.action_id ? a.action_id : safeRandomUUID(),
       given_at: typeof a?.given_at === "string" ? a.given_at : now,
       text: String(a?.text ?? "—"),
+      title: typeof a?.title === "string" && a.title.trim() ? a.title.trim() : undefined,
       category,
       timing,
       rationale: String(a?.rationale ?? ""),
@@ -501,8 +504,14 @@ async function callLLMViaAPI(input: {
         const type = event.type;
         if (type === "reasoning" && typeof event.text === "string") {
           input.onStream.onReasoning?.(event.text);
-        } else if (type === "content" && typeof event.text === "string") {
-          input.onStream.onPartialResponse?.(event.text);
+        } else if (type === "content") {
+          const rawLen = typeof event.raw_length === "number" ? event.raw_length : 0;
+          if (rawLen > 0) {
+            input.onStream.onContentStreamStart?.();
+          }
+          if (typeof event.text === "string") {
+            input.onStream.onPartialResponse?.(event.text);
+          }
         } else if (type === "complete") {
           complete = event as LLMApiPayload;
         } else if (type === "error") {

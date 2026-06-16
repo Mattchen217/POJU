@@ -60,6 +60,8 @@ export interface POJUAction {
   action_id: string;
   given_at: string;
   text: string;
+  /** Custom heading from `### Action N: …` in final delivery (falls back to category label in UI). */
+  title?: string;
   category: "traditional" | "modern_decisive" | "modern_reflective";
   timing: "immediate" | "this_week" | "this_month" | "ongoing";
   rationale: string;

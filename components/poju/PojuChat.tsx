@@ -49,6 +49,8 @@ export interface PojuChatProps {
   messages: PojuMessage[];
   isStreaming?: boolean;
   streamingText?: string; // 正在流式输出的正文(逐块更新)
+  /** Model JSON/content stream started — hide thinking pulse, show reply bubble. */
+  replyStreaming?: boolean;
   thinkingMode?: ThinkingStreamMode | null;
   thinkingLocale?: string;
   liveThinkingLine?: string | null;
@@ -162,7 +164,7 @@ function AiReplyShell({ children }: { children: ReactNode }) {
 export default function PojuChat(props: PojuChatProps) {
   const {
     sessions, currentSessionId, messages,
-    isStreaming, streamingText,
+    isStreaming, streamingText, replyStreaming,
     thinkingMode, thinkingLocale, liveThinkingLine, thinkingWaitLabel,
     onSend,
     onNewSession,
@@ -229,11 +231,15 @@ export default function PojuChat(props: PojuChatProps) {
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTo({ top: el.scrollHeight });
-  }, [messages, streamingText, thinkingMode, liveThinkingLine, inlineNotice, pulseHold]);
+  }, [messages, streamingText, replyStreaming, thinkingMode, liveThinkingLine, inlineNotice, pulseHold]);
 
   useEffect(() => {
-    if (isStreaming && thinkingMode) setPulseHold(true);
-  }, [isStreaming, thinkingMode]);
+    if (isStreaming && thinkingMode && !replyStreaming) setPulseHold(true);
+  }, [isStreaming, thinkingMode, replyStreaming]);
+
+  useEffect(() => {
+    if (replyStreaming) setPulseHold(false);
+  }, [replyStreaming]);
 
   useEffect(() => {
     if (!openMenuSessionId) return;
@@ -508,25 +514,35 @@ export default function PojuChat(props: PojuChatProps) {
 
             {inlineNotice ? <div className="pchat__inline-notice">{inlineNotice}</div> : null}
 
-            {/* 流式:正式回答(逐字) */}
-            {isStreaming && streamingText ? (
-              <StreamingAssistantBubble content={streamingText} />
+            {/* 思考中：头像右侧波形（透明）；正文流开始后切换为 StreamingAssistantBubble */}
+            {(isStreaming || pulseHold) && thinkingMode && !replyStreaming ? (
+              <div className="pchat__msg pchat__msg--ai">
+                <div className="pchat__ai-row pchat__ai-row--thinking">
+                  <PojuAiAvatar />
+                  <ThinkingEnergyPulse
+                    variant="inline"
+                    streaming={isStreaming && !replyStreaming}
+                    reasoningText={liveThinkingLine}
+                    onFadeComplete={() => setPulseHold(false)}
+                    hudLabel={
+                      thinkingLocale?.startsWith("zh") ? "思维矩阵：运行中" : "THOUGHT METRICS: ACTIVE"
+                    }
+                  />
+                </div>
+              </div>
+            ) : null}
+
+            {isStreaming && replyStreaming ? (
+              <StreamingAssistantBubble
+                content={streamingText ?? ""}
+                pending={!streamingText?.trim()}
+              />
             ) : null}
           </div>
         </div>
 
         {/* 输入框 */}
         <div className="pchat__inputbar">
-          {(isStreaming || pulseHold) && thinkingMode ? (
-            <ThinkingEnergyPulse
-              streaming={isStreaming}
-              reasoningText={liveThinkingLine}
-              onFadeComplete={() => setPulseHold(false)}
-              hudLabel={
-                thinkingLocale?.startsWith("zh") ? "思维矩阵：运行中" : "THOUGHT METRICS: ACTIVE"
-              }
-            />
-          ) : null}
           <div className="pchat__inputwrap">
             {onAttachPick ? (
               <div className="pchat__attach-wrap">

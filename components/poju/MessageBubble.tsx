@@ -268,7 +268,9 @@ function ActionCard({
         <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-400/25 text-xs font-semibold text-amber-100">
           {index}
         </span>
-        <span className="rounded bg-white/10 px-2 py-0.5">{categoryLabels[action.category]}</span>
+        <span className="rounded bg-white/10 px-2 py-0.5 font-medium text-white/90">
+          {action.title?.trim() || categoryLabels[action.category]}
+        </span>
         <span className="ml-auto text-white/55">{timingLabels[action.timing]}</span>
       </div>
       <p className="m-0 text-sm leading-relaxed text-white/90">{action.text}</p>

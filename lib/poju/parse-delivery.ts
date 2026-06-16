@@ -48,12 +48,28 @@ export function parseDeliveryContent(content: string): DeliverySection[] {
     const title = parts[i]?.trim() || "";
     const body = parts[i + 1]?.trim() || "";
     const type = guessSectionType(title);
-    const paragraphs = body
-      .split(/\n\n+/)
-      .map((p) => p.trim())
-      .filter(Boolean);
+    const paragraphs =
+      type === "actions"
+        ? splitActionParagraphs(body)
+        : body
+            .split(/\n\n+/)
+            .map((p) => p.trim())
+            .filter(Boolean);
     sections.push({ type, title, paragraphs });
   }
 
   return sections;
+}
+
+/** Split WHAT TO DO body into one paragraph per ### Action N block. */
+function splitActionParagraphs(body: string): string[] {
+  const chunks = body
+    .split(/(?=###\s*Action\s*\d+\s*:)/i)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (chunks.length > 1) return chunks;
+  return body
+    .split(/\n\n+/)
+    .map((p) => p.trim())
+    .filter(Boolean);
 }

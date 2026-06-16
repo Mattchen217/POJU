@@ -128,6 +128,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const [thinkingMode, setThinkingMode] = useState<ThinkingStreamMode | null>(null);
   const [liveThinkingLine, setLiveThinkingLine] = useState<string | null>(null);
   const [streamingReply, setStreamingReply] = useState<string | null>(null);
+  const [replyStreaming, setReplyStreaming] = useState(false);
   const [generationStopped, setGenerationStopped] = useState(false);
   const [showOffTopicAction, setShowOffTopicAction] = useState(false);
   const [driftReason, setDriftReason] = useState("");
@@ -445,6 +446,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     setThinkingMode(null);
     setLiveThinkingLine(null);
     setStreamingReply(null);
+    setReplyStreaming(false);
     setGenerationStopped(true);
   }
 
@@ -491,6 +493,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     setThinkingMode("flash");
     setLiveThinkingLine(null);
     setStreamingReply("");
+    setReplyStreaming(false);
     setGenerationStopped(false);
 
     try {
@@ -501,8 +504,14 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         signal: ac.signal,
         onStream: {
           onReasoning: (text) => setLiveThinkingLine(text),
+          onContentStreamStart: () => {
+            setReplyStreaming(true);
+            setLiveThinkingLine(null);
+          },
           onPartialResponse: (text) => {
+            setReplyStreaming(true);
             setStreamingReply(text);
+            setLiveThinkingLine(null);
             scrollChatToBottom("auto");
           },
         },
@@ -524,6 +533,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         setThinkingMode(null);
         setLiveThinkingLine(null);
         setStreamingReply(null);
+        setReplyStreaming(false);
       }
     }
   }
@@ -540,6 +550,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     setThinkingMode(resolveThinkingStreamMode(baseSession, userMessage));
     setLiveThinkingLine(null);
     setStreamingReply("");
+    setReplyStreaming(false);
     setGenerationStopped(false);
     scrollChatToBottom("smooth");
 
@@ -552,8 +563,14 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         signal: ac.signal,
         onStream: {
           onReasoning: (text) => setLiveThinkingLine(text),
+          onContentStreamStart: () => {
+            setReplyStreaming(true);
+            setLiveThinkingLine(null);
+          },
           onPartialResponse: (text) => {
+            setReplyStreaming(true);
             setStreamingReply(text);
+            setLiveThinkingLine(null);
             scrollChatToBottom("auto");
           },
         },
@@ -624,6 +641,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         setThinkingMode(null);
         setLiveThinkingLine(null);
         setStreamingReply(null);
+        setReplyStreaming(false);
       }
     }
   }
@@ -1289,6 +1307,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         messageFollowUps={messageFollowUps}
         messageFollowUpActionsText={messageFollowUpActionsText}
         streamingText={streamingReply ?? undefined}
+        replyStreaming={replyStreaming}
         thinkingMode={streaming ? thinkingMode : null}
         thinkingLocale={locale}
         liveThinkingLine={liveThinkingLine}

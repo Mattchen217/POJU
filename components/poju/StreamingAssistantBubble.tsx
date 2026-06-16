@@ -4,10 +4,12 @@ import { PojuAiAvatar } from "@/components/poju/PojuAiAvatar";
 
 type StreamingAssistantBubbleProps = {
   content: string;
+  /** Show cursor while JSON preamble streams before `response` text is extractable. */
+  pending?: boolean;
 };
 
-export function StreamingAssistantBubble({ content }: StreamingAssistantBubbleProps) {
-  if (!content.trim()) return null;
+export function StreamingAssistantBubble({ content, pending = false }: StreamingAssistantBubbleProps) {
+  if (!content.trim() && !pending) return null;
 
   return (
     <div className="pchat__msg pchat__msg--ai">

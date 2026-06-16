@@ -27,11 +27,22 @@ export type ThinkingEnergyPulseProps = {
    */
   reasoningText?: string | null;
   hudLabel?: string;
+  /** `bar` = composer strip; `inline` = beside POJU avatar, transparent. */
+  variant?: "bar" | "inline";
+  /** Show bottom HUD dot + label (off for inline avatar layout). */
+  showHud?: boolean;
 };
 
 export const ThinkingEnergyPulse = forwardRef<ThinkingEnergyPulseHandle, ThinkingEnergyPulseProps>(
   function ThinkingEnergyPulse(
-    { streaming = true, onFadeComplete, reasoningText, hudLabel = "THOUGHT METRICS: ACTIVE" },
+    {
+      streaming = true,
+      onFadeComplete,
+      reasoningText,
+      hudLabel = "THOUGHT METRICS: ACTIVE",
+      variant = "bar",
+      showHud = variant === "bar",
+    },
     ref,
   ) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -78,10 +89,16 @@ export const ThinkingEnergyPulse = forwardRef<ThinkingEnergyPulseHandle, Thinkin
 
       let lastTs = performance.now();
 
+      let lastW = 0;
+      let lastH = 0;
+
       const resize = () => {
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
         const w = wrap.clientWidth;
         const h = wrap.clientHeight;
+        if (w === lastW && h === lastH) return;
+        lastW = w;
+        lastH = h;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
         canvas.width = Math.floor(w * dpr);
         canvas.height = Math.floor(h * dpr);
         canvas.style.width = `${w}px`;
@@ -107,14 +124,8 @@ export const ThinkingEnergyPulse = forwardRef<ThinkingEnergyPulseHandle, Thinkin
         const { width: w, height: h } = engine;
         ctx.clearRect(0, 0, w, h);
 
-        const bg = ctx.createLinearGradient(0, 0, 0, h);
-        bg.addColorStop(0, "rgba(11, 9, 20, 0.98)");
-        bg.addColorStop(1, "rgba(14, 11, 26, 0.95)");
-        ctx.fillStyle = bg;
-        ctx.fillRect(0, 0, w, h);
-
         const alpha = engine.fadeAlpha;
-        const steps = Math.max(80, Math.floor(w / 3));
+        const steps = Math.max(64, Math.floor(w / 4));
 
         for (const layer of engine.layers) {
           ctx.beginPath();
@@ -125,17 +136,18 @@ export const ThinkingEnergyPulse = forwardRef<ThinkingEnergyPulseHandle, Thinkin
             if (i === 0) ctx.moveTo(x, y);
             else ctx.lineTo(x, y);
           }
+
+          if (layer.glow) {
+            ctx.strokeStyle = "rgba(229, 193, 88, 0.32)";
+            ctx.lineWidth = layer.lineWidth + 5;
+            ctx.globalAlpha = alpha * 0.38 * engine.energy;
+            ctx.stroke();
+          }
+
           ctx.strokeStyle = layer.color;
           ctx.lineWidth = layer.lineWidth;
-          ctx.globalAlpha = alpha * (layer.glow ? 0.85 : 0.55);
-          if (layer.glow) {
-            ctx.shadowBlur = 15 * engine.energy * alpha;
-            ctx.shadowColor = "rgba(229, 193, 88, 0.75)";
-          } else {
-            ctx.shadowBlur = 0;
-          }
+          ctx.globalAlpha = alpha * (layer.glow ? 0.88 : 0.58);
           ctx.stroke();
-          ctx.shadowBlur = 0;
         }
 
         ctx.globalAlpha = alpha;
@@ -148,20 +160,30 @@ export const ThinkingEnergyPulse = forwardRef<ThinkingEnergyPulseHandle, Thinkin
         }
 
         const nowMs = performance.now();
-        for (const flash of engine.hudFlashes) {
-          const age = nowMs - flash.born;
-          const t = 1 - age / flash.ttl;
-          ctx.font = "9px ui-monospace, monospace";
-          ctx.fillStyle = `rgba(177, 242, 121, ${t * 0.35})`;
-          ctx.fillText(flash.text, flash.x, flash.y);
-        }
+        if (showHud) {
+          for (const flash of engine.hudFlashes) {
+            const age = nowMs - flash.born;
+            const t = 1 - age / flash.ttl;
+            ctx.font = "9px ui-monospace, monospace";
+            ctx.fillStyle = `rgba(177, 242, 121, ${t * 0.35})`;
+            ctx.fillText(flash.text, flash.x, flash.y);
+          }
 
-        const dotPulse = 0.45 + Math.sin(engine.hudDotPhase) * 0.35;
-        ctx.font = "10px ui-monospace, SFMono-Regular, Menlo, monospace";
-        ctx.fillStyle = `rgba(177, 242, 121, ${dotPulse * alpha * 0.85})`;
-        ctx.fillText("●", 12, h - 12);
-        ctx.fillStyle = `rgba(177, 242, 121, ${0.45 * alpha})`;
-        ctx.fillText(hudLabel, 22, h - 12);
+          const dotPulse = 0.55 + Math.sin(engine.hudDotPhase) * 0.2;
+          ctx.font = "10px ui-monospace, SFMono-Regular, Menlo, monospace";
+          ctx.fillStyle = `rgba(177, 242, 121, ${dotPulse * alpha * 0.85})`;
+          ctx.fillText("●", 12, h - 12);
+          ctx.fillStyle = `rgba(177, 242, 121, ${0.45 * alpha})`;
+          ctx.fillText(hudLabel, 22, h - 12);
+        } else {
+          for (const flash of engine.hudFlashes) {
+            const age = nowMs - flash.born;
+            const t = 1 - age / flash.ttl;
+            ctx.font = "8px ui-monospace, monospace";
+            ctx.fillStyle = `rgba(177, 242, 121, ${t * 0.22})`;
+            ctx.fillText(flash.text, flash.x, flash.y * 0.92);
+          }
+        }
 
         ctx.globalAlpha = 1;
         rafRef.current = requestAnimationFrame(draw);
@@ -173,10 +195,12 @@ export const ThinkingEnergyPulse = forwardRef<ThinkingEnergyPulseHandle, Thinkin
         cancelAnimationFrame(rafRef.current);
         ro.disconnect();
       };
-    }, [hudLabel, onFadeComplete]);
+    }, [hudLabel, onFadeComplete, showHud]);
+
+    const className = variant === "inline" ? "tep tep--inline" : "tep";
 
     return (
-      <div className="tep" ref={wrapRef} role="status" aria-live="polite" aria-label={hudLabel}>
+      <div className={className} ref={wrapRef} role="status" aria-live="polite" aria-label={hudLabel}>
         <canvas ref={canvasRef} className="tep__canvas" aria-hidden />
       </div>
     );

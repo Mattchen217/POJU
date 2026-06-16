@@ -78,7 +78,7 @@ export function resolveDeliveryLanguage(input: {
 /** Non-Chinese deliveries: Action 2 must use platforms the user can use locally (Step K / issue 12). */
 export function buildRegionalPlatformGuidance(code: DeliveryLanguageCode): string {
   if (code === "zh") return "";
-  return `# Regional platforms (Action 2 — Modern Decisive Action)
+  return `# Regional platforms (when an action involves outreach or channels)
 
 - Assume the user is in North America / global English context unless they stated otherwise.
 - Prefer: LinkedIn, Reddit, industry Discords/Slack, email outreach, local meetups, Upwork/Fiverr if relevant.
@@ -133,9 +133,9 @@ ${regionalGuidance ? `${regionalGuidance}\n\n` : ""}规则:
 - **分段标记行**（═══ ANALYSIS ═══ 等）必须原样保留；标记内正文用目标语言
 - Action 子标题可保留英文 "### Action 1: ..." 或本地化，但行动**内容**必须用目标语言
 
-# 交付结构（解析依赖 — 标记必须独立成行）
+# 交付结构（解析依赖 — 四段大标记必须独立成行）
 
-严格使用 POJU_OUTPUT_BRANDING 中的分段标记与三条 Action 顺序。
+严格使用 POJU_OUTPUT_BRANDING 中的分段标记。
 
 ═══ ANALYSIS ═══
 （展开：profile / core nature / life cycle / balancing element / 困境根源 / 破局方向 — 见 POJU_BAZI_DEEP_METHOD；禁 chart/合婚排盘术语）
@@ -144,10 +144,17 @@ ${regionalGuidance ? `${regionalGuidance}\n\n` : ""}规则:
 （收束：对用户问题的直接判断 + 1–2 句核心建议）
 
 ═══ WHAT TO DO ═══
-### Action 1: Environmental Alignment
-### Action 2: Modern Decisive Action
-### Action 3: Modern Reflective Practice
-（每类 80–120 字/词，含 profile 依据；Action 1 须三步洗白：spatial harmony + 具体动作 + 环境心理学；禁招财/催运/Amulet/lucky direction）
+给 3 条行动，每条用 "### Action N: " 开头 + **自拟标题**（贴合该用户具体处境，不用 Environmental Alignment 等固定名）。
+
+【选取规则】
+- 从 POJU_ACTION_DESIGN_PRINCIPLES 中的行动维度菜单，按本次对话挑 3 个**不同**维度
+- 三条必须覆盖不同维度：不得三条都是内省，也不得三条都是发消息
+- 每条从用户**亲口说过的具体细节**生长 — 人、项目、恐惧、资源、数字、时间点；禁万能模板
+- 每条 80–120 字/词，末尾独立一行 \`Profile basis: …\`
+
+【硬约束（不变）】
+- 若选到「环境与空间」：须三步洗白（spatial harmony + 具体动作 + 环境心理学）；禁招财/催运/Amulet/lucky direction
+- 不预测具体未来事件、不下吉凶断语
 
 ═══ COMING BACK ═══
 （60–100 字/词；模糊回访；Session 30 天有效；禁止复诊/三个月后再来）
@@ -155,8 +162,8 @@ ${regionalGuidance ? `${regionalGuidance}\n\n` : ""}规则:
 # 关键规则
 
 1. 全文使用用户语言。
-2. 用户可见须软化术语 + **禁合婚排盘术语 + 超自然承诺（招财/催运/lucky direction）**；五行/I Ching 可保留；Action 1 风水手段三步洗白。
-3. WHAT TO DO 三步须极其具体（时间+地点+人+话+可观察结果）。
+2. 用户可见须软化术语 + **禁合婚排盘术语 + 超自然承诺（招财/催运/lucky direction）**；五行/I Ching 可保留。
+3. WHAT TO DO 三条须极其具体（时间+地点+人+话+可观察结果）。
 4. 不下命运定论；不用中医话术（方子/诊脉/复诊）。
 5. 不暴露 Glyph / Syncro / Match 等产品名。
 6. 总长约 1000–1500 词/字，素材极薄时可略短。`;
@@ -185,7 +192,7 @@ Required delivery language: ${DELIVERY_LANGUAGE_NAMES[deliveryLang]} (${delivery
 
 Generate the complete delivery now. Use the markers exactly as specified. All body text in ${DELIVERY_LANGUAGE_NAMES[deliveryLang]}.
 
-Action 1 must use Environmental Alignment (3-step whitewash): spatial harmony context + concrete placement/action + environmental psychology rationale. No wealth/luck/amulet promises.`;
+WHAT TO DO: exactly 3 actions as \`### Action 1:\` / \`### Action 2:\` / \`### Action 3:\` with custom titles and distinct dimension types from the menu. If you include spatial/environment actions, use the 3-step whitewash — no wealth/luck/amulet promises.`;
 
   return { system, user };
 }
@@ -194,11 +201,34 @@ function isRecord(x: unknown): x is Record<string, unknown> {
   return Boolean(x) && typeof x === "object" && !Array.isArray(x);
 }
 
-/** Map Step 9 extracted categories to POJU v4 action card categories. */
-function mapCategory(idx: number): POJUAction["category"] {
+/** Map extracted action content to card chrome category (color), not fixed Action 1/2/3 slots. */
+function inferActionCategory(title: string, body: string, idx: number): POJUAction["category"] {
+  const blob = `${title}\n${body}`.toLowerCase();
+  const spatial =
+    /environment|spatial|空间|环境|绿植|placement|room|desk|物件|harmony|biophilic|feng|layout|方位/i;
+  const reflective =
+    /reflect|journal|写|反思|内观|meditat|复盘|书写|恢复|休整|recovery|rest|journaling|内省/i;
+  const decisive =
+    /decide|对话|email|call|reach|commit|会议|发|谈|止损|边界|实验|里程碑|outreach|linkedin|conversation|deadline/i;
+
+  if (spatial.test(blob)) return "traditional";
+  if (reflective.test(blob) && !decisive.test(blob)) return "modern_reflective";
+  if (decisive.test(blob)) return "modern_decisive";
+
   if (idx === 0) return "traditional";
   if (idx === 1) return "modern_decisive";
   return "modern_reflective";
+}
+
+function splitActionBodyAndBasis(block: string): { text: string; rationale: string } {
+  const m = block.match(/\n(?:Profile basis|profile basis|Profile 依据|五行依据)\s*[:：]\s*([\s\S]+)$/i);
+  if (m && typeof m.index === "number") {
+    return {
+      text: block.slice(0, m.index).trim(),
+      rationale: String(m[1] ?? "").trim(),
+    };
+  }
+  return { text: block.trim(), rationale: "" };
 }
 
 export function extractActionsFromDelivery(fullText: string, situationAnalysis: unknown): POJUAction[] {
@@ -210,28 +240,39 @@ export function extractActionsFromDelivery(fullText: string, situationAnalysis: 
   const reflective = modern && Array.isArray(modern["反思性行动"]) ? (modern["反思性行动"] as Record<string, unknown>[]) : [];
 
   const actions: POJUAction[] = [];
-  const actionMatches = [...fullText.matchAll(/###\s*Action\s*\d+[^\n]*\r?\n([\s\S]*?)(?=###\s*Action|═══|$)/gi)];
+  const actionMatches = [
+    ...fullText.matchAll(
+      /###\s*Action\s*(\d+)\s*:\s*([^\n]*)\r?\n([\s\S]*?)(?=###\s*Action\s*\d+\s*:|═══|$)/gi,
+    ),
+  ];
 
   let idx = 0;
   const now = new Date().toISOString();
   for (const match of actionMatches) {
-    const block = String(match[0] ?? "").replace(/^###\s*Action\s*\d+[^\n]*\n?/i, "").trim();
-    if (!block) continue;
+    const customTitle = String(match[2] ?? "").trim();
+    const rawBlock = String(match[3] ?? "").trim();
+    if (!rawBlock) continue;
 
-    let rationale = "";
-    const cat = mapCategory(idx);
-    if (cat === "traditional" && tiao[0] && isRecord(tiao[0])) {
-      rationale = String(tiao[0]["命理依据"] ?? "");
-    } else if (cat === "modern_decisive" && decisive[0] && isRecord(decisive[0])) {
-      rationale = String(decisive[0]["依据"] ?? "");
-    } else if (cat === "modern_reflective" && reflective[0] && isRecord(reflective[0])) {
-      rationale = String(reflective[0]["依据"] ?? "");
+    const { text, rationale: basisFromBlock } = splitActionBodyAndBasis(rawBlock);
+    if (!text) continue;
+
+    const cat = inferActionCategory(customTitle, text, idx);
+    let rationale = basisFromBlock;
+    if (!rationale) {
+      if (cat === "traditional" && tiao[0] && isRecord(tiao[0])) {
+        rationale = String(tiao[0]["命理依据"] ?? "");
+      } else if (cat === "modern_decisive" && decisive[0] && isRecord(decisive[0])) {
+        rationale = String(decisive[0]["依据"] ?? "");
+      } else if (cat === "modern_reflective" && reflective[0] && isRecord(reflective[0])) {
+        rationale = String(reflective[0]["依据"] ?? "");
+      }
     }
 
     actions.push({
       action_id: safeRandomUUID(),
       given_at: now,
-      text: block.slice(0, 4000),
+      title: customTitle || undefined,
+      text: text.slice(0, 4000),
       category: cat,
       timing: "this_week",
       rationale,

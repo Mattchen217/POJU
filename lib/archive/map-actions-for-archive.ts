@@ -20,7 +20,7 @@ export function mapSessionActionsToArchiveActions(actions: POJUAction[]) {
   return actions.map((a) => ({
     action_id: a.action_id,
     category: mapCategory(a.category),
-    title: shortTitle(a.text),
+    title: a.title?.trim() || shortTitle(a.text),
     description: a.text,
     rationale: a.rationale,
     timing: a.timing,

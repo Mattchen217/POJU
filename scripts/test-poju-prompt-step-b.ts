@@ -52,10 +52,10 @@ async function main(): Promise<void> {
   assert("identity 我是 POJU / I am POJU", POJU_BREAKTHROUGH_COUNSELOR_IDENTITY.includes("我是 POJU"));
   assert("identity output policy wired", buildPojuCorePromptSections().some((s) => s.includes("POJULIFE OUTPUT POLICY")));
 
-  assert("action 3类", POJU_ACTION_DESIGN_PRINCIPLES.includes("Action 1"));
-  assert("action Environmental Alignment", POJU_ACTION_DESIGN_PRINCIPLES.includes("Environmental Alignment"));
-  assert("action 决策", POJU_ACTION_DESIGN_PRINCIPLES.includes("决策行动"));
-  assert("action 反思", POJU_ACTION_DESIGN_PRINCIPLES.includes("反思练习"));
+  assert("action dimension menu", POJU_ACTION_DESIGN_PRINCIPLES.includes("行动维度菜单"));
+  assert("action Action 1 prefix", POJU_ACTION_DESIGN_PRINCIPLES.includes("### Action 1:"));
+  assert("action 关键对话 dimension", POJU_ACTION_DESIGN_PRINCIPLES.includes("关键对话"));
+  assert("action Profile basis line", POJU_ACTION_DESIGN_PRINCIPLES.includes("Profile basis"));
 
   assert("branding ANALYSIS marker", POJU_OUTPUT_BRANDING.includes("═══ ANALYSIS ═══"));
   assert("branding CONCLUSION marker", POJU_OUTPUT_BRANDING.includes("═══ CONCLUSION ═══"));
@@ -150,7 +150,8 @@ async function main(): Promise<void> {
 
   assert("final delivery has ANALYSIS marker", deliverySystem.includes("═══ ANALYSIS ═══"));
   assert("final delivery has WHAT TO DO", deliverySystem.includes("═══ WHAT TO DO ═══"));
-  assert("final delivery has Action 1/2/3", deliverySystem.includes("Action 1") && deliverySystem.includes("Action 3"));
+  assert("final delivery has Action 1 prefix", deliverySystem.includes("### Action 1:"));
+  assert("branding no fixed Action 2 name", !POJU_OUTPUT_BRANDING.includes("Modern Decisive Action"));
   assert("final delivery has poju-base 八字", deliverySystem.includes("POJU_BAZI_DEEP_METHOD") || deliverySystem.includes("八字深度解读"));
 
   const sample = [

@@ -63,32 +63,33 @@ export const POJU_BAZI_DEEP_METHOD = `# 性格画像深度解读法则（POJU �
 
 export const POJU_ACTION_DESIGN_PRINCIPLES = `# 行动设计原则（WHAT TO DO · 三条行动）
 
-主交付的 **═══ WHAT TO DO ═══** 必须包含且仅包含 **3 类行动**，顺序固定：
+主交付的 **═══ WHAT TO DO ═══** 必须包含 **恰好 3 条行动**。
 
-## Action 1：环境对齐（Environmental Alignment · 三步洗白）
-- 可含水景/绿植/方位调理/材质调整 — **须同时满足**：
-  1. 文化背景：spatial harmony / Space Alignment（Feng Shui 括号注释少用）
-  2. 给动作：何时何地做什么 — **不给**招财/催运/改运结果承诺
-  3. 环境心理学：流水声降压力 / biophilic anchoring / 材质对冲减压
-- ✓ 「周三午休在书桌旁放一小盆绿植（biophilic anchoring）— 绿色视觉锚定你的 Wood 平衡能量，帮助 Metal 型大脑从决策焦虑中缓下来」
-- ✗ 招财/催运/避邪/lucky direction/Wealth activation/Amulet/「下月发财」
-- 每条须附 **profile 依据**（balancing element / 五行 / life cycle 一句，白话解释）
+## 格式（供解析 — 必须保留前缀）
+每条以独立子标题开头（保留 \`Action 1/2/3\` 序号，冒号后为**自拟标题**，贴合该用户处境）：
+\`### Action 1: {自拟标题}\`
+\`### Action 2: {自拟标题}\`
+\`### Action 3: {自拟标题}\`
+
+## 选取规则
+从下列**行动维度菜单**中，按本次对话实际情况，挑 **3 个不同维度**（不得三条同属内省，也不得三条都是发消息/联络）：
+决断承诺 / 关键对话 / 关系与支持 / 信息调研验证 / 小步实验与里程碑 /
+资源与财务安排 / 身体与节律 / 内在书写反思 / 时间窗与节奏 /
+技能能力建设 / 仪式与象征转变 / 边界与止损 / 环境与空间 /
+学习输入 / 创造表达 / 休整恢复 / 寻求专业帮助 / 公开承诺 / 复盘记录
+
+每条必须从**用户亲口说过的具体细节**生长 — 具体的人、项目、恐惧、资源、数字、时间点。
+严禁套用「挪个物件 / 发封邮件 / 拿张纸写」等放之四海皆准的万能模板。
+
+## 每条内容要求
 - 80–120 字（中文）/ 对应词数（英文）
+- 极其具体：时间 + 地点/对象 + 做什么 + 可观察结果
+- 末尾**独立一行**：\`Profile basis: …\`（五行 / life cycle / balancing element 一句，白话）
+- 非中文用户涉及平台时用当地渠道（LinkedIn、邮件、面谈等），勿默认中国 App
 
-## Action 2：决策行动（现代、立断）
-- 具体到：**时间** + **渠道/对象** + **说什么/做什么** + **观察什么信号**
-- 非中文用户用当地平台（LinkedIn、邮件、面谈等），勿默认中国 App
-- 须附 profile 依据
-- 80–120 字
-
-## Action 3：反思练习（内观 / 书写 / 对话）
-- 具体到：**时长** + **地点** + **做什么**（提示语/问题）
-- Solo 可执行；须附 profile 依据
-- 80–120 字
-
-## 通用要求
-- **极其具体** — ✗「改善工作环境」 ✓「周三午休在图书馆安静角写 10 分钟决策清单，桌上留一盆绿植帮你稳住注意力」
-- 三类缺一不可；不得合并为两条或扩成四条以上
+## 硬约束
+- 若选到「环境与空间」维度：须三步洗白（spatial harmony + 具体动作 + 环境心理学解释）；禁招财/催运/Amulet/lucky direction
+- 不预测具体未来事件、不下吉凶断语
 - 禁止中医话术：方子、诊脉、开方、病灶、吃药、复诊`;
 
 export const POJU_OUTPUT_BRANDING = `# ⚠️ POJU 输出品牌（用户可见 · 严格遵守 · 与 OUTPUT POLICY 一并执行）
@@ -112,11 +113,6 @@ export const POJU_OUTPUT_BRANDING = `# ⚠️ POJU 输出品牌（用户可见 �
 ═══ CONCLUSION ═══
 
 ═══ WHAT TO DO ═══
-
-（WHAT TO DO 内三个子标题顺序固定：）
-### Action 1: Environmental Alignment
-### Action 2: Modern Decisive Action
-### Action 3: Modern Reflective Practice
 
 ═══ COMING BACK ═══
 

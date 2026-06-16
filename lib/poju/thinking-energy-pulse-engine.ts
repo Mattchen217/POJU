@@ -44,11 +44,11 @@ export class ThinkingEnergyPulseEngine {
   hudDotPhase = 0;
 
   readonly layers: PulseWaveLayer[] = [
-    { amplitude: 0.22, frequency: 2.1, phase: 0, speed: 1.0, color: "rgba(229, 193, 88, 0.45)", lineWidth: 1.2, glow: false },
-    { amplitude: 0.28, frequency: 1.6, phase: 1.2, speed: 0.85, color: "rgba(177, 242, 121, 0.38)", lineWidth: 1.4, glow: false },
-    { amplitude: 0.35, frequency: 1.2, phase: 2.4, speed: 1.1, color: "rgba(229, 193, 88, 0.55)", lineWidth: 1.8, glow: true },
-    { amplitude: 0.18, frequency: 2.8, phase: 0.8, speed: 1.3, color: "rgba(177, 242, 121, 0.28)", lineWidth: 1, glow: false },
-    { amplitude: 0.15, frequency: 3.4, phase: 3.1, speed: 0.7, color: "rgba(229, 193, 88, 0.25)", lineWidth: 0.9, glow: false },
+    { amplitude: 0.34, frequency: 2.1, phase: 0, speed: 1.0, color: "rgba(229, 193, 88, 0.45)", lineWidth: 1.2, glow: false },
+    { amplitude: 0.4, frequency: 1.6, phase: 1.2, speed: 0.85, color: "rgba(177, 242, 121, 0.38)", lineWidth: 1.4, glow: false },
+    { amplitude: 0.52, frequency: 1.2, phase: 2.4, speed: 1.1, color: "rgba(229, 193, 88, 0.55)", lineWidth: 1.8, glow: true },
+    { amplitude: 0.28, frequency: 2.8, phase: 0.8, speed: 1.3, color: "rgba(177, 242, 121, 0.28)", lineWidth: 1, glow: false },
+    { amplitude: 0.24, frequency: 3.4, phase: 3.1, speed: 0.7, color: "rgba(229, 193, 88, 0.25)", lineWidth: 0.9, glow: false },
   ];
 
   resize(w: number, h: number) {
@@ -133,9 +133,11 @@ export class ThinkingEnergyPulseEngine {
   }
 
   waveY(layer: PulseWaveLayer, xNorm: number, now: number): number {
-    const amp = layer.amplitude * this.energy * this.height * 0.42;
-    const omega = layer.frequency * (0.8 + this.frequency * 0.25);
+    const amp = layer.amplitude * this.energy * this.height * 0.68;
+    const omega = layer.frequency * (0.85 + this.frequency * 0.22);
     const phi = layer.phase + this.globalPhase * layer.speed;
-    return this.height * 0.5 + amp * Math.sin(omega * xNorm * Math.PI * 2 + phi);
+    const primary = Math.sin(omega * xNorm * Math.PI * 2 + phi);
+    const secondary = Math.sin(omega * 1.85 * xNorm * Math.PI * 2 + phi * 1.25) * 0.42;
+    return this.height * 0.5 + amp * (primary + secondary);
   }
 }
