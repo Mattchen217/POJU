@@ -415,7 +415,12 @@
 }
 
 .pem-wuxing-card--radar {
-  min-height: 248px;
+  min-height: 300px;
+  padding: 14px 16px 10px;
+}
+
+.pem-wuxing-card--radar .pem-wuxing-card__label {
+  margin-bottom: 8px;
 }
 
 .pem-wuxing-card--map {
@@ -430,8 +435,8 @@
   content: "";
   position: absolute;
   left: 50%;
-  top: 52%;
-  width: 72%;
+  top: 56%;
+  width: 78%;
   aspect-ratio: 1;
   transform: translate(-50%, -50%);
   border-radius: 50%;
@@ -472,7 +477,11 @@
 
 .pem-wuxing-card__body--radar {
   flex: 1 1 auto;
-  min-height: 188px;
+  min-height: 232px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: -2px;
 }
 
 .pem-wuxing-card__body--map {
@@ -482,10 +491,15 @@
 
 .pem-wuxing-grid .radar {
   width: 100%;
-  flex: 0 0 auto;
-  min-height: 188px;
-  height: 188px;
+  flex: 1 1 auto;
+  min-height: 232px;
+  height: 232px;
   max-height: none;
+}
+
+.pem-wuxing-grid .radar.radar--compact {
+  min-height: 232px;
+  height: 232px;
 }
 
 .pem-wuxing-grid .pem__element-map {
@@ -647,12 +661,13 @@
 }
 
 .pchat__ai .pem-wuxing-card--radar {
-  min-height: 220px;
+  min-height: 268px;
 }
 
-.pchat__ai .pem-wuxing-grid .radar {
-  min-height: 176px;
-  height: 176px;
+.pchat__ai .pem-wuxing-grid .radar,
+.pchat__ai .pem-wuxing-grid .radar.radar--compact {
+  min-height: 208px;
+  height: 208px;
 }
 
 .pem .radarpanel,
@@ -1450,10 +1465,11 @@
     min-height: auto;
   }
 
-  .pem-wuxing-grid .radar {
-    min-height: 200px;
+  .pem-wuxing-grid .radar,
+  .pem-wuxing-grid .radar.radar--compact {
+    min-height: 220px;
     max-height: none;
-    height: 200px;
+    height: 220px;
   }
 
   .pem .topband {

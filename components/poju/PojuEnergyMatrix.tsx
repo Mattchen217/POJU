@@ -115,11 +115,17 @@ function RadarChart({ scores }: { scores: PojuMatrixPayload["wuxing_scores"] }) 
       chart.setOption({
         backgroundColor: "transparent",
         radar: {
-          center: ["50%", "48%"],
-          radius: "62%",
+          center: ["50%", "54%"],
+          radius: "80%",
           startAngle: 90,
           splitNumber: 3,
-          axisName: { color: "rgba(255,255,255,0.78)", fontSize: 12, fontWeight: 500, fontFamily: "Inter, system-ui, sans-serif" },
+          axisName: {
+            color: "rgba(255,255,255,0.78)",
+            fontSize: 11,
+            fontWeight: 500,
+            fontFamily: "Inter, system-ui, sans-serif",
+            padding: [0, 4],
+          },
           splitLine: { lineStyle: { color: "rgba(255,255,255,0.13)" } },
           splitArea: { areaStyle: { color: ["rgba(255,255,255,0.02)", "rgba(255,255,255,0.05)"] } },
           axisLine: { lineStyle: { color: "rgba(255,255,255,0.15)" } },
@@ -145,9 +151,12 @@ function RadarChart({ scores }: { scores: PojuMatrixPayload["wuxing_scores"] }) 
 
     const onResize = () => chart?.resize();
     window.addEventListener("resize", onResize);
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(onResize) : null;
+    ro?.observe(el);
     return () => {
       cancelled = true;
       window.removeEventListener("resize", onResize);
+      ro?.disconnect();
       chart?.dispose();
     };
   }, [scores]);
