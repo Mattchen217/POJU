@@ -4,19 +4,6 @@ import { resolveSessionHasProfile, withSessionProfileFlags } from "@/lib/poju/se
 import type { POJUMessage, POJUSessionState } from "@/lib/poju/types";
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 
-export function matrixGuideText(locale: string): string {
-  if (locale.startsWith("zh")) {
-    return (
-      "这是你的 Personal Energy Matrix——你此刻的能量结构快照。" +
-      "告诉我那个让你反复权衡、迟迟无法落定的问题或困境，我会顺着你的命局，陪你把它拆到底。"
-    );
-  }
-  return (
-    "This is your Personal Energy Matrix — a snapshot of your energy structure right now. " +
-    "Tell me the question or dilemma you keep weighing and cannot settle — I will walk through it with you, grounded in your chart."
-  );
-}
-
 export function getUnlockStatus(session: POJUSessionState): "preview" | "unlocked" {
   if (session.unlock_status === "unlocked") return "unlocked";
   if (session.unlock_status === "preview") return "preview";
@@ -37,10 +24,10 @@ export function hasPaywallMessage(session: POJUSessionState): boolean {
   return session.messages.some((m) => m.meta?.kind === "paywall");
 }
 
-export function createEnergyMatrixMessage(payload: PojuMatrixPayload, locale: string): POJUMessage {
+export function createEnergyMatrixMessage(payload: PojuMatrixPayload, _locale: string): POJUMessage {
   return {
     role: "assistant",
-    content: matrixGuideText(locale),
+    content: "",
     timestamp: new Date().toISOString(),
     meta: {
       kind: "energy_matrix",

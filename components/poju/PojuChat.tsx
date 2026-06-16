@@ -32,7 +32,6 @@ export interface PojuMessage {
   role: "user" | "assistant";
   content: string; // assistant 内容可能含 "### 标题" 和 "═══ 分隔 ═══"
   editable?: boolean;
-  showGuideAfterSlot?: boolean;
 }
 export interface PojuSession {
   id: string;
@@ -468,12 +467,7 @@ export default function PojuChat(props: PojuChatProps) {
                 ) : (
                   <AiReplyShell>
                     {messageSlots?.[m.id] ? (
-                      <>
-                        {messageSlots[m.id]}
-                        {m.showGuideAfterSlot && m.content.trim() ? (
-                          <p className="pem__guide">{m.content}</p>
-                        ) : null}
-                      </>
+                      messageSlots[m.id]
                     ) : (
                       renderAiContent(m.content)
                     )}

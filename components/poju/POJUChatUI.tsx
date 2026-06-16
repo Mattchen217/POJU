@@ -57,6 +57,7 @@ import {
   setExpiryReminderSnoozed,
   shouldShowExpiryWarning,
 } from "@/lib/poju/expiry-reminder";
+import { MatrixNarrativeReply } from "@/components/poju/MatrixNarrativeReply";
 import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
 import { PojuPaywallInline } from "@/components/poju/PojuPaywallInline";
 import { PojuUnlockAnalysisOverlay } from "@/components/poju/PojuUnlockAnalysisOverlay";
@@ -1213,7 +1214,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     role: m.role as "user" | "assistant",
     content: m.content,
     editable: m.role === "user" && !m.is_rejected,
-    showGuideAfterSlot: m.meta?.kind === "energy_matrix",
   }));
 
   const messageSlots = useMemo(() => {
@@ -1221,7 +1221,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     for (const m of visibleMessages) {
       if (m.meta?.kind === "energy_matrix" && m.meta.matrix_payload) {
         slots[m.timestamp] = (
-          <PojuEnergyMatrix payload={m.meta.matrix_payload} locale={locale} compact />
+          <>
+            <PojuEnergyMatrix payload={m.meta.matrix_payload} locale={locale} compact />
+            <MatrixNarrativeReply payload={m.meta.matrix_payload} locale={locale} />
+          </>
         );
       }
       if (m.meta?.kind === "paywall") {

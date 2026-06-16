@@ -4,6 +4,8 @@ import { useTranslations } from "next-intl";
 import type { POJUAction, POJUMessage, ToolName } from "@/lib/poju/types";
 import { AssistantMessageActions } from "@/components/poju/AssistantMessageActions";
 import { MainDeliveryView } from "@/components/poju/MainDeliveryView";
+import { MatrixNarrativeReply } from "@/components/poju/MatrixNarrativeReply";
+import { PojuAiAvatar } from "@/components/poju/PojuAiAvatar";
 import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
 import { ToolSuggestionCard } from "@/components/poju/ToolSuggestionCard";
 import "@/styles/poju-energy-matrix.css";
@@ -44,8 +46,13 @@ export function MessageBubble({
   if (message.role === "assistant" && message.meta?.kind === "energy_matrix" && message.meta.matrix_payload) {
     return (
       <div className="pchat__msg pchat__msg--ai">
-        <PojuEnergyMatrix payload={message.meta.matrix_payload} locale="en" compact />
-        {message.content.trim() ? <p className="pem__guide">{message.content}</p> : null}
+        <div className="pchat__ai-row">
+          <PojuAiAvatar />
+          <div className="pchat__ai">
+            <PojuEnergyMatrix payload={message.meta.matrix_payload} locale="en" compact />
+            <MatrixNarrativeReply payload={message.meta.matrix_payload} locale="en" />
+          </div>
+        </div>
       </div>
     );
   }

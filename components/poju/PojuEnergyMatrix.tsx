@@ -1,11 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { PojuDaYunDial } from "@/components/poju/PojuDaYunDial";
-import pojuAvatar from "@/assets/icons/P.png";
 import { elementCssClass } from "@/lib/poju/bazi-matrix-mappings";
 import { buildElementPillarMap, type ElementPillarRow } from "@/lib/poju/build-element-pillar-map";
 import { buildMatrixDisplayData } from "@/lib/poju/build-matrix-display";
@@ -57,13 +55,6 @@ function NarrativePlaceholder({ zh }: { zh: boolean }) {
     <span className="pem__narrative-loading">
       {zh ? "POJU 正在读取…" : "POJU is reading…"}
     </span>
-  );
-}
-
-function renderRichText(text: string) {
-  const parts = text.split(/\*\*(.+?)\*\*/g);
-  return parts.map((part, i) =>
-    i % 2 === 1 ? <b key={i}>{part}</b> : <span key={i}>{part}</span>,
   );
 }
 
@@ -128,7 +119,7 @@ function RadarChart({ scores }: { scores: PojuMatrixPayload["wuxing_scores"] }) 
           radius: "62%",
           startAngle: 90,
           splitNumber: 3,
-          axisName: { color: "#c9c4dc", fontSize: 10.5, fontFamily: "Inter" },
+          axisName: { color: "rgba(255,255,255,0.78)", fontSize: 12, fontWeight: 500, fontFamily: "Inter, system-ui, sans-serif" },
           splitLine: { lineStyle: { color: "rgba(255,255,255,0.13)" } },
           splitArea: { areaStyle: { color: ["rgba(255,255,255,0.02)", "rgba(255,255,255,0.05)"] } },
           axisLine: { lineStyle: { color: "rgba(255,255,255,0.15)" } },
@@ -169,11 +160,13 @@ function ElementPillarMap({
   zh,
   tb,
   tm,
+  showTitle = true,
 }: {
   rows: ElementPillarRow[];
   zh: boolean;
   tb: (key: string) => string;
   tm: (key: string) => string;
+  showTitle?: boolean;
 }) {
   if (!rows.length) return null;
 
@@ -181,24 +174,26 @@ function ElementPillarMap({
 
   return (
     <div className="pem__element-map" aria-label={tm("element_map_title")}>
-      <div className="pem__element-map-title">{tm("element_map_title")}</div>
-      {rows.map((row) => (
-        <div className="pem__element-map-row" key={row.element}>
-          <span className={`pem__element-map-el ${ELEMENT_CLASS[row.element] ?? ""}`}>
-            {tb(`element.${row.element.toLowerCase()}`)}
-          </span>
-          <span className="pem__element-map-body">
-            {row.assignments.map((assignment, index) => (
-              <span key={assignment.slot}>
-                {index > 0 ? tm("element_map_sep") : null}
-                {tb(`pillar_slot.${assignment.slot}`)}
-                {colon}
-                <span className="pem__element-map-glyph">{assignment.display_glyph}</span>
-              </span>
-            ))}
-          </span>
-        </div>
-      ))}
+      {showTitle ? <div className="pem__element-map-title">{tm("element_map_title")}</div> : null}
+      <div className="pem__element-map-body-wrap">
+        {rows.map((row) => (
+          <div className="pem__element-map-row" key={row.element}>
+            <span className={`pem__element-map-el ${ELEMENT_CLASS[row.element] ?? ""}`}>
+              {tb(`element.${row.element.toLowerCase()}`)}
+            </span>
+            <span className="pem__element-map-slots">
+              {row.assignments.map((assignment, index) => (
+                <span className="pem__element-map-entry" key={assignment.slot}>
+                  {index > 0 ? tm("element_map_sep") : null}
+                  {tb(`pillar_slot.${assignment.slot}`)}
+                  {colon}
+                  <span className="pem__element-map-glyph">{assignment.display_glyph}</span>
+                </span>
+              ))}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -226,12 +221,6 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
       }),
     [payload.display, user_profile, structured, strength, wuxing_scores, locale],
   );
-
-  const synopsisPrompt =
-    display.synopsis.prompt ??
-    (zh
-      ? "把你反复掂量、又迟迟定不下来的那个问题告诉我——发在下面，我会结合你的命盘，和你一步步拆开。"
-      : "Tell me the question or dilemma you keep weighing and cannot settle — share it below, and I'll walk through it with you, grounded in your chart.");
 
   const maxCount = Math.max(...wuxing_scores.map((s) => s.count), 1);
   const sorted = [...wuxing_scores].sort((a, b) => b.pct - a.pct);
@@ -381,17 +370,34 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
           </div>
         </div>
 
-        <div className="block block--spread">
-          <div className="radarpanel">
-            <div className="rp__k">
-              {zh ? "五行能量谱" : "Elemental Signature"} <em>· {zh ? "五行" : "wuxing"}</em>
+        <div className="block block--spread pem-wuxing-grid">
+          <div className="pem-wuxing__left">
+            <div className="pem-wuxing-card pem-wuxing-card--radar">
+              <div className="pem-wuxing-card__label">
+                {zh ? "五行能量谱" : "Elemental Signature"} <em>· {zh ? "五行" : "wuxing"}</em>
+              </div>
+              <div className="pem-wuxing-card__body pem-wuxing-card__body--radar">
+                <RadarChart scores={wuxing_scores} />
+              </div>
             </div>
-            <RadarChart scores={wuxing_scores} />
-            <ElementPillarMap rows={elementPillarRows} zh={zh} tb={tb} tm={tm} />
+            <div className="pem-wuxing-card pem-wuxing-card--map">
+              <div className="pem-wuxing-card__label">
+                {tm("element_map_title")} <em>· {zh ? "干支" : "pillars"}</em>
+              </div>
+              <div className="pem-wuxing-card__body pem-wuxing-card__body--map">
+                <ElementPillarMap
+                  rows={elementPillarRows}
+                  zh={zh}
+                  tb={tb}
+                  tm={tm}
+                  showTitle={false}
+                />
+              </div>
+            </div>
           </div>
-          <div className="side">
-            <div className="ro">
-              <div className="ro__k">{zh ? "五行分布" : "Elemental Breakdown · 五行分布"}</div>
+          <div className="pem-wuxing__right">
+            <div className="ro ro--wuxing">
+              <div className="ro__k">{zh ? "五行分布" : "Elemental Breakdown"}</div>
               <div className="elist">
                 {wuxing_scores.map((row) => (
                   <div className="erow" key={row.element}>
@@ -439,9 +445,9 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
                 ) : null}
               </div>
             </div>
-            <div className="ro">
-              <div className="ro__k">{zh ? "核心活力" : "Core Vitality · Daymaster"}</div>
-              <div className="ro__v">{strengthLabel(strength, locale)}</div>
+            <div className="ro ro--wuxing">
+              <div className="ro__k">{zh ? "核心活力" : "Core Vitality"}</div>
+              <div className="ro__v ro__v--metric">{strengthLabel(strength, locale)}</div>
               <div className="vtrack">
                 <div className="mid" />
                 <div className="pin" style={{ left: vitalityPin(strength) }} />
@@ -452,12 +458,14 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
                 <span>{zh ? "偏强" : "Dominant"}</span>
               </div>
             </div>
-            <div className="ro">
+            <div className="ro ro--wuxing">
               <div className="ro__k">{zh ? "五行均衡" : "Elemental Equilibrium"}</div>
               {dominant ? (
                 <>
-                  <div className="ro__v">
-                    <span className={ELEMENT_CLASS[dominant.element] ?? ""}>{dominant.element}</span>
+                  <div className="ro__v ro__v--metric">
+                    <span className={`ro__v-accent ${ELEMENT_CLASS[dominant.element] ?? ""}`}>
+                      {dominant.element}
+                    </span>
                     <span className="pct">
                       {zh ? "盈余" : "Surplus"} · {dominant.pct}%
                     </span>
@@ -469,8 +477,10 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
               ) : null}
               {deficit ? (
                 <>
-                  <div className="ro__v" style={{ marginTop: 12 }}>
-                    <span className={ELEMENT_CLASS[deficit.element] ?? ""}>{deficit.element}</span>
+                  <div className="ro__v ro__v--metric" style={{ marginTop: 12 }}>
+                    <span className={`ro__v-accent ${ELEMENT_CLASS[deficit.element] ?? ""}`}>
+                      {deficit.element}
+                    </span>
                     <span className="pct">
                       {zh ? "不足" : "Deficit"} · {deficit.pct}%
                     </span>
@@ -603,36 +613,6 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
               </div>
             );
           })}
-        </div>
-      </section>
-
-      <section className="below">
-        <div className="pojumsg">
-          <div className="pojumsg__avatar">
-            <Image src={pojuAvatar} alt="POJU" width={40} height={40} />
-          </div>
-          <div className="pojumsg__body">
-            <div className="pojumsg__who">POJU</div>
-            <div className="pojumsg__bubble">
-              {narrativeLoading ? (
-                <p className="pem__narrative-loading">
-                  {zh ? "POJU 正在读取你的能量结构…" : "POJU is reading your energy structure…"}
-                </p>
-              ) : isLlmNarrative ? (
-                <>
-                  <p>{display.synopsis.archetype}</p>
-                  <p>{display.synopsis.friction}</p>
-                  <p className="ask">{display.synopsis.prompt}</p>
-                </>
-              ) : showTemplateFallback ? (
-                <>
-                  <p>{renderRichText(display.synopsis.archetype)}</p>
-                  <p>{renderRichText(display.synopsis.friction)}</p>
-                  <p className="ask">{synopsisPrompt}</p>
-                </>
-              ) : null}
-            </div>
-          </div>
         </div>
       </section>
     </div>
