@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import type { POJUAction, POJUMessage, ToolName } from "@/lib/poju/types";
 import { AssistantMessageActions } from "@/components/poju/AssistantMessageActions";
 import { MainDeliveryView } from "@/components/poju/MainDeliveryView";
-import { MatrixNarrativeReply } from "@/components/poju/MatrixNarrativeReply";
+import { MatrixNarrativeReply, matrixNarrativeActionsText } from "@/components/poju/MatrixNarrativeReply";
 import { PojuAiAvatar } from "@/components/poju/PojuAiAvatar";
 import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
 import { ToolSuggestionCard } from "@/components/poju/ToolSuggestionCard";
@@ -44,16 +44,22 @@ export function MessageBubble({
   const isWelcomePanel = isAssistantWelcomeMessage(message);
   if (isWelcomePanel && hideWelcomePanel) return null;
   if (message.role === "assistant" && message.meta?.kind === "energy_matrix" && message.meta.matrix_payload) {
+    const narrativeText = matrixNarrativeActionsText(message.meta.matrix_payload, "en");
     return (
-      <div className="pchat__msg pchat__msg--ai">
-        <div className="pchat__ai-row">
-          <PojuAiAvatar />
-          <div className="pchat__ai">
-            <PojuEnergyMatrix payload={message.meta.matrix_payload} locale="en" compact />
-            <MatrixNarrativeReply payload={message.meta.matrix_payload} locale="en" />
+      <>
+        <div className="pchat__msg pchat__msg--ai">
+          <PojuEnergyMatrix payload={message.meta.matrix_payload} locale="en" compact />
+        </div>
+        <div className="pchat__msg pchat__msg--ai">
+          <div className="pchat__ai-row">
+            <PojuAiAvatar />
+            <div className="pchat__ai">
+              <MatrixNarrativeReply payload={message.meta.matrix_payload} locale="en" />
+              {narrativeText ? <AssistantMessageActions content={narrativeText} /> : null}
+            </div>
           </div>
         </div>
-      </div>
+      </>
     );
   }
   if (message.role === "assistant" && message.meta?.kind === "paywall") {

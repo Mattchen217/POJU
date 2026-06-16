@@ -108,6 +108,12 @@ export interface PojuChatProps {
   newSessionPriceLabel?: string;
   /** Rich assistant slots keyed by message id (energy matrix, paywall, report). */
   messageSlots?: Record<string, ReactNode>;
+  /** Slot ids rendered without avatar shell (full-width embeds). */
+  bareMessageSlotIds?: ReadonlySet<string>;
+  /** Extra AI reply blocks immediately after a parent message id. */
+  messageFollowUps?: Record<string, ReactNode>;
+  /** Plain text for copy/actions on follow-up blocks. */
+  messageFollowUpActionsText?: Record<string, string>;
 }
 
 /* ---------- AI 文本渲染(不用 Tailwind prose,避免 65ch 限制)----------
@@ -192,6 +198,9 @@ export default function PojuChat(props: PojuChatProps) {
     newSessionLabel = "+ New POJU",
     newSessionPriceLabel = "$9.99",
     messageSlots,
+    bareMessageSlotIds,
+    messageFollowUps,
+    messageFollowUpActionsText,
   } = props;
 
   const [input, setInput] = useState("");
@@ -443,37 +452,46 @@ export default function PojuChat(props: PojuChatProps) {
         <div className="pchat__scroll" ref={scrollRef}>
           <div className="pchat__messages">
             {messages.map((m) => (
-              <div
-                key={m.id}
-                className={`pchat__msg pchat__msg--${
-                  m.role === "user" ? "user" : "ai"
-                }`}
-              >
-                {m.role === "user" ? (
-                  <>
-                    <div className="pchat__bubble">{m.content}</div>
-                    {m.editable && onEditMessage ? (
-                      <button
-                        type="button"
-                        className="pchat__msg-edit icon-btn"
-                        disabled={editDisabled}
-                        onClick={() => onEditMessage(m.id, m.content)}
-                        aria-label={editLabel ?? "Edit"}
-                      >
-                        <span className="material-symbols-outlined">edit</span>
-                      </button>
-                    ) : null}
-                  </>
-                ) : (
-                  <AiReplyShell>
-                    {messageSlots?.[m.id] ? (
-                      messageSlots[m.id]
-                    ) : (
-                      renderAiContent(m.content)
-                    )}
-                    {!messageSlots?.[m.id] ? <AssistantMessageActions content={m.content} /> : null}
-                  </AiReplyShell>
-                )}
+              <div key={m.id}>
+                <div
+                  className={`pchat__msg pchat__msg--${
+                    m.role === "user" ? "user" : "ai"
+                  }`}
+                >
+                  {m.role === "user" ? (
+                    <>
+                      <div className="pchat__bubble">{m.content}</div>
+                      {m.editable && onEditMessage ? (
+                        <button
+                          type="button"
+                          className="pchat__msg-edit icon-btn"
+                          disabled={editDisabled}
+                          onClick={() => onEditMessage(m.id, m.content)}
+                          aria-label={editLabel ?? "Edit"}
+                        >
+                          <span className="material-symbols-outlined">edit</span>
+                        </button>
+                      ) : null}
+                    </>
+                  ) : bareMessageSlotIds?.has(m.id) && messageSlots?.[m.id] ? (
+                    messageSlots[m.id]
+                  ) : (
+                    <AiReplyShell>
+                      {messageSlots?.[m.id] ? messageSlots[m.id] : renderAiContent(m.content)}
+                      {!messageSlots?.[m.id] ? <AssistantMessageActions content={m.content} /> : null}
+                    </AiReplyShell>
+                  )}
+                </div>
+                {messageFollowUps?.[m.id] ? (
+                  <div className="pchat__msg pchat__msg--ai">
+                    <AiReplyShell>
+                      {messageFollowUps[m.id]}
+                      {messageFollowUpActionsText?.[m.id] ? (
+                        <AssistantMessageActions content={messageFollowUpActionsText[m.id]!} />
+                      ) : null}
+                    </AiReplyShell>
+                  </div>
+                ) : null}
               </div>
             ))}
 

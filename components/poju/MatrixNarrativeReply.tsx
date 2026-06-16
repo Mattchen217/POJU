@@ -2,8 +2,12 @@
 
 import { useMemo } from "react";
 
-import { buildMatrixDisplayData } from "@/lib/poju/build-matrix-display";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
+import {
+  getMatrixSynopsisPlainText,
+  matrixSynopsisNarrativeState,
+  resolveMatrixDisplay,
+} from "@/lib/poju/matrix-narrative-text";
 
 function renderRichText(text: string) {
   const parts = text.split(/\*\*(.+?)\*\*/g);
@@ -17,27 +21,13 @@ type Props = {
   locale: string;
 };
 
-/** Matrix onboarding copy — rendered as standard assistant paragraphs inside `.pchat__ai`. */
+/** Synopsis paragraphs only — parent wraps with `AiReplyShell` (avatar + `.pchat__ai`). */
 export function MatrixNarrativeReply({ payload, locale }: Props) {
   const zh = locale.startsWith("zh");
-  const { structured, user_profile, wuxing_scores, strength } = payload;
 
-  const display = useMemo(
-    () =>
-      payload.display ??
-      buildMatrixDisplayData({
-        profile: user_profile,
-        structured,
-        strength,
-        wuxing_scores,
-        locale,
-      }),
-    [payload.display, user_profile, structured, strength, wuxing_scores, locale],
-  );
-
-  const isLlmNarrative = display.narrative_source === "llm";
-  const showTemplateFallback = display.narrative_failed === true;
-  const narrativeLoading = !isLlmNarrative && !showTemplateFallback;
+  const display = useMemo(() => resolveMatrixDisplay(payload, locale), [payload, locale]);
+  const { isLlmNarrative, showTemplateFallback, narrativeLoading } =
+    matrixSynopsisNarrativeState(display);
 
   const synopsisPrompt =
     display.synopsis.prompt ??
@@ -47,8 +37,9 @@ export function MatrixNarrativeReply({ payload, locale }: Props) {
 
   if (narrativeLoading) {
     return (
-      <p className="pem-matrix-narrative pem-matrix-narrative--loading">
+      <p className="pchat__streaming-line">
         {zh ? "POJU 正在读取你的能量结构…" : "POJU is reading your energy structure…"}
+        <span className="pchat__streaming-cursor">▍</span>
       </p>
     );
   }
@@ -74,4 +65,11 @@ export function MatrixNarrativeReply({ payload, locale }: Props) {
   }
 
   return null;
+}
+
+export function matrixNarrativeActionsText(payload: PojuMatrixPayload, locale: string): string {
+  const display = resolveMatrixDisplay(payload, locale);
+  const { narrativeLoading } = matrixSynopsisNarrativeState(display);
+  if (narrativeLoading) return "";
+  return getMatrixSynopsisPlainText(display, locale);
 }

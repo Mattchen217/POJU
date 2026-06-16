@@ -64,7 +64,7 @@ export async function POST(req: Request) {
       call_type: "matrix_narrative",
       system: MATRIX_NARRATIVE_SYSTEM_PROMPT,
       messages: [{ role: "user", content: userMessage }],
-      max_tokens: 1800,
+      max_tokens: 1100,
       thinking_effort: "off",
       response_format: "json",
       temperature: 0.65,

@@ -22,27 +22,42 @@ To comply with global payment gateway policies (Stripe, PayPal, App Store) regar
 1. NO THINKING/REASONING PROCESS: Do not generate any internal thoughts, redacted_thinking tags, or explanations. Start outputting the requested JSON payload directly.
 2. LANGUAGE COMPLIANCE: Detect the user_language variable provided in the input and generate ALL descriptive text in THAT exact language.
 3. NO RAW MARKDOWN IN JSON: Avoid emitting raw markdown characters like '**' or '__' inside string values unless specifically asked.
+4. LENGTH BUDGET (strict): Every string must stay inside the ranges below. Prefer the middle of each range. Never exceed the upper bound.
+
+# LENGTH BUDGET BY FIELD
+Use user_language to pick the correct column. Count CJK characters for zh; count space-separated words for en/de/es/fr.
+
+| Field | EN / DE / ES / FR (words) | ZH (characters) |
+| elemental_breakdown.caption | 18–30 | 28–45 |
+| structural_dynamics.resonance | 16–26 | 26–40 |
+| structural_dynamics.tension | 16–26 | 26–40 |
+| structural_dynamics.reading | 16–26 | 26–40 |
+| annual_transit_2026.title | 3–8 | 4–12 |
+| annual_transit_2026.description | 38–55 (exactly 2 sentences) | 60–85 (exactly 2 sentences) |
+| poju_onboarding.archetype_intro | 22–36 (exactly 1 sentence) | 35–52 (exactly 1 sentence) |
+| poju_onboarding.core_conflict | 22–36 (exactly 1 sentence) | 35–52 (exactly 1 sentence) |
+| poju_onboarding.call_to_action | 28–42 (exactly 1 sentence) | 45–62 (exactly 1 sentence) |
 
 # OUTPUT JSON SPECIFICATION
 You must respond ONLY with a valid JSON matching this exact schema. Each string must be generated completely dynamically based on the input payload, serving as a replacement for old hardcoded fallback templates:
 
 {
   "elemental_breakdown": {
-    "caption": "[Replace static template. Generate a poetic yet behaviorally accurate 1-sentence description of their current elemental setup based on their Day Master, surplus, and deficits.]"
+    "caption": "[1 sentence within LENGTH BUDGET. Poetic yet behaviorally accurate description of their elemental setup from Day Master, surplus, and deficits.]"
   },
   "structural_dynamics": {
-    "resonance": "[Analyze the input heavenly stem interactions/clashes in 1 elegant sentence. Frame it as how their archetype anchors their conscious surface identity. Do not use raw technical code-speak.]",
-    "tension": "[Analyze the input branch-layer combinations, clashes, or hidden harmonies in 1 sentence. Frame it as a workable psychological paradox or behavioral habit to build awareness around.]",
-    "reading": "[Provide a tactical 1-sentence self-coaching behavioral directive on how they can consciously channel this systemic blueprint when navigating pressure.]"
+    "resonance": "[1 sentence within LENGTH BUDGET. Heavenly stem interactions as how their archetype anchors conscious identity.]",
+    "tension": "[1 sentence within LENGTH BUDGET. Branch-layer paradox as a workable psychological habit to build awareness around.]",
+    "reading": "[1 sentence within LENGTH BUDGET. Tactical self-coaching directive for navigating pressure.]"
   },
   "annual_transit_2026": {
-    "title": "[The localized native name of the 2026 Element, e.g., 'Yang Fire / 丙午']",
-    "description": "[A masterful 2-sentence macro-environmental analysis of how the 2026 transit energy interacts with their specific chart balance. Frame the year's elements as a changing seasonal climate inviting them to lean into specific alignment paths, entirely avoiding absolute event predictions.]"
+    "title": "[Localized 2026 element label within LENGTH BUDGET, e.g. 'Yang Fire / 丙午']",
+    "description": "[Exactly 2 sentences within LENGTH BUDGET. Macro-environmental climate for 2026 vs their chart — trends only, no predictions.]"
   },
   "poju_onboarding": {
-    "archetype_intro": "[A powerful 1-sentence psychological archetype introduction tailored to their Day Master and energetic state.]",
-    "core_conflict": "[A 1-sentence description of their current internal elemental pull or deficit. Explain why they might feel an analytical or emotional tug-of-war right now in daily life.]",
-    "call_to_action": "[A comforting, philosophical open-ended invitation asking them to share the current personal growth challenge, career alignment question, or decision they are weighing so you can unwrap perspectives together.]"
+    "archetype_intro": "[Exactly 1 sentence within LENGTH BUDGET. Psychological archetype from Day Master and energetic state.]",
+    "core_conflict": "[Exactly 1 sentence within LENGTH BUDGET. Internal elemental pull or deficit — why daily life may feel like a tug-of-war.]",
+    "call_to_action": "[Exactly 1 sentence within LENGTH BUDGET. Warm open invitation to share the personal question or decision they are weighing.]"
   }
 }
 
@@ -150,6 +165,27 @@ function requireString(obj: Record<string, unknown>, key: string): string {
   return v.trim();
 }
 
+const FIELD_MAX_CHARS: Record<string, number> = {
+  "elemental_breakdown.caption": 220,
+  "structural_dynamics.resonance": 200,
+  "structural_dynamics.tension": 200,
+  "structural_dynamics.reading": 200,
+  "annual_transit_2026.title": 48,
+  "annual_transit_2026.description": 380,
+  "poju_onboarding.archetype_intro": 240,
+  "poju_onboarding.core_conflict": 240,
+  "poju_onboarding.call_to_action": 280,
+};
+
+function clampNarrativeField(text: string, fieldKey: string): string {
+  const max = FIELD_MAX_CHARS[fieldKey];
+  if (!max || text.length <= max) return text;
+  const slice = text.slice(0, max);
+  const lastStop = Math.max(slice.lastIndexOf("."), slice.lastIndexOf("。"), slice.lastIndexOf("!"), slice.lastIndexOf("！"), slice.lastIndexOf("?"), slice.lastIndexOf("？"));
+  if (lastStop > max * 0.55) return slice.slice(0, lastStop + 1).trim();
+  return slice.trimEnd() + "…";
+}
+
 export function parseMatrixNarrativeResponseText(text: string): MatrixNarrativeResponse {
   let raw = text.trim();
   const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
@@ -167,21 +203,21 @@ export function parseMatrixNarrativeResponseText(text: string): MatrixNarrativeR
 
   return {
     elemental_breakdown: {
-      caption: requireString(eb, "caption"),
+      caption: clampNarrativeField(requireString(eb, "caption"), "elemental_breakdown.caption"),
     },
     structural_dynamics: {
-      resonance: requireString(sd, "resonance"),
-      tension: requireString(sd, "tension"),
-      reading: requireString(sd, "reading"),
+      resonance: clampNarrativeField(requireString(sd, "resonance"), "structural_dynamics.resonance"),
+      tension: clampNarrativeField(requireString(sd, "tension"), "structural_dynamics.tension"),
+      reading: clampNarrativeField(requireString(sd, "reading"), "structural_dynamics.reading"),
     },
     annual_transit_2026: {
-      title: requireString(at, "title"),
-      description: requireString(at, "description"),
+      title: clampNarrativeField(requireString(at, "title"), "annual_transit_2026.title"),
+      description: clampNarrativeField(requireString(at, "description"), "annual_transit_2026.description"),
     },
     poju_onboarding: {
-      archetype_intro: requireString(po, "archetype_intro"),
-      core_conflict: requireString(po, "core_conflict"),
-      call_to_action: requireString(po, "call_to_action"),
+      archetype_intro: clampNarrativeField(requireString(po, "archetype_intro"), "poju_onboarding.archetype_intro"),
+      core_conflict: clampNarrativeField(requireString(po, "core_conflict"), "poju_onboarding.core_conflict"),
+      call_to_action: clampNarrativeField(requireString(po, "call_to_action"), "poju_onboarding.call_to_action"),
     },
   };
 }

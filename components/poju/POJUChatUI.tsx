@@ -57,7 +57,7 @@ import {
   setExpiryReminderSnoozed,
   shouldShowExpiryWarning,
 } from "@/lib/poju/expiry-reminder";
-import { MatrixNarrativeReply } from "@/components/poju/MatrixNarrativeReply";
+import { MatrixNarrativeReply, matrixNarrativeActionsText } from "@/components/poju/MatrixNarrativeReply";
 import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
 import { PojuPaywallInline } from "@/components/poju/PojuPaywallInline";
 import { PojuUnlockAnalysisOverlay } from "@/components/poju/PojuUnlockAnalysisOverlay";
@@ -1216,16 +1216,24 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     editable: m.role === "user" && !m.is_rejected,
   }));
 
-  const messageSlots = useMemo(() => {
+  const { messageSlots, bareMessageSlotIds, messageFollowUps, messageFollowUpActionsText } =
+    useMemo(() => {
     const slots: Record<string, ReactNode> = {};
+    const bareIds = new Set<string>();
+    const followUps: Record<string, ReactNode> = {};
+    const followUpActions: Record<string, string> = {};
+
     for (const m of visibleMessages) {
       if (m.meta?.kind === "energy_matrix" && m.meta.matrix_payload) {
+        bareIds.add(m.timestamp);
         slots[m.timestamp] = (
-          <>
-            <PojuEnergyMatrix payload={m.meta.matrix_payload} locale={locale} compact />
-            <MatrixNarrativeReply payload={m.meta.matrix_payload} locale={locale} />
-          </>
+          <PojuEnergyMatrix payload={m.meta.matrix_payload} locale={locale} compact />
         );
+        followUps[m.timestamp] = (
+          <MatrixNarrativeReply payload={m.meta.matrix_payload} locale={locale} />
+        );
+        const actionsText = matrixNarrativeActionsText(m.meta.matrix_payload, locale);
+        if (actionsText) followUpActions[m.timestamp] = actionsText;
       }
       if (m.meta?.kind === "paywall") {
         slots[m.timestamp] = (
@@ -1249,7 +1257,12 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         );
       }
     }
-    return slots;
+    return {
+      messageSlots: slots,
+      bareMessageSlotIds: bareIds,
+      messageFollowUps: followUps,
+      messageFollowUpActionsText: followUpActions,
+    };
   }, [
     visibleMessages,
     locale,
@@ -1303,6 +1316,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         isStreaming={streaming}
         composerDisabled={composerLocked}
         messageSlots={messageSlots}
+        bareMessageSlotIds={bareMessageSlotIds}
+        messageFollowUps={messageFollowUps}
+        messageFollowUpActionsText={messageFollowUpActionsText}
         streamingText={streamingReply ?? undefined}
         thinkingMode={streaming ? thinkingMode : null}
         thinkingLocale={locale}
