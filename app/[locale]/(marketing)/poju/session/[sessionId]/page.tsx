@@ -9,6 +9,8 @@ import { setPOJUV4SessionStatus } from "@/lib/poju/v4-lifecycle";
 import { PojuSessionChatShell } from "@/components/poju/PojuSessionChatShell";
 import { AppDialogProvider } from "@/components/ui/app-dialog";
 import { createInitialAgentState } from "@/lib/poju/agent-state";
+import { sessionMatrixReadyForChat } from "@/lib/poju/matrix-narrative-ready";
+import { isPreviewSession } from "@/lib/poju/preview-unlock";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import type { POJUSessionState } from "@/lib/poju/types";
 import { Link, useRouter } from "@/i18n/navigation";
@@ -76,10 +78,20 @@ export default function PojuSessionDeepLinkPage() {
     ) {
       try {
         const { bindPreviewProfileToSession } = await import("@/lib/poju/preview-unlock");
-        local = await bindPreviewProfileToSession(local, local.selected_stored_profile_id);
+        local = await bindPreviewProfileToSession(local, local.selected_stored_profile_id, locale);
         await savePOJUSession(local);
       } catch (e) {
         console.warn("[poju/session] matrix payload bootstrap failed:", e);
+      }
+    }
+
+    if (isPreviewSession(local) && !sessionMatrixReadyForChat(local)) {
+      const pid = local.selected_stored_profile_id?.trim();
+      if (pid) {
+        router.replace(
+          `/poju/session/${sessionId}/preparing?profile=${encodeURIComponent(pid)}`,
+        );
+        return;
       }
     }
 

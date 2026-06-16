@@ -269,7 +269,7 @@
         "brand_tag": "POJU",
         "heading": "Parfois, lire ne suffit pas.",
         "description": "Vous avez lu les livres, consulté vos amis et pesé le pour et le contre. Pourtant, le dilemme central refuse de vous lâcher.",
-        "tagline": "**POJU** est un espace de dialogue analytique conçu pour ce qui vient après avoir pensé seul.",
+        "tagline": "Déconstruisez votre matrice. Brisez l'impasse.",
         "cta_primary": "Initialiser une session profonde",
         "billing_notice": "9,99 $ / session ou exécutable via les jetons du Pass Mensuel"
       },
@@ -370,8 +370,8 @@
       },
       "what_is": {
         "title": "Qu'est-ce que POJU ?",
-        "subtitle": "L'agent de dialogue",
-        "body": "POJU est un partenaire cognitif d'IA conversationnelle ancré dans le cadre de la théorie orientale des Cinq Éléments (Wu Xing) et du Yi King. Traduisant plus de 2 000 ans de logique systémique en un modèle analytique moderne, POJU calcule votre schéma spatio-temporel personnalisé à partir de vos coordonnées de naissance et de l'heure solaire vraie. Face à un dilemme central, POJU fait office de tableau de bord de décision stratégique, croisant votre profil élémentaire avec votre situation précise. Le système fournit une analyse comportementale approfondie, des pistes de déblocage stratégiques et des suggestions concrètes d'ajustement de l'environnement, accompagnées d'un cycle de soutien continu de 30 jours qui facilite un recalibrage dynamique à mesure que votre situation évolue."
+        "subtitle": "Noyau de décision stratégique",
+        "body": "POJU (Strategic Nexus Unlock) est un partenaire conversationnel de stratégie cognitive à haute cognition conçu pour déconstruire les dilemes de vie complexes. Ancré dans l'architecture systémique de la théorie orientale des cinq éléments (Wu Xing) et du I Ching, POJU traduit plus de 3 000 ans de logique relationnelle en un modèle analytique moderne et avancé. En calibrant vos coordonnées géographiques exactes et le temps solaire vrai, le système calcule votre matrice astro-chronologique personnalisée. Face à un goulot d'étranglement stratégique majeur, POJU sert de tableau de bord d'aide à la décision, croisant votre profil élémentaire unique avec votre contexte réel immédiat. Chaque session fournit une cartographie approfondie de votre élan comportemental, des vecteurs tactiques précis pour briser les impasses et des ajustements environnementaux exploitables. Le tout est soutenu par une boucle de suivi continu de 30 jours, facilitant un calibrage dynamique et un retour d'expérience systémique à mesure que votre situation évolue."
       }
     },
     "glyph": {
@@ -760,6 +760,11 @@
     "birth_location_default": "Par défaut (méridien du fuseau horaire)"
   },
   "poju": {
+    "branding": {
+      "navbar_tooltip": "Déblocage stratégique : brisez les impasses cognitives et les dilemmes de vie complexes.",
+      "hero_tagline": "Déconstruisez votre matrice. Brisez l'impasse.",
+      "feature_definition": "POJU (Strategic Nexus Unlock) est un partenaire conversationnel de stratégie cognitive à haute cognition conçu pour déconstruire les dilemes de vie complexes. Ancré dans l'architecture systémique de la théorie orientale des cinq éléments (Wu Xing) et du I Ching, POJU traduit plus de 3 000 ans de logique relationnelle en un modèle analytique moderne et avancé. En calibrant vos coordonnées géographiques exactes et le temps solaire vrai, le système calcule votre matrice astro-chronologique personnalisée. Face à un goulot d'étranglement stratégique majeur, POJU sert de tableau de bord d'aide à la décision, croisant votre profil élémentaire unique avec votre contexte réel immédiat. Chaque session fournit une cartographie approfondie de votre élan comportemental, des vecteurs tactiques précis pour briser les impasses et des ajustements environnementaux exploitables. Le tout est soutenu par une boucle de suivi continu de 30 jours, facilitant un calibrage dynamique et un retour d'expérience systémique à mesure que votre situation évolue."
+    },
     "chat": {
       "question_label": "Votre question",
       "archive_link": "Sessions et archive",
@@ -1173,12 +1178,54 @@
       "tian_yi_gui_ren": "Noble céleste (天乙贵人)",
       "lu_shen": "Étoile de prospérité (禄神)",
       "fei_ren": "Lame volante (飞刃)",
+      "yang_ren": "Lame de chèvre (羊刃)",
       "wen_chang": "Étoile littéraire (文昌)",
+      "wen_chang_gui_ren": "Noble littéraire (文昌贵人)",
       "tao_hua": "Fleur de pêcher (桃花)",
       "yi_ma": "Cheval voyageur (驿马)",
       "hua_gai": "Étoile dais (华盖)",
       "gu_chen": "Étoile solitaire (孤辰)",
-      "gua_su": "Étoile veuve (寡宿)"
+      "gua_su": "Étoile veuve (寡宿)",
+      "jin_yu": "Carrosse doré (金舆)",
+      "tian_de_gui_ren": "Vertu céleste (天德贵人)",
+      "tian_de_he": "Union de vertu céleste (天德合)",
+      "yue_de_gui_ren": "Vertu mensuelle (月德贵人)",
+      "yue_de_he": "Union de vertu mensuelle (月德合)",
+      "de_xiu_gui_ren": "Noble vertu et grâce (德秀贵人)",
+      "fu_xing_gui_ren": "Noble étoile de fortune (福星贵人)",
+      "tai_ji_gui_ren": "Noble Taiji (太极贵人)",
+      "guo_yin_gui_ren": "Noble sceau national (国印贵人)",
+      "tian_chu_gui_ren": "Noble cuisine céleste (天厨贵人)",
+      "jiang_xing": "Étoile générale (将星)",
+      "jie_sha": "Démon voleur (劫煞)",
+      "wang_shen": "Esprit perdu (亡神)",
+      "zai_sha": "Sha de catastrophe (灾煞)",
+      "tian_xi": "Joie céleste (天喜)",
+      "tian_yi_medical": "Médecin céleste (天医)",
+      "hong_luan": "Phénix rouge (红鸾)",
+      "pi_ma": "Deuil de chanvre (披麻)",
+      "sang_men": "Porte funéraire (丧门)",
+      "diao_ke": "Invité de deuil (吊客)",
+      "gou_jiao_sha": "Sha d'enchevêtrement (勾绞煞)",
+      "yuan_chen": "Esprit primordial (元辰)",
+      "liu_xia": "Nuage rosé (流霞)",
+      "xue_ren": "Lame de sang (血刃)",
+      "hong_yan_sha": "Charme cramoisi (红艳煞)",
+      "liu_xiu_ri": "Jour des six élégances (六秀日)",
+      "jiu_chou_ri": "Jour des neuf laideurs (九丑日)",
+      "kui_gang_ri": "Jour Kui Gang (魁罡日)",
+      "shi_e_da_bai": "Dix abominations (十恶大败)",
+      "yin_cha_yang_cuo": "Décalage yin-yang (阴差阳错)",
+      "gu_luan_sha": "Phénix solitaire (孤鸾煞)",
+      "ba_zhuan_ri": "Jour des huit dévotions (八专日)",
+      "shi_ling_ri": "Jour des dix esprits (十灵日)",
+      "jin_shen": "Esprit doré (金神)",
+      "tian_she_ri": "Jour du pardon céleste (天赦日)",
+      "di_wang": "Filet terrestre (地网)",
+      "ci_guan": "Salle littéraire (词馆)",
+      "zheng_xue_tang": "Vraie académie (正学堂)",
+      "tong_zi_sha": "Esprit enfantin (童子煞)",
+      "kong_wang": "Vide et néant (空亡)"
     },
     "yongshen_label": "Dieu utile (喜用神)",
     "optimizing_vector": "Vecteur d'optimisation (用神):",

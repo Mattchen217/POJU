@@ -63,6 +63,7 @@ import { PojuPaywallInline } from "@/components/poju/PojuPaywallInline";
 import { PojuUnlockAnalysisOverlay } from "@/components/poju/PojuUnlockAnalysisOverlay";
 import { formatSituationOpeningText } from "@/lib/poju/format-situation-opening";
 import { requestMatrixNarrative } from "@/lib/llm/deepseek/matrix-narrative";
+import { sessionMatrixReadyForChat } from "@/lib/poju/matrix-narrative-ready";
 import { applyMatrixNarrativeToPayload, markMatrixNarrativeFailed } from "@/lib/poju/apply-matrix-narrative";
 import { refreshMatrixPayload } from "@/lib/poju/build-matrix-payload";
 import {
@@ -104,6 +105,7 @@ type ComposerAttachment = {
 
 export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const t = useTranslations("poju.chat");
+  const tBrand = useTranslations("poju.branding");
   const dialog = useAppDialog();
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -286,6 +288,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     if (previewMatrixInitRef.current === session.session_id) return;
     if (!isPreviewSession(session)) return;
     if (!resolveSessionHasProfile(session)) return;
+    if (sessionMatrixReadyForChat(session)) return;
     if (hasPreviewMatrixMessage(session)) return;
     if (!session.matrix_payload) return;
 
@@ -308,6 +311,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
 
   useEffect(() => {
     if (!isPreviewSession(session)) return;
+    if (sessionMatrixReadyForChat(session)) return;
     if (!matrixMessageReady) return;
 
     const matrixIdx = sessionRef.current.messages.findIndex((m) => m.meta?.kind === "energy_matrix");
@@ -317,6 +321,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     const payload = matrixMsg?.meta?.matrix_payload;
     if (!payload?.display) return;
     if (payload.display.narrative_source === "llm") return;
+    if (payload.display.narrative_failed === true) return;
 
     const fetchKey = `${session.session_id}:${locale}`;
     if (matrixNarrativeRef.current === fetchKey) return;
@@ -1362,6 +1367,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         editLabel={t("edit_message")}
         onClose={() => router.push("/poju")}
         brandName={t("sidebar_brand_name")}
+        brandTooltip={tBrand("navbar_tooltip")}
         sessionsLabel={t("sidebar_sessions_label")}
         newSessionLabel={t("session_picker.new_poju")}
         newSessionPriceLabel={t("session_picker.price")}

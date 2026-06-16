@@ -145,10 +145,12 @@ function PojuPaymentSuccessInner() {
         if (pendingProfile?.trim()) {
           const local = await loadPOJUSession(sessionId);
           if (local) {
-            const bound = await bindPreviewProfileToSession(local, pendingProfile.trim());
+            const bound = await bindPreviewProfileToSession(local, pendingProfile.trim(), locale);
             await savePOJUSession(bound);
           }
-          router.replace(`/poju/session/${sessionId}`);
+          router.replace(
+            `/poju/session/${sessionId}/preparing?profile=${encodeURIComponent(pendingProfile.trim())}`,
+          );
         } else {
           router.replace(`/poju/session/${sessionId}/prepare`);
         }

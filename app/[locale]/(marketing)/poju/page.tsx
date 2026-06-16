@@ -28,6 +28,7 @@ const STEP_NUMS = ["1", "2", "3", "4", "5", "6"] as const;
 
 export default async function PojuProductPage() {
   const t = await getTranslations("marketingSite.poju");
+  const tBrand = await getTranslations("poju.branding");
   const howSteps = STEP_NUMS.map((k) => ({
     title: t(`how_it_works.steps.${k}.title`),
     description: t(`how_it_works.steps.${k}.description`),
@@ -39,7 +40,7 @@ export default async function PojuProductPage() {
     brandTag: t("hero.brand_tag"),
     heading: t("hero.heading"),
     description: t("hero.description"),
-    tagline: t("hero.tagline"),
+    tagline: tBrand("hero_tagline"),
     ctaPrimary: t("hero.cta_primary"),
     billingNotice: t("hero.billing_notice"),
   };

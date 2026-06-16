@@ -134,6 +134,11 @@
 .pchat__brand-name {
   font-size: 21px !important; font-weight: 700; letter-spacing: 0.01em; color: #fff; line-height: 1.1;
 }
+.pchat__brand-name--has-tip {
+  cursor: help;
+  text-decoration: underline dotted rgba(255, 255, 255, 0.28);
+  text-underline-offset: 4px;
+}
 .pchat__sessions-label {
   padding: 16px 22px 10px; font-size: var(--pchat-label-font) !important; letter-spacing: 0.22em;
   color: #7d7791; text-transform: uppercase; font-weight: 600;

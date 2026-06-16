@@ -7,6 +7,7 @@ import { useRouter } from "@/i18n/navigation";
 import { SessionPreparation } from "@/components/poju/SessionPreparation";
 import { loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
 import { bindPreviewProfileToSession } from "@/lib/poju/preview-unlock";
+import { sessionMatrixReadyForChat } from "@/lib/poju/matrix-narrative-ready";
 import {
   listStoredProfilesForSessionPrep,
   recordProfileUsage,
@@ -14,7 +15,6 @@ import {
 } from "@/lib/profile/stored-profiles-service";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import type { POJUSessionState } from "@/lib/poju/types";
-import { PreparingStatusOverlay } from "@/components/poju/PreparingStatusOverlay";
 import "@/styles/session-prep.css";
 import "@/styles/chart-loader.css";
 
@@ -29,7 +29,6 @@ export default function PreparePage() {
   const [session, setSession] = useState<POJUSessionState | null>(null);
   const [profiles, setProfiles] = useState<StoredProfileSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [enteringChat, setEnteringChat] = useState(false);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -44,7 +43,13 @@ export default function PreparePage() {
         }
 
         if (resolveSessionHasProfile(sessionData) && sessionData.selected_stored_profile_id) {
-          router.replace(`/poju/session/${sessionId}`);
+          if (sessionMatrixReadyForChat(sessionData)) {
+            router.replace(`/poju/session/${sessionId}`);
+          } else {
+            router.replace(
+              `/poju/session/${sessionId}/preparing?profile=${encodeURIComponent(sessionData.selected_stored_profile_id)}`,
+            );
+          }
           return;
         }
 
@@ -66,20 +71,20 @@ export default function PreparePage() {
   }, [sessionId, router]);
 
   async function handleProfileSelected(profileId: string) {
-    setEnteringChat(true);
     try {
       const sessionData = await loadPOJUSession(sessionId);
       if (!sessionData) {
         router.replace("/poju");
         return;
       }
-      const bound = await bindPreviewProfileToSession(sessionData, profileId);
+      const bound = await bindPreviewProfileToSession(sessionData, profileId, locale);
       await savePOJUSession(bound);
       await recordProfileUsage(profileId, "poju");
-      router.replace(`/poju/session/${sessionId}`);
+      router.replace(
+        `/poju/session/${sessionId}/preparing?profile=${encodeURIComponent(profileId)}`,
+      );
     } catch (err) {
       console.error("[prepare] Profile bind failed:", err);
-      setEnteringChat(false);
       router.replace("/poju");
     }
   }
@@ -93,16 +98,6 @@ export default function PreparePage() {
   }
 
   if (!session) return null;
-
-  if (enteringChat) {
-    return (
-      <div className="preparing-spline-page preparing-spline-page--transition">
-        <PreparingStatusOverlay>
-          <p className="preparing-spline-page__status">{t("preparing")}</p>
-        </PreparingStatusOverlay>
-      </div>
-    );
-  }
 
   return (
     <div className="browser-flow-page">

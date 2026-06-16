@@ -29,6 +29,7 @@ const WHAT_IS_CARD_GLOW: Partial<Record<ProductWhatIsId, { originY: number }>> =
 export function ProductWhatIsSection({ product }: { product: ProductWhatIsId }) {
   const ns = product === "match" ? "match.home" : `marketingSite.${product}`;
   const t = useTranslations(ns);
+  const tPojuBrand = useTranslations("poju.branding");
   const glow = WHAT_IS_CARD_GLOW[product];
 
   return (
@@ -63,7 +64,9 @@ export function ProductWhatIsSection({ product }: { product: ProductWhatIsId }) 
             <h2 className="product-what-is__title">{t("what_is.title")}</h2>
             <div className="product-what-is__body-wrap">
               <span className="product-what-is__accent-bar" aria-hidden />
-              <p className="product-what-is__body">{t("what_is.body")}</p>
+              <p className="product-what-is__body">
+                {product === "poju" ? tPojuBrand("feature_definition") : t("what_is.body")}
+              </p>
             </div>
           </div>
         </div>

@@ -103,6 +103,7 @@ export interface PojuChatProps {
   composerHasAttachment?: boolean;
   composerDisabled?: boolean;
   brandName?: string;
+  brandTooltip?: string;
   sessionsLabel?: string;
   newSessionLabel?: string;
   newSessionPriceLabel?: string;
@@ -194,6 +195,7 @@ export default function PojuChat(props: PojuChatProps) {
     composerHasAttachment,
     composerDisabled,
     brandName = "POJU",
+    brandTooltip,
     sessionsLabel = "Recent Sessions",
     newSessionLabel = "+ New POJU",
     newSessionPriceLabel = "$9.99",
@@ -305,7 +307,12 @@ export default function PojuChat(props: PojuChatProps) {
             />
           </span>
           <span className="pchat__brand-text">
-            <span className="pchat__brand-name">{brandName}</span>
+            <span
+              className={`pchat__brand-name${brandTooltip ? " pchat__brand-name--has-tip" : ""}`}
+              title={brandTooltip}
+            >
+              {brandName}
+            </span>
           </span>
         </div>
         <button
