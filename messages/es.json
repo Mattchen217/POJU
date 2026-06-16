@@ -87,23 +87,23 @@
       "subline": "Deja de leer. Empieza a atravesarla.",
       "primary": "Haz tu pregunta — $9.99",
       "secondary": "O prueba Glyph gratis primero →",
-      "readyHeading": "¿Listo para empezar?",
-      "readySubheading": "Tres formas de entrar. Elige lo que encaje con este momento.",
+      "readyHeading": "¿Listo para comenzar?",
+      "readySubheading": "Cuatro portales hacia la velocidad cognitiva. Elige el vector que mejor se adapte a este momento.",
       "poju": {
-        "title": "Inicia una sesión POJU",
-        "sub": "$9.99 · Una pregunta"
+        "title": "Inicializar Sesión POJU",
+        "sub": "$9.99 · Una Consulta Estratégica · 30 Días"
       },
       "glyph": {
-        "title": "Prueba Glyph",
-        "sub": "Primera lectura gratis al día — $1.99"
+        "title": "Decodificar Matriz Glyph",
+        "sub": "$4.99 · Lectura Arquitectónica Sistémica"
       },
       "syncro": {
-        "title": "Abre Syncro",
-        "sub": "Gratis · En tu móvil"
+        "title": "Activar Bucle Syncro",
+        "sub": "$4.99 · Matriz Espaciotemporal de 24 Horas"
       },
       "match": {
-        "title": "Iniciar un Match",
-        "sub": "$4.99 · El primero gratis"
+        "title": "Inicializar Alineación de Match",
+        "sub": "$4.99 · Perfilado de Dinámica Relacional"
       }
     },
     "products": {
@@ -1181,7 +1181,28 @@
       "gua_su": "Estrella viuda (寡宿)"
     },
     "yongshen_label": "Dios útil (喜用神)",
-    "optimizing_vector": "Vector optimizador (用神):"
+    "optimizing_vector": "Vector optimizador (用神):",
+    "pillar_slot": {
+      "year_stem": "Tallo del Año",
+      "year_branch": "Rama del Año",
+      "month_stem": "Tallo del Mes",
+      "month_branch": "Rama del Mes",
+      "day_stem": "Tallo del Día",
+      "day_branch": "Rama del Día",
+      "hour_stem": "Tallo de la Hora",
+      "hour_branch": "Rama de la Hora"
+    }
+  },
+  "poju_matrix": {
+    "eyebrow": "Alineación Espaciotemporal",
+    "main_title": "Matriz Astro-Cronológica",
+    "main_description": "Una deconstrucción sistémica de tu arquitectura natal calculada a través de coordenadas espaciotemporales y geográficas, diseñada para la toma de decisiones estratégicas avanzadas.",
+    "section_label": "Perfil Espaciotemporal Natal · Calibración de Precisión",
+    "born": "NACIDO",
+    "coordinates": "COORDENADAS",
+    "matrix_id": "ID DE MATRIZ",
+    "element_map_title": "Mapa de Pilares Elementales",
+    "element_map_sep": ", "
   },
   "chart_loader": {
     "your_chart_title": "Tus cuatro pilares",

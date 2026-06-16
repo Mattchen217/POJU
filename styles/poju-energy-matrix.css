@@ -399,7 +399,7 @@
   content: "";
   position: absolute;
   left: 50%;
-  top: 56%;
+  top: 42%;
   width: 74%;
   aspect-ratio: 1;
   transform: translate(-50%, -50%);
@@ -425,8 +425,62 @@
 
 .pem .radar {
   width: 100%;
+  flex: 0 0 auto;
+  min-height: 188px;
+  height: 188px;
+}
+
+.pem .radar.radar--compact {
+  min-height: 188px;
+  height: 188px;
+}
+
+.pem__element-map {
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  line-height: 1.65;
+  color: var(--ink-soft);
+  position: relative;
+  z-index: 1;
+}
+
+.pem__element-map-title {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 8px;
+}
+
+.pem__element-map-row {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  margin-bottom: 4px;
+}
+
+.pem__element-map-row:last-child {
+  margin-bottom: 0;
+}
+
+.pem__element-map-el {
+  flex: 0 0 auto;
+  min-width: 2.2em;
+  font-weight: 600;
+}
+
+.pem__element-map-body {
   flex: 1;
-  min-height: 280px;
+  min-width: 0;
+  color: var(--ink-mute);
+}
+
+.pem__element-map-glyph {
+  color: var(--ink-bright);
+  font-weight: 600;
 }
 
 .pem .side {

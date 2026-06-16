@@ -1,5 +1,12 @@
+import { resolveBirthTimezone } from "@/lib/location/infer-birth-timezone";
 import { HOUR_PERIOD_INFO, type BirthInfo, type BirthLocation, type HourPeriod, type LegacyBirthFormInput } from "@/lib/profile/types";
 import { guessLongitudeFromTimezone, standardMeridianFromTimezone } from "@/lib/profile/location-utils";
+
+export function formatBirthClockTime(birth: BirthInfo): string {
+  const hour = birth.hour ?? representativeHour(birth);
+  const minute = birth.minute ?? 0;
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
 
 const HOUR_TO_PERIOD: Record<number, HourPeriod> = {
   0: "zi_early",
@@ -130,7 +137,7 @@ export function shunshiParamsFromBirthInfo(birth: BirthInfo): {
   const clockHour = birth.hour ?? representativeHour(birth);
   const clockMinute = birth.minute ?? 0;
   const birthDate = new Date(birth.year, birth.month - 1, birth.day, clockHour, clockMinute);
-  const timezone = birth.birth_location?.timezone ?? birth.timezone;
+  const timezone = resolveBirthTimezone(birth);
 
   return {
     year: birth.year,

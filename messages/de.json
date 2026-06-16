@@ -87,23 +87,23 @@
       "subline": "Hör auf zu lesen. Fang an, sie zu durchqueren.",
       "primary": "Stell deine Frage — $9.99",
       "secondary": "Oder probier Glyph erst kostenlos →",
-      "readyHeading": "Bereit anzufangen?",
-      "readySubheading": "Drei Zugänge. Wähle, was zu diesem Moment passt.",
+      "readyHeading": "Bereit zu beginnen?",
+      "readySubheading": "Vier Tore zur kognitiven Geschwindigkeit. Wählen Sie den Vektor, der zu diesem Moment passt.",
       "poju": {
-        "title": "Starte eine POJU-Sitzung",
-        "sub": "$9.99 · Für eine Frage"
+        "title": "POJU-Sitzung initialisieren",
+        "sub": "9,99 $ · Eine strategische Anfrage · 30 Tage"
       },
       "glyph": {
-        "title": "Glyph ausprobieren",
-        "sub": "Erste Legung täglich kostenlos — $1.99"
+        "title": "Glyph-Matrix entschlüsseln",
+        "sub": "4,99 $ · Systemische architektonische Analyse"
       },
       "syncro": {
-        "title": "Syncro öffnen",
-        "sub": "Kostenlos · Auf dem Handy"
+        "title": "Syncro-Schleife aktivieren",
+        "sub": "4,99 $ · 24-Stunden-Raumzeit-Matrix"
       },
       "match": {
-        "title": "Match starten",
-        "sub": "$4.99 · Erstes Mal gratis"
+        "title": "Match-Ausrichtung initialisieren",
+        "sub": "4,99 $ · Profilierung von Beziehungsdynamiken"
       }
     },
     "products": {
@@ -1181,7 +1181,28 @@
       "gua_su": "Witwenstern (寡宿)"
     },
     "yongshen_label": "Nützlicher Gott (喜用神)",
-    "optimizing_vector": "Optimierungsvektor (用神):"
+    "optimizing_vector": "Optimierungsvektor (用神):",
+    "pillar_slot": {
+      "year_stem": "Jahresstamm",
+      "year_branch": "Jahreszweig",
+      "month_stem": "Monatsstamm",
+      "month_branch": "Monatszweig",
+      "day_stem": "Tagesstamm",
+      "day_branch": "Tageszweig",
+      "hour_stem": "Stundenstamm",
+      "hour_branch": "Stundenzweig"
+    }
+  },
+  "poju_matrix": {
+    "eyebrow": "Raumzeitliche Ausrichtung",
+    "main_title": "Astro-Chronologische Matrix",
+    "main_description": "Eine systemische Dekonstruktion Ihrer Geburtsarchitektur, berechnet über raumzeitliche und geografische Koordinaten, entwickelt für fortgeschrittene strategische Entscheidungen.",
+    "section_label": "Natales Raumzeit-Profil · Präzisionskalibrierung",
+    "born": "GEBOREN",
+    "coordinates": "KOORDINATEN",
+    "matrix_id": "MATRIX-ID",
+    "element_map_title": "Elementare Säulenzuordnung",
+    "element_map_sep": ", "
   },
   "chart_loader": {
     "your_chart_title": "Deine vier Säulen",

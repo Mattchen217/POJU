@@ -104,22 +104,22 @@
       "primary": "提出你的问题 — $9.99",
       "secondary": "或者先免费试试 Glyph →",
       "readyHeading": "准备好开始了吗？",
-      "readySubheading": "四扇门。选择适合此刻的方式。",
+      "readySubheading": "通往认知跃迁的四条主权路径。选择契合当下维度的演进入口。",
       "poju": {
-        "title": "开始 POJU 对话",
-        "sub": "$9.99 · 一个问题 · 30 天"
+        "title": "开启 POJU 策略推演",
+        "sub": "$9.99 · 单项核心困惑 · 30天跟踪"
       },
       "glyph": {
-        "title": "体验 Glyph",
-        "sub": "首次免费 · 之后 $4.99 / 次"
+        "title": "破译 Glyph 符号矩阵",
+        "sub": "$4.99 · 系统性主权架构解析"
       },
       "syncro": {
-        "title": "体验 Syncro",
-        "sub": "首次免费 · 之后 $4.99 / 天"
+        "title": "激活 Syncro 时空律动",
+        "sub": "$4.99 · 24小时时空向量循环"
       },
       "match": {
-        "title": "开始 Match",
-        "sub": "首次免费 · 之后 $4.99 / 次"
+        "title": "初始化 Match 双人对齐",
+        "sub": "$4.99 · 双人关系动力学建模"
       }
     },
     "products": {
@@ -1231,7 +1231,28 @@
       "gua_su": "寡宿"
     },
     "yongshen_label": "喜用神",
-    "optimizing_vector": "优化向量 (用神):"
+    "optimizing_vector": "优化向量 (用神):",
+    "pillar_slot": {
+      "year_stem": "年干",
+      "year_branch": "年支",
+      "month_stem": "月干",
+      "month_branch": "月支",
+      "day_stem": "日干",
+      "day_branch": "日支",
+      "hour_stem": "时干",
+      "hour_branch": "时支"
+    }
+  },
+  "poju_matrix": {
+    "eyebrow": "时空对齐",
+    "main_title": "天体时序矩阵",
+    "main_description": "基于地理经纬与历法时空坐标的先天架构系统解构，用于高阶系统化决策。",
+    "section_label": "原初时空特征 · 精密校准",
+    "born": "生于",
+    "coordinates": "坐标",
+    "matrix_id": "矩阵 ID",
+    "element_map_title": "五行干支分布",
+    "element_map_sep": "，"
   },
   "chart_loader": {
     "your_chart_title": "你的性格结构",

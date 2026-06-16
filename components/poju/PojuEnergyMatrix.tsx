@@ -7,11 +7,13 @@ import { useTranslations } from "next-intl";
 import { PojuDaYunDial } from "@/components/poju/PojuDaYunDial";
 import pojuAvatar from "@/assets/icons/P.png";
 import { elementCssClass } from "@/lib/poju/bazi-matrix-mappings";
+import { buildElementPillarMap, type ElementPillarRow } from "@/lib/poju/build-element-pillar-map";
 import { buildMatrixDisplayData } from "@/lib/poju/build-matrix-display";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
 import { activePillarByAge } from "@/lib/poju/matrix-life-segment";
 import { computeYearTransitProgress } from "@/lib/poju/matrix-transit-progress";
 import { resolveBaziLabel, shenshaHanToSubKey } from "@/lib/poju/resolve-bazi-i18n";
+import { formatBirthClockTime } from "@/lib/profile/birth-info-utils";
 import type { UserProfile } from "@/lib/profile/types";
 import "@/styles/poju-energy-matrix.css";
 
@@ -71,7 +73,7 @@ function formatBornLine(profile: UserProfile): string {
   const time =
     profile.tst_meta?.original_time ??
     profile.birth.tst_meta?.original_time ??
-    "";
+    formatBirthClockTime(b);
   const date = `${b.year} · ${pad(b.month)} · ${pad(b.day)}`;
   return time ? `${date} — ${time}` : date;
 }
@@ -122,8 +124,8 @@ function RadarChart({ scores }: { scores: PojuMatrixPayload["wuxing_scores"] }) 
       chart.setOption({
         backgroundColor: "transparent",
         radar: {
-          center: ["50%", "50%"],
-          radius: "72%",
+          center: ["50%", "48%"],
+          radius: "62%",
           startAngle: 90,
           splitNumber: 3,
           axisName: { color: "#c9c4dc", fontSize: 10.5, fontFamily: "Inter" },
@@ -159,13 +161,58 @@ function RadarChart({ scores }: { scores: PojuMatrixPayload["wuxing_scores"] }) 
     };
   }, [scores]);
 
-  return <div className="radar" ref={ref} aria-hidden />;
+  return <div className="radar radar--compact" ref={ref} aria-hidden />;
+}
+
+function ElementPillarMap({
+  rows,
+  zh,
+  tb,
+  tm,
+}: {
+  rows: ElementPillarRow[];
+  zh: boolean;
+  tb: (key: string) => string;
+  tm: (key: string) => string;
+}) {
+  if (!rows.length) return null;
+
+  const colon = zh ? "：" : ": ";
+
+  return (
+    <div className="pem__element-map" aria-label={tm("element_map_title")}>
+      <div className="pem__element-map-title">{tm("element_map_title")}</div>
+      {rows.map((row) => (
+        <div className="pem__element-map-row" key={row.element}>
+          <span className={`pem__element-map-el ${ELEMENT_CLASS[row.element] ?? ""}`}>
+            {tb(`element.${row.element.toLowerCase()}`)}
+          </span>
+          <span className="pem__element-map-body">
+            {row.assignments.map((assignment, index) => (
+              <span key={assignment.slot}>
+                {index > 0 ? tm("element_map_sep") : null}
+                {tb(`pillar_slot.${assignment.slot}`)}
+                {colon}
+                <span className="pem__element-map-glyph">{assignment.display_glyph}</span>
+              </span>
+            ))}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
   const { structured, user_profile, wuxing_scores, strength, matrix_id } = payload;
   const zh = locale.startsWith("zh");
   const tb = useTranslations("bazi");
+  const tm = useTranslations("poju_matrix");
+
+  const elementPillarRows = useMemo(
+    () => buildElementPillarMap(structured.pillars_detail, locale),
+    [structured.pillars_detail, locale],
+  );
 
   const display = useMemo(
     () =>
@@ -225,22 +272,18 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
   return (
     <div className={`pem${compact ? " pem--compact" : ""}`}>
       <header className="rhead">
-        <div className="eyebrow">{zh ? "时空对齐" : "Spatio-Temporal Alignment"}</div>
-        <h2>{zh ? "时空能量矩阵" : "The Space-Time Matrix"}</h2>
-        <p className="tag">
-          {zh
-            ? "基于出生坐标的能量结构快照，用于更清晰的决策。"
-            : "A psycho-spatial alignment of your birth coordinates — for clearer decision-making."}
-        </p>
+        <div className="eyebrow">{tm("eyebrow")}</div>
+        <h2>{tm("main_title")}</h2>
+        <p className="tag">{tm("main_description")}</p>
         <div className="subject">
           <span>
-            {zh ? "生于" : "BORN"} <b>{formatBornLine(user_profile)}</b>
+            {tm("born")} <b>{formatBornLine(user_profile)}</b>
           </span>
           <span>
-            {zh ? "坐标" : "COORDINATES"} <b>{formatCoordinates(user_profile, locale)}</b>
+            {tm("coordinates")} <b>{formatCoordinates(user_profile, locale)}</b>
           </span>
           <span>
-            {zh ? "矩阵 ID" : "MATRIX ID"} <b>{matrix_id}</b>
+            {tm("matrix_id")} <b>{matrix_id}</b>
           </span>
         </div>
       </header>
@@ -252,8 +295,7 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
         <span className="reg br" />
 
         <div className="dev-head">
-          <div className="t">{zh ? "宇宙能量矩阵 · 实时读数" : "Cosmic Energy Matrix · Live Reading"}</div>
-          <div className="id">{zh ? "引擎 v4 · 本地计算" : "ENGINE v4 · Local Compute"}</div>
+          <div className="t">{tm("section_label")}</div>
         </div>
 
         <div className="topband">
@@ -309,7 +351,11 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
                   ) : null}
                 </div>
                 <div className="s">
-                  {zh ? "经度修正" : "Longitude correction"} · {tst.diff_minutes}m
+                  {zh ? "经度修正" : "Longitude correction"} ·{" "}
+                  {tst.longitude_diff_minutes ?? tst.diff_minutes}m
+                  {tst.eq_of_time_minutes != null
+                    ? ` · ${zh ? "时差" : "EoT"} ${tst.eq_of_time_minutes > 0 ? "+" : ""}${tst.eq_of_time_minutes}m`
+                    : null}
                 </div>
               </>
             ) : (
@@ -341,6 +387,7 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
               {zh ? "五行能量谱" : "Elemental Signature"} <em>· {zh ? "五行" : "wuxing"}</em>
             </div>
             <RadarChart scores={wuxing_scores} />
+            <ElementPillarMap rows={elementPillarRows} zh={zh} tb={tb} tm={tm} />
           </div>
           <div className="side">
             <div className="ro">

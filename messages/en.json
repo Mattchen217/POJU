@@ -104,22 +104,22 @@
       "primary": "Ask Your Question — $9.99",
       "secondary": "Or try Glyph for free first →",
       "readyHeading": "Ready to begin?",
-      "readySubheading": "Four ways in. Choose what fits this moment.",
+      "readySubheading": "Four gateways to cognitive velocity. Choose the vector that fits this moment.",
       "poju": {
-        "title": "Start a POJU session",
-        "sub": "$9.99 · one question · 30 days"
+        "title": "Initialize POJU Session",
+        "sub": "$9.99 · One Strategic Inquiry · 30 Days"
       },
       "glyph": {
-        "title": "Try Glyph",
-        "sub": "First free · then $4.99 / reading"
+        "title": "Decode Glyph Matrix",
+        "sub": "$4.99 · Systemic Architectural Reading"
       },
       "syncro": {
-        "title": "Try Syncro",
-        "sub": "First free · then $4.99 / day"
+        "title": "Activate Syncro Loop",
+        "sub": "$4.99 · 24-Hour Spatiotemporal Matrix"
       },
       "match": {
-        "title": "Start a Match",
-        "sub": "First free · then $4.99 / reading"
+        "title": "Initialize Match Alignment",
+        "sub": "$4.99 · Relational Dynamics Profiling"
       }
     },
     "products": {
@@ -1216,7 +1216,28 @@
       "gua_su": "Widow Star (寡宿)"
     },
     "yongshen_label": "Useful God (喜用神)",
-    "optimizing_vector": "Optimizing Vector (用神):"
+    "optimizing_vector": "Optimizing Vector (用神):",
+    "pillar_slot": {
+      "year_stem": "Year Stem",
+      "year_branch": "Year Branch",
+      "month_stem": "Month Stem",
+      "month_branch": "Month Branch",
+      "day_stem": "Day Stem",
+      "day_branch": "Day Branch",
+      "hour_stem": "Hour Stem",
+      "hour_branch": "Hour Branch"
+    }
+  },
+  "poju_matrix": {
+    "eyebrow": "Spatiotemporal Alignment",
+    "main_title": "Astro-Chronological Matrix",
+    "main_description": "A systemic deconstruction of your natal architecture computed via spatiotemporal and geographic coordinates, engineered for advanced strategic decision-making.",
+    "section_label": "Natal Spatiotemporal Profile · Precision Calibration",
+    "born": "BORN",
+    "coordinates": "COORDINATES",
+    "matrix_id": "MATRIX ID",
+    "element_map_title": "Elemental Pillar Map",
+    "element_map_sep": ", "
   },
   "chart_loader": {
     "your_chart_title": "Your Personality Structure",

@@ -139,7 +139,12 @@ export interface TstMeta {
   original_time: string;
   true_solar_date: string;
   true_solar_time: string;
+  /** Total true-solar correction vs clock time (minutes). */
   diff_minutes: number;
+  /** Longitude vs civil-timezone meridian only (minutes). */
+  longitude_diff_minutes?: number;
+  /** Equation-of-time component (minutes). */
+  eq_of_time_minutes?: number;
   longitude: number;
   timezone: string;
   computation_version: "v1" | "v2_with_tst";

@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { getCurrentLocation } from "@/components/global/FirstTimeLocation";
 import { BirthCitySearchInput, type CitySuggestion } from "@/components/forms/BirthCitySearchInput";
 import { calculateOffsetMinutes, formatOffset } from "@/lib/location/precision-hint";
+import { inferTimezoneFromBirthLocation, timezoneMatchesLongitude } from "@/lib/location/infer-birth-timezone";
 import {
   formatCitySuggestionLabel,
   type CitySuggestion as CitySuggestionType,
@@ -85,10 +86,22 @@ export function BirthLocationField({ value, onChange }: Props) {
   const effectiveLongitude =
     value?.longitude ?? getCurrentLocation()?.longitude ?? getTimezoneFallbackCity(timezone).lng;
 
-  const offsetMinutes = calculateOffsetMinutes(effectiveLongitude, timezone);
+  const hintTimezone =
+    value?.timezone ??
+    (value && !value.use_defaults
+      ? inferTimezoneFromBirthLocation(value)
+      : timezone);
+
+  const offsetMinutes = calculateOffsetMinutes(effectiveLongitude, hintTimezone);
 
   function handleCitySelect(city: CitySuggestionType) {
-    const loc = suggestionToBirthLocation(city, timezone);
+    const name = formatCitySuggestionLabel(city.city, city.state, city.country);
+    const birthTz = inferTimezoneFromBirthLocation({
+      name,
+      longitude: city.longitude,
+      latitude: city.latitude,
+    });
+    const loc = suggestionToBirthLocation(city, birthTz);
     console.log("[BirthLocation] submit:", loc);
     onChange(loc);
   }
@@ -123,7 +136,11 @@ export function resolveBirthLocationForSubmit(
   timezone: string,
 ): BirthLocation {
   if (value && !value.use_defaults) {
-    return { ...value, timezone: value.timezone || timezone };
+    const inferred = inferTimezoneFromBirthLocation(value);
+    const stored = value.timezone?.trim() || timezone;
+    const resolvedTz =
+      stored && timezoneMatchesLongitude(stored, value.longitude) ? stored : inferred;
+    return { ...value, timezone: resolvedTz };
   }
 
   const detected = getCurrentLocation();

@@ -88,22 +88,22 @@
       "primary": "Posez votre question — $9.99",
       "secondary": "Ou essayez Glyph gratuitement d'abord →",
       "readyHeading": "Prêt à commencer ?",
-      "readySubheading": "Trois entrées. Choisissez ce qui correspond à cet instant.",
+      "readySubheading": "Quatre passerelles vers la vélocité cognitive. Choisissez le vecteur qui correspond à cet instant.",
       "poju": {
-        "title": "Commencer une session POJU",
-        "sub": "$9.99 · Pour une question"
+        "title": "Initialiser une Session POJU",
+        "sub": "9,99 $ · Une Question Stratégique · 30 Jours"
       },
       "glyph": {
-        "title": "Essayer Glyph",
-        "sub": "Première lecture gratuite chaque jour — $1.99"
+        "title": "Décoder la Matrice Glyph",
+        "sub": "4,99 $ · Lecture Architecturale Systémique"
       },
       "syncro": {
-        "title": "Ouvrir Syncro",
-        "sub": "Gratuit · Sur votre téléphone"
+        "title": "Activer la Boucle Syncro",
+        "sub": "4,99 $ · Matrice Spatiotemporelle 24 Heures"
       },
       "match": {
-        "title": "Lancer un Match",
-        "sub": "$4.99 · Le premier est gratuit"
+        "title": "Initialiser l'Alignement Match",
+        "sub": "4,99 $ · Profilage de la Dynamique Relationnelle"
       }
     },
     "products": {
@@ -1181,7 +1181,28 @@
       "gua_su": "Étoile veuve (寡宿)"
     },
     "yongshen_label": "Dieu utile (喜用神)",
-    "optimizing_vector": "Vecteur d'optimisation (用神):"
+    "optimizing_vector": "Vecteur d'optimisation (用神):",
+    "pillar_slot": {
+      "year_stem": "Tige de l'Année",
+      "year_branch": "Branche de l'Année",
+      "month_stem": "Tige du Mois",
+      "month_branch": "Branche du Mois",
+      "day_stem": "Tige du Jour",
+      "day_branch": "Branche du Jour",
+      "hour_stem": "Tige de l'Heure",
+      "hour_branch": "Branche de l'Heure"
+    }
+  },
+  "poju_matrix": {
+    "eyebrow": "Alignement Spatiotemporel",
+    "main_title": "Matrice Astro-Chronologique",
+    "main_description": "Une déconstruction systémique de votre architecture natale calculée via des coordonnées spatiotemporelles et géographiques, conçue pour la prise de décision stratégique avancée.",
+    "section_label": "Profil Spatiotemporel Natal · Calibrage de Précision",
+    "born": "NÉ",
+    "coordinates": "COORDONNÉES",
+    "matrix_id": "ID MATRICE",
+    "element_map_title": "Carte des Piliers Élémentaires",
+    "element_map_sep": ", "
   },
   "chart_loader": {
     "your_chart_title": "Vos quatre piliers",
