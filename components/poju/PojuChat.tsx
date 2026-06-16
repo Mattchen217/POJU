@@ -13,8 +13,7 @@ import Image from "next/image";
 import pojuLogo from "@/assets/images/POJUlogo.png";
 import { AssistantMessageActions } from "@/components/poju/AssistantMessageActions";
 import { PojuAiAvatar } from "@/components/poju/PojuAiAvatar";
-import { ThinkingStream } from "@/components/poju/ThinkingStream";
-import { LiveThinkingTicker } from "@/components/poju/LiveThinkingTicker";
+import { ThinkingEnergyPulse } from "@/components/poju/ThinkingEnergyPulse";
 import { StreamingAssistantBubble } from "@/components/poju/StreamingAssistantBubble";
 import { EditMessageDialog } from "@/components/poju/EditMessageDialog";
 import {
@@ -213,6 +212,7 @@ export default function PojuChat(props: PojuChatProps) {
   const [openMenuSessionId, setOpenMenuSessionId] = useState<string | null>(null);
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
   const [sessionDialog, setSessionDialog] = useState<SessionSidebarDialogState | null>(null);
+  const [pulseHold, setPulseHold] = useState(false);
   const menuBtnRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const taRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -229,7 +229,11 @@ export default function PojuChat(props: PojuChatProps) {
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTo({ top: el.scrollHeight });
-  }, [messages, streamingText, thinkingMode, liveThinkingLine, inlineNotice]);
+  }, [messages, streamingText, thinkingMode, liveThinkingLine, inlineNotice, pulseHold]);
+
+  useEffect(() => {
+    if (isStreaming && thinkingMode) setPulseHold(true);
+  }, [isStreaming, thinkingMode]);
 
   useEffect(() => {
     if (!openMenuSessionId) return;
@@ -513,12 +517,15 @@ export default function PojuChat(props: PojuChatProps) {
 
         {/* 输入框 */}
         <div className="pchat__inputbar">
-          {isStreaming && thinkingMode ? (
-            liveThinkingLine ? (
-              <LiveThinkingTicker line={liveThinkingLine} waitingLabel={thinkingWaitLabel} />
-            ) : (
-              <ThinkingStream mode={thinkingMode} locale={thinkingLocale ?? "en"} />
-            )
+          {(isStreaming || pulseHold) && thinkingMode ? (
+            <ThinkingEnergyPulse
+              streaming={isStreaming}
+              reasoningText={liveThinkingLine}
+              onFadeComplete={() => setPulseHold(false)}
+              hudLabel={
+                thinkingLocale?.startsWith("zh") ? "思维矩阵：运行中" : "THOUGHT METRICS: ACTIVE"
+              }
+            />
           ) : null}
           <div className="pchat__inputwrap">
             {onAttachPick ? (

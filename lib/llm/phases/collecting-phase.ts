@@ -1,8 +1,16 @@
 import {
   findMissingFields,
   REQUIRED_FIELDS_BY_CATEGORY,
+  calculateCompleteness,
+  type POJUAgentState,
 } from "@/lib/poju/agent-state";
-import { formatContextForPrompt, formatMissingFieldsForPrompt } from "@/lib/poju/context-extractor";
+import {
+  countEffectiveCollectingTurns,
+  evaluateCollectingConfirmationGate,
+  isMajorQuestionCategory,
+  MIN_MAJOR_COLLECTING_USER_TURNS,
+} from "@/lib/poju/collecting-confirmation-gate";
+import { formatContextForPrompt, formatMissingFieldsForPrompt, extractQuestionCategory, mergeContextUpdates, recordToLLMContextUpdates } from "@/lib/poju/context-extractor";
 import type { AgentPhase } from "@/lib/poju/agent-state";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseResult, withPhaseStreamOpts } from "@/lib/llm/phases/phase-transport";
@@ -24,6 +32,41 @@ const VALID_ACTIONS: PojuV4ActionRequested[] = [
 
 function formatFieldKey(key: string): string {
   return key.replace(/_/g, " ");
+}
+
+function projectAgentAfterUpdates(
+  agent: POJUAgentState,
+  contextUpdates: Record<string, unknown>,
+  questionCategory: string | null,
+): POJUAgentState {
+  const structured = recordToLLMContextUpdates(contextUpdates);
+  const merged: POJUAgentState = {
+    ...agent,
+    context_collected: mergeContextUpdates(agent.context_collected, structured),
+    question_category:
+      extractQuestionCategory(contextUpdates) ??
+      (questionCategory as POJUAgentState["question_category"]) ??
+      agent.question_category,
+  };
+  return { ...merged, collection_completeness: calculateCompleteness(merged) };
+}
+
+function clampCollectingSuggestedPhase(
+  suggested_phase: AgentPhase | null,
+  agent: POJUAgentState,
+  session: PhaseLLMInput["session"],
+  contextUpdates: Record<string, unknown>,
+  questionCategory: string | null,
+): AgentPhase | null {
+  if (suggested_phase !== "awaiting_confirmation") return suggested_phase;
+  const projected = projectAgentAfterUpdates(agent, contextUpdates, questionCategory);
+  const gate = evaluateCollectingConfirmationGate(
+    projected,
+    countEffectiveCollectingTurns(session),
+  );
+  if (gate.allowed) return suggested_phase;
+  console.warn("[collecting-phase] Blocked premature awaiting_confirmation:", gate.reason);
+  return "collecting_context";
 }
 
 function buildCollectingTaskBlock(input: PhaseLLMInput): string {
@@ -48,6 +91,10 @@ function buildCollectingTaskBlock(input: PhaseLLMInput): string {
 `
     : "";
 
+  const majorGateNote = cat && isMajorQuestionCategory(cat)
+    ? `\n【硬下限】本议题为 career / relationship / decision 等重大类型：必须 ≥${MIN_MAJOR_COLLECTING_USER_TURNS} 轮有效问答且必填字段齐全，才能切 awaiting_confirmation；未达到一律保持 collecting_context。`
+    : "";
+
   return `# 当前任务：深入问诊（收集上下文）
 
 你已经主动开场，用户开始回应。现在要像【医生问诊 + 律师询问】那样深入了解具体处境。
@@ -67,6 +114,12 @@ ${missingText}
 ## 本类别必填字段
 ${requiredList}
 
+## 收集阶段铁律（最高优先级，凌驾本段其他所有规则）
+1. 收集阶段【只问诊，不开方】。response 严禁包含任何：具体行动建议、Step、Action、"你应该/可以做 X"、"今晚/这周去做 Y"、放置物件/选择方位/择时的操作指令。
+2. 你只能做三件事：承接情绪与事实 → 用命盘对应处境 → 问 1-2 个问题。
+3. "具体怎么破局、做什么"是 final-delivery 的专属内容。即使你已想清楚行动，也一律不得在收集/确认阶段提前给。
+4. 若你觉得"已经能给出行动了"——那是该切 awaiting_confirmation 的信号，但 response 里【仍然只能写过渡确认句】（如"我了解得差不多了，让我整理一下你看看"），绝不能写出行动本身。
+
 ## 问诊原则
 
 1. 每轮做三件事：承接用户情绪与事实（2-4 句）→ 命盘/大运与处境对应（必须引用命主基础分析中的具体点）→ 问 1-2 个尖锐具体问题
@@ -74,17 +127,17 @@ ${requiredList}
 3. 不重复已知信息；一次不要问超过 3 个问题
 4. 只把用户【明确说过】的事实写入 context_updates，不要推断编造
 
-## 用户追问已给建议时（如「只放个水杯就行吗」「除了 X 还要做什么」）
-
-- ✗ 禁止退化成空泛倾听套话、重复追问上下文中用户已说清楚的事实
-- ✓ 在水杯/方位/物件/行动建议上【展开】：为什么有效、放哪里、什么材质/颜色、何时调整、还可叠加 1-2 个具体动作
-- ✓ 继续用命主基础分析 + 当前大运支撑，保持东方破局顾问口吻
+## 用户追问【已正式交付过的】建议时（仅限本 Session 已完成 final-delivery 之后）
+- ✓ 在已给过的建议上【展开】：为什么有效、怎么做、何时调整、叠加 1-2 个动作
+- ⚠️ 若本 Session 尚未正式交付（还在收集阶段），用户即使追问"该做什么"，也【不在收集阶段给新行动】，而是回应："这些具体做法我会在完整分析里一次给你，现在先把情况了解清楚。"然后继续问诊。
+（当前为收集阶段：一律不得给出任何新行动或操作指令。）
 
 ## 完成判断
-
-- 完成度 ≥ 70% 或信息已够支撑 3 条可执行行动 → suggested_phase: "awaiting_confirmation"
-- 用户说「差不多了 / 可以分析了」→ "awaiting_confirmation"
+- 本类别【必填字段】已全部收齐 → suggested_phase: "awaiting_confirmation"
+- 用户明确说「差不多了 / 可以分析了 / 你来说吧」→ "awaiting_confirmation"
 - 否则 → "collecting_context"
+${majorGateNote}
+（已删除"或信息已够支撑 3 条可执行行动"判据——该判据会诱导提前凑出行动并写进 response。）
 
 ## 风格
 
@@ -140,7 +193,18 @@ export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLL
       : {};
 
   const rawPhase = typeof parsed.suggested_phase === "string" ? parsed.suggested_phase.trim() : null;
-  const suggested_phase = rawPhase && VALID_SUGGESTED.includes(rawPhase as AgentPhase) ? (rawPhase as AgentPhase) : null;
+  let suggested_phase = rawPhase && VALID_SUGGESTED.includes(rawPhase as AgentPhase) ? (rawPhase as AgentPhase) : null;
+
+  const questionCategory = typeof parsed.question_category === "string" ? parsed.question_category : null;
+  if (input.agent_state && suggested_phase) {
+    suggested_phase = clampCollectingSuggestedPhase(
+      suggested_phase,
+      input.agent_state,
+      input.session,
+      context_updates,
+      questionCategory,
+    );
+  }
 
   const rawAction = typeof parsed.action_requested === "string" ? parsed.action_requested.trim() : null;
   let action_requested: PojuV4ActionRequested | null =
@@ -159,7 +223,7 @@ export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLL
     suggested_phase,
     action_requested,
     context_updates,
-    question_category: typeof parsed.question_category === "string" ? parsed.question_category : null,
+    question_category: questionCategory,
     current_summary: null,
     main_delivery_data: null,
     actions: [],

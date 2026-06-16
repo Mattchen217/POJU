@@ -2,6 +2,11 @@
  * POJU Agent state machine (v5 Step B: opening → collecting → confirmation → delivery → tracking).
  */
 
+import {
+  areRequiredFieldsComplete,
+  evaluateCollectingConfirmationGate,
+  userExplicitlyRequestsConfirmation,
+} from "@/lib/poju/collecting-confirmation-gate";
 import type { POJUAction } from "@/lib/poju/types";
 
 export type AgentPhase =
@@ -250,6 +255,8 @@ export interface PhaseTransitionInput {
   current_state: POJUAgentState;
   llm_suggested_phase: AgentPhase | LegacyAgentPhase | null;
   user_message: string;
+  /** Effective user Q&A rounds — used for collecting → confirmation hard gate. */
+  user_turn_count?: number;
 }
 
 export interface PhaseTransitionResult {
@@ -260,20 +267,28 @@ export interface PhaseTransitionResult {
 
 export function decidePhaseTransition(input: PhaseTransitionInput): PhaseTransitionResult {
   const { current_state, user_message } = input;
+  const userTurnCount = input.user_turn_count ?? 0;
   const llm_suggested_phase = normalizeAgentPhase(input.llm_suggested_phase ?? undefined);
   const current = normalizeAgentPhase(current_state.current_phase) ?? current_state.current_phase;
+
+  const tryCollectingToConfirmation = (reason: string): PhaseTransitionResult | null => {
+    const gate = evaluateCollectingConfirmationGate(current_state, userTurnCount);
+    if (!gate.allowed) return null;
+    return {
+      should_transition: true,
+      new_phase: "awaiting_confirmation",
+      reason,
+    };
+  };
 
   if (
     /(?:give|tell|show).{0,20}(?:analysis|reading|advice|recommendation)|现在.{0,5}(?:给我|告诉我).{0,5}(?:分析|建议|结论)/i.test(
       user_message,
     )
   ) {
-    if (current === "collecting_context" && current_state.collection_completeness >= 0.5) {
-      return {
-        should_transition: true,
-        new_phase: "awaiting_confirmation",
-        reason: "User explicitly requested delivery",
-      };
+    if (current === "collecting_context") {
+      const transition = tryCollectingToConfirmation("User explicitly requested delivery");
+      if (transition) return transition;
     }
   }
 
@@ -289,23 +304,20 @@ export function decidePhaseTransition(input: PhaseTransitionInput): PhaseTransit
       break;
 
     case "collecting_context": {
-      const complete = current_state.collection_completeness;
-      if (complete >= 0.7) {
-        return {
-          should_transition: true,
-          new_phase: "awaiting_confirmation",
-          reason: `Collection sufficient (${(complete * 100).toFixed(0)}%)`,
-        };
+      const userWantsConfirm = userExplicitlyRequestsConfirmation(user_message);
+      const llmWantsConfirm = llm_suggested_phase === "awaiting_confirmation";
+
+      if (userWantsConfirm) {
+        const transition = tryCollectingToConfirmation("User requested confirmation");
+        if (transition) return transition;
       }
-      if (
-        /(?:可以了|够了|生成|分析|建议|tell me|ready|enough|generate)/i.test(user_message) &&
-        complete >= 0.4
-      ) {
-        return {
-          should_transition: true,
-          new_phase: "awaiting_confirmation",
-          reason: "User requested early delivery, completeness OK",
-        };
+      if (llmWantsConfirm) {
+        const transition = tryCollectingToConfirmation("LLM suggested confirmation");
+        if (transition) return transition;
+      }
+      if (areRequiredFieldsComplete(current_state)) {
+        const transition = tryCollectingToConfirmation("Required fields complete");
+        if (transition) return transition;
       }
       break;
     }

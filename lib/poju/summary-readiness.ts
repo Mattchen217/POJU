@@ -1,4 +1,5 @@
 import type { POJUSessionState } from "@/lib/poju/types";
+import { evaluateCollectingConfirmationGate } from "@/lib/poju/collecting-confirmation-gate";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 
 export function countUserTurns(session: POJUSessionState): number {
@@ -13,10 +14,8 @@ export function shouldShowContextSummaryForm(session: POJUSessionState): boolean
   if (!agent.current_summary?.sections?.length) return false;
 
   const userTurns = countUserTurns(session);
-  if (userTurns < 2) return false;
-
-  const completeness = agent.collection_completeness ?? 0;
-  if (completeness < 0.45) return false;
+  const gate = evaluateCollectingConfirmationGate(agent, userTurns);
+  if (!gate.allowed) return false;
 
   if (!resolveSessionHasProfile(session) && !session.profile_skipped) return false;
 

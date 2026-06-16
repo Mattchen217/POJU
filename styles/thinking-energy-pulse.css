@@ -1,0 +1,31 @@
+.tep {
+  width: 100%;
+  max-width: min(100%, 720px);
+  height: 72px;
+  margin: 0 auto 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(229, 193, 88, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 24px rgba(124, 92, 255, 0.08);
+  background: #0b0914;
+  overflow: hidden;
+  position: relative;
+}
+
+.tep__canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.pchat__inputbar .tep {
+  max-width: min(100%, 720px);
+}
+
+@media (max-width: 640px) {
+  .tep {
+    height: 64px;
+    border-radius: 8px;
+  }
+}

@@ -12,6 +12,7 @@ import {
   type ContextSummary,
   type POJUAgentState,
 } from "@/lib/poju/agent-state";
+import { countUserTurns } from "@/lib/poju/summary-readiness";
 import { ensureSessionCycles } from "@/lib/poju/cycle-manager";
 import { finalizeToolInjectionTurn, prepareToolInjectionTurn } from "@/lib/poju/prepare-tool-injection-turn";
 import { findPendingToolInjection } from "@/lib/poju/find-pending-tool-injection";
@@ -147,6 +148,7 @@ function finalizeAgentV2(
     current_state: merged,
     llm_suggested_phase: llmPhase,
     user_message: phaseUserMessage,
+    user_turn_count: countUserTurns(session),
   });
   let after = applyPhaseTransition(merged, transition);
   if (llm.current_summary && after.current_phase === "awaiting_confirmation") {
