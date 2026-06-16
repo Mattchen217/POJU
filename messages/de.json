@@ -1145,8 +1145,8 @@
   },
   "bazi": {
     "gender": {
-      "qian": "Männliches Horoskop (乾造)",
-      "kun": "Weibliches Horoskop (坤造)"
+      "qian": "Qián-Natalmatrix (乾造)",
+      "kun": "Kūn-Natalmatrix (坤造)"
     },
     "strength": {
       "strong": "Stark (身旺)",
@@ -1262,7 +1262,7 @@
     "day_master_label": "Tagesmeister",
     "strength_label": "Stärke",
     "current_phase_label": "Aktuelle 10-Jahres-Phase",
-    "hint_first_time": "Deine ausführliche Deutung wird erstellt. 2–5 Minuten. Nur dieses Mal.",
+    "hint_first_time": "Deine ausführliche Deutung wird erstellt. Bitte bleib auf diesem Bildschirm.",
     "hint_using_cache": "Bereits analysiertes Chart wird geladen...",
     "done_message": "Bereit. Sitzung wird geöffnet...",
     "error_title": "Vorbereitung fehlgeschlagen",

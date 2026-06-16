@@ -5,6 +5,7 @@ import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
 export function applyMatrixNarrativeToDisplay(
   display: MatrixDisplayData,
   narrative: MatrixNarrativeResponse,
+  narrativeLocale?: string,
 ): MatrixDisplayData {
   return {
     ...display,
@@ -22,18 +23,20 @@ export function applyMatrixNarrativeToDisplay(
     },
     narrative_source: "llm",
     narrative_failed: false,
+    narrative_locale: narrativeLocale,
   };
 }
 
 export function applyMatrixNarrativeToPayload(
   payload: PojuMatrixPayload,
   narrative: MatrixNarrativeResponse,
+  narrativeLocale?: string,
 ): PojuMatrixPayload {
   const display = payload.display;
   if (!display) return payload;
   return {
     ...payload,
-    display: applyMatrixNarrativeToDisplay(display, narrative),
+    display: applyMatrixNarrativeToDisplay(display, narrative, narrativeLocale),
   };
 }
 

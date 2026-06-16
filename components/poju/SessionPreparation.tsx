@@ -215,7 +215,6 @@ function WelcomeSection({
   suppressMatchWelcomeCopy?: boolean;
 }) {
   const t = useTranslations("session_prep");
-  const tBrand = useTranslations("poju.branding");
   const tGlyph = useTranslations("glyph");
   const tSyncro = useTranslations("syncro");
 
@@ -240,9 +239,8 @@ function WelcomeSection({
       {!suppressMatchWelcomeCopy ? (
         productType === "poju" ? (
           <>
-            <p className="welcome-text welcome-text--tagline">{tBrand("hero_tagline")}</p>
             <p className="welcome-text welcome-text--lead">{t("welcome_title")}</p>
-            <p className="welcome-text">{tBrand("feature_definition")}</p>
+            <p className="welcome-text">{t("welcome_desc")}</p>
           </>
         ) : (
           <p className="welcome-text">{getWelcomeText(locale, productType, matchPerson)}</p>

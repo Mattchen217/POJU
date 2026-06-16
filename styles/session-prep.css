@@ -49,15 +49,6 @@
   margin-bottom: 10px;
 }
 
-.welcome-text--tagline {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 13px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #c4b5fd;
-  margin-bottom: 14px;
-}
-
 .prep-main {
   width: 100%;
   max-width: 600px;

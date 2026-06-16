@@ -1,8 +1,8 @@
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 import { buildPojuCorePromptSections } from "@/lib/llm/prompts/poju-base";
+import { getPojuChatLanguageDirective, parseAppLocale } from "@/lib/prompts/language-directive";
 import {
   buildCurrentDateContext,
-  buildLanguageGuidance,
   buildNorthAmericaAdaptation,
   buildProfileContextSection,
   stitchPromptSections,
@@ -28,10 +28,18 @@ export async function loadBaseAnalysisForSession(input: PhaseLLMInput): Promise<
 export async function buildPojuSystemPrompt(input: PhaseLLMInput, taskBlock: string): Promise<string> {
   const baseAnalysis = await loadBaseAnalysisForSession(input);
   const injectionBlock = input.tool_injection_context?.trim();
+  const langDirective = getPojuChatLanguageDirective({
+    locale: parseAppLocale(input.locale),
+    userInput: input.user_message,
+    conversationHistory: input.session.messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    })),
+  });
   return stitchPromptSections(
     ...buildPojuCorePromptSections(),
     buildCurrentDateContext(new Date(), input.locale),
-    buildLanguageGuidance(input.locale, input.user_message),
+    langDirective.directive,
     buildNorthAmericaAdaptation(input.locale),
     buildProfileContextSection(input.profile, baseAnalysis, input.locale),
     injectionBlock ?? "",

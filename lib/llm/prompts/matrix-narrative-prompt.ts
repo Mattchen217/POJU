@@ -36,7 +36,23 @@ Use user_language to pick the correct column. Count CJK characters for zh; count
 | annual_transit_2026.description | 38–55 (exactly 2 sentences) | 60–85 (exactly 2 sentences) |
 | poju_onboarding.archetype_intro | 22–36 (exactly 1 sentence) | 35–52 (exactly 1 sentence) |
 | poju_onboarding.core_conflict | 22–36 (exactly 1 sentence) | 35–52 (exactly 1 sentence) |
-| poju_onboarding.call_to_action | 28–42 (exactly 1 sentence) | 45–62 (exactly 1 sentence) |
+| poju_onboarding.call_to_action | 32–48 (exactly 1 sentence) | 50–72 (exactly 1 sentence) |
+
+# POJU ONBOARDING CTA (poju_onboarding.call_to_action) — MANDATORY
+This sentence appears directly above the chat input. It MUST explicitly invite the user to **type and send** their personal question or dilemma in the message box below — not a vague "let's begin" or generic welcome.
+
+Required elements (all in user_language):
+1. A clear imperative to **share / tell / write** their question or dilemma (e.g. "Tell me…", "Share the…", "请在下面对话框告诉我…").
+2. Reference that they should **send it in the chat below** (or equivalent).
+3. Optional: one phrase that POJU will work through it with their matrix/profile — keep within LENGTH BUDGET.
+
+Good examples:
+- EN: "Tell me the question or dilemma you're weighing right now — type it below and send, and we'll work through it together from your matrix."
+- ZH: "请把你此刻最纠结的问题或困境写在下方对话框并发送，我会结合你的能量结构陪你一步步拆开。"
+
+Bad (do NOT use):
+- Vague: "I'm here when you're ready." / "让我们开始吧。"
+- No send/chat cue: "What is on your mind?" without mentioning typing/sending below.
 
 # OUTPUT JSON SPECIFICATION
 You must respond ONLY with a valid JSON matching this exact schema. Each string must be generated completely dynamically based on the input payload, serving as a replacement for old hardcoded fallback templates:
@@ -57,7 +73,7 @@ You must respond ONLY with a valid JSON matching this exact schema. Each string 
   "poju_onboarding": {
     "archetype_intro": "[Exactly 1 sentence within LENGTH BUDGET. Psychological archetype from Day Master and energetic state.]",
     "core_conflict": "[Exactly 1 sentence within LENGTH BUDGET. Internal elemental pull or deficit — why daily life may feel like a tug-of-war.]",
-    "call_to_action": "[Exactly 1 sentence within LENGTH BUDGET. Warm open invitation to share the personal question or decision they are weighing.]"
+    "call_to_action": "[Exactly 1 sentence within LENGTH BUDGET. MUST explicitly ask the user to type and send their personal question or dilemma in the chat box below — clear imperative + send/below cue.]"
   }
 }
 
@@ -174,7 +190,7 @@ const FIELD_MAX_CHARS: Record<string, number> = {
   "annual_transit_2026.description": 380,
   "poju_onboarding.archetype_intro": 240,
   "poju_onboarding.core_conflict": 240,
-  "poju_onboarding.call_to_action": 280,
+  "poju_onboarding.call_to_action": 320,
 };
 
 function clampNarrativeField(text: string, fieldKey: string): string {

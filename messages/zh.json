@@ -1312,7 +1312,7 @@
     "day_master_label": "核心特质",
     "strength_label": "强弱",
     "current_phase_label": "当前人生阶段",
-    "hint_first_time": "正在为你做完整的性格画像分析，分析需要大量的计算，过程约需要 3–5 分钟或以上，请耐心等待...",
+    "hint_first_time": "正在为你做完整的性格画像分析，请耐心等待...",
     "hint_using_cache": "正在读取你的完整性格画像...",
     "done_message": "已就绪，即将进入对话...",
     "error_title": "准备失败",

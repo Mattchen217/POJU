@@ -1,3 +1,7 @@
+.base-analysis-stream-preparing--hidden {
+  display: none;
+}
+
 .chart-loader-page {
   min-height: 100vh;
   background: linear-gradient(180deg, #0a0a0f 0%, #1a1a25 100%);

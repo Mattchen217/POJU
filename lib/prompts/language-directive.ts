@@ -202,6 +202,61 @@ ${buildDirective(language, "priority_1")}`,
   };
 }
 
+/**
+ * POJU chat: reply language follows the user's messages, not the UI locale.
+ * Bazi / matrix reports use UI locale separately.
+ */
+export function getPojuChatLanguageDirective(
+  input: LanguageDirectiveInput,
+): LanguageDirectiveOutput {
+  const uiLocale = input.locale;
+  const userTexts = [
+    ...(input.conversationHistory ?? [])
+      .filter((m) => m.role === "user" || m.role === "User")
+      .map((m) => m.content)
+      .reverse(),
+    ...(input.userInput && input.userInput !== "__OPENING__" ? [input.userInput] : []),
+  ].filter((t) => t.trim().length > 0);
+
+  let outputLocale: AppLocale = uiLocale;
+
+  for (const text of userTexts) {
+    for (const pattern of switchPatterns) {
+      const match = text.match(pattern);
+      if (match?.[1]) {
+        const mapped = mapToLocale(match[1]);
+        if (mapped) {
+          outputLocale = mapped;
+          break;
+        }
+      }
+    }
+    if (outputLocale !== uiLocale) break;
+
+    if (text.length >= 3) {
+      const detected = detectLanguage(text);
+      if (detected) {
+        outputLocale = detected;
+        break;
+      }
+    }
+  }
+
+  const language = localeNames[outputLocale];
+  return {
+    outputLanguage: language,
+    directive: `
+# POJU OUTPUT LANGUAGE (message-driven)
+
+Write **every** user-visible sentence in this reply in **${language}**.
+
+- Match the language of the user's question and recent messages (e.g. English question → English reply).
+- The website UI locale is ${localeNames[uiLocale]} — use that only if the user has not written in a clear language yet.
+- You may read stored profile / base-analysis JSON in any language; express insights for the user in **${language}**.
+${buildDirective(language, "priority_1")}`,
+  };
+}
+
 function buildDirective(
   language: string,
   priorityType: "priority_1" | "priority_1_with_input_note" | "priority_3",

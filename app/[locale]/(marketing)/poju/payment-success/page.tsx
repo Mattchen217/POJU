@@ -23,7 +23,6 @@ import {
 import {
   bindPreviewProfileToSession,
   POJU_PENDING_UNLOCK_SESSION_KEY,
-  POJU_RUN_UNLOCK_FLAG,
 } from "@/lib/poju/preview-unlock";
 import { restorePOJUV4ArchivedSession } from "@/lib/poju/v4-lifecycle";
 
@@ -91,14 +90,27 @@ function PojuPaymentSuccessInner() {
           const sessionId =
             sessionStorage.getItem(POJU_PENDING_UNLOCK_SESSION_KEY) ?? params.get("session_id") ?? "";
           if (!orderId || !sessionId) throw new Error("Missing unlock context");
-          sessionStorage.setItem(POJU_RUN_UNLOCK_FLAG, sessionId);
+
+          const pendingFromStorage = sessionStorage.getItem("poju_pending_question")?.trim();
+          const loaded = await loadPOJUSession(sessionId);
+          if (loaded) {
+            const pendingQ = pendingFromStorage || loaded.pending_question?.trim();
+            await savePOJUSession({
+              ...loaded,
+              unlock_status: "unlocked",
+              unlock_via: "payment",
+              original_question: pendingQ || loaded.original_question,
+              pending_question: pendingQ || loaded.pending_question,
+            });
+          }
+
           sessionStorage.removeItem(POJU_PENDING_UNLOCK_SESSION_KEY);
           sessionStorage.removeItem(POJU_PENDING_ORDER_KEY);
           sessionStorage.removeItem("poju_pending_question");
           sessionStorage.removeItem(POJU_PENDING_ACTION_KEY);
           if (cancelled) return;
           setStatus("success");
-          router.replace(`/poju/session/${sessionId}`);
+          router.replace(`/poju/session/${sessionId}/preparing?unlock=1`);
           return;
         }
 

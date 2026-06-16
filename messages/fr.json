@@ -1145,8 +1145,8 @@
   },
   "bazi": {
     "gender": {
-      "qian": "Thème masculin (乾造)",
-      "kun": "Thème féminin (坤造)"
+      "qian": "Matrice natale Qián (乾造)",
+      "kun": "Matrice natale Kūn (坤造)"
     },
     "strength": {
       "strong": "Fort (身旺)",
@@ -1262,7 +1262,7 @@
     "day_master_label": "Maître du jour",
     "strength_label": "Force",
     "current_phase_label": "Phase actuelle (10 ans)",
-    "hint_first_time": "Élaboration de votre lecture détaillée. 2 à 5 minutes. Une seule fois.",
+    "hint_first_time": "Élaboration de votre lecture détaillée. Veuillez rester sur cet écran.",
     "hint_using_cache": "Chargement de votre thème déjà analysé...",
     "done_message": "Prêt. Entrée dans votre session...",
     "error_title": "Échec de la préparation",

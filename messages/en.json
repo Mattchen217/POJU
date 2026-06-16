@@ -1180,8 +1180,8 @@
   },
   "bazi": {
     "gender": {
-      "qian": "Male Chart (乾造)",
-      "kun": "Female Chart (坤造)"
+      "qian": "Qián Natal Matrix (乾造)",
+      "kun": "Kūn Natal Matrix (坤造)"
     },
     "strength": {
       "strong": "Strong (身旺)",
@@ -1297,7 +1297,7 @@
     "day_master_label": "Core Nature",
     "strength_label": "Strength",
     "current_phase_label": "Current 10-Year Phase",
-    "hint_first_time": "Building your full chart reading. This requires heavy computation and usually takes 3–5 minutes or longer. Please stay on this screen…",
+    "hint_first_time": "Building your full chart reading. Please stay on this screen…",
     "hint_using_cache": "Loading your full chart reading...",
     "done_message": "Ready. Entering your session...",
     "error_title": "Preparation Failed",

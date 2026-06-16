@@ -104,4 +104,13 @@ export async function bindPreviewProfileToSession(
 }
 
 export const POJU_PENDING_UNLOCK_SESSION_KEY = "poju_pending_unlock_session_id";
+/** @deprecated Unlock now routes through `/preparing?unlock=1` instead of in-chat overlay. */
 export const POJU_RUN_UNLOCK_FLAG = "poju_run_unlock";
+/** After unlock bazi prep, chat auto-sends the intercepted user question. */
+export const POJU_RELEASE_PENDING_QUESTION_FLAG = "poju_release_pending_question";
+
+export function needsUnlockBaziPreparation(session: POJUSessionState): boolean {
+  if (session.unlock_status !== "unlocked") return false;
+  if (session.messages.some((m) => m.meta?.kind === "report")) return false;
+  return Boolean(session.pending_question?.trim() || session.original_question?.trim());
+}

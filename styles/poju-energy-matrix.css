@@ -1064,9 +1064,15 @@
   transform: translate(-50%, -50%);
   text-align: center;
   width: 76px;
-  opacity: 0.15;
+  opacity: 1;
   transition: opacity 0.4s ease;
   pointer-events: none;
+}
+
+.pem .phase:not(.now) .age,
+.pem .phase:not(.now) .theme,
+.pem .phase:not(.now) .gz {
+  color: #fff;
 }
 
 .pem .phase .age {
@@ -1251,6 +1257,7 @@
 .pem .pl .star--major {
   color: rgba(251, 191, 36, 0.88);
   display: block;
+  font-size: 12px;
   margin-top: 4px;
 }
 
@@ -1327,8 +1334,9 @@
 }
 
 .pem .pl .star {
-  display: inline-block;
-  font-size: 9px;
+  display: block;
+  font-size: 11.5px;
+  line-height: 1.45;
   color: var(--gold-soft);
   margin-top: 5px;
 }

@@ -1145,8 +1145,8 @@
   },
   "bazi": {
     "gender": {
-      "qian": "Carta masculina (乾造)",
-      "kun": "Carta femenina (坤造)"
+      "qian": "Matriz natal Qián (乾造)",
+      "kun": "Matriz natal Kūn (坤造)"
     },
     "strength": {
       "strong": "Fuerte (身旺)",
@@ -1262,7 +1262,7 @@
     "day_master_label": "Maestro del día",
     "strength_label": "Fuerza",
     "current_phase_label": "Fase actual (10 años)",
-    "hint_first_time": "Elaborando tu lectura detallada. Tarda 2–5 minutos. Solo esta vez.",
+    "hint_first_time": "Elaborando tu lectura detallada. Permanece en esta pantalla.",
     "hint_using_cache": "Cargando tu carta ya analizada...",
     "done_message": "Listo. Entrando en tu sesión...",
     "error_title": "Preparación fallida",

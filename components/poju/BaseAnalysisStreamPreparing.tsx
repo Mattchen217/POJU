@@ -6,8 +6,12 @@ import { useTranslations } from "next-intl";
 import { StreamingAnalysisView } from "@/components/poju/StreamingAnalysisView";
 import { usePreparingSplineControl } from "@/components/poju/preparing-spline-control";
 import { buildStreamLocalDataFromProfile } from "@/lib/base-analysis/build-stream-local-data";
+import {
+  appLocaleToOutputLanguage,
+} from "@/lib/base-analysis/resolve-output-language";
 import { useStreamingAnalysis } from "@/lib/base-analysis/useStreamingAnalysis";
 import type { StoredProfileData } from "@/lib/db/poju-db";
+import { parseAppLocale } from "@/lib/prompts/language-directive";
 import {
   saveBaseAnalysisFromStream,
 } from "@/lib/profile/stored-profiles-service";
@@ -23,6 +27,10 @@ export type BaseAnalysisStreamPreparingProps = {
   resumeJobId?: string;
   /** `replay` skips SSE (handled by overlay); default `live` consumes stream. */
   mode?: "replay" | "live";
+  /** When true, parent shows ChartReadingLoader only (no inline stream view). */
+  hideStreamView?: boolean;
+  /** Base-analysis report follows UI locale, not browser / user input. */
+  reportOutputLanguageFromUi?: boolean;
 };
 
 function formatStreamError(error: string, t: (key: string) => string): string {
@@ -44,13 +52,19 @@ export function BaseAnalysisStreamPreparing({
   onError,
   resumeJobId,
   mode = "live",
+  hideStreamView = false,
+  reportOutputLanguageFromUi = false,
 }: BaseAnalysisStreamPreparingProps) {
   const tChart = useTranslations("chart_loader");
   const splineControl = usePreparingSplineControl();
-  const localData = useMemo(
-    () => buildStreamLocalDataFromProfile(profile.user_profile),
-    [profile.user_profile],
-  );
+  const localData = useMemo(() => {
+    const uiLang = reportOutputLanguageFromUi
+      ? appLocaleToOutputLanguage(parseAppLocale(locale))
+      : undefined;
+    return buildStreamLocalDataFromProfile(profile.user_profile, {
+      output_language: uiLang,
+    });
+  }, [profile.user_profile, locale, reportOutputLanguageFromUi]);
   const startedRef = useRef(false);
   const onCompleteRef = useRef(onComplete);
   const onErrorRef = useRef(onError);
@@ -61,10 +75,11 @@ export function BaseAnalysisStreamPreparing({
     console.group(`[${logLabel}] Local computation result`);
     console.log("Profile ID:", profileId);
     console.log("Structured:", localData.structured);
-    console.log("Output language (user input / browser):", localData.output_language);
-    console.log("URL locale (routing only):", locale);
+    console.log("Output language:", localData.output_language);
+    console.log("URL locale (routing):", locale);
+    console.log("Report follows UI locale:", reportOutputLanguageFromUi);
     console.groupEnd();
-  }, [profileId, localData, locale, logLabel]);
+  }, [profileId, localData, locale, logLabel, reportOutputLanguageFromUi]);
 
   const handleComplete = useCallback(
     async (displayText: string, meta: Record<string, unknown> | undefined) => {
@@ -114,15 +129,17 @@ export function BaseAnalysisStreamPreparing({
   const displayError = state.error ? formatStreamError(state.error, tChart) : null;
 
   return (
-    <div className="preparing-page base-analysis-stream-preparing">
-      <StreamingAnalysisView
-        content={state.content}
-        status={state.status}
-        bytes_received={state.bytes_received}
-        thinkingOnly
-      />
+    <div className={hideStreamView ? "base-analysis-stream-preparing base-analysis-stream-preparing--hidden" : "preparing-page base-analysis-stream-preparing"}>
+      {!hideStreamView ? (
+        <StreamingAnalysisView
+          content={state.content}
+          status={state.status}
+          bytes_received={state.bytes_received}
+          thinkingOnly
+        />
+      ) : null}
 
-      {state.status === "failed" && displayError ? (
+      {!hideStreamView && state.status === "failed" && displayError ? (
         <div className="chart-loader-content error-view-inline preparing-stream-error">
           <div className="error-icon" aria-hidden>
             ✕

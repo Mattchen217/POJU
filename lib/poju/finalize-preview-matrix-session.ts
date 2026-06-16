@@ -42,7 +42,7 @@ export async function finalizePreviewMatrixSession(
         locale,
         signal: options?.signal,
       });
-      finalPayload = applyMatrixNarrativeToPayload(payload, narrative);
+      finalPayload = applyMatrixNarrativeToPayload(payload, narrative, locale);
     } catch {
       finalPayload = markMatrixNarrativeFailed(payload);
     }

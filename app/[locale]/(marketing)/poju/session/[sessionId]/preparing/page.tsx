@@ -6,6 +6,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
 import { PreviewMatrixPreparing } from "@/components/poju/PreviewMatrixPreparing";
+import { UnlockBaziPreparing } from "@/components/poju/UnlockBaziPreparing";
 import { usePreparingBlockInput } from "@/components/poju/preparing-spline-control";
 import { PreparingStatusOverlay } from "@/components/poju/PreparingStatusOverlay";
 import { createInitialAgentState } from "@/lib/poju/agent-state";
@@ -22,7 +23,7 @@ import {
   profileHasBaseAnalysis,
   recordProfileUsage,
 } from "@/lib/profile/stored-profiles-service";
-import { bindPreviewProfileToSession } from "@/lib/poju/preview-unlock";
+import { bindPreviewProfileToSession, needsUnlockBaziPreparation } from "@/lib/poju/preview-unlock";
 import { loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
 import {
   PREPARING_MIN_SPLINE_CACHE_MS,
@@ -31,7 +32,7 @@ import {
 import { withSessionProfileFlags } from "@/lib/poju/session-profile";
 import type { POJUSessionState } from "@/lib/poju/types";
 
-type Phase = "loading" | "preview_matrix" | "cache" | "streaming" | "error";
+type Phase = "loading" | "preview_matrix" | "unlock_bazi" | "cache" | "streaming" | "error";
 
 function PreparingInner() {
   const params = useParams();
@@ -43,6 +44,7 @@ function PreparingInner() {
 
   const sessionId = typeof params.sessionId === "string" ? params.sessionId : "";
   const profileIdFromUrl = searchParams.get("profile");
+  const unlockFromUrl = searchParams.get("unlock") === "1";
 
   const [session, setSession] = useState<POJUSessionState | null>(null);
   const [profile, setProfile] = useState<StoredProfileData | null>(null);
@@ -50,6 +52,7 @@ function PreparingInner() {
   const [phase, setPhase] = useState<Phase>("loading");
   const [error, setError] = useState<string | null>(null);
   const previewSplineStartedRef = useRef(0);
+  const unlockSplineStartedRef = useRef(0);
   const cacheSplineStartedRef = useRef(0);
   const initRef = useRef(false);
 
@@ -135,8 +138,25 @@ function PreparingInner() {
         }
         setProfile(profileData);
 
-        if (sessionMatrixReadyForChat(loaded)) {
+        if (sessionMatrixReadyForChat(loaded) && !unlockFromUrl && !needsUnlockBaziPreparation(loaded)) {
           await finishToSession();
+          return;
+        }
+
+        if (unlockFromUrl || needsUnlockBaziPreparation(loaded)) {
+          if (loaded.unlock_status !== "unlocked") {
+            const pendingQ = loaded.pending_question?.trim();
+            loaded = {
+              ...loaded,
+              unlock_status: "unlocked",
+              original_question: pendingQ || loaded.original_question,
+            };
+            await savePOJUSession(loaded);
+          }
+          await recordProfileUsage(pid, "poju");
+          setSession(loaded);
+          unlockSplineStartedRef.current = Date.now();
+          setPhase("unlock_bazi");
           return;
         }
 
@@ -176,6 +196,7 @@ function PreparingInner() {
   }, [
     sessionId,
     profileIdFromUrl,
+    unlockFromUrl,
     locale,
     router,
     bindSessionWithBaseAnalysis,
@@ -187,6 +208,20 @@ function PreparingInner() {
       <PreparingStatusOverlay>
         <p className="preparing-spline-page__status">{tPrep("preparing")}</p>
       </PreparingStatusOverlay>
+    );
+  }
+
+  if (phase === "unlock_bazi" && session) {
+    return (
+      <UnlockBaziPreparing
+        session={session}
+        sessionId={sessionId}
+        profile={profile}
+        profileId={profileId}
+        locale={locale}
+        startedAt={unlockSplineStartedRef.current}
+        onRefund={handleRefund}
+      />
     );
   }
 
