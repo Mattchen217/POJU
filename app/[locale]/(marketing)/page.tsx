@@ -59,7 +59,7 @@ export default async function LandingPage() {
       descLines: [tHome("hero.descLine1"), tHome("hero.descLine2"), tHome("hero.descLine3")],
       trustLine: tHome("hero.trustLine"),
     },
-    fourWays: { heading: tHome("fourWays.heading") },
+    fourWays: { heading: tHome("fourWays.heading"), subtitle: tHome("fourWays.subtitle") },
     products: PRODUCT_STYLES.map((style) => ({
       ...style,
       name: tp(`${style.productKey}.name`),
@@ -95,36 +95,24 @@ export default async function LandingPage() {
         href,
         imageSrc,
         accent,
-        lines: [
-          tHome(`meetsMoment.${key}.p1`),
-          tHome(`meetsMoment.${key}.p2`),
-          tHome(`meetsMoment.${key}.p3`),
-        ],
+        title: tHome(`meetsMoment.${key}.title`),
+        text: tHome(`meetsMoment.${key}.text`),
         cta: tHome(`meetsMoment.${key}.cta`),
       })),
     },
     promises: {
       heading: tHome("promises.heading"),
-      neverStoredTitle: tHome("promises.neverStoredTitle"),
-      neverStoredParas: [
-        tHome("promises.neverStoredP1"),
-        tHome("promises.neverStoredP2"),
-        tHome("promises.neverStoredP3"),
-      ],
-      neverRequiredTitle: tHome("promises.neverRequiredTitle"),
-      neverRequiredParas: [
-        tHome("promises.neverRequiredP1"),
-        tHome("promises.neverRequiredP2"),
-        tHome("promises.neverRequiredP3"),
-        tHome("promises.neverRequiredP4"),
-      ],
-      neverManipulativeTitle: tHome("promises.neverManipulativeTitle"),
-      neverManipulativeParas: [
-        tHome("promises.neverManipulativeP1"),
-        tHome("promises.neverManipulativeP2"),
-        tHome("promises.neverManipulativeP3"),
-      ],
-      dataLine: tHome("promises.dataLine"),
+      subtitle: tHome("promises.subtitle"),
+      cards: (
+        [
+          { key: "card1" as const },
+          { key: "card2" as const },
+          { key: "card3" as const },
+        ] as const
+      ).map(({ key }) => ({
+        title: tHome(`promises.${key}.title`),
+        content: tHome(`promises.${key}.content`),
+      })),
       readMore: tHome("promises.readMore"),
     },
     finalCta: {

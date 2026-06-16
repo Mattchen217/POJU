@@ -1,0 +1,65 @@
+{
+  "meta": {
+    "title": "Contacto — pojulife",
+    "description": "Conecta con pojulife — Versión 1.1",
+    "version": "Versión 1.1",
+    "pageTitle": "Conecta con pojulife"
+  },
+  "intro": {
+    "p1": "Supervisamos continuamente nuestros nodos de comunicación. pojulife es una operación independiente y soberana: creadores e ingenieros reales responden a tus consultas lo más rápido posible.",
+    "p2": "Para dirigir tu solicitud al terminal correcto y ayudarte más rápido, elige el nodo de contacto apropiado a continuación."
+  },
+  "footer": "Aviso de idioma: aunque esta interfaz está localizada para tu comodidad, nuestro equipo principal de ingeniería y soporte opera principalmente en inglés y chino. Puedes escribirnos en tu idioma nativo: utilizamos matrices de traducción con IA de alta fidelidad para procesar y atender tickets de soporte globales.",
+  "billing": {
+    "title": "1. Facturación, suscripciones y soporte de tokens",
+    "body": "Para problemas de sesión activa, anomalías de pago, validación de tokens individuales o consultas sobre tu suscripción Monthly Pass:",
+    "emailLabel": "Correo:",
+    "responseLabel": "Marco de respuesta:",
+    "response": "Normalmente en un plazo de 24 horas en días laborables.",
+    "note": "Nota: si solicitas un reembolso técnico, incluye explícitamente tu ID de transacción formal recibido de nuestro Merchant of Record (Dodo Payments)."
+  },
+  "subscription": {
+    "title": "2. Autonomía de suscripción (autoservicio)",
+    "bodyBefore": "¿Deseas cancelar la renovación automática de tu Monthly Pass? No necesitas esperar una respuesta por correo. Puedes revocar al instante tu próximo ciclo de facturación con un solo clic usando el enlace",
+    "manageLink": "«Manage Subscription»",
+    "bodyAfter": "dentro de tu panel localizado."
+  },
+  "privacy": {
+    "title": "3. Soberanía de datos y registro de privacidad",
+    "body": "Para preguntas sobre arquitectura criptográfica, rectificación de caché local (IndexedDB) o solicitudes para eliminar tu correo de suscripción de nuestro relé de facturación seguro:",
+    "emailLabel": "Correo:",
+    "responseLabel": "Marco de respuesta:",
+    "response": "Normalmente respondido en un plazo de 48 horas."
+  },
+  "legal": {
+    "title": "4. Legal, regulatorio e institucional",
+    "body": "Para asuntos legales jurisdiccionales, coordinación de derechos de autor o solicitudes formales de verificación de dirección física:",
+    "emailLabel": "Correo:",
+    "responseLabel": "Marco de respuesta:",
+    "response": "Normalmente respondido en un plazo de 5 días hábiles."
+  },
+  "beforeWrite": {
+    "title": "💡 Antes de escribirnos",
+    "body": "Un número considerable de anomalías operativas y aclaraciones de funciones se resuelven al instante en nuestra documentación unificada. Recomendamos revisarla antes de enviar un correo:",
+    "terms": "Terms of Service (v1.1)",
+    "termsDesc": "Límites de participación comercial (texto en inglés)",
+    "privacy": "Privacy Policy (v1.1)",
+    "privacyDesc": "Cifrado local y protocolos de datos (texto en inglés)",
+    "disclaimer": "Disclaimer & Limitation of Liability (v1.1)",
+    "disclaimerDesc": "Alcance de las reflexiones algorítmicas de IA (texto en inglés)",
+    "refund": "Refund Policy (v1.1)",
+    "refundDesc": "Parámetros técnicos de reversión de transacciones (texto en inglés)"
+  },
+  "crisis": {
+    "title": "🚨 Protocolo urgente de apoyo en crisis",
+    "body": "pojulife opera completamente con modelos de lenguaje grandes predictivos y automatizados y está fundamentalmente desprovisto de capacidad para gestionar emergencias psicológicas o médicas. Si experimentas angustia emocional severa, ansiedad aguda o pensamientos de autolesión, evita por completo nuestros nodos de correo y conéctate de inmediato con profesionales humanos certificados 24/7:",
+    "usCanadaLabel": "Estados Unidos y Canadá:",
+    "usCanadaAction": "Llama o envía SMS al 988",
+    "ukLabel": "Reino Unido:",
+    "ukAction": "Llama al 116 123",
+    "euLabel": "Unión Europea:",
+    "euAction": "Llama al 112 (o servicios de emergencia locales)",
+    "globalLabel": "Hub global:",
+    "globalAction": "Encuentra apoyo humano inmediato localizado en"
+  }
+}

@@ -1,12 +1,183 @@
 import type { Metadata } from "next";
 
-import { LegalDocumentPage } from "@/components/legal/legal-document-page";
+import { LegalPageShell } from "@/components/legal/legal-page-shell";
+import { Link } from "@/i18n/navigation";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Disclaimer — pojulife",
-  description: "pojulife disclaimer",
+  description: "pojulife disclaimer — Version 1.1",
 };
 
 export default function DisclaimerPage() {
-  return <LegalDocumentPage namespace="disclaimer" />;
+  return (
+    <LegalPageShell
+      version="Version 1.1"
+      title="Disclaimer & Limitation of Liability"
+      updated="Last updated: 2026-06-15"
+      intro={
+        <p>
+          <strong>Governing Language:</strong> This agreement is formulated and executed exclusively in the English
+          language. Any localized translations provided elsewhere are for convenience only, and this English version
+          shall govern and prevail in all aspects of interpretation and dispute resolution.
+        </p>
+      }
+    >
+      <h2>1. Nature of the Services</h2>
+      <p>
+        pojulife (including its specialized modular decision-support engines: POJU, Glyph, Syncro, and Match,
+        collectively referred to as &quot;the Services&quot;) provides cognitive reframing, systemic analysis, and
+        personal reflection tools. These engines synthesize classical structural frameworks, psychological archetypes,
+        and advanced linguistic processing to generate text-based conceptual matrices based entirely on user inputs.
+      </p>
+      <p>
+        The Services are engineered strictly for personal exploration, intellectual journaling, strategic framing, and
+        structured self-reflection. They are designed to help you analyze variables and think more clearly about the
+        situational contexts you present.
+      </p>
+
+      <h2>2. Strict Professional Exclusions (What the Services Are NOT)</h2>
+      <p>
+        The Services do not possess human consciousness, professional credentials, or objective empirical knowledge. The
+        Services explicitly do <strong>NOT</strong> provide, and shall not be interpreted as providing:
+      </p>
+      <ul>
+        <li>
+          <strong>Medical Advice:</strong> We do not diagnose, treat, cure, or mitigate any medical, physiological, or
+          biological conditions.
+        </li>
+        <li>
+          <strong>Mental Health Treatment:</strong> We are not licensed therapists, psychiatrists, clinical
+          psychologists, or counselors. The Services are not a substitute for professional mental health intervention.
+        </li>
+        <li>
+          <strong>Legal Counsel:</strong> We do not provide statutory or jurisdictional legal interpretations. For legal
+          matters, consult a licensed attorney in your appropriate jurisdiction.
+        </li>
+        <li>
+          <strong>Financial or Investment Advice:</strong> We do not provide guidance on equity investments, algorithmic
+          trading, tax planning, or corporate asset allocation. Consult a certified financial planner for commercial
+          decisions.
+        </li>
+        <li>
+          <strong>Guarantees of Future Outcomes:</strong> Our analytical matrices evaluate conceptual patterns and
+          environmental vectors; they do not forecast deterministic real-world outcomes or guarantee future events.
+        </li>
+        <li>
+          <strong>Supernatural or Occult Claims:</strong> pojulife treats traditional philosophical systems as purely
+          cultural, literary, and cognitive resources. We make absolutely zero claims of supernatural insight,
+          divination, or mystical forecasting.
+        </li>
+        <li>
+          <strong>A Substitute for Human Judgment:</strong> The outputs are probabilistic conceptual lenses engineered
+          to complement—never replace—your individual logic, responsibility, and independent decision-making.
+        </li>
+      </ul>
+
+      <h2>3. Cultural and Philosophical Frameworks</h2>
+      <p>
+        The Services draw conceptually from classical Eastern analytical systems, including the foundational archetypes
+        of the I Ching (Book of Changes) and related traditional time-space frameworks. We approach these frameworks
+        rigorously as cultural and cognitive toolsets for systematic thinking—analogous to how modern behavioral
+        coaching draws on Carl Jung&apos;s archetypal models, or how modern corporate strategies adapt Sun Tzu&apos;s{" "}
+        <em>The Art of War</em>.
+      </p>
+      <p>
+        We do not present these systems as supernatural. All traditional notation, vectors, and symbolic metrics are
+        utilized strictly as an analytical vocabulary to map thought processes, much like psychological terms such as
+        &quot;locus of control&quot; or &quot;cognitive attachment styles.&quot;
+      </p>
+
+      <h2>4. Technological Disclosures (AI Integration)</h2>
+      <p>
+        All reflective content and conceptual analysis generated by the platform are compiled via advanced automated
+        artificial intelligence pipelines (leveraging enterprise API endpoints from premium providers such as
+        Anthropic). You explicitly acknowledge that:
+      </p>
+      <ul>
+        <li>Algorithmic outputs are, by nature, probabilistic, non-deterministic, and structurally imperfect.</li>
+        <li>Outputs reflect linguistic patterns synthesized from vast textual frameworks, not absolute empirical truth.</li>
+        <li>
+          Content may occasionally contain contextual inconsistencies or analytical errors and must be scrutinized with
+          critical human judgment.
+        </li>
+      </ul>
+
+      <h2>5. User Accountability</h2>
+      <p>
+        You maintain exclusive, 100% legal and personal responsibility for all decisions, behaviors, commitments, or life
+        transitions executed during, around, or after your engagement with pojulife. It is your sole obligation to
+        independently verify any conceptual data delivered by the Services before taking action, and to secure certified
+        professional counsel for serious legal, financial, or medical matters.
+      </p>
+
+      <h2>6. Age Requirement</h2>
+      <p>
+        The Services are strictly intended for individuals who are 18 years of age or older. We do not knowingly
+        facilitate sessions for minors. If you have reason to believe a minor has accessed the platform, please notify
+        us immediately at <a href="mailto:privacy@pojulife.com">privacy@pojulife.com</a>.
+      </p>
+
+      <h2>7. Crisis Support Protocol</h2>
+      <p>
+        pojulife is a reflective interface and is fundamentally <strong>not equipped</strong> to manage psychological or
+        medical emergencies. If you are experiencing a mental health crisis, acute emotional distress, thoughts of
+        self-harm, or suicidal ideation, please immediately discontinue use and connect with a certified, 24/7 human
+        emergency service:
+      </p>
+      <ul>
+        <li>
+          <strong>United States:</strong> Call or text <strong>988</strong> (Suicide &amp; Crisis Lifeline)
+        </li>
+        <li>
+          <strong>United Kingdom:</strong> Call <strong>116 123</strong> (Samaritans Helpline)
+        </li>
+        <li>
+          <strong>Canada:</strong> Call or text <strong>988</strong> (Suicide Crisis Helpline)
+        </li>
+        <li>
+          <strong>European Union:</strong> Call <strong>112</strong> or your localized emergency service numbers.
+        </li>
+        <li>
+          <strong>Global Resources:</strong> Locate immediate local assistance at{" "}
+          <a href="https://findahelpline.com" rel="noopener noreferrer" target="_blank">
+            https://findahelpline.com
+          </a>
+        </li>
+      </ul>
+
+      <h2>8. Limitation of Liability</h2>
+      <p>
+        To the maximum extent permitted by applicable law, pojulife, its operators, its founder (Tonghui Chen), and its
+        infrastructure partners shall under no circumstances be held liable for any direct, indirect, incidental,
+        special, consequential, exemplary, or punitive damages. This liability shield covers, without limitation,
+        financial losses, commercial capital depreciation, career interruptions, emotional distress, relationship
+        dissolutions, or life outcomes correlated with your use or inability to use the platform.
+      </p>
+      <p>
+        Your sole, exclusive remedy for dissatisfaction with the software, logic outputs, or service availability is to
+        discontinue using the platform. Transaction-specific remedies are governed strictly by our{" "}
+        <Link href="/refund">Refund Policy</Link>.
+      </p>
+
+      <h2>9. Governance and Contact Nodes</h2>
+      <p>
+        We reserve the right to revise this Disclaimer at any time to preserve compliance with international financial
+        gateways and technological shifts. The &quot;Last Updated&quot; timestamp at the apex of this document denotes the
+        current legal baseline. Continued activation of the platform&apos;s engines following a deployment constitutes
+        absolute acceptance of these parameters.
+      </p>
+      <p>
+        <strong>Legal &amp; Regulatory Inquiries:</strong>
+        <br />
+        <a href="mailto:legal@pojulife.com">legal@pojulife.com</a>
+      </p>
+      <p>
+        <strong>Operational &amp; Technical Support:</strong>
+        <br />
+        <a href="mailto:support@pojulife.com">support@pojulife.com</a>
+      </p>
+    </LegalPageShell>
+  );
 }

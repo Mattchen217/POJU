@@ -1,17 +1,20 @@
 "use client";
 
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
+
 import { usePwaInstall } from "@/components/pwa/pwa-install-context";
 import { isMacOS } from "@/lib/pwa/detect";
 
 export function HeroInstallCta() {
+  const t = useTranslations("home.hero");
   const { clientReady, standalone, persona, requestInstall, androidApkUrl } = usePwaInstall();
 
   const copy = useMemo(() => {
     if (persona === "ios_safari" || persona === "ios_other") {
-      return "Add to desktop for a better experience";
+      return t("ctaAddDesktop");
     }
-    if (isMacOS()) return "Add to desktop for a better experience";
+    if (isMacOS()) return t("ctaAddDesktop");
     if (
       persona === "android" ||
       persona === "win_chromium" ||
@@ -19,10 +22,10 @@ export function HeroInstallCta() {
       persona === "desktop_chromium" ||
       persona === "desktop_other"
     ) {
-      return "Install desktop app for a better experience";
+      return t("ctaInstall");
     }
-    return "Install app for a better experience";
-  }, [persona]);
+    return t("ctaInstallApp");
+  }, [persona, t]);
 
   if (!clientReady || standalone) return null;
 
@@ -43,7 +46,7 @@ export function HeroInstallCta() {
     <button
       type="button"
       onClick={handleClick}
-      className="pj-btn pj-btn-primary mt-6 px-8 py-3 text-sm font-semibold"
+      className="ds-home-hero__cta pj-btn pj-btn-primary mt-6 px-8 py-3 text-sm font-semibold"
     >
       {copy}
     </button>

@@ -1,0 +1,65 @@
+{
+  "meta": {
+    "title": "Kontakt — pojulife",
+    "description": "Kontakt zu pojulife — Version 1.1",
+    "version": "Version 1.1",
+    "pageTitle": "Kontakt zu pojulife"
+  },
+  "intro": {
+    "p1": "Wir überwachen unsere Kommunikationsknoten kontinuierlich. pojulife ist ein unabhängiger, souveräner Betrieb — echte menschliche Entwickler und Ingenieure antworten so schnell wie möglich auf Ihre Anfragen.",
+    "p2": "Damit wir Ihre Anfrage an die richtige Stelle weiterleiten und Sie schneller unterstützen können, wählen Sie bitte unten den passenden Kontaktknoten."
+  },
+  "footer": "Sprachhinweis: Diese Oberfläche ist zu Ihrer Bequemlichkeit lokalisiert, unser Kernteam für Engineering und Support arbeitet jedoch hauptsächlich auf Englisch und Chinesisch. Sie können uns gerne in Ihrer Muttersprache schreiben — wir setzen hochpräzise KI-Übersetzungsmatrizen ein, um globale Support-Tickets zu bearbeiten.",
+  "billing": {
+    "title": "1. Abrechnung, Abonnements & Token-Support",
+    "body": "Bei aktiven Sitzungsproblemen, Zahlungsanomalien, Einzel-Token-Validierung oder Anfragen zu Ihrem Monthly Pass-Abonnement:",
+    "emailLabel": "E-Mail:",
+    "responseLabel": "Antwortrahmen:",
+    "response": "In der Regel innerhalb von 24 Stunden an Werktagen.",
+    "note": "Hinweis: Wenn Sie eine technische Rückerstattung beantragen, geben Sie bitte ausdrücklich Ihre formelle Transaktions-ID an, die Sie von unserem Merchant of Record (Dodo Payments) erhalten haben."
+  },
+  "subscription": {
+    "title": "2. Abonnement-Autonomie (Self-Service)",
+    "bodyBefore": "Möchten Sie die automatische Verlängerung Ihres Monthly Pass kündigen? Sie müssen nicht auf eine E-Mail-Antwort warten. Sie können Ihren nächsten Abrechnungszyklus sofort mit einem Klick widerrufen, indem Sie den Link",
+    "manageLink": "„Manage Subscription“",
+    "bodyAfter": "in Ihrem lokalisierten Dashboard nutzen."
+  },
+  "privacy": {
+    "title": "3. Datensouveränität & Datenschutzregister",
+    "body": "Bei Fragen zur kryptografischen Architektur, zur Korrektur des lokalen Caches (IndexedDB) oder zur Löschung Ihrer Abonnement-E-Mail aus unserem sicheren Abrechnungsrelais:",
+    "emailLabel": "E-Mail:",
+    "responseLabel": "Antwortrahmen:",
+    "response": "In der Regel innerhalb von 48 Stunden beantwortet."
+  },
+  "legal": {
+    "title": "4. Rechtliches, Regulatorisches & Institutionelles",
+    "body": "Bei rechtlichen Angelegenheiten mit Zuständigkeitsbezug, Urheberrechtskoordination oder Anfragen zur formellen physischen Adressverifizierung:",
+    "emailLabel": "E-Mail:",
+    "responseLabel": "Antwortrahmen:",
+    "response": "In der Regel innerhalb von 5 Werktagen beantwortet."
+  },
+  "beforeWrite": {
+    "title": "💡 Bevor Sie uns schreiben",
+    "body": "Viele betriebliche Anomalien und Funktionsklärungen werden sofort in unserer einheitlichen Dokumentation gelöst. Wir empfehlen dringend, diese vor dem Versenden einer E-Mail zu prüfen:",
+    "terms": "Terms of Service (v1.1)",
+    "termsDesc": "Grenzen der kommerziellen Nutzung (englischer Text)",
+    "privacy": "Privacy Policy (v1.1)",
+    "privacyDesc": "Lokale Verschlüsselung & Datenprotokolle (englischer Text)",
+    "disclaimer": "Disclaimer & Limitation of Liability (v1.1)",
+    "disclaimerDesc": "Umfang algorithmischer KI-Reflexionen (englischer Text)",
+    "refund": "Refund Policy (v1.1)",
+    "refundDesc": "Technische Rückerstattungsparameter (englischer Text)"
+  },
+  "crisis": {
+    "title": "🚨 Dringendes Krisen-Support-Protokoll",
+    "body": "pojulife arbeitet vollständig mit prädiktiven, automatisierten Large-Language-Modellen und ist grundsätzlich nicht in der Lage, psychologische oder medizinische Notfälle zu bewältigen. Wenn Sie schwere emotionale Belastung, akute Angst oder Gedanken an Selbstverletzung erleben, umgehen Sie bitte unsere E-Mail-Knoten vollständig und wenden Sie sich sofort an zertifizierte 24/7-Fachkräfte:",
+    "usCanadaLabel": "USA & Kanada:",
+    "usCanadaAction": "Anruf oder SMS an 988",
+    "ukLabel": "Vereinigtes Königreich:",
+    "ukAction": "Anruf an 116 123",
+    "euLabel": "Europäische Union:",
+    "euAction": "Anruf an 112 (oder lokale Notdienste)",
+    "globalLabel": "Globaler Hub:",
+    "globalAction": "Sofortige lokalisierte Krisenunterstützung finden unter"
+  }
+}

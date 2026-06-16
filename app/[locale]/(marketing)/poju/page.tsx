@@ -36,11 +36,12 @@ export default async function PojuProductPage() {
   const notIncludedItems = t.raw("two_columns.not_included.items") as string[];
 
   const heroCopy = {
+    brandTag: t("hero.brand_tag"),
     heading: t("hero.heading"),
     description: t("hero.description"),
     tagline: t("hero.tagline"),
     ctaPrimary: t("hero.cta_primary"),
-    ctaSecondary: t("hero.cta_secondary"),
+    billingNotice: t("hero.billing_notice"),
   };
 
   return (

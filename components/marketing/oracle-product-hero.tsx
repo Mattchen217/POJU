@@ -5,11 +5,13 @@ import { DsGradientTitle } from "@/components/ds/primitives";
 
 import "@/styles/spline-interactive.css";
 import {
-  ProductHeroActions,
+  HeroInlineBold,
   ProductHeroAccent,
+  ProductHeroActions,
+  ProductHeroBillingNotice,
+  ProductHeroBrandTag,
   ProductHeroContent,
   ProductHeroDescription,
-  ProductHeroMeta,
   ProductMarketingHero,
 } from "@/components/marketing/product-marketing-hero";
 import { NotPWA } from "@/components/pwa/PWAConditional";
@@ -17,12 +19,12 @@ import { AppModeHeroActions } from "@/components/pwa/AppModeHeroActions";
 import { PwaInlineOpenLink } from "@/components/marketing/pwa-inline-open-link";
 
 export type OracleProductHeroCopy = {
+  brandTag: string;
   heading: string;
-  subtitle: string;
   description: string;
-  footnote: string;
+  tagline?: string;
   cta: string;
-  ctaSubline: string;
+  billingNotice: string;
 };
 
 export function OracleProductHero({
@@ -45,12 +47,16 @@ export function OracleProductHero({
       }
     >
       <ProductHeroContent>
+        <ProductHeroBrandTag>{copy.brandTag}</ProductHeroBrandTag>
         <DsGradientTitle from="#a78bfa" to="#d8b4fe">
           {copy.heading}
         </DsGradientTitle>
-        <ProductHeroAccent>{copy.subtitle}</ProductHeroAccent>
         <ProductHeroDescription>{copy.description}</ProductHeroDescription>
-        <ProductHeroMeta>{copy.footnote}</ProductHeroMeta>
+        {copy.tagline ? (
+          <ProductHeroAccent>
+            <HeroInlineBold text={copy.tagline} />
+          </ProductHeroAccent>
+        ) : null}
         <ProductHeroActions>
           {cta ?? (
             <NotPWA>
@@ -64,9 +70,7 @@ export function OracleProductHero({
               </PwaInlineOpenLink>
             </NotPWA>
           )}
-          <NotPWA>
-            <p className="product-hero__cta-subline">{copy.ctaSubline}</p>
-          </NotPWA>
+          {copy.billingNotice ? <ProductHeroBillingNotice>{copy.billingNotice}</ProductHeroBillingNotice> : null}
           <AppModeHeroActions productId="glyph" price="$4.99" />
         </ProductHeroActions>
       </ProductHeroContent>

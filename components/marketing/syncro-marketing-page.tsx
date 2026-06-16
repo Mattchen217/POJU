@@ -36,12 +36,12 @@ export async function SyncroMarketingPage() {
   const isntItems = t.raw("what_it_is.isnt.items") as string[];
 
   const heroCopy = {
+    brandTag: t("hero.brand_tag"),
     heading: t("hero.heading"),
-    subtitle: t("hero.subtitle"),
     description: t("hero.description"),
-    tagline: t("hero.tagline"),
-    footnote: t("hero.footnote"),
+    tagline: t.has("hero.tagline") ? t("hero.tagline") : undefined,
     cta: t("hero.cta"),
+    billingNotice: t("hero.billing_notice"),
   };
 
   const syncroSteps = [

@@ -96,15 +96,12 @@ export function BeginButton({
       case "glyph":
         return {
           main: eligibleFree ? tGlyphHero("cta") : tGlyphProduct("start_paid"),
-          sub: tGlyphHero("cta_subline"),
+          sub: null as string | null,
         };
       case "syncro":
         return { main: tSyncroHero("cta"), sub: null as string | null };
       case "match":
-        return {
-          main: eligibleFree ? tMatchHome("cta_free") : tMatchHome("cta_paid"),
-          sub: eligibleFree ? tMatchHome("free_note") : tMatchHome("paid_note"),
-        };
+        return { main: tMatchHome("cta"), sub: tMatchHome("billing_notice") };
       default:
         return { main: tBegin("start"), sub: price };
     }

@@ -1,0 +1,65 @@
+{
+  "meta": {
+    "title": "Contact — pojulife",
+    "description": "Connect with pojulife — Version 1.1",
+    "version": "Version 1.1",
+    "pageTitle": "Connect with pojulife"
+  },
+  "intro": {
+    "p1": "We monitor our communication nodes continuously. pojulife is an independent, sovereign operation—real human creators and engineers respond to your inquiries as rapidly as possible.",
+    "p2": "To help us route your request to the correct terminal and assist you faster, please choose the appropriate contact node below."
+  },
+  "footer": "Language Notice: While this interface is localized for your convenience, our core engineering and support team operates primarily in English and Chinese. You are welcome to write to us in your native language—we deploy high-fidelity AI translation matrices to process and fulfill global support tickets.",
+  "billing": {
+    "title": "1. Billing, Subscriptions & Token Support",
+    "body": "For active session issues, payment anomalies, standalone token validation, or inquiries regarding your Monthly Pass subscription:",
+    "emailLabel": "Email:",
+    "responseLabel": "Response Framework:",
+    "response": "Typically within 24 hours on standard business days.",
+    "note": "Note: If you are requesting a technical refund, please explicitly include your formal Transaction ID received from our Merchant of Record (Dodo Payments)."
+  },
+  "subscription": {
+    "title": "2. Subscription Autonomy (Self-Service)",
+    "bodyBefore": "Looking to cancel your Monthly Pass automated renewal? You do not need to wait for an email response. You can instantly revoke your next billing cycle with a single click by utilizing the",
+    "manageLink": "\"Manage Subscription\"",
+    "bodyAfter": "link inside your localized dashboard canvas."
+  },
+  "privacy": {
+    "title": "3. Data Sovereignty & Privacy Registry",
+    "body": "For cryptographic architecture questions, local cache (IndexedDB) rectification, or requests to purge your subscription email from our secure billing relay:",
+    "emailLabel": "Email:",
+    "responseLabel": "Response Framework:",
+    "response": "Typically answered within 48 hours."
+  },
+  "legal": {
+    "title": "4. Legal, Regulatory & Institutional",
+    "body": "For jurisdictional legal matters, copyright coordination, or formal physical address verification requests:",
+    "emailLabel": "Email:",
+    "responseLabel": "Response Framework:",
+    "response": "Typically answered within 5 business days."
+  },
+  "beforeWrite": {
+    "title": "💡 Before You Write to Us",
+    "body": "A substantial number of operational anomalies and feature clarifications are instantly resolved within our unified documentation stacks. We highly recommend reviewing these before dispatching an email:",
+    "terms": "Terms of Service (v1.1)",
+    "termsDesc": "Commercial engagement boundaries",
+    "privacy": "Privacy Policy (v1.1)",
+    "privacyDesc": "Local encryption & data protocols",
+    "disclaimer": "Disclaimer & Limitation of Liability (v1.1)",
+    "disclaimerDesc": "Scope of AI algorithmic reflections",
+    "refund": "Refund Policy (v1.1)",
+    "refundDesc": "Technical transaction reversal parameters"
+  },
+  "crisis": {
+    "title": "🚨 Urgent Crisis Support Protocol",
+    "body": "pojulife operates entirely on predictive, automated large language models and is fundamentally unequipped to manage psychological or medical emergencies. If you are experiencing severe emotional distress, acute anxiety, or thoughts of self-harm, please bypass our email nodes entirely and immediately connect with certified 24/7 human professionals:",
+    "usCanadaLabel": "United States & Canada:",
+    "usCanadaAction": "Call or text 988",
+    "ukLabel": "United Kingdom:",
+    "ukAction": "Call 116 123",
+    "euLabel": "European Union:",
+    "euAction": "Call 112 (or your local emergency services)",
+    "globalLabel": "Global Hub:",
+    "globalAction": "Locate immediate localized human crisis support at"
+  }
+}

@@ -214,6 +214,7 @@ function WelcomeSection({
   matchPerson: MatchPrepPerson;
   suppressMatchWelcomeCopy?: boolean;
 }) {
+  const t = useTranslations("session_prep");
   const tGlyph = useTranslations("glyph");
   const tSyncro = useTranslations("syncro");
 
@@ -236,7 +237,14 @@ function WelcomeSection({
         <p className="match-person-label">{customLabel}</p>
       ) : null}
       {!suppressMatchWelcomeCopy ? (
-        <p className="welcome-text">{getWelcomeText(locale, productType, matchPerson)}</p>
+        productType === "poju" ? (
+          <>
+            <p className="welcome-text welcome-text--lead">{t("welcome_title")}</p>
+            <p className="welcome-text">{t("welcome_desc")}</p>
+          </>
+        ) : (
+          <p className="welcome-text">{getWelcomeText(locale, productType, matchPerson)}</p>
+        )
       ) : null}
       {originalQuestion.trim() && questionLabel ? (
         <div className="your-question">

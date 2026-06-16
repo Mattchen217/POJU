@@ -127,7 +127,7 @@ function LegalBlockView({ block }: { block: LegalBlock }) {
 }
 
 type LegalDocumentBodyProps = {
-  namespace: "disclaimer" | "refund" | "terms" | "cookies";
+  namespace: "cookies";
 };
 
 export function LegalDocumentBody({ namespace }: LegalDocumentBodyProps) {

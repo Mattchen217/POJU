@@ -14,6 +14,8 @@ type Props = {
 export function GlyphPrepareCta({ className = "", variant = "hero" }: Props) {
   const router = useRouter();
   const t = useTranslations("glyph");
+  const tHero = useTranslations("marketingSite.glyph.hero");
+  const tPricing = useTranslations("marketingSite.glyph.pricing");
   const [hasUsedFree, setHasUsedFree] = useState(false);
   const [checking, setChecking] = useState(true);
   const [paidBusy, setPaidBusy] = useState(false);
@@ -76,7 +78,13 @@ export function GlyphPrepareCta({ className = "", variant = "hero" }: Props) {
       onClick={() => (hasUsedFree ? void handleStartPaid() : handleStartFree())}
       className={`${pillClass} ${className}`}
     >
-      {hasUsedFree ? (paidBusy ? t("starting_paid") : t("start_paid")) : t("start_free")}
+      {hasUsedFree
+        ? paidBusy
+          ? t("starting_paid")
+          : t("start_paid")
+        : variant === "final"
+          ? tPricing("cta")
+          : tHero("cta")}
     </button>
   );
 }

@@ -346,6 +346,66 @@
   font-size: clamp(1.05rem, 2.2vw, 1.2rem);
 }
 
+.product-hero__brand-tag {
+  margin: 0 auto 14px;
+  font-size: clamp(0.8125rem, 1.8vw, 0.9375rem);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+.product-page--poju .product-hero__brand-tag {
+  color: rgb(232 197 111 / 0.92);
+}
+
+.product-page--glyph .product-hero__brand-tag {
+  color: rgb(216 180 254 / 0.92);
+}
+
+.product-page--syncro .product-hero__brand-tag {
+  color: rgb(94 234 212 / 0.92);
+}
+
+.product-page--match .product-hero__brand-tag {
+  color: rgb(255 179 199 / 0.92);
+}
+
+.product-page--poju .product-hero__brand-tag + .ds-gradient-title,
+.product-page--glyph .product-hero__brand-tag + .ds-gradient-title,
+.product-page--syncro .product-hero__brand-tag + .ds-gradient-title,
+.product-page--match .product-hero__brand-tag + .ds-gradient-title {
+  margin-top: 0;
+}
+
+.product-page--poju .product-hero__accent-strong {
+  font-weight: 700;
+  color: rgb(232 197 111 / 0.98);
+}
+
+.product-page--glyph .product-hero__accent-strong {
+  font-weight: 700;
+  color: rgb(216 180 254 / 0.98);
+}
+
+.product-page--syncro .product-hero__accent-strong {
+  font-weight: 700;
+  color: rgb(94 234 212 / 0.98);
+}
+
+.product-page--match .product-hero__accent-strong {
+  font-weight: 700;
+  color: rgb(255 179 199 / 0.98);
+}
+
+.product-page--poju .product-hero__actions,
+.product-page--glyph .product-hero__actions,
+.product-page--syncro .product-hero__actions,
+.product-page--match .product-hero__actions {
+  margin-top: 28px;
+  gap: 10px;
+}
+
 /* 正文描述 */
 .product-hero__description {
   margin: 20px auto 0;
@@ -447,8 +507,20 @@
   max-width: 28rem;
   text-align: center;
   font-size: 13px;
-  line-height: 1.45;
-  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.product-hero__cta-subline--billing {
+  margin-top: 0.75rem;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  background: rgba(8, 10, 24, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.42);
+  text-wrap: balance;
 }
 
 .product-hero__secondary-link {

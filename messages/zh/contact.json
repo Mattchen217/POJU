@@ -1,0 +1,65 @@
+{
+  "meta": {
+    "title": "联系我们 — pojulife",
+    "description": "联系 pojulife — 版本 1.1",
+    "version": "版本 1.1",
+    "pageTitle": "联系 pojulife"
+  },
+  "intro": {
+    "p1": "我们持续监控各通信节点。pojulife 是一项独立、自主运营的项目——真实的人类创作者与工程师会尽快回复您的咨询。",
+    "p2": "为将您的请求路由至正确的处理终端并更快协助您，请选择下方对应的联系节点。"
+  },
+  "footer": "语言说明：本界面已为您本地化展示，但核心工程与支持团队主要使用英语和中文工作。您可以使用母语写信给我们——我们部署高精度 AI 翻译矩阵来处理并履行全球支持工单。",
+  "billing": {
+    "title": "1. 账单、订阅与 Token 支持",
+    "body": "适用于活跃会话问题、支付异常、单次 Token 验证，或关于 Monthly Pass 月度订阅的咨询：",
+    "emailLabel": "邮箱：",
+    "responseLabel": "响应机制：",
+    "response": "通常在工作日 24 小时内回复。",
+    "note": "说明：若您申请技术性退款，请务必附上从我们的 Merchant of Record（Dodo Payments）收到的正式 Transaction ID。"
+  },
+  "subscription": {
+    "title": "2. 订阅自主管理（自助服务）",
+    "bodyBefore": "想要取消 Monthly Pass 自动续费？无需等待邮件回复。您可在本地化仪表盘画布中，通过",
+    "manageLink": "「Manage Subscription（管理订阅）」",
+    "bodyAfter": "链接一键撤销下一计费周期。"
+  },
+  "privacy": {
+    "title": "3. 数据主权与隐私登记",
+    "body": "适用于密码学架构问题、本地缓存（IndexedDB）修正，或请求从安全账单中继中清除您的订阅邮箱：",
+    "emailLabel": "邮箱：",
+    "responseLabel": "响应机制：",
+    "response": "通常在 48 小时内回复。"
+  },
+  "legal": {
+    "title": "4. 法律、监管与机构事务",
+    "body": "适用于司法管辖法律事务、版权协调，或正式实体地址验证请求：",
+    "emailLabel": "邮箱：",
+    "responseLabel": "响应机制：",
+    "response": "通常在 5 个工作日内回复。"
+  },
+  "beforeWrite": {
+    "title": "💡 写信之前",
+    "body": "大量运营异常与功能说明可在统一文档栈中即时解决。我们强烈建议在发送邮件前先查阅以下内容：",
+    "terms": "Terms of Service（服务条款 v1.1）",
+    "termsDesc": "商业参与边界（英文正文）",
+    "privacy": "Privacy Policy（隐私政策 v1.1）",
+    "privacyDesc": "本地加密与数据协议（英文正文）",
+    "disclaimer": "Disclaimer & Limitation of Liability（免责声明 v1.1）",
+    "disclaimerDesc": "AI 算法性反思的范围（英文正文）",
+    "refund": "Refund Policy（退款政策 v1.1）",
+    "refundDesc": "技术交易撤销参数（英文正文）"
+  },
+  "crisis": {
+    "title": "🚨 紧急危机支持协议",
+    "body": "pojulife 完全基于预测性自动化大语言模型运行，根本不具备处理心理或医疗紧急事件的能力。若您正经历严重情绪困扰、急性焦虑或自伤念头，请完全绕过我们的邮件节点，立即联系经认证的全天候人工专业援助：",
+    "usCanadaLabel": "美国与加拿大：",
+    "usCanadaAction": "拨打或短信 988",
+    "ukLabel": "英国：",
+    "ukAction": "拨打 116 123",
+    "euLabel": "欧盟：",
+    "euAction": "拨打 112（或当地紧急服务号码）",
+    "globalLabel": "全球枢纽：",
+    "globalAction": "在以下地址查找即时本地化人工危机支持"
+  }
+}

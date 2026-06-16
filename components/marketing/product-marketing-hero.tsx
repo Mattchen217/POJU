@@ -101,6 +101,32 @@ export function ProductHeroTitle({
   );
 }
 
+export function ProductHeroBrandTag({ children, className }: { children: ReactNode; className?: string }) {
+  return <h3 className={cn("product-hero__brand-tag", className)}>{children}</h3>;
+}
+
+export function HeroInlineBold({ text }: { text: string }) {
+  const parts = text.split(/\*\*(.+?)\*\*/g);
+
+  return (
+    <>
+      {parts.map((part, index) =>
+        index % 2 === 1 ? (
+          <strong key={index} className="product-hero__accent-strong">
+            {part}
+          </strong>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  );
+}
+
+export function ProductHeroBillingNotice({ children, className }: { children: ReactNode; className?: string }) {
+  return <p className={cn("product-hero__cta-subline product-hero__cta-subline--billing", className)}>{children}</p>;
+}
+
 export function ProductHeroAccent({ children, className }: { children: ReactNode; className?: string }) {
   return <p className={cn("product-hero__accent", className)}>{children}</p>;
 }

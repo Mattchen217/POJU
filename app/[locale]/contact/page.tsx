@@ -1,108 +1,121 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { Link } from "@/i18n/navigation";
+import { getTranslations } from "next-intl/server";
 
-import { siteConfig } from "@/lib/config/site";
 import { LegalPageShell } from "@/components/legal/legal-page-shell";
+import { Link } from "@/i18n/navigation";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Contact — pojulife",
-  description: "Contact pojulife",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("contact.meta");
 
-function ContactContent() {
+  return {
+    title: t("title"),
+    description: t("description"),
+  };
+}
+
+async function ContactContent() {
+  const t = await getTranslations("contact");
+
   return (
-    <LegalPageShell title="Contact pojulife" maxWidth="md">
-      <p>We read every email. pojulife is a small operation — real humans respond as fast as we can.</p>
-      <hr />
-
-      <h2>Operator</h2>
-      <p>
-        pojulife is operated by <strong>Tonghui Chen</strong>, an individual developer based in the People&apos;s
-        Republic of China.
-        <br />
-        <strong>Operator contact:</strong>{" "}
-        <a href={`mailto:${siteConfig.founderEmail}`}>{siteConfig.founderEmail}</a>
-      </p>
-
-      <hr />
-
-      <h2>Support</h2>
-      <p>
-        For payments, refunds, and technical issues
-        <br />
-        <a href={`mailto:${siteConfig.supportEmail}`}>{siteConfig.supportEmail}</a>
-        <br />
-        <em>We usually reply within 24 hours on business days.</em>
-      </p>
-
-      <h2>Privacy</h2>
-      <p>
-        For data questions, CCPA/GDPR requests, and cookie preferences
-        <br />
-        <a href={`mailto:${siteConfig.privacyEmail}`}>{siteConfig.privacyEmail}</a>
-        <br />
-        <em>Privacy requests are typically answered within 48 hours.</em>
-      </p>
-
-      <h2>Legal</h2>
-      <p>
-        For legal matters, press inquiries, and physical address requests
-        <br />
-        <a href={`mailto:${siteConfig.legalEmail}`}>{siteConfig.legalEmail}</a>
-        <br />
-        <em>Legal inquiries are typically answered within 5 business days.</em>
-      </p>
-
-      <hr />
-
-      <h2>Payments</h2>
-      <p>
-        Card payments are processed by <strong>Dodo Payments</strong> as the merchant of record. pojulife does not store
-        your full payment card details.
-      </p>
-
-      <hr />
-
-      <h2>Before you write</h2>
-      <p>Many questions are answered in our:</p>
+    <LegalPageShell
+      version={t("meta.version")}
+      title={t("meta.pageTitle")}
+      intro={
+        <>
+          <p>{t("intro.p1")}</p>
+          <p>{t("intro.p2")}</p>
+        </>
+      }
+      footer={
+        <p className="legal-page__closing-note">
+          <em>{t("footer")}</em>
+        </p>
+      }
+    >
+      <h2>{t("billing.title")}</h2>
+      <p>{t("billing.body")}</p>
       <ul>
         <li>
-          <Link href="/privacy">Privacy Policy</Link> — How we handle your data
+          <strong>{t("billing.emailLabel")}</strong>{" "}
+          <a href="mailto:support@pojulife.com">support@pojulife.com</a>
         </li>
         <li>
-          <Link href="/terms">Terms of Service</Link> — What you agree to
+          <strong>{t("billing.responseLabel")}</strong> {t("billing.response")}
+        </li>
+      </ul>
+      <p>
+        <em>{t("billing.note")}</em>
+      </p>
+
+      <h2>{t("subscription.title")}</h2>
+      <p>
+        {t("subscription.bodyBefore")} <strong>{t("subscription.manageLink")}</strong>{" "}
+        {t("subscription.bodyAfter")}
+      </p>
+
+      <h2>{t("privacy.title")}</h2>
+      <p>{t("privacy.body")}</p>
+      <ul>
+        <li>
+          <strong>{t("privacy.emailLabel")}</strong>{" "}
+          <a href="mailto:privacy@pojulife.com">privacy@pojulife.com</a>
         </li>
         <li>
-          <Link href="/disclaimer">Disclaimer</Link> — What pojulife is and isn&apos;t
-        </li>
-        <li>
-          <Link href="/refund">Refund Policy</Link> — When refunds apply
-        </li>
-        <li>
-          <Link href="/cookies">Cookie Policy</Link> — How we use cookies
+          <strong>{t("privacy.responseLabel")}</strong> {t("privacy.response")}
         </li>
       </ul>
 
-      <hr />
+      <h2>{t("legal.title")}</h2>
+      <p>{t("legal.body")}</p>
+      <ul>
+        <li>
+          <strong>{t("legal.emailLabel")}</strong>{" "}
+          <a href="mailto:legal@pojulife.com">legal@pojulife.com</a>
+        </li>
+        <li>
+          <strong>{t("legal.responseLabel")}</strong> {t("legal.response")}
+        </li>
+      </ul>
 
-      <h2>Crisis support</h2>
-      <p>If you&apos;re in crisis or considering harm to yourself:</p>
-      <p>
-        <strong>United States</strong>: Call or text 988 — available 24/7
-        <br />
-        <strong>Worldwide</strong>:{" "}
-        <a href="https://findahelpline.com" rel="noopener noreferrer" target="_blank">
-          findahelpline.com
-        </a>
-      </p>
-      <p>pojulife is not equipped to help with mental health crises. Please reach out to someone trained for this.</p>
+      <h2>{t("beforeWrite.title")}</h2>
+      <p>{t("beforeWrite.body")}</p>
+      <ul>
+        <li>
+          <Link href="/terms">{t("beforeWrite.terms")}</Link> — {t("beforeWrite.termsDesc")}
+        </li>
+        <li>
+          <Link href="/privacy">{t("beforeWrite.privacy")}</Link> — {t("beforeWrite.privacyDesc")}
+        </li>
+        <li>
+          <Link href="/disclaimer">{t("beforeWrite.disclaimer")}</Link> — {t("beforeWrite.disclaimerDesc")}
+        </li>
+        <li>
+          <Link href="/refund">{t("beforeWrite.refund")}</Link> — {t("beforeWrite.refundDesc")}
+        </li>
+      </ul>
 
-      <hr />
-
-      <p className="legal-prose__closing">We read every message.</p>
+      <h2>{t("crisis.title")}</h2>
+      <p>{t("crisis.body")}</p>
+      <ul>
+        <li>
+          <strong>{t("crisis.usCanadaLabel")}</strong> {t("crisis.usCanadaAction")}
+        </li>
+        <li>
+          <strong>{t("crisis.ukLabel")}</strong> {t("crisis.ukAction")}
+        </li>
+        <li>
+          <strong>{t("crisis.euLabel")}</strong> {t("crisis.euAction")}
+        </li>
+        <li>
+          <strong>{t("crisis.globalLabel")}</strong> {t("crisis.globalAction")}{" "}
+          <a href="https://findahelpline.com" rel="noopener noreferrer" target="_blank">
+            https://findahelpline.com
+          </a>
+        </li>
+      </ul>
     </LegalPageShell>
   );
 }

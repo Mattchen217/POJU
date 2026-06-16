@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import {
   Award,
   Briefcase,
@@ -27,7 +26,7 @@ import {
 import { DsMatchUseCard } from "@/components/ds/marketing/DsProductFlows";
 import { MatchHowWorksSection } from "@/components/match/MatchHowWorksSection";
 import { ProductPricingSection } from "@/components/marketing/product-pricing-section";
-import { NotPWA, PWAOnly } from "@/components/pwa/PWAConditional";
+import { NotPWA } from "@/components/pwa/PWAConditional";
 import { AppModeDesktopHint } from "@/components/pwa/AppModeDesktopHint";
 import { AppModeHeroActions } from "@/components/pwa/AppModeHeroActions";
 import { AppModeProductTopBar } from "@/components/pwa/AppModeProductTopBar";
@@ -37,11 +36,11 @@ import {
   MarketingPageSections,
 } from "@/components/marketing/marketing-page-layout";
 import {
-  ProductHeroAccent,
   ProductHeroActions,
+  ProductHeroBillingNotice,
+  ProductHeroBrandTag,
   ProductHeroContent,
   ProductHeroDescription,
-  ProductHeroMeta,
   ProductMarketingHero,
 } from "@/components/marketing/product-marketing-hero";
 import { ProductWhatIsSection } from "@/components/marketing/product-what-is-section";
@@ -49,7 +48,6 @@ import { MatchSplineScene } from "@/components/match/MatchSplineScene";
 import { PojuToolHandoffBanner } from "@/components/poju/PojuToolHandoffBanner";
 import { useRouter } from "@/i18n/navigation";
 import { usePojuToolHandoff } from "@/lib/poju/use-poju-tool-handoff";
-import { isFirstTimeFree } from "@/lib/syncro/device-usage";
 
 const FEATURE_KEYS = [
   "feature_two_charts_title",
@@ -95,37 +93,17 @@ const MATCH_CTA_CLASS =
 export function MatchHomePage() {
   const router = useRouter();
   const t = useTranslations("match.home");
-  const tLoading = useTranslations("match");
 
   const pojuHandoff = usePojuToolHandoff("match");
-  const [canFree, setCanFree] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    void isFirstTimeFree("match").then(setCanFree);
-  }, []);
 
   function handleStart() {
-    if (canFree === null && !pojuHandoff?.quota_free) return;
-    const useFree = pojuHandoff?.quota_free || canFree === true;
+    const useFree = Boolean(pojuHandoff?.quota_free);
     sessionStorage.setItem("match_session_type", useFree ? "free" : "paid");
     if (pojuHandoff?.prefill.partner_relationship) {
       sessionStorage.setItem("match_relationship_prefill", pojuHandoff.prefill.partner_relationship);
     }
     router.push(useFree ? "/match/select-a" : "/match/payment");
   }
-
-  const effectiveFree = pojuHandoff?.quota_free || canFree === true;
-
-  if (canFree === null && !pojuHandoff) {
-    return (
-      <main className="match-home match-home--loading">
-        <p>{tLoading("loading")}</p>
-      </main>
-    );
-  }
-
-  const ctaLabel = effectiveFree ? t("cta_free") : t("cta_paid");
-  const heroNote = effectiveFree ? t("free_note") : t("paid_note");
 
   return (
     <MarketingPageLayout theme="match" className="match-home">
@@ -144,20 +122,17 @@ export function MatchHomePage() {
           background={<MatchSplineScene variant="hero" className="match-hero-spline" pointerFollow={false} />}
         >
           <ProductHeroContent>
-            <DsGradientTitle from="#ff6b9d" to="#ffb3c7" spaced>
-              Match
+            <ProductHeroBrandTag>{t("brand_tag")}</ProductHeroBrandTag>
+            <DsGradientTitle from="#ff6b9d" to="#ffb3c7">
+              {t("heading")}
             </DsGradientTitle>
-            <ProductHeroAccent>{t("tagline")}</ProductHeroAccent>
             <ProductHeroDescription>{t("description")}</ProductHeroDescription>
-            <PWAOnly>
-              <ProductHeroMeta bright>{t("free_note")}</ProductHeroMeta>
-            </PWAOnly>
             <ProductHeroActions>
               <NotPWA>
                 <button type="button" onClick={handleStart} className={MATCH_CTA_CLASS}>
-                  {ctaLabel}
+                  {t("cta")}
                 </button>
-                <p className="product-hero__actions-note">{heroNote}</p>
+                <ProductHeroBillingNotice>{t("billing_notice")}</ProductHeroBillingNotice>
               </NotPWA>
               <AppModeHeroActions productId="match" price="$4.99" />
             </ProductHeroActions>
@@ -243,7 +218,7 @@ export function MatchHomePage() {
               </DsMutedCard>
             </div>
             <p className="mx-auto mt-8 max-w-xl text-center text-[17px] text-white">
-              {effectiveFree ? t("first_free_emphasized") : heroNote}
+              {t("billing_notice")}
             </p>
           </DsBand>
 
@@ -261,7 +236,7 @@ export function MatchHomePage() {
 
           <ProductPricingSection
             product="match"
-            matchCtaLabel={ctaLabel}
+            matchCtaLabel={t("cta")}
             onMatchStart={handleStart}
           />
         </NotPWA>

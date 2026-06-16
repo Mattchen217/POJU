@@ -37,13 +37,17 @@
     "hero": {
       "brand": "pojulife",
       "headline": "Break through what won't let you go.",
-      "descLine1": "Two thousand years of Eastern frameworks.",
-      "descLine2": "Reframed by modern research.",
-      "descLine3": "Translated by AI — for you, today.",
-      "trustLine": "No account · No subscription · Decisions are yours alone"
+      "descLine1": "Three thousand years of Eastern time-space frameworks.",
+      "descLine2": "Reframed by cognitive psychology.",
+      "descLine3": "Synthesized by generative intelligence — for your clarity, today.",
+      "trustLine": "No cloud accounts · Decentralized privacy · Pay-per-use or Monthly Pass",
+      "ctaInstall": "Install desktop app for a better experience",
+      "ctaAddDesktop": "Add to desktop for a better experience",
+      "ctaInstallApp": "Install app for a better experience"
     },
     "fourWays": {
-      "heading": "Four ways in. One way through."
+      "heading": "Four Specialized Engines. Aligned by Need.",
+      "subtitle": "Tailored analytical dimensions for distinct situational challenges. From long-term transitions and instant resonance to spatial-temporal routing and dual-matrix synergy — precisely calibrated to your immediate context."
     },
     "cta": {
       "startSession": "Start a POJU session · $9.99",
@@ -65,34 +69,33 @@
       "youBody": "Your birth context, moment, and question."
     },
     "built": {
-      "heading": "What we built. Why it works.",
-      "intro": "Two thousand years of human reflection on the questions that matter, examined through modern research, made accessible through AI. All for one purpose: helping you see what you couldn't see alone.",
+      "heading": "Our Methodology. Why It Works.",
+      "intro": "Three millennia of structural human philosophy, calibrated by contemporary interdisciplinary research and translated through an advanced language engine. Designed to empower your core decisions and illuminate cognitive blind spots you cannot navigate alone.",
       "easternTitle": "Eastern Frameworks",
-      "easternBody": "For two thousand years, Eastern philosophical traditions have examined the questions humans keep asking — about decision, direction, and the patterns that shape a life.\n\nCareer. Love. Direction. Doubt.\n\nThese traditions help you think through choices and decisions. They were frameworks for thinking — refined over eighty generations of human experience.",
+      "easternBody": "For three thousand years, Eastern philosophical traditions have examined time cycles and systemic balance—dissecting choices, direction, and the intrinsic patterns that shape human behavior.\n\nAlignment · Momentum · Reframing · Clarity\n\nThese ancient traditions are engineered to help you untangle inner logic and evolutionary paths. They are highly structured cognitive models, iterated over dozens of generations.",
       "modernTitle": "Modern Research",
-      "modernBody": "What ancient observation noticed, modern research is beginning to measure.\n\nCognitive science on how we frame decisions. Spatial psychology on attention. Circadian biology on natural rhythm. Behavioral economics on cognitive bias.\n\nThe frameworks that worked for millennia, now examined through contemporary research.",
-      "aiTitle": "AI Translation",
-      "aiBody": "We took the frameworks these traditions developed. We added what modern research has examined. We gave it to AI — to respond to your specific question, in your specific moment.\n\nNot to replace your judgment. To return the conversation to you.\n\nThese tools are designed for self-reflection and personal exploration — for reference only, not a substitute for professional diagnosis or advice.",
-      "closingHeading": "This is what pojulife is for.",
-      "closingBody": "The questions that matter, met with the depth they deserve — across two millennia of human reflection, the rigor of modern research, and the immediacy of AI."
+      "modernBody": "The empirical regularities observed by ancient traditions are now finding their validation and measurement through the lens of modern science.\n\nCognitive science in decision framing. Archetypal psychology in spatial awareness. Chronobiology in natural circadian rhythms. Behavioral economics in cognitive biases.\n\nA millennial-tested conceptual framework, now re-examined and verified under the rigor of contemporary research.",
+      "aiTitle": "Algorithmic Translation",
+      "aiBody": "We harvest the structural data inherent in these ancient calendar systems, cross-reference them with contemporary behavioral insights, and utilize an advanced language engine to translate them into clear, contextual feedback tailored to your unique inquiries.\n\nNot to replace your judgment. To return the cognitive agency back to you.\n\nThese tools are engineered exclusively for self-reflection and personal growth exploration — offering thematic frameworks for reference only, never as a substitute for professional diagnosis or deterministic forecasting.",
+      "closingHeading": "This is the core essence of pojulife.",
+      "closingBody": "The essential questions of life deserve nothing less than three thousand years of philosophical reflection, the empirical rigor of modern science, and the precision of a personalized linguistic engine."
     },
     "promises": {
-      "heading": "What we promise. What we won't do.",
-      "neverStoredTitle": "Never stored",
-      "neverStoredP1": "Your conversations stay encrypted on your device. Not on our servers. Not in our database.",
-      "neverStoredP2": "Even if we wanted to read them, we couldn't. Even if we were breached, there's nothing to leak.",
-      "neverStoredP3": "Your words stay yours.",
-      "neverRequiredTitle": "Never required",
-      "neverRequiredP1": "No account. No login. No password.",
-      "neverRequiredP2": "We ask for your email in two situations only: when you choose to purchase, or when you request a PDF of your reading.",
-      "neverRequiredP3": "In both cases, we send what you asked for — nothing more. No marketing. No newsletters. No drip campaigns. No third-party sharing.",
-      "neverRequiredP4": "Your inbox stays yours.",
-      "neverManipulativeTitle": "Never manipulative",
-      "neverManipulativeP1": "No subscriptions. No auto-renewals. No hidden fees. No upsells. No dark patterns.",
-      "neverManipulativeP2": "Each use is a single, transparent choice. Free tools are clearly marked. Paid tools are clearly priced — once, when you decide to use them.",
-      "neverManipulativeP3": "That's the entire business.",
-      "dataLine": "We're not a company that sells data because we don't collect data.",
-      "readMore": "Read the full privacy architecture →"
+      "heading": "Our Guarantees. Decentralized Sovereignty.",
+      "subtitle": "We do not monetize your history, because our system is engineered to never collect it.",
+      "card1": {
+        "title": "Zero Central Storage",
+        "content": "Complete localization. All inputs and interactions are securely encrypted and retained strictly within your local browser storage. We run no centralized servers to harvest privacy and host no databases tracking your inputs. Your narrative stays entirely yours."
+      },
+      "card2": {
+        "title": "Zero Friction",
+        "content": "No account registration, no password walls. We delay and strictly limit email requests to only two transparent use cases: 1) Secure gateway routing handled by our payment processor for receipt delivery, or 2) Voluntary sign-up to claim your monthly complimentary ecosystem vouchers. Your inbox stays yours."
+      },
+      "card3": {
+        "title": "Absolute Transparency",
+        "content": "No deceptive dark patterns. Beyond explicit pay-per-use billing, we offer a high-value voluntary Monthly Pass subscription ($29.99/mo delivering an ecosystem voucher package worth $125). Zero hidden checkouts, absolute single-click cancellation anytime."
+      },
+      "readMore": "Read Complete Privacy Architecture →"
     },
     "finalCta": {
       "heading": "When the question won't let you go.",
@@ -122,65 +125,61 @@
     "products": {
       "poju": {
         "name": "POJU",
-        "line1": "For the question that won't let you go.",
-        "line2": "A 30-day deep conversation that walks with you until you see your way through.",
+        "line1": "Navigating specific transitions. 30 days of immersive, interactive deep coaching to deliver clear, actionable strategies that guide you through cognitive blind spots.",
+        "line2": "",
         "badge": "$9.99",
-        "cta": "Try POJU →"
+        "cta": "Go to POJU →"
       },
       "glyph": {
         "name": "Glyph",
-        "line1": "A pocket-sized mirror for your moment.",
-        "line2": "Hold a question. Draw a pattern. Read what comes back. 60 seconds.",
-        "badge": "Free first · then $4.99",
-        "cta": "Try Glyph free →"
+        "line1": "Intent anchoring and archetypal resonance. Grounded in classical 100-image symbolic frameworks, draw a signature matrix card via randomized digital particle dynamics, allowing Glyph to deeply deconstruct your core themes.",
+        "line2": "",
+        "badge": "$4.99",
+        "cta": "Go to Glyph →"
       },
       "syncro": {
         "name": "Syncro",
-        "line1": "See your natural rhythms unfold.",
-        "line2": "Eight directions, twelve hour-periods. A 24-hour live companion.",
-        "badge": "Free first · then $4.99",
-        "cta": "Try Syncro free →"
+        "line1": "24-hour dynamic spatial-temporal decision matrix. Tailored to a specific upcoming action, evaluating environmental tailwinds and potential friction across 8 directions over the next 12 cycles.",
+        "line2": "",
+        "badge": "$4.99",
+        "cta": "Go to Syncro →"
       },
       "match": {
         "name": "Match",
-        "line1": "Two charts. One relationship.",
-        "line2": "See how your energies align — and what to do about it.",
-        "badge": "Free first · then $4.99",
-        "cta": "Try Match free →"
+        "line1": "Dual-matrix synergistic network. Independently mapping two distinct temporal profiles to thoroughly evaluate structural alignment, friction points, and collective compatibility regarding specific milestones.",
+        "line2": "",
+        "badge": "$4.99",
+        "cta": "Go to Match →"
       }
     },
     "meetsMoment": {
-      "heading": "When pojulife meets your moment.",
-      "subtitle": "Real situations where pojulife helps you see clearly.",
+      "heading": "When Insight Meets Concrete Contexts.",
+      "subtitle": "Unfolding a holistic perspective at your real-world turning points.",
       "card1": {
-        "p1": "You're stuck between two paths.",
-        "p2": "Career change. Relationship decision. Where to live.",
-        "p3": "You've thought about it. Now think differently.",
-        "cta": "Try POJU"
+        "title": "Standing at a Critical Crossroads",
+        "text": "Career transitions, core relationship directions, or strategic relocations. After endless deliberation, POJU shifts your cognitive coordinates to see a way forward.",
+        "cta": "Go to POJU →"
       },
       "card2": {
-        "p1": "You need a fresh angle on what's circling.",
-        "p2": "Something feels off. You're not sure what.",
-        "p3": "Glyph holds up a mirror — read what comes back.",
-        "cta": "Try Glyph"
+        "title": "Navigating Lingering Uncertainties",
+        "text": "Facing an unnamable complexity. Feeling that implicit underlying forces are at play but unable to pinpoint them. Let Glyph act as your archetypal mirror to decode structural signals below the surface.",
+        "cta": "Go to Glyph →"
       },
       "card3": {
-        "p1": "You want to know your own rhythm.",
-        "p2": "When do you have momentum? When does friction arrive?",
-        "p3": "Syncro maps it, updated every two hours.",
-        "cta": "Try Syncro"
+        "title": "Syncing with Your Spatial-Temporal Pulse",
+        "text": "Seeking precision over your actionable rhythm. When to push forward for breakthroughs? When to preserve energy and mitigate friction? Syncro dynamically maps the environment over the next 24 hours.",
+        "cta": "Go to Syncro →"
       },
       "card4": {
-        "p1": "You're considering a partnership or commitment.",
-        "p2": "Marriage. Business. A team hire.",
-        "p3": "See how two energetic patterns interact before you make the call.",
-        "cta": "Try Match"
+        "title": "Evaluating Commitments or Strategic Alliances",
+        "text": "Whether establishing a lifelong personal partnership, a commercial joint venture, or locking in a key organizational structure. Clarify systemic synergy before the final signature.",
+        "cta": "Go to Match →"
       }
     }
   },
   "legal": {
-    "lastUpdated": "Last updated: October 30, 2025",
-    "version": "Version 1.0"
+    "lastUpdated": "Last updated: 2026-06-15",
+    "version": "Version 1.1"
   },
   "marketingSite": {
     "common": {
@@ -267,11 +266,12 @@
     },
     "poju": {
       "hero": {
+        "brand_tag": "POJU",
         "heading": "Sometimes reading isn't enough.",
-        "description": "You've already read the books, talked to the friends, and weighed the pros and cons. The question still won't let you go.",
-        "tagline": "POJU is what comes after thinking alone.",
-        "cta_primary": "Start your session — $9.99",
-        "cta_secondary": "See how it works ↓"
+        "description": "You have read the books, consulted friends, and mapped out every pros-and-cons matrix. Yet, the core dilemma refuses to release its grip.",
+        "tagline": "**POJU** is an analytical conversational space engineered for what comes after thinking alone.",
+        "cta_primary": "Initialize Deep Session",
+        "billing_notice": "$9.99 / session or executable via Monthly Pass tokens"
       },
       "what_is": {
         "title": "What is POJU?",
@@ -360,28 +360,27 @@
       },
       "pricing": {
         "heading": "Pricing",
-        "body": "One focused question unlocks a 30-day coaching window — not a subscription. Pay once per session ($9.99), return anytime within 30 days to log updates and refine your strategy. No auto-renewal. No hidden fees.",
+        "body": "Transparent architectural value designed for your decision velocity. A single strategic inquiry unlocks a 30-day evolutionary coaching window for $9.99—or is fully covered via your Monthly Pass tokens. Return anytime within the 30-day horizon to log updates, refine your execution, and iterate with absolute privacy.",
         "price": "$9.99",
-        "price_unit": "per 30-day session",
+        "price_unit": "per 30-day strategic session · Monthly Pass eligible",
         "features_heading": "What's included",
         "features": [
-          "Unlimited depth in a single session",
-          "Action plan you can act on tomorrow",
-          "Reflection prompts to sit with",
-          "30-day session access"
+          "Unlimited analytical depth within your chosen inquiry matrix",
+          "A highly structured, immediately actionable execution roadmap",
+          "Tailored reflective prompts designed to break cognitive bottlenecks",
+          "30-day persistent session access secured entirely within your local sandbox"
         ],
-        "cta": "Start a POJU session — $9.99",
-        "footnote": "One question · Unlimited depth · Deletes when you close"
+        "cta": "Initialize Your Strategic Session",
+        "footnote": "One core inquiry · Unlimited systemic depth · Encrypted locally inside your browser sandbox"
       }
     },
     "glyph": {
       "hero": {
-        "heading": "Glyph",
-        "subtitle": "A pocket-sized mirror.",
-        "description": "Hold a question. Draw a pattern. Read a reflection.",
-        "footnote": "First reading free. After that, $4.99 each.",
-        "cta": "Try Glyph free",
-        "cta_subline": "First free · then $4.99 per reading"
+        "brand_tag": "Glyph",
+        "heading": "A portable mirror for your intuition and subconscious chaos.",
+        "description": "Anchor your inquiry. Draw a symbol. Decode the resonance.",
+        "cta": "Cast Your First Glyph",
+        "billing_notice": "$4.99 / reading or via Monthly Pass (Complimentary trial voucher available for new arrivals)"
       },
       "what_is": {
         "title": "What is Glyph?",
@@ -471,28 +470,28 @@
       },
       "pricing": {
         "heading": "Pricing",
-        "body": "Your first Glyph reading is free. We want you to experience the tool with no commitment. After that, each reading is $4.99 — a single transparent purchase. No subscription. No auto-renewal. No hidden fees.",
+        "body": "Transparent architecture built for your financial autonomy. Each standalone Glyph session is $4.99—or completely covered via your Monthly Pass entitlements. New arrivals can claim a complimentary voucher to cast their first deep inquiry with zero upfront commitment.",
         "price": "$4.99",
-        "price_unit": "per reading · first reading free",
+        "price_unit": "per single reading · voucher options available",
         "features_heading": "What's included",
         "features": [
-          "One question per reading session",
-          "Archetypal pattern drawn via immersive particle interface",
-          "Deep reflection connecting metaphor to your profile",
-          "On-screen delivery with optional PDF to your email"
+          "Deep exploration of a single focused inquiry matrix",
+          "Archetypal pattern generated via immersive particle interface",
+          "Comprehensive cognitive reflection mapped to your profile data",
+          "Instant local secure delivery, fully preserved within your browser sandbox"
         ],
-        "cta": "Try Glyph free",
-        "footnote": "Read with a wink. The patterns mirror what's happening."
+        "cta": "Cast Your First Glyph",
+        "footnote": "Decentralized data custody, upholding your absolute privacy sovereignty."
       }
     },
     "syncro": {
       "hero": {
-        "heading": "Syncro",
-        "subtitle": "See your natural rhythms.",
-        "description": "Based on your personality profile, Syncro reflects how each 2-hour period and 8 directions align with your energy. Where to lean in. Where to slow down.",
-        "tagline": "A live companion for the next 24 hours.",
-        "footnote": "First Syncro free. After that, $4.99 per 24-hour window. Opens on mobile only.",
-        "cta": "Open Syncro",
+        "brand_tag": "Syncro",
+        "heading": "Map your spatiotemporal rhythms in real-time.",
+        "description": "Based on your cognitive profile, Syncro models how each 2-hour chronobiological window and 8-directional vector interact with your behavioral momentum. Know precisely when to execute at peak velocity, when to internalize, and where to anchor your focus.",
+        "tagline": "A live dynamic companion for your next 24-hour cycle.",
+        "cta": "Activate 24-Hour Synchronization",
+        "billing_notice": "$4.99 per 24-hour matrix loop · Fully covered via Monthly Pass tokens · Mobile optimized",
         "qr_label": "pojulife.com/syncro",
         "sms_label": "Text yourself the link",
         "sms_button": "Text me the link",
@@ -591,17 +590,18 @@
       },
       "pricing": {
         "heading": "Pricing",
-        "body": "Your first Syncro is free. We want you to feel how spatial reflection works with no commitment. After that, $4.99 unlocks a 24-hour live window — guidance updating every two hours for one specific task. No subscription. No auto-renewal.",
+        "body": "Sovereign spatiotemporal alignment engineered for your daily execution velocity. A single 24-hour Syncro loop is $4.99—or seamlessly executed via your Monthly Pass entitlements. Align your execution vectors with your natural cognitive momentum in real-time.",
         "price": "$4.99",
-        "price_unit": "per 24-hour window · first Syncro free",
+        "price_unit": "per 24-hour synchronization window · Monthly Pass eligible",
         "features_heading": "What's included",
         "features": [
-          "24-hour live guidance for one specific task",
-          "Updates every two hours based on your energy map",
-          "Eight-direction spatial reflection on mobile",
-          "Personalized to your personality profile"
+          "24-hour high-frequency guidance loop optimized for a targeted strategic directive",
+          "Dynamic updates computed every two hours, calibrated precisely to your chronobiological rhythm",
+          "Full 8-vector spatiotemporal alignment model architected natively for mobile",
+          "Deep systemic calibration mapped to your core personalized cognitive profile"
         ],
-        "cta": "Open Syncro on mobile"
+        "cta": "Initialize Mobile Spatiotemporal Synchronization",
+        "footnote": "Real-time loop · Adaptive chronobiological telemetry · Optimized for on-the-go execution"
       },
       "pwa_guide": {
         "title": "Install Syncro on your phone",
@@ -1090,6 +1090,8 @@
     "loading": "Loading…",
     "preparing": "Preparing your chart…",
     "preparing_done": "Opening your session…",
+    "welcome_title": "Welcome to POJU.",
+    "welcome_desc": "POJU is your thinking partner for navigating life's complex transitions — integrating actionable strategic wisdom from the timeless traditions of the I-Ching and the balancing principles of the Five Elements. To calibrate your personal energy matrix, please provide your foundational timing metrics below.",
     "list_title": "Choose Your Foundation",
     "list_description": "Select a saved profile, or add new birth information.",
     "add_new_person": "Add new person",
@@ -1532,12 +1534,11 @@
     },
     "loading": "Loading…",
     "home": {
-      "tagline": "Two charts. One relationship. Real clarity.",
-      "description": "Match weaves both personality profiles together — yours and theirs — to reveal how your energies align, where you support each other, where you collide, and what to do about it.",
-      "cta_free": "Run a free Match",
-      "cta_paid": "Start a Match — $4.99",
-      "free_note": "First Match free. After that, $4.99 per reading.",
-      "paid_note": "One reading. Complete report. 5 sections.",
+      "brand_tag": "Match",
+      "heading": "Dual Profiles. One Shared Orbit. Total Relational Architecture.",
+      "description": "Match maps two independent cognitive frameworks into a single unified matrix. Decode exactly how your behavioral vectors intersect—revealing structural alignment, systemic friction, and precise, actionable pathways toward co-evolution.",
+      "cta": "Initialize Match Alignment",
+      "billing_notice": "$4.99 per single alignment · Fully covered via your Monthly Pass tokens",
       "what_is": {
         "title": "What is Match?",
         "subtitle": "The Relational Matrix",
@@ -1592,18 +1593,19 @@
       "first_free_emphasized": "Your first Match is free. No card required.",
       "pricing": {
         "heading": "Pricing",
-        "body": "Your first Match is free — no card required. We want you to experience the full report before you pay. After that, each complete reading is $4.99. One purchase, one report. No subscription. No auto-renewal.",
+        "body": "Transparent, sovereign value engineered for relational analysis. Each comprehensive Match synchronization is $4.99—or fully unlocked via your Monthly Pass entitlements. Map your behavioral orbits and decode joint dynamics with absolute data privacy.",
         "price": "$4.99",
-        "price_unit": "per complete reading · first Match free",
+        "price_unit": "per complete synchronization · Monthly Pass eligible",
         "features_heading": "What's included",
         "features": [
-          "Full personality profile analysis of both people",
-          "Energy structure & relational dynamics interaction map",
-          "Compatibility tier with reasoning",
-          "4–6 actionable recommendations",
-          "Saved to Archive — return anytime"
+          "Complete cognitive & personality matrix analysis for both profiles",
+          "Behavioral vector & relational dynamics interaction mapping",
+          "Structural alignment grading with deep algorithmic reasoning",
+          "4–6 immediately actionable, systemic recommendations for co-evolution",
+          "Permanently secured within your local browser sandbox archive"
         ],
-        "footnote": "One reading. Complete report. 5 sections."
+        "cta": "Initialize Match Alignment",
+        "footnote": "Comprehensive report · 5 analytical sections · Preserved under local hardware sovereignty"
       },
       "faq_title": "Common questions",
       "faq_q1": "What if I don't know the other person's birth time?",

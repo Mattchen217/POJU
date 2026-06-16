@@ -4,21 +4,23 @@ import { NotPWA } from "@/components/pwa/PWAConditional";
 import { AppModeHeroActions } from "@/components/pwa/AppModeHeroActions";
 import { DsGradientTitle } from "@/components/ds/primitives";
 import {
+  HeroInlineBold,
   ProductHeroAccent,
   ProductHeroActions,
+  ProductHeroBillingNotice,
+  ProductHeroBrandTag,
   ProductHeroContent,
   ProductHeroDescription,
-  ProductHeroMeta,
   ProductMarketingHero,
 } from "@/components/marketing/product-marketing-hero";
 
 export type SyncroProductHeroCopy = {
+  brandTag: string;
   heading: string;
-  subtitle: string;
   description: string;
-  tagline: string;
-  footnote: string;
+  tagline?: string;
   cta: string;
+  billingNotice: string;
 };
 
 export function SyncroProductHero({ copy }: { copy: SyncroProductHeroCopy }) {
@@ -30,13 +32,16 @@ export function SyncroProductHero({ copy }: { copy: SyncroProductHeroCopy }) {
       }
     >
       <ProductHeroContent>
-        <DsGradientTitle from="#5eead4" to="#22d3ee" spaced>
+        <ProductHeroBrandTag>{copy.brandTag}</ProductHeroBrandTag>
+        <DsGradientTitle from="#5eead4" to="#22d3ee">
           {copy.heading}
         </DsGradientTitle>
-        <ProductHeroAccent>{copy.subtitle}</ProductHeroAccent>
         <ProductHeroDescription>{copy.description}</ProductHeroDescription>
-        <ProductHeroMeta bold>{copy.tagline}</ProductHeroMeta>
-        <ProductHeroMeta>{copy.footnote}</ProductHeroMeta>
+        {copy.tagline ? (
+          <ProductHeroAccent>
+            <HeroInlineBold text={copy.tagline} />
+          </ProductHeroAccent>
+        ) : null}
         <ProductHeroActions>
           <NotPWA>
             <SyncroPwaInstallTrigger
@@ -45,6 +50,7 @@ export function SyncroProductHero({ copy }: { copy: SyncroProductHeroCopy }) {
             >
               {copy.cta}
             </SyncroPwaInstallTrigger>
+            {copy.billingNotice ? <ProductHeroBillingNotice>{copy.billingNotice}</ProductHeroBillingNotice> : null}
           </NotPWA>
           <AppModeHeroActions productId="syncro" price="$4.99" />
         </ProductHeroActions>

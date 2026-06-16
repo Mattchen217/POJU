@@ -8,5 +8,5 @@ export const siteConfig = {
   privacyEmail: "privacy@pojulife.com",
   legalEmail: "legal@pojulife.com",
   founderEmail: "founder@pojulife.com",
-  disclaimerVersion: "v1",
+  disclaimerVersion: "v1.1",
 } as const;

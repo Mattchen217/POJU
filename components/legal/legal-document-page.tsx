@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { LegalDocumentBody } from "@/components/legal/legal-document-body";
 import { LegalPageShell } from "@/components/legal/legal-page-shell";
 
-type LegalNamespace = "disclaimer" | "refund" | "terms" | "cookies";
+type LegalNamespace = "cookies";
 
 type LegalDocumentPageProps = {
   namespace: LegalNamespace;

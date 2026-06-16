@@ -68,8 +68,8 @@ function DsHomeProductCard({ card }: { card: ProductCardData }) {
           </span>
         </span>
         <span className="ds-product-card__lines">
-          <span>{card.line1}</span>
-          <span>{card.line2}</span>
+          {card.line1 ? <span>{card.line1}</span> : null}
+          {card.line2 ? <span>{card.line2}</span> : null}
         </span>
         <span className="ds-product-card__cta">{card.cta}</span>
       </span>
@@ -115,13 +115,15 @@ function DsScenarioCard({
   href,
   imageSrc,
   accent,
-  lines,
+  title,
+  text,
   cta,
 }: {
   href: string;
   imageSrc: string;
   accent: "violet" | "magenta" | "blue" | "fuchsia";
-  lines: string[];
+  title: string;
+  text: string;
   cta: string;
 }) {
   return (
@@ -136,14 +138,9 @@ function DsScenarioCard({
         />
       </div>
       <div className={`ds-scenario-card__body ds-scenario-card__body--${accent}`}>
-        {lines.map((line) => (
-          <p key={line} className="m-0 text-base leading-relaxed">
-            {line}
-          </p>
-        ))}
-        <p className="m-0 mt-3 text-[17px] font-semibold transition-transform duration-300 group-hover:translate-x-1">
-          → {cta}
-        </p>
+        <p className="ds-scenario-card__title">{title}</p>
+        <p className="ds-scenario-card__text">{text}</p>
+        <p className="ds-scenario-card__cta">{cta}</p>
       </div>
     </Link>
   );
@@ -183,7 +180,7 @@ export type DsHomeCopy = {
     descLines: [string, string, string];
     trustLine: string;
   };
-  fourWays: { heading: string };
+  fourWays: { heading: string; subtitle: string };
   products: ProductCardData[];
   built: {
     heading: string;
@@ -200,17 +197,12 @@ export type DsHomeCopy = {
   meetsMoment: {
     heading: string;
     subtitle: string;
-    cards: { href: string; imageSrc: string; accent: "violet" | "magenta" | "blue" | "fuchsia"; lines: string[]; cta: string }[];
+    cards: { href: string; imageSrc: string; accent: "violet" | "magenta" | "blue" | "fuchsia"; title: string; text: string; cta: string }[];
   };
   promises: {
     heading: string;
-    neverStoredTitle: string;
-    neverStoredParas: string[];
-    neverRequiredTitle: string;
-    neverRequiredParas: string[];
-    neverManipulativeTitle: string;
-    neverManipulativeParas: string[];
-    dataLine: string;
+    subtitle: string;
+    cards: { title: string; content: string }[];
     readMore: string;
   };
   finalCta: {
@@ -273,6 +265,7 @@ export function DsHomePage({ copy }: { copy: DsHomeCopy }) {
       <DsPageStack variant="home">
         <DsBand>
           <DsSectionHeading>{copy.fourWays.heading}</DsSectionHeading>
+          <p className="mx-auto mt-5 max-w-2xl text-center text-lg text-white/90">{copy.fourWays.subtitle}</p>
           <div className="ds-grid-auto-220 ds-mt-48">
             {copy.products.map((p) => (
               <DsHomeProductCard key={p.kind} card={p} />
@@ -325,30 +318,30 @@ export function DsHomePage({ copy }: { copy: DsHomeCopy }) {
 
         <DsBand>
           <DsSectionHeading>{copy.promises.heading}</DsSectionHeading>
+          <p className="mx-auto mt-5 max-w-3xl text-center text-lg leading-relaxed text-white/90">
+            {copy.promises.subtitle}
+          </p>
           <div className="ds-gap-col mx-auto max-w-5xl ds-mt-40">
             <DsPromiseCard
               accent="violet"
               icon={<Lock className="h-[22px] w-[22px]" strokeWidth={2} />}
-              title={copy.promises.neverStoredTitle}
-              paras={copy.promises.neverStoredParas}
+              title={copy.promises.cards[0]!.title}
+              paras={[copy.promises.cards[0]!.content]}
             />
             <DsPromiseCard
               accent="blue"
               icon={<UserX className="h-[22px] w-[22px]" strokeWidth={2} />}
-              title={copy.promises.neverRequiredTitle}
-              paras={copy.promises.neverRequiredParas}
+              title={copy.promises.cards[1]!.title}
+              paras={[copy.promises.cards[1]!.content]}
             />
             <DsPromiseCard
               accent="gold"
               icon={<Scale className="h-[22px] w-[22px]" strokeWidth={2} />}
-              title={copy.promises.neverManipulativeTitle}
-              paras={copy.promises.neverManipulativeParas}
+              title={copy.promises.cards[2]!.title}
+              paras={[copy.promises.cards[2]!.content]}
             />
           </div>
-          <p className="mx-auto mt-11 max-w-3xl text-center text-lg leading-relaxed text-white whitespace-pre-line">
-            {copy.promises.dataLine}
-          </p>
-          <p className="mt-5 text-center">
+          <p className="mt-8 text-center">
             <Link href="/privacy" className="font-medium text-[var(--pj-gold-soft)] hover:underline">
               {copy.promises.readMore}
             </Link>

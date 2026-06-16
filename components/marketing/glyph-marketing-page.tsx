@@ -113,12 +113,11 @@ export async function GlyphMarketingPage() {
   const onTheCardsParagraphs = t.raw("on_the_cards.paragraphs") as string[];
 
   const heroCopy = {
+    brandTag: t("hero.brand_tag"),
     heading: t("hero.heading"),
-    subtitle: t("hero.subtitle"),
     description: t("hero.description"),
-    footnote: t("hero.footnote"),
     cta: t("hero.cta"),
-    ctaSubline: t("hero.cta_subline"),
+    billingNotice: t("hero.billing_notice"),
   };
 
   const divine = {
