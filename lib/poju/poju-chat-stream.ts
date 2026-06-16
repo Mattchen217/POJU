@@ -35,6 +35,7 @@ export function createPojuChatStreamResponse(body: ChatBody, reqSignal?: AbortSi
       }
 
       try {
+        let lastContentText = "";
         const llm = await callPOJULLM({
           session: body.session,
           profile: body.profile ?? body.userProfile ?? null,
@@ -47,9 +48,12 @@ export function createPojuChatStreamResponse(body: ChatBody, reqSignal?: AbortSi
             onReasoning: (text) => send({ type: "reasoning", text }),
             onContent: (raw) => {
               if (!raw.length) return;
+              const text = extractStreamingResponseText(raw);
+              if (text === lastContentText) return;
+              lastContentText = text;
               send({
                 type: "content",
-                text: extractStreamingResponseText(raw),
+                text,
                 raw_length: raw.length,
               });
             },
@@ -96,6 +100,7 @@ export function createPojuChatStreamResponse(body: ChatBody, reqSignal?: AbortSi
       "Content-Type": "text/event-stream; charset=utf-8",
       "Cache-Control": "no-cache, no-transform",
       Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
     },
   });
 }

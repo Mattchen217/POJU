@@ -43,5 +43,9 @@ export interface PhaseLLMResult {
   tool_suggestion?: ToolSuggestionPayload | null;
   start_new_cycle?: boolean;
   new_cycle_question?: string | null;
+  /** Collecting phase progress signal (Step 1). */
+  collection_progress?: "advancing" | "stalled" | "resistant" | null;
+  /** Stop-loss binary choice offer (Step 3). */
+  stall_offer?: boolean;
 }
 

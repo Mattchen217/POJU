@@ -13,6 +13,11 @@ import {
   type POJUAgentState,
 } from "@/lib/poju/agent-state";
 import { countUserTurns } from "@/lib/poju/summary-readiness";
+import {
+  applyCollectingTurnCounters,
+  evaluateStopLoss,
+  parseCollectionProgress,
+} from "@/lib/poju/collection-progress";
 import { ensureSessionCycles } from "@/lib/poju/cycle-manager";
 import { finalizeToolInjectionTurn, prepareToolInjectionTurn } from "@/lib/poju/prepare-tool-injection-turn";
 import { findPendingToolInjection } from "@/lib/poju/find-pending-tool-injection";
@@ -71,6 +76,8 @@ type LLMApiPayload = {
   tool_suggestion?: ToolSuggestionPayload | null;
   start_new_cycle?: boolean;
   new_cycle_question?: string | null;
+  collection_progress?: "advancing" | "stalled" | "resistant" | null;
+  stall_offer?: boolean;
 };
 
 function ensureAgentV2(session: POJUSessionState): POJUAgentState {
@@ -115,6 +122,8 @@ function finalizeAgentV2(
     question_category?: string | null;
     contains_delivery?: boolean;
     main_delivery?: unknown;
+    collection_progress?: "advancing" | "stalled" | "resistant" | null;
+    stall_offer?: boolean;
   },
   userMessage: string,
   isSystemMessage: boolean,
@@ -146,13 +155,49 @@ function finalizeAgentV2(
         ? ""
         : userMessage;
 
+  const currentPhase = normalizeAgentPhase(base.current_phase) ?? base.current_phase;
+  const collectionProgress = parseCollectionProgress(llm.collection_progress);
+  const isCollectingTurn = currentPhase === "collecting_context" && !isSystemMessage;
+  const counters = applyCollectingTurnCounters(base, {
+    isCollectingTurn,
+    collection_progress: collectionProgress,
+  });
+  const stopLoss = isCollectingTurn
+    ? evaluateStopLoss({
+        stall_count: counters.stall_count,
+        collection_progress: collectionProgress,
+        collecting_turn_count: counters.collecting_turn_count,
+      })
+    : { triggered: false, reason: null };
+
+  const stallOffer = Boolean((llm as { stall_offer?: boolean }).stall_offer);
+
   const transition = decidePhaseTransition({
     current_state: merged,
     llm_suggested_phase: llmPhase,
     user_message: phaseUserMessage,
     user_turn_count: countUserTurns(session),
+    collection_progress: collectionProgress,
+    stall_count: counters.stall_count,
+    collecting_turn_count: counters.collecting_turn_count,
+    stop_loss: stopLoss,
+    stall_offer: stallOffer,
   });
   let after = applyPhaseTransition(merged, transition);
+  after = {
+    ...after,
+    stall_count: transition.reset_stall_count ? 0 : counters.stall_count,
+    collecting_turn_count: counters.collecting_turn_count,
+  };
+  if (isCollectingTurn && after.resume_collecting_low_barrier) {
+    after = { ...after, resume_collecting_low_barrier: false };
+  }
+  if (stopLoss.triggered && stallOffer) {
+    console.info("[agent] Stall offer presented:", stopLoss.reason, {
+      stall_count: counters.stall_count,
+      collecting_turn_count: counters.collecting_turn_count,
+    });
+  }
   if (llm.current_summary && after.current_phase === "awaiting_confirmation") {
     after = { ...after, current_summary: llm.current_summary };
   }
@@ -310,6 +355,8 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       question_category: llmResponse.question_category,
       contains_delivery: llmResponse.contains_delivery,
       main_delivery: llmResponse.main_delivery,
+      collection_progress: llmResponse.collection_progress,
+      stall_offer: llmResponse.stall_offer,
     },
     userMessage,
     isSystemMessage,
@@ -454,6 +501,8 @@ async function callLLMViaAPI(input: {
   tool_suggestion?: ToolSuggestionPayload | null;
   start_new_cycle?: boolean;
   new_cycle_question?: string | null;
+  collection_progress?: "advancing" | "stalled" | "resistant" | null;
+  stall_offer?: boolean;
 }> {
   const body = JSON.stringify({
     session: input.session,
@@ -505,11 +554,8 @@ async function callLLMViaAPI(input: {
         if (type === "reasoning" && typeof event.text === "string") {
           input.onStream.onReasoning?.(event.text);
         } else if (type === "content") {
-          const rawLen = typeof event.raw_length === "number" ? event.raw_length : 0;
-          if (rawLen > 0) {
+          if (typeof event.text === "string" && event.text.length > 0) {
             input.onStream.onContentStreamStart?.();
-          }
-          if (typeof event.text === "string") {
             input.onStream.onPartialResponse?.(event.text);
           }
         } else if (type === "complete") {
@@ -587,6 +633,8 @@ function mapLlmApiPayload(
     start_new_cycle: data.start_new_cycle === true,
     new_cycle_question:
       typeof data.new_cycle_question === "string" ? data.new_cycle_question : null,
+    collection_progress: parseCollectionProgress(data.collection_progress),
+    stall_offer: data.stall_offer === true,
   };
 }
 

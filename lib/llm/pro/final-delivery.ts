@@ -5,6 +5,8 @@
 
 import { safeRandomUUID } from "@/lib/client/safe-crypto";
 import type { POJUAgentState } from "@/lib/poju/agent-state";
+import { findMissingFields } from "@/lib/poju/agent-state";
+import type { DeliveryMode } from "@/lib/poju/collection-progress";
 import { formatContextForPrompt } from "@/lib/poju/context-extractor";
 import type { POJUAction, POJUDelivery, POJUSessionState, POJUMessage } from "@/lib/poju/types";
 import { markCycleDelivered } from "@/lib/poju/cycle-manager";
@@ -85,40 +87,68 @@ export function buildRegionalPlatformGuidance(code: DeliveryLanguageCode): strin
 - Do NOT recommend 知乎, 微博, 豆瓣, 脉脉, 小红书, or other China-only platforms unless the user explicitly operates in China.`;
 }
 
-export function buildFinalDeliveryPrompt(input: {
-  base_analysis: unknown | null;
-  situation_analysis: unknown | null;
+export function resolveDeliveryMode(input: {
+  delivery_mode?: DeliveryMode | null;
   agent_v2: POJUAgentState;
-  locale: string;
-  recent_user_messages?: string[];
-}): { system: string; user: string } {
-  const { base_analysis, situation_analysis, agent_v2, locale, recent_user_messages } = input;
-  const baseStr = safeJsonSlice(base_analysis, 3000);
-  const sitStr = safeJsonSlice(situation_analysis, 3000);
-  const { code: deliveryLang, instruction: langInstruction } = resolveDeliveryLanguage({
-    original_question: agent_v2.original_question,
-    locale,
-    recent_user_messages,
-  });
-  const regionalGuidance = buildRegionalPlatformGuidance(deliveryLang);
+}): DeliveryMode {
+  if (input.delivery_mode === "degraded" || input.delivery_mode === "full") {
+    return input.delivery_mode;
+  }
+  if (input.agent_v2.delivery_mode === "degraded") {
+    return "degraded";
+  }
+  return "full";
+}
 
-  const finalDeliveryTask = `# 当前任务：主交付（Final Delivery）
+function formatFieldKey(key: string): string {
+  return key.replace(/_/g, " ");
+}
+
+function topMissingLabels(agent: POJUAgentState, limit = 2): string[] {
+  const missing = findMissingFields(agent);
+  return [...missing.general, ...missing.category_specific].slice(0, limit).map(formatFieldKey);
+}
+
+function buildDegradedDeliveryRules(agent: POJUAgentState): string {
+  const missingHint =
+    topMissingLabels(agent).join("、") || "更多具体处境细节";
+
+  return `# 降级交付模式（delivery_mode = degraded · 信息不足）
+
+本次为**降级交付**：收集阶段信息不足或用户选择「先给方向」。仍须输出完整四段结构，但重心与 full 模式不同。
+
+## 降级规则（mandatory）
+
+1. **四段结构不变**：═══ ANALYSIS ═══ / ═══ CONCLUSION ═══ / ═══ WHAT TO DO ═══ / ═══ COMING BACK ═══ 必须齐全。
+
+2. **重命盘、轻具体处境**：
+   - ANALYSIS 主要依据 Base Analysis（命盘是真实计算出的内容），从格局、用神、大运、五行结构展开
+   - 少依赖、少编造具体对话细节（用户分享得少）；可泛化引用 original_question 与已收集的少量事实，不得虚构人名/项目/数字
+
+3. **诚实声明**（放在开篇 1-2 句或 COMING BACK 段）：
+   - 中文示例："这是基于你愿意分享的部分 + 你的命盘给出的方向。如果之后你愿意多聊 ${missingHint}，我能给得更贴合。"
+   - 英文示例："This direction draws on what you shared plus your chart. If you later want to talk through ${missingHint}, I can tailor this much more closely."
+
+4. **WHAT TO DO — 偏低风险、通用、自我探索类**：
+   - 信息不足时**禁止**高风险具体行动：辞职、搬家、大额投资、立刻分手、重大合同签字等
+   - **优先**安全行动：先观察/小步试探/厘清某个问题/记录与复盘/低承诺的信息收集/与信任的人做一次短对话
+   - 仍用 \`### Action N: 自拟标题\` 格式，3 条不同维度，每条末尾 \`Profile basis:\` 须来自命盘真实依据
+
+5. **合规不变**：
+   - 重命盘 ≠ 编造：只用 Base Analysis 中真实算出的内容
+   - 仍禁预测具体未来事件、禁吉凶断语、禁招财/催运/Amulet/lucky direction
+   - 用户可见须软化术语；禁合婚排盘术语`;
+}
+
+function buildFullDeliveryTask(
+  regionalGuidance: string,
+  langInstruction: string,
+  deliveryLang: DeliveryLanguageCode,
+  locale: string,
+): string {
+  return `# 当前任务：主交付（Final Delivery · full 模式）
 
 这是用户付费后的**最重要时刻**。用户已确认情境汇总，现在输出完整破局交付。
-
-# 专家分析素材（可能为中文 — 仅作依据，勿照抄语言）
-
-## 1. Base Analysis（命局基础 — 节选）
-${baseStr}
-
-## 2. Situation Analysis（所问之事 — 节选）
-${sitStr}
-
-# 你的任务
-
-将两份分析 **整合 + 必要时翻译** 为结构化长文交付。
-不得超出分析已暗示的范畴编造玄学结论。
-须按 POJU 八字深度解读法则展开 ANALYSIS；按行动设计原则填写 WHAT TO DO 三条。
 
 # 🌐 输出语言（最高优先级）
 
@@ -167,6 +197,97 @@ ${regionalGuidance ? `${regionalGuidance}\n\n` : ""}规则:
 4. 不下命运定论；不用中医话术（方子/诊脉/复诊）。
 5. 不暴露 Glyph / Syncro / Match 等产品名。
 6. 总长约 1000–1500 词/字，素材极薄时可略短。`;
+}
+
+function buildDegradedDeliveryTask(
+  regionalGuidance: string,
+  langInstruction: string,
+  deliveryLang: DeliveryLanguageCode,
+  locale: string,
+  agent: POJUAgentState,
+): string {
+  const missingHint = topMissingLabels(agent).join("、") || "更多细节";
+  return `# 当前任务：主交付（Final Delivery · degraded 模式）
+
+用户选择或系统判定：信息不足，输出**降级方向性交付**（非 full 完整破局）。
+
+${buildDegradedDeliveryRules(agent)}
+
+# 🌐 输出语言（最高优先级）
+
+${langInstruction}
+
+目标语言代码: **${deliveryLang}**
+Session locale: ${locale}
+
+${regionalGuidance ? `${regionalGuidance}\n\n` : ""}规则:
+- 四段标记行必须原样保留；标记内正文用目标语言
+- Action 子标题 \`### Action N: …\`，内容用目标语言
+
+# 交付结构（四段大标记必须独立成行）
+
+═══ ANALYSIS ═══
+（以 Base Analysis 命盘结构为主轴展开；困境与方向可结合 original_question；轻量引用已收集事实，不编造细节）
+
+═══ CONCLUSION ═══
+（方向性判断 + 核心提醒：这是基于有限信息 + 命盘的方向，非最终定论）
+
+═══ WHAT TO DO ═══
+3 条**低-risk**行动：观察/小步试探/厘清/记录/低承诺探索；禁辞职/搬家/大额决策类；格式同 full（### Action N + Profile basis）
+
+═══ COMING BACK ═══
+（含诚实声明变体 + 若愿意补充 ${missingHint} 可更贴合；Session 30 天有效）
+
+# 关键规则
+
+1. 全文使用用户语言。
+2. 合规与 full 相同：禁预测具体未来、禁吉凶断语、禁招财/催运/lucky direction、禁合婚排盘术语。
+3. 不暴露 Glyph / Syncro / Match 等产品名。
+4. 总长约 700–1200 词/字。`;
+}
+
+export function buildFinalDeliveryPrompt(input: {
+  base_analysis: unknown | null;
+  situation_analysis: unknown | null;
+  agent_v2: POJUAgentState;
+  locale: string;
+  recent_user_messages?: string[];
+  delivery_mode?: DeliveryMode | null;
+}): { system: string; user: string; delivery_mode: DeliveryMode } {
+  const { base_analysis, situation_analysis, agent_v2, locale, recent_user_messages } = input;
+  const delivery_mode = resolveDeliveryMode({ delivery_mode: input.delivery_mode, agent_v2 });
+  const baseStr = safeJsonSlice(base_analysis, 3000);
+  const sitStr =
+    situation_analysis != null
+      ? safeJsonSlice(situation_analysis, 3000)
+      : "(none — degraded mode: rely primarily on Base Analysis chart content; do not invent situation details.)";
+  const { code: deliveryLang, instruction: langInstruction } = resolveDeliveryLanguage({
+    original_question: agent_v2.original_question,
+    locale,
+    recent_user_messages,
+  });
+  const regionalGuidance = buildRegionalPlatformGuidance(deliveryLang);
+
+  const modeTask =
+    delivery_mode === "degraded"
+      ? buildDegradedDeliveryTask(regionalGuidance, langInstruction, deliveryLang, locale, agent_v2)
+      : buildFullDeliveryTask(regionalGuidance, langInstruction, deliveryLang, locale);
+
+  const expertMaterials = `# 专家分析素材（可能为中文 — 仅作依据，勿照抄语言）
+
+## 1. Base Analysis（命局基础 — 节选）
+${baseStr}
+
+## 2. Situation Analysis（所问之事 — 节选）
+${sitStr}
+
+# 整合要求
+
+将可用分析 **整合 + 必要时翻译** 为结构化长文交付。
+不得超出分析已暗示的范畴编造玄学结论。
+须按 POJU 八字深度解读法则展开 ANALYSIS；按行动设计原则填写 WHAT TO DO 三条。`;
+
+  const finalDeliveryTask = `${modeTask}\n\n${expertMaterials}`;
 
   const system = stitchPromptSections(...buildPojuCorePromptSections(), finalDeliveryTask);
 
@@ -177,7 +298,14 @@ ${regionalGuidance ? `${regionalGuidance}\n\n` : ""}规则:
       ? recent_user_messages.map((m, i) => `${i + 1}. ${m.slice(0, 500)}`).join("\n")
       : "(no recent user messages provided)";
 
+  const modeHint =
+    delivery_mode === "degraded"
+      ? `Delivery mode: **degraded** — chart-forward, low-risk actions, honest limitation statement required.`
+      : `Delivery mode: **full** — integrate situation + chart; highly specific actions from user-stated details.`;
+
   const user = `User's original question: "${agent_v2.original_question}"
+
+${modeHint}
 
 Recent user messages (for language + tone):
 ${recentBlock}
@@ -192,9 +320,13 @@ Required delivery language: ${DELIVERY_LANGUAGE_NAMES[deliveryLang]} (${delivery
 
 Generate the complete delivery now. Use the markers exactly as specified. All body text in ${DELIVERY_LANGUAGE_NAMES[deliveryLang]}.
 
-WHAT TO DO: exactly 3 actions as \`### Action 1:\` / \`### Action 2:\` / \`### Action 3:\` with custom titles and distinct dimension types from the menu. If you include spatial/environment actions, use the 3-step whitewash — no wealth/luck/amulet promises.`;
+WHAT TO DO: exactly 3 actions as \`### Action 1:\` / \`### Action 2:\` / \`### Action 3:\` with custom titles and distinct dimension types from the menu.${
+    delivery_mode === "degraded"
+      ? " Degraded mode: low-risk / observational / small-step actions only — no quit/move/major financial commitments."
+      : " If you include spatial/environment actions, use the 3-step whitewash — no wealth/luck/amulet promises."
+  }`;
 
-  return { system, user };
+  return { system, user, delivery_mode };
 }
 
 function isRecord(x: unknown): x is Record<string, unknown> {
@@ -350,6 +482,7 @@ export async function requestFinalDeliveryFromApi(input: {
   agent_v2: POJUAgentState;
   locale: string;
   recent_user_messages?: string[];
+  delivery_mode?: DeliveryMode | null;
 }): Promise<FinalDeliveryResult> {
   if (typeof window === "undefined") throw new Error("requestFinalDeliveryFromApi is browser-only");
 
@@ -379,8 +512,17 @@ export async function requestFinalDeliveryFromApi(input: {
  * 需要：当前语境指纹下已有 Step 8 缓存；`agent_v2` 存在。
  * 将最终交付写入 `main_delivery`、合并 `actions`、追加一条 assistant（含 meta.contains_delivery）。
  */
-export async function runFinalDeliveryForSession(session: POJUSessionState, locale: string): Promise<POJUSessionState> {
+export async function runFinalDeliveryForSession(
+  session: POJUSessionState,
+  locale: string,
+  opts?: { delivery_mode?: DeliveryMode | null },
+): Promise<POJUSessionState> {
   if (!session.agent_v2) throw new Error("agent_v2 required");
+  const delivery_mode = resolveDeliveryMode({
+    delivery_mode: opts?.delivery_mode,
+    agent_v2: session.agent_v2,
+  });
+
   const fp = await computeSituationContextFingerprint({
     session_id: session.session_id,
     original_question: session.original_question,
@@ -388,7 +530,7 @@ export async function runFinalDeliveryForSession(session: POJUSessionState, loca
     context_collected: session.context_collected,
   });
   const sit = getCachedSituationAnalysis(session, fp);
-  if (!sit?.content) {
+  if (delivery_mode === "full" && !sit?.content) {
     throw new Error("No cached situation analysis for this context; run Step 8 first.");
   }
 
@@ -401,10 +543,11 @@ export async function runFinalDeliveryForSession(session: POJUSessionState, loca
 
   const result = await requestFinalDeliveryFromApi({
     base_analysis,
-    situation_analysis: sit.content,
+    situation_analysis: sit?.content ?? null,
     agent_v2: session.agent_v2,
     locale,
     recent_user_messages,
+    delivery_mode,
   });
 
   const deliveryLang = resolveDeliveryLanguage({

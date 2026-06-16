@@ -43,6 +43,7 @@ function patchAgent(session: POJUSessionState, patch: Partial<POJUAgentState>): 
 function ensureContextSummary(session: POJUSessionState): POJUSessionState {
   const agent = session.agent_v2;
   if (!agent || agent.current_phase !== "awaiting_confirmation") return session;
+  if (agent.stall_offer_pending) return session;
   if (agent.current_summary) return session;
   return patchAgent(session, { current_summary: buildFallbackContextSummary(agent) });
 }
@@ -96,6 +97,23 @@ export async function runPostTurnOrchestration(
     }
   }
 
+  if (
+    auto &&
+    s.agent_v2?.delivery_mode === "degraded" &&
+    s.agent_v2.current_phase === "delivered" &&
+    !s.main_delivery_done
+  ) {
+    ui.pipelineBusy = true;
+    try {
+      s = await runDegradedDeliveryPipeline(s, locale);
+      ui.pipelineNotice = locale.startsWith("zh") ? "方向性分析已生成。" : "Directional analysis is ready.";
+    } catch (e) {
+      console.warn("[agent-orchestrator] Degraded delivery failed:", e);
+      ui.pipelineError = e instanceof Error ? e.message : String(e);
+    }
+    ui.pipelineBusy = false;
+  }
+
   // Step 8/9 run only after user confirms the summary (runConfirmationPipeline), not while the form is open.
 
   return { session: s, ui };
@@ -124,6 +142,27 @@ export async function runConfirmationPipeline(session: POJUSessionState, locale:
   const patched = patchAgent(delivered, {
     current_phase: "delivered",
     main_delivery_at: new Date().toISOString(),
+  });
+  const { trySaveDeliveryActionsToArchive } = await import("@/lib/archive/archive-service");
+  return trySaveDeliveryActionsToArchive(patched, locale);
+}
+
+/** Degraded delivery after stall-offer choice or fallback (Step 3 → Step 4). */
+export async function runDegradedDeliveryPipeline(
+  session: POJUSessionState,
+  locale: string,
+): Promise<POJUSessionState> {
+  let s = withSessionProfileFlags(session);
+  if (!s.agent_v2) throw new Error("agent_v2 required");
+
+  s = await ensureBaseAnalysis(s);
+
+  const delivered = await runFinalDeliveryForSession(s, locale, { delivery_mode: "degraded" });
+  const patched = patchAgent(delivered, {
+    current_phase: "delivered",
+    delivery_mode: "degraded",
+    main_delivery_at: new Date().toISOString(),
+    stall_offer_pending: false,
   });
   const { trySaveDeliveryActionsToArchive } = await import("@/lib/archive/archive-service");
   return trySaveDeliveryActionsToArchive(patched, locale);

@@ -7,6 +7,12 @@ import {
   evaluateCollectingConfirmationGate,
   userExplicitlyRequestsConfirmation,
 } from "@/lib/poju/collecting-confirmation-gate";
+import {
+  isPrematureCollectingPhase,
+  type CollectionProgress,
+  type DeliveryMode,
+} from "@/lib/poju/collection-progress";
+import { classifyStallOfferReply } from "@/lib/poju/stall-offer-routing";
 import type { POJUAction } from "@/lib/poju/types";
 
 export type AgentPhase =
@@ -86,7 +92,20 @@ export interface POJUAgentState {
   actions: POJUAction[];
   main_delivery_at: string | null;
   main_delivery_data: unknown | null;
+  /** Total agent turns (legacy counter). */
   turn_count: number;
+  /** Effective Q&A rounds while in collecting_context (code-maintained). */
+  collecting_turn_count: number;
+  /** Consecutive stalled/resistant collecting rounds (resets on advancing). */
+  stall_count: number;
+  /** full = normal confirm path; degraded = stop-loss path (Step 3 delivery). */
+  delivery_mode: import("@/lib/poju/collection-progress").DeliveryMode | null;
+  /** Set when stop-loss hard rule fires; Step 3 reads this to run degraded delivery. */
+  stop_loss_triggered: boolean;
+  /** User sees stall-offer binary choice (no summary form). */
+  stall_offer_pending: boolean;
+  /** Next collecting turn uses low-barrier re-engagement prompt. */
+  resume_collecting_low_barrier: boolean;
   tokens_used: number;
   phase_history: Array<{
     from_phase: AgentPhase;
@@ -200,6 +219,12 @@ export function createInitialAgentState(input: {
     main_delivery_at: null,
     main_delivery_data: null,
     turn_count: 0,
+    collecting_turn_count: 0,
+    stall_count: 0,
+    delivery_mode: null,
+    stop_loss_triggered: false,
+    stall_offer_pending: false,
+    resume_collecting_low_barrier: false,
     tokens_used: 0,
     phase_history: [],
   };
@@ -257,26 +282,48 @@ export interface PhaseTransitionInput {
   user_message: string;
   /** Effective user Q&A rounds — used for collecting → confirmation hard gate. */
   user_turn_count?: number;
+  /** LLM signal from collecting phase (Step 1). */
+  collection_progress?: CollectionProgress | null;
+  /** Counters after this turn's update (Step 2). */
+  stall_count?: number;
+  collecting_turn_count?: number;
+  /** Precomputed stop-loss evaluation for this turn. */
+  stop_loss?: { triggered: boolean; reason: string | null };
+  /** LLM stall-offer branch (Step 3). */
+  stall_offer?: boolean;
 }
 
 export interface PhaseTransitionResult {
   should_transition: boolean;
   new_phase: AgentPhase;
   reason: string;
+  delivery_mode?: DeliveryMode | null;
+  stop_loss_triggered?: boolean;
+  stall_offer_pending?: boolean;
+  clear_stall_offer_pending?: boolean;
+  reset_stall_count?: boolean;
+  resume_collecting_low_barrier?: boolean;
+  clear_resume_collecting_low_barrier?: boolean;
 }
 
 export function decidePhaseTransition(input: PhaseTransitionInput): PhaseTransitionResult {
   const { current_state, user_message } = input;
   const userTurnCount = input.user_turn_count ?? 0;
+  const collectingTurnCount =
+    input.collecting_turn_count ?? current_state.collecting_turn_count ?? 0;
   const llm_suggested_phase = normalizeAgentPhase(input.llm_suggested_phase ?? undefined);
   const current = normalizeAgentPhase(current_state.current_phase) ?? current_state.current_phase;
 
   const tryCollectingToConfirmation = (reason: string): PhaseTransitionResult | null => {
+    if (isPrematureCollectingPhase(current_state, collectingTurnCount)) {
+      return null;
+    }
     const gate = evaluateCollectingConfirmationGate(current_state, userTurnCount);
     if (!gate.allowed) return null;
     return {
       should_transition: true,
       new_phase: "awaiting_confirmation",
+      delivery_mode: "full",
       reason,
     };
   };
@@ -287,6 +334,15 @@ export function decidePhaseTransition(input: PhaseTransitionInput): PhaseTransit
     )
   ) {
     if (current === "collecting_context") {
+      if (input.stall_offer) {
+        return {
+          should_transition: true,
+          new_phase: "awaiting_confirmation",
+          stop_loss_triggered: true,
+          stall_offer_pending: true,
+          reason: `Stop-loss stall offer: ${input.stop_loss?.reason ?? "triggered"}`,
+        };
+      }
       const transition = tryCollectingToConfirmation("User explicitly requested delivery");
       if (transition) return transition;
     }
@@ -304,6 +360,16 @@ export function decidePhaseTransition(input: PhaseTransitionInput): PhaseTransit
       break;
 
     case "collecting_context": {
+      if (input.stall_offer) {
+        return {
+          should_transition: true,
+          new_phase: "awaiting_confirmation",
+          stop_loss_triggered: true,
+          stall_offer_pending: true,
+          reason: `Stop-loss stall offer: ${input.stop_loss?.reason ?? "triggered"}`,
+        };
+      }
+
       const userWantsConfirm = userExplicitlyRequestsConfirmation(user_message);
       const llmWantsConfirm = llm_suggested_phase === "awaiting_confirmation";
 
@@ -323,6 +389,29 @@ export function decidePhaseTransition(input: PhaseTransitionInput): PhaseTransit
     }
 
     case "awaiting_confirmation":
+      if (current_state.stall_offer_pending) {
+        const choice = classifyStallOfferReply(user_message);
+        if (choice === "continue_collecting") {
+          return {
+            should_transition: true,
+            new_phase: "collecting_context",
+            reset_stall_count: true,
+            clear_stall_offer_pending: true,
+            resume_collecting_low_barrier: true,
+            reason: "User chose to continue collecting after stall offer",
+          };
+        }
+        return {
+          should_transition: true,
+          new_phase: "delivered",
+          delivery_mode: "degraded",
+          clear_stall_offer_pending: true,
+          reason:
+            choice === "degraded_delivery"
+              ? "User chose degraded delivery after stall offer"
+              : "Stall offer fallback to degraded delivery",
+        };
+      }
       if (llm_suggested_phase === "collecting_context") {
         return {
           should_transition: true,
@@ -334,6 +423,7 @@ export function decidePhaseTransition(input: PhaseTransitionInput): PhaseTransit
         return {
           should_transition: true,
           new_phase: "delivered",
+          delivery_mode: current_state.delivery_mode ?? "full",
           reason: "User confirmed, generating delivery",
         };
       }
@@ -361,13 +451,26 @@ export function decidePhaseTransition(input: PhaseTransitionInput): PhaseTransit
 }
 
 export function applyPhaseTransition(state: POJUAgentState, transition: PhaseTransitionResult): POJUAgentState {
-  if (!transition.should_transition) return state;
+  const statePatch: Partial<POJUAgentState> = {};
+
+  if (transition.delivery_mode != null) statePatch.delivery_mode = transition.delivery_mode;
+  if (transition.stop_loss_triggered) statePatch.stop_loss_triggered = true;
+  if (transition.stall_offer_pending) statePatch.stall_offer_pending = true;
+  if (transition.clear_stall_offer_pending) statePatch.stall_offer_pending = false;
+  if (transition.reset_stall_count) statePatch.stall_count = 0;
+  if (transition.resume_collecting_low_barrier) statePatch.resume_collecting_low_barrier = true;
+  if (transition.clear_resume_collecting_low_barrier) statePatch.resume_collecting_low_barrier = false;
+
+  if (!transition.should_transition) {
+    return Object.keys(statePatch).length > 0 ? { ...state, ...statePatch } : state;
+  }
 
   const from = normalizeAgentPhase(state.current_phase) ?? state.current_phase;
   const to = transition.new_phase;
 
   return {
     ...state,
+    ...statePatch,
     current_phase: to,
     phase_history: [
       ...state.phase_history,

@@ -1,4 +1,8 @@
 import { formatContextForPrompt } from "@/lib/poju/context-extractor";
+import {
+  classifyStallOfferReply,
+  stallOfferChoiceToSuggestedPhase,
+} from "@/lib/poju/stall-offer-routing";
 import type { AgentPhase, ContextSummary } from "@/lib/poju/agent-state";
 import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseResult, withPhaseStreamOpts } from "@/lib/llm/phases/phase-transport";
 import { buildOrientalSystemPrompt } from "@/lib/llm/phases/oriental-prompt-context";
@@ -17,6 +21,20 @@ function normalizeSummary(raw: unknown): ContextSummary | null {
     sections: s.sections,
   };
 }
+
+const TRANSITION_CONSENT_RULES = `# 过渡句措辞铁律（写死 · 防止死锁）
+
+response 必须：
+
+1. 以一个【明确的征询问句】结尾，问号收尾，直接问用户「现在就要完整分析吗」，需要用户回 yes/no 才能推进。
+   ✓ "I have what I need. Ready for me to lay out the full analysis and the concrete steps now?"
+   ✓ "我已经看清这个局了。要我现在给你完整分析和三个具体行动吗？"
+
+2. 严禁任何【异步告知式】措辞——它们暗示你会自己稍后推送，但你是回合制的、不会自动推送，会让用户被动等待→死锁：
+   ✗ "Give me a moment" / "Let me assemble" / "I'll come back"
+   ✗ "给我一点时间" / "稍等" / "我去整理一下" / "我会回来给你" / "让我整理一下你看看"
+
+3. 触发权交给用户：用户回 yes/ready → 可进入下一步；用户要补充/修改 → 回 collecting_context。`;
 
 function buildSummaryTaskBlock(input: PhaseLLMInput): string {
   const agent = input.agent_state;
@@ -37,8 +55,10 @@ ${contextText}
 
 ## 你要做什么
 
-1. response：50-100 字承接（「我整理了一下，你看看对不对」），不要复述整张表
+1. response：50-100 字简短承接（说明汇总卡片已生成、请核对），**不要**复述整张表；**必须以明确征询问句结尾**（见下方过渡句铁律），问用户信息是否准确、是否现在就要完整分析。
 2. current_summary：5-7 个 section，每节 2-5 个 item；value 尽量用用户原话；不要补充用户没说的
+
+${TRANSITION_CONSENT_RULES}
 
 ## 输出格式（严格 JSON）
 
@@ -139,10 +159,76 @@ async function generateSummaryPhase(input: PhaseLLMInput): Promise<PhaseLLMResul
   };
 }
 
+async function handleStallOfferReply(input: PhaseLLMInput): Promise<PhaseLLMResult> {
+  const choice = classifyStallOfferReply(input.user_message);
+  const suggested_phase = stallOfferChoiceToSuggestedPhase(choice);
+  const choiceHint =
+    choice === "continue_collecting"
+      ? "用户选择继续补充信息"
+      : choice === "degraded_delivery"
+        ? "用户选择基于现有信息先给方向"
+        : "用户未明确选择，按兜底先给方向处理";
+
+  const system = await buildOrientalSystemPrompt(
+    input,
+    `# 当前任务：止损选择回应
+
+用户刚收到「继续聊 vs 先给方向」的二选一。代码已判定：${choiceHint}。
+
+用 2-4 句自然承接即可：
+- 若继续收集：欢迎补充，说明下一问会轻松具体
+- 若先给方向 / 兜底：确认将基于现有信息与命盘给出方向（不要输出完整交付正文）
+
+不要再次抛出二选一。不要「稍等我去整理」。
+
+输出 JSON：
+{
+  "response": "...",
+  "suggested_phase": "${suggested_phase}",
+  "context_updates": {}
+}`,
+  );
+  const messages = formatPhaseMessageHistory(input.session.messages);
+  const result = await callPhaseJsonTransport(
+    system,
+    messages,
+    withPhaseStreamOpts(input, {
+      call_type: "collection_flash",
+      max_tokens: 900,
+      temperature: 0.45,
+    }),
+  );
+
+  const { parsed, response } = parsePhaseResult(result.content);
+
+  return {
+    response,
+    suggested_phase,
+    context_updates:
+      parsed.context_updates && typeof parsed.context_updates === "object" && !Array.isArray(parsed.context_updates)
+        ? (parsed.context_updates as Record<string, unknown>)
+        : {},
+    question_category: null,
+    current_summary: null,
+    main_delivery_data: null,
+    actions: [],
+    tokens_used: result.tokens_used,
+    total_cost: 0,
+    call_count: 1,
+    model: result.model,
+    thinking_process: thinkingFromPhaseTransport(result, parsed, input.locale),
+    stall_offer: false,
+  };
+}
+
 export async function callConfirmationPhase(input: PhaseLLMInput): Promise<PhaseLLMResult> {
   const agent = input.agent_state;
   const userMsg = input.user_message.trim();
   const existingSummary = agent?.current_summary ?? null;
+
+  if (agent?.stall_offer_pending) {
+    return handleStallOfferReply(input);
+  }
 
   if (!existingSummary) {
     return generateSummaryPhase(input);
@@ -161,7 +247,13 @@ export async function callConfirmationPhase(input: PhaseLLMInput): Promise<Phase
 - 明确确认可开始分析 → suggested_phase: "delivered"
 - 否则保持 "awaiting_confirmation"
 
-不要在此阶段输出完整破局交付。输出 JSON：response, suggested_phase, context_updates`,
+不要在此阶段输出完整破局交付。
+
+${TRANSITION_CONSENT_RULES}
+
+若用户尚未明确 yes/ready，你的 response 仍须以征询问句结尾（例如确认汇总无误后是否现在开始完整分析），禁止「稍等我去整理」类告知式措辞。
+
+输出 JSON：response, suggested_phase, context_updates`,
   );
   const messages = formatPhaseMessageHistory(input.session.messages);
   const result = await callPhaseJsonTransport(

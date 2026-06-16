@@ -10,6 +10,14 @@ import {
   isMajorQuestionCategory,
   MIN_MAJOR_COLLECTING_USER_TURNS,
 } from "@/lib/poju/collecting-confirmation-gate";
+import {
+  evaluateStopLoss,
+  isPrematureCollectingPhase,
+  nextStallCount,
+  parseCollectionProgress,
+  projectCollectingStopLoss,
+} from "@/lib/poju/collection-progress";
+import { callStallOfferPhase } from "@/lib/llm/phases/stall-offer-phase";
 import { formatContextForPrompt, formatMissingFieldsForPrompt, extractQuestionCategory, mergeContextUpdates, recordToLLMContextUpdates } from "@/lib/poju/context-extractor";
 import type { AgentPhase } from "@/lib/poju/agent-state";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
@@ -57,9 +65,27 @@ function clampCollectingSuggestedPhase(
   session: PhaseLLMInput["session"],
   contextUpdates: Record<string, unknown>,
   questionCategory: string | null,
+  collectionProgress: ReturnType<typeof parseCollectionProgress>,
 ): AgentPhase | null {
   if (suggested_phase !== "awaiting_confirmation") return suggested_phase;
   const projected = projectAgentAfterUpdates(agent, contextUpdates, questionCategory);
+  const collectingTurns = (agent.collecting_turn_count ?? 0) + 1;
+  if (isPrematureCollectingPhase(projected, collectingTurns)) {
+    console.warn("[collecting-phase] Blocked premature awaiting_confirmation: turns < 3 and required incomplete");
+    return "collecting_context";
+  }
+  if (collectionProgress) {
+    const projectedStall = nextStallCount(agent.stall_count ?? 0, collectionProgress);
+    const stopLoss = evaluateStopLoss({
+      stall_count: projectedStall,
+      collection_progress: collectionProgress,
+      collecting_turn_count: collectingTurns,
+    });
+    if (stopLoss.triggered) {
+      console.warn("[collecting-phase] Blocked awaiting_confirmation: stop-loss", stopLoss.reason);
+      return "collecting_context";
+    }
+  }
   const gate = evaluateCollectingConfirmationGate(
     projected,
     countEffectiveCollectingTurns(session),
@@ -72,7 +98,7 @@ function clampCollectingSuggestedPhase(
 function buildCollectingTaskBlock(input: PhaseLLMInput): string {
   const agent = input.agent_state;
   if (!agent) {
-    return `# 当前任务：深入问诊\n\n原始问题: "${input.session.original_question}"\n问一个具体跟进问题。输出 JSON：response, suggested_phase, context_updates。`;
+    return `# 当前任务：深入问诊\n\n原始问题: "${input.session.original_question}"\n问一个具体跟进问题。输出 JSON：response, suggested_phase, context_updates, collection_progress。`;
   }
 
   const contextText = formatContextForPrompt(agent);
@@ -93,6 +119,16 @@ function buildCollectingTaskBlock(input: PhaseLLMInput): string {
 
   const majorGateNote = cat && isMajorQuestionCategory(cat)
     ? `\n【硬下限】本议题为 career / relationship / decision 等重大类型：必须 ≥${MIN_MAJOR_COLLECTING_USER_TURNS} 轮有效问答且必填字段齐全，才能切 awaiting_confirmation；未达到一律保持 collecting_context。`
+    : "";
+
+  const resumeAfterStallNote = agent.resume_collecting_low_barrier
+    ? `
+## 止损后重新收集（本轮 mandatory）
+用户刚选择了「愿意再聊」。不要再施压或连珠追问：
+- 换角度、降低门槛：给 2-3 个具体选项或「是/否/大概范围」式问题，让用户好答
+- 一次只问 1 个最容易补的关键点
+- 语气轻松，允许用户跳过仍缺的项
+`
     : "";
 
   return `# 当前任务：深入问诊（收集上下文）
@@ -118,7 +154,21 @@ ${requiredList}
 1. 收集阶段【只问诊，不开方】。response 严禁包含任何：具体行动建议、Step、Action、"你应该/可以做 X"、"今晚/这周去做 Y"、放置物件/选择方位/择时的操作指令。
 2. 你只能做三件事：承接情绪与事实 → 用命盘对应处境 → 问 1-2 个问题。
 3. "具体怎么破局、做什么"是 final-delivery 的专属内容。即使你已想清楚行动，也一律不得在收集/确认阶段提前给。
-4. 若你觉得"已经能给出行动了"——那是该切 awaiting_confirmation 的信号，但 response 里【仍然只能写过渡确认句】（如"我了解得差不多了，让我整理一下你看看"），绝不能写出行动本身。
+4. 若你觉得"已经能给出行动了"——那是该切 awaiting_confirmation 的信号：response 末尾必须用【明确征询问句】问用户是否现在就要完整分析（见「过渡句措辞铁律」），绝不能写行动本身。
+
+## 过渡句措辞铁律（suggested_phase = "awaiting_confirmation" 时 mandatory）
+
+切到 awaiting_confirmation / 准备交付前，response 必须：
+
+1. 以一个【明确的征询问句】结尾，问号收尾，直接问用户「现在就要完整分析吗」，需要用户回 yes/no 才能推进。
+   ✓ "I have what I need. Ready for me to lay out the full analysis and the concrete steps now?"
+   ✓ "我已经看清这个局了。要我现在给你完整分析和三个具体行动吗？"
+
+2. 严禁任何【异步告知式】措辞——它们暗示你会自己稍后推送，但你是回合制的、不会自动推送，会让用户被动等待→死锁：
+   ✗ "Give me a moment" / "Let me assemble" / "I'll come back"
+   ✗ "给我一点时间" / "稍等" / "我去整理一下" / "我会回来给你" / "让我整理一下你看看"
+
+3. 触发权交给用户：用户回 yes/ready → 进入汇总/交付流程；用户要补充/修改 → 保持或回到 collecting_context。
 
 ## 问诊原则
 
@@ -137,6 +187,7 @@ ${requiredList}
 - 用户明确说「差不多了 / 可以分析了 / 你来说吧」→ "awaiting_confirmation"
 - 否则 → "collecting_context"
 ${majorGateNote}
+${resumeAfterStallNote}
 （已删除"或信息已够支撑 3 条可执行行动"判据——该判据会诱导提前凑出行动并写进 response。）
 
 ## 风格
@@ -151,6 +202,16 @@ ${majorGateNote}
 - "edge"：可能相关，你已在 response 里简短确认（类型 2）
 - "off_topic"：完全新维度，必须拒绝深入并在 response 中引导开新 Session（类型 3）
 
+## 本轮收集进展判断（collection_progress，每轮必填）
+
+根据【用户本轮消息】相对已收集信息的配合度，输出以下三者之一（与 suggested_phase 独立判断）：
+
+- "advancing"：用户这轮给出了新的有效信息——你会写入 context_updates 的事实、细节、时间线、立场或情绪转折（非空 updates 通常是 advancing）
+- "stalled"：用户这轮没给新信息——敷衍（「就那样」「还行」）、灌水、答非所问、重复已说过的、只回 emoji/单字无实质内容
+- "resistant"：用户明确抗拒收集——「我不想说」「你直接说」「你是大师你来看」、拒绝回答关键问题、要求跳过问诊立刻给结论
+
+注意：即使用户说「可以分析了/你来说吧」，若本轮没有补充新事实，collection_progress 仍可能是 "stalled" 或 "resistant"（不是 advancing）；suggested_phase 可单独切 awaiting_confirmation。
+
 ## 输出格式（严格 JSON，无 markdown 围栏）
 
 {
@@ -159,6 +220,7 @@ ${majorGateNote}
   "action_requested": "continue_chat" | "show_birth_form",
   "question_category": "career" | "relationship" | "wealth" | "health" | "family" | "decision" | "interpersonal" | "other" | null,
   "context_updates": { },
+  "collection_progress": "advancing" | "stalled" | "resistant",
   "topic_drift_signal": "none" | "edge" | "off_topic",
   "drift_reason": "若有偏离，一句话说明（无则空字符串）",
   "should_show_new_session_button": false
@@ -196,6 +258,7 @@ export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLL
   let suggested_phase = rawPhase && VALID_SUGGESTED.includes(rawPhase as AgentPhase) ? (rawPhase as AgentPhase) : null;
 
   const questionCategory = typeof parsed.question_category === "string" ? parsed.question_category : null;
+  const collection_progress = parseCollectionProgress(parsed.collection_progress);
   if (input.agent_state && suggested_phase) {
     suggested_phase = clampCollectingSuggestedPhase(
       suggested_phase,
@@ -203,6 +266,7 @@ export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLL
       input.session,
       context_updates,
       questionCategory,
+      collection_progress,
     );
   }
 
@@ -217,6 +281,18 @@ export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLL
 
   const drift = parseTopicDriftFromParsed(parsed);
   const tool_suggestion = parseToolSuggestionFromParsed(parsed);
+
+  if (input.agent_state && collection_progress) {
+    const { stopLoss } = projectCollectingStopLoss(input.agent_state, collection_progress, true);
+    if (stopLoss.triggered) {
+      console.info("[collecting-phase] Stop-loss → stall offer:", stopLoss.reason);
+      const stallResult = await callStallOfferPhase(input);
+      return {
+        ...stallResult,
+        collection_progress,
+      };
+    }
+  }
 
   return {
     response,
@@ -235,6 +311,7 @@ export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLL
     tool_suggestion,
     start_new_cycle: false,
     new_cycle_question: null,
+    collection_progress,
     ...drift,
   };
 }

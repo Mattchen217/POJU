@@ -1,6 +1,9 @@
 /**
  * Audit-only output compliance detection (alert — never mutates text).
  * Aligns with docs/POJULIFE-定位与合规边界-v1.md
+ *
+ * 明确保留：事后 regex 检测能力，与 prompt JUDGMENT_CORE 互补；
+ * 不因 prompt 宽泛化而删减 EN/ZH 行为词与术语指纹 pattern。
  */
 
 export type OutputPolicyViolationCategory =

@@ -73,60 +73,66 @@ export function DisclaimerModal({ onAccepted }: DisclaimerModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/70 p-4 sm:p-6">
-      <div
-        aria-labelledby="disclaimer-modal-title"
-        aria-modal="true"
-        className="poju-glass-card w-full max-w-2xl p-6 sm:p-8"
-        role="dialog"
-      >
-        <h2
-          id="disclaimer-modal-title"
-          className="text-xl font-semibold tracking-tight text-text-primary sm:text-2xl"
+    <div className="fixed inset-0 z-[500] bg-black/70">
+      <div className="flex min-h-full items-center justify-center overflow-y-auto overscroll-contain p-4 sm:p-6">
+        <div
+          aria-labelledby="disclaimer-modal-title"
+          aria-modal="true"
+          className="poju-glass-card my-auto flex w-full max-h-[calc(100dvh-2rem)] max-w-2xl flex-col overflow-hidden p-5 sm:p-8"
+          role="dialog"
         >
-          Before you enter pojulife
-        </h2>
+          <h2
+            id="disclaimer-modal-title"
+            className="shrink-0 text-xl font-semibold tracking-tight text-text-primary sm:text-2xl"
+          >
+            Before you enter pojulife
+          </h2>
 
-        <div className="mt-5 rounded-xl border border-glass-border bg-bg-layer-2/50 p-4 sm:p-5">
-          <ul className="space-y-4">
-            {DISCLAIMER_BULLETS.map((item) => (
-              <li key={item.label} className="text-sm leading-relaxed text-text-secondary">
-                <strong className="font-semibold text-text-primary">{item.label}</strong>
-                <span aria-hidden="true">: </span>
-                <span>{item.body}</span>
-              </li>
-            ))}
-          </ul>
+          <div className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5 [-webkit-overflow-scrolling:touch]">
+            <div className="rounded-xl border border-glass-border bg-bg-layer-2/50 p-4 sm:p-5">
+              <ul className="space-y-4">
+                {DISCLAIMER_BULLETS.map((item) => (
+                  <li key={item.label} className="text-sm leading-relaxed text-text-secondary">
+                    <strong className="font-semibold text-text-primary">{item.label}</strong>
+                    <span aria-hidden="true">: </span>
+                    <span>{item.body}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <Link
+              className="mt-4 inline-flex text-sm font-medium text-text-accent transition-colors hover:text-purple-vivid"
+              href="/disclaimer"
+            >
+              [Read the full Disclaimer &amp; Sovereignty Architecture →]
+            </Link>
+          </div>
+
+          <div className="mt-4 shrink-0 border-t border-glass-border/60 pt-4">
+            <label className="flex cursor-pointer items-start gap-3 text-sm leading-relaxed text-text-secondary">
+              <input
+                checked={checked}
+                className="mt-1 size-4 shrink-0 accent-purple-vivid"
+                onChange={(event) => setChecked(event.target.checked)}
+                type="checkbox"
+              />
+              <span>
+                I explicitly acknowledge these disclaimers and agree to the Terms of Service, Privacy Policy, and Refund
+                Policy.
+              </span>
+            </label>
+
+            <button
+              className="poju-button-primary mt-4 w-full disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={!checked}
+              onClick={handleEnter}
+              type="button"
+            >
+              Enter pojulife
+            </button>
+          </div>
         </div>
-
-        <Link
-          className="mt-5 inline-flex text-sm font-medium text-text-accent transition-colors hover:text-purple-vivid"
-          href="/disclaimer"
-        >
-          [Read the full Disclaimer &amp; Sovereignty Architecture →]
-        </Link>
-
-        <label className="mt-6 flex cursor-pointer items-start gap-3 text-sm leading-relaxed text-text-secondary">
-          <input
-            checked={checked}
-            className="mt-1 size-4 shrink-0 accent-purple-vivid"
-            onChange={(event) => setChecked(event.target.checked)}
-            type="checkbox"
-          />
-          <span>
-            I explicitly acknowledge these disclaimers and agree to the Terms of Service, Privacy Policy, and Refund
-            Policy.
-          </span>
-        </label>
-
-        <button
-          className="poju-button-primary mt-5 w-full disabled:cursor-not-allowed disabled:opacity-50"
-          disabled={!checked}
-          onClick={handleEnter}
-          type="button"
-        >
-          Enter pojulife
-        </button>
       </div>
     </div>
   );

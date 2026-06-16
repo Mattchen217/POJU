@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   buildFinalDeliveryPrompt,
   extractActionsFromDelivery,
+  resolveDeliveryMode,
 } from "@/lib/llm/pro/final-delivery";
 import { callLLM } from "@/lib/llm/router";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
@@ -39,12 +40,20 @@ export async function POST(req: Request) {
       base_analysis?: unknown;
       situation_analysis?: unknown;
       recent_user_messages?: unknown;
+      delivery_mode?: unknown;
     };
 
     if (!isLooseAgentState(body.agent_v2)) {
       return NextResponse.json({ ok: false, error: "Invalid or missing agent_v2" }, { status: 400 });
     }
-    if (body.situation_analysis === undefined || body.situation_analysis === null) {
+
+    const delivery_mode = resolveDeliveryMode({
+      delivery_mode:
+        body.delivery_mode === "degraded" || body.delivery_mode === "full" ? body.delivery_mode : null,
+      agent_v2: body.agent_v2,
+    });
+
+    if (delivery_mode === "full" && (body.situation_analysis === undefined || body.situation_analysis === null)) {
       return NextResponse.json({ ok: false, error: "Missing situation_analysis" }, { status: 400 });
     }
 
@@ -54,12 +63,18 @@ export async function POST(req: Request) {
       ? body.recent_user_messages.filter((m): m is string => typeof m === "string" && m.trim().length > 0)
       : [];
 
+    const situation_analysis =
+      body.situation_analysis === undefined || body.situation_analysis === null
+        ? null
+        : body.situation_analysis;
+
     const { system, user } = buildFinalDeliveryPrompt({
       base_analysis,
-      situation_analysis: body.situation_analysis,
+      situation_analysis,
       agent_v2: body.agent_v2,
       locale,
       recent_user_messages,
+      delivery_mode,
     });
 
     const t0 = Date.now();
@@ -83,6 +98,7 @@ export async function POST(req: Request) {
       tokens_used: result.meta.tokens_used,
       latency_ms,
       cost_usd: result.meta.cost_usd,
+      delivery_mode,
     });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "final_delivery_failed";

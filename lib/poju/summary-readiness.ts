@@ -6,10 +6,11 @@ export function countUserTurns(session: POJUSessionState): number {
   return session.messages.filter((m) => m.role === "user" && !m.is_rejected).length;
 }
 
-/** Context summary form only at interview wrap-up — not greeting / thin sessions. */
+/** Context summary form only at interview wrap-up — not greeting / thin sessions / stall offer. */
 export function shouldShowContextSummaryForm(session: POJUSessionState): boolean {
   const agent = session.agent_v2;
   if (!agent || agent.current_phase !== "awaiting_confirmation") return false;
+  if (agent.stall_offer_pending) return false;
   if (session.main_delivery_done) return false;
   if (!agent.current_summary?.sections?.length) return false;
 
@@ -26,6 +27,7 @@ export function shouldShowContextSummaryForm(session: POJUSessionState): boolean
 export function downgradePrematureConfirmationPhase(session: POJUSessionState): POJUSessionState {
   const agent = session.agent_v2;
   if (!agent || agent.current_phase !== "awaiting_confirmation") return session;
+  if (agent.stall_offer_pending) return session;
   if (shouldShowContextSummaryForm(session)) return session;
 
   return {

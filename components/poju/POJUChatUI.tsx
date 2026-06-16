@@ -502,13 +502,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         userMessage: "__OPENING__",
         locale,
         signal: ac.signal,
-        onStream: {
+          onStream: {
           onReasoning: (text) => setLiveThinkingLine(text),
-          onContentStreamStart: () => {
-            setReplyStreaming(true);
-            setLiveThinkingLine(null);
-          },
           onPartialResponse: (text) => {
+            if (!text) return;
             setReplyStreaming(true);
             setStreamingReply(text);
             setLiveThinkingLine(null);
@@ -561,13 +558,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         locale,
         userAlreadyAppended: true,
         signal: ac.signal,
-        onStream: {
+          onStream: {
           onReasoning: (text) => setLiveThinkingLine(text),
-          onContentStreamStart: () => {
-            setReplyStreaming(true);
-            setLiveThinkingLine(null);
-          },
           onPartialResponse: (text) => {
+            if (!text) return;
             setReplyStreaming(true);
             setStreamingReply(text);
             setLiveThinkingLine(null);
