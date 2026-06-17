@@ -7,15 +7,15 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Terms of Service — pojulife",
-  description: "pojulife terms of service — Version 1.1",
+  description: "pojulife terms of service — Version 1.2",
 };
 
 export default function TermsPage() {
   return (
     <LegalPageShell
-      version="Version 1.1"
+      version="Version 1.2"
       title="Terms of Service"
-      updated="Last updated: 2026-06-15"
+      updated="Last updated: 2026-06-17"
       intro={
         <p>
           <strong>Governing Language:</strong> This agreement is formulated and executed exclusively in the English
@@ -189,26 +189,38 @@ export default function TermsPage() {
         </li>
       </ul>
 
-      <h2>6. Account Architecture and Local Data Custody</h2>
-      <p>pojulife utilizes a decentralized user-state architecture:</p>
+      <h2>6. Decentralized Vault Architecture and Local Data Custody</h2>
+      <p>
+        pojulife operates under a strict, decentralized &quot;Zero-Cloud&quot; local-first architecture. All user history
+        and analytical records are converted into local AES-256 encrypted data, contained within a private Vault tied
+        exclusively to your active device and specific browser environment.
+      </p>
       <ul>
         <li>
-          <strong>No Cloud Identity Vaults:</strong> We do not mandate registration via email/password combos or OAuth
-          third-party cloud trackers.
+          <strong>Zero Cloud &amp; Device-Locked Limitations:</strong> We maintain absolutely zero user accounts,
+          biological identities, or cloud-side history archives on our servers. Switching phones, PCs, or browsers will
+          invariably result in a completely empty Vault, as cross-device or cross-browser synchronization is
+          architecturally non-existent.
         </li>
         <li>
-          <strong>Localized Cache Custody:</strong> Your complete conversation logs are fully encrypted (via AES-256
-          protocols) and saved exclusively inside your browser&apos;s IndexedDB environment.
+          <strong>Permanent Erasure Risks (Incognito &amp; Cache Hazards):</strong> You assume sole and unreserved
+          responsibility for the preservation and stability of your browser&apos;s local storage environment. Manually
+          clearing your browser cache/cookies/IndexedDB, utilizing strict privacy extensions that auto-wipe site history,
+          or uninstalling the PWA application will permanently and irreversibly wipe your records. Crucially, closing an
+          interface tab or browser window operated in private browsing or Incognito mode will trigger an immediate,
+          automatic browser-level destruction of your local Vault data.
         </li>
         <li>
-          <strong>Session Tracking:</strong> A cryptographic, one-way hash of your hardware profile (Device
-          Fingerprint) is utilized as a silent anchor to validate subscription structures and active token authorization
-          balances.
+          <strong>Absolute Inability to Recover:</strong> Because we do not possess your local cryptographic keys, seed
+          logs, or conversational inputs, pojulife has zero technical capacity to restore, reconstruct, or retrieve your
+          lost journey history. Once erased by user action or automated browser security protocols, it is permanently
+          unrecoverable.
         </li>
         <li>
-          <strong>Data Loss Exclusion:</strong> Because data lives strictly on your personal device, we hold no
-          liability for data clearance resulting from manual browser wipes, local hardware corruption, privacy extensions
-          clearing local data, or device loss.
+          <strong>Non-Refundability for Local Data Loss:</strong> The accidental loss, automated browser deletion, or
+          manual erasure of local session logs does not entitle the user to financial refunds, token restitution,
+          chargeback reversals, or complimentary service resets. We hold no liability for data that our infrastructure was
+          designed from inception never to harvest or store.
         </li>
       </ul>
 
