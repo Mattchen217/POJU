@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useParams, useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
+import { ChartReadingLoader } from "@/components/poju/ChartReadingLoader";
 import { PreviewMatrixPreparing } from "@/components/poju/PreviewMatrixPreparing";
 import { UnlockBaziPreparing } from "@/components/poju/UnlockBaziPreparing";
 import { usePreparingBlockInput } from "@/components/poju/preparing-spline-control";
@@ -337,14 +338,27 @@ function StreamingPhase({
   usePreparingBlockInput(true);
 
   return (
-    <BaseAnalysisStreamPreparing
-      profile={profile}
-      profileId={profileId}
-      locale={locale}
-      logLabel="POJUPreparing"
-      onComplete={onComplete}
-      onError={onError}
-    />
+    <>
+      <BaseAnalysisStreamPreparing
+        profile={profile}
+        profileId={profileId}
+        locale={locale}
+        logLabel="POJUPreparing"
+        hideStreamView
+        reportOutputLanguageFromUi
+        onComplete={onComplete}
+        onError={onError}
+      />
+      <ChartReadingLoader
+        profile={profile}
+        currentStep="analyzing"
+        error={null}
+        onRetry={() => {}}
+        onRefund={() => {}}
+        locale={locale}
+        variant="portrait"
+      />
+    </>
   );
 }
 

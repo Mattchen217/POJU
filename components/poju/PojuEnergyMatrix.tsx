@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { PojuDaYunDial } from "@/components/poju/PojuDaYunDial";
-import { elementCssClass } from "@/lib/poju/bazi-matrix-mappings";
+import { elementCssClass, formatBranchDisplay, formatStemDisplay, isZhMatrixLocale } from "@/lib/poju/bazi-matrix-mappings";
 import { buildElementPillarMap, type ElementPillarRow } from "@/lib/poju/build-element-pillar-map";
 import { buildMatrixDisplayData } from "@/lib/poju/build-matrix-display";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
@@ -42,11 +42,15 @@ const ELEMENT_BAR_CLASS: Record<string, string> = {
 const MAJOR_SHENSHA = new Set(["天乙贵人", "禄神", "prime_mentor_node", "provision_anchor"]);
 
 function formatLifeStageBranch(
-  pl: { branch_en: string; life_stage_label: string | null },
+  pl: { branch: string; branch_en: string; life_stage_label: string | null },
   lifeStageKey: string | undefined,
   tb: (key: string) => string,
+  locale: string,
 ): string {
   const stageLabel = resolveBaziLabel(lifeStageKey, tb, pl.life_stage_label ?? undefined);
+  if (isZhMatrixLocale(locale)) {
+    return formatBranchDisplay(pl.branch, locale, stageLabel || pl.life_stage_label);
+  }
   if (!stageLabel) return pl.branch_en;
   const han = pl.life_stage_label ?? "";
   return han && !stageLabel.includes(han) ? `${pl.branch_en} · ${stageLabel} (${han})` : `${pl.branch_en} · ${stageLabel}`;
@@ -204,6 +208,7 @@ function ElementPillarMap({
 export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
   const { structured, user_profile, wuxing_scores, strength, matrix_id } = payload;
   const shenshaLocale = normalizeShenshaLocale(locale);
+  const isZh = isZhMatrixLocale(locale);
   const tb = useTranslations("bazi");
   const tm = useTranslations("poju_matrix");
   const tc = useTranslations("poju_matrix.card");
@@ -213,18 +218,27 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
     [structured.pillars_detail, locale],
   );
 
-  const display = useMemo(
-    () =>
-      payload.display ??
-      buildMatrixDisplayData({
-        profile: user_profile,
-        structured,
-        strength,
-        wuxing_scores,
-        locale,
-      }),
-    [payload.display, user_profile, structured, strength, wuxing_scores, locale],
-  );
+  const display = useMemo(() => {
+    const base = buildMatrixDisplayData({
+      profile: user_profile,
+      structured,
+      strength,
+      wuxing_scores,
+      locale,
+    });
+    const cached = payload.display;
+    if (!cached || cached.narrative_source !== "llm") return base;
+    return {
+      ...base,
+      synopsis: cached.synopsis,
+      structural_dynamics: cached.structural_dynamics,
+      annual_transit: { ...base.annual_transit, narrative: cached.annual_transit.narrative },
+      enote_caption: cached.enote_caption,
+      narrative_source: cached.narrative_source,
+      narrative_locale: cached.narrative_locale,
+      narrative_failed: cached.narrative_failed,
+    };
+  }, [payload.display, user_profile, structured, strength, wuxing_scores, locale]);
 
   const maxCount = Math.max(...wuxing_scores.map((s) => s.count), 1);
   const sorted = [...wuxing_scores].sort((a, b) => b.pct - a.pct);
@@ -539,7 +553,7 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
               </div>
               <div className="ro__v">
                 <span className={elementCssClass(display.annual_transit.stem_en.split(" ")[1] ?? "")}>
-                  {display.annual_transit.stem_en}
+                  {formatStemDisplay(display.annual_transit.ganzhi.charAt(0), locale)}
                 </span>
                 <span className="pct" style={{ flexBasis: "100%" }}>
                   {display.annual_transit.ganzhi} · {display.annual_transit.pinyin}
@@ -576,11 +590,13 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
               >
                 <div className="cap">{pillarLabels[key]}</div>
                 <div className="role" style={isDay ? { color: "var(--gold-soft)" } : undefined}>
-                  {pl.ten_god_en}
-                  <span className="cn">{pl.ten_god}</span>
+                  {isZh ? pl.ten_god : pl.ten_god_en}
+                  {!isZh ? <span className="cn">{pl.ten_god}</span> : null}
                 </div>
                 <div className="stem">
-                  <div className={`en ${elementCssClass(pl.stem_element)}`}>{pl.stem_en}</div>
+                  <div className={`en ${elementCssClass(pl.stem_element)}`}>
+                    {formatStemDisplay(pl.stem, locale)}
+                  </div>
                   <div className="sub">
                     <span className="seal">{pl.stem}</span>
                     <span className="pin">{pl.stem_pinyin}</span>
@@ -592,6 +608,7 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
                       pl,
                       payload.structured.pillars_detail?.[key]?.life_stage,
                       tb,
+                      locale,
                     )}
                   </div>
                   <div className="sub">
@@ -609,8 +626,7 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
                           className={`star star--${star.polarity}${MAJOR_SHENSHA.has(star.id) || MAJOR_SHENSHA.has(star.zh_src) ? " star--major" : ""}`}
                           title={star.gloss}
                         >
-                          ✦ {star.label}{" "}
-                          <i className="star__glyph">({star.zh_src})</i>
+                          ✦ {star.label}
                         </span>
                       ))}
                     </>

@@ -271,7 +271,7 @@
         "description": "Ya has leído los libros, consultado a amigos y analizado cada matriz de pros y contras. Sin embargo, el dilema central se niega a soltarte.",
         "tagline": "Deconstruye tu matriz. Rompe el bloqueo.",
         "cta_primary": "Inicializar sesión profunda",
-        "billing_notice": "$9.99 por sesión o ejecutable mediante tokens de Pase Mensual"
+        "billing_notice": "Sesión profunda de 30 días sobre un tema concreto por $9.99 o usar cupón de experiencia"
       },
       "when_to_come": {
         "heading": "Cuándo venir a POJU.",
@@ -379,8 +379,8 @@
         "brand_tag": "Glyph",
         "heading": "Un espejo portátil para tu intuición y el caos subconsciente.",
         "description": "Ancla tu pregunta. Dibuja un símbolo. Decodifica la resonancia.",
-        "cta": "Lanza tu primer Glyph",
-        "billing_notice": "$4.99 por lectura o mediante Pase Mensual (Cupón de prueba gratuito disponible para nuevos usuarios)"
+        "cta": "Iniciar extracción Glyph",
+        "billing_notice": "$4.99 por lectura o usar cupón de experiencia"
       },
       "five_winds": {
         "heading": "Cinco vientos — cinco patrones arquetípicos",
@@ -475,7 +475,7 @@
           "Reflexión cognitiva integral mapeada en tus datos de perfil",
           "Entrega local segura e instantánea, preservada por completo en el entorno seguro de tu navegador"
         ],
-        "cta": "Lanza tu primer Glyph",
+        "cta": "Iniciar extracción Glyph",
         "footnote": "Custodia de datos descentralizada, defendiendo tu absoluta soberanía de privacidad."
       },
       "what_is": {
@@ -491,7 +491,7 @@
         "description": "Basado en tu perfil cognitivo, Syncro modela cómo cada ventana cronobiológica de 2 horas y cada vector de 8 direcciones interactúan con tu impulso conductual. Sabe con precisión cuándo ejecutar a máxima velocidad, cuándo internalizar y dónde anclar tu enfoque.",
         "tagline": "Un compañero dinámico en vivo para tu próximo ciclo de 24 horas.",
         "cta": "Activar Sincronización de 24 Horas",
-        "billing_notice": "$4.99 por bucle de matriz de 24 horas · Totalmente cubierto por tu Pase Mensual · Optimizado para móviles",
+        "billing_notice": "$4.99 por sincronización de 24 h o usar cupón de experiencia",
         "qr_label": "pojulife.com/syncro",
         "sms_label": "Envíate el enlace",
         "sms_button": "Envíame el enlace",
@@ -1345,8 +1345,8 @@
     "day_master_label": "Maestro del día",
     "strength_label": "Fuerza",
     "current_phase_label": "Fase actual (10 años)",
-    "hint_first_time": "Elaborando tu lectura detallada. Permanece en esta pantalla.",
-    "hint_using_cache": "Cargando tu carta ya analizada...",
+    "hint_first_time": "Formando tu matriz energética. Permanece en esta pantalla.",
+    "hint_using_cache": "Cargando tu matriz energética...",
     "done_message": "Listo. Entrando en tu sesión...",
     "error_title": "Preparación fallida",
     "error_message": "Algo salió mal al preparar tu lectura.",
@@ -1364,6 +1364,20 @@
     "step_7": "Componiendo tu lectura fundamental...",
     "step_8": "Casi listo, un momento...",
     "error_timeout": "El análisis tardó más de lo esperado. Quédate en esta página con una conexión estable y toca Reintentar: suele funcionar al segundo intento."
+  },
+  "portrait_loader": {
+    "hint_first_time": "Redactando tu informe completo de retrato de personalidad. El análisis profundo tarda unos 2–5 minutos — mantén esta pantalla abierta.",
+    "hint_using_cache": "Cargando tu informe de retrato guardado...",
+    "done_message": "Informe listo. Entrando en tu sesión...",
+    "step_0": "Conectando con el motor de lectura profunda...",
+    "step_1": "Extrayendo señales de personalidad en capas de tu estructura...",
+    "step_2": "Mapeando impulsos centrales y hábitos cotidianos...",
+    "step_3": "Identificando tirones internos recurrentes y puntos ciegos...",
+    "step_4": "Integrando temas de fase vital con lo que importa ahora...",
+    "step_5": "Redactando caminos de fortaleza y dónde sueles atascarte...",
+    "step_6": "Calibrando el tono para que el retrato resuene con claridad...",
+    "step_7": "Estructurando el retrato completo en secciones legibles...",
+    "step_8": "Tu informe está casi listo..."
   },
   "syncro": {
     "loading": "Cargando…",
@@ -1643,7 +1657,7 @@
       "heading": "Perfiles Duales. Un Órbita Compartida. Arquitectura Relacional Total.",
       "description": "Match mapea dos marcos cognitivos independientes en una sola matriz unificada. Decodifica exactamente cómo se intersecan tus vectores de comportamiento, revelando la alineación estructural, la fricción sistémica y vías precisas y accionables hacia la coevolución.",
       "cta": "Inicializar Alineación de Match",
-      "billing_notice": "$4.99 por alineación individual · Totalmente cubierto por tu Pase Mensual",
+      "billing_notice": "$4.99 por alineación o usar cupón de experiencia",
       "feature_two_charts_title": "Análisis de dos cartas",
       "feature_two_charts_desc": "Lecturas individuales profundas de ambas personas, luego un análisis en capas de cómo se encuentran.",
       "feature_any_relationship_title": "Cualquier tipo de relación",

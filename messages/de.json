@@ -271,7 +271,7 @@
         "description": "Sie haben die Bücher gelesen, Freunde konsultiert und jede Pro-und-Contra-Matrix abgewogen. Dennoch lässt Sie das Kern-Dilemma nicht los.",
         "tagline": "Dekonstruiere deine Matrix. Durchbrich die Sackgasse.",
         "cta_primary": "Tiefe Sitzung initialisieren",
-        "billing_notice": "9,99 $ / Sitzung oder über Monatspass-Guthaben einlösbar"
+        "billing_notice": "30-tägige Tiefensitzung zu einem konkreten Thema für 9,99 $ oder Erlebnisgutschein nutzen"
       },
       "when_to_come": {
         "heading": "Wann zu POJU kommen.",
@@ -379,8 +379,8 @@
         "brand_tag": "Glyph",
         "heading": "Ein tragbarer Spiegel für Ihre Intuition und das unbewusste Chaos.",
         "description": "Verankern Sie Ihre Frage. Ziehen Sie ein Symbol. Dekodieren Sie die Resonanz.",
-        "cta": "Starte deine erste Glyph-Ziehung",
-        "billing_notice": "4,99 $ / Lesung oder via Monatspass (Kostenloser Testgutschein für Neuzugänge verfügbar)"
+        "cta": "Glyph-Ziehung starten",
+        "billing_notice": "4,99 $ pro Lesung oder Erlebnisgutschein nutzen"
       },
       "five_winds": {
         "heading": "Fünf Winde — fünf archetypische Muster",
@@ -475,7 +475,7 @@
           "Umfassende kognitive Reflexion, abgestimmt auf Ihre Profilpräferenzen",
           "Sofortige, sichere lokale Bereitstellung, vollständig in Ihrer Browser-Sandbox gespeichert"
         ],
-        "cta": "Starte deine erste Glyph-Ziehung",
+        "cta": "Glyph-Ziehung starten",
         "footnote": "Dezentrale Datenverwahrung, die Ihre absolute Datenschutzsouveränität wahrt."
       },
       "what_is": {
@@ -491,7 +491,7 @@
         "description": "Basierend auf Ihrem kognitiven Profil modelliert Syncro, wie jedes 2-stündige chronobiologische Fenster und jeder 8-Richtungs-Vektor mit Ihrer Verhaltensdynamik interagieren. Wissen Sie genau, wann Sie mit maximaler Geschwindigkeit agieren, wann Sie in sich gehen und wo Sie Ihren Fokus verankern sollten.",
         "tagline": "Ein lebendiger, dynamischer Begleiter für Ihren nächsten 24-Stunden-Zyklus.",
         "cta": "24-Stunden-Synchronisation aktivieren",
-        "billing_notice": "4,99 $ pro 24-Stunden-Matrixschleife · Vollständig durch Ihren Monatspass abgedeckt · Für Mobilgeräte optimiert",
+        "billing_notice": "4,99 $ pro 24-Stunden-Sync oder Erlebnisgutschein nutzen",
         "qr_label": "pojulife.com/syncro",
         "sms_label": "Sende dir den Link",
         "sms_button": "Schick mir den Link",
@@ -1345,8 +1345,8 @@
     "day_master_label": "Tagesmeister",
     "strength_label": "Stärke",
     "current_phase_label": "Aktuelle 10-Jahres-Phase",
-    "hint_first_time": "Deine ausführliche Deutung wird erstellt. Bitte bleib auf diesem Bildschirm.",
-    "hint_using_cache": "Bereits analysiertes Chart wird geladen...",
+    "hint_first_time": "Deine Energiematrix wird aufgebaut. Bitte bleib auf diesem Bildschirm.",
+    "hint_using_cache": "Energiematrix wird geladen...",
     "done_message": "Bereit. Sitzung wird geöffnet...",
     "error_title": "Vorbereitung fehlgeschlagen",
     "error_message": "Bei der Vorbereitung deiner Deutung ist etwas schiefgelaufen.",
@@ -1364,6 +1364,20 @@
     "step_7": "Grundlegende Deutung wird zusammengestellt...",
     "step_8": "Fast fertig, einen Moment...",
     "error_timeout": "Die Analyse hat länger gedauert als erwartet. Bleibe mit einer stabilen Verbindung auf dieser Seite und tippe auf Erneut versuchen – meist klappt es beim zweiten Versuch."
+  },
+  "portrait_loader": {
+    "hint_first_time": "Dein vollständiger Persönlichkeitsporträt-Bericht wird geschrieben. Die Tiefenanalyse dauert etwa 2–5 Minuten — bitte diesen Bildschirm offen lassen.",
+    "hint_using_cache": "Gespeicherter Persönlichkeitsporträt-Bericht wird geladen...",
+    "done_message": "Bericht bereit. Sitzung wird geöffnet...",
+    "step_0": "Verbindung zur Tiefenlese-Engine...",
+    "step_1": "Mehrschichtige Persönlichkeitssignale aus deiner Struktur extrahieren...",
+    "step_2": "Kernantriebe und alltägliche Verhaltensgewohnheiten kartieren...",
+    "step_3": "Wiederkehrende innere Zerrungen und blinde Flecken erkennen...",
+    "step_4": "Lebensphasen-Themen mit dem aktuellen Kernanliegen verbinden...",
+    "step_5": "Stärkepfade und typische Festpunkte formulieren...",
+    "step_6": "Ton kalibrieren, damit das Porträt klar ankommt...",
+    "step_7": "Vollständiges Porträt in lesbare Abschnitte gliedern...",
+    "step_8": "Dein Bericht ist fast fertig..."
   },
   "syncro": {
     "loading": "Laden…",
@@ -1643,7 +1657,7 @@
       "heading": "Duale Profile. Eine gemeinsame Umlaufbahn. Totale Beziehungsarchitektur.",
       "description": "Match bildet zwei unabhängige kognitive Frameworks in einer einzigen, einheitlichen Matrix ab. Entschlüsseln Sie präzise, wie sich Ihre Verhaltensvektoren überschneiden — und legen Sie strukturelle Übereinstimmungen, systemische Reibungen und exakte, umsetzbare Pfade zur Ko-Evolution offen.",
       "cta": "Match-Ausrichtung initialisieren",
-      "billing_notice": "4,99 $ pro Einzelausrichtung · Vollständig durch Ihren Monatspass abgedeckt",
+      "billing_notice": "4,99 $ pro Ausrichtung oder Erlebnisgutschein nutzen",
       "feature_two_charts_title": "Zwei-Chart-Analyse",
       "feature_two_charts_desc": "Tiefe Einzelanalysen beider Personen, dann eine Schicht-für-Schicht-Betrachtung, wie ihr aufeinandertrefft.",
       "feature_any_relationship_title": "Jede Beziehungsart",

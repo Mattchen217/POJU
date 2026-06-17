@@ -280,6 +280,7 @@ export function GlyphReadingPage() {
           onRetry={() => {}}
           onRefund={() => router.push("/glyph")}
           locale={locale}
+          variant="portrait"
           hintOverride={t("reading_loading_hint")}
         />
       </PreparingSplineShell>

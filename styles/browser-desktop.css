@@ -84,10 +84,19 @@
   }
 
   /* ── Glyph draw (question input) ── */
-  html:not(.pwa-mode) .glyph-draw-page {
+  html:not(.pwa-mode) .glyph-draw-page:not(.tool-preview-page) {
     min-height: auto;
     background: transparent;
     padding: 2.5rem 3rem 4rem;
+  }
+
+  html:not(.pwa-mode) .glyph-draw-page.tool-preview-page,
+  html:not(.pwa-mode) .match-relationship-page.tool-preview-page,
+  html:not(.pwa-mode) .syncro-preview-page.tool-preview-page {
+    max-width: none;
+    width: 100%;
+    padding-inline: 0;
+    background: transparent;
   }
 
   html:not(.pwa-mode) .glyph-draw-back,
@@ -161,7 +170,7 @@
 
   /* ── Match flow ── */
   html:not(.pwa-mode) .match-select-page,
-  html:not(.pwa-mode) .match-relationship-page,
+  html:not(.pwa-mode) .match-relationship-page:not(.tool-preview-page),
   html:not(.pwa-mode) .match-analyzing {
     min-height: auto;
     background: transparent;
@@ -173,7 +182,7 @@
   html:not(.pwa-mode) .match-select-header,
   html:not(.pwa-mode) .match-relationship-content {
     width: 100%;
-    max-width: var(--browser-flow-max-width);
+    max-width: min(var(--pchat-content-width, 1040px), calc(100vw - 32px));
     margin-inline: auto;
     padding-inline: 1rem;
     box-sizing: border-box;

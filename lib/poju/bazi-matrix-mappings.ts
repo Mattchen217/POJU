@@ -85,6 +85,53 @@ export const ZODIAN_HAN_TO_EN: Record<string, string> = {
   猪: "Pig",
 };
 
+const ELEMENT_ZH: Record<string, string> = {
+  Wood: "木",
+  Fire: "火",
+  Earth: "土",
+  Metal: "金",
+  Water: "水",
+};
+
+const ZODIAN_EN_TO_HAN: Record<string, string> = Object.fromEntries(
+  Object.entries(ZODIAN_HAN_TO_EN).map(([han, en]) => [en, han]),
+);
+
+export function isZhMatrixLocale(locale: string): boolean {
+  return locale.toLowerCase().startsWith("zh");
+}
+
+export function elementLabelLocalized(element: string, locale: string): string {
+  return isZhMatrixLocale(locale) ? (ELEMENT_ZH[element] ?? element) : element;
+}
+
+export function formatStemDisplay(stem: string, locale: string): string {
+  const info = getStemInfo(stem);
+  if (!info) return stem;
+  if (isZhMatrixLocale(locale)) {
+    const yy = info.yin_yang === "Yin" ? "阴" : "阳";
+    return `${yy}${ELEMENT_ZH[info.element]}`;
+  }
+  return info.en;
+}
+
+export function formatBranchDisplay(
+  branch: string,
+  locale: string,
+  lifeStage?: string | null,
+): string {
+  const info = getBranchInfo(branch);
+  if (!info) return branch;
+  if (isZhMatrixLocale(locale)) {
+    const zodiac = ZODIAN_EN_TO_HAN[info.zodiac_en] ?? info.zodiac_en;
+    const parts = [zodiac, ELEMENT_ZH[info.element]];
+    if (lifeStage) parts.push(lifeStage);
+    return parts.join(" · ");
+  }
+  const base = `${info.zodiac_en} · ${info.element}`;
+  return lifeStage ? `${base} · ${lifeStage}` : base;
+}
+
 export function getStemInfo(stem: string): StemInfo | null {
   const ch = stem.trim().charAt(0);
   return HEAVENLY_STEMS[ch] ?? null;
@@ -105,13 +152,13 @@ export function splitGanzhi(ganzhi: string): { stem: string; branch: string } {
 }
 
 export function formatHiddenStemsDisplay(stems: string[], locale: string): string {
-  if (!stems.length) return locale.startsWith("zh") ? "无" : "—";
+  if (!stems.length) return isZhMatrixLocale(locale) ? "无" : "—";
   const parts = stems.map((st) => {
     const info = getStemInfo(st);
-    return info?.element ?? st;
+    return info ? elementLabelLocalized(info.element, locale) : st;
   });
   const unique = [...new Set(parts)];
-  const label = locale.startsWith("zh") ? "藏干" : "Hidden";
+  const label = isZhMatrixLocale(locale) ? "藏干" : "Hidden";
   return `${label}: ${unique.join("·")}`;
 }
 

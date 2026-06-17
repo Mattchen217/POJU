@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 
 import { ChartReadingLoader } from "@/components/poju/ChartReadingLoader";
@@ -33,7 +32,6 @@ export function PreviewMatrixPreparing({
   onRefund,
 }: Props) {
   const router = useRouter();
-  const tChart = useTranslations("chart_loader");
   const [error, setError] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
 
@@ -83,7 +81,7 @@ export function PreviewMatrixPreparing({
       onRetry={() => {}}
       onRefund={onRefund}
       locale={locale}
-      hintOverride={tChart("hint_first_time")}
+      variant="matrix"
     />
   );
 }

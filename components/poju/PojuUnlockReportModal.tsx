@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 
 import "@/styles/poju-unlock-report.css";
+import "@/styles/pwa-product-begin.css";
 
 type Props = {
   open: boolean;
@@ -56,8 +57,10 @@ export function PojuUnlockReportModal({ open, reportText, gateMode = false, onCl
         </div>
 
         <footer className="poju-unlock-report-panel__foot">
-          <button type="button" className="poju-unlock-report-panel__close-btn" onClick={onClose}>
-            {gateMode ? t("unlock_report_close_continue") : t("unlock_report_close")}
+          <button type="button" className="begin-btn-large poju-unlock-report-panel__close-btn" onClick={onClose}>
+            <span className="begin-btn-main">
+              {gateMode ? t("unlock_report_close_continue") : t("unlock_report_close")}
+            </span>
           </button>
         </footer>
       </div>

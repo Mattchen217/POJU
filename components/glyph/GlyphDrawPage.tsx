@@ -6,10 +6,9 @@ import { useLocale, useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { DrawSequence } from "@/components/oracle/DrawSequence";
 import { OracleSummon } from "@/components/oracle/OracleSummon";
-import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
-import { PreparingSplineShell } from "@/components/poju/PreparingSplineShell";
-import { ToolMatrixNarrativeReply } from "@/components/cross-product/ToolMatrixNarrativeReply";
+import { ToolPreviewChatSection } from "@/components/cross-product/ToolPreviewChatSection";
 import { ToolPaywallInline } from "@/components/cross-product/ToolPaywallInline";
+import { PreparingSplineShell } from "@/components/poju/PreparingSplineShell";
 import { finalizeToolPreview } from "@/lib/cross-product/finalize-tool-preview";
 import {
   loadGlyphDrawSession,
@@ -286,56 +285,55 @@ export function GlyphDrawPage() {
   const canDraw = qLen >= 10 && qLen <= 200 && !drawBusy && Boolean(matrixPayload);
 
   return (
-    <main className="glyph-draw-page browser-flow-page">
-      <Link href="/glyph/prepare" className="glyph-draw-back">
-        ← {t("back_to_prepare")}
-      </Link>
+    <main className="glyph-draw-page browser-flow-page tool-preview-page">
+      <div className="tool-preview-page__header">
+        <Link href="/glyph/prepare" className="glyph-draw-back">
+          ← {t("back_to_prepare")}
+        </Link>
 
-      {profile ? (
-        <div className="profile-mini-display">
-          <span className="profile-mini-label">{t("reading_for_label")}</span>
-          <span className="profile-mini-value">{formatGlyphProfileShort(profile, locale)}</span>
-        </div>
-      ) : null}
+        {profile ? (
+          <div className="profile-mini-display">
+            <span className="profile-mini-label">{t("reading_for_label")}</span>
+            <span className="profile-mini-value">{formatGlyphProfileShort(profile, locale)}</span>
+          </div>
+        ) : null}
+      </div>
 
       {matrixPayload ? (
-        <div className="glyph-draw-preview pchat">
-          <PojuEnergyMatrix payload={matrixPayload} locale={locale} compact />
-          <div className="glyph-draw-preview__narrative pchat__bubble pchat__bubble--assistant">
-            <ToolMatrixNarrativeReply
-              product="glyph"
-              locale={locale}
-              payloadA={matrixPayload}
-              narrative={narrative}
-            />
-          </div>
-        </div>
+        <ToolPreviewChatSection
+          product="glyph"
+          locale={locale}
+          matrices={[{ payload: matrixPayload }]}
+          narrative={narrative}
+        />
       ) : null}
 
-      <h2 className="glyph-input-title">{t("input_title")}</h2>
-      <p className="glyph-input-hint">{t("input_hint")}</p>
+      <div className="tool-preview-page__footer">
+        <h2 className="glyph-input-title">{t("input_title")}</h2>
+        <p className="glyph-input-hint">{t("input_hint")}</p>
 
-      <textarea
-        className="glyph-question-input"
-        value={question}
-        onChange={(e) => setQuestion(e.target.value.slice(0, 200))}
-        placeholder={t("input_placeholder")}
-        rows={5}
-        autoFocus
-      />
+        <textarea
+          className="glyph-question-input"
+          value={question}
+          onChange={(e) => setQuestion(e.target.value.slice(0, 200))}
+          placeholder={t("input_placeholder")}
+          rows={5}
+          autoFocus
+        />
 
-      <div className="glyph-char-count">{qLen} / 200</div>
+        <div className="glyph-char-count">{qLen} / 200</div>
 
-      {error ? <p className="glyph-draw-error">{error}</p> : null}
+        {error ? <p className="glyph-draw-error">{error}</p> : null}
 
-      <button
-        type="button"
-        className="glyph-primary-btn glyph-draw-button"
-        disabled={!canDraw}
-        onClick={() => void handleDraw()}
-      >
-        {drawBusy ? t("drawing_text") : t("draw_button")}
-      </button>
+        <button
+          type="button"
+          className="glyph-primary-btn glyph-draw-button"
+          disabled={!canDraw}
+          onClick={() => void handleDraw()}
+        >
+          {drawBusy ? t("drawing_text") : t("draw_button")}
+        </button>
+      </div>
     </main>
   );
 }

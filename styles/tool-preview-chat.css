@@ -1,0 +1,72 @@
+/* Tool preview (Glyph / Match / Syncro) — same read column as POJU chat, no narrow card shell */
+
+.tool-preview-page {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  min-height: 100dvh;
+  background: transparent;
+  color: var(--pchat-ink, #ece9f4);
+  box-sizing: border-box;
+}
+
+.tool-preview-page__header {
+  width: 100%;
+  max-width: min(var(--pchat-content-width, 1040px), calc(100vw - 32px));
+  margin: 0 auto;
+  padding: 1.25rem 1.75rem 0;
+  box-sizing: border-box;
+}
+
+.tool-preview-page__footer {
+  width: 100%;
+  max-width: min(var(--pchat-content-width, 1040px), calc(100vw - 32px));
+  margin: 0 auto;
+  padding: 0 1.75rem 3rem;
+  box-sizing: border-box;
+}
+
+.tool-preview-chat.pchat {
+  --pchat-read-max: min(var(--pchat-content-width, 1040px), calc(100vw - 32px));
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  background: transparent;
+}
+
+.tool-preview-chat__messages {
+  padding-top: 1rem;
+  padding-bottom: 2.5rem;
+}
+
+.tool-preview-chat__matrix-label {
+  display: inline-block;
+  margin-bottom: 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ff7eb0;
+}
+
+.tool-preview-chat .pchat__msg--ai > .pem {
+  width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 767px) {
+  .tool-preview-chat.pchat {
+    --pchat-read-max: 100%;
+  }
+
+  .tool-preview-page__header,
+  .tool-preview-page__footer {
+    max-width: 100%;
+    padding-inline: 1rem;
+  }
+
+  .tool-preview-chat__messages {
+    padding-top: 0.5rem;
+    padding-bottom: 2rem;
+  }
+}

@@ -271,7 +271,7 @@
         "description": "You have read the books, consulted friends, and mapped out every pros-and-cons matrix. Yet, the core dilemma refuses to release its grip.",
         "tagline": "Deconstruct your matrix. Break the gridlock.",
         "cta_primary": "Initialize Deep Session",
-        "billing_notice": "$9.99 / session or executable via Monthly Pass tokens"
+        "billing_notice": "30-day deep session on a specific question for $9.99 or use experience voucher"
       },
       "what_is": {
         "title": "What is POJU?",
@@ -379,8 +379,8 @@
         "brand_tag": "Glyph",
         "heading": "A portable mirror for your intuition and subconscious chaos.",
         "description": "Anchor your inquiry. Draw a symbol. Decode the resonance.",
-        "cta": "Cast Your First Glyph",
-        "billing_notice": "$4.99 / reading or via Monthly Pass (Complimentary trial voucher available for new arrivals)"
+        "cta": "Start a Glyph draw",
+        "billing_notice": "$4.99 per reading or use experience voucher"
       },
       "what_is": {
         "title": "What is Glyph?",
@@ -480,7 +480,7 @@
           "Comprehensive cognitive reflection mapped to your profile data",
           "Instant local secure delivery, fully preserved within your browser sandbox"
         ],
-        "cta": "Cast Your First Glyph",
+        "cta": "Start a Glyph draw",
         "footnote": "Decentralized data custody, upholding your absolute privacy sovereignty."
       }
     },
@@ -491,7 +491,7 @@
         "description": "Based on your cognitive profile, Syncro models how each 2-hour chronobiological window and 8-directional vector interact with your behavioral momentum. Know precisely when to execute at peak velocity, when to internalize, and where to anchor your focus.",
         "tagline": "A live dynamic companion for your next 24-hour cycle.",
         "cta": "Activate 24-Hour Synchronization",
-        "billing_notice": "$4.99 per 24-hour matrix loop · Fully covered via Monthly Pass tokens · Mobile optimized",
+        "billing_notice": "$4.99 per 24-hour sync or use experience voucher",
         "qr_label": "pojulife.com/syncro",
         "sms_label": "Text yourself the link",
         "sms_button": "Text me the link",
@@ -1398,8 +1398,8 @@
     "day_master_label": "Core Nature",
     "strength_label": "Strength",
     "current_phase_label": "Current 10-Year Phase",
-    "hint_first_time": "Building your full chart reading. Please stay on this screen…",
-    "hint_using_cache": "Loading your full chart reading...",
+    "hint_first_time": "Building your energy matrix. Please stay on this screen…",
+    "hint_using_cache": "Loading your energy matrix...",
     "done_message": "Ready. Entering your session...",
     "error_title": "Preparation Failed",
     "error_message": "Something went wrong while preparing your reading.",
@@ -1417,6 +1417,20 @@
     "step_6": "Understanding your current energy phase...",
     "step_7": "Composing your foundational reading...",
     "step_8": "Almost done, just a moment..."
+  },
+  "portrait_loader": {
+    "hint_first_time": "Writing your full personality portrait report. Deep analysis takes about 2–5 minutes — please keep this screen open…",
+    "hint_using_cache": "Loading your saved personality portrait report...",
+    "done_message": "Report ready. Entering your session...",
+    "step_0": "Connecting to the deep-reading engine...",
+    "step_1": "Extracting layered personality signals from your structure...",
+    "step_2": "Mapping core drives and everyday behavioral habits...",
+    "step_3": "Identifying recurring inner pulls and blind spots...",
+    "step_4": "Integrating life-phase themes with what matters now...",
+    "step_5": "Drafting strength paths and where you tend to get stuck...",
+    "step_6": "Calibrating tone so the portrait lands with clarity...",
+    "step_7": "Structuring the full portrait into readable sections...",
+    "step_8": "Your report is almost ready..."
   },
   "analysis_loader": {
     "connecting": "Connecting…",
@@ -1707,7 +1721,7 @@
       "heading": "Dual Profiles. One Shared Orbit. Total Relational Architecture.",
       "description": "Match maps two independent cognitive frameworks into a single unified matrix. Decode exactly how your behavioral vectors intersect—revealing structural alignment, systemic friction, and precise, actionable pathways toward co-evolution.",
       "cta": "Initialize Match Alignment",
-      "billing_notice": "$4.99 per single alignment · Fully covered via your Monthly Pass tokens",
+      "billing_notice": "$4.99 per alignment or use experience voucher",
       "what_is": {
         "title": "What is Match?",
         "subtitle": "The Relational Matrix",

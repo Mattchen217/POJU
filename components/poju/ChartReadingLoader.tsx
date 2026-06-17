@@ -7,6 +7,8 @@ import { PreparingStatusOverlay } from "@/components/poju/PreparingStatusOverlay
 
 const STEP_COUNT = 9;
 
+export type ChartLoaderVariant = "matrix" | "portrait";
+
 export interface ChartReadingLoaderProps {
   profile: StoredProfileData;
   currentStep: string;
@@ -14,6 +16,8 @@ export interface ChartReadingLoaderProps {
   onRetry: () => void;
   onRefund: () => void;
   locale: string;
+  /** `matrix` = energy matrix prep; `portrait` = full base-analysis report */
+  variant?: ChartLoaderVariant;
   /** e.g. Glyph full-reading wait copy */
   hintOverride?: string;
   /** 非 POJU 会话时用，例如 Syncro「返回」 */
@@ -25,10 +29,11 @@ export function ChartReadingLoader({
   error,
   onRetry,
   onRefund,
+  variant = "matrix",
   hintOverride,
   secondaryActionLabel,
 }: ChartReadingLoaderProps) {
-  const t = useTranslations("chart_loader");
+  const t = useTranslations(variant === "portrait" ? "portrait_loader" : "chart_loader");
   const steps = useMemo(
     () => Array.from({ length: STEP_COUNT }, (_, i) => t(`step_${i}` as "step_0")),
     [t],

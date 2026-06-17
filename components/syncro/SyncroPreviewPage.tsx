@@ -4,9 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { Link, useRouter } from "@/i18n/navigation";
-import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
 import { PreparingSplineShell } from "@/components/poju/PreparingSplineShell";
-import { ToolMatrixNarrativeReply } from "@/components/cross-product/ToolMatrixNarrativeReply";
+import { ToolPreviewChatSection } from "@/components/cross-product/ToolPreviewChatSection";
 import { finalizeToolPreview } from "@/lib/cross-product/finalize-tool-preview";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
 import type { MatrixNarrativeResponse } from "@/lib/llm/prompts/matrix-narrative-prompt";
@@ -101,28 +100,25 @@ export function SyncroPreviewPage() {
   }
 
   return (
-    <main className="min-h-screen bg-bg-deep text-text-body">
-      <div className="syncro-preview-page browser-flow-page mx-auto w-full max-w-lg px-4 pb-12 pt-6">
+    <main className="syncro-preview-page browser-flow-page tool-preview-page min-h-screen bg-bg-deep text-text-body">
+      <div className="tool-preview-page__header">
         <Link href="/syncro/prepare" className="inline-flex text-sm text-cyan-200/80 hover:text-cyan-100">
           ← {tTask("back")}
         </Link>
+      </div>
 
-        {matrixPayload ? (
-          <div className="syncro-preview-block pchat mt-6">
-            <PojuEnergyMatrix payload={matrixPayload} locale={locale} compact />
-            <div className="syncro-preview-narrative pchat__bubble pchat__bubble--assistant mt-4">
-              <ToolMatrixNarrativeReply
-                product="syncro"
-                locale={locale}
-                payloadA={matrixPayload}
-                narrative={narrative}
-              />
-            </div>
-          </div>
-        ) : null}
+      {matrixPayload ? (
+        <ToolPreviewChatSection
+          product="syncro"
+          locale={locale}
+          matrices={[{ payload: matrixPayload }]}
+          narrative={narrative}
+        />
+      ) : null}
 
+      <div className="tool-preview-page__footer">
         {task ? (
-          <div className="syncro-preview-task mt-6 rounded-xl border border-white/10 bg-black/25 px-4 py-3">
+          <div className="syncro-preview-task rounded-xl border border-white/10 bg-black/25 px-4 py-3">
             <p className="text-xs font-semibold uppercase tracking-[0.1em] text-text-dim">{tTask("title")}</p>
             <p className="mt-2 text-[15px] leading-7 text-text-secondary">&ldquo;{task}&rdquo;</p>
           </div>

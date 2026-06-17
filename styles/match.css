@@ -188,8 +188,15 @@
 
 .match-relationship-page {
   min-height: 100dvh;
-  background: linear-gradient(180deg, #0f0a06 0%, #050308 100%);
   color: #e8e2d8;
+  padding: 0;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+.match-relationship-page:not(.tool-preview-page) {
+  background: linear-gradient(180deg, #0f0a06 0%, #050308 100%);
   padding: 1.5rem 1rem 3rem;
 }
 
@@ -206,8 +213,9 @@
 }
 
 .match-preview-block {
-  max-width: 28rem;
-  margin: 0 auto 1.75rem;
+  width: 100%;
+  max-width: none;
+  margin: 0 0 1.75rem;
 }
 
 .match-preview-matrix {
@@ -243,8 +251,7 @@
 }
 
 .match-draw-error {
-  max-width: 28rem;
-  margin: 0 auto 1rem;
+  margin: 0 0 1rem;
   font-size: 0.85rem;
   color: #fca5a5;
 }
@@ -257,7 +264,8 @@
 }
 
 .match-relationship-content {
-  max-width: 28rem;
+  width: 100%;
+  max-width: min(var(--pchat-content-width, 1040px), calc(100vw - 32px));
   margin: 0 auto;
 }
 

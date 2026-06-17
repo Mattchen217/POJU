@@ -5,10 +5,9 @@ import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
 import { PojuToolHandoffBanner } from "@/components/poju/PojuToolHandoffBanner";
-import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
 import { PreparingSplineShell } from "@/components/poju/PreparingSplineShell";
 import { RelationshipInput } from "@/components/match/RelationshipInput";
-import { ToolMatrixNarrativeReply } from "@/components/cross-product/ToolMatrixNarrativeReply";
+import { ToolPreviewChatSection } from "@/components/cross-product/ToolPreviewChatSection";
 import { ToolPaywallInline } from "@/components/cross-product/ToolPaywallInline";
 import { finalizeToolPreview } from "@/lib/cross-product/finalize-tool-preview";
 import { formatBirthShort } from "@/lib/match/format-birth-short";
@@ -215,45 +214,35 @@ export function MatchRelationshipPage() {
   }
 
   return (
-    <main className="match-relationship-page browser-flow-page">
+    <main className="match-relationship-page browser-flow-page tool-preview-page">
       {pojuHandoff ? <PojuToolHandoffBanner handoff={pojuHandoff} /> : null}
 
       {matrixPayload ? (
-        <div className="match-preview-block pchat">
-          <div className="match-preview-matrix">
-            <span className="match-preview-matrix__label">A</span>
-            <PojuEnergyMatrix payload={matrixPayload} locale={locale} compact />
-          </div>
-          {matrixPayloadB ? (
-            <div className="match-preview-matrix">
-              <span className="match-preview-matrix__label">B</span>
-              <PojuEnergyMatrix payload={matrixPayloadB} locale={locale} compact />
-            </div>
-          ) : null}
-          <div className="match-preview-narrative pchat__bubble pchat__bubble--assistant">
-            <ToolMatrixNarrativeReply
-              product="match"
-              locale={locale}
-              payloadA={matrixPayload}
-              payloadB={matrixPayloadB}
-              narrative={narrative}
-            />
-          </div>
-        </div>
+        <ToolPreviewChatSection
+          product="match"
+          locale={locale}
+          matrices={[
+            { payload: matrixPayload, label: "A" },
+            ...(matrixPayloadB ? [{ payload: matrixPayloadB, label: "B" }] : []),
+          ]}
+          narrative={narrative}
+        />
       ) : null}
 
-      {error ? <p className="match-draw-error">{error}</p> : null}
+      <div className="tool-preview-page__footer">
+        {error ? <p className="match-draw-error">{error}</p> : null}
 
-      <RelationshipInput
-        aLabel={formatBirthShort(aProfile)}
-        bLabel={formatBirthShort(bProfile)}
-        relationship={relationship}
-        onRelationshipChange={setRelationship}
-        onContinue={() => void handleContinue()}
-        onBack={handleBack}
-        continueLabel={t("relationship.begin_match")}
-        continueDisabled={unlockBusy}
-      />
+        <RelationshipInput
+          aLabel={formatBirthShort(aProfile)}
+          bLabel={formatBirthShort(bProfile)}
+          relationship={relationship}
+          onRelationshipChange={setRelationship}
+          onContinue={() => void handleContinue()}
+          onBack={handleBack}
+          continueLabel={t("relationship.begin_match")}
+          continueDisabled={unlockBusy}
+        />
+      </div>
     </main>
   );
 }

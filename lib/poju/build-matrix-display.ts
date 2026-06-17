@@ -5,6 +5,8 @@ import type { ProfileStrength, ProfileStructured, PillarDetail } from "@/lib/cal
 import type { DaYunEntry } from "@/lib/calculations/lunar-dayun";
 import {
   DA_YUN_THEMES,
+  elementLabelLocalized,
+  formatHiddenStemsDisplay,
   getBranchInfo,
   getStemInfo,
   getTenGodArchetype,
@@ -127,9 +129,6 @@ function dayunAgeRange(entry: DaYunEntry, next: DaYunEntry | undefined): string 
 function enrichPillar(p: PillarDetail, locale: string): MatrixPillarDisplay {
   const stemInfo = getStemInfo(p.stem);
   const branchInfo = getBranchInfo(p.branch);
-  const hiddenParts = p.hidden_stems.map((st) => getStemInfo(st)?.element ?? st);
-  const hiddenUnique = [...new Set(hiddenParts)];
-  const hiddenPrefix = tMatrix(locale, "card.hidden_prefix");
   return {
     ...p,
     stem_en: stemInfo?.en ?? p.stem,
@@ -139,10 +138,7 @@ function enrichPillar(p: PillarDetail, locale: string): MatrixPillarDisplay {
     branch_pinyin: branchInfo?.pinyin ?? "",
     branch_element: branchInfo?.element ?? "",
     ten_god_en: getTenGodArchetype(p.ten_god),
-    hidden_display:
-      hiddenUnique.length > 0
-        ? `${hiddenPrefix}: ${hiddenUnique.join("·")}`
-        : tMatrix(locale, "card.hidden_empty"),
+    hidden_display: formatHiddenStemsDisplay(p.hidden_stems, locale) || tMatrix(locale, "card.hidden_empty"),
     star_label: p.shen_sha[0] ? `✦ ${p.shen_sha[0]}` : null,
     life_stage_label: p.life_stage_han ?? null,
     star_labels: p.shen_sha,

@@ -313,7 +313,7 @@ export function MatchAnalyzingPage() {
           onRetry={() => {}}
           onRefund={() => router.push("/match")}
           locale={locale}
-          hintOverride={tChart("hint_first_time")}
+          variant="portrait"
         />
       </PreparingSplineShell>
     );
@@ -343,7 +343,7 @@ export function MatchAnalyzingPage() {
           onRetry={() => {}}
           onRefund={() => router.push("/match")}
           locale={locale}
-          hintOverride={tChart("hint_first_time")}
+          variant="portrait"
         />
       </PreparingSplineShell>
     );
@@ -354,12 +354,12 @@ export function MatchAnalyzingPage() {
       <PreparingSplineShell blockInteraction>
         <ChartReadingLoader
           profile={profileA}
-          currentStep="analyzing"
+          currentStep="using_cache"
           error={null}
           onRetry={() => {}}
           onRefund={() => router.push("/match")}
           locale={locale}
-          hintOverride={tChart("hint_first_time")}
+          variant="portrait"
         />
       </PreparingSplineShell>
     );

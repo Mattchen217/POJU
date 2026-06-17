@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 
 import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
@@ -37,7 +36,6 @@ export function UnlockBaziPreparing({
   onRefund,
 }: Props) {
   const router = useRouter();
-  const tChart = useTranslations("chart_loader");
   const [error, setError] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
   const [streamDone, setStreamDone] = useState(false);
@@ -102,7 +100,7 @@ export function UnlockBaziPreparing({
         onRetry={() => {}}
         onRefund={onRefund}
         locale={locale}
-        hintOverride={tChart("hint_first_time")}
+        variant="portrait"
       />
     </>
   );

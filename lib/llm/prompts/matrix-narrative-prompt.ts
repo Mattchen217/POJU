@@ -24,21 +24,26 @@ To comply with global payment gateway policies (Stripe, PayPal, App Store) regar
 1. NO THINKING/REASONING PROCESS: Do not generate any internal thoughts, redacted_thinking tags, or explanations. Start outputting the requested JSON payload directly.
 2. LANGUAGE COMPLIANCE: Detect the user_language variable provided in the input and generate ALL descriptive text in THAT exact language.
 3. NO RAW MARKDOWN IN JSON: Avoid emitting raw markdown characters like '**' or '__' inside string values unless specifically asked.
-4. LENGTH BUDGET (strict): Every string must stay inside the ranges below. Prefer the middle of each range. Never exceed the upper bound.
+4. LENGTH BUDGET (strict): Every string must stay inside the ranges below. Aim for the **upper half** of each range — rich, textured, psychologically specific prose. Never exceed the upper bound. Avoid telegraphic one-liners.
+
+# DEPTH & TEXTURE (all narrative fields)
+- Ground each line in the user's actual chart signals (day master, surplus/deficit, clashes, yongshen, transit).
+- Use at least one concrete behavioral image or inner-life detail (not generic MBTI fluff).
+- Prefer 2 sentences where the range allows; single sentences must still feel complete, not clipped.
 
 # LENGTH BUDGET BY FIELD
 Use user_language to pick the correct column. Count CJK characters for zh; count space-separated words for en/de/es/fr.
 
 | Field | EN / DE / ES / FR (words) | ZH (characters) |
-| elemental_breakdown.caption | 18–30 | 28–45 |
-| structural_dynamics.resonance | 16–26 | 26–40 |
-| structural_dynamics.tension | 16–26 | 26–40 |
-| structural_dynamics.reading | 16–26 | 26–40 |
+| elemental_breakdown.caption | 28–42 | 45–70 |
+| structural_dynamics.resonance | 24–38 | 40–60 |
+| structural_dynamics.tension | 24–38 | 40–60 |
+| structural_dynamics.reading | 24–38 | 40–60 |
 | annual_transit_2026.title | 3–8 | 4–12 |
-| annual_transit_2026.description | 38–55 (exactly 2 sentences) | 60–85 (exactly 2 sentences) |
-| poju_onboarding.archetype_intro | 22–36 (exactly 1 sentence) | 35–52 (exactly 1 sentence) |
-| poju_onboarding.core_conflict | 22–36 (exactly 1 sentence) | 35–52 (exactly 1 sentence) |
-| poju_onboarding.call_to_action | 32–48 (exactly 1 sentence) | 50–72 (exactly 1 sentence) |
+| annual_transit_2026.description | 50–72 (exactly 2 sentences) | 80–115 (exactly 2 sentences) |
+| poju_onboarding.archetype_intro | 38–58 (1–2 sentences) | 60–95 (1–2 sentences) |
+| poju_onboarding.core_conflict | 38–58 (1–2 sentences) | 60–95 (1–2 sentences) |
+| poju_onboarding.call_to_action | 45–65 (1–2 sentences) | 72–105 (1–2 sentences) |
 
 # POJU ONBOARDING CTA (poju_onboarding.call_to_action) — MANDATORY
 This sentence appears directly above the chat input. It MUST explicitly invite the user to **type and send** their personal question or dilemma in the message box below — not a vague "let's begin" or generic welcome.
@@ -49,8 +54,8 @@ Required elements (all in user_language):
 3. Optional: one phrase that POJU will work through it with their matrix/profile — keep within LENGTH BUDGET.
 
 Good examples:
-- EN: "Tell me the question or dilemma you're weighing right now — type it below and send, and we'll work through it together from your matrix."
-- ZH: "请把你此刻最纠结的问题或困境写在下方对话框并发送，我会结合你的能量结构陪你一步步拆开。"
+- EN: "Tell me the question or dilemma you're weighing right now — type it in the box below and send, and we'll unpack it together using your energy matrix as a map."
+- ZH: "请把你此刻最纠结、迟迟定不下来的问题或困境写在下方对话框并发送——我会结合你的能量结构，陪你一步步拆开其中的拉扯与卡点。"
 
 Bad (do NOT use):
 - Vague: "I'm here when you're ready." / "让我们开始吧。"
@@ -73,9 +78,9 @@ You must respond ONLY with a valid JSON matching this exact schema. Each string 
     "description": "[Exactly 2 sentences within LENGTH BUDGET. Macro-environmental climate for 2026 vs their chart — trends only, no predictions.]"
   },
   "poju_onboarding": {
-    "archetype_intro": "[Exactly 1 sentence within LENGTH BUDGET. Psychological archetype from Day Master and energetic state.]",
-    "core_conflict": "[Exactly 1 sentence within LENGTH BUDGET. Internal elemental pull or deficit — why daily life may feel like a tug-of-war.]",
-    "call_to_action": "[Exactly 1 sentence within LENGTH BUDGET. MUST explicitly ask the user to type and send their personal question or dilemma in the chat box below — clear imperative + send/below cue.]"
+    "archetype_intro": "[1–2 sentences within LENGTH BUDGET. Psychological archetype from Day Master and energetic state — vivid, specific, not generic.]",
+    "core_conflict": "[1–2 sentences within LENGTH BUDGET. Internal elemental pull or deficit — name the felt tension in daily life, not just chart labels.]",
+    "call_to_action": "[1–2 sentences within LENGTH BUDGET. MUST explicitly ask the user to type and send their personal question or dilemma in the chat box below — clear imperative + send/below cue.]"
   }
 }
 
@@ -90,7 +95,7 @@ The user will draw a symbolic card for ONE concrete decision or dilemma. Tone: c
   match: `
 # PRODUCT CONTEXT: MATCH (relationship alignment, TWO charts)
 Input includes chart A and chart B. In ONE response:
-- REQUIRED "narrative_a": one paragraph interpreting Person A's matrix (LENGTH similar to poju_onboarding.archetype_intro + core_conflict combined).
+- REQUIRED "narrative_a": one paragraph interpreting Person A's matrix (LENGTH similar to poju_onboarding.archetype_intro + core_conflict combined; aim upper half of combined budget).
 - REQUIRED "narrative_b": one paragraph interpreting Person B's matrix (same length).
 - REQUIRED "guide" (≤60 chars): invite them to describe the specific relationship question they want solved (how to relate, longevity, a concrete conflict…). Mention typing/sending below.
 - Set poju_onboarding fields to brief placeholders if needed; primary copy is narrative_a, narrative_b, guide.`,
@@ -235,15 +240,15 @@ function requireString(obj: Record<string, unknown>, key: string): string {
 }
 
 const FIELD_MAX_CHARS: Record<string, number> = {
-  "elemental_breakdown.caption": 220,
-  "structural_dynamics.resonance": 200,
-  "structural_dynamics.tension": 200,
-  "structural_dynamics.reading": 200,
+  "elemental_breakdown.caption": 360,
+  "structural_dynamics.resonance": 320,
+  "structural_dynamics.tension": 320,
+  "structural_dynamics.reading": 320,
   "annual_transit_2026.title": 48,
-  "annual_transit_2026.description": 380,
-  "poju_onboarding.archetype_intro": 240,
-  "poju_onboarding.core_conflict": 240,
-  "poju_onboarding.call_to_action": 320,
+  "annual_transit_2026.description": 520,
+  "poju_onboarding.archetype_intro": 420,
+  "poju_onboarding.core_conflict": 420,
+  "poju_onboarding.call_to_action": 480,
 };
 
 function clampNarrativeField(text: string, fieldKey: string): string {
