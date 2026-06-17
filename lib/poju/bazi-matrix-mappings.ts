@@ -85,6 +85,22 @@ export const ZODIAN_HAN_TO_EN: Record<string, string> = {
   猪: "Pig",
 };
 
+/** Pinyin for zodiac animal han (not earthly-branch reading). */
+export const ZODIAC_HAN_PINYIN: Record<string, string> = {
+  鼠: "shǔ",
+  牛: "niú",
+  虎: "hǔ",
+  兔: "tù",
+  龙: "lóng",
+  蛇: "shé",
+  马: "mǎ",
+  羊: "yáng",
+  猴: "hóu",
+  鸡: "jī",
+  狗: "gǒu",
+  猪: "zhū",
+};
+
 const ELEMENT_ZH: Record<string, string> = {
   Wood: "木",
   Fire: "火",
@@ -96,6 +112,25 @@ const ELEMENT_ZH: Record<string, string> = {
 const ZODIAN_EN_TO_HAN: Record<string, string> = Object.fromEntries(
   Object.entries(ZODIAN_HAN_TO_EN).map(([han, en]) => [en, han]),
 );
+
+/** Year-branch → zodiac animal han (蛇 not 巳). */
+export function zodiacAnimalHanFromBranch(branch: string): string {
+  const info = getBranchInfo(branch);
+  if (!info) return branch.trim().charAt(0);
+  return ZODIAN_EN_TO_HAN[info.zodiac_en] ?? branch.trim().charAt(0);
+}
+
+export function resolveZodiacAnimalDisplay(
+  yearBranch: string,
+  shengxiaoHan?: string,
+): { han: string; en: string; pinyin: string; branch: string } {
+  const branch = yearBranch.trim().charAt(0);
+  const branchInfo = getBranchInfo(branch);
+  const han = (shengxiaoHan?.trim() || zodiacAnimalHanFromBranch(branch)).trim();
+  const en = ZODIAN_HAN_TO_EN[han] ?? branchInfo?.zodiac_en ?? "—";
+  const pinyin = ZODIAC_HAN_PINYIN[han] ?? branchInfo?.pinyin ?? "";
+  return { han, en, pinyin, branch };
+}
 
 export function isZhMatrixLocale(locale: string): boolean {
   return locale.toLowerCase().startsWith("zh");
@@ -162,6 +197,33 @@ export function formatHiddenStemsDisplay(stems: string[], locale: string): strin
   return `${label}: ${unique.join("·")}`;
 }
 
+const WUXING_HAN_TO_EN: Record<string, string> = {
+  木: "Wood",
+  火: "Fire",
+  土: "Earth",
+  金: "Metal",
+  水: "Water",
+};
+
+export type YongshenChipDisplay = { label: string; elementKey: string };
+
+/** Locale-aware 用神 chips: zh shows 木水火土金, en shows Wood/Fire/…. */
+export function yongshenChipsForLocale(
+  analysis: { elements_en?: string[]; elements_han?: string[] } | null | undefined,
+  locale: string,
+): YongshenChipDisplay[] {
+  if (!analysis) return [];
+  const han = analysis.elements_han ?? [];
+  const en = analysis.elements_en ?? [];
+  if (isZhMatrixLocale(locale)) {
+    return han.map((h, i) => ({
+      label: String(h),
+      elementKey: en[i] ?? WUXING_HAN_TO_EN[String(h)] ?? String(h),
+    }));
+  }
+  return en.map((e) => ({ label: e, elementKey: e }));
+}
+
 export function elementCssClass(element: string): string {
   const map: Record<string, string> = {
     Wood: "el-w",
@@ -170,7 +232,8 @@ export function elementCssClass(element: string): string {
     Metal: "el-m",
     Water: "el-water",
   };
-  return map[element] ?? "";
+  const key = map[element] ? element : (WUXING_HAN_TO_EN[element] ?? element);
+  return map[key] ?? "";
 }
 
 export function isEngineRawPattern(text: string): boolean {

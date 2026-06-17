@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
@@ -128,6 +128,12 @@ export function MatchRelationshipPage() {
     void loadPreview();
     return () => previewAbortRef.current?.abort();
   }, [loadPreview, previewRetryKey]);
+
+  useLayoutEffect(() => {
+    if (stage === "preview") {
+      window.scrollTo(0, 0);
+    }
+  }, [stage]);
 
   useEffect(() => {
     const prefill =

@@ -19,6 +19,32 @@ type Props = {
   narrative?: MatrixNarrativeResponse | null;
 };
 
+function matchPersonLabel(person: "A" | "B", locale: string): string {
+  return locale.startsWith("zh") ? `命主 ${person}` : `Person ${person}`;
+}
+
+function matchPersonFallbackBlock(
+  person: "A" | "B",
+  payload: PojuMatrixPayload,
+  locale: string,
+): string {
+  const display = resolveMatrixDisplay(payload, locale);
+  const label = matchPersonLabel(person, locale);
+  const parts = [display.synopsis.archetype, display.synopsis.friction].filter(Boolean);
+  return `${label}：${parts.join(" ")}`;
+}
+
+function matchPersonBlock(
+  person: "A" | "B",
+  payload: PojuMatrixPayload,
+  locale: string,
+  narrative?: MatrixNarrativeResponse | null,
+): string {
+  const fromNarrative = person === "A" ? narrative?.narrative_a : narrative?.narrative_b;
+  if (fromNarrative?.trim()) return fromNarrative.trim();
+  return matchPersonFallbackBlock(person, payload, locale);
+}
+
 /** Tool preview narrative — match: A then B then guide; glyph/syncro: matrix synopsis + guide. */
 export function ToolMatrixNarrativeReply({ product, locale, payloadA, payloadB, narrative }: Props) {
   const t = useTranslations("tool_preview");
@@ -48,8 +74,8 @@ export function ToolMatrixNarrativeReply({ product, locale, payloadA, payloadB, 
   }
 
   if (product === "match") {
-    const blockA = narrative?.narrative_a ?? displayA.synopsis.archetype;
-    const blockB = narrative?.narrative_b ?? (payloadB ? resolveMatrixDisplay(payloadB, locale).synopsis.archetype : "");
+    const blockA = matchPersonBlock("A", payloadA, locale, narrative);
+    const blockB = payloadB ? matchPersonBlock("B", payloadB, locale, narrative) : "";
     return (
       <>
         {blockA ? <p>{blockA}</p> : null}
@@ -95,15 +121,12 @@ export function toolMatrixNarrativeActionsText(
 
   const parts: string[] = [];
   if (product === "match") {
-    if (narrative?.narrative_a) parts.push(narrative.narrative_a);
-    if (narrative?.narrative_b) parts.push(narrative.narrative_b);
+    parts.push(matchPersonBlock("A", payloadA, locale, narrative));
+    if (payloadB) parts.push(matchPersonBlock("B", payloadB, locale, narrative));
   } else {
     parts.push(getMatrixSynopsisPlainText(displayA, locale));
   }
   const guide = narrative?.guide ?? displayA.synopsis.prompt;
   if (guide) parts.push(guide);
-  if (product === "match" && payloadB && !narrative?.narrative_b) {
-    void payloadB;
-  }
   return parts.filter(Boolean).join("\n\n");
 }

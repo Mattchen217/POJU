@@ -10,8 +10,8 @@ import {
   getBranchInfo,
   getStemInfo,
   getTenGodArchetype,
+  resolveZodiacAnimalDisplay,
   splitGanzhi,
-  ZODIAN_HAN_TO_EN,
 } from "@/lib/poju/bazi-matrix-mappings";
 import { normalizeMatrixLocale, tMatrix } from "@/lib/poju/poju-matrix-i18n";
 import type { UserProfile } from "@/lib/profile/types";
@@ -278,7 +278,6 @@ export function buildMatrixDisplayData(input: {
   const zhDate = normalizeMatrixLocale(locale) === "zh";
   const pd = structured.pillars_detail;
   const yearBranch = pd?.year.branch ?? splitGanzhi(profile.bazi.yearPillar).branch;
-  const branchInfo = getBranchInfo(yearBranch);
   const dmStem = pd?.day.stem ?? structured.day_master.charAt(0);
   const dmInfo = getStemInfo(dmStem);
   const sorted = [...wuxing_scores].sort((a, b) => b.pct - a.pct);
@@ -286,8 +285,9 @@ export function buildMatrixDisplayData(input: {
   const deficit = sorted[sorted.length - 1]?.element ?? "Fire";
   const dmElement = dmInfo?.element ?? "Wood";
 
-  const shengxiaoHan = String(chart?.八字?.生肖 ?? "");
-  const zodiacEn = ZODIAN_HAN_TO_EN[shengxiaoHan] ?? branchInfo?.zodiac_en ?? "—";
+  const shengxiaoHan = String(chart?.八字?.生肖 ?? "").trim();
+  const zodiacDisplay = resolveZodiacAnimalDisplay(yearBranch, shengxiaoHan || undefined);
+  const zodiacEn = zodiacDisplay.en;
 
   const monthNames = [
     "Jan",
@@ -310,7 +310,7 @@ export function buildMatrixDisplayData(input: {
 
   const yearGanzhi = pd?.year.ganzhi ?? profile.bazi.yearPillar;
   const pattern_line = tMatrix(locale, "template.pattern_line", {
-    zodiac: zhDate ? shengxiaoHan || branchInfo?.han || "" : zodiacEn,
+    zodiac: zhDate ? zodiacDisplay.han : zodiacEn,
     day_master: dmInfo?.en ?? dmStem,
   });
 
@@ -334,10 +334,10 @@ export function buildMatrixDisplayData(input: {
 
   return {
     zodiac: {
-      han: shengxiaoHan || branchInfo?.han || yearBranch,
-      en: zodiacEn,
-      pinyin: branchInfo?.pinyin ?? "",
-      branch: yearBranch,
+      han: zodiacDisplay.han,
+      en: zodiacDisplay.en,
+      pinyin: zodiacDisplay.pinyin,
+      branch: zodiacDisplay.branch,
       note: tMatrix(locale, "template.zodiac_note"),
     },
     calendar: {

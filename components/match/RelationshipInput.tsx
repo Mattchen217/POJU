@@ -61,7 +61,6 @@ export function RelationshipInput({
         }
         placeholder={t("placeholder")}
         rows={5}
-        autoFocus
         className="match-relationship-textarea"
       />
 

@@ -11,6 +11,7 @@ export function applyToolMatrixNarrative(
   narrative: MatrixNarrativeResponse | null,
   product: ToolName,
   locale: string,
+  matchPerson?: "a" | "b",
 ): PojuMatrixPayload {
   if (!narrative) {
     return applyToolMatrixNarrativeFailed(payload, product, locale);
@@ -26,13 +27,15 @@ export function applyToolMatrixNarrative(
     getStaticToolPreviewGuide(locale, product);
 
   if (product === "match") {
+    const personLine =
+      matchPerson === "b" ? narrative.narrative_b : narrative.narrative_a;
     updated = {
       ...updated,
       display: {
         ...display,
         synopsis: {
-          archetype: narrative.narrative_a ?? display.synopsis.archetype,
-          friction: narrative.narrative_b ?? display.synopsis.friction,
+          ...display.synopsis,
+          archetype: personLine ?? display.synopsis.archetype,
           prompt: guide,
         },
       },

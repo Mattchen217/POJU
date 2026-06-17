@@ -94,10 +94,6 @@
 }
 
 .poju-unlock-report-panel__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
   padding: 18px 18px 14px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -114,17 +110,6 @@
   font-size: 13px;
   line-height: 1.55;
   color: rgba(255, 255, 255, 0.62);
-}
-
-.poju-unlock-report-panel__head-close {
-  flex-shrink: 0;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 10px;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.85);
-  padding: 6px 12px;
-  font-size: 13px;
-  cursor: pointer;
 }
 
 .poju-unlock-report-panel__body {
@@ -206,8 +191,10 @@
   background: linear-gradient(180deg, transparent, rgba(9, 6, 17, 0.72));
 }
 
-.poju-unlock-report-panel__foot .poju-unlock-report-panel__close-btn.begin-btn-large {
+.poju-unlock-report-panel__foot .poju-unlock-report-panel__close-btn.poju-new-session-btn {
   width: min(280px, 88%);
   margin: 0;
-  border: none;
+  padding: 12px 20px;
+  font-size: 15px;
+  line-height: 1.35;
 }

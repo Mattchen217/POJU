@@ -44,6 +44,9 @@ Use user_language to pick the correct column. Count CJK characters for zh; count
 | poju_onboarding.archetype_intro | 38–58 (1–2 sentences) | 60–95 (1–2 sentences) |
 | poju_onboarding.core_conflict | 38–58 (1–2 sentences) | 60–95 (1–2 sentences) |
 | poju_onboarding.call_to_action | 45–65 (1–2 sentences) | 72–105 (1–2 sentences) |
+| narrative_a (Match only) | 55–85 (2 sentences) | 85–130 (2 sentences) |
+| narrative_b (Match only) | 55–85 (2 sentences) | 85–130 (2 sentences) |
+| guide (Match / Glyph / Syncro) | 35–55 (1–2 sentences) | 55–90 (1–2 sentences) |
 
 # POJU ONBOARDING CTA (poju_onboarding.call_to_action) — MANDATORY
 This sentence appears directly above the chat input. It MUST explicitly invite the user to **type and send** their personal question or dilemma in the message box below — not a vague "let's begin" or generic welcome.
@@ -91,25 +94,48 @@ const TOOL_PRODUCT_PROMPT_APPEND: Record<Exclude<MatrixNarrativeProduct, "poju">
 # PRODUCT CONTEXT: GLYPH (symbol oracle)
 The user will draw a symbolic card for ONE concrete decision or dilemma. Tone: contemplative, like focusing before a draw.
 - Set poju_onboarding.call_to_action to empty string "".
-- REQUIRED field "guide" (≤60 chars in user_language): invite them to name the ONE thing they want clarity on right now (career fork, relationship, stay-or-go…) before they draw. Mention typing/sending below. Do not spoil paid reading.`,
+- REQUIRED field "guide" (see guide row in LENGTH BUDGET): invite them to name the ONE thing they want clarity on right now (career fork, relationship, stay-or-go…) before they draw. Mention typing/sending below. Do not spoil paid reading.`,
   match: `
-# PRODUCT CONTEXT: MATCH (relationship alignment, TWO charts)
-Input includes chart A and chart B. In ONE response:
-- REQUIRED "narrative_a": one paragraph interpreting Person A's matrix (LENGTH similar to poju_onboarding.archetype_intro + core_conflict combined; aim upper half of combined budget).
-- REQUIRED "narrative_b": one paragraph interpreting Person B's matrix (same length).
-- REQUIRED "guide" (≤60 chars): invite them to describe the specific relationship question they want solved (how to relate, longevity, a concrete conflict…). Mention typing/sending below.
-- Set poju_onboarding fields to brief placeholders if needed; primary copy is narrative_a, narrative_b, guide.`,
+# PRODUCT CONTEXT: MATCH (relationship alignment — TWO DISTINCT people)
+Input JSON contains person_a (chart A) and person_b (chart B) with separate birth_date, day_master, chart_status, clashes, yongshen, and strength. Read BOTH charts independently.
+
+## CRITICAL — narrative_a vs narrative_b
+1. narrative_a interprets ONLY person_a's chart; narrative_b interprets ONLY person_b's chart.
+2. NEVER copy, lightly paraphrase, or reuse the same sentences across narrative_a and narrative_b.
+3. If both share the same day-master element, you MUST still differentiate using each person's surplus/deficit percentages, clashes_tensions, yongshen, strength, and gender_label.
+4. Each paragraph must feel written for that specific individual — not a generic element blurb.
+
+## REQUIRED OPENING LABELS (user_language)
+- narrative_a MUST open with a clear Person A label before the interpretation:
+  - ZH: start with「命主 A：」or「对于 A，你…」
+  - EN: start with "Person A —" or "For Person A, you…"
+  - DE/ES/FR: equivalent Person-A label in that language
+- narrative_b MUST open with the matching Person B label (命主 B / Person B — / …).
+
+## CONTENT SHAPE (each of narrative_a and narrative_b)
+- Sentence 1: psychological archetype from day_master + energetic state (vivid, specific).
+- Sentence 2: inner pull or relational tendency from surplus/deficit, clashes, or yongshen — how this person tends to show up in connection.
+- Stay within LENGTH BUDGET; aim for the upper half.
+
+## guide (third block — relationship question CTA)
+- REQUIRED separate field "guide" — NOT inside narrative_a or narrative_b.
+- Invite them to describe the specific relationship question they want solved OR ask about (compatibility, conflict, how to relate, stay-or-go…).
+- MUST include a clear cue to type and send in the input box below.
+- LENGTH: see guide row in LENGTH BUDGET table.
+
+## Other fields
+- Set poju_onboarding fields to minimal placeholders; primary copy is narrative_a, narrative_b, guide.`,
   syncro: `
 # PRODUCT CONTEXT: SYNCRO (timing & direction for a task)
 The user needs optimal timing/direction for a concrete task at a location. Tone: practical, spatial-temporal.
 - Set poju_onboarding.call_to_action to empty string "".
-- REQUIRED "guide" (≤60 chars in user_language): ask what they need to do AND where (interview, signing, travel…) — type and send below. Do not spoil paid syncro matrix.`,
+- REQUIRED "guide" (see guide row in LENGTH BUDGET): ask what they need to do AND where (interview, signing, travel…) — type and send below. Do not spoil paid syncro matrix.`,
 };
 
 const TOOL_JSON_FIELDS_APPEND = `
-  "guide": "[≤60 chars in user_language. Product-specific invite to type/send their question below.]",
-  "narrative_a": "[Match only: A interpretation paragraph.]",
-  "narrative_b": "[Match only: B interpretation paragraph. Omit for non-match.]"
+  "guide": "[Match/Glyph/Syncro: 1–2 sentences within LENGTH BUDGET. Product-specific invite to type/send their question below.]",
+  "narrative_a": "[Match only: Person A interpretation — MUST open with Person A label; grounded in person_a chart only.]",
+  "narrative_b": "[Match only: Person B interpretation — MUST open with Person B label; grounded in person_b chart only; MUST differ materially from narrative_a.]"
 `;
 
 export function getMatrixNarrativeSystemPrompt(product: MatrixNarrativeProduct = "poju"): string {
@@ -124,6 +150,8 @@ export function getMatrixNarrativeSystemPrompt(product: MatrixNarrativeProduct =
 
 export type MatrixNarrativeInput = {
   user_language: string;
+  person_label?: string;
+  birth_date?: string;
   day_master: string;
   chart_status: string;
   clashes_tensions: string[];
@@ -149,7 +177,7 @@ export type MatrixNarrativeResponse = {
     core_conflict: string;
     call_to_action: string;
   };
-  /** Tool preview CTA (glyph/match/syncro); ≤60 chars */
+  /** Tool preview CTA (glyph/match/syncro) */
   guide?: string;
   /** Match: Person A interpretation */
   narrative_a?: string;
@@ -206,8 +234,13 @@ export function buildMatrixNarrativeInput(
     structured.bazi_enrichment?.yongshen_analysis.elements_han?.map(String) ??
     [];
 
+  const birth = payload.user_profile.birth;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const birthDate = `${birth.year}-${pad(birth.month)}-${pad(birth.day)}`;
+
   return {
     user_language: localeToUserLanguage(locale),
+    birth_date: birthDate,
     day_master: `${day_master_en} (${dmHan})`,
     chart_status: chartStatus,
     clashes_tensions: extractClashes(chart),
@@ -223,7 +256,15 @@ export function buildMatrixNarrativeUserMessage(
   opts?: { inputB?: MatrixNarrativeInput; product?: MatrixNarrativeProduct },
 ): string {
   if (opts?.product === "match" && opts.inputB) {
-    return JSON.stringify({ product: "match", chart_a: input, chart_b: opts.inputB }, null, 2);
+    return JSON.stringify(
+      {
+        product: "match",
+        person_a: { label: "A", ...input },
+        person_b: { label: "B", ...opts.inputB },
+      },
+      null,
+      2,
+    );
   }
   if (opts?.product && opts.product !== "poju") {
     return JSON.stringify({ product: opts.product, ...input }, null, 2);
@@ -249,6 +290,9 @@ const FIELD_MAX_CHARS: Record<string, number> = {
   "poju_onboarding.archetype_intro": 420,
   "poju_onboarding.core_conflict": 420,
   "poju_onboarding.call_to_action": 480,
+  guide: 200,
+  narrative_a: 520,
+  narrative_b: 520,
 };
 
 function clampNarrativeField(text: string, fieldKey: string): string {
@@ -284,13 +328,23 @@ export function parseMatrixNarrativeResponseText(
   };
 
   const guideRaw = optionalString(parsed, "guide");
-  const guide = guideRaw ? clampNarrativeField(guideRaw.slice(0, 120), "poju_onboarding.call_to_action") : undefined;
-  const narrative_a = optionalString(parsed, "narrative_a");
-  const narrative_b = optionalString(parsed, "narrative_b");
+  const guide = guideRaw ? clampNarrativeField(guideRaw, "guide") : undefined;
+  const narrative_aRaw = optionalString(parsed, "narrative_a");
+  const narrative_bRaw = optionalString(parsed, "narrative_b");
+  const narrative_a = narrative_aRaw ? clampNarrativeField(narrative_aRaw, "narrative_a") : undefined;
+  const narrative_b = narrative_bRaw ? clampNarrativeField(narrative_bRaw, "narrative_b") : undefined;
   const callToActionRaw = optionalString(po, "call_to_action");
 
   if (product === "match" && (!narrative_a || !narrative_b)) {
     throw new Error("Match narrative requires narrative_a and narrative_b");
+  }
+  if (
+    product === "match" &&
+    narrative_a &&
+    narrative_b &&
+    narrative_a.replace(/\s+/g, "") === narrative_b.replace(/\s+/g, "")
+  ) {
+    throw new Error("Match narrative_a and narrative_b must not be identical");
   }
   if (product !== "poju" && !guide && !callToActionRaw) {
     throw new Error("Tool narrative requires guide or call_to_action");

@@ -620,7 +620,8 @@
       },
       "pwa_guide": {
         "title": "Syncro auf deinem Smartphone installieren",
-        "subtitle": "Syncro funktioniert nur als installierte App auf deinem Startbildschirm. Folge unten den Schritten für dein Smartphone.",
+        "intro_lead": "Öffne pojulife.com im mobilen Browser oder installiere die pojulife-App auf deinem Smartphone.",
+        "subtitle": "Syncro funktioniert nur im mobilen Browser oder als PWA auf dem Startbildschirm. Folge unten den Schritten für dein Smartphone.",
         "ios_browser_note": "Öffne pojulife.com/syncro nur in Safari – andere Browser auf dem iPhone können die App nicht installieren.",
         "android_browser_note": "Öffne pojulife.com/syncro nur in Chrome – andere Android-Browser können die vollständige App nicht installieren.",
         "ios_step_4": "Verlasse Safari und öffne pojulife über das Symbol auf deinem Startbildschirm.",
@@ -628,7 +629,6 @@
         "android_step_2": "Wähle Zum Startbildschirm hinzufügen oder App installieren.",
         "android_step_3": "Tippe zur Bestätigung auf Installieren oder Hinzufügen.",
         "android_step_4": "Verlasse Chrome und öffne pojulife über das Symbol auf deinem Startbildschirm.",
-        "footer_note": "Öffne Syncro nach der Installation immer über das pojulife-Symbol auf deinem Startbildschirm – nicht über einen Browser-Tab.",
         "close": "Verstanden"
       }
     },
@@ -1964,7 +1964,7 @@
   "tool_preview": {
     "guide": {
       "glyph": "Nenne die eine Entscheidung, die dich beschäftigt — unten eingeben und senden.",
-      "match": "Beschreibe deine Beziehungsfrage — unten eingeben und senden.",
+      "match": "Beschreibe die Beziehungsfrage, die du klären oder stellen willst — unten eingeben und senden.",
       "syncro": "Was musst du tun, und wo? Aufgabe unten eingeben und senden."
     }
   },

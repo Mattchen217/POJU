@@ -6,20 +6,20 @@ const TOOL_GUIDE_FALLBACK: Record<string, Record<ToolName, string>> = {
     glyph:
       "Name the one decision on your mind — type it below and send before you draw.",
     match:
-      "Describe the relationship question you want clarity on — type and send below.",
+      "Describe the relationship question you want to solve or ask about — type and send below.",
     syncro:
       "What do you need to do, and where? Type your task below and send.",
   },
   zh: {
     glyph: "写下你此刻最想问清的那一件事，在下方输入并发送后再抽签。",
-    match: "写下你想解决的这段关系里的具体问题，在下方输入并发送。",
+    match: "写下你想解决或询问的这段关系里的具体问题，在下方输入并发送。",
     syncro: "写下你要办的事和所在位置，在下方输入并发送。",
   },
   de: {
     glyph:
       "Nenne die eine Entscheidung, die dich beschäftigt — unten eingeben und senden.",
     match:
-      "Beschreibe deine Beziehungsfrage — unten eingeben und senden.",
+      "Beschreibe die Beziehungsfrage, die du klären oder stellen willst — unten eingeben und senden.",
     syncro:
       "Was musst du tun, und wo? Aufgabe unten eingeben und senden.",
   },
@@ -27,7 +27,7 @@ const TOOL_GUIDE_FALLBACK: Record<string, Record<ToolName, string>> = {
     glyph:
       "Escribe la decisión que más te pesa — envíala abajo antes de sacar.",
     match:
-      "Describe la pregunta sobre la relación — escríbela abajo y envía.",
+      "Describe la pregunta sobre la relación que quieres resolver o plantear — escríbela abajo y envía.",
     syncro:
       "¿Qué necesitas hacer y dónde? Escríbelo abajo y envía.",
   },
@@ -35,7 +35,7 @@ const TOOL_GUIDE_FALLBACK: Record<string, Record<ToolName, string>> = {
     glyph:
       "Écrivez la décision qui vous préoccupe — envoyez-la ci-dessous avant de tirer.",
     match:
-      "Décrivez votre question sur la relation — tapez et envoyez ci-dessous.",
+      "Décrivez la question sur cette relation que vous voulez résoudre ou poser — tapez et envoyez ci-dessous.",
     syncro:
       "Que devez-vous faire, et où ? Tapez la tâche ci-dessous et envoyez.",
   },

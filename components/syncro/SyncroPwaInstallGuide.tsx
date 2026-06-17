@@ -16,6 +16,10 @@ import {
 } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
 
+import { PwaBrandMark } from "@/components/pwa/PwaBrandMark";
+import "@/styles/pchat-scrollbar.css";
+import "@/styles/pwa-gate.css";
+
 type SyncroPwaInstallContextValue = {
   open: () => void;
   close: () => void;
@@ -159,14 +163,13 @@ function SyncroPwaInstallModal({ onClose }: { onClose: () => void }) {
       >
         <div className="mx-auto mt-3 h-1 w-10 rounded-full bg-white/25 sm:hidden" />
 
-        <div className="overflow-y-auto px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5 sm:px-8 sm:pb-8 sm:pt-8">
+        <div className="pchat-scrollbar overflow-y-auto px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5 sm:px-8 sm:pb-8 sm:pt-8">
           <div className="flex flex-col items-center gap-3 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/20 bg-gradient-to-br from-[#8b5cf6] via-[#7c3aed] to-[#312e81] shadow-[0_0_24px_rgba(139,92,246,0.45)]">
-              <span className="text-2xl font-black text-white">P</span>
-            </div>
+            <PwaBrandMark size="lg" />
             <h2 id="syncro-pwa-guide-title" className="text-lg font-semibold text-[#f4f0fa] sm:text-xl">
               {t("title")}
             </h2>
+            <p className="max-w-lg text-sm leading-relaxed text-[#cbc3d7]">{t("intro_lead")}</p>
             <p className="max-w-lg text-sm leading-relaxed text-[#cbc3d7]">{t("subtitle")}</p>
           </div>
 
@@ -225,10 +228,6 @@ function SyncroPwaInstallModal({ onClose }: { onClose: () => void }) {
               ]}
             />
           </div>
-
-          <p className="mt-5 rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-center text-xs leading-relaxed text-amber-100/95">
-            {t("footer_note")}
-          </p>
 
           <button
             type="button"

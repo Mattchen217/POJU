@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { BirthInfoPicker } from "@/components/poju/BirthInfoPicker";
 import { BirthInfoConfirmDialog } from "@/components/poju/BirthInfoConfirmDialog";
@@ -91,6 +91,10 @@ export function SessionPreparation({
       setMode("new");
     }
   }, [profiles.length]);
+
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0);
+  }, [mode]);
 
   function handleSelectExisting(profileId: string) {
     setSelectedProfileId(profileId);

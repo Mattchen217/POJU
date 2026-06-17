@@ -57,9 +57,10 @@ export async function finalizeToolPreview(opts: {
     narrative,
     opts.product,
     locale,
+    opts.product === "match" ? "a" : undefined,
   );
   const matrix_payload_b = payloadB
-    ? applyToolMatrixNarrative(payloadB, narrative, opts.product, locale)
+    ? applyToolMatrixNarrative(payloadB, narrative, opts.product, locale, "b")
     : null;
 
   return { matrix_payload, matrix_payload_b, narrative };

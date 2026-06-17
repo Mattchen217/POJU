@@ -620,7 +620,8 @@
       },
       "pwa_guide": {
         "title": "在手机上安装 Syncro",
-        "subtitle": "Syncro 只能通过安装到主屏幕的 PWA 使用。请根据你的手机，按下方步骤操作。",
+        "intro_lead": "请在手机浏览器中打开 pojulife.com 或在手机上安装 pojulife 的应用。",
+        "subtitle": "Syncro 只能在手机浏览器或通过安装到主屏幕的 PWA 应用使用。请根据你的手机，按下方步骤操作。",
         "ios_browser_note": "请仅用 Safari 打开 pojulife.com/syncro —— iPhone 上其他浏览器无法完成安装。",
         "android_browser_note": "请仅用 Chrome 打开 pojulife.com/syncro —— Android 上其他浏览器无法安装完整应用。",
         "ios_step_4": "退出 Safari，从主屏幕的 pojulife 图标进入。",
@@ -628,7 +629,6 @@
         "android_step_2": "选择「添加到主屏幕」或「安装应用」。",
         "android_step_3": "点击「安装」或「添加」确认。",
         "android_step_4": "退出 Chrome，从主屏幕的 pojulife 图标进入。",
-        "footer_note": "安装完成后，请始终从主屏幕的 pojulife 图标打开 Syncro，不要从浏览器标签页进入。",
         "close": "知道了"
       }
     },
@@ -802,7 +802,7 @@
   "tool_preview": {
     "guide": {
       "glyph": "写下你此刻最想问清的那一件事，在下方输入并发送后再抽签。",
-      "match": "写下你想解决的这段关系里的具体问题，在下方输入并发送。",
+      "match": "写下你想解决或询问的这段关系里的具体问题，在下方输入并发送。",
       "syncro": "写下你要办的事和所在位置，在下方输入并发送。"
     }
   },

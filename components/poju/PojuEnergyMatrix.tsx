@@ -4,7 +4,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { PojuDaYunDial } from "@/components/poju/PojuDaYunDial";
-import { elementCssClass, formatBranchDisplay, formatStemDisplay, isZhMatrixLocale } from "@/lib/poju/bazi-matrix-mappings";
+import {
+  elementCssClass,
+  formatBranchDisplay,
+  formatStemDisplay,
+  isZhMatrixLocale,
+  yongshenChipsForLocale,
+} from "@/lib/poju/bazi-matrix-mappings";
 import { buildElementPillarMap, type ElementPillarRow } from "@/lib/poju/build-element-pillar-map";
 import { buildMatrixDisplayData } from "@/lib/poju/build-matrix-display";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
@@ -279,10 +285,10 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
   }, []);
 
   const lifeSegmentPillar = activePillarByAge(display.current_age);
-  const yongshenElements =
-    structured.bazi_enrichment?.yongshen_analysis.elements_en ??
-    structured.bazi_enrichment?.yongshen_analysis.elements_han?.map(String) ??
-    [];
+  const yongshenChips = useMemo(
+    () => yongshenChipsForLocale(structured.bazi_enrichment?.yongshen_analysis, locale),
+    [structured.bazi_enrichment?.yongshen_analysis, locale],
+  );
 
   const pillarLabels: Record<string, string> = {
     year: tc("pillar_year"),
@@ -323,11 +329,11 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
         <div className="topband">
           <div className="tcard zsign">
             <div className="zsign__art">
-              <span>{display.zodiac.han || display.zodiac.branch}</span>
+              <span>{display.zodiac.han}</span>
             </div>
             <div className="zsign__en">{display.zodiac.en}</div>
             <div className="zsign__cn">
-              {display.zodiac.branch} · {display.zodiac.pinyin}
+              {display.zodiac.han} · {display.zodiac.pinyin}
             </div>
             <div className="zsign__tag">{tc("your_sign_tag")}</div>
             <div className="zsign__note">{display.zodiac.note}</div>
@@ -446,16 +452,16 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
                   </div>
                 ))}
               </div>
-              {yongshenElements.length > 0 ? (
+              {yongshenChips.length > 0 ? (
                 <div className="pem__yongshen-row">
                   <span className="pem__yongshen-label">{tb("optimizing_vector")}</span>
                   <span className="pem__yongshen-chips">
-                    {yongshenElements.map((el) => (
+                    {yongshenChips.map((chip) => (
                       <span
-                        key={el}
-                        className={`pem__yongshen-chip ${ELEMENT_CLASS[el] ?? ""}`}
+                        key={chip.label}
+                        className={`pem__yongshen-chip ${elementCssClass(chip.elementKey)}`}
                       >
-                        {el}
+                        {chip.label}
                       </span>
                     ))}
                   </span>
