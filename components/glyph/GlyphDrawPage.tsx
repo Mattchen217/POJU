@@ -19,7 +19,7 @@ import { discardIncompletePendingProfile } from "@/lib/profile/stored-profiles-s
 import type { StoredProfileData } from "@/lib/db/poju-db";
 import {
   getStoredProfile,
-  getStoredProfileRecord,
+  profileHasBaseAnalysis,
   recordProfileUsage,
 } from "@/lib/profile/stored-profiles-service";
 import { normalizeStoredBirthInfo } from "@/lib/profile/birth-info-utils";
@@ -64,8 +64,7 @@ export function GlyphDrawPage() {
       }
       setProfile(p);
 
-      const record = await getStoredProfileRecord(profileId);
-      if (record?.has_base_analysis && p.base_analysis?.content) {
+      if (await profileHasBaseAnalysis(profileId)) {
         cacheSplineStartedRef.current = Date.now();
         setPrepPhase("cache");
         return;

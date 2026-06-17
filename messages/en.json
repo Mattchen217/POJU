@@ -998,7 +998,7 @@
     "hero_points": [
       { "icon": "lock", "text": "Zero Cloud: No accounts. Our servers store absolutely zero data." },
       { "icon": "alert", "text": "Device-Locked: Switching phones, PCs, or browsers will result in an empty vault (no sync)." },
-      { "icon": "erase", "text": "Erase Warning: Clearing browser data, browsing via Incognito, or removing the PWA app will permanently wipe your records. They cannot be recovered." }
+      { "icon": "erase", "text": "Erase Warning: Clearing browser data, closing pages browsed in private/Incognito mode, or uninstalling the PWA app will permanently wipe your records. They cannot be recovered." }
     ],
     "loading": "Loading…",
     "load_error": "Could not read your local archive. Close and reopen the app, then try again.",

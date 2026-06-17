@@ -6,6 +6,7 @@ import { syncSessionCyclesToDb } from "@/lib/poju/cycle-db-sync";
 import { createNewCycle, ensureSessionCycles } from "@/lib/poju/cycle-manager";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import { syncPojuSessionVaultArchive } from "@/lib/archive/poju-session-vault";
+import { syncPojuSessionReportsToStoredProfiles } from "@/lib/profile/sync-poju-base-analysis";
 import type { POJUSessionState, PojuV4StateHint } from "@/lib/poju/types";
 
 const SESSION_SECRET = "pojulife_v4_poju_session";
@@ -133,6 +134,12 @@ export async function savePOJUSession(state: POJUSessionState): Promise<void> {
     await syncPojuSessionVaultArchive(state);
   } catch (e) {
     console.error("[poju] Archive vault sync failed:", e);
+  }
+
+  try {
+    await syncPojuSessionReportsToStoredProfiles(state);
+  } catch (e) {
+    console.error("[poju] base analysis profile sync failed:", e);
   }
 }
 

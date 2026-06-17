@@ -981,7 +981,7 @@
       },
       {
         "icon": "erase",
-        "text": "Erase Warning: Clearing browser data, browsing via Incognito, or removing the PWA app will permanently wipe your records. They cannot be recovered."
+        "text": "Avertissement d'effacement : vider les données du navigateur, fermer les pages consultées en navigation privée ou désinstaller l'application (PWA) effacera définitivement vos enregistrements. Ils ne peuvent pas être récupérés."
       }
     ],
     "loading": "Chargement…",

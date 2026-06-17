@@ -7,7 +7,7 @@ import { sha256Hex } from "@/lib/sha256";
 import { calculateProfile } from "@/lib/calculations";
 import { getUserProfile } from "@/lib/profile/active-profile";
 import { getPojuDb } from "@/lib/db/poju-db";
-import type { StoredProfileData, StoredProfileRecord } from "@/lib/db/poju-db";
+import type { StoredProfileBaseAnalysis, StoredProfileData, StoredProfileRecord } from "@/lib/db/poju-db";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
 import {
   generateDisplayName,
@@ -52,6 +52,32 @@ export interface StoredProfileSummary {
   created_at: string;
 }
 
+const MIN_BASE_ANALYSIS_CHARS = 80;
+
+/** Whether encrypted payload contains a usable base analysis (not just the index flag). */
+export function storedBaseAnalysisPresent(ba: StoredProfileBaseAnalysis | undefined): boolean {
+  if (!ba) return false;
+  const display = ba.display_text?.trim();
+  if (display && display.length >= MIN_BASE_ANALYSIS_CHARS) return true;
+  const raw = ba.raw_text?.trim();
+  if (raw && raw.length >= MIN_BASE_ANALYSIS_CHARS) return true;
+  const content = ba.content;
+  if (typeof content === "string" && content.trim().length >= MIN_BASE_ANALYSIS_CHARS) return true;
+  if (content !== undefined && content !== null && typeof content !== "string") return true;
+  return false;
+}
+
+async function reconcileBaseAnalysisFlag(profileId: string, present: boolean): Promise<void> {
+  if (!present) return;
+  const db = getPojuDb();
+  const record = await db.stored_profiles.get(profileId);
+  if (!record || record.has_base_analysis) return;
+  await db.stored_profiles.update(profileId, {
+    has_base_analysis: true,
+    base_analysis_at: record.base_analysis_at ?? new Date(),
+  });
+}
+
 export async function listStoredProfiles(): Promise<StoredProfileSummary[]> {
   if (typeof window === "undefined") return [];
 
@@ -70,6 +96,10 @@ export async function listStoredProfiles(): Promise<StoredProfileSummary[]> {
       });
       const b = normalizeStoredBirthInfo(data.birth_info as unknown as Record<string, unknown>);
       const loc = b.birth_location;
+      const analysisPresent = storedBaseAnalysisPresent(data.base_analysis);
+      if (analysisPresent && !record.has_base_analysis) {
+        void reconcileBaseAnalysisFlag(record.profile_id, true);
+      }
       summaries.push({
         profile_id: record.profile_id,
         display_name: record.display_name,
@@ -78,7 +108,7 @@ export async function listStoredProfiles(): Promise<StoredProfileSummary[]> {
         gender: b.gender,
         timezone: b.timezone,
         relationship: record.relationship,
-        has_base_analysis: record.has_base_analysis,
+        has_base_analysis: record.has_base_analysis || analysisPresent,
         used_true_solar_time:
           data.user_profile?.used_true_solar_time ??
           data.base_analysis?.used_true_solar_time ??
@@ -107,9 +137,12 @@ export async function listStoredProfiles(): Promise<StoredProfileSummary[]> {
  * If v5 `stored_profiles` is empty but legacy `userProfiles` exists, import once.
  */
 export async function listStoredProfilesForSessionPrep(): Promise<StoredProfileSummary[]> {
-  let list = await listStoredProfiles();
-  /** Only show profiles with a completed 命主基础分析 — no "empty shell" rows after failed LLM. */
-  list = list.filter((p) => p.has_base_analysis);
+  const { syncPojuReportMessagesToStoredProfiles } = await import(
+    "@/lib/profile/sync-poju-base-analysis"
+  );
+  await syncPojuReportMessagesToStoredProfiles();
+
+  let list = (await listStoredProfiles()).filter((p) => p.has_base_analysis);
   if (list.length > 0) return list;
 
   const legacy = await getUserProfile();
@@ -117,7 +150,7 @@ export async function listStoredProfilesForSessionPrep(): Promise<StoredProfileS
 
   try {
     await importCalculatedProfileAsStored({ profile: legacy });
-    list = await listStoredProfiles();
+    list = (await listStoredProfiles()).filter((p) => p.has_base_analysis);
   } catch (e) {
     console.warn("[stored-profiles] Legacy profile import failed:", e);
   }
@@ -410,14 +443,12 @@ export async function upgradeStoredProfileLocation(
 /** Whether IndexedDB has a completed 命主基础分析 for this profile. */
 export async function profileHasBaseAnalysis(profileId: string): Promise<boolean> {
   assertBrowser();
-  const record = await getStoredProfileRecord(profileId);
-  if (!record?.has_base_analysis) return false;
   const data = await getStoredProfile(profileId);
-  const ba = data?.base_analysis;
-  if (!ba) return false;
-  const content = ba.content;
-  if (content !== undefined && content !== null) return true;
-  return Boolean(ba.raw_text && ba.raw_text.trim().length > 80);
+  if (storedBaseAnalysisPresent(data?.base_analysis)) {
+    void reconcileBaseAnalysisFlag(profileId, true);
+    return true;
+  }
+  return false;
 }
 
 /**
