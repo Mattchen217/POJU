@@ -19,10 +19,8 @@ export function MatchSelectAPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const sessionType = sessionStorage.getItem("match_session_type");
-    if (!sessionType) {
-      router.replace("/match");
-      return;
+    if (!sessionStorage.getItem("match_session_type")) {
+      sessionStorage.setItem("match_session_type", "free");
     }
 
     void (async () => {

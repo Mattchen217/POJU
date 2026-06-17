@@ -59,6 +59,9 @@ export interface SyncroSession {
     tokens_used: number;
     latency_ms: number;
   };
+  /** Hook flow — preview gate before compute. */
+  unlock_status?: "preview" | "unlocked";
+  unlock_via?: "payment" | "code";
 }
 
 /** JSON stored in encrypted blob (dates as ISO strings). */

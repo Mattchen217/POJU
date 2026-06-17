@@ -862,6 +862,14 @@
       "attach_menu_document": "Dokument",
       "attach_menu_image": "Bild",
       "attach_menu_pdf": "PDF",
+      "unlock_report_modal_title": "Basislesung (vollständige Analyse)",
+      "unlock_report_modal_hint": "Du kannst dies jederzeit erneut im Chat öffnen.",
+      "unlock_report_gate_hint": "Bitte lies zuerst deine vollständige Basislesung. Nach dem Schließen setzt POJU mit deiner Frage fort.",
+      "unlock_report_close": "Schließen",
+      "unlock_report_close_continue": "Schließen und fortfahren",
+      "unlock_report_card_label": "Basislesung",
+      "unlock_report_card_title": "Deine vollständige Basislesung ist bereit",
+      "unlock_report_view_full": "Vollständigen Bericht ansehen",
       "session_picker": {
         "close": "Schließen",
         "new_poju": "+ New POJU",
@@ -1937,6 +1945,13 @@
       "continuing_from": "Fortsetzung von {tool}",
       "context_label": "Fortsetzung dieser Analyse",
       "joining": "Das Ergebnis deines Tools wird dieser Sitzung hinzugefügt…"
+    }
+  },
+  "tool_preview": {
+    "guide": {
+      "glyph": "Nenne die eine Entscheidung, die dich beschäftigt — unten eingeben und senden.",
+      "match": "Beschreibe deine Beziehungsfrage — unten eingeben und senden.",
+      "syncro": "Was musst du tun, und wo? Aufgabe unten eingeben und senden."
     }
   },
   "base_analysis_view": {

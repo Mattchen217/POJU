@@ -62,11 +62,8 @@ export function SyncroHomePage() {
   }
 
   function handleStart() {
-    if (canUse.isFreeAvailable) {
-      router.push("/syncro/task?type=free");
-    } else {
-      router.push("/syncro/task?type=paid");
-    }
+    sessionStorage.setItem("syncro_session_type", "free");
+    router.push("/syncro/task?new=1");
   }
 
   if (canUse.checking) {
@@ -109,11 +106,9 @@ export function SyncroHomePage() {
             onClick={handleStart}
             className="marketing-pill-outline-cta marketing-pill-outline-cta--cyan inline-flex w-full min-w-[220px] max-w-sm justify-center px-8 py-3.5 text-[15px] font-semibold hover:-translate-y-0.5 hover:scale-[1.02] motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100 active:scale-[0.99] sm:w-auto md:px-10 md:py-4 md:text-base"
           >
-            {canUse.isFreeAvailable ? t("start_free") : t("start_paid")}
+            {t("start_free")}
           </button>
-          <p className="mt-4 text-sm leading-7 text-text-dim">
-            {canUse.isFreeAvailable ? t("free_note") : t("paid_note")}
-          </p>
+          <p className="mt-4 text-sm leading-7 text-text-dim">{t("free_note")}</p>
         </div>
       </div>
     </main>

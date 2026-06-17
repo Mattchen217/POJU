@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 
 import { CitySearchBox, type CitySearchSelection } from "@/components/syncro/CitySearchBox";
+import { ToolPaywallInline } from "@/components/cross-product/ToolPaywallInline";
 import { useRouter } from "@/i18n/navigation";
 import {
   deviceOrientationRequiresPermissionPrompt,
@@ -11,33 +13,48 @@ import {
   requestDeviceOrientationPermission,
 } from "@/lib/syncro/compass-permission-ios";
 import {
+  loadSyncroPreviewSession,
+  patchSyncroPreviewSession,
+} from "@/lib/syncro/syncro-preview-session";
+import { isSyncroPreviewSession } from "@/lib/syncro/syncro-preview-unlock";
+import {
   SYNCRO_LOCATION_STORAGE_KEY,
   buildSyncroStoredLocation,
   type SyncroStoredLocation,
 } from "@/lib/syncro/syncro-location-storage";
 
-type LocationStage = "asking" | "manual_search" | "confirm" | "denied";
+type LocationStage = "asking" | "manual_search" | "confirm" | "denied" | "paywall";
 
 export function SyncroLocationPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const locale = useLocale();
 
   const [stage, setStage] = useState<LocationStage>("asking");
   const [location, setLocation] = useState<SyncroStoredLocation | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  const [unlockBusy, setUnlockBusy] = useState(false);
   const geoStartedRef = useRef(false);
 
   useEffect(() => {
     const profileId = sessionStorage.getItem("syncro_profile_id");
     if (!profileId) {
       router.replace("/syncro/prepare");
+      return;
     }
-  }, [router]);
+    const preview = loadSyncroPreviewSession();
+    if (preview) setPreviewId(preview.preview_id);
+    if (searchParams.get("paywall") === "1" && preview && isSyncroPreviewSession(preview)) {
+      setStage("paywall");
+    }
+  }, [router, searchParams]);
 
   useEffect(() => {
-    if (geoStartedRef.current) return;
+    if (geoStartedRef.current || stage === "paywall") return;
     geoStartedRef.current = true;
     tryGeolocation();
-  }, []);
+  }, [stage]);
 
   function tryGeolocation() {
     setError(null);
@@ -88,23 +105,60 @@ export function SyncroLocationPage() {
     setStage("confirm");
   }
 
-  function handleConfirm() {
-    if (!location) return;
-    sessionStorage.setItem(SYNCRO_LOCATION_STORAGE_KEY, JSON.stringify(location));
-
-    const goComputing = () => router.push("/syncro/computing");
-
+  function goComputing() {
     if (deviceOrientationRequiresPermissionPrompt()) {
       requestDeviceOrientationPermission().then((status) => {
         if (status === "granted") {
           void markCompassGrantedInStorage();
         }
-        goComputing();
+        router.push("/syncro/computing");
       });
+      return;
+    }
+    router.push("/syncro/computing");
+  }
+
+  function handleConfirm() {
+    if (!location) return;
+    sessionStorage.setItem(SYNCRO_LOCATION_STORAGE_KEY, JSON.stringify(location));
+
+    const preview = loadSyncroPreviewSession();
+    if (preview && isSyncroPreviewSession(preview)) {
+      setPreviewId(preview.preview_id);
+      setStage("paywall");
       return;
     }
 
     goComputing();
+  }
+
+  async function handleUnlocked(via: "payment" | "code") {
+    setUnlockBusy(true);
+    try {
+      patchSyncroPreviewSession({
+        unlock_status: "unlocked",
+        unlock_via: via,
+      });
+      goComputing();
+    } finally {
+      setUnlockBusy(false);
+    }
+  }
+
+  if (stage === "paywall" && previewId) {
+    return (
+      <main className="syncro-location-page syncro-location-page--paywall flex min-h-screen flex-col items-center justify-end bg-bg-deep px-4 pb-12 text-text-body">
+        <div className="syncro-paywall-overlay w-full max-w-md" role="dialog" aria-modal="true">
+          <ToolPaywallInline
+            product="syncro"
+            previewId={previewId}
+            locale={locale}
+            onUnlocked={handleUnlocked}
+            busy={unlockBusy}
+          />
+        </div>
+      </main>
+    );
   }
 
   return (

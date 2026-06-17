@@ -8,23 +8,18 @@ import { PojuToolHandoffBanner } from "@/components/poju/PojuToolHandoffBanner";
 import { SessionPreparation } from "@/components/poju/SessionPreparation";
 import { usePojuToolHandoff } from "@/lib/poju/use-poju-tool-handoff";
 import "@/styles/poju-tool-handoff.css";
-import { markPendingBaseAnalysisProfile } from "@/lib/profile/pending-base-analysis";
 import {
   listStoredProfilesForSessionPrep,
-  profileHasBaseAnalysis,
   type StoredProfileSummary,
 } from "@/lib/profile/stored-profiles-service";
 import "@/styles/session-prep.css";
 
 function GlyphPrepareInner() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const locale = useLocale();
   const t = useTranslations("glyph");
 
   const pojuHandoff = usePojuToolHandoff("glyph");
-  const sessionType =
-    pojuHandoff?.quota_free || searchParams.get("type") !== "paid" ? "free" : "paid";
 
   const [profiles, setProfiles] = useState<StoredProfileSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,11 +37,8 @@ function GlyphPrepareInner() {
     })();
   }, []);
 
-  async function handleProfileSelected(profileId: string) {
-    if (!(await profileHasBaseAnalysis(profileId))) {
-      markPendingBaseAnalysisProfile(profileId);
-    }
-    router.push(`/glyph/draw?profile=${encodeURIComponent(profileId)}&type=${sessionType}`);
+  function handleProfileSelected(profileId: string) {
+    router.push(`/glyph/draw?profile=${encodeURIComponent(profileId)}`);
   }
 
   function handleBack() {

@@ -80,15 +80,12 @@ export function SyncroMobileStartSection() {
 
     if (!isSupportedDevice) return;
 
-    if (isFreeAvailable) {
-      router.push("/syncro/task?type=free&new=1");
-    } else {
-      router.push("/syncro/task?type=paid&new=1");
-    }
+    sessionStorage.setItem("syncro_session_type", "free");
+    router.push("/syncro/task?new=1");
   }
 
   const qrUrl = buildSyncroMobileUrl(locale);
-  const ctaLabel = isFreeAvailable ? t("start_free") : t("start_paid");
+  const ctaLabel = t("start_free");
 
   if (checking) {
     return (
@@ -120,9 +117,7 @@ export function SyncroMobileStartSection() {
         >
           {ctaLabel}
         </button>
-        <p className="mt-4 text-sm leading-7 text-text-dim">
-          {isFreeAvailable ? t("free_note") : t("paid_note")}
-        </p>
+        <p className="mt-4 text-sm leading-7 text-text-dim">{t("free_note")}</p>
       </div>
 
       <div className="mt-10 grid gap-4">

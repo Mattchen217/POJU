@@ -799,6 +799,13 @@
       "joining": "正在把工具结果加入本会话…"
     }
   },
+  "tool_preview": {
+    "guide": {
+      "glyph": "写下你此刻最想问清的那一件事，在下方输入并发送后再抽签。",
+      "match": "写下你想解决的这段关系里的具体问题，在下方输入并发送。",
+      "syncro": "写下你要办的事和所在位置，在下方输入并发送。"
+    }
+  },
   "poju": {
     "branding": {
       "navbar_tooltip": "策略破局：打破认知死角与复杂的人生困局。",
@@ -915,6 +922,14 @@
       "attach_menu_document": "添加文档",
       "attach_menu_image": "添加图片",
       "attach_menu_pdf": "添加 PDF",
+      "unlock_report_modal_title": "核心性格画像（完整分析）",
+      "unlock_report_modal_hint": "可随时在聊天记录中再次打开。",
+      "unlock_report_gate_hint": "请先阅读你的完整性格画像分析。关闭后将开始针对你问题的对话。",
+      "unlock_report_close": "关闭",
+      "unlock_report_close_continue": "关闭并继续对话",
+      "unlock_report_card_label": "核心性格画像",
+      "unlock_report_card_title": "完整性格画像分析已就绪",
+      "unlock_report_view_full": "查看完整报告",
       "session_picker": {
         "close": "关闭",
         "new_poju": "+ New POJU",

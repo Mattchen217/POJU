@@ -97,12 +97,11 @@ export function MatchHomePage() {
   const pojuHandoff = usePojuToolHandoff("match");
 
   function handleStart() {
-    const useFree = Boolean(pojuHandoff?.quota_free);
-    sessionStorage.setItem("match_session_type", useFree ? "free" : "paid");
+    sessionStorage.setItem("match_session_type", "free");
     if (pojuHandoff?.prefill.partner_relationship) {
       sessionStorage.setItem("match_relationship_prefill", pojuHandoff.prefill.partner_relationship);
     }
-    router.push(useFree ? "/match/select-a" : "/match/payment");
+    router.push("/match/select-a");
   }
 
   return (

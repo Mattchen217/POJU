@@ -90,6 +90,10 @@ export interface MatchSession {
   locale: string;
   resonance_index?: number;
   engine_version?: "v5.1";
+  /** Hook flow — set on preview session before analyze. */
+  unlock_status?: "preview" | "unlocked";
+  unlock_via?: "payment" | "code";
+  pending_question?: string;
 }
 
 /** JSON-serializable session blob (encrypted at rest). */

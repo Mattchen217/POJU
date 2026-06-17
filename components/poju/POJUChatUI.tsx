@@ -60,11 +60,19 @@ import {
 import { MatrixNarrativeReply, matrixNarrativeActionsText } from "@/components/poju/MatrixNarrativeReply";
 import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
 import { PojuPaywallInline } from "@/components/poju/PojuPaywallInline";
+import { PojuReportChatCard } from "@/components/poju/PojuReportChatCard";
+import { PojuUnlockReportModal } from "@/components/poju/PojuUnlockReportModal";
 import { hasUnlockReportMessage, prepareUnlockReleaseSession } from "@/lib/poju/finalize-unlock-bazi-session";
 import { requestMatrixNarrative } from "@/lib/llm/deepseek/matrix-narrative";
 import { sessionMatrixReadyForChat } from "@/lib/poju/matrix-narrative-ready";
 import { applyMatrixNarrativeToPayload, markMatrixNarrativeFailed } from "@/lib/poju/apply-matrix-narrative";
 import { refreshMatrixPayload } from "@/lib/poju/build-matrix-payload";
+import {
+  getUnlockReportMessage,
+  getUnlockReportText,
+  isPendingUnlockQuestionRelease,
+  reportPreviewExcerpt,
+} from "@/lib/poju/unlock-report-gate";
 import {
   markPojuChatIntroSeen,
   pojuChatInitialScrollPosition,
@@ -138,6 +146,15 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const [driftReason, setDriftReason] = useState("");
   const [editDialog, setEditDialog] = useState<{ messageId: string; content: string } | null>(null);
   const [unlockBusy, setUnlockBusy] = useState(false);
+  const [unlockReportModalOpen, setUnlockReportModalOpen] = useState(false);
+  const [unlockReportGateDismissed, setUnlockReportGateDismissed] = useState(() => {
+    if (typeof window === "undefined") return true;
+    try {
+      return sessionStorage.getItem(POJU_RELEASE_PENDING_QUESTION_FLAG) !== session.session_id;
+    } catch {
+      return true;
+    }
+  });
   const openingInitRef = useRef(false);
   const previewMatrixInitRef = useRef<string | null>(null);
   const matrixNarrativeRef = useRef<string | null>(null);
@@ -177,20 +194,39 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     () => pojuChatInitialScrollPosition(session.session_id),
     [session.session_id],
   );
+  const unlockReportMessage = useMemo(() => getUnlockReportMessage(session), [session.messages]);
+  const unlockReportText = useMemo(() => getUnlockReportText(unlockReportMessage), [unlockReportMessage]);
+  const unlockReportGatePending =
+    Boolean(unlockReportMessage) &&
+    isPendingUnlockQuestionRelease(session.session_id) &&
+    !unlockReportGateDismissed;
+  const unlockReportGateBlocking = unlockReportGatePending;
+  const hasUserMessage = visibleMessages.some((m) => m.role === "user");
+  const expired = isSessionExpired(session.expires_at);
+  const previewComposerBlocked = isPreviewSession(session) && hasPaywallMessage(session);
+  const composerLocked = expired || previewComposerBlocked || unlockBusy || unlockReportGateBlocking;
+  const birthFlowBlocking = birthFlowStage === "form" || birthFlowStage === "received" || birthFlowStage === "analyzing";
+  const showSummaryForm =
+    shouldShowContextSummaryForm(session) && !summaryFormDismissed && !session.main_delivery_done;
+  const overlayFormOpen = birthFlowBlocking || showProfilePicker || showSummaryForm;
+
+  const openUnlockReportModal = useCallback(() => setUnlockReportModalOpen(true), []);
+
+  useEffect(() => {
+    if (!unlockReportMessage) return;
+    if (!isPendingUnlockQuestionRelease(session.session_id)) {
+      setUnlockReportGateDismissed(true);
+      return;
+    }
+    setUnlockReportGateDismissed(false);
+    setUnlockReportModalOpen(true);
+  }, [session.session_id, unlockReportMessage]);
 
   useEffect(() => {
     if (initialScrollPosition === "top") {
       markPojuChatIntroSeen(session.session_id);
     }
   }, [session.session_id, initialScrollPosition]);
-  const hasUserMessage = visibleMessages.some((m) => m.role === "user");
-  const expired = isSessionExpired(session.expires_at);
-  const previewComposerBlocked = isPreviewSession(session) && hasPaywallMessage(session);
-  const composerLocked = expired || previewComposerBlocked || unlockBusy;
-  const birthFlowBlocking = birthFlowStage === "form" || birthFlowStage === "received" || birthFlowStage === "analyzing";
-  const showSummaryForm =
-    shouldShowContextSummaryForm(session) && !summaryFormDismissed && !session.main_delivery_done;
-  const overlayFormOpen = birthFlowBlocking || showProfilePicker || showSummaryForm;
 
   useEffect(() => {
     if (expired) {
@@ -412,6 +448,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     if (flag !== session.session_id) return;
     if (sending || confirmBusy || pipelineBusy) return;
     if (!hasUnlockReportMessage(session)) return;
+    if (!unlockReportGateDismissed) return;
 
     const pending = session.pending_question?.trim() || session.original_question?.trim();
     if (!pending) return;
@@ -434,6 +471,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     sending,
     confirmBusy,
     pipelineBusy,
+    unlockReportGateDismissed,
     onSessionUpdate,
   ]);
 
@@ -1235,13 +1273,12 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         if (actionsText) followUpActions[m.timestamp] = actionsText;
       }
       if (m.meta?.kind === "report") {
+        bareIds.add(m.timestamp);
         slots[m.timestamp] = (
-          <div className="pchat__report">
-            <div className="pchat__report-k">
-              {locale.startsWith("zh") ? "八字基础分析" : "Base Analysis Report"}
-            </div>
-            {m.meta.report_text ?? m.content}
-          </div>
+          <PojuReportChatCard
+            excerpt={reportPreviewExcerpt(getUnlockReportText(m))}
+            onOpen={openUnlockReportModal}
+          />
         );
       }
     }
@@ -1256,6 +1293,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     locale,
     session.session_id,
     unlockBusy,
+    openUnlockReportModal,
   ]);
 
   const streaming = sending || confirmBusy;
@@ -1400,6 +1438,22 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         onDismiss={handleExpiryDismiss}
         onExtend={({ snooze }) => void handleExtendSessionPayment(snooze)}
       />
+
+      {unlockReportText ? (
+        <PojuUnlockReportModal
+          open={unlockReportModalOpen}
+          reportText={unlockReportText}
+          gateMode={unlockReportGatePending}
+          onClose={() => {
+            if (unlockReportGatePending) {
+              setUnlockReportModalOpen(false);
+              setUnlockReportGateDismissed(true);
+              return;
+            }
+            setUnlockReportModalOpen(false);
+          }}
+        />
+      ) : null}
 
       {overlayFormOpen ? (
         <div

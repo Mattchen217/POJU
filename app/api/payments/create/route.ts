@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-type Product = "poju" | "glyph" | "syncro_ar";
+type Product = "poju" | "glyph" | "syncro_ar" | "match";
 
 function randomToken(prefix: string): string {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
@@ -20,11 +20,18 @@ export async function POST(req: Request) {
   };
   const raw = String(body.product ?? "glyph").toLowerCase();
   const product: Product =
-    raw === "poju" ? "poju" : raw === "syncro_ar" || raw === "syncro" ? "syncro_ar" : "glyph";
+    raw === "poju"
+      ? "poju"
+      : raw === "match"
+        ? "match"
+        : raw === "syncro_ar" || raw === "syncro"
+          ? "syncro_ar"
+          : "glyph";
 
   const amounts: Record<Product, number> = {
     poju: 9.99,
     glyph: 4.99,
+    match: 4.99,
     syncro_ar: 1.99,
   };
 
@@ -50,14 +57,65 @@ export async function POST(req: Request) {
   }
 
   if (product === "syncro_ar") {
-    const checkoutUrl = "/syncro/task?type=paid";
+    const orderId = randomToken("mocksyncro");
+    const loc =
+      typeof body.locale === "string" && /^[a-zA-Z]{2,3}([-_][a-zA-Z0-9]+)*$/.test(body.locale.trim())
+        ? body.locale.trim()
+        : "en";
+    const fallbackReturn = `/${loc}/syncro/payment-success?mock=true`;
+    const returnUrl = typeof body.return_url === "string" && body.return_url.length > 0 ? body.return_url : fallbackReturn;
+    const sep = returnUrl.includes("?") ? "&" : "?";
+    const paymentUrl = `${returnUrl}${sep}mock=true&order_id=${encodeURIComponent(orderId)}`;
     return NextResponse.json({
       ok: true,
       product,
       amount: amounts.syncro_ar,
       currency: "USD",
-      checkout_url: checkoutUrl,
-      payment_url: checkoutUrl,
+      checkout_url: paymentUrl,
+      payment_url: paymentUrl,
+      order_id: orderId,
+    });
+  }
+
+  if (product === "glyph") {
+    const orderId = randomToken("mockglyph");
+    const loc =
+      typeof body.locale === "string" && /^[a-zA-Z]{2,3}([-_][a-zA-Z0-9]+)*$/.test(body.locale.trim())
+        ? body.locale.trim()
+        : "en";
+    const fallbackReturn = `/${loc}/glyph/payment-success?mock=true`;
+    const returnUrl = typeof body.return_url === "string" && body.return_url.length > 0 ? body.return_url : fallbackReturn;
+    const sep = returnUrl.includes("?") ? "&" : "?";
+    const paymentUrl = `${returnUrl}${sep}mock=true&order_id=${encodeURIComponent(orderId)}`;
+    return NextResponse.json({
+      ok: true,
+      product: "glyph",
+      amount: amounts.glyph,
+      currency: "USD",
+      checkout_url: paymentUrl,
+      payment_url: paymentUrl,
+      order_id: orderId,
+    });
+  }
+
+  if (product === "match") {
+    const orderId = randomToken("mockmatch");
+    const loc =
+      typeof body.locale === "string" && /^[a-zA-Z]{2,3}([-_][a-zA-Z0-9]+)*$/.test(body.locale.trim())
+        ? body.locale.trim()
+        : "en";
+    const fallbackReturn = `/${loc}/match/payment-success?mock=true`;
+    const returnUrl = typeof body.return_url === "string" && body.return_url.length > 0 ? body.return_url : fallbackReturn;
+    const sep = returnUrl.includes("?") ? "&" : "?";
+    const paymentUrl = `${returnUrl}${sep}mock=true&order_id=${encodeURIComponent(orderId)}`;
+    return NextResponse.json({
+      ok: true,
+      product: "match",
+      amount: amounts.match,
+      currency: "USD",
+      checkout_url: paymentUrl,
+      payment_url: paymentUrl,
+      order_id: orderId,
     });
   }
 

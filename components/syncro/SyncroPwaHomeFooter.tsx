@@ -28,7 +28,7 @@ export function SyncroPwaHomeFooter() {
           <button
             type="button"
             className="text-xs text-cyan-200/80 underline decoration-cyan-200/30 underline-offset-2"
-            onClick={() => router.push("/syncro/task?type=paid&new=1")}
+            onClick={() => router.push("/syncro/task?new=1")}
           >
             {t("start_new_link")}
           </button>

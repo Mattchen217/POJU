@@ -1,34 +1,133 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 
 import { PojuToolHandoffBanner } from "@/components/poju/PojuToolHandoffBanner";
+import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
+import { PreparingSplineShell } from "@/components/poju/PreparingSplineShell";
 import { RelationshipInput } from "@/components/match/RelationshipInput";
-import { useMatchStartFlow } from "@/components/match/MatchStartButton";
+import { ToolMatrixNarrativeReply } from "@/components/cross-product/ToolMatrixNarrativeReply";
+import { ToolPaywallInline } from "@/components/cross-product/ToolPaywallInline";
+import { finalizeToolPreview } from "@/lib/cross-product/finalize-tool-preview";
+import { formatBirthShort } from "@/lib/match/format-birth-short";
+import {
+  ensureMatchPreviewSession,
+  loadMatchPreviewSession,
+  patchMatchPreviewSession,
+} from "@/lib/match/match-preview-session";
+import { isMatchPreviewSession } from "@/lib/match/match-preview-unlock";
+import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
+import type { MatrixNarrativeResponse } from "@/lib/llm/prompts/matrix-narrative-prompt";
 import { usePojuToolHandoff } from "@/lib/poju/use-poju-tool-handoff";
 import "@/styles/poju-tool-handoff.css";
 import { useRouter } from "@/i18n/navigation";
-import { formatBirthShort } from "@/lib/match/format-birth-short";
-import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 import type { StoredProfileData } from "@/lib/db/poju-db";
+import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 
 import "@/styles/match.css";
 
+type Stage = "preview-loading" | "preview" | "paywall";
+
 export function MatchRelationshipPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const locale = useLocale();
   const t = useTranslations("match");
+
+  const openPaywall = searchParams.get("paywall") === "1";
 
   const [aProfile, setAProfile] = useState<StoredProfileData | null>(null);
   const [bProfile, setBProfile] = useState<StoredProfileData | null>(null);
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  const [matrixPayload, setMatrixPayload] = useState<PojuMatrixPayload | null>(null);
+  const [matrixPayloadB, setMatrixPayloadB] = useState<PojuMatrixPayload | null>(null);
+  const [narrative, setNarrative] = useState<MatrixNarrativeResponse | null>(null);
+  const [stage, setStage] = useState<Stage>("preview-loading");
   const pojuHandoff = usePojuToolHandoff("match");
   const [relationship, setRelationship] = useState("");
-  const [loading, setLoading] = useState(true);
-  const { startMatch, buttonLabel, isBusy } = useMatchStartFlow();
+  const [unlockBusy, setUnlockBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const previewAbortRef = useRef<AbortController | null>(null);
+  const initRef = useRef(false);
+
+  const loadPreview = useCallback(async () => {
+    const aId = sessionStorage.getItem("match_a_profile_id");
+    const bId = sessionStorage.getItem("match_b_profile_id");
+
+    if (!aId || !bId) {
+      router.replace("/match/select-a");
+      return;
+    }
+
+    previewAbortRef.current?.abort();
+    const ac = new AbortController();
+    previewAbortRef.current = ac;
+
+    setStage("preview-loading");
+    setError(null);
+
+    try {
+      const [a, b] = await Promise.all([getStoredProfile(aId), getStoredProfile(bId)]);
+      if (!a?.user_profile || !b?.user_profile) {
+        router.replace("/match/select-a");
+        return;
+      }
+      setAProfile(a);
+      setBProfile(b);
+
+      const previewSession = ensureMatchPreviewSession({
+        a_profile_id: aId,
+        b_profile_id: bId,
+        locale,
+      });
+      setPreviewId(previewSession.preview_id);
+
+      const preview = await finalizeToolPreview({
+        profileId: aId,
+        userProfile: a.user_profile,
+        profileBId: bId,
+        userProfileB: b.user_profile,
+        locale,
+        product: "match",
+        signal: ac.signal,
+      });
+      if (ac.signal.aborted) return;
+
+      setMatrixPayload(preview.matrix_payload);
+      setMatrixPayloadB(preview.matrix_payload_b);
+      setNarrative(preview.narrative);
+      patchMatchPreviewSession({
+        matrix_payload: preview.matrix_payload,
+        matrix_payload_b: preview.matrix_payload_b ?? undefined,
+      });
+
+      const existing = loadMatchPreviewSession();
+      if (existing && !isMatchPreviewSession(existing)) {
+        setStage("preview");
+        return;
+      }
+      if (openPaywall && existing?.pending_question) {
+        setRelationship(existing.pending_question);
+        setStage("paywall");
+        return;
+      }
+      setStage("preview");
+    } catch (e) {
+      if (ac.signal.aborted) return;
+      setError(e instanceof Error ? e.message : String(e));
+      setStage("preview");
+    }
+  }, [locale, openPaywall, router]);
 
   useEffect(() => {
-    void init();
-  }, [router]);
+    if (initRef.current) return;
+    initRef.current = true;
+    void loadPreview();
+    return () => previewAbortRef.current?.abort();
+  }, [loadPreview]);
 
   useEffect(() => {
     const prefill =
@@ -39,50 +138,75 @@ export function MatchRelationshipPage() {
     }
   }, [pojuHandoff, relationship]);
 
-  async function init() {
-    const aId = sessionStorage.getItem("match_a_profile_id");
-    const bId = sessionStorage.getItem("match_b_profile_id");
+  async function handleContinue() {
+    const q = relationship.trim();
+    if (q.length < 10 || unlockBusy) return;
 
-    if (!aId || !bId) {
-      router.replace("/match/select-a");
+    const session = loadMatchPreviewSession();
+    if (!session) return;
+
+    if (isMatchPreviewSession(session)) {
+      patchMatchPreviewSession({
+        pending_question: q,
+        unlock_status: "preview",
+      });
+      setStage("paywall");
       return;
     }
 
-    try {
-      const [a, b] = await Promise.all([getStoredProfile(aId), getStoredProfile(bId)]);
-      if (!a || !b) {
-        router.replace("/match/select-a");
-        return;
-      }
-      setAProfile(a);
-      setBProfile(b);
-    } catch (e) {
-      console.error("[match/relationship]", e);
-      router.replace("/match/select-a");
-    } finally {
-      setLoading(false);
-    }
+    sessionStorage.setItem("match_relationship", q);
+    router.push("/match/analyzing");
   }
 
-  async function handleContinue() {
-    if (relationship.trim().length < 10 || isBusy) return;
-    sessionStorage.setItem("match_relationship", relationship.trim());
-
-    const aId = sessionStorage.getItem("match_a_profile_id");
-    const bId = sessionStorage.getItem("match_b_profile_id");
-    if (!aId || !bId) {
-      router.replace("/match/select-a");
-      return;
+  async function handleUnlocked(via: "payment" | "code") {
+    const q = relationship.trim();
+    if (!q) return;
+    setUnlockBusy(true);
+    try {
+      patchMatchPreviewSession({
+        unlock_status: "unlocked",
+        unlock_via: via,
+        pending_question: q,
+      });
+      sessionStorage.setItem("match_relationship", q);
+      router.push("/match/analyzing");
+    } finally {
+      setUnlockBusy(false);
     }
-
-    await startMatch(aId, bId);
   }
 
   function handleBack() {
     router.push("/match/select-b");
   }
 
-  if (loading) {
+  if (stage === "preview-loading") {
+    return (
+      <PreparingSplineShell blockInteraction>
+        <div className="preparing-spline-page__overlay" role="status" aria-live="polite">
+          <p className="preparing-spline-page__status">{t("loading")}</p>
+        </div>
+      </PreparingSplineShell>
+    );
+  }
+
+  if (stage === "paywall" && previewId) {
+    return (
+      <main className="match-relationship-page match-relationship-page--paywall browser-flow-page">
+        <div className="match-paywall-overlay" role="dialog" aria-modal="true">
+          <ToolPaywallInline
+            product="match"
+            previewId={previewId}
+            locale={locale}
+            pendingQuestion={relationship.trim()}
+            onUnlocked={handleUnlocked}
+            busy={unlockBusy}
+          />
+        </div>
+      </main>
+    );
+  }
+
+  if (!aProfile || !bProfile) {
     return (
       <main className="match-relationship-page match-relationship-page--loading browser-flow-page">
         <p>{t("loading")}</p>
@@ -93,6 +217,33 @@ export function MatchRelationshipPage() {
   return (
     <main className="match-relationship-page browser-flow-page">
       {pojuHandoff ? <PojuToolHandoffBanner handoff={pojuHandoff} /> : null}
+
+      {matrixPayload ? (
+        <div className="match-preview-block pchat">
+          <div className="match-preview-matrix">
+            <span className="match-preview-matrix__label">A</span>
+            <PojuEnergyMatrix payload={matrixPayload} locale={locale} compact />
+          </div>
+          {matrixPayloadB ? (
+            <div className="match-preview-matrix">
+              <span className="match-preview-matrix__label">B</span>
+              <PojuEnergyMatrix payload={matrixPayloadB} locale={locale} compact />
+            </div>
+          ) : null}
+          <div className="match-preview-narrative pchat__bubble pchat__bubble--assistant">
+            <ToolMatrixNarrativeReply
+              product="match"
+              locale={locale}
+              payloadA={matrixPayload}
+              payloadB={matrixPayloadB}
+              narrative={narrative}
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {error ? <p className="match-draw-error">{error}</p> : null}
+
       <RelationshipInput
         aLabel={formatBirthShort(aProfile)}
         bLabel={formatBirthShort(bProfile)}
@@ -100,8 +251,8 @@ export function MatchRelationshipPage() {
         onRelationshipChange={setRelationship}
         onContinue={() => void handleContinue()}
         onBack={handleBack}
-        continueLabel={buttonLabel}
-        continueDisabled={isBusy}
+        continueLabel={t("relationship.begin_match")}
+        continueDisabled={unlockBusy}
       />
     </main>
   );

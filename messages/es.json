@@ -862,6 +862,14 @@
       "attach_menu_document": "Documento",
       "attach_menu_image": "Imagen",
       "attach_menu_pdf": "PDF",
+      "unlock_report_modal_title": "Lectura base (análisis completo)",
+      "unlock_report_modal_hint": "Puedes volver a abrirlo desde el chat en cualquier momento.",
+      "unlock_report_gate_hint": "Lee primero tu lectura base completa. Al cerrar, POJU continuará con tu pregunta.",
+      "unlock_report_close": "Cerrar",
+      "unlock_report_close_continue": "Cerrar y continuar",
+      "unlock_report_card_label": "Lectura base",
+      "unlock_report_card_title": "Tu lectura base completa está lista",
+      "unlock_report_view_full": "Ver informe completo",
       "session_picker": {
         "close": "Cerrar",
         "new_poju": "+ New POJU",
@@ -1937,6 +1945,13 @@
       "continuing_from": "Continuando desde {tool}",
       "context_label": "Continuando este análisis",
       "joining": "Añadiendo el resultado de tu herramienta a esta sesión…"
+    }
+  },
+  "tool_preview": {
+    "guide": {
+      "glyph": "Escribe la decisión que más te pesa — envíala abajo antes de sacar.",
+      "match": "Describe la pregunta sobre la relación — escríbela abajo y envía.",
+      "syncro": "¿Qué necesitas hacer y dónde? Escríbelo abajo y envía."
     }
   },
   "base_analysis_view": {

@@ -6,10 +6,8 @@ import { useLocale, useTranslations } from "next-intl";
 
 import { SessionPreparation } from "@/components/poju/SessionPreparation";
 import { useRouter } from "@/i18n/navigation";
-import { markPendingBaseAnalysisProfile } from "@/lib/profile/pending-base-analysis";
 import {
   listStoredProfilesForSessionPrep,
-  profileHasBaseAnalysis,
   type StoredProfileSummary,
 } from "@/lib/profile/stored-profiles-service";
 
@@ -22,13 +20,9 @@ export function SyncroPreparePage() {
   const [profiles, setProfiles] = useState<StoredProfileSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [task, setTask] = useState("");
-  const [sessionType, setSessionType] = useState("paid");
 
   useEffect(() => {
     const pendingTask = sessionStorage.getItem("syncro_task_pending");
-    const typeFromStorage = sessionStorage.getItem("syncro_session_type");
-    const typeFromQuery = searchParams.get("type");
-    const type = typeFromStorage || typeFromQuery || "paid";
 
     if (!pendingTask) {
       router.replace("/syncro/task");
@@ -36,7 +30,7 @@ export function SyncroPreparePage() {
     }
 
     setTask(pendingTask);
-    setSessionType(type === "free" ? "free" : "paid");
+    sessionStorage.setItem("syncro_session_type", "free");
 
     void (async () => {
       try {
@@ -50,16 +44,9 @@ export function SyncroPreparePage() {
     })();
   }, [router, searchParams]);
 
-  async function handleProfileSelected(profileId: string) {
+  function handleProfileSelected(profileId: string) {
     sessionStorage.setItem("syncro_profile_id", profileId);
-    sessionStorage.setItem("syncro_session_type", sessionType);
-
-    if (await profileHasBaseAnalysis(profileId)) {
-      router.push("/syncro/location");
-    } else {
-      markPendingBaseAnalysisProfile(profileId);
-      router.push(`/syncro/preparing?profile=${encodeURIComponent(profileId)}`);
-    }
+    router.push("/syncro/preview");
   }
 
   function handleCancel() {

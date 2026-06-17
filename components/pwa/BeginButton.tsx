@@ -154,16 +154,15 @@ export function BeginButton({
 
       switch (productId) {
         case "syncro":
-          router.push(
-            free ? "/syncro/task?type=free&new=1" : "/syncro/task?type=paid&new=1",
-          );
+          sessionStorage.setItem("syncro_session_type", "free");
+          router.push("/syncro/task?new=1");
           break;
         case "glyph":
-          router.push(free ? "/glyph/prepare?type=free" : "/glyph/prepare?type=paid");
+          router.push("/glyph/prepare");
           break;
         case "match":
-          sessionStorage.setItem("match_session_type", free ? "free" : "paid");
-          router.push(free ? "/match/select-a" : "/match/payment");
+          sessionStorage.setItem("match_session_type", "free");
+          router.push("/match/select-a");
           break;
         case "poju":
           await startPoju();

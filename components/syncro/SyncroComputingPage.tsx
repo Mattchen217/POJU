@@ -6,17 +6,19 @@ import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { saveSyncroToArchive } from "@/lib/archive/archive-service";
 import { registerPendingDeliveryArchive } from "@/lib/archive/archive-delivery-pending";
+import { getCachedBaseAnalysis } from "@/lib/cross-product/get-cached-base-analysis";
 import { createSyncroSession } from "@/lib/syncro/syncro-session";
 import { computeSyncroSessionExpiresAt } from "@/lib/syncro/syncro-submission-timeline";
 import { recordUsage } from "@/lib/syncro/device-usage";
 import { getStoredProfile, recordProfileUsage } from "@/lib/profile/stored-profiles-service";
 import { readFetchJson } from "@/lib/client/fetch-json";
-import {
-  hasBaseAnalysisPayload,
-  normalizeBaseAnalysisInput,
-} from "@/lib/llm/prompts/base-analysis-context";
 import { parseSyncroStoredLocation } from "@/lib/syncro/syncro-location-storage";
 import { saveSyncroLlmContext } from "@/lib/syncro/syncro-llm-context-storage";
+import {
+  clearSyncroPreviewSession,
+  loadSyncroPreviewSession,
+} from "@/lib/syncro/syncro-preview-session";
+import { isSyncroPreviewSession } from "@/lib/syncro/syncro-preview-unlock";
 import type { MatrixCell } from "@/lib/syncro/calculate-matrix";
 import {
   formatSyncroComputeError,
@@ -56,10 +58,15 @@ export function SyncroComputingPage() {
 
   async function compute() {
     try {
+      const preview = loadSyncroPreviewSession();
+      if (preview && isSyncroPreviewSession(preview)) {
+        router.replace("/syncro/location?paywall=1");
+        return;
+      }
+
       const profileId = sessionStorage.getItem("syncro_profile_id");
       const task = sessionStorage.getItem("syncro_task_pending");
       const locationStr = sessionStorage.getItem("syncro_location");
-      const sessionType = sessionStorage.getItem("syncro_session_type") || "paid";
 
       if (!profileId || !task || !locationStr) {
         throw new Error(t("missing_data"));
@@ -70,10 +77,12 @@ export function SyncroComputingPage() {
         throw new Error(t("missing_data"));
       }
       const profileRow = await getStoredProfile(profileId);
-      const baseAnalysis = profileRow?.base_analysis;
-      if (!profileRow?.user_profile || !hasBaseAnalysisPayload(normalizeBaseAnalysisInput(baseAnalysis))) {
+      if (!profileRow?.user_profile) {
         throw new Error(t("profile_not_ready"));
       }
+
+      const cached = await getCachedBaseAnalysis(profileId);
+      const baseAnalysis = cached?.baseAnalysis ?? null;
 
       const response = await fetch("/api/syncro/compute_local", {
         method: "POST",
@@ -126,7 +135,7 @@ export function SyncroComputingPage() {
         },
         matrix,
         locale,
-        is_free: sessionType === "free",
+        is_free: false,
         cost_usd: llmMeta.cost_usd ?? 0,
         llm_meta: {
           model: llmMeta.model ?? "local",
@@ -145,7 +154,7 @@ export function SyncroComputingPage() {
         },
         locale,
         user_profile: profileRow.user_profile,
-        base_analysis: baseAnalysis,
+        base_analysis: baseAnalysis ?? profileRow.base_analysis,
         local_matrix: data.local_matrix,
         compute_started_at: data.compute_started_at ?? new Date().toISOString(),
         true_solar: data.true_solar_meta,
@@ -153,7 +162,7 @@ export function SyncroComputingPage() {
 
       saveSyncroLlmContext(sessionId, llmCtx);
 
-      await recordUsage("syncro", sessionType === "free", llmMeta.cost_usd ?? 0);
+      await recordUsage("syncro", false, llmMeta.cost_usd ?? 0);
       await recordProfileUsage(profileId, "syncro");
 
       try {
@@ -185,6 +194,7 @@ export function SyncroComputingPage() {
       sessionStorage.removeItem("syncro_session_type");
       sessionStorage.removeItem("syncro_profile_id");
       sessionStorage.removeItem("syncro_location");
+      clearSyncroPreviewSession();
 
       router.push(`/syncro/result/${sessionId}`);
     } catch (e: unknown) {

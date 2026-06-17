@@ -10,11 +10,14 @@ import {
   Sprout,
   type LucideIcon,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { MatchReportCard } from "@/components/match/MatchReportCard";
 import { PojuDeepDiveCTA } from "@/components/cross-product/PojuDeepDiveCTA";
 import { ReturnToPojuCTA } from "@/components/poju/ReturnToPojuCTA";
+import { StreamingAnalysisView } from "@/components/poju/StreamingAnalysisView";
+import { getCachedBaseAnalysis } from "@/lib/cross-product/get-cached-base-analysis";
 import { extractMatchSummary } from "@/lib/poju/tool-result-summary";
 import { useRouter } from "@/i18n/navigation";
 import { normalizeSynergyType } from "@/lib/match/synergy-normalize";
@@ -75,9 +78,22 @@ function ActionItem({
 export function MatchReport({ session, locale }: MatchReportProps) {
   const t = useTranslations("match.report");
   const router = useRouter();
+  const [baseReportA, setBaseReportA] = useState<string | null>(null);
+  const [baseReportB, setBaseReportB] = useState<string | null>(null);
 
   const { report } = session;
   const isZh = locale.startsWith("zh");
+
+  useEffect(() => {
+    void (async () => {
+      const [a, b] = await Promise.all([
+        getCachedBaseAnalysis(session.a_profile_id),
+        getCachedBaseAnalysis(session.b_profile_id),
+      ]);
+      setBaseReportA(a?.reportText ?? null);
+      setBaseReportB(b?.reportText ?? null);
+    })();
+  }, [session.a_profile_id, session.b_profile_id]);
 
   const synergyType = normalizeSynergyType(report.conclusion.synergy_type);
   const synergyInfo = SYNERGY_TYPES[synergyType as SynergyType] ?? SYNERGY_TYPES.adaptive_balance;
@@ -92,6 +108,26 @@ export function MatchReport({ session, locale }: MatchReportProps) {
         resultData={matchSummary}
         variant="banner"
       />
+      {baseReportA ? (
+        <section className="match-base-report">
+          <span className="match-base-report__label">A</span>
+          <StreamingAnalysisView
+            content={baseReportA}
+            status="completed"
+            bytes_received={baseReportA.length}
+          />
+        </section>
+      ) : null}
+      {baseReportB ? (
+        <section className="match-base-report">
+          <span className="match-base-report__label">B</span>
+          <StreamingAnalysisView
+            content={baseReportB}
+            status="completed"
+            bytes_received={baseReportB.length}
+          />
+        </section>
+      ) : null}
       <header className="report-header">
         <h1>{t("title")}</h1>
         <p className="relationship-line">&ldquo;{session.relationship_description}&rdquo;</p>

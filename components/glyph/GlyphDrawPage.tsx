@@ -6,26 +6,27 @@ import { useLocale, useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { DrawSequence } from "@/components/oracle/DrawSequence";
 import { OracleSummon } from "@/components/oracle/OracleSummon";
-import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
+import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
 import { PreparingSplineShell } from "@/components/poju/PreparingSplineShell";
-import { saveGlyphDrawSession } from "@/lib/glyph/glyph-draw-session";
-import { formatGlyphProfileShort, hourPeriodToShichen } from "@/lib/glyph/profile-display";
-import { markGlyphFreeUsedLocal } from "@/lib/glyph/storage";
+import { ToolMatrixNarrativeReply } from "@/components/cross-product/ToolMatrixNarrativeReply";
+import { ToolPaywallInline } from "@/components/cross-product/ToolPaywallInline";
+import { finalizeToolPreview } from "@/lib/cross-product/finalize-tool-preview";
 import {
-  PREPARING_MIN_SPLINE_CACHE_MS,
-  waitRemainingMinSpline,
-} from "@/lib/poju/preparing-spline-timing";
+  loadGlyphDrawSession,
+  saveGlyphDrawSession,
+  updateGlyphDrawSession,
+} from "@/lib/glyph/glyph-draw-session";
+import { getGlyphUnlockStatus } from "@/lib/glyph/glyph-preview-unlock";
+import { formatGlyphProfileShort, hourPeriodToShichen } from "@/lib/glyph/profile-display";
+import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
+import type { MatrixNarrativeResponse } from "@/lib/llm/prompts/matrix-narrative-prompt";
 import { discardIncompletePendingProfile } from "@/lib/profile/stored-profiles-service";
 import type { StoredProfileData } from "@/lib/db/poju-db";
-import {
-  getStoredProfile,
-  profileHasBaseAnalysis,
-  recordProfileUsage,
-} from "@/lib/profile/stored-profiles-service";
+import { getStoredProfile, recordProfileUsage } from "@/lib/profile/stored-profiles-service";
 import { normalizeStoredBirthInfo } from "@/lib/profile/birth-info-utils";
 import type { SignData, UserInput } from "@/types/oracle";
 
-type Stage = "preparing" | "input" | "summon" | "drawing";
+type Stage = "preview-loading" | "preview" | "summon" | "drawing" | "paywall";
 
 export function GlyphDrawPage() {
   const router = useRouter();
@@ -34,59 +35,61 @@ export function GlyphDrawPage() {
   const t = useTranslations("glyph");
 
   const profileId = searchParams.get("profile");
-  const sessionType = searchParams.get("type") === "paid" ? "paid" : "free";
+  const resumeReadingId = searchParams.get("reading");
+  const openPaywall = searchParams.get("paywall") === "1";
 
   const [profile, setProfile] = useState<StoredProfileData | null>(null);
-  const [stage, setStage] = useState<Stage>("preparing");
-  const [prepPhase, setPrepPhase] = useState<"loading" | "cache" | "streaming" | "error">("loading");
+  const [stage, setStage] = useState<Stage>("preview-loading");
   const [error, setError] = useState<string | null>(null);
-  const cacheSplineStartedRef = useRef(0);
+  const [matrixPayload, setMatrixPayload] = useState<PojuMatrixPayload | null>(null);
+  const [narrative, setNarrative] = useState<MatrixNarrativeResponse | null>(null);
   const [question, setQuestion] = useState("");
   const [drawnSign, setDrawnSign] = useState<SignData | null>(null);
-  const [readingId, setReadingId] = useState<string | null>(null);
+  const [readingId, setReadingId] = useState<string | null>(resumeReadingId);
   const [drawBusy, setDrawBusy] = useState(false);
   const [summonFinished, setSummonFinished] = useState(false);
+  const [unlockBusy, setUnlockBusy] = useState(false);
 
   const initRef = useRef(false);
+  const previewAbortRef = useRef<AbortController | null>(null);
 
-  const initializeProfile = useCallback(async () => {
+  const initializePreview = useCallback(async () => {
     if (!profileId) return;
+    previewAbortRef.current?.abort();
+    const ac = new AbortController();
+    previewAbortRef.current = ac;
+
     setError(null);
-    setPrepPhase("loading");
-    setStage("preparing");
+    setStage("preview-loading");
 
     try {
       const p = await getStoredProfile(profileId);
-      if (!p) {
+      if (!p?.user_profile) {
         setError(t("profile_not_found"));
-        setPrepPhase("error");
         return;
       }
       setProfile(p);
 
-      if (await profileHasBaseAnalysis(profileId)) {
-        cacheSplineStartedRef.current = Date.now();
-        setPrepPhase("cache");
-        return;
-      }
+      const preview = await finalizeToolPreview({
+        profileId,
+        userProfile: p.user_profile,
+        locale,
+        product: "glyph",
+        signal: ac.signal,
+      });
+      if (ac.signal.aborted) return;
 
-      setPrepPhase("streaming");
+      setMatrixPayload(preview.matrix_payload);
+      setNarrative(preview.narrative);
+      setStage("preview");
     } catch (e) {
+      if (ac.signal.aborted) return;
       if (profileId) {
         await discardIncompletePendingProfile(profileId);
       }
       setError(e instanceof Error ? e.message : String(e));
-      setPrepPhase("error");
     }
-  }, [profileId, t]);
-
-  useEffect(() => {
-    if (prepPhase !== "cache" || !profileId) return;
-    void (async () => {
-      await waitRemainingMinSpline(cacheSplineStartedRef.current, PREPARING_MIN_SPLINE_CACHE_MS);
-      setStage("input");
-    })();
-  }, [prepPhase, profileId]);
+  }, [profileId, locale, t]);
 
   useEffect(() => {
     if (!profileId) {
@@ -95,12 +98,25 @@ export function GlyphDrawPage() {
     }
     if (initRef.current) return;
     initRef.current = true;
-    void initializeProfile();
-  }, [profileId, router, initializeProfile]);
+    void initializePreview();
+    return () => previewAbortRef.current?.abort();
+  }, [profileId, router, initializePreview]);
+
+  useEffect(() => {
+    if (!openPaywall || !resumeReadingId) return;
+    const session = loadGlyphDrawSession(resumeReadingId);
+    if (!session) return;
+    setReadingId(resumeReadingId);
+    setQuestion(session.pending_question?.trim() || session.question);
+    setDrawnSign(session.sign);
+    if (getGlyphUnlockStatus(session) === "preview") {
+      setStage("paywall");
+    }
+  }, [openPaywall, resumeReadingId]);
 
   async function handleDraw() {
     const q = question.trim();
-    if (q.length < 10 || q.length > 200 || !profileId || !profile) return;
+    if (q.length < 10 || q.length > 200 || !profileId || !profile || !matrixPayload) return;
 
     setDrawBusy(true);
     setError(null);
@@ -112,7 +128,7 @@ export function GlyphDrawPage() {
         body: JSON.stringify({
           profile_id: profileId,
           question: q,
-          session_type: sessionType,
+          session_type: "free",
           locale,
         }),
       });
@@ -127,15 +143,6 @@ export function GlyphDrawPage() {
         sign: SignData;
       };
 
-      if (sessionType === "free") {
-        markGlyphFreeUsedLocal();
-        await fetch("/api/glyph/quota", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ action: "consume_free" }),
-        }).catch(() => undefined);
-      }
-
       await recordProfileUsage(profileId, "glyph");
 
       setReadingId(data.reading_id);
@@ -144,17 +151,19 @@ export function GlyphDrawPage() {
         reading_id: data.reading_id,
         profile_id: profileId,
         question: q,
-        session_type: sessionType,
+        pending_question: q,
+        session_type: "free",
         locale,
         sign: data.sign,
         created_at: new Date().toISOString(),
+        unlock_status: "preview",
+        matrix_payload: matrixPayload,
       });
 
       setSummonFinished(false);
       setStage("summon");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
-      setStage("input");
     } finally {
       setDrawBusy(false);
     }
@@ -181,71 +190,64 @@ export function GlyphDrawPage() {
     };
   }
 
-  function handleFullReading(sign: SignData) {
+  function handleFullReading(_sign: SignData) {
     if (!readingId) return;
-    router.push(`/glyph/reading/${readingId}`);
+    const session = updateGlyphDrawSession(readingId, {
+      pending_question: question.trim(),
+      unlock_status: "preview",
+    });
+    if (session && getGlyphUnlockStatus(session) === "unlocked") {
+      router.push(`/glyph/reading/${readingId}`);
+      return;
+    }
+    setStage("paywall");
+  }
+
+  async function handleUnlocked(via: "payment" | "code") {
+    if (!readingId) return;
+    setUnlockBusy(true);
+    try {
+      const q = question.trim();
+      updateGlyphDrawSession(readingId, {
+        unlock_status: "unlocked",
+        unlock_via: via,
+        question: q,
+        pending_question: undefined,
+      });
+      router.push(`/glyph/reading/${readingId}`);
+    } finally {
+      setUnlockBusy(false);
+    }
   }
 
   if (!profileId) {
     return null;
   }
 
-  if (stage === "preparing") {
-    if (!profile || prepPhase === "loading") {
-      return (
-        <PreparingSplineShell blockInteraction>
-          <div className="preparing-spline-page__overlay" role="status" aria-live="polite">
-            <p className="preparing-spline-page__status">{t("loading")}</p>
-          </div>
-        </PreparingSplineShell>
-      );
-    }
-
-    if (prepPhase === "cache") {
-      return (
-        <PreparingSplineShell blockInteraction>
-          <div className="preparing-spline-page__overlay" role="status" aria-live="polite">
-            <p className="preparing-spline-page__status">{t("loading")}</p>
-          </div>
-        </PreparingSplineShell>
-      );
-    }
-
-    if (prepPhase === "error") {
-      return (
-        <PreparingSplineShell blockInteraction>
-          <div className="preparing-spline-page__overlay preparing-spline-page__overlay--error" role="alert">
-            <p>{error}</p>
-            <button type="button" onClick={() => void initializeProfile()}>
-              {t("reading_retry")}
-            </button>
-            <button type="button" onClick={() => router.push("/glyph")}>
-              {t("back_to_home")}
-            </button>
-          </div>
-        </PreparingSplineShell>
-      );
-    }
-
+  if (stage === "preview-loading") {
     return (
       <PreparingSplineShell blockInteraction>
-        <BaseAnalysisStreamPreparing
-          profile={profile}
-          profileId={profileId}
-          locale={locale}
-          logLabel="GlyphPreparing"
-          onComplete={async () => {
-            const updated = await getStoredProfile(profileId);
-            setProfile(updated ?? profile);
-            setStage("input");
-          }}
-          onError={async (err) => {
-            await discardIncompletePendingProfile(profileId);
-            setError(err);
-            setPrepPhase("error");
-          }}
-        />
+        <div className="preparing-spline-page__overlay" role="status" aria-live="polite">
+          <p className="preparing-spline-page__status">{t("loading")}</p>
+        </div>
       </PreparingSplineShell>
+    );
+  }
+
+  if (stage === "paywall" && readingId) {
+    return (
+      <main className="glyph-draw-page browser-flow-page glyph-draw-page--paywall">
+        <div className="glyph-paywall-overlay" role="dialog" aria-modal="true">
+          <ToolPaywallInline
+            product="glyph"
+            readingId={readingId}
+            locale={locale}
+            pendingQuestion={question.trim()}
+            onUnlocked={handleUnlocked}
+            busy={unlockBusy}
+          />
+        </div>
+      </main>
     );
   }
 
@@ -264,12 +266,7 @@ export function GlyphDrawPage() {
       );
     }
 
-    return (
-      <OracleSummon
-        userInput={userInput}
-        onComplete={handleSummonComplete}
-      />
-    );
+    return <OracleSummon userInput={userInput} onComplete={handleSummonComplete} />;
   }
 
   if (stage === "drawing" && drawnSign) {
@@ -280,13 +277,13 @@ export function GlyphDrawPage() {
         userInput={userInput}
         forcedSign={drawnSign}
         onFullReading={handleFullReading}
-        onClose={() => setStage("input")}
+        onClose={() => setStage("preview")}
       />
     );
   }
 
   const qLen = question.length;
-  const canDraw = qLen >= 10 && qLen <= 200 && !drawBusy;
+  const canDraw = qLen >= 10 && qLen <= 200 && !drawBusy && Boolean(matrixPayload);
 
   return (
     <main className="glyph-draw-page browser-flow-page">
@@ -298,6 +295,20 @@ export function GlyphDrawPage() {
         <div className="profile-mini-display">
           <span className="profile-mini-label">{t("reading_for_label")}</span>
           <span className="profile-mini-value">{formatGlyphProfileShort(profile, locale)}</span>
+        </div>
+      ) : null}
+
+      {matrixPayload ? (
+        <div className="glyph-draw-preview pchat">
+          <PojuEnergyMatrix payload={matrixPayload} locale={locale} compact />
+          <div className="glyph-draw-preview__narrative pchat__bubble pchat__bubble--assistant">
+            <ToolMatrixNarrativeReply
+              product="glyph"
+              locale={locale}
+              payloadA={matrixPayload}
+              narrative={narrative}
+            />
+          </div>
         </div>
       ) : null}
 
@@ -313,9 +324,7 @@ export function GlyphDrawPage() {
         autoFocus
       />
 
-      <div className="glyph-char-count">
-        {qLen} / 200
-      </div>
+      <div className="glyph-char-count">{qLen} / 200</div>
 
       {error ? <p className="glyph-draw-error">{error}</p> : null}
 

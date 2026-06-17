@@ -1,40 +1,72 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { MatchAnalyzingLoader } from "@/components/match/MatchAnalyzingLoader";
+import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
+import { ChartReadingLoader } from "@/components/poju/ChartReadingLoader";
+import { PreparingSplineShell } from "@/components/poju/PreparingSplineShell";
 import { useRouter } from "@/i18n/navigation";
 import { saveMatchToArchive } from "@/lib/archive/archive-service";
 import { registerPendingDeliveryArchive } from "@/lib/archive/archive-delivery-pending";
+import { getCachedBaseAnalysis } from "@/lib/cross-product/get-cached-base-analysis";
 import {
   hasBaseAnalysisPayload,
   normalizeBaseAnalysisInput,
 } from "@/lib/llm/prompts/base-analysis-context";
 import { calculateCompatibilityMatrix } from "@/lib/match/calculate-compatibility";
 import { createMatchSession } from "@/lib/match/match-session";
+import {
+  clearMatchPreviewSession,
+  loadMatchPreviewSession,
+} from "@/lib/match/match-preview-session";
+import { isMatchPreviewSession } from "@/lib/match/match-preview-unlock";
 import { wrapProfileForMatrix } from "@/lib/match/parse-profile-for-matrix";
 import {
   SYNERGY_TYPES,
   type MatchReport,
   type SynergyType,
 } from "@/lib/match/types";
+import type { StoredProfileData } from "@/lib/db/poju-db";
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
+import {
+  PREPARING_MIN_SPLINE_CACHE_MS,
+  waitRemainingMinSpline,
+} from "@/lib/poju/preparing-spline-timing";
 import { recordUsage } from "@/lib/syncro/device-usage";
 
 import "@/styles/match.css";
 
 const STEP_INTERVAL_MS = 3500;
 
+type Phase =
+  | "gate"
+  | "base-a"
+  | "base-b"
+  | "base-cache"
+  | "analyzing"
+  | "error";
+
 export function MatchAnalyzingPage() {
   const router = useRouter();
   const locale = useLocale();
   const t = useTranslations("match.analyzing");
+  const tChart = useTranslations("chart_loader");
 
+  const [phase, setPhase] = useState<Phase>("gate");
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [previewLine, setPreviewLine] = useState<string | null>(null);
+  const [profileA, setProfileA] = useState<StoredProfileData | null>(null);
+  const [profileB, setProfileB] = useState<StoredProfileData | null>(null);
+  const [aId, setAId] = useState("");
+  const [bId, setBId] = useState("");
+  const [basePrepKey, setBasePrepKey] = useState(0);
+  const cacheSplineStartedRef = useRef(0);
   const startedRef = useRef(false);
+
+  const isZh = locale.startsWith("zh");
 
   const steps = useMemo(
     () => [
@@ -49,27 +81,19 @@ export function MatchAnalyzingPage() {
     [t],
   );
 
-  const isZh = locale.startsWith("zh");
-
   useEffect(() => {
+    if (phase !== "analyzing") return;
     const interval = window.setInterval(() => {
       setStep((s) => (s + 1) % steps.length);
     }, STEP_INTERVAL_MS);
     return () => window.clearInterval(interval);
-  }, [steps.length]);
+  }, [phase, steps.length]);
 
-  useEffect(() => {
-    if (startedRef.current) return;
-    startedRef.current = true;
-    void analyze();
-  }, []);
-
-  async function analyze() {
+  const runAnalyze = useCallback(async () => {
     try {
-      const aId = sessionStorage.getItem("match_a_profile_id");
-      const bId = sessionStorage.getItem("match_b_profile_id");
-      const relationship = sessionStorage.getItem("match_relationship");
-      const sessionType = sessionStorage.getItem("match_session_type") || "paid";
+      const relationship =
+        sessionStorage.getItem("match_relationship")?.trim() ||
+        loadMatchPreviewSession()?.pending_question?.trim();
 
       if (!aId || !bId || !relationship) {
         throw new Error(t("missing_data"));
@@ -84,18 +108,14 @@ export function MatchAnalyzingPage() {
         throw new Error(t("profile_b_not_ready"));
       }
 
-      const profileA = wrapProfileForMatrix(aRow.user_profile, aRow.base_analysis);
-      const profileB = wrapProfileForMatrix(bRow.user_profile, bRow.base_analysis);
+      const profileAForMatrix = wrapProfileForMatrix(aRow.user_profile, aRow.base_analysis);
+      const profileBForMatrix = wrapProfileForMatrix(bRow.user_profile, bRow.base_analysis);
 
-      const matrix = calculateCompatibilityMatrix({ profileA, profileB });
+      const matrix = calculateCompatibilityMatrix({ profileA: profileAForMatrix, profileB: profileBForMatrix });
       const synergyInfo =
         SYNERGY_TYPES[matrix.synergy_type as SynergyType] ?? SYNERGY_TYPES.adaptive_balance;
       const synergyName = isZh ? synergyInfo.name_zh : synergyInfo.name_en;
-      setPreviewLine(
-        t("preview_synergy", {
-          type: synergyName,
-        }),
-      );
+      setPreviewLine(t("preview_synergy", { type: synergyName }));
 
       const response = await fetch("/api/match/analyze", {
         method: "POST",
@@ -138,35 +158,22 @@ export function MatchAnalyzingPage() {
         throw new Error(t("analysis_failed"));
       }
 
-      if (
-        data.report.conclusion.synergy_type !== matrix.synergy_type &&
-        data.meta?.local_computation
-      ) {
-        console.warn(
-          "[match/ui] Synergy type mismatch — using server report type:",
-          data.report.conclusion.synergy_type,
-          "local was",
-          matrix.synergy_type,
-        );
-      }
-
       const costUsd = data.meta?.cost_usd ?? 0;
       const resonanceIndex = data.meta?.resonance_index ?? matrix.resonance_index;
-      const isFree = sessionType === "free";
 
       const matchId = await createMatchSession({
         a_profile_id: aId,
         b_profile_id: bId,
         relationship_description: relationship,
         report: data.report,
-        is_free: isFree,
-        cost_usd: isFree ? 0 : costUsd,
+        is_free: false,
+        cost_usd: costUsd,
         locale,
         resonance_index: resonanceIndex,
         engine_version: "v5.1",
       });
 
-      await recordUsage("match", isFree, isFree ? 0 : costUsd);
+      await recordUsage("match", false, costUsd);
 
       try {
         const archiveId = await saveMatchToArchive({
@@ -191,15 +198,182 @@ export function MatchAnalyzingPage() {
       sessionStorage.removeItem("match_b_profile_id");
       sessionStorage.removeItem("match_relationship");
       sessionStorage.removeItem("match_session_type");
+      clearMatchPreviewSession();
 
       router.push(`/match/result/${matchId}`);
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : String(e);
       setError(message);
+      setPhase("error");
     }
+  }, [aId, bId, isZh, locale, router, t]);
+
+  const beginPipeline = useCallback(async () => {
+    const preview = loadMatchPreviewSession();
+    if (preview && isMatchPreviewSession(preview)) {
+      router.replace("/match/relationship?paywall=1");
+      return;
+    }
+
+    const storedAId = sessionStorage.getItem("match_a_profile_id");
+    const storedBId = sessionStorage.getItem("match_b_profile_id");
+    if (!storedAId || !storedBId) {
+      router.replace("/match/select-a");
+      return;
+    }
+
+    setAId(storedAId);
+    setBId(storedBId);
+
+    const [aRow, bRow] = await Promise.all([
+      getStoredProfile(storedAId),
+      getStoredProfile(storedBId),
+    ]);
+    if (!aRow?.user_profile || !bRow?.user_profile) {
+      setError(t("missing_data"));
+      setPhase("error");
+      return;
+    }
+    setProfileA(aRow);
+    setProfileB(bRow);
+
+    const [cachedA, cachedB] = await Promise.all([
+      getCachedBaseAnalysis(storedAId),
+      getCachedBaseAnalysis(storedBId),
+    ]);
+
+    if (!cachedA) {
+      setPhase("base-a");
+      return;
+    }
+    if (!cachedB) {
+      setPhase("base-b");
+      return;
+    }
+
+    cacheSplineStartedRef.current = Date.now();
+    setPhase("base-cache");
+  }, [router, t]);
+
+  useEffect(() => {
+    if (phase !== "base-cache") return;
+    void (async () => {
+      await waitRemainingMinSpline(cacheSplineStartedRef.current, PREPARING_MIN_SPLINE_CACHE_MS);
+      setPhase("analyzing");
+      await runAnalyze();
+    })();
+  }, [phase, runAnalyze]);
+
+  useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    void beginPipeline();
+  }, [beginPipeline]);
+
+  async function afterBaseAComplete() {
+    const refreshedB = await getCachedBaseAnalysis(bId);
+    if (refreshedB) {
+      cacheSplineStartedRef.current = Date.now();
+      setPhase("base-cache");
+      return;
+    }
+    const refreshedA = await getStoredProfile(aId);
+    if (refreshedA) setProfileA(refreshedA);
+    setPhase("base-b");
   }
 
-  if (error) {
+  async function afterBaseBComplete() {
+    const refreshed = await getStoredProfile(bId);
+    if (refreshed) setProfileB(refreshed);
+    setPhase("analyzing");
+    await runAnalyze();
+  }
+
+  if (phase === "base-a" && profileA && aId) {
+    return (
+      <PreparingSplineShell blockInteraction>
+        <BaseAnalysisStreamPreparing
+          key={`base-a-${basePrepKey}`}
+          profile={profileA}
+          profileId={aId}
+          locale={locale}
+          logLabel="MatchUnlockPreparingA"
+          hideStreamView
+          reportOutputLanguageFromUi
+          onComplete={() => void afterBaseAComplete()}
+          onError={(err) => {
+            setError(err);
+            setPhase("error");
+          }}
+        />
+        <ChartReadingLoader
+          profile={profileA}
+          currentStep="analyzing"
+          error={null}
+          onRetry={() => {}}
+          onRefund={() => router.push("/match")}
+          locale={locale}
+          hintOverride={tChart("hint_first_time")}
+        />
+      </PreparingSplineShell>
+    );
+  }
+
+  if (phase === "base-b" && profileB && bId) {
+    return (
+      <PreparingSplineShell blockInteraction>
+        <BaseAnalysisStreamPreparing
+          key={`base-b-${basePrepKey}`}
+          profile={profileB}
+          profileId={bId}
+          locale={locale}
+          logLabel="MatchUnlockPreparingB"
+          hideStreamView
+          reportOutputLanguageFromUi
+          onComplete={() => void afterBaseBComplete()}
+          onError={(err) => {
+            setError(err);
+            setPhase("error");
+          }}
+        />
+        <ChartReadingLoader
+          profile={profileB}
+          currentStep="analyzing"
+          error={null}
+          onRetry={() => {}}
+          onRefund={() => router.push("/match")}
+          locale={locale}
+          hintOverride={tChart("hint_first_time")}
+        />
+      </PreparingSplineShell>
+    );
+  }
+
+  if (phase === "base-cache" && profileA) {
+    return (
+      <PreparingSplineShell blockInteraction>
+        <ChartReadingLoader
+          profile={profileA}
+          currentStep="analyzing"
+          error={null}
+          onRetry={() => {}}
+          onRefund={() => router.push("/match")}
+          locale={locale}
+          hintOverride={tChart("hint_first_time")}
+        />
+      </PreparingSplineShell>
+    );
+  }
+
+  if (phase === "gate") {
+    return (
+      <main className="match-analyzing">
+        <MatchAnalyzingLoader step={0} steps={steps} hint={t("hint")} previewLine={null} />
+      </main>
+    );
+  }
+
+  if (error || phase === "error") {
     return (
       <main className="match-analyzing match-analyzing--error">
         <div className="match-analyzing-error-icon" aria-hidden>
@@ -207,7 +381,19 @@ export function MatchAnalyzingPage() {
         </div>
         <h2>{t("error_title")}</h2>
         <p>{error}</p>
-        <button type="button" onClick={() => router.push("/match")} className="match-primary-btn">
+        <button
+          type="button"
+          onClick={() => {
+            setError(null);
+            setBasePrepKey((k) => k + 1);
+            startedRef.current = false;
+            void beginPipeline();
+          }}
+          className="match-primary-btn"
+        >
+          {tChart("retry")}
+        </button>
+        <button type="button" onClick={() => router.push("/match")} className="match-relationship-back">
           {t("go_back")}
         </button>
       </main>

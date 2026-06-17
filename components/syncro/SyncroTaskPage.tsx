@@ -20,8 +20,6 @@ export function SyncroTaskPage() {
   const t = useTranslations("syncro.task");
 
   const pojuHandoff = usePojuToolHandoff("syncro");
-  const sessionType =
-    pojuHandoff?.quota_free || searchParams.get("type") === "free" ? "free" : "paid";
   const forceNew = searchParams.get("new") === "1";
 
   const [task, setTask] = useState("");
@@ -49,7 +47,7 @@ export function SyncroTaskPage() {
 
     const trimmed = task.trim();
     sessionStorage.setItem("syncro_task_pending", trimmed);
-    sessionStorage.setItem("syncro_session_type", sessionType);
+    sessionStorage.setItem("syncro_session_type", "free");
     sessionStorage.setItem(SYNCRO_TASK_TIME_KEY, inferTaskTimeScope(trimmed));
     router.push("/syncro/prepare");
   }

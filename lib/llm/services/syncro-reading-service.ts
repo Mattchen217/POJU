@@ -86,8 +86,25 @@ async function resolveProfileBundle(input: GenerateSyncroMatrixInput): Promise<{
   profile: UserProfile;
   base_analysis: unknown;
 }> {
-  if (input.user_profile && input.base_analysis != null) {
-    return { profile: input.user_profile, base_analysis: input.base_analysis };
+  if (input.user_profile) {
+    if (
+      input.base_analysis != null &&
+      hasBaseAnalysisPayload(normalizeBaseAnalysisInput(input.base_analysis))
+    ) {
+      return { profile: input.user_profile, base_analysis: input.base_analysis };
+    }
+
+    if (typeof window !== "undefined" && input.profile_id) {
+      const row = await getStoredProfile(input.profile_id);
+      if (row?.user_profile && hasBaseAnalysisPayload(normalizeBaseAnalysisInput(row.base_analysis))) {
+        return {
+          profile: row.user_profile,
+          base_analysis: row.base_analysis,
+        };
+      }
+    }
+
+    return { profile: input.user_profile, base_analysis: input.base_analysis ?? {} };
   }
 
   if (typeof window !== "undefined" && input.profile_id) {

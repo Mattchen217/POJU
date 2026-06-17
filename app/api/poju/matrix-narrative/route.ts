@@ -4,8 +4,9 @@ import { getBaziChart } from "shunshi-bazi-core";
 import {
   buildMatrixNarrativeInput,
   buildMatrixNarrativeUserMessage,
-  MATRIX_NARRATIVE_SYSTEM_PROMPT,
+  getMatrixNarrativeSystemPrompt,
   parseMatrixNarrativeResponseText,
+  type MatrixNarrativeProduct,
 } from "@/lib/llm/prompts/matrix-narrative-prompt";
 import { callLLM } from "@/lib/llm/router";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
@@ -20,6 +21,29 @@ function isMatrixPayload(x: unknown): x is PojuMatrixPayload {
   return Boolean(p.user_profile?.birth && p.structured && p.wuxing_scores);
 }
 
+function parseProduct(x: unknown): MatrixNarrativeProduct {
+  if (x === "glyph" || x === "match" || x === "syncro" || x === "poju") return x;
+  return "poju";
+}
+
+function chartForPayload(payload: PojuMatrixPayload) {
+  const params = shunshiParamsFromBirthInfo(payload.user_profile.birth);
+  return getBaziChart({
+    year: params.year,
+    month: params.month,
+    day: params.day,
+    hour: params.hour,
+    minute: params.minute,
+    gender: params.gender,
+    city: params.city,
+    latitude: params.latitude,
+    longitude: params.longitude,
+    standardMeridian: params.standardMeridian,
+    useTrueSolarTime: true,
+    sect: 1,
+  });
+}
+
 export async function POST(req: Request) {
   try {
     if (!isOpenRouterConfigured()) {
@@ -31,7 +55,9 @@ export async function POST(req: Request) {
 
     const body = (await req.json().catch(() => ({}))) as {
       matrix_payload?: unknown;
+      matrix_payload_b?: unknown;
       locale?: unknown;
+      product?: unknown;
     };
 
     if (!isMatrixPayload(body.matrix_payload)) {
@@ -39,32 +65,33 @@ export async function POST(req: Request) {
     }
 
     const locale = typeof body.locale === "string" ? body.locale : "en";
+    const product = parseProduct(body.product);
     const payload = body.matrix_payload;
 
-    const params = shunshiParamsFromBirthInfo(payload.user_profile.birth);
-    const chart = getBaziChart({
-      year: params.year,
-      month: params.month,
-      day: params.day,
-      hour: params.hour,
-      minute: params.minute,
-      gender: params.gender,
-      city: params.city,
-      latitude: params.latitude,
-      longitude: params.longitude,
-      standardMeridian: params.standardMeridian,
-      useTrueSolarTime: true,
-      sect: 1,
-    });
+    if (product === "match" && !isMatrixPayload(body.matrix_payload_b)) {
+      return NextResponse.json({ ok: false, error: "match requires matrix_payload_b" }, { status: 400 });
+    }
 
-    const narrativeInput = buildMatrixNarrativeInput(payload, chart, locale);
-    const userMessage = buildMatrixNarrativeUserMessage(narrativeInput);
+    const chartA = chartForPayload(payload);
+    const narrativeInputA = buildMatrixNarrativeInput(payload, chartA, locale);
+
+    let userMessage: string;
+    if (product === "match" && isMatrixPayload(body.matrix_payload_b)) {
+      const chartB = chartForPayload(body.matrix_payload_b);
+      const narrativeInputB = buildMatrixNarrativeInput(body.matrix_payload_b, chartB, locale);
+      userMessage = buildMatrixNarrativeUserMessage(narrativeInputA, {
+        product: "match",
+        inputB: narrativeInputB,
+      });
+    } else {
+      userMessage = buildMatrixNarrativeUserMessage(narrativeInputA, { product });
+    }
 
     const result = await callLLM({
       call_type: "matrix_narrative",
-      system: MATRIX_NARRATIVE_SYSTEM_PROMPT,
+      system: getMatrixNarrativeSystemPrompt(product),
       messages: [{ role: "user", content: userMessage }],
-      max_tokens: 1100,
+      max_tokens: product === "match" ? 1400 : 1100,
       thinking_effort: "off",
       response_format: "json",
       temperature: 0.65,
@@ -73,7 +100,7 @@ export async function POST(req: Request) {
 
     let narrative;
     try {
-      narrative = parseMatrixNarrativeResponseText(result.content);
+      narrative = parseMatrixNarrativeResponseText(result.content, product);
     } catch {
       return NextResponse.json(
         {
@@ -88,6 +115,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       ok: true,
       narrative,
+      product,
       model: result.actual_model,
       tokens_used: result.meta.tokens_used,
       latency_ms: result.meta.latency_ms,

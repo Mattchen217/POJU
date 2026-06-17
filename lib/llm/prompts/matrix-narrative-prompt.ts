@@ -4,6 +4,8 @@ import type { ProfileStrength } from "@/lib/calculations/build-profile-structure
 import { getStemInfo } from "@/lib/poju/bazi-matrix-mappings";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
 
+export type MatrixNarrativeProduct = "poju" | "glyph" | "match" | "syncro";
+
 /** System prompt — Cosmic Energy Matrix copywriter (payment-gateway safe). */
 export const MATRIX_NARRATIVE_SYSTEM_PROMPT = `# ROLE
 You are an advanced Cosmic Psychology & Metaphysics Copywriter for an elite, tech-forward Bazi analytics application (Cosmic Energy Matrix). Your job is to convert raw numerical Bazi calculations into deeply resonating, modern, psychological, and high-vibe narrative text blocks.
@@ -79,6 +81,42 @@ You must respond ONLY with a valid JSON matching this exact schema. Each string 
 
 Output raw minified or pretty JSON only. Do not wrap in markdown code blocks.`;
 
+const TOOL_PRODUCT_PROMPT_APPEND: Record<Exclude<MatrixNarrativeProduct, "poju">, string> = {
+  glyph: `
+# PRODUCT CONTEXT: GLYPH (symbol oracle)
+The user will draw a symbolic card for ONE concrete decision or dilemma. Tone: contemplative, like focusing before a draw.
+- Set poju_onboarding.call_to_action to empty string "".
+- REQUIRED field "guide" (≤60 chars in user_language): invite them to name the ONE thing they want clarity on right now (career fork, relationship, stay-or-go…) before they draw. Mention typing/sending below. Do not spoil paid reading.`,
+  match: `
+# PRODUCT CONTEXT: MATCH (relationship alignment, TWO charts)
+Input includes chart A and chart B. In ONE response:
+- REQUIRED "narrative_a": one paragraph interpreting Person A's matrix (LENGTH similar to poju_onboarding.archetype_intro + core_conflict combined).
+- REQUIRED "narrative_b": one paragraph interpreting Person B's matrix (same length).
+- REQUIRED "guide" (≤60 chars): invite them to describe the specific relationship question they want solved (how to relate, longevity, a concrete conflict…). Mention typing/sending below.
+- Set poju_onboarding fields to brief placeholders if needed; primary copy is narrative_a, narrative_b, guide.`,
+  syncro: `
+# PRODUCT CONTEXT: SYNCRO (timing & direction for a task)
+The user needs optimal timing/direction for a concrete task at a location. Tone: practical, spatial-temporal.
+- Set poju_onboarding.call_to_action to empty string "".
+- REQUIRED "guide" (≤60 chars in user_language): ask what they need to do AND where (interview, signing, travel…) — type and send below. Do not spoil paid syncro matrix.`,
+};
+
+const TOOL_JSON_FIELDS_APPEND = `
+  "guide": "[≤60 chars in user_language. Product-specific invite to type/send their question below.]",
+  "narrative_a": "[Match only: A interpretation paragraph.]",
+  "narrative_b": "[Match only: B interpretation paragraph. Omit for non-match.]"
+`;
+
+export function getMatrixNarrativeSystemPrompt(product: MatrixNarrativeProduct = "poju"): string {
+  if (product === "poju") return MATRIX_NARRATIVE_SYSTEM_PROMPT;
+  const append = TOOL_PRODUCT_PROMPT_APPEND[product];
+  const schemaExtra = product === "match" ? TOOL_JSON_FIELDS_APPEND : TOOL_JSON_FIELDS_APPEND.replace(
+    /"narrative_a"[\s\S]*?"narrative_b"[\s\S]*?\n/,
+    "",
+  );
+  return `${MATRIX_NARRATIVE_SYSTEM_PROMPT}\n${append}\n# ADDITIONAL JSON FIELDS (append to schema root)${schemaExtra}`;
+}
+
 export type MatrixNarrativeInput = {
   user_language: string;
   day_master: string;
@@ -106,6 +144,12 @@ export type MatrixNarrativeResponse = {
     core_conflict: string;
     call_to_action: string;
   };
+  /** Tool preview CTA (glyph/match/syncro); ≤60 chars */
+  guide?: string;
+  /** Match: Person A interpretation */
+  narrative_a?: string;
+  /** Match: Person B interpretation */
+  narrative_b?: string;
 };
 
 function localeToUserLanguage(locale: string): string {
@@ -169,7 +213,16 @@ export function buildMatrixNarrativeInput(
   };
 }
 
-export function buildMatrixNarrativeUserMessage(input: MatrixNarrativeInput): string {
+export function buildMatrixNarrativeUserMessage(
+  input: MatrixNarrativeInput,
+  opts?: { inputB?: MatrixNarrativeInput; product?: MatrixNarrativeProduct },
+): string {
+  if (opts?.product === "match" && opts.inputB) {
+    return JSON.stringify({ product: "match", chart_a: input, chart_b: opts.inputB }, null, 2);
+  }
+  if (opts?.product && opts.product !== "poju") {
+    return JSON.stringify({ product: opts.product, ...input }, null, 2);
+  }
   return JSON.stringify(input, null, 2);
 }
 
@@ -202,7 +255,10 @@ function clampNarrativeField(text: string, fieldKey: string): string {
   return slice.trimEnd() + "…";
 }
 
-export function parseMatrixNarrativeResponseText(text: string): MatrixNarrativeResponse {
+export function parseMatrixNarrativeResponseText(
+  text: string,
+  product: MatrixNarrativeProduct = "poju",
+): MatrixNarrativeResponse {
   let raw = text.trim();
   const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
   if (fence?.[1]) raw = fence[1].trim();
@@ -216,6 +272,33 @@ export function parseMatrixNarrativeResponseText(text: string): MatrixNarrativeR
   if (!eb || !sd || !at || !po) {
     throw new Error("Response missing required top-level sections");
   }
+
+  const optionalString = (obj: Record<string, unknown>, key: string): string | undefined => {
+    const v = obj[key];
+    return typeof v === "string" && v.trim() ? v.trim() : undefined;
+  };
+
+  const guideRaw = optionalString(parsed, "guide");
+  const guide = guideRaw ? clampNarrativeField(guideRaw.slice(0, 120), "poju_onboarding.call_to_action") : undefined;
+  const narrative_a = optionalString(parsed, "narrative_a");
+  const narrative_b = optionalString(parsed, "narrative_b");
+  const callToActionRaw = optionalString(po, "call_to_action");
+
+  if (product === "match" && (!narrative_a || !narrative_b)) {
+    throw new Error("Match narrative requires narrative_a and narrative_b");
+  }
+  if (product !== "poju" && !guide && !callToActionRaw) {
+    throw new Error("Tool narrative requires guide or call_to_action");
+  }
+
+  const archetypeIntro =
+    product === "match"
+      ? (optionalString(po, "archetype_intro") ?? narrative_a ?? "")
+      : requireString(po, "archetype_intro");
+  const coreConflict =
+    product === "match"
+      ? (optionalString(po, "core_conflict") ?? narrative_b ?? "")
+      : requireString(po, "core_conflict");
 
   return {
     elemental_breakdown: {
@@ -231,9 +314,15 @@ export function parseMatrixNarrativeResponseText(text: string): MatrixNarrativeR
       description: clampNarrativeField(requireString(at, "description"), "annual_transit_2026.description"),
     },
     poju_onboarding: {
-      archetype_intro: clampNarrativeField(requireString(po, "archetype_intro"), "poju_onboarding.archetype_intro"),
-      core_conflict: clampNarrativeField(requireString(po, "core_conflict"), "poju_onboarding.core_conflict"),
-      call_to_action: clampNarrativeField(requireString(po, "call_to_action"), "poju_onboarding.call_to_action"),
+      archetype_intro: clampNarrativeField(archetypeIntro, "poju_onboarding.archetype_intro"),
+      core_conflict: clampNarrativeField(coreConflict, "poju_onboarding.core_conflict"),
+      call_to_action: clampNarrativeField(
+        guide ?? callToActionRaw ?? "",
+        "poju_onboarding.call_to_action",
+      ),
     },
+    guide,
+    narrative_a,
+    narrative_b,
   };
 }

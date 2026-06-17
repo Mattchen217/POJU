@@ -208,6 +208,36 @@
   color: #fca5a5;
 }
 
+.glyph-draw-preview {
+  margin-bottom: 1.75rem;
+}
+
+.glyph-draw-preview__narrative {
+  margin-top: 1rem;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: #cbc3d7;
+}
+
+.glyph-draw-page--paywall {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 100dvh;
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+}
+
+.glyph-paywall-overlay {
+  width: 100%;
+  max-width: 28rem;
+  padding: 0 1rem;
+}
+
+.glyph-base-report {
+  margin-bottom: 1.5rem;
+  padding: 0 0.25rem;
+}
+
 .welcome-section .glyph-brand {
   color: #d0bcff;
   letter-spacing: 0.14em;

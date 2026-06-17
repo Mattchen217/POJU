@@ -784,6 +784,13 @@
       "joining": "Adding your tool result to this session…"
     }
   },
+  "tool_preview": {
+    "guide": {
+      "glyph": "Name the one decision on your mind — type it below and send before you draw.",
+      "match": "Describe the relationship question you want clarity on — type and send below.",
+      "syncro": "What do you need to do, and where? Type your task below and send."
+    }
+  },
   "poju": {
     "branding": {
       "navbar_tooltip": "Strategic Unlock: Break through cognitive gridlocks and complex life dilemmas.",
@@ -900,6 +907,14 @@
       "attach_menu_document": "Document",
       "attach_menu_image": "Image",
       "attach_menu_pdf": "PDF",
+      "unlock_report_modal_title": "Foundation reading (full analysis)",
+      "unlock_report_modal_hint": "You can open this again from the chat at any time.",
+      "unlock_report_gate_hint": "Please read your full foundation reading first. After you close, POJU will continue with your question.",
+      "unlock_report_close": "Close",
+      "unlock_report_close_continue": "Close and continue",
+      "unlock_report_card_label": "Foundation reading",
+      "unlock_report_card_title": "Your full foundation reading is ready",
+      "unlock_report_view_full": "View full report",
       "session_picker": {
         "close": "Close",
         "new_poju": "+ New POJU",

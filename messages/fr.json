@@ -862,6 +862,14 @@
       "attach_menu_document": "Document",
       "attach_menu_image": "Image",
       "attach_menu_pdf": "PDF",
+      "unlock_report_modal_title": "Lecture fondatrice (analyse complète)",
+      "unlock_report_modal_hint": "Vous pouvez la rouvrir depuis le chat à tout moment.",
+      "unlock_report_gate_hint": "Veuillez d'abord lire votre lecture fondatrice complète. Après fermeture, POJU poursuivra avec votre question.",
+      "unlock_report_close": "Fermer",
+      "unlock_report_close_continue": "Fermer et continuer",
+      "unlock_report_card_label": "Lecture fondatrice",
+      "unlock_report_card_title": "Votre lecture fondatrice complète est prête",
+      "unlock_report_view_full": "Voir le rapport complet",
       "session_picker": {
         "close": "Fermer",
         "new_poju": "+ New POJU",
@@ -1937,6 +1945,13 @@
       "continuing_from": "Suite de {tool}",
       "context_label": "Suite de cette analyse",
       "joining": "Ajout du résultat de votre outil à cette session…"
+    }
+  },
+  "tool_preview": {
+    "guide": {
+      "glyph": "Écrivez la décision qui vous préoccupe — envoyez-la ci-dessous avant de tirer.",
+      "match": "Décrivez votre question sur la relation — tapez et envoyez ci-dessous.",
+      "syncro": "Que devez-vous faire, et où ? Tapez la tâche ci-dessous et envoyez."
     }
   },
   "base_analysis_view": {
