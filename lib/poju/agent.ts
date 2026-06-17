@@ -82,8 +82,13 @@ type LLMApiPayload = {
 
 function ensureAgentV2(session: POJUSessionState): POJUAgentState {
   const merge = (base: POJUAgentState): POJUAgentState => {
+    const defaults = createInitialAgentState({
+      original_question: base.original_question || session.original_question,
+      selected_profile_id: base.selected_profile_id ?? session.selected_stored_profile_id,
+    });
     const phase = normalizeAgentPhase(base.current_phase) ?? base.current_phase;
     return {
+      ...defaults,
       ...base,
       current_phase: phase,
       profile_skipped: session.profile_skipped,

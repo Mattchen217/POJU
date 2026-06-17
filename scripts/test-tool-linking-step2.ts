@@ -3,6 +3,7 @@
  * Run: pnpm exec tsx scripts/test-tool-linking-step2.ts
  */
 
+import { createInitialAgentState } from "../lib/poju/agent-state";
 import { createNewCycle } from "../lib/poju/cycle-manager";
 import {
   applyToolLinkingFromLlm,
@@ -35,29 +36,15 @@ const session: POJUSessionState = {
   last_interaction_at: new Date().toISOString(),
   expires_at: new Date().toISOString(),
   agent_v2: {
+    ...createInitialAgentState({ original_question: "和老板吵架" }),
     current_phase: "tracking",
-    original_question: "和老板吵架",
-    selected_profile_id: null,
     has_base_analysis: true,
     profile_skipped: false,
     question_category: "career",
-    context_collected: {
-      duration: null,
-      trigger_event: null,
-      emotional_state: null,
-      what_tried: [],
-      desired_outcome: null,
-      category_specific: {},
-    },
     collection_completeness: 1,
-    current_summary: null,
     has_situation_analysis: true,
-    actions: [],
     main_delivery_at: new Date().toISOString(),
-    main_delivery_data: null,
     turn_count: 5,
-    tokens_used: 0,
-    phase_history: [],
   },
 };
 
