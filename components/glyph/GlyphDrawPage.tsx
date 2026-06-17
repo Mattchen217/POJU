@@ -7,8 +7,8 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { DrawSequence } from "@/components/oracle/DrawSequence";
 import { OracleSummon } from "@/components/oracle/OracleSummon";
 import { ToolPreviewChatSection } from "@/components/cross-product/ToolPreviewChatSection";
+import { ToolPreviewMatrixLoading } from "@/components/cross-product/ToolPreviewMatrixLoading";
 import { ToolPaywallInline } from "@/components/cross-product/ToolPaywallInline";
-import { PreparingSplineShell } from "@/components/poju/PreparingSplineShell";
 import { finalizeToolPreview } from "@/lib/cross-product/finalize-tool-preview";
 import {
   loadGlyphDrawSession,
@@ -51,6 +51,7 @@ export function GlyphDrawPage() {
 
   const initRef = useRef(false);
   const previewAbortRef = useRef<AbortController | null>(null);
+  const [previewRetryKey, setPreviewRetryKey] = useState(0);
 
   const initializePreview = useCallback(async () => {
     if (!profileId) return;
@@ -65,6 +66,7 @@ export function GlyphDrawPage() {
       const p = await getStoredProfile(profileId);
       if (!p?.user_profile) {
         setError(t("profile_not_found"));
+        setStage("preview-loading");
         return;
       }
       setProfile(p);
@@ -87,6 +89,7 @@ export function GlyphDrawPage() {
         await discardIncompletePendingProfile(profileId);
       }
       setError(e instanceof Error ? e.message : String(e));
+      setStage("preview-loading");
     }
   }, [profileId, locale, t]);
 
@@ -95,11 +98,11 @@ export function GlyphDrawPage() {
       router.replace("/glyph");
       return;
     }
-    if (initRef.current) return;
+    if (previewRetryKey === 0 && initRef.current) return;
     initRef.current = true;
     void initializePreview();
     return () => previewAbortRef.current?.abort();
-  }, [profileId, router, initializePreview]);
+  }, [profileId, router, initializePreview, previewRetryKey]);
 
   useEffect(() => {
     if (!openPaywall || !resumeReadingId) return;
@@ -225,11 +228,16 @@ export function GlyphDrawPage() {
 
   if (stage === "preview-loading") {
     return (
-      <PreparingSplineShell blockInteraction>
-        <div className="preparing-spline-page__overlay" role="status" aria-live="polite">
-          <p className="preparing-spline-page__status">{t("loading")}</p>
-        </div>
-      </PreparingSplineShell>
+      <ToolPreviewMatrixLoading
+        profile={profile}
+        locale={locale}
+        error={error}
+        onRetry={() => {
+          setError(null);
+          setPreviewRetryKey((k) => k + 1);
+        }}
+        onBack={() => router.push("/glyph/prepare")}
+      />
     );
   }
 

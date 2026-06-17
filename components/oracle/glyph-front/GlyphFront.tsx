@@ -17,9 +17,11 @@ interface GlyphFrontProps {
   sign: SignData;
   animate?: boolean;
   compact?: boolean;
+  /** Draw flip flow — same as compact, tuned for shorter viewport card. */
+  draw?: boolean;
 }
 
-export function GlyphFront({ sign, animate = true, compact = false }: GlyphFrontProps) {
+export function GlyphFront({ sign, animate = true, compact = false, draw = false }: GlyphFrontProps) {
   const meta = LEVEL_META[sign.level];
   const frontByLevel = {
     divine_tailwind: divineTailwindFront,
@@ -45,8 +47,15 @@ export function GlyphFront({ sign, animate = true, compact = false }: GlyphFront
     eye_of_storm: "#FF556E",
   };
   const toneColor = topTextColorByLevel[sign.level];
+  const faceSmall = compact || draw;
   const maxVerseLen = Math.max(...sign.verse_lines_en.map((line) => line.length), 1);
-  const verseSizeClass = compact
+  const verseSizeClass = draw
+    ? maxVerseLen > 62
+      ? "text-[0.62rem] leading-[1.26]"
+      : maxVerseLen > 54
+        ? "text-[0.66rem] leading-[1.28]"
+        : "text-[0.7rem] leading-[1.3]"
+    : compact
     ? maxVerseLen > 62
       ? "text-[0.68rem] leading-[1.28]"
       : maxVerseLen > 54
@@ -59,7 +68,13 @@ export function GlyphFront({ sign, animate = true, compact = false }: GlyphFront
         : "text-[1.16rem] md:text-[1.22rem]";
 
   const summaryLen = sign.summary_line_en.length;
-  const summarySizeClass = compact
+  const summarySizeClass = draw
+    ? summaryLen > 130
+      ? "text-[0.6rem] leading-[1.28]"
+      : summaryLen > 100
+        ? "text-[0.64rem] leading-[1.32]"
+        : "text-[0.68rem] leading-[1.34]"
+    : compact
     ? summaryLen > 130
       ? "text-[0.66rem] leading-[1.32]"
       : summaryLen > 100
@@ -69,7 +84,7 @@ export function GlyphFront({ sign, animate = true, compact = false }: GlyphFront
 
   return (
     <motion.div
-      className="relative aspect-[9/16] w-full overflow-hidden rounded-[24px]"
+      className={`relative h-full w-full overflow-hidden rounded-[24px] ${draw ? "" : "aspect-[9/16]"}`}
       initial={animate ? { opacity: 0 } : false}
       animate={{ opacity: 1 }}
       transition={{
@@ -90,18 +105,18 @@ export function GlyphFront({ sign, animate = true, compact = false }: GlyphFront
 
       <div
         className={`relative z-20 flex h-full flex-col text-center ${
-          compact ? "px-[10%] py-[11%]" : "px-[11%] py-[13%]"
+          draw ? "px-[9%] py-[9%]" : faceSmall ? "px-[10%] py-[11%]" : "px-[11%] py-[13%]"
         }`}
       >
         <motion.div
-          className={compact ? "shrink-0 pt-[3%]" : "pt-[7%]"}
+          className={draw ? "shrink-0 pt-[2%]" : faceSmall ? "shrink-0 pt-[3%]" : "pt-[7%]"}
           initial={animate ? { opacity: 0, y: -10 } : false}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
           <h2
             className={`font-verse mb-0.5 tracking-wide ${
-              compact ? "text-[1.2rem]" : "text-3xl md:text-4xl"
+              draw ? "text-[1.05rem]" : faceSmall ? "text-[1.2rem]" : "text-3xl md:text-4xl"
             }`}
             style={{ color: toneColor }}
           >
@@ -109,7 +124,9 @@ export function GlyphFront({ sign, animate = true, compact = false }: GlyphFront
           </h2>
 
           <p
-            className={`italic opacity-70 ${compact ? "mb-1.5 text-[0.62rem]" : "mb-4 text-sm md:text-base"}`}
+            className={`italic opacity-70 ${
+              draw ? "mb-1 text-[0.58rem]" : faceSmall ? "mb-1.5 text-[0.62rem]" : "mb-4 text-sm md:text-base"
+            }`}
             style={{ color: toneColor }}
           >
             {meta.subtitle}
@@ -117,7 +134,11 @@ export function GlyphFront({ sign, animate = true, compact = false }: GlyphFront
 
           <div
             className={`tracking-[0.2em] text-white ${
-              compact ? "mb-1 text-[0.5rem] tracking-[0.14em]" : "text-[0.65rem] md:text-[0.72rem]"
+              draw
+                ? "mb-0.5 text-[0.48rem] tracking-[0.12em]"
+                : faceSmall
+                  ? "mb-1 text-[0.5rem] tracking-[0.14em]"
+                  : "text-[0.65rem] md:text-[0.72rem]"
             }`}
           >
             GLYPH No. {String(sign.sign_number).padStart(3, "0")}
@@ -125,23 +146,23 @@ export function GlyphFront({ sign, animate = true, compact = false }: GlyphFront
         </motion.div>
 
         <motion.div
-          className={`mx-auto w-[88%] ${compact ? "min-h-0 flex-1" : "-mt-2 h-[46%] overflow-hidden"}`}
+          className={`mx-auto w-[88%] ${faceSmall ? "min-h-0 flex-1" : "-mt-2 h-[46%] overflow-hidden"}`}
           initial={animate ? { opacity: 0 } : false}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.5 }}
         >
           <div
             className={`font-verse flex h-full flex-col justify-center italic ${
-              compact ? "gap-0.5" : "gap-2"
+              faceSmall ? "gap-0.5" : "gap-2"
             } ${verseSizeClass}`}
             style={{ color: toneColor }}
           >
             {sign.verse_lines_en.map((line, idx) => (
               <motion.p
                 key={idx}
-                className={compact ? "leading-[1.28] text-center" : "leading-[1.45] text-justify"}
+                className={faceSmall ? "leading-[1.28] text-center" : "leading-[1.45] text-justify"}
                 style={
-                  compact
+                  faceSmall
                     ? undefined
                     : {
                         display: "-webkit-box",
@@ -165,7 +186,7 @@ export function GlyphFront({ sign, animate = true, compact = false }: GlyphFront
 
         <motion.div
           className={`relative z-30 shrink-0 ${
-            compact ? "mt-1 px-1 pb-[10%] pt-1" : "mt-2 min-h-[16%] px-2"
+            draw ? "mt-0.5 px-1 pb-[8%] pt-0.5" : faceSmall ? "mt-1 px-1 pb-[10%] pt-1" : "mt-2 min-h-[16%] px-2"
           }`}
           initial={animate ? { opacity: 0 } : false}
           animate={{ opacity: 1 }}
@@ -179,7 +200,11 @@ export function GlyphFront({ sign, animate = true, compact = false }: GlyphFront
 
       <p
         className={`absolute left-1/2 z-30 -translate-x-1/2 rounded-full tracking-[0.3em] ${
-          compact ? "bottom-[3.5%] px-2 py-0.5 text-[0.58rem]" : "bottom-[7%] px-3 py-1 text-xs"
+          draw
+            ? "bottom-[3%] px-2 py-0.5 text-[0.52rem]"
+            : faceSmall
+              ? "bottom-[3.5%] px-2 py-0.5 text-[0.58rem]"
+              : "bottom-[7%] px-3 py-1 text-xs"
         }`}
         style={{
           color: toneColor,

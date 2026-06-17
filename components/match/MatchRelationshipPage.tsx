@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
 import { PojuToolHandoffBanner } from "@/components/poju/PojuToolHandoffBanner";
-import { PreparingSplineShell } from "@/components/poju/PreparingSplineShell";
+import { ToolPreviewMatrixLoading } from "@/components/cross-product/ToolPreviewMatrixLoading";
 import { RelationshipInput } from "@/components/match/RelationshipInput";
 import { ToolPreviewChatSection } from "@/components/cross-product/ToolPreviewChatSection";
 import { ToolPaywallInline } from "@/components/cross-product/ToolPaywallInline";
@@ -51,6 +51,7 @@ export function MatchRelationshipPage() {
 
   const previewAbortRef = useRef<AbortController | null>(null);
   const initRef = useRef(false);
+  const [previewRetryKey, setPreviewRetryKey] = useState(0);
 
   const loadPreview = useCallback(async () => {
     const aId = sessionStorage.getItem("match_a_profile_id");
@@ -117,16 +118,16 @@ export function MatchRelationshipPage() {
     } catch (e) {
       if (ac.signal.aborted) return;
       setError(e instanceof Error ? e.message : String(e));
-      setStage("preview");
+      setStage("preview-loading");
     }
   }, [locale, openPaywall, router]);
 
   useEffect(() => {
-    if (initRef.current) return;
+    if (previewRetryKey === 0 && initRef.current) return;
     initRef.current = true;
     void loadPreview();
     return () => previewAbortRef.current?.abort();
-  }, [loadPreview]);
+  }, [loadPreview, previewRetryKey]);
 
   useEffect(() => {
     const prefill =
@@ -180,11 +181,16 @@ export function MatchRelationshipPage() {
 
   if (stage === "preview-loading") {
     return (
-      <PreparingSplineShell blockInteraction>
-        <div className="preparing-spline-page__overlay" role="status" aria-live="polite">
-          <p className="preparing-spline-page__status">{t("loading")}</p>
-        </div>
-      </PreparingSplineShell>
+      <ToolPreviewMatrixLoading
+        profile={aProfile}
+        locale={locale}
+        error={error}
+        onRetry={() => {
+          setError(null);
+          setPreviewRetryKey((k) => k + 1);
+        }}
+        onBack={() => router.push("/match/select-b")}
+      />
     );
   }
 

@@ -191,7 +191,7 @@ export function GlyphReadingPage() {
     }
 
     setStage("base-prep");
-  }, [locale, readingId, t]);
+  }, [locale, readingId, router, t]);
 
   useEffect(() => {
     if (stage !== "base-cache") return;

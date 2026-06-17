@@ -227,17 +227,32 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
       locale,
     });
     const cached = payload.display;
-    if (!cached || cached.narrative_source !== "llm") return base;
-    return {
-      ...base,
-      synopsis: cached.synopsis,
-      structural_dynamics: cached.structural_dynamics,
-      annual_transit: { ...base.annual_transit, narrative: cached.annual_transit.narrative },
-      enote_caption: cached.enote_caption,
-      narrative_source: cached.narrative_source,
-      narrative_locale: cached.narrative_locale,
-      narrative_failed: cached.narrative_failed,
-    };
+    if (!cached) return base;
+    if (cached.narrative_source === "llm") {
+      return {
+        ...base,
+        synopsis: cached.synopsis,
+        structural_dynamics: cached.structural_dynamics,
+        annual_transit: { ...base.annual_transit, narrative: cached.annual_transit.narrative },
+        enote_caption: cached.enote_caption,
+        narrative_source: cached.narrative_source,
+        narrative_locale: cached.narrative_locale,
+        narrative_failed: cached.narrative_failed,
+      };
+    }
+    if (cached.narrative_failed) {
+      return {
+        ...base,
+        synopsis: cached.synopsis,
+        structural_dynamics: cached.structural_dynamics,
+        annual_transit: { ...base.annual_transit, narrative: cached.annual_transit.narrative },
+        enote_caption: cached.enote_caption,
+        narrative_source: cached.narrative_source ?? "template",
+        narrative_locale: cached.narrative_locale,
+        narrative_failed: true,
+      };
+    }
+    return base;
   }, [payload.display, user_profile, structured, strength, wuxing_scores, locale]);
 
   const maxCount = Math.max(...wuxing_scores.map((s) => s.count), 1);

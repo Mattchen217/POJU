@@ -7,6 +7,8 @@ import { GlyphCard } from "@/components/oracle/GlyphCard";
 import { drawSign } from "@/lib/oracle/drawSign";
 import type { SignData, UserInput } from "@/types/oracle";
 
+import "@/styles/glyph-draw-sequence.css";
+
 type SequenceStage = "drawing" | "card-back" | "flipping" | "card-front" | "reading";
 
 interface DrawSequenceProps {
@@ -81,31 +83,32 @@ export function DrawSequence({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-b from-[#0B0815] to-black px-6 py-12">
+    <div className="glyph-draw-sequence">
       {onClose ? (
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-6 top-6 flex h-10 w-10 items-center justify-center rounded-full text-white/60 transition-all hover:bg-white/10 hover:text-white"
+          className="glyph-draw-sequence__close"
           aria-label="Close"
         >
           ✕
         </button>
       ) : null}
 
-      {/* Single column: card + hint slot share one layout box so flex centering does not jump when hint fades in. */}
-      <div className="flex w-full max-w-[400px] flex-col items-stretch">
-        <GlyphCard
-          sign={sign}
-          side={stage === "card-back" ? "back" : "front"}
-          onCardClick={handleCardClick}
-          onFlipComplete={handleFlipComplete}
-        />
+      <div className="glyph-draw-sequence__column">
+        <div className="glyph-draw-sequence__card">
+          <GlyphCard
+            sign={sign}
+            side={stage === "card-back" ? "back" : "front"}
+            onCardClick={handleCardClick}
+            onFlipComplete={handleFlipComplete}
+            draw
+          />
+        </div>
 
-        <div className="mt-6 flex min-h-[4.5rem] w-full flex-col items-center justify-center text-center">
+        <div className="glyph-draw-sequence__hint">
           {stage === "card-back" ? (
             <motion.p
-              className="text-lg font-semibold tracking-wide text-white/80"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: 2 }}
@@ -115,17 +118,13 @@ export function DrawSequence({
           ) : null}
 
           {stage === "flipping" ? (
-            <p
-              className="pointer-events-none select-none text-lg font-semibold tracking-wide text-white/85 opacity-0"
-              aria-hidden
-            >
+            <p className="pointer-events-none select-none opacity-0" aria-hidden>
               Tap the card for a full reading
             </p>
           ) : null}
 
           {stage === "card-front" ? (
             <motion.p
-              className="text-lg font-semibold tracking-wide text-white/85"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.4 }}

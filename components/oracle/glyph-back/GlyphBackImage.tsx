@@ -15,12 +15,15 @@ import { LEVEL_META, type GlyphLevel } from "@/types/oracle";
 interface GlyphBackImageProps {
   level: GlyphLevel;
   animate?: boolean;
+  /** Fill parent flip cell (draw flow) instead of fixed 9:16 box. */
+  fill?: boolean;
   onAnimationComplete?: () => void;
 }
 
 export function GlyphBackImage({
   level,
   animate = true,
+  fill = false,
   onAnimationComplete,
 }: GlyphBackImageProps) {
   const meta = LEVEL_META[level];
@@ -38,7 +41,7 @@ export function GlyphBackImage({
 
   return (
     <motion.div
-      className="relative aspect-[9/16] w-full overflow-hidden rounded-[24px]"
+      className={`relative w-full overflow-hidden rounded-[24px] ${fill ? "h-full" : "aspect-[9/16]"}`}
       initial={animate ? { opacity: 0 } : false}
       animate={{ opacity: 1 }}
       transition={{

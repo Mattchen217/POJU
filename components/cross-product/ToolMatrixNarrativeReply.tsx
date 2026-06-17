@@ -33,6 +33,10 @@ export function ToolMatrixNarrativeReply({ product, locale, payloadA, payloadB, 
     narrative?.guide?.trim() ||
     displayA.synopsis.prompt?.trim() ||
     staticGuide;
+  const synopsisArchetype =
+    narrative?.poju_onboarding?.archetype_intro?.trim() || displayA.synopsis.archetype;
+  const synopsisFriction =
+    narrative?.poju_onboarding?.core_conflict?.trim() || displayA.synopsis.friction;
 
   if (narrativeLoading) {
     return (
@@ -58,8 +62,8 @@ export function ToolMatrixNarrativeReply({ product, locale, payloadA, payloadB, 
   if (isLlmNarrative) {
     return (
       <>
-        {displayA.synopsis.archetype ? <p>{displayA.synopsis.archetype}</p> : null}
-        {displayA.synopsis.friction ? <p>{displayA.synopsis.friction}</p> : null}
+        {synopsisArchetype ? <p>{synopsisArchetype}</p> : null}
+        {synopsisFriction ? <p>{synopsisFriction}</p> : null}
         {guide ? <p>{guide}</p> : null}
       </>
     );
@@ -68,8 +72,8 @@ export function ToolMatrixNarrativeReply({ product, locale, payloadA, payloadB, 
   if (showTemplateFallback) {
     return (
       <>
-        {displayA.synopsis.archetype ? <p>{displayA.synopsis.archetype}</p> : null}
-        {displayA.synopsis.friction ? <p>{displayA.synopsis.friction}</p> : null}
+        {synopsisArchetype ? <p>{synopsisArchetype}</p> : null}
+        {synopsisFriction ? <p>{synopsisFriction}</p> : null}
         <p>{guide}</p>
       </>
     );

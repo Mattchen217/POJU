@@ -13,6 +13,8 @@ interface GlyphCardProps {
   onFlipComplete?: () => void;
   /** Smaller face layout for delivery / reading page. */
   compact?: boolean;
+  /** Draw / flip flow — compact text, fills parent height (see glyph-draw-sequence.css). */
+  draw?: boolean;
   animate?: boolean;
 }
 
@@ -22,18 +24,26 @@ export function GlyphCard({
   onCardClick,
   onFlipComplete,
   compact = false,
+  draw = false,
   animate = true,
 }: GlyphCardProps) {
   const isFlipped = side === "front";
+  const isCompactFace = compact || draw;
 
   return (
     <div
-      className={`relative mx-auto w-full select-none ${compact ? "glyph-card--compact max-w-[240px]" : "max-w-[400px] cursor-pointer"}`}
+      className={`relative mx-auto w-full select-none ${
+        draw
+          ? "glyph-card--draw h-full max-w-none cursor-pointer"
+          : compact
+            ? "glyph-card--compact max-w-[240px]"
+            : "max-w-[400px] cursor-pointer"
+      }`}
       style={{ perspective: "2000px" }}
       onClick={onCardClick}
     >
       <motion.div
-        className="relative aspect-[9/16] w-full"
+        className={`glyph-card__flip relative w-full ${draw ? "h-full" : "aspect-[9/16]"}`}
         style={{ transformStyle: "preserve-3d" }}
         animate={{ rotateY: isFlipped ? -180 : 0 }}
         transition={{
@@ -50,7 +60,7 @@ export function GlyphCard({
           className="absolute inset-0 h-full w-full"
           style={{ backfaceVisibility: "hidden" }}
         >
-          <GlyphBackImage level={sign.level} animate={!isFlipped} />
+          <GlyphBackImage level={sign.level} animate={!isFlipped} fill={draw} />
         </div>
 
         <div
@@ -60,7 +70,7 @@ export function GlyphCard({
             transform: "rotateY(180deg)",
           }}
         >
-          <GlyphFront sign={sign} animate={animate && isFlipped} compact={compact} />
+          <GlyphFront sign={sign} animate={animate && isFlipped} compact={isCompactFace} draw={draw} />
         </div>
       </motion.div>
 

@@ -32,6 +32,16 @@
   max-width: none;
   margin: 0;
   background: transparent;
+  /* In-flow preview — do not inherit full-viewport chat shell clipping */
+  display: block;
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+}
+
+.tool-preview-page {
+  overflow-x: clip;
+  overflow-y: visible;
 }
 
 .tool-preview-chat__messages {
