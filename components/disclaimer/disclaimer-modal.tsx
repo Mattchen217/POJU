@@ -25,7 +25,7 @@ const DISCLAIMER_BULLETS: DisclaimerBullet[] = [
     body: (
       <>
         This platform does <strong>NOT</strong> provide medical, clinical, mental health, legal, or financial advice.
-        No supernatural claims, divination, or deterministic future forecasting are guaranteed.
+        Supernatural claims, divination, and deterministic future forecasting are strictly not provided.
       </>
     ),
   },
@@ -40,11 +40,13 @@ const DISCLAIMER_BULLETS: DisclaimerBullet[] = [
     ),
   },
   {
-    label: "Decentralized Privacy Architecture",
+    label: "Decentralized Storage & Data Loss Risk",
     body: (
       <>
-        Zero central storage. All your inputs and conversation history are encrypted locally (<strong>AES-256</strong>)
-        within your browser storage and are never collected on our servers.
+        Zero central cloud storage. Your history is encrypted locally (<strong>AES-256</strong>) strictly within this
+        specific browser and device. <strong>Crucial:</strong> Switching devices, clearing browser cache, or closing an
+        Incognito/Private tab will permanently and irreversibly destroy your data. We maintain no backups and have zero
+        technical capacity to recover lost logs.
       </>
     ),
   },

@@ -286,8 +286,15 @@
   margin-top: 8px;
 }
 
-/* react-mobile-picker — golden selection frame */
-.picker-section :global(.picker) {
+/* react-mobile-picker — golden selection frame; wheel zone blocks page scroll on touch */
+.picker-wheel-zone {
+  touch-action: none;
+  overscroll-behavior: contain;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.picker-section .picker-wheel-zone :global(.picker) {
   position: relative;
 }
 

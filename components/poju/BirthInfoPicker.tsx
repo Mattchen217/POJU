@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import Picker from "react-mobile-picker";
 
+import { PickerWheelZone } from "@/components/poju/PickerWheelZone";
 import { BirthLocationField } from "@/components/forms/BirthLocationField";
 import { hourToHourPeriod } from "@/lib/profile/birth-info-utils";
 import { isBirthLocationComplete } from "@/lib/profile/validate-birth-location";
@@ -118,74 +119,78 @@ export function BirthInfoPicker({ onSubmit, onCancel, locale }: BirthInfoPickerP
 
       <div className="picker-section">
         <label>{t("birth_date")}</label>
-        <Picker
-          value={{ year, month, day }}
-          onChange={(value) => {
-            setYear(Number(value.year));
-            setMonth(Number(value.month));
-            setDay(Number(value.day));
-          }}
-          height={180}
-          itemHeight={36}
-          wheelMode="natural"
-        >
-          <Picker.Column name="year">
-            {years.map((y) => (
-              <Picker.Item key={y} value={y}>
-                {({ selected }) => <PickerCell selected={selected}>{y}</PickerCell>}
-              </Picker.Item>
-            ))}
-          </Picker.Column>
-          <Picker.Column name="month">
-            {months.map((m) => (
-              <Picker.Item key={m} value={m}>
-                {({ selected }) => (
-                  <PickerCell selected={selected}>
-                    {localeKey === "zh" ? `${m} 月` : monthEnglishName(m)}
-                  </PickerCell>
-                )}
-              </Picker.Item>
-            ))}
-          </Picker.Column>
-          <Picker.Column name="day">
-            {days.map((d) => (
-              <Picker.Item key={d} value={d}>
-                {({ selected }) => (
-                  <PickerCell selected={selected}>{localeKey === "zh" ? `${d} 日` : d}</PickerCell>
-                )}
-              </Picker.Item>
-            ))}
-          </Picker.Column>
-        </Picker>
+        <PickerWheelZone>
+          <Picker
+            value={{ year, month, day }}
+            onChange={(value) => {
+              setYear(Number(value.year));
+              setMonth(Number(value.month));
+              setDay(Number(value.day));
+            }}
+            height={180}
+            itemHeight={36}
+            wheelMode="natural"
+          >
+            <Picker.Column name="year">
+              {years.map((y) => (
+                <Picker.Item key={y} value={y}>
+                  {({ selected }) => <PickerCell selected={selected}>{y}</PickerCell>}
+                </Picker.Item>
+              ))}
+            </Picker.Column>
+            <Picker.Column name="month">
+              {months.map((m) => (
+                <Picker.Item key={m} value={m}>
+                  {({ selected }) => (
+                    <PickerCell selected={selected}>
+                      {localeKey === "zh" ? `${m} 月` : monthEnglishName(m)}
+                    </PickerCell>
+                  )}
+                </Picker.Item>
+              ))}
+            </Picker.Column>
+            <Picker.Column name="day">
+              {days.map((d) => (
+                <Picker.Item key={d} value={d}>
+                  {({ selected }) => (
+                    <PickerCell selected={selected}>{localeKey === "zh" ? `${d} 日` : d}</PickerCell>
+                  )}
+                </Picker.Item>
+              ))}
+            </Picker.Column>
+          </Picker>
+        </PickerWheelZone>
       </div>
 
       <div className="picker-section picker-section--time">
         <label>{t("birth_hour")}</label>
-        <Picker
-          value={{ hour, minute }}
-          onChange={(value) => {
-            setHour(Number(value.hour));
-            setMinute(Number(value.minute));
-          }}
-          height={180}
-          itemHeight={36}
-          wheelMode="natural"
-        >
-          <Picker.Column name="hour">
-            {hours.map((h) => (
-              <Picker.Item key={h} value={h}>
-                {({ selected }) => <PickerCell selected={selected}>{padClock(h)}</PickerCell>}
-              </Picker.Item>
-            ))}
-          </Picker.Column>
-          <Picker.Column name="minute">
-            {minutes.map((m) => (
-              <Picker.Item key={m} value={m}>
-                {({ selected }) => <PickerCell selected={selected}>{padClock(m)}</PickerCell>}
-              </Picker.Item>
-            ))}
-          </Picker.Column>
-        </Picker>
+        <PickerWheelZone>
+          <Picker
+            value={{ hour, minute }}
+            onChange={(value) => {
+              setHour(Number(value.hour));
+              setMinute(Number(value.minute));
+            }}
+            height={180}
+            itemHeight={36}
+            wheelMode="natural"
+          >
+            <Picker.Column name="hour">
+              {hours.map((h) => (
+                <Picker.Item key={h} value={h}>
+                  {({ selected }) => <PickerCell selected={selected}>{padClock(h)}</PickerCell>}
+                </Picker.Item>
+              ))}
+            </Picker.Column>
+            <Picker.Column name="minute">
+              {minutes.map((m) => (
+                <Picker.Item key={m} value={m}>
+                  {({ selected }) => <PickerCell selected={selected}>{padClock(m)}</PickerCell>}
+                </Picker.Item>
+              ))}
+            </Picker.Column>
+          </Picker>
+        </PickerWheelZone>
         <p className="picker-shichen-preview" aria-live="polite">
           {t("shichen_preview", { period: shichenPreview })}
         </p>
