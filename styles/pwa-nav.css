@@ -211,6 +211,18 @@ html.pwa-mode {
 /* 聊天页自管高度与底栏间距，避免与 .pchat 叠加留白 */
 .pwa-mode .pwa-page:has(.pchat) {
   padding-bottom: 0;
+  height: calc(100dvh - var(--pwa-bottom-nav-height));
+  max-height: calc(100dvh - var(--pwa-bottom-nav-height));
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.pwa-mode .pwa-page:has(.pchat) > .pchat {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  max-height: none;
 }
 
 /* PWA 无顶栏 — 页面顶到屏幕（padding-top: 0 见 pojulife-design-system.css） */

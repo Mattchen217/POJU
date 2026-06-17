@@ -352,11 +352,13 @@
 .pchat__main {
   flex: 1 1 auto !important;
   min-width: 0 !important;
+  min-height: 0 !important;
   display: flex;
   flex-direction: column;
   position: relative;
   z-index: 1;
   background: transparent;
+  overflow: hidden;
 }
 .pchat__header {
   height: 58px;
@@ -423,7 +425,14 @@
 }
 
 /* ---------- 消息滚动区 ---------- */
-.pchat__scroll { flex: 1 1 auto; overflow-y: auto; }
+.pchat__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
 .pchat__messages {
   max-width: var(--pchat-read-max) !important;
   width: 100% !important;
@@ -432,6 +441,11 @@
   box-sizing: border-box;
 }
 .pchat__msg { margin-bottom: 46px; }
+
+.pchat__msg--ai > .pem {
+  width: 100%;
+  min-width: 0;
+}
 
 .pchat__msg--user {
   display: flex;
@@ -581,8 +595,38 @@
 
 /* ---------- 输入框 ---------- */
 .pchat__inputbar {
-  position: sticky; bottom: 0; padding: 16px 28px 26px;
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 95;
+  padding: 16px 28px 26px;
   background: linear-gradient(transparent, rgba(9, 6, 17, 0.55) 26%, var(--pchat-space-fade) 100%);
+}
+
+/* ---------- 支付弹层（输入框上方，非消息流） ---------- */
+.pchat__paywall-dock {
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 96;
+  padding: 0 16px 8px;
+  pointer-events: none;
+}
+
+.pchat__paywall-dock__panel {
+  max-width: var(--pchat-read-max);
+  margin: 0 auto;
+  pointer-events: auto;
+  animation: pchat-paywall-in 0.28s ease-out;
+}
+
+@keyframes pchat-paywall-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .pchat__inputwrap {
   max-width: var(--pchat-read-max) !important;
@@ -991,12 +1035,27 @@
     color: #fff; cursor: pointer; font-size: 18px;
   }
   .pchat__messages { max-width: 100% !important; padding: 24px 16px 140px; }
+  .pchat__msg--ai > .pem .rhead .subject {
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .pchat__msg--ai > .pem .rhead .subject > span {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+  .pchat__msg--ai > .pem .rhead .subject b {
+    white-space: normal;
+    word-break: break-word;
+  }
   .pchat__msg--user .pchat__bubble {
     max-width: 78% !important;
     max-height: var(--pchat-user-bubble-max-height);
     overflow-y: auto;
   }
   .pchat__inputbar { padding: 12px 12px calc(12px + env(safe-area-inset-bottom)); }
+  .pchat__paywall-dock { padding: 0 12px 4px; }
   .pchat__inputwrap { max-width: 100% !important; }
   .pchat__inputbar .pchat__thinking { max-width: 100% !important; }
   .pchat__inputwrap .icon-btn,
@@ -1024,11 +1083,13 @@
 }
 
 .pwa-mode .pchat__inputbar {
-  position: sticky;
-  bottom: 0;
-  z-index: 90;
+  z-index: 95;
   padding: 12px 12px 12px;
   background: linear-gradient(transparent, rgba(9, 6, 17, 0.72) 38%, var(--pchat-space-fade) 100%);
+}
+
+.pwa-mode .pchat__paywall-dock {
+  padding: 0 12px 6px;
 }
 
 .pwa-mode .pchat__messages {
@@ -1207,4 +1268,36 @@
   height: 16px;
   accent-color: #a78bfa;
   cursor: pointer;
+}
+
+/* ---------- 文档级滚动锁定（仅消息区可滚） ---------- */
+html.pchat-page-lock,
+body.pchat-page-lock {
+  overflow: hidden;
+  height: 100%;
+  overscroll-behavior: none;
+}
+
+body.pchat-page-lock {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+}
+
+body.pchat-page-lock > .min-h-screen {
+  min-height: 0 !important;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+body.pchat-page-lock .pwa-page:has(.pchat) {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+body.pchat-page-lock .pchat {
+  flex: 1 1 auto;
+  min-height: 0;
 }

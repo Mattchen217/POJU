@@ -1087,9 +1087,11 @@
     "male": "Hombre",
     "female": "Mujer",
     "ready": "Analizado",
+    "view_analysis": "Ver informe completo",
+    "delete": "Eliminar",
+    "confirm_delete": "¿Eliminar este perfil guardado de este dispositivo?",
     "refund_link": "No quiero compartir — reembolsar sesión",
-    "error_create_profile": "No se pudo guardar. Inténtalo de nuevo.",
-    "view_analysis": "Ver análisis del perfil"
+    "error_create_profile": "No se pudo guardar. Inténtalo de nuevo."
   },
   "refund": {
     "title": "Reembolso de tu sesión",

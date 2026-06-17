@@ -1087,9 +1087,11 @@
     "male": "Männlich",
     "female": "Weiblich",
     "ready": "Analysiert",
+    "view_analysis": "Vollständigen Bericht ansehen",
+    "delete": "Löschen",
+    "confirm_delete": "Dieses gespeicherte Profil von diesem Gerät löschen?",
     "refund_link": "Ich möchte nicht teilen — Erstattung",
-    "error_create_profile": "Speichern fehlgeschlagen. Bitte erneut versuchen.",
-    "view_analysis": "Profilanalyse ansehen"
+    "error_create_profile": "Speichern fehlgeschlagen. Bitte erneut versuchen."
   },
   "refund": {
     "title": "Sitzung erstatten",

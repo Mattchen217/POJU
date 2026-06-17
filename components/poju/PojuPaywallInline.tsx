@@ -52,7 +52,7 @@ export function PojuPaywallInline({ sessionId, locale, pendingQuestion, onUnlock
         <span aria-hidden>🔒</span>
         {zh ? "解锁完整对齐" : "Unlock the Full Alignment"}
       </div>
-      <h2 className="pwall__title">
+      <h2 id="pchat-paywall-title" className="pwall__title">
         {zh ? (
           <>
             查看<span className="pwall__gold">完整矩阵</span>并与 POJU 深入对话

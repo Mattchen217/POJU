@@ -15,7 +15,7 @@ import {
   type SessionPrepProduct,
 } from "@/lib/poju/session-prep-copy";
 import { markPendingBaseAnalysisProfile } from "@/lib/profile/pending-base-analysis";
-import { createStoredProfile, listStoredProfilesForSessionPrep, type StoredProfileSummary } from "@/lib/profile/stored-profiles-service";
+import { createStoredProfile, deleteStoredProfile, listStoredProfilesForSessionPrep, type StoredProfileSummary } from "@/lib/profile/stored-profiles-service";
 import type { BirthInfo } from "@/lib/profile/types";
 
 export interface SessionPreparationProps {
@@ -71,6 +71,15 @@ export function SessionPreparation({
     const list = await listStoredProfilesForSessionPrep();
     setProfiles(list);
     return list;
+  }
+
+  async function handleDeleteProfile(profileId: string) {
+    if (!window.confirm(t("confirm_delete"))) return;
+    await deleteStoredProfile(profileId);
+    const list = await refreshProfiles();
+    if (list.length === 0) {
+      setMode("new");
+    }
   }
 
   useEffect(() => {
@@ -142,6 +151,7 @@ export function SessionPreparation({
             onAddNew={() => setMode("new")}
             onUpgrade={(p) => setUpgradeTarget(p)}
             onViewAnalysis={(p) => setViewAnalysisProfile(p)}
+            onDelete={(id) => void handleDeleteProfile(id)}
           />
         ) : null}
 
@@ -262,12 +272,14 @@ function ProfileListView({
   onAddNew,
   onUpgrade,
   onViewAnalysis,
+  onDelete,
 }: {
   profiles: StoredProfileSummary[];
   onSelect: (id: string, summary: StoredProfileSummary) => void;
   onAddNew: () => void;
   onUpgrade: (summary: StoredProfileSummary) => void;
   onViewAnalysis: (summary: StoredProfileSummary) => void;
+  onDelete: (profileId: string) => void;
 }) {
   const t = useTranslations("session_prep");
   const tConfirm = useTranslations("birth_confirm");
@@ -278,7 +290,7 @@ function ProfileListView({
       <p>{t("list_description")}</p>
       <div className="profiles-grid">
         {profiles.map((p) => (
-          <div key={p.profile_id} className="profile-card-wrapper">
+          <div key={p.profile_id} className="profile-card">
             <button
               type="button"
               className="profile-card-button"
@@ -307,18 +319,24 @@ function ProfileListView({
                 {p.used_in_products.syncro > 0 ? <span>Syncro {p.used_in_products.syncro}×</span> : null}
               </div>
             </button>
-            {p.has_base_analysis ? (
+            <div className="profile-card-actions">
+              {p.has_base_analysis ? (
+                <button
+                  type="button"
+                  className="profile-card-action profile-card-action--view"
+                  onClick={() => onViewAnalysis(p)}
+                >
+                  {t("view_analysis")}
+                </button>
+              ) : null}
               <button
                 type="button"
-                className="mt-2 w-full text-left text-xs font-medium text-cyan-200/90 underline underline-offset-2 hover:text-cyan-100"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onViewAnalysis(p);
-                }}
+                className="profile-card-action profile-card-action--delete"
+                onClick={() => onDelete(p.profile_id)}
               >
-                {t("view_analysis")}
+                {t("delete")}
               </button>
-            ) : null}
+            </div>
           </div>
         ))}
         <button type="button" className="add-new-card-button" onClick={onAddNew}>

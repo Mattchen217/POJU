@@ -115,6 +115,10 @@ export interface PojuChatProps {
   messageFollowUps?: Record<string, ReactNode>;
   /** Plain text for copy/actions on follow-up blocks. */
   messageFollowUpActionsText?: Record<string, string>;
+  /** Paywall / unlock sheet rendered above the composer (not in message list). */
+  paywallOverlay?: ReactNode;
+  /** First session open: "top" (matrix header); return visits: "bottom". */
+  initialScrollPosition?: "top" | "bottom";
 }
 
 /* ---------- AI 文本渲染(不用 Tailwind prose,避免 65ch 限制)----------
@@ -202,6 +206,8 @@ export default function PojuChat(props: PojuChatProps) {
     bareMessageSlotIds,
     messageFollowUps,
     messageFollowUpActionsText,
+    paywallOverlay,
+    initialScrollPosition = "bottom",
   } = props;
 
   const [input, setInput] = useState("");
@@ -216,6 +222,23 @@ export default function PojuChat(props: PojuChatProps) {
   const menuBtnRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const taRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const pendingInitialScrollRef = useRef<"top" | "bottom" | null>(initialScrollPosition);
+  const suppressTailScrollRef = useRef(initialScrollPosition === "top");
+
+  useEffect(() => {
+    pendingInitialScrollRef.current = initialScrollPosition;
+    suppressTailScrollRef.current = initialScrollPosition === "top";
+  }, [currentSessionId, initialScrollPosition]);
+
+  /* Lock document scroll — only .pchat__scroll may scroll (iOS Safari rubber-band). */
+  useEffect(() => {
+    document.documentElement.classList.add("pchat-page-lock");
+    document.body.classList.add("pchat-page-lock");
+    return () => {
+      document.documentElement.classList.remove("pchat-page-lock");
+      document.body.classList.remove("pchat-page-lock");
+    };
+  }, []);
 
   /* 输入框自适应高度 */
   useEffect(() => {
@@ -225,11 +248,33 @@ export default function PojuChat(props: PojuChatProps) {
     ta.style.height = Math.min(ta.scrollHeight, 200) + "px";
   }, [textareaValue]);
 
-  /* 新消息 / 流式时自动滚到底 */
+  /* 新消息 / 流式时自动滚到底；首次进入会话按 initialScrollPosition 定位 */
   useEffect(() => {
     const el = scrollRef.current;
-    if (el) el.scrollTo({ top: el.scrollHeight });
-  }, [messages, streamingText, replyStreaming, thinkingMode, liveThinkingLine, inlineNotice, pulseHold]);
+    if (!el) return;
+
+    if (pendingInitialScrollRef.current !== null) {
+      const pos = pendingInitialScrollRef.current;
+      requestAnimationFrame(() => {
+        el.scrollTo({ top: pos === "top" ? 0 : el.scrollHeight, behavior: "auto" });
+        pendingInitialScrollRef.current = null;
+      });
+      return;
+    }
+
+    if (!suppressTailScrollRef.current) {
+      el.scrollTo({ top: el.scrollHeight, behavior: "auto" });
+    }
+  }, [
+    messages,
+    streamingText,
+    replyStreaming,
+    thinkingMode,
+    liveThinkingLine,
+    inlineNotice,
+    pulseHold,
+    currentSessionId,
+  ]);
 
   useEffect(() => {
     if (isStreaming && thinkingMode && !replyStreaming) setPulseHold(true);
@@ -270,6 +315,7 @@ export default function PojuChat(props: PojuChatProps) {
   const send = () => {
     const t = textareaValue.trim();
     if (!t || isStreaming || composerDisabled) return;
+    suppressTailScrollRef.current = false;
     onSend(t);
     setTextareaValue("");
   };
@@ -534,6 +580,17 @@ export default function PojuChat(props: PojuChatProps) {
             ) : null}
           </div>
         </div>
+
+        {paywallOverlay ? (
+          <div
+            className="pchat__paywall-dock"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="pchat-paywall-title"
+          >
+            <div className="pchat__paywall-dock__panel">{paywallOverlay}</div>
+          </div>
+        ) : null}
 
         {/* 输入框 */}
         <div className="pchat__inputbar">

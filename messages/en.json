@@ -1114,7 +1114,9 @@
     "male": "Male",
     "female": "Female",
     "ready": "Analyzed",
-    "view_analysis": "View profile analysis",
+    "view_analysis": "View full report",
+    "delete": "Delete",
+    "confirm_delete": "Delete this saved profile from this device?",
     "refund_link": "I don't want to share — refund my session",
     "error_create_profile": "Failed to save your information. Please try again."
   },

@@ -1087,9 +1087,11 @@
     "male": "Homme",
     "female": "Femme",
     "ready": "Analysé",
+    "view_analysis": "Voir le rapport complet",
+    "delete": "Supprimer",
+    "confirm_delete": "Supprimer ce profil enregistré de cet appareil ?",
     "refund_link": "Je ne veux pas partager — rembourser",
-    "error_create_profile": "Échec de l'enregistrement. Réessayez.",
-    "view_analysis": "Voir l'analyse du profil"
+    "error_create_profile": "Échec de l'enregistrement. Réessayez."
   },
   "refund": {
     "title": "Rembourser votre session",

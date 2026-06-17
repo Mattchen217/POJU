@@ -66,6 +66,10 @@ import { sessionMatrixReadyForChat } from "@/lib/poju/matrix-narrative-ready";
 import { applyMatrixNarrativeToPayload, markMatrixNarrativeFailed } from "@/lib/poju/apply-matrix-narrative";
 import { refreshMatrixPayload } from "@/lib/poju/build-matrix-payload";
 import {
+  markPojuChatIntroSeen,
+  pojuChatInitialScrollPosition,
+} from "@/lib/poju/chat-intro-scroll";
+import {
   createEnergyMatrixMessage,
   createPaywallMessage,
   hasPaywallMessage,
@@ -163,8 +167,22 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   }, []);
 
   const visibleMessages = session.messages.filter(
-    (m) => m.role !== "system" && !m.content.trim().startsWith("[SYSTEM:"),
+    (m) =>
+      m.role !== "system" &&
+      !m.content.trim().startsWith("[SYSTEM:") &&
+      m.meta?.kind !== "paywall",
   );
+  const paywallOpen = isPreviewSession(session) && hasPaywallMessage(session);
+  const initialScrollPosition = useMemo(
+    () => pojuChatInitialScrollPosition(session.session_id),
+    [session.session_id],
+  );
+
+  useEffect(() => {
+    if (initialScrollPosition === "top") {
+      markPojuChatIntroSeen(session.session_id);
+    }
+  }, [session.session_id, initialScrollPosition]);
   const hasUserMessage = visibleMessages.some((m) => m.role === "user");
   const expired = isSessionExpired(session.expires_at);
   const previewComposerBlocked = isPreviewSession(session) && hasPaywallMessage(session);
@@ -1216,17 +1234,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         const actionsText = matrixNarrativeActionsText(m.meta.matrix_payload, locale);
         if (actionsText) followUpActions[m.timestamp] = actionsText;
       }
-      if (m.meta?.kind === "paywall") {
-        slots[m.timestamp] = (
-          <PojuPaywallInline
-            sessionId={session.session_id}
-            locale={locale}
-            pendingQuestion={session.pending_question ?? session.original_question}
-            busy={unlockBusy}
-            onUnlocked={(via) => void handlePreviewUnlock(via)}
-          />
-        );
-      }
       if (m.meta?.kind === "report") {
         slots[m.timestamp] = (
           <div className="pchat__report">
@@ -1248,8 +1255,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     visibleMessages,
     locale,
     session.session_id,
-    session.pending_question,
-    session.original_question,
     unlockBusy,
   ]);
 
@@ -1300,6 +1305,18 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         bareMessageSlotIds={bareMessageSlotIds}
         messageFollowUps={messageFollowUps}
         messageFollowUpActionsText={messageFollowUpActionsText}
+        paywallOverlay={
+          paywallOpen ? (
+            <PojuPaywallInline
+              sessionId={session.session_id}
+              locale={locale}
+              pendingQuestion={session.pending_question ?? session.original_question}
+              busy={unlockBusy}
+              onUnlocked={(via) => void handlePreviewUnlock(via)}
+            />
+          ) : undefined
+        }
+        initialScrollPosition={initialScrollPosition}
         streamingText={streamingReply ?? undefined}
         replyStreaming={replyStreaming}
         thinkingMode={streaming ? thinkingMode : null}

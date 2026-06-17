@@ -1129,7 +1129,9 @@
     "male": "男",
     "female": "女",
     "ready": "已分析",
-    "view_analysis": "查看性格画像分析",
+    "view_analysis": "查看完整报告",
+    "delete": "删除",
+    "confirm_delete": "从本机删除这条已保存的档案？",
     "refund_link": "我不想分享 — 退款",
     "error_create_profile": "保存失败，请重试。"
   },
