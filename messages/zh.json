@@ -1050,7 +1050,18 @@
     "syncro_open_live": "打开实时罗盘",
     "syncro_start_new": "开始新的 Syncro",
     "syncro_expired": "这次 24 小时窗口已结束。",
-    "syncro_active_until": "实时窗口有效至 {date}"
+    "syncro_active_until": "实时窗口有效至 {date}",
+    "poju_session_title": "POJU 对话",
+    "poju_session_active_until": "会话窗口内 — 开始页选择器还剩 {days} 天",
+    "poju_session_no_messages": "暂无消息 — 继续此话题即可开始对话。",
+    "poju_role_user": "你",
+    "poju_role_assistant": "POJU",
+    "poju_session_continue": "继续此话题",
+    "poju_session_expired_body": "此会话已满 30 天。如需继续此会话，请支付 $9.99 重新开启。",
+    "poju_session_pay_cta": "继续会话 — $9.99",
+    "poju_session_paying": "跳转支付…",
+    "poju_session_dismiss": "我知道了",
+    "poju_session_paused_hint": "此会话已暂停，请先在 POJU 会话归档页恢复。"
   },
   "glyph": {
     "begin": {

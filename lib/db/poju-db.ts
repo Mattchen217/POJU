@@ -139,7 +139,7 @@ export interface StoredProfileData {
 export interface ArchiveRecord {
   archive_id: string;
   device_id: string;
-  type: "poju_action_recommendations" | "glyph_reading" | "syncro_task" | "match_session";
+  type: "poju_session" | "poju_action_recommendations" | "glyph_reading" | "syncro_task" | "match_session";
   session_id?: string;
   profile_id?: string;
   title: string;

@@ -4,7 +4,7 @@ import { getPojuDb, ensurePojuDbReady, type ArchiveRecord } from "@/lib/db/poju-
 import { markArchiveRead } from "@/lib/archive/archive-unread";
 import { ARCHIVE_UPDATED_EVENT } from "@/lib/archive/runtime-archive";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
-import { mapSessionActionsToArchiveActions } from "@/lib/archive/map-actions-for-archive";
+import { loadPojuSessionVault, syncPojuSessionVaultArchive } from "@/lib/archive/poju-session-vault";
 import type { GlyphReadingContent } from "@/lib/llm/services/glyph-reading-service";
 import { CURRENT_LEVELS, type CurrentLevel } from "@/lib/syncro/current-system";
 import type { MatchReport } from "@/lib/match/types";
@@ -478,51 +478,37 @@ export async function deleteArchiveItem(archiveId: string): Promise<void> {
 export async function loadArchiveDataForSession(
   sessionId: string,
 ): Promise<POJUActionRecommendationsData | null> {
-  const items = await listArchive({ product: "poju", type: "poju_action_recommendations" });
-  const hit = items.find((a) => a.session_id === sessionId);
+  const items = await listArchive({ product: "poju" });
+  const hit =
+    items.find((a) => a.session_id === sessionId && a.type === "poju_session") ??
+    items.find((a) => a.session_id === sessionId && a.type === "poju_action_recommendations");
   if (!hit) return null;
+  if (hit.type === "poju_session") {
+    const vault = await loadPojuSessionVault(hit.archive_id);
+    if (!vault) return null;
+    return {
+      session_id: vault.session_id,
+      profile_id: vault.profile_id,
+      original_question: vault.original_question,
+      delivered_at: vault.updated_at,
+      delivery_excerpt: vault.delivery_excerpt,
+      actions: vault.actions,
+    };
+  }
   return loadArchiveItem(hit.archive_id);
 }
 
-/** After main delivery: persist the 3 action cards to IndexedDB archive (non-blocking for caller). */
+/** After main delivery: sync full session vault (transcript + actions). */
 export async function trySaveDeliveryActionsToArchive(
   session: POJUSessionState,
   locale: string,
 ): Promise<POJUSessionState> {
-  if (session.action_plan_archive_id) return session;
-  const deliveryActions = session.main_delivery?.actions?.length
-    ? session.main_delivery.actions
-    : session.actions;
-  if (deliveryActions.length < 1 && !session.main_delivery?.analysis) return session;
-
-  const md = session.main_delivery;
-  const deliveryExcerpt = md
-    ? [
-        md.analysis?.user_situation_summary,
-        md.conclusion?.core_message,
-      ]
-        .filter(Boolean)
-        .join("\n\n")
-        .slice(0, 4000)
-    : "";
-
   try {
-    const profileId = session.selected_stored_profile_id ?? session.agent_v2?.selected_profile_id ?? "";
-    const mapped = mapSessionActionsToArchiveActions(deliveryActions.slice(0, 3));
-    if (mapped.length < 1 && !deliveryExcerpt) return session;
-
-    const archiveId = await saveActionRecommendationsToArchive({
-      session_id: session.session_id,
-      profile_id: profileId,
-      original_question: session.original_question,
-      actions: mapped.length > 0 ? mapped : [],
-      delivery_excerpt: deliveryExcerpt || undefined,
-      locale,
-    });
-    console.log("[delivery] Session saved to archive:", archiveId);
+    const archiveId = await syncPojuSessionVaultArchive(session, locale);
+    if (session.action_plan_archive_id === archiveId) return session;
     return { ...session, action_plan_archive_id: archiveId };
   } catch (e) {
-    console.error("[delivery] Archive save failed:", e);
+    console.error("[delivery] Archive vault sync failed:", e);
     return session;
   }
 }

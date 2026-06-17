@@ -6,6 +6,7 @@ import { Link, useRouter } from "@/i18n/navigation";
 
 import { GlyphArchiveDetail } from "@/components/archive/glyph-archive-detail";
 import { MatchArchiveDetail } from "@/components/archive/match-archive-detail";
+import { PojuSessionArchiveDetail } from "@/components/archive/poju-session-archive-detail";
 import { SyncroArchiveDetail } from "@/components/archive/syncro-archive-detail";
 import {
   deleteArchiveItem,
@@ -19,6 +20,8 @@ import {
   type POJUActionRecommendationsData,
   type SyncroTaskArchiveData,
 } from "@/lib/archive/archive-service";
+import { getArchiveRecord, loadPojuSessionVault } from "@/lib/archive/poju-session-vault";
+import type { POJUSessionVaultData } from "@/lib/archive/poju-session-vault";
 import { markArchiveRead } from "@/lib/archive/archive-unread";
 
 type Props = {
@@ -29,6 +32,7 @@ export function ArchiveDetailClient({ archiveId }: Props) {
   const t = useTranslations("archiveDetail");
   const locale = useLocale();
   const router = useRouter();
+  const [pojuVaultData, setPojuVaultData] = useState<POJUSessionVaultData | null>(null);
   const [pojuData, setPojuData] = useState<POJUActionRecommendationsData | null>(null);
   const [glyphData, setGlyphData] = useState<GlyphReadingArchiveData | null>(null);
   const [syncroData, setSyncroData] = useState<SyncroTaskArchiveData | null>(null);
@@ -42,12 +46,26 @@ export function ArchiveDetailClient({ archiveId }: Props) {
   useEffect(() => {
     let stop = false;
     void (async () => {
+      const record = await getArchiveRecord(archiveId);
+      if (stop) return;
+      if (record?.type === "poju_session") {
+        const vault = await loadPojuSessionVault(archiveId);
+        if (stop) return;
+        setPojuVaultData(vault);
+        setMatchData(null);
+        setSyncroData(null);
+        setGlyphData(null);
+        setPojuData(null);
+        setLoading(false);
+        return;
+      }
       const match = await loadMatchArchive(archiveId);
       if (stop) return;
       if (match) {
         setMatchData(match);
         setSyncroData(null);
         setGlyphData(null);
+        setPojuVaultData(null);
         setPojuData(null);
         setLoading(false);
         return;
@@ -58,6 +76,7 @@ export function ArchiveDetailClient({ archiveId }: Props) {
         setSyncroData(syncro);
         setMatchData(null);
         setGlyphData(null);
+        setPojuVaultData(null);
         setPojuData(null);
         setLoading(false);
         return;
@@ -68,6 +87,7 @@ export function ArchiveDetailClient({ archiveId }: Props) {
         setGlyphData(glyph);
         setMatchData(null);
         setSyncroData(null);
+        setPojuVaultData(null);
         setPojuData(null);
         setLoading(false);
         return;
@@ -115,6 +135,10 @@ export function ArchiveDetailClient({ archiveId }: Props) {
 
   if (syncroData) {
     return <SyncroArchiveDetail archiveId={archiveId} data={syncroData} locale={locale} />;
+  }
+
+  if (pojuVaultData) {
+    return <PojuSessionArchiveDetail archiveId={archiveId} data={pojuVaultData} />;
   }
 
   if (!pojuData) {

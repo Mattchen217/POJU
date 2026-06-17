@@ -55,10 +55,6 @@ export function PojuSessionPickerModal({
           onClick={onNewSession}
         >
           <span>{t("new_poju")}</span>
-          <span className="poju-new-session-btn__sep" aria-hidden>
-            —
-          </span>
-          <span className="poju-new-session-btn__price">{t("price")}</span>
         </button>
 
         <div className="poju-session-picker-body">

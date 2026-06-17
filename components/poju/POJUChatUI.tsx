@@ -1347,7 +1347,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         brandTooltip={tBrand("navbar_tooltip")}
         sessionsLabel={t("sidebar_sessions_label")}
         newSessionLabel={t("session_picker.new_poju")}
-        newSessionPriceLabel={t("session_picker.price")}
         inlineNotice={
           showOffTopicAction ? (
             <OffTopicAction

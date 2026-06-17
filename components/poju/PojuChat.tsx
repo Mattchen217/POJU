@@ -107,7 +107,6 @@ export interface PojuChatProps {
   brandTooltip?: string;
   sessionsLabel?: string;
   newSessionLabel?: string;
-  newSessionPriceLabel?: string;
   /** Rich assistant slots keyed by message id (energy matrix, paywall, report). */
   messageSlots?: Record<string, ReactNode>;
   /** Slot ids rendered without avatar shell (full-width embeds). */
@@ -199,7 +198,6 @@ export default function PojuChat(props: PojuChatProps) {
     brandTooltip,
     sessionsLabel = "Recent Sessions",
     newSessionLabel = "+ New POJU",
-    newSessionPriceLabel = "$9.99",
     messageSlots,
     bareMessageSlotIds,
     messageFollowUps,
@@ -331,10 +329,6 @@ export default function PojuChat(props: PojuChatProps) {
           disabled={newSessionDisabled}
         >
           <span>{newSessionLabel}</span>
-          <span className="poju-new-session-btn__sep" aria-hidden>
-            —
-          </span>
-          <span className="poju-new-session-btn__price">{newSessionPriceLabel}</span>
         </button>
         <div className="pchat__sessions-label">{sessionsLabel}</div>
         <div className="pchat__sessions">

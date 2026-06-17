@@ -1035,7 +1035,18 @@
     "syncro_open_live": "Open live compass",
     "syncro_start_new": "Start a new Syncro",
     "syncro_expired": "This 24-hour window has ended.",
-    "syncro_active_until": "Live window active until {date}"
+    "syncro_active_until": "Live window active until {date}",
+    "poju_session_title": "POJU Conversation",
+    "poju_session_active_until": "Active window — {days} days left in session picker",
+    "poju_session_no_messages": "No messages yet — open this session to start chatting.",
+    "poju_role_user": "You",
+    "poju_role_assistant": "POJU",
+    "poju_session_continue": "Continue this topic",
+    "poju_session_expired_body": "This session has passed its 30-day window. To continue the conversation, pay $9.99 to reopen it.",
+    "poju_session_pay_cta": "Continue — $9.99",
+    "poju_session_paying": "Redirecting to payment…",
+    "poju_session_dismiss": "Got it",
+    "poju_session_paused_hint": "This session is paused. Resume it from POJU session archive first."
   },
   "glyph": {
     "begin": {

@@ -5,6 +5,7 @@ import { getPojuDeviceId } from "@/lib/poju/client-device-id";
 import { syncSessionCyclesToDb } from "@/lib/poju/cycle-db-sync";
 import { createNewCycle, ensureSessionCycles } from "@/lib/poju/cycle-manager";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
+import { syncPojuSessionVaultArchive } from "@/lib/archive/poju-session-vault";
 import type { POJUSessionState, PojuV4StateHint } from "@/lib/poju/types";
 
 const SESSION_SECRET = "pojulife_v4_poju_session";
@@ -87,6 +88,12 @@ export async function createPOJUSession(input: {
 
   await syncSessionCyclesToDb(sessionState);
 
+  try {
+    await syncPojuSessionVaultArchive(sessionState);
+  } catch (e) {
+    console.error("[poju] Initial archive vault sync failed:", e);
+  }
+
   return sessionId;
 }
 
@@ -121,6 +128,12 @@ export async function savePOJUSession(state: POJUSessionState): Promise<void> {
     active_cycle_id: state.active_cycle_id,
   });
   await syncSessionCyclesToDb(state);
+
+  try {
+    await syncPojuSessionVaultArchive(state);
+  } catch (e) {
+    console.error("[poju] Archive vault sync failed:", e);
+  }
 }
 
 export async function getActivePOJUSessionsByDevice(deviceId: string) {
