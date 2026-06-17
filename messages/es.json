@@ -619,8 +619,7 @@
         "body": "Syncro es una matriz de eficiencia espaciotemporal basada en la lógica direccional del I Ching y el marco de los Cinco Elementos. Al analizar la alineación energética entre tu perfil personal y una tarea próxima, Syncro traza un mapa de eficiencia completo para las próximas 24 horas. A lo largo de 8 direcciones espaciales, descodifica la resonancia y la fricción del entorno y las clasifica en cinco corrientes esenciales: Corriente Abierta (avanza con confianza), Corriente Favorable (el camino te apoya, con esfuerzo), Aguas Quietas (detente y observa), Contracorriente (reconsidera esta dirección o este momento) y Resaca (fricción intensa: se recomienda cambiar de rumbo). A modo de mapa meteorológico espaciotemporal de alta precisión, Syncro ayuda a optimizar el momento y la orientación de los empeños importantes para minimizar la fricción del entorno."
       },
       "pwa_guide": {
-        "title": "Instala Syncro en tu teléfono",
-        "intro_lead": "Abre pojulife.com en el navegador de tu móvil o instala la app pojulife en tu teléfono.",
+        "title": "Abre pojulife.com en el navegador de tu móvil o instala la app pojulife en tu teléfono.",
         "subtitle": "Syncro solo funciona en el navegador móvil o como PWA instalada en la pantalla de inicio. Sigue los pasos para tu teléfono más abajo.",
         "ios_browser_note": "Abre pojulife.com/syncro solo en Safari — los demás navegadores del iPhone no pueden instalar la app.",
         "android_browser_note": "Abre pojulife.com/syncro solo en Chrome — los demás navegadores de Android no pueden instalar la app completa.",
@@ -833,6 +832,7 @@
       "dialog_cancel": "Cancelar",
       "dialog_connection_error": "Problema de conexión. Inténtalo de nuevo.",
       "dialog_create_session_error": "No se puede crear una nueva sesión en este momento. Inténtalo de nuevo.",
+      "session_list_new": "Nueva sesión",
       "dialog_payment_redirect_failed": "No se pudo abrir la página de pago. Inténtalo de nuevo.",
       "dialog_speech_unsupported": "La entrada de voz no es compatible con este navegador.",
       "dialog_speech_denied": "Se denegó el acceso al micrófono. Permite el micrófono en los ajustes del navegador para usar la entrada de voz.",

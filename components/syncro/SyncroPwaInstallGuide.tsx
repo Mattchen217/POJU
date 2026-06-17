@@ -169,7 +169,6 @@ function SyncroPwaInstallModal({ onClose }: { onClose: () => void }) {
             <h2 id="syncro-pwa-guide-title" className="text-lg font-semibold text-[#f4f0fa] sm:text-xl">
               {t("title")}
             </h2>
-            <p className="max-w-lg text-sm leading-relaxed text-[#cbc3d7]">{t("intro_lead")}</p>
             <p className="max-w-lg text-sm leading-relaxed text-[#cbc3d7]">{t("subtitle")}</p>
           </div>
 

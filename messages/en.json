@@ -604,8 +604,7 @@
         "footnote": "Real-time loop · Adaptive chronobiological telemetry · Optimized for on-the-go execution"
       },
       "pwa_guide": {
-        "title": "Install Syncro on your phone",
-        "intro_lead": "Open pojulife.com in your mobile browser, or install the pojulife app on your phone.",
+        "title": "Open pojulife.com in your mobile browser, or install the pojulife app on your phone.",
         "subtitle": "Syncro only works in a mobile browser or as a PWA installed to your home screen. Follow the steps below for your phone.",
         "ios_browser_note": "Open pojulife.com/syncro in Safari only — other browsers on iPhone cannot install the app.",
         "android_browser_note": "Open pojulife.com/syncro in Chrome only — other Android browsers cannot install the full app.",
@@ -878,6 +877,7 @@
       "dialog_cancel": "Cancel",
       "dialog_connection_error": "Connection issue. Please try again.",
       "dialog_create_session_error": "Unable to create a new session right now. Please try again.",
+      "session_list_new": "New session",
       "dialog_payment_redirect_failed": "Could not open the payment page. Please try again.",
       "dialog_speech_unsupported": "Speech input is not supported in this browser.",
       "dialog_speech_denied": "Microphone access was denied. Allow the microphone in browser settings to use voice input.",

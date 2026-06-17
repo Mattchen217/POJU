@@ -619,8 +619,7 @@
         "body": "Syncro est une matrice d'efficacité spatio-temporelle fondée sur la logique directionnelle du Yi King et le cadre des Cinq Éléments. En analysant l'alignement énergétique entre votre profil personnel et une tâche à venir, Syncro trace une carte d'efficacité complète pour les 24 prochaines heures. Sur 8 directions de l'espace, elle décode la résonance et la friction de l'environnement et les classe en cinq courants essentiels : Courant Ouvert (avancez avec confiance), Courant Porteur (la voie vous soutient, avec effort), Eaux Calmes (faites une pause et observez), Contre-courant (reconsidérez cette direction ou ce moment) et Ressac (forte friction — il est recommandé de changer de voie). Telle une carte météo spatio-temporelle de haute précision, Syncro aide à optimiser le moment et l'orientation des entreprises importantes afin de réduire la friction de l'environnement."
       },
       "pwa_guide": {
-        "title": "Installez Syncro sur votre téléphone",
-        "intro_lead": "Ouvrez pojulife.com dans le navigateur de votre téléphone, ou installez l'application pojulife.",
+        "title": "Ouvrez pojulife.com dans le navigateur de votre téléphone, ou installez l'application pojulife.",
         "subtitle": "Syncro ne fonctionne que dans le navigateur mobile ou en PWA installée sur l'écran d'accueil. Suivez les étapes ci-dessous pour votre téléphone.",
         "ios_browser_note": "Ouvrez pojulife.com/syncro uniquement dans Safari — les autres navigateurs de l'iPhone ne peuvent pas installer l'app.",
         "android_browser_note": "Ouvrez pojulife.com/syncro uniquement dans Chrome — les autres navigateurs Android ne peuvent pas installer l'app complète.",
@@ -833,6 +832,7 @@
       "dialog_cancel": "Annuler",
       "dialog_connection_error": "Problème de connexion. Veuillez réessayer.",
       "dialog_create_session_error": "Impossible de créer une nouvelle session pour le moment. Veuillez réessayer.",
+      "session_list_new": "Nouvelle session",
       "dialog_payment_redirect_failed": "Impossible d'ouvrir la page de paiement. Veuillez réessayer.",
       "dialog_speech_unsupported": "La saisie vocale n'est pas prise en charge par ce navigateur.",
       "dialog_speech_denied": "L'accès au microphone a été refusé. Autorisez le microphone dans les réglages du navigateur pour utiliser la saisie vocale.",

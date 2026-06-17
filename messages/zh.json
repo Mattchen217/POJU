@@ -619,8 +619,7 @@
         "footnote": "实时闭环推演 · 动态生物节律测算 · 专为移动端高频执行优化"
       },
       "pwa_guide": {
-        "title": "在手机上安装 Syncro",
-        "intro_lead": "请在手机浏览器中打开 pojulife.com 或在手机上安装 pojulife 的应用。",
+        "title": "请在手机浏览器中打开 pojulife.com 或在手机上安装 pojulife 的应用。",
         "subtitle": "Syncro 只能在手机浏览器或通过安装到主屏幕的 PWA 应用使用。请根据你的手机，按下方步骤操作。",
         "ios_browser_note": "请仅用 Safari 打开 pojulife.com/syncro —— iPhone 上其他浏览器无法完成安装。",
         "android_browser_note": "请仅用 Chrome 打开 pojulife.com/syncro —— Android 上其他浏览器无法安装完整应用。",
@@ -893,6 +892,7 @@
       "dialog_cancel": "取消",
       "dialog_connection_error": "连接异常，请稍后重试。",
       "dialog_create_session_error": "暂时无法创建新会话，请稍后重试。",
+      "session_list_new": "新会话",
       "dialog_payment_redirect_failed": "无法打开支付页面，请稍后再试。",
       "dialog_speech_unsupported": "当前浏览器不支持语音输入。",
       "dialog_speech_denied": "未获得麦克风权限。请在浏览器设置中允许麦克风后再试。",

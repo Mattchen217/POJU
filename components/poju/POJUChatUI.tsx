@@ -39,7 +39,9 @@ import { markPOJUV4SessionResolved } from "@/lib/poju/v4-lifecycle";
 import {
   DEFAULT_NEW_SESSION_TITLE,
   formatSessionListDateTime,
-  sessionListTopicLine,
+  isDefaultNewSessionTitle,
+  resolveSessionListTopic,
+  topicFromFirstUserMessage,
 } from "@/lib/poju/session-list-label";
 import { getActiveCycle, recordUserResponse } from "@/lib/poju/cycle-manager";
 import { findPendingToolInjection } from "@/lib/poju/find-pending-tool-injection";
@@ -629,13 +631,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
 
       const userCount = updatedSession.messages.filter((m) => m.role === "user").length;
       let toPersist = updatedSession;
-      if (userCount === 1 && updatedSession.original_question.trim() === DEFAULT_NEW_SESSION_TITLE) {
+      if (
+        userCount === 1 &&
+        isDefaultNewSessionTitle(updatedSession.original_question)
+      ) {
         const topic = topicFromFirstUserMessage(userMessage);
         if (topic) {
           toPersist = { ...updatedSession, original_question: topic };
-          await getPojuDb().pojuSessionRecords.update(toPersist.session_id, {
-            original_question: topic,
-          });
           setSessionRows((prev) =>
             prev.map((x) => (x.session_id === toPersist.session_id ? { ...x, original_question: topic } : x)),
           );
@@ -750,13 +752,25 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       if (!hasPaywallMessage(baseSession)) {
         messages.push(createPaywallMessage());
       }
+      const topic = topicFromFirstUserMessage(userMessage);
       const withPaywall: POJUSessionState = {
         ...baseSession,
         pending_question: userMessage,
+        original_question:
+          isDefaultNewSessionTitle(baseSession.original_question) && topic
+            ? topic
+            : baseSession.original_question,
         messages,
       };
       onSessionUpdate(withPaywall);
       await savePOJUSession(withPaywall);
+      if (isDefaultNewSessionTitle(baseSession.original_question) && topic) {
+        setSessionRows((prev) =>
+          prev.map((x) =>
+            x.session_id === baseSession.session_id ? { ...x, original_question: topic } : x,
+          ),
+        );
+      }
       return;
     }
 
@@ -1239,12 +1253,27 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     }
   }
 
-  const pojuSessions = sessionRows.map((row) => ({
-    id: row.session_id,
-    title: sessionListTopicLine(row.original_question),
-    updatedAt: row.last_interaction_at.toISOString(),
-    meta: formatSessionListDateTime(row.created_at, locale),
-  }));
+  const newSessionLabel = t("session_list_new");
+
+  const pojuSessions = sessionRows.map((row) => {
+    const isCurrent = row.session_id === session.session_id;
+    const firstUserMessage = isCurrent
+      ? session.messages.find((m) => m.role === "user" && !m.is_rejected)?.content
+      : undefined;
+    return {
+      id: row.session_id,
+      title: resolveSessionListTopic(
+        {
+          original_question: isCurrent ? session.original_question : row.original_question,
+          pending_question: isCurrent ? session.pending_question : undefined,
+          first_user_message: firstUserMessage,
+        },
+        newSessionLabel,
+      ),
+      updatedAt: row.last_interaction_at.toISOString(),
+      meta: formatSessionListDateTime(row.created_at, locale),
+    };
+  });
 
   const pojuMessages = visibleMessages.map((m) => ({
     id: m.timestamp,
@@ -1516,16 +1545,6 @@ function buildAttachmentNote(attachment: ComposerAttachment | null): string {
   if (attachment.kind === "image") return `[Image attached: ${attachment.name}]`;
   if (attachment.kind === "pdf") return `[PDF attached: ${attachment.name}]`;
   return `[Document attached: ${attachment.name}]`;
-}
-
-function topicFromFirstUserMessage(raw: string): string {
-  const t = raw.trim();
-  if (!t) return "";
-  if (t.startsWith("[Image attached:")) return "Image";
-  if (t.startsWith("[PDF attached:")) return "PDF";
-  if (t.startsWith("[Document attached:")) return "Document";
-  const max = 72;
-  return t.length > max ? `${t.slice(0, max - 1)}…` : t;
 }
 
 function buildActionUpdateSystemNote(actionText: string, status: string, feedback?: string): string {

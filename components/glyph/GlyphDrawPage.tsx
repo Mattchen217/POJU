@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
@@ -103,6 +103,12 @@ export function GlyphDrawPage() {
     void initializePreview();
     return () => previewAbortRef.current?.abort();
   }, [profileId, router, initializePreview, previewRetryKey]);
+
+  useLayoutEffect(() => {
+    if (stage === "preview") {
+      window.scrollTo(0, 0);
+    }
+  }, [stage]);
 
   useEffect(() => {
     if (!openPaywall || !resumeReadingId) return;
@@ -326,7 +332,6 @@ export function GlyphDrawPage() {
           onChange={(e) => setQuestion(e.target.value.slice(0, 200))}
           placeholder={t("input_placeholder")}
           rows={5}
-          autoFocus
         />
 
         <div className="glyph-char-count">{qLen} / 200</div>

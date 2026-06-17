@@ -31,7 +31,8 @@ export function PojuSessionStarter({ className, children }: Props) {
     if (busy) return;
     setBusy(true);
     try {
-      await runPOJUV4SessionMaintenance();
+      // Maintenance already runs on app init; archive expired rows in background without blocking the picker.
+      void runPOJUV4SessionMaintenance().catch(() => {});
       const sessions = await listActivePojuSessionsForPicker();
       if (sessions.length === 0) {
         await redirectToPojuPayment(locale);

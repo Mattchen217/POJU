@@ -119,6 +119,7 @@ export async function savePOJUSession(state: POJUSessionState): Promise<void> {
   await db.pojuSessionRecords.update(state.session_id, {
     encrypted_data: payload.cipher,
     iv: payload.iv,
+    original_question: state.original_question.trim(),
     last_interaction_at: new Date(state.last_interaction_at),
     expires_at: new Date(state.expires_at),
     tokens_used: state.tokens_used,

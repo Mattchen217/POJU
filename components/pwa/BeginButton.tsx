@@ -120,7 +120,7 @@ export function BeginButton({
   ]);
 
   async function startPoju() {
-    await runPOJUV4SessionMaintenance();
+    void runPOJUV4SessionMaintenance().catch(() => {});
     const sessions = await listActivePojuSessionsForPicker();
     if (sessions.length === 0) {
       await redirectToPojuPayment(locale);

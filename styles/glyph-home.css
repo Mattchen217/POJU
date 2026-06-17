@@ -63,6 +63,33 @@
   opacity: 0.6;
 }
 
+.glyph-draw-page .glyph-primary-btn {
+  border: none;
+  cursor: pointer;
+}
+
+.glyph-draw-page .glyph-primary-btn:not(:disabled) {
+  color: #f8f4ff;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.58) 0%, rgba(167, 139, 250, 0.48) 100%);
+  box-shadow:
+    inset 0 0 0 0.5px rgba(232, 213, 255, 0.58),
+    0 10px 28px rgba(139, 92, 246, 0.42);
+  opacity: 1;
+}
+
+.glyph-draw-page .glyph-primary-btn:not(:disabled):hover {
+  color: #fff;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.72) 0%, rgba(196, 160, 255, 0.58) 100%);
+}
+
+.glyph-draw-page .glyph-primary-btn:disabled {
+  color: rgba(243, 232, 255, 0.38);
+  background: rgba(139, 92, 246, 0.1);
+  box-shadow: inset 0 0 0 0.5px rgba(208, 188, 255, 0.2);
+  opacity: 1;
+  cursor: not-allowed;
+}
+
 .glyph-home-foot {
   margin-top: 2.5rem;
   font-size: 0.8rem;
@@ -720,7 +747,7 @@
   color: var(--g-ink-mute);
 }
 
-.glyph-primary-btn,
+.glyph-reading-page .glyph-primary-btn,
 .glyph-report-archive-btn {
   display: inline-flex;
   align-items: center;
@@ -741,7 +768,7 @@
   transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
 }
 
-.glyph-primary-btn:hover,
+.glyph-reading-page .glyph-primary-btn:hover,
 .glyph-report-archive-btn:hover {
   transform: translateY(-1px);
   filter: brightness(1.04);

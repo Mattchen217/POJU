@@ -619,8 +619,7 @@
         "body": "Syncro ist eine raumzeitliche Effizienzmatrix, die auf der Richtungslogik des I Ging und dem Rahmen der Fünf Elemente beruht. Durch die Analyse der energetischen Abstimmung zwischen deinem persönlichen Profil und einer bevorstehenden Aufgabe zeichnet Syncro eine umfassende Effizienzkarte für die nächsten 24 Stunden. Über 8 räumliche Richtungen hinweg entschlüsselt es Resonanz und Reibung des Umfelds und ordnet sie fünf Kernströmungen zu: Offene Strömung (geh mit Zuversicht voran), Tragende Strömung (der Weg trägt dich, mit Einsatz), Stilles Wasser (innehalten und beobachten), Gegenströmung (überdenke diese Richtung oder diesen Moment) und Sog (starke Reibung – ein Kurswechsel wird empfohlen). Wie eine hochpräzise raumzeitliche Wetterkarte hilft Syncro, Zeitpunkt und Ausrichtung wichtiger Vorhaben zu optimieren und die Reibung des Umfelds zu minimieren."
       },
       "pwa_guide": {
-        "title": "Syncro auf deinem Smartphone installieren",
-        "intro_lead": "Öffne pojulife.com im mobilen Browser oder installiere die pojulife-App auf deinem Smartphone.",
+        "title": "Öffne pojulife.com im mobilen Browser oder installiere die pojulife-App auf deinem Smartphone.",
         "subtitle": "Syncro funktioniert nur im mobilen Browser oder als PWA auf dem Startbildschirm. Folge unten den Schritten für dein Smartphone.",
         "ios_browser_note": "Öffne pojulife.com/syncro nur in Safari – andere Browser auf dem iPhone können die App nicht installieren.",
         "android_browser_note": "Öffne pojulife.com/syncro nur in Chrome – andere Android-Browser können die vollständige App nicht installieren.",
@@ -833,6 +832,7 @@
       "dialog_cancel": "Abbrechen",
       "dialog_connection_error": "Verbindungsproblem. Bitte versuche es erneut.",
       "dialog_create_session_error": "Es kann gerade keine neue Sitzung erstellt werden. Bitte versuche es erneut.",
+      "session_list_new": "Neue Sitzung",
       "dialog_payment_redirect_failed": "Die Zahlungsseite konnte nicht geöffnet werden. Bitte versuche es erneut.",
       "dialog_speech_unsupported": "Spracheingabe wird von diesem Browser nicht unterstützt.",
       "dialog_speech_denied": "Der Zugriff auf das Mikrofon wurde verweigert. Erlaube das Mikrofon in den Browser-Einstellungen, um die Spracheingabe zu nutzen.",
