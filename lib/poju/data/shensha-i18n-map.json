@@ -1,0 +1,428 @@
+{
+  "$schema": "poju.shensha.i18n/v2",
+  "meta": {
+    "purpose": "神煞全量多语言合规映射表。本地引擎（shunshi-bazi-core + bazi-shensha-local merge）只输出 ID，UI 渲染前按 locale 查 i18n 取合规文案。计算层与展示层彻底解耦。",
+    "compliance": "全部 51 种名称的英/中/西/德/法 label 均已去魔幻化，转译为宏观博弈 / 个人管理 / 结构动力学的商业语域。中文原名仅作 zh_src 字形保留（海外网关视为无语义东方符号，可作特色）。严禁任何语言出现 occult / fortune-telling / gothic 直译。",
+    "locales": ["en", "zh", "es", "de", "fr"],
+    "render_pattern": "i18n[locale].label + ' (' + zh_src + ')'",
+    "polarity_legend": {
+      "support": "系统性支持（原吉神/贵人）— UI 金色",
+      "edge": "中性力量 / 锋芒（原中性特质）— UI 冷白",
+      "pressure": "压力与脆弱因子（原凶煞）— UI 琥珀/暖灰"
+    },
+    "id_bridge": "引擎当前吐中文名时，按各 term 的 zh_src + aliases 建 zh→id 索引过渡；引擎改吐 id 后零成本对接。",
+    "count": 51,
+    "version": "2026.06.17"
+  },
+
+  "terms": {
+    "execution_edge": { "zh_src": "羊刃", "aliases": [], "polarity": "edge", "axis": "execution", "source": "engine",
+      "i18n": {
+        "en": { "label": "Execution Edge", "gloss": "High-pressure drive that breaks through deadlock" },
+        "zh": { "label": "执行锋芒", "gloss": "高压下的强势推进与决断力" },
+        "es": { "label": "Filo de Ejecución", "gloss": "Empuje bajo presión que rompe el estancamiento" },
+        "de": { "label": "Umsetzungskante", "gloss": "Durchsetzungskraft, die Blockaden aufbricht" },
+        "fr": { "label": "Tranchant d'Exécution", "gloss": "Force d'exécution qui débloque sous pression" } } },
+
+    "tactical_impulse": { "zh_src": "飞刃", "aliases": [], "polarity": "edge", "axis": "execution", "source": "engine",
+      "i18n": {
+        "en": { "label": "Tactical Impulse", "gloss": "Fast, reactive decision tendency" },
+        "zh": { "label": "战术脉冲", "gloss": "突发、快速的出手与应激反应" },
+        "es": { "label": "Impulso Táctico", "gloss": "Tendencia a decidir rápido y reactivo" },
+        "de": { "label": "Taktischer Impuls", "gloss": "Schnelle, reaktive Entscheidungsneigung" },
+        "fr": { "label": "Impulsion Tactique", "gloss": "Tendance à décider vite et par réaction" } } },
+
+    "provision_anchor": { "zh_src": "禄神", "aliases": ["禄","建禄"], "polarity": "support", "axis": "resource", "source": "engine",
+      "i18n": {
+        "en": { "label": "Provision Anchor", "gloss": "Stable baseline income and resource floor" },
+        "zh": { "label": "稳态供给", "gloss": "稳定的基础收入与资源底盘" },
+        "es": { "label": "Ancla de Provisión", "gloss": "Base estable de ingresos y recursos" },
+        "de": { "label": "Versorgungsanker", "gloss": "Stabile Einkommens- und Ressourcenbasis" },
+        "fr": { "label": "Ancre de Provision", "gloss": "Base stable de revenus et de ressources" } } },
+
+    "flow_volatility": { "zh_src": "流霞", "aliases": [], "polarity": "pressure", "axis": "risk", "source": "engine",
+      "i18n": {
+        "en": { "label": "Flow Volatility", "gloss": "Spikes of instability in critical moments" },
+        "zh": { "label": "流动波动", "gloss": "关键节点上的不稳定波动" },
+        "es": { "label": "Volatilidad de Flujo", "gloss": "Picos de inestabilidad en momentos clave" },
+        "de": { "label": "Flussvolatilität", "gloss": "Instabilitätsspitzen in kritischen Momenten" },
+        "fr": { "label": "Volatilité de Flux", "gloss": "Pics d'instabilité aux moments clés" } } },
+
+    "impact_exposure": { "zh_src": "血刃", "aliases": [], "polarity": "pressure", "axis": "risk", "source": "engine",
+      "i18n": {
+        "en": { "label": "Impact Exposure", "gloss": "Heightened exposure to abrupt setbacks" },
+        "zh": { "label": "冲击暴露", "gloss": "对突发挫折的暴露度偏高" },
+        "es": { "label": "Exposición a Impactos", "gloss": "Mayor exposición a reveses abruptos" },
+        "de": { "label": "Aufprallexposition", "gloss": "Erhöhte Anfälligkeit für abrupte Rückschläge" },
+        "fr": { "label": "Exposition aux Impacts", "gloss": "Exposition accrue aux revers brusques" } } },
+
+    "magnetic_appeal": { "zh_src": "红艳煞", "aliases": ["红艳"], "polarity": "edge", "axis": "relational", "source": "engine",
+      "i18n": {
+        "en": { "label": "Magnetic Appeal", "gloss": "Strong interpersonal attractiveness" },
+        "zh": { "label": "人际吸引力", "gloss": "较强的个人魅力与吸引力" },
+        "es": { "label": "Atractivo Magnético", "gloss": "Fuerte poder de atracción interpersonal" },
+        "de": { "label": "Magnetische Anziehung", "gloss": "Starke zwischenmenschliche Anziehungskraft" },
+        "fr": { "label": "Attrait Magnétique", "gloss": "Fort pouvoir d'attraction interpersonnel" } } },
+
+    "autonomy_index": { "zh_src": "寡宿", "aliases": [], "polarity": "pressure", "axis": "internal", "source": "engine",
+      "i18n": {
+        "en": { "label": "Autonomy Index", "gloss": "High-autonomy, low-attachment operating mode" },
+        "zh": { "label": "独立运作指数", "gloss": "高自主、低依附的运作倾向" },
+        "es": { "label": "Índice de Autonomía", "gloss": "Modo de alta autonomía y baja dependencia" },
+        "de": { "label": "Autonomie-Index", "gloss": "Hohe Autonomie, geringe Bindungsneigung" },
+        "fr": { "label": "Indice d'Autonomie", "gloss": "Mode à forte autonomie, faible attachement" } } },
+
+    "prime_mentor_node": { "zh_src": "天乙贵人", "aliases": [], "polarity": "support", "axis": "support", "source": "engine",
+      "i18n": {
+        "en": { "label": "Prime Mentor Node", "gloss": "Top-tier mentor and key-moment backing" },
+        "zh": { "label": "首要导师节点", "gloss": "最高阶的贵人扶持与关键护持" },
+        "es": { "label": "Nodo de Mentor Clave", "gloss": "Mentoría de alto nivel y respaldo decisivo" },
+        "de": { "label": "Primärer Mentor-Knoten", "gloss": "Erstklassige Mentoren und Rückhalt" },
+        "fr": { "label": "Nœud de Mentor Clé", "gloss": "Mentorat de haut niveau et appui décisif" } } },
+
+    "fortune_buffer": { "zh_src": "福星贵人", "aliases": [], "polarity": "support", "axis": "support", "source": "engine",
+      "i18n": {
+        "en": { "label": "Fortune Buffer", "gloss": "Ease and downside cushioning" },
+        "zh": { "label": "福气缓冲", "gloss": "顺遂与下行风险的缓冲垫" },
+        "es": { "label": "Amortiguador de Fortuna", "gloss": "Holgura y colchón ante caídas" },
+        "de": { "label": "Glückspuffer", "gloss": "Leichtigkeit und Abfederung von Risiken" },
+        "fr": { "label": "Tampon de Fortune", "gloss": "Aisance et amortissement des risques" } } },
+
+    "insight_catalyst": { "zh_src": "太极贵人", "aliases": [], "polarity": "support", "axis": "cognition", "source": "engine",
+      "i18n": {
+        "en": { "label": "Insight Catalyst", "gloss": "Aptitude for depth, research and pattern-finding" },
+        "zh": { "label": "洞察催化", "gloss": "钻研深度与规律洞察的禀赋" },
+        "es": { "label": "Catalizador de Perspicacia", "gloss": "Aptitud para profundidad y análisis" },
+        "de": { "label": "Einsichts-Katalysator", "gloss": "Begabung für Tiefe und Mustererkennung" },
+        "fr": { "label": "Catalyseur de Perspicacité", "gloss": "Aptitude à la profondeur et à l'analyse" } } },
+
+    "institutional_authority_node": { "zh_src": "国印贵人", "aliases": [], "polarity": "support", "axis": "authority", "source": "engine",
+      "i18n": {
+        "en": { "label": "Institutional Authority Node", "gloss": "Institutional endorsement and mandate" },
+        "zh": { "label": "建制授权节点", "gloss": "体制内的背书、权责与话语权" },
+        "es": { "label": "Nodo de Autoridad Institucional", "gloss": "Respaldo y mandato institucional" },
+        "de": { "label": "Institutioneller Autoritätsknoten", "gloss": "Institutionelle Rückendeckung und Mandat" },
+        "fr": { "label": "Nœud d'Autorité Institutionnelle", "gloss": "Aval et mandat institutionnels" } } },
+
+    "cognitive_advantage": { "zh_src": "文昌贵人", "aliases": [], "polarity": "support", "axis": "cognition", "source": "engine",
+      "i18n": {
+        "en": { "label": "Cognitive Advantage", "gloss": "Edge in learning, writing and articulation" },
+        "zh": { "label": "认知优势", "gloss": "学习、表达与文字上的优势" },
+        "es": { "label": "Ventaja Cognitiva", "gloss": "Ventaja en aprendizaje y expresión" },
+        "de": { "label": "Kognitiver Vorteil", "gloss": "Vorteil bei Lernen und Ausdruck" },
+        "fr": { "label": "Avantage Cognitif", "gloss": "Avantage en apprentissage et expression" } } },
+
+    "resource_provisioning": { "zh_src": "天厨贵人", "aliases": [], "polarity": "support", "axis": "resource", "source": "engine",
+      "i18n": {
+        "en": { "label": "Resource Provisioning", "gloss": "Reliable access to material provision" },
+        "zh": { "label": "资源供给", "gloss": "物质保障与供给的可靠通道" },
+        "es": { "label": "Provisión de Recursos", "gloss": "Acceso fiable a recursos materiales" },
+        "de": { "label": "Ressourcenbereitstellung", "gloss": "Verlässlicher Zugang zu Versorgung" },
+        "fr": { "label": "Approvisionnement en Ressources", "gloss": "Accès fiable aux ressources matérielles" } } },
+
+    "mobility_capital": { "zh_src": "金舆", "aliases": [], "polarity": "support", "axis": "resource", "source": "engine",
+      "i18n": {
+        "en": { "label": "Mobility Capital", "gloss": "Resources and vehicles that carry upward moves" },
+        "zh": { "label": "上行资本", "gloss": "承载位置与阶层跃迁的资源载具" },
+        "es": { "label": "Capital de Movilidad", "gloss": "Recursos que impulsan el ascenso" },
+        "de": { "label": "Mobilitätskapital", "gloss": "Ressourcen, die Aufstieg tragen" },
+        "fr": { "label": "Capital de Mobilité", "gloss": "Ressources qui portent l'ascension" } } },
+
+    "social_magnetism": { "zh_src": "桃花", "aliases": ["咸池"], "polarity": "edge", "axis": "relational", "source": "engine",
+      "i18n": {
+        "en": { "label": "Social Magnetism", "gloss": "Charm, popularity and network pull" },
+        "zh": { "label": "社交磁场", "gloss": "魅力、人气与人脉吸引力" },
+        "es": { "label": "Magnetismo Social", "gloss": "Encanto, popularidad y atracción de red" },
+        "de": { "label": "Soziale Anziehungskraft", "gloss": "Charme, Beliebtheit und Netzwerk-Sog" },
+        "fr": { "label": "Magnétisme Social", "gloss": "Charme, popularité et attraction de réseau" } } },
+
+    "velocity_vector": { "zh_src": "驿马", "aliases": [], "polarity": "edge", "axis": "timing", "source": "engine",
+      "i18n": {
+        "en": { "label": "Velocity Vector", "gloss": "Drive toward movement, travel and relocation" },
+        "zh": { "label": "位移向量", "gloss": "迁移、出行与变动的驱动力" },
+        "es": { "label": "Vector de Velocidad", "gloss": "Impulso al movimiento y los cambios de lugar" },
+        "de": { "label": "Geschwindigkeitsvektor", "gloss": "Antrieb zu Bewegung und Ortswechsel" },
+        "fr": { "label": "Vecteur de Vitesse", "gloss": "Élan vers le mouvement et le déplacement" } } },
+
+    "signature_originality": { "zh_src": "华盖", "aliases": [], "polarity": "edge", "axis": "identity", "source": "engine",
+      "i18n": {
+        "en": { "label": "Signature Originality", "gloss": "Distinctive, solitary creative thinking" },
+        "zh": { "label": "独创标识", "gloss": "独特、自处的创造性思维" },
+        "es": { "label": "Originalidad Distintiva", "gloss": "Pensamiento creativo único y solitario" },
+        "de": { "label": "Markante Originalität", "gloss": "Eigenständiges, originelles Denken" },
+        "fr": { "label": "Originalité Distinctive", "gloss": "Pensée créative singulière et solitaire" } } },
+
+    "command_authority": { "zh_src": "将星", "aliases": [], "polarity": "edge", "axis": "authority", "source": "engine",
+      "i18n": {
+        "en": { "label": "Command Authority", "gloss": "Leadership and command presence" },
+        "zh": { "label": "统御权威", "gloss": "领导力与统御气场" },
+        "es": { "label": "Autoridad de Mando", "gloss": "Liderazgo y presencia de mando" },
+        "de": { "label": "Führungsautorität", "gloss": "Führungsstärke und Kommandopräsenz" },
+        "fr": { "label": "Autorité de Commandement", "gloss": "Leadership et présence de commandement" } } },
+
+    "disruption_friction": { "zh_src": "劫煞", "aliases": [], "polarity": "pressure", "axis": "environment", "source": "engine",
+      "i18n": {
+        "en": { "label": "Disruption Friction", "gloss": "External shocks that pull on your rhythm" },
+        "zh": { "label": "环境干扰摩擦", "gloss": "外部突发因素对节奏的拉扯" },
+        "es": { "label": "Fricción de Disrupción", "gloss": "Choques externos que alteran tu ritmo" },
+        "de": { "label": "Störungsreibung", "gloss": "Externe Schocks, die den Rhythmus stören" },
+        "fr": { "label": "Friction de Perturbation", "gloss": "Chocs externes qui perturbent le rythme" } } },
+
+    "vigilance_load": { "zh_src": "亡神", "aliases": [], "polarity": "pressure", "axis": "internal", "source": "engine",
+      "i18n": {
+        "en": { "label": "Vigilance Load", "gloss": "Inward intensity that demands constant guard" },
+        "zh": { "label": "警戒负荷", "gloss": "内敛而需持续警惕的心力消耗" },
+        "es": { "label": "Carga de Vigilancia", "gloss": "Intensidad interna que exige guardia constante" },
+        "de": { "label": "Wachsamkeitslast", "gloss": "Innere Anspannung mit ständiger Wachsamkeit" },
+        "fr": { "label": "Charge de Vigilance", "gloss": "Intensité interne exigeant une garde constante" } } },
+
+    "adversity_shock": { "zh_src": "灾煞", "aliases": [], "polarity": "pressure", "axis": "environment", "source": "engine",
+      "i18n": {
+        "en": { "label": "Adversity Shock", "gloss": "Risk of sudden, sharp adversity" },
+        "zh": { "label": "突变冲击", "gloss": "突发、剧烈的逆境风险" },
+        "es": { "label": "Choque de Adversidad", "gloss": "Riesgo de adversidad súbita y aguda" },
+        "de": { "label": "Widrigkeitsschock", "gloss": "Risiko plötzlicher, heftiger Widrigkeiten" },
+        "fr": { "label": "Choc d'Adversité", "gloss": "Risque d'adversité soudaine et aiguë" } } },
+
+    "momentum_tailwind": { "zh_src": "天喜", "aliases": [], "polarity": "support", "axis": "timing", "source": "engine",
+      "i18n": {
+        "en": { "label": "Momentum Tailwind", "gloss": "Positive lift in mood and relationships" },
+        "zh": { "label": "顺风窗口", "gloss": "情绪与关系上的正向增量" },
+        "es": { "label": "Viento de Cola de Impulso", "gloss": "Empuje positivo en ánimo y relaciones" },
+        "de": { "label": "Rückenwind-Momentum", "gloss": "Positiver Auftrieb für Stimmung und Beziehungen" },
+        "fr": { "label": "Vent Arrière de Momentum", "gloss": "Élan positif sur l'humeur et les relations" } } },
+
+    "recovery_capacity": { "zh_src": "天医", "aliases": [], "polarity": "support", "axis": "resilience", "source": "engine",
+      "i18n": {
+        "en": { "label": "Recovery Capacity", "gloss": "Capacity to recover and access timely help" },
+        "zh": { "label": "恢复韧性", "gloss": "自我修复与及时获助的能力" },
+        "es": { "label": "Capacidad de Recuperación", "gloss": "Capacidad de recuperarse y recibir ayuda" },
+        "de": { "label": "Erholungskapazität", "gloss": "Fähigkeit zur Erholung und rechtzeitigen Hilfe" },
+        "fr": { "label": "Capacité de Récupération", "gloss": "Capacité à récupérer et à recevoir de l'aide" } } },
+
+    "relational_catalyst": { "zh_src": "红鸾", "aliases": [], "polarity": "support", "axis": "relational", "source": "engine",
+      "i18n": {
+        "en": { "label": "Relational Catalyst", "gloss": "Catalyst for new bonds and partnerships" },
+        "zh": { "label": "关系催化", "gloss": "新关系与合作的催化窗口" },
+        "es": { "label": "Catalizador Relacional", "gloss": "Catalizador de vínculos y alianzas nuevas" },
+        "de": { "label": "Beziehungs-Katalysator", "gloss": "Katalysator für neue Bindungen und Partnerschaften" },
+        "fr": { "label": "Catalyseur Relationnel", "gloss": "Catalyseur de liens et de partenariats nouveaux" } } },
+
+    "transition_strain": { "zh_src": "披麻", "aliases": [], "polarity": "pressure", "axis": "transition", "source": "engine",
+      "i18n": {
+        "en": { "label": "Transition Strain", "gloss": "Adaptation cost during phase changes" },
+        "zh": { "label": "转型期张力", "gloss": "阶段切换中的适配成本与损耗" },
+        "es": { "label": "Tensión de Transición", "gloss": "Costo de adaptación en cambios de etapa" },
+        "de": { "label": "Übergangsbelastung", "gloss": "Anpassungskosten bei Phasenwechseln" },
+        "fr": { "label": "Tension de Transition", "gloss": "Coût d'adaptation lors des changements de phase" } } },
+
+    "sentiment_drawdown": { "zh_src": "丧门", "aliases": [], "polarity": "pressure", "axis": "transition", "source": "engine",
+      "i18n": {
+        "en": { "label": "Sentiment Drawdown", "gloss": "Periods of emotional drawdown around loss" },
+        "zh": { "label": "情绪回撤", "gloss": "围绕失去事件的情绪回落期" },
+        "es": { "label": "Caída de Ánimo", "gloss": "Periodos de bajón emocional ante pérdidas" },
+        "de": { "label": "Stimmungseinbruch", "gloss": "Phasen emotionaler Einbrüche bei Verlust" },
+        "fr": { "label": "Repli du Moral", "gloss": "Périodes de repli émotionnel autour de pertes" } } },
+
+    "external_drain": { "zh_src": "吊客", "aliases": [], "polarity": "pressure", "axis": "transition", "source": "engine",
+      "i18n": {
+        "en": { "label": "External Drain", "gloss": "Energy drawn off by outside demands" },
+        "zh": { "label": "外部损耗", "gloss": "被外部事务牵扯的能量消耗" },
+        "es": { "label": "Desgaste Externo", "gloss": "Energía drenada por demandas externas" },
+        "de": { "label": "Externe Zehrung", "gloss": "Energieverlust durch äußere Anforderungen" },
+        "fr": { "label": "Drain Externe", "gloss": "Énergie absorbée par les exigences externes" } } },
+
+    "entanglement_risk": { "zh_src": "勾绞煞", "aliases": ["勾绞"], "polarity": "pressure", "axis": "environment", "source": "engine",
+      "i18n": {
+        "en": { "label": "Entanglement Risk", "gloss": "Exposure to disputes and tangled obligations" },
+        "zh": { "label": "纠葛风险", "gloss": "卷入争议与复杂牵连的风险" },
+        "es": { "label": "Riesgo de Enredo", "gloss": "Exposición a disputas y obligaciones enredadas" },
+        "de": { "label": "Verstrickungsrisiko", "gloss": "Anfälligkeit für Streit und Verstrickungen" },
+        "fr": { "label": "Risque d'Enchevêtrement", "gloss": "Exposition aux litiges et obligations enchevêtrées" } } },
+
+    "low_coupling_preference": { "zh_src": "孤辰", "aliases": [], "polarity": "pressure", "axis": "internal", "source": "engine",
+      "i18n": {
+        "en": { "label": "Low-Coupling Preference", "gloss": "Preference for loose ties and independence" },
+        "zh": { "label": "低耦合偏好", "gloss": "偏好松散联结与独立的运作" },
+        "es": { "label": "Preferencia de Bajo Acoplamiento", "gloss": "Preferencia por vínculos sueltos e independencia" },
+        "de": { "label": "Geringe-Kopplung-Präferenz", "gloss": "Vorliebe für lose Bindungen und Unabhängigkeit" },
+        "fr": { "label": "Préférence de Faible Couplage", "gloss": "Préférence pour des liens lâches et l'indépendance" } } },
+
+    "baseline_volatility": { "zh_src": "元辰", "aliases": [], "polarity": "pressure", "axis": "internal", "source": "engine",
+      "i18n": {
+        "en": { "label": "Baseline Volatility", "gloss": "Underlying restlessness and dissatisfaction" },
+        "zh": { "label": "基线波动", "gloss": "底层的不安与不满情绪" },
+        "es": { "label": "Volatilidad de Base", "gloss": "Inquietud e insatisfacción de fondo" },
+        "de": { "label": "Grundlinien-Volatilität", "gloss": "Latente Unruhe und Unzufriedenheit" },
+        "fr": { "label": "Volatilité de Référence", "gloss": "Agitation et insatisfaction de fond" } } },
+
+    "grounded_support": { "zh_src": "月德贵人", "aliases": [], "polarity": "support", "axis": "support", "source": "engine",
+      "i18n": {
+        "en": { "label": "Grounded Support", "gloss": "Steady, protective day-to-day backing" },
+        "zh": { "label": "稳固护持", "gloss": "日常稳定的护持与守护" },
+        "es": { "label": "Apoyo Sólido", "gloss": "Respaldo protector y constante" },
+        "de": { "label": "Bodenständige Unterstützung", "gloss": "Stetiger, schützender Rückhalt" },
+        "fr": { "label": "Soutien Ancré", "gloss": "Appui protecteur et constant" } } },
+
+    "support_coupling": { "zh_src": "月德合", "aliases": [], "polarity": "support", "axis": "support", "source": "engine",
+      "i18n": {
+        "en": { "label": "Support Coupling", "gloss": "Reinforced protective alignment" },
+        "zh": { "label": "护持协同", "gloss": "护持力量的叠加与协同" },
+        "es": { "label": "Acoplamiento de Apoyo", "gloss": "Alineación protectora reforzada" },
+        "de": { "label": "Unterstützungskopplung", "gloss": "Verstärkte schützende Ausrichtung" },
+        "fr": { "label": "Couplage de Soutien", "gloss": "Alignement protecteur renforcé" } } },
+
+    "systemic_support_core": { "zh_src": "天德贵人", "aliases": [], "polarity": "support", "axis": "support", "source": "engine",
+      "i18n": {
+        "en": { "label": "Systemic Support Core", "gloss": "Structural protection at key nodes" },
+        "zh": { "label": "系统性核心支持", "gloss": "关键节点的结构性护持与缓冲" },
+        "es": { "label": "Núcleo de Apoyo Sistémico", "gloss": "Protección estructural en nodos clave" },
+        "de": { "label": "Systemischer Stützkern", "gloss": "Strukturelle Absicherung an Schlüsselknoten" },
+        "fr": { "label": "Noyau de Soutien Systémique", "gloss": "Protection structurelle aux nœuds clés" } } },
+
+    "synergistic_dynamic": { "zh_src": "天德合", "aliases": [], "polarity": "support", "axis": "support", "source": "engine",
+      "i18n": {
+        "en": { "label": "Synergistic Dynamic", "gloss": "Amplified combined force of allies and resources" },
+        "zh": { "label": "协同动力", "gloss": "外部资源与合作的合力放大" },
+        "es": { "label": "Dinámica Sinérgica", "gloss": "Fuerza combinada amplificada de aliados y recursos" },
+        "de": { "label": "Synergetische Dynamik", "gloss": "Verstärkte Bündelung von Verbündeten und Ressourcen" },
+        "fr": { "label": "Dynamique Synergique", "gloss": "Force combinée amplifiée d'alliés et de ressources" } } },
+
+    "resonant_alignment_vector": { "zh_src": "德秀贵人", "aliases": [], "polarity": "support", "axis": "support", "source": "engine",
+      "i18n": {
+        "en": { "label": "Resonant Alignment Vector", "gloss": "Inner-outer rhythm in alignment" },
+        "zh": { "label": "共振协调向量", "gloss": "才华与时机的对齐顺势" },
+        "es": { "label": "Vector de Alineación Resonante", "gloss": "Ritmo interno y externo alineado" },
+        "de": { "label": "Resonanter Ausrichtungsvektor", "gloss": "Innerer und äußerer Rhythmus im Einklang" },
+        "fr": { "label": "Vecteur d'Alignement Résonant", "gloss": "Rythme interne et externe aligné" } } },
+
+    "refined_talent": { "zh_src": "六秀日", "aliases": [], "polarity": "edge", "axis": "identity", "source": "engine",
+      "i18n": {
+        "en": { "label": "Refined Talent", "gloss": "Polished, refined ability signature" },
+        "zh": { "label": "精炼才具", "gloss": "精致而出众的才华标识" },
+        "es": { "label": "Talento Refinado", "gloss": "Capacidad pulida y refinada" },
+        "de": { "label": "Verfeinertes Talent", "gloss": "Geschliffene, kultivierte Begabung" },
+        "fr": { "label": "Talent Raffiné", "gloss": "Aptitude polie et raffinée" } } },
+
+    "reputational_sensitivity": { "zh_src": "九丑日", "aliases": [], "polarity": "pressure", "axis": "relational", "source": "engine",
+      "i18n": {
+        "en": { "label": "Reputational Sensitivity", "gloss": "Sensitivity around image and relationships" },
+        "zh": { "label": "声誉敏感", "gloss": "在形象与关系上较为敏感" },
+        "es": { "label": "Sensibilidad Reputacional", "gloss": "Sensibilidad en imagen y relaciones" },
+        "de": { "label": "Reputationssensibilität", "gloss": "Empfindlichkeit bei Image und Beziehungen" },
+        "fr": { "label": "Sensibilité Réputationnelle", "gloss": "Sensibilité sur l'image et les relations" } } },
+
+    "decisive_authority": { "zh_src": "魁罡日", "aliases": ["魁罡"], "polarity": "edge", "axis": "authority", "source": "engine",
+      "i18n": {
+        "en": { "label": "Decisive Authority", "gloss": "Forceful, decisive command profile" },
+        "zh": { "label": "果决权威", "gloss": "刚强、果断的统御气质" },
+        "es": { "label": "Autoridad Decisiva", "gloss": "Perfil de mando firme y decidido" },
+        "de": { "label": "Entschlossene Autorität", "gloss": "Kraftvolles, entschlossenes Führungsprofil" },
+        "fr": { "label": "Autorité Décisive", "gloss": "Profil de commandement ferme et décidé" } } },
+
+    "structural_vulnerability": { "zh_src": "十恶大败", "aliases": [], "polarity": "pressure", "axis": "structure", "source": "engine",
+      "i18n": {
+        "en": { "label": "Structural Vulnerability", "gloss": "Imbalance risk under foundational pressure" },
+        "zh": { "label": "结构性脆弱点", "gloss": "根基重压下的结构失衡风险" },
+        "es": { "label": "Vulnerabilidad Estructural", "gloss": "Riesgo de desequilibrio bajo presión de base" },
+        "de": { "label": "Strukturelle Verwundbarkeit", "gloss": "Ungleichgewichtsrisiko unter Grunddruck" },
+        "fr": { "label": "Vulnérabilité Structurelle", "gloss": "Risque de déséquilibre sous pression de fond" } } },
+
+    "timing_misalignment": { "zh_src": "阴差阳错", "aliases": [], "polarity": "pressure", "axis": "timing", "source": "engine",
+      "i18n": {
+        "en": { "label": "Timing Misalignment", "gloss": "Mismatch between effort and timing" },
+        "zh": { "label": "时机错位", "gloss": "投入与时机之间的错配" },
+        "es": { "label": "Desalineación Temporal", "gloss": "Desfase entre esfuerzo y momento" },
+        "de": { "label": "Zeitliche Fehlausrichtung", "gloss": "Missverhältnis zwischen Aufwand und Timing" },
+        "fr": { "label": "Désalignement Temporel", "gloss": "Décalage entre l'effort et le moment" } } },
+
+    "independent_operating_mode": { "zh_src": "孤鸾煞", "aliases": ["孤鸾"], "polarity": "pressure", "axis": "internal", "source": "engine",
+      "i18n": {
+        "en": { "label": "Independent Operating Mode", "gloss": "Single-core drive, low collaboration coupling" },
+        "zh": { "label": "独立运作模式", "gloss": "单核驱动、低协作耦合的运作模式" },
+        "es": { "label": "Modo de Operación Independiente", "gloss": "Impulso individual, baja colaboración" },
+        "de": { "label": "Unabhängiger Betriebsmodus", "gloss": "Einzelantrieb, geringe Kollaborationskopplung" },
+        "fr": { "label": "Mode Opérationnel Indépendant", "gloss": "Moteur individuel, faible couplage collaboratif" } } },
+
+    "concentrated_focus": { "zh_src": "八专日", "aliases": [], "polarity": "edge", "axis": "identity", "source": "engine",
+      "i18n": {
+        "en": { "label": "Concentrated Focus", "gloss": "Intense, narrowly concentrated energy" },
+        "zh": { "label": "高度专注", "gloss": "强烈而集中的专注能量" },
+        "es": { "label": "Enfoque Concentrado", "gloss": "Energía intensa y muy concentrada" },
+        "de": { "label": "Konzentrierter Fokus", "gloss": "Intensive, eng gebündelte Energie" },
+        "fr": { "label": "Concentration Focalisée", "gloss": "Énergie intense et très concentrée" } } },
+
+    "adaptive_acumen": { "zh_src": "十灵日", "aliases": [], "polarity": "support", "axis": "cognition", "source": "engine",
+      "i18n": {
+        "en": { "label": "Adaptive Acumen", "gloss": "Quick wit and adaptive cleverness" },
+        "zh": { "label": "应变机敏", "gloss": "灵巧、随机应变的机敏" },
+        "es": { "label": "Perspicacia Adaptativa", "gloss": "Ingenio rápido y adaptable" },
+        "de": { "label": "Adaptiver Scharfsinn", "gloss": "Schnelle Auffassung und Anpassungsfähigkeit" },
+        "fr": { "label": "Perspicacité Adaptative", "gloss": "Vivacité d'esprit et adaptabilité" } } },
+
+    "high_intensity_drive": { "zh_src": "金神", "aliases": [], "polarity": "edge", "axis": "execution", "source": "engine",
+      "i18n": {
+        "en": { "label": "High-Intensity Drive", "gloss": "Sharp, forceful drive needing channeling" },
+        "zh": { "label": "高强驱动", "gloss": "锋利、需引导的强劲冲劲" },
+        "es": { "label": "Impulso de Alta Intensidad", "gloss": "Empuje fuerte que requiere encauzarse" },
+        "de": { "label": "Hochintensiver Antrieb", "gloss": "Scharfer Antrieb, der Kanalisierung braucht" },
+        "fr": { "label": "Élan de Haute Intensité", "gloss": "Élan puissant à canaliser" } } },
+
+    "reset_window": { "zh_src": "天赦日", "aliases": [], "polarity": "support", "axis": "timing", "source": "engine",
+      "i18n": {
+        "en": { "label": "Reset Window", "gloss": "Window to reset, forgive and restart" },
+        "zh": { "label": "重置窗口", "gloss": "化解、赦免与重启的窗口" },
+        "es": { "label": "Ventana de Reinicio", "gloss": "Ventana para reiniciar y empezar de nuevo" },
+        "de": { "label": "Reset-Fenster", "gloss": "Fenster zum Zurücksetzen und Neustart" },
+        "fr": { "label": "Fenêtre de Réinitialisation", "gloss": "Fenêtre pour repartir à zéro" } } },
+
+    "constraint_field": { "zh_src": "地网", "aliases": ["天罗地网"], "polarity": "pressure", "axis": "environment", "source": "engine",
+      "i18n": {
+        "en": { "label": "Constraint Field", "gloss": "Structural boundaries limiting freedom of action" },
+        "zh": { "label": "约束场", "gloss": "结构性边界对行动自由度的限制" },
+        "es": { "label": "Campo de Restricción", "gloss": "Límites estructurales que reducen la libertad de acción" },
+        "de": { "label": "Beschränkungsfeld", "gloss": "Strukturelle Grenzen, die Handlungsspielraum begrenzen" },
+        "fr": { "label": "Champ de Contrainte", "gloss": "Limites structurelles réduisant la liberté d'action" } } },
+
+    "articulation_strength": { "zh_src": "词馆", "aliases": [], "polarity": "support", "axis": "cognition", "source": "engine",
+      "i18n": {
+        "en": { "label": "Articulation Strength", "gloss": "Strength in language and articulate expression" },
+        "zh": { "label": "表达力", "gloss": "语言与文辞表达上的优势" },
+        "es": { "label": "Fuerza de Articulación", "gloss": "Fortaleza en lenguaje y expresión" },
+        "de": { "label": "Artikulationsstärke", "gloss": "Stärke in Sprache und Ausdruck" },
+        "fr": { "label": "Force d'Articulation", "gloss": "Force en langage et en expression" } } },
+
+    "learning_foundation": { "zh_src": "正学堂", "aliases": ["学堂"], "polarity": "support", "axis": "cognition", "source": "engine",
+      "i18n": {
+        "en": { "label": "Learning Foundation", "gloss": "Solid base for study and scholarship" },
+        "zh": { "label": "学养根基", "gloss": "学习与治学的扎实根基" },
+        "es": { "label": "Base de Aprendizaje", "gloss": "Base sólida para el estudio" },
+        "de": { "label": "Lernfundament", "gloss": "Solide Grundlage für Studium und Bildung" },
+        "fr": { "label": "Fondation d'Apprentissage", "gloss": "Base solide pour l'étude" } } },
+
+    "perceptual_sensitivity": { "zh_src": "童子煞", "aliases": [], "polarity": "pressure", "axis": "internal", "source": "engine",
+      "i18n": {
+        "en": { "label": "Perceptual Sensitivity", "gloss": "Acuity that carries extra emotional overhead" },
+        "zh": { "label": "高感知内耗", "gloss": "高敏锐度带来的情绪与能量开销" },
+        "es": { "label": "Sensibilidad Perceptiva", "gloss": "Agudeza con coste emocional añadido" },
+        "de": { "label": "Wahrnehmungssensibilität", "gloss": "Feinfühligkeit mit zusätzlichem emotionalem Aufwand" },
+        "fr": { "label": "Sensibilité Perceptive", "gloss": "Acuité au coût émotionnel supplémentaire" } } },
+
+    "strategic_latency": { "zh_src": "空亡", "aliases": [], "polarity": "pressure", "axis": "timing", "source": "engine",
+      "i18n": {
+        "en": { "label": "Strategic Latency", "gloss": "Latent, not-yet-activated potential space" },
+        "zh": { "label": "策略留白", "gloss": "潜在空间——尚未兑现、可后置激活的区域" },
+        "es": { "label": "Latencia Estratégica", "gloss": "Espacio latente aún por activar" },
+        "de": { "label": "Strategische Latenz", "gloss": "Latenter, noch nicht aktivierter Spielraum" },
+        "fr": { "label": "Latence Stratégique", "gloss": "Espace latent encore à activer" } } },
+
+    "cognitive_advantage_local": { "zh_src": "文昌", "aliases": [], "polarity": "support", "axis": "cognition", "source": "local",
+      "note": "本地补充层别名，与引擎 文昌贵人(cognitive_advantage) 同义；保留独立 id 以区分来源，UI 可与 cognitive_advantage 去重合并。",
+      "i18n": {
+        "en": { "label": "Cognitive Advantage", "gloss": "Edge in learning, writing and articulation" },
+        "zh": { "label": "认知优势", "gloss": "学习、表达与文字上的优势" },
+        "es": { "label": "Ventaja Cognitiva", "gloss": "Ventaja en aprendizaje y expresión" },
+        "de": { "label": "Kognitiver Vorteil", "gloss": "Vorteil bei Lernen und Ausdruck" },
+        "fr": { "label": "Avantage Cognitif", "gloss": "Avantage en apprentissage et expression" } } }
+  }
+}

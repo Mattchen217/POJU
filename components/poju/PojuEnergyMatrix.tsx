@@ -10,7 +10,9 @@ import { buildMatrixDisplayData } from "@/lib/poju/build-matrix-display";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
 import { activePillarByAge } from "@/lib/poju/matrix-life-segment";
 import { computeYearTransitProgress } from "@/lib/poju/matrix-transit-progress";
-import { resolveBaziLabel, shenshaHanToSubKey } from "@/lib/poju/resolve-bazi-i18n";
+import { resolveBaziLabel } from "@/lib/poju/resolve-bazi-i18n";
+import { normalizeShenshaLocale, resolveShenshaList } from "@/lib/poju/shensha";
+import { tMatrix } from "@/lib/poju/poju-matrix-i18n";
 import { formatBirthClockTime } from "@/lib/profile/birth-info-utils";
 import type { UserProfile } from "@/lib/profile/types";
 import "@/styles/poju-energy-matrix.css";
@@ -37,7 +39,7 @@ const ELEMENT_BAR_CLASS: Record<string, string> = {
   Water: "ebar-fill--water",
 };
 
-const MAJOR_SHENSHA = new Set(["天乙贵人", "禄神"]);
+const MAJOR_SHENSHA = new Set(["天乙贵人", "禄神", "prime_mentor_node", "provision_anchor"]);
 
 function formatLifeStageBranch(
   pl: { branch_en: string; life_stage_label: string | null },
@@ -50,12 +52,8 @@ function formatLifeStageBranch(
   return han && !stageLabel.includes(han) ? `${pl.branch_en} · ${stageLabel} (${han})` : `${pl.branch_en} · ${stageLabel}`;
 }
 
-function NarrativePlaceholder({ zh }: { zh: boolean }) {
-  return (
-    <span className="pem__narrative-loading">
-      {zh ? "POJU 正在读取…" : "POJU is reading…"}
-    </span>
-  );
+function NarrativePlaceholder({ label }: { label: string }) {
+  return <span className="pem__narrative-loading">{label}</span>;
 }
 
 function formatBornLine(profile: UserProfile): string {
@@ -78,18 +76,16 @@ function formatCoordinates(profile: UserProfile, locale: string): string {
     return `${loc.name} ${Math.abs(lon).toFixed(2)}°${dir}`;
   }
   if (loc?.name && !loc.use_defaults) return loc.name;
-  return profile.birth.timezone || (locale.startsWith("zh") ? "默认时区" : "Default timezone");
+  return profile.birth.timezone || tMatrix(locale, "card.default_timezone");
 }
 
-function strengthLabel(strength: PojuMatrixPayload["strength"], locale: string): string {
-  if (locale.startsWith("zh")) {
-    if (strength === "strong") return "偏强";
-    if (strength === "weak") return "偏弱";
-    return "平衡";
-  }
-  if (strength === "strong") return "Dominant";
-  if (strength === "weak") return "Receptive Core";
-  return "Dynamic Balance";
+function strengthLabel(
+  strength: PojuMatrixPayload["strength"],
+  tc: (key: string) => string,
+): string {
+  if (strength === "strong") return tc("strength_strong");
+  if (strength === "weak") return tc("strength_weak");
+  return tc("strength_balanced");
 }
 
 function vitalityPin(strength: PojuMatrixPayload["strength"]): string {
@@ -166,20 +162,18 @@ function RadarChart({ scores }: { scores: PojuMatrixPayload["wuxing_scores"] }) 
 
 function ElementPillarMap({
   rows,
-  zh,
+  colon,
   tb,
   tm,
   showTitle = true,
 }: {
   rows: ElementPillarRow[];
-  zh: boolean;
+  colon: string;
   tb: (key: string) => string;
   tm: (key: string) => string;
   showTitle?: boolean;
 }) {
   if (!rows.length) return null;
-
-  const colon = zh ? "：" : ": ";
 
   return (
     <div className="pem__element-map" aria-label={tm("element_map_title")}>
@@ -209,9 +203,10 @@ function ElementPillarMap({
 
 export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
   const { structured, user_profile, wuxing_scores, strength, matrix_id } = payload;
-  const zh = locale.startsWith("zh");
+  const shenshaLocale = normalizeShenshaLocale(locale);
   const tb = useTranslations("bazi");
   const tm = useTranslations("poju_matrix");
+  const tc = useTranslations("poju_matrix.card");
 
   const elementPillarRows = useMemo(
     () => buildElementPillarMap(structured.pillars_detail, locale),
@@ -261,10 +256,10 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
     [];
 
   const pillarLabels: Record<string, string> = {
-    year: zh ? "年柱" : "Year",
-    month: zh ? "月柱" : "Month",
-    day: zh ? "日柱 · 日元" : "Day · Self",
-    hour: zh ? "时柱" : "Hour",
+    year: tc("pillar_year"),
+    month: tc("pillar_month"),
+    day: tc("pillar_day"),
+    hour: tc("pillar_hour"),
   };
 
   return (
@@ -305,17 +300,17 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
             <div className="zsign__cn">
               {display.zodiac.branch} · {display.zodiac.pinyin}
             </div>
-            <div className="zsign__tag">{zh ? "你的生肖 · Your Sign" : "Your Sign · 生肖"}</div>
+            <div className="zsign__tag">{tc("your_sign_tag")}</div>
             <div className="zsign__note">{display.zodiac.note}</div>
           </div>
 
           <div className="tcard a">
             <div className="k">
               <span className="bull" />
-              {zh ? "历法对齐" : "Calendar Alignment"} <em>· {zh ? "历法对齐" : "calendar"}</em>
+              {tc("calendar_alignment")} <em>· {tc("calendar_alignment_em")}</em>
             </div>
             <div className="v">
-              {display.calendar.gregorian} <small>{zh ? "公历" : "Gregorian"}</small>
+              {display.calendar.gregorian} <small>{tc("gregorian")}</small>
             </div>
             <div className="mid">
               {display.calendar.headline}
@@ -327,19 +322,19 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
           <div className="tcard a">
             <div className="k">
               <span className="bull" />
-              {zh ? "真太阳时校准" : "True Solar Time"} <em>· {zh ? "真太阳时校准" : "TST"}</em>
+              {tc("true_solar_time")} <em>· {tc("true_solar_time_em")}</em>
             </div>
             {tst ? (
               <>
                 <div className="tst">
                   <div className="t">
                     <div className="vv">{tst.original_time}</div>
-                    <div className="kk">{zh ? "标准时" : "Standard"}</div>
+                    <div className="kk">{tc("standard_time")}</div>
                   </div>
                   <div className="arr">→</div>
                   <div className="t">
                     <div className="vv gold">{tst.true_solar_time}</div>
-                    <div className="kk">{zh ? "真太阳时" : "True Solar"}</div>
+                    <div className="kk">{tc("true_solar")}</div>
                   </div>
                   {tst.diff_minutes !== 0 ? (
                     <div className="chip">
@@ -349,10 +344,10 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
                   ) : null}
                 </div>
                 <div className="s">
-                  {zh ? "经度修正" : "Longitude correction"} ·{" "}
+                  {tc("longitude_correction")} ·{" "}
                   {tst.longitude_diff_minutes ?? tst.diff_minutes}m
                   {tst.eq_of_time_minutes != null
-                    ? ` · ${zh ? "时差" : "EoT"} ${tst.eq_of_time_minutes > 0 ? "+" : ""}${tst.eq_of_time_minutes}m`
+                    ? ` · ${tc("eq_of_time")} ${tst.eq_of_time_minutes > 0 ? "+" : ""}${tst.eq_of_time_minutes}m`
                     : null}
                 </div>
               </>
@@ -364,14 +359,14 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
           <div className="tcard a">
             <div className="k">
               <span className="bull" />
-              {zh ? "节气交接" : "Solar Term"} <em>· {zh ? "节气" : "jieqi"}</em>
+              {tc("solar_term")} <em>· {tc("solar_term_em")}</em>
             </div>
             <div className="v">
               {display.solar_term.name_en} <small>{display.solar_term.name}</small>
             </div>
             <div className="mid">{display.solar_term.season}</div>
             <div className="s">
-              {zh ? "下一节气" : "Next"}: {display.solar_term.next_name}
+              {tc("next_term")}: {display.solar_term.next_name}
             </div>
             <div className="term">
               <i style={{ width: `${display.solar_term.progress_pct}%` }} />
@@ -383,7 +378,7 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
           <div className="pem-wuxing__left">
             <div className="pem-wuxing-card pem-wuxing-card--radar">
               <div className="pem-wuxing-card__label">
-                {zh ? "五行能量谱" : "Elemental Signature"} <em>· {zh ? "五行" : "wuxing"}</em>
+                {tc("elemental_signature")} <em>· {tc("elemental_signature_em")}</em>
               </div>
               <div className="pem-wuxing-card__body pem-wuxing-card__body--radar">
                 <RadarChart scores={wuxing_scores} />
@@ -391,12 +386,12 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
             </div>
             <div className="pem-wuxing-card pem-wuxing-card--map">
               <div className="pem-wuxing-card__label">
-                {tm("element_map_title")} <em>· {zh ? "干支" : "pillars"}</em>
+                {tm("element_map_title")} <em>· {tc("pillars_em")}</em>
               </div>
               <div className="pem-wuxing-card__body pem-wuxing-card__body--map">
                 <ElementPillarMap
                   rows={elementPillarRows}
-                  zh={zh}
+                  colon={tc("colon")}
                   tb={tb}
                   tm={tm}
                   showTitle={false}
@@ -406,7 +401,7 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
           </div>
           <div className="pem-wuxing__right">
             <div className="ro ro--wuxing">
-              <div className="ro__k">{zh ? "五行分布" : "Elemental Breakdown"}</div>
+              <div className="ro__k">{tc("elemental_breakdown")}</div>
               <div className="elist">
                 {wuxing_scores.map((row) => (
                   <div className="erow" key={row.element}>
@@ -439,36 +434,36 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
               ) : null}
               <div className="enote">
                 {narrativeLoading ? (
-                  <NarrativePlaceholder zh={zh} />
+                  <NarrativePlaceholder label={tc("narrative_loading")} />
                 ) : isLlmNarrative && display.enote_caption ? (
                   display.enote_caption
                 ) : showTemplateFallback ? (
                   <>
-                    {zh ? "日主" : "Day Master"} <b>{display.day_master.en}</b>
-                    {zh ? "，五行以" : ", with "}
+                    {tc("day_master")} <b>{display.day_master.en}</b>
+                    {tc("with_surplus")}
                     <b>{dominant?.element}</b>
-                    {zh ? "偏盛、" : " surplus and "}
+                    {tc("surplus_and")}
                     <b>{deficit?.element}</b>
-                    {zh ? "偏薄。" : " deficit."}
+                    {tc("deficit_period")}
                   </>
                 ) : null}
               </div>
             </div>
             <div className="ro ro--wuxing">
-              <div className="ro__k">{zh ? "核心活力" : "Core Vitality"}</div>
-              <div className="ro__v ro__v--metric">{strengthLabel(strength, locale)}</div>
+              <div className="ro__k">{tc("core_vitality")}</div>
+              <div className="ro__v ro__v--metric">{strengthLabel(strength, tc)}</div>
               <div className="vtrack">
                 <div className="mid" />
                 <div className="pin" style={{ left: vitalityPin(strength) }} />
               </div>
               <div className="vscale">
-                <span>{zh ? "偏弱" : "Receptive"}</span>
-                <span>{zh ? "平衡" : "Dynamic Balance"}</span>
-                <span>{zh ? "偏强" : "Dominant"}</span>
+                <span>{tc("vitality_receptive")}</span>
+                <span>{tc("vitality_balance")}</span>
+                <span>{tc("vitality_dominant")}</span>
               </div>
             </div>
             <div className="ro ro--wuxing">
-              <div className="ro__k">{zh ? "五行均衡" : "Elemental Equilibrium"}</div>
+              <div className="ro__k">{tc("elemental_equilibrium")}</div>
               {dominant ? (
                 <>
                   <div className="ro__v ro__v--metric">
@@ -476,11 +471,11 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
                       {dominant.element}
                     </span>
                     <span className="pct">
-                      {zh ? "盈余" : "Surplus"} · {dominant.pct}%
+                      {tc("surplus")} · {dominant.pct}%
                     </span>
                   </div>
                   <div className="ro__tag up">
-                    ▲ {zh ? "主导向量" : "Dominant vector"} · {dominant.element.toLowerCase()}
+                    ▲ {tc("dominant_vector")} · {dominant.element.toLowerCase()}
                   </div>
                 </>
               ) : null}
@@ -491,11 +486,11 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
                       {deficit.element}
                     </span>
                     <span className="pct">
-                      {zh ? "不足" : "Deficit"} · {deficit.pct}%
+                      {tc("deficit")} · {deficit.pct}%
                     </span>
                   </div>
                   <div className="ro__tag down">
-                    ▼ {zh ? "关键缺口" : "Key gap"} · {deficit.element.toLowerCase()}
+                    ▼ {tc("key_gap")} · {deficit.element.toLowerCase()}
                   </div>
                 </>
               ) : null}
@@ -506,7 +501,7 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
         <div className="block block--fill">
           <div className="dialpanel">
             <div className="rp__k">
-              {zh ? "大运能量场" : "Macro-Lifecycle Field"} <em>· {zh ? "大运" : "dayun"}</em>
+              {tc("macro_lifecycle")} <em>· {tc("macro_lifecycle_em")}</em>
             </div>
             <PojuDaYunDial
               daYun={structured.da_yun}
@@ -518,21 +513,21 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
           </div>
           <div className="side">
             <div className="ro ro__friction">
-              <div className="ro__k">{zh ? "结构动力学" : "Structural Dynamics"}</div>
+              <div className="ro__k">{tc("structural_dynamics")}</div>
               {narrativeLoading ? (
-                <NarrativePlaceholder zh={zh} />
+                <NarrativePlaceholder label={tc("narrative_loading")} />
               ) : (
                 <>
                   <div className="fr">
-                    <span className="fk res">RESONANCE</span>
+                    <span className="fk res">{tc("resonance_label")}</span>
                     <span>{display.structural_dynamics.resonance}</span>
                   </div>
                   <div className="fr">
-                    <span className="fk ten">TENSION</span>
+                    <span className="fk ten">{tc("tension_label")}</span>
                     <span>{display.structural_dynamics.tension}</span>
                   </div>
                   <div className="fr">
-                    <span className="fk neu">READING</span>
+                    <span className="fk neu">{tc("reading_label")}</span>
                     <span>{display.structural_dynamics.reading}</span>
                   </div>
                 </>
@@ -540,7 +535,7 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
             </div>
             <div className="ro">
               <div className="ro__k">
-                {zh ? "流年" : "Annual Transit"} · {display.annual_transit.year}
+                {tc("annual_transit")} · {display.annual_transit.year}
               </div>
               <div className="ro__v">
                 <span className={elementCssClass(display.annual_transit.stem_en.split(" ")[1] ?? "")}>
@@ -551,7 +546,7 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
                 </span>
               </div>
               <p className="transit-note">
-                {narrativeLoading ? <NarrativePlaceholder zh={zh} /> : display.annual_transit.narrative}
+                {narrativeLoading ? <NarrativePlaceholder label={tc("narrative_loading")} /> : display.annual_transit.narrative}
               </p>
               <div className="tprog">
                 <div className="tprog__bar">
@@ -559,7 +554,7 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
                 </div>
                 <div className="tprog__lab">
                   <span>
-                    {display.annual_transit.year} {zh ? "流年进度" : "Transit Progress"}
+                    {display.annual_transit.year} {tc("transit_progress")}
                   </span>
                   <span className="blink">{transitProgress}% ▮</span>
                 </div>
@@ -608,12 +603,14 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
                   {pl.star_labels.length > 0 ? (
                     <>
                       <br />
-                      {pl.star_labels.map((star) => (
+                      {resolveShenshaList(pl.star_labels, shenshaLocale).map((star) => (
                         <span
-                          key={star}
-                          className={`star${MAJOR_SHENSHA.has(star) ? " star--major" : ""}`}
+                          key={star.id}
+                          className={`star star--${star.polarity}${MAJOR_SHENSHA.has(star.id) || MAJOR_SHENSHA.has(star.zh_src) ? " star--major" : ""}`}
+                          title={star.gloss}
                         >
-                          ✦ {resolveBaziLabel(`bazi.${shenshaHanToSubKey(star)}`, tb, star)}
+                          ✦ {star.label}{" "}
+                          <i className="star__glyph">({star.zh_src})</i>
                         </span>
                       ))}
                     </>

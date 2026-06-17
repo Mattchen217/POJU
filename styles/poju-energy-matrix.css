@@ -1255,10 +1255,28 @@
 }
 
 .pem .pl .star--major {
-  color: rgba(251, 191, 36, 0.88);
   display: block;
   font-size: 12px;
   margin-top: 4px;
+}
+
+.pem .pl .star--support {
+  color: rgba(251, 191, 36, 0.88);
+}
+
+.pem .pl .star--edge {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.pem .pl .star--pressure {
+  color: rgba(217, 169, 120, 0.82);
+}
+
+.pem .pl .star__glyph {
+  font-style: normal;
+  font-family: var(--serif);
+  font-size: 10px;
+  opacity: 0.75;
 }
 
 .pem .pl .role {
