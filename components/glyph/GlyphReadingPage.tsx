@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
@@ -79,6 +79,11 @@ export function GlyphReadingPage() {
 
   useEffect(() => {
     stageRef.current = stage;
+  }, [stage]);
+
+  useLayoutEffect(() => {
+    if (stage !== "ready") return;
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }, [stage]);
 
   const clearGlyphWatchdog = useCallback(() => {
@@ -459,16 +464,17 @@ export function GlyphReadingPage() {
         resultData={glyphSummary}
         variant="banner"
       />
+      <GlyphCanvas glyph={glyph} animated={false} compact />
       {reportText ? (
         <section className="glyph-base-report">
           <StreamingAnalysisView
             content={reportText}
             status="completed"
             bytes_received={reportText.length}
+            layout="inline"
           />
         </section>
       ) : null}
-      <GlyphCanvas glyph={glyph} animated={false} compact />
       <GlyphReport reading={reading} glyph={glyph} question={question} />
       <ReturnToPojuCTA
         tool="glyph"

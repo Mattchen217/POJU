@@ -1,13 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { UserInput } from "@/types/oracle";
 
 import { SplineInteractiveScene } from "@/components/spline/SplineInteractiveScene";
-import {
-  ORACLE_SUMMON_DISPLAY_SCALE,
-  ORACLE_SUMMON_ZOOM,
-} from "@/lib/oracle/oracle-summon-scene";
+import { ORACLE_SUMMON_ZOOM } from "@/lib/oracle/oracle-summon-scene";
 import { forwardPointerToSplineCanvas } from "@/lib/spline/spline-pointer-bridge";
 
 import "@/styles/oracle-summon.css";
@@ -120,11 +117,6 @@ export function OracleSummon({ userInput: _userInput, onComplete }: OracleSummon
         <SplineInteractiveScene
           scene="/spline/oracle-explosion.splinecode"
           className="oracle-summon-spline"
-          style={
-            {
-              ["--oracle-summon-display-scale" as string]: String(ORACLE_SUMMON_DISPLAY_SCALE),
-            } as CSSProperties
-          }
           initialZoom={ORACLE_SUMMON_ZOOM}
           pointerFollow
           webGLContext="preparing"

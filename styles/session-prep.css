@@ -1,6 +1,13 @@
+:root {
+  --session-prep-page-bg:
+    radial-gradient(ellipse 110% 70% at 50% -8%, rgba(108, 52, 172, 0.28) 0%, transparent 56%),
+    radial-gradient(ellipse 80% 60% at 14% 88%, rgba(76, 38, 132, 0.16) 0%, transparent 54%),
+    linear-gradient(180deg, #0a0a0f 0%, #12121c 48%, #1a1a25 100%);
+}
+
 .session-prep-container {
   min-height: 100vh;
-  background: linear-gradient(180deg, #0a0a0f 0%, #1a1a25 100%);
+  background: var(--session-prep-page-bg);
   color: #e5e5e5;
   padding: 24px 16px;
   display: flex;
@@ -13,7 +20,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #0a0a0f;
+  background: var(--session-prep-page-bg);
   color: #888;
 }
 

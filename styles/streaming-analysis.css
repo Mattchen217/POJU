@@ -120,6 +120,30 @@
   padding: 0 12px;
 }
 
+/* Delivery pages — full portrait report in normal scroll flow */
+.streaming-analysis-inline {
+  position: relative;
+  z-index: auto;
+  max-height: none;
+  pointer-events: auto;
+}
+
+.streaming-analysis-inline .streaming-container {
+  max-height: none;
+  overflow: visible;
+  padding: 1.25rem 1.125rem;
+}
+
+.streaming-analysis-inline .streaming-content-compact {
+  max-height: none;
+  overflow-y: visible;
+}
+
+.streaming-analysis-inline .streaming-content-compact .content-text {
+  font-size: 0.875rem;
+  line-height: 1.75;
+}
+
 .preparing-page {
   position: relative;
   height: 100vh;

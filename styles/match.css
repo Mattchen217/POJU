@@ -238,7 +238,12 @@
 }
 
 .match-base-report {
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.match-base-report .streaming-analysis-inline .streaming-container {
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .match-base-report__label {

@@ -268,8 +268,13 @@
 }
 
 .glyph-base-report {
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
   padding: 0 0.25rem;
+}
+
+.glyph-base-report .streaming-analysis-inline .streaming-container {
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .welcome-section .glyph-brand {

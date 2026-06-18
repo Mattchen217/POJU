@@ -44,10 +44,15 @@
   }
 
   /* ── Session prep (Glyph / Match / Syncro / POJU) ── */
+  html:not(.pwa-mode) .browser-flow-page:has(.session-prep-container) {
+    max-width: none;
+    width: 100%;
+    padding-inline: 0;
+  }
+
   html:not(.pwa-mode) .session-prep-container {
     width: 100%;
-    min-height: auto;
-    background: transparent;
+    min-height: 100dvh;
     padding: 3rem 2.5rem 4rem;
     align-items: center;
   }
@@ -172,8 +177,7 @@
   html:not(.pwa-mode) .match-select-page,
   html:not(.pwa-mode) .match-relationship-page:not(.tool-preview-page),
   html:not(.pwa-mode) .match-analyzing {
-    min-height: auto;
-    background: transparent;
+    min-height: 100dvh;
     display: flex;
     flex-direction: column;
     align-items: center;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 
 import { stripMetaSection } from '@/lib/base-analysis/useStreamingAnalysis';
@@ -11,6 +11,8 @@ interface Props {
   bytes_received: number;
   /** Preparing pages: keep thinking animation only — never render growing stream text. */
   thinkingOnly?: boolean;
+  /** overlay = fixed bottom panel (preparing); inline = normal document flow (delivery pages). */
+  layout?: 'overlay' | 'inline';
 }
 
 const THINKING_PHRASES_ZH = [
@@ -34,6 +36,7 @@ export function StreamingAnalysisView({
   status,
   bytes_received,
   thinkingOnly = false,
+  layout = 'overlay',
 }: Props) {
   const t = useTranslations('analysis_loader');
   const locale = useLocale();
@@ -56,17 +59,30 @@ export function StreamingAnalysisView({
     return () => window.clearInterval(timer);
   }, [isThinking, phrases.length]);
 
-  useEffect(() => {
-    if (isThinking || thinkingOnly) return;
-    if (contentRef.current) {
+  const followLiveStream =
+    layout === 'overlay' && (status === 'streaming' || status === 'connecting');
+
+  useLayoutEffect(() => {
+    if (isThinking || thinkingOnly || !contentRef.current) return;
+
+    if (followLiveStream) {
       contentRef.current.scrollTop = contentRef.current.scrollHeight;
+      return;
     }
-  }, [content, isThinking, thinkingOnly]);
+
+    if (layout === 'inline') {
+      contentRef.current.scrollTop = 0;
+    }
+  }, [content, isThinking, thinkingOnly, layout, followLiveStream]);
 
   const visibleContent = stripMetaSection(content);
 
   return (
-    <div className="streaming-analysis-bottom">
+    <div
+      className={
+        layout === 'inline' ? 'streaming-analysis-inline' : 'streaming-analysis-bottom'
+      }
+    >
       <div className="streaming-container">
         {isThinking ? (
           <div className="thinking-phase">

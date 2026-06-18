@@ -10,7 +10,7 @@ import {
   Sprout,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { MatchReportCard } from "@/components/match/MatchReportCard";
@@ -95,6 +95,10 @@ export function MatchReport({ session, locale }: MatchReportProps) {
     })();
   }, [session.a_profile_id, session.b_profile_id]);
 
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, []);
+
   const synergyType = normalizeSynergyType(report.conclusion.synergy_type);
   const synergyInfo = SYNERGY_TYPES[synergyType as SynergyType] ?? SYNERGY_TYPES.adaptive_balance;
 
@@ -115,6 +119,7 @@ export function MatchReport({ session, locale }: MatchReportProps) {
             content={baseReportA}
             status="completed"
             bytes_received={baseReportA.length}
+            layout="inline"
           />
         </section>
       ) : null}
@@ -125,6 +130,7 @@ export function MatchReport({ session, locale }: MatchReportProps) {
             content={baseReportB}
             status="completed"
             bytes_received={baseReportB.length}
+            layout="inline"
           />
         </section>
       ) : null}
