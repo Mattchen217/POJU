@@ -33,7 +33,6 @@ import {
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 import { PojuDeepDiveCTA } from "@/components/cross-product/PojuDeepDiveCTA";
 import { ReadingDecoderBanner } from "@/components/reading-ritual/ReadingDecoderBanner";
-import { ReadingRitualWaitingPanel } from "@/components/reading-ritual/ReadingRitualWaitingPanel";
 import { ReturnToPojuCTA } from "@/components/poju/ReturnToPojuCTA";
 import { extractGlyphSummary } from "@/lib/poju/tool-result-summary";
 import { useDeliveryWaitPhase } from "@/lib/wait-ritual/use-delivery-wait-phase";
@@ -69,7 +68,6 @@ export function GlyphReadingPage() {
   const [productComplete, setProductComplete] = useState(false);
   const [isReturningUser, setIsReturningUser] = useState(false);
   const [waitVisualDone, setWaitVisualDone] = useState(false);
-  const [ritualReleased, setRitualReleased] = useState(false);
   const glyphProductStartedRef = useRef(false);
   const startedRef = useRef(false);
   const mountedRef = useRef(true);
@@ -206,10 +204,10 @@ export function GlyphReadingPage() {
   });
 
   useEffect(() => {
-    if (waitVisualDone && ritualReleased) {
+    if (waitVisualDone && productComplete) {
       setStage("ready");
     }
-  }, [waitVisualDone, ritualReleased]);
+  }, [waitVisualDone, productComplete]);
 
   useEffect(() => {
     if (waitFlow.phase !== "product") return;
@@ -369,7 +367,6 @@ export function GlyphReadingPage() {
           setBaziComplete(false);
           setProductComplete(false);
           setWaitVisualDone(false);
-          setRitualReleased(false);
           startedRef.current = false;
           void beginUnlockPipeline();
         }}
@@ -397,13 +394,6 @@ export function GlyphReadingPage() {
               }}
             />
           ) : null
-        }
-        ritualPanel={
-          <ReadingRitualWaitingPanel
-            product="glyph"
-            ready={productComplete}
-            onReleased={() => setRitualReleased(true)}
-          />
         }
       />
     );

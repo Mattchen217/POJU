@@ -67,7 +67,7 @@ export function GlyphFront({ sign, animate = true, compact = false, draw = false
   const stackedFooter = draw || deliveryCompact;
 
   const gridShellClass = draw
-    ? "relative z-20 grid h-full grid-rows-[auto_auto_auto] content-start gap-y-1 px-[8%] pt-[3%] pb-[5%] text-center md:gap-y-1.5 md:pt-[3.5%]"
+    ? "relative z-20 grid h-full grid-rows-[auto_auto_auto] content-start gap-y-1 px-[8%] pt-[7%] pb-[5%] text-center md:gap-y-1.5 md:pt-[7.5%]"
     : deliveryCompact
       ? deliveryDesktop
         ? "relative z-20 grid h-full grid-rows-[auto_auto_auto] content-start gap-y-1 px-[9%] pb-[4.5%] pt-[6.25%] text-center"
@@ -155,7 +155,7 @@ export function GlyphFront({ sign, animate = true, compact = false, draw = false
 
       <div className={gridShellClass}>
         <motion.div
-          className={faceSmall || draw ? "shrink-0 pt-0" : "pt-[7%]"}
+          className={faceSmall || draw ? "shrink-0 pt-1" : "pt-[7%]"}
           initial={animate ? { opacity: 0, y: -10 } : false}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}

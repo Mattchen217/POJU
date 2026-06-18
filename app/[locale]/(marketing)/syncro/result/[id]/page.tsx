@@ -10,7 +10,6 @@ import { SyncroLlmProgressBar } from "@/components/syncro/SyncroLlmProgressBar";
 import { PojuDeepDiveCTA } from "@/components/cross-product/PojuDeepDiveCTA";
 import { ReturnToPojuCTA } from "@/components/poju/ReturnToPojuCTA";
 import { ReadingDecoderBanner } from "@/components/reading-ritual/ReadingDecoderBanner";
-import { ReadingRitualWaitingPanel } from "@/components/reading-ritual/ReadingRitualWaitingPanel";
 import { DeliveryWaitFrame } from "@/components/wait-ritual/DeliveryWaitFrame";
 import { SyncroMainView } from "@/components/syncro/SyncroMainView";
 import { SyncroPreparingLiveHour } from "@/components/syncro/SyncroPreparingLiveHour";
@@ -68,7 +67,6 @@ function SyncroResultPageContent() {
   });
   const [highlightKeys, setHighlightKeys] = useState<Set<string>>(() => new Set());
   const [retryingHour, setRetryingHour] = useState<HourPeriod | null>(null);
-  const [ritualReleased, setRitualReleased] = useState(false);
   const [waitVisualDone, setWaitVisualDone] = useState(false);
 
   const handleSessionUpdate = useCallback((next: SyncroSession) => {
@@ -125,7 +123,7 @@ function SyncroResultPageContent() {
   const liveHourReady =
     stage === "ready" && session !== null && isSyncroCompassGateReady(session);
 
-  const showMainView = liveHourReady && ritualReleased && waitVisualDone;
+  const showMainView = liveHourReady && waitVisualDone;
 
   const waitFlow = useDeliveryWaitPhase({
     product: "syncro",
@@ -316,13 +314,6 @@ function SyncroResultPageContent() {
                   headless
                 />
               ) : null
-            }
-            ritualPanel={
-              <ReadingRitualWaitingPanel
-                product="syncro"
-                ready={liveHourReady}
-                onReleased={() => setRitualReleased(true)}
-              />
             }
           />
         )}

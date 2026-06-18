@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "@/i18n/navigation";
 
 import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
-import { ReadingRitualWaitingPanel } from "@/components/reading-ritual/ReadingRitualWaitingPanel";
 import { DeliveryWaitFrame } from "@/components/wait-ritual/DeliveryWaitFrame";
 import { usePreparingBlockInput } from "@/components/poju/preparing-spline-control";
 import type { StoredProfileData } from "@/lib/db/poju-db";
@@ -41,7 +40,6 @@ export function UnlockBaziPreparing({
   const [error, setError] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
   const [streamDone, setStreamDone] = useState(false);
-  const [ritualReleased, setRitualReleased] = useState(false);
   const [waitVisualDone, setWaitVisualDone] = useState(false);
 
   usePreparingBlockInput(true);
@@ -55,7 +53,7 @@ export function UnlockBaziPreparing({
   });
 
   useEffect(() => {
-    if (!streamDone || !ritualReleased || !waitVisualDone) return;
+    if (!streamDone || !waitVisualDone) return;
     const ac = new AbortController();
     void (async () => {
       try {
@@ -69,7 +67,7 @@ export function UnlockBaziPreparing({
       }
     })();
     return () => ac.abort();
-  }, [streamDone, ritualReleased, waitVisualDone, startedAt, sessionId, router]);
+  }, [streamDone, waitVisualDone, startedAt, sessionId, router]);
 
   return (
     <DeliveryWaitFrame
@@ -79,7 +77,6 @@ export function UnlockBaziPreparing({
         setError(null);
         setStreamDone(false);
         setWaitVisualDone(false);
-        setRitualReleased(false);
         setRetryKey((k) => k + 1);
       }}
       onRefund={onRefund}
@@ -98,13 +95,6 @@ export function UnlockBaziPreparing({
             setStreamDone(true);
           }}
           onError={(err) => setError(err)}
-        />
-      }
-      ritualPanel={
-        <ReadingRitualWaitingPanel
-          product="poju"
-          ready={streamDone}
-          onReleased={() => setRitualReleased(true)}
         />
       }
     />

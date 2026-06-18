@@ -52,30 +52,43 @@ export function useDeliveryWaitPhase(opts: UseDeliveryWaitPhaseOptions): Deliver
     onExitComplete,
   } = opts;
 
-  const [phase, setPhase] = useState<DeliveryWaitVisualPhase>(() =>
-    skipBazi || product === "poju" ? (product === "poju" ? "bazi" : "product") : "bazi",
-  );
+  const initialPhase: DeliveryWaitVisualPhase =
+    skipBazi || product === "poju" ? (product === "poju" ? "bazi" : "product") : "bazi";
+
+  const [phase, setPhase] = useState<DeliveryWaitVisualPhase>(() => initialPhase);
   const [stepIndex, setStepIndex] = useState(0);
   const [showFlash, setShowFlash] = useState(false);
   const [showConverge, setShowConverge] = useState(false);
   const [exiting, setExiting] = useState(false);
-  const baziMinMetRef = useRef(!isReturningUser || skipBazi);
+  const [baziMinMet, setBaziMinMet] = useState(!isReturningUser || skipBazi);
   const exitCalledRef = useRef(false);
   const onExitCompleteRef = useRef(onExitComplete);
   onExitCompleteRef.current = onExitComplete;
 
   useEffect(() => {
-    if (!enabled || !isReturningUser || skipBazi) return;
-    baziMinMetRef.current = false;
-    const timer = window.setTimeout(() => {
-      baziMinMetRef.current = true;
-    }, WAIT_BAZI_CACHED_MIN_MS);
+    if (enabled) return;
+    setPhase(initialPhase);
+    setStepIndex(0);
+    setShowFlash(false);
+    setShowConverge(false);
+    setExiting(false);
+    setBaziMinMet(!isReturningUser || skipBazi);
+    exitCalledRef.current = false;
+  }, [enabled, initialPhase, isReturningUser, skipBazi]);
+
+  useEffect(() => {
+    if (!enabled || !isReturningUser || skipBazi) {
+      setBaziMinMet(true);
+      return;
+    }
+    setBaziMinMet(false);
+    const timer = window.setTimeout(() => setBaziMinMet(true), WAIT_BAZI_CACHED_MIN_MS);
     return () => window.clearTimeout(timer);
   }, [enabled, isReturningUser, skipBazi]);
 
   useEffect(() => {
     if (!enabled || phase !== "bazi") return;
-    if (!baziComplete || !baziMinMetRef.current) return;
+    if (!baziComplete || !baziMinMet) return;
 
     if (product === "poju") {
       setPhase("converge");
@@ -92,7 +105,7 @@ export function useDeliveryWaitPhase(opts: UseDeliveryWaitPhaseOptions): Deliver
       setStepIndex(0);
     }, WAIT_BRIDGE_HOLD_MS);
     return () => window.clearTimeout(bridgeTimer);
-  }, [enabled, phase, baziComplete, product]);
+  }, [enabled, phase, baziComplete, baziMinMet, product]);
 
   useEffect(() => {
     if (!enabled || phase !== "product") return;

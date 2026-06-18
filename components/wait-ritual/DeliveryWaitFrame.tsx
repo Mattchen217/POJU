@@ -17,12 +17,11 @@ type Props = {
   onRetry?: () => void;
   onRefund?: () => void;
   secondaryActionLabel?: string;
-  ritualPanel?: ReactNode;
   hiddenWork?: ReactNode;
   children?: ReactNode;
 };
 
-/** Unified delivery wait: one Spline shell, FX layer, copy overlay, optional ritual + hidden LLM work. */
+/** Unified delivery wait: one Spline shell, FX layer, copy overlay, optional hidden LLM work. */
 export function DeliveryWaitFrame({
   wait,
   isReturningUser,
@@ -30,7 +29,6 @@ export function DeliveryWaitFrame({
   onRetry,
   onRefund,
   secondaryActionLabel,
-  ritualPanel,
   hiddenWork,
   children,
 }: Props) {
@@ -56,7 +54,6 @@ export function DeliveryWaitFrame({
         secondaryActionLabel={secondaryActionLabel}
       />
       {hiddenWork}
-      {ritualPanel}
       {children}
     </PreparingSplineShell>
   );

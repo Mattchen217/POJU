@@ -5,7 +5,6 @@ import { useLocale, useTranslations } from "next-intl";
 
 import { MatchAnalyzingLoader } from "@/components/match/MatchAnalyzingLoader";
 import { DeliveryWaitFrame } from "@/components/wait-ritual/DeliveryWaitFrame";
-import { ReadingRitualWaitingPanel } from "@/components/reading-ritual/ReadingRitualWaitingPanel";
 import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
 import { useRouter } from "@/i18n/navigation";
 import { saveMatchToArchive } from "@/lib/archive/archive-service";
@@ -54,7 +53,6 @@ export function MatchAnalyzingPage() {
   const [aId, setAId] = useState("");
   const [bId, setBId] = useState("");
   const [basePrepKey, setBasePrepKey] = useState(0);
-  const [ritualReleased, setRitualReleased] = useState(false);
   const [pendingMatchId, setPendingMatchId] = useState<string | null>(null);
   const [baziComplete, setBaziComplete] = useState(false);
   const [isReturningUser, setIsReturningUser] = useState(false);
@@ -193,9 +191,9 @@ export function MatchAnalyzingPage() {
   }, [aId, bId, locale, t]);
 
   useEffect(() => {
-    if (!pendingMatchId || !waitVisualDone || !ritualReleased) return;
+    if (!pendingMatchId || !waitVisualDone) return;
     router.push(`/match/result/${pendingMatchId}`);
-  }, [pendingMatchId, waitVisualDone, ritualReleased, router]);
+  }, [pendingMatchId, waitVisualDone, router]);
 
   const isBaziPhase = phase === "base-a" || phase === "base-b" || phase === "base-cache";
   const isProductPhase = phase === "analyzing";
@@ -208,6 +206,11 @@ export function MatchAnalyzingPage() {
     enabled: isBaziPhase || isProductPhase,
     onExitComplete: () => setWaitVisualDone(true),
   });
+
+  useEffect(() => {
+    if (waitFlow.phase !== "product") return;
+    if (phase === "base-cache") setPhase("analyzing");
+  }, [waitFlow.phase, phase]);
 
   useEffect(() => {
     if (waitFlow.phase !== "product") return;
@@ -265,16 +268,10 @@ export function MatchAnalyzingPage() {
     setPhase("base-cache");
   }, [router, t]);
 
-  useEffect(() => {
-    if (phase !== "base-cache") return;
-    setIsReturningUser(true);
-    setBaziComplete(true);
-    setPhase("analyzing");
-  }, [phase]);
-
   async function afterBaseAComplete() {
     const refreshedB = await getCachedBaseAnalysis(bId);
     if (refreshedB) {
+      setIsReturningUser(true);
       setBaziComplete(true);
       setPhase("base-cache");
       return;
@@ -389,13 +386,6 @@ export function MatchAnalyzingPage() {
       wait={waitFlow}
       error={error}
       onRefund={() => router.push("/match")}
-      ritualPanel={
-        <ReadingRitualWaitingPanel
-          product="match"
-          ready={productComplete}
-          onReleased={() => setRitualReleased(true)}
-        />
-      }
     />
   );
 }
