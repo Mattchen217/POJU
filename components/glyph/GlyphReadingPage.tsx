@@ -40,7 +40,7 @@ import { cn } from "@/lib/utils/classnames";
 import type { CSSProperties } from "react";
 import { LEVEL_META, type SignData } from "@/types/oracle";
 
-type Stage = "loading" | "paywall" | "base-prep" | "base-cache" | "glyph-gen" | "ready" | "error";
+type Stage = "loading" | "paywall" | "base-prep" | "glyph-gen" | "ready" | "error";
 
 /** After resume from background, retry glyph fetch if still running longer than this. */
 const GLYPH_GEN_VISIBILITY_RETRY_MS = 75_000;
@@ -67,6 +67,7 @@ export function GlyphReadingPage() {
   const [baziComplete, setBaziComplete] = useState(false);
   const [productComplete, setProductComplete] = useState(false);
   const [isReturningUser, setIsReturningUser] = useState(false);
+  const [skipBaziAtDelivery, setSkipBaziAtDelivery] = useState(false);
   const [waitVisualDone, setWaitVisualDone] = useState(false);
   const glyphProductStartedRef = useRef(false);
   const startedRef = useRef(false);
@@ -191,12 +192,12 @@ export function GlyphReadingPage() {
     [clearGlyphWatchdog, locale, readingId, t],
   );
 
-  const isWaitStage =
-    stage === "base-prep" || stage === "base-cache" || stage === "glyph-gen";
+  const isWaitStage = stage === "base-prep" || stage === "glyph-gen";
 
   const waitFlow = useDeliveryWaitPhase({
     product: "glyph",
-    isReturningUser,
+    skipBazi: skipBaziAtDelivery,
+    isReturningUser: !skipBaziAtDelivery && isReturningUser,
     baziComplete,
     productComplete,
     enabled: isWaitStage,
@@ -301,12 +302,14 @@ export function GlyphReadingPage() {
       setBaseReportText(unlockBase.baseReportText);
       updateGlyphDrawSession(readingId, { base_report_text: unlockBase.baseReportText });
       setIsReturningUser(true);
+      setSkipBaziAtDelivery(true);
       setBaziComplete(true);
-      setStage("base-cache");
+      setStage("glyph-gen");
       return;
     }
 
     setIsReturningUser(false);
+    setSkipBaziAtDelivery(false);
     setBaziComplete(false);
     setStage("base-prep");
   }, [locale, readingId, router, t]);
@@ -364,6 +367,7 @@ export function GlyphReadingPage() {
           clearInFlightGlyphReading(readingId);
           glyphGenAbortRef.current?.abort();
           glyphProductStartedRef.current = false;
+          setSkipBaziAtDelivery(false);
           setBaziComplete(false);
           setProductComplete(false);
           setWaitVisualDone(false);

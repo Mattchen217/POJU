@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 
 import { SessionPreparation } from "@/components/poju/SessionPreparation";
 import { useRouter } from "@/i18n/navigation";
+import { getCachedBaseAnalysis } from "@/lib/cross-product/get-cached-base-analysis";
 import { listStoredProfilesForSessionPrep, type StoredProfileSummary } from "@/lib/profile/stored-profiles-service";
 
 import "@/styles/match.css";
@@ -42,13 +43,24 @@ export function MatchSelectBPage() {
     }
   }
 
-  function handleSelectB(profileId: string) {
+  async function handleSelectB(profileId: string) {
     if (profileId === aProfileId) {
       alert(t("cannot_match_self"));
       return;
     }
 
     sessionStorage.setItem("match_b_profile_id", profileId);
+
+    const [cachedA, cachedB] = await Promise.all([
+      getCachedBaseAnalysis(aProfileId!),
+      getCachedBaseAnalysis(profileId),
+    ]);
+
+    if (cachedA && cachedB) {
+      router.push("/match/cached-prep");
+      return;
+    }
+
     router.push("/match/relationship");
   }
 

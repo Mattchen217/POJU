@@ -135,7 +135,7 @@ export const GLYPH_EXPLORATION_GUIDANCE = `# exploration 微练习 — 多样性
 ✅ B（环境）：「明天早餐时把合作文件收进一个文件夹，桌上只留便签，写签里『月』意象对应的你方一项资源。」
 ✅ C（静观但贴题）：「睡前刷牙时盯镜面 20 秒，问：若项目是未散的雨，我已带进的『光』是什么？手机备忘录写一句，不设标题。」
 
-长度：100–160 字（中文）/ 对应英文词数；\`duration_estimate\` 与正文一致。`;
+长度：120–200 字（中文）/ 对应英文词数；\`duration_estimate\` 与正文一致。`;
 
 export const GLYPH_LAYOUT_CONTRACT = `# 输出板块分工（严格遵守，杜绝重复）
 

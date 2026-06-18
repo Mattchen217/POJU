@@ -22,7 +22,7 @@ import {
 import type { SignData } from "@/types/oracle";
 import type { UserProfile } from "@/lib/profile/types";
 
-/** Prior cap 3000 caused finish_reason:length — truncated JSON, client retry + double billing. */
+/** v5.3 ~5200 中文字 + JSON 结构；prior 3000 cap caused finish_reason:length truncation. */
 export const GLYPH_READING_MAX_TOKENS = 15_000;
 /** Match Vercel route maxDuration (300s); leave headroom for parse + JSON response. */
 export const GLYPH_READING_TIMEOUT_MS = 290_000;

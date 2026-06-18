@@ -134,20 +134,16 @@
   padding: 20px 20px 12px;
   text-align: center;
   pointer-events: none;
-  background: linear-gradient(180deg, transparent 0%, rgba(5, 5, 8, 0.35) 45%, rgba(5, 5, 8, 0.72) 100%);
   transform: none;
 }
 
-/* PWA：Loading 文案在底栏上方，渐变不盖住全屏动效 */
+/* PWA：Loading 文案在底栏上方 */
 .pwa-mode .preparing-spline-page__overlay:not(.preparing-spline-page__overlay--error) {
   bottom: max(5.5rem, calc(var(--pwa-bottom-nav-height, 72px) + 0.75rem));
-  background: linear-gradient(180deg, transparent 0%, rgba(5, 5, 8, 0.2) 50%, rgba(5, 5, 8, 0.58) 100%);
 }
 
-/* 勿与 session-prep-loading 叠用 — 后者会铺满全屏黑底 */
 .preparing-spline-page__overlay.session-prep-loading {
   min-height: 0;
-  background: linear-gradient(180deg, transparent 0%, rgba(5, 5, 8, 0.35) 45%, rgba(5, 5, 8, 0.72) 100%);
 }
 
 .preparing-spline-page__overlay--error {

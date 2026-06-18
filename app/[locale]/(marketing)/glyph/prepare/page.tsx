@@ -38,7 +38,7 @@ function GlyphPrepareInner() {
   }, []);
 
   function handleProfileSelected(profileId: string) {
-    router.push(`/glyph/draw?profile=${encodeURIComponent(profileId)}`);
+    router.push(`/glyph/preparing/${encodeURIComponent(profileId)}`);
   }
 
   function handleBack() {

@@ -78,13 +78,6 @@ export function isInvalidInputStyleReading(r: Record<string, unknown>): boolean 
   );
 }
 
-function countWords(input: string): number {
-  return input
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean).length;
-}
-
 /** Map legacy JSON keys (situation/meaning/wisdom/actions) into current UI schema. */
 export function normalizeLegacyReadingShape(raw: Record<string, unknown>): Record<string, unknown> {
   const o: Record<string, unknown> = { ...raw };
@@ -247,21 +240,6 @@ export function validateAndFinalizeReading(
       duration_estimate: r.exploration?.duration_estimate ?? "5 minutes",
       is_solo: r.exploration?.is_solo ?? true,
     };
-  }
-
-  if (opts.locale === "en" && !r.invalid_input) {
-    const totalWords =
-      countWords(r.wind_category_blurb) +
-      countWords(r.classical_voice) +
-      countWords(r.meaning_for_question) +
-      countWords(r.hidden_tension) +
-      countWords(r.your_moment) +
-      countWords(r.exploration?.text ?? "") +
-      countWords(r.reflection_question);
-    if (totalWords < 520 || totalWords > 900) {
-      throw new Error(`LLM response word count out of range: ${totalWords}`);
-    }
-    r.metadata = { ...(r.metadata ?? {}), word_count: totalWords };
   }
 
   return r;

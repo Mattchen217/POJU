@@ -56,6 +56,7 @@ export function MatchAnalyzingPage() {
   const [pendingMatchId, setPendingMatchId] = useState<string | null>(null);
   const [baziComplete, setBaziComplete] = useState(false);
   const [isReturningUser, setIsReturningUser] = useState(false);
+  const [skipBaziAtDelivery, setSkipBaziAtDelivery] = useState(false);
   const [waitVisualDone, setWaitVisualDone] = useState(false);
   const [productComplete, setProductComplete] = useState(false);
   const matchAnalyzeStartedRef = useRef(false);
@@ -200,8 +201,8 @@ export function MatchAnalyzingPage() {
 
   const waitFlow = useDeliveryWaitPhase({
     product: "match",
-    skipBazi: false,
-    isReturningUser,
+    skipBazi: skipBaziAtDelivery,
+    isReturningUser: !skipBaziAtDelivery && isReturningUser,
     baziComplete,
     productComplete,
     enabled: isBaziPhase || isProductPhase,
@@ -265,8 +266,9 @@ export function MatchAnalyzingPage() {
     }
 
     setIsReturningUser(true);
+    setSkipBaziAtDelivery(true);
     setBaziComplete(true);
-    setPhase("base-cache");
+    setPhase("analyzing");
   }, [router, t]);
 
   async function afterBaseAComplete() {
@@ -367,6 +369,7 @@ export function MatchAnalyzingPage() {
           type="button"
           onClick={() => {
             setError(null);
+            setSkipBaziAtDelivery(false);
             setBasePrepKey((k) => k + 1);
             startedRef.current = false;
             void beginPipeline();

@@ -27,6 +27,9 @@ export type UseDeliveryWaitPhaseOptions = {
   /** Depth-② finished */
   productComplete: boolean;
   enabled?: boolean;
+  /** Profile-select prep: bazi scene only (10s min), no bridge/product */
+  baziOnly?: boolean;
+  onBaziRitualComplete?: () => void;
   onExitComplete?: () => void;
 };
 
@@ -49,6 +52,8 @@ export function useDeliveryWaitPhase(opts: UseDeliveryWaitPhaseOptions): Deliver
     baziComplete,
     productComplete,
     enabled = true,
+    baziOnly = false,
+    onBaziRitualComplete,
     onExitComplete,
   } = opts;
 
@@ -62,8 +67,11 @@ export function useDeliveryWaitPhase(opts: UseDeliveryWaitPhaseOptions): Deliver
   const [exiting, setExiting] = useState(false);
   const [baziMinMet, setBaziMinMet] = useState(!isReturningUser || skipBazi);
   const exitCalledRef = useRef(false);
+  const baziRitualCalledRef = useRef(false);
   const onExitCompleteRef = useRef(onExitComplete);
+  const onBaziRitualCompleteRef = useRef(onBaziRitualComplete);
   onExitCompleteRef.current = onExitComplete;
+  onBaziRitualCompleteRef.current = onBaziRitualComplete;
 
   useEffect(() => {
     if (enabled) return;
@@ -74,6 +82,7 @@ export function useDeliveryWaitPhase(opts: UseDeliveryWaitPhaseOptions): Deliver
     setExiting(false);
     setBaziMinMet(!isReturningUser || skipBazi);
     exitCalledRef.current = false;
+    baziRitualCalledRef.current = false;
   }, [enabled, initialPhase, isReturningUser, skipBazi]);
 
   useEffect(() => {
@@ -95,9 +104,17 @@ export function useDeliveryWaitPhase(opts: UseDeliveryWaitPhaseOptions): Deliver
       return;
     }
 
+    if (baziOnly) {
+      if (!baziRitualCalledRef.current) {
+        baziRitualCalledRef.current = true;
+        onBaziRitualCompleteRef.current?.();
+      }
+      return;
+    }
+
     setPhase("bridge");
     setStepIndex(0);
-  }, [enabled, phase, baziComplete, baziMinMet, product]);
+  }, [enabled, phase, baziComplete, baziMinMet, product, baziOnly]);
 
   /** bridge → product: must be a separate effect so bazi→bridge re-render does not cancel this timer */
   useEffect(() => {
