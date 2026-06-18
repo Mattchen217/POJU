@@ -92,35 +92,42 @@ export function useDeliveryWaitPhase(opts: UseDeliveryWaitPhaseOptions): Deliver
 
     if (product === "poju") {
       setPhase("converge");
-      setShowConverge(true);
       return;
     }
 
     setPhase("bridge");
     setStepIndex(0);
+  }, [enabled, phase, baziComplete, baziMinMet, product]);
+
+  /** bridge → product: must be a separate effect so bazi→bridge re-render does not cancel this timer */
+  useEffect(() => {
+    if (!enabled || phase !== "bridge") return;
+
     const bridgeTimer = window.setTimeout(() => {
       setShowFlash(true);
       window.setTimeout(() => setShowFlash(false), WAIT_FLASH_MS);
       setPhase("product");
       setStepIndex(0);
     }, WAIT_BRIDGE_HOLD_MS);
+
     return () => window.clearTimeout(bridgeTimer);
-  }, [enabled, phase, baziComplete, baziMinMet, product]);
+  }, [enabled, phase]);
 
   useEffect(() => {
     if (!enabled || phase !== "product") return;
     if (!productComplete) return;
     setPhase("converge");
-    setShowConverge(true);
   }, [enabled, phase, productComplete]);
 
+  /** converge → exit: separate from product→converge so state updates do not cancel the timer */
   useEffect(() => {
-    if (!enabled || phase !== "converge" || !showConverge) return;
+    if (!enabled || phase !== "converge") return;
+    setShowConverge(true);
     const timer = window.setTimeout(() => {
       setExiting(true);
     }, WAIT_CONVERGE_MS);
     return () => window.clearTimeout(timer);
-  }, [enabled, phase, showConverge]);
+  }, [enabled, phase]);
 
   useEffect(() => {
     if (!enabled || !exiting || exitCalledRef.current) return;

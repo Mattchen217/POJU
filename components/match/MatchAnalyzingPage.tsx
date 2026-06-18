@@ -200,6 +200,7 @@ export function MatchAnalyzingPage() {
 
   const waitFlow = useDeliveryWaitPhase({
     product: "match",
+    skipBazi: false,
     isReturningUser,
     baziComplete,
     productComplete,
@@ -384,6 +385,7 @@ export function MatchAnalyzingPage() {
   return (
     <DeliveryWaitFrame
       wait={waitFlow}
+      isReturningUser={isReturningUser}
       error={error}
       onRefund={() => router.push("/match")}
     />

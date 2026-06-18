@@ -127,6 +127,7 @@ function SyncroResultPageContent() {
 
   const waitFlow = useDeliveryWaitPhase({
     product: "syncro",
+    skipBazi: true,
     baziComplete: true,
     productComplete: liveHourReady,
     enabled: stage === "ready" && session !== null && !showMainView,
