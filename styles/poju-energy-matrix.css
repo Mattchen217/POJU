@@ -18,8 +18,8 @@
   --e: #e7c06a;
   --m: #d6dbe6;
   --water: #6ea6ee;
-  --glass: rgba(17, 14, 28, 0.46);
-  --glass-2: rgba(255, 255, 255, 0.07);
+  --glass: rgba(14, 11, 24, 0.9);
+  --glass-2: rgba(22, 18, 36, 0.82);
   --glass-blur: blur(28px) saturate(180%);
   --edge: inset 0 1px 0 0 rgba(255, 255, 255, 0.16), inset 0 0 0 1px rgba(255, 255, 255, 0.07),
     inset 0 -1px 0 0 rgba(0, 0, 0, 0.25);
@@ -112,7 +112,9 @@
   margin-top: 0;
   position: relative;
   border-radius: 28px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.025));
+  /* Dark solid base — backdrop-filter is enhancement only (iOS Reduce Transparency / no blur) */
+  background-color: rgba(10, 8, 18, 0.96);
+  background-image: linear-gradient(180deg, rgba(28, 22, 46, 0.9), rgba(10, 8, 18, 0.96));
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   box-shadow: var(--edge), 0 40px 100px rgba(3, 2, 8, 0.66);
@@ -197,7 +199,7 @@
 }
 
 .pem .tcard {
-  background: var(--glass);
+  background-color: var(--glass);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border-radius: 18px;
@@ -1759,4 +1761,39 @@
   text-transform: uppercase;
   color: #f4d493;
   margin-bottom: 10px;
+}
+
+/* iOS「降低透明度」/ 不支持 backdrop-filter 时 — 去掉毛玻璃，保留深色实底 */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .pem .device,
+  .pem .tcard,
+  .pem .radarpanel,
+  .pem .dialpanel,
+  .pem .ro:not(.ro--wuxing),
+  .pem-wuxing-card,
+  .pem-wuxing__right .ro--wuxing,
+  .pem .pillars {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .pem .device,
+  .pem .tcard,
+  .pem .radarpanel,
+  .pem .dialpanel,
+  .pem .ro:not(.ro--wuxing),
+  .pem-wuxing-card,
+  .pem-wuxing__right .ro--wuxing,
+  .pem .pillars {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background-color: rgba(12, 10, 20, 0.98) !important;
+    background-image: none !important;
+  }
+
+  .pem .device {
+    background-color: #0b0912 !important;
+  }
 }

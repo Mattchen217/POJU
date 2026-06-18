@@ -5,11 +5,16 @@
   max-width: none;
   margin: 0;
   min-height: 100dvh;
-  background: transparent;
   color: var(--pchat-ink, #ece9f4);
   box-sizing: border-box;
   overflow-x: clip;
   overflow-y: visible;
+  /* Match POJU chat cosmic base so matrix glass never blurs a light/empty layer */
+  background-color: #080510;
+  background-image:
+    radial-gradient(ellipse 100% 72% at 8% -4%, rgba(124, 92, 255, 0.22) 0%, transparent 56%),
+    radial-gradient(ellipse 70% 55% at 96% 2%, rgba(212, 175, 55, 0.08) 0%, transparent 48%),
+    linear-gradient(150deg, #20133a 0%, #150d27 46%, #080510 100%);
 }
 
 .pwa-mode .tool-preview-page {

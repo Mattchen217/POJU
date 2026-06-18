@@ -26,7 +26,11 @@ import {
   hasBaseAnalysisPayload,
   normalizeBaseAnalysisInput,
 } from "@/lib/llm/prompts/base-analysis-context";
-import { generateGlyphFullReading } from "@/lib/oracle/api";
+import {
+  clearInFlightGlyphReading,
+  generateGlyphFullReading,
+  GLYPH_READING_CLIENT_TIMEOUT_MS,
+} from "@/lib/oracle/api";
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 import { PojuDeepDiveCTA } from "@/components/cross-product/PojuDeepDiveCTA";
 import { ReturnToPojuCTA } from "@/components/poju/ReturnToPojuCTA";
@@ -40,6 +44,10 @@ import type { CSSProperties } from "react";
 import { LEVEL_META, type SignData } from "@/types/oracle";
 
 type Stage = "loading" | "paywall" | "base-prep" | "base-cache" | "glyph-gen" | "ready" | "error";
+
+/** After resume from background, retry glyph fetch if still running longer than this. */
+const GLYPH_GEN_VISIBILITY_RETRY_MS = 75_000;
+const GLYPH_GEN_WATCHDOG_MS = GLYPH_READING_CLIENT_TIMEOUT_MS + 15_000;
 
 export function GlyphReadingPage() {
   const params = useParams();
@@ -62,16 +70,40 @@ export function GlyphReadingPage() {
   const cacheSplineStartedRef = useRef(0);
   const startedRef = useRef(false);
   const mountedRef = useRef(true);
+  const stageRef = useRef<Stage>("loading");
+  const glyphGenAbortRef = useRef<AbortController | null>(null);
+  const glyphGenStartedAtRef = useRef(0);
+  const glyphGenTokenRef = useRef(0);
+  const visibilityRetryUsedRef = useRef(false);
+  const glyphWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    stageRef.current = stage;
+  }, [stage]);
+
+  const clearGlyphWatchdog = useCallback(() => {
+    if (glyphWatchdogRef.current) {
+      clearTimeout(glyphWatchdogRef.current);
+      glyphWatchdogRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      glyphGenAbortRef.current?.abort();
+      clearGlyphWatchdog();
     };
-  }, []);
+  }, [clearGlyphWatchdog]);
 
   const runGlyphGeneration = useCallback(
-    async (sessionProfileId: string, sessionQuestion: string, sign: SignData) => {
+    async (
+      sessionProfileId: string,
+      sessionQuestion: string,
+      sign: SignData,
+      opts?: { force?: boolean },
+    ) => {
       setLoaderStep("analyzing");
       setStage("glyph-gen");
 
@@ -85,6 +117,25 @@ export function GlyphReadingPage() {
 
       setProfile(stored);
 
+      glyphGenAbortRef.current?.abort();
+      clearGlyphWatchdog();
+      const controller = new AbortController();
+      glyphGenAbortRef.current = controller;
+      glyphGenStartedAtRef.current = Date.now();
+      const runToken = ++glyphGenTokenRef.current;
+
+      glyphWatchdogRef.current = setTimeout(() => {
+        if (stageRef.current !== "glyph-gen") return;
+        if (runToken !== glyphGenTokenRef.current) return;
+        controller.abort();
+        clearInFlightGlyphReading(readingId);
+        if (mountedRef.current) {
+          setError("glyph_reading_client_timeout");
+          setLoaderStep("error");
+          setStage("error");
+        }
+      }, GLYPH_GEN_WATCHDOG_MS);
+
       try {
         const { reading: content, meta } = await generateGlyphFullReading({
           sign,
@@ -94,7 +145,13 @@ export function GlyphReadingPage() {
           reading_id: readingId,
           user_profile: stored.user_profile,
           base_analysis: stored.base_analysis,
+          signal: controller.signal,
+          force: opts?.force,
         });
+
+        clearGlyphWatchdog();
+
+        if (runToken !== glyphGenTokenRef.current || !mountedRef.current) return;
 
         console.info("[glyph-reading] DeepSeek full reading complete", {
           reading_id: readingId,
@@ -128,13 +185,37 @@ export function GlyphReadingPage() {
 
         setStage("ready");
       } catch (e) {
+        clearGlyphWatchdog();
+        if (runToken !== glyphGenTokenRef.current || !mountedRef.current) return;
         setError(e instanceof Error ? e.message : String(e));
         setLoaderStep("error");
         setStage("error");
       }
     },
-    [locale, readingId, t],
+    [clearGlyphWatchdog, locale, readingId, t],
   );
+
+  useEffect(() => {
+    function onVisibilityChange() {
+      if (document.visibilityState !== "visible") return;
+      if (stageRef.current !== "glyph-gen") return;
+      if (visibilityRetryUsedRef.current) return;
+      const elapsed = Date.now() - glyphGenStartedAtRef.current;
+      if (elapsed < GLYPH_GEN_VISIBILITY_RETRY_MS) return;
+
+      visibilityRetryUsedRef.current = true;
+      clearInFlightGlyphReading(readingId);
+      glyphGenAbortRef.current?.abort();
+
+      const session = loadGlyphDrawSession(readingId);
+      if (!session) return;
+      const q = session.pending_question?.trim() || session.question;
+      void runGlyphGeneration(session.profile_id, q, session.sign, { force: true });
+    }
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, [readingId, runGlyphGeneration]);
 
   const beginUnlockPipeline = useCallback(async () => {
     if (!readingId) {
@@ -165,6 +246,7 @@ export function GlyphReadingPage() {
     setError(null);
     setLoaderStep("loading");
     setStage("loading");
+    visibilityRetryUsedRef.current = false;
 
     const stored = await getStoredProfile(session.profile_id);
     if (!stored?.user_profile) {
@@ -306,6 +388,9 @@ export function GlyphReadingPage() {
             currentStep={loaderStep}
             error={error}
             onRetry={() => {
+              visibilityRetryUsedRef.current = false;
+              clearInFlightGlyphReading(readingId);
+              glyphGenAbortRef.current?.abort();
               startedRef.current = false;
               void beginUnlockPipeline();
             }}

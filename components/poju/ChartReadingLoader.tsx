@@ -96,6 +96,7 @@ function formatChartLoaderError(error: string, t: (key: string) => string): stri
   }
   if (
     error === "BASE_ANALYSIS_CLIENT_TIMEOUT" ||
+    error === "glyph_reading_client_timeout" ||
     /llm_batch_timeout|AbortError|timed?\s*out/i.test(error)
   ) {
     return t("error_timeout");

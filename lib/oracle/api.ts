@@ -13,6 +13,41 @@ import type { SignData, UserInput, FullReading } from "@/types/oracle";
 const inFlightFullReadingRequests = new Map<string, Promise<FullReading>>();
 const inFlightGlyphReadingRequests = new Map<string, Promise<GlyphReadingServiceResult>>();
 
+/** Slightly above server maxDuration (300s) + JSON parse slack. */
+export const GLYPH_READING_CLIENT_TIMEOUT_MS = 320_000;
+
+export function clearInFlightGlyphReading(readingId: string): void {
+  inFlightGlyphReadingRequests.delete(`glyph:${readingId}`);
+}
+
+function mergeAbortSignals(...signals: AbortSignal[]): AbortSignal {
+  const active = signals.filter((s) => !s.aborted);
+  if (active.length === 0) return AbortSignal.abort();
+  if (active.length === 1) return active[0]!;
+  if (typeof AbortSignal.any === "function") {
+    return AbortSignal.any(active);
+  }
+  const controller = new AbortController();
+  for (const signal of active) {
+    if (signal.aborted) {
+      controller.abort();
+      break;
+    }
+    signal.addEventListener("abort", () => controller.abort(), { once: true });
+  }
+  return controller.signal;
+}
+
+function glyphReadingFetchSignal(external?: AbortSignal): AbortSignal {
+  const timeout =
+    typeof AbortSignal.timeout === "function"
+      ? AbortSignal.timeout(GLYPH_READING_CLIENT_TIMEOUT_MS)
+      : undefined;
+  if (external && timeout) return mergeAbortSignals(external, timeout);
+  if (timeout) return timeout;
+  return external ?? AbortSignal.abort();
+}
+
 export async function generateFullReading({
   sign,
   userInput,
@@ -88,6 +123,8 @@ export async function generateGlyphFullReading({
   reading_id,
   user_profile,
   base_analysis,
+  signal,
+  force,
 }: {
   sign: SignData;
   question: string;
@@ -96,6 +133,9 @@ export async function generateGlyphFullReading({
   reading_id?: string;
   user_profile: UserProfile;
   base_analysis: unknown;
+  signal?: AbortSignal;
+  /** When true, skip in-flight dedupe (e.g. after background resume retry). */
+  force?: boolean;
 }): Promise<GlyphReadingServiceResult> {
   if (reading_id) {
     const cached = loadCachedGlyphReadingResult(reading_id);
@@ -116,15 +156,29 @@ export async function generateGlyphFullReading({
     ? `glyph:${reading_id}`
     : `glyph:${JSON.stringify({ sign_number: sign.sign_number, profile_id, question: question.trim() })}`;
 
-  const pending = inFlightGlyphReadingRequests.get(requestKey);
-  if (pending) return pending;
+  if (!force) {
+    const pending = inFlightGlyphReadingRequests.get(requestKey);
+    if (pending) return pending;
+  }
 
   const requestPromise = (async () => {
-    const response = await fetch("/api/oracle/full-reading", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(requestPayload),
-    });
+    let response: Response;
+    try {
+      response = await fetch("/api/oracle/full-reading", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestPayload),
+        signal: glyphReadingFetchSignal(signal),
+      });
+    } catch (e) {
+      if (e instanceof Error && e.name === "AbortError") {
+        throw new Error("glyph_reading_client_timeout");
+      }
+      if (e instanceof Error && /load failed|failed to fetch/i.test(e.message)) {
+        throw new Error("NETWORK_LOAD_FAILED");
+      }
+      throw e;
+    }
 
     if (!response.ok) {
       let errorMessage = `API error: ${response.status}`;
