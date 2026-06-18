@@ -1,0 +1,184 @@
+/* Cognitive threshold copy — reuses existing preparing overlay layout */
+
+.reading-ritual-panel {
+  max-width: 28rem;
+  margin: 0 auto;
+  padding: 0 1.25rem 1.5rem;
+  text-align: left;
+}
+
+.reading-ritual-panel__value {
+  margin: 0 0 1.25rem;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.reading-ritual-panel__title {
+  margin: 0 0 0.875rem;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.reading-ritual-panel__checks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  margin: 0 0 1.125rem;
+  padding: 0;
+  list-style: none;
+}
+
+.reading-ritual-panel__check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.82);
+  cursor: pointer;
+}
+
+.reading-ritual-panel__check input {
+  margin-top: 0.2rem;
+  flex-shrink: 0;
+  accent-color: #c4b5fd;
+}
+
+.reading-ritual-panel__select-all {
+  margin: 0 0 1rem;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 0.8125rem;
+  color: rgba(196, 181, 253, 0.9);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.reading-ritual-panel__cta {
+  display: block;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(196, 181, 253, 0.35);
+  border-radius: 0.625rem;
+  background: rgba(139, 92, 246, 0.22);
+  color: #f5f3ff;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s ease, background 0.2s ease;
+}
+
+.reading-ritual-panel__cta:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.reading-ritual-panel__cta:not(:disabled):hover {
+  background: rgba(139, 92, 246, 0.32);
+}
+
+.reading-ritual-panel__cta--waiting {
+  animation: reading-ritual-pulse 2s ease-in-out infinite;
+}
+
+@keyframes reading-ritual-pulse {
+  0%,
+  100% {
+    opacity: 0.65;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.reading-ritual-panel__skip {
+  display: block;
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 0.25rem;
+  border: none;
+  background: none;
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.45);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.reading-ritual-teaser {
+  margin: 0.75rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.72);
+  font-style: italic;
+}
+
+.reading-ritual-decoder {
+  margin: 0 0 1.25rem;
+  padding: 0.875rem 1rem;
+  border-radius: 0.625rem;
+  border: 1px solid rgba(196, 181, 253, 0.2);
+  background: rgba(139, 92, 246, 0.08);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.reading-ritual-decoder__row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.reading-ritual-decoder__dismiss {
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 1.125rem;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.45);
+  cursor: pointer;
+}
+
+.reading-ritual-decoder__hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.8125rem;
+  color: rgba(196, 181, 253, 0.85);
+}
+
+.reading-ritual-fade-in {
+  animation: reading-ritual-fade-in 700ms ease forwards;
+}
+
+@keyframes reading-ritual-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.poju-unlock-report-panel__text--decode .poju-unlock-report-panel__para {
+  margin: 0 0 1rem;
+  padding: 0.5rem 0.625rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.poju-unlock-report-panel__text--decode .poju-unlock-report-panel__para:hover {
+  background: rgba(139, 92, 246, 0.12);
+}
+
+.poju-unlock-report-panel__text--decode .poju-unlock-report-panel__para:focus-visible {
+  outline: 2px solid rgba(196, 181, 253, 0.5);
+  outline-offset: 2px;
+}

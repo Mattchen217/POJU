@@ -24,11 +24,14 @@ export const MATCH_HOW_WORKS_SPLINE_SHELL_OFFSET_Y = "-2%";
 
 /** Analyzing wait — pull back + center so cyan/green wisps are not edge-clipped. */
 export const MATCH_ANALYZING_ORBS_SCENE_PAN_X = "72px";
+/** Desktop browser — nudge right so midpoint between orbs aligns with copy below. */
+export const MATCH_ANALYZING_ORBS_SCENE_PAN_X_DESKTOP = "108px";
 export const MATCH_ANALYZING_ORBS_SCENE_SCALE = 0.94;
 export const MATCH_ANALYZING_ORBS_DISPLAY_SCALE = 0.46;
 export const MATCH_ANALYZING_ORBS_SHELL_HEIGHT_RATIO = 1.62;
 export const MATCH_ANALYZING_ORBS_SHELL_WIDTH_RATIO = 1.55;
 export const MATCH_ANALYZING_ORBS_SHELL_OFFSET_X = "-1.5%";
+export const MATCH_ANALYZING_ORBS_SHELL_OFFSET_X_DESKTOP = "1%";
 export const MATCH_ANALYZING_ORBS_SHELL_OFFSET_Y = "-2%";
 
 /** Smaller zoom = wider framing (smaller orbs in frame). */

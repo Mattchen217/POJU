@@ -27,7 +27,7 @@ export const GLYPH_GUANYIN_INTERPRETATION_METHOD = `# 观音百签 · 解签法�
 2. **气势与五风类**：参照签文意象与 pojulife **五风类**——顺风类重「顺势、承恩、时机已熟」；戒守类重「戒、守、转圆」；静水类重「待时、内省、勿躁」。**勿用恐吓语气**；**禁止**写「上签/中签/下签」等等第名。
 3. **典故与人物**：若签有历史人物或仙佛典故（如钟离成道、孔子在陈），签意往往落在「处境像谁」「该如何自处」——必须点明典故与**用户问题的对应**，不可只讲故事。
 4. **解曰 / 仙机 / 白话释义**（若原文提供）：这些是历代归纳的「签眼」，优先吸收其判断方向，再用现代语言说出。
-5. **问事而断**：百签为**一事一签**——只回应用户所问之事，不把签扩写成人生总论；若问题含混，在 meaning 段点出「签在提醒你聚焦哪一层」。
+5. **问事而断**：百签为**一事一签**——只回应用户所问之事，不把签扩写成人生总论；若问题含混，在 synthesis 段点出「签在提醒你聚焦哪一层」。
 
 ## 2. 签文与命理如何合参（双视角）
 
@@ -47,7 +47,7 @@ export const GLYPH_GUANYIN_INTERPRETATION_METHOD = `# 观音百签 · 解签法�
 
 禁止泛泛「你的命局不错」而不落上述任一项。
 
-## 2.2 签文意象引用 — **至少用 2 种**（签文看此事 / classical_voice / meaning_for_question）
+## 2.2 签文意象引用 — **至少用 2 种**（签文看此事 / classical_voice / synthesis）
 
 引用本次完整签文原文时，**至少**采用下列方式中的两种（禁止只复述 modern_translation 英文摘要）：
 
@@ -137,6 +137,26 @@ export const GLYPH_EXPLORATION_GUIDANCE = `# exploration 微练习 — 多样性
 
 长度：100–160 字（中文）/ 对应英文词数；\`duration_estimate\` 与正文一致。`;
 
+export const GLYPH_LAYOUT_CONTRACT = `# 输出板块分工（严格遵守，杜绝重复）
+
+整篇解读的板块各司其职，**同一件事只在一个板块说**：
+
+| 板块 | 角色 | 是否复述用户问题 |
+|------|------|------------------|
+| question_response（关于你的问题） | **唯一直答**：先复述问题一次，再用 2–4 句给出"镜子照出的方向"——答案先行（TL;DR） | ✅ 唯一可复述处 |
+| wind_category_blurb / classical_voice | 签的气势与意象本身 | ❌ 不提问题 |
+| 命理看此事 | **依据·命盘**：日主/大运/用神/五行 看此人对此事的天然倾向与盲点 | ❌ 不复述，直接分析 |
+| 签文看此事 | **依据·签象**：签文原型对此事照出的意象 | ❌ 不复述 |
+| 两者印证或冲突 | 两面镜子如何印证/张力 | ❌ 不复述 |
+| synthesis（整合解读） | **深化而非重说**：把命盘×签象×问题三者拧成一个比 question_response 更深的洞见，落到"关键变量 + 着力点"。**不得再复述问题、不得重复 question_response 的话** | ❌ 严禁复述 |
+| hidden_tension | 盲点/暗流 | ❌ |
+| your_moment | 当前年度能量节律 + 能量层面的"时机窗口感"（合规，不报日期） | ❌ |
+| exploration / reflection_question | 一个微练习 + 一个反思问句 | ❌ |
+
+## 两条硬规则
+1. **复述问题只在 question_response 出现一次**；其余板块默认用户已知问题，直接展开各自角色。
+2. **question_response = 答案先行的精炼直答；synthesis = 依据先行的深度整合**。synthesis 必须比 question_response 多出新角度（如具体关键变量、能量时机窗口、下一步着力点），**不能是 question_response 的扩写或同义重复**。`;
+
 /**
  * 用户可见 JSON 字符串的最高优先级输出合规（白榜）。
  * System / 输入数据可含术语供模型理解；禁止词仅约束【输出】字符串字段。
@@ -220,28 +240,33 @@ export const GLYPH_OUTPUT_WORDING = `# Glyph 措辞统一（输出 JSON 字符�
 ❌ 「这支签告诉你…」 / 「签文意象…」 / 「The sign suggests…」 / 「this lot means…」
 ✅ 「这个 Glyph 映照出…」 / 「Glyph 文的核心意象…」 / 「This Glyph reflects…」 / 「The Glyph text points to…」`;
 
-import { buildComplianceTranslationPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
 import { buildOutputPolicyForGlyph } from "@/lib/llm/compliance/output-policy";
 
-/** 防线 1 — 术语软化：八字专有术语禁裸写；五行作性格能量可保留 */
-export const GLYPH_OUTPUT_DEFENSE_TERMS = `# 防线 1 — 术语软化（OUTPUT POLICY · 输出强制）
+/** 防线 1 — 命理术语：深度交付允许使用，须可读、有解释 */
+export const GLYPH_OUTPUT_DEFENSE_TERMS = `# 防线 1 — 命理术语（深度交付 · 允许 + 就近解释）
 
 ${buildOutputPolicyForGlyph()}
 
-${buildComplianceTranslationPromptBlock()}
+## 深度交付正文（本 JSON）— 命理术语**允许使用**
+日主 / 大运 / 用神 / 忌神 / 干支 / 纳音 / 神煞 / 十神 / 五行生克等，是 pojulife 的文化差异化——**可以写**，但须：
+- **就近用大白话解释一次**，不堆砌、不甩术语墙
+  · ✓ 「你的核心是乙木——柔韧、需要支点，像藤蔓在关系里向上生长」
+  · ✗ 「乙木日主，坐巳火，大运行至庚申，伤官见官」（连串裸术语、无解释）
+- 一段里术语密度有节制；服务的是"让用户读懂自己"，不是炫技
 
-⛔ **JSON 字符串禁止裸写**（须翻译为 profile / core nature / life cycle / balancing element）：
-- 干支组合：乙木、丁酉、丙午 等
-- 十神：食神、七杀、正官 等
-- 命理框架词：日主、大运、流年、用神、忌神、八字、四柱、命盘、chart / birth chart
-- **「贵人」**及命理语境贵人运
+## 收银面 / 英文网关可见处（非本 JSON）
+能量矩阵标签、付费墙前界面仍走合规商业语域（shensha-i18n-map 等）——**本解读 JSON 不受"禁裸写"约束**。
 
-✓ **允许保留**（作性格 / 能量模型）：
-- **Wood / Fire / Earth / Metal / Water** 及 金木水火土
-- Yin-Yang / 阴阳
-- 「your Wood-like nature」「 excess Fire energy — balance with Earth」
+## 六条合规红线（与术语无关 · 必须守）
+1. **不预测**：不报具体日期/年份、不断言将发生的具体事件
+2. **不恐吓**：不渲染灾祸/诅咒式表述
+3. **不下定论**：不说"一定会/绝不会""命中注定""宜婚/不宜婚""必成/必败"
+4. **不承诺超自然结果**：不招财/催运/避邪/lucky direction/护身符
+5. **不医疗诊疗**：不开方/诊脉/病灶/复诊
+6. **主动权交还用户**：给方向、条件、能量窗口与可执行动作，不替命运拍板
 
-内部 structured 仅供分析，输出须遵守 OUTPUT POLICY。`;
+✓ **五行 Wood/Fire/Earth/Metal/Water** 及 金木水火土 — 照常使用
+✓ **阴阳 / Yin-Yang** — 照常使用`;
 
 /** 防线 2 — 叙事抽象：输出禁签诗原文与具体历史人物 */
 export const GLYPH_OUTPUT_DEFENSE_NARRATIVE = `# 防线 2 — 叙事抽象 + Glyph 文处理（输出强制 · 中英文同等）
@@ -288,7 +313,7 @@ export const GLYPH_OUTPUT_ICHING_FRAMEWORK = `# 《易经》框架（必须自�
 把原型隐喻锚定在《易经》(Book of Changes / I Ching) 的**变化哲学**：
 - 开头或关键段落自然引用《易经》框架，体现东方深度与可信度
 - 用易经**哲学概念**：变化之道、时位、阴阳平衡、否极泰来
-- 自然融入，不生硬（不必每句都提；classical_voice / meaning_for_question 至少一处体现）
+- 自然融入，不生硬（不必每句都提；classical_voice / synthesis 至少一处体现）
 
 【允许（易经作哲学）】
 
@@ -357,19 +382,16 @@ export const GLYPH_OUTPUT_DEFENSE_PREDICTION = `# 防线 3 — 预测规避（�
 /** 生成每段前的三道自检（prompt 末尾） */
 export const GLYPH_OUTPUT_SELF_CHECK = `# 生成前自检（写每一段字符串前必做 · 不合格则重写该段）
 
-1. **有没有干支 / 十神 / 日主 / chart / Day Master / Yong Shen / 八字 / 四柱？有没有「贵人」？**
-   → 翻译成 profile / core nature / life cycle / balancing element（防线 1）
-   → **五行 Wood/Fire/Earth/Metal/Water 作性格 — 可保留**
-2. **有没有签诗原文 / 具体历史人物 / 英文故事情节 / 引号格言？**（a warrior who… / ancient wisdom: '…' / "classical verse"）
-   → 抽象成「经典东方叙事原型」主题词；不引原句、不展开情节（防线 2）
-3. **有没有预测句？**（何时 / 将会 / 会遇到 / will meet / will be seen / going to + 未来事件 / next month + 断言）
-   → 整句改成【当下时机评估】；用现在时 / 条件句 / present readiness，不断言未来（防线 3）
-4. **有没有自然融入《易经》/ I Ching 哲学框架？**（变化之道 / 时位 / 阴阳平衡 — 非起卦占卜）
-   → classical_voice 或 meaning_for_question 至少一处体现；禁止 hexagram casting / the I Ching predicts
-5. **有没有用 Glyph 指代？有没有「签 / sign / lot」？** archetypal metaphor 是否只在开篇出现一次？
-   → 之后全文用 Glyph / this Glyph / Glyph 文 / the Glyph text（见 GLYPH_OUTPUT_WORDING）
+1. **命理术语是否可读？** 用了日主/大运/用神/干支等时，是否**就近有大白话解释**？有没有术语墙？
+2. **有没有签诗原文 / 具体历史人物 / 英文故事情节 / 引号格言？**（签文看此事可摘 1–2 句原文；其他字段意象化）
+   → 不引整段情节、不展开故事（防线 2）
+3. **有没有预测句？**（何时 / 将会 / 会遇到 / will meet / going to + 未来事件）
+   → 改成当下时机评估 / present readiness（防线 3）
+4. **有没有自然融入《易经》/ I Ching 哲学框架？** synthesis 或 classical_voice 至少一处
+5. **板块是否重复？** question_response 是否唯一复述问题？synthesis 是否深化、未重复 question_response？
+6. **有没有用 Glyph 指代？有没有「签 / sign / lot」？** archetypal metaphor 是否只在开篇出现一次？
 
-五段自检全部通过后再写入 JSON。`;
+六段自检全部通过后再写入 JSON。`;
 
 /**
  * 用户可见文案的品牌规则（最高优先级之一）。
@@ -377,7 +399,7 @@ export const GLYPH_OUTPUT_SELF_CHECK = `# 生成前自检（写每一段字符�
  */
 export const GLYPH_OUTPUT_BRANDING = `# ⚠️ 输出品牌（用户可见文案 · 严格遵守 · 与 OUTPUT FRAMING 一并执行）
 
-以下规则适用于 JSON 中**所有字符串字段**（含 命理双视角、classical_voice、meaning_for_question 等）。违反即视为不合格输出。
+以下规则适用于 JSON 中**所有字符串字段**（含 命理双视角、classical_voice、synthesis 等）。违反即视为不合格输出。
 
 ## 必须使用的称呼（输出白榜）
 

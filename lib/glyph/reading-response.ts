@@ -95,7 +95,13 @@ export function normalizeLegacyReadingShape(raw: Record<string, unknown>): Recor
     if (typeof o.wisdom === "string" && o.wisdom.trim()) o.classical_voice = o.wisdom;
   }
   if (typeof o.meaning_for_question !== "string" || !String(o.meaning_for_question).trim()) {
-    if (typeof o.meaning === "string" && o.meaning.trim()) o.meaning_for_question = o.meaning;
+    if (typeof o.synthesis === "string" && o.synthesis.trim()) o.meaning_for_question = o.synthesis;
+    else if (typeof o.meaning === "string" && o.meaning.trim()) o.meaning_for_question = o.meaning;
+  }
+  if (typeof o.synthesis !== "string" || !String(o.synthesis).trim()) {
+    if (typeof o.meaning_for_question === "string" && o.meaning_for_question.trim()) {
+      o.synthesis = o.meaning_for_question;
+    }
   }
   const actions = Array.isArray(o.actions) ? o.actions.map((x) => String(x ?? "").trim()).filter(Boolean) : [];
   if (typeof o.hidden_tension !== "string" || !String(o.hidden_tension).trim()) {

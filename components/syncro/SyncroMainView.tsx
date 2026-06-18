@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { HourProgressBar } from "@/components/syncro/HourProgressBar";
+import { ReadingDecoderBanner } from "@/components/reading-ritual/ReadingDecoderBanner";
 import { SyncroPermissionGate } from "@/components/syncro/SyncroPermissionGate";
 import { ThreeModeToggle } from "@/components/syncro/ThreeModeToggle";
 import { useOrientation } from "@/components/syncro/SyncroOrientationProvider";
@@ -287,6 +288,10 @@ export function SyncroMainView({
           onReady={handlePermissionGateReady}
         />
       ) : null}
+
+      <div className="px-4 pt-2">
+        <ReadingDecoderBanner variant="others" />
+      </div>
 
       {session.task_response ? (
         <div className="syncro-task-response">

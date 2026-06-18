@@ -9,8 +9,7 @@ import { glyphWindAccentStyle } from "@/lib/glyph/glyph-wind-accents";
 import { GlyphReport } from "@/components/glyph/GlyphReport";
 import { ToolPaywallInline } from "@/components/cross-product/ToolPaywallInline";
 import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
-import { ChartReadingLoader } from "@/components/poju/ChartReadingLoader";
-import { PreparingSplineShell } from "@/components/poju/PreparingSplineShell";
+import { DeliveryWaitFrame } from "@/components/wait-ritual/DeliveryWaitFrame";
 import { StreamingAnalysisView } from "@/components/poju/StreamingAnalysisView";
 import { saveGlyphReadingToArchive } from "@/lib/archive/archive-service";
 import { markArchiveUnread } from "@/lib/archive/archive-unread";
@@ -33,12 +32,11 @@ import {
 } from "@/lib/oracle/api";
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 import { PojuDeepDiveCTA } from "@/components/cross-product/PojuDeepDiveCTA";
+import { ReadingDecoderBanner } from "@/components/reading-ritual/ReadingDecoderBanner";
+import { ReadingRitualWaitingPanel } from "@/components/reading-ritual/ReadingRitualWaitingPanel";
 import { ReturnToPojuCTA } from "@/components/poju/ReturnToPojuCTA";
 import { extractGlyphSummary } from "@/lib/poju/tool-result-summary";
-import {
-  PREPARING_MIN_SPLINE_CACHE_MS,
-  waitRemainingMinSpline,
-} from "@/lib/poju/preparing-spline-timing";
+import { useDeliveryWaitPhase } from "@/lib/wait-ritual/use-delivery-wait-phase";
 import { cn } from "@/lib/utils/classnames";
 import type { CSSProperties } from "react";
 import { LEVEL_META, type SignData } from "@/types/oracle";
@@ -67,7 +65,12 @@ export function GlyphReadingPage() {
   const [error, setError] = useState<string | null>(null);
   const [unlockBusy, setUnlockBusy] = useState(false);
   const [basePrepKey, setBasePrepKey] = useState(0);
-  const cacheSplineStartedRef = useRef(0);
+  const [baziComplete, setBaziComplete] = useState(false);
+  const [productComplete, setProductComplete] = useState(false);
+  const [isReturningUser, setIsReturningUser] = useState(false);
+  const [waitVisualDone, setWaitVisualDone] = useState(false);
+  const [ritualReleased, setRitualReleased] = useState(false);
+  const glyphProductStartedRef = useRef(false);
   const startedRef = useRef(false);
   const mountedRef = useRef(true);
   const stageRef = useRef<Stage>("loading");
@@ -92,15 +95,6 @@ export function GlyphReadingPage() {
       glyphWatchdogRef.current = null;
     }
   }, []);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-      glyphGenAbortRef.current?.abort();
-      clearGlyphWatchdog();
-    };
-  }, [clearGlyphWatchdog]);
 
   const runGlyphGeneration = useCallback(
     async (
@@ -167,6 +161,7 @@ export function GlyphReadingPage() {
         });
 
         setReading(content);
+        setProductComplete(true);
 
         if (!content.invalid_input) {
           const windCategory = LEVEL_META[sign.level]?.display_name ?? sign.level;
@@ -187,8 +182,6 @@ export function GlyphReadingPage() {
             console.error("[glyph-reading] Archive save failed:", e);
           }
         }
-
-        setStage("ready");
       } catch (e) {
         clearGlyphWatchdog();
         if (runToken !== glyphGenTokenRef.current || !mountedRef.current) return;
@@ -199,6 +192,43 @@ export function GlyphReadingPage() {
     },
     [clearGlyphWatchdog, locale, readingId, t],
   );
+
+  const isWaitStage =
+    stage === "base-prep" || stage === "base-cache" || stage === "glyph-gen";
+
+  const waitFlow = useDeliveryWaitPhase({
+    product: "glyph",
+    isReturningUser,
+    baziComplete,
+    productComplete,
+    enabled: isWaitStage,
+    onExitComplete: () => setWaitVisualDone(true),
+  });
+
+  useEffect(() => {
+    if (waitVisualDone && ritualReleased) {
+      setStage("ready");
+    }
+  }, [waitVisualDone, ritualReleased]);
+
+  useEffect(() => {
+    if (waitFlow.phase !== "product") return;
+    if (glyphProductStartedRef.current) return;
+    const session = loadGlyphDrawSession(readingId);
+    if (!session || !profileId) return;
+    glyphProductStartedRef.current = true;
+    setStage("glyph-gen");
+    const q = session.pending_question?.trim() || session.question || question;
+    void runGlyphGeneration(profileId, q, session.sign);
+  }, [waitFlow.phase, profileId, readingId, question, runGlyphGeneration]);
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+      glyphGenAbortRef.current?.abort();
+      clearGlyphWatchdog();
+    };
+  }, [clearGlyphWatchdog]);
 
   useEffect(() => {
     function onVisibilityChange() {
@@ -272,24 +302,16 @@ export function GlyphReadingPage() {
     if (unlockBase.baseReportText) {
       setBaseReportText(unlockBase.baseReportText);
       updateGlyphDrawSession(readingId, { base_report_text: unlockBase.baseReportText });
-      cacheSplineStartedRef.current = Date.now();
+      setIsReturningUser(true);
+      setBaziComplete(true);
       setStage("base-cache");
       return;
     }
 
+    setIsReturningUser(false);
+    setBaziComplete(false);
     setStage("base-prep");
   }, [locale, readingId, router, t]);
-
-  useEffect(() => {
-    if (stage !== "base-cache") return;
-    void (async () => {
-      await waitRemainingMinSpline(cacheSplineStartedRef.current, PREPARING_MIN_SPLINE_CACHE_MS);
-      const session = loadGlyphDrawSession(readingId);
-      if (!session) return;
-      const q = session.pending_question?.trim() || session.question;
-      await runGlyphGeneration(session.profile_id, q, session.sign);
-    })();
-  }, [stage, readingId, runGlyphGeneration]);
 
   useEffect(() => {
     if (startedRef.current) return;
@@ -333,97 +355,78 @@ export function GlyphReadingPage() {
     );
   }
 
-  if (stage === "base-prep" && profile && profileId) {
-    const session = loadGlyphDrawSession(readingId);
+  if (isWaitStage && profile) {
     return (
-      <PreparingSplineShell blockInteraction>
-        <BaseAnalysisStreamPreparing
-          key={basePrepKey}
-          profile={profile}
-          profileId={profileId}
-          locale={locale}
-          logLabel="GlyphUnlockPreparing"
-          hideStreamView
-          reportOutputLanguageFromUi
-          onComplete={async (displayText) => {
-            setBaseReportText(displayText);
-            updateGlyphDrawSession(readingId, { base_report_text: displayText });
-            const refreshed = await getStoredProfile(profileId);
-            if (refreshed) setProfile(refreshed);
-            const q = session?.pending_question?.trim() || session?.question || question;
-            if (session) {
-              await runGlyphGeneration(profileId, q, session.sign);
-            }
-          }}
-          onError={(err) => {
-            setError(err);
-            setStage("error");
-          }}
-        />
-        <ChartReadingLoader
-          profile={profile}
-          currentStep="analyzing"
-          error={null}
-          onRetry={() => {}}
-          onRefund={() => router.push("/glyph")}
-          locale={locale}
-          variant="portrait"
-          hintOverride={t("reading_loading_hint")}
-        />
-      </PreparingSplineShell>
-    );
-  }
-
-  if (stage === "loading" || stage === "base-cache" || stage === "glyph-gen") {
-    if (!profile && loaderStep !== "error" && stage === "loading") {
-      return (
-        <PreparingSplineShell blockInteraction>
-          <div className="preparing-spline-page__overlay" role="status">
-            <p className="preparing-spline-page__status">{t("reading_loading")}</p>
-          </div>
-        </PreparingSplineShell>
-      );
-    }
-
-    if (profile) {
-      return (
-        <PreparingSplineShell blockInteraction>
-          <ChartReadingLoader
-            profile={profile}
-            currentStep={loaderStep}
-            error={error}
-            onRetry={() => {
-              visibilityRetryUsedRef.current = false;
-              clearInFlightGlyphReading(readingId);
-              glyphGenAbortRef.current?.abort();
-              startedRef.current = false;
-              void beginUnlockPipeline();
-            }}
-            onRefund={() => router.push("/glyph")}
-            locale={locale}
-            hintOverride={t("reading_loading_hint")}
+      <DeliveryWaitFrame
+        wait={waitFlow}
+        isReturningUser={isReturningUser}
+        error={error}
+        onRetry={() => {
+          visibilityRetryUsedRef.current = false;
+          clearInFlightGlyphReading(readingId);
+          glyphGenAbortRef.current?.abort();
+          glyphProductStartedRef.current = false;
+          setBaziComplete(false);
+          setProductComplete(false);
+          setWaitVisualDone(false);
+          setRitualReleased(false);
+          startedRef.current = false;
+          void beginUnlockPipeline();
+        }}
+        onRefund={() => router.push("/glyph")}
+        hiddenWork={
+          stage === "base-prep" ? (
+            <BaseAnalysisStreamPreparing
+              key={basePrepKey}
+              profile={profile}
+              profileId={profileId}
+              locale={locale}
+              logLabel="GlyphUnlockPreparing"
+              hideStreamView
+              reportOutputLanguageFromUi
+              onComplete={async (displayText) => {
+                setBaseReportText(displayText);
+                updateGlyphDrawSession(readingId, { base_report_text: displayText });
+                const refreshed = await getStoredProfile(profileId);
+                if (refreshed) setProfile(refreshed);
+                setBaziComplete(true);
+              }}
+              onError={(err) => {
+                setError(err);
+                setStage("error");
+              }}
+            />
+          ) : null
+        }
+        ritualPanel={
+          <ReadingRitualWaitingPanel
+            product="glyph"
+            ready={productComplete}
+            onReleased={() => setRitualReleased(true)}
           />
-        </PreparingSplineShell>
-      );
-    }
-
-    return (
-      <div className="glyph-error-page">
-        <p>{t("reading_failed")}</p>
-        {error ? <p className="error-detail">{error}</p> : null}
-        <div className="glyph-error-actions">
-          <button type="button" className="glyph-primary-btn" onClick={() => void beginUnlockPipeline()}>
-            {t("reading_retry")}
-          </button>
-          <Link href="/glyph" className="glyph-link-muted">
-            {t("back_to_glyph")}
-          </Link>
-        </div>
-      </div>
+        }
+      />
     );
   }
 
-  if (stage === "error") {
+  if (stage === "loading" && !profile) {
+    return (
+      <DeliveryWaitFrame
+        wait={{
+          phase: "bazi",
+          scene: "/spline/Analyzing-scene.splinecode",
+          glowColor: "#8AB4FF",
+          stepIndex: 0,
+          showFlash: false,
+          showConverge: false,
+          exiting: false,
+          copyPhase: "bazi",
+        }}
+      />
+    );
+  }
+
+  if (stage === "error" || (stage === "loading" && error)) {
     return (
       <div className="glyph-error-page">
         <p>{t("reading_failed")}</p>
@@ -455,7 +458,7 @@ export function GlyphReadingPage() {
 
   return (
     <div
-      className={cn("glyph-reading-page browser-flow-page")}
+      className={cn("glyph-reading-page browser-flow-page reading-ritual-fade-in")}
       style={glyphWindAccentStyle(glyph.level) as CSSProperties}
     >
       <ReturnToPojuCTA
@@ -464,6 +467,7 @@ export function GlyphReadingPage() {
         resultData={glyphSummary}
         variant="banner"
       />
+      <ReadingDecoderBanner variant="others" />
       <GlyphCanvas glyph={glyph} animated={false} compact />
       {reportText ? (
         <section className="glyph-base-report">

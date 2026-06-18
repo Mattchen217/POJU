@@ -9,6 +9,9 @@ import type { SyncroLlmProgress } from "@/lib/syncro/syncro-llm-progress";
 import { SyncroLlmProgressBar } from "@/components/syncro/SyncroLlmProgressBar";
 import { PojuDeepDiveCTA } from "@/components/cross-product/PojuDeepDiveCTA";
 import { ReturnToPojuCTA } from "@/components/poju/ReturnToPojuCTA";
+import { ReadingDecoderBanner } from "@/components/reading-ritual/ReadingDecoderBanner";
+import { ReadingRitualWaitingPanel } from "@/components/reading-ritual/ReadingRitualWaitingPanel";
+import { DeliveryWaitFrame } from "@/components/wait-ritual/DeliveryWaitFrame";
 import { SyncroMainView } from "@/components/syncro/SyncroMainView";
 import { SyncroPreparingLiveHour } from "@/components/syncro/SyncroPreparingLiveHour";
 import { extractSyncroSummary } from "@/lib/poju/tool-result-summary";
@@ -34,6 +37,7 @@ import { HOUR_ORDER } from "@/lib/syncro/hour-order";
 import { getOrderedHourPeriodsFromSession } from "@/lib/syncro/syncro-view-helpers";
 import { dispatchSyncroMatrixPatch } from "@/lib/syncro/syncro-llm-events";
 import { resolveSyncroLlmContext } from "@/lib/syncro/syncro-llm-context-storage";
+import { useDeliveryWaitPhase } from "@/lib/wait-ritual/use-delivery-wait-phase";
 import type { HourPeriod, SyncroSession } from "@/lib/syncro/types";
 
 import "@/styles/syncro.css";
@@ -64,6 +68,8 @@ function SyncroResultPageContent() {
   });
   const [highlightKeys, setHighlightKeys] = useState<Set<string>>(() => new Set());
   const [retryingHour, setRetryingHour] = useState<HourPeriod | null>(null);
+  const [ritualReleased, setRitualReleased] = useState(false);
+  const [waitVisualDone, setWaitVisualDone] = useState(false);
 
   const handleSessionUpdate = useCallback((next: SyncroSession) => {
     setSession(next);
@@ -118,6 +124,16 @@ function SyncroResultPageContent() {
 
   const liveHourReady =
     stage === "ready" && session !== null && isSyncroCompassGateReady(session);
+
+  const showMainView = liveHourReady && ritualReleased && waitVisualDone;
+
+  const waitFlow = useDeliveryWaitPhase({
+    product: "syncro",
+    baziComplete: true,
+    productComplete: liveHourReady,
+    enabled: stage === "ready" && session !== null && !showMainView,
+    onExitComplete: () => setWaitVisualDone(true),
+  });
 
   /** Optional on-page SSE; cloud batches (Inngest) run regardless via useSyncroInngestJob. */
   const backgroundStream = useSyncroBackgroundStream({
@@ -272,29 +288,46 @@ function SyncroResultPageContent() {
         }
       >
         <SyncroLlmProgressBar progress={llmProgress} />
-        {liveHourReady ? (
-          <SyncroMainView
-            session={session}
-            locale={locale}
-            highlightMatrixKeys={highlightKeys}
-            llmProgress={llmProgress}
-            liveHourReady
-            backgroundStream={backgroundStream}
-            onRetryHour={handleRetryHour}
-            retryingHour={retryingHour}
-            onTimelineComplete={handleTimelineComplete}
-          />
+        {showMainView ? (
+          <div className="reading-ritual-fade-in">
+            <SyncroMainView
+              session={session}
+              locale={locale}
+              highlightMatrixKeys={highlightKeys}
+              llmProgress={llmProgress}
+              liveHourReady
+              backgroundStream={backgroundStream}
+              onRetryHour={handleRetryHour}
+              retryingHour={retryingHour}
+              onTimelineComplete={handleTimelineComplete}
+            />
+          </div>
         ) : (
-          <SyncroPreparingLiveHour
-            session={session}
-            locale={locale}
-            realtimePeriod={timelineLivePeriod}
-            progress={llmProgress}
-            onSessionUpdate={handleSessionUpdate}
+          <DeliveryWaitFrame
+            wait={waitFlow}
+            hiddenWork={
+              session ? (
+                <SyncroPreparingLiveHour
+                  session={session}
+                  locale={locale}
+                  realtimePeriod={timelineLivePeriod}
+                  progress={llmProgress}
+                  onSessionUpdate={handleSessionUpdate}
+                  headless
+                />
+              ) : null
+            }
+            ritualPanel={
+              <ReadingRitualWaitingPanel
+                product="syncro"
+                ready={liveHourReady}
+                onReleased={() => setRitualReleased(true)}
+              />
+            }
           />
         )}
       </div>
-      {liveHourReady ? (
+      {showMainView ? (
         <div className="px-4 pb-8">
           <PojuDeepDiveCTA productId="syncro" result_id={sessionId} result_data={syncroSummary} />
           <ReturnToPojuCTA

@@ -1977,6 +1977,92 @@
       "syncro": "Was musst du tun, und wo? Aufgabe unten eingeben und senden."
     }
   },
+  "wait_ritual": {
+    "bazi": {
+      "value": "Was dich erwartet, ist ein Verhaltensbauplan, der aus einer 3.000-jährigen Raum-Zeit-Matrix und moderner Psychologie gewebt wurde. Er liest sich wie ein Spiegel – die Worte tragen ein Echo in sich. Lies ihn langsam, in einem Moment der Stille; jedes Zurückkehren zeigt dir ein anderes Selbst.",
+      "subtitle": "Deine Persönlichkeitsstruktur und Energie werden erfasst. Dauer: ca. 3–5 Minuten.",
+      "subtitle_cached": "Gespeichertes Profil wird geladen. Einen Moment, bitte…",
+      "steps": {
+        "0": "Deinen Geburtsmoment kalibrieren…",
+        "1": "Deine Persönlichkeitsstruktur erfassen…",
+        "2": "Deine Urnatur und Energiestruktur analysieren…",
+        "3": "Dein Persönlichkeitsmuster und deine Schlüsselenergie bestimmen…",
+        "4": "Lebensphasen und aktuellen Zyklus kartieren…"
+      }
+    },
+    "bridge": {
+      "glyph": "Dein Persönlichkeitsprofil und deine Energiestruktur sind vollständig. Nun wird dieses Profil mit deinem Glyph verwoben…",
+      "match": "Dein Persönlichkeitsprofil ist vollständig. Nun wird dein Profil mit ihrem zusammengeführt, um zu sehen, wie ihr einander begegnet…"
+    },
+    "glyph": {
+      "value": "Was dich erwartet, ist ein Spiegel – geschliffen aus einer 3.000-jährigen Tradition der Selbstreflexion und moderner Psychologie. Er liefert dir keine fertige Antwort, sondern zeigt dir dein jetziges Ich. Es lohnt sich, ein zweites Mal hinzusehen, mit mehr Zeit.",
+      "subtitle": "Dein Profil wird mit deinem Glyph verwoben. Dauer: ca. 3–5 Minuten.",
+      "steps": {
+        "0": "Die Lebensphase lesen, in der du dich gerade befindest…",
+        "1": "Dem Glyph lauschen, das du aktiviert hast…",
+        "2": "Das Glyph mit deinem Profil verweben…",
+        "3": "Das Spiegelbild Gestalt annehmen lassen…"
+      }
+    },
+    "match": {
+      "value": "Was dich erwartet, ist eine Energiekarte – gezeichnet aus 3.000 Jahren Beziehungsweisheit und moderner Psychologie –, die zeigt, wie zwei Menschen einander wirklich begegnen. Lies sie langsam; die wahre Erkenntnis entfaltet sich erst beim zweiten Blick.",
+      "subtitle": "Es wird erfasst, wie eure beiden Energien aufeinandertreffen. Dauer: ca. 3–5 Minuten.",
+      "steps": {
+        "0": "Die Urnatur des ersten Profils lesen…",
+        "1": "Die Urnatur des zweiten Profils lesen…",
+        "2": "Spüren, wie eure Energien einander nähren oder reiben…",
+        "3": "Kartieren, wo eure Lebensphasen im Gleichklang schwingen…",
+        "4": "Die Form eurer Verbindung zeichnen…"
+      }
+    },
+    "syncro": {
+      "value": "Was dich erwartet, ist eine Timing-Karte – kalibriert aus einem 3.000-jährigen östlichen Framework und moderner Entscheidungswissenschaft. Kein Einheitskalender, sondern Zeitfenster, die sich mit deinem Vorhaben bewegen. Um sie zu verstehen, gilt es, sich ganz auf die Gegenwart auszurichten.",
+      "subtitle": "Timing und Ausrichtung für dein Vorhaben werden abgestimmt. Dauer: ca. 1–2 Minuten.",
+      "steps": {
+        "0": "Dein Vorhaben auf das Raum-Zeit-Feld projizieren…",
+        "1": "Die Zeitfenster der kommenden Stunden scannen…",
+        "2": "Die Ausrichtungen auf jedes Fenster abstimmen…",
+        "3": "Deine kraftvollsten Zeitfenster in den Fokus rücken…"
+      }
+    }
+  },
+  "reading_ritual": {
+    "teaser": {
+      "poju": "Als Nächstes kommt kein Horoskop — sondern ein Bauplan, der Zeit zum Lesen verdient.",
+      "glyph": "Als Nächstes kommt keine schnelle Antwort — sondern ein Spiegel, zu dem man zurückkehrt.",
+      "match": "Als Nächstes kommt keine Punktzahl — sondern eine Karte, wie zwei Menschen aufeinandertreffen.",
+      "syncro": "Als Nächstes kommt kein Glückstag — sondern eine Zeitkarte für deine Aufgabe."
+    },
+    "value_frame": {
+      "poju": "POJU liefert keine Fast-Food-Vorhersagen. Was ankommt, ist ein Verhaltensbauplan aus einer dreitausendjährigen Raum-Zeit-Matrix und moderner Psychologie. Er liest sich wie ein Spiegel mit Nachhall — nimm dir in den nächsten 30 Tagen ruhige Momente; bei jedem Zurückkehren triffst du eine leicht andere Version von dir.",
+      "glyph": "Das ist kein schnelles Horoskop. Deine Glyph-Lesung ist ein präziser Spiegel aus dreitausendjähriger Symboltradition und moderner Psychologie. Ihre Zeilen laden zum Verweilen ein — einmal die Form, einmal das, was sie in dir berührt.",
+      "match": "Das ist keine Kompatibilitätsnote. Es ist eine energetische Karte, wie zwei Menschen wirklich aufeinandertreffen — aus einem dreitausendjährigen Rahmen und relationaler Psychologie. Langsam lesen, zusammen oder allein; die Einsicht kommt oft beim zweiten Durchgang.",
+      "syncro": "Das ist kein Glückstage-Kalender. Es ist eine feine Karte, wie Zeit und Richtung sich mit deiner Aufgabe bewegen — lies die Fenster, dann spüre, welches zu deinem Moment passt."
+    },
+    "gate": {
+      "title": {
+        "poju": "Bevor du deine Lesung öffnest",
+        "glyph": "Bevor du dein Glyph öffnest",
+        "match": "Bevor du deinen Kompatibilitätsbericht öffnest",
+        "syncro": "Bevor du deine Zeitkarte öffnest"
+      },
+      "items": {
+        "0": "Ich bin an einem ruhigen Ort, mit ein paar Minuten für mich.",
+        "1": "Ich lese mit offenem, neugierigem Geist.",
+        "2": "Ich verstehe: Die Worte sind ein Anstoß — die Einsicht entsteht beim Lesen."
+      },
+      "select_all": "Alle auswählen",
+      "cta": "Den Ausrichtungsraum betreten →",
+      "cta_waiting": "Deine Lesung wird ausgerichtet…",
+      "skip": "Ohne Ritual fortfahren"
+    },
+    "decoder": {
+      "poju": "Das ist eine dichte, vielschichtige Lesung — etwas geistige und emotionale Reibung beim ersten Durchgang ist normal und gehört dazu. In den nächsten 30 Tagen tippe auf jede Zeile, die du entfalten willst — POJU übersetzt sie in klare Sprache und in dein echtes Leben.",
+      "others": "Diese Lesung lohnt einen zweiten Blick — ihre Schichten öffnen sich mit der Zeit. Soll sie Zeile für Zeile in klarer Sprache auf dein Leben bezogen werden? Setz im tiefen Dialog von POJU fort.",
+      "poju_hint": "Tippe auf einen Absatz in deinem Bericht, damit POJU ihn entfaltet.",
+      "dismiss": "Schließen"
+    }
+  },
   "base_analysis_view": {
     "title": "Grundlagen-Auswertung (Volltext)",
     "close": "Schließen",

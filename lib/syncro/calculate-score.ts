@@ -60,6 +60,14 @@ export interface ScoreFactors {
     bonus: number;
     subtotal: number;
   };
+  xi_ji_adjustment?: {
+    direction_bonus: number;
+    hour_bonus: number;
+    subtotal: number;
+  };
+  wuxing_balance_adjustment?: {
+    subtotal: number;
+  };
   total_score: number;
 }
 
@@ -70,6 +78,9 @@ export function calculateCombinationScore(input: {
   direction: DirectionId;
   combinationTime: Date;
   taskKeywords: TaskKeywords;
+  xiShenWuXings?: WuXing[];
+  jiShenWuXings?: WuXing[];
+  wuxingStrength?: Record<string, number>;
 }): ScoreFactors {
   const lunar = Lunar.fromDate(input.combinationTime);
   const qimenPan = QimenUtil.create(lunar);
@@ -110,7 +121,7 @@ export function calculateCombinationScore(input: {
       sanQiBonus +
       kongWangPenalty +
       favoredDoorBonus) *
-    0.35;
+    0.3;
 
   const dirWuXing = palaceInfo.element as WuXing;
   const yongShenRelation = getWuXingRelation(
@@ -135,19 +146,34 @@ export function calculateCombinationScore(input: {
     dirWuXing
   );
   const dayMasterScore = scoreForDayMaster(dayMasterRelation);
-  const dayMasterSubtotal = dayMasterScore * 0.1 * 3;
+  const dayMasterSubtotal = dayMasterScore * 0.15 * 3;
 
   const directionBonusMap =
     TASK_TO_DIRECTION_BONUS[input.taskKeywords.primary_type] ?? {};
   const taskDirectionBonus = directionBonusMap[input.direction] ?? 0;
   const taskSubtotal = taskDirectionBonus * 0.1 * 3;
 
+  const { directionBonus, hourBonus } = scoreXiJiAdjustment({
+    dirWuXing,
+    hourStemWuXing,
+    xiShenWuXings: input.xiShenWuXings,
+    jiShenWuXings: input.jiShenWuXings,
+  });
+  const xiJiSubtotal = (directionBonus + hourBonus) * 0.25;
+
+  const wuxingBalanceSubtotal = scoreWuxingBalanceAdjustment({
+    dirWuXing,
+    wuxingStrength: input.wuxingStrength,
+  });
+
   const totalScore =
     qimenSubtotal +
     yongShenSubtotal +
     hourSubtotal +
     dayMasterSubtotal +
-    taskSubtotal;
+    taskSubtotal +
+    xiJiSubtotal +
+    wuxingBalanceSubtotal;
 
   return {
     qimen_signals: {
@@ -181,8 +207,70 @@ export function calculateCombinationScore(input: {
       bonus: taskDirectionBonus,
       subtotal: taskSubtotal,
     },
+    xi_ji_adjustment:
+      directionBonus !== 0 || hourBonus !== 0
+        ? {
+            direction_bonus: directionBonus,
+            hour_bonus: hourBonus,
+            subtotal: xiJiSubtotal,
+          }
+        : undefined,
+    wuxing_balance_adjustment:
+      wuxingBalanceSubtotal !== 0
+        ? { subtotal: wuxingBalanceSubtotal }
+        : undefined,
     total_score: Math.round(totalScore * 100) / 100,
   };
+}
+
+function scoreXiJiAdjustment(input: {
+  dirWuXing: WuXing;
+  hourStemWuXing: WuXing;
+  xiShenWuXings?: WuXing[];
+  jiShenWuXings?: WuXing[];
+}): { directionBonus: number; hourBonus: number } {
+  let directionBonus = 0;
+  let hourBonus = 0;
+
+  for (const xi of input.xiShenWuXings ?? []) {
+    const dirRel = getWuXingRelation(xi, input.dirWuXing);
+    if (dirRel === "same" || dirRel === "shengSelf") directionBonus += 4;
+    const hourRel = getWuXingRelation(xi, input.hourStemWuXing);
+    if (hourRel === "same" || hourRel === "shengSelf") hourBonus += 3;
+  }
+
+  for (const ji of input.jiShenWuXings ?? []) {
+    const dirRel = getWuXingRelation(ji, input.dirWuXing);
+    if (dirRel === "same" || dirRel === "keOther") directionBonus -= 5;
+    const hourRel = getWuXingRelation(ji, input.hourStemWuXing);
+    if (hourRel === "same" || hourRel === "keOther") hourBonus -= 4;
+  }
+
+  return { directionBonus, hourBonus };
+}
+
+function scoreWuxingBalanceAdjustment(input: {
+  dirWuXing: WuXing;
+  wuxingStrength?: Record<string, number>;
+}): number {
+  const strength = input.wuxingStrength;
+  if (!strength) return 0;
+
+  const entries = Object.entries(strength) as Array<[WuXing, number]>;
+  if (!entries.length) return 0;
+
+  const avg = entries.reduce((sum, [, v]) => sum + v, 0) / entries.length;
+  const weak = entries.filter(([, v]) => v <= avg * 0.85);
+  if (!weak.length) return 0;
+
+  let bonus = 0;
+  for (const [wx] of weak) {
+    if (getWuXingRelation(wx, input.dirWuXing) === "shengOther") {
+      bonus += 3;
+    }
+  }
+
+  return bonus * 0.15;
 }
 
 function scoreForDayMaster(relation: WuXingRelation): number {

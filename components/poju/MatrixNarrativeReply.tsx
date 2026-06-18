@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 
+import { ReadingRitualTeaser } from "@/components/reading-ritual/ReadingRitualTeaser";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
 import {
   getMatrixSynopsisPlainText,
@@ -50,6 +51,7 @@ export function MatrixNarrativeReply({ payload, locale }: Props) {
         {display.synopsis.archetype ? <p>{display.synopsis.archetype}</p> : null}
         {display.synopsis.friction ? <p>{display.synopsis.friction}</p> : null}
         {display.synopsis.prompt ? <p>{display.synopsis.prompt}</p> : null}
+        <ReadingRitualTeaser product="poju" />
       </>
     );
   }
@@ -60,6 +62,7 @@ export function MatrixNarrativeReply({ payload, locale }: Props) {
         {display.synopsis.archetype ? <p>{renderRichText(display.synopsis.archetype)}</p> : null}
         {display.synopsis.friction ? <p>{renderRichText(display.synopsis.friction)}</p> : null}
         {synopsisPrompt ? <p>{synopsisPrompt}</p> : null}
+        <ReadingRitualTeaser product="poju" />
       </>
     );
   }

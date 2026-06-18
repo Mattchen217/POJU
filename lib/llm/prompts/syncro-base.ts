@@ -150,14 +150,16 @@ export const SYNCRO_QIMEN_INTERPRETATION_METHOD = `# 奇门遁甲简化运用（
 3. **八卦方位 + 用神 + 用户命局**：该方向对此刻任务是顺、逆、静、险
 4. **综合 → Current 等级**：映射到 5 档 Current（见 SYNCRO_TIMESPACE_FRAMEWORK）
 
-## 命局必引（detailed_advice / rationale 中 — 用户可见须软化）
+## 命局必引（detailed_advice / rationale / task_response 中 — 用户可见须软化）
 
-每个组合的 detailed_advice 或 rationale **至少一处**关联用户 profile：
-- **core nature**（五行气质倾向 — Wood/Fire 等 **可写**）
-- **当前 life cycle** 主题
-- **balancing element** 与此时段、此方向的互动
+每个组合的 detailed_advice 或 rationale **至少一处**关联用户**本地命局背景**中的具体一项：
+- **core nature / balancing element**（五行气质 — Wood/Fire 等 **可写**）
+- **当前 life cycle / 大运流年主题**（内化后写人生阶段能量，不写干支）
+- **喜忌倾向 / 关键神煞**（行动、迁移、时机相关 — 译为能量语言）
+- **旺衰倾向**（某能量偏弱/偏旺时，解释为何此时此向补不足或避有余）
 
 禁止 96 格全部同一等级或同一套空话。禁 chart / Day Master / Yong Shen 裸写。
+**必须让用户感到「这是按我的命局算的」**，不是通用黄历。
 
 ## 用户可见禁忌
 
@@ -234,10 +236,12 @@ export const SYNCRO_TASK_RESPONSE_FOCUS = `# ⭐ 必须为用户的任务给出�
 ## 合规接法
 - ✓ 「就你要做的『任务』，最顺的时机窗口是【时辰段】、朝【方向】——这组合让你【任务相关的状态，如气场稳/头脑清醒】」。
 - ✓ 「若错过这些窗口，次优是【…】；要避开的是【低 level 时段】，因为那时你容易【…】」。
+- ✓ **why / avoid 至少引用一项命局依据**（用神所喜方位、忌神所在、大运流年主题、关键神煞或旺衰倾向），与已计算的高 level 窗口一致。
 - ✗ 禁：报具体公历日期吉凶、承诺"必成"、写八门/奇门/用神等术语、预测结果。
 
 ## 底线
 - task_response 必须**点名最佳的 1–3 个时机窗口 + 方向**（来自已算 open_current），并给出**用户任务视角**的依据（大白话，不堆术语）。
+- **why / avoid 至少引用一项本地命局依据**（见「用户命局背景」），与矩阵高 level 窗口一致；给「窗口+方向+为何适合你这件事」，不报公历日期吉凶、不承诺必成。
 - 明确、不打太极；但不报日期吉凶、不承诺成功。`;
 
 /** Syncro matrix + hour-stream prompt 共用的输出防线（顺序固定） */

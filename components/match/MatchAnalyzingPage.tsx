@@ -4,9 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { MatchAnalyzingLoader } from "@/components/match/MatchAnalyzingLoader";
+import { DeliveryWaitFrame } from "@/components/wait-ritual/DeliveryWaitFrame";
+import { ReadingRitualWaitingPanel } from "@/components/reading-ritual/ReadingRitualWaitingPanel";
 import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
-import { ChartReadingLoader } from "@/components/poju/ChartReadingLoader";
-import { PreparingSplineShell } from "@/components/poju/PreparingSplineShell";
 import { useRouter } from "@/i18n/navigation";
 import { saveMatchToArchive } from "@/lib/archive/archive-service";
 import { registerPendingDeliveryArchive } from "@/lib/archive/archive-delivery-pending";
@@ -24,21 +24,14 @@ import {
 import { isMatchPreviewSession } from "@/lib/match/match-preview-unlock";
 import { wrapProfileForMatrix } from "@/lib/match/parse-profile-for-matrix";
 import {
-  SYNERGY_TYPES,
   type MatchReport,
-  type SynergyType,
 } from "@/lib/match/types";
 import type { StoredProfileData } from "@/lib/db/poju-db";
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
-import {
-  PREPARING_MIN_SPLINE_CACHE_MS,
-  waitRemainingMinSpline,
-} from "@/lib/poju/preparing-spline-timing";
+import { useDeliveryWaitPhase } from "@/lib/wait-ritual/use-delivery-wait-phase";
 import { recordUsage } from "@/lib/syncro/device-usage";
 
 import "@/styles/match.css";
-
-const STEP_INTERVAL_MS = 3500;
 
 type Phase =
   | "gate"
@@ -55,18 +48,20 @@ export function MatchAnalyzingPage() {
   const tChart = useTranslations("chart_loader");
 
   const [phase, setPhase] = useState<Phase>("gate");
-  const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [previewLine, setPreviewLine] = useState<string | null>(null);
   const [profileA, setProfileA] = useState<StoredProfileData | null>(null);
   const [profileB, setProfileB] = useState<StoredProfileData | null>(null);
   const [aId, setAId] = useState("");
   const [bId, setBId] = useState("");
   const [basePrepKey, setBasePrepKey] = useState(0);
-  const cacheSplineStartedRef = useRef(0);
+  const [ritualReleased, setRitualReleased] = useState(false);
+  const [pendingMatchId, setPendingMatchId] = useState<string | null>(null);
+  const [baziComplete, setBaziComplete] = useState(false);
+  const [isReturningUser, setIsReturningUser] = useState(false);
+  const [waitVisualDone, setWaitVisualDone] = useState(false);
+  const [productComplete, setProductComplete] = useState(false);
+  const matchAnalyzeStartedRef = useRef(false);
   const startedRef = useRef(false);
-
-  const isZh = locale.startsWith("zh");
 
   const steps = useMemo(
     () => [
@@ -80,14 +75,6 @@ export function MatchAnalyzingPage() {
     ],
     [t],
   );
-
-  useEffect(() => {
-    if (phase !== "analyzing") return;
-    const interval = window.setInterval(() => {
-      setStep((s) => (s + 1) % steps.length);
-    }, STEP_INTERVAL_MS);
-    return () => window.clearInterval(interval);
-  }, [phase, steps.length]);
 
   const runAnalyze = useCallback(async () => {
     try {
@@ -112,10 +99,6 @@ export function MatchAnalyzingPage() {
       const profileBForMatrix = wrapProfileForMatrix(bRow.user_profile, bRow.base_analysis);
 
       const matrix = calculateCompatibilityMatrix({ profileA: profileAForMatrix, profileB: profileBForMatrix });
-      const synergyInfo =
-        SYNERGY_TYPES[matrix.synergy_type as SynergyType] ?? SYNERGY_TYPES.adaptive_balance;
-      const synergyName = isZh ? synergyInfo.name_zh : synergyInfo.name_en;
-      setPreviewLine(t("preview_synergy", { type: synergyName }));
 
       const response = await fetch("/api/match/analyze", {
         method: "POST",
@@ -200,13 +183,39 @@ export function MatchAnalyzingPage() {
       sessionStorage.removeItem("match_session_type");
       clearMatchPreviewSession();
 
-      router.push(`/match/result/${matchId}`);
+      setPendingMatchId(matchId);
+      setProductComplete(true);
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : String(e);
       setError(message);
       setPhase("error");
     }
-  }, [aId, bId, isZh, locale, router, t]);
+  }, [aId, bId, locale, t]);
+
+  useEffect(() => {
+    if (!pendingMatchId || !waitVisualDone || !ritualReleased) return;
+    router.push(`/match/result/${pendingMatchId}`);
+  }, [pendingMatchId, waitVisualDone, ritualReleased, router]);
+
+  const isBaziPhase = phase === "base-a" || phase === "base-b" || phase === "base-cache";
+  const isProductPhase = phase === "analyzing";
+
+  const waitFlow = useDeliveryWaitPhase({
+    product: "match",
+    isReturningUser,
+    baziComplete,
+    productComplete,
+    enabled: isBaziPhase || isProductPhase,
+    onExitComplete: () => setWaitVisualDone(true),
+  });
+
+  useEffect(() => {
+    if (waitFlow.phase !== "product") return;
+    if (matchAnalyzeStartedRef.current) return;
+    if (phase !== "analyzing") return;
+    matchAnalyzeStartedRef.current = true;
+    void runAnalyze();
+  }, [waitFlow.phase, phase, runAnalyze]);
 
   const beginPipeline = useCallback(async () => {
     const preview = loadMatchPreviewSession();
@@ -251,29 +260,22 @@ export function MatchAnalyzingPage() {
       return;
     }
 
-    cacheSplineStartedRef.current = Date.now();
+    setIsReturningUser(true);
+    setBaziComplete(true);
     setPhase("base-cache");
   }, [router, t]);
 
   useEffect(() => {
     if (phase !== "base-cache") return;
-    void (async () => {
-      await waitRemainingMinSpline(cacheSplineStartedRef.current, PREPARING_MIN_SPLINE_CACHE_MS);
-      setPhase("analyzing");
-      await runAnalyze();
-    })();
-  }, [phase, runAnalyze]);
-
-  useEffect(() => {
-    if (startedRef.current) return;
-    startedRef.current = true;
-    void beginPipeline();
-  }, [beginPipeline]);
+    setIsReturningUser(true);
+    setBaziComplete(true);
+    setPhase("analyzing");
+  }, [phase]);
 
   async function afterBaseAComplete() {
     const refreshedB = await getCachedBaseAnalysis(bId);
     if (refreshedB) {
-      cacheSplineStartedRef.current = Date.now();
+      setBaziComplete(true);
       setPhase("base-cache");
       return;
     }
@@ -285,84 +287,66 @@ export function MatchAnalyzingPage() {
   async function afterBaseBComplete() {
     const refreshed = await getStoredProfile(bId);
     if (refreshed) setProfileB(refreshed);
+    setBaziComplete(true);
     setPhase("analyzing");
-    await runAnalyze();
   }
+
+  useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    void beginPipeline();
+  }, [beginPipeline]);
 
   if (phase === "base-a" && profileA && aId) {
     return (
-      <PreparingSplineShell blockInteraction>
-        <BaseAnalysisStreamPreparing
-          key={`base-a-${basePrepKey}`}
-          profile={profileA}
-          profileId={aId}
-          locale={locale}
-          logLabel="MatchUnlockPreparingA"
-          hideStreamView
-          reportOutputLanguageFromUi
-          onComplete={() => void afterBaseAComplete()}
-          onError={(err) => {
-            setError(err);
-            setPhase("error");
-          }}
-        />
-        <ChartReadingLoader
-          profile={profileA}
-          currentStep="analyzing"
-          error={null}
-          onRetry={() => {}}
-          onRefund={() => router.push("/match")}
-          locale={locale}
-          variant="portrait"
-        />
-      </PreparingSplineShell>
+      <DeliveryWaitFrame
+        wait={waitFlow}
+        hiddenWork={
+          <BaseAnalysisStreamPreparing
+            key={`base-a-${basePrepKey}`}
+            profile={profileA}
+            profileId={aId}
+            locale={locale}
+            logLabel="MatchUnlockPreparingA"
+            hideStreamView
+            reportOutputLanguageFromUi
+            onComplete={() => void afterBaseAComplete()}
+            onError={(err) => {
+              setError(err);
+              setPhase("error");
+            }}
+          />
+        }
+      />
     );
   }
 
   if (phase === "base-b" && profileB && bId) {
     return (
-      <PreparingSplineShell blockInteraction>
-        <BaseAnalysisStreamPreparing
-          key={`base-b-${basePrepKey}`}
-          profile={profileB}
-          profileId={bId}
-          locale={locale}
-          logLabel="MatchUnlockPreparingB"
-          hideStreamView
-          reportOutputLanguageFromUi
-          onComplete={() => void afterBaseBComplete()}
-          onError={(err) => {
-            setError(err);
-            setPhase("error");
-          }}
-        />
-        <ChartReadingLoader
-          profile={profileB}
-          currentStep="analyzing"
-          error={null}
-          onRetry={() => {}}
-          onRefund={() => router.push("/match")}
-          locale={locale}
-          variant="portrait"
-        />
-      </PreparingSplineShell>
+      <DeliveryWaitFrame
+        wait={waitFlow}
+        hiddenWork={
+          <BaseAnalysisStreamPreparing
+            key={`base-b-${basePrepKey}`}
+            profile={profileB}
+            profileId={bId}
+            locale={locale}
+            logLabel="MatchUnlockPreparingB"
+            hideStreamView
+            reportOutputLanguageFromUi
+            onComplete={() => void afterBaseBComplete()}
+            onError={(err) => {
+              setError(err);
+              setPhase("error");
+            }}
+          />
+        }
+      />
     );
   }
 
   if (phase === "base-cache" && profileA) {
-    return (
-      <PreparingSplineShell blockInteraction>
-        <ChartReadingLoader
-          profile={profileA}
-          currentStep="using_cache"
-          error={null}
-          onRetry={() => {}}
-          onRefund={() => router.push("/match")}
-          locale={locale}
-          variant="portrait"
-        />
-      </PreparingSplineShell>
-    );
+    return <DeliveryWaitFrame wait={waitFlow} isReturningUser />;
   }
 
   if (phase === "gate") {
@@ -401,13 +385,17 @@ export function MatchAnalyzingPage() {
   }
 
   return (
-    <main className="match-analyzing">
-      <MatchAnalyzingLoader
-        step={step}
-        steps={steps}
-        hint={t("hint")}
-        previewLine={previewLine}
-      />
-    </main>
+    <DeliveryWaitFrame
+      wait={waitFlow}
+      error={error}
+      onRefund={() => router.push("/match")}
+      ritualPanel={
+        <ReadingRitualWaitingPanel
+          product="match"
+          ready={productComplete}
+          onReleased={() => setRitualReleased(true)}
+        />
+      }
+    />
   );
 }

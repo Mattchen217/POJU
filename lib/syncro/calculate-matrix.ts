@@ -20,6 +20,10 @@ import { matrixKey, type HourPeriod } from "./types";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import type { UserProfile } from "@/lib/profile/types";
+import {
+  buildSyncroBaziContext,
+  elementsToWuXingList,
+} from "@/lib/syncro/build-syncro-bazi-context";
 
 export interface MatrixCell {
   hour_period: HourPeriod;
@@ -105,6 +109,12 @@ export function calculateSyncroMatrix(input: {
 
   const yongShenWuXing = extractYongShenWuXing(input.profile);
   const dayMasterWuXing = extractDayMasterWuXing(input.profile);
+  const baziContext = buildSyncroBaziContext(
+    input.profile.base_analysis?.structured ??
+      normalizeBaseAnalysisInput(input.profile.base_analysis).structured,
+  );
+  const xiShenWuXings = elementsToWuXingList(baziContext?.xi_shen);
+  const jiShenWuXings = elementsToWuXingList(baziContext?.ji_shen);
   const taskKeywords = extractTaskKeywords(input.taskDescription);
   const hourPeriods = generateNext12HourPeriods(
     tstResult.trueSolarTime,
@@ -123,6 +133,9 @@ export function calculateSyncroMatrix(input: {
         direction,
         combinationTime: period.start,
         taskKeywords,
+        xiShenWuXings,
+        jiShenWuXings,
+        wuxingStrength: baziContext?.wuxing_strength,
       });
 
       const level = scoreToCurrentLevel(factors.total_score);
@@ -194,6 +207,14 @@ function extractKeyFactors(factors: ScoreFactors): string[] {
     {
       name: "task_direction",
       score: Math.abs(factors.task_direction_match.subtotal),
+    },
+    {
+      name: "xi_ji",
+      score: Math.abs(factors.xi_ji_adjustment?.subtotal ?? 0),
+    },
+    {
+      name: "wuxing_balance",
+      score: Math.abs(factors.wuxing_balance_adjustment?.subtotal ?? 0),
     },
   ];
 

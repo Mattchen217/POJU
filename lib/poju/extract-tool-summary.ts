@@ -56,10 +56,12 @@ export function extractToolSummary(tool: ToolName, raw_data: unknown): Record<st
         question: data.question,
         glyph_drawn: data.glyph_drawn ?? data.glyph_level ?? data.sign_number,
         meaning:
+          data.synthesis ??
           data.meaning ??
           data.meaning_for_question ??
           data.classical_voice,
-        meaning_for_question: data.meaning_for_question,
+        synthesis: data.synthesis,
+        meaning_for_question: data.meaning_for_question ?? data.synthesis,
         classical_voice: data.classical_voice,
         hidden_tension: data.hidden_tension,
         your_moment: data.your_moment,

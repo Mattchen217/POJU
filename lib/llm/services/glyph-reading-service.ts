@@ -39,6 +39,8 @@ export type GlyphReadingContent = {
   /** Direct answer to the user's draw question (v5.1+). */
   question_response?: string;
   命理双视角: GlyphDualViewReading;
+  /** Deep synthesis — preferred over meaning_for_question (v5.2+). */
+  synthesis?: string;
   meaning_for_question: string;
   hidden_tension: string;
   your_moment: string;
@@ -140,17 +142,20 @@ function validateReading(parsed: Record<string, unknown>): GlyphReadingContent {
 
   const invalid = parsed.invalid_input === true;
 
+  const synthesisText =
+    asString(parsed.synthesis) || asString(parsed.meaning_for_question);
+
   const reading: GlyphReadingContent = {
     wind_category_blurb: asString(parsed.wind_category_blurb),
     classical_voice: asString(parsed.classical_voice),
-    question_response:
-      asString(parsed.question_response) || asString(parsed.meaning_for_question) || undefined,
+    question_response: asString(parsed.question_response) || undefined,
     命理双视角: {
       命理看此事: asString(dual?.命理看此事 ?? dual?.["命理看此事"]),
       签文看此事: asString(dual?.签文看此事 ?? dual?.["签文看此事"]),
       两者印证或冲突: asString(dual?.两者印证或冲突 ?? dual?.["两者印证或冲突"]),
     },
-    meaning_for_question: asString(parsed.meaning_for_question),
+    synthesis: synthesisText || undefined,
+    meaning_for_question: synthesisText,
     hidden_tension: asString(parsed.hidden_tension),
     your_moment: asString(parsed.your_moment),
     exploration: {

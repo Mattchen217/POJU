@@ -14,6 +14,7 @@ import { useEffect, useLayoutEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { MatchReportCard } from "@/components/match/MatchReportCard";
+import { ReadingDecoderBanner } from "@/components/reading-ritual/ReadingDecoderBanner";
 import { PojuDeepDiveCTA } from "@/components/cross-product/PojuDeepDiveCTA";
 import { ReturnToPojuCTA } from "@/components/poju/ReturnToPojuCTA";
 import { StreamingAnalysisView } from "@/components/poju/StreamingAnalysisView";
@@ -106,7 +107,7 @@ export function MatchReport({ session, locale }: MatchReportProps) {
   const matchSummary = extractMatchSummary(session);
 
   return (
-    <main className="match-report browser-flow-page">
+    <main className="match-report browser-flow-page reading-ritual-fade-in">
       <ReturnToPojuCTA
         tool="match"
         resultId={session.match_id}
@@ -139,6 +140,8 @@ export function MatchReport({ session, locale }: MatchReportProps) {
         <h1>{t("title")}</h1>
         <p className="relationship-line">&ldquo;{session.relationship_description}&rdquo;</p>
       </header>
+
+      <ReadingDecoderBanner variant="others" />
 
       <div className="synergy-signal-panel-wrapper">
         <div className="synergy-signal-panel" style={{ color: synergyInfo.color_hex }}>

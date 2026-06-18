@@ -5,7 +5,7 @@ export type GlyphReportSectionLabels = {
   section_dual_view: string;
   view_bazi_title: string;
   view_glyph_title: string;
-  section_meaning: string;
+  section_synthesis: string;
   section_hidden: string;
   section_moment: string;
   section_exploration: string;
@@ -17,7 +17,7 @@ const ZH: GlyphReportSectionLabels = {
   section_dual_view: "双视角分析",
   view_bazi_title: "从你的性格画像看",
   view_glyph_title: "从 Glyph 的角度看",
-  section_meaning: "针对你的问题",
+  section_synthesis: "整合解读",
   section_hidden: "你可能没看到的",
   section_moment: "你当下的时机",
   section_exploration: "一个小练习",
@@ -29,7 +29,7 @@ const EN: GlyphReportSectionLabels = {
   section_dual_view: "Dual perspective analysis",
   view_bazi_title: "From your profile",
   view_glyph_title: "From the glyph",
-  section_meaning: "For your question",
+  section_synthesis: "The synthesis",
   section_hidden: "What you may not see",
   section_moment: "Your current moment",
   section_exploration: "A small practice",

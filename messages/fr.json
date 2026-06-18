@@ -1977,6 +1977,92 @@
       "syncro": "Que devez-vous faire, et où ? Tapez la tâche ci-dessous et envoyez."
     }
   },
+  "wait_ritual": {
+    "bazi": {
+      "value": "Ce qui s'apprête à émerger est un schéma comportemental issu d'une matrice spatio-temporelle de 3 000 ans et de la psychologie moderne. Il se lit comme un miroir — les mots portent un écho. Lis-le lentement, dans un moment de calme ; chaque relecture te révélera un autre toi-même.",
+      "subtitle": "Cartographie de votre structure de personnalité et de votre énergie. Environ 3 à 5 minutes.",
+      "subtitle_cached": "Chargement de votre profil enregistré. Un instant, s'il vous plaît…",
+      "steps": {
+        "0": "Calibrage de votre moment de naissance…",
+        "1": "Cartographie de votre structure de personnalité…",
+        "2": "Analyse de votre nature profonde et de votre structure énergétique…",
+        "3": "Détermination de votre profil de personnalité et de votre énergie clé…",
+        "4": "Cartographie de vos phases de vie et de votre cycle actuel…"
+      }
+    },
+    "bridge": {
+      "glyph": "Votre portrait de personnalité et votre structure énergétique sont terminés. À présent, tissage de ce portrait avec votre Glyph…",
+      "match": "Votre portrait de personnalité est terminé. À présent, croisement de votre portrait avec le leur pour cartographier votre rencontre…"
+    },
+    "glyph": {
+      "value": "Ce qui s'apprête à émerger est un miroir — façonné par 3 000 ans de tradition réflexive et de psychologie moderne. Il ne vous donne pas une réponse ; il vous révèle à vous-même en ce moment précis. Il mérite un second regard, plus posé.",
+      "subtitle": "Tissage de votre portrait avec votre Glyph. Environ 3 à 5 minutes.",
+      "steps": {
+        "0": "Lecture de la saison dans laquelle vous vous trouvez…",
+        "1": "Écoute du Glyph que vous avez activé…",
+        "2": "Tissage du Glyph avec votre portrait…",
+        "3": "Laisser le reflet prendre forme…"
+      }
+    },
+    "match": {
+      "value": "Ce qui s'apprête à émerger est une carte énergétique — dessinée à partir de 3 000 ans de sagesse relationnelle et de psychologie moderne — révélant comment deux personnes se rencontrent vraiment. Lisez lentement ; la véritable clarté apparaît à la seconde lecture.",
+      "subtitle": "Cartographie de la rencontre de vos deux énergies. Environ 3 à 5 minutes.",
+      "steps": {
+        "0": "Lecture de la nature profonde du premier portrait…",
+        "1": "Lecture de la nature profonde du second portrait…",
+        "2": "Analyse du flux de vos énergies entre résonance et friction…",
+        "3": "Cartographie des points de synchronisation de vos phases de vie…",
+        "4": "Dessiner la forme de votre lien…"
+      }
+    },
+    "syncro": {
+      "value": "Ce qui s'apprête à émerger est une carte de synchronicité temporelle, calibrée d'après un modèle oriental de 3 000 ans et les sciences modernes de la décision. Ce n'est pas un calendrier universel, mais des fenêtres d'opportunité qui s'alignent sur votre projet. Bien la lire demande de s'aligner avec le présent.",
+      "subtitle": "Alignement du timing et de la direction pour votre projet. Environ 1 à 2 minutes.",
+      "steps": {
+        "0": "Projection de votre projet dans le champ spatio-temporel…",
+        "1": "Scan des fenêtres d'opportunité au cours des heures à venir…",
+        "2": "Alignement des directions avec chaque fenêtre…",
+        "3": "Mise en lumière de vos fenêtres les plus favorables…"
+      }
+    }
+  },
+  "reading_ritual": {
+    "teaser": {
+      "poju": "Ce qui vient n'est pas un horoscope — c'est un plan à lire avec attention.",
+      "glyph": "Ce qui vient n'est pas une réponse rapide — c'est un miroir auquel revenir.",
+      "match": "Ce qui vient n'est pas un score — c'est une carte de la rencontre entre deux personnes.",
+      "syncro": "Ce qui vient n'est pas un jour de chance — c'est une carte du moment pour votre tâche."
+    },
+    "value_frame": {
+      "poju": "POJU ne produit pas de prédictions express. Ce qui arrive est un plan comportemental issu d'une matrice spatio-temporelle de trois mille ans et de la psychologie moderne. Il se lit comme un miroir avec écho — accordez-lui du calme sur 30 jours ; à chaque retour, vous vous verrez un peu autrement.",
+      "glyph": "Ce n'est pas un horoscope rapide. Votre lecture Glyph est un miroir précis, frappé d'une tradition symbolique millénaire et de la psychologie actuelle. Ses lignes demandent pause — lisez une fois la forme, une autre ce qu'elle pointe en vous.",
+      "match": "Ce n'est pas un score de compatibilité. C'est une carte énergétique de la façon dont deux personnes se rencontrent vraiment — depuis un cadre de trois mille ans et la psychologie relationnelle. Lisez lentement, ensemble ou seul ; l'insight arrive souvent à la seconde lecture.",
+      "syncro": "Ce n'est pas un calendrier de jours propices. C'est une carte fine de la façon dont le temps et la direction bougent avec votre tâche — lisez les fenêtres, puis sentez laquelle correspond à votre moment."
+    },
+    "gate": {
+      "title": {
+        "poju": "Avant d'ouvrir votre lecture",
+        "glyph": "Avant d'ouvrir votre Glyph",
+        "match": "Avant d'ouvrir votre rapport de compatibilité",
+        "syncro": "Avant d'ouvrir votre carte du moment"
+      },
+      "items": {
+        "0": "Je suis dans un endroit calme, avec quelques minutes pour moi.",
+        "1": "Je lis avec un esprit ouvert et curieux.",
+        "2": "Je comprends que les mots sont un préambule — l'insight naît en lisant."
+      },
+      "select_all": "Tout sélectionner",
+      "cta": "Entrer dans l'espace d'alignement →",
+      "cta_waiting": "Alignement de votre lecture…",
+      "skip": "Continuer sans le rituel"
+    },
+    "decoder": {
+      "poju": "C'est une lecture dense et stratifiée — un peu de friction intellectuelle et émotionnelle au premier passage est normal, et c'est le point. Pendant 30 jours, touchez toute ligne à déplier et POJU la traduira en langage clair et dans votre vie réelle.",
+      "others": "Cette lecture récompense un second regard — ses couches s'ouvrent avec le temps. Vous voulez qu'on la déplie ligne par ligne, en langage simple et appliquée à votre vie ? Poursuivez dans le dialogue profond de POJU.",
+      "poju_hint": "Touchez un paragraphe du rapport pour demander à POJU de le déplier.",
+      "dismiss": "Fermer"
+    }
+  },
   "base_analysis_view": {
     "title": "Lecture de fond (texte intégral)",
     "close": "Fermer",

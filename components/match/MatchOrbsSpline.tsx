@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, type CSSProperties } from "react";
+import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import type { Application } from "@splinetool/runtime";
 
 import { SplineInteractiveScene } from "@/components/spline/SplineInteractiveScene";
@@ -8,9 +8,11 @@ import { configureMatchHowWorksSplineFraming } from "@/lib/match/configure-match
 import {
   MATCH_ANALYZING_ORBS_DISPLAY_SCALE,
   MATCH_ANALYZING_ORBS_SCENE_PAN_X,
+  MATCH_ANALYZING_ORBS_SCENE_PAN_X_DESKTOP,
   MATCH_ANALYZING_ORBS_SCENE_SCALE,
   MATCH_ANALYZING_ORBS_SHELL_HEIGHT_RATIO,
   MATCH_ANALYZING_ORBS_SHELL_OFFSET_X,
+  MATCH_ANALYZING_ORBS_SHELL_OFFSET_X_DESKTOP,
   MATCH_ANALYZING_ORBS_SHELL_OFFSET_Y,
   MATCH_ANALYZING_ORBS_SHELL_WIDTH_RATIO,
   MATCH_HOW_WORKS_SPLINE_DISPLAY_SCALE,
@@ -60,7 +62,22 @@ export function MatchOrbsSpline({
   variant = "howWorks",
   webGLContext = "marketing",
 }: Props) {
+  const [isDesktopViewport, setIsDesktopViewport] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const apply = () => setIsDesktopViewport(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+
   const config = ORBS_VARIANT_CONFIG[variant];
+  const useAnalyzingDesktop = variant === "analyzing" && isDesktopViewport;
+  const panX = useAnalyzingDesktop ? MATCH_ANALYZING_ORBS_SCENE_PAN_X_DESKTOP : config.panX;
+  const offsetX = useAnalyzingDesktop
+    ? MATCH_ANALYZING_ORBS_SHELL_OFFSET_X_DESKTOP
+    : config.offsetX;
 
   const handleSplineLoad = useCallback((app: Application) => {
     configureMatchHowWorksSplineFraming(app);
@@ -70,12 +87,12 @@ export function MatchOrbsSpline({
     ["--match-how-spline-display-scale" as string]: String(config.displayScale),
     ["--match-how-spline-height-ratio" as string]: String(config.heightRatio),
     ["--match-how-spline-width-ratio" as string]: String(config.widthRatio),
-    ["--match-how-spline-offset-x" as string]: config.offsetX,
+    ["--match-how-spline-offset-x" as string]: offsetX,
     ["--match-how-spline-offset-y" as string]: config.offsetY,
   } as CSSProperties;
 
   const scenePanStyle = {
-    transform: `translateX(${config.panX}) scale(${config.sceneScale})`,
+    transform: `translateX(${panX}) scale(${config.sceneScale})`,
     transformOrigin: "center center",
   } as CSSProperties;
 

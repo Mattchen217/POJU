@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 
+import { ReadingRitualTeaser } from "@/components/reading-ritual/ReadingRitualTeaser";
 import type { MatrixNarrativeResponse } from "@/lib/llm/prompts/matrix-narrative-prompt";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
 import {
@@ -83,6 +84,7 @@ export function ToolMatrixNarrativeReply({ product, locale, payloadA, payloadB, 
         {blockA ? <p>{blockA}</p> : null}
         {blockB ? <p>{blockB}</p> : null}
         {guide ? <p>{guide}</p> : null}
+        <ReadingRitualTeaser product={product} />
       </>
     );
   }
@@ -93,6 +95,7 @@ export function ToolMatrixNarrativeReply({ product, locale, payloadA, payloadB, 
         {synopsisArchetype ? <p>{synopsisArchetype}</p> : null}
         {synopsisFriction ? <p>{synopsisFriction}</p> : null}
         {guide ? <p>{guide}</p> : null}
+        <ReadingRitualTeaser product={product} />
       </>
     );
   }
@@ -103,11 +106,17 @@ export function ToolMatrixNarrativeReply({ product, locale, payloadA, payloadB, 
         {synopsisArchetype ? <p>{synopsisArchetype}</p> : null}
         {synopsisFriction ? <p>{synopsisFriction}</p> : null}
         <p>{guide}</p>
+        <ReadingRitualTeaser product={product} />
       </>
     );
   }
 
-  return guide ? <p>{guide}</p> : null;
+  return guide ? (
+    <>
+      <p>{guide}</p>
+      <ReadingRitualTeaser product={product} />
+    </>
+  ) : null;
 }
 
 export function toolMatrixNarrativeActionsText(

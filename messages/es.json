@@ -1977,6 +1977,92 @@
       "syncro": "¿Qué necesitas hacer y dónde? Escríbelo abajo y envía."
     }
   },
+  "wait_ritual": {
+    "bazi": {
+      "value": "Lo que está por llegar es un mapa de ruta conductual trazado a partir de una matriz espacio-temporal de 3,000 años y la psicología moderna. Se lee como un espejo: las palabras tienen eco. Léelo despacio, en un momento de quietud; cada relectura te mostrará un reflejo diferente de ti mismo.",
+      "subtitle": "Mapeando tu estructura de personalidad y energía. Toma alrededor de 3–5 minutos.",
+      "subtitle_cached": "Cargando tu perfil guardado. Un momento mientras se asienta…",
+      "steps": {
+        "0": "Calibrando tu momento de nacimiento…",
+        "1": "Trazando tu estructura de personalidad…",
+        "2": "Analizando tu naturaleza esencial y estructura energética…",
+        "3": "Determinando tu patrón de personalidad y energía clave…",
+        "4": "Mapeando tus fases de vida y ciclo actual…"
+      }
+    },
+    "bridge": {
+      "glyph": "Tu retrato de personalidad y estructura energética están listos. Ahora, entrelazando ese retrato con tu Glyph…",
+      "match": "Tu retrato de personalidad está listo. Ahora, uniendo tu retrato con el suyo para mapear cómo se encuentran sus caminos…"
+    },
+    "glyph": {
+      "value": "Lo que está por llegar es un espejo, pulido por una tradición reflexiva de 3,000 años y la psicología moderna. No te entrega una respuesta; te muestra tu momento presente. Vale la pena una segunda mirada, más pausada.",
+      "subtitle": "Entrelazando tu retrato con tu Glyph. Toma alrededor de 3–5 minutos.",
+      "steps": {
+        "0": "Leyendo la estación en la que te encuentras ahora…",
+        "1": "Escuchando el Glyph con el que conectaste…",
+        "2": "Entrelazando el Glyph con tu retrato…",
+        "3": "Dejando que el reflejo tome forma…"
+      }
+    },
+    "match": {
+      "value": "Lo que está por llegar es un mapa energético — trazado a partir de 3,000 años de sabiduría relacional y psicología moderna — que muestra cómo se encuentran realmente dos personas. Léelo despacio; la verdadera claridad surge en la segunda lectura.",
+      "subtitle": "Mapeando cómo se encuentran sus dos energías. Toma alrededor de 3–5 minutos.",
+      "steps": {
+        "0": "Leyendo la naturaleza esencial del primer retrato…",
+        "1": "Leyendo la naturaleza esencial del segundo retrato…",
+        "2": "Rastreando cómo interactúan sus energías entre el apoyo y la fricción…",
+        "3": "Mapeando dónde se sincronizan sus fases de vida…",
+        "4": "Dibujando la forma de su conexión…"
+      }
+    },
+    "syncro": {
+      "value": "Lo que está por llegar es un mapa de sincronía temporal, calibrado desde un marco oriental de 3,000 años y la ciencia moderna de la decisión. No es un calendario genérico, sino las ventanas de oportunidad que se mueven con tu propósito. Leerlo bien te invita a alinearte con el presente.",
+      "subtitle": "Alineando el tiempo y la dirección para tu propósito. Toma alrededor de 1–2 minutos.",
+      "steps": {
+        "0": "Proyectando tu propósito en el campo espacio-temporal…",
+        "1": "Escaneando las ventanas de oportunidad para las próximas horas…",
+        "2": "Alineando las direcciones con cada ventana…",
+        "3": "Trayendo tus ventanas más fuertes al centro de atención…"
+      }
+    }
+  },
+  "reading_ritual": {
+    "teaser": {
+      "poju": "Lo que sigue no es un horóscopo — es un plano que merece detenerse a leer.",
+      "glyph": "Lo que sigue no es una respuesta rápida — es un espejo al que volver.",
+      "match": "Lo que sigue no es una puntuación — es un mapa de cómo dos personas se encuentran.",
+      "syncro": "Lo que sigue no es elegir un día de suerte — es un mapa del momento para tu tarea."
+    },
+    "value_frame": {
+      "poju": "POJU no ofrece predicciones rápidas. Lo que llega es un plano conductual tejido con una matriz espacio-temporal de tres mil años y psicología moderna. Se lee como un espejo con eco — merece tu calma en los próximos 30 días; cada vez que vuelvas, te verás un poco distinto.",
+      "glyph": "Esto no es un horóscopo veloz. Tu lectura Glyph es un espejo preciso, forjado en una tradición simbólica milenaria y la psicología actual. Sus líneas piden pausa — léelas una vez por la forma, otra por lo que señalan en ti.",
+      "match": "Esto no es una puntuación de compatibilidad. Es un mapa energético de cómo dos personas se encuentran de verdad — desde un marco de tres mil años y psicología relacional moderna. Léelo despacio, juntos o en solitario; la comprensión aterriza en la segunda pasada.",
+      "syncro": "Esto no es un calendario de días afortunados. Es un mapa fino de cómo el tiempo y la dirección se mueven con tu tarea — lee las ventanas y siente cuál encaja con tu momento."
+    },
+    "gate": {
+      "title": {
+        "poju": "Antes de abrir tu lectura",
+        "glyph": "Antes de abrir tu Glyph",
+        "match": "Antes de abrir tu informe de compatibilidad",
+        "syncro": "Antes de abrir tu mapa del momento"
+      },
+      "items": {
+        "0": "Estoy en un lugar tranquilo, con unos minutos para mí.",
+        "1": "Leo con mente abierta y curiosa.",
+        "2": "Entiendo que las palabras son un preludio — la comprensión surge al leer."
+      },
+      "select_all": "Seleccionar todo",
+      "cta": "Entrar al espacio de alineación →",
+      "cta_waiting": "Alineando tu lectura…",
+      "skip": "Continuar sin el ritual"
+    },
+    "decoder": {
+      "poju": "Es una lectura densa y en capas — un poco de fricción intelectual y emocional en la primera pasada es normal, y forma parte del valor. Durante 30 días, toca cualquier línea que quieras desplegar y POJU la traducirá a lenguaje claro y a tu vida real.",
+      "others": "Esta lectura premia una segunda mirada — sus capas se abren con el tiempo. ¿Quieres que te la desglosen línea a línea, en lenguaje llano y aplicada a tu vida? Sigue en el diálogo profundo de POJU.",
+      "poju_hint": "Toca cualquier párrafo de tu informe para pedir a POJU que lo despliegue.",
+      "dismiss": "Cerrar"
+    }
+  },
   "base_analysis_view": {
     "title": "Lectura de base (texto completo)",
     "close": "Cerrar",

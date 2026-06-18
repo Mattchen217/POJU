@@ -22,6 +22,8 @@ const PreparingAnalyzingSpline = dynamic(
   { ssr: false },
 );
 
+const PREPARING_ANALYZING_SCENE = "/spline/Analyzing-scene.splinecode";
+
 /**
  * Full-screen POJU analyzing Spline + overlay children (status steps, errors).
  * Mount once per `/preparing` route (see preparing/layout.tsx).
@@ -29,14 +31,19 @@ const PreparingAnalyzingSpline = dynamic(
 type PreparingSplineShellProps = {
   children: ReactNode;
   sceneZoom?: number;
+  /** Spline scene URL — defaults to matrix bazi analyzing scene */
+  scene?: string;
   /** Standalone pages (Glyph/Match) without layout parent. Merges with `usePreparingBlockInput`. */
   blockInteraction?: boolean;
+  className?: string;
 };
 
 export function PreparingSplineShell({
   children,
   sceneZoom = PREPARING_ANALYZING_ZOOM,
+  scene,
   blockInteraction: blockInteractionProp = false,
+  className,
 }: PreparingSplineShellProps) {
   const allowWebGL = useAllowHeavyWebGL("preparing");
   const profile = useMemo(() => getPreparingDeviceProfile(), []);
@@ -70,6 +77,8 @@ export function PreparingSplineShell({
     [registerApp],
   );
 
+  const activeScene = scene ?? PREPARING_ANALYZING_SCENE;
+
   useEffect(() => {
     return () => {
       try {
@@ -79,7 +88,7 @@ export function PreparingSplineShell({
       }
       appRef.current = null;
     };
-  }, []);
+  }, [activeScene]);
 
   const controlValue = useMemo(
     () => ({
@@ -99,6 +108,7 @@ export function PreparingSplineShell({
           "preparing-spline-page preparing-spline-page--transition",
           blockInteraction && "preparing-spline-page--block-input",
           !allowWebGL && "preparing-spline-page--no-webgl",
+          className,
         )}
       >
         {blockInteraction ? (
@@ -107,8 +117,10 @@ export function PreparingSplineShell({
         <div className="preparing-spline-page__scene-wrap" aria-hidden>
           {showSpline ? (
             <PreparingAnalyzingSpline
+              key={activeScene}
               className="preparing-spline-page__scene"
               initialZoom={sceneZoom}
+              scene={activeScene}
               onLoad={handleSplineLoad}
             />
           ) : (

@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "@/i18n/navigation";
 
 import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
-import { ChartReadingLoader } from "@/components/poju/ChartReadingLoader";
+import { ReadingRitualWaitingPanel } from "@/components/reading-ritual/ReadingRitualWaitingPanel";
+import { DeliveryWaitFrame } from "@/components/wait-ritual/DeliveryWaitFrame";
 import { usePreparingBlockInput } from "@/components/poju/preparing-spline-control";
 import type { StoredProfileData } from "@/lib/db/poju-db";
 import { finalizeUnlockBaziSession } from "@/lib/poju/finalize-unlock-bazi-session";
@@ -15,6 +16,7 @@ import {
 } from "@/lib/poju/preparing-spline-timing";
 import { savePOJUSession } from "@/lib/poju/session-manager";
 import type { POJUSessionState } from "@/lib/poju/types";
+import { useDeliveryWaitPhase } from "@/lib/wait-ritual/use-delivery-wait-phase";
 
 type Props = {
   session: POJUSessionState;
@@ -39,11 +41,21 @@ export function UnlockBaziPreparing({
   const [error, setError] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
   const [streamDone, setStreamDone] = useState(false);
+  const [ritualReleased, setRitualReleased] = useState(false);
+  const [waitVisualDone, setWaitVisualDone] = useState(false);
 
   usePreparingBlockInput(true);
 
+  const waitFlow = useDeliveryWaitPhase({
+    product: "poju",
+    baziComplete: streamDone,
+    productComplete: false,
+    enabled: !error,
+    onExitComplete: () => setWaitVisualDone(true),
+  });
+
   useEffect(() => {
-    if (!streamDone) return;
+    if (!streamDone || !ritualReleased || !waitVisualDone) return;
     const ac = new AbortController();
     void (async () => {
       try {
@@ -57,51 +69,44 @@ export function UnlockBaziPreparing({
       }
     })();
     return () => ac.abort();
-  }, [streamDone, startedAt, sessionId, router]);
-
-  if (error) {
-    return (
-      <ChartReadingLoader
-        profile={profile}
-        currentStep="error"
-        error={error}
-        onRetry={() => {
-          setError(null);
-          setStreamDone(false);
-          setRetryKey((k) => k + 1);
-        }}
-        onRefund={onRefund}
-        locale={locale}
-      />
-    );
-  }
+  }, [streamDone, ritualReleased, waitVisualDone, startedAt, sessionId, router]);
 
   return (
-    <>
-      <BaseAnalysisStreamPreparing
-        key={retryKey}
-        profile={profile}
-        profileId={profileId}
-        locale={locale}
-        logLabel="POJUUnlockPreparing"
-        hideStreamView
-        reportOutputLanguageFromUi
-        onComplete={async (displayText) => {
-          const finalSession = finalizeUnlockBaziSession(session, displayText, profileId);
-          await savePOJUSession(finalSession);
-          setStreamDone(true);
-        }}
-        onError={(err) => setError(err)}
-      />
-      <ChartReadingLoader
-        profile={profile}
-        currentStep="analyzing"
-        error={null}
-        onRetry={() => {}}
-        onRefund={onRefund}
-        locale={locale}
-        variant="portrait"
-      />
-    </>
+    <DeliveryWaitFrame
+      wait={waitFlow}
+      error={error}
+      onRetry={() => {
+        setError(null);
+        setStreamDone(false);
+        setWaitVisualDone(false);
+        setRitualReleased(false);
+        setRetryKey((k) => k + 1);
+      }}
+      onRefund={onRefund}
+      hiddenWork={
+        <BaseAnalysisStreamPreparing
+          key={retryKey}
+          profile={profile}
+          profileId={profileId}
+          locale={locale}
+          logLabel="POJUUnlockPreparing"
+          hideStreamView
+          reportOutputLanguageFromUi
+          onComplete={async (displayText) => {
+            const finalSession = finalizeUnlockBaziSession(session, displayText, profileId);
+            await savePOJUSession(finalSession);
+            setStreamDone(true);
+          }}
+          onError={(err) => setError(err)}
+        />
+      }
+      ritualPanel={
+        <ReadingRitualWaitingPanel
+          product="poju"
+          ready={streamDone}
+          onReleased={() => setRitualReleased(true)}
+        />
+      }
+    />
   );
 }

@@ -169,7 +169,7 @@ function collectReadingStrings(reading: GlyphReadingContent): string[] {
     reading.命理双视角.命理看此事,
     reading.命理双视角.签文看此事,
     reading.命理双视角.两者印证或冲突,
-    reading.meaning_for_question,
+    reading.synthesis ?? reading.meaning_for_question,
     reading.hidden_tension,
     reading.your_moment,
     reading.exploration.text,

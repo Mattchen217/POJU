@@ -29,6 +29,8 @@ type Props = {
   realtimePeriod: HourPeriod;
   progress: SyncroLlmProgress;
   onSessionUpdate: (session: SyncroSession) => void;
+  /** SSE only — no compass / ticker UI (used inside DeliveryWaitFrame). */
+  headless?: boolean;
 };
 
 type StreamPhase =
@@ -63,6 +65,7 @@ export function SyncroPreparingLiveHour({
   realtimePeriod,
   progress,
   onSessionUpdate,
+  headless = false,
 }: Props) {
   const t = useTranslations("syncro.preparing_live");
   const params = useParams();
@@ -188,6 +191,10 @@ export function SyncroPreparingLiveHour({
       abort.abort();
     };
   }, [sessionId, priorityHour, locale, session, retryKey, onSessionUpdate, t]);
+
+  if (headless) {
+    return null;
+  }
 
   return (
     <div className="syncro-preparing-live">

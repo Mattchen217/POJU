@@ -11,9 +11,13 @@ import {
 import {
   buildCurrentDateContext,
   buildNorthAmericaAdaptation,
-  buildProfileContextSection,
   stitchPromptSections,
 } from "@/lib/llm/prompts/oriental-counselor-base";
+import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
+import {
+  buildSyncroBaziContext,
+  buildSyncroBaziContextSection,
+} from "@/lib/syncro/build-syncro-bazi-context";
 import {
   getSyncroLanguageDirective,
   parseAppLocale,
@@ -88,7 +92,6 @@ export function buildSyncroPrompt(input: BuildSyncroPromptInput): {
   user: string;
 } {
   const {
-    profile,
     base_analysis,
     task_description,
     user_location,
@@ -146,10 +149,10 @@ ${buildTrueSolarSection(input.true_solar)}
 后台已基于完整命理模型（奇门遁甲盘 + 用神方位 + 时辰天干 + 日主 + 任务偏好）精确计算每个组合的 **current_level**。
 
 5 个维度（已加权）：
-  1. 奇门遁甲盘信号（35%）— 八门 / 八神 / 九星 / 三奇六仪 / 空亡
-  2. 用神方位匹配（25%）
+  1. 奇门遁甲盘信号（30%）— 八门 / 八神 / 九星 / 三奇六仪 / 空亡
+  2. 用神 + 喜忌方位匹配（25%）
   3. 时辰天干 vs 用神（20%）
-  4. 日主 vs 方位（10%）
+  4. 日主 + 旺衰微调 vs 方位（15%）
   5. 任务匹配方位含义（10%）
 
 # ⛔ 严格禁止
@@ -184,11 +187,12 @@ ${taskResponseBlock}
 
 2. **detailed_advice**（100–200 字/词）
    - 展开命理依据 + 具体行动
-   - 引用用户命局（日主 / 用神 / 大运至少一项）
+   - **必须引用该用户命局的具体一项**（用神所喜五行、当前大运主题、关键神煞、旺衰倾向等 — 见「用户命局背景」）
    - 可内化 _internal.qimen_data 中的门星神信号，**用户可见处用 Syncro 语言**，不写八门/奇门遁甲
 
 3. **rationale**（100–150 字/词）
    - ⚠️ 针对用户【具体任务】解释为何此时此向适合（或不适合）去做这件事
+   - **必须引用命局背景 ≥1 项**，让用户感到「这是按我的八字算的」，不是通用黄历
    - 把 _internal.key_factors 当作内心依据，**禁止**在文案中写出原始字段名（如 qimen、yong_shen_direction、day_master_direction、hour_yong_shen、task_direction）
    - **禁止**「主要因素：…」或「Key factors: …」及逗号罗列内部 key 的句式
    - 用大白话说明对用户任务的含义，不堆术语、不写八门/奇门/用神等词
@@ -234,12 +238,19 @@ ${SYNCRO_OUTPUT_SELF_CHECK}
   }
 }`;
 
+  const structured = normalizeBaseAnalysisInput(base_analysis).structured;
+  const baziContext = buildSyncroBaziContext(structured);
+  const baziContextSection = buildSyncroBaziContextSection(
+    baziContext,
+    structured?.pattern,
+  );
+
   const system = stitchPromptSections(
     ...buildSyncroFullPromptSections(),
     buildCurrentDateContext(current_time, locale),
     langDirective.directive,
     buildNorthAmericaAdaptation(outputLocale),
-    buildProfileContextSection(profile, base_analysis),
+    baziContextSection,
     taskBlock,
   );
 
@@ -248,11 +259,11 @@ ${SYNCRO_OUTPUT_SELF_CHECK}
       ? `请为已计算好的矩阵生成 short_advice / detailed_advice / rationale 文案（本批 ${cellCount} 个 key）。
 ${isFinalBatch ? `并产出 task_response 顶层直答用户任务「${escapedTask}」。` : "本批不要产出 task_response。"}
 不要修改 current_level。全部使用${outputLanguage}。严格 JSON，matrix 内每个 key 缺一不可。
-rationale 必须紧扣用户任务「${escapedTask}」，绝不写出 qimen / yong_shen_direction / day_master 等内部字段名。`
+rationale 必须紧扣用户任务「${escapedTask}」，引用「用户命局背景」至少一项，绝不写出 qimen / yong_shen_direction / day_master 等内部字段名。`
       : `Generate short_advice, detailed_advice, and rationale for the precomputed matrix (${cellCount} keys in this batch).
 ${isFinalBatch ? `Also produce task_response answering the user's task ("${escapedTask}").` : "Do not produce task_response in this batch."}
 Do not change current_level. Write entirely in ${outputLanguage}. Strict JSON only; every key in matrix is required.
-Each rationale must speak to the user's task ("${escapedTask}") in plain language—never expose internal factor keys like qimen or yong_shen_direction.`;
+Each rationale must speak to the user's task ("${escapedTask}") in plain language—never expose internal factor keys like qimen or yong_shen_direction. Cite at least one item from the local profile background section.`;
 
   return { system, user };
 }

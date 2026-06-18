@@ -14,6 +14,7 @@ export { PREPARING_ANALYZING_ZOOM };
 type PreparingAnalyzingSplineProps = {
   className?: string;
   initialZoom?: number;
+  scene?: string;
   onLoad?: (app: Application) => void;
 };
 
@@ -23,13 +24,15 @@ type PreparingAnalyzingSplineProps = {
 export function PreparingAnalyzingSpline({
   className,
   initialZoom = PREPARING_ANALYZING_ZOOM,
+  scene = PREPARING_ANALYZING_SCENE,
   onLoad,
 }: PreparingAnalyzingSplineProps) {
   const profile = getPreparingDeviceProfile();
 
   return (
     <SplineInteractiveScene
-      scene={PREPARING_ANALYZING_SCENE}
+      key={scene}
+      scene={scene}
       className={className}
       initialZoom={initialZoom}
       pointerFollow={profile.pointerFollow}

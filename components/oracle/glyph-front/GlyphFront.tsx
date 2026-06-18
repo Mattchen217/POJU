@@ -67,15 +67,15 @@ export function GlyphFront({ sign, animate = true, compact = false, draw = false
   const stackedFooter = draw || deliveryCompact;
 
   const gridShellClass = draw
-    ? "relative z-20 grid h-full grid-rows-[auto_minmax(0,1fr)_auto_auto] gap-y-1.5 px-[8%] py-[5.5%] text-center md:gap-y-2 md:py-[6%]"
+    ? "relative z-20 grid h-full grid-rows-[auto_auto_auto] content-start gap-y-1 px-[8%] pt-[3%] pb-[5%] text-center md:gap-y-1.5 md:pt-[3.5%]"
     : deliveryCompact
       ? deliveryDesktop
-        ? "relative z-20 grid h-full grid-rows-[auto_auto_auto_auto] content-start gap-y-0.5 px-[9%] pb-[4.5%] pt-[6.5%] text-center"
-        : "relative z-20 grid h-full grid-rows-[auto_auto_auto_auto] content-start gap-y-1 px-[9%] pb-[5%] pt-[7%] text-center"
+        ? "relative z-20 grid h-full grid-rows-[auto_auto_auto] content-start gap-y-1 px-[9%] pb-[4.5%] pt-[6.25%] text-center"
+        : "relative z-20 grid h-full grid-rows-[auto_auto_auto] content-start gap-y-1.5 px-[9%] pb-[5%] pt-[6.75%] text-center"
       : "relative z-20 flex h-full flex-col text-center px-[11%] py-[13%]";
 
   const verseShellClass = draw
-    ? "mx-auto flex min-h-0 w-[88%] flex-col justify-center overflow-hidden"
+    ? "mx-auto flex w-[88%] flex-col justify-start overflow-hidden"
     : deliveryCompact
       ? "mx-auto w-[88%] -mt-0.5 flex flex-col justify-start"
       : "mx-auto -mt-2 h-[46%] w-[88%] overflow-hidden";
@@ -132,14 +132,6 @@ export function GlyphFront({ sign, animate = true, compact = false, draw = false
       ? "mb-0.5 text-[0.56rem] tracking-[0.14em]"
       : "text-[0.65rem] md:text-[0.72rem]";
 
-  const brandClass = drawDesktop
-    ? "mt-1.5 px-2.5 py-0.5 text-[0.56rem] tracking-[0.26em]"
-    : deliveryDesktop
-      ? "mt-0.5 px-2 py-0.5 text-[0.52rem] tracking-[0.2em]"
-      : faceSmall
-        ? "mt-1 px-2 py-0.5 text-[0.54rem] tracking-[0.22em]"
-        : "";
-
   return (
     <motion.div
       className={`relative h-full w-full overflow-hidden rounded-[24px] ${draw ? "" : "aspect-[9/16]"}`}
@@ -163,7 +155,7 @@ export function GlyphFront({ sign, animate = true, compact = false, draw = false
 
       <div className={gridShellClass}>
         <motion.div
-          className={faceSmall || draw ? "shrink-0 pt-[1%]" : "pt-[7%]"}
+          className={faceSmall || draw ? "shrink-0 pt-0" : "pt-[7%]"}
           initial={animate ? { opacity: 0, y: -10 } : false}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
@@ -232,9 +224,13 @@ export function GlyphFront({ sign, animate = true, compact = false, draw = false
         <motion.div
           className={`relative z-30 shrink-0 ${
             stackedFooter
-              ? deliveryDesktop
-                ? "-mt-0.5 px-1"
-                : "px-1 pt-0.5"
+              ? deliveryCompact
+                ? deliveryDesktop
+                  ? "mt-1 px-1"
+                  : "mt-1.5 px-1"
+                : deliveryDesktop
+                  ? "-mt-0.5 px-1"
+                  : "px-1 pt-0"
               : "mt-2 min-h-[16%] px-2"
           }`}
           initial={animate ? { opacity: 0 } : false}
@@ -245,31 +241,7 @@ export function GlyphFront({ sign, animate = true, compact = false, draw = false
             &ldquo;{sign.summary_line_en}&rdquo;
           </p>
         </motion.div>
-
-        {stackedFooter ? (
-          <p
-            className={`relative z-30 shrink-0 rounded-full ${brandClass}`}
-            style={{
-              color: toneColor,
-              background: "rgba(0,0,0,0.72)",
-            }}
-          >
-            pojulife.com
-          </p>
-        ) : null}
       </div>
-
-      {!stackedFooter ? (
-        <p
-          className="absolute bottom-[7%] left-1/2 z-30 -translate-x-1/2 rounded-full px-3 py-1 text-xs tracking-[0.3em]"
-          style={{
-            color: toneColor,
-            background: "rgba(0,0,0,0.72)",
-          }}
-        >
-          pojulife.com
-        </p>
-      ) : null}
     </motion.div>
   );
 }

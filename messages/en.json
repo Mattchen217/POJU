@@ -790,6 +790,92 @@
       "syncro": "What do you need to do, and where? Type your task below and send."
     }
   },
+  "reading_ritual": {
+    "teaser": {
+      "poju": "What comes next isn't a horoscope — it's a blueprint worth sitting with.",
+      "glyph": "What comes next isn't a quick take — it's a mirror worth returning to.",
+      "match": "What comes next isn't a score — it's a map of how two people actually meet.",
+      "syncro": "What comes next isn't a lucky-day pick — it's a timing map tuned to your task."
+    },
+    "value_frame": {
+      "poju": "POJU doesn't produce fast-food predictions. What's arriving is a behavioral blueprint drawn from a 3,000-year space-time matrix and modern psychology. It reads like a mirror — the words carry an echo. Sit with it over the next 30 days; each time you return, you'll meet a slightly different version of yourself.",
+      "glyph": "This isn't a quick horoscope. Your Glyph reading is a single, precise mirror struck from a 3,000-year symbolic tradition and modern psychology. Its lines are meant to be sat with — read it once for the shape, again for what it points to in you.",
+      "match": "This isn't a compatibility score. It's an energetic map of how two people actually meet — drawn from a 3,000-year framework and modern relational psychology. Read it slowly, together or alone; the insight lands on the second pass.",
+      "syncro": "This isn't a lucky-day calendar. It's a fine-grained map of how time and direction move with your task — read the windows, then feel which one matches your moment."
+    },
+    "gate": {
+      "title": {
+        "poju": "Before you open your reading",
+        "glyph": "Before you open your Glyph",
+        "match": "Before you open your compatibility report",
+        "syncro": "Before you open your timing map"
+      },
+      "items": {
+        "0": "I'm somewhere quiet, with a few minutes to myself.",
+        "1": "I'm reading with an open, curious mind.",
+        "2": "I understand the words are a prompt — the insight forms as I read."
+      },
+      "select_all": "Select all",
+      "cta": "Enter the alignment space →",
+      "cta_waiting": "Aligning your reading…",
+      "skip": "Continue without the ritual"
+    },
+    "decoder": {
+      "poju": "This is a dense, multi-layered reading — a little intellectual and emotional friction on the first pass is normal, and it's the point. Over the next 30 days, tap any line you want unpacked and POJU will translate it into plain language and your real-life situations.",
+      "others": "This reading rewards a second look — its layers open over time. Want it unpacked line by line, in plain language and applied to your life? Continue the conversation in POJU's deep dialogue.",
+      "poju_hint": "Tap any paragraph in your report to ask POJU to unpack it.",
+      "dismiss": "Dismiss"
+    }
+  },
+  "wait_ritual": {
+    "bazi": {
+      "value": "What's arriving is a behavioral blueprint drawn from a 3,000-year space-time matrix and modern psychology. It reads like a mirror — the words carry an echo. Read it slowly, in a quiet moment; each return shows you a different self.",
+      "subtitle": "Mapping your personality structure and energy. Takes about 3–5 minutes.",
+      "subtitle_cached": "Loading your saved profile. A moment while the matrix settles…",
+      "steps": {
+        "0": "Calibrating your birth moment…",
+        "1": "Mapping your personality structure…",
+        "2": "Analyzing core nature and energy structure…",
+        "3": "Determining your personality pattern and key energy…",
+        "4": "Mapping life phases and current cycle…"
+      }
+    },
+    "bridge": {
+      "glyph": "Your personality portrait and energy structure are complete. Now, weaving that portrait together with your Glyph…",
+      "match": "Your personality portrait is complete. Now, bringing your portrait together with theirs to map how the two of you meet…"
+    },
+    "glyph": {
+      "value": "What's arriving is a mirror — drawn from a 3,000-year reflective tradition and modern psychology. It doesn't hand you an answer; it shows you this moment of yourself. Worth a second, slower look.",
+      "subtitle": "Weaving your portrait with your Glyph. Takes about 3–5 minutes.",
+      "steps": {
+        "0": "Reading the season you're in now…",
+        "1": "Listening to the Glyph you engaged with…",
+        "2": "Weaving the Glyph against your portrait…",
+        "3": "Letting the reflection take shape…"
+      }
+    },
+    "match": {
+      "value": "What's arriving is an energy map — drawn from 3,000 years of relational wisdom and modern psychology — of how two people actually meet. Read it slowly; the real insight lands on the second pass.",
+      "subtitle": "Mapping how your two energies meet. Takes about 3–5 minutes.",
+      "steps": {
+        "0": "Reading the first portrait's core nature…",
+        "1": "Reading the second portrait's core nature…",
+        "2": "Tracing how your energies feed and friction…",
+        "3": "Mapping where your life phases move in sync…",
+        "4": "Drawing the shape of your connection…"
+      }
+    },
+    "syncro": {
+      "value": "What's arriving is a timing map — calibrated from a 3,000-year Eastern framework and modern decision science. Not a one-size-fits-all calendar, but the windows that move with your task. Reading it well asks you to align with the present.",
+      "subtitle": "Aligning timing and direction for your task. Takes about 1–2 minutes.",
+      "steps": {
+        "0": "Reading your task against the time-and-space field…",
+        "1": "Scanning the windows across the coming hours…",
+        "2": "Aligning directions with each window…",
+        "3": "Bringing your strongest windows into focus…"
+      }
+    }
+  },
   "poju": {
     "branding": {
       "navbar_tooltip": "Strategic Unlock: Break through cognitive gridlocks and complex life dilemmas.",

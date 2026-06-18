@@ -3,18 +3,37 @@
 import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 
+import { ReadingDecoderBanner } from "@/components/reading-ritual/ReadingDecoderBanner";
+
 import "@/styles/poju-unlock-report.css";
 import "@/styles/poju-new-session-btn.css";
+import "@/styles/reading-ritual.css";
 
 type Props = {
   open: boolean;
   reportText: string;
   gateMode?: boolean;
   onClose: () => void;
+  onDecodeParagraph?: (paragraph: string) => void;
 };
 
-export function PojuUnlockReportModal({ open, reportText, gateMode = false, onClose }: Props) {
+function splitReportParagraphs(text: string): string[] {
+  return text
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+}
+
+export function PojuUnlockReportModal({
+  open,
+  reportText,
+  gateMode = false,
+  onClose,
+  onDecodeParagraph,
+}: Props) {
   const t = useTranslations("poju.chat");
+  const decodeEnabled = Boolean(onDecodeParagraph) && !gateMode;
+  const paragraphs = decodeEnabled ? splitReportParagraphs(reportText) : [];
 
   useEffect(() => {
     if (!open) return;
@@ -47,8 +66,32 @@ export function PojuUnlockReportModal({ open, reportText, gateMode = false, onCl
           </div>
         </header>
 
+        {decodeEnabled ? <ReadingDecoderBanner variant="poju" /> : null}
+
         <div className="poju-unlock-report-panel__body">
-          <pre className="poju-unlock-report-panel__text">{reportText}</pre>
+          {decodeEnabled ? (
+            <div className="poju-unlock-report-panel__text poju-unlock-report-panel__text--decode">
+              {paragraphs.map((para, i) => (
+                <p
+                  key={i}
+                  className="poju-unlock-report-panel__para"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => onDecodeParagraph?.(para)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onDecodeParagraph?.(para);
+                    }
+                  }}
+                >
+                  {para}
+                </p>
+              ))}
+            </div>
+          ) : (
+            <pre className="poju-unlock-report-panel__text">{reportText}</pre>
+          )}
         </div>
 
         <footer className="poju-unlock-report-panel__foot">

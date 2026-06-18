@@ -793,6 +793,17 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     });
   }
 
+  function handleDecodeReportParagraph(paragraph: string) {
+    setUnlockReportModalOpen(false);
+    if (unlockReportGatePending) {
+      setUnlockReportGateDismissed(true);
+    }
+    const prompt = locale.startsWith("zh")
+      ? `请用白话帮我读透下面这段报告，并联系我的真实处境：\n\n${paragraph}`
+      : `Please unpack this part of my reading in plain language and connect it to my real-life situation:\n\n${paragraph}`;
+    void handlePojuSend(prompt);
+  }
+
   async function handleRenameSession(targetSessionId: string, newTitle: string) {
     const value = newTitle.trim();
     if (!value) return;
@@ -1473,6 +1484,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           open={unlockReportModalOpen}
           reportText={unlockReportText}
           gateMode={unlockReportGatePending}
+          onDecodeParagraph={handleDecodeReportParagraph}
           onClose={() => {
             if (unlockReportGatePending) {
               setUnlockReportModalOpen(false);
