@@ -225,6 +225,8 @@ function validateAndNormalizeReport(
     },
     conclusion: {
       title: asString(conclusion.title) || "Conclusion",
+      question_response:
+        asString(conclusion.question_response) || asString(conclusion.summary) || undefined,
       synergy_type: computedSynergyType,
       summary: asString(conclusion.summary),
       detail: asString(conclusion.detail),

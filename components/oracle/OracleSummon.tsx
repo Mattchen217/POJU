@@ -4,7 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import type { UserInput } from "@/types/oracle";
 
 import { SplineInteractiveScene } from "@/components/spline/SplineInteractiveScene";
-import { ORACLE_SUMMON_ZOOM } from "@/lib/oracle/oracle-summon-scene";
+import {
+  ORACLE_SUMMON_MOBILE_ZOOM,
+  ORACLE_SUMMON_ZOOM,
+} from "@/lib/oracle/oracle-summon-scene";
 import { forwardPointerToSplineCanvas } from "@/lib/spline/spline-pointer-bridge";
 
 import "@/styles/oracle-summon.css";
@@ -28,6 +31,17 @@ export function OracleSummon({ userInput: _userInput, onComplete }: OracleSummon
   const holdTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const holdTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const burstTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [summonZoom, setSummonZoom] = useState(ORACLE_SUMMON_ZOOM);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const apply = () => {
+      setSummonZoom(mq.matches ? ORACLE_SUMMON_MOBILE_ZOOM : ORACLE_SUMMON_ZOOM);
+    };
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
 
   const forwardTouch = (clientX: number, clientY: number) => {
     const canvas = sceneRef.current?.querySelector("canvas");
@@ -117,7 +131,7 @@ export function OracleSummon({ userInput: _userInput, onComplete }: OracleSummon
         <SplineInteractiveScene
           scene="/spline/oracle-explosion.splinecode"
           className="oracle-summon-spline"
-          initialZoom={ORACLE_SUMMON_ZOOM}
+          initialZoom={summonZoom}
           pointerFollow
           webGLContext="preparing"
         />

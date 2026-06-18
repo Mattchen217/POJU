@@ -1092,6 +1092,7 @@
     "back_to_home": "返回 Glyph",
     "about_glyph": "了解 Glyph",
     "your_question_label": "你的问题",
+    "question_response_title": "关于你的问题",
     "draw_missing_profile": "未选择档案，请先选择或添加性格画像。",
     "back_to_prepare": "返回准备页",
     "draw_stub_title": "档案已就绪 — 下一步抽 Glyph",
@@ -1677,7 +1678,9 @@
       "exit_vr": "退出 VR 模式",
       "not_supported": "你的设备不支持方向感应",
       "combination_not_found": "此组合无指引",
-      "session_not_found": "找不到会话。"
+      "session_not_found": "找不到会话。",
+      "task_response_title": "为你这件事的直答",
+      "task_response_avoid": "宜避开"
     },
     "timer": {
       "live_label": "实时",
@@ -1906,6 +1909,7 @@
       "timing_dynamic": "人生阶段协同",
       "strengths": "优势",
       "challenges": "挑战",
+      "question_response_title": "关于你的问题",
       "timing": "时机",
       "saved_to_archive": "已保存到你的 Archive。",
       "view_archive": "在 Archive 中查看",

@@ -1039,6 +1039,7 @@
     "back_to_home": "Zurück zu Glyph",
     "about_glyph": "Über Glyph",
     "your_question_label": "Deine Frage",
+    "question_response_title": "Zu deiner Frage",
     "draw_missing_profile": "Kein Profil gewählt. Bitte zuerst dein Geburtshoroskop wählen.",
     "back_to_prepare": "Zurück zur Vorbereitung",
     "draw_stub_title": "Profil bereit — Ziehung in Schritt 4",
@@ -1471,7 +1472,9 @@
       "exit_vr": "VR-Modus beenden",
       "not_supported": "Gerät unterstützt keine Orientierung",
       "combination_not_found": "Keine Lesung für diese Kombination",
-      "session_not_found": "Session nicht gefunden."
+      "session_not_found": "Session nicht gefunden.",
+      "task_response_title": "Zu deiner Aufgabe",
+      "task_response_avoid": "Vermeiden"
     },
     "timer": {
       "live_label": "Live",
@@ -1823,6 +1826,7 @@
       "timing_dynamic": "Timing-Abgleich",
       "strengths": "Stärken",
       "challenges": "Herausforderungen",
+      "question_response_title": "Zu Ihrer Frage",
       "timing": "Wann",
       "saved_to_archive": "In Ihrem Archive gespeichert.",
       "view_archive": "Im Archive ansehen",

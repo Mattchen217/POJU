@@ -12,6 +12,7 @@ import {
   MATCH_ANALYZING_ORBS_SHELL_HEIGHT_RATIO,
   MATCH_ANALYZING_ORBS_SHELL_OFFSET_X,
   MATCH_ANALYZING_ORBS_SHELL_OFFSET_Y,
+  MATCH_ANALYZING_ORBS_SHELL_WIDTH_RATIO,
   MATCH_HOW_WORKS_SPLINE_DISPLAY_SCALE,
   MATCH_HOW_WORKS_SPLINE_SCENE,
   MATCH_HOW_WORKS_SPLINE_SCENE_PAN_X,
@@ -36,6 +37,7 @@ const ORBS_VARIANT_CONFIG = {
   howWorks: {
     displayScale: MATCH_HOW_WORKS_SPLINE_DISPLAY_SCALE,
     heightRatio: MATCH_HOW_WORKS_SPLINE_SHELL_HEIGHT_RATIO,
+    widthRatio: 1,
     offsetX: MATCH_HOW_WORKS_SPLINE_SHELL_OFFSET_X,
     offsetY: MATCH_HOW_WORKS_SPLINE_SHELL_OFFSET_Y,
     panX: MATCH_HOW_WORKS_SPLINE_SCENE_PAN_X,
@@ -44,6 +46,7 @@ const ORBS_VARIANT_CONFIG = {
   analyzing: {
     displayScale: MATCH_ANALYZING_ORBS_DISPLAY_SCALE,
     heightRatio: MATCH_ANALYZING_ORBS_SHELL_HEIGHT_RATIO,
+    widthRatio: MATCH_ANALYZING_ORBS_SHELL_WIDTH_RATIO,
     offsetX: MATCH_ANALYZING_ORBS_SHELL_OFFSET_X,
     offsetY: MATCH_ANALYZING_ORBS_SHELL_OFFSET_Y,
     panX: MATCH_ANALYZING_ORBS_SCENE_PAN_X,
@@ -66,6 +69,7 @@ export function MatchOrbsSpline({
   const shellStyle = {
     ["--match-how-spline-display-scale" as string]: String(config.displayScale),
     ["--match-how-spline-height-ratio" as string]: String(config.heightRatio),
+    ["--match-how-spline-width-ratio" as string]: String(config.widthRatio),
     ["--match-how-spline-offset-x" as string]: config.offsetX,
     ["--match-how-spline-offset-y" as string]: config.offsetY,
   } as CSSProperties;

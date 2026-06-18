@@ -221,6 +221,25 @@ export const SYNCRO_OUTPUT_BRANDING = `# ⚠️ Syncro 输出品牌（JSON matri
 - 不预测「必成功」；给环境效率与共振判断
 - 不替用户做决定；给宜/不宜/慎的方向性判断`;
 
+export const SYNCRO_TASK_RESPONSE_FOCUS = `# ⭐ 必须为用户的任务给出顶层直答 task_response（最高优先级）
+
+用户带着一个具体任务来。除了 96 格文案，你必须额外产出一个 **task_response** 顶层对象，直接回答"我这件事该何时、朝哪个方向"。
+
+## 取据于（内部已计算 → 合规输出）
+1. **已计算的 current_level**：从矩阵里挑出 level 最高（open_current 等）的若干组合——这就是"推荐窗口 + 方向"的硬依据，**绝不另判等级**。
+2. **奇门 / 用神方位 / 时辰天干**：_internal.key_factors / qimen_data——为何这些时辰×方位利于此任务（内化，输出翻译成 Syncro 语言）。
+3. **真太阳时**：窗口基于用户真实地理位置（见真太阳时背景）。
+→ 汇总成对用户任务的**明确时机—方向建议**。
+
+## 合规接法
+- ✓ 「就你要做的『任务』，最顺的时机窗口是【时辰段】、朝【方向】——这组合让你【任务相关的状态，如气场稳/头脑清醒】」。
+- ✓ 「若错过这些窗口，次优是【…】；要避开的是【低 level 时段】，因为那时你容易【…】」。
+- ✗ 禁：报具体公历日期吉凶、承诺"必成"、写八门/奇门/用神等术语、预测结果。
+
+## 底线
+- task_response 必须**点名最佳的 1–3 个时机窗口 + 方向**（来自已算 open_current），并给出**用户任务视角**的依据（大白话，不堆术语）。
+- 明确、不打太极；但不报日期吉凶、不承诺成功。`;
+
 /** Syncro matrix + hour-stream prompt 共用的输出防线（顺序固定） */
 export function buildSyncroOutputDefenseSections(): string[] {
   return [

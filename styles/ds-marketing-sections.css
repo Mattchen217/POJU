@@ -304,12 +304,13 @@
 .match-how-works-spline__shell {
   --match-how-shell-scale: var(--match-how-spline-display-scale, 0.58);
   --match-how-shell-height-ratio: var(--match-how-spline-height-ratio, 1.62);
+  --match-how-shell-width-ratio: var(--match-how-spline-width-ratio, 1);
   --match-how-shell-offset-x: var(--match-how-spline-offset-x, 0px);
   --match-how-shell-offset-y: var(--match-how-spline-offset-y, -2%);
   position: absolute;
   left: 50%;
   top: 50%;
-  width: calc(100% / var(--match-how-shell-scale));
+  width: calc(100% * var(--match-how-shell-width-ratio) / var(--match-how-shell-scale));
   height: calc(100% * var(--match-how-shell-height-ratio) / var(--match-how-shell-scale));
   min-height: 0;
   transform: translate(

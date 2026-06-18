@@ -101,6 +101,7 @@ export function MatchReport({ session, locale }: MatchReportProps) {
 
   const synergyType = normalizeSynergyType(report.conclusion.synergy_type);
   const synergyInfo = SYNERGY_TYPES[synergyType as SynergyType] ?? SYNERGY_TYPES.adaptive_balance;
+  const questionResponse = report.conclusion.question_response?.trim();
 
   const matchSummary = extractMatchSummary(session);
 
@@ -119,7 +120,7 @@ export function MatchReport({ session, locale }: MatchReportProps) {
             content={baseReportA}
             status="completed"
             bytes_received={baseReportA.length}
-            layout="inline"
+            layout="panel"
           />
         </section>
       ) : null}
@@ -130,7 +131,7 @@ export function MatchReport({ session, locale }: MatchReportProps) {
             content={baseReportB}
             status="completed"
             bytes_received={baseReportB.length}
-            layout="inline"
+            layout="panel"
           />
         </section>
       ) : null}
@@ -198,6 +199,12 @@ export function MatchReport({ session, locale }: MatchReportProps) {
           color={synergyInfo.color_hex}
         >
           <div className="card-content">
+            {questionResponse ? (
+              <>
+                <h4>{t("question_response_title")}</h4>
+                <p>{questionResponse}</p>
+              </>
+            ) : null}
             <p>{report.conclusion.detail}</p>
             <h4>{t("strengths")}</h4>
             <ul className="strengths-list">

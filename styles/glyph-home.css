@@ -157,6 +157,11 @@
   background: linear-gradient(180deg, #0b0815 0%, #050308 100%);
 }
 
+.glyph-draw-page:not(.tool-preview-page).glyph-draw-page--paywall {
+  background: transparent;
+  max-width: none;
+}
+
 .glyph-draw-back {
   display: inline-block;
   margin-bottom: 1.5rem;

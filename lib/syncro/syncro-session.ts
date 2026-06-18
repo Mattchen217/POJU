@@ -7,7 +7,7 @@ import { safeRandomUUID } from "@/lib/client/safe-crypto";
 import { decryptJson, encryptJson } from "@/lib/crypto";
 import { getPojuDb, type SyncroSessionRecord } from "@/lib/db/poju-db";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
-import type { SyncroSession, SyncroSessionPayload } from "./types";
+import type { SyncroSession, SyncroSessionPayload, SyncroTaskResponse } from "./types";
 import {
   computeSyncroSessionExpiresAt,
   isSubmissionTimelineComplete,
@@ -99,6 +99,7 @@ export async function patchSyncroSessionMatrix(
     }>
   >,
   llmMeta?: Partial<SyncroSession["llm_meta"]> & { cost_usd_delta?: number },
+  taskResponse?: SyncroTaskResponse,
 ): Promise<SyncroSession | null> {
   const record = await getPojuDb().syncro_sessions.get(sessionId);
   if (!record) return null;
@@ -133,6 +134,9 @@ export async function patchSyncroSessionMatrix(
     }
     if (typeof llmMeta?.cost_usd_delta === "number") {
       session.cost_usd += llmMeta.cost_usd_delta;
+    }
+    if (taskResponse) {
+      session.task_response = taskResponse;
     }
 
     const { cipher, iv } = await encryptJson(SYNCRO_SESSION_SECRET, toPayload(session));

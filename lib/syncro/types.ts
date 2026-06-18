@@ -38,6 +38,18 @@ export type SyncroMatrix = {
   [key: string]: SyncroCombination;
 };
 
+export interface SyncroTaskResponseWindow {
+  window: string;
+  direction: string;
+  why: string;
+}
+
+export interface SyncroTaskResponse {
+  summary: string;
+  best_windows: SyncroTaskResponseWindow[];
+  avoid: string;
+}
+
 export interface SyncroSession {
   session_id: string;
   device_id: string;
@@ -59,6 +71,8 @@ export interface SyncroSession {
     tokens_used: number;
     latency_ms: number;
   };
+  /** Top-level direct answer to the user's task (v5.1+). */
+  task_response?: SyncroTaskResponse;
   /** Hook flow — preview gate before compute. */
   unlock_status?: "preview" | "unlocked";
   unlock_via?: "payment" | "code";

@@ -1039,6 +1039,7 @@
     "back_to_home": "Volver a Glyph",
     "about_glyph": "Sobre Glyph",
     "your_question_label": "Tu pregunta",
+    "question_response_title": "Sobre tu pregunta",
     "draw_missing_profile": "No hay perfil seleccionado. Elige tu carta natal primero.",
     "back_to_prepare": "Volver a preparar",
     "draw_stub_title": "Perfil listo — el sorteo viene en el paso 4",
@@ -1471,7 +1472,9 @@
       "exit_vr": "Salir del modo VR",
       "not_supported": "Tu dispositivo no admite orientación",
       "combination_not_found": "Sin lectura para esta combinación",
-      "session_not_found": "Sesión no encontrada."
+      "session_not_found": "Sesión no encontrada.",
+      "task_response_title": "Para tu tarea",
+      "task_response_avoid": "Evitar"
     },
     "timer": {
       "live_label": "En vivo",
@@ -1823,6 +1826,7 @@
       "timing_dynamic": "Alineación temporal",
       "strengths": "Fortalezas",
       "challenges": "Desafíos",
+      "question_response_title": "Sobre tu pregunta",
       "timing": "Cuándo",
       "saved_to_archive": "Guardado en tu Archive.",
       "view_archive": "Ver en Archive",

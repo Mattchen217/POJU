@@ -471,7 +471,7 @@ export function GlyphReadingPage() {
             content={reportText}
             status="completed"
             bytes_received={reportText.length}
-            layout="inline"
+            layout="panel"
           />
         </section>
       ) : null}

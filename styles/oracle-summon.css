@@ -93,11 +93,28 @@
 
 @media (max-width: 767px) {
   .oracle-summon-page {
-    --oracle-summon-display-scale: 0.84;
+    /*
+     * Expand canvas then scale down (Match hero shell pattern) —
+     * avoids clipping the particle ring at left/right edges.
+     */
+    --oracle-summon-display-scale: 0.56;
+    --oracle-summon-shell-height-ratio: 1.22;
   }
 
   .oracle-summon-scene .spline-interactive-scene,
   .oracle-summon-scene .oracle-summon-spline {
-    transform-origin: center 46%;
+    inset: auto;
+    left: 50%;
+    top: 42%;
+    width: calc(100% / var(--oracle-summon-display-scale));
+    height: calc(100% * var(--oracle-summon-shell-height-ratio) / var(--oracle-summon-display-scale));
+    transform: translate(-50%, -50%) scale(var(--oracle-summon-display-scale));
+    transform-origin: center center;
+  }
+
+  .oracle-summon-scene--burst .spline-interactive-scene,
+  .oracle-summon-scene--burst .oracle-summon-spline {
+    transform: translate(-50%, -50%)
+      scale(calc(var(--oracle-summon-display-scale) * 4.5));
   }
 }

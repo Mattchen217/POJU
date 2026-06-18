@@ -175,12 +175,20 @@
 
   /* ── Match flow ── */
   html:not(.pwa-mode) .match-select-page,
-  html:not(.pwa-mode) .match-relationship-page:not(.tool-preview-page),
+  html:not(.pwa-mode) .match-relationship-page:not(.tool-preview-page):not(.match-relationship-page--paywall),
   html:not(.pwa-mode) .match-analyzing {
     min-height: 100dvh;
     display: flex;
     flex-direction: column;
     align-items: center;
+  }
+
+  html:not(.pwa-mode) .match-relationship-page--paywall {
+    background: transparent;
+    min-height: auto;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1.25rem 4rem;
   }
 
   html:not(.pwa-mode) .match-select-header,

@@ -24,7 +24,7 @@ import {
 } from "@/lib/syncro/calculate-matrix";
 import type { CurrentLevel } from "@/lib/syncro/current-system";
 import { HOUR_ORDER } from "@/lib/syncro/hour-order";
-import type { SyncroMatrix } from "@/lib/syncro/types";
+import type { SyncroMatrix, SyncroTaskResponse } from "@/lib/syncro/types";
 
 export type GenerateSyncroMatrixInput = {
   profile_id: string;
@@ -65,6 +65,7 @@ export type SyncroLlmBatchResult = {
   batch_index: number;
   batch_total: number;
   advice: Record<string, { short_advice: string; detailed_advice: string; rationale: string }>;
+  task_response?: SyncroTaskResponse;
   model: string;
   tokens_used: number;
   cost_usd: number;
@@ -124,6 +125,33 @@ async function resolveProfileBundle(input: GenerateSyncroMatrixInput): Promise<{
 
 function asString(v: unknown): string {
   return typeof v === "string" ? v.trim() : "";
+}
+
+export function parseSyncroTaskResponse(raw: unknown): SyncroTaskResponse | undefined {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+  const row = raw as Record<string, unknown>;
+  const summary = asString(row.summary);
+  const avoid = asString(row.avoid);
+  const windowsRaw = row.best_windows;
+  const best_windows = Array.isArray(windowsRaw)
+    ? windowsRaw
+        .filter((item) => item && typeof item === "object" && !Array.isArray(item))
+        .map((item) => {
+          const w = item as Record<string, unknown>;
+          return {
+            window: asString(w.window),
+            direction: asString(w.direction),
+            why: asString(w.why),
+          };
+        })
+        .filter((w) => w.window && w.direction && w.why)
+    : [];
+  if (!summary && best_windows.length === 0) return undefined;
+  return {
+    summary,
+    best_windows,
+    avoid,
+  };
 }
 
 function toMatrixProfile(
@@ -325,16 +353,19 @@ export async function fetchLlmAdviceBatch(input: {
   locale: string;
   current_time: Date;
   subMatrix: Record<string, MatrixCell>;
+  full_matrix?: Record<string, MatrixCell>;
   true_solar?: SyncroMatrixMetadata;
   batch_index: number;
   batch_total: number;
   output_locale?: AppLocale;
 }): Promise<{
   advice: Record<string, unknown>;
+  task_response?: SyncroTaskResponse;
   model: string;
   tokens_used: number;
   cost_usd: number;
 }> {
+  const isFinalBatch = input.batch_index === input.batch_total;
   const { system, user } = buildSyncroPrompt({
     profile: input.profile,
     base_analysis: input.base_analysis,
@@ -346,6 +377,7 @@ export async function fetchLlmAdviceBatch(input: {
     true_solar: input.true_solar,
     batch_index: input.batch_index,
     batch_total: input.batch_total,
+    full_matrix: isFinalBatch ? input.full_matrix : undefined,
   });
 
   let result = await callLLM({
@@ -410,6 +442,7 @@ export async function fetchLlmAdviceBatch(input: {
 
   return {
     advice,
+    task_response: parseSyncroTaskResponse(parsed.task_response),
     model: result.actual_model,
     tokens_used: result.meta.tokens_used,
     cost_usd: result.meta.cost_usd ?? 0,
@@ -528,6 +561,7 @@ export async function runSyncroLlmBatch(input: {
     locale: input.locale,
     current_time,
     subMatrix,
+    full_matrix: input.local_matrix,
     true_solar: input.true_solar,
     batch_index: input.batch_index + 1,
     batch_total: batches.length,
@@ -538,6 +572,7 @@ export async function runSyncroLlmBatch(input: {
     batch_index: input.batch_index,
     batch_total: batches.length,
     advice: normalizeBatchAdvice(batch.advice),
+    task_response: batch.task_response,
     model: batch.model,
     tokens_used: batch.tokens_used,
     cost_usd: batch.cost_usd,

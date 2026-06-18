@@ -32,6 +32,7 @@ type StatusResponse = {
     current_hour: string | null;
     failed_hours: string[];
     done: boolean;
+    task_response?: import("@/lib/syncro/types").SyncroTaskResponse;
   } | null;
   hours: Record<string, SyncroHourData | null>;
   kv_configured?: boolean;
@@ -147,6 +148,19 @@ export function useSyncroInngestJob({
               await applyHourFromKv(hourId, hourData);
             }
 
+            if (data.status.task_response && !workingSessionRef.current?.task_response) {
+              const withTask = await patchSyncroSessionMatrix(
+                sessionId,
+                {},
+                { cost_usd_delta: 0 },
+                data.status.task_response,
+              );
+              if (withTask) {
+                workingSessionRef.current = withTask;
+                onSessionUpdate(withTask);
+              }
+            }
+
             for (const hourId of failedHourIds) {
               const hourData = data.hours[hourId];
               if (!hourData || !isSyncroHourKvComplete(hourData)) {
@@ -155,6 +169,18 @@ export function useSyncroInngestJob({
             }
 
             if (data.status.done) {
+              if (data.status.task_response && !workingSessionRef.current?.task_response) {
+                const withTask = await patchSyncroSessionMatrix(
+                  sessionId,
+                  {},
+                  { cost_usd_delta: 0 },
+                  data.status.task_response,
+                );
+                if (withTask) {
+                  workingSessionRef.current = withTask;
+                  onSessionUpdate(withTask);
+                }
+              }
               onProgress({
                 completed: countLlmReadyHours(workingSessionRef.current ?? activeSession),
                 total: 12,

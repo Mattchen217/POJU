@@ -200,11 +200,16 @@
   padding: 1.5rem 1rem 3rem;
 }
 
+.match-relationship-page:not(.tool-preview-page).match-relationship-page--paywall {
+  background: transparent;
+}
+
 .match-relationship-page--paywall {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+  min-height: 100dvh;
+  padding: 1.5rem 1rem max(1.5rem, env(safe-area-inset-bottom));
 }
 
 .match-paywall-overlay {
@@ -496,7 +501,8 @@
 }
 
 .match-analyzing-orbs-loop {
-  width: min(100vw, 36rem);
+  width: min(100vw, 40rem);
+  min-height: clamp(200px, 48vw, 280px);
   margin: 0 auto 1.75rem;
   overflow: visible;
 }

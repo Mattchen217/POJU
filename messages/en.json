@@ -1077,6 +1077,7 @@
     "back_to_home": "Back to Glyph",
     "about_glyph": "About Glyph",
     "your_question_label": "Your question",
+    "question_response_title": "About your question",
     "draw_missing_profile": "No profile selected. Choose your birth chart first.",
     "back_to_prepare": "Back to prepare",
     "draw_stub_title": "Profile ready — draw step next",
@@ -1662,7 +1663,9 @@
       "exit_vr": "Exit VR mode",
       "not_supported": "Your device doesn't support orientation",
       "combination_not_found": "No reading available for this combination",
-      "session_not_found": "Session not found."
+      "session_not_found": "Session not found.",
+      "task_response_title": "For your task",
+      "task_response_avoid": "Avoid"
     },
     "timer": {
       "live_label": "Live",
@@ -1891,6 +1894,7 @@
       "timing_dynamic": "Timing Alignment",
       "strengths": "Strengths",
       "challenges": "Challenges",
+      "question_response_title": "About your question",
       "timing": "When",
       "saved_to_archive": "Saved to your Archive.",
       "view_archive": "View in Archive",

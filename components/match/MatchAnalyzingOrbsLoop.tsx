@@ -4,13 +4,13 @@ import { useEffect, useState } from "react";
 
 import { MatchOrbsSpline } from "@/components/match/MatchOrbsSpline";
 import {
-  MATCH_ORBS_LOOP_FADE_MS,
+  MATCH_ORBS_LOOP_HIDDEN_MS,
   MATCH_ORBS_LOOP_VISIBLE_MS,
 } from "@/lib/match/match-orbs-loop-timing";
 
-/** Analyzing wait — orbs visible 4s, slow fade out, repeat until analysis completes. */
+/** Analyzing wait — mount orbs 4s, unmount, remount (repeat until analysis completes). */
 export function MatchAnalyzingOrbsLoop() {
-  const [opacity, setOpacity] = useState(1);
+  const [mounted, setMounted] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -23,13 +23,13 @@ export function MatchAnalyzingOrbsLoop() {
     };
 
     const runVisiblePhase = () => {
-      setOpacity(1);
-      schedule(runFadeOutPhase, MATCH_ORBS_LOOP_VISIBLE_MS);
+      setMounted(true);
+      schedule(runHiddenPhase, MATCH_ORBS_LOOP_VISIBLE_MS);
     };
 
-    const runFadeOutPhase = () => {
-      setOpacity(0);
-      schedule(runVisiblePhase, MATCH_ORBS_LOOP_FADE_MS);
+    const runHiddenPhase = () => {
+      setMounted(false);
+      schedule(runVisiblePhase, MATCH_ORBS_LOOP_HIDDEN_MS);
     };
 
     runVisiblePhase();
@@ -41,19 +41,14 @@ export function MatchAnalyzingOrbsLoop() {
   }, []);
 
   return (
-    <div
-      className="match-analyzing-orbs-loop"
-      style={{
-        opacity,
-        transition: `opacity ${MATCH_ORBS_LOOP_FADE_MS}ms ease-in-out`,
-      }}
-      aria-hidden
-    >
-      <MatchOrbsSpline
-        className="match-analyzing-orbs"
-        variant="analyzing"
-        webGLContext="preparing"
-      />
+    <div className="match-analyzing-orbs-loop" aria-hidden>
+      {mounted ? (
+        <MatchOrbsSpline
+          className="match-analyzing-orbs"
+          variant="analyzing"
+          webGLContext="preparing"
+        />
+      ) : null}
     </div>
   );
 }

@@ -22,6 +22,65 @@
   --syncro-stage-top: calc(env(safe-area-inset-top, 0px) + 158px);
 }
 
+.syncro-task-response {
+  position: relative;
+  z-index: 11;
+  margin: calc(env(safe-area-inset-top, 0px) + 8px) 12px 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(12, 18, 32, 0.88);
+  border: 1px solid rgba(139, 156, 255, 0.22);
+  color: rgba(235, 240, 255, 0.92);
+}
+
+.syncro-task-response__title {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(167, 196, 255, 0.9);
+}
+
+.syncro-task-response__summary {
+  margin: 0 0 10px;
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.syncro-task-response__windows {
+  margin: 0 0 10px;
+  padding-left: 1.1rem;
+  list-style: disc;
+}
+
+.syncro-task-response__windows li {
+  margin-bottom: 8px;
+}
+
+.syncro-task-response__windows strong {
+  display: block;
+  font-size: 0.86rem;
+  margin-bottom: 2px;
+}
+
+.syncro-task-response__windows p {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: rgba(210, 220, 240, 0.88);
+}
+
+.syncro-task-response__avoid {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: rgba(200, 210, 230, 0.85);
+}
+
+.syncro-task-response__avoid-label {
+  color: rgba(255, 180, 140, 0.9);
+}
+
 /* Hour progress — top band */
 .syncro-main-view .hour-progress-bar {
   top: var(--syncro-hour-top);

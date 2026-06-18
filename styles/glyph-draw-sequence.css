@@ -105,7 +105,7 @@
 
 @media (min-width: 768px) {
   .glyph-draw-sequence__card {
-    --glyph-draw-card-h: min(calc(100dvh - 10rem), 32rem);
-    width: min(18.5rem, calc(var(--glyph-draw-card-h) * 9 / 16));
+    --glyph-draw-card-h: min(calc(100dvh - 10rem), 28rem);
+    width: min(17rem, calc(var(--glyph-draw-card-h) * 9 / 16));
   }
 }

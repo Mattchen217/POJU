@@ -1,4 +1,4 @@
-import { buildSyncroOutputDefenseSections } from "@/lib/llm/prompts/syncro-base";
+import { buildSyncroOutputDefenseSections, SYNCRO_TASK_RESPONSE_FOCUS } from "@/lib/llm/prompts/syncro-base";
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
 import {
   getSyncroLanguageDirective,
@@ -27,6 +27,9 @@ export type BuildSyncroBatchPromptInput = {
   task_description: string;
   profile_summary: string;
   locale: string;
+  /** When true, also output task_response (final Inngest step only). */
+  include_task_response?: boolean;
+  full_matrix_summary?: string;
 };
 
 export type SyncroBatchPromptResult = {
@@ -87,6 +90,36 @@ export function buildSyncroBatchPromptForHours(
   const cellCount = input.hours.reduce((n, h) => n + h.cells.length, 0);
   const defenseBlock = stitchPromptSections(...buildSyncroOutputDefenseSections());
   const profileIsolation = buildSyncroProfileIsolationBlock(outputLanguage, isZhOutput);
+  const taskResponseSection =
+    input.include_task_response && input.full_matrix_summary
+      ? (isZhOutput
+          ? `# ⭐ 本批须额外产出 task_response（顶层直答用户任务）
+
+用户任务:"${input.task_description}"
+全矩阵高 level 组合参考（勿另判等级）:
+${input.full_matrix_summary}
+
+${SYNCRO_TASK_RESPONSE_FOCUS}
+
+JSON 顶层增加:
+"task_response": {
+  "summary": "60-100 字",
+  "best_windows": [{ "window": "...", "direction": "...", "why": "80-140 字" }],
+  "avoid": "60-100 字"
+}
+`
+          : `# ⭐ Also produce task_response (top-level answer for the user's task)
+
+Task: "${input.task_description}"
+Top precomputed combinations (do NOT re-judge levels):
+${input.full_matrix_summary}
+
+${SYNCRO_TASK_RESPONSE_FOCUS}
+
+Add top-level JSON:
+"task_response": { "summary", "best_windows": [{ "window", "direction", "why" }], "avoid" }
+`)
+      : "";
 
   const coreRules = isZhOutput
     ? `你是 pojulife Syncro 资深分析师。本次 LLM 调用【仅】生成以下 ${input.hours.length} 个时辰（hour_id 必须完全一致）:${hourIdList}。共 ${cellCount} 个方位。
@@ -134,6 +167,8 @@ Include all hour_ids: ${hourIds}. advice_by_hour keys MUST match those hour_id s
 
   const system = `${coreRules}
 
+${taskResponseSection}
+
 ${langDirective}
 
 ${profileIsolation}
@@ -141,8 +176,8 @@ ${profileIsolation}
 ${defenseBlock}`;
 
   const user = isZhOutput
-    ? `请为上述 ${input.hours.length} 个时辰生成文案,严格 JSON,按 advice_by_hour 结构。全部使用 ${outputLanguage}。`
-    : `Generate for all listed hours. Strict JSON with advice_by_hour. Write entirely in ${outputLanguage}.`;
+    ? `请为上述 ${input.hours.length} 个时辰生成文案,严格 JSON,按 advice_by_hour 结构。${input.include_task_response ? "并产出 task_response 顶层对象。" : ""}全部使用 ${outputLanguage}。`
+    : `Generate for all listed hours. Strict JSON with advice_by_hour.${input.include_task_response ? " Include task_response at top level." : ""} Write entirely in ${outputLanguage}.`;
 
   return { system, user, outputLocale, outputLanguage };
 }

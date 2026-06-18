@@ -59,6 +59,13 @@ export const POJU_BAZI_DEEP_METHOD = `# 性格画像深度解读法则（POJU �
 - 给出 **顺势**（何时推进）或 **转向**（何时守、何时断）的明确判断
 - 不替用户做决定；给出 1–2 条可验证的破局轴线
 
+## 6. 正面回答原始问题（CONCLUSION 收口）
+- CONCLUSION 段**必须有一句明确收口**：把第 1–5 层推演的结论，落回用户的 original_question，正面回答其"方向 / 条件 / 该进该守"。
+- 依据须可追溯到 core nature / life cycle / balancing element 至少 2 项（已软化为能量语言）。
+- 合规接法同 Match：回答"方向、条件、时机窗口、主动权"，**不预测具体事件日期、不下吉凶、不替用户决定**。
+- ✗ 反例：CONCLUSION 只描述"你正处在金水交战的格局"却不回答用户问的"该不该辞职"。
+- ✓ 正例：「就你问的该不该辞职——从你 Metal 主导、当前 life cycle 转型、balancing element 在 Water 来看，方向是『可动，但先补 X 这块根基』，时机窗口在你完成 Y 之后；走不走，主动权在你」。
+
 ⚠️ 问诊阶段可浅引 profile；**主交付**必须深度展开以上 5 层，且用户可见处用 profile / core nature，禁 chart / Day Master / Yong Shen 裸写。`;
 
 export const POJU_ACTION_DESIGN_PRINCIPLES = `# 行动设计原则（WHAT TO DO · 三条行动）

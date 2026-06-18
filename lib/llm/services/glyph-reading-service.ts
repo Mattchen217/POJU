@@ -36,6 +36,8 @@ export type GlyphDualViewReading = {
 export type GlyphReadingContent = {
   wind_category_blurb: string;
   classical_voice: string;
+  /** Direct answer to the user's draw question (v5.1+). */
+  question_response?: string;
   命理双视角: GlyphDualViewReading;
   meaning_for_question: string;
   hidden_tension: string;
@@ -141,6 +143,8 @@ function validateReading(parsed: Record<string, unknown>): GlyphReadingContent {
   const reading: GlyphReadingContent = {
     wind_category_blurb: asString(parsed.wind_category_blurb),
     classical_voice: asString(parsed.classical_voice),
+    question_response:
+      asString(parsed.question_response) || asString(parsed.meaning_for_question) || undefined,
     命理双视角: {
       命理看此事: asString(dual?.命理看此事 ?? dual?.["命理看此事"]),
       签文看此事: asString(dual?.签文看此事 ?? dual?.["签文看此事"]),

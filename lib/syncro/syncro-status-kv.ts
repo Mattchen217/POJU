@@ -1,5 +1,7 @@
 import { kv } from "@/lib/kv/client";
 
+import type { SyncroTaskResponse } from "@/lib/syncro/types";
+
 const TTL_STATUS = 86400; // 24 hours
 
 export type SyncroHourAdviceCell = {
@@ -17,6 +19,7 @@ export type SyncroStatus = {
   started_at: number;
   updated_at: number;
   done: boolean;
+  task_response?: SyncroTaskResponse;
 };
 
 export type SyncroHourData = {

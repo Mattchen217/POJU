@@ -41,6 +41,8 @@ export interface MatchReport {
 
   conclusion: {
     title: string;
+    /** Direct answer to the user's question in relationship_description (v5.1+). */
+    question_response?: string;
     synergy_type: SynergyType;
     summary: string;
     detail: string;

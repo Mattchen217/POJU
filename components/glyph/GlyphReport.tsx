@@ -45,6 +45,7 @@ export function GlyphReport({ reading, glyph, question }: Props) {
   const safeReading = reading;
   const windLabel = LEVEL_META[glyph.level]?.display_name ?? glyph.level;
   const timeframeKey = TIMEFRAME_KEYS[safeReading.exploration.timeframe] ?? "explore_time_today";
+  const questionResponse = safeReading.question_response?.trim();
 
   if (safeReading.invalid_input) {
     return (
@@ -62,6 +63,13 @@ export function GlyphReport({ reading, glyph, question }: Props) {
         <GlyphSectionLabel icon={MessageCircle}>{t("your_question_label")}</GlyphSectionLabel>
         <p className="question-recap-text">{question}</p>
       </div>
+
+      {questionResponse ? (
+        <div className="report-section meaning">
+          <GlyphSectionLabel icon={Target}>{t("question_response_title")}</GlyphSectionLabel>
+          <p>{questionResponse}</p>
+        </div>
+      ) : null}
 
       <div className="report-section wind-category">
         <h3>{windLabel}</h3>

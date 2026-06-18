@@ -103,7 +103,9 @@ export const syncroGenerateBatch = inngest.createFunction(
       if (!ctx) throw new Error("syncro_llm_context_missing");
 
       try {
-        const input = buildSyncroLlmHoursInput(session_id, hour_ids, ctx);
+        const input = buildSyncroLlmHoursInput(session_id, hour_ids, ctx, {
+          include_task_response: step_index === step_total - 1,
+        });
         const result = await generateSyncroHoursAdvice(input);
         const now = Date.now();
 
@@ -123,6 +125,7 @@ export const syncroGenerateBatch = inngest.createFunction(
           started_at: nextStatus?.started_at ?? Date.now(),
           updated_at: Date.now(),
           done: completed >= 12,
+          task_response: result.task_response ?? nextStatus?.task_response,
         });
         await touchSyncroJob(session_id);
 
@@ -133,6 +136,7 @@ export const syncroGenerateBatch = inngest.createFunction(
           completed,
           step_index,
           step_total,
+          task_response: Boolean(result.task_response),
         };
       } catch (e) {
         console.error(`[inngest/batch] ${session_id} ${label} failed:`, e);

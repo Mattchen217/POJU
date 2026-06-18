@@ -144,6 +144,42 @@
   line-height: 1.75;
 }
 
+/* Delivery portrait — fixed window, scroll inside */
+.streaming-analysis-panel {
+  --delivery-portrait-panel-h: min(40dvh, 21rem);
+}
+
+.streaming-analysis-panel .streaming-container {
+  max-height: var(--delivery-portrait-panel-h);
+  overflow: hidden;
+  padding: 0;
+}
+
+.streaming-analysis-panel .streaming-content-compact {
+  max-height: var(--delivery-portrait-panel-h);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1.125rem 1.125rem 1.25rem;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+}
+
+.streaming-analysis-panel .streaming-content-compact::-webkit-scrollbar {
+  width: 5px;
+}
+
+.streaming-analysis-panel .streaming-content-compact::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 3px;
+}
+
+@media (min-width: 768px) {
+  .streaming-analysis-panel {
+    --delivery-portrait-panel-h: min(36dvh, 19.5rem);
+  }
+}
+
 .preparing-page {
   position: relative;
   height: 100vh;

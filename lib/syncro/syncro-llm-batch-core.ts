@@ -3,6 +3,8 @@ import {
   buildSyncroBatchPromptForHours,
   resolveSyncroBatchOutputLocale,
 } from "@/lib/syncro/syncro-batch-prompt";
+import { buildTopWindowsMatrixSummary } from "@/lib/llm/prompts/syncro-deepseek-prompt";
+import { parseSyncroTaskResponse } from "@/lib/llm/services/syncro-reading-service";
 import { buildSyncroProfileSummary } from "@/lib/syncro/syncro-profile-summary";
 import { sanitizeSyncroHourAdvice } from "@/lib/syncro/sanitize-output";
 import {
@@ -25,7 +27,7 @@ import {
 } from "@/lib/syncro/syncro-llm-core";
 
 export { SyncroLlmHttpError, SyncroParseError };
-import type { HourPeriod } from "@/lib/syncro/types";
+import type { HourPeriod, SyncroTaskResponse } from "@/lib/syncro/types";
 
 export type SyncroLlmHourBlock = {
   hour_id: HourPeriod;
@@ -45,10 +47,13 @@ export type SyncroLlmHoursInput = {
   task_description: string;
   profile_summary: string;
   locale: string;
+  include_task_response?: boolean;
+  local_matrix?: SyncroLlmContext["local_matrix"];
 };
 
 export type SyncroLlmHoursResult = {
   advice: Record<string, SyncroHourAdviceCell>;
+  task_response?: SyncroTaskResponse;
   raw_content: string;
   from_cache: boolean;
 };
@@ -122,6 +127,11 @@ function buildPromptForHours(input: SyncroLlmHoursInput): ReturnType<typeof buil
     task_description: input.task_description,
     profile_summary: input.profile_summary,
     locale: input.locale,
+    include_task_response: input.include_task_response,
+    full_matrix_summary:
+      input.include_task_response && input.local_matrix
+        ? buildTopWindowsMatrixSummary(input.local_matrix)
+        : undefined,
   });
 }
 
@@ -188,9 +198,10 @@ function normalizeAdviceByHour(
 function parseAdviceByHourJson(
   accumContent: string,
   input: SyncroLlmHoursInput,
-): Record<string, SyncroHourAdviceCell> {
+): { adviceByKey: Record<string, SyncroHourAdviceCell>; task_response?: SyncroTaskResponse } {
   const parsed = JSON.parse(accumContent) as {
     advice_by_hour?: Record<string, Record<string, DirectionAdvice>>;
+    task_response?: unknown;
   };
   const byHourRaw = parsed.advice_by_hour;
   if (!byHourRaw) {
@@ -233,7 +244,10 @@ function parseAdviceByHourJson(
     `[syncro-llm-batch] parsed hours=[${input.hours.map((h) => h.hour_id).join(", ")}] cells=${Object.keys(adviceByKey).length}`,
   );
 
-  return adviceByKey;
+  return {
+    adviceByKey,
+    task_response: parseSyncroTaskResponse(parsed.task_response),
+  };
 }
 
 async function streamOpenRouter(
@@ -377,12 +391,13 @@ export async function generateSyncroHoursAdvice(
     signal,
   );
 
-  const adviceByKey = parseAdviceByHourJson(accumContent, input);
+  const { adviceByKey, task_response } = parseAdviceByHourJson(accumContent, input);
   sanitizeSyncroHourAdvice(adviceByKey, outputLocale);
   await splitAndCachePerHour(input.session_id, outputLocale, input, adviceByKey);
 
   return {
     advice: adviceByKey,
+    task_response,
     raw_content: accumContent,
     from_cache: false,
   };
@@ -392,6 +407,7 @@ export function buildSyncroLlmHoursInput(
   sessionId: string,
   hourIds: HourPeriod[],
   ctx: SyncroLlmContext,
+  options?: { include_task_response?: boolean },
 ): SyncroLlmHoursInput {
   const locale = ctx.locale;
   return {
@@ -412,6 +428,8 @@ export function buildSyncroLlmHoursInput(
     task_description: ctx.task_description,
     profile_summary: buildSyncroProfileSummary(ctx.base_analysis, ctx.task_description),
     locale,
+    include_task_response: options?.include_task_response,
+    local_matrix: options?.include_task_response ? ctx.local_matrix : undefined,
   };
 }
 

@@ -69,6 +69,14 @@ ${buildProfileContextSection(b_profile, bBaseAnalysis)}
 
 "${relEscaped}"
 
+# ⭐⭐⭐ 本次报告必须回答的核心问题
+
+用户这次来，核心想知道的是：**"${relEscaped}"**
+- conclusion.question_response **第一句必须复述这个问题并正面回应**。
+- **回应必须有合婚技术依据**：内部先按日主互动 / 配偶宫(日支六合六冲) / 用神互补 / 神煞共振 / 大运流年同步**真算**，再把术语翻译成能量语言输出——像合婚先生那样「先算、有据」，不许凭感觉泛讲。
+- combined.detail 与 recommendations 必须围绕它展开。
+- 用 §"用户提问必须被正面回应" 的合规接法（技术依据 → 能量可行性 → 时机窗口 → 主动权），**不铁口日期、不下吉凶决断**。
+
 # ⭐⭐⭐ 极其重要:协同类型已经计算好了
 
 后台已基于 6 个能量维度精确计算了两个 profile 的系统动力学（JSON 矩阵见下）。
@@ -114,6 +122,7 @@ ${JSON.stringify(compatibilityMatrix, null, 2)}
 - 至少一处 **《易经》** 互补/变化之道
 
 ## 4. conclusion(结论)
+- **question_response：100–180 字，开头复述用户问题；必须引用 ≥2 项合婚技术依据（日主互动/配偶宫/用神互补/神煞/大运流年，已翻译为能量语言），给出「合的成色 + 关键变量 + 时机窗口 + 主动权」；禁铁口日期与宜婚不宜婚**
 - synergy_type 必须用【已计算的 synergy_type】(绝不修改!)
 - 简短结论 50-100 字
 - 详细 200-400 字
@@ -149,6 +158,7 @@ ${JSON.stringify(compatibilityMatrix, null, 2)}
   },
   "conclusion": {
     "title": "...",
+    "question_response": "（先复述用户问题；再引≥2 项合婚技术依据给出明确回应；100–180 字；合规接法）",
     "synergy_type": "${level}",
     "summary": "...",
     "detail": "...",
@@ -185,6 +195,7 @@ ${JSON.stringify(compatibilityMatrix, null, 2)}
   );
 
   const user = `请基于已计算好的系统动力学矩阵 + 关系描述,生成完整 5 段报告 JSON。
+本次用户的核心问题是:"${relEscaped}" —— conclusion.question_response 必须正面回应它(合规接法,不铁口日期)。
 不修改 synergy_type(必须用 "${level}")。
 ${detectedLanguage}。
 严格 JSON。`;

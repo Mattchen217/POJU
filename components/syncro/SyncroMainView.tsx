@@ -288,6 +288,31 @@ export function SyncroMainView({
         />
       ) : null}
 
+      {session.task_response ? (
+        <div className="syncro-task-response">
+          <h3 className="syncro-task-response__title">{t("task_response_title")}</h3>
+          <p className="syncro-task-response__summary">{session.task_response.summary}</p>
+          {session.task_response.best_windows.length > 0 ? (
+            <ul className="syncro-task-response__windows">
+              {session.task_response.best_windows.map((win, i) => (
+                <li key={i}>
+                  <strong>
+                    {win.window} · {win.direction}
+                  </strong>
+                  <p>{win.why}</p>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {session.task_response.avoid ? (
+            <p className="syncro-task-response__avoid">
+              <span className="syncro-task-response__avoid-label">{t("task_response_avoid")}:</span>{" "}
+              {session.task_response.avoid}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       <HourProgressBar
         matrix={session.matrix}
         llmMeta={session.llm_meta}

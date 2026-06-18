@@ -11,8 +11,8 @@ interface Props {
   bytes_received: number;
   /** Preparing pages: keep thinking animation only — never render growing stream text. */
   thinkingOnly?: boolean;
-  /** overlay = fixed bottom panel (preparing); inline = normal document flow (delivery pages). */
-  layout?: 'overlay' | 'inline';
+  /** overlay = preparing float; inline = full page flow; panel = fixed-height scroll on delivery pages. */
+  layout?: 'overlay' | 'inline' | 'panel';
 }
 
 const THINKING_PHRASES_ZH = [
@@ -70,19 +70,22 @@ export function StreamingAnalysisView({
       return;
     }
 
-    if (layout === 'inline') {
+    if (layout === 'inline' || layout === 'panel') {
       contentRef.current.scrollTop = 0;
     }
   }, [content, isThinking, thinkingOnly, layout, followLiveStream]);
 
+  const rootClass =
+    layout === 'panel'
+      ? 'streaming-analysis-inline streaming-analysis-panel'
+      : layout === 'inline'
+        ? 'streaming-analysis-inline'
+        : 'streaming-analysis-bottom';
+
   const visibleContent = stripMetaSection(content);
 
   return (
-    <div
-      className={
-        layout === 'inline' ? 'streaming-analysis-inline' : 'streaming-analysis-bottom'
-      }
-    >
+    <div className={rootClass}>
       <div className="streaming-container">
         {isThinking ? (
           <div className="thinking-phase">

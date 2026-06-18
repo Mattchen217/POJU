@@ -6,6 +6,7 @@
 import {
   buildSyncroFullPromptSections,
   SYNCRO_OUTPUT_SELF_CHECK,
+  SYNCRO_TASK_RESPONSE_FOCUS,
 } from "@/lib/llm/prompts/syncro-base";
 import {
   buildCurrentDateContext,
@@ -19,6 +20,7 @@ import {
   resolveSyncroOutputLocale,
 } from "@/lib/prompts/language-directive";
 import type { MatrixCell, SyncroMatrixMetadata } from "@/lib/syncro/calculate-matrix";
+import type { CurrentLevel } from "@/lib/syncro/current-system";
 import type { UserProfile } from "@/lib/profile/types";
 
 /** Slim payload for LLM — levels locked, no empty advice fields. */
@@ -51,7 +53,35 @@ export type BuildSyncroPromptInput = {
   true_solar?: SyncroMatrixMetadata;
   batch_index?: number;
   batch_total?: number;
+  /** Full 96-cell matrix — required for task_response on the final batch. */
+  full_matrix?: Record<string, MatrixCell>;
 };
+
+const LEVEL_RANK: Record<CurrentLevel, number> = {
+  open_current: 5,
+  following_current: 4,
+  stillwater: 3,
+  crosscurrent: 2,
+  undertow: 1,
+};
+
+/** Summarize top precomputed cells for task_response (internal prompt only). */
+export function buildTopWindowsMatrixSummary(
+  matrix: Record<string, MatrixCell>,
+  topN = 15,
+): string {
+  return Object.entries(matrix)
+    .map(([key, cell]) => ({
+      key,
+      level: cell.current_level,
+      score: cell._internal.total_score,
+      rank: LEVEL_RANK[cell.current_level] ?? 0,
+    }))
+    .sort((a, b) => b.rank - a.rank || b.score - a.score)
+    .slice(0, topN)
+    .map((row) => `${row.key}: ${row.level} (score ${row.score})`)
+    .join("\n");
+}
 
 export function buildSyncroPrompt(input: BuildSyncroPromptInput): {
   system: string;
@@ -77,6 +107,28 @@ export function buildSyncroPrompt(input: BuildSyncroPromptInput): {
     input.batch_total && input.batch_total > 1
       ? `\n本批为第 ${input.batch_index ?? 1}/${input.batch_total} 批，仅处理下列 ${cellCount} 个 key。\n`
       : "";
+  const isFinalBatch =
+    !input.batch_total || input.batch_total <= 1 || input.batch_index === input.batch_total;
+  const fullMatrix = input.full_matrix ?? matrix;
+  const topWindowsSummary = buildTopWindowsMatrixSummary(fullMatrix);
+
+  const taskResponseBlock = isFinalBatch
+    ? `# ⭐ 必须为用户的任务给出顶层直答 task_response（最高优先级）
+
+用户要做的事："${escapedTask}"。除了 matrix 文案，你必须额外产出一个 **task_response** 顶层对象，直接回答"我这件事该何时、朝哪个方向"。
+
+## 取据于（内部已计算 → 合规输出）
+1. **已计算的 current_level**：从全矩阵高 level 组合中挑选——绝不另判等级。参考：
+${topWindowsSummary}
+2. **奇门 / 用神方位 / 时辰天干**：_internal.key_factors / qimen_data——内化后输出 Syncro 语言。
+3. **真太阳时**：窗口基于用户真实地理位置。
+
+## 合规接法
+- ✓ 就任务直答：推荐时机窗口 + 方向 + 任务视角依据（大白话）。
+- ✗ 禁：报具体公历日期吉凶、承诺"必成"、写八门/奇门/用神等术语。
+
+${SYNCRO_TASK_RESPONSE_FOCUS}`
+    : `# 本批不产出 task_response（仅在最后一批汇总；本批 ${input.batch_index ?? 1}/${input.batch_total ?? 1}）。`;
 
   const taskBlock = `# 当前任务：Syncro 96 组合文案生成
 ${batchNote}
@@ -117,6 +169,8 @@ ${buildTrueSolarSection(input.true_solar)}
 
 ${JSON.stringify(slimMatrix, null, 2)}
 
+${taskResponseBlock}
+
 # 你的工作
 
 为 matrix 中每个 key（共 ${cellCount} 个），仅输出 short_advice / detailed_advice / rationale。
@@ -155,6 +209,7 @@ ${JSON.stringify(slimMatrix, null, 2)}
 2. **输出 JSON 每个 cell 仅含 3 个字段**：short_advice、detailed_advice、rationale
 3. **语言**：${outputLanguage}
 4. **品牌 + 四道防线**：用户可见处只用 Syncro + Current 五流 + 共振/效率语言；禁奇门/风水/吉凶/预测成功；须 I Ching 时位框架
+5. **task_response 必填**（仅最后一批）：从已计算的高 level 组合中汇总推荐窗口+方向，任务视角给依据；不报日期吉凶、不承诺成功、不写奇门/用神术语。
 
 ${SYNCRO_OUTPUT_SELF_CHECK}
 
@@ -163,6 +218,13 @@ ${SYNCRO_OUTPUT_SELF_CHECK}
 只输出 JSON，无 markdown 围栏：
 
 {
+  ${isFinalBatch ? `"task_response": {
+    "summary": "60-100 字。就用户任务直答：推荐的时机窗口 + 方向（大白话）",
+    "best_windows": [
+      { "window": "（时辰段）", "direction": "（方位）", "why": "80-140 字，任务视角依据" }
+    ],
+    "avoid": "60-100 字。要避开的时段/方向及原因"
+  },` : ""}
   "matrix": {
     "zi__N": {
       "short_advice": "...",
@@ -184,9 +246,11 @@ ${SYNCRO_OUTPUT_SELF_CHECK}
   const user =
     outputLocale === "zh"
       ? `请为已计算好的矩阵生成 short_advice / detailed_advice / rationale 文案（本批 ${cellCount} 个 key）。
+${isFinalBatch ? `并产出 task_response 顶层直答用户任务「${escapedTask}」。` : "本批不要产出 task_response。"}
 不要修改 current_level。全部使用${outputLanguage}。严格 JSON，matrix 内每个 key 缺一不可。
 rationale 必须紧扣用户任务「${escapedTask}」，绝不写出 qimen / yong_shen_direction / day_master 等内部字段名。`
       : `Generate short_advice, detailed_advice, and rationale for the precomputed matrix (${cellCount} keys in this batch).
+${isFinalBatch ? `Also produce task_response answering the user's task ("${escapedTask}").` : "Do not produce task_response in this batch."}
 Do not change current_level. Write entirely in ${outputLanguage}. Strict JSON only; every key in matrix is required.
 Each rationale must speak to the user's task ("${escapedTask}") in plain language—never expose internal factor keys like qimen or yong_shen_direction.`;
 

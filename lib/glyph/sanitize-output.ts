@@ -165,6 +165,7 @@ function collectReadingStrings(reading: GlyphReadingContent): string[] {
   return [
     reading.wind_category_blurb,
     reading.classical_voice,
+    reading.question_response ?? "",
     reading.命理双视角.命理看此事,
     reading.命理双视角.签文看此事,
     reading.命理双视角.两者印证或冲突,
