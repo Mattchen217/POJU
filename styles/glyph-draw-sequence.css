@@ -26,8 +26,8 @@
 }
 
 .glyph-draw-sequence__card {
-  --glyph-draw-card-h: min(calc(100dvh - 12.5rem), 28rem);
-  width: min(72vw, calc(var(--glyph-draw-card-h) * 9 / 16), 17.5rem);
+  --glyph-draw-card-h: min(calc(100dvh - 11.5rem), 30rem);
+  width: min(74vw, calc(var(--glyph-draw-card-h) * 9 / 16), 18.5rem);
   height: var(--glyph-draw-card-h);
   margin-inline: auto;
   flex-shrink: 1;
@@ -94,8 +94,8 @@
   }
 
   .glyph-draw-sequence__card {
-    --glyph-draw-card-h: min(calc(100dvh - 13rem), 24rem);
-    width: min(68vw, calc(var(--glyph-draw-card-h) * 9 / 16), 16rem);
+    --glyph-draw-card-h: min(calc(100dvh - 12rem), 26rem);
+    width: min(70vw, calc(var(--glyph-draw-card-h) * 9 / 16), 17rem);
   }
 
   .glyph-draw-sequence__hint p {
@@ -105,7 +105,7 @@
 
 @media (min-width: 768px) {
   .glyph-draw-sequence__card {
-    --glyph-draw-card-h: min(calc(100dvh - 11rem), 30rem);
-    width: min(17.5rem, calc(var(--glyph-draw-card-h) * 9 / 16));
+    --glyph-draw-card-h: min(calc(100dvh - 10rem), 32rem);
+    width: min(18.5rem, calc(var(--glyph-draw-card-h) * 9 / 16));
   }
 }

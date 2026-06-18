@@ -197,4 +197,19 @@
   padding: 12px 20px;
   font-size: 15px;
   line-height: 1.35;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.92);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+}
+
+.poju-unlock-report-panel__foot .poju-unlock-report-panel__close-btn.poju-new-session-btn:hover:not(:disabled) {
+  background: rgba(212, 175, 55, 0.1);
+  color: rgba(244, 212, 147, 0.95);
+  box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.32);
+  transform: none;
+}
+
+.poju-unlock-report-panel__foot .poju-unlock-report-panel__close-btn.poju-new-session-btn:active:not(:disabled) {
+  background: rgba(212, 175, 55, 0.14);
+  transform: none;
 }

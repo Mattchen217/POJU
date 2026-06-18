@@ -8,6 +8,13 @@
   background: transparent;
   color: var(--pchat-ink, #ece9f4);
   box-sizing: border-box;
+  overflow-x: clip;
+  overflow-y: visible;
+}
+
+.pwa-mode .tool-preview-page {
+  min-height: auto;
+  padding-bottom: max(1.25rem, var(--pwa-bottom-nav-height, 72px));
 }
 
 .tool-preview-page__header {
@@ -36,12 +43,24 @@
   display: block;
   height: auto;
   min-height: 0;
+  max-height: none;
   overflow: visible;
 }
 
-.tool-preview-page {
-  overflow-x: clip;
-  overflow-y: visible;
+.pwa-mode .tool-preview-chat.pchat {
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.tool-preview-chat .pchat__messages {
+  overflow: visible;
+  height: auto;
+  max-height: none;
+}
+
+.pwa-mode .tool-preview-chat .pchat__messages {
+  padding-bottom: 2rem !important;
 }
 
 .tool-preview-chat__messages {
@@ -73,6 +92,10 @@
   .tool-preview-page__footer {
     max-width: 100%;
     padding-inline: 1rem;
+  }
+
+  .pwa-mode .tool-preview-page__footer {
+    padding-bottom: max(2rem, calc(var(--pwa-bottom-nav-height, 72px) + 0.5rem));
   }
 
   .tool-preview-chat__messages {

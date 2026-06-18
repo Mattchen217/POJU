@@ -1053,6 +1053,11 @@
     "input_placeholder": "ex. Je hésite entre deux offres d'emploi…",
     "draw_button": "Tirer votre glyphe",
     "drawing_text": "Tirage en cours…",
+    "draw_sequence": {
+      "tap_to_reveal": "Touchez la carte pour la retourner",
+      "tap_for_reading": "Touchez la carte pour la lecture complète",
+      "close": "Fermer"
+    },
     "reading_loading": "Préparation de la lecture…",
     "reading_loading_hint": "Nous tissons votre thème et le glyphe. Comptez 3 à 5 minutes.",
     "reading_failed": "Échec de la lecture",

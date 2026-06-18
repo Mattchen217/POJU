@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { redirectToPojuUnlockPayment } from "@/lib/poju/start-poju-unlock-payment";
+import { isPaymentGatewayEnabled } from "@/lib/payments/gateway-enabled";
 import "@/styles/poju-paywall-inline.css";
 
 type Props = {
@@ -23,6 +24,11 @@ export function PojuPaywallInline({ sessionId, locale, pendingQuestion, onUnlock
     if (payBusy || busy) return;
     setPayBusy(true);
     try {
+      if (!isPaymentGatewayEnabled()) {
+        await onUnlocked("payment");
+        return;
+      }
+
       const ok = await redirectToPojuUnlockPayment({
         sessionId,
         locale,

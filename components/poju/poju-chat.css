@@ -1076,8 +1076,8 @@
   flex-basis: calc(58px + env(safe-area-inset-top));
 }
 
-/* PWA：聊天区高度扣除底栏，输入框贴 Tab 上方 */
-.pwa-mode .pchat {
+/* PWA：聊天区高度扣除底栏，输入框贴 Tab 上方（不含工具预览矩阵页） */
+.pwa-mode .pchat:not(.tool-preview-chat) {
   height: calc(100dvh - var(--pwa-bottom-nav-height));
   max-height: calc(100dvh - var(--pwa-bottom-nav-height));
 }
@@ -1292,12 +1292,12 @@ body.pchat-page-lock > .min-h-screen {
   flex-direction: column;
 }
 
-body.pchat-page-lock .pwa-page:has(.pchat) {
+body.pchat-page-lock .pwa-page:has(.pchat:not(.tool-preview-chat)) {
   flex: 1 1 auto;
   min-height: 0;
 }
 
-body.pchat-page-lock .pchat {
+body.pchat-page-lock .pchat:not(.tool-preview-chat) {
   flex: 1 1 auto;
   min-height: 0;
 }

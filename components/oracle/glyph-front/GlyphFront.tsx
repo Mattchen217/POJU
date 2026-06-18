@@ -49,18 +49,12 @@ export function GlyphFront({ sign, animate = true, compact = false, draw = false
   const toneColor = topTextColorByLevel[sign.level];
   const faceSmall = compact || draw;
   const maxVerseLen = Math.max(...sign.verse_lines_en.map((line) => line.length), 1);
-  const verseSizeClass = draw
+  const verseSizeClass = faceSmall
     ? maxVerseLen > 62
-      ? "text-[0.62rem] leading-[1.26]"
+      ? "text-[0.74rem] leading-[1.28]"
       : maxVerseLen > 54
-        ? "text-[0.66rem] leading-[1.28]"
-        : "text-[0.7rem] leading-[1.3]"
-    : compact
-    ? maxVerseLen > 62
-      ? "text-[0.68rem] leading-[1.28]"
-      : maxVerseLen > 54
-        ? "text-[0.72rem] leading-[1.3]"
-        : "text-[0.76rem] leading-[1.32]"
+        ? "text-[0.78rem] leading-[1.3]"
+        : "text-[0.82rem] leading-[1.32]"
     : maxVerseLen > 62
       ? "text-[1rem] md:text-[1.06rem]"
       : maxVerseLen > 54
@@ -68,18 +62,12 @@ export function GlyphFront({ sign, animate = true, compact = false, draw = false
         : "text-[1.16rem] md:text-[1.22rem]";
 
   const summaryLen = sign.summary_line_en.length;
-  const summarySizeClass = draw
+  const summarySizeClass = faceSmall
     ? summaryLen > 130
-      ? "text-[0.6rem] leading-[1.28]"
+      ? "text-[0.7rem] leading-[1.32]"
       : summaryLen > 100
-        ? "text-[0.64rem] leading-[1.32]"
-        : "text-[0.68rem] leading-[1.34]"
-    : compact
-    ? summaryLen > 130
-      ? "text-[0.66rem] leading-[1.32]"
-      : summaryLen > 100
-        ? "text-[0.72rem] leading-[1.35]"
-        : "text-[0.78rem] leading-[1.38]"
+        ? "text-[0.75rem] leading-[1.35]"
+        : "text-[0.82rem] leading-[1.38]"
     : "text-[0.96rem] leading-[1.45] md:text-[1.02rem]";
 
   return (
@@ -105,18 +93,18 @@ export function GlyphFront({ sign, animate = true, compact = false, draw = false
 
       <div
         className={`relative z-20 flex h-full flex-col text-center ${
-          draw ? "px-[9%] py-[9%]" : faceSmall ? "px-[10%] py-[11%]" : "px-[11%] py-[13%]"
+          draw ? "px-[8%] py-[7%]" : faceSmall ? "px-[10%] py-[10%]" : "px-[11%] py-[13%]"
         }`}
       >
         <motion.div
-          className={draw ? "shrink-0 pt-[2%]" : faceSmall ? "shrink-0 pt-[3%]" : "pt-[7%]"}
+          className={faceSmall ? "shrink-0 pt-[1%]" : "pt-[7%]"}
           initial={animate ? { opacity: 0, y: -10 } : false}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
           <h2
             className={`font-verse mb-0.5 tracking-wide ${
-              draw ? "text-[1.05rem]" : faceSmall ? "text-[1.2rem]" : "text-3xl md:text-4xl"
+              faceSmall ? "text-[1.2rem]" : "text-3xl md:text-4xl"
             }`}
             style={{ color: toneColor }}
           >
@@ -124,8 +112,8 @@ export function GlyphFront({ sign, animate = true, compact = false, draw = false
           </h2>
 
           <p
-            className={`italic opacity-70 ${
-              draw ? "mb-1 text-[0.58rem]" : faceSmall ? "mb-1.5 text-[0.62rem]" : "mb-4 text-sm md:text-base"
+            className={`italic opacity-80 ${
+              faceSmall ? "mb-1 text-[0.72rem]" : "mb-4 text-sm md:text-base"
             }`}
             style={{ color: toneColor }}
           >
@@ -134,11 +122,9 @@ export function GlyphFront({ sign, animate = true, compact = false, draw = false
 
           <div
             className={`tracking-[0.2em] text-white ${
-              draw
-                ? "mb-0.5 text-[0.48rem] tracking-[0.12em]"
-                : faceSmall
-                  ? "mb-1 text-[0.5rem] tracking-[0.14em]"
-                  : "text-[0.65rem] md:text-[0.72rem]"
+              faceSmall
+                ? "mb-0.5 text-[0.56rem] tracking-[0.14em]"
+                : "text-[0.65rem] md:text-[0.72rem]"
             }`}
           >
             GLYPH No. {String(sign.sign_number).padStart(3, "0")}
@@ -186,7 +172,7 @@ export function GlyphFront({ sign, animate = true, compact = false, draw = false
 
         <motion.div
           className={`relative z-30 shrink-0 ${
-            draw ? "mt-0.5 px-1 pb-[8%] pt-0.5" : faceSmall ? "mt-1 px-1 pb-[10%] pt-1" : "mt-2 min-h-[16%] px-2"
+            draw ? "mt-0.5 px-1 pb-[7%] pt-0.5" : faceSmall ? "mt-1 px-1 pb-[9%] pt-1" : "mt-2 min-h-[16%] px-2"
           }`}
           initial={animate ? { opacity: 0 } : false}
           animate={{ opacity: 1 }}
@@ -200,11 +186,9 @@ export function GlyphFront({ sign, animate = true, compact = false, draw = false
 
       <p
         className={`absolute left-1/2 z-30 -translate-x-1/2 rounded-full tracking-[0.3em] ${
-          draw
-            ? "bottom-[3%] px-2 py-0.5 text-[0.52rem]"
-            : faceSmall
-              ? "bottom-[3.5%] px-2 py-0.5 text-[0.58rem]"
-              : "bottom-[7%] px-3 py-1 text-xs"
+          faceSmall
+            ? "bottom-[2.5%] px-2 py-0.5 text-[0.58rem]"
+            : "bottom-[7%] px-3 py-1 text-xs"
         }`}
         style={{
           color: toneColor,

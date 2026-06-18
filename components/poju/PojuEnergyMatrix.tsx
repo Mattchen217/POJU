@@ -27,6 +27,8 @@ type Props = {
   payload: PojuMatrixPayload;
   locale: string;
   compact?: boolean;
+  /** Match preview: e.g. 用户A： before born / coordinates / matrix id. */
+  subjectPrefix?: string;
 };
 
 const ELEMENT_CLASS: Record<string, string> = {
@@ -211,7 +213,7 @@ function ElementPillarMap({
   );
 }
 
-export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
+export function PojuEnergyMatrix({ payload, locale, compact = false, subjectPrefix }: Props) {
   const { structured, user_profile, wuxing_scores, strength, matrix_id } = payload;
   const shenshaLocale = normalizeShenshaLocale(locale);
   const isZh = isZhMatrixLocale(locale);
@@ -304,6 +306,11 @@ export function PojuEnergyMatrix({ payload, locale, compact = false }: Props) {
         <h2>{tm("main_title")}</h2>
         <p className="tag">{tm("main_description")}</p>
         <div className="subject">
+          {subjectPrefix ? (
+            <span className="pem__subject-prefix">
+              <b>{subjectPrefix}</b>
+            </span>
+          ) : null}
           <span>
             {tm("born")} <b>{formatBornLine(user_profile)}</b>
           </span>

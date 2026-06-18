@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { GlyphCard } from "@/components/oracle/GlyphCard";
 import { drawSign } from "@/lib/oracle/drawSign";
@@ -24,6 +25,8 @@ export function DrawSequence({
   onClose,
   forcedSign,
 }: DrawSequenceProps) {
+  const t = useTranslations("glyph.draw_sequence");
+  const tGlyph = useTranslations("glyph");
   const [stage, setStage] = useState<SequenceStage>("drawing");
   const [sign, setSign] = useState<SignData | null>(null);
   const [drawError, setDrawError] = useState<string | null>(null);
@@ -72,7 +75,7 @@ export function DrawSequence({
           href="/glyph"
           className="rounded-full border border-white/20 px-6 py-2 text-sm text-white/80 hover:bg-white/10"
         >
-          返回 Glyph
+          {tGlyph("back_to_glyph")}
         </Link>
       </div>
     );
@@ -89,7 +92,7 @@ export function DrawSequence({
           type="button"
           onClick={onClose}
           className="glyph-draw-sequence__close"
-          aria-label="Close"
+          aria-label={t("close")}
         >
           ✕
         </button>
@@ -113,13 +116,13 @@ export function DrawSequence({
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: 2 }}
             >
-              Tap card to reveal
+              {t("tap_to_reveal")}
             </motion.p>
           ) : null}
 
           {stage === "flipping" ? (
             <p className="pointer-events-none select-none opacity-0" aria-hidden>
-              Tap the card for a full reading
+              {t("tap_for_reading")}
             </p>
           ) : null}
 
@@ -129,7 +132,7 @@ export function DrawSequence({
               animate={{ opacity: 1 }}
               transition={{ duration: 0.4 }}
             >
-              Tap the card for a full reading
+              {t("tap_for_reading")}
             </motion.p>
           ) : null}
         </div>

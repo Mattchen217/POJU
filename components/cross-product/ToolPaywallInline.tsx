@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { redirectToGlyphUnlockPayment } from "@/lib/glyph/start-glyph-unlock-payment";
 import { redirectToMatchUnlockPayment } from "@/lib/match/start-match-unlock-payment";
+import { isPaymentGatewayEnabled } from "@/lib/payments/gateway-enabled";
 import { redirectToSyncroUnlockPayment } from "@/lib/syncro/start-syncro-unlock-payment";
 import "@/styles/poju-paywall-inline.css";
 
@@ -56,6 +57,11 @@ export function ToolPaywallInline(props: Props) {
     if (payBusy || busy) return;
     setPayBusy(true);
     try {
+      if (!isPaymentGatewayEnabled()) {
+        await onUnlocked("payment");
+        return;
+      }
+
       let ok = false;
       if (product === "glyph") {
         ok = await redirectToGlyphUnlockPayment({

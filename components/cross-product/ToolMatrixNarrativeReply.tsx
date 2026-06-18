@@ -9,6 +9,10 @@ import {
   matrixSynopsisNarrativeState,
   resolveMatrixDisplay,
 } from "@/lib/poju/matrix-narrative-text";
+import {
+  matchUserSubjectPrefix,
+  sanitizeMatchUserLabels,
+} from "@/lib/match/match-user-labels";
 import type { ToolName } from "@/lib/poju/types";
 
 type Props = {
@@ -19,19 +23,15 @@ type Props = {
   narrative?: MatrixNarrativeResponse | null;
 };
 
-function matchPersonLabel(person: "A" | "B", locale: string): string {
-  return locale.startsWith("zh") ? `命主 ${person}` : `Person ${person}`;
-}
-
 function matchPersonFallbackBlock(
   person: "A" | "B",
   payload: PojuMatrixPayload,
   locale: string,
 ): string {
   const display = resolveMatrixDisplay(payload, locale);
-  const label = matchPersonLabel(person, locale);
+  const label = matchUserSubjectPrefix(person, locale);
   const parts = [display.synopsis.archetype, display.synopsis.friction].filter(Boolean);
-  return `${label}：${parts.join(" ")}`;
+  return `${label}${parts.join(" ")}`;
 }
 
 function matchPersonBlock(
@@ -41,7 +41,9 @@ function matchPersonBlock(
   narrative?: MatrixNarrativeResponse | null,
 ): string {
   const fromNarrative = person === "A" ? narrative?.narrative_a : narrative?.narrative_b;
-  if (fromNarrative?.trim()) return fromNarrative.trim();
+  if (fromNarrative?.trim()) {
+    return sanitizeMatchUserLabels(fromNarrative.trim(), locale);
+  }
   return matchPersonFallbackBlock(person, payload, locale);
 }
 

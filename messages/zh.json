@@ -1106,6 +1106,11 @@
     "input_placeholder": "例如：我现在在两个工作 offer 之间犹豫……",
     "draw_button": "抽取你的 Glyph",
     "drawing_text": "正在抽取 Glyph……",
+    "draw_sequence": {
+      "tap_to_reveal": "点击卡牌翻面",
+      "tap_for_reading": "点击卡牌查看完整解读",
+      "close": "关闭"
+    },
     "reading_loading": "正在为你推演……",
     "reading_loading_hint": "结合你的画像与隐喻，大约 3–5 分钟。",
     "reading_failed": "解读失败",

@@ -1091,6 +1091,11 @@
     "input_placeholder": "e.g., I'm caught between two job offers and need to decide…",
     "draw_button": "Draw your glyph",
     "drawing_text": "Drawing your glyph…",
+    "draw_sequence": {
+      "tap_to_reveal": "Tap card to reveal",
+      "tap_for_reading": "Tap the card for a full reading",
+      "close": "Close"
+    },
     "reading_loading": "Preparing your reading…",
     "reading_loading_hint": "Weaving your chart with the glyph. Takes about 3–5 minutes.",
     "reading_failed": "Reading failed",

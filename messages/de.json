@@ -1053,6 +1053,11 @@
     "input_placeholder": "z. B. Ich schwanke zwischen zwei Jobangeboten…",
     "draw_button": "Glyphe ziehen",
     "drawing_text": "Glyphe wird gezogen…",
+    "draw_sequence": {
+      "tap_to_reveal": "Tippe auf die Karte zum Aufdecken",
+      "tap_for_reading": "Tippe auf die Karte für die vollständige Deutung",
+      "close": "Schließen"
+    },
     "reading_loading": "Lesung wird vorbereitet…",
     "reading_loading_hint": "Dein Horoskop und die Glyphe werden verbunden. Etwa 3–5 Minuten.",
     "reading_failed": "Lesung fehlgeschlagen",

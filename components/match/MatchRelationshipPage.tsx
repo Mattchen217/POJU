@@ -11,6 +11,7 @@ import { ToolPreviewChatSection } from "@/components/cross-product/ToolPreviewCh
 import { ToolPaywallInline } from "@/components/cross-product/ToolPaywallInline";
 import { finalizeToolPreview } from "@/lib/cross-product/finalize-tool-preview";
 import { formatBirthShort } from "@/lib/match/format-birth-short";
+import { matchUserSubjectPrefix } from "@/lib/match/match-user-labels";
 import {
   ensureMatchPreviewSession,
   loadMatchPreviewSession,
@@ -234,8 +235,10 @@ export function MatchRelationshipPage() {
           product="match"
           locale={locale}
           matrices={[
-            { payload: matrixPayload, label: "A" },
-            ...(matrixPayloadB ? [{ payload: matrixPayloadB, label: "B" }] : []),
+            { payload: matrixPayload, subjectPrefix: matchUserSubjectPrefix("A", locale) },
+            ...(matrixPayloadB
+              ? [{ payload: matrixPayloadB, subjectPrefix: matchUserSubjectPrefix("B", locale) }]
+              : []),
           ]}
           narrative={narrative}
         />

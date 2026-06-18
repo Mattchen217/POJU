@@ -208,8 +208,8 @@ html.pwa-mode {
   padding-bottom: max(80px, calc(56px + env(safe-area-inset-bottom)));
 }
 
-/* 聊天页自管高度与底栏间距，避免与 .pchat 叠加留白 */
-.pwa-mode .pwa-page:has(.pchat) {
+/* 聊天页自管高度与底栏间距，避免与 .pchat 叠加留白（不含 Glyph/Match/Syncro 工具预览） */
+.pwa-mode .pwa-page:has(.pchat:not(.tool-preview-chat)) {
   padding-bottom: 0;
   height: calc(100dvh - var(--pwa-bottom-nav-height));
   max-height: calc(100dvh - var(--pwa-bottom-nav-height));
@@ -218,11 +218,19 @@ html.pwa-mode {
   flex-direction: column;
 }
 
-.pwa-mode .pwa-page:has(.pchat) > .pchat {
+.pwa-mode .pwa-page:has(.pchat:not(.tool-preview-chat)) > .pchat {
   flex: 1 1 auto;
   min-height: 0;
   height: auto;
   max-height: none;
+}
+
+/* Tool preview (Glyph / Match / Syncro) — scrollable in-flow page, not chat viewport lock */
+.pwa-mode .pwa-page:has(.tool-preview-page) {
+  height: auto;
+  max-height: none;
+  overflow: visible;
+  display: block;
 }
 
 /* PWA 无顶栏 — 页面顶到屏幕（padding-top: 0 见 pojulife-design-system.css） */

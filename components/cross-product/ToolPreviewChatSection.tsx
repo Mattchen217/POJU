@@ -13,7 +13,10 @@ import "@/styles/tool-preview-chat.css";
 
 export type ToolPreviewMatrixItem = {
   payload: PojuMatrixPayload;
+  /** @deprecated Prefer subjectPrefix — shown above matrix in tool preview. */
   label?: string;
+  /** e.g. 用户A： — prepended to born / coordinates / matrix id line. */
+  subjectPrefix?: string;
 };
 
 type Props = {
@@ -33,11 +36,16 @@ export function ToolPreviewChatSection({ product, locale, matrices, narrative }:
     <section className="tool-preview-chat pchat" aria-label="Energy matrix preview">
       <div className="pchat__messages tool-preview-chat__messages">
         {matrices.map((item, index) => (
-          <div key={item.label ?? `matrix-${index}`} className="pchat__msg pchat__msg--ai">
-            {item.label ? (
+          <div key={item.subjectPrefix ?? item.label ?? `matrix-${index}`} className="pchat__msg pchat__msg--ai">
+            {item.label && !item.subjectPrefix ? (
               <span className="tool-preview-chat__matrix-label">{item.label}</span>
             ) : null}
-            <PojuEnergyMatrix payload={item.payload} locale={locale} compact />
+            <PojuEnergyMatrix
+              payload={item.payload}
+              locale={locale}
+              compact
+              subjectPrefix={item.subjectPrefix}
+            />
           </div>
         ))}
 

@@ -98,6 +98,16 @@
   justify-content: center;
 }
 
+.pem .rhead .subject .pem__subject-prefix {
+  color: var(--ink-dim);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.pem .rhead .subject .pem__subject-prefix b {
+  font-weight: 600;
+}
+
 .pem .device {
   margin-top: 0;
   position: relative;

@@ -1,6 +1,7 @@
 import type { GetBaziChartOutput } from "shunshi-bazi-core";
 
 import type { ProfileStrength } from "@/lib/calculations/build-profile-structured";
+import { matchUserDisplayLabel } from "@/lib/match/match-user-labels";
 import { getStemInfo } from "@/lib/poju/bazi-matrix-mappings";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
 
@@ -105,12 +106,16 @@ Input JSON contains person_a (chart A) and person_b (chart B) with separate birt
 3. If both share the same day-master element, you MUST still differentiate using each person's surplus/deficit percentages, clashes_tensions, yongshen, strength, and gender_label.
 4. Each paragraph must feel written for that specific individual — not a generic element blurb.
 
+## FORBIDDEN TERMS (user-facing copy)
+- NEVER use「命主」,「mingzhu」, or any variant in narrative_a, narrative_b, or guide.
+- Always label people as 用户A / 用户B (ZH) or User A / User B (EN) — never「命主 A/B」.
+
 ## REQUIRED OPENING LABELS (user_language)
-- narrative_a MUST open with a clear Person A label before the interpretation:
-  - ZH: start with「命主 A：」or「对于 A，你…」
-  - EN: start with "Person A —" or "For Person A, you…"
-  - DE/ES/FR: equivalent Person-A label in that language
-- narrative_b MUST open with the matching Person B label (命主 B / Person B — / …).
+- narrative_a MUST open with a clear User A label before the interpretation:
+  - ZH: start with「用户A：」or「对于用户A，你…」
+  - EN: start with "User A —" or "For User A, you…"
+  - DE/ES/FR: equivalent User-A label in that language (e.g. Nutzer A / Usuario A / Utilisateur A)
+- narrative_b MUST open with the matching User B label (用户B： / User B — / …).
 
 ## CONTENT SHAPE (each of narrative_a and narrative_b)
 - Sentence 1: psychological archetype from day_master + energetic state (vivid, specific).
@@ -134,8 +139,8 @@ The user needs optimal timing/direction for a concrete task at a location. Tone:
 
 const TOOL_JSON_FIELDS_APPEND = `
   "guide": "[Match/Glyph/Syncro: 1–2 sentences within LENGTH BUDGET. Product-specific invite to type/send their question below.]",
-  "narrative_a": "[Match only: Person A interpretation — MUST open with Person A label; grounded in person_a chart only.]",
-  "narrative_b": "[Match only: Person B interpretation — MUST open with Person B label; grounded in person_b chart only; MUST differ materially from narrative_a.]"
+  "narrative_a": "[Match only: User A interpretation — MUST open with User A label (用户A： / User A —); grounded in person_a chart only; NEVER use 命主.]",
+  "narrative_b": "[Match only: User B interpretation — MUST open with User B label (用户B： / User B —); grounded in person_b chart only; MUST differ materially from narrative_a; NEVER use 命主.]"
 `;
 
 export function getMatrixNarrativeSystemPrompt(product: MatrixNarrativeProduct = "poju"): string {
@@ -256,11 +261,13 @@ export function buildMatrixNarrativeUserMessage(
   opts?: { inputB?: MatrixNarrativeInput; product?: MatrixNarrativeProduct },
 ): string {
   if (opts?.product === "match" && opts.inputB) {
+    const lang = input.user_language;
+    const localeHint = lang === "zh" ? "zh" : lang === "de" ? "de" : lang === "es" ? "es" : lang === "fr" ? "fr" : "en";
     return JSON.stringify(
       {
         product: "match",
-        person_a: { label: "A", ...input },
-        person_b: { label: "B", ...opts.inputB },
+        person_a: { label: matchUserDisplayLabel("A", localeHint), ...input },
+        person_b: { label: matchUserDisplayLabel("B", localeHint), ...opts.inputB },
       },
       null,
       2,

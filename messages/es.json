@@ -1053,6 +1053,11 @@
     "input_placeholder": "p. ej., Estoy entre dos ofertas de trabajo y necesito decidir…",
     "draw_button": "Saca tu glifo",
     "drawing_text": "Sacando tu glifo…",
+    "draw_sequence": {
+      "tap_to_reveal": "Toca la carta para revelarla",
+      "tap_for_reading": "Toca la carta para la lectura completa",
+      "close": "Cerrar"
+    },
     "reading_loading": "Generando tu lectura…",
     "reading_loading_hint": "Tejiendo tu carta con el glifo. Unos 3–5 minutos.",
     "reading_failed": "La lectura falló",
