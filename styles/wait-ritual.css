@@ -134,14 +134,67 @@
   animation: preparing-status-fade 0.45s ease;
 }
 
+.delivery-wait-copy__finish {
+  margin: 0 auto;
+  max-width: clamp(420px, 50vw, 720px);
+  font-size: clamp(20px, 4.2vw, 34px);
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.96);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.65);
+  animation: delivery-wait-value-in 0.6s ease;
+}
+
+/* Crossfade: delivery underneath, wait on top during收束 */
+.delivery-wait-crossfade {
+  position: relative;
+  min-height: 100dvh;
+  min-height: 100vh;
+}
+
+.delivery-wait-crossfade__delivery {
+  opacity: 0;
+  transition: opacity var(--wait-crossfade-ms, 700ms) ease;
+}
+
+.delivery-wait-crossfade__delivery--enter {
+  opacity: 1;
+}
+
+.delivery-wait-crossfade__wait {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.delivery-wait-crossfade__wait--exit {
+  animation: delivery-wait-exit var(--wait-crossfade-ms, 700ms) ease forwards;
+}
+
+.delivery-wait-crossfade__wait .preparing-spline-page {
+  pointer-events: auto;
+}
+
 .preparing-spline-page__scene-wrap .preparing-spline-page__scene,
 .preparing-spline-page__scene-wrap .spline-interactive-scene {
   object-fit: cover;
 }
 
+/* Glyph / Match / Syncro / POJU — copy anchored near page bottom */
+.delivery-wait-page .preparing-spline-page__overlay:not(.preparing-spline-page__overlay--error) {
+  bottom: max(1.25rem, calc(env(safe-area-inset-bottom) + 0.75rem));
+  padding: 12px 20px max(0.5rem, env(safe-area-inset-bottom));
+}
+
+.pwa-mode .delivery-wait-page .preparing-spline-page__overlay:not(.preparing-spline-page__overlay--error) {
+  bottom: max(0.5rem, calc(var(--pwa-bottom-nav-height, 72px) + 0.35rem));
+}
+
 @media (min-width: 768px) {
-  .preparing-spline-page__overlay {
-    bottom: max(12vh, calc(env(safe-area-inset-bottom) + 3rem));
+  .delivery-wait-page .preparing-spline-page__overlay:not(.preparing-spline-page__overlay--error) {
+    bottom: max(1.5rem, calc(env(safe-area-inset-bottom) + 1rem));
     padding-left: clamp(20px, 4vw, 48px);
     padding-right: clamp(20px, 4vw, 48px);
   }

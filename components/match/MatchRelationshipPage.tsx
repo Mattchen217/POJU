@@ -10,6 +10,7 @@ import { RelationshipInput } from "@/components/match/RelationshipInput";
 import { ToolPreviewChatSection } from "@/components/cross-product/ToolPreviewChatSection";
 import { ToolPaywallInline } from "@/components/cross-product/ToolPaywallInline";
 import { finalizeToolPreview } from "@/lib/cross-product/finalize-tool-preview";
+import { consumeMatchToolPreviewSession } from "@/lib/cross-product/tool-preview-session-cache";
 import { formatBirthShort } from "@/lib/match/format-birth-short";
 import { matchUserSubjectPrefix } from "@/lib/match/match-user-labels";
 import {
@@ -85,6 +86,30 @@ export function MatchRelationshipPage() {
         locale,
       });
       setPreviewId(previewSession.preview_id);
+
+      const cachedPreview = consumeMatchToolPreviewSession(aId, bId);
+      if (cachedPreview) {
+        setMatrixPayload(cachedPreview.matrix_payload);
+        setMatrixPayloadB(cachedPreview.matrix_payload_b);
+        setNarrative(cachedPreview.narrative);
+        patchMatchPreviewSession({
+          matrix_payload: cachedPreview.matrix_payload,
+          matrix_payload_b: cachedPreview.matrix_payload_b ?? undefined,
+        });
+
+        const existing = loadMatchPreviewSession();
+        if (existing && !isMatchPreviewSession(existing)) {
+          setStage("preview");
+          return;
+        }
+        if (openPaywall && existing?.pending_question) {
+          setRelationship(existing.pending_question);
+          setStage("paywall");
+          return;
+        }
+        setStage("preview");
+        return;
+      }
 
       const preview = await finalizeToolPreview({
         profileId: aId,

@@ -1988,7 +1988,8 @@
         "2": "Deine Urnatur und Energiestruktur analysieren…",
         "3": "Dein Persönlichkeitsmuster und deine Schlüsselenergie bestimmen…",
         "4": "Lebensphasen und aktuellen Zyklus kartieren…"
-      }
+      },
+      "finish": "Deine Lesung hat Gestalt angenommen."
     },
     "bridge": {
       "glyph": "Dein Persönlichkeitsprofil und deine Energiestruktur sind vollständig. Nun wird dieses Profil mit deinem Glyph verwoben…",
@@ -2002,7 +2003,8 @@
         "1": "Dem Glyph lauschen, das du aktiviert hast…",
         "2": "Das Glyph mit deinem Profil verweben…",
         "3": "Das Spiegelbild Gestalt annehmen lassen…"
-      }
+      },
+      "finish": "Der Spiegel ist klar."
     },
     "match": {
       "value": "Was dich erwartet, ist eine Energiekarte – gezeichnet aus 3.000 Jahren Beziehungsweisheit und moderner Psychologie –, die zeigt, wie zwei Menschen einander wirklich begegnen. Lies sie langsam; die wahre Erkenntnis entfaltet sich erst beim zweiten Blick.",
@@ -2013,7 +2015,8 @@
         "2": "Spüren, wie eure Energien einander nähren oder reiben…",
         "3": "Kartieren, wo eure Lebensphasen im Gleichklang schwingen…",
         "4": "Die Form eurer Verbindung zeichnen…"
-      }
+      },
+      "finish": "Eure Verbindungskarte ist gezeichnet."
     },
     "syncro": {
       "value": "Was dich erwartet, ist eine Timing-Karte – kalibriert aus einem 3.000-jährigen östlichen Framework und moderner Entscheidungswissenschaft. Kein Einheitskalender, sondern Zeitfenster, die sich mit deinem Vorhaben bewegen. Um sie zu verstehen, gilt es, sich ganz auf die Gegenwart auszurichten.",
@@ -2023,7 +2026,8 @@
         "1": "Die Zeitfenster der kommenden Stunden scannen…",
         "2": "Die Ausrichtungen auf jedes Fenster abstimmen…",
         "3": "Deine kraftvollsten Zeitfenster in den Fokus rücken…"
-      }
+      },
+      "finish": "Deine Zeitfenster sind ausgerichtet."
     }
   },
   "reading_ritual": {

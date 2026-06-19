@@ -10,6 +10,7 @@ import { ToolPreviewChatSection } from "@/components/cross-product/ToolPreviewCh
 import { ToolPreviewMatrixLoading } from "@/components/cross-product/ToolPreviewMatrixLoading";
 import { ToolPaywallInline } from "@/components/cross-product/ToolPaywallInline";
 import { finalizeToolPreview } from "@/lib/cross-product/finalize-tool-preview";
+import { consumeGlyphToolPreviewSession } from "@/lib/cross-product/tool-preview-session-cache";
 import {
   loadGlyphDrawSession,
   saveGlyphDrawSession,
@@ -70,6 +71,14 @@ export function GlyphDrawPage() {
         return;
       }
       setProfile(p);
+
+      const cachedPreview = consumeGlyphToolPreviewSession(profileId);
+      if (cachedPreview) {
+        setMatrixPayload(cachedPreview.matrix_payload);
+        setNarrative(cachedPreview.narrative);
+        setStage("preview");
+        return;
+      }
 
       const preview = await finalizeToolPreview({
         profileId,

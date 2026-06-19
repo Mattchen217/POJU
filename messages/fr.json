@@ -1988,7 +1988,8 @@
         "2": "Analyse de votre nature profonde et de votre structure énergétique…",
         "3": "Détermination de votre profil de personnalité et de votre énergie clé…",
         "4": "Cartographie de vos phases de vie et de votre cycle actuel…"
-      }
+      },
+      "finish": "Votre lecture a pris forme."
     },
     "bridge": {
       "glyph": "Votre portrait de personnalité et votre structure énergétique sont terminés. À présent, tissage de ce portrait avec votre Glyph…",
@@ -2002,7 +2003,8 @@
         "1": "Écoute du Glyph que vous avez activé…",
         "2": "Tissage du Glyph avec votre portrait…",
         "3": "Laisser le reflet prendre forme…"
-      }
+      },
+      "finish": "Le reflet est clair."
     },
     "match": {
       "value": "Ce qui s'apprête à émerger est une carte énergétique — dessinée à partir de 3 000 ans de sagesse relationnelle et de psychologie moderne — révélant comment deux personnes se rencontrent vraiment. Lisez lentement ; la véritable clarté apparaît à la seconde lecture.",
@@ -2013,7 +2015,8 @@
         "2": "Analyse du flux de vos énergies entre résonance et friction…",
         "3": "Cartographie des points de synchronisation de vos phases de vie…",
         "4": "Dessiner la forme de votre lien…"
-      }
+      },
+      "finish": "Votre carte de connexion est tracée."
     },
     "syncro": {
       "value": "Ce qui s'apprête à émerger est une carte de synchronicité temporelle, calibrée d'après un modèle oriental de 3 000 ans et les sciences modernes de la décision. Ce n'est pas un calendrier universel, mais des fenêtres d'opportunité qui s'alignent sur votre projet. Bien la lire demande de s'aligner avec le présent.",
@@ -2023,7 +2026,8 @@
         "1": "Scan des fenêtres d'opportunité au cours des heures à venir…",
         "2": "Alignement des directions avec chaque fenêtre…",
         "3": "Mise en lumière de vos fenêtres les plus favorables…"
-      }
+      },
+      "finish": "Vos fenêtres de timing sont alignées."
     }
   },
   "reading_ritual": {

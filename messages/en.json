@@ -838,7 +838,8 @@
         "2": "Analyzing core nature and energy structure…",
         "3": "Determining your personality pattern and key energy…",
         "4": "Mapping life phases and current cycle…"
-      }
+      },
+      "finish": "Your reading has taken shape."
     },
     "bridge": {
       "glyph": "Your personality portrait and energy structure are complete. Now, weaving that portrait together with your Glyph…",
@@ -852,7 +853,8 @@
         "1": "Listening to the Glyph you engaged with…",
         "2": "Weaving the Glyph against your portrait…",
         "3": "Letting the reflection take shape…"
-      }
+      },
+      "finish": "The reflection is clear."
     },
     "match": {
       "value": "What's arriving is an energy map — drawn from 3,000 years of relational wisdom and modern psychology — of how two people actually meet. Read it slowly; the real insight lands on the second pass.",
@@ -863,7 +865,8 @@
         "2": "Tracing how your energies feed and friction…",
         "3": "Mapping where your life phases move in sync…",
         "4": "Drawing the shape of your connection…"
-      }
+      },
+      "finish": "Your connection is mapped."
     },
     "syncro": {
       "value": "What's arriving is a timing map — calibrated from a 3,000-year Eastern framework and modern decision science. Not a one-size-fits-all calendar, but the windows that move with your task. Reading it well asks you to align with the present.",
@@ -873,7 +876,8 @@
         "1": "Scanning the windows across the coming hours…",
         "2": "Aligning directions with each window…",
         "3": "Bringing your strongest windows into focus…"
-      }
+      },
+      "finish": "Your windows are aligned."
     }
   },
   "poju": {

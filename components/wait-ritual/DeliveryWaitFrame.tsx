@@ -17,6 +17,8 @@ type Props = {
   onRetry?: () => void;
   onRefund?: () => void;
   secondaryActionLabel?: string;
+  /** Crossfade wrapper owns exit opacity; skip duplicate exit animation on shell. */
+  exitAnimationExternal?: boolean;
   hiddenWork?: ReactNode;
   children?: ReactNode;
 };
@@ -29,6 +31,7 @@ export function DeliveryWaitFrame({
   onRetry,
   onRefund,
   secondaryActionLabel,
+  exitAnimationExternal = false,
   hiddenWork,
   children,
 }: Props) {
@@ -36,7 +39,10 @@ export function DeliveryWaitFrame({
     <PreparingSplineShell
       blockInteraction
       scene={wait.scene}
-      className={clsx("delivery-wait-page", wait.exiting && "delivery-wait-page--exit")}
+      className={clsx(
+        "delivery-wait-page",
+        wait.exiting && !exitAnimationExternal && "delivery-wait-page--exit",
+      )}
     >
       <WaitFxLayer
         glowColor={wait.glowColor}

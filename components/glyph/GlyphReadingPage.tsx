@@ -10,6 +10,7 @@ import { GlyphReport } from "@/components/glyph/GlyphReport";
 import { ToolPaywallInline } from "@/components/cross-product/ToolPaywallInline";
 import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
 import { DeliveryWaitFrame } from "@/components/wait-ritual/DeliveryWaitFrame";
+import { DeliveryWaitCrossfade } from "@/components/wait-ritual/DeliveryWaitCrossfade";
 import { StreamingAnalysisView } from "@/components/poju/StreamingAnalysisView";
 import { saveGlyphReadingToArchive } from "@/lib/archive/archive-service";
 import { markArchiveUnread } from "@/lib/archive/archive-unread";
@@ -36,7 +37,6 @@ import { ReadingDecoderBanner } from "@/components/reading-ritual/ReadingDecoder
 import { ReturnToPojuCTA } from "@/components/poju/ReturnToPojuCTA";
 import { extractGlyphSummary } from "@/lib/poju/tool-result-summary";
 import { useDeliveryWaitPhase } from "@/lib/wait-ritual/use-delivery-wait-phase";
-import { cn } from "@/lib/utils/classnames";
 import type { CSSProperties } from "react";
 import { LEVEL_META, type SignData } from "@/types/oracle";
 
@@ -69,6 +69,7 @@ export function GlyphReadingPage() {
   const [isReturningUser, setIsReturningUser] = useState(false);
   const [skipBaziAtDelivery, setSkipBaziAtDelivery] = useState(false);
   const [waitVisualDone, setWaitVisualDone] = useState(false);
+  const [finishCrossfadeStarted, setFinishCrossfadeStarted] = useState(false);
   const glyphProductStartedRef = useRef(false);
   const startedRef = useRef(false);
   const mountedRef = useRef(true);
@@ -209,6 +210,12 @@ export function GlyphReadingPage() {
       setStage("ready");
     }
   }, [waitVisualDone, productComplete]);
+
+  useEffect(() => {
+    if (productComplete && reading && glyph) {
+      setFinishCrossfadeStarted(true);
+    }
+  }, [productComplete, reading, glyph]);
 
   useEffect(() => {
     if (waitFlow.phase !== "product") return;
@@ -356,6 +363,110 @@ export function GlyphReadingPage() {
     );
   }
 
+  if (finishCrossfadeStarted && glyph && reading) {
+    const glyphSummary = extractGlyphSummary({
+      reading_id: readingId,
+      question,
+      glyph,
+      reading,
+    });
+    const reportText = baseReportText ?? loadGlyphDrawSession(readingId)?.base_report_text ?? "";
+
+    const waitFrame = (
+      <DeliveryWaitFrame
+        wait={waitFlow}
+        isReturningUser={isReturningUser}
+        error={error}
+        exitAnimationExternal
+        onRetry={() => {
+          visibilityRetryUsedRef.current = false;
+          clearInFlightGlyphReading(readingId);
+          glyphGenAbortRef.current?.abort();
+          glyphProductStartedRef.current = false;
+          setSkipBaziAtDelivery(false);
+          setBaziComplete(false);
+          setProductComplete(false);
+          setWaitVisualDone(false);
+          setFinishCrossfadeStarted(false);
+          startedRef.current = false;
+          void beginUnlockPipeline();
+        }}
+        onRefund={() => router.push("/glyph")}
+        hiddenWork={
+          stage === "base-prep" ? (
+            <BaseAnalysisStreamPreparing
+              key={basePrepKey}
+              profile={profile!}
+              profileId={profileId}
+              locale={locale}
+              logLabel="GlyphUnlockPreparing"
+              hideStreamView
+              reportOutputLanguageFromUi
+              onComplete={async (displayText) => {
+                setBaseReportText(displayText);
+                updateGlyphDrawSession(readingId, { base_report_text: displayText });
+                const refreshed = await getStoredProfile(profileId);
+                if (refreshed) setProfile(refreshed);
+                setBaziComplete(true);
+              }}
+              onError={(err) => {
+                setError(err);
+                setStage("error");
+              }}
+            />
+          ) : null
+        }
+      />
+    );
+
+    return (
+      <DeliveryWaitCrossfade
+        wait={waitFlow}
+        showWait={isWaitStage && !waitVisualDone}
+        showDelivery
+        waitFrame={waitFrame}
+        delivery={
+          <div
+            className="glyph-reading-page browser-flow-page"
+            style={glyphWindAccentStyle(glyph.level) as CSSProperties}
+          >
+            <ReturnToPojuCTA
+              tool="glyph"
+              resultId={readingId}
+              resultData={glyphSummary}
+              variant="banner"
+            />
+            <ReadingDecoderBanner variant="others" />
+            <GlyphCanvas glyph={glyph} animated={false} compact />
+            {reportText ? (
+              <section className="glyph-base-report">
+                <StreamingAnalysisView
+                  content={reportText}
+                  status="completed"
+                  bytes_received={reportText.length}
+                  layout="panel"
+                />
+              </section>
+            ) : null}
+            <GlyphReport reading={reading} glyph={glyph} question={question} />
+            <ReturnToPojuCTA
+              tool="glyph"
+              resultId={readingId}
+              resultData={glyphSummary}
+              variant="footer"
+            />
+            <PojuDeepDiveCTA productId="glyph" result_id={readingId} result_data={glyphSummary} />
+            <div className="glyph-reading-footer">
+              <Link href="/glyph" className="glyph-link-muted">
+                {t("back_to_glyph")}
+              </Link>
+            </div>
+          </div>
+        }
+      />
+    );
+  }
+
   if (isWaitStage && profile) {
     return (
       <DeliveryWaitFrame
@@ -371,6 +482,7 @@ export function GlyphReadingPage() {
           setBaziComplete(false);
           setProductComplete(false);
           setWaitVisualDone(false);
+          setFinishCrossfadeStarted(false);
           startedRef.current = false;
           void beginUnlockPipeline();
         }}
@@ -407,6 +519,7 @@ export function GlyphReadingPage() {
     return (
       <DeliveryWaitFrame
         wait={{
+          product: "glyph",
           phase: "bazi",
           scene: "/spline/Analyzing-scene.splinecode",
           glowColor: "#8AB4FF",
@@ -452,7 +565,7 @@ export function GlyphReadingPage() {
 
   return (
     <div
-      className={cn("glyph-reading-page browser-flow-page reading-ritual-fade-in")}
+      className="glyph-reading-page browser-flow-page"
       style={glyphWindAccentStyle(glyph.level) as CSSProperties}
     >
       <ReturnToPojuCTA

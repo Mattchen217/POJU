@@ -6,6 +6,7 @@ import {
   DELIVERY_WAIT_SCENES,
   WAIT_BAZI_CACHED_MIN_MS,
   WAIT_BRIDGE_HOLD_MS,
+  WAIT_FINISH_COPY_MS,
   WAIT_CONVERGE_MS,
   WAIT_CROSSFADE_MS,
   WAIT_FLASH_MS,
@@ -34,6 +35,7 @@ export type UseDeliveryWaitPhaseOptions = {
 };
 
 export type DeliveryWaitPhaseState = {
+  product: DeliveryWaitProduct;
   phase: DeliveryWaitVisualPhase;
   scene: string;
   glowColor: string;
@@ -75,6 +77,7 @@ export function useDeliveryWaitPhase(opts: UseDeliveryWaitPhaseOptions): Deliver
 
   useEffect(() => {
     if (enabled) return;
+    if (exitCalledRef.current) return;
     setPhase(initialPhase);
     setStepIndex(0);
     setShowFlash(false);
@@ -100,7 +103,7 @@ export function useDeliveryWaitPhase(opts: UseDeliveryWaitPhaseOptions): Deliver
     if (!baziComplete || !baziMinMet) return;
 
     if (product === "poju") {
-      setPhase("converge");
+      setPhase("finishing");
       return;
     }
 
@@ -133,10 +136,17 @@ export function useDeliveryWaitPhase(opts: UseDeliveryWaitPhaseOptions): Deliver
   useEffect(() => {
     if (!enabled || phase !== "product") return;
     if (!productComplete) return;
-    setPhase("converge");
+    setPhase("finishing");
   }, [enabled, phase, productComplete]);
 
-  /** converge → exit: separate from product→converge so state updates do not cancel the timer */
+  /** finishing → converge: finish copy ~600ms before收束光 */
+  useEffect(() => {
+    if (!enabled || phase !== "finishing") return;
+    const timer = window.setTimeout(() => setPhase("converge"), WAIT_FINISH_COPY_MS);
+    return () => window.clearTimeout(timer);
+  }, [enabled, phase]);
+
+  /** converge → exit: separate from product→finishing so state updates do not cancel the timer */
   useEffect(() => {
     if (!enabled || phase !== "converge") return;
     setShowConverge(true);
@@ -171,6 +181,10 @@ export function useDeliveryWaitPhase(opts: UseDeliveryWaitPhaseOptions): Deliver
   }, [phase, product]);
 
   const copyPhase = useMemo((): DeliveryWaitPhaseState["copyPhase"] => {
+    if (phase === "finishing" || phase === "converge" || phase === "exit") {
+      if (product === "poju") return "bazi";
+      return product;
+    }
     if (phase === "bridge") {
       return product === "match" ? "match" : product === "glyph" ? "glyph" : "syncro";
     }
@@ -180,6 +194,7 @@ export function useDeliveryWaitPhase(opts: UseDeliveryWaitPhaseOptions): Deliver
   }, [phase, product]);
 
   return {
+    product,
     phase,
     scene,
     glowColor: glowForPhase(product, phase),

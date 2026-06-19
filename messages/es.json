@@ -1988,7 +1988,8 @@
         "2": "Analizando tu naturaleza esencial y estructura energética…",
         "3": "Determinando tu patrón de personalidad y energía clave…",
         "4": "Mapeando tus fases de vida y ciclo actual…"
-      }
+      },
+      "finish": "Tu lectura ha tomado forma."
     },
     "bridge": {
       "glyph": "Tu retrato de personalidad y estructura energética están listos. Ahora, entrelazando ese retrato con tu Glyph…",
@@ -2002,7 +2003,8 @@
         "1": "Escuchando el Glyph con el que conectaste…",
         "2": "Entrelazando el Glyph con tu retrato…",
         "3": "Dejando que el reflejo tome forma…"
-      }
+      },
+      "finish": "El reflejo es claro."
     },
     "match": {
       "value": "Lo que está por llegar es un mapa energético — trazado a partir de 3,000 años de sabiduría relacional y psicología moderna — que muestra cómo se encuentran realmente dos personas. Léelo despacio; la verdadera claridad surge en la segunda lectura.",
@@ -2013,7 +2015,8 @@
         "2": "Rastreando cómo interactúan sus energías entre el apoyo y la fricción…",
         "3": "Mapeando dónde se sincronizan sus fases de vida…",
         "4": "Dibujando la forma de su conexión…"
-      }
+      },
+      "finish": "Su mapa de conexión está trazado."
     },
     "syncro": {
       "value": "Lo que está por llegar es un mapa de sincronía temporal, calibrado desde un marco oriental de 3,000 años y la ciencia moderna de la decisión. No es un calendario genérico, sino las ventanas de oportunidad que se mueven con tu propósito. Leerlo bien te invita a alinearte con el presente.",
@@ -2023,7 +2026,8 @@
         "1": "Escaneando las ventanas de oportunidad para las próximas horas…",
         "2": "Alineando las direcciones con cada ventana…",
         "3": "Trayendo tus ventanas más fuertes al centro de atención…"
-      }
+      },
+      "finish": "Tus ventanas de oportunidad están alineadas."
     }
   },
   "reading_ritual": {

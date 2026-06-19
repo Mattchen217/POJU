@@ -11,6 +11,7 @@ import { PojuDeepDiveCTA } from "@/components/cross-product/PojuDeepDiveCTA";
 import { ReturnToPojuCTA } from "@/components/poju/ReturnToPojuCTA";
 import { ReadingDecoderBanner } from "@/components/reading-ritual/ReadingDecoderBanner";
 import { DeliveryWaitFrame } from "@/components/wait-ritual/DeliveryWaitFrame";
+import { DeliveryWaitCrossfade } from "@/components/wait-ritual/DeliveryWaitCrossfade";
 import { SyncroMainView } from "@/components/syncro/SyncroMainView";
 import { SyncroPreparingLiveHour } from "@/components/syncro/SyncroPreparingLiveHour";
 import { extractSyncroSummary } from "@/lib/poju/tool-result-summary";
@@ -123,14 +124,15 @@ function SyncroResultPageContent() {
   const liveHourReady =
     stage === "ready" && session !== null && isSyncroCompassGateReady(session);
 
-  const showMainView = liveHourReady && waitVisualDone;
-
   const waitFlow = useDeliveryWaitPhase({
     product: "syncro",
     skipBazi: true,
     baziComplete: true,
     productComplete: liveHourReady,
-    enabled: stage === "ready" && session !== null && !showMainView,
+    enabled:
+      stage === "ready" &&
+      session !== null &&
+      (!liveHourReady || !waitVisualDone),
     onExitComplete: () => setWaitVisualDone(true),
   });
 
@@ -287,39 +289,45 @@ function SyncroResultPageContent() {
         }
       >
         <SyncroLlmProgressBar progress={llmProgress} />
-        {showMainView ? (
-          <div className="reading-ritual-fade-in">
-            <SyncroMainView
-              session={session}
-              locale={locale}
-              highlightMatrixKeys={highlightKeys}
-              llmProgress={llmProgress}
-              liveHourReady
-              backgroundStream={backgroundStream}
-              onRetryHour={handleRetryHour}
-              retryingHour={retryingHour}
-              onTimelineComplete={handleTimelineComplete}
-            />
-          </div>
+        {liveHourReady ? (
+          <DeliveryWaitCrossfade
+            wait={waitFlow}
+            showWait={!waitVisualDone}
+            showDelivery
+            waitFrame={
+              <DeliveryWaitFrame wait={waitFlow} exitAnimationExternal />
+            }
+            delivery={
+              <SyncroMainView
+                session={session}
+                locale={locale}
+                highlightMatrixKeys={highlightKeys}
+                llmProgress={llmProgress}
+                liveHourReady
+                backgroundStream={backgroundStream}
+                onRetryHour={handleRetryHour}
+                retryingHour={retryingHour}
+                onTimelineComplete={handleTimelineComplete}
+              />
+            }
+          />
         ) : (
           <DeliveryWaitFrame
             wait={waitFlow}
             hiddenWork={
-              session ? (
-                <SyncroPreparingLiveHour
-                  session={session}
-                  locale={locale}
-                  realtimePeriod={timelineLivePeriod}
-                  progress={llmProgress}
-                  onSessionUpdate={handleSessionUpdate}
-                  headless
-                />
-              ) : null
+              <SyncroPreparingLiveHour
+                session={session}
+                locale={locale}
+                realtimePeriod={timelineLivePeriod}
+                progress={llmProgress}
+                onSessionUpdate={handleSessionUpdate}
+                headless
+              />
             }
           />
         )}
       </div>
-      {showMainView ? (
+      {liveHourReady && waitVisualDone ? (
         <div className="px-4 pb-8">
           <PojuDeepDiveCTA productId="syncro" result_id={sessionId} result_data={syncroSummary} />
           <ReturnToPojuCTA

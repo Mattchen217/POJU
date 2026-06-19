@@ -92,6 +92,22 @@ export function DeliveryWaitCopyOverlay({
     );
   }
 
+  if (phase === "finishing") {
+    const finishNs =
+      copyPhase === "bazi"
+        ? "bazi"
+        : copyPhase === "glyph"
+          ? "glyph"
+          : copyPhase === "match"
+            ? "match"
+            : "syncro";
+    return (
+      <PreparingStatusOverlay>
+        <p className="delivery-wait-copy__finish">{t(`${finishNs}.finish` as "glyph.finish")}</p>
+      </PreparingStatusOverlay>
+    );
+  }
+
   if (phase === "converge" || phase === "exit") {
     return null;
   }

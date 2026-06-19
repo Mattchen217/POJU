@@ -2,7 +2,7 @@ import { PREPARING_ANALYZING_SCENE } from "@/components/poju/PreparingAnalyzingS
 
 export type DeliveryWaitProduct = "glyph" | "match" | "syncro" | "poju";
 
-export type DeliveryWaitVisualPhase = "bazi" | "bridge" | "product" | "converge" | "exit";
+export type DeliveryWaitVisualPhase = "bazi" | "bridge" | "product" | "finishing" | "converge" | "exit";
 
 export const DELIVERY_WAIT_SCENES = {
   bazi: PREPARING_ANALYZING_SCENE,
@@ -20,6 +20,7 @@ export const DELIVERY_WAIT_GLOW: Record<DeliveryWaitProduct | "bazi", string> = 
 };
 
 export const WAIT_BRIDGE_HOLD_MS = 2500;
+export const WAIT_FINISH_COPY_MS = 600;
 export const WAIT_CONVERGE_MS = 900;
 export const WAIT_CROSSFADE_MS = 700;
 export const WAIT_FLASH_MS = 300;
