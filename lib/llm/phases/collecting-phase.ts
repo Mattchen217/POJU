@@ -2,13 +2,15 @@ import {
   findMissingFields,
   REQUIRED_FIELDS_BY_CATEGORY,
   calculateCompleteness,
+  AGENDA_COVERED_GATE,
+  MIN_COLLECTING_USER_TURNS,
+  PUSH_GATE,
+  PUSH_MIN_TURNS,
   type POJUAgentState,
 } from "@/lib/poju/agent-state";
 import {
   countEffectiveCollectingTurns,
   evaluateCollectingConfirmationGate,
-  isMajorQuestionCategory,
-  MIN_MAJOR_COLLECTING_USER_TURNS,
 } from "@/lib/poju/collecting-confirmation-gate";
 import {
   evaluateStopLoss,
@@ -17,6 +19,14 @@ import {
   parseCollectionProgress,
   projectCollectingStopLoss,
 } from "@/lib/poju/collection-progress";
+import {
+  applyAgendaStatusUpdates,
+  extractAgendaStatusUpdates,
+  formatAgendaForPrompt,
+  getNextAgendaFocus,
+  parseInvestigationAgenda,
+  stripAgendaFieldsFromContextUpdates,
+} from "@/lib/poju/investigation-agenda";
 import { callStallOfferPhase } from "@/lib/llm/phases/stall-offer-phase";
 import { formatContextForPrompt, formatMissingFieldsForPrompt, extractQuestionCategory, mergeContextUpdates, recordToLLMContextUpdates } from "@/lib/poju/context-extractor";
 import type { AgentPhase } from "@/lib/poju/agent-state";
@@ -46,15 +56,34 @@ function projectAgentAfterUpdates(
   agent: POJUAgentState,
   contextUpdates: Record<string, unknown>,
   questionCategory: string | null,
+  investigationAgenda?: unknown,
 ): POJUAgentState {
-  const structured = recordToLLMContextUpdates(contextUpdates);
+  const stripped = stripAgendaFieldsFromContextUpdates(contextUpdates);
+  const structured = recordToLLMContextUpdates(stripped);
+  let investigation_agenda = agent.investigation_agenda ?? [];
+  let agenda_generated = agent.agenda_generated ?? false;
+
+  if (!agenda_generated && investigationAgenda) {
+    const parsed = parseInvestigationAgenda(investigationAgenda);
+    if (parsed) {
+      investigation_agenda = parsed;
+      agenda_generated = true;
+    }
+  }
+  const statusUpdates = extractAgendaStatusUpdates(contextUpdates);
+  if (agenda_generated && statusUpdates) {
+    investigation_agenda = applyAgendaStatusUpdates(investigation_agenda, statusUpdates);
+  }
+
   const merged: POJUAgentState = {
     ...agent,
     context_collected: mergeContextUpdates(agent.context_collected, structured),
     question_category:
-      extractQuestionCategory(contextUpdates) ??
+      extractQuestionCategory(stripped) ??
       (questionCategory as POJUAgentState["question_category"]) ??
       agent.question_category,
+    investigation_agenda,
+    agenda_generated,
   };
   return { ...merged, collection_completeness: calculateCompleteness(merged) };
 }
@@ -66,12 +95,18 @@ function clampCollectingSuggestedPhase(
   contextUpdates: Record<string, unknown>,
   questionCategory: string | null,
   collectionProgress: ReturnType<typeof parseCollectionProgress>,
+  investigationAgenda?: unknown,
 ): AgentPhase | null {
   if (suggested_phase !== "awaiting_confirmation") return suggested_phase;
-  const projected = projectAgentAfterUpdates(agent, contextUpdates, questionCategory);
-  const collectingTurns = (agent.collecting_turn_count ?? 0) + 1;
-  if (isPrematureCollectingPhase(projected, collectingTurns)) {
-    console.warn("[collecting-phase] Blocked premature awaiting_confirmation: turns < 3 and required incomplete");
+  const projected = projectAgentAfterUpdates(
+    agent,
+    contextUpdates,
+    questionCategory,
+    investigationAgenda,
+  );
+  const userTurns = countEffectiveCollectingTurns(session);
+  if (isPrematureCollectingPhase(projected, userTurns)) {
+    console.warn("[collecting-phase] Blocked premature awaiting_confirmation: agenda or turns below gate");
     return "collecting_context";
   }
   if (collectionProgress) {
@@ -79,7 +114,7 @@ function clampCollectingSuggestedPhase(
     const stopLoss = evaluateStopLoss({
       stall_count: projectedStall,
       collection_progress: collectionProgress,
-      collecting_turn_count: collectingTurns,
+      collecting_turn_count: agent.collecting_turn_count ?? userTurns,
     });
     if (stopLoss.triggered) {
       console.warn("[collecting-phase] Blocked awaiting_confirmation: stop-loss", stopLoss.reason);
@@ -93,6 +128,74 @@ function clampCollectingSuggestedPhase(
   if (gate.allowed) return suggested_phase;
   console.warn("[collecting-phase] Blocked premature awaiting_confirmation:", gate.reason);
   return "collecting_context";
+}
+
+function buildPullbackBlock(input: PhaseLLMInput): string {
+  if (!input.collecting_pullback) return "";
+  const labels =
+    input.uncovered_critical_labels?.length
+      ? input.uncovered_critical_labels.slice(0, 2).join("；")
+      : "关键处境细节";
+  return `
+
+## ★ 本轮 mandatory：用户催促交付 — 把他拉回来（不交付）
+
+用户本轮在要报告/结论/「该怎么办」，但问诊议程尚未收齐。本轮【禁止交付、禁止给行动建议】，按以下结构回应（自然 POJU 语气，不要机械）：
+
+1. **共情认可**急切——"我知道你现在最想要的就是一个明确答案/方向"
+2. **坦诚说明代价**——"如果我现在就下结论，只能给你一份谁都适用的泛泛建议——这恰恰是最不值钱、对你最没用的东西。我想给你的是只对你成立的判断。"
+3. **点名还差什么**——具体说出：${labels}。说明"这两点会直接改变结论方向"。
+4. **立刻抛 1 个尖锐追问**接住对话。
+
+措辞红线：不得说"系统要求/还没到轮数/流程规定"等暴露机制的话；让用户感到是为了把分析做准才追问。
+`;
+}
+
+function buildAgendaGenerationBlock(agent: POJUAgentState): string {
+  if (agent.agenda_generated) return "";
+  return `
+
+## ★ 首轮 mandatory：生成本次问诊议程（仅本轮一次）
+
+基于用户的原始问题，在 JSON 中额外输出 \`investigation_agenda\` 数组（6–8 项），每项针对**这个人这件事**定制（不要通用字段名），例如咖啡店困境：
+- 竞争冲击的时间线与量级
+- 已试手段及实际效果
+- 现金流/债务可撑多久
+- 真实诉求（止损 vs 死磕）
+- 个人精力与心理临界
+- 可动用的差异化资源
+- 退出/转型的机会成本
+
+格式：
+"investigation_agenda": [
+  { "id": "timeline", "label": "…", "critical": true, "status": "unexplored" },
+  …
+]
+
+至少 3 项标 critical: true。生成后代码会持久化，**后续轮次不得重写此议程**。
+同时正常输出本轮第一个尖锐问题。
+`;
+}
+
+function buildAgendaTrackingBlock(agent: POJUAgentState): string {
+  const agenda = agent.investigation_agenda ?? [];
+  if (agenda.length === 0) return "";
+  const focus = getNextAgendaFocus(agenda);
+  const focusText = focus.map((a) => `- ${a.label} (${a.id}, ${a.status})`).join("\n");
+  return `
+
+## 问诊议程（持久 — 勿重写）
+${formatAgendaForPrompt(agenda)}
+
+## 本轮问诊焦点（mandatory）
+从上面选 1–2 个 status 为 unexplored 或 partial 的角度发问：
+${focusText || "- 优先补全必查项"}
+
+每轮在 context_updates 里回报 agenda_status_updates，例如：
+"agenda_status_updates": { "timeline": "partial", "what_tried": "covered" }
+只把用户【明确说过】的事实写入 context_updates / agenda 状态，不要推断编造。
+禁止重复问已 covered 的角度；禁止泛泛倾听。
+`;
 }
 
 function buildCollectingTaskBlock(input: PhaseLLMInput): string {
@@ -117,8 +220,8 @@ function buildCollectingTaskBlock(input: PhaseLLMInput): string {
 `
     : "";
 
-  const majorGateNote = cat && isMajorQuestionCategory(cat)
-    ? `\n【硬下限】本议题为 career / relationship / decision 等重大类型：必须 ≥${MIN_MAJOR_COLLECTING_USER_TURNS} 轮有效问答且必填字段齐全，才能切 awaiting_confirmation；未达到一律保持 collecting_context。`
+  const majorGateNote = agent.agenda_generated
+    ? `\n【硬下限】至少 ${MIN_COLLECTING_USER_TURNS} 轮有效 user 问诊、必查议程项全覆盖、整体覆盖 ≥ ${AGENDA_COVERED_GATE * 100}% 才能切 awaiting_confirmation。`
     : "";
 
   const resumeAfterStallNote = agent.resume_collecting_low_barrier
@@ -142,7 +245,8 @@ ${profileGate}
 ## 已收集的信息
 ${contextText}
 
-完成度: ${(completeness * 100).toFixed(0)}%
+完成度（参考，非交付闸门）: ${(completeness * 100).toFixed(0)}%
+${buildAgendaTrackingBlock(agent)}
 
 ## 还需要收集的字段
 ${missingText}
@@ -182,11 +286,14 @@ ${requiredList}
 - ⚠️ 若本 Session 尚未正式交付（还在收集阶段），用户即使追问"该做什么"，也【不在收集阶段给新行动】，而是回应："这些具体做法我会在完整分析里一次给你，现在先把情况了解清楚。"然后继续问诊。
 （当前为收集阶段：一律不得给出任何新行动或操作指令。）
 
-## 完成判断
-- 本类别【必填字段】已全部收齐 → suggested_phase: "awaiting_confirmation"
-- 用户明确说「差不多了 / 可以分析了 / 你来说吧」→ "awaiting_confirmation"
+## 完成判断（议程驱动）
+- 必查 agenda 项全部 covered + 整体覆盖 ≥ ${AGENDA_COVERED_GATE * 100}% + 有效 user 轮 ≥ ${MIN_COLLECTING_USER_TURNS} → 才可 suggested_phase: "awaiting_confirmation"
+- 未达标 → 每轮必须推进 1–2 个 unexplored/partial 议程角度，禁止重复 covered、禁止泛泛倾听
+- 用户说「分析一下/给点建议」→ **不算** skip-ahead；保持 collecting_context 并继续问诊
+- 仅当用户明确「直接给结论 / 不用再问了 / skip ahead / just give me the result」且 ≥ ${PUSH_MIN_TURNS} 轮 + 覆盖 ≥ ${PUSH_GATE * 100}% 时，才可因强催促提前 suggested_phase: "awaiting_confirmation"
 - 否则 → "collecting_context"
 ${majorGateNote}
+${buildAgendaGenerationBlock(agent)}
 ${resumeAfterStallNote}
 （已删除"或信息已够支撑 3 条可执行行动"判据——该判据会诱导提前凑出行动并写进 response。）
 
@@ -219,7 +326,10 @@ ${resumeAfterStallNote}
   "suggested_phase": "collecting_context" | "awaiting_confirmation" | null,
   "action_requested": "continue_chat" | "show_birth_form",
   "question_category": "career" | "relationship" | "wealth" | "health" | "family" | "decision" | "interpersonal" | "other" | null,
-  "context_updates": { },
+  "context_updates": {
+    "agenda_status_updates": { "agenda_id": "partial" | "covered" }
+  },
+  "investigation_agenda": [ { "id": "...", "label": "...", "critical": true, "status": "unexplored" } ],
   "collection_progress": "advancing" | "stalled" | "resistant",
   "topic_drift_signal": "none" | "edge" | "off_topic",
   "drift_reason": "若有偏离，一句话说明（无则空字符串）",
@@ -227,8 +337,10 @@ ${resumeAfterStallNote}
 }
 
 判断：topic_drift_signal 为 "off_topic" 时 should_show_new_session_button 必须为 true；其他情况为 false。
+首轮且 agenda 未生成时 investigation_agenda 必填；已生成则省略 investigation_agenda 字段。
 
-${buildToolSuggestionPhaseAppendix(input, { includeNewCycleDetection: false })}`;
+${buildToolSuggestionPhaseAppendix(input, { includeNewCycleDetection: false })}
+${buildPullbackBlock(input)}`;
 }
 
 export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLLMResult> {
@@ -259,6 +371,9 @@ export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLL
 
   const questionCategory = typeof parsed.question_category === "string" ? parsed.question_category : null;
   const collection_progress = parseCollectionProgress(parsed.collection_progress);
+  const investigation_agenda_raw = !input.agent_state?.agenda_generated
+    ? parsed.investigation_agenda
+    : null;
   if (input.agent_state && suggested_phase) {
     suggested_phase = clampCollectingSuggestedPhase(
       suggested_phase,
@@ -267,6 +382,7 @@ export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLL
       context_updates,
       questionCategory,
       collection_progress,
+      investigation_agenda_raw,
     );
   }
 
@@ -312,6 +428,7 @@ export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLL
     start_new_cycle: false,
     new_cycle_question: null,
     collection_progress,
+    investigation_agenda: parseInvestigationAgenda(investigation_agenda_raw),
     ...drift,
   };
 }

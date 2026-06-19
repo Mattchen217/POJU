@@ -7,6 +7,7 @@ import { createNewCycle, ensureSessionCycles } from "@/lib/poju/cycle-manager";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import { syncPojuSessionVaultArchive } from "@/lib/archive/poju-session-vault";
 import { syncPojuSessionReportsToStoredProfiles } from "@/lib/profile/sync-poju-base-analysis";
+import { countUserTurns } from "@/lib/poju/summary-readiness";
 import type { POJUSessionState, PojuV4StateHint } from "@/lib/poju/types";
 
 const SESSION_SECRET = "pojulife_v4_poju_session";
@@ -123,7 +124,7 @@ export async function savePOJUSession(state: POJUSessionState): Promise<void> {
     last_interaction_at: new Date(state.last_interaction_at),
     expires_at: new Date(state.expires_at),
     tokens_used: state.tokens_used,
-    turn_count: state.messages.filter((m) => m.role !== "system").length,
+    turn_count: countUserTurns(state),
     current_state_hint: getCurrentStateHint(state),
     main_delivery_done: state.main_delivery_done,
     main_delivery_at: state.main_delivery_done ? new Date() : undefined,

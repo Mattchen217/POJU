@@ -22,6 +22,12 @@ import { ensureSessionCycles } from "@/lib/poju/cycle-manager";
 import { finalizeToolInjectionTurn, prepareToolInjectionTurn } from "@/lib/poju/prepare-tool-injection-turn";
 import { findPendingToolInjection } from "@/lib/poju/find-pending-tool-injection";
 import { extractQuestionCategory, mergeContextUpdates, recordToLLMContextUpdates } from "@/lib/poju/context-extractor";
+import {
+  applyAgendaStatusUpdates,
+  extractAgendaStatusUpdates,
+  parseInvestigationAgenda,
+  stripAgendaFieldsFromContextUpdates,
+} from "@/lib/poju/investigation-agenda";
 import { applyToolLinkingFromLlm } from "@/lib/poju/tool-suggestion";
 import type { ToolSuggestionPayload } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
@@ -78,6 +84,7 @@ type LLMApiPayload = {
   new_cycle_question?: string | null;
   collection_progress?: "advancing" | "stalled" | "resistant" | null;
   stall_offer?: boolean;
+  investigation_agenda?: unknown;
 };
 
 function ensureAgentV2(session: POJUSessionState): POJUAgentState {
@@ -129,22 +136,40 @@ function finalizeAgentV2(
     main_delivery?: unknown;
     collection_progress?: "advancing" | "stalled" | "resistant" | null;
     stall_offer?: boolean;
+    investigation_agenda?: unknown;
   },
   userMessage: string,
   isSystemMessage: boolean,
 ): POJUAgentState {
   const flat = llm.context_updates ?? {};
-  const structured = recordToLLMContextUpdates(flat);
+  const agendaStatusUpdates = extractAgendaStatusUpdates(flat);
+  const contextFlat = stripAgendaFieldsFromContextUpdates(flat);
+  const structured = recordToLLMContextUpdates(contextFlat);
+  let investigation_agenda = base.investigation_agenda ?? [];
+  let agenda_generated = base.agenda_generated ?? false;
+
+  if (!agenda_generated) {
+    const parsedAgenda = parseInvestigationAgenda(llm.investigation_agenda);
+    if (parsedAgenda) {
+      investigation_agenda = parsedAgenda;
+      agenda_generated = true;
+    }
+  } else if (agendaStatusUpdates) {
+    investigation_agenda = applyAgendaStatusUpdates(investigation_agenda, agendaStatusUpdates);
+  }
+
   let merged: POJUAgentState = {
     ...base,
     context_collected: mergeContextUpdates(base.context_collected, structured),
     question_category:
-      extractQuestionCategory(flat) ??
+      extractQuestionCategory(contextFlat) ??
       (llm.question_category as POJUAgentState["question_category"]) ??
       base.question_category,
     profile_skipped: session.profile_skipped,
     has_base_analysis: session.has_profile,
     selected_profile_id: resolveSelectedProfileId(session, base),
+    investigation_agenda,
+    agenda_generated,
   };
   merged = {
     ...merged,
@@ -177,11 +202,14 @@ function finalizeAgentV2(
 
   const stallOffer = Boolean((llm as { stall_offer?: boolean }).stall_offer);
 
+  const userTurns = countUserTurns(session);
+  merged = { ...merged, turn_count: userTurns };
+
   const transition = decidePhaseTransition({
     current_state: merged,
     llm_suggested_phase: llmPhase,
     user_message: phaseUserMessage,
-    user_turn_count: countUserTurns(session),
+    user_turn_count: userTurns,
     collection_progress: collectionProgress,
     stall_count: counters.stall_count,
     collecting_turn_count: counters.collecting_turn_count,
@@ -217,7 +245,7 @@ function finalizeAgentV2(
   const tokenDelta = typeof llm.tokens_used === "number" ? llm.tokens_used : 0;
   return {
     ...after,
-    turn_count: after.turn_count + (isSystemMessage ? 0 : 1),
+    turn_count: userTurns,
     tokens_used: after.tokens_used + tokenDelta,
   };
 }
@@ -362,6 +390,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       main_delivery: llmResponse.main_delivery,
       collection_progress: llmResponse.collection_progress,
       stall_offer: llmResponse.stall_offer,
+      investigation_agenda: (llmResponse as { investigation_agenda?: unknown }).investigation_agenda,
     },
     userMessage,
     isSystemMessage,

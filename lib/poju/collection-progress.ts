@@ -1,13 +1,15 @@
-import { areRequiredFieldsComplete } from "@/lib/poju/collecting-confirmation-gate";
-import type { POJUAgentState } from "@/lib/poju/agent-state";
-
+import {
+  MIN_COLLECTING_USER_TURNS,
+  type POJUAgentState,
+} from "@/lib/poju/agent-state";
+import { isAgendaSatisfied } from "@/lib/poju/investigation-agenda";
 export type CollectionProgress = "advancing" | "stalled" | "resistant";
 export type DeliveryMode = "full" | "degraded";
 
-/** Minimum collecting Q&A rounds before allowing confirmation when required fields are still incomplete. */
-export const MIN_COLLECTING_TURNS = 3;
+/** Minimum collecting Q&A rounds before allowing confirmation. */
+export const MIN_COLLECTING_TURNS = MIN_COLLECTING_USER_TURNS;
 /** Hard cap on collecting turns — triggers degraded delivery (stop-loss). */
-export const MAX_COLLECTING_TURNS = 8;
+export const MAX_COLLECTING_TURNS = 12;
 /** Consecutive stalled/resistant rounds before stop-loss. */
 export const STALL_STOP_LOSS_THRESHOLD = 2;
 
@@ -49,12 +51,16 @@ export function evaluateStopLoss(input: {
   return { triggered: false, reason: null };
 }
 
-/** Rule ① — block premature confirmation while fields incomplete and turns < minimum. */
+/** Block confirmation while turns or agenda coverage below gate. */
 export function isPrematureCollectingPhase(
   state: POJUAgentState,
-  collectingTurnCount: number,
+  userTurnCount: number,
 ): boolean {
-  return collectingTurnCount < MIN_COLLECTING_TURNS && !areRequiredFieldsComplete(state);
+  const turns = state.turn_count ?? userTurnCount;
+  if (turns < MIN_COLLECTING_USER_TURNS) return true;
+  const agenda = state.investigation_agenda ?? [];
+  if (agenda.length === 0) return true;
+  return !isAgendaSatisfied(agenda);
 }
 
 export function projectCollectingStopLoss(

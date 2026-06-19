@@ -12,6 +12,11 @@ import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
 import { resolveActiveAgentPhase } from "@/lib/llm/poju-phase-router";
 import { mapPhaseResultToChatPayload } from "@/lib/poju/phase-llm-mapper";
 import { normalizeAgentPhase, type AgentPhase } from "@/lib/poju/agent-state";
+import {
+  computeCollectingPullback,
+  getUncoveredCriticalLabels,
+} from "@/lib/poju/investigation-agenda";
+import { countUserTurns } from "@/lib/poju/summary-readiness";
 import { getLastUserMessageContent } from "@/lib/poju/context-helpers";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import type { POJUSessionState } from "@/lib/poju/types";
@@ -31,19 +36,33 @@ function buildPhaseInput(
   tool_injection_context?: string | null,
   stream_hooks?: PhaseLLMInput["stream_hooks"],
   signal?: AbortSignal,
+  activePhase?: AgentPhase,
 ): PhaseLLMInput {
   const user_message = getLastUserMessageContent(session);
+  const agent = session.agent_v2 ?? null;
+  const userTurns = countUserTurns(session);
+  const collecting_pullback =
+    activePhase === "collecting_context"
+      ? computeCollectingPullback({ userMessage: user_message, agent, userTurns })
+      : false;
+  const uncovered_critical_labels =
+    agent?.investigation_agenda?.length
+      ? getUncoveredCriticalLabels(agent.investigation_agenda)
+      : [];
+
   return {
     session,
     profile,
     base_analysis: base_analysis ?? null,
     locale,
     user_message,
-    agent_state: session.agent_v2 ?? null,
+    agent_state: agent,
     archive_data: archive_data ?? null,
     tool_injection_context: tool_injection_context ?? null,
     stream_hooks,
     signal,
+    collecting_pullback,
+    uncovered_critical_labels,
   };
 }
 
@@ -103,6 +122,7 @@ export async function executeAgentPhaseLLM(input: {
       tool_injection_context,
       stream_hooks,
       signal,
+      "opening",
     );
     const phase = await callGreetingPhase(phaseInput);
     const mapped = mapPhaseResultToChatPayload(phase, {
@@ -124,6 +144,7 @@ export async function executeAgentPhaseLLM(input: {
     tool_injection_context,
     stream_hooks,
     signal,
+    activePhase,
   );
   const phase = await dispatchPhase(activePhase, phaseInput, session);
   const mapped = mapPhaseResultToChatPayload(phase, {

@@ -2,18 +2,17 @@
  * POJU Agent state machine (v5 Step B: opening → collecting → confirmation → delivery → tracking).
  */
 
+import { type CollectionProgress, type DeliveryMode } from "@/lib/poju/collection-progress";
 import {
-  areRequiredFieldsComplete,
-  evaluateCollectingConfirmationGate,
-  userExplicitlyRequestsConfirmation,
-} from "@/lib/poju/collecting-confirmation-gate";
-import {
-  isPrematureCollectingPhase,
-  type CollectionProgress,
-  type DeliveryMode,
-} from "@/lib/poju/collection-progress";
+  canTransitionToConfirmation,
+  computeCollectingPullback,
+  type AgendaItem,
+} from "@/lib/poju/investigation-agenda";
 import { classifyStallOfferReply } from "@/lib/poju/stall-offer-routing";
 import type { POJUAction } from "@/lib/poju/types";
+
+export type { AgendaItem } from "@/lib/poju/investigation-agenda";
+export type AgendaItemStatus = import("@/lib/poju/investigation-agenda").AgendaItemStatus;
 
 export type AgentPhase =
   | "opening"
@@ -113,6 +112,36 @@ export interface POJUAgentState {
     triggered_at: string;
     reason: string;
   }>;
+  /** Custom investigation angles — generated once on first collecting turn. */
+  investigation_agenda: AgendaItem[];
+  /** When true, investigation_agenda must never be regenerated. */
+  agenda_generated: boolean;
+}
+
+/** Minimum effective user turns before confirmation (agenda-driven gate). */
+export const MIN_COLLECTING_USER_TURNS = 7;
+/** Strong skip-ahead — minimum user turns. */
+export const PUSH_MIN_TURNS = 4;
+/** Strong skip-ahead — minimum agenda coverage ratio. */
+export const PUSH_GATE = 0.6;
+/** Overall agenda coverage required for normal confirmation. */
+export const AGENDA_COVERED_GATE = 0.8;
+/** @deprecated Display only — no longer used as delivery gate. */
+export const COLLECTION_COMPLETE_GATE = 0.85;
+/** @deprecated Use PUSH_MIN_TURNS. */
+export const MIN_USER_PUSH_TURNS = PUSH_MIN_TURNS;
+/** @deprecated Use PUSH_GATE. */
+export const USER_PUSH_COMPLETE_GATE = PUSH_GATE;
+/** Distinct category fields needed for full category slice of completeness score. */
+export const MIN_CATEGORY_FIELDS_FOR_FULL = 6;
+
+export { detectDeliveryRequest, userHardPushed } from "@/lib/poju/investigation-agenda";
+
+/** @deprecated Use userHardPushed. */
+export function userExplicitlySkippedAhead(userMessage: string): boolean {
+  return /(?:就现在给我结果|直接给结论|不用再问了|skip ahead|just give me (?:the )?(?:result|analysis)|don'?t need more questions)/i.test(
+    userMessage,
+  );
 }
 
 export const REQUIRED_FIELDS_BY_CATEGORY: Record<string, string[]> = {
@@ -227,6 +256,8 @@ export function createInitialAgentState(input: {
     resume_collecting_low_barrier: false,
     tokens_used: 0,
     phase_history: [],
+    investigation_agenda: [],
+    agenda_generated: false,
   };
 }
 
@@ -251,7 +282,8 @@ export function calculateCompleteness(state: POJUAgentState): number {
   for (const field of required) {
     if (isFilled(c.category_specific[field])) categoryFilled += 1;
   }
-  const categoryScore = (categoryFilled / required.length) * 0.6;
+  const categoryScore =
+    Math.min(1, categoryFilled / Math.max(MIN_CATEGORY_FIELDS_FOR_FULL, required.length)) * 0.6;
 
   return Math.min(1, generalScore + triedScore + categoryScore);
 }
@@ -304,49 +336,15 @@ export interface PhaseTransitionResult {
   reset_stall_count?: boolean;
   resume_collecting_low_barrier?: boolean;
   clear_resume_collecting_low_barrier?: boolean;
+  /** User asked for delivery but agenda gate not met — inject pullback prompt next turn. */
+  pullback?: boolean;
 }
 
 export function decidePhaseTransition(input: PhaseTransitionInput): PhaseTransitionResult {
   const { current_state, user_message } = input;
-  const userTurnCount = input.user_turn_count ?? 0;
-  const collectingTurnCount =
-    input.collecting_turn_count ?? current_state.collecting_turn_count ?? 0;
+  const userTurns = input.user_turn_count ?? current_state.turn_count ?? 0;
   const llm_suggested_phase = normalizeAgentPhase(input.llm_suggested_phase ?? undefined);
   const current = normalizeAgentPhase(current_state.current_phase) ?? current_state.current_phase;
-
-  const tryCollectingToConfirmation = (reason: string): PhaseTransitionResult | null => {
-    if (isPrematureCollectingPhase(current_state, collectingTurnCount)) {
-      return null;
-    }
-    const gate = evaluateCollectingConfirmationGate(current_state, userTurnCount);
-    if (!gate.allowed) return null;
-    return {
-      should_transition: true,
-      new_phase: "awaiting_confirmation",
-      delivery_mode: "full",
-      reason,
-    };
-  };
-
-  if (
-    /(?:give|tell|show).{0,20}(?:analysis|reading|advice|recommendation)|现在.{0,5}(?:给我|告诉我).{0,5}(?:分析|建议|结论)/i.test(
-      user_message,
-    )
-  ) {
-    if (current === "collecting_context") {
-      if (input.stall_offer) {
-        return {
-          should_transition: true,
-          new_phase: "awaiting_confirmation",
-          stop_loss_triggered: true,
-          stall_offer_pending: true,
-          reason: `Stop-loss stall offer: ${input.stop_loss?.reason ?? "triggered"}`,
-        };
-      }
-      const transition = tryCollectingToConfirmation("User explicitly requested delivery");
-      if (transition) return transition;
-    }
-  }
 
   switch (current) {
     case "opening":
@@ -370,22 +368,35 @@ export function decidePhaseTransition(input: PhaseTransitionInput): PhaseTransit
         };
       }
 
-      const userWantsConfirm = userExplicitlyRequestsConfirmation(user_message);
-      const llmWantsConfirm = llm_suggested_phase === "awaiting_confirmation";
+      const confirm = canTransitionToConfirmation({
+        agent: current_state,
+        userTurns,
+        userMessage: user_message,
+      });
+      if (confirm.allowed) {
+        const reason =
+          llm_suggested_phase === "awaiting_confirmation"
+            ? confirm.reason
+            : confirm.reason;
+        return {
+          should_transition: true,
+          new_phase: "awaiting_confirmation",
+          delivery_mode: "full",
+          reason,
+        };
+      }
 
-      if (userWantsConfirm) {
-        const transition = tryCollectingToConfirmation("User requested confirmation");
-        if (transition) return transition;
-      }
-      if (llmWantsConfirm) {
-        const transition = tryCollectingToConfirmation("LLM suggested confirmation");
-        if (transition) return transition;
-      }
-      if (areRequiredFieldsComplete(current_state)) {
-        const transition = tryCollectingToConfirmation("Required fields complete");
-        if (transition) return transition;
-      }
-      break;
+      const pullback = computeCollectingPullback({
+        userMessage: user_message,
+        agent: current_state,
+        userTurns,
+      });
+      return {
+        should_transition: false,
+        new_phase: "collecting_context",
+        reason: confirm.reason,
+        pullback,
+      };
     }
 
     case "awaiting_confirmation":

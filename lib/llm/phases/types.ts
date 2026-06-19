@@ -19,6 +19,10 @@ export interface PhaseLLMInput {
   /** Live UI hooks while OpenRouter streams reasoning + JSON content. */
   stream_hooks?: import("@/lib/llm/phases/phase-transport").PhaseStreamHooks;
   signal?: AbortSignal;
+  /** Inject pullback response structure when user asks for delivery too early. */
+  collecting_pullback?: boolean;
+  /** Critical agenda labels still uncovered — prompt tail only. */
+  uncovered_critical_labels?: string[];
 }
 
 export interface PhaseLLMResult {
@@ -47,5 +51,7 @@ export interface PhaseLLMResult {
   collection_progress?: "advancing" | "stalled" | "resistant" | null;
   /** Stop-loss binary choice offer (Step 3). */
   stall_offer?: boolean;
+  /** First collecting turn only — persisted once. */
+  investigation_agenda?: import("@/lib/poju/investigation-agenda").AgendaItem[] | null;
 }
 
