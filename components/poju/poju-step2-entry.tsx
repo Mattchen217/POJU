@@ -14,6 +14,7 @@ import { listStoredProfiles } from "@/lib/profile/stored-profiles-service";
 import { ProfileSelector } from "@/components/profile/ProfileSelector";
 import { readFromToolPending } from "@/lib/cross-product/from-tool-pending";
 import { QuestionDialog } from "@/components/poju/QuestionDialog";
+import { sessionListTopicLine } from "@/lib/poju/session-list-label";
 
 type ActiveSession = {
   session_id: string;
@@ -145,7 +146,7 @@ export function PojuStep2Entry() {
               className="block w-full rounded-lg border border-white/10 px-3 py-2 text-left text-sm text-white/85 hover:bg-white/5"
               onClick={() => router.push(`/${locale}/poju/session/${s.session_id}`)}
             >
-              {s.original_question}
+              {sessionListTopicLine(s.original_question)}
             </button>
           ))}
         </div>

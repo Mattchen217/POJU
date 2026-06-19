@@ -1,6 +1,6 @@
 import type { GlyphReadingContent } from "@/lib/llm/services/glyph-reading-service";
 import signsData from "@/lib/glyph/data/signs.json";
-import { detectComplianceViolations, filterDeletedTerms } from "@/lib/llm/sanitize/compliance-terms";
+import { applyComplianceSanitize, detectComplianceViolations, sanitizeDeepStringFields } from "@/lib/llm/sanitize/compliance-terms";
 import { detectNarrativeSentences } from "@/lib/glyph/sanitize-narrative-sentences";
 import { detectPredictionSentences } from "@/lib/glyph/sanitize-prediction-sentences";
 
@@ -202,22 +202,23 @@ export function logGlyphOutputViolations(
  * Output quality is enforced by prompt, not post-hoc text mutation.
  */
 export function sanitizeGlyphOutput(text: string, locale: string): string {
-  const filtered = filterDeletedTerms(text);
-  const violations = detectGlyphOutputViolations(filtered, locale);
-  if (violations.length > 0) {
-    logGlyphOutputViolations(violations, "glyph-audit");
+  const sanitized = applyComplianceSanitize(text, locale).text;
+  const narrative = detectGlyphOutputViolations(sanitized, locale);
+  if (narrative.length > 0) {
+    logGlyphOutputViolations(narrative, "glyph-sanitize");
   }
-  return filtered;
+  return sanitized;
 }
 
-/** Audit-only — logs violations per field, returns reading unchanged. */
+/** Sanitize all user-visible string fields in a Glyph reading. */
 export function sanitizeGlyphReadingContent(
   reading: GlyphReadingContent,
   locale: string,
 ): GlyphReadingContent {
-  const violations = auditGlyphReadingContent(reading, locale);
+  const sanitized = sanitizeDeepStringFields(reading, locale) as GlyphReadingContent;
+  const violations = auditGlyphReadingContent(sanitized, locale);
   if (violations.length > 0) {
     logGlyphOutputViolations(violations, "glyph-reading-audit");
   }
-  return reading;
+  return sanitized;
 }

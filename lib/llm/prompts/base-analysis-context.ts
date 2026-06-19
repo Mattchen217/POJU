@@ -1,4 +1,5 @@
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
+import { stripGlossTokensForPrompt } from "@/lib/llm/sanitize/compliance-terms";
 import { formatBaseAnalysisForDisplay } from "@/lib/profile/format-base-analysis-zh";
 
 /** Normalized base_analysis payload for prompts + local calculations. */
@@ -100,7 +101,7 @@ ${JSON.stringify(bundle.structured, null, 2)}
   if (displayText && !legacyJsonOnly) {
     parts.push(`## 性格画像分析（用户向白榜）
 
-${displayText}`);
+${stripGlossTokensForPrompt(displayText)}`);
   } else if (legacyJsonOnly) {
     parts.push(`## 命主基础分析（legacy JSON）
 

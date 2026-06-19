@@ -72,6 +72,14 @@ export async function appendChunk(job_id: string, chunk: string): Promise<void> 
   await kv.set(jobKey(job_id), job, { ex: KV_TTL.BASE_ANALYSIS_JOB });
 }
 
+export async function setJobContent(job_id: string, content: string): Promise<void> {
+  const job = await getJob(job_id);
+  if (!job) return;
+  job.accumulated_content = content;
+  job.updated_at = Date.now();
+  await kv.set(jobKey(job_id), job, { ex: KV_TTL.BASE_ANALYSIS_JOB });
+}
+
 export async function finalizeJob(
   job_id: string,
   meta: BaseAnalysisJob["meta"] | Record<string, unknown>,

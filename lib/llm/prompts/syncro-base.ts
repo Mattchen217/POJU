@@ -3,7 +3,6 @@
  */
 
 import { buildOutputPolicyForSyncro } from "@/lib/llm/compliance/output-policy";
-import { buildComplianceTranslationPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
 
 export const SYNCRO_OUTPUT_FRAMING = `# SYNCRO OUTPUT FRAMING — 输出合规（必须遵守 · 最高优先级）
 
@@ -27,11 +26,11 @@ System 与输入数据可含奇门、八字等供内部分析——**不得抄�
 - **方向矢量 / direction vector**（禁「吉凶方位」）
 - **环境共振 / execution efficiency / strategic resonance**（禁 luck / 好运 / 会成功）`;
 
-export const SYNCRO_OUTPUT_DEFENSE_TERMS = `# 防线 1 — 术语翻译（共享 compliance-terms + Syncro 特有）
+export const SYNCRO_OUTPUT_DEFENSE_TERMS = `# 防线 1 — 术语（自由输出 · 输出端软翻译）
 
-${buildComplianceTranslationPromptBlock()}
+可自然使用命理/奇门术语撰写文案；输出端会自动软翻译。仍须遵守语义红线（禁吉凶/预测/超自然承诺）。
 
-⛔ **输出 JSON 字符串禁止**（含同义改写）：
+⛔ **输出 JSON 字符串禁止**（语义红线 · 非术语）：
 
 **Syncro 特有（不写框架名，用时空分析语言）**
 - 奇门 / 遁甲 / Qimen / Dunjia / 八门 / 九星 / 三奇六仪 / 飞宫 / 局数 → **省略**；用「时空分析」「环境共振」

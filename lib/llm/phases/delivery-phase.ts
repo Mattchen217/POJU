@@ -41,7 +41,7 @@ export async function callDeliveryPhase(input: PhaseLLMInput): Promise<PhaseLLMR
     }),
   );
 
-  const { parsed, response } = parsePhaseResult(result.content);
+  const { parsed, response } = parsePhaseResult(result.content, { locale: input.locale });
 
   const rawPhase = typeof parsed.suggested_phase === "string" ? parsed.suggested_phase.trim() : null;
   const suggested_phase: AgentPhase | null =

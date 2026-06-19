@@ -101,7 +101,7 @@ export async function callOpeningPhase(input: PhaseLLMInput): Promise<PhaseLLMRe
     }),
   );
 
-  const { parsed, response } = parsePhaseResult(result.content);
+  const { parsed, response } = parsePhaseResult(result.content, { locale: input.locale });
 
   const suggestedRaw = typeof parsed.suggested_phase === "string" ? parsed.suggested_phase : null;
   const suggested = suggestedRaw ? normalizeAgentPhase(suggestedRaw) : null;

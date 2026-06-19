@@ -11,6 +11,7 @@
 import { useState, useRef, useEffect, type JSX, type ReactNode } from "react";
 import Image from "next/image";
 import pojuLogo from "@/assets/images/POJUlogo.png";
+import { GlossaryText } from "@/components/cross-product/GlossaryText";
 import { AssistantMessageActions } from "@/components/poju/AssistantMessageActions";
 import { PojuAiAvatar } from "@/components/poju/PojuAiAvatar";
 import { ThinkingEnergyPulse } from "@/components/poju/ThinkingEnergyPulse";
@@ -123,13 +124,18 @@ export interface PojuChatProps {
 
 /* ---------- AI 文本渲染(不用 Tailwind prose,避免 65ch 限制)----------
    支持:### 标题 / ═══ XXX ═══ 分隔行 / 普通段落 */
-function renderAiContent(text: string): JSX.Element[] {
+function renderAiContent(text: string, locale: string): JSX.Element[] {
   const lines = text.split("\n");
   const out: JSX.Element[] = [];
   let buf: string[] = [];
   const flush = (key: string) => {
     if (buf.length) {
-      out.push(<p key={key}>{buf.join("\n")}</p>);
+      const paragraph = buf.join("\n");
+      out.push(
+        <p key={key}>
+          <GlossaryText text={paragraph} locale={locale} />
+        </p>,
+      );
       buf = [];
     }
   };
@@ -214,7 +220,7 @@ export default function PojuChat(props: PojuChatProps) {
   const textareaValue = composerText ?? input;
   const setTextareaValue = onComposerTextChange ?? setInput;
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [openMenuSessionId, setOpenMenuSessionId] = useState<string | null>(null);
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
   const [sessionDialog, setSessionDialog] = useState<SessionSidebarDialogState | null>(null);
@@ -534,7 +540,7 @@ export default function PojuChat(props: PojuChatProps) {
                     messageSlots[m.id]
                   ) : (
                     <AiReplyShell>
-                      {messageSlots?.[m.id] ? messageSlots[m.id] : renderAiContent(m.content)}
+                      {messageSlots?.[m.id] ? messageSlots[m.id] : renderAiContent(m.content, thinkingLocale ?? "en")}
                       {!messageSlots?.[m.id] ? <AssistantMessageActions content={m.content} /> : null}
                     </AiReplyShell>
                   )}

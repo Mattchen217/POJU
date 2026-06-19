@@ -7,6 +7,7 @@ import {
 } from "@/lib/llm/pro/final-delivery";
 import { callLLM } from "@/lib/llm/router";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
+import { sanitizeDeliveryText } from "@/lib/llm/sanitize/compliance-terms";
 import { normalizeAgentPhase, type POJUAgentState } from "@/lib/poju/agent-state";
 
 export const maxDuration = 180;
@@ -93,7 +94,7 @@ export async function POST(req: Request) {
       session_id: sessionId,
     });
 
-    const text = result.content.trim();
+    const text = sanitizeDeliveryText(result.content.trim(), locale);
     const actions = extractActionsFromDelivery(text, body.situation_analysis);
     const latency_ms = result.meta.latency_ms || Date.now() - t0;
 

@@ -6,14 +6,26 @@ export function isDefaultNewSessionTitle(question: string | undefined | null): b
   return !q || q === DEFAULT_NEW_SESSION_TITLE;
 }
 
+/** Max chars for sidebar / session list display titles. */
+const SESSION_LIST_TOPIC_MAX = 48;
+
+function extractFirstSegment(text: string): string {
+  const firstLine = text.split(/\n+/)[0]?.trim() ?? text;
+  const sentenceMatch = firstLine.match(/^[\s\S]*?(?:[.!?。！？](?:\s|$)|$)/);
+  const sentence = (sentenceMatch?.[0] ?? firstLine).trim();
+  return sentence.length >= 4 ? sentence : firstLine;
+}
+
 export function topicFromFirstUserMessage(raw: string): string {
-  const t = raw.trim();
+  const t = raw.trim().replace(/\s+/g, " ");
   if (!t) return "";
   if (t.startsWith("[Image attached:")) return "Image";
   if (t.startsWith("[PDF attached:")) return "PDF";
   if (t.startsWith("[Document attached:")) return "Document";
-  const max = 72;
-  return t.length > max ? `${t.slice(0, max - 1)}…` : t;
+  const segment = extractFirstSegment(t);
+  return segment.length > SESSION_LIST_TOPIC_MAX
+    ? `${segment.slice(0, SESSION_LIST_TOPIC_MAX - 1)}…`
+    : segment;
 }
 
 export function resolveSessionListTopic(
@@ -31,7 +43,9 @@ export function resolveSessionListTopic(
   }
 
   const original = input.original_question?.trim() || "";
-  if (!isDefaultNewSessionTitle(original)) return original;
+  if (!isDefaultNewSessionTitle(original)) {
+    return topicFromFirstUserMessage(original);
+  }
 
   const firstUser = input.first_user_message?.trim();
   if (firstUser) {

@@ -95,7 +95,7 @@ async function handleConfirmProceed(input: PhaseLLMInput): Promise<PhaseLLMResul
     }),
   );
 
-  const { parsed, response } = parsePhaseResult(result.content);
+  const { parsed, response } = parsePhaseResult(result.content, { locale: input.locale });
   const rawPhase = typeof parsed.suggested_phase === "string" ? parsed.suggested_phase.trim() : null;
   const suggested_phase =
     rawPhase === "delivered" ? "delivered" : ("delivered" as const);
@@ -136,7 +136,7 @@ async function generateSummaryPhase(input: PhaseLLMInput): Promise<PhaseLLMResul
     }),
   );
 
-  const { parsed, response } = parsePhaseResult(result.content);
+  const { parsed, response } = parsePhaseResult(result.content, { locale: input.locale });
 
   const summary = normalizeSummary(parsed.current_summary);
   if (summary && !summary.generated_at) {
@@ -199,7 +199,7 @@ async function handleStallOfferReply(input: PhaseLLMInput): Promise<PhaseLLMResu
     }),
   );
 
-  const { parsed, response } = parsePhaseResult(result.content);
+  const { parsed, response } = parsePhaseResult(result.content, { locale: input.locale });
 
   return {
     response,
@@ -266,7 +266,7 @@ ${TRANSITION_CONSENT_RULES}
     }),
   );
 
-  const { parsed, response } = parsePhaseResult(result.content);
+  const { parsed, response } = parsePhaseResult(result.content, { locale: input.locale });
 
   const rawPhase = typeof parsed.suggested_phase === "string" ? parsed.suggested_phase.trim() : null;
   const suggested_phase =

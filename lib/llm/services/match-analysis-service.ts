@@ -19,6 +19,7 @@ import {
 } from "@/lib/llm/prompts/base-analysis-context";
 import { buildMatchPrompt } from "@/lib/llm/prompts/match-deepseek-prompt";
 import { callLLM } from "@/lib/llm/router";
+import { sanitizeDeepStringFields } from "@/lib/llm/sanitize/compliance-terms";
 import { calculateCompatibilityMatrix } from "@/lib/match/calculate-compatibility";
 import { normalizeSynergyType } from "@/lib/match/synergy-normalize";
 import { wrapProfileForMatrix } from "@/lib/match/parse-profile-for-matrix";
@@ -339,6 +340,7 @@ export async function generateMatchAnalysis(
   let parsed: Record<string, unknown>;
   try {
     parsed = parseJsonContent(result.content) as Record<string, unknown>;
+    parsed = sanitizeDeepStringFields(parsed, input.locale) as Record<string, unknown>;
   } catch (e) {
     console.error("[match] JSON parse failed:", e);
     console.error("[match] Raw (first 800):", result.content.slice(0, 800));

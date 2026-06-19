@@ -1,3 +1,4 @@
+import { applyComplianceSanitize, stripGlossTokensForPrompt } from "@/lib/llm/sanitize/compliance-terms";
 import {
   generateGeminiChatCompletion,
   getGeminiClient,
@@ -99,34 +100,47 @@ export function parsePhaseJson(rawText: string): Record<string, unknown> {
   return JSON.parse(cleaned) as Record<string, unknown>;
 }
 
-/** Parse phase JSON; never substitute hardcoded conversational copy — use model text on failure. */
-export function parsePhaseResult(rawText: string): {
+/** Parse phase JSON; sanitize `response` when locale provided (output-side gloss tokens). */
+export function parsePhaseResult(
+  rawText: string,
+  options?: { locale?: string },
+): {
   parsed: Record<string, unknown>;
   response: string;
 } {
   const cleaned = rawText.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
   if (!cleaned) return { parsed: {}, response: "" };
 
+  const sanitizeResponse = (raw: string): string => {
+    if (!options?.locale || !raw.trim()) return raw;
+    return applyComplianceSanitize(raw, options.locale).text;
+  };
+
   try {
     const parsed = parsePhaseJson(rawText);
-    const response =
+    const responseRaw =
       typeof parsed.response === "string"
         ? parsed.response.trim()
         : typeof parsed.reply === "string"
           ? parsed.reply.trim()
           : cleaned;
+    const response = sanitizeResponse(responseRaw);
+    if (typeof parsed.response === "string") parsed.response = response;
     return { parsed, response };
   } catch {
     const fieldMatch = cleaned.match(/"response"\s*:\s*"((?:\\.|[^"\\])*)"/);
     if (fieldMatch?.[1]) {
       try {
         const unescaped = JSON.parse(`"${fieldMatch[1]}"`) as string;
-        return { parsed: {}, response: String(unescaped).trim() };
+        return { parsed: {}, response: sanitizeResponse(String(unescaped).trim()) };
       } catch {
-        return { parsed: {}, response: fieldMatch[1].replace(/\\n/g, "\n").trim() };
+        return {
+          parsed: {},
+          response: sanitizeResponse(fieldMatch[1].replace(/\\n/g, "\n").trim()),
+        };
       }
     }
-    return { parsed: {}, response: cleaned };
+    return { parsed: {}, response: sanitizeResponse(cleaned) };
   }
 }
 
@@ -138,7 +152,7 @@ export function formatPhaseMessageHistory(
     .filter((m) => !m.is_rejected)
     .map((m) => ({
       role: m.role as "user" | "assistant",
-      content: m.content,
+      content: stripGlossTokensForPrompt(m.content),
     }));
 }
 

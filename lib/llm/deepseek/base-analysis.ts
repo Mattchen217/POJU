@@ -12,6 +12,7 @@ import {
   saveBaseAnalysisFromStream,
 } from "@/lib/profile/stored-profiles-service";
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
+import { applyComplianceSanitize } from "@/lib/llm/sanitize/compliance-terms";
 
 export type BaseAnalysisStreamCallbacks = {
   onReasoning?: (fullReasoning: string) => void;
@@ -236,7 +237,7 @@ export async function generateBaseAnalysis(
     },
   });
 
-  const displayText = result.content.trim();
+  const displayText = applyComplianceSanitize(result.content.trim(), outputLocale).text;
   await saveBaseAnalysisFromStream({
     profile_id: profileId,
     display_text: displayText,

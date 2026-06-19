@@ -244,7 +244,7 @@ export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLL
     }),
   );
 
-  const { parsed, response } = parsePhaseResult(result.content);
+  const { parsed, response } = parsePhaseResult(result.content, { locale: input.locale });
   if (!response) {
     console.warn("[collecting-phase] Empty response from model; raw length:", result.content.length);
   }

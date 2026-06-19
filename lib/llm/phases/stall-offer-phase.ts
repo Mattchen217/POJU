@@ -78,7 +78,7 @@ export async function callStallOfferPhase(input: PhaseLLMInput): Promise<PhaseLL
     }),
   );
 
-  const { parsed, response } = parsePhaseResult(result.content);
+  const { parsed, response } = parsePhaseResult(result.content, { locale: input.locale });
 
   return {
     response,

@@ -118,36 +118,186 @@ export function filterDeletedTerms(text: string): string {
   return result.replace(/\s{2,}/g, " ").replace(/\s+([,.;:!?])/g, "$1").trim();
 }
 
-/** Inject full replace + delete + allow tables for prompt rendering. */
-export function buildComplianceTranslationPromptBlock(locale: Locale = "en"): string {
-  const replaceRows = TERM_GLOSSARY.filter((c) => c.surface === "replace")
-    .map((c) => `· ${c.forbidden_variants.join(" / ")} → ${c.soft[locale]}`)
-    .join("\n");
-  const deleteRows = TERM_GLOSSARY.filter((c) => c.surface === "delete")
-    .map((c) => c.forbidden_variants.join(" / "))
-    .join(" / ");
-  const allowRows = TERM_GLOSSARY.filter((c) => c.surface === "allow")
-    .map((c) => c.soft[locale] + (c.hanzi ? `(${c.hanzi})` : ""))
-    .join(" / ");
+/** Private gloss markup — UI parses `⟦g|display|plain⟧`. */
+export const GLOSS_TOKEN_PATTERN = /⟦g\|((?:\\.|[^|\\])*)\|((?:\\.|[^|]|\\[^⟧])*?)⟧/g;
 
-  return `# 术语渲染规则（自由思考，按表输出 · 最高优先级）
+function escapeGlossPart(s: string): string {
+  return s.replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/⟧/g, "\\⟧");
+}
 
-你可以**在内部用任何专业术语自由推演**（八字/奇门/用神/六合…不受限）。
-但**最终面向用户的每一个字符串**，必须按下表把"违禁词"渲染成"软词"——**绝不让违禁词原形出现在输出里**。
+export function unescapeGlossPart(s: string): string {
+  return s.replace(/\\(.)/g, "$1");
+}
 
-## 替换表（违禁词 → 软词，本次输出语言）
-${replaceRows}
+export function encodeGlossToken(display: string, plain: string): string {
+  return `⟦g|${escapeGlossPart(display)}|${escapeGlossPart(plain)}⟧`;
+}
 
-## 直接删除（绝不上屏，含同义/外文变体；如底层签文含神祇名，过滤为空）
-${deleteRows}
+/** Compact display-only form for LLM history (no plain text — cache-stable). */
+export function stripGlossTokensForPrompt(text: string): string {
+  return text.replace(GLOSS_TOKEN_PATTERN, (_, display: string) => unescapeGlossPart(display));
+}
 
-## 允许直接输出（不替换，文化灵魂）
-${allowRows}
+export type ParsedGlossToken = { display: string; plain: string; raw: string };
 
-规则：
-- 软词后**就近一句大白话**可选——但不必堆砌；白话主要由 UI 负责，你只需输出软词本身。
-- 时机/结果相邻处（大运/流年/奇门窗口）措辞为"决策支持/能量节律"，**不报具体日期、不下吉凶**。
-- 自检：输出前扫一遍，任何违禁词原形 = 必须换成软词或删除。`;
+export function parseGlossTokens(text: string): ParsedGlossToken[] {
+  const out: ParsedGlossToken[] = [];
+  GLOSS_TOKEN_PATTERN.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = GLOSS_TOKEN_PATTERN.exec(text)) !== null) {
+    out.push({
+      display: unescapeGlossPart(m[1]),
+      plain: unescapeGlossPart(m[2]),
+      raw: m[0],
+    });
+  }
+  return out;
+}
+
+function findReplaceConcept(term: string): GlossaryConcept | undefined {
+  const t = term.trim();
+  const tl = t.toLowerCase();
+  return TERM_GLOSSARY.find(
+    (c) =>
+      c.surface === "replace" &&
+      c.forbidden_variants.some((v) => v === t || v.toLowerCase() === tl),
+  );
+}
+
+function conceptToGlossToken(c: GlossaryConcept, locale: string): string {
+  const loc = toGlossaryLocale(locale);
+  const display = c.soft[loc] || c.soft.zh || c.soft.en;
+  const plain = c.gloss[loc] || c.gloss.en;
+  return encodeGlossToken(display, plain);
+}
+
+function sortedReplaceEntries(locale: string): Array<{ term: string; concept: GlossaryConcept }> {
+  const loc = toGlossaryLocale(locale);
+  const isZh = loc === "zh";
+  const entries: Array<{ term: string; concept: GlossaryConcept }> = [];
+  for (const c of TERM_GLOSSARY) {
+    if (c.surface !== "replace") continue;
+    for (const v of c.forbidden_variants) {
+      const zh = isChineseVariant(v);
+      if (isZh && !zh) continue;
+      if (!isZh && zh) continue;
+      entries.push({ term: v, concept: c });
+    }
+  }
+  entries.sort((a, b) => b.term.length - a.term.length);
+  return entries;
+}
+
+function applySortedTermReplacements(text: string, locale: string): string {
+  let result = text;
+  for (const { term, concept } of sortedReplaceEntries(locale)) {
+    const token = conceptToGlossToken(concept, locale);
+    if (isChineseVariant(term)) {
+      if (!result.includes(term)) continue;
+      result = result.split(term).join(token);
+    } else {
+      const re = new RegExp(`\\b${escapeRegExp(term)}\\b`, "gi");
+      result = result.replace(re, token);
+    }
+  }
+  return result;
+}
+
+function applyZhRegexReplacements(text: string, locale: string): string {
+  let result = text;
+  const loc = toGlossaryLocale(locale);
+
+  const guiren = TERM_GLOSSARY.find((c) => c.id === "贵人");
+  const dayMaster = TERM_GLOSSARY.find((c) => c.id === "日主");
+  const yong = TERM_GLOSSARY.find((c) => c.id === "用神");
+
+  const repl = (regex: RegExp, concept: GlossaryConcept | undefined, displayFn: (m: string) => string) => {
+    if (!concept) return;
+    regex.lastIndex = 0;
+    result = result.replace(regex, (match) => {
+      const display = displayFn(match);
+      const plain = concept.gloss[loc] || concept.gloss.en;
+      return encodeGlossToken(display, plain);
+    });
+  };
+
+  repl(ZH_STEM_ELEMENT_REGEX, dayMaster, (m) => `核心特质（${m}）`);
+  repl(ZH_STEM_BRANCH_REGEX, TERM_GLOSSARY.find((c) => c.id === "大运流年"), (m) => `人生阶段（${m}）`);
+  repl(ZH_WUXING_YONGXI_REGEX, yong, (m) => `关键平衡（${m}）`);
+  repl(ZH_GUIRen_REGEX, guiren, (m) => guiren!.soft[loc] || m);
+  repl(ZH_WUXING_ELEMENT_CONTEXT_REGEX, yong, (m) => `能量特质（${m}）`);
+
+  return result;
+}
+
+function applyEnRegexReplacements(text: string, locale: string): string {
+  let result = text;
+  const loc = toGlossaryLocale(locale);
+  const yong = TERM_GLOSSARY.find((c) => c.id === "用神");
+
+  const repl = (regex: RegExp, concept: GlossaryConcept | undefined) => {
+    if (!concept) return;
+    const token = conceptToGlossToken(concept, locale);
+    regex.lastIndex = 0;
+    result = result.replace(regex, token);
+  };
+
+  repl(EN_FAVORABLE_ELEMENT_REGEX, yong);
+  repl(EN_UNFAVORABLE_ELEMENT_REGEX, TERM_GLOSSARY.find((c) => c.id === "忌神"));
+  repl(EN_WUXING_ELEMENT_COMBO_REGEX, yong);
+
+  return result;
+}
+
+function applyTermGlossReplacements(text: string, locale: string): string {
+  if (!text?.trim()) return text;
+  let result = filterDeletedTerms(text);
+  result = applySortedTermReplacements(result, locale);
+  const loc = toGlossaryLocale(locale);
+  if (loc === "zh") {
+    result = applyZhRegexReplacements(result, locale);
+  } else {
+    result = applyEnRegexReplacements(result, locale);
+    result = applyZhRegexReplacements(result, locale);
+  }
+  return result;
+}
+
+/** Sanitize all string values in a JSON-like tree (user-visible fields only). */
+export function sanitizeDeepStringFields(value: unknown, locale: string): unknown {
+  if (typeof value === "string") {
+    return applyComplianceSanitize(value, locale).text;
+  }
+  if (Array.isArray(value)) {
+    return value.map((v) => sanitizeDeepStringFields(v, locale));
+  }
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      out[k] = sanitizeDeepStringFields(v, locale);
+    }
+    return out;
+  }
+  return value;
+}
+
+const DELIVERY_MARKER_RE =
+  /(═══\s*(?:ANALYSIS|CONCLUSION|WHAT\s+(?:TO\s+DO|YOU\s+CAN\s+DO)|COMING\s+BACK)\s*═══)/gi;
+
+/** Sanitize POJU final delivery — preserve ═══ marker lines. */
+export function sanitizeDeliveryText(fullText: string, locale: string): string {
+  const parts = fullText.split(DELIVERY_MARKER_RE);
+  return parts
+    .map((part, i) => (i % 2 === 1 ? part : applyComplianceSanitize(part, locale).text))
+    .join("");
+}
+
+/** @deprecated Prompt no longer carries term tables — output-side sanitize handles terms. */
+export function buildComplianceTranslationPromptBlock(_locale: Locale = "en"): string {
+  return `# 术语输出说明
+
+可自然使用命理术语（日主/丙火/用神/大运等）与中文；**输出端会自动软翻译并附白话解释**。
+你只需遵守六条语义红线（不预测/不算命/不占卜/不决吉凶/不恐吓/不超自然承诺）。`;
 }
 
 /** Detect policy + glossary forbidden terms (audit-only). Does NOT flag allow-list labels. */
@@ -220,21 +370,35 @@ export type ComplianceSanitizeResult = {
 };
 
 /**
- * Audit-only — detects black-word hits, applies delete-class hard filter, returns filtered text.
+ * Output-side sanitize: term fingerprint → gloss tokens; red-line semantics → audit only.
  */
 export function applyComplianceSanitize(text: string, locale: string): ComplianceSanitizeResult {
-  const violationsBefore = detectComplianceViolations(text, locale);
-  const filtered = filterDeletedTerms(text);
-  const violationsAfter = detectComplianceViolations(filtered, locale);
+  if (!text?.trim()) {
+    return { text: text ?? "", violationsBefore: [], violationsAfter: [] };
+  }
 
-  if (violationsBefore.length > 0) {
+  const violationsBefore = detectComplianceViolations(text, locale);
+  const replaced = applyTermGlossReplacements(text, locale);
+  const violationsAfter = detectComplianceViolations(replaced, locale);
+
+  const redLineAfter = detectOutputPolicyViolations(replaced, locale);
+  if (redLineAfter.length > 0) {
     console.error(
-      `[compliance-audit] Black-word hits (${violationsBefore.length}, locale=${locale}):`,
-      violationsBefore,
+      `[compliance-audit] Red-line hits after sanitize (${redLineAfter.length}, locale=${locale}):`,
+      redLineAfter.slice(0, 5),
     );
   }
 
-  return { text: filtered, violationsBefore, violationsAfter };
+  if (violationsBefore.length > 0) {
+    const termHits = violationsBefore.filter((v) => v.label.startsWith("term:"));
+    if (termHits.length > 0) {
+      console.log(
+        `[compliance-sanitize] terms replaced: ${termHits.length} → gloss tokens (locale=${locale})`,
+      );
+    }
+  }
+
+  return { text: replaced, violationsBefore, violationsAfter };
 }
 
 export { auditOutputPolicyText, detectOutputPolicyViolations, toGlossaryLocale };

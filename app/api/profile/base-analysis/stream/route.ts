@@ -12,9 +12,11 @@ import {
   findLatestJobForProfile,
   getJob,
   releaseLock,
+  setJobContent,
   updateJobStatus,
 } from "@/lib/base-analysis/job-store";
 import { buildBaseAnalysisStreamPrompt } from "@/lib/llm/prompts/base-analysis-stream-prompt";
+import { applyComplianceSanitize } from "@/lib/llm/sanitize/compliance-terms";
 import { openRouterStream } from "@/lib/llm/openrouter-stream";
 import { getOpenRouterDefaultModel, isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 
@@ -188,19 +190,25 @@ export async function POST(req: NextRequest) {
             const finalJob = await getJob(activeJob.job_id);
             if (!finalJob) return;
 
-            const fullContent = finalJob.accumulated_content;
-            const meta = extractMetaFromStreamContent(fullContent);
+            const rawContent = finalJob.accumulated_content;
+            const glossed = applyComplianceSanitize(rawContent, activeJob.locale).text;
+            if (glossed !== rawContent) {
+              await setJobContent(activeJob.job_id, glossed);
+            }
+
+            const meta = extractMetaFromStreamContent(glossed);
 
             await finalizeJob(activeJob.job_id, meta);
 
             send("done", {
               job_id: activeJob.job_id,
               meta,
-              final_length: fullContent.length,
+              final_length: glossed.length,
+              sanitized: glossed !== rawContent,
             });
 
             console.log(
-              `[base-analysis/stream] completed ${activeJob.job_id}, length=${fullContent.length}`,
+              `[base-analysis/stream] completed ${activeJob.job_id}, length=${glossed.length}`,
             );
           },
 
