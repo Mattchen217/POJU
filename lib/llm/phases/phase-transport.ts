@@ -26,6 +26,7 @@ export async function callPhaseJsonTransport(
     temperature?: number;
     max_tokens?: number;
     call_type?: LLMCallType;
+    session_id?: string;
     stream_hooks?: PhaseStreamHooks;
     signal?: AbortSignal;
   },
@@ -48,6 +49,7 @@ export async function callPhaseJsonTransport(
           temperature,
           json_mode: true,
           reasoning_effort: call_type === "collection_flash" ? "medium" : "medium",
+          session_id: options?.session_id,
         },
         {
           onReasoning: streamHooks.onReasoning,
@@ -69,6 +71,7 @@ export async function callPhaseJsonTransport(
       max_tokens,
       temperature,
       response_format: "json",
+      session_id: options?.session_id,
     });
     return {
       content: result.content,
@@ -147,12 +150,13 @@ export function withPhaseStreamOpts<
     call_type?: import("@/lib/llm/router").LLMCallType;
   },
 >(
-  input: { stream_hooks?: PhaseStreamHooks; signal?: AbortSignal },
+  input: { stream_hooks?: PhaseStreamHooks; signal?: AbortSignal; session: { session_id: string } },
   opts: T,
-): T & { stream_hooks?: PhaseStreamHooks; signal?: AbortSignal } {
+): T & { stream_hooks?: PhaseStreamHooks; signal?: AbortSignal; session_id?: string } {
   return {
     ...opts,
     stream_hooks: input.stream_hooks,
     signal: input.signal,
+    session_id: input.session.session_id,
   };
 }

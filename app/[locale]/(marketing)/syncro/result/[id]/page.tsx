@@ -85,7 +85,7 @@ function SyncroResultPageContent() {
           return;
         }
 
-        const result = await generateSyncroHourWithRetry(hourId, ctx);
+        const result = await generateSyncroHourWithRetry(hourId, ctx, undefined, sessionId);
         const cellKeys = Object.keys(ctx.local_matrix).filter((k) =>
           k.startsWith(`${hourId}__`),
         );

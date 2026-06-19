@@ -2,6 +2,7 @@
  * Glyph v5 — full reading via `callLLM({ call_type: 'glyph_reading' })`.
  */
 
+import { glyphCacheSessionId } from "@/lib/llm/cache-session-id";
 import { signDataToPromptGlyph } from "@/lib/glyph/sign-to-prompt";
 import { loadGlyphBySignData } from "@/lib/glyph/load-glyph";
 import {
@@ -213,7 +214,7 @@ function validateReading(parsed: Record<string, unknown>): GlyphReadingContent {
 async function requestGlyphReadingJson(
   system: string,
   user: string,
-  readingId?: string,
+  input: GenerateGlyphReadingInput,
 ): Promise<{ content: string; actual_model: string; meta: GlyphReadingServiceResult["meta"] }> {
   const result = await callLLM({
     call_type: "glyph_reading",
@@ -224,10 +225,11 @@ async function requestGlyphReadingJson(
     response_format: "json",
     temperature: 0.55,
     timeout_ms: GLYPH_READING_TIMEOUT_MS,
+    session_id: glyphCacheSessionId(input.reading_id, input.profile_id),
   });
 
   console.info("[glyph-reading] LLM complete", {
-    reading_id: readingId ?? null,
+    reading_id: input.reading_id ?? null,
     model: result.actual_model,
     tokens_used: result.meta.tokens_used,
     latency_ms: result.meta.latency_ms,
@@ -294,7 +296,7 @@ export async function generateGlyphReading(
     `[glyph-reading] Calling DeepSeek (glyph_reading, max_tokens: ${GLYPH_READING_MAX_TOKENS}, timeout_ms: ${GLYPH_READING_TIMEOUT_MS})...`,
   );
 
-  const llm = await requestGlyphReadingJson(system, user, input.reading_id);
+  const llm = await requestGlyphReadingJson(system, user, input);
 
   let parsed: Record<string, unknown>;
   try {

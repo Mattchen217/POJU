@@ -28,7 +28,40 @@ export type OpenRouterChatOptions = {
   reasoning_effort?: "off" | "low" | "medium" | "high" | "xhigh";
   /** Override default 90s abort (ms). */
   timeout_ms?: number;
+  /** OpenRouter sticky routing — same session_id → same provider (prefix cache). */
+  session_id?: string;
 };
+
+/** Provider extras: never set `order` (disables sticky routing). */
+export function openRouterProviderExtras(): Record<string, unknown> | undefined {
+  const ignoreRaw = process.env.OPENROUTER_PROVIDER_IGNORE?.trim();
+  if (!ignoreRaw) return undefined;
+  const ignore = ignoreRaw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (ignore.length === 0) return undefined;
+  return { ignore, allow_fallbacks: true };
+}
+
+export function openRouterRequestExtras(session_id?: string): Record<string, unknown> {
+  const extras: Record<string, unknown> = {};
+  if (session_id?.trim()) extras.session_id = session_id.trim();
+  const provider = openRouterProviderExtras();
+  if (provider) extras.provider = provider;
+  return extras;
+}
+
+function parseCachedTokens(usage: Record<string, unknown> | undefined): number {
+  if (!usage) return 0;
+  const details = usage.prompt_tokens_details;
+  if (details && typeof details === "object" && !Array.isArray(details)) {
+    const cached = (details as Record<string, unknown>).cached_tokens;
+    if (typeof cached === "number") return cached;
+  }
+  if (typeof usage.native_tokens_cached === "number") return usage.native_tokens_cached;
+  return 0;
+}
 
 export function isOpenRouterConfigured(): boolean {
   return Boolean(process.env.OPENROUTER_API_KEY?.trim());
@@ -60,6 +93,7 @@ export type OpenRouterCompletionResult = {
   tokens_used: number;
   prompt_tokens: number;
   completion_tokens: number;
+  cached_tokens: number;
   /** DeepSeek / OpenRouter reasoning tokens when `reasoning.effort` is enabled. */
   reasoning?: string;
   reasoning_details?: unknown;
@@ -82,6 +116,7 @@ export async function openRouterChatCompletion(
       messages: options.messages,
       temperature: options.temperature ?? 0.55,
       max_tokens: options.max_tokens ?? 4096,
+      ...openRouterRequestExtras(options.session_id),
     };
     if (options.json_mode) {
       body.response_format = { type: "json_object" };
@@ -151,6 +186,8 @@ export async function openRouterChatCompletion(
       total_tokens?: number;
       prompt_tokens?: number;
       completion_tokens?: number;
+      prompt_tokens_details?: { cached_tokens?: number };
+      native_tokens_cached?: number;
     };
   };
   try {
@@ -165,8 +202,15 @@ export async function openRouterChatCompletion(
   const u = data.usage;
   const prompt_tokens = typeof u?.prompt_tokens === "number" ? u.prompt_tokens : 0;
   const completion_tokens = typeof u?.completion_tokens === "number" ? u.completion_tokens : 0;
+  const cached_tokens = parseCachedTokens(u as Record<string, unknown> | undefined);
   const tokens_used =
     typeof u?.total_tokens === "number" ? u.total_tokens : prompt_tokens + completion_tokens;
+
+  if (cached_tokens > 0) {
+    console.log(
+      `[openrouter] cache hit: cached_tokens=${cached_tokens} prompt_tokens=${prompt_tokens} session=${options.session_id ?? "—"}`,
+    );
+  }
 
   const reasoning =
     typeof message?.reasoning === "string" && message.reasoning.trim()
@@ -179,6 +223,7 @@ export async function openRouterChatCompletion(
     tokens_used,
     prompt_tokens,
     completion_tokens,
+    cached_tokens,
     reasoning,
     reasoning_details: message?.reasoning_details,
   };

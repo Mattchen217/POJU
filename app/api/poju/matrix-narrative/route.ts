@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getBaziChart } from "shunshi-bazi-core";
 
+import { matrixNarrativeCacheSessionId } from "@/lib/llm/cache-session-id";
 import {
   buildMatrixNarrativeInput,
   buildMatrixNarrativeUserMessage,
@@ -96,6 +97,7 @@ export async function POST(req: Request) {
       response_format: "json",
       temperature: 0.65,
       timeout_ms: 45_000,
+      session_id: matrixNarrativeCacheSessionId(product, locale),
     });
 
     let narrative;

@@ -13,6 +13,7 @@ import {
   getGeminiClient,
 } from "@/lib/llm/gemini-shared";
 import { callLLM } from "@/lib/llm/router";
+import { pojuCacheSessionId } from "@/lib/llm/cache-session-id";
 import { getOpenRouterDefaultModel, isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 import {
   buildThinkingProcessDisplay,
@@ -206,6 +207,7 @@ async function callPOJULLMLegacyPath(input: CallInput): Promise<POJULLMResponse>
         max_tokens: 2500,
         thinking_effort: "low",
         response_format: "json",
+        session_id: pojuCacheSessionId(session.session_id),
       });
       text = out.content;
       modelUsed = out.actual_model;

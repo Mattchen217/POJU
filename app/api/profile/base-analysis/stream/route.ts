@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 
+import { baseAnalysisCacheSessionId } from "@/lib/llm/cache-session-id";
 import { extractMetaFromStreamContent } from "@/lib/base-analysis/extract-meta";
 import type { BaseAnalysisJob } from "@/lib/base-analysis/job-types";
 import {
@@ -172,6 +173,7 @@ export async function POST(req: NextRequest) {
           model: getOpenRouterDefaultModel(),
           max_tokens: 8000,
           temperature: 0.7,
+          session_id: baseAnalysisCacheSessionId(profileId),
 
           onChunk: async (chunk: string) => {
             send("chunk", { text: chunk });

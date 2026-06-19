@@ -1,4 +1,5 @@
-import { getOpenRouterDefaultModel } from "@/lib/llm/openrouter-shared";
+import { syncroCacheSessionId } from "@/lib/llm/cache-session-id";
+import { getOpenRouterDefaultModel, openRouterRequestExtras } from "@/lib/llm/openrouter-shared";
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
 import { buildSyncroOutputDefenseSections } from "@/lib/llm/prompts/syncro-base";
 import { resolveSyncroBatchOutputLocale } from "@/lib/syncro/syncro-batch-prompt";
@@ -391,16 +392,14 @@ function buildOpenRouterBody(
   system: string,
   user: string,
   includeReasoning: boolean,
+  sessionId?: string,
 ): Record<string, unknown> {
   return {
     model,
     stream: true,
     ...(includeReasoning ? { reasoning: { effort: "high" } } : {}),
     response_format: { type: "json_object" },
-    provider: {
-      order: ["atlas-cloud", "alibaba", "venice"],
-      allow_fallbacks: true,
-    },
+    ...openRouterRequestExtras(sessionId ? syncroCacheSessionId(sessionId) : undefined),
     messages: [
       { role: "system", content: system },
       { role: "user", content: user },
@@ -455,7 +454,7 @@ async function streamOpenRouterCompletion(
   let llmRes = await fetch(openRouterUrl, {
     method: "POST",
     headers: openRouterHeaders(),
-    body: JSON.stringify(buildOpenRouterBody(model, system, user, true)),
+    body: JSON.stringify(buildOpenRouterBody(model, system, user, true, input.session_id)),
     signal,
   });
 
@@ -463,7 +462,7 @@ async function streamOpenRouterCompletion(
     llmRes = await fetch(openRouterUrl, {
       method: "POST",
       headers: openRouterHeaders(),
-      body: JSON.stringify(buildOpenRouterBody(model, system, user, false)),
+      body: JSON.stringify(buildOpenRouterBody(model, system, user, false, input.session_id)),
       signal,
     });
   }

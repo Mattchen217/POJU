@@ -44,6 +44,7 @@ export async function generateSyncroHourWithRetry(
   hourId: HourPeriod,
   ctx: SyncroLlmContext,
   onAttempt?: (attempt: number) => void,
+  sessionId?: string,
 ): Promise<GenerateSyncroHourResult> {
   const cells = cellsForHourFromContext(ctx, hourId);
   if (cells.length === 0) {
@@ -61,6 +62,8 @@ export async function generateSyncroHourWithRetry(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          session_id: sessionId,
+          profile_id: ctx.profile_id,
           hour_id: hourId,
           hour_label: hourPeriodDisplayName(hourId, ctx.locale),
           hour_range: HOUR_PERIOD_RANGES[hourId],

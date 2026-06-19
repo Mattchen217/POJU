@@ -3,6 +3,12 @@
  */
 
 import {
+  baseAnalysisCacheSessionId,
+  glyphCacheSessionId,
+  matchCacheSessionId,
+  syncroProfileCacheSessionId,
+} from "@/lib/llm/cache-session-id";
+import {
   buildBaseAnalysisPrompt,
   generateBaseAnalysis,
   parseBaseAnalysisResponseText,
@@ -58,6 +64,8 @@ export type GenerateMatchAnalysisInput = {
   a_base_analysis?: unknown | null;
   b_user_profile?: UserProfile | null;
   b_base_analysis?: unknown | null;
+  /** Optional sticky-routing key; defaults to sorted profile pair id. */
+  cache_session_id?: string;
 };
 
 export type MatchAnalysisServiceResult = {
@@ -96,6 +104,7 @@ async function generateBaseAnalysisOnServer(profile: UserProfile): Promise<unkno
     max_tokens: 10_000,
     thinking_effort: "medium",
     response_format: "json",
+    session_id: baseAnalysisCacheSessionId(profile.id),
   });
   return parseBaseAnalysisResponseText(result.content);
 }
@@ -312,6 +321,10 @@ export async function generateMatchAnalysis(
   console.log(`[match] Calling DeepSeek for report (language: ${detected_language})`);
   const startTime = Date.now();
 
+  const cacheSessionId =
+    input.cache_session_id?.trim() ||
+    matchCacheSessionId(input.a_profile_id, input.b_profile_id);
+
   const result = await callLLM({
     call_type: "match_report",
     system,
@@ -320,6 +333,7 @@ export async function generateMatchAnalysis(
     thinking_effort: "medium",
     response_format: "json",
     temperature: 0.55,
+    session_id: cacheSessionId,
   });
 
   let parsed: Record<string, unknown>;

@@ -1,4 +1,4 @@
-import { getOpenRouterDefaultModel } from "@/lib/llm/openrouter-shared";
+import { getOpenRouterDefaultModel, openRouterRequestExtras } from "@/lib/llm/openrouter-shared";
 import {
   buildSyncroBatchPromptForHours,
   resolveSyncroBatchOutputLocale,
@@ -83,16 +83,14 @@ function buildOpenRouterBody(
   system: string,
   user: string,
   includeReasoning: boolean,
+  sessionId: string,
 ): Record<string, unknown> {
   return {
     model,
     stream: true,
     ...(includeReasoning ? { reasoning: { effort: "high" } } : {}),
     response_format: { type: "json_object" },
-    provider: {
-      order: ["atlas-cloud", "alibaba", "venice"],
-      allow_fallbacks: true,
-    },
+    ...openRouterRequestExtras(sessionId),
     messages: [
       { role: "system", content: system },
       { role: "user", content: user },
@@ -268,7 +266,7 @@ async function streamOpenRouter(
   let llmRes = await fetch(openRouterUrl, {
     method: "POST",
     headers: openRouterHeaders(),
-    body: JSON.stringify(buildOpenRouterBody(model, system, user, true)),
+    body: JSON.stringify(buildOpenRouterBody(model, system, user, true, sessionId)),
     signal,
   });
 
@@ -276,7 +274,7 @@ async function streamOpenRouter(
     llmRes = await fetch(openRouterUrl, {
       method: "POST",
       headers: openRouterHeaders(),
-      body: JSON.stringify(buildOpenRouterBody(model, system, user, false)),
+      body: JSON.stringify(buildOpenRouterBody(model, system, user, false, sessionId)),
       signal,
     });
   }

@@ -2,6 +2,7 @@
  * Step 10 — Greeting 阶段：中性问诊 prompt + JSON + 幻觉 sanitizer（Part1 §11）
  */
 
+import { openingHookCacheSessionId, pojuCacheSessionId } from "@/lib/llm/cache-session-id";
 import {
   generateGeminiChatCompletion,
   getGeminiClient,
@@ -156,6 +157,8 @@ function normalizeSuggestedPhase(raw: unknown): AgentPhase | null {
 async function callGreetingTransport(
   system: string,
   messages: Array<{ role: "user" | "assistant"; content: string }>,
+  sessionId: string,
+  locale: string,
 ): Promise<{
   content: string;
   model: string;
@@ -171,6 +174,9 @@ async function callGreetingTransport(
       temperature: 0.45,
       max_tokens: 1500,
       response_format: "json",
+      session_id: sessionId
+        ? pojuCacheSessionId(sessionId)
+        : openingHookCacheSessionId(locale),
     });
     return {
       content: out.content,
@@ -199,7 +205,7 @@ export async function callGreetingPhase(input: PhaseLLMInput): Promise<PhaseLLMR
   });
   const messages = formatMessageHistory(input);
 
-  const result = await callGreetingTransport(system, messages);
+  const result = await callGreetingTransport(system, messages, input.session.session_id, input.locale);
 
   let parsed: Record<string, unknown>;
   try {

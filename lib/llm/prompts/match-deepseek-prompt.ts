@@ -50,10 +50,10 @@ export function buildMatchPrompt(input: BuildMatchPromptInput): BuildMatchPrompt
 
   const relEscaped = relationship_description.replace(/"/g, '\\"');
   const level = compatibilityMatrix.synergy_type;
+  const dateContext = buildCurrentDateContext(new Date(), locale);
 
   const system = stitchPromptSections(
     ...buildMatchCorePromptSections(),
-    buildCurrentDateContext(new Date(), locale),
 
     `# 命主 A 的完整命盘
 ${buildProfileContextSection(a_profile, aBaseAnalysis)}
@@ -64,19 +64,6 @@ ${buildProfileContextSection(a_profile, aBaseAnalysis)}
 ${buildProfileContextSection(b_profile, bBaseAnalysis)}
 
 ---
-
-# 用户描述的关系
-
-"${relEscaped}"
-
-# ⭐⭐⭐ 本次报告必须回答的核心问题
-
-用户这次来，核心想知道的是：**"${relEscaped}"**
-- conclusion.question_response **第一句必须复述这个问题并正面回应**。
-- **回应必须有合婚技术依据**：内部先按日主互动 / 配偶宫(日支六合六冲) / 用神互补 / 神煞共振 / 大运流年同步**真算**，再把术语翻译成能量语言输出——像合婚先生那样「先算、有据」，不许凭感觉泛讲。
-- 各段须围绕核心问题服务，但**遵守板块分工**（MATCH_OUTPUT_BRANDING）：combined 讲机制、conclusion 讲判断、recommendations 讲行动 —— **严禁回头重述**。
-- 全文遵守 **MATCH_VOICE_CONTRACT**（A/B/combined 第三人称；conclusion/recommendations 用"你们"指整对，绝不把单方叫"你"）。
-- 用 §"用户提问必须被正面回应" 的合规接法（技术依据 → 能量可行性 → 时机窗口 → 主动权），**不铁口日期、不下吉凶决断**。
 
 # ⭐⭐⭐ 极其重要:协同类型已经计算好了
 
@@ -95,13 +82,21 @@ ${buildProfileContextSection(b_profile, bBaseAnalysis)}
 你只需要:
   ✓ 把【矩阵计算结果】翻译为【五行能量 + synergy/tension/friction 用户语言】
   ✓ 把 key_insights 展开为具体叙述（用 natural affinity / friction，不用合冲刑害裸写）
-  ✓ 基于用户描述的关系,给出针对性的建议
+  ✓ 基于 user 消息中的关系描述与核心问题,给出针对性的建议
 
 # 已计算的系统动力学矩阵（内部分析用 — 用户可见 JSON 须翻译术语）
 
 \`\`\`json
 ${JSON.stringify(compatibilityMatrix, null, 2)}
 \`\`\`
+
+# 用户核心问题（须正面回应 · 见 user 消息）
+
+- conclusion.question_response **第一句必须复述 user 消息中的核心问题并正面回应**。
+- **回应必须有合婚技术依据**：内部先按日主互动 / 配偶宫(日支六合六冲) / 用神互补 / 神煞共振 / 大运流年同步**真算**，再把术语翻译成能量语言输出——像合婚先生那样「先算、有据」，不许凭感觉泛讲。
+- 各段须围绕核心问题服务，但**遵守板块分工**（MATCH_OUTPUT_BRANDING）：combined 讲机制、conclusion 讲判断、recommendations 讲行动 —— **严禁回头重述**。
+- 全文遵守 **MATCH_VOICE_CONTRACT**（A/B/combined 第三人称；conclusion/recommendations 用"你们"指整对，绝不把单方叫"你"）。
+- 用 §"用户提问必须被正面回应" 的合规接法（技术依据 → 能量可行性 → 时机窗口 → 主动权），**不铁口日期、不下吉凶决断**。
 
 # 你的工作:生成 5 段完整报告
 
@@ -205,8 +200,16 @@ ${JSON.stringify(compatibilityMatrix, null, 2)}
 # 严格 JSON,无 markdown 围栏`,
   );
 
-  const user = `请基于已计算好的系统动力学矩阵 + 关系描述,生成完整 5 段报告 JSON。
-本次用户的核心问题是:"${relEscaped}" —— conclusion.question_response 必须正面回应它(合规接法,不铁口日期)。
+  const user = `${dateContext}
+
+请基于已计算好的系统动力学矩阵 + 关系描述,生成完整 5 段报告 JSON。
+
+# 用户描述的关系
+"${relEscaped}"
+
+# 本次核心问题（conclusion.question_response 必须正面回应）
+"${relEscaped}"
+
 遵守 MATCH_VOICE_CONTRACT（第三人称 vs 你们）与板块分工（combined 机制 → conclusion 判断 → recommendations 行动，严禁重述）。
 不修改 synergy_type(必须用 "${level}")。
 ${detectedLanguage}。

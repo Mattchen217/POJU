@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { syncroCacheSessionId, syncroProfileCacheSessionId } from "@/lib/llm/cache-session-id";
 import { callLLM } from "@/lib/llm/router";
 import {
   getOpenRouterDefaultModel,
@@ -16,6 +17,8 @@ export const dynamic = "force-dynamic";
 const LLM_TIMEOUT_MS = 55_000;
 
 type LlmHourBody = {
+  session_id?: string;
+  profile_id?: string;
   hour_id?: string;
   hour_label?: string;
   hour_range?: string;
@@ -114,6 +117,13 @@ export async function POST(req: Request) {
 
   try {
     console.log(`[llm_hour] Using model: ${model}`);
+    const cacheSessionId =
+      typeof body.session_id === "string" && body.session_id.trim()
+        ? syncroCacheSessionId(body.session_id.trim())
+        : typeof body.profile_id === "string" && body.profile_id.trim()
+          ? syncroProfileCacheSessionId(body.profile_id.trim())
+          : undefined;
+
     const llm = await callLLM({
       call_type: "syncro_batch",
       system,
@@ -122,6 +132,7 @@ export async function POST(req: Request) {
       temperature: 0.7,
       response_format: "json",
       timeout_ms: LLM_TIMEOUT_MS,
+      session_id: cacheSessionId,
     });
 
     const raw = llm.content?.trim();

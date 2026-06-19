@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { pojuCacheSessionId } from "@/lib/llm/cache-session-id";
 import {
   buildFinalDeliveryPrompt,
   extractActionsFromDelivery,
@@ -35,6 +36,7 @@ export async function POST(req: Request) {
     }
 
     const body = (await req.json().catch(() => ({}))) as {
+      session_id?: unknown;
       agent_v2?: unknown;
       locale?: unknown;
       base_analysis?: unknown;
@@ -78,12 +80,17 @@ export async function POST(req: Request) {
     });
 
     const t0 = Date.now();
+    const sessionId =
+      typeof body.session_id === "string" && body.session_id.trim()
+        ? pojuCacheSessionId(body.session_id.trim())
+        : undefined;
     const result = await callLLM({
       call_type: "main_delivery",
       system,
       messages: [{ role: "user", content: user }],
       max_tokens: 8000,
       response_format: "text",
+      session_id: sessionId,
     });
 
     const text = result.content.trim();

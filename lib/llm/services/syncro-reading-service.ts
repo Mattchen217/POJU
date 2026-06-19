@@ -3,6 +3,7 @@
  * @see docs/Syncro_Calculation_Engine.md Step 6
  */
 
+import { syncroProfileCacheSessionId } from "@/lib/llm/cache-session-id";
 import { buildSyncroPrompt } from "@/lib/llm/prompts/syncro-deepseek-prompt";
 import {
   hasBaseAnalysisPayload,
@@ -37,6 +38,8 @@ export type GenerateSyncroMatrixInput = {
   locale: string;
   user_profile?: UserProfile | null;
   base_analysis?: unknown | null;
+  /** Syncro session id for sticky routing; falls back to profile-based key. */
+  cache_session_id?: string;
 };
 
 export type SyncroMatrixServiceResult = {
@@ -358,6 +361,7 @@ export async function fetchLlmAdviceBatch(input: {
   batch_index: number;
   batch_total: number;
   output_locale?: AppLocale;
+  cache_session_id?: string;
 }): Promise<{
   advice: Record<string, unknown>;
   task_response?: SyncroTaskResponse;
@@ -380,6 +384,10 @@ export async function fetchLlmAdviceBatch(input: {
     full_matrix: isFinalBatch ? input.full_matrix : undefined,
   });
 
+  const cacheSessionId =
+    input.cache_session_id?.trim() ||
+    syncroProfileCacheSessionId(input.profile.id);
+
   let result = await callLLM({
     call_type: "syncro_batch",
     system,
@@ -389,6 +397,7 @@ export async function fetchLlmAdviceBatch(input: {
     response_format: "json",
     temperature: 0.55,
     timeout_ms: 90_000,
+    session_id: cacheSessionId,
   });
 
   let parsed: Record<string, unknown>;
@@ -422,6 +431,7 @@ export async function fetchLlmAdviceBatch(input: {
       response_format: "json",
       temperature: 0.4,
       timeout_ms: 90_000,
+      session_id: cacheSessionId,
     });
     try {
       parsed = parseJsonContent(result.content) as Record<string, unknown>;
@@ -592,6 +602,10 @@ export async function generateSyncroMatrix(
   let totalCost = 0;
   let lastModel = "";
 
+  const cacheSessionId =
+    input.cache_session_id?.trim() ||
+    syncroProfileCacheSessionId(input.profile_id);
+
   const batches = getSyncroBatchKeyLists(localResult.local_matrix);
   console.log(`[syncro] Calling LLM for text (${batches.length} batches, sequential)...`);
 
@@ -610,6 +624,7 @@ export async function generateSyncroMatrix(
         true_solar: localResult.true_solar_meta,
         batch_index: i + 1,
         batch_total: batches.length,
+        cache_session_id: cacheSessionId,
       });
       Object.assign(mergedAdvice, batch.advice);
       totalTokens += batch.tokens_used;

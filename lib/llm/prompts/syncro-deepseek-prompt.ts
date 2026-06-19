@@ -133,18 +133,9 @@ ${topWindowsSummary}
 ${SYNCRO_TASK_RESPONSE_FOCUS}`
     : `# 本批不产出 task_response（仅在最后一批汇总；本批 ${input.batch_index ?? 1}/${input.batch_total ?? 1}）。`;
 
-  const taskBlock = `# 当前任务：Syncro 96 组合文案生成
-${batchNote}
+  const dateContext = buildCurrentDateContext(current_time, locale);
 
-用户即将要做的事情：
-"${escapedTask}"
-
-用户当前位置：
-经度 ${user_location.longitude.toFixed(4)}，纬度 ${user_location.latitude.toFixed(4)}
-时区：${user_location.timezone}
-${buildTrueSolarSection(input.true_solar)}
-
-# ⭐⭐⭐ 极其重要：矩阵已经计算好了
+  const syncroRulesBlock = `# ⭐⭐⭐ 极其重要：矩阵已经计算好了
 
 后台已基于完整命理模型（奇门遁甲盘 + 用神方位 + 时辰天干 + 日主 + 任务偏好）精确计算每个组合的 **current_level**。
 
@@ -168,15 +159,9 @@ ${buildTrueSolarSection(input.true_solar)}
   ✓ 为每个组合写 detailed_advice（100–200 字/词）
   ✓ 为每个组合写 rationale（100–200 字/词）
 
-# 组合数据（已计算 — 供你写文案参考）
-
-${JSON.stringify(slimMatrix, null, 2)}
-
-${taskResponseBlock}
-
 # 你的工作
 
-为 matrix 中每个 key（共 ${cellCount} 个），仅输出 short_advice / detailed_advice / rationale。
+为 matrix 中每个 key，仅输出 short_advice / detailed_advice / rationale。
 
 写作要求：
 
@@ -209,11 +194,10 @@ ${taskResponseBlock}
 
 # 关键规则
 
-1. **本批所有 key 必须全部填充**（共 ${cellCount} 个）
+1. **本批所有 key 必须全部填充**
 2. **输出 JSON 每个 cell 仅含 3 个字段**：short_advice、detailed_advice、rationale
-3. **语言**：${outputLanguage}
-4. **品牌 + 四道防线**：用户可见处只用 Syncro + Current 五流 + 共振/效率语言；禁奇门/风水/吉凶/预测成功；须 I Ching 时位框架
-5. **task_response 必填**（仅最后一批）：从已计算的高 level 组合中汇总推荐窗口+方向，任务视角给依据；不报日期吉凶、不承诺成功、不写奇门/用神术语。
+3. **品牌 + 四道防线**：用户可见处只用 Syncro + Current 五流 + 共振/效率语言；禁奇门/风水/吉凶/预测成功；须 I Ching 时位框架
+4. **task_response 必填**（仅最后一批）：从已计算的高 level 组合中汇总推荐窗口+方向，任务视角给依据；不报日期吉凶、不承诺成功、不写奇门/用神术语。
 
 ${SYNCRO_OUTPUT_SELF_CHECK}
 
@@ -222,13 +206,7 @@ ${SYNCRO_OUTPUT_SELF_CHECK}
 只输出 JSON，无 markdown 围栏：
 
 {
-  ${isFinalBatch ? `"task_response": {
-    "summary": "60-100 字。就用户任务直答：推荐的时机窗口 + 方向（大白话）",
-    "best_windows": [
-      { "window": "（时辰段）", "direction": "（方位）", "why": "80-140 字，任务视角依据" }
-    ],
-    "avoid": "60-100 字。要避开的时段/方向及原因"
-  },` : ""}
+  "task_response": { "summary": "...", "best_windows": [...], "avoid": "..." },
   "matrix": {
     "zi__N": {
       "short_advice": "...",
@@ -237,6 +215,25 @@ ${SYNCRO_OUTPUT_SELF_CHECK}
     }
   }
 }`;
+
+  const taskBlock = `# 当前任务：Syncro 96 组合文案生成
+${batchNote}
+
+用户即将要做的事情：
+"${escapedTask}"
+
+用户当前位置：
+经度 ${user_location.longitude.toFixed(4)}，纬度 ${user_location.latitude.toFixed(4)}
+时区：${user_location.timezone}
+${buildTrueSolarSection(input.true_solar)}
+
+# 组合数据（已计算 — 供你写文案参考）
+
+${JSON.stringify(slimMatrix, null, 2)}
+
+${taskResponseBlock}
+
+本批共 ${cellCount} 个 key。输出语言：${outputLanguage}。`;
 
   const structured = normalizeBaseAnalysisInput(base_analysis).structured;
   const baziContext = buildSyncroBaziContext(structured);
@@ -247,14 +244,15 @@ ${SYNCRO_OUTPUT_SELF_CHECK}
 
   const system = stitchPromptSections(
     ...buildSyncroFullPromptSections(),
-    buildCurrentDateContext(current_time, locale),
-    langDirective.directive,
-    buildNorthAmericaAdaptation(outputLocale),
     baziContextSection,
-    taskBlock,
+    syncroRulesBlock,
   );
 
-  const user =
+  const user = stitchPromptSections(
+    dateContext,
+    langDirective.directive,
+    buildNorthAmericaAdaptation(outputLocale),
+    taskBlock,
     outputLocale === "zh"
       ? `请为已计算好的矩阵生成 short_advice / detailed_advice / rationale 文案（本批 ${cellCount} 个 key）。
 ${isFinalBatch ? `并产出 task_response 顶层直答用户任务「${escapedTask}」。` : "本批不要产出 task_response。"}
@@ -263,7 +261,8 @@ rationale 必须紧扣用户任务「${escapedTask}」，引用「用户命局�
       : `Generate short_advice, detailed_advice, and rationale for the precomputed matrix (${cellCount} keys in this batch).
 ${isFinalBatch ? `Also produce task_response answering the user's task ("${escapedTask}").` : "Do not produce task_response in this batch."}
 Do not change current_level. Write entirely in ${outputLanguage}. Strict JSON only; every key in matrix is required.
-Each rationale must speak to the user's task ("${escapedTask}") in plain language—never expose internal factor keys like qimen or yong_shen_direction. Cite at least one item from the local profile background section.`;
+Each rationale must speak to the user's task ("${escapedTask}") in plain language—never expose internal factor keys like qimen or yong_shen_direction. Cite at least one item from the local profile background section.`,
+  );
 
   return { system, user };
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { pojuCacheSessionId } from "@/lib/llm/cache-session-id";
 import { buildSituationAnalysisPrompt, parseSituationAnalysisResponseText } from "@/lib/llm/deepseek/situation-analysis";
 import { callLLM } from "@/lib/llm/router";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
@@ -90,6 +91,7 @@ export async function POST(req: Request) {
       thinking_effort: "medium",
       response_format: "json",
       timeout_ms: 120_000,
+      session_id: pojuCacheSessionId(body.session_id.trim()),
     });
 
     let analysis: unknown;

@@ -48,6 +48,8 @@ export interface CallLLMInput {
   temperature?: number;
   /** OpenRouter HTTP timeout (ms). Defaults to 90s; deep_analysis uses 180s. */
   timeout_ms?: number;
+  /** OpenRouter sticky routing key for prefix cache (see lib/llm/cache-session-id.ts). */
+  session_id?: string;
 }
 
 export interface CallLLMResult {
@@ -60,6 +62,7 @@ export interface CallLLMResult {
     tokens_used: number;
     latency_ms: number;
     cost_usd: number;
+    cached_tokens: number;
     thinking_enabled: boolean;
     thinking_effort: ReasoningEffort;
   };
@@ -147,8 +150,14 @@ export function callTypeForAgentPhase(phase: AgentPhase): LLMCallType {
   }
 }
 
-export function estimateCostUsd(inputTokens: number, outputTokens: number): number {
-  const inputCost = (inputTokens / 1_000_000) * 0.435;
+export function estimateCostUsd(
+  inputTokens: number,
+  outputTokens: number,
+  cachedTokens = 0,
+): number {
+  const uncachedInput = Math.max(0, inputTokens - cachedTokens);
+  const inputCost =
+    (uncachedInput / 1_000_000) * 0.435 + (cachedTokens / 1_000_000) * 0.003625;
   const outputCost = (outputTokens / 1_000_000) * 0.87;
   return Number((inputCost + outputCost).toFixed(6));
 }
@@ -203,9 +212,16 @@ export async function callLLM(input: CallLLMInput): Promise<CallLLMResult> {
     json_mode: input.response_format === "json",
     reasoning_effort: effort,
     timeout_ms,
+    session_id: input.session_id,
   });
 
   const latency_ms = Date.now() - startTime;
+
+  if (out.cached_tokens > 0) {
+    console.log(
+      `[llm/router] ${input.call_type} cache: cached=${out.cached_tokens} prompt=${out.prompt_tokens} session=${input.session_id ?? "—"}`,
+    );
+  }
 
   return {
     content: out.text,
@@ -216,7 +232,8 @@ export async function callLLM(input: CallLLMInput): Promise<CallLLMResult> {
       call_type: input.call_type,
       tokens_used: out.tokens_used,
       latency_ms,
-      cost_usd: estimateCostUsd(out.prompt_tokens, out.completion_tokens),
+      cost_usd: estimateCostUsd(out.prompt_tokens, out.completion_tokens, out.cached_tokens),
+      cached_tokens: out.cached_tokens,
       thinking_enabled: thinkingEnabled,
       thinking_effort: effort,
     },

@@ -68,8 +68,11 @@ export function buildGlyphReadingPrompt(input: BuildGlyphReadingPromptInput): {
   const { profile, base_analysis, question, glyph, locale } = input;
   const outputLang = detectLanguage(question, locale);
 
+  const dateContext = buildCurrentDateContext(new Date(), locale);
+  const questionEscaped = question.replace(/"/g, '\\"');
+
   const signBlock = `# 用户的问题
-"${question.replace(/"/g, '\\"')}"
+"${questionEscaped}"
 
 # 抽到的签（观音百签 · 完整数据）
 
@@ -92,7 +95,7 @@ ${windCategoryToneBlock(glyph.wind_category)}
 
 # ⭐ 必须正面回应用户的问题（最高优先级）
 
-用户抽签时带着一个具体问题："${question.replace(/"/g, '\\"')}"。
+用户抽签时带着一个具体问题："${questionEscaped}"。
 你**必须**在 question_response 里先复述它，再给出精炼直答——不许把它泛化成"放下执念"之类的空话。
 其余板块（含 synthesis）**不得再复述问题**，见 GLYPH_LAYOUT_CONTRACT。
 
@@ -190,19 +193,20 @@ ${GLYPH_OUTPUT_SELF_CHECK}`;
     GLYPH_OUTPUT_BRANDING,
     GLYPH_LANGUAGE_RULES,
     ORIENTAL_SHARED_GUARDRAILS,
-    buildCurrentDateContext(new Date(), locale),
     buildProfileContextSection(profile, base_analysis),
-    buildLanguageGuidance(locale, question),
-    buildNorthAmericaAdaptation(locale),
-    `# 当前任务：本次 Glyph 解读
+    `# 当前任务：Glyph 深度解读
 
-用户触发了一个原型隐喻（内部对应观音百签 #${glyph.id}）。你要结合【命主 base_analysis structured + display_text】+【完整签文原文（仅内部分析用）】+【用户问题】，按上文解签法则做一次【深度双视角解读】。
+结合【命主 base_analysis structured + display_text】+【完整签文原文（仅内部分析用）】+【user 消息中的用户问题与签象数据】，按上文解签法则做一次【深度双视角解读】。
 输出 JSON 字符串必须 100% 遵守 OUTPUT FRAMING + 三道防线 + GLYPH_LAYOUT_CONTRACT + Glyph 措辞统一（禁签/sign/lot）。`,
-    signBlock,
-    outputSchema,
   );
 
-  const user = `请按解签法则生成解读 JSON。
+  const user = stitchPromptSections(
+    dateContext,
+    buildLanguageGuidance(locale, question),
+    buildNorthAmericaAdaptation(locale),
+    signBlock,
+    outputSchema,
+    `请按解签法则生成解读 JSON（签 #${glyph.id} · ${glyph.name}）。
 
 ⛔ 输出合规（最高优先级）: OUTPUT FRAMING + 三道防线 + GLYPH_LAYOUT_CONTRACT + Glyph 措辞
   · 指代: 统一 Glyph / Glyph 文 / the Glyph text；禁签/sign/lot；archetypal metaphor 仅开篇一次
@@ -214,7 +218,8 @@ ${GLYPH_OUTPUT_SELF_CHECK}`;
 ✓ 语言: 跟随用户实际输入（${outputLang}）。
 ✓ 内容: 命理看此事须体现人格架构+10年周期+认知偏好；不得抄写 modern_translation。
 ✓ 写每段前执行 GLYPH_OUTPUT_SELF_CHECK。invalid_input 时所有字段仍填中性引导，禁止空字符串。
-✓ exploration：按 GLYPH_EXPLORATION_GUIDANCE 选 **一种** 练习形态，勿次次「安静地方+闭眼+纸上写」。`;
+✓ exploration：按 GLYPH_EXPLORATION_GUIDANCE 选 **一种** 练习形态，勿次次「安静地方+闭眼+纸上写」。`,
+  );
 
   return { system, user };
 }

@@ -1,5 +1,6 @@
 import {
   getOpenRouterDefaultModel,
+  openRouterRequestExtras,
   type OpenRouterChatMessage,
   type OpenRouterChatOptions,
   type OpenRouterCompletionResult,
@@ -76,8 +77,9 @@ export async function openRouterChatCompletionStream(
     messages: options.messages,
     temperature: options.temperature ?? 0.55,
     max_tokens: options.max_tokens ?? 4096,
-  ...(options.json_mode ? { response_format: { type: "json_object" } } : {}),
+    ...(options.json_mode ? { response_format: { type: "json_object" } } : {}),
     ...(includeReasoning && effort !== "off" ? { reasoning: { effort } } : {}),
+    ...openRouterRequestExtras(options.session_id),
   });
 
   const headers: Record<string, string> = {
@@ -109,6 +111,7 @@ export async function openRouterChatCompletionStream(
     let tokens_used = 0;
     let prompt_tokens = 0;
     let completion_tokens = 0;
+    let cached_tokens = 0;
     let buffer = "";
 
     const reader = res.body.getReader();
@@ -135,6 +138,12 @@ export async function openRouterChatCompletionStream(
           if (typeof usage.total_tokens === "number") tokens_used = usage.total_tokens;
           if (typeof usage.prompt_tokens === "number") prompt_tokens = usage.prompt_tokens;
           if (typeof usage.completion_tokens === "number") completion_tokens = usage.completion_tokens;
+          const details = usage.prompt_tokens_details as Record<string, unknown> | undefined;
+          if (details && typeof details.cached_tokens === "number") {
+            cached_tokens = details.cached_tokens;
+          } else if (typeof usage.native_tokens_cached === "number") {
+            cached_tokens = usage.native_tokens_cached;
+          }
         }
 
         const choice = (parsed.choices as Array<Record<string, unknown>> | undefined)?.[0];
@@ -166,6 +175,7 @@ export async function openRouterChatCompletionStream(
         tokens_used,
         prompt_tokens,
         completion_tokens,
+        cached_tokens,
         reasoning: reasoning.trim() || undefined,
       },
     };
@@ -199,6 +209,7 @@ export type OpenRouterStreamInput = {
   model?: string;
   max_tokens?: number;
   temperature?: number;
+  session_id?: string;
   signal?: AbortSignal;
   onChunk: (chunk: string) => Promise<void> | void;
   onDone: () => Promise<void> | void;
@@ -238,6 +249,7 @@ export async function openRouterStream(input: OpenRouterStreamInput): Promise<vo
         { role: "system", content: input.system },
         { role: "user", content: input.user },
       ],
+      ...openRouterRequestExtras(input.session_id),
     }),
     signal: input.signal,
   });

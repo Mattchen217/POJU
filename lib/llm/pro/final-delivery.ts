@@ -477,6 +477,7 @@ export function buildPojuDeliveryFromFinalText(
 }
 
 export async function requestFinalDeliveryFromApi(input: {
+  session_id?: string;
   base_analysis: unknown | null;
   situation_analysis: unknown | null;
   agent_v2: POJUAgentState;
@@ -542,6 +543,7 @@ export async function runFinalDeliveryForSession(
     .slice(-8);
 
   const result = await requestFinalDeliveryFromApi({
+    session_id: session.session_id,
     base_analysis,
     situation_analysis: sit?.content ?? null,
     agent_v2: session.agent_v2,
