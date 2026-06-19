@@ -29,6 +29,11 @@ export function syncroProfileCacheSessionId(profileId: string): string {
   return `syncro-profile-${profileId.trim()}`;
 }
 
+/** All 12 LLM batches in one matrix run share one sticky-routing key. */
+export function syncroBatchCacheSessionId(profileId: string, computeStartedAt: string): string {
+  return `syncro-${profileId.trim()}-${computeStartedAt.trim()}`;
+}
+
 export function matrixNarrativeCacheSessionId(product: MatrixNarrativeProduct, locale: string): string {
   const loc = locale.startsWith("zh") ? "zh" : locale.split("-")[0] || "en";
   return `preview-mn-${product}-${loc}`;

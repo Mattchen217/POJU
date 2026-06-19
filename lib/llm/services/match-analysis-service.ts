@@ -4,9 +4,7 @@
 
 import {
   baseAnalysisCacheSessionId,
-  glyphCacheSessionId,
   matchCacheSessionId,
-  syncroProfileCacheSessionId,
 } from "@/lib/llm/cache-session-id";
 import {
   buildBaseAnalysisPrompt,
@@ -19,6 +17,10 @@ import {
 } from "@/lib/llm/prompts/base-analysis-context";
 import { buildMatchPrompt } from "@/lib/llm/prompts/match-deepseek-prompt";
 import { callLLM } from "@/lib/llm/router";
+import {
+  requestJsonWithRepair,
+  type JsonValidateResult,
+} from "@/lib/llm/services/delivery-resilience";
 import { sanitizeDeepStringFields } from "@/lib/llm/sanitize/compliance-terms";
 import { calculateCompatibilityMatrix } from "@/lib/match/calculate-compatibility";
 import { normalizeSynergyType } from "@/lib/match/synergy-normalize";
@@ -29,22 +31,6 @@ import {
   recordProfileUsage,
 } from "@/lib/profile/stored-profiles-service";
 import type { UserProfile } from "@/lib/profile/types";
-
-const REQUIRED_SECTIONS = [
-  "analysis_a",
-  "analysis_b",
-  "combined",
-  "conclusion",
-  "recommendations",
-] as const;
-
-const VALID_SYNERGY_TYPES = new Set<SynergyType>([
-  "full_resonance",
-  "complementary_flow",
-  "adaptive_balance",
-  "dynamic_tension",
-  "structural_undertow",
-]);
 
 const VALID_ACTION_CATEGORIES = new Set([
   "communication",
@@ -86,15 +72,6 @@ type ProfileBundle = {
   user_profile: UserProfile;
   base_analysis: unknown;
 };
-
-function parseJsonContent(raw: string): unknown {
-  const cleaned = raw
-    .replace(/^```json\s*/i, "")
-    .replace(/^```\s*/i, "")
-    .replace(/```\s*$/g, "")
-    .trim();
-  return JSON.parse(cleaned) as unknown;
-}
 
 async function generateBaseAnalysisOnServer(profile: UserProfile): Promise<unknown> {
   const { system, user } = buildBaseAnalysisPrompt(profile);
@@ -176,21 +153,54 @@ function validateAndNormalizeReport(
   tokens_used: number,
   computedSynergyType: SynergyType,
   compatibilityMatrix: ReturnType<typeof calculateCompatibilityMatrix>,
-): MatchReport {
-  for (const key of REQUIRED_SECTIONS) {
-    if (!parsed[key] || typeof parsed[key] !== "object") {
-      throw new Error(`Missing required section: ${key}`);
-    }
+  locale: string,
+): JsonValidateResult<MatchReport> {
+  const combined =
+    parsed.combined && typeof parsed.combined === "object"
+      ? (parsed.combined as Record<string, unknown>)
+      : null;
+  const conclusion =
+    parsed.conclusion && typeof parsed.conclusion === "object"
+      ? (parsed.conclusion as Record<string, unknown>)
+      : null;
+
+  const missingCore: string[] = [];
+  if (!combined) missingCore.push("combined");
+  if (!conclusion) missingCore.push("conclusion");
+  if (missingCore.length > 0) {
+    return {
+      ok: false,
+      missing: missingCore,
+      message: `Match report missing core sections: ${missingCore.join(", ")}`,
+      parsed,
+    };
   }
 
-  const a = parsed.analysis_a as Record<string, unknown>;
-  const b = parsed.analysis_b as Record<string, unknown>;
-  const combined = parsed.combined as Record<string, unknown>;
-  const conclusion = parsed.conclusion as Record<string, unknown>;
-  const recommendations = parsed.recommendations as Record<string, unknown>;
+  const a =
+    parsed.analysis_a && typeof parsed.analysis_a === "object"
+      ? (parsed.analysis_a as Record<string, unknown>)
+      : {};
+  const b =
+    parsed.analysis_b && typeof parsed.analysis_b === "object"
+      ? (parsed.analysis_b as Record<string, unknown>)
+      : {};
+  const recommendations =
+    parsed.recommendations && typeof parsed.recommendations === "object"
+      ? (parsed.recommendations as Record<string, unknown>)
+      : {};
+
+  if (!parsed.analysis_a || typeof parsed.analysis_a !== "object") {
+    console.warn("[match] soft fallback: analysis_a");
+  }
+  if (!parsed.analysis_b || typeof parsed.analysis_b !== "object") {
+    console.warn("[match] soft fallback: analysis_b");
+  }
+  if (!parsed.recommendations || typeof parsed.recommendations !== "object") {
+    console.warn("[match] soft fallback: recommendations");
+  }
 
   const actionsRaw = recommendations.actions;
-  const actions = Array.isArray(actionsRaw)
+  let actions = Array.isArray(actionsRaw)
     ? actionsRaw
         .filter((item) => item && typeof item === "object")
         .map((item) => {
@@ -210,42 +220,68 @@ function validateAndNormalizeReport(
     : [];
 
   if (actions.length < 1) {
-    throw new Error("Match report missing recommendations.actions");
+    const insight =
+      compatibilityMatrix.key_insights.strengths[0] ||
+      compatibilityMatrix.key_insights.challenges[0] ||
+      (locale.startsWith("zh")
+        ? "先就你们最在意的一件事开诚布公地谈一次。"
+        : "Start with one honest conversation about what matters most between you.");
+    console.warn("[match] soft fallback: recommendations.actions");
+    actions = [
+      {
+        category: "communication",
+        title: locale.startsWith("zh") ? "从最关键的一点开始" : "Start with the key point",
+        detail: insight,
+        timing: undefined,
+      },
+    ];
   }
 
-  return {
+  const soft = (v: string, fallback: string) => (v.trim() ? v : fallback);
+
+  const report: MatchReport = {
     analysis_a: {
       title: asString(a.title) || "Person A",
-      summary: asString(a.summary),
-      detail: asString(a.detail),
+      summary: soft(asString(a.summary), locale.startsWith("zh") ? "见上文合盘分析。" : "See combined analysis above."),
+      detail: soft(asString(a.detail), locale.startsWith("zh") ? "个体脉络已融入合盘段落。" : "Individual thread woven into combined sections."),
       key_traits: asStringArray(a.key_traits),
     },
     analysis_b: {
       title: asString(b.title) || "Person B",
-      summary: asString(b.summary),
-      detail: asString(b.detail),
+      summary: soft(asString(b.summary), locale.startsWith("zh") ? "见上文合盘分析。" : "See combined analysis above."),
+      detail: soft(asString(b.detail), locale.startsWith("zh") ? "个体脉络已融入合盘段落。" : "Individual thread woven into combined sections."),
       key_traits: asStringArray(b.key_traits),
     },
     combined: {
-      title: asString(combined.title) || "Together",
-      summary: asString(combined.summary),
-      detail: asString(combined.detail),
-      five_elements_interaction: asString(combined.five_elements_interaction),
-      timing_dynamic: asString(combined.timing_dynamic),
+      title: asString(combined!.title) || "Together",
+      summary: soft(asString(combined!.summary), locale.startsWith("zh") ? "两人互动见细节段。" : "See detail for interaction pattern."),
+      detail: soft(asString(combined!.detail), locale.startsWith("zh") ? "合盘细节已在上文展开。" : "Combined dynamics expanded above."),
+      five_elements_interaction: soft(
+        asString(combined!.five_elements_interaction),
+        locale.startsWith("zh") ? "五行互动见本地矩阵。" : "See local matrix for element interaction.",
+      ),
+      timing_dynamic: soft(
+        asString(combined!.timing_dynamic),
+        locale.startsWith("zh") ? "时运节奏见结论段。" : "See conclusion for timing rhythm.",
+      ),
     },
     conclusion: {
-      title: asString(conclusion.title) || "Conclusion",
+      title: asString(conclusion!.title) || "Conclusion",
       question_response:
-        asString(conclusion.question_response) || asString(conclusion.summary) || undefined,
+        asString(conclusion!.question_response) || asString(conclusion!.summary) || undefined,
       synergy_type: computedSynergyType,
-      summary: asString(conclusion.summary),
-      detail: asString(conclusion.detail),
-      strengths: asStringArray(conclusion.strengths),
-      challenges: asStringArray(conclusion.challenges),
+      summary: soft(asString(conclusion!.summary), locale.startsWith("zh") ? "见细节段。" : "See detail section."),
+      detail: soft(asString(conclusion!.detail), locale.startsWith("zh") ? "结论已融入合盘分析。" : "Conclusion woven into combined analysis."),
+      strengths: asStringArray(conclusion!.strengths).length
+        ? asStringArray(conclusion!.strengths)
+        : compatibilityMatrix.key_insights.strengths.slice(0, 3),
+      challenges: asStringArray(conclusion!.challenges).length
+        ? asStringArray(conclusion!.challenges)
+        : compatibilityMatrix.key_insights.challenges.slice(0, 3),
     },
     recommendations: {
       title: asString(recommendations.title) || "Recommendations",
-      summary: asString(recommendations.summary),
+      summary: soft(asString(recommendations.summary), locale.startsWith("zh") ? "见下方行动建议。" : "See actions below."),
       actions,
     },
     _meta: {
@@ -265,6 +301,8 @@ function validateAndNormalizeReport(
       },
     },
   };
+
+  return { ok: true, value: report };
 }
 
 export async function generateMatchAnalysis(
@@ -326,54 +364,61 @@ export async function generateMatchAnalysis(
     input.cache_session_id?.trim() ||
     matchCacheSessionId(input.a_profile_id, input.b_profile_id);
 
-  const result = await callLLM({
-    call_type: "match_report",
-    system,
-    messages: [{ role: "user", content: user }],
-    max_tokens: 10_000,
-    thinking_effort: "medium",
-    response_format: "json",
-    temperature: 0.55,
-    session_id: cacheSessionId,
+  const computedSynergyType = compatibilityMatrix.synergy_type;
+  const trimmedInput = {
+    ...input,
+    relationship_description: input.relationship_description.trim(),
+  };
+
+  const { value: reportRaw, result } = await requestJsonWithRepair({
+    llm: {
+      call_type: "match_report",
+      system,
+      messages: [{ role: "user", content: user }],
+      max_tokens: 10_000,
+      thinking_effort: "medium",
+      response_format: "json",
+      temperature: 0.55,
+      session_id: cacheSessionId,
+    },
+    validate: (parsed) => {
+      if (parsed.conclusion && typeof parsed.conclusion === "object") {
+        const conclusion = parsed.conclusion as Record<string, unknown>;
+        const llmType = normalizeSynergyType(conclusion.synergy_type ?? conclusion.compatibility_level);
+        if (llmType !== computedSynergyType) {
+          console.warn(
+            "[match] LLM synergy_type overridden:",
+            conclusion.synergy_type ?? conclusion.compatibility_level,
+            "→",
+            computedSynergyType,
+          );
+        }
+        conclusion.synergy_type = computedSynergyType;
+      }
+      return validateAndNormalizeReport(
+        parsed,
+        trimmedInput,
+        detected_language,
+        "pending",
+        0,
+        computedSynergyType,
+        compatibilityMatrix,
+        input.locale,
+      );
+    },
+    repairHint: (missing) =>
+      input.locale.startsWith("zh")
+        ? `上次回复缺失或被截断。请补全以下 section/字段并返回完整 JSON：${missing.join(", ")}`
+        : `Previous reply was missing or truncated. Fill these sections/fields and return complete JSON: ${missing.join(", ")}`,
   });
 
-  let parsed: Record<string, unknown>;
-  try {
-    parsed = parseJsonContent(result.content) as Record<string, unknown>;
-    parsed = sanitizeDeepStringFields(parsed, input.locale) as Record<string, unknown>;
-  } catch (e) {
-    console.error("[match] JSON parse failed:", e);
-    console.error("[match] Raw (first 800):", result.content.slice(0, 800));
-    throw new Error("Match report output is not valid JSON");
-  }
-
-  const computedSynergyType = compatibilityMatrix.synergy_type;
-  if (parsed.conclusion && typeof parsed.conclusion === "object") {
-    const conclusion = parsed.conclusion as Record<string, unknown>;
-    const llmType = normalizeSynergyType(conclusion.synergy_type ?? conclusion.compatibility_level);
-    if (llmType !== computedSynergyType) {
-      console.warn(
-        "[match] LLM synergy_type overridden:",
-        conclusion.synergy_type ?? conclusion.compatibility_level,
-        "→",
-        computedSynergyType,
-      );
-    }
-    conclusion.synergy_type = computedSynergyType;
-  }
-
-  const report = validateAndNormalizeReport(
-    parsed,
-    {
-      ...input,
-      relationship_description: input.relationship_description.trim(),
-    },
-    detected_language,
-    result.actual_model,
-    result.meta.tokens_used,
-    computedSynergyType,
-    compatibilityMatrix,
-  );
+  let report = reportRaw;
+  report = sanitizeDeepStringFields(report, input.locale) as MatchReport;
+  report._meta = {
+    ...report._meta!,
+    model: result.actual_model,
+    tokens_used: result.meta.tokens_used,
+  };
 
   if (typeof window !== "undefined") {
     await Promise.all([

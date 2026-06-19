@@ -30,6 +30,8 @@ export type OpenRouterChatOptions = {
   timeout_ms?: number;
   /** OpenRouter sticky routing — same session_id → same provider (prefix cache). */
   session_id?: string;
+  /** Provider routing constraints — never set `order` (disables sticky routing). */
+  provider?: Record<string, unknown>;
 };
 
 /** Provider extras: never set `order` (disables sticky routing). */
@@ -116,8 +118,16 @@ export async function openRouterChatCompletion(
       messages: options.messages,
       temperature: options.temperature ?? 0.55,
       max_tokens: options.max_tokens ?? 4096,
-      ...openRouterRequestExtras(options.session_id),
     };
+    if (options.session_id?.trim()) {
+      body.session_id = options.session_id.trim();
+    }
+    if (options.provider) {
+      body.provider = options.provider;
+    } else {
+      const provider = openRouterProviderExtras();
+      if (provider) body.provider = provider;
+    }
     if (options.json_mode) {
       body.response_format = { type: "json_object" };
     }

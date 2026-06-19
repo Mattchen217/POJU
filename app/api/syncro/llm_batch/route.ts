@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { runSyncroLlmBatch, getSyncroBatchKeyLists } from "@/lib/llm/services/syncro-reading-service";
+import { syncroBatchCacheSessionId } from "@/lib/llm/cache-session-id";
+import { withDeliveryIdempotency } from "@/lib/llm/services/delivery-idempotency";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 import { parseAppLocale } from "@/lib/prompts/language-directive";
 import type { MatrixCell } from "@/lib/syncro/calculate-matrix";
@@ -92,17 +94,28 @@ export async function POST(req: Request) {
       ],
     });
 
-    const result = await runSyncroLlmBatch({
-      batch_index: body.batch_index,
-      profile: body.user_profile,
-      base_analysis: body.base_analysis,
-      task_description: body.task_description.trim(),
-      user_location: { latitude, longitude, timezone: timezone.trim() },
-      locale,
-      local_matrix: body.local_matrix,
-      compute_started_at: body.compute_started_at ?? new Date().toISOString(),
-      true_solar: body.true_solar_meta,
-    });
+    const computeStartedAt = body.compute_started_at ?? new Date().toISOString();
+    const profileId = body.profile_id?.trim() ?? body.user_profile?.id ?? "unknown";
+    const batchSessionId =
+      body.session_id?.trim() ||
+      syncroBatchCacheSessionId(profileId, computeStartedAt);
+    const idempotencyKey = `syncro-batch:${profileId}:${computeStartedAt}:${body.batch_index}`;
+
+    const result = await withDeliveryIdempotency(idempotencyKey, () =>
+      runSyncroLlmBatch({
+        batch_index: body.batch_index!,
+        profile: body.user_profile!,
+        profile_id: profileId,
+        base_analysis: body.base_analysis!,
+        task_description: body.task_description!.trim(),
+        user_location: { latitude, longitude, timezone: timezone.trim() },
+        locale,
+        local_matrix: body.local_matrix!,
+        compute_started_at: computeStartedAt,
+        true_solar: body.true_solar_meta,
+        cache_session_id: batchSessionId,
+      }),
+    );
 
     const sampleAdvice = Object.values(result.advice)[0];
     console.log("[llm_batch] LLM returned:", {

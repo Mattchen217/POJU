@@ -15,7 +15,12 @@ import {
   hasBaseAnalysisPayload,
   normalizeBaseAnalysisInput,
 } from "@/lib/llm/prompts/base-analysis-context";
-import { callLLM } from "@/lib/llm/router";
+import {
+  parseJsonLoose,
+  requestJsonWithRepair,
+  type JsonValidateResult,
+} from "@/lib/llm/services/delivery-resilience";
+import { sanitizeDeepStringFields } from "@/lib/llm/sanitize/compliance-terms";
 import {
   getStoredProfile,
   recordProfileUsage,
@@ -23,9 +28,7 @@ import {
 import type { SignData } from "@/types/oracle";
 import type { UserProfile } from "@/lib/profile/types";
 
-/** v5.3 ~5200 中文字 + JSON 结构；prior 3000 cap caused finish_reason:length truncation. */
 export const GLYPH_READING_MAX_TOKENS = 15_000;
-/** Match Vercel route maxDuration (300s); leave headroom for parse + JSON response. */
 export const GLYPH_READING_TIMEOUT_MS = 290_000;
 
 export type GlyphDualViewReading = {
@@ -37,10 +40,8 @@ export type GlyphDualViewReading = {
 export type GlyphReadingContent = {
   wind_category_blurb: string;
   classical_voice: string;
-  /** Direct answer to the user's draw question (v5.1+). */
   question_response?: string;
   命理双视角: GlyphDualViewReading;
-  /** Deep synthesis — preferred over meaning_for_question (v5.2+). */
   synthesis?: string;
   meaning_for_question: string;
   hidden_tension: string;
@@ -61,9 +62,7 @@ export type GenerateGlyphReadingInput = {
   question: string;
   locale: string;
   profile_id: string;
-  /** Idempotency / logging — same draw session should not re-bill on client retry. */
   reading_id?: string;
-  /** Required for server API — client loads from IndexedDB and sends. */
   user_profile?: UserProfile | null;
   base_analysis?: unknown | null;
 };
@@ -78,27 +77,43 @@ export type GlyphReadingServiceResult = {
   };
 };
 
-function parseJsonContent(raw: string): unknown {
-  const cleaned = raw
-    .replace(/^```json\s*/i, "")
-    .replace(/^```\s*/i, "")
-    .replace(/```\s*$/g, "")
-    .trim();
-  return JSON.parse(cleaned) as unknown;
-}
-
-function extractJsonObject(raw: string): string {
-  const cleaned = raw
-    .replace(/^```json\s*/i, "")
-    .replace(/^```\s*/i, "")
-    .replace(/```\s*$/g, "")
-    .trim();
-  const start = cleaned.indexOf("{");
-  const end = cleaned.lastIndexOf("}");
-  if (start >= 0 && end > start) {
-    return cleaned.slice(start, end + 1);
+function softFallback(field: string, locale: string): string {
+  const zh = locale.startsWith("zh");
+  const map: Record<string, [string, string]> = {
+    classical_voice: [
+      "The sign speaks in its own language — listen for what resonates rather than forcing a single reading.",
+      "签文自有其声，先听共鸣，不必急于定于一解。",
+    ],
+    hidden_tension: [
+      "There is tension beneath the surface of this question; naming it clearly will matter more than rushing to resolve it.",
+      "问题底下有未说清的张力，先把它说清楚，比急着下结论更重要。",
+    ],
+    your_moment: [
+      "Stay with one small next step rather than solving the whole horizon today.",
+      "今天先守住一小步，不必一次解决整个人生方向。",
+    ],
+    exploration_text: [
+      "Take ten quiet minutes to write down what you already know but haven't said aloud.",
+      "留十分钟，把心里已知却还没说出口的事实写下来。",
+    ],
+    reflection_question: [
+      "What would you want to remember about how you felt at the end of this reading?",
+      "读完这一签，你最想记住的是自己当时的什么感受？",
+    ],
+    签文看此事: [
+      "The sign line points to patience and clarity before action.",
+      "签意提醒：先看清时机，再动。",
+    ],
+    两者印证或冲突: [
+      "Chart and sign both ask you to look at timing before committing.",
+      "命盘与签文都在提醒：先辨时机，再定取舍。",
+    ],
+  };
+  const pair = map[field];
+  if (!pair) {
+    return zh ? "此处信息暂缺，可结合上文继续体会。" : "This detail was not fully captured; read it in light of the sections above.";
   }
-  return cleaned;
+  return zh ? pair[1] : pair[0];
 }
 
 async function resolveProfileBundle(input: GenerateGlyphReadingInput): Promise<{
@@ -128,28 +143,30 @@ function asString(v: unknown): string {
   return typeof v === "string" ? v.trim() : "";
 }
 
-function validateReading(parsed: Record<string, unknown>): GlyphReadingContent {
-  const dualRaw = parsed.命理双视角;
+function validateReading(
+  parsed: Record<string, unknown>,
+  locale: string,
+): JsonValidateResult<GlyphReadingContent> {
+  const shaped = normalizeGlyphReadingShape(parsed);
+  const dualRaw = shaped.命理双视角;
   const dual =
     dualRaw && typeof dualRaw === "object" && !Array.isArray(dualRaw)
       ? (dualRaw as Record<string, unknown>)
       : null;
 
-  const explorationRaw = parsed.exploration;
+  const explorationRaw = shaped.exploration;
   const exploration =
     explorationRaw && typeof explorationRaw === "object" && !Array.isArray(explorationRaw)
       ? (explorationRaw as Record<string, unknown>)
       : null;
 
-  const invalid = parsed.invalid_input === true;
-
-  const synthesisText =
-    asString(parsed.synthesis) || asString(parsed.meaning_for_question);
+  const invalid = shaped.invalid_input === true;
+  const synthesisText = asString(shaped.synthesis) || asString(shaped.meaning_for_question);
 
   const reading: GlyphReadingContent = {
-    wind_category_blurb: asString(parsed.wind_category_blurb),
-    classical_voice: asString(parsed.classical_voice),
-    question_response: asString(parsed.question_response) || undefined,
+    wind_category_blurb: asString(shaped.wind_category_blurb),
+    classical_voice: asString(shaped.classical_voice),
+    question_response: asString(shaped.question_response) || undefined,
     命理双视角: {
       命理看此事: asString(dual?.命理看此事 ?? dual?.["命理看此事"]),
       签文看此事: asString(dual?.签文看此事 ?? dual?.["签文看此事"]),
@@ -157,8 +174,8 @@ function validateReading(parsed: Record<string, unknown>): GlyphReadingContent {
     },
     synthesis: synthesisText || undefined,
     meaning_for_question: synthesisText,
-    hidden_tension: asString(parsed.hidden_tension),
-    your_moment: asString(parsed.your_moment),
+    hidden_tension: asString(shaped.hidden_tension),
+    your_moment: asString(shaped.your_moment),
     exploration: {
       text: asString(exploration?.text),
       timeframe: (["today", "tonight", "within_24h", "this_week"].includes(
@@ -169,108 +186,77 @@ function validateReading(parsed: Record<string, unknown>): GlyphReadingContent {
       duration_estimate: asString(exploration?.duration_estimate) || "10 minutes",
       is_solo: exploration?.is_solo !== false,
     },
-    reflection_question: asString(parsed.reflection_question),
+    reflection_question: asString(shaped.reflection_question),
     invalid_input: invalid,
     _meta:
-      parsed._meta && typeof parsed._meta === "object"
-        ? (parsed._meta as Record<string, unknown>)
+      shaped._meta && typeof shaped._meta === "object"
+        ? (shaped._meta as Record<string, unknown>)
         : undefined,
   };
 
-  if (!reading.wind_category_blurb) {
-    throw new Error("Glyph reading missing wind_category_blurb");
+  if (invalid) {
+    return { ok: true, value: reading };
   }
 
-  if (!invalid) {
-    if (
-      !reading.classical_voice ||
-      !reading.命理双视角.命理看此事 ||
-      !reading.命理双视角.签文看此事 ||
-      !reading.命理双视角.两者印证或冲突 ||
-      !reading.meaning_for_question ||
-      !reading.hidden_tension ||
-      !reading.your_moment ||
-      !reading.exploration.text ||
-      !reading.reflection_question
-    ) {
-      console.error("[glyph-reading] validateReading missing fields", {
-        classical_voice: Boolean(reading.classical_voice),
-        dual_bazi: Boolean(reading.命理双视角.命理看此事),
-        dual_glyph: Boolean(reading.命理双视角.签文看此事),
-        dual_resonance: Boolean(reading.命理双视角.两者印证或冲突),
-        meaning: Boolean(reading.meaning_for_question),
-        hidden: Boolean(reading.hidden_tension),
-        moment: Boolean(reading.your_moment),
-        exploration: Boolean(reading.exploration.text),
-        reflection: Boolean(reading.reflection_question),
-      });
-      throw new Error("Glyph reading missing required fields");
-    }
+  const missingCore: string[] = [];
+  if (!reading.wind_category_blurb) missingCore.push("wind_category_blurb");
+  if (!reading.命理双视角.命理看此事) missingCore.push("命理看此事");
+  if (!reading.meaning_for_question) missingCore.push("meaning_for_question");
+
+  if (missingCore.length > 0) {
+    return {
+      ok: false,
+      missing: missingCore,
+      message: `Glyph reading missing core fields: ${missingCore.join(", ")}`,
+      parsed: shaped,
+    };
   }
 
-  return reading;
-}
-
-async function requestGlyphReadingJson(
-  system: string,
-  user: string,
-  input: GenerateGlyphReadingInput,
-): Promise<{ content: string; actual_model: string; meta: GlyphReadingServiceResult["meta"] }> {
-  const result = await callLLM({
-    call_type: "glyph_reading",
-    system,
-    messages: [{ role: "user", content: user }],
-    max_tokens: GLYPH_READING_MAX_TOKENS,
-    thinking_effort: "low",
-    response_format: "json",
-    temperature: 0.55,
-    timeout_ms: GLYPH_READING_TIMEOUT_MS,
-    session_id: glyphCacheSessionId(input.reading_id, input.profile_id),
-  });
-
-  console.info("[glyph-reading] LLM complete", {
-    reading_id: input.reading_id ?? null,
-    model: result.actual_model,
-    tokens_used: result.meta.tokens_used,
-    latency_ms: result.meta.latency_ms,
-    content_chars: result.content.length,
-  });
-
-  return {
-    content: result.content,
-    actual_model: result.actual_model,
-    meta: {
-      model: result.actual_model,
-      tokens_used: result.meta.tokens_used,
-      cost_usd: result.meta.cost_usd,
-      latency_ms: result.meta.latency_ms,
-    },
-  };
-}
-
-function parseReadingRecord(raw: string): Record<string, unknown> {
-  try {
-    return normalizeGlyphReadingShape(parseJsonContent(raw) as Record<string, unknown>);
-  } catch (firstError) {
-    try {
-      return normalizeGlyphReadingShape(
-        parseJsonContent(extractJsonObject(raw)) as Record<string, unknown>,
-      );
-    } catch {
-      throw firstError;
-    }
+  if (!reading.classical_voice) {
+    reading.classical_voice = softFallback("classical_voice", locale);
+    console.warn("[glyph-reading] soft fallback: classical_voice");
   }
+  if (!reading.命理双视角.签文看此事) {
+    reading.命理双视角.签文看此事 = softFallback("签文看此事", locale);
+    console.warn("[glyph-reading] soft fallback: 签文看此事");
+  }
+  if (!reading.命理双视角.两者印证或冲突) {
+    reading.命理双视角.两者印证或冲突 = softFallback("两者印证或冲突", locale);
+    console.warn("[glyph-reading] soft fallback: 两者印证或冲突");
+  }
+  if (!reading.hidden_tension) {
+    reading.hidden_tension = softFallback("hidden_tension", locale);
+    console.warn("[glyph-reading] soft fallback: hidden_tension");
+  }
+  if (!reading.your_moment) {
+    reading.your_moment = softFallback("your_moment", locale);
+    console.warn("[glyph-reading] soft fallback: your_moment");
+  }
+  if (!reading.exploration.text) {
+    reading.exploration.text = softFallback("exploration_text", locale);
+    console.warn("[glyph-reading] soft fallback: exploration.text");
+  }
+  if (!reading.reflection_question) {
+    reading.reflection_question = softFallback("reflection_question", locale);
+    console.warn("[glyph-reading] soft fallback: reflection_question");
+  }
+
+  return { ok: true, value: reading };
 }
 
-function finalizeGlyphReading(
-  reading: GlyphReadingContent,
-  locale: string,
-): GlyphReadingContent {
+function finalizeGlyphReading(reading: GlyphReadingContent, locale: string): GlyphReadingContent {
   const violations = auditGlyphReadingContent(reading, locale);
   if (violations.length > 0) {
     logGlyphOutputViolations(violations, "glyph-reading");
   }
-  return reading;
+  return sanitizeDeepStringFields(reading, locale) as GlyphReadingContent;
+}
+
+function buildRepairHint(missing: string[], locale: string): string {
+  const fields = missing.join(", ");
+  return locale.startsWith("zh")
+    ? `上次回复缺失或被截断。请仅补全以下字段并返回【完整】合法 JSON：${fields}。不要省略其他已有字段。`
+    : `Previous reply was missing or truncated. Return ONLY complete valid JSON, filling these fields: ${fields}. Keep all other fields intact.`;
 }
 
 export async function generateGlyphReading(
@@ -292,31 +278,51 @@ export async function generateGlyphReading(
     locale: input.locale,
   });
 
+  const sessionId = glyphCacheSessionId(input.reading_id, input.profile_id);
+
   console.log(
-    `[glyph-reading] Calling DeepSeek (glyph_reading, max_tokens: ${GLYPH_READING_MAX_TOKENS}, timeout_ms: ${GLYPH_READING_TIMEOUT_MS})...`,
+    `[glyph-reading] Calling DeepSeek (glyph_reading, max_tokens: ${GLYPH_READING_MAX_TOKENS}, session: ${sessionId})...`,
   );
 
-  const llm = await requestGlyphReadingJson(system, user, input);
+  const { value: reading, result } = await requestJsonWithRepair({
+    llm: {
+      call_type: "glyph_reading",
+      system,
+      messages: [{ role: "user", content: user }],
+      max_tokens: GLYPH_READING_MAX_TOKENS,
+      response_format: "json",
+      temperature: 0.55,
+      timeout_ms: GLYPH_READING_TIMEOUT_MS,
+      session_id: sessionId,
+    },
+    validate: (parsed) => validateReading(parsed, input.locale),
+    repairHint: (missing) => buildRepairHint(missing, input.locale),
+  });
 
-  let parsed: Record<string, unknown>;
-  try {
-    parsed = parseReadingRecord(llm.content);
-  } catch (e) {
-    console.error("[glyph-reading] JSON parse failed:", e);
-    console.error("[glyph-reading] Raw (first 800):", llm.content.slice(0, 800));
-    console.error("[glyph-reading] Raw (last 400):", llm.content.slice(-400));
-    throw new Error("Glyph reading output is not valid JSON");
-  }
+  console.info("[glyph-reading] LLM complete", {
+    reading_id: input.reading_id ?? null,
+    model: result.actual_model,
+    tokens_used: result.meta.tokens_used,
+    latency_ms: result.meta.latency_ms,
+  });
 
-  let reading = validateReading(parsed);
-  reading = finalizeGlyphReading(reading, input.locale);
+  const finalized = finalizeGlyphReading(reading, input.locale);
 
   if (typeof window !== "undefined") {
     await recordProfileUsage(input.profile_id, "glyph");
   }
 
   return {
-    reading,
-    meta: llm.meta,
+    reading: finalized,
+    meta: {
+      model: result.actual_model,
+      tokens_used: result.meta.tokens_used,
+      cost_usd: result.meta.cost_usd,
+      latency_ms: result.meta.latency_ms,
+    },
   };
+}
+
+export function parseGlyphReadingJson(raw: string): Record<string, unknown> {
+  return normalizeGlyphReadingShape(parseJsonLoose(raw));
 }

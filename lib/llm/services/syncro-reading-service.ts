@@ -3,13 +3,14 @@
  * @see docs/Syncro_Calculation_Engine.md Step 6
  */
 
-import { syncroProfileCacheSessionId } from "@/lib/llm/cache-session-id";
+import { syncroBatchCacheSessionId, syncroProfileCacheSessionId } from "@/lib/llm/cache-session-id";
 import { buildSyncroPrompt } from "@/lib/llm/prompts/syncro-deepseek-prompt";
 import {
   hasBaseAnalysisPayload,
   normalizeBaseAnalysisInput,
 } from "@/lib/llm/prompts/base-analysis-context";
 import { callLLM } from "@/lib/llm/router";
+import { sanitizeDeepStringFields } from "@/lib/llm/sanitize/compliance-terms";
 import {
   parseAppLocale,
   resolveSyncroOutputLocale,
@@ -256,7 +257,11 @@ export function matrixWithFallbacksOnly(
   return matrixFromLocalPending(localMatrix);
 }
 
-function validateMatrix(matrix: SyncroMatrix): void {
+function validateMatrix(
+  matrix: SyncroMatrix,
+  localMatrix?: Record<string, MatrixCell>,
+  outputLocale: AppLocale = "en",
+): void {
   const count = Object.keys(matrix).length;
   if (count < 96) {
     throw new Error(`Matrix incomplete: only ${count} combinations`);
@@ -264,9 +269,17 @@ function validateMatrix(matrix: SyncroMatrix): void {
 
   for (const [key, combo] of Object.entries(matrix)) {
     if (combo.llm_pending) continue;
-    if (!combo.short_advice || !combo.detailed_advice || !combo.rationale) {
-      throw new Error(`Matrix entry ${key} missing advice fields`);
+    if (combo.short_advice && combo.detailed_advice && combo.rationale) continue;
+
+    const local = localMatrix?.[key];
+    if (local) {
+      if (!combo.short_advice) combo.short_advice = generateFallbackShort(local, outputLocale);
+      if (!combo.detailed_advice) combo.detailed_advice = generateFallbackDetailed(local, outputLocale);
+      if (!combo.rationale) combo.rationale = generateFallbackRationale(local, outputLocale);
+      console.warn(`[syncro] fallback advice applied for ${key}`);
     }
+    combo.llm_failed = true;
+    combo.llm_pending = false;
   }
 }
 
@@ -509,7 +522,7 @@ export async function generateSyncroMatrixLocal(
 
   const distribution = computeDistribution(localMatrix);
   const matrix = matrixFromLocalPending(localMatrix);
-  validateMatrix(matrix);
+  validateMatrix(matrix, localMatrix, outputLocale);
 
   if (typeof window !== "undefined") {
     await recordProfileUsage(input.profile_id, "syncro");
@@ -542,6 +555,7 @@ export async function generateSyncroMatrixLocal(
 export async function runSyncroLlmBatch(input: {
   batch_index: number;
   profile: UserProfile;
+  profile_id?: string;
   base_analysis: unknown;
   task_description: string;
   user_location: GenerateSyncroMatrixInput["user_location"];
@@ -549,6 +563,7 @@ export async function runSyncroLlmBatch(input: {
   local_matrix: Record<string, MatrixCell>;
   compute_started_at: string;
   true_solar?: SyncroMatrixMetadata;
+  cache_session_id?: string;
 }): Promise<SyncroLlmBatchResult> {
   const batches = getSyncroBatchKeyLists(input.local_matrix);
   if (input.batch_index < 0 || input.batch_index >= batches.length) {
@@ -563,6 +578,10 @@ export async function runSyncroLlmBatch(input: {
     input.task_description,
   );
 
+  const batchSessionId =
+    input.cache_session_id?.trim() ||
+    syncroBatchCacheSessionId(input.profile_id ?? input.profile.id, input.compute_started_at);
+
   const batch = await fetchLlmAdviceBatch({
     profile: input.profile,
     base_analysis: input.base_analysis,
@@ -576,12 +595,18 @@ export async function runSyncroLlmBatch(input: {
     batch_index: input.batch_index + 1,
     batch_total: batches.length,
     output_locale: outputLocale,
+    cache_session_id: batchSessionId,
   });
+
+  const advice = sanitizeDeepStringFields(
+    normalizeBatchAdvice(batch.advice),
+    input.locale,
+  ) as Record<string, { short_advice: string; detailed_advice: string; rationale: string }>;
 
   return {
     batch_index: input.batch_index,
     batch_total: batches.length,
-    advice: normalizeBatchAdvice(batch.advice),
+    advice,
     task_response: batch.task_response,
     model: batch.model,
     tokens_used: batch.tokens_used,
@@ -604,7 +629,7 @@ export async function generateSyncroMatrix(
 
   const cacheSessionId =
     input.cache_session_id?.trim() ||
-    syncroProfileCacheSessionId(input.profile_id);
+    syncroBatchCacheSessionId(input.profile_id, localResult.compute_started_at);
 
   const batches = getSyncroBatchKeyLists(localResult.local_matrix);
   console.log(`[syncro] Calling LLM for text (${batches.length} batches, sequential)...`);
@@ -645,7 +670,7 @@ export async function generateSyncroMatrix(
     mergedAdvice,
     outputLocale,
   );
-  validateMatrix(matrix);
+  validateMatrix(matrix, localResult.local_matrix, outputLocale);
 
   return {
     matrix,

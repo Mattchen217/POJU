@@ -6,6 +6,10 @@ import {
   GLYPH_SAFETY_FALLBACK,
 } from "@/lib/glyph/reading-response";
 import { generateGlyphReading } from "@/lib/llm/services/glyph-reading-service";
+import {
+  fingerprintText,
+  withDeliveryIdempotency,
+} from "@/lib/llm/services/delivery-idempotency";
 import { getLanguageDirective, parseAppLocale } from "@/lib/prompts/language-directive";
 import type { SignData } from "@/types/oracle";
 import type { UserProfile } from "@/lib/profile/types";
@@ -57,21 +61,30 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Sign not found" }, { status: 404 });
     }
 
-    const { reading, meta } = await generateGlyphReading({
-      sign: signData,
-      question: body.user_question.trim(),
-      locale,
-      profile_id: body.profile_id,
-      reading_id: body.reading_id?.trim() || undefined,
-      user_profile: body.user_profile ?? null,
-      base_analysis: body.base_analysis ?? null,
+    const profileId = body.profile_id.trim();
+    const readingId = body.reading_id?.trim();
+    const idempotencyKey = readingId
+      ? `glyph-reading:${readingId}`
+      : `glyph-reading:${profileId}:${body.sign_number}:${fingerprintText(body.user_question)}`;
+
+    const payload = await withDeliveryIdempotency(idempotencyKey, async () => {
+      const { reading, meta } = await generateGlyphReading({
+        sign: signData,
+        question: body.user_question.trim(),
+        locale,
+        profile_id: profileId,
+        reading_id: readingId || undefined,
+        user_profile: body.user_profile ?? null,
+        base_analysis: body.base_analysis ?? null,
+      });
+      return {
+        reading,
+        language: langDirective.outputLanguage,
+        meta,
+      };
     });
 
-    return NextResponse.json({
-      reading,
-      language: langDirective.outputLanguage,
-      meta,
-    });
+    return NextResponse.json(payload);
   } catch (error) {
     const message = formatReadingApiError(error);
     console.error("[oracle/full-reading]", error);

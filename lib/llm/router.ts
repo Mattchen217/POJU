@@ -6,6 +6,7 @@ import {
   getOpenRouterDefaultModel,
   isOpenRouterConfigured,
   openRouterChatCompletion,
+  openRouterProviderExtras,
   type OpenRouterChatMessage,
 } from "@/lib/llm/openrouter-shared";
 import type { AgentPhase } from "@/lib/poju/agent-state";
@@ -70,6 +71,32 @@ export interface CallLLMResult {
 
 const DEFAULT_MODEL = "deepseek/deepseek-v4-pro";
 
+const HIGH_OUTPUT_CALL_TYPES = new Set<LLMCallType>([
+  "glyph_reading",
+  "match_report",
+  "syncro_batch",
+  "main_delivery",
+  "deep_analysis",
+  "poju_situation_analysis",
+  "poju_final_delivery",
+]);
+
+export function parseProviderIgnore(): string[] {
+  const raw = process.env.OPENROUTER_PROVIDER_IGNORE?.trim();
+  if (!raw) return [];
+  return raw.split(",").map((s) => s.trim()).filter(Boolean);
+}
+
+/** Long JSON deliveries — exclude low max-output providers (e.g. Venice). Never set `order`. */
+export function highOutputProviderConstraints(): Record<string, unknown> {
+  const ignore = parseProviderIgnore();
+  return {
+    require_parameters: true,
+    ...(ignore.length > 0 ? { ignore } : {}),
+    allow_fallbacks: true,
+  };
+}
+
 function normalizeCallType(callType: LLMCallType): Exclude<
   LLMCallType,
   | "poju_base_analysis"
@@ -111,8 +138,9 @@ export function getThinkingConfig(callType: LLMCallType): { enabled: boolean; ef
       return { enabled: true, effort: "medium" };
     case "poju_reply":
     case "syncro_batch":
-    case "glyph_reading":
       return { enabled: true, effort: "low" };
+    case "glyph_reading":
+      return { enabled: true, effort: "medium" };
     default:
       break;
   }
@@ -205,6 +233,10 @@ export async function callLLM(input: CallLLMInput): Promise<CallLLMResult> {
           ? 180_000
           : undefined);
 
+  const provider = HIGH_OUTPUT_CALL_TYPES.has(input.call_type)
+    ? highOutputProviderConstraints()
+    : openRouterProviderExtras();
+
   const out = await openRouterChatCompletion({
     messages: msgs,
     max_tokens,
@@ -213,6 +245,7 @@ export async function callLLM(input: CallLLMInput): Promise<CallLLMResult> {
     reasoning_effort: effort,
     timeout_ms,
     session_id: input.session_id,
+    provider,
   });
 
   const latency_ms = Date.now() - startTime;

@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { generateMatchAnalysis } from "@/lib/llm/services/match-analysis-service";
+import {
+  fingerprintText,
+  withDeliveryIdempotency,
+} from "@/lib/llm/services/delivery-idempotency";
 import { parseAppLocale } from "@/lib/prompts/language-directive";
 import type { UserProfile } from "@/lib/profile/types";
 
@@ -39,22 +43,27 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "relationship_too_short" }, { status: 400 });
     }
 
-    const result = await generateMatchAnalysis({
-      a_profile_id: aId,
-      b_profile_id: bId,
-      relationship_description: relationship,
-      locale,
-      a_user_profile: body.a_user_profile ?? null,
-      a_base_analysis: body.a_base_analysis ?? null,
-      b_user_profile: body.b_user_profile ?? null,
-      b_base_analysis: body.b_base_analysis ?? null,
+    const idempotencyKey = `match-report:${aId}:${bId}:${fingerprintText(relationship)}`;
+
+    const payload = await withDeliveryIdempotency(idempotencyKey, async () => {
+      const result = await generateMatchAnalysis({
+        a_profile_id: aId,
+        b_profile_id: bId,
+        relationship_description: relationship,
+        locale,
+        a_user_profile: body.a_user_profile ?? null,
+        a_base_analysis: body.a_base_analysis ?? null,
+        b_user_profile: body.b_user_profile ?? null,
+        b_base_analysis: body.b_base_analysis ?? null,
+      });
+      return {
+        success: true as const,
+        report: result.report,
+        meta: result.meta,
+      };
     });
 
-    return NextResponse.json({
-      success: true,
-      report: result.report,
-      meta: result.meta,
-    });
+    return NextResponse.json(payload);
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e);
     console.error("[api/match/analyze] error:", e);
