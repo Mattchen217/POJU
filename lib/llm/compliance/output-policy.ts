@@ -18,6 +18,8 @@
  * · audit-output.ts — 事后 regex 审计，保持检测能力，不改为纯 prompt 自律
  */
 
+import { buildComplianceTranslationPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
+
 export type OutputPolicyModule = "poju" | "glyph" | "syncro" | "match";
 
 const JUDGMENT_CORE = `# 判断总纲（最高原则 · 给标准让模型自己判断，不对场景表）
@@ -185,7 +187,9 @@ ${ICHING_FRAME}
 
 ${PRODUCT_NAMING}
 
-${SELF_CHECK}`;
+${SELF_CHECK}
+
+${buildComplianceTranslationPromptBlock()}`;
 }
 
 const POJU_SPECIFIC = `# POJU 特化（对话式 · 预测风险相对较低）

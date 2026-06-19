@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 
 import { HourProgressBar } from "@/components/syncro/HourProgressBar";
 import { ReadingDecoderBanner } from "@/components/reading-ritual/ReadingDecoderBanner";
+import { GlossaryText } from "@/components/cross-product/GlossaryText";
 import { SyncroPermissionGate } from "@/components/syncro/SyncroPermissionGate";
 import { ThreeModeToggle } from "@/components/syncro/ThreeModeToggle";
 import { useOrientation } from "@/components/syncro/SyncroOrientationProvider";
@@ -71,6 +72,7 @@ export function SyncroMainView({
   onTimelineComplete,
 }: SyncroMainViewProps) {
   const t = useTranslations("syncro.main");
+  const glossarySeen = useRef(new Set<string>()).current;
   const { isSupported, receivingHeading, requestPermissionFromUserGesture } = useOrientation();
   const rootRef = useRef<HTMLDivElement>(null);
   const autoCompassOnceRef = useRef(false);
@@ -296,7 +298,9 @@ export function SyncroMainView({
       {session.task_response ? (
         <div className="syncro-task-response">
           <h3 className="syncro-task-response__title">{t("task_response_title")}</h3>
-          <p className="syncro-task-response__summary">{session.task_response.summary}</p>
+          <p className="syncro-task-response__summary">
+            <GlossaryText text={session.task_response.summary} locale={locale} seen={glossarySeen} />
+          </p>
           {session.task_response.best_windows.length > 0 ? (
             <ul className="syncro-task-response__windows">
               {session.task_response.best_windows.map((win, i) => (
@@ -304,7 +308,9 @@ export function SyncroMainView({
                   <strong>
                     {win.window} · {win.direction}
                   </strong>
-                  <p>{win.why}</p>
+                  <p>
+                    <GlossaryText text={win.why} locale={locale} seen={glossarySeen} />
+                  </p>
                 </li>
               ))}
             </ul>
@@ -312,7 +318,7 @@ export function SyncroMainView({
           {session.task_response.avoid ? (
             <p className="syncro-task-response__avoid">
               <span className="syncro-task-response__avoid-label">{t("task_response_avoid")}:</span>{" "}
-              {session.task_response.avoid}
+              <GlossaryText text={session.task_response.avoid} locale={locale} seen={glossarySeen} />
             </p>
           ) : null}
         </div>

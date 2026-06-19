@@ -1,4 +1,4 @@
-import { detectComplianceViolations } from "@/lib/llm/sanitize/compliance-terms";
+import { detectComplianceViolations, filterDeletedTerms } from "@/lib/llm/sanitize/compliance-terms";
 
 export type SyncroHourAdviceCell = {
   short_advice: string;
@@ -189,10 +189,11 @@ export function auditSyncroText(text: string, locale: string, context?: string):
   return violations;
 }
 
-/** Audit-only — returns text unchanged. */
+/** Audit + delete-class hard filter for religious/deity terms. */
 export function sanitizeSyncroText(text: string, locale: string): string {
-  auditSyncroText(text, locale, "syncro-sanitize");
-  return text;
+  const filtered = filterDeletedTerms(text);
+  auditSyncroText(filtered, locale, "syncro-sanitize");
+  return filtered;
 }
 
 export function auditSyncroHourAdvice(
@@ -216,11 +217,19 @@ export function auditSyncroHourAdvice(
   return all;
 }
 
-/** Audit-only — returns advice unchanged. */
+/** Audit + delete-class hard filter on each advice field. */
 export function sanitizeSyncroHourAdvice(
   advice: Record<string, SyncroHourAdviceCell>,
   locale: string,
 ): Record<string, SyncroHourAdviceCell> {
-  auditSyncroHourAdvice(advice, locale);
-  return advice;
+  const filtered: Record<string, SyncroHourAdviceCell> = {};
+  for (const [key, cell] of Object.entries(advice)) {
+    filtered[key] = {
+      short_advice: filterDeletedTerms(cell.short_advice),
+      detailed_advice: filterDeletedTerms(cell.detailed_advice),
+      rationale: filterDeletedTerms(cell.rationale),
+    };
+  }
+  auditSyncroHourAdvice(filtered, locale);
+  return filtered;
 }

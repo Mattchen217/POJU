@@ -1,191 +1,27 @@
 /**
  * Shared blacklist → whitelist term maps for LLM output compliance.
  * Prompt translation suggestions + audit detection (audit-only, no mutation).
+ * Single glossary source: lib/glossary/term-glossary.ts
  * @see lib/llm/compliance/output-policy.ts — prompt defense blocks
  * @see lib/llm/compliance/audit-output.ts — detection rules
  */
 
 import {
+  AUDIT_ALLOW_LABELS,
+  EN_TERM_MAP,
+  FORBIDDEN_VARIANTS_ALL,
+  TERM_GLOSSARY,
+  ZH_TERM_MAP,
+  type GlossaryConcept,
+  type Locale,
+  toGlossaryLocale,
+} from "@/lib/glossary/term-glossary";
+import {
   auditOutputPolicyText,
   detectOutputPolicyViolations,
 } from "@/lib/llm/compliance/audit-output";
-import { buildOutputPolicyCoreBlock } from "@/lib/llm/compliance/output-policy";
 
-export const EN_TERM_MAP: Record<string, string> = {
-  // A. 八字/排盘
-  Bazi: "personality profile",
-  BaZi: "personality profile",
-  "Ba Zi": "personality profile",
-  "Four Pillars": "personality structure",
-  "Day Master": "core nature",
-  "Heavenly Stem": "",
-  "Earthly Branch": "",
-  "natal chart": "personality profile",
-  "birth chart": "personality profile",
-  "Yi Wood": "core trait",
-  "Jia Wood": "core trait",
-  "Bing Fire": "core trait",
-  "Ding Fire": "core trait",
-  "Wu Earth": "core trait",
-  "Ji Earth": "core trait",
-  "Geng Metal": "core trait",
-  "Xin Metal": "core trait",
-  "Ren Water": "core trait",
-  "Gui Water": "core trait",
-
-  // B. 十神
-  "Ten Gods": "relational dynamics",
-  "Seven Killings": "external pressure dynamics",
-  "Eating God": "expressive intelligence",
-  "Hurting Officer": "expressive drive",
-  "Direct Wealth": "resource orientation",
-  "Indirect Wealth": "resource orientation",
-  "Direct Officer": "structure and authority dynamics",
-  "Indirect Officer": "structure and authority dynamics",
-  "Direct Resource": "support and learning dynamics",
-  "Indirect Resource": "support and learning dynamics",
-  Companion: "peer dynamics",
-  "Rob Wealth": "peer dynamics",
-
-  // C. 大运/流年
-  "Luck Pillar": "major life cycle",
-  "Luck Cycle": "major life cycle",
-  "Da Yun": "major life cycle",
-  "Major Luck": "10-year life cycle",
-  "Decade Luck": "10-year life cycle",
-  "Annual Pillar": "current annual cycle",
-  "Liu Nian": "current annual cycle",
-  "Fleeting Year": "current annual cycle",
-
-  // D. 用神/五行 (phrase-level; elemental Wood/Fire handled by regex)
-  "Useful God": "key supporting energy",
-  "Yong Shen": "key supporting energy",
-  "Favorable God": "key supporting energy",
-  "Favorable Element": "beneficial quality",
-  "Unfavorable Element": "quality to watch",
-  "Ji Shen": "quality to watch",
-  "Five Elements": "energy structure",
-  "Wu Xing": "energy structure",
-
-  // E. 格局
-  "Ge Ju": "personality pattern",
-
-  // F. 占卜/宗教
-  "Divination Lot": "archetypal metaphor",
-  Divination: "archetypal reflection",
-  "drawing a lot": "engaging a metaphor",
-  Oracle: "reflection tool",
-  "Guan Yin": "",
-  Bodhisattva: "",
-  Buddha: "",
-  deity: "",
-  deities: "",
-  Temple: "",
-  shrine: "",
-  "Fortune-telling": "analysis",
-  blessing: "",
-  prayer: "",
-  sacred: "",
-  worship: "",
-  incense: "",
-  altar: "",
-
-  // G. 宿命/预测
-  Fate: "inherent tendencies",
-  Destiny: "life direction",
-  Prediction: "insight",
-  predict: "assess",
-  forecast: "assessment",
-  Karma: "pattern",
-  karmic: "patterned",
-  predestined: "naturally aligned",
-  "meant to be": "naturally aligned",
-
-  // H. 民间命理
-  "Noble Person": "key supporter",
-  Benefactor: "external support",
-  "Nobleman luck": "external support",
-  "Peach Blossom": "interpersonal energy",
-};
-
-export const ZH_TERM_MAP: Record<string, string> = {
-  // A. 八字/排盘
-  八字: "性格画像",
-  四柱: "性格结构",
-  命盘: "性格画像",
-  日主: "核心特质",
-  天干: "",
-  地支: "",
-
-  // B. 十神
-  十神: "关系动力",
-  七杀: "外部压力动力",
-  食神: "表达型智慧",
-  伤官: "表达驱动力",
-  正财: "资源取向",
-  偏财: "资源取向",
-  正官: "结构与权威动力",
-  偏官: "结构与权威动力",
-  正印: "支持与学习动力",
-  偏印: "支持与学习动力",
-  比肩: "同侪动力",
-  劫财: "同侪动力",
-
-  // C. 大运/流年
-  大运: "人生阶段",
-  流年: "当前周期",
-  流年大运: "人生阶段",
-
-  // D. 用神/五行
-  用神: "关键能量",
-  喜神: "有利特质",
-  忌神: "需留意的特质",
-  五行: "能量结构",
-  喜土金: "稳定与结构判断",
-  忌火土: "急躁与固执",
-  喜用水金: "沉静智慧与决断力",
-
-  // E. 格局
-  格局: "性格模式",
-
-  // F. 占卜/宗教
-  占卜: "原型隐喻",
-  签文: "原型隐喻",
-  抽签: "触发隐喻",
-  求签: "触发隐喻",
-  灵签: "原型隐喻",
-  签: "隐喻",
-  观音: "",
-  菩萨: "",
-  佛: "",
-  寺庙: "",
-  庙: "",
-  算命: "分析",
-  命理: "分析",
-  保佑: "",
-  祈福: "",
-  求神: "",
-  拜佛: "",
-  神明: "",
-  神灵: "",
-
-  // G. 宿命/预测
-  宿命: "先天倾向",
-  命运: "人生方向",
-  预测: "洞察",
-  预言: "洞察",
-  运势: "趋势状态",
-  命中注定: "自然契合",
-  注定: "自然契合",
-
-  // H. 民间命理
-  贵人: "外部助力",
-  小人: "负面影响",
-  桃花: "情感能量",
-  驿马: "变动能量",
-  刑冲: "摩擦张力",
-  相克: "风格差异",
-};
+export { EN_TERM_MAP, ZH_TERM_MAP };
 
 export const COMPLIANCE_MASK = "…";
 
@@ -248,73 +84,73 @@ function snippetAround(text: string, index: number, len: number): string {
   return text.slice(start, end).replace(/\s+/g, " ").trim();
 }
 
-function sortedMapEntries(map: Record<string, string>): Array<[string, string]> {
-  return Object.entries(map).sort((a, b) => b[0].length - a[0].length);
-}
-
 function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function applyZhRegexReplacements(text: string): string {
-  let result = text;
-  result = result.replace(/喜用水金/g, ZH_TERM_MAP["喜用水金"]!);
-  result = result.replace(/喜土金/g, ZH_TERM_MAP["喜土金"]!);
-  result = result.replace(/忌火土/g, ZH_TERM_MAP["忌火土"]!);
-  result = result.replace(ZH_WUXING_YONGXI_REGEX, (m) => {
-    if (m.startsWith("忌")) return "需留意的特质";
-    return "有利特质";
-  });
-  result = result.replace(ZH_STEM_ELEMENT_REGEX, "核心特质");
-  result = result.replace(ZH_STEM_BRANCH_REGEX, "核心特质");
-  result = result.replace(ZH_WUXING_ELEMENT_CONTEXT_REGEX, "能量特质");
-  result = result.replace(ZH_GUIRen_REGEX, "外部助力");
-  return result;
+function isChineseVariant(v: string): boolean {
+  return /[\u4e00-\u9fff]/.test(v);
 }
 
-function applyEnRegexReplacements(text: string): string {
-  let result = text;
-  result = result.replace(EN_FAVORABLE_ELEMENT_REGEX, "beneficial quality");
-  result = result.replace(EN_UNFAVORABLE_ELEMENT_REGEX, "quality to watch");
-  result = result.replace(EN_WUXING_ELEMENT_COMBO_REGEX, (m) => {
-    if (/unfavorable/i.test(m)) return "quality to watch";
-    if (/your/i.test(m)) return "core trait";
-    return "beneficial quality";
-  });
-  return result;
+function shouldSkipAuditTerm(term: string): boolean {
+  if (AUDIT_ALLOW_LABELS.has(term)) return true;
+  for (const label of AUDIT_ALLOW_LABELS) {
+    if (term.toLowerCase() === label.toLowerCase()) return true;
+  }
+  return false;
 }
 
-function applyTermMap(text: string, map: Record<string, string>, locale: string): string {
+/** Hard-filter delete-class terms (religious/deity) — the only allowed post-hoc rewrite. */
+export function filterDeletedTerms(text: string): string {
+  if (!text?.trim()) return text;
   let result = text;
-  for (const [term, replacement] of sortedMapEntries(map)) {
-    if (locale.startsWith("zh")) {
-      result = result.split(term).join(replacement);
-    } else {
-      const re = new RegExp(`\\b${escapeRegExp(term)}\\b`, "gi");
-      result = result.replace(re, replacement);
+  for (const c of TERM_GLOSSARY) {
+    if (c.surface !== "delete") continue;
+    for (const term of c.forbidden_variants) {
+      if (isChineseVariant(term)) {
+        result = result.split(term).join("");
+      } else {
+        const re = new RegExp(`\\b${escapeRegExp(term)}\\b`, "gi");
+        result = result.replace(re, "");
+      }
     }
   }
   return result.replace(/\s{2,}/g, " ").replace(/\s+([,.;:!?])/g, "$1").trim();
 }
 
-/** Terms allowed as Five-Elements personality language — do not audit. */
-const AUDIT_SKIP_TERMS = new Set([
-  "Five Elements",
-  "Wu Xing",
-  "五行",
-  "Fate",
-  "Destiny",
-  "Karma",
-  "karmic",
-  "Prediction",
-  "predict",
-  "forecast",
-  "运势",
-  "预测",
-  "预言",
-]);
+/** Inject full replace + delete + allow tables for prompt rendering. */
+export function buildComplianceTranslationPromptBlock(locale: Locale = "en"): string {
+  const replaceRows = TERM_GLOSSARY.filter((c) => c.surface === "replace")
+    .map((c) => `· ${c.forbidden_variants.join(" / ")} → ${c.soft[locale]}`)
+    .join("\n");
+  const deleteRows = TERM_GLOSSARY.filter((c) => c.surface === "delete")
+    .map((c) => c.forbidden_variants.join(" / "))
+    .join(" / ");
+  const allowRows = TERM_GLOSSARY.filter((c) => c.surface === "allow")
+    .map((c) => c.soft[locale] + (c.hanzi ? `(${c.hanzi})` : ""))
+    .join(" / ");
 
-/** Detect policy + bazi fingerprint terms (audit-only). Does NOT flag bare Wood/Fire/Yin-Yang. */
+  return `# 术语渲染规则（自由思考，按表输出 · 最高优先级）
+
+你可以**在内部用任何专业术语自由推演**（八字/奇门/用神/六合…不受限）。
+但**最终面向用户的每一个字符串**，必须按下表把"违禁词"渲染成"软词"——**绝不让违禁词原形出现在输出里**。
+
+## 替换表（违禁词 → 软词，本次输出语言）
+${replaceRows}
+
+## 直接删除（绝不上屏，含同义/外文变体；如底层签文含神祇名，过滤为空）
+${deleteRows}
+
+## 允许直接输出（不替换，文化灵魂）
+${allowRows}
+
+规则：
+- 软词后**就近一句大白话**可选——但不必堆砌；白话主要由 UI 负责，你只需输出软词本身。
+- 时机/结果相邻处（大运/流年/奇门窗口）措辞为"决策支持/能量节律"，**不报具体日期、不下吉凶**。
+- 自检：输出前扫一遍，任何违禁词原形 = 必须换成软词或删除。`;
+}
+
+/** Detect policy + glossary forbidden terms (audit-only). Does NOT flag allow-list labels. */
 export function detectComplianceViolations(text: string, locale: string): ComplianceViolation[] {
   if (!text?.trim()) return [];
   const violations: ComplianceViolation[] = [];
@@ -339,8 +175,9 @@ export function detectComplianceViolations(text: string, locale: string): Compli
     pushRegex(ZH_STEM_ELEMENT_REGEX, "stem_element");
     pushRegex(ZH_WUXING_YONGXI_REGEX, "wuxing_yongxi");
     pushRegex(ZH_GUIRen_REGEX, "guiren");
-    for (const term of sortedMapEntries(ZH_TERM_MAP).map(([k]) => k)) {
-      if (term.length < 2 || AUDIT_SKIP_TERMS.has(term)) continue;
+    for (const term of FORBIDDEN_VARIANTS_ALL) {
+      if (!isChineseVariant(term) || term.length < 2) continue;
+      if (shouldSkipAuditTerm(term)) continue;
       if (text.includes(term)) {
         violations.push({
           label: `term:${term}`,
@@ -353,8 +190,9 @@ export function detectComplianceViolations(text: string, locale: string): Compli
     pushRegex(EN_WARRIOR_WHO_REGEX, "warrior_who_narrative");
     pushRegex(EN_STORY_SEQUENCE_VERB_REGEX, "story_sequence_verb");
     pushRegex(EN_STORY_SEQUENCE_NARRATIVE_REGEX, "story_sequence_narrative");
-    for (const [term] of sortedMapEntries(EN_TERM_MAP)) {
-      if (AUDIT_SKIP_TERMS.has(term)) continue;
+    for (const term of FORBIDDEN_VARIANTS_ALL) {
+      if (isChineseVariant(term)) continue;
+      if (shouldSkipAuditTerm(term)) continue;
       const re = new RegExp(`\\b${escapeRegExp(term)}\\b`, "i");
       const m = re.exec(text);
       if (m) {
@@ -375,28 +213,6 @@ export function detectComplianceViolations(text: string, locale: string): Compli
   });
 }
 
-/** Mask remaining violation spans in text. @deprecated Audit-only mode — no longer used. */
-function maskRemainingViolations(
-  text: string,
-  violations: ComplianceViolation[],
-  locale: string,
-): string {
-  let result = text;
-  for (const v of violations) {
-    const idx = result.indexOf(v.snippet);
-    if (idx >= 0 && v.snippet.length > 4) {
-      result = result.slice(0, idx) + COMPLIANCE_MASK + result.slice(idx + v.snippet.length);
-      continue;
-    }
-    // Re-detect exact match from label term
-    const term = v.label.startsWith("term:") ? v.label.slice(5) : null;
-    if (term && result.includes(term)) {
-      result = result.split(term).join(COMPLIANCE_MASK);
-    }
-  }
-  return result.replace(/\s{2,}/g, " ").trim();
-}
-
 export type ComplianceSanitizeResult = {
   text: string;
   violationsBefore: ComplianceViolation[];
@@ -404,12 +220,12 @@ export type ComplianceSanitizeResult = {
 };
 
 /**
- * Audit-only — detects black-word hits, returns text unchanged.
- * EN_TERM_MAP / ZH_TERM_MAP remain as prompt translation suggestions (not auto-applied).
+ * Audit-only — detects black-word hits, applies delete-class hard filter, returns filtered text.
  */
 export function applyComplianceSanitize(text: string, locale: string): ComplianceSanitizeResult {
   const violationsBefore = detectComplianceViolations(text, locale);
-  const violationsAfter = violationsBefore;
+  const filtered = filterDeletedTerms(text);
+  const violationsAfter = detectComplianceViolations(filtered, locale);
 
   if (violationsBefore.length > 0) {
     console.error(
@@ -418,20 +234,8 @@ export function applyComplianceSanitize(text: string, locale: string): Complianc
     );
   }
 
-  return { text, violationsBefore, violationsAfter };
+  return { text: filtered, violationsBefore, violationsAfter };
 }
 
-/** Prompt block: soften bazi terms; Five Elements as personality allowed. */
-export function buildComplianceTranslationPromptBlock(): string {
-  return `# 共享合规（见 lib/llm/compliance/output-policy.ts · audit 仅告警）
-
-${buildOutputPolicyCoreBlock()}
-
-术语映射表（输出须翻译，完整见 compliance-terms.ts EN_TERM_MAP / ZH_TERM_MAP）：
-· Day Master / 日主 → core nature / 核心特质
-· Yong Shen / 用神 → balancing element / 关键平衡能量
-· chart / 命盘 → profile / 性格画像
-· ✅ Wood/Fire/Earth/Metal/Water 作性格能量 — **保留**`;
-}
-
-export { auditOutputPolicyText, detectOutputPolicyViolations };
+export { auditOutputPolicyText, detectOutputPolicyViolations, toGlossaryLocale };
+export type { GlossaryConcept, Locale };

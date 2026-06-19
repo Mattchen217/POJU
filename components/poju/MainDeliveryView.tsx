@@ -5,8 +5,12 @@
  * Used by `MessageBubble` for `contains_delivery` messages.
  */
 
-import { useTranslations } from "next-intl";
+import { useRef } from "react";
+import { useLocale, useTranslations } from "next-intl";
+
+import { GlossaryText } from "@/components/cross-product/GlossaryText";
 import { ArchiveSavedHint } from "@/components/archive/archive-saved-hint";
+import type { Locale } from "@/lib/glossary/term-glossary";
 import type { POJUAction } from "@/lib/poju/types";
 import { parseDeliveryContent, type DeliverySection } from "@/lib/poju/parse-delivery";
 
@@ -21,6 +25,8 @@ export function MainDeliveryView({ fullText, actions, archiveId, onActionUpdate 
   const tDelivery = useTranslations("poju.delivery");
   const tActions = useTranslations("poju.actions");
   const tCard = useTranslations("poju.action_card");
+  const locale = useLocale() as Locale;
+  const seen = useRef(new Set<string>()).current;
   const sections = parseDeliveryContent(fullText);
 
   return (
@@ -31,7 +37,12 @@ export function MainDeliveryView({ fullText, actions, archiveId, onActionUpdate 
       </header>
 
       {sections.map((section, idx) => (
-        <DeliverySectionView key={`${section.type}-${idx}`} section={section} />
+        <DeliverySectionView
+          key={`${section.type}-${idx}`}
+          section={section}
+          locale={locale}
+          seen={seen}
+        />
       ))}
 
       {actions.length > 0 ? (
@@ -39,7 +50,15 @@ export function MainDeliveryView({ fullText, actions, archiveId, onActionUpdate 
           <h3 className="pchat__delivery-section-title">{tActions("title")}</h3>
           <div className="flex flex-col gap-4">
             {actions.map((action, idx) => (
-              <ActionRow key={action.action_id} action={action} index={idx + 1} tCard={tCard} onUpdate={onActionUpdate} />
+              <ActionRow
+                key={action.action_id}
+                action={action}
+                index={idx + 1}
+                tCard={tCard}
+                onUpdate={onActionUpdate}
+                locale={locale}
+                seen={seen}
+              />
             ))}
           </div>
         </div>
@@ -52,7 +71,15 @@ export function MainDeliveryView({ fullText, actions, archiveId, onActionUpdate 
   );
 }
 
-function DeliverySectionView({ section }: { section: DeliverySection }) {
+function DeliverySectionView({
+  section,
+  locale,
+  seen,
+}: {
+  section: DeliverySection;
+  locale: Locale;
+  seen: Set<string>;
+}) {
   if (section.type === "opening" && section.paragraphs.length === 0) return null;
 
   return (
@@ -60,7 +87,9 @@ function DeliverySectionView({ section }: { section: DeliverySection }) {
       {section.title ? <h3 className="pchat__delivery-section-title">{section.title}</h3> : null}
       <div>
         {section.paragraphs.map((p, i) => (
-          <p key={i}>{p}</p>
+          <p key={i}>
+            <GlossaryText text={p} locale={locale} seen={seen} />
+          </p>
         ))}
       </div>
     </section>
@@ -72,11 +101,15 @@ function ActionRow({
   index,
   tCard,
   onUpdate,
+  locale,
+  seen,
 }: {
   action: POJUAction;
   index: number;
   tCard: (key: string) => string;
   onUpdate?: (id: string, status: POJUAction["status"], feedback?: string) => void;
+  locale: Locale;
+  seen: Set<string>;
 }) {
   const categoryLabels: Record<POJUAction["category"], string> = {
     traditional: tCard("category_traditional"),
@@ -95,7 +128,9 @@ function ActionRow({
       <p className="pchat__delivery-action-label">
         {index}. {action.title?.trim() || categoryLabels[action.category]}
       </p>
-      <p>{action.text}</p>
+      <p>
+        <GlossaryText text={action.text} locale={locale} seen={seen} />
+      </p>
       {onUpdate && action.status === "pending" ? (
         <div className="pchat__delivery-action-btns">
           <button type="button" onClick={() => onUpdate(action.action_id, "completed")}>

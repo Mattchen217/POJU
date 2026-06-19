@@ -1,7 +1,9 @@
 "use client";
 
+import { useRef } from "react";
 import { useTranslations } from "next-intl";
 
+import { GlossaryText } from "@/components/cross-product/GlossaryText";
 import { sanitizeSyncroRationale } from "@/lib/syncro/sanitize-rationale";
 
 import {
@@ -63,6 +65,7 @@ export function SyncroCenterInfo({
   compact,
   locale,
   llmHighlight,
+  glossarySeen,
 }: {
   combination: SyncroCombination;
   directionId: DirectionId;
@@ -72,9 +75,12 @@ export function SyncroCenterInfo({
   compact?: boolean;
   locale: string;
   llmHighlight?: boolean;
+  glossarySeen?: Set<string>;
 }) {
   const t = useTranslations("syncro.main");
   const isZh = locale.startsWith("zh");
+  const fallbackSeen = useRef(new Set<string>()).current;
+  const seen = glossarySeen ?? fallbackSeen;
   const levelInfo = CURRENT_LEVELS[combination.current_level];
   const directionInfo = DIRECTIONS[directionId];
   const periodLabel = isZh ? HOUR_PERIODS[hourPeriod].name_zh : HOUR_PERIODS[hourPeriod].name_en;
@@ -96,7 +102,9 @@ export function SyncroCenterInfo({
         {t("current_hour")}
       </div>
 
-      <p className="short-advice">{combination.short_advice}</p>
+      <p className="short-advice">
+        <GlossaryText text={combination.short_advice} locale={locale} seen={seen} />
+      </p>
 
       {!showDetail ? (
         <button type="button" onClick={onToggleDetail} className="why-button">
@@ -107,9 +115,17 @@ export function SyncroCenterInfo({
       {showDetail ? (
         <div className="detail-section">
           <h4>{t("detailed_label")}</h4>
-          <p>{combination.detailed_advice}</p>
+          <p>
+            <GlossaryText text={combination.detailed_advice} locale={locale} seen={seen} />
+          </p>
           <h4>{t("rationale_label")}</h4>
-          <p>{sanitizeSyncroRationale(combination.rationale, locale)}</p>
+          <p>
+            <GlossaryText
+              text={sanitizeSyncroRationale(combination.rationale, locale)}
+              locale={locale}
+              seen={seen}
+            />
+          </p>
           <button type="button" onClick={onToggleDetail} className="collapse-button">
             {t("collapse")} ↑
           </button>

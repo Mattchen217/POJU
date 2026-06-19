@@ -1,6 +1,6 @@
 import type { GlyphReadingContent } from "@/lib/llm/services/glyph-reading-service";
 import signsData from "@/lib/glyph/data/signs.json";
-import { detectComplianceViolations } from "@/lib/llm/sanitize/compliance-terms";
+import { detectComplianceViolations, filterDeletedTerms } from "@/lib/llm/sanitize/compliance-terms";
 import { detectNarrativeSentences } from "@/lib/glyph/sanitize-narrative-sentences";
 import { detectPredictionSentences } from "@/lib/glyph/sanitize-prediction-sentences";
 
@@ -202,11 +202,12 @@ export function logGlyphOutputViolations(
  * Output quality is enforced by prompt, not post-hoc text mutation.
  */
 export function sanitizeGlyphOutput(text: string, locale: string): string {
-  const violations = detectGlyphOutputViolations(text, locale);
+  const filtered = filterDeletedTerms(text);
+  const violations = detectGlyphOutputViolations(filtered, locale);
   if (violations.length > 0) {
     logGlyphOutputViolations(violations, "glyph-audit");
   }
-  return text;
+  return filtered;
 }
 
 /** Audit-only — logs violations per field, returns reading unchanged. */

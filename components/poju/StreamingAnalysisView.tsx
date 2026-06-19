@@ -3,7 +3,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 
+import { GlossaryText } from '@/components/cross-product/GlossaryText';
 import { stripMetaSection } from '@/lib/base-analysis/useStreamingAnalysis';
+import type { Locale } from '@/lib/glossary/term-glossary';
 
 interface Props {
   content: string;
@@ -98,7 +100,13 @@ export function StreamingAnalysisView({
 
         {!isThinking && visibleContent ? (
           <div ref={contentRef} className="streaming-content-compact">
-            <pre className="content-text">{visibleContent}</pre>
+            <pre className="content-text">
+              {status === 'completed' ? (
+                <GlossaryText text={visibleContent} locale={locale as Locale} />
+              ) : (
+                visibleContent
+              )}
+            </pre>
             {status === 'streaming' ? <span className="cursor">▊</span> : null}
           </div>
         ) : null}

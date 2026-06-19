@@ -1,7 +1,9 @@
 "use client";
 
 import { IconLoader2 } from "@tabler/icons-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+
+import { GlossaryText } from "@/components/cross-product/GlossaryText";
 
 import {
   getSyncroCellDisplayState,
@@ -13,10 +15,14 @@ type Props = {
   cell: SyncroCombination | undefined;
   llmMeta: SyncroSession["llm_meta"];
   className?: string;
+  locale?: string;
+  seen?: Set<string>;
 };
 
-export function SyncroCellAdvice({ cell, llmMeta, className = "compass-short-advice" }: Props) {
+export function SyncroCellAdvice({ cell, llmMeta, className = "compass-short-advice", locale, seen }: Props) {
   const t = useTranslations("syncro");
+  const pageLocale = useLocale();
+  const effectiveLocale = locale ?? pageLocale;
   const state: SyncroCellDisplayState = getSyncroCellDisplayState(cell, llmMeta);
 
   if (state === "loading") {
@@ -36,5 +42,9 @@ export function SyncroCellAdvice({ cell, llmMeta, className = "compass-short-adv
     );
   }
 
-  return <p className={className}>{cell!.short_advice}</p>;
+  return (
+    <p className={className}>
+      <GlossaryText text={cell!.short_advice} locale={effectiveLocale} seen={seen} />
+    </p>
+  );
 }
