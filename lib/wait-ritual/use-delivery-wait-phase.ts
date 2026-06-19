@@ -70,10 +70,30 @@ export function useDeliveryWaitPhase(opts: UseDeliveryWaitPhaseOptions): Deliver
   const [baziMinMet, setBaziMinMet] = useState(!isReturningUser || skipBazi);
   const exitCalledRef = useRef(false);
   const baziRitualCalledRef = useRef(false);
+  const wasEnabledRef = useRef(enabled);
   const onExitCompleteRef = useRef(onExitComplete);
   const onBaziRitualCompleteRef = useRef(onBaziRitualComplete);
   onExitCompleteRef.current = onExitComplete;
   onBaziRitualCompleteRef.current = onBaziRitualComplete;
+
+  useEffect(() => {
+    if (enabled && !wasEnabledRef.current) {
+      setPhase(initialPhase);
+      setStepIndex(0);
+      setShowFlash(false);
+      setShowConverge(false);
+      setExiting(false);
+    }
+    wasEnabledRef.current = enabled;
+  }, [enabled, initialPhase]);
+
+  useEffect(() => {
+    if (!enabled || !skipBazi) return;
+    if (phase === "bazi" || phase === "bridge") {
+      setPhase("product");
+      setStepIndex(0);
+    }
+  }, [enabled, skipBazi, phase]);
 
   useEffect(() => {
     if (enabled) return;
@@ -115,9 +135,15 @@ export function useDeliveryWaitPhase(opts: UseDeliveryWaitPhaseOptions): Deliver
       return;
     }
 
+    if (skipBazi) {
+      setPhase("product");
+      setStepIndex(0);
+      return;
+    }
+
     setPhase("bridge");
     setStepIndex(0);
-  }, [enabled, phase, baziComplete, baziMinMet, product, baziOnly]);
+  }, [enabled, phase, baziComplete, baziMinMet, product, baziOnly, skipBazi]);
 
   /** bridge → product: must be a separate effect so bazi→bridge re-render does not cancel this timer */
   useEffect(() => {

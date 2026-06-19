@@ -1,9 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
-import { MatchAnalyzingLoader } from "@/components/match/MatchAnalyzingLoader";
 import { DeliveryWaitFrame } from "@/components/wait-ritual/DeliveryWaitFrame";
 import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
 import { useRouter } from "@/i18n/navigation";
@@ -33,7 +32,7 @@ import { recordUsage } from "@/lib/syncro/device-usage";
 import "@/styles/match.css";
 
 type Phase =
-  | "gate"
+  | "init"
   | "base-a"
   | "base-b"
   | "base-cache"
@@ -46,7 +45,7 @@ export function MatchAnalyzingPage() {
   const t = useTranslations("match.analyzing");
   const tChart = useTranslations("chart_loader");
 
-  const [phase, setPhase] = useState<Phase>("gate");
+  const [phase, setPhase] = useState<Phase>("init");
   const [error, setError] = useState<string | null>(null);
   const [profileA, setProfileA] = useState<StoredProfileData | null>(null);
   const [profileB, setProfileB] = useState<StoredProfileData | null>(null);
@@ -61,19 +60,6 @@ export function MatchAnalyzingPage() {
   const [productComplete, setProductComplete] = useState(false);
   const matchAnalyzeStartedRef = useRef(false);
   const startedRef = useRef(false);
-
-  const steps = useMemo(
-    () => [
-      t("step_1"),
-      t("step_2"),
-      t("step_3"),
-      t("step_4"),
-      t("step_5"),
-      t("step_6"),
-      t("step_7"),
-    ],
-    [t],
-  );
 
   const runAnalyze = useCallback(async () => {
     try {
@@ -198,6 +184,7 @@ export function MatchAnalyzingPage() {
 
   const isBaziPhase = phase === "base-a" || phase === "base-b" || phase === "base-cache";
   const isProductPhase = phase === "analyzing";
+  const isWaitPhase = isBaziPhase || isProductPhase;
 
   const waitFlow = useDeliveryWaitPhase({
     product: "match",
@@ -205,7 +192,7 @@ export function MatchAnalyzingPage() {
     isReturningUser: !skipBaziAtDelivery && isReturningUser,
     baziComplete,
     productComplete,
-    enabled: isBaziPhase || isProductPhase,
+    enabled: isWaitPhase,
     onExitComplete: () => setWaitVisualDone(true),
   });
 
@@ -349,12 +336,8 @@ export function MatchAnalyzingPage() {
     return <DeliveryWaitFrame wait={waitFlow} isReturningUser />;
   }
 
-  if (phase === "gate") {
-    return (
-      <main className="match-analyzing">
-        <MatchAnalyzingLoader step={0} steps={steps} hint={t("hint")} previewLine={null} />
-      </main>
-    );
+  if (phase === "init") {
+    return null;
   }
 
   if (error || phase === "error") {

@@ -285,8 +285,6 @@ export function GlyphReadingPage() {
     setQuestion(q);
     setProfileId(session.profile_id);
     setError(null);
-    setLoaderStep("loading");
-    setStage("loading");
     visibilityRetryUsedRef.current = false;
 
     const stored = await getStoredProfile(session.profile_id);
@@ -516,24 +514,10 @@ export function GlyphReadingPage() {
   }
 
   if (stage === "loading" && !profile) {
-    return (
-      <DeliveryWaitFrame
-        wait={{
-          product: "glyph",
-          phase: "bazi",
-          scene: "/spline/Analyzing-scene.splinecode",
-          glowColor: "#8AB4FF",
-          stepIndex: 0,
-          showFlash: false,
-          showConverge: false,
-          exiting: false,
-          copyPhase: "bazi",
-        }}
-      />
-    );
+    return null;
   }
 
-  if (stage === "error" || (stage === "loading" && error)) {
+  if (stage === "error") {
     return (
       <div className="glyph-error-page">
         <p>{t("reading_failed")}</p>

@@ -6,7 +6,6 @@ import { useLocale, useTranslations } from "next-intl";
 
 import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
 import { PreparingStatusOverlay } from "@/components/poju/PreparingStatusOverlay";
-import { PreparingSplineShell } from "@/components/poju/PreparingSplineShell";
 import { useRouter } from "@/i18n/navigation";
 import type { StoredProfileData } from "@/lib/db/poju-db";
 import { clearPendingBaseAnalysisProfile } from "@/lib/profile/pending-base-analysis";
@@ -144,42 +143,36 @@ export function SyncroPreparingPage() {
 
   if (phase === "cache") {
     return (
-      <PreparingSplineShell blockInteraction>
-        <PreparingStatusOverlay>
-          <p className="preparing-spline-page__status">{tPrep("preparing_done")}</p>
-        </PreparingStatusOverlay>
-      </PreparingSplineShell>
+      <PreparingStatusOverlay>
+        <p className="preparing-spline-page__status">{tPrep("preparing_done")}</p>
+      </PreparingStatusOverlay>
     );
   }
 
   if (phase === "error") {
     return (
-      <PreparingSplineShell blockInteraction>
-        <div className="preparing-spline-page__overlay preparing-spline-page__overlay--error" role="alert">
-          <p className="preparing-spline-page__status">{error}</p>
-          <div className="error-actions">
-            <button type="button" className="primary" onClick={() => setPhase("streaming")}>
-              {tChart("retry")}
-            </button>
-            <button type="button" className="secondary" onClick={() => void handleBack()}>
-              {tSyncro("back_to_home")}
-            </button>
-          </div>
+      <div className="preparing-spline-page__overlay preparing-spline-page__overlay--error" role="alert">
+        <p className="preparing-spline-page__status">{error}</p>
+        <div className="error-actions">
+          <button type="button" className="primary" onClick={() => setPhase("streaming")}>
+            {tChart("retry")}
+          </button>
+          <button type="button" className="secondary" onClick={() => void handleBack()}>
+            {tSyncro("back_to_home")}
+          </button>
         </div>
-      </PreparingSplineShell>
+      </div>
     );
   }
 
   return (
-    <PreparingSplineShell blockInteraction>
-      <BaseAnalysisStreamPreparing
-        profile={profile}
-        profileId={profileId}
-        locale={locale}
-        logLabel="SyncroPreparing"
-        onComplete={goToLocation}
-        onError={handleStreamError}
-      />
-    </PreparingSplineShell>
+    <BaseAnalysisStreamPreparing
+      profile={profile}
+      profileId={profileId}
+      locale={locale}
+      logLabel="SyncroPreparing"
+      onComplete={goToLocation}
+      onError={handleStreamError}
+    />
   );
 }
