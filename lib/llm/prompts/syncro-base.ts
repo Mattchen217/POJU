@@ -42,9 +42,10 @@ export const SYNCRO_OUTPUT_DEFENSE_TERMS = `# 防线 1 — 术语（自由输出
 - 方位（吉凶义）→ 矢量 / direction / vector
 - 罗盘 / 奇门盘 → **禁止**；用 Syncro 矩阵
 
-**共享命理术语（须翻译，见 compliance-terms · 五行 Wood/Fire 作能量 — 可保留）**
-- 用神 / 日主 / 大运 / 八字 / 四柱 / 十神 → 关键能量 / 核心特质 / 人生阶段 / profile
-- chart / birth chart / natal chart → profile
+**命理术语（深度交付 · 输出端软翻译）**
+- 可自然使用日主/大运/流年/用神/干支等命理术语；输出端会统一软翻译并附白话解释
+- 你只需遵守六条语义红线；**不必**逐词替换为 profile / life phase theme 等委婉词
+- chart / birth chart / natal chart 在深度交付中可写命理术语；收银面仍走合规商业语域
 - 奇门 / Qimen / 风水 / Feng Shui → 时空能量分析（输出省略框架名）
 
 ✓ 五流 Current 等级 **id 不变**；用户可见描述用水流隐喻 + 共振/效率语言。
@@ -202,7 +203,7 @@ export const SYNCRO_OUTPUT_BRANDING = `# ⚠️ Syncro 输出品牌（JSON matri
 
 - 产品：**Syncro**，**24 小时时空效率矩阵**
 - 显示：**Current 五流等级** + **行动建议**（共振/效率语言，禁吉凶/运气）
-- 命局信息须 **OUTPUT POLICY 白榜翻译**（core nature / balancing element / life cycle / profile），禁裸写 chart / Day Master / Yong Shen
+- 深度交付可自然使用命理术语（日主/大运/用神/干支等）；输出端软翻译 — 守六条语义红线
 - 方位 N/NE/E…；时段用 peak window / 时段
 
 ## 禁止暴露

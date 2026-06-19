@@ -160,7 +160,7 @@ ${GLYPH_LAYOUT_CONTRACT}
 
 1. **全部字段填充**（JSON 不能缺字段；**禁止空字符串**；invalid_input 时也用中性引导填满）
 2. **使用语言**: ${outputLang}（跟随用户实际输入语言）
-3. **OUTPUT FRAMING + 三道防线 + 《易经》框架**: 命理术语允许+就近解释 + 叙事抽象 + 预测规避 + I Ching 哲学透镜（非占卜）
+3. **OUTPUT POLICY + 叙事抽象 + 预测规避 + 《易经》框架**: 可自然使用命理术语（输出端软翻译）+ 叙事抽象 + 预测规避 + I Ching 哲学透镜（非占卜）
 4. **人格依据**: 「命理看此事」须体现人格架构 + 10年生命周期 + 认知资源偏好（允许日主/大运/用神，就近解释）
 5. **隐喻依据**: 签文看此事可摘 1–2 句签诗原文；其他字段意象化；禁止展开历史人物故事情节
 6. **结构必备**: 命理双视角 + 原型隐喻意象 + exploration 微练习 三者缺一不可；exploration 须遵守 GLYPH_EXPLORATION_GUIDANCE（多样形态，忌模板化静坐书写）
@@ -197,7 +197,7 @@ ${GLYPH_OUTPUT_SELF_CHECK}`;
     `# 当前任务：Glyph 深度解读
 
 结合【命主 base_analysis structured + display_text】+【完整签文原文（仅内部分析用）】+【user 消息中的用户问题与签象数据】，按上文解签法则做一次【深度双视角解读】。
-输出 JSON 字符串必须 100% 遵守 OUTPUT FRAMING + 三道防线 + GLYPH_LAYOUT_CONTRACT + Glyph 措辞统一（禁签/sign/lot）。`,
+输出 JSON 字符串必须 100% 遵守 OUTPUT POLICY + GLYPH_LAYOUT_CONTRACT + Glyph 措辞统一（禁签/sign/lot）。`,
   );
 
   const user = stitchPromptSections(
@@ -208,7 +208,7 @@ ${GLYPH_OUTPUT_SELF_CHECK}`;
     outputSchema,
     `请按解签法则生成解读 JSON（签 #${glyph.id} · ${glyph.name}）。
 
-⛔ 输出合规（最高优先级）: OUTPUT FRAMING + 三道防线 + GLYPH_LAYOUT_CONTRACT + Glyph 措辞
+⛔ 输出合规（最高优先级）: OUTPUT POLICY + GLYPH_LAYOUT_CONTRACT + Glyph 措辞
   · 指代: 统一 Glyph / Glyph 文 / the Glyph text；禁签/sign/lot；archetypal metaphor 仅开篇一次
   · 术语: 深度交付允许日主/大运/用神/干支等 — **就近用大白话解释**，不甩术语墙
   · 防线2: 签文看此事可摘 1–2 句原文 / 其他字段意象化 / 禁历史人物故事情节

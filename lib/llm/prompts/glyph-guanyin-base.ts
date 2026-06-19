@@ -242,31 +242,8 @@ export const GLYPH_OUTPUT_WORDING = `# Glyph 措辞统一（输出 JSON 字符�
 
 import { buildOutputPolicyForGlyph } from "@/lib/llm/compliance/output-policy";
 
-/** 防线 1 — 命理术语：深度交付允许使用，须可读、有解释 */
-export const GLYPH_OUTPUT_DEFENSE_TERMS = `# 防线 1 — 命理术语（深度交付 · 允许 + 就近解释）
-
-${buildOutputPolicyForGlyph()}
-
-## 深度交付正文（本 JSON）— 命理术语**允许使用**
-日主 / 大运 / 用神 / 忌神 / 干支 / 纳音 / 神煞 / 十神 / 五行生克等，是 pojulife 的文化差异化——**可以写**，但须：
-- **就近用大白话解释一次**，不堆砌、不甩术语墙
-  · ✓ 「你的核心是乙木——柔韧、需要支点，像藤蔓在关系里向上生长」
-  · ✗ 「乙木日主，坐巳火，大运行至庚申，伤官见官」（连串裸术语、无解释）
-- 一段里术语密度有节制；服务的是"让用户读懂自己"，不是炫技
-
-## 收银面 / 英文网关可见处（非本 JSON）
-能量矩阵标签、付费墙前界面仍走合规商业语域（shensha-i18n-map 等）——**本解读 JSON 不受"禁裸写"约束**。
-
-## 六条合规红线（与术语无关 · 必须守）
-1. **不预测**：不报具体日期/年份、不断言将发生的具体事件
-2. **不恐吓**：不渲染灾祸/诅咒式表述
-3. **不下定论**：不说"一定会/绝不会""命中注定""宜婚/不宜婚""必成/必败"
-4. **不承诺超自然结果**：不招财/催运/避邪/lucky direction/护身符
-5. **不医疗诊疗**：不开方/诊脉/病灶/复诊
-6. **主动权交还用户**：给方向、条件、能量窗口与可执行动作，不替命运拍板
-
-✓ **五行 Wood/Fire/Earth/Metal/Water** 及 金木水火土 — 照常使用
-✓ **阴阳 / Yin-Yang** — 照常使用`;
+/** 术语与红线 — 深度交付可自然使用命理术语，输出端统一软翻译 */
+export const GLYPH_OUTPUT_DEFENSE_TERMS = buildOutputPolicyForGlyph();
 
 /** 防线 2 — 叙事抽象：输出禁签诗原文与具体历史人物 */
 export const GLYPH_OUTPUT_DEFENSE_NARRATIVE = `# 防线 2 — 叙事抽象 + Glyph 文处理（输出强制 · 中英文同等）
@@ -433,14 +410,14 @@ export const GLYPH_OUTPUT_BRANDING = `# ⚠️ 输出品牌（用户可见文案
 
 - **System 指令与输入数据**可含签诗、观音百签、命理 structured 等——仅供内部分析。
 - **输出 JSON 字符串**只呈现反思镜体验：原型隐喻 + 性格画像 + 五风类，零宗教/零占卜用语。
-- **输出禁干支 / 十神 / 签诗原文 / 历史人物 / 未来预测**（见三道防线）；仅允许心理学翻译与抽象叙事原型。`;
+- **深度交付可自然使用命理术语**（输出端软翻译）；禁签诗原文逐字引用 / 历史人物情节 / 未来预测（见 OUTPUT POLICY + 叙事/预测防线）。`;
 
 /** POJU 与 Glyph 共用的伦理、术语、语言风格（不含 POJU Session / 话题边界） */
 export const ORIENTAL_SHARED_GUARDRAILS = `# 共用伦理与语言（Glyph 解签时同样遵守）
 
 ## 语言风格
 
-- System 内部分析可用命理 / 签文术语；**输出 JSON 字符串**须遵守 OUTPUT FRAMING + 三道防线（ psychology 翻译、抽象叙事、无预测）。
+- System 内部分析可用命理 / 签文术语；**输出 JSON 字符串**须遵守 OUTPUT POLICY + 叙事/预测防线（抽象叙事、无预测；命理术语允许，输出端软翻译）。
 - 直接、有温度，不软糯；落地到用户问题。
 - 反思与内观建议要具体，避免「调整心态」等空话；exploration 形态须多样（见 GLYPH_EXPLORATION_GUIDANCE）。
 

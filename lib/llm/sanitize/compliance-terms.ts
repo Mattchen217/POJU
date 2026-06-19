@@ -164,11 +164,56 @@ function findReplaceConcept(term: string): GlossaryConcept | undefined {
   );
 }
 
-function conceptToGlossToken(c: GlossaryConcept, locale: string): string {
+function primarySoftLabel(c: GlossaryConcept, locale: string): string {
   const loc = toGlossaryLocale(locale);
-  const display = c.soft[loc] || c.soft.zh || c.soft.en;
+  const soft = c.soft[loc] || c.soft.en;
+  return soft.split(/\s*\/\s*/)[0]!.trim();
+}
+
+function buildLocalizedGlossDisplay(
+  concept: GlossaryConcept,
+  locale: string,
+  termHanzi?: string,
+): string {
+  const label = primarySoftLabel(concept, locale);
+  const term = termHanzi?.trim();
+  if (!term) return label;
+  const loc = toGlossaryLocale(locale);
+  if (loc === "zh") return `${label}（${term}）`;
+  return `${label} (${term})`;
+}
+
+function conceptToGlossToken(c: GlossaryConcept, locale: string, termHanzi?: string): string {
+  const loc = toGlossaryLocale(locale);
+  const display = buildLocalizedGlossDisplay(c, locale, termHanzi);
   const plain = c.gloss[loc] || c.gloss.en;
   return encodeGlossToken(display, plain);
+}
+
+const EUPHEMISM_BEFORE_GLOSS_RE =
+  /\b(?:(?:represented by|as a|your)\s+)?(?:life phase theme|life cycle\s*\/?\s*life phase|profile\s*\/?\s*personality profile|personality profile|core trait theme)\s+\(\s*(⟦g\|(?:\\.|[^|\\])*?\|(?:\\.|[^|]|\\[^⟧])*?⟧)\s*\)/gi;
+
+/** Remove model-stacked Chinese label wrappers before gloss (EN locale bleed). */
+function stripNestedChineseLabelWrappers(text: string, locale: string): string {
+  if (toGlossaryLocale(locale) === "zh") return text;
+  return text
+    .replace(/核心特质[（(]([甲乙丙丁戊己庚辛壬癸][金木水火土])[）)]/g, "$1")
+    .replace(/人生阶段[（(]([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])[）)]/g, "$1")
+    .replace(/流年能量[（(]([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])[）)]/g, "$1");
+}
+
+/** Strip leftover model euphemisms once gloss tokens exist. */
+function collapseDoubleTranslation(text: string): string {
+  let result = text;
+  result = result.replace(EUPHEMISM_BEFORE_GLOSS_RE, "$1");
+  result = result.replace(
+    /\b([A-Za-z][A-Za-z\s/]{2,48}?)\s+\(\s*(⟦g\|(?:\\.|[^|\\])*?\|(?:\\.|[^|]|\\[^⟧])*?⟧)\s*\)/g,
+    "$2",
+  );
+  result = result.replace(/\b(?:represented by|as a|your)\s+/gi, "");
+  result = result.replace(/\blife phase theme\b/gi, "");
+  result = result.replace(/\bprofile\s*\/?\s*personality profile\b/gi, "personality profile");
+  return result;
 }
 
 function sortedReplaceEntries(locale: string): Array<{ term: string; concept: GlossaryConcept }> {
@@ -188,19 +233,38 @@ function sortedReplaceEntries(locale: string): Array<{ term: string; concept: Gl
   return entries;
 }
 
+function maskGlossTokens(text: string): { masked: string; slots: string[] } {
+  const slots: string[] = [];
+  const masked = text.replace(GLOSS_TOKEN_PATTERN, (m) => {
+    slots.push(m);
+    return `\uE000${slots.length - 1}\uE001`;
+  });
+  return { masked, slots };
+}
+
+function unmaskGlossTokens(text: string, slots: string[]): string {
+  return text.replace(/\uE000(\d+)\uE001/g, (_, i) => slots[Number(i)] ?? "");
+}
+
+function replaceOnUnmaskedSegments(text: string, replacer: (segment: string) => string): string {
+  const { masked, slots } = maskGlossTokens(text);
+  return unmaskGlossTokens(replacer(masked), slots);
+}
 function applySortedTermReplacements(text: string, locale: string): string {
-  let result = text;
-  for (const { term, concept } of sortedReplaceEntries(locale)) {
-    const token = conceptToGlossToken(concept, locale);
-    if (isChineseVariant(term)) {
-      if (!result.includes(term)) continue;
-      result = result.split(term).join(token);
-    } else {
-      const re = new RegExp(`\\b${escapeRegExp(term)}\\b`, "gi");
-      result = result.replace(re, token);
+  return replaceOnUnmaskedSegments(text, (segment) => {
+    let result = segment;
+    for (const { term, concept } of sortedReplaceEntries(locale)) {
+      const token = conceptToGlossToken(concept, locale);
+      if (isChineseVariant(term)) {
+        if (!result.includes(term)) continue;
+        result = result.split(term).join(token);
+      } else {
+        const re = new RegExp(`\\b${escapeRegExp(term)}\\b`, "gi");
+        result = result.replace(re, token);
+      }
     }
-  }
-  return result;
+    return result;
+  });
 }
 
 function applyZhRegexReplacements(text: string, locale: string): string {
@@ -209,58 +273,93 @@ function applyZhRegexReplacements(text: string, locale: string): string {
 
   const guiren = TERM_GLOSSARY.find((c) => c.id === "贵人");
   const dayMaster = TERM_GLOSSARY.find((c) => c.id === "日主");
+  const dayun = TERM_GLOSSARY.find((c) => c.id === "大运");
+  const liunian = TERM_GLOSSARY.find((c) => c.id === "流年");
   const yong = TERM_GLOSSARY.find((c) => c.id === "用神");
 
-  const repl = (regex: RegExp, concept: GlossaryConcept | undefined, displayFn: (m: string) => string) => {
+  const replToken = (
+    regex: RegExp,
+    concept: GlossaryConcept | undefined,
+    displayFn: (m: string) => string,
+  ) => {
     if (!concept) return;
-    regex.lastIndex = 0;
-    result = result.replace(regex, (match) => {
-      const display = displayFn(match);
-      const plain = concept.gloss[loc] || concept.gloss.en;
-      return encodeGlossToken(display, plain);
+    result = replaceOnUnmaskedSegments(result, (segment) => {
+      regex.lastIndex = 0;
+      return segment.replace(regex, (...args) => {
+        const match = args[0] as string;
+        const captures = args.slice(1, args.length - 2) as string[];
+        const termRef = captures.find((c) => typeof c === "string" && c.length > 0) ?? match;
+        const display = displayFn(termRef);
+        const plain = concept.gloss[loc] || concept.gloss.en;
+        return encodeGlossToken(display, plain);
+      });
     });
   };
 
-  repl(ZH_STEM_ELEMENT_REGEX, dayMaster, (m) => `核心特质（${m}）`);
-  repl(ZH_STEM_BRANCH_REGEX, TERM_GLOSSARY.find((c) => c.id === "大运流年"), (m) => `人生阶段（${m}）`);
-  repl(ZH_WUXING_YONGXI_REGEX, yong, (m) => `关键平衡（${m}）`);
-  repl(ZH_GUIRen_REGEX, guiren, (m) => guiren!.soft[loc] || m);
-  repl(ZH_WUXING_ELEMENT_CONTEXT_REGEX, yong, (m) => `能量特质（${m}）`);
+  replToken(/大运([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])/g, dayun, (m) =>
+    buildLocalizedGlossDisplay(dayun!, locale, m),
+  );
+  replToken(/流年([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])/g, liunian, (m) =>
+    buildLocalizedGlossDisplay(liunian!, locale, m),
+  );
+  replToken(/大运[：:\s]+([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])/g, dayun, (m) =>
+    buildLocalizedGlossDisplay(dayun!, locale, m),
+  );
+  replToken(/流年[：:\s]+([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])/g, liunian, (m) =>
+    buildLocalizedGlossDisplay(liunian!, locale, m),
+  );
+  replToken(ZH_STEM_ELEMENT_REGEX, dayMaster, (m) =>
+    buildLocalizedGlossDisplay(dayMaster!, locale, m),
+  );
+  replToken(ZH_STEM_BRANCH_REGEX, liunian, (m) =>
+    buildLocalizedGlossDisplay(liunian!, locale, m),
+  );
+  replToken(ZH_WUXING_YONGXI_REGEX, yong, (m) =>
+    buildLocalizedGlossDisplay(yong!, locale, m.replace(/^[喜忌用]+/, "").trim() || m),
+  );
+  replToken(ZH_GUIRen_REGEX, guiren, () => primarySoftLabel(guiren!, locale));
+  replToken(ZH_WUXING_ELEMENT_CONTEXT_REGEX, yong, (m) =>
+    buildLocalizedGlossDisplay(yong!, locale, m),
+  );
 
   return result;
 }
 
 function applyEnRegexReplacements(text: string, locale: string): string {
-  let result = text;
-  const loc = toGlossaryLocale(locale);
-  const yong = TERM_GLOSSARY.find((c) => c.id === "用神");
+  return replaceOnUnmaskedSegments(text, (segment) => {
+    let result = segment;
+    const yong = TERM_GLOSSARY.find((c) => c.id === "用神");
 
-  const repl = (regex: RegExp, concept: GlossaryConcept | undefined) => {
-    if (!concept) return;
-    const token = conceptToGlossToken(concept, locale);
-    regex.lastIndex = 0;
-    result = result.replace(regex, token);
-  };
+    const repl = (regex: RegExp, concept: GlossaryConcept | undefined) => {
+      if (!concept) return;
+      const token = conceptToGlossToken(concept, locale);
+      regex.lastIndex = 0;
+      result = result.replace(regex, token);
+    };
 
-  repl(EN_FAVORABLE_ELEMENT_REGEX, yong);
-  repl(EN_UNFAVORABLE_ELEMENT_REGEX, TERM_GLOSSARY.find((c) => c.id === "忌神"));
-  repl(EN_WUXING_ELEMENT_COMBO_REGEX, yong);
+    repl(EN_FAVORABLE_ELEMENT_REGEX, yong);
+    repl(EN_UNFAVORABLE_ELEMENT_REGEX, TERM_GLOSSARY.find((c) => c.id === "忌神"));
+    repl(EN_WUXING_ELEMENT_COMBO_REGEX, yong);
 
-  return result;
+    return result;
+  });
 }
 
 function applyTermGlossReplacements(text: string, locale: string): string {
   if (!text?.trim()) return text;
   let result = filterDeletedTerms(text);
-  result = applySortedTermReplacements(result, locale);
+  result = stripNestedChineseLabelWrappers(result, locale);
   const loc = toGlossaryLocale(locale);
   if (loc === "zh") {
     result = applyZhRegexReplacements(result, locale);
   } else {
     result = applyEnRegexReplacements(result, locale);
-    result = applyZhRegexReplacements(result, locale);
+    if (/[\u4e00-\u9fff]/.test(result)) {
+      result = applyZhRegexReplacements(result, locale);
+    }
   }
-  return result;
+  result = applySortedTermReplacements(result, locale);
+  return collapseDoubleTranslation(result);
 }
 
 /** Sanitize all string values in a JSON-like tree (user-visible fields only). */

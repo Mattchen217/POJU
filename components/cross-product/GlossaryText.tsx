@@ -55,12 +55,12 @@ function GlossaryMark({ display, plain, hanzi }: { display: string; plain: strin
       onClick={() => setOpen((o) => !o)}
     >
       {display}
-      {hanzi ? ` (${hanzi})` : ""}
+      {hanzi && !display.includes(hanzi) ? ` (${hanzi})` : ""}
       {open ? (
         <span id={id} role="tooltip" className="glossary-pop">
           <span className="glossary-pop__title">
             {display}
-            {hanzi ? ` (${hanzi})` : ""}
+            {hanzi && !display.includes(hanzi) ? ` (${hanzi})` : ""}
           </span>
           <span className="glossary-pop__body">{plain}</span>
         </span>

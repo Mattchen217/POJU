@@ -89,7 +89,7 @@ export const TERM_GLOSSARY: GlossaryConcept[] = [
     surface: "replace",
     forbidden_variants: ["用神", "Yong Shen", "Useful God", "yong shen"],
     ...sg(
-      "balancing element", "关键平衡能量", "energía de equilibrio clave", "énergie d'équilibre clé", "Schlüsselenergie des Ausgleichs",
+      "key balancing element", "关键平衡能量", "energía de equilibrio clave", "énergie d'équilibre clé", "Schlüsselenergie des Ausgleichs",
       "The quality that brings your profile into balance — what restores you when over-extended. A quality worth cultivating.",
       "让你的画像趋于平衡的能量——过度消耗时靠它回血，是值得养护的倾向。",
       "La cualidad que equilibra tu perfil: aquello que te restaura cuando te excedes.",
@@ -98,20 +98,45 @@ export const TERM_GLOSSARY: GlossaryConcept[] = [
     ),
   },
   {
+    id: "大运",
+    surface: "replace",
+    forbidden_variants: ["大运", "Da Yun", "Luck Pillar", "Luck Cycle", "Major Luck", "Decade Luck"],
+    ...sg(
+      "life phase", "人生阶段", "fase vital", "phase de vie", "Lebensphase",
+      "The longer chapter of energy you are moving through — a multi-year rhythm that shapes how your traits express over time.",
+      "你正在经历的一段较长时序章节——多年节律，影响特质如何随时间展开。",
+      "El capítulo energético más largo por el que transitas — un ritmo de varios años.",
+      "Le chapitre énergétique plus long que vous traversez — un rythme sur plusieurs années.",
+      "Das längere Energiekapitel, das du durchläufst — ein mehrjähriger Rhythmus.",
+    ),
+  },
+  {
+    id: "流年",
+    surface: "replace",
+    forbidden_variants: ["流年", "Liu Nian", "Fleeting Year", "Annual Pillar"],
+    ...sg(
+      "year's energy", "流年能量", "energía del año", "énergie de l'année", "Jahresenergie",
+      "The specific annual window of energy you are navigating right now — a shorter rhythm layered on top of your longer life phase.",
+      "你当下正在经历的年度能量窗口——叠在更长人生阶段之上的较短节律。",
+      "La ventana anual de energía específica por la que transitas ahora.",
+      "La fenêtre énergétique annuelle spécifique que vous traversez en ce moment.",
+      "Das spezifische jährliche Energiefenster, das du gerade durchläufst.",
+    ),
+  },
+  {
     id: "大运流年",
     surface: "replace",
     forbidden_variants: [
-      "大运", "Da Yun", "Luck Pillar", "Luck Cycle", "Major Luck", "Decade Luck",
-      "流年", "Liu Nian", "Fleeting Year", "Annual Pillar", "运势", "Fortune", "Luck", "Horoscope trend", "流年大运",
+      "运势", "Fortune", "Luck", "Horoscope trend", "流年大运",
+      "life phase theme", "life cycle / life phase", "profile / personality profile",
     ],
     ...sg(
-      "life cycle / life phase", "人生阶段 / 时序周期",
-      "ciclo de vida / fase temporal", "cycle de vie / phase temporelle", "Lebenszyklus / zeitliche Phase",
-      "The specific chronological chapter or annual window of energy you are navigating. It acts as an adaptive rhythm and decision-support lens, helping you understand which behaviors are supported in the present moment, rather than making unalterable predictions.",
-      "你正在经历的特定时序章节或年度能量窗口。它作为一个动态调整的节律与决策支持视角，帮助你理解当下哪些行为更具外部顺风，而非给出不可改变的预言。",
-      "El capítulo cronológico específico o ventana anual de energía por la que transitas. Funciona como un ritmo adaptativo y una lente de apoyo para la toma de decisiones.",
-      "Le chapitre chronologique spécifique ou la fenêtre énergétique annuelle que vous traversez. Il s'agit d'un rythme adaptatif et d'un outil d'aide à la décision.",
-      "Das spezifische chronologische Kapitel oder das jährliche Energiefenster, das du durchläufst. Es fungiert als anpassungsfähiger Rhythmus und Werkzeug zur Entscheidungsunterstützung.",
+      "life rhythm", "时序周期", "ritmo vital", "rythme temporel", "Zeitrhythmus",
+      "The interplay of longer and shorter energy rhythms in your profile — a decision-support lens, not a forecast.",
+      "你画像中较长与较短能量节律的交织——决策支持视角，而非预言。",
+      "La interacción de ritmos energéticos largos y cortos en tu perfil.",
+      "L'interaction des rythmes énergétiques longs et courts dans votre profil.",
+      "Das Zusammenspiel längerer und kürzerer Energierhythmen in deinem Profil.",
     ),
   },
   // ── A. 八字 / 排盘 ──
@@ -146,7 +171,7 @@ export const TERM_GLOSSARY: GlossaryConcept[] = [
     surface: "replace",
     forbidden_variants: ["命盘", "命局", "natal chart", "birth chart", "in your chart"],
     ...sg(
-      "profile / personality profile", "性格画像", "perfil / perfil de personalidad", "profil / profil de personnalité", "Profil / Persönlichkeitsprofil",
+      "personality profile", "性格画像", "perfil de personalidad", "profil de personnalité", "Persönlichkeitsprofil",
       "The comprehensive visual and analytical matrix that displays how your energy traits interact with each other across different life sectors.",
       "全景式的分析矩阵，直观展示你的各项能量特质在不同生命领域中如何相互作用与交织。",
       "La matriz visual y analítica integral que muestra cómo interactúan tus rasgos energéticos entre sí.",
@@ -183,12 +208,9 @@ export const TERM_GLOSSARY: GlossaryConcept[] = [
   {
     id: "干支名",
     surface: "replace",
-    forbidden_variants: [
-      "干支名", "Yi Wood", "Jia Wood", "Bing Fire", "Ding Fire", "Wu Earth", "Ji Earth",
-      "Geng Metal", "Xin Metal", "Ren Water", "Gui Water", "Ding You", "Ding Hai",
-    ],
+    forbidden_variants: ["干支名"],
     ...sg(
-      "life phase theme", "阶段能量主题", "tema de la fase de vida", "thème de la phase de vie", "Thema der Lebensphase",
+      "stem-branch pair", "干支组合", "par tronco-rama", "paire tronc-branche", "Stamm-Zweig-Paar",
       "The specific dynamic quality resulting from the union of active expression and inner motivation during a defined period. It dictates the dominant psychological undertone.",
       "在特定生命周期内，显性表达与内在动机结合后所产生的特定动态。它决定了这一时期占主导地位的心理底色。",
       "La cualidad dinámica específica resultante de la unión entre la expresión activa y la motivación interna durante un periodo definido.",

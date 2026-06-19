@@ -141,7 +141,7 @@ export const MATCH_OUTPUT_BRANDING = `# ⚠️ Match 输出品牌（JSON 5 段 �
 
 - 产品：**Match**，**兼容性 / synergy 评估**
 - 结构：**5 段卡片** — analysis_a / analysis_b / combined / conclusion / recommendations
-- 用户可见须软化 chart / Day Master / Yong Shen → profile / core nature / balancing element
+- 可自然使用命理术语（日主/大运/用神/干支等）；输出端会统一软翻译 — 守六条语义红线即可
 - **五行 Wood/Fire/Earth/Metal/Water** 作能量互动 — **可保留**
 - synergy_type 用英文 id + 用户语言的类型名（Full Resonance / 完全共鸣 等）
 - **《易经》**阴阳互补、变化之道 — 至少一处（非占卜）
