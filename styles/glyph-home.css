@@ -417,7 +417,6 @@
 
 .glyph-canvas--delivery .glyph-card--compact {
   max-width: 100%;
-  filter: drop-shadow(0 16px 36px var(--wind-glow));
 }
 
 .glyph-report {
@@ -795,6 +794,6 @@
   text-align: center;
 }
 
-.archive-detail-page .glyph-report {
+.archive-detail-page .glyph-delivery-panel {
   margin-top: 0.5rem;
 }

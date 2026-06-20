@@ -4,13 +4,12 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { useParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
-import { GlyphReport } from "@/components/glyph/GlyphReport";
+import { GlyphDeliveryView } from "@/components/glyph/GlyphDeliveryView";
 import { ToolPaywallInline } from "@/components/cross-product/ToolPaywallInline";
 import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
 import { DeliveryWaitFrame } from "@/components/wait-ritual/DeliveryWaitFrame";
 import { DeliveryWaitCrossfade } from "@/components/wait-ritual/DeliveryWaitCrossfade";
 import { saveGlyphReadingToArchive } from "@/lib/archive/archive-service";
-import { glyphWindAccentStyle } from "@/lib/glyph/glyph-wind-accents";
 import { markArchiveUnread } from "@/lib/archive/archive-unread";
 import { prepareToolUnlockBase } from "@/lib/cross-product/finalize-tool-unlock";
 import {
@@ -30,16 +29,11 @@ import {
   GLYPH_READING_CLIENT_TIMEOUT_MS,
 } from "@/lib/oracle/api";
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
-import { PojuDeepDiveCTA } from "@/components/cross-product/PojuDeepDiveCTA";
-import { GlyphDeliveryBanners } from "@/components/glyph/GlyphDeliveryBanners";
-import { ReturnToPojuCTA } from "@/components/poju/ReturnToPojuCTA";
 import {
   classifyGlyphReadingError,
   GLYPH_READING_ERROR_I18N_KEY,
 } from "@/lib/glyph/glyph-reading-errors";
-import { extractGlyphSummary } from "@/lib/poju/tool-result-summary";
 import { useDeliveryWaitPhase } from "@/lib/wait-ritual/use-delivery-wait-phase";
-import type { CSSProperties } from "react";
 import { LEVEL_META, type SignData } from "@/types/oracle";
 
 type Stage = "loading" | "paywall" | "base-prep" | "glyph-gen" | "ready" | "error";
@@ -364,12 +358,6 @@ export function GlyphReadingPage() {
   }
 
   if (finishCrossfadeStarted && glyph && reading) {
-    const glyphSummary = extractGlyphSummary({
-      reading_id: readingId,
-      question,
-      glyph,
-      reading,
-    });
     const reportText = baseReportText ?? loadGlyphDrawSession(readingId)?.base_report_text ?? "";
 
     const waitFrame = (
@@ -426,36 +414,13 @@ export function GlyphReadingPage() {
         showDelivery
         waitFrame={waitFrame}
         delivery={
-          <div
-            className="glyph-reading-page browser-flow-page"
-            style={glyphWindAccentStyle(glyph.level) as CSSProperties}
-          >
-            <ReturnToPojuCTA
-              tool="glyph"
-              resultId={readingId}
-              resultData={glyphSummary}
-              variant="banner"
-            />
-            <GlyphDeliveryBanners variant="others" />
-            <GlyphReport
-              reading={reading}
-              glyph={glyph}
-              question={question}
-              baseReportText={reportText || undefined}
-            />
-            <PojuDeepDiveCTA productId="glyph" result_id={readingId} result_data={glyphSummary} />
-            <ReturnToPojuCTA
-              tool="glyph"
-              resultId={readingId}
-              resultData={glyphSummary}
-              variant="footer"
-            />
-            <div className="glyph-reading-footer">
-              <Link href="/glyph" className="glyph-link-muted">
-                {t("back_to_glyph")}
-              </Link>
-            </div>
-          </div>
+          <GlyphDeliveryView
+            reading={reading}
+            glyph={glyph}
+            question={question}
+            readingId={readingId}
+            baseReportText={reportText || undefined}
+          />
         }
       />
     );
@@ -536,45 +501,15 @@ export function GlyphReadingPage() {
     return null;
   }
 
-  const glyphSummary = extractGlyphSummary({
-    reading_id: readingId,
-    question,
-    glyph,
-    reading,
-  });
-
   const reportText = baseReportText ?? loadGlyphDrawSession(readingId)?.base_report_text ?? "";
 
   return (
-    <div
-      className="glyph-reading-page browser-flow-page"
-      style={glyphWindAccentStyle(glyph.level) as CSSProperties}
-    >
-      <ReturnToPojuCTA
-        tool="glyph"
-        resultId={readingId}
-        resultData={glyphSummary}
-        variant="banner"
-      />
-      <GlyphDeliveryBanners variant="others" />
-      <GlyphReport
-        reading={reading}
-        glyph={glyph}
-        question={question}
-        baseReportText={reportText || undefined}
-      />
-      <PojuDeepDiveCTA productId="glyph" result_id={readingId} result_data={glyphSummary} />
-      <ReturnToPojuCTA
-        tool="glyph"
-        resultId={readingId}
-        resultData={glyphSummary}
-        variant="footer"
-      />
-      <div className="glyph-reading-footer">
-        <Link href="/glyph" className="glyph-link-muted">
-          {t("back_to_glyph")}
-        </Link>
-      </div>
-    </div>
+    <GlyphDeliveryView
+      reading={reading}
+      glyph={glyph}
+      question={question}
+      readingId={readingId}
+      baseReportText={reportText || undefined}
+    />
   );
 }

@@ -1,15 +1,17 @@
 "use client";
 
-import "@/styles/glyph-home.css";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
-import { GlyphReport } from "@/components/glyph/GlyphReport";
+
+import { GlyphDeliveryView } from "@/components/glyph/GlyphDeliveryView";
+import { getCachedBaseAnalysis } from "@/lib/cross-product/get-cached-base-analysis";
 import {
   deleteArchiveItem,
   type GlyphReadingArchiveData,
 } from "@/lib/archive/archive-service";
-import { pojuChatColumn } from "@/lib/poju/chat-layout";
-import { cn } from "@/lib/utils/classnames";
+import { loadGlyphDrawSession } from "@/lib/glyph/glyph-draw-session";
+import { loadGlyphBySignData } from "@/lib/glyph/load-glyph";
 import type { SignData } from "@/types/oracle";
 
 type Props = {
@@ -21,14 +23,41 @@ export function GlyphArchiveDetail({ archiveId, data }: Props) {
   const t = useTranslations("archiveDetail");
   const tGlyph = useTranslations("glyph");
   const router = useRouter();
+  const [baseReportText, setBaseReportText] = useState<string | undefined>();
 
-  const glyphStub: SignData = {
-    sign_number: data.sign_number,
-    level: data.sign_level,
-    verse_lines_en: [],
-    summary_line_en: "",
-    raw_md_content: "",
-  };
+  const glyph = useMemo(
+    (): SignData =>
+      loadGlyphBySignData({
+        sign_number: data.sign_number,
+        level: data.sign_level,
+        verse_lines_en: [],
+        summary_line_en: "",
+        raw_md_content: "",
+      }),
+    [data.sign_level, data.sign_number],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadBaseReport() {
+      const fromSession = loadGlyphDrawSession(data.reading_id)?.base_report_text?.trim();
+      if (fromSession) {
+        if (!cancelled) setBaseReportText(fromSession);
+        return;
+      }
+
+      const cached = await getCachedBaseAnalysis(data.profile_id);
+      if (!cancelled && cached?.reportText?.trim()) {
+        setBaseReportText(cached.reportText.trim());
+      }
+    }
+
+    void loadBaseReport();
+    return () => {
+      cancelled = true;
+    };
+  }, [data.profile_id, data.reading_id]);
 
   async function handleDelete() {
     if (!confirm(t("confirm_delete"))) return;
@@ -37,36 +66,39 @@ export function GlyphArchiveDetail({ archiveId, data }: Props) {
   }
 
   return (
-    <div className={cn("archive-detail-page browser-flow-page px-4 md:px-6", pojuChatColumn)}>
-      <div className="detail-header mb-8">
-        <Link href="/archive" className="text-sm text-violet-300 hover:text-white">
-          ← {t("back")}
-        </Link>
-        <h1 className="mt-4 font-['Manrope'] text-2xl font-bold text-[#d0bcff]">
-          {tGlyph("archive_detail_title", {
-            name: data.question?.trim() || data.glyph_display_name,
-          })}
-        </h1>
-        <p className="mt-1 text-sm text-[#958ea0]">
-          {new Date(data.delivered_at).toLocaleString()}
-        </p>
-      </div>
-
-      <GlyphReport
-        reading={data.reading}
-        glyph={glyphStub}
-        question={data.question}
-      />
-
-      <div className="detail-footer mt-10 flex flex-wrap gap-3">
-        <button
-          type="button"
-          onClick={() => void handleDelete()}
-          className="danger rounded-lg border border-red-400/30 px-5 py-2 text-sm text-red-300 hover:bg-red-500/10"
-        >
-          {t("delete")}
-        </button>
-      </div>
-    </div>
+    <GlyphDeliveryView
+      variant="archive"
+      reading={data.reading}
+      glyph={glyph}
+      question={data.question}
+      readingId={data.reading_id}
+      baseReportText={baseReportText}
+      header={
+        <div className="glyph-archive-delivery-header">
+          <Link href="/archive" className="glyph-archive-delivery-header__back">
+            ← {t("back")}
+          </Link>
+          <h1 className="glyph-archive-delivery-header__title">
+            {tGlyph("archive_detail_title", {
+              name: data.question?.trim() || data.glyph_display_name,
+            })}
+          </h1>
+          <p className="glyph-archive-delivery-header__date">
+            {new Date(data.delivered_at).toLocaleString()}
+          </p>
+        </div>
+      }
+      footer={
+        <div className="glyph-archive-delivery-footer">
+          <button
+            type="button"
+            onClick={() => void handleDelete()}
+            className="glyph-archive-delivery-footer__delete"
+          >
+            {t("delete")}
+          </button>
+        </div>
+      }
+    />
   );
 }

@@ -68,6 +68,8 @@
   align-items: stretch;
   justify-content: center;
   height: var(--glyph-delivery-card-h, calc(200px * 16 / 9));
+  overflow: hidden;
+  isolation: isolate;
 }
 
 .glyph-delivery-hero__card .glyph-canvas--delivery {
@@ -471,4 +473,57 @@
 .glyph-reading-page .poju-deep-dive-cta {
   max-width: 920px;
   margin-inline: auto;
+}
+
+.glyph-archive-delivery-header {
+  width: 100%;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 0;
+  box-sizing: border-box;
+}
+
+.glyph-archive-delivery-header__back {
+  font-size: 0.875rem;
+  color: rgba(196, 168, 128, 0.85);
+  text-decoration: none;
+}
+
+.glyph-archive-delivery-header__back:hover {
+  color: #c5a880;
+}
+
+.glyph-archive-delivery-header__title {
+  margin: 1rem 0 0.35rem;
+  font-family: var(--font-garamond, Georgia, serif);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #e4e6ea;
+}
+
+.glyph-archive-delivery-header__date {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: rgba(203, 195, 215, 0.65);
+}
+
+.glyph-archive-delivery-footer {
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
+  padding: 0 1.25rem 1rem;
+}
+
+.glyph-archive-delivery-footer__delete {
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  border-radius: 0.5rem;
+  padding: 0.5rem 1.25rem;
+  font-size: 0.875rem;
+  color: rgb(252, 165, 165);
+  background: transparent;
+  cursor: pointer;
+}
+
+.glyph-archive-delivery-footer__delete:hover {
+  background: rgba(239, 68, 68, 0.1);
 }
