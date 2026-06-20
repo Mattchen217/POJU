@@ -99,7 +99,8 @@ function BlockquoteContent({
 }
 
 export function RichReadingText({ text, locale, className, variant = "body" }: Props) {
-  const dedupeScope = useMemo(() => new Set<string>(), [text]);
+  // Fresh Set each render — must not survive across StrictMode/re-renders (mutated during parse).
+  const dedupeScope = new Set<string>();
   const blocks = useMemo(() => parseReadingBlocks(text), [text]);
 
   if (!blocks.length) {
