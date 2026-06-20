@@ -137,11 +137,10 @@ export function stripMarkersForPrompt(text: string): string {
   );
 }
 
-/** Remove broken / unclosed markers so users never see raw `⟦`. */
+/** Remove broken / unclosed markers so users never see raw `⟦`. Intact closed markers become visible text. */
 export function stripBrokenMarkers(text: string): string {
   if (!text.includes("⟦") && !text.includes("⟧")) return text;
   let r = text
-    .replace(/⟦t:[a-zA-Z0-9_]+\|((?:\\.|[^|\\])*?)⟧/g, (_, v: string) => unescapeMarkerPart(v))
     .replace(/⟦t:[a-zA-Z0-9_]+\|((?:\\.|[^|\\])*?)(?=⟧|$)/g, (_, v: string) => unescapeMarkerPart(v))
     .replace(/⟦g\|((?:\\.|[^|\\])*)\|((?:\\.|[^|]|\\[^⟧])*?)⟧/g, (_, d: string) =>
       d.replace(/\\(.)/g, "$1"),

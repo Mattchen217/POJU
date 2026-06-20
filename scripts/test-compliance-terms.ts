@@ -52,6 +52,12 @@ function main() {
   assert(!fixed.includes("⟦"), "no raw delimiter after strip");
   assert(fixed.includes("core nature (乙木)"), "visible text preserved");
 
+  const intact = "Your ⟦t:day_master|core nature (乙木)⟧ thrives.";
+  assert(
+    stripBrokenMarkers(intact) === "Your core nature (乙木) thrives.",
+    "closed marker becomes visible when stripping",
+  );
+
   console.log("\n=== bare sign poem audit (en) ===");
   const poem = "The theme echoes 志气功业在朝朝，今将酒色不胜饶 in tone.";
   const poemAudit = auditDeliveredText(poem, "en");

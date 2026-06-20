@@ -89,7 +89,8 @@ function LegacyGlossMark({ display, plain }: { display: string; plain: string })
 
 function renderPlainText(segment: string, keyPrefix: number): ReactNode[] {
   if (!segment) return [];
-  return [<span key={`plain-${keyPrefix}`}>{segment}</span>];
+  const clean = stripBrokenMarkers(segment);
+  return clean ? [<span key={`plain-${keyPrefix}`}>{clean}</span>] : [];
 }
 
 function findNextMarker(
@@ -196,19 +197,18 @@ function FirstVisitHint() {
 
 export function GlossaryText({ text, locale, seen }: Props) {
   const localSeen = seen ?? new Set<string>();
-  const safeText = stripBrokenMarkers(text);
-  const hasMarkers = safeText.includes("⟦t:") || safeText.includes("⟦g|");
-
-  const nodes = parseMarkedText(safeText, locale, localSeen, 0);
+  const hasMarkers = text.includes("⟦t:") || text.includes("⟦g|");
+  const nodes = parseMarkedText(text, locale, localSeen, 0);
 
   if (!hasMarkers) {
-    return <>{nodes.length ? nodes : safeText}</>;
+    const clean = stripBrokenMarkers(text);
+    return <>{nodes.length ? nodes : clean}</>;
   }
 
   return (
     <>
       <FirstVisitHint />
-      {nodes.length ? nodes : safeText}
+      {nodes.length ? nodes : stripBrokenMarkers(text)}
     </>
   );
 }
