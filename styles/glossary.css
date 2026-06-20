@@ -1,7 +1,61 @@
+/* Term marks — golden word + [···] info affordance (no underline mutation) */
+
+.term-mark {
+  display: inline;
+  white-space: nowrap;
+}
+
+.term-mark__word {
+  color: #d4af37;
+  font-weight: 500;
+  cursor: help;
+  position: relative;
+}
+
+.term-mark__info {
+  display: inline;
+  margin-left: 2px;
+  padding: 0 1px;
+  border: none;
+  background: none;
+  color: #d4af37;
+  font-size: 0.82em;
+  line-height: 1;
+  cursor: pointer;
+  vertical-align: baseline;
+  font-family: inherit;
+}
+
+.term-mark__info--inline {
+  pointer-events: none;
+}
+
+.term-hint {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(212, 175, 55, 0.08);
+  border: 0.5px solid rgba(212, 175, 55, 0.25);
+  font-size: 13px;
+  color: #cbd0e0;
+}
+
+.term-hint__dismiss {
+  margin-left: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #d4af37;
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Legacy glossary popover (shared with term marks) */
 .glossary-mark {
-  text-decoration: underline dotted;
-  text-decoration-color: rgba(212, 175, 55, 0.5);
-  text-underline-offset: 3px;
+  color: #d4af37;
+  font-weight: 500;
   cursor: help;
   position: relative;
 }
@@ -34,8 +88,16 @@
   color: #cbd0e0;
 }
 
-/* Panel scroll containers — open tooltip upward to avoid overflow clip */
 .streaming-analysis-panel .glossary-pop {
+  top: auto;
+  bottom: 1.6em;
+}
+
+.term-mark .glossary-pop {
+  top: 1.6em;
+}
+
+.streaming-analysis-panel .term-mark .glossary-pop {
   top: auto;
   bottom: 1.6em;
 }

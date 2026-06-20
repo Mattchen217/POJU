@@ -20,6 +20,39 @@ import {
   auditOutputPolicyText,
   detectOutputPolicyViolations,
 } from "@/lib/llm/compliance/audit-output";
+import {
+  BARE_SIGN_POEM_PATTERN,
+  buildTermMarkingPromptBlock,
+  detectBrokenMarkers,
+  encodeTermMarker,
+  maskMarkersForAudit,
+  parseTermMarkers,
+  plainByTermId,
+  stripBrokenMarkers,
+  stripMarkersForPrompt,
+  TERM_ENTRIES,
+  TERM_MARKER_PATTERN,
+  type ParsedTermMarker,
+  type TermEntry,
+  uiTermById,
+  unescapeMarkerPart,
+} from "@/lib/llm/sanitize/term-marking";
+
+export {
+  BARE_SIGN_POEM_PATTERN,
+  buildTermMarkingPromptBlock,
+  encodeTermMarker,
+  parseTermMarkers,
+  plainByTermId,
+  stripBrokenMarkers,
+  stripMarkersForPrompt,
+  TERM_ENTRIES,
+  TERM_MARKER_PATTERN,
+  type ParsedTermMarker,
+  type TermEntry,
+  uiTermById,
+  unescapeMarkerPart,
+};
 
 export { EN_TERM_MAP, ZH_TERM_MAP };
 
@@ -133,9 +166,12 @@ export function encodeGlossToken(display: string, plain: string): string {
   return `⟦g|${escapeGlossPart(display)}|${escapeGlossPart(plain)}⟧`;
 }
 
-/** Compact display-only form for LLM history (no plain text — cache-stable). */
+/** Compact display-only form for LLM history (legacy gloss + term markers). */
 export function stripGlossTokensForPrompt(text: string): string {
-  return text.replace(GLOSS_TOKEN_PATTERN, (_, display: string) => unescapeGlossPart(display));
+  const noLegacy = text.replace(GLOSS_TOKEN_PATTERN, (_, display: string) =>
+    unescapeGlossPart(display),
+  );
+  return stripMarkersForPrompt(noLegacy);
 }
 
 export type ParsedGlossToken = { display: string; plain: string; raw: string };
@@ -345,27 +381,15 @@ function applyEnRegexReplacements(text: string, locale: string): string {
   });
 }
 
-function applyTermGlossReplacements(text: string, locale: string): string {
-  if (!text?.trim()) return text;
-  let result = filterDeletedTerms(text);
-  result = stripNestedChineseLabelWrappers(result, locale);
-  const loc = toGlossaryLocale(locale);
-  if (loc === "zh") {
-    result = applyZhRegexReplacements(result, locale);
-  } else {
-    result = applyEnRegexReplacements(result, locale);
-    if (/[\u4e00-\u9fff]/.test(result)) {
-      result = applyZhRegexReplacements(result, locale);
-    }
-  }
-  result = applySortedTermReplacements(result, locale);
-  return collapseDoubleTranslation(result);
+function applyTermGlossReplacements(text: string, _locale: string): string {
+  return text;
 }
 
-/** Sanitize all string values in a JSON-like tree (user-visible fields only). */
+/** Walk JSON tree and audit string fields (no mutation). */
 export function sanitizeDeepStringFields(value: unknown, locale: string): unknown {
   if (typeof value === "string") {
-    return applyComplianceSanitize(value, locale).text;
+    auditDeliveredText(value, locale);
+    return value;
   }
   if (Array.isArray(value)) {
     return value.map((v) => sanitizeDeepStringFields(v, locale));
@@ -383,20 +407,55 @@ export function sanitizeDeepStringFields(value: unknown, locale: string): unknow
 const DELIVERY_MARKER_RE =
   /(═══\s*(?:ANALYSIS|CONCLUSION|WHAT\s+(?:TO\s+DO|YOU\s+CAN\s+DO)|COMING\s+BACK)\s*═══)/gi;
 
-/** Sanitize POJU final delivery — preserve ═══ marker lines. */
+/** Audit POJU final delivery — preserve ═══ marker lines; no mutation. */
 export function sanitizeDeliveryText(fullText: string, locale: string): string {
   const parts = fullText.split(DELIVERY_MARKER_RE);
-  return parts
-    .map((part, i) => (i % 2 === 1 ? part : applyComplianceSanitize(part, locale).text))
-    .join("");
+  parts.forEach((part, i) => {
+    if (i % 2 === 0) auditDeliveredText(part, locale);
+  });
+  return fullText;
 }
 
-/** @deprecated Prompt no longer carries term tables — output-side sanitize handles terms. */
+/** @deprecated Use buildTermMarkingPromptBlock — LLM marks terms at generation time. */
 export function buildComplianceTranslationPromptBlock(_locale: Locale = "en"): string {
-  return `# 术语输出说明
+  return buildTermMarkingPromptBlock(_locale);
+}
 
-可自然使用命理术语（日主/丙火/用神/大运等）与中文；**输出端会自动软翻译并附白话解释**。
-你只需遵守六条语义红线（不预测/不算命/不占卜/不决吉凶/不恐吓/不超自然承诺）。`;
+/** Read-only delivery audit: bare forbidden terms, bare sign poems, broken markers, red lines. */
+export function auditDeliveredText(text: string, locale: string): ComplianceViolation[] {
+  if (!text?.trim()) return [];
+  const violations = detectComplianceViolations(maskMarkersForAudit(text), locale);
+
+  if (detectBrokenMarkers(text)) {
+    violations.push({ label: "broken_marker", snippet: snippetAround(text, text.indexOf("⟦"), 12) });
+  }
+
+  if (!locale.startsWith("zh")) {
+    BARE_SIGN_POEM_PATTERN.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    const masked = maskMarkersForAudit(text);
+    while ((m = BARE_SIGN_POEM_PATTERN.exec(masked)) !== null) {
+      violations.push({
+        label: "bare_sign_poem",
+        snippet: snippetAround(masked, m.index, m[0].length),
+      });
+    }
+  }
+
+  if (violations.length > 0) {
+    console.warn(
+      `[compliance-audit] delivery audit (${violations.length}, locale=${locale}):`,
+      violations.slice(0, 5),
+    );
+  }
+
+  const seen = new Set<string>();
+  return violations.filter((v) => {
+    const key = `${v.label}:${v.snippet}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 /** Detect policy + glossary forbidden terms (audit-only). Does NOT flag allow-list labels. */
@@ -469,35 +528,15 @@ export type ComplianceSanitizeResult = {
 };
 
 /**
- * Output-side sanitize: term fingerprint → gloss tokens; red-line semantics → audit only.
+ * Output-side pass-through + audit only. LLM marks terms; UI renders markers.
  */
 export function applyComplianceSanitize(text: string, locale: string): ComplianceSanitizeResult {
   if (!text?.trim()) {
     return { text: text ?? "", violationsBefore: [], violationsAfter: [] };
   }
 
-  const violationsBefore = detectComplianceViolations(text, locale);
-  const replaced = applyTermGlossReplacements(text, locale);
-  const violationsAfter = detectComplianceViolations(replaced, locale);
-
-  const redLineAfter = detectOutputPolicyViolations(replaced, locale);
-  if (redLineAfter.length > 0) {
-    console.error(
-      `[compliance-audit] Red-line hits after sanitize (${redLineAfter.length}, locale=${locale}):`,
-      redLineAfter.slice(0, 5),
-    );
-  }
-
-  if (violationsBefore.length > 0) {
-    const termHits = violationsBefore.filter((v) => v.label.startsWith("term:"));
-    if (termHits.length > 0) {
-      console.log(
-        `[compliance-sanitize] terms replaced: ${termHits.length} → gloss tokens (locale=${locale})`,
-      );
-    }
-  }
-
-  return { text: replaced, violationsBefore, violationsAfter };
+  const violationsBefore = auditDeliveredText(text, locale);
+  return { text, violationsBefore, violationsAfter: violationsBefore };
 }
 
 export { auditOutputPolicyText, detectOutputPolicyViolations, toGlossaryLocale };

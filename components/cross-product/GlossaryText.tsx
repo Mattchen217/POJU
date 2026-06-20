@@ -4,25 +4,29 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 import {
   GLOSS_TOKEN_PATTERN,
-  parseGlossTokens,
+  stripBrokenMarkers,
+  TERM_MARKER_PATTERN,
+  uiTermById,
   unescapeGlossPart,
+  unescapeMarkerPart,
 } from "@/lib/llm/sanitize/compliance-terms";
-import { tippableEntries, toGlossaryLocale, type Locale } from "@/lib/glossary/term-glossary";
+import { toGlossaryLocale, type Locale } from "@/lib/glossary/term-glossary";
 
 import "@/styles/glossary.css";
 
-type TippableEntry = { label: string; hanzi?: string; gloss: string };
-
 type Props = { text: string; locale: string; seen?: Set<string> };
 
-function isWordBoundary(text: string, idx: number, label: string, locale: Locale): boolean {
-  if (locale === "zh") return true;
-  const before = idx > 0 ? text[idx - 1] : " ";
-  const after = idx + label.length < text.length ? text[idx + label.length] : " ";
-  return !/[A-Za-z0-9]/.test(before) && !/[A-Za-z0-9]/.test(after);
-}
+const HINT_KEY = "poju-term-hint-seen";
 
-function GlossaryMark({ display, plain, hanzi }: { display: string; plain: string; hanzi?: string }) {
+function TermMark({
+  visible,
+  plain,
+  showInfo,
+}: {
+  visible: string;
+  plain: string;
+  showInfo: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const id = useId();
   const ref = useRef<HTMLSpanElement>(null);
@@ -41,27 +45,36 @@ function GlossaryMark({ display, plain, hanzi }: { display: string; plain: strin
     };
   }, [open]);
 
+  const toggle = () => setOpen((o) => !o);
+
   return (
-    <span
-      ref={ref}
-      className="glossary-mark"
-      tabIndex={0}
-      role="button"
-      aria-describedby={open ? id : undefined}
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-      onFocus={() => setOpen(true)}
-      onBlur={() => setOpen(false)}
-      onClick={() => setOpen((o) => !o)}
-    >
-      {display}
-      {hanzi && !display.includes(hanzi) ? ` (${hanzi})` : ""}
-      {open ? (
+    <span ref={ref} className="term-mark">
+      <span
+        className="term-mark__word"
+        tabIndex={0}
+        role="button"
+        aria-describedby={open ? id : undefined}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+        onClick={toggle}
+      >
+        {visible}
+      </span>
+      {showInfo ? (
+        <button
+          type="button"
+          className="term-mark__info"
+          aria-label="Explain term"
+          onClick={toggle}
+        >
+          [···]
+        </button>
+      ) : null}
+      {open && plain ? (
         <span id={id} role="tooltip" className="glossary-pop">
-          <span className="glossary-pop__title">
-            {display}
-            {hanzi && !display.includes(hanzi) ? ` (${hanzi})` : ""}
-          </span>
+          <span className="glossary-pop__title">{visible}</span>
           <span className="glossary-pop__body">{plain}</span>
         </span>
       ) : null}
@@ -69,83 +82,133 @@ function GlossaryMark({ display, plain, hanzi }: { display: string; plain: strin
   );
 }
 
-/** Render plain segment — legacy soft labels still tippable when no gloss token. */
-function renderPlainSegment(
-  segment: string,
-  glossaryLocale: Locale,
-  entries: TippableEntry[],
-  localSeen: Set<string>,
-  keyPrefix: number,
+/** Legacy ⟦g|display|plain⟧ — still rendered for older cached deliveries. */
+function LegacyGlossMark({ display, plain }: { display: string; plain: string }) {
+  return <TermMark visible={display} plain={plain} showInfo />;
+}
+
+function renderPlainText(segment: string, keyPrefix: number): ReactNode[] {
+  if (!segment) return [];
+  return [<span key={`plain-${keyPrefix}`}>{segment}</span>];
+}
+
+function findNextMarker(
+  text: string,
+  from: number,
+): { index: number; raw: string; kind: "t" | "g"; groups: string[] } | null {
+  TERM_MARKER_PATTERN.lastIndex = from;
+  GLOSS_TOKEN_PATTERN.lastIndex = from;
+  const tMatch = TERM_MARKER_PATTERN.exec(text);
+  const gMatch = GLOSS_TOKEN_PATTERN.exec(text);
+  if (!tMatch && !gMatch) return null;
+  if (tMatch && (!gMatch || tMatch.index <= gMatch.index)) {
+    return { index: tMatch.index, raw: tMatch[0], kind: "t", groups: [tMatch[1], tMatch[2]] };
+  }
+  return {
+    index: gMatch!.index,
+    raw: gMatch![0],
+    kind: "g",
+    groups: [gMatch![1], gMatch![2]],
+  };
+}
+
+function parseMarkedText(
+  text: string,
+  locale: string,
+  seen: Set<string>,
+  keyBase: number,
 ): ReactNode[] {
   const nodes: ReactNode[] = [];
-  let rest = segment;
+  const glossaryLocale = toGlossaryLocale(locale);
+  let cursor = 0;
   let keyIdx = 0;
 
-  outer: while (rest.length) {
-    for (const e of entries) {
-      if (localSeen.has(e.label)) continue;
-      const idx = rest.indexOf(e.label);
-      if (idx >= 0 && isWordBoundary(rest, idx, e.label, glossaryLocale)) {
-        if (idx > 0) nodes.push(rest.slice(0, idx));
-        nodes.push(
-          <GlossaryMark
-            key={`${keyPrefix}-${keyIdx++}-${e.label}`}
-            display={e.label}
-            plain={e.gloss}
-            hanzi={e.hanzi}
-          />,
-        );
-        localSeen.add(e.label);
-        rest = rest.slice(idx + e.label.length);
-        continue outer;
-      }
+  while (cursor < text.length) {
+    const next = findNextMarker(text, cursor);
+    if (!next) {
+      nodes.push(...renderPlainText(text.slice(cursor), keyBase + keyIdx++));
+      break;
     }
-    nodes.push(rest);
-    break;
+    if (next.index > cursor) {
+      nodes.push(...renderPlainText(text.slice(cursor, next.index), keyBase + keyIdx++));
+    }
+    if (next.kind === "t") {
+      const termId = next.groups[0];
+      const visible = unescapeMarkerPart(next.groups[1]);
+      const ui = uiTermById(termId, glossaryLocale);
+      const plain = ui?.plain ?? "";
+      const showInfo = !seen.has(termId);
+      if (showInfo) seen.add(termId);
+      nodes.push(
+        <TermMark
+          key={`t-${keyBase}-${keyIdx++}`}
+          visible={visible}
+          plain={plain}
+          showInfo={showInfo}
+        />,
+      );
+    } else {
+      const display = unescapeGlossPart(next.groups[0]);
+      const plain = unescapeGlossPart(next.groups[1]);
+      nodes.push(
+        <LegacyGlossMark key={`g-${keyBase}-${keyIdx++}`} display={display} plain={plain} />,
+      );
+    }
+    cursor = next.index + next.raw.length;
   }
 
   return nodes;
 }
 
-export function GlossaryText({ text, locale, seen }: Props) {
-  const glossaryLocale = toGlossaryLocale(locale);
-  const entries = tippableEntries(glossaryLocale);
-  const localSeen = seen ?? new Set<string>();
-  const nodes: ReactNode[] = [];
+function FirstVisitHint() {
+  const [show, setShow] = useState(false);
 
-  GLOSS_TOKEN_PATTERN.lastIndex = 0;
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-  let tokenIdx = 0;
-
-  while ((match = GLOSS_TOKEN_PATTERN.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      const plain = text.slice(lastIndex, match.index);
-      nodes.push(
-        ...renderPlainSegment(plain, glossaryLocale, entries, localSeen, tokenIdx),
-      );
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(HINT_KEY) !== "1") setShow(true);
+    } catch {
+      /* ignore */
     }
-    const display = unescapeGlossPart(match[1]);
-    const plain = unescapeGlossPart(match[2]);
-    nodes.push(
-      <GlossaryMark
-        key={`gloss-${tokenIdx++}`}
-        display={display}
-        plain={plain}
-      />,
-    );
-    lastIndex = match.index + match[0].length;
+  }, []);
+
+  if (!show) return null;
+
+  return (
+    <p className="term-hint" role="note">
+      Tap{" "}
+      <span className="term-mark__info term-mark__info--inline" aria-hidden>
+        [···]
+      </span>{" "}
+      beside highlighted terms for a plain-language explanation.{" "}
+      <button type="button" className="term-hint__dismiss" onClick={() => {
+        setShow(false);
+        try {
+          localStorage.setItem(HINT_KEY, "1");
+        } catch {
+          /* ignore */
+        }
+      }}>
+        Got it
+      </button>
+    </p>
+  );
+}
+
+export function GlossaryText({ text, locale, seen }: Props) {
+  const localSeen = seen ?? new Set<string>();
+  const safeText = stripBrokenMarkers(text);
+  const hasMarkers = safeText.includes("⟦t:") || safeText.includes("⟦g|");
+
+  const nodes = parseMarkedText(safeText, locale, localSeen, 0);
+
+  if (!hasMarkers) {
+    return <>{nodes.length ? nodes : safeText}</>;
   }
 
-  if (lastIndex < text.length) {
-    nodes.push(
-      ...renderPlainSegment(text.slice(lastIndex), glossaryLocale, entries, localSeen, tokenIdx),
-    );
-  }
-
-  if (nodes.length === 0) {
-    return <>{renderPlainSegment(text, glossaryLocale, entries, localSeen, 0)}</>;
-  }
-
-  return <>{nodes}</>;
+  return (
+    <>
+      <FirstVisitHint />
+      {nodes.length ? nodes : safeText}
+    </>
+  );
 }

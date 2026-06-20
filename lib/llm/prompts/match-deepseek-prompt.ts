@@ -11,6 +11,7 @@ import {
   detectLanguage,
   stitchPromptSections,
 } from "@/lib/llm/prompts/oriental-counselor-base";
+import { buildTermMarkingPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
 import type { UserProfile } from "@/lib/profile/types";
 
 export type BuildMatchPromptInput = {
@@ -54,6 +55,7 @@ export function buildMatchPrompt(input: BuildMatchPromptInput): BuildMatchPrompt
 
   const system = stitchPromptSections(
     ...buildMatchCorePromptSections(),
+    buildTermMarkingPromptBlock(locale),
 
     `# 命主 A 的完整命盘
 ${buildProfileContextSection(a_profile, aBaseAnalysis)}
@@ -76,12 +78,12 @@ ${buildProfileContextSection(b_profile, bBaseAnalysis)}
   ✗ 修改 resonance_index
   ✗ 重新判断协同类型
   ✗ 输出"我觉得他们协同更高"等推翻计算的话
-  ✗ **裸写排盘/合婚术语**：Liu He / 六合 / Xing / Hai / Chong / stem / branch / pillar / 干支名 / charts
+  ✗ **裸写禁词表内术语**（须用上方术语表软翻译 + `⟦t:id|…⟧` 标记，勿留 Liu He / Day Master / 六合 等原形）
   ✗ **超自然承诺**：招财/催运/避邪/lucky direction/Amulet/Wealth activation
 
 你只需要:
   ✓ 把【矩阵计算结果】翻译为【五行能量 + synergy/tension/friction 用户语言】
-  ✓ 把 key_insights 展开为具体叙述（用 natural affinity / friction，不用合冲刑害裸写）
+  ✓ 把 key_insights 展开为具体叙述（用术语表 soft 词 + 标记，如 natural affinity / friction）
   ✓ 基于 user 消息中的关系描述与核心问题,给出针对性的建议
 
 # 已计算的系统动力学矩阵（内部分析用 — 用户可见 JSON 须翻译术语）

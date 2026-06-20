@@ -22,6 +22,7 @@ import {
   detectLanguage,
   stitchPromptSections,
 } from "@/lib/llm/prompts/oriental-counselor-base";
+import { buildTermMarkingPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
 import type { UserProfile } from "@/lib/profile/types";
 
 export type GlyphPromptSign = {
@@ -186,6 +187,7 @@ ${GLYPH_OUTPUT_SELF_CHECK}`;
     GLYPH_EXPLORATION_GUIDANCE,
     GLYPH_OUTPUT_FRAMING,
     GLYPH_OUTPUT_DEFENSE_TERMS,
+    buildTermMarkingPromptBlock(outputLang),
     GLYPH_OUTPUT_DEFENSE_NARRATIVE,
     GLYPH_OUTPUT_ICHING_FRAMEWORK,
     GLYPH_OUTPUT_WORDING,

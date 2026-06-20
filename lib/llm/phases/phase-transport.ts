@@ -1,4 +1,4 @@
-import { applyComplianceSanitize, stripGlossTokensForPrompt } from "@/lib/llm/sanitize/compliance-terms";
+import { auditDeliveredText, stripGlossTokensForPrompt } from "@/lib/llm/sanitize/compliance-terms";
 import {
   generateGeminiChatCompletion,
   getGeminiClient,
@@ -112,8 +112,8 @@ export function parsePhaseResult(
   if (!cleaned) return { parsed: {}, response: "" };
 
   const sanitizeResponse = (raw: string): string => {
-    if (!options?.locale || !raw.trim()) return raw;
-    return applyComplianceSanitize(raw, options.locale).text;
+    if (options?.locale && raw.trim()) auditDeliveredText(raw, options.locale);
+    return raw;
   };
 
   try {

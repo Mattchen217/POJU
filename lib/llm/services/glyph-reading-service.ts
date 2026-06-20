@@ -245,11 +245,9 @@ function validateReading(
 }
 
 function finalizeGlyphReading(reading: GlyphReadingContent, locale: string): GlyphReadingContent {
-  const violations = auditGlyphReadingContent(reading, locale);
-  if (violations.length > 0) {
-    logGlyphOutputViolations(violations, "glyph-reading");
-  }
-  return sanitizeDeepStringFields(reading, locale) as GlyphReadingContent;
+  auditGlyphReadingContent(reading, locale);
+  sanitizeDeepStringFields(reading, locale);
+  return reading;
 }
 
 function buildRepairHint(missing: string[], locale: string): string {

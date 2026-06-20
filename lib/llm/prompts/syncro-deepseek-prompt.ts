@@ -25,6 +25,7 @@ import {
 } from "@/lib/prompts/language-directive";
 import type { MatrixCell, SyncroMatrixMetadata } from "@/lib/syncro/calculate-matrix";
 import type { CurrentLevel } from "@/lib/syncro/current-system";
+import { buildTermMarkingPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
 import type { UserProfile } from "@/lib/profile/types";
 
 /** Slim payload for LLM — levels locked, no empty advice fields. */
@@ -244,6 +245,7 @@ ${taskResponseBlock}
 
   const system = stitchPromptSections(
     ...buildSyncroFullPromptSections(),
+    buildTermMarkingPromptBlock(outputLocale),
     baziContextSection,
     syncroRulesBlock,
   );
