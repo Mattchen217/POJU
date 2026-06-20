@@ -5,7 +5,6 @@ import { useLocale, useTranslations } from "next-intl";
 
 import { MarkedInline } from "@/components/cross-product/GlossaryText";
 import { RichReadingText } from "@/components/cross-product/RichReadingText";
-import { TermMarkFirstVisitHint } from "@/components/cross-product/TermMarkFirstVisitHint";
 import { GlyphCanvas } from "@/components/glyph/GlyphCanvas";
 import { GlyphDeliveryChart } from "@/components/glyph/GlyphDeliveryChart";
 import {
@@ -97,8 +96,6 @@ export function GlyphReport({ reading, glyph, question, baseReportText }: Props)
   return (
     <div className="glyph-delivery-panel">
       <div className="glyph-delivery-inner">
-        <TermMarkFirstVisitHint />
-
         <section
           className={cn(
             "glyph-delivery-hero",

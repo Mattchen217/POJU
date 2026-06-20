@@ -112,6 +112,10 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  background: #0d0e10;
+  border-radius: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  box-sizing: border-box;
 }
 
 .glyph-delivery-chart .streaming-analysis-panel {
@@ -135,8 +139,9 @@
 .glyph-delivery-chart .streaming-content-compact {
   max-height: none !important;
   height: 100%;
-  padding: 0 0.25rem 0 0 !important;
+  padding: 0 !important;
   overflow-y: auto;
+  background: transparent;
 }
 
 .glyph-delivery-divider {

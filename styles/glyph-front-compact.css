@@ -1,0 +1,92 @@
+/* Delivery / compact glyph card — safe inset for frame diamonds, 3 text zones */
+
+.glyph-front-compact {
+  --glyph-zone-base: 10px;
+
+  box-sizing: border-box;
+  height: 100%;
+  width: 100%;
+  /* Top/bottom diamonds intrude ~10–12% — keep text inside inner frame */
+  padding: 13% 11% 15%;
+  display: grid;
+  grid-template-rows: minmax(0, 0.23fr) minmax(0, 0.41fr) minmax(0, 0.36fr);
+  gap: 0.2em;
+  text-align: center;
+}
+
+.glyph-front-compact__zone {
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.glyph-front-compact__zone--header {
+  justify-content: flex-start;
+  font-size: calc(var(--glyph-zone-base) * var(--glyph-header-scale, 1));
+}
+
+.glyph-front-compact__zone--verse {
+  justify-content: center;
+  font-size: calc(var(--glyph-zone-base) * var(--glyph-verse-scale, 1));
+}
+
+.glyph-front-compact__zone--summary {
+  justify-content: flex-end;
+  padding-bottom: 0.1em;
+  font-size: calc(var(--glyph-zone-base) * var(--glyph-summary-scale, 1));
+}
+
+.glyph-front-compact__title {
+  margin: 0;
+  font-family: var(--font-verse, "EB Garamond", Georgia, serif);
+  font-size: 1.38em;
+  font-weight: 400;
+  line-height: 1.12;
+  letter-spacing: 0.02em;
+}
+
+.glyph-front-compact__subtitle {
+  margin: 0.18em 0 0;
+  font-size: 0.66em;
+  font-style: italic;
+  line-height: 1.18;
+  opacity: 0.88;
+}
+
+.glyph-front-compact__number {
+  margin: 0.22em 0 0;
+  font-size: 0.5em;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.glyph-front-compact__verse-inner {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.22em;
+  width: 100%;
+}
+
+.glyph-front-compact__verse-line {
+  margin: 0;
+  font-family: var(--font-verse, "EB Garamond", Georgia, serif);
+  font-size: 1em;
+  font-style: italic;
+  line-height: 1.26;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.glyph-front-compact__summary {
+  margin: 0;
+  font-size: 1em;
+  font-style: italic;
+  line-height: 1.3;
+  color: #e5e5e5;
+  text-align: center;
+  overflow-wrap: anywhere;
+}

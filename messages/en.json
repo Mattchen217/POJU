@@ -824,7 +824,8 @@
       "poju": "This is a dense, multi-layered reading — a little intellectual and emotional friction on the first pass is normal, and it's the point. Over the next 30 days, tap any line you want unpacked and POJU will translate it into plain language and your real-life situations.",
       "others": "This reading rewards a second look — its layers open over time. Want it unpacked line by line, in plain language and applied to your life? Continue the conversation in POJU's deep dialogue.",
       "poju_hint": "Tap any paragraph in your report to ask POJU to unpack it.",
-      "dismiss": "Dismiss"
+      "dismiss": "Dismiss",
+      "ack": "Got it"
     }
   },
   "wait_ritual": {
@@ -1190,6 +1191,9 @@
     "reading_loading": "Preparing your reading…",
     "reading_loading_hint": "Weaving your chart with the glyph. Takes about 3–5 minutes.",
     "delivery_chart_title": "Complete personality analysis",
+    "term_mark_hint": "Hover or tap",
+    "term_mark_hint_suffix": "beside highlighted terms for a plain-language explanation.",
+    "term_mark_ack": "Got it",
     "reading_failed": "Reading failed",
     "reading_retry": "Try again",
     "reading_error_transient": "The reading service had a temporary glitch. Please tap Try again — your chart data is saved.",

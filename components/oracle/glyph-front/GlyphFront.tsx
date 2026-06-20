@@ -15,6 +15,8 @@ import {
 import { useAutoFitText } from "@/components/oracle/glyph-front/useAutoFitText";
 import { LEVEL_META, type SignData } from "@/types/oracle";
 
+import "@/styles/glyph-front-compact.css";
+
 interface GlyphFrontProps {
   sign: SignData;
   animate?: boolean;
@@ -67,19 +69,26 @@ export function GlyphFront({ sign, animate = true, compact = false, draw = false
   const deliveryDesktop = deliveryCompact && !mobileViewport;
   const stackedFooter = draw || deliveryCompact;
 
-  const headerFit = useAutoFitText([
-    meta.display_name,
-    meta.subtitle,
-    sign.sign_number,
-    deliveryCompact,
-  ]);
-  const verseFit = useAutoFitText([sign.verse_lines_en.join("|"), deliveryCompact]);
-  const summaryFit = useAutoFitText([sign.summary_line_en, deliveryCompact]);
+  const headerFitRef = useAutoFitText(
+    [meta.display_name, meta.subtitle, sign.sign_number, deliveryCompact],
+    0.52,
+    "glyph-header-scale",
+  );
+  const verseFitRef = useAutoFitText(
+    [sign.verse_lines_en.join("|"), deliveryCompact],
+    0.52,
+    "glyph-verse-scale",
+  );
+  const summaryFitRef = useAutoFitText(
+    [sign.summary_line_en, deliveryCompact],
+    0.48,
+    "glyph-summary-scale",
+  );
 
   const gridShellClass = draw
     ? "relative z-20 grid h-full grid-rows-[auto_auto_auto] content-start gap-y-1 px-[8%] pt-[7%] pb-[5%] text-center md:gap-y-1.5 md:pt-[7.5%]"
     : deliveryCompact
-      ? "glyph-front-compact relative z-20 grid h-full min-h-0 grid-rows-[26%_42%_32%] px-[9%] py-[5.5%] text-center"
+      ? "glyph-front-compact relative z-20 h-full min-h-0 text-center"
       : "relative z-20 flex h-full flex-col text-center px-[11%] py-[13%]";
 
   const verseShellClass = draw
@@ -162,10 +171,49 @@ export function GlyphFront({ sign, animate = true, compact = false, draw = false
       <WindBorderParticlesOverlay particleKey={particleKeyByLevel[sign.level]} />
 
       <div className={gridShellClass}>
+        {deliveryCompact ? (
+          <>
+            <div
+              ref={headerFitRef}
+              className="glyph-front-compact__zone glyph-front-compact__zone--header"
+            >
+              <h2 className="glyph-front-compact__title" style={{ color: toneColor }}>
+                {meta.display_name}
+              </h2>
+              <p className="glyph-front-compact__subtitle" style={{ color: toneColor }}>
+                {meta.subtitle}
+              </p>
+              <div className="glyph-front-compact__number">
+                GLYPH No. {String(sign.sign_number).padStart(3, "0")}
+              </div>
+            </div>
+
+            <div
+              ref={verseFitRef}
+              className="glyph-front-compact__zone glyph-front-compact__zone--verse"
+            >
+              <div className="glyph-front-compact__verse-inner" style={{ color: toneColor }}>
+                {sign.verse_lines_en.map((line, idx) => (
+                  <p key={idx} className="glyph-front-compact__verse-line">
+                    {line}
+                  </p>
+                ))}
+              </div>
+            </div>
+
+            <div
+              ref={summaryFitRef}
+              className="glyph-front-compact__zone glyph-front-compact__zone--summary"
+            >
+              <p className="glyph-front-compact__summary">
+                &ldquo;{sign.summary_line_en}&rdquo;
+              </p>
+            </div>
+          </>
+        ) : (
+          <>
         <motion.div
-          ref={deliveryCompact ? headerFit.ref : undefined}
-          className={`glyph-front-compact__header ${faceSmall || draw ? "min-h-0 overflow-hidden" : "pt-[7%]"}`}
-          style={deliveryCompact ? { fontSize: "calc(1em * var(--glyph-fit-scale, 1))" } : undefined}
+          className={faceSmall || draw ? "min-h-0 overflow-hidden" : "pt-[7%]"}
           initial={animate ? { opacity: 0, y: -10 } : false}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
@@ -187,18 +235,14 @@ export function GlyphFront({ sign, animate = true, compact = false, draw = false
         </motion.div>
 
         <motion.div
-          ref={deliveryCompact ? verseFit.ref : undefined}
           className={verseShellClass}
-          style={deliveryCompact ? { fontSize: "calc(1em * var(--glyph-fit-scale, 1))" } : undefined}
           initial={animate ? { opacity: 0 } : false}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.5 }}
         >
           <div
             className={`font-verse flex min-h-0 flex-1 flex-col italic ${verseSizeClass} ${
-              deliveryCompact
-                ? "justify-center gap-0.5"
-                : `h-full justify-center ${faceSmall || drawDesktop ? "gap-0.5" : "gap-2"}`
+              `h-full justify-center ${faceSmall || drawDesktop ? "gap-0.5" : "gap-2"}`
             }`}
             style={{ color: toneColor }}
           >
@@ -234,17 +278,15 @@ export function GlyphFront({ sign, animate = true, compact = false, draw = false
         </motion.div>
 
         <motion.div
-          ref={deliveryCompact ? summaryFit.ref : undefined}
-          className={`glyph-front-compact__summary relative z-30 min-h-0 overflow-hidden ${
-            stackedFooter
-              ? deliveryCompact
-                ? "flex items-end px-1"
-                : deliveryDesktop
-                  ? "-mt-0.5 px-1"
-                  : "px-1 pt-0"
+          className={`relative z-30 shrink-0 ${
+            stackedFooter && !deliveryCompact
+              ? deliveryDesktop
+                ? "-mt-0.5 px-1"
+                : "px-1 pt-0"
+              : stackedFooter
+                ? "px-1 pt-0"
               : "mt-2 min-h-[16%] px-2"
           }`}
-          style={deliveryCompact ? { fontSize: "calc(1em * var(--glyph-fit-scale, 1))" } : undefined}
           initial={animate ? { opacity: 0 } : false}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 1.2 }}
@@ -253,6 +295,8 @@ export function GlyphFront({ sign, animate = true, compact = false, draw = false
             &ldquo;{sign.summary_line_en}&rdquo;
           </p>
         </motion.div>
+          </>
+        )}
       </div>
     </motion.div>
   );

@@ -1,35 +1,39 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef } from "react";
 
-/** Shrink font-size until block content fits its fixed-height container. */
-export function useAutoFitText(deps: unknown[], minScale = 0.62) {
+/** Shrink a zone's `--{scaleVar}` until content fits (uses em-based children). */
+export function useAutoFitText(
+  deps: unknown[],
+  minScale = 0.52,
+  scaleVar = "glyph-fit-scale",
+) {
   const ref = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1);
 
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
 
-    let next = 1;
-    el.style.setProperty("--glyph-fit-scale", "1");
-
     const fit = () => {
       if (!el) return;
-      next = 1;
-      el.style.setProperty("--glyph-fit-scale", "1");
-      while (el.scrollHeight > el.clientHeight + 1 && next > minScale) {
-        next = Number((next - 0.04).toFixed(2));
-        el.style.setProperty("--glyph-fit-scale", String(next));
+      if (el.clientHeight < 4) return;
+      let scale = 1;
+      el.style.setProperty(`--${scaleVar}`, "1");
+      for (let i = 0; i < 28 && scale > minScale; i++) {
+        if (el.scrollHeight <= el.clientHeight + 1) break;
+        scale = Number((scale - 0.035).toFixed(3));
+        el.style.setProperty(`--${scaleVar}`, String(scale));
       }
-      setScale(next);
     };
 
-    fit();
+    const raf = requestAnimationFrame(() => requestAnimationFrame(fit));
     const ro = new ResizeObserver(fit);
     ro.observe(el);
-    return () => ro.disconnect();
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+    };
   }, deps);
 
-  return { ref, scale };
+  return ref;
 }

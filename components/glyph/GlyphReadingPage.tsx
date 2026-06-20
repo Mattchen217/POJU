@@ -31,7 +31,7 @@ import {
 } from "@/lib/oracle/api";
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 import { PojuDeepDiveCTA } from "@/components/cross-product/PojuDeepDiveCTA";
-import { ReadingDecoderBanner } from "@/components/reading-ritual/ReadingDecoderBanner";
+import { GlyphDeliveryBanners } from "@/components/glyph/GlyphDeliveryBanners";
 import { ReturnToPojuCTA } from "@/components/poju/ReturnToPojuCTA";
 import {
   classifyGlyphReadingError,
@@ -436,7 +436,7 @@ export function GlyphReadingPage() {
               resultData={glyphSummary}
               variant="banner"
             />
-            <ReadingDecoderBanner variant="others" />
+            <GlyphDeliveryBanners variant="others" />
             <GlyphReport
               reading={reading}
               glyph={glyph}
@@ -556,7 +556,7 @@ export function GlyphReadingPage() {
         resultData={glyphSummary}
         variant="banner"
       />
-      <ReadingDecoderBanner variant="others" />
+      <GlyphDeliveryBanners variant="others" />
       <GlyphReport
         reading={reading}
         glyph={glyph}

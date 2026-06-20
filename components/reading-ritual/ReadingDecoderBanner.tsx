@@ -23,10 +23,9 @@ export function ReadingDecoderBanner({ variant, className }: Props) {
         <button
           type="button"
           className="reading-ritual-decoder__dismiss"
-          aria-label={t("dismiss")}
           onClick={() => setDismissed(true)}
         >
-          ×
+          {t("ack")}
         </button>
       </div>
       {variant === "poju" ? (

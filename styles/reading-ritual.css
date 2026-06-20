@@ -136,19 +136,44 @@
 
 .reading-ritual-decoder__dismiss {
   flex-shrink: 0;
-  padding: 0;
-  border: none;
-  background: none;
-  font-size: 1.125rem;
-  line-height: 1;
-  color: rgba(255, 255, 255, 0.45);
+  padding: 0.25rem 0.75rem;
+  border: 1px solid rgba(196, 181, 253, 0.35);
+  border-radius: 999px;
+  background: rgba(139, 92, 246, 0.15);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.88);
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .reading-ritual-decoder__hint {
   margin: 0.5rem 0 0;
   font-size: 0.8125rem;
   color: rgba(196, 181, 253, 0.85);
+}
+
+/* Glyph delivery — banner stack matches nav width (920px) */
+.glyph-reading-banners {
+  width: 100%;
+  max-width: 920px;
+  margin: 0 auto 1.25rem;
+  padding-inline: 1.25rem;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.glyph-reading-banners .reading-ritual-decoder,
+.glyph-reading-banners .term-hint--bar {
+  margin: 0;
+}
+
+@media (min-width: 768px) {
+  .glyph-reading-banners {
+    padding-inline: 2rem;
+  }
 }
 
 .reading-ritual-fade-in {

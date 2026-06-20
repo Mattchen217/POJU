@@ -839,7 +839,8 @@
       "poju": "这是一份多维度的深度报告，信息量很大——初次阅读带来一点智力与情感上的冲击，是非常自然的，这正是它的价值所在。接下来的 30 天里，敲击任何一段你想读透的文字，POJU 会为你做白话破译，并落到你真实的生活场景里。",
       "others": "这份报告值得反复看，它的层次会随时间展开。想让人逐句给你讲透、并落到你的生活里？在 POJU 的深度对话中继续。",
       "poju_hint": "点击报告中任意段落，请 POJU 为你白话破译。",
-      "dismiss": "关闭"
+      "dismiss": "关闭",
+      "ack": "我知道了"
     }
   },
   "wait_ritual": {
@@ -1205,6 +1206,9 @@
     "reading_loading": "正在为你推演……",
     "reading_loading_hint": "结合你的画像与隐喻，大约 3–5 分钟。",
     "delivery_chart_title": "完整性格分析",
+    "term_mark_hint": "将鼠标移到高亮术语上，或点击",
+    "term_mark_hint_suffix": "，即可阅读白话解释。",
+    "term_mark_ack": "我知道了",
     "reading_failed": "解读失败",
     "reading_retry": "重试",
     "reading_error_transient": "解读服务暂时异常，请点「重试」——你的性格画像已保存。",
