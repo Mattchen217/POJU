@@ -91,7 +91,12 @@ function findNextMarker(
   const gMatch = GLOSS_TOKEN_PATTERN.exec(text);
   if (!tMatch && !gMatch) return null;
   if (tMatch && (!gMatch || tMatch.index <= gMatch.index)) {
-    return { index: tMatch.index, raw: tMatch[0], kind: "t", groups: [tMatch[1], tMatch[2]] };
+    return {
+      index: tMatch.index,
+      raw: tMatch[0],
+      kind: "t",
+      groups: [tMatch[1], tMatch[2], tMatch[3] ?? ""],
+    };
   }
   return {
     index: gMatch!.index,
@@ -119,8 +124,9 @@ function parseMarkedText(text: string, locale: string, keyBase: number): ReactNo
     if (next.kind === "t") {
       const termId = next.groups[0];
       const visible = unescapeMarkerPart(next.groups[1]);
+      const dynamicPlain = next.groups[2] ? unescapeMarkerPart(next.groups[2]).trim() : "";
       const ui = uiTermById(termId, glossaryLocale);
-      const plain = ui?.plain ?? "";
+      const plain = dynamicPlain || ui?.plain || "";
       nodes.push(
         <TermMark
           key={`t-${keyBase}-${keyIdx++}`}

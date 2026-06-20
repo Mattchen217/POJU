@@ -425,7 +425,7 @@ export async function generateMatchAnalysis(
     reportRaw = out.value;
     result = out.result;
 
-    const auditViolations = auditDeepStringFields(reportRaw, input.locale);
+    const auditViolations = auditDeepStringFields(reportRaw, input.locale, "match");
     if (isCriticalDeliveryAuditFailure(auditViolations) && !auditRetried) {
       auditRetried = true;
       console.warn("[match] audit regen (1x)", auditViolations.slice(0, 5));

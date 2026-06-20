@@ -3,6 +3,10 @@
  */
 
 import { buildOutputPolicyForSyncro } from "@/lib/llm/compliance/output-policy";
+import {
+  buildPlainspeakVoiceSections,
+  PLAINSPEAK_STYLE_EXAMPLE_SYNCRO,
+} from "@/lib/llm/prompts/plainspeak-voice";
 
 export const SYNCRO_OUTPUT_FRAMING = `# SYNCRO OUTPUT FRAMING — 输出合规（必须遵守 · 最高优先级）
 
@@ -261,6 +265,7 @@ export function buildSyncroOutputDefenseSections(): string[] {
 export function buildSyncroCorePromptSections(): string[] {
   return [
     SYNCRO_QIMEN_DUNJIA_IDENTITY,
+    ...buildPlainspeakVoiceSections(PLAINSPEAK_STYLE_EXAMPLE_SYNCRO),
     SYNCRO_QIMEN_INTERPRETATION_METHOD,
     SYNCRO_TIMESPACE_FRAMEWORK,
     SYNCRO_OUTPUT_BRANDING,

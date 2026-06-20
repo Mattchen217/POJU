@@ -98,8 +98,9 @@ const DELIVERY_MARKING_ENTRIES: TermEntry[] = DELIVERY_MARKING_GLOSSARY_IDS.map(
   return termId ? TERM_BY_ID.get(termId) : undefined;
 }).filter((e): e is TermEntry => e !== undefined);
 
-/** LLM term marker — UI parses `⟦t:id|visible⟧`. Legacy `⟦g|display|plain⟧` still supported in UI. */
-export const TERM_MARKER_PATTERN = /⟦t:([a-zA-Z0-9_]+)\|((?:\\.|[^|\\])*?)⟧/g;
+/** LLM term marker — UI parses `⟦t:id|visible|plain⟧` (plain optional). Legacy 2-segment + `⟦g|…⟧` supported. */
+export const TERM_MARKER_PATTERN =
+  /⟦t:([a-zA-Z0-9_]+)\|((?:\\.|[^|\\])*?)(?:\|((?:\\.|[^|\\])*?))?⟧/g;
 
 function escapeMarkerPart(s: string): string {
   return s.replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/⟧/g, "\\⟧");
@@ -109,11 +110,15 @@ export function unescapeMarkerPart(s: string): string {
   return s.replace(/\\(.)/g, "$1");
 }
 
-export function encodeTermMarker(id: string, visible: string): string {
-  return `⟦t:${id}|${escapeMarkerPart(visible)}⟧`;
+export function encodeTermMarker(id: string, visible: string, plain?: string): string {
+  const vis = escapeMarkerPart(visible);
+  if (plain?.trim()) {
+    return `⟦t:${id}|${vis}|${escapeMarkerPart(plain)}⟧`;
+  }
+  return `⟦t:${id}|${vis}⟧`;
 }
 
-export type ParsedTermMarker = { id: string; visible: string; raw: string };
+export type ParsedTermMarker = { id: string; visible: string; plain?: string; raw: string };
 
 export function parseTermMarkers(text: string): ParsedTermMarker[] {
   const out: ParsedTermMarker[] = [];
@@ -123,17 +128,19 @@ export function parseTermMarkers(text: string): ParsedTermMarker[] {
     out.push({
       id: m[1],
       visible: unescapeMarkerPart(m[2]),
+      plain: m[3] ? unescapeMarkerPart(m[3]) : undefined,
       raw: m[0],
     });
   }
   return out;
 }
 
-/** Strip markers for LLM history — visible text only, no plain/tooltip payload. */
+/** Strip markers for LLM history — visible text only; dynamic plain + id never enter prefix. */
 export function stripMarkersForPrompt(text: string): string {
   TERM_MARKER_PATTERN.lastIndex = 0;
-  return text.replace(TERM_MARKER_PATTERN, (_, _id: string, visible: string) =>
-    unescapeMarkerPart(visible),
+  return text.replace(
+    TERM_MARKER_PATTERN,
+    (_, _id: string, visible: string, _plain?: string) => unescapeMarkerPart(visible),
   );
 }
 
@@ -141,7 +148,10 @@ export function stripMarkersForPrompt(text: string): string {
 export function stripBrokenMarkers(text: string): string {
   if (!text.includes("⟦") && !text.includes("⟧")) return text;
   let r = text
-    .replace(/⟦t:[a-zA-Z0-9_]+\|((?:\\.|[^|\\])*?)(?=⟧|$)/g, (_, v: string) => unescapeMarkerPart(v))
+    .replace(
+      /⟦t:[a-zA-Z0-9_]+\|((?:\\.|[^|\\])*?)(?:\|((?:\\.|[^|\\])*?))?(?=⟧|$)/g,
+      (match, v: string) => unescapeMarkerPart(v),
+    )
     .replace(/⟦g\|((?:\\.|[^|\\])*)\|((?:\\.|[^|]|\\[^⟧])*?)⟧/g, (_, d: string) =>
       d.replace(/\\(.)/g, "$1"),
     )
@@ -174,18 +184,18 @@ export function uiTermById(
 export function buildTermMarkingFewShot(locale: string): string {
   const loc = toGlossaryLocale(locale);
   if (loc === "zh") {
-    return `## 字段 few-shot 示例（必须模仿此形态 · 含标记+中文干支）
+    return `## 字段 few-shot 示例（必须模仿此形态 · 三段位标记+中文干支+动态白话）
 
 \`\`\`
-"question_response": "你问的是…这支 Glyph 照见的是耐心中的转机。结合你的 ⟦t:day_master|核心特质（乙木）⟧，此刻更宜先稳住节奏…"
-"命理看此事": "…你的 ⟦t:day_master|核心特质（乙木）⟧ 在关系里需要先找支点。现行 ⟦t:decade|人生阶段（癸酉）⟧ 更利于沉潜整理，而 ⟦t:year|流年能量（丙午）⟧ 则推你向外试探一小步…"
+"question_response": "你问的是…这支 Glyph 照见的是耐心中的转机。结合你的 ⟦t:day_master|核心特质（乙木）|你像靠人脉和氛围做买卖的人，硬推销反而散劲⟧，此刻更宜先稳住节奏…"
+"命理看此事": "…你的 ⟦t:day_master|核心特质（乙木）|在这件事里，你需要先找能依靠的支点再往外伸⟧。外面这阵 ⟦t:year|流年能量（丙午）|今年这股燥热在推你焦虑乱动，不是你能力不够⟧ 只会让你更乱。**稳住。** 先把 ⟦t:yong_shen|用神（水）|对你就是：整理现有客户名单、把服务流程理顺，像给根须浇水⟧ 做到位，再迈一小步…"
 \`\`\``;
   }
-  return `## Field few-shot examples (copy this exact shape · markers + Chinese stem-branch)
+  return `## Field few-shot examples (copy this exact shape · 3-part markers + Chinese stem-branch + dynamic plain)
 
 \`\`\`
-"question_response": "You asked whether… This Glyph reflects a turn that ripens through patience. Your ⟦t:day_master|core nature (乙木)⟧ needs a clear anchor before you stretch further…"
-"命理看此事": "… your ⟦t:day_master|core nature (乙木)⟧ seeks connection with structure. The current ⟦t:decade|life phase (癸酉)⟧ favors consolidation, while ⟦t:year|year's energy (丙午)⟧ nudges one small outward step…"
+"question_response": "You asked whether… This Glyph reflects a turn that ripens through patience. Your ⟦t:day_master|core nature (乙木)|In this sentence: you grow through relationships, not hard selling⟧ needs a clear anchor before you stretch further…"
+"命理看此事": "… your ⟦t:day_master|core nature (乙木)|Here: you need a reliable base before reaching out⟧ seeks connection with structure. The current ⟦t:year|year's energy (丙午)|This year feels like heat pushing you to act before you're ready—not a personal failing⟧ nudges one small outward step only after ⟦t:yong_shen|key balancing element (Water)|For you: tidy your offer, call one trusted mentor—like opening a window⟧ is in place…"
 \`\`\``;
 }
 
@@ -207,20 +217,71 @@ export function buildTermMarkingPromptBlock(locale: string): string {
 
   return `# 术语软翻译 + 标记（输出 JSON 字符串 · ${langLabel}）
 
-凡涉及下表命理术语，**用对应语言的软翻译词替换原文**，并打标记：\`⟦t:<id>|<可见文本>⟧\`
+凡涉及下表命理术语，**用对应语言的软翻译词替换原文**，并打 **三段位**标记：\`⟦t:<id>|<可见文本>|<该处白话>⟧\`
 
 | id | 禁/术语示例 | 软翻译 (${langLabel}) |
 |---|---|---|
 ${rows}
 
 ## 打标记规则
-1. \`<可见文本>\` = 你写出的软翻译词；若该 id 带干支，拼成 \`软翻译词 (干支)\` — 例：\`⟦t:day_master|core nature (乙木)⟧\`、\`⟦t:year|year's energy (丙午)⟧\`、中文版 \`⟦t:day_master|核心特质（乙木）⟧\`
-2. **只用当前交付语言**，整句必须通顺；标记**只包软翻译词（含括号干支）**，**勿把 your/the/as 等前后词包进标记**
-3. 同一概念在一段内**只标一次**（首次出现）
-4. **签诗/古文诗句不是术语**：禁逐字引签诗原文（如「志气功业在朝朝…」）；只能意象化转述成交付语言，**不打术语标记**
-5. 守六条语义红线（不预测/不算命/不占卜/不决吉凶/不恐吓/不超自然承诺）
+1. \`<可见文本>\` = 你写出的软翻译词；若该 id 带干支，拼成 \`软翻译词 (干支)\` — 例：\`⟦t:day_master|core nature (乙木)|You grow through people, not force⟧\`
+2. \`<该处白话>\` = **结合本句意境 + 用户问题**现写的 2–4 句人话（动作 3）：一句比方 + 现实可做的具体事 + 对这件事意味着什么。**同 id 在不同段落白话必须不同**；白话**不出现在正文**，只进标记第 3 段（UI tooltip）
+3. **只用当前交付语言**，整句必须通顺；标记**只包软翻译词（含括号干支）**，**勿把 your/the/as 等前后词包进标记**
+4. 正文须含贴切的日常比喻（动作 1）；流年/大运类先归因外境再给掌控感（动作 2）
+5. 同一概念在一段内**只标一次**（首次出现）
+6. **签诗/古文诗句不是术语**：禁逐字引签诗原文；只能意象化转述，**不打术语标记**
+7. 守六条语义红线（不预测/不算命/不占卜/不决吉凶/不恐吓/不超自然承诺）
+8. 若漏写第 3 段白话，UI 会回退静态词典——**务必写全三段位**
 
 ${buildTermMarkingFewShot(locale)}`;
+}
+
+export function countDistinctTermIds(text: string): number {
+  const ids = new Set(parseTermMarkers(text).map((m) => m.id));
+  return ids.size;
+}
+
+/** Depth ids beyond day_master / decade / year / yong_shen — grounding audit. */
+export const GROUNDING_DEPTH_TERM_IDS = new Set([
+  "ten_gods",
+  "seven_killings",
+  "eating_god",
+  "hurting_officer",
+  "wealth_stars",
+  "officer_stars",
+  "resource_stars",
+  "peer_stars",
+  "pattern",
+  "auxiliary_stars",
+  "noble_support",
+  "partner_star",
+  "six_harmonies",
+  "punishment",
+  "clash",
+  "favorable_element",
+  "unfavorable_element",
+  "four_pillars",
+  "heavenly_stem",
+  "earthly_branch",
+]);
+
+export type GroundingAuditResult = {
+  distinctCount: number;
+  depthCount: number;
+  ids: string[];
+};
+
+export function auditGroundingMarkers(
+  text: string,
+  minDistinct: number,
+  minDepth = 1,
+): GroundingAuditResult | null {
+  const markers = parseTermMarkers(text);
+  const ids = [...new Set(markers.map((m) => m.id))];
+  const depthCount = ids.filter((id) => GROUNDING_DEPTH_TERM_IDS.has(id)).length;
+  const result: GroundingAuditResult = { distinctCount: ids.length, depthCount, ids };
+  if (ids.length < minDistinct || depthCount < minDepth) return result;
+  return null;
 }
 
 export const BARE_SIGN_POEM_PATTERN =

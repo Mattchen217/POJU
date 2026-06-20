@@ -3,6 +3,10 @@
  */
 
 import { buildOutputPolicyForMatch } from "@/lib/llm/compliance/output-policy";
+import {
+  buildPlainspeakVoiceSections,
+  PLAINSPEAK_STYLE_EXAMPLE_MATCH,
+} from "@/lib/llm/prompts/plainspeak-voice";
 
 export const MATCH_BAZI_HEPAN_IDENTITY = `# 你是谁（Match · 兼容性顾问）
 
@@ -44,8 +48,8 @@ export const MATCH_HEPAN_METHOD = `# 合盘核心要素（推演必遵 · 内部
 - 近阶段对关系的引动 — 条件式语言，不铁口日期
 
 ## 引用要求（用户可见 JSON）
-- **analysis_a / analysis_b**：core nature + 五行 + life cycle + balancing element（禁 chart/pillar/stem）
-- **combined**：**五行能量互动** + **affinity/tension/friction** 至少 2 类
+- **analysis_a / analysis_b**：core nature + **具体十神/配偶宫/神煞**（有则引 structured）+ life cycle + balancing element — 禁只写五行生克一句带过
+- **combined**：**五行能量互动** + **affinity/tension/friction** 至少 2 类 + **点名至少 1 项十神或神煞结构**
 - **禁止**：超自然承诺（招财/催运/避邪/lucky direction）；框成 **this Match** + compatibility/synergy
 - **environment 建议**：三步洗白 — spatial harmony + 具体动作 + 环境心理学（鱼缸/植物/材质可保留）`;
 
@@ -193,6 +197,7 @@ export const MATCH_OUTPUT_BRANDING = `# ⚠️ Match 输出品牌（JSON 5 段 �
 export function buildMatchCorePromptSections(): string[] {
   return [
     MATCH_BAZI_HEPAN_IDENTITY,
+    ...buildPlainspeakVoiceSections(PLAINSPEAK_STYLE_EXAMPLE_MATCH),
     MATCH_HEPAN_METHOD,
     MATCH_RELATIONSHIP_FRAMEWORK,
     MATCH_QUESTION_FOCUS,

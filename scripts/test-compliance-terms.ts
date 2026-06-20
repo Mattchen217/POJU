@@ -23,16 +23,20 @@ function assert(cond: boolean, msg: string): void {
 
 function main() {
   console.log("=== term markers ===");
-  const marked = `Your ⟦t:day_master|core nature (乙木)⟧ seeks balance.`;
+  const marked = `Your ⟦t:day_master|core nature (乙木)|You grow through people, not force⟧ seeks balance.`;
   const parsed = parseTermMarkers(marked);
   assert(parsed.length === 1, "parse one marker");
   assert(parsed[0]!.id === "day_master", "marker id");
   assert(parsed[0]!.visible === "core nature (乙木)", "marker visible");
+  assert(parsed[0]!.plain === "You grow through people, not force", "marker dynamic plain");
+
+  const legacy2 = `Your ⟦t:day_master|core nature (乙木)⟧ seeks balance.`;
+  assert(parseTermMarkers(legacy2).length === 1, "parse legacy 2-part marker");
 
   console.log("\n=== strip for prompt history ===");
   assert(
     stripMarkersForPrompt(marked) === "Your core nature (乙木) seeks balance.",
-    "stripMarkersForPrompt",
+    "stripMarkersForPrompt drops dynamic plain",
   );
   const legacy = `Hello ⟦g|core nature (乙木)|plain⟧ world`;
   assert(
@@ -52,10 +56,10 @@ function main() {
   assert(!fixed.includes("⟦"), "no raw delimiter after strip");
   assert(fixed.includes("core nature (乙木)"), "visible text preserved");
 
-  const intact = "Your ⟦t:day_master|core nature (乙木)⟧ thrives.";
+  const intact2 = "Your ⟦t:day_master|core nature (乙木)⟧ thrives.";
   assert(
-    stripBrokenMarkers(intact) === "Your core nature (乙木) thrives.",
-    "closed marker becomes visible when stripping",
+    stripBrokenMarkers(intact2) === "Your core nature (乙木) thrives.",
+    "closed 2-part marker becomes visible when stripping",
   );
 
   console.log("\n=== bare sign poem audit (en) ===");
@@ -64,7 +68,10 @@ function main() {
   assert(poemAudit.some((v) => v.label === "bare_sign_poem"), "detects bare sign poem");
 
   TERM_MARKER_PATTERN.lastIndex = 0;
-  assert(TERM_MARKER_PATTERN.test(encodeTermMarker("year", "year's energy (丙午)")), "encode pattern");
+  assert(
+    TERM_MARKER_PATTERN.test(encodeTermMarker("year", "year's energy (丙午)", "Heat pushing you to act")),
+    "encode 3-part pattern",
+  );
 
   if (process.exitCode) process.exit(1);
   console.log("\nAll compliance-terms checks passed.");

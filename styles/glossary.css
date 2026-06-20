@@ -3,6 +3,10 @@
 .term-mark {
   display: inline;
   position: relative;
+}
+
+.term-mark__word,
+.term-mark__info {
   white-space: nowrap;
 }
 
@@ -65,7 +69,9 @@
   left: 0;
   top: 1.6em;
   z-index: 1000;
+  box-sizing: border-box;
   width: min(280px, 78vw);
+  max-width: min(280px, 78vw);
   padding: 12px 14px;
   border-radius: 14px;
   background: rgba(20, 18, 32, 0.92);
@@ -77,15 +83,22 @@
   line-height: 1.5;
   display: grid;
   gap: 4px;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .glossary-pop__title {
   color: #d4af37;
   font-weight: 600;
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 
 .glossary-pop__body {
   color: #cbd0e0;
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 
 .streaming-analysis-panel .glossary-pop {

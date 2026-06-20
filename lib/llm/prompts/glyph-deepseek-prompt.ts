@@ -23,6 +23,10 @@ import {
   stitchPromptSections,
 } from "@/lib/llm/prompts/oriental-counselor-base";
 import { buildTermMarkingPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
+import {
+  buildPlainspeakVoiceSections,
+  PLAINSPEAK_STYLE_EXAMPLE_GLYPH,
+} from "@/lib/llm/prompts/plainspeak-voice";
 import type { UserProfile } from "@/lib/profile/types";
 
 export type GlyphPromptSign = {
@@ -185,6 +189,7 @@ ${GLYPH_OUTPUT_SELF_CHECK}`;
     GLYPH_GUANYIN_100_LOTS_IDENTITY,
     GLYPH_GUANYIN_INTERPRETATION_METHOD,
     GLYPH_EXPLORATION_GUIDANCE,
+    ...buildPlainspeakVoiceSections(PLAINSPEAK_STYLE_EXAMPLE_GLYPH),
     GLYPH_OUTPUT_FRAMING,
     GLYPH_OUTPUT_DEFENSE_TERMS,
     buildTermMarkingPromptBlock(outputLang),
@@ -212,13 +217,14 @@ ${GLYPH_OUTPUT_SELF_CHECK}`;
 
 ⛔ 输出合规（最高优先级）: OUTPUT POLICY + 术语标记表 + GLYPH_LAYOUT_CONTRACT + Glyph 措辞
   · 指代: 统一 Glyph / Glyph 文 / the Glyph text；禁签/sign/lot；archetypal metaphor 仅开篇一次
-  · 术语: **必须** ⟦t:id|软译词 (干支)⟧ 标记 — 禁裸 Day Master/日主/大运/Yi Wood/energy blueprint
+  · 术语: **必须** ⟦t:id|软译 (干支)|该处白话⟧ 三段位标记 — 禁裸 Day Master/日主/大运/Yi Wood/energy blueprint
+  · 正文: 大白话 + 比喻入句 + 先归因外境再给掌控（见 PLAINSPEAK）
   · 防线2: **意象化转述**签文；禁逐字签诗原文 / 禁历史人物故事情节
   · 防线3: 禁 will meet / going to + 未来事件 → present readiness / 现在时
   · 板块: question_response 唯一直答+复述；synthesis 深化、严禁复述问题或重复 question_response
   · 《易经》: 自然融入 I Ching 变化之道/时位/阴阳（非起卦占卜）
 ✓ 语言: 跟随用户实际输入（${outputLang}）。
-✓ 内容: 命理看此事须含 ⟦t:day_master|…⟧ + ⟦t:decade|…⟧ + ⟦t:yong_shen|…⟧；不得抄写 modern_translation。
+✓ 内容: 命理看此事须引 structured 全量（日主/十神/格局/大运/用神/神煞 ≥3 不同 id）；不得抄写 modern_translation。
 ✓ 写每段前执行 GLYPH_OUTPUT_SELF_CHECK。invalid_input 时所有字段仍填中性引导，禁止空字符串。
 ✓ exploration：按 GLYPH_EXPLORATION_GUIDANCE 选 **一种** 练习形态，勿次次「安静地方+闭眼+纸上写」。`,
   );

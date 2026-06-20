@@ -310,7 +310,7 @@ export async function generateGlyphReading(
     reading = out.value;
     result = out.result;
 
-    const auditViolations = auditDeepStringFields(reading, input.locale);
+    const auditViolations = auditDeepStringFields(reading, input.locale, "glyph");
     if (isCriticalDeliveryAuditFailure(auditViolations) && !auditRetried) {
       auditRetried = true;
       console.warn("[glyph-reading] audit regen (1x)", auditViolations.slice(0, 5));
