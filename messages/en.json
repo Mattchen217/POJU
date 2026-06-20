@@ -1189,6 +1189,7 @@
     },
     "reading_loading": "Preparing your reading…",
     "reading_loading_hint": "Weaving your chart with the glyph. Takes about 3–5 minutes.",
+    "delivery_chart_title": "Complete personality analysis",
     "reading_failed": "Reading failed",
     "reading_retry": "Try again",
     "reading_error_transient": "The reading service had a temporary glitch. Please tap Try again — your chart data is saved.",

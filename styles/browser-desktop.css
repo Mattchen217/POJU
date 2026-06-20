@@ -32,7 +32,16 @@
 
   html:not(.pwa-mode) .glyph-reading-page,
   html:not(.pwa-mode) .archive-detail-page.browser-flow-page {
-    max-width: var(--glyph-reading-max-width);
+    max-width: none;
+    width: 100%;
+    padding-inline: 1rem;
+  }
+
+  @media (min-width: 768px) {
+    html:not(.pwa-mode) .glyph-reading-page,
+    html:not(.pwa-mode) .archive-detail-page.browser-flow-page {
+      padding-inline: 1.25rem;
+    }
   }
 
   html:not(.pwa-mode) .match-report {

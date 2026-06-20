@@ -12,6 +12,7 @@ import {
   WindBorderParticlesOverlay,
   type WindCardParticleKey,
 } from "@/components/oracle/wind-cards";
+import { useAutoFitText } from "@/components/oracle/glyph-front/useAutoFitText";
 import { LEVEL_META, type SignData } from "@/types/oracle";
 
 interface GlyphFrontProps {
@@ -66,18 +67,25 @@ export function GlyphFront({ sign, animate = true, compact = false, draw = false
   const deliveryDesktop = deliveryCompact && !mobileViewport;
   const stackedFooter = draw || deliveryCompact;
 
+  const headerFit = useAutoFitText([
+    meta.display_name,
+    meta.subtitle,
+    sign.sign_number,
+    deliveryCompact,
+  ]);
+  const verseFit = useAutoFitText([sign.verse_lines_en.join("|"), deliveryCompact]);
+  const summaryFit = useAutoFitText([sign.summary_line_en, deliveryCompact]);
+
   const gridShellClass = draw
     ? "relative z-20 grid h-full grid-rows-[auto_auto_auto] content-start gap-y-1 px-[8%] pt-[7%] pb-[5%] text-center md:gap-y-1.5 md:pt-[7.5%]"
     : deliveryCompact
-      ? deliveryDesktop
-        ? "relative z-20 grid h-full grid-rows-[auto_auto_auto] content-start gap-y-1 px-[9%] pb-[4.5%] pt-[6.25%] text-center"
-        : "relative z-20 grid h-full grid-rows-[auto_auto_auto] content-start gap-y-1.5 px-[9%] pb-[5%] pt-[6.75%] text-center"
+      ? "glyph-front-compact relative z-20 grid h-full min-h-0 grid-rows-[26%_42%_32%] px-[9%] py-[5.5%] text-center"
       : "relative z-20 flex h-full flex-col text-center px-[11%] py-[13%]";
 
   const verseShellClass = draw
     ? "mx-auto flex w-[88%] flex-col justify-start overflow-hidden"
     : deliveryCompact
-      ? "mx-auto w-[88%] -mt-0.5 flex flex-col justify-start"
+      ? "glyph-front-compact__verse mx-auto flex min-h-0 w-[88%] flex-col overflow-hidden"
       : "mx-auto -mt-2 h-[46%] w-[88%] overflow-hidden";
 
   const maxVerseLen = Math.max(...sign.verse_lines_en.map((line) => line.length), 1);
@@ -155,7 +163,9 @@ export function GlyphFront({ sign, animate = true, compact = false, draw = false
 
       <div className={gridShellClass}>
         <motion.div
-          className={faceSmall || draw ? "shrink-0 pt-1" : "pt-[7%]"}
+          ref={deliveryCompact ? headerFit.ref : undefined}
+          className={`glyph-front-compact__header ${faceSmall || draw ? "min-h-0 overflow-hidden" : "pt-[7%]"}`}
+          style={deliveryCompact ? { fontSize: "calc(1em * var(--glyph-fit-scale, 1))" } : undefined}
           initial={animate ? { opacity: 0, y: -10 } : false}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
@@ -177,15 +187,17 @@ export function GlyphFront({ sign, animate = true, compact = false, draw = false
         </motion.div>
 
         <motion.div
+          ref={deliveryCompact ? verseFit.ref : undefined}
           className={verseShellClass}
+          style={deliveryCompact ? { fontSize: "calc(1em * var(--glyph-fit-scale, 1))" } : undefined}
           initial={animate ? { opacity: 0 } : false}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.5 }}
         >
           <div
-            className={`font-verse flex flex-col italic ${verseSizeClass} ${
+            className={`font-verse flex min-h-0 flex-1 flex-col italic ${verseSizeClass} ${
               deliveryCompact
-                ? "justify-start gap-0.5"
+                ? "justify-center gap-0.5"
                 : `h-full justify-center ${faceSmall || drawDesktop ? "gap-0.5" : "gap-2"}`
             }`}
             style={{ color: toneColor }}
@@ -222,17 +234,17 @@ export function GlyphFront({ sign, animate = true, compact = false, draw = false
         </motion.div>
 
         <motion.div
-          className={`relative z-30 shrink-0 ${
+          ref={deliveryCompact ? summaryFit.ref : undefined}
+          className={`glyph-front-compact__summary relative z-30 min-h-0 overflow-hidden ${
             stackedFooter
               ? deliveryCompact
-                ? deliveryDesktop
-                  ? "mt-1 px-1"
-                  : "mt-1.5 px-1"
+                ? "flex items-end px-1"
                 : deliveryDesktop
                   ? "-mt-0.5 px-1"
                   : "px-1 pt-0"
               : "mt-2 min-h-[16%] px-2"
           }`}
+          style={deliveryCompact ? { fontSize: "calc(1em * var(--glyph-fit-scale, 1))" } : undefined}
           initial={animate ? { opacity: 0 } : false}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 1.2 }}

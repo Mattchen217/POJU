@@ -4,11 +4,10 @@ import { AlertTriangle } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { MarkedInline } from "@/components/cross-product/GlossaryText";
-import { PojuDeepDiveCTA } from "@/components/cross-product/PojuDeepDiveCTA";
 import { RichReadingText } from "@/components/cross-product/RichReadingText";
 import { TermMarkFirstVisitHint } from "@/components/cross-product/TermMarkFirstVisitHint";
 import { GlyphCanvas } from "@/components/glyph/GlyphCanvas";
-import { StreamingAnalysisView } from "@/components/poju/StreamingAnalysisView";
+import { GlyphDeliveryChart } from "@/components/glyph/GlyphDeliveryChart";
 import {
   glyphReportSectionLabels,
   resolveGlyphOutputLanguage,
@@ -28,10 +27,6 @@ type Props = {
   glyph: SignData;
   question: string;
   baseReportText?: string;
-  pojuDeepDive?: {
-    result_id: string;
-    result_data: Record<string, unknown>;
-  };
 };
 
 const TIMEFRAME_KEYS: Record<
@@ -44,13 +39,35 @@ const TIMEFRAME_KEYS: Record<
   this_week: "explore_time_week",
 };
 
-export function GlyphReport({
-  reading,
-  glyph,
-  question,
-  baseReportText,
-  pojuDeepDive,
-}: Props) {
+function SectionHeading({
+  title,
+  variant = "default",
+}: {
+  title: string;
+  variant?: "default" | "warn" | "moment";
+}) {
+  if (variant === "warn") {
+    return (
+      <div className="glyph-delivery-section-heading glyph-delivery-section-heading--warn">
+        <AlertTriangle size={16} aria-hidden />
+        <h2 className="glyph-delivery-section-title">{title}</h2>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        "glyph-delivery-section-heading",
+        variant === "moment" && "glyph-delivery-section-heading--moment",
+      )}
+    >
+      <h2 className="glyph-delivery-section-title">{title}</h2>
+    </div>
+  );
+}
+
+export function GlyphReport({ reading, glyph, question, baseReportText }: Props) {
   const t = useTranslations("glyph");
   const pageLocale = useLocale();
   const outputLang = resolveGlyphOutputLanguage(reading, pageLocale);
@@ -65,7 +82,7 @@ export function GlyphReport({
     safeReading.synthesis?.trim() || safeReading.meaning_for_question?.trim() || "";
   const synthesisCards = synthesisCardsFromText(synthesisText);
   const hiddenCols = hiddenTensionColumns(safeReading.hidden_tension);
-  const displayQuestion = questionResponse ? question : question.trim();
+  const displayQuestion = question.trim();
 
   if (safeReading.invalid_input) {
     return (
@@ -91,16 +108,7 @@ export function GlyphReport({
           <div className="glyph-delivery-hero__card">
             <GlyphCanvas glyph={glyph} animated={false} compact />
           </div>
-          {baseReportText?.trim() ? (
-            <div className="glyph-delivery-hero__chart">
-              <StreamingAnalysisView
-                content={baseReportText}
-                status="completed"
-                bytes_received={baseReportText.length}
-                layout="panel"
-              />
-            </div>
-          ) : null}
+          {baseReportText?.trim() ? <GlyphDeliveryChart content={baseReportText} /> : null}
         </section>
 
         <div className="glyph-delivery-divider" aria-hidden />
@@ -140,7 +148,7 @@ export function GlyphReport({
         </section>
 
         <section className="glyph-delivery-section">
-          <h2 className="glyph-delivery-section-title">{sectionLabels.section_classical}</h2>
+          <SectionHeading title={sectionLabels.section_classical} />
           <div className="glyph-delivery-section__body">
             <RichReadingText
               text={safeReading.classical_voice}
@@ -151,7 +159,7 @@ export function GlyphReport({
         </section>
 
         <section className="glyph-delivery-section glyph-dual-section">
-          <h2 className="glyph-delivery-section-title">{sectionLabels.section_dual_view}</h2>
+          <SectionHeading title={sectionLabels.section_dual_view} />
 
           <div className="glyph-dual-block">
             <span className="glyph-dual-pill">{sectionLabels.view_bazi_title}</span>
@@ -171,7 +179,7 @@ export function GlyphReport({
 
         {synthesisText ? (
           <section className="glyph-delivery-section">
-            <h2 className="glyph-delivery-section-title">{sectionLabels.section_synthesis}</h2>
+            <SectionHeading title={sectionLabels.section_synthesis} />
             {synthesisCards.length > 1 ? (
               <div className="glyph-synthesis-grid">
                 {synthesisCards.map((card, i) => (
@@ -192,10 +200,7 @@ export function GlyphReport({
         ) : null}
 
         <section className="glyph-delivery-section">
-          <h2 className="glyph-delivery-section-title glyph-delivery-section-title--warn">
-            <AlertTriangle size={16} aria-hidden />
-            {sectionLabels.section_hidden}
-          </h2>
+          <SectionHeading title={sectionLabels.section_hidden} variant="warn" />
           {hiddenCols ? (
             <div className="glyph-hidden-grid">
               <RichReadingText text={hiddenCols[0]} locale={outputLang} />
@@ -207,9 +212,7 @@ export function GlyphReport({
         </section>
 
         <section className="glyph-delivery-section">
-          <h2 className="glyph-delivery-section-title glyph-delivery-section-title--serif">
-            {sectionLabels.section_moment}
-          </h2>
+          <SectionHeading title={sectionLabels.section_moment} variant="moment" />
           <RichReadingText text={safeReading.your_moment} locale={outputLang} />
         </section>
 
@@ -233,19 +236,9 @@ export function GlyphReport({
         </footer>
 
         <section className="glyph-delivery-section">
-          <h2 className="glyph-delivery-section-title glyph-delivery-section-title--serif">
-            {sectionLabels.section_reflection}
-          </h2>
+          <SectionHeading title={sectionLabels.section_reflection} variant="moment" />
           <p className="glyph-delivery-reflection">{safeReading.reflection_question}</p>
         </section>
-
-        {pojuDeepDive ? (
-          <PojuDeepDiveCTA
-            productId="glyph"
-            result_id={pojuDeepDive.result_id}
-            result_data={pojuDeepDive.result_data}
-          />
-        ) : null}
       </div>
     </div>
   );

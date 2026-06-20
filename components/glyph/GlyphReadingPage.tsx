@@ -30,6 +30,7 @@ import {
   GLYPH_READING_CLIENT_TIMEOUT_MS,
 } from "@/lib/oracle/api";
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
+import { PojuDeepDiveCTA } from "@/components/cross-product/PojuDeepDiveCTA";
 import { ReadingDecoderBanner } from "@/components/reading-ritual/ReadingDecoderBanner";
 import { ReturnToPojuCTA } from "@/components/poju/ReturnToPojuCTA";
 import {
@@ -441,8 +442,8 @@ export function GlyphReadingPage() {
               glyph={glyph}
               question={question}
               baseReportText={reportText || undefined}
-              pojuDeepDive={{ result_id: readingId, result_data: glyphSummary }}
             />
+            <PojuDeepDiveCTA productId="glyph" result_id={readingId} result_data={glyphSummary} />
             <ReturnToPojuCTA
               tool="glyph"
               resultId={readingId}
@@ -561,8 +562,8 @@ export function GlyphReadingPage() {
         glyph={glyph}
         question={question}
         baseReportText={reportText || undefined}
-        pojuDeepDive={{ result_id: readingId, result_data: glyphSummary }}
       />
+      <PojuDeepDiveCTA productId="glyph" result_id={readingId} result_data={glyphSummary} />
       <ReturnToPojuCTA
         tool="glyph"
         resultId={readingId}
