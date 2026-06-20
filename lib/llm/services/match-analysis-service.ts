@@ -21,6 +21,11 @@ import {
   requestJsonWithRepair,
   type JsonValidateResult,
 } from "@/lib/llm/services/delivery-resilience";
+import {
+  auditDeepStringFields,
+  buildAuditRegenHint,
+  isCriticalDeliveryAuditFailure,
+} from "@/lib/llm/services/delivery-audit-regen";
 import { sanitizeDeepStringFields } from "@/lib/llm/sanitize/compliance-terms";
 import { calculateCompatibilityMatrix } from "@/lib/match/calculate-compatibility";
 import { normalizeSynergyType } from "@/lib/match/synergy-normalize";
@@ -370,47 +375,65 @@ export async function generateMatchAnalysis(
     relationship_description: input.relationship_description.trim(),
   };
 
-  const { value: reportRaw, result } = await requestJsonWithRepair({
-    llm: {
-      call_type: "match_report",
-      system,
-      messages: [{ role: "user", content: user }],
-      max_tokens: 10_000,
-      thinking_effort: "medium",
-      response_format: "json",
-      temperature: 0.55,
-      session_id: cacheSessionId,
-    },
-    validate: (parsed) => {
-      if (parsed.conclusion && typeof parsed.conclusion === "object") {
-        const conclusion = parsed.conclusion as Record<string, unknown>;
-        const llmType = normalizeSynergyType(conclusion.synergy_type ?? conclusion.compatibility_level);
-        if (llmType !== computedSynergyType) {
-          console.warn(
-            "[match] LLM synergy_type overridden:",
-            conclusion.synergy_type ?? conclusion.compatibility_level,
-            "→",
-            computedSynergyType,
-          );
+  let userContent = user;
+  let auditRetried = false;
+  let reportRaw!: MatchReport;
+  let result!: Awaited<ReturnType<typeof requestJsonWithRepair<MatchReport>>>["result"];
+
+  for (;;) {
+    const out = await requestJsonWithRepair({
+      llm: {
+        call_type: "match_report",
+        system,
+        messages: [{ role: "user", content: userContent }],
+        max_tokens: 10_000,
+        thinking_effort: "medium",
+        response_format: "json",
+        temperature: auditRetried ? 0.3 : 0.55,
+        session_id: cacheSessionId,
+      },
+      validate: (parsed) => {
+        if (parsed.conclusion && typeof parsed.conclusion === "object") {
+          const conclusion = parsed.conclusion as Record<string, unknown>;
+          const llmType = normalizeSynergyType(conclusion.synergy_type ?? conclusion.compatibility_level);
+          if (llmType !== computedSynergyType) {
+            console.warn(
+              "[match] LLM synergy_type overridden:",
+              conclusion.synergy_type ?? conclusion.compatibility_level,
+              "→",
+              computedSynergyType,
+            );
+          }
+          conclusion.synergy_type = computedSynergyType;
         }
-        conclusion.synergy_type = computedSynergyType;
-      }
-      return validateAndNormalizeReport(
-        parsed,
-        trimmedInput,
-        detected_language,
-        "pending",
-        0,
-        computedSynergyType,
-        compatibilityMatrix,
-        input.locale,
-      );
-    },
-    repairHint: (missing) =>
-      input.locale.startsWith("zh")
-        ? `上次回复缺失或被截断。请补全以下 section/字段并返回完整 JSON：${missing.join(", ")}`
-        : `Previous reply was missing or truncated. Fill these sections/fields and return complete JSON: ${missing.join(", ")}`,
-  });
+        return validateAndNormalizeReport(
+          parsed,
+          trimmedInput,
+          detected_language,
+          "pending",
+          0,
+          computedSynergyType,
+          compatibilityMatrix,
+          input.locale,
+        );
+      },
+      repairHint: (missing) =>
+        input.locale.startsWith("zh")
+          ? `上次回复缺失或被截断。请补全以下 section/字段并返回完整 JSON：${missing.join(", ")}`
+          : `Previous reply was missing or truncated. Fill these sections/fields and return complete JSON: ${missing.join(", ")}`,
+    });
+    reportRaw = out.value;
+    result = out.result;
+
+    const auditViolations = auditDeepStringFields(reportRaw, input.locale);
+    if (isCriticalDeliveryAuditFailure(auditViolations) && !auditRetried) {
+      auditRetried = true;
+      console.warn("[match] audit regen (1x)", auditViolations.slice(0, 5));
+      userContent = user + buildAuditRegenHint(auditViolations, input.locale);
+      continue;
+    }
+    break;
+  }
 
   let report = reportRaw;
   report = sanitizeDeepStringFields(report, input.locale) as MatchReport;

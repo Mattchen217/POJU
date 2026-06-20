@@ -23,6 +23,7 @@ import {
 import {
   BARE_SIGN_POEM_PATTERN,
   buildTermMarkingPromptBlock,
+  buildTermMarkingFewShot,
   detectBrokenMarkers,
   encodeTermMarker,
   maskMarkersForAudit,
@@ -41,6 +42,7 @@ import {
 export {
   BARE_SIGN_POEM_PATTERN,
   buildTermMarkingPromptBlock,
+  buildTermMarkingFewShot,
   encodeTermMarker,
   parseTermMarkers,
   plainByTermId,

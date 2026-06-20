@@ -13,6 +13,7 @@ import { markCycleDelivered } from "@/lib/poju/cycle-manager";
 import { computeSituationContextFingerprint } from "@/lib/poju/situation-context-fingerprint";
 import { getCachedSituationAnalysis, resolveBaseAnalysisForSession } from "@/lib/llm/deepseek/situation-analysis";
 import { buildPojuCorePromptSections } from "@/lib/llm/prompts/poju-base";
+import { buildTermMarkingPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
 
 export interface FinalDeliveryResult {
@@ -137,7 +138,7 @@ function buildDegradedDeliveryRules(agent: POJUAgentState): string {
 5. **合规不变**：
    - 重命盘 ≠ 编造：只用 Base Analysis 中真实算出的内容
    - 仍禁预测具体未来事件、禁吉凶断语、禁招财/催运/Amulet/lucky direction
-   - 用户可见须软化术语；禁合婚排盘术语`;
+   - 用户可见须用术语表 soft 词 + ⟦t:id|…⟧ 标记；禁裸合婚排盘术语`;
 }
 
 function buildFullDeliveryTask(
@@ -168,7 +169,7 @@ ${regionalGuidance ? `${regionalGuidance}\n\n` : ""}规则:
 严格使用 POJU_OUTPUT_BRANDING 中的分段标记。
 
 ═══ ANALYSIS ═══
-（展开：profile / core nature / life cycle / balancing element / 困境根源 / 破局方向 — 见 POJU_BAZI_DEEP_METHOD；禁 chart/合婚排盘术语）
+（展开：⟦t:day_master|…⟧ / ⟦t:decade|…⟧ / ⟦t:yong_shen|…⟧ / 困境根源 / 破局方向 — 见 POJU_BAZI_DEEP_METHOD；禁裸 chart/Day Master/合婚术语）
 
 ═══ CONCLUSION ═══
 （收束：对用户问题的直接判断 + 1–2 句核心建议）
@@ -192,7 +193,7 @@ ${regionalGuidance ? `${regionalGuidance}\n\n` : ""}规则:
 # 关键规则
 
 1. 全文使用用户语言。
-2. 用户可见须软化术语 + **禁合婚排盘术语 + 超自然承诺（招财/催运/lucky direction）**；五行/I Ching 可保留。
+2. 用户可见须 **⟦t:id|软译词 (干支)⟧ 标记** + 禁裸合婚排盘术语 + 禁超自然承诺；五行/I Ching 可保留。
 3. WHAT TO DO 三条须极其具体（时间+地点+人+话+可观察结果）。
 4. 不下命运定论；不用中医话术（方子/诊脉/复诊）。
 5. 不暴露 Glyph / Syncro / Match 等产品名。
@@ -289,7 +290,11 @@ ${sitStr}
 
   const finalDeliveryTask = `${modeTask}\n\n${expertMaterials}`;
 
-  const system = stitchPromptSections(...buildPojuCorePromptSections(), finalDeliveryTask);
+  const system = stitchPromptSections(
+    ...buildPojuCorePromptSections(),
+    buildTermMarkingPromptBlock(locale),
+    finalDeliveryTask,
+  );
 
   const contextText = formatContextForPrompt(agent_v2);
   const summaryStr = agent_v2.current_summary ? safeJsonSlice(agent_v2.current_summary, 4000) : "(No formal current_summary object — rely on context below.)";

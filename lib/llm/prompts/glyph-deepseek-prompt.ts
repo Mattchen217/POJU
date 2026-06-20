@@ -102,14 +102,14 @@ ${windCategoryToneBlock(glyph.wind_category)}
 
 ## 回应必须取据于（内部推演 → 合规输出）
 1. **签象第一依据**：抽到的签（${glyph.name}）的签文原文 + 五风类气势（${glyph.wind_category}）
-2. **命盘依据**：base_analysis 的人格架构 / 当前大运 / 用神 — 允许术语，就近解释
+2. **命盘依据**：base_analysis 的人格架构 / 当前大运 / 用神 — 输出须 ⟦t:id|软译词 (干支)⟧ 标记
 3. **《易经》依据**：时位 / 变化 / 阴阳之道
 → 给出对用户问题的**原型层面明确表态**：不是"会不会、何时"，而是"这面镜子照出你该看清的是什么、此刻的势在助你还是在拦你、下一步的方向感"。
 
 ## 合规接法（原型反思语域，不算命）
-- ✓ 「就你问的『此事』，这支 Glyph 照出的是【意象】——结合你【日主/核心特质】，此刻的势更利于【方向】而非【方向】」。
-- ✓ 「Glyph 象与你当前的大运都指向：真正的关口不在『何时发生』，而在你是否先完成【内在动作】」。
-- ✗ 禁：答具体「何时/几月」、断言未来事件、下吉凶、替用户决定。
+- ✓ 「就你问的『此事』，这支 Glyph 照出的是【意象】——结合你的 ⟦t:day_master|core nature (乙木)⟧（或中文版 ⟦t:day_master|核心特质（乙木）⟧），此刻的势更利于【方向】而非【方向】」。
+- ✓ 「Glyph 象与你当前的 ⟦t:decade|life phase (癸酉)⟧ 都指向：真正的关口不在『何时发生』，而在你是否先完成【内在动作】」。
+- ✗ 禁：答具体「何时/几月」、断言未来事件、下吉凶、替用户决定；禁裸写 Day Master/Yi Wood/energy blueprint（须术语表+标记）。
 
 # 输入质量
 
@@ -130,17 +130,17 @@ ${windCategoryToneBlock(glyph.wind_category)}
 ${GLYPH_LAYOUT_CONTRACT}
 
 {
-  "question_response": "120-200 字【答案先行·唯一复述处】。第一句复述用户问题，随后 2-4 句给出镜子照出的方向：此刻的势在助还是在拦、关键着力点是什么。适度加厚但仍精炼，不展开依据、不堆术语。",
-  "wind_category_blurb": "60-110 字。这个风类的整体氛围（不提问题；六条红线）",
-  "classical_voice": "220-360 字。签的意象与《易经》时位（不提问题；archetypal metaphor 开篇一次；用 Glyph 指代）",
+  "question_response": "120-200 字【答案先行·唯一复述处】。第一句复述用户问题，随后 2-4 句给出镜子照出的方向。命盘依据须含 ⟦t:day_master|…⟧ 或 ⟦t:decade|…⟧ 标记（keep_cn 含中文干支）。例（EN）：your ⟦t:day_master|core nature (乙木)⟧ …",
+  "wind_category_blurb": "60-110 字。这个风类的整体氛围（不提问题；六条红线；命理词须标记）",
+  "classical_voice": "220-360 字。签的意象与《易经》时位（不提问题；archetypal metaphor 开篇一次；用 Glyph 指代；**意象化转述签诗，禁逐字引原文**）",
   "命理双视角": {
-    "命理看此事": "480-820 字（中文）/ 480-820 词（英文）【依据·命盘，不复述问题】。日主/大运/流年/用神/五行（允许术语，就近用大白话解释）逐项展开——此人对此事的天然倾向、亮点与盲点。直接分析，不复述问题。",
-    "签文看此事": "480-820 字（中文）/ 480-820 词（英文）【依据·签象，不复述问题】。Glyph 文原型对此事照出的意象/典故（可引用 1-2 句签诗原文，抽象化；用 Glyph 指代，禁 sign/lot）",
-    "两者印证或冲突": "240-420 字。两面镜子如何印证或形成张力（不复述问题；六条红线）"
+    "命理看此事": "480-820 字（中文）/ 480-820 词（英文）【依据·命盘，不复述问题】。须逐项展开 ⟦t:day_master|…⟧、⟦t:decade|…⟧、⟦t:year|…⟧、⟦t:yong_shen|…⟧（禁止裸写 Day Master/大运/用神/Yi Wood）。例：your ⟦t:day_master|core nature (乙木)⟧ … current ⟦t:decade|life phase (癸酉)⟧ …",
+    "签文看此事": "480-820 字（中文）/ 480-820 词（英文）【依据·签象，不复述问题】。Glyph 文原型意象**意象化转述**（禁逐字签诗原文；禁 sign/lot）",
+    "两者印证或冲突": "240-420 字。两面镜子如何印证或形成张力（不复述问题；六条红线；术语须标记）"
   },
-  "synthesis": "460-760 字【深度整合·严禁复述问题、严禁重复 question_response】。把命盘×签象×问题拧成一个更深的洞见：点名关键变量、说清条件、给出着力点；可含能量层面的时机窗口感（不报日期）。默认用户已知问题，直接深入——加厚=加新角度，不是把旧话拉长。",
-  "hidden_tension": "160-280 字。盲点或暗流（当下视角）",
-  "your_moment": "180-320 字。当前年度能量节律 + 能量层面时机窗口感（顺势/沉淀，禁报日期、禁预测事件）",
+  "synthesis": "460-760 字【深度整合·严禁复述问题、严禁重复 question_response】。把命盘×签象×问题拧成一个更深的洞见；命理词须 ⟦t:id|…⟧ 标记。",
+  "hidden_tension": "160-280 字。盲点或暗流（当下视角；术语须标记）",
+  "your_moment": "180-320 字。当前 ⟦t:year|year's energy (… )⟧ 或 ⟦t:decade|life phase (… )⟧ 节律 + 能量层面时机窗口感（禁报日期、禁预测事件）",
   "exploration": {
     "text": "120-200 字微练习（见 exploration 专节）：何时+场景+动作链+尽量有产出物；形态多样，禁止默认「安静坐下闭眼+纸上书写」",
     "timeframe": "today | tonight | within_24h | this_week",
@@ -161,13 +161,13 @@ ${GLYPH_LAYOUT_CONTRACT}
 
 1. **全部字段填充**（JSON 不能缺字段；**禁止空字符串**；invalid_input 时也用中性引导填满）
 2. **使用语言**: ${outputLang}（跟随用户实际输入语言）
-3. **OUTPUT POLICY + 叙事抽象 + 预测规避 + 《易经》框架**: 可自然使用命理术语（输出端软翻译）+ 叙事抽象 + 预测规避 + I Ching 哲学透镜（非占卜）
-4. **人格依据**: 「命理看此事」须体现人格架构 + 10年生命周期 + 认知资源偏好（允许日主/大运/用神，就近解释）
-5. **隐喻依据**: 签文看此事可摘 1–2 句签诗原文；其他字段意象化；禁止展开历史人物故事情节
+3. **OUTPUT POLICY + 术语标记 + 叙事抽象 + 预测规避 + 《易经》框架**: 命理术语须术语表 soft 词 + ⟦t:id|…⟧ 标记（keep_cn 保留中文干支）；叙事意象化；预测规避；I Ching 哲学透镜（非占卜）
+4. **人格依据**: 「命理看此事」须体现 ⟦t:day_master|…⟧、⟦t:decade|…⟧、⟦t:yong_shen|…⟧ 等标记化术语（禁裸写/Yi Wood/energy blueprint）
+5. **隐喻依据**: 签文看此事 / classical_voice **意象化转述**签意；**禁逐字引签诗原文**；禁止展开历史人物故事情节
 6. **结构必备**: 命理双视角 + 原型隐喻意象 + exploration 微练习 三者缺一不可；exploration 须遵守 GLYPH_EXPLORATION_GUIDANCE（多样形态，忌模板化静坐书写）
 7. **总字数**: 中文约 3400-5400 字 / 英文约 2800-4600 词（各字符串字段合计；宁详不短，但不得违反各字段上限）
 8. **question_response**：必须正面回应用户问题，至少引用签象依据 + 命盘依据各一处；明确不打太极，但保持原型反思、不预测。
-9. **板块零重复**：复述用户问题只在 question_response 出现一次；synthesis 必须深化、严禁复述问题或重复 question_response。命理术语允许使用但须就近解释；全篇守六条红线（不预测/不恐吓/不定论/不超自然/不诊疗/交还主动权）。
+9. **板块零重复**：复述用户问题只在 question_response 出现一次；synthesis 必须深化、严禁复述问题或重复 question_response。命理术语须 ⟦t:id|…⟧ 标记；全篇守六条红线。
 10. **严格 JSON**: 不要用 \`\`\`json 包裹
 
 # 不要做的事
@@ -210,15 +210,15 @@ ${GLYPH_OUTPUT_SELF_CHECK}`;
     outputSchema,
     `请按解签法则生成解读 JSON（签 #${glyph.id} · ${glyph.name}）。
 
-⛔ 输出合规（最高优先级）: OUTPUT POLICY + GLYPH_LAYOUT_CONTRACT + Glyph 措辞
+⛔ 输出合规（最高优先级）: OUTPUT POLICY + 术语标记表 + GLYPH_LAYOUT_CONTRACT + Glyph 措辞
   · 指代: 统一 Glyph / Glyph 文 / the Glyph text；禁签/sign/lot；archetypal metaphor 仅开篇一次
-  · 术语: 深度交付允许日主/大运/用神/干支等 — **就近用大白话解释**，不甩术语墙
-  · 防线2: 签文看此事可摘 1–2 句原文 / 其他字段意象化 / 禁历史人物故事情节
+  · 术语: **必须** ⟦t:id|软译词 (干支)⟧ 标记 — 禁裸 Day Master/日主/大运/Yi Wood/energy blueprint
+  · 防线2: **意象化转述**签文；禁逐字签诗原文 / 禁历史人物故事情节
   · 防线3: 禁 will meet / going to + 未来事件 → present readiness / 现在时
   · 板块: question_response 唯一直答+复述；synthesis 深化、严禁复述问题或重复 question_response
   · 《易经》: 自然融入 I Ching 变化之道/时位/阴阳（非起卦占卜）
 ✓ 语言: 跟随用户实际输入（${outputLang}）。
-✓ 内容: 命理看此事须体现人格架构+10年周期+认知偏好；不得抄写 modern_translation。
+✓ 内容: 命理看此事须含 ⟦t:day_master|…⟧ + ⟦t:decade|…⟧ + ⟦t:yong_shen|…⟧；不得抄写 modern_translation。
 ✓ 写每段前执行 GLYPH_OUTPUT_SELF_CHECK。invalid_input 时所有字段仍填中性引导，禁止空字符串。
 ✓ exploration：按 GLYPH_EXPLORATION_GUIDANCE 选 **一种** 练习形态，勿次次「安静地方+闭眼+纸上写」。`,
   );

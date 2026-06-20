@@ -7,7 +7,11 @@ import {
 } from "@/lib/llm/pro/final-delivery";
 import { callLLM } from "@/lib/llm/router";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
-import { sanitizeDeliveryText } from "@/lib/llm/sanitize/compliance-terms";
+import { sanitizeDeliveryText, auditDeliveredText } from "@/lib/llm/sanitize/compliance-terms";
+import {
+  buildAuditRegenHint,
+  isCriticalDeliveryAuditFailure,
+} from "@/lib/llm/services/delivery-audit-regen";
 import { normalizeAgentPhase, type POJUAgentState } from "@/lib/poju/agent-state";
 
 export const maxDuration = 180;
@@ -85,14 +89,35 @@ export async function POST(req: Request) {
       typeof body.session_id === "string" && body.session_id.trim()
         ? pojuCacheSessionId(body.session_id.trim())
         : undefined;
-    const result = await callLLM({
+
+    let userContent = user;
+    let auditRetried = false;
+    let result = await callLLM({
       call_type: "main_delivery",
       system,
-      messages: [{ role: "user", content: user }],
+      messages: [{ role: "user", content: userContent }],
       max_tokens: 8000,
       response_format: "text",
       session_id: sessionId,
+      temperature: 0.55,
     });
+
+    let auditViolations = auditDeliveredText(result.content, locale);
+    if (isCriticalDeliveryAuditFailure(auditViolations) && !auditRetried) {
+      auditRetried = true;
+      console.warn("[final-delivery] audit regen (1x)", auditViolations.slice(0, 5));
+      userContent = user + buildAuditRegenHint(auditViolations, locale);
+      result = await callLLM({
+        call_type: "main_delivery",
+        system,
+        messages: [{ role: "user", content: userContent }],
+        max_tokens: 8000,
+        response_format: "text",
+        session_id: sessionId,
+        temperature: 0.3,
+      });
+      auditViolations = auditDeliveredText(result.content, locale);
+    }
 
     const text = sanitizeDeliveryText(result.content.trim(), locale);
     const actions = extractActionsFromDelivery(text, body.situation_analysis);

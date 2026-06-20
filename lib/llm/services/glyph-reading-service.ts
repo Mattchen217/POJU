@@ -20,6 +20,11 @@ import {
   requestJsonWithRepair,
   type JsonValidateResult,
 } from "@/lib/llm/services/delivery-resilience";
+import {
+  auditDeepStringFields,
+  buildAuditRegenHint,
+  isCriticalDeliveryAuditFailure,
+} from "@/lib/llm/services/delivery-audit-regen";
 import { sanitizeDeepStringFields } from "@/lib/llm/sanitize/compliance-terms";
 import {
   getStoredProfile,
@@ -282,20 +287,38 @@ export async function generateGlyphReading(
     `[glyph-reading] Calling DeepSeek (glyph_reading, max_tokens: ${GLYPH_READING_MAX_TOKENS}, session: ${sessionId})...`,
   );
 
-  const { value: reading, result } = await requestJsonWithRepair({
-    llm: {
-      call_type: "glyph_reading",
-      system,
-      messages: [{ role: "user", content: user }],
-      max_tokens: GLYPH_READING_MAX_TOKENS,
-      response_format: "json",
-      temperature: 0.55,
-      timeout_ms: GLYPH_READING_TIMEOUT_MS,
-      session_id: sessionId,
-    },
-    validate: (parsed) => validateReading(parsed, input.locale),
-    repairHint: (missing) => buildRepairHint(missing, input.locale),
-  });
+  let userContent = user;
+  let auditRetried = false;
+  let reading!: GlyphReadingContent;
+  let result!: Awaited<ReturnType<typeof requestJsonWithRepair<GlyphReadingContent>>>["result"];
+
+  for (;;) {
+    const out = await requestJsonWithRepair({
+      llm: {
+        call_type: "glyph_reading",
+        system,
+        messages: [{ role: "user", content: userContent }],
+        max_tokens: GLYPH_READING_MAX_TOKENS,
+        response_format: "json",
+        temperature: auditRetried ? 0.3 : 0.55,
+        timeout_ms: GLYPH_READING_TIMEOUT_MS,
+        session_id: sessionId,
+      },
+      validate: (parsed) => validateReading(parsed, input.locale),
+      repairHint: (missing) => buildRepairHint(missing, input.locale),
+    });
+    reading = out.value;
+    result = out.result;
+
+    const auditViolations = auditDeepStringFields(reading, input.locale);
+    if (isCriticalDeliveryAuditFailure(auditViolations) && !auditRetried) {
+      auditRetried = true;
+      console.warn("[glyph-reading] audit regen (1x)", auditViolations.slice(0, 5));
+      userContent = user + buildAuditRegenHint(auditViolations, input.locale);
+      continue;
+    }
+    break;
+  }
 
   console.info("[glyph-reading] LLM complete", {
     reading_id: input.reading_id ?? null,

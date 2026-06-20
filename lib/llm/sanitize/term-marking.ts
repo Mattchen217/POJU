@@ -172,6 +172,24 @@ export function uiTermById(
 }
 
 /** Prompt projection: forbidden → id + soft (+ keep_cn hint). Plain excluded to save tokens. */
+export function buildTermMarkingFewShot(locale: string): string {
+  const loc = toGlossaryLocale(locale);
+  if (loc === "zh") {
+    return `## 字段 few-shot 示例（必须模仿此形态 · 含标记+中文干支）
+
+\`\`\`
+"question_response": "你问的是…这支 Glyph 照见的是耐心中的转机。结合你的 ⟦t:day_master|核心特质（乙木）⟧，此刻更宜先稳住节奏…"
+"命理看此事": "…你的 ⟦t:day_master|核心特质（乙木）⟧ 在关系里需要先找支点。现行 ⟦t:decade|人生阶段（癸酉）⟧ 更利于沉潜整理，而 ⟦t:year|流年能量（丙午）⟧ 则推你向外试探一小步…"
+\`\`\``;
+  }
+  return `## Field few-shot examples (copy this exact shape · markers + Chinese stem-branch)
+
+\`\`\`
+"question_response": "You asked whether… This Glyph reflects a turn that ripens through patience. Your ⟦t:day_master|core nature (乙木)⟧ needs a clear anchor before you stretch further…"
+"命理看此事": "… your ⟦t:day_master|core nature (乙木)⟧ seeks connection with structure. The current ⟦t:decade|life phase (癸酉)⟧ favors consolidation, while ⟦t:year|year's energy (丙午)⟧ nudges one small outward step…"
+\`\`\``;
+}
+
 export function buildTermMarkingPromptBlock(locale: string): string {
   const loc = toGlossaryLocale(locale);
   const langLabel =
@@ -201,7 +219,9 @@ ${rows}
 2. **只用当前交付语言**，整句必须通顺；标记**只包软翻译词（含括号干支）**，**勿把 your/the/as 等前后词包进标记**
 3. 同一概念在一段内**只标一次**（首次出现）
 4. **签诗/古文诗句不是术语**：禁逐字引签诗原文（如「志气功业在朝朝…」）；只能意象化转述成交付语言，**不打术语标记**
-5. 守六条语义红线（不预测/不算命/不占卜/不决吉凶/不恐吓/不超自然承诺）`;
+5. 守六条语义红线（不预测/不算命/不占卜/不决吉凶/不恐吓/不超自然承诺）
+
+${buildTermMarkingFewShot(locale)}`;
 }
 
 export const BARE_SIGN_POEM_PATTERN =

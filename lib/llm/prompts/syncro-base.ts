@@ -173,7 +173,7 @@ export const SYNCRO_TIMESPACE_FRAMEWORK = `# 时空对行动的三层影响 + Cu
 
 1. **天时**（时段能量）：此刻段五行气势、对用户 balancing element 是支持还是摩擦
 2. **地利**（方向能量）：该方向在此时段是否助力任务
-3. **人和**（用户 profile）：core nature、life cycle 能否「承得住」此时此向
+3. **人和**（用户 profile）：⟦t:day_master|core nature (… )⟧、⟦t:decade|life phase (… )⟧ 能否「承得住」此时此向
 
 ## Current 5 等级（**唯一**允许对用户输出的气势标签）
 
