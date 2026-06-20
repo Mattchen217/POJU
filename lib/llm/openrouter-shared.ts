@@ -171,18 +171,7 @@ export async function openRouterChatCompletion(
   }
 
   let includeReasoning = effort !== "off";
-  let { res, raw } = await post(buildBody(includeReasoning));
-
-  if (!res.ok && includeReasoning) {
-    console.warn("[openrouter] Request failed with reasoning; retrying without reasoning parameter:", raw.slice(0, 200));
-    includeReasoning = false;
-    ({ res, raw } = await post(buildBody(false)));
-  }
-
-  if (!res.ok) {
-    throw new Error(`openrouter_http_${res.status}: ${raw.slice(0, 900)}`);
-  }
-
+  const maxJsonAttempts = 3;
   let data: {
     model?: string;
     choices?: Array<{
@@ -199,10 +188,45 @@ export async function openRouterChatCompletion(
       prompt_tokens_details?: { cached_tokens?: number };
       native_tokens_cached?: number;
     };
-  };
-  try {
-    data = JSON.parse(raw) as typeof data;
-  } catch {
+  } | undefined;
+
+  for (let attempt = 0; attempt < maxJsonAttempts; attempt++) {
+    let res: Response;
+    let raw: string;
+    ({ res, raw } = await post(buildBody(includeReasoning)));
+
+    if (!res.ok && includeReasoning) {
+      console.warn(
+        "[openrouter] Request failed with reasoning; retrying without reasoning parameter:",
+        raw.slice(0, 200),
+      );
+      includeReasoning = false;
+      ({ res, raw } = await post(buildBody(false)));
+    }
+
+    if (!res.ok) {
+      throw new Error(`openrouter_http_${res.status}: ${raw.slice(0, 900)}`);
+    }
+
+    try {
+      data = JSON.parse(raw) as typeof data;
+      break;
+    } catch {
+      const snippet = raw.slice(0, 400).replace(/\s+/g, " ").trim();
+      if (attempt + 1 < maxJsonAttempts) {
+        console.warn(
+          `[openrouter] Invalid JSON envelope (attempt ${attempt + 1}/${maxJsonAttempts}), retrying:`,
+          snippet,
+        );
+        await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
+        continue;
+      }
+      console.error("[openrouter] Invalid JSON envelope after retries:", snippet);
+      throw new Error("openrouter_invalid_json_response");
+    }
+  }
+
+  if (!data) {
     throw new Error("openrouter_invalid_json_response");
   }
 

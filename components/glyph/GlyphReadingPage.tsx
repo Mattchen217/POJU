@@ -32,6 +32,10 @@ import {
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 import { ReadingDecoderBanner } from "@/components/reading-ritual/ReadingDecoderBanner";
 import { ReturnToPojuCTA } from "@/components/poju/ReturnToPojuCTA";
+import {
+  classifyGlyphReadingError,
+  GLYPH_READING_ERROR_I18N_KEY,
+} from "@/lib/glyph/glyph-reading-errors";
 import { extractGlyphSummary } from "@/lib/poju/tool-result-summary";
 import { useDeliveryWaitPhase } from "@/lib/wait-ritual/use-delivery-wait-phase";
 import type { CSSProperties } from "react";
@@ -509,10 +513,12 @@ export function GlyphReadingPage() {
   }
 
   if (stage === "error") {
+    const errorCode = error ? classifyGlyphReadingError(error) : "unknown";
+    const errorDetailKey = GLYPH_READING_ERROR_I18N_KEY[errorCode];
     return (
       <div className="glyph-error-page">
         <p>{t("reading_failed")}</p>
-        {error ? <p className="error-detail">{error}</p> : null}
+        <p className="error-detail">{t(errorDetailKey)}</p>
         <div className="glyph-error-actions">
           <button type="button" className="glyph-primary-btn" onClick={() => void beginUnlockPipeline()}>
             {t("reading_retry")}

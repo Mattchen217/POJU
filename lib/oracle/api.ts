@@ -186,8 +186,12 @@ export async function generateGlyphFullReading({
         const errorData = await readFetchJson<{
           error?: string;
           message?: string;
+          code?: string;
         }>(response);
-        errorMessage = errorData.message || errorData.error || errorMessage;
+        errorMessage = errorData.error || errorData.message || errorMessage;
+        if (errorData.code && !errorData.error?.includes(errorData.code)) {
+          errorMessage = `${errorMessage}:${errorData.code}`;
+        }
       } catch {
         // keep status fallback
       }

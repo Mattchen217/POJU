@@ -107,10 +107,15 @@ export async function POST(req: Request) {
       );
     }
 
-    if (message.includes("llm_timeout")) {
+    if (message.includes("llm_timeout") || message.includes("openrouter_invalid_json")) {
       return NextResponse.json(
-        { error: "Reading timed out. Please retry.", message, code: "llm_timeout" },
-        { status: 504 },
+        {
+          error: "Reading timed out or the model provider glitched. Please retry.",
+          message,
+          code: message.includes("llm_timeout") ? "llm_timeout" : "openrouter_invalid_json",
+          retryable: true,
+        },
+        { status: message.includes("llm_timeout") ? 504 : 502 },
       );
     }
 
