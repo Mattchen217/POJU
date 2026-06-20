@@ -75,10 +75,37 @@ function LegacyGlossMark({ display, plain }: { display: string; plain: string })
   return <TermMark visible={display} plain={plain} />;
 }
 
-function renderPlainText(segment: string, keyPrefix: number): ReactNode[] {
+function renderPlainSegment(segment: string, keyPrefix: number): ReactNode[] {
   if (!segment) return [];
   const clean = stripBrokenMarkers(segment);
-  return clean ? [<span key={`plain-${keyPrefix}`}>{clean}</span>] : [];
+  if (!clean) return [];
+
+  const parts: ReactNode[] = [];
+  const boldRe = /\*\*([^*]+)\*\*/g;
+  let last = 0;
+  let ki = 0;
+  let m: RegExpExecArray | null;
+
+  boldRe.lastIndex = 0;
+  while ((m = boldRe.exec(clean)) !== null) {
+    if (m.index > last) {
+      parts.push(
+        <span key={`plain-${keyPrefix}-${ki++}`}>{clean.slice(last, m.index)}</span>,
+      );
+    }
+    parts.push(
+      <strong key={`bold-${keyPrefix}-${ki++}`} className="reading-strong">
+        {m[1]}
+      </strong>,
+    );
+    last = m.index + m[0].length;
+  }
+
+  if (last < clean.length) {
+    parts.push(<span key={`plain-${keyPrefix}-${ki++}`}>{clean.slice(last)}</span>);
+  }
+
+  return parts.length ? parts : [<span key={`plain-${keyPrefix}`}>{clean}</span>];
 }
 
 function findNextMarker(
@@ -121,11 +148,11 @@ function parseMarkedText(
   while (cursor < text.length) {
     const next = findNextMarker(text, cursor);
     if (!next) {
-      nodes.push(...renderPlainText(text.slice(cursor), keyBase + keyIdx++));
+      nodes.push(...renderPlainSegment(text.slice(cursor), keyBase + keyIdx++));
       break;
     }
     if (next.index > cursor) {
-      nodes.push(...renderPlainText(text.slice(cursor, next.index), keyBase + keyIdx++));
+      nodes.push(...renderPlainSegment(text.slice(cursor, next.index), keyBase + keyIdx++));
     }
     if (next.kind === "t") {
       const termId = next.groups[0];

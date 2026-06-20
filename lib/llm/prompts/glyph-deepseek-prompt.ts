@@ -126,7 +126,7 @@ ${windCategoryToneBlock(glyph.wind_category)}
 - 命理双视角三字段：各写 2–4 句中性说明（可泛述五风类气势 + 内观方向，不硬断）
 - synthesis / hidden_tension / your_moment / reflection_question：给出通用反思引导（聚焦、暂停、写下真正想问的一句）
 - exploration.text：仍须具体 Solo 微练习，但形态从 GLYPH_EXPLORATION_GUIDANCE 中选，禁止默认静坐+书写套路
-- classical_voice：用抽象叙事原型描述意象，**禁止**引用输入原文诗句或历史人物名
+- classical_voice：用抽象叙事原型描述意象，**禁止**引用输入原文诗句或历史人物名；**100% 使用交付语言**（英文交付禁整句中文，除 ⟦t:…⟧ 内干支锚点）；禁写中文定位句如「你触发的这个原型隐喻…」
 
 # 输出格式（严格 JSON，无 markdown 围栏）
 ⚠️ 生成前执行 GLYPH_OUTPUT_SELF_CHECK + OUTPUT FRAMING 白榜：所有字符串字段守六条红线、零禁词、零预测。`;
@@ -138,7 +138,7 @@ ${GLYPH_LAYOUT_CONTRACT}
 {
   "question_response": "120-200 字【答案先行·唯一复述处】。第一句复述用户问题，随后 2-4 句给出镜子照出的方向。命盘依据须含 ⟦t:day_master|…⟧ 或 ⟦t:decade|…⟧ 标记（keep_cn 含中文干支）。例（EN）：your ⟦t:day_master|core nature (乙木)⟧ …",
   "wind_category_blurb": "60-110 字。这个风类的整体氛围（不提问题；六条红线；命理词须标记）",
-  "classical_voice": "220-360 字。签的意象与《易经》时位（不提问题；archetypal metaphor 开篇一次；用 Glyph 指代；**意象化转述签诗，禁逐字引原文**）",
+  "classical_voice": "220-360 字。签的意象与《易经》时位（不提问题；archetypal metaphor 开篇一次；用 Glyph 指代；**意象化转述签诗，禁逐字引原文**；**全文交付语言，英文禁整句中文**）",
   "命理双视角": {
     "命理看此事": "480-820 字（中文）/ 480-820 词（英文）【依据·命盘，不复述问题】。须逐项展开 ⟦t:day_master|…⟧、⟦t:decade|…⟧、⟦t:year|…⟧、⟦t:yong_shen|…⟧（禁止裸写 Day Master/大运/用神/Yi Wood）。例：your ⟦t:day_master|core nature (乙木)⟧ … current ⟦t:decade|life phase (癸酉)⟧ …",
     "签文看此事": "480-820 字（中文）/ 480-820 词（英文）【依据·签象，不复述问题】。Glyph 文原型意象**意象化转述**（禁逐字签诗原文；禁 sign/lot）",

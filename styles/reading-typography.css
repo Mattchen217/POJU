@@ -1,17 +1,28 @@
 /* Shared magazine-style reading typography — Glyph / POJU / Match */
 
 .reading-body {
-  max-width: 38rem;
+  width: 100%;
+  max-width: min(760px, 100%);
   text-align: left;
+  font-size: 1.0625rem; /* 17px */
   line-height: 1.7;
   color: inherit;
 }
 
 .reading-body--poem {
-  max-width: 32rem;
+  max-width: min(560px, 100%);
   margin-inline: auto;
   text-align: center;
+  font-size: 1.125rem; /* 18px */
   line-height: 1.74;
+}
+
+.reading-unit {
+  margin: 0 0 1em;
+}
+
+.reading-unit--in-quote {
+  margin-bottom: 0.65em;
 }
 
 .reading-p {
@@ -21,27 +32,45 @@
   color: inherit;
 }
 
-.reading-p:last-child {
+.reading-p:last-child,
+.reading-unit:last-child {
   margin-bottom: 0;
 }
 
-.reading-p--labeled {
-  margin-top: 0.15em;
+.reading-lead-block {
+  margin: 14px 0 8px;
+  font-size: 1.05em;
+  line-height: 1.45;
+}
+
+.reading-lead-block:first-child {
+  margin-top: 0;
+}
+
+.reading-lead-block--subhead {
+  margin-top: 16px;
+  margin-bottom: 6px;
+}
+
+.reading-lead-block--pullquote {
+  margin-top: 0;
+  margin-bottom: 10px;
 }
 
 .reading-lead {
   font-weight: 600;
-  color: rgba(212, 175, 55, 0.88);
+  color: rgba(212, 175, 55, 0.92);
   letter-spacing: 0.01em;
 }
 
-.reading-lead--pullquote {
-  display: inline;
+.reading-strong {
+  font-weight: 600;
+  color: rgba(212, 175, 55, 0.88);
 }
 
 .reading-subhead {
   margin: 1.15em 0 0.5em;
-  font-size: 1.02em;
+  font-size: 1.05em;
   font-weight: 600;
   letter-spacing: 0.02em;
   color: rgba(212, 175, 55, 0.75);
@@ -53,24 +82,28 @@
 }
 
 .reading-pullquote {
-  margin: 1.1em 0 1.25em;
+  margin: 1.15em 0 1.35em;
   padding: 16px 20px;
   border-left: 2px solid rgba(212, 175, 55, 0.55);
   border-radius: 10px;
   background: rgba(212, 175, 55, 0.06);
-  font-size: 1.05em;
+  font-size: 1.06em;
   line-height: 1.65;
   color: inherit;
 }
 
+.reading-pullquote .reading-p {
+  margin-bottom: 0;
+}
+
 .reading-list {
   margin: 0.65em 0 1em;
-  padding-left: 1.2em;
+  padding-left: 1.25em;
   list-style: disc;
 }
 
 .reading-list li {
-  margin-bottom: 7px;
+  margin-bottom: 8px;
   line-height: 1.65;
 }
 
@@ -80,7 +113,7 @@
 
 /* POJU main delivery */
 .pchat__delivery section {
-  margin-bottom: 2.5rem;
+  margin-bottom: 3rem; /* 48px */
 }
 
 .pchat__delivery-section-title {
@@ -92,33 +125,38 @@
 }
 
 /* Glyph report — long body left-aligned; poem variant stays centered */
-.glyph-report .reading-body:not(.reading-body--poem) {
-  margin: 0;
+.glyph-report {
+  gap: 3rem;
 }
 
-.glyph-report .report-section {
-  margin-bottom: 0;
+.glyph-report .reading-body:not(.reading-body--poem) {
+  margin: 0;
+  max-width: min(760px, 100%);
 }
 
 .glyph-report .report-section.meaning,
 .glyph-report .report-section.tension,
 .glyph-report .report-section.moment,
-.glyph-report .report-section.exploration {
+.glyph-report .report-section.exploration,
+.glyph-report .report-section.dual-view {
   padding-bottom: 0.25rem;
 }
 
 .glyph-report .dual-view-card .reading-body {
-  font-size: 0.98rem;
+  max-width: 100%;
+  font-size: 1rem;
 }
 
 .glyph-report .dual-view-resonance .reading-body {
-  font-size: 0.95rem;
-  opacity: 0.92;
+  max-width: min(760px, 100%);
+  font-size: 1.02rem;
+  opacity: 0.95;
 }
 
 /* Match report cards */
 .match-report .card-content .reading-body {
-  font-size: 0.96rem;
+  max-width: min(760px, 100%);
+  font-size: 1.0625rem;
   color: var(--m-ink-dim, #c8c4d4);
 }
 
@@ -128,4 +166,8 @@
 
 .match-report .action-detail .reading-body {
   margin: 0;
+}
+
+.match-report .match-cards {
+  gap: 3rem;
 }

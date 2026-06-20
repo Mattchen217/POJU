@@ -423,7 +423,7 @@
 .glyph-report {
   display: flex;
   flex-direction: column;
-  gap: 2.25rem;
+  gap: 3rem;
 }
 
 .glyph-report .section-label {

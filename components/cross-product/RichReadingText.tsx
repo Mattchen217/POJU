@@ -4,6 +4,10 @@ import { useMemo, type ReactNode } from "react";
 
 import { MarkedInline } from "@/components/cross-product/GlossaryText";
 import { cn } from "@/lib/utils/classnames";
+import {
+  parseBlockquoteParts,
+  parseReadingBlocks,
+} from "@/lib/reading/parse-reading-blocks";
 
 import "@/styles/reading-typography.css";
 
@@ -15,9 +19,36 @@ type Props = {
   variant?: "body" | "poem";
 };
 
-import { parseReadingBlocks, parseReadingLabel } from "@/lib/reading/parse-reading-blocks";
+function LeadBlock({
+  label,
+  body,
+  locale,
+  dedupeScope,
+  blockKey,
+  inQuote,
+}: {
+  label: string;
+  body: string;
+  locale: string;
+  dedupeScope: Set<string>;
+  blockKey: number;
+  inQuote?: boolean;
+}) {
+  return (
+    <div className={cn("reading-unit", inQuote && "reading-unit--in-quote")}>
+      <div className={cn("reading-lead-block", inQuote && "reading-lead-block--pullquote")}>
+        <strong className="reading-lead">{label}</strong>
+      </div>
+      {body ? (
+        <p className="reading-p">
+          <MarkedInline text={body} locale={locale} dedupeScope={dedupeScope} keyBase={blockKey} />
+        </p>
+      ) : null}
+    </div>
+  );
+}
 
-function LabeledParagraph({
+function SubheadBlock({
   content,
   locale,
   dedupeScope,
@@ -28,19 +59,12 @@ function LabeledParagraph({
   dedupeScope: Set<string>;
   blockKey: number;
 }) {
-  const labeled = parseReadingLabel(content);
-  if (labeled) {
-    return (
-      <p className="reading-p reading-p--labeled">
-        <strong className="reading-lead">{labeled.label}</strong>{" "}
-        <MarkedInline text={labeled.body} locale={locale} dedupeScope={dedupeScope} keyBase={blockKey} />
-      </p>
-    );
-  }
   return (
-    <p className="reading-p">
-      <MarkedInline text={content} locale={locale} dedupeScope={dedupeScope} keyBase={blockKey} />
-    </p>
+    <div className="reading-lead-block reading-lead-block--subhead">
+      <strong className="reading-lead">
+        <MarkedInline text={content} locale={locale} dedupeScope={dedupeScope} keyBase={blockKey} />
+      </strong>
+    </div>
   );
 }
 
@@ -55,17 +79,20 @@ function BlockquoteContent({
   dedupeScope: Set<string>;
   blockKey: number;
 }) {
-  const labeled = parseReadingLabel(content);
-  const inner = labeled ? labeled.body : content;
+  const { label, body } = parseBlockquoteParts(content);
   return (
     <blockquote className="reading-pullquote">
-      {labeled ? (
-        <>
-          <strong className="reading-lead reading-lead--pullquote">{labeled.label}</strong>{" "}
-          <MarkedInline text={inner} locale={locale} dedupeScope={dedupeScope} keyBase={blockKey} />
-        </>
+      {label ? (
+        <LeadBlock
+          label={label}
+          body={body}
+          locale={locale}
+          dedupeScope={dedupeScope}
+          blockKey={blockKey}
+          inQuote
+        />
       ) : (
-        <MarkedInline text={inner} locale={locale} dedupeScope={dedupeScope} keyBase={blockKey} />
+        <MarkedInline text={body} locale={locale} dedupeScope={dedupeScope} keyBase={blockKey} />
       )}
     </blockquote>
   );
@@ -84,12 +111,38 @@ export function RichReadingText({ text, locale, className, variant = "body" }: P
   }
 
   const nodes: ReactNode[] = blocks.map((block, i) => {
+    const keyBase = i * 10;
     switch (block.type) {
       case "h3":
         return (
-          <h4 key={i} className="reading-subhead">
-            <MarkedInline text={block.content} locale={locale} dedupeScope={dedupeScope} keyBase={i * 10} />
-          </h4>
+          <SubheadBlock
+            key={i}
+            content={block.content}
+            locale={locale}
+            dedupeScope={dedupeScope}
+            blockKey={keyBase}
+          />
+        );
+      case "subhead":
+        return (
+          <SubheadBlock
+            key={i}
+            content={block.content}
+            locale={locale}
+            dedupeScope={dedupeScope}
+            blockKey={keyBase}
+          />
+        );
+      case "lead":
+        return (
+          <LeadBlock
+            key={i}
+            label={block.label}
+            body={block.body}
+            locale={locale}
+            dedupeScope={dedupeScope}
+            blockKey={keyBase}
+          />
         );
       case "blockquote":
         return (
@@ -98,7 +151,7 @@ export function RichReadingText({ text, locale, className, variant = "body" }: P
             content={block.content}
             locale={locale}
             dedupeScope={dedupeScope}
-            blockKey={i * 10}
+            blockKey={keyBase}
           />
         );
       case "ul":
@@ -110,7 +163,7 @@ export function RichReadingText({ text, locale, className, variant = "body" }: P
                   text={item}
                   locale={locale}
                   dedupeScope={dedupeScope}
-                  keyBase={i * 10 + j}
+                  keyBase={keyBase + j}
                 />
               </li>
             ))}
@@ -118,13 +171,14 @@ export function RichReadingText({ text, locale, className, variant = "body" }: P
         );
       default:
         return (
-          <LabeledParagraph
-            key={i}
-            content={block.content}
-            locale={locale}
-            dedupeScope={dedupeScope}
-            blockKey={i * 10}
-          />
+          <p key={i} className="reading-p">
+            <MarkedInline
+              text={block.content}
+              locale={locale}
+              dedupeScope={dedupeScope}
+              keyBase={keyBase}
+            />
+          </p>
         );
     }
   });
