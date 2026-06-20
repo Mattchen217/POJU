@@ -6,11 +6,7 @@
   max-width: none;
   width: 100%;
   padding: 0 0 3rem;
-  background: #0d0e10 !important;
-}
-
-.glyph-reading-page::before {
-  display: none;
+  background: transparent !important;
 }
 
 .glyph-delivery-panel {
@@ -22,7 +18,7 @@
   padding: 2.5rem 1.25rem 3rem;
   border-radius: 0;
   border: none;
-  background: #0d0e10;
+  background: transparent;
   box-shadow: none;
   box-sizing: border-box;
 }
