@@ -27,6 +27,8 @@ import {
   buildPlainspeakVoiceSections,
   PLAINSPEAK_STYLE_EXAMPLE_GLYPH,
 } from "@/lib/llm/prompts/plainspeak-voice";
+import { READING_LAYOUT_CONTRACT } from "@/lib/llm/prompts/reading-layout";
+import { buildDeliveryGrammarPolishBlock } from "@/lib/llm/prompts/delivery-grammar-polish";
 import type { UserProfile } from "@/lib/profile/types";
 
 export type GlyphPromptSign = {
@@ -190,6 +192,7 @@ ${GLYPH_OUTPUT_SELF_CHECK}`;
     GLYPH_GUANYIN_INTERPRETATION_METHOD,
     GLYPH_EXPLORATION_GUIDANCE,
     ...buildPlainspeakVoiceSections(PLAINSPEAK_STYLE_EXAMPLE_GLYPH),
+    READING_LAYOUT_CONTRACT,
     GLYPH_OUTPUT_FRAMING,
     GLYPH_OUTPUT_DEFENSE_TERMS,
     buildTermMarkingPromptBlock(outputLang),
@@ -205,6 +208,7 @@ ${GLYPH_OUTPUT_SELF_CHECK}`;
 
 结合【命主 base_analysis structured + display_text】+【完整签文原文（仅内部分析用）】+【user 消息中的用户问题与签象数据】，按上文解签法则做一次【深度双视角解读】。
 输出 JSON 字符串必须 100% 遵守 OUTPUT POLICY + GLYPH_LAYOUT_CONTRACT + Glyph 措辞统一（禁签/sign/lot）。`,
+    buildDeliveryGrammarPolishBlock(outputLang),
   );
 
   const user = stitchPromptSections(
@@ -218,7 +222,7 @@ ${GLYPH_OUTPUT_SELF_CHECK}`;
 ⛔ 输出合规（最高优先级）: OUTPUT POLICY + 术语标记表 + GLYPH_LAYOUT_CONTRACT + Glyph 措辞
   · 指代: 统一 Glyph / Glyph 文 / the Glyph text；禁签/sign/lot；archetypal metaphor 仅开篇一次
   · 术语: **必须** ⟦t:id|软译 (干支)|该处白话⟧ 三段位标记 — 禁裸 Day Master/日主/大运/Yi Wood/energy blueprint
-  · 正文: 大白话 + 比喻入句 + 先归因外境再给掌控（见 PLAINSPEAK）
+  · 正文: 大白话 + 比喻入句 + 先归因外境再给掌控（见 PLAINSPEAK）+ **降维排版**（小标题/短段/金句框，见 READING_LAYOUT）
   · 防线2: **意象化转述**签文；禁逐字签诗原文 / 禁历史人物故事情节
   · 防线3: 禁 will meet / going to + 未来事件 → present readiness / 现在时
   · 板块: question_response 唯一直答+复述；synthesis 深化、严禁复述问题或重复 question_response

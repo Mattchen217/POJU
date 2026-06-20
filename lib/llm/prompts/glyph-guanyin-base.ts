@@ -160,7 +160,10 @@ export const GLYPH_LAYOUT_CONTRACT = `# 输出板块分工（严格遵守，杜�
 
 ## 两条硬规则
 1. **复述问题只在 question_response 出现一次**；其余板块默认用户已知问题，直接展开各自角色。
-2. **question_response = 答案先行的精炼直答；synthesis = 依据先行的深度整合**。synthesis 必须比 question_response 多出新角度（如具体关键变量、能量时机窗口、下一步着力点），**不能是 question_response 的扩写或同义重复**。`;
+2. **question_response = 答案先行的精炼直答；synthesis = 依据先行的深度整合**。synthesis 必须比 question_response 多出新角度（如具体关键变量、能量时机窗口、下一步着力点），**不能是 question_response 的扩写或同义重复**。
+
+## 排版（见 READING_LAYOUT_CONTRACT）
+各长字段须 **小标题 + 2–3 句短段 + 金句框**；同一字段内金色术语只标记一次。`;
 
 /**
  * 用户可见 JSON 字符串的最高优先级输出合规（白榜）。

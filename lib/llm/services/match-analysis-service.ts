@@ -27,6 +27,7 @@ import {
   isCriticalDeliveryAuditFailure,
 } from "@/lib/llm/services/delivery-audit-regen";
 import { sanitizeDeepStringFields } from "@/lib/llm/sanitize/compliance-terms";
+import { polishDeepStringFields } from "@/lib/llm/sanitize/delivery-grammar-polish";
 import { calculateCompatibilityMatrix } from "@/lib/match/calculate-compatibility";
 import { normalizeSynergyType } from "@/lib/match/synergy-normalize";
 import { wrapProfileForMatrix } from "@/lib/match/parse-profile-for-matrix";
@@ -437,6 +438,7 @@ export async function generateMatchAnalysis(
 
   let report = reportRaw;
   report = sanitizeDeepStringFields(report, input.locale) as MatchReport;
+  report = polishDeepStringFields(report, input.locale) as MatchReport;
   report._meta = {
     ...report._meta!,
     model: result.actual_model,

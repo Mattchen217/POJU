@@ -1,0 +1,45 @@
+/**
+ * 降维排版 —— 杂志式结构化输出（Glyph / POJU / Match 共用 · 不进 Syncro）。
+ * @see Cursor 指令 - 降维排版重构（全产品统一）.md
+ */
+
+export const READING_LAYOUT_CONTRACT = `# 降维排版（杂志式版面 · 用户可见 JSON 字符串必遵）
+
+长字段禁止「一堵字墙」。用轻量 Markdown 排版，渲染器会解析为短段/小标题/金句框/列表。
+
+## 1. 强制分段
+- 每 **2–3 句** 一段，段间 **空一行**（\\n\\n）。
+- **禁止** >4 句不分段。
+
+## 2. 小标题引导（粗体自拟）
+- 每个意思单元开头给 **粗体引导词**，格式 \`**Your Natural Advantage:**\` 或 \`**当前这股压力:**\`（3–8 字/词，点出该段要旨）。
+- 用户扫粗体就能抓住逻辑链；引导词按**本段内容自拟**，勿全篇套用同一套标题。
+
+## 3. 金句框（核心行动 / 直接结论）
+- 每个 section/字段把**最该被记住的一句**（核心行动或直接结论）单独用引用框：
+  \`> **The Move:** 具体可做的下一步…\`
+- **每 section 至多 1 个**金句框；每屏整体 1–2 个即可。
+- POJU **CONCLUSION** 里「直接回答用户问题」那句 + 每条 Action 的核心句 → 优先金句框。
+- Match **conclusion.question_response** + synergy 定性 → 优先金句框。
+
+## 4. 列表
+- 并列项（多条信号、多个行动要点）用 \`* \` 或 \`- \` 列表，**不要**挤成长句堆叠。
+
+## 5. 金色词降噪（与瘦身四条一致）
+- 同一 term id 在**同一 section/字段内**只打 **1 次** ⟦t:id|可见|白话⟧（最关键诊断处）。
+- 其余用普通人话指代（「你这藤蔓般的优势」「目前的火运」「那把双刃」）。
+- **禁止**正文先写 soft 词、标记里又重复同词（如 core nature is core nature）。
+
+## 版式范例（结构示意 · 勿抄意象）
+\`\`\`
+**Your Natural Advantage:** You are like a tender vine—flexible and adaptive. You thrive by bending, not bulldozing.
+
+**The Current Storm:** Right now you're running hot. Your ⟦t:decade|life phase (丁酉)|…⟧ is a pressure cooker.
+
+> **The Move:** Improvement won't come from more hustle. Step back, cut costs without sentiment, and find one trusted advisor.
+\`\`\`
+
+## 产品落点
+- **Glyph**：question_response / 命理看此事 / 签文看此事 / synthesis / hidden_tension / your_moment / exploration.text 等均按上式。
+- **POJU 主交付**：═══ ANALYSIS / CONCLUSION / WHAT TO DO / COMING BACK ═══ 各段内小标题+短段；CONCLUSION 直答 + Action 用金句框。
+- **Match**：analysis_a/b.detail、combined.detail、conclusion、recommendations.actions[].detail 同式。`;

@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
-import { GlossaryText } from "@/components/cross-product/GlossaryText";
+import { RichReadingText } from "@/components/cross-product/RichReadingText";
 import { TermMarkFirstVisitHint } from "@/components/cross-product/TermMarkFirstVisitHint";
 
 import { GlyphSectionLabel } from "@/components/glyph/GlyphSectionLabel";
@@ -68,9 +68,7 @@ export function GlyphReport({ reading, glyph, question }: Props) {
       {questionResponse ? (
         <div className="report-section meaning">
           <GlyphSectionLabel icon={Target}>{t("question_response_title")}</GlyphSectionLabel>
-          <p>
-            <GlossaryText text={questionResponse} locale={outputLang} />
-          </p>
+          <RichReadingText text={questionResponse} locale={outputLang} />
         </div>
       ) : (
         <div className="report-section question-recap">
@@ -86,9 +84,12 @@ export function GlyphReport({ reading, glyph, question }: Props) {
 
       <div className="report-section classical">
         <GlyphSectionLabel icon={ScrollText}>{sectionLabels.section_classical}</GlyphSectionLabel>
-        <p className="classical-text">
-          <GlossaryText text={safeReading.classical_voice} locale={outputLang} />
-        </p>
+        <RichReadingText
+          text={safeReading.classical_voice}
+          locale={outputLang}
+          variant="poem"
+          className="classical-text"
+        />
       </div>
 
       <div className="report-section dual-view">
@@ -96,55 +97,38 @@ export function GlyphReport({ reading, glyph, question }: Props) {
 
         <div className="dual-view-card view-bazi">
           <h4>{sectionLabels.view_bazi_title}</h4>
-          <p>
-            <GlossaryText text={safeReading.命理双视角.命理看此事} locale={outputLang} />
-          </p>
+          <RichReadingText text={safeReading.命理双视角.命理看此事} locale={outputLang} />
         </div>
 
         <div className="dual-view-card view-glyph">
           <h4>{sectionLabels.view_glyph_title}</h4>
-          <p>
-            <GlossaryText text={safeReading.命理双视角.签文看此事} locale={outputLang} />
-          </p>
+          <RichReadingText text={safeReading.命理双视角.签文看此事} locale={outputLang} />
         </div>
 
         <div className="dual-view-resonance">
-          <p>
-            <GlossaryText
-              text={safeReading.命理双视角.两者印证或冲突}
-              locale={outputLang}
-            />
-          </p>
+          <RichReadingText text={safeReading.命理双视角.两者印证或冲突} locale={outputLang} />
         </div>
       </div>
 
       <div className="report-section meaning">
         <GlyphSectionLabel icon={Target}>{sectionLabels.section_synthesis}</GlyphSectionLabel>
-        <p>
-          <GlossaryText text={synthesisText} locale={outputLang} />
-        </p>
+        <RichReadingText text={synthesisText} locale={outputLang} />
       </div>
 
       <div className="report-section tension">
         <GlyphSectionLabel icon={Eye}>{sectionLabels.section_hidden}</GlyphSectionLabel>
-        <p>
-          <GlossaryText text={safeReading.hidden_tension} locale={outputLang} />
-        </p>
+        <RichReadingText text={safeReading.hidden_tension} locale={outputLang} />
       </div>
 
       <div className="report-section moment">
         <GlyphSectionLabel icon={Hourglass}>{sectionLabels.section_moment}</GlyphSectionLabel>
-        <p>
-          <GlossaryText text={safeReading.your_moment} locale={outputLang} />
-        </p>
+        <RichReadingText text={safeReading.your_moment} locale={outputLang} />
       </div>
 
       <div className="report-section exploration">
         <GlyphSectionLabel icon={Footprints}>{sectionLabels.section_exploration}</GlyphSectionLabel>
         <div className="exploration-card">
-          <p className="explore-text">
-            <GlossaryText text={safeReading.exploration.text} locale={outputLang} />
-          </p>
+          <RichReadingText text={safeReading.exploration.text} locale={outputLang} />
           <div className="explore-meta">
             <span>{t(timeframeKey)}</span>
             <span>·</span>

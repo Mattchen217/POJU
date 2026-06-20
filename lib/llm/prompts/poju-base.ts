@@ -8,6 +8,8 @@ import {
   buildPlainspeakVoiceSections,
   PLAINSPEAK_STYLE_EXAMPLE_POJU,
 } from "@/lib/llm/prompts/plainspeak-voice";
+import { READING_LAYOUT_CONTRACT } from "@/lib/llm/prompts/reading-layout";
+import { buildDeliveryGrammarPolishBlock } from "@/lib/llm/prompts/delivery-grammar-polish";
 
 export const POJU_BREAKTHROUGH_COUNSELOR_IDENTITY = `# 你是谁（POJU · 破局顾问）
 
@@ -184,14 +186,16 @@ Session 30 天有效，用户**自主**决定何时回来。
 发现完全偏离时 response 须说明须开新 Session，并询问是否继续原话题。`;
 
 /** POJU 各 phase / final-delivery 共用的核心模块（顺序固定） */
-export function buildPojuCorePromptSections(): string[] {
+export function buildPojuCorePromptSections(outputLang = "en"): string[] {
   return [
     POJU_BREAKTHROUGH_COUNSELOR_IDENTITY,
     ...buildPlainspeakVoiceSections(PLAINSPEAK_STYLE_EXAMPLE_POJU),
+    READING_LAYOUT_CONTRACT,
     POJU_BAZI_DEEP_METHOD,
     POJU_ACTION_DESIGN_PRINCIPLES,
     buildOutputPolicyForPoju(),
     POJU_OUTPUT_BRANDING,
     POJU_SESSION_GUARDRAILS,
+    buildDeliveryGrammarPolishBlock(outputLang),
   ];
 }

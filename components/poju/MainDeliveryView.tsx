@@ -3,6 +3,7 @@
 import { useLocale, useTranslations } from "next-intl";
 
 import { GlossaryText } from "@/components/cross-product/GlossaryText";
+import { RichReadingText } from "@/components/cross-product/RichReadingText";
 import { ArchiveSavedHint } from "@/components/archive/archive-saved-hint";
 import { TermMarkFirstVisitHint } from "@/components/cross-product/TermMarkFirstVisitHint";
 import type { Locale } from "@/lib/glossary/term-glossary";
@@ -74,11 +75,7 @@ function DeliverySectionView({
     <section>
       {section.title ? <h3 className="pchat__delivery-section-title">{section.title}</h3> : null}
       <div>
-        {section.paragraphs.map((p, i) => (
-          <p key={i}>
-            <GlossaryText text={p} locale={locale} />
-          </p>
-        ))}
+        <RichReadingText text={section.paragraphs.join("\n\n")} locale={locale} />
       </div>
     </section>
   );
@@ -114,9 +111,7 @@ function ActionRow({
       <p className="pchat__delivery-action-label">
         {index}. {action.title?.trim() || categoryLabels[action.category]}
       </p>
-      <p>
-        <GlossaryText text={action.text} locale={locale} />
-      </p>
+      <RichReadingText text={action.text} locale={locale} />
       {onUpdate && action.status === "pending" ? (
         <div className="pchat__delivery-action-btns">
           <button type="button" onClick={() => onUpdate(action.action_id, "completed")}>

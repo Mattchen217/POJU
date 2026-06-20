@@ -8,6 +8,7 @@ import {
 import { callLLM } from "@/lib/llm/router";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 import { sanitizeDeliveryText, auditDeliveredText } from "@/lib/llm/sanitize/compliance-terms";
+import { polishDeliveryGrammar } from "@/lib/llm/sanitize/delivery-grammar-polish";
 import {
   buildAuditRegenHint,
   isCriticalDeliveryAuditFailure,
@@ -119,7 +120,8 @@ export async function POST(req: Request) {
       auditViolations = auditDeliveredText(result.content, locale);
     }
 
-    const text = sanitizeDeliveryText(result.content.trim(), locale);
+    const polished = polishDeliveryGrammar(result.content.trim(), locale);
+    const text = sanitizeDeliveryText(polished.text, locale);
     const actions = extractActionsFromDelivery(text, body.situation_analysis);
     const latency_ms = result.meta.latency_ms || Date.now() - t0;
 

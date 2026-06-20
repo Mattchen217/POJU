@@ -1,0 +1,131 @@
+/* Shared magazine-style reading typography — Glyph / POJU / Match */
+
+.reading-body {
+  max-width: 38rem;
+  text-align: left;
+  line-height: 1.7;
+  color: inherit;
+}
+
+.reading-body--poem {
+  max-width: 32rem;
+  margin-inline: auto;
+  text-align: center;
+  line-height: 1.74;
+}
+
+.reading-p {
+  margin: 0 0 1em;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+
+.reading-p:last-child {
+  margin-bottom: 0;
+}
+
+.reading-p--labeled {
+  margin-top: 0.15em;
+}
+
+.reading-lead {
+  font-weight: 600;
+  color: rgba(212, 175, 55, 0.88);
+  letter-spacing: 0.01em;
+}
+
+.reading-lead--pullquote {
+  display: inline;
+}
+
+.reading-subhead {
+  margin: 1.15em 0 0.5em;
+  font-size: 1.02em;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(212, 175, 55, 0.75);
+  line-height: 1.45;
+}
+
+.reading-subhead:first-child {
+  margin-top: 0;
+}
+
+.reading-pullquote {
+  margin: 1.1em 0 1.25em;
+  padding: 16px 20px;
+  border-left: 2px solid rgba(212, 175, 55, 0.55);
+  border-radius: 10px;
+  background: rgba(212, 175, 55, 0.06);
+  font-size: 1.05em;
+  line-height: 1.65;
+  color: inherit;
+}
+
+.reading-list {
+  margin: 0.65em 0 1em;
+  padding-left: 1.2em;
+  list-style: disc;
+}
+
+.reading-list li {
+  margin-bottom: 7px;
+  line-height: 1.65;
+}
+
+.reading-list li:last-child {
+  margin-bottom: 0;
+}
+
+/* POJU main delivery */
+.pchat__delivery section {
+  margin-bottom: 2.5rem;
+}
+
+.pchat__delivery-section-title {
+  margin-bottom: 0.85rem;
+}
+
+.pchat__delivery-action .reading-body {
+  margin-top: 0.35rem;
+}
+
+/* Glyph report — long body left-aligned; poem variant stays centered */
+.glyph-report .reading-body:not(.reading-body--poem) {
+  margin: 0;
+}
+
+.glyph-report .report-section {
+  margin-bottom: 0;
+}
+
+.glyph-report .report-section.meaning,
+.glyph-report .report-section.tension,
+.glyph-report .report-section.moment,
+.glyph-report .report-section.exploration {
+  padding-bottom: 0.25rem;
+}
+
+.glyph-report .dual-view-card .reading-body {
+  font-size: 0.98rem;
+}
+
+.glyph-report .dual-view-resonance .reading-body {
+  font-size: 0.95rem;
+  opacity: 0.92;
+}
+
+/* Match report cards */
+.match-report .card-content .reading-body {
+  font-size: 0.96rem;
+  color: var(--m-ink-dim, #c8c4d4);
+}
+
+.match-report .card-content .reading-pullquote {
+  margin-top: 0.85em;
+}
+
+.match-report .action-detail .reading-body {
+  margin: 0;
+}

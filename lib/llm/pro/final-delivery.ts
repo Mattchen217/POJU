@@ -169,10 +169,10 @@ ${regionalGuidance ? `${regionalGuidance}\n\n` : ""}规则:
 严格使用 POJU_OUTPUT_BRANDING 中的分段标记。
 
 ═══ ANALYSIS ═══
-（展开：⟦t:day_master|…⟧ / ⟦t:decade|…⟧ / ⟦t:yong_shen|…⟧ / 困境根源 / 破局方向 — 见 POJU_BAZI_DEEP_METHOD；禁裸 chart/Day Master/合婚术语）
+（展开：⟦t:day_master|…⟧ / ⟦t:decade|…⟧ / ⟦t:yong_shen|…⟧ / 困境根源 / 破局方向 — 见 POJU_BAZI_DEEP_METHOD；**小标题+2–3句短段+金句框**，见 READING_LAYOUT；禁裸 chart/Day Master/合婚术语）
 
 ═══ CONCLUSION ═══
-（收束：对用户问题的直接判断 + 1–2 句核心建议）
+（收束：对用户问题的直接判断 + 1–2 句核心建议 — **直答句用金句框** \`> **…:** …\`）
 
 ═══ WHAT TO DO ═══
 给 3 条行动，每条用 "### Action N: " 开头 + **自拟标题**（贴合该用户具体处境，不用 Environmental Alignment 等固定名）。
@@ -291,7 +291,7 @@ ${sitStr}
   const finalDeliveryTask = `${modeTask}\n\n${expertMaterials}`;
 
   const system = stitchPromptSections(
-    ...buildPojuCorePromptSections(),
+    ...buildPojuCorePromptSections(deliveryLang),
     buildTermMarkingPromptBlock(locale),
     finalDeliveryTask,
   );

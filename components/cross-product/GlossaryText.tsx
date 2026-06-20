@@ -106,10 +106,15 @@ function findNextMarker(
   };
 }
 
-function parseMarkedText(text: string, locale: string, keyBase: number): ReactNode[] {
+function parseMarkedText(
+  text: string,
+  locale: string,
+  keyBase: number,
+  dedupeScope?: Set<string>,
+): ReactNode[] {
   const nodes: ReactNode[] = [];
   const glossaryLocale = toGlossaryLocale(locale);
-  const seenInParagraph = new Set<string>();
+  const seenInParagraph = dedupeScope ?? new Set<string>();
   let cursor = 0;
   let keyIdx = 0;
 
@@ -153,9 +158,20 @@ function parseMarkedText(text: string, locale: string, keyBase: number): ReactNo
   return nodes;
 }
 
-export function GlossaryText({ text, locale }: Props) {
+/** Inline marked text — optional shared dedupeScope for section-level golden-term density. */
+export function MarkedInline({
+  text,
+  locale,
+  dedupeScope,
+  keyBase = 0,
+}: {
+  text: string;
+  locale: string;
+  dedupeScope?: Set<string>;
+  keyBase?: number;
+}) {
   const hasMarkers = text.includes("⟦t:") || text.includes("⟦g|");
-  const nodes = parseMarkedText(text, locale, 0);
+  const nodes = parseMarkedText(text, locale, keyBase, dedupeScope);
 
   if (!hasMarkers) {
     const clean = stripBrokenMarkers(text);
@@ -163,4 +179,8 @@ export function GlossaryText({ text, locale }: Props) {
   }
 
   return <>{nodes.length ? nodes : stripBrokenMarkers(text)}</>;
+}
+
+export function GlossaryText({ text, locale }: Props) {
+  return <MarkedInline text={text} locale={locale} />;
 }

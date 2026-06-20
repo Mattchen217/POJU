@@ -7,6 +7,8 @@ import {
   buildPlainspeakVoiceSections,
   PLAINSPEAK_STYLE_EXAMPLE_MATCH,
 } from "@/lib/llm/prompts/plainspeak-voice";
+import { READING_LAYOUT_CONTRACT } from "@/lib/llm/prompts/reading-layout";
+import { buildDeliveryGrammarPolishBlock } from "@/lib/llm/prompts/delivery-grammar-polish";
 
 export const MATCH_BAZI_HEPAN_IDENTITY = `# 你是谁（Match · 兼容性顾问）
 
@@ -194,15 +196,17 @@ export const MATCH_OUTPUT_BRANDING = `# ⚠️ Match 输出品牌（JSON 5 段 �
   —— 干支术语可作文化质感出现在"画像/机制"里，但**不得用作时间锚点来暗示某段时间会发生什么**。`;
 
 /** Match report prompt 共用的核心模块（顺序固定） */
-export function buildMatchCorePromptSections(): string[] {
+export function buildMatchCorePromptSections(outputLang = "en"): string[] {
   return [
     MATCH_BAZI_HEPAN_IDENTITY,
     ...buildPlainspeakVoiceSections(PLAINSPEAK_STYLE_EXAMPLE_MATCH),
+    READING_LAYOUT_CONTRACT,
     MATCH_HEPAN_METHOD,
     MATCH_RELATIONSHIP_FRAMEWORK,
     MATCH_QUESTION_FOCUS,
     MATCH_VOICE_CONTRACT,
     buildOutputPolicyForMatch(),
     MATCH_OUTPUT_BRANDING,
+    buildDeliveryGrammarPolishBlock(outputLang),
   ];
 }

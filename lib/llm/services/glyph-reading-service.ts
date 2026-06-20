@@ -26,6 +26,7 @@ import {
   isCriticalDeliveryAuditFailure,
 } from "@/lib/llm/services/delivery-audit-regen";
 import { sanitizeDeepStringFields } from "@/lib/llm/sanitize/compliance-terms";
+import { polishDeepStringFields } from "@/lib/llm/sanitize/delivery-grammar-polish";
 import {
   getStoredProfile,
   recordProfileUsage,
@@ -251,8 +252,8 @@ function validateReading(
 
 function finalizeGlyphReading(reading: GlyphReadingContent, locale: string): GlyphReadingContent {
   auditGlyphReadingContent(reading, locale);
-  sanitizeDeepStringFields(reading, locale);
-  return reading;
+  const audited = sanitizeDeepStringFields(reading, locale) as GlyphReadingContent;
+  return polishDeepStringFields(audited, locale) as GlyphReadingContent;
 }
 
 function buildRepairHint(missing: string[], locale: string): string {

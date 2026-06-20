@@ -54,7 +54,7 @@ export function buildMatchPrompt(input: BuildMatchPromptInput): BuildMatchPrompt
   const dateContext = buildCurrentDateContext(new Date(), locale);
 
   const system = stitchPromptSections(
-    ...buildMatchCorePromptSections(),
+    ...buildMatchCorePromptSections(detectedLanguage),
     buildTermMarkingPromptBlock(locale),
 
     `# 命主 A 的完整命盘

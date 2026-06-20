@@ -14,6 +14,7 @@ import { useEffect, useLayoutEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { GlossaryText } from "@/components/cross-product/GlossaryText";
+import { RichReadingText } from "@/components/cross-product/RichReadingText";
 import { TermMarkFirstVisitHint } from "@/components/cross-product/TermMarkFirstVisitHint";
 
 import { MatchReportCard } from "@/components/match/MatchReportCard";
@@ -70,9 +71,9 @@ function ActionItem({
           </span>
           <h4>{action.title}</h4>
         </div>
-        <p className="action-detail">
-          <GlossaryText text={action.detail} locale={locale} />
-        </p>
+        <div className="action-detail">
+          <RichReadingText text={action.detail} locale={locale} />
+        </div>
         {action.timing ? (
           <p className="action-timing">
             <span className="timing-label">{t("timing")}:</span> {action.timing}
@@ -171,9 +172,7 @@ export function MatchReport({ session, locale }: MatchReportProps) {
       <div className="match-cards">
         <MatchReportCard icon="A" title={report.analysis_a.title} summary={report.analysis_a.summary} color="#ff7eb0">
           <div className="card-content">
-            <p>
-              <GlossaryText text={report.analysis_a.detail} locale={locale} />
-            </p>
+            <RichReadingText text={report.analysis_a.detail} locale={locale} />
             <h4>{t("key_traits")}</h4>
             <ul className="traits-list">
               {report.analysis_a.key_traits.map((trait, i) => (
@@ -187,9 +186,7 @@ export function MatchReport({ session, locale }: MatchReportProps) {
 
         <MatchReportCard icon="B" title={report.analysis_b.title} summary={report.analysis_b.summary} color="#b08cff">
           <div className="card-content">
-            <p>
-              <GlossaryText text={report.analysis_b.detail} locale={locale} />
-            </p>
+            <RichReadingText text={report.analysis_b.detail} locale={locale} />
             <h4>{t("key_traits")}</h4>
             <ul className="traits-list">
               {report.analysis_b.key_traits.map((trait, i) => (
@@ -203,20 +200,11 @@ export function MatchReport({ session, locale }: MatchReportProps) {
 
         <MatchReportCard icon="infinity" title={report.combined.title} summary={report.combined.summary} color="#e879f9">
           <div className="card-content">
-            <p>
-              <GlossaryText text={report.combined.detail} locale={locale} />
-            </p>
+            <RichReadingText text={report.combined.detail} locale={locale} />
             <h4>{t("five_elements")}</h4>
-            <p>
-              <GlossaryText
-                text={report.combined.five_elements_interaction}
-                locale={locale}
-              />
-            </p>
+            <RichReadingText text={report.combined.five_elements_interaction} locale={locale} />
             <h4>{t("timing_dynamic")}</h4>
-            <p>
-              <GlossaryText text={report.combined.timing_dynamic} locale={locale} />
-            </p>
+            <RichReadingText text={report.combined.timing_dynamic} locale={locale} />
           </div>
         </MatchReportCard>
 
@@ -230,14 +218,10 @@ export function MatchReport({ session, locale }: MatchReportProps) {
             {questionResponse ? (
               <>
                 <h4>{t("question_response_title")}</h4>
-                <p>
-                  <GlossaryText text={questionResponse} locale={locale} />
-                </p>
+                <RichReadingText text={questionResponse} locale={locale} />
               </>
             ) : null}
-            <p>
-              <GlossaryText text={report.conclusion.detail} locale={locale} />
-            </p>
+            <RichReadingText text={report.conclusion.detail} locale={locale} />
             <h4>{t("strengths")}</h4>
             <ul className="strengths-list">
               {report.conclusion.strengths.map((s, i) => (
