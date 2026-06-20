@@ -3,6 +3,7 @@
  * LLM writes ⟦t:id|visible⟧; UI reads markers; audit detects leaks (no mutate).
  */
 
+import { termPolarityById, type TermPolarity } from "@/lib/glossary/term-polarity";
 import {
   CLOSED_SET_REPLACE_IDS,
   CLOSED_SET_SLUG,
@@ -129,13 +130,14 @@ export function plainByTermId(termId: string, locale: string): string | null {
 export function uiTermById(
   termId: string,
   locale: string,
-): { soft: string; plain: string } | null {
+): { soft: string; plain: string; polarity: TermPolarity } | null {
   const entry = TERM_BY_ID.get(termId);
   if (!entry) return null;
   const loc = toGlossaryLocale(locale);
   return {
     soft: softLabel(entry, loc),
     plain: entry.plain[loc] || entry.plain.en,
+    polarity: termPolarityById(termId),
   };
 }
 

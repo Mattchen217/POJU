@@ -11,9 +11,44 @@
 }
 
 .term-mark__word {
-  color: #d4af37;
   font-weight: 500;
   cursor: help;
+}
+
+.term-mark--neutral .term-mark__word,
+.term-mark--neutral .term-mark__info {
+  color: #c5a880;
+}
+
+.term-mark--favorable .term-mark__word,
+.term-mark--favorable .term-mark__info {
+  color: #7fc4a8;
+}
+
+.term-mark--caution .term-mark__word,
+.term-mark--caution .term-mark__info {
+  color: #e07a5f;
+}
+
+.term-mark--neutral .glossary-pop__title {
+  color: #c5a880;
+}
+
+.term-mark--favorable .glossary-pop__title {
+  color: #7fc4a8;
+}
+
+.term-mark--caution .glossary-pop__title {
+  color: #e07a5f;
+}
+
+/* legacy default gold when no polarity class */
+.term-mark:not([class*="term-mark--"]) .term-mark__word {
+  color: #d4af37;
+}
+
+.term-mark:not([class*="term-mark--"]) .term-mark__info {
+  color: #d4af37;
 }
 
 .term-mark__info {
@@ -22,7 +57,6 @@
   padding: 0 1px;
   border: none;
   background: none;
-  color: #d4af37;
   font-size: 0.82em;
   line-height: 1;
   cursor: pointer;

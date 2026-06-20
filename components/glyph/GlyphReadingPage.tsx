@@ -4,15 +4,13 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { useParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
-import { GlyphCanvas } from "@/components/glyph/GlyphCanvas";
-import { glyphWindAccentStyle } from "@/lib/glyph/glyph-wind-accents";
 import { GlyphReport } from "@/components/glyph/GlyphReport";
 import { ToolPaywallInline } from "@/components/cross-product/ToolPaywallInline";
 import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
 import { DeliveryWaitFrame } from "@/components/wait-ritual/DeliveryWaitFrame";
 import { DeliveryWaitCrossfade } from "@/components/wait-ritual/DeliveryWaitCrossfade";
-import { StreamingAnalysisView } from "@/components/poju/StreamingAnalysisView";
 import { saveGlyphReadingToArchive } from "@/lib/archive/archive-service";
+import { glyphWindAccentStyle } from "@/lib/glyph/glyph-wind-accents";
 import { markArchiveUnread } from "@/lib/archive/archive-unread";
 import { prepareToolUnlockBase } from "@/lib/cross-product/finalize-tool-unlock";
 import {
@@ -32,7 +30,6 @@ import {
   GLYPH_READING_CLIENT_TIMEOUT_MS,
 } from "@/lib/oracle/api";
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
-import { PojuDeepDiveCTA } from "@/components/cross-product/PojuDeepDiveCTA";
 import { ReadingDecoderBanner } from "@/components/reading-ritual/ReadingDecoderBanner";
 import { ReturnToPojuCTA } from "@/components/poju/ReturnToPojuCTA";
 import { extractGlyphSummary } from "@/lib/poju/tool-result-summary";
@@ -435,25 +432,19 @@ export function GlyphReadingPage() {
               variant="banner"
             />
             <ReadingDecoderBanner variant="others" />
-            <GlyphCanvas glyph={glyph} animated={false} compact />
-            {reportText ? (
-              <section className="glyph-base-report">
-                <StreamingAnalysisView
-                  content={reportText}
-                  status="completed"
-                  bytes_received={reportText.length}
-                  layout="panel"
-                />
-              </section>
-            ) : null}
-            <GlyphReport reading={reading} glyph={glyph} question={question} />
+            <GlyphReport
+              reading={reading}
+              glyph={glyph}
+              question={question}
+              baseReportText={reportText || undefined}
+              pojuDeepDive={{ result_id: readingId, result_data: glyphSummary }}
+            />
             <ReturnToPojuCTA
               tool="glyph"
               resultId={readingId}
               resultData={glyphSummary}
               variant="footer"
             />
-            <PojuDeepDiveCTA productId="glyph" result_id={readingId} result_data={glyphSummary} />
             <div className="glyph-reading-footer">
               <Link href="/glyph" className="glyph-link-muted">
                 {t("back_to_glyph")}
@@ -559,25 +550,19 @@ export function GlyphReadingPage() {
         variant="banner"
       />
       <ReadingDecoderBanner variant="others" />
-      <GlyphCanvas glyph={glyph} animated={false} compact />
-      {reportText ? (
-        <section className="glyph-base-report">
-          <StreamingAnalysisView
-            content={reportText}
-            status="completed"
-            bytes_received={reportText.length}
-            layout="panel"
-          />
-        </section>
-      ) : null}
-      <GlyphReport reading={reading} glyph={glyph} question={question} />
+      <GlyphReport
+        reading={reading}
+        glyph={glyph}
+        question={question}
+        baseReportText={reportText || undefined}
+        pojuDeepDive={{ result_id: readingId, result_data: glyphSummary }}
+      />
       <ReturnToPojuCTA
         tool="glyph"
         resultId={readingId}
         resultData={glyphSummary}
         variant="footer"
       />
-      <PojuDeepDiveCTA productId="glyph" result_id={readingId} result_data={glyphSummary} />
       <div className="glyph-reading-footer">
         <Link href="/glyph" className="glyph-link-muted">
           {t("back_to_glyph")}

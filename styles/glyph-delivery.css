@@ -1,0 +1,476 @@
+/* Glyph delivery panel — black card on starfield (§附B) */
+
+.glyph-reading-page {
+  max-width: none;
+  width: 100%;
+  padding: 1rem 0 3rem;
+}
+
+.glyph-delivery-panel {
+  position: relative;
+  z-index: 1;
+  width: min(1180px, 95%);
+  margin: 0 auto;
+  padding: 3.5rem 1rem;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #0d0e10;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.55);
+  box-sizing: border-box;
+}
+
+@media (min-width: 640px) {
+  .glyph-delivery-panel {
+    padding: 3.5rem 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .glyph-delivery-panel {
+    padding: 3.5rem 3rem;
+  }
+}
+
+.glyph-delivery-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 4rem;
+  max-width: 48rem;
+  margin-inline: auto;
+  color: #e4e6ea;
+  font-size: 1rem;
+  line-height: 1.7;
+  text-align: left;
+}
+
+/* Hero: card + chart */
+.glyph-delivery-hero {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+@media (min-width: 640px) {
+  .glyph-delivery-hero {
+    grid-template-columns: 200px 1fr;
+  }
+
+  .glyph-delivery-hero--card-only {
+    grid-template-columns: 200px;
+    justify-content: start;
+  }
+}
+
+.glyph-delivery-hero__card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.glyph-delivery-hero__card .glyph-canvas--delivery {
+  width: 100%;
+  margin: 0;
+}
+
+.glyph-delivery-hero__card .glyph-card--compact {
+  border-color: color-mix(in srgb, var(--wind) 30%, transparent);
+  box-shadow: inset 0 0 40px color-mix(in srgb, var(--wind) 8%, transparent);
+}
+
+.glyph-delivery-hero__chart {
+  border-radius: 1rem;
+  border: 1px solid rgba(55, 65, 81, 0.7);
+  background: #101117;
+  padding: 1.25rem;
+  min-height: 12rem;
+}
+
+.glyph-delivery-hero__chart .streaming-analysis-panel {
+  max-height: 280px;
+}
+
+.glyph-delivery-hero__chart .streaming-content-compact {
+  max-height: 240px;
+}
+
+.glyph-delivery-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+}
+
+/* Header */
+.glyph-delivery-header {
+  padding-bottom: 2.5rem;
+  border-bottom: 1px solid rgba(55, 65, 81, 0.6);
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .glyph-delivery-header {
+    text-align: left;
+  }
+}
+
+.glyph-delivery-eyebrow {
+  margin: 0 0 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #c5a880;
+}
+
+.glyph-delivery-question {
+  margin: 0 0 1.25rem;
+  font-family: var(--pj-font-serif, "Cinzel", serif);
+  font-size: clamp(1.5rem, 4vw, 1.875rem);
+  font-weight: 300;
+  line-height: 1.35;
+  color: #f3f4f6;
+}
+
+.glyph-delivery-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #9ca3af;
+}
+
+@media (min-width: 640px) {
+  .glyph-delivery-meta {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+  }
+}
+
+.glyph-delivery-meta__sep {
+  display: none;
+  color: #374151;
+}
+
+@media (min-width: 640px) {
+  .glyph-delivery-meta__sep {
+    display: inline;
+  }
+}
+
+.glyph-delivery-meta__wind {
+  color: var(--wind);
+  font-weight: 600;
+}
+
+.glyph-delivery-meta__strategy {
+  color: #d1d5db;
+}
+
+/* Inner pattern wind card */
+.glyph-delivery-wind-card {
+  padding: 1.5rem 2rem;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--wind) 25%, transparent);
+  background: color-mix(in srgb, var(--wind) 4.5%, transparent);
+}
+
+.glyph-delivery-wind-card__eyebrow {
+  margin: 0 0 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--wind) 80%, transparent);
+}
+
+.glyph-delivery-wind-card__title {
+  margin: 0 0 1rem;
+  font-family: var(--pj-font-serif, "Cinzel", serif);
+  font-size: 1.25rem;
+  font-weight: 300;
+  color: var(--wind);
+}
+
+/* Section titles */
+.glyph-delivery-section-title {
+  margin: 0;
+  padding-left: 1rem;
+  border-left: 2px solid rgba(197, 168, 128, 0.3);
+  font-family: var(--pj-font-serif, "Cinzel", serif);
+  font-size: 1.25rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: #f3f4f6;
+}
+
+.glyph-delivery-section-title--warn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-left: 0;
+  border-left: none;
+  font-family: var(--pj-font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #e07a5f;
+}
+
+.glyph-delivery-section-title--serif {
+  padding-left: 0;
+  border-left: none;
+  font-size: 1.125rem;
+  font-weight: 300;
+  color: #e5e7eb;
+}
+
+/* Dual perspective */
+.glyph-dual-block {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.glyph-dual-pill {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.375rem;
+  border: 1px solid rgba(55, 65, 81, 0.4);
+  background: #16181f;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #9ca3af;
+}
+
+.glyph-dual-alignment {
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(55, 65, 81, 0.8);
+  background: linear-gradient(180deg, #111317, #0e0f12);
+}
+
+.glyph-dual-alignment__title {
+  margin: 0 0 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #e5e7eb;
+}
+
+/* Synthesis grid */
+.glyph-synthesis-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .glyph-synthesis-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.glyph-synthesis-card {
+  padding: 1.25rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(55, 65, 81, 0.6);
+  background: rgba(17, 19, 24, 0.4);
+}
+
+.glyph-synthesis-card__title {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #e5e7eb;
+}
+
+.glyph-synthesis-card__body {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.65;
+  color: #9ca3af;
+  font-weight: 300;
+}
+
+/* Hidden tension columns */
+.glyph-hidden-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  padding-top: 2.5rem;
+  border-top: 1px solid rgba(55, 65, 81, 0.8);
+}
+
+@media (min-width: 640px) {
+  .glyph-hidden-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.glyph-hidden-grid .reading-body {
+  font-size: 0.875rem;
+  color: #9ca3af;
+}
+
+/* Exploration footer card */
+.glyph-delivery-practice {
+  position: relative;
+  overflow: hidden;
+  padding: 1.5rem 2rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(55, 65, 81, 0.8);
+  background: linear-gradient(135deg, #14161b, #101115);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+
+.glyph-delivery-practice__glow {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8rem;
+  height: 8rem;
+  border-radius: 9999px;
+  background: rgba(197, 168, 128, 0.05);
+  filter: blur(48px);
+  pointer-events: none;
+}
+
+.glyph-delivery-practice__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.glyph-delivery-practice__meta {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.glyph-delivery-reflection {
+  margin: 0;
+  font-family: var(--pj-font-serif, "Cinzel", serif);
+  font-size: 1.0625rem;
+  font-weight: 300;
+  font-style: italic;
+  line-height: 1.65;
+  color: #d1d5db;
+}
+
+/* Typography overrides inside delivery panel */
+.glyph-delivery-inner .reading-body,
+.glyph-delivery-inner .reading-body--poem {
+  max-width: 100%;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: #d1d5db;
+  font-weight: 300;
+}
+
+.glyph-delivery-inner .reading-lead {
+  color: #e5e7eb;
+}
+
+.glyph-delivery-inner .reading-strong {
+  color: #e5e7eb;
+}
+
+.glyph-delivery-inner .reading-subhead {
+  color: #e5e7eb;
+}
+
+.glyph-delivery-inner .reading-pullquote {
+  margin: 1.5rem 0;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid rgba(55, 65, 81, 1);
+  border-left: none;
+  border-radius: 0.75rem;
+  background: #14161c;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.glyph-delivery-inner .reading-pullquote .reading-lead {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #c5a880;
+}
+
+.glyph-delivery-inner .reading-list {
+  list-style: none;
+  padding-left: 0;
+}
+
+.glyph-delivery-inner .reading-list li {
+  position: relative;
+  padding-left: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.glyph-delivery-inner .reading-list li::before {
+  content: "▪";
+  position: absolute;
+  left: 0;
+  top: 0.35em;
+  font-size: 0.65rem;
+  color: #c5a880;
+}
+
+/* POJU CTA inside delivery panel */
+.glyph-delivery-inner .poju-deep-dive-cta {
+  margin-top: 0;
+  padding: 1.75rem 2.25rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(129, 140, 248, 0.25);
+  background: linear-gradient(135deg, #1c1840, #141029);
+  position: relative;
+  overflow: hidden;
+}
+
+.glyph-delivery-inner .poju-deep-dive-cta::before {
+  content: "";
+  position: absolute;
+  top: -2.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 15rem;
+  height: 10rem;
+  border-radius: 9999px;
+  background: rgba(99, 102, 241, 0.1);
+  filter: blur(48px);
+  pointer-events: none;
+}
+
+.glyph-delivery-inner .pdd-title {
+  font-family: var(--pj-font-serif, "Cinzel", serif);
+  font-size: 1.5rem;
+  font-weight: 300;
+  color: #f3f4f6;
+}
+
+.glyph-delivery-inner .pdd-description {
+  color: #9ca3af;
+  font-weight: 300;
+}
+
+.glyph-delivery-inner .pdd-cta-btn {
+  background: linear-gradient(90deg, #818cf8, #d946ef);
+  color: #fff;
+  border: none;
+  border-radius: 9999px;
+  padding: 0.75rem 1.75rem;
+}
+
+.glyph-delivery-inner .pdd-price,
+.glyph-delivery-inner .pdd-period,
+.glyph-delivery-inner .pdd-value {
+  display: none;
+}

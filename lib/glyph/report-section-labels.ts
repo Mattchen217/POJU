@@ -1,6 +1,11 @@
 /** Section headings for Glyph report — follow LLM output language, not page locale. */
 
 export type GlyphReportSectionLabels = {
+  eyebrow_about_question: string;
+  eyebrow_inner_pattern: string;
+  meta_glyph_pattern: string;
+  meta_strategy: string;
+  alignment_title: string;
   section_classical: string;
   section_dual_view: string;
   view_bazi_title: string;
@@ -13,6 +18,11 @@ export type GlyphReportSectionLabels = {
 };
 
 const ZH: GlyphReportSectionLabels = {
+  eyebrow_about_question: "关于你的问题",
+  eyebrow_inner_pattern: "内在纹章",
+  meta_glyph_pattern: "Glyph 纹章",
+  meta_strategy: "策略",
+  alignment_title: "印证与张力",
   section_classical: "这个 Glyph 说什么",
   section_dual_view: "双视角分析",
   view_bazi_title: "从你的性格画像看",
@@ -25,6 +35,11 @@ const ZH: GlyphReportSectionLabels = {
 };
 
 const EN: GlyphReportSectionLabels = {
+  eyebrow_about_question: "About your question",
+  eyebrow_inner_pattern: "The inner pattern",
+  meta_glyph_pattern: "Glyph pattern",
+  meta_strategy: "Strategy",
+  alignment_title: "Alignment & tension resolution",
   section_classical: "What this glyph says",
   section_dual_view: "Dual perspective analysis",
   view_bazi_title: "From your profile",

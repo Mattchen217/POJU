@@ -11,12 +11,21 @@ import {
   unescapeMarkerPart,
 } from "@/lib/llm/sanitize/compliance-terms";
 import { toGlossaryLocale } from "@/lib/glossary/term-glossary";
+import type { TermPolarity } from "@/lib/glossary/term-polarity";
 
 import "@/styles/glossary.css";
 
 type Props = { text: string; locale: string };
 
-function TermMark({ visible, plain }: { visible: string; plain: string }) {
+function TermMark({
+  visible,
+  plain,
+  polarity = "neutral",
+}: {
+  visible: string;
+  plain: string;
+  polarity?: TermPolarity;
+}) {
   const [open, setOpen] = useState(false);
   const id = useId();
   const ref = useRef<HTMLSpanElement>(null);
@@ -38,7 +47,7 @@ function TermMark({ visible, plain }: { visible: string; plain: string }) {
   const toggle = () => setOpen((o) => !o);
 
   return (
-    <span ref={ref} className="term-mark">
+    <span ref={ref} className={`term-mark term-mark--${polarity}`}>
       <span
         className="term-mark__word"
         tabIndex={0}
@@ -61,7 +70,7 @@ function TermMark({ visible, plain }: { visible: string; plain: string }) {
         [···]
       </button>
       {open && plain ? (
-        <span id={id} role="tooltip" className="glossary-pop">
+        <span id={id} role="tooltip" className={`glossary-pop glossary-pop--${polarity}`}>
           <span className="glossary-pop__title">{visible}</span>
           <span className="glossary-pop__body">{plain}</span>
         </span>
@@ -169,6 +178,7 @@ function parseMarkedText(
             key={`t-${keyBase}-${keyIdx++}`}
             visible={visible}
             plain={plain}
+            polarity={ui?.polarity ?? "neutral"}
           />,
         );
       }
