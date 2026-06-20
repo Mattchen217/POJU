@@ -109,6 +109,7 @@ function findNextMarker(
 function parseMarkedText(text: string, locale: string, keyBase: number): ReactNode[] {
   const nodes: ReactNode[] = [];
   const glossaryLocale = toGlossaryLocale(locale);
+  const seenInParagraph = new Set<string>();
   let cursor = 0;
   let keyIdx = 0;
 
@@ -127,13 +128,18 @@ function parseMarkedText(text: string, locale: string, keyBase: number): ReactNo
       const dynamicPlain = next.groups[2] ? unescapeMarkerPart(next.groups[2]).trim() : "";
       const ui = uiTermById(termId, glossaryLocale);
       const plain = dynamicPlain || ui?.plain || "";
-      nodes.push(
-        <TermMark
-          key={`t-${keyBase}-${keyIdx++}`}
-          visible={visible}
-          plain={plain}
-        />,
-      );
+      if (seenInParagraph.has(termId)) {
+        nodes.push(<span key={`t-dup-${keyBase}-${keyIdx++}`}>{visible}</span>);
+      } else {
+        seenInParagraph.add(termId);
+        nodes.push(
+          <TermMark
+            key={`t-${keyBase}-${keyIdx++}`}
+            visible={visible}
+            plain={plain}
+          />,
+        );
+      }
     } else {
       const display = unescapeGlossPart(next.groups[0]);
       const plain = unescapeGlossPart(next.groups[1]);

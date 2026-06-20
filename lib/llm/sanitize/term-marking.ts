@@ -4,11 +4,20 @@
  */
 
 import {
+  CLOSED_SET_REPLACE_IDS,
+  CLOSED_SET_SLUG,
+  KEEP_CN_SLUGS,
+  OUT_OF_SET_FORBIDDEN_EN,
+  OUT_OF_SET_FORBIDDEN_HAN,
+} from "@/lib/glossary/term-closed-set";
+import { CLOSED_SET_GLOSSARY_ENTRIES } from "@/lib/glossary/term-glossary-closed";
+import {
   TERM_GLOSSARY,
   type GlossaryConcept,
   type Locale,
   toGlossaryLocale,
 } from "@/lib/glossary/term-glossary";
+import { buildClosedSetConstraintPromptBlock } from "@/lib/llm/prompts/term-closed-set-constraint";
 
 export type TermEntry = {
   id: string;
@@ -18,58 +27,8 @@ export type TermEntry = {
   plain: Record<Locale, string>;
 };
 
-const GLOSSARY_ID_TO_TERM_ID: Record<string, string> = {
-  日主: "day_master",
-  用神: "yong_shen",
-  大运: "decade",
-  流年: "year",
-  八字: "bazi",
-  命盘: "natal_profile",
-  四柱: "four_pillars",
-  天干: "heavenly_stem",
-  地支: "earthly_branch",
-  忌神: "unfavorable_element",
-  喜神: "favorable_element",
-  六合: "six_harmonies",
-  刑: "punishment",
-  害冲: "clash",
-  十神: "ten_gods",
-  七杀: "seven_killings",
-  食神: "eating_god",
-  伤官: "hurting_officer",
-  正财偏财: "wealth_stars",
-  正官偏官: "officer_stars",
-  正印偏印: "resource_stars",
-  比肩劫财: "peer_stars",
-  格局: "pattern",
-  贵人: "noble_support",
-  神煞: "auxiliary_stars",
-  配偶星: "partner_star",
-};
-
-const KEEP_CN_TERM_IDS = new Set(["day_master", "decade", "year"]);
-
-/** Glossary rows injected into delivery prompts (常量前缀 · cache-stable). */
-const DELIVERY_MARKING_GLOSSARY_IDS = [
-  "日主",
-  "用神",
-  "大运",
-  "流年",
-  "八字",
-  "命盘",
-  "四柱",
-  "天干",
-  "地支",
-  "忌神",
-  "喜神",
-  "六合",
-  "刑",
-  "害冲",
-  "十神",
-  "贵人",
-  "神煞",
-  "格局",
-];
+/** Glossary rows injected into delivery prompts (closed-set 命理 · cache-stable). */
+const DELIVERY_MARKING_GLOSSARY_IDS = CLOSED_SET_REPLACE_IDS.filter((id) => id !== "羊刃");
 
 function softLabel(entry: TermEntry, loc: Locale): string {
   return (entry.soft[loc] || entry.soft.en).split(/\s*\/\s*/)[0]!.trim();
@@ -77,12 +36,12 @@ function softLabel(entry: TermEntry, loc: Locale): string {
 
 function conceptToTermEntry(c: GlossaryConcept): TermEntry | null {
   if (c.surface === "delete" || c.surface === "allow") return null;
-  const id = GLOSSARY_ID_TO_TERM_ID[c.id] ?? c.id.replace(/[^a-zA-Z0-9_]/g, "_");
+  const id = CLOSED_SET_SLUG[c.id] ?? c.id.replace(/[^a-zA-Z0-9_]/g, "_");
   return {
     id,
     forbidden: [...c.forbidden_variants],
     soft: c.soft,
-    keep_cn: KEEP_CN_TERM_IDS.has(id),
+    keep_cn: KEEP_CN_SLUGS.has(id),
     plain: c.gloss,
   };
 }
@@ -93,10 +52,10 @@ export const TERM_ENTRIES: TermEntry[] = TERM_GLOSSARY.map(conceptToTermEntry).f
 
 const TERM_BY_ID = new Map(TERM_ENTRIES.map((e) => [e.id, e]));
 
-const DELIVERY_MARKING_ENTRIES: TermEntry[] = DELIVERY_MARKING_GLOSSARY_IDS.map((gid) => {
-  const termId = GLOSSARY_ID_TO_TERM_ID[gid];
-  return termId ? TERM_BY_ID.get(termId) : undefined;
-}).filter((e): e is TermEntry => e !== undefined);
+const DELIVERY_MARKING_ENTRIES: TermEntry[] = DELIVERY_MARKING_GLOSSARY_IDS.map((hanId) => {
+  const concept = CLOSED_SET_GLOSSARY_ENTRIES.find((c) => c.id === hanId);
+  return concept ? conceptToTermEntry(concept) : null;
+}).filter((e): e is TermEntry => e !== null);
 
 /** LLM term marker — UI parses `⟦t:id|visible|plain⟧` (plain optional). Legacy 2-segment + `⟦g|…⟧` supported. */
 export const TERM_MARKER_PATTERN =
@@ -228,12 +187,50 @@ ${rows}
 2. \`<该处白话>\` = **结合本句意境 + 用户问题**现写的 2–4 句人话（动作 3）：一句比方 + 现实可做的具体事 + 对这件事意味着什么。**同 id 在不同段落白话必须不同**；白话**不出现在正文**，只进标记第 3 段（UI tooltip）
 3. **只用当前交付语言**，整句必须通顺；标记**只包软翻译词（含括号干支）**，**勿把 your/the/as 等前后词包进标记**
 4. 正文须含贴切的日常比喻（动作 1）；流年/大运类先归因外境再给掌控感（动作 2）
-5. 同一概念在一段内**只标一次**（首次出现）
+5. **每段/每字段 ≤120 词（中文 ≤180 字）**；同 id **每段只标 1 次**；全文**一个主比喻**，tooltip 小比喻与之呼应（瘦身四条）
 6. **签诗/古文诗句不是术语**：禁逐字引签诗原文；只能意象化转述，**不打术语标记**
 7. 守六条语义红线（不预测/不算命/不占卜/不决吉凶/不恐吓/不超自然承诺）
 8. 若漏写第 3 段白话，UI 会回退静态词典——**务必写全三段位**
 
-${buildTermMarkingFewShot(locale)}`;
+${buildTermMarkingFewShot(locale)}
+
+${buildClosedSetConstraintPromptBlock(locale)}`;
+}
+
+export type OutOfSetAuditHit = { label: string; snippet: string };
+
+/** Detect engine-out-of-set 神煞/术语 in delivery text (audit-only). */
+export function auditOutOfSetTerms(text: string): OutOfSetAuditHit[] {
+  if (!text?.trim()) return [];
+  const masked = maskMarkersForAudit(text);
+  const hits: OutOfSetAuditHit[] = [];
+
+  for (const han of OUT_OF_SET_FORBIDDEN_HAN) {
+    if (masked.includes(han)) {
+      hits.push({ label: `out_of_set_term:${han}`, snippet: han });
+    }
+  }
+  for (const en of OUT_OF_SET_FORBIDDEN_EN) {
+    const re = new RegExp(`\\b${en.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
+    if (re.test(masked)) {
+      hits.push({ label: `out_of_set_term:${en}`, snippet: en });
+    }
+  }
+
+  const closedSlugs = new Set(Object.values(CLOSED_SET_SLUG));
+  const groupedForbidden = new Set(["ten_gods", "auxiliary_stars", "noble_support", "wealth_stars", "officer_stars", "resource_stars", "peer_stars", "punishment", "clash", "six_harmonies"]);
+  for (const m of parseTermMarkers(text)) {
+    if (groupedForbidden.has(m.id)) {
+      hits.push({ label: `out_of_set_marker_id:${m.id}`, snippet: m.raw.slice(0, 40) });
+    } else if (
+      !closedSlugs.has(m.id) &&
+      !TERM_BY_ID.has(m.id)
+    ) {
+      // unknown marker id — may be compliance term; skip unless clearly grouped
+    }
+  }
+
+  return hits;
 }
 
 export function countDistinctTermIds(text: string): number {
@@ -242,28 +239,14 @@ export function countDistinctTermIds(text: string): number {
 }
 
 /** Depth ids beyond day_master / decade / year / yong_shen — grounding audit. */
-export const GROUNDING_DEPTH_TERM_IDS = new Set([
-  "ten_gods",
-  "seven_killings",
-  "eating_god",
-  "hurting_officer",
-  "wealth_stars",
-  "officer_stars",
-  "resource_stars",
-  "peer_stars",
-  "pattern",
-  "auxiliary_stars",
-  "noble_support",
-  "partner_star",
-  "six_harmonies",
-  "punishment",
-  "clash",
-  "favorable_element",
-  "unfavorable_element",
-  "four_pillars",
-  "heavenly_stem",
-  "earthly_branch",
-]);
+export const GROUNDING_DEPTH_TERM_IDS = new Set(
+  Object.values(CLOSED_SET_SLUG).filter(
+    (slug) =>
+      !["day_master", "decade", "year", "yong_shen", "bazi", "natal_profile", "four_pillars"].includes(
+        slug,
+      ),
+  ),
+);
 
 export type GroundingAuditResult = {
   distinctCount: number;

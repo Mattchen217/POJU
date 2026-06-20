@@ -4,6 +4,12 @@
  * @see Cursor 指令 - 术语合规引擎 v3.md
  */
 
+import {
+  CLOSED_SET_GLOSSARY_ENTRIES,
+  SUPERSEDED_GLOSSARY_IDS,
+} from "@/lib/glossary/term-glossary-closed";
+import { CLOSED_SET_REPLACE_IDS } from "@/lib/glossary/term-closed-set";
+
 export type Locale = "en" | "zh" | "es" | "fr" | "de";
 export type Surface = "replace" | "allow" | "delete";
 
@@ -38,7 +44,10 @@ function sg(
 
 const EMPTY_LOCALES: Record<Locale, string> = { en: "", zh: "", es: "", fr: "", de: "" };
 
-export const TERM_GLOSSARY: GlossaryConcept[] = [
+const CLOSED_HAN_ID_SET = new Set<string>(CLOSED_SET_REPLACE_IDS);
+
+/** Legacy compliance rows (奇门/风水/占卜/删除类) — 命理闭集词条见 term-glossary-closed.ts */
+const LEGACY_TERM_GLOSSARY: GlossaryConcept[] = [
   // ── replace: 奇门 / 风水 / core bazi ──
   {
     id: "奇门",
@@ -481,7 +490,7 @@ export const TERM_GLOSSARY: GlossaryConcept[] = [
   {
     id: "贵人",
     surface: "replace",
-    forbidden_variants: ["贵人", "Noble Person", "Benefactor", "Nobleman luck", "Gui Ren"],
+    forbidden_variants: ["贵人", "Noble Person", "Benefactor", "Nobleman luck", "Gui Ren", "天乙贵人", "天乙"],
     ...sg(
       "key supporter / external support", "外部助力 / 关键支持者",
       "aliado clave / apoyo externo", "soutien clé / support externe", "Schlüsselunterstützer / äußere Hilfe",
@@ -529,6 +538,90 @@ export const TERM_GLOSSARY: GlossaryConcept[] = [
       "Un impulso psicológico interno hacia el movimiento geográfico o el cambio de entorno.",
       "Une pulsion psychologique interne vers le déplacement géographique ou le changement d'environnement.",
       "Ein innerer psychologischer Drang nach geografischer Veränderung oder Umgebungswechsel.",
+    ),
+  },
+  {
+    id: "羊刃",
+    surface: "replace",
+    forbidden_variants: ["羊刃", "Yang Ren", "Blade Star", "Flying Blade"],
+    ...sg(
+      "double-edged drive", "双刃驱动力",
+      "impulso de filo doble", "pulsion à double tranchant", "zweischneidiger Drang",
+      "A sharp inner edge — decisive cutting power that clears clutter and guards boundaries when channeled; reckless when unchecked.",
+      "内在的锐利锋刃——用得好能砍掉废物、守住边界；失控则伤人伤己。",
+      "Un filo interior afilado: poder de corte decisivo que elimina lo superfluo y protege límites si se canaliza.",
+      "Un tranchant intérieur — une force de coupe qui élimine le superflu et défend les limites lorsqu'elle est canalisée.",
+      "Eine scharfe innere Kante — entscheidende Schneidekraft, die Ballast abträgt und Grenzen wahrt, wenn sie kanalisiert wird.",
+    ),
+  },
+  {
+    id: "华盖",
+    surface: "replace",
+    forbidden_variants: ["华盖", "Hua Gai", "Canopy Star"],
+    ...sg(
+      "creative solitude", "独处创造型",
+      "soledad creativa", "solitude créative", "kreative Zurückgezogenheit",
+      "A pull toward deep solo focus, reflective withdrawal, or thinking apart from the crowd — rich for ideas, easy to over-isolate.",
+      "偏向深度独处、内省退后或离群思考——利于创见，也易过度封闭。",
+      "Un impulso hacia el enfoque solitario profundo y la reflexión apartada del grupo.",
+      "Une tendance au focus solitaire profond et à la retraite réflexive à l'écart du groupe.",
+      "Eine Neigung zu tiefem Solo-Fokus und reflexivem Rückzug abseits der Masse.",
+    ),
+  },
+  {
+    id: "孤辰",
+    surface: "replace",
+    forbidden_variants: ["孤辰", "Gu Chen", "Lonely Star"],
+    ...sg(
+      "solo rhythm", "独行节奏",
+      "ritmo solitario", "rythme solitaire", "Solorythmus",
+      "A baseline preference for doing things your own way, on your own timeline — independence that can feel lonely if unbalanced.",
+      "习惯按自己的节奏、自己的方式行事——独立感强，失衡时易显孤单。",
+      "Preferencia por hacer las cosas a tu manera y en tu propio tiempo.",
+      "Une préférence de base pour agir à votre rythme et à votre manière.",
+      "Eine Grundneigung, Dinge auf eigene Weise und im eigenen Tempo zu tun.",
+    ),
+  },
+  {
+    id: "寡宿",
+    surface: "replace",
+    forbidden_variants: ["寡宿", "Gua Su", "Widow Star"],
+    ...sg(
+      "independent streak", "独立倾向",
+      "racha independiente", "trait d'indépendance", "unabhängige Note",
+      "An inner stance of self-reliance and emotional self-containment — strong boundaries, less need for constant company.",
+      "内在的自立与情感自持——边界清楚，不太依赖随时有人陪着。",
+      "Una postura interior de autosuficiencia y contención emocional.",
+      "Une posture intérieure d'autosuffisance et de contenance émotionnelle.",
+      "Eine innere Haltung der Selbstständigkeit und emotionalen Selbstbeherrschung.",
+    ),
+  },
+  {
+    id: "正印",
+    surface: "replace",
+    forbidden_variants: ["正印", "Direct Resource", "Zheng Yin"],
+    ...sg(
+      "steady support", "稳定支持力",
+      "apoyo estable", "soutien stable", "beständige Stütze",
+      "Learning and care received in structured, reliable ways — mentors, routines, and frameworks that nourish you.",
+      "以稳定、可靠的方式获得的学习与照护——导师、惯例和能滋养你的框架。",
+      "Aprendizaje y cuidado recibidos de forma estructurada y fiable.",
+      "Apprentissage et soutien reçus de manière structurée et fiable.",
+      "Lernen und Fürsorge, die auf strukturierte, verlässliche Weise ankommen.",
+    ),
+  },
+  {
+    id: "正官",
+    surface: "replace",
+    forbidden_variants: ["正官", "Direct Officer", "Zheng Guan"],
+    ...sg(
+      "order and responsibility", "秩序与责任",
+      "orden y responsabilidad", "ordre et responsabilité", "Ordnung und Verantwortung",
+      "How you relate to rules, roles, and accountability — building structure rather than rebelling against it.",
+      "你如何面对规则、角色与责任——倾向建构秩序而非硬碰体制。",
+      "Cómo te relacionas con reglas, roles y responsabilidad.",
+      "Votre rapport aux règles, aux rôles et à la responsabilité.",
+      "Wie du zu Regeln, Rollen und Verantwortung stehst.",
     ),
   },
   // ── H. 占卜 / Glyph ──
@@ -830,6 +923,14 @@ export const TERM_GLOSSARY: GlossaryConcept[] = [
       "El principio del flujo natural.",
       "Le principe du flux naturel.",
       "Das Prinzip des natürlichen Flusses.") },
+];
+
+/** Closed-set 命理词条优先；legacy 去掉被 supersede / 闭集覆盖的重复项。 */
+export const TERM_GLOSSARY: GlossaryConcept[] = [
+  ...CLOSED_SET_GLOSSARY_ENTRIES,
+  ...LEGACY_TERM_GLOSSARY.filter(
+    (c) => !SUPERSEDED_GLOSSARY_IDS.has(c.id) && !CLOSED_HAN_ID_SET.has(c.id),
+  ),
 ];
 
 // ── Derived indexes ──

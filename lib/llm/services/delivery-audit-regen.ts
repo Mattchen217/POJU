@@ -6,7 +6,10 @@ import {
   auditDeliveredText,
   type ComplianceViolation,
 } from "@/lib/llm/sanitize/compliance-terms";
-import { auditGroundingMarkers } from "@/lib/llm/sanitize/term-marking";
+import {
+  auditGroundingMarkers,
+  auditOutOfSetTerms,
+} from "@/lib/llm/sanitize/term-marking";
 
 export type DeliveryProduct = "poju" | "glyph" | "match" | "syncro";
 
@@ -84,6 +87,7 @@ export function isCriticalDeliveryAuditFailure(
       v.label === "bare_sign_poem" ||
       v.label === "broken_marker" ||
       v.label === "grounding_low" ||
+      v.label.startsWith("out_of_set_") ||
       v.label.includes("bazi_"),
   );
 }

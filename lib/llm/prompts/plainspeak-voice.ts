@@ -43,6 +43,25 @@ export const PLAINSPEAK_THREE_ACTIONS = `# 三个文案动作（付费核心 · 
 
 **调性**：保留东方"植物 / 天气 / 流水"的意象感（让用户觉得酷），但说出来的全是**商业和生活的智慧**——高级而不端着。`;
 
+export const PLAINSPEAK_SLIM_FOUR_RULES = `# 瘦身四条（实测劝退点 · 与大白话同等优先级）
+
+**① 长度与密度 — 说人话 ≠ 说更多话**
+- 每个 JSON 字符串字段 / 每个自然段：**≤120 词（中文约 ≤180 字）**；超长必须拆成多段或删繁就简。
+- 结构：**先 1 句人话结论 → 最多 2–3 句展开**；禁止把 core nature + life phase + balancing + year + 十神 + 神煞 **全挤进一段**。
+- 同一意思全文**说一次到位**，禁止反复绕（如"别硬撑、要引水"换说法重复三遍）。
+
+**② 同概念金色标记 — 每段最多 1 次**
+- 同一 \`term id\` 在**一个段落/字段内**只打 **1 次** ⟦t:id|…|…⟧（首次出现）；其余用人话指代（"你这股性子""外面的燥劲"），**勿重复刷同一个金色词**。
+- 接地看的是**多少不同结构**，不是同一词刷次数。
+
+**③ 神煞/十神 — 必须用贴切 id，禁止张冠李戴**
+- **每个具体神煞/十神名**用术语表里**对应 id 的 soft 词**，禁止把羊刃标成 external support、把华盖标成 social energy 等**标签与含义矛盾**的写法。
+- 可见文本可保留中文名括号，如 \`⟦t:yang_blade|双刃驱动力（羊刃）|…⟧\`；**id 必须对应该词的真实含义**。
+
+**④ 主比喻收敛 — 别"比喻沙拉"**
+- 全文**锚定一个主比喻**（由本次处境/签象/问题自定，不指定具体词），各段围绕它展开。
+- tooltip 第 3 段的小比喻**尽量与主比喻同系、互相呼应**；避免一份报告里熔炉、利刃、灌溉、烈日各说各的、冲淡主意象。`;
+
 const STYLE_EXAMPLE_FOOTER = `
 > ↑ 这条**只示范说话的风格与三个动作**（比喻入正文 / 先归因外境再给掌控 / tooltip 译成现实动作）。
 > **实际请按这个用户的处境与盘面，另造贴切的比喻**，不要套用上面的领域或意象。`;
@@ -89,6 +108,7 @@ export function buildPlainspeakVoiceSections(styleExample: string): string[] {
   return [
     PLAINSPEAK_VOICE_CONTRACT,
     PLAINSPEAK_THREE_ACTIONS,
+    PLAINSPEAK_SLIM_FOUR_RULES,
     styleExample,
   ];
 }

@@ -22,6 +22,7 @@ import {
 } from "@/lib/llm/compliance/audit-output";
 import {
   BARE_SIGN_POEM_PATTERN,
+  auditOutOfSetTerms,
   buildTermMarkingPromptBlock,
   buildTermMarkingFewShot,
   detectBrokenMarkers,
@@ -40,6 +41,7 @@ import {
 } from "@/lib/llm/sanitize/term-marking";
 
 export {
+  auditOutOfSetTerms,
   BARE_SIGN_POEM_PATTERN,
   buildTermMarkingPromptBlock,
   buildTermMarkingFewShot,
@@ -430,6 +432,10 @@ export function auditDeliveredText(text: string, locale: string): ComplianceViol
 
   if (detectBrokenMarkers(text)) {
     violations.push({ label: "broken_marker", snippet: snippetAround(text, text.indexOf("⟦"), 12) });
+  }
+
+  for (const hit of auditOutOfSetTerms(text)) {
+    violations.push(hit);
   }
 
   if (!locale.startsWith("zh")) {
