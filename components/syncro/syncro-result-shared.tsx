@@ -1,6 +1,5 @@
 "use client";
 
-import { useRef } from "react";
 import { useTranslations } from "next-intl";
 
 import { GlossaryText } from "@/components/cross-product/GlossaryText";
@@ -65,7 +64,6 @@ export function SyncroCenterInfo({
   compact,
   locale,
   llmHighlight,
-  glossarySeen,
 }: {
   combination: SyncroCombination;
   directionId: DirectionId;
@@ -75,12 +73,9 @@ export function SyncroCenterInfo({
   compact?: boolean;
   locale: string;
   llmHighlight?: boolean;
-  glossarySeen?: Set<string>;
 }) {
   const t = useTranslations("syncro.main");
   const isZh = locale.startsWith("zh");
-  const fallbackSeen = useRef(new Set<string>()).current;
-  const seen = glossarySeen ?? fallbackSeen;
   const levelInfo = CURRENT_LEVELS[combination.current_level];
   const directionInfo = DIRECTIONS[directionId];
   const periodLabel = isZh ? HOUR_PERIODS[hourPeriod].name_zh : HOUR_PERIODS[hourPeriod].name_en;
@@ -103,7 +98,7 @@ export function SyncroCenterInfo({
       </div>
 
       <p className="short-advice">
-        <GlossaryText text={combination.short_advice} locale={locale} seen={seen} />
+        <GlossaryText text={combination.short_advice} locale={locale} />
       </p>
 
       {!showDetail ? (
@@ -116,14 +111,13 @@ export function SyncroCenterInfo({
         <div className="detail-section">
           <h4>{t("detailed_label")}</h4>
           <p>
-            <GlossaryText text={combination.detailed_advice} locale={locale} seen={seen} />
+            <GlossaryText text={combination.detailed_advice} locale={locale} />
           </p>
           <h4>{t("rationale_label")}</h4>
           <p>
             <GlossaryText
               text={sanitizeSyncroRationale(combination.rationale, locale)}
               locale={locale}
-              seen={seen}
             />
           </p>
           <button type="button" onClick={onToggleDetail} className="collapse-button">

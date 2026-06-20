@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { HourProgressBar } from "@/components/syncro/HourProgressBar";
 import { ReadingDecoderBanner } from "@/components/reading-ritual/ReadingDecoderBanner";
 import { GlossaryText } from "@/components/cross-product/GlossaryText";
+import { TermMarkFirstVisitHint } from "@/components/cross-product/TermMarkFirstVisitHint";
 import { SyncroPermissionGate } from "@/components/syncro/SyncroPermissionGate";
 import { ThreeModeToggle } from "@/components/syncro/ThreeModeToggle";
 import { useOrientation } from "@/components/syncro/SyncroOrientationProvider";
@@ -72,7 +73,6 @@ export function SyncroMainView({
   onTimelineComplete,
 }: SyncroMainViewProps) {
   const t = useTranslations("syncro.main");
-  const glossarySeen = useRef(new Set<string>()).current;
   const { isSupported, receivingHeading, requestPermissionFromUserGesture } = useOrientation();
   const rootRef = useRef<HTMLDivElement>(null);
   const autoCompassOnceRef = useRef(false);
@@ -293,13 +293,14 @@ export function SyncroMainView({
 
       <div className="px-4 pt-2">
         <ReadingDecoderBanner variant="others" />
+        <TermMarkFirstVisitHint />
       </div>
 
       {session.task_response ? (
         <div className="syncro-task-response">
           <h3 className="syncro-task-response__title">{t("task_response_title")}</h3>
           <p className="syncro-task-response__summary">
-            <GlossaryText text={session.task_response.summary} locale={locale} seen={glossarySeen} />
+            <GlossaryText text={session.task_response.summary} locale={locale} />
           </p>
           {session.task_response.best_windows.length > 0 ? (
             <ul className="syncro-task-response__windows">
@@ -309,7 +310,7 @@ export function SyncroMainView({
                     {win.window} · {win.direction}
                   </strong>
                   <p>
-                    <GlossaryText text={win.why} locale={locale} seen={glossarySeen} />
+                    <GlossaryText text={win.why} locale={locale} />
                   </p>
                 </li>
               ))}
@@ -318,7 +319,7 @@ export function SyncroMainView({
           {session.task_response.avoid ? (
             <p className="syncro-task-response__avoid">
               <span className="syncro-task-response__avoid-label">{t("task_response_avoid")}:</span>{" "}
-              <GlossaryText text={session.task_response.avoid} locale={locale} seen={glossarySeen} />
+              <GlossaryText text={session.task_response.avoid} locale={locale} />
             </p>
           ) : null}
         </div>

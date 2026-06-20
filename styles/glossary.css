@@ -2,6 +2,7 @@
 
 .term-mark {
   display: inline;
+  position: relative;
   white-space: nowrap;
 }
 
@@ -9,7 +10,6 @@
   color: #d4af37;
   font-weight: 500;
   cursor: help;
-  position: relative;
 }
 
 .term-mark__info {
@@ -64,7 +64,7 @@
   position: absolute;
   left: 0;
   top: 1.6em;
-  z-index: 40;
+  z-index: 1000;
   width: min(280px, 78vw);
   padding: 12px 14px;
   border-radius: 14px;

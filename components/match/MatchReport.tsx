@@ -10,10 +10,11 @@ import {
   Sprout,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { GlossaryText } from "@/components/cross-product/GlossaryText";
+import { TermMarkFirstVisitHint } from "@/components/cross-product/TermMarkFirstVisitHint";
 
 import { MatchReportCard } from "@/components/match/MatchReportCard";
 import { ReadingDecoderBanner } from "@/components/reading-ritual/ReadingDecoderBanner";
@@ -51,12 +52,10 @@ function ActionItem({
   action,
   index,
   locale,
-  seen,
 }: {
   action: MatchReportData["recommendations"]["actions"][number];
   index: number;
   locale: string;
-  seen: Set<string>;
 }) {
   const t = useTranslations("match.report");
   const CategoryIcon = CATEGORY_ICONS[action.category] ?? Circle;
@@ -72,7 +71,7 @@ function ActionItem({
           <h4>{action.title}</h4>
         </div>
         <p className="action-detail">
-          <GlossaryText text={action.detail} locale={locale} seen={seen} />
+          <GlossaryText text={action.detail} locale={locale} />
         </p>
         {action.timing ? (
           <p className="action-timing">
@@ -87,7 +86,6 @@ function ActionItem({
 export function MatchReport({ session, locale }: MatchReportProps) {
   const t = useTranslations("match.report");
   const router = useRouter();
-  const glossarySeen = useRef(new Set<string>()).current;
   const [baseReportA, setBaseReportA] = useState<string | null>(null);
   const [baseReportB, setBaseReportB] = useState<string | null>(null);
 
@@ -151,6 +149,7 @@ export function MatchReport({ session, locale }: MatchReportProps) {
       </header>
 
       <ReadingDecoderBanner variant="others" />
+      <TermMarkFirstVisitHint />
 
       <div className="synergy-signal-panel-wrapper">
         <div className="synergy-signal-panel" style={{ color: synergyInfo.color_hex }}>
@@ -173,13 +172,13 @@ export function MatchReport({ session, locale }: MatchReportProps) {
         <MatchReportCard icon="A" title={report.analysis_a.title} summary={report.analysis_a.summary} color="#ff7eb0">
           <div className="card-content">
             <p>
-              <GlossaryText text={report.analysis_a.detail} locale={locale} seen={glossarySeen} />
+              <GlossaryText text={report.analysis_a.detail} locale={locale} />
             </p>
             <h4>{t("key_traits")}</h4>
             <ul className="traits-list">
               {report.analysis_a.key_traits.map((trait, i) => (
                 <li key={i}>
-                  <GlossaryText text={trait} locale={locale} seen={glossarySeen} />
+                  <GlossaryText text={trait} locale={locale} />
                 </li>
               ))}
             </ul>
@@ -189,13 +188,13 @@ export function MatchReport({ session, locale }: MatchReportProps) {
         <MatchReportCard icon="B" title={report.analysis_b.title} summary={report.analysis_b.summary} color="#b08cff">
           <div className="card-content">
             <p>
-              <GlossaryText text={report.analysis_b.detail} locale={locale} seen={glossarySeen} />
+              <GlossaryText text={report.analysis_b.detail} locale={locale} />
             </p>
             <h4>{t("key_traits")}</h4>
             <ul className="traits-list">
               {report.analysis_b.key_traits.map((trait, i) => (
                 <li key={i}>
-                  <GlossaryText text={trait} locale={locale} seen={glossarySeen} />
+                  <GlossaryText text={trait} locale={locale} />
                 </li>
               ))}
             </ul>
@@ -205,19 +204,18 @@ export function MatchReport({ session, locale }: MatchReportProps) {
         <MatchReportCard icon="infinity" title={report.combined.title} summary={report.combined.summary} color="#e879f9">
           <div className="card-content">
             <p>
-              <GlossaryText text={report.combined.detail} locale={locale} seen={glossarySeen} />
+              <GlossaryText text={report.combined.detail} locale={locale} />
             </p>
             <h4>{t("five_elements")}</h4>
             <p>
               <GlossaryText
                 text={report.combined.five_elements_interaction}
                 locale={locale}
-                seen={glossarySeen}
               />
             </p>
             <h4>{t("timing_dynamic")}</h4>
             <p>
-              <GlossaryText text={report.combined.timing_dynamic} locale={locale} seen={glossarySeen} />
+              <GlossaryText text={report.combined.timing_dynamic} locale={locale} />
             </p>
           </div>
         </MatchReportCard>
@@ -233,18 +231,18 @@ export function MatchReport({ session, locale }: MatchReportProps) {
               <>
                 <h4>{t("question_response_title")}</h4>
                 <p>
-                  <GlossaryText text={questionResponse} locale={locale} seen={glossarySeen} />
+                  <GlossaryText text={questionResponse} locale={locale} />
                 </p>
               </>
             ) : null}
             <p>
-              <GlossaryText text={report.conclusion.detail} locale={locale} seen={glossarySeen} />
+              <GlossaryText text={report.conclusion.detail} locale={locale} />
             </p>
             <h4>{t("strengths")}</h4>
             <ul className="strengths-list">
               {report.conclusion.strengths.map((s, i) => (
                 <li key={i}>
-                  <GlossaryText text={s} locale={locale} seen={glossarySeen} />
+                  <GlossaryText text={s} locale={locale} />
                 </li>
               ))}
             </ul>
@@ -252,7 +250,7 @@ export function MatchReport({ session, locale }: MatchReportProps) {
             <ul className="challenges-list">
               {report.conclusion.challenges.map((c, i) => (
                 <li key={i}>
-                  <GlossaryText text={c} locale={locale} seen={glossarySeen} />
+                  <GlossaryText text={c} locale={locale} />
                 </li>
               ))}
             </ul>
@@ -273,7 +271,6 @@ export function MatchReport({ session, locale }: MatchReportProps) {
                   action={action}
                   index={i + 1}
                   locale={locale}
-                  seen={glossarySeen}
                 />
               ))}
             </div>

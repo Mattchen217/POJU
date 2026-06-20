@@ -10,10 +10,10 @@ import {
   ScrollText,
   Target,
 } from "lucide-react";
-import { useRef } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { GlossaryText } from "@/components/cross-product/GlossaryText";
+import { TermMarkFirstVisitHint } from "@/components/cross-product/TermMarkFirstVisitHint";
 
 import { GlyphSectionLabel } from "@/components/glyph/GlyphSectionLabel";
 import {
@@ -44,7 +44,6 @@ export function GlyphReport({ reading, glyph, question }: Props) {
   const t = useTranslations("glyph");
   const pageLocale = useLocale();
   const outputLang = resolveGlyphOutputLanguage(reading, pageLocale);
-  const glossarySeen = useRef(new Set<string>()).current;
   const sectionLabels = glyphReportSectionLabels(outputLang);
   const safeReading = reading;
   const windLabel = LEVEL_META[glyph.level]?.display_name ?? glyph.level;
@@ -65,11 +64,12 @@ export function GlyphReport({ reading, glyph, question }: Props) {
 
   return (
     <div className={cn("glyph-report")}>
+      <TermMarkFirstVisitHint />
       {questionResponse ? (
         <div className="report-section meaning">
           <GlyphSectionLabel icon={Target}>{t("question_response_title")}</GlyphSectionLabel>
           <p>
-            <GlossaryText text={questionResponse} locale={outputLang} seen={glossarySeen} />
+            <GlossaryText text={questionResponse} locale={outputLang} />
           </p>
         </div>
       ) : (
@@ -87,7 +87,7 @@ export function GlyphReport({ reading, glyph, question }: Props) {
       <div className="report-section classical">
         <GlyphSectionLabel icon={ScrollText}>{sectionLabels.section_classical}</GlyphSectionLabel>
         <p className="classical-text">
-          <GlossaryText text={safeReading.classical_voice} locale={outputLang} seen={glossarySeen} />
+          <GlossaryText text={safeReading.classical_voice} locale={outputLang} />
         </p>
       </div>
 
@@ -97,14 +97,14 @@ export function GlyphReport({ reading, glyph, question }: Props) {
         <div className="dual-view-card view-bazi">
           <h4>{sectionLabels.view_bazi_title}</h4>
           <p>
-            <GlossaryText text={safeReading.命理双视角.命理看此事} locale={outputLang} seen={glossarySeen} />
+            <GlossaryText text={safeReading.命理双视角.命理看此事} locale={outputLang} />
           </p>
         </div>
 
         <div className="dual-view-card view-glyph">
           <h4>{sectionLabels.view_glyph_title}</h4>
           <p>
-            <GlossaryText text={safeReading.命理双视角.签文看此事} locale={outputLang} seen={glossarySeen} />
+            <GlossaryText text={safeReading.命理双视角.签文看此事} locale={outputLang} />
           </p>
         </div>
 
@@ -113,7 +113,6 @@ export function GlyphReport({ reading, glyph, question }: Props) {
             <GlossaryText
               text={safeReading.命理双视角.两者印证或冲突}
               locale={outputLang}
-              seen={glossarySeen}
             />
           </p>
         </div>
@@ -122,21 +121,21 @@ export function GlyphReport({ reading, glyph, question }: Props) {
       <div className="report-section meaning">
         <GlyphSectionLabel icon={Target}>{sectionLabels.section_synthesis}</GlyphSectionLabel>
         <p>
-          <GlossaryText text={synthesisText} locale={outputLang} seen={glossarySeen} />
+          <GlossaryText text={synthesisText} locale={outputLang} />
         </p>
       </div>
 
       <div className="report-section tension">
         <GlyphSectionLabel icon={Eye}>{sectionLabels.section_hidden}</GlyphSectionLabel>
         <p>
-          <GlossaryText text={safeReading.hidden_tension} locale={outputLang} seen={glossarySeen} />
+          <GlossaryText text={safeReading.hidden_tension} locale={outputLang} />
         </p>
       </div>
 
       <div className="report-section moment">
         <GlyphSectionLabel icon={Hourglass}>{sectionLabels.section_moment}</GlyphSectionLabel>
         <p>
-          <GlossaryText text={safeReading.your_moment} locale={outputLang} seen={glossarySeen} />
+          <GlossaryText text={safeReading.your_moment} locale={outputLang} />
         </p>
       </div>
 
@@ -144,7 +143,7 @@ export function GlyphReport({ reading, glyph, question }: Props) {
         <GlyphSectionLabel icon={Footprints}>{sectionLabels.section_exploration}</GlyphSectionLabel>
         <div className="exploration-card">
           <p className="explore-text">
-            <GlossaryText text={safeReading.exploration.text} locale={outputLang} seen={glossarySeen} />
+            <GlossaryText text={safeReading.exploration.text} locale={outputLang} />
           </p>
           <div className="explore-meta">
             <span>{t(timeframeKey)}</span>

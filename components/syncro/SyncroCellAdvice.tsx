@@ -16,10 +16,9 @@ type Props = {
   llmMeta: SyncroSession["llm_meta"];
   className?: string;
   locale?: string;
-  seen?: Set<string>;
 };
 
-export function SyncroCellAdvice({ cell, llmMeta, className = "compass-short-advice", locale, seen }: Props) {
+export function SyncroCellAdvice({ cell, llmMeta, className = "compass-short-advice", locale }: Props) {
   const t = useTranslations("syncro");
   const pageLocale = useLocale();
   const effectiveLocale = locale ?? pageLocale;
@@ -44,7 +43,7 @@ export function SyncroCellAdvice({ cell, llmMeta, className = "compass-short-adv
 
   return (
     <p className={className}>
-      <GlossaryText text={cell!.short_advice} locale={effectiveLocale} seen={seen} />
+      <GlossaryText text={cell!.short_advice} locale={effectiveLocale} />
     </p>
   );
 }

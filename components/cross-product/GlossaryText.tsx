@@ -10,23 +10,13 @@ import {
   unescapeGlossPart,
   unescapeMarkerPart,
 } from "@/lib/llm/sanitize/compliance-terms";
-import { toGlossaryLocale, type Locale } from "@/lib/glossary/term-glossary";
+import { toGlossaryLocale } from "@/lib/glossary/term-glossary";
 
 import "@/styles/glossary.css";
 
-type Props = { text: string; locale: string; seen?: Set<string> };
+type Props = { text: string; locale: string };
 
-const HINT_KEY = "poju-term-hint-seen";
-
-function TermMark({
-  visible,
-  plain,
-  showInfo,
-}: {
-  visible: string;
-  plain: string;
-  showInfo: boolean;
-}) {
+function TermMark({ visible, plain }: { visible: string; plain: string }) {
   const [open, setOpen] = useState(false);
   const id = useId();
   const ref = useRef<HTMLSpanElement>(null);
@@ -62,16 +52,14 @@ function TermMark({
       >
         {visible}
       </span>
-      {showInfo ? (
-        <button
-          type="button"
-          className="term-mark__info"
-          aria-label="Explain term"
-          onClick={toggle}
-        >
-          [···]
-        </button>
-      ) : null}
+      <button
+        type="button"
+        className="term-mark__info"
+        aria-label="Explain term"
+        onClick={toggle}
+      >
+        [···]
+      </button>
       {open && plain ? (
         <span id={id} role="tooltip" className="glossary-pop">
           <span className="glossary-pop__title">{visible}</span>
@@ -84,7 +72,7 @@ function TermMark({
 
 /** Legacy ⟦g|display|plain⟧ — still rendered for older cached deliveries. */
 function LegacyGlossMark({ display, plain }: { display: string; plain: string }) {
-  return <TermMark visible={display} plain={plain} showInfo />;
+  return <TermMark visible={display} plain={plain} />;
 }
 
 function renderPlainText(segment: string, keyPrefix: number): ReactNode[] {
@@ -113,12 +101,7 @@ function findNextMarker(
   };
 }
 
-function parseMarkedText(
-  text: string,
-  locale: string,
-  seen: Set<string>,
-  keyBase: number,
-): ReactNode[] {
+function parseMarkedText(text: string, locale: string, keyBase: number): ReactNode[] {
   const nodes: ReactNode[] = [];
   const glossaryLocale = toGlossaryLocale(locale);
   let cursor = 0;
@@ -138,14 +121,11 @@ function parseMarkedText(
       const visible = unescapeMarkerPart(next.groups[1]);
       const ui = uiTermById(termId, glossaryLocale);
       const plain = ui?.plain ?? "";
-      const showInfo = !seen.has(termId);
-      if (showInfo) seen.add(termId);
       nodes.push(
         <TermMark
           key={`t-${keyBase}-${keyIdx++}`}
           visible={visible}
           plain={plain}
-          showInfo={showInfo}
         />,
       );
     } else {
@@ -161,54 +141,14 @@ function parseMarkedText(
   return nodes;
 }
 
-function FirstVisitHint() {
-  const [show, setShow] = useState(false);
-
-  useEffect(() => {
-    try {
-      if (localStorage.getItem(HINT_KEY) !== "1") setShow(true);
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
-  if (!show) return null;
-
-  return (
-    <p className="term-hint" role="note">
-      Tap{" "}
-      <span className="term-mark__info term-mark__info--inline" aria-hidden>
-        [···]
-      </span>{" "}
-      beside highlighted terms for a plain-language explanation.{" "}
-      <button type="button" className="term-hint__dismiss" onClick={() => {
-        setShow(false);
-        try {
-          localStorage.setItem(HINT_KEY, "1");
-        } catch {
-          /* ignore */
-        }
-      }}>
-        Got it
-      </button>
-    </p>
-  );
-}
-
-export function GlossaryText({ text, locale, seen }: Props) {
-  const localSeen = seen ?? new Set<string>();
+export function GlossaryText({ text, locale }: Props) {
   const hasMarkers = text.includes("⟦t:") || text.includes("⟦g|");
-  const nodes = parseMarkedText(text, locale, localSeen, 0);
+  const nodes = parseMarkedText(text, locale, 0);
 
   if (!hasMarkers) {
     const clean = stripBrokenMarkers(text);
     return <>{nodes.length ? nodes : clean}</>;
   }
 
-  return (
-    <>
-      <FirstVisitHint />
-      {nodes.length ? nodes : stripBrokenMarkers(text)}
-    </>
-  );
+  return <>{nodes.length ? nodes : stripBrokenMarkers(text)}</>;
 }

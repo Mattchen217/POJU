@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { IconBulb, IconX } from "@tabler/icons-react";
 import { useLocale, useTranslations } from "next-intl";
@@ -30,7 +30,6 @@ export function WhyThisCurrentModal({ cell, direction, hourId, onClose }: WhyThi
   const t = useTranslations("syncro");
   const tLevels = useTranslations("syncro.levels");
   const locale = useLocale();
-  const glossarySeen = useRef(new Set<string>()).current;
   const isZh = locale.startsWith("zh");
 
   useEffect(() => {
@@ -98,14 +97,14 @@ export function WhyThisCurrentModal({ cell, direction, hourId, onClose }: WhyThi
         <div className="why-divider" aria-hidden />
 
         <div className="why-rationale">
-          <GlossaryText text={rationaleText} locale={locale} seen={glossarySeen} />
+          <GlossaryText text={rationaleText} locale={locale} />
         </div>
 
         {showActionCard ? (
           <div className="why-action-card">
             <IconBulb aria-hidden size={18} stroke={1.5} className="why-action-icon" />
             <span>
-              <GlossaryText text={detailedText} locale={locale} seen={glossarySeen} />
+              <GlossaryText text={detailedText} locale={locale} />
             </span>
           </div>
         ) : null}
