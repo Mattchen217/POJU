@@ -1,9 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
-import { PojuDaYunDial } from "@/components/poju/PojuDaYunDial";
+import { PojuDaYunTimeline } from "@/components/poju/PojuDaYunTimeline";
 import {
   elementCssClass,
   formatBranchDisplay,
@@ -11,7 +12,7 @@ import {
   isZhMatrixLocale,
   yongshenChipsForLocale,
 } from "@/lib/poju/bazi-matrix-mappings";
-import { buildElementPillarMap, type ElementPillarRow } from "@/lib/poju/build-element-pillar-map";
+import { buildElementPillarMap, type ElementKey, type ElementPillarAssignment } from "@/lib/poju/build-element-pillar-map";
 import { buildMatrixDisplayData } from "@/lib/poju/build-matrix-display";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
 import { activePillarByAge } from "@/lib/poju/matrix-life-segment";
@@ -20,6 +21,7 @@ import { resolveBaziLabel } from "@/lib/poju/resolve-bazi-i18n";
 import { normalizeShenshaLocale, resolveShenshaList } from "@/lib/poju/shensha";
 import { tMatrix } from "@/lib/poju/poju-matrix-i18n";
 import { formatBirthClockTime } from "@/lib/profile/birth-info-utils";
+import { ZODIAC_ICON_BY_HAN } from "@/lib/poju/zodiac-icon-assets";
 import type { UserProfile } from "@/lib/profile/types";
 import "@/styles/poju-energy-matrix.css";
 
@@ -172,45 +174,19 @@ function RadarChart({ scores }: { scores: PojuMatrixPayload["wuxing_scores"] }) 
   return <div className="radar radar--compact" ref={ref} aria-hidden />;
 }
 
-function ElementPillarMap({
-  rows,
-  colon,
-  tb,
-  tm,
-  showTitle = true,
-}: {
-  rows: ElementPillarRow[];
-  colon: string;
-  tb: (key: string) => string;
-  tm: (key: string) => string;
-  showTitle?: boolean;
-}) {
-  if (!rows.length) return null;
-
-  return (
-    <div className="pem__element-map" aria-label={tm("element_map_title")}>
-      {showTitle ? <div className="pem__element-map-title">{tm("element_map_title")}</div> : null}
-      <div className="pem__element-map-body-wrap">
-        {rows.map((row) => (
-          <div className="pem__element-map-row" key={row.element}>
-            <span className={`pem__element-map-el ${ELEMENT_CLASS[row.element] ?? ""}`}>
-              {tb(`element.${row.element.toLowerCase()}`)}
-            </span>
-            <span className="pem__element-map-slots">
-              {row.assignments.map((assignment, index) => (
-                <span className="pem__element-map-entry" key={assignment.slot}>
-                  {index > 0 ? tm("element_map_sep") : null}
-                  {tb(`pillar_slot.${assignment.slot}`)}
-                  {colon}
-                  <span className="pem__element-map-glyph">{assignment.display_glyph}</span>
-                </span>
-              ))}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+function formatElementAttribution(
+  assignments: ElementPillarAssignment[],
+  isZhLocale: boolean,
+  tb: (key: string) => string,
+  colon: string,
+  sep: string,
+): string {
+  return assignments
+    .map((a) => {
+      const glyph = isZhLocale ? a.han : a.display_glyph;
+      return `${tb(`pillar_slot.${a.slot}`)}${colon}${glyph}`;
+    })
+    .join(sep);
 }
 
 export function PojuEnergyMatrix({ payload, locale, compact = false, subjectPrefix }: Props) {
@@ -225,6 +201,14 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, subjectPref
     () => buildElementPillarMap(structured.pillars_detail, locale),
     [structured.pillars_detail, locale],
   );
+
+  const assignmentsByElement = useMemo(() => {
+    const map = new Map<ElementKey, ElementPillarAssignment[]>();
+    for (const row of elementPillarRows) {
+      map.set(row.element, row.assignments);
+    }
+    return map;
+  }, [elementPillarRows]);
 
   const display = useMemo(() => {
     const base = buildMatrixDisplayData({
@@ -262,6 +246,8 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, subjectPref
     }
     return base;
   }, [payload.display, user_profile, structured, strength, wuxing_scores, locale]);
+
+  const zodiacIcon = ZODIAC_ICON_BY_HAN[display.zodiac.han];
 
   const maxCount = Math.max(...wuxing_scores.map((s) => s.count), 1);
   const sorted = [...wuxing_scores].sort((a, b) => b.pct - a.pct);
@@ -323,20 +309,21 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, subjectPref
         </div>
       </header>
 
-      <section className="device">
-        <span className="reg tl" />
-        <span className="reg tr" />
-        <span className="reg bl" />
-        <span className="reg br" />
-
-        <div className="dev-head">
-          <div className="t">{tm("section_label")}</div>
-        </div>
-
+      <section className="device pem-matrix-body">
         <div className="topband">
           <div className="tcard zsign">
             <div className="zsign__art">
-              <span>{display.zodiac.han}</span>
+              {zodiacIcon ? (
+                <Image
+                  src={zodiacIcon}
+                  alt=""
+                  width={44}
+                  height={44}
+                  className="zsign__icon"
+                />
+              ) : (
+                <span>{display.zodiac.han}</span>
+              )}
             </div>
             <div className="zsign__en">{display.zodiac.en}</div>
             <div className="zsign__cn">
@@ -346,7 +333,12 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, subjectPref
             <div className="zsign__note">{display.zodiac.note}</div>
           </div>
 
-          <div className="tcard a">
+          <div className="topband__calibration">
+            <div className="topband__calibration-head">
+              <p className="topband__calibration-title">{tm("section_label")}</p>
+            </div>
+            <div className="topband__calibration-grid">
+          <div className="tcard a tcard--nested">
             <div className="k">
               <span className="bull" />
               {tc("calendar_alignment")} <em>· {tc("calendar_alignment_em")}</em>
@@ -361,7 +353,7 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, subjectPref
             <div className="s">{display.calendar.lunar || display.calendar.mid}</div>
           </div>
 
-          <div className="tcard a">
+          <div className="tcard a tcard--nested">
             <div className="k">
               <span className="bull" />
               {tc("true_solar_time")} <em>· {tc("true_solar_time_em")}</em>
@@ -398,7 +390,7 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, subjectPref
             )}
           </div>
 
-          <div className="tcard a">
+          <div className="tcard a tcard--nested">
             <div className="k">
               <span className="bull" />
               {tc("solar_term")} <em>· {tc("solar_term_em")}</em>
@@ -414,100 +406,103 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, subjectPref
               <i style={{ width: `${display.solar_term.progress_pct}%` }} />
             </div>
           </div>
-        </div>
-
-        <div className="block block--spread pem-wuxing-grid">
-          <div className="pem-wuxing__left">
-            <div className="pem-wuxing-card pem-wuxing-card--radar">
-              <div className="pem-wuxing-card__label">
-                {tc("elemental_signature")} <em>· {tc("elemental_signature_em")}</em>
-              </div>
-              <div className="pem-wuxing-card__body pem-wuxing-card__body--radar">
-                <RadarChart scores={wuxing_scores} />
-              </div>
-            </div>
-            <div className="pem-wuxing-card pem-wuxing-card--map">
-              <div className="pem-wuxing-card__label">
-                {tm("element_map_title")} <em>· {tc("pillars_em")}</em>
-              </div>
-              <div className="pem-wuxing-card__body pem-wuxing-card__body--map">
-                <ElementPillarMap
-                  rows={elementPillarRows}
-                  colon={tc("colon")}
-                  tb={tb}
-                  tm={tm}
-                  showTitle={false}
-                />
-              </div>
             </div>
           </div>
-          <div className="pem-wuxing__right">
-            <div className="ro ro--wuxing">
-              <div className="ro__k">{tc("elemental_breakdown")}</div>
-              <div className="elist">
-                {wuxing_scores.map((row) => (
+        </div>
+
+        <div className="pem-row pem-row--duo">
+          <div className="pem-panel pem-panel--radar">
+            <div className="pem-panel__label">
+              {tc("radar_matrix")} <em>· {tc("radar_matrix_em")}</em>
+            </div>
+            <div className="pem-panel__body pem-panel__body--radar">
+              <RadarChart scores={wuxing_scores} />
+            </div>
+          </div>
+          <div className="pem-panel pem-panel--bars ro ro--wuxing">
+            <div className="ro__k">
+              {tc("elemental_signature")} <em>· {tc("elemental_signature_em")}</em>
+            </div>
+            <div className="elist">
+              {wuxing_scores.map((row) => {
+                const assignments = assignmentsByElement.get(row.element as ElementKey) ?? [];
+                const attribution =
+                  assignments.length > 0
+                    ? `(${formatElementAttribution(assignments, isZh, tb, tc("colon"), tm("element_map_sep"))})`
+                    : null;
+                return (
                   <div className="erow" key={row.element}>
-                    <span className={`ename ${ELEMENT_CLASS[row.element] ?? ""}`}>{row.element}</span>
-                    <span className="ecn">{row.element_zh}</span>
+                    <div className="erow__head">
+                      <span className="erow__names">
+                        <span className={`ename ${ELEMENT_CLASS[row.element] ?? ""}`}>{row.element}</span>
+                        <span className="ecn">{row.element_zh}</span>
+                        {attribution ? <span className="erow__attrib">{attribution}</span> : null}
+                      </span>
+                      <span className="ecount">{row.count}</span>
+                    </div>
                     <span className="ebar">
                       <i
                         style={{ width: `${Math.round((row.count / maxCount) * 100)}%` }}
                         className={ELEMENT_BAR_CLASS[row.element] ?? ""}
                       />
                     </span>
-                    <span className="ecount">{row.count}</span>
                   </div>
-                ))}
-              </div>
-              {yongshenChips.length > 0 ? (
-                <div className="pem__yongshen-row">
-                  <span className="pem__yongshen-label">{tb("optimizing_vector")}</span>
-                  <span className="pem__yongshen-chips">
-                    {yongshenChips.map((chip) => (
-                      <span
-                        key={chip.label}
-                        className={`pem__yongshen-chip ${elementCssClass(chip.elementKey)}`}
-                      >
-                        {chip.label}
-                      </span>
-                    ))}
-                  </span>
-                </div>
-              ) : null}
-              <div className="enote">
-                {narrativeLoading ? (
-                  <NarrativePlaceholder label={tc("narrative_loading")} />
-                ) : isLlmNarrative && display.enote_caption ? (
-                  display.enote_caption
-                ) : showTemplateFallback ? (
-                  <>
-                    {tc("day_master")} <b>{display.day_master.en}</b>
-                    {tc("with_surplus")}
-                    <b>{dominant?.element}</b>
-                    {tc("surplus_and")}
-                    <b>{deficit?.element}</b>
-                    {tc("deficit_period")}
-                  </>
-                ) : null}
-              </div>
+                );
+              })}
             </div>
-            <div className="ro ro--wuxing">
-              <div className="ro__k">{tc("core_vitality")}</div>
-              <div className="ro__v ro__v--metric">{strengthLabel(strength, tc)}</div>
-              <div className="vtrack">
-                <div className="mid" />
-                <div className="pin" style={{ left: vitalityPin(strength) }} />
+            {yongshenChips.length > 0 ? (
+              <div className="pem__yongshen-row">
+                <span className="pem__yongshen-label">{tb("optimizing_vector")}</span>
+                <span className="pem__yongshen-chips">
+                  {yongshenChips.map((chip) => (
+                    <span
+                      key={chip.label}
+                      className={`pem__yongshen-chip ${elementCssClass(chip.elementKey)}`}
+                    >
+                      {chip.label}
+                    </span>
+                  ))}
+                </span>
               </div>
-              <div className="vscale">
-                <span>{tc("vitality_receptive")}</span>
-                <span>{tc("vitality_balance")}</span>
-                <span>{tc("vitality_dominant")}</span>
-              </div>
-            </div>
-            <div className="ro ro--wuxing">
-              <div className="ro__k">{tc("elemental_equilibrium")}</div>
-              {dominant ? (
+            ) : null}
+            <div className="enote">
+              {narrativeLoading ? (
+                <NarrativePlaceholder label={tc("narrative_loading")} />
+              ) : isLlmNarrative && display.enote_caption ? (
+                display.enote_caption
+              ) : showTemplateFallback ? (
                 <>
+                  {tc("day_master")} <b>{display.day_master.en}</b>
+                  {tc("with_surplus")}
+                  <b>{dominant?.element}</b>
+                  {tc("surplus_and")}
+                  <b>{deficit?.element}</b>
+                  {tc("deficit_period")}
+                </>
+              ) : null}
+            </div>
+          </div>
+        </div>
+
+        <div className="pem-row pem-row--duo">
+          <div className="pem-panel ro ro--wuxing">
+            <div className="ro__k">{tc("core_vitality")}</div>
+            <div className="ro__v ro__v--metric">{strengthLabel(strength, tc)}</div>
+            <div className="vtrack">
+              <div className="mid" />
+              <div className="pin" style={{ left: vitalityPin(strength) }} />
+            </div>
+            <div className="vscale">
+              <span>{tc("vitality_receptive")}</span>
+              <span>{tc("vitality_balance")}</span>
+              <span>{tc("vitality_dominant")}</span>
+            </div>
+          </div>
+          <div className="pem-panel ro ro--wuxing pem-panel--equilibrium">
+            <div className="ro__k">{tc("elemental_equilibrium")}</div>
+            <div className="pem-equilibrium-grid">
+              {dominant ? (
+                <div className="pem-equilibrium-item">
                   <div className="ro__v ro__v--metric">
                     <span className={`ro__v-accent ${ELEMENT_CLASS[dominant.element] ?? ""}`}>
                       {dominant.element}
@@ -516,14 +511,17 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, subjectPref
                       {tc("surplus")} · {dominant.pct}%
                     </span>
                   </div>
+                  <div className="ebar pem-equilibrium-bar">
+                    <i style={{ width: `${dominant.pct}%` }} className={ELEMENT_BAR_CLASS[dominant.element] ?? ""} />
+                  </div>
                   <div className="ro__tag up">
                     ▲ {tc("dominant_vector")} · {dominant.element.toLowerCase()}
                   </div>
-                </>
+                </div>
               ) : null}
               {deficit ? (
-                <>
-                  <div className="ro__v ro__v--metric" style={{ marginTop: 12 }}>
+                <div className="pem-equilibrium-item">
+                  <div className="ro__v ro__v--metric">
                     <span className={`ro__v-accent ${ELEMENT_CLASS[deficit.element] ?? ""}`}>
                       {deficit.element}
                     </span>
@@ -531,24 +529,26 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, subjectPref
                       {tc("deficit")} · {deficit.pct}%
                     </span>
                   </div>
+                  <div className="ebar pem-equilibrium-bar">
+                    <i style={{ width: `${Math.max(deficit.pct, 5)}%` }} className={ELEMENT_BAR_CLASS[deficit.element] ?? ""} />
+                  </div>
                   <div className="ro__tag down">
                     ▼ {tc("key_gap")} · {deficit.element.toLowerCase()}
                   </div>
-                </>
+                </div>
               ) : null}
             </div>
           </div>
         </div>
 
-        <div className="block block--fill">
-          <div className="dialpanel">
+        <div className="pem-row pem-row--lifecycle block block--fill">
+          <div className="dialpanel dialpanel--timeline">
             <div className="rp__k">
               {tc("macro_lifecycle")} <em>· {tc("macro_lifecycle_em")}</em>
             </div>
-            <PojuDaYunDial
+            <PojuDaYunTimeline
               daYun={structured.da_yun}
               currentIndex={display.current_dayun_index}
-              hub={display.dayun_hub}
               currentAge={display.current_age}
               locale={locale}
             />
