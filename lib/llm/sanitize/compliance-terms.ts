@@ -22,7 +22,9 @@ import {
 } from "@/lib/llm/compliance/audit-output";
 import {
   BARE_SIGN_POEM_PATTERN,
+  auditBareGanzhi,
   auditOutOfSetTerms,
+  auditTermMarkerDensity,
   buildTermMarkingPromptBlock,
   buildTermMarkingFewShot,
   detectBrokenMarkers,
@@ -41,7 +43,9 @@ import {
 } from "@/lib/llm/sanitize/term-marking";
 
 export {
+  auditBareGanzhi,
   auditOutOfSetTerms,
+  auditTermMarkerDensity,
   BARE_SIGN_POEM_PATTERN,
   buildTermMarkingPromptBlock,
   buildTermMarkingFewShot,
@@ -109,6 +113,10 @@ export const EN_STORY_SEQUENCE_VERB_REGEX =
 
 export const EN_STORY_SEQUENCE_NARRATIVE_REGEX =
   /\b(?:defeat(?:ed)?|capture(?:d)?|escape(?:d)?|recall(?:ed)?|exile(?:d)?).{0,80}(?:defeat|capture|escape|recall|exile|return)/gi;
+
+/** EN hidden-stem English dump — e.g. "Hidden stems (Wu earth, Xin metal, …)" */
+export const EN_HIDDEN_STEM_DUMP_REGEX =
+  /\bhidden stems?\s*\([A-Za-z\s,·]+(?:earth|metal|wood|fire|water)[^)]*\)/gi;
 
 export type ComplianceViolation = {
   label: string;
@@ -438,6 +446,14 @@ export function auditDeliveredText(text: string, locale: string): ComplianceViol
     violations.push(hit);
   }
 
+  for (const hit of auditBareGanzhi(text)) {
+    violations.push(hit);
+  }
+
+  for (const hit of auditTermMarkerDensity(text)) {
+    violations.push(hit);
+  }
+
   if (!locale.startsWith("zh")) {
     BARE_SIGN_POEM_PATTERN.lastIndex = 0;
     let m: RegExpExecArray | null;
@@ -506,6 +522,7 @@ export function detectComplianceViolations(text: string, locale: string): Compli
     pushRegex(EN_WARRIOR_WHO_REGEX, "warrior_who_narrative");
     pushRegex(EN_STORY_SEQUENCE_VERB_REGEX, "story_sequence_verb");
     pushRegex(EN_STORY_SEQUENCE_NARRATIVE_REGEX, "story_sequence_narrative");
+    pushRegex(EN_HIDDEN_STEM_DUMP_REGEX, "hidden_stem_dump");
     for (const term of FORBIDDEN_VARIANTS_ALL) {
       if (isChineseVariant(term)) continue;
       if (shouldSkipAuditTerm(term)) continue;

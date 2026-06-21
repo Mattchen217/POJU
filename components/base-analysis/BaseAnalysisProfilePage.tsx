@@ -21,6 +21,7 @@ type LoadState =
       status: "ready";
       displayText: string;
       structured: ProfileStructured;
+      userProfile: import("@/lib/profile/types").UserProfile;
       displayName: string;
       generatedAt?: string;
     };
@@ -63,6 +64,7 @@ export function BaseAnalysisProfilePage() {
         status: "ready",
         displayText,
         structured,
+        userProfile: data.user_profile,
         displayName: record?.display_name?.trim() || "",
         generatedAt: data.base_analysis?.generated_at,
       });
@@ -108,6 +110,7 @@ export function BaseAnalysisProfilePage() {
       <BaseAnalysisDeliveryView
         displayText={state.displayText}
         structured={state.structured}
+        userProfile={state.userProfile}
         locale={locale}
         profileId={profileId}
         displayName={state.displayName || undefined}

@@ -370,3 +370,32 @@ export function buildMatrixDisplayData(input: {
     narrative_source: "template",
   };
 }
+
+/** Zodiac + birth calendar + solar term row (matrix topband only). */
+export function buildMatrixTopbandData(input: {
+  profile: UserProfile;
+  structured: ProfileStructured;
+  chart?: GetBaziChartOutput;
+  locale: string;
+}): Pick<MatrixDisplayData, "zodiac" | "calendar" | "solar_term"> {
+  const placeholderScores = [
+    { element: "Wood", pct: 20 },
+    { element: "Fire", pct: 20 },
+    { element: "Earth", pct: 20 },
+    { element: "Metal", pct: 20 },
+    { element: "Water", pct: 20 },
+  ];
+  const full = buildMatrixDisplayData({
+    profile: input.profile,
+    structured: input.structured,
+    chart: input.chart,
+    strength: input.structured.strength,
+    wuxing_scores: placeholderScores,
+    locale: input.locale,
+  });
+  return {
+    zodiac: full.zodiac,
+    calendar: full.calendar,
+    solar_term: full.solar_term,
+  };
+}

@@ -3,7 +3,9 @@
  * Run: pnpm tsx scripts/test-compliance-terms.ts
  */
 import {
+  auditBareGanzhi,
   auditDeliveredText,
+  auditTermMarkerDensity,
   encodeTermMarker,
   parseTermMarkers,
   stripBrokenMarkers,
@@ -66,6 +68,43 @@ function main() {
   const poem = "The theme echoes 志气功业在朝朝，今将酒色不胜饶 in tone.";
   const poemAudit = auditDeliveredText(poem, "en");
   assert(poemAudit.some((v) => v.label === "bare_sign_poem"), "detects bare sign poem");
+
+  console.log("\n=== bare ganzhi audit (en) ===");
+  const barePhase = "Your early twenties (癸酉 phase) felt restless.";
+  const bareAudit = auditDeliveredText(barePhase, "en");
+  assert(
+    bareAudit.some((v) => v.label === "bare_ganzhi"),
+    "EN audit catches bare 癸酉 outside markers",
+  );
+  assert(auditBareGanzhi(barePhase).length === 1, "auditBareGanzhi direct hit");
+
+  const markedPhase = `Your early twenties (${encodeTermMarker("decade", "life phase (癸酉)", "a refining metal decade")}) felt restless.`;
+  assert(
+    auditBareGanzhi(markedPhase).length === 0,
+    "marked 癸酉 inside marker is not bare",
+  );
+  assert(
+    auditDeliveredText(markedPhase, "en").every((v) => v.label !== "bare_ganzhi"),
+    "delivered audit passes marked ganzhi",
+  );
+
+  console.log("\n=== term marker density audit ===");
+  const dense = `**Lead:** ${encodeTermMarker("day_master", "core (乙木)", "vine growth")} ${encodeTermMarker("ten_god", "peer (比肩)", "allies")} ${encodeTermMarker("element", "wood (木)", "flexible")} extra.`;
+  const densityHits = auditTermMarkerDensity(dense);
+  assert(densityHits.some((h) => h.label.startsWith("term_density:")), "density > 2 warns");
+  assert(
+    auditDeliveredText(dense, "en").some((h) => h.label.startsWith("term_density:")),
+    "delivered audit includes density hits",
+  );
+
+  console.log("\n=== hidden stem dump audit (en) ===");
+  const stemDump =
+    "Hidden stems (Wu earth, Xin metal, Gui water) dominate this branch.";
+  const stemAudit = auditDeliveredText(stemDump, "en");
+  assert(
+    stemAudit.some((v) => v.label === "hidden_stem_dump"),
+    "detects hidden-stem English dump",
+  );
 
   TERM_MARKER_PATTERN.lastIndex = 0;
   assert(

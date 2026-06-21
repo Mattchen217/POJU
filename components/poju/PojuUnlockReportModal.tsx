@@ -34,6 +34,9 @@ export function PojuUnlockReportModal({
   const t = useTranslations("poju.chat");
   const locale = useLocale();
   const [structured, setStructured] = useState<ProfileStructured | null>(null);
+  const [userProfile, setUserProfile] = useState<
+    import("@/lib/profile/types").UserProfile | null
+  >(null);
   const [displayName, setDisplayName] = useState<string | undefined>();
 
   const displayText = decodeMarkedDisplayText(reportText);
@@ -41,6 +44,7 @@ export function PojuUnlockReportModal({
   useEffect(() => {
     if (!open || !profileId) {
       setStructured(null);
+      setUserProfile(null);
       setDisplayName(undefined);
       return;
     }
@@ -53,6 +57,7 @@ export function PojuUnlockReportModal({
         ]);
         if (cancelled) return;
         setDisplayName(record?.display_name?.trim() || undefined);
+        setUserProfile(data?.user_profile ?? null);
         setStructured(
           data?.base_analysis?.structured ??
             (data?.user_profile
@@ -103,6 +108,7 @@ export function PojuUnlockReportModal({
           <BaseAnalysisDeliveryView
             displayText={displayText}
             structured={structured}
+            userProfile={userProfile}
             locale={locale}
             profileId={profileId}
             displayName={displayName}

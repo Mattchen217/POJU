@@ -3,11 +3,12 @@
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 
-import { BaseAnalysisPillarCard } from "@/components/base-analysis/BaseAnalysisPillarCard";
+import { BaseAnalysisIdentityBand } from "@/components/base-analysis/BaseAnalysisIdentityBand";
 import { RichReadingText } from "@/components/cross-product/RichReadingText";
 import { Link } from "@/i18n/navigation";
 import { parseBaseAnalysisSections } from "@/lib/base-analysis/parse-base-analysis-sections";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
+import type { UserProfile } from "@/lib/profile/types";
 
 import "@/styles/glyph-delivery.css";
 import "@/styles/base-analysis-delivery.css";
@@ -16,6 +17,7 @@ import "@/styles/poju-deep-dive.css";
 type Props = {
   displayText: string;
   structured?: ProfileStructured | null;
+  userProfile?: UserProfile | null;
   locale: string;
   profileId?: string;
   displayName?: string;
@@ -28,6 +30,7 @@ type Props = {
 export function BaseAnalysisDeliveryView({
   displayText,
   structured,
+  userProfile,
   locale,
   profileId,
   displayName,
@@ -57,9 +60,14 @@ export function BaseAnalysisDeliveryView({
             </header>
           ) : null}
 
-          {structured ? (
-            <div className="base-analysis-delivery__pillar-wrap">
-              <BaseAnalysisPillarCard structured={structured} locale={locale} />
+          {structured && userProfile ? (
+            <div className="base-analysis-delivery__identity-wrap">
+              <BaseAnalysisIdentityBand
+                userProfile={userProfile}
+                structured={structured}
+                locale={locale}
+                compact={variant === "modal"}
+              />
             </div>
           ) : null}
 

@@ -269,6 +269,42 @@ export function auditGroundingMarkers(
   return null;
 }
 
+const BARE_GANZHI_RE = /[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]/g;
+
+/** Detect bare stem-branch pairs outside term markers (EN deliveries often leak 癸酉/壬申). */
+export function auditBareGanzhi(text: string): OutOfSetAuditHit[] {
+  if (!text?.trim()) return [];
+  const masked = maskMarkersForAudit(text);
+  const hits: OutOfSetAuditHit[] = [];
+  BARE_GANZHI_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = BARE_GANZHI_RE.exec(masked)) !== null) {
+    hits.push({ label: "bare_ganzhi", snippet: m[0] });
+  }
+  return hits;
+}
+
+/** Warn when a paragraph packs too many golden term markers (luxury delivery density cap). */
+export function auditTermMarkerDensity(
+  text: string,
+  maxPerParagraph = 2,
+): OutOfSetAuditHit[] {
+  if (!text?.trim()) return [];
+  const hits: OutOfSetAuditHit[] = [];
+  for (const chunk of text.split(/\n\n+/)) {
+    const trimmed = chunk.trim();
+    if (!trimmed || trimmed.startsWith("##")) continue;
+    const count = parseTermMarkers(chunk).length;
+    if (count > maxPerParagraph) {
+      hits.push({
+        label: `term_density:${count}`,
+        snippet: trimmed.replace(/\s+/g, " ").slice(0, 72),
+      });
+    }
+  }
+  return hits;
+}
+
 export const BARE_SIGN_POEM_PATTERN =
   /[\u4e00-\u9fff]{7,}[，,；;、][\u4e00-\u9fff]{5,}/g;
 

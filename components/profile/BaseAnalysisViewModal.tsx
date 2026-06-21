@@ -21,6 +21,9 @@ export function BaseAnalysisViewModal({ profileId, displayName, onClose }: BaseA
   const [structured, setStructured] = useState<
     import("@/lib/calculations/build-profile-structured").ProfileStructured | null
   >(null);
+  const [userProfile, setUserProfile] = useState<
+    import("@/lib/profile/types").UserProfile | null
+  >(null);
   const [metaLine, setMetaLine] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,6 +43,7 @@ export function BaseAnalysisViewModal({ profileId, displayName, onClose }: BaseA
         const ba = data!.base_analysis!;
         if (!cancelled) {
           setText(displayText);
+          setUserProfile(data?.user_profile ?? null);
           setStructured(
             ba.structured ??
               (data?.user_profile
@@ -104,6 +108,7 @@ export function BaseAnalysisViewModal({ profileId, displayName, onClose }: BaseA
             <BaseAnalysisDeliveryView
               displayText={text}
               structured={structured}
+              userProfile={userProfile}
               locale={locale}
               profileId={profileId}
               displayName={displayName}
