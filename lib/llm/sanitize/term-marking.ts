@@ -7,10 +7,12 @@ import { termPolarityById, type TermPolarity } from "@/lib/glossary/term-polarit
 import {
   CLOSED_SET_REPLACE_IDS,
   CLOSED_SET_SLUG,
+  CLOSED_SHEN_SHA,
   KEEP_CN_SLUGS,
   OUT_OF_SET_FORBIDDEN_EN,
   OUT_OF_SET_FORBIDDEN_HAN,
 } from "@/lib/glossary/term-closed-set";
+import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import { CLOSED_SET_GLOSSARY_ENTRIES } from "@/lib/glossary/term-glossary-closed";
 import {
   TERM_GLOSSARY,
@@ -312,7 +314,90 @@ export function detectBrokenMarkers(text: string): boolean {
   if (!text.includes("⟦")) return false;
   const opens = text.match(/⟦/g)?.length ?? 0;
   const closes = text.match(/⟧/g)?.length ?? 0;
-  return opens !== closes;
+  if (opens !== closes) return true;
+  // Trailing unclosed marker region
+  const lastOpen = text.lastIndexOf("⟦");
+  const lastClose = text.lastIndexOf("⟧");
+  if (lastOpen > lastClose) return true;
+  // Open delimiter without closing ⟧ before next ⟦ or EOF
+  if (/⟦(?:(?!⟧).)*$/.test(text)) return true;
+  return false;
+}
+
+/** Collect shen_sha actually present in structured pillars_detail. */
+export function collectInstanceShenSha(structured: ProfileStructured): Set<string> {
+  const allowed = new Set<string>();
+  if (!structured.pillars_detail) return allowed;
+  for (const key of ["year", "month", "day", "hour"] as const) {
+    for (const s of structured.pillars_detail[key]?.shen_sha ?? []) {
+      allowed.add(s);
+    }
+  }
+  return allowed;
+}
+
+/** Shen_sha in text must match instance inventory; empty inventory → no shen_sha names at all. */
+export function auditShenShaAgainstInstance(
+  text: string,
+  structured: ProfileStructured,
+): OutOfSetAuditHit[] {
+  if (!text?.trim()) return [];
+  const masked = maskMarkersForAudit(text);
+  const allowed = collectInstanceShenSha(structured);
+  const hits: OutOfSetAuditHit[] = [];
+
+  const checkName = (name: string) => {
+    if (!masked.includes(name)) return;
+    if (allowed.size === 0 || !allowed.has(name)) {
+      hits.push({
+        label: allowed.size === 0 ? `shen_sha_forbidden_empty_instance:${name}` : `shen_sha_not_in_instance:${name}`,
+        snippet: name,
+      });
+    }
+  };
+
+  for (const name of CLOSED_SHEN_SHA) checkName(name);
+  if (masked.includes("羊刃")) {
+    if (allowed.size === 0 || (!allowed.has("飞刃") && !allowed.has("羊刃"))) {
+      hits.push({
+        label:
+          allowed.size === 0
+            ? "shen_sha_forbidden_empty_instance:羊刃"
+            : "shen_sha_not_in_instance:羊刃",
+        snippet: "羊刃",
+      });
+    }
+  }
+
+  return hits;
+}
+
+/** Broken / incomplete markers and visible-text shape issues. */
+export function auditMarkerCompleteness(text: string): OutOfSetAuditHit[] {
+  if (!text?.trim()) return [];
+  const hits: OutOfSetAuditHit[] = [];
+
+  if (detectBrokenMarkers(text)) {
+    const idx = text.indexOf("⟦");
+    hits.push({
+      label: "broken_marker",
+      snippet: idx >= 0 ? text.slice(idx, idx + 48).replace(/\s+/g, " ") : "⟦…",
+    });
+  }
+
+  for (const m of parseTermMarkers(text)) {
+    if (!m.plain?.trim()) {
+      hits.push({ label: "marker_missing_plain", snippet: m.raw.slice(0, 48) });
+    }
+    const vis = m.visible.trim();
+    if (/^(the|a|an)\s+(the|a|an)\b/i.test(vis)) {
+      hits.push({ label: "marker_visible_article_dup", snippet: vis.slice(0, 40) });
+    } else if (/^(the|a|an)\s/i.test(vis)) {
+      hits.push({ label: "marker_visible_leading_article", snippet: vis.slice(0, 40) });
+    }
+  }
+
+  return hits;
 }
 
 /** Mask marked regions before forbidden-term audit. */

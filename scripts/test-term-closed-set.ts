@@ -64,6 +64,8 @@ function main() {
   const hits = auditOutOfSetTerms(bad);
   assert(hits.some((h) => h.label.includes("空亡")), "detects 空亡");
   assert(hits.some((h) => h.label.includes("将星")), "detects 将星");
+  assert(auditOutOfSetTerms("命带元辰与六秀日").some((h) => h.snippet === "元辰"), "detects 元辰");
+  assert(auditOutOfSetTerms("阴差阳错配置").some((h) => h.snippet === "阴差阳错"), "detects 阴差阳错");
 
   const ok = "你的 ⟦t:fei_ren|double-edged drive|Channel the edge into one clear cut⟧ 在此事上宜守边界。";
   assert(auditOutOfSetTerms(ok).length === 0, "marked closed-set text passes");

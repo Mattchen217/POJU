@@ -117,6 +117,10 @@ export async function consumeBaseAnalysisStream(input: {
         input.callbacks?.onChunk?.(text, accumulatedContent);
         return null;
       }
+      case "reset":
+        accumulatedContent = "";
+        input.callbacks?.onPollContent?.("");
+        return null;
       case "resumed":
         return {
           content: String(ev.accumulated ?? ""),

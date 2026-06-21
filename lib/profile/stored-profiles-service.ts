@@ -2,6 +2,7 @@
  * Multi-person BaZi profiles on device (POJU v5 Step B).
  */
 import { safeRandomUUID } from "@/lib/client/safe-crypto";
+import { assertBaseAnalysisDeliveryGate } from "@/lib/base-analysis/assert-delivery-gate";
 import { encryptJson, decryptJson } from "@/lib/crypto";
 import { sha256Hex } from "@/lib/sha256";
 import { calculateProfile } from "@/lib/calculations";
@@ -280,6 +281,9 @@ export async function saveBaseAnalysisFromStream(input: {
   content?: string;
 }): Promise<void> {
   assertBrowser();
+  const normalizedDisplay = stripMetaSectionForStorage(input.display_text.trim());
+  assertBaseAnalysisDeliveryGate(normalizedDisplay, input.locale, input.structured);
+
   const db = getPojuDb();
   const record = await db.stored_profiles.get(input.profile_id);
   if (!record) throw new Error("profile not found");
@@ -289,7 +293,7 @@ export async function saveBaseAnalysisFromStream(input: {
     cipher: record.encrypted_data,
   });
 
-  const displayText = input.display_text.trim();
+  const displayText = normalizedDisplay;
   const tst_meta =
     tstMetaFromProfile(
       normalizeStoredBirthInfo(data.birth_info as unknown as Record<string, unknown>),

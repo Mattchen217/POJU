@@ -23,7 +23,9 @@ import {
 import {
   BARE_SIGN_POEM_PATTERN,
   auditBareGanzhi,
+  auditMarkerCompleteness,
   auditOutOfSetTerms,
+  auditShenShaAgainstInstance,
   auditTermMarkerDensity,
   buildTermMarkingPromptBlock,
   buildTermMarkingFewShot,
@@ -44,7 +46,9 @@ import {
 
 export {
   auditBareGanzhi,
+  auditMarkerCompleteness,
   auditOutOfSetTerms,
+  auditShenShaAgainstInstance,
   auditTermMarkerDensity,
   BARE_SIGN_POEM_PATTERN,
   buildTermMarkingPromptBlock,

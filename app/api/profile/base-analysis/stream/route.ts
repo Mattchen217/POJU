@@ -15,9 +15,9 @@ import {
   setJobContent,
   updateJobStatus,
 } from "@/lib/base-analysis/job-store";
-import { buildBaseAnalysisStreamPrompt } from "@/lib/llm/prompts/base-analysis-stream-prompt";
+import { auditBaseAnalysisDelivery } from "@/lib/base-analysis/delivery-gate";
+import { streamBaseAnalysisWithDeliveryGate } from "@/lib/base-analysis/stream-llm-with-gate";
 import { applyComplianceSanitize } from "@/lib/llm/sanitize/compliance-terms";
-import { openRouterStream } from "@/lib/llm/openrouter-stream";
 import { getOpenRouterDefaultModel, isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 
 export const runtime = "nodejs";
@@ -126,14 +126,35 @@ export async function POST(req: NextRequest) {
 
       try {
         if (activeJob.status === "completed") {
-          send("resumed", {
-            job_id: activeJob.job_id,
-            from_kv: true,
-            accumulated: activeJob.accumulated_content,
-            meta: activeJob.meta,
-          });
-          send("done", { job_id: activeJob.job_id });
-          return;
+          const cached = applyComplianceSanitize(
+            activeJob.accumulated_content,
+            activeJob.locale,
+          ).text;
+          const gate = auditBaseAnalysisDelivery(
+            cached,
+            activeJob.locale,
+            body.local_data.structured,
+          );
+          if (!gate.ok) {
+            console.warn(
+              `[base-analysis/stream] completed job ${activeJob.job_id} failed delivery gate — regenerating`,
+              gate.violations.slice(0, 5),
+            );
+            await updateJobStatus(activeJob.job_id, "pending", {
+              accumulated_content: "",
+              error: undefined,
+              error_detail: undefined,
+            });
+          } else {
+            send("resumed", {
+              job_id: activeJob.job_id,
+              from_kv: true,
+              accumulated: cached,
+              meta: activeJob.meta,
+            });
+            send("done", { job_id: activeJob.job_id });
+            return;
+          }
         }
 
         if (activeJob.status === "streaming") {
@@ -165,18 +186,21 @@ export async function POST(req: NextRequest) {
           ...(resetContent ? { accumulated_content: "", error: undefined, error_detail: undefined } : {}),
         });
 
-        const { system, user } = buildBaseAnalysisStreamPrompt({
-          local_data: body.local_data,
-        });
-
-        await openRouterStream({
-          system,
-          user,
-          model: getOpenRouterDefaultModel(),
-          max_tokens: 8000,
-          temperature: 0.7,
+        const model = getOpenRouterDefaultModel();
+        const gen = await streamBaseAnalysisWithDeliveryGate({
+          profileId,
+          locale: activeJob.locale,
+          structured: body.local_data.structured,
+          output_language: body.local_data.output_language,
           session_id: baseAnalysisCacheSessionId(profileId),
-
+          model,
+          max_tokens: 10_000,
+          onAttemptStart: async (attempt) => {
+            if (attempt > 0) {
+              send("reset", { job_id: activeJob.job_id, attempt: attempt + 1 });
+              await setJobContent(activeJob.job_id, "");
+            }
+          },
           onChunk: async (chunk: string) => {
             send("chunk", { text: chunk });
             try {
@@ -185,39 +209,37 @@ export async function POST(req: NextRequest) {
               console.error("[base-analysis/stream] KV append failed:", e);
             }
           },
-
-          onDone: async () => {
-            const finalJob = await getJob(activeJob.job_id);
-            if (!finalJob) return;
-
-            const rawContent = finalJob.accumulated_content;
-            const glossed = applyComplianceSanitize(rawContent, activeJob.locale).text;
-            if (glossed !== rawContent) {
-              await setJobContent(activeJob.job_id, glossed);
-            }
-
-            const meta = extractMetaFromStreamContent(glossed);
-
-            await finalizeJob(activeJob.job_id, meta);
-
-            send("done", {
-              job_id: activeJob.job_id,
-              meta,
-              final_length: glossed.length,
-              sanitized: glossed !== rawContent,
-            });
-
-            console.log(
-              `[base-analysis/stream] completed ${activeJob.job_id}, length=${glossed.length}`,
-            );
-          },
-
-          onError: async (error: string) => {
-            await failJob(activeJob.job_id, "llm_error", error);
-            send("error", { error });
-            console.error(`[base-analysis/stream] failed ${activeJob.job_id}: ${error}`);
-          },
         });
+
+        if (!gen.ok) {
+          const detail =
+            gen.error === "delivery_gate_failed"
+              ? gen.violations.map((v) => v.label).join(", ")
+              : gen.error;
+          await failJob(activeJob.job_id, gen.error, detail);
+          send("error", { error: gen.error, gate_violations: gen.violations.slice(0, 8) });
+          console.error(`[base-analysis/stream] failed ${activeJob.job_id}: ${detail}`);
+          return;
+        }
+
+        await setJobContent(activeJob.job_id, gen.content);
+
+        const glossed = gen.content;
+        const meta = extractMetaFromStreamContent(glossed);
+
+        await finalizeJob(activeJob.job_id, meta);
+
+        send("done", {
+          job_id: activeJob.job_id,
+          meta,
+          final_length: glossed.length,
+          sanitized: true,
+          gate_attempts: gen.attempts,
+        });
+
+        console.log(
+          `[base-analysis/stream] completed ${activeJob.job_id}, length=${glossed.length}, attempts=${gen.attempts}`,
+        );
       } catch (e: unknown) {
         const message = e instanceof Error ? e.message : "stream_error";
         console.error("[base-analysis/stream] outer error:", e);

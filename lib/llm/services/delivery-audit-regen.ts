@@ -88,6 +88,9 @@ export function isCriticalDeliveryAuditFailure(
       v.label === "broken_marker" ||
       v.label === "grounding_low" ||
       v.label.startsWith("out_of_set_") ||
+      v.label.startsWith("shen_sha_") ||
+      v.label === "marker_missing_plain" ||
+      v.label.startsWith("marker_visible_") ||
       v.label.includes("bazi_"),
   );
 }

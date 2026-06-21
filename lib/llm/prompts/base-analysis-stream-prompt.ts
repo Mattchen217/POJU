@@ -36,7 +36,7 @@ const BASE_ANALYSIS_OUTPUT_SECTIONS_ZH = `# 输出分区（必须齐全 · Markd
 
 ## 数据展示层（配置读数 · 禁人生剧情）
 
-5. **## 四柱命盘数据** — 年/月/日/时柱、藏干、十神、神煞（**仅 structured 里有的**）；以**仪器读数 / 配置清单**口吻呈现，解释各层能量角色，**不写人生故事**。
+5. **## 四柱命盘数据** — 年/月/日/时柱、藏干、十神、神煞（**仅 structured 里该柱实际有的项**）；仪器读数口吻。**逐柱：有则写、无则跳过**；每柱 ≤2 个金字；**禁止**为填满四柱补神煞。
 6. **## 大运能量气候概览** — 按 \`structured.da_yun\` 时序概览各阶段**能量气候倾向**（偏燥/偏润/收敛/扩张等）；缺失则方向性 climate sketch。**只讲气候，不讲人生剧情**；禁裸干支（用年龄段白话或 ⟦t:decade|…⟧）。`;
 
 const BASE_ANALYSIS_OUTPUT_SECTIONS_EN = `# Output sections (all required · Markdown ## headings)
@@ -50,7 +50,7 @@ const BASE_ANALYSIS_OUTPUT_SECTIONS_EN = `# Output sections (all required · Mar
 
 ## Data display layers (instrument readout · no life plot)
 
-5. **## Four-Pillar Configuration** — pillars, hidden stems, ten gods, stars (**only those in structured**); instrument-readout tone—energy roles, **no life narrative**.
+5. **## Four-Pillar Configuration** — pillars, hidden stems, ten gods, stars (**only what structured has for that pillar**); instrument readout.**Per pillar: write if present, skip if absent**; ≤2 markers per pillar; **never pad** missing shen_sha.
 6. **## Decade Energy Climate Overview** — chronological \`structured.da_yun\` **climate tendencies** (dry / moist / contracting / expanding); or directional sketch if missing. **Climate only—no life plot**; no bare Ganzhi (age phrases or ⟦t:decade|…⟧).`;
 
 const BASE_ANALYSIS_NEUTRALITY_RULES_ZH = `# 中立元报告 · 硬禁（场景化留给下游 POJU/Glyph/Match/Syncro）
@@ -86,14 +86,16 @@ This is a **shared neutral context base** (like a lab report / raw MBTI readout 
 const BASE_ANALYSIS_BINDING_RULES = `# 绑定计算结果 · 闭集 · 禁幻觉
 
 1. **用神/喜神/忌神/强弱/格局** — 以 structured 为准；只能展开解释，**不得改判或另算**；喜忌方向不得与 structured 相反。
-2. **神煞闭集** — 只能取自 structured.pillars_detail 里实际出现的神煞（引擎闭集 9 选 N：天乙贵人/禄神/飞刃/文昌/桃花/驿马/华盖/孤辰/寡宿）。**严禁**写出数据中不存在的神煞，尤其禁止：国印贵人、月德合、天德合、太极贵人、福星贵人、劫煞、十恶大败、空亡、学堂 等引擎不计算的项。
+2. **神煞闭集 · 实例清单** — 神煞**只能逐字取自**本次 \`buildStructuredInstanceInventory\` 列出的项（引擎闭集 9 选 N：天乙贵人/禄神/飞刃/文昌/桃花/驿马/华盖/孤辰/寡宿）。**该清单为空则整篇不得出现任何神煞名**。**严禁**引擎不计算项，显式禁止：**元辰 / 六秀日 / 阴差阳错 / 阴阳差错 / 空亡 / 将星 / 劫煞 / 国印贵人 / 月德合 / 天德合 / 太极贵人 / 福星贵人 / 十恶大败 / 学堂** 等。
 3. **十神/长生** — 同理，只用 structured 给出的具体条目；禁止类别统称代替或编造。
 4. **data_availability.missing** — pillars_detail 或 da_yun 缺失时，该维度**只做方向性描述**，禁止编造具体干支/神煞/起运岁数。
-5. **术语标记 · 干支禁裸** — 凡命理术语一律 \`⟦t:<id>|<可见软译词>|<该处白话>⟧\` 三段位；**id 必须严格使用术语表中的闭集 slug**。**正文任何干支组合（年/月/日/时柱、大运、流年，如 癸酉/壬申/辛未/己巳）一律不得裸露**——要么 \`⟦t:decade|人生阶段（癸酉）|…⟧\` / \`⟦t:year|流年能量（丙午）|…⟧\` 三段位，要么在概览段**完全不用干支**，改用白话年龄段（「二十出头」「三十到四十岁」）。**禁止** \`(癸酉 phase)\`、\`during 壬申\` 这类半裸写法。
-6. **藏干/十神禁罗列** — **禁止** \`Hidden stems (Wu earth, Xin metal…)\` 或整行藏干英文直译堆砌；藏干影响用**一句机制白话**（「底层藏干增加额外的土性稳定承载因子」），必要时最多 1 个 ⟦t:…⟧ 进 tooltip。
-7. **标记排版** — 标记**紧贴**软译词，**禁止**在标记前插入裸换行。
-8. **金色词密度** — **每段最多 1–2 个** ⟦t:…⟧；只在该论点**首次关键诊断**处标记；同段其余用白话指代（「这套高频输出型驱动」「目前的燥气气候段」），**禁止**同 id 重复刷标记。
-9. **禁止假设**「输出端会软翻译」——你必须在生成时直接写好标记与软译词。`;
+5. **术语标记 · 三段位闭合 · 干支禁裸** — 凡命理术语一律 \`⟦t:<id>|<可见软译词>|<该处白话>⟧\` **三段位必须完整闭合**；**禁止**只写可见词不打标记、**禁止**句子在标记处中断截断。**正文任何干支组合**一律不得裸露——要么三段位标记，要么概览段完全不用干支（白话年龄段）。**禁止** \`(癸酉 phase)\`、\`during 壬申\` 半裸写法。
+6. **可见词形态** — \`<可见文本>\` 用**名词短语**，**禁止**前导冠词 \`the/a/an\`（避免 "The the refined core"）；英文如 \`refined core (癸)\` 而非 \`the refined core (癸)\`。
+7. **藏干/十神禁罗列** — **禁止** \`Hidden stems (Wu earth, Xin metal…)\` 英文堆砌；藏干用**一句机制白话**，必要时最多 1 个 ⟦t:…⟧。
+8. **标记排版** — 标记**紧贴**软译词，**禁止**在标记前插入裸换行。
+9. **金色词密度** — **每段最多 1–2 个** ⟦t:…⟧；**## 四柱命盘数据 逐柱段**尤其收敛——**每柱最多 1–2 个**核心标记，其余藏干/十神用白话带过，**禁止**逐条全标。
+10. **四柱逐柱段（复发源）** — 逐柱**只描述 structured 里该柱实际有的** \`ten_god / shen_sha / life_stage / hidden_stems\`；**缺则不写**，**禁止**为填满四柱而补神煞或编造配置。
+11. **禁止假设**「输出端会软翻译」——你必须在生成时直接写好标记与软译词。`;
 
 const BASE_ANALYSIS_LAYOUT_ZH = `# 降维排版（中立元报告 · 奢侈品交付 · 必遵）
 
@@ -262,8 +264,8 @@ ${BASE_ANALYSIS_OUTPUT_SECTIONS_ZH.split("\n").slice(1).join("\n")}
 4. **1100–1600 词**（中文同等篇幅）— **优先保证四维与数据层完整**；宁可略超，**不可**为压字数砍掉任何块。
 5. **压缩水分，不砍信息** — 删解释性铺垫、安慰性排比、同义重复、场景化举例；保留每个维度的关键能量结论与一条可操作的**中立调谐**建议（作息/环境/决策习惯，非职业/关系）。
 6. 第二人称（你），现代、专业、克制；**每段 ≤120 字**；**四维各至少 1 个** \`**粗体引导句:**\` **+ 1 个** \`>\` 金句/锚点；**能量平衡锚** 另需 \`- \` bullets 亦可。
-7. 挑战类**不得渲染成「灾祸/损失」恐吓**；**禁裸干支**；神煞/十神不得超出 structured；**严格执行中立硬禁**（无职业/婚育/资产/未来事件/脏腑医嘱）。
-8. 可自然提及 POJU / pojulife；禁 astrology / divination / psychic / horoscope。`
+7. 挑战类**不得渲染成「灾祸/损失」恐吓**；**禁裸干支**；神煞/十神**只能来自 structured 实例清单**；**每个 ⟦t:…⟧ 三段位必须闭合**；可见词禁前导 the/a/an；逐柱段每柱 ≤2 金字。
+8. **落库门禁** — 集外神煞（元辰/六秀日/阴差阳错等）、断标记、裸干支、密度超标会导致整篇被拒并重写；可自然提及 POJU / pojulife；禁 astrology / divination / psychic / horoscope。`
       : `# Output requirements
 
 1. **Markdown body only** (## sections + ### subheads + lead + pull quotes + bullets)—no JSON, no \`---META---\`, no fenced full-document code block.
@@ -273,8 +275,8 @@ ${BASE_ANALYSIS_OUTPUT_SECTIONS_EN.split("\n").slice(1).join("\n")}
 4. **1100–1600 words** (equivalent length in Chinese)—**four dimensions + data layers complete first**; slightly over is OK; never drop a block for word cap.
 5. **Cut fluff, not facts** — drop padding, reassurance loops, scenario examples; keep each dimension's key energy read + one **neutral tuning** takeaway (rhythm/environment/decision habits—not career/relationship).
 6. Second person (you); modern, restrained, professional; **≤80 words per paragraph**; **each of the four dimensions** needs at least one \`**Bold lead:**\` **+ one** \`>\` anchor; **Balancing Anchors** may also use \`- \` bullets.
-7. Do not frame challenges as doom/scare; **no bare Ganzhi**; shen_sha/ten_gods within structured only; **enforce neutral hard bans** (no career/marriage/assets/future events/organ/diet prescriptions).
-8. POJU / pojulife OK; no astrology / divination / psychic / horoscope.`;
+7. Do not frame challenges as doom/scare; **no bare Ganzhi**; shen_sha/ten_gods **only from structured instance inventory**; **every ⟦t:…⟧ must be fully closed** (3 parts); visible text without leading the/a/an; ≤2 markers per pillar block.
+8. **Delivery gate** — out-of-set shen_sha (元辰/六秀日/阴差阳错 etc.), broken markers, bare Ganzhi, or density overflow will reject the draft and force rewrite; POJU / pojulife OK; no astrology / divination / psychic / horoscope.`;
 
   const forbiddenBlock =
     lang === "zh"
