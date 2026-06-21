@@ -892,8 +892,6 @@
   text-align: right;
   flex: 0 0 auto;
 }
-  flex: 0 0 auto;
-}
 
 .pem .enote {
   font-family: var(--serif);
