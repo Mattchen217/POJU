@@ -36,7 +36,7 @@ export function SyncroPreviewPage() {
     const pendingTask = sessionStorage.getItem("syncro_task_pending");
 
     if (!profileId || !pendingTask) {
-      router.replace("/syncro/task");
+      router.replace("/syncro/prepare");
       return;
     }
 

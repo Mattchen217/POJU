@@ -2072,10 +2072,14 @@
     }
   },
   "base_analysis_view": {
-    "title": "Lectura de base (texto completo)",
+    "eyebrow": "Retrato base",
+    "title": "Retrato de carácter",
     "close": "Cerrar",
     "loading": "Cargando…",
-    "not_found": "No se encontró ningún análisis guardado."
+    "not_found": "No se encontró ningún análisis guardado.",
+    "poju_cta_title": "Lleva este retrato a POJU",
+    "poju_cta_description": "Tu carta ya está en contexto — haz preguntas de seguimiento.",
+    "poju_cta_button": "Abrir POJU"
   },
   "birth_form": {
     "birth_location": "Lugar de nacimiento",

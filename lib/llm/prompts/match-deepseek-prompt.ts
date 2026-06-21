@@ -133,6 +133,7 @@ ${JSON.stringify(compatibilityMatrix, null, 2)}
 
 ## 5. recommendations(建议 · 行动层)
 - 4-6 条具体可执行 — **直接给做法，不重述前面分析**
+- **recommendations.title 禁止写死步骤数**（如 "Four Steps" / "三步" / "5 Ways"）；改用不含计数的标题（如 "How to Turn Good Compatibility into Great Collaboration" / "把好兼容性变成好协作"）。若任何字段提及条数，**必须 === actions 数组实际长度**
 - 类别:communication / timing / boundary / growth / environment（三步洗白：spatial harmony + 动作 + 环境心理学；鱼缸/植物/材质可保留；禁招财/催运）
 - 每条:title + detail (80-150 字) + timing
 - 涉及单人用第三人称（"他可以…""她则…"）；行动主体可用"你们"；timing **禁**干支纪年/公历年锚定
@@ -198,6 +199,8 @@ ${JSON.stringify(compatibilityMatrix, null, 2)}
 7. **板块零重复**：conclusion 不重讲 combined 机制；recommendations 不重述分析
 
 8. **产品指代**：this Match + synergy / systemic dynamics 框架
+
+9. **recommendations.title 禁止写死步骤数**（"Four Steps"/"三步"/"5 Ways" 等）；若提及数量必须 === actions.length
 
 # 严格 JSON,无 markdown 围栏`,
   );

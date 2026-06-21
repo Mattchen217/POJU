@@ -171,13 +171,14 @@ export const MATCH_OUTPUT_BRANDING = `# ⚠️ Match 输出品牌（JSON 5 段 �
 | analysis_b | B 在此关系中会怎样 | 不讲 A、不讲互动结果 |
 | combined | **机制层**：五行如何生克、affinity/tension/friction 的来龙去脉、life cycle 同频 —— 解释"为什么会这样互动" | 不下总评、不复述 A/B 画像 |
 | conclusion | **判断层**：question_response（直答用户问题）+ synergy_type 定性 + strengths/challenges 清单 —— 给"所以结论是什么" | **严禁把 combined 的互动机制重讲一遍**；strengths/challenges 是凝练条目，不是 combined 的散文复述 |
-| recommendations | **行动层**：4–6 条可落地建议 | 不重述前面的分析，直接给做法 |
+| recommendations | **行动层**：4–6 条可落地建议 | 不重述前面的分析，直接给做法；**title 禁止写死步骤数** |
 
 1. **analysis_a** — A 在此关系中的天然倾向（200–400 字 detail + 3–5 key_traits；第三人称）
 2. **analysis_b** — B 在此关系中会怎样（同上；第三人称）
 3. **combined** — 机制层：五行能量互动 + affinity/tension/friction（400–600 字 detail；含 five_elements_interaction、timing_dynamic；第三人称 + "两人"）
 4. **conclusion** — 判断层：**question_response（先复述并正面回应用户提问，合婚技术依据，不铁口日期）** + synergy_type + strengths 3–5 + challenges 3–5。**detail/summary 若有，只做定性收口，不得复述 combined 的能量互动过程**。（"你们"称呼整对）
 5. **recommendations** — 行动层：4–6 条可执行建议（communication / timing / boundary / growth / environment）
+   · **recommendations.title 禁止写死步骤数量词**（如 "Four Steps" / "三步" / "5 Ways"）；改用不含计数的标题（如 "How to Turn Good Compatibility into Great Collaboration" / "把好兼容性变成好协作"）。若任何字段提及条数，**必须 === actions 数组实际长度**，不得凭空写数字
    · **environment** = 三步洗白的空间建议（水景/绿植/材质可保留）+ 环境心理学解释；禁招财/催运/避邪/lucky direction
    · 涉及单人用第三人称（"他可以…""她则…"），行动主体可用"你们"
 

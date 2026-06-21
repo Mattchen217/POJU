@@ -10,6 +10,20 @@ import type { UserProfile } from "@/lib/profile/types";
 
 import { resolveBaseAnalysisOutputLanguage } from "./resolve-output-language";
 
+function normalizeStructuredAvailability(
+  structured: import("@/lib/calculations/build-profile-structured").ProfileStructured,
+): import("@/lib/calculations/build-profile-structured").ProfileStructured {
+  if (structured.data_availability) return structured;
+  return {
+    ...structured,
+    data_availability: {
+      pillars_detail: Boolean(structured.pillars_detail),
+      da_yun: structured.da_yun.length > 0,
+      bazi_enrichment: Boolean(structured.bazi_enrichment),
+    },
+  };
+}
+
 /** Build POST body for `/api/profile/base-analysis/stream` (structured computed locally). */
 export function buildStreamLocalDataFromProfile(
   profile: UserProfile,
@@ -31,7 +45,7 @@ export function buildStreamLocalDataFromProfile(
     sect: 1,
   });
 
-  const structured = buildProfileStructured({ profile, chart });
+  const structured = normalizeStructuredAvailability(buildProfileStructured({ profile, chart }));
   const output_language =
     options?.output_language ?? resolveBaseAnalysisOutputLanguage(options?.user_input);
 

@@ -2072,10 +2072,14 @@
     }
   },
   "base_analysis_view": {
-    "title": "Grundlagen-Auswertung (Volltext)",
+    "eyebrow": "Grundporträt",
+    "title": "Charakterporträt",
     "close": "Schließen",
     "loading": "Wird geladen…",
-    "not_found": "Keine gespeicherte Analyse gefunden."
+    "not_found": "Keine gespeicherte Analyse gefunden.",
+    "poju_cta_title": "Mit diesem Porträt zu POJU",
+    "poju_cta_description": "Dein Chart ist schon im Kontext — stell Nachfragen.",
+    "poju_cta_button": "POJU öffnen"
   },
   "birth_form": {
     "birth_location": "Geburtsort",

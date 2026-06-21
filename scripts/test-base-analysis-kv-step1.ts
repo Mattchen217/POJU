@@ -45,6 +45,7 @@ async function main() {
         strength: "balanced",
         four_pillars: { year: "甲子", month: "乙丑", day: "丙寅", hour: "丁卯" },
         da_yun: [{ start_age: 5, start_year: 1995, ganzhi: "戊辰" }],
+        data_availability: { pillars_detail: false, da_yun: true, bazi_enrichment: false },
       },
     },
   });
@@ -83,6 +84,7 @@ async function main() {
         strength: "balanced",
         four_pillars: { year: "?", month: "?", day: "?", hour: "?" },
         da_yun: [],
+        data_availability: { pillars_detail: false, da_yun: false, bazi_enrichment: false },
       },
     },
   });

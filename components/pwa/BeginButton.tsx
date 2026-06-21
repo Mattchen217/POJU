@@ -155,7 +155,7 @@ export function BeginButton({
       switch (productId) {
         case "syncro":
           sessionStorage.setItem("syncro_session_type", "free");
-          router.push("/syncro/task?new=1");
+          router.push("/syncro/prepare?new=1");
           break;
         case "glyph":
           router.push("/glyph/prepare");

@@ -48,6 +48,12 @@ export type BaziEnrichment = {
   yongshen_analysis: YongshenAnalysis;
 };
 
+export type ProfileDataAvailability = {
+  pillars_detail: boolean;
+  da_yun: boolean;
+  bazi_enrichment: boolean;
+};
+
 export type ProfileStructured = {
   day_master: string;
   pattern: string;
@@ -71,6 +77,8 @@ export type ProfileStructured = {
   da_yun: DaYunEntry[];
   /** Gender, life stages, merged 神煞, 喜用神 — i18n-keyed payload for UI/LLM. */
   bazi_enrichment?: BaziEnrichment;
+  /** When false, LLM must not invent that dimension (see data_availability). */
+  data_availability: ProfileDataAvailability;
 };
 
 const WU_XING_KEYS = ["金", "木", "水", "火", "土"] as const;
@@ -272,5 +280,10 @@ export function buildProfileStructured(input: {
     pillars_detail,
     da_yun,
     bazi_enrichment,
+    data_availability: {
+      pillars_detail: Boolean(pillars_detail),
+      da_yun: da_yun.length > 0,
+      bazi_enrichment: Boolean(bazi_enrichment),
+    },
   };
 }

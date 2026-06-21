@@ -15,7 +15,7 @@ const path = buildToolHandoffPath("syncro", {
   prefill: { task_description: "明天下午面试", event_time: "tomorrow afternoon" },
 });
 
-assert(path.startsWith("/syncro/task?"), path);
+assert(path.startsWith("/syncro/prepare?"), path);
 assert(path.includes("from_poju_session=sess-1"), path);
 assert(path.includes("from_poju_cycle=cycle-1"), path);
 assert(path.includes("task_description="), path);

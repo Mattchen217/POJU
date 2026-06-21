@@ -16,7 +16,7 @@ export async function redirectToSyncroUnlockPayment(input: {
   const pay = await fetch("/api/payments/create", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ product: "syncro_ar", locale: input.locale, return_url: returnUrl }),
+    body: JSON.stringify({ product: "syncro", locale: input.locale, return_url: returnUrl }),
   });
   const p = (await pay.json()) as {
     checkout_url?: string;

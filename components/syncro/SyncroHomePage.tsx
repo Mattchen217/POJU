@@ -63,7 +63,7 @@ export function SyncroHomePage() {
 
   function handleStart() {
     sessionStorage.setItem("syncro_session_type", "free");
-    router.push("/syncro/task?new=1");
+    router.push("/syncro/prepare?new=1");
   }
 
   if (canUse.checking) {

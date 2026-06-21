@@ -1,5 +1,5 @@
 /**
- * Verify base_analysis v4: code structured + LLM display_text.
+ * Verify base_analysis v5: term markers + closed-set audit + section structure.
  * Run: pnpm tsx scripts/test-base-analysis-display-text.ts
  * Requires OPENROUTER_API_KEY in .env.local for live display_text generation.
  */
@@ -9,10 +9,12 @@ import { resolve } from "node:path";
 import { getBaziChart } from "shunshi-bazi-core";
 
 import { buildStreamLocalDataFromProfile } from "@/lib/base-analysis/build-stream-local-data";
+import { parseBaseAnalysisSections } from "@/lib/base-analysis/parse-base-analysis-sections";
 import { buildProfileStructured } from "@/lib/calculations/build-profile-structured";
 import { shunshiParamsFromBirthInfo } from "@/lib/profile/birth-info-utils";
 import type { BirthInfo, UserProfile } from "@/lib/profile/types";
 import { buildBaseAnalysisStreamPrompt } from "@/lib/llm/prompts/base-analysis-stream-prompt";
+import { auditOutOfSetTerms, parseTermMarkers } from "@/lib/llm/sanitize/term-marking";
 import {
   isOpenRouterConfigured,
   openRouterChatCompletion,
@@ -30,9 +32,15 @@ function loadEnvLocal() {
   }
 }
 
-const ZH_BLACKLIST = /八字|四柱|日主|用神|忌神|大运|格局|算命|命理|命盘|命运|预测命运|[吉凶]/;
-const EN_BLACKLIST =
-  /\b(Bazi|Four Pillars|Day Master|Yong Shen|Ji Shen|Da Yun|fortune[- ]?telling|fate|destiny|auspicious|inauspicious)\b/i;
+const REQUIRED_SECTIONS_ZH = [
+  "核心性格",
+  "四柱与隐藏世界",
+  "天赋与盲点",
+  "人生主题",
+  "当前大运详解",
+  "大运全程概览",
+  "传统调候建议",
+];
 
 function buildTestProfile(): { profile: UserProfile; chart: ReturnType<typeof getBaziChart> } {
   const birth: BirthInfo = {
@@ -99,18 +107,22 @@ async function main() {
   const structured = buildProfileStructured({ profile, chart });
 
   console.log("=== structured (code) ===");
-  console.log(JSON.stringify(structured, null, 2));
-  console.log("\nstructured.da_yun[0..2]:", structured.da_yun.slice(0, 3));
+  console.log("data_availability:", structured.data_availability);
+  console.log("da_yun[0..2]:", structured.da_yun.slice(0, 3));
+
+  const { system } = buildBaseAnalysisStreamPrompt({ local_data: localData });
+  console.log("\n=== prompt checks ===");
+  console.log("has term marking block:", system.includes("⟦t:") ? "PASS" : "FAIL");
+  console.log("has closed-set rule:", system.includes("国印贵人") ? "PASS" : "FAIL");
+  console.log("has data_availability:", system.includes("data_availability") ? "PASS" : "FAIL");
 
   if (!isOpenRouterConfigured()) {
     console.log("\n⚠ OPENROUTER_API_KEY not set — skipping live display_text generation.");
-    console.log("Prompt preview (system excerpt):");
-    const { system } = buildBaseAnalysisStreamPrompt({ local_data: localData });
-    console.log(system.slice(0, 400), "...");
+    console.log("System excerpt:", system.slice(0, 500), "...");
     return;
   }
 
-  const { system, user } = buildBaseAnalysisStreamPrompt({ local_data: localData });
+  const { user } = buildBaseAnalysisStreamPrompt({ local_data: localData });
   console.log("\n=== Generating display_text (zh) via OpenRouter ===");
 
   const result = await openRouterChatCompletion({
@@ -124,12 +136,26 @@ async function main() {
   });
 
   const displayText = result.text.trim();
-  console.log("\n=== display_text ===");
-  console.log(displayText);
+  console.log("\n=== display_text (first 1200 chars) ===");
+  console.log(displayText.slice(0, 1200));
+
+  const markers = parseTermMarkers(displayText);
+  const outOfSet = auditOutOfSetTerms(displayText);
+  const sections = parseBaseAnalysisSections(displayText);
+  const sectionTitles = sections.map((s) => s.title);
+
   console.log("\n=== validation ===");
   console.log("length:", displayText.length);
-  console.log("ZH blacklist hits:", ZH_BLACKLIST.test(displayText) ? "FAIL" : "PASS (0)");
-  console.log("EN blacklist hits:", EN_BLACKLIST.test(displayText) ? "FAIL" : "PASS (0)");
+  console.log("term markers:", markers.length, markers.length >= 5 ? "PASS" : "WARN");
+  console.log("raw marker leak:", /⟦t:/.test(displayText) ? "expected (parsed by UI)" : "none");
+  console.log("out-of-set audit hits:", outOfSet.length, outOfSet.length === 0 ? "PASS" : "FAIL");
+  if (outOfSet.length) console.log("  hits:", outOfSet);
+
+  const missingSections = REQUIRED_SECTIONS_ZH.filter(
+    (title) => !sectionTitles.some((t) => t.includes(title)),
+  );
+  console.log("sections found:", sectionTitles.length);
+  console.log("missing sections:", missingSections.length ? missingSections.join(", ") : "PASS (0)");
   console.log("tokens:", result.tokens_used);
 }
 

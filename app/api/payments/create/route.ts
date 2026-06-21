@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-type Product = "poju" | "glyph" | "syncro_ar" | "match";
+type Product = "poju" | "glyph" | "syncro" | "syncro_ar" | "match";
 
 function randomToken(prefix: string): string {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
@@ -24,14 +24,17 @@ export async function POST(req: Request) {
       ? "poju"
       : raw === "match"
         ? "match"
-        : raw === "syncro_ar" || raw === "syncro"
+        : raw === "syncro_ar"
           ? "syncro_ar"
-          : "glyph";
+          : raw === "syncro"
+            ? "syncro"
+            : "glyph";
 
   const amounts: Record<Product, number> = {
     poju: 9.99,
     glyph: 4.99,
     match: 4.99,
+    syncro: 4.99,
     syncro_ar: 1.99,
   };
 
@@ -49,6 +52,27 @@ export async function POST(req: Request) {
       ok: true,
       product,
       amount: amounts.poju,
+      currency: "USD",
+      checkout_url: paymentUrl,
+      payment_url: paymentUrl,
+      order_id: orderId,
+    });
+  }
+
+  if (product === "syncro") {
+    const orderId = randomToken("mocksyncro");
+    const loc =
+      typeof body.locale === "string" && /^[a-zA-Z]{2,3}([-_][a-zA-Z0-9]+)*$/.test(body.locale.trim())
+        ? body.locale.trim()
+        : "en";
+    const fallbackReturn = `/${loc}/syncro/payment-success?mock=true`;
+    const returnUrl = typeof body.return_url === "string" && body.return_url.length > 0 ? body.return_url : fallbackReturn;
+    const sep = returnUrl.includes("?") ? "&" : "?";
+    const paymentUrl = `${returnUrl}${sep}mock=true&order_id=${encodeURIComponent(orderId)}`;
+    return NextResponse.json({
+      ok: true,
+      product: "syncro",
+      amount: amounts.syncro,
       currency: "USD",
       checkout_url: paymentUrl,
       payment_url: paymentUrl,

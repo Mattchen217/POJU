@@ -1257,10 +1257,14 @@
     "error_create_profile": "保存失败，请重试。"
   },
   "base_analysis_view": {
-    "title": "核心性格分析（全文）",
+    "eyebrow": "命主画像",
+    "title": "性格画像",
     "close": "关闭",
     "loading": "正在加载…",
-    "not_found": "未找到已保存的分析。"
+    "not_found": "未找到已保存的分析。",
+    "poju_cta_title": "带着这份画像进入 POJU",
+    "poju_cta_description": "你的命盘已在上下文中，可直接追问、深聊。",
+    "poju_cta_button": "打开 POJU"
   },
   "refund": {
     "title": "退款",

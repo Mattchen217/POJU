@@ -30,7 +30,7 @@ export function buildToolHandoffPath(
     case "glyph":
       return `/glyph/prepare?${params.toString()}`;
     case "syncro":
-      return `/syncro/task?${params.toString()}`;
+      return `/syncro/prepare?${params.toString()}`;
     case "match":
       return `/match?${params.toString()}`;
   }

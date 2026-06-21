@@ -1,0 +1,154 @@
+/* Base analysis delivery — extends glyph-delivery tokens (Cinzel + Inter, starfield via parent) */
+
+.base-analysis-delivery {
+  width: 100%;
+  background: transparent !important;
+}
+
+.base-analysis-delivery--modal .glyph-delivery-panel {
+  padding: 0;
+}
+
+.base-analysis-delivery__inner {
+  gap: 3rem;
+}
+
+.base-analysis-delivery__header {
+  padding-bottom: 1.5rem;
+}
+
+.base-analysis-delivery__title {
+  font-size: clamp(1.35rem, 3.5vw, 1.75rem);
+}
+
+.base-analysis-pillar-card {
+  background: rgba(13, 14, 16, 0.72);
+  border: 1px solid rgba(197, 168, 128, 0.28);
+  border-radius: 0.75rem;
+  padding: 1rem 0.75rem 0.85rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.base-analysis-pillar-card__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+@media (max-width: 639px) {
+  .base-analysis-pillar-card__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.base-analysis-pillar-card__col {
+  text-align: center;
+  padding: 0.65rem 0.35rem;
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(55, 65, 81, 0.45);
+}
+
+.base-analysis-pillar-card__col--day {
+  border-color: rgba(197, 168, 128, 0.45);
+  background: rgba(197, 168, 128, 0.06);
+}
+
+.base-analysis-pillar-card__cap {
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(156, 163, 175, 0.9);
+}
+
+.base-analysis-pillar-card__col--day .base-analysis-pillar-card__cap {
+  color: #c5a880;
+}
+
+.base-analysis-pillar-card__gz {
+  margin-top: 0.35rem;
+  font-family: var(--glyph-display-serif, "Cinzel", serif);
+  font-size: 1.125rem;
+  letter-spacing: 0.08em;
+  color: #e4e6ea;
+}
+
+.base-analysis-pillar-card__meta {
+  margin-top: 0.25rem;
+  font-size: 0.6875rem;
+  color: rgba(156, 163, 175, 0.85);
+}
+
+.base-analysis-pillar-card__stars {
+  margin-top: 0.2rem;
+  font-size: 0.625rem;
+  color: rgba(156, 163, 175, 0.65);
+  line-height: 1.35;
+}
+
+.base-analysis-pillar-card__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(55, 65, 81, 0.45);
+}
+
+.base-analysis-pillar-card__chip {
+  font-size: 0.6875rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(55, 65, 81, 0.65);
+  color: rgba(209, 213, 219, 0.9);
+}
+
+.base-analysis-pillar-card__chip--gold {
+  border-color: rgba(197, 168, 128, 0.45);
+  color: #c5a880;
+}
+
+.base-analysis-pillar-card__chip--fav {
+  border-color: rgba(72, 199, 142, 0.35);
+  color: #86efac;
+}
+
+.base-analysis-pillar-card__chip--chal {
+  border-color: rgba(224, 122, 95, 0.35);
+  color: #fca5a5;
+}
+
+.base-analysis-delivery__sections {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.base-analysis-delivery__card {
+  margin-top: 0.75rem;
+  padding: 1.25rem 1.15rem;
+  background: rgba(13, 14, 16, 0.55);
+  border: 1px solid rgba(55, 65, 81, 0.45);
+  border-radius: 0.65rem;
+  box-shadow: inset 3px 0 0 rgba(197, 168, 128, 0.35);
+  overflow: visible;
+}
+
+.base-analysis-delivery__card .reading-p,
+.base-analysis-delivery__card .reading-unit {
+  overflow: visible;
+}
+
+.base-analysis-delivery__poju-card {
+  max-width: 920px;
+  margin-inline: auto;
+}
+
+.base-analysis-delivery__poju-card .pdd-cta-btn {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { BirthInfoPicker } from "@/components/poju/BirthInfoPicker";
 import { BirthInfoConfirmDialog } from "@/components/poju/BirthInfoConfirmDialog";
@@ -34,6 +34,11 @@ export interface SessionPreparationProps {
   matchPerson?: MatchPrepPerson;
   /** Override cancel/refund link label (e.g. back to select-a). */
   refundLabel?: string;
+  /** Optional block below profile list (e.g. Syncro task input). */
+  footerSlot?: ReactNode;
+  /** When false, profile confirm is blocked (e.g. missing Syncro task). */
+  canProceed?: () => boolean;
+  onProceedBlocked?: () => void;
 }
 
 export function SessionPreparation({
@@ -47,6 +52,9 @@ export function SessionPreparation({
   suppressMatchWelcomeCopy = false,
   matchPerson = "a",
   refundLabel,
+  footerSlot,
+  canProceed,
+  onProceedBlocked,
 }: SessionPreparationProps) {
   const t = useTranslations("session_prep");
   const tGlyph = useTranslations("glyph");
@@ -109,6 +117,12 @@ export function SessionPreparation({
   }
 
   async function handleConfirmAndContinue() {
+    if (canProceed && !canProceed()) {
+      onProceedBlocked?.();
+      setShowConfirm(false);
+      return;
+    }
+
     if (selectedProfileId) {
       setShowConfirm(false);
       onProfileSelected(selectedProfileId);
@@ -167,6 +181,8 @@ export function SessionPreparation({
           />
         ) : null}
       </div>
+
+      {footerSlot}
 
       <div className="refund-link-section">
         <button type="button" onClick={onRefund} className="refund-link">

@@ -2072,10 +2072,14 @@
     }
   },
   "base_analysis_view": {
-    "title": "Lecture de fond (texte intégral)",
+    "eyebrow": "Portrait de base",
+    "title": "Portrait de caractère",
     "close": "Fermer",
     "loading": "Chargement…",
-    "not_found": "Aucune analyse enregistrée trouvée."
+    "not_found": "Aucune analyse enregistrée trouvée.",
+    "poju_cta_title": "Porter ce portrait dans POJU",
+    "poju_cta_description": "Votre thème est déjà en contexte — posez des questions de suivi.",
+    "poju_cta_button": "Ouvrir POJU"
   },
   "birth_form": {
     "birth_location": "Lieu de naissance",

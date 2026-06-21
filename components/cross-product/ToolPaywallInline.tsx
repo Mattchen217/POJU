@@ -114,8 +114,8 @@ export function ToolPaywallInline(props: Props) {
           sub: zh
             ? "解锁针对你任务与位置的完整 96 格时空矩阵与 AI 择时解读。"
             : "Unlock the full 96-cell timing matrix and AI guidance for your task and location.",
-          price: "1.99",
-          cta: zh ? "✦ 解锁完整择时 · $1.99" : "✦ Unlock full timing · $1.99",
+          price: "4.99",
+          cta: zh ? "✦ 解锁完整择时 · $4.99" : "✦ Unlock full timing · $4.99",
           codePh: zh ? "体验码 SYNCRO-XXXX-XXXX" : "Have a code? SYNCRO-XXXX-XXXX",
         }
       : product === "match"
