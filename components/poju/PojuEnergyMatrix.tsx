@@ -125,10 +125,10 @@ function RadarChart({ scores }: { scores: PojuMatrixPayload["wuxing_scores"] }) 
       chart.setOption({
         backgroundColor: "transparent",
         radar: {
-          center: ["50%", "54%"],
-          radius: "80%",
+          center: ["50%", "52%"],
+          radius: "86%",
           startAngle: 90,
-          splitNumber: 3,
+          splitNumber: 4,
           axisName: {
             color: "rgba(255,255,255,0.78)",
             fontSize: 11,
@@ -317,8 +317,8 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, subjectPref
                 <Image
                   src={zodiacIcon}
                   alt=""
-                  width={44}
-                  height={44}
+                  width={56}
+                  height={56}
                   className="zsign__icon"
                 />
               ) : (
@@ -361,19 +361,21 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, subjectPref
             {tst ? (
               <>
                 <div className="tst">
-                  <div className="t">
-                    <div className="vv">{tst.original_time}</div>
-                    <div className="kk">{tc("standard_time")}</div>
-                  </div>
-                  <div className="arr">→</div>
-                  <div className="t">
-                    <div className="vv gold">{tst.true_solar_time}</div>
-                    <div className="kk">{tc("true_solar")}</div>
+                  <div className="tst__times">
+                    <div className="t">
+                      <div className="vv">{tst.original_time}</div>
+                      <div className="kk">{tc("standard_time")}</div>
+                    </div>
+                    <div className="arr">→</div>
+                    <div className="t">
+                      <div className="vv gold">{tst.true_solar_time}</div>
+                      <div className="kk">{tc("true_solar")}</div>
+                    </div>
                   </div>
                   {tst.diff_minutes !== 0 ? (
-                    <div className="chip">
+                    <div className="tst__chip">
                       {tst.diff_minutes > 0 ? "+" : "−"}
-                      {Math.abs(tst.diff_minutes)}m
+                      {Math.abs(Number(tst.diff_minutes.toFixed(2)))}m
                     </div>
                   ) : null}
                 </div>
