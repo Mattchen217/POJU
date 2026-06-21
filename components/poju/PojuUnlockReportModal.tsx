@@ -1,50 +1,83 @@
 "use client";
 
-import { useEffect } from "react";
-import { useTranslations } from "next-intl";
+import { useEffect, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 
-import { ReadingDecoderBanner } from "@/components/reading-ritual/ReadingDecoderBanner";
+import { BaseAnalysisDeliveryView } from "@/components/base-analysis/BaseAnalysisDeliveryView";
+import { buildStreamLocalDataFromProfile } from "@/lib/base-analysis/build-stream-local-data";
+import { decodeMarkedDisplayText } from "@/lib/base-analysis/resolve-display-text";
+import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
+import {
+  getStoredProfile,
+  getStoredProfileRecord,
+} from "@/lib/profile/stored-profiles-service";
 
+import "@/styles/glyph-delivery.css";
+import "@/styles/base-analysis-delivery.css";
 import "@/styles/poju-unlock-report.css";
-import "@/styles/poju-new-session-btn.css";
-import "@/styles/reading-ritual.css";
 
 type Props = {
   open: boolean;
   reportText: string;
+  profileId?: string;
   gateMode?: boolean;
   onClose: () => void;
-  onDecodeParagraph?: (paragraph: string) => void;
 };
-
-function splitReportParagraphs(text: string): string[] {
-  return text
-    .split(/\n{2,}/)
-    .map((p) => p.trim())
-    .filter(Boolean);
-}
 
 export function PojuUnlockReportModal({
   open,
   reportText,
+  profileId,
   gateMode = false,
   onClose,
-  onDecodeParagraph,
 }: Props) {
   const t = useTranslations("poju.chat");
-  const decodeEnabled = Boolean(onDecodeParagraph) && !gateMode;
-  const paragraphs = decodeEnabled ? splitReportParagraphs(reportText) : [];
+  const locale = useLocale();
+  const [structured, setStructured] = useState<ProfileStructured | null>(null);
+  const [displayName, setDisplayName] = useState<string | undefined>();
+
+  const displayText = decodeMarkedDisplayText(reportText);
+
+  useEffect(() => {
+    if (!open || !profileId) {
+      setStructured(null);
+      setDisplayName(undefined);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const [data, record] = await Promise.all([
+          getStoredProfile(profileId),
+          getStoredProfileRecord(profileId),
+        ]);
+        if (cancelled) return;
+        setDisplayName(record?.display_name?.trim() || undefined);
+        setStructured(
+          data?.base_analysis?.structured ??
+            (data?.user_profile
+              ? buildStreamLocalDataFromProfile(data.user_profile).structured
+              : null),
+        );
+      } catch {
+        if (!cancelled) setStructured(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, profileId]);
 
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape" && !gateMode) onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, onClose, gateMode]);
 
-  if (!open) return null;
+  if (!open || !displayText) return null;
 
   return (
     <div
@@ -66,32 +99,16 @@ export function PojuUnlockReportModal({
           </div>
         </header>
 
-        {decodeEnabled ? <ReadingDecoderBanner variant="poju" /> : null}
-
-        <div className="poju-unlock-report-panel__body">
-          {decodeEnabled ? (
-            <div className="poju-unlock-report-panel__text poju-unlock-report-panel__text--decode">
-              {paragraphs.map((para, i) => (
-                <p
-                  key={i}
-                  className="poju-unlock-report-panel__para"
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => onDecodeParagraph?.(para)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      onDecodeParagraph?.(para);
-                    }
-                  }}
-                >
-                  {para}
-                </p>
-              ))}
-            </div>
-          ) : (
-            <pre className="poju-unlock-report-panel__text">{reportText}</pre>
-          )}
+        <div className="poju-unlock-report-panel__body poju-unlock-report-panel__body--delivery">
+          <BaseAnalysisDeliveryView
+            displayText={displayText}
+            structured={structured}
+            locale={locale}
+            profileId={profileId}
+            displayName={displayName}
+            variant="modal"
+            showPageHeader={false}
+          />
         </div>
 
         <footer className="poju-unlock-report-panel__foot">

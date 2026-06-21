@@ -21,6 +21,8 @@ type Props = {
   displayName?: string;
   variant?: "page" | "modal";
   header?: ReactNode;
+  /** When false, skip in-view title block (e.g. POJU unlock modal has its own chrome). */
+  showPageHeader?: boolean;
 };
 
 export function BaseAnalysisDeliveryView({
@@ -31,6 +33,7 @@ export function BaseAnalysisDeliveryView({
   displayName,
   variant = "page",
   header,
+  showPageHeader = true,
 }: Props) {
   const t = useTranslations("base_analysis_view");
   const sections = parseBaseAnalysisSections(displayText);
@@ -44,13 +47,15 @@ export function BaseAnalysisDeliveryView({
         <div className="glyph-delivery-inner base-analysis-delivery__inner">
           {header}
 
-          <header className="glyph-delivery-header base-analysis-delivery__header">
-            <p className="glyph-delivery-eyebrow">{t("eyebrow")}</p>
-            <h1 className="glyph-delivery-question base-analysis-delivery__title">
-              {displayName ? `${displayName} · ` : ""}
-              {t("title")}
-            </h1>
-          </header>
+          {showPageHeader ? (
+            <header className="glyph-delivery-header base-analysis-delivery__header">
+              <p className="glyph-delivery-eyebrow">{t("eyebrow")}</p>
+              <h1 className="glyph-delivery-question base-analysis-delivery__title">
+                {displayName ? `${displayName} · ` : ""}
+                {t("title")}
+              </h1>
+            </header>
+          ) : null}
 
           {structured ? (
             <div className="base-analysis-delivery__pillar-wrap">

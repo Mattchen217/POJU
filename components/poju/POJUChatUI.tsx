@@ -199,6 +199,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   );
   const unlockReportMessage = useMemo(() => getUnlockReportMessage(session), [session.messages]);
   const unlockReportText = useMemo(() => getUnlockReportText(unlockReportMessage), [unlockReportMessage]);
+  const unlockReportProfileId =
+    unlockReportMessage?.meta?.report_profile_id ??
+    session.agent_v2?.selected_profile_id ??
+    session.selected_stored_profile_id ??
+    undefined;
   const unlockReportGatePending =
     Boolean(unlockReportMessage) &&
     isPendingUnlockQuestionRelease(session.session_id) &&
@@ -796,17 +801,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       typed,
       attachment: savedComposerAttachment,
     });
-  }
-
-  function handleDecodeReportParagraph(paragraph: string) {
-    setUnlockReportModalOpen(false);
-    if (unlockReportGatePending) {
-      setUnlockReportGateDismissed(true);
-    }
-    const prompt = locale.startsWith("zh")
-      ? `请用白话帮我读透下面这段报告，并联系我的真实处境：\n\n${paragraph}`
-      : `Please unpack this part of my reading in plain language and connect it to my real-life situation:\n\n${paragraph}`;
-    void handlePojuSend(prompt);
   }
 
   async function handleRenameSession(targetSessionId: string, newTitle: string) {
@@ -1490,8 +1484,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         <PojuUnlockReportModal
           open={unlockReportModalOpen}
           reportText={unlockReportText}
+          profileId={unlockReportProfileId}
           gateMode={unlockReportGatePending}
-          onDecodeParagraph={handleDecodeReportParagraph}
           onClose={() => {
             if (unlockReportGatePending) {
               setUnlockReportModalOpen(false);
