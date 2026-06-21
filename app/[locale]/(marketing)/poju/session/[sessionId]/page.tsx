@@ -6,8 +6,10 @@ import { useParams } from "next/navigation";
 import { getPojuDb } from "@/lib/db/poju-db";
 import { loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
 import { setPOJUV4SessionStatus } from "@/lib/poju/v4-lifecycle";
+import { isUnlockReportReturnRoute } from "@/lib/poju/unlock-report-gate";
 import { PojuSessionChatShell } from "@/components/poju/PojuSessionChatShell";
 import { AppDialogProvider } from "@/components/ui/app-dialog";
+import "@/styles/poju-unlock-report.css";
 import { createInitialAgentState } from "@/lib/poju/agent-state";
 import { sessionMatrixReadyForChat } from "@/lib/poju/matrix-narrative-ready";
 import { isPreviewSession } from "@/lib/poju/preview-unlock";
@@ -132,7 +134,18 @@ export default function PojuSessionDeepLinkPage() {
     );
   }
 
-  if (loading) return <main className="flex min-h-[50vh] items-center justify-center text-white/70">Loading...</main>;
+  if (loading) {
+    if (typeof window !== "undefined" && isUnlockReportReturnRoute(sessionId)) {
+      return (
+        <main
+          className="poju-unlock-report-overlay poju-unlock-report-overlay--route-pending"
+          aria-busy="true"
+          aria-label="Opening base analysis report"
+        />
+      );
+    }
+    return <main className="flex min-h-[50vh] items-center justify-center text-white/70">Loading...</main>;
+  }
   if (!session) return <main className="flex min-h-[50vh] items-center justify-center text-white/70">Session not found</main>;
 
   if (pausedOnly) {

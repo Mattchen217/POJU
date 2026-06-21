@@ -135,6 +135,76 @@ Open each point with \`**Label:** body\` (renderer lead block).
 - **Never** output template placeholders: **Bold lead**, **Lead**, **Bold lead sentence**, etc.
 - Chinese uses the same rule with real phrases like **驱动类型:** — never copy English placeholder tokens`;
 
+const BASE_ANALYSIS_BLOCK_SPACING_ZH = `# 块间距 · 子标题与引导句分行（parseReadingBlocks 必遵）
+
+渲染器按 **\\n\\n** 分块。\`###\` 与 \`**引导:**\` 若挤在同一段/同一行，会渲染成黏连标题（如 "Drive Type Raw drive:"）——**必须分行 + 空行**。
+
+## 正确结构（复制换行 · 勿删空行）
+\`\`\`
+### 子标题
+
+**引导标签:** 正文第一句…
+
+**第二引导:** 可选第二段…
+
+> **核心锚点:** 金句…
+\`\`\`
+
+## 清单标签与 bullets
+\`\`\`
+**日常锚点清单:**
+
+- 第一条
+- 第二条
+\`\`\`
+
+## 严禁（黏行 · 无法分块）
+- ✗ \`### 驱动类型 **原始驱动:** 正文\`（### 与引导同段）
+- ✗ \`### Drive type Raw drive: …\`（### 与引导同一行）
+- ✗ \`**Daily anchor list:** - Rhythm: … - Environment: …\`（清单标签与 bullet 同段、无 \`- \` 换行）
+- ✗ \`### 气候时序 **二十出头:** …\`（子标题与引导黏连）
+
+## 硬规则
+1. \`### 子标题\` **独占一行**，行首 \`### \`，行末**不得**接 \`**引导:**\` 或正文
+2. \`###\` 行后 **必须空一行**，再写 \`**引导标签:** 正文\`
+3. 各块（### / 引导 / 短段 / > 金句 / bullets）之间 **一律 \\n\\n 空行分隔**
+4. 清单标题（如 **日常锚点清单:**）后 **空一行**，再写第一条 \`- \``;
+
+const BASE_ANALYSIS_BLOCK_SPACING_EN = `# Block spacing · subheads vs lead labels (parseReadingBlocks)
+
+The renderer splits on **\\n\\n**. If \`###\` and \`**Label:**\` share one paragraph/line, UI glues them ("Drive Type Raw drive:")—**must be separate lines + blank lines**.
+
+## Correct pattern (keep blank lines)
+\`\`\`
+### Subhead title
+
+**Lead label:** First sentence of body…
+
+**Second lead:** Optional second point…
+
+> **Core anchor:** Pull quote…
+\`\`\`
+
+## List label + bullets
+\`\`\`
+**Daily anchor list:**
+
+- First item
+- Second item
+\`\`\`
+
+## Forbidden (glued · won't parse)
+- ✗ \`### Drive type **Raw drive:** body\` (subhead + lead same chunk)
+- ✗ \`### Drive type Raw drive: …\` (subhead + lead same line)
+- ✗ \`**Daily anchor list:** - Rhythm: … - Environment: …\` (label + bullets one paragraph)
+- ✗ \`### Climate timeline **Early twenties:** …\` (subhead + lead glued)
+
+## Hard rules
+1. \`### Subhead\` on **its own line** only—never append \`**Label:**\` or body on the same line
+2. **Blank line after** every \`###\` line, then \`**Lead label:** body\`
+3. **Blank line between** every block (### / lead / ¶ / > quote / bullets)
+4. List labels (e.g. **Daily anchor list:**) then **blank line**, then first \`- \` item`;
+
 const BASE_ANALYSIS_BULLET_RULE_ZH = `# 列表格式（必须可渲染 · 落库前 parseReadingBlocks 解析）
 
 - 可操作清单（**能量平衡锚** / 调候 / 日常锚点 / 三大变化等）**必须**用 Markdown 列表：
@@ -160,11 +230,11 @@ const BASE_ANALYSIS_LAYOUT_ZH = `# 降维排版（中立元报告 · 奢侈品�
 读感应像 **中立精密读数 + 人话注解**（不是人生故事）。排版像 **Apple 官网 / 顶级杂志**：**精炼、克制、留白**。
 
 ## 每个 ## 分区内部结构
-1. **### 小标题** — 长分区拆成 **2–4 个** \`###\` 子块。
-2. **引导块** — \`**真实标签:** 正文\`（见引导块标签规则）；**禁止** "Bold lead" / "粗体引导" 等占位词。
+1. **### 小标题** — 长分区拆成 **2–4 个** \`###\` 子块；**独占一行 + 后空一行**（见块间距规则）。
+2. **引导块** — \`**真实标签:** 正文\`（见引导块标签规则）；**禁止** "Bold lead" / "粗体引导" 等占位词；**不得与 ### 同段/同行**。
 3. **短段** — 每段 **≤120 字**（英文 ≤80 词），**一个论点一段**，段间空一行。
 4. **金句框 / 锚点** — **四维各至少 1 个** \`> **核心锚点:** …\` 或 \`> **调谐要点:** …\`（锚点标签也要真实短语）。
-5. **列表** — 见列表格式规则：每条 \`- \` **独占一行**，列表前空一行。
+5. **列表** — 见列表格式规则：清单标签后空一行；每条 \`- \` **独占一行**。
 
 ## 篇幅与完整性
 - 全文 **1100–1600 词**（中文同等篇幅）；**四维 + 两层数据展示必须齐全**——宁可略超，**不可**为压字数砍掉任何块。
@@ -179,11 +249,11 @@ const BASE_ANALYSIS_LAYOUT_EN = `# Layout (neutral meta-report · luxury tier ·
 Read like **precise neutral readout + plain-language notes**—not a life story. Layout like **Apple.com / a top magazine**: concise, restrained, breathing room.
 
 ## Inside each ## section
-1. **### subheads** — Split into **2–4** \`###\` blocks.
-2. **Lead blocks** — \`**Real label:** body\` (see lead-label rules)—**never** literal "Bold lead" / "Lead".
+1. **### subheads** — Split into **2–4** \`###\` blocks; **own line + blank line after** (see block-spacing rules).
+2. **Lead blocks** — \`**Real label:** body\` (see lead-label rules)—**never** literal "Bold lead" / "Lead"; **never same line/chunk as ###**.
 3. **Short paragraphs** — **≤80 words** each (Chinese ≤120 chars), one idea per paragraph.
 4. **Pull quote / anchor** — **Each of the four dimensions** needs at least one \`> **Core anchor:** …\` or \`> **Tuning note:** …\` (real label text).
-5. **Bullets** — See bullet format rules: **one** \`- \` item **per line**, blank line before list.
+5. **Bullets** — List label, blank line, then **one** \`- \` item **per line** (see bullet rules).
 
 ## Length & completeness
 - **1100–1600 words** total; **all four dimensions + both data layers required**—slightly over is OK; never drop a block to hit a cap.
@@ -193,7 +263,7 @@ Read like **precise neutral readout + plain-language notes**—not a life story.
 - **All four energy dimensions mandatory**; data layers (synthesized pillars / decade climate) **must remain**.
 - Every ## section: at least one lead block with a **real label**; **Balancing Anchors** needs at least one \`>\` pull quote **or** multi-line \`- \` bullets.`;
 
-const BASE_ANALYSIS_FEW_SHOT_ZH = `# 分区范例（复制结构 · 勿抄意象 · 禁场景）
+const BASE_ANALYSIS_FEW_SHOT_ZH = `# 分区范例（复制结构 · 勿抄意象 · 禁场景 · 保留空行）
 
 \`\`\`markdown
 ## 核心底色（Core Engine Baseline · 强项）
@@ -216,9 +286,13 @@ const BASE_ANALYSIS_FEW_SHOT_ZH = `# 分区范例（复制结构 · 勿抄意象
 
 ## 能量平衡锚（Balancing Anchors · 解决方案）
 
+### 调谐机制
+
 **调谐机制:** 对你有效的 ⟦t:yong_shen|用神（水）|规则网格 + 固定复盘时段，给高频输出加缓冲⟧——标记嵌在完整句中，不作句首碎片。
 
-**神煞嵌入句范例:** 你的 ⟦t:yi_ma|行动脉冲（驿马）|让你倾向持续换场、靠移动释放压力⟧与 ⟦t:gua_su|独立 streak（寡宿）|在需要协作时易变成一堵墙⟧并存时，需要外部节律补位——**禁止** \`行动脉冲（驿马） Pairs with…\` 式断裂。
+### 神煞嵌入
+
+**神煞嵌入句范例:** 你的 ⟦t:yi_ma|行动脉冲（驿马）|让你倾向持续换场、靠移动释放压力⟧与 ⟦t:gua_su|独立 streak（寡宿）|在需要协作时易变成一堵墙⟧并存时，需要外部节律补位。
 
 **日常锚点清单:**
 
@@ -228,6 +302,8 @@ const BASE_ANALYSIS_FEW_SHOT_ZH = `# 分区范例（复制结构 · 勿抄意象
 - 方位/颜色：按 structured 调候方向中性列出（禁招财承诺）
 
 ## 高杠杆发力区（High-Leverage Trajectory · 全力以赴方向）
+
+### 突破状态
 
 **突破状态:** 当用神得力、官印相生链路通畅时，系统最易进入「高信噪比产出」状态——不指定行业，只描述能量条件。
 
@@ -239,21 +315,16 @@ const BASE_ANALYSIS_FEW_SHOT_ZH = `# 分区范例（复制结构 · 勿抄意象
 
 ## 大运能量气候概览
 
-### 气候时序（策略 B · 全白话年龄段 · 无干支）
+### 气候时序
 
 **二十出头:** 金气渐起，系统进入收敛校准期（整段不出现 癸酉/壬申 等字符）。
 
 **三十前后:** 燥润交替，宜强化冷却锚点，避免连续高压输出。（只讲气候，不讲换赛道/升职等剧情）
+\`\`\`
 
-### 气候时序（策略 A · 全标记 · 若用干支则每个都标）
+（策略 A 全标记大运：每个 \`###\` 阶段块同样 **### 独占一行 → 空行 → **阶段引导:** …**，禁止 \`### 气候 **二十出头:**\` 黏行）`;
 
-**若 structured.da_yun 含多个阶段且你选择写干支**，则**每一个**都必须三段位，例如：
-**二十出头:** ⟦t:decade|life phase (癸酉)|水金交接，系统进入校准收敛期⟧。
-**二十中后期:** ⟦t:decade|life phase (壬申)|资源重组期，内耗风险随输出频率上升⟧。
-（辛未/庚午 等同理——**禁止**只标首个、其余裸写）
-\`\`\``;
-
-const BASE_ANALYSIS_FEW_SHOT_EN = `# Section example (copy structure · no scenarios)
+const BASE_ANALYSIS_FEW_SHOT_EN = `# Section example (copy structure · no scenarios · keep blank lines)
 
 \`\`\`markdown
 ## Core Engine Baseline (强项)
@@ -276,7 +347,11 @@ const BASE_ANALYSIS_FEW_SHOT_EN = `# Section example (copy structure · no scena
 
 ## Balancing Anchors (解决方案)
 
+### Tuning mechanism
+
 **Tuning mechanism:** What works for you is a ⟦t:yong_shen|favorable element (水)|rule grid + fixed review windows to buffer high-frequency output⟧—marker inside a full sentence, never a sentence-start fragment.
+
+### Embedded markers
 
 **Embedded-marker grammar:** Your ⟦t:yi_ma|mobility pulse (驿马)|keeps you in motion and releases pressure through change⟧ can pair with a sharp edge when ⟦t:gua_su|independent streak (寡宿)|turns collaboration into a wall you didn't mean to build⟧—**never** \`mobility pulse (驿马) Pairs with…\` (broken subject).
 
@@ -289,6 +364,8 @@ const BASE_ANALYSIS_FEW_SHOT_EN = `# Section example (copy structure · no scena
 
 ## High-Leverage Trajectory (全力以赴方向)
 
+### Breakthrough state
+
 **Breakthrough state:** When the favorable god is active and officer-seal linkage is clear, the system enters high signal-to-noise output easiest—energy conditions only, no industry.
 
 ## Four-Pillar Configuration
@@ -299,19 +376,14 @@ const BASE_ANALYSIS_FEW_SHOT_EN = `# Section example (copy structure · no scena
 
 ## Decade Energy Climate Overview
 
-### Climate timeline (Strategy B · age phrases only · zero Ganzhi)
+### Climate timeline
 
 **Early twenties:** Metal tone rises—system enters calibration/contraction (**no** 癸酉/壬申/辛未/庚午 characters anywhere in this section).
 
 **Mid-thirties:** Dry-moist alternation—reinforce cooling anchors; avoid chained high-pressure output. (climate only—no promotion plot)
+\`\`\`
 
-### Climate timeline (Strategy A · all marked · if you use Ganzhi, mark every one)
-
-If you name stem-branch from \`structured.da_yun\`, **every** stage needs a full marker with **distinct** plain text, e.g.:
-**Early twenties:** ⟦t:decade|life phase (癸酉)|Water-metal handoff—calibration, less visible heat⟧.
-**Mid-twenties:** ⟦t:decade|life phase (壬申)|Resource consolidation; friction rises if cooling stays weak⟧.
-(辛未 / 庚午 same rule—**never** mark the first decade and leave the rest bare)
-\`\`\``;
+(Strategy A all-marked decades: same **### alone → blank line → **Stage label:** …**; never \`### Climate timeline **Early twenties:**\` on one line)`;
 
 export function buildBaseAnalysisStreamPrompt(input: BaseAnalysisStreamPromptInput): {
   system: string;
@@ -346,8 +418,9 @@ ${BASE_ANALYSIS_OUTPUT_SECTIONS_ZH.split("\n").slice(1).join("\n")}
 4. **1100–1600 词**（中文同等篇幅）— **优先保证四维与数据层完整**；宁可略超，**不可**为压字数砍掉任何块。
 5. **压缩水分，不砍信息** — 删解释性铺垫、安慰性排比、同义重复、场景化举例；保留每个维度的关键能量结论与一条可操作的**中立调谐**建议（作息/环境/决策习惯，非职业/关系）。
 6. 第二人称（你），现代、专业、克制；**每段 ≤120 字**；引导块用**真实标签**（禁 Bold lead/粗体引导 占位词）；**四维各至少 1 个**引导块 **+ 1 个** \`>\` 锚点；**能量平衡锚** 用**多行** \`- \` bullets（每条独占一行，列表前空一行）。
-7. 挑战类**不得渲染成「灾祸/损失」恐吓**；**禁裸干支**（大运段全有或全无）；**禁止逐柱罗列原始配置**；神煞/十神**只能来自 structured 实例清单**；**每个 ⟦t:…⟧ 三段位必须闭合**、**嵌入完整句**（禁术语当无冠词句首主语）；可见词内禁 the/a/an。
-8. **落库门禁** — 集外神煞（元辰/六秀日/阴差阳错等）、断标记、裸干支、密度超标会导致整篇被拒并重写；可自然提及 POJU / pojulife；禁 astrology / divination / psychic / horoscope。`
+7. **### 独占一行**，其后空一行再写 \`**引导:**\`；子标题/引导/段落/bullets 块间一律 \`\\n\\n\` 空行（禁 "Drive Type Raw drive:" / "冷却不足 结构短板:" 黏行）。
+8. 挑战类**不得渲染成「灾祸/损失」恐吓**；**禁裸干支**（大运段全有或全无）；**禁止逐柱罗列原始配置**；神煞/十神**只能来自 structured 实例清单**；**每个 ⟦t:…⟧ 三段位必须闭合**、**嵌入完整句**（禁术语当无冠词句首主语）；可见词内禁 the/a/an。
+9. **落库门禁** — 集外神煞（元辰/六秀日/阴差阳错等）、断标记、裸干支、密度超标会导致整篇被拒并重写；可自然提及 POJU / pojulife；禁 astrology / divination / psychic / horoscope。`
       : `# Output requirements
 
 1. **Markdown body only** (## sections + ### subheads + lead + pull quotes + bullets)—no JSON, no \`---META---\`, no fenced full-document code block.
@@ -357,8 +430,9 @@ ${BASE_ANALYSIS_OUTPUT_SECTIONS_EN.split("\n").slice(1).join("\n")}
 4. **1100–1600 words** (equivalent length in Chinese)—**four dimensions + data layers complete first**; slightly over is OK; never drop a block for word cap.
 5. **Cut fluff, not facts** — drop padding, reassurance loops, scenario examples; keep each dimension's key energy read + one **neutral tuning** takeaway (rhythm/environment/decision habits—not career/relationship).
 6. Second person (you); modern, restrained, professional; **≤80 words per paragraph**; lead blocks use **real labels** (never literal "Bold lead" / "Lead"); **each of the four dimensions** needs at least one labeled lead **+ one** \`>\` anchor; **Balancing Anchors** uses **multi-line** \`- \` bullets (one item per line, blank line before list).
-7. Do not frame challenges as doom/scare; **no bare Ganzhi** (decade section: all marked or all age phrases); **no pillar-by-pillar raw config dumps**; shen_sha/ten_gods **only from structured instance inventory**; **every ⟦t:…⟧ fully closed**, **embedded in complete sentences** (no bare term as subject fragment); no the/a/an **inside** visible text.
-8. **Delivery gate** — out-of-set shen_sha (元辰/六秀日/阴差阳错 etc.), broken markers, bare Ganzhi, or density overflow will reject the draft and force rewrite; POJU / pojulife OK; no astrology / divination / psychic / horoscope.`;
+7. **Each \`###\` on its own line**, blank line, then \`**Label:** body\`; blank \`\\n\\n\` between ### / lead / ¶ / bullets (never glued "Drive Type Raw drive:" / "Cooling gap Structural gap:").
+8. Do not frame challenges as doom/scare; **no bare Ganzhi** (decade section: all marked or all age phrases); **no pillar-by-pillar raw config dumps**; shen_sha/ten_gods **only from structured instance inventory**; **every ⟦t:…⟧ fully closed**, **embedded in complete sentences** (no bare term as subject fragment); no the/a/an **inside** visible text.
+9. **Delivery gate** — out-of-set shen_sha (元辰/六秀日/阴差阳错 etc.), broken markers, bare Ganzhi, or density overflow will reject the draft and force rewrite; POJU / pojulife OK; no astrology / divination / psychic / horoscope.`;
 
   const forbiddenBlock =
     lang === "zh"
@@ -379,6 +453,7 @@ ${BASE_ANALYSIS_OUTPUT_SECTIONS_EN.split("\n").slice(1).join("\n")}
     lang === "zh" ? BASE_ANALYSIS_NARRATIVE_BREVITY_ZH : BASE_ANALYSIS_NARRATIVE_BREVITY_EN,
     ...buildPlainspeakVoiceSections(PLAINSPEAK_STYLE_EXAMPLE_BASE_ANALYSIS),
     READING_LAYOUT_CONTRACT,
+    lang === "zh" ? BASE_ANALYSIS_BLOCK_SPACING_ZH : BASE_ANALYSIS_BLOCK_SPACING_EN,
     lang === "zh" ? BASE_ANALYSIS_LEAD_LABEL_RULE_ZH : BASE_ANALYSIS_LEAD_LABEL_RULE_EN,
     lang === "zh" ? BASE_ANALYSIS_BULLET_RULE_ZH : BASE_ANALYSIS_BULLET_RULE_EN,
     lang === "zh" ? BASE_ANALYSIS_LAYOUT_ZH : BASE_ANALYSIS_LAYOUT_EN,

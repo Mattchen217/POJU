@@ -67,6 +67,12 @@
   -webkit-backdrop-filter: blur(8px);
 }
 
+/** Session route loading — same scrim as report modal to avoid chat flash after unlock preparing. */
+.poju-unlock-report-overlay--route-pending {
+  z-index: 200;
+  pointer-events: none;
+}
+
 .poju-unlock-report-panel {
   display: flex;
   flex-direction: column;

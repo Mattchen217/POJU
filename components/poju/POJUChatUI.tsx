@@ -74,6 +74,7 @@ import { refreshMatrixPayload } from "@/lib/poju/build-matrix-payload";
 import {
   getUnlockReportMessage,
   getUnlockReportText,
+  getInitialUnlockReportUiState,
   isPendingUnlockQuestionRelease,
   reportPreviewForCard,
 } from "@/lib/poju/unlock-report-gate";
@@ -150,15 +151,12 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const [driftReason, setDriftReason] = useState("");
   const [editDialog, setEditDialog] = useState<{ messageId: string; content: string } | null>(null);
   const [unlockBusy, setUnlockBusy] = useState(false);
-  const [unlockReportModalOpen, setUnlockReportModalOpen] = useState(false);
-  const [unlockReportGateDismissed, setUnlockReportGateDismissed] = useState(() => {
-    if (typeof window === "undefined") return true;
-    try {
-      return sessionStorage.getItem(POJU_RELEASE_PENDING_QUESTION_FLAG) !== session.session_id;
-    } catch {
-      return true;
-    }
-  });
+  const [unlockReportModalOpen, setUnlockReportModalOpen] = useState(
+    () => getInitialUnlockReportUiState(session).modalOpen,
+  );
+  const [unlockReportGateDismissed, setUnlockReportGateDismissed] = useState(
+    () => getInitialUnlockReportUiState(session).gateDismissed,
+  );
   const openingInitRef = useRef(false);
   const previewMatrixInitRef = useRef<string | null>(null);
   const matrixNarrativeRef = useRef<string | null>(null);
@@ -226,9 +224,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const openUnlockReportModal = useCallback(() => setUnlockReportModalOpen(true), []);
 
   useEffect(() => {
-    if (!unlockReportMessage) return;
+    if (!unlockReportMessage) {
+      setUnlockReportModalOpen(false);
+      return;
+    }
     if (!isPendingUnlockQuestionRelease(session.session_id)) {
       setUnlockReportGateDismissed(true);
+      setUnlockReportModalOpen(false);
       return;
     }
     setUnlockReportGateDismissed(false);
