@@ -2,9 +2,9 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import { BirthInfoPicker } from "@/components/poju/BirthInfoPicker";
 import { BirthInfoConfirmDialog } from "@/components/poju/BirthInfoConfirmDialog";
-import { BaseAnalysisViewModal } from "@/components/profile/BaseAnalysisViewModal";
 import { ProfileAccuracyBadge } from "@/components/profile/ProfileAccuracyBadge";
 import { formatBirthLocationLabel } from "@/lib/profile/birth-info-display";
 import { ProfileUpgradeModal } from "@/components/profile/ProfileUpgradeModal";
@@ -60,6 +60,7 @@ export function SessionPreparation({
   const tGlyph = useTranslations("glyph");
   const tSyncro = useTranslations("syncro");
   const tMatch = useTranslations("match");
+  const router = useRouter();
 
   const [mode, setMode] = useState<"list" | "new">(existingProfiles.length > 0 ? "list" : "new");
   const [profiles, setProfiles] = useState(existingProfiles);
@@ -68,7 +69,6 @@ export function SessionPreparation({
   const [showConfirm, setShowConfirm] = useState(false);
   const [creating, setCreating] = useState(false);
   const [upgradeTarget, setUpgradeTarget] = useState<StoredProfileSummary | null>(null);
-  const [viewAnalysisProfile, setViewAnalysisProfile] = useState<StoredProfileSummary | null>(null);
   const hadProfilesRef = useRef(existingProfiles.length > 0);
 
   useEffect(() => {
@@ -168,7 +168,7 @@ export function SessionPreparation({
             onSelect={handleSelectExisting}
             onAddNew={() => setMode("new")}
             onUpgrade={(p) => setUpgradeTarget(p)}
-            onViewAnalysis={(p) => setViewAnalysisProfile(p)}
+            onViewAnalysis={(p) => router.push(`/profile/${p.profile_id}`)}
             onDelete={(id) => void handleDeleteProfile(id)}
           />
         ) : null}
@@ -215,14 +215,6 @@ export function SessionPreparation({
           profile={upgradeTarget}
           onClose={() => setUpgradeTarget(null)}
           onUpgraded={() => void refreshProfiles()}
-        />
-      ) : null}
-
-      {viewAnalysisProfile ? (
-        <BaseAnalysisViewModal
-          profileId={viewAnalysisProfile.profile_id}
-          displayName={viewAnalysisProfile.display_name}
-          onClose={() => setViewAnalysisProfile(null)}
         />
       ) : null}
     </div>

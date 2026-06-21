@@ -10,8 +10,8 @@ import {
   unescapeGlossPart,
   unescapeMarkerPart,
 } from "@/lib/llm/sanitize/compliance-terms";
+import { termPolarityById, type TermPolarity } from "@/lib/glossary/term-polarity";
 import { toGlossaryLocale } from "@/lib/glossary/term-glossary";
-import type { TermPolarity } from "@/lib/glossary/term-polarity";
 
 import "@/styles/glossary.css";
 
@@ -169,6 +169,7 @@ function parseMarkedText(
       const dynamicPlain = next.groups[2] ? unescapeMarkerPart(next.groups[2]).trim() : "";
       const ui = uiTermById(termId, glossaryLocale);
       const plain = dynamicPlain || ui?.plain || "";
+      const polarity = ui?.polarity ?? termPolarityById(termId);
       if (seenInParagraph.has(termId)) {
         nodes.push(<span key={`t-dup-${keyBase}-${keyIdx++}`}>{visible}</span>);
       } else {
@@ -178,7 +179,7 @@ function parseMarkedText(
             key={`t-${keyBase}-${keyIdx++}`}
             visible={visible}
             plain={plain}
-            polarity={ui?.polarity ?? "neutral"}
+            polarity={polarity}
           />,
         );
       }

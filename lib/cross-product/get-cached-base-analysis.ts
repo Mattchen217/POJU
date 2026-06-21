@@ -2,7 +2,7 @@ import {
   hasBaseAnalysisPayload,
   normalizeBaseAnalysisInput,
 } from "@/lib/llm/prompts/base-analysis-context";
-import { formatBaseAnalysisForDisplay } from "@/lib/profile/format-base-analysis-zh";
+import { markedTextFromStoredBaseAnalysis } from "@/lib/base-analysis/resolve-display-text";
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 
 export type CachedBaseAnalysis = {
@@ -18,14 +18,11 @@ export async function getCachedBaseAnalysis(profileId: string): Promise<CachedBa
   const bundle = normalizeBaseAnalysisInput(stored.base_analysis);
   if (!hasBaseAnalysisPayload(bundle)) return null;
 
-  const reportText = formatBaseAnalysisForDisplay({
-    content: bundle.content,
-    display_text: bundle.display_text,
-  });
-  if (!reportText.trim()) return null;
+  const reportText = markedTextFromStoredBaseAnalysis(stored.base_analysis);
+  if (!reportText) return null;
 
   return {
     baseAnalysis: stored.base_analysis,
-    reportText: reportText.trim(),
+    reportText,
   };
 }

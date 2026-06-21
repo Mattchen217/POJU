@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { BaseAnalysisDeliveryView } from "@/components/base-analysis/BaseAnalysisDeliveryView";
-import { formatBaseAnalysisForDisplay } from "@/lib/profile/format-base-analysis-zh";
+import { buildStreamLocalDataFromProfile } from "@/lib/base-analysis/build-stream-local-data";
+import { markedTextFromStoredBaseAnalysis } from "@/lib/base-analysis/resolve-display-text";
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 
 type BaseAnalysisViewModalProps = {
@@ -31,20 +32,20 @@ export function BaseAnalysisViewModal({ profileId, displayName, onClose }: BaseA
       setError(null);
       try {
         const data = await getStoredProfile(profileId);
-        if (!data?.base_analysis) {
+        const displayText = markedTextFromStoredBaseAnalysis(data?.base_analysis);
+        if (!displayText) {
           setError(t("not_found"));
           return;
         }
-        const ba = data.base_analysis;
+        const ba = data!.base_analysis!;
         if (!cancelled) {
-          setText(
-            formatBaseAnalysisForDisplay({
-              content: ba.content,
-              display_text: ba.display_text,
-              raw_text: ba.raw_text,
-            }),
+          setText(displayText);
+          setStructured(
+            ba.structured ??
+              (data?.user_profile
+                ? buildStreamLocalDataFromProfile(data.user_profile).structured
+                : null),
           );
-          setStructured(ba.structured ?? null);
           const when = ba.generated_at ? new Date(ba.generated_at).toLocaleString() : "";
           setMetaLine(
             [displayName, when, ba.model ? `模型 ${ba.model}` : ""].filter(Boolean).join(" · "),

@@ -37,7 +37,9 @@ export function BaseAnalysisDeliveryView({
   const showCta = variant === "page" && profileId;
 
   return (
-    <div className={`base-analysis-delivery glyph-reading-page${variant === "modal" ? " base-analysis-delivery--modal" : ""}`}>
+    <div
+      className={`base-analysis-delivery glyph-reading-page${variant === "page" ? " browser-flow-page" : ""}${variant === "modal" ? " base-analysis-delivery--modal" : ""}`}
+    >
       <div className="glyph-delivery-panel">
         <div className="glyph-delivery-inner base-analysis-delivery__inner">
           {header}

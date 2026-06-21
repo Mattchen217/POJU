@@ -25,7 +25,7 @@ const EN_RED_LINE =
 
 const BASE_ANALYSIS_OUTPUT_SECTIONS_ZH = `# 输出分区（必须齐全 · Markdown ## 标题）
 
-1. **## 核心性格** — 日主 + 格局 + 用神/喜神/忌神 + 强弱（绑定 structured，只展开不另算）
+1. **## 核心性格** — 日主 + **结构化格局判断**（绑定 structured.pattern，展开不另判）+ 用神/喜神/忌神 + 强弱（绑定 structured，只展开不另算）
 2. **## 四柱与隐藏世界** — 年/月/日/时柱与藏干、十神、神煞（**仅 structured 里有的**）
 3. **## 天赋与盲点** — 天性优势与性格盲区（具体行为模式）
 4. **## 人生主题** — 事业 · 财富 · 婚恋 · 健康 · 贵人方位（小标题或段落分隔）
@@ -35,7 +35,7 @@ const BASE_ANALYSIS_OUTPUT_SECTIONS_ZH = `# 输出分区（必须齐全 · Markd
 
 const BASE_ANALYSIS_OUTPUT_SECTIONS_EN = `# Output sections (all required · Markdown ## headings)
 
-1. **## Core Character** — day master + pattern + yong/xi/ji + strength (bound to structured; explain only)
+1. **## Core Character** — day master + **structured pattern read** (bound to structured.pattern; explain only) + yong/xi/ji + strength (bound to structured; explain only)
 2. **## Four Pillars & Hidden Layer** — pillars, hidden stems, ten gods, stars (**only those in structured**)
 3. **## Gifts & Blind Spots** — natural strengths and blind spots (concrete behaviors)
 4. **## Life Themes** — career · wealth · relationships · health · mentor directions
@@ -49,8 +49,9 @@ const BASE_ANALYSIS_BINDING_RULES = `# 绑定计算结果 · 闭集 · 禁幻觉
 2. **神煞闭集** — 只能取自 structured.pillars_detail 里实际出现的神煞（引擎闭集 9 选 N：天乙贵人/禄神/飞刃/文昌/桃花/驿马/华盖/孤辰/寡宿）。**严禁**写出数据中不存在的神煞，尤其禁止：国印贵人、月德合、天德合、太极贵人、福星贵人、劫煞、十恶大败、空亡、学堂 等引擎不计算的项。
 3. **十神/长生** — 同理，只用 structured 给出的具体条目；禁止类别统称代替或编造。
 4. **data_availability.missing** — pillars_detail 或 da_yun 缺失时，该维度**只做方向性描述**，禁止编造具体干支/神煞/起运岁数。
-5. **术语标记** — 凡命理术语一律 \`⟦t:<id>|<可见软译词>|<该处白话>⟧\` 三段位；keep_cn 词（日主/大运/流年/干支）拼成 \`软译 (干支)\`，如 \`⟦t:day_master|core nature (辛)|…⟧\`。用户正文**不得出现裸术语或未闭合标记**。
-6. **禁止假设**「输出端会软翻译」——你必须在生成时直接写好标记与软译词。`;
+5. **术语标记** — 凡命理术语一律 \`⟦t:<id>|<可见软译词>|<该处白话>⟧\` 三段位；**id 必须严格使用术语表中的闭集 slug**（如 \`yong_shen\`、\`favorable_element\`、\`unfavorable_element\`、\`yi_ma\`、\`fei_ren\`、\`zheng_yin\`、\`life_guandai\`、\`strong_self\`），**禁止自造 id**。keep_cn 词（日主/大运/流年/干支）拼成 \`软译 (干支)\`，如 \`⟦t:day_master|core nature (辛)|…⟧\`。用户正文**不得出现裸术语或未闭合标记**。
+6. **标记排版** — 标记**紧贴**软译词，**禁止**在标记前插入裸换行或断行（错误：\`the\\n⟦t:zheng_yin|…⟧\`；正确：\`the ⟦t:zheng_yin|steady support|…⟧ rhythm\`）。
+7. **禁止假设**「输出端会软翻译」——你必须在生成时直接写好标记与软译词。`;
 
 const BASE_ANALYSIS_FEW_SHOT_ZH = `# 字段范例（复制此形态 · 三段位 + 比喻入正文）
 

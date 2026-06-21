@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import { BirthInfoForm } from "@/components/forms/BirthInfoForm";
 import type { StoredProfileRelationship } from "@/lib/db/poju-db";
 import {
@@ -18,7 +19,6 @@ import { normalizeStoredBirthInfo } from "@/lib/profile/birth-info-utils";
 import { formatBirthLocationLabel } from "@/lib/profile/birth-info-display";
 import type { UserProfile } from "@/lib/profile/types";
 import { generateBaseAnalysis } from "@/lib/llm/deepseek/base-analysis";
-import { BaseAnalysisViewModal } from "@/components/profile/BaseAnalysisViewModal";
 import { ProfileAccuracyBadge } from "@/components/profile/ProfileAccuracyBadge";
 import { ProfileUpgradeModal } from "@/components/profile/ProfileUpgradeModal";
 
@@ -63,12 +63,12 @@ function relLabel(r: StoredProfileRelationship, tr: (key: string) => string): st
 
 export function ProfileSelector({ product, onSelected, onCancel, allowSkip, onSkip }: ProfileSelectorProps) {
   const t = useTranslations("profile_selector");
+  const router = useRouter();
   const [step, setStep] = useState<Step>("list");
   const [profiles, setProfiles] = useState<StoredProfileSummary[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [upgradeTarget, setUpgradeTarget] = useState<StoredProfileSummary | null>(null);
-  const [viewAnalysisProfile, setViewAnalysisProfile] = useState<StoredProfileSummary | null>(null);
 
   async function loadProfiles() {
     setLoading(true);
@@ -115,7 +115,7 @@ export function ProfileSelector({ product, onSelected, onCancel, allowSkip, onSk
           onAddNew={() => setStep("create")}
           onDelete={(id) => void handleDelete(id)}
           onUpgrade={(p) => setUpgradeTarget(p)}
-          onViewAnalysis={(p) => setViewAnalysisProfile(p)}
+          onViewAnalysis={(p) => router.push(`/profile/${p.profile_id}`)}
           onCancel={onCancel}
           allowSkip={allowSkip}
           onSkip={onSkip}
@@ -150,14 +150,6 @@ export function ProfileSelector({ product, onSelected, onCancel, allowSkip, onSk
           profile={upgradeTarget}
           onClose={() => setUpgradeTarget(null)}
           onUpgraded={() => void loadProfiles()}
-        />
-      ) : null}
-
-      {viewAnalysisProfile ? (
-        <BaseAnalysisViewModal
-          profileId={viewAnalysisProfile.profile_id}
-          displayName={viewAnalysisProfile.display_name}
-          onClose={() => setViewAnalysisProfile(null)}
         />
       ) : null}
 
@@ -278,6 +270,7 @@ function ProfileConfirmView({
   onBack: () => void;
 }) {
   const t = useTranslations("profile_selector");
+  const router = useRouter();
   const [data, setData] = useState<Awaited<ReturnType<typeof getStoredProfile>> | null | undefined>(undefined);
   const [record, setRecord] = useState<Awaited<ReturnType<typeof getStoredProfileRecord>> | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -299,9 +292,7 @@ function ProfileConfirmView({
     setGenerating(true);
     try {
       await generateBaseAnalysis(profileId);
-      const [d, r] = await Promise.all([getStoredProfile(profileId), getStoredProfileRecord(profileId)]);
-      setData(d ?? null);
-      setRecord(r);
+      router.push(`/profile/${profileId}`);
     } catch (e) {
       setGenError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -357,7 +348,16 @@ function ProfileConfirmView({
           </button>
         </div>
       ) : record?.has_base_analysis ? (
-        <p className="text-xs text-emerald-200/90">{t("base_analysis_ready")}</p>
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-xs text-emerald-200/90">{t("base_analysis_ready")}</p>
+          <button
+            type="button"
+            className="text-xs text-cyan-200/90 hover:underline"
+            onClick={() => router.push(`/profile/${profileId}`)}
+          >
+            {t("view_analysis")}
+          </button>
+        </div>
       ) : null}
       <div className="flex flex-wrap gap-2">
         <button type="button" className="rounded-lg border border-white/20 px-3 py-2 text-sm" onClick={onBack}>
