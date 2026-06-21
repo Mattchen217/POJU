@@ -46,7 +46,7 @@ async function main(): Promise<void> {
   console.log("\n=== Step B: POJU modularization static checks ===\n");
 
   assert("poju-base.ts exists", existsSync(resolve(ROOT, "lib/llm/prompts/poju-base.ts")));
-  assert("6 core exports (incl output policy)", buildPojuCorePromptSections().length === 6);
+  assert("core sections exclude READING_LAYOUT (delivery-only)", !buildPojuCorePromptSections().some((s) => s.includes("降维排版（杂志式版面")));
 
   assert("identity 破局顾问", POJU_BREAKTHROUGH_COUNSELOR_IDENTITY.includes("破局顾问"));
   assert("identity 不是签文(Glyph)", POJU_BREAKTHROUGH_COUNSELOR_IDENTITY.includes("Glyph"));
@@ -70,6 +70,8 @@ async function main(): Promise<void> {
   assert("context NOT ORIENTAL_COUNSELOR_BASE", !ctx.includes("ORIENTAL_COUNSELOR_BASE"));
 
   assert("final-delivery uses poju-base", final.includes("buildPojuCorePromptSections"));
+  assert("final-delivery includes READING_LAYOUT", final.includes("READING_LAYOUT_CONTRACT"));
+  assert("chat static core excludes READING_LAYOUT", !buildPojuCorePromptSections().some((s) => s.includes("降维排版（杂志式版面")));
   assert("final-delivery stitchPromptSections", final.includes("stitchPromptSections"));
 
   assert("oriental-counselor still has ORIENTAL_COUNSELOR_BASE for Syncro/Match", oriental.includes("ORIENTAL_COUNSELOR_BASE"));

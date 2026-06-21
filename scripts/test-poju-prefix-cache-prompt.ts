@@ -103,6 +103,9 @@ async function main(): Promise<void> {
   assert("static system has NO task block A", !staticA.includes("Task A"));
   assert("static system has NO task block B", !staticB.includes("Task B"));
   assert("static system has core POJU identity", staticA.includes("POJU") || staticA.includes("破局"));
+  assert("static chat system excludes READING_LAYOUT magazine block", !staticA.includes("降维排版（杂志式版面"));
+  assert("dynamic turn has POJU chat rules (not report layout)", dynamicA.includes("POJU 对话 response 规则"));
+  assert("dynamic chat rules ban per-turn quote boxes", dynamicA.includes("金句框"));
   assert("user turn has date context (dynamic)", prepA.messages[prepA.messages.length - 1]!.content.includes("202"));
   assert("user turn has language directive marker", prepA.messages[prepA.messages.length - 1]!.content.length > 200);
 

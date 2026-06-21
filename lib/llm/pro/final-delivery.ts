@@ -13,6 +13,7 @@ import { markCycleDelivered } from "@/lib/poju/cycle-manager";
 import { computeSituationContextFingerprint } from "@/lib/poju/situation-context-fingerprint";
 import { getCachedSituationAnalysis, resolveBaseAnalysisForSession } from "@/lib/llm/deepseek/situation-analysis";
 import { buildPojuCorePromptSections } from "@/lib/llm/prompts/poju-base";
+import { READING_LAYOUT_CONTRACT } from "@/lib/llm/prompts/reading-layout";
 import { buildTermMarkingPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
 
@@ -292,6 +293,7 @@ ${sitStr}
 
   const system = stitchPromptSections(
     ...buildPojuCorePromptSections(deliveryLang),
+    READING_LAYOUT_CONTRACT,
     buildTermMarkingPromptBlock(locale),
     finalDeliveryTask,
   );

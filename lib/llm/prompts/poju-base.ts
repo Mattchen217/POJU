@@ -8,7 +8,6 @@ import {
   buildPlainspeakVoiceSections,
   PLAINSPEAK_STYLE_EXAMPLE_POJU,
 } from "@/lib/llm/prompts/plainspeak-voice";
-import { READING_LAYOUT_CONTRACT } from "@/lib/llm/prompts/reading-layout";
 import { buildDeliveryGrammarPolishBlock } from "@/lib/llm/prompts/delivery-grammar-polish";
 
 export const POJU_BREAKTHROUGH_COUNSELOR_IDENTITY = `# 你是谁（POJU · 破局顾问）
@@ -136,6 +135,7 @@ export const POJU_OUTPUT_BRANDING = `# ⚠️ POJU 输出品牌（用户可见 �
 
 - 标记行本身保持英文/符号原样；**标记内正文**使用用户语言
 - 聊天阶段（问诊/追踪）**不要**输出上述完整交付块——Step 9 / final-delivery 负责
+- 聊天 JSON \`response\` **不要**套用降维排版/杂志式版面（无每轮粗体引导、无金句框、无 ### 子标题）——见动态侧「POJU 对话 response 规则」
 
 ## POJU 术语替换（禁止中医/占卜口吻）
 ✗ 方子 → ✓ 破局方案 / 行动方案
@@ -190,7 +190,6 @@ export function buildPojuCorePromptSections(outputLang = "en"): string[] {
   return [
     POJU_BREAKTHROUGH_COUNSELOR_IDENTITY,
     ...buildPlainspeakVoiceSections(PLAINSPEAK_STYLE_EXAMPLE_POJU),
-    READING_LAYOUT_CONTRACT,
     POJU_BAZI_DEEP_METHOD,
     POJU_ACTION_DESIGN_PRINCIPLES,
     buildOutputPolicyForPoju(),

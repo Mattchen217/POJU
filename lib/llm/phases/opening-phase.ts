@@ -41,7 +41,7 @@ function buildOpeningTaskBlock(input: PhaseLLMInput): string {
 ## 风格
 
 - 总字数 180–420 字（中文）/ 140–300 词（英文）
-- **对话口吻**：短段 + 必要时粗体引导 + 至多 1 个金句框（可选）；可引用命盘或工具结论中的至少 1 条具体细节（⟦t:…⟧）
+- **对话 Agent 口吻**：自然短多段；至少 1 条命盘或工具结论细节（⟦t:…⟧）；**不要**粗体引导标签/金句框/### 子标题
 - 细则见上方「POJU 对话 response 规则」
 
 ## 输出格式（严格 JSON，无 markdown 围栏）
@@ -79,7 +79,7 @@ function buildOpeningTaskBlock(input: PhaseLLMInput): string {
 ## 风格
 
 - 总字数 180-420 字（中文）/ 140-300 词（英文）
-- **对话口吻**：命盘 1-2 段 + 承接问题 + 尖锐追问（追问可进金句框，**非必须**）；至少 1 处 ⟦t:…⟧ 引用 base_analysis
+- **对话 Agent 口吻**：命盘 1-2 短段 + 承接问题 + 尖锐追问；至少 1 处 ⟦t:…⟧ 引用 base_analysis；**不要**粗体引导标签/金句框/### 子标题
 - 细则见上方「POJU 对话 response 规则」；不要说「我能帮你」之类的空承诺
 
 ## 输出格式（严格 JSON，无 markdown 围栏）
