@@ -1987,6 +1987,11 @@
     },
     "report": {
       "title": "Match Report",
+      "delivery_eyebrow": "Relationship Resonance",
+      "meta_synergy": "Synergy",
+      "meta_resonance": "Resonance",
+      "synergy_pattern_eyebrow": "Resonance Pattern",
+      "question_lead": "Your Question",
       "resonance_label": "Dynamic Resonance",
       "preview_synergy": "System dynamics: {type} — generating narrative…",
       "key_traits": "Key Traits",

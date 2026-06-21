@@ -21,7 +21,7 @@
   html:not(.pwa-mode) .glyph-loading-page,
   html:not(.pwa-mode) .glyph-error-page,
   html:not(.pwa-mode) .archive-detail-page,
-  html:not(.pwa-mode) .match-report,
+  html:not(.pwa-mode) .match-reading-page,
   html:not(.pwa-mode) .match-payment-page,
   html:not(.pwa-mode) .syncro-task-page {
     width: 100%;
@@ -44,8 +44,8 @@
     }
   }
 
-  html:not(.pwa-mode) .match-report {
-    max-width: var(--browser-flow-max-width-wide);
+  html:not(.pwa-mode) .match-reading-page {
+    max-width: none;
   }
 
   html:not(.pwa-mode) .browser-flow-page {
@@ -233,9 +233,9 @@
     margin-inline: auto;
   }
 
-  html:not(.pwa-mode) .match-report {
+  html:not(.pwa-mode) .match-reading-page {
     min-height: auto;
-    padding: 2rem 2.5rem 4rem;
+    padding: 0 0 4rem;
   }
 
   html:not(.pwa-mode) .match-payment-page {

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
-import { MatchReport } from "@/components/match/MatchReport";
+import { MatchDeliveryView } from "@/components/match/MatchDeliveryView";
 import { acknowledgeDeliveryViewed } from "@/lib/archive/archive-delivery-pending";
 import { useRouter } from "@/i18n/navigation";
 import { loadMatchSession } from "@/lib/match/match-session";
@@ -55,5 +55,5 @@ export function MatchResultPage() {
     );
   }
 
-  return <MatchReport session={session} locale={session.locale || locale} />;
+  return <MatchDeliveryView session={session} locale={session.locale || locale} />;
 }

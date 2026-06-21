@@ -164,21 +164,11 @@
   opacity: 1;
 }
 
-/* Match report */
-.match-report .card-content .reading-body {
-  max-width: min(780px, 100%);
-  font-size: 1.0625rem;
-  color: var(--m-ink-dim, #c8c4d4);
+/* Match delivery (glyph-delivery layout) */
+.match-reading-page .glyph-delivery-inner .reading-body {
+  max-width: 100%;
 }
 
-.match-report .card-content .reading-pullquote {
-  margin-top: 0.85em;
-}
-
-.match-report .action-detail .reading-body {
+.match-reading-page .glyph-dual-alignment .reading-body {
   margin: 0;
-}
-
-.match-report .match-cards {
-  gap: 3.5rem;
 }

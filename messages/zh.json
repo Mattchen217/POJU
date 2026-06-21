@@ -2002,6 +2002,11 @@
     },
     "report": {
       "title": "合盘报告",
+      "delivery_eyebrow": "关系共振",
+      "meta_synergy": "协同",
+      "meta_resonance": "共振",
+      "synergy_pattern_eyebrow": "共振模式",
+      "question_lead": "你的问题",
       "resonance_label": "动态共振",
       "preview_synergy": "系统动力学：{type} — 正在生成报告…",
       "key_traits": "关键特质",
