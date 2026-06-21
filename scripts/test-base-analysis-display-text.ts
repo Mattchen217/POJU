@@ -33,13 +33,12 @@ function loadEnvLocal() {
 }
 
 const REQUIRED_SECTIONS_ZH = [
-  "核心性格",
-  "四柱与隐藏世界",
-  "天赋与盲点",
-  "人生主题",
-  "当前大运详解",
-  "大运全程概览",
-  "传统调候建议",
+  "核心底色",
+  "系统脆弱点",
+  "能量平衡锚",
+  "高杠杆发力区",
+  "四柱命盘数据",
+  "大运能量气候概览",
 ];
 
 function buildTestProfile(): { profile: UserProfile; chart: ReturnType<typeof getBaziChart> } {
@@ -115,6 +114,8 @@ async function main() {
   console.log("has term marking block:", system.includes("⟦t:") ? "PASS" : "FAIL");
   console.log("has closed-set rule:", system.includes("国印贵人") ? "PASS" : "FAIL");
   console.log("has data_availability:", system.includes("data_availability") ? "PASS" : "FAIL");
+  console.log("has four-dimension framework:", system.includes("核心底色") && system.includes("系统脆弱点") ? "PASS" : "FAIL");
+  console.log("has neutrality ban:", system.includes("开咖啡馆") || system.includes("café") ? "PASS" : "FAIL");
 
   if (!isOpenRouterConfigured()) {
     console.log("\n⚠ OPENROUTER_API_KEY not set — skipping live display_text generation.");

@@ -5,7 +5,10 @@
 import { getBaziChart } from "shunshi-bazi-core";
 
 import { buildProfileStructured } from "@/lib/calculations/build-profile-structured";
-import { formatBaseAnalysisForPrompt } from "@/lib/llm/prompts/base-analysis-context";
+import {
+  BASE_ANALYSIS_DOWNSTREAM_BANNER_ZH,
+  formatBaseAnalysisForPrompt,
+} from "@/lib/llm/prompts/base-analysis-context";
 import { buildProfileContextSection } from "@/lib/llm/prompts/oriental-counselor-base";
 import { parseProfileForMatrix, wrapProfileForMatrix } from "@/lib/match/parse-profile-for-matrix";
 import { calculateSyncroMatrix } from "@/lib/syncro/calculate-matrix";
@@ -75,12 +78,18 @@ function main() {
 
   console.log("=== buildProfileContextSection (v4) ===");
   const ctxV4 = buildProfileContextSection(profile, v4Bundle);
-  console.log(ctxV4.includes("## 性格结构数据（内部精确") ? "✓ has structured block" : "✗ missing structured");
-  console.log(ctxV4.includes("## 性格画像分析（用户向白榜") ? "✓ has display_text block" : "✗ missing display_text");
+  console.log(ctxV4.includes("## 能量底座·结构数据（内部精确") ? "✓ has structured block" : "✗ missing structured");
+  console.log(ctxV4.includes("## 中立能量元报告（用户向白榜") ? "✓ has display_text block" : "✗ missing display_text");
   console.log(ctxV4.includes('"da_yun"') ? "✓ structured JSON includes da_yun" : "✗ da_yun missing");
 
   console.log("\n=== formatBaseAnalysisForPrompt excerpt ===");
-  console.log(formatBaseAnalysisForPrompt(v4Bundle).slice(0, 600), "\n…");
+  const formatted = formatBaseAnalysisForPrompt(v4Bundle, "zh");
+  console.log(formatted.slice(0, 600), "\n…");
+  console.log(
+    formatted.includes(BASE_ANALYSIS_DOWNSTREAM_BANNER_ZH)
+      ? "✓ downstream neutral banner present"
+      : "✗ missing downstream banner",
+  );
 
   console.log("\n=== legacy fallback (v3 content only) ===");
   const ctxLegacy = buildProfileContextSection(profile, legacyBundle);

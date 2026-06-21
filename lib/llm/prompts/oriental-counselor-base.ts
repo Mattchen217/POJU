@@ -324,7 +324,7 @@ export function buildProfileContextSection(
   const h = splitPillar(bazi.hourPillar);
   const birth = profile.birth;
 
-  const analysisBlock = formatBaseAnalysisForPrompt(baseAnalysis);
+  const analysisBlock = formatBaseAnalysisForPrompt(baseAnalysis, locale);
   const identityBlock = buildBirthIdentityGroundTruthBlock(birth, locale);
 
   return `# 用户的命盘信息（仅供你内部分析使用）
@@ -349,11 +349,11 @@ ${analysisBlock}
 ---
 
 ⚠️ 使用说明:
-- 【性格结构数据】含精确四柱/用神/大运等术语 JSON，是计算与交叉验证的首要依据
-- 【性格画像分析】是用户向白榜，可引用其洞察，但精确干支/大运以 structured 为准
+- 【能量底座·结构数据】含精确四柱/用神/大运等术语 JSON，是计算与交叉验证的首要依据
+- 【中立能量元报告】是只读配置底座（非场景化人生故事）；**场景投射由你（下游引擎）完成**，不得从中反推具体职业/关系/事件
 - 不要在回复里粘贴 JSON 或命盘表格；把结论融入自然对话
 - 用户困境沉重时，允许写得更充分（见各阶段字数要求），不要为短而短
-- 行动建议必须基于这个命主结构`;
+- 行动建议必须基于这个命主结构，并结合用户当下情境`;
 }
 
 export function stitchPromptSections(...parts: string[]): string {

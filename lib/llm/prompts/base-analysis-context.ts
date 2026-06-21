@@ -68,18 +68,29 @@ function applyMaxChars(text: string): string {
   return text;
 }
 
-/** LLM context: structured (精确术语) + display_text (白榜). Legacy content-only still supported. */
-export function formatBaseAnalysisForPrompt(baseAnalysis: unknown): string {
+/** Downstream injection banner — neutral base must not be read as scenario typing. */
+export const BASE_ANALYSIS_DOWNSTREAM_BANNER_ZH =
+  "(以下为中立能量底座，供下游做场景投射；不含且不应推断具体职业/关系/事件。)";
+
+export const BASE_ANALYSIS_DOWNSTREAM_BANNER_EN =
+  "(Neutral energy base below—for downstream scenario projection only; must not infer specific career, relationship, or events from it.)";
+
+/** LLM context: structured (精确术语) + display_text (中立元报告白榜). Legacy content-only still supported. */
+export function formatBaseAnalysisForPrompt(baseAnalysis: unknown, locale?: string): string {
   const bundle = normalizeBaseAnalysisInput(baseAnalysis);
 
   if (!hasBaseAnalysisPayload(bundle)) {
-    return "(命主基础分析尚未生成，可依据四柱与日主做推演。)";
+    return "(中立能量元报告尚未生成，可依据 structured / 四柱与日主做下游推演。)";
   }
+
+  const banner = locale?.startsWith("zh")
+    ? BASE_ANALYSIS_DOWNSTREAM_BANNER_ZH
+    : BASE_ANALYSIS_DOWNSTREAM_BANNER_EN;
 
   const parts: string[] = [];
 
   if (bundle.structured) {
-    parts.push(`## 性格结构数据（内部精确，术语数据）
+    parts.push(`## 能量底座·结构数据（内部精确，术语数据）
 
 \`\`\`json
 ${JSON.stringify(bundle.structured, null, 2)}
@@ -99,23 +110,29 @@ ${JSON.stringify(bundle.structured, null, 2)}
     typeof bundle.content === "object";
 
   if (displayText && !legacyJsonOnly) {
-    parts.push(`## 性格画像分析（用户向白榜）
+    parts.push(`## 中立能量元报告（用户向白榜）
+
+${banner}
 
 ${stripGlossTokensForPrompt(displayText)}`);
   } else if (legacyJsonOnly) {
-    parts.push(`## 命主基础分析（legacy JSON）
+    parts.push(`## 命主基础分析（legacy JSON · 场景化内容可能过时）
+
+${banner}
 
 \`\`\`json
 ${JSON.stringify(bundle.content, null, 2)}
 \`\`\``);
   } else if (typeof bundle.content === "string" && bundle.content.trim()) {
-    parts.push(`## 性格画像分析（用户向白榜）
+    parts.push(`## 中立能量元报告（用户向白榜）
+
+${banner}
 
 ${bundle.content.trim()}`);
   }
 
   if (parts.length === 0) {
-    return "(命主基础分析尚未生成，可依据四柱与日主做推演。)";
+    return "(中立能量元报告尚未生成，可依据 structured / 四柱与日主做下游推演。)";
   }
 
   return applyMaxChars(parts.join("\n\n"));
