@@ -17,7 +17,11 @@ import {
   POJU_SESSION_GUARDRAILS,
   buildPojuCorePromptSections,
 } from "@/lib/llm/prompts/poju-base";
-import { buildPojuSystemPrompt } from "@/lib/llm/phases/oriental-prompt-context";
+import {
+  buildPojuStaticSystemPrompt,
+  buildPojuDynamicTurnContext,
+  preparePojuPhaseLLMCall,
+} from "@/lib/llm/phases/oriental-prompt-context";
 import type { BirthInfo } from "@/lib/profile/types";
 import type { PhaseLLMInput } from "@/lib/llm/phases/types";
 
@@ -70,15 +74,25 @@ async function main(): Promise<void> {
 
   assert("oriental-counselor still has ORIENTAL_COUNSELOR_BASE for Syncro/Match", oriental.includes("ORIENTAL_COUNSELOR_BASE"));
 
+  assert("context has buildPojuStaticSystemPrompt", ctx.includes("buildPojuStaticSystemPrompt"));
+  assert("context has preparePojuPhaseLLMCall", ctx.includes("preparePojuPhaseLLMCall"));
+  assert("context has buildPojuDynamicTurnContext", ctx.includes("buildPojuDynamicTurnContext"));
+  assert("context documents prefix cache TTL", ctx.includes("TTL"));
+
   for (const phase of [
     "opening-phase.ts",
     "collecting-phase.ts",
     "confirmation-phase.ts",
     "delivery-phase.ts",
     "tracking-phase.ts",
+    "stall-offer-phase.ts",
   ]) {
     const p = read(`lib/llm/phases/${phase}`);
-    assert(`${phase} uses buildOrientalSystemPrompt`, p.includes("buildOrientalSystemPrompt"));
+    const usesNew =
+      p.includes("preparePojuPhaseLLMCall") ||
+      (phase === "opening-phase.ts" && p.includes("buildPojuStaticSystemPrompt"));
+    assert(`${phase} uses prefix-cache API`, usesNew);
+    assert(`${phase} does NOT call buildOrientalSystemPrompt`, !p.includes("buildOrientalSystemPrompt"));
   }
 
   const birth: BirthInfo = {
@@ -131,7 +145,12 @@ async function main(): Promise<void> {
 
   phaseInput.session.agent_v2 = mockAgent;
 
-  const openingSystem = await buildPojuSystemPrompt(
+  const openingStatic = await buildPojuStaticSystemPrompt(phaseInput);
+  const openingPrep = await preparePojuPhaseLLMCall(
+    phaseInput,
+    `# 当前任务：主动开场\n\nOutput JSON with response only.`,
+  );
+  const openingDynamic = buildPojuDynamicTurnContext(
     phaseInput,
     `# 当前任务：主动开场\n\nOutput JSON with response only.`,
   );
@@ -144,9 +163,13 @@ async function main(): Promise<void> {
     recent_user_messages: ["Should I leave my current job to join a startup?"],
   });
 
-  assert("opening prompt has POJU identity", openingSystem.includes("破局顾问") || openingSystem.includes("POJU"));
-  assert("opening prompt has BAZI method", openingSystem.includes("大运") || openingSystem.includes("Major"));
-  assert("opening prompt NO monolithic ORIENTAL at start", !openingSystem.startsWith("# 你是谁\n\n你是 POJU，一位精通"));
+  assert("opening static has POJU identity", openingStatic.includes("破局顾问") || openingStatic.includes("POJU"));
+  assert("opening static has BAZI method", openingStatic.includes("大运") || openingStatic.includes("Major"));
+  assert("opening static NO monolithic ORIENTAL at start", !openingStatic.startsWith("# 你是谁\n\n你是 POJU，一位精通"));
+  assert("opening static equals prepare system", openingStatic === openingPrep.system);
+  assert("dynamic context NOT in static system", !openingStatic.includes("当前任务：主动开场"));
+  assert("dynamic context in user turn", openingPrep.messages.some((m) => m.content.includes("当前任务：主动开场")));
+  assert("dynamic turn context non-empty", openingDynamic.trim().length > 50);
 
   assert("final delivery has ANALYSIS marker", deliverySystem.includes("═══ ANALYSIS ═══"));
   assert("final delivery has WHAT TO DO", deliverySystem.includes("═══ WHAT TO DO ═══"));
@@ -155,10 +178,12 @@ async function main(): Promise<void> {
   assert("final delivery has poju-base 八字", deliverySystem.includes("POJU_BAZI_DEEP_METHOD") || deliverySystem.includes("八字深度解读"));
 
   const sample = [
-    "========== POJU OPENING PHASE (collecting) — head ==========",
-    openingSystem.slice(0, 2400),
+    "========== POJU STATIC SYSTEM (collecting) — head ==========",
+    openingStatic.slice(0, 2400),
     "\n...[middle omitted]...\n",
-    openingSystem.slice(-1200),
+    openingStatic.slice(-1200),
+    "\n========== POJU DYNAMIC TURN CONTEXT — head ==========",
+    openingDynamic.slice(0, 1200),
     "\n========== POJU FINAL DELIVERY — head ==========",
     deliverySystem.slice(0, 2400),
     "\n...[middle omitted]...\n",
@@ -169,7 +194,7 @@ async function main(): Promise<void> {
   writeFileSync(OUT, sample, "utf8");
 
   console.log(`\nPrompt sample: ${OUT}`);
-  console.log(`Opening system: ${openingSystem.length} chars`);
+  console.log(`Opening static system: ${openingStatic.length} chars`);
   console.log(`Final delivery system: ${deliverySystem.length} chars`);
 
   if (failures.length) {

@@ -31,8 +31,8 @@ import { callStallOfferPhase } from "@/lib/llm/phases/stall-offer-phase";
 import { formatContextForPrompt, formatMissingFieldsForPrompt, extractQuestionCategory, mergeContextUpdates, recordToLLMContextUpdates } from "@/lib/poju/context-extractor";
 import type { AgentPhase } from "@/lib/poju/agent-state";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
-import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseResult, withPhaseStreamOpts } from "@/lib/llm/phases/phase-transport";
-import { buildOrientalSystemPrompt } from "@/lib/llm/phases/oriental-prompt-context";
+import { callPhaseJsonTransport, parsePhaseResult, withPhaseStreamOpts } from "@/lib/llm/phases/phase-transport";
+import { preparePojuPhaseLLMCall } from "@/lib/llm/phases/oriental-prompt-context";
 import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
 import type { PojuV4ActionRequested } from "@/lib/poju/types";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
@@ -300,7 +300,7 @@ ${resumeAfterStallNote}
 ## 风格
 
 - 中文 220-520 字 / 英文 160-380 词
-- 4-6 段自然叙述，少用 bullet
+- 4-6 段自然叙述，少用 bullet（**命理词仍须 ⟦t:…⟧ 标记；勿因「少用结构」而省略标记**）
 - 必须体现你已读过【完整】命主基础分析，至少点出 2 处与当前困境相关的命理结构（如大运、格局、用神、时间窗）
 
 ## 话题偏移检测（相对 original_question）
@@ -344,13 +344,13 @@ ${buildPullbackBlock(input)}`;
 }
 
 export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLLMResult> {
-  const system = await buildOrientalSystemPrompt(input, buildCollectingTaskBlock(input));
-  const messages = formatPhaseMessageHistory(input.session.messages);
+  const { system, messages } = await preparePojuPhaseLLMCall(input, buildCollectingTaskBlock(input));
   const result = await callPhaseJsonTransport(
     system,
     messages,
     withPhaseStreamOpts(input, {
       call_type: "collection_flash",
+      phase_name: "collecting",
       max_tokens: 3600,
       temperature: 0.5,
     }),

@@ -8,6 +8,7 @@ type StreamingAssistantBubbleProps = {
   pending?: boolean;
 };
 
+/** In-progress stream only — finalized assistant turns render via MessageBubble / PojuChat + RichReadingText. */
 export function StreamingAssistantBubble({ content, pending = false }: StreamingAssistantBubbleProps) {
   if (!content.trim() && !pending) return null;
 

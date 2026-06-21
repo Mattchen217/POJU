@@ -13,6 +13,15 @@ alwaysApply: true
 
 Three ways in. One way through.
 
+## 保护性规范（必读）
+
+任何提示词、LLM 调用、渲染、合规、落库改动**不得破坏**：
+
+- `.cursor/docs/pojulife-四产品统一输出规范.md`
+- `.cursor/docs/prefix-cache-省钱工程-spec.md`
+
+详见 `.cursor/rules/06-protective-specs.mdc`。
+
 ## 三产品架构
 
 POJU Universe 由三个产品组成：

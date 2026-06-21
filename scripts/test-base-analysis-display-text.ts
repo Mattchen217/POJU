@@ -116,6 +116,9 @@ async function main() {
   console.log("has data_availability:", system.includes("data_availability") ? "PASS" : "FAIL");
   console.log("has four-dimension framework:", system.includes("核心底色") && system.includes("系统脆弱点") ? "PASS" : "FAIL");
   console.log("has neutrality ban:", system.includes("开咖啡馆") || system.includes("café") ? "PASS" : "FAIL");
+  console.log("bans Bold lead placeholder:", !system.includes("**Bold lead:**") && system.includes("严禁") ? "PASS" : "FAIL");
+  console.log("has multi-line bullet rule:", system.includes("独占一行") || system.includes("per line") ? "PASS" : "FAIL");
+  console.log("has synthesis not pillar dump:", system.includes("综合解读") || system.includes("Synthesized config") ? "PASS" : "FAIL");
 
   if (!isOpenRouterConfigured()) {
     console.log("\n⚠ OPENROUTER_API_KEY not set — skipping live display_text generation.");

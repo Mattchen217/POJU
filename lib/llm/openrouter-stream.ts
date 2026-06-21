@@ -1,5 +1,6 @@
 import {
   getOpenRouterDefaultModel,
+  logOpenRouterPrefixCacheMetrics,
   openRouterRequestExtras,
   type OpenRouterChatMessage,
   type OpenRouterChatOptions,
@@ -191,6 +192,13 @@ export async function openRouterChatCompletionStream(
   if (!out.ok) {
     throw new Error(`openrouter_stream_${out.status}: ${out.errText.slice(0, 900)}`);
   }
+  logOpenRouterPrefixCacheMetrics({
+    cached_tokens: out.result.cached_tokens,
+    prompt_tokens: out.result.prompt_tokens,
+    session_id: options.session_id,
+    call_type: options.call_type,
+    phase_name: options.phase_name,
+  });
   return out.result;
 }
 

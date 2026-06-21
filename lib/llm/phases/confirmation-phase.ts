@@ -4,8 +4,8 @@ import {
   stallOfferChoiceToSuggestedPhase,
 } from "@/lib/poju/stall-offer-routing";
 import type { AgentPhase, ContextSummary } from "@/lib/poju/agent-state";
-import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseResult, withPhaseStreamOpts } from "@/lib/llm/phases/phase-transport";
-import { buildOrientalSystemPrompt } from "@/lib/llm/phases/oriental-prompt-context";
+import { callPhaseJsonTransport, parsePhaseResult, withPhaseStreamOpts } from "@/lib/llm/phases/phase-transport";
+import { preparePojuPhaseLLMCall } from "@/lib/llm/phases/oriental-prompt-context";
 import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
 
@@ -76,7 +76,7 @@ ${TRANSITION_CONSENT_RULES}
 
 async function handleConfirmProceed(input: PhaseLLMInput): Promise<PhaseLLMResult> {
   const existingSummary = input.agent_state?.current_summary ?? null;
-  const system = await buildOrientalSystemPrompt(
+  const { system, messages } = await preparePojuPhaseLLMCall(
     input,
     `# 当前任务：用户已确认汇总
 
@@ -84,12 +84,12 @@ async function handleConfirmProceed(input: PhaseLLMInput): Promise<PhaseLLMResul
 
 输出 JSON：response, suggested_phase, context_updates`,
   );
-  const messages = formatPhaseMessageHistory(input.session.messages);
   const result = await callPhaseJsonTransport(
     system,
     messages,
     withPhaseStreamOpts(input, {
       call_type: "collection_flash",
+      phase_name: "confirmation_proceed",
       max_tokens: 800,
       temperature: 0.45,
     }),
@@ -120,8 +120,7 @@ async function handleConfirmProceed(input: PhaseLLMInput): Promise<PhaseLLMResul
 }
 
 async function generateSummaryPhase(input: PhaseLLMInput): Promise<PhaseLLMResult> {
-  const system = await buildOrientalSystemPrompt(input, buildSummaryTaskBlock(input));
-  const messages = formatPhaseMessageHistory(input.session.messages);
+  const { system, messages } = await preparePojuPhaseLLMCall(input, buildSummaryTaskBlock(input));
   const trigger =
     input.user_message.trim() ||
     (input.locale.startsWith("zh") ? "请基于以上信息生成汇总。" : "Generate the confirmation summary from our conversation.");
@@ -131,6 +130,7 @@ async function generateSummaryPhase(input: PhaseLLMInput): Promise<PhaseLLMResul
     [...messages, { role: "user", content: trigger }],
     withPhaseStreamOpts(input, {
       call_type: "collection_flash",
+      phase_name: "confirmation_summary",
       max_tokens: 3000,
       temperature: 0.45,
     }),
@@ -169,7 +169,7 @@ async function handleStallOfferReply(input: PhaseLLMInput): Promise<PhaseLLMResu
         ? "用户选择基于现有信息先给方向"
         : "用户未明确选择，按兜底先给方向处理";
 
-  const system = await buildOrientalSystemPrompt(
+  const { system, messages } = await preparePojuPhaseLLMCall(
     input,
     `# 当前任务：止损选择回应
 
@@ -188,12 +188,12 @@ async function handleStallOfferReply(input: PhaseLLMInput): Promise<PhaseLLMResu
   "context_updates": {}
 }`,
   );
-  const messages = formatPhaseMessageHistory(input.session.messages);
   const result = await callPhaseJsonTransport(
     system,
     messages,
     withPhaseStreamOpts(input, {
       call_type: "collection_flash",
+      phase_name: "confirmation_stall_reply",
       max_tokens: 900,
       temperature: 0.45,
     }),
@@ -238,7 +238,7 @@ export async function callConfirmationPhase(input: PhaseLLMInput): Promise<Phase
     return await handleConfirmProceed(input);
   }
 
-  const system = await buildOrientalSystemPrompt(
+  const { system, messages } = await preparePojuPhaseLLMCall(
     input,
     `# 当前任务：确认阶段对话
 
@@ -255,12 +255,12 @@ ${TRANSITION_CONSENT_RULES}
 
 输出 JSON：response, suggested_phase, context_updates`,
   );
-  const messages = formatPhaseMessageHistory(input.session.messages);
   const result = await callPhaseJsonTransport(
     system,
     messages,
     withPhaseStreamOpts(input, {
       call_type: "collection_flash",
+      phase_name: "confirmation",
       max_tokens: 1200,
       temperature: 0.45,
     }),

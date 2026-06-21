@@ -1,6 +1,6 @@
 import type { AgentPhase } from "@/lib/poju/agent-state";
-import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseResult, withPhaseStreamOpts } from "@/lib/llm/phases/phase-transport";
-import { buildOrientalSystemPrompt } from "@/lib/llm/phases/oriental-prompt-context";
+import { callPhaseJsonTransport, parsePhaseResult, withPhaseStreamOpts } from "@/lib/llm/phases/phase-transport";
+import { preparePojuPhaseLLMCall } from "@/lib/llm/phases/oriental-prompt-context";
 import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
 
@@ -29,13 +29,13 @@ function buildDeliveryTaskBlock(input: PhaseLLMInput): string {
 }
 
 export async function callDeliveryPhase(input: PhaseLLMInput): Promise<PhaseLLMResult> {
-  const system = await buildOrientalSystemPrompt(input, buildDeliveryTaskBlock(input));
-  const messages = formatPhaseMessageHistory(input.session.messages);
+  const { system, messages } = await preparePojuPhaseLLMCall(input, buildDeliveryTaskBlock(input));
   const result = await callPhaseJsonTransport(
     system,
     messages,
     withPhaseStreamOpts(input, {
       call_type: "chat_flash",
+      phase_name: "delivery",
       max_tokens: 800,
       temperature: 0.4,
     }),

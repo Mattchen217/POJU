@@ -8,10 +8,10 @@
    图标用 emoji 占位,可替换成 lucide-react 等现有图标库。
    ============================================================ */
 
-import { useState, useRef, useEffect, type JSX, type ReactNode } from "react";
+import { useState, useRef, useEffect, type ReactNode } from "react";
 import Image from "next/image";
 import pojuLogo from "@/assets/images/POJUlogo.png";
-import { GlossaryText } from "@/components/cross-product/GlossaryText";
+import { RichReadingText } from "@/components/cross-product/RichReadingText";
 import { AssistantMessageActions } from "@/components/poju/AssistantMessageActions";
 import { PojuAiAvatar } from "@/components/poju/PojuAiAvatar";
 import { ThinkingEnergyPulse } from "@/components/poju/ThinkingEnergyPulse";
@@ -23,6 +23,7 @@ import {
 } from "@/components/poju/SessionSidebarDialog";
 import type { ThinkingStreamMode } from "@/lib/poju/thinking-stream-mode";
 import "./poju-chat.css";
+import "@/styles/reading-typography.css";
 
 export type PojuAttachKind = "image" | "document" | "pdf";
 
@@ -122,43 +123,9 @@ export interface PojuChatProps {
   initialScrollPosition?: "top" | "bottom";
 }
 
-/* ---------- AI 文本渲染(不用 Tailwind prose,避免 65ch 限制)----------
-   支持:### 标题 / ═══ XXX ═══ 分隔行 / 普通段落 */
-function renderAiContent(text: string, locale: string): JSX.Element[] {
-  const lines = text.split("\n");
-  const out: JSX.Element[] = [];
-  let buf: string[] = [];
-  const flush = (key: string) => {
-    if (buf.length) {
-      const paragraph = buf.join("\n");
-      out.push(
-        <p key={key}>
-          <GlossaryText text={paragraph} locale={locale} />
-        </p>,
-      );
-      buf = [];
-    }
-  };
-  lines.forEach((line, i) => {
-    const t = line.trim();
-    if (t.startsWith("### ")) {
-      flush(`p${i}`);
-      out.push(<h3 key={`h${i}`}>{t.slice(4)}</h3>);
-    } else if (/^[═=]{2,}.*[═=]{2,}$/.test(t)) {
-      flush(`p${i}`);
-      out.push(
-        <div className="pchat__divider" key={`d${i}`}>
-          {t.replace(/[═=]/g, "").trim()}
-        </div>
-      );
-    } else if (t === "") {
-      flush(`p${i}`);
-    } else {
-      buf.push(line);
-    }
-  });
-  flush("pEnd");
-  return out;
+/* ---------- AI 文本：定稿后走 RichReadingText（金字 + 轻排版）；流式进行中仍裸显 ---------- */
+function renderAiContent(text: string, locale: string): ReactNode {
+  return <RichReadingText text={text} locale={locale} />;
 }
 
 function AiReplyShell({ children }: { children: ReactNode }) {

@@ -36,7 +36,7 @@ const BASE_ANALYSIS_OUTPUT_SECTIONS_ZH = `# 输出分区（必须齐全 · Markd
 
 ## 数据展示层（配置读数 · 禁人生剧情）
 
-5. **## 四柱命盘数据** — 年/月/日/时柱、藏干、十神、神煞（**仅 structured 里该柱实际有的项**）；仪器读数口吻。**逐柱：有则写、无则跳过**；每柱 ≤2 个金字；**禁止**为填满四柱补神煞。
+5. **## 四柱命盘数据** — **综合配置解读**（2–4 句）：如「根基偏动、核心主温和承载、私域偏独处」——只谈**整体能量角色**，**禁止**逐柱枚举藏干/十神/神煞/长生清单（原始数据在 structured，下游自取）。可点名身强/身弱、格局、关键十神**机制组合**（如食神生财）——**仅 structured 实有字段**。
 6. **## 大运能量气候概览** — 按 \`structured.da_yun\` 时序概览各阶段**能量气候倾向**（偏燥/偏润/收敛/扩张等）；缺失则方向性 climate sketch。**只讲气候，不讲人生剧情**；禁裸干支（用年龄段白话或 ⟦t:decade|…⟧）。`;
 
 const BASE_ANALYSIS_OUTPUT_SECTIONS_EN = `# Output sections (all required · Markdown ## headings)
@@ -50,7 +50,7 @@ const BASE_ANALYSIS_OUTPUT_SECTIONS_EN = `# Output sections (all required · Mar
 
 ## Data display layers (instrument readout · no life plot)
 
-5. **## Four-Pillar Configuration** — pillars, hidden stems, ten gods, stars (**only what structured has for that pillar**); instrument readout.**Per pillar: write if present, skip if absent**; ≤2 markers per pillar; **never pad** missing shen_sha.
+5. **## Four-Pillar Configuration** — **Synthesized config read** (2–4 sentences): e.g. "roots lean active, core runs steady warmth, private sphere favors solitude"—**overall energy roles only**; **never** pillar-by-pillar lists of hidden stems / ten gods / shen_sha / life stages (raw data lives in structured for downstream). May name strength/pattern/key ten-god **mechanisms** (e.g. output feeds wealth)—**structured fields only**.
 6. **## Decade Energy Climate Overview** — chronological \`structured.da_yun\` **climate tendencies** (dry / moist / contracting / expanding); or directional sketch if missing. **Climate only—no life plot**; no bare Ganzhi (age phrases or ⟦t:decade|…⟧).`;
 
 const BASE_ANALYSIS_NEUTRALITY_RULES_ZH = `# 中立元报告 · 硬禁（场景化留给下游 POJU/Glyph/Match/Syncro）
@@ -67,6 +67,20 @@ const BASE_ANALYSIS_NEUTRALITY_RULES_ZH = `# 中立元报告 · 硬禁（场景�
 
 ## 比喻边界
 - 比喻**可以**用，但**只服务于解释能量机制**（如「缺冷却模块」「规则网格」），**不编造现实情节**（工作室、摊位、合伙人、家庭剧情等）。`;
+
+const BASE_ANALYSIS_NARRATIVE_BREVITY_ZH = `# 叙事精简 · 禁止逐柱复述（准确性）
+
+- 正文保持**四维综合判断**的精简中立文本即可——**禁止**为「显得详细」而逐柱罗列原始数据（各柱藏干/十神/神煞/长生/干支表）。
+- 原始配置由 **structured JSON** 完整注入下游；叙事复述既冗余，又是**神煞幻觉高发区**。
+- **## 四柱命盘数据** 只做**综合解读**（整体角色 + 可选 1–2 个关键结构点），**不**做年/月/日/时逐项清单。
+- 允许在四维段或综合段点名：**身强/身弱、格局、用神/喜忌方向、关键十神机制组合**——只能引用 structured 实有字段，**不得新增神煞**。`;
+
+const BASE_ANALYSIS_NARRATIVE_BREVITY_EN = `# Narrative brevity · no pillar dumps (accuracy)
+
+- Keep body copy as **concise neutral synthesis across the four dimensions**—**never** pad with pillar-by-pillar raw dumps (hidden stems / ten gods / shen_sha / life stages / pillar tables).
+- Raw config is injected downstream via **structured JSON**; narrative re-listing is redundant and a **shen_sha hallucination hotspot**.
+- **## Four-Pillar Configuration** = **synthesized read only** (overall roles + optional 1–2 structural highlights)—**not** year/month/day/hour itemization.
+- You may name **strength/pattern/favorable directions/key ten-god mechanisms** in dimension sections—**structured fields only**; **no new shen_sha**.`;
 
 const BASE_ANALYSIS_NEUTRALITY_RULES_EN = `# Neutral meta-report · hard bans (scenarios belong to downstream POJU/Glyph/Match/Syncro)
 
@@ -93,9 +107,37 @@ const BASE_ANALYSIS_BINDING_RULES = `# 绑定计算结果 · 闭集 · 禁幻觉
 6. **可见词形态** — \`<可见文本>\` 用**名词短语**，**禁止**前导冠词 \`the/a/an\`（避免 "The the refined core"）；英文如 \`refined core (癸)\` 而非 \`the refined core (癸)\`。
 7. **藏干/十神禁罗列** — **禁止** \`Hidden stems (Wu earth, Xin metal…)\` 英文堆砌；藏干用**一句机制白话**，必要时最多 1 个 ⟦t:…⟧。
 8. **标记排版** — 标记**紧贴**软译词，**禁止**在标记前插入裸换行。
-9. **金色词密度** — **每段最多 1–2 个** ⟦t:…⟧；**## 四柱命盘数据 逐柱段**尤其收敛——**每柱最多 1–2 个**核心标记，其余藏干/十神用白话带过，**禁止**逐条全标。
-10. **四柱逐柱段（复发源）** — 逐柱**只描述 structured 里该柱实际有的** \`ten_god / shen_sha / life_stage / hidden_stems\`；**缺则不写**，**禁止**为填满四柱而补神煞或编造配置。
+9. **金色词密度** — **每段最多 1–2 个** ⟦t:…⟧；同 id 不重复刷标记。
+10. **禁止逐柱复述** — **禁止**在正文逐柱枚举藏干/十神/神煞/长生；**## 四柱命盘数据** 仅 2–4 句综合解读（见叙事精简规则）。
 11. **禁止假设**「输出端会软翻译」——你必须在生成时直接写好标记与软译词。`;
+
+const BASE_ANALYSIS_LEAD_LABEL_RULE_ZH = `# 引导块标签（严禁占位词）
+
+每个论点以 \`**标签:** 正文\` 开启（渲染器 lead 块）。
+
+- **标签** = 该段要旨的**真实短语**（3–8 字/词），如 **驱动类型:**、**冷却缺口:**、**调谐机制:**、**突破状态:**、**配置总览:**
+- **严禁**输出占位词：**Bold lead** / **Lead** / **粗体引导** / **粗体引导句** / **引导句** 等模板字样
+- 英文同理：**Raw drive:**、**The cooling gap:**、**Breakthrough state:** — **never** the literal words "Bold lead" or "Lead"`;
+
+const BASE_ANALYSIS_LEAD_LABEL_RULE_EN = `# Lead-block labels (no placeholder words)
+
+Open each point with \`**Label:** body\` (renderer lead block).
+
+- **Label** = a **real gist phrase** for that paragraph (3–8 words), e.g. **Raw drive:**, **The cooling gap:**, **Tuning mechanism:**, **Breakthrough state:**, **Config overview:**
+- **Never** output template placeholders: **Bold lead**, **Lead**, **Bold lead sentence**, etc.
+- Chinese uses the same rule with real phrases like **驱动类型:** — never copy English placeholder tokens`;
+
+const BASE_ANALYSIS_BULLET_RULE_ZH = `# 列表格式（必须可渲染）
+
+- 每条 bullet **独占一行**，以 \`- \` 开头；列表前 **空一行**
+- **禁止**在同一行或同一段内写多个 \`- \` 项（错误：\`This looks like: - A - B - C\`）
+- 正确范例见 few-shot **能量平衡锚** 段`;
+
+const BASE_ANALYSIS_BULLET_RULE_EN = `# Bullet list format (must render)
+
+- **One** \`- \` item **per line**; **blank line before** the list
+- **Never** pack multiple \`- \` items on one line or in one prose sentence (bad: \`This looks like: - Rhythm: … - Environment: …\`)
+- See few-shot **Balancing Anchors** for correct multi-line layout`;
 
 const BASE_ANALYSIS_LAYOUT_ZH = `# 降维排版（中立元报告 · 奢侈品交付 · 必遵）
 
@@ -103,18 +145,18 @@ const BASE_ANALYSIS_LAYOUT_ZH = `# 降维排版（中立元报告 · 奢侈品�
 
 ## 每个 ## 分区内部结构
 1. **### 小标题** — 长分区拆成 **2–4 个** \`###\` 子块。
-2. **Lead 引导块** — 每个论点以 \`**粗体引导句:** 正文\` 开启；引导句 3–8 字/词。
+2. **引导块** — \`**真实标签:** 正文\`（见引导块标签规则）；**禁止** "Bold lead" / "粗体引导" 等占位词。
 3. **短段** — 每段 **≤120 字**（英文 ≤80 词），**一个论点一段**，段间空一行。
-4. **金句框 / 锚点** — **四维各至少 1 个** \`> **核心锚点:** …\` 或 \`> **调谐要点:** …\`；数据层各至少 1 个可记住的读数摘要。
-5. **列表** — 平衡锚、调谐机制、配置要点用 \`- \` bullet。
+4. **金句框 / 锚点** — **四维各至少 1 个** \`> **核心锚点:** …\` 或 \`> **调谐要点:** …\`（锚点标签也要真实短语）。
+5. **列表** — 见列表格式规则：每条 \`- \` **独占一行**，列表前空一行。
 
 ## 篇幅与完整性
 - 全文 **1100–1600 词**（中文同等篇幅）；**四维 + 两层数据展示必须齐全**——宁可略超，**不可**为压字数砍掉任何块。
-- 压缩对象是**水分**（铺垫、安慰性排比、同义重复、场景化举例），不是能量诊断点。
+- 压缩对象是**水分**（铺垫、排比、同义重复、场景举例、**逐柱原始数据罗列**），不是四维能量诊断点。
 
 ## 分区硬约束
-- **四维能量动力学四块一个都不能少**；数据展示层（四柱 / 大运气候）**必须保留**。
-- 每个 ## 分区至少 **1 个** \`**粗体引导句:**\`；**能量平衡锚** 至少 **1 个** \`>\` 金句框 **或** \`- \` bullets。`;
+- **四维能量动力学四块一个都不能少**；数据展示层（四柱综合 / 大运气候）**必须保留**。
+- 每个 ## 分区至少 **1 个** 真实标签引导块；**能量平衡锚** 至少 **1 个** \`>\` 金句框 **或** 多行 \`- \` bullets。`;
 
 const BASE_ANALYSIS_LAYOUT_EN = `# Layout (neutral meta-report · luxury tier · mandatory)
 
@@ -122,18 +164,18 @@ Read like **precise neutral readout + plain-language notes**—not a life story.
 
 ## Inside each ## section
 1. **### subheads** — Split into **2–4** \`###\` blocks.
-2. **Lead blocks** — \`**Bold lead:** body\`; label 3–8 words.
+2. **Lead blocks** — \`**Real label:** body\` (see lead-label rules)—**never** literal "Bold lead" / "Lead".
 3. **Short paragraphs** — **≤80 words** each (Chinese ≤120 chars), one idea per paragraph.
-4. **Pull quote / anchor** — **Each of the four dimensions** needs at least one \`> **Core anchor:** …\` or \`> **Tuning note:** …\`; data layers need a memorable readout line.
-5. **Bullets** — balancing anchors, tuning mechanisms, config points use \`- \` bullets.
+4. **Pull quote / anchor** — **Each of the four dimensions** needs at least one \`> **Core anchor:** …\` or \`> **Tuning note:** …\` (real label text).
+5. **Bullets** — See bullet format rules: **one** \`- \` item **per line**, blank line before list.
 
 ## Length & completeness
 - **1100–1600 words** total; **all four dimensions + both data layers required**—slightly over is OK; never drop a block to hit a cap.
-- Cut **fluff** (padding, reassurance loops, scenario examples)—not energy diagnostics.
+- Cut **fluff** (padding, reassurance loops, scenario examples, **pillar-by-pillar raw dumps**)—not four-dimension energy diagnostics.
 
 ## Section hard rules
-- **All four energy dimensions mandatory**; data layers (pillars / decade climate) **must remain**.
-- Every ## section: at least one \`**Bold lead:**\`; **Balancing Anchors** needs at least one \`>\` pull quote **or** \`- \` bullets.`;
+- **All four energy dimensions mandatory**; data layers (synthesized pillars / decade climate) **must remain**.
+- Every ## section: at least one lead block with a **real label**; **Balancing Anchors** needs at least one \`>\` pull quote **or** multi-line \`- \` bullets.`;
 
 const BASE_ANALYSIS_FEW_SHOT_ZH = `# 分区范例（复制结构 · 勿抄意象 · 禁场景）
 
@@ -160,6 +202,8 @@ const BASE_ANALYSIS_FEW_SHOT_ZH = `# 分区范例（复制结构 · 勿抄意象
 
 **调谐机制:** 对你有效的 ⟦t:yong_shen|用神（水）|规则网格 + 固定复盘时段，给高频输出加缓冲⟧。
 
+**日常锚点清单:**
+
 - 作息：固定「冷却窗口」，重大决定不进该窗口
 - 环境：偏润、低噪、可分段专注的空间
 - 方位/颜色：按 structured 调候方向中性列出（禁招财承诺）
@@ -170,9 +214,9 @@ const BASE_ANALYSIS_FEW_SHOT_ZH = `# 分区范例（复制结构 · 勿抄意象
 
 ## 四柱命盘数据
 
-### 配置读数
+### 配置总览
 
-（仅 structured 有的柱位 / 十神 / 神煞；机制角色，禁故事）
+**整体角色:** 根基偏动、日主核心偏温和承载、时柱私域能量偏独处——只谈综合角色，**不**逐柱列藏干/神煞/十神清单（structured 已含原始数据）。
 
 ## 大运能量气候概览
 
@@ -208,6 +252,8 @@ const BASE_ANALYSIS_FEW_SHOT_EN = `# Section example (copy structure · no scena
 
 **Tuning mechanism:** What works for you ⟦t:yong_shen|favorable element (水)|rule grid + fixed review windows to buffer high-frequency output⟧.
 
+**Daily anchor list:**
+
 - Rhythm: fixed "cool-down windows"; no major calls inside them
 - Environment: moist, low-noise, segmentable focus space
 - Direction/color: neutral list from structured climate balance (no wealth promises)
@@ -218,9 +264,9 @@ const BASE_ANALYSIS_FEW_SHOT_EN = `# Section example (copy structure · no scena
 
 ## Four-Pillar Configuration
 
-### Readout
+### Config overview
 
-(pillars / ten gods / stars from structured only—roles, no plot)
+**Overall roles:** Roots lean outward-active; day-core runs steady warmth; hour-sphere favors private recharge—synthesized roles only; **no** pillar-by-pillar hidden-stem / shen_sha / ten-god lists (structured holds raw data).
 
 ## Decade Energy Climate Overview
 
@@ -263,8 +309,8 @@ Shared context base for **POJU / Glyph / Match / Syncro**—injected downstream 
 ${BASE_ANALYSIS_OUTPUT_SECTIONS_ZH.split("\n").slice(1).join("\n")}
 4. **1100–1600 词**（中文同等篇幅）— **优先保证四维与数据层完整**；宁可略超，**不可**为压字数砍掉任何块。
 5. **压缩水分，不砍信息** — 删解释性铺垫、安慰性排比、同义重复、场景化举例；保留每个维度的关键能量结论与一条可操作的**中立调谐**建议（作息/环境/决策习惯，非职业/关系）。
-6. 第二人称（你），现代、专业、克制；**每段 ≤120 字**；**四维各至少 1 个** \`**粗体引导句:**\` **+ 1 个** \`>\` 金句/锚点；**能量平衡锚** 另需 \`- \` bullets 亦可。
-7. 挑战类**不得渲染成「灾祸/损失」恐吓**；**禁裸干支**；神煞/十神**只能来自 structured 实例清单**；**每个 ⟦t:…⟧ 三段位必须闭合**；可见词禁前导 the/a/an；逐柱段每柱 ≤2 金字。
+6. 第二人称（你），现代、专业、克制；**每段 ≤120 字**；引导块用**真实标签**（禁 Bold lead/粗体引导 占位词）；**四维各至少 1 个**引导块 **+ 1 个** \`>\` 锚点；**能量平衡锚** 用**多行** \`- \` bullets（每条独占一行，列表前空一行）。
+7. 挑战类**不得渲染成「灾祸/损失」恐吓**；**禁裸干支**；**禁止逐柱罗列原始配置**；神煞/十神**只能来自 structured 实例清单**；**每个 ⟦t:…⟧ 三段位必须闭合**；可见词禁前导 the/a/an。
 8. **落库门禁** — 集外神煞（元辰/六秀日/阴差阳错等）、断标记、裸干支、密度超标会导致整篇被拒并重写；可自然提及 POJU / pojulife；禁 astrology / divination / psychic / horoscope。`
       : `# Output requirements
 
@@ -274,8 +320,8 @@ ${BASE_ANALYSIS_OUTPUT_SECTIONS_ZH.split("\n").slice(1).join("\n")}
 ${BASE_ANALYSIS_OUTPUT_SECTIONS_EN.split("\n").slice(1).join("\n")}
 4. **1100–1600 words** (equivalent length in Chinese)—**four dimensions + data layers complete first**; slightly over is OK; never drop a block for word cap.
 5. **Cut fluff, not facts** — drop padding, reassurance loops, scenario examples; keep each dimension's key energy read + one **neutral tuning** takeaway (rhythm/environment/decision habits—not career/relationship).
-6. Second person (you); modern, restrained, professional; **≤80 words per paragraph**; **each of the four dimensions** needs at least one \`**Bold lead:**\` **+ one** \`>\` anchor; **Balancing Anchors** may also use \`- \` bullets.
-7. Do not frame challenges as doom/scare; **no bare Ganzhi**; shen_sha/ten_gods **only from structured instance inventory**; **every ⟦t:…⟧ must be fully closed** (3 parts); visible text without leading the/a/an; ≤2 markers per pillar block.
+6. Second person (you); modern, restrained, professional; **≤80 words per paragraph**; lead blocks use **real labels** (never literal "Bold lead" / "Lead"); **each of the four dimensions** needs at least one labeled lead **+ one** \`>\` anchor; **Balancing Anchors** uses **multi-line** \`- \` bullets (one item per line, blank line before list).
+7. Do not frame challenges as doom/scare; **no bare Ganzhi**; **no pillar-by-pillar raw config dumps**; shen_sha/ten_gods **only from structured instance inventory**; **every ⟦t:…⟧ must be fully closed** (3 parts); visible text without leading the/a/an.
 8. **Delivery gate** — out-of-set shen_sha (元辰/六秀日/阴差阳错 etc.), broken markers, bare Ganzhi, or density overflow will reject the draft and force rewrite; POJU / pojulife OK; no astrology / divination / psychic / horoscope.`;
 
   const forbiddenBlock =
@@ -294,8 +340,11 @@ ${BASE_ANALYSIS_OUTPUT_SECTIONS_EN.split("\n").slice(1).join("\n")}
   const system = stitchPromptSections(
     taskBlock,
     lang === "zh" ? BASE_ANALYSIS_NEUTRALITY_RULES_ZH : BASE_ANALYSIS_NEUTRALITY_RULES_EN,
+    lang === "zh" ? BASE_ANALYSIS_NARRATIVE_BREVITY_ZH : BASE_ANALYSIS_NARRATIVE_BREVITY_EN,
     ...buildPlainspeakVoiceSections(PLAINSPEAK_STYLE_EXAMPLE_BASE_ANALYSIS),
     READING_LAYOUT_CONTRACT,
+    lang === "zh" ? BASE_ANALYSIS_LEAD_LABEL_RULE_ZH : BASE_ANALYSIS_LEAD_LABEL_RULE_EN,
+    lang === "zh" ? BASE_ANALYSIS_BULLET_RULE_ZH : BASE_ANALYSIS_BULLET_RULE_EN,
     lang === "zh" ? BASE_ANALYSIS_LAYOUT_ZH : BASE_ANALYSIS_LAYOUT_EN,
     BASE_ANALYSIS_BINDING_RULES,
     buildTermMarkingPromptBlock(lang),
@@ -314,14 +363,14 @@ ${BASE_ANALYSIS_OUTPUT_SECTIONS_EN.split("\n").slice(1).join("\n")}
 ${JSON.stringify(input.local_data.structured, null, 2)}
 \`\`\`
 
-现在开始写完整 Markdown 元报告。**降维排版**（### + **引导:** + 短段 + > 锚点 + bullets）；**1100–1600 词、四维+数据层齐全**；只读配置、不编故事；术语三段位；**禁裸干支**；神煞/十神不得超出 structured；避免语义红线词（${redLine}）。`
+现在开始写完整 Markdown 元报告。**降维排版**（### + **真实标签:** 引导块 + 短段 + > 锚点 + 多行 bullets）；**1100–1600 词、四维+数据层齐全**；四柱段只写综合解读、不逐柱罗列；术语三段位；**禁裸干支**；神煞/十神不得超出 structured；避免语义红线词（${redLine}）。`
       : `structured JSON (internal — write neutral energy meta-report; honor closed-set, term markers, neutral hard bans):
 
 \`\`\`json
 ${JSON.stringify(input.local_data.structured, null, 2)}
 \`\`\`
 
-Write the full Markdown meta-report now. **Magazine layout** (### + **Lead:** + short ¶ + > anchor + bullets); **1100–1600 words, four dimensions + data layers complete**; config readout only—no life plot; 3-part term markers; **no bare Ganzhi**; shen_sha/ten_gods within structured; avoid red-line words (${redLine}).`;
+Write the full Markdown meta-report now. **Magazine layout** (### + **real label:** lead + short ¶ + > anchor + multi-line bullets); **1100–1600 words, four dimensions + data layers complete**; Four-Pillar section = synthesized read only—no pillar dumps; 3-part term markers; **no bare Ganzhi**; shen_sha/ten_gods within structured; never output literal "Bold lead"; avoid red-line words (${redLine}).`;
 
   return { system, user };
 }

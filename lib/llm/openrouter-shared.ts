@@ -30,6 +30,10 @@ export type OpenRouterChatOptions = {
   timeout_ms?: number;
   /** OpenRouter sticky routing — same session_id → same provider (prefix cache). */
   session_id?: string;
+  /** Router call_type — for cache observability logs. */
+  call_type?: string;
+  /** POJU phase name — for cache observability logs. */
+  phase_name?: string;
   /** Provider routing constraints — never set `order` (disables sticky routing). */
   provider?: Record<string, unknown>;
 };
@@ -63,6 +67,23 @@ function parseCachedTokens(usage: Record<string, unknown> | undefined): number {
   }
   if (typeof usage.native_tokens_cached === "number") return usage.native_tokens_cached;
   return 0;
+}
+
+/** Log prefix-cache metrics (DeepSeek TTL is minute-level — misses after long gaps are expected). */
+export function logOpenRouterPrefixCacheMetrics(meta: {
+  cached_tokens: number;
+  prompt_tokens: number;
+  session_id?: string;
+  call_type?: string;
+  phase_name?: string;
+}): void {
+  const ratio =
+    meta.prompt_tokens > 0 ? (meta.cached_tokens / meta.prompt_tokens).toFixed(3) : "0.000";
+  const phase = meta.phase_name ?? meta.call_type ?? "—";
+  const hit = meta.cached_tokens > 0 ? "HIT" : "miss";
+  console.log(
+    `[openrouter] prefix cache ${hit}: cached=${meta.cached_tokens} prompt=${meta.prompt_tokens} ratio=${ratio} phase=${phase} session=${meta.session_id ?? "—"}`,
+  );
 }
 
 export function isOpenRouterConfigured(): boolean {
@@ -240,11 +261,13 @@ export async function openRouterChatCompletion(
   const tokens_used =
     typeof u?.total_tokens === "number" ? u.total_tokens : prompt_tokens + completion_tokens;
 
-  if (cached_tokens > 0) {
-    console.log(
-      `[openrouter] cache hit: cached_tokens=${cached_tokens} prompt_tokens=${prompt_tokens} session=${options.session_id ?? "—"}`,
-    );
-  }
+  logOpenRouterPrefixCacheMetrics({
+    cached_tokens,
+    prompt_tokens,
+    session_id: options.session_id,
+    call_type: options.call_type,
+    phase_name: options.phase_name,
+  });
 
   const reasoning =
     typeof message?.reasoning === "string" && message.reasoning.trim()

@@ -1,6 +1,8 @@
 /**
  * 共享工具：日期/语言/命盘拼接、`stitchPromptSections`。
- * POJU 各 phase 使用 `poju-base.ts` + `buildPojuSystemPrompt`（见 oriental-prompt-context.ts）。
+ * POJU 各 phase 使用 `poju-base.ts` + `buildPojuStaticSystemPrompt`（见 oriental-prompt-context.ts）；
+ * 日期/语言/任务等动态块在 user 消息侧，以保持 system 前缀跨轮 byte 稳定（OpenRouter/DeepSeek prefix cache）。
+ * DeepSeek 前缀缓存有分钟级 TTL，轮间隔过长会自然 miss。
  * Glyph → `glyph-guanyin-base.ts`；Syncro/Match 暂用下方 `ORIENTAL_COUNSELOR_BASE`（Step C/D 将拆分）。
  */
 import { formatBaseAnalysisForPrompt } from "@/lib/llm/prompts/base-analysis-context";

@@ -1,7 +1,7 @@
 import { findMissingFields, type POJUAgentState } from "@/lib/poju/agent-state";
 import { formatContextForPrompt, formatMissingFieldsForPrompt } from "@/lib/poju/context-extractor";
-import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseResult, withPhaseStreamOpts } from "@/lib/llm/phases/phase-transport";
-import { buildOrientalSystemPrompt } from "@/lib/llm/phases/oriental-prompt-context";
+import { callPhaseJsonTransport, parsePhaseResult, withPhaseStreamOpts } from "@/lib/llm/phases/phase-transport";
+import { preparePojuPhaseLLMCall } from "@/lib/llm/phases/oriental-prompt-context";
 import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
 
@@ -66,13 +66,13 @@ ${missingText}
 
 /** Stop-loss branch — explicit user choice instead of more interrogation. */
 export async function callStallOfferPhase(input: PhaseLLMInput): Promise<PhaseLLMResult> {
-  const system = await buildOrientalSystemPrompt(input, buildStallOfferTaskBlock(input));
-  const messages = formatPhaseMessageHistory(input.session.messages);
+  const { system, messages } = await preparePojuPhaseLLMCall(input, buildStallOfferTaskBlock(input));
   const result = await callPhaseJsonTransport(
     system,
     messages,
     withPhaseStreamOpts(input, {
       call_type: "collection_flash",
+      phase_name: "stall_offer",
       max_tokens: 1600,
       temperature: 0.45,
     }),

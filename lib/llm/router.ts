@@ -51,6 +51,8 @@ export interface CallLLMInput {
   timeout_ms?: number;
   /** OpenRouter sticky routing key for prefix cache (see lib/llm/cache-session-id.ts). */
   session_id?: string;
+  /** POJU phase label for cache observability. */
+  phase_name?: string;
 }
 
 export interface CallLLMResult {
@@ -245,16 +247,12 @@ export async function callLLM(input: CallLLMInput): Promise<CallLLMResult> {
     reasoning_effort: effort,
     timeout_ms,
     session_id: input.session_id,
+    call_type: input.call_type,
+    phase_name: input.phase_name,
     provider,
   });
 
   const latency_ms = Date.now() - startTime;
-
-  if (out.cached_tokens > 0) {
-    console.log(
-      `[llm/router] ${input.call_type} cache: cached=${out.cached_tokens} prompt=${out.prompt_tokens} session=${input.session_id ?? "—"}`,
-    );
-  }
 
   return {
     content: out.text,

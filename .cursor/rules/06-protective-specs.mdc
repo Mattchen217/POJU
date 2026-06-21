@@ -1,0 +1,29 @@
+---
+description: 四产品统一输出 + prefix 缓存省钱工程 — 保护性规范（必读，不可破坏）
+alwaysApply: true
+---
+
+# 保护性规范（Canonical Specs）
+
+**任何改动或新建**（提示词、LLM 调用链、渲染、合规、落库、会话结构）**必须先读并遵循**以下两份文档，不得破坏其中规定：
+
+1. `.cursor/docs/pojulife-四产品统一输出规范.md` — 术语/排版/闭集/底座中立/合规/渲染链
+2. `.cursor/docs/prefix-cache-省钱工程-spec.md` — sticky 路由、静态 system、base_analysis 一致、session_id
+
+## 四产品输出 — 不可破坏要点
+
+- 用户可见术语：`⟦t:<闭集slug>|<软译>|<语境白话>⟧`；展示走 `GlossaryText` → `RichReadingText`，禁止裸 markdown
+- 神煞闭集 9 个；集外禁词（元辰/六秀日/阴差阳错/空亡…）落库前 `auditDeliveredText` 必须能阻断
+- 排版：`###` / `**要旨:**` / `> 金句` / 独占行 bullets / 短段；禁 `Bold lead:` 字面、禁字墙
+- 底座中立四维（数字孪生）：不推职业/事件/医疗脏腑/逐柱罗列；下游靠 `structured` 作事实源
+- 改 OpenRouter 路由：`OPENROUTER_PROVIDER_IGNORE` 只设 `ignore`，**绝不设 `provider.order`**
+
+## Prefix 缓存 — 不可破坏要点（INV-1～6）
+
+- **静态 system**（跨轮 byte 恒定）：`buildPojuCorePromptSections` + NA adaptation + profile/base_analysis
+- **动态内容**（日期/语言/任务/议程/已收集上下文）只在 **user 消息**侧，不在 system
+- `base_analysis` session 内快照复用，键序稳定；`session_id` 统一 `cache-session-id.ts` 生成器
+- 勿频繁改静态头（一次性失效全部缓存）；勿在静态头混入时间戳/随机/非确定顺序
+- TTL 分钟级 miss 是预期，非 bug；观测 `[openrouter] prefix cache` 日志的 `cached_tokens`
+
+改动前过两份文档文末「自检清单」。

@@ -1,4 +1,5 @@
-import { auditDeliveredText, stripGlossTokensForPrompt } from "@/lib/llm/sanitize/compliance-terms";
+import { auditDeliveredText, sanitizeChatResponse, stripGlossTokensForPrompt } from "@/lib/llm/sanitize/compliance-terms";
+import { pojuCacheSessionId } from "@/lib/llm/cache-session-id";
 import {
   generateGeminiChatCompletion,
   getGeminiClient,
@@ -28,6 +29,7 @@ export async function callPhaseJsonTransport(
     max_tokens?: number;
     call_type?: LLMCallType;
     session_id?: string;
+    phase_name?: string;
     stream_hooks?: PhaseStreamHooks;
     signal?: AbortSignal;
   },
@@ -51,6 +53,8 @@ export async function callPhaseJsonTransport(
           json_mode: true,
           reasoning_effort: call_type === "collection_flash" ? "medium" : "medium",
           session_id: options?.session_id,
+          call_type: call_type,
+          phase_name: options?.phase_name,
         },
         {
           onReasoning: streamHooks.onReasoning,
@@ -73,6 +77,7 @@ export async function callPhaseJsonTransport(
       temperature,
       response_format: "json",
       session_id: options?.session_id,
+      phase_name: options?.phase_name,
     });
     return {
       content: result.content,
@@ -112,8 +117,10 @@ export function parsePhaseResult(
   if (!cleaned) return { parsed: {}, response: "" };
 
   const sanitizeResponse = (raw: string): string => {
-    if (options?.locale && raw.trim()) auditDeliveredText(raw, options.locale);
-    return raw;
+    if (!options?.locale || !raw.trim()) return raw;
+    const audited = sanitizeChatResponse(raw, options.locale);
+    auditDeliveredText(audited, options.locale);
+    return audited;
   };
 
   try {
@@ -156,21 +163,55 @@ export function formatPhaseMessageHistory(
     }));
 }
 
+/**
+ * Prepend per-turn dynamic context (date, language, task) to the latest user turn.
+ * Keeps the system prompt byte-stable for OpenRouter/DeepSeek prefix cache.
+ */
+export function applyTurnContext(
+  messages: Array<{ role: "user" | "assistant"; content: string }>,
+  turnContext: string,
+): Array<{ role: "user" | "assistant"; content: string }> {
+  const ctx = turnContext.trim();
+  if (!ctx) return messages;
+
+  if (messages.length === 0) {
+    return [{ role: "user", content: ctx }];
+  }
+
+  const last = messages[messages.length - 1]!;
+  if (last.role === "user") {
+    return [
+      ...messages.slice(0, -1),
+      { role: "user", content: `${ctx}\n\n---\n\n${last.content}` },
+    ];
+  }
+
+  return [
+    ...messages,
+    {
+      role: "user",
+      content: `${ctx}\n\n(Continue the conversation above per the current task.)`,
+    },
+  ];
+}
+
 /** Pass stream hooks + abort signal from phase input into transport options. */
 export function withPhaseStreamOpts<
   T extends {
     temperature?: number;
     max_tokens?: number;
     call_type?: import("@/lib/llm/router").LLMCallType;
+    phase_name?: string;
   },
 >(
   input: { stream_hooks?: PhaseStreamHooks; signal?: AbortSignal; session: { session_id: string } },
   opts: T,
-): T & { stream_hooks?: PhaseStreamHooks; signal?: AbortSignal; session_id?: string } {
+): T & { stream_hooks?: PhaseStreamHooks; signal?: AbortSignal; session_id?: string; phase_name?: string } {
   return {
     ...opts,
     stream_hooks: input.stream_hooks,
     signal: input.signal,
-    session_id: input.session.session_id,
+    session_id: pojuCacheSessionId(input.session.session_id),
+    phase_name: opts.phase_name,
   };
 }

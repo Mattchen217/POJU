@@ -63,6 +63,7 @@ import {
 import { MatrixNarrativeReply, matrixNarrativeActionsText } from "@/components/poju/MatrixNarrativeReply";
 import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
 import { PojuPaywallInline } from "@/components/poju/PojuPaywallInline";
+import { MainDeliveryView } from "@/components/poju/MainDeliveryView";
 import { PojuReportChatCard } from "@/components/poju/PojuReportChatCard";
 import { PojuUnlockReportModal } from "@/components/poju/PojuUnlockReportModal";
 import { hasUnlockReportMessage, prepareUnlockReleaseSession } from "@/lib/poju/finalize-unlock-bazi-session";
@@ -74,7 +75,7 @@ import {
   getUnlockReportMessage,
   getUnlockReportText,
   isPendingUnlockQuestionRelease,
-  reportPreviewExcerpt,
+  reportPreviewForCard,
 } from "@/lib/poju/unlock-report-gate";
 import {
   markPojuChatIntroSeen,
@@ -1311,11 +1312,21 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         const actionsText = matrixNarrativeActionsText(m.meta.matrix_payload, locale);
         if (actionsText) followUpActions[m.timestamp] = actionsText;
       }
+      if (m.meta?.contains_delivery) {
+        bareIds.add(m.timestamp);
+        slots[m.timestamp] = (
+          <MainDeliveryView
+            fullText={m.content}
+            actions={session.actions}
+            archiveId={session.action_plan_archive_id}
+          />
+        );
+      }
       if (m.meta?.kind === "report") {
         bareIds.add(m.timestamp);
         slots[m.timestamp] = (
           <PojuReportChatCard
-            excerpt={reportPreviewExcerpt(getUnlockReportText(m))}
+            excerpt={reportPreviewForCard(getUnlockReportText(m))}
             onOpen={openUnlockReportModal}
           />
         );
@@ -1331,7 +1342,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     visibleMessages,
     locale,
     session.session_id,
-    unlockBusy,
+    session.actions,
+    session.action_plan_archive_id,
     openUnlockReportModal,
   ]);
 
