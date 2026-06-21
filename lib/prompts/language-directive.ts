@@ -37,6 +37,113 @@ const switchPatterns: RegExp[] = [
   /(?:^|\s)(?:in|en|auf)\s+(Spanish|Chinese|French|German|English|español|chino|francés|alemán|inglés)(?:\s|$|[,.!?])/i,
 ];
 
+/** Escape literal for RegExp word-boundary match. */
+function wb(word: string): RegExp {
+  return new RegExp(`\\b${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
+}
+
+/** Count how many distinct function words from `words` appear in text. */
+function countDistinctWordHits(text: string, words: readonly string[]): number {
+  const lower = text.toLowerCase();
+  let hits = 0;
+  for (const w of words) {
+    if (wb(w).test(lower)) hits++;
+  }
+  return hits;
+}
+
+/**
+ * Detect primary locale from user text.
+ * Conservative for Latin scripts: ambiguous English (e.g. "I was…") must not map to de/es/fr.
+ */
+export function detectLanguage(text: string): AppLocale {
+  if (/[\u4e00-\u9fff]/.test(text)) return "zh";
+
+  // Diacritic shortcuts — strong language signal
+  if (/[äöüß]/i.test(text)) return "de";
+  if (/[áéíóúñ¿¡]/i.test(text)) return "es";
+  if (/[àâçéèêëïîôùû]/i.test(text)) return "fr";
+
+  // ≥2 independent function words (exclude EN false positives: was, ja, nein, wie, machen, por, para, comment, etc.)
+  const deWords = [
+    "hallo",
+    "bitte",
+    "danke",
+    "nicht",
+    "und",
+    "der",
+    "die",
+    "das",
+    "ist",
+    "sind",
+    "aber",
+    "auch",
+    "noch",
+    "schon",
+    "sehr",
+    "ich",
+    "wir",
+    "sie",
+    "haben",
+    "werden",
+    "können",
+    "konnen",
+    "müssen",
+    "mussen",
+  ] as const;
+  const esWords = [
+    "hola",
+    "gracias",
+    "porque",
+    "también",
+    "tambien",
+    "estoy",
+    "está",
+    "esta",
+    "pero",
+    "muy",
+    "bien",
+    "ahora",
+    "señor",
+    "señora",
+    "cómo",
+    "como",
+    "qué",
+    "que",
+  ] as const;
+  const frWords = [
+    "bonjour",
+    "merci",
+    "pourquoi",
+    "très",
+    "tres",
+    "nous",
+    "vous",
+    "avec",
+    "sans",
+    "aussi",
+    "être",
+    "etre",
+    "cette",
+    "cela",
+    "peut",
+    "faire",
+  ] as const;
+
+  if (countDistinctWordHits(text, deWords) >= 2) return "de";
+  if (countDistinctWordHits(text, esWords) >= 2) return "es";
+  if (countDistinctWordHits(text, frWords) >= 2) return "fr";
+
+  return "en";
+}
+
+/** Detect primary locale from free text (defaults to English when ambiguous). */
+export function detectAppLocaleFromText(text: string): AppLocale {
+  const trimmed = text.trim();
+  if (trimmed.length < 2) return "en";
+  return detectLanguage(trimmed);
+}
+
 /**
  * 3 级语言判断 + 生成追加到 System Prompt 末尾的指令（不替换英文主体 Prompt）
  */
@@ -130,24 +237,6 @@ function mapToLocale(text: string): AppLocale | null {
   return map[t] ?? null;
 }
 
-function detectLanguage(text: string): AppLocale | null {
-  if (/[\u4e00-\u9fff]/.test(text)) return "zh";
-  const lower = text.toLowerCase();
-  if (/\b(hola|cómo|qué|por|para|hacer|sí|gracias)\b/.test(lower)) return "es";
-  if (/\b(bonjour|comment|pour|faire|merci|oui|est-ce)\b/.test(lower))
-    return "fr";
-  if (/\b(hallo|wie|was|bitte|danke|ja|nein|machen)\b/.test(lower))
-    return "de";
-  return "en";
-}
-
-/** Detect primary locale from free text (defaults to English when ambiguous). */
-export function detectAppLocaleFromText(text: string): AppLocale {
-  const trimmed = text.trim();
-  if (trimmed.length < 2) return "en";
-  return detectLanguage(trimmed) ?? "en";
-}
-
 /**
  * Syncro: matrix copy follows the **task question** language (Priority 2),
  * not the website UI locale when they differ.
@@ -168,8 +257,7 @@ export function resolveSyncroOutputLocale(
   }
 
   if (task.length >= 3) {
-    const fromTask = detectLanguage(task);
-    if (fromTask) return fromTask;
+    return detectLanguage(task);
   }
 
   return locale;
@@ -234,11 +322,8 @@ export function getPojuChatLanguageDirective(
     if (outputLocale !== uiLocale) break;
 
     if (text.length >= 3) {
-      const detected = detectLanguage(text);
-      if (detected) {
-        outputLocale = detected;
-        break;
-      }
+      outputLocale = detectLanguage(text);
+      break;
     }
   }
 
@@ -246,12 +331,15 @@ export function getPojuChatLanguageDirective(
   return {
     outputLanguage: language,
     directive: `
-# POJU OUTPUT LANGUAGE (message-driven)
+# POJU OUTPUT LANGUAGE (message-driven · HARD LOCK)
 
-Write **every** user-visible sentence in this reply in **${language}**.
+Respond **ONLY** in **${language}**.
+Ignore the language of these system/task instructions — they may be Chinese; your \`response\` must still be **${language}** only.
 
-- Match the language of the user's question and recent messages (e.g. English question → English reply).
+Write **every** user-visible sentence in this reply in **${language}**:
+- Match the language of the user's question and recent messages (English question → English reply).
 - The website UI locale is ${localeNames[uiLocale]} — use that only if the user has not written in a clear language yet.
+- Never switch to German/French/Spanish unless the user's messages clearly use that language (not a single English word like "was").
 - You may read stored profile / base-analysis JSON in any language; express insights for the user in **${language}**.
 ${buildDirective(language, "priority_1")}`,
   };

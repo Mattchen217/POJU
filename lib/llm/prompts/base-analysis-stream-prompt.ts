@@ -103,13 +103,21 @@ const BASE_ANALYSIS_BINDING_RULES = `# 绑定计算结果 · 闭集 · 禁幻觉
 2. **神煞闭集 · 实例清单** — 神煞**只能逐字取自**本次 \`buildStructuredInstanceInventory\` 列出的项（引擎闭集 9 选 N：天乙贵人/禄神/飞刃/文昌/桃花/驿马/华盖/孤辰/寡宿）。**该清单为空则整篇不得出现任何神煞名**。**严禁**引擎不计算项，显式禁止：**元辰 / 六秀日 / 阴差阳错 / 阴阳差错 / 空亡 / 将星 / 劫煞 / 国印贵人 / 月德合 / 天德合 / 太极贵人 / 福星贵人 / 十恶大败 / 学堂** 等。
 3. **十神/长生** — 同理，只用 structured 给出的具体条目；禁止类别统称代替或编造。
 4. **data_availability.missing** — pillars_detail 或 da_yun 缺失时，该维度**只做方向性描述**，禁止编造具体干支/神煞/起运岁数。
-5. **术语标记 · 三段位闭合 · 干支禁裸** — 凡命理术语一律 \`⟦t:<id>|<可见软译词>|<该处白话>⟧\` **三段位必须完整闭合**；**禁止**只写可见词不打标记、**禁止**句子在标记处中断截断。**正文任何干支组合**一律不得裸露——要么三段位标记，要么概览段完全不用干支（白话年龄段）。**禁止** \`(癸酉 phase)\`、\`during 壬申\` 半裸写法。
-6. **可见词形态** — \`<可见文本>\` 用**名词短语**，**禁止**前导冠词 \`the/a/an\`（避免 "The the refined core"）；英文如 \`refined core (癸)\` 而非 \`the refined core (癸)\`。
-7. **藏干/十神禁罗列** — **禁止** \`Hidden stems (Wu earth, Xin metal…)\` 英文堆砌；藏干用**一句机制白话**，必要时最多 1 个 ⟦t:…⟧。
-8. **标记排版** — 标记**紧贴**软译词，**禁止**在标记前插入裸换行。
-9. **金色词密度** — **每段最多 1–2 个** ⟦t:…⟧；同 id 不重复刷标记。
-10. **禁止逐柱复述** — **禁止**在正文逐柱枚举藏干/十神/神煞/长生；**## 四柱命盘数据** 仅 2–4 句综合解读（见叙事精简规则）。
-11. **禁止假设**「输出端会软翻译」——你必须在生成时直接写好标记与软译词。`;
+5. **术语标记 · 三段位闭合 · 干支禁裸** — 凡命理术语一律 \`⟦t:<id>|<可见软译词>|<该处白话>⟧\` **三段位必须完整闭合**；**禁止**只写可见词不打标记、**禁止**句子在标记处中断截落。**正文任何干支组合**一律不得裸露——要么三段位标记，要么概览段完全不用干支（白话年龄段）。**禁止** \`(癸酉 phase)\`、\`during 壬申\` 半裸写法。
+6. **大运段干支 · 全有或全无（一致性）** — **## 大运能量气候概览** 内，每一个 \`structured.da_yun\` 阶段出现的干支必须**统一策略**：
+   - **策略 A（标记）**：**每一个**干支都写完整 \`⟦t:decade|life phase (X)|该阶段各自不同的白话>⟧\`（癸酉/壬申/辛未/庚午 **全部**标记，白话各不相同）；
+   - **策略 B（白话）**：**整段**只用年龄段/人生阶段白话（「二十出头」「三十前后」「early twenties」），**完全不出现**任何干支字符。
+   - **严禁半标**：首个 decade 有 [···] 金字，其余 壬申/辛未/庚午 裸写——这是落库门禁 **裸干支** 必拒项。
+7. **标记嵌入完整句（语法）** — ⟦t:…⟧ **必须**嵌入通顺完整句；可见词**前**要有自然冠词/物主词/连接词（在标记**外**），**禁止**把标记当作无冠词句首主语或句首碎片后接大写动词新句。
+   - ✗ \`mobility pulse (驿马)[···] Pairs with a sharp…\`
+   - ✓ \`Your mobility pulse (驿马) keeps you in motion—it pairs with a sharp…\`
+   - **标记内** \`<可见文本>\` 仍用名词短语，**禁止**在可见词**里面**写 the/a/an（避免双冠词）；冠词/物主词写在标记**外面**。
+8. **可见词形态** — \`<可见文本>\` 用**名词短语**；英文如 \`refined core (癸)\`、\`mobility pulse (驿马)\`（**不在**可见词内加 the/a/an）。
+9. **藏干/十神禁罗列** — **禁止** \`Hidden stems (Wu earth, Xin metal…)\` 英文堆砌；藏干用**一句机制白话**，必要时最多 1 个 ⟦t:…⟧。
+10. **标记排版** — 标记**紧贴**软译词，**禁止**在标记前插入裸换行。
+11. **金色词密度** — **每段最多 1–2 个** ⟦t:…⟧；同 id 不重复刷标记。
+12. **禁止逐柱复述** — **禁止**在正文逐柱枚举藏干/十神/神煞/长生；**## 四柱命盘数据** 仅 2–4 句综合解读（见叙事精简规则）。
+13. **禁止假设**「输出端会软翻译」——你必须在生成时直接写好标记与软译词。`;
 
 const BASE_ANALYSIS_LEAD_LABEL_RULE_ZH = `# 引导块标签（严禁占位词）
 
@@ -127,17 +135,25 @@ Open each point with \`**Label:** body\` (renderer lead block).
 - **Never** output template placeholders: **Bold lead**, **Lead**, **Bold lead sentence**, etc.
 - Chinese uses the same rule with real phrases like **驱动类型:** — never copy English placeholder tokens`;
 
-const BASE_ANALYSIS_BULLET_RULE_ZH = `# 列表格式（必须可渲染）
+const BASE_ANALYSIS_BULLET_RULE_ZH = `# 列表格式（必须可渲染 · 落库前 parseReadingBlocks 解析）
 
-- 每条 bullet **独占一行**，以 \`- \` 开头；列表前 **空一行**
+- 可操作清单（**能量平衡锚** / 调候 / 日常锚点 / 三大变化等）**必须**用 Markdown 列表：
+  1. 清单标题行（如 **日常锚点清单:**）后 **空一行**
+  2. **每一条**以 \`- \` 开头、**独占一行**
+  3. 允许 \`- **标签:** 内容\`（如 \`- 作息：固定冷却窗口\`）
+- **禁止**用纯文本冒号列举挤在同一段（错误：\`Rhythm: … Environment: … Decision habits: …\` 无 \`- \`、无换行）
 - **禁止**在同一行或同一段内写多个 \`- \` 项（错误：\`This looks like: - A - B - C\`）
-- 正确范例见 few-shot **能量平衡锚** 段`;
+- 正确范例见 few-shot **能量平衡锚 · 日常锚点清单** 段`;
 
-const BASE_ANALYSIS_BULLET_RULE_EN = `# Bullet list format (must render)
+const BASE_ANALYSIS_BULLET_RULE_EN = `# Bullet list format (must render · parseReadingBlocks)
 
-- **One** \`- \` item **per line**; **blank line before** the list
-- **Never** pack multiple \`- \` items on one line or in one prose sentence (bad: \`This looks like: - Rhythm: … - Environment: …\`)
-- See few-shot **Balancing Anchors** for correct multi-line layout`;
+- Actionable lists (**Balancing Anchors** / climate tuning / daily anchors / three shifts) **must** use Markdown bullets:
+  1. Label line (e.g. **Daily anchor list:**) then **blank line**
+  2. **Each** item starts with \`- \` on **its own line**
+  3. OK: \`- **Rhythm:** fixed cool-down windows\`
+- **Never** colon-separated prose in one paragraph without \`- \` (bad: \`Rhythm: … Environment: … Decision habits: …\` on one block—won't render as \`<ul>\`)
+- **Never** pack multiple \`- \` items on one line (bad: \`This looks like: - A - B - C\`)
+- See few-shot **Balancing Anchors · Daily anchor list** for correct multi-line layout`;
 
 const BASE_ANALYSIS_LAYOUT_ZH = `# 降维排版（中立元报告 · 奢侈品交付 · 必遵）
 
@@ -200,12 +216,15 @@ const BASE_ANALYSIS_FEW_SHOT_ZH = `# 分区范例（复制结构 · 勿抄意象
 
 ## 能量平衡锚（Balancing Anchors · 解决方案）
 
-**调谐机制:** 对你有效的 ⟦t:yong_shen|用神（水）|规则网格 + 固定复盘时段，给高频输出加缓冲⟧。
+**调谐机制:** 对你有效的 ⟦t:yong_shen|用神（水）|规则网格 + 固定复盘时段，给高频输出加缓冲⟧——标记嵌在完整句中，不作句首碎片。
+
+**神煞嵌入句范例:** 你的 ⟦t:yi_ma|行动脉冲（驿马）|让你倾向持续换场、靠移动释放压力⟧与 ⟦t:gua_su|独立 streak（寡宿）|在需要协作时易变成一堵墙⟧并存时，需要外部节律补位——**禁止** \`行动脉冲（驿马） Pairs with…\` 式断裂。
 
 **日常锚点清单:**
 
 - 作息：固定「冷却窗口」，重大决定不进该窗口
 - 环境：偏润、低噪、可分段专注的空间
+- 决策习惯：重大拍板前强制 24h 缓冲
 - 方位/颜色：按 structured 调候方向中性列出（禁招财承诺）
 
 ## 高杠杆发力区（High-Leverage Trajectory · 全力以赴方向）
@@ -220,11 +239,18 @@ const BASE_ANALYSIS_FEW_SHOT_ZH = `# 分区范例（复制结构 · 勿抄意象
 
 ## 大运能量气候概览
 
-### 气候时序
+### 气候时序（策略 B · 全白话年龄段 · 无干支）
 
-**二十出头:** 金气渐起，系统进入收敛校准期（**禁裸** 癸酉/壬申；用年龄段）。
+**二十出头:** 金气渐起，系统进入收敛校准期（整段不出现 癸酉/壬申 等字符）。
 
 **三十前后:** 燥润交替，宜强化冷却锚点，避免连续高压输出。（只讲气候，不讲换赛道/升职等剧情）
+
+### 气候时序（策略 A · 全标记 · 若用干支则每个都标）
+
+**若 structured.da_yun 含多个阶段且你选择写干支**，则**每一个**都必须三段位，例如：
+**二十出头:** ⟦t:decade|life phase (癸酉)|水金交接，系统进入校准收敛期⟧。
+**二十中后期:** ⟦t:decade|life phase (壬申)|资源重组期，内耗风险随输出频率上升⟧。
+（辛未/庚午 等同理——**禁止**只标首个、其余裸写）
 \`\`\``;
 
 const BASE_ANALYSIS_FEW_SHOT_EN = `# Section example (copy structure · no scenarios)
@@ -250,13 +276,16 @@ const BASE_ANALYSIS_FEW_SHOT_EN = `# Section example (copy structure · no scena
 
 ## Balancing Anchors (解决方案)
 
-**Tuning mechanism:** What works for you ⟦t:yong_shen|favorable element (水)|rule grid + fixed review windows to buffer high-frequency output⟧.
+**Tuning mechanism:** What works for you is a ⟦t:yong_shen|favorable element (水)|rule grid + fixed review windows to buffer high-frequency output⟧—marker inside a full sentence, never a sentence-start fragment.
+
+**Embedded-marker grammar:** Your ⟦t:yi_ma|mobility pulse (驿马)|keeps you in motion and releases pressure through change⟧ can pair with a sharp edge when ⟦t:gua_su|independent streak (寡宿)|turns collaboration into a wall you didn't mean to build⟧—**never** \`mobility pulse (驿马) Pairs with…\` (broken subject).
 
 **Daily anchor list:**
 
-- Rhythm: fixed "cool-down windows"; no major calls inside them
-- Environment: moist, low-noise, segmentable focus space
-- Direction/color: neutral list from structured climate balance (no wealth promises)
+- **Rhythm:** fixed "cool-down windows"; no major calls inside them
+- **Environment:** moist, low-noise, segmentable focus space
+- **Decision habits:** mandatory 24h buffer before irreversible calls
+- **Direction/color:** neutral list from structured climate balance (no wealth promises)
 
 ## High-Leverage Trajectory (全力以赴方向)
 
@@ -270,11 +299,18 @@ const BASE_ANALYSIS_FEW_SHOT_EN = `# Section example (copy structure · no scena
 
 ## Decade Energy Climate Overview
 
-### Climate timeline
+### Climate timeline (Strategy B · age phrases only · zero Ganzhi)
 
-**Early twenties:** Metal tone rises—system enters calibration/contraction phase (**no bare** 癸酉/壬申; age phrases only).
+**Early twenties:** Metal tone rises—system enters calibration/contraction (**no** 癸酉/壬申/辛未/庚午 characters anywhere in this section).
 
-**Mid-thirties:** Dry-moist alternation—reinforce cooling anchors; avoid chained high-pressure output. (climate only—no promotion/job-change plot)
+**Mid-thirties:** Dry-moist alternation—reinforce cooling anchors; avoid chained high-pressure output. (climate only—no promotion plot)
+
+### Climate timeline (Strategy A · all marked · if you use Ganzhi, mark every one)
+
+If you name stem-branch from \`structured.da_yun\`, **every** stage needs a full marker with **distinct** plain text, e.g.:
+**Early twenties:** ⟦t:decade|life phase (癸酉)|Water-metal handoff—calibration, less visible heat⟧.
+**Mid-twenties:** ⟦t:decade|life phase (壬申)|Resource consolidation; friction rises if cooling stays weak⟧.
+(辛未 / 庚午 same rule—**never** mark the first decade and leave the rest bare)
 \`\`\``;
 
 export function buildBaseAnalysisStreamPrompt(input: BaseAnalysisStreamPromptInput): {
@@ -310,7 +346,7 @@ ${BASE_ANALYSIS_OUTPUT_SECTIONS_ZH.split("\n").slice(1).join("\n")}
 4. **1100–1600 词**（中文同等篇幅）— **优先保证四维与数据层完整**；宁可略超，**不可**为压字数砍掉任何块。
 5. **压缩水分，不砍信息** — 删解释性铺垫、安慰性排比、同义重复、场景化举例；保留每个维度的关键能量结论与一条可操作的**中立调谐**建议（作息/环境/决策习惯，非职业/关系）。
 6. 第二人称（你），现代、专业、克制；**每段 ≤120 字**；引导块用**真实标签**（禁 Bold lead/粗体引导 占位词）；**四维各至少 1 个**引导块 **+ 1 个** \`>\` 锚点；**能量平衡锚** 用**多行** \`- \` bullets（每条独占一行，列表前空一行）。
-7. 挑战类**不得渲染成「灾祸/损失」恐吓**；**禁裸干支**；**禁止逐柱罗列原始配置**；神煞/十神**只能来自 structured 实例清单**；**每个 ⟦t:…⟧ 三段位必须闭合**；可见词禁前导 the/a/an。
+7. 挑战类**不得渲染成「灾祸/损失」恐吓**；**禁裸干支**（大运段全有或全无）；**禁止逐柱罗列原始配置**；神煞/十神**只能来自 structured 实例清单**；**每个 ⟦t:…⟧ 三段位必须闭合**、**嵌入完整句**（禁术语当无冠词句首主语）；可见词内禁 the/a/an。
 8. **落库门禁** — 集外神煞（元辰/六秀日/阴差阳错等）、断标记、裸干支、密度超标会导致整篇被拒并重写；可自然提及 POJU / pojulife；禁 astrology / divination / psychic / horoscope。`
       : `# Output requirements
 
@@ -321,7 +357,7 @@ ${BASE_ANALYSIS_OUTPUT_SECTIONS_EN.split("\n").slice(1).join("\n")}
 4. **1100–1600 words** (equivalent length in Chinese)—**four dimensions + data layers complete first**; slightly over is OK; never drop a block for word cap.
 5. **Cut fluff, not facts** — drop padding, reassurance loops, scenario examples; keep each dimension's key energy read + one **neutral tuning** takeaway (rhythm/environment/decision habits—not career/relationship).
 6. Second person (you); modern, restrained, professional; **≤80 words per paragraph**; lead blocks use **real labels** (never literal "Bold lead" / "Lead"); **each of the four dimensions** needs at least one labeled lead **+ one** \`>\` anchor; **Balancing Anchors** uses **multi-line** \`- \` bullets (one item per line, blank line before list).
-7. Do not frame challenges as doom/scare; **no bare Ganzhi**; **no pillar-by-pillar raw config dumps**; shen_sha/ten_gods **only from structured instance inventory**; **every ⟦t:…⟧ must be fully closed** (3 parts); visible text without leading the/a/an.
+7. Do not frame challenges as doom/scare; **no bare Ganzhi** (decade section: all marked or all age phrases); **no pillar-by-pillar raw config dumps**; shen_sha/ten_gods **only from structured instance inventory**; **every ⟦t:…⟧ fully closed**, **embedded in complete sentences** (no bare term as subject fragment); no the/a/an **inside** visible text.
 8. **Delivery gate** — out-of-set shen_sha (元辰/六秀日/阴差阳错 etc.), broken markers, bare Ganzhi, or density overflow will reject the draft and force rewrite; POJU / pojulife OK; no astrology / divination / psychic / horoscope.`;
 
   const forbiddenBlock =
