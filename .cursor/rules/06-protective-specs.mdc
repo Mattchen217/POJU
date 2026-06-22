@@ -8,7 +8,7 @@ alwaysApply: true
 **任何改动或新建**（提示词、LLM 调用链、渲染、合规、落库、会话结构）**必须先读并遵循**以下两份文档，不得破坏其中规定：
 
 1. `.cursor/docs/pojulife-四产品统一输出规范.md` — 术语/排版/闭集/底座中立/合规/渲染链
-2. `.cursor/docs/prefix-cache-省钱工程-spec.md` — provider.only 钉供应商、静态 system、base_analysis 一致、session_id 观测
+2. `.cursor/docs/prefix-cache-省钱工程-spec.md` — provider.order 钉供应商、静态 system、base_analysis 一致、session_id 观测
 
 ## 四产品输出 — 不可破坏要点
 
@@ -16,7 +16,7 @@ alwaysApply: true
 - 神煞闭集 9 个；集外禁词（元辰/六秀日/阴差阳错/空亡…）落库前 `auditDeliveredText` 必须能阻断
 - 排版：`###` / `**要旨:**` / `> 金句` / 独占行 bullets / 短段；禁 `Bold lead:` 字面、禁字墙
 - 底座中立四维（数字孪生）：不推职业/事件/医疗脏腑/逐柱罗列；下游靠 `structured` 作事实源
-- 改 OpenRouter 路由：设 `OPENROUTER_PROVIDER_ONLY` 钉死单一上游（`provider.only` + `allow_fallbacks: false`）；`OPENROUTER_PROVIDER_IGNORE` 可合并。`session_id` 仅观测，不钉供应商
+- 改 OpenRouter 路由：设 `OPENROUTER_PROVIDER_ORDER`（`provider.order` + `allow_fallbacks: false`）；`OPENROUTER_PROVIDER_IGNORE` 可合并。`session_id` 仅观测，不钉供应商
 
 ## Prefix 缓存 — 不可破坏要点（INV-1～6）
 

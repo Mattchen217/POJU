@@ -13,7 +13,7 @@ DeepSeek 在 OpenRouter 上支持 **prefix 缓存（前缀缓存）**：当一�
 对 POJU 这种**多轮聊天**，每轮都重发「系统提示词（含命主 base_analysis 大块）+ 全部历史消息」。如果前缀能命中缓存，第 2 轮起省下的就是整个系统提示词的钱。这就是「省钱工程」。
 
 **命中需要同时满足三件事：**
-1. **同一上游供应商**（`OPENROUTER_PROVIDER_ONLY` → `provider.only` + `allow_fallbacks: false`；`session_id` body 参数**不**钉供应商）。
+1. **同一上游供应商**（`OPENROUTER_PROVIDER_ORDER` → `provider.order` + `allow_fallbacks: false`；`session_id` body 参数**不**钉供应商）。
 2. **前缀逐 token 相同**（靠提示词「静态在前、动态在后」）。
 3. **缓存未过期**（供应商侧 TTL，分钟级，非永久）。
 
@@ -23,9 +23,9 @@ DeepSeek 在 OpenRouter 上支持 **prefix 缓存（前缀缓存）**：当一�
 
 | 环节 | 位置 | 作用 |
 |---|---|---|
-| 供应商钉选 | `openRouterProviderExtras()` ← `OPENROUTER_PROVIDER_ONLY` | `provider.only` + `allow_fallbacks: false`，同 session 固定上游 |
+| 供应商钉选 | `openRouterProviderExtras()` ← `OPENROUTER_PROVIDER_ORDER` | `provider.order` + `allow_fallbacks: false`，按序降级、不漂到名单外 |
 | session key | `openRouterRequestExtras(session_id)` + `cache-session-id.ts` | 请求体 `session_id`（观测/分组；**不**钉供应商） |
-| provider 黑名单 | `OPENROUTER_PROVIDER_IGNORE` | 与 ONLY 合并为 `ignore` |
+| provider 黑名单 | `OPENROUTER_PROVIDER_IGNORE` | 与 ORDER 合并为 `ignore` |
 | 命中观测 | `openRouterChatCompletion()` → `logOpenRouterPrefixCacheMetrics` | `[openrouter] prefix cache HIT/Miss cached=… ratio=…` |
 
 ### 各产品 session key（`cache-session-id.ts`）
@@ -62,10 +62,10 @@ DeepSeek 在 OpenRouter 上支持 **prefix 缓存（前缀缓存）**：当一�
 - 客户端每轮把 `base_analysis` 放进请求体时，发**同一份对象**，不得有空白/字段差异。
 
 ### INV-3 供应商钉选 + `session_id` 稳定
-- 生产环境设 **`OPENROUTER_PROVIDER_ONLY`**（如 `DeepSeek` / `Novita` / `SiliconFlow`）——DeepSeek 前缀缓存**按供应商独立**，每轮换节点 = 永远 miss。
+- 生产环境设 **`OPENROUTER_PROVIDER_ORDER`**（如 `DeepSeek,Baidu,Alibaba`）——DeepSeek 前缀缓存**按供应商独立**，每轮换节点 = 永远 miss。`allow_fallbacks: false` 时仅在 ORDER 名单内按序降级，不漂到 NextBit 等名单外。
 - `session_id` 用 `cache-session-id.ts` 生成器，**勿在路径间用不同 key**；保留用于观测，**不依赖它钉供应商**。
   - ⚠ 已知不一致：POJU **phase 路径**当前传原始 `session.session_id`，**legacy 路径**用 `pojuCacheSessionId(...)`。应统一为 `pojuCacheSessionId(...)`。
-- `OPENROUTER_PROVIDER_IGNORE` 可与 ONLY 合并（ONLY 优先：`allow_fallbacks: false`）。
+- `OPENROUTER_PROVIDER_IGNORE` 可与 ORDER 合并。
 
 ### INV-4 不要轻易改动「静态头」
 对 `buildPojuCorePromptSections()` 及其子块（identity / plainspeak / `READING_LAYOUT_CONTRACT` / 方法 / 政策 / 品牌 / 守则 / grammar polish）的**任何字符改动或重排**，都会让**所有现存缓存一次性失效**。改动是允许的，但要知道代价：上线后需要每个 session 重新预热第 1 轮。**不要为微小措辞频繁动静态头。**
@@ -84,8 +84,8 @@ DeepSeek 在 OpenRouter 上支持 **prefix 缓存（前缀缓存）**：当一�
    - 有但偏小 → INV-1 结构问题（分叉点偏前），按目标架构下沉动态内容。
    - 完全没有 + 两轮间隔短 → 多半是「刚改过静态头（INV-4 一次性失效）」或 INV-2 base_analysis 每轮不一致。
    - 完全没有 + 两轮间隔几分钟 → INV-6 TTL 过期，非 bug。
-2. **确认供应商**：`OPENROUTER_PROVIDER_ONLY` 是否已设；同 session 连发 3 轮日志里供应商名应恒定。
-3. **确认 `provider.only` 生效**（INV-3）；未设 ONLY 时 OpenRouter 会在多供应商间轮转 → 缓存永远 miss。
+2. **确认供应商**：`OPENROUTER_PROVIDER_ORDER` 是否已设；同 session 连发 3 轮日志里供应商名应恒定（DeepSeek 在线时应恒为 DeepSeek）。
+3. **确认 `provider.order` 生效**（INV-3）；未设 ORDER 时 OpenRouter 会在多供应商间轮转 → 缓存永远 miss。
 
 ---
 
@@ -94,7 +94,7 @@ DeepSeek 在 OpenRouter 上支持 **prefix 缓存（前缀缓存）**：当一�
 - [ ] 我新增/改动的内容是**静态**的吗？若是动态（按轮/按用户/按时间变），是否放在了系统提示词**最后**或 user 消息里？
 - [ ] 我有没有往**静态头**里插入动态内容（日期、随机、Set 顺序、按 user 输入变的文本）？（违反 INV-5）
 - [ ] `base_analysis` 是否仍逐字节一致、session 内快照复用？（INV-2）
-- [ ] `OPENROUTER_PROVIDER_ONLY` 是否已配置、同 session 供应商恒定？（INV-3）
+- [ ] `OPENROUTER_PROVIDER_ORDER` 是否已配置、同 session 供应商恒定？（INV-3）
 - [ ] `session_id` 生成器是否仍一致？（INV-3）
 - [ ] 我是否改了静态头、知道会一次性失效全部缓存？是否必要？（INV-4）
 - [ ] 上线后是否看 `cached_tokens` 日志确认命中率没退化？

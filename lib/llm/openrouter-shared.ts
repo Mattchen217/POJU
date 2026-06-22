@@ -5,8 +5,8 @@
  * - OPENROUTER_API_KEY — required to use this path
  * - OPENROUTER_MODEL — default `deepseek/deepseek-v4-pro` (dev: single model per product decision)
  * - OPENROUTER_REASONING_EFFORT — `high` | `xhigh` | `off` (default `high` = deep reasoning where supported)
- * - OPENROUTER_PROVIDER_ONLY — pin a single upstream (e.g. `DeepSeek`, `Novita`, `SiliconFlow`) for prefix-cache hits
- * - OPENROUTER_PROVIDER_IGNORE — comma-separated providers to skip (merged with ONLY; ONLY wins on fallbacks)
+ * - OPENROUTER_PROVIDER_ORDER — comma-separated provider slugs in priority order (e.g. `DeepSeek,Baidu,Alibaba`)
+ * - OPENROUTER_PROVIDER_IGNORE — comma-separated providers to skip (merged with ORDER)
  * - OPENROUTER_HTTP_REFERER, OPENROUTER_APP_TITLE — optional OpenRouter attribution headers
  */
 
@@ -36,12 +36,12 @@ export type OpenRouterChatOptions = {
   call_type?: string;
   /** POJU phase name — for cache observability logs. */
   phase_name?: string;
-  /** Provider routing — use `provider.only` (via OPENROUTER_PROVIDER_ONLY) to pin supplier. */
+  /** Provider routing — `provider.order` via OPENROUTER_PROVIDER_ORDER (+ allow_fallbacks: false). */
   provider?: Record<string, unknown>;
 };
 
-export function parseProviderOnly(): string[] {
-  const raw = process.env.OPENROUTER_PROVIDER_ONLY?.trim();
+export function parseProviderOrder(): string[] {
+  const raw = process.env.OPENROUTER_PROVIDER_ORDER?.trim();
   if (!raw) return [];
   return raw
     .split(",")
@@ -62,13 +62,13 @@ export function parseProviderIgnore(): string[] {
  * OpenRouter provider routing extras.
  *
  * `session_id` in the request body does NOT sticky-route to one upstream — DeepSeek prefix cache
- * is per supplier. Pin with `OPENROUTER_PROVIDER_ONLY` → `provider.only` + `allow_fallbacks: false`.
- * `OPENROUTER_PROVIDER_IGNORE` merges as `ignore` (ONLY takes priority on fallbacks).
+ * is per supplier. Pin with `OPENROUTER_PROVIDER_ORDER` → `provider.order` + `allow_fallbacks: false`
+ * (tries each slug in order; never drifts to unlisted providers). `OPENROUTER_PROVIDER_IGNORE` merges as `ignore`.
  */
 export function openRouterProviderExtras(options?: {
   require_parameters?: boolean;
 }): Record<string, unknown> | undefined {
-  const only = parseProviderOnly();
+  const order = parseProviderOrder();
   const ignore = parseProviderIgnore();
   const out: Record<string, unknown> = {};
 
@@ -76,14 +76,14 @@ export function openRouterProviderExtras(options?: {
     out.require_parameters = true;
   }
 
-  if (only.length > 0) {
-    out.only = only;
+  if (order.length > 0) {
+    out.order = order;
     out.allow_fallbacks = false;
   }
 
   if (ignore.length > 0) {
     out.ignore = ignore;
-    if (only.length === 0) {
+    if (order.length === 0) {
       out.allow_fallbacks = true;
     }
   }
@@ -118,14 +118,42 @@ export function logOpenRouterPrefixCacheMetrics(meta: {
   session_id?: string;
   call_type?: string;
   phase_name?: string;
+  provider?: string | null;
 }): void {
   const ratio =
     meta.prompt_tokens > 0 ? (meta.cached_tokens / meta.prompt_tokens).toFixed(3) : "0.000";
   const phase = meta.phase_name ?? meta.call_type ?? "—";
   const hit = meta.cached_tokens > 0 ? "HIT" : "miss";
   console.log(
-    `[openrouter] prefix cache ${hit}: cached=${meta.cached_tokens} prompt=${meta.prompt_tokens} ratio=${ratio} phase=${phase} session=${meta.session_id ?? "—"}`,
+    `[openrouter] prefix cache ${hit}: cached=${meta.cached_tokens} prompt=${meta.prompt_tokens} ratio=${ratio} phase=${phase} provider=${meta.provider ?? "—"} session=${meta.session_id ?? "—"}`,
   );
+}
+
+let warnedMissingProviderOrder = false;
+
+/** Warn once per process when supplier order env is missing. */
+export function warnIfProviderNotPinned(): void {
+  if (warnedMissingProviderOrder || !isOpenRouterConfigured()) return;
+  if (parseProviderOrder().length > 0) return;
+  warnedMissingProviderOrder = true;
+  console.warn(
+    "[openrouter] OPENROUTER_PROVIDER_ORDER is not set — OpenRouter may rotate suppliers (e.g. NextBit) and prefix cache will miss. Set provider.order via env.",
+  );
+}
+
+/** Log outbound provider routing constraints (verify allow_fallbacks:false when pinned). */
+export function logOpenRouterRequestRouting(
+  body: Record<string, unknown>,
+  meta?: { call_type?: string; phase_name?: string },
+): void {
+  warnIfProviderNotPinned();
+  const provider = body.provider;
+  const phase = meta?.phase_name ?? meta?.call_type ?? "—";
+  if (!provider || typeof provider !== "object") {
+    console.warn(`[openrouter] request routing: no provider constraints (phase=${phase})`);
+    return;
+  }
+  console.log(`[openrouter] request routing: ${JSON.stringify(provider)} phase=${phase}`);
 }
 
 export function isOpenRouterConfigured(): boolean {
@@ -201,6 +229,10 @@ export async function openRouterChatCompletion(
     if (includeReasoning && effort !== "off") {
       body.reasoning = { effort };
     }
+    logOpenRouterRequestRouting(body, {
+      call_type: options.call_type,
+      phase_name: options.phase_name,
+    });
     return body;
   };
 
@@ -319,6 +351,7 @@ export async function openRouterChatCompletion(
     session_id: options.session_id,
     call_type: options.call_type,
     phase_name: options.phase_name,
+    provider,
   });
 
   const reasoning =

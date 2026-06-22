@@ -37,10 +37,13 @@ import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import {
   callPhaseJsonTransport,
   formatPhaseMessageHistory,
+  getPhaseResponseFallback,
   resolvePhaseResponse,
   withPhaseStreamOpts,
 } from "@/lib/llm/phases/phase-transport";
+import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import { buildOrientalSystemPrompt } from "@/lib/llm/phases/oriental-prompt-context";
+import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
 import type { PojuV4ActionRequested } from "@/lib/poju/types";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
@@ -354,6 +357,9 @@ ${requiredList}
 2. 命盘 ↔ 处境对应，不要空讲性格；用户已表达多年不顺/重大压力时，命理解读要够具体、够展开
 3. 不重复已知信息；一次不要问超过 3 个问题
 4. 只把用户【明确说过】的事实写入 context_updates，不要推断编造
+5. **防复读**：禁止原样重述前几轮已说过的命盘结论；每轮必须基于用户本轮新信息往前推进
+6. **标记一致**：复述已提过的命理结构须同样 \`⟦t:…⟧\` 包好，或干脆不提；禁止裸写食神/正官/用神等
+7. **keep_cn 括号**：life phase / 人生阶段 等软译括号内必须带干支（如 人生阶段（丙午）），禁止空括号
 
 ## 用户追问【已正式交付过的】建议时（仅限本 Session 已完成 final-delivery 之后）
 - ✓ 在已给过的建议上【展开】：为什么有效、怎么做、何时调整、叠加 1-2 个动作
@@ -429,10 +435,12 @@ ${buildCollectingEscalationBlock(
 }
 
 export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLLMResult> {
+  const firstAgendaTurn = !input.agent_state?.agenda_generated;
+  const structured = normalizeBaseAnalysisInput(input.base_analysis ?? null).structured ?? null;
   const system = await buildOrientalSystemPrompt(input, buildCollectingTaskBlock(input));
   const messages = formatPhaseMessageHistory(input.session.messages);
-  const firstAgendaTurn = !input.agent_state?.agenda_generated;
-  const result = await callPhaseJsonTransport(
+
+  let transport = await callPhaseJsonTransport(
     system,
     messages,
     withPhaseStreamOpts(input, {
@@ -442,15 +450,58 @@ export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLL
     }),
   );
 
-  const { parsed, response } = resolvePhaseResponse(result.content, {
+  let resolved = resolvePhaseResponse(transport.content, {
     locale: input.locale,
     phase_name: "collecting_context",
     call_type: "collection_flash",
-    model: result.model,
-    finish_reason: result.finish_reason,
-    provider: result.provider,
+    model: transport.model,
+    finish_reason: transport.finish_reason,
+    provider: transport.provider,
+    structured,
     use_fallback: true,
   });
+
+  if (resolved.compliance_failed) {
+    console.warn("[collecting-phase] compliance failed — retrying once on pinned provider");
+    transport = await callPhaseJsonTransport(
+      system,
+      messages,
+      withPhaseStreamOpts(input, {
+        call_type: "collection_flash",
+        max_tokens: firstAgendaTurn ? 7200 : 3600,
+        temperature: 0.5,
+      }),
+    );
+    resolved = resolvePhaseResponse(transport.content, {
+      locale: input.locale,
+      phase_name: "collecting_context",
+      call_type: "collection_flash",
+      model: transport.model,
+      finish_reason: transport.finish_reason,
+      provider: transport.provider,
+      structured,
+      use_fallback: true,
+    });
+  }
+
+  if (!resolved.response.trim()) {
+    resolved = {
+      ...resolved,
+      response: getPhaseResponseFallback(input.locale),
+      used_fallback: true,
+    };
+  }
+
+  return finishCollectingPhase(input, transport, resolved.parsed, resolved.response, structured);
+}
+
+async function finishCollectingPhase(
+  input: PhaseLLMInput,
+  result: Awaited<ReturnType<typeof callPhaseJsonTransport>>,
+  parsed: Record<string, unknown>,
+  response: string,
+  _structured: ProfileStructured | null,
+): Promise<PhaseLLMResult> {
 
   const context_updates =
     parsed.context_updates && typeof parsed.context_updates === "object" && !Array.isArray(parsed.context_updates)

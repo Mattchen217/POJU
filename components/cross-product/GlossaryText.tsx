@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 import {
   GLOSS_TOKEN_PATTERN,
@@ -17,6 +18,35 @@ import "@/styles/glossary.css";
 
 type Props = { text: string; locale: string };
 
+const GLOSSARY_POP_WIDTH = 280;
+const GLOSSARY_POP_GAP = 8;
+const GLOSSARY_POP_Z = 10000;
+
+type PopPlacement = "below" | "above";
+
+function computeGlossaryPopPosition(anchor: DOMRect): {
+  top: number;
+  left: number;
+  placement: PopPlacement;
+  width: number;
+} {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const width = Math.min(GLOSSARY_POP_WIDTH, vw * 0.78);
+
+  let left = anchor.left;
+  if (left + width > vw - 12) left = Math.max(12, vw - width - 12);
+  if (left < 12) left = 12;
+
+  const belowTop = anchor.bottom + GLOSSARY_POP_GAP;
+  const spaceBelow = vh - belowTop;
+  const spaceAbove = anchor.top - GLOSSARY_POP_GAP;
+  const placement: PopPlacement = spaceBelow < 96 && spaceAbove > spaceBelow ? "above" : "below";
+  const top = placement === "below" ? belowTop : anchor.top - GLOSSARY_POP_GAP;
+
+  return { top, left, placement, width };
+}
+
 function TermMark({
   visible,
   plain,
@@ -27,13 +57,61 @@ function TermMark({
   polarity?: TermPolarity;
 }) {
   const [open, setOpen] = useState(false);
+  const [popStyle, setPopStyle] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    placement: PopPlacement;
+  } | null>(null);
   const id = useId();
-  const ref = useRef<HTMLSpanElement>(null);
+  const anchorRef = useRef<HTMLSpanElement>(null);
+  const popRef = useRef<HTMLSpanElement>(null);
+  const hoverCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelHoverClose = () => {
+    if (hoverCloseTimer.current) {
+      clearTimeout(hoverCloseTimer.current);
+      hoverCloseTimer.current = null;
+    }
+  };
+
+  const scheduleHoverClose = () => {
+    cancelHoverClose();
+    hoverCloseTimer.current = setTimeout(() => setOpen(false), 140);
+  };
+
+  const openFromHover = () => {
+    cancelHoverClose();
+    setOpen(true);
+  };
+
+  const updatePopPosition = () => {
+    const el = anchorRef.current;
+    if (!el) return;
+    setPopStyle(computeGlossaryPopPosition(el.getBoundingClientRect()));
+  };
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setPopStyle(null);
+      return;
+    }
+    updatePopPosition();
+    window.addEventListener("resize", updatePopPosition);
+    window.addEventListener("scroll", updatePopPosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePopPosition);
+      window.removeEventListener("scroll", updatePopPosition, true);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
     const close = (ev: Event) => {
-      if (!ref.current?.contains(ev.target as Node)) setOpen(false);
+      const target = ev.target as Node;
+      if (anchorRef.current?.contains(target)) return;
+      if (popRef.current?.contains(target)) return;
+      setOpen(false);
     };
     document.addEventListener("pointerdown", close);
     const esc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
@@ -46,15 +124,39 @@ function TermMark({
 
   const toggle = () => setOpen((o) => !o);
 
+  const popNode =
+    open && plain && popStyle ? (
+      <span
+        ref={popRef}
+        id={id}
+        role="tooltip"
+        className={`glossary-pop glossary-pop--portal glossary-pop--${polarity}${
+          popStyle.placement === "above" ? " glossary-pop--above" : ""
+        }`}
+        style={{
+          top: popStyle.top,
+          left: popStyle.left,
+          width: popStyle.width,
+          maxWidth: popStyle.width,
+          zIndex: GLOSSARY_POP_Z,
+        }}
+        onMouseEnter={cancelHoverClose}
+        onMouseLeave={scheduleHoverClose}
+      >
+        <span className="glossary-pop__title">{visible}</span>
+        <span className="glossary-pop__body">{plain}</span>
+      </span>
+    ) : null;
+
   return (
-    <span ref={ref} className={`term-mark term-mark--${polarity}`}>
+    <span ref={anchorRef} className={`term-mark term-mark--${polarity}`}>
       <span
         className="term-mark__word"
         tabIndex={0}
         role="button"
         aria-describedby={open ? id : undefined}
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
+        onMouseEnter={openFromHover}
+        onMouseLeave={scheduleHoverClose}
         onFocus={() => setOpen(true)}
         onBlur={() => setOpen(false)}
         onClick={toggle}
@@ -69,12 +171,7 @@ function TermMark({
       >
         [···]
       </button>
-      {open && plain ? (
-        <span id={id} role="tooltip" className={`glossary-pop glossary-pop--${polarity}`}>
-          <span className="glossary-pop__title">{visible}</span>
-          <span className="glossary-pop__body">{plain}</span>
-        </span>
-      ) : null}
+      {typeof document !== "undefined" && popNode ? createPortal(popNode, document.body) : null}
     </span>
   );
 }

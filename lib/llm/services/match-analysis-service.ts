@@ -57,7 +57,7 @@ export type GenerateMatchAnalysisInput = {
   a_base_analysis?: unknown | null;
   b_user_profile?: UserProfile | null;
   b_base_analysis?: unknown | null;
-  /** Optional session key for observability; supplier pin = OPENROUTER_PROVIDER_ONLY. */
+  /** Optional session key for observability; supplier pin = OPENROUTER_PROVIDER_ORDER. */
   cache_session_id?: string;
 };
 

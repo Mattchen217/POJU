@@ -43,6 +43,7 @@ import {
   uiTermById,
   unescapeMarkerPart,
 } from "@/lib/llm/sanitize/term-marking";
+import { auditEmptyKeepCnBrackets } from "@/lib/llm/sanitize/keep-cn-brackets";
 
 export {
   auditBareGanzhi,
@@ -497,6 +498,10 @@ export function auditDeliveredText(text: string, locale: string): ComplianceViol
   }
 
   for (const hit of auditBareGanzhi(text)) {
+    violations.push(hit);
+  }
+
+  for (const hit of auditEmptyKeepCnBrackets(text)) {
     violations.push(hit);
   }
 

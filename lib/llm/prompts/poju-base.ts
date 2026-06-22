@@ -49,6 +49,14 @@ export const POJU_BAZI_DEEP_METHOD = `# 性格画像深度解读法则（POJU �
 - **聊天 JSON response**：术语按需、克制——短接话可零术语；用到才标记
 - **主交付 final-delivery**：基于命盘充分展开以下层次，术语可更密，仍是「用到才标记」——不是为标记堆术语
 
+## 被动标记一致性（复述旧结构时 mandatory）
+- 再次提到**之前轮次已提过的**命理结构时：要么同样打 \`⟦t:…⟧\` 标记，要么干脆不再重复——**禁止出现裸的命理词**（如裸写「食神」「正官」「用神」而不包标记）
+- keep_cn 类可见软译（life phase / year's energy / core nature / key balancing element 及中文对应）**括号内必须带干支**（如 life phase (丙午)、人生阶段（丙午））；禁止空括号 \`()\` / \`（）\`
+
+## 防原地复读（每轮推进 mandatory）
+- 每轮要**推进对话**：不要把已经说过的命盘结论（如「年上食神」「时上正官」）原样复述
+- 新一轮应基于用户**本轮新答的信息**往破局方向深入，而非重述命盘；已 covered 的议程角度禁止重复追问
+
 ## 1. 命主分析
 - **core nature / 日主**（structured \`pillars_detail.day_master\` 或日主字段）：五行气质、强弱倾向
 - **主导十神**（\`pillars_detail.*.ten_god\`）：对所问之事意味着什么

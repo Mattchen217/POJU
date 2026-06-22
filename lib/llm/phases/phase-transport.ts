@@ -1,13 +1,19 @@
 import { auditDeliveredText, sanitizeChatResponse, stripGlossTokensForPrompt } from "@/lib/llm/sanitize/compliance-terms";
+import { repairEmptyKeepCnBrackets } from "@/lib/llm/sanitize/keep-cn-brackets";
 import { salvagePhaseResponseText } from "@/lib/poju/extract-streaming-response";
 import { pojuCacheSessionId } from "@/lib/llm/cache-session-id";
+import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import {
   generateGeminiChatCompletion,
   getGeminiClient,
 } from "@/lib/llm/gemini-shared";
-import { callLLM, type LLMCallType } from "@/lib/llm/router";
+import { callLLM, highOutputProviderConstraints, type LLMCallType } from "@/lib/llm/router";
 import { openRouterChatCompletionStream } from "@/lib/llm/openrouter-stream";
-import { getOpenRouterDefaultModel, isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
+import {
+  getOpenRouterDefaultModel,
+  isOpenRouterConfigured,
+  openRouterProviderExtras,
+} from "@/lib/llm/openrouter-shared";
 
 export type PhaseStreamHooks = {
   onReasoning?: (fullReasoning: string) => void;
@@ -38,6 +44,40 @@ function shouldRetryEmptyReply(call_type?: LLMCallType): boolean {
 
 function hasSalvageableResponse(rawText: string): boolean {
   return Boolean(salvagePhaseResponseText(rawText).trim());
+}
+
+function resolveStreamProvider(call_type: LLMCallType): Record<string, unknown> | undefined {
+  const highOutput = new Set<LLMCallType>([
+    "glyph_reading",
+    "match_report",
+    "syncro_batch",
+    "main_delivery",
+    "deep_analysis",
+    "poju_situation_analysis",
+    "poju_final_delivery",
+  ]);
+  return highOutput.has(call_type)
+    ? highOutputProviderConstraints()
+    : openRouterProviderExtras();
+}
+
+const RETRYABLE_COMPLIANCE_LABELS = new Set([
+  "empty_keep_cn_bracket",
+  "broken_marker",
+  "bare_ganzhi",
+]);
+
+function isRetryableComplianceLabel(label: string): boolean {
+  if (RETRYABLE_COMPLIANCE_LABELS.has(label)) return true;
+  if (label.startsWith("term:") || label.startsWith("out_of_set:")) return true;
+  return false;
+}
+
+export function auditPhaseChatCompliance(
+  text: string,
+  locale: string,
+): Array<{ label: string; snippet?: string }> {
+  return auditDeliveredText(text, locale).filter((v) => isRetryableComplianceLabel(v.label));
 }
 
 export async function callPhaseJsonTransport(
@@ -75,6 +115,7 @@ export async function callPhaseJsonTransport(
             session_id: options?.session_id,
             call_type: call_type,
             phase_name: options?.phase_name,
+            provider: resolveStreamProvider(call_type),
           },
           {
             onReasoning: streamHooks.onReasoning,
@@ -181,7 +222,29 @@ export type PhaseResponseResolveContext = {
   provider?: string | null;
   raw_length?: number;
   use_fallback?: boolean;
+  structured?: ProfileStructured | null;
 };
+
+/** Log bad markers / bare terms before retry or fallback. */
+export function logPhaseComplianceFailure(
+  rawText: string,
+  ctx: PhaseResponseResolveContext,
+  violations: Array<{ label: string; snippet?: string }>,
+): void {
+  const preview = rawText.replace(/\s+/g, " ").trim().slice(0, 400);
+  console.warn(
+    "[phase-transport] phase response compliance failure",
+    JSON.stringify({
+      phase: ctx.phase_name ?? "—",
+      call_type: ctx.call_type ?? "—",
+      provider: ctx.provider ?? "—",
+      model: ctx.model ?? "—",
+      finish_reason: ctx.finish_reason ?? "—",
+      violations: violations.slice(0, 6).map((v) => v.label),
+      raw_preview: preview,
+    }),
+  );
+}
 
 /** Log when user-visible fallback copy is shown — includes supplier + finish_reason for triage. */
 export function logPhaseResponseFallback(rawText: string, ctx: PhaseResponseResolveContext): void {
@@ -207,19 +270,39 @@ export function logPhaseResponseFallback(rawText: string, ctx: PhaseResponseReso
 export function resolvePhaseResponse(
   rawText: string,
   ctx: PhaseResponseResolveContext,
-): { parsed: Record<string, unknown>; response: string; used_fallback: boolean } {
-  const { parsed, response } = parsePhaseResult(rawText, { locale: ctx.locale });
-  if (response.trim()) {
-    return { parsed, response, used_fallback: false };
+): {
+  parsed: Record<string, unknown>;
+  response: string;
+  used_fallback: boolean;
+  compliance_failed: boolean;
+} {
+  let { parsed, response } = parsePhaseResult(rawText, { locale: ctx.locale });
+
+  if (response.trim() && ctx.structured !== undefined) {
+    const repaired = repairEmptyKeepCnBrackets(response, ctx.structured, ctx.locale ?? "en");
+    response = repaired.text;
+    if (typeof parsed.response === "string") parsed.response = response;
+    else if (response) parsed.response = response;
   }
+
+  if (response.trim()) {
+    const violations = auditPhaseChatCompliance(response, ctx.locale ?? "en");
+    if (violations.length > 0) {
+      logPhaseComplianceFailure(rawText, { ...ctx, raw_length: rawText.length }, violations);
+      return { parsed, response: "", used_fallback: false, compliance_failed: true };
+    }
+    return { parsed, response, used_fallback: false, compliance_failed: false };
+  }
+
   if (ctx.use_fallback === false) {
-    return { parsed, response: "", used_fallback: false };
+    return { parsed, response: "", used_fallback: false, compliance_failed: false };
   }
   logPhaseResponseFallback(rawText, { ...ctx, raw_length: rawText.length });
   return {
     parsed,
     response: getPhaseResponseFallback(ctx.locale),
     used_fallback: true,
+    compliance_failed: false,
   };
 }
 

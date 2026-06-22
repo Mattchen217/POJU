@@ -111,7 +111,7 @@
 
 - **语气**：plainspeak（短句、直接、有温度、不软糯）；**全文一个主比喻**，比喻服务于解释能量机制，不刷屏、不编现实情节。
 - **语言跟随用户**：回复语言跟随**用户消息语言**（`getPojuChatLanguageDirective`），不是 UI locale。
-- **⚠ 语言漂移事故**：曾出现英文提问、模型用德语回复（DeepSeek V4 Pro 经 **GMICloud** 节点）。语言漂移多为**供应商/节点**问题。处置：① `OPENROUTER_PROVIDER_ONLY` 钉单一稳定上游；② `OPENROUTER_PROVIDER_IGNORE` 禁用漂移供应商（如 GMICloud）；③ 提示词语言指令保持强约束。
+- **⚠ 语言漂移事故**：曾出现英文提问、模型用德语回复（DeepSeek V4 Pro 经 **GMICloud** 节点）。语言漂移多为**供应商/节点**问题。处置：① `OPENROUTER_PROVIDER_ORDER` 按序钉供应商（如 `DeepSeek,Baidu,Alibaba`）；② `OPENROUTER_PROVIDER_IGNORE` 禁用漂移供应商（如 GMICloud）；③ 提示词语言指令保持强约束。
 
 ---
 

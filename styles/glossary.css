@@ -141,6 +141,18 @@
   white-space: normal;
   overflow-wrap: break-word;
   word-break: break-word;
+  pointer-events: auto;
+}
+
+/* Portaled popover — escapes modal overflow clipping */
+.glossary-pop--portal {
+  position: fixed;
+  top: auto;
+  left: auto;
+}
+
+.glossary-pop--portal.glossary-pop--above {
+  transform: translateY(-100%);
 }
 
 .glossary-pop__title {

@@ -50,7 +50,7 @@ export interface CallLLMInput {
   temperature?: number;
   /** OpenRouter HTTP timeout (ms). Defaults to 90s; deep_analysis uses 180s. */
   timeout_ms?: number;
-  /** OpenRouter session key for observability (see lib/llm/cache-session-id.ts). Supplier pin = OPENROUTER_PROVIDER_ONLY. */
+  /** OpenRouter session key for observability (see lib/llm/cache-session-id.ts). Supplier pin = OPENROUTER_PROVIDER_ORDER. */
   session_id?: string;
   /** POJU phase label for cache observability. */
   phase_name?: string;
@@ -86,7 +86,7 @@ const HIGH_OUTPUT_CALL_TYPES = new Set<LLMCallType>([
   "poju_final_delivery",
 ]);
 
-/** Long JSON deliveries — exclude low max-output providers; merges OPENROUTER_PROVIDER_ONLY pin. */
+/** Long JSON deliveries — exclude low max-output providers; merges OPENROUTER_PROVIDER_ORDER pin. */
 export function highOutputProviderConstraints(): Record<string, unknown> {
   const pinned = openRouterProviderExtras({ require_parameters: true });
   if (pinned) return pinned;

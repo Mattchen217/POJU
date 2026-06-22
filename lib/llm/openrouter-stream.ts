@@ -1,6 +1,8 @@
 import {
   getOpenRouterDefaultModel,
   logOpenRouterPrefixCacheMetrics,
+  logOpenRouterRequestRouting,
+  openRouterProviderExtras,
   openRouterRequestExtras,
   type OpenRouterChatMessage,
   type OpenRouterChatOptions,
@@ -72,16 +74,25 @@ export async function openRouterChatCompletionStream(
   const model = getOpenRouterDefaultModel();
   const effort = resolveReasoningEffort(options.reasoning_effort);
 
-  const buildBody = (includeReasoning: boolean): Record<string, unknown> => ({
-    model,
-    stream: true,
-    messages: options.messages,
-    temperature: options.temperature ?? 0.55,
-    max_tokens: options.max_tokens ?? 4096,
-    ...(options.json_mode ? { response_format: { type: "json_object" } } : {}),
-    ...(includeReasoning && effort !== "off" ? { reasoning: { effort } } : {}),
-    ...openRouterRequestExtras(options.session_id),
-  });
+  const buildBody = (includeReasoning: boolean): Record<string, unknown> => {
+    const extras = openRouterRequestExtras(options.session_id);
+    if (options.provider) extras.provider = options.provider;
+    const body: Record<string, unknown> = {
+      model,
+      stream: true,
+      messages: options.messages,
+      temperature: options.temperature ?? 0.55,
+      max_tokens: options.max_tokens ?? 4096,
+      ...(options.json_mode ? { response_format: { type: "json_object" } } : {}),
+      ...(includeReasoning && effort !== "off" ? { reasoning: { effort } } : {}),
+      ...extras,
+    };
+    logOpenRouterRequestRouting(body, {
+      call_type: options.call_type,
+      phase_name: options.phase_name,
+    });
+    return body;
+  };
 
   const headers: Record<string, string> = {
     Authorization: `Bearer ${apiKey}`,
@@ -208,6 +219,7 @@ export async function openRouterChatCompletionStream(
     session_id: options.session_id,
     call_type: options.call_type,
     phase_name: options.phase_name,
+    provider: out.result.provider,
   });
   return out.result;
 }
