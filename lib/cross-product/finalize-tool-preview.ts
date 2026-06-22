@@ -1,11 +1,13 @@
-import { requestMatrixNarrative } from "@/lib/llm/deepseek/matrix-narrative";
 import type { MatrixNarrativeResponse } from "@/lib/llm/prompts/matrix-narrative-prompt";
 import {
-  applyToolMatrixNarrative,
   applyToolMatrixNarrativeFailed,
 } from "@/lib/cross-product/apply-tool-matrix-narrative";
 import { buildMatrixPayloadFromProfile, refreshMatrixPayload } from "@/lib/poju/build-matrix-payload";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
+import {
+  applyMatrixPreviewToPayload,
+  ensureProfileMatrixList,
+} from "@/lib/poju/resolve-matrix-preview";
 import type { ToolName } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
 
@@ -16,8 +18,8 @@ export type ToolPreviewResult = {
 };
 
 /**
- * Tool free-preview layer: local matrix (zero LLM) + one light matrix-narrative call.
- * Match returns A/B payloads; narrative order is A → B → guide.
+ * Tool free-preview layer: local matrix + matrix_list from storage or one-time backfill.
+ * Match checks A/B independently; zero LLM when both profiles have matrix_list.
  */
 export async function finalizeToolPreview(opts: {
   profileId: string;
@@ -39,29 +41,35 @@ export async function finalizeToolPreview(opts: {
     payloadB = refreshMatrixPayload(payloadB, locale);
   }
 
-  let narrative: MatrixNarrativeResponse | null = null;
-  try {
-    narrative = await requestMatrixNarrative({
-      matrix_payload: payloadA,
-      matrix_payload_b: payloadB ?? undefined,
+  const [ensuredA, ensuredB] = await Promise.all([
+    ensureProfileMatrixList({
+      profileId: opts.profileId,
+      userProfile: opts.userProfile,
       locale,
-      product: opts.product,
       signal: opts.signal,
-    });
-  } catch {
-    narrative = null;
-  }
+    }),
+    opts.product === "match" && opts.userProfileB && opts.profileBId
+      ? ensureProfileMatrixList({
+          profileId: opts.profileBId,
+          userProfile: opts.userProfileB,
+          locale,
+          signal: opts.signal,
+        })
+      : Promise.resolve(null),
+  ]);
 
-  const matrix_payload = applyToolMatrixNarrative(
+  const matrix_payload = applyMatrixPreviewToPayload(
     payloadA,
-    narrative,
+    ensuredA,
     opts.product,
     locale,
     opts.product === "match" ? "a" : undefined,
   );
-  const matrix_payload_b = payloadB
-    ? applyToolMatrixNarrative(payloadB, narrative, opts.product, locale, "b")
+  const matrix_payload_b = payloadB && ensuredB
+    ? applyMatrixPreviewToPayload(payloadB, ensuredB, opts.product, locale, "b")
     : null;
+
+  const narrative = ensuredA.narrative ?? ensuredB?.narrative ?? null;
 
   return { matrix_payload, matrix_payload_b, narrative };
 }

@@ -25,7 +25,7 @@ To comply with global payment gateway policies (Stripe, PayPal, App Store) regar
 1. NO THINKING/REASONING PROCESS: Do not generate any internal thoughts, redacted_thinking tags, or explanations. Start outputting the requested JSON payload directly.
 2. LANGUAGE COMPLIANCE: Detect the user_language variable provided in the input and generate ALL descriptive text in THAT exact language.
 3. NO RAW MARKDOWN IN JSON: Avoid emitting raw markdown characters like '**' or '__' inside string values unless specifically asked.
-4. LENGTH BUDGET (strict): Every string must stay inside the ranges below. Aim for the **upper half** of each range — rich, textured, psychologically specific prose. Never exceed the upper bound. Avoid telegraphic one-liners.
+4. LENGTH BUDGET (strict): Every string must stay inside the ranges below. Aim for the **middle** of each range — rich, textured, psychologically specific prose. Never exceed the upper bound. Avoid telegraphic one-liners.
 
 # DEPTH & TEXTURE (all narrative fields)
 - Ground each line in the user's actual chart signals (day master, surplus/deficit, clashes, yongshen, transit).
@@ -120,7 +120,7 @@ Input JSON contains person_a (chart A) and person_b (chart B) with separate birt
 ## CONTENT SHAPE (each of narrative_a and narrative_b)
 - Sentence 1: psychological archetype from day_master + energetic state (vivid, specific).
 - Sentence 2: inner pull or relational tendency from surplus/deficit, clashes, or yongshen — how this person tends to show up in connection.
-- Stay within LENGTH BUDGET; aim for the upper half.
+- Stay within LENGTH BUDGET; aim for the middle.
 
 ## guide (third block — relationship question CTA)
 - REQUIRED separate field "guide" — NOT inside narrative_a or narrative_b.
@@ -311,15 +311,92 @@ function clampNarrativeField(text: string, fieldKey: string): string {
   return slice.trimEnd() + "…";
 }
 
+function unwrapMatrixNarrativeJson(text: string): string {
+  let raw = text.trim();
+  const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence?.[1]) raw = fence[1].trim();
+  const start = raw.indexOf("{");
+  if (start > 0) raw = raw.slice(start);
+  return raw;
+}
+
+/** Close truncated model JSON so partial matrix-narrative payloads can still parse. */
+function salvageTruncatedMatrixNarrativeJson(raw: string): string {
+  let text = unwrapMatrixNarrativeJson(raw);
+  if (!text.startsWith("{")) return text;
+
+  let inString = false;
+  let escaped = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]!;
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (ch === "\\") {
+      escaped = true;
+      continue;
+    }
+    if (ch === '"') inString = !inString;
+  }
+  if (inString) text += '"';
+
+  text = text.replace(/,\s*"[^"\\]*(?:\\.[^"\\]*)*"\s*:\s*$/, "");
+  text = text.replace(/,\s*"[^"\\]*$/, "");
+  text = text.replace(/,\s*$/, "");
+
+  let braces = 0;
+  let brackets = 0;
+  inString = false;
+  escaped = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]!;
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (ch === "\\") {
+      escaped = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+    if (ch === "{") braces++;
+    else if (ch === "}") braces--;
+    else if (ch === "[") brackets++;
+    else if (ch === "]") brackets--;
+  }
+
+  while (brackets > 0) {
+    text += "]";
+    brackets--;
+  }
+  while (braces > 0) {
+    text += "}";
+    braces--;
+  }
+
+  return text;
+}
+
+function parseMatrixNarrativeJson(text: string): Record<string, unknown> {
+  const raw = unwrapMatrixNarrativeJson(text);
+  try {
+    return JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    const salvaged = salvageTruncatedMatrixNarrativeJson(text);
+    return JSON.parse(salvaged) as Record<string, unknown>;
+  }
+}
+
 export function parseMatrixNarrativeResponseText(
   text: string,
   product: MatrixNarrativeProduct = "poju",
 ): MatrixNarrativeResponse {
-  let raw = text.trim();
-  const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  if (fence?.[1]) raw = fence[1].trim();
-
-  const parsed = JSON.parse(raw) as Record<string, unknown>;
+  const parsed = parseMatrixNarrativeJson(text);
   const eb = parsed.elemental_breakdown as Record<string, unknown> | undefined;
   const sd = parsed.structural_dynamics as Record<string, unknown> | undefined;
   const at = parsed.annual_transit_2026 as Record<string, unknown> | undefined;

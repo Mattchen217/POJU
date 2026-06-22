@@ -109,6 +109,15 @@ export interface StoredProfileBirthInfo {
   location_name?: string;
 }
 
+/** Product-agnostic Energy Matrix list blocks (fixed per birth chart). */
+export interface StoredProfileMatrixList {
+  elemental_breakdown: { caption: string };
+  structural_dynamics: { resonance: string; tension: string; reading: string };
+  annual_transit_2026: { title: string; description: string };
+  generated_at: string;
+  locale: string;
+}
+
 export interface StoredProfileBaseAnalysis {
   generated_at: string;
   model: string;
@@ -133,6 +142,8 @@ export interface StoredProfileData {
   birth_info: StoredProfileBirthInfo;
   user_profile: UserProfile;
   base_analysis?: StoredProfileBaseAnalysis;
+  /** Cached matrix list blocks — product-agnostic, keyed to birth chart. */
+  matrix_list?: StoredProfileMatrixList;
 }
 
 /** POJU 改进 3 — encrypted action-plan vault rows. */

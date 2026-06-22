@@ -20,6 +20,7 @@ import {
   PREPARING_MIN_SPLINE_CACHE_MS,
   waitRemainingMinSpline,
 } from "@/lib/poju/preparing-spline-timing";
+import { ensureProfileMatrixList } from "@/lib/poju/resolve-matrix-preview";
 
 import "@/styles/match.css";
 
@@ -145,6 +146,13 @@ export function MatchPreparePage({ profileId }: MatchPreparePageProps) {
           profileId={profileId}
           locale={locale}
           logLabel="MatchPreparing"
+          preStreamWork={async () => {
+            await ensureProfileMatrixList({
+              profileId,
+              userProfile: profile.user_profile,
+              locale,
+            });
+          }}
           onComplete={finishToMatch}
           onError={handleStreamError}
         />

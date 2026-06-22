@@ -92,7 +92,7 @@ export async function POST(req: Request) {
       call_type: "matrix_narrative",
       system: getMatrixNarrativeSystemPrompt(product),
       messages: [{ role: "user", content: userMessage }],
-      max_tokens: product === "match" ? 2400 : 1400,
+      max_tokens: product === "match" ? 2800 : 2400,
       thinking_effort: "off",
       response_format: "json",
       temperature: 0.65,
@@ -103,12 +103,25 @@ export async function POST(req: Request) {
     let narrative;
     try {
       narrative = parseMatrixNarrativeResponseText(result.content, product);
-    } catch {
+    } catch (parseError) {
+      const rawPreview = result.content.replace(/\s+/g, " ").trim().slice(0, 400);
+      console.warn(
+        "[matrix-narrative] parse failed",
+        JSON.stringify({
+          product,
+          finish_reason: result.meta.finish_reason ?? "—",
+          output_tokens: result.meta.completion_tokens ?? null,
+          raw_preview: rawPreview,
+          error: parseError instanceof Error ? parseError.message : "parse failed",
+        }),
+      );
       return NextResponse.json(
         {
           ok: false,
           error: "Model output is not valid JSON",
           preview: result.content.slice(0, 400),
+          finish_reason: result.meta.finish_reason ?? null,
+          output_tokens: result.meta.completion_tokens ?? null,
         },
         { status: 422 },
       );

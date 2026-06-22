@@ -2,6 +2,7 @@ import { callPOJULLM } from "@/lib/llm/poju-llm";
 import { logPojuError } from "@/lib/poju/base-analysis-diagnostics";
 import { resolveStreamedCompleteResponse } from "@/lib/llm/phases/phase-transport";
 import { extractStreamingResponseText } from "@/lib/poju/extract-streaming-response";
+import { pojuLlmToChatPayload } from "@/lib/poju/serialize-chat-payload";
 import type { POJUActionRecommendationsData } from "@/lib/archive/archive-service";
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
@@ -65,30 +66,13 @@ export function createPojuChatStreamResponse(body: ChatBody, reqSignal?: AbortSi
 
         send({
           type: "complete",
-          response: resolveStreamedCompleteResponse(
-            llm.response,
-            lastContentText,
-            body.locale,
-          ),
-          model: llm.model,
-          tokens_used: llm.tokens_used,
-          user_intent: llm.user_intent,
-          current_state: llm.current_state,
-          action_requested: llm.action_requested,
-          topic_drift_detected: llm.topic_drift_detected,
-          topic_drift_signal: llm.topic_drift_signal ?? "none",
-          should_show_new_session_button: llm.should_show_new_session_button ?? false,
-          drift_reason: llm.drift_reason ?? null,
-          context_updates: llm.context_updates,
-          contains_delivery: llm.contains_delivery,
-          main_delivery: llm.main_delivery,
-          new_actions: llm.new_actions,
-          agent_suggested_phase: llm.agent_suggested_phase,
-          current_summary: llm.current_summary,
-          question_category: llm.question_category,
-          thinking_process: llm.thinking_process,
-          suggest_refund: llm.suggest_refund ?? false,
-          locked_provider: llm.locked_provider,
+          ...pojuLlmToChatPayload(llm, {
+            response: resolveStreamedCompleteResponse(
+              llm.response,
+              lastContentText,
+              body.locale,
+            ),
+          }),
         });
       } catch (e) {
         logPojuError("poju-chat-stream:callPOJULLM", e);

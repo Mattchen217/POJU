@@ -1,8 +1,7 @@
-import { requestMatrixNarrative } from "@/lib/llm/deepseek/matrix-narrative";
 import {
-  applyMatrixNarrativeToPayload,
-  markMatrixNarrativeFailed,
-} from "@/lib/poju/apply-matrix-narrative";
+  applyMatrixPreviewToPayload,
+  ensureProfileMatrixList,
+} from "@/lib/poju/resolve-matrix-preview";
 import { refreshMatrixPayload } from "@/lib/poju/build-matrix-payload";
 import { isMatrixNarrativeReady } from "@/lib/poju/matrix-narrative-ready";
 import {
@@ -10,6 +9,8 @@ import {
   createEnergyMatrixMessage,
   hasPreviewMatrixMessage,
 } from "@/lib/poju/preview-unlock";
+import { markMatrixNarrativeFailed } from "@/lib/poju/apply-matrix-narrative";
+import { getOnboardingCopy } from "@/lib/poju/onboarding-templates";
 import type { POJUSessionState } from "@/lib/poju/types";
 
 export async function finalizePreviewMatrixSession(
@@ -32,19 +33,39 @@ export async function finalizePreviewMatrixSession(
     throw new Error("Matrix payload missing");
   }
 
+  const profileId = working.selected_stored_profile_id;
+  if (!profileId || !payload.user_profile) {
+    throw new Error("Profile missing for matrix preview");
+  }
+
   payload = refreshMatrixPayload(payload, locale);
 
   let finalPayload = payload;
   if (!isMatrixNarrativeReady(payload)) {
     try {
-      const narrative = await requestMatrixNarrative({
-        matrix_payload: payload,
+      const ensured = await ensureProfileMatrixList({
+        profileId,
+        userProfile: payload.user_profile,
         locale,
         signal: options?.signal,
       });
-      finalPayload = applyMatrixNarrativeToPayload(payload, narrative, locale);
+      finalPayload = applyMatrixPreviewToPayload(payload, ensured, "poju", locale);
     } catch {
-      finalPayload = markMatrixNarrativeFailed(payload);
+      const failed = markMatrixNarrativeFailed(payload);
+      const display = failed.display;
+      finalPayload =
+        display != null
+          ? {
+              ...failed,
+              display: {
+                ...display,
+                synopsis: {
+                  ...display.synopsis,
+                  prompt: getOnboardingCopy("poju", locale),
+                },
+              },
+            }
+          : failed;
     }
   }
 

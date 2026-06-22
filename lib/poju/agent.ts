@@ -28,10 +28,12 @@ import {
   extractAgendaStatusUpdates,
   parseInvestigationAgenda,
   stripAgendaFieldsFromContextUpdates,
+  getNextAgendaFocus,
 } from "@/lib/poju/investigation-agenda";
 import { applyToolLinkingFromLlm } from "@/lib/poju/tool-suggestion";
 import type { ToolSuggestionPayload } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
+import { chatPayloadFromWire } from "@/lib/poju/serialize-chat-payload";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 /** Session uses default `userProfiles` slot from device. */
@@ -159,6 +161,12 @@ function finalizeAgentV2(
     }
   } else if (agendaStatusUpdates) {
     investigation_agenda = applyAgendaStatusUpdates(investigation_agenda, agendaStatusUpdates);
+  }
+
+  if (investigation_agenda.length > 0) {
+    const focus = getNextAgendaFocus(investigation_agenda);
+    const focusIds = focus.map((a) => a.id).join(", ") || "—";
+    console.info(`[agent] agenda: ${investigation_agenda.length} items, next focus = ${focusIds}`);
   }
 
   let merged: POJUAgentState = {
@@ -397,7 +405,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       main_delivery: llmResponse.main_delivery,
       collection_progress: llmResponse.collection_progress,
       stall_offer: llmResponse.stall_offer,
-      investigation_agenda: (llmResponse as { investigation_agenda?: unknown }).investigation_agenda,
+      investigation_agenda: llmResponse.investigation_agenda,
     },
     userMessage,
     isSystemMessage,
@@ -547,6 +555,7 @@ async function callLLMViaAPI(input: {
   new_cycle_question?: string | null;
   collection_progress?: "advancing" | "stalled" | "resistant" | null;
   stall_offer?: boolean;
+  investigation_agenda?: unknown;
   suggest_refund?: boolean;
   locked_provider?: string;
 }> {
@@ -649,42 +658,51 @@ function mapLlmApiPayload(
     throw new Error("missing `response` in /api/poju/chat JSON");
   }
 
+  const wire = chatPayloadFromWire(data as Record<string, unknown>, {
+    response: text,
+    current_state: sessionStateHint(session),
+  });
+
   return {
     response: text,
-    model: typeof data.model === "string" ? data.model : "poju-chat-api",
-    tokens_used: typeof data.tokens_used === "number" ? data.tokens_used : 0,
-    user_intent: (data.user_intent as NonNullable<POJUMessage["meta"]>["user_intent"]) ?? "unclear",
-    current_state: (data.current_state as NonNullable<POJUMessage["meta"]>["current_state"]) ?? sessionStateHint(
-      session,
-    ),
+    model: typeof wire.model === "string" ? wire.model : "poju-chat-api",
+    tokens_used: typeof wire.tokens_used === "number" ? wire.tokens_used : 0,
+    user_intent: (wire.user_intent as NonNullable<POJUMessage["meta"]>["user_intent"]) ?? "unclear",
+    current_state:
+      (wire.current_state as NonNullable<POJUMessage["meta"]>["current_state"]) ??
+      sessionStateHint(session),
     action_requested:
-      (data.action_requested as NonNullable<POJUMessage["meta"]>["action_requested"]) ?? "continue_chat",
-    topic_drift_detected: Boolean(data.topic_drift_detected),
+      (wire.action_requested as NonNullable<POJUMessage["meta"]>["action_requested"]) ??
+      "continue_chat",
+    topic_drift_detected: Boolean(wire.topic_drift_detected),
     topic_drift_signal:
-      data.topic_drift_signal === "edge" || data.topic_drift_signal === "off_topic"
-        ? data.topic_drift_signal
+      wire.topic_drift_signal === "edge" || wire.topic_drift_signal === "off_topic"
+        ? wire.topic_drift_signal
         : "none",
-    drift_reason: typeof data.drift_reason === "string" ? data.drift_reason : null,
-    should_show_new_session_button: Boolean(data.should_show_new_session_button),
-    context_updates: (data.context_updates as Record<string, unknown>) ?? {},
-    contains_delivery: Boolean(data.contains_delivery),
-    main_delivery: data.main_delivery,
-    new_actions: data.new_actions,
-    agent_suggested_phase: data.agent_suggested_phase,
-    current_summary: data.current_summary,
-    question_category: data.question_category,
+    drift_reason: typeof wire.drift_reason === "string" ? wire.drift_reason : null,
+    should_show_new_session_button: Boolean(wire.should_show_new_session_button),
+    context_updates: (wire.context_updates as Record<string, unknown>) ?? {},
+    contains_delivery: Boolean(wire.contains_delivery),
+    main_delivery: wire.main_delivery,
+    new_actions: wire.new_actions as unknown[] | undefined,
+    agent_suggested_phase:
+      typeof wire.agent_suggested_phase === "string" ? wire.agent_suggested_phase : undefined,
+    current_summary: wire.current_summary as ContextSummary | null | undefined,
+    question_category:
+      typeof wire.question_category === "string" ? wire.question_category : null,
     thinking_process:
-      typeof data.thinking_process === "string" ? data.thinking_process : undefined,
-    tool_suggestion: parseToolSuggestionPayload(data.tool_suggestion),
-    start_new_cycle: data.start_new_cycle === true,
+      typeof wire.thinking_process === "string" ? wire.thinking_process : undefined,
+    tool_suggestion: parseToolSuggestionPayload(wire.tool_suggestion),
+    start_new_cycle: wire.start_new_cycle === true,
     new_cycle_question:
-      typeof data.new_cycle_question === "string" ? data.new_cycle_question : null,
-    collection_progress: parseCollectionProgress(data.collection_progress),
-    stall_offer: data.stall_offer === true,
-    suggest_refund: data.suggest_refund === true,
+      typeof wire.new_cycle_question === "string" ? wire.new_cycle_question : null,
+    collection_progress: parseCollectionProgress(wire.collection_progress),
+    stall_offer: wire.stall_offer === true,
+    investigation_agenda: wire.investigation_agenda ?? null,
+    suggest_refund: wire.suggest_refund === true,
     locked_provider:
-      typeof data.locked_provider === "string" && data.locked_provider.trim()
-        ? data.locked_provider.trim()
+      typeof wire.locked_provider === "string" && wire.locked_provider.trim()
+        ? wire.locked_provider.trim()
         : undefined,
   };
 }

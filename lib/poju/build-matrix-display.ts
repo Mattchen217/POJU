@@ -52,8 +52,8 @@ export type MatrixDisplayData = {
   dayun_hub: { theme: string; age_range: string; start_year: number };
   /** LLM-generated caption for Elemental Breakdown (replaces enote template). */
   enote_caption?: string;
-  /** template = local fallback; llm = DeepSeek matrix narrative */
-  narrative_source?: "template" | "llm";
+  /** template = local fallback; llm = DeepSeek matrix narrative; stored = IndexedDB matrix_list */
+  narrative_source?: "template" | "llm" | "stored";
   /** Locale used when narrative_source === "llm" */
   narrative_locale?: string;
   /** Set when LLM fetch failed — UI may show template fallbacks */

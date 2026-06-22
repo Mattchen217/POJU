@@ -263,14 +263,18 @@ function buildAgendaTrackingBlock(agent: POJUAgentState): string {
 ## 问诊议程（持久 — 勿重写）
 ${formatAgendaForPrompt(agenda)}
 
-## 本轮可深入的方向（后台参考 · 自然融入，勿当清单走）
-以下是还没了解清楚、有助于看准这个局的方向。**自然地**在对话里触及即可——可以问，也可以借由你的洞见引出；**不要机械地逐条发问**：
+## 本轮怎么用这份议程（每轮必做 · 这是你的收集计划）
+1. **先判断上一轮**：用户上一轮回答，是否说清了当前焦点项？
+   - 说清了 → agenda_status_updates 标 "covered"，本轮推进到下一个 unexplored/partial 项。
+   - 没说清/答偏/敷衍 → 标 "partial"，本轮就这一项**换个角度继续追问**（别重复原话）。
+2. **本轮核心目标** = 把下面这个/这些焦点项问清楚：
 ${focusText || "- 优先把必查项了解清楚"}
+3. **但怎么问要自然**：把问题包在洞见里——先给一句对他处境的真实点拨，再自然引出要问的事；不要像念问卷"问题 3/8"，一次最多 1-2 问。
+4. 已 covered 的项不再问；议程未覆盖完不得提前切交付。
 
-每轮在 context_updates 里回报 agenda_status_updates，例如：
-"agenda_status_updates": { "timeline": "partial", "what_tried": "covered" }
-只把用户【明确说过】的事实写入 context_updates / agenda 状态，不要推断编造。
-禁止重复问已 covered 的角度；禁止泛泛倾听。
+每轮必在 context_updates 回报 agenda_status_updates，例如：
+"agenda_status_updates": { "runway": "covered", "price_test": "partial" }
+只把用户【明确说过】的写进状态，不推断编造。
 `;
 }
 

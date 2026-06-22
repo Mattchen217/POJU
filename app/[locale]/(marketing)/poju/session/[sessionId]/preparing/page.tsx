@@ -31,6 +31,7 @@ import {
   waitRemainingMinSpline,
 } from "@/lib/poju/preparing-spline-timing";
 import { withSessionProfileFlags } from "@/lib/poju/session-profile";
+import { ensureProfileMatrixList } from "@/lib/poju/resolve-matrix-preview";
 import type { POJUSessionState } from "@/lib/poju/types";
 
 type Phase = "loading" | "preview_matrix" | "unlock_bazi" | "cache" | "streaming" | "error";
@@ -346,6 +347,13 @@ function StreamingPhase({
         logLabel="POJUPreparing"
         hideStreamView
         reportOutputLanguageFromUi
+        preStreamWork={async () => {
+          await ensureProfileMatrixList({
+            profileId,
+            userProfile: profile.user_profile,
+            locale,
+          });
+        }}
         onComplete={onComplete}
         onError={onError}
       />

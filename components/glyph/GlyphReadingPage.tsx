@@ -29,6 +29,7 @@ import {
   GLYPH_READING_CLIENT_TIMEOUT_MS,
 } from "@/lib/oracle/api";
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
+import { ensureProfileMatrixList } from "@/lib/poju/resolve-matrix-preview";
 import {
   classifyGlyphReadingError,
   GLYPH_READING_ERROR_I18N_KEY,
@@ -390,6 +391,13 @@ export function GlyphReadingPage() {
               logLabel="GlyphUnlockPreparing"
               hideStreamView
               reportOutputLanguageFromUi
+              preStreamWork={async () => {
+                await ensureProfileMatrixList({
+                  profileId,
+                  userProfile: profile!.user_profile,
+                  locale,
+                });
+              }}
               onComplete={async (displayText) => {
                 setBaseReportText(displayText);
                 updateGlyphDrawSession(readingId, { base_report_text: displayText });
@@ -456,6 +464,13 @@ export function GlyphReadingPage() {
               logLabel="GlyphUnlockPreparing"
               hideStreamView
               reportOutputLanguageFromUi
+              preStreamWork={async () => {
+                await ensureProfileMatrixList({
+                  profileId,
+                  userProfile: profile.user_profile,
+                  locale,
+                });
+              }}
               onComplete={async (displayText) => {
                 setBaseReportText(displayText);
                 updateGlyphDrawSession(readingId, { base_report_text: displayText });

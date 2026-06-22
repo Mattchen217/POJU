@@ -19,6 +19,7 @@ import {
   isOnSyncroPreparingRoute,
   replaceSyncroPreparingWithLocation,
 } from "@/lib/syncro/syncro-preparing-nav";
+import { ensureProfileMatrixList } from "@/lib/poju/resolve-matrix-preview";
 
 const PREPARING_MIN_SPLINE_CACHE_MS = 10_000;
 const NAV_WATCHDOG_MS = 2500;
@@ -171,6 +172,13 @@ export function SyncroPreparingPage() {
       profileId={profileId}
       locale={locale}
       logLabel="SyncroPreparing"
+      preStreamWork={async () => {
+        await ensureProfileMatrixList({
+          profileId,
+          userProfile: profile.user_profile,
+          locale,
+        });
+      }}
       onComplete={goToLocation}
       onError={handleStreamError}
     />

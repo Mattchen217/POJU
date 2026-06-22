@@ -26,6 +26,7 @@ import {
 } from "@/lib/match/types";
 import type { StoredProfileData } from "@/lib/db/poju-db";
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
+import { ensureProfileMatrixList } from "@/lib/poju/resolve-matrix-preview";
 import { useDeliveryWaitPhase } from "@/lib/wait-ritual/use-delivery-wait-phase";
 import { recordUsage } from "@/lib/syncro/device-usage";
 
@@ -297,6 +298,13 @@ export function MatchAnalyzingPage() {
             logLabel="MatchUnlockPreparingA"
             hideStreamView
             reportOutputLanguageFromUi
+            preStreamWork={async () => {
+              await ensureProfileMatrixList({
+                profileId: aId,
+                userProfile: profileA.user_profile,
+                locale,
+              });
+            }}
             onComplete={() => void afterBaseAComplete()}
             onError={(err) => {
               setError(err);
@@ -321,6 +329,13 @@ export function MatchAnalyzingPage() {
             logLabel="MatchUnlockPreparingB"
             hideStreamView
             reportOutputLanguageFromUi
+            preStreamWork={async () => {
+              await ensureProfileMatrixList({
+                profileId: bId,
+                userProfile: profileB.user_profile,
+                locale,
+              });
+            }}
             onComplete={() => void afterBaseBComplete()}
             onError={(err) => {
               setError(err);

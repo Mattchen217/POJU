@@ -68,6 +68,7 @@ export interface POJULLMResponse {
   new_cycle_question?: string | null;
   collection_progress?: "advancing" | "stalled" | "resistant" | null;
   stall_offer?: boolean;
+  investigation_agenda?: import("@/lib/poju/investigation-agenda").AgendaItem[] | null;
   suggest_refund?: boolean;
   /** OpenRouter provider that served this turn. */
   served_provider?: string | null;
@@ -153,6 +154,7 @@ async function callPOJULLMPhasePath(input: CallInput): Promise<POJULLMResponse> 
     new_cycle_question: phase.new_cycle_question ?? null,
     collection_progress: phase.collection_progress ?? null,
     stall_offer: Boolean(phase.stall_offer),
+    investigation_agenda: phase.investigation_agenda ?? null,
     suggest_refund: Boolean(phase.suggest_refund),
     served_provider: phase.served_provider ?? null,
   };

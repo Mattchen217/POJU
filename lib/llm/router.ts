@@ -74,6 +74,7 @@ export interface CallLLMResult {
     thinking_enabled: boolean;
     thinking_effort: ReasoningEffort;
     finish_reason?: string | null;
+    completion_tokens?: number;
     provider?: string | null;
   };
 }
@@ -252,6 +253,7 @@ export async function callLLM(input: CallLLMInput): Promise<CallLLMResult> {
       thinking_enabled: thinkingEnabled,
       thinking_effort: effort,
       finish_reason: out.finish_reason,
+      completion_tokens: out.completion_tokens,
       provider: out.provider,
     },
   };

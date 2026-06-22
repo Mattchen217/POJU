@@ -29,6 +29,8 @@ export type BaseAnalysisStreamPreparingProps = {
   mode?: "replay" | "live";
   /** When true, parent shows ChartReadingLoader only (no inline stream view). */
   hideStreamView?: boolean;
+  /** Runs before base-analysis stream (e.g. matrix_list generation + save). */
+  preStreamWork?: () => Promise<void>;
   /** Base-analysis report follows UI locale, not browser / user input. */
   reportOutputLanguageFromUi?: boolean;
 };
@@ -53,6 +55,7 @@ export function BaseAnalysisStreamPreparing({
   resumeJobId,
   mode = "live",
   hideStreamView = false,
+  preStreamWork,
   reportOutputLanguageFromUi = false,
 }: BaseAnalysisStreamPreparingProps) {
   const tChart = useTranslations("chart_loader");
@@ -118,13 +121,27 @@ export function BaseAnalysisStreamPreparing({
     },
   });
 
+  const preStreamWorkRef = useRef(preStreamWork);
+  preStreamWorkRef.current = preStreamWork;
+
   useEffect(() => {
     if (startedRef.current) return;
     if (mode === "replay") return;
     startedRef.current = true;
-    void start();
+    void (async () => {
+      try {
+        if (preStreamWorkRef.current) {
+          await preStreamWorkRef.current();
+        }
+        await start();
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        console.error(`[${logLabel}] preStreamWork failed:`, e);
+        onErrorRef.current?.(msg);
+      }
+    })();
     return () => stop();
-  }, [start, stop, mode]);
+  }, [start, stop, mode, logLabel]);
 
   const displayError = state.error ? formatStreamError(state.error, tChart) : null;
 

@@ -8,7 +8,12 @@ import { sha256Hex } from "@/lib/sha256";
 import { calculateProfile } from "@/lib/calculations";
 import { getUserProfile } from "@/lib/profile/active-profile";
 import { getPojuDb } from "@/lib/db/poju-db";
-import type { StoredProfileBaseAnalysis, StoredProfileData, StoredProfileRecord } from "@/lib/db/poju-db";
+import type {
+  StoredProfileBaseAnalysis,
+  StoredProfileData,
+  StoredProfileMatrixList,
+  StoredProfileRecord,
+} from "@/lib/db/poju-db";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
 import {
   generateDisplayName,
@@ -270,6 +275,42 @@ export function stripMetaSectionForStorage(content: string): string {
   return idx === -1 ? content : content.slice(0, idx).trim();
 }
 
+export function storedMatrixListPresent(data: StoredProfileData | null | undefined): boolean {
+  const ml = data?.matrix_list;
+  if (!ml) return false;
+  return Boolean(
+    ml.elemental_breakdown?.caption?.trim() &&
+      ml.structural_dynamics?.resonance?.trim() &&
+      ml.annual_transit_2026?.title?.trim(),
+  );
+}
+
+export async function saveMatrixList(
+  profileId: string,
+  matrixList: StoredProfileMatrixList,
+): Promise<void> {
+  assertBrowser();
+  const db = getPojuDb();
+  const record = await db.stored_profiles.get(profileId);
+  if (!record) throw new Error("profile not found");
+
+  const data = await decryptJson<StoredProfileData>(STORED_PROFILES_SECRET, {
+    iv: record.iv,
+    cipher: record.encrypted_data,
+  });
+
+  data.matrix_list = matrixList;
+
+  const enc = await encryptJson(STORED_PROFILES_SECRET, data);
+  await db.stored_profiles.update(profileId, {
+    encrypted_data: enc.cipher,
+    iv: enc.iv,
+    last_used_at: new Date(),
+  });
+
+  console.log("[saveMatrixList] saved matrix_list", profileId);
+}
+
 export async function saveBaseAnalysisFromStream(input: {
   profile_id: string;
   display_text: string;
@@ -431,6 +472,7 @@ export async function upgradeStoredProfileLocation(
   data.birth_info = storedBirth;
   data.user_profile = userProfile;
   delete data.base_analysis;
+  delete data.matrix_list;
 
   const enc = await encryptJson(STORED_PROFILES_SECRET, data);
   await db.stored_profiles.update(profileId, {

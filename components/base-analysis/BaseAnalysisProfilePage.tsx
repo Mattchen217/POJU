@@ -6,12 +6,17 @@ import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 
 import { BaseAnalysisDeliveryView } from "@/components/base-analysis/BaseAnalysisDeliveryView";
+import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
 import { buildStreamLocalDataFromProfile } from "@/lib/base-analysis/build-stream-local-data";
 import { markedTextFromStoredBaseAnalysis } from "@/lib/base-analysis/resolve-display-text";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
+import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
+import { buildMatrixPayloadFromProfile, refreshMatrixPayload } from "@/lib/poju/build-matrix-payload";
+import { applyStoredMatrixPreview } from "@/lib/poju/resolve-matrix-preview";
 import {
   getStoredProfile,
   getStoredProfileRecord,
+  storedMatrixListPresent,
 } from "@/lib/profile/stored-profiles-service";
 
 type LoadState =
@@ -24,6 +29,7 @@ type LoadState =
       userProfile: import("@/lib/profile/types").UserProfile;
       displayName: string;
       generatedAt?: string;
+      matrixPayload: PojuMatrixPayload | null;
     };
 
 export function BaseAnalysisProfilePage() {
@@ -60,6 +66,13 @@ export function BaseAnalysisProfilePage() {
         data.base_analysis?.structured ??
         buildStreamLocalDataFromProfile(data.user_profile).structured;
 
+      let matrixPayload: PojuMatrixPayload | null = null;
+      if (storedMatrixListPresent(data)) {
+        let payload = buildMatrixPayloadFromProfile(profileId, data.user_profile, { locale });
+        payload = refreshMatrixPayload(payload, locale);
+        matrixPayload = applyStoredMatrixPreview(payload, data.matrix_list!, "poju", locale);
+      }
+
       setState({
         status: "ready",
         displayText,
@@ -67,6 +80,7 @@ export function BaseAnalysisProfilePage() {
         userProfile: data.user_profile,
         displayName: record?.display_name?.trim() || "",
         generatedAt: data.base_analysis?.generated_at,
+        matrixPayload,
       });
     } catch (e) {
       setState({
@@ -74,7 +88,7 @@ export function BaseAnalysisProfilePage() {
         message: e instanceof Error ? e.message : String(e),
       });
     }
-  }, [profileId, t]);
+  }, [profileId, t, locale]);
 
   useEffect(() => {
     void load();
@@ -126,6 +140,11 @@ export function BaseAnalysisProfilePage() {
           </div>
         }
       />
+      {state.matrixPayload ? (
+        <section className="base-analysis-profile-page__matrix px-4 pb-16">
+          <PojuEnergyMatrix payload={state.matrixPayload} locale={locale} />
+        </section>
+      ) : null}
     </main>
   );
 }

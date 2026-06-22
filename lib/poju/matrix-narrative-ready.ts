@@ -4,7 +4,8 @@ import type { POJUSessionState } from "@/lib/poju/types";
 
 export function isMatrixNarrativeReady(payload: PojuMatrixPayload | undefined | null): boolean {
   if (!payload?.display) return false;
-  return payload.display.narrative_source === "llm" || payload.display.narrative_failed === true;
+  const src = payload.display.narrative_source;
+  return src === "llm" || src === "stored" || payload.display.narrative_failed === true;
 }
 
 /** Preview chat may open only after matrix message exists and narrative finished (LLM or fallback). */

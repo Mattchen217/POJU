@@ -68,10 +68,16 @@ import { MainDeliveryView } from "@/components/poju/MainDeliveryView";
 import { PojuReportChatCard } from "@/components/poju/PojuReportChatCard";
 import { PojuUnlockReportModal } from "@/components/poju/PojuUnlockReportModal";
 import { hasUnlockReportMessage, prepareUnlockReleaseSession } from "@/lib/poju/finalize-unlock-bazi-session";
-import { requestMatrixNarrative } from "@/lib/llm/deepseek/matrix-narrative";
 import { sessionMatrixReadyForChat } from "@/lib/poju/matrix-narrative-ready";
-import { applyMatrixNarrativeToPayload, markMatrixNarrativeFailed } from "@/lib/poju/apply-matrix-narrative";
+import { markMatrixNarrativeFailed } from "@/lib/poju/apply-matrix-narrative";
 import { refreshMatrixPayload } from "@/lib/poju/build-matrix-payload";
+import {
+  applyMatrixPreviewToPayload,
+  applyStoredMatrixPreview,
+  ensureProfileMatrixList,
+} from "@/lib/poju/resolve-matrix-preview";
+import { getOnboardingCopy } from "@/lib/poju/onboarding-templates";
+import { getStoredProfile, storedMatrixListPresent } from "@/lib/profile/stored-profiles-service";
 import {
   getUnlockReportMessage,
   getUnlockReportText,
@@ -395,27 +401,30 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     void (async () => {
       try {
         const refreshed = refreshMatrixPayload(payload, locale);
+        const profileId = sessionRef.current.selected_stored_profile_id;
+        let updatedPayload = refreshed;
 
-        const preMessages = [...sessionRef.current.messages];
-        preMessages[matrixIdx] = {
-          ...preMessages[matrixIdx]!,
-          meta: { ...preMessages[matrixIdx]!.meta, matrix_payload: refreshed },
-        };
-        const preSession: POJUSessionState = {
-          ...sessionRef.current,
-          messages: preMessages,
-          matrix_payload: refreshed,
-        };
-        onSessionUpdate(preSession);
+        const storedRow = profileId ? await getStoredProfile(profileId) : null;
+        if (storedMatrixListPresent(storedRow)) {
+          updatedPayload = applyStoredMatrixPreview(
+            refreshed,
+            storedRow!.matrix_list!,
+            "poju",
+            locale,
+          );
+        } else if (profileId && refreshed.user_profile) {
+          const ensured = await ensureProfileMatrixList({
+            profileId,
+            userProfile: refreshed.user_profile,
+            locale,
+            signal: ac.signal,
+          });
+          if (ac.signal.aborted) return;
+          updatedPayload = applyMatrixPreviewToPayload(refreshed, ensured, "poju", locale);
+        } else {
+          return;
+        }
 
-        const narrative = await requestMatrixNarrative({
-          matrix_payload: refreshed,
-          locale,
-          signal: ac.signal,
-        });
-        if (ac.signal.aborted) return;
-
-        const updatedPayload = applyMatrixNarrativeToPayload(refreshed, narrative, locale);
         const current = sessionRef.current;
         const msgIdx = current.messages.findIndex((m) => m.meta?.kind === "energy_matrix");
         if (msgIdx < 0) return;
@@ -434,22 +443,35 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         await savePOJUSession(next);
       } catch (e) {
         if (ac.signal.aborted) return;
-        console.warn("[poju] matrix narrative LLM failed:", e);
+        console.warn("[poju] matrix preview resolve failed:", e);
         matrixNarrativeRef.current = null;
 
         const current = sessionRef.current;
         const msgIdx = current.messages.findIndex((m) => m.meta?.kind === "energy_matrix");
         if (msgIdx < 0) return;
-        const failedPayload = markMatrixNarrativeFailed(
-          current.messages[msgIdx]?.meta?.matrix_payload ?? payload,
-        );
+        const basePayload = current.messages[msgIdx]?.meta?.matrix_payload ?? payload;
+        const failedPayload = markMatrixNarrativeFailed(basePayload);
+        const display = failedPayload.display;
+        const withPrompt =
+          display != null
+            ? {
+                ...failedPayload,
+                display: {
+                  ...display,
+                  synopsis: {
+                    ...display.synopsis,
+                    prompt: getOnboardingCopy("poju", locale),
+                  },
+                },
+              }
+            : failedPayload;
         const messages = [...current.messages];
         messages[msgIdx] = {
           ...messages[msgIdx]!,
-          meta: { ...messages[msgIdx]!.meta, matrix_payload: failedPayload },
+          meta: { ...messages[msgIdx]!.meta, matrix_payload: withPrompt },
         };
-        onSessionUpdate({ ...current, messages, matrix_payload: failedPayload });
-        await savePOJUSession({ ...current, messages, matrix_payload: failedPayload });
+        onSessionUpdate({ ...current, messages, matrix_payload: withPrompt });
+        await savePOJUSession({ ...current, messages, matrix_payload: withPrompt });
       }
     })();
 
