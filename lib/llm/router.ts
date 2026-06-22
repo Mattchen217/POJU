@@ -87,8 +87,8 @@ const HIGH_OUTPUT_CALL_TYPES = new Set<LLMCallType>([
 ]);
 
 /** Long JSON deliveries — exclude low max-output providers; merges OPENROUTER_PROVIDER_ORDER pin. */
-export function highOutputProviderConstraints(): Record<string, unknown> {
-  const pinned = openRouterProviderExtras({ require_parameters: true });
+export function highOutputProviderConstraints(extra_ignore?: string[]): Record<string, unknown> {
+  const pinned = openRouterProviderExtras({ require_parameters: true, extra_ignore });
   if (pinned) return pinned;
   const ignore = parseProviderIgnore();
   return {
@@ -234,9 +234,10 @@ export async function callLLM(input: CallLLMInput): Promise<CallLLMResult> {
           ? 180_000
           : undefined);
 
+  const needsJson = input.response_format === "json";
   const provider = HIGH_OUTPUT_CALL_TYPES.has(input.call_type)
     ? highOutputProviderConstraints()
-    : openRouterProviderExtras();
+    : openRouterProviderExtras({ require_parameters: needsJson });
 
   const out = await openRouterChatCompletion({
     messages: msgs,

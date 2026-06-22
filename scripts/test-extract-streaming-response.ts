@@ -2,7 +2,7 @@ import {
   extractStreamingResponseText,
   salvagePhaseResponseText,
 } from "@/lib/poju/extract-streaming-response";
-import { parsePhaseResult } from "@/lib/llm/phases/phase-transport";
+import { parsePhaseResult, isPhaseResponseFallback, resolveStreamedCompleteResponse } from "@/lib/llm/phases/phase-transport";
 
 function assert(name: string, condition: boolean) {
   if (!condition) {
@@ -69,4 +69,31 @@ assert(
 assert(
   "parsePhaseResult uses salvage for reply",
   parsePhaseResult('{"reply":"Salvaged via parsePhaseResult."}').response.includes("Salvaged"),
+);
+
+assert(
+  "salvage strips reasoning prefix before JSON",
+  salvagePhaseResponseText(
+    'Let me think through this carefully first.\n{"response":"Body after reasoning prefix."}',
+  ) === "Body after reasoning prefix.",
+);
+
+assert(
+  "salvage prose when no JSON structure",
+  salvagePhaseResponseText("This is plain prose without any JSON wrapper at all.") ===
+    "This is plain prose without any JSON wrapper at all.",
+);
+
+assert(
+  "resolveStreamedCompleteResponse keeps streamed over fallback",
+  resolveStreamedCompleteResponse(
+    "[POJU] 本轮回复未能生成，请重试发送。会话已保存。",
+    "Already streamed valid reply text here.",
+    "zh",
+  ) === "Already streamed valid reply text here.",
+);
+
+assert(
+  "isPhaseResponseFallback detects infrastructure copy",
+  isPhaseResponseFallback("[POJU] Reply could not be generated. Please send again."),
 );

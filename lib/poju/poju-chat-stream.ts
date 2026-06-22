@@ -1,4 +1,5 @@
 import { callPOJULLM } from "@/lib/llm/poju-llm";
+import { resolveStreamedCompleteResponse } from "@/lib/llm/phases/phase-transport";
 import { extractStreamingResponseText } from "@/lib/poju/extract-streaming-response";
 import type { POJUActionRecommendationsData } from "@/lib/archive/archive-service";
 import type { POJUSessionState } from "@/lib/poju/types";
@@ -63,7 +64,11 @@ export function createPojuChatStreamResponse(body: ChatBody, reqSignal?: AbortSi
 
         send({
           type: "complete",
-          response: llm.response,
+          response: resolveStreamedCompleteResponse(
+            llm.response,
+            lastContentText,
+            body.locale,
+          ),
           model: llm.model,
           tokens_used: llm.tokens_used,
           user_intent: llm.user_intent,

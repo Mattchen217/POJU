@@ -462,7 +462,10 @@ export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLL
   });
 
   if (resolved.compliance_failed) {
-    console.warn("[collecting-phase] compliance failed — retrying once on pinned provider");
+    console.warn(
+      "[collecting-phase] compliance failed — retrying once, ignoring provider",
+      transport.provider ?? "—",
+    );
     transport = await callPhaseJsonTransport(
       system,
       messages,
@@ -470,6 +473,9 @@ export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLL
         call_type: "collection_flash",
         max_tokens: firstAgendaTurn ? 7200 : 3600,
         temperature: 0.5,
+        provider_extra_ignore: transport.provider?.trim()
+          ? [transport.provider.trim()]
+          : undefined,
       }),
     );
     resolved = resolvePhaseResponse(transport.content, {

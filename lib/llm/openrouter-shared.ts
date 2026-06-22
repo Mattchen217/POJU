@@ -5,7 +5,7 @@
  * - OPENROUTER_API_KEY — required to use this path
  * - OPENROUTER_MODEL — default `deepseek/deepseek-v4-pro` (dev: single model per product decision)
  * - OPENROUTER_REASONING_EFFORT — `high` | `xhigh` | `off` (default `high` = deep reasoning where supported)
- * - OPENROUTER_PROVIDER_ORDER — comma-separated provider slugs in priority order (e.g. `DeepSeek,Baidu,Alibaba`)
+ * - OPENROUTER_PROVIDER_ORDER — comma-separated provider slugs in priority order (e.g. `baidu/fp8,streamlake,siliconflow/fp8`)
  * - OPENROUTER_PROVIDER_IGNORE — comma-separated providers to skip (merged with ORDER)
  * - OPENROUTER_HTTP_REFERER, OPENROUTER_APP_TITLE — optional OpenRouter attribution headers
  */
@@ -67,9 +67,17 @@ export function parseProviderIgnore(): string[] {
  */
 export function openRouterProviderExtras(options?: {
   require_parameters?: boolean;
+  /** One-off ignore slugs merged with OPENROUTER_PROVIDER_IGNORE (e.g. retry after bad provider). */
+  extra_ignore?: string[];
 }): Record<string, unknown> | undefined {
   const order = parseProviderOrder();
   const ignore = parseProviderIgnore();
+  if (options?.extra_ignore?.length) {
+    for (const slug of options.extra_ignore) {
+      const s = slug.trim();
+      if (s && !ignore.includes(s)) ignore.push(s);
+    }
+  }
   const out: Record<string, unknown> = {};
 
   if (options?.require_parameters) {
@@ -92,12 +100,44 @@ export function openRouterProviderExtras(options?: {
   return out;
 }
 
-export function openRouterRequestExtras(session_id?: string): Record<string, unknown> {
+export function openRouterRequestExtras(
+  session_id?: string,
+  opts?: { require_parameters?: boolean; extra_ignore?: string[] },
+): Record<string, unknown> {
   const extras: Record<string, unknown> = {};
   if (session_id?.trim()) extras.session_id = session_id.trim();
-  const provider = openRouterProviderExtras();
+  const provider = openRouterProviderExtras(opts);
   if (provider) extras.provider = provider;
   return extras;
+}
+
+/** Match served provider name (e.g. `Baidu`) against order slug (e.g. `baidu/fp8`). */
+export function providerMatchesOrderEntry(served: string, orderSlug: string): boolean {
+  const norm = (s: string) => s.trim().toLowerCase();
+  const s = norm(served);
+  const o = norm(orderSlug);
+  if (!s || !o) return false;
+  if (s === o) return true;
+  const sBase = s.split("/")[0]!;
+  const oBase = o.split("/")[0]!;
+  return sBase === oBase || s.includes(oBase) || o.includes(sBase);
+}
+
+export function servedProviderInOrder(served: string | null | undefined): boolean {
+  if (!served?.trim()) return true;
+  const order = parseProviderOrder();
+  if (order.length === 0) return true;
+  return order.some((slug) => providerMatchesOrderEntry(served, slug));
+}
+
+/** Ensure JSON calls carry require_parameters when merging explicit provider overrides. */
+export function mergeJsonProviderConstraints(
+  provider: Record<string, unknown>,
+  json_mode?: boolean,
+): Record<string, unknown> {
+  if (!json_mode) return provider;
+  if (provider.require_parameters === true) return provider;
+  return { ...provider, require_parameters: true };
 }
 
 function parseCachedTokens(usage: Record<string, unknown> | undefined): number {
@@ -154,6 +194,28 @@ export function logOpenRouterRequestRouting(
     return;
   }
   console.log(`[openrouter] request routing: ${JSON.stringify(provider)} phase=${phase}`);
+}
+
+/** Log actual served provider vs configured order (stream + non-stream). */
+export function logOpenRouterProviderServed(meta: {
+  provider?: string | null;
+  finish_reason?: string | null;
+  cached_tokens?: number;
+  call_type?: string;
+  phase_name?: string;
+}): void {
+  const order = parseProviderOrder();
+  const served = meta.provider?.trim() || "—";
+  const orderLabel = order.length > 0 ? `[${order.join(",")}]` : "[]";
+  const phase = meta.phase_name ?? meta.call_type ?? "—";
+  console.log(
+    `[openrouter] provider served: order=${orderLabel} → served=${served} finish=${meta.finish_reason ?? "—"} cached=${meta.cached_tokens ?? 0} phase=${phase}`,
+  );
+  if (order.length > 0 && served !== "—" && !servedProviderInOrder(served)) {
+    console.warn(
+      `[openrouter] served provider "${served}" not in OPENROUTER_PROVIDER_ORDER (${order.join(",")}) — slug may be misspelled or order was bypassed`,
+    );
+  }
 }
 
 export function isOpenRouterConfigured(): boolean {
@@ -218,9 +280,9 @@ export async function openRouterChatCompletion(
       body.session_id = options.session_id.trim();
     }
     if (options.provider) {
-      body.provider = options.provider;
+      body.provider = mergeJsonProviderConstraints(options.provider, options.json_mode);
     } else {
-      const provider = openRouterProviderExtras();
+      const provider = openRouterProviderExtras({ require_parameters: Boolean(options.json_mode) });
       if (provider) body.provider = provider;
     }
     if (options.json_mode) {
@@ -352,6 +414,13 @@ export async function openRouterChatCompletion(
     call_type: options.call_type,
     phase_name: options.phase_name,
     provider,
+  });
+  logOpenRouterProviderServed({
+    provider,
+    finish_reason,
+    cached_tokens,
+    call_type: options.call_type,
+    phase_name: options.phase_name,
   });
 
   const reasoning =

@@ -65,6 +65,34 @@ export function extractJsonStringField(trimmed: string, field: string): string {
 
 const SALVAGE_FIELD_ORDER = ["response", "reply", "message", "content", "text", "answer"] as const;
 
+function stripReasoningPrefix(raw: string): string {
+  const trimmed = raw.trim();
+  const jsonStart = trimmed.indexOf("{");
+  if (jsonStart <= 0) return trimmed;
+  const prefix = trimmed.slice(0, jsonStart).trim();
+  if (prefix.length < 16) return trimmed;
+  if (/"response"\s*:/.test(prefix)) return trimmed;
+  return trimmed.slice(jsonStart);
+}
+
+function looksLikeJsonStructure(text: string): boolean {
+  const t = text.trim();
+  if (!t) return false;
+  if (t.startsWith("{") || t.startsWith("[")) return true;
+  return /"response"\s*:/.test(t) || /"reply"\s*:/.test(t);
+}
+
+function salvageProseFallback(trimmed: string): string {
+  if (looksLikeJsonStructure(trimmed)) return "";
+  const prose = trimmed
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/```\s*$/i, "")
+    .trim();
+  if (prose.length < 12) return "";
+  if (prose.startsWith("[POJU]")) return "";
+  return prose;
+}
+
 /** Longest string literal in JSON — last-resort salvage for mis-shaped provider output. */
 function extractLongestJsonStringLiteral(trimmed: string, minLength = 24): string {
   let best = "";
@@ -83,8 +111,10 @@ function extractLongestJsonStringLiteral(trimmed: string, minLength = 24): strin
  * Order: parsed fields → partial field extract → longest prose-like string literal.
  */
 export function salvagePhaseResponseText(raw: string): string {
-  const trimmed = unwrapMarkdownJson(raw);
+  let trimmed = unwrapMarkdownJson(raw);
   if (!trimmed) return "";
+
+  trimmed = stripReasoningPrefix(trimmed);
 
   const complete = extractFromCompleteJson(trimmed);
   if (complete) return complete;
@@ -94,7 +124,10 @@ export function salvagePhaseResponseText(raw: string): string {
     if (partial) return partial;
   }
 
-  return extractLongestJsonStringLiteral(trimmed);
+  const longest = extractLongestJsonStringLiteral(trimmed);
+  if (longest) return longest;
+
+  return salvageProseFallback(trimmed);
 }
 
 /** Best-effort extract of the `response` field while JSON is still streaming. */

@@ -1,8 +1,9 @@
 import {
   getOpenRouterDefaultModel,
   logOpenRouterPrefixCacheMetrics,
+  logOpenRouterProviderServed,
   logOpenRouterRequestRouting,
-  openRouterProviderExtras,
+  mergeJsonProviderConstraints,
   openRouterRequestExtras,
   type OpenRouterChatMessage,
   type OpenRouterChatOptions,
@@ -75,8 +76,12 @@ export async function openRouterChatCompletionStream(
   const effort = resolveReasoningEffort(options.reasoning_effort);
 
   const buildBody = (includeReasoning: boolean): Record<string, unknown> => {
-    const extras = openRouterRequestExtras(options.session_id);
-    if (options.provider) extras.provider = options.provider;
+    const extras = openRouterRequestExtras(options.session_id, {
+      require_parameters: Boolean(options.json_mode),
+    });
+    if (options.provider) {
+      extras.provider = mergeJsonProviderConstraints(options.provider, options.json_mode);
+    }
     const body: Record<string, unknown> = {
       model,
       stream: true,
@@ -220,6 +225,13 @@ export async function openRouterChatCompletionStream(
     call_type: options.call_type,
     phase_name: options.phase_name,
     provider: out.result.provider,
+  });
+  logOpenRouterProviderServed({
+    provider: out.result.provider,
+    finish_reason: out.result.finish_reason,
+    cached_tokens: out.result.cached_tokens,
+    call_type: options.call_type,
+    phase_name: options.phase_name,
   });
   return out.result;
 }

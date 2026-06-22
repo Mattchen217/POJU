@@ -46,7 +46,10 @@ function hasSalvageableResponse(rawText: string): boolean {
   return Boolean(salvagePhaseResponseText(rawText).trim());
 }
 
-function resolveStreamProvider(call_type: LLMCallType): Record<string, unknown> | undefined {
+function resolveStreamProvider(
+  call_type: LLMCallType,
+  extra_ignore?: string[],
+): Record<string, unknown> | undefined {
   const highOutput = new Set<LLMCallType>([
     "glyph_reading",
     "match_report",
@@ -57,8 +60,8 @@ function resolveStreamProvider(call_type: LLMCallType): Record<string, unknown> 
     "poju_final_delivery",
   ]);
   return highOutput.has(call_type)
-    ? highOutputProviderConstraints()
-    : openRouterProviderExtras();
+    ? highOutputProviderConstraints(extra_ignore)
+    : openRouterProviderExtras({ require_parameters: true, extra_ignore });
 }
 
 const RETRYABLE_COMPLIANCE_LABELS = new Set([
@@ -91,14 +94,19 @@ export async function callPhaseJsonTransport(
     phase_name?: string;
     stream_hooks?: PhaseStreamHooks;
     signal?: AbortSignal;
+    /** Temporary ignore slugs for retry (e.g. skip provider that returned unparseable JSON). */
+    provider_extra_ignore?: string[];
   },
 ): Promise<PhaseTransportResult> {
   const temperature = options?.temperature ?? 0.5;
   const max_tokens = options?.max_tokens ?? 2500;
   const call_type = options?.call_type ?? "poju_reply";
   const streamHooks = options?.stream_hooks;
+  const extraIgnore = options?.provider_extra_ignore;
 
-  const runOnce = async (): Promise<PhaseTransportResult> => {
+  const runOnce = async (retryIgnore?: string[]): Promise<PhaseTransportResult> => {
+    const ignoreList = [...(extraIgnore ?? []), ...(retryIgnore ?? [])];
+    const providerIgnore = ignoreList.length > 0 ? ignoreList : undefined;
     if (isOpenRouterConfigured()) {
       if (streamHooks) {
         const chatMessages = [
@@ -115,7 +123,7 @@ export async function callPhaseJsonTransport(
             session_id: options?.session_id,
             call_type: call_type,
             phase_name: options?.phase_name,
-            provider: resolveStreamProvider(call_type),
+            provider: resolveStreamProvider(call_type, providerIgnore),
           },
           {
             onReasoning: streamHooks.onReasoning,
@@ -167,10 +175,11 @@ export async function callPhaseJsonTransport(
 
   let result = await runOnce();
   if (shouldRetryEmptyReply(call_type) && !hasSalvageableResponse(result.content)) {
+    const badProvider = result.provider?.trim();
     console.warn(
-      `[phase-transport] empty salvageable response — retrying once (call_type=${call_type} phase=${options?.phase_name ?? "—"} provider=${result.provider ?? "—"})`,
+      `[phase-transport] empty salvageable response — retrying once (call_type=${call_type} phase=${options?.phase_name ?? "—"} provider=${badProvider ?? "—"})`,
     );
-    result = await runOnce();
+    result = await runOnce(badProvider ? [badProvider] : undefined);
   }
   return result;
 }
@@ -183,13 +192,14 @@ export function parsePhaseJson(rawText: string): Record<string, unknown> {
 /** Parse phase JSON; sanitize `response` when locale provided (output-side gloss tokens). */
 export function parsePhaseResult(
   rawText: string,
-  options?: { locale?: string },
+  options?: { locale?: string; logContext?: PhaseResponseResolveContext },
 ): {
   parsed: Record<string, unknown>;
   response: string;
+  salvaged: boolean;
 } {
   const cleaned = rawText.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
-  if (!cleaned) return { parsed: {}, response: "" };
+  if (!cleaned) return { parsed: {}, response: "", salvaged: false };
 
   const sanitizeResponse = (raw: string): string => {
     if (!options?.locale || !raw.trim()) return raw;
@@ -199,18 +209,43 @@ export function parsePhaseResult(
   };
 
   let parsed: Record<string, unknown> = {};
+  let jsonParsed = false;
   try {
     parsed = parsePhaseJson(rawText);
+    jsonParsed = true;
   } catch {
     parsed = {};
   }
 
-  const salvaged = salvagePhaseResponseText(rawText).trim();
-  const response = sanitizeResponse(salvaged);
+  const salvagedRaw = salvagePhaseResponseText(rawText).trim();
+  const response = sanitizeResponse(salvagedRaw);
+  if (!jsonParsed && salvagedRaw) {
+    logPhaseSalvage(rawText, options?.logContext, salvagedRaw.startsWith("{") ? "partial_json" : "prose");
+  }
   if (typeof parsed.response === "string") parsed.response = response;
   else if (response && !parsed.response) parsed.response = response;
 
-  return { parsed, response };
+  return { parsed, response, salvaged: !jsonParsed && Boolean(salvagedRaw) };
+}
+
+/** Log when salvage extracts user-visible text from broken / prose output. */
+export function logPhaseSalvage(
+  rawText: string,
+  ctx: PhaseResponseResolveContext | undefined,
+  mode: "prose" | "partial_json",
+): void {
+  const preview = rawText.replace(/\s+/g, " ").trim().slice(0, 400);
+  console.warn(
+    "[phase-transport] phase response salvaged",
+    JSON.stringify({
+      mode,
+      phase: ctx?.phase_name ?? "—",
+      call_type: ctx?.call_type ?? "—",
+      provider: ctx?.provider ?? "—",
+      finish_reason: ctx?.finish_reason ?? "—",
+      raw_preview: preview,
+    }),
+  );
 }
 
 export type PhaseResponseResolveContext = {
@@ -276,7 +311,10 @@ export function resolvePhaseResponse(
   used_fallback: boolean;
   compliance_failed: boolean;
 } {
-  let { parsed, response } = parsePhaseResult(rawText, { locale: ctx.locale });
+  let { parsed, response } = parsePhaseResult(rawText, {
+    locale: ctx.locale,
+    logContext: ctx,
+  });
 
   if (response.trim() && ctx.structured !== undefined) {
     const repaired = repairEmptyKeepCnBrackets(response, ctx.structured, ctx.locale ?? "en");
@@ -319,6 +357,30 @@ export function getPhaseResponseFallback(locale?: string): string {
     es: "[POJU] No se pudo generar la respuesta. Reintenta. Tu sesión está guardada.",
   };
   return messages[loc] ?? messages.en!;
+}
+
+/** True when text is the infrastructure fallback copy (not conversational content). */
+export function isPhaseResponseFallback(text: string): boolean {
+  const t = text.trim();
+  if (!t.startsWith("[POJU]")) return false;
+  return (
+    t.includes("could not be generated") ||
+    t.includes("未能生成") ||
+    t.includes("No se pudo generar")
+  );
+}
+
+/** Prefer streamed content over fallback placeholder when parse/salvage failed server-side. */
+export function resolveStreamedCompleteResponse(
+  llmResponse: string,
+  streamedText: string,
+  locale?: string,
+): string {
+  const streamed = streamedText.trim();
+  const resolved = llmResponse.trim();
+  if (resolved && !isPhaseResponseFallback(resolved)) return resolved;
+  if (streamed) return streamed;
+  return getPhaseResponseFallback(locale);
 }
 
 export function formatPhaseMessageHistory(
