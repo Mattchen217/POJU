@@ -16,6 +16,7 @@ export interface LanguageDirectiveInput {
 
 export interface LanguageDirectiveOutput {
   outputLanguage: string;
+  outputLocale: AppLocale;
   directive: string;
 }
 
@@ -170,6 +171,7 @@ export function getLanguageDirective(
           const name = localeNames[detectedLang];
           return {
             outputLanguage: name,
+            outputLocale: detectedLang,
             directive: buildDirective(name, "priority_3"),
           };
         }
@@ -184,6 +186,7 @@ export function getLanguageDirective(
       const inputLangName = localeNames[detectedLocale];
       return {
         outputLanguage: uiName,
+        outputLocale: input.locale,
         directive: buildDirective(
           uiName,
           "priority_1_with_input_note",
@@ -196,6 +199,7 @@ export function getLanguageDirective(
   const name = localeNames[input.locale];
   return {
     outputLanguage: name,
+    outputLocale: input.locale,
     directive: buildDirective(name, "priority_1"),
   };
 }
@@ -273,6 +277,7 @@ export function getSyncroLanguageDirective(
 
   return {
     outputLanguage: language,
+    outputLocale,
     directive: `
 # SYNCRO OUTPUT LANGUAGE (task-driven)
 
@@ -330,6 +335,7 @@ export function getPojuChatLanguageDirective(
   const language = localeNames[outputLocale];
   return {
     outputLanguage: language,
+    outputLocale,
     directive: `
 # POJU OUTPUT LANGUAGE (message-driven · HARD LOCK)
 

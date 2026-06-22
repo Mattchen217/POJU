@@ -65,6 +65,7 @@ export function buildPhaseTurnContext(input: PhaseLLMInput, taskBlock: string): 
       content: m.content,
     })),
   });
+  const outLoc = langDirective.outputLocale;
   const structured =
     normalizeBaseAnalysisInput(input.base_analysis ?? null).structured ?? null;
   const injectionBlock = input.tool_injection_context?.trim() ?? "";
@@ -73,9 +74,9 @@ export function buildPhaseTurnContext(input: PhaseLLMInput, taskBlock: string): 
     langDirective.directive.trim(),
     buildCurrentDateContext(new Date(), input.locale),
     injectionBlock,
-    buildTermMarkingPromptBlock(input.locale),
+    buildTermMarkingPromptBlock(outLoc),
     structured ? buildStructuredInstanceInventory(structured) : "",
-    buildChatPhaseTermBindingBlock(input.locale),
+    buildChatPhaseTermBindingBlock(outLoc),
     taskBlock,
   );
 }
