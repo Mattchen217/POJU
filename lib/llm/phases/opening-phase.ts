@@ -2,19 +2,10 @@
  * Step I — AI 主动开场（东方破局顾问定位）
  */
 import { normalizeAgentPhase, type AgentPhase } from "@/lib/poju/agent-state";
-import {
-  applyTurnContext,
-  callPhaseJsonTransport,
-  formatPhaseMessageHistory,
-  parsePhaseResult,
-  withPhaseStreamOpts,
-} from "@/lib/llm/phases/phase-transport";
-import {
-  buildPojuDynamicTurnContext,
-  buildPojuStaticSystemPrompt,
-} from "@/lib/llm/phases/oriental-prompt-context";
-import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
+import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseResult, withPhaseStreamOpts } from "@/lib/llm/phases/phase-transport";
 import type { PojuV4ActionRequested } from "@/lib/poju/types";
+import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
+import { buildOrientalSystemPrompt } from "@/lib/llm/phases/oriental-prompt-context";
 
 const VALID_SUGGESTED: AgentPhase[] = ["opening", "collecting_context"];
 
@@ -41,8 +32,8 @@ function buildOpeningTaskBlock(input: PhaseLLMInput): string {
 ## 风格
 
 - 总字数 180–420 字（中文）/ 140–300 词（英文）
-- **对话 Agent 口吻**：自然短多段；至少 1 条命盘或工具结论细节（⟦t:…⟧）；**不要**粗体引导标签/金句框/### 子标题
-- 细则见上方「POJU 对话 response 规则」
+- 3–5 个自然段；可引用命盘或工具结论中的至少 1 条具体细节
+- 不要列要点清单；不要说「我能帮你」之类的空承诺
 
 ## 输出格式（严格 JSON，无 markdown 围栏）
 
@@ -79,8 +70,9 @@ function buildOpeningTaskBlock(input: PhaseLLMInput): string {
 ## 风格
 
 - 总字数 180-420 字（中文）/ 140-300 词（英文）
-- **对话 Agent 口吻**：命盘 1-2 短段 + 承接问题 + 尖锐追问；至少 1 处 ⟦t:…⟧ 引用 base_analysis；**不要**粗体引导标签/金句框/### 子标题
-- 细则见上方「POJU 对话 response 规则」；不要说「我能帮你」之类的空承诺
+- 3-5 个自然段：命盘结构 1-2 段 + 承接问题 + 尖锐追问
+- 必须引用命主基础分析中的至少 1 条具体结论（格局/大运/用神/亮点或隐忧），并白话解释
+- 不要列要点清单；不要说「我能帮你」之类的空承诺
 
 ## 输出格式（严格 JSON，无 markdown 围栏）
 
@@ -93,21 +85,17 @@ function buildOpeningTaskBlock(input: PhaseLLMInput): string {
 }
 
 export async function callOpeningPhase(input: PhaseLLMInput): Promise<PhaseLLMResult> {
-  const taskBlock = buildOpeningTaskBlock(input);
-  const system = await buildPojuStaticSystemPrompt(input);
-  const turnContext = buildPojuDynamicTurnContext(input, taskBlock);
-  let base = formatPhaseMessageHistory(input.session.messages);
-  if (base.length === 0) {
-    base = [{ role: "user", content: "__OPENING__" }];
+  const system = await buildOrientalSystemPrompt(input, buildOpeningTaskBlock(input));
+  let messages = formatPhaseMessageHistory(input.session.messages);
+  if (messages.length === 0) {
+    messages = [{ role: "user", content: "__OPENING__" }];
   }
-  const messages = applyTurnContext(base, turnContext);
 
   const result = await callPhaseJsonTransport(
     system,
     messages,
     withPhaseStreamOpts(input, {
       call_type: "chat_flash",
-      phase_name: "opening",
       temperature: 0.55,
       max_tokens: 2800,
     }),

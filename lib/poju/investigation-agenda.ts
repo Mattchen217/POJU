@@ -13,6 +13,8 @@ export interface AgendaItem {
   label: string;
   critical: boolean;
   status: AgendaItemStatus;
+  /** Which breakthrough hypothesis this item validates (hidden from user response). */
+  supports?: string;
 }
 
 const AGENDA_STATUSES: AgendaItemStatus[] = ["unexplored", "partial", "covered"];
@@ -75,6 +77,7 @@ export function parseInvestigationAgenda(raw: unknown): AgendaItem[] | null {
       label,
       critical: Boolean(o.critical),
       status,
+      supports: typeof o.supports === "string" ? o.supports.trim() : "",
     });
   }
   if (items.length < 4 || items.length > 10) return null;
@@ -127,6 +130,28 @@ export function getNextAgendaFocus(agenda: AgendaItem[]): AgendaItem[] {
   const open = agenda.filter((a) => a.status !== "covered");
   const critical = open.filter((a) => a.critical);
   const pool = critical.length > 0 ? critical : open;
+
+  const uncoveredByHypothesis = new Map<string, number>();
+  for (const item of agenda) {
+    if (!item.critical) continue;
+    const key = item.supports?.trim();
+    if (!key || item.status === "covered") continue;
+    uncoveredByHypothesis.set(key, (uncoveredByHypothesis.get(key) ?? 0) + 1);
+  }
+
+  if (uncoveredByHypothesis.size > 0) {
+    const rankedHypotheses = [...uncoveredByHypothesis.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([k]) => k);
+    const prioritized: AgendaItem[] = [];
+    for (const hyp of rankedHypotheses) {
+      for (const item of pool) {
+        if (item.supports?.trim() === hyp) prioritized.push(item);
+      }
+    }
+    if (prioritized.length > 0) return prioritized.slice(0, 2);
+  }
+
   return pool.slice(0, 2);
 }
 
@@ -137,7 +162,8 @@ export function formatAgendaForPrompt(agenda: AgendaItem[]): string {
       const tag = a.critical ? "必查" : "补充";
       const status =
         a.status === "covered" ? "已覆盖" : a.status === "partial" ? "部分" : "未探";
-      return `- [${tag}] ${a.label} (${a.id}) — ${status}`;
+      const supportNote = a.supports?.trim() ? ` · 支撑「${a.supports}」` : "";
+      return `- [${tag}] ${a.label} (${a.id}) — ${status}${supportNote}`;
     })
     .join("\n");
 }

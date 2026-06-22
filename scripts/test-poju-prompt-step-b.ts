@@ -17,11 +17,7 @@ import {
   POJU_SESSION_GUARDRAILS,
   buildPojuCorePromptSections,
 } from "@/lib/llm/prompts/poju-base";
-import {
-  buildPojuStaticSystemPrompt,
-  buildPojuDynamicTurnContext,
-  preparePojuPhaseLLMCall,
-} from "@/lib/llm/phases/oriental-prompt-context";
+import { buildPojuSystemPrompt } from "@/lib/llm/phases/oriental-prompt-context";
 import type { BirthInfo } from "@/lib/profile/types";
 import type { PhaseLLMInput } from "@/lib/llm/phases/types";
 
@@ -40,13 +36,14 @@ function read(rel: string): string {
 
 async function main(): Promise<void> {
   const ctx = read("lib/llm/phases/oriental-prompt-context.ts");
+  const collecting = read("lib/llm/phases/collecting-phase.ts");
   const final = read("lib/llm/pro/final-delivery.ts");
   const oriental = read("lib/llm/prompts/oriental-counselor-base.ts");
 
   console.log("\n=== Step B: POJU modularization static checks ===\n");
 
   assert("poju-base.ts exists", existsSync(resolve(ROOT, "lib/llm/prompts/poju-base.ts")));
-  assert("core sections exclude READING_LAYOUT (delivery-only)", !buildPojuCorePromptSections().some((s) => s.includes("降维排版（杂志式版面")));
+  assert("core has READING_LAYOUT (committed layout in static head)", buildPojuCorePromptSections().some((s) => s.includes("降维排版（杂志式版面")));
 
   assert("identity 破局顾问", POJU_BREAKTHROUGH_COUNSELOR_IDENTITY.includes("破局顾问"));
   assert("identity 不是签文(Glyph)", POJU_BREAKTHROUGH_COUNSELOR_IDENTITY.includes("Glyph"));
@@ -55,6 +52,9 @@ async function main(): Promise<void> {
 
   assert("identity 我是 POJU / I am POJU", POJU_BREAKTHROUGH_COUNSELOR_IDENTITY.includes("我是 POJU"));
   assert("identity output policy wired", buildPojuCorePromptSections().some((s) => s.includes("POJULIFE OUTPUT POLICY")));
+
+  assert("passive term marking in BAZI method", POJU_BAZI_DEEP_METHOD.includes("被动包装"));
+  assert("no ≥4 term id quota in BAZI method", !POJU_BAZI_DEEP_METHOD.includes("≥4 个不同 term id"));
 
   assert("action dimension menu", POJU_ACTION_DESIGN_PRINCIPLES.includes("行动维度菜单"));
   assert("action Action 1 prefix", POJU_ACTION_DESIGN_PRINCIPLES.includes("### Action 1:"));
@@ -67,19 +67,19 @@ async function main(): Promise<void> {
   assert("branding 禁 Glyph/Syncro/Match 暴露", POJU_OUTPUT_BRANDING.includes("不得在用户可见"));
 
   assert("context uses poju-base", ctx.includes("buildPojuCorePromptSections"));
+  assert("context has buildPojuSystemPrompt", ctx.includes("buildPojuSystemPrompt"));
   assert("context NOT ORIENTAL_COUNSELOR_BASE", !ctx.includes("ORIENTAL_COUNSELOR_BASE"));
 
+  assert("collecting 4-6 段自然叙述", collecting.includes("4-6 段自然叙述"));
+  assert("collecting investigation_agenda", collecting.includes("investigation_agenda"));
+  assert("collecting buildPullbackBlock", collecting.includes("buildPullbackBlock"));
+  assert("collecting hypothesis-backward agenda", collecting.includes("破局假设"));
+  assert("collecting topic_drift + new session button", collecting.includes("should_show_new_session_button"));
+
   assert("final-delivery uses poju-base", final.includes("buildPojuCorePromptSections"));
-  assert("final-delivery includes READING_LAYOUT", final.includes("READING_LAYOUT_CONTRACT"));
-  assert("chat static core excludes READING_LAYOUT", !buildPojuCorePromptSections().some((s) => s.includes("降维排版（杂志式版面")));
   assert("final-delivery stitchPromptSections", final.includes("stitchPromptSections"));
 
   assert("oriental-counselor still has ORIENTAL_COUNSELOR_BASE for Syncro/Match", oriental.includes("ORIENTAL_COUNSELOR_BASE"));
-
-  assert("context has buildPojuStaticSystemPrompt", ctx.includes("buildPojuStaticSystemPrompt"));
-  assert("context has preparePojuPhaseLLMCall", ctx.includes("preparePojuPhaseLLMCall"));
-  assert("context has buildPojuDynamicTurnContext", ctx.includes("buildPojuDynamicTurnContext"));
-  assert("context documents prefix cache TTL", ctx.includes("TTL"));
 
   for (const phase of [
     "opening-phase.ts",
@@ -90,11 +90,9 @@ async function main(): Promise<void> {
     "stall-offer-phase.ts",
   ]) {
     const p = read(`lib/llm/phases/${phase}`);
-    const usesNew =
-      p.includes("preparePojuPhaseLLMCall") ||
-      (phase === "opening-phase.ts" && p.includes("buildPojuStaticSystemPrompt"));
-    assert(`${phase} uses prefix-cache API`, usesNew);
-    assert(`${phase} does NOT call buildOrientalSystemPrompt`, !p.includes("buildOrientalSystemPrompt"));
+    const usesOriental =
+      p.includes("buildOrientalSystemPrompt") || p.includes("buildPojuSystemPrompt");
+    assert(`${phase} uses buildOrientalSystemPrompt / buildPojuSystemPrompt`, usesOriental);
   }
 
   const birth: BirthInfo = {
@@ -147,12 +145,7 @@ async function main(): Promise<void> {
 
   phaseInput.session.agent_v2 = mockAgent;
 
-  const openingStatic = await buildPojuStaticSystemPrompt(phaseInput);
-  const openingPrep = await preparePojuPhaseLLMCall(
-    phaseInput,
-    `# 当前任务：主动开场\n\nOutput JSON with response only.`,
-  );
-  const openingDynamic = buildPojuDynamicTurnContext(
+  const openingSystem = await buildPojuSystemPrompt(
     phaseInput,
     `# 当前任务：主动开场\n\nOutput JSON with response only.`,
   );
@@ -165,13 +158,10 @@ async function main(): Promise<void> {
     recent_user_messages: ["Should I leave my current job to join a startup?"],
   });
 
-  assert("opening static has POJU identity", openingStatic.includes("破局顾问") || openingStatic.includes("POJU"));
-  assert("opening static has BAZI method", openingStatic.includes("大运") || openingStatic.includes("Major"));
-  assert("opening static NO monolithic ORIENTAL at start", !openingStatic.startsWith("# 你是谁\n\n你是 POJU，一位精通"));
-  assert("opening static equals prepare system", openingStatic === openingPrep.system);
-  assert("dynamic context NOT in static system", !openingStatic.includes("当前任务：主动开场"));
-  assert("dynamic context in user turn", openingPrep.messages.some((m) => m.content.includes("当前任务：主动开场")));
-  assert("dynamic turn context non-empty", openingDynamic.trim().length > 50);
+  assert("opening system has POJU identity", openingSystem.includes("破局顾问") || openingSystem.includes("POJU"));
+  assert("opening system has BAZI method", openingSystem.includes("大运") || openingSystem.includes("Major"));
+  assert("opening system includes task block", openingSystem.includes("当前任务：主动开场"));
+  assert("opening system NO monolithic ORIENTAL at start", !openingSystem.startsWith("# 你是谁\n\n你是 POJU，一位精通"));
 
   assert("final delivery has ANALYSIS marker", deliverySystem.includes("═══ ANALYSIS ═══"));
   assert("final delivery has WHAT TO DO", deliverySystem.includes("═══ WHAT TO DO ═══"));
@@ -180,12 +170,10 @@ async function main(): Promise<void> {
   assert("final delivery has poju-base 八字", deliverySystem.includes("POJU_BAZI_DEEP_METHOD") || deliverySystem.includes("八字深度解读"));
 
   const sample = [
-    "========== POJU STATIC SYSTEM (collecting) — head ==========",
-    openingStatic.slice(0, 2400),
+    "========== POJU SYSTEM PROMPT (opening) — head ==========",
+    openingSystem.slice(0, 2400),
     "\n...[middle omitted]...\n",
-    openingStatic.slice(-1200),
-    "\n========== POJU DYNAMIC TURN CONTEXT — head ==========",
-    openingDynamic.slice(0, 1200),
+    openingSystem.slice(-1200),
     "\n========== POJU FINAL DELIVERY — head ==========",
     deliverySystem.slice(0, 2400),
     "\n...[middle omitted]...\n",
@@ -196,7 +184,7 @@ async function main(): Promise<void> {
   writeFileSync(OUT, sample, "utf8");
 
   console.log(`\nPrompt sample: ${OUT}`);
-  console.log(`Opening static system: ${openingStatic.length} chars`);
+  console.log(`Opening system prompt: ${openingSystem.length} chars`);
   console.log(`Final delivery system: ${deliverySystem.length} chars`);
 
   if (failures.length) {

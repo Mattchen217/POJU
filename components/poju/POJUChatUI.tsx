@@ -9,6 +9,7 @@ import { useAppDialog } from "@/components/ui/app-dialog";
 import { ContextSummaryEditor } from "@/components/poju/ContextSummaryEditor";
 import type { ContextSummary } from "@/lib/poju/agent-state";
 import { OffTopicAction } from "@/components/poju/OffTopicAction";
+import { RefundOfferAction } from "@/components/poju/RefundOfferAction";
 import {
   resolveThinkingStreamMode,
   type ThinkingStreamMode,
@@ -1333,6 +1334,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           />
         );
       }
+      if (m.meta?.suggest_refund && m.role === "assistant") {
+        followUps[m.timestamp] = (
+          <RefundOfferAction sessionId={session.session_id} variant="message" />
+        );
+      }
     }
     return {
       messageSlots: slots,
@@ -1347,6 +1353,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     session.actions,
     session.action_plan_archive_id,
     openUnlockReportModal,
+    session.session_id,
   ]);
 
   const streaming = sending || confirmBusy;

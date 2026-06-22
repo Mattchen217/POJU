@@ -3,6 +3,7 @@
 import { useLocale } from "next-intl";
 import type { POJUAction, POJUMessage, ToolName } from "@/lib/poju/types";
 import { RichReadingText } from "@/components/cross-product/RichReadingText";
+import { RefundOfferAction } from "@/components/poju/RefundOfferAction";
 import { AssistantMessageActions } from "@/components/poju/AssistantMessageActions";
 import { MainDeliveryView } from "@/components/poju/MainDeliveryView";
 import { MatrixNarrativeReply, matrixNarrativeActionsText } from "@/components/poju/MatrixNarrativeReply";
@@ -125,6 +126,9 @@ export function MessageBubble({
   return (
     <div className="pchat__msg pchat__msg--ai">
       <RichReadingText text={message.content} locale={locale} />
+      {message.meta?.suggest_refund && sessionId ? (
+        <RefundOfferAction sessionId={sessionId} variant="message" />
+      ) : null}
       {message.meta?.tool_suggestion && sessionId && cycleId && onToolResponse ? (
         <ToolSuggestionCard
           suggestion={message.meta.tool_suggestion}

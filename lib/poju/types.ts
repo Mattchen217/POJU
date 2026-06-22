@@ -39,6 +39,7 @@ export interface POJUMessage {
     topic_drift_signal?: "none" | "edge" | "off_topic";
     drift_reason?: string;
     should_show_new_session_button?: boolean;
+    suggest_refund?: boolean;
     contains_delivery?: boolean;
     /** Tool_Linking Step 2 — pending tool card on this assistant turn. */
     tool_suggestion?: ToolSuggestionPayload;
@@ -46,7 +47,7 @@ export interface POJUMessage {
     tool_suggestion_message_id?: string;
     /** DeepSeek / OpenRouter reasoning tokens + POJU thought digest for this turn. */
     thinking_process?: string;
-    /** Preview-unlock flow — special in-chat message kinds (zero LLM for matrix/paywall). */
+    /** Collecting escalation — show refund entry (user-initiated). */
     kind?: "energy_matrix" | "paywall" | "report";
     matrix_payload?: import("./build-matrix-payload").PojuMatrixPayload;
     report_text?: string;

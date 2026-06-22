@@ -81,6 +81,7 @@ export function createPojuChatStreamResponse(body: ChatBody, reqSignal?: AbortSi
           current_summary: llm.current_summary,
           question_category: llm.question_category,
           thinking_process: llm.thinking_process,
+          suggest_refund: llm.suggest_refund ?? false,
         });
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e);

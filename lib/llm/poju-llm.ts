@@ -75,6 +75,9 @@ export interface POJULLMResponse {
   tool_suggestion?: import("@/lib/poju/types").ToolSuggestionPayload | null;
   start_new_cycle?: boolean;
   new_cycle_question?: string | null;
+  collection_progress?: "advancing" | "stalled" | "resistant" | null;
+  stall_offer?: boolean;
+  suggest_refund?: boolean;
 }
 
 export async function callPOJULLM(input: CallInput): Promise<POJULLMResponse> {
@@ -150,6 +153,9 @@ async function callPOJULLMPhasePath(input: CallInput): Promise<POJULLMResponse> 
     tool_suggestion: phase.tool_suggestion ?? null,
     start_new_cycle: Boolean(phase.start_new_cycle),
     new_cycle_question: phase.new_cycle_question ?? null,
+    collection_progress: phase.collection_progress ?? null,
+    stall_offer: Boolean(phase.stall_offer),
+    suggest_refund: Boolean(phase.suggest_refund),
   };
 }
 

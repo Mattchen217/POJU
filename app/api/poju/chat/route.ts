@@ -65,5 +65,8 @@ export async function POST(req: Request) {
     current_summary: llm.current_summary,
     question_category: llm.question_category,
     thinking_process: llm.thinking_process,
+    collection_progress: llm.collection_progress,
+    stall_offer: llm.stall_offer,
+    suggest_refund: llm.suggest_refund ?? false,
   });
 }

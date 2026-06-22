@@ -6,6 +6,17 @@ import { isAgendaSatisfied } from "@/lib/poju/investigation-agenda";
 export type CollectionProgress = "advancing" | "stalled" | "resistant";
 export type DeliveryMode = "full" | "degraded";
 
+/** Consecutive stall/resistant rounds before suggesting refund (after stall-offer path). */
+export const REFUND_SUGGEST_THRESHOLD = 3;
+
+export type CollectingEscalationLevel =
+  | "none"
+  | "L1"
+  | "L2"
+  | "L3"
+  | "refund"
+  | "delivery_pullback";
+
 /** Minimum collecting Q&A rounds before allowing confirmation. */
 export const MIN_COLLECTING_TURNS = MIN_COLLECTING_USER_TURNS;
 /** Hard cap on collecting turns — triggers degraded delivery (stop-loss). */
@@ -49,6 +60,36 @@ export function evaluateStopLoss(input: {
     };
   }
   return { triggered: false, reason: null };
+}
+
+/** Pre-LLM tier for collecting-phase prompt injection (stall_count + pullback flags). */
+export function resolvePreCallEscalation(input: {
+  agent?: POJUAgentState | null;
+  collecting_pullback?: boolean;
+}): CollectingEscalationLevel {
+  if (input.collecting_pullback) return "delivery_pullback";
+  const agent = input.agent;
+  if (!agent) return "L1";
+  const stall = agent.stall_count ?? 0;
+  if (stall >= REFUND_SUGGEST_THRESHOLD) return "refund";
+  if (agent.resume_collecting_low_barrier) return "refund";
+  if (stall >= 1) return "L2";
+  return "L1";
+}
+
+/** Post-LLM: offer refund entry (never auto-refund). Skipped when stall_offer replaces the turn. */
+export function shouldSuggestRefund(input: {
+  agent: POJUAgentState;
+  collection_progress: CollectionProgress;
+  stall_offer?: boolean;
+}): boolean {
+  if (input.stall_offer) return false;
+  const projected = nextStallCount(input.agent.stall_count ?? 0, input.collection_progress);
+  if (projected >= REFUND_SUGGEST_THRESHOLD) return true;
+  if (input.agent.resume_collecting_low_barrier && input.collection_progress === "resistant") {
+    return true;
+  }
+  return false;
 }
 
 /** Block confirmation while turns or agenda coverage below gate. */

@@ -15,12 +15,18 @@ import {
   isPrematureCollectingPhase,
   MAX_COLLECTING_TURNS,
   nextStallCount,
+  parseCollectionProgress,
+  projectCollectingStopLoss,
+  REFUND_SUGGEST_THRESHOLD,
+  resolvePreCallEscalation,
+  shouldSuggestRefund,
   STALL_STOP_LOSS_THRESHOLD,
 } from "@/lib/poju/collection-progress";
 import {
   applyAgendaStatusUpdates,
   computeCollectingPullback,
   detectDeliveryRequest,
+  getNextAgendaFocus,
   parseInvestigationAgenda,
   userHardPushed,
   type AgendaItem,
@@ -74,6 +80,63 @@ const parsed = parseInvestigationAgenda(
   sampleAgenda().map(({ id, label, critical, status }) => ({ id, label, critical, status })),
 );
 assert(parsed !== null && parsed.length === 7, "parse investigation agenda");
+
+const withSupports = parseInvestigationAgenda([
+  { id: "a", label: "现金流 runway", critical: true, status: "unexplored", supports: "止损收缩" },
+  { id: "b", label: "调价历史", critical: true, status: "unexplored", supports: "提价筛客" },
+  { id: "c", label: "竞争冲击时间线", critical: true, status: "unexplored", supports: "止损收缩" },
+  { id: "d", label: "精力临界", critical: false, status: "unexplored" },
+  { id: "e", label: "可动用资源", critical: false, status: "unexplored" },
+  { id: "f", label: "真实诉求权重", critical: false, status: "unexplored" },
+]);
+assert(withSupports !== null && withSupports[0]!.supports === "止损收缩", "supports parsed and passed through");
+assert(
+  withSupports!.every((i) => typeof i.supports === "string"),
+  "supports defaults to string on all items",
+);
+
+const focusAgenda: AgendaItem[] = [
+  { id: "a", label: "A", critical: true, status: "covered", supports: "hyp-A" },
+  { id: "b", label: "B", critical: true, status: "unexplored", supports: "hyp-A" },
+  { id: "c", label: "C", critical: true, status: "unexplored", supports: "hyp-B" },
+  { id: "d", label: "D", critical: false, status: "unexplored" },
+  { id: "e", label: "E", critical: false, status: "unexplored" },
+  { id: "f", label: "F", critical: false, status: "unexplored" },
+  { id: "g", label: "G", critical: false, status: "unexplored" },
+];
+const focus = getNextAgendaFocus(focusAgenda);
+assert(focus.length === 2, "focus returns up to 2 items");
+assert(
+  focus.every((f) => f.critical && f.supports?.trim()),
+  "focus prioritizes critical items tied to active hypotheses",
+);
+assert(focus.some((f) => f.id === "b"), "focus includes hyp-A critical item");
+
+assert(resolvePreCallEscalation({ collecting_pullback: true }) === "delivery_pullback", "pullback tier");
+assert(resolvePreCallEscalation({ agent: agent({ stall_count: 0 }) }) === "L1", "first stall tier L1");
+assert(resolvePreCallEscalation({ agent: agent({ stall_count: 1 }) }) === "L2", "stall_count≥1 → L2");
+assert(
+  resolvePreCallEscalation({ agent: agent({ stall_count: 3 }) }) === "refund",
+  "stall_count≥3 → refund tier",
+);
+
+const lowBarrier = agent({ resume_collecting_low_barrier: true, stall_count: 0 });
+assert(
+  shouldSuggestRefund({
+    agent: lowBarrier,
+    collection_progress: "resistant",
+  }),
+  "post stall-offer resistant → suggest refund",
+);
+assert(
+  !shouldSuggestRefund({
+    agent: agent({ stall_count: 1 }),
+    collection_progress: "advancing",
+    stall_offer: true,
+  }),
+  "stall offer turn skips suggest_refund",
+);
+assert(REFUND_SUGGEST_THRESHOLD >= STALL_STOP_LOSS_THRESHOLD, "refund after stall-offer path");
 
 // Delivery request vs hard push
 assert(detectDeliveryRequest("给我分析一下该怎么办"), "casual delivery request");

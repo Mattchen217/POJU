@@ -85,6 +85,7 @@ type LLMApiPayload = {
   collection_progress?: "advancing" | "stalled" | "resistant" | null;
   stall_offer?: boolean;
   investigation_agenda?: unknown;
+  suggest_refund?: boolean;
 };
 
 function ensureAgentV2(session: POJUSessionState): POJUAgentState {
@@ -411,6 +412,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       topic_drift_signal: llmResponse.topic_drift_signal,
       drift_reason: llmResponse.drift_reason ?? undefined,
       should_show_new_session_button: llmResponse.should_show_new_session_button,
+      suggest_refund: llmResponse.suggest_refund,
       contains_delivery: llmResponse.contains_delivery,
       tool_suggestion: linking.tool_suggestion ?? undefined,
       tool_suggestion_message_id: linking.tool_suggestion ? assistantMessageId : undefined,
@@ -537,6 +539,7 @@ async function callLLMViaAPI(input: {
   new_cycle_question?: string | null;
   collection_progress?: "advancing" | "stalled" | "resistant" | null;
   stall_offer?: boolean;
+  suggest_refund?: boolean;
 }> {
   const body = JSON.stringify({
     session: input.session,
@@ -669,6 +672,7 @@ function mapLlmApiPayload(
       typeof data.new_cycle_question === "string" ? data.new_cycle_question : null,
     collection_progress: parseCollectionProgress(data.collection_progress),
     stall_offer: data.stall_offer === true,
+    suggest_refund: data.suggest_refund === true,
   };
 }
 

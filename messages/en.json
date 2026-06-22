@@ -1019,6 +1019,15 @@
       "start_new_session": "Open a new POJU Session",
       "continue_current": "Continue with the original topic"
     },
+    "refund_offer": {
+      "hint": "If this isn't the right time to go deeper, you can request a refund and come back when you're ready.",
+      "open_refund": "Request a refund",
+      "continue_chat": "Keep chatting",
+      "modal_title": "Request a refund",
+      "loading": "Loading payment details…",
+      "no_payment": "No payment record found for this session.",
+      "error_fallback": "We couldn't process your refund automatically."
+    },
     "archive_hint": {
       "saved_title": "Your action plan is saved",
       "saved_text": "Find it anytime in Archive under POJU. We won't push notifications—you come back when you're ready.",

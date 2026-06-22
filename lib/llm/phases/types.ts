@@ -23,6 +23,8 @@ export interface PhaseLLMInput {
   collecting_pullback?: boolean;
   /** Critical agenda labels still uncovered — prompt tail only. */
   uncovered_critical_labels?: string[];
+  /** Precomputed collecting escalation tier for this turn. */
+  collecting_escalation_level?: import("@/lib/poju/collection-progress").CollectingEscalationLevel;
 }
 
 export interface PhaseLLMResult {
@@ -53,5 +55,7 @@ export interface PhaseLLMResult {
   stall_offer?: boolean;
   /** First collecting turn only — persisted once. */
   investigation_agenda?: import("@/lib/poju/investigation-agenda").AgendaItem[] | null;
+  /** Collecting escalation — show refund entry (user-initiated only). */
+  suggest_refund?: boolean;
 }
 

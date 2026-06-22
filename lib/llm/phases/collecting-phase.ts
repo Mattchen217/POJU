@@ -18,6 +18,9 @@ import {
   nextStallCount,
   parseCollectionProgress,
   projectCollectingStopLoss,
+  resolvePreCallEscalation,
+  shouldSuggestRefund,
+  type CollectingEscalationLevel,
 } from "@/lib/poju/collection-progress";
 import {
   applyAgendaStatusUpdates,
@@ -31,8 +34,8 @@ import { callStallOfferPhase } from "@/lib/llm/phases/stall-offer-phase";
 import { formatContextForPrompt, formatMissingFieldsForPrompt, extractQuestionCategory, mergeContextUpdates, recordToLLMContextUpdates } from "@/lib/poju/context-extractor";
 import type { AgentPhase } from "@/lib/poju/agent-state";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
-import { callPhaseJsonTransport, parsePhaseResult, withPhaseStreamOpts } from "@/lib/llm/phases/phase-transport";
-import { preparePojuPhaseLLMCall } from "@/lib/llm/phases/oriental-prompt-context";
+import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseResult, withPhaseStreamOpts } from "@/lib/llm/phases/phase-transport";
+import { buildOrientalSystemPrompt } from "@/lib/llm/phases/oriental-prompt-context";
 import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
 import type { PojuV4ActionRequested } from "@/lib/poju/types";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
@@ -130,13 +133,19 @@ function clampCollectingSuggestedPhase(
   return "collecting_context";
 }
 
-function buildPullbackBlock(input: PhaseLLMInput): string {
-  if (!input.collecting_pullback) return "";
-  const labels =
+function buildCollectingEscalationBlock(
+  input: PhaseLLMInput,
+  level: CollectingEscalationLevel,
+): string {
+  if (level === "none") return "";
+
+  const focusLabels =
     input.uncovered_critical_labels?.length
       ? input.uncovered_critical_labels.slice(0, 2).join("；")
       : "关键处境细节";
-  return `
+
+  if (level === "delivery_pullback") {
+    return `
 
 ## ★ 本轮 mandatory：用户催促交付 — 把他拉回来（不交付）
 
@@ -144,36 +153,97 @@ function buildPullbackBlock(input: PhaseLLMInput): string {
 
 1. **共情认可**急切——"我知道你现在最想要的就是一个明确答案/方向"
 2. **坦诚说明代价**——"如果我现在就下结论，只能给你一份谁都适用的泛泛建议——这恰恰是最不值钱、对你最没用的东西。我想给你的是只对你成立的判断。"
-3. **点名还差什么**——具体说出：${labels}。说明"这两点会直接改变结论方向"。
+3. **点名还差什么**——具体说出：${focusLabels}。说明"这两点会直接改变结论方向"。
 4. **立刻抛 1 个尖锐追问**接住对话。
 
-措辞红线：不得说"系统要求/还没到轮数/流程规定"等暴露机制的话；让用户感到是为了把分析做准才追问。
-`;
+措辞红线：不得说"系统要求/还没到轮数/流程规定"等暴露机制的话；让用户感到是为了把分析做准才追问。`;
+  }
+
+  if (level === "refund") {
+    return `
+
+## ★ 本轮 mandatory：持续不配合 — 委婉退款档（L4+ · 善意收口）
+
+用户多轮未提供有效信息，或止损二选一后仍抗拒问诊。本轮【禁止交付、禁止给行动建议】，语气自然、不惩罚：
+
+1. 坦诚说明——若一直收集不到足够信息，建议会失真、对 TA 没意义
+2. 委婉收口——"如果现在不是深入聊的好时机，可以考虑申请退款，准备好再回来"
+3. **不要**自动退款；**不要**说"系统/流程/轮数"；**不要**指责用户
+4. 仍可留一个极轻的开放口——"若愿意补一句具体的 ${focusLabels}，我们还可以继续"
+
+参考语气（勿照抄）："如果一直收集不到足够信息，我给的建议会失真、对你没意义。如果现在不是深入的好时机，可以考虑申请退款，准备好再回来。"`;
+  }
+
+  if (level === "L2") {
+    return `
+
+## ★ 本轮 mandatory：敷衍/抗拒 — 认真提醒（L2 · L4 同档）
+
+用户本轮 collection_progress 很可能是 stalled（重复）或 resistant。本轮【禁止交付、禁止给行动建议】：
+
+1. 认真、不指责——"我想给你的是只对你成立的判断，不是泛泛话"
+2. 说明代价——"这需要你认真回答几个关键点，否则结果对你没意义"
+3. 点名 1 个议程焦点（见上方「本轮问诊焦点」）抛尖锐追问
+4. 不得说"系统要求/还没到轮数/流程规定"`;
+  }
+
+  return `
+
+## ★ 本轮提示：信息不清 — 温和澄清（L1）
+
+若你判 collection_progress 为 "stalled" 且这是首次敷衍/不清（非恶意抗拒），优先温和澄清：
+
+- "这点我没抓准，能具体说说 ${focusLabels} 吗？越具体，我的判断越准。"
+- 仍只问诊，不给行动建议；不得暴露机制话术`;
+}
+
+function buildTopicDriftL3Block(): string {
+  return `
+
+## 话题偏移 L3（off_topic · mandatory）
+
+若 topic_drift_signal 为 "off_topic"：
+- response 说明这不在本次 Session 核心问题内，**不要**深入新维度
+- should_show_new_session_button: true
+- 语气自然："这个维度需要单独开一个 Session 才公平；要开新问题，还是回到你原来的问题？"
+- 不得说"系统规定/流程要求"`;
 }
 
 function buildAgendaGenerationBlock(agent: POJUAgentState): string {
   if (agent.agenda_generated) return "";
   return `
 
-## ★ 首轮 mandatory：生成本次问诊议程（仅本轮一次）
+## ★ 首轮 mandatory：破局假设 → 倒推问诊议程（仅本轮一次 · 隐藏推理）
 
-基于用户的原始问题，在 JSON 中额外输出 \`investigation_agenda\` 数组（6–8 项），每项针对**这个人这件事**定制（不要通用字段名），例如咖啡店困境：
-- 竞争冲击的时间线与量级
-- 已试手段及实际效果
-- 现金流/债务可撑多久
-- 真实诉求（止损 vs 死磕）
-- 个人精力与心理临界
-- 可动用的差异化资源
-- 退出/转型的机会成本
+**禁止**在 user-visible \`response\` 里写出破局方向、结论或「我判断你应该…」——收集阶段仍**只问诊、不开方**（见上方铁律）。
+
+### 步骤 0 — 隐藏推理（mandatory · 不进 response）
+在 JSON 的 \`thought\` 对象（和/或模型 reasoning，供 UI thinking_process）里**先**完成两步，再填 \`investigation_agenda\`：
+
+1. **破局假设** — 基于 original_question + 命主结构，列出 **1–2 条**最可能的破局方向（互斥或需二选一），例如「止损收缩」vs「提价筛客」。只写在 \`thought\`，**绝不**写进 \`response\`。
+2. **倒推清单** — 为负责任地验证/在这些方向间抉择，还必须确认哪些信息？把每条信息变成 \`investigation_agenda\` 的一项；每项 \`supports\` 填它支撑哪条假设（简短短语，与 thought 里一致）。
+
+\`thought\` 示例（首轮可选但强烈建议）：
+\`\`\`json
+"thought": {
+  "breakthrough_hypotheses": ["止损收缩", "提价筛客"],
+  "agenda_derivation_note": "缺现金流与已试手段则无法在两假设间下判断"
+}
+\`\`\`
+
+### 步骤 1 — 输出 investigation_agenda（6–8 项）
+每项针对**这个人这件事**定制（不要通用字段名）；**至少 3 项** \`critical: true\`（缺了就无法在假设间下判断）。
 
 格式：
+\`\`\`json
 "investigation_agenda": [
-  { "id": "timeline", "label": "…", "critical": true, "status": "unexplored" },
+  { "id": "runway", "label": "现金流/债务还能撑多久", "critical": true, "status": "unexplored", "supports": "止损收缩" },
+  { "id": "price_test", "label": "近期调价或筛客是否试过、效果如何", "critical": true, "status": "unexplored", "supports": "提价筛客" },
   …
 ]
+\`\`\`
 
-至少 3 项标 critical: true。生成后代码会持久化，**后续轮次不得重写此议程**。
-同时正常输出本轮第一个尖锐问题。
+生成后代码会持久化，**后续轮次不得重写此议程**（只更新 status）。同时正常输出本轮第一个尖锐问题——**response 里只问诊，不剧透 thought 中的假设或方向**。
 `;
 }
 
@@ -181,7 +251,12 @@ function buildAgendaTrackingBlock(agent: POJUAgentState): string {
   const agenda = agent.investigation_agenda ?? [];
   if (agenda.length === 0) return "";
   const focus = getNextAgendaFocus(agenda);
-  const focusText = focus.map((a) => `- ${a.label} (${a.id}, ${a.status})`).join("\n");
+  const focusText = focus
+    .map((a) => {
+      const sup = a.supports?.trim() ? ` · supports「${a.supports}」` : "";
+      return `- ${a.label} (${a.id}, ${a.status}${sup})`;
+    })
+    .join("\n");
   return `
 
 ## 问诊议程（持久 — 勿重写）
@@ -300,15 +375,15 @@ ${resumeAfterStallNote}
 ## 风格
 
 - 中文 220-520 字 / 英文 160-380 词
-- **对话 Agent 口吻**：自然、有共情、像人说话；长回复拆成短多段（段间空行），短接话可一两句
-- 必须体现你已读过【完整】命主基础分析，至少点出 2 处与当前困境相关的命理结构（用 ⟦t:…⟧ 标记）
-- **不要**每轮粗体引导标签、金句框、### 子标题——细则见上方「POJU 对话 response 规则」
+- 4-6 段自然叙述，少用 bullet
+- 必须体现你已读过【完整】命主基础分析，结合当前困境言之有物；命理术语仅在自然提及时用 ⟦t:…⟧ 包好（短回复可零术语，勿为金字堆术语）
 
 ## 话题偏移检测（相对 original_question）
 
 - "none"：与本 Session 核心话题一致或紧密相关（类型 1）
 - "edge"：可能相关，你已在 response 里简短确认（类型 2）
 - "off_topic"：完全新维度，必须拒绝深入并在 response 中引导开新 Session（类型 3）
+${buildTopicDriftL3Block()}
 
 ## 本轮收集进展判断（collection_progress，每轮必填）
 
@@ -330,7 +405,8 @@ ${resumeAfterStallNote}
   "context_updates": {
     "agenda_status_updates": { "agenda_id": "partial" | "covered" }
   },
-  "investigation_agenda": [ { "id": "...", "label": "...", "critical": true, "status": "unexplored" } ],
+  "investigation_agenda": [ { "id": "...", "label": "...", "critical": true, "status": "unexplored", "supports": "支撑哪条破局假设" } ],
+  "thought": { "breakthrough_hypotheses": ["…"], "agenda_derivation_note": "…" },
   "collection_progress": "advancing" | "stalled" | "resistant",
   "topic_drift_signal": "none" | "edge" | "off_topic",
   "drift_reason": "若有偏离，一句话说明（无则空字符串）",
@@ -341,17 +417,24 @@ ${resumeAfterStallNote}
 首轮且 agenda 未生成时 investigation_agenda 必填；已生成则省略 investigation_agenda 字段。
 
 ${buildToolSuggestionPhaseAppendix(input, { includeNewCycleDetection: false })}
-${buildPullbackBlock(input)}`;
+${buildCollectingEscalationBlock(
+  input,
+  input.collecting_escalation_level ??
+    resolvePreCallEscalation({
+      agent: agent,
+      collecting_pullback: input.collecting_pullback,
+    }),
+)}`;
 }
 
 export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLLMResult> {
-  const { system, messages } = await preparePojuPhaseLLMCall(input, buildCollectingTaskBlock(input));
+  const system = await buildOrientalSystemPrompt(input, buildCollectingTaskBlock(input));
+  const messages = formatPhaseMessageHistory(input.session.messages);
   const result = await callPhaseJsonTransport(
     system,
     messages,
     withPhaseStreamOpts(input, {
       call_type: "collection_flash",
-      phase_name: "collecting",
       max_tokens: 3600,
       temperature: 0.5,
     }),
@@ -399,9 +482,15 @@ export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLL
   const drift = parseTopicDriftFromParsed(parsed);
   const tool_suggestion = parseToolSuggestionFromParsed(parsed);
 
+  let suggest_refund = false;
   if (input.agent_state && collection_progress) {
     const { stopLoss } = projectCollectingStopLoss(input.agent_state, collection_progress, true);
-    if (stopLoss.triggered) {
+    suggest_refund = shouldSuggestRefund({
+      agent: input.agent_state,
+      collection_progress,
+      stall_offer: false,
+    });
+    if (stopLoss.triggered && !suggest_refund) {
       console.info("[collecting-phase] Stop-loss → stall offer:", stopLoss.reason);
       const stallResult = await callStallOfferPhase(input);
       return {
@@ -430,6 +519,7 @@ export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLL
     new_cycle_question: null,
     collection_progress,
     investigation_agenda: parseInvestigationAgenda(investigation_agenda_raw),
+    suggest_refund,
     ...drift,
   };
 }

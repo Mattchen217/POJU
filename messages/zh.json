@@ -1034,6 +1034,15 @@
       "start_new_session": "开启新 Session 聊这个",
       "continue_current": "回到原话题"
     },
+    "refund_offer": {
+      "hint": "如果暂时不适合深入聊，可以申请退款，准备好再回来。",
+      "open_refund": "申请退款",
+      "continue_chat": "继续聊",
+      "modal_title": "申请退款",
+      "loading": "正在加载支付信息…",
+      "no_payment": "未找到本 Session 的支付记录。",
+      "error_fallback": "无法自动处理退款，请联系我们。"
+    },
     "archive_hint": {
       "saved_title": "行动建议已存入 Archive",
       "saved_text": "随时在 Archive 的 POJU 分类中查看。我们不会推送提醒——你准备好了再回来即可。",
