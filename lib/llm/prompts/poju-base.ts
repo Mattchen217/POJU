@@ -161,7 +161,7 @@ export const POJU_SESSION_GUARDRAILS = `# POJU 会话守则（伦理 · 术语 �
 
 ## JSON 流式输出（chat phase · 必须遵守）
 - 输出 JSON 时 **「response」必须是第一个字段**，并随 token **逐字/逐词**写出正文（不要等其它字段写完再一次性填 response）
-- 禁止先输出大段 \`context_updates\` / \`current_summary\` 等再写 response — 否则用户端无法流式显示
+- 禁止先输出大段 \`context_updates\` / \`current_summary\` / \`investigation_agenda\` / \`thought\` 等再写 response — 否则用户端无法流式显示且易触顶截断
 
 ## 你不做的事
 - 不预测具体未来事件（几岁结婚、几月升职）

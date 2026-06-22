@@ -1,4 +1,5 @@
 import { auditDeliveredText, sanitizeChatResponse, stripGlossTokensForPrompt } from "@/lib/llm/sanitize/compliance-terms";
+import { extractStreamingResponseText } from "@/lib/poju/extract-streaming-response";
 import { pojuCacheSessionId } from "@/lib/llm/cache-session-id";
 import {
   generateGeminiChatCompletion,
@@ -125,16 +126,23 @@ export function parsePhaseResult(
 
   try {
     const parsed = parsePhaseJson(rawText);
-    const responseRaw =
+    let responseRaw =
       typeof parsed.response === "string"
         ? parsed.response.trim()
         : typeof parsed.reply === "string"
           ? parsed.reply.trim()
-          : cleaned;
+          : "";
+    if (!responseRaw) {
+      responseRaw = extractStreamingResponseText(rawText).trim();
+    }
     const response = sanitizeResponse(responseRaw);
     if (typeof parsed.response === "string") parsed.response = response;
     return { parsed, response };
   } catch {
+    const salvaged = extractStreamingResponseText(rawText).trim();
+    if (salvaged) {
+      return { parsed: {}, response: sanitizeResponse(salvaged) };
+    }
     const fieldMatch = cleaned.match(/"response"\s*:\s*"((?:\\.|[^"\\])*)"/);
     if (fieldMatch?.[1]) {
       try {
@@ -147,8 +155,23 @@ export function parsePhaseResult(
         };
       }
     }
-    return { parsed: {}, response: sanitizeResponse(cleaned) };
+    return { parsed: {}, response: "" };
   }
+}
+
+/** User-visible fallback when the model returns no parseable `response` (e.g. truncated JSON). */
+export function getPhaseResponseFallback(locale?: string): string {
+  const loc = locale?.toLowerCase().startsWith("zh")
+    ? "zh"
+    : locale?.toLowerCase().startsWith("es")
+      ? "es"
+      : "en";
+  const messages: Record<string, string> = {
+    en: "[POJU] Reply could not be generated. Please send again. Your session is saved.",
+    zh: "[POJU] 本轮回复未能生成，请重试发送。会话已保存。",
+    es: "[POJU] No se pudo generar la respuesta. Reintenta. Tu sesión está guardada.",
+  };
+  return messages[loc] ?? messages.en!;
 }
 
 export function formatPhaseMessageHistory(

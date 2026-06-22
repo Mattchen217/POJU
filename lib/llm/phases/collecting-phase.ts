@@ -34,7 +34,13 @@ import { callStallOfferPhase } from "@/lib/llm/phases/stall-offer-phase";
 import { formatContextForPrompt, formatMissingFieldsForPrompt, extractQuestionCategory, mergeContextUpdates, recordToLLMContextUpdates } from "@/lib/poju/context-extractor";
 import type { AgentPhase } from "@/lib/poju/agent-state";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
-import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseResult, withPhaseStreamOpts } from "@/lib/llm/phases/phase-transport";
+import {
+  callPhaseJsonTransport,
+  formatPhaseMessageHistory,
+  getPhaseResponseFallback,
+  parsePhaseResult,
+  withPhaseStreamOpts,
+} from "@/lib/llm/phases/phase-transport";
 import { buildOrientalSystemPrompt } from "@/lib/llm/phases/oriental-prompt-context";
 import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
 import type { PojuV4ActionRequested } from "@/lib/poju/types";
@@ -217,24 +223,18 @@ function buildAgendaGenerationBlock(agent: POJUAgentState): string {
 
 **禁止**在 user-visible \`response\` 里写出破局方向、结论或「我判断你应该…」——收集阶段仍**只问诊、不开方**（见上方铁律）。
 
-### 步骤 0 — 隐藏推理（mandatory · 不进 response）
-在 JSON 的 \`thought\` 对象（和/或模型 reasoning，供 UI thinking_process）里**先**完成两步，再填 \`investigation_agenda\`：
+### JSON 输出顺序铁律（最高优先级 · 与全局 guardrails 一致）
+**必须先写 \`"response"\` 键及其完整正文**，再写 \`investigation_agenda\`、\`thought\` 及其他字段。禁止先输出 agenda/thought 再写 response — 否则流式 UI 空白且易触顶截断。
 
-1. **破局假设** — 基于 original_question + 命主结构，列出 **1–2 条**最可能的破局方向（互斥或需二选一），例如「止损收缩」vs「提价筛客」。只写在 \`thought\`，**绝不**写进 \`response\`。
-2. **倒推清单** — 为负责任地验证/在这些方向间抉择，还必须确认哪些信息？把每条信息变成 \`investigation_agenda\` 的一项；每项 \`supports\` 填它支撑哪条假设（简短短语，与 thought 里一致）。
+### 步骤 0 — 隐藏推理（mandatory · 不进 response · 写在 response **之后**）
+在 \`thought\`（供 UI thinking_process）里完成两步，**紧凑**（每条假设 ≤8 字，derivation_note ≤30 字）：
 
-\`thought\` 示例（首轮可选但强烈建议）：
-\`\`\`json
-"thought": {
-  "breakthrough_hypotheses": ["止损收缩", "提价筛客"],
-  "agenda_derivation_note": "缺现金流与已试手段则无法在两假设间下判断"
-}
-\`\`\`
+1. **破局假设** — 1–2 条互斥方向，只写在 \`thought\`，**绝不**写进 \`response\`。
+2. **倒推清单** — 为验证假设还需哪些信息 → 每项 \`investigation_agenda\`；\`supports\` 用 2–6 字短语。
 
-### 步骤 1 — 输出 investigation_agenda（6–8 项）
-每项针对**这个人这件事**定制（不要通用字段名）；**至少 3 项** \`critical: true\`（缺了就无法在假设间下判断）。
+### 步骤 1 — 输出 investigation_agenda（6–8 项 · 写在 response 之后）
+每项针对**这个人这件事**定制（不要通用字段名）；**至少 3 项** \`critical: true\`（缺了就无法在假设间下判断）。\`label\` / \`supports\` 尽量精简（压字数不压项数），避免冗长描述。
 
-格式：
 \`\`\`json
 "investigation_agenda": [
   { "id": "runway", "label": "现金流/债务还能撑多久", "critical": true, "status": "unexplored", "supports": "止损收缩" },
@@ -243,7 +243,7 @@ function buildAgendaGenerationBlock(agent: POJUAgentState): string {
 ]
 \`\`\`
 
-生成后代码会持久化，**后续轮次不得重写此议程**（只更新 status）。同时正常输出本轮第一个尖锐问题——**response 里只问诊，不剧透 thought 中的假设或方向**。
+生成后代码会持久化，**后续轮次不得重写此议程**（只更新 status）。**response 里只问诊，不剧透 thought 中的假设或方向**。
 `;
 }
 
@@ -397,6 +397,8 @@ ${buildTopicDriftL3Block()}
 
 ## 输出格式（严格 JSON，无 markdown 围栏）
 
+**「response」必须是 JSON 对象的第一个键**（流式逐字输出正文后再写其余字段）。
+
 {
   "response": "...",
   "suggested_phase": "collecting_context" | "awaiting_confirmation" | null,
@@ -430,19 +432,27 @@ ${buildCollectingEscalationBlock(
 export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLLMResult> {
   const system = await buildOrientalSystemPrompt(input, buildCollectingTaskBlock(input));
   const messages = formatPhaseMessageHistory(input.session.messages);
+  const firstAgendaTurn = !input.agent_state?.agenda_generated;
   const result = await callPhaseJsonTransport(
     system,
     messages,
     withPhaseStreamOpts(input, {
       call_type: "collection_flash",
-      max_tokens: 3600,
+      max_tokens: firstAgendaTurn ? 7200 : 3600,
       temperature: 0.5,
     }),
   );
 
-  const { parsed, response } = parsePhaseResult(result.content, { locale: input.locale });
-  if (!response) {
-    console.warn("[collecting-phase] Empty response from model; raw length:", result.content.length);
+  const { parsed, response: parsedResponse } = parsePhaseResult(result.content, { locale: input.locale });
+  let response = parsedResponse;
+  if (!response.trim()) {
+    console.warn(
+      "[collecting-phase] empty response from model; raw length:",
+      result.content.length,
+      "preview:",
+      result.content.slice(0, 200),
+    );
+    response = getPhaseResponseFallback(input.locale);
   }
 
   const context_updates =

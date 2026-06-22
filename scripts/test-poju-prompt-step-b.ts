@@ -72,6 +72,10 @@ async function main(): Promise<void> {
 
   assert("collecting 4-6 段自然叙述", collecting.includes("4-6 段自然叙述"));
   assert("collecting investigation_agenda", collecting.includes("investigation_agenda"));
+  assert("collecting agenda 6-8 items", collecting.includes("6–8 项"));
+  assert("collecting agenda ≥3 critical", collecting.includes("至少 3 项"));
+  assert("collecting response-first JSON order", collecting.includes("第一个键"));
+  assert("collecting NOT agenda 4-6 shrink", !collecting.includes("4–6 项"));
   assert("collecting buildPullbackBlock", collecting.includes("buildPullbackBlock"));
   assert("collecting hypothesis-backward agenda", collecting.includes("破局假设"));
   assert("collecting topic_drift + new session button", collecting.includes("should_show_new_session_button"));

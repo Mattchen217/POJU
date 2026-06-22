@@ -83,6 +83,15 @@ function staticChecks(): void {
   // 8 — no hardcoded fallback: parsePhaseResult preserves model text
   const passthrough = parsePhaseResult('{"response":"你的日主为庚金，走偏印大运。"}').response;
   assert("8 parsePhaseResult preserves 命理 text", passthrough.includes("庚金"));
+  const truncated = '{"response": "我能感受到你现在的窒息感。四年来';
+  assert(
+    "8b truncated JSON salvages partial response",
+    parsePhaseResult(truncated).response.includes("窒息感"),
+  );
+  assert(
+    "8c agenda-first truncated does not leak raw JSON",
+    parsePhaseResult('{"thought":{"breakthrough_hypotheses":["a"]}, "investigation_agenda": [').response === "",
+  );
 
   // 9 — ContextSummaryEditor
   assert("9 ContextSummaryEditor wired", chatUi.includes("ContextSummaryEditor"));
