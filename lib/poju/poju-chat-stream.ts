@@ -88,6 +88,7 @@ export function createPojuChatStreamResponse(body: ChatBody, reqSignal?: AbortSi
           question_category: llm.question_category,
           thinking_process: llm.thinking_process,
           suggest_refund: llm.suggest_refund ?? false,
+          locked_provider: llm.locked_provider,
         });
       } catch (e) {
         logPojuError("poju-chat-stream:callPOJULLM", e);

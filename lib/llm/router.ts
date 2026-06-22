@@ -7,8 +7,8 @@ import {
   isOpenRouterConfigured,
   openRouterChatCompletion,
   openRouterProviderExtras,
-  parseProviderIgnore,
   type OpenRouterChatMessage,
+  type OpenRouterRoutePath,
 } from "@/lib/llm/openrouter-shared";
 import type { AgentPhase } from "@/lib/poju/agent-state";
 
@@ -54,6 +54,10 @@ export interface CallLLMInput {
   session_id?: string;
   /** POJU phase label for cache observability. */
   phase_name?: string;
+  /** `once` = full ORDER each call; `chat` = session lock when locked_provider set. */
+  route_path?: OpenRouterRoutePath;
+  /** Chat session pin — single provider in order when set. */
+  locked_provider?: string;
 }
 
 export interface CallLLMResult {
@@ -75,28 +79,6 @@ export interface CallLLMResult {
 }
 
 const DEFAULT_MODEL = "deepseek/deepseek-v4-pro";
-
-const HIGH_OUTPUT_CALL_TYPES = new Set<LLMCallType>([
-  "glyph_reading",
-  "match_report",
-  "syncro_batch",
-  "main_delivery",
-  "deep_analysis",
-  "poju_situation_analysis",
-  "poju_final_delivery",
-]);
-
-/** Long JSON deliveries — exclude low max-output providers; merges OPENROUTER_PROVIDER_ORDER pin. */
-export function highOutputProviderConstraints(extra_ignore?: string[]): Record<string, unknown> {
-  const pinned = openRouterProviderExtras({ require_parameters: true, extra_ignore });
-  if (pinned) return pinned;
-  const ignore = parseProviderIgnore();
-  return {
-    require_parameters: true,
-    ...(ignore.length > 0 ? { ignore } : {}),
-    allow_fallbacks: true,
-  };
-}
 
 function normalizeCallType(callType: LLMCallType): Exclude<
   LLMCallType,
@@ -234,10 +216,10 @@ export async function callLLM(input: CallLLMInput): Promise<CallLLMResult> {
           ? 180_000
           : undefined);
 
-  const needsJson = input.response_format === "json";
-  const provider = HIGH_OUTPUT_CALL_TYPES.has(input.call_type)
-    ? highOutputProviderConstraints()
-    : openRouterProviderExtras({ require_parameters: needsJson });
+  const locked = input.locked_provider?.trim();
+  const provider = locked
+    ? openRouterProviderExtras({ lockedProvider: locked })
+    : openRouterProviderExtras();
 
   const out = await openRouterChatCompletion({
     messages: msgs,
@@ -249,6 +231,8 @@ export async function callLLM(input: CallLLMInput): Promise<CallLLMResult> {
     session_id: input.session_id,
     call_type: input.call_type,
     phase_name: input.phase_name,
+    route_path: input.route_path ?? "once",
+    locked_provider: locked ?? null,
     provider,
   });
 

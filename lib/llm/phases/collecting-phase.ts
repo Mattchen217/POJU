@@ -463,31 +463,15 @@ export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLL
 
   if (resolved.compliance_failed) {
     console.warn(
-      "[collecting-phase] compliance failed — retrying once, ignoring provider",
+      "[collecting-phase] compliance failed — using fallback (no re-POST)",
       transport.provider ?? "—",
     );
-    transport = await callPhaseJsonTransport(
-      system,
-      messages,
-      withPhaseStreamOpts(input, {
-        call_type: "collection_flash",
-        max_tokens: firstAgendaTurn ? 7200 : 3600,
-        temperature: 0.5,
-        provider_extra_ignore: transport.provider?.trim()
-          ? [transport.provider.trim()]
-          : undefined,
-      }),
-    );
-    resolved = resolvePhaseResponse(transport.content, {
-      locale: input.locale,
-      phase_name: "collecting_context",
-      call_type: "collection_flash",
-      model: transport.model,
-      finish_reason: transport.finish_reason,
-      provider: transport.provider,
-      structured,
-      use_fallback: true,
-    });
+    resolved = {
+      ...resolved,
+      response: getPhaseResponseFallback(input.locale),
+      used_fallback: true,
+      compliance_failed: false,
+    };
   }
 
   if (!resolved.response.trim()) {
@@ -584,6 +568,7 @@ async function finishCollectingPhase(
     collection_progress,
     investigation_agenda: parseInvestigationAgenda(investigation_agenda_raw),
     suggest_refund,
+    served_provider: result.provider ?? null,
     ...drift,
   };
 }

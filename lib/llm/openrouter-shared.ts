@@ -3,12 +3,29 @@
  *
  * Env:
  * - OPENROUTER_API_KEY — required to use this path
- * - OPENROUTER_MODEL — default `deepseek/deepseek-v4-pro` (dev: single model per product decision)
- * - OPENROUTER_REASONING_EFFORT — `high` | `xhigh` | `off` (default `high` = deep reasoning where supported)
- * - OPENROUTER_PROVIDER_ORDER — comma-separated provider slugs in priority order (e.g. `baidu`)
+ * - OPENROUTER_MODEL — default `deepseek/deepseek-v4-pro`
+ * - OPENROUTER_REASONING_EFFORT — `high` | `xhigh` | `off` (default `high`)
+ * - OPENROUTER_PROVIDER_ORDER — comma-separated provider slugs (e.g. `streamlake,siliconflow,deepinfra`)
  * - OPENROUTER_PROVIDER_IGNORE — comma-separated providers to skip (merged with ORDER)
  * - OPENROUTER_HTTP_REFERER, OPENROUTER_APP_TITLE — optional OpenRouter attribution headers
  */
+
+import {
+  isProviderEscapeHttpStatus,
+  openRouterProviderExtras,
+  servedProviderInOrder,
+  type OpenRouterRoutePath,
+} from "@/lib/llm/openrouter-provider-routing";
+
+export {
+  openRouterProviderExtras,
+  providerMatchesOrderEntry,
+  servedProviderInOrder,
+  normalizeProviderSlugForLock,
+  resolveSessionLockedProvider,
+  isProviderEscapeHttpStatus,
+  type OpenRouterRoutePath,
+} from "@/lib/llm/openrouter-provider-routing";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
@@ -36,8 +53,12 @@ export type OpenRouterChatOptions = {
   call_type?: string;
   /** POJU phase name — for cache observability logs. */
   phase_name?: string;
-  /** Provider routing — `provider.order` via OPENROUTER_PROVIDER_ORDER (+ allow_fallbacks: false). */
+  /** Explicit provider routing override (normally built from locked_provider + ORDER). */
   provider?: Record<string, unknown>;
+  /** `chat` = multi-turn session lock; `once` = full ORDER each call. */
+  route_path?: OpenRouterRoutePath;
+  /** Session-pinned supplier slug (chat path). */
+  locked_provider?: string | null;
 };
 
 export function parseProviderOrder(): string[] {
@@ -58,86 +79,15 @@ export function parseProviderIgnore(): string[] {
     .filter(Boolean);
 }
 
-/**
- * OpenRouter provider routing extras.
- *
- * `session_id` in the request body does NOT sticky-route to one upstream — DeepSeek prefix cache
- * is per supplier. Pin with `OPENROUTER_PROVIDER_ORDER` → `provider.order` + `allow_fallbacks: false`
- * (tries each slug in order; never drifts to unlisted providers). `OPENROUTER_PROVIDER_IGNORE` merges as `ignore`.
- */
-export function openRouterProviderExtras(options?: {
-  require_parameters?: boolean;
-  /** One-off ignore slugs merged with OPENROUTER_PROVIDER_IGNORE (e.g. retry after bad provider). */
-  extra_ignore?: string[];
-}): Record<string, unknown> | undefined {
-  const order = parseProviderOrder();
-  const ignore = parseProviderIgnore();
-  if (options?.extra_ignore?.length) {
-    for (const slug of options.extra_ignore) {
-      const s = slug.trim();
-      if (s && !ignore.includes(s)) ignore.push(s);
-    }
-  }
-  const out: Record<string, unknown> = {};
-
-  if (options?.require_parameters) {
-    out.require_parameters = true;
-  }
-
-  if (order.length > 0) {
-    out.order = order;
-    out.allow_fallbacks = false;
-  }
-
-  if (ignore.length > 0) {
-    out.ignore = ignore;
-    if (order.length === 0) {
-      out.allow_fallbacks = true;
-    }
-  }
-
-  if (Object.keys(out).length === 0) return undefined;
-  return out;
-}
-
 export function openRouterRequestExtras(
   session_id?: string,
-  opts?: { require_parameters?: boolean; extra_ignore?: string[] },
+  opts?: { lockedProvider?: string; extra_ignore?: string[] },
 ): Record<string, unknown> {
   const extras: Record<string, unknown> = {};
   if (session_id?.trim()) extras.session_id = session_id.trim();
   const provider = openRouterProviderExtras(opts);
   if (provider) extras.provider = provider;
   return extras;
-}
-
-/** Match served provider name (e.g. `Baidu`) against order slug (e.g. `baidu/fp8`). */
-export function providerMatchesOrderEntry(served: string, orderSlug: string): boolean {
-  const norm = (s: string) => s.trim().toLowerCase();
-  const s = norm(served);
-  const o = norm(orderSlug);
-  if (!s || !o) return false;
-  if (s === o) return true;
-  const sBase = s.split("/")[0]!;
-  const oBase = o.split("/")[0]!;
-  return sBase === oBase || s.includes(oBase) || o.includes(sBase);
-}
-
-export function servedProviderInOrder(served: string | null | undefined): boolean {
-  if (!served?.trim()) return true;
-  const order = parseProviderOrder();
-  if (order.length === 0) return true;
-  return order.some((slug) => providerMatchesOrderEntry(served, slug));
-}
-
-/** Ensure JSON calls carry require_parameters when merging explicit provider overrides. */
-export function mergeJsonProviderConstraints(
-  provider: Record<string, unknown>,
-  json_mode?: boolean,
-): Record<string, unknown> {
-  if (!json_mode) return provider;
-  if (provider.require_parameters === true) return provider;
-  return { ...provider, require_parameters: true };
 }
 
 function parseCachedTokens(usage: Record<string, unknown> | undefined): number {
@@ -151,7 +101,16 @@ function parseCachedTokens(usage: Record<string, unknown> | undefined): number {
   return 0;
 }
 
-/** Log prefix-cache metrics — delegates to {@link logOpenRouterProviderServed} (single line per call). */
+function resolveProviderBody(
+  options: OpenRouterChatOptions,
+  escapeHatch: boolean,
+): Record<string, unknown> | undefined {
+  if (options.provider) return options.provider;
+  const locked = escapeHatch ? undefined : options.locked_provider?.trim();
+  return openRouterProviderExtras(locked ? { lockedProvider: locked } : undefined);
+}
+
+/** Log prefix-cache metrics — delegates to {@link logOpenRouterProviderServed}. */
 export function logOpenRouterPrefixCacheMetrics(meta: {
   cached_tokens: number;
   prompt_tokens: number;
@@ -162,6 +121,9 @@ export function logOpenRouterPrefixCacheMetrics(meta: {
   provider?: string | null;
   finish_reason?: string | null;
   reasoning?: "on" | "off";
+  path?: OpenRouterRoutePath;
+  locked?: string | null;
+  attempt?: number;
 }): void {
   logOpenRouterProviderServed(meta);
 }
@@ -177,15 +139,15 @@ export function logOpenRouterProviderServed(meta: {
   call_type?: string;
   phase_name?: string;
   reasoning?: "on" | "off";
+  path?: OpenRouterRoutePath;
+  locked?: string | null;
+  attempt?: number;
 }): void {
-  const turn =
-    meta.session_id?.trim() ||
-    meta.phase_name?.trim() ||
-    meta.call_type?.trim() ||
-    "—";
   const served = meta.provider?.trim() || "—";
+  const locked = meta.locked?.trim() || "none";
+  const path = meta.path ?? "—";
   console.log(
-    `[openrouter] turn=${turn} served=${served} reasoning=${meta.reasoning ?? "—"} finish=${meta.finish_reason ?? "—"} prompt=${meta.prompt_tokens ?? 0} output=${meta.completion_tokens ?? 0} cached=${meta.cached_tokens ?? 0}`,
+    `[openrouter] path=${path} locked=${locked} served=${served} finish=${meta.finish_reason ?? "—"} cached=${meta.cached_tokens ?? 0} attempt=${meta.attempt ?? 1}`,
   );
   const order = parseProviderOrder();
   if (order.length > 0 && served !== "—" && !servedProviderInOrder(served)) {
@@ -203,7 +165,7 @@ export function warnIfProviderNotPinned(): void {
   if (parseProviderOrder().length > 0) return;
   warnedMissingProviderOrder = true;
   console.warn(
-    "[openrouter] OPENROUTER_PROVIDER_ORDER is not set — OpenRouter may rotate suppliers (e.g. NextBit) and prefix cache will miss. Set provider.order via env.",
+    "[openrouter] OPENROUTER_PROVIDER_ORDER is not set — OpenRouter may rotate suppliers and prefix cache will miss. Set provider.order via env.",
   );
 }
 
@@ -253,11 +215,8 @@ export type OpenRouterCompletionResult = {
   prompt_tokens: number;
   completion_tokens: number;
   cached_tokens: number;
-  /** Normalized finish reason from OpenRouter (stop | length | …). */
   finish_reason?: string | null;
-  /** Upstream provider slug when returned by OpenRouter (e.g. Novita, DeepSeek). */
   provider?: string | null;
-  /** DeepSeek / OpenRouter reasoning tokens when `reasoning.effort` is enabled. */
   reasoning?: string;
   reasoning_details?: unknown;
 };
@@ -272,8 +231,11 @@ export async function openRouterChatCompletion(
 
   const model = getOpenRouterDefaultModel();
   const effort = resolveReasoningEffort(options.reasoning_effort);
+  const includeReasoning = effort !== "off";
+  const routePath = options.route_path ?? "once";
+  const lockedLabel = options.locked_provider?.trim() || null;
 
-  const buildBody = (includeReasoning: boolean): Record<string, unknown> => {
+  const buildBody = (escapeHatch: boolean): Record<string, unknown> => {
     const body: Record<string, unknown> = {
       model,
       messages: options.messages,
@@ -283,16 +245,12 @@ export async function openRouterChatCompletion(
     if (options.session_id?.trim()) {
       body.session_id = options.session_id.trim();
     }
-    if (options.provider) {
-      body.provider = mergeJsonProviderConstraints(options.provider, options.json_mode);
-    } else {
-      const provider = openRouterProviderExtras({ require_parameters: Boolean(options.json_mode) });
-      if (provider) body.provider = provider;
-    }
+    const provider = resolveProviderBody(options, escapeHatch);
+    if (provider) body.provider = provider;
     if (options.json_mode) {
       body.response_format = { type: "json_object" };
     }
-    if (includeReasoning && effort !== "off") {
+    if (includeReasoning) {
       body.reasoning = { effort };
     }
     logOpenRouterRequestRouting(body, {
@@ -313,14 +271,14 @@ export async function openRouterChatCompletion(
 
   const timeoutMs = options.timeout_ms ?? OPENROUTER_FETCH_TIMEOUT_MS;
 
-  async function post(body: Record<string, unknown>) {
+  async function post(escapeHatch: boolean) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const res = await fetch(OPENROUTER_URL, {
         method: "POST",
         headers,
-        body: JSON.stringify(body),
+        body: JSON.stringify(buildBody(escapeHatch)),
         signal: controller.signal,
       });
       const raw = await res.text();
@@ -335,14 +293,29 @@ export async function openRouterChatCompletion(
     }
   }
 
-  let includeReasoning = effort !== "off";
-  const maxJsonAttempts = 3;
+  let attempt = 1;
+  let { res, raw } = await post(false);
+  if (
+    !res.ok &&
+    lockedLabel &&
+    isProviderEscapeHttpStatus(res.status)
+  ) {
+    console.warn(
+      `[openrouter] locked=${lockedLabel} failed status=${res.status} — escape hatch with full ORDER`,
+    );
+    attempt = 2;
+    ({ res, raw } = await post(true));
+  }
+
+  if (!res.ok) {
+    throw new Error(`openrouter_http_${res.status}: ${raw.slice(0, 900)}`);
+  }
+
   let data: {
     provider?: string;
     model?: string;
     choices?: Array<{
       finish_reason?: string | null;
-      native_finish_reason?: string | null;
       message?: {
         content?: string | null;
         reasoning?: string | null;
@@ -356,45 +329,13 @@ export async function openRouterChatCompletion(
       prompt_tokens_details?: { cached_tokens?: number };
       native_tokens_cached?: number;
     };
-  } | undefined;
+  };
 
-  for (let attempt = 0; attempt < maxJsonAttempts; attempt++) {
-    let res: Response;
-    let raw: string;
-    ({ res, raw } = await post(buildBody(includeReasoning)));
-
-    if (!res.ok && includeReasoning) {
-      console.warn(
-        "[openrouter] Request failed with reasoning; retrying without reasoning parameter:",
-        raw.slice(0, 200),
-      );
-      includeReasoning = false;
-      ({ res, raw } = await post(buildBody(false)));
-    }
-
-    if (!res.ok) {
-      throw new Error(`openrouter_http_${res.status}: ${raw.slice(0, 900)}`);
-    }
-
-    try {
-      data = JSON.parse(raw) as typeof data;
-      break;
-    } catch {
-      const snippet = raw.slice(0, 400).replace(/\s+/g, " ").trim();
-      if (attempt + 1 < maxJsonAttempts) {
-        console.warn(
-          `[openrouter] Invalid JSON envelope (attempt ${attempt + 1}/${maxJsonAttempts}), retrying:`,
-          snippet,
-        );
-        await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
-        continue;
-      }
-      console.error("[openrouter] Invalid JSON envelope after retries:", snippet);
-      throw new Error("openrouter_invalid_json_response");
-    }
-  }
-
-  if (!data) {
+  try {
+    data = JSON.parse(raw) as typeof data;
+  } catch {
+    const snippet = raw.slice(0, 400).replace(/\s+/g, " ").trim();
+    console.error("[openrouter] Invalid JSON envelope:", snippet);
     throw new Error("openrouter_invalid_json_response");
   }
 
@@ -420,7 +361,10 @@ export async function openRouterChatCompletion(
     session_id: options.session_id,
     call_type: options.call_type,
     phase_name: options.phase_name,
-    reasoning: includeReasoning && effort !== "off" ? "on" : "off",
+    reasoning: includeReasoning ? "on" : "off",
+    path: routePath,
+    locked: lockedLabel,
+    attempt,
   });
 
   const reasoning =

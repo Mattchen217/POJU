@@ -190,4 +190,6 @@ export interface POJUSessionState {
   pending_question?: string;
   /** Local chart data for Energy Matrix (no LLM). */
   matrix_payload?: import("./build-matrix-payload").PojuMatrixPayload;
+  /** OpenRouter supplier pinned after first successful chat turn (prefix cache). */
+  locked_provider?: string;
 }

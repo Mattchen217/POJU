@@ -57,5 +57,7 @@ export interface PhaseLLMResult {
   investigation_agenda?: import("@/lib/poju/investigation-agenda").AgendaItem[] | null;
   /** Collecting escalation — show refund entry (user-initiated only). */
   suggest_refund?: boolean;
+  /** OpenRouter upstream provider that served this turn (for session lock). */
+  served_provider?: string | null;
 }
 

@@ -115,6 +115,7 @@ async function handleConfirmProceed(input: PhaseLLMInput): Promise<PhaseLLMResul
     total_cost: 0,
     call_count: 1,
     model: result.model,
+    served_provider: result.provider ?? null,
     thinking_process: thinkingFromPhaseTransport(result, parsed, input.locale),
   };
 }
@@ -155,6 +156,7 @@ async function generateSummaryPhase(input: PhaseLLMInput): Promise<PhaseLLMResul
     total_cost: 0,
     call_count: 1,
     model: result.model,
+    served_provider: result.provider ?? null,
     thinking_process: thinkingFromPhaseTransport(result, parsed, input.locale),
   };
 }
@@ -216,6 +218,7 @@ async function handleStallOfferReply(input: PhaseLLMInput): Promise<PhaseLLMResu
     total_cost: 0,
     call_count: 1,
     model: result.model,
+    served_provider: result.provider ?? null,
     thinking_process: thinkingFromPhaseTransport(result, parsed, input.locale),
     stall_offer: false,
   };
@@ -287,6 +290,7 @@ ${TRANSITION_CONSENT_RULES}
     total_cost: 0,
     call_count: 1,
     model: result.model,
+    served_provider: result.provider ?? null,
     thinking_process: thinkingFromPhaseTransport(result, parsed, input.locale),
   };
 }

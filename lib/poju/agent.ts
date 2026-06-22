@@ -87,6 +87,7 @@ type LLMApiPayload = {
   stall_offer?: boolean;
   investigation_agenda?: unknown;
   suggest_refund?: boolean;
+  locked_provider?: string;
 };
 
 function ensureAgentV2(session: POJUSessionState): POJUAgentState {
@@ -443,6 +444,8 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     tokens_used: workingSession.tokens_used + (llmResponse.tokens_used || 0),
     last_interaction_at: nowIso,
     expires_at: rollingExpiry,
+    locked_provider:
+      llmResponse.locked_provider ?? workingSession.locked_provider,
   });
 }
 
@@ -545,6 +548,7 @@ async function callLLMViaAPI(input: {
   collection_progress?: "advancing" | "stalled" | "resistant" | null;
   stall_offer?: boolean;
   suggest_refund?: boolean;
+  locked_provider?: string;
 }> {
   const body = JSON.stringify({
     session: input.session,
@@ -678,6 +682,10 @@ function mapLlmApiPayload(
     collection_progress: parseCollectionProgress(data.collection_progress),
     stall_offer: data.stall_offer === true,
     suggest_refund: data.suggest_refund === true,
+    locked_provider:
+      typeof data.locked_provider === "string" && data.locked_provider.trim()
+        ? data.locked_provider.trim()
+        : undefined,
   };
 }
 

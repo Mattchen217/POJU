@@ -65,6 +65,7 @@ export async function callDeliveryPhase(input: PhaseLLMInput): Promise<PhaseLLMR
     total_cost: 0,
     call_count: 1,
     model: result.model,
+    served_provider: result.provider ?? null,
     thinking_process: thinkingFromPhaseTransport(result, parsed, input.locale),
   };
 }

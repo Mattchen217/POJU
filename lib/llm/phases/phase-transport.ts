@@ -7,12 +7,13 @@ import {
   generateGeminiChatCompletion,
   getGeminiClient,
 } from "@/lib/llm/gemini-shared";
-import { callLLM, highOutputProviderConstraints, type LLMCallType } from "@/lib/llm/router";
+import { callLLM, type LLMCallType } from "@/lib/llm/router";
 import { openRouterChatCompletionStream } from "@/lib/llm/openrouter-stream";
 import {
   getOpenRouterDefaultModel,
   isOpenRouterConfigured,
   openRouterProviderExtras,
+  type OpenRouterRoutePath,
 } from "@/lib/llm/openrouter-shared";
 
 export type PhaseStreamHooks = {
@@ -30,38 +31,14 @@ export type PhaseTransportResult = {
   provider?: string | null;
 };
 
-/** POJU chat phases that must return a user-visible `response` string. */
-const REPLY_REQUIRED_CALL_TYPES = new Set<LLMCallType>([
-  "poju_reply",
-  "collection_flash",
-  "chat_flash",
-  "tracking_flash",
-]);
-
-function shouldRetryEmptyReply(call_type?: LLMCallType): boolean {
-  return call_type != null && REPLY_REQUIRED_CALL_TYPES.has(call_type);
-}
-
-function hasSalvageableResponse(rawText: string): boolean {
-  return Boolean(salvagePhaseResponseText(rawText).trim());
-}
-
 function resolveStreamProvider(
-  call_type: LLMCallType,
+  locked_provider?: string,
   extra_ignore?: string[],
 ): Record<string, unknown> | undefined {
-  const highOutput = new Set<LLMCallType>([
-    "glyph_reading",
-    "match_report",
-    "syncro_batch",
-    "main_delivery",
-    "deep_analysis",
-    "poju_situation_analysis",
-    "poju_final_delivery",
-  ]);
-  return highOutput.has(call_type)
-    ? highOutputProviderConstraints(extra_ignore)
-    : openRouterProviderExtras({ require_parameters: true, extra_ignore });
+  return openRouterProviderExtras({
+    lockedProvider: locked_provider?.trim() || undefined,
+    extra_ignore,
+  });
 }
 
 const RETRYABLE_COMPLIANCE_LABELS = new Set([
@@ -94,8 +71,10 @@ export async function callPhaseJsonTransport(
     phase_name?: string;
     stream_hooks?: PhaseStreamHooks;
     signal?: AbortSignal;
-    /** Temporary ignore slugs for retry (e.g. skip provider that returned unparseable JSON). */
+    /** Temporary ignore slugs (legacy — prefer escape hatch over re-POST). */
     provider_extra_ignore?: string[];
+    locked_provider?: string;
+    route_path?: OpenRouterRoutePath;
   },
 ): Promise<PhaseTransportResult> {
   const temperature = options?.temperature ?? 0.5;
@@ -104,9 +83,10 @@ export async function callPhaseJsonTransport(
   const streamHooks = options?.stream_hooks;
   const extraIgnore = options?.provider_extra_ignore;
 
-  const runOnce = async (retryIgnore?: string[]): Promise<PhaseTransportResult> => {
-    const ignoreList = [...(extraIgnore ?? []), ...(retryIgnore ?? [])];
-    const providerIgnore = ignoreList.length > 0 ? ignoreList : undefined;
+  const runOnce = async (): Promise<PhaseTransportResult> => {
+    const providerIgnore = extraIgnore?.length ? extraIgnore : undefined;
+    const locked = options?.locked_provider?.trim() || undefined;
+    const routePath = options?.route_path ?? "chat";
     if (isOpenRouterConfigured()) {
       if (streamHooks) {
         const chatMessages = [
@@ -123,7 +103,9 @@ export async function callPhaseJsonTransport(
             session_id: options?.session_id,
             call_type: call_type,
             phase_name: options?.phase_name,
-            provider: resolveStreamProvider(call_type, providerIgnore),
+            provider: resolveStreamProvider(locked, providerIgnore),
+            route_path: routePath,
+            locked_provider: locked ?? null,
           },
           {
             onReasoning: streamHooks.onReasoning,
@@ -149,6 +131,8 @@ export async function callPhaseJsonTransport(
         response_format: "json",
         session_id: options?.session_id,
         phase_name: options?.phase_name,
+        route_path: routePath,
+        locked_provider: locked,
       });
       return {
         content: result.content,
@@ -173,15 +157,7 @@ export async function callPhaseJsonTransport(
     return { content: gemini.text, model: gemini.modelUsed, tokens_used: gemini.tokens_used };
   };
 
-  let result = await runOnce();
-  if (shouldRetryEmptyReply(call_type) && !hasSalvageableResponse(result.content)) {
-    const badProvider = result.provider?.trim();
-    console.warn(
-      `[phase-transport] empty salvageable response — retrying once (call_type=${call_type} phase=${options?.phase_name ?? "—"} provider=${badProvider ?? "—"})`,
-    );
-    result = await runOnce(badProvider ? [badProvider] : undefined);
-  }
-  return result;
+  return runOnce();
 }
 
 export function parsePhaseJson(rawText: string): Record<string, unknown> {
@@ -300,7 +276,6 @@ export function logPhaseResponseFallback(rawText: string, ctx: PhaseResponseReso
 
 /**
  * Parse phase JSON + optional user-visible fallback when salvage fails.
- * Use after `callPhaseJsonTransport` (which may already retry once on empty salvage).
  */
 export function resolvePhaseResponse(
   rawText: string,
@@ -436,14 +411,27 @@ export function withPhaseStreamOpts<
     phase_name?: string;
   },
 >(
-  input: { stream_hooks?: PhaseStreamHooks; signal?: AbortSignal; session: { session_id: string } },
+  input: {
+    stream_hooks?: PhaseStreamHooks;
+    signal?: AbortSignal;
+    session: { session_id: string; locked_provider?: string };
+  },
   opts: T,
-): T & { stream_hooks?: PhaseStreamHooks; signal?: AbortSignal; session_id?: string; phase_name?: string } {
+): T & {
+  stream_hooks?: PhaseStreamHooks;
+  signal?: AbortSignal;
+  session_id?: string;
+  phase_name?: string;
+  locked_provider?: string;
+  route_path: OpenRouterRoutePath;
+} {
   return {
     ...opts,
     stream_hooks: input.stream_hooks,
     signal: input.signal,
     session_id: pojuCacheSessionId(input.session.session_id),
     phase_name: opts.phase_name,
+    locked_provider: input.session.locked_provider?.trim() || undefined,
+    route_path: "chat",
   };
 }

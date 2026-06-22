@@ -101,6 +101,7 @@ export async function callStallOfferPhase(input: PhaseLLMInput): Promise<PhaseLL
     total_cost: 0,
     call_count: 1,
     model: result.model,
+    served_provider: result.provider ?? null,
     thinking_process: thinkingFromPhaseTransport(result, parsed, input.locale),
     stall_offer: true,
   };

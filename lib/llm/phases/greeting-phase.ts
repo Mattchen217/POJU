@@ -159,12 +159,14 @@ async function callGreetingTransport(
   messages: Array<{ role: "user" | "assistant"; content: string }>,
   sessionId: string,
   locale: string,
+  locked_provider?: string,
 ): Promise<{
   content: string;
   model: string;
   tokens_used: number;
   reasoning?: string;
   reasoning_details?: unknown;
+  provider?: string | null;
 }> {
   if (isOpenRouterConfigured()) {
     const out = await callLLM({
@@ -177,6 +179,8 @@ async function callGreetingTransport(
       session_id: sessionId
         ? pojuCacheSessionId(sessionId)
         : openingHookCacheSessionId(locale),
+      route_path: "chat",
+      locked_provider,
     });
     return {
       content: out.content,
@@ -184,6 +188,7 @@ async function callGreetingTransport(
       tokens_used: out.meta.tokens_used,
       reasoning: out.reasoning,
       reasoning_details: out.reasoning_details,
+      provider: out.meta.provider,
     };
   }
   if (!getGeminiClient()) {
@@ -205,7 +210,13 @@ export async function callGreetingPhase(input: PhaseLLMInput): Promise<PhaseLLMR
   });
   const messages = formatMessageHistory(input);
 
-  const result = await callGreetingTransport(system, messages, input.session.session_id, input.locale);
+  const result = await callGreetingTransport(
+    system,
+    messages,
+    input.session.session_id,
+    input.locale,
+    input.session.locked_provider?.trim() || undefined,
+  );
 
   let parsed: Record<string, unknown>;
   try {
@@ -255,5 +266,6 @@ export async function callGreetingPhase(input: PhaseLLMInput): Promise<PhaseLLMR
     call_count: 1,
     model: result.model,
     thinking_process: thinkingFromPhaseTransport(result, parsed, input.locale),
+    served_provider: result.provider ?? null,
   };
 }

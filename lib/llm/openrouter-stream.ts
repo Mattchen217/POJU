@@ -1,9 +1,9 @@
 import {
   getOpenRouterDefaultModel,
-  logOpenRouterPrefixCacheMetrics,
+  isProviderEscapeHttpStatus,
   logOpenRouterProviderServed,
   logOpenRouterRequestRouting,
-  mergeJsonProviderConstraints,
+  openRouterProviderExtras,
   openRouterRequestExtras,
   type OpenRouterChatMessage,
   type OpenRouterChatOptions,
@@ -62,6 +62,15 @@ function parseSseJsonBlocks(buffer: string): { events: string[]; rest: string } 
   return { events, rest };
 }
 
+function resolveStreamProviderBody(
+  options: OpenRouterChatOptions,
+  escapeHatch: boolean,
+): Record<string, unknown> | undefined {
+  if (options.provider) return options.provider;
+  const locked = escapeHatch ? undefined : options.locked_provider?.trim();
+  return openRouterProviderExtras(locked ? { lockedProvider: locked } : undefined);
+}
+
 /**
  * Stream OpenRouter chat completions; accumulates reasoning + content deltas.
  */
@@ -74,14 +83,14 @@ export async function openRouterChatCompletionStream(
 
   const model = getOpenRouterDefaultModel();
   const effort = resolveReasoningEffort(options.reasoning_effort);
+  const includeReasoning = effort !== "off";
+  const routePath = options.route_path ?? "chat";
+  const lockedLabel = options.locked_provider?.trim() || null;
 
-  const buildBody = (includeReasoning: boolean): Record<string, unknown> => {
-    const extras = openRouterRequestExtras(options.session_id, {
-      require_parameters: Boolean(options.json_mode),
-    });
-    if (options.provider) {
-      extras.provider = mergeJsonProviderConstraints(options.provider, options.json_mode);
-    }
+  const buildBody = (escapeHatch: boolean): Record<string, unknown> => {
+    const extras = openRouterRequestExtras(options.session_id);
+    const provider = resolveStreamProviderBody(options, escapeHatch);
+    if (provider) extras.provider = provider;
     const body: Record<string, unknown> = {
       model,
       stream: true,
@@ -89,7 +98,7 @@ export async function openRouterChatCompletionStream(
       temperature: options.temperature ?? 0.55,
       max_tokens: options.max_tokens ?? 4096,
       ...(options.json_mode ? { response_format: { type: "json_object" } } : {}),
-      ...(includeReasoning && effort !== "off" ? { reasoning: { effort } } : {}),
+      ...(includeReasoning ? { reasoning: { effort } } : {}),
       ...extras,
     };
     logOpenRouterRequestRouting(body, {
@@ -108,11 +117,11 @@ export async function openRouterChatCompletionStream(
   if (referer) headers["HTTP-Referer"] = referer;
   if (title) headers["X-Title"] = title;
 
-  async function run(includeReasoning: boolean) {
+  async function run(escapeHatch: boolean) {
     const res = await fetch(OPENROUTER_URL, {
       method: "POST",
       headers,
-      body: JSON.stringify(buildBody(includeReasoning)),
+      body: JSON.stringify(buildBody(escapeHatch)),
     });
     if (!res.ok) {
       const errText = await res.text();
@@ -208,12 +217,18 @@ export async function openRouterChatCompletionStream(
     };
   }
 
-  let includeReasoning = effort !== "off";
-  let out = await run(includeReasoning);
-  if (!out.ok && includeReasoning) {
-    console.warn("[openrouter-stream] Retrying without reasoning:", out.errText.slice(0, 200));
-    includeReasoning = false;
-    out = await run(false);
+  let attempt = 1;
+  let out = await run(false);
+  if (
+    !out.ok &&
+    lockedLabel &&
+    isProviderEscapeHttpStatus(out.status)
+  ) {
+    console.warn(
+      `[openrouter-stream] locked=${lockedLabel} failed status=${out.status} — escape hatch with full ORDER`,
+    );
+    attempt = 2;
+    out = await run(true);
   }
   if (!out.ok) {
     throw new Error(`openrouter_stream_${out.status}: ${out.errText.slice(0, 900)}`);
@@ -228,6 +243,9 @@ export async function openRouterChatCompletionStream(
     call_type: options.call_type,
     phase_name: options.phase_name,
     reasoning: includeReasoning ? "on" : "off",
+    path: routePath,
+    locked: lockedLabel,
+    attempt,
   });
   return out.result;
 }

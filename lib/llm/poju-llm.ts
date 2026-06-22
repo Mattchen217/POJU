@@ -1,5 +1,3 @@
-import { buildPOJUSystemPrompt } from "@/lib/llm/prompts/legacy-poju-prompt";
-import { repairLLMOutput, validateLLMOutput } from "@/lib/llm/output-validator";
 import { applyPojuOutputPolicies } from "@/lib/poju/output-policy-pass";
 import {
   callGreetingPhase,
@@ -9,20 +7,12 @@ import type { PhaseLLMResult } from "@/lib/llm/phases/types";
 import { executeAgentPhaseLLM } from "@/lib/poju/agent-phase-runner";
 import {
   GEMINI_PRIMARY_MODEL,
-  generateGeminiChatCompletion,
   getGeminiClient,
 } from "@/lib/llm/gemini-shared";
-import { callLLM } from "@/lib/llm/router";
-import { pojuCacheSessionId } from "@/lib/llm/cache-session-id";
 import { logPojuError } from "@/lib/poju/base-analysis-diagnostics";
-import { getOpenRouterDefaultModel, isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
-import {
-  buildThinkingProcessDisplay,
-  parseThoughtFromUnknown,
-} from "@/lib/llm/thinking-process";
+import { getOpenRouterDefaultModel, isOpenRouterConfigured, resolveSessionLockedProvider } from "@/lib/llm/openrouter-shared";
 import { normalizeAgentPhase } from "@/lib/poju/agent-state";
 import { getLastUserMessageContent } from "@/lib/poju/context-helpers";
-import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import type { POJUActionRecommendationsData } from "@/lib/archive/archive-service";
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
@@ -79,41 +69,44 @@ export interface POJULLMResponse {
   collection_progress?: "advancing" | "stalled" | "resistant" | null;
   stall_offer?: boolean;
   suggest_refund?: boolean;
+  /** OpenRouter provider that served this turn. */
+  served_provider?: string | null;
+  /** Resolved session lock (existing or newly set from served_provider). */
+  locked_provider?: string;
 }
 
 export async function callPOJULLM(input: CallInput): Promise<POJULLMResponse> {
-  const { session, profile, locale } = input;
+  const { session, profile } = input;
 
   try {
     if (shouldUseGreetingPhase(session, profile)) {
-      return await callPOJULLMGreetingPath(input);
+      return finalizeLockFields(await callPOJULLMGreetingPath(input), session);
     }
 
-    if (shouldUseOpeningPhase(session)) {
-      try {
-        return await callPOJULLMPhasePath(input);
-      } catch (error: unknown) {
-        logPojuError("poju-llm:opening-phase", error);
-      }
+    if (!isOpenRouterConfigured() && !getGeminiClient()) {
+      return emptyFailureResponse(
+        session,
+        input.locale,
+        GEMINI_PRIMARY_MODEL,
+      );
     }
 
-    if (isOpenRouterConfigured() || getGeminiClient()) {
-      const hasUserTurns = session.messages.some((m) => m.role === "user" && !m.is_rejected);
-      if (hasUserTurns) {
-        try {
-          return await callPOJULLMPhasePath(input);
-        } catch (error: unknown) {
-          logPojuError("poju-llm:phase-path", error);
-          console.warn("[poju-llm] Phase path failed, falling back to legacy prompt");
-        }
-      }
-    }
-
-    return await callPOJULLMLegacyPath(input);
+    return finalizeLockFields(await callPOJULLMPhasePath(input), session);
   } catch (error: unknown) {
     logPojuError("poju-llm:callPOJULLM", error);
     throw error;
   }
+}
+
+function finalizeLockFields(response: POJULLMResponse, session: POJUSessionState): POJULLMResponse {
+  const locked_provider = resolveSessionLockedProvider(
+    session.locked_provider,
+    response.served_provider,
+  );
+  return {
+    ...response,
+    locked_provider,
+  };
 }
 
 async function callPOJULLMPhasePath(input: CallInput): Promise<POJULLMResponse> {
@@ -161,115 +154,8 @@ async function callPOJULLMPhasePath(input: CallInput): Promise<POJULLMResponse> 
     collection_progress: phase.collection_progress ?? null,
     stall_offer: Boolean(phase.stall_offer),
     suggest_refund: Boolean(phase.suggest_refund),
+    served_provider: phase.served_provider ?? null,
   };
-}
-
-function shouldUseOpeningPhase(session: POJUSessionState): boolean {
-  if (!resolveSessionHasProfile(session)) return false;
-  const phase = normalizeAgentPhase(session.agent_v2?.current_phase);
-  if (phase !== "opening") return false;
-  const hasUser = session.messages.some((m) => m.role === "user" && !m.is_rejected);
-  if (!hasUser) return true;
-  return getLastUserMessageContent(session) === "__OPENING__";
-}
-
-async function callPOJULLMLegacyPath(input: CallInput): Promise<POJULLMResponse> {
-  const { session, profile, locale } = input;
-  const systemPrompt = buildPOJUSystemPrompt({ session, profile, locale });
-
-  const conversationMessages = session.messages
-    .filter((m) => m.role === "user" || m.role === "assistant")
-    .filter((m) => !m.is_rejected)
-    .map((m) => ({
-      role: m.role as "user" | "assistant",
-      content: m.content,
-    }));
-
-  const lastMessage = session.messages[session.messages.length - 1];
-  if (lastMessage?.role === "system") {
-    conversationMessages.push({
-      role: "user",
-      content: lastMessage.content,
-    });
-  }
-
-  if (!isOpenRouterConfigured() && !getGeminiClient()) {
-    console.error("[poju-llm] Set OPENROUTER_API_KEY (preferred) or GOOGLE_GENERATIVE_AI_API_KEY / GEMINI_API_KEY");
-    return emptyFailureResponse(
-      session,
-      locale,
-      isOpenRouterConfigured() ? getOpenRouterDefaultModel() : GEMINI_PRIMARY_MODEL,
-    );
-  }
-
-  try {
-    let text: string;
-    let modelUsed: string;
-    let tokens_used: number;
-    let openRouterReasoning: string | undefined;
-    let openRouterReasoningDetails: unknown;
-
-    if (isOpenRouterConfigured()) {
-      const out = await callLLM({
-        call_type: "poju_reply",
-        system: systemPrompt,
-        messages: conversationMessages,
-        temperature: 0.55,
-        max_tokens: 2500,
-        thinking_effort: "low",
-        response_format: "json",
-        session_id: pojuCacheSessionId(session.session_id),
-      });
-      text = out.content;
-      modelUsed = out.actual_model;
-      tokens_used = out.meta.tokens_used;
-      openRouterReasoning = out.reasoning;
-      openRouterReasoningDetails = out.reasoning_details;
-    } else {
-      const gemini = await generateGeminiChatCompletion({
-        systemInstruction: systemPrompt,
-        messages: conversationMessages,
-        temperature: 0.55,
-        maxOutputTokens: 4096,
-      });
-      text = gemini.text;
-      modelUsed = gemini.modelUsed;
-      tokens_used = gemini.tokens_used;
-    }
-
-    const parsed = parseStep5LLMResponse(text, locale, session, profile);
-    const thinking_process = buildThinkingProcessDisplay({
-      openRouterReasoning,
-      reasoning_details: openRouterReasoningDetails,
-      thought: parseThoughtFromUnknown(parsed.thought),
-      locale,
-    });
-
-    return {
-      response: String(parsed.response ?? ""),
-      model: modelUsed,
-      tokens_used,
-      user_intent: (parsed.user_intent as POJULLMResponse["user_intent"]) || "unclear",
-      current_state:
-        (parsed.current_state as POJULLMResponse["current_state"]) ||
-        (session.main_delivery_done ? "tracking" : "collecting_context"),
-      action_requested: parsed.action_requested as POJULLMResponse["action_requested"],
-      topic_drift_detected: Boolean(parsed.topic_drift_detected),
-      context_updates: (parsed.context_updates as Record<string, unknown>) || {},
-      contains_delivery: Boolean(parsed.contains_delivery),
-      main_delivery: parsed.main_delivery,
-      new_actions: parsed.new_actions as unknown[] | undefined,
-      thinking_process,
-    };
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error);
-    console.error("[poju-llm] LLM request failed:", msg);
-    return emptyFailureResponse(
-      session,
-      locale,
-      isOpenRouterConfigured() ? getOpenRouterDefaultModel() : GEMINI_PRIMARY_MODEL,
-    );
-  }
 }
 
 function mapGreetingPhaseToPojuResponse(phase: PhaseLLMResult, model: string): POJULLMResponse {
@@ -302,6 +188,7 @@ function mapGreetingPhaseToPojuResponse(phase: PhaseLLMResult, model: string): P
     agent_suggested_phase: suggested ?? undefined,
     question_category: phase.question_category,
     thinking_process: undefined,
+    served_provider: phase.served_provider ?? null,
   };
 }
 
@@ -349,31 +236,6 @@ function emptyFailureResponse(session: POJUSessionState, locale: string, model: 
     contains_delivery: false,
     context_updates: {},
   };
-}
-
-function parseStep5LLMResponse(
-  rawText: string,
-  locale: string,
-  session: POJUSessionState,
-  profile: UserProfile | null,
-): Record<string, unknown> {
-  try {
-    const cleaned = rawText.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
-    const parsed = JSON.parse(cleaned);
-    const validation = validateLLMOutput(parsed);
-    const base = validation.valid ? validation.data : repairLLMOutput(parsed, locale);
-    if (!validation.valid) {
-      console.warn("[poju-llm] Invalid output, attempting repair:", validation.error);
-    }
-    return applyPojuOutputPolicies(base, { session, profile, locale }) as Record<string, unknown>;
-  } catch {
-    console.error("[poju-llm] JSON parse failed");
-    return applyPojuOutputPolicies(repairLLMOutput({ response: rawText || getLLMFailureMessage(locale) }, locale), {
-      session,
-      profile,
-      locale,
-    }) as Record<string, unknown>;
-  }
 }
 
 /** Infrastructure-only message when the LLM API fails entirely (not conversational coaching). */
