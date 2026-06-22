@@ -145,7 +145,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const [pipelineBusy, setPipelineBusy] = useState(false);
   const [thinkingMode, setThinkingMode] = useState<ThinkingStreamMode | null>(null);
   const [liveThinkingLine, setLiveThinkingLine] = useState<string | null>(null);
-  const [streamingReply, setStreamingReply] = useState<string | null>(null);
   const [replyStreaming, setReplyStreaming] = useState(false);
   const [generationStopped, setGenerationStopped] = useState(false);
   const [showOffTopicAction, setShowOffTopicAction] = useState(false);
@@ -517,7 +516,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     setSending(false);
     setThinkingMode(null);
     setLiveThinkingLine(null);
-    setStreamingReply(null);
     setReplyStreaming(false);
     setGenerationStopped(true);
   }
@@ -564,7 +562,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     setSending(true);
     setThinkingMode("flash");
     setLiveThinkingLine(null);
-    setStreamingReply("");
     setReplyStreaming(false);
     setGenerationStopped(false);
 
@@ -574,12 +571,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         userMessage: "__OPENING__",
         locale,
         signal: ac.signal,
-          onStream: {
+        onStream: {
           onReasoning: (text) => setLiveThinkingLine(text),
-          onPartialResponse: (text) => {
-            if (!text) return;
+          onContentStreamStart: () => {
             setReplyStreaming(true);
-            setStreamingReply(text);
             setLiveThinkingLine(null);
             scrollChatToBottom("auto");
           },
@@ -591,6 +586,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       if (ac.signal.aborted || gen !== sendGenerationRef.current) return;
 
       onSessionUpdate(orch.session);
+      setReplyStreaming(false);
       await savePOJUSession(orch.session);
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return;
@@ -601,7 +597,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         setSending(false);
         setThinkingMode(null);
         setLiveThinkingLine(null);
-        setStreamingReply(null);
         setReplyStreaming(false);
       }
     }
@@ -618,7 +613,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     setSending(true);
     setThinkingMode(resolveThinkingStreamMode(baseSession, userMessage));
     setLiveThinkingLine(null);
-    setStreamingReply("");
     setReplyStreaming(false);
     setGenerationStopped(false);
     scrollChatToBottom("smooth");
@@ -645,12 +639,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         locale,
         userAlreadyAppended: true,
         signal: ac.signal,
-          onStream: {
+        onStream: {
           onReasoning: (text) => setLiveThinkingLine(text),
-          onPartialResponse: (text) => {
-            if (!text) return;
+          onContentStreamStart: () => {
             setReplyStreaming(true);
-            setStreamingReply(text);
             setLiveThinkingLine(null);
             scrollChatToBottom("auto");
           },
@@ -686,6 +678,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       }
 
       onSessionUpdate(finalSession);
+      setReplyStreaming(false);
       await savePOJUSession(finalSession);
 
       const lastAssistant = [...finalSession.messages]
@@ -721,7 +714,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         setSending(false);
         setThinkingMode(null);
         setLiveThinkingLine(null);
-        setStreamingReply(null);
         setReplyStreaming(false);
       }
     }
@@ -1433,6 +1425,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         currentSessionId={session.session_id}
         messages={pojuMessages}
         isStreaming={streaming}
+        replyStreaming={replyStreaming}
+        replyingLabel={t("replying_wait")}
         composerDisabled={composerLocked}
         messageSlots={messageSlots}
         bareMessageSlotIds={bareMessageSlotIds}
@@ -1450,8 +1444,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           ) : undefined
         }
         initialScrollPosition={initialScrollPosition}
-        streamingText={streamingReply ?? undefined}
-        replyStreaming={replyStreaming}
         thinkingMode={streaming ? thinkingMode : null}
         thinkingLocale={locale}
         liveThinkingLine={liveThinkingLine}

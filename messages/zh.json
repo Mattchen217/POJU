@@ -924,6 +924,7 @@
       "stop_generating": "停止",
       "generation_stopped": "已停止生成。",
       "thinking_wait": "POJU 正在思考…",
+      "replying_wait": "POJU 正在回复…",
       "edit_message": "编辑",
       "edit_message_title": "编辑消息",
       "edit_message_prompt": "修改你的消息。此条之后的对话将被删除，并从修改后的内容重新开始。",

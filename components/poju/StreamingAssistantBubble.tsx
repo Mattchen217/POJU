@@ -3,23 +3,22 @@
 import { PojuAiAvatar } from "@/components/poju/PojuAiAvatar";
 
 type StreamingAssistantBubbleProps = {
-  content: string;
-  /** Show cursor while JSON preamble streams before `response` text is extractable. */
-  pending?: boolean;
+  /** Localized "POJU is replying…" — never shows raw model stream. */
+  label: string;
 };
 
-/** In-progress stream only — finalized assistant turns render via MessageBubble / PojuChat + RichReadingText. */
-export function StreamingAssistantBubble({ content, pending = false }: StreamingAssistantBubbleProps) {
-  if (!content.trim() && !pending) return null;
-
+/** In-progress reply — placeholder + cursor only; finalized turns use RichReadingText. */
+export function StreamingAssistantBubble({ label }: StreamingAssistantBubbleProps) {
   return (
     <div className="pchat__msg pchat__msg--ai">
       <div className="pchat__ai-row">
         <PojuAiAvatar />
         <div className="pchat__ai">
-          <p className="pchat__streaming-line">
-            {content}
-            <span className="pchat__streaming-cursor">▍</span>
+          <p className="pchat__streaming-line pchat__streaming-placeholder">
+            <span className="pchat__streaming-placeholder-text">{label}</span>
+            <span className="pchat__streaming-cursor" aria-hidden>
+              ▍
+            </span>
           </p>
         </div>
       </div>

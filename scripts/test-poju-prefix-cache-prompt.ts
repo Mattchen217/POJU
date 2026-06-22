@@ -1,12 +1,15 @@
 /**
- * POJU system prompt smoke — buildPojuSystemPrompt stitches core + task block.
+ * POJU prefix cache — byte-stable system prompt + dynamic turnContext.
  *
  *   pnpm exec tsx scripts/test-poju-prefix-cache-prompt.ts
  */
 import { calculateProfile } from "@/lib/calculations";
 import { createInitialAgentState } from "@/lib/poju/agent-state";
-import { buildPojuSystemPrompt } from "@/lib/llm/phases/oriental-prompt-context";
-import { POJU_BAZI_DEEP_METHOD } from "@/lib/llm/prompts/poju-base";
+import {
+  buildPhaseTurnContext,
+  buildPojuSystemPrompt,
+} from "@/lib/llm/phases/oriental-prompt-context";
+import { stableJsonStringify } from "@/lib/llm/prompts/base-analysis-context";
 import type { BirthInfo } from "@/lib/profile/types";
 import type { PhaseLLMInput } from "@/lib/llm/phases/types";
 
@@ -17,7 +20,7 @@ function assert(name: string, ok: boolean): void {
   if (!ok) failures.push(name);
 }
 
-async function mockPhaseInput(): Promise<PhaseLLMInput> {
+async function mockPhaseInput(userMessage: string): Promise<PhaseLLMInput> {
   const birth: BirthInfo = {
     year: 1985,
     month: 8,
@@ -52,38 +55,54 @@ async function mockPhaseInput(): Promise<PhaseLLMInput> {
     },
     profile,
     base_analysis: {
-      day_master: { stem: "庚", element: "金" },
-      current_major_luck: { period: "2020-2030", theme: "pressure and breakthrough" },
-      useful_god: { primary: "水", note: "water as useful god" },
+      display_text: "## Snapshot\n\nNeutral energy base for cache test.",
+      structured: { day_master: "庚", yong_shen: "水", z: 1, a: 2 },
     },
-    user_message: "Still unsure about timing.",
+    user_message: userMessage,
     locale: "en",
     agent_state: mockAgent,
   } as unknown as PhaseLLMInput;
 }
 
 async function main(): Promise<void> {
-  console.log("\n=== POJU system prompt smoke ===\n");
+  console.log("\n=== POJU prefix cache prompt ===\n");
 
-  const input = await mockPhaseInput();
+  const inputRound1 = await mockPhaseInput("Still unsure about timing.");
+  const inputRound2 = await mockPhaseInput("What if I wait six months?");
+  inputRound2.user_message = "What if I wait six months?";
+
   const taskA = "# Task A: collecting round 1\n\nOutput JSON.";
   const taskB = "# Task B: collecting round 2\n\nOutput JSON.";
 
-  const sysA = await buildPojuSystemPrompt(input, taskA);
-  const sysB = await buildPojuSystemPrompt(input, taskB);
+  const sys1a = await buildPojuSystemPrompt(inputRound1);
+  const sys1b = await buildPojuSystemPrompt(inputRound1);
+  const sys2 = await buildPojuSystemPrompt(inputRound2);
 
-  assert("system prompt includes POJU identity", sysA.includes("POJU") || sysA.includes("破局"));
-  assert("task A embedded in system prompt", sysA.includes("Task A"));
-  assert("task B embedded in system prompt", sysB.includes("Task B"));
-  assert("different task blocks → different system strings", sysA !== sysB);
-  assert("passive term marking in POJU_BAZI_DEEP_METHOD", POJU_BAZI_DEEP_METHOD.includes("被动包装"));
-  assert("no chat term quota in POJU_BAZI_DEEP_METHOD", !POJU_BAZI_DEEP_METHOD.includes("≥4 个不同 term id"));
+  assert("same session round 1 vs 1 — system byte-identical", sys1a === sys1b);
+  assert("same session round 1 vs 2 — system byte-identical", sys1a === sys2);
+  assert("system has POJU identity", sys1a.includes("POJU") || sys1a.includes("破局"));
+  assert("system excludes task A", !sys1a.includes("Task A"));
+  assert("system excludes task B", !sys1a.includes("Task B"));
+  assert("system excludes today's date header", !sys1a.includes("Today's date"));
+  assert("system includes profile block", sys1a.includes("八字四柱") || sys1a.includes("Four"));
+
+  const turnA = buildPhaseTurnContext(inputRound1, taskA);
+  const turnB = buildPhaseTurnContext(inputRound1, taskB);
+  assert("task A in turnContext only", turnA.includes("Task A") && !sys1a.includes("Task A"));
+  assert("task B in turnContext only", turnB.includes("Task B"));
+  assert("different tasks → different turnContext", turnA !== turnB);
+  assert("turnContext has language lock", turnA.includes("Respond **ONLY** in"));
+  assert("turnContext has date context", turnA.includes("今天的实际日期") || turnA.includes("Today's actual date"));
+
+  const stableA = stableJsonStringify({ b: 2, a: 1, nested: { z: 1, a: 0 } });
+  const stableB = stableJsonStringify({ a: 1, b: 2, nested: { a: 0, z: 1 } });
+  assert("stableJsonStringify key order", stableA === stableB);
 
   if (failures.length) {
     console.error(`\n${failures.length} check(s) failed.`);
     process.exit(1);
   }
-  console.log("\nAll POJU system prompt smoke checks passed.\n");
+  console.log("\nAll POJU prefix cache prompt checks passed.\n");
 }
 
 main().catch((e) => {

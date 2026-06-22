@@ -149,7 +149,10 @@ async function main(): Promise<void> {
 
   phaseInput.session.agent_v2 = mockAgent;
 
-  const openingSystem = await buildPojuSystemPrompt(
+  const openingSystem = await buildPojuSystemPrompt(phaseInput);
+
+  const { buildPhaseTurnContext } = await import("@/lib/llm/phases/oriental-prompt-context");
+  const openingTurn = buildPhaseTurnContext(
     phaseInput,
     `# 当前任务：主动开场\n\nOutput JSON with response only.`,
   );
@@ -164,7 +167,8 @@ async function main(): Promise<void> {
 
   assert("opening system has POJU identity", openingSystem.includes("破局顾问") || openingSystem.includes("POJU"));
   assert("opening system has BAZI method", openingSystem.includes("大运") || openingSystem.includes("Major"));
-  assert("opening system includes task block", openingSystem.includes("当前任务：主动开场"));
+  assert("opening task in turnContext not system", openingTurn.includes("当前任务：主动开场"));
+  assert("opening system NO task block", !openingSystem.includes("当前任务：主动开场"));
   assert("opening system NO monolithic ORIENTAL at start", !openingSystem.startsWith("# 你是谁\n\n你是 POJU，一位精通"));
 
   assert("final delivery has ANALYSIS marker", deliverySystem.includes("═══ ANALYSIS ═══"));

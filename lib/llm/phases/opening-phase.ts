@@ -5,7 +5,7 @@ import { normalizeAgentPhase, type AgentPhase } from "@/lib/poju/agent-state";
 import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseResult, withPhaseStreamOpts } from "@/lib/llm/phases/phase-transport";
 import type { PojuV4ActionRequested } from "@/lib/poju/types";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
-import { buildOrientalSystemPrompt } from "@/lib/llm/phases/oriental-prompt-context";
+import { buildPhaseTransportInput } from "@/lib/llm/phases/oriental-prompt-context";
 
 const VALID_SUGGESTED: AgentPhase[] = ["opening", "collecting_context"];
 
@@ -85,11 +85,15 @@ function buildOpeningTaskBlock(input: PhaseLLMInput): string {
 }
 
 export async function callOpeningPhase(input: PhaseLLMInput): Promise<PhaseLLMResult> {
-  const system = await buildOrientalSystemPrompt(input, buildOpeningTaskBlock(input));
-  let messages = formatPhaseMessageHistory(input.session.messages);
-  if (messages.length === 0) {
-    messages = [{ role: "user", content: "__OPENING__" }];
+  let baseMessages = formatPhaseMessageHistory(input.session.messages);
+  if (baseMessages.length === 0) {
+    baseMessages = [{ role: "user", content: "__OPENING__" }];
   }
+  const { system, messages } = await buildPhaseTransportInput(
+    input,
+    buildOpeningTaskBlock(input),
+    baseMessages,
+  );
 
   const result = await callPhaseJsonTransport(
     system,

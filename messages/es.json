@@ -794,6 +794,7 @@
       "stop_generating": "Detener",
       "generation_stopped": "Generación detenida.",
       "thinking_wait": "POJU está pensando…",
+      "replying_wait": "POJU está redactando la respuesta…",
       "edit_message": "Editar",
       "edit_message_title": "Editar mensaje",
       "edit_message_prompt": "Cambia tu mensaje. Todo lo posterior se eliminará y la conversación continuará desde aquí.",

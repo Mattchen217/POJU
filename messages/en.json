@@ -909,6 +909,7 @@
       "stop_generating": "Stop",
       "generation_stopped": "Generation stopped.",
       "thinking_wait": "POJU is thinking…",
+      "replying_wait": "POJU is composing a reply…",
       "edit_message": "Edit",
       "edit_message_title": "Edit message",
       "edit_message_prompt": "Change your message. Everything after it will be removed and the conversation will continue from here.",

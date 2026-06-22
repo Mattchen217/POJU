@@ -36,13 +36,12 @@ import type { AgentPhase } from "@/lib/poju/agent-state";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import {
   callPhaseJsonTransport,
-  formatPhaseMessageHistory,
   getPhaseResponseFallback,
   resolvePhaseResponse,
   withPhaseStreamOpts,
 } from "@/lib/llm/phases/phase-transport";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
-import { buildOrientalSystemPrompt } from "@/lib/llm/phases/oriental-prompt-context";
+import { buildPhaseTransportInput } from "@/lib/llm/phases/oriental-prompt-context";
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
 import type { PojuV4ActionRequested } from "@/lib/poju/types";
@@ -437,8 +436,10 @@ ${buildCollectingEscalationBlock(
 export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLLMResult> {
   const firstAgendaTurn = !input.agent_state?.agenda_generated;
   const structured = normalizeBaseAnalysisInput(input.base_analysis ?? null).structured ?? null;
-  const system = await buildOrientalSystemPrompt(input, buildCollectingTaskBlock(input));
-  const messages = formatPhaseMessageHistory(input.session.messages);
+  const { system, messages } = await buildPhaseTransportInput(
+    input,
+    buildCollectingTaskBlock(input),
+  );
 
   let transport = await callPhaseJsonTransport(
     system,

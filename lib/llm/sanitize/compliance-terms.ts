@@ -439,49 +439,13 @@ export function buildComplianceTranslationPromptBlock(_locale: Locale = "en"): s
 }
 
 /**
- * Light repair for chat `response` — strip broken markers / out-of-set / bare 干支 without full regen.
+ * Chat `response` pass-through — audit only (no destructive repair).
+ * Term binding is enforced at generation time via buildTermMarkingPromptBlock + closed-set.
  */
 export function sanitizeChatResponse(text: string, locale: string): string {
   if (!text?.trim()) return text ?? "";
-
-  let result = text;
-  const violations = auditDeliveredText(result, locale);
-  const needsRepair = violations.some(
-    (v) =>
-      v.label === "broken_marker" ||
-      v.label.startsWith("out_of_set") ||
-      v.label === "bare_ganzhi" ||
-      v.label.startsWith("bare_ganzhi"),
-  );
-
-  if (!needsRepair) return result;
-
-  console.warn(
-    `[chat-sanitize] repairing response (${violations.length} hit(s), locale=${locale}):`,
-    violations.slice(0, 4).map((v) => v.label),
-  );
-
-  if (detectBrokenMarkers(result)) {
-    result = stripBrokenMarkers(result);
-  }
-
-  for (const hit of auditOutOfSetTerms(result)) {
-    if (hit.snippet) {
-      result = result.split(hit.snippet).join("");
-    }
-  }
-
-  for (const hit of auditBareGanzhi(result)) {
-    if (hit.snippet) {
-      result = result.split(hit.snippet).join("");
-    }
-  }
-
-  if (detectBrokenMarkers(result)) {
-    result = stripBrokenMarkers(result);
-  }
-
-  return result.replace(/\n{3,}/g, "\n\n").trim();
+  auditDeliveredText(text, locale);
+  return text;
 }
 
 /** Read-only delivery audit: bare forbidden terms, bare sign poems, broken markers, red lines. */

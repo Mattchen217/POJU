@@ -11,6 +11,7 @@ import {
   stripBrokenMarkers,
   stripGlossTokensForPrompt,
   stripMarkersForPrompt,
+  sanitizeChatResponse,
   TERM_MARKER_PATTERN,
 } from "@/lib/llm/sanitize/compliance-terms";
 
@@ -96,6 +97,13 @@ function main() {
     auditDeliveredText(dense, "en").some((h) => h.label.startsWith("term_density:")),
     "delivered audit includes density hits",
   );
+
+  console.log("\n=== chat sanitize (audit-only) ===");
+  const bareTerms = "命局带食神，丁酉年有转机，偏印大运需留意。";
+  const sanitized = sanitizeChatResponse(bareTerms, "zh");
+  assert(sanitized === bareTerms, "sanitizeChatResponse does not mutate text");
+  assert(sanitized.includes("食神"), "食神 preserved");
+  assert(sanitized.includes("丁酉"), "丁酉 preserved");
 
   console.log("\n=== hidden stem dump audit (en) ===");
   const stemDump =

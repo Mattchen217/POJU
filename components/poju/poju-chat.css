@@ -873,6 +873,22 @@
   font-size: var(--pchat-body-size) !important;
   line-height: var(--pchat-line) !important;
 }
+.pchat__streaming-placeholder-text {
+  color: rgba(212, 175, 55, 0.72);
+  font-style: italic;
+}
+.pchat__reading-reveal {
+  animation: pchat-reading-reveal 250ms ease-out both;
+}
+@keyframes pchat-reading-reveal {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .pchat__streaming-cursor {
   margin-left: 2px; color: var(--pchat-violet-bright);
   animation: pchat-blink 1s step-end infinite;

@@ -1,6 +1,5 @@
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import { stripGlossTokensForPrompt } from "@/lib/llm/sanitize/compliance-terms";
-import { formatBaseAnalysisForDisplay } from "@/lib/profile/format-base-analysis-zh";
 
 /** Normalized base_analysis payload for prompts + local calculations. */
 export type BaseAnalysisBundle = {
@@ -68,6 +67,26 @@ function applyMaxChars(text: string): string {
   return text;
 }
 
+/** Recursively sort object keys for byte-stable JSON in prompts. */
+function stableSortKeys(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(stableSortKeys);
+  }
+  if (value && typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    const sorted: Record<string, unknown> = {};
+    for (const key of Object.keys(obj).sort()) {
+      sorted[key] = stableSortKeys(obj[key]);
+    }
+    return sorted;
+  }
+  return value;
+}
+
+export function stableJsonStringify(value: unknown, indent = 2): string {
+  return JSON.stringify(stableSortKeys(value), null, indent);
+}
+
 /** Downstream injection banner — neutral base must not be read as scenario typing. */
 export const BASE_ANALYSIS_DOWNSTREAM_BANNER_ZH =
   "(以下为中立能量底座，供下游做场景投射；不含且不应推断具体职业/关系/事件。)";
@@ -93,16 +112,11 @@ export function formatBaseAnalysisForPrompt(baseAnalysis: unknown, locale?: stri
     parts.push(`## 能量底座·结构数据（内部精确，术语数据）
 
 \`\`\`json
-${JSON.stringify(bundle.structured, null, 2)}
+${stableJsonStringify(bundle.structured)}
 \`\`\``);
   }
 
-  const displayText =
-    bundle.display_text?.trim() ||
-    formatBaseAnalysisForDisplay({
-      content: bundle.content,
-      display_text: bundle.display_text,
-    });
+  const displayText = bundle.display_text?.trim();
 
   const legacyJsonOnly =
     !bundle.display_text?.trim() &&
@@ -121,7 +135,7 @@ ${stripGlossTokensForPrompt(displayText)}`);
 ${banner}
 
 \`\`\`json
-${JSON.stringify(bundle.content, null, 2)}
+${stableJsonStringify(bundle.content)}
 \`\`\``);
   } else if (typeof bundle.content === "string" && bundle.content.trim()) {
     parts.push(`## 中立能量元报告（用户向白榜）

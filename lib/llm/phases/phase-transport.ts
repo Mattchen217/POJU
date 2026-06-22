@@ -41,6 +41,11 @@ function resolveStreamProvider(
   });
 }
 
+/** OpenRouter returned zero-length completion body. */
+export function isEmptyPhaseCompletion(result: PhaseTransportResult): boolean {
+  return result.content.trim().length === 0;
+}
+
 const RETRYABLE_COMPLIANCE_LABELS = new Set([
   "empty_keep_cn_bracket",
   "broken_marker",
@@ -83,9 +88,18 @@ export async function callPhaseJsonTransport(
   const streamHooks = options?.stream_hooks;
   const extraIgnore = options?.provider_extra_ignore;
 
-  const runOnce = async (): Promise<PhaseTransportResult> => {
-    const providerIgnore = extraIgnore?.length ? extraIgnore : undefined;
-    const locked = options?.locked_provider?.trim() || undefined;
+  const runOnce = async (retry?: {
+    extra_ignore?: string[];
+    use_full_order?: boolean;
+  }): Promise<PhaseTransportResult> => {
+    const mergedIgnore = [
+      ...(extraIgnore ?? []),
+      ...(retry?.extra_ignore ?? []),
+    ].filter(Boolean);
+    const providerIgnore = mergedIgnore.length > 0 ? [...new Set(mergedIgnore)] : undefined;
+    const locked = retry?.use_full_order
+      ? undefined
+      : options?.locked_provider?.trim() || undefined;
     const routePath = options?.route_path ?? "chat";
     if (isOpenRouterConfigured()) {
       if (streamHooks) {
@@ -157,7 +171,26 @@ export async function callPhaseJsonTransport(
     return { content: gemini.text, model: gemini.modelUsed, tokens_used: gemini.tokens_used };
   };
 
-  return runOnce();
+  let result = await runOnce();
+  if (isEmptyPhaseCompletion(result)) {
+    const failedProvider = result.provider?.trim();
+    console.warn(
+      "[phase-transport] empty completion (raw_length=0) — controlled retry once",
+      JSON.stringify({
+        phase: options?.phase_name ?? "—",
+        call_type,
+        provider: failedProvider ?? "—",
+        finish_reason: result.finish_reason ?? "—",
+        locked: options?.locked_provider?.trim() ?? null,
+      }),
+    );
+    result = await runOnce({
+      extra_ignore: failedProvider ? [failedProvider] : undefined,
+      use_full_order: Boolean(options?.locked_provider?.trim()),
+    });
+  }
+
+  return result;
 }
 
 export function parsePhaseJson(rawText: string): Record<string, unknown> {

@@ -146,8 +146,12 @@ export function logOpenRouterProviderServed(meta: {
   const served = meta.provider?.trim() || "—";
   const locked = meta.locked?.trim() || "none";
   const path = meta.path ?? "—";
+  const promptTokens = meta.prompt_tokens ?? 0;
+  const cachedTokens = meta.cached_tokens ?? 0;
+  const cacheRatio =
+    promptTokens > 0 ? (cachedTokens / promptTokens).toFixed(3) : "—";
   console.log(
-    `[openrouter] path=${path} locked=${locked} served=${served} finish=${meta.finish_reason ?? "—"} cached=${meta.cached_tokens ?? 0} attempt=${meta.attempt ?? 1}`,
+    `[openrouter] path=${path} locked=${locked} served=${served} finish=${meta.finish_reason ?? "—"} prompt=${promptTokens} cached=${cachedTokens} cache_ratio=${cacheRatio} attempt=${meta.attempt ?? 1}`,
   );
   const order = parseProviderOrder();
   if (order.length > 0 && served !== "—" && !servedProviderInOrder(served)) {

@@ -50,9 +50,10 @@ export interface PojuChatProps {
   currentSessionId: string | null;
   messages: PojuMessage[];
   isStreaming?: boolean;
-  streamingText?: string; // 正在流式输出的正文(逐块更新)
-  /** Model JSON/content stream started — hide thinking pulse, show reply bubble. */
+  /** Model JSON/content stream started — hide thinking pulse, show reply placeholder. */
   replyStreaming?: boolean;
+  /** Shown while reply buffers (no raw stream text). */
+  replyingLabel?: string;
   thinkingMode?: ThinkingStreamMode | null;
   thinkingLocale?: string;
   liveThinkingLine?: string | null;
@@ -123,10 +124,14 @@ export interface PojuChatProps {
   initialScrollPosition?: "top" | "bottom";
 }
 
-/* ---------- AI 文本：定稿后走 RichReadingText（金字 + 轻排版）；流式进行中仍裸显 ---------- */
-function renderAiContent(text: string, locale: string): ReactNode {
+/* ---------- AI 文本：定稿后走 RichReadingText（金字 + 轻排版） ---------- */
+function renderAiContent(text: string, locale: string, reveal?: boolean): ReactNode {
   return (
-    <RichReadingText text={text} locale={locale} className="pchat__reading-body" />
+    <RichReadingText
+      text={text}
+      locale={locale}
+      className={`pchat__reading-body${reveal ? " pchat__reading-reveal" : ""}`}
+    />
   );
 }
 
@@ -142,7 +147,7 @@ function AiReplyShell({ children }: { children: ReactNode }) {
 export default function PojuChat(props: PojuChatProps) {
   const {
     sessions, currentSessionId, messages,
-    isStreaming, streamingText, replyStreaming,
+    isStreaming, replyStreaming, replyingLabel,
     thinkingMode, thinkingLocale, liveThinkingLine, thinkingWaitLabel,
     onSend,
     onNewSession,
@@ -194,6 +199,8 @@ export default function PojuChat(props: PojuChatProps) {
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
   const [sessionDialog, setSessionDialog] = useState<SessionSidebarDialogState | null>(null);
   const [pulseHold, setPulseHold] = useState(false);
+  const prevReplyStreamingRef = useRef(false);
+  const [revealAssistantId, setRevealAssistantId] = useState<string | null>(null);
   const menuBtnRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const taRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -242,7 +249,6 @@ export default function PojuChat(props: PojuChatProps) {
     }
   }, [
     messages,
-    streamingText,
     replyStreaming,
     thinkingMode,
     liveThinkingLine,
@@ -250,6 +256,24 @@ export default function PojuChat(props: PojuChatProps) {
     pulseHold,
     currentSessionId,
   ]);
+
+  useEffect(() => {
+    if (prevReplyStreamingRef.current && !replyStreaming) {
+      for (let i = messages.length - 1; i >= 0; i--) {
+        if (messages[i].role === "assistant") {
+          setRevealAssistantId(messages[i].id);
+          break;
+        }
+      }
+    }
+    prevReplyStreamingRef.current = Boolean(replyStreaming);
+  }, [replyStreaming, messages]);
+
+  useEffect(() => {
+    if (!revealAssistantId) return;
+    const timer = window.setTimeout(() => setRevealAssistantId(null), 280);
+    return () => window.clearTimeout(timer);
+  }, [revealAssistantId]);
 
   useEffect(() => {
     if (isStreaming && thinkingMode && !replyStreaming) setPulseHold(true);
@@ -509,7 +533,13 @@ export default function PojuChat(props: PojuChatProps) {
                     messageSlots[m.id]
                   ) : (
                     <AiReplyShell>
-                      {messageSlots?.[m.id] ? messageSlots[m.id] : renderAiContent(m.content, thinkingLocale ?? "en")}
+                      {messageSlots?.[m.id]
+                        ? messageSlots[m.id]
+                        : renderAiContent(
+                            m.content,
+                            thinkingLocale ?? "en",
+                            m.id === revealAssistantId,
+                          )}
                       {!messageSlots?.[m.id] ? <AssistantMessageActions content={m.content} /> : null}
                     </AiReplyShell>
                   )}
@@ -548,10 +578,7 @@ export default function PojuChat(props: PojuChatProps) {
             ) : null}
 
             {isStreaming && replyStreaming ? (
-              <StreamingAssistantBubble
-                content={streamingText ?? ""}
-                pending={!streamingText?.trim()}
-              />
+              <StreamingAssistantBubble label={replyingLabel ?? "POJU is composing a reply…"} />
             ) : null}
           </div>
         </div>
