@@ -1,5 +1,6 @@
 /**
- * OpenRouter sticky-routing keys for DeepSeek prefix cache.
+ * OpenRouter session keys for prefix-cache observability and request grouping.
+ * Upstream supplier pin: OPENROUTER_PROVIDER_ONLY → provider.only (not session_id body).
  * @see Cursor 指令 - DeepSeek 缓存省钱工程
  */
 
@@ -29,7 +30,7 @@ export function syncroProfileCacheSessionId(profileId: string): string {
   return `syncro-profile-${profileId.trim()}`;
 }
 
-/** All 12 LLM batches in one matrix run share one sticky-routing key. */
+/** All 12 LLM batches in one matrix run share one session key (observability; supplier pin = OPENROUTER_PROVIDER_ONLY). */
 export function syncroBatchCacheSessionId(profileId: string, computeStartedAt: string): string {
   return `syncro-${profileId.trim()}-${computeStartedAt.trim()}`;
 }

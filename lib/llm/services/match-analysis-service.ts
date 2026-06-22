@@ -57,7 +57,7 @@ export type GenerateMatchAnalysisInput = {
   a_base_analysis?: unknown | null;
   b_user_profile?: UserProfile | null;
   b_base_analysis?: unknown | null;
-  /** Optional sticky-routing key; defaults to sorted profile pair id. */
+  /** Optional session key for observability; supplier pin = OPENROUTER_PROVIDER_ONLY. */
   cache_session_id?: string;
 };
 

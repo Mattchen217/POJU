@@ -7,6 +7,7 @@ import {
   isOpenRouterConfigured,
   openRouterChatCompletion,
   openRouterProviderExtras,
+  parseProviderIgnore,
   type OpenRouterChatMessage,
 } from "@/lib/llm/openrouter-shared";
 import type { AgentPhase } from "@/lib/poju/agent-state";
@@ -49,7 +50,7 @@ export interface CallLLMInput {
   temperature?: number;
   /** OpenRouter HTTP timeout (ms). Defaults to 90s; deep_analysis uses 180s. */
   timeout_ms?: number;
-  /** OpenRouter sticky routing key for prefix cache (see lib/llm/cache-session-id.ts). */
+  /** OpenRouter session key for observability (see lib/llm/cache-session-id.ts). Supplier pin = OPENROUTER_PROVIDER_ONLY. */
   session_id?: string;
   /** POJU phase label for cache observability. */
   phase_name?: string;
@@ -68,6 +69,8 @@ export interface CallLLMResult {
     cached_tokens: number;
     thinking_enabled: boolean;
     thinking_effort: ReasoningEffort;
+    finish_reason?: string | null;
+    provider?: string | null;
   };
 }
 
@@ -83,14 +86,10 @@ const HIGH_OUTPUT_CALL_TYPES = new Set<LLMCallType>([
   "poju_final_delivery",
 ]);
 
-export function parseProviderIgnore(): string[] {
-  const raw = process.env.OPENROUTER_PROVIDER_IGNORE?.trim();
-  if (!raw) return [];
-  return raw.split(",").map((s) => s.trim()).filter(Boolean);
-}
-
-/** Long JSON deliveries — exclude low max-output providers (e.g. Venice). Never set `order`. */
+/** Long JSON deliveries — exclude low max-output providers; merges OPENROUTER_PROVIDER_ONLY pin. */
 export function highOutputProviderConstraints(): Record<string, unknown> {
+  const pinned = openRouterProviderExtras({ require_parameters: true });
+  if (pinned) return pinned;
   const ignore = parseProviderIgnore();
   return {
     require_parameters: true,
@@ -267,6 +266,8 @@ export async function callLLM(input: CallLLMInput): Promise<CallLLMResult> {
       cached_tokens: out.cached_tokens,
       thinking_enabled: thinkingEnabled,
       thinking_effort: effort,
+      finish_reason: out.finish_reason,
+      provider: out.provider,
     },
   };
 }

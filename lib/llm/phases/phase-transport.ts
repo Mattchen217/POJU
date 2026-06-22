@@ -1,5 +1,5 @@
 import { auditDeliveredText, sanitizeChatResponse, stripGlossTokensForPrompt } from "@/lib/llm/sanitize/compliance-terms";
-import { extractStreamingResponseText } from "@/lib/poju/extract-streaming-response";
+import { salvagePhaseResponseText } from "@/lib/poju/extract-streaming-response";
 import { pojuCacheSessionId } from "@/lib/llm/cache-session-id";
 import {
   generateGeminiChatCompletion,
@@ -20,7 +20,25 @@ export type PhaseTransportResult = {
   tokens_used: number;
   reasoning?: string;
   reasoning_details?: unknown;
+  finish_reason?: string | null;
+  provider?: string | null;
 };
+
+/** POJU chat phases that must return a user-visible `response` string. */
+const REPLY_REQUIRED_CALL_TYPES = new Set<LLMCallType>([
+  "poju_reply",
+  "collection_flash",
+  "chat_flash",
+  "tracking_flash",
+]);
+
+function shouldRetryEmptyReply(call_type?: LLMCallType): boolean {
+  return call_type != null && REPLY_REQUIRED_CALL_TYPES.has(call_type);
+}
+
+function hasSalvageableResponse(rawText: string): boolean {
+  return Boolean(salvagePhaseResponseText(rawText).trim());
+}
 
 export async function callPhaseJsonTransport(
   system: string,
@@ -40,65 +58,80 @@ export async function callPhaseJsonTransport(
   const call_type = options?.call_type ?? "poju_reply";
   const streamHooks = options?.stream_hooks;
 
-  if (isOpenRouterConfigured()) {
-    if (streamHooks) {
-      const chatMessages = [
-        { role: "system" as const, content: system },
-        ...messages.map((m) => ({ role: m.role, content: m.content })),
-      ];
-      const streamed = await openRouterChatCompletionStream(
-        {
-          messages: chatMessages,
-          max_tokens,
-          temperature,
-          json_mode: true,
-          reasoning_effort: call_type === "collection_flash" ? "medium" : "medium",
-          session_id: options?.session_id,
-          call_type: call_type,
-          phase_name: options?.phase_name,
-        },
-        {
-          onReasoning: streamHooks.onReasoning,
-          onContent: streamHooks.onContent,
-        },
-      );
+  const runOnce = async (): Promise<PhaseTransportResult> => {
+    if (isOpenRouterConfigured()) {
+      if (streamHooks) {
+        const chatMessages = [
+          { role: "system" as const, content: system },
+          ...messages.map((m) => ({ role: m.role, content: m.content })),
+        ];
+        const streamed = await openRouterChatCompletionStream(
+          {
+            messages: chatMessages,
+            max_tokens,
+            temperature,
+            json_mode: true,
+            reasoning_effort: call_type === "collection_flash" ? "medium" : "medium",
+            session_id: options?.session_id,
+            call_type: call_type,
+            phase_name: options?.phase_name,
+          },
+          {
+            onReasoning: streamHooks.onReasoning,
+            onContent: streamHooks.onContent,
+          },
+        );
+        return {
+          content: streamed.text,
+          model: streamed.model ?? getOpenRouterDefaultModel(),
+          tokens_used: streamed.tokens_used ?? 0,
+          reasoning: streamed.reasoning,
+          finish_reason: streamed.finish_reason,
+          provider: streamed.provider,
+        };
+      }
+
+      const result = await callLLM({
+        call_type,
+        system,
+        messages,
+        max_tokens,
+        temperature,
+        response_format: "json",
+        session_id: options?.session_id,
+        phase_name: options?.phase_name,
+      });
       return {
-        content: streamed.text,
-        model: streamed.model ?? getOpenRouterDefaultModel(),
-        tokens_used: streamed.tokens_used ?? 0,
-        reasoning: streamed.reasoning,
+        content: result.content,
+        model: result.actual_model,
+        tokens_used: result.meta.tokens_used,
+        reasoning: result.reasoning,
+        reasoning_details: result.reasoning_details,
+        finish_reason: result.meta.finish_reason,
+        provider: result.meta.provider,
       };
     }
 
-    const result = await callLLM({
-      call_type,
-      system,
+    if (!getGeminiClient()) {
+      throw new Error("missing_llm_api_key");
+    }
+    const gemini = await generateGeminiChatCompletion({
+      systemInstruction: system,
       messages,
-      max_tokens,
       temperature,
-      response_format: "json",
-      session_id: options?.session_id,
-      phase_name: options?.phase_name,
+      maxOutputTokens: max_tokens,
     });
-    return {
-      content: result.content,
-      model: result.actual_model,
-      tokens_used: result.meta.tokens_used,
-      reasoning: result.reasoning,
-      reasoning_details: result.reasoning_details,
-    };
-  }
+    return { content: gemini.text, model: gemini.modelUsed, tokens_used: gemini.tokens_used };
+  };
 
-  if (!getGeminiClient()) {
-    throw new Error("missing_llm_api_key");
+  let result = await runOnce();
+  if (shouldRetryEmptyReply(call_type) && !hasSalvageableResponse(result.content)) {
+    console.warn(
+      `[phase-transport] empty salvageable response — retrying once (call_type=${call_type} phase=${options?.phase_name ?? "—"} provider=${result.provider ?? "—"})`,
+    );
+    result = await runOnce();
   }
-  const gemini = await generateGeminiChatCompletion({
-    systemInstruction: system,
-    messages,
-    temperature,
-    maxOutputTokens: max_tokens,
-  });
-  return { content: gemini.text, model: gemini.modelUsed, tokens_used: gemini.tokens_used };
+  return result;
 }
 
 export function parsePhaseJson(rawText: string): Record<string, unknown> {
@@ -124,39 +157,70 @@ export function parsePhaseResult(
     return audited;
   };
 
+  let parsed: Record<string, unknown> = {};
   try {
-    const parsed = parsePhaseJson(rawText);
-    let responseRaw =
-      typeof parsed.response === "string"
-        ? parsed.response.trim()
-        : typeof parsed.reply === "string"
-          ? parsed.reply.trim()
-          : "";
-    if (!responseRaw) {
-      responseRaw = extractStreamingResponseText(rawText).trim();
-    }
-    const response = sanitizeResponse(responseRaw);
-    if (typeof parsed.response === "string") parsed.response = response;
-    return { parsed, response };
+    parsed = parsePhaseJson(rawText);
   } catch {
-    const salvaged = extractStreamingResponseText(rawText).trim();
-    if (salvaged) {
-      return { parsed: {}, response: sanitizeResponse(salvaged) };
-    }
-    const fieldMatch = cleaned.match(/"response"\s*:\s*"((?:\\.|[^"\\])*)"/);
-    if (fieldMatch?.[1]) {
-      try {
-        const unescaped = JSON.parse(`"${fieldMatch[1]}"`) as string;
-        return { parsed: {}, response: sanitizeResponse(String(unescaped).trim()) };
-      } catch {
-        return {
-          parsed: {},
-          response: sanitizeResponse(fieldMatch[1].replace(/\\n/g, "\n").trim()),
-        };
-      }
-    }
-    return { parsed: {}, response: "" };
+    parsed = {};
   }
+
+  const salvaged = salvagePhaseResponseText(rawText).trim();
+  const response = sanitizeResponse(salvaged);
+  if (typeof parsed.response === "string") parsed.response = response;
+  else if (response && !parsed.response) parsed.response = response;
+
+  return { parsed, response };
+}
+
+export type PhaseResponseResolveContext = {
+  locale?: string;
+  phase_name?: string;
+  call_type?: string;
+  model?: string;
+  finish_reason?: string | null;
+  provider?: string | null;
+  raw_length?: number;
+  use_fallback?: boolean;
+};
+
+/** Log when user-visible fallback copy is shown — includes supplier + finish_reason for triage. */
+export function logPhaseResponseFallback(rawText: string, ctx: PhaseResponseResolveContext): void {
+  const preview = rawText.replace(/\s+/g, " ").trim().slice(0, 400);
+  console.warn(
+    "[phase-transport] phase response fallback triggered",
+    JSON.stringify({
+      phase: ctx.phase_name ?? "—",
+      call_type: ctx.call_type ?? "—",
+      provider: ctx.provider ?? "—",
+      model: ctx.model ?? "—",
+      finish_reason: ctx.finish_reason ?? "—",
+      raw_length: ctx.raw_length ?? rawText.length,
+      raw_preview: preview,
+    }),
+  );
+}
+
+/**
+ * Parse phase JSON + optional user-visible fallback when salvage fails.
+ * Use after `callPhaseJsonTransport` (which may already retry once on empty salvage).
+ */
+export function resolvePhaseResponse(
+  rawText: string,
+  ctx: PhaseResponseResolveContext,
+): { parsed: Record<string, unknown>; response: string; used_fallback: boolean } {
+  const { parsed, response } = parsePhaseResult(rawText, { locale: ctx.locale });
+  if (response.trim()) {
+    return { parsed, response, used_fallback: false };
+  }
+  if (ctx.use_fallback === false) {
+    return { parsed, response: "", used_fallback: false };
+  }
+  logPhaseResponseFallback(rawText, { ...ctx, raw_length: rawText.length });
+  return {
+    parsed,
+    response: getPhaseResponseFallback(ctx.locale),
+    used_fallback: true,
+  };
 }
 
 /** User-visible fallback when the model returns no parseable `response` (e.g. truncated JSON). */

@@ -125,7 +125,9 @@ export interface PojuChatProps {
 
 /* ---------- AI 文本：定稿后走 RichReadingText（金字 + 轻排版）；流式进行中仍裸显 ---------- */
 function renderAiContent(text: string, locale: string): ReactNode {
-  return <RichReadingText text={text} locale={locale} />;
+  return (
+    <RichReadingText text={text} locale={locale} className="pchat__reading-body" />
+  );
 }
 
 function AiReplyShell({ children }: { children: ReactNode }) {

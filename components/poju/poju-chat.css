@@ -544,6 +544,26 @@
   line-height: var(--pchat-line) !important;
 }
 .pchat__ai p:last-child { margin-bottom: 0 !important; }
+
+/* Finalized RichReadingText: same measure + typography as streaming bubble */
+.pchat .pchat__ai .pchat__reading-body.reading-body {
+  max-width: none !important;
+  width: 100%;
+  margin-inline: 0;
+  font-size: var(--pchat-body-size) !important;
+  line-height: var(--pchat-line) !important;
+}
+
+.pchat .pchat__ai .pchat__reading-body .reading-p {
+  margin: 0 0 1em !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
+
+.pchat .pchat__ai .pchat__reading-body .reading-p:last-child {
+  margin-bottom: 0 !important;
+}
+
 .pchat__ai h3 {
   font-family: var(--pchat-serif);
   font-size: 23px !important;

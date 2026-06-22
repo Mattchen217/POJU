@@ -37,8 +37,7 @@ import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import {
   callPhaseJsonTransport,
   formatPhaseMessageHistory,
-  getPhaseResponseFallback,
-  parsePhaseResult,
+  resolvePhaseResponse,
   withPhaseStreamOpts,
 } from "@/lib/llm/phases/phase-transport";
 import { buildOrientalSystemPrompt } from "@/lib/llm/phases/oriental-prompt-context";
@@ -443,17 +442,15 @@ export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLL
     }),
   );
 
-  const { parsed, response: parsedResponse } = parsePhaseResult(result.content, { locale: input.locale });
-  let response = parsedResponse;
-  if (!response.trim()) {
-    console.warn(
-      "[collecting-phase] empty response from model; raw length:",
-      result.content.length,
-      "preview:",
-      result.content.slice(0, 200),
-    );
-    response = getPhaseResponseFallback(input.locale);
-  }
+  const { parsed, response } = resolvePhaseResponse(result.content, {
+    locale: input.locale,
+    phase_name: "collecting_context",
+    call_type: "collection_flash",
+    model: result.model,
+    finish_reason: result.finish_reason,
+    provider: result.provider,
+    use_fallback: true,
+  });
 
   const context_updates =
     parsed.context_updates && typeof parsed.context_updates === "object" && !Array.isArray(parsed.context_updates)

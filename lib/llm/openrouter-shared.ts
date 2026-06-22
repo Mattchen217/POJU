@@ -5,6 +5,8 @@
  * - OPENROUTER_API_KEY — required to use this path
  * - OPENROUTER_MODEL — default `deepseek/deepseek-v4-pro` (dev: single model per product decision)
  * - OPENROUTER_REASONING_EFFORT — `high` | `xhigh` | `off` (default `high` = deep reasoning where supported)
+ * - OPENROUTER_PROVIDER_ONLY — pin a single upstream (e.g. `DeepSeek`, `Novita`, `SiliconFlow`) for prefix-cache hits
+ * - OPENROUTER_PROVIDER_IGNORE — comma-separated providers to skip (merged with ONLY; ONLY wins on fallbacks)
  * - OPENROUTER_HTTP_REFERER, OPENROUTER_APP_TITLE — optional OpenRouter attribution headers
  */
 
@@ -28,26 +30,66 @@ export type OpenRouterChatOptions = {
   reasoning_effort?: "off" | "low" | "medium" | "high" | "xhigh";
   /** Override default 90s abort (ms). */
   timeout_ms?: number;
-  /** OpenRouter sticky routing — same session_id → same provider (prefix cache). */
+  /** Observability / session affinity — does NOT pin upstream supplier for DeepSeek prefix cache. */
   session_id?: string;
   /** Router call_type — for cache observability logs. */
   call_type?: string;
   /** POJU phase name — for cache observability logs. */
   phase_name?: string;
-  /** Provider routing constraints — never set `order` (disables sticky routing). */
+  /** Provider routing — use `provider.only` (via OPENROUTER_PROVIDER_ONLY) to pin supplier. */
   provider?: Record<string, unknown>;
 };
 
-/** Provider extras: never set `order` (disables sticky routing). */
-export function openRouterProviderExtras(): Record<string, unknown> | undefined {
-  const ignoreRaw = process.env.OPENROUTER_PROVIDER_IGNORE?.trim();
-  if (!ignoreRaw) return undefined;
-  const ignore = ignoreRaw
+export function parseProviderOnly(): string[] {
+  const raw = process.env.OPENROUTER_PROVIDER_ONLY?.trim();
+  if (!raw) return [];
+  return raw
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
-  if (ignore.length === 0) return undefined;
-  return { ignore, allow_fallbacks: true };
+}
+
+export function parseProviderIgnore(): string[] {
+  const raw = process.env.OPENROUTER_PROVIDER_IGNORE?.trim();
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/**
+ * OpenRouter provider routing extras.
+ *
+ * `session_id` in the request body does NOT sticky-route to one upstream — DeepSeek prefix cache
+ * is per supplier. Pin with `OPENROUTER_PROVIDER_ONLY` → `provider.only` + `allow_fallbacks: false`.
+ * `OPENROUTER_PROVIDER_IGNORE` merges as `ignore` (ONLY takes priority on fallbacks).
+ */
+export function openRouterProviderExtras(options?: {
+  require_parameters?: boolean;
+}): Record<string, unknown> | undefined {
+  const only = parseProviderOnly();
+  const ignore = parseProviderIgnore();
+  const out: Record<string, unknown> = {};
+
+  if (options?.require_parameters) {
+    out.require_parameters = true;
+  }
+
+  if (only.length > 0) {
+    out.only = only;
+    out.allow_fallbacks = false;
+  }
+
+  if (ignore.length > 0) {
+    out.ignore = ignore;
+    if (only.length === 0) {
+      out.allow_fallbacks = true;
+    }
+  }
+
+  if (Object.keys(out).length === 0) return undefined;
+  return out;
 }
 
 export function openRouterRequestExtras(session_id?: string): Record<string, unknown> {
@@ -117,6 +159,10 @@ export type OpenRouterCompletionResult = {
   prompt_tokens: number;
   completion_tokens: number;
   cached_tokens: number;
+  /** Normalized finish reason from OpenRouter (stop | length | …). */
+  finish_reason?: string | null;
+  /** Upstream provider slug when returned by OpenRouter (e.g. Novita, DeepSeek). */
+  provider?: string | null;
   /** DeepSeek / OpenRouter reasoning tokens when `reasoning.effort` is enabled. */
   reasoning?: string;
   reasoning_details?: unknown;
@@ -194,8 +240,11 @@ export async function openRouterChatCompletion(
   let includeReasoning = effort !== "off";
   const maxJsonAttempts = 3;
   let data: {
+    provider?: string;
     model?: string;
     choices?: Array<{
+      finish_reason?: string | null;
+      native_finish_reason?: string | null;
       message?: {
         content?: string | null;
         reasoning?: string | null;
@@ -254,6 +303,9 @@ export async function openRouterChatCompletion(
   const message = data.choices?.[0]?.message;
   const text = String(message?.content ?? "").trim();
   const modelOut = typeof data.model === "string" ? data.model : model;
+  const finish_reason = data.choices?.[0]?.finish_reason ?? null;
+  const provider =
+    typeof data.provider === "string" && data.provider.trim() ? data.provider.trim() : null;
   const u = data.usage;
   const prompt_tokens = typeof u?.prompt_tokens === "number" ? u.prompt_tokens : 0;
   const completion_tokens = typeof u?.completion_tokens === "number" ? u.completion_tokens : 0;
@@ -281,6 +333,8 @@ export async function openRouterChatCompletion(
     prompt_tokens,
     completion_tokens,
     cached_tokens,
+    finish_reason,
+    provider,
     reasoning,
     reasoning_details: message?.reasoning_details,
   };

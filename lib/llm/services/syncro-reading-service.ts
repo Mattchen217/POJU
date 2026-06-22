@@ -39,7 +39,7 @@ export type GenerateSyncroMatrixInput = {
   locale: string;
   user_profile?: UserProfile | null;
   base_analysis?: unknown | null;
-  /** Syncro session id for sticky routing; falls back to profile-based key. */
+  /** Syncro session id for cache observability; supplier pin = OPENROUTER_PROVIDER_ONLY. */
   cache_session_id?: string;
 };
 

@@ -1,4 +1,8 @@
-import { extractStreamingResponseText } from "@/lib/poju/extract-streaming-response";
+import {
+  extractStreamingResponseText,
+  salvagePhaseResponseText,
+} from "@/lib/poju/extract-streaming-response";
+import { parsePhaseResult } from "@/lib/llm/phases/phase-transport";
 
 function assert(name: string, condition: boolean) {
   if (!condition) {
@@ -33,4 +37,36 @@ assert(
 assert(
   "does not leak raw JSON wrapper",
   !extractStreamingResponseText('{\n"response": "hello').includes('"response"'),
+);
+
+assert(
+  "salvage reply field",
+  salvagePhaseResponseText('{"reply":"Hello from reply field."}') === "Hello from reply field.",
+);
+
+assert(
+  "salvage message field",
+  salvagePhaseResponseText('{"message":"Hello from message field."}') === "Hello from message field.",
+);
+
+assert(
+  "salvage nested message.content",
+  salvagePhaseResponseText('{"message":{"content":"Nested content works."}}') === "Nested content works.",
+);
+
+assert(
+  "salvage longest prose string as last resort",
+  salvagePhaseResponseText(
+    '{"thought":{"breakthrough_hypotheses":["a"]},"text":"This is a long alternate body field for salvage testing."}',
+  ).includes("long alternate body"),
+);
+
+assert(
+  "agenda-only truncated stays empty",
+  parsePhaseResult('{"thought":{"breakthrough_hypotheses":["a"]}, "investigation_agenda": [').response === "",
+);
+
+assert(
+  "parsePhaseResult uses salvage for reply",
+  parsePhaseResult('{"reply":"Salvaged via parsePhaseResult."}').response.includes("Salvaged"),
 );
