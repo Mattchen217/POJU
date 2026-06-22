@@ -2,6 +2,10 @@ import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 import { buildPojuCorePromptSections } from "@/lib/llm/prompts/poju-base";
 import { getPojuChatLanguageDirective, parseAppLocale } from "@/lib/prompts/language-directive";
 import {
+  estimatePromptTokens,
+  logBaseAnalysisPayload,
+} from "@/lib/poju/base-analysis-diagnostics";
+import {
   buildCurrentDateContext,
   buildNorthAmericaAdaptation,
   buildProfileContextSection,
@@ -36,7 +40,7 @@ export async function buildPojuSystemPrompt(input: PhaseLLMInput, taskBlock: str
       content: m.content,
     })),
   });
-  return stitchPromptSections(
+  const system = stitchPromptSections(
     ...buildPojuCorePromptSections(),
     buildCurrentDateContext(new Date(), input.locale),
     langDirective.directive,
@@ -45,6 +49,12 @@ export async function buildPojuSystemPrompt(input: PhaseLLMInput, taskBlock: str
     injectionBlock ?? "",
     taskBlock,
   );
+  logBaseAnalysisPayload("buildPojuSystemPrompt", baseAnalysis, {
+    session_id: input.session.session_id,
+    system_chars: system.length,
+    system_est_tokens: estimatePromptTokens(system.length),
+  });
+  return system;
 }
 
 /** @deprecated 使用 buildPojuSystemPrompt；保留别名避免大范围重命名 */

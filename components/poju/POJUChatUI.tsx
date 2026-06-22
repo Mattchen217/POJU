@@ -36,7 +36,7 @@ import {
 } from "@/lib/poju/session-profile";
 import { applyPhaseTransition } from "@/lib/poju/agent-state";
 import { generateBaseAnalysis } from "@/lib/llm/deepseek/base-analysis";
-import { importCalculatedProfileAsStored, recordProfileUsage } from "@/lib/profile/stored-profiles-service";
+import { importCalculatedProfileAsStored, profileHasBaseAnalysis, recordProfileUsage } from "@/lib/profile/stored-profiles-service";
 import { markPOJUV4SessionResolved } from "@/lib/poju/v4-lifecycle";
 import {
   DEFAULT_NEW_SESSION_TITLE,
@@ -624,6 +624,21 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     scrollChatToBottom("smooth");
 
     try {
+      const profileId = baseSession.selected_stored_profile_id?.trim();
+      const isRealUserTurn =
+        userMessage.trim().length > 0 && !userMessage.startsWith("[SYSTEM:");
+      if (isRealUserTurn && profileId && resolveSessionHasProfile(baseSession)) {
+        const ready = await ensureBaseAnalysisReady(profileId);
+        if (!ready) {
+          await dialog.alert(
+            locale.startsWith("zh")
+              ? "命主基础分析准备中，请稍后再发送。"
+              : "Base chart analysis is still preparing. Please wait and try again.",
+          );
+          return;
+        }
+      }
+
       const updatedSession = await handleUserMessage({
         session: baseSession,
         userMessage,
@@ -995,6 +1010,27 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     }
   }
 
+  async function ensureBaseAnalysisReady(profileId: string): Promise<boolean> {
+    try {
+      if (!(await profileHasBaseAnalysis(profileId))) {
+        await generateBaseAnalysis(profileId);
+      }
+      const cur = sessionRef.current;
+      if (cur.agent_v2) {
+        const withAnalysis = {
+          ...cur,
+          agent_v2: { ...cur.agent_v2, has_base_analysis: true, selected_profile_id: profileId },
+        };
+        onSessionUpdate(withAnalysis);
+        await savePOJUSession(withAnalysis);
+      }
+      return true;
+    } catch (e) {
+      console.warn("[poju] base analysis not ready:", e);
+      return false;
+    }
+  }
+
   async function handleStoredProfileSelected(profileId: string) {
     setShowProfilePicker(false);
     setBirthFlowStage(null);
@@ -1033,16 +1069,15 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     onSessionUpdate(updatedSession);
     await savePOJUSession(updatedSession);
 
-    void generateBaseAnalysis(profileId)
-      .then(() => {
-        const cur = sessionRef.current;
-        if (!cur.agent_v2) return;
-        onSessionUpdate({
-          ...cur,
-          agent_v2: { ...cur.agent_v2, has_base_analysis: true, selected_profile_id: profileId },
-        });
-      })
-      .catch((e) => console.warn("[poju] base analysis after profile select:", e));
+    const analysisReady = await ensureBaseAnalysisReady(profileId);
+    if (!analysisReady) {
+      await dialog.alert(
+        locale.startsWith("zh")
+          ? "命主基础分析尚未准备好，请稍后再试。"
+          : "Base chart analysis is not ready yet. Please try again in a moment.",
+      );
+      return;
+    }
 
     let finalSession = await handleUserMessage({
       session: updatedSession,

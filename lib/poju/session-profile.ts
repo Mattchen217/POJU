@@ -70,6 +70,21 @@ export async function loadSessionUserProfile(session: POJUSessionState): Promise
   return bundle.profile;
 }
 
+function resolveStoredProfileIdForSession(session: POJUSessionState): string | null {
+  const sid = session.selected_stored_profile_id?.trim();
+  if (isValidStoredProfileId(sid)) return sid!;
+  const agentSid = session.agent_v2?.selected_profile_id?.trim();
+  if (isValidStoredProfileId(agentSid)) return agentSid!;
+  return null;
+}
+
+async function loadStoredBaseAnalysis(session: POJUSessionState): Promise<unknown | null> {
+  const profileId = resolveStoredProfileIdForSession(session);
+  if (!profileId) return null;
+  const data = await getStoredProfile(profileId);
+  return data?.base_analysis ?? null;
+}
+
 /** Browser-only: profile + Step 7 base analysis for `/api/poju/chat`. */
 export async function loadSessionProfileBundle(session: POJUSessionState): Promise<{
   profile: UserProfile | null;
@@ -81,11 +96,12 @@ export async function loadSessionProfileBundle(session: POJUSessionState): Promi
     const data = await getStoredProfile(sid!);
     return {
       profile: data?.user_profile ?? null,
-      base_analysis: data?.base_analysis?.content ?? null,
+      base_analysis: data?.base_analysis ?? null,
     };
   }
   if (session.birth_submitted_in_session) {
-    return { profile: await getUserProfile(), base_analysis: null };
+    const base_analysis = await loadStoredBaseAnalysis(session);
+    return { profile: await getUserProfile(), base_analysis };
   }
   return { profile: null, base_analysis: null };
 }

@@ -14,6 +14,7 @@ import {
 } from "@/lib/llm/gemini-shared";
 import { callLLM } from "@/lib/llm/router";
 import { pojuCacheSessionId } from "@/lib/llm/cache-session-id";
+import { logPojuError } from "@/lib/poju/base-analysis-diagnostics";
 import { getOpenRouterDefaultModel, isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 import {
   buildThinkingProcessDisplay,
@@ -83,32 +84,36 @@ export interface POJULLMResponse {
 export async function callPOJULLM(input: CallInput): Promise<POJULLMResponse> {
   const { session, profile, locale } = input;
 
-  if (shouldUseGreetingPhase(session, profile)) {
-    return callPOJULLMGreetingPath(input);
-  }
-
-  if (shouldUseOpeningPhase(session)) {
-    try {
-      return await callPOJULLMPhasePath(input);
-    } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : String(error);
-      console.warn("[poju-llm] Opening phase failed:", msg);
+  try {
+    if (shouldUseGreetingPhase(session, profile)) {
+      return await callPOJULLMGreetingPath(input);
     }
-  }
 
-  if (isOpenRouterConfigured() || getGeminiClient()) {
-    const hasUserTurns = session.messages.some((m) => m.role === "user" && !m.is_rejected);
-    if (hasUserTurns) {
+    if (shouldUseOpeningPhase(session)) {
       try {
         return await callPOJULLMPhasePath(input);
       } catch (error: unknown) {
-        const msg = error instanceof Error ? error.message : String(error);
-        console.warn("[poju-llm] Phase path failed, falling back to legacy prompt:", msg);
+        logPojuError("poju-llm:opening-phase", error);
       }
     }
-  }
 
-  return callPOJULLMLegacyPath(input);
+    if (isOpenRouterConfigured() || getGeminiClient()) {
+      const hasUserTurns = session.messages.some((m) => m.role === "user" && !m.is_rejected);
+      if (hasUserTurns) {
+        try {
+          return await callPOJULLMPhasePath(input);
+        } catch (error: unknown) {
+          logPojuError("poju-llm:phase-path", error);
+          console.warn("[poju-llm] Phase path failed, falling back to legacy prompt");
+        }
+      }
+    }
+
+    return await callPOJULLMLegacyPath(input);
+  } catch (error: unknown) {
+    logPojuError("poju-llm:callPOJULLM", error);
+    throw error;
+  }
 }
 
 async function callPOJULLMPhasePath(input: CallInput): Promise<POJULLMResponse> {

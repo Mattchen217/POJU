@@ -1,5 +1,6 @@
 import { safeRandomUUID } from "@/lib/client/safe-crypto";
-import { loadSessionProfileBundle, withSessionProfileFlags } from "@/lib/poju/session-profile";
+import { loadSessionProfileBundle, resolveSessionHasProfile, withSessionProfileFlags } from "@/lib/poju/session-profile";
+import { logBaseAnalysisPayload } from "@/lib/poju/base-analysis-diagnostics";
 import type { POJUAction, POJUSessionState, POJUMessage } from "@/lib/poju/types";
 import { checkRuleViolation, getRuleRejectionMessage } from "@/lib/poju/rules";
 import {
@@ -334,6 +335,10 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     };
   }
   const { profile, base_analysis } = await loadSessionProfileBundle(sessionForLlm);
+  logBaseAnalysisPayload("callLLMViaAPI:before-fetch", base_analysis, {
+    session_id: sessionForLlm.session_id,
+    has_profile: resolveSessionHasProfile(sessionForLlm),
+  });
 
   let archive_data: import("@/lib/archive/archive-service").POJUActionRecommendationsData | null = null;
   if (sessionForLlm.main_delivery_done && sessionForLlm.session_id) {

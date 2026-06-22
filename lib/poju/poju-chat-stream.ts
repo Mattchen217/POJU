@@ -1,4 +1,5 @@
 import { callPOJULLM } from "@/lib/llm/poju-llm";
+import { logPojuError } from "@/lib/poju/base-analysis-diagnostics";
 import { resolveStreamedCompleteResponse } from "@/lib/llm/phases/phase-transport";
 import { extractStreamingResponseText } from "@/lib/poju/extract-streaming-response";
 import type { POJUActionRecommendationsData } from "@/lib/archive/archive-service";
@@ -89,6 +90,7 @@ export function createPojuChatStreamResponse(body: ChatBody, reqSignal?: AbortSi
           suggest_refund: llm.suggest_refund ?? false,
         });
       } catch (e) {
+        logPojuError("poju-chat-stream:callPOJULLM", e);
         const message = e instanceof Error ? e.message : String(e);
         if (message.includes("abort") || message.includes("AbortError")) {
           send({ type: "aborted" });
