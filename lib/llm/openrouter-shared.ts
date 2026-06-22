@@ -5,7 +5,7 @@
  * - OPENROUTER_API_KEY — required to use this path
  * - OPENROUTER_MODEL — default `deepseek/deepseek-v4-pro` (dev: single model per product decision)
  * - OPENROUTER_REASONING_EFFORT — `high` | `xhigh` | `off` (default `high` = deep reasoning where supported)
- * - OPENROUTER_PROVIDER_ORDER — comma-separated provider slugs in priority order (e.g. `baidu/fp8,streamlake,siliconflow/fp8`)
+ * - OPENROUTER_PROVIDER_ORDER — comma-separated provider slugs in priority order (e.g. `baidu`)
  * - OPENROUTER_PROVIDER_IGNORE — comma-separated providers to skip (merged with ORDER)
  * - OPENROUTER_HTTP_REFERER, OPENROUTER_APP_TITLE — optional OpenRouter attribution headers
  */
@@ -151,22 +151,48 @@ function parseCachedTokens(usage: Record<string, unknown> | undefined): number {
   return 0;
 }
 
-/** Log prefix-cache metrics (DeepSeek TTL is minute-level — misses after long gaps are expected). */
+/** Log prefix-cache metrics — delegates to {@link logOpenRouterProviderServed} (single line per call). */
 export function logOpenRouterPrefixCacheMetrics(meta: {
   cached_tokens: number;
   prompt_tokens: number;
+  completion_tokens?: number;
   session_id?: string;
   call_type?: string;
   phase_name?: string;
   provider?: string | null;
+  finish_reason?: string | null;
+  reasoning?: "on" | "off";
 }): void {
-  const ratio =
-    meta.prompt_tokens > 0 ? (meta.cached_tokens / meta.prompt_tokens).toFixed(3) : "0.000";
-  const phase = meta.phase_name ?? meta.call_type ?? "—";
-  const hit = meta.cached_tokens > 0 ? "HIT" : "miss";
+  logOpenRouterProviderServed(meta);
+}
+
+/** Log actual served provider + token stats (stream + non-stream). */
+export function logOpenRouterProviderServed(meta: {
+  provider?: string | null;
+  finish_reason?: string | null;
+  cached_tokens?: number;
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  session_id?: string;
+  call_type?: string;
+  phase_name?: string;
+  reasoning?: "on" | "off";
+}): void {
+  const turn =
+    meta.session_id?.trim() ||
+    meta.phase_name?.trim() ||
+    meta.call_type?.trim() ||
+    "—";
+  const served = meta.provider?.trim() || "—";
   console.log(
-    `[openrouter] prefix cache ${hit}: cached=${meta.cached_tokens} prompt=${meta.prompt_tokens} ratio=${ratio} phase=${phase} provider=${meta.provider ?? "—"} session=${meta.session_id ?? "—"}`,
+    `[openrouter] turn=${turn} served=${served} reasoning=${meta.reasoning ?? "—"} finish=${meta.finish_reason ?? "—"} prompt=${meta.prompt_tokens ?? 0} output=${meta.completion_tokens ?? 0} cached=${meta.cached_tokens ?? 0}`,
   );
+  const order = parseProviderOrder();
+  if (order.length > 0 && served !== "—" && !servedProviderInOrder(served)) {
+    console.warn(
+      `[openrouter] served provider "${served}" not in OPENROUTER_PROVIDER_ORDER (${order.join(",")}) — slug may be misspelled or order was bypassed`,
+    );
+  }
 }
 
 let warnedMissingProviderOrder = false;
@@ -194,28 +220,6 @@ export function logOpenRouterRequestRouting(
     return;
   }
   console.log(`[openrouter] request routing: ${JSON.stringify(provider)} phase=${phase}`);
-}
-
-/** Log actual served provider vs configured order (stream + non-stream). */
-export function logOpenRouterProviderServed(meta: {
-  provider?: string | null;
-  finish_reason?: string | null;
-  cached_tokens?: number;
-  call_type?: string;
-  phase_name?: string;
-}): void {
-  const order = parseProviderOrder();
-  const served = meta.provider?.trim() || "—";
-  const orderLabel = order.length > 0 ? `[${order.join(",")}]` : "[]";
-  const phase = meta.phase_name ?? meta.call_type ?? "—";
-  console.log(
-    `[openrouter] provider served: order=${orderLabel} → served=${served} finish=${meta.finish_reason ?? "—"} cached=${meta.cached_tokens ?? 0} phase=${phase}`,
-  );
-  if (order.length > 0 && served !== "—" && !servedProviderInOrder(served)) {
-    console.warn(
-      `[openrouter] served provider "${served}" not in OPENROUTER_PROVIDER_ORDER (${order.join(",")}) — slug may be misspelled or order was bypassed`,
-    );
-  }
 }
 
 export function isOpenRouterConfigured(): boolean {
@@ -407,20 +411,16 @@ export async function openRouterChatCompletion(
   const tokens_used =
     typeof u?.total_tokens === "number" ? u.total_tokens : prompt_tokens + completion_tokens;
 
-  logOpenRouterPrefixCacheMetrics({
-    cached_tokens,
-    prompt_tokens,
-    session_id: options.session_id,
-    call_type: options.call_type,
-    phase_name: options.phase_name,
-    provider,
-  });
   logOpenRouterProviderServed({
     provider,
     finish_reason,
     cached_tokens,
+    prompt_tokens,
+    completion_tokens,
+    session_id: options.session_id,
     call_type: options.call_type,
     phase_name: options.phase_name,
+    reasoning: includeReasoning && effort !== "off" ? "on" : "off",
   });
 
   const reasoning =

@@ -218,20 +218,16 @@ export async function openRouterChatCompletionStream(
   if (!out.ok) {
     throw new Error(`openrouter_stream_${out.status}: ${out.errText.slice(0, 900)}`);
   }
-  logOpenRouterPrefixCacheMetrics({
-    cached_tokens: out.result.cached_tokens,
-    prompt_tokens: out.result.prompt_tokens,
-    session_id: options.session_id,
-    call_type: options.call_type,
-    phase_name: options.phase_name,
-    provider: out.result.provider,
-  });
   logOpenRouterProviderServed({
     provider: out.result.provider,
     finish_reason: out.result.finish_reason,
     cached_tokens: out.result.cached_tokens,
+    prompt_tokens: out.result.prompt_tokens,
+    completion_tokens: out.result.completion_tokens,
+    session_id: options.session_id,
     call_type: options.call_type,
     phase_name: options.phase_name,
+    reasoning: includeReasoning ? "on" : "off",
   });
   return out.result;
 }

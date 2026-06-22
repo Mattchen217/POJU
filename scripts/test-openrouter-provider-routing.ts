@@ -76,6 +76,16 @@ withEnv(
   },
 );
 
+withEnv({ OPENROUTER_PROVIDER_ORDER: "baidu", OPENROUTER_PROVIDER_IGNORE: undefined }, () => {
+  assert("single baidu ORDER", parseProviderOrder().join(",") === "baidu");
+  const p = openRouterProviderExtras()!;
+  assert(
+    "single baidu extras",
+    JSON.stringify({ order: p.order, allow_fallbacks: p.allow_fallbacks }) ===
+      '{"order":["baidu"],"allow_fallbacks":false}',
+  );
+});
+
 withEnv({ OPENROUTER_PROVIDER_ORDER: "A, B", OPENROUTER_PROVIDER_IGNORE: undefined }, () => {
   assert("comma ORDER trims", parseProviderOrder().join(",") === "A,B");
 });
