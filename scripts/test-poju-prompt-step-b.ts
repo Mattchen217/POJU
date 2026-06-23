@@ -12,10 +12,11 @@ import { buildFinalDeliveryPrompt } from "@/lib/llm/pro/final-delivery";
 import {
   POJU_ACTION_DESIGN_PRINCIPLES,
   POJU_BAZI_DEEP_METHOD,
-  POJU_BREAKTHROUGH_COUNSELOR_IDENTITY,
+  POJU_IDENTITY,
   POJU_OUTPUT_BRANDING,
   POJU_SESSION_GUARDRAILS,
-  buildPojuCorePromptSections,
+  buildPojuChatCoreSections,
+  buildPojuDeliveryCoreSections,
 } from "@/lib/llm/prompts/poju-base";
 import { buildPojuSystemPrompt } from "@/lib/llm/phases/oriental-prompt-context";
 import type { BirthInfo } from "@/lib/profile/types";
@@ -43,15 +44,20 @@ async function main(): Promise<void> {
   console.log("\n=== Step B: POJU modularization static checks ===\n");
 
   assert("poju-base.ts exists", existsSync(resolve(ROOT, "lib/llm/prompts/poju-base.ts")));
-  assert("core has READING_LAYOUT (committed layout in static head)", buildPojuCorePromptSections().some((s) => s.includes("降维排版（杂志式版面")));
+  assert("delivery core has READING_LAYOUT", buildPojuDeliveryCoreSections().some((s) => s.includes("降维排版（杂志式版面")));
+  assert("chat core NO READING_LAYOUT", !buildPojuChatCoreSections().some((s) => s.includes("降维排版（杂志式版面")));
 
-  assert("identity 破局顾问", POJU_BREAKTHROUGH_COUNSELOR_IDENTITY.includes("破局顾问"));
-  assert("identity 不是签文(Glyph)", POJU_BREAKTHROUGH_COUNSELOR_IDENTITY.includes("Glyph"));
-  assert("identity 不是方位(Syncro)", POJU_BREAKTHROUGH_COUNSELOR_IDENTITY.includes("Syncro"));
-  assert("identity 不是合盘(Match)", POJU_BREAKTHROUGH_COUNSELOR_IDENTITY.includes("Match"));
+  assert("identity POJU 智者", POJU_IDENTITY.includes("精通东方文化"));
+  assert("identity Match 不归我", POJU_IDENTITY.includes("Match"));
 
-  assert("identity 我是 POJU / I am POJU", POJU_BREAKTHROUGH_COUNSELOR_IDENTITY.includes("我是 POJU"));
-  assert("identity output policy wired", buildPojuCorePromptSections().some((s) => s.includes("POJULIFE OUTPUT POLICY")));
+  assert("identity 我是 POJU", POJU_IDENTITY.includes("我是 POJU"));
+  assert("chat core output policy wired", buildPojuChatCoreSections().some((s) => s.includes("POJULIFE OUTPUT POLICY")));
+  assert(
+    "delivery core BAZI method",
+    buildPojuDeliveryCoreSections().some(
+      (s) => s.includes("八字深度解读") || s.includes("性格画像深度解读"),
+    ),
+  );
 
   assert("passive term marking in BAZI method", POJU_BAZI_DEEP_METHOD.includes("被动包装"));
   assert("no ≥4 term id quota in BAZI method", !POJU_BAZI_DEEP_METHOD.includes("≥4 个不同 term id"));
@@ -66,21 +72,18 @@ async function main(): Promise<void> {
   assert("branding WHAT TO DO marker", POJU_OUTPUT_BRANDING.includes("═══ WHAT TO DO ═══"));
   assert("branding 禁 Glyph/Syncro/Match 暴露", POJU_OUTPUT_BRANDING.includes("不得在用户可见"));
 
-  assert("context uses poju-base", ctx.includes("buildPojuCorePromptSections"));
+  assert("context uses buildPojuChatCoreSections", ctx.includes("buildPojuChatCoreSections"));
   assert("context has buildPojuSystemPrompt", ctx.includes("buildPojuSystemPrompt"));
   assert("context NOT ORIENTAL_COUNSELOR_BASE", !ctx.includes("ORIENTAL_COUNSELOR_BASE"));
 
-  assert("collecting 4-6 段自然叙述", collecting.includes("4-6 段自然叙述"));
   assert("collecting investigation_agenda", collecting.includes("investigation_agenda"));
   assert("collecting agenda 6-8 items", collecting.includes("6–8 项"));
   assert("collecting agenda ≥3 critical", collecting.includes("至少 3 项"));
-  assert("collecting response-first JSON order", collecting.includes("第一个键"));
-  assert("collecting NOT agenda 4-6 shrink", !collecting.includes("4–6 项"));
-  assert("collecting buildPullbackBlock", collecting.includes("buildPullbackBlock"));
-  assert("collecting hypothesis-backward agenda", collecting.includes("破局假设"));
+  assert("collecting response-first JSON order", collecting.includes("response 第一个键"));
   assert("collecting topic_drift + new session button", collecting.includes("should_show_new_session_button"));
+  assert("collecting no rigid escalation template", !collecting.includes("buildCollectingEscalationBlock"));
 
-  assert("final-delivery uses poju-base", final.includes("buildPojuCorePromptSections"));
+  assert("final-delivery uses buildPojuDeliveryCoreSections", final.includes("buildPojuDeliveryCoreSections"));
   assert("final-delivery stitchPromptSections", final.includes("stitchPromptSections"));
 
   assert("oriental-counselor still has ORIENTAL_COUNSELOR_BASE for Syncro/Match", oriental.includes("ORIENTAL_COUNSELOR_BASE"));
@@ -95,7 +98,9 @@ async function main(): Promise<void> {
   ]) {
     const p = read(`lib/llm/phases/${phase}`);
     const usesOriental =
-      p.includes("buildOrientalSystemPrompt") || p.includes("buildPojuSystemPrompt");
+      p.includes("buildOrientalSystemPrompt") ||
+      p.includes("buildPojuSystemPrompt") ||
+      p.includes("buildPhaseTransportInput");
     assert(`${phase} uses buildOrientalSystemPrompt / buildPojuSystemPrompt`, usesOriental);
   }
 
@@ -165,10 +170,10 @@ async function main(): Promise<void> {
     recent_user_messages: ["Should I leave my current job to join a startup?"],
   });
 
-  assert("opening system has POJU identity", openingSystem.includes("破局顾问") || openingSystem.includes("POJU"));
-  assert("opening system has BAZI method", openingSystem.includes("大运") || openingSystem.includes("Major"));
-  assert("opening task in turnContext not system", openingTurn.includes("当前任务：主动开场"));
-  assert("opening system NO task block", !openingSystem.includes("当前任务：主动开场"));
+  assert("opening system has POJU identity", openingSystem.includes("POJU") || openingSystem.includes("智者"));
+  assert("opening system NO BAZI deep method in chat core", !openingSystem.includes("性格画像深度解读法则"));
+  assert("opening task in turnContext not system", openingTurn.includes("任务：") || openingTurn.includes("当前任务"));
+  assert("opening system NO task block", !openingSystem.includes("任务：主动开场") && !openingSystem.includes("当前任务：主动开场"));
   assert("opening system NO monolithic ORIENTAL at start", !openingSystem.startsWith("# 你是谁\n\n你是 POJU，一位精通"));
 
   assert("final delivery has ANALYSIS marker", deliverySystem.includes("═══ ANALYSIS ═══"));

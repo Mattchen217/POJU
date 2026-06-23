@@ -1,14 +1,4 @@
 import {
-  findMissingFields,
-  REQUIRED_FIELDS_BY_CATEGORY,
-  calculateCompleteness,
-  AGENDA_COVERED_GATE,
-  MIN_COLLECTING_USER_TURNS,
-  PUSH_GATE,
-  PUSH_MIN_TURNS,
-  type POJUAgentState,
-} from "@/lib/poju/agent-state";
-import {
   countEffectiveCollectingTurns,
   evaluateCollectingConfirmationGate,
 } from "@/lib/poju/collecting-confirmation-gate";
@@ -18,9 +8,7 @@ import {
   nextStallCount,
   parseCollectionProgress,
   projectCollectingStopLoss,
-  resolvePreCallEscalation,
   shouldSuggestRefund,
-  type CollectingEscalationLevel,
 } from "@/lib/poju/collection-progress";
 import {
   applyAgendaStatusUpdates,
@@ -31,9 +19,9 @@ import {
   stripAgendaFieldsFromContextUpdates,
 } from "@/lib/poju/investigation-agenda";
 import { callStallOfferPhase } from "@/lib/llm/phases/stall-offer-phase";
-import { formatContextForPrompt, formatMissingFieldsForPrompt, extractQuestionCategory, mergeContextUpdates, recordToLLMContextUpdates } from "@/lib/poju/context-extractor";
-import type { AgentPhase } from "@/lib/poju/agent-state";
-import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
+import { formatContextForPrompt, extractQuestionCategory, mergeContextUpdates, recordToLLMContextUpdates } from "@/lib/poju/context-extractor";
+import type { AgentPhase, POJUAgentState } from "@/lib/poju/agent-state";
+import { calculateCompleteness } from "@/lib/poju/agent-state";
 import {
   callPhaseJsonTransport,
   getPhaseResponseFallback,
@@ -57,10 +45,6 @@ const VALID_ACTIONS: PojuV4ActionRequested[] = [
   "deliver_main",
   "track_progress",
 ];
-
-function formatFieldKey(key: string): string {
-  return key.replace(/_/g, " ");
-}
 
 function projectAgentAfterUpdates(
   agent: POJUAgentState,
@@ -140,301 +124,93 @@ function clampCollectingSuggestedPhase(
   return "collecting_context";
 }
 
-function buildCollectingEscalationBlock(
-  input: PhaseLLMInput,
-  level: CollectingEscalationLevel,
-): string {
-  if (level === "none") return "";
-
-  const focusLabels =
-    input.uncovered_critical_labels?.length
-      ? input.uncovered_critical_labels.slice(0, 2).join("；")
-      : "关键处境细节";
-
-  if (level === "delivery_pullback") {
-    return `
-
-## ★ 本轮 mandatory：用户催促交付 — 把他拉回来（不交付）
-
-用户本轮在要报告/结论/「该怎么办」，但问诊议程尚未收齐。本轮【禁止交付、禁止给行动建议】，按以下结构回应（自然 POJU 语气，不要机械）：
-
-1. **共情认可**急切——"我知道你现在最想要的就是一个明确答案/方向"
-2. **坦诚说明代价**——"如果我现在就下结论，只能给你一份谁都适用的泛泛建议——这恰恰是最不值钱、对你最没用的东西。我想给你的是只对你成立的判断。"
-3. **点名还差什么**——具体说出：${focusLabels}。说明"这两点会直接改变结论方向"。
-4. **立刻抛 1 个尖锐追问**接住对话。
-
-措辞红线：不得说"系统要求/还没到轮数/流程规定"等暴露机制的话；让用户感到是为了把分析做准才追问。`;
-  }
-
-  if (level === "refund") {
-    return `
-
-## ★ 本轮 mandatory：持续不配合 — 委婉退款档（L4+ · 善意收口）
-
-用户多轮未提供有效信息，或止损二选一后仍抗拒问诊。本轮【禁止交付、禁止给行动建议】，语气自然、不惩罚：
-
-1. 坦诚说明——若一直收集不到足够信息，建议会失真、对 TA 没意义
-2. 委婉收口——"如果现在不是深入聊的好时机，可以考虑申请退款，准备好再回来"
-3. **不要**自动退款；**不要**说"系统/流程/轮数"；**不要**指责用户
-4. 仍可留一个极轻的开放口——"若愿意补一句具体的 ${focusLabels}，我们还可以继续"
-
-参考语气（勿照抄）："如果一直收集不到足够信息，我给的建议会失真、对你没意义。如果现在不是深入的好时机，可以考虑申请退款，准备好再回来。"`;
-  }
-
-  if (level === "L2") {
-    return `
-
-## ★ 本轮 mandatory：敷衍/抗拒 — 认真提醒（L2 · L4 同档）
-
-用户本轮 collection_progress 很可能是 stalled（重复）或 resistant。本轮【禁止交付、禁止给行动建议】：
-
-1. 认真、不指责——"我想给你的是只对你成立的判断，不是泛泛话"
-2. 说明代价——"这需要你认真回答几个关键点，否则结果对你没意义"
-3. 点名 1 个议程焦点（见上方「本轮问诊焦点」）抛尖锐追问
-4. 不得说"系统要求/还没到轮数/流程规定"`;
-  }
-
-  return `
-
-## ★ 本轮提示：信息不清 — 温和澄清（L1）
-
-若你判 collection_progress 为 "stalled" 且这是首次敷衍/不清（非恶意抗拒），优先温和澄清：
-
-- "这点我没抓准，能具体说说 ${focusLabels} 吗？越具体，我的判断越准。"
-- 仍只问诊，不给行动建议；不得暴露机制话术`;
-}
-
-function buildTopicDriftL3Block(): string {
-  return `
-
-## 话题偏移 L3（off_topic · mandatory）
-
-若 topic_drift_signal 为 "off_topic"：
-- response 说明这不在本次 Session 核心问题内，**不要**深入新维度
-- should_show_new_session_button: true
-- 语气自然："这个维度需要单独开一个 Session 才公平；要开新问题，还是回到你原来的问题？"
-- 不得说"系统规定/流程要求"`;
-}
-
 function buildAgendaGenerationBlock(agent: POJUAgentState): string {
   if (agent.agenda_generated) return "";
   return `
 
-## ★ 首轮 mandatory：破局假设 → 倒推问诊议程（仅本轮一次 · 隐藏推理）
-
-**禁止**在 user-visible \`response\` 里写出破局方向、结论或「我判断你应该…」——收集阶段仍**只问诊、不开方**（见上方铁律）。
-
-### JSON 输出顺序铁律（最高优先级 · 与全局 guardrails 一致）
-**必须先写 \`"response"\` 键及其完整正文**，再写 \`investigation_agenda\`、\`thought\` 及其他字段。禁止先输出 agenda/thought 再写 response — 否则流式 UI 空白且易触顶截断。
-
-### 步骤 0 — 隐藏推理（mandatory · 不进 response · 写在 response **之后**）
-在 \`thought\`（供 UI thinking_process）里完成两步，**紧凑**（每条假设 ≤8 字，derivation_note ≤30 字）：
-
-1. **破局假设** — 1–2 条互斥方向，只写在 \`thought\`，**绝不**写进 \`response\`。
-2. **倒推清单** — 为验证假设还需哪些信息 → 每项 \`investigation_agenda\`；\`supports\` 用 2–6 字短语。
-
-### 步骤 1 — 输出 investigation_agenda（6–8 项 · 写在 response 之后）
-每项针对**这个人这件事**定制（不要通用字段名）；**至少 3 项** \`critical: true\`（缺了就无法在假设间下判断）。\`label\` / \`supports\` 尽量精简（压字数不压项数），避免冗长描述。
-
-\`\`\`json
-"investigation_agenda": [
-  { "id": "runway", "label": "现金流/债务还能撑多久", "critical": true, "status": "unexplored", "supports": "止损收缩" },
-  { "id": "price_test", "label": "近期调价或筛客是否试过、效果如何", "critical": true, "status": "unexplored", "supports": "提价筛客" },
-  …
-]
-\`\`\`
-
-生成后代码会持久化，**后续轮次不得重写此议程**（只更新 status）。**response 里只问诊，不剧透 thought 中的假设或方向**。
-`;
+## 首轮：先定调查议程（仅这一轮 · 持久）
+这是第一轮。先在心里想清楚：要负责任地帮他破这个局，你**必须**搞清楚哪些事？把它们列成调查议程，写进 investigation_agenda：
+- 6–8 项，针对【这个人这件事】定制（不要用通用字段名）。
+- 至少 3 项 critical=true（缺了它就无法下判断）。
+- 每项 { id, label, critical, status:"unexplored", supports }；supports 用一两句写它支撑你心里哪条破局方向。
+- 破局方向/假设只放进 thought（不进 response）；收集阶段不开方。
+议程一旦生成，后续轮**不再重写**，只更新各项 status。
+response 里：自然接住他的问题、给一句真实判断，再抛出议程里第一个、最关键的问题。`;
 }
 
 function buildAgendaTrackingBlock(agent: POJUAgentState): string {
   const agenda = agent.investigation_agenda ?? [];
   if (agenda.length === 0) return "";
   const focus = getNextAgendaFocus(agenda);
-  const focusText = focus
-    .map((a) => {
-      const sup = a.supports?.trim() ? ` · supports「${a.supports}」` : "";
-      return `- ${a.label} (${a.id}, ${a.status}${sup})`;
-    })
-    .join("\n");
+  const focusText = focus.map((a) => `- ${a.label} (${a.id}, ${a.status})`).join("\n") || "- 优先把必查项弄清楚";
   return `
 
-## 问诊议程（持久 — 勿重写）
+## 调查议程（你的收集计划 · 持久，勿重写）
 ${formatAgendaForPrompt(agenda)}
 
-## 这个局你还没了解清楚的地方（后台清单 · 不要照着念）
-${focusText || "- 优先把必查项了解清楚"}
+下一个该弄清的：
+${focusText}
 
-这是你心里的方向，不是回复的模板：
-- 用户上一轮说清了某项 → agenda_status_updates 标 "covered"；没说清 → 标 "partial"。
-- 整段对话朝"把上面这些弄明白"走，但**每一轮长什么样由对话当下决定**——不要每轮都"点拨+提问"一个套路。有时深聊一点，有时只接一句，有时才追问。
-- 已 covered 的别再问；覆盖完才考虑交付。
-
-每轮在 context_updates 回报 agenda_status_updates（只写用户明确说过的），如：
-"agenda_status_updates": { "runway": "covered", "price_test": "partial" }
-`;
+每轮判断用户上一答把当前项说清了没——说清 → agenda_status_updates 标 "covered"，推进到下一个还没弄清的关键项；没说清/答偏 → 标 "partial"，换个角度再问一次。已 covered 的别重复问。`;
 }
 
 function buildCollectingTaskBlock(input: PhaseLLMInput): string {
   const agent = input.agent_state;
+  const q = input.session.original_question;
   if (!agent) {
-    return `# 当前任务：深入问诊\n\n原始问题: "${input.session.original_question}"\n问一个具体跟进问题。输出 JSON：response, suggested_phase, context_updates, collection_progress。`;
+    return `# 任务：开始了解这个局
+
+用户的问题："${q}"
+你还没有调查议程——先定议程（见下），接住他的问题、给一句真实判断，再问第一个关键问题。`;
   }
-
   const contextText = formatContextForPrompt(agent);
-  const missingFields = findMissingFields(agent);
-  const missingText = formatMissingFieldsForPrompt(missingFields);
-  const completeness = agent.collection_completeness;
-  const cat = agent.question_category;
-  const requiredList = cat
-    ? (REQUIRED_FIELDS_BY_CATEGORY[cat] ?? []).map((f) => `  - ${formatFieldKey(f)}`).join("\n")
-    : "  (先判断问题类别，再收集该类别的关键字段。)";
 
-  const profileGate = !resolveSessionHasProfile(input.session)
-    ? `
-## 尚未关联命盘
-在 response 中说明为何需要出生信息（仅保存在本设备）。准备好后设 action_requested 为 "show_birth_form"；若还需先聊情境则 "continue_chat"。
-`
-    : "";
+  return `# 任务：收集阶段——把这个局弄清楚
 
-  const majorGateNote = agent.agenda_generated
-    ? `\n【硬下限】至少 ${MIN_COLLECTING_USER_TURNS} 轮有效 user 问诊、必查议程项全覆盖、整体覆盖 ≥ ${AGENDA_COVERED_GATE * 100}% 才能切 awaiting_confirmation。`
-    : "";
+用户的问题："${q}"
 
-  const resumeAfterStallNote = agent.resume_collecting_low_barrier
-    ? `
-## 止损后重新收集（本轮 mandatory）
-用户刚选择了「愿意再聊」。不要再施压或连珠追问：
-- 换角度、降低门槛：给 2-3 个具体选项或「是/否/大概范围」式问题，让用户好答
-- 一次只问 1 个最容易补的关键点
-- 语气轻松，允许用户跳过仍缺的项
-`
-    : "";
-
-  return `# 当前任务：深入问诊（收集上下文）
-
-你已经主动开场，用户开始回应。现在像一位精通东方智慧的老师那样：一边为他点亮当下的处境（给真实的洞见），一边把这个局了解得更深、更准。你不是在填表收集，你是在和一个带着困局来求教的人对话。
-${profileGate}
-
-## 用户的原始问题
-"${input.session.original_question}"
-
-## 已收集的信息
+## 已了解到的
 ${contextText}
 
-完成度（参考，非交付闸门）: ${(completeness * 100).toFixed(0)}%
 ${buildAgendaTrackingBlock(agent)}
 
-## 还需要收集的字段
-${missingText}
+## 这一阶段你在做什么
+你在通过对话把判断这个局所需的信息收齐，同时在你确有所见时给他真实洞见。
+- **有真东西就给**：看到一个值得说的判断（锚在他命盘真实结构上）就讲透；没有就别硬凑命盘、别每句"你的核心是…"。有时一整轮只是认真听、接住、把话头引到你要弄清的关键点，也很好。
+- **带着方向聊**：每轮朝"还没弄清的关键项"推进一步，别只顺着他上一句无限展开，也别停在原地。但怎么说完全自然，不套固定结构。
+- **还不交付完整方案**：完整的分析和行动留到信息齐了之后。现在如果他催"快给建议"，就告诉他"我会在完整分析里一次给你，先把情况弄清楚"，继续了解。
+- **信息齐了**：必查项都弄清楚后，问他要不要现在就出完整分析（用明确的征询问句，问号收尾）。
 
-## 本类别必填字段
-${requiredList}
+## 每轮必判：他有没有跑题（topic_drift_signal）
+- 与本问题相关 → "none"
+- 沾边但偏 → "edge"，回复里简短确认相关性
+- 完全跑到另一件事 → "off_topic"：委婉说明这要另开一个会话才聊得透，should_show_new_session_button 设 true，并问他要不要回到原来的问题
 
-## 收集阶段边界（最高优先级）
-收集阶段【持续给洞见，但不给完整破局方案】。务必分清这两层：
-- ✅ 鼓励给：对他处境/能量结构的**洞见与点拨**——为什么会卡在这里、他的命盘如何解释当下、一个他自己没看到的角度。**每一轮都要让用户有所得**，这是他付费的理由。
-- ❌ 不要给：完整行动方案、3 条 Action、"今晚/这周去做 X"的操作指令、放物件/择方位/择时——这些是 final-delivery 的专属回报，留到信息齐了一次性给。
-- 即使你已隐约看清破局方向，收集阶段也只点到**洞见层**，不展开成可执行步骤。
-- 当你判断"信息已够、可以给完整方案了"——那是切 awaiting_confirmation 的信号：用【明确征询问句】问用户是否现在就要完整分析（见「过渡句措辞铁律」），不要直接写方案。
+## 他不配合时（委婉拉回，直到配合）
+- 答得含糊 → 温和请他说具体点："这点我没太抓准，能具体说说吗？越具体，我给的判断越准。"
+- 敷衍/想跳过 → 认真而不指责："我想给你的是只对你成立的判断，不是谁都适用的泛泛话，这需要你认真回答几个关键点。"
+- 一直不配合 → 坦诚："一直收集不到足够信息，我给的建议会失真、对你没意义。如果现在不是深入聊的好时机，可以考虑申请退款，准备好再回来。"
+- 绝不说"系统要求/还没到轮数/流程规定"。他一旦开始配合，就回到正常聊。
 
-## 过渡句措辞铁律（suggested_phase = "awaiting_confirmation" 时 mandatory）
-
-切到 awaiting_confirmation / 准备交付前，response 必须：
-
-1. 以一个【明确的征询问句】结尾，问号收尾，直接问用户「现在就要完整分析吗」，需要用户回 yes/no 才能推进。
-   ✓ "I have what I need. Ready for me to lay out the full analysis and the concrete steps now?"
-   ✓ "我已经看清这个局了。要我现在给你完整分析和三个具体行动吗？"
-
-2. 严禁任何【异步告知式】措辞——它们暗示你会自己稍后推送，但你是回合制的、不会自动推送，会让用户被动等待→死锁：
-   ✗ "Give me a moment" / "Let me assemble" / "I'll come back"
-   ✗ "给我一点时间" / "稍等" / "我去整理一下" / "我会回来给你" / "让我整理一下你看看"
-
-3. 触发权交给用户：用户回 yes/ready → 进入汇总/交付流程；用户要补充/修改 → 保持或回到 collecting_context。
-
-## 对话原则（你是智者，不是问卷机）
-
-1. **有真东西才给，不硬凑**：当你确实看到一个值得说的洞见时，给得透彻——但**不要每一轮都强行搬命盘**。命盘解读是你最贵的牌，在关键处打出来才有分量；每句话都"你的核心是…"只会变成复读机。有时一整轮只是认真听、接住、往深处问一句，也完全可以。
-2. **自然地了解更多**：给了洞见之后，像关心学生的老师那样自然引出你还想了解的事——是为了把局看准，不是为了填表。可以问，也可以只是邀请他多说一点。
-3. **节奏像真人，不套固定结构**：不要每轮都用同一个骨架。有时多讲一点点拨，有时只接一句顺势深入。**不强求每轮问满问题**；要问，一次最多 1-2 个，且从对话自然长出来。**严禁**每轮以"我听到了/我明白了"开头的套路。
-4. 命盘 ↔ 处境要具体，不空讲性格；用户多年不顺/重大压力时，解读要够深、够展开。
-5. 只把用户【明确说过】的事实写入 context_updates，不推断编造。
-6. **防复读**：不原样重述前几轮已说的结论；每轮基于本轮新信息往前推进，给新的理解。
-7. **标记/括号**：命理术语用 ⟦t:…⟧ 被动包好（用到才包，短回复可零术语，勿堆砌）；keep_cn 软译括号内必须带干支（如 人生阶段（丙午）），禁空括号。
-
-## 用户追问【已正式交付过的】建议时（仅限本 Session 已完成 final-delivery 之后）
-- ✓ 在已给过的建议上【展开】：为什么有效、怎么做、何时调整、叠加 1-2 个动作
-- ⚠️ 若本 Session 尚未正式交付（还在收集阶段），用户即使追问"该做什么"，也【不在收集阶段给新行动】，而是回应："这些具体做法我会在完整分析里一次给你，现在先把情况了解清楚。"然后继续问诊。
-（当前为收集阶段：一律不得给出任何新行动或操作指令。）
-
-## 完成判断（议程驱动）
-- 必查 agenda 项全部 covered + 整体覆盖 ≥ ${AGENDA_COVERED_GATE * 100}% + 有效 user 轮 ≥ ${MIN_COLLECTING_USER_TURNS} → 才可 suggested_phase: "awaiting_confirmation"
-- 未达标 → 每轮必须推进 1–2 个 unexplored/partial 议程角度，禁止重复 covered、禁止泛泛倾听
-- 用户说「分析一下/给点建议」→ **不算** skip-ahead；保持 collecting_context 并继续问诊
-- 仅当用户明确「直接给结论 / 不用再问了 / skip ahead / just give me the result」且 ≥ ${PUSH_MIN_TURNS} 轮 + 覆盖 ≥ ${PUSH_GATE * 100}% 时，才可因强催促提前 suggested_phase: "awaiting_confirmation"
-- 否则 → "collecting_context"
-${majorGateNote}
 ${buildAgendaGenerationBlock(agent)}
-${resumeAfterStallNote}
-（已删除"或信息已够支撑 3 条可执行行动"判据——该判据会诱导提前凑出行动并写进 response。）
 
-## 风格
-
-- 长度跟着对话走：深入点拨时可长（中文 220-520 字 / 英文 160-380 词），轻接一句时就短——不要每轮都写满。
-- 自然叙述、像人说话；少用 bullet；不要套固定段落结构或固定开场白。
-- **严禁套路化开场与结构**：不要每轮都以"你的核心是…/你是…型"开头，不要每轮都"一段命理+一个问题"。换着来——这一轮可以直接回应他说的事，下一轮才点一句命盘。读起来要像真人老师在聊，不是按模板填空。
-- 必须体现你已读过【完整】命主基础分析，结合当前困境言之有物；命理术语自然提及时才用 ⟦t:…⟧ 包好（短回复可零术语，勿为金字堆术语）。
-
-## 话题偏移检测（相对 original_question）
-
-- "none"：与本 Session 核心话题一致或紧密相关（类型 1）
-- "edge"：可能相关，你已在 response 里简短确认（类型 2）
-- "off_topic"：完全新维度，必须拒绝深入并在 response 中引导开新 Session（类型 3）
-${buildTopicDriftL3Block()}
-
-## 本轮收集进展判断（collection_progress，每轮必填）
-
-根据【用户本轮消息】相对已收集信息的配合度，输出以下三者之一（与 suggested_phase 独立判断）：
-
-- "advancing"：用户这轮给出了新的有效信息——你会写入 context_updates 的事实、细节、时间线、立场或情绪转折（非空 updates 通常是 advancing）
-- "stalled"：用户这轮没给新信息——敷衍（「就那样」「还行」）、灌水、答非所问、重复已说过的、只回 emoji/单字无实质内容
-- "resistant"：用户明确抗拒收集——「我不想说」「你直接说」「你是大师你来看」、拒绝回答关键问题、要求跳过问诊立刻给结论
-
-注意：即使用户说「可以分析了/你来说吧」，若本轮没有补充新事实，collection_progress 仍可能是 "stalled" 或 "resistant"（不是 advancing）；suggested_phase 可单独切 awaiting_confirmation。
-
-## 输出格式（严格 JSON，无 markdown 围栏）
-
-**「response」必须是 JSON 对象的第一个键**（流式逐字输出正文后再写其余字段）。
-
+## 输出格式（严格 JSON，response 第一个键）
 {
   "response": "...",
   "suggested_phase": "collecting_context" | "awaiting_confirmation" | null,
   "action_requested": "continue_chat" | "show_birth_form",
-  "question_category": "career" | "relationship" | "wealth" | "health" | "family" | "decision" | "interpersonal" | "other" | null,
-  "context_updates": {
-    "agenda_status_updates": { "agenda_id": "partial" | "covered" }
-  },
-  "investigation_agenda": [ { "id": "...", "label": "...", "critical": true, "status": "unexplored", "supports": "支撑哪条破局假设" } ],
+  "question_category": "career"|"relationship"|"wealth"|"health"|"family"|"decision"|"interpersonal"|"other"|null,
+  "context_updates": { "agenda_status_updates": { "<agenda_id>": "partial"|"covered" } },
+  "investigation_agenda": [ { "id":"...", "label":"...", "critical":true, "status":"unexplored", "supports":"支撑哪条破局假设" } ],
   "thought": { "breakthrough_hypotheses": ["…"], "agenda_derivation_note": "…" },
-  "collection_progress": "advancing" | "stalled" | "resistant",
-  "topic_drift_signal": "none" | "edge" | "off_topic",
-  "drift_reason": "若有偏离，一句话说明（无则空字符串）",
+  "collection_progress": "advancing"|"stalled"|"resistant",
+  "topic_drift_signal": "none"|"edge"|"off_topic",
+  "drift_reason": "若偏离一句话说明，否则空字符串",
   "should_show_new_session_button": false
 }
+off_topic 时 should_show_new_session_button 必为 true。首轮 agenda 未生成时 investigation_agenda 必填；已生成则省略该字段。
 
-判断：topic_drift_signal 为 "off_topic" 时 should_show_new_session_button 必须为 true；其他情况为 false。
-首轮且 agenda 未生成时 investigation_agenda 必填；已生成则省略 investigation_agenda 字段。
-
-${buildToolSuggestionPhaseAppendix(input, { includeNewCycleDetection: false })}
-${buildCollectingEscalationBlock(
-  input,
-  input.collecting_escalation_level ??
-    resolvePreCallEscalation({
-      agent: agent,
-      collecting_pullback: input.collecting_pullback,
-    }),
-)}`;
+${buildToolSuggestionPhaseAppendix(input, { includeNewCycleDetection: false })}`;
 }
 
 export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLLMResult> {

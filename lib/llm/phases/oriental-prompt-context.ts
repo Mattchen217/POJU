@@ -1,6 +1,6 @@
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-structured-instance-inventory";
-import { buildPojuCorePromptSections, POJU_CHAT_LAYOUT_NOTE } from "@/lib/llm/prompts/poju-base";
+import { buildPojuChatCoreSections } from "@/lib/llm/prompts/poju-base";
 import {
   getPojuChatLanguageDirective,
   parseAppLocale,
@@ -56,8 +56,7 @@ export async function buildPojuSystemPrompt(input: PhaseLLMInput): Promise<strin
     })),
   });
   const system = stitchPromptSections(
-    ...buildPojuCorePromptSections(outLoc),
-    POJU_CHAT_LAYOUT_NOTE,
+    ...buildPojuChatCoreSections(outLoc),
     buildNorthAmericaAdaptation(outLoc),
     buildProfileContextSection(input.profile, baseAnalysis, outLoc),
   );

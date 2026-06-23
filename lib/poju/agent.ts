@@ -159,9 +159,11 @@ function finalizeAgentV2(
     if (parsedAgenda) {
       investigation_agenda = parsedAgenda;
       agenda_generated = true;
+      console.info("[agenda] generated:", parsedAgenda.map((a) => a.label));
     }
   } else if (agendaStatusUpdates) {
     investigation_agenda = applyAgendaStatusUpdates(investigation_agenda, agendaStatusUpdates);
+    console.info("[agenda] status:", agendaStatusUpdates);
   }
 
   if (investigation_agenda.length > 0) {

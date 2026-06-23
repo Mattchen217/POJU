@@ -12,11 +12,7 @@ import type { POJUAction, POJUDelivery, POJUSessionState, POJUMessage } from "@/
 import { markCycleDelivered } from "@/lib/poju/cycle-manager";
 import { computeSituationContextFingerprint } from "@/lib/poju/situation-context-fingerprint";
 import { getCachedSituationAnalysis, resolveBaseAnalysisForSession } from "@/lib/llm/deepseek/situation-analysis";
-import {
-  buildPojuCorePromptSections,
-  POJU_ACTION_DESIGN_PRINCIPLES,
-} from "@/lib/llm/prompts/poju-base";
-import { READING_LAYOUT_CONTRACT } from "@/lib/llm/prompts/reading-layout";
+import { buildPojuDeliveryCoreSections } from "@/lib/llm/prompts/poju-base";
 import { buildTermMarkingPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
 
@@ -295,9 +291,7 @@ ${sitStr}
   const finalDeliveryTask = `${modeTask}\n\n${expertMaterials}`;
 
   const system = stitchPromptSections(
-    ...buildPojuCorePromptSections(deliveryLang),
-    POJU_ACTION_DESIGN_PRINCIPLES,
-    READING_LAYOUT_CONTRACT,
+    ...buildPojuDeliveryCoreSections(deliveryLang),
     buildTermMarkingPromptBlock(locale),
     finalDeliveryTask,
   );

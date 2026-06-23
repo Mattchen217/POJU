@@ -26,7 +26,7 @@ import {
   shouldShowContextSummaryForm,
 } from "@/lib/poju/summary-readiness";
 import { normalizeAgentPhase } from "@/lib/poju/agent-state";
-import { formatAgendaProgressLabel } from "@/lib/poju/agenda-progress-label";
+import { AgendaProgressPanel } from "@/components/poju/AgendaProgressPanel";
 import { getLastUserMessageContent } from "@/lib/poju/context-helpers";
 import {
   clearBirthFormActionIfProfileBound,
@@ -221,10 +221,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const birthFlowBlocking = birthFlowStage === "form" || birthFlowStage === "received" || birthFlowStage === "analyzing";
   const showSummaryForm =
     shouldShowContextSummaryForm(session) && !summaryFormDismissed && !session.main_delivery_done;
-  const agendaProgressLabel = useMemo(
-    () => formatAgendaProgressLabel(session.agent_v2, locale),
-    [session.agent_v2, locale],
-  );
   const overlayFormOpen = birthFlowBlocking || showProfilePicker || showSummaryForm;
 
   const openUnlockReportModal = useCallback(() => setUnlockReportModalOpen(true), []);
@@ -1521,8 +1517,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                 setDriftReason("");
               }}
             />
-          ) : agendaProgressLabel ? (
-            <p className="px-1 text-xs text-muted-foreground">{agendaProgressLabel}</p>
+          ) : session.agent_v2 ? (
+            <AgendaProgressPanel agent={session.agent_v2} locale={locale} />
           ) : null
         }
         editDialog={
