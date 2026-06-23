@@ -11,7 +11,7 @@ import { buildStreamLocalDataFromProfile } from "@/lib/base-analysis/build-strea
 import { markedTextFromStoredBaseAnalysis } from "@/lib/base-analysis/resolve-display-text";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
-import { resolveProfileMatrixPayload } from "@/lib/poju/resolve-matrix-preview";
+import { resolveProfileMatrixPayloadWithoutLlm } from "@/lib/poju/resolve-matrix-preview";
 import {
   getStoredProfile,
   getStoredProfileRecord,
@@ -64,12 +64,17 @@ export function BaseAnalysisProfilePage() {
         data.base_analysis?.structured ??
         buildStreamLocalDataFromProfile(data.user_profile).structured;
 
-      const matrixPayload = await resolveProfileMatrixPayload({
-        profileId,
-        userProfile: data.user_profile,
-        locale,
-        product: "poju",
-      });
+      let matrixPayload: PojuMatrixPayload | null = null;
+      try {
+        matrixPayload = await resolveProfileMatrixPayloadWithoutLlm({
+          profileId,
+          userProfile: data.user_profile,
+          locale,
+          product: "poju",
+        });
+      } catch (e) {
+        console.warn("[BaseAnalysisProfilePage] matrix preview skipped:", e);
+      }
 
       setState({
         status: "ready",

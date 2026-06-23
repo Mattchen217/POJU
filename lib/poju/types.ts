@@ -48,7 +48,7 @@ export interface POJUMessage {
     /** DeepSeek / OpenRouter reasoning tokens + POJU thought digest for this turn. */
     thinking_process?: string;
     /** Collecting escalation — show refund entry (user-initiated). */
-    kind?: "energy_matrix" | "paywall" | "report";
+    kind?: "energy_matrix" | "paywall" | "report" | "welcome";
     matrix_payload?: import("./build-matrix-payload").PojuMatrixPayload;
     report_text?: string;
     report_profile_id?: string;

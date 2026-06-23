@@ -10,6 +10,7 @@ import { createInitialAgentState } from "@/lib/poju/agent-state";
 import { buildFallbackContextSummary } from "@/lib/poju/context-summary-builder";
 import {
   lastAssistantRequestsBirthForm,
+  loadSessionProfileBundle,
   resolveSessionHasProfile,
   withSessionProfileFlags,
 } from "@/lib/poju/session-profile";
@@ -48,18 +49,21 @@ function ensureContextSummary(session: POJUSessionState): POJUSessionState {
 }
 
 async function ensureBaseAnalysis(session: POJUSessionState): Promise<POJUSessionState> {
+  if (session.agent_v2?.has_base_analysis) return session;
   const profileId = session.selected_stored_profile_id;
-  if (!profileId || session.agent_v2?.has_base_analysis) return session;
-  try {
-    await generateBaseAnalysis(profileId);
-    return patchAgent(session, {
-      has_base_analysis: true,
-      selected_profile_id: profileId,
-    });
-  } catch (e) {
-    console.warn("[agent-orchestrator] Step 7 failed:", e);
-    return session;
+  if (profileId) {
+    try {
+      await generateBaseAnalysis(profileId);
+    } catch (e) {
+      console.warn("[agent-orchestrator] base-analysis gen failed:", e);
+    }
   }
+  const { base_analysis } = await loadSessionProfileBundle(session);
+  if (base_analysis == null) return session;
+  return patchAgent(session, {
+    has_base_analysis: true,
+    selected_profile_id: profileId ?? session.agent_v2?.selected_profile_id ?? null,
+  });
 }
 
 async function ensureBreakthroughCore(
@@ -70,9 +74,11 @@ async function ensureBreakthroughCore(
   if (!agent) return session;
   if (agent.current_phase !== "collecting_context") return session;
   if (agent.breakthrough_core != null) return session;
-  if (!agent.has_base_analysis) return session;
 
-  const out = await requestBreakthroughCore(session, locale);
+  const { base_analysis } = await loadSessionProfileBundle(session);
+  if (base_analysis == null) return session;
+
+  const out = await requestBreakthroughCore(session, locale, { base_analysis });
   return out.session;
 }
 
@@ -100,7 +106,7 @@ export async function runPostTurnOrchestration(
     pipelineError: null,
   };
 
-  if (resolveSessionHasProfile(s) && s.selected_stored_profile_id && !s.agent_v2?.has_base_analysis) {
+  if (resolveSessionHasProfile(s) && !s.agent_v2?.has_base_analysis) {
     ui.pipelineBusy = true;
     s = await ensureBaseAnalysis(s);
     ui.pipelineBusy = false;
@@ -112,7 +118,7 @@ export async function runPostTurnOrchestration(
   if (
     s.agent_v2?.current_phase === "collecting_context" &&
     s.agent_v2.breakthrough_core == null &&
-    s.agent_v2.has_base_analysis
+    resolveSessionHasProfile(s)
   ) {
     ui.pipelineBusy = true;
     try {
@@ -158,9 +164,12 @@ export async function runConfirmationPipeline(session: POJUSessionState, locale:
   const agent = s.agent_v2;
   if (!agent) throw new Error("agent_v2 required");
 
-  if (!agent.breakthrough_core && agent.has_base_analysis) {
-    const out = await requestBreakthroughCore(s, locale);
-    s = out.session;
+  if (!agent.breakthrough_core) {
+    const { base_analysis } = await loadSessionProfileBundle(s);
+    if (base_analysis != null) {
+      const out = await requestBreakthroughCore(s, locale, { base_analysis });
+      s = out.session;
+    }
   }
 
   const delivered = await runFinalDeliveryForSession(s, locale);

@@ -213,3 +213,48 @@ export function applyMatrixPreviewToPayload(
   }
   return applyToolMatrixNarrativeFailed(payload, product, locale);
 }
+
+/** Matrix preview without LLM — stored matrix_list or deterministic static fallback. */
+export function buildStaticMatrixPreviewPayload(
+  payload: PojuMatrixPayload,
+  product: MatrixPreviewProduct,
+  locale: string,
+): PojuMatrixPayload {
+  const failed = markMatrixNarrativeFailed(payload);
+  const display = failed.display;
+  if (!display) return failed;
+  return {
+    ...failed,
+    display: {
+      ...display,
+      synopsis: {
+        ...display.synopsis,
+        prompt: getOnboardingCopy(product, locale),
+      },
+      narrative_locale: locale,
+    },
+  };
+}
+
+/**
+ * Profile view / preview prep / report modal — never calls matrix narrative LLM.
+ */
+export async function resolveProfileMatrixPayloadWithoutLlm(opts: {
+  profileId: string;
+  userProfile: UserProfile;
+  locale: string;
+  product?: MatrixPreviewProduct;
+}): Promise<PojuMatrixPayload> {
+  let payload = buildMatrixPayloadFromProfile(opts.profileId, opts.userProfile, {
+    locale: opts.locale,
+  });
+  payload = refreshMatrixPayload(payload, opts.locale);
+  const product = opts.product ?? "poju";
+
+  const row = await getStoredProfile(opts.profileId);
+  if (storedMatrixListPresent(row)) {
+    return applyStoredMatrixPreview(payload, row!.matrix_list!, product, opts.locale);
+  }
+
+  return buildStaticMatrixPreviewPayload(payload, product, opts.locale);
+}

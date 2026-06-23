@@ -7,6 +7,7 @@ import type { BreakthroughCore, POJUAgentState } from "@/lib/poju/agent-state";
 import { formatContextForPrompt } from "@/lib/poju/context-extractor";
 import { parseInvestigationAgenda, type AgendaItem } from "@/lib/poju/investigation-agenda";
 import type { POJUSessionState } from "@/lib/poju/types";
+import { loadSessionProfileBundle } from "@/lib/poju/session-profile";
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 import { POJU_IDENTITY, POJU_KNOWLEDGE_ROOTS } from "@/lib/llm/prompts/poju-base";
 import { buildOutputPolicyForPoju } from "@/lib/llm/compliance/output-policy";
@@ -224,9 +225,13 @@ export async function resolveBaseAnalysisForBreakthrough(
   const id =
     uuidLike(session.selected_stored_profile_id) ??
     uuidLike(session.agent_v2?.selected_profile_id);
-  if (!id) return null;
-  const stored = await getStoredProfile(id);
-  return stored?.base_analysis?.content ?? stored?.base_analysis ?? null;
+  if (id) {
+    const stored = await getStoredProfile(id);
+    const ba = stored?.base_analysis?.content ?? stored?.base_analysis ?? null;
+    if (ba != null) return ba;
+  }
+  const { base_analysis } = await loadSessionProfileBundle(session);
+  return base_analysis ?? null;
 }
 
 function uuidLike(s: string | null | undefined): string | null {

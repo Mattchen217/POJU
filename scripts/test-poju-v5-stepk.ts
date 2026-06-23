@@ -67,11 +67,11 @@ function staticChecks(): void {
   const sessionPage = read("app/[locale]/(marketing)/poju/session/[sessionId]/page.tsx");
   assert("4 session redirects to prepare without profile", sessionPage.includes("/prepare"));
 
-  // 5 — no hardcoded welcome in session flow
-  const agentTs = read("lib/poju/agent.ts");
-  const sessionUsesWelcome =
-    sessionPage.includes("getWelcomeMessage") || agentTs.includes("getWelcomeMessage(");
-  assert("5 no getWelcomeMessage in live session/agent path", !sessionUsesWelcome);
+  // 5 — fixed welcome seeded locally before first user turn (no __OPENING__ LLM)
+  const chatBootstrap = read("lib/poju/chat-bootstrap.ts");
+  assert("5 chat-bootstrap getWelcomeMessage", chatBootstrap.includes("getWelcomeMessage"));
+  assert("5 POJUChatUI seeds fixed welcome", chatUi.includes("seedFixedWelcomeMessages"));
+  assert("5 POJUChatUI no auto triggerOpening", !chatUi.includes("void triggerOpening()"));
 
   // 6 — chart loader / preparing
   assert("6 ChartReadingLoader component", existsSync(resolve(ROOT, "components/poju/ChartReadingLoader.tsx")));

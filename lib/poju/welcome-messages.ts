@@ -44,3 +44,17 @@ export function getWelcomeMessage(locale: string): string {
   const lang = locale.split("-")[0].toLowerCase();
   return WELCOME[lang] ?? WELCOME.en;
 }
+
+const QUESTION_ECHO: Record<string, (q: string) => string> = {
+  en: (q) => `Your question for this session:\n\n"${q}"\n\nWhen you're ready, type below and send.`,
+  zh: (q) => `你这次会话的问题：\n\n"${q}"\n\n准备好了，在下方输入并发送即可。`,
+  es: (q) => `Tu pregunta para esta sesión:\n\n"${q}"\n\nCuando quieras, escribe abajo y envía.`,
+  fr: (q) => `Votre question pour cette session :\n\n"${q}"\n\nQuand vous voulez, écrivez ci-dessous et envoyez.`,
+  de: (q) => `Ihre Frage für diese Sitzung:\n\n"${q}"\n\nWenn Sie soweit sind, tippen Sie unten und senden Sie.`,
+};
+
+export function getQuestionEchoMessage(question: string, locale: string): string {
+  const lang = locale.split("-")[0].toLowerCase();
+  const fn = QUESTION_ECHO[lang] ?? QUESTION_ECHO.en;
+  return fn(question.trim());
+}

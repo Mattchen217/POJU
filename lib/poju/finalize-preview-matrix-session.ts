@@ -1,6 +1,6 @@
 import {
-  applyMatrixPreviewToPayload,
-  ensureProfileMatrixList,
+  applyStoredMatrixPreview,
+  resolveProfileMatrixPayloadWithoutLlm,
 } from "@/lib/poju/resolve-matrix-preview";
 import { refreshMatrixPayload } from "@/lib/poju/build-matrix-payload";
 import { isMatrixNarrativeReady } from "@/lib/poju/matrix-narrative-ready";
@@ -9,8 +9,8 @@ import {
   createEnergyMatrixMessage,
   hasPreviewMatrixMessage,
 } from "@/lib/poju/preview-unlock";
-import { markMatrixNarrativeFailed } from "@/lib/poju/apply-matrix-narrative";
-import { getOnboardingCopy } from "@/lib/poju/onboarding-templates";
+import { seedFixedWelcomeMessages } from "@/lib/poju/chat-bootstrap";
+import { getStoredProfile, storedMatrixListPresent } from "@/lib/profile/stored-profiles-service";
 import type { POJUSessionState } from "@/lib/poju/types";
 
 export async function finalizePreviewMatrixSession(
@@ -18,6 +18,7 @@ export async function finalizePreviewMatrixSession(
   locale: string,
   options?: { signal?: AbortSignal },
 ): Promise<POJUSessionState> {
+  void options?.signal;
   let working = session;
 
   if (!working.matrix_payload && working.selected_stored_profile_id) {
@@ -42,35 +43,21 @@ export async function finalizePreviewMatrixSession(
 
   let finalPayload = payload;
   if (!isMatrixNarrativeReady(payload)) {
-    try {
-      const ensured = await ensureProfileMatrixList({
+    const row = await getStoredProfile(profileId);
+    if (storedMatrixListPresent(row)) {
+      finalPayload = applyStoredMatrixPreview(payload, row!.matrix_list!, "poju", locale);
+    } else {
+      finalPayload = await resolveProfileMatrixPayloadWithoutLlm({
         profileId,
         userProfile: payload.user_profile,
         locale,
-        signal: options?.signal,
+        product: "poju",
       });
-      finalPayload = applyMatrixPreviewToPayload(payload, ensured, "poju", locale);
-    } catch {
-      const failed = markMatrixNarrativeFailed(payload);
-      const display = failed.display;
-      finalPayload =
-        display != null
-          ? {
-              ...failed,
-              display: {
-                ...display,
-                synopsis: {
-                  ...display.synopsis,
-                  prompt: getOnboardingCopy("poju", locale),
-                },
-              },
-            }
-          : failed;
     }
   }
 
   const matrixMsg = createEnergyMatrixMessage(finalPayload, locale);
-  const messages = hasPreviewMatrixMessage(working)
+  let messages = hasPreviewMatrixMessage(working)
     ? working.messages.map((m) =>
         m.meta?.kind === "energy_matrix"
           ? {
@@ -81,9 +68,11 @@ export async function finalizePreviewMatrixSession(
       )
     : [...working.messages, matrixMsg];
 
-  return {
+  let next: POJUSessionState = {
     ...working,
     matrix_payload: finalPayload,
     messages,
   };
+  next = seedFixedWelcomeMessages(next, locale);
+  return next;
 }

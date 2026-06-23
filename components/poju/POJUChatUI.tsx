@@ -21,6 +21,7 @@ import { clearPendingStoredProfileId, readPendingStoredProfileId } from "@/lib/p
 import { runConfirmationPipeline, runPostTurnOrchestration } from "@/lib/poju/agent-orchestrator";
 import { handleUserMessage, tryHandleRuleRejection } from "@/lib/poju/agent";
 import { appendBirthFlowMessage } from "@/lib/poju/birth-flow-messages";
+import { hasFixedWelcomeMessage, seedFixedWelcomeMessages } from "@/lib/poju/chat-bootstrap";
 import {
   downgradePrematureConfirmationPhase,
   shouldShowContextSummaryForm,
@@ -68,15 +69,12 @@ import { MainDeliveryView } from "@/components/poju/MainDeliveryView";
 import { PojuReportChatCard } from "@/components/poju/PojuReportChatCard";
 import { PojuUnlockReportModal } from "@/components/poju/PojuUnlockReportModal";
 import { hasUnlockReportMessage, prepareUnlockReleaseSession } from "@/lib/poju/finalize-unlock-bazi-session";
-import { sessionMatrixReadyForChat } from "@/lib/poju/matrix-narrative-ready";
-import { markMatrixNarrativeFailed } from "@/lib/poju/apply-matrix-narrative";
+import { sessionMatrixReadyForChat, isMatrixNarrativeReady } from "@/lib/poju/matrix-narrative-ready";
 import { refreshMatrixPayload } from "@/lib/poju/build-matrix-payload";
 import {
-  applyMatrixPreviewToPayload,
   applyStoredMatrixPreview,
-  ensureProfileMatrixList,
+  resolveProfileMatrixPayloadWithoutLlm,
 } from "@/lib/poju/resolve-matrix-preview";
-import { getOnboardingCopy } from "@/lib/poju/onboarding-templates";
 import { getStoredProfile, storedMatrixListPresent } from "@/lib/profile/stored-profiles-service";
 import {
   getUnlockReportMessage,
@@ -340,15 +338,19 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   useEffect(() => {
     if (openingInitRef.current) return;
     if (!resolveSessionHasProfile(session)) return;
-    if (isPreviewSession(session)) return;
-    if (normalizeAgentPhase(session.agent_v2?.current_phase) !== "opening") return;
+    if (hasUnlockReportMessage(session)) return;
+    if (hasFixedWelcomeMessage(session)) return;
     if (visibleMessages.length > 0) return;
     if (sending || confirmBusy || pipelineBusy) return;
 
     openingInitRef.current = true;
-    void triggerOpening();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per empty opening session
-  }, [session.session_id, session.agent_v2?.current_phase, visibleMessages.length]);
+    const seeded = seedFixedWelcomeMessages(session, locale);
+    if (seeded !== session) {
+      onSessionUpdate(seeded);
+      void savePOJUSession(seeded);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per empty session with profile
+  }, [session.session_id, session.messages, visibleMessages.length]);
 
   useEffect(() => {
     if (previewMatrixInitRef.current === session.session_id) return;
@@ -386,8 +388,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     const matrixMsg = sessionRef.current.messages[matrixIdx];
     const payload = matrixMsg?.meta?.matrix_payload;
     if (!payload?.display) return;
-    if (payload.display.narrative_source === "llm" && payload.display.narrative_locale === locale) return;
-    if (payload.display.narrative_failed === true) return;
+    if (isMatrixNarrativeReady(payload) && payload.display.narrative_locale === locale) return;
 
     const fetchKey = `${session.session_id}:${locale}`;
     if (matrixNarrativeRef.current === fetchKey) return;
@@ -398,29 +399,19 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       try {
         const refreshed = refreshMatrixPayload(payload, locale);
         const profileId = sessionRef.current.selected_stored_profile_id;
-        let updatedPayload = refreshed;
+        if (!profileId || !refreshed.user_profile) return;
 
-        const storedRow = profileId ? await getStoredProfile(profileId) : null;
-        if (storedMatrixListPresent(storedRow)) {
-          updatedPayload = applyStoredMatrixPreview(
-            refreshed,
-            storedRow!.matrix_list!,
-            "poju",
-            locale,
-          );
-        } else if (profileId && refreshed.user_profile) {
-          const ensured = await ensureProfileMatrixList({
-            profileId,
-            userProfile: refreshed.user_profile,
-            locale,
-            signal: ac.signal,
-          });
-          if (ac.signal.aborted) return;
-          updatedPayload = applyMatrixPreviewToPayload(refreshed, ensured, "poju", locale);
-        } else {
-          return;
-        }
+        const storedRow = await getStoredProfile(profileId);
+        const updatedPayload = storedMatrixListPresent(storedRow)
+          ? applyStoredMatrixPreview(refreshed, storedRow!.matrix_list!, "poju", locale)
+          : await resolveProfileMatrixPayloadWithoutLlm({
+              profileId,
+              userProfile: refreshed.user_profile,
+              locale,
+              product: "poju",
+            });
 
+        if (ac.signal.aborted) return;
         const current = sessionRef.current;
         const msgIdx = current.messages.findIndex((m) => m.meta?.kind === "energy_matrix");
         if (msgIdx < 0) return;
@@ -441,33 +432,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         if (ac.signal.aborted) return;
         console.warn("[poju] matrix preview resolve failed:", e);
         matrixNarrativeRef.current = null;
-
-        const current = sessionRef.current;
-        const msgIdx = current.messages.findIndex((m) => m.meta?.kind === "energy_matrix");
-        if (msgIdx < 0) return;
-        const basePayload = current.messages[msgIdx]?.meta?.matrix_payload ?? payload;
-        const failedPayload = markMatrixNarrativeFailed(basePayload);
-        const display = failedPayload.display;
-        const withPrompt =
-          display != null
-            ? {
-                ...failedPayload,
-                display: {
-                  ...display,
-                  synopsis: {
-                    ...display.synopsis,
-                    prompt: getOnboardingCopy("poju", locale),
-                  },
-                },
-              }
-            : failedPayload;
-        const messages = [...current.messages];
-        messages[msgIdx] = {
-          ...messages[msgIdx]!,
-          meta: { ...messages[msgIdx]!.meta, matrix_payload: withPrompt },
-        };
-        onSessionUpdate({ ...current, messages, matrix_payload: withPrompt });
-        await savePOJUSession({ ...current, messages, matrix_payload: withPrompt });
       }
     })();
 
@@ -571,53 +535,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     if (rejected) return;
 
     await runUserTurn(rewound, newContent);
-  }
-
-  async function triggerOpening() {
-    const gen = ++sendGenerationRef.current;
-    const ac = new AbortController();
-    sendAbortRef.current = ac;
-    setSending(true);
-    setThinkingMode("flash");
-    setLiveThinkingLine(null);
-    setReplyStreaming(false);
-    setGenerationStopped(false);
-
-    try {
-      let updated = await handleUserMessage({
-        session: sessionRef.current,
-        userMessage: "__OPENING__",
-        locale,
-        signal: ac.signal,
-        onStream: {
-          onReasoning: (text) => setLiveThinkingLine(text),
-          onContentStreamStart: () => {
-            setReplyStreaming(true);
-            setLiveThinkingLine(null);
-            scrollChatToBottom("auto");
-          },
-        },
-      });
-      if (ac.signal.aborted || gen !== sendGenerationRef.current) return;
-
-      const orch = await runPostTurnOrchestration(updated, { locale });
-      if (ac.signal.aborted || gen !== sendGenerationRef.current) return;
-
-      onSessionUpdate(orch.session);
-      setReplyStreaming(false);
-      await savePOJUSession(orch.session);
-    } catch (err) {
-      if (err instanceof Error && err.name === "AbortError") return;
-      console.error("[poju] Opening failed:", err);
-    } finally {
-      if (sendAbortRef.current === ac) sendAbortRef.current = null;
-      if (gen === sendGenerationRef.current) {
-        setSending(false);
-        setThinkingMode(null);
-        setLiveThinkingLine(null);
-        setReplyStreaming(false);
-      }
-    }
   }
 
   async function runUserTurn(
@@ -1063,17 +980,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       { selected_stored_profile_id: profileId },
     );
     if (updatedSession.agent_v2) {
-      const transitioned =
-        normalizeAgentPhase(updatedSession.agent_v2.current_phase) === "opening"
-          ? applyPhaseTransition(updatedSession.agent_v2, {
-              should_transition: true,
-              new_phase: "collecting_context",
-              reason: "Stored profile linked",
-            })
-          : updatedSession.agent_v2;
       updatedSession = {
         ...updatedSession,
-        agent_v2: { ...transitioned, selected_profile_id: profileId, profile_skipped: false },
+        agent_v2: {
+          ...updatedSession.agent_v2,
+          selected_profile_id: profileId,
+          profile_skipped: false,
+        },
       };
     }
     onSessionUpdate(updatedSession);
@@ -1089,16 +1002,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       return;
     }
 
-    let finalSession = await handleUserMessage({
-      session: updatedSession,
-      userMessage: "[SYSTEM: User linked a saved birth profile. Acknowledge and continue collecting context.]",
-      locale,
-    });
+    let finalSession = appendBirthFlowMessage(updatedSession, locale, "analysis_done");
     finalSession = clearBirthFormActionIfProfileBound(finalSession);
-    const orch = await runPostTurnOrchestration(finalSession, { locale });
-    const next = clearBirthFormActionIfProfileBound(orch.session);
-    onSessionUpdate(next);
-    await savePOJUSession(next);
+    onSessionUpdate(finalSession);
+    await savePOJUSession(finalSession);
   }
 
   async function handleConfirmSummary(editedSummary: ContextSummary) {

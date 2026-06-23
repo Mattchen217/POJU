@@ -9,7 +9,7 @@ import { buildStreamLocalDataFromProfile } from "@/lib/base-analysis/build-strea
 import { decodeMarkedDisplayText } from "@/lib/base-analysis/resolve-display-text";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
-import { resolveProfileMatrixPayload } from "@/lib/poju/resolve-matrix-preview";
+import { resolveProfileMatrixPayloadWithoutLlm } from "@/lib/poju/resolve-matrix-preview";
 import {
   getStoredProfile,
   getStoredProfileRecord,
@@ -72,7 +72,7 @@ export function PojuUnlockReportModal({
         );
         if (data?.user_profile) {
           try {
-            const payload = await resolveProfileMatrixPayload({
+            const payload = await resolveProfileMatrixPayloadWithoutLlm({
               profileId,
               userProfile: data.user_profile,
               locale,
