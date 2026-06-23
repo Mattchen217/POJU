@@ -23,9 +23,29 @@ const agent = {
 assert(resolveDeliveryMode({ agent_v2: agent }) === "degraded", "resolve from agent_v2");
 assert(resolveDeliveryMode({ agent_v2: agent, delivery_mode: "full" }) === "full", "explicit full wins");
 
+const mockBreakthroughCore = {
+  relationship_conclusion: "命盘七杀透而身弱，卡在不敢转行的结构性犹豫。",
+  breakthrough_directions: [
+    {
+      direction: "顺势试探新机会",
+      structural_basis: "month.ten_god=七杀",
+      what_would_confirm: "是否已有具体 offer",
+      status: "selected" as const,
+    },
+    {
+      direction: "守势稳住现金流",
+      structural_basis: "strength=weak",
+      what_would_confirm: "负债与 runway",
+      status: "hypothesis" as const,
+    },
+  ],
+  generated_at: new Date().toISOString(),
+};
+
 const { system, user, delivery_mode } = buildFinalDeliveryPrompt({
   base_analysis: { 格局: "示例", 用神: "木" },
-  situation_analysis: null,
+  breakthrough_core: null,
+  covered_agenda: [],
   agent_v2: agent,
   locale: "zh-CN",
   delivery_mode: "degraded",
@@ -42,7 +62,8 @@ assert(!system.includes("用户已确认情境汇总"), "full-only intro absent"
 
 const full = buildFinalDeliveryPrompt({
   base_analysis: { x: 1 },
-  situation_analysis: { y: 2 },
+  breakthrough_core: mockBreakthroughCore,
+  covered_agenda: [{ label: "是否已有 offer" }],
   agent_v2: { ...agent, delivery_mode: "full" },
   locale: "en",
   delivery_mode: "full",

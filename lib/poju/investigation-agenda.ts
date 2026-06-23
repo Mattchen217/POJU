@@ -53,6 +53,16 @@ export function evaluateAgendaCoverage(agenda: AgendaItem[]): {
   };
 }
 
+/** Covered agenda items for final-delivery spine evidence block. */
+export function buildCoveredAgendaEvidence(
+  agent: POJUAgentState | null | undefined,
+): Array<{ label: string; answer?: string }> {
+  const agenda = agent?.investigation_agenda ?? [];
+  return agenda
+    .filter((a) => a.status === "covered")
+    .map((a) => ({ label: a.label }));
+}
+
 export function isAgendaSatisfied(agenda: AgendaItem[]): boolean {
   if (agenda.length === 0) return false;
   const { criticalLeft, coveredRatio } = evaluateAgendaCoverage(agenda);
@@ -60,7 +70,7 @@ export function isAgendaSatisfied(agenda: AgendaItem[]): boolean {
 }
 
 export function parseInvestigationAgenda(raw: unknown): AgendaItem[] | null {
-  if (!Array.isArray(raw) || raw.length < 4) return null;
+  if (!Array.isArray(raw) || raw.length < 3) return null;
   const items: AgendaItem[] = [];
   for (const entry of raw) {
     if (!entry || typeof entry !== "object") continue;
@@ -80,7 +90,7 @@ export function parseInvestigationAgenda(raw: unknown): AgendaItem[] | null {
       supports: typeof o.supports === "string" ? o.supports.trim() : "",
     });
   }
-  if (items.length < 4 || items.length > 10) return null;
+  if (items.length < 3 || items.length > 6) return null;
   if (!items.some((a) => a.critical)) {
     items[0] = { ...items[0], critical: true };
   }

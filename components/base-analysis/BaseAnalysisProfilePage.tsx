@@ -11,12 +11,10 @@ import { buildStreamLocalDataFromProfile } from "@/lib/base-analysis/build-strea
 import { markedTextFromStoredBaseAnalysis } from "@/lib/base-analysis/resolve-display-text";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
-import { buildMatrixPayloadFromProfile, refreshMatrixPayload } from "@/lib/poju/build-matrix-payload";
-import { applyStoredMatrixPreview } from "@/lib/poju/resolve-matrix-preview";
+import { resolveProfileMatrixPayload } from "@/lib/poju/resolve-matrix-preview";
 import {
   getStoredProfile,
   getStoredProfileRecord,
-  storedMatrixListPresent,
 } from "@/lib/profile/stored-profiles-service";
 
 type LoadState =
@@ -66,12 +64,12 @@ export function BaseAnalysisProfilePage() {
         data.base_analysis?.structured ??
         buildStreamLocalDataFromProfile(data.user_profile).structured;
 
-      let matrixPayload: PojuMatrixPayload | null = null;
-      if (storedMatrixListPresent(data)) {
-        let payload = buildMatrixPayloadFromProfile(profileId, data.user_profile, { locale });
-        payload = refreshMatrixPayload(payload, locale);
-        matrixPayload = applyStoredMatrixPreview(payload, data.matrix_list!, "poju", locale);
-      }
+      const matrixPayload = await resolveProfileMatrixPayload({
+        profileId,
+        userProfile: data.user_profile,
+        locale,
+        product: "poju",
+      });
 
       setState({
         status: "ready",

@@ -4,14 +4,14 @@
  */
 
 import { safeRandomUUID } from "@/lib/client/safe-crypto";
-import type { POJUAgentState } from "@/lib/poju/agent-state";
+import type { POJUAgentState, BreakthroughCore } from "@/lib/poju/agent-state";
 import { findMissingFields } from "@/lib/poju/agent-state";
 import type { DeliveryMode } from "@/lib/poju/collection-progress";
 import { formatContextForPrompt } from "@/lib/poju/context-extractor";
 import type { POJUAction, POJUDelivery, POJUSessionState, POJUMessage } from "@/lib/poju/types";
 import { markCycleDelivered } from "@/lib/poju/cycle-manager";
-import { computeSituationContextFingerprint } from "@/lib/poju/situation-context-fingerprint";
-import { getCachedSituationAnalysis, resolveBaseAnalysisForSession } from "@/lib/llm/deepseek/situation-analysis";
+import { buildCoveredAgendaEvidence } from "@/lib/poju/investigation-agenda";
+import { resolveBaseAnalysisForBreakthrough } from "@/lib/llm/deepseek/breakthrough-core";
 import { buildPojuDeliveryCoreSections } from "@/lib/llm/prompts/poju-base";
 import { buildTermMarkingPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
@@ -247,21 +247,38 @@ ${regionalGuidance ? `${regionalGuidance}\n\n` : ""}规则:
 4. 总长约 700–1200 词/字。`;
 }
 
+function formatBreakthroughCoreForDelivery(core: BreakthroughCore | null): string {
+  if (!core) return "(none — degraded mode: rely on chart + collected context only.)";
+  const dirs = core.breakthrough_directions
+    .map(
+      (d) =>
+        `- ${d.direction} [status: ${d.status ?? "hypothesis"}]\n  锚：${d.structural_basis}\n  待验证：${d.what_would_confirm}`,
+    )
+    .join("\n");
+  return `关系结论（人与问题的结构性原因）：\n${core.relationship_conclusion}\n\n破局方向（经收集验证后的最终判断）：\n${dirs}`;
+}
+
+function formatCoveredAgendaForDelivery(
+  items: Array<{ label: string; answer?: string }>,
+): string {
+  if (items.length === 0) return "(尚无 covered 议程项 — 结合 collected context 作答，勿编造。)";
+  return items.map((a, i) => `${i + 1}. ${a.label}${a.answer ? `\n   用户确认：${a.answer}` : ""}`).join("\n");
+}
+
 export function buildFinalDeliveryPrompt(input: {
   base_analysis: unknown | null;
-  situation_analysis: unknown | null;
+  breakthrough_core: BreakthroughCore | null;
+  covered_agenda: Array<{ label: string; answer?: string }>;
   agent_v2: POJUAgentState;
   locale: string;
   recent_user_messages?: string[];
   delivery_mode?: DeliveryMode | null;
 }): { system: string; user: string; delivery_mode: DeliveryMode } {
-  const { base_analysis, situation_analysis, agent_v2, locale, recent_user_messages } = input;
+  const { base_analysis, breakthrough_core, covered_agenda, agent_v2, locale, recent_user_messages } = input;
   const delivery_mode = resolveDeliveryMode({ delivery_mode: input.delivery_mode, agent_v2 });
   const baseStr = safeJsonSlice(base_analysis, 3000);
-  const sitStr =
-    situation_analysis != null
-      ? safeJsonSlice(situation_analysis, 3000)
-      : "(none — degraded mode: rely primarily on Base Analysis chart content; do not invent situation details.)";
+  const spineStr = formatBreakthroughCoreForDelivery(breakthrough_core);
+  const agendaStr = formatCoveredAgendaForDelivery(covered_agenda);
   const { code: deliveryLang, instruction: langInstruction } = resolveDeliveryLanguage({
     original_question: agent_v2.original_question,
     locale,
@@ -274,19 +291,26 @@ export function buildFinalDeliveryPrompt(input: {
       ? buildDegradedDeliveryTask(regionalGuidance, langInstruction, deliveryLang, locale, agent_v2)
       : buildFullDeliveryTask(regionalGuidance, langInstruction, deliveryLang, locale);
 
-  const expertMaterials = `# 专家分析素材（可能为中文 — 仅作依据，勿照抄语言）
+  const expertMaterials = `# 专家分析素材（脊柱 · 已贯穿全程，禁从头重算）
 
-## 1. Base Analysis（命局基础 — 节选）
+## 推理脊柱（本次破局的骨架 —— ANALYSIS / CONCLUSION 必须长在它上面）
+${spineStr}
+
+## 议程证据（用户亲口确认、用于落地行动的事实）
+${agendaStr}
+
+## 命局基础（structured —— 事实源，节选）
 ${baseStr}
 
-## 2. Situation Analysis（所问之事 — 节选）
-${sitStr}
-
-# 整合要求
-
-将可用分析 **整合 + 必要时翻译** 为结构化长文交付。
-不得超出分析已暗示的范畴编造玄学结论。
-须按 POJU 八字深度解读法则展开 ANALYSIS；按行动设计原则填写 WHAT TO DO 三条。`;
+# 整合要求（闭环 · 反断点）
+- ANALYSIS：直接展开 relationship_conclusion，点名命盘真实结构（pillars_detail/yong_shen/da_yun…）；
+  不要重新做一遍困境分析，不要复述命盘。
+- CONCLUSION：落回 original_question，依据 = 被收集证据【选定】的那条破局方向（一句金句框直答）。
+- WHAT TO DO：3 条从「选定方向 × 用户亲口议程证据」生长，禁万能模板；
+  每条末尾 Profile basis 引具体结构（如"month.ten_god 七杀 + da_yun 第三步"）。
+- 全程只用本次 structured 实有命理实例；过 auditDeliveredText（集外神煞 / 断标记 / 裸干支 → 拒绝落库重生成）。
+- 不预测具体未来事件、不下吉凶断语、不暴露 Glyph/Syncro/Match。
+- 须按 POJU 八字深度解读法则展开 ANALYSIS；按行动设计原则填写 WHAT TO DO 三条。`;
 
   const finalDeliveryTask = `${modeTask}\n\n${expertMaterials}`;
 
@@ -306,7 +330,7 @@ ${sitStr}
   const modeHint =
     delivery_mode === "degraded"
       ? `Delivery mode: **degraded** — chart-forward, low-risk actions, honest limitation statement required.`
-      : `Delivery mode: **full** — integrate situation + chart; highly specific actions from user-stated details.`;
+      : `Delivery mode: **full** — spine-fed delivery from breakthrough_core + covered agenda evidence; highly specific actions from user-stated details.`;
 
   const user = `User's original question: "${agent_v2.original_question}"
 
@@ -484,7 +508,8 @@ export function buildPojuDeliveryFromFinalText(
 export async function requestFinalDeliveryFromApi(input: {
   session_id?: string;
   base_analysis: unknown | null;
-  situation_analysis: unknown | null;
+  breakthrough_core: BreakthroughCore | null;
+  covered_agenda: Array<{ label: string; answer?: string }>;
   agent_v2: POJUAgentState;
   locale: string;
   recent_user_messages?: string[];
@@ -529,18 +554,12 @@ export async function runFinalDeliveryForSession(
     agent_v2: session.agent_v2,
   });
 
-  const fp = await computeSituationContextFingerprint({
-    session_id: session.session_id,
-    original_question: session.original_question,
-    agent_v2: session.agent_v2,
-    context_collected: session.context_collected,
-  });
-  const sit = getCachedSituationAnalysis(session, fp);
-  if (delivery_mode === "full" && !sit?.content) {
-    throw new Error("No cached situation analysis for this context; run Step 8 first.");
+  if (delivery_mode === "full" && !session.agent_v2.breakthrough_core) {
+    throw new Error("No breakthrough_core persisted; run deep reckoning pass first.");
   }
 
-  const base_analysis = await resolveBaseAnalysisForSession(session);
+  const base_analysis = await resolveBaseAnalysisForBreakthrough(session);
+  const covered_agenda = buildCoveredAgendaEvidence(session.agent_v2);
 
   const recent_user_messages = session.messages
     .filter((m) => m.role === "user" && !m.is_rejected)
@@ -550,7 +569,8 @@ export async function runFinalDeliveryForSession(
   const result = await requestFinalDeliveryFromApi({
     session_id: session.session_id,
     base_analysis,
-    situation_analysis: sit?.content ?? null,
+    breakthrough_core: session.agent_v2.breakthrough_core,
+    covered_agenda,
     agent_v2: session.agent_v2,
     locale,
     recent_user_messages,

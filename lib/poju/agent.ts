@@ -8,6 +8,7 @@ import {
   calculateCompleteness,
   createInitialAgentState,
   decidePhaseTransition,
+  mergeBreakthroughCoreUpdates,
   normalizeAgentPhase,
   type AgentPhase,
   type ContextSummary,
@@ -91,6 +92,8 @@ type LLMApiPayload = {
   investigation_agenda?: unknown;
   suggest_refund?: boolean;
   locked_provider?: string;
+  understanding?: { sufficient: boolean; missing: string } | null;
+  breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null;
 };
 
 function ensureAgentV2(session: POJUSessionState): POJUAgentState {
@@ -143,6 +146,8 @@ function finalizeAgentV2(
     collection_progress?: "advancing" | "stalled" | "resistant" | null;
     stall_offer?: boolean;
     investigation_agenda?: unknown;
+    understanding?: { sufficient: boolean; missing: string } | null;
+    breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null;
   },
   userMessage: string,
   isSystemMessage: boolean,
@@ -185,6 +190,15 @@ function finalizeAgentV2(
     investigation_agenda,
     agenda_generated,
   };
+  if (merged.breakthrough_core && (llm as { breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null }).breakthrough_core_updates) {
+    const updates = (llm as { breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null }).breakthrough_core_updates;
+    if (updates) {
+      merged = {
+        ...merged,
+        breakthrough_core: mergeBreakthroughCoreUpdates(merged.breakthrough_core, updates),
+      };
+    }
+  }
   merged = {
     ...merged,
     collection_completeness: calculateCompleteness(merged),
@@ -229,6 +243,7 @@ function finalizeAgentV2(
     collecting_turn_count: counters.collecting_turn_count,
     stop_loss: stopLoss,
     stall_offer: stallOffer,
+    understanding_sufficient: llm.understanding?.sufficient,
   });
   let after = applyPhaseTransition(merged, transition);
   after = {
@@ -425,6 +440,8 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       collection_progress: llmResponse.collection_progress,
       stall_offer: llmResponse.stall_offer,
       investigation_agenda: llmResponse.investigation_agenda,
+      understanding: llmResponse.understanding ?? null,
+      breakthrough_core_updates: llmResponse.breakthrough_core_updates ?? null,
     },
     userMessage,
     isSystemMessage,
@@ -578,6 +595,8 @@ async function callLLMViaAPI(input: {
   investigation_agenda?: unknown;
   suggest_refund?: boolean;
   locked_provider?: string;
+  understanding?: { sufficient: boolean; missing: string } | null;
+  breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null;
 }> {
   const body = JSON.stringify({
     session: input.session,
@@ -724,6 +743,21 @@ function mapLlmApiPayload(
       typeof wire.locked_provider === "string" && wire.locked_provider.trim()
         ? wire.locked_provider.trim()
         : undefined,
+    understanding:
+      wire.understanding &&
+      typeof wire.understanding === "object" &&
+      !Array.isArray(wire.understanding)
+        ? {
+            sufficient: Boolean((wire.understanding as { sufficient?: unknown }).sufficient),
+            missing: String((wire.understanding as { missing?: unknown }).missing ?? ""),
+          }
+        : null,
+    breakthrough_core_updates:
+      wire.breakthrough_core_updates &&
+      typeof wire.breakthrough_core_updates === "object" &&
+      !Array.isArray(wire.breakthrough_core_updates)
+        ? (wire.breakthrough_core_updates as Partial<import("@/lib/poju/agent-state").BreakthroughCore>)
+        : null,
   };
 }
 

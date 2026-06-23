@@ -74,6 +74,9 @@ export interface POJULLMResponse {
   served_provider?: string | null;
   /** Resolved session lock (existing or newly set from served_provider). */
   locked_provider?: string;
+  /** Opening Deep Judge gate signal. */
+  understanding?: { sufficient: boolean; missing: string } | null;
+  breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null;
 }
 
 export async function callPOJULLM(input: CallInput): Promise<POJULLMResponse> {
@@ -157,6 +160,8 @@ async function callPOJULLMPhasePath(input: CallInput): Promise<POJULLMResponse> 
     investigation_agenda: phase.investigation_agenda ?? null,
     suggest_refund: Boolean(phase.suggest_refund),
     served_provider: phase.served_provider ?? null,
+    understanding: phase.understanding ?? null,
+    breakthrough_core_updates: phase.breakthrough_core_updates ?? null,
   };
 }
 

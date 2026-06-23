@@ -61,8 +61,9 @@ async function handleConfirmProceed(input: PhaseLLMInput): Promise<PhaseLLMResul
     messages,
     withPhaseStreamOpts(input, {
       call_type: "collection_flash",
-      max_tokens: 800,
+      max_tokens: 2500,
       temperature: 0.45,
+      thinking_effort: "xhigh",
     }),
   );
 
@@ -110,8 +111,9 @@ async function generateSummaryPhase(input: PhaseLLMInput): Promise<PhaseLLMResul
     messages,
     withPhaseStreamOpts(input, {
       call_type: "collection_flash",
-      max_tokens: 3000,
+      max_tokens: 7000,
       temperature: 0.45,
+      thinking_effort: "xhigh",
     }),
   );
 
@@ -162,8 +164,9 @@ async function handleStallOfferReply(input: PhaseLLMInput): Promise<PhaseLLMResu
     messages,
     withPhaseStreamOpts(input, {
       call_type: "collection_flash",
-      max_tokens: 900,
+      max_tokens: 2500,
       temperature: 0.45,
+      thinking_effort: "xhigh",
     }),
   );
 
@@ -222,8 +225,9 @@ ${TRANSITION_CONSENT_RULES}
     messages,
     withPhaseStreamOpts(input, {
       call_type: "collection_flash",
-      max_tokens: 1200,
+      max_tokens: 4000,
       temperature: 0.45,
+      thinking_effort: "xhigh",
     }),
   );
 

@@ -59,5 +59,8 @@ export interface PhaseLLMResult {
   suggest_refund?: boolean;
   /** OpenRouter upstream provider that served this turn (for session lock). */
   served_provider?: string | null;
+  breakthrough_core?: import("@/lib/poju/agent-state").BreakthroughCore | null;
+  breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null;
+  understanding?: { sufficient: boolean; missing: string } | null;
 }
 

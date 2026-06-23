@@ -7,13 +7,18 @@ import {
 } from "@/lib/llm/pro/final-delivery";
 import { callLLM } from "@/lib/llm/router";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
-import { sanitizeDeliveryText, auditDeliveredText } from "@/lib/llm/sanitize/compliance-terms";
+import { sanitizeDeliveryText } from "@/lib/llm/sanitize/compliance-terms";
+import { detectShenShaPollution } from "@/lib/llm/sanitize/closed-set-circuit-breaker";
 import { polishDeliveryGrammar } from "@/lib/llm/sanitize/delivery-grammar-polish";
 import {
+  auditDeepStringFields,
   buildAuditRegenHint,
   isCriticalDeliveryAuditFailure,
 } from "@/lib/llm/services/delivery-audit-regen";
-import { normalizeAgentPhase, type POJUAgentState } from "@/lib/poju/agent-state";
+import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
+import type { BreakthroughCore, POJUAgentState } from "@/lib/poju/agent-state";
+import { normalizeAgentPhase } from "@/lib/poju/agent-state";
+import type { POJUAction } from "@/lib/poju/types";
 
 export const maxDuration = 180;
 
@@ -29,8 +34,20 @@ function isLooseAgentState(x: unknown): x is POJUAgentState {
   return true;
 }
 
+function isBreakthroughCore(x: unknown): x is BreakthroughCore {
+  if (!isRecord(x)) return false;
+  if (typeof x.relationship_conclusion !== "string") return false;
+  if (!Array.isArray(x.breakthrough_directions)) return false;
+  return true;
+}
+
+function buildDeliveryAuditText(fullText: string, actions: POJUAction[]): string {
+  const actionText = actions.map((a) => `${a.text}\n${a.rationale}`).join("\n");
+  return `${fullText}\n${actionText}`;
+}
+
 /**
- * Body: `{ agent_v2, locale, base_analysis?, situation_analysis, recent_user_messages? }`
+ * Body: `{ agent_v2, locale, base_analysis?, breakthrough_core, covered_agenda?, recent_user_messages? }`
  */
 export async function POST(req: Request) {
   try {
@@ -46,7 +63,8 @@ export async function POST(req: Request) {
       agent_v2?: unknown;
       locale?: unknown;
       base_analysis?: unknown;
-      situation_analysis?: unknown;
+      breakthrough_core?: unknown;
+      covered_agenda?: unknown;
       recent_user_messages?: unknown;
       delivery_mode?: unknown;
     };
@@ -61,24 +79,36 @@ export async function POST(req: Request) {
       agent_v2: body.agent_v2,
     });
 
-    if (delivery_mode === "full" && (body.situation_analysis === undefined || body.situation_analysis === null)) {
-      return NextResponse.json({ ok: false, error: "Missing situation_analysis" }, { status: 400 });
+    const breakthrough_core =
+      body.breakthrough_core === undefined || body.breakthrough_core === null
+        ? null
+        : isBreakthroughCore(body.breakthrough_core)
+          ? body.breakthrough_core
+          : null;
+
+    if (delivery_mode === "full" && !breakthrough_core) {
+      return NextResponse.json({ ok: false, error: "Missing breakthrough_core" }, { status: 400 });
     }
 
     const locale = typeof body.locale === "string" ? body.locale : "en";
     const base_analysis = body.base_analysis === undefined || body.base_analysis === null ? null : body.base_analysis;
+    const structured = normalizeBaseAnalysisInput(base_analysis).structured ?? null;
     const recent_user_messages = Array.isArray(body.recent_user_messages)
       ? body.recent_user_messages.filter((m): m is string => typeof m === "string" && m.trim().length > 0)
       : [];
-
-    const situation_analysis =
-      body.situation_analysis === undefined || body.situation_analysis === null
-        ? null
-        : body.situation_analysis;
+    const covered_agenda = Array.isArray(body.covered_agenda)
+      ? body.covered_agenda
+          .filter((e): e is { label: string; answer?: string } => isRecord(e) && typeof e.label === "string")
+          .map((e) => ({
+            label: e.label,
+            answer: typeof e.answer === "string" ? e.answer : undefined,
+          }))
+      : [];
 
     const { system, user } = buildFinalDeliveryPrompt({
       base_analysis,
-      situation_analysis,
+      breakthrough_core,
+      covered_agenda,
       agent_v2: body.agent_v2,
       locale,
       recent_user_messages,
@@ -91,23 +121,14 @@ export async function POST(req: Request) {
         ? pojuCacheSessionId(body.session_id.trim())
         : undefined;
 
-    let userContent = user;
-    let auditRetried = false;
-    let result = await callLLM({
-      call_type: "main_delivery",
-      system,
-      messages: [{ role: "user", content: userContent }],
-      max_tokens: 8000,
-      response_format: "text",
-      session_id: sessionId,
-      temperature: 0.55,
-    });
+    const maxRetries = 2;
+    let hint: string | null = null;
+    let text = "";
+    let actions: POJUAction[] = [];
+    let result: Awaited<ReturnType<typeof callLLM>> | null = null;
 
-    let auditViolations = auditDeliveredText(result.content, locale);
-    if (isCriticalDeliveryAuditFailure(auditViolations) && !auditRetried) {
-      auditRetried = true;
-      console.warn("[final-delivery] audit regen (1x)", auditViolations.slice(0, 5));
-      userContent = user + buildAuditRegenHint(auditViolations, locale);
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      const userContent = hint ? `${user}\n\n${hint}` : user;
       result = await callLLM({
         call_type: "main_delivery",
         system,
@@ -115,14 +136,48 @@ export async function POST(req: Request) {
         max_tokens: 8000,
         response_format: "text",
         session_id: sessionId,
-        temperature: 0.3,
+        temperature: attempt === 0 ? 0.55 : 0.3,
       });
-      auditViolations = auditDeliveredText(result.content, locale);
+
+      const polished = polishDeliveryGrammar(result.content.trim(), locale);
+      text = sanitizeDeliveryText(polished.text, locale);
+      actions = extractActionsFromDelivery(text, null);
+      const auditText = buildDeliveryAuditText(text, actions);
+      const { polluted, hits } = detectShenShaPollution(auditText, structured, locale);
+      const deepViolations = auditDeepStringFields({ full_text: text, actions }, locale, "poju");
+      const deepFail = isCriticalDeliveryAuditFailure(deepViolations);
+
+      if (!polluted && !deepFail) break;
+
+      console.error(
+        `[circuit-breaker:final-delivery] 交付审计未通过，熔断重试 ${attempt + 1}/${maxRetries}:`,
+        polluted ? hits.slice(0, 5) : deepViolations.slice(0, 5).map((v) => v.label),
+      );
+
+      const hints: string[] = [];
+      if (polluted) {
+        hints.push(
+          `⚠️ 你上一次产出包含了集外或不在本盘的神煞：${hits.slice(0, 5).join("、")}。严禁！神煞只能用本次 structured 实际算出的闭集 9 个。删除所有集外神煞，重写。`,
+        );
+      }
+      if (deepFail) hints.push(buildAuditRegenHint(deepViolations, locale));
+      hint = hints.join("\n\n");
+
+      if (attempt === maxRetries) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: `[circuit-breaker:final-delivery] 集外/合规污染，${maxRetries} 次重试后仍脏，拒绝交付。`,
+          },
+          { status: 422 },
+        );
+      }
     }
 
-    const polished = polishDeliveryGrammar(result.content.trim(), locale);
-    const text = sanitizeDeliveryText(polished.text, locale);
-    const actions = extractActionsFromDelivery(text, body.situation_analysis);
+    if (!result) {
+      return NextResponse.json({ ok: false, error: "final_delivery_failed" }, { status: 500 });
+    }
+
     const latency_ms = result.meta.latency_ms || Date.now() - t0;
 
     return NextResponse.json({

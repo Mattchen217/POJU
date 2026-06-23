@@ -13,6 +13,9 @@
     "app/api/poju/situation-analysis/route.ts": {
       "maxDuration": 300
     },
+    "app/api/poju/breakthrough-core/route.ts": {
+      "maxDuration": 300
+    },
     "app/api/poju/final-delivery/route.ts": {
       "maxDuration": 300
     },

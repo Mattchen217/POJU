@@ -133,9 +133,9 @@ export function getThinkingConfig(callType: LLMCallType): { enabled: boolean; ef
   switch (t) {
     case "chat_flash":
     case "tracking_flash":
-      return { enabled: false, effort: "off" };
+      return { enabled: true, effort: "high" };
     case "collection_flash":
-      return { enabled: true, effort: "low" };
+      return { enabled: true, effort: "xhigh" };
     case "deep_analysis":
       return { enabled: true, effort: "medium" };
     case "main_delivery":

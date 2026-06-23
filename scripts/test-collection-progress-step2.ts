@@ -44,7 +44,6 @@ function sampleAgenda(partial: Partial<Record<string, AgendaItem["status"]>> = {
     { id: "stakes", label: "真实诉求", critical: true, status: "unexplored" },
     { id: "resources", label: "可用资源", critical: false, status: "unexplored" },
     { id: "exit_cost", label: "退出成本", critical: false, status: "unexplored" },
-    { id: "energy", label: "精力临界", critical: false, status: "unexplored" },
   ];
   return base.map((item) => ({
     ...item,
@@ -60,7 +59,6 @@ function coveredAgenda(): AgendaItem[] {
     stakes: "covered",
     resources: "covered",
     exit_cost: "covered",
-    energy: "covered",
   });
 }
 
@@ -79,7 +77,15 @@ function agent(partial: Partial<POJUAgentState> = {}): POJUAgentState {
 const parsed = parseInvestigationAgenda(
   sampleAgenda().map(({ id, label, critical, status }) => ({ id, label, critical, status })),
 );
-assert(parsed !== null && parsed.length === 7, "parse investigation agenda");
+assert(parsed !== null && parsed.length === 6, "parse investigation agenda (3–6 items)");
+
+const rejects7 = parseInvestigationAgenda(
+  sampleAgenda().concat([
+    { id: "extra1", label: "x", critical: false, status: "unexplored" },
+    { id: "extra2", label: "y", critical: false, status: "unexplored" },
+  ]).map(({ id, label, critical, status }) => ({ id, label, critical, status })),
+);
+assert(rejects7 === null, "parse rejects >6 items");
 
 const withSupports = parseInvestigationAgenda([
   { id: "a", label: "现金流 runway", critical: true, status: "unexplored", supports: "止损收缩" },
@@ -156,31 +162,30 @@ assert(
 // Stall counters unchanged
 assert(nextStallCount(2, "advancing") === 0, "advancing resets stall");
 
-// Premature: turns < 7 or agenda incomplete
-assert(isPrematureCollectingPhase(agent(), 3), "premature at 3 user turns");
+// Premature: turns < MIN or agenda incomplete
+assert(isPrematureCollectingPhase(agent(), 2), "premature at 2 user turns");
 assert(
-  isPrematureCollectingPhase(agent({ investigation_agenda: coveredAgenda() }), 3),
-  "premature at 3 turns even with covered agenda",
-);
-assert(
-  !isPrematureCollectingPhase(agent({ investigation_agenda: coveredAgenda(), turn_count: 7 }), 7),
-  "not premature at 7 turns with covered agenda",
+  !isPrematureCollectingPhase(
+    agent({ investigation_agenda: coveredAgenda(), turn_count: MIN_COLLECTING_USER_TURNS }),
+    MIN_COLLECTING_USER_TURNS,
+  ),
+  "not premature at MIN turns with covered agenda",
 );
 
-// Blocked: 6 turns + full agenda
-const almost = agent({ investigation_agenda: coveredAgenda(), turn_count: 6 });
+// Blocked: below MIN turns even with full agenda
+const almost = agent({ investigation_agenda: coveredAgenda(), turn_count: 2 });
 const blocked = decidePhaseTransition({
   current_state: almost,
   llm_suggested_phase: "awaiting_confirmation",
   user_message: "继续",
-  user_turn_count: 6,
-  collecting_turn_count: 6,
+  user_turn_count: 2,
+  collecting_turn_count: 2,
   stop_loss: { triggered: false, reason: null },
 });
-assert(!blocked.should_transition, "6 turns blocked");
+assert(!blocked.should_transition, "2 turns blocked");
 assert(blocked.new_phase === "collecting_context", "stays collecting");
 
-// Allowed: 7 turns + agenda satisfied
+// Allowed: MIN turns + agenda satisfied
 const ready = agent({ investigation_agenda: coveredAgenda(), turn_count: MIN_COLLECTING_USER_TURNS });
 const ok = decidePhaseTransition({
   current_state: ready,
@@ -190,7 +195,7 @@ const ok = decidePhaseTransition({
   collecting_turn_count: MIN_COLLECTING_USER_TURNS,
   stop_loss: { triggered: false, reason: null },
 });
-assert(ok.new_phase === "awaiting_confirmation", "7 turns + agenda → confirmation");
+assert(ok.new_phase === "awaiting_confirmation", "MIN turns + agenda → confirmation");
 
 // Hard push early path
 const pushAgenda = applyAgendaStatusUpdates(sampleAgenda(), {

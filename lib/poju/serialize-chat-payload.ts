@@ -28,6 +28,8 @@ export const CHAT_PAYLOAD_FIELDS = [
   "new_cycle_question",
   "suggest_refund",
   "locked_provider",
+  "understanding",
+  "breakthrough_core_updates",
 ] as const;
 
 export type ChatPayloadField = (typeof CHAT_PAYLOAD_FIELDS)[number];
@@ -72,6 +74,8 @@ export function pojuLlmToChatPayload(
     new_cycle_question: llm.new_cycle_question ?? null,
     suggest_refund: llm.suggest_refund ?? false,
     locked_provider: llm.locked_provider,
+    understanding: llm.understanding ?? null,
+    breakthrough_core_updates: llm.breakthrough_core_updates ?? null,
     ...overrides,
   });
 }
@@ -112,5 +116,7 @@ export function chatPayloadFromWire(
       typeof data.new_cycle_question === "string" ? data.new_cycle_question : null,
     suggest_refund: data.suggest_refund === true,
     locked_provider: data.locked_provider,
+    understanding: data.understanding ?? null,
+    breakthrough_core_updates: data.breakthrough_core_updates ?? null,
   });
 }

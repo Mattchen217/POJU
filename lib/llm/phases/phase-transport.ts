@@ -80,6 +80,7 @@ export async function callPhaseJsonTransport(
     provider_extra_ignore?: string[];
     locked_provider?: string;
     route_path?: OpenRouterRoutePath;
+    thinking_effort?: import("@/lib/llm/router").ReasoningEffort;
   },
 ): Promise<PhaseTransportResult> {
   const temperature = options?.temperature ?? 0.5;
@@ -113,7 +114,7 @@ export async function callPhaseJsonTransport(
             max_tokens,
             temperature,
             json_mode: true,
-            reasoning_effort: call_type === "collection_flash" ? "medium" : "medium",
+            reasoning_effort: options?.thinking_effort ?? "xhigh",
             session_id: options?.session_id,
             call_type: call_type,
             phase_name: options?.phase_name,
@@ -147,6 +148,7 @@ export async function callPhaseJsonTransport(
         phase_name: options?.phase_name,
         route_path: routePath,
         locked_provider: locked,
+        thinking_effort: options?.thinking_effort,
       });
       return {
         content: result.content,
@@ -159,6 +161,9 @@ export async function callPhaseJsonTransport(
       };
     }
 
+    console.error(
+      "[poju] OpenRouter not configured — POJU falling back to Gemini flash; deep-thinking disabled.",
+    );
     if (!getGeminiClient()) {
       throw new Error("missing_llm_api_key");
     }
@@ -442,6 +447,7 @@ export function withPhaseStreamOpts<
     max_tokens?: number;
     call_type?: import("@/lib/llm/router").LLMCallType;
     phase_name?: string;
+    thinking_effort?: import("@/lib/llm/router").ReasoningEffort;
   },
 >(
   input: {

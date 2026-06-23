@@ -4,9 +4,12 @@ import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { BaseAnalysisDeliveryView } from "@/components/base-analysis/BaseAnalysisDeliveryView";
+import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
 import { buildStreamLocalDataFromProfile } from "@/lib/base-analysis/build-stream-local-data";
 import { decodeMarkedDisplayText } from "@/lib/base-analysis/resolve-display-text";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
+import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
+import { resolveProfileMatrixPayload } from "@/lib/poju/resolve-matrix-preview";
 import {
   getStoredProfile,
   getStoredProfileRecord,
@@ -15,6 +18,7 @@ import {
 import "@/styles/glyph-delivery.css";
 import "@/styles/base-analysis-delivery.css";
 import "@/styles/poju-unlock-report.css";
+import "@/styles/poju-energy-matrix.css";
 
 type Props = {
   open: boolean;
@@ -38,6 +42,7 @@ export function PojuUnlockReportModal({
     import("@/lib/profile/types").UserProfile | null
   >(null);
   const [displayName, setDisplayName] = useState<string | undefined>();
+  const [matrixPayload, setMatrixPayload] = useState<PojuMatrixPayload | null>(null);
 
   const displayText = decodeMarkedDisplayText(reportText);
 
@@ -46,6 +51,7 @@ export function PojuUnlockReportModal({
       setStructured(null);
       setUserProfile(null);
       setDisplayName(undefined);
+      setMatrixPayload(null);
       return;
     }
     let cancelled = false;
@@ -64,6 +70,20 @@ export function PojuUnlockReportModal({
               ? buildStreamLocalDataFromProfile(data.user_profile).structured
               : null),
         );
+        if (data?.user_profile) {
+          try {
+            const payload = await resolveProfileMatrixPayload({
+              profileId,
+              userProfile: data.user_profile,
+              locale,
+              product: "poju",
+            });
+            if (!cancelled) setMatrixPayload(payload);
+          } catch (e) {
+            console.warn("[PojuUnlockReportModal] matrix preview failed:", e);
+            if (!cancelled) setMatrixPayload(null);
+          }
+        }
       } catch {
         if (!cancelled) setStructured(null);
       }
@@ -71,7 +91,7 @@ export function PojuUnlockReportModal({
     return () => {
       cancelled = true;
     };
-  }, [open, profileId]);
+  }, [open, profileId, locale]);
 
   useEffect(() => {
     if (!open) return;
@@ -115,6 +135,11 @@ export function PojuUnlockReportModal({
             variant="modal"
             showPageHeader={false}
           />
+          {matrixPayload ? (
+            <section className="px-2 pb-4">
+              <PojuEnergyMatrix payload={matrixPayload} locale={locale} compact />
+            </section>
+          ) : null}
         </div>
 
         <footer className="poju-unlock-report-panel__foot">

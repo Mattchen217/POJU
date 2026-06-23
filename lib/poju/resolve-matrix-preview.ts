@@ -140,6 +140,36 @@ export async function ensureProfileMatrixList(opts: {
   return { list, narrative, fromStorage: false };
 }
 
+/**
+ * Profile view / report modal: stored matrix_list or one-time legacy backfill, then payload for UI.
+ */
+export async function resolveProfileMatrixPayload(opts: {
+  profileId: string;
+  userProfile: UserProfile;
+  locale: string;
+  product?: MatrixPreviewProduct;
+  signal?: AbortSignal;
+}): Promise<PojuMatrixPayload> {
+  let payload = buildMatrixPayloadFromProfile(opts.profileId, opts.userProfile, {
+    locale: opts.locale,
+  });
+  payload = refreshMatrixPayload(payload, opts.locale);
+  const product = opts.product ?? "poju";
+
+  const row = await getStoredProfile(opts.profileId);
+  if (storedMatrixListPresent(row)) {
+    return applyStoredMatrixPreview(payload, row!.matrix_list!, product, opts.locale);
+  }
+
+  const ensured = await ensureProfileMatrixList({
+    profileId: opts.profileId,
+    userProfile: opts.userProfile,
+    locale: opts.locale,
+    signal: opts.signal,
+  });
+  return applyMatrixPreviewToPayload(payload, ensured, product, opts.locale);
+}
+
 export function applyFreshNarrativeToPayload(
   payload: PojuMatrixPayload,
   narrative: MatrixNarrativeResponse,

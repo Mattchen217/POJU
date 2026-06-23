@@ -37,7 +37,25 @@ async function main() {
       },
       display_text: "Metal-like core nature; Water balances intensity.",
     },
-    situation_analysis: { core_tension: "growth vs rent pressure in Toronto" },
+    breakthrough_core: {
+      relationship_conclusion: "Metal core resists pay cut while learning hunger pulls toward lateral move.",
+      breakthrough_directions: [
+        {
+          direction: "Negotiate learning + partial pay protection",
+          structural_basis: "core_nature Metal + balancing Water",
+          what_would_confirm: "rent runway in Toronto",
+          status: "selected",
+        },
+        {
+          direction: "Stay and upskill in place",
+          structural_basis: "life_cycle skill expansion",
+          what_would_confirm: "internal growth path",
+          status: "hypothesis",
+        },
+      ],
+      generated_at: new Date().toISOString(),
+    },
+    covered_agenda: [{ label: "rent pressure in Toronto" }],
     locale: "en",
     recent_user_messages: ["I value learning but worry about rent in Toronto."],
   });

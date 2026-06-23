@@ -3,12 +3,11 @@
  */
 
 import { generateBaseAnalysis } from "@/lib/llm/deepseek/base-analysis";
-import { getCachedSituationAnalysis, requestSituationAnalysis } from "@/lib/llm/deepseek/situation-analysis";
+import { requestBreakthroughCore } from "@/lib/llm/deepseek/breakthrough-core";
 import { runFinalDeliveryForSession } from "@/lib/llm/pro/final-delivery";
 import type { POJUAgentState } from "@/lib/poju/agent-state";
 import { createInitialAgentState } from "@/lib/poju/agent-state";
 import { buildFallbackContextSummary } from "@/lib/poju/context-summary-builder";
-import { computeSituationContextFingerprint } from "@/lib/poju/situation-context-fingerprint";
 import {
   lastAssistantRequestsBirthForm,
   resolveSessionHasProfile,
@@ -63,6 +62,20 @@ async function ensureBaseAnalysis(session: POJUSessionState): Promise<POJUSessio
   }
 }
 
+async function ensureBreakthroughCore(
+  session: POJUSessionState,
+  locale: string,
+): Promise<POJUSessionState> {
+  const agent = session.agent_v2;
+  if (!agent) return session;
+  if (agent.current_phase !== "collecting_context") return session;
+  if (agent.breakthrough_core != null) return session;
+  if (!agent.has_base_analysis) return session;
+
+  const out = await requestBreakthroughCore(session, locale);
+  return out.session;
+}
+
 export async function runPostTurnOrchestration(
   session: POJUSessionState,
   opts: { locale: string; lastUserMessage?: string; autoPipeline?: boolean },
@@ -98,6 +111,24 @@ export async function runPostTurnOrchestration(
   }
 
   if (
+    s.agent_v2?.current_phase === "collecting_context" &&
+    s.agent_v2.breakthrough_core == null &&
+    s.agent_v2.has_base_analysis
+  ) {
+    ui.pipelineBusy = true;
+    try {
+      s = await ensureBreakthroughCore(s, locale);
+      ui.pipelineNotice = locale.startsWith("zh")
+        ? "破局推理脊柱与调查议程已生成。"
+        : "Breakthrough spine and investigation agenda are ready.";
+    } catch (e) {
+      console.warn("[agent-orchestrator] Breakthrough core failed:", e);
+      ui.pipelineError = e instanceof Error ? e.message : String(e);
+    }
+    ui.pipelineBusy = false;
+  }
+
+  if (
     auto &&
     s.agent_v2?.delivery_mode === "degraded" &&
     s.agent_v2.current_phase === "delivered" &&
@@ -119,22 +150,17 @@ export async function runPostTurnOrchestration(
   return { session: s, ui };
 }
 
-/** After user confirms the context summary: Step 8 (if needed) → Step 9. */
+/** After user confirms the context summary: Step 9 (spine-fed delivery). */
 export async function runConfirmationPipeline(session: POJUSessionState, locale: string): Promise<POJUSessionState> {
   let s = withSessionProfileFlags(session);
   if (!s.agent_v2) throw new Error("agent_v2 required");
 
   s = await ensureBaseAnalysis(s);
+  const agent = s.agent_v2;
+  if (!agent) throw new Error("agent_v2 required");
 
-  const fp = await computeSituationContextFingerprint({
-    session_id: s.session_id,
-    original_question: s.original_question,
-    agent_v2: s.agent_v2,
-    context_collected: s.context_collected,
-  });
-
-  if (!getCachedSituationAnalysis(s, fp)?.content) {
-    const out = await requestSituationAnalysis(s, locale, { force: false });
+  if (!agent.breakthrough_core && agent.has_base_analysis) {
+    const out = await requestBreakthroughCore(s, locale);
     s = out.session;
   }
 

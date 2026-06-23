@@ -71,6 +71,8 @@ export function mapPhaseResultToChatPayload(
     stall_offer: Boolean(phase.stall_offer),
     investigation_agenda: phase.investigation_agenda ?? null,
     suggest_refund: Boolean(phase.suggest_refund),
+    understanding: phase.understanding ?? null,
+    breakthrough_core_updates: phase.breakthrough_core_updates ?? null,
   };
 
   return applyPojuOutputPolicies(base, {

@@ -50,7 +50,7 @@ async function main(): Promise<void> {
   assert("identity POJU 智者", POJU_IDENTITY.includes("精通东方文化"));
   assert("identity Match 不归我", POJU_IDENTITY.includes("Match"));
 
-  assert("identity 我是 POJU", POJU_IDENTITY.includes("我是 POJU"));
+  assert("identity 我叫 POJU", POJU_IDENTITY.includes("我叫 POJU"));
   assert("chat core output policy wired", buildPojuChatCoreSections().some((s) => s.includes("POJULIFE OUTPUT POLICY")));
   assert(
     "delivery core BAZI method",
@@ -76,9 +76,9 @@ async function main(): Promise<void> {
   assert("context has buildPojuSystemPrompt", ctx.includes("buildPojuSystemPrompt"));
   assert("context NOT ORIENTAL_COUNSELOR_BASE", !ctx.includes("ORIENTAL_COUNSELOR_BASE"));
 
-  assert("collecting investigation_agenda", collecting.includes("investigation_agenda"));
-  assert("collecting agenda 6-8 items", collecting.includes("6–8 项"));
-  assert("collecting agenda ≥3 critical", collecting.includes("至少 3 项"));
+  assert("collecting breakthrough_core_updates", collecting.includes("breakthrough_core_updates"));
+  assert("collecting no agenda generation block", !collecting.includes("buildAgendaGenerationBlock"));
+  assert("collecting spine block", collecting.includes("buildSpineBlock"));
   assert("collecting response-first JSON order", collecting.includes("response 第一个键"));
   assert("collecting topic_drift + new session button", collecting.includes("should_show_new_session_button"));
   assert("collecting no rigid escalation template", !collecting.includes("buildCollectingEscalationBlock"));
@@ -164,7 +164,25 @@ async function main(): Promise<void> {
 
   const { system: deliverySystem } = buildFinalDeliveryPrompt({
     base_analysis: phaseInput.base_analysis,
-    situation_analysis: { theme: "career transition", tension: "risk vs growth" },
+    breakthrough_core: {
+      relationship_conclusion: "Career transition tension maps to weak day master vs aggressive month officer.",
+      breakthrough_directions: [
+        {
+          direction: "Test startup fit before quitting",
+          structural_basis: "pattern + da_yun step 2",
+          what_would_confirm: "offer runway and role scope",
+          status: "selected",
+        },
+        {
+          direction: "Stabilize income first",
+          structural_basis: "strength=weak",
+          what_would_confirm: "debt and savings buffer",
+          status: "hypothesis",
+        },
+      ],
+      generated_at: new Date().toISOString(),
+    },
+    covered_agenda: [{ label: "Current role dissatisfaction specifics" }],
     agent_v2: mockAgent,
     locale: "en",
     recent_user_messages: ["Should I leave my current job to join a startup?"],

@@ -80,8 +80,9 @@ export async function callStallOfferPhase(input: PhaseLLMInput): Promise<PhaseLL
     withPhaseStreamOpts(input, {
       call_type: "collection_flash",
       phase_name: "stall_offer",
-      max_tokens: 1600,
+      max_tokens: 7000,
       temperature: 0.45,
+      thinking_effort: "xhigh",
     }),
   );
 

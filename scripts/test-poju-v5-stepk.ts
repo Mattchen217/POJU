@@ -46,13 +46,13 @@ const failures: string[] = [];
 function staticChecks(): void {
   console.log("\n=== Step K: 12-issue static verification ===\n");
 
-  // 1 — chat/tracking: thinking off
+  // 1 — POJU flash tiers: deep thinking defaults (phases override to xhigh via phase-transport)
   const chat = getThinkingConfig("chat_flash");
   const track = getThinkingConfig("tracking_flash");
   const collect = getThinkingConfig("collection_flash");
-  assert("1a chat_flash thinking off", !chat.enabled && chat.effort === "off");
-  assert("1b tracking_flash thinking off", !track.enabled && track.effort === "off");
-  assert("1c collection_flash thinking low", collect.enabled && collect.effort === "low");
+  assert("1a chat_flash thinking high", chat.enabled && chat.effort === "high");
+  assert("1b tracking_flash thinking high", track.enabled && track.effort === "high");
+  assert("1c collection_flash thinking xhigh", collect.enabled && collect.effort === "xhigh");
 
   // 2 — ThinkingStream UI
   const chatUi = read("components/poju/POJUChatUI.tsx");
@@ -99,13 +99,17 @@ function staticChecks(): void {
   // 10 — maxDuration 180
   const routes = [
     "app/api/poju/chat/route.ts",
-    "app/api/poju/situation-analysis/route.ts",
+    "app/api/poju/breakthrough-core/route.ts",
     "app/api/poju/final-delivery/route.ts",
-    "app/api/profile/base-analysis/route.ts",
+    "app/api/profile/base-analysis/stream/route.ts",
   ];
   for (const r of routes) {
     const src = read(r);
-    assert(`10 maxDuration 180 (${r})`, /maxDuration\s*=\s*180/.test(src));
+    const ok =
+      r.includes("base-analysis/stream")
+        ? /maxDuration\s*=\s*300/.test(src)
+        : /maxDuration\s*=\s*180/.test(src);
+    assert(`10 maxDuration (${r})`, ok);
   }
 
   // 11 — delivery section markers

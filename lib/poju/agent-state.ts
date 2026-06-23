@@ -77,6 +77,84 @@ export interface ContextSummary {
   }>;
 }
 
+/** 破局推理脊柱：深测算一次产出、随收集演进、最后喂入交付。session 内持久。 */
+export interface BreakthroughDirection {
+  direction: string;
+  structural_basis: string;
+  what_would_confirm: string;
+  status?: "hypothesis" | "reinforced" | "selected" | "weakened";
+}
+
+export interface BreakthroughCore {
+  relationship_conclusion: string;
+  breakthrough_directions: BreakthroughDirection[];
+  generated_at: string;
+  evolved_at?: string;
+}
+
+/** Parse collecting-phase `breakthrough_core_updates` (supports revised_directions alias). */
+export function parseBreakthroughCoreUpdatesFromLlm(raw: unknown): Partial<BreakthroughCore> | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const o = raw as Record<string, unknown>;
+  const out: Partial<BreakthroughCore> = {};
+  if (typeof o.relationship_conclusion === "string" && o.relationship_conclusion.trim()) {
+    out.relationship_conclusion = o.relationship_conclusion.trim();
+  }
+  const dirsRaw = o.breakthrough_directions ?? o.revised_directions;
+  if (Array.isArray(dirsRaw) && dirsRaw.length > 0) {
+    const dirs: BreakthroughDirection[] = [];
+    for (const entry of dirsRaw) {
+      if (!entry || typeof entry !== "object") continue;
+      const row = entry as Record<string, unknown>;
+      const direction = typeof row.direction === "string" ? row.direction.trim() : "";
+      if (!direction) continue;
+      dirs.push({
+        direction,
+        structural_basis:
+          typeof row.structural_basis === "string" ? row.structural_basis.trim() : "",
+        what_would_confirm:
+          typeof row.what_would_confirm === "string" ? row.what_would_confirm.trim() : "",
+        status:
+          row.status === "hypothesis" ||
+          row.status === "reinforced" ||
+          row.status === "selected" ||
+          row.status === "weakened"
+            ? row.status
+            : undefined,
+      });
+    }
+    if (dirs.length > 0) out.breakthrough_directions = dirs;
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+/** Merge collecting-round spine updates; sets evolved_at. */
+export function mergeBreakthroughCoreUpdates(
+  base: BreakthroughCore,
+  updates: Partial<BreakthroughCore>,
+): BreakthroughCore {
+  const now = new Date().toISOString();
+  let breakthrough_directions = [...base.breakthrough_directions];
+  if (Array.isArray(updates.breakthrough_directions)) {
+    for (const patch of updates.breakthrough_directions) {
+      const idx = breakthrough_directions.findIndex((d) => d.direction === patch.direction);
+      if (idx >= 0) {
+        breakthrough_directions[idx] = {
+          ...breakthrough_directions[idx],
+          ...patch,
+          direction: patch.direction || breakthrough_directions[idx].direction,
+        };
+      }
+    }
+  }
+  return {
+    relationship_conclusion: updates.relationship_conclusion?.trim() || base.relationship_conclusion,
+    breakthrough_directions,
+    generated_at: base.generated_at,
+    evolved_at: now,
+  };
+}
+
 export interface POJUAgentState {
   current_phase: AgentPhase;
   original_question: string;
@@ -116,12 +194,14 @@ export interface POJUAgentState {
   investigation_agenda: AgendaItem[];
   /** When true, investigation_agenda must never be regenerated. */
   agenda_generated: boolean;
+  /** 破局推理脊柱（深测算产出，收集演进，交付消费）。null = 尚未深测算。 */
+  breakthrough_core: BreakthroughCore | null;
 }
 
 /** Minimum effective user turns before confirmation (agenda-driven gate). */
-export const MIN_COLLECTING_USER_TURNS = 7;
+export const MIN_COLLECTING_USER_TURNS = 3;
 /** Strong skip-ahead — minimum user turns. */
-export const PUSH_MIN_TURNS = 4;
+export const PUSH_MIN_TURNS = 2;
 /** Strong skip-ahead — minimum agenda coverage ratio. */
 export const PUSH_GATE = 0.6;
 /** Overall agenda coverage required for normal confirmation. */
@@ -258,6 +338,7 @@ export function createInitialAgentState(input: {
     phase_history: [],
     investigation_agenda: [],
     agenda_generated: false,
+    breakthrough_core: null,
   };
 }
 
@@ -323,6 +404,8 @@ export interface PhaseTransitionInput {
   stop_loss?: { triggered: boolean; reason: string | null };
   /** LLM stall-offer branch (Step 3). */
   stall_offer?: boolean;
+  /** Opening Deep Judge — only true allows opening → collecting. */
+  understanding_sufficient?: boolean;
 }
 
 export interface PhaseTransitionResult {
@@ -348,11 +431,15 @@ export function decidePhaseTransition(input: PhaseTransitionInput): PhaseTransit
 
   switch (current) {
     case "opening":
-      if (user_message !== "__OPENING__" && user_message.trim()) {
+      if (
+        user_message !== "__OPENING__" &&
+        user_message.trim() &&
+        input.understanding_sufficient === true
+      ) {
         return {
           should_transition: true,
           new_phase: "collecting_context",
-          reason: "User responded to opening, entering collection",
+          reason: "Understanding sufficient, entering collection",
         };
       }
       break;
