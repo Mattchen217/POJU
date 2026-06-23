@@ -93,10 +93,16 @@ export function buildBreakthroughCorePrompt(input: {
   agent_v2: POJUAgentState | null | undefined;
   original_question: string;
   locale: string;
-}): { system: string; user: string; structured: ProfileStructured | null } {
+}): { system: string; user: string; structured: ProfileStructured } {
   const { base_analysis, agent_v2, original_question, locale } = input;
+  if (base_analysis == null) {
+    throw new Error("[breakthrough-core] structured 命盘为空，拒绝生成脊柱（必锚命盘）。");
+  }
   const bundle = normalizeBaseAnalysisInput(base_analysis);
   const structured = bundle.structured ?? null;
+  if (structured == null) {
+    throw new Error("[breakthrough-core] structured 命盘为空，拒绝生成脊柱（必锚命盘）。");
+  }
 
   const contextText = (() => {
     if (!agent_v2) return "（尚无结构化 agent_v2 语境，仅依赖问题。）";
@@ -107,16 +113,13 @@ export function buildBreakthroughCorePrompt(input: {
     }
   })();
 
-  const baseStr =
-    base_analysis === null || base_analysis === undefined
-      ? "（未提供命主基础分析；请主要依据 structured 实例清单与下列语境。）"
-      : JSON.stringify(base_analysis, null, 2).slice(0, 12000);
+  const baseStr = JSON.stringify(base_analysis, null, 2).slice(0, 12000);
 
   const system = stitchPromptSections(
     POJU_IDENTITY,
     POJU_KNOWLEDGE_ROOTS,
     buildOutputPolicyForPoju(),
-    structured ? buildStructuredInstanceInventory(structured) : "",
+    buildStructuredInstanceInventory(structured),
     DEEP_RECKONING_TASK,
   );
 
@@ -218,7 +221,9 @@ export function mapBreakthroughCorePayload(parsed: unknown): {
 export async function resolveBaseAnalysisForBreakthrough(
   session: POJUSessionState,
 ): Promise<unknown | null> {
-  const id = session.selected_stored_profile_id ?? uuidLike(session.agent_v2?.selected_profile_id);
+  const id =
+    uuidLike(session.selected_stored_profile_id) ??
+    uuidLike(session.agent_v2?.selected_profile_id);
   if (!id) return null;
   const stored = await getStoredProfile(id);
   return stored?.base_analysis?.content ?? stored?.base_analysis ?? null;
@@ -248,6 +253,12 @@ export async function requestBreakthroughCore(
   let base_analysis = options?.base_analysis;
   if (base_analysis === undefined) {
     base_analysis = await resolveBaseAnalysisForBreakthrough(session);
+  }
+  if (base_analysis == null) {
+    throw new Error(
+      "[breakthrough-core] 命主基础分析缺失，无法锚定深测算（必锚命盘）。selected_stored_profile_id=" +
+        (session.selected_stored_profile_id ?? "null"),
+    );
   }
 
   const profileId =

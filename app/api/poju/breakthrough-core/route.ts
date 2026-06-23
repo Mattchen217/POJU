@@ -71,6 +71,18 @@ export async function POST(req: Request) {
     const base_analysis =
       body.base_analysis === undefined || body.base_analysis === null ? null : body.base_analysis;
 
+    if (base_analysis == null) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "[breakthrough-core] 命主基础分析缺失，无法锚定深测算（必锚命盘）。selected_stored_profile_id=" +
+            String(body.selected_stored_profile_id ?? "null"),
+        },
+        { status: 422 },
+      );
+    }
+
     const locale = typeof body.locale === "string" ? body.locale : "en";
     const sessionId = body.session_id.trim();
     const profileId = resolveProfileId({ selected_stored_profile_id: body.selected_stored_profile_id, agent_v2 });

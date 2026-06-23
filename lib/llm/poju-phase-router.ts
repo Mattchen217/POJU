@@ -16,7 +16,7 @@ export function resolveActiveAgentPhase(session: POJUSessionState): AgentPhase {
   const normalized = normalizeAgentPhase(session.agent_v2?.current_phase);
   if (normalized) return normalized;
   const userTurns = session.messages.filter((m) => m.role === "user" && !m.is_rejected).length;
-  if (userTurns > 0) return session.has_profile || session.profile_skipped ? "collecting_context" : "opening";
+  if (userTurns > 0) return session.has_profile ? "collecting_context" : "opening";
   return "opening";
 }
 

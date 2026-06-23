@@ -226,7 +226,14 @@ function soulAndCacheTests(): void {
   assert("chat core has warm identity", chatCore.includes("我是 POJU"));
 
   const { system } = buildBreakthroughCorePrompt({
-    base_analysis: null,
+    base_analysis: {
+      structured: {
+        day_master: { stem: "庚", element: "金" },
+        strength: "weak",
+        yong_shen: "水",
+        pattern: "七杀",
+      },
+    },
     agent_v2: null,
     original_question: "career",
     locale: "en",

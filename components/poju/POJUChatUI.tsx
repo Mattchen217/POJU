@@ -304,7 +304,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   }, [session.session_id, session.original_question, session.agent_v2, session.context_collected]);
 
   useEffect(() => {
-    if (resolveSessionHasProfile(session) || session.profile_skipped) {
+    if (resolveSessionHasProfile(session)) {
       setBirthFlowStage(null);
       return;
     }
@@ -1175,32 +1175,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     return map[phase] ?? "agent_phase_collecting";
   }
 
-  async function handleProfileSkipped() {
-    const s = sessionRef.current;
-    setBirthFlowStage(null);
-    setShowProfilePicker(false);
-    const updatedSession: POJUSessionState = {
-      ...s,
-      profile_skipped: true,
-      selected_stored_profile_id: null,
-      messages: [
-        ...s.messages,
-        {
-          role: "system",
-          content: "[User chose to skip birth info. Continue with generic analysis.]",
-          timestamp: new Date().toISOString(),
-        },
-      ],
-    };
-    const finalSession = await handleUserMessage({
-      session: updatedSession,
-      userMessage: "[SYSTEM: User skipped birth info. Continue with generic perspectives.]",
-      locale,
-    });
-    onSessionUpdate(finalSession);
-    await savePOJUSession(finalSession);
-  }
-
   async function handleToolResponse(tool: ToolName, action: "accepted" | "declined") {
     const s = sessionRef.current;
     const next = recordUserResponse(s, tool, action);
@@ -1584,9 +1558,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
               <div className="mt-3">
                 <ProfileSelector
                   product="poju"
-                  allowSkip
                   onSelected={(id) => void handleStoredProfileSelected(id)}
-                  onSkip={() => void handleProfileSkipped()}
                   onCancel={() => setShowProfilePicker(false)}
                 />
               </div>
@@ -1609,7 +1581,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                 analysisFailed={birthAnalysisFailed}
                 onContinueToForm={() => setBirthFlowStage("form")}
                 onComplete={(p) => void handleProfileSubmitted(p)}
-                onSkip={() => void handleProfileSkipped()}
               />
             </div>
           ) : null}

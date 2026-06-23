@@ -92,7 +92,6 @@ export async function runPostTurnOrchestration(
     showProfilePicker:
       phase === "opening" &&
       !resolveSessionHasProfile(s) &&
-      !s.profile_skipped &&
       !agentWantsBirthForm &&
       (s.messages.filter((m) => m.role === "user" && !m.is_rejected).length === 0),
     showContextSummary: false,
