@@ -105,7 +105,7 @@ function phase1ProfileAnchorTests(): void {
     resolveActiveAgentPhase(noProfile) === "opening",
   );
 
-  const withProfile = mockSession({ has_profile: true, agent_v2: null });
+  const withProfile = mockSession({ has_profile: true, agent_v2: undefined });
   assert(
     "profile session advances to collecting (router fallback)",
     resolveActiveAgentPhase(withProfile) === "collecting_context",
