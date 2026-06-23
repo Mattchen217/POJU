@@ -76,6 +76,7 @@ import type { PojuV4ActionRequested } from "@/lib/poju/types";
 
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
 
+import { buildSpineBlock } from "@/lib/llm/phases/spine-block";
 import { buildToolSuggestionPhaseAppendix } from "@/lib/llm/phases/tool-suggestion-phase-appendix";
 
 import { parseToolSuggestionFromParsed } from "@/lib/poju/tool-suggestion";
@@ -249,34 +250,6 @@ function clampCollectingSuggestedPhase(
   console.warn("[collecting-phase] Blocked premature awaiting_confirmation:", gate.reason);
 
   return "collecting_context";
-
-}
-
-
-
-function buildSpineBlock(agent: POJUAgentState | null | undefined): string {
-
-  const core = agent?.breakthrough_core;
-
-  if (!core) return "";
-
-  return `## 你的破局脊柱（私有 · 勿原样念给用户）
-
-关系结论：${core.relationship_conclusion}
-
-破局方向：
-
-${core.breakthrough_directions
-
-  .map(
-
-    (d) =>
-
-      `- ${d.direction}（锚：${d.structural_basis} · 待验证：${d.what_would_confirm} · ${d.status ?? "hypothesis"}）`,
-
-  )
-
-  .join("\n")}`;
 
 }
 
