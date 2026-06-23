@@ -23,6 +23,7 @@ import { ensureSessionCycles } from "@/lib/poju/cycle-manager";
 import { finalizeToolInjectionTurn, prepareToolInjectionTurn } from "@/lib/poju/prepare-tool-injection-turn";
 import { findPendingToolInjection } from "@/lib/poju/find-pending-tool-injection";
 import { extractQuestionCategory, mergeContextUpdates, recordToLLMContextUpdates } from "@/lib/poju/context-extractor";
+import { parseAppLocale, resolvePojuSessionOutputLocale } from "@/lib/prompts/language-directive";
 import {
   applyAgendaStatusUpdates,
   extractAgendaStatusUpdates,
@@ -343,6 +344,22 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       ],
     };
   }
+
+  const lockedOutputLocale =
+    sessionBase.locked_output_locale ??
+    (!isSystemMessage && userMessage.trim() && userMessage.trim() !== "__OPENING__"
+      ? resolvePojuSessionOutputLocale({
+          locked: undefined,
+          uiLocale: parseAppLocale(locale),
+          userInput: userMessage,
+          conversationHistory: messagesWithUser.map((m) => ({ role: m.role, content: m.content })),
+        })
+      : sessionBase.locked_output_locale);
+
+  if (lockedOutputLocale) {
+    sessionForLlm = { ...sessionForLlm, locked_output_locale: lockedOutputLocale };
+  }
+
   const { profile, base_analysis } = await loadSessionProfileBundle(sessionForLlm);
   logBaseAnalysisPayload("callLLMViaAPI:before-fetch", base_analysis, {
     session_id: sessionForLlm.session_id,
@@ -454,6 +471,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     expires_at: rollingExpiry,
     locked_provider:
       llmResponse.locked_provider ?? workingSession.locked_provider,
+    locked_output_locale: lockedOutputLocale,
   });
 }
 

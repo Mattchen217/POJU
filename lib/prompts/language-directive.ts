@@ -12,6 +12,8 @@ export interface LanguageDirectiveInput {
   /** POJU / Glyph 有；Syncro 不传 */
   userInput?: string;
   conversationHistory?: Array<{ role: string; content: string }>;
+  /** Session-locked output locale — skip message re-detection when set (prefix-cache stability). */
+  forcedOutputLocale?: AppLocale;
 }
 
 export interface LanguageDirectiveOutput {
@@ -299,10 +301,66 @@ ${buildDirective(language, "priority_1")}`,
  * POJU chat: reply language follows the user's messages, not the UI locale.
  * Bazi / matrix reports use UI locale separately.
  */
+/** Explicit in-message language switch (e.g. "please respond in Chinese"). */
+export function detectExplicitLanguageSwitch(userInput?: string): AppLocale | null {
+  if (!userInput?.trim()) return null;
+  for (const pattern of switchPatterns) {
+    const match = userInput.match(pattern);
+    if (match?.[1]) {
+      const mapped = mapToLocale(match[1]);
+      if (mapped) return mapped;
+    }
+  }
+  return null;
+}
+
+/**
+ * Session output locale: locked value wins unless user explicitly switches language this turn.
+ * Unlocked sessions infer from messages (first real user message sets the lock in agent).
+ */
+export function resolvePojuSessionOutputLocale(input: {
+  locked?: AppLocale;
+  uiLocale: AppLocale;
+  userInput?: string;
+  conversationHistory?: Array<{ role: string; content: string }>;
+}): AppLocale {
+  const explicitSwitch = detectExplicitLanguageSwitch(input.userInput);
+  if (explicitSwitch) return explicitSwitch;
+
+  if (input.locked) return input.locked;
+
+  return getPojuChatLanguageDirective({
+    locale: input.uiLocale,
+    userInput: input.userInput,
+    conversationHistory: input.conversationHistory,
+  }).outputLocale;
+}
+
 export function getPojuChatLanguageDirective(
   input: LanguageDirectiveInput,
 ): LanguageDirectiveOutput {
   const uiLocale = input.locale;
+
+  if (input.forcedOutputLocale) {
+    const outputLocale = input.forcedOutputLocale;
+    const language = localeNames[outputLocale];
+    return {
+      outputLanguage: language,
+      outputLocale,
+      directive: `
+# POJU OUTPUT LANGUAGE (message-driven · HARD LOCK)
+
+Respond **ONLY** in **${language}**.
+Ignore the language of these system/task instructions — they may be Chinese; your \`response\` must still be **${language}** only.
+
+Write **every** user-visible sentence in this reply in **${language}**:
+- Match the language of the user's question and recent messages (English question → English reply).
+- The website UI locale is ${localeNames[uiLocale]} — use that only if the user has not written in a clear language yet.
+- Never switch to German/French/Spanish unless the user's messages clearly use that language (not a single English word like "was").
+- You may read stored profile / base-analysis JSON in any language; express insights for the user in **${language}**.
+${buildDirective(language, "priority_1")}`,
+    };
+  }
   const userTexts = [
     ...(input.conversationHistory ?? [])
       .filter((m) => m.role === "user" || m.role === "User")

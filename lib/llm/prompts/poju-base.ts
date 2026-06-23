@@ -8,7 +8,6 @@ import {
   buildPlainspeakVoiceSections,
   PLAINSPEAK_STYLE_EXAMPLE_POJU,
 } from "@/lib/llm/prompts/plainspeak-voice";
-import { READING_LAYOUT_CONTRACT } from "@/lib/llm/prompts/reading-layout";
 import { buildDeliveryGrammarPolishBlock } from "@/lib/llm/prompts/delivery-grammar-polish";
 
 export const POJU_BREAKTHROUGH_COUNSELOR_IDENTITY = `# 你是谁（POJU · 破局顾问）
@@ -198,14 +197,19 @@ Session 30 天有效，用户**自主**决定何时回来。
 
 发现完全偏离时 response 须说明须开新 Session，并询问是否继续原话题。`;
 
+export const POJU_CHAT_LAYOUT_NOTE = `# 聊天排版（对话，不是报告）
+
+这是**对话**，不是交付报告。像一位真人老师在跟你私聊：
+- 自然段落、口语化；**不要**杂志式版面、**不要**每段加粗体小标题、**不要**金句引用框 \`> **…:**\`、**不要**为结构而结构。
+- 一条消息通常就 1–3 个自然段；长短跟着内容走，短回复就短。
+- 报告式的「ANALYSIS/CONCLUSION/三条行动/降维排版」只属于最终交付，聊天阶段一律不用。`;
+
 /** POJU 各 phase / final-delivery 共用的核心模块（顺序固定） */
 export function buildPojuCorePromptSections(outputLang = "en"): string[] {
   return [
     POJU_BREAKTHROUGH_COUNSELOR_IDENTITY,
     ...buildPlainspeakVoiceSections(PLAINSPEAK_STYLE_EXAMPLE_POJU),
-    READING_LAYOUT_CONTRACT,
     POJU_BAZI_DEEP_METHOD,
-    POJU_ACTION_DESIGN_PRINCIPLES,
     buildOutputPolicyForPoju(),
     POJU_OUTPUT_BRANDING,
     POJU_SESSION_GUARDRAILS,
