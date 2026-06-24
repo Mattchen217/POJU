@@ -15,6 +15,7 @@ import {
   withSessionProfileFlags,
 } from "@/lib/poju/session-profile";
 import { downgradePrematureConfirmationPhase } from "@/lib/poju/summary-readiness";
+import { isSubstantiveBreakthroughQuestion } from "@/lib/poju/breakthrough-question-gate";
 import type { POJUSessionState } from "@/lib/poju/types";
 
 export type AgentOrchestratorUi = {
@@ -74,6 +75,7 @@ async function ensureBreakthroughCore(
   if (!agent) return session;
   if (agent.current_phase !== "collecting_context") return session;
   if (agent.breakthrough_core != null) return session;
+  if (!isSubstantiveBreakthroughQuestion(session.original_question)) return session;
 
   const { base_analysis } = await loadSessionProfileBundle(session);
   if (base_analysis == null) return session;
@@ -118,7 +120,8 @@ export async function runPostTurnOrchestration(
   if (
     s.agent_v2?.current_phase === "collecting_context" &&
     s.agent_v2.breakthrough_core == null &&
-    resolveSessionHasProfile(s)
+    resolveSessionHasProfile(s) &&
+    isSubstantiveBreakthroughQuestion(s.original_question)
   ) {
     ui.pipelineBusy = true;
     try {

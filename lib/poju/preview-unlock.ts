@@ -20,13 +20,13 @@ export function hasPreviewMatrixMessage(session: POJUSessionState): boolean {
   return session.messages.some((m) => m.meta?.kind === "energy_matrix");
 }
 
-/** Keep at most one energy_matrix bubble (preparing + chat init race guard). */
+/** Keep at most one energy_matrix bubble — by kind only, not payload equality. */
 export function dedupePreviewMatrixMessages(session: POJUSessionState): POJUSessionState {
   const indices = session.messages
     .map((m, i) => (m.meta?.kind === "energy_matrix" ? i : -1))
     .filter((i) => i >= 0);
   if (indices.length <= 1) return session;
-  const keepIdx = indices[indices.length - 1]!;
+  const keepIdx = indices[0]!;
   const keepPayload =
     session.messages[keepIdx]?.meta?.matrix_payload ?? session.matrix_payload ?? undefined;
   return {

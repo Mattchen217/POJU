@@ -357,7 +357,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   }, [session.session_id, session.messages, visibleMessages.length]);
 
   useEffect(() => {
-    if (!isPreviewSession(session)) return;
     const deduped = dedupePreviewMatrixMessages(session);
     if (deduped !== session) {
       onSessionUpdate(deduped);
@@ -1151,9 +1150,12 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     const bareIds = new Set<string>();
     const followUps: Record<string, ReactNode> = {};
     const followUpActions: Record<string, string> = {};
+    let energyMatrixRendered = false;
 
     for (const m of visibleMessages) {
       if (m.meta?.kind === "energy_matrix" && m.meta.matrix_payload) {
+        if (energyMatrixRendered) continue;
+        energyMatrixRendered = true;
         bareIds.add(m.timestamp);
         slots[m.timestamp] = (
           <PojuEnergyMatrix payload={m.meta.matrix_payload} locale={locale} compact />

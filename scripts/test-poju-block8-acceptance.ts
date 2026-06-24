@@ -45,7 +45,7 @@ function main(): void {
 
   console.log("\n=== Fix 4 · client soft timeout + retry hint ===\n");
   const btClient = read("lib/llm/deepseek/breakthrough-core.ts");
-  assert("requestBreakthroughCore AbortController 90s", btClient.includes("90_000") && btClient.includes("AbortController"));
+  assert("requestBreakthroughCore AbortController 200s", btClient.includes("200_000") && btClient.includes("AbortController"));
   const orch = read("lib/poju/agent-orchestrator.ts");
   assert("orchestrator retry hint zh", orch.includes("深测算暂时没完成，再发一句继续即可"));
 

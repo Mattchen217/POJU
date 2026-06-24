@@ -301,6 +301,38 @@ ${buildDirective(language, "priority_1")}`,
  * POJU chat: reply language follows the user's messages, not the UI locale.
  * Bazi / matrix reports use UI locale separately.
  */
+/** CJK (Chinese / Japanese kana / Korean hangul) in user text → zh output. */
+const CJK_PATTERN =
+  /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/;
+
+function inferLocaleFromUserMessages(input: {
+  userInput?: string;
+  conversationHistory?: Array<{ role: string; content: string }>;
+}): AppLocale | null {
+  const texts: string[] = [];
+  if (input.userInput?.trim() && input.userInput.trim() !== "__OPENING__") {
+    texts.push(input.userInput.trim());
+  }
+  for (const msg of [...(input.conversationHistory ?? [])].reverse()) {
+    if (msg.role !== "user" && msg.role !== "User") continue;
+    const t = msg.content.trim();
+    if (t && !texts.includes(t)) texts.push(t);
+  }
+
+  for (const text of texts) {
+    if (CJK_PATTERN.test(text)) return "zh";
+    for (const pattern of switchPatterns) {
+      const match = text.match(pattern);
+      if (match?.[1]) {
+        const mapped = mapToLocale(match[1]);
+        if (mapped) return mapped;
+      }
+    }
+    if (text.length >= 2) return detectLanguage(text);
+  }
+  return null;
+}
+
 /** Explicit in-message language switch (e.g. "please respond in Chinese"). */
 export function detectExplicitLanguageSwitch(userInput?: string): AppLocale | null {
   if (!userInput?.trim()) return null;
@@ -315,8 +347,8 @@ export function detectExplicitLanguageSwitch(userInput?: string): AppLocale | nu
 }
 
 /**
- * Session output locale: locked value wins unless user explicitly switches language this turn.
- * Unlocked sessions infer from messages (first real user message sets the lock in agent).
+ * Session output locale: explicit switch → latest user message language → locked → UI.
+ * `locked` is set only when the user explicitly requests a language — not from UI locale.
  */
 export function resolvePojuSessionOutputLocale(input: {
   locked?: AppLocale;
@@ -327,13 +359,14 @@ export function resolvePojuSessionOutputLocale(input: {
   const explicitSwitch = detectExplicitLanguageSwitch(input.userInput);
   if (explicitSwitch) return explicitSwitch;
 
-  if (input.locked) return input.locked;
-
-  return getPojuChatLanguageDirective({
-    locale: input.uiLocale,
+  const fromMessages = inferLocaleFromUserMessages({
     userInput: input.userInput,
     conversationHistory: input.conversationHistory,
-  }).outputLocale;
+  });
+  if (fromMessages) return fromMessages;
+
+  if (input.locked) return input.locked;
+  return input.uiLocale;
 }
 
 export function getPojuChatLanguageDirective(

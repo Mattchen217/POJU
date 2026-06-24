@@ -87,7 +87,7 @@ export default function PojuSessionDeepLinkPage() {
       }
     }
 
-    if (isPreviewSession(local)) {
+    if (local.selected_stored_profile_id) {
       const deduped = dedupePreviewMatrixMessages(local);
       if (deduped !== local) {
         local = deduped;

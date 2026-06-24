@@ -285,7 +285,7 @@ export async function requestBreakthroughCore(
     session.selected_stored_profile_id?.trim() ?? uuidLike(agent.selected_profile_id) ?? "";
 
   const ac = new AbortController();
-  const softTimeoutMs = 90_000;
+  const softTimeoutMs = 200_000;
   const timer = window.setTimeout(() => ac.abort(), softTimeoutMs);
 
   let res: Response;
