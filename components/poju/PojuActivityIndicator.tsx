@@ -1,9 +1,11 @@
 "use client";
 
-import { Suspense, lazy, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { SplineInteractiveScene } from "@/components/spline/SplineInteractiveScene";
 import "@/styles/poju-activity.css";
 
-const Spline = lazy(() => import("@splinetool/react-spline"));
+/** Wider framing so the POJU figure stays visible in the 2:1 chat strip. */
+const POJU_CHAT_ACTIVITY_ZOOM = 0.68;
 
 const ROTATE_MS = 2800;
 
@@ -26,12 +28,23 @@ export function PojuActivityIndicator({ lines }: { lines: string[] }) {
 
   return (
     <div className="poju-activity" role="status" aria-live="polite">
-      <Suspense fallback={<div className="poju-activity__fallback" aria-hidden />}>
-        <Spline scene="/spline/POJUCHAT.splinecode" className="poju-activity__scene" />
-      </Suspense>
-      <p key={caption} className="poju-activity__caption">
-        {caption}
-      </p>
+      <div className="poju-activity__stage">
+        <Suspense fallback={<div className="poju-activity__fallback" aria-hidden />}>
+          <SplineInteractiveScene
+            scene="/spline/POJUCHAT.splinecode"
+            className="poju-activity__scene"
+            initialZoom={POJU_CHAT_ACTIVITY_ZOOM}
+            pointerFollow={false}
+            webGLContext="preparing"
+            renderOnDemand={false}
+          />
+        </Suspense>
+        {caption ? (
+          <p key={caption} className="poju-activity__caption">
+            {caption}
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }

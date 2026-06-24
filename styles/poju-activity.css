@@ -1,31 +1,52 @@
+/* Full-width activity stage inside .pchat__ai (same measure as reply text) */
 .poju-activity {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.5rem;
+  width: 100%;
   min-width: 0;
-  max-width: 100%;
+  margin-top: 0.15rem;
+}
+
+.poju-activity__stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  max-height: 42vh;
+  border-radius: 14px;
+  overflow: hidden;
+  background: radial-gradient(
+    ellipse 85% 70% at 50% 38%,
+    rgba(88, 28, 135, 0.22) 0%,
+    rgba(12, 8, 24, 0.55) 55%,
+    rgba(8, 6, 16, 0.85) 100%
+  );
 }
 
 .poju-activity__scene {
-  width: 280px;
-  height: 200px;
-  max-width: min(280px, 100%);
-  border-radius: 12px;
-  overflow: hidden;
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 108% !important;
+  top: -4%;
   pointer-events: none;
+  transform: scale(1.06);
+  transform-origin: center 42%;
+}
+
+/* Spline canvas: fill stage */
+.poju-activity__scene.spline-interactive-scene,
+.poju-activity__scene > div,
+.poju-activity__scene canvas {
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .poju-activity__fallback {
-  width: 280px;
-  height: 200px;
-  max-width: min(280px, 100%);
-  border-radius: 12px;
+  position: absolute;
+  inset: 0;
   background: radial-gradient(
-    circle at 50% 45%,
-    rgba(167, 139, 250, 0.35) 0%,
-    rgba(88, 28, 135, 0.12) 55%,
-    transparent 72%
+    circle at 50% 42%,
+    rgba(167, 139, 250, 0.38) 0%,
+    rgba(88, 28, 135, 0.14) 52%,
+    transparent 78%
   );
   animation: poju-activity-breathe 2.4s ease-in-out infinite;
 }
@@ -34,7 +55,7 @@
   0%,
   100% {
     opacity: 0.55;
-    transform: scale(0.96);
+    transform: scale(0.98);
   }
   50% {
     opacity: 1;
@@ -43,20 +64,43 @@
 }
 
 .poju-activity__caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
   margin: 0;
-  font-size: 0.9rem;
+  padding: 2.5rem 1rem 0.85rem;
+  text-align: center;
+  font-size: 0.875rem;
   line-height: 1.45;
-  color: rgba(226, 232, 240, 0.88);
+  color: rgba(240, 236, 252, 0.94);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.65);
+  background: linear-gradient(
+    to top,
+    rgba(6, 4, 14, 0.88) 0%,
+    rgba(6, 4, 14, 0.5) 45%,
+    transparent 100%
+  );
+  pointer-events: none;
   animation: poju-activity-caption-in 0.45s ease-out;
 }
 
 @keyframes poju-activity-caption-in {
   from {
     opacity: 0;
-    transform: translateY(4px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+.pchat__ai .poju-activity {
+  width: 100%;
+}
+
+.pchat__ai .poju-activity__caption {
+  margin-bottom: 0 !important;
 }
