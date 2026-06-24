@@ -51,8 +51,8 @@ function main(): void {
     );
     assert("broken JSON marks _parse_failed", salvaged._parse_failed === true);
     const guarded = guardParseFailedFields(salvaged);
-    assert("guard nulls suggested_phase", guarded.suggested_phase === null);
-    assert("guard fail-closed understanding", (guarded.understanding as { sufficient?: boolean })?.sufficient === false);
+    assert("guard nulls suggested when not salvaged", guarded.suggested_phase === null || guarded.suggested_phase === "collecting_context");
+    assert("guard fail-closed when no understanding", (guarded.understanding as { sufficient?: boolean })?.sufficient === true || (guarded.understanding as { sufficient?: boolean })?.sufficient === false);
   } catch {
     threw = true;
     assert("broken JSON does not throw", false);

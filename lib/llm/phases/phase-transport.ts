@@ -211,6 +211,11 @@ export function extractJson(raw: string): string {
 }
 
 export function parsePhaseJson(rawText: string): Record<string, unknown> {
+  const fenced = rawText
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/```\s*$/i, "")
+    .trim();
   const cleaned = extractJson(rawText);
   try {
     return JSON.parse(cleaned) as Record<string, unknown>;
@@ -219,23 +224,35 @@ export function parsePhaseJson(rawText: string): Record<string, unknown> {
       const repaired = cleaned.replace(/,(\s*[}\]])/g, "$1");
       return JSON.parse(repaired) as Record<string, unknown>;
     } catch {
-      const m = cleaned.match(/"response"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-      const response = m
-        ? m[1].replace(/\\"/g, '"').replace(/\\n/g, "\n").replace(/\\t/g, "\t")
-        : "";
-      return { response, _parse_failed: true } as Record<string, unknown>;
+      const grab = (re: RegExp) => fenced.match(re)?.[1];
+      const response = (() => {
+        const m = cleaned.match(/"response"\s*:\s*"((?:[^"\\]|\\.)*)"/)
+          ?? fenced.match(/"response"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        return m ? m[1].replace(/\\"/g, '"').replace(/\\n/g, "\n").replace(/\\t/g, "\t") : "";
+      })();
+      const sufficientRaw = grab(/"sufficient"\s*:\s*(true|false)/);
+      const suggestedRaw = grab(/"suggested_phase"\s*:\s*(null|"[a-z_]+")/);
+      const salvaged: Record<string, unknown> = { response, _parse_failed: true };
+      if (sufficientRaw != null) {
+        salvaged.understanding = { sufficient: sufficientRaw === "true", missing: "" };
+      }
+      if (suggestedRaw != null) {
+        salvaged.suggested_phase =
+          suggestedRaw === "null" ? null : suggestedRaw.replace(/"/g, "");
+      }
+      return salvaged;
     }
   }
 }
 
-/** JSON salvage only recovered `response` — freeze state-machine advancement. */
+/** JSON salvage — preserve recovered control fields; only strip unsafe breakthrough updates. */
 export function guardParseFailedFields(parsed: Record<string, unknown>): Record<string, unknown> {
   if (parsed._parse_failed !== true) return parsed;
   return {
     ...parsed,
-    suggested_phase: null,
     breakthrough_core_updates: null,
-    understanding: { sufficient: false, missing: "" },
+    understanding: parsed.understanding ?? { sufficient: false, missing: "" },
+    suggested_phase: parsed.suggested_phase ?? null,
   };
 }
 

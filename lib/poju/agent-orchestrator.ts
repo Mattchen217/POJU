@@ -72,6 +72,11 @@ async function ensureBreakthroughCore(
   locale: string,
 ): Promise<POJUSessionState> {
   const agent = session.agent_v2;
+  console.log("[poju-diag] breakthrough-core trigger", {
+    phase: agent?.current_phase,
+    has_core: agent?.breakthrough_core != null,
+    has_profile: resolveSessionHasProfile(session),
+  });
   if (!agent) return session;
   if (agent.current_phase !== "collecting_context") return session;
   if (agent.breakthrough_core != null) return session;

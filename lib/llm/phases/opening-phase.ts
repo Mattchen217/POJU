@@ -75,12 +75,18 @@ function buildOpeningTaskBlock(input: PhaseLLMInput): string {
 只有当用户【说出了一件具体的、想破的事】（哪怕一句：如"卡了三年想转行但不敢"、
 "和合伙人闹翻了"、"事业这几年一直不顺"），sufficient 才可以 = true。
 
-sufficient=false 时：response 温和邀请他说出"现在最卡的那件事"（像你平时回应"你好"那样自然），
-suggested_phase = null，**绝不进入深测算 / 不生成脊柱**。
+sufficient=false 时：response 比现在更有温度、更"接得住人"——
+  用 3–5 句：先稳稳接住他这声招呼，可顺手点一句对他底色的轻观察（锚命盘，
+  让他有"这人好像有点东西"的感觉，但不展开完整解读），再自然邀请他说出"现在最卡的那件事"。
+  仍只温和追问【那一个】最关键缺口，不审讯、不连环问。suggested_phase = null，
+  **绝不进入深测算 / 不生成脊柱**。
 
 ## 判定与动作
 - 足够（sufficient=true）：哪怕只有一两句但指向明确（如"卡了三年想转行但不敢"），立即放行。
-  response 给一个真实、有洞见的回应（锚命盘真实结构，自然用 ⟦t:⟧ 包术语），自然过渡到"我来为你深入看一下"。
+  response 是一段【简短有洞见的 hook，2–4 句】——点出 1–2 个最关键的结构张力（锚命盘，自然用 ⟦t:⟧），
+  让他感到被看懂，然后明确收束到一句"让我为你深入推演一下"。
+  ❌ 严禁在此给：分步行动方案（第一步/第二步）、COMING BACK 收尾、完整破局结论。
+     —— 那些是深测算+收集+交付之后的回报，绝不在开场一次性倒出。
   suggested_phase = "collecting_context"。
 - 不足（sufficient=false）：信息太薄、无法锚定推演时，只温和追问【那一个】最关键的缺口（最多一句）。
   绝不审讯式连环问、绝不生成脊柱、绝不生成议程。suggested_phase = null（留在 opening）。
@@ -124,24 +130,27 @@ export async function callOpeningPhase(input: PhaseLLMInput): Promise<PhaseLLMRe
 
   const { parsed, response } = parsePhaseResult(result.content, { locale: input.locale });
 
-  const understanding = isPhaseParseFailed(parsed)
-    ? { sufficient: false, missing: "" }
-    : parsed.understanding && typeof parsed.understanding === "object"
+  const recovered =
+    parsed.understanding && typeof parsed.understanding === "object"
       ? {
           sufficient: Boolean((parsed.understanding as { sufficient?: unknown }).sufficient),
           missing: String((parsed.understanding as { missing?: unknown }).missing ?? ""),
         }
-      : { sufficient: false, missing: "" };
+      : null;
+  const understanding = recovered ?? { sufficient: false, missing: "" };
 
   const suggestedRaw = typeof parsed.suggested_phase === "string" ? parsed.suggested_phase : null;
   const suggested = suggestedRaw ? normalizeAgentPhase(suggestedRaw) : null;
   const suggested_phase =
-    !isPhaseParseFailed(parsed) &&
-    understanding.sufficient &&
-    suggested &&
-    VALID_SUGGESTED.includes(suggested)
-      ? suggested
-      : null;
+    understanding.sufficient && suggested && VALID_SUGGESTED.includes(suggested) ? suggested : null;
+
+  console.log("[poju-diag] phase-transition", {
+    from: "opening",
+    to: suggested_phase ?? "opening",
+    sufficient: understanding.sufficient,
+    suggested: suggested_phase,
+    parse_failed: isPhaseParseFailed(parsed),
+  });
 
   const rawAction = typeof parsed.action_requested === "string" ? parsed.action_requested.trim() : null;
   const action_requested: PojuV4ActionRequested | null =
