@@ -198,8 +198,20 @@ export async function callPhaseJsonTransport(
   return result;
 }
 
+/** Strip fences / prose wrappers; return innermost JSON object substring when present. */
+export function extractJson(raw: string): string {
+  let s = raw
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/```\s*$/i, "")
+    .trim();
+  const a = s.indexOf("{");
+  const b = s.lastIndexOf("}");
+  return a >= 0 && b > a ? s.slice(a, b + 1) : s;
+}
+
 export function parsePhaseJson(rawText: string): Record<string, unknown> {
-  const cleaned = rawText.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
+  const cleaned = extractJson(rawText);
   return JSON.parse(cleaned) as Record<string, unknown>;
 }
 

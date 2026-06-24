@@ -72,12 +72,13 @@ import { MainDeliveryView } from "@/components/poju/MainDeliveryView";
 import { PojuReportChatCard } from "@/components/poju/PojuReportChatCard";
 import { PojuUnlockReportModal } from "@/components/poju/PojuUnlockReportModal";
 import { hasUnlockReportMessage, prepareUnlockReleaseSession } from "@/lib/poju/finalize-unlock-bazi-session";
-import { sessionMatrixReadyForChat, isMatrixNarrativeReady } from "@/lib/poju/matrix-narrative-ready";
 import {
-  applyStoredMatrixPreview,
-  resolveProfileMatrixPayloadWithoutLlm,
-} from "@/lib/poju/resolve-matrix-preview";
-import { getStoredProfile, storedMatrixListPresent } from "@/lib/profile/stored-profiles-service";
+  createPaywallMessage,
+  dedupePreviewMatrixMessages,
+  hasPaywallMessage,
+  isPreviewSession,
+  POJU_RELEASE_PENDING_QUESTION_FLAG,
+} from "@/lib/poju/preview-unlock";
 import {
   getUnlockReportMessage,
   getUnlockReportText,
@@ -89,21 +90,9 @@ import {
   markPojuChatIntroSeen,
   pojuChatInitialScrollPosition,
 } from "@/lib/poju/chat-intro-scroll";
-import {
-  createEnergyMatrixMessage,
-  createPaywallMessage,
-  dedupePreviewMatrixMessages,
-  hasPaywallMessage,
-  hasPreviewMatrixMessage,
-  isPreviewSession,
-  POJU_RELEASE_PENDING_QUESTION_FLAG,
-} from "@/lib/poju/preview-unlock";
-
-/** Internal pipeline / phase UI — development only. */
-const POJU_DEV_DEBUG = process.env.NODE_ENV === "development";
+import { redirectToPojuSessionPayment } from "@/lib/poju/start-poju-session-payment";
 import "@/styles/topic-drift.css";
 import "@/styles/poju-energy-matrix.css";
-import { redirectToPojuSessionPayment } from "@/lib/poju/start-poju-session-payment";
 
 interface Props {
   session: POJUSessionState;
@@ -165,8 +154,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     () => getInitialUnlockReportUiState(session).gateDismissed,
   );
   const openingInitRef = useRef(false);
-  const previewMatrixInitRef = useRef<string | null>(null);
-  const matrixNarrativeRef = useRef<string | null>(null);
   const releasePendingInitRef = useRef<string | null>(null);
   const toolResumeInitRef = useRef<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -376,94 +363,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       onSessionUpdate(deduped);
       void savePOJUSession(deduped);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- dedupe once per message set change
-  }, [session.session_id, session.messages.length]);
-
-  useEffect(() => {
-    if (previewMatrixInitRef.current === session.session_id) return;
-    if (!isPreviewSession(session)) return;
-    if (!resolveSessionHasProfile(session)) return;
-    if (sessionMatrixReadyForChat(session)) return;
-    if (hasPreviewMatrixMessage(session)) return;
-    if (!session.matrix_payload) return;
-
-    previewMatrixInitRef.current = session.session_id;
-    const payload = session.matrix_payload;
-    const withMatrix: POJUSessionState = dedupePreviewMatrixMessages({
-      ...session,
-      messages: [...session.messages, createEnergyMatrixMessage(payload, locale)],
-    });
-    onSessionUpdate(withMatrix);
-    void savePOJUSession(withMatrix);
-  }, [
-    session,
-    session.session_id,
-    session.matrix_payload,
-    locale,
-    onSessionUpdate,
-  ]);
-
-  const matrixMessageReady = hasPreviewMatrixMessage(session);
-
-  useEffect(() => {
-    if (!isPreviewSession(session)) return;
-    if (sessionMatrixReadyForChat(session)) return;
-    if (!matrixMessageReady) return;
-
-    const matrixIdx = sessionRef.current.messages.findIndex((m) => m.meta?.kind === "energy_matrix");
-    if (matrixIdx < 0) return;
-
-    const matrixMsg = sessionRef.current.messages[matrixIdx];
-    const payload = matrixMsg?.meta?.matrix_payload;
-    if (!payload?.display) return;
-    if (isMatrixNarrativeReady(payload) && payload.display.narrative_locale === locale) return;
-
-    const fetchKey = `${session.session_id}:${locale}`;
-    if (matrixNarrativeRef.current === fetchKey) return;
-    matrixNarrativeRef.current = fetchKey;
-
-    const ac = new AbortController();
-    void (async () => {
-      try {
-        const profileId = sessionRef.current.selected_stored_profile_id;
-        if (!profileId || !payload.user_profile) return;
-
-        const storedRow = await getStoredProfile(profileId);
-        const updatedPayload = storedMatrixListPresent(storedRow)
-          ? applyStoredMatrixPreview(payload, storedRow!.matrix_list!, "poju", locale)
-          : await resolveProfileMatrixPayloadWithoutLlm({
-              profileId,
-              userProfile: payload.user_profile,
-              locale,
-              product: "poju",
-            });
-
-        if (ac.signal.aborted) return;
-        const current = sessionRef.current;
-        const msgIdx = current.messages.findIndex((m) => m.meta?.kind === "energy_matrix");
-        if (msgIdx < 0) return;
-
-        const messages = [...current.messages];
-        messages[msgIdx] = {
-          ...messages[msgIdx]!,
-          meta: { ...messages[msgIdx]!.meta, matrix_payload: updatedPayload },
-        };
-        const next: POJUSessionState = {
-          ...current,
-          messages,
-          matrix_payload: updatedPayload,
-        };
-        onSessionUpdate(next);
-        await savePOJUSession(next);
-      } catch (e) {
-        if (ac.signal.aborted) return;
-        console.warn("[poju] matrix preview resolve failed:", e);
-        matrixNarrativeRef.current = null;
-      }
-    })();
-
-    return () => ac.abort();
-  }, [session.session_id, locale, matrixMessageReady, onSessionUpdate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- dedupe when message list changes
+  }, [session.session_id, session.messages]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;

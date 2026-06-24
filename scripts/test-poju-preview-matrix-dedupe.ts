@@ -1,0 +1,52 @@
+/**
+ * Old-record preview matrix — no duplicate energy_matrix, no LLM.
+ * Run: pnpm exec tsx scripts/test-poju-preview-matrix-dedupe.ts
+ */
+import fs from "node:fs";
+import path from "node:path";
+
+import { dedupePreviewMatrixMessages } from "@/lib/poju/preview-unlock";
+import type { POJUSessionState } from "@/lib/poju/types";
+
+const ROOT = path.join(process.cwd());
+const failures: string[] = [];
+
+function assert(label: string, ok: boolean): void {
+  if (!ok) failures.push(label);
+  console.log(`  [${ok ? "PASS" : "FAIL"}] ${label}`);
+}
+
+function read(rel: string): string {
+  return fs.readFileSync(path.join(ROOT, rel), "utf8");
+}
+
+function main(): void {
+  console.log("\n=== Preview matrix dedupe (static) ===\n");
+
+  const chatUi = read("components/poju/POJUChatUI.tsx");
+  assert("POJUChatUI removed previewMatrixInitRef", !chatUi.includes("previewMatrixInitRef"));
+  assert("POJUChatUI removed chat-side matrix append", !chatUi.includes("createEnergyMatrixMessage"));
+  assert("finalize loads from DB", read("lib/poju/finalize-preview-matrix-session.ts").includes("loadPOJUSession"));
+  assert("finalize no refreshMatrixPayload", !read("lib/poju/finalize-preview-matrix-session.ts").includes("refreshMatrixPayload"));
+
+  const dup = {
+    messages: [
+      { role: "assistant" as const, content: "", timestamp: "1", meta: { kind: "energy_matrix" as const } },
+      { role: "assistant" as const, content: "", timestamp: "2", meta: { kind: "energy_matrix" as const } },
+    ],
+  } as POJUSessionState;
+  const once = dedupePreviewMatrixMessages(dup);
+  assert(
+    "dedupe keeps one energy_matrix",
+    once.messages.filter((m) => m.meta?.kind === "energy_matrix").length === 1,
+  );
+
+  console.log("\n=== Summary ===\n");
+  if (failures.length) {
+    console.error(`FAILED (${failures.length}):`, failures.join(", "));
+    process.exit(1);
+  }
+  console.log("All preview matrix dedupe checks passed.\n");
+}
+
+main();

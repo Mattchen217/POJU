@@ -128,7 +128,9 @@ export async function runPostTurnOrchestration(
         : "Breakthrough spine and investigation agenda are ready.";
     } catch (e) {
       console.warn("[agent-orchestrator] Breakthrough core failed:", e);
-      ui.pipelineError = e instanceof Error ? e.message : String(e);
+      ui.pipelineError = locale.startsWith("zh")
+        ? "深测算暂时没完成，再发一句继续即可。"
+        : "Deep analysis didn't finish yet — send another message to retry.";
     }
     ui.pipelineBusy = false;
   }

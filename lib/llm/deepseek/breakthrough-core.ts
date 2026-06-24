@@ -14,6 +14,7 @@ import { buildOutputPolicyForPoju } from "@/lib/llm/compliance/output-policy";
 import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-structured-instance-inventory";
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
+import { extractJson } from "@/lib/llm/phases/phase-transport";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 
 export const DEEP_RECKONING_TASK = `# 角色：破局总设计师（上帝视角 · 零聊天腔）
@@ -159,8 +160,7 @@ ${contextText}
 }
 
 export function parseBreakthroughCoreResponseText(raw: string): unknown {
-  const cleaned = raw.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
-  return JSON.parse(cleaned) as unknown;
+  return JSON.parse(extractJson(raw)) as unknown;
 }
 
 export function buildBreakthroughCoreAuditText(parsed: unknown): string {
@@ -284,18 +284,37 @@ export async function requestBreakthroughCore(
   const profileId =
     session.selected_stored_profile_id?.trim() ?? uuidLike(agent.selected_profile_id) ?? "";
 
-  const res = await fetch("/api/poju/breakthrough-core", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      session_id: session.session_id,
-      original_question: session.original_question,
-      agent_v2: agent,
-      base_analysis,
-      locale,
-      selected_stored_profile_id: profileId || null,
-    }),
-  });
+  const ac = new AbortController();
+  const softTimeoutMs = 90_000;
+  const timer = window.setTimeout(() => ac.abort(), softTimeoutMs);
+
+  let res: Response;
+  try {
+    res = await fetch("/api/poju/breakthrough-core", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        session_id: session.session_id,
+        original_question: session.original_question,
+        agent_v2: agent,
+        base_analysis,
+        locale,
+        selected_stored_profile_id: profileId || null,
+      }),
+      signal: ac.signal,
+    });
+  } catch (e) {
+    if (e instanceof Error && e.name === "AbortError") {
+      throw new Error(
+        locale.startsWith("zh")
+          ? "深测算超时未完成，再发一句继续即可。"
+          : "Deep analysis timed out — send another message to retry.",
+      );
+    }
+    throw e;
+  } finally {
+    window.clearTimeout(timer);
+  }
 
   const payload = (await res.json().catch(() => ({}))) as {
     ok?: boolean;

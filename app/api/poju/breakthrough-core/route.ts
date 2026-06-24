@@ -11,7 +11,7 @@ import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 import { generateWithClosedSetGuard } from "@/lib/llm/sanitize/closed-set-circuit-breaker";
 import { normalizeAgentPhase, type POJUAgentState } from "@/lib/poju/agent-state";
 
-export const maxDuration = 180;
+export const maxDuration = 300;
 
 function isRecord(x: unknown): x is Record<string, unknown> {
   return Boolean(x) && typeof x === "object" && !Array.isArray(x);
@@ -105,10 +105,10 @@ export async function POST(req: Request) {
           call_type: "deep_analysis",
           system,
           messages: [{ role: "user", content: userContent }],
-          max_tokens: 12000,
+          max_tokens: 6000,
           thinking_effort: "xhigh",
           response_format: "json",
-          timeout_ms: 180_000,
+          timeout_ms: 270_000,
           session_id: profileId ? baseAnalysisCacheSessionId(profileId) : pojuCacheSessionId(sessionId),
         });
         rawContent = result.content;

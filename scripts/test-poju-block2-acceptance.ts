@@ -292,7 +292,7 @@ function fileChecklist(): void {
   const deep = getThinkingConfig("deep_analysis");
   assert("deep_analysis thinking enabled", deep.enabled === true);
   const btRouteSrc = read("app/api/poju/breakthrough-core/route.ts");
-  assert("breakthrough-core route xhigh + 12000", btRouteSrc.includes('thinking_effort: "xhigh"') && btRouteSrc.includes("max_tokens: 12000"));
+  assert("breakthrough-core route xhigh + 6000", btRouteSrc.includes('thinking_effort: "xhigh"') && btRouteSrc.includes("max_tokens: 6000"));
 }
 
 async function main(): Promise<void> {

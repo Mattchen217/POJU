@@ -116,7 +116,7 @@ export async function callOpeningPhase(input: PhaseLLMInput): Promise<PhaseLLMRe
           sufficient: Boolean((parsed.understanding as { sufficient?: unknown }).sufficient),
           missing: String((parsed.understanding as { missing?: unknown }).missing ?? ""),
         }
-      : { sufficient: true, missing: "" };
+      : { sufficient: false, missing: "" };
 
   const suggestedRaw = typeof parsed.suggested_phase === "string" ? parsed.suggested_phase : null;
   const suggested = suggestedRaw ? normalizeAgentPhase(suggestedRaw) : null;

@@ -97,19 +97,16 @@ function staticChecks(): void {
   // 9 — ContextSummaryEditor
   assert("9 ContextSummaryEditor wired", chatUi.includes("ContextSummaryEditor"));
 
-  // 10 — maxDuration 180
+  // 10 — maxDuration (breakthrough + final-delivery 300; chat 180)
   const routes = [
-    "app/api/poju/chat/route.ts",
-    "app/api/poju/breakthrough-core/route.ts",
-    "app/api/poju/final-delivery/route.ts",
-    "app/api/profile/base-analysis/stream/route.ts",
+    { path: "app/api/poju/chat/route.ts", expect: 180 },
+    { path: "app/api/poju/breakthrough-core/route.ts", expect: 300 },
+    { path: "app/api/poju/final-delivery/route.ts", expect: 300 },
+    { path: "app/api/profile/base-analysis/stream/route.ts", expect: 300 },
   ];
-  for (const r of routes) {
+  for (const { path: r, expect: dur } of routes) {
     const src = read(r);
-    const ok =
-      r.includes("base-analysis/stream")
-        ? /maxDuration\s*=\s*300/.test(src)
-        : /maxDuration\s*=\s*180/.test(src);
+    const ok = new RegExp(`maxDuration\\s*=\\s*${dur}`).test(src);
     assert(`10 maxDuration (${r})`, ok);
   }
 

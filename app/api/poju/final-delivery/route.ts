@@ -20,7 +20,7 @@ import type { BreakthroughCore, POJUAgentState } from "@/lib/poju/agent-state";
 import { normalizeAgentPhase } from "@/lib/poju/agent-state";
 import type { POJUAction } from "@/lib/poju/types";
 
-export const maxDuration = 180;
+export const maxDuration = 300;
 
 function isRecord(x: unknown): x is Record<string, unknown> {
   return Boolean(x) && typeof x === "object" && !Array.isArray(x);
