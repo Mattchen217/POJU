@@ -23,8 +23,8 @@ export function finalizeUnlockBaziSession(
           ...session.agent_v2,
           has_base_analysis: true,
           selected_profile_id: profileId,
-          /** Matrix narrative served as onboarding; first user turn enters collecting. */
-          current_phase: "collecting_context",
+          /** Report/matrix is onboarding display; dialogue still starts at understanding gate (PDF step 2). */
+          current_phase: "opening",
         }
       : session.agent_v2,
   };
@@ -60,7 +60,7 @@ export function prepareUnlockReleaseSession(
       ? {
           ...session.agent_v2,
           has_base_analysis: true,
-          current_phase: "collecting_context",
+          current_phase: "opening",
         }
       : session.agent_v2,
   };
