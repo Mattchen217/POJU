@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 
 import { GlossaryText } from '@/components/cross-product/GlossaryText';
+import { ACTIVITY_CAPTION_ROTATE_MS } from "@/lib/ui/activity-caption-timing";
 import { stripMetaSection } from '@/lib/base-analysis/useStreamingAnalysis';
 import type { Locale } from '@/lib/glossary/term-glossary';
 
@@ -56,7 +57,7 @@ export function StreamingAnalysisView({
 
     const timer = window.setInterval(() => {
       setThinkingPhraseIdx((idx) => (idx + 1) % phrases.length);
-    }, 2000);
+    }, ACTIVITY_CAPTION_ROTATE_MS);
 
     return () => window.clearInterval(timer);
   }, [isThinking, phrases.length]);

@@ -30,6 +30,8 @@ type Props = {
   payload: PojuMatrixPayload;
   locale: string;
   compact?: boolean;
+  /** Chat: synopsis lives in MatrixNarrativeReply — hide enote / loading placeholders here. */
+  suppressNarrative?: boolean;
   /** Match preview: e.g. 用户A： before born / coordinates / matrix id. */
   subjectPrefix?: string;
 };
@@ -190,7 +192,7 @@ function formatElementAttribution(
     .join(sep);
 }
 
-export function PojuEnergyMatrix({ payload, locale, compact = false, subjectPrefix }: Props) {
+export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNarrative = false, subjectPrefix }: Props) {
   const { structured, user_profile, wuxing_scores, strength, matrix_id } = payload;
   const shenshaLocale = normalizeShenshaLocale(locale);
   const isZh = isZhMatrixLocale(locale);
@@ -468,11 +470,11 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, subjectPref
               </div>
             ) : null}
             <div className="enote">
-              {narrativeLoading ? (
+              {!suppressNarrative && narrativeLoading ? (
                 <NarrativePlaceholder label={tc("narrative_loading")} />
-              ) : isLlmNarrative && display.enote_caption ? (
+              ) : !suppressNarrative && isLlmNarrative && display.enote_caption ? (
                 display.enote_caption
-              ) : showTemplateFallback ? (
+              ) : !suppressNarrative && showTemplateFallback ? (
                 <>
                   {tc("day_master")} <b>{display.day_master.en}</b>
                   {tc("with_surplus")}
@@ -558,7 +560,7 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, subjectPref
           <div className="side">
             <div className="ro ro__friction">
               <div className="ro__k">{tc("structural_dynamics")}</div>
-              {narrativeLoading ? (
+              {suppressNarrative && narrativeLoading ? null : narrativeLoading ? (
                 <NarrativePlaceholder label={tc("narrative_loading")} />
               ) : (
                 <>
@@ -590,7 +592,11 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, subjectPref
                 </span>
               </div>
               <p className="transit-note">
-                {narrativeLoading ? <NarrativePlaceholder label={tc("narrative_loading")} /> : display.annual_transit.narrative}
+                {suppressNarrative && narrativeLoading ? null : narrativeLoading ? (
+                  <NarrativePlaceholder label={tc("narrative_loading")} />
+                ) : (
+                  display.annual_transit.narrative
+                )}
               </p>
               <div className="tprog">
                 <div className="tprog__bar">

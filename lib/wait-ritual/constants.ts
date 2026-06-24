@@ -1,3 +1,4 @@
+import { ACTIVITY_CAPTION_ROTATE_MS } from "@/lib/ui/activity-caption-timing";
 import { PREPARING_ANALYZING_SCENE } from "@/components/poju/PreparingAnalyzingSpline";
 
 export type DeliveryWaitProduct = "glyph" | "match" | "syncro" | "poju";
@@ -25,7 +26,7 @@ export const WAIT_CONVERGE_MS = 900;
 export const WAIT_CROSSFADE_MS = 700;
 export const WAIT_FLASH_MS = 300;
 export const WAIT_BAZI_CACHED_MIN_MS = 10_000;
-export const WAIT_STEP_INTERVAL_MS = 2500;
+export const WAIT_STEP_INTERVAL_MS = ACTIVITY_CAPTION_ROTATE_MS;
 
 export function productScene(product: DeliveryWaitProduct): string {
   if (product === "poju") return DELIVERY_WAIT_SCENES.bazi;

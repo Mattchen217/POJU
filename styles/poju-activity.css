@@ -88,7 +88,7 @@
     transparent 100%
   );
   pointer-events: none;
-  animation: poju-activity-caption-in 0.45s ease-out;
+  animation: poju-activity-caption-in 0.9s ease-out;
 }
 
 @keyframes poju-activity-caption-in {

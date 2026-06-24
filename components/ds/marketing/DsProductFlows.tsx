@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 
 import { DsWhenProductCard } from "@/components/ds/marketing/DsWhenProductCard";
 import { DsFlowStepRow, type FlowStep } from "@/components/ds/marketing/DsFlowStepRow";
+import { ACTIVITY_CAPTION_ROTATE_MS } from "@/lib/ui/activity-caption-timing";
 
 function mulberry32(seed: number) {
   return function () {
@@ -22,7 +23,7 @@ const SYNCRO_ANG = [0, 45, 90, 135, 180];
 /** DS SyncroFlow — 24h timeline sweep + compass */
 export function DsSyncroFlow({ steps }: { steps: FlowStep[] }) {
   const hostRef = useRef<HTMLDivElement>(null);
-  const period = 6400;
+  const period = ACTIVITY_CAPTION_ROTATE_MS * Math.max(steps.length, 1);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -312,7 +313,7 @@ export function DsMatchFlow({ steps }: { steps: FlowStep[] }) {
   return (
     <div>
       <div ref={hostRef} className="ds-match-flow-canvas" />
-      <DsFlowStepRow steps={steps} accentRgb="244,114,182" cycleMs={1700} />
+      <DsFlowStepRow steps={steps} accentRgb="244,114,182" />
     </div>
   );
 }

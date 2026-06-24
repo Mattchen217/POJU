@@ -107,8 +107,8 @@ function phase1ProfileAnchorTests(): void {
 
   const withProfile = mockSession({ has_profile: true, agent_v2: undefined });
   assert(
-    "profile session advances to collecting (router fallback)",
-    resolveActiveAgentPhase(withProfile) === "collecting_context",
+    "profile session without persisted phase stays opening",
+    resolveActiveAgentPhase(withProfile) === "opening",
   );
 
   const orch = read("lib/poju/agent-orchestrator.ts");

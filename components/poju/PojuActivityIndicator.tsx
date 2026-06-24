@@ -2,12 +2,13 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import { SplineInteractiveScene } from "@/components/spline/SplineInteractiveScene";
+import { ACTIVITY_CAPTION_ROTATE_MS } from "@/lib/ui/activity-caption-timing";
 import "@/styles/poju-activity.css";
 
 /** Framing for strip height = (width÷2)×⅔; nudge figure to vertical center. */
 const POJU_CHAT_ACTIVITY_ZOOM = 0.74;
 
-const ROTATE_MS = 2800;
+const ROTATE_MS = ACTIVITY_CAPTION_ROTATE_MS;
 
 export function PojuActivityIndicator({ lines }: { lines: string[] }) {
   const [i, setI] = useState(0);

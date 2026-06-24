@@ -7,6 +7,7 @@ import {
   PojuHowWorksFrameParticles,
   PojuHowWorksGoldRing,
 } from "@/components/marketing/poju-how-works-particles";
+import { ACTIVITY_CAPTION_RING_ROTATE_MS } from "@/lib/ui/activity-caption-timing";
 import {
   POJU_HOW_RING_RADIUS_VB,
   POJU_HOW_WORKS_VB,
@@ -105,7 +106,7 @@ export function PojuHowWorksRing({ steps }: PojuHowWorksRingProps) {
     if (reduceMotion || paused) return;
     const t = window.setInterval(() => {
       setTick((k) => k + 1);
-    }, 4200);
+    }, ACTIVITY_CAPTION_RING_ROTATE_MS);
     return () => window.clearInterval(t);
   }, [reduceMotion, paused]);
 

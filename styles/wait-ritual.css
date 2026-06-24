@@ -111,7 +111,7 @@
   font-weight: 600;
   letter-spacing: 0.01em;
   text-shadow: 0 1px 12px rgba(0, 0, 0, 0.65);
-  animation: preparing-status-fade 0.45s ease;
+  animation: preparing-status-fade 0.9s ease;
 }
 
 .delivery-wait-copy__subtitle {
@@ -131,7 +131,7 @@
   line-height: 1.45;
   color: rgba(255, 255, 255, 0.94);
   font-weight: 600;
-  animation: preparing-status-fade 0.45s ease;
+  animation: preparing-status-fade 0.9s ease;
 }
 
 .delivery-wait-copy__finish {

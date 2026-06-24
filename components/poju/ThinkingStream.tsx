@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getThinkingStreamLines } from "@/lib/poju/thinking-stream-lines";
 import type { ThinkingStreamMode } from "@/lib/poju/thinking-stream-mode";
+import { ACTIVITY_CAPTION_ROTATE_MS } from "@/lib/ui/activity-caption-timing";
 
 export interface ThinkingStreamProps {
   mode: ThinkingStreamMode | null;
@@ -25,7 +26,7 @@ export function ThinkingStream({ mode, locale }: ThinkingStreamProps) {
     setLineIndex(0);
     const interval = setInterval(() => {
       setLineIndex((prev) => (prev + 1) % lines.length);
-    }, 2200);
+    }, ACTIVITY_CAPTION_ROTATE_MS);
     return () => clearInterval(interval);
   }, [mode, locale, lines.length]);
 

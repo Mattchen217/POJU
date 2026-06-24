@@ -87,7 +87,7 @@ export function GlyphHowWorksExplosion({
   };
 
   if (windCount === 0) {
-    return <DsFlowStepRow steps={steps} accentRgb="167,139,250" cycleMs={2000} />;
+    return <DsFlowStepRow steps={steps} accentRgb="167,139,250" />;
   }
 
   const card = windCards[cardIndex]!;

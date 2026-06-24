@@ -40,7 +40,7 @@
   font-size: var(--pj-text-sm);
   color: var(--pj-text-primary);
   letter-spacing: 0.3px;
-  animation: thinking-fade-in 0.4s ease;
+  animation: thinking-fade-in 0.85s ease;
 }
 
 @keyframes thinking-fade-in {

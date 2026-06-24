@@ -846,6 +846,52 @@
   max-width: var(--pchat-read-max) !important;
   margin: 0 auto 12px;
 }
+.pchat__pending-reply .poju-activity {
+  min-height: clamp(7rem, 28vw, 11rem);
+}
+
+.pchat__reply-handoff {
+  position: relative;
+  min-height: clamp(7rem, 28vw, 11rem);
+}
+
+.pchat__reply-handoff__activity,
+.pchat__reply-handoff__text {
+  transition: opacity 0.2s ease;
+}
+
+.pchat__reply-handoff__activity {
+  opacity: 1;
+}
+
+.pchat__reply-handoff__text {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pchat__reply-handoff--done .pchat__reply-handoff__activity {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pchat__reply-handoff--done .pchat__reply-handoff__text {
+  position: relative;
+  inset: auto;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.poju-matrix-bubble__synopsis {
+  margin-top: 0.75rem;
+  padding: 0 0.15rem;
+}
+
+.poju-matrix-bubble__synopsis .pchat__streaming-line {
+  margin: 0;
+}
+
 .pchat__thinking-bar {
   display: flex; align-items: center; gap: 12px;
   padding: 12px 18px; border-radius: 14px;
@@ -858,6 +904,11 @@
   margin: 0; font-size: 16px !important; font-style: italic; color: var(--pchat-gold-soft);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   font-family: var(--pchat-serif);
+  animation: pchat-thinking-line-in 0.85s ease;
+}
+@keyframes pchat-thinking-line-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 .pchat__thinking-spinner {
   width: 14px; height: 14px; border-radius: 50%;

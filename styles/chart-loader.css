@@ -169,7 +169,7 @@
   font-weight: 600;
   letter-spacing: 0.01em;
   text-shadow: 0 1px 12px rgba(0, 0, 0, 0.65);
-  animation: preparing-status-fade 0.45s ease;
+  animation: preparing-status-fade 0.9s ease;
 }
 
 .preparing-spline-page__hint {

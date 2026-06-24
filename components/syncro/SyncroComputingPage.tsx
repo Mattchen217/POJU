@@ -12,6 +12,7 @@ import { computeSyncroSessionExpiresAt } from "@/lib/syncro/syncro-submission-ti
 import { recordUsage } from "@/lib/syncro/device-usage";
 import { getStoredProfile, recordProfileUsage } from "@/lib/profile/stored-profiles-service";
 import { readFetchJson } from "@/lib/client/fetch-json";
+import { ACTIVITY_CAPTION_ROTATE_MS } from "@/lib/ui/activity-caption-timing";
 import { parseSyncroStoredLocation } from "@/lib/syncro/syncro-location-storage";
 import { saveSyncroLlmContext } from "@/lib/syncro/syncro-llm-context-storage";
 import {
@@ -46,7 +47,7 @@ export function SyncroComputingPage() {
   useEffect(() => {
     const interval = window.setInterval(() => {
       setStep((s) => (s + 1) % steps.length);
-    }, 3000);
+    }, ACTIVITY_CAPTION_ROTATE_MS);
     return () => window.clearInterval(interval);
   }, [steps.length]);
 

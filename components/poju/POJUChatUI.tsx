@@ -66,6 +66,7 @@ import {
   shouldShowExpiryWarning,
 } from "@/lib/poju/expiry-reminder";
 import { MatrixNarrativeReply, matrixNarrativeActionsText } from "@/components/poju/MatrixNarrativeReply";
+import { AssistantMessageActions } from "@/components/poju/AssistantMessageActions";
 import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
 import { PojuPaywallInline } from "@/components/poju/PojuPaywallInline";
 import { MainDeliveryView } from "@/components/poju/MainDeliveryView";
@@ -517,8 +518,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         }
       }
 
-      setSlotActivity(null);
       onSessionUpdate(toPersist);
+      window.setTimeout(() => setSlotActivity(null), 200);
 
       if (willTriggerDeepReckoning(toPersist)) {
         setTrailingActivity("deep_reckoning");
@@ -1157,14 +1158,21 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         if (energyMatrixRendered) continue;
         energyMatrixRendered = true;
         bareIds.add(m.timestamp);
-        slots[m.timestamp] = (
-          <PojuEnergyMatrix payload={m.meta.matrix_payload} locale={locale} compact />
-        );
-        followUps[m.timestamp] = (
-          <MatrixNarrativeReply payload={m.meta.matrix_payload} locale={locale} />
-        );
         const actionsText = matrixNarrativeActionsText(m.meta.matrix_payload, locale);
-        if (actionsText) followUpActions[m.timestamp] = actionsText;
+        slots[m.timestamp] = (
+          <div className="poju-matrix-bubble">
+            <PojuEnergyMatrix
+              payload={m.meta.matrix_payload}
+              locale={locale}
+              compact
+              suppressNarrative
+            />
+            <div className="poju-matrix-bubble__synopsis">
+              <MatrixNarrativeReply payload={m.meta.matrix_payload} locale={locale} />
+              {actionsText ? <AssistantMessageActions content={actionsText} /> : null}
+            </div>
+          </div>
+        );
       }
       if (m.meta?.contains_delivery) {
         bareIds.add(m.timestamp);

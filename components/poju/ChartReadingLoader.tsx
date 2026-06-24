@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { StoredProfileData } from "@/lib/db/poju-db";
 import { PreparingStatusOverlay } from "@/components/poju/PreparingStatusOverlay";
+import { ACTIVITY_CAPTION_ROTATE_MS } from "@/lib/ui/activity-caption-timing";
 
 const STEP_COUNT = 9;
 
@@ -53,7 +54,7 @@ export function ChartReadingLoader({
         }
         return prev;
       });
-    }, 2500);
+    }, ACTIVITY_CAPTION_ROTATE_MS);
 
     return () => clearInterval(interval);
   }, [currentStep, steps.length]);

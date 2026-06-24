@@ -51,7 +51,7 @@ export function MatchHowWorksSection({ header, steps }: Props) {
       </div>
 
       <div className="mt-9">
-        <DsFlowStepRow steps={steps} accentRgb="244,114,182" cycleMs={1700} />
+        <DsFlowStepRow steps={steps} accentRgb="244,114,182" />
       </div>
     </div>
   );

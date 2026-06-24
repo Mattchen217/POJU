@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 
+import { ACTIVITY_CAPTION_ROTATE_MS } from "@/lib/ui/activity-caption-timing";
+
 export type FlowStep = { title: string; desc?: string };
 
 export function DsFlowStepRow({
   steps,
   accentRgb,
-  cycleMs = 2000,
+  cycleMs = ACTIVITY_CAPTION_ROTATE_MS,
   activeIndex,
 }: {
   steps: FlowStep[];
