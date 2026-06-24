@@ -81,6 +81,7 @@ export interface ContextSummary {
 export interface BreakthroughDirection {
   direction: string;
   structural_basis: string;
+  timing?: string;
   what_would_confirm: string;
   status?: "hypothesis" | "reinforced" | "selected" | "weakened";
 }
@@ -112,6 +113,7 @@ export function parseBreakthroughCoreUpdatesFromLlm(raw: unknown): Partial<Break
         direction,
         structural_basis:
           typeof row.structural_basis === "string" ? row.structural_basis.trim() : "",
+        timing: typeof row.timing === "string" ? row.timing.trim() : undefined,
         what_would_confirm:
           typeof row.what_would_confirm === "string" ? row.what_would_confirm.trim() : "",
         status:

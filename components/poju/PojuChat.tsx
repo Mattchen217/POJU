@@ -14,14 +14,12 @@ import pojuLogo from "@/assets/images/POJUlogo.png";
 import { RichReadingText } from "@/components/cross-product/RichReadingText";
 import { AssistantMessageActions } from "@/components/poju/AssistantMessageActions";
 import { PojuAiAvatar } from "@/components/poju/PojuAiAvatar";
-import { ThinkingEnergyPulse } from "@/components/poju/ThinkingEnergyPulse";
-import { StreamingAssistantBubble } from "@/components/poju/StreamingAssistantBubble";
+import { PojuActivityIndicator } from "@/components/poju/PojuActivityIndicator";
 import { EditMessageDialog } from "@/components/poju/EditMessageDialog";
 import {
   SessionSidebarDialog,
   type SessionSidebarDialogState,
 } from "@/components/poju/SessionSidebarDialog";
-import type { ThinkingStreamMode } from "@/lib/poju/thinking-stream-mode";
 import "./poju-chat.css";
 import "@/styles/reading-typography.css";
 
@@ -50,14 +48,9 @@ export interface PojuChatProps {
   currentSessionId: string | null;
   messages: PojuMessage[];
   isStreaming?: boolean;
-  /** Model JSON/content stream started — hide thinking pulse, show reply placeholder. */
-  replyStreaming?: boolean;
-  /** Shown while reply buffers (no raw stream text). */
-  replyingLabel?: string;
-  thinkingMode?: ThinkingStreamMode | null;
+  /** Rotating status lines while call-1 is in flight (Spline + caption). */
+  pendingActivityLines?: string[] | null;
   thinkingLocale?: string;
-  liveThinkingLine?: string | null;
-  thinkingWaitLabel?: string;
   onSend: (text: string) => void;
   onNewSession: () => void;
   onSelectSession: (id: string) => void;
@@ -147,8 +140,7 @@ function AiReplyShell({ children }: { children: ReactNode }) {
 export default function PojuChat(props: PojuChatProps) {
   const {
     sessions, currentSessionId, messages,
-    isStreaming, replyStreaming, replyingLabel,
-    thinkingMode, thinkingLocale, liveThinkingLine, thinkingWaitLabel,
+    isStreaming, pendingActivityLines, thinkingLocale,
     onSend,
     onNewSession,
     onSelectSession,
@@ -198,9 +190,8 @@ export default function PojuChat(props: PojuChatProps) {
   const [openMenuSessionId, setOpenMenuSessionId] = useState<string | null>(null);
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
   const [sessionDialog, setSessionDialog] = useState<SessionSidebarDialogState | null>(null);
-  const [pulseHold, setPulseHold] = useState(false);
-  const prevReplyStreamingRef = useRef(false);
   const [revealAssistantId, setRevealAssistantId] = useState<string | null>(null);
+  const prevPendingRef = useRef(false);
   const menuBtnRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const taRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -249,16 +240,15 @@ export default function PojuChat(props: PojuChatProps) {
     }
   }, [
     messages,
-    replyStreaming,
-    thinkingMode,
-    liveThinkingLine,
+    pendingActivityLines,
     inlineNotice,
-    pulseHold,
+    messageFollowUps,
     currentSessionId,
   ]);
 
   useEffect(() => {
-    if (prevReplyStreamingRef.current && !replyStreaming) {
+    const pending = Boolean(pendingActivityLines?.length);
+    if (prevPendingRef.current && !pending) {
       for (let i = messages.length - 1; i >= 0; i--) {
         if (messages[i].role === "assistant") {
           setRevealAssistantId(messages[i].id);
@@ -266,22 +256,14 @@ export default function PojuChat(props: PojuChatProps) {
         }
       }
     }
-    prevReplyStreamingRef.current = Boolean(replyStreaming);
-  }, [replyStreaming, messages]);
+    prevPendingRef.current = pending;
+  }, [pendingActivityLines, messages]);
 
   useEffect(() => {
     if (!revealAssistantId) return;
     const timer = window.setTimeout(() => setRevealAssistantId(null), 280);
     return () => window.clearTimeout(timer);
   }, [revealAssistantId]);
-
-  useEffect(() => {
-    if (isStreaming && thinkingMode && !replyStreaming) setPulseHold(true);
-  }, [isStreaming, thinkingMode, replyStreaming]);
-
-  useEffect(() => {
-    if (replyStreaming) setPulseHold(false);
-  }, [replyStreaming]);
 
   useEffect(() => {
     if (!openMenuSessionId) return;
@@ -559,26 +541,12 @@ export default function PojuChat(props: PojuChatProps) {
 
             {inlineNotice ? <div className="pchat__inline-notice">{inlineNotice}</div> : null}
 
-            {/* 思考中：头像右侧波形（透明）；正文流开始后切换为 StreamingAssistantBubble */}
-            {(isStreaming || pulseHold) && thinkingMode && !replyStreaming ? (
+            {pendingActivityLines?.length ? (
               <div className="pchat__msg pchat__msg--ai">
-                <div className="pchat__ai-row pchat__ai-row--thinking">
-                  <PojuAiAvatar />
-                  <ThinkingEnergyPulse
-                    variant="inline"
-                    streaming={isStreaming && !replyStreaming}
-                    reasoningText={liveThinkingLine}
-                    onFadeComplete={() => setPulseHold(false)}
-                    hudLabel={
-                      thinkingLocale?.startsWith("zh") ? "思维矩阵：运行中" : "THOUGHT METRICS: ACTIVE"
-                    }
-                  />
-                </div>
+                <AiReplyShell>
+                  <PojuActivityIndicator lines={pendingActivityLines} />
+                </AiReplyShell>
               </div>
-            ) : null}
-
-            {isStreaming && replyStreaming ? (
-              <StreamingAssistantBubble label={replyingLabel ?? "POJU is composing a reply…"} />
             ) : null}
           </div>
         </div>

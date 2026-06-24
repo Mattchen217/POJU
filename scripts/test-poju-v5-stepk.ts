@@ -54,9 +54,10 @@ function staticChecks(): void {
   assert("1b tracking_flash thinking high", track.enabled && track.effort === "high");
   assert("1c collection_flash thinking xhigh", collect.enabled && collect.effort === "xhigh");
 
-  // 2 — ThinkingStream UI
+  // 2 — Unified activity indicator (Block 7C)
   const chatUi = read("components/poju/POJUChatUI.tsx");
-  assert("2 ThinkingStream in chat UI", chatUi.includes("ThinkingStream") && chatUi.includes("thinkingMode"));
+  assert("2 PojuActivityIndicator in chat UI", chatUi.includes("PojuActivityIndicator") && chatUi.includes("slotActivity"));
+  assert("2 no ThinkingEnergyPulse in chat UI", !chatUi.includes("ThinkingEnergyPulse"));
 
   // 3 — opening prompt: positive framing hint
   const opening = read("lib/llm/phases/opening-phase.ts");

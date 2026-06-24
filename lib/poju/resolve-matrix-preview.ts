@@ -227,6 +227,7 @@ export function buildStaticMatrixPreviewPayload(
     ...failed,
     display: {
       ...display,
+      narrative_source: "stored",
       synopsis: {
         ...display.synopsis,
         prompt: getOnboardingCopy(product, locale),

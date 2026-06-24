@@ -9,7 +9,7 @@ export function buildSpineBlock(agent: POJUAgentState | null | undefined): strin
 ${core.breakthrough_directions
   .map(
     (d) =>
-      `- ${d.direction}（锚：${d.structural_basis} · 待验证：${d.what_would_confirm} · ${d.status ?? "hypothesis"}）`,
+      `- ${d.direction}（锚：${d.structural_basis}${d.timing ? ` · 节律：${d.timing}` : ""} · 待验证：${d.what_would_confirm} · ${d.status ?? "hypothesis"}）`,
   )
   .join("\n")}`;
 }

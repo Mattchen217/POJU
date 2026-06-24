@@ -16,6 +16,7 @@ import { buildElementPillarMap, type ElementKey, type ElementPillarAssignment } 
 import { buildMatrixDisplayData } from "@/lib/poju/build-matrix-display";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
 import { activePillarByAge } from "@/lib/poju/matrix-life-segment";
+import { matrixSynopsisNarrativeState } from "@/lib/poju/matrix-narrative-text";
 import { computeYearTransitProgress } from "@/lib/poju/matrix-transit-progress";
 import { resolveBaziLabel } from "@/lib/poju/resolve-bazi-i18n";
 import { normalizeShenshaLocale, resolveShenshaList } from "@/lib/poju/shensha";
@@ -261,9 +262,8 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, subjectPref
       ? tb("gender.qian")
       : tb("gender.kun");
 
-  const isLlmNarrative = display.narrative_source === "llm";
-  const showTemplateFallback = display.narrative_failed === true;
-  const narrativeLoading = !isLlmNarrative && !showTemplateFallback;
+  const { isLlmNarrative, showTemplateFallback, narrativeLoading } =
+    matrixSynopsisNarrativeState(display);
 
   const [transitProgress, setTransitProgress] = useState(() => computeYearTransitProgress());
   useEffect(() => {

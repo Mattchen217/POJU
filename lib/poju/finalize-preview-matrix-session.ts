@@ -7,6 +7,7 @@ import { isMatrixNarrativeReady } from "@/lib/poju/matrix-narrative-ready";
 import {
   bindPreviewProfileToSession,
   createEnergyMatrixMessage,
+  dedupePreviewMatrixMessages,
   hasPreviewMatrixMessage,
 } from "@/lib/poju/preview-unlock";
 import { seedFixedWelcomeMessages } from "@/lib/poju/chat-bootstrap";
@@ -68,11 +69,11 @@ export async function finalizePreviewMatrixSession(
       )
     : [...working.messages, matrixMsg];
 
-  let next: POJUSessionState = {
+  let next: POJUSessionState = dedupePreviewMatrixMessages({
     ...working,
     matrix_payload: finalPayload,
     messages,
-  };
+  });
   next = seedFixedWelcomeMessages(next, locale);
   return next;
 }

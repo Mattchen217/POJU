@@ -1,0 +1,62 @@
+.poju-activity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.poju-activity__scene {
+  width: 280px;
+  height: 200px;
+  max-width: min(280px, 100%);
+  border-radius: 12px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.poju-activity__fallback {
+  width: 280px;
+  height: 200px;
+  max-width: min(280px, 100%);
+  border-radius: 12px;
+  background: radial-gradient(
+    circle at 50% 45%,
+    rgba(167, 139, 250, 0.35) 0%,
+    rgba(88, 28, 135, 0.12) 55%,
+    transparent 72%
+  );
+  animation: poju-activity-breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes poju-activity-breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.poju-activity__caption {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: rgba(226, 232, 240, 0.88);
+  animation: poju-activity-caption-in 0.45s ease-out;
+}
+
+@keyframes poju-activity-caption-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

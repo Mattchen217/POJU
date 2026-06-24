@@ -35,12 +35,25 @@ export const DEEP_RECKONING_TASK = `# 角色：破局总设计师（上帝视角
    这个人的命盘结构，为什么会让他卡在这个问题上？把"困境"翻译成"结构性原因"。
    必须点名 structured 的具体字段（如 month.ten_god=七杀、strength=weak、da_yun 第三步、ji_shen=X），
    不许只报四个五行词、不许泛泛而谈。这是"人与问题的关系"，不是命盘复述。
-2. breakthrough_directions（破局方向，2–3 条）：
+2. breakthrough_directions（破局方向，2–3 条，宁少而锐）：
    基于关系结论深思，每条 = {
-     direction: 一句话方向（顺势/转向/立断的判断，不替用户决定、不预测事件日期）,
-     structural_basis: 锚在哪条命盘结构,
-     what_would_confirm: 要验证/证伪它成立，需从用户那儿知道什么
+     direction: 一句话方向（顺势 / 守 / 转 / 立断 的判断，不替用户决定、不预测事件日期）,
+     structural_basis: 锚在哪些命盘结构（见下方「维度织入」硬要求）,
+     timing: 基于 da_yun 当前这步（顺/逆/进/守），现在是该进、该守、还是该转的窗口
+             —— 只说能量节律，禁公历年 / 干支纪年 / 具体日期,
+     what_would_confirm: 要验证 / 证伪它成立，需从用户那儿知道什么
    }
+
+# 维度织入（硬要求 · 反"只看五行"）
+每条 direction 的 structural_basis 必须整合【至少 2 个不同维度】，不许只报五行 / 强弱：
+- 十神 / 格局：驱动力与命局格调（pillars_detail.*.ten_god, pattern）
+- 五行强弱 / 用神喜忌：过载还是不足、往哪调（strength, yong_shen / xi_shen / ji_shen）
+- 大运时机：当前这步是顺是逆、该进该守（da_yun）—— 破局的"何时"
+- 神煞（仅闭集 9、且仅本盘实有的那几个）：点出与所问之事相关的助力或隐忧
+  （pillars_detail.*.shen_sha）；本盘没有相关神煞就不提，严禁编造、严禁集外
+- 十二长生：相关柱的能量处于旺 / 衰哪一阶段（pillars_detail.*.life_stage）—— 力量的"火候"
+至少有 1 条 direction 必须带出 timing（大运视角的进 / 守 / 转判断）。
+若某维度本盘确实无可用实例，跳过该维度即可，但不得用其它维度凑数式堆砌，更不得编造。
 
 # 硬核标准（反注水）
 - 每条结论/方向都必须能追溯到 structured 的具体字段，否则删掉重写。
@@ -52,7 +65,7 @@ export const DEEP_RECKONING_TASK = `# 角色：破局总设计师（上帝视角
 {
   "relationship_conclusion": "...",
   "breakthrough_directions": [
-    { "direction": "...", "structural_basis": "...", "what_would_confirm": "..." }
+    { "direction": "...", "structural_basis": "...", "timing": "...", "what_would_confirm": "..." }
   ],
   "investigation_agenda": [ … 见下方议程段 ]
 }
@@ -84,6 +97,7 @@ export type BreakthroughCoreLLMResponse = {
   breakthrough_directions: Array<{
     direction: string;
     structural_basis: string;
+    timing: string;
     what_would_confirm: string;
   }>;
   investigation_agenda: unknown;
@@ -159,7 +173,7 @@ export function buildBreakthroughCoreAuditText(parsed: unknown): string {
     for (const d of dirs) {
       if (!d || typeof d !== "object") continue;
       const row = d as Record<string, unknown>;
-      for (const k of ["direction", "structural_basis", "what_would_confirm"] as const) {
+      for (const k of ["direction", "structural_basis", "timing", "what_would_confirm"] as const) {
         if (typeof row[k] === "string") parts.push(row[k]);
       }
     }
@@ -195,12 +209,13 @@ export function mapBreakthroughCorePayload(parsed: unknown): {
     const row = d as Record<string, unknown>;
     const direction = typeof row.direction === "string" ? row.direction.trim() : "";
     const structural_basis = typeof row.structural_basis === "string" ? row.structural_basis.trim() : "";
+    const timing = typeof row.timing === "string" ? row.timing.trim() : "";
     const what_would_confirm =
       typeof row.what_would_confirm === "string" ? row.what_would_confirm.trim() : "";
-    if (!direction || !structural_basis || !what_would_confirm) {
+    if (!direction || !structural_basis || !timing || !what_would_confirm) {
       throw new Error(`breakthrough_directions[${i}] missing required fields`);
     }
-    return { direction, structural_basis, what_would_confirm, status: "hypothesis" as const };
+    return { direction, structural_basis, timing, what_would_confirm, status: "hypothesis" as const };
   });
 
   const investigation_agenda = parseInvestigationAgenda(o.investigation_agenda);

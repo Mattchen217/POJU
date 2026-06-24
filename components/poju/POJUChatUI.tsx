@@ -11,9 +11,12 @@ import type { ContextSummary } from "@/lib/poju/agent-state";
 import { OffTopicAction } from "@/components/poju/OffTopicAction";
 import { RefundOfferAction } from "@/components/poju/RefundOfferAction";
 import {
-  resolveThinkingStreamMode,
-  type ThinkingStreamMode,
-} from "@/lib/poju/thinking-stream-mode";
+  resolveActivityForSend,
+  willRunDegradedDelivery,
+  willTriggerDeepReckoning,
+  type PojuActivity,
+} from "@/lib/poju/activity";
+import { PojuActivityIndicator } from "@/components/poju/PojuActivityIndicator";
 import { ProfileSelector } from "@/components/profile/ProfileSelector";
 import { getPojuDb } from "@/lib/db/poju-db";
 import { createPOJUSession, loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
@@ -70,7 +73,6 @@ import { PojuReportChatCard } from "@/components/poju/PojuReportChatCard";
 import { PojuUnlockReportModal } from "@/components/poju/PojuUnlockReportModal";
 import { hasUnlockReportMessage, prepareUnlockReleaseSession } from "@/lib/poju/finalize-unlock-bazi-session";
 import { sessionMatrixReadyForChat, isMatrixNarrativeReady } from "@/lib/poju/matrix-narrative-ready";
-import { refreshMatrixPayload } from "@/lib/poju/build-matrix-payload";
 import {
   applyStoredMatrixPreview,
   resolveProfileMatrixPayloadWithoutLlm,
@@ -90,6 +92,7 @@ import {
 import {
   createEnergyMatrixMessage,
   createPaywallMessage,
+  dedupePreviewMatrixMessages,
   hasPaywallMessage,
   hasPreviewMatrixMessage,
   isPreviewSession,
@@ -124,6 +127,7 @@ type ComposerAttachment = {
 
 export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const t = useTranslations("poju.chat");
+  const tActivity = useTranslations("poju.activity");
   const tBrand = useTranslations("poju.branding");
   const dialog = useAppDialog();
   const [input, setInput] = useState("");
@@ -147,9 +151,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const [showProfilePicker, setShowProfilePicker] = useState(false);
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [pipelineBusy, setPipelineBusy] = useState(false);
-  const [thinkingMode, setThinkingMode] = useState<ThinkingStreamMode | null>(null);
-  const [liveThinkingLine, setLiveThinkingLine] = useState<string | null>(null);
-  const [replyStreaming, setReplyStreaming] = useState(false);
+  const [slotActivity, setSlotActivity] = useState<PojuActivity | null>(null);
+  const [trailingActivity, setTrailingActivity] = useState<PojuActivity | null>(null);
   const [generationStopped, setGenerationStopped] = useState(false);
   const [showOffTopicAction, setShowOffTopicAction] = useState(false);
   const [driftReason, setDriftReason] = useState("");
@@ -184,6 +187,20 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     onUnsupported: () => void dialog.alert(t("dialog_speech_unsupported")),
     onPermissionDenied: () => void dialog.alert(t("dialog_speech_denied")),
   });
+
+  const getActivityLines = useCallback(
+    (key: PojuActivity): string[] => {
+      const raw = tActivity.raw(key);
+      return Array.isArray(raw) ? (raw as string[]) : [];
+    },
+    [tActivity],
+  );
+
+  const pendingActivityLines = useMemo(() => {
+    if (slotActivity) return getActivityLines(slotActivity);
+    if (confirmBusy) return getActivityLines("delivering");
+    return null;
+  }, [slotActivity, confirmBusy, getActivityLines]);
 
   const scrollChatToBottom = useCallback((_behavior: ScrollBehavior = "smooth") => {
     /* PojuChat scrolls internally */
@@ -353,6 +370,16 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   }, [session.session_id, session.messages, visibleMessages.length]);
 
   useEffect(() => {
+    if (!isPreviewSession(session)) return;
+    const deduped = dedupePreviewMatrixMessages(session);
+    if (deduped !== session) {
+      onSessionUpdate(deduped);
+      void savePOJUSession(deduped);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- dedupe once per message set change
+  }, [session.session_id, session.messages.length]);
+
+  useEffect(() => {
     if (previewMatrixInitRef.current === session.session_id) return;
     if (!isPreviewSession(session)) return;
     if (!resolveSessionHasProfile(session)) return;
@@ -361,10 +388,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     if (!session.matrix_payload) return;
 
     previewMatrixInitRef.current = session.session_id;
-    const withMatrix: POJUSessionState = {
+    const payload = session.matrix_payload;
+    const withMatrix: POJUSessionState = dedupePreviewMatrixMessages({
       ...session,
-      messages: [...session.messages, createEnergyMatrixMessage(session.matrix_payload, locale)],
-    };
+      messages: [...session.messages, createEnergyMatrixMessage(payload, locale)],
+    });
     onSessionUpdate(withMatrix);
     void savePOJUSession(withMatrix);
   }, [
@@ -397,16 +425,15 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     const ac = new AbortController();
     void (async () => {
       try {
-        const refreshed = refreshMatrixPayload(payload, locale);
         const profileId = sessionRef.current.selected_stored_profile_id;
-        if (!profileId || !refreshed.user_profile) return;
+        if (!profileId || !payload.user_profile) return;
 
         const storedRow = await getStoredProfile(profileId);
         const updatedPayload = storedMatrixListPresent(storedRow)
-          ? applyStoredMatrixPreview(refreshed, storedRow!.matrix_list!, "poju", locale)
+          ? applyStoredMatrixPreview(payload, storedRow!.matrix_list!, "poju", locale)
           : await resolveProfileMatrixPayloadWithoutLlm({
               profileId,
-              userProfile: refreshed.user_profile,
+              userProfile: payload.user_profile,
               locale,
               product: "poju",
             });
@@ -496,9 +523,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     sendAbortRef.current?.abort();
     sendAbortRef.current = null;
     setSending(false);
-    setThinkingMode(null);
-    setLiveThinkingLine(null);
-    setReplyStreaming(false);
+    setSlotActivity(null);
+    setTrailingActivity(null);
     setGenerationStopped(true);
   }
 
@@ -546,9 +572,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     const ac = new AbortController();
     sendAbortRef.current = ac;
     setSending(true);
-    setThinkingMode(resolveThinkingStreamMode(baseSession, userMessage));
-    setLiveThinkingLine(null);
-    setReplyStreaming(false);
+    setSlotActivity(resolveActivityForSend(baseSession));
+    setTrailingActivity(null);
     setGenerationStopped(false);
     scrollChatToBottom("smooth");
 
@@ -574,14 +599,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         locale,
         userAlreadyAppended: true,
         signal: ac.signal,
-        onStream: {
-          onReasoning: (text) => setLiveThinkingLine(text),
-          onContentStreamStart: () => {
-            setReplyStreaming(true);
-            setLiveThinkingLine(null);
-            scrollChatToBottom("auto");
-          },
-        },
       });
       if (ac.signal.aborted || gen !== sendGenerationRef.current) return;
 
@@ -600,6 +617,15 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         }
       }
 
+      setSlotActivity(null);
+      onSessionUpdate(toPersist);
+
+      if (willTriggerDeepReckoning(toPersist)) {
+        setTrailingActivity("deep_reckoning");
+      } else if (willRunDegradedDelivery(toPersist)) {
+        setSlotActivity("degraded_delivering");
+      }
+
       const orch = await runPostTurnOrchestration(toPersist, {
         locale,
         lastUserMessage: userMessage,
@@ -613,8 +639,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       }
 
       onSessionUpdate(finalSession);
-      setReplyStreaming(false);
       await savePOJUSession(finalSession);
+      setTrailingActivity(null);
+      setSlotActivity(null);
 
       const lastAssistant = [...finalSession.messages]
         .reverse()
@@ -647,9 +674,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       if (sendAbortRef.current === ac) sendAbortRef.current = null;
       if (gen === sendGenerationRef.current) {
         setSending(false);
-        setThinkingMode(null);
-        setLiveThinkingLine(null);
-        setReplyStreaming(false);
+        setSlotActivity(null);
+        setTrailingActivity(null);
       }
     }
   }
@@ -883,7 +909,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     }
 
     setBirthFlowStage("analyzing");
-    setThinkingMode("analyzing");
     onSessionUpdate(updatedSession);
     await savePOJUSession(updatedSession);
     scrollChatToBottom("smooth");
@@ -917,7 +942,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
 
     window.setTimeout(() => {
       setBirthFlowStage(null);
-      setThinkingMode(null);
     }, 2400);
 
     try {
@@ -1013,8 +1037,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     setSummaryFormDismissed(true);
     setFinalError(null);
     setSituationError(null);
-    setSending(true);
-    setThinkingMode("preparing_delivery");
+    setSlotActivity("delivering");
     scrollChatToBottom("smooth");
 
     try {
@@ -1038,8 +1061,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       setSummaryFormDismissed(false);
     } finally {
       setConfirmBusy(false);
-      setSending(false);
-      setThinkingMode(null);
+      setSlotActivity(null);
     }
   }
 
@@ -1266,6 +1288,23 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         );
       }
     }
+
+    if (trailingActivity === "deep_reckoning") {
+      const lastAssistant = [...visibleMessages].reverse().find((m) => m.role === "assistant");
+      if (lastAssistant) {
+        const lines = getActivityLines("deep_reckoning");
+        const trailingNode = <PojuActivityIndicator lines={lines} />;
+        followUps[lastAssistant.timestamp] = followUps[lastAssistant.timestamp] ? (
+          <>
+            {followUps[lastAssistant.timestamp]}
+            {trailingNode}
+          </>
+        ) : (
+          trailingNode
+        );
+      }
+    }
+
     return {
       messageSlots: slots,
       bareMessageSlotIds: bareIds,
@@ -1279,10 +1318,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     session.actions,
     session.action_plan_archive_id,
     openUnlockReportModal,
-    session.session_id,
+    trailingActivity,
+    getActivityLines,
   ]);
 
-  const streaming = sending || confirmBusy;
+  const streaming = sending || confirmBusy || trailingActivity != null;
 
   return (
     <>
@@ -1324,8 +1364,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         currentSessionId={session.session_id}
         messages={pojuMessages}
         isStreaming={streaming}
-        replyStreaming={replyStreaming}
-        replyingLabel={t("replying_wait")}
+        pendingActivityLines={pendingActivityLines}
+        thinkingLocale={locale}
         composerDisabled={composerLocked}
         messageSlots={messageSlots}
         bareMessageSlotIds={bareMessageSlotIds}
@@ -1343,10 +1383,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           ) : undefined
         }
         initialScrollPosition={initialScrollPosition}
-        thinkingMode={streaming ? thinkingMode : null}
-        thinkingLocale={locale}
-        liveThinkingLine={liveThinkingLine}
-        thinkingWaitLabel={t("thinking_wait")}
         inputPlaceholder={t("input_placeholder")}
         composerText={input}
         onComposerTextChange={setInput}

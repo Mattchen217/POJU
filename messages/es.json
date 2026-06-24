@@ -946,6 +946,39 @@
       "start": "Empezar",
       "free_first_time": "Inicia tu sesión"
     },
+    "activity": {
+      "understanding": [
+        "POJU está analizando tu situación actual…",
+        "Identificando el conflicto central de tu sistema…",
+        "POJU está cargando tu mapa de diseño subyacente…",
+        "Relacionando este problema con tus patrones de conducta…"
+      ],
+      "deep_reckoning": [
+        "POJU está integrando tu perfil multidimensional completo…",
+        "Realizando un análisis profundo de variables estructuradas…",
+        "Razonando las rutas óptimas de ruptura sistémica…",
+        "Construyendo tu agenda de verificación personalizada…"
+      ],
+      "collecting": [
+        "POJU está depositando tu feedback real en el núcleo de datos…",
+        "Contrastando con tu modelo de tendencias conductuales…"
+      ],
+      "summarizing": [
+        "POJU está consolidando estructuralmente la información de varias rondas…",
+        "Revelando el núcleo del problema detrás de la superficie…"
+      ],
+      "delivering": [
+        "POJU está fusionando diseño y realidad en el informe final de ruptura…",
+        "Traduciendo el juicio estratégico en guía accionable y medible…"
+      ],
+      "tracking": [
+        "POJU está rastreando tu ejecución real y la desviación de datos…",
+        "Ajustando dinámicamente el ritmo de tu próximo impulso estratégico…"
+      ],
+      "degraded_delivering": [
+        "POJU está extrayendo la estrategia más viable con los datos actuales…"
+      ]
+    },
     "tool_handoff": {
       "banner_free": "Desde POJU · Gratis esta vez en tu sesión",
       "banner_paid": "Desde POJU · Se aplica el precio estándar de la herramienta",

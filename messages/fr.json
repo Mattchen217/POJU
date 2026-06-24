@@ -946,6 +946,39 @@
       "start": "Commencer",
       "free_first_time": "Démarrer votre session"
     },
+    "activity": {
+      "understanding": [
+        "POJU analyse votre situation actuelle…",
+        "Identification du conflit central de votre système…",
+        "POJU charge votre carte de design sous-jacent…",
+        "Mise en relation du problème avec vos schémas comportementaux…"
+      ],
+      "deep_reckoning": [
+        "POJU intègre votre profil multidimensionnel complet…",
+        "Analyse approfondie des variables structurées en cours…",
+        "Raisonnement sur les voies optimales de rupture systémique…",
+        "Construction de votre agenda de vérification sur mesure…"
+      ],
+      "collecting": [
+        "POJU intègre vos retours réels dans le réservoir de données…",
+        "Recoupement avec votre modèle de tendances comportementales…"
+      ],
+      "summarizing": [
+        "POJU consolide structurellement les informations de plusieurs tours…",
+        "Mise en lumière du noyau du problème derrière la surface…"
+      ],
+      "delivering": [
+        "POJU fusionne design et réalité dans le rapport final de rupture…",
+        "Traduction du jugement stratégique en guide actionnable et mesurable…"
+      ],
+      "tracking": [
+        "POJU suit vos retours d'exécution et les écarts de données…",
+        "Ajustement dynamique du rythme de votre prochaine poussée stratégique…"
+      ],
+      "degraded_delivering": [
+        "POJU extrait la stratégie la plus viable à partir des données actuelles…"
+      ]
+    },
     "tool_handoff": {
       "banner_free": "Depuis POJU · Gratuit cette fois dans votre session",
       "banner_paid": "Depuis POJU · Tarif standard de l'outil applicable",

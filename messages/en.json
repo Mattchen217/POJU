@@ -891,6 +891,39 @@
       "start": "Begin",
       "free_first_time": "Start your session"
     },
+    "activity": {
+      "understanding": [
+        "POJU is parsing your current situation…",
+        "Locking onto the core conflict in your setup…",
+        "POJU is loading your underlying design map…",
+        "Mapping how this issue connects to your behavior patterns…"
+      ],
+      "deep_reckoning": [
+        "POJU is integrating your full multidimensional profile…",
+        "Running deep structured variable analysis…",
+        "Reasoning through optimal systemic breakthrough paths…",
+        "Building your tailored real-world verification agenda…"
+      ],
+      "collecting": [
+        "POJU is depositing your real-world feedback into the core data pool…",
+        "Cross-checking against your underlying behavior tendency model…"
+      ],
+      "summarizing": [
+        "POJU is structurally consolidating information from multiple rounds…",
+        "Surfacing the core issue hidden behind the surface pattern…"
+      ],
+      "delivering": [
+        "POJU is weaving your design and reality into the final breakthrough report…",
+        "Translating strategic judgment into actionable, measurable guidance…"
+      ],
+      "tracking": [
+        "POJU is tracking your real-world execution feedback and data drift…",
+        "Dynamically adjusting the rhythm of your next strategic push…"
+      ],
+      "degraded_delivering": [
+        "POJU is extracting the most viable strategy from your current data anchor…"
+      ]
+    },
     "tool_handoff": {
       "banner_free": "From POJU · Free this time in your session",
       "banner_paid": "From POJU · Standard tool pricing applies",

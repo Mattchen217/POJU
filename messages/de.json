@@ -946,6 +946,39 @@
       "start": "Beginnen",
       "free_first_time": "Sitzung starten"
     },
+    "activity": {
+      "understanding": [
+        "POJU analysiert deine aktuelle Situation…",
+        "Der Kernkonflikt in deinem Setup wird erfasst…",
+        "POJU lädt deine zugrunde liegende Designkarte…",
+        "Die Verbindung zwischen Problem und Verhaltensmustern wird abgebildet…"
+      ],
+      "deep_reckoning": [
+        "POJU integriert dein vollständiges multidimensionales Profil…",
+        "Tiefe strukturierte Variablenanalyse läuft…",
+        "Optimale systemische Durchbruchspfade werden durchdacht…",
+        "Deine maßgeschneiderte Verifikationsagenda wird erstellt…"
+      ],
+      "collecting": [
+        "POJU speichert dein reales Feedback im Kerndatenpool…",
+        "Abgleich mit deinem Verhaltenstendenzmodell…"
+      ],
+      "summarizing": [
+        "POJU fasst Informationen aus mehreren Runden strukturell zusammen…",
+        "Der Kern hinter der Oberfläche wird sichtbar gemacht…"
+      ],
+      "delivering": [
+        "POJU verwebt Design und Realität zum finalen Durchbruchsbericht…",
+        "Strategisches Urteil wird in umsetzbare, messbare Leitlinien übersetzt…"
+      ],
+      "tracking": [
+        "POJU verfolgt dein reales Feedback und Datenabweichungen…",
+        "Der Rhythmus deines nächsten strategischen Schritts wird dynamisch angepasst…"
+      ],
+      "degraded_delivering": [
+        "POJU extrahiert die tragfähigste Strategie aus den aktuellen Datenankern…"
+      ]
+    },
     "tool_handoff": {
       "banner_free": "Von POJU · Diesmal in deiner Sitzung kostenlos",
       "banner_paid": "Von POJU · Es gilt der Standardpreis des Tools",
