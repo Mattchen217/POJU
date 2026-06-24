@@ -62,6 +62,8 @@ import {
 
   withPhaseStreamOpts,
 
+  isPhaseParseFailed,
+
 } from "@/lib/llm/phases/phase-transport";
 
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
@@ -541,7 +543,12 @@ async function finishCollectingPhase(
 
   const rawPhase = typeof parsed.suggested_phase === "string" ? parsed.suggested_phase.trim() : null;
 
-  let suggested_phase = rawPhase && VALID_SUGGESTED.includes(rawPhase as AgentPhase) ? (rawPhase as AgentPhase) : null;
+  let suggested_phase =
+    !isPhaseParseFailed(parsed) &&
+    rawPhase &&
+    VALID_SUGGESTED.includes(rawPhase as AgentPhase)
+      ? (rawPhase as AgentPhase)
+      : null;
 
 
 
@@ -549,7 +556,9 @@ async function finishCollectingPhase(
 
   const collection_progress = parseCollectionProgress(parsed.collection_progress);
 
-  const breakthrough_core_updates = parseBreakthroughCoreUpdatesFromLlm(parsed.breakthrough_core_updates);
+  const breakthrough_core_updates = isPhaseParseFailed(parsed)
+    ? null
+    : parseBreakthroughCoreUpdatesFromLlm(parsed.breakthrough_core_updates);
 
 
 

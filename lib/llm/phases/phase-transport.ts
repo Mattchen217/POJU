@@ -212,7 +212,50 @@ export function extractJson(raw: string): string {
 
 export function parsePhaseJson(rawText: string): Record<string, unknown> {
   const cleaned = extractJson(rawText);
-  return JSON.parse(cleaned) as Record<string, unknown>;
+  try {
+    return JSON.parse(cleaned) as Record<string, unknown>;
+  } catch {
+    try {
+      const repaired = cleaned.replace(/,(\s*[}\]])/g, "$1");
+      return JSON.parse(repaired) as Record<string, unknown>;
+    } catch {
+      const m = cleaned.match(/"response"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+      const response = m
+        ? m[1].replace(/\\"/g, '"').replace(/\\n/g, "\n").replace(/\\t/g, "\t")
+        : "";
+      return { response, _parse_failed: true } as Record<string, unknown>;
+    }
+  }
+}
+
+/** JSON salvage only recovered `response` — freeze state-machine advancement. */
+export function guardParseFailedFields(parsed: Record<string, unknown>): Record<string, unknown> {
+  if (parsed._parse_failed !== true) return parsed;
+  return {
+    ...parsed,
+    suggested_phase: null,
+    breakthrough_core_updates: null,
+    understanding: { sufficient: false, missing: "" },
+  };
+}
+
+export function isPhaseParseFailed(parsed: Record<string, unknown>): boolean {
+  return parsed._parse_failed === true;
+}
+
+/** Parse phase JSON; sanitize `response` when locale provided (output-side gloss tokens). */
+export function getPhaseResponseFallback(locale?: string): string {
+  const loc = locale?.toLowerCase().startsWith("zh")
+    ? "zh"
+    : locale?.toLowerCase().startsWith("es")
+      ? "es"
+      : "en";
+  const messages: Record<string, string> = {
+    en: "[POJU] Reply could not be generated. Please send again. Your session is saved.",
+    zh: "[POJU] 本轮回复未能生成，请重试发送。会话已保存。",
+    es: "[POJU] No se pudo generar la respuesta. Reintenta. Tu sesión está guardada.",
+  };
+  return messages[loc] ?? messages.en!;
 }
 
 /** Parse phase JSON; sanitize `response` when locale provided (output-side gloss tokens). */
@@ -237,19 +280,29 @@ export function parsePhaseResult(
   let parsed: Record<string, unknown> = {};
   let jsonParsed = false;
   try {
-    parsed = parsePhaseJson(rawText);
-    jsonParsed = true;
+    parsed = guardParseFailedFields(parsePhaseJson(rawText));
+    jsonParsed = !isPhaseParseFailed(parsed);
   } catch {
     parsed = {};
   }
 
   const salvagedRaw = salvagePhaseResponseText(rawText).trim();
-  const response = sanitizeResponse(salvagedRaw);
-  if (!jsonParsed && salvagedRaw) {
-    logPhaseSalvage(rawText, options?.logContext, salvagedRaw.startsWith("{") ? "partial_json" : "prose");
+  let response = "";
+  if (typeof parsed.response === "string" && parsed.response.trim()) {
+    response = sanitizeResponse(parsed.response);
+  } else if (salvagedRaw) {
+    response = sanitizeResponse(salvagedRaw);
+    if (!jsonParsed) {
+      logPhaseSalvage(rawText, options?.logContext, salvagedRaw.startsWith("{") ? "partial_json" : "prose");
+    }
   }
+
+  if (isPhaseParseFailed(parsed) && !response.trim()) {
+    response = getPhaseResponseFallback(options?.locale);
+  }
+
   if (typeof parsed.response === "string") parsed.response = response;
-  else if (response && !parsed.response) parsed.response = response;
+  else if (response) parsed.response = response;
 
   return { parsed, response, salvaged: !jsonParsed && Boolean(salvagedRaw) };
 }
@@ -370,19 +423,6 @@ export function resolvePhaseResponse(
 }
 
 /** User-visible fallback when the model returns no parseable `response` (e.g. truncated JSON). */
-export function getPhaseResponseFallback(locale?: string): string {
-  const loc = locale?.toLowerCase().startsWith("zh")
-    ? "zh"
-    : locale?.toLowerCase().startsWith("es")
-      ? "es"
-      : "en";
-  const messages: Record<string, string> = {
-    en: "[POJU] Reply could not be generated. Please send again. Your session is saved.",
-    zh: "[POJU] 本轮回复未能生成，请重试发送。会话已保存。",
-    es: "[POJU] No se pudo generar la respuesta. Reintenta. Tu sesión está guardada.",
-  };
-  return messages[loc] ?? messages.en!;
-}
 
 /** True when text is the infrastructure fallback copy (not conversational content). */
 export function isPhaseResponseFallback(text: string): boolean {

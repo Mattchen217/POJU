@@ -4,8 +4,8 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { SplineInteractiveScene } from "@/components/spline/SplineInteractiveScene";
 import "@/styles/poju-activity.css";
 
-/** Wider framing so the POJU figure stays visible in the 2:1 chat strip. */
-const POJU_CHAT_ACTIVITY_ZOOM = 0.68;
+/** Framing for strip height = (width÷2)×⅔; nudge figure to vertical center. */
+const POJU_CHAT_ACTIVITY_ZOOM = 0.74;
 
 const ROTATE_MS = 2800;
 

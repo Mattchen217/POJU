@@ -62,8 +62,10 @@ assert(
 );
 
 assert(
-  "agenda-only truncated stays empty",
-  parsePhaseResult('{"thought":{"breakthrough_hypotheses":["a"]}, "investigation_agenda": [').response === "",
+  "agenda-only truncated gets infrastructure fallback",
+  isPhaseResponseFallback(
+    parsePhaseResult('{"thought":{"breakthrough_hypotheses":["a"]}, "investigation_agenda": [').response,
+  ),
 );
 
 assert(

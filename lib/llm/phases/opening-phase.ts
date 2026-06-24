@@ -2,7 +2,7 @@
  * Step I — AI 主动开场（东方破局顾问定位）
  */
 import { normalizeAgentPhase, type AgentPhase } from "@/lib/poju/agent-state";
-import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseResult, withPhaseStreamOpts } from "@/lib/llm/phases/phase-transport";
+import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseResult, withPhaseStreamOpts, isPhaseParseFailed } from "@/lib/llm/phases/phase-transport";
 import type { PojuV4ActionRequested } from "@/lib/poju/types";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
 import { buildPhaseTransportInput } from "@/lib/llm/phases/oriental-prompt-context";
@@ -124,8 +124,9 @@ export async function callOpeningPhase(input: PhaseLLMInput): Promise<PhaseLLMRe
 
   const { parsed, response } = parsePhaseResult(result.content, { locale: input.locale });
 
-  const understanding =
-    parsed.understanding && typeof parsed.understanding === "object"
+  const understanding = isPhaseParseFailed(parsed)
+    ? { sufficient: false, missing: "" }
+    : parsed.understanding && typeof parsed.understanding === "object"
       ? {
           sufficient: Boolean((parsed.understanding as { sufficient?: unknown }).sufficient),
           missing: String((parsed.understanding as { missing?: unknown }).missing ?? ""),
@@ -135,7 +136,12 @@ export async function callOpeningPhase(input: PhaseLLMInput): Promise<PhaseLLMRe
   const suggestedRaw = typeof parsed.suggested_phase === "string" ? parsed.suggested_phase : null;
   const suggested = suggestedRaw ? normalizeAgentPhase(suggestedRaw) : null;
   const suggested_phase =
-    understanding.sufficient && suggested && VALID_SUGGESTED.includes(suggested) ? suggested : null;
+    !isPhaseParseFailed(parsed) &&
+    understanding.sufficient &&
+    suggested &&
+    VALID_SUGGESTED.includes(suggested)
+      ? suggested
+      : null;
 
   const rawAction = typeof parsed.action_requested === "string" ? parsed.action_requested.trim() : null;
   const action_requested: PojuV4ActionRequested | null =

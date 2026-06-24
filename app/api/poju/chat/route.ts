@@ -10,7 +10,7 @@ import type { UserProfile } from "@/lib/profile/types";
  * POJU v5: phase-routed chat (`opening` → `collecting` → `confirmation` → `delivered` → `tracking`).
  * Request body: `{ session, profile?, locale? }` (session must include `session_id`).
  */
-export const maxDuration = 180;
+export const maxDuration = 300;
 
 export async function POST(req: Request) {
   const url = new URL(req.url);
@@ -37,15 +37,33 @@ export async function POST(req: Request) {
     return createPojuChatStreamResponse(body, req.signal);
   }
 
-  const llm = await callPOJULLM({
-    session: body.session,
-    profile: body.profile ?? body.userProfile ?? null,
-    base_analysis: body.base_analysis === undefined ? null : body.base_analysis,
-    archive_data: body.archive_data === undefined ? null : body.archive_data,
-    locale: String(body.locale ?? "en"),
-    tool_injection_context:
-      typeof body.tool_injection_context === "string" ? body.tool_injection_context : null,
-  });
+  try {
+    const llm = await callPOJULLM({
+      session: body.session,
+      profile: body.profile ?? body.userProfile ?? null,
+      base_analysis: body.base_analysis === undefined ? null : body.base_analysis,
+      archive_data: body.archive_data === undefined ? null : body.archive_data,
+      locale: String(body.locale ?? "en"),
+      tool_injection_context:
+        typeof body.tool_injection_context === "string" ? body.tool_injection_context : null,
+    });
 
-  return NextResponse.json(pojuLlmToChatPayload(llm));
+    return NextResponse.json(pojuLlmToChatPayload(llm));
+  } catch (error: unknown) {
+    console.error("[poju/chat] unhandled error:", error);
+    const locale = String(body.locale ?? "en");
+    const zh = locale.toLowerCase().startsWith("zh");
+    return NextResponse.json({
+      response: zh
+        ? "[POJU] 本轮回复未能生成，请重试发送。会话已保存。"
+        : "[POJU] Reply could not be generated. Please send again. Your session is saved.",
+      model: "",
+      tokens_used: 0,
+      user_intent: "unclear",
+      current_state: body.session.main_delivery_done ? "tracking" : "collecting_context",
+      topic_drift_detected: false,
+      contains_delivery: false,
+      context_updates: {},
+    });
+  }
 }

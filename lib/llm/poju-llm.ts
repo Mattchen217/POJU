@@ -98,7 +98,10 @@ export async function callPOJULLM(input: CallInput): Promise<POJULLMResponse> {
     return finalizeLockFields(await callPOJULLMPhasePath(input), session);
   } catch (error: unknown) {
     logPojuError("poju-llm:callPOJULLM", error);
-    throw error;
+    return finalizeLockFields(
+      emptyFailureResponse(session, input.locale, GEMINI_PRIMARY_MODEL),
+      session,
+    );
   }
 }
 
