@@ -7,6 +7,7 @@ import type { AgentPhase, ContextSummary } from "@/lib/poju/agent-state";
 import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseResult, withPhaseStreamOpts } from "@/lib/llm/phases/phase-transport";
 import { buildPhaseTransportInput } from "@/lib/llm/phases/oriental-prompt-context";
 import { buildSpineBlock } from "@/lib/llm/phases/spine-block";
+import { buildStateLedger } from "@/lib/llm/phases/state-ledger";
 import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
 
@@ -24,7 +25,7 @@ function normalizeSummary(raw: unknown): ContextSummary | null {
 }
 
 const TRANSITION_CONSENT_RULES = `# 征询问句（suggested_phase 切 awaiting_confirmation 时）
-response 必须以明确征询问句结尾（问号收尾），问用户是否现在就要完整分析。禁止「稍等/我去整理/我会回来」等异步告知式措辞。`;
+征询用户是否现在就要完整分析。`;
 
 function buildSummaryTaskBlock(input: PhaseLLMInput): string {
   const agent = input.agent_state;
@@ -32,11 +33,18 @@ function buildSummaryTaskBlock(input: PhaseLLMInput): string {
   const completeness = agent?.collection_completeness ?? 0;
   const spineBlock = buildSpineBlock(agent);
 
-  return `# 任务：深度总结 + 确认（PDF 步骤 14–15）
+  const ledger = buildStateLedger(
+    agent ?? null,
+    "总结+确认",
+    "把你看清的局凝成一段有洞见的话、预告倾向方向，请他确认或补充",
+    "用户确认→进交付；要补充→收下，留本格",
+  );
 
-收集已够。现在做一次【深度思考下的总结】—— 不是把零碎事实排成卡片，
-而是把你这一路在脊柱上看清的，凝成一段有洞见的话讲给用户，并预告你倾向的破局方向，
-请他确认/补充后再出完整方案。
+  return `${ledger}
+
+# 任务：深度总结 + 确认
+
+收集已够。把你这一路在脊柱上看清的凝成有洞见的话讲给用户，预告你倾向的破局方向，请他确认或补充后再出完整方案。
 
 用户的问题："${input.session.original_question}"
 
@@ -46,15 +54,9 @@ ${spineBlock}
 ${contextText}
 完成度: ${(completeness * 100).toFixed(0)}%
 
-## response 要做到（深，不是流水账）
-1. 用 2–4 句把"我现在看清的局"讲透 —— 锚在关系结论 + 他亲口的关键细节，
-   给他"被准确照见"的感觉（自然用 ⟦t:⟧ 包术语，每段金字 ≤2）。
-2. 点出你【倾向】的那条破局方向（一句话预告，不展开完整方案 —— 完整 3 条留到交付）。
-3. 以明确征询问句收尾（问号）：是否还有补充，或现在就出完整破局方案。
-语气是那位有温度、直指要害的老师；不套"我听到了 / 我明白了"。
-
-## 同时产出 current_summary（供可编辑确认页渲染，与 response 并存）
-5–7 个 section，每节 2–5 item，value 用用户原话、不编造。
+## 任务与要求
+你是 POJU——有温度、直指要害的东方智者。把"你现在看清的局"讲透，锚在关系结论与他亲口的关键细节；点出你倾向的那条破局方向（不展开完整方案）。
+同时产出 current_summary（供可编辑确认页渲染，与 response 并存）：5–7 个 section，每节 2–5 item，value 用用户原话、不编造。
 
 ## 红线
 - 不在此给完整 3 条行动、不下 CONCLUSION 收口（那是交付的回报）。

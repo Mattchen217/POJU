@@ -2,19 +2,36 @@
  * Step I — AI 主动开场（东方破局顾问定位）
  */
 import { normalizeAgentPhase, type AgentPhase } from "@/lib/poju/agent-state";
-import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseResult, withPhaseStreamOpts, isPhaseParseFailed } from "@/lib/llm/phases/phase-transport";
+import { isGreetingOrEmptyQuestion } from "@/lib/poju/breakthrough-question-gate";
+import {
+  callPhaseJsonTransport,
+  formatPhaseMessageHistory,
+  parsePhaseResult,
+  withPhaseStreamOpts,
+  isPhaseParseFailed,
+} from "@/lib/llm/phases/phase-transport";
 import type { PojuV4ActionRequested } from "@/lib/poju/types";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
 import { buildPhaseTransportInput } from "@/lib/llm/phases/oriental-prompt-context";
+import { buildStateLedger } from "@/lib/llm/phases/state-ledger";
 
 const VALID_SUGGESTED: AgentPhase[] = ["opening", "collecting_context"];
 
 function buildOpeningTaskBlock(input: PhaseLLMInput): string {
   const q = input.session.original_question;
+  const agent = input.agent_state;
   const deliveryHandoff = Boolean(input.tool_injection_context?.includes("交付页延续"));
 
   if (deliveryHandoff) {
-    return `# 当前任务：交付页转入 · 主动开场
+    const ledger = buildStateLedger(
+      agent ?? null,
+      "理解门·交付转入",
+      "从工具交付资料与用户原始问题中锚定他要深入的那件具体困境",
+      "锚得住→自然承接并说要深入看一下，进 collecting；锚不住→请他点明那件事，留本格",
+    );
+    return `${ledger}
+
+# 当前任务：交付页转入 · 主动开场
 
 用户刚从工具交付页（Match / Glyph / Syncro）付费进入 POJU，并已看过完整交付内容。
 系统注入块里已有合盘/卦象/时机等全部资料；下方「原始问题」是用户想深入的方向。
@@ -22,18 +39,10 @@ function buildOpeningTaskBlock(input: PhaseLLMInput): string {
 ## 用户的原始问题
 "${q}"
 
-## 你的开场要做到
-
-像一位已经读过全部资料的老师，**先给一个有洞见的回应**——点出 1–2 个最关键的结构或张力（勿复述全文），让用户感到你真正看懂了。再自然承接到 POJU 对话，邀请他多说一点或选一个想深入的焦点。
-
-- **严禁**「我听到了/我明白了」式套路开场；**不要**固定「总结→承接→提问」三段骨架
-- 可以给点拨，但**不要**在此给出完整行动方案或操作指令
-- 若要问，最多 1 个从对话自然长出的问题，不要像问卷
-
-## 风格
-
-- 总字数 180–420 字（中文）/ 140–300 词（英文）；可引用命盘或工具结论中的至少 1 条具体细节
-- 自然叙述、像人说话；不要列要点清单；不要说「我能帮你」之类的空承诺
+## 任务与要求
+像一位已经读过全部资料的老师，从资料与用户问题中理解他要破的那件事，自然开口承接。
+你是 POJU——有温度、直指要害的东方智者；可引用命盘或工具结论中的具体细节，用 ⟦t:⟧ 包术语。
+此格不给完整行动方案或操作指令。
 
 ## 输出格式（严格 JSON，无 markdown 围栏）
 
@@ -45,56 +54,29 @@ function buildOpeningTaskBlock(input: PhaseLLMInput): string {
 }`;
   }
 
-  return `# 任务：理解判断门（Deep Judge）
+  const ledger = buildStateLedger(
+    agent ?? null,
+    "理解门",
+    "从用户输入理解并锚定他要破的那一件具体困境",
+    "锚得住（非问候/测试）→进 collecting；锚不住→委婉而坚定地引导他说清那件事，留在本格",
+  );
 
-你是 POJU——那位有温度、直指要害的智者（见身份头与知识根基）。在为这位用户启动深度测算之前，
-你要先像一位"想真正听懂你的事才肯下判断"的老师那样判断：
-他把「困境/问题」讲清楚到**足以锚定一次深度命理推演**了吗？
-（要严谨，但不冷——你审的是"我听懂了吗"，不是把他当考生。）
+  return `${ledger}
+
+# 任务：理解判断门
+
+你是 POJU——有温度、直指要害的东方智者。在为这位用户启动深度测算之前，
+判断他把「困境/问题」讲清楚到足以锚定一次深度命理推演了吗？
 
 ## 用户的原始问题
 "${q}"
 
-## 你审的是「问题清晰度」，不是「八字真伪」
+## 要求
 - 八字四柱由本地引擎确定性算出，永远完整合法 —— 绝不质疑、绝不说"八字信息不全"。
 - 你只审：用户的【处境描述】是否清晰到能让你判断"这个局卡在哪、与他命盘哪条结构相关"。
-
-## 内部评分维度（不输出给用户）
-- 问题指向：他想破的到底是哪一件事？是否具体到一个焦点？
-- 处境锚点：有没有至少一个可抓的事实（时间跨度 / 触发事件 / 当前状态 任一）？
-- 可推演性：凭现有信息，你能不能产出一条不空泛的「关系结论」？
-
-## 硬规则：什么算"还没说出问题"（这些情况 understanding.sufficient 一律 = false）
-无论你回应得多得体，只要用户【还没说出一件具体的、想破的事】，sufficient 必须 = false，
-并且【绝不】把这句话当成他的问题（original_question）：
-- 纯问候 / 寒暄："你好"、"hi"、"嗨"、"在吗"、"早上好"
-- 测试 / 单词 / 无实质："测试"、"试试"、"。"、单个表情、单个词
-- 只有情绪没有具体事："好累"、"心情不好" → 要继续问"是哪件事让你这样"
-- 任何还没指向某一件具体困境的输入
-
-只有当用户【说出了一件具体的、想破的事】（哪怕一句：如"卡了三年想转行但不敢"、
-"和合伙人闹翻了"、"事业这几年一直不顺"），sufficient 才可以 = true。
-
-sufficient=false 时：response 比现在更有温度、更"接得住人"——
-  用 3–5 句：先稳稳接住他这声招呼，可顺手点一句对他底色的轻观察（锚命盘，
-  让他有"这人好像有点东西"的感觉，但不展开完整解读），再自然邀请他说出"现在最卡的那件事"。
-  仍只温和追问【那一个】最关键缺口，不审讯、不连环问。suggested_phase = null，
-  **绝不进入深测算 / 不生成脊柱**。
-
-## 判定与动作
-- 足够（sufficient=true）：哪怕只有一两句但指向明确（如"卡了三年想转行但不敢"），立即放行。
-  response 是一段【简短有洞见的 hook，2–4 句】——点出 1–2 个最关键的结构张力（锚命盘，自然用 ⟦t:⟧），
-  让他感到被看懂，然后明确收束到一句"让我为你深入推演一下"。
-  ❌ 严禁在此给：分步行动方案（第一步/第二步）、COMING BACK 收尾、完整破局结论。
-     —— 那些是深测算+收集+交付之后的回报，绝不在开场一次性倒出。
-  suggested_phase = "collecting_context"。
-- 不足（sufficient=false）：信息太薄、无法锚定推演时，只温和追问【那一个】最关键的缺口（最多一句）。
-  绝不审讯式连环问、绝不生成脊柱、绝不生成议程。suggested_phase = null（留在 opening）。
-
-## 红线
-- 最多追问 1 次；一个本就清楚的问题立即放行，不为凑"完整度"硬卡。
-- 不暴露打分/机制；说人话，像一位想把你的事弄清楚才肯下判断的老师。
-- 不套"我听到了/我明白了"开头。
+- 锚得住：自然承接，点出你看清的结构张力（锚命盘），并说要为他深入推演一下；suggested_phase = "collecting_context"。
+- 锚不住（问候/测试/只有情绪没有具体事）：委婉而坚定地请他点明"现在最卡的那一件事"；suggested_phase = null。
+- 不暴露打分/机制；完整破局方案留到深测算+收集+交付之后。
 
 ## 输出 JSON（response 第一个键）
 {
@@ -130,14 +112,11 @@ export async function callOpeningPhase(input: PhaseLLMInput): Promise<PhaseLLMRe
 
   const { parsed, response } = parsePhaseResult(result.content, { locale: input.locale });
 
-  const recovered =
-    parsed.understanding && typeof parsed.understanding === "object"
-      ? {
-          sufficient: Boolean((parsed.understanding as { sufficient?: unknown }).sufficient),
-          missing: String((parsed.understanding as { missing?: unknown }).missing ?? ""),
-        }
-      : null;
-  const understanding = recovered ?? { sufficient: false, missing: "" };
+  const lastUserMessage = [...input.session.messages].reverse().find((m) => m.role === "user")?.content;
+  const userText = String(input.session.original_question ?? lastUserMessage ?? "").trim();
+  const isNonQuestion = isGreetingOrEmptyQuestion(userText);
+  const finalSufficient = !isNonQuestion;
+  const understanding = { sufficient: finalSufficient, missing: "" };
 
   const suggestedRaw = typeof parsed.suggested_phase === "string" ? parsed.suggested_phase : null;
   const suggested = suggestedRaw ? normalizeAgentPhase(suggestedRaw) : null;
@@ -150,6 +129,7 @@ export async function callOpeningPhase(input: PhaseLLMInput): Promise<PhaseLLMRe
     sufficient: understanding.sufficient,
     suggested: suggested_phase,
     parse_failed: isPhaseParseFailed(parsed),
+    deterministic_gate: isNonQuestion ? "greeting" : "substantive",
   });
 
   const rawAction = typeof parsed.action_requested === "string" ? parsed.action_requested.trim() : null;

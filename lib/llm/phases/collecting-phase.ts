@@ -79,6 +79,7 @@ import type { PojuV4ActionRequested } from "@/lib/poju/types";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
 
 import { buildSpineBlock } from "@/lib/llm/phases/spine-block";
+import { buildStateLedger } from "@/lib/llm/phases/state-ledger";
 import { buildToolSuggestionPhaseAppendix } from "@/lib/llm/phases/tool-suggestion-phase-appendix";
 
 import { parseToolSuggestionFromParsed } from "@/lib/poju/tool-suggestion";
@@ -286,125 +287,66 @@ ${focusText}`;
 
 
 function buildCollectingTaskBlock(input: PhaseLLMInput): string {
-
   const agent = input.agent_state;
-
   const q = input.session.original_question;
-
   const spineBlock = buildSpineBlock(agent);
-
   const agendaBlock = agent ? buildAgendaTrackingBlock(agent) : "";
 
+  const ledger = buildStateLedger(
+    agent ?? null,
+    "收集·验证演进",
+    "拿他的回答验证/修正你的破局方向，弄清你还需要知道的关键项",
+    "必查项全 covered 且覆盖≥80%→征询出完整分析，进确认",
+  );
 
+  return `${ledger}
 
-  return `# 任务：收集阶段 —— 在脊柱上验证与演进
-
-
+# 任务：收集阶段 —— 在脊柱上验证与演进
 
 用户的问题："${q}"
 
-
-
 你已经有一条推理脊柱（关系结论 + 2–3 条破局方向）和一份由它倒推出的调查议程。
-
 这一阶段你不是"重新认识他"，而是【拿他的回答去验证 / 修正你的破局方向】。
-
-
 
 ${spineBlock}
 
 ${agendaBlock}
 
+## 任务与要求
+这一格你拿他的回答去验证或修正你的破局方向，顺着自然弄清你还需要知道的关键项；判断变了就在 \`breakthrough_core_updates\` 里演进对应方向。
+怎么回应、说多少、这一轮要不要发问、从哪切入，全凭你作为一位有温度、直指要害的东方智者对这一刻的判断——不套任何固定结构。
+已 covered 的角度别重问；完整方案留到交付。议程是私有计划，不要照念给用户。
 
-
-## 每一轮你做三件事（但怎么说完全自然，绝不套固定骨架）
-
-1. 从脊柱掏真洞见：用他上一轮回答，印证或推翻某条破局方向，把"为什么会这样"再讲深一层。
-
-   有真东西才说，没有就老实接住、别硬凑命盘、别每句"你的核心是…"。
-
-2. 悄悄推进议程：朝"还没弄清的关键项"问一步——像老师追问，不像表格。已 covered 的角度禁止重问。
-
-3. 演进脊柱：如果他的回答改变了你对某条破局方向的判断（强化/削弱/需换方向），
-
-   在 breakthrough_core_updates 里更新对应 direction 的 status 与措辞；没变化就不输出该字段。
-
-
-
-## 每轮的分量（别敷衍，也别注水）
-- 每一轮 response 必须落地【至少一个真洞见】—— 从脊柱里掏出来、扣住他这轮说的话、
-  让他对自己的处境多看清一层。只"嗯我懂了 + 问一句"是不合格的。
-- 篇幅指引：中文约 150–320 字 / 英文约 110–230 词。够你把一个洞见讲透 + 自然带出下一个要弄清的点。
-  明显短于此，多半是洞见没给够。
-- 但"分量" = 洞见密度，不是堆字、不是堆术语。真没有新东西可给时宁可短，
-  也绝不许用漂亮空话 / 重复命盘词凑长度（金字仍每段 ≤2）。
-
-
-
-## 红线（违反即回退机器人 · 灵魂文档 3.2）
-
-- 绝不"每轮必问 1-2 题"的固定模板；有时一整轮只是认真听、点一句，也很好。
-
-- 绝不"我听到了 / 我明白了"开头。
-
-- 议程是私有计划，不是逐条念给用户的清单；聊天表层永远"边给光边问"。
-
+## 红线
 - 还不交付完整方案；他催就告诉他"完整分析里一次给你，先把情况弄清楚"。
 
-
-
 ## 他不配合时（委婉拉回阶梯，不暴露机制）
-
 - 含糊 → 温和请他具体点；敷衍/想跳过 → 认真而不指责；持续不配合 → 坦诚提退款选项。
-
 - 绝不说"系统要求/还没到轮数/流程规定"。一旦配合就回到正常聊。
 
-
-
 ## 每轮必判跑题（topic_drift_signal）
-
 - 相关 none / 沾边 edge（简短确认相关性）/ 完全偏离 off_topic（说明需另开会话，should_show_new_session_button=true）
 
-
-
 ## 信息齐了
-
-必查项全 covered → 用明确征询问句问他"要不要现在就出完整分析"（问号收尾）。
-
-
+必查项全 covered → 征询他是否现在就出完整分析。
 
 ## 输出 JSON（response 第一个键）
-
 {
-
   "response": "...",
-
   "suggested_phase": "collecting_context" | "awaiting_confirmation" | null,
-
   "action_requested": "continue_chat" | "show_birth_form",
-
   "question_category": "career"|"relationship"|"wealth"|"health"|"family"|"decision"|"interpersonal"|"other"|null,
-
   "context_updates": { "agenda_status_updates": { "<id>": "partial"|"covered" } },
-
   "breakthrough_core_updates": { "breakthrough_directions": [ { "direction": "...", "status": "reinforced"|"weakened"|"selected", "structural_basis": "...", "what_would_confirm": "..." } ] },
-
   "collection_progress": "advancing"|"stalled"|"resistant",
-
   "topic_drift_signal": "none"|"edge"|"off_topic",
-
   "drift_reason": "若偏离一句话说明，否则空字符串",
-
   "should_show_new_session_button": false
-
 }
 
 （breakthrough_core_updates 无变化时省略该键。议程已生成，不再输出 investigation_agenda。）
 
-
-
 ${buildToolSuggestionPhaseAppendix(input, { includeNewCycleDetection: false })}`;
-
 }
 
 
@@ -464,32 +406,6 @@ export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLL
     use_fallback: true,
 
   });
-
-
-
-  if (resolved.compliance_failed) {
-
-    console.warn(
-
-      "[collecting-phase] compliance failed — using fallback (no re-POST)",
-
-      transport.provider ?? "—",
-
-    );
-
-    resolved = {
-
-      ...resolved,
-
-      response: getPhaseResponseFallback(input.locale),
-
-      used_fallback: true,
-
-      compliance_failed: false,
-
-    };
-
-  }
 
 
 

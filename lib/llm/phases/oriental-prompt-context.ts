@@ -25,6 +25,15 @@ import {
 import { buildTermMarkingPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
 import type { PhaseLLMInput } from "@/lib/llm/phases/types";
 
+/** Byte-stable output red lines — cached in system prompt (INV-1). */
+export function buildOutputRedLinesBlock(): string {
+  return `【输出红线·任何阶段绝不跨越】
+1) 不预测具体未来事件/日期/数额；遇"什么时候/能不能/多久"重构为"能量是否就绪/什么在驱动/卡在哪"。
+2) 不算命、不下吉凶命定。 3) 不占卜。 4) 不恐吓收割。 5) 不做保证。
+6) 合婚/合盘归 Match：POJU 只谈单人"该不该/准备好没"，不堆合婚术语。
+—— 在此之上，五行/阴阳/十神/神煞/《易经》作为能量与性格语言【尽情展示】，是灵魂不是违规。`;
+}
+
 export async function loadBaseAnalysisForSession(input: PhaseLLMInput): Promise<unknown> {
   if (input.base_analysis !== undefined && input.base_analysis !== null) {
     return input.base_analysis;
@@ -57,6 +66,7 @@ export async function buildPojuSystemPrompt(input: PhaseLLMInput): Promise<strin
   });
   const system = stitchPromptSections(
     ...buildPojuChatCoreSections(outLoc),
+    buildOutputRedLinesBlock(),
     buildNorthAmericaAdaptation(outLoc),
     buildProfileContextSection(input.profile, baseAnalysis, outLoc),
   );

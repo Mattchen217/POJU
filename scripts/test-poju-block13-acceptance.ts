@@ -40,13 +40,12 @@ function main(): void {
   assert("guard keeps sufficient after salvage", (guarded.understanding as { sufficient?: boolean })?.sufficient === true);
   assert("guard keeps suggested after salvage", guarded.suggested_phase === "collecting_context");
 
-  console.log("\n=== Fix 2/3 · opening prompt rules ===\n");
   const opening = read("lib/llm/phases/opening-phase.ts");
-  assert("hook 2-4 sentences rule", opening.includes("2–4 句"));
-  assert("no step-by-step in opening", opening.includes("第一步/第二步"));
-  assert("greeting 3-5 sentences", opening.includes("3–5 句"));
-  assert("opening uses recovered understanding", opening.includes("const recovered"));
-  assert("opening no parse_failed block on suggested", !opening.includes("!isPhaseParseFailed(parsed) &&\n    understanding.sufficient"));
+
+  console.log("\n=== Fix 2/3 · opening (Block 14+ superseded prompt hooks) ===\n");
+  assert("opening deterministic gate", opening.includes("isGreetingOrEmptyQuestion"));
+  assert("opening finalSufficient", opening.includes("finalSufficient"));
+  assert("opening phase-transition diag", opening.includes('[poju-diag] phase-transition'));
 
   console.log("\n=== Fix 4 · diag logs ===\n");
   const orch = read("lib/poju/agent-orchestrator.ts");

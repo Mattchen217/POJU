@@ -356,15 +356,15 @@ export type PhaseResponseResolveContext = {
   structured?: ProfileStructured | null;
 };
 
-/** Log bad markers / bare terms before retry or fallback. */
-export function logPhaseComplianceFailure(
+/** Log compliance violations — alert only, never mutates response. */
+function logPhaseComplianceViolation(
   rawText: string,
   ctx: PhaseResponseResolveContext,
   violations: Array<{ label: string; snippet?: string }>,
 ): void {
   const preview = rawText.replace(/\s+/g, " ").trim().slice(0, 400);
   console.warn(
-    "[phase-transport] phase response compliance failure",
+    "[phase-transport] phase response compliance alert",
     JSON.stringify({
       phase: ctx.phase_name ?? "—",
       call_type: ctx.call_type ?? "—",
@@ -376,6 +376,17 @@ export function logPhaseComplianceFailure(
     }),
   );
 }
+
+export function logPhaseComplianceAlert(
+  rawText: string,
+  ctx: PhaseResponseResolveContext,
+  violations: Array<{ label: string; snippet?: string }>,
+): void {
+  logPhaseComplianceViolation(rawText, ctx, violations);
+}
+
+/** @deprecated Use logPhaseComplianceAlert. */
+export const logPhaseComplianceFailure = logPhaseComplianceAlert;
 
 /** Log when user-visible fallback copy is shown — includes supplier + finish_reason for triage. */
 export function logPhaseResponseFallback(rawText: string, ctx: PhaseResponseResolveContext): void {
@@ -421,8 +432,7 @@ export function resolvePhaseResponse(
   if (response.trim()) {
     const violations = auditPhaseChatCompliance(response, ctx.locale ?? "en");
     if (violations.length > 0) {
-      logPhaseComplianceFailure(rawText, { ...ctx, raw_length: rawText.length }, violations);
-      return { parsed, response: "", used_fallback: false, compliance_failed: true };
+      logPhaseComplianceAlert(rawText, { ...ctx, raw_length: rawText.length }, violations);
     }
     return { parsed, response, used_fallback: false, compliance_failed: false };
   }
