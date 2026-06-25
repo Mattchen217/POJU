@@ -112,8 +112,9 @@ export async function callOpeningPhase(input: PhaseLLMInput): Promise<PhaseLLMRe
 
   const { parsed, response } = parsePhaseResult(result.content, { locale: input.locale });
 
-  const lastUserMessage = [...input.session.messages].reverse().find((m) => m.role === "user")?.content;
-  const userText = String(input.session.original_question ?? lastUserMessage ?? "").trim();
+  const lastUserMessage =
+    [...input.session.messages].reverse().find((m) => m.role === "user")?.content ?? "";
+  const userText = lastUserMessage.trim();
   const isNonQuestion = isGreetingOrEmptyQuestion(userText);
   const finalSufficient = !isNonQuestion;
   const understanding = { sufficient: finalSufficient, missing: "" };

@@ -16,7 +16,15 @@ import {
 } from "@/lib/poju/session-profile";
 import { downgradePrematureConfirmationPhase } from "@/lib/poju/summary-readiness";
 import { isSubstantiveBreakthroughQuestion } from "@/lib/poju/breakthrough-question-gate";
+import {
+  patchLastAssistantOrchestrationMeta,
+  syncSessionOriginalQuestion,
+} from "@/lib/poju/agent-state-snapshot";
 import type { POJUSessionState } from "@/lib/poju/types";
+
+function resolveSessionOriginalQuestion(session: POJUSessionState): string {
+  return session.agent_v2?.original_question?.trim() || session.original_question?.trim() || "";
+}
 
 export type AgentOrchestratorUi = {
   showBirthForm: boolean;
@@ -80,7 +88,7 @@ async function ensureBreakthroughCore(
   if (!agent) return session;
   if (agent.current_phase !== "collecting_context") return session;
   if (agent.breakthrough_core != null) return session;
-  if (!isSubstantiveBreakthroughQuestion(session.original_question)) return session;
+  if (!isSubstantiveBreakthroughQuestion(resolveSessionOriginalQuestion(session))) return session;
 
   const { base_analysis } = await loadSessionProfileBundle(session);
   if (base_analysis == null) return session;
@@ -97,6 +105,8 @@ export async function runPostTurnOrchestration(
   const auto = opts.autoPipeline !== false;
 
   let s = withSessionProfileFlags(ensureContextSummary(downgradePrematureConfirmationPhase(session)));
+  s = syncSessionOriginalQuestion(s);
+  const beforeOrchestration = s;
   const phase = s.agent_v2?.current_phase;
   const agentWantsBirthForm = lastAssistantRequestsBirthForm(s);
 
@@ -126,7 +136,7 @@ export async function runPostTurnOrchestration(
     s.agent_v2?.current_phase === "collecting_context" &&
     s.agent_v2.breakthrough_core == null &&
     resolveSessionHasProfile(s) &&
-    isSubstantiveBreakthroughQuestion(s.original_question)
+    isSubstantiveBreakthroughQuestion(resolveSessionOriginalQuestion(s))
   ) {
     ui.pipelineBusy = true;
     try {
@@ -161,6 +171,9 @@ export async function runPostTurnOrchestration(
   }
 
   // Step 8/9 run only after user confirms the summary (runConfirmationPipeline), not while the form is open.
+
+  s = syncSessionOriginalQuestion(s);
+  s = patchLastAssistantOrchestrationMeta(s, beforeOrchestration);
 
   return { session: s, ui };
 }

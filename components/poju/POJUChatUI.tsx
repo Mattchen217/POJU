@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { BirthProfileFlow, type BirthProfileFlowStage } from "@/components/poju/BirthProfileFlow";
@@ -71,6 +72,8 @@ import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
 import { PojuPaywallInline } from "@/components/poju/PojuPaywallInline";
 import { MainDeliveryView } from "@/components/poju/MainDeliveryView";
 import { PojuReportChatCard } from "@/components/poju/PojuReportChatCard";
+import { PojuStateDebugPanel } from "@/components/poju/PojuStateDebugPanel";
+import { PojuAgendaCard } from "@/components/poju/PojuAgendaCard";
 import { PojuUnlockReportModal } from "@/components/poju/PojuUnlockReportModal";
 import { hasUnlockReportMessage, prepareUnlockReleaseSession } from "@/lib/poju/finalize-unlock-bazi-session";
 import {
@@ -165,6 +168,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const sendAbortRef = useRef<AbortController | null>(null);
   const sendGenerationRef = useRef(0);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const showStateDebug = searchParams.get("debug") !== "0";
   const speechLang = locale.startsWith("zh") ? "zh-CN" : locale.startsWith("fr") ? "fr-FR" : "en-US";
   const {
     active: voiceActive,
@@ -1198,6 +1203,29 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           <RefundOfferAction sessionId={session.session_id} variant="message" />
         );
       }
+      if (m.role === "assistant" && !m.is_rejected) {
+        const below: ReactNode[] = [];
+        if (showStateDebug && m.meta?.state_snapshot) {
+          below.push(
+            <PojuStateDebugPanel key="state-debug" snapshot={m.meta.state_snapshot} locale={locale} />,
+          );
+        }
+        if (m.meta?.investigation_agenda && m.meta.investigation_agenda.length > 0) {
+          below.push(
+            <PojuAgendaCard key="agenda" items={m.meta.investigation_agenda} locale={locale} />,
+          );
+        }
+        if (below.length > 0) {
+          followUps[m.timestamp] = followUps[m.timestamp] ? (
+            <>
+              {followUps[m.timestamp]}
+              {below}
+            </>
+          ) : (
+            <>{below}</>
+          );
+        }
+      }
     }
 
     if (trailingActivity === "deep_reckoning") {
@@ -1231,6 +1259,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     openUnlockReportModal,
     trailingActivity,
     getActivityLines,
+    showStateDebug,
   ]);
 
   const streaming = sending || confirmBusy || trailingActivity != null;

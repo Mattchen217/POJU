@@ -47,6 +47,10 @@ export interface POJUMessage {
     tool_suggestion_message_id?: string;
     /** DeepSeek / OpenRouter reasoning tokens + POJU thought digest for this turn. */
     thinking_process?: string;
+    /** Debug panel — agent state machine flags after this turn. */
+    state_snapshot?: import("@/lib/poju/agent-state-snapshot").PojuStateSnapshot;
+    /** Agenda items when first built (shown below bubble, not in body). */
+    investigation_agenda?: import("@/lib/poju/investigation-agenda").AgendaItem[];
     /** Collecting escalation — show refund entry (user-initiated). */
     kind?: "energy_matrix" | "paywall" | "report" | "welcome";
     matrix_payload?: import("./build-matrix-payload").PojuMatrixPayload;

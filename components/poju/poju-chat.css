@@ -1388,3 +1388,100 @@ body.pchat-page-lock .pchat:not(.tool-preview-chat) {
   flex: 1 1 auto;
   min-height: 0;
 }
+
+/* ---------- POJU state debug + agenda (below assistant bubble) ---------- */
+.poju-state-debug {
+  margin-top: 0.35rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 6px;
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.22);
+  font-family: ui-monospace, "Cascadia Code", "SF Mono", Menlo, monospace;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--pchat-ink-mute, #8a849c);
+}
+
+.poju-state-debug__title {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.85;
+  margin-bottom: 0.2rem;
+}
+
+.poju-state-debug__phase {
+  margin-bottom: 0.25rem;
+}
+
+.poju-state-debug__phase code {
+  color: var(--pchat-ink-dim, #b7b2c8);
+}
+
+.poju-state-debug__flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.65rem;
+}
+
+.poju-state-debug__ok {
+  color: #6fcf97;
+}
+
+.poju-state-debug__no {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.poju-agenda-card {
+  margin-top: 0.5rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid rgba(212, 175, 55, 0.22);
+  background: rgba(212, 175, 55, 0.06);
+  font-size: 13px;
+  color: var(--pchat-ink-dim, #b7b2c8);
+}
+
+.poju-agenda-card__title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pchat-gold-soft, #f2c994);
+  margin-bottom: 0.4rem;
+}
+
+.poju-agenda-card__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.poju-agenda-card__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+}
+
+.poju-agenda-card__item--covered .poju-agenda-card__label {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
+.poju-agenda-card__badge {
+  font-size: 10px;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--pchat-ink, #ece9f4);
+}
+
+.poju-agenda-card__status {
+  margin-left: auto;
+  font-size: 11px;
+  opacity: 0.75;
+}

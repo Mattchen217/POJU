@@ -40,6 +40,8 @@ import { applyToolLinkingFromLlm } from "@/lib/poju/tool-suggestion";
 import type { ToolSuggestionPayload } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
 import { chatPayloadFromWire } from "@/lib/poju/serialize-chat-payload";
+import { isSubstantiveBreakthroughQuestion } from "@/lib/poju/breakthrough-question-gate";
+import { buildAgentStateSnapshot } from "@/lib/poju/agent-state-snapshot";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 /** Session uses default `userProfiles` slot from device. */
@@ -250,6 +252,17 @@ function finalizeAgentV2(
     understanding_sufficient: llm.understanding?.sufficient,
   });
   let after = applyPhaseTransition(merged, transition);
+  // PDF 步骤1：理解通过、进入收集 → 把这一句真困境填入 original_question
+  if (
+    transition.should_transition &&
+    transition.new_phase === "collecting_context" &&
+    normalizeAgentPhase(merged.current_phase) === "opening" &&
+    phaseUserMessage &&
+    phaseUserMessage !== "__OPENING__" &&
+    !isSubstantiveBreakthroughQuestion(after.original_question)
+  ) {
+    after = { ...after, original_question: phaseUserMessage.trim() };
+  }
   after = {
     ...after,
     stall_count: transition.reset_stall_count ? 0 : counters.stall_count,
@@ -466,14 +479,21 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       tool_suggestion: linking.tool_suggestion ?? undefined,
       tool_suggestion_message_id: linking.tool_suggestion ? assistantMessageId : undefined,
       thinking_process: llmResponse.thinking_process,
+      state_snapshot: buildAgentStateSnapshot(
+        agent_v2,
+        llmResponse.contains_delivery || workingSession.main_delivery_done,
+      ),
     },
   };
 
   const nowIso = new Date().toISOString();
   const rollingExpiry = new Date(Date.now() + THIRTY_DAYS_MS).toISOString();
+  const resolvedOriginalQuestion =
+    agent_v2.original_question?.trim() || workingSession.original_question;
 
   return withSessionProfileFlags({
     ...workingSession,
+    original_question: resolvedOriginalQuestion,
     messages: [...messagesWithUser, assistantMessage],
     context_collected: {
       ...sessionBase.context_collected,
