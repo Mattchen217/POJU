@@ -29,6 +29,9 @@ export const CHAT_PAYLOAD_FIELDS = [
   "suggest_refund",
   "locked_provider",
   "understanding",
+  "understanding_sufficient",
+  "agenda_updates",
+  "user_confirms_delivery",
   "breakthrough_core_updates",
 ] as const;
 
@@ -75,6 +78,9 @@ export function pojuLlmToChatPayload(
     suggest_refund: llm.suggest_refund ?? false,
     locked_provider: llm.locked_provider,
     understanding: llm.understanding ?? null,
+    understanding_sufficient: llm.understanding_sufficient,
+    agenda_updates: llm.agenda_updates ?? null,
+    user_confirms_delivery: llm.user_confirms_delivery,
     breakthrough_core_updates: llm.breakthrough_core_updates ?? null,
     ...overrides,
   });
@@ -117,6 +123,14 @@ export function chatPayloadFromWire(
     suggest_refund: data.suggest_refund === true,
     locked_provider: data.locked_provider,
     understanding: data.understanding ?? null,
+    understanding_sufficient:
+      typeof data.understanding_sufficient === "boolean" ? data.understanding_sufficient : undefined,
+    agenda_updates:
+      data.agenda_updates && typeof data.agenda_updates === "object" && !Array.isArray(data.agenda_updates)
+        ? (data.agenda_updates as { completed_in_this_turn?: string[] })
+        : undefined,
+    user_confirms_delivery:
+      typeof data.user_confirms_delivery === "boolean" ? data.user_confirms_delivery : undefined,
     breakthrough_core_updates: data.breakthrough_core_updates ?? null,
   });
 }

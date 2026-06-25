@@ -79,7 +79,6 @@ import type { PojuV4ActionRequested } from "@/lib/poju/types";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
 
 import { buildSpineBlock } from "@/lib/llm/phases/spine-block";
-import { buildStateLedger } from "@/lib/llm/phases/state-ledger";
 import { buildToolSuggestionPhaseAppendix } from "@/lib/llm/phases/tool-suggestion-phase-appendix";
 
 import { parseToolSuggestionFromParsed } from "@/lib/poju/tool-suggestion";
@@ -286,61 +285,14 @@ function buildCollectingTaskBlock(input: PhaseLLMInput): string {
   const spineBlock = buildSpineBlock(agent);
   const agendaBlock = agent ? buildAgendaTrackingBlock(agent) : "";
 
-  const ledger = buildStateLedger(
-    agent ?? null,
-    "收集·验证演进",
-    "拿他的回答验证/修正你的破局方向，弄清你还需要知道的关键项",
-    "必查项全 covered 且覆盖≥80%→征询出完整分析，进确认",
-  );
-
-  return `${ledger}
-
-# 任务：收集阶段 —— 在脊柱上验证与演进
-
+  return `# 动态上下文 · collecting
 用户的问题："${q}"
-
-你已经有一条推理脊柱（关系结论 + 2–3 条破局方向）和一份由它倒推出的调查议程。
-这一阶段你不是"重新认识他"，而是【拿他的回答去验证 / 修正你的破局方向】。
 
 ${spineBlock}
 
 ${agendaBlock}
 
-## 任务与要求
-这一格你拿他的回答去验证或修正你的破局方向，顺着自然弄清你还需要知道的关键项；判断变了就在 \`breakthrough_core_updates\` 里演进对应方向。
-怎么回应、说多少、这一轮要不要发问、从哪切入，全凭你作为一位有温度、直指要害的东方智者对这一刻的判断——不套任何固定结构。
-已 covered 的角度别重问；完整方案留到交付。议程是私有计划，不要照念给用户。
-
-## 红线
-- 还不交付完整方案；他催就告诉他"完整分析里一次给你，先把情况弄清楚"。
-
-## 他不配合时（委婉拉回阶梯，不暴露机制）
-- 含糊 → 温和请他具体点；敷衍/想跳过 → 认真而不指责；持续不配合 → 坦诚提退款选项。
-- 绝不说"系统要求/还没到轮数/流程规定"。一旦配合就回到正常聊。
-
-## 每轮必判跑题（topic_drift_signal）
-- 相关 none / 沾边 edge（简短确认相关性）/ 完全偏离 off_topic（说明需另开会话，should_show_new_session_button=true）
-
-## 信息齐了
-必查项全 covered → 征询他是否现在就出完整分析。
-
-## 输出 JSON（response 第一个键）
-{
-  "response": "...",
-  "suggested_phase": "collecting_context" | "awaiting_confirmation" | null,
-  "action_requested": "continue_chat",
-  "question_category": "career"|"relationship"|"wealth"|"health"|"family"|"decision"|"interpersonal"|"other"|null,
-  "context_updates": { "agenda_status_updates": { "<id>": "partial"|"covered" } },
-  "breakthrough_core_updates": { "breakthrough_directions": [ { "direction": "...", "status": "reinforced"|"weakened"|"selected", "structural_basis": "...", "what_would_confirm": "..." } ] },
-  "collection_progress": "advancing"|"stalled"|"resistant",
-  "topic_drift_signal": "none"|"edge"|"off_topic",
-  "drift_reason": "若偏离一句话说明，否则空字符串",
-  "should_show_new_session_button": false
-}
-
-（breakthrough_core_updates 无变化时省略该键。议程已生成，不再输出 investigation_agenda。）
-
-${buildToolSuggestionPhaseAppendix(input, { includeNewCycleDetection: false })}`;
+${buildToolSuggestionPhaseAppendix(input, { includeNewCycleDetection: false })}`.trim();
 }
 
 
@@ -505,6 +457,13 @@ async function finishCollectingPhase(
 
   const drift = parseTopicDriftFromParsed(parsed);
 
+  const agenda_updates =
+    parsed.agenda_updates &&
+    typeof parsed.agenda_updates === "object" &&
+    !Array.isArray(parsed.agenda_updates)
+      ? (parsed.agenda_updates as { completed_in_this_turn?: string[] })
+      : undefined;
+
   const tool_suggestion = parseToolSuggestionFromParsed(parsed);
 
 
@@ -584,6 +543,8 @@ async function finishCollectingPhase(
     investigation_agenda: null,
 
     breakthrough_core_updates,
+
+    agenda_updates,
 
     suggest_refund,
 

@@ -9,7 +9,7 @@ import {
   buildBreakthroughCorePrompt,
   resolveBaseAnalysisForBreakthrough,
 } from "@/lib/llm/deepseek/breakthrough-core";
-import { resolveActiveAgentPhase } from "@/lib/llm/poju-phase-router";
+import { resolveActiveAgentPhase } from "@/lib/poju/state-machine";
 import type { POJUSessionState } from "@/lib/poju/types";
 import { createInitialAgentState } from "@/lib/poju/agent-state";
 
@@ -97,8 +97,8 @@ function phase1ProfileAnchorTests(): void {
   assert("no in-chat birth flow", !ui.includes("birthFlowStage") && !ui.includes("BirthProfileFlow"));
   assert("no greeting-phase file", !exists("lib/llm/phases/greeting-phase.ts"));
 
-  const router = read("lib/llm/poju-phase-router.ts");
-  assert("phase router no callGreetingPhase", !router.includes("callGreetingPhase"));
+  assert("state-machine module exists", exists("lib/poju/state-machine.ts"));
+  assert("no poju-phase-router file", !exists("lib/llm/poju-phase-router.ts"));
 
   const noProfile = mockSession();
   assert(

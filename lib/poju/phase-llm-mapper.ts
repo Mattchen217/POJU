@@ -71,6 +71,13 @@ export function mapPhaseResultToChatPayload(
     investigation_agenda: phase.investigation_agenda ?? null,
     suggest_refund: Boolean(phase.suggest_refund),
     understanding: phase.understanding ?? null,
+    understanding_sufficient:
+      typeof phase.understanding_sufficient === "boolean"
+        ? phase.understanding_sufficient
+        : phase.understanding?.sufficient,
+    agenda_updates: (phase as { agenda_updates?: { completed_in_this_turn?: string[] } }).agenda_updates ?? null,
+    user_confirms_delivery:
+      (phase as { user_confirms_delivery?: boolean }).user_confirms_delivery ?? undefined,
     breakthrough_core_updates: phase.breakthrough_core_updates ?? null,
   };
 

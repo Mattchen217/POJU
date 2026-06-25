@@ -7,13 +7,17 @@ import {
   applyPhaseTransition,
   calculateCompleteness,
   createInitialAgentState,
-  decidePhaseTransition,
   mergeBreakthroughCoreUpdates,
   normalizeAgentPhase,
   type AgentPhase,
   type ContextSummary,
   type POJUAgentState,
 } from "@/lib/poju/agent-state";
+import { classifyStallOfferReply } from "@/lib/poju/stall-offer-routing";
+import {
+  advanceStateMachine,
+  extractModelTurnSignals,
+} from "@/lib/poju/state-machine";
 import { countUserTurns } from "@/lib/poju/summary-readiness";
 import {
   applyCollectingTurnCounters,
@@ -40,7 +44,6 @@ import { applyToolLinkingFromLlm } from "@/lib/poju/tool-suggestion";
 import type { ToolSuggestionPayload } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
 import { chatPayloadFromWire } from "@/lib/poju/serialize-chat-payload";
-import { isSubstantiveBreakthroughQuestion } from "@/lib/poju/breakthrough-question-gate";
 import { buildAgentStateSnapshot } from "@/lib/poju/agent-state-snapshot";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -99,6 +102,9 @@ type LLMApiPayload = {
   suggest_refund?: boolean;
   locked_provider?: string;
   understanding?: { sufficient: boolean; missing: string } | null;
+  understanding_sufficient?: boolean;
+  agenda_updates?: { completed_in_this_turn?: string[] };
+  user_confirms_delivery?: boolean;
   breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null;
 };
 
@@ -153,6 +159,10 @@ function finalizeAgentV2(
     stall_offer?: boolean;
     investigation_agenda?: unknown;
     understanding?: { sufficient: boolean; missing: string } | null;
+    understanding_sufficient?: boolean;
+    agenda_updates?: { completed_in_this_turn?: string[] };
+    user_confirms_delivery?: boolean;
+    topic_drift_signal?: "none" | "edge" | "off_topic";
     breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null;
   },
   userMessage: string,
@@ -239,33 +249,89 @@ function finalizeAgentV2(
   const userTurns = countUserTurns(session);
   merged = { ...merged, turn_count: userTurns };
 
-  const transition = decidePhaseTransition({
-    current_state: merged,
-    llm_suggested_phase: llmPhase,
-    user_message: phaseUserMessage,
-    user_turn_count: userTurns,
-    collection_progress: collectionProgress,
-    stall_count: counters.stall_count,
-    collecting_turn_count: counters.collecting_turn_count,
-    stop_loss: stopLoss,
-    stall_offer: stallOffer,
-    understanding_sufficient: llm.understanding?.sufficient,
+  const signals = extractModelTurnSignals({
+    response: "",
+    understanding_sufficient: llm.understanding_sufficient,
+    understanding: llm.understanding,
+    topic_drift_signal: llm.topic_drift_signal,
+    agenda_updates: llm.agenda_updates,
+    user_confirms_delivery: llm.user_confirms_delivery,
   });
-  let after = applyPhaseTransition(merged, transition);
-  // PDF 步骤1：理解通过、进入收集 → 把这一句真困境填入 original_question
-  if (
-    transition.should_transition &&
-    transition.new_phase === "collecting_context" &&
-    normalizeAgentPhase(merged.current_phase) === "opening" &&
-    phaseUserMessage &&
-    phaseUserMessage !== "__OPENING__" &&
-    !isSubstantiveBreakthroughQuestion(after.original_question)
+
+  const advance = advanceStateMachine(merged, signals, phaseUserMessage);
+  let after = advance.next_agent;
+  let resetStallCount = false;
+
+  if (isCollectingTurn && stopLoss.triggered && stallOffer) {
+    after = applyPhaseTransition(after, {
+      should_transition: true,
+      new_phase: "awaiting_confirmation",
+      stop_loss_triggered: true,
+      stall_offer_pending: true,
+      reason: `Stop-loss stall offer: ${stopLoss.reason ?? "triggered"}`,
+    });
+  } else if (
+    currentPhase === "awaiting_confirmation" &&
+    base.stall_offer_pending &&
+    phaseUserMessage.trim()
   ) {
-    after = { ...after, original_question: phaseUserMessage.trim() };
+    const choice = classifyStallOfferReply(phaseUserMessage);
+    if (choice === "continue_collecting") {
+      resetStallCount = true;
+      after = applyPhaseTransition(after, {
+        should_transition: true,
+        new_phase: "collecting_context",
+        reset_stall_count: true,
+        clear_stall_offer_pending: true,
+        resume_collecting_low_barrier: true,
+        reason: "User chose to continue collecting after stall offer",
+      });
+    } else {
+      after = applyPhaseTransition(after, {
+        should_transition: true,
+        new_phase: "delivered",
+        delivery_mode: "degraded",
+        clear_stall_offer_pending: true,
+        reason:
+          choice === "degraded_delivery"
+            ? "User chose degraded delivery after stall offer"
+            : "Stall offer fallback to degraded delivery",
+      });
+    }
+  } else if (
+    currentPhase === "awaiting_confirmation" &&
+    !after.stall_offer_pending &&
+    llmPhase === "collecting_context"
+  ) {
+    after = applyPhaseTransition(after, {
+      should_transition: true,
+      new_phase: "collecting_context",
+      reason: "User wants to add more context",
+    });
+  } else if (
+    currentPhase === "awaiting_confirmation" &&
+    !advance.trigger_delivery &&
+    llmPhase === "delivered" &&
+    signals.user_confirms_delivery !== false
+  ) {
+    after = applyPhaseTransition(after, {
+      should_transition: true,
+      new_phase: "delivered",
+      delivery_mode: after.delivery_mode ?? "full",
+      reason: "User confirmed, generating delivery",
+    });
   }
+
+  if (advance.trigger_breakthrough_core) {
+    console.info("[agent] state machine: trigger_breakthrough_core");
+  }
+  if (advance.trigger_delivery) {
+    console.info("[agent] state machine: trigger_delivery");
+  }
+
   after = {
     ...after,
-    stall_count: transition.reset_stall_count ? 0 : counters.stall_count,
+    stall_count: resetStallCount ? 0 : counters.stall_count,
     collecting_turn_count: counters.collecting_turn_count,
   };
   if (isCollectingTurn && after.resume_collecting_low_barrier) {
@@ -453,6 +519,10 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       stall_offer: llmResponse.stall_offer,
       investigation_agenda: llmResponse.investigation_agenda,
       understanding: llmResponse.understanding ?? null,
+      understanding_sufficient: llmResponse.understanding_sufficient,
+      agenda_updates: llmResponse.agenda_updates,
+      user_confirms_delivery: llmResponse.user_confirms_delivery,
+      topic_drift_signal: llmResponse.topic_drift_signal,
       breakthrough_core_updates: llmResponse.breakthrough_core_updates ?? null,
     },
     userMessage,
@@ -615,6 +685,9 @@ async function callLLMViaAPI(input: {
   suggest_refund?: boolean;
   locked_provider?: string;
   understanding?: { sufficient: boolean; missing: string } | null;
+  understanding_sufficient?: boolean;
+  agenda_updates?: { completed_in_this_turn?: string[] };
+  user_confirms_delivery?: boolean;
   breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null;
 }> {
   const body = JSON.stringify({
@@ -771,6 +844,16 @@ function mapLlmApiPayload(
             missing: String((wire.understanding as { missing?: unknown }).missing ?? ""),
           }
         : null,
+    understanding_sufficient:
+      typeof wire.understanding_sufficient === "boolean" ? wire.understanding_sufficient : undefined,
+    agenda_updates:
+      wire.agenda_updates &&
+      typeof wire.agenda_updates === "object" &&
+      !Array.isArray(wire.agenda_updates)
+        ? (wire.agenda_updates as { completed_in_this_turn?: string[] })
+        : undefined,
+    user_confirms_delivery:
+      typeof wire.user_confirms_delivery === "boolean" ? wire.user_confirms_delivery : undefined,
     breakthrough_core_updates:
       wire.breakthrough_core_updates &&
       typeof wire.breakthrough_core_updates === "object" &&

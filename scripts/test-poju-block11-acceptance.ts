@@ -5,7 +5,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { resolveActiveAgentPhase } from "@/lib/llm/poju-phase-router";
+import { resolveActiveAgentPhase } from "@/lib/poju/state-machine";
 import { createInitialAgentState } from "@/lib/poju/agent-state";
 import type { POJUSessionState } from "@/lib/poju/types";
 
@@ -35,9 +35,9 @@ function main(): void {
   console.log("\n========== POJU Block 11 Acceptance ==========\n");
 
   console.log("=== Fix 1 · opening gate (no router skip) ===\n");
-  const router = read("lib/llm/poju-phase-router.ts");
-  assert("router no userTurns shortcut", !router.includes("userTurns"));
-  assert("router defaults opening", /return "opening";/.test(router));
+  const sm = read("lib/poju/state-machine.ts");
+  assert("state-machine has resolveActiveAgentPhase", sm.includes("resolveActiveAgentPhase"));
+  assert("state-machine defaults opening", /return "opening";/.test(sm));
   assert(
     "null agent_v2 + profile → opening",
     resolveActiveAgentPhase(mockSession({ agent_v2: undefined })) === "opening",

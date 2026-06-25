@@ -30,16 +30,15 @@ function main(): void {
   assert("birth-flow-messages removed", !exists("lib/poju/birth-flow-messages.ts"));
   assert("poju-step2-entry removed", !exists("components/poju/poju-step2-entry.tsx"));
 
-  console.log("\n=== Router / LLM no greeting branch ===\n");
-  const router = read("lib/llm/poju-phase-router.ts");
-  assert("no callGreetingPhase", !router.includes("callGreetingPhase"));
-  assert("opening always callOpeningPhase", router.includes("return { phase: await callOpeningPhase(phaseInput)"));
+  console.log("\n=== Phase runner / LLM no greeting branch ===\n");
+  assert("poju-phase-router removed", !exists("lib/llm/poju-phase-router.ts"));
+  const runner = read("lib/poju/agent-phase-runner.ts");
+  assert("runner resolves phase from state-machine", runner.includes("@/lib/poju/state-machine"));
+  assert("opening always callOpeningPhase", runner.includes('case "opening":'));
 
   const llm = read("lib/llm/poju-llm.ts");
   assert("no shouldUseGreetingPhase", !llm.includes("shouldUseGreetingPhase"));
   assert("no greeting-phase import", !llm.includes("greeting-phase"));
-
-  const runner = read("lib/poju/agent-phase-runner.ts");
   assert("runner no greeting", !runner.includes("callGreetingPhase"));
 
   console.log("\n=== Chat UI no in-chat birth form ===\n");

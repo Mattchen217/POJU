@@ -18,6 +18,7 @@ import {
 } from "@/lib/llm/prompts/oriental-counselor-base";
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import { buildChatPhaseTermBindingBlock } from "@/lib/llm/prompts/term-closed-set-constraint";
+import { buildTurnContextSnapshot } from "@/lib/poju/state-machine";
 import {
   applyTurnContext,
   formatPhaseMessageHistory,
@@ -103,6 +104,8 @@ export function buildPhaseTurnContext(input: PhaseLLMInput, taskBlock: string): 
     normalizeBaseAnalysisInput(input.base_analysis ?? null).structured ?? null;
   const injectionBlock = input.tool_injection_context?.trim() ?? "";
 
+  const snapshotBlock = buildTurnContextSnapshot(input.agent_state);
+
   return stitchPromptSections(
     langDirective.directive.trim(),
     buildCurrentDateContext(new Date(), outLoc),
@@ -110,6 +113,7 @@ export function buildPhaseTurnContext(input: PhaseLLMInput, taskBlock: string): 
     buildTermMarkingPromptBlock(outLoc),
     structured ? buildStructuredInstanceInventory(structured) : "",
     buildChatPhaseTermBindingBlock(outLoc),
+    snapshotBlock,
     taskBlock,
   );
 }

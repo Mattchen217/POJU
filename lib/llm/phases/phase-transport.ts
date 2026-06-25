@@ -231,8 +231,12 @@ export function parsePhaseJson(rawText: string): Record<string, unknown> {
         return m ? m[1].replace(/\\"/g, '"').replace(/\\n/g, "\n").replace(/\\t/g, "\t") : "";
       })();
       const sufficientRaw = grab(/"sufficient"\s*:\s*(true|false)/);
+      const understandingSufficientRaw = grab(/"understanding_sufficient"\s*:\s*(true|false)/);
       const suggestedRaw = grab(/"suggested_phase"\s*:\s*(null|"[a-z_]+")/);
       const salvaged: Record<string, unknown> = { response, _parse_failed: true };
+      if (understandingSufficientRaw != null) {
+        salvaged.understanding_sufficient = understandingSufficientRaw === "true";
+      }
       if (sufficientRaw != null) {
         salvaged.understanding = { sufficient: sufficientRaw === "true", missing: "" };
       }
@@ -251,6 +255,8 @@ export function guardParseFailedFields(parsed: Record<string, unknown>): Record<
   return {
     ...parsed,
     breakthrough_core_updates: null,
+    understanding_sufficient:
+      typeof parsed.understanding_sufficient === "boolean" ? parsed.understanding_sufficient : undefined,
     understanding: parsed.understanding ?? { sufficient: false, missing: "" },
     suggested_phase: parsed.suggested_phase ?? null,
   };

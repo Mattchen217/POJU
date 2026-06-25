@@ -7,7 +7,6 @@ import type { AgentPhase, ContextSummary } from "@/lib/poju/agent-state";
 import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseResult, withPhaseStreamOpts } from "@/lib/llm/phases/phase-transport";
 import { buildPhaseTransportInput } from "@/lib/llm/phases/oriental-prompt-context";
 import { buildSpineBlock } from "@/lib/llm/phases/spine-block";
-import { buildStateLedger } from "@/lib/llm/phases/state-ledger";
 import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
 
@@ -33,38 +32,14 @@ function buildSummaryTaskBlock(input: PhaseLLMInput): string {
   const completeness = agent?.collection_completeness ?? 0;
   const spineBlock = buildSpineBlock(agent);
 
-  const ledger = buildStateLedger(
-    agent ?? null,
-    "总结+确认",
-    "把你看清的局凝成一段有洞见的话、预告倾向方向，请他确认或补充",
-    "用户确认→进交付；要补充→收下，留本格",
-  );
-
-  return `${ledger}
-
-# 任务：深度总结 + 确认
-
-收集已够。把你这一路在脊柱上看清的凝成有洞见的话讲给用户，预告你倾向的破局方向，请他确认或补充后再出完整方案。
-
+  return `# 动态上下文 · awaiting_confirmation
 用户的问题："${input.session.original_question}"
 
 ${spineBlock}
 
 ## 已收集（用户亲口）
 ${contextText}
-完成度: ${(completeness * 100).toFixed(0)}%
-
-## 任务与要求
-你是 POJU——有温度、直指要害的东方智者。把"你现在看清的局"讲透，锚在关系结论与他亲口的关键细节；点出你倾向的那条破局方向（不展开完整方案）。
-同时产出 current_summary（供可编辑确认页渲染，与 response 并存）：5–7 个 section，每节 2–5 item，value 用用户原话、不编造。
-
-## 红线
-- 不在此给完整 3 条行动、不下 CONCLUSION 收口（那是交付的回报）。
-- 只用本次 structured 实有命理实例；集外神煞禁止。
-
-${TRANSITION_CONSENT_RULES}
-
-输出 JSON：response, suggested_phase, current_summary, context_updates`;
+完成度: ${(completeness * 100).toFixed(0)}%`;
 }
 
 async function handleConfirmProceed(input: PhaseLLMInput): Promise<PhaseLLMResult> {
@@ -96,6 +71,7 @@ async function handleConfirmProceed(input: PhaseLLMInput): Promise<PhaseLLMResul
   return {
     response,
     suggested_phase,
+    user_confirms_delivery: true,
     context_updates:
       parsed.context_updates && typeof parsed.context_updates === "object" && !Array.isArray(parsed.context_updates)
         ? (parsed.context_updates as Record<string, unknown>)
@@ -257,10 +233,17 @@ ${TRANSITION_CONSENT_RULES}
   const rawPhase = typeof parsed.suggested_phase === "string" ? parsed.suggested_phase.trim() : null;
   const suggested_phase =
     rawPhase && VALID_SUGGESTED.includes(rawPhase as AgentPhase) ? (rawPhase as AgentPhase) : "awaiting_confirmation";
+  const user_confirms_delivery =
+    typeof parsed.user_confirms_delivery === "boolean"
+      ? parsed.user_confirms_delivery
+      : suggested_phase === "delivered"
+        ? true
+        : undefined;
 
   return {
     response,
     suggested_phase,
+    user_confirms_delivery,
     context_updates:
       parsed.context_updates && typeof parsed.context_updates === "object" && !Array.isArray(parsed.context_updates)
         ? (parsed.context_updates as Record<string, unknown>)

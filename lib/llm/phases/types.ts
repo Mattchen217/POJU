@@ -62,5 +62,8 @@ export interface PhaseLLMResult {
   breakthrough_core?: import("@/lib/poju/agent-state").BreakthroughCore | null;
   breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null;
   understanding?: { sufficient: boolean; missing: string } | null;
+  understanding_sufficient?: boolean;
+  agenda_updates?: { completed_in_this_turn?: string[] };
+  user_confirms_delivery?: boolean;
 }
 

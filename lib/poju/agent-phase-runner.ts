@@ -8,7 +8,7 @@ import { callDeliveryPhase } from "@/lib/llm/phases/delivery-phase";
 import { callOpeningPhase } from "@/lib/llm/phases/opening-phase";
 import { callTrackingPhase } from "@/lib/llm/phases/tracking-phase";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
-import { resolveActiveAgentPhase } from "@/lib/llm/poju-phase-router";
+import { resolveActiveAgentPhase } from "@/lib/poju/state-machine";
 import { mapPhaseResultToChatPayload } from "@/lib/poju/phase-llm-mapper";
 import type { AgentPhase } from "@/lib/poju/agent-state";
 import {

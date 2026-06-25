@@ -1,17 +1,14 @@
 /**
- * Block 16 — fix state machine oscillation + state debug panel + agenda below bubble
+ * Block 16 — state machine + debug panel (core wiring updated for Block 19)
  * Run: pnpm exec tsx scripts/test-poju-block16-acceptance.ts
  */
 import fs from "node:fs";
 import path from "node:path";
 
-import {
-  applyPhaseTransition,
-  createInitialAgentState,
-  decidePhaseTransition,
-} from "@/lib/poju/agent-state";
+import { createInitialAgentState } from "@/lib/poju/agent-state";
 import { buildAgentStateSnapshot } from "@/lib/poju/agent-state-snapshot";
-import { isGreetingOrEmptyQuestion, isSubstantiveBreakthroughQuestion } from "@/lib/poju/breakthrough-question-gate";
+import { advanceStateMachine, extractModelTurnSignals } from "@/lib/poju/state-machine";
+import { isSubstantiveBreakthroughQuestion } from "@/lib/poju/breakthrough-question-gate";
 
 const ROOT = path.join(process.cwd());
 const failures: string[] = [];
@@ -28,36 +25,24 @@ function assert(label: string, ok: boolean): void {
 function main(): void {
   console.log("\n========== POJU Block 16 Acceptance ==========\n");
 
-  console.log("=== Fix A1 · gate judges latest user message ===\n");
+  console.log("=== Fix A1 · opening uses model signal ===\n");
   const opening = read("lib/llm/phases/opening-phase.ts");
-  assert("opening uses lastUserMessage only", opening.includes("const userText = lastUserMessage.trim()"));
-  assert("opening not stale original_question", !opening.includes("input.session.original_question ?? lastUserMessage"));
+  assert("opening parses understanding_sufficient", opening.includes("parsed.understanding_sufficient"));
+  assert("opening no regex override", !opening.includes("isGreetingOrEmptyQuestion"));
 
   console.log("\n=== Fix A2 · fill original_question on opening→collecting ===\n");
   const agent = read("lib/poju/agent.ts");
-  assert("agent imports isSubstantiveBreakthroughQuestion", agent.includes("isSubstantiveBreakthroughQuestion"));
-  assert("agent fills original_question on transition", agent.includes("original_question: phaseUserMessage.trim()"));
+  assert("agent uses advanceStateMachine", agent.includes("advanceStateMachine"));
   assert("session syncs original_question", agent.includes("resolvedOriginalQuestion"));
 
   const base = createInitialAgentState({ original_question: "你好" });
-  const transition = decidePhaseTransition({
-    current_state: base,
-    llm_suggested_phase: "collecting_context",
-    user_message: "我离婚8年了想重新开始",
-    user_turn_count: 2,
-    understanding_sufficient: true,
-  });
-  let after = applyPhaseTransition(base, transition);
-  if (
-    transition.should_transition &&
-    transition.new_phase === "collecting_context" &&
-    !isSubstantiveBreakthroughQuestion(after.original_question)
-  ) {
-    after = { ...after, original_question: "我离婚8年了想重新开始".trim() };
-  }
-  assert("simulated fill makes question substantive", isSubstantiveBreakthroughQuestion(after.original_question));
+  const after = advanceStateMachine(
+    base,
+    extractModelTurnSignals({ understanding_sufficient: true }),
+    "我离婚8年了想重新开始",
+  ).next_agent;
+  assert("advance fills substantive question", isSubstantiveBreakthroughQuestion(after.original_question));
   assert("greeting alone not substantive", !isSubstantiveBreakthroughQuestion("你好"));
-  assert("short collecting reply not blocked at gate", isGreetingOrEmptyQuestion("没有人"));
 
   console.log("\n=== Fix A3 · orchestrator reads updated question ===\n");
   const orch = read("lib/poju/agent-orchestrator.ts");

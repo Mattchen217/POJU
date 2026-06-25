@@ -10,7 +10,7 @@ import {
   finalizeUnlockBaziSession,
   prepareUnlockReleaseSession,
 } from "@/lib/poju/finalize-unlock-bazi-session";
-import { resolveActiveAgentPhase } from "@/lib/llm/poju-phase-router";
+import { resolveActiveAgentPhase } from "@/lib/poju/state-machine";
 import type { POJUSessionState } from "@/lib/poju/types";
 
 const ROOT = path.join(process.cwd());

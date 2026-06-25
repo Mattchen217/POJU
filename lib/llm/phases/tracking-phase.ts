@@ -2,7 +2,6 @@ import { parseBreakthroughCoreUpdatesFromLlm, type AgentPhase } from "@/lib/poju
 import { callPhaseJsonTransport, parsePhaseResult, withPhaseStreamOpts } from "@/lib/llm/phases/phase-transport";
 import { buildPhaseTransportInput } from "@/lib/llm/phases/oriental-prompt-context";
 import { buildSpineBlock } from "@/lib/llm/phases/spine-block";
-import { buildStateLedger } from "@/lib/llm/phases/state-ledger";
 import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
 import { buildToolSuggestionPhaseAppendix } from "@/lib/llm/phases/tool-suggestion-phase-appendix";
@@ -36,19 +35,7 @@ function buildTrackingTaskBlock(input: PhaseLLMInput): string {
 ${archiveCompleted}`
     : "";
 
-  const ledger = buildStateLedger(
-    agent ?? null,
-    "追踪陪伴",
-    "在已给方案+脊柱上解读他的进展，叠加下一层微动作",
-    "持续陪伴；全新话题→引导开新 Session",
-  );
-
-  return `${ledger}
-
-# 任务：追踪 · 动态破局陪伴
-
-主交付已完成。用户回来汇报进展 / 提问 / 收尾。在【已给的方案 + 你的破局脊柱】上继续陪他推进。
-
+  return `# 动态上下文 · tracking
 原始问题："${input.session.original_question}"
 
 ${spineBlock}
@@ -56,20 +43,7 @@ ${spineBlock}
 ## 已给出的行动
 ${actionLines}${archiveBlock}
 
-## 任务与要求
-你是他的长期破局顾问。听他的进展与阻碍，在脊柱上解读反馈印证或削弱哪条破局方向；
-顺势给下一层微动作或调整做法（不重复三条原文，是它的延伸）。进展改变了方向判断时输出 breakthrough_core_updates。
-
-## 边界
-- 全新话题 → 说明一个 Session 专注一个问题，可开新 Session。
-- 不指定"几个月后 / 下周再来"；用"随时回来""有进展时"。Session 30 天有效。
-- topic_drift_signal："none" | "edge" | "off_topic"。完全偏离时拒绝深入，引导新 Session。
-
-输出 JSON：response, suggested_phase:"tracking", context_updates,
-  breakthrough_core_updates, topic_drift_signal, drift_reason, should_show_new_session_button
-  （breakthrough_core_updates 形如 { "breakthrough_directions": [ { "direction":"...", "status":"reinforced"|"weakened"|"selected", "structural_basis":"...", "what_would_confirm":"..." } ] }）
-
-${buildToolSuggestionPhaseAppendix(input, { includeNewCycleDetection: true })}`;
+${buildToolSuggestionPhaseAppendix(input, { includeNewCycleDetection: true })}`.trim();
 }
 
 export async function callTrackingPhase(input: PhaseLLMInput): Promise<PhaseLLMResult> {

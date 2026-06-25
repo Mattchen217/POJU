@@ -188,8 +188,8 @@ function understandingGateTests(): void {
   console.log("\n=== 4. 理解门 ===\n");
 
   const opening = read("lib/llm/phases/opening-phase.ts");
-  assert("opening Deep Judge prompt", opening.includes("理解判断门"));
-  assert("opening parses understanding", opening.includes("parsed.understanding"));
+  assert("opening uses model understanding_sufficient", opening.includes("parsed.understanding_sufficient"));
+  assert("opening parses understanding", opening.includes("understanding_sufficient"));
   assert("opening gates suggested_phase on sufficient", opening.includes("understanding.sufficient"));
 
   const agent = createInitialAgentState({ original_question: "test" });
@@ -218,7 +218,7 @@ function understandingGateTests(): void {
 function soulAndCacheTests(): void {
   console.log("\n=== 5. 灵魂 + 前缀缓存 ===\n");
 
-  assert("POJU_IDENTITY warm + tracking", POJU_IDENTITY.includes("多轮追踪心智"));
+  assert("POJU_IDENTITY warm + tracking", POJU_IDENTITY.includes("欢迎回来"));
   assert("POJU_IDENTITY no spine mechanism leak", !POJU_IDENTITY.includes("独立深推理脊柱"));
 
   const chatCore = buildPojuChatCoreSections("en").join("\n");
