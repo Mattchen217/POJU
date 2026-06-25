@@ -1,9 +1,3 @@
-import { applyPojuOutputPolicies } from "@/lib/poju/output-policy-pass";
-import {
-  callGreetingPhase,
-  shouldUseGreetingPhase,
-} from "@/lib/llm/phases/greeting-phase";
-import type { PhaseLLMResult } from "@/lib/llm/phases/types";
 import { executeAgentPhaseLLM } from "@/lib/poju/agent-phase-runner";
 import {
   GEMINI_PRIMARY_MODEL,
@@ -11,8 +5,6 @@ import {
 } from "@/lib/llm/gemini-shared";
 import { logPojuError } from "@/lib/poju/base-analysis-diagnostics";
 import { getOpenRouterDefaultModel, isOpenRouterConfigured, resolveSessionLockedProvider } from "@/lib/llm/openrouter-shared";
-import { normalizeAgentPhase } from "@/lib/poju/agent-state";
-import { getLastUserMessageContent } from "@/lib/poju/context-helpers";
 import type { POJUActionRecommendationsData } from "@/lib/archive/archive-service";
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
@@ -80,13 +72,9 @@ export interface POJULLMResponse {
 }
 
 export async function callPOJULLM(input: CallInput): Promise<POJULLMResponse> {
-  const { session, profile } = input;
+  const { session } = input;
 
   try {
-    if (shouldUseGreetingPhase(session, profile)) {
-      return finalizeLockFields(await callPOJULLMGreetingPath(input), session);
-    }
-
     if (!isOpenRouterConfigured() && !getGeminiClient()) {
       return emptyFailureResponse(
         session,
@@ -166,73 +154,6 @@ async function callPOJULLMPhasePath(input: CallInput): Promise<POJULLMResponse> 
     understanding: phase.understanding ?? null,
     breakthrough_core_updates: phase.breakthrough_core_updates ?? null,
   };
-}
-
-function mapGreetingPhaseToPojuResponse(phase: PhaseLLMResult, model: string): POJULLMResponse {
-  const suggested = normalizeAgentPhase(phase.suggested_phase ?? undefined);
-  let current_state: POJULLMResponse["current_state"] = "opening";
-  let action_requested: POJULLMResponse["action_requested"] = "continue_chat";
-  let user_intent: POJULLMResponse["user_intent"] = "greeting";
-
-  if (phase.action_requested === "show_birth_form") {
-    current_state = "collecting_context";
-    action_requested = "show_birth_form";
-    user_intent = "sharing_situation";
-  } else if (suggested === "collecting_context") {
-    current_state = "collecting_context";
-    user_intent = "sharing_situation";
-  } else if (phase.context_updates && Object.keys(phase.context_updates).length > 0) {
-    user_intent = "sharing_situation";
-  }
-
-  return {
-    response: phase.response,
-    model,
-    tokens_used: phase.tokens_used,
-    user_intent,
-    current_state,
-    action_requested,
-    topic_drift_detected: false,
-    context_updates: phase.context_updates ?? {},
-    contains_delivery: false,
-    agent_suggested_phase: suggested ?? undefined,
-    question_category: phase.question_category,
-    thinking_process: undefined,
-    served_provider: phase.served_provider ?? null,
-  };
-}
-
-async function callPOJULLMGreetingPath(input: CallInput): Promise<POJULLMResponse> {
-  const { session, profile, locale } = input;
-  const fallbackModel = isOpenRouterConfigured() ? getOpenRouterDefaultModel() : GEMINI_PRIMARY_MODEL;
-
-  if (!isOpenRouterConfigured() && !getGeminiClient()) {
-    console.error("[poju-llm] Set OPENROUTER_API_KEY (preferred) or GOOGLE_GENERATIVE_AI_API_KEY / GEMINI_API_KEY");
-    return emptyFailureResponse(session, locale, fallbackModel);
-  }
-
-  try {
-    const phase = await callGreetingPhase({
-      session,
-      profile,
-      locale,
-      user_message: getLastUserMessageContent(session),
-    });
-    const mapped = mapGreetingPhaseToPojuResponse(phase, phase.model ?? fallbackModel);
-    const withThought = {
-      ...mapped,
-      thought: {
-        current_context_score: 2,
-        missing_keys: ["birth_profile_missing"],
-        next_best_action: mapped.action_requested ?? "continue_chat",
-      },
-    };
-    return applyPojuOutputPolicies(withThought, { session, profile, locale }) as POJULLMResponse;
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error);
-    console.error("[poju-llm] Greeting phase failed:", msg);
-    return emptyFailureResponse(session, locale, fallbackModel);
-  }
 }
 
 function emptyFailureResponse(session: POJUSessionState, locale: string, model: string): POJULLMResponse {

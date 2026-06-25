@@ -18,7 +18,7 @@ export function shouldShowContextSummaryForm(session: POJUSessionState): boolean
   const gate = evaluateCollectingConfirmationGate(agent, userTurns);
   if (!gate.allowed) return false;
 
-  if (!resolveSessionHasProfile(session) && !session.profile_skipped) return false;
+  if (!resolveSessionHasProfile(session)) return false;
 
   return true;
 }

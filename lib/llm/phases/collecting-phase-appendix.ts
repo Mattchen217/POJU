@@ -1,18 +1,16 @@
-import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
 
 /** Extra system rules while `agent_v2.current_phase === collecting_context`. */
-export function collectingPhaseSystemAppendix(session: POJUSessionState, profile: UserProfile | null): string {
-  const hasProfile = resolveSessionHasProfile(session) && Boolean(profile);
+export function collectingPhaseSystemAppendix(_session: POJUSessionState, _profile: UserProfile | null): string {
   return `
 ## CURRENT PHASE: collecting_context (Agent v4)
 - Ask **one** focused follow-up per turn; do not stack multiple unrelated questions.
 - Gather facts: duration, trigger, emotions, what was tried, desired outcome, who is involved.
 - Do **not** output ═══ ANALYSIS ═══, ═══ CONCLUSION ═══, or full action-plan packages — Step 9 delivers those after the user confirms a summary.
 - Do **not** invent BaZi / 五行 / 用神 / personality-from-chart claims unless birth data is bound to **this** session.
-${hasProfile ? "- Birth profile is on file for this session: you may reference chart themes only at a high level; still no final delivery blocks in chat." : "- No birth profile yet: if this topic needs BaZi, explain why in your response and set `action_requested` to show_birth_form (the client opens the form). Do not assume the form is already open."}
-- JSON only; keep \`contains_delivery\` false; \`action_requested\` is continue_chat or show_birth_form.
+- Birth profile is on file for this session: reference chart themes at a high level; still no final delivery blocks in chat.
+- JSON only; keep \`contains_delivery\` false; \`action_requested\` is continue_chat.
 `.trim();
 }
 

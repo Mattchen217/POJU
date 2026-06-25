@@ -135,7 +135,7 @@ export async function callOpeningPhase(input: PhaseLLMInput): Promise<PhaseLLMRe
 
   const rawAction = typeof parsed.action_requested === "string" ? parsed.action_requested.trim() : null;
   const action_requested: PojuV4ActionRequested | null =
-    rawAction === "continue_chat" || rawAction === "show_birth_form" ? rawAction : "continue_chat";
+    rawAction === "continue_chat" ? rawAction : "continue_chat";
 
   const context_updates =
     parsed.context_updates && typeof parsed.context_updates === "object" && !Array.isArray(parsed.context_updates)

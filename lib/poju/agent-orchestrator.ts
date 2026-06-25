@@ -9,7 +9,6 @@ import type { POJUAgentState } from "@/lib/poju/agent-state";
 import { createInitialAgentState } from "@/lib/poju/agent-state";
 import { buildFallbackContextSummary } from "@/lib/poju/context-summary-builder";
 import {
-  lastAssistantRequestsBirthForm,
   loadSessionProfileBundle,
   resolveSessionHasProfile,
   withSessionProfileFlags,
@@ -27,8 +26,6 @@ function resolveSessionOriginalQuestion(session: POJUSessionState): string {
 }
 
 export type AgentOrchestratorUi = {
-  showBirthForm: boolean;
-  showProfilePicker: boolean;
   showContextSummary: boolean;
   pipelineBusy: boolean;
   pipelineNotice: string | null;
@@ -107,16 +104,8 @@ export async function runPostTurnOrchestration(
   let s = withSessionProfileFlags(ensureContextSummary(downgradePrematureConfirmationPhase(session)));
   s = syncSessionOriginalQuestion(s);
   const beforeOrchestration = s;
-  const phase = s.agent_v2?.current_phase;
-  const agentWantsBirthForm = lastAssistantRequestsBirthForm(s);
 
   const ui: AgentOrchestratorUi = {
-    showBirthForm: agentWantsBirthForm,
-    showProfilePicker:
-      phase === "opening" &&
-      !resolveSessionHasProfile(s) &&
-      !agentWantsBirthForm &&
-      (s.messages.filter((m) => m.role === "user" && !m.is_rejected).length === 0),
     showContextSummary: false,
     pipelineBusy: false,
     pipelineNotice: null,

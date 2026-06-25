@@ -19,7 +19,6 @@ export function mapPhaseResultToChatPayload(
   const phaseAction = phase.action_requested;
   if (
     phaseAction === "continue_chat" ||
-    phaseAction === "show_birth_form" ||
     phaseAction === "deliver_main" ||
     phaseAction === "track_progress"
   ) {

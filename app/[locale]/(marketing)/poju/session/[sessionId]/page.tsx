@@ -59,7 +59,7 @@ export default function PojuSessionDeepLinkPage() {
       return;
     }
 
-    if (!resolveSessionHasProfile(local) && !local.profile_skipped) {
+    if (!resolveSessionHasProfile(local)) {
       router.replace(`/poju/session/${sessionId}/prepare`);
       return;
     }

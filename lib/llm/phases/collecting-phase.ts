@@ -91,15 +91,9 @@ import { parseTopicDriftFromParsed } from "@/lib/poju/topic-drift";
 const VALID_SUGGESTED: AgentPhase[] = ["collecting_context", "awaiting_confirmation"];
 
 const VALID_ACTIONS: PojuV4ActionRequested[] = [
-
   "continue_chat",
-
-  "show_birth_form",
-
   "deliver_main",
-
   "track_progress",
-
 ];
 
 
@@ -334,7 +328,7 @@ ${agendaBlock}
 {
   "response": "...",
   "suggested_phase": "collecting_context" | "awaiting_confirmation" | null,
-  "action_requested": "continue_chat" | "show_birth_form",
+  "action_requested": "continue_chat",
   "question_category": "career"|"relationship"|"wealth"|"health"|"family"|"decision"|"interpersonal"|"other"|null,
   "context_updates": { "agenda_status_updates": { "<id>": "partial"|"covered" } },
   "breakthrough_core_updates": { "breakthrough_directions": [ { "direction": "...", "status": "reinforced"|"weakened"|"selected", "structural_basis": "...", "what_would_confirm": "..." } ] },
@@ -504,21 +498,10 @@ async function finishCollectingPhase(
 
   const rawAction = typeof parsed.action_requested === "string" ? parsed.action_requested.trim() : null;
 
-  let action_requested: PojuV4ActionRequested | null =
-
+  const action_requested: PojuV4ActionRequested | null =
     rawAction && VALID_ACTIONS.includes(rawAction as PojuV4ActionRequested)
-
       ? (rawAction as PojuV4ActionRequested)
-
-      : null;
-
-  if (!action_requested && rawAction === "show_birth_form") {
-
-    action_requested = "show_birth_form";
-
-  }
-
-
+      : "continue_chat";
 
   const drift = parseTopicDriftFromParsed(parsed);
 

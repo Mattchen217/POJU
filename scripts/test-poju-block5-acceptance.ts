@@ -3,7 +3,7 @@
  *
  *   pnpm exec tsx scripts/test-poju-block5-acceptance.ts
  */
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import {
   buildBreakthroughCorePrompt,
@@ -18,6 +18,10 @@ const failures: string[] = [];
 
 function read(rel: string): string {
   return readFileSync(resolve(ROOT, rel), "utf8");
+}
+
+function exists(rel: string): boolean {
+  return existsSync(resolve(ROOT, rel));
 }
 
 function grepCount(pattern: string, rel: string): number {
@@ -90,14 +94,11 @@ function phase1ProfileAnchorTests(): void {
   assert("no profile_skipped: true in app/lib/components", countProfileSkippedTrueInCode() === 0);
   assert("POJUChatUI no onSkip", !ui.includes("onSkip"));
   assert("POJUChatUI no handleProfileSkipped", !ui.includes("handleProfileSkipped"));
-  assert(
-    "birth flow effect uses has_profile only",
-    ui.includes("if (resolveSessionHasProfile(session))") &&
-      !ui.match(/resolveSessionHasProfile\(session\) \|\| session\.profile_skipped/),
-  );
+  assert("no in-chat birth flow", !ui.includes("birthFlowStage") && !ui.includes("BirthProfileFlow"));
+  assert("no greeting-phase file", !exists("lib/llm/phases/greeting-phase.ts"));
 
   const router = read("lib/llm/poju-phase-router.ts");
-  assert("phase router no profile_skipped branch", !router.includes("session.profile_skipped"));
+  assert("phase router no callGreetingPhase", !router.includes("callGreetingPhase"));
 
   const noProfile = mockSession();
   assert(
@@ -112,7 +113,7 @@ function phase1ProfileAnchorTests(): void {
   );
 
   const orch = read("lib/poju/agent-orchestrator.ts");
-  assert("showProfilePicker no profile_skipped guard", !orch.includes("!s.profile_skipped"));
+  assert("orchestrator has runDegradedDeliveryPipeline", orch.includes("export async function runDegradedDeliveryPipeline"));
 }
 
 function phase2BreakthroughGuardTests(): void {

@@ -1,6 +1,6 @@
 /**
  * v5 — no response sanitization or hardcoded fallback copy.
- * Only language detection for greeting-phase prompts.
+ * Language detection for phase prompts.
  */
 
 export function detectInitialLanguage(text: string): string {

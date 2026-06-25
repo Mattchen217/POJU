@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
-import { BirthProfileFlow, type BirthProfileFlowStage } from "@/components/poju/BirthProfileFlow";
 import PojuChat from "@/components/poju/PojuChat";
 import { useAppDialog } from "@/components/ui/app-dialog";
 import { ContextSummaryEditor } from "@/components/poju/ContextSummaryEditor";
@@ -18,30 +17,21 @@ import {
   type PojuActivity,
 } from "@/lib/poju/activity";
 import { PojuActivityIndicator } from "@/components/poju/PojuActivityIndicator";
-import { ProfileSelector } from "@/components/profile/ProfileSelector";
 import { getPojuDb } from "@/lib/db/poju-db";
 import { createPOJUSession, loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
 import { clearPendingStoredProfileId, readPendingStoredProfileId } from "@/lib/poju/pending-stored-profile";
 import { runConfirmationPipeline, runPostTurnOrchestration } from "@/lib/poju/agent-orchestrator";
 import { handleUserMessage, tryHandleRuleRejection } from "@/lib/poju/agent";
-import { appendBirthFlowMessage } from "@/lib/poju/birth-flow-messages";
 import { hasFixedWelcomeMessage, seedFixedWelcomeMessages } from "@/lib/poju/chat-bootstrap";
 import {
   downgradePrematureConfirmationPhase,
   shouldShowContextSummaryForm,
 } from "@/lib/poju/summary-readiness";
-import { normalizeAgentPhase } from "@/lib/poju/agent-state";
 import { AgendaProgressPanel } from "@/components/poju/AgendaProgressPanel";
 import { getLastUserMessageContent } from "@/lib/poju/context-helpers";
-import {
-  clearBirthFormActionIfProfileBound,
-  lastAssistantRequestsBirthForm,
-  resolveSessionHasProfile,
-  withSessionProfileFlags,
-} from "@/lib/poju/session-profile";
-import { applyPhaseTransition } from "@/lib/poju/agent-state";
+import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import { generateBaseAnalysis } from "@/lib/llm/deepseek/base-analysis";
-import { importCalculatedProfileAsStored, profileHasBaseAnalysis, recordProfileUsage } from "@/lib/profile/stored-profiles-service";
+import { profileHasBaseAnalysis } from "@/lib/profile/stored-profiles-service";
 import { markPOJUV4SessionResolved } from "@/lib/poju/v4-lifecycle";
 import {
   DEFAULT_NEW_SESSION_TITLE,
@@ -54,7 +44,6 @@ import { getActiveCycle, recordUserResponse } from "@/lib/poju/cycle-manager";
 import { findPendingToolInjection } from "@/lib/poju/find-pending-tool-injection";
 import { getToolSuggestionResponseState } from "@/lib/poju/tool-suggestion";
 import type { POJUSessionState, POJUAction, POJUMessage, ToolName } from "@/lib/poju/types";
-import type { UserProfile } from "@/lib/profile/types";
 import { computeSituationContextFingerprint } from "@/lib/poju/situation-context-fingerprint";
 import { getCachedSituationAnalysis, requestSituationAnalysis } from "@/lib/llm/deepseek/situation-analysis";
 import { runFinalDeliveryForSession } from "@/lib/llm/pro/final-delivery";
@@ -125,8 +114,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const dialog = useAppDialog();
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
-  const [birthFlowStage, setBirthFlowStage] = useState<BirthProfileFlowStage | null>(null);
-  const [birthAnalysisFailed, setBirthAnalysisFailed] = useState(false);
   const summaryIntroAppendedRef = useRef(false);
   const [summaryFormDismissed, setSummaryFormDismissed] = useState(false);
   const [expiryDialogOpen, setExpiryDialogOpen] = useState(false);
@@ -141,7 +128,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const [situationNotice, setSituationNotice] = useState<string | null>(null);
   const [finalBusy, setFinalBusy] = useState(false);
   const [finalError, setFinalError] = useState<string | null>(null);
-  const [showProfilePicker, setShowProfilePicker] = useState(false);
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [pipelineBusy, setPipelineBusy] = useState(false);
   const [slotActivity, setSlotActivity] = useState<PojuActivity | null>(null);
@@ -226,10 +212,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const expired = isSessionExpired(session.expires_at);
   const previewComposerBlocked = isPreviewSession(session) && hasPaywallMessage(session);
   const composerLocked = expired || previewComposerBlocked || unlockBusy || unlockReportGateBlocking;
-  const birthFlowBlocking = birthFlowStage === "form" || birthFlowStage === "received" || birthFlowStage === "analyzing";
   const showSummaryForm =
     shouldShowContextSummaryForm(session) && !summaryFormDismissed && !session.main_delivery_done;
-  const overlayFormOpen = birthFlowBlocking || showProfilePicker || showSummaryForm;
+  const overlayFormOpen = showSummaryForm;
 
   const openUnlockReportModal = useCallback(() => setUnlockReportModalOpen(true), []);
 
@@ -310,22 +295,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       cancelled = true;
     };
   }, [session.session_id, session.original_question, session.agent_v2, session.context_collected]);
-
-  useEffect(() => {
-    if (resolveSessionHasProfile(session)) {
-      setBirthFlowStage(null);
-      return;
-    }
-    if (sending || birthFlowStage === "received" || birthFlowStage === "analyzing" || birthFlowStage === "complete") {
-      return;
-    }
-
-    if (lastAssistantRequestsBirthForm(session)) {
-      setBirthFlowStage((prev) => (prev === "received" || prev === "analyzing" ? prev : "form"));
-    } else if (birthFlowStage === "form" || birthFlowStage === "intro") {
-      setBirthFlowStage(null);
-    }
-  }, [session, sending, birthFlowStage]);
 
   useEffect(() => {
     const downgraded = downgradePrematureConfirmationPhase(session);
@@ -461,8 +430,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     await savePOJUSession(nextSession);
     setSummaryFormDismissed(false);
     summaryIntroAppendedRef.current = false;
-    setBirthFlowStage(null);
-    setShowProfilePicker(false);
 
     if (rejected) return;
 
@@ -560,10 +527,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         setDriftReason("");
       }
 
-      if (!resolveSessionHasProfile(finalSession)) {
-        if (orch.ui.showBirthForm) setBirthFlowStage("form");
-        if (orch.ui.showProfilePicker) setShowProfilePicker(true);
-      }
       if (orch.ui.pipelineNotice) setSituationNotice(orch.ui.pipelineNotice);
       if (orch.ui.pipelineError) setSituationError(orch.ui.pipelineError);
       setPipelineBusy(orch.ui.pipelineBusy);
@@ -754,119 +717,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     }
   }
 
-  async function handleProfileSubmitted(profile: UserProfile) {
-    const s = sessionRef.current;
-    setShowProfilePicker(false);
-    setBirthAnalysisFailed(false);
-    setBirthFlowStage("received");
-
-    let profile_id: string;
-    let updatedSession: POJUSessionState;
-    try {
-      ({ profile_id } = await importCalculatedProfileAsStored({ profile }));
-      await recordProfileUsage(profile_id, "poju");
-
-      updatedSession = withSessionProfileFlags(
-        {
-          ...s,
-          profile_skipped: false,
-          birth_submitted_in_session: true,
-          selected_stored_profile_id: profile_id,
-          messages: [
-            ...s.messages,
-            {
-              role: "system",
-              content: "[Birth info collected. Profile generated.]",
-              timestamp: new Date().toISOString(),
-            },
-          ],
-        },
-        { birth_submitted_in_session: true, selected_stored_profile_id: profile_id },
-      );
-
-      if (updatedSession.agent_v2) {
-        const agentPhase = normalizeAgentPhase(updatedSession.agent_v2.current_phase);
-        const transitioned =
-          agentPhase === "opening" || agentPhase === "collecting_context"
-            ? applyPhaseTransition(updatedSession.agent_v2, {
-                should_transition: true,
-                new_phase: "collecting_context",
-                reason: "Birth profile bound to session",
-              })
-            : updatedSession.agent_v2;
-        updatedSession = {
-          ...updatedSession,
-          agent_v2: {
-            ...transitioned,
-            selected_profile_id: profile_id,
-            profile_skipped: false,
-          },
-        };
-      }
-
-      updatedSession = appendBirthFlowMessage(updatedSession, locale, "received");
-      onSessionUpdate(updatedSession);
-      await savePOJUSession(updatedSession);
-    } catch (e) {
-      console.error("[poju] Profile local save failed:", e);
-      setBirthFlowStage("form");
-      await dialog.alert(t("profile_save_failed"));
-      return;
-    }
-
-    setBirthFlowStage("analyzing");
-    onSessionUpdate(updatedSession);
-    await savePOJUSession(updatedSession);
-    scrollChatToBottom("smooth");
-
-    let analysisFailed = false;
-    try {
-      await generateBaseAnalysis(profile_id);
-      const cur = sessionRef.current;
-      if (cur.agent_v2) {
-        const withAnalysis = {
-          ...cur,
-          agent_v2: { ...cur.agent_v2, has_base_analysis: true, selected_profile_id: profile_id },
-        };
-        onSessionUpdate(withAnalysis);
-        await savePOJUSession(withAnalysis);
-      }
-    } catch (err) {
-      console.warn("[poju] base analysis after birth submit:", err);
-      analysisFailed = true;
-      setBirthAnalysisFailed(true);
-    }
-
-    const doneKey = analysisFailed ? "analysis_failed" : "analysis_done";
-    const doneSession = clearBirthFormActionIfProfileBound(
-      appendBirthFlowMessage(sessionRef.current, locale, doneKey),
-    );
-    onSessionUpdate(doneSession);
-    await savePOJUSession(doneSession);
-    setBirthFlowStage("complete");
-    scrollChatToBottom("smooth");
-
-    window.setTimeout(() => {
-      setBirthFlowStage(null);
-    }, 2400);
-
-    try {
-      let finalSession = await handleUserMessage({
-        session: doneSession,
-        userMessage: "[SYSTEM: Birth info just collected. Please acknowledge and continue collecting context.]",
-        locale,
-      });
-      finalSession = clearBirthFormActionIfProfileBound(finalSession);
-      const orch = await runPostTurnOrchestration(finalSession, { locale });
-      const next = clearBirthFormActionIfProfileBound(orch.session);
-      onSessionUpdate(next);
-      await savePOJUSession(next);
-    } catch (e) {
-      console.error("[poju] Profile saved but follow-up chat failed:", e);
-      await dialog.alert(t("profile_saved_chat_failed"));
-    }
-  }
-
   async function ensureBaseAnalysisReady(profileId: string): Promise<boolean> {
     try {
       if (!(await profileHasBaseAnalysis(profileId))) {
@@ -886,56 +736,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       console.warn("[poju] base analysis not ready:", e);
       return false;
     }
-  }
-
-  async function handleStoredProfileSelected(profileId: string) {
-    setShowProfilePicker(false);
-    setBirthFlowStage(null);
-    const s = sessionRef.current;
-    await recordProfileUsage(profileId, "poju");
-    let updatedSession = withSessionProfileFlags(
-      {
-        ...s,
-        profile_skipped: false,
-        selected_stored_profile_id: profileId,
-        messages: [
-          ...s.messages,
-          {
-            role: "system",
-            content: "[Stored birth profile linked to this session.]",
-            timestamp: new Date().toISOString(),
-          },
-        ],
-      },
-      { selected_stored_profile_id: profileId },
-    );
-    if (updatedSession.agent_v2) {
-      updatedSession = {
-        ...updatedSession,
-        agent_v2: {
-          ...updatedSession.agent_v2,
-          selected_profile_id: profileId,
-          profile_skipped: false,
-        },
-      };
-    }
-    onSessionUpdate(updatedSession);
-    await savePOJUSession(updatedSession);
-
-    const analysisReady = await ensureBaseAnalysisReady(profileId);
-    if (!analysisReady) {
-      await dialog.alert(
-        locale.startsWith("zh")
-          ? "命主基础分析尚未准备好，请稍后再试。"
-          : "Base chart analysis is not ready yet. Please try again in a moment.",
-      );
-      return;
-    }
-
-    let finalSession = appendBirthFlowMessage(updatedSession, locale, "analysis_done");
-    finalSession = clearBirthFormActionIfProfileBound(finalSession);
-    onSessionUpdate(finalSession);
-    await savePOJUSession(finalSession);
   }
 
   async function handleConfirmSummary(editedSummary: ContextSummary) {
@@ -1434,20 +1234,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
             overflowY: "auto",
           }}
         >
-          {showProfilePicker ? (
-            <div className="w-full max-w-lg rounded-2xl border border-violet-300/20 bg-violet-950/95 p-3">
-              <p className="text-sm font-medium text-on-surface">{t("profile_picker_in_chat_title")}</p>
-              <p className="mt-1 text-xs text-on-surface-variant">{t("profile_picker_in_chat_hint")}</p>
-              <div className="mt-3">
-                <ProfileSelector
-                  product="poju"
-                  onSelected={(id) => void handleStoredProfileSelected(id)}
-                  onCancel={() => setShowProfilePicker(false)}
-                />
-              </div>
-            </div>
-          ) : null}
-
           {showSummaryForm && session.agent_v2?.current_summary ? (
             <ContextSummaryEditor
               summary={session.agent_v2.current_summary}
@@ -1455,17 +1241,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
               onConfirm={(edited) => void handleConfirmSummary(edited)}
               onAddMore={(note) => void handleSummaryAddMore(note)}
             />
-          ) : null}
-
-          {birthFlowStage ? (
-            <div className="w-full max-w-lg rounded-2xl border border-violet-300/20 bg-violet-950/95 p-3">
-              <BirthProfileFlow
-                stage={birthFlowStage}
-                analysisFailed={birthAnalysisFailed}
-                onContinueToForm={() => setBirthFlowStage("form")}
-                onComplete={(p) => void handleProfileSubmitted(p)}
-              />
-            </div>
           ) : null}
         </div>
       ) : null}

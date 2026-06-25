@@ -1,9 +1,7 @@
 import type { AgentPhase } from "@/lib/poju/agent-state";
 import { callCollectingPhase } from "@/lib/llm/phases/collecting-phase";
 import { callConfirmationPhase } from "@/lib/llm/phases/confirmation-phase";
-import { callGreetingPhase } from "@/lib/llm/phases/greeting-phase";
 import { callOpeningPhase } from "@/lib/llm/phases/opening-phase";
-import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import { callTrackingPhase } from "@/lib/llm/phases/tracking-phase";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
 import { normalizeAgentPhase } from "@/lib/poju/agent-state";
@@ -37,10 +35,7 @@ export async function callPhaseSpecificLLM(input: {
 
   switch (activePhase) {
     case "opening":
-      if (resolveSessionHasProfile(input.session) || input.profile) {
-        return { phase: await callOpeningPhase(phaseInput), activePhase: "opening" };
-      }
-      return { phase: await callGreetingPhase(phaseInput), activePhase: "opening" };
+      return { phase: await callOpeningPhase(phaseInput), activePhase: "opening" };
     case "collecting_context":
       return { phase: await callCollectingPhase(phaseInput), activePhase: "collecting_context" };
     case "awaiting_confirmation":

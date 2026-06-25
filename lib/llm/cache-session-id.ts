@@ -43,8 +43,3 @@ export function matrixNarrativeCacheSessionId(product: MatrixNarrativeProduct, l
 export function baseAnalysisCacheSessionId(profileId: string): string {
   return `base-analysis-${profileId.trim()}`;
 }
-
-export function openingHookCacheSessionId(locale: string): string {
-  const loc = locale.startsWith("zh") ? "zh" : locale.split("-")[0] || "en";
-  return `opening-hook-${loc}`;
-}
