@@ -175,6 +175,8 @@ export interface POJUAgentState {
   turn_count: number;
   /** Effective Q&A rounds while in collecting_context (code-maintained). */
   collecting_turn_count: number;
+  /** Substantive user turns while in opening (control-plane threshold for entering collecting). */
+  opening_substantive_turns?: number;
   /** Consecutive stalled/resistant collecting rounds (resets on advancing). */
   stall_count: number;
   /** full = normal confirm path; degraded = stop-loss path (Step 3 delivery). */
@@ -331,6 +333,7 @@ export function createInitialAgentState(input: {
     main_delivery_data: null,
     turn_count: 0,
     collecting_turn_count: 0,
+    opening_substantive_turns: 0,
     stall_count: 0,
     delivery_mode: null,
     stop_loss_triggered: false,

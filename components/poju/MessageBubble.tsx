@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { useLocale } from "next-intl";
 import type { POJUAction, POJUMessage, ToolName } from "@/lib/poju/types";
 import { RichReadingText } from "@/components/cross-product/RichReadingText";
@@ -28,7 +29,7 @@ export interface MessageBubbleProps {
   onToolResponse?: (tool: ToolName, action: "accepted" | "declined") => void;
 }
 
-export function MessageBubble({
+export const MessageBubble = memo(function MessageBubble({
   message,
   hideWelcomePanel = false,
   actions,
@@ -141,6 +142,27 @@ export function MessageBubble({
       ) : null}
       <AssistantMessageActions content={message.content} />
     </div>
+  );
+}, messageBubblePropsEqual);
+
+function messageBubblePropsEqual(prev: MessageBubbleProps, next: MessageBubbleProps): boolean {
+  return (
+    prev.message.timestamp === next.message.timestamp &&
+    prev.message.role === next.message.role &&
+    prev.message.content === next.message.content &&
+    prev.message.is_rejected === next.message.is_rejected &&
+    prev.hideWelcomePanel === next.hideWelcomePanel &&
+    prev.editDisabled === next.editDisabled &&
+    prev.editLabel === next.editLabel &&
+    prev.sessionId === next.sessionId &&
+    prev.cycleId === next.cycleId &&
+    prev.toolSuggestionResponse === next.toolSuggestionResponse &&
+    prev.actionPlanArchiveId === next.actionPlanArchiveId &&
+    prev.actions === next.actions &&
+    prev.message.meta?.contains_delivery === next.message.meta?.contains_delivery &&
+    prev.message.meta?.suggest_refund === next.message.meta?.suggest_refund &&
+    prev.message.meta?.kind === next.message.meta?.kind &&
+    prev.message.meta?.tool_suggestion === next.message.meta?.tool_suggestion
   );
 }
 

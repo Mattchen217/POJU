@@ -846,6 +846,25 @@
   max-width: var(--pchat-read-max) !important;
   margin: 0 auto 12px;
 }
+.pchat__activity-slot {
+  min-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.22s ease, visibility 0.22s ease, min-height 0.22s ease;
+  pointer-events: none;
+}
+
+.pchat__activity-slot.is-visible {
+  min-height: clamp(7rem, 28vw, 11rem);
+  opacity: 1;
+  visibility: visible;
+}
+
+.pchat__activity-slot.is-fading {
+  opacity: 0;
+}
+
 .pchat__pending-reply .poju-activity {
   min-height: clamp(7rem, 28vw, 11rem);
 }

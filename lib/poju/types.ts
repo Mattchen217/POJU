@@ -29,6 +29,8 @@ export interface POJUMessage {
   role: "user" | "assistant" | "system";
   content: string;
   timestamp: string;
+  /** Stable list key; preserved from optimistic append through persistence. */
+  client_id?: string;
   meta?: {
     llm_model?: string;
     tokens_used?: number;

@@ -50,6 +50,8 @@ export interface PojuChatProps {
   isStreaming?: boolean;
   /** Rotating status lines while call-1 is in flight (Spline + caption). */
   pendingActivityLines?: string[] | null;
+  /** Fade out pending activity instead of hard unmount. */
+  pendingActivityFading?: boolean;
   thinkingLocale?: string;
   onSend: (text: string) => void;
   onNewSession: () => void;
@@ -140,7 +142,7 @@ function AiReplyShell({ children }: { children: ReactNode }) {
 export default function PojuChat(props: PojuChatProps) {
   const {
     sessions, currentSessionId, messages,
-    isStreaming, pendingActivityLines, thinkingLocale,
+    isStreaming, pendingActivityLines, pendingActivityFading, thinkingLocale,
     onSend,
     onNewSession,
     onSelectSession,
@@ -290,6 +292,8 @@ export default function PojuChat(props: PojuChatProps) {
   }, [revealAssistantId]);
 
   const pendingOnly = Boolean(pendingActivityLines?.length) && !replyHandoff;
+  const activitySlotVisible =
+    pendingOnly || Boolean(replyHandoff) || Boolean(pendingActivityFading && pendingActivityLines?.length);
   const handoffAssistant = replyHandoff
     ? messages.find((m) => m.id === replyHandoff.assistantId)
     : null;
@@ -581,28 +585,35 @@ export default function PojuChat(props: PojuChatProps) {
 
             {inlineNotice ? <div className="pchat__inline-notice">{inlineNotice}</div> : null}
 
-            {replyHandoff && handoffAssistant ? (
-              <div className="pchat__msg pchat__msg--ai pchat__pending-reply">
-                <AiReplyShell>
-                  <div
-                    className={`pchat__reply-handoff${pendingActivityLines?.length ? "" : " pchat__reply-handoff--done"}`}
-                  >
-                    <div className="pchat__reply-handoff__activity">
-                      <PojuActivityIndicator lines={replyHandoff.lines} />
+            <div
+              className={`pchat__activity-slot${
+                activitySlotVisible ? " is-visible" : ""
+              }${pendingActivityFading ? " is-fading" : ""}`}
+              aria-hidden={!activitySlotVisible}
+            >
+              {replyHandoff && handoffAssistant ? (
+                <div className="pchat__msg pchat__msg--ai pchat__pending-reply">
+                  <AiReplyShell>
+                    <div
+                      className={`pchat__reply-handoff${pendingActivityLines?.length ? "" : " pchat__reply-handoff--done"}`}
+                    >
+                      <div className="pchat__reply-handoff__activity">
+                        <PojuActivityIndicator lines={replyHandoff.lines} />
+                      </div>
+                      <div className="pchat__reply-handoff__text">
+                        {renderAssistantBody(handoffAssistant, true)}
+                      </div>
                     </div>
-                    <div className="pchat__reply-handoff__text">
-                      {renderAssistantBody(handoffAssistant, true)}
-                    </div>
-                  </div>
-                </AiReplyShell>
-              </div>
-            ) : pendingOnly ? (
-              <div className="pchat__msg pchat__msg--ai pchat__pending-reply">
-                <AiReplyShell>
-                  <PojuActivityIndicator lines={pendingActivityLines!} />
-                </AiReplyShell>
-              </div>
-            ) : null}
+                  </AiReplyShell>
+                </div>
+              ) : pendingOnly || (pendingActivityFading && pendingActivityLines?.length) ? (
+                <div className="pchat__msg pchat__msg--ai pchat__pending-reply">
+                  <AiReplyShell>
+                    <PojuActivityIndicator lines={pendingActivityLines!} />
+                  </AiReplyShell>
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
 

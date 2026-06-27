@@ -124,6 +124,11 @@ export function extractModelTurnSignals(source: {
   };
 }
 
+/** Minimum substantive opening turns before entering collecting (unless single message is rich). */
+export const OPENING_RICH_CHARS = 80;
+/** Minimum substantive opening turns when message is below OPENING_RICH_CHARS. */
+export const OPENING_MIN_SUBSTANTIVE_TURNS = 2;
+
 /** ② 唯一的确定性流转函数：读模型信号，确定性更新状态 */
 export function advanceStateMachine(
   agent: POJUAgentState,
@@ -140,19 +145,36 @@ export function advanceStateMachine(
 
   switch (state) {
     case "opening": {
-      if (
+      const canAnchor =
         signals.understanding_sufficient === true &&
         signals.base_analysis_ready === true &&
         userInput.trim() &&
-        userInput !== "__OPENING__"
-      ) {
-        next = {
-          ...agent,
-          original_question: userInput.trim(),
-        };
-        nextState = "collecting_context";
-        triggerCore = true;
-        transitionReason = "Understanding sufficient, base analysis ready, entering collection";
+        userInput !== "__OPENING__";
+
+      if (canAnchor) {
+        const substantiveTurns = (agent.opening_substantive_turns ?? 0) + 1;
+        const richSingle = userInput.trim().length >= OPENING_RICH_CHARS;
+        const enoughTurns = substantiveTurns >= OPENING_MIN_SUBSTANTIVE_TURNS;
+
+        if (richSingle || enoughTurns) {
+          next = {
+            ...agent,
+            original_question: userInput.trim(),
+            opening_substantive_turns: substantiveTurns,
+          };
+          nextState = "collecting_context";
+          triggerCore = true;
+          transitionReason = richSingle
+            ? "Rich single message, base analysis ready, entering collection"
+            : "Opening turns sufficient, base analysis ready, entering collection";
+        } else {
+          next = {
+            ...agent,
+            opening_substantive_turns: substantiveTurns,
+            original_question: agent.original_question?.trim() || userInput.trim(),
+          };
+          transitionReason = "Understanding sufficient but opening threshold not met";
+        }
       }
       break;
     }

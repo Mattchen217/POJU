@@ -44,6 +44,7 @@ import { getActiveCycle, recordUserResponse } from "@/lib/poju/cycle-manager";
 import { findPendingToolInjection } from "@/lib/poju/find-pending-tool-injection";
 import { getToolSuggestionResponseState } from "@/lib/poju/tool-suggestion";
 import type { POJUSessionState, POJUAction, POJUMessage, ToolName } from "@/lib/poju/types";
+import { safeRandomUUID } from "@/lib/client/safe-crypto";
 import { computeSituationContextFingerprint } from "@/lib/poju/situation-context-fingerprint";
 import { getCachedSituationAnalysis, requestSituationAnalysis } from "@/lib/llm/deepseek/situation-analysis";
 import { runFinalDeliveryForSession } from "@/lib/llm/pro/final-delivery";
@@ -131,6 +132,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [pipelineBusy, setPipelineBusy] = useState(false);
   const [slotActivity, setSlotActivity] = useState<PojuActivity | null>(null);
+  const [slotActivityFading, setSlotActivityFading] = useState(false);
   const [trailingActivity, setTrailingActivity] = useState<PojuActivity | null>(null);
   const [generationStopped, setGenerationStopped] = useState(false);
   const [showOffTopicAction, setShowOffTopicAction] = useState(false);
@@ -175,6 +177,15 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     [tActivity],
   );
 
+  const clearSlotActivityWithFade = useCallback(() => {
+    if (!slotActivity) return;
+    setSlotActivityFading(true);
+    window.setTimeout(() => {
+      setSlotActivity(null);
+      setSlotActivityFading(false);
+    }, 220);
+  }, [slotActivity]);
+
   const pendingActivityLines = useMemo(() => {
     if (slotActivity) return getActivityLines(slotActivity);
     if (confirmBusy) return getActivityLines("delivering");
@@ -185,11 +196,15 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     /* PojuChat scrolls internally */
   }, []);
 
-  const visibleMessages = session.messages.filter(
-    (m) =>
-      m.role !== "system" &&
-      !m.content.trim().startsWith("[SYSTEM:") &&
-      m.meta?.kind !== "paywall",
+  const visibleMessages = useMemo(
+    () =>
+      session.messages.filter(
+        (m) =>
+          m.role !== "system" &&
+          !m.content.trim().startsWith("[SYSTEM:") &&
+          m.meta?.kind !== "paywall",
+      ),
+    [session.messages],
   );
   const paywallOpen = isPreviewSession(session) && hasPaywallMessage(session);
   const initialScrollPosition = useMemo(
@@ -399,6 +414,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     sendAbortRef.current = null;
     setSending(false);
     setSlotActivity(null);
+    setSlotActivityFading(false);
     setTrailingActivity(null);
     setGenerationStopped(true);
   }
@@ -491,7 +507,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       }
 
       onSessionUpdate(toPersist);
-      window.setTimeout(() => setSlotActivity(null), 200);
+      clearSlotActivityWithFade();
 
       if (willTriggerDeepReckoning(toPersist)) {
         setTrailingActivity("deep_reckoning");
@@ -630,6 +646,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       role: "user",
       content: userMessage,
       timestamp: nowIso,
+      client_id: safeRandomUUID(),
     };
     const withUser: POJUSessionState = {
       ...baseSession,
@@ -943,12 +960,16 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     };
   });
 
-  const pojuMessages = visibleMessages.map((m) => ({
-    id: m.timestamp,
-    role: m.role as "user" | "assistant",
-    content: m.content,
-    editable: m.role === "user" && !m.is_rejected,
-  }));
+  const pojuMessages = useMemo(
+    () =>
+      visibleMessages.map((m) => ({
+        id: m.client_id ?? m.timestamp,
+        role: m.role as "user" | "assistant",
+        content: m.content,
+        editable: m.role === "user" && !m.is_rejected,
+      })),
+    [visibleMessages],
+  );
 
   const { messageSlots, bareMessageSlotIds, messageFollowUps, messageFollowUpActionsText } =
     useMemo(() => {
@@ -959,12 +980,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     let energyMatrixRendered = false;
 
     for (const m of visibleMessages) {
+      const mid = m.client_id ?? m.timestamp;
       if (m.meta?.kind === "energy_matrix" && m.meta.matrix_payload) {
         if (energyMatrixRendered) continue;
         energyMatrixRendered = true;
-        bareIds.add(m.timestamp);
+        bareIds.add(mid);
         const actionsText = matrixNarrativeActionsText(m.meta.matrix_payload, locale);
-        slots[m.timestamp] = (
+        slots[mid] = (
           <div className="poju-matrix-bubble">
             <PojuEnergyMatrix
               payload={m.meta.matrix_payload}
@@ -980,8 +1002,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         );
       }
       if (m.meta?.contains_delivery) {
-        bareIds.add(m.timestamp);
-        slots[m.timestamp] = (
+        bareIds.add(mid);
+        slots[mid] = (
           <MainDeliveryView
             fullText={m.content}
             actions={session.actions}
@@ -990,8 +1012,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         );
       }
       if (m.meta?.kind === "report") {
-        bareIds.add(m.timestamp);
-        slots[m.timestamp] = (
+        bareIds.add(mid);
+        slots[mid] = (
           <PojuReportChatCard
             excerpt={reportPreviewForCard(getUnlockReportText(m))}
             onOpen={openUnlockReportModal}
@@ -999,7 +1021,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         );
       }
       if (m.meta?.suggest_refund && m.role === "assistant") {
-        followUps[m.timestamp] = (
+        followUps[mid] = (
           <RefundOfferAction sessionId={session.session_id} variant="message" />
         );
       }
@@ -1016,9 +1038,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           );
         }
         if (below.length > 0) {
-          followUps[m.timestamp] = followUps[m.timestamp] ? (
+          followUps[mid] = followUps[mid] ? (
             <>
-              {followUps[m.timestamp]}
+              {followUps[mid]}
               {below}
             </>
           ) : (
@@ -1031,11 +1053,12 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     if (trailingActivity === "deep_reckoning") {
       const lastAssistant = [...visibleMessages].reverse().find((m) => m.role === "assistant");
       if (lastAssistant) {
+        const lastId = lastAssistant.client_id ?? lastAssistant.timestamp;
         const lines = getActivityLines("deep_reckoning");
         const trailingNode = <PojuActivityIndicator lines={lines} />;
-        followUps[lastAssistant.timestamp] = followUps[lastAssistant.timestamp] ? (
+        followUps[lastId] = followUps[lastId] ? (
           <>
-            {followUps[lastAssistant.timestamp]}
+            {followUps[lastId]}
             {trailingNode}
           </>
         ) : (
@@ -1105,6 +1128,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         messages={pojuMessages}
         isStreaming={streaming}
         pendingActivityLines={pendingActivityLines}
+        pendingActivityFading={slotActivityFading}
         thinkingLocale={locale}
         composerDisabled={composerLocked}
         messageSlots={messageSlots}

@@ -54,12 +54,28 @@ function main(): void {
     ).next_state === "opening",
   );
   const substantiveAdvance = advanceStateMachine(
-    { ...agent, has_base_analysis: true },
+    { ...agent, has_base_analysis: true, opening_substantive_turns: 1 },
     extractModelTurnSignals({ understanding_sufficient: true, base_analysis_ready: true }),
     "我离婚8年了想重新开始",
   );
-  assert("substantive enters collecting when base ready", substantiveAdvance.next_state === "collecting_context");
+  assert("substantive enters collecting when base ready and turns met", substantiveAdvance.next_state === "collecting_context");
   assert("trigger core true when sufficient and base ready", substantiveAdvance.trigger_breakthrough_core === true);
+  assert(
+    "first substantive turn stays opening when message short",
+    advanceStateMachine(
+      { ...agent, has_base_analysis: true },
+      extractModelTurnSignals({ understanding_sufficient: true, base_analysis_ready: true }),
+      "我离婚8年了想重新开始",
+    ).next_state === "opening",
+  );
+  assert(
+    "rich single message enters collecting on first turn",
+    advanceStateMachine(
+      { ...agent, has_base_analysis: true },
+      extractModelTurnSignals({ understanding_sufficient: true, base_analysis_ready: true }),
+      "我".repeat(80),
+    ).next_state === "collecting_context",
+  );
   assert(
     "sufficient without base stays opening",
     advanceStateMachine(

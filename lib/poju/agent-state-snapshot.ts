@@ -50,6 +50,22 @@ export function patchLastAssistantOrchestrationMeta(
   const agendaJustBuilt = !hadAgenda && hasAgenda;
   const snapshot = buildAgentStateSnapshot(agent, session.main_delivery_done);
 
+  const prevMeta = msgs[idx].meta;
+  const prevSnap = prevMeta?.state_snapshot;
+  const snapshotUnchanged =
+    prevSnap != null &&
+    prevSnap.phase === snapshot.phase &&
+    prevSnap.problem_understood === snapshot.problem_understood &&
+    prevSnap.relationship_conclusion === snapshot.relationship_conclusion &&
+    prevSnap.breakthrough_direction === snapshot.breakthrough_direction &&
+    prevSnap.agenda_built === snapshot.agenda_built &&
+    prevSnap.agenda_progress === snapshot.agenda_progress &&
+    prevSnap.delivered === snapshot.delivered;
+
+  if (snapshotUnchanged && !agendaJustBuilt) {
+    return session;
+  }
+
   msgs[idx] = {
     ...msgs[idx],
     meta: {
