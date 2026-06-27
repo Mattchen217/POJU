@@ -106,10 +106,19 @@ export function stripMarkersForPrompt(text: string): string {
   );
 }
 
+/** Remove bare t: leaks (no ⟦⟧) and broken markers so users never see raw tokens. */
+export function stripBareTermMarkers(text: string): string {
+  return text.replace(
+    /(?<!⟦)t:[a-zA-Z0-9_:]+\|([^|⟧\n]+?)(?:\|[^⟧\n]*?)?(?=[\s，。、；,.!?]|$)/g,
+    "$1",
+  );
+}
+
 /** Remove broken / unclosed markers so users never see raw `⟦`. Intact closed markers become visible text. */
 export function stripBrokenMarkers(text: string): string {
-  if (!text.includes("⟦") && !text.includes("⟧")) return text;
-  let r = text
+  let r = stripBareTermMarkers(text);
+  if (!r.includes("⟦") && !r.includes("⟧")) return r;
+  r = r
     .replace(
       /⟦t:[a-zA-Z0-9_]+\|((?:\\.|[^|\\])*?)(?:\|((?:\\.|[^|\\])*?))?(?=⟧|$)/g,
       (match, v: string) => unescapeMarkerPart(v),

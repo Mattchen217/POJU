@@ -151,6 +151,20 @@ function resolveOriginalQuestion(agent: POJUAgentState, userMessage: string): st
   return agent.original_question?.trim() || "";
 }
 
+const OPENING_GREETING_PATTERN =
+  /^(你好|您好|hi|hello|在吗|嗨|哈喽|你是谁|你能|你可以|测试)/i;
+
+/** Count substantive user turns in opening from message history (deterministic gate input). */
+export function countSubstantiveOpeningTurns(messages: POJUMessage[]): number {
+  return messages.filter((m) => {
+    if (m.role !== "user" || m.is_rejected) return false;
+    const trimmed = m.content.trim();
+    if (trimmed.length <= 6 || trimmed === "__OPENING__") return false;
+    if (trimmed.startsWith("[SYSTEM:")) return false;
+    return !OPENING_GREETING_PATTERN.test(trimmed);
+  }).length;
+}
+
 function finalizeAgentV2(
   base: POJUAgentState,
   session: POJUSessionState,
@@ -257,14 +271,25 @@ function finalizeAgentV2(
   const userTurns = countUserTurns(session);
   merged = { ...merged, turn_count: userTurns };
 
+  const baseAnalysisReady = Boolean(merged.has_base_analysis || resolveSessionHasProfile(session));
+  const substantiveOpeningTurns = countSubstantiveOpeningTurns(session.messages);
+
   const signals = extractModelTurnSignals({
     response: "",
     understanding_sufficient: llm.understanding_sufficient,
     understanding: llm.understanding,
-    base_analysis_ready: Boolean(merged.has_base_analysis || resolveSessionHasProfile(session)),
+    base_analysis_ready: baseAnalysisReady,
+    substantive_opening_turns: substantiveOpeningTurns,
     topic_drift_signal: llm.topic_drift_signal,
     agenda_updates: llm.agenda_updates,
     user_confirms_delivery: llm.user_confirms_delivery,
+  });
+
+  console.log("[poju-gate]", {
+    phase: merged.current_phase,
+    understanding_sufficient: llm.understanding_sufficient,
+    base_analysis_ready: baseAnalysisReady,
+    substantive_opening_turns: substantiveOpeningTurns,
   });
 
   const advance = advanceStateMachine(merged, signals, phaseUserMessage);

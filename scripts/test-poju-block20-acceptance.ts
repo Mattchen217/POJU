@@ -82,8 +82,12 @@ function main(): void {
   );
 
   const readyAdvance = advanceStateMachine(
-    { ...agent, has_base_analysis: true, opening_substantive_turns: 1 },
-    extractModelTurnSignals({ understanding_sufficient: true, base_analysis_ready: true }),
+    { ...agent, has_base_analysis: true },
+    extractModelTurnSignals({
+      understanding_sufficient: true,
+      base_analysis_ready: true,
+      substantive_opening_turns: 2,
+    }),
     "我离婚8年了想重新开始",
   );
   assert("ready advance enters collecting", readyAdvance.next_state === "collecting_context");

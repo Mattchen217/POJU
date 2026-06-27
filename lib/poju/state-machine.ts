@@ -84,6 +84,8 @@ export interface ModelTurnSignals {
   response: string;
   understanding_sufficient?: boolean;
   base_analysis_ready?: boolean;
+  /** Substantive user turns counted from session history (opening gate). */
+  substantive_opening_turns?: number;
   topic_drift_signal?: "none" | "edge" | "off_topic";
   agenda_updates?: { completed_in_this_turn?: string[] };
   user_confirms_delivery?: boolean;
@@ -102,6 +104,7 @@ export function extractModelTurnSignals(source: {
   response?: string;
   understanding_sufficient?: boolean;
   base_analysis_ready?: boolean;
+  substantive_opening_turns?: number;
   understanding?: { sufficient?: boolean; missing?: string } | null;
   topic_drift_signal?: "none" | "edge" | "off_topic";
   agenda_updates?: { completed_in_this_turn?: string[] };
@@ -118,6 +121,7 @@ export function extractModelTurnSignals(source: {
     response: source.response ?? "",
     understanding_sufficient,
     base_analysis_ready: source.base_analysis_ready,
+    substantive_opening_turns: source.substantive_opening_turns,
     topic_drift_signal: source.topic_drift_signal,
     agenda_updates: source.agenda_updates,
     user_confirms_delivery: source.user_confirms_delivery,
@@ -145,36 +149,22 @@ export function advanceStateMachine(
 
   switch (state) {
     case "opening": {
-      const canAnchor =
+      const turns = signals.substantive_opening_turns ?? 0;
+      const richSingle = userInput.trim().length >= OPENING_RICH_CHARS;
+      const canAdvance =
         signals.understanding_sufficient === true &&
         signals.base_analysis_ready === true &&
         userInput.trim() &&
-        userInput !== "__OPENING__";
+        userInput !== "__OPENING__" &&
+        (richSingle || turns >= OPENING_MIN_SUBSTANTIVE_TURNS);
 
-      if (canAnchor) {
-        const substantiveTurns = (agent.opening_substantive_turns ?? 0) + 1;
-        const richSingle = userInput.trim().length >= OPENING_RICH_CHARS;
-        const enoughTurns = substantiveTurns >= OPENING_MIN_SUBSTANTIVE_TURNS;
-
-        if (richSingle || enoughTurns) {
-          next = {
-            ...agent,
-            original_question: userInput.trim(),
-            opening_substantive_turns: substantiveTurns,
-          };
-          nextState = "collecting_context";
-          triggerCore = true;
-          transitionReason = richSingle
-            ? "Rich single message, base analysis ready, entering collection"
-            : "Opening turns sufficient, base analysis ready, entering collection";
-        } else {
-          next = {
-            ...agent,
-            opening_substantive_turns: substantiveTurns,
-            original_question: agent.original_question?.trim() || userInput.trim(),
-          };
-          transitionReason = "Understanding sufficient but opening threshold not met";
-        }
+      if (canAdvance) {
+        next = { ...agent, original_question: userInput.trim() };
+        nextState = "collecting_context";
+        triggerCore = true;
+        transitionReason = richSingle
+          ? "Rich single message, base analysis ready, entering collection"
+          : "Substantive opening turns sufficient, entering collection";
       }
       break;
     }
