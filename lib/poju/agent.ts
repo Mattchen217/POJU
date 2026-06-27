@@ -549,13 +549,12 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   let agent_v2: POJUAgentState = { ...agentCore, actions: mergedActions };
 
   if (advance.trigger_breakthrough_core) {
-    const withQ = {
-      ...agent_v2,
-      original_question: resolveOriginalQuestion(agent_v2, phaseUserMessage),
-    };
+    const freshQuestion = resolveOriginalQuestion(agent_v2, phaseUserMessage);
+    const withQ = { ...agent_v2, original_question: freshQuestion };
     const coreResult = await ensureBreakthroughCore(
       {
         ...sessionForAgent,
+        original_question: freshQuestion,
         agent_v2: { ...withQ, current_phase: "collecting_context" },
       },
       locale,

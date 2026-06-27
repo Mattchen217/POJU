@@ -284,6 +284,15 @@ export async function requestBreakthroughCore(
   const profileId =
     session.selected_stored_profile_id?.trim() ?? uuidLike(agent.selected_profile_id) ?? "";
 
+  const original_question =
+    session.agent_v2?.original_question?.trim() || session.original_question?.trim() || "";
+  if (!original_question) {
+    throw new Error(
+      "[breakthrough-core] original_question empty — cannot anchor deep analysis to user dilemma",
+    );
+  }
+  console.info("[breakthrough-core] input original_question:", original_question.slice(0, 120));
+
   const ac = new AbortController();
   const softTimeoutMs = 200_000;
   const timer = window.setTimeout(() => ac.abort(), softTimeoutMs);
@@ -295,7 +304,7 @@ export async function requestBreakthroughCore(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         session_id: session.session_id,
-        original_question: session.original_question,
+        original_question,
         agent_v2: agent,
         base_analysis,
         locale,
