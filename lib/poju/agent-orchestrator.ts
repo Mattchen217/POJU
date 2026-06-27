@@ -90,8 +90,13 @@ export async function ensureBreakthroughCore(
   const { base_analysis } = await loadSessionProfileBundle(session);
   if (base_analysis == null) return session;
 
-  const out = await requestBreakthroughCore(session, locale, { base_analysis });
-  return out.session;
+  try {
+    const out = await requestBreakthroughCore(session, locale, { base_analysis });
+    return out.session;
+  } catch (e) {
+    console.warn("[agent-orchestrator] Breakthrough core failed:", e);
+    return session;
+  }
 }
 
 export async function runPostTurnOrchestration(

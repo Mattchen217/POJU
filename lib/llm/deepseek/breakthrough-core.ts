@@ -327,6 +327,8 @@ export async function requestBreakthroughCore(
 
   const payload = (await res.json().catch(() => ({}))) as {
     ok?: boolean;
+    retryable?: boolean;
+    reason?: string;
     breakthrough_core?: BreakthroughCore;
     investigation_agenda?: AgendaItem[];
     model?: string;
@@ -334,7 +336,16 @@ export async function requestBreakthroughCore(
     error?: string;
   };
 
-  if (!res.ok || !payload.ok || !payload.breakthrough_core || !payload.investigation_agenda) {
+  if (payload.ok === false && payload.retryable) {
+    console.warn(
+      "[breakthrough-core] soft failure (retryable):",
+      payload.reason ?? "unknown",
+      payload.error ?? "",
+    );
+    return { session, tokens_used: 0 };
+  }
+
+  if (!payload.ok || !payload.breakthrough_core || !payload.investigation_agenda) {
     throw new Error(payload.error || `Breakthrough core failed (${res.status})`);
   }
 

@@ -10,8 +10,22 @@ import { callLLM } from "@/lib/llm/router";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 import { generateWithClosedSetGuard } from "@/lib/llm/sanitize/closed-set-circuit-breaker";
 import { normalizeAgentPhase, type POJUAgentState } from "@/lib/poju/agent-state";
+import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 
 export const maxDuration = 300;
+
+const CORE_MAX_TOKENS_INITIAL = 16_000;
+const CORE_MAX_TOKENS_RETRY = 24_000;
+
+class BreakthroughCoreRetryableError extends Error {
+  constructor(
+    readonly reason: "truncated" | "parse_failed",
+    message: string,
+  ) {
+    super(message);
+    this.name = "BreakthroughCoreRetryableError";
+  }
+}
 
 function isRecord(x: unknown): x is Record<string, unknown> {
   return Boolean(x) && typeof x === "object" && !Array.isArray(x);
@@ -36,6 +50,76 @@ function resolveProfileId(body: {
     return fromAgent.trim();
   }
   return null;
+}
+
+function retryableResponse(reason: "truncated" | "parse_failed", error: string) {
+  return NextResponse.json({ ok: false, retryable: true, reason, error }, { status: 200 });
+}
+
+async function callCoreLLM(input: {
+  system: string;
+  userContent: string;
+  max_tokens: number;
+  sessionId: string;
+  profileId: string | null;
+}) {
+  return callLLM({
+    call_type: "deep_analysis",
+    system: input.system,
+    messages: [{ role: "user", content: input.userContent }],
+    max_tokens: input.max_tokens,
+    thinking_effort: "xhigh",
+    response_format: "json",
+    timeout_ms: 270_000,
+    session_id: input.profileId
+      ? baseAnalysisCacheSessionId(input.profileId)
+      : pojuCacheSessionId(input.sessionId),
+  });
+}
+
+async function fetchCoreContent(input: {
+  system: string;
+  userContent: string;
+  sessionId: string;
+  profileId: string | null;
+}): Promise<
+  | { ok: true; content: string; tokens_used: number; model: string; finish_reason: string | null }
+  | { ok: false; reason: "truncated" | "parse_failed"; error: string }
+> {
+  let result = await callCoreLLM({ ...input, max_tokens: CORE_MAX_TOKENS_INITIAL });
+  if (result.meta.finish_reason === "length") {
+    console.warn("[breakthrough-core] truncated at 16000, retrying at 24000");
+    result = await callCoreLLM({ ...input, max_tokens: CORE_MAX_TOKENS_RETRY });
+  }
+
+  const finish = result.meta.finish_reason ?? null;
+  if (finish === "length") {
+    console.warn("[breakthrough-core] truncated by length cap");
+    return {
+      ok: false,
+      reason: "truncated",
+      error: "deep analysis output was truncated",
+    };
+  }
+
+  try {
+    parseBreakthroughCoreResponseText(result.content);
+  } catch (e) {
+    console.warn("[breakthrough-core] parse failed:", e);
+    return {
+      ok: false,
+      reason: "parse_failed",
+      error: "deep analysis JSON was incomplete",
+    };
+  }
+
+  return {
+    ok: true,
+    content: result.content,
+    tokens_used: result.meta.tokens_used,
+    model: result.actual_model,
+    finish_reason: finish,
+  };
 }
 
 export async function POST(req: Request) {
@@ -101,23 +185,21 @@ export async function POST(req: Request) {
     await generateWithClosedSetGuard({
       generate: async (hint) => {
         const userContent = hint ? `${user}\n\n${hint}` : user;
-        const result = await callLLM({
-          call_type: "deep_analysis",
+        const fetched = await fetchCoreContent({
           system,
-          messages: [{ role: "user", content: userContent }],
-          max_tokens: 6000,
-          thinking_effort: "xhigh",
-          response_format: "json",
-          timeout_ms: 270_000,
-          session_id: profileId ? baseAnalysisCacheSessionId(profileId) : pojuCacheSessionId(sessionId),
+          userContent,
+          sessionId,
+          profileId,
         });
-        rawContent = result.content;
-        tokens_used = result.meta.tokens_used;
-        model = result.actual_model;
-        const parsed = parseBreakthroughCoreResponseText(rawContent);
-        return buildBreakthroughCoreAuditText(parsed);
+        if (!fetched.ok) {
+          throw new BreakthroughCoreRetryableError(fetched.reason, fetched.error);
+        }
+        rawContent = fetched.content;
+        tokens_used = fetched.tokens_used;
+        model = fetched.model;
+        return buildBreakthroughCoreAuditText(parseBreakthroughCoreResponseText(rawContent));
       },
-      structured,
+      structured: structured as ProfileStructured,
       locale,
       label: "breakthrough-core",
     });
@@ -127,10 +209,8 @@ export async function POST(req: Request) {
       mapped = mapBreakthroughCorePayload(parseBreakthroughCoreResponseText(rawContent));
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Invalid breakthrough core payload";
-      return NextResponse.json(
-        { ok: false, error: msg, preview: rawContent.slice(0, 400) },
-        { status: 422 },
-      );
+      console.warn("[breakthrough-core] map failed:", msg);
+      return retryableResponse("parse_failed", "deep analysis JSON was incomplete");
     }
 
     return NextResponse.json({
@@ -141,6 +221,9 @@ export async function POST(req: Request) {
       tokens_used,
     });
   } catch (e: unknown) {
+    if (e instanceof BreakthroughCoreRetryableError) {
+      return retryableResponse(e.reason, e.message);
+    }
     const msg = e instanceof Error ? e.message : "Breakthrough core failed";
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }

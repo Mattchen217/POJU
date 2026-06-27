@@ -212,7 +212,12 @@ function understandingGateTests(): void {
   assert("clear message allowed when sufficient", allowed.should_transition && allowed.new_phase === "collecting_context");
 
   const orch = read("lib/poju/agent-orchestrator.ts");
-  assert("breakthrough only after collecting phase", orch.includes('current_phase === "collecting_context"'));
+  const agentTs = read("lib/poju/agent.ts");
+  assert(
+    "breakthrough only after collecting phase",
+    orch.includes('current_phase !== "collecting_context"') &&
+      agentTs.includes('current_phase: "collecting_context"'),
+  );
 }
 
 function soulAndCacheTests(): void {
@@ -292,7 +297,7 @@ function fileChecklist(): void {
   const deep = getThinkingConfig("deep_analysis");
   assert("deep_analysis thinking enabled", deep.enabled === true);
   const btRouteSrc = read("app/api/poju/breakthrough-core/route.ts");
-  assert("breakthrough-core route xhigh + 6000", btRouteSrc.includes('thinking_effort: "xhigh"') && btRouteSrc.includes("max_tokens: 6000"));
+  assert("breakthrough-core route xhigh + 16000", btRouteSrc.includes('thinking_effort: "xhigh"') && btRouteSrc.includes("16_000"));
 }
 
 async function main(): Promise<void> {
