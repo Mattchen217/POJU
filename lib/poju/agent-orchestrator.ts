@@ -72,7 +72,7 @@ async function ensureBaseAnalysis(session: POJUSessionState): Promise<POJUSessio
   });
 }
 
-async function ensureBreakthroughCore(
+export async function ensureBreakthroughCore(
   session: POJUSessionState,
   locale: string,
 ): Promise<POJUSessionState> {
@@ -119,27 +119,6 @@ export async function runPostTurnOrchestration(
     if (s.agent_v2?.has_base_analysis) {
       ui.pipelineNotice = locale.startsWith("zh") ? "命主基础分析已就绪。" : "Base chart analysis is ready.";
     }
-  }
-
-  if (
-    s.agent_v2?.current_phase === "collecting_context" &&
-    s.agent_v2.breakthrough_core == null &&
-    resolveSessionHasProfile(s) &&
-    isSubstantiveBreakthroughQuestion(resolveSessionOriginalQuestion(s))
-  ) {
-    ui.pipelineBusy = true;
-    try {
-      s = await ensureBreakthroughCore(s, locale);
-      ui.pipelineNotice = locale.startsWith("zh")
-        ? "破局推理脊柱与调查议程已生成。"
-        : "Breakthrough spine and investigation agenda are ready.";
-    } catch (e) {
-      console.warn("[agent-orchestrator] Breakthrough core failed:", e);
-      ui.pipelineError = locale.startsWith("zh")
-        ? "深测算暂时没完成，再发一句继续即可。"
-        : "Deep analysis didn't finish yet — send another message to retry.";
-    }
-    ui.pipelineBusy = false;
   }
 
   if (

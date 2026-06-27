@@ -37,6 +37,7 @@ import {
 } from "@/lib/poju/investigation-agenda";
 
 import { callStallOfferPhase } from "@/lib/llm/phases/stall-offer-phase";
+import { callOpeningPhase } from "@/lib/llm/phases/opening-phase";
 
 import { extractQuestionCategory, mergeContextUpdates, recordToLLMContextUpdates } from "@/lib/poju/context-extractor";
 
@@ -279,11 +280,27 @@ ${focusText}`;
 
 
 
+function buildFirstCollectingInsightDirective(agent: POJUAgentState): string {
+  if (!agent.breakthrough_core) return "";
+  const collectingTurns = agent.collecting_turn_count ?? 0;
+  if (collectingTurns > 0) {
+    return `
+
+## 本轮动作
+快照里关系结论与破局方向已确立（✓），**不要重复**第一阶段洞见；严格按议程 pending 第一项推进。`;
+  }
+  return `
+
+## 本轮动作（首次进入 collecting · 关系结论本回合刚确立）
+给出第一阶段洞见——他卡在哪一层、当前十年大运宜进还是宜守，给他一个之前没察觉的破局大方向。**绝不**交付完整的 3 条行动。`;
+}
+
 function buildCollectingTaskBlock(input: PhaseLLMInput): string {
   const agent = input.agent_state;
   const q = input.session.original_question;
   const spineBlock = buildSpineBlock(agent);
   const agendaBlock = agent ? buildAgendaTrackingBlock(agent) : "";
+  const insightDirective = agent ? buildFirstCollectingInsightDirective(agent) : "";
 
   return `# 动态上下文 · collecting
 用户的问题："${q}"
@@ -291,6 +308,7 @@ function buildCollectingTaskBlock(input: PhaseLLMInput): string {
 ${spineBlock}
 
 ${agendaBlock}
+${insightDirective}
 
 ${buildToolSuggestionPhaseAppendix(input, { includeNewCycleDetection: false })}`.trim();
 }
@@ -298,6 +316,10 @@ ${buildToolSuggestionPhaseAppendix(input, { includeNewCycleDetection: false })}`
 
 
 export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLLMResult> {
+  const agent = input.agent_state;
+  if (agent?.current_phase === "collecting_context" && agent.breakthrough_core == null) {
+    return callOpeningPhase(input);
+  }
 
   const structured = normalizeBaseAnalysisInput(input.base_analysis ?? null).structured ?? null;
 

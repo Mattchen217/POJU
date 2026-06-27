@@ -54,12 +54,20 @@ function main(): void {
     ).next_state === "opening",
   );
   const substantiveAdvance = advanceStateMachine(
-    agent,
-    extractModelTurnSignals({ understanding_sufficient: true }),
+    { ...agent, has_base_analysis: true },
+    extractModelTurnSignals({ understanding_sufficient: true, base_analysis_ready: true }),
     "我离婚8年了想重新开始",
   );
-  assert("substantive enters collecting", substantiveAdvance.next_state === "collecting_context");
-  assert("trigger core true when sufficient", substantiveAdvance.trigger_breakthrough_core === true);
+  assert("substantive enters collecting when base ready", substantiveAdvance.next_state === "collecting_context");
+  assert("trigger core true when sufficient and base ready", substantiveAdvance.trigger_breakthrough_core === true);
+  assert(
+    "sufficient without base stays opening",
+    advanceStateMachine(
+      agent,
+      extractModelTurnSignals({ understanding_sufficient: true, base_analysis_ready: false }),
+      "我离婚8年了想重新开始",
+    ).next_state === "opening",
+  );
 
   const session = {
     session_id: "s",

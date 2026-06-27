@@ -83,6 +83,7 @@ export function resolveActiveAgentPhase(session: POJUSessionState): AgentPhase {
 export interface ModelTurnSignals {
   response: string;
   understanding_sufficient?: boolean;
+  base_analysis_ready?: boolean;
   topic_drift_signal?: "none" | "edge" | "off_topic";
   agenda_updates?: { completed_in_this_turn?: string[] };
   user_confirms_delivery?: boolean;
@@ -100,6 +101,7 @@ export interface AdvanceResult {
 export function extractModelTurnSignals(source: {
   response?: string;
   understanding_sufficient?: boolean;
+  base_analysis_ready?: boolean;
   understanding?: { sufficient?: boolean; missing?: string } | null;
   topic_drift_signal?: "none" | "edge" | "off_topic";
   agenda_updates?: { completed_in_this_turn?: string[] };
@@ -115,6 +117,7 @@ export function extractModelTurnSignals(source: {
   return {
     response: source.response ?? "",
     understanding_sufficient,
+    base_analysis_ready: source.base_analysis_ready,
     topic_drift_signal: source.topic_drift_signal,
     agenda_updates: source.agenda_updates,
     user_confirms_delivery: source.user_confirms_delivery,
@@ -137,14 +140,19 @@ export function advanceStateMachine(
 
   switch (state) {
     case "opening": {
-      if (signals.understanding_sufficient === true && userInput.trim() && userInput !== "__OPENING__") {
+      if (
+        signals.understanding_sufficient === true &&
+        signals.base_analysis_ready === true &&
+        userInput.trim() &&
+        userInput !== "__OPENING__"
+      ) {
         next = {
           ...agent,
           original_question: userInput.trim(),
         };
         nextState = "collecting_context";
         triggerCore = true;
-        transitionReason = "Understanding sufficient, entering collection";
+        transitionReason = "Understanding sufficient, base analysis ready, entering collection";
       }
       break;
     }

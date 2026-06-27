@@ -27,6 +27,7 @@ function orchestratorTests(): void {
   console.log("\n=== 1. agent-orchestrator 取盘统一 ===\n");
 
   const orch = read("lib/poju/agent-orchestrator.ts");
+  const agent = read("lib/poju/agent.ts");
   assert("imports loadSessionProfileBundle", orch.includes("loadSessionProfileBundle"));
   assert(
     "ensureBreakthroughCore passes base_analysis to requestBreakthroughCore",
@@ -41,8 +42,9 @@ function orchestratorTests(): void {
     !orch.match(/ensureBreakthroughCore[\s\S]*if \(!agent\.has_base_analysis\)/),
   );
   assert(
-    "breakthrough trigger uses resolveSessionHasProfile",
-    orch.includes("breakthrough_core == null") && orch.includes("resolveSessionHasProfile(s)"),
+    "sync core trigger in agent.ts (not post-turn)",
+    agent.includes("await ensureBreakthroughCore") &&
+      !/runPostTurnOrchestration[\s\S]*await ensureBreakthroughCore/.test(orch),
   );
   assert(
     "ensureBaseAnalysis outer gate uses resolveSessionHasProfile only",

@@ -17,6 +17,7 @@ import { classifyStallOfferReply } from "@/lib/poju/stall-offer-routing";
 import {
   advanceStateMachine,
   extractModelTurnSignals,
+  type AdvanceResult,
 } from "@/lib/poju/state-machine";
 import { countUserTurns } from "@/lib/poju/summary-readiness";
 import {
@@ -45,6 +46,7 @@ import type { ToolSuggestionPayload } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
 import { chatPayloadFromWire } from "@/lib/poju/serialize-chat-payload";
 import { buildAgentStateSnapshot } from "@/lib/poju/agent-state-snapshot";
+import { ensureBreakthroughCore } from "@/lib/poju/agent-orchestrator";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 /** Session uses default `userProfiles` slot from device. */
@@ -143,6 +145,12 @@ function mapLlmHintToAgentPhase(hint: string | undefined): AgentPhase | null {
   }
 }
 
+function resolveOriginalQuestion(agent: POJUAgentState, userMessage: string): string {
+  const trimmed = userMessage.trim();
+  if (trimmed && trimmed !== "__OPENING__") return trimmed;
+  return agent.original_question?.trim() || "";
+}
+
 function finalizeAgentV2(
   base: POJUAgentState,
   session: POJUSessionState,
@@ -167,7 +175,7 @@ function finalizeAgentV2(
   },
   userMessage: string,
   isSystemMessage: boolean,
-): POJUAgentState {
+): { agent: POJUAgentState; advance: AdvanceResult } {
   const flat = llm.context_updates ?? {};
   const agendaStatusUpdates = extractAgendaStatusUpdates(flat);
   const contextFlat = stripAgendaFieldsFromContextUpdates(flat);
@@ -253,6 +261,7 @@ function finalizeAgentV2(
     response: "",
     understanding_sufficient: llm.understanding_sufficient,
     understanding: llm.understanding,
+    base_analysis_ready: Boolean(merged.has_base_analysis || resolveSessionHasProfile(session)),
     topic_drift_signal: llm.topic_drift_signal,
     agenda_updates: llm.agenda_updates,
     user_confirms_delivery: llm.user_confirms_delivery,
@@ -356,9 +365,12 @@ function finalizeAgentV2(
   }
   const tokenDelta = typeof llm.tokens_used === "number" ? llm.tokens_used : 0;
   return {
-    ...after,
-    turn_count: userTurns,
-    tokens_used: after.tokens_used + tokenDelta,
+    agent: {
+      ...after,
+      turn_count: userTurns,
+      tokens_used: after.tokens_used + tokenDelta,
+    },
+    advance,
   };
 }
 
@@ -503,7 +515,13 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       : workingSession.actions;
 
   const sessionForAgent: POJUSessionState = { ...workingSession, messages: messagesWithUser };
-  const agentCore = finalizeAgentV2(
+  const phaseUserMessage =
+    userMessage.trim() === "__OPENING__"
+      ? "__OPENING__"
+      : isSystemMessage
+        ? ""
+        : userMessage;
+  const { agent: agentCore, advance } = finalizeAgentV2(
     ensureAgentV2(sessionForAgent),
     sessionForAgent,
     {
@@ -528,7 +546,27 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     userMessage,
     isSystemMessage,
   );
-  const agent_v2: POJUAgentState = { ...agentCore, actions: mergedActions };
+  let agent_v2: POJUAgentState = { ...agentCore, actions: mergedActions };
+
+  if (advance.trigger_breakthrough_core) {
+    const withQ = {
+      ...agent_v2,
+      original_question: resolveOriginalQuestion(agent_v2, phaseUserMessage),
+    };
+    const coreResult = await ensureBreakthroughCore(
+      {
+        ...sessionForAgent,
+        agent_v2: { ...withQ, current_phase: "collecting_context" },
+      },
+      locale,
+    );
+    const coreReady = coreResult.agent_v2?.breakthrough_core != null;
+    if (coreReady) {
+      agent_v2 = { ...coreResult.agent_v2!, actions: mergedActions };
+    } else {
+      agent_v2 = { ...agent_v2, current_phase: "opening" };
+    }
+  }
 
   const assistantMessage: POJUMessage = {
     role: "assistant",
