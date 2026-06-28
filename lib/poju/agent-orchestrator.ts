@@ -99,6 +99,7 @@ export async function ensureBreakthroughCore(
   }
 }
 
+/** Post-turn hooks for explicit pipelines only — not invoked on every user turn. */
 export async function runPostTurnOrchestration(
   session: POJUSessionState,
   opts: { locale: string; lastUserMessage?: string; autoPipeline?: boolean },
@@ -116,15 +117,6 @@ export async function runPostTurnOrchestration(
     pipelineNotice: null,
     pipelineError: null,
   };
-
-  if (resolveSessionHasProfile(s) && !s.agent_v2?.has_base_analysis) {
-    ui.pipelineBusy = true;
-    s = await ensureBaseAnalysis(s);
-    ui.pipelineBusy = false;
-    if (s.agent_v2?.has_base_analysis) {
-      ui.pipelineNotice = locale.startsWith("zh") ? "命主基础分析已就绪。" : "Base chart analysis is ready.";
-    }
-  }
 
   if (
     auto &&

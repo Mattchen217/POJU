@@ -32,6 +32,13 @@ function assertCollectingCoreInvariant(
   }
 }
 
+function postTurnOrchestrationBody(source: string): string {
+  const m = source.match(
+    /export async function runPostTurnOrchestration[\s\S]*?(?=\nexport async function|\n\/\*\* After user confirms)/,
+  );
+  return m?.[0] ?? "";
+}
+
 function main(): void {
   console.log("\n========== POJU Block 20 Acceptance ==========\n");
 
@@ -46,7 +53,9 @@ function main(): void {
     "post-turn no deferred breakthrough trigger",
     !orch.includes("破局推理脊柱与调查议程已生成"),
   );
-  assert("post-turn ensureBaseAnalysis retained", orch.includes("await ensureBaseAnalysis"));
+  assert("post-turn no per-turn ensureBaseAnalysis", !postTurnOrchestrationBody(orch).includes("ensureBaseAnalysis"));
+  assert("confirmation pipeline still ensures base analysis", /runConfirmationPipeline[\s\S]*ensureBaseAnalysis/.test(orch));
+  assert("UI ensures base analysis before send", read("components/poju/POJUChatUI.tsx").includes("ensureBaseAnalysisReady"));
 
   console.log("\n=== Fix 2 · collecting null-core guard + first insight once ===\n");
   const collecting = read("lib/llm/phases/collecting-phase.ts");

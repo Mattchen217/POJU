@@ -13,14 +13,13 @@ import { RefundOfferAction } from "@/components/poju/RefundOfferAction";
 import {
   resolveActivityForSend,
   willRunDegradedDelivery,
-  willTriggerDeepReckoning,
   type PojuActivity,
 } from "@/lib/poju/activity";
 import { PojuActivityIndicator } from "@/components/poju/PojuActivityIndicator";
 import { getPojuDb } from "@/lib/db/poju-db";
 import { createPOJUSession, loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
 import { clearPendingStoredProfileId, readPendingStoredProfileId } from "@/lib/poju/pending-stored-profile";
-import { runConfirmationPipeline, runPostTurnOrchestration } from "@/lib/poju/agent-orchestrator";
+import { runConfirmationPipeline, runDegradedDeliveryPipeline } from "@/lib/poju/agent-orchestrator";
 import { handleUserMessage, tryHandleRuleRejection } from "@/lib/poju/agent";
 import { hasFixedWelcomeMessage, seedFixedWelcomeMessages } from "@/lib/poju/chat-bootstrap";
 import {
@@ -135,7 +134,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const [pipelineBusy, setPipelineBusy] = useState(false);
   const [slotActivity, setSlotActivity] = useState<PojuActivity | null>(null);
   const [slotActivityFading, setSlotActivityFading] = useState(false);
-  const [trailingActivity, setTrailingActivity] = useState<PojuActivity | null>(null);
   const [debugStateLedger, setDebugStateLedger] = useState<unknown>(null);
   const [generationStopped, setGenerationStopped] = useState(false);
   const [showOffTopicAction, setShowOffTopicAction] = useState(false);
@@ -427,7 +425,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     setSending(false);
     setSlotActivity(null);
     setSlotActivityFading(false);
-    setTrailingActivity(null);
     setGenerationStopped(true);
   }
 
@@ -474,7 +471,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     sendAbortRef.current = ac;
     setSending(true);
     setSlotActivity(resolveActivityForSend(baseSession));
-    setTrailingActivity(null);
     setGenerationStopped(false);
     scrollChatToBottom("smooth");
 
@@ -520,32 +516,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
 
       onSessionUpdate(toPersist);
       clearSlotActivityWithFade();
+      syncDebugStateLedger(toPersist);
+      await savePOJUSession(toPersist);
 
-      if (willTriggerDeepReckoning(toPersist)) {
-        setTrailingActivity("deep_reckoning");
-      } else if (willRunDegradedDelivery(toPersist)) {
-        setSlotActivity("degraded_delivering");
-      }
-
-      const orch = await runPostTurnOrchestration(toPersist, {
-        locale,
-        lastUserMessage: userMessage,
-      });
-      if (ac.signal.aborted || gen !== sendGenerationRef.current) return;
-
-      let finalSession = orch.session;
-      if (finalSession.main_delivery_done && !finalSession.action_plan_archive_id) {
-        const { trySaveDeliveryActionsToArchive } = await import("@/lib/archive/archive-service");
-        finalSession = await trySaveDeliveryActionsToArchive(finalSession, locale);
-      }
-
-      onSessionUpdate(finalSession);
-      syncDebugStateLedger(finalSession);
-      await savePOJUSession(finalSession);
-      setTrailingActivity(null);
-      setSlotActivity(null);
-
-      const lastAssistant = [...finalSession.messages]
+      const lastAssistant = [...toPersist.messages]
         .reverse()
         .find((m) => m.role === "assistant" && !m.is_rejected);
       if (lastAssistant?.meta?.should_show_new_session_button) {
@@ -556,9 +530,29 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         setDriftReason("");
       }
 
-      if (orch.ui.pipelineNotice) setSituationNotice(orch.ui.pipelineNotice);
-      if (orch.ui.pipelineError) setSituationError(orch.ui.pipelineError);
-      setPipelineBusy(orch.ui.pipelineBusy);
+      if (willRunDegradedDelivery(toPersist)) {
+        setPipelineBusy(true);
+        setSlotActivity("degraded_delivering");
+        try {
+          let finalSession = await runDegradedDeliveryPipeline(toPersist, locale);
+          if (finalSession.main_delivery_done && !finalSession.action_plan_archive_id) {
+            const { trySaveDeliveryActionsToArchive } = await import("@/lib/archive/archive-service");
+            finalSession = await trySaveDeliveryActionsToArchive(finalSession, locale);
+          }
+          onSessionUpdate(finalSession);
+          syncDebugStateLedger(finalSession);
+          await savePOJUSession(finalSession);
+          setSituationNotice(
+            locale.startsWith("zh") ? "方向性分析已生成。" : "Directional analysis is ready.",
+          );
+        } catch (e) {
+          console.warn("[poju] Degraded delivery failed:", e);
+          setSituationError(e instanceof Error ? e.message : String(e));
+        } finally {
+          setPipelineBusy(false);
+          setSlotActivity(null);
+        }
+      }
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return;
       console.error("[poju] Send failed:", err);
@@ -573,7 +567,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       if (gen === sendGenerationRef.current) {
         setSending(false);
         setSlotActivity(null);
-        setTrailingActivity(null);
       }
     }
   }
@@ -820,9 +813,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       locale,
       userAlreadyAppended: true,
     });
-    const orch = await runPostTurnOrchestration(finalSession, { locale, lastUserMessage: note });
-    onSessionUpdate(orch.session);
-    await savePOJUSession(orch.session);
+    onSessionUpdate(finalSession);
+    syncDebugStateLedger(finalSession);
+    await savePOJUSession(finalSession);
   }
 
   function agentPhaseKey(): string {
@@ -1063,23 +1056,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       }
     }
 
-    if (trailingActivity === "deep_reckoning") {
-      const lastAssistant = [...visibleMessages].reverse().find((m) => m.role === "assistant");
-      if (lastAssistant) {
-        const lastId = lastAssistant.client_id ?? lastAssistant.timestamp;
-        const lines = getActivityLines("deep_reckoning");
-        const trailingNode = <PojuActivityIndicator lines={lines} />;
-        followUps[lastId] = followUps[lastId] ? (
-          <>
-            {followUps[lastId]}
-            {trailingNode}
-          </>
-        ) : (
-          trailingNode
-        );
-      }
-    }
-
     return {
       messageSlots: slots,
       bareMessageSlotIds: bareIds,
@@ -1093,12 +1069,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     session.actions,
     session.action_plan_archive_id,
     openUnlockReportModal,
-    trailingActivity,
     getActivityLines,
     showStateDebug,
   ]);
 
-  const streaming = sending || confirmBusy || trailingActivity != null;
+  const streaming = sending || confirmBusy;
 
   return (
     <>

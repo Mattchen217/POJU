@@ -46,6 +46,7 @@ import type { ToolSuggestionPayload } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
 import { chatPayloadFromWire } from "@/lib/poju/serialize-chat-payload";
 import { buildAgentStateSnapshot } from "@/lib/poju/agent-state-snapshot";
+import { buildFallbackContextSummary } from "@/lib/poju/context-summary-builder";
 import { ensureBreakthroughCore } from "@/lib/poju/agent-orchestrator";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -402,6 +403,12 @@ function finalizeAgentV2(
   }
   if (llm.current_summary && after.current_phase === "awaiting_confirmation") {
     after = { ...after, current_summary: llm.current_summary };
+  } else if (
+    after.current_phase === "awaiting_confirmation" &&
+    !after.stall_offer_pending &&
+    !after.current_summary
+  ) {
+    after = { ...after, current_summary: buildFallbackContextSummary(after) };
   }
   const nowIso = new Date().toISOString();
   if (llm.contains_delivery) {
@@ -597,23 +604,28 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   let agent_v2: POJUAgentState = { ...agentCore, actions: mergedActions };
 
   if (advance.trigger_breakthrough_core) {
-    const freshQuestion =
-      agent_v2.original_question?.trim() ||
-      extractOpeningProblem(sessionForAgent.messages) ||
-      resolveOriginalQuestion(agent_v2, phaseUserMessage);
-    const withQ = { ...agent_v2, original_question: freshQuestion };
-    const coreResult = await ensureBreakthroughCore(
-      {
-        ...sessionForAgent,
-        original_question: freshQuestion,
-        agent_v2: { ...withQ, current_phase: "collecting_context" },
-      },
-      locale,
-    );
-    const coreReady = coreResult.agent_v2?.breakthrough_core != null;
-    if (coreReady) {
-      agent_v2 = { ...coreResult.agent_v2!, actions: mergedActions };
-    } else {
+    try {
+      const freshQuestion =
+        agent_v2.original_question?.trim() ||
+        extractOpeningProblem(sessionForAgent.messages) ||
+        resolveOriginalQuestion(agent_v2, phaseUserMessage);
+      const withQ = { ...agent_v2, original_question: freshQuestion };
+      const coreResult = await ensureBreakthroughCore(
+        {
+          ...sessionForAgent,
+          original_question: freshQuestion,
+          agent_v2: { ...withQ, current_phase: "collecting_context" },
+        },
+        locale,
+      );
+      const coreReady = coreResult.agent_v2?.breakthrough_core != null;
+      if (coreReady) {
+        agent_v2 = { ...coreResult.agent_v2!, actions: mergedActions };
+      } else {
+        agent_v2 = { ...agent_v2, current_phase: "opening" };
+      }
+    } catch (e) {
+      console.warn("[agent] breakthrough-core failed, staying in opening:", e);
       agent_v2 = { ...agent_v2, current_phase: "opening" };
     }
   }

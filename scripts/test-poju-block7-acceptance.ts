@@ -100,7 +100,7 @@ function main(): void {
   assert("PojuActivityIndicator scene path", indicator.includes("/spline/POJUCHAT.splinecode"));
   const chatUi = read("components/poju/POJUChatUI.tsx");
   assert("POJUChatUI slotActivity", chatUi.includes("slotActivity"));
-  assert("POJUChatUI trailingActivity", chatUi.includes("trailingActivity"));
+  assert("POJUChatUI single slotActivity (no trailing)", chatUi.includes("slotActivity") && !chatUi.includes("trailingActivity"));
   assert("POJUChatUI no onStream", !chatUi.includes("onStream:"));
   const pojuChat = read("components/poju/PojuChat.tsx");
   assert("PojuChat pendingActivityLines", pojuChat.includes("pendingActivityLines"));
