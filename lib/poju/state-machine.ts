@@ -1,5 +1,6 @@
 import {
   evaluateAgendaCoverage,
+  selectCurrentAgendaFocus,
   type AgendaItem,
 } from "@/lib/poju/investigation-agenda";
 import {
@@ -27,7 +28,11 @@ export interface StateLedgerSnapshot {
       breakthrough_direction_confirmed: boolean;
       agenda_built: boolean;
     };
-    agenda_checklist: { completed: string[]; pending: string[] };
+    agenda_checklist: {
+      completed: string[];
+      pending: string[];
+      current_focus: string | null;
+    };
   };
 }
 
@@ -46,6 +51,8 @@ export function pojuStateToAgentPhase(state: PojuState): AgentPhase {
 export function buildStateSnapshot(agent: POJUAgentState): StateLedgerSnapshot {
   const core = agent.breakthrough_core ?? null;
   const agenda: AgendaItem[] = agent.investigation_agenda ?? [];
+  const pendingItems = agenda.filter((a) => a.status !== "covered");
+  const focus = selectCurrentAgendaFocus(agenda);
   return {
     state_ledger: {
       current_state: agentPhaseToPojuState(agent.current_phase),
@@ -57,7 +64,8 @@ export function buildStateSnapshot(agent: POJUAgentState): StateLedgerSnapshot {
       },
       agenda_checklist: {
         completed: agenda.filter((a) => a.status === "covered").map((a) => a.label),
-        pending: agenda.filter((a) => a.status !== "covered").map((a) => a.label),
+        pending: pendingItems.map((a) => a.label),
+        current_focus: focus ? focus.label : null,
       },
     },
   };
@@ -169,12 +177,27 @@ export function advanceStateMachine(
       break;
     }
     case "collecting_context": {
-      const done = new Set(signals.agenda_updates?.completed_in_this_turn ?? []);
-      const agenda = (agent.investigation_agenda ?? []).map((a) =>
-        done.has(a.label) ? { ...a, status: "covered" as const } : a,
-      );
-      next = { ...agent, investigation_agenda: agenda };
-      const cov = evaluateAgendaCoverage(agenda);
+      const agenda = agent.investigation_agenda ?? [];
+      const focus = selectCurrentAgendaFocus(agenda);
+
+      const reported = new Set(signals.agenda_updates?.completed_in_this_turn ?? []);
+      const hasUserInput =
+        userInput.trim().length > 0 &&
+        userInput.trim() !== "__OPENING__" &&
+        !userInput.trim().startsWith("[SYSTEM:");
+
+      const updated = agenda.map((a) => {
+        if (reported.has(a.label)) return { ...a, status: "covered" as const };
+
+        if (focus && a.label === focus.label && hasUserInput) {
+          if (a.status !== "partial") return { ...a, status: "partial" as const };
+          return { ...a, status: "covered" as const };
+        }
+        return a;
+      });
+      next = { ...agent, investigation_agenda: updated };
+
+      const cov = evaluateAgendaCoverage(updated);
       if (cov.total > 0 && cov.criticalLeft === 0 && cov.coveredRatio >= 0.8) {
         nextState = "awaiting_confirmation";
         transitionReason = `Agenda satisfied (${Math.round(cov.coveredRatio * 100)}%)`;

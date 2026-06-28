@@ -32,6 +32,8 @@ import {
 
   getNextAgendaFocus,
 
+  selectCurrentAgendaFocus,
+
   stripAgendaFieldsFromContextUpdates,
 
 } from "@/lib/poju/investigation-agenda";
@@ -258,9 +260,11 @@ function buildAgendaTrackingBlock(agent: POJUAgentState): string {
 
   if (agenda.length === 0) return "";
 
-  const focus = getNextAgendaFocus(agenda);
+  const focus = selectCurrentAgendaFocus(agenda);
 
-  const focusText = focus.map((a) => `- ${a.label} (${a.id}, ${a.status})`).join("\n") || "- 优先把必查项弄清楚";
+  const focusText = focus
+    ? `- ${focus.label} (${focus.id}, ${focus.status})`
+    : "- 优先把必查项弄清楚";
 
   return `
 

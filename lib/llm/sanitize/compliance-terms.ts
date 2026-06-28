@@ -42,6 +42,7 @@ import {
   type TermEntry,
   uiTermById,
   unescapeMarkerPart,
+  wrapBareKeepCnSoftTerms,
 } from "@/lib/llm/sanitize/term-marking";
 import { auditEmptyKeepCnBrackets } from "@/lib/llm/sanitize/keep-cn-brackets";
 
@@ -65,6 +66,7 @@ export {
   type TermEntry,
   uiTermById,
   unescapeMarkerPart,
+  wrapBareKeepCnSoftTerms,
 };
 
 export { EN_TERM_MAP, ZH_TERM_MAP };

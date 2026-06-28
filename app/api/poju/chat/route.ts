@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { callPOJULLM } from "@/lib/llm/poju-llm";
 import { createPojuChatStreamResponse } from "@/lib/poju/poju-chat-stream";
 import { pojuLlmToChatPayload } from "@/lib/poju/serialize-chat-payload";
+import { attachDevStateLedger } from "@/lib/poju/dev-state-ledger";
 import type { POJUActionRecommendationsData } from "@/lib/archive/archive-service";
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
@@ -48,7 +49,8 @@ export async function POST(req: Request) {
         typeof body.tool_injection_context === "string" ? body.tool_injection_context : null,
     });
 
-    return NextResponse.json(pojuLlmToChatPayload(llm));
+    const payload = pojuLlmToChatPayload(llm);
+    return NextResponse.json(attachDevStateLedger(payload, body.session));
   } catch (error: unknown) {
     console.error("[poju/chat] unhandled error:", error);
     const locale = String(body.locale ?? "en");

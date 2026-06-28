@@ -3,6 +3,8 @@ import { logPojuError } from "@/lib/poju/base-analysis-diagnostics";
 import { resolveStreamedCompleteResponse } from "@/lib/llm/phases/phase-transport";
 import { extractStreamingResponseText } from "@/lib/poju/extract-streaming-response";
 import { pojuLlmToChatPayload } from "@/lib/poju/serialize-chat-payload";
+import { attachDevStateLedger } from "@/lib/poju/dev-state-ledger";
+import { attachDevStateLedger } from "@/lib/poju/dev-state-ledger";
 import type { POJUActionRecommendationsData } from "@/lib/archive/archive-service";
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
@@ -66,13 +68,16 @@ export function createPojuChatStreamResponse(body: ChatBody, reqSignal?: AbortSi
 
         send({
           type: "complete",
-          ...pojuLlmToChatPayload(llm, {
-            response: resolveStreamedCompleteResponse(
-              llm.response,
-              lastContentText,
-              body.locale,
-            ),
-          }),
+          ...attachDevStateLedger(
+            pojuLlmToChatPayload(llm, {
+              response: resolveStreamedCompleteResponse(
+                llm.response,
+                lastContentText,
+                body.locale,
+              ),
+            }),
+            body.session,
+          ),
         });
       } catch (e) {
         logPojuError("poju-chat-stream:callPOJULLM", e);

@@ -1504,3 +1504,75 @@ body.pchat-page-lock .pchat:not(.tool-preview-chat) {
   font-size: 11px;
   opacity: 0.75;
 }
+
+/* ── Dev-only state machine debug panel (Part E) ── */
+.poju-chat-shell {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+.poju-chat-shell__main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.poju-debug-panel {
+  flex: 0 0 min(360px, 32vw);
+  max-width: 420px;
+  border-left: 1px solid rgba(212, 175, 55, 0.18);
+  background: rgba(8, 10, 18, 0.96);
+  color: #c8d0e0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.poju-debug-title {
+  flex: 0 0 auto;
+  padding: 10px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #f2c994;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.15);
+}
+
+.poju-debug-pre {
+  flex: 1;
+  margin: 0;
+  padding: 10px 12px 14px;
+  overflow: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.45;
+  tab-size: 2;
+}
+
+.poju-debug-pre code {
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #b8e0ff;
+}
+
+@media (max-width: 960px) {
+  .poju-chat-shell {
+    flex-direction: column;
+  }
+
+  .poju-debug-panel {
+    flex: 0 0 auto;
+    max-width: none;
+    width: 100%;
+    max-height: 32vh;
+    border-left: none;
+    border-top: 1px solid rgba(212, 175, 55, 0.18);
+  }
+}

@@ -114,6 +114,26 @@ export function stripBareTermMarkers(text: string): string {
   );
 }
 
+/** Wrap bare keep_cn soft phrases (e.g. 人生阶段（丁酉）) that lack ⟦t:…⟧ markers. */
+export function wrapBareKeepCnSoftTerms(text: string, locale: string): string {
+  const gz = "[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]";
+  const patterns: Array<{ id: string; label: string }> = [
+    { id: "decade", label: "人生阶段" },
+    { id: "day_master", label: "核心特质" },
+    { id: "year", label: "流年能量" },
+    { id: "yong_shen", label: "用神" },
+  ];
+  let out = text;
+  for (const { id, label } of patterns) {
+    const re = new RegExp(`(?<!⟦)${label}（(${gz})）`, "g");
+    out = out.replace(re, (match) => {
+      const plain = plainByTermId(id, locale);
+      return encodeTermMarker(id, match, plain ?? undefined);
+    });
+  }
+  return out;
+}
+
 /** Remove broken / unclosed markers so users never see raw `⟦`. Intact closed markers become visible text. */
 export function stripBrokenMarkers(text: string): string {
   let r = stripBareTermMarkers(text);

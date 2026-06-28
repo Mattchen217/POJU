@@ -63,6 +63,8 @@ import { PojuPaywallInline } from "@/components/poju/PojuPaywallInline";
 import { MainDeliveryView } from "@/components/poju/MainDeliveryView";
 import { PojuReportChatCard } from "@/components/poju/PojuReportChatCard";
 import { PojuStateDebugPanel } from "@/components/poju/PojuStateDebugPanel";
+import { StateMachineDebugPanel } from "@/components/poju/StateMachineDebugPanel";
+import { buildDevStateLedger } from "@/lib/poju/dev-state-ledger";
 import { PojuAgendaCard } from "@/components/poju/PojuAgendaCard";
 import { PojuUnlockReportModal } from "@/components/poju/PojuUnlockReportModal";
 import { hasUnlockReportMessage, prepareUnlockReleaseSession } from "@/lib/poju/finalize-unlock-bazi-session";
@@ -134,6 +136,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const [slotActivity, setSlotActivity] = useState<PojuActivity | null>(null);
   const [slotActivityFading, setSlotActivityFading] = useState(false);
   const [trailingActivity, setTrailingActivity] = useState<PojuActivity | null>(null);
+  const [debugStateLedger, setDebugStateLedger] = useState<unknown>(null);
   const [generationStopped, setGenerationStopped] = useState(false);
   const [showOffTopicAction, setShowOffTopicAction] = useState(false);
   const [driftReason, setDriftReason] = useState("");
@@ -153,6 +156,15 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const pdfFileRef = useRef<HTMLInputElement | null>(null);
   const sessionRef = useRef(session);
   sessionRef.current = session;
+
+  const syncDebugStateLedger = useCallback((s: POJUSessionState) => {
+    if (process.env.NODE_ENV !== "development") return;
+    setDebugStateLedger(buildDevStateLedger(s));
+  }, []);
+
+  useEffect(() => {
+    syncDebugStateLedger(session);
+  }, [session.session_id, session.agent_v2, syncDebugStateLedger]);
   const sendAbortRef = useRef<AbortController | null>(null);
   const sendGenerationRef = useRef(0);
   const router = useRouter();
@@ -528,6 +540,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       }
 
       onSessionUpdate(finalSession);
+      syncDebugStateLedger(finalSession);
       await savePOJUSession(finalSession);
       setTrailingActivity(null);
       setSlotActivity(null);
@@ -1122,6 +1135,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           e.target.value = "";
         }}
       />
+      <div className="poju-chat-shell">
+        <div className="poju-chat-shell__main">
       <PojuChat
         sessions={pojuSessions}
         currentSessionId={session.session_id}
@@ -1216,6 +1231,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
             : null
         }
       />
+        </div>
+        {process.env.NODE_ENV === "development" ? (
+          <StateMachineDebugPanel ledger={debugStateLedger} />
+        ) : null}
+      </div>
 
       <SessionExpiryDialog
         sessionId={session.session_id}

@@ -136,6 +136,12 @@ export function getUncoveredCriticalLabels(agenda: AgendaItem[]): string[] {
   return agenda.filter((a) => a.critical && a.status !== "covered").map((a) => a.label);
 }
 
+/** Single agenda focus for this turn: critical first, else first pending in agenda order. */
+export function selectCurrentAgendaFocus(agenda: AgendaItem[]): AgendaItem | null {
+  const pendingItems = agenda.filter((a) => a.status !== "covered");
+  return pendingItems.find((a) => a.critical) ?? pendingItems[0] ?? null;
+}
+
 export function getNextAgendaFocus(agenda: AgendaItem[]): AgendaItem[] {
   const open = agenda.filter((a) => a.status !== "covered");
   const critical = open.filter((a) => a.critical);

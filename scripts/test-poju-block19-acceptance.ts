@@ -44,6 +44,7 @@ function main(): void {
   const snap = buildStateSnapshot(agent);
   assert("snapshot current_state opening", snap.state_ledger.current_state === "opening");
   assert("snapshot has agenda_checklist", Array.isArray(snap.state_ledger.agenda_checklist.pending));
+  assert("snapshot has current_focus", "current_focus" in snap.state_ledger.agenda_checklist);
 
   assert(
     "greeting blocked when insufficient",
