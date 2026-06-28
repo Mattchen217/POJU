@@ -4,7 +4,6 @@ import { resolveStreamedCompleteResponse } from "@/lib/llm/phases/phase-transpor
 import { extractStreamingResponseText } from "@/lib/poju/extract-streaming-response";
 import { pojuLlmToChatPayload } from "@/lib/poju/serialize-chat-payload";
 import { attachDevStateLedger } from "@/lib/poju/dev-state-ledger";
-import { attachDevStateLedger } from "@/lib/poju/dev-state-ledger";
 import type { POJUActionRecommendationsData } from "@/lib/archive/archive-service";
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
