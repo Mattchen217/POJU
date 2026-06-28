@@ -156,6 +156,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   }, [session.session_id, session.agent_v2, syncDebugStateLedger]);
   const sendAbortRef = useRef<AbortController | null>(null);
   const sendGenerationRef = useRef(0);
+  const turnInFlightRef = useRef(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const showStateDebug = searchParams.get("debug") !== "0";
@@ -380,6 +381,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     sendGenerationRef.current += 1;
     sendAbortRef.current?.abort();
     sendAbortRef.current = null;
+    turnInFlightRef.current = false;
     setSending(false);
     setSlotActivity(null);
     setSlotActivityFading(false);
@@ -422,6 +424,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     userMessage: string,
     errorRestore?: { rollbackSession: POJUSessionState; typed: string; attachment: ComposerAttachment | null },
   ) {
+    if (turnInFlightRef.current) return;
+    turnInFlightRef.current = true;
+
     const gen = ++sendGenerationRef.current;
     const ac = new AbortController();
     sendAbortRef.current = ac;
@@ -522,6 +527,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       }
       await dialog.alert(t("dialog_connection_error"));
     } finally {
+      turnInFlightRef.current = false;
       if (sendAbortRef.current === ac) sendAbortRef.current = null;
       if (gen === sendGenerationRef.current) {
         setSending(false);
