@@ -196,11 +196,14 @@ export function advanceStateMachine(
         !userInput.trim().startsWith("[SYSTEM:");
 
       const updated = agenda.map((a) => {
+        if (!focus || a.label !== focus.label) return a;
+
         if (reported.has(a.label)) return { ...a, status: "covered" as const };
 
-        if (focus && a.label === focus.label && hasUserInput) {
-          if (a.status !== "partial") return { ...a, status: "partial" as const };
-          return { ...a, status: "covered" as const };
+        if (hasUserInput) {
+          return a.status === "partial"
+            ? { ...a, status: "covered" as const }
+            : { ...a, status: "partial" as const };
         }
         return a;
       });

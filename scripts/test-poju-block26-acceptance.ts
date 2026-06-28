@@ -41,7 +41,7 @@ function main(): void {
   const sm = read("lib/poju/state-machine.ts");
   assert("no userAnswered auto-cover", !sm.includes("userAnswered"));
   assert("partial state transition", sm.includes('"partial" as const'));
-  assert("partial then covered fallback", /a\.status !== "partial"[\s\S]*"partial"[\s\S]*"covered"/.test(sm));
+  assert("partial then covered fallback", /a\.status === "partial"[\s\S]*"covered"[\s\S]*"partial"/.test(sm));
 
   const agenda = [
     item("a1", "必查第一项", true, "unexplored"),

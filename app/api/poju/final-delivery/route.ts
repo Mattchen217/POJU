@@ -134,6 +134,7 @@ export async function POST(req: Request) {
         system,
         messages: [{ role: "user", content: userContent }],
         max_tokens: 8000,
+        timeout_ms: 270_000,
         response_format: "text",
         session_id: sessionId,
         temperature: attempt === 0 ? 0.55 : 0.3,
