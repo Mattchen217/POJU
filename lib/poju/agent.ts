@@ -146,13 +146,34 @@ function mapLlmHintToAgentPhase(hint: string | undefined): AgentPhase | null {
 }
 
 function resolveOriginalQuestion(agent: POJUAgentState, userMessage: string): string {
+  const fromAgent = agent.original_question?.trim();
+  if (fromAgent) return fromAgent;
   const trimmed = userMessage.trim();
   if (trimmed && trimmed !== "__OPENING__") return trimmed;
-  return agent.original_question?.trim() || "";
+  return "";
 }
 
 const OPENING_GREETING_PATTERN =
   /^(你好|您好|hi|hello|在吗|嗨|哈喽|你是谁|你能|你可以|测试)/i;
+
+const PROBLEM_FILLER =
+  /^(你好|您好|hi|hello|在吗|嗨|哈喽|测试|好的?|你问吧|请问吧?|继续|可以|嗯+|ok|okay|是的|对)/i;
+
+/** First 1–2 substantive opening user messages = core problem statement (excludes clarifications/fillers). */
+export function extractOpeningProblem(messages: POJUMessage[]): string {
+  const substantive = messages
+    .filter((m) => m.role === "user" && !m.is_rejected)
+    .map((m) => m.content.trim())
+    .filter(
+      (c) =>
+        c.length >= 6 &&
+        c !== "__OPENING__" &&
+        !c.startsWith("[SYSTEM:") &&
+        !OPENING_GREETING_PATTERN.test(c) &&
+        !PROBLEM_FILLER.test(c),
+    );
+  return substantive.slice(0, 2).join("；");
+}
 
 /** Count substantive user turns in opening from message history (deterministic gate input). */
 export function countSubstantiveOpeningTurns(messages: POJUMessage[]): number {
@@ -273,6 +294,7 @@ function finalizeAgentV2(
 
   const baseAnalysisReady = Boolean(merged.has_base_analysis || resolveSessionHasProfile(session));
   const substantiveOpeningTurns = countSubstantiveOpeningTurns(session.messages);
+  const openingProblem = extractOpeningProblem(session.messages);
 
   const signals = extractModelTurnSignals({
     response: "",
@@ -280,6 +302,7 @@ function finalizeAgentV2(
     understanding: llm.understanding,
     base_analysis_ready: baseAnalysisReady,
     substantive_opening_turns: substantiveOpeningTurns,
+    opening_problem_statement: openingProblem,
     topic_drift_signal: llm.topic_drift_signal,
     agenda_updates: llm.agenda_updates,
     user_confirms_delivery: llm.user_confirms_delivery,
@@ -574,7 +597,10 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   let agent_v2: POJUAgentState = { ...agentCore, actions: mergedActions };
 
   if (advance.trigger_breakthrough_core) {
-    const freshQuestion = resolveOriginalQuestion(agent_v2, phaseUserMessage);
+    const freshQuestion =
+      agent_v2.original_question?.trim() ||
+      extractOpeningProblem(sessionForAgent.messages) ||
+      resolveOriginalQuestion(agent_v2, phaseUserMessage);
     const withQ = { ...agent_v2, original_question: freshQuestion };
     const coreResult = await ensureBreakthroughCore(
       {

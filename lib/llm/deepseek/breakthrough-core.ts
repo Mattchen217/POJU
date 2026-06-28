@@ -62,6 +62,11 @@ export const DEEP_RECKONING_TASK = `# 角色：破局总设计师（上帝视角
 - 命理词只能用本次 structured 实有的实例（见下方实例清单）；
   严禁集外神煞（国印/空亡/元辰/六秀日/阴差阳错…一律禁止）。
 
+# 篇幅节制（硬要求 · 缩短生成、一次跑完）
+- relationship_conclusion：3–5 句，只写结构性原因，不注水。
+- 每条 direction.structural_basis：一句话点命盘锚点，禁止段落式复述。
+- investigation_agenda：3–4 项即可；每项 label ≤20 字，锐而短，直指验证目标。
+
 # 输出（严格 JSON，无围栏，内部推理用中文；此输出不直接给用户看）
 {
   "relationship_conclusion": "...",
@@ -294,7 +299,7 @@ export async function requestBreakthroughCore(
   console.info("[breakthrough-core] input original_question:", original_question.slice(0, 120));
 
   const ac = new AbortController();
-  const softTimeoutMs = 200_000;
+  const softTimeoutMs = 240_000;
   const timer = window.setTimeout(() => ac.abort(), softTimeoutMs);
 
   let res: Response;

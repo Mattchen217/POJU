@@ -94,6 +94,8 @@ export interface ModelTurnSignals {
   base_analysis_ready?: boolean;
   /** Substantive user turns counted from session history (opening gate). */
   substantive_opening_turns?: number;
+  /** Core problem statement extracted from first 1–2 substantive opening messages. */
+  opening_problem_statement?: string;
   topic_drift_signal?: "none" | "edge" | "off_topic";
   agenda_updates?: { completed_in_this_turn?: string[] };
   user_confirms_delivery?: boolean;
@@ -113,6 +115,7 @@ export function extractModelTurnSignals(source: {
   understanding_sufficient?: boolean;
   base_analysis_ready?: boolean;
   substantive_opening_turns?: number;
+  opening_problem_statement?: string;
   understanding?: { sufficient?: boolean; missing?: string } | null;
   topic_drift_signal?: "none" | "edge" | "off_topic";
   agenda_updates?: { completed_in_this_turn?: string[] };
@@ -130,6 +133,7 @@ export function extractModelTurnSignals(source: {
     understanding_sufficient,
     base_analysis_ready: source.base_analysis_ready,
     substantive_opening_turns: source.substantive_opening_turns,
+    opening_problem_statement: source.opening_problem_statement,
     topic_drift_signal: source.topic_drift_signal,
     agenda_updates: source.agenda_updates,
     user_confirms_delivery: source.user_confirms_delivery,
@@ -167,7 +171,9 @@ export function advanceStateMachine(
         (richSingle || turns >= OPENING_MIN_SUBSTANTIVE_TURNS);
 
       if (canAdvance) {
-        next = { ...agent, original_question: userInput.trim() };
+        const lockedQuestion =
+          signals.opening_problem_statement?.trim() || userInput.trim();
+        next = { ...agent, original_question: lockedQuestion };
         nextState = "collecting_context";
         triggerCore = true;
         transitionReason = richSingle

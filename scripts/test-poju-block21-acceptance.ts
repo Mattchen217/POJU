@@ -27,9 +27,10 @@ function main(): void {
     /trigger_breakthrough_core[\s\S]*original_question:\s*freshQuestion/.test(agent),
   );
   assert(
-    "freshQuestion from resolveOriginalQuestion",
-    agent.includes("const freshQuestion = resolveOriginalQuestion"),
+    "freshQuestion prefers locked agent original_question",
+    /agent_v2\.original_question\?\.trim\(\)/.test(agent),
   );
+  assert("extractOpeningProblem fallback in trigger", agent.includes("extractOpeningProblem(sessionForAgent.messages)"));
 
   console.log("\n=== Fix B · breakthrough-core prefers agent_v2 question ===\n");
   const bt = read("lib/llm/deepseek/breakthrough-core.ts");
