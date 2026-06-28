@@ -206,7 +206,6 @@ function finalizeAgentV2(
     agenda_updates?: { completed_in_this_turn?: string[] };
     user_confirms_delivery?: boolean;
     confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";
-    confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";
     topic_drift_signal?: "none" | "edge" | "off_topic";
     breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null;
   },
