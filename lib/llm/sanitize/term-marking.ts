@@ -123,15 +123,21 @@ export function wrapBareKeepCnSoftTerms(text: string, locale: string): string {
     { id: "year", label: "流年能量" },
     { id: "yong_shen", label: "用神" },
   ];
-  let out = text;
-  for (const { id, label } of patterns) {
-    const re = new RegExp(`(?<!⟦)${label}（(${gz})）`, "g");
-    out = out.replace(re, (match) => {
-      const plain = plainByTermId(id, locale);
-      return encodeTermMarker(id, match, plain ?? undefined);
-    });
-  }
-  return out;
+
+  const parts = text.split(/(⟦[^⟧]*⟧)/g);
+  return parts
+    .map((part, i) => {
+      if (i % 2 === 1) return part;
+      let out = part;
+      for (const { id, label } of patterns) {
+        const re = new RegExp(`${label}（(${gz})）`, "g");
+        out = out.replace(re, (match) =>
+          encodeTermMarker(id, match, plainByTermId(id, locale) ?? undefined),
+        );
+      }
+      return out;
+    })
+    .join("");
 }
 
 /** Remove broken / unclosed markers so users never see raw `⟦`. Intact closed markers become visible text. */
