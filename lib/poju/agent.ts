@@ -46,8 +46,7 @@ import type { ToolSuggestionPayload } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
 import { chatPayloadFromWire } from "@/lib/poju/serialize-chat-payload";
 import { buildAgentStateSnapshot } from "@/lib/poju/agent-state-snapshot";
-import { buildFallbackContextSummary } from "@/lib/poju/context-summary-builder";
-import { ensureBreakthroughCore } from "@/lib/poju/agent-orchestrator";
+import { ensureBreakthroughCore, runConfirmationPipeline } from "@/lib/poju/agent-orchestrator";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 /** Session uses default `userProfiles` slot from device. */
@@ -206,6 +205,8 @@ function finalizeAgentV2(
     understanding_sufficient?: boolean;
     agenda_updates?: { completed_in_this_turn?: string[] };
     user_confirms_delivery?: boolean;
+    confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";
+    confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";
     topic_drift_signal?: "none" | "edge" | "off_topic";
     breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null;
   },
@@ -307,6 +308,7 @@ function finalizeAgentV2(
     topic_drift_signal: llm.topic_drift_signal,
     agenda_updates: llm.agenda_updates,
     user_confirms_delivery: llm.user_confirms_delivery,
+    confirmation_signal: llm.confirmation_signal,
   });
 
   console.log("[poju-gate]", {
@@ -359,7 +361,7 @@ function finalizeAgentV2(
   } else if (
     currentPhase === "awaiting_confirmation" &&
     !after.stall_offer_pending &&
-    llmPhase === "collecting_context"
+    (signals.confirmation_signal === "wants_to_add" || llmPhase === "collecting_context")
   ) {
     after = applyPhaseTransition(after, {
       should_transition: true,
@@ -369,8 +371,9 @@ function finalizeAgentV2(
   } else if (
     currentPhase === "awaiting_confirmation" &&
     !advance.trigger_delivery &&
-    llmPhase === "delivered" &&
-    signals.user_confirms_delivery !== false
+    (signals.confirmation_signal === "confirmed" ||
+      llmPhase === "delivered" ||
+      signals.user_confirms_delivery === true)
   ) {
     after = applyPhaseTransition(after, {
       should_transition: true,
@@ -400,15 +403,6 @@ function finalizeAgentV2(
       stall_count: counters.stall_count,
       collecting_turn_count: counters.collecting_turn_count,
     });
-  }
-  if (llm.current_summary && after.current_phase === "awaiting_confirmation") {
-    after = { ...after, current_summary: llm.current_summary };
-  } else if (
-    after.current_phase === "awaiting_confirmation" &&
-    !after.stall_offer_pending &&
-    !after.current_summary
-  ) {
-    after = { ...after, current_summary: buildFallbackContextSummary(after) };
   }
   const nowIso = new Date().toISOString();
   if (llm.contains_delivery) {
@@ -584,7 +578,6 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       tokens_used: llmResponse.tokens_used,
       current_state: llmResponse.current_state,
       agent_suggested_phase: llmResponse.agent_suggested_phase,
-      current_summary: llmResponse.current_summary,
       question_category: llmResponse.question_category,
       contains_delivery: llmResponse.contains_delivery,
       main_delivery: llmResponse.main_delivery,
@@ -595,6 +588,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       understanding_sufficient: llmResponse.understanding_sufficient,
       agenda_updates: llmResponse.agenda_updates,
       user_confirms_delivery: llmResponse.user_confirms_delivery,
+      confirmation_signal: llmResponse.confirmation_signal,
       topic_drift_signal: llmResponse.topic_drift_signal,
       breakthrough_core_updates: llmResponse.breakthrough_core_updates ?? null,
     },
@@ -661,7 +655,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   const resolvedOriginalQuestion =
     agent_v2.original_question?.trim() || workingSession.original_question;
 
-  return withSessionProfileFlags({
+  const sessionOut = withSessionProfileFlags({
     ...workingSession,
     original_question: resolvedOriginalQuestion,
     messages: [...messagesWithUser, assistantMessage],
@@ -681,6 +675,27 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       llmResponse.locked_provider ?? workingSession.locked_provider,
     locked_output_locale: explicitLanguageSwitch ?? sessionBase.locked_output_locale,
   });
+
+  return maybeRunDeliveryPipeline(sessionOut, advance, locale);
+}
+
+async function maybeRunDeliveryPipeline(
+  session: POJUSessionState,
+  advance: AdvanceResult,
+  locale: string,
+): Promise<POJUSessionState> {
+  if (!advance.trigger_delivery || session.main_delivery_done) return session;
+  if (session.agent_v2?.delivery_mode === "degraded") return session;
+  try {
+    return await runConfirmationPipeline(session, locale);
+  } catch (e) {
+    console.warn("[agent] delivery pipeline failed, staying in confirmation:", e);
+    if (!session.agent_v2) return session;
+    return {
+      ...session,
+      agent_v2: { ...session.agent_v2, current_phase: "awaiting_confirmation" },
+    };
+  }
 }
 
 /**
@@ -788,6 +803,7 @@ async function callLLMViaAPI(input: {
   understanding_sufficient?: boolean;
   agenda_updates?: { completed_in_this_turn?: string[] };
   user_confirms_delivery?: boolean;
+  confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";
   breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null;
 }> {
   const body = JSON.stringify({
@@ -954,6 +970,12 @@ function mapLlmApiPayload(
         : undefined,
     user_confirms_delivery:
       typeof wire.user_confirms_delivery === "boolean" ? wire.user_confirms_delivery : undefined,
+    confirmation_signal:
+      wire.confirmation_signal === "confirmed" ||
+      wire.confirmation_signal === "wants_to_add" ||
+      wire.confirmation_signal === "unclear"
+        ? wire.confirmation_signal
+        : undefined,
     breakthrough_core_updates:
       wire.breakthrough_core_updates &&
       typeof wire.breakthrough_core_updates === "object" &&

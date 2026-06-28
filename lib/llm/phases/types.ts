@@ -65,5 +65,6 @@ export interface PhaseLLMResult {
   understanding_sufficient?: boolean;
   agenda_updates?: { completed_in_this_turn?: string[] };
   user_confirms_delivery?: boolean;
+  confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";
 }
 

@@ -3,139 +3,72 @@ import {
   classifyStallOfferReply,
   stallOfferChoiceToSuggestedPhase,
 } from "@/lib/poju/stall-offer-routing";
-import type { AgentPhase, ContextSummary } from "@/lib/poju/agent-state";
+import type { AgentPhase } from "@/lib/poju/agent-state";
 import { callPhaseJsonTransport, formatPhaseMessageHistory, parsePhaseResult, withPhaseStreamOpts } from "@/lib/llm/phases/phase-transport";
 import { buildPhaseTransportInput } from "@/lib/llm/phases/oriental-prompt-context";
 import { buildSpineBlock } from "@/lib/llm/phases/spine-block";
 import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
 
-const VALID_SUGGESTED: AgentPhase[] = ["awaiting_confirmation", "collecting_context", "delivered"];
+const VALID_SUGGESTED: AgentPhase[] = ["awaiting_confirmation", "collecting_context"];
 
-function normalizeSummary(raw: unknown): ContextSummary | null {
-  if (!raw || typeof raw !== "object") return null;
-  const s = raw as ContextSummary;
-  if (!Array.isArray(s.sections)) return null;
-  return {
-    generated_at: typeof s.generated_at === "string" ? s.generated_at : new Date().toISOString(),
-    category: String(s.category ?? "other"),
-    sections: s.sections,
-  };
+export type ConfirmationSignal = "confirmed" | "wants_to_add" | "unclear";
+
+function parseConfirmationSignal(parsed: Record<string, unknown>): ConfirmationSignal | undefined {
+  const raw = parsed.confirmation_signal;
+  if (raw === "confirmed" || raw === "wants_to_add" || raw === "unclear") return raw;
+  const phase = typeof parsed.suggested_phase === "string" ? parsed.suggested_phase.trim() : "";
+  if (phase === "delivered") return "confirmed";
+  if (phase === "collecting_context") return "wants_to_add";
+  if (typeof parsed.user_confirms_delivery === "boolean" && parsed.user_confirms_delivery) {
+    return "confirmed";
+  }
+  return undefined;
 }
 
-const TRANSITION_CONSENT_RULES = `# 征询问句（suggested_phase 切 awaiting_confirmation 时）
-征询用户是否现在就要完整分析。`;
-
-function buildSummaryTaskBlock(input: PhaseLLMInput): string {
+function buildConfirmationTaskBlock(input: PhaseLLMInput, mode: "wrap_up" | "follow_up"): string {
   const agent = input.agent_state;
   const contextText = agent ? formatContextForPrompt(agent) : "";
-  const completeness = agent?.collection_completeness ?? 0;
   const spineBlock = buildSpineBlock(agent);
 
-  return `# 动态上下文 · awaiting_confirmation
+  if (mode === "wrap_up") {
+    return `# 动态上下文 · awaiting_confirmation（收集完成 · 对话式核对）
+
 用户的问题："${input.session.original_question}"
 
 ${spineBlock}
 
 ## 已收集（用户亲口）
 ${contextText}
-完成度: ${(completeness * 100).toFixed(0)}%`;
-}
 
-async function handleConfirmProceed(input: PhaseLLMInput): Promise<PhaseLLMResult> {
-  const existingSummary = input.agent_state?.current_summary ?? null;
-  const { system, messages } = await buildPhaseTransportInput(
-    input,
-    `# 任务：用户已确认汇总
+## 任务
+你已收齐该问的关键信息。用一段【聊天口吻】的话，把你对他处境的理解做一次凝练总结
+（不是复述他的原话，而是你看懂了什么：核心困局 + 你已掌握的几个关键事实），
+让他感到"被真正听懂了"。
+末尾自然地问一句：还有什么要补充或修正的吗？如果没有，我就为你做完整的深度推演和破局方案了。
+不要弹任何表单、不要罗列字段；就是一段有温度的话 + 一个邀请。
+confirmation_signal 填 "unclear"（等待用户回应）。
 
-用户已确认信息无误，准备进入深度破局交付。1-3 句自然承接，suggested_phase 设为 "delivered"。不要输出完整交付正文。
-
-输出 JSON：response, suggested_phase, context_updates`,
-  );
-  const result = await callPhaseJsonTransport(
-    system,
-    messages,
-    withPhaseStreamOpts(input, {
-      call_type: "collection_flash",
-      max_tokens: 2500,
-      temperature: 0.45,
-      thinking_effort: "xhigh",
-    }),
-  );
-
-  const { parsed, response } = parsePhaseResult(result.content, { locale: input.locale });
-  const rawPhase = typeof parsed.suggested_phase === "string" ? parsed.suggested_phase.trim() : null;
-  const suggested_phase =
-    rawPhase === "delivered" ? "delivered" : ("delivered" as const);
-
-  return {
-    response,
-    suggested_phase,
-    user_confirms_delivery: true,
-    context_updates:
-      parsed.context_updates && typeof parsed.context_updates === "object" && !Array.isArray(parsed.context_updates)
-        ? (parsed.context_updates as Record<string, unknown>)
-        : {},
-    question_category: null,
-    current_summary: existingSummary,
-    main_delivery_data: null,
-    actions: [],
-    tokens_used: result.tokens_used,
-    total_cost: 0,
-    call_count: 1,
-    model: result.model,
-    served_provider: result.provider ?? null,
-    thinking_process: thinkingFromPhaseTransport(result, parsed, input.locale),
-  };
-}
-
-async function generateSummaryPhase(input: PhaseLLMInput): Promise<PhaseLLMResult> {
-  const trigger =
-    input.user_message.trim() ||
-    (input.locale.startsWith("zh") ? "请基于以上信息生成汇总。" : "Generate the confirmation summary from our conversation.");
-  const baseMessages = [
-    ...formatPhaseMessageHistory(input.session.messages),
-    { role: "user" as const, content: trigger },
-  ];
-  const { system, messages } = await buildPhaseTransportInput(
-    input,
-    buildSummaryTaskBlock(input),
-    baseMessages,
-  );
-
-  const result = await callPhaseJsonTransport(
-    system,
-    messages,
-    withPhaseStreamOpts(input, {
-      call_type: "collection_flash",
-      max_tokens: 7000,
-      temperature: 0.45,
-      thinking_effort: "xhigh",
-    }),
-  );
-
-  const { parsed, response } = parsePhaseResult(result.content, { locale: input.locale });
-
-  const summary = normalizeSummary(parsed.current_summary);
-  if (summary && !summary.generated_at) {
-    summary.generated_at = new Date().toISOString();
+输出 JSON：response, confirmation_signal, suggested_phase, context_updates`;
   }
 
-  return {
-    response,
-    suggested_phase: null,
-    context_updates: {},
-    question_category: null,
-    current_summary: summary,
-    main_delivery_data: null,
-    actions: [],
-    tokens_used: result.tokens_used,
-    total_cost: 0,
-    call_count: 1,
-    model: result.model,
-    served_provider: result.provider ?? null,
-    thinking_process: thinkingFromPhaseTransport(result, parsed, input.locale),
-  };
+  return `# 动态上下文 · awaiting_confirmation（用户回应核对）
+
+用户的问题："${input.session.original_question}"
+
+${spineBlock}
+
+## 已收集
+${contextText}
+
+## 任务
+用户刚回应你的总结/核对邀请。判断他是要补充、确认可以交付、还是还没说清：
+- 明确确认（可以/没有了/继续/开始吧）→ confirmation_signal: "confirmed"，1-3 句自然承接，suggested_phase: "awaiting_confirmation"
+- 要补充或修正 → confirmation_signal: "wants_to_add"，接住新信息，suggested_phase: "collecting_context"
+- 含糊未决 → confirmation_signal: "unclear"，温和再确认一次，suggested_phase: "awaiting_confirmation"
+不要在此输出完整破局交付正文。
+
+输出 JSON：response, confirmation_signal, suggested_phase, context_updates`;
 }
 
 async function handleStallOfferReply(input: PhaseLLMInput): Promise<PhaseLLMResult> {
@@ -190,66 +123,74 @@ async function handleStallOfferReply(input: PhaseLLMInput): Promise<PhaseLLMResu
   };
 }
 
+function isWrapUpTurn(input: PhaseLLMInput): boolean {
+  const userMsg = input.user_message.trim();
+  if (!userMsg || userMsg === "__OPENING__" || userMsg.startsWith("[SYSTEM:")) return true;
+  const lastAssistant = [...input.session.messages].reverse().find((m) => m.role === "assistant");
+  if (!lastAssistant) return true;
+  const confirmCue =
+    /补充|修正|完整|推演|破局|还有什么|anything (?:else|more)|add or correct|ready for (?:the )?(?:full )?(?:analysis|plan)/i;
+  return !confirmCue.test(lastAssistant.content);
+}
+
 export async function callConfirmationPhase(input: PhaseLLMInput): Promise<PhaseLLMResult> {
   const agent = input.agent_state;
-  const userMsg = input.user_message.trim();
-  const existingSummary = agent?.current_summary ?? null;
 
   if (agent?.stall_offer_pending) {
     return handleStallOfferReply(input);
   }
 
-  if (!existingSummary) {
-    return generateSummaryPhase(input);
-  }
+  const wrapUp = isWrapUpTurn(input);
+  const task = buildConfirmationTaskBlock(input, wrapUp ? "wrap_up" : "follow_up");
+  const baseMessages = wrapUp
+    ? [
+        ...formatPhaseMessageHistory(input.session.messages),
+        {
+          role: "user" as const,
+          content: input.locale.startsWith("zh")
+            ? "关键信息已收齐，请用聊天口吻总结并问我是否还要补充。"
+            : "Collection is complete — summarize in chat and ask if I want to add anything.",
+        },
+      ]
+    : formatPhaseMessageHistory(input.session.messages);
 
-  if (userMsg.includes("confirmed summary") || userMsg.includes("[SYSTEM:")) {
-    return await handleConfirmProceed(input);
-  }
+  const { system, messages } = await buildPhaseTransportInput(input, task, baseMessages);
 
-  const { system, messages } = await buildPhaseTransportInput(
-    input,
-    `# 任务：确认阶段对话
-
-用户已看到汇总，正在回应。要补充 → suggested_phase: "collecting_context"；明确确认可开始分析 → "delivered"；否则保持 "awaiting_confirmation"。不要在此输出完整破局交付。
-
-${TRANSITION_CONSENT_RULES}
-
-输出 JSON：response, suggested_phase, context_updates`,
-  );
   const result = await callPhaseJsonTransport(
     system,
     messages,
     withPhaseStreamOpts(input, {
       call_type: "collection_flash",
-      max_tokens: 4000,
+      max_tokens: wrapUp ? 5000 : 4000,
       temperature: 0.45,
       thinking_effort: "xhigh",
     }),
   );
 
   const { parsed, response } = parsePhaseResult(result.content, { locale: input.locale });
-
+  const confirmation_signal = parseConfirmationSignal(parsed as Record<string, unknown>);
   const rawPhase = typeof parsed.suggested_phase === "string" ? parsed.suggested_phase.trim() : null;
-  const suggested_phase =
-    rawPhase && VALID_SUGGESTED.includes(rawPhase as AgentPhase) ? (rawPhase as AgentPhase) : "awaiting_confirmation";
-  const user_confirms_delivery =
-    typeof parsed.user_confirms_delivery === "boolean"
-      ? parsed.user_confirms_delivery
-      : suggested_phase === "delivered"
-        ? true
-        : undefined;
+  let suggested_phase: AgentPhase =
+    rawPhase && VALID_SUGGESTED.includes(rawPhase as AgentPhase)
+      ? (rawPhase as AgentPhase)
+      : "awaiting_confirmation";
+
+  if (confirmation_signal === "wants_to_add") suggested_phase = "collecting_context";
+  if (confirmation_signal === "confirmed") suggested_phase = "awaiting_confirmation";
+
+  const user_confirms_delivery = confirmation_signal === "confirmed" ? true : undefined;
 
   return {
     response,
     suggested_phase,
+    confirmation_signal,
     user_confirms_delivery,
     context_updates:
       parsed.context_updates && typeof parsed.context_updates === "object" && !Array.isArray(parsed.context_updates)
         ? (parsed.context_updates as Record<string, unknown>)
         : {},
     question_category: null,
-    current_summary: existingSummary,
+    current_summary: null,
     main_delivery_data: null,
     actions: [],
     tokens_used: result.tokens_used,

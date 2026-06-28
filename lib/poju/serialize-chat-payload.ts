@@ -32,6 +32,7 @@ export const CHAT_PAYLOAD_FIELDS = [
   "understanding_sufficient",
   "agenda_updates",
   "user_confirms_delivery",
+  "confirmation_signal",
   "breakthrough_core_updates",
 ] as const;
 
@@ -81,6 +82,7 @@ export function pojuLlmToChatPayload(
     understanding_sufficient: llm.understanding_sufficient,
     agenda_updates: llm.agenda_updates ?? null,
     user_confirms_delivery: llm.user_confirms_delivery,
+    confirmation_signal: llm.confirmation_signal,
     breakthrough_core_updates: llm.breakthrough_core_updates ?? null,
     ...overrides,
   });
@@ -131,6 +133,12 @@ export function chatPayloadFromWire(
         : undefined,
     user_confirms_delivery:
       typeof data.user_confirms_delivery === "boolean" ? data.user_confirms_delivery : undefined,
+    confirmation_signal:
+      data.confirmation_signal === "confirmed" ||
+      data.confirmation_signal === "wants_to_add" ||
+      data.confirmation_signal === "unclear"
+        ? data.confirmation_signal
+        : undefined,
     breakthrough_core_updates: data.breakthrough_core_updates ?? null,
   });
 }

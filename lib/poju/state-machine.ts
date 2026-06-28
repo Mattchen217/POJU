@@ -99,6 +99,7 @@ export interface ModelTurnSignals {
   topic_drift_signal?: "none" | "edge" | "off_topic";
   agenda_updates?: { completed_in_this_turn?: string[] };
   user_confirms_delivery?: boolean;
+  confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";
 }
 
 export interface AdvanceResult {
@@ -120,6 +121,7 @@ export function extractModelTurnSignals(source: {
   topic_drift_signal?: "none" | "edge" | "off_topic";
   agenda_updates?: { completed_in_this_turn?: string[] };
   user_confirms_delivery?: boolean;
+  confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";
 }): ModelTurnSignals {
   const understanding_sufficient =
     typeof source.understanding_sufficient === "boolean"
@@ -137,6 +139,7 @@ export function extractModelTurnSignals(source: {
     topic_drift_signal: source.topic_drift_signal,
     agenda_updates: source.agenda_updates,
     user_confirms_delivery: source.user_confirms_delivery,
+    confirmation_signal: source.confirmation_signal,
   };
 }
 
@@ -204,17 +207,21 @@ export function advanceStateMachine(
       next = { ...agent, investigation_agenda: updated };
 
       const cov = evaluateAgendaCoverage(updated);
-      if (cov.total > 0 && cov.criticalLeft === 0 && cov.coveredRatio >= 0.8) {
+      if (cov.total > 0 && cov.coveredRatio >= 1) {
         nextState = "awaiting_confirmation";
-        transitionReason = `Agenda satisfied (${Math.round(cov.coveredRatio * 100)}%)`;
+        transitionReason = `Agenda fully covered (${cov.coveredCount}/${cov.total})`;
       }
       break;
     }
     case "awaiting_confirmation": {
-      if (signals.user_confirms_delivery === true) {
+      const sig = signals.confirmation_signal;
+      if (sig === "confirmed" || signals.user_confirms_delivery === true) {
         nextState = "delivery";
         triggerDelivery = true;
         transitionReason = "User confirmed, generating delivery";
+      } else if (sig === "wants_to_add") {
+        nextState = "collecting_context";
+        transitionReason = "User wants to add more context";
       }
       break;
     }

@@ -7,13 +7,11 @@ import { requestBreakthroughCore } from "@/lib/llm/deepseek/breakthrough-core";
 import { runFinalDeliveryForSession } from "@/lib/llm/pro/final-delivery";
 import type { POJUAgentState } from "@/lib/poju/agent-state";
 import { createInitialAgentState } from "@/lib/poju/agent-state";
-import { buildFallbackContextSummary } from "@/lib/poju/context-summary-builder";
 import {
   loadSessionProfileBundle,
   resolveSessionHasProfile,
   withSessionProfileFlags,
 } from "@/lib/poju/session-profile";
-import { downgradePrematureConfirmationPhase } from "@/lib/poju/summary-readiness";
 import { isSubstantiveBreakthroughQuestion } from "@/lib/poju/breakthrough-question-gate";
 import {
   patchLastAssistantOrchestrationMeta,
@@ -44,14 +42,6 @@ function patchAgent(session: POJUSessionState, patch: Partial<POJUAgentState>): 
     ...session,
     agent_v2: { ...base, ...patch },
   });
-}
-
-function ensureContextSummary(session: POJUSessionState): POJUSessionState {
-  const agent = session.agent_v2;
-  if (!agent || agent.current_phase !== "awaiting_confirmation") return session;
-  if (agent.stall_offer_pending) return session;
-  if (agent.current_summary) return session;
-  return patchAgent(session, { current_summary: buildFallbackContextSummary(agent) });
 }
 
 async function ensureBaseAnalysis(session: POJUSessionState): Promise<POJUSessionState> {
@@ -107,7 +97,7 @@ export async function runPostTurnOrchestration(
   const locale = opts.locale;
   const auto = opts.autoPipeline !== false;
 
-  let s = withSessionProfileFlags(ensureContextSummary(downgradePrematureConfirmationPhase(session)));
+  let s = withSessionProfileFlags(session);
   s = syncSessionOriginalQuestion(s);
   const beforeOrchestration = s;
 

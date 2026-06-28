@@ -6,8 +6,6 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import PojuChat from "@/components/poju/PojuChat";
 import { useAppDialog } from "@/components/ui/app-dialog";
-import { ContextSummaryEditor } from "@/components/poju/ContextSummaryEditor";
-import type { ContextSummary } from "@/lib/poju/agent-state";
 import { OffTopicAction } from "@/components/poju/OffTopicAction";
 import { RefundOfferAction } from "@/components/poju/RefundOfferAction";
 import {
@@ -19,13 +17,9 @@ import { PojuActivityIndicator } from "@/components/poju/PojuActivityIndicator";
 import { getPojuDb } from "@/lib/db/poju-db";
 import { createPOJUSession, loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
 import { clearPendingStoredProfileId, readPendingStoredProfileId } from "@/lib/poju/pending-stored-profile";
-import { runConfirmationPipeline, runDegradedDeliveryPipeline } from "@/lib/poju/agent-orchestrator";
+import { runDegradedDeliveryPipeline } from "@/lib/poju/agent-orchestrator";
 import { handleUserMessage, tryHandleRuleRejection } from "@/lib/poju/agent";
 import { hasFixedWelcomeMessage, seedFixedWelcomeMessages } from "@/lib/poju/chat-bootstrap";
-import {
-  downgradePrematureConfirmationPhase,
-  shouldShowContextSummaryForm,
-} from "@/lib/poju/summary-readiness";
 import { AgendaProgressPanel } from "@/components/poju/AgendaProgressPanel";
 import { getLastUserMessageContent } from "@/lib/poju/context-helpers";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
@@ -116,8 +110,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const dialog = useAppDialog();
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
-  const summaryIntroAppendedRef = useRef(false);
-  const [summaryFormDismissed, setSummaryFormDismissed] = useState(false);
   const [expiryDialogOpen, setExpiryDialogOpen] = useState(false);
   const [expiryPaymentBusy, setExpiryPaymentBusy] = useState(false);
   const [ending, setEnding] = useState(false);
@@ -130,7 +122,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const [situationNotice, setSituationNotice] = useState<string | null>(null);
   const [finalBusy, setFinalBusy] = useState(false);
   const [finalError, setFinalError] = useState<string | null>(null);
-  const [confirmBusy, setConfirmBusy] = useState(false);
   const [pipelineBusy, setPipelineBusy] = useState(false);
   const [slotActivity, setSlotActivity] = useState<PojuActivity | null>(null);
   const [slotActivityFading, setSlotActivityFading] = useState(false);
@@ -198,9 +189,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
 
   const pendingActivityLines = useMemo(() => {
     if (slotActivity) return getActivityLines(slotActivity);
-    if (confirmBusy) return getActivityLines("delivering");
     return null;
-  }, [slotActivity, confirmBusy, getActivityLines]);
+  }, [slotActivity, getActivityLines]);
 
   const scrollChatToBottom = useCallback((_behavior: ScrollBehavior = "smooth") => {
     /* PojuChat scrolls internally */
@@ -237,9 +227,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const expired = isSessionExpired(session.expires_at);
   const previewComposerBlocked = isPreviewSession(session) && hasPaywallMessage(session);
   const composerLocked = expired || previewComposerBlocked || unlockBusy || unlockReportGateBlocking;
-  const showSummaryForm =
-    shouldShowContextSummaryForm(session) && !summaryFormDismissed && !session.main_delivery_done;
-  const overlayFormOpen = showSummaryForm;
 
   const openUnlockReportModal = useCallback(() => setUnlockReportModalOpen(true), []);
 
@@ -270,11 +257,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     }
     setExpiryDialogOpen(shouldShowExpiryWarning(session.session_id, session.expires_at));
   }, [session.session_id, session.expires_at, expired]);
-
-  useEffect(() => {
-    setSummaryFormDismissed(false);
-    summaryIntroAppendedRef.current = false;
-  }, [session.session_id]);
 
   useEffect(() => {
     scrollChatToBottom("smooth");
@@ -322,30 +304,12 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   }, [session.session_id, session.original_question, session.agent_v2, session.context_collected]);
 
   useEffect(() => {
-    const downgraded = downgradePrematureConfirmationPhase(session);
-    if (downgraded !== session) {
-      summaryIntroAppendedRef.current = false;
-      onSessionUpdate(downgraded);
-      void savePOJUSession(downgraded);
-      return;
-    }
-
-    if (!shouldShowContextSummaryForm(session)) {
-      summaryIntroAppendedRef.current = false;
-      return;
-    }
-
-    summaryIntroAppendedRef.current = true;
-    scrollChatToBottom("smooth");
-  }, [session, scrollChatToBottom]);
-
-  useEffect(() => {
     if (openingInitRef.current) return;
     if (!resolveSessionHasProfile(session)) return;
     if (hasUnlockReportMessage(session)) return;
     if (hasFixedWelcomeMessage(session)) return;
     if (visibleMessages.length > 0) return;
-    if (sending || confirmBusy || pipelineBusy) return;
+    if (sending || pipelineBusy) return;
 
     openingInitRef.current = true;
     const seeded = seedFixedWelcomeMessages(session, locale);
@@ -370,7 +334,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     if (releasePendingInitRef.current === session.session_id) return;
     const flag = sessionStorage.getItem(POJU_RELEASE_PENDING_QUESTION_FLAG);
     if (flag !== session.session_id) return;
-    if (sending || confirmBusy || pipelineBusy) return;
+    if (sending || pipelineBusy) return;
     if (!hasUnlockReportMessage(session)) return;
     if (!unlockReportGateDismissed) return;
 
@@ -393,7 +357,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     session.session_id,
     session.messages,
     sending,
-    confirmBusy,
     pipelineBusy,
     unlockReportGateDismissed,
     onSessionUpdate,
@@ -402,7 +365,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   useEffect(() => {
     if (toolResumeInitRef.current === session.session_id) return;
     if (!hasUserMessage) return;
-    if (sending || confirmBusy || pipelineBusy) return;
+    if (sending || pipelineBusy) return;
     if (!findPendingToolInjection(session)) return;
 
     toolResumeInitRef.current = session.session_id;
@@ -411,12 +374,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       : "I'm back from the tool — let's continue.";
     void runUserTurn(sessionRef.current, resumeMsg);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per session when tool result pending
-  }, [session.session_id, hasUserMessage, sending, confirmBusy, pipelineBusy, locale]);
-
-  useEffect(() => {
-    if (!overlayFormOpen) return;
-  }, [overlayFormOpen]);
-
+  }, [session.session_id, hasUserMessage, sending, pipelineBusy, locale]);
 
   function handleStopGeneration() {
     sendGenerationRef.current += 1;
@@ -429,7 +387,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   }
 
   async function handleEditUserMessage(messageId: string, currentContent: string) {
-    if (sending || confirmBusy || pipelineBusy) return;
+    if (sending || pipelineBusy) return;
     setEditDialog({ messageId, content: currentContent });
   }
 
@@ -453,8 +411,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
 
     onSessionUpdate(nextSession);
     await savePOJUSession(nextSession);
-    setSummaryFormDismissed(false);
-    summaryIntroAppendedRef.current = false;
 
     if (rejected) return;
 
@@ -518,6 +474,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       clearSlotActivityWithFade();
       syncDebugStateLedger(toPersist);
       await savePOJUSession(toPersist);
+      if (toPersist.main_delivery_done && !baseSession.main_delivery_done) {
+        setSituationNotice(t("final_delivery_done"));
+      }
 
       const lastAssistant = [...toPersist.messages]
         .reverse()
@@ -759,63 +718,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       console.warn("[poju] base analysis not ready:", e);
       return false;
     }
-  }
-
-  async function handleConfirmSummary(editedSummary: ContextSummary) {
-    setConfirmBusy(true);
-    setSummaryFormDismissed(true);
-    setFinalError(null);
-    setSituationError(null);
-    setSlotActivity("delivering");
-    scrollChatToBottom("smooth");
-
-    try {
-      const base = sessionRef.current;
-      const withSummary: POJUSessionState = base.agent_v2
-        ? { ...base, agent_v2: { ...base.agent_v2, current_summary: editedSummary } }
-        : base;
-
-      onSessionUpdate(withSummary);
-      await savePOJUSession(withSummary);
-
-      let next = await runConfirmationPipeline(withSummary, locale);
-      const { trySaveDeliveryActionsToArchive } = await import("@/lib/archive/archive-service");
-      next = await trySaveDeliveryActionsToArchive(next, locale);
-
-      onSessionUpdate(next);
-      await savePOJUSession(next);
-      setSituationNotice(t("final_delivery_done"));
-    } catch (e) {
-      setFinalError(e instanceof Error ? e.message : String(e));
-      setSummaryFormDismissed(false);
-    } finally {
-      setConfirmBusy(false);
-      setSlotActivity(null);
-    }
-  }
-
-  async function handleSummaryAddMore(note: string) {
-    setSummaryFormDismissed(true);
-    summaryIntroAppendedRef.current = false;
-    const s = sessionRef.current;
-    const updated: POJUSessionState = {
-      ...s,
-      messages: [
-        ...s.messages,
-        { role: "user", content: `[Additional context for summary] ${note}`, timestamp: new Date().toISOString() },
-      ],
-    };
-    onSessionUpdate(updated);
-    await savePOJUSession(updated);
-    const finalSession = await handleUserMessage({
-      session: updated,
-      userMessage: note,
-      locale,
-      userAlreadyAppended: true,
-    });
-    onSessionUpdate(finalSession);
-    syncDebugStateLedger(finalSession);
-    await savePOJUSession(finalSession);
   }
 
   function agentPhaseKey(): string {
@@ -1073,7 +975,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     showStateDebug,
   ]);
 
-  const streaming = sending || confirmBusy;
+  const streaming = sending;
 
   return (
     <>
@@ -1237,31 +1139,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
             setUnlockReportModalOpen(false);
           }}
         />
-      ) : null}
-
-      {overlayFormOpen ? (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 60,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 16,
-            background: "rgba(0,0,0,0.65)",
-            overflowY: "auto",
-          }}
-        >
-          {showSummaryForm && session.agent_v2?.current_summary ? (
-            <ContextSummaryEditor
-              summary={session.agent_v2.current_summary}
-              busy={confirmBusy}
-              onConfirm={(edited) => void handleConfirmSummary(edited)}
-              onAddMore={(note) => void handleSummaryAddMore(note)}
-            />
-          ) : null}
-        </div>
       ) : null}
     </>
   );

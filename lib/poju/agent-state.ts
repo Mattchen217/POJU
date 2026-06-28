@@ -209,7 +209,7 @@ export const PUSH_MIN_TURNS = 2;
 /** Strong skip-ahead — minimum agenda coverage ratio. */
 export const PUSH_GATE = 0.6;
 /** Overall agenda coverage required for normal confirmation. */
-export const AGENDA_COVERED_GATE = 0.8;
+export const AGENDA_COVERED_GATE = 1;
 /** @deprecated Display only — no longer used as delivery gate. */
 export const COLLECTION_COMPLETE_GATE = 0.85;
 /** @deprecated Use PUSH_MIN_TURNS. */

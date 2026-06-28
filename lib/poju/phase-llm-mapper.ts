@@ -78,6 +78,9 @@ export function mapPhaseResultToChatPayload(
     agenda_updates: (phase as { agenda_updates?: { completed_in_this_turn?: string[] } }).agenda_updates ?? null,
     user_confirms_delivery:
       (phase as { user_confirms_delivery?: boolean }).user_confirms_delivery ?? undefined,
+    confirmation_signal:
+      (phase as { confirmation_signal?: "confirmed" | "wants_to_add" | "unclear" }).confirmation_signal ??
+      undefined,
     breakthrough_core_updates: phase.breakthrough_core_updates ?? null,
   };
 
