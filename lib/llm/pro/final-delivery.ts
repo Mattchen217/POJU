@@ -352,17 +352,15 @@ ${baseStr}
   const structured = normalizeBaseAnalysisInput(base_analysis).structured ?? null;
   const uiLocale = parseAppLocale(locale);
   const outLoc = resolvePojuSessionOutputLocale({
-    locked: null,
     uiLocale,
     userInput: agent_v2.original_question,
     conversationHistory: (recent_user_messages ?? []).map((content) => ({ role: "user" as const, content })),
   });
   const langDirective = getPojuChatLanguageDirective({
-    uiLocale,
+    locale: uiLocale,
     userInput: agent_v2.original_question,
     conversationHistory: (recent_user_messages ?? []).map((content) => ({ role: "user" as const, content })),
-    forcedOutputLocale:
-      deliveryLang === "zh" ? "zh-CN" : deliveryLang === "en" ? "en" : outLoc,
+    forcedOutputLocale: deliveryLang,
   });
 
   const system = stitchPromptSections(
