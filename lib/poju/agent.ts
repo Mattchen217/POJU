@@ -48,6 +48,7 @@ import { chatPayloadFromWire } from "@/lib/poju/serialize-chat-payload";
 import { buildAgentStateSnapshot } from "@/lib/poju/agent-state-snapshot";
 import { ensureBreakthroughCore, runConfirmationPipeline } from "@/lib/poju/agent-orchestrator";
 import { appendConfirmationInvite, hasConfirmationInviteCue } from "@/lib/poju/confirmation-reply";
+import { appendFirstFocusQuestion, hasQuestionCue } from "@/lib/poju/collecting-focus-reply";
 import { applyActionStatusUpdates, parseActionStatusUpdates } from "@/lib/poju/action-status-updates";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -636,13 +637,21 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     }
   }
 
+  const phaseNow = normalizeAgentPhase(agent_v2.current_phase);
+  let finalContent = llmResponse.response;
+  if (phaseNow === "awaiting_confirmation" && !hasConfirmationInviteCue(llmResponse.response)) {
+    finalContent = appendConfirmationInvite(llmResponse.response, locale);
+  } else if (
+    phaseNow === "collecting_context" &&
+    advance.trigger_breakthrough_core &&
+    !hasQuestionCue(llmResponse.response)
+  ) {
+    finalContent = appendFirstFocusQuestion(llmResponse.response, agent_v2, locale);
+  }
+
   const assistantMessage: POJUMessage = {
     role: "assistant",
-    content:
-      normalizeAgentPhase(agent_v2.current_phase) === "awaiting_confirmation" &&
-      !hasConfirmationInviteCue(llmResponse.response)
-        ? appendConfirmationInvite(llmResponse.response, locale)
-        : llmResponse.response,
+    content: finalContent,
     timestamp: new Date().toISOString(),
     meta: {
       llm_model: llmResponse.model,
