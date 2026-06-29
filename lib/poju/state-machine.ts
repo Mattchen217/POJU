@@ -10,6 +10,7 @@ import {
   createInitialAgentState,
 } from "@/lib/poju/agent-state";
 import type { POJUSessionState } from "@/lib/poju/types";
+import { classifyConfirmationAffirmative } from "@/lib/poju/confirmation-reply";
 
 export type PojuState =
   | "opening"
@@ -218,11 +219,16 @@ export function advanceStateMachine(
     }
     case "awaiting_confirmation": {
       const sig = signals.confirmation_signal;
-      if (sig === "confirmed" || signals.user_confirms_delivery === true) {
+      const inferred = classifyConfirmationAffirmative(userInput);
+      if (
+        sig === "confirmed" ||
+        signals.user_confirms_delivery === true ||
+        inferred === "confirmed"
+      ) {
         nextState = "delivery";
         triggerDelivery = true;
         transitionReason = "User confirmed, generating delivery";
-      } else if (sig === "wants_to_add") {
+      } else if (sig === "wants_to_add" || inferred === "wants_to_add") {
         nextState = "collecting_context";
         transitionReason = "User wants to add more context";
       }

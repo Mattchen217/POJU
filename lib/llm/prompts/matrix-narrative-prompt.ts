@@ -311,13 +311,41 @@ function clampNarrativeField(text: string, fieldKey: string): string {
   return slice.trimEnd() + "…";
 }
 
+function stripModelReasoningArtifacts(text: string): string {
+  return text
+    .replace(/[\s\S]*?<\/think>/gi, "")
+    .replace(/<think>[\s\S]*?<\/redacted_thinking>/gi, "")
+    .trim();
+}
+
+function extractJsonObjectSubstring(raw: string): string | null {
+  const start = raw.indexOf("{");
+  const end = raw.lastIndexOf("}");
+  if (start < 0 || end <= start) return null;
+  return raw.slice(start, end + 1);
+}
+
 function unwrapMatrixNarrativeJson(text: string): string {
-  let raw = text.trim();
+  let raw = stripModelReasoningArtifacts(text);
   const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
   if (fence?.[1]) raw = fence[1].trim();
   const start = raw.indexOf("{");
   if (start > 0) raw = raw.slice(start);
   return raw;
+}
+
+function matrixNarrativeJsonCandidates(text: string): string[] {
+  const cleaned = stripModelReasoningArtifacts(text);
+  const unwrapped = unwrapMatrixNarrativeJson(cleaned);
+  const candidates = [
+    cleaned,
+    unwrapped,
+    salvageTruncatedMatrixNarrativeJson(cleaned),
+    salvageTruncatedMatrixNarrativeJson(unwrapped),
+    extractJsonObjectSubstring(cleaned) ?? "",
+    extractJsonObjectSubstring(unwrapped) ?? "",
+  ].filter((s) => s.length > 0);
+  return [...new Set(candidates)];
 }
 
 /** Close truncated model JSON so partial matrix-narrative payloads can still parse. */
@@ -383,13 +411,15 @@ function salvageTruncatedMatrixNarrativeJson(raw: string): string {
 }
 
 function parseMatrixNarrativeJson(text: string): Record<string, unknown> {
-  const raw = unwrapMatrixNarrativeJson(text);
-  try {
-    return JSON.parse(raw) as Record<string, unknown>;
-  } catch {
-    const salvaged = salvageTruncatedMatrixNarrativeJson(text);
-    return JSON.parse(salvaged) as Record<string, unknown>;
+  let lastError: unknown;
+  for (const candidate of matrixNarrativeJsonCandidates(text)) {
+    try {
+      return JSON.parse(candidate) as Record<string, unknown>;
+    } catch (e) {
+      lastError = e;
+    }
   }
+  throw lastError instanceof Error ? lastError : new Error("Model output is not valid JSON");
 }
 
 export function parseMatrixNarrativeResponseText(

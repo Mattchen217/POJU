@@ -47,6 +47,7 @@ import type { UserProfile } from "@/lib/profile/types";
 import { chatPayloadFromWire } from "@/lib/poju/serialize-chat-payload";
 import { buildAgentStateSnapshot } from "@/lib/poju/agent-state-snapshot";
 import { ensureBreakthroughCore, runConfirmationPipeline } from "@/lib/poju/agent-orchestrator";
+import { appendConfirmationInvite, hasConfirmationInviteCue } from "@/lib/poju/confirmation-reply";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 /** Session uses default `userProfiles` slot from device. */
@@ -596,6 +597,10 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   );
   let agent_v2: POJUAgentState = { ...agentCore, actions: mergedActions };
 
+  if (advance.trigger_delivery && !workingSession.main_delivery_done) {
+    agent_v2 = { ...agent_v2, current_phase: "awaiting_confirmation" };
+  }
+
   if (advance.trigger_breakthrough_core) {
     try {
       const freshQuestion =
@@ -625,7 +630,11 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
 
   const assistantMessage: POJUMessage = {
     role: "assistant",
-    content: llmResponse.response,
+    content:
+      normalizeAgentPhase(agent_v2.current_phase) === "awaiting_confirmation" &&
+      !hasConfirmationInviteCue(llmResponse.response)
+        ? appendConfirmationInvite(llmResponse.response, locale)
+        : llmResponse.response,
     timestamp: new Date().toISOString(),
     meta: {
       llm_model: llmResponse.model,
@@ -690,8 +699,17 @@ async function maybeRunDeliveryPipeline(
   } catch (e) {
     console.warn("[agent] delivery pipeline failed, staying in confirmation:", e);
     if (!session.agent_v2) return session;
+    const retryHint = locale.startsWith("zh")
+      ? "完整方案生成时遇到合规校验问题，暂时没能输出。你的信息都已保留——请直接回复「继续」或「再试一次」，我会重新生成交付。"
+      : "The full plan could not be generated due to a compliance check. Your context is saved—reply **continue** or **try again** to retry delivery.";
+    const messages = [...session.messages];
+    const last = messages[messages.length - 1];
+    if (last?.role === "assistant") {
+      messages[messages.length - 1] = { ...last, content: retryHint };
+    }
     return {
       ...session,
+      messages,
       agent_v2: { ...session.agent_v2, current_phase: "awaiting_confirmation" },
     };
   }

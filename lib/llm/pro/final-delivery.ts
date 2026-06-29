@@ -11,10 +11,28 @@ import { formatContextForPrompt } from "@/lib/poju/context-extractor";
 import type { POJUAction, POJUDelivery, POJUSessionState, POJUMessage } from "@/lib/poju/types";
 import { markCycleDelivered } from "@/lib/poju/cycle-manager";
 import { buildCoveredAgendaEvidence } from "@/lib/poju/investigation-agenda";
+import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-structured-instance-inventory";
 import { resolveBaseAnalysisForBreakthrough } from "@/lib/llm/deepseek/breakthrough-core";
-import { buildPojuDeliveryCoreSections } from "@/lib/llm/prompts/poju-base";
+import { buildOutputRedLinesBlock } from "@/lib/llm/phases/oriental-prompt-context";
+import {
+  buildPojuChatCoreSections,
+  POJU_ACTION_DESIGN_PRINCIPLES,
+  POJU_BAZI_DEEP_METHOD,
+} from "@/lib/llm/prompts/poju-base";
+import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
+import { buildChatPhaseTermBindingBlock } from "@/lib/llm/prompts/term-closed-set-constraint";
+import {
+  buildCurrentDateContext,
+  buildNorthAmericaAdaptation,
+  stitchPromptSections,
+} from "@/lib/llm/prompts/oriental-counselor-base";
+import { READING_LAYOUT_CONTRACT } from "@/lib/llm/prompts/reading-layout";
 import { buildTermMarkingPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
-import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
+import {
+  getPojuChatLanguageDirective,
+  parseAppLocale,
+  resolvePojuSessionOutputLocale,
+} from "@/lib/prompts/language-directive";
 
 export interface FinalDeliveryResult {
   full_text: string;
@@ -265,6 +283,24 @@ function formatCoveredAgendaForDelivery(
   return items.map((a, i) => `${i + 1}. ${a.label}${a.answer ? `\n   用户确认：${a.answer}` : ""}`).join("\n");
 }
 
+/** Same closed-set binding as chat phases; delivery output is plain text, not JSON `response`. */
+function buildDeliveryTermBindingBlock(locale: string): string {
+  return buildChatPhaseTermBindingBlock(locale).replace(/`response`/g, "交付全文（四段 + 行动）");
+}
+
+function buildDeliveryDynamicTaskTail(input: {
+  modeTask: string;
+  expertMaterials: string;
+}): string {
+  return stitchPromptSections(
+    READING_LAYOUT_CONTRACT,
+    POJU_BAZI_DEEP_METHOD,
+    POJU_ACTION_DESIGN_PRINCIPLES,
+    input.modeTask,
+    input.expertMaterials,
+  );
+}
+
 export function buildFinalDeliveryPrompt(input: {
   base_analysis: unknown | null;
   breakthrough_core: BreakthroughCore | null;
@@ -312,12 +348,27 @@ ${baseStr}
 - 不预测具体未来事件、不下吉凶断语、不暴露 Glyph/Syncro/Match。
 - 须按 POJU 八字深度解读法则展开 ANALYSIS；按行动设计原则填写 WHAT TO DO 三条。`;
 
-  const finalDeliveryTask = `${modeTask}\n\n${expertMaterials}`;
+  const deliveryTaskTail = buildDeliveryDynamicTaskTail({ modeTask, expertMaterials });
+  const structured = normalizeBaseAnalysisInput(base_analysis).structured ?? null;
+  const uiLocale = parseAppLocale(locale);
+  const outLoc = resolvePojuSessionOutputLocale({
+    locked: null,
+    uiLocale,
+    userInput: agent_v2.original_question,
+    conversationHistory: (recent_user_messages ?? []).map((content) => ({ role: "user" as const, content })),
+  });
+  const langDirective = getPojuChatLanguageDirective({
+    uiLocale,
+    userInput: agent_v2.original_question,
+    conversationHistory: (recent_user_messages ?? []).map((content) => ({ role: "user" as const, content })),
+    forcedOutputLocale:
+      deliveryLang === "zh" ? "zh-CN" : deliveryLang === "en" ? "en" : outLoc,
+  });
 
   const system = stitchPromptSections(
-    ...buildPojuDeliveryCoreSections(deliveryLang),
-    buildTermMarkingPromptBlock(locale),
-    finalDeliveryTask,
+    ...buildPojuChatCoreSections(deliveryLang),
+    buildOutputRedLinesBlock(),
+    buildNorthAmericaAdaptation(deliveryLang),
   );
 
   const contextText = formatContextForPrompt(agent_v2);
@@ -332,7 +383,14 @@ ${baseStr}
       ? `Delivery mode: **degraded** — chart-forward, low-risk actions, honest limitation statement required.`
       : `Delivery mode: **full** — spine-fed delivery from breakthrough_core + covered agenda evidence; highly specific actions from user-stated details.`;
 
-  const user = `User's original question: "${agent_v2.original_question}"
+  const user = stitchPromptSections(
+    langDirective.directive.trim(),
+    buildCurrentDateContext(new Date(), outLoc),
+    buildTermMarkingPromptBlock(outLoc),
+    structured ? buildStructuredInstanceInventory(structured) : "",
+    buildDeliveryTermBindingBlock(outLoc),
+    deliveryTaskTail,
+    `User's original question: "${agent_v2.original_question}"
 
 ${modeHint}
 
@@ -350,10 +408,11 @@ Required delivery language: ${DELIVERY_LANGUAGE_NAMES[deliveryLang]} (${delivery
 Generate the complete delivery now. Use the markers exactly as specified. All body text in ${DELIVERY_LANGUAGE_NAMES[deliveryLang]}.
 
 WHAT TO DO: exactly 3 actions as \`### Action 1:\` / \`### Action 2:\` / \`### Action 3:\` with custom titles and distinct dimension types from the menu.${
-    delivery_mode === "degraded"
-      ? " Degraded mode: low-risk / observational / small-step actions only — no quit/move/major financial commitments."
-      : " If you include spatial/environment actions, use the 3-step whitewash — no wealth/luck/amulet promises."
-  }`;
+      delivery_mode === "degraded"
+        ? " Degraded mode: low-risk / observational / small-step actions only — no quit/move/major financial commitments."
+        : " If you include spatial/environment actions, use the 3-step whitewash — no wealth/luck/amulet promises."
+    }`,
+  );
 
   return { system, user, delivery_mode };
 }

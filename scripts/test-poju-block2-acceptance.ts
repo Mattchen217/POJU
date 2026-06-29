@@ -7,7 +7,6 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   buildPojuChatCoreSections,
-  buildPojuDeliveryCoreSections,
   POJU_IDENTITY,
   POJU_KNOWLEDGE_ROOTS,
 } from "@/lib/llm/prompts/poju-base";
@@ -247,14 +246,14 @@ function soulAndCacheTests(): void {
   assert("deep pass system has KNOWLEDGE_ROOTS", system.includes(POJU_KNOWLEDGE_ROOTS.slice(0, 20)));
   assert("deep pass has DEEP_RECKONING_TASK", system.includes("破局总设计师"));
 
-  const deliveryCore = buildPojuDeliveryCoreSections("en").join("\n");
-  assert("delivery core has tracking mindset", deliveryCore.includes("30 天") || deliveryCore.includes("随时回来"));
+  const chatCoreMaster = buildPojuChatCoreSections("en").join("\n");
+  assert("master core has tracking mindset", chatCoreMaster.includes("欢迎回来") || chatCoreMaster.includes("随时回来"));
 
   const collecting = read("lib/llm/phases/collecting-phase.ts");
   assert("spine in collecting task block not static import", collecting.includes("buildSpineBlock"));
   assert("chat static core excludes spine block fn", !chatCore.includes("buildSpineBlock"));
 
-  const { system: deliveryPrompt } = buildFinalDeliveryPrompt({
+  const { system: deliverySystem, user: deliveryUser } = buildFinalDeliveryPrompt({
     base_analysis: { x: 1 },
     breakthrough_core: {
       relationship_conclusion: "RC-TEST",
@@ -268,8 +267,9 @@ function soulAndCacheTests(): void {
     agent_v2: createInitialAgentState({ original_question: "q" }),
     locale: "en",
   });
-  assert("delivery prompt embeds RC-TEST", deliveryPrompt.includes("RC-TEST"));
-  assert("delivery prompt no situation_analysis field", !deliveryPrompt.includes("Situation Analysis"));
+  assert("delivery system uses master chat core", deliverySystem.includes("状态机协同"));
+  assert("delivery user embeds RC-TEST spine", deliveryUser.includes("RC-TEST"));
+  assert("delivery user no situation_analysis field", !deliveryUser.includes("Situation Analysis"));
 }
 
 function fileChecklist(): void {

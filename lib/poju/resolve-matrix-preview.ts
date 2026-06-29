@@ -22,7 +22,7 @@ import type { UserProfile } from "@/lib/profile/types";
 export type MatrixPreviewProduct = ToolName | "poju";
 
 export type EnsureMatrixListResult = {
-  list: StoredProfileMatrixList;
+  list: StoredProfileMatrixList | null;
   narrative: MatrixNarrativeResponse | null;
   fromStorage: boolean;
 };
@@ -128,16 +128,24 @@ export async function ensureProfileMatrixList(opts: {
   });
   payload = refreshMatrixPayload(payload, opts.locale);
 
-  const narrative = await requestMatrixNarrative({
-    matrix_payload: payload,
-    locale: opts.locale,
-    product: "poju",
-    signal: opts.signal,
-  });
+  try {
+    const narrative = await requestMatrixNarrative({
+      matrix_payload: payload,
+      locale: opts.locale,
+      product: "poju",
+      signal: opts.signal,
+    });
 
-  const list = matrixListFromNarrative(narrative, opts.locale);
-  await saveMatrixList(opts.profileId, list);
-  return { list, narrative, fromStorage: false };
+    const list = matrixListFromNarrative(narrative, opts.locale);
+    await saveMatrixList(opts.profileId, list);
+    return { list, narrative, fromStorage: false };
+  } catch (e) {
+    console.warn(
+      "[ensureProfileMatrixList] matrix narrative failed — static matrix fallback",
+      e instanceof Error ? e.message : String(e),
+    );
+    return { list: null, narrative: null, fromStorage: false };
+  }
 }
 
 /**
@@ -191,6 +199,9 @@ export function applyMatrixPreviewToPayload(
   matchPerson?: "a" | "b",
 ): PojuMatrixPayload {
   if (ensured.fromStorage) {
+    if (!ensured.list) {
+      throw new Error("Stored matrix preview missing matrix_list");
+    }
     return applyStoredMatrixPreview(payload, ensured.list, product, locale, matchPerson);
   }
   if (ensured.narrative) {

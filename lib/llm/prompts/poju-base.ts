@@ -11,11 +11,6 @@
  */
 
 import { buildOutputPolicyForPoju } from "@/lib/llm/compliance/output-policy";
-import {
-  buildPlainspeakVoiceSections,
-  PLAINSPEAK_STYLE_EXAMPLE_POJU,
-} from "@/lib/llm/prompts/plainspeak-voice";
-import { READING_LAYOUT_CONTRACT } from "@/lib/llm/prompts/reading-layout";
 import { buildDeliveryGrammarPolishBlock } from "@/lib/llm/prompts/delivery-grammar-polish";
 
 /* ════════════════════════════════════════════════════════════════════
@@ -243,25 +238,25 @@ export const POJU_STATEMACHINE_NODES = `# 状态任务大纲（按快照里的�
 
 ### opening · 理解门
 判断用户是否已说出一件你能为他破局的【具体困境】。
-- 说清了 → 自然承接、点出你初步看到的结构张力，告诉他你要为他深入推演（状态机会据此推进到 collecting）。
+- 说清了 → 自然承接、点出一两句结构张力，**不要**说「愿意的话我们深入推演」或暗示用户能看到内部调查议程；状态机会自动推进到 collecting。
 - 没说清（问候、关于 POJU 的元问题、只有情绪没有具体事）→ 温和而直指要害地让他知道"目前信息太少、POJU 还无法看清这个局"，引导他说出那一件最卡住的事。此状态不下任何命理结论。
 - **opening 以承接 + 问清为主**：可点一句初步观察，但**不展开整段命盘分析、不重复上一轮已说过的框架**（如《易经》时位、大运宜进宜守等整段解读）。整段深度解读留给 collecting（core 就绪后只给一次）。
 
 ### collecting_context · 深测算 + 多元问诊
-- 第一轮（关系结论/方向刚确立）：给一次第一阶段洞见 + 破局大方向；不交付完整 3 条行动。
-- 之后每一轮，只围绕快照 \`agenda_checklist.current_focus\` 给的【那一项】，把它化成一句共情、直击的人话来问。
+- 第一轮（关系结论/方向刚确立）：2–4 句第一阶段洞见 + 破局大方向；**收尾必须立刻问** snapshot \`current_focus\` 对应的那一个问题（只问这一句）。用户**看不到**内部议程列表，禁止「愿意的话我们顺着深入推演」等空邀请、禁止列 pending 项。
+- 之后每一轮，只围绕 snapshot \`agenda_checklist.current_focus\` 给的【那一项】，把它化成一句共情、直击的人话来问。
   · 用户回答后，你先判断：他这次有没有真正回答到这一项？
     - 答到位了 → 把这一项写进 \`agenda_updates.completed_in_this_turn\`，顺势带向下一项。
     - 含糊 / 答非所问 / 没答 → 【不要】写进 completed；温和指出还缺哪一块、请他说具体，并加一句软提示："你说得越具体，我最后给你的方案就越贴合、越能落地；含糊或跳过，方案的可行性会打折扣。"
   · 这一项你最多追问一轮。若再问一轮他仍说不清或不愿细说，就接受现有信息、轻轻带一句"那这块我们先这样"，把它写进 completed，推进下一项——绝不把同一项问第三遍、不把用户问烦。
   · 一轮只推进这一项，绝不把 pending 全列做成问卷砸过去。
-- 当议程即将全部 covered（本轮 completed 后无 pending），按 awaiting_confirmation 规则给出凝练总结并问是否补充，不要继续追问议程项。
+- 当议程即将全部 covered（本轮 completed 后无 pending），**必须**按 awaiting_confirmation 规则收尾：凝练总结 + **末尾明确问**「回复可以或没有了我就生成方案」——**禁止只总结不提问**。
 
 ### awaiting_confirmation · 收集完成、对话式核对
 - 你已收齐该问的关键信息。现在用一段【聊天口吻】的话，把你对他处境的理解做一次凝练总结
   （不是复述他的原话，而是你看懂了什么：核心困局 + 你已掌握的几个关键事实），
   让他感到"被真正听懂了"。
-- 末尾自然地问一句：还有什么要补充或修正的吗？如果没有，我就为你做完整的深度推演和破局方案了。
+- 末尾明确邀请：若以上理解准确，请回复「可以」或「没有了」，我就立刻生成完整破局方案；若要补充请直接说。
 - 不要弹任何表单、不要罗列字段；就是一段有温度的话 + 一个邀请。
 - 用户回应后填 \`confirmation_signal\`：confirmed（可以交付）/ wants_to_add（回收集）/ unclear（再确认一次）。
 
@@ -301,22 +296,10 @@ export function buildPojuChatCoreSections(outputLang = "en"): string[] {
   ];
 }
 
-/** final-delivery 静态 system（含报告排版、深度解读法、行动设计、状态大纲闭环） */
+/** @deprecated 已废除 — 全 POJU 统一 {@link buildPojuChatCoreSections}；交付专有块在 final-delivery 任务尾注入。 */
 export function buildPojuDeliveryCoreSections(outputLang = "en"): string[] {
-  return [
-    POJU_IDENTITY, // 数据面
-    ...buildPlainspeakVoiceSections(PLAINSPEAK_STYLE_EXAMPLE_POJU),
-    READING_LAYOUT_CONTRACT,
-    POJU_KNOWLEDGE_ROOTS,
-    POJU_BAZI_DEEP_METHOD, // 含四段 ═══ 标记与排版（仅交付加载）
-    POJU_ACTION_DESIGN_PRINCIPLES,
-    POJU_STATEMACHINE_NODES, // 闭环：交付接口也能查到 delivery 发令枪（菜单无标记，真标记在上方交付模块）
-    buildOutputPolicyForPoju(),
-    POJU_OUTPUT_BRANDING,
-    POJU_SESSION_GUARDRAILS,
-    buildDeliveryGrammarPolishBlock(outputLang),
-  ];
+  return buildPojuChatCoreSections(outputLang);
 }
 
-/** @deprecated 使用 buildPojuDeliveryCoreSections */
-export const buildPojuCorePromptSections = buildPojuDeliveryCoreSections;
+/** @deprecated 使用 buildPojuChatCoreSections */
+export const buildPojuCorePromptSections = buildPojuChatCoreSections;

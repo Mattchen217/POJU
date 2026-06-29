@@ -122,6 +122,7 @@ export function wrapBareKeepCnSoftTerms(text: string, locale: string): string {
     { id: "day_master", label: "核心特质" },
     { id: "year", label: "流年能量" },
     { id: "yong_shen", label: "用神" },
+    { id: "yong_shen", label: "关键平衡能量" },
   ];
 
   const parts = text.split(/(⟦[^⟧]*⟧)/g);
@@ -135,6 +136,10 @@ export function wrapBareKeepCnSoftTerms(text: string, locale: string): string {
           encodeTermMarker(id, match, plainByTermId(id, locale) ?? undefined),
         );
       }
+      const elementRe = /(?:关键平衡能量|用神)（([金木水火土])）/g;
+      out = out.replace(elementRe, (match) =>
+        encodeTermMarker("yong_shen", match, plainByTermId("yong_shen", locale) ?? undefined),
+      );
       return out;
     })
     .join("");
@@ -237,6 +242,17 @@ ${buildClosedSetConstraintPromptBlock(locale)}`;
 }
 
 export type OutOfSetAuditHit = { label: string; snippet: string };
+
+export function fillMissingMarkerPlain(text: string, locale: string): string {
+  let out = text;
+  for (const m of parseTermMarkers(text)) {
+    if (m.plain?.trim()) continue;
+    const fallback = plainByTermId(m.id, locale);
+    if (!fallback) continue;
+    out = out.replace(m.raw, encodeTermMarker(m.id, m.visible, fallback));
+  }
+  return out;
+}
 
 /** Detect engine-out-of-set 神煞/术语 in delivery text (audit-only). */
 export function auditOutOfSetTerms(text: string): OutOfSetAuditHit[] {

@@ -88,40 +88,63 @@ export async function POST(req: Request) {
       userMessage = buildMatrixNarrativeUserMessage(narrativeInputA, { product });
     }
 
-    const result = await callLLM({
-      call_type: "matrix_narrative",
-      system: getMatrixNarrativeSystemPrompt(product),
-      messages: [{ role: "user", content: userMessage }],
-      max_tokens: product === "match" ? 2800 : 2400,
-      thinking_effort: "off",
-      response_format: "json",
-      temperature: 0.65,
-      timeout_ms: 45_000,
-      session_id: matrixNarrativeCacheSessionId(product, locale),
-    });
+    const maxAttempts = 3;
+    let lastResult: Awaited<ReturnType<typeof callLLM>> | null = null;
+    let lastParseError: unknown = null;
+    let narrative: ReturnType<typeof parseMatrixNarrativeResponseText> | null = null;
 
-    let narrative;
-    try {
-      narrative = parseMatrixNarrativeResponseText(result.content, product);
-    } catch (parseError) {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const result = await callLLM({
+        call_type: "matrix_narrative",
+        system: getMatrixNarrativeSystemPrompt(product),
+        messages: [{ role: "user", content: userMessage }],
+        max_tokens: product === "match" ? 3200 : 2800,
+        thinking_effort: "off",
+        response_format: "json",
+        temperature: attempt === 1 ? 0.65 : 0.5,
+        timeout_ms: 45_000,
+        session_id: matrixNarrativeCacheSessionId(product, locale),
+      });
+      lastResult = result;
+
+      const parseCandidates = [result.content];
+      if (result.reasoning?.trim()) parseCandidates.push(result.reasoning);
+
+      for (const text of parseCandidates) {
+        try {
+          narrative = parseMatrixNarrativeResponseText(text, product);
+          break;
+        } catch (parseError) {
+          lastParseError = parseError;
+        }
+      }
+
+      if (narrative) break;
+
       const rawPreview = result.content.replace(/\s+/g, " ").trim().slice(0, 400);
       console.warn(
         "[matrix-narrative] parse failed",
         JSON.stringify({
           product,
+          attempt,
           finish_reason: result.meta.finish_reason ?? "—",
           output_tokens: result.meta.completion_tokens ?? null,
           raw_preview: rawPreview,
-          error: parseError instanceof Error ? parseError.message : "parse failed",
+          error: lastParseError instanceof Error ? lastParseError.message : "parse failed",
         }),
       );
+    }
+
+    if (!narrative || !lastResult) {
+      const rawPreview = (lastResult?.content ?? "").replace(/\s+/g, " ").trim().slice(0, 400);
       return NextResponse.json(
         {
           ok: false,
           error: "Model output is not valid JSON",
-          preview: result.content.slice(0, 400),
-          finish_reason: result.meta.finish_reason ?? null,
-          output_tokens: result.meta.completion_tokens ?? null,
+          preview: (lastResult?.content ?? "").slice(0, 400),
+          finish_reason: lastResult?.meta.finish_reason ?? null,
+          output_tokens: lastResult?.meta.completion_tokens ?? null,
+          raw_preview: rawPreview,
         },
         { status: 422 },
       );
@@ -131,10 +154,10 @@ export async function POST(req: Request) {
       ok: true,
       narrative,
       product,
-      model: result.actual_model,
-      tokens_used: result.meta.tokens_used,
-      latency_ms: result.meta.latency_ms,
-      cost_usd: result.meta.cost_usd,
+      model: lastResult.actual_model,
+      tokens_used: lastResult.meta.tokens_used,
+      latency_ms: lastResult.meta.latency_ms,
+      cost_usd: lastResult.meta.cost_usd,
     });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Matrix narrative failed";

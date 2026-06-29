@@ -284,6 +284,19 @@ ${focusText}`;
 
 
 
+function buildLastAgendaItemDirective(agent: POJUAgentState): string {
+  const agenda = agent.investigation_agenda ?? [];
+  const focus = selectCurrentAgendaFocus(agenda);
+  if (!focus) return "";
+  const pending = agenda.filter((a) => a.status !== "covered");
+  if (pending.length !== 1 || pending[0]?.label !== focus.label) return "";
+  return `
+
+## 本轮是最后一项议程（答到位后控制面将切到 awaiting_confirmation）
+用户刚回应的是最后一项。若判定答到位：写进 completed，**不要**再追问新议程。
+用核对口吻凝练总结 + **末尾必须明确问**：「回复可以或没有了我就生成完整破局方案」——**禁止只总结不提问**。`;
+}
+
 function buildFirstCollectingInsightDirective(agent: POJUAgentState): string {
   if (!agent.breakthrough_core) return "";
   const collectingTurns = agent.collecting_turn_count ?? 0;
@@ -296,7 +309,8 @@ function buildFirstCollectingInsightDirective(agent: POJUAgentState): string {
   return `
 
 ## 本轮动作（首次进入 collecting · 关系结论本回合刚确立）
-给出第一阶段洞见——他卡在哪一层、当前十年大运宜进还是宜守，给他一个之前没察觉的破局大方向。**绝不**交付完整的 3 条行动。`;
+2–4 句第一阶段洞见：他卡在哪一层 + 一个破局大方向。**不要**说「愿意的话我们深入推演」——用户看不到内部议程列表。
+收尾**必须立刻**问 snapshot \`current_focus\` 对应的那一个问题（只问这一句，不列 pending）。**绝不**交付完整 3 条行动。`;
 }
 
 function buildCollectingTaskBlock(input: PhaseLLMInput): string {
@@ -305,6 +319,7 @@ function buildCollectingTaskBlock(input: PhaseLLMInput): string {
   const spineBlock = buildSpineBlock(agent);
   const agendaBlock = agent ? buildAgendaTrackingBlock(agent) : "";
   const insightDirective = agent ? buildFirstCollectingInsightDirective(agent) : "";
+  const lastItemDirective = agent ? buildLastAgendaItemDirective(agent) : "";
 
   return `# 动态上下文 · collecting
 用户的问题："${q}"
@@ -313,6 +328,7 @@ ${spineBlock}
 
 ${agendaBlock}
 ${insightDirective}
+${lastItemDirective}
 
 ${buildToolSuggestionPhaseAppendix(input, { includeNewCycleDetection: false })}`.trim();
 }
