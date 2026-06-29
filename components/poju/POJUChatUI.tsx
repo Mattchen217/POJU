@@ -167,6 +167,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const sendAbortRef = useRef<AbortController | null>(null);
   const sendGenerationRef = useRef(0);
   const turnInFlightRef = useRef(false);
+  const lastTurnSigRef = useRef<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const showStateDebug = searchParams.get("debug") !== "0";
@@ -367,6 +368,15 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     const pending = session.pending_question?.trim() || session.original_question?.trim();
     if (!pending) return;
 
+    const alreadySent = session.messages.some(
+      (m) => m.role === "user" && !m.is_rejected && m.content.trim() === pending,
+    );
+    if (alreadySent) {
+      releasePendingInitRef.current = session.session_id;
+      sessionStorage.removeItem(POJU_RELEASE_PENDING_QUESTION_FLAG);
+      return;
+    }
+
     releasePendingInitRef.current = session.session_id;
     sessionStorage.removeItem(POJU_RELEASE_PENDING_QUESTION_FLAG);
 
@@ -451,6 +461,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     errorRestore?: { rollbackSession: POJUSessionState; typed: string; attachment: ComposerAttachment | null },
   ) {
     if (turnInFlightRef.current) return;
+
+    const sig = `${baseSession.session_id}::${baseSession.messages.length}::${userMessage}`;
+    if (lastTurnSigRef.current === sig) return;
+    lastTurnSigRef.current = sig;
+
     turnInFlightRef.current = true;
 
     const gen = ++sendGenerationRef.current;
@@ -469,6 +484,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       if (isRealUserTurn && profileId && resolveSessionHasProfile(baseSession)) {
         const ready = await ensureBaseAnalysisReady(profileId);
         if (!ready) {
+          lastTurnSigRef.current = null;
           await dialog.alert(
             locale.startsWith("zh")
               ? "命主基础分析准备中，请稍后再发送。"
@@ -552,6 +568,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       }
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return;
+      lastTurnSigRef.current = null;
       console.error("[poju] Send failed:", err);
       if (errorRestore) {
         onSessionUpdate(errorRestore.rollbackSession);
