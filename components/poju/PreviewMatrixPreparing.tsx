@@ -7,6 +7,7 @@ import { ChartReadingLoader } from "@/components/poju/ChartReadingLoader";
 import { usePreparingBlockInput } from "@/components/poju/preparing-spline-control";
 import type { StoredProfileData } from "@/lib/db/poju-db";
 import { finalizePreviewMatrixSession } from "@/lib/poju/finalize-preview-matrix-session";
+import { loadPOJUSession } from "@/lib/poju/session-manager";
 import {
   PREVIEW_MATRIX_MIN_PREP_MS,
   waitRemainingMinSpline,
@@ -41,8 +42,10 @@ export function PreviewMatrixPreparing({
     const ac = new AbortController();
     void (async () => {
       try {
+        const latest = await loadPOJUSession(sessionId);
+        if (!latest) throw new Error("Session not found");
         const [finalSession] = await Promise.all([
-          finalizePreviewMatrixSession(session, locale, { signal: ac.signal }),
+          finalizePreviewMatrixSession(latest, locale, { signal: ac.signal }),
           waitRemainingMinSpline(startedAt, PREVIEW_MATRIX_MIN_PREP_MS),
         ]);
         if (ac.signal.aborted) return;
@@ -55,7 +58,7 @@ export function PreviewMatrixPreparing({
       }
     })();
     return () => ac.abort();
-  }, [session, sessionId, locale, startedAt, router, retryKey]);
+  }, [sessionId, locale, startedAt, router, retryKey]);
 
   if (error) {
     return (

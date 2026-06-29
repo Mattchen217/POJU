@@ -16,14 +16,25 @@ export function isPreviewSession(session: POJUSessionState): boolean {
   return getUnlockStatus(session) === "preview";
 }
 
-export function hasPreviewMatrixMessage(session: POJUSessionState): boolean {
-  return session.messages.some((m) => m.meta?.kind === "energy_matrix");
+export const ENERGY_MATRIX_MESSAGE_CLIENT_ID = "poju-energy-matrix-preview";
+
+/** Assistant bubble that carries the cosmic energy matrix (incl. legacy rows with payload only). */
+export function isEnergyMatrixMessage(m: POJUMessage): boolean {
+  if (m.meta?.kind === "energy_matrix") return true;
+  if (m.meta?.kind === "report" || m.meta?.kind === "paywall" || m.meta?.kind === "welcome") {
+    return false;
+  }
+  return m.role === "assistant" && Boolean(m.meta?.matrix_payload);
 }
 
-/** Keep at most one energy_matrix bubble — by kind only, not payload equality. */
+export function hasPreviewMatrixMessage(session: POJUSessionState): boolean {
+  return session.messages.some((m) => isEnergyMatrixMessage(m));
+}
+
+/** Keep at most one energy_matrix bubble — by kind or matrix_payload. */
 export function dedupePreviewMatrixMessages(session: POJUSessionState): POJUSessionState {
   const indices = session.messages
-    .map((m, i) => (m.meta?.kind === "energy_matrix" ? i : -1))
+    .map((m, i) => (isEnergyMatrixMessage(m) ? i : -1))
     .filter((i) => i >= 0);
   if (indices.length <= 1) return session;
   const keepIdx = indices[0]!;
@@ -32,7 +43,7 @@ export function dedupePreviewMatrixMessages(session: POJUSessionState): POJUSess
   return {
     ...session,
     matrix_payload: keepPayload ?? session.matrix_payload,
-    messages: session.messages.filter((m, i) => m.meta?.kind !== "energy_matrix" || i === keepIdx),
+    messages: session.messages.filter((m, i) => !isEnergyMatrixMessage(m) || i === keepIdx),
   };
 }
 
@@ -44,12 +55,37 @@ export function createEnergyMatrixMessage(payload: PojuMatrixPayload, _locale: s
   return {
     role: "assistant",
     content: "",
+    client_id: ENERGY_MATRIX_MESSAGE_CLIENT_ID,
     timestamp: new Date().toISOString(),
     meta: {
       kind: "energy_matrix",
       matrix_payload: payload,
     },
   };
+}
+
+/** Idempotent: one matrix bubble per session (update payload if already present). */
+export function upsertEnergyMatrixMessage(
+  messages: POJUMessage[],
+  payload: PojuMatrixPayload,
+  locale: string,
+): POJUMessage[] {
+  const matrixIdx = messages.findIndex((m) => isEnergyMatrixMessage(m));
+  const fresh = createEnergyMatrixMessage(payload, locale);
+  if (matrixIdx < 0) {
+    return [...messages, fresh];
+  }
+  const existing = messages[matrixIdx]!;
+  return messages.map((m, i) =>
+    i === matrixIdx
+      ? {
+          ...fresh,
+          timestamp: existing.timestamp,
+          client_id: existing.client_id ?? fresh.client_id,
+          meta: { ...fresh.meta, matrix_payload: payload },
+        }
+      : m,
+  );
 }
 
 export function createPaywallMessage(): POJUMessage {

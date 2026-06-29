@@ -65,6 +65,8 @@ import {
   createPaywallMessage,
   dedupePreviewMatrixMessages,
   hasPaywallMessage,
+  hasPreviewMatrixMessage,
+  isEnergyMatrixMessage,
   isPreviewSession,
   POJU_RELEASE_PENDING_QUESTION_FLAG,
 } from "@/lib/poju/preview-unlock";
@@ -197,15 +199,20 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     /* PojuChat scrolls internally */
   }, []);
 
+  const displaySession = useMemo(
+    () => dedupePreviewMatrixMessages(session),
+    [session],
+  );
+
   const visibleMessages = useMemo(
     () =>
-      session.messages.filter(
+      displaySession.messages.filter(
         (m) =>
           m.role !== "system" &&
           !m.content.trim().startsWith("[SYSTEM:") &&
           m.meta?.kind !== "paywall",
       ),
-    [session.messages],
+    [displaySession.messages],
   );
   const paywallOpen = isPreviewSession(session) && hasPaywallMessage(session);
   const initialScrollPosition = useMemo(
@@ -895,7 +902,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
 
     for (const m of visibleMessages) {
       const mid = m.client_id ?? m.timestamp;
-      if (m.meta?.kind === "energy_matrix" && m.meta.matrix_payload) {
+      if (isEnergyMatrixMessage(m) && m.meta?.matrix_payload) {
         if (energyMatrixRendered) continue;
         energyMatrixRendered = true;
         bareIds.add(mid);
@@ -1136,6 +1143,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           reportText={unlockReportText}
           profileId={unlockReportProfileId}
           gateMode={unlockReportGatePending}
+          showMatrix={!hasPreviewMatrixMessage(session)}
           onClose={() => {
             if (unlockReportGatePending) {
               setUnlockReportModalOpen(false);

@@ -5,9 +5,8 @@ import {
 import { isMatrixNarrativeReady } from "@/lib/poju/matrix-narrative-ready";
 import {
   bindPreviewProfileToSession,
-  createEnergyMatrixMessage,
   dedupePreviewMatrixMessages,
-  hasPreviewMatrixMessage,
+  upsertEnergyMatrixMessage,
 } from "@/lib/poju/preview-unlock";
 import { seedFixedWelcomeMessages } from "@/lib/poju/chat-bootstrap";
 import { loadPOJUSession } from "@/lib/poju/session-manager";
@@ -70,16 +69,7 @@ export async function finalizePreviewMatrixSession(
 
   const finalPayload = await resolvePreviewMatrixPayload(working, locale);
 
-  const messages = hasPreviewMatrixMessage(working)
-    ? working.messages.map((m) =>
-        m.meta?.kind === "energy_matrix"
-          ? {
-              ...m,
-              meta: { ...m.meta, matrix_payload: finalPayload },
-            }
-          : m,
-      )
-    : [...working.messages, createEnergyMatrixMessage(finalPayload, locale)];
+  const messages = upsertEnergyMatrixMessage(working.messages, finalPayload, locale);
 
   let next: POJUSessionState = dedupePreviewMatrixMessages({
     ...working,

@@ -25,6 +25,8 @@ type Props = {
   reportText: string;
   profileId?: string;
   gateMode?: boolean;
+  /** Chat already shows energy_matrix — skip duplicate matrix in modal. */
+  showMatrix?: boolean;
   onClose: () => void;
 };
 
@@ -33,6 +35,7 @@ export function PojuUnlockReportModal({
   reportText,
   profileId,
   gateMode = false,
+  showMatrix = true,
   onClose,
 }: Props) {
   const t = useTranslations("poju.chat");
@@ -135,7 +138,7 @@ export function PojuUnlockReportModal({
             variant="modal"
             showPageHeader={false}
           />
-          {matrixPayload ? (
+          {showMatrix && matrixPayload ? (
             <section className="px-2 pb-4">
               <PojuEnergyMatrix payload={matrixPayload} locale={locale} compact />
             </section>

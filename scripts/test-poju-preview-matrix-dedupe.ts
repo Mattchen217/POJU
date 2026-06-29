@@ -5,7 +5,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { dedupePreviewMatrixMessages } from "@/lib/poju/preview-unlock";
+import { dedupePreviewMatrixMessages, upsertEnergyMatrixMessage } from "@/lib/poju/preview-unlock";
 import type { POJUSessionState } from "@/lib/poju/types";
 
 const ROOT = path.join(process.cwd());
@@ -26,8 +26,10 @@ function main(): void {
   const chatUi = read("components/poju/POJUChatUI.tsx");
   assert("POJUChatUI removed previewMatrixInitRef", !chatUi.includes("previewMatrixInitRef"));
   assert("POJUChatUI removed chat-side matrix append", !chatUi.includes("createEnergyMatrixMessage"));
+  assert("POJUChatUI uses isEnergyMatrixMessage", chatUi.includes("isEnergyMatrixMessage"));
+  assert("POJUChatUI displaySession dedupe", chatUi.includes("dedupePreviewMatrixMessages(session)"));
   assert("finalize loads from DB", read("lib/poju/finalize-preview-matrix-session.ts").includes("loadPOJUSession"));
-  assert("finalize no refreshMatrixPayload", !read("lib/poju/finalize-preview-matrix-session.ts").includes("refreshMatrixPayload"));
+  assert("finalize uses upsertEnergyMatrixMessage", read("lib/poju/finalize-preview-matrix-session.ts").includes("upsertEnergyMatrixMessage"));
 
   const dup = {
     messages: [
@@ -40,6 +42,13 @@ function main(): void {
     "dedupe keeps one energy_matrix",
     once.messages.filter((m) => m.meta?.kind === "energy_matrix").length === 1,
   );
+
+  const upserted = upsertEnergyMatrixMessage(
+    [{ role: "assistant", content: "", timestamp: "a", meta: { kind: "energy_matrix" } }],
+    { matrix_id: "x" } as never,
+    "zh",
+  );
+  assert("upsert keeps one row", upserted.filter((m) => m.meta?.kind === "energy_matrix").length === 1);
 
   console.log("\n=== Summary ===\n");
   if (failures.length) {
