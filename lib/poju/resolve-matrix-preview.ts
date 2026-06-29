@@ -37,6 +37,11 @@ export function matrixListFromNarrative(
     annual_transit_2026: narrative.annual_transit_2026,
     generated_at: new Date().toISOString(),
     locale,
+    poju_onboarding: {
+      archetype_intro: narrative.poju_onboarding.archetype_intro,
+      core_conflict: narrative.poju_onboarding.core_conflict,
+      call_to_action: narrative.poju_onboarding.call_to_action,
+    },
   };
 }
 
@@ -87,14 +92,21 @@ export function applyStoredMatrixPreview(
   }
 
   if (product === "poju") {
+    const onboarding = list.poju_onboarding;
     return {
       ...payload,
       display: {
         ...updatedDisplay,
-        synopsis: {
-          ...updatedDisplay.synopsis,
-          prompt: guide,
-        },
+        synopsis: onboarding
+          ? {
+              archetype: onboarding.archetype_intro,
+              friction: onboarding.core_conflict,
+              prompt: onboarding.call_to_action || guide,
+            }
+          : {
+              ...updatedDisplay.synopsis,
+              prompt: guide,
+            },
       },
     };
   }

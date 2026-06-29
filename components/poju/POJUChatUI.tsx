@@ -19,7 +19,14 @@ import { createPOJUSession, loadPOJUSession, savePOJUSession } from "@/lib/poju/
 import { clearPendingStoredProfileId, readPendingStoredProfileId } from "@/lib/poju/pending-stored-profile";
 import { runDegradedDeliveryPipeline } from "@/lib/poju/agent-orchestrator";
 import { handleUserMessage, tryHandleRuleRejection } from "@/lib/poju/agent";
-import { hasFixedWelcomeMessage, seedFixedWelcomeMessages } from "@/lib/poju/chat-bootstrap";
+import {
+  dedupeWelcomeMessages,
+  hasFixedWelcomeMessage,
+  hasMatrixWelcomeMessage,
+  isMatrixWelcomeMessage,
+  seedFixedWelcomeMessages,
+  seedMatrixWelcomeMessage,
+} from "@/lib/poju/chat-bootstrap";
 import { AgendaProgressPanel } from "@/components/poju/AgendaProgressPanel";
 import { getLastUserMessageContent } from "@/lib/poju/context-helpers";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
@@ -200,7 +207,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   }, []);
 
   const displaySession = useMemo(
-    () => dedupePreviewMatrixMessages(session),
+    () => dedupeWelcomeMessages(dedupePreviewMatrixMessages(session)),
     [session],
   );
 
@@ -314,9 +321,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   useEffect(() => {
     if (openingInitRef.current) return;
     if (!resolveSessionHasProfile(session)) return;
+    if (session.matrix_payload) return;
     if (hasUnlockReportMessage(session)) return;
     if (hasFixedWelcomeMessage(session)) return;
-    if (visibleMessages.length > 0) return;
     if (sending || pipelineBusy) return;
 
     openingInitRef.current = true;
@@ -325,17 +332,26 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       onSessionUpdate(seeded);
       void savePOJUSession(seeded);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per empty session with profile
-  }, [session.session_id, session.messages, visibleMessages.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per profile-less session
+  }, [session.session_id, session.messages, session.matrix_payload]);
 
   useEffect(() => {
-    const deduped = dedupePreviewMatrixMessages(session);
-    if (deduped !== session) {
-      onSessionUpdate(deduped);
-      void savePOJUSession(deduped);
+    let next = dedupePreviewMatrixMessages(session);
+    next = dedupeWelcomeMessages(next);
+    if (
+      resolveSessionHasProfile(next) &&
+      next.matrix_payload &&
+      !hasMatrixWelcomeMessage(next)
+    ) {
+      next = seedMatrixWelcomeMessage(next, locale);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- dedupe when message list changes
-  }, [session.session_id, session.messages]);
+    next = dedupeWelcomeMessages(next);
+    if (next !== session) {
+      onSessionUpdate(next);
+      void savePOJUSession(next);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- dedupe / migrate welcome when messages change
+  }, [session.session_id, session.messages, session.matrix_payload, locale]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -906,7 +922,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         if (energyMatrixRendered) continue;
         energyMatrixRendered = true;
         bareIds.add(mid);
-        const actionsText = matrixNarrativeActionsText(m.meta.matrix_payload, locale);
         slots[mid] = (
           <div className="poju-matrix-bubble">
             <PojuEnergyMatrix
@@ -915,12 +930,20 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
               compact
               suppressNarrative
             />
-            <div className="poju-matrix-bubble__synopsis">
-              <MatrixNarrativeReply payload={m.meta.matrix_payload} locale={locale} />
-              {actionsText ? <AssistantMessageActions content={actionsText} /> : null}
-            </div>
           </div>
         );
+      }
+      if (isMatrixWelcomeMessage(m)) {
+        const payload = m.meta?.matrix_payload ?? session.matrix_payload;
+        if (payload) {
+          const actionsText = matrixNarrativeActionsText(payload, locale);
+          slots[mid] = (
+            <>
+              <MatrixNarrativeReply payload={payload} locale={locale} />
+              {actionsText ? <AssistantMessageActions content={actionsText} /> : null}
+            </>
+          );
+        }
       }
       if (m.meta?.contains_delivery) {
         bareIds.add(mid);

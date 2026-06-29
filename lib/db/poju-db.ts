@@ -116,6 +116,12 @@ export interface StoredProfileMatrixList {
   annual_transit_2026: { title: string; description: string };
   generated_at: string;
   locale: string;
+  /** POJU onboarding copy — persisted after one-time matrix narrative LLM. */
+  poju_onboarding?: {
+    archetype_intro: string;
+    core_conflict: string;
+    call_to_action: string;
+  };
 }
 
 export interface StoredProfileBaseAnalysis {

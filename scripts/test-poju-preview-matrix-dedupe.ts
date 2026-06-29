@@ -6,6 +6,11 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { dedupePreviewMatrixMessages, upsertEnergyMatrixMessage } from "@/lib/poju/preview-unlock";
+import {
+  dedupeWelcomeMessages,
+  isMatrixWelcomeMessage,
+  upsertMatrixWelcomeMessage,
+} from "@/lib/poju/chat-bootstrap";
 import type { POJUSessionState } from "@/lib/poju/types";
 
 const ROOT = path.join(process.cwd());
@@ -30,6 +35,10 @@ function main(): void {
   assert("POJUChatUI displaySession dedupe", chatUi.includes("dedupePreviewMatrixMessages(session)"));
   assert("finalize loads from DB", read("lib/poju/finalize-preview-matrix-session.ts").includes("loadPOJUSession"));
   assert("finalize uses upsertEnergyMatrixMessage", read("lib/poju/finalize-preview-matrix-session.ts").includes("upsertEnergyMatrixMessage"));
+  assert("finalize uses seedMatrixWelcomeMessage", read("lib/poju/finalize-preview-matrix-session.ts").includes("seedMatrixWelcomeMessage"));
+  assert("finalize no seedFixedWelcomeMessages", !read("lib/poju/finalize-preview-matrix-session.ts").includes("seedFixedWelcomeMessages"));
+  assert("POJUChatUI matrix welcome slot", chatUi.includes("isMatrixWelcomeMessage"));
+  assert("POJUChatUI matrix bubble no synopsis", !chatUi.includes("poju-matrix-bubble__synopsis"));
 
   const dup = {
     messages: [
@@ -49,6 +58,38 @@ function main(): void {
     "zh",
   );
   assert("upsert keeps one row", upserted.filter((m) => m.meta?.kind === "energy_matrix").length === 1);
+
+  const payload = {
+    display: {
+      synopsis: { archetype: "柔韧之藤", friction: "Fire盈余", prompt: "写下你的问题" },
+      narrative_source: "stored",
+    },
+  } as never;
+
+  const dupWelcome = {
+    messages: [
+      {
+        role: "assistant" as const,
+        content: "柔韧之藤",
+        timestamp: "1",
+        meta: { kind: "welcome" as const, matrix_welcome: true, matrix_payload: payload },
+      },
+      {
+        role: "assistant" as const,
+        content: "欢迎来到 POJU。\n\n这里只围绕你今天带来的那一个核心问题",
+        timestamp: "2",
+        meta: { kind: "welcome" as const },
+      },
+    ],
+  } as POJUSessionState;
+  const welcomeOnce = dedupeWelcomeMessages(dupWelcome);
+  assert(
+    "dedupe keeps matrix welcome over generic",
+    welcomeOnce.messages.length === 1 && isMatrixWelcomeMessage(welcomeOnce.messages[0]!),
+  );
+
+  const seeded = upsertMatrixWelcomeMessage({ messages: [] } as POJUSessionState, payload, "zh");
+  assert("upsert matrix welcome", seeded.messages.some(isMatrixWelcomeMessage));
 
   console.log("\n=== Summary ===\n");
   if (failures.length) {

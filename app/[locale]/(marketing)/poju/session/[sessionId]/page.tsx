@@ -11,6 +11,7 @@ import { PojuSessionChatShell } from "@/components/poju/PojuSessionChatShell";
 import { AppDialogProvider } from "@/components/ui/app-dialog";
 import "@/styles/poju-unlock-report.css";
 import { createInitialAgentState } from "@/lib/poju/agent-state";
+import { dedupeWelcomeMessages, seedMatrixWelcomeMessage } from "@/lib/poju/chat-bootstrap";
 import { sessionMatrixReadyForChat } from "@/lib/poju/matrix-narrative-ready";
 import { dedupePreviewMatrixMessages, isPreviewSession } from "@/lib/poju/preview-unlock";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
@@ -88,7 +89,12 @@ export default function PojuSessionDeepLinkPage() {
     }
 
     if (local.selected_stored_profile_id) {
-      const deduped = dedupePreviewMatrixMessages(local);
+      let deduped = dedupePreviewMatrixMessages(local);
+      deduped = dedupeWelcomeMessages(deduped);
+      if (deduped.matrix_payload && isPreviewSession(deduped)) {
+        const withWelcome = seedMatrixWelcomeMessage(deduped, locale);
+        deduped = dedupeWelcomeMessages(withWelcome);
+      }
       if (deduped !== local) {
         local = deduped;
         await savePOJUSession(local);

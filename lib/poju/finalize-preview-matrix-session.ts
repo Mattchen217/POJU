@@ -1,22 +1,26 @@
 import {
+  applyMatrixPreviewToPayload,
   applyStoredMatrixPreview,
-  resolveProfileMatrixPayloadWithoutLlm,
+  ensureProfileMatrixList,
 } from "@/lib/poju/resolve-matrix-preview";
-import { isMatrixNarrativeReady } from "@/lib/poju/matrix-narrative-ready";
 import {
   bindPreviewProfileToSession,
   dedupePreviewMatrixMessages,
   upsertEnergyMatrixMessage,
 } from "@/lib/poju/preview-unlock";
-import { seedFixedWelcomeMessages } from "@/lib/poju/chat-bootstrap";
+import { dedupeWelcomeMessages, seedMatrixWelcomeMessage } from "@/lib/poju/chat-bootstrap";
 import { loadPOJUSession } from "@/lib/poju/session-manager";
 import { getStoredProfile, storedMatrixListPresent } from "@/lib/profile/stored-profiles-service";
 import type { POJUSessionState } from "@/lib/poju/types";
 
-/** Resolve matrix payload for preview — stored list or static fallback, never LLM. */
+/**
+ * Preview prepare → chat matrix payload.
+ * Old profile (stored matrix_list): no LLM. New profile: one matrix-narrative LLM call + persist.
+ */
 async function resolvePreviewMatrixPayload(
   session: POJUSessionState,
   locale: string,
+  signal?: AbortSignal,
 ): Promise<NonNullable<POJUSessionState["matrix_payload"]>> {
   const profileId = session.selected_stored_profile_id;
   const payload = session.matrix_payload;
@@ -29,20 +33,17 @@ async function resolvePreviewMatrixPayload(
     return applyStoredMatrixPreview(payload, row!.matrix_list!, "poju", locale);
   }
 
-  if (isMatrixNarrativeReady(payload) && payload.display?.narrative_source === "stored") {
-    return payload;
-  }
-
-  return resolveProfileMatrixPayloadWithoutLlm({
+  const ensured = await ensureProfileMatrixList({
     profileId,
     userProfile: payload.user_profile,
     locale,
-    product: "poju",
+    signal,
   });
+  return applyMatrixPreviewToPayload(payload, ensured, "poju", locale);
 }
 
 /**
- * Preview prepare → chat: one energy_matrix bubble + fixed welcome, no LLM.
+ * Preview prepare → chat: one energy_matrix bubble + matrix welcome (avatar chat), no generic welcome.
  * Reloads persisted session first (Strict Mode / double-run safe).
  */
 export async function finalizePreviewMatrixSession(
@@ -50,8 +51,6 @@ export async function finalizePreviewMatrixSession(
   locale: string,
   options?: { signal?: AbortSignal },
 ): Promise<POJUSessionState> {
-  void options?.signal;
-
   let working = (await loadPOJUSession(session.session_id)) ?? session;
   working = dedupePreviewMatrixMessages(working);
 
@@ -67,7 +66,11 @@ export async function finalizePreviewMatrixSession(
     throw new Error("Matrix payload missing");
   }
 
-  const finalPayload = await resolvePreviewMatrixPayload(working, locale);
+  const finalPayload = await resolvePreviewMatrixPayload(
+    working,
+    locale,
+    options?.signal,
+  );
 
   const messages = upsertEnergyMatrixMessage(working.messages, finalPayload, locale);
 
@@ -76,6 +79,6 @@ export async function finalizePreviewMatrixSession(
     matrix_payload: finalPayload,
     messages,
   });
-  next = seedFixedWelcomeMessages(next, locale);
-  return dedupePreviewMatrixMessages(next);
+  next = seedMatrixWelcomeMessage(next, locale);
+  return dedupeWelcomeMessages(dedupePreviewMatrixMessages(next));
 }
