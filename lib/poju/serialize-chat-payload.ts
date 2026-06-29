@@ -34,6 +34,7 @@ export const CHAT_PAYLOAD_FIELDS = [
   "user_confirms_delivery",
   "confirmation_signal",
   "breakthrough_core_updates",
+  "action_status_updates",
 ] as const;
 
 export type ChatPayloadField = (typeof CHAT_PAYLOAD_FIELDS)[number];
@@ -84,6 +85,7 @@ export function pojuLlmToChatPayload(
     user_confirms_delivery: llm.user_confirms_delivery,
     confirmation_signal: llm.confirmation_signal,
     breakthrough_core_updates: llm.breakthrough_core_updates ?? null,
+    action_status_updates: llm.action_status_updates ?? undefined,
     ...overrides,
   });
 }
@@ -140,5 +142,6 @@ export function chatPayloadFromWire(
         ? data.confirmation_signal
         : undefined,
     breakthrough_core_updates: data.breakthrough_core_updates ?? null,
+    action_status_updates: data.action_status_updates,
   });
 }

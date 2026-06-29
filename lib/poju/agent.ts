@@ -48,6 +48,7 @@ import { chatPayloadFromWire } from "@/lib/poju/serialize-chat-payload";
 import { buildAgentStateSnapshot } from "@/lib/poju/agent-state-snapshot";
 import { ensureBreakthroughCore, runConfirmationPipeline } from "@/lib/poju/agent-orchestrator";
 import { appendConfirmationInvite, hasConfirmationInviteCue } from "@/lib/poju/confirmation-reply";
+import { applyActionStatusUpdates, parseActionStatusUpdates } from "@/lib/poju/action-status-updates";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 /** Session uses default `userProfiles` slot from device. */
@@ -109,6 +110,7 @@ type LLMApiPayload = {
   agenda_updates?: { completed_in_this_turn?: string[] };
   user_confirms_delivery?: boolean;
   breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null;
+  action_status_updates?: import("@/lib/poju/action-status-updates").ActionStatusPatch[];
 };
 
 function ensureAgentV2(session: POJUSessionState): POJUAgentState {
@@ -545,23 +547,29 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
 
   const normalizedNewActions = normalizeNewActions(llmResponse.new_actions);
   const assistantMessageId = safeRandomUUID();
+  const trackingPhase =
+    normalizeAgentPhase(ensureAgentV2(workingSession).current_phase) === "tracking";
 
   const linking = applyToolLinkingFromLlm(
     { ...workingSession, messages: messagesWithUser },
     {
       tool_suggestion: llmResponse.tool_suggestion ?? null,
-      start_new_cycle: llmResponse.start_new_cycle,
-      new_cycle_question: llmResponse.new_cycle_question ?? null,
+      start_new_cycle: trackingPhase ? false : llmResponse.start_new_cycle,
+      new_cycle_question: trackingPhase ? null : llmResponse.new_cycle_question ?? null,
       question_category: llmResponse.question_category,
     },
     assistantMessageId,
   );
 
   workingSession = linking.session;
-  const mergedActions =
+  const baseActions =
     normalizedNewActions.length > 0
       ? [...workingSession.actions, ...normalizedNewActions]
       : workingSession.actions;
+  const mergedActions = applyActionStatusUpdates(
+    baseActions,
+    llmResponse.action_status_updates,
+  );
 
   const sessionForAgent: POJUSessionState = { ...workingSession, messages: messagesWithUser };
   const phaseUserMessage =
@@ -822,6 +830,7 @@ async function callLLMViaAPI(input: {
   user_confirms_delivery?: boolean;
   confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";
   breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null;
+  action_status_updates?: import("@/lib/poju/action-status-updates").ActionStatusPatch[];
 }> {
   const body = JSON.stringify({
     session: input.session,
@@ -999,6 +1008,9 @@ function mapLlmApiPayload(
       !Array.isArray(wire.breakthrough_core_updates)
         ? (wire.breakthrough_core_updates as Partial<import("@/lib/poju/agent-state").BreakthroughCore>)
         : null,
+    action_status_updates: Array.isArray(wire.action_status_updates)
+      ? parseActionStatusUpdates({ action_status_updates: wire.action_status_updates })
+      : undefined,
   };
 }
 

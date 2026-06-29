@@ -82,6 +82,7 @@ export function mapPhaseResultToChatPayload(
       (phase as { confirmation_signal?: "confirmed" | "wants_to_add" | "unclear" }).confirmation_signal ??
       undefined,
     breakthrough_core_updates: phase.breakthrough_core_updates ?? null,
+    action_status_updates: phase.action_status_updates ?? undefined,
   };
 
   return applyPojuOutputPolicies(base, {
