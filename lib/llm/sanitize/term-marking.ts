@@ -288,6 +288,50 @@ export function auditOutOfSetTerms(text: string): OutOfSetAuditHit[] {
   return hits;
 }
 
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function blobMatchesOutOfSetForbidden(blob: string): boolean {
+  for (const han of OUT_OF_SET_FORBIDDEN_HAN) {
+    if (blob.includes(han)) return true;
+  }
+  for (const en of OUT_OF_SET_FORBIDDEN_EN) {
+    const re = new RegExp(`\\b${escapeRegExp(en)}\\b`, "i");
+    if (re.test(blob)) return true;
+  }
+  return false;
+}
+
+function cleanupAfterOutOfSetStrip(text: string): string {
+  return text
+    .replace(/\[···\]/g, "")
+    .replace(/[、，,]{2,}/g, "，")
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s+([,.;:!?])/g, "$1")
+    .trim();
+}
+
+/** Strip engine-out-of-set 神煞 from persisted chat text (markers + bare terms). */
+export function stripForbiddenShenSha(text: string): string {
+  if (!text?.trim()) return text ?? "";
+  let out = text;
+  for (const m of parseTermMarkers(out)) {
+    const blob = `${m.visible} ${m.plain ?? ""}`;
+    if (blobMatchesOutOfSetForbidden(blob)) {
+      out = out.replace(m.raw, "");
+    }
+  }
+  const sortedHan = [...OUT_OF_SET_FORBIDDEN_HAN].sort((a, b) => b.length - a.length);
+  for (const han of sortedHan) {
+    out = out.replace(new RegExp(escapeRegExp(han), "g"), "");
+  }
+  for (const en of OUT_OF_SET_FORBIDDEN_EN) {
+    out = out.replace(new RegExp(`\\b${escapeRegExp(en)}\\b`, "gi"), "");
+  }
+  return cleanupAfterOutOfSetStrip(out);
+}
+
 export function countDistinctTermIds(text: string): number {
   const ids = new Set(parseTermMarkers(text).map((m) => m.id));
   return ids.size;

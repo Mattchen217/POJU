@@ -1,4 +1,4 @@
-import { auditDeliveredText, sanitizeChatResponse, stripGlossTokensForPrompt } from "@/lib/llm/sanitize/compliance-terms";
+import { auditDeliveredText, sanitizeChatResponse, stripForbiddenShenSha, stripGlossTokensForPrompt } from "@/lib/llm/sanitize/compliance-terms";
 import { repairEmptyKeepCnBrackets } from "@/lib/llm/sanitize/keep-cn-brackets";
 import { salvagePhaseResponseText } from "@/lib/poju/extract-streaming-response";
 import { pojuCacheSessionId } from "@/lib/llm/cache-session-id";
@@ -295,8 +295,14 @@ export function parsePhaseResult(
 
   const sanitizeResponse = (raw: string): string => {
     if (!options?.locale || !raw.trim()) return raw;
-    const audited = sanitizeChatResponse(raw, options.locale);
-    auditDeliveredText(audited, options.locale);
+    let audited = sanitizeChatResponse(raw, options.locale);
+    const hits = auditDeliveredText(audited, options.locale).filter((v) =>
+      v.label.startsWith("out_of_set"),
+    );
+    if (hits.length) {
+      audited = stripForbiddenShenSha(audited);
+      console.warn("[chat] 集外神煞已剥离:", hits.map((h) => h.label));
+    }
     return audited;
   };
 

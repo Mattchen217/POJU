@@ -15,6 +15,7 @@ import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-stru
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
 import { extractJson } from "@/lib/llm/phases/phase-transport";
+import { buildShenShaGuardBlock } from "@/lib/llm/prompts/shen-sha-guard";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 
 export const DEEP_RECKONING_TASK = `# 角色：破局总设计师（上帝视角 · 零聊天腔）
@@ -116,36 +117,6 @@ export type BreakthroughCoreLLMResponse = {
   }>;
   investigation_agenda: unknown;
 };
-
-const PILLAR_KEYS = ["year", "month", "day", "hour"] as const;
-
-/** Engine-computed shen_sha only — for last-mile guard before JSON generation. */
-export function extractChartShenSha(structured: ProfileStructured): string[] {
-  const set = new Set<string>();
-  const pd = structured.pillars_detail;
-  if (!pd) return [];
-  for (const key of PILLAR_KEYS) {
-    for (const s of pd[key]?.shen_sha ?? []) {
-      const t = s.trim();
-      if (t) set.add(t);
-    }
-  }
-  return [...set];
-}
-
-function buildShenShaGuardBlock(structured: ProfileStructured): string {
-  const chartShenSha = extractChartShenSha(structured);
-  if (chartShenSha.length > 0) {
-    return `【本盘神煞 · 硬约束（生成前再读一遍）】
-这个盘引擎实际算出的神煞【只有】：${chartShenSha.join("、")}。
-- 要提神煞，【只能从这几个里挑、按名引用】，结合所问之事点出助力或隐忧。
-- 这盘没算出的神煞——包括你训练里认识的任何其他神煞（空亡/国印/将星/月德/天德/劫煞/元辰/六秀日/阴差阳错…）——对【这个盘】不存在。写一个都算编造，会被审计拦截、整份重写。
-- 神煞少是正常的。不要为了"丰富"去补；不够就靠十神/用神/喜忌/强弱/大运/藏干说话，那些才是你的主材料。`;
-  }
-  return `【本盘神煞 · 硬约束（生成前再读一遍）】
-这个盘引擎【没算出任何神煞】。所以整份输出里【一个神煞名都不许出现】（空亡/国印/将星/桃花/驿马/华盖…全部禁止）。
-神煞为空是完全正常的——靠十神/用神/喜忌/强弱/大运/藏干说话即可。写任何神煞名都会被拦截、整份重写。`;
-}
 
 export function buildBreakthroughCorePrompt(input: {
   base_analysis: unknown | null;

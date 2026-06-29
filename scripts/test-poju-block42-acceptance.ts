@@ -7,8 +7,8 @@ import path from "node:path";
 
 import {
   buildBreakthroughCorePrompt,
-  extractChartShenSha,
 } from "@/lib/llm/deepseek/breakthrough-core";
+import { extractChartShenSha } from "@/lib/llm/prompts/shen-sha-guard";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 
 const ROOT = path.join(process.cwd());
@@ -44,10 +44,12 @@ const structuredWithSha = {
 function main(): void {
   console.log("\n=== Block 42 acceptance ===\n");
 
-  const src = read("lib/llm/deepseek/breakthrough-core.ts");
+  const src = read("lib/llm/prompts/shen-sha-guard.ts");
   assert("extractChartShenSha exported", src.includes("export function extractChartShenSha"));
-  assert("buildShenShaGuardBlock", src.includes("buildShenShaGuardBlock"));
-  assert("guard before task", src.includes("${shenShaGuard}\n\n【任务】"));
+  assert("buildShenShaGuardBlock", src.includes("export function buildShenShaGuardBlock"));
+
+  const btSrc = read("lib/llm/deepseek/breakthrough-core.ts");
+  assert("guard before task", btSrc.includes("${shenShaGuard}\n\n【任务】"));
 
   const names = extractChartShenSha(structuredWithSha);
   assert("extract dedupes pillars", names.includes("天乙贵人") && names.includes("驿马"));
