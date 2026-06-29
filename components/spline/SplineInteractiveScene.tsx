@@ -47,10 +47,33 @@ export function SplineInteractiveScene({
   const appRef = useRef<Application | null>(null);
   const [sceneReady, setSceneReady] = useState(false);
 
+  const disposeSplineApp = useCallback(() => {
+    const app = appRef.current;
+    if (!app) return;
+    const canvas = rootRef.current?.querySelector("canvas") as HTMLCanvasElement | null;
+    try {
+      (app as unknown as { dispose?: () => void }).dispose?.();
+    } catch {
+      // optional
+    }
+    try {
+      const gl =
+        (canvas?.getContext("webgl2") as WebGLRenderingContext | null) ??
+        (canvas?.getContext("webgl") as WebGLRenderingContext | null) ??
+        (canvas?.getContext("experimental-webgl") as WebGLRenderingContext | null);
+      gl?.getExtension("WEBGL_lose_context")?.loseContext();
+    } catch {
+      // optional
+    }
+    appRef.current = null;
+  }, []);
+
   useEffect(() => {
     setSceneReady(false);
-    appRef.current = null;
-  }, [scene]);
+    return () => {
+      disposeSplineApp();
+    };
+  }, [scene, disposeSplineApp]);
 
   const handleLoad = useCallback(
     (app: Application) => {
