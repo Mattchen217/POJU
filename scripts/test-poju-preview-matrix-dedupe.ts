@@ -45,7 +45,7 @@ function main(): void {
       { role: "assistant" as const, content: "", timestamp: "1", meta: { kind: "energy_matrix" as const } },
       { role: "assistant" as const, content: "", timestamp: "2", meta: { kind: "energy_matrix" as const } },
     ],
-  } as POJUSessionState;
+  } as unknown as POJUSessionState;
   const once = dedupePreviewMatrixMessages(dup);
   assert(
     "dedupe keeps one energy_matrix",
@@ -81,14 +81,18 @@ function main(): void {
         meta: { kind: "welcome" as const },
       },
     ],
-  } as POJUSessionState;
+  } as unknown as POJUSessionState;
   const welcomeOnce = dedupeWelcomeMessages(dupWelcome);
   assert(
     "dedupe keeps matrix welcome over generic",
     welcomeOnce.messages.length === 1 && isMatrixWelcomeMessage(welcomeOnce.messages[0]!),
   );
 
-  const seeded = upsertMatrixWelcomeMessage({ messages: [] } as POJUSessionState, payload, "zh");
+  const seeded = upsertMatrixWelcomeMessage(
+    { messages: [] } as unknown as POJUSessionState,
+    payload,
+    "zh",
+  );
   assert("upsert matrix welcome", seeded.messages.some(isMatrixWelcomeMessage));
 
   console.log("\n=== Summary ===\n");
