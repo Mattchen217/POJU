@@ -134,6 +134,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const [pipelineBusy, setPipelineBusy] = useState(false);
   const [slotActivity, setSlotActivity] = useState<PojuActivity | null>(null);
   const [slotActivityFading, setSlotActivityFading] = useState(false);
+  const [thinkingLiveLine, setThinkingLiveLine] = useState<string | null>(null);
   const [debugStateLedger, setDebugStateLedger] = useState<unknown>(null);
   const [generationStopped, setGenerationStopped] = useState(false);
   const [showOffTopicAction, setShowOffTopicAction] = useState(false);
@@ -194,6 +195,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     window.setTimeout(() => {
       setSlotActivity(null);
       setSlotActivityFading(false);
+      setThinkingLiveLine(null);
     }, 220);
   }, [slotActivity]);
 
@@ -408,6 +410,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     setSending(false);
     setSlotActivity(null);
     setSlotActivityFading(false);
+    setThinkingLiveLine(null);
     setGenerationStopped(true);
   }
 
@@ -455,6 +458,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     sendAbortRef.current = ac;
     setSending(true);
     setSlotActivity(resolveActivityForSend(baseSession));
+    setThinkingLiveLine(null);
     setGenerationStopped(false);
     scrollChatToBottom("smooth");
 
@@ -480,6 +484,12 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         locale,
         userAlreadyAppended: true,
         signal: ac.signal,
+        onStream: {
+          onReasoning: (text) => {
+            if (gen !== sendGenerationRef.current) return;
+            if (text.trim()) setThinkingLiveLine(text);
+          },
+        },
       });
       if (ac.signal.aborted || gen !== sendGenerationRef.current) return;
 
@@ -555,6 +565,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       if (gen === sendGenerationRef.current) {
         setSending(false);
         setSlotActivity(null);
+        setThinkingLiveLine(null);
       }
     }
   }
@@ -1057,6 +1068,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         isStreaming={streaming}
         pendingActivityLines={pendingActivityLines}
         pendingActivityFading={slotActivityFading}
+        thinkingLiveLine={thinkingLiveLine}
         thinkingLocale={locale}
         composerDisabled={composerLocked}
         messageSlots={messageSlots}

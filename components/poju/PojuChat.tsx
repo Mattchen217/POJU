@@ -52,6 +52,8 @@ export interface PojuChatProps {
   pendingActivityLines?: string[] | null;
   /** Fade out pending activity instead of hard unmount. */
   pendingActivityFading?: boolean;
+  /** Live model reasoning under activity caption (RTL ticker). */
+  thinkingLiveLine?: string | null;
   thinkingLocale?: string;
   onSend: (text: string) => void;
   onNewSession: () => void;
@@ -142,7 +144,7 @@ function AiReplyShell({ children }: { children: ReactNode }) {
 export default function PojuChat(props: PojuChatProps) {
   const {
     sessions, currentSessionId, messages,
-    isStreaming, pendingActivityLines, pendingActivityFading, thinkingLocale,
+    isStreaming, pendingActivityLines, pendingActivityFading, thinkingLiveLine, thinkingLocale,
     onSend,
     onNewSession,
     onSelectSession,
@@ -598,7 +600,7 @@ export default function PojuChat(props: PojuChatProps) {
                       className={`pchat__reply-handoff${pendingActivityLines?.length ? "" : " pchat__reply-handoff--done"}`}
                     >
                       <div className="pchat__reply-handoff__activity">
-                        <PojuActivityIndicator lines={replyHandoff.lines} />
+                        <PojuActivityIndicator lines={replyHandoff.lines} thinkingLine={thinkingLiveLine} />
                       </div>
                       <div className="pchat__reply-handoff__text">
                         {renderAssistantBody(handoffAssistant, true)}
@@ -609,7 +611,7 @@ export default function PojuChat(props: PojuChatProps) {
               ) : pendingOnly || (pendingActivityFading && pendingActivityLines?.length) ? (
                 <div className="pchat__msg pchat__msg--ai pchat__pending-reply">
                   <AiReplyShell>
-                    <PojuActivityIndicator lines={pendingActivityLines!} />
+                    <PojuActivityIndicator lines={pendingActivityLines!} thinkingLine={thinkingLiveLine} />
                   </AiReplyShell>
                 </div>
               ) : null}

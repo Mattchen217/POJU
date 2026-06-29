@@ -68,27 +68,81 @@
   }
 }
 
-.poju-activity__caption {
+.poju-activity__overlay {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
   z-index: 2;
+  pointer-events: none;
+  padding: 0 0 0.5rem;
+  background: linear-gradient(
+    to top,
+    rgba(6, 4, 14, 0.92) 0%,
+    rgba(6, 4, 14, 0.55) 50%,
+    transparent 100%
+  );
+}
+
+.poju-activity__caption {
+  position: relative;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  z-index: auto;
   margin: 0;
-  padding: 1.65rem 1rem 0.65rem;
+  padding: 1.65rem 1rem 0.35rem;
   text-align: center;
   font-size: 0.875rem;
   line-height: 1.45;
   color: rgba(240, 236, 252, 0.94);
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.65);
-  background: linear-gradient(
-    to top,
-    rgba(6, 4, 14, 0.88) 0%,
-    rgba(6, 4, 14, 0.5) 45%,
-    transparent 100%
-  );
+  background: none;
   pointer-events: none;
   animation: poju-activity-caption-in 0.9s ease-out;
+}
+
+.poju-activity__thinking {
+  width: 100%;
+  padding: 0 0.85rem 0.15rem;
+}
+
+.poju-activity__thinking-viewport {
+  width: 100%;
+  overflow: hidden;
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(0, 0, 0, 0.85) 12%,
+    rgba(0, 0, 0, 0.85) 88%,
+    transparent 100%
+  );
+}
+
+.poju-activity__thinking-track {
+  display: inline-block;
+  max-width: none;
+  white-space: nowrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+  color: rgba(165, 243, 252, 0.88);
+  text-shadow: 0 0 12px rgba(34, 211, 238, 0.25);
+}
+
+.poju-activity__thinking-track.is-scrolling {
+  padding-left: 100%;
+  animation: poju-thinking-marquee 5.5s linear infinite;
+}
+
+@keyframes poju-thinking-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
 }
 
 @keyframes poju-activity-caption-in {

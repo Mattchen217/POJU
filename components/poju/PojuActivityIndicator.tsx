@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import { SplineInteractiveScene } from "@/components/spline/SplineInteractiveScene";
+import { PojuThinkingTicker } from "@/components/poju/PojuThinkingTicker";
 import { ACTIVITY_CAPTION_ROTATE_MS } from "@/lib/ui/activity-caption-timing";
 import "@/styles/poju-activity.css";
 
@@ -10,7 +11,14 @@ const POJU_CHAT_ACTIVITY_ZOOM = 0.74;
 
 const ROTATE_MS = ACTIVITY_CAPTION_ROTATE_MS;
 
-export function PojuActivityIndicator({ lines }: { lines: string[] }) {
+export function PojuActivityIndicator({
+  lines,
+  thinkingLine,
+}: {
+  lines: string[];
+  /** Live model reasoning — shown below caption, RTL ticker. */
+  thinkingLine?: string | null;
+}) {
   const [i, setI] = useState(0);
   const linesRef = useRef(lines);
   linesRef.current = lines;
@@ -40,10 +48,15 @@ export function PojuActivityIndicator({ lines }: { lines: string[] }) {
             renderOnDemand={false}
           />
         </Suspense>
-        {caption ? (
-          <p key={caption} className="poju-activity__caption">
-            {caption}
-          </p>
+        {caption || thinkingLine ? (
+          <div className="poju-activity__overlay">
+            {caption ? (
+              <p key={caption} className="poju-activity__caption">
+                {caption}
+              </p>
+            ) : null}
+            <PojuThinkingTicker text={thinkingLine} />
+          </div>
         ) : null}
       </div>
     </div>
