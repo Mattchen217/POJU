@@ -167,6 +167,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const sendAbortRef = useRef<AbortController | null>(null);
   const sendGenerationRef = useRef(0);
   const turnInFlightRef = useRef(false);
+  /** Synchronous dedupe — blocks same-tick double runUserTurn before turnInFlightRef is visible. */
+  const activeTurnKeyRef = useRef<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const showStateDebug = searchParams.get("debug") !== "0";
@@ -416,6 +418,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     sendAbortRef.current?.abort();
     sendAbortRef.current = null;
     turnInFlightRef.current = false;
+    activeTurnKeyRef.current = null;
     setSending(false);
     setSlotActivity(null);
     setSlotActivityFading(false);
@@ -461,6 +464,12 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   ) {
     if (turnInFlightRef.current) return;
 
+    const turnKey = `${baseSession.session_id}::${userMessage.trim()}`;
+    if (activeTurnKeyRef.current === turnKey) return;
+
+    turnInFlightRef.current = true;
+    activeTurnKeyRef.current = turnKey;
+
     const liveMsgs = sessionRef.current.messages;
     const lastUserMsg = [...liveMsgs].reverse().find((m) => m.role === "user" && !m.is_rejected);
     const lastMsg = liveMsgs[liveMsgs.length - 1];
@@ -468,9 +477,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       lastUserMsg?.content.trim() === userMessage.trim() &&
       lastMsg?.role === "assistant" &&
       !lastMsg.content.includes("未能生成");
-    if (alreadyAnswered) return;
-
-    turnInFlightRef.current = true;
+    if (alreadyAnswered) {
+      turnInFlightRef.current = false;
+      activeTurnKeyRef.current = null;
+      return;
+    }
 
     const gen = ++sendGenerationRef.current;
     const ac = new AbortController();
@@ -580,6 +591,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       await dialog.alert(t("dialog_connection_error"));
     } finally {
       turnInFlightRef.current = false;
+      if (activeTurnKeyRef.current === turnKey) activeTurnKeyRef.current = null;
       if (sendAbortRef.current === ac) sendAbortRef.current = null;
       if (gen === sendGenerationRef.current) {
         setSending(false);

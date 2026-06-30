@@ -625,6 +625,9 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     if (inlineCoreReady) {
       console.info("[agent] conversion envelope supplied core + agenda (single call)");
     } else {
+      console.warn(
+        "[agent] inline envelope missing — fallback breakthrough-core (2nd model call)",
+      );
       try {
         const freshQuestion =
           agent_v2.original_question?.trim() ||
