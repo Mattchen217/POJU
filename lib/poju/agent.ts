@@ -48,7 +48,6 @@ import { chatPayloadFromWire } from "@/lib/poju/serialize-chat-payload";
 import { buildAgentStateSnapshot } from "@/lib/poju/agent-state-snapshot";
 import { ensureBreakthroughCore, runConfirmationPipeline } from "@/lib/poju/agent-orchestrator";
 import { appendConfirmationInvite, hasConfirmationInviteCue } from "@/lib/poju/confirmation-reply";
-import { appendFirstFocusQuestion, hasQuestionCue } from "@/lib/poju/collecting-focus-reply";
 import { applyActionStatusUpdates, parseActionStatusUpdates } from "@/lib/poju/action-status-updates";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -212,6 +211,8 @@ function finalizeAgentV2(
     confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";
     topic_drift_signal?: "none" | "edge" | "off_topic";
     breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null;
+    breakthrough_core?: import("@/lib/poju/agent-state").BreakthroughCore | null;
+    problem_summary?: string | null;
   },
   userMessage: string,
   isSystemMessage: boolean,
@@ -253,7 +254,12 @@ function finalizeAgentV2(
     selected_profile_id: resolveSelectedProfileId(session, base),
     investigation_agenda,
     agenda_generated,
+    breakthrough_core:
+      base.breakthrough_core ?? llm.breakthrough_core ?? null,
   };
+  if (!base.breakthrough_core && llm.breakthrough_core) {
+    console.info("[agent] breakthrough_core from opening conversion envelope");
+  }
   if (merged.breakthrough_core && (llm as { breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null }).breakthrough_core_updates) {
     const updates = (llm as { breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null }).breakthrough_core_updates;
     if (updates) {
@@ -299,7 +305,8 @@ function finalizeAgentV2(
 
   const baseAnalysisReady = Boolean(merged.has_base_analysis || resolveSessionHasProfile(session));
   const substantiveOpeningTurns = countSubstantiveOpeningTurns(session.messages);
-  const openingProblem = extractOpeningProblem(session.messages);
+  const openingProblem =
+    llm.problem_summary?.trim() || extractOpeningProblem(session.messages);
 
   const signals = extractModelTurnSignals({
     response: "",
@@ -600,6 +607,8 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       confirmation_signal: llmResponse.confirmation_signal,
       topic_drift_signal: llmResponse.topic_drift_signal,
       breakthrough_core_updates: llmResponse.breakthrough_core_updates ?? null,
+      breakthrough_core: llmResponse.breakthrough_core ?? null,
+      problem_summary: llmResponse.problem_summary ?? null,
     },
     userMessage,
     isSystemMessage,
@@ -611,29 +620,36 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   }
 
   if (advance.trigger_breakthrough_core) {
-    try {
-      const freshQuestion =
-        agent_v2.original_question?.trim() ||
-        extractOpeningProblem(sessionForAgent.messages) ||
-        resolveOriginalQuestion(agent_v2, phaseUserMessage);
-      const withQ = { ...agent_v2, original_question: freshQuestion };
-      const coreResult = await ensureBreakthroughCore(
-        {
-          ...sessionForAgent,
-          original_question: freshQuestion,
-          agent_v2: { ...withQ, current_phase: "collecting_context" },
-        },
-        locale,
-      );
-      const coreReady = coreResult.agent_v2?.breakthrough_core != null;
-      if (coreReady) {
-        agent_v2 = { ...coreResult.agent_v2!, actions: mergedActions };
-      } else {
+    const inlineCoreReady =
+      agent_v2.breakthrough_core != null && (agent_v2.investigation_agenda?.length ?? 0) > 0;
+    if (inlineCoreReady) {
+      console.info("[agent] conversion envelope supplied core + agenda (single call)");
+    } else {
+      try {
+        const freshQuestion =
+          agent_v2.original_question?.trim() ||
+          llmResponse.problem_summary?.trim() ||
+          extractOpeningProblem(sessionForAgent.messages) ||
+          resolveOriginalQuestion(agent_v2, phaseUserMessage);
+        const withQ = { ...agent_v2, original_question: freshQuestion };
+        const coreResult = await ensureBreakthroughCore(
+          {
+            ...sessionForAgent,
+            original_question: freshQuestion,
+            agent_v2: { ...withQ, current_phase: "collecting_context" },
+          },
+          locale,
+        );
+        const coreReady = coreResult.agent_v2?.breakthrough_core != null;
+        if (coreReady) {
+          agent_v2 = { ...coreResult.agent_v2!, actions: mergedActions };
+        } else {
+          agent_v2 = { ...agent_v2, current_phase: "opening" };
+        }
+      } catch (e) {
+        console.warn("[agent] breakthrough-core fallback failed, staying in opening:", e);
         agent_v2 = { ...agent_v2, current_phase: "opening" };
       }
-    } catch (e) {
-      console.warn("[agent] breakthrough-core failed, staying in opening:", e);
-      agent_v2 = { ...agent_v2, current_phase: "opening" };
     }
   }
 
@@ -641,12 +657,6 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   let finalContent = llmResponse.response;
   if (phaseNow === "awaiting_confirmation" && !hasConfirmationInviteCue(llmResponse.response)) {
     finalContent = appendConfirmationInvite(llmResponse.response, locale);
-  } else if (
-    phaseNow === "collecting_context" &&
-    advance.trigger_breakthrough_core &&
-    !hasQuestionCue(llmResponse.response)
-  ) {
-    finalContent = appendFirstFocusQuestion(llmResponse.response, agent_v2, locale);
   }
 
   const assistantMessage: POJUMessage = {
@@ -839,6 +849,8 @@ async function callLLMViaAPI(input: {
   user_confirms_delivery?: boolean;
   confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";
   breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null;
+  breakthrough_core?: import("@/lib/poju/agent-state").BreakthroughCore | null;
+  problem_summary?: string | null;
   action_status_updates?: import("@/lib/poju/action-status-updates").ActionStatusPatch[];
 }> {
   const body = JSON.stringify({
@@ -1017,6 +1029,14 @@ function mapLlmApiPayload(
       !Array.isArray(wire.breakthrough_core_updates)
         ? (wire.breakthrough_core_updates as Partial<import("@/lib/poju/agent-state").BreakthroughCore>)
         : null,
+    breakthrough_core:
+      wire.breakthrough_core &&
+      typeof wire.breakthrough_core === "object" &&
+      !Array.isArray(wire.breakthrough_core)
+        ? (wire.breakthrough_core as import("@/lib/poju/agent-state").BreakthroughCore)
+        : null,
+    problem_summary:
+      typeof wire.problem_summary === "string" ? wire.problem_summary : null,
     action_status_updates: Array.isArray(wire.action_status_updates)
       ? parseActionStatusUpdates({ action_status_updates: wire.action_status_updates })
       : undefined,

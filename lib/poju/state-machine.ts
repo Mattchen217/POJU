@@ -24,6 +24,7 @@ export interface StateLedgerSnapshot {
   state_ledger: {
     current_state: PojuState;
     original_question: string;
+    question_category: string | null;
     flags: {
       relationship_conclusion_established: boolean;
       breakthrough_direction_confirmed: boolean;
@@ -59,7 +60,8 @@ export function buildStateSnapshot(agent: POJUAgentState): StateLedgerSnapshot {
     state_ledger: {
       current_state: agentPhaseToPojuState(agent.current_phase),
       original_question: agent.original_question ?? "",
-    flags: {
+      question_category: agent.question_category ?? null,
+      flags: {
       problem_understood:
         agentPhaseToPojuState(agent.current_phase) !== "opening" &&
         Boolean(agent.original_question?.trim()),

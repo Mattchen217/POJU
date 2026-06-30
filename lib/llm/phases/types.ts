@@ -55,6 +55,8 @@ export interface PhaseLLMResult {
   stall_offer?: boolean;
   /** First collecting turn only — persisted once. */
   investigation_agenda?: import("@/lib/poju/investigation-agenda").AgendaItem[] | null;
+  /** Opening conversion — one-line dilemma summary. */
+  problem_summary?: string | null;
   /** Collecting escalation — show refund entry (user-initiated only). */
   suggest_refund?: boolean;
   /** OpenRouter upstream provider that served this turn (for session lock). */

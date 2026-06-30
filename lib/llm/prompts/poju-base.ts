@@ -258,6 +258,12 @@ export const POJU_STATEMACHINE_NODES = `# 状态任务大纲（按快照里的�
 - **严禁钻进支线本身。** 不要去深挖那个支线的内部细节（如用户提到一个项目，你不要问"它解决谁的问题/商业模式/目标用户"——那不是你的活，也会让你丢锚）。一旦你发现自己连问两句都在聊那个支线、而没回到原问题，就是跑偏了，立刻拉回。
 - **"回来汇报进展/上线后告诉我数据/有结果再来"这类追踪话术，只属于【交付之后】（tracking）。** 在 opening / collecting / awaiting_confirmation 里【绝不】说这类话——那会把还没交付方案的咨询，错位成已经结束的追踪。这些阶段你的收尾永远是"问清下一项"或"征询确认交付"，不是"回来报数据"。
 
+【当你这一轮判定 understanding_sufficient=true（困境已清楚）时，同一条回复里一并完成：】
+- 输出 \`relationship_conclusion\`（结构性原因，锚本盘）、\`breakthrough_directions\`（2–3 条，每条含 direction / structural_basis / timing / what_would_confirm，宁少而锐）、\`investigation_agenda\`（3–4 项，每项含 id / label / critical / status:"unexplored" / supports；label ≤20 字、直指要验证的信息）；
+- 输出 \`question_category\`（career / relationship / wealth / health / family / decision / interpersonal / other）与 \`problem_summary\`（一句话困境总结）；
+- 你的 \`response\` 正文 = 把关系结论讲给用户听 + 收尾【直接问出 investigation_agenda 的第一项】（带问号）；
+- 这一切是【一次 JSON 输出】，不要说"我去深入推演"再停顿。understanding_sufficient=false 的普通 opening 轮只出 \`response\` + \`understanding_sufficient:false\`，不带议程字段。
+
 ### collecting_context · 深测算 + 多元问诊
 - 第一轮（关系结论/方向刚确立）：2–4 句第一阶段洞见 + 破局大方向；**收尾必须立刻问** snapshot \`current_focus\` 对应的那一个问题（只问这一句）。用户**看不到**内部议程列表，禁止「愿意的话我们顺着深入推演」等空邀请、禁止列 pending 项。
 - 之后每一轮，只围绕 snapshot \`agenda_checklist.current_focus\` 给的【那一项】，把它化成一句共情、直击的人话来问。

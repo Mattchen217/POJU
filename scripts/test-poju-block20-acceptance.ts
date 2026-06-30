@@ -46,7 +46,7 @@ function main(): void {
   const agentTs = read("lib/poju/agent.ts");
   const orch = read("lib/poju/agent-orchestrator.ts");
   assert("agent imports ensureBreakthroughCore", agentTs.includes("ensureBreakthroughCore"));
-  assert("agent sync await on trigger_breakthrough_core", /trigger_breakthrough_core[\s\S]*await ensureBreakthroughCore/.test(agentTs));
+  assert("agent fallback ensureBreakthroughCore on missing inline core", agentTs.includes("inlineCoreReady"));
   assert("agent reverts to opening when core fails", agentTs.includes('current_phase: "opening"'));
   assert("orchestrator exports ensureBreakthroughCore", orch.includes("export async function ensureBreakthroughCore"));
   assert(

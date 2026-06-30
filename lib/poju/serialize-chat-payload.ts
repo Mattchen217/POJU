@@ -33,6 +33,8 @@ export const CHAT_PAYLOAD_FIELDS = [
   "agenda_updates",
   "user_confirms_delivery",
   "confirmation_signal",
+  "breakthrough_core",
+  "problem_summary",
   "breakthrough_core_updates",
   "action_status_updates",
 ] as const;
@@ -72,6 +74,8 @@ export function pojuLlmToChatPayload(
     question_category: llm.question_category,
     thinking_process: llm.thinking_process,
     investigation_agenda: llm.investigation_agenda ?? null,
+    breakthrough_core: llm.breakthrough_core ?? null,
+    problem_summary: llm.problem_summary ?? null,
     collection_progress: llm.collection_progress ?? null,
     stall_offer: llm.stall_offer ?? false,
     tool_suggestion: llm.tool_suggestion ?? null,
@@ -118,6 +122,9 @@ export function chatPayloadFromWire(
     question_category: data.question_category,
     thinking_process: data.thinking_process,
     investigation_agenda: data.investigation_agenda ?? null,
+    breakthrough_core: data.breakthrough_core ?? null,
+    problem_summary:
+      typeof data.problem_summary === "string" ? data.problem_summary : null,
     collection_progress: data.collection_progress ?? null,
     stall_offer: data.stall_offer === true,
     tool_suggestion: data.tool_suggestion ?? null,

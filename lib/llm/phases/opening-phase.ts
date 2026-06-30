@@ -12,6 +12,8 @@ import {
 import type { PojuV4ActionRequested } from "@/lib/poju/types";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
 import { buildPhaseTransportInput } from "@/lib/llm/phases/oriental-prompt-context";
+import { parseOpeningConversionPayload } from "@/lib/poju/opening-conversion-payload";
+import { extractQuestionCategory } from "@/lib/poju/context-extractor";
 
 const VALID_SUGGESTED: AgentPhase[] = ["opening", "collecting_context"];
 
@@ -41,12 +43,13 @@ export async function callOpeningPhase(input: PhaseLLMInput): Promise<PhaseLLMRe
     withPhaseStreamOpts(input, {
       call_type: "chat_flash",
       temperature: 0.55,
-      max_tokens: 6000,
+      max_tokens: 8192,
       thinking_effort: "xhigh",
     }),
   );
 
-  const { parsed, response } = parsePhaseResult(result.content, { locale: input.locale });
+  const { parsed, response: rawResponse } = parsePhaseResult(result.content, { locale: input.locale });
+  let response = rawResponse;
 
   const understanding_sufficient =
     typeof parsed.understanding_sufficient === "boolean"
@@ -68,9 +71,37 @@ export async function callOpeningPhase(input: PhaseLLMInput): Promise<PhaseLLMRe
   };
 
   const suggestedRaw = typeof parsed.suggested_phase === "string" ? parsed.suggested_phase : null;
-  const suggested = suggestedRaw ? normalizeAgentPhase(suggestedRaw) : null;
+  let suggested = suggestedRaw ? normalizeAgentPhase(suggestedRaw) : null;
+
+  let question_category = extractQuestionCategory(parsed);
+  let breakthrough_core: PhaseLLMResult["breakthrough_core"] = null;
+  let investigation_agenda: PhaseLLMResult["investigation_agenda"] = null;
+  let problem_summary: string | null = null;
+
+  if (understanding_sufficient) {
+    const conversion = parseOpeningConversionPayload(parsed, response);
+    if (conversion) {
+      response = conversion.response;
+      breakthrough_core = conversion.breakthrough_core;
+      investigation_agenda = conversion.investigation_agenda;
+      question_category = conversion.question_category ?? question_category;
+      problem_summary = conversion.problem_summary;
+      suggested = "collecting_context";
+      console.info("[opening-conversion] envelope parsed", {
+        agenda: investigation_agenda.length,
+        category: question_category,
+      });
+    } else {
+      console.warn("[opening-conversion] understanding_sufficient but envelope parse failed — fallback core may run");
+    }
+  }
+
   const suggested_phase =
-    understanding.sufficient && suggested && VALID_SUGGESTED.includes(suggested) ? suggested : null;
+    understanding_sufficient && suggested && VALID_SUGGESTED.includes(suggested)
+      ? suggested
+      : understanding.sufficient && suggested && VALID_SUGGESTED.includes(suggested)
+        ? suggested
+        : null;
 
   console.log("[poju-diag] phase-transition", {
     from: "opening",
@@ -95,8 +126,11 @@ export async function callOpeningPhase(input: PhaseLLMInput): Promise<PhaseLLMRe
     suggested_phase,
     action_requested,
     context_updates,
-    question_category: null,
-    current_summary: null,
+    question_category,
+    current_summary: problem_summary,
+    problem_summary,
+    breakthrough_core,
+    investigation_agenda,
     main_delivery_data: null,
     actions: [],
     tokens_used: result.tokens_used,
