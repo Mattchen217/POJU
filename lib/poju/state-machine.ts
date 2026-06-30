@@ -28,6 +28,7 @@ export interface StateLedgerSnapshot {
       relationship_conclusion_established: boolean;
       breakthrough_direction_confirmed: boolean;
       agenda_built: boolean;
+      problem_understood: boolean;
     };
     agenda_checklist: {
       completed: string[];
@@ -58,11 +59,14 @@ export function buildStateSnapshot(agent: POJUAgentState): StateLedgerSnapshot {
     state_ledger: {
       current_state: agentPhaseToPojuState(agent.current_phase),
       original_question: agent.original_question ?? "",
-      flags: {
-        relationship_conclusion_established: Boolean(core?.relationship_conclusion),
-        breakthrough_direction_confirmed: (core?.breakthrough_directions?.length ?? 0) > 0,
-        agenda_built: agenda.length > 0,
-      },
+    flags: {
+      problem_understood:
+        agentPhaseToPojuState(agent.current_phase) !== "opening" &&
+        Boolean(agent.original_question?.trim()),
+      relationship_conclusion_established: Boolean(core?.relationship_conclusion),
+      breakthrough_direction_confirmed: (core?.breakthrough_directions?.length ?? 0) > 0,
+      agenda_built: agenda.length > 0,
+    },
       agenda_checklist: {
         completed: agenda.filter((a) => a.status === "covered").map((a) => a.label),
         pending: pendingItems.map((a) => a.label),

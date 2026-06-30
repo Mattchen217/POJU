@@ -1,4 +1,5 @@
 import type { POJUAgentState } from "@/lib/poju/agent-state";
+import { agentPhaseToPojuState } from "@/lib/poju/state-machine";
 import type { AgendaItem } from "@/lib/poju/investigation-agenda";
 
 export interface PojuStateSnapshot {
@@ -19,7 +20,9 @@ export function buildAgentStateSnapshot(
   const covered = agenda.filter((a) => a.status === "covered").length;
   return {
     phase: agent.current_phase,
-    problem_understood: agent.current_phase !== "opening" || Boolean(agent.has_base_analysis),
+    problem_understood:
+      agentPhaseToPojuState(agent.current_phase) !== "opening" &&
+      Boolean(agent.original_question?.trim()),
     relationship_conclusion: Boolean(agent.breakthrough_core?.relationship_conclusion),
     breakthrough_direction: (agent.breakthrough_core?.breakthrough_directions?.length ?? 0) > 0,
     agenda_built: agenda.length > 0,
