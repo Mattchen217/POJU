@@ -62,7 +62,41 @@ const DELIVERY_MARKING_ENTRIES: TermEntry[] = DELIVERY_MARKING_GLOSSARY_IDS.map(
 
 /** LLM term marker — UI parses `⟦t:id|visible|plain⟧` (plain optional). Legacy 2-segment + `⟦g|…⟧` supported. */
 export const TERM_MARKER_PATTERN =
-  /⟦t:([a-zA-Z0-9_]+)\|((?:\\.|[^|\\])*?)(?:\|((?:\\.|[^|\\])*?))?⟧/g;
+  /⟦t:([a-zA-Z0-9_:]+)\|((?:\\.|[^|\\])*?)(?:\|((?:\\.|[^|\\])*?))?⟧/g;
+
+function normalizeTermMarkerId(raw: string): string {
+  if (!raw.includes(":")) return raw;
+  const leaf = raw.split(":").pop()!;
+  return TERM_BY_ID.has(leaf) ? leaf : raw;
+}
+
+export function repairChatTermMarkers(text: string, locale: string): string {
+  if (!text?.trim()) return text ?? "";
+  let out = text.replace(
+    /(?<!⟦)t:([a-zA-Z0-9_:]+)\|([^|]+)\|?/g,
+    (_m, rawId: string, visible: string) => {
+      const id = normalizeTermMarkerId(rawId);
+      const vis = visible.trim();
+      if (!TERM_BY_ID.has(id)) return vis;
+      const plain = plainByTermId(id, locale) ?? undefined;
+      return encodeTermMarker(id, vis, plain);
+    },
+  );
+  out = out.replace(
+    /⟦t:([a-zA-Z0-9_:]+)\|((?:\\.|[^|\\])*?)(?:\|((?:\\.|[^|\\])*?))?⟧/g,
+    (raw, rawId: string, visEsc: string, plainEsc?: string) => {
+      const id = normalizeTermMarkerId(rawId);
+      if (id === rawId && TERM_BY_ID.has(id)) return raw;
+      if (!TERM_BY_ID.has(id)) return unescapeMarkerPart(visEsc);
+      const vis = unescapeMarkerPart(visEsc);
+      const plain = plainEsc?.trim()
+        ? unescapeMarkerPart(plainEsc)
+        : plainByTermId(id, locale) ?? undefined;
+      return encodeTermMarker(id, vis, plain);
+    },
+  );
+  return out;
+}
 
 function escapeMarkerPart(s: string): string {
   return s.replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/⟧/g, "\\⟧");
@@ -88,7 +122,7 @@ export function parseTermMarkers(text: string): ParsedTermMarker[] {
   let m: RegExpExecArray | null;
   while ((m = TERM_MARKER_PATTERN.exec(text)) !== null) {
     out.push({
-      id: m[1],
+      id: normalizeTermMarkerId(m[1]),
       visible: unescapeMarkerPart(m[2]),
       plain: m[3] ? unescapeMarkerPart(m[3]) : undefined,
       raw: m[0],
@@ -108,10 +142,7 @@ export function stripMarkersForPrompt(text: string): string {
 
 /** Remove bare t: leaks (no ⟦⟧) and broken markers so users never see raw tokens. */
 export function stripBareTermMarkers(text: string): string {
-  return text.replace(
-    /(?<!⟦)t:[a-zA-Z0-9_:]+\|([^|⟧\n]+?)(?:\|[^⟧\n]*?)?(?=[\s，。、；,.!?]|$)/g,
-    "$1",
-  );
+  return text.replace(/(?<!⟦)t:[a-zA-Z0-9_:]+\|([^|]+)\|?/g, "$1");
 }
 
 /** Wrap bare keep_cn soft phrases (e.g. 人生阶段（丁酉）) that lack ⟦t:…⟧ markers. */
@@ -151,8 +182,8 @@ export function stripBrokenMarkers(text: string): string {
   if (!r.includes("⟦") && !r.includes("⟧")) return r;
   r = r
     .replace(
-      /⟦t:[a-zA-Z0-9_]+\|((?:\\.|[^|\\])*?)(?:\|((?:\\.|[^|\\])*?))?(?=⟧|$)/g,
-      (match, v: string) => unescapeMarkerPart(v),
+      /⟦t:[a-zA-Z0-9_:]+\|((?:\\.|[^|\\])*?)(?:\|((?:\\.|[^|\\])*?))?(?=⟧|$)/g,
+      (_match, v: string) => unescapeMarkerPart(v),
     )
     .replace(/⟦g\|((?:\\.|[^|\\])*)\|((?:\\.|[^|]|\\[^⟧])*?)⟧/g, (_, d: string) =>
       d.replace(/\\(.)/g, "$1"),

@@ -1,4 +1,4 @@
-import { auditDeliveredText, sanitizeChatResponse, stripForbiddenShenSha, stripGlossTokensForPrompt } from "@/lib/llm/sanitize/compliance-terms";
+import { auditDeliveredText, repairChatTermMarkers, sanitizeChatResponse, stripForbiddenShenSha, stripGlossTokensForPrompt } from "@/lib/llm/sanitize/compliance-terms";
 import { repairEmptyKeepCnBrackets } from "@/lib/llm/sanitize/keep-cn-brackets";
 import { salvagePhaseResponseText } from "@/lib/poju/extract-streaming-response";
 import { pojuCacheSessionId } from "@/lib/llm/cache-session-id";
@@ -295,7 +295,8 @@ export function parsePhaseResult(
 
   const sanitizeResponse = (raw: string): string => {
     if (!options?.locale || !raw.trim()) return raw;
-    let audited = sanitizeChatResponse(raw, options.locale);
+    let audited = repairChatTermMarkers(raw, options.locale);
+    audited = sanitizeChatResponse(audited, options.locale);
     const hits = auditDeliveredText(audited, options.locale).filter((v) =>
       v.label.startsWith("out_of_set"),
     );
@@ -480,10 +481,13 @@ export function resolveStreamedCompleteResponse(
   streamedText: string,
   locale?: string,
 ): string {
-  const streamed = streamedText.trim();
   const resolved = llmResponse.trim();
   if (resolved && !isPhaseResponseFallback(resolved)) return resolved;
-  if (streamed) return streamed;
+  const streamed = streamedText.trim();
+  if (streamed) {
+    const salvaged = salvagePhaseResponseText(streamed).trim();
+    if (salvaged && !isPhaseResponseFallback(salvaged)) return salvaged;
+  }
   return getPhaseResponseFallback(locale);
 }
 

@@ -2,7 +2,7 @@
  * Opening conversion envelope — relationship_conclusion + directions + agenda in one LLM turn.
  */
 import { mapBreakthroughCorePayload } from "@/lib/llm/deepseek/breakthrough-core";
-import { stripForbiddenShenSha } from "@/lib/llm/sanitize/compliance-terms";
+import { repairChatTermMarkers, stripForbiddenShenSha } from "@/lib/llm/sanitize/compliance-terms";
 import type { BreakthroughCore, QuestionCategory } from "@/lib/poju/agent-state";
 import { extractQuestionCategory } from "@/lib/poju/context-extractor";
 import type { AgendaItem } from "@/lib/poju/investigation-agenda";
@@ -42,6 +42,7 @@ function stripAgendaLabels(agenda: AgendaItem[]): AgendaItem[] {
 export function parseOpeningConversionPayload(
   parsed: Record<string, unknown>,
   response: string,
+  locale = "zh",
 ): OpeningConversionPayload | null {
   try {
     const normalized = {
@@ -54,7 +55,7 @@ export function parseOpeningConversionPayload(
       typeof parsed.problem_summary === "string" ? parsed.problem_summary.trim() : "";
 
     return {
-      response: stripForbiddenShenSha(response),
+      response: repairChatTermMarkers(stripForbiddenShenSha(response), locale),
       breakthrough_core,
       investigation_agenda: stripAgendaLabels(investigation_agenda),
       question_category,

@@ -5,13 +5,14 @@ import { normalizeAgentPhase, type AgentPhase } from "@/lib/poju/agent-state";
 import {
   callPhaseJsonTransport,
   formatPhaseMessageHistory,
-  parsePhaseResult,
+  resolvePhaseResponse,
   withPhaseStreamOpts,
   isPhaseParseFailed,
 } from "@/lib/llm/phases/phase-transport";
 import type { PojuV4ActionRequested } from "@/lib/poju/types";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
 import { buildPhaseTransportInput } from "@/lib/llm/phases/oriental-prompt-context";
+import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import { parseOpeningConversionPayload } from "@/lib/poju/opening-conversion-payload";
 import { extractQuestionCategory } from "@/lib/poju/context-extractor";
 
@@ -48,7 +49,18 @@ export async function callOpeningPhase(input: PhaseLLMInput): Promise<PhaseLLMRe
     }),
   );
 
-  const { parsed, response: rawResponse } = parsePhaseResult(result.content, { locale: input.locale });
+  const structured = normalizeBaseAnalysisInput(input.base_analysis ?? null).structured;
+
+  const { parsed, response: rawResponse } = resolvePhaseResponse(result.content, {
+    locale: input.locale,
+    structured,
+    phase_name: "opening",
+    call_type: "chat_flash",
+    provider: result.provider ?? undefined,
+    model: result.model,
+    finish_reason: result.finish_reason ?? undefined,
+    raw_length: result.content.length,
+  });
   let response = rawResponse;
 
   const understanding_sufficient =
@@ -79,7 +91,7 @@ export async function callOpeningPhase(input: PhaseLLMInput): Promise<PhaseLLMRe
   let problem_summary: string | null = null;
 
   if (understanding_sufficient) {
-    const conversion = parseOpeningConversionPayload(parsed, response);
+    const conversion = parseOpeningConversionPayload(parsed, response, input.locale);
     if (conversion) {
       response = conversion.response;
       breakthrough_core = conversion.breakthrough_core;
