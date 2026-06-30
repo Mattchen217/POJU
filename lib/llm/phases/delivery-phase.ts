@@ -21,7 +21,7 @@ function buildDeliveryTaskBlock(input: PhaseLLMInput): string {
 
 ## 你要做
 
-- 40-80 字（中文）/ 30-60 词（英文）承接
+- 80-160 字（中文）/ 60-120 词（英文）承接
 - 邀请用户选一个行动开始，或追问哪一点还不清楚
 - 可简短用命理视角回应追问，但不要重新做完整推演
 - 遵守 POJU 术语（方案/推演，禁止方子/诊脉/调方/病灶）；结尾用模糊回访时间（随时回来 / 30 天 Session），禁止「三个月后再来」「复诊」
@@ -43,8 +43,9 @@ export async function callDeliveryPhase(input: PhaseLLMInput): Promise<PhaseLLMR
     withPhaseStreamOpts(input, {
       call_type: "chat_flash",
       phase_name: "delivery",
-      max_tokens: 800,
+      max_tokens: 6000,
       temperature: 0.4,
+      thinking_effort: "xhigh",
     }),
   );
 
