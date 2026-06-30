@@ -655,8 +655,32 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
 
   const phaseNow = normalizeAgentPhase(agent_v2.current_phase);
   let finalContent = llmResponse.response;
-  if (phaseNow === "awaiting_confirmation" && !hasConfirmationInviteCue(llmResponse.response)) {
-    finalContent = appendConfirmationInvite(llmResponse.response, locale);
+
+  if (phaseNow === "awaiting_confirmation" && !hasConfirmationInviteCue(finalContent)) {
+    finalContent = appendConfirmationInvite(finalContent, locale);
+  }
+
+  const justConverted =
+    advance.trigger_breakthrough_core &&
+    agent_v2.breakthrough_core != null &&
+    (agent_v2.investigation_agenda?.length ?? 0) > 0;
+  if (justConverted) {
+    const tail = finalContent.slice(-50);
+    const hasQuestion = /[？?]/.test(tail);
+    if (!hasQuestion) {
+      const firstFocus =
+        agent_v2.investigation_agenda!.find((a) => a.status !== "covered") ??
+        agent_v2.investigation_agenda![0];
+      if (firstFocus?.label) {
+        const lead = locale.startsWith("zh")
+          ? "\n\n我想先从一件事开始——"
+          : "\n\nLet's start with one thing—";
+        const q = /[？?]$/.test(firstFocus.label.trim())
+          ? firstFocus.label.trim()
+          : `${firstFocus.label.trim()}？`;
+        finalContent = `${finalContent.trimEnd()}${lead}${q}`;
+      }
+    }
   }
 
   const assistantMessage: POJUMessage = {

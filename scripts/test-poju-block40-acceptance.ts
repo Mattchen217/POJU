@@ -21,11 +21,10 @@ function main(): void {
   console.log("\n=== Block 40 acceptance ===\n");
 
   const chatUi = read("components/poju/POJUChatUI.tsx");
-  assert("lastTurnSigRef declared", chatUi.includes("lastTurnSigRef"));
-  assert("runUserTurn sig dedupe", chatUi.includes("lastTurnSigRef.current === sig"));
-  assert("messages.length in sig", chatUi.includes("baseSession.messages.length"));
+  assert("turnInFlightRef declared", chatUi.includes("turnInFlightRef"));
+  assert("alreadyAnswered re-fire guard", chatUi.includes("alreadyAnswered"));
   assert("unlock release alreadySent guard", chatUi.includes("alreadySent"));
-  assert("clear sig on send failure", chatUi.includes("lastTurnSigRef.current = null"));
+  assert("no messages.length sig dedupe", !chatUi.includes("lastTurnSigRef"));
 
   const routing = read("lib/llm/openrouter-provider-routing.ts");
   assert("allow_fallbacks false", routing.includes("allow_fallbacks = false"));

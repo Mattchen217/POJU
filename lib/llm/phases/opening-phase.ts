@@ -43,7 +43,7 @@ export async function callOpeningPhase(input: PhaseLLMInput): Promise<PhaseLLMRe
     withPhaseStreamOpts(input, {
       call_type: "chat_flash",
       temperature: 0.55,
-      max_tokens: 8192,
+      max_tokens: 16000,
       thinking_effort: "xhigh",
     }),
   );
