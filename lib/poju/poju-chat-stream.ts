@@ -1,4 +1,5 @@
 import { callPOJULLM } from "@/lib/llm/poju-llm";
+import { OpenRouterProviderQueueError } from "@/lib/llm/openrouter-retry";
 import { logPojuError } from "@/lib/poju/base-analysis-diagnostics";
 import { resolveStreamedCompleteResponse } from "@/lib/llm/phases/phase-transport";
 import { extractStreamingResponseText } from "@/lib/poju/extract-streaming-response";
@@ -83,6 +84,8 @@ export function createPojuChatStreamResponse(body: ChatBody, reqSignal?: AbortSi
         const message = e instanceof Error ? e.message : String(e);
         if (message.includes("abort") || message.includes("AbortError")) {
           send({ type: "aborted" });
+        } else if (e instanceof OpenRouterProviderQueueError) {
+          send({ type: "error", code: "provider_queue", message: e.message });
         } else {
           send({ type: "error", message });
         }

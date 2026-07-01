@@ -1,6 +1,5 @@
 import {
   getOpenRouterDefaultModel,
-  isProviderEscapeHttpStatus,
   logOpenRouterProviderServed,
   logOpenRouterRequestRouting,
   openRouterProviderExtras,
@@ -9,6 +8,7 @@ import {
   type OpenRouterChatOptions,
   type OpenRouterCompletionResult,
 } from "@/lib/llm/openrouter-shared";
+import { withOpenRouterExponentialBackoff } from "@/lib/llm/openrouter-retry";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
@@ -62,12 +62,9 @@ function parseSseJsonBlocks(buffer: string): { events: string[]; rest: string } 
   return { events, rest };
 }
 
-function resolveStreamProviderBody(
-  options: OpenRouterChatOptions,
-  escapeHatch: boolean,
-): Record<string, unknown> | undefined {
+function resolveStreamProviderBody(options: OpenRouterChatOptions): Record<string, unknown> | undefined {
   if (options.provider) return options.provider;
-  const locked = escapeHatch ? undefined : options.locked_provider?.trim();
+  const locked = options.locked_provider?.trim();
   return openRouterProviderExtras(locked ? { lockedProvider: locked } : undefined);
 }
 
@@ -87,9 +84,9 @@ export async function openRouterChatCompletionStream(
   const routePath = options.route_path ?? "chat";
   const lockedLabel = options.locked_provider?.trim() || null;
 
-  const buildBody = (escapeHatch: boolean): Record<string, unknown> => {
+  const buildBody = (): Record<string, unknown> => {
     const extras = openRouterRequestExtras(options.session_id);
-    const provider = resolveStreamProviderBody(options, escapeHatch);
+    const provider = resolveStreamProviderBody(options);
     if (provider) extras.provider = provider;
     const body: Record<string, unknown> = {
       model,
@@ -117,18 +114,19 @@ export async function openRouterChatCompletionStream(
   if (referer) headers["HTTP-Referer"] = referer;
   if (title) headers["X-Title"] = title;
 
-  async function run(escapeHatch: boolean) {
+  async function runOnce() {
     const res = await fetch(OPENROUTER_URL, {
       method: "POST",
       headers,
-      body: JSON.stringify(buildBody(escapeHatch)),
+      body: JSON.stringify(buildBody()),
+      signal: options.signal,
     });
     if (!res.ok) {
       const errText = await res.text();
-      return { ok: false as const, status: res.status, errText };
+      throw new Error(`openrouter_stream_${res.status}: ${errText.slice(0, 900)}`);
     }
     if (!res.body) {
-      return { ok: false as const, status: 500, errText: "no_response_body" };
+      throw new Error("openrouter_stream_500: no_response_body");
     }
 
     let reasoning = "";
@@ -202,52 +200,43 @@ export async function openRouterChatCompletionStream(
     }
 
     return {
-      ok: true as const,
-      result: {
-        text: content.trim(),
-        model: modelOut,
-        tokens_used,
-        prompt_tokens,
-        completion_tokens,
-        cached_tokens,
-        finish_reason,
-        provider,
-        reasoning: reasoning.trim() || undefined,
-      },
+      text: content.trim(),
+      model: modelOut,
+      tokens_used,
+      prompt_tokens,
+      completion_tokens,
+      cached_tokens,
+      finish_reason,
+      provider,
+      reasoning: reasoning.trim() || undefined,
     };
   }
 
-  let attempt = 1;
-  let out = await run(false);
-  if (
-    !out.ok &&
-    lockedLabel &&
-    isProviderEscapeHttpStatus(out.status)
-  ) {
-    console.warn(
-      `[openrouter-stream] locked=${lockedLabel} failed status=${out.status} — escape hatch with full ORDER`,
-    );
-    attempt = 2;
-    out = await run(true);
-  }
-  if (!out.ok) {
-    throw new Error(`openrouter_stream_${out.status}: ${out.errText.slice(0, 900)}`);
-  }
+  let transportAttempt = 1;
+  const result = await withOpenRouterExponentialBackoff(runOnce, {
+    signal: options.signal,
+    onRetry: (info) => {
+      transportAttempt = info.attempt + 1;
+      console.warn(
+        `[openrouter-stream] retry attempt=${info.attempt} wait_ms=${info.wait_ms} locked=${lockedLabel ?? "none"}`,
+      );
+    },
+  });
   logOpenRouterProviderServed({
-    provider: out.result.provider,
-    finish_reason: out.result.finish_reason,
-    cached_tokens: out.result.cached_tokens,
-    prompt_tokens: out.result.prompt_tokens,
-    completion_tokens: out.result.completion_tokens,
+    provider: result.provider,
+    finish_reason: result.finish_reason,
+    cached_tokens: result.cached_tokens,
+    prompt_tokens: result.prompt_tokens,
+    completion_tokens: result.completion_tokens,
     session_id: options.session_id,
     call_type: options.call_type,
     phase_name: options.phase_name,
     reasoning: includeReasoning ? "on" : "off",
     path: routePath,
     locked: lockedLabel,
-    attempt,
+    attempt: transportAttempt,
   });
-  return out.result;
+  return result;
 }
 
 export type StreamProxyMessage = OpenRouterChatMessage;

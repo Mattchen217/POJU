@@ -5,17 +5,22 @@
  * - OPENROUTER_API_KEY — required to use this path
  * - OPENROUTER_MODEL — default `deepseek/deepseek-v4-pro`
  * - OPENROUTER_REASONING_EFFORT — `high` | `xhigh` | `off` (default `high`)
- * - OPENROUTER_PROVIDER_ORDER — comma-separated provider slugs (e.g. `streamlake,siliconflow,deepinfra`)
+ * - OPENROUTER_PROVIDER_ORDER — comma-separated provider slugs (production: `streamlake`)
  * - OPENROUTER_PROVIDER_IGNORE — comma-separated providers to skip (merged with ORDER)
  * - OPENROUTER_HTTP_REFERER, OPENROUTER_APP_TITLE — optional OpenRouter attribution headers
  */
 
 import {
-  isProviderEscapeHttpStatus,
+  OpenRouterProviderQueueError,
+  withOpenRouterExponentialBackoff,
+} from "@/lib/llm/openrouter-retry";
+import {
   openRouterProviderExtras,
   servedProviderInOrder,
   type OpenRouterRoutePath,
 } from "@/lib/llm/openrouter-provider-routing";
+
+export { OpenRouterProviderQueueError } from "@/lib/llm/openrouter-retry";
 
 export {
   openRouterProviderExtras,
@@ -59,6 +64,7 @@ export type OpenRouterChatOptions = {
   route_path?: OpenRouterRoutePath;
   /** Session-pinned supplier slug (chat path). */
   locked_provider?: string | null;
+  signal?: AbortSignal;
 };
 
 export function parseProviderOrder(): string[] {
@@ -101,12 +107,9 @@ function parseCachedTokens(usage: Record<string, unknown> | undefined): number {
   return 0;
 }
 
-function resolveProviderBody(
-  options: OpenRouterChatOptions,
-  escapeHatch: boolean,
-): Record<string, unknown> | undefined {
+function resolveProviderBody(options: OpenRouterChatOptions): Record<string, unknown> | undefined {
   if (options.provider) return options.provider;
-  const locked = escapeHatch ? undefined : options.locked_provider?.trim();
+  const locked = options.locked_provider?.trim();
   return openRouterProviderExtras(locked ? { lockedProvider: locked } : undefined);
 }
 
@@ -239,7 +242,7 @@ export async function openRouterChatCompletion(
   const routePath = options.route_path ?? "once";
   const lockedLabel = options.locked_provider?.trim() || null;
 
-  const buildBody = (escapeHatch: boolean): Record<string, unknown> => {
+  const buildBody = (): Record<string, unknown> => {
     const body: Record<string, unknown> = {
       model,
       messages: options.messages,
@@ -249,7 +252,7 @@ export async function openRouterChatCompletion(
     if (options.session_id?.trim()) {
       body.session_id = options.session_id.trim();
     }
-    const provider = resolveProviderBody(options, escapeHatch);
+    const provider = resolveProviderBody(options);
     if (provider) body.provider = provider;
     if (options.json_mode) {
       body.response_format = { type: "json_object" };
@@ -275,45 +278,49 @@ export async function openRouterChatCompletion(
 
   const timeoutMs = options.timeout_ms ?? OPENROUTER_FETCH_TIMEOUT_MS;
 
-  async function post(escapeHatch: boolean) {
+  async function postOnce() {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    const onAbort = () => controller.abort();
+    options.signal?.addEventListener("abort", onAbort, { once: true });
     try {
       const res = await fetch(OPENROUTER_URL, {
         method: "POST",
         headers,
-        body: JSON.stringify(buildBody(escapeHatch)),
+        body: JSON.stringify(buildBody()),
         signal: controller.signal,
       });
       const raw = await res.text();
-      return { res, raw };
+      if (!res.ok) {
+        throw new Error(`openrouter_http_${res.status}: ${raw.slice(0, 900)}`);
+      }
+      return raw;
     } catch (e: unknown) {
       if (e instanceof Error && e.name === "AbortError") {
+        if (options.signal?.aborted) {
+          const err = new Error("AbortError");
+          err.name = "AbortError";
+          throw err;
+        }
         throw new Error("llm_timeout");
       }
       throw e;
     } finally {
       clearTimeout(timeoutId);
+      options.signal?.removeEventListener("abort", onAbort);
     }
   }
 
-  let attempt = 1;
-  let { res, raw } = await post(false);
-  if (
-    !res.ok &&
-    lockedLabel &&
-    isProviderEscapeHttpStatus(res.status)
-  ) {
-    console.warn(
-      `[openrouter] locked=${lockedLabel} failed status=${res.status} — escape hatch with full ORDER`,
-    );
-    attempt = 2;
-    ({ res, raw } = await post(true));
-  }
-
-  if (!res.ok) {
-    throw new Error(`openrouter_http_${res.status}: ${raw.slice(0, 900)}`);
-  }
+  let transportAttempt = 1;
+  const raw = await withOpenRouterExponentialBackoff(postOnce, {
+    signal: options.signal,
+    onRetry: (info) => {
+      transportAttempt = info.attempt + 1;
+      console.warn(
+        `[openrouter] retry attempt=${info.attempt} wait_ms=${info.wait_ms} locked=${lockedLabel ?? "none"}`,
+      );
+    },
+  });
 
   let data: {
     provider?: string;
@@ -368,7 +375,7 @@ export async function openRouterChatCompletion(
     reasoning: includeReasoning ? "on" : "off",
     path: routePath,
     locked: lockedLabel,
-    attempt,
+    attempt: transportAttempt,
   });
 
   const reasoning =

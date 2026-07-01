@@ -588,7 +588,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         setInput(errorRestore.typed);
         if (errorRestore.attachment) setComposerAttachment(errorRestore.attachment);
       }
-      await dialog.alert(t("dialog_connection_error"));
+      const isProviderQueue =
+        err instanceof Error &&
+        (err.name === "OpenRouterProviderQueueError" ||
+          err.message === "openrouter_provider_queue");
+      await dialog.alert(
+        isProviderQueue ? t("dialog_provider_queue") : t("dialog_connection_error"),
+      );
     } finally {
       turnInFlightRef.current = false;
       if (activeTurnKeyRef.current === turnKey) activeTurnKeyRef.current = null;

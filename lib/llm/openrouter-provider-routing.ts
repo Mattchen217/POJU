@@ -53,6 +53,10 @@ export function openRouterProviderExtras(options?: {
 
   const locked = options?.lockedProvider?.trim();
   const order = locked ? [locked] : parseProviderOrder();
+  const orderUsesSiliconflow = order.some((slug) => slug.trim().toLowerCase() === "siliconflow");
+  if (!orderUsesSiliconflow && !ignore.some((slug) => slug.trim().toLowerCase() === "siliconflow")) {
+    ignore.push("siliconflow");
+  }
   const out: Record<string, unknown> = {};
 
   if (order.length > 0) {

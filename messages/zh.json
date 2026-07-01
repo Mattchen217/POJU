@@ -1016,6 +1016,7 @@
       "dialog_ok": "确定",
       "dialog_cancel": "取消",
       "dialog_connection_error": "连接异常，请稍后重试。",
+      "dialog_provider_queue": "系统提示：为了保障深度咨询报告的推演质量，POJU正在进行复杂的后台数据融合计算。当前服务器正处于高负载排队中，请您稍候 1-2 分钟后重试发送。给您带来的不便敬请谅解。",
       "dialog_create_session_error": "暂时无法创建新会话，请稍后重试。",
       "session_list_new": "新会话",
       "dialog_payment_redirect_failed": "无法打开支付页面，请稍后再试。",

@@ -35,35 +35,36 @@ function withEnv(patch: Record<string, string | undefined>, fn: () => void): voi
 console.log("\n=== OpenRouter provider routing ===\n");
 
 withEnv({ OPENROUTER_PROVIDER_ORDER: undefined, OPENROUTER_PROVIDER_IGNORE: undefined }, () => {
-  assert("no env → undefined extras", openRouterProviderExtras() === undefined);
+  const p = openRouterProviderExtras();
+  assert("no ORDER → only siliconflow ignore", JSON.stringify(p) === '{"ignore":["siliconflow"]}');
 });
 
 withEnv(
   {
-    OPENROUTER_PROVIDER_ORDER: "streamlake,siliconflow,deepinfra",
+    OPENROUTER_PROVIDER_ORDER: "streamlake",
     OPENROUTER_PROVIDER_IGNORE: undefined,
   },
   () => {
     const p = openRouterProviderExtras()!;
     const order = p.order as string[];
-    assert("ORDER → three providers", order.join(",") === "streamlake,siliconflow,deepinfra");
+    assert("ORDER → streamlake only", order.join(",") === "streamlake");
     assert("ORDER → allow_fallbacks false", p.allow_fallbacks === false);
-    assert("ORDER → no require_parameters", p.require_parameters === undefined);
+    const ignore = p.ignore as string[];
+    assert("siliconflow always ignored", ignore.includes("siliconflow"));
   },
 );
 
 withEnv(
-  { OPENROUTER_PROVIDER_ORDER: "streamlake,siliconflow,deepinfra", OPENROUTER_PROVIDER_IGNORE: undefined },
+  { OPENROUTER_PROVIDER_ORDER: "streamlake", OPENROUTER_PROVIDER_IGNORE: undefined },
   () => {
     const p = openRouterProviderExtras({ lockedProvider: "streamlake" })!;
     assert("locked → single order entry", JSON.stringify(p.order) === '["streamlake"]');
     assert("locked → allow_fallbacks false", p.allow_fallbacks === false);
-    assert("locked → no require_parameters", p.require_parameters === undefined);
   },
 );
 
 withEnv(
-  { OPENROUTER_PROVIDER_ORDER: "streamlake,siliconflow,deepinfra", OPENROUTER_PROVIDER_IGNORE: undefined },
+  { OPENROUTER_PROVIDER_ORDER: "streamlake", OPENROUTER_PROVIDER_IGNORE: undefined },
   () => {
     assert(
       "normalize served name",
@@ -71,11 +72,7 @@ withEnv(
     );
     assert(
       "session lock keeps existing",
-      resolveSessionLockedProvider("siliconflow", "StreamLake") === "siliconflow",
-    );
-    assert(
-      "session lock from served",
-      resolveSessionLockedProvider(undefined, "DeepInfra") === "deepinfra",
+      resolveSessionLockedProvider("streamlake", "StreamLake") === "streamlake",
     );
   },
 );

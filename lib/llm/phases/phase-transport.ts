@@ -91,16 +91,13 @@ export async function callPhaseJsonTransport(
 
   const runOnce = async (retry?: {
     extra_ignore?: string[];
-    use_full_order?: boolean;
   }): Promise<PhaseTransportResult> => {
     const mergedIgnore = [
       ...(extraIgnore ?? []),
       ...(retry?.extra_ignore ?? []),
     ].filter(Boolean);
     const providerIgnore = mergedIgnore.length > 0 ? [...new Set(mergedIgnore)] : undefined;
-    const locked = retry?.use_full_order
-      ? undefined
-      : options?.locked_provider?.trim() || undefined;
+    const locked = options?.locked_provider?.trim() || undefined;
     const routePath = options?.route_path ?? "chat";
     if (isOpenRouterConfigured()) {
       if (streamHooks) {
@@ -121,6 +118,7 @@ export async function callPhaseJsonTransport(
             provider: resolveStreamProvider(locked, providerIgnore),
             route_path: routePath,
             locked_provider: locked ?? null,
+            signal: options?.signal,
           },
           {
             onReasoning: streamHooks.onReasoning,
@@ -191,7 +189,6 @@ export async function callPhaseJsonTransport(
     );
     result = await runOnce({
       extra_ignore: failedProvider ? [failedProvider] : undefined,
-      use_full_order: Boolean(options?.locked_provider?.trim()),
     });
   }
 

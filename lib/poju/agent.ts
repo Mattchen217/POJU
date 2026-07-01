@@ -937,6 +937,11 @@ async function callLLMViaAPI(input: {
         } else if (type === "complete") {
           complete = event as LLMApiPayload;
         } else if (type === "error") {
+          if (event.code === "provider_queue") {
+            const err = new Error("openrouter_provider_queue");
+            err.name = "OpenRouterProviderQueueError";
+            throw err;
+          }
           throw new Error(String(event.message ?? "stream_error"));
         } else if (type === "aborted") {
           const err = new Error("AbortError");
