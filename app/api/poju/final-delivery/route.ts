@@ -11,6 +11,10 @@ import { sanitizeDeliveryText } from "@/lib/llm/sanitize/compliance-terms";
 import { detectShenShaPollution } from "@/lib/llm/sanitize/closed-set-circuit-breaker";
 import { polishDeliveryGrammar } from "@/lib/llm/sanitize/delivery-grammar-polish";
 import {
+  computeDirectedRelations,
+  getCurrentLiunian,
+} from "@/lib/calculations/relation-engine";
+import {
   auditDeepStringFields,
   buildAuditRegenHint,
   isCriticalDeliveryAuditFailure,
@@ -93,6 +97,9 @@ export async function POST(req: Request) {
     const locale = typeof body.locale === "string" ? body.locale : "en";
     const base_analysis = body.base_analysis === undefined || body.base_analysis === null ? null : body.base_analysis;
     const structured = normalizeBaseAnalysisInput(base_analysis).structured ?? null;
+    const directedRelations = structured
+      ? computeDirectedRelations(structured, getCurrentLiunian(), body.agent_v2.question_category)
+      : undefined;
     const recent_user_messages = Array.isArray(body.recent_user_messages)
       ? body.recent_user_messages.filter((m): m is string => typeof m === "string" && m.trim().length > 0)
       : [];
@@ -144,7 +151,9 @@ export async function POST(req: Request) {
       text = sanitizeDeliveryText(polished.text, locale);
       actions = extractActionsFromDelivery(text, null);
       const auditText = buildDeliveryAuditText(text, actions);
-      const { polluted, hits } = detectShenShaPollution(auditText, structured, locale);
+      const { polluted, hits } = detectShenShaPollution(auditText, structured, locale, {
+        relations: directedRelations,
+      });
       const deepViolations = auditDeepStringFields({ full_text: text, actions }, locale, "poju");
       const deepFail = isCriticalDeliveryAuditFailure(deepViolations);
 

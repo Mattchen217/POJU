@@ -15,7 +15,7 @@ import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-stru
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
 import { extractJson } from "@/lib/llm/phases/phase-transport";
-import { buildShenShaGuardBlock } from "@/lib/llm/prompts/shen-sha-guard";
+import { buildFactGuardBlock } from "@/lib/llm/prompts/shen-sha-guard";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 
 export const DEEP_RECKONING_TASK = `# 角色：破局总设计师（上帝视角 · 零聊天腔）
@@ -144,7 +144,7 @@ export function buildBreakthroughCorePrompt(input: {
   })();
 
   const baseStr = JSON.stringify(base_analysis, null, 2).slice(0, 12000);
-  const shenShaGuard = buildShenShaGuardBlock(structured);
+  const shenShaGuard = buildFactGuardBlock(structured);
 
   const system = stitchPromptSections(
     POJU_IDENTITY,

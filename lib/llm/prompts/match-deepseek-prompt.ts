@@ -12,6 +12,8 @@ import {
   stitchPromptSections,
 } from "@/lib/llm/prompts/oriental-counselor-base";
 import { buildTermMarkingPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
+import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
+import { stitchMatchRelationClosedSet } from "@/lib/llm/prompts/relation-closed-set-context";
 import type { UserProfile } from "@/lib/profile/types";
 
 export type BuildMatchPromptInput = {
@@ -53,6 +55,13 @@ export function buildMatchPrompt(input: BuildMatchPromptInput): BuildMatchPrompt
   const level = compatibilityMatrix.synergy_type;
   const dateContext = buildCurrentDateContext(new Date(), locale);
 
+  const structuredA = normalizeBaseAnalysisInput(aBaseAnalysis).structured ?? null;
+  const structuredB = normalizeBaseAnalysisInput(bBaseAnalysis).structured ?? null;
+  const relationClosedSetBlock =
+    structuredA && structuredB
+      ? stitchMatchRelationClosedSet(structuredA, structuredB, relationship_description)
+      : "";
+
   const system = stitchPromptSections(
     ...buildMatchCorePromptSections(detectedLanguage),
     buildTermMarkingPromptBlock(locale),
@@ -64,6 +73,10 @@ ${buildProfileContextSection(a_profile, aBaseAnalysis)}
 
 # 命主 B 的完整命盘
 ${buildProfileContextSection(b_profile, bBaseAnalysis)}
+
+---
+
+${relationClosedSetBlock}
 
 ---
 

@@ -44,7 +44,7 @@ import {
   isPhaseParseFailed,
 } from "@/lib/llm/phases/phase-transport";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
-import { buildPhaseTransportInputV6 } from "@/lib/llm/phases/oriental-prompt-context-v6";
+import { buildPhaseTransportInputV6, buildDirectedRelationAuditAllowlistV6, shouldInjectDirectedRelationsV6 } from "@/lib/llm/phases/oriental-prompt-context-v6";
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
 import type { PojuV4ActionRequested } from "@/lib/poju/types";
@@ -242,6 +242,10 @@ export async function callCollectingPhaseV6(input: PhaseLLMInput): Promise<Phase
   }
 
   const structured = normalizeBaseAnalysisInput(input.base_analysis ?? null).structured ?? null;
+  const auditRelations =
+    structured && shouldInjectDirectedRelationsV6(input)
+      ? buildDirectedRelationAuditAllowlistV6(structured, input.agent_state?.question_category)
+      : undefined;
 
   const { system, messages } = await buildPhaseTransportInputV6(
     input,
@@ -267,6 +271,7 @@ export async function callCollectingPhaseV6(input: PhaseLLMInput): Promise<Phase
     finish_reason: transport.finish_reason,
     provider: transport.provider,
     structured,
+    audit_relations: auditRelations,
     use_fallback: true,
   });
 

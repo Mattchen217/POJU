@@ -1,6 +1,10 @@
 import type { GetBaziChartOutput } from "shunshi-bazi-core";
 
 import type { ProfileStrength } from "@/lib/calculations/build-profile-structured";
+import {
+  computeLiunianRelations,
+  getCurrentLiunian,
+} from "@/lib/calculations/relation-engine";
 import { matchUserDisplayLabel } from "@/lib/match/match-user-labels";
 import { getStemInfo } from "@/lib/poju/bazi-matrix-mappings";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
@@ -134,7 +138,8 @@ Input JSON contains person_a (chart A) and person_b (chart B) with separate birt
 # PRODUCT CONTEXT: SYNCRO (timing & direction for a task)
 The user needs optimal timing/direction for a concrete task at a location. Tone: practical, spatial-temporal.
 - Set poju_onboarding.call_to_action to empty string "".
-- REQUIRED "guide" (see guide row in LENGTH BUDGET): ask what they need to do AND where (interview, signing, travel…) — type and send below. Do not spoil paid syncro matrix.`,
+- REQUIRED "guide" (see guide row in LENGTH BUDGET): ask what they need to do AND where (interview, signing, travel…) — type and send below. Do not spoil paid syncro matrix.
+- **流年引动优先**：structural_dynamics.tension / annual_transit_2026.description 须优先 grounded 于 liunian_relations（引擎实算），勿泛写 clashes_tensions。`,
 };
 
 const TOOL_JSON_FIELDS_APPEND = `
@@ -160,6 +165,8 @@ export type MatrixNarrativeInput = {
   day_master: string;
   chart_status: string;
   clashes_tensions: string[];
+  /** 引擎实算流年×命局关系（Syncro 核心驱动） */
+  liunian_relations?: string[];
   current_year_transit: string;
   yongshen: string[];
   gender_label?: string;
@@ -243,13 +250,19 @@ export function buildMatrixNarrativeInput(
   const pad = (n: number) => String(n).padStart(2, "0");
   const birthDate = `${birth.year}-${pad(birth.month)}-${pad(birth.day)}`;
 
+  const liunian = getCurrentLiunian();
+  const liunianRelations = computeLiunianRelations(structured, liunian).map((r) => r.han);
+
   return {
     user_language: localeToUserLanguage(locale),
     birth_date: birthDate,
     day_master: `${day_master_en} (${dmHan})`,
     chart_status: chartStatus,
     clashes_tensions: extractClashes(chart),
-    current_year_transit: `${transitYear} · ${transitGz} (${transitStem})`,
+    liunian_relations: liunianRelations,
+    current_year_transit: `${transitYear} · ${transitGz} (${transitStem}) · 流年引动: ${
+      liunianRelations.length ? liunianRelations.join("；") : "（引擎未算出 — 勿编造关系词）"
+    }`,
     yongshen,
     gender_label: structured.bazi_enrichment?.gender_label,
     strength,

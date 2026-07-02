@@ -5,6 +5,12 @@
 
 import { syncroBatchCacheSessionId, syncroProfileCacheSessionId } from "@/lib/llm/cache-session-id";
 import { buildSyncroPrompt } from "@/lib/llm/prompts/syncro-deepseek-prompt";
+import { buildSingleProfileRelationClosedSet } from "@/lib/llm/prompts/relation-closed-set-context";
+import {
+  auditDeepStringFields,
+  buildAuditRegenHint,
+  isCriticalDeliveryAuditFailure,
+} from "@/lib/llm/services/delivery-audit-regen";
 import {
   hasBaseAnalysisPayload,
   normalizeBaseAnalysisInput,
@@ -401,61 +407,88 @@ export async function fetchLlmAdviceBatch(input: {
     input.cache_session_id?.trim() ||
     syncroProfileCacheSessionId(input.profile.id);
 
-  let result = await callLLM({
-    call_type: "syncro_batch",
-    system,
-    messages: [{ role: "user", content: user }],
-    max_tokens: SYNCRO_LLM_MAX_TOKENS_PER_BATCH,
-    thinking_effort: "low",
-    response_format: "json",
-    temperature: 0.55,
-    timeout_ms: 90_000,
-    session_id: cacheSessionId,
-  });
+  const structured = normalizeBaseAnalysisInput(input.base_analysis).structured ?? null;
+  const relationAudit = structured
+    ? buildSingleProfileRelationClosedSet(structured, { questionText: input.task_description })
+    : null;
 
-  let parsed: Record<string, unknown>;
-  try {
-    parsed = parseJsonContent(result.content) as Record<string, unknown>;
-  } catch (firstError) {
-    console.warn(
-      `[syncro] JSON parse retry batch ${input.batch_index}/${input.batch_total}:`,
-      firstError,
-    );
-    const outputLocale =
-      input.output_locale ??
-      resolveSyncroOutputLocale(parseAppLocale(input.locale), input.task_description);
-    const retryHint =
-      outputLocale === "zh"
-        ? "上次回复被截断或不是合法 JSON。请只返回本批合法 JSON。detailed_advice 与 rationale 各控制在约 120 字以内。"
-        : "Your previous reply was truncated or invalid JSON. Return ONLY valid JSON for this batch. Keep detailed_advice and rationale concise (under 120 words each).";
+  let userContent = user;
+  let auditRetried = false;
+  let result!: Awaited<ReturnType<typeof callLLM>>;
+  let parsed!: Record<string, unknown>;
 
+  for (;;) {
     result = await callLLM({
       call_type: "syncro_batch",
       system,
-      messages: [
-        { role: "user", content: user },
-        {
-          role: "user",
-          content: retryHint,
-        },
-      ],
+      messages: [{ role: "user", content: userContent }],
       max_tokens: SYNCRO_LLM_MAX_TOKENS_PER_BATCH,
       thinking_effort: "low",
       response_format: "json",
-      temperature: 0.4,
+      temperature: auditRetried ? 0.3 : 0.55,
       timeout_ms: 90_000,
       session_id: cacheSessionId,
     });
+
     try {
       parsed = parseJsonContent(result.content) as Record<string, unknown>;
-    } catch (e) {
-      console.error(
-        `[syncro] JSON parse failed (batch ${input.batch_index}/${input.batch_total}):`,
-        e,
+    } catch (firstError) {
+      console.warn(
+        `[syncro] JSON parse retry batch ${input.batch_index}/${input.batch_total}:`,
+        firstError,
       );
-      console.error("[syncro] Raw (first 500):", result.content.slice(0, 500));
-      throw new Error("Syncro text generation output is not valid JSON");
+      const outputLocale =
+        input.output_locale ??
+        resolveSyncroOutputLocale(parseAppLocale(input.locale), input.task_description);
+      const retryHint =
+        outputLocale === "zh"
+          ? "上次回复被截断或不是合法 JSON。请只返回本批合法 JSON。detailed_advice 与 rationale 各控制在约 120 字以内。"
+          : "Your previous reply was truncated or invalid JSON. Return ONLY valid JSON for this batch. Keep detailed_advice and rationale concise (under 120 words each).";
+
+      result = await callLLM({
+        call_type: "syncro_batch",
+        system,
+        messages: [
+          { role: "user", content: userContent },
+          {
+            role: "user",
+            content: retryHint,
+          },
+        ],
+        max_tokens: SYNCRO_LLM_MAX_TOKENS_PER_BATCH,
+        thinking_effort: "low",
+        response_format: "json",
+        temperature: 0.4,
+        timeout_ms: 90_000,
+        session_id: cacheSessionId,
+      });
+      try {
+        parsed = parseJsonContent(result.content) as Record<string, unknown>;
+      } catch (e) {
+        console.error(
+          `[syncro] JSON parse failed (batch ${input.batch_index}/${input.batch_total}):`,
+          e,
+        );
+        console.error("[syncro] Raw (first 500):", result.content.slice(0, 500));
+        throw new Error("Syncro text generation output is not valid JSON");
+      }
     }
+
+    const auditPayload = {
+      matrix: parsed.matrix,
+      task_response: parsed.task_response,
+    };
+    const auditViolations = auditDeepStringFields(auditPayload, input.locale, "syncro", {
+      structured,
+      relations: relationAudit?.auditAllowlist,
+    });
+    if (isCriticalDeliveryAuditFailure(auditViolations) && !auditRetried) {
+      auditRetried = true;
+      console.warn("[syncro] audit regen (1x)", auditViolations.slice(0, 5));
+      userContent = user + buildAuditRegenHint(auditViolations, input.locale);
+      continue;
+    }
+    break;
   }
 
   const advice =

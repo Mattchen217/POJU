@@ -12,12 +12,17 @@ import type { POJUAction, POJUDelivery, POJUSessionState, POJUMessage } from "@/
 import { markCycleDelivered } from "@/lib/poju/cycle-manager";
 import { buildCoveredAgendaEvidence } from "@/lib/poju/investigation-agenda";
 import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-structured-instance-inventory";
+import {
+  buildDirectedRelationInventoryBlock,
+  getCurrentLiunian,
+} from "@/lib/calculations/relation-engine";
 import { resolveBaseAnalysisForBreakthrough } from "@/lib/llm/deepseek/breakthrough-core";
 import { buildOutputRedLinesBlock } from "@/lib/llm/phases/oriental-prompt-context";
 import {
   buildPojuChatCoreSections,
   POJU_ACTION_DESIGN_PRINCIPLES,
   POJU_BAZI_DEEP_METHOD,
+  POJU_OUTPUT_DATA_DISCIPLINE,
 } from "@/lib/llm/prompts/poju-base";
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import { buildChatPhaseTermBindingBlock } from "@/lib/llm/prompts/term-closed-set-constraint";
@@ -327,7 +332,8 @@ export function buildFinalDeliveryPrompt(input: {
       ? buildDegradedDeliveryTask(regionalGuidance, langInstruction, deliveryLang, locale, agent_v2)
       : buildFullDeliveryTask(regionalGuidance, langInstruction, deliveryLang, locale);
 
-  const expertMaterials = `# 专家分析素材（脊柱 · 已贯穿全程，禁从头重算）
+  const expertMaterials = stitchPromptSections(
+    `# 专家分析素材（脊柱 · 已贯穿全程，禁从头重算）
 
 ## 推理脊柱（本次破局的骨架 —— ANALYSIS / CONCLUSION 必须长在它上面）
 ${spineStr}
@@ -336,17 +342,18 @@ ${spineStr}
 ${agendaStr}
 
 ## 命局基础（structured —— 事实源，节选）
-${baseStr}
-
-# 整合要求（闭环 · 反断点）
+${baseStr}`,
+    `# 整合要求（闭环 · 反断点）
 - ANALYSIS：直接展开 relationship_conclusion，点名命盘真实结构（pillars_detail/yong_shen/da_yun…）；
   不要重新做一遍困境分析，不要复述命盘。
 - CONCLUSION：落回 original_question，依据 = 被收集证据【选定】的那条破局方向（一句金句框直答）。
 - WHAT TO DO：3 条从「选定方向 × 用户亲口议程证据」生长，禁万能模板；
   每条末尾 Profile basis 引具体结构（如"month.ten_god 七杀 + da_yun 第三步"）。
-- 全程只用本次 structured 实有命理实例；过 auditDeliveredText（集外神煞 / 断标记 / 裸干支 → 拒绝落库重生成）。
+- 全程只用本次 structured 实有命理实例；过 auditDeliveredText（集外神煞 / 关系 / 断标记 / 裸干支 → 拒绝落库重生成）。
 - 不预测具体未来事件、不下吉凶断语、不暴露 Glyph/Syncro/Match。
-- 须按 POJU 八字深度解读法则展开 ANALYSIS；按行动设计原则填写 WHAT TO DO 三条。`;
+- 须按 POJU 八字深度解读法则展开 ANALYSIS（含 4b 关系：定向 1–3 条、中性金字、不罗列）；按行动设计原则填写 WHAT TO DO 三条。`,
+    POJU_OUTPUT_DATA_DISCIPLINE,
+  );
 
   const deliveryTaskTail = buildDeliveryDynamicTaskTail({ modeTask, expertMaterials });
   const structured = normalizeBaseAnalysisInput(base_analysis).structured ?? null;
@@ -381,11 +388,16 @@ ${baseStr}
       ? `Delivery mode: **degraded** — chart-forward, low-risk actions, honest limitation statement required.`
       : `Delivery mode: **full** — spine-fed delivery from breakthrough_core + covered agenda evidence; highly specific actions from user-stated details.`;
 
+  const directedRelationBlock = structured
+    ? buildDirectedRelationInventoryBlock(structured, getCurrentLiunian(), agent_v2.question_category)
+    : "";
+
   const user = stitchPromptSections(
     langDirective.directive.trim(),
     buildCurrentDateContext(new Date(), outLoc),
     buildTermMarkingPromptBlock(outLoc),
     structured ? buildStructuredInstanceInventory(structured) : "",
+    directedRelationBlock,
     buildDeliveryTermBindingBlock(outLoc),
     deliveryTaskTail,
     `User's original question: "${agent_v2.original_question}"

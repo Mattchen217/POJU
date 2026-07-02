@@ -6,6 +6,7 @@
 import { createHash } from "node:crypto";
 
 import { calculateProfile } from "@/lib/calculations";
+import { buildProfileStructured } from "@/lib/calculations/build-profile-structured";
 import { createInitialAgentState } from "@/lib/poju/agent-state";
 import { buildPhaseTransportInputV6 } from "@/lib/llm/phases/oriental-prompt-context-v6";
 import { buildOpeningTaskBlockV6 } from "@/lib/llm/phases/opening-phase-v6";
@@ -13,6 +14,7 @@ import { buildCollectingTaskBlockV6 } from "@/lib/llm/phases/collecting-phase-v6
 import { buildConfirmationTaskBlockV6 } from "@/lib/llm/phases/confirmation-phase-v6";
 import { buildDeliveryTaskBlockV6 } from "@/lib/llm/phases/delivery-phase-v6";
 import { buildTrackingTaskBlockV6 } from "@/lib/llm/phases/tracking-phase-v6";
+import { POJU_OUTPUT_DATA_DISCIPLINE } from "@/lib/llm/prompts/poju-base";
 import { POJU_V6_STATIC_SYSTEM } from "@/lib/llm/prompts/poju-base-v6";
 import type { BirthInfo } from "@/lib/profile/types";
 import type { PhaseLLMInput } from "@/lib/llm/phases/types";
@@ -55,6 +57,7 @@ function makePhaseInput(opts: {
   });
   agent.current_phase = opts.phase;
   if (opts.phase === "collecting_context") {
+    agent.question_category = "career";
     agent.breakthrough_core = {
       relationship_conclusion: "结构性张力已确立（测试桩）",
       breakthrough_directions: [
@@ -80,6 +83,7 @@ function makePhaseInput(opts: {
     agent.agenda_generated = true;
   }
   if (opts.phase === "tracking" || opts.phase === "delivered") {
+    agent.question_category = "career";
     agent.actions = [
       {
         action_id: "a1",
@@ -155,8 +159,19 @@ async function main(): Promise<void> {
     "v6-cache-test-profile-b",
   );
 
-  const baseA = { display_text: "Profile A base analysis — 庚金结构", content: "mock-a" };
-  const baseB = { display_text: "Profile B base analysis — 甲木结构", content: "mock-b" };
+  const structuredA = buildProfileStructured({ profile: profileA });
+  const structuredB = buildProfileStructured({ profile: profileB });
+
+  const baseA = {
+    display_text: "Profile A base analysis — 庚金结构",
+    content: "mock-a",
+    structured: structuredA,
+  };
+  const baseB = {
+    display_text: "Profile B base analysis — 甲木结构",
+    content: "mock-b",
+    structured: structuredB,
+  };
 
   const scenarios: Array<{
     label: string;
@@ -250,11 +265,35 @@ async function main(): Promise<void> {
     const turnLen = lastUser?.content.length ?? 0;
     turnContextLengths.push(turnLen);
 
+    const userContent = lastUser?.content ?? "";
+    const hasDirectedInventory = userContent.includes("本盘动态关系实例（流年/定向");
+    const hasDirectedGuard = userContent.includes("流年/定向动态关系");
+
     console.log(`[${s.label}]`);
     console.log("  system SHA256:", hash);
     console.log("  system === static constant:", system === POJU_V6_STATIC_SYSTEM);
     console.log("  user prepend length:", turnLen);
+    console.log("  directed inventory block:", hasDirectedInventory);
+    console.log("  directed guard block:", hasDirectedGuard);
+
+    if (s.phase === "opening") {
+      assert(`${s.label} · opening has no directed inventory`, !hasDirectedInventory);
+      assert(`${s.label} · opening has no directed guard`, !hasDirectedGuard);
+    }
+    if (s.phase === "collecting_context" || s.phase === "delivered") {
+      assert(`${s.label} · downstream has directed inventory`, hasDirectedInventory);
+      assert(`${s.label} · downstream has directed guard`, hasDirectedGuard);
+      assert(
+        `${s.label} · user turn includes data discipline`,
+        userContent.includes("数据变多后的克制铁律"),
+      );
+    }
   }
+
+  assert(
+    "POJU_OUTPUT_DATA_DISCIPLINE exported",
+    POJU_OUTPUT_DATA_DISCIPLINE.includes("算全 · 不写全"),
+  );
 
   const uniqueSystemHashes = new Set(systemHashes);
   assert(

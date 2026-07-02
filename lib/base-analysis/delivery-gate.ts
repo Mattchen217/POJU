@@ -37,7 +37,7 @@ export function auditBaseAnalysisDelivery(
   structured: ProfileStructured,
 ): BaseAnalysisGateResult {
   const violations = dedupeViolations([
-    ...auditDeliveredText(text, locale),
+    ...auditDeliveredText(text, locale, structured),
     ...auditMarkerCompleteness(text),
     ...auditShenShaAgainstInstance(text, structured),
   ]);
@@ -60,6 +60,7 @@ export function isBaseAnalysisGateFailure(violations: ComplianceViolation[]): bo
       v.label.startsWith("broken_marker_") ||
       v.label.startsWith("out_of_set_") ||
       v.label.startsWith("shen_sha_") ||
+      v.label.startsWith("relation_") ||
       v.label === "bare_ganzhi" ||
       v.label.startsWith("term_density:") ||
       v.label === "marker_missing_plain" ||

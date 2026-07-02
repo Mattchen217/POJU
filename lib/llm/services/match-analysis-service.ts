@@ -16,6 +16,7 @@ import {
   normalizeBaseAnalysisInput,
 } from "@/lib/llm/prompts/base-analysis-context";
 import { buildMatchPrompt } from "@/lib/llm/prompts/match-deepseek-prompt";
+import { buildMatchRelationClosedSet } from "@/lib/llm/prompts/relation-closed-set-context";
 import { callLLM } from "@/lib/llm/router";
 import {
   requestJsonWithRepair,
@@ -376,6 +377,13 @@ export async function generateMatchAnalysis(
     relationship_description: input.relationship_description.trim(),
   };
 
+  const structuredA = normalizeBaseAnalysisInput(aBundle.base_analysis).structured ?? null;
+  const structuredB = normalizeBaseAnalysisInput(bBundle.base_analysis).structured ?? null;
+  const relationAudit =
+    structuredA && structuredB
+      ? buildMatchRelationClosedSet(structuredA, structuredB, trimmedInput.relationship_description)
+      : null;
+
   let userContent = user;
   let auditRetried = false;
   let reportRaw!: MatchReport;
@@ -426,7 +434,10 @@ export async function generateMatchAnalysis(
     reportRaw = out.value;
     result = out.result;
 
-    const auditViolations = auditDeepStringFields(reportRaw, input.locale, "match");
+    const auditViolations = auditDeepStringFields(reportRaw, input.locale, "match", {
+      structured: structuredA,
+      relations: relationAudit?.auditAllowlist,
+    });
     if (isCriticalDeliveryAuditFailure(auditViolations) && !auditRetried) {
       auditRetried = true;
       console.warn("[match] audit regen (1x)", auditViolations.slice(0, 5));

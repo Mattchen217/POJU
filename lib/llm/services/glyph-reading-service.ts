@@ -25,6 +25,7 @@ import {
   buildAuditRegenHint,
   isCriticalDeliveryAuditFailure,
 } from "@/lib/llm/services/delivery-audit-regen";
+import { buildSingleProfileRelationClosedSet } from "@/lib/llm/prompts/relation-closed-set-context";
 import { sanitizeDeepStringFields } from "@/lib/llm/sanitize/compliance-terms";
 import { polishDeepStringFields } from "@/lib/llm/sanitize/delivery-grammar-polish";
 import {
@@ -273,6 +274,10 @@ export async function generateGlyphReading(
   const { user_profile, base_analysis } = await resolveProfileBundle(input);
   const sign = loadGlyphBySignData(input.sign);
   const glyph = signDataToPromptGlyph(sign);
+  const structured = normalizeBaseAnalysisInput(base_analysis).structured ?? null;
+  const relationAudit = structured
+    ? buildSingleProfileRelationClosedSet(structured, { questionText: input.question.trim() })
+    : null;
 
   const { system, user } = buildGlyphReadingPrompt({
     profile: user_profile,
@@ -311,7 +316,10 @@ export async function generateGlyphReading(
     reading = out.value;
     result = out.result;
 
-    const auditViolations = auditDeepStringFields(reading, input.locale, "glyph");
+    const auditViolations = auditDeepStringFields(reading, input.locale, "glyph", {
+      structured,
+      relations: relationAudit?.auditAllowlist,
+    });
     if (isCriticalDeliveryAuditFailure(auditViolations) && !auditRetried) {
       auditRetried = true;
       console.warn("[glyph-reading] audit regen (1x)", auditViolations.slice(0, 5));

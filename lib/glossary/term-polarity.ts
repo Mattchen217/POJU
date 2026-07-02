@@ -3,7 +3,7 @@
  * @see Cursor 指令 - Glyph 交付页 UI 重排
  */
 
-import { CLOSED_SET_SLUG } from "@/lib/glossary/term-closed-set";
+import { CLOSED_SET_SLUG, relationPolarityToken } from "@/lib/glossary/term-closed-set";
 import { TEN_GOD_NATURE } from "@/lib/match/data/stems-branches";
 
 export type TermPolarity = "favorable" | "neutral" | "caution";
@@ -65,6 +65,11 @@ CAUTION_SLUGS.add("unfavorable_element");
 CAUTION_SLUGS.add("fei_ren");
 
 export function termPolarityById(termId: string): TermPolarity {
+  const rel = relationPolarityToken(termId);
+  if (rel === "green") return "favorable";
+  if (rel === "red") return "caution";
+  if (rel === "gold") return "neutral";
+
   if (CAUTION_SLUGS.has(termId)) return "caution";
   if (FAVORABLE_SLUGS.has(termId)) return "favorable";
   return "neutral";

@@ -2,7 +2,7 @@
 
 > 本文件是 **POJU / Glyph / Match / Syncro 四个产品 + 命主基础分析底座** 的**统一输出标准**。任何改动产品输出、提示词、渲染、合规的工作，都**必须先读本文件并遵循**。目标：四个产品交付给用户的东西，在**术语白话、UI 排版、合规、语气、准确性**上口径一致，且能互为干净的上下文。
 
-最后更新：2026-06
+最后更新：2026-06（§9 并入《动态关系增补》）
 
 ---
 
@@ -191,7 +191,10 @@
 ## 关联文件
 
 - 术语系统：`lib/llm/sanitize/term-marking.ts`、`compliance-terms.ts`、`lib/glossary/term-closed-set.ts`、`term-polarity.ts`
+- 关系引擎：`lib/calculations/relation-engine.ts`
 - 渲染：`components/cross-product/GlossaryText.tsx`、`RichReadingText.tsx`、`lib/reading/parse-reading-blocks.ts`
 - 底座提示词：`lib/llm/prompts/base-analysis-stream-prompt.ts`
 - 下游注入：`lib/llm/prompts/base-analysis-context.ts`
-- 省钱工程：见同目录《prefix-cache-省钱工程-spec.md》
+- 数据克制提示词：`POJU_OUTPUT_DATA_DISCIPLINE` in `lib/llm/prompts/poju-base.ts`
+- 四产品关系接线对照：`docs/指令7-四产品关系接线对照.md`
+- 省钱工程：见 `.cursor/docs/prefix-cache-省钱工程-spec.md`

@@ -23,6 +23,8 @@ import {
   stitchPromptSections,
 } from "@/lib/llm/prompts/oriental-counselor-base";
 import { buildTermMarkingPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
+import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
+import { stitchSingleProfileRelationClosedSet } from "@/lib/llm/prompts/relation-closed-set-context";
 import {
   buildPlainspeakVoiceSections,
   PLAINSPEAK_STYLE_EXAMPLE_GLYPH,
@@ -74,6 +76,11 @@ export function buildGlyphReadingPrompt(input: BuildGlyphReadingPromptInput): {
 } {
   const { profile, base_analysis, question, glyph, locale } = input;
   const outputLang = detectLanguage(question, locale);
+
+  const structured = normalizeBaseAnalysisInput(base_analysis).structured ?? null;
+  const relationClosedSetBlock = structured
+    ? stitchSingleProfileRelationClosedSet(structured, { questionText: question })
+    : "";
 
   const dateContext = buildCurrentDateContext(new Date(), locale);
   const questionEscaped = question.replace(/"/g, '\\"');
@@ -214,6 +221,7 @@ ${GLYPH_OUTPUT_SELF_CHECK}`;
     GLYPH_LANGUAGE_RULES,
     ORIENTAL_SHARED_GUARDRAILS,
     buildProfileContextSection(profile, base_analysis),
+    relationClosedSetBlock,
     `# 当前任务：Glyph 深度解读
 
 结合【命主 base_analysis structured + display_text】+【完整签文原文（仅内部分析用）】+【user 消息中的用户问题与签象数据】，按上文解签法则做一次【深度双视角解读】。

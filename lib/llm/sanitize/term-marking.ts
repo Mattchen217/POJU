@@ -3,16 +3,22 @@
  * LLM writes ⟦t:id|visible⟧; UI reads markers; audit detects leaks (no mutate).
  */
 
+import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
+import { computeChartRelations, type RelationLabel } from "@/lib/calculations/relation-engine";
 import { termPolarityById, type TermPolarity } from "@/lib/glossary/term-polarity";
 import {
   CLOSED_SET_REPLACE_IDS,
   CLOSED_SET_SLUG,
   CLOSED_SHEN_SHA,
+  isRelationMarkerId,
   KEEP_CN_SLUGS,
   OUT_OF_SET_FORBIDDEN_EN,
   OUT_OF_SET_FORBIDDEN_HAN,
+  RELATION_KIND_SOFT,
+  RELATION_SURFACE_TERMS_ZH,
+  TEN_GOD_TENSION_SOFT,
+  relationKindFromMarkerId,
 } from "@/lib/glossary/term-closed-set";
-import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import { CLOSED_SET_GLOSSARY_ENTRIES } from "@/lib/glossary/term-glossary-closed";
 import {
   TERM_GLOSSARY,
@@ -77,7 +83,7 @@ export function repairChatTermMarkers(text: string, locale: string): string {
     (_m, rawId: string, visible: string) => {
       const id = normalizeTermMarkerId(rawId);
       const vis = visible.trim();
-      if (!TERM_BY_ID.has(id)) return vis;
+      if (!TERM_BY_ID.has(id) && !isRelationMarkerId(id)) return vis;
       const plain = plainByTermId(id, locale) ?? undefined;
       return encodeTermMarker(id, vis, plain);
     },
@@ -86,8 +92,8 @@ export function repairChatTermMarkers(text: string, locale: string): string {
     /⟦t:([a-zA-Z0-9_:]+)\|((?:\\.|[^|\\])*?)(?:\|((?:\\.|[^|\\])*?))?⟧/g,
     (raw, rawId: string, visEsc: string, plainEsc?: string) => {
       const id = normalizeTermMarkerId(rawId);
-      if (id === rawId && TERM_BY_ID.has(id)) return raw;
-      if (!TERM_BY_ID.has(id)) return unescapeMarkerPart(visEsc);
+      if (id === rawId && (TERM_BY_ID.has(id) || isRelationMarkerId(id))) return raw;
+      if (!TERM_BY_ID.has(id) && !isRelationMarkerId(id)) return unescapeMarkerPart(visEsc);
       const vis = unescapeMarkerPart(visEsc);
       const plain = plainEsc?.trim()
         ? unescapeMarkerPart(plainEsc)
@@ -194,6 +200,16 @@ export function stripBrokenMarkers(text: string): string {
 }
 
 export function plainByTermId(termId: string, locale: string): string | null {
+  const tension = TEN_GOD_TENSION_SOFT[termId as keyof typeof TEN_GOD_TENSION_SOFT];
+  if (tension) {
+    const loc = toGlossaryLocale(locale);
+    return tension[loc === "zh" ? "zh" : "en"];
+  }
+  const relKind = relationKindFromMarkerId(termId);
+  if (relKind) {
+    const loc = toGlossaryLocale(locale);
+    return RELATION_KIND_SOFT[relKind][loc === "zh" ? "zh" : "en"];
+  }
   const entry = TERM_BY_ID.get(termId);
   if (!entry) return null;
   const loc = toGlossaryLocale(locale);
@@ -204,6 +220,26 @@ export function uiTermById(
   termId: string,
   locale: string,
 ): { soft: string; plain: string; polarity: TermPolarity } | null {
+  const tension = TEN_GOD_TENSION_SOFT[termId as keyof typeof TEN_GOD_TENSION_SOFT];
+  if (tension) {
+    const loc = toGlossaryLocale(locale);
+    const lang = loc === "zh" ? "zh" : "en";
+    return {
+      soft: tension[lang],
+      plain: tension[lang],
+      polarity: termPolarityById(termId),
+    };
+  }
+  const relKind = relationKindFromMarkerId(termId);
+  if (relKind) {
+    const loc = toGlossaryLocale(locale);
+    const lang = loc === "zh" ? "zh" : "en";
+    return {
+      soft: RELATION_KIND_SOFT[relKind][lang],
+      plain: RELATION_KIND_SOFT[relKind][lang],
+      polarity: termPolarityById(termId),
+    };
+  }
   const entry = TERM_BY_ID.get(termId);
   if (!entry) return null;
   const loc = toGlossaryLocale(locale);
@@ -491,6 +527,90 @@ export function auditShenShaAgainstInstance(
             ? "shen_sha_forbidden_empty_instance:羊刃"
             : "shen_sha_not_in_instance:羊刃",
         snippet: "羊刃",
+      });
+    }
+  }
+
+  return hits;
+}
+
+const BRANCH_CHARS = "子丑寅卯辰巳午未申酉戌亥";
+const STEM_CHARS = "甲乙丙丁戊己庚辛壬癸";
+
+/** Extract bare relation phrases (branch-pair / sanhe / stem-he) from audit-masked text. */
+export function extractBareRelationPhrases(masked: string): string[] {
+  const out = new Set<string>();
+  const reBranchPair = new RegExp(
+    `[${BRANCH_CHARS}][${BRANCH_CHARS}](?:相冲|相刑|相害|六合[^、，。；\\s]{0,8}|半合[^、，。；\\s]{0,12}|三合[^、，。；\\s]{0,12})`,
+    "g",
+  );
+  const reSanhe = new RegExp(`[${BRANCH_CHARS}]{3}三合[^、，。；\\s]{0,12}`, "g");
+  const reStemHe = new RegExp(`日主[${STEM_CHARS}][${STEM_CHARS}]相合[^、，。；\\s]{0,12}`, "g");
+  for (const re of [reBranchPair, reSanhe, reStemHe]) {
+    re.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(masked)) !== null) out.add(m[0]);
+  }
+  return [...out];
+}
+
+function phraseAllowed(phrase: string, allowedHan: Set<string>): boolean {
+  if (allowedHan.has(phrase)) return true;
+  for (const han of allowedHan) {
+    if (phrase.startsWith(han) || han.startsWith(phrase)) return true;
+  }
+  return false;
+}
+
+/** Relations in text must match computeChartRelations inventory; empty inventory → no relation words. */
+export function auditRelationsAgainstInstance(
+  text: string,
+  structured: ProfileStructured,
+  opts?: { relations?: RelationLabel[] },
+): OutOfSetAuditHit[] {
+  if (!text?.trim()) return [];
+  const masked = maskMarkersForAudit(text);
+  const rels = opts?.relations ?? computeChartRelations(structured);
+  const allowedIds = new Set(rels.map((r) => r.id));
+  const allowedHan = new Set(rels.map((r) => r.han));
+  const hits: OutOfSetAuditHit[] = [];
+
+  for (const m of parseTermMarkers(text)) {
+    if (!isRelationMarkerId(m.id)) continue;
+    if (allowedIds.size === 0 || !allowedIds.has(m.id)) {
+      hits.push({
+        label:
+          allowedIds.size === 0
+            ? `relation_forbidden_empty_instance:${m.id}`
+            : `relation_not_in_instance:${m.id}`,
+        snippet: m.raw.slice(0, 48),
+      });
+    }
+  }
+
+  if (allowedHan.size === 0) {
+    for (const term of RELATION_SURFACE_TERMS_ZH) {
+      if (masked.includes(term)) {
+        hits.push({
+          label: `relation_forbidden_empty_instance:${term}`,
+          snippet: term,
+        });
+      }
+    }
+    for (const phrase of extractBareRelationPhrases(masked)) {
+      hits.push({
+        label: `relation_forbidden_empty_instance:${phrase}`,
+        snippet: phrase,
+      });
+    }
+    return hits;
+  }
+
+  for (const phrase of extractBareRelationPhrases(masked)) {
+    if (!phraseAllowed(phrase, allowedHan)) {
+      hits.push({
+        label: `relation_not_in_instance:${phrase}`,
+        snippet: phrase,
       });
     }
   }

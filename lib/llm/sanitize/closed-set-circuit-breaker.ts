@@ -1,16 +1,21 @@
-import { auditOutOfSetTerms, auditShenShaAgainstInstance } from "@/lib/llm/sanitize/term-marking";
+import { auditOutOfSetTerms, auditRelationsAgainstInstance, auditShenShaAgainstInstance } from "@/lib/llm/sanitize/term-marking";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
+import type { RelationLabel } from "@/lib/calculations/relation-engine";
 
 /** 命中集外神煞 / 在集内但不在本盘 → 视为污染，必须熔断重生成。 */
 export function detectShenShaPollution(
   text: string,
   structured: ProfileStructured | null,
   _locale: string,
+  opts?: { relations?: RelationLabel[] },
 ): { polluted: boolean; hits: string[] } {
   const hits: string[] = [];
   for (const h of auditOutOfSetTerms(text)) hits.push(h.snippet ?? String(h));
   if (structured) {
     for (const h of auditShenShaAgainstInstance(text, structured)) hits.push(h.snippet ?? String(h));
+    for (const h of auditRelationsAgainstInstance(text, structured, { relations: opts?.relations })) {
+      hits.push(h.snippet ?? String(h));
+    }
   }
   return { polluted: hits.length > 0, hits };
 }
@@ -35,7 +40,8 @@ export async function generateWithClosedSetGuard(args: {
     );
     hint =
       `⚠️ 你上一次产出包含了集外或不在本盘的神煞：${hits.slice(0, 5).join("、")}。` +
-      `严禁！神煞只能用本次 structured 实际算出的、且属于闭集 9 个（天乙贵人/禄神/飞刃/文昌/桃花/驿马/华盖/孤辰/寡宿）的那几个。` +
+      `严禁！神煞只能用本次 structured 实际算出的、且属于闭集 9 个（天乙贵人/禄神/飞刃/文昌/桃花/驿马/华盖/孤辰/寡宿）的那几个；` +
+      `关系标签只能引用实例清单列出的本盘动态关系，禁止自推刑冲合害/半合/三合/天干合。` +
       `删除所有集外神煞，重写。`;
   }
   throw new Error(

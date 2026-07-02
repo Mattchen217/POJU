@@ -14,6 +14,7 @@ import {
   stitchPromptSections,
 } from "@/lib/llm/prompts/oriental-counselor-base";
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
+import { stitchSingleProfileRelationClosedSet } from "@/lib/llm/prompts/relation-closed-set-context";
 import {
   buildSyncroBaziContext,
   buildSyncroBaziContextSection,
@@ -236,17 +237,21 @@ ${taskResponseBlock}
 
 本批共 ${cellCount} 个 key。输出语言：${outputLanguage}。`;
 
-  const structured = normalizeBaseAnalysisInput(base_analysis).structured;
+  const structured = normalizeBaseAnalysisInput(base_analysis).structured ?? null;
   const baziContext = buildSyncroBaziContext(structured);
   const baziContextSection = buildSyncroBaziContextSection(
     baziContext,
     structured?.pattern,
   );
+  const relationClosedSetBlock = structured
+    ? stitchSingleProfileRelationClosedSet(structured, { questionText: task_description })
+    : "";
 
   const system = stitchPromptSections(
     ...buildSyncroFullPromptSections(),
     buildTermMarkingPromptBlock(outputLocale),
     baziContextSection,
+    relationClosedSetBlock,
     syncroRulesBlock,
   );
 

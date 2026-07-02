@@ -16,6 +16,7 @@ import {
   type Locale,
   toGlossaryLocale,
 } from "@/lib/glossary/term-glossary";
+import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import {
   auditOutputPolicyText,
   detectOutputPolicyViolations,
@@ -25,6 +26,7 @@ import {
   auditBareGanzhi,
   auditMarkerCompleteness,
   auditOutOfSetTerms,
+  auditRelationsAgainstInstance,
   auditShenShaAgainstInstance,
   auditTermMarkerDensity,
   buildTermMarkingPromptBlock,
@@ -52,6 +54,7 @@ export {
   auditBareGanzhi,
   auditMarkerCompleteness,
   auditOutOfSetTerms,
+  auditRelationsAgainstInstance,
   auditShenShaAgainstInstance,
   auditTermMarkerDensity,
   BARE_SIGN_POEM_PATTERN,
@@ -455,7 +458,12 @@ export function sanitizeChatResponse(text: string, locale: string): string {
 }
 
 /** Read-only delivery audit: bare forbidden terms, bare sign poems, broken markers, red lines. */
-export function auditDeliveredText(text: string, locale: string): ComplianceViolation[] {
+export function auditDeliveredText(
+  text: string,
+  locale: string,
+  structured?: ProfileStructured | null,
+  opts?: { relations?: import("@/lib/calculations/relation-engine").RelationLabel[] },
+): ComplianceViolation[] {
   if (!text?.trim()) return [];
   const violations = detectComplianceViolations(maskMarkersForAudit(text), locale);
 
@@ -465,6 +473,12 @@ export function auditDeliveredText(text: string, locale: string): ComplianceViol
 
   for (const hit of auditOutOfSetTerms(text)) {
     violations.push(hit);
+  }
+
+  if (structured) {
+    for (const hit of auditRelationsAgainstInstance(text, structured, { relations: opts?.relations })) {
+      violations.push(hit);
+    }
   }
 
   for (const hit of auditBareGanzhi(text)) {

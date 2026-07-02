@@ -214,6 +214,103 @@ export const CLOSED_SET_SLUG: Record<string, string> = {
   三合: "san_he",
 };
 
+/** relation-engine RelationLabel.id prefixes (dynamic per chart, e.g. chong_午_子). */
+export const RELATION_MARKER_PREFIXES = [
+  "chong",
+  "xing",
+  "hai",
+  "liuhe",
+  "banhe",
+  "sanhe",
+  "stemhe",
+] as const;
+
+export type RelationMarkerPrefix = (typeof RELATION_MARKER_PREFIXES)[number];
+
+/** Soft-label guidance per relation kind (marker visible / plain fallback). */
+export const RELATION_KIND_SOFT: Record<
+  RelationMarkerPrefix,
+  { zh: string; en: string }
+> = {
+  chong: { zh: "两股力的正面顶撞", en: "head-on friction between two forces" },
+  xing: { zh: "关系里的拉扯张力", en: "pull-and-push tension in the pattern" },
+  hai: { zh: "暗处的消耗摩擦", en: "slow drain between two pulls" },
+  liuhe: { zh: "自然的契合引力", en: "natural affinity pulling together" },
+  banhe: { zh: "部分合力成势", en: "partial alliance building momentum" },
+  sanhe: { zh: "三方合力成局", en: "triple-branch combined momentum" },
+  stemhe: { zh: "天干层面的相合牵引", en: "stem-level mutual pull" },
+};
+
+/** 十神张力闭集 slug（S5 · 中性软译，禁凶断）。 */
+export const TEN_GOD_TENSION_MARKER_IDS = ["shangguan_jianguan", "xiaoshen_duoshi"] as const;
+
+export const TEN_GOD_TENSION_SOFT: Record<
+  (typeof TEN_GOD_TENSION_MARKER_IDS)[number],
+  { zh: string; en: string }
+> = {
+  shangguan_jianguan: {
+    zh: "外部约束下的对抗张力",
+    en: "tension between expression and external norms",
+  },
+  xiaoshen_duoshi: {
+    zh: "内省本能对表达的挤占张力",
+    en: "inner pressure crowding out expression",
+  },
+};
+
+/** Generic relation surface terms — forbidden when chart has zero computed relations. */
+export const RELATION_SURFACE_TERMS_ZH = [
+  "刑冲合害",
+  "相冲",
+  "相刑",
+  "相害",
+  "半合",
+  "三合",
+  "六合",
+  "天干合",
+  "五合",
+  "六冲",
+  "三刑",
+  "六害",
+  "三合局",
+  "半合局",
+  "伤官见官",
+  "枭神夺食",
+] as const;
+
+export function relationKindFromMarkerId(id: string): RelationMarkerPrefix | null {
+  const parts = id.split("_");
+  const base = parts[0];
+  if ((RELATION_MARKER_PREFIXES as readonly string[]).includes(base)) {
+    return base as RelationMarkerPrefix;
+  }
+  if (base === "liunian" && parts[1] && (RELATION_MARKER_PREFIXES as readonly string[]).includes(parts[1])) {
+    return parts[1] as RelationMarkerPrefix;
+  }
+  if (base === "cross" && parts[1] && (RELATION_MARKER_PREFIXES as readonly string[]).includes(parts[1])) {
+    return parts[1] as RelationMarkerPrefix;
+  }
+  return null;
+}
+
+export function isTenGodTensionMarkerId(id: string): boolean {
+  return (TEN_GOD_TENSION_MARKER_IDS as readonly string[]).includes(id);
+}
+
+export function isRelationMarkerId(id: string): boolean {
+  if (isTenGodTensionMarkerId(id)) return true;
+  return relationKindFromMarkerId(id) !== null;
+}
+
+export function relationPolarityToken(id: string): "green" | "red" | "gold" | null {
+  if (isTenGodTensionMarkerId(id)) return "red";
+  const kind = relationKindFromMarkerId(id);
+  if (!kind) return null;
+  if (kind === "chong" || kind === "xing" || kind === "hai") return "red";
+  if (kind === "liuhe" || kind === "banhe" || kind === "sanhe") return "green";
+  return "gold";
+}
+
 export const KEEP_CN_SLUGS = new Set([
   "day_master",
   "decade",

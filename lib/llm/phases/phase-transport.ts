@@ -3,6 +3,7 @@ import { repairEmptyKeepCnBrackets } from "@/lib/llm/sanitize/keep-cn-brackets";
 import { salvagePhaseResponseText } from "@/lib/poju/extract-streaming-response";
 import { pojuCacheSessionId } from "@/lib/llm/cache-session-id";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
+import type { RelationLabel } from "@/lib/calculations/relation-engine";
 import {
   generateGeminiChatCompletion,
   getGeminiClient,
@@ -55,14 +56,19 @@ const RETRYABLE_COMPLIANCE_LABELS = new Set([
 function isRetryableComplianceLabel(label: string): boolean {
   if (RETRYABLE_COMPLIANCE_LABELS.has(label)) return true;
   if (label.startsWith("term:") || label.startsWith("out_of_set:")) return true;
+  if (label.startsWith("relation_")) return true;
   return false;
 }
 
 export function auditPhaseChatCompliance(
   text: string,
   locale: string,
+  structured?: ProfileStructured | null,
+  opts?: { relations?: RelationLabel[] },
 ): Array<{ label: string; snippet?: string }> {
-  return auditDeliveredText(text, locale).filter((v) => isRetryableComplianceLabel(v.label));
+  return auditDeliveredText(text, locale, structured, opts).filter((v) =>
+    isRetryableComplianceLabel(v.label),
+  );
 }
 
 export async function callPhaseJsonTransport(
@@ -364,6 +370,7 @@ export type PhaseResponseResolveContext = {
   raw_length?: number;
   use_fallback?: boolean;
   structured?: ProfileStructured | null;
+  audit_relations?: RelationLabel[];
 };
 
 /** Log compliance violations — alert only, never mutates response. */
@@ -440,7 +447,9 @@ export function resolvePhaseResponse(
   }
 
   if (response.trim()) {
-    const violations = auditPhaseChatCompliance(response, ctx.locale ?? "en");
+    const violations = auditPhaseChatCompliance(response, ctx.locale ?? "en", ctx.structured, {
+      relations: ctx.audit_relations,
+    });
     if (violations.length > 0) {
       logPhaseComplianceAlert(rawText, { ...ctx, raw_length: rawText.length }, violations);
     }

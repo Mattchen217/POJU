@@ -18,7 +18,7 @@ const OUT_OF_SET_SAMPLE = OUT_OF_SET_FORBIDDEN_HAN.slice(0, 8).join("/");
 export function buildClosedSetConstraintPromptBlock(_locale: string): string {
   return `# 命理术语闭集约束（硬规则）
 
-1. **实例闭集**：你只能使用【本次提供的命主结构数据 (structured) 里实际出现的】命理术语。structured 未列出的神煞/十神/长生/干支关系，一律**不准提及、不准编造**。
+1. **实例闭集**：你只能使用【本次提供的命主结构数据 (structured) 里实际出现的】命理术语。structured 未列出的神煞/十神/长生/干支关系/本盘动态关系，一律**不准提及、不准编造**。
 2. **词汇闭集**：本引擎**不计算**下列词——若 structured 无对应项，**绝不能出现**：${OUT_OF_SET_SAMPLE}… 等集外神煞/术语。
 3. **神煞**只可能是这 9 个之一：${SHEN_SHA_LIST}。
 4. **十神**只可能是这 10 个之一：${TEN_GOD_LIST}。
@@ -36,12 +36,12 @@ export function buildChatPhaseTermBindingBlock(locale: string): string {
 - 凡命理术语**必须**来自上方术语表 + 本次 structured 实例闭集；**禁止**闭集外自造词。
 - **必须**用 \`⟦t:<slug>|<可见软译>|<该处白话>⟧\` 三段位包裹；**严禁**裸写术语、裸括号干支、裸「神煞/十神/贵人」等统称。
 - 标记只包软译词（含括号干支），不要把整句 your/你/的 包进去。
-- 未在 structured 出现的神煞/十神/长生**不得**写进 \`response\`。`;
+- 未在 structured 出现的神煞/十神/长生/本盘动态关系**不得**写进 \`response\`。`;
   }
   return `# POJU chat \`response\` · term binding (hard rules)
 
 - Every metaphysical term **must** come from the closed-set table + structured instance inventory above — **no** out-of-set inventions.
 - **Must** wrap each term as \`⟦t:<slug>|<visible soft label>|<context plain>⟧\` (3 segments). **Never** bare terms, bare stem-branch pairs, or category labels ("ten god", "shen sha", "noble star").
 - Markers wrap only the soft label (with stem-branch in parens if required) — not whole clauses with "your/the/as".
-- Do **not** mention shen_sha / ten_god / life_stage names absent from structured.`;
+- Do **not** mention shen_sha / ten_god / life_stage / natal relation labels absent from structured.`;
 }

@@ -10,6 +10,14 @@
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-structured-instance-inventory";
 import {
+  buildDirectedDynamicRelationInventoryBlock,
+  computeDirectedDynamicRelations,
+  computeRelationAuditAllowlist,
+  getCurrentLiunian,
+} from "@/lib/calculations/relation-engine";
+import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
+import type { AgentPhase } from "@/lib/poju/agent-state";
+import {
   buildPojuSystemPromptV6,
   buildPojuUserSideControlPlane,
 } from "@/lib/llm/prompts/poju-base-v6";
@@ -29,7 +37,7 @@ import {
   stitchPromptSections,
 } from "@/lib/llm/prompts/oriental-counselor-base";
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
-import { buildChatShenShaGuardBlock } from "@/lib/llm/prompts/shen-sha-guard";
+import { buildChatFactGuardBlock } from "@/lib/llm/prompts/shen-sha-guard";
 import { buildChatPhaseTermBindingBlock } from "@/lib/llm/prompts/term-closed-set-constraint";
 import { buildTurnContextSnapshot } from "@/lib/poju/state-machine";
 import {
@@ -38,6 +46,25 @@ import {
 } from "@/lib/llm/phases/phase-transport";
 import { buildTermMarkingPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
 import type { PhaseLLMInput } from "@/lib/llm/phases/types";
+
+/** 下游相位：question_category 已定，流年/定向关系进 user 侧（INV-1 · 不进 system）。 */
+export const POJU_V6_DIRECTED_RELATION_PHASES: ReadonlySet<AgentPhase> = new Set([
+  "collecting_context",
+  "awaiting_confirmation",
+  "delivered",
+]);
+
+export function shouldInjectDirectedRelationsV6(input: PhaseLLMInput): boolean {
+  const phase = input.agent_state?.current_phase;
+  return phase != null && POJU_V6_DIRECTED_RELATION_PHASES.has(phase);
+}
+
+export function buildDirectedRelationAuditAllowlistV6(
+  structured: ProfileStructured,
+  questionCategory: string | null | undefined,
+) {
+  return computeRelationAuditAllowlist(structured, getCurrentLiunian(), questionCategory);
+}
 
 export async function loadBaseAnalysisForSessionV6(input: PhaseLLMInput): Promise<unknown> {
   if (input.base_analysis !== undefined && input.base_analysis !== null) {
@@ -104,11 +131,28 @@ export async function buildPhaseTurnContextV6(
   const injectionBlock = input.tool_injection_context?.trim() ?? "";
   const snapshotBlock = buildTurnContextSnapshot(input.agent_state);
 
+  const injectDirected = Boolean(structured && shouldInjectDirectedRelationsV6(input));
+  const liunian = injectDirected ? getCurrentLiunian() : null;
+  const questionCategory = input.agent_state?.question_category;
+  const directedDynamicRels =
+    structured && liunian
+      ? computeDirectedDynamicRelations(structured, liunian, questionCategory)
+      : undefined;
+  const directedInventoryBlock =
+    structured && liunian
+      ? buildDirectedDynamicRelationInventoryBlock(structured, liunian, questionCategory)
+      : "";
+
   const dataPlane = stitchPromptSections(
     buildNorthAmericaAdaptation(outLoc),
     buildProfileContextSection(input.profile, baseAnalysis, outLoc),
-    structured ? buildChatShenShaGuardBlock(structured) : "",
+    structured
+      ? buildChatFactGuardBlock(structured, {
+          directedRelations: injectDirected ? directedDynamicRels ?? [] : undefined,
+        })
+      : "",
     structured ? buildStructuredInstanceInventory(structured) : "",
+    directedInventoryBlock,
   );
 
   const termPlane = stitchPromptSections(

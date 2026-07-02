@@ -17,7 +17,7 @@ import {
   stitchPromptSections,
 } from "@/lib/llm/prompts/oriental-counselor-base";
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
-import { buildChatShenShaGuardBlock } from "@/lib/llm/prompts/shen-sha-guard";
+import { buildChatFactGuardBlock } from "@/lib/llm/prompts/shen-sha-guard";
 import { buildChatPhaseTermBindingBlock } from "@/lib/llm/prompts/term-closed-set-constraint";
 import { buildTurnContextSnapshot } from "@/lib/poju/state-machine";
 import {
@@ -73,7 +73,7 @@ export async function buildPojuSystemPrompt(input: PhaseLLMInput): Promise<strin
     buildOutputRedLinesBlock(),
     buildNorthAmericaAdaptation(outLoc),
     buildProfileContextSection(input.profile, baseAnalysis, outLoc),
-    structured ? buildChatShenShaGuardBlock(structured) : "",
+    structured ? buildChatFactGuardBlock(structured) : "",
   );
   logBaseAnalysisPayload("buildPojuSystemPrompt", baseAnalysis, {
     session_id: input.session.session_id,

@@ -12,6 +12,7 @@ import { buildDeliveryGrammarPolishBlock } from "@/lib/llm/prompts/delivery-gram
 import {
   POJU_KNOWLEDGE_ROOTS,
   POJU_OUTPUT_BRANDING,
+  POJU_OUTPUT_DATA_DISCIPLINE,
   POJU_OUTPUT_FORMAT,
   POJU_SCENARIO_GOAL,
   POJU_SESSION_GUARDRAILS,
@@ -83,6 +84,7 @@ export function buildPojuUserSideControlPlane(outputLang = "en"): string {
     POJU_OUTPUT_BRANDING,
     POJU_SESSION_GUARDRAILS,
     POJU_OUTPUT_FORMAT,
+    POJU_OUTPUT_DATA_DISCIPLINE,
     buildDeliveryGrammarPolishBlock(outputLang),
   );
 }

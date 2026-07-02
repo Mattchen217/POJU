@@ -2,6 +2,8 @@
  * Read-only delivery audit + one-shot low-temp regen hint (§3.5 + grounding §3.5).
  */
 
+import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
+import type { RelationLabel } from "@/lib/calculations/relation-engine";
 import {
   auditDeliveredText,
   type ComplianceViolation,
@@ -40,11 +42,12 @@ export function auditDeepStringFields(
   value: unknown,
   locale: string,
   product?: DeliveryProduct,
+  opts?: { structured?: ProfileStructured | null; relations?: RelationLabel[] },
 ): ComplianceViolation[] {
   const all: ComplianceViolation[] = [];
   const walk = (v: unknown) => {
     if (typeof v === "string") {
-      all.push(...auditDeliveredText(v, locale));
+      all.push(...auditDeliveredText(v, locale, opts?.structured, { relations: opts?.relations }));
     } else if (Array.isArray(v)) {
       v.forEach(walk);
     } else if (v && typeof v === "object") {
@@ -89,6 +92,7 @@ export function isCriticalDeliveryAuditFailure(
       v.label === "grounding_low" ||
       v.label.startsWith("out_of_set_") ||
       v.label.startsWith("shen_sha_") ||
+      v.label.startsWith("relation_") ||
       v.label === "marker_missing_plain" ||
       v.label.startsWith("marker_visible_") ||
       v.label.includes("bazi_"),
