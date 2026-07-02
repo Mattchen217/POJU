@@ -24,13 +24,31 @@ const ZH_RED_LINE = "算命、命运、吉、凶、预测";
 const EN_RED_LINE =
   "fortune-telling, fate, destiny, auspicious, inauspicious, prediction";
 
+const BASE_ANALYSIS_NATAL_RELATION_ANCHOR_ZH = `【用本盘动态关系锚定结构（仅本命、仅一处、中性、织进叙事）】
+- 若实例清单里有【本命结构关系】（相冲/相刑/相害/半合/三合/天干五合），
+  用它把「系统脆弱点」或「核心底色」锚到真实结构张力上——
+  例：「结构里有一处彼此消耗的拉扯」（源自相刑）、「核心与外部有一股要合而未合的牵引」（源自天干合）。
+- 【最多点一处】，织进叙事，【禁枚举】关系名（不写「你有寅巳相刑、巳酉半合…」）。
+- 关系词走软翻译 ⟦t:<relation_slug>|软译|白话⟧，中性化（禁凶/灾/克死）。
+- 【只用 source=natal 的本命关系】；实例清单里的【流年/动态关系一律忽略】——
+  底座是稳定中立读数，流年剧情留给下游。`;
+
+const BASE_ANALYSIS_NATAL_RELATION_ANCHOR_EN = `[Anchor structure on natal relations (natal only · one mention max · neutral · woven)]
+- If the instance inventory lists **natal structure relations** (clash / penalty / harm / half-combo / triple / stem combine),
+  use **one** to anchor **Structural Vulnerabilities** or **Core Engine Baseline** to real structural tension—
+  e.g. "a mutually draining pull inside the structure" (from penalty), "core and outer field share an almost-merge pull" (from stem combine).
+- **At most one mention**, woven into narrative—**never enumerate** ("you have Yin-Si penalty AND Si-You half-combo…").
+- Relation terms: soft ⟦t:<relation_slug>|soft label|plain⟧, neutralized (no doom / disaster / fatalism).
+- **Natal only (\`source=natal\`)**; ignore any liunian/directed/dynamic relations—stable neutral base; plot timing belongs downstream.`;
+
 /** Four neutral energy dimensions + two data-display layers (fixed semantics). */
 const BASE_ANALYSIS_OUTPUT_SECTIONS_ZH = `# 输出分区（必须齐全 · Markdown ## 标题）
 
 ## 四维能量动力学（中立诊断 · 必须四块齐全）
 
 1. **## 核心底色（Core Engine Baseline · 强项）** — 原始驱动力类型（火=高频爆发 / 土=稳健承载 等），绑定 \`day_master\` + \`strength\` + \`pattern\`；能量在何种机制下产生最大价值（十神组合的现代机制转译，如食神生财、官印相生——**只谈机制，不谈职业场景**）。
-2. **## 系统脆弱点（Structural Vulnerabilities · 需注意）** — **不谈吉凶**，只谈配置天然短板：缺冷却机制（缺水）→ 冲动决策；结构过载（克泄交加）→ 身心内耗。绑定 \`ji_shen\` / 缺失五行 / 失衡。
+${BASE_ANALYSIS_NATAL_RELATION_ANCHOR_ZH}
+2. **## 系统脆弱点（Structural Vulnerabilities · 需注意）** — **不谈吉凶**，只谈配置天然短板：缺冷却机制（缺水）→ 冲动决策；结构过载（克泄交加）→ 身心内耗。绑定 \`ji_shen\` / 缺失五行 / 失衡；**可**用上方本命结构关系锚定一处真实结构张力（仍只一处、不枚举）。
 3. **## 能量平衡锚（Balancing Anchors · 解决方案）** — 中立、**非场景**的调谐：作息节律、环境心理学、决策习惯（Wood/Water/Metal 的调谐机制）。绑定 \`yong_shen\` / \`xi_shen\` + 调候；可含方位 · 颜色 · 物件 · 朝向 · 规避（禁招财/催运/避邪承诺）。
 4. **## 高杠杆发力区（High-Leverage Trajectory · 全力以赴方向）** — 当系统处于何种状态（用神得力 / 格局成）时**最易突破**；只描述「什么能量状态下最易出成就」，**不预测具体事件，不指定行业**。
 
@@ -43,8 +61,9 @@ const BASE_ANALYSIS_OUTPUT_SECTIONS_EN = `# Output sections (all required · Mar
 
 ## Four neutral energy dimensions (mandatory · all four)
 
-1. **## Core Engine Baseline (强项)** — Raw drive type (fire = high-frequency bursts / earth = steady load-bearing, etc.), bound to \`day_master\` + \`strength\` + \`pattern\`; where energy creates max value via ten-god **mechanisms** (e.g. output feeds wealth, officer nourishes seal)—**mechanism only, no career scenes**).
-2. **## Structural Vulnerabilities (需注意)** — **No good/bad moralizing**—only structural weak points: missing cooling (low water) → impulsive calls; overload (clash + drain) → internal friction. Bound to \`ji_shen\` / missing elements / imbalance.
+1. **## Core Engine Baseline (强项)** — Raw drive type (fire = high-frequency bursts / earth = steady load-bearing, etc.), bound to \`day_master\` + \`strength\` + \`pattern\`; where energy creates max value via ten-god **mechanisms** (e.g. output feeds wealth, officer nourishes seal)—**mechanism only, no career scenes**.
+${BASE_ANALYSIS_NATAL_RELATION_ANCHOR_EN}
+2. **## Structural Vulnerabilities (需注意)** — **No good/bad moralizing**—only structural weak points: missing cooling (low water) → impulsive calls; overload (clash + drain) → internal friction. Bound to \`ji_shen\` / missing elements / imbalance; **may** anchor one natal structural tension (still one mention max, no enumeration).
 3. **## Balancing Anchors (解决方案)** — Neutral, **non-scenario** tuning: rhythm, environmental psychology, decision habits (Wood/Water/Metal tuning mechanisms). Bound to \`yong_shen\` / \`xi_shen\` + climate balance; may include direction · color · objects · facing · avoid (no superstition promises).
 4. **## High-Leverage Trajectory (全力以赴方向)** — When the system is in which state (favorable god active / pattern coherent) **breakthrough comes easiest**; describe **energy state**, not events or industries.
 
@@ -117,7 +136,8 @@ const BASE_ANALYSIS_BINDING_RULES = `# 绑定计算结果 · 闭集 · 禁幻觉
 10. **标记排版** — 标记**紧贴**软译词，**禁止**在标记前插入裸换行。
 11. **金色词密度** — **每段最多 1–2 个** ⟦t:…⟧；同 id 不重复刷标记。
 12. **禁止逐柱复述** — **禁止**在正文逐柱枚举藏干/十神/神煞/长生；**## 四柱命盘数据** 仅 2–4 句综合解读（见叙事精简规则）。
-13. **禁止假设**「输出端会软翻译」——你必须在生成时直接写好标记与软译词。`;
+13. **禁止假设**「输出端会软翻译」——你必须在生成时直接写好标记与软译词。
+14. **本命结构关系 · 锚定不枚举** — 关系**只能**来自实例清单【本命结构关系】（\`source=natal\`）；**最多一处**织进「核心底色」或「系统脆弱点」；**禁**流年/定向/十神张力词；**禁**裸写刑冲合害或关系清单；须 ⟦t:<relation_slug>|软译|白话⟧ + 中性化。清单为空则**不得**硬塞关系词。`;
 
 const BASE_ANALYSIS_LEAD_LABEL_RULE_ZH = `# 引导块标签（严禁占位词）
 
@@ -282,6 +302,8 @@ const BASE_ANALYSIS_FEW_SHOT_ZH = `# 分区范例（复制结构 · 勿抄意象
 
 **结构短板:** 水元素冷却模块偏弱（structured 忌神/缺失方向）→ 决策窗口缩短，易在信息未齐时提前锁定。
 
+**结构张力（范例 · 仅当有本命关系时 · 勿抄 slug）:** 配置里有一处 ⟦t:chong_午_子|两股力的正面顶撞|年月两支在结构上互相顶撞，口径变窄⟧——理解为散热缺口，而非「注定冲突」；**无本命关系则跳过本句**。
+
 > **调谐提示:** 这不是「性格缺陷」，是配置上的散热缺口——需要外部节律补位。
 
 ## 能量平衡锚（Balancing Anchors · 解决方案）
@@ -343,6 +365,8 @@ const BASE_ANALYSIS_FEW_SHOT_EN = `# Section example (copy structure · no scena
 
 **Structural gap:** Weak water cooling module (structured challenging direction) → shorter decision windows, premature lock-in before data is complete.
 
+**Structural tension (example · only when natal relations exist · do not copy slug):** One ⟦t:chong_午_子|head-on structural push|year-month branches push against each other, narrowing the cooling window⟧—a heat-dissipation gap, not "doomed conflict"; **omit if inventory has no natal relations**.
+
 > **Tuning note:** Not a character flaw—a heat-dissipation gap in the config.
 
 ## Balancing Anchors (解决方案)
@@ -392,7 +416,9 @@ export function buildBaseAnalysisStreamPrompt(input: BaseAnalysisStreamPromptInp
   const lang = input.local_data.output_language;
   const langLabel = outputLanguageLabel(lang);
   const redLine = lang === "zh" ? ZH_RED_LINE : EN_RED_LINE;
-  const instanceInventory = buildStructuredInstanceInventory(input.local_data.structured);
+  const instanceInventory = buildStructuredInstanceInventory(input.local_data.structured, {
+    forBaseAnalysis: true,
+  });
 
   const taskBlock =
     lang === "zh"

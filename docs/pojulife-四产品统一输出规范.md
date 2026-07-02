@@ -197,4 +197,5 @@
 - 下游注入：`lib/llm/prompts/base-analysis-context.ts`
 - 数据克制提示词：`POJU_OUTPUT_DATA_DISCIPLINE` in `lib/llm/prompts/poju-base.ts`
 - 四产品关系接线对照：`docs/指令7-四产品关系接线对照.md`
+- base_analysis 本命关系锚定：`docs/指令8-base_analysis本命关系锚定.md`
 - 省钱工程：见 `.cursor/docs/prefix-cache-省钱工程-spec.md`

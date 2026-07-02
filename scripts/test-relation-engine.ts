@@ -3,7 +3,9 @@
  *
  *   pnpm exec tsx scripts/test-relation-engine.ts
  */
-import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
+import type { ProfileStructured, ProfileStrength } from "@/lib/calculations/build-profile-structured";
+import type { DaYunEntry } from "@/lib/calculations/lunar-dayun";
+import type { LiuNianGanzhi } from "@/lib/calculations/liunian";
 import {
   computeChartRelations,
   computeDirectedRelations,
@@ -27,9 +29,9 @@ function makeProfile(
     hour: string;
   },
   opts?: {
-    strength?: string;
+    strength?: ProfileStrength;
     tenGods?: Partial<Record<"year" | "month" | "day" | "hour", string>>;
-    daYun?: Array<{ ganzhi: string; start_age: number }>;
+    daYun?: DaYunEntry[];
   },
 ): ProfileStructured {
   const pillar = (gz: string, pos: "year" | "month" | "day" | "hour") => ({
@@ -79,10 +81,10 @@ const chartA = makeProfile({
 const relsA = computeChartRelations(chartA);
 const chong = hasRelation(relsA, "chong_午_子");
 assert("chart A: 子午相冲", Boolean(chong));
-assert("chart A: chong kind/polarity", chong?.kind === "chong" && chong.polarity === "red");
+assert("chart A: chong kind/polarity", Boolean(chong?.kind === "chong" && chong?.polarity === "red"));
 assert(
   "chart A: chong palaces include career+root",
-  chong?.palaces.includes("career") && chong?.palaces.includes("root"),
+  Boolean(chong?.palaces.includes("career") && chong?.palaces.includes("root")),
 );
 assert("chart A: natal source", chong?.source === "natal");
 
@@ -96,8 +98,8 @@ const chartB = makeProfile({
 const relsB = computeChartRelations(chartB);
 const stemHe = hasRelation(relsB, "stemhe_乙_庚");
 assert("chart B: 日主乙庚相合", Boolean(stemHe));
-assert("chart B: stem_he kind/gold", stemHe?.kind === "stem_he" && stemHe.polarity === "gold");
-assert("chart B: self palace", stemHe?.palaces.includes("self"));
+assert("chart B: stem_he kind/gold", Boolean(stemHe?.kind === "stem_he" && stemHe?.polarity === "gold"));
+assert("chart B: self palace", Boolean(stemHe?.palaces.includes("self")));
 
 // Chart C: 年寅 + 月午 → 寅午半合火局（含旺支午）
 const chartC = makeProfile({
@@ -109,7 +111,7 @@ const chartC = makeProfile({
 const relsC = computeChartRelations(chartC);
 const banhe = hasRelation(relsC, "banhe_午_寅_火局");
 assert("chart C: 寅午半合火局", Boolean(banhe));
-assert("chart C: banhe green", banhe?.kind === "banhe" && banhe.polarity === "green");
+assert("chart C: banhe green", Boolean(banhe?.kind === "banhe" && banhe?.polarity === "green"));
 
 // Chart D: 申子辰齐 → 三合水局
 const chartD = makeProfile({
@@ -150,7 +152,7 @@ assert("S2 chart A: 流年午冲年支子", Boolean(liChongYear));
 assert("S2: liunian source", liChongYear?.source === "liunian");
 assert(
   "S2: positions include liunian",
-  liChongYear?.positions.includes("liunian") && liChongYear?.positions.includes("year"),
+  Boolean(liChongYear?.positions.includes("liunian") && liChongYear?.positions.includes("year")),
 );
 const liBanheHour = hasRelation(relsLiunianA, "liunian_banhe_午_寅_hour_火局");
 assert("S2 chart A: 流年午与时支寅半合火局", Boolean(liBanheHour));
@@ -167,11 +169,11 @@ const chartWeakOfficer = makeProfile(
   },
   { strength: "weak", tenGods: { month: "正官" } },
 );
-const liunianDingMao = { stem: "丁", branch: "卯", ganzhi: "丁卯" };
+const liunianDingMao: LiuNianGanzhi = { stem: "丁", branch: "卯", ganzhi: "丁卯" };
 const tensionsOfficer = detectTenGodTensions(chartWeakOfficer, liunianDingMao);
 const sgjg = hasRelation(tensionsOfficer, "shangguan_jianguan");
 assert("S5: 偏弱盘流年伤官见官", Boolean(sgjg));
-assert("S5: shangguan polarity red", sgjg?.polarity === "red" && sgjg.kind === "ten_god_tension");
+assert("S5: shangguan polarity red", Boolean(sgjg?.polarity === "red" && sgjg?.kind === "ten_god_tension"));
 assert("S5: shangguan neutral han (no 凶)", Boolean(sgjg?.han && !/凶|灾|克死/.test(sgjg.han)));
 
 const chartBalanced = makeProfile(

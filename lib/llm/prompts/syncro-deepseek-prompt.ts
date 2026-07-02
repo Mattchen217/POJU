@@ -237,7 +237,7 @@ ${taskResponseBlock}
 
 本批共 ${cellCount} 个 key。输出语言：${outputLanguage}。`;
 
-  const structured = normalizeBaseAnalysisInput(base_analysis).structured ?? null;
+  const structured = normalizeBaseAnalysisInput(base_analysis).structured;
   const baziContext = buildSyncroBaziContext(structured);
   const baziContextSection = buildSyncroBaziContextSection(
     baziContext,

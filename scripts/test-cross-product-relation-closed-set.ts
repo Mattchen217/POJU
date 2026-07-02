@@ -68,8 +68,17 @@ const stubMatrixCell = (): MatrixCell =>
   ({
     hour_period: "zi",
     direction_id: "N",
+    hour_start_iso: "2026-01-01T00:00:00.000Z",
+    hour_end_iso: "2026-01-01T01:00:00.000Z",
     current_level: "stillwater",
-    _internal: { total_score: 50, key_factors: [], qimen_data: {} },
+    short_advice: "",
+    detailed_advice: "",
+    rationale: "",
+    _internal: {
+      total_score: 50,
+      key_factors: [],
+      qimen_data: { door: "", god: "", star: "", is_kong_wang: false },
+    },
   }) as MatrixCell;
 
 const stubResonanceMatrix = (): ResonanceMatrix =>
@@ -78,7 +87,7 @@ const stubResonanceMatrix = (): ResonanceMatrix =>
     resonance_index: 72,
     dimensions: {},
     key_insights: [],
-  }) as ResonanceMatrix;
+  }) as unknown as ResonanceMatrix;
 
 console.log("\n=== cross-product relation closed-set (指令 7) ===\n");
 
@@ -146,7 +155,7 @@ const chongRel =
   singleClosed.auditAllowlist.find((r) => r.id === "chong_午_子") ?? singleClosed.auditAllowlist[0]!;
 const allowedMarker = encodeTermMarker(
   chongRel.id,
-  RELATION_KIND_SOFT[chongRel.kind]?.zh ?? RELATION_KIND_SOFT.chong.zh,
+  RELATION_KIND_SOFT.chong.zh,
   plainByTermId(chongRel.id, "zh") ?? chongRel.han,
 );
 const allowedCopy = `叙事里${allowedMarker}可作为背景张力。`;

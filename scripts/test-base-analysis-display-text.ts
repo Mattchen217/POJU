@@ -119,6 +119,8 @@ async function main() {
   console.log("bans Bold lead placeholder:", !system.includes("**Bold lead:**") && system.includes("严禁") ? "PASS" : "FAIL");
   console.log("has multi-line bullet rule:", system.includes("独占一行") || system.includes("per line") ? "PASS" : "FAIL");
   console.log("has synthesis not pillar dump:", system.includes("综合解读") || system.includes("Synthesized config") ? "PASS" : "FAIL");
+  console.log("has natal relation anchor:", system.includes("本命结构关系") && system.includes("最多点一处") ? "PASS" : "FAIL");
+  console.log("ignores liunian in base:", system.includes("流年/动态") || system.includes("liunian") ? "PASS" : "FAIL");
 
   if (!isOpenRouterConfigured()) {
     console.log("\n⚠ OPENROUTER_API_KEY not set — skipping live display_text generation.");

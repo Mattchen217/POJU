@@ -4,6 +4,7 @@
  */
 
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
+import { computeNatalChartRelations } from "@/lib/calculations/relation-engine";
 import {
   auditDeliveredText,
   type ComplianceViolation,
@@ -37,7 +38,9 @@ export function auditBaseAnalysisDelivery(
   structured: ProfileStructured,
 ): BaseAnalysisGateResult {
   const violations = dedupeViolations([
-    ...auditDeliveredText(text, locale, structured),
+    ...auditDeliveredText(text, locale, structured, {
+      relations: computeNatalChartRelations(structured),
+    }),
     ...auditMarkerCompleteness(text),
     ...auditShenShaAgainstInstance(text, structured),
   ]);

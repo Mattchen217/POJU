@@ -407,7 +407,7 @@ export async function fetchLlmAdviceBatch(input: {
     input.cache_session_id?.trim() ||
     syncroProfileCacheSessionId(input.profile.id);
 
-  const structured = normalizeBaseAnalysisInput(input.base_analysis).structured ?? null;
+  const structured = normalizeBaseAnalysisInput(input.base_analysis).structured;
   const relationAudit = structured
     ? buildSingleProfileRelationClosedSet(structured, { questionText: input.task_description })
     : null;

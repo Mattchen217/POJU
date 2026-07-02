@@ -213,6 +213,11 @@ export function computeChartRelations(structured: ProfileStructured): RelationLa
   return out;
 }
 
+/** base_analysis 底座允许集：仅 `source==="natal"` 的本命静态结构关系。 */
+export function computeNatalChartRelations(structured: ProfileStructured): RelationLabel[] {
+  return computeChartRelations(structured).filter((r) => r.source === "natal");
+}
+
 const POS_HAN: Record<Pos, string> = {
   year: "年",
   month: "月",

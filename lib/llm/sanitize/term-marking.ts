@@ -68,7 +68,7 @@ const DELIVERY_MARKING_ENTRIES: TermEntry[] = DELIVERY_MARKING_GLOSSARY_IDS.map(
 
 /** LLM term marker — UI parses `⟦t:id|visible|plain⟧` (plain optional). Legacy 2-segment + `⟦g|…⟧` supported. */
 export const TERM_MARKER_PATTERN =
-  /⟦t:([a-zA-Z0-9_:]+)\|((?:\\.|[^|\\])*?)(?:\|((?:\\.|[^|\\])*?))?⟧/g;
+  /⟦t:([^|]+)\|((?:\\.|[^|\\])*?)(?:\|((?:\\.|[^|\\])*?))?⟧/g;
 
 function normalizeTermMarkerId(raw: string): string {
   if (!raw.includes(":")) return raw;
