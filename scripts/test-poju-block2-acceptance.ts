@@ -81,24 +81,20 @@ async function circuitBreakerTests(): Promise<void> {
   }
 
   let failAttempts = 0;
-  try {
-    await generateWithClosedSetGuard({
-      label: "test-fail",
-      locale: "zh",
-      structured: null,
-      maxRetries: 2,
-      generate: async () => {
-        failAttempts++;
-        return "空亡元辰六秀日将星国印";
-      },
-    });
-    assert("guard throws after 3 dirty attempts", false);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    assert("guard throws after 3 dirty attempts", failAttempts === 3 && msg.includes("circuit-breaker:test-fail"));
-  } finally {
-    console.error = origError;
-  }
+  let degraded = "";
+  degraded = await generateWithClosedSetGuard({
+    label: "test-fail",
+    locale: "zh",
+    structured: null,
+    maxRetries: 2,
+    generate: async () => {
+      failAttempts++;
+      return "空亡元辰六秀日将星国印";
+    },
+  });
+  assert("guard degrades after 3 dirty attempts (no throw)", failAttempts === 3);
+  assert("degraded text strips forbidden terms", !degraded.includes("空亡") && !degraded.includes("元辰"));
+  console.error = origError;
 
   const finalRoute = read("app/api/poju/final-delivery/route.ts");
   assert("final-delivery route uses circuit-breaker log prefix", finalRoute.includes("[circuit-breaker:final-delivery]"));

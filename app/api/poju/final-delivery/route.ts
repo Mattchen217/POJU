@@ -8,7 +8,7 @@ import {
 import { callLLM } from "@/lib/llm/router";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 import { sanitizeDeliveryText } from "@/lib/llm/sanitize/compliance-terms";
-import { detectShenShaPollution } from "@/lib/llm/sanitize/closed-set-circuit-breaker";
+import { detectShenShaPollution, stripOutOfSetFactTerms } from "@/lib/llm/sanitize/closed-set-circuit-breaker";
 import { polishDeliveryGrammar } from "@/lib/llm/sanitize/delivery-grammar-polish";
 import {
   computeDirectedRelations,
@@ -174,13 +174,25 @@ export async function POST(req: Request) {
       hint = hints.join("\n\n");
 
       if (attempt === maxRetries) {
-        return NextResponse.json(
-          {
-            ok: false,
-            error: `[circuit-breaker:final-delivery] 集外/合规污染，${maxRetries} 次重试后仍脏，拒绝交付。`,
-          },
-          { status: 422 },
-        );
+        if (polluted) {
+          console.warn(
+            `[circuit-breaker:final-delivery] ${maxRetries} 次仍脏，剥离集外词后降级交付。`,
+            hits.slice(0, 5),
+          );
+          text = stripOutOfSetFactTerms(text, structured, { relations: directedRelations });
+          text = sanitizeDeliveryText(text, locale);
+          actions = extractActionsFromDelivery(text, null);
+        }
+        if (deepFail) {
+          return NextResponse.json(
+            {
+              ok: false,
+              error: `[circuit-breaker:final-delivery] 合规审计未通过，${maxRetries} 次重试后仍脏，拒绝交付。`,
+            },
+            { status: 422 },
+          );
+        }
+        break;
       }
     }
 

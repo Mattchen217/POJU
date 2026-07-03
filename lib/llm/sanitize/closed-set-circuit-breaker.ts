@@ -1,4 +1,9 @@
-import { auditOutOfSetTerms, auditRelationsAgainstInstance, auditShenShaAgainstInstance } from "@/lib/llm/sanitize/term-marking";
+import {
+  auditOutOfSetTerms,
+  auditRelationsAgainstInstance,
+  auditShenShaAgainstInstance,
+  stripOutOfSetFactTerms,
+} from "@/lib/llm/sanitize/term-marking";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import type { RelationLabel } from "@/lib/calculations/relation-engine";
 
@@ -20,31 +25,40 @@ export function detectShenShaPollution(
   return { polluted: hits.length > 0, hits };
 }
 
-/** 通用熔断重试：generate() 产文 → 检测 → 脏则带纠正提示重生成，maxRetries 次仍脏 → 抛错。 */
+/** 通用熔断重试：generate() 产文 → 检测 → 脏则带纠正提示重生成；耗尽后剥离降级交付，不抛错。 */
 export async function generateWithClosedSetGuard(args: {
   generate: (correctiveHint: string | null) => Promise<string>;
   structured: ProfileStructured | null;
   locale: string;
   maxRetries?: number;
   label: string;
+  opts?: { relations?: RelationLabel[] };
 }): Promise<string> {
   const maxRetries = args.maxRetries ?? 2;
   let hint: string | null = null;
+  let lastText = "";
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const text = await args.generate(hint);
-    const { polluted, hits } = detectShenShaPollution(text, args.structured, args.locale);
+    lastText = text;
+    const { polluted, hits } = detectShenShaPollution(
+      text,
+      args.structured,
+      args.locale,
+      args.opts,
+    );
     if (!polluted) return text;
     console.error(
-      `[circuit-breaker:${args.label}] 集外神煞污染，熔断重试 ${attempt + 1}/${maxRetries}:`,
+      `[circuit-breaker:${args.label}] 集外神煞/关系污染，熔断重试 ${attempt + 1}/${maxRetries}:`,
       hits.slice(0, 5),
     );
     hint =
-      `⚠️ 你上一次产出包含了集外或不在本盘的神煞：${hits.slice(0, 5).join("、")}。` +
-      `严禁！神煞只能用本次 structured 实际算出的、且属于闭集 9 个（天乙贵人/禄神/飞刃/文昌/桃花/驿马/华盖/孤辰/寡宿）的那几个；` +
-      `关系标签只能引用实例清单列出的本盘动态关系，禁止自推刑冲合害/半合/三合/天干合。` +
-      `删除所有集外神煞，重写。`;
+      `⚠️ 你上一次产出包含了集外或不在本盘的神煞/关系：${hits.slice(0, 5).join("、")}。` +
+      `严禁！神煞只能引用本盘实例清单；关系只能引用本盘动态关系清单。删除所有集外项，重写。`;
   }
-  throw new Error(
-    `[circuit-breaker:${args.label}] 集外神煞污染，${maxRetries} 次重试后仍脏，拒绝交付。`,
+  console.warn(
+    `[circuit-breaker:${args.label}] ${maxRetries} 次仍脏，剥离集外词后降级交付。`,
   );
+  return stripOutOfSetFactTerms(lastText, args.structured, args.opts);
 }
+
+export { stripOutOfSetFactTerms };

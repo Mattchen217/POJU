@@ -404,6 +404,92 @@ export function stripForbiddenShenSha(text: string): string {
   return cleanupAfterOutOfSetStrip(out);
 }
 
+function markerViolatesShenShaInstance(
+  blob: string,
+  allowed: Set<string>,
+): boolean {
+  if (blobMatchesOutOfSetForbidden(blob)) return true;
+  for (const name of CLOSED_SHEN_SHA) {
+    if (blob.includes(name) && (allowed.size === 0 || !allowed.has(name))) return true;
+  }
+  if (
+    blob.includes("羊刃") &&
+    (allowed.size === 0 || (!allowed.has("飞刃") && !allowed.has("羊刃")))
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Last-resort degrade: strip out-of-set shen_sha + relations (markers and bare phrases).
+ * Used when circuit-breaker retries are exhausted — deliver clean text instead of erroring.
+ */
+export function stripOutOfSetFactTerms(
+  text: string,
+  structured: ProfileStructured | null,
+  opts?: { relations?: RelationLabel[] },
+): string {
+  if (!text?.trim()) return text ?? "";
+  let out = text;
+
+  if (structured) {
+    const rels = opts?.relations ?? computeChartRelations(structured);
+    const allowedRelIds = new Set(rels.map((r) => r.id));
+    for (const m of parseTermMarkers(out)) {
+      if (isRelationMarkerId(m.id) && (allowedRelIds.size === 0 || !allowedRelIds.has(m.id))) {
+        out = out.split(m.raw).join("");
+      }
+    }
+
+    const allowedShenSha = collectInstanceShenSha(structured);
+    for (const m of parseTermMarkers(out)) {
+      const blob = `${m.visible} ${m.plain ?? ""}`;
+      if (markerViolatesShenShaInstance(blob, allowedShenSha)) {
+        out = out.split(m.raw).join("");
+      }
+    }
+
+    for (const name of CLOSED_SHEN_SHA) {
+      if (allowedShenSha.size === 0 || !allowedShenSha.has(name)) {
+        out = out.replace(new RegExp(escapeRegExp(name), "g"), "");
+      }
+    }
+    if (allowedShenSha.size === 0 || (!allowedShenSha.has("飞刃") && !allowedShenSha.has("羊刃"))) {
+      out = out.replace(/羊刃/g, "");
+    }
+
+    const relSnippets = [
+      ...new Set(
+        auditRelationsAgainstInstance(out, structured, opts)
+          .map((h) => h.snippet)
+          .filter(Boolean),
+      ),
+    ].sort((a, b) => b.length - a.length);
+    for (const snippet of relSnippets) {
+      out = out.replace(new RegExp(escapeRegExp(snippet), "g"), "");
+    }
+  }
+
+  out = stripForbiddenShenSha(out);
+
+  for (const hit of auditOutOfSetTerms(out)) {
+    if (hit.snippet) {
+      out = out.replace(new RegExp(escapeRegExp(hit.snippet), "gi"), "");
+    }
+  }
+
+  if (structured) {
+    for (const hit of auditShenShaAgainstInstance(out, structured)) {
+      if (hit.snippet) {
+        out = out.replace(new RegExp(escapeRegExp(hit.snippet), "g"), "");
+      }
+    }
+  }
+
+  return cleanupAfterOutOfSetStrip(out);
+}
+
 export function countDistinctTermIds(text: string): number {
   const ids = new Set(parseTermMarkers(text).map((m) => m.id));
   return ids.size;
