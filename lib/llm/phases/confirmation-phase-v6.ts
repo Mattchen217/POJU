@@ -120,7 +120,7 @@ async function handleStallOfferReplyV6(input: PhaseLLMInput): Promise<PhaseLLMRe
       call_type: "collection_flash",
       max_tokens: 8000,
       temperature: 0.45,
-      thinking_effort: "xhigh",
+      thinking_effort: "high",
     }),
   );
 
@@ -188,7 +188,7 @@ export async function callConfirmationPhaseV6(input: PhaseLLMInput): Promise<Pha
       call_type: "collection_flash",
       max_tokens: 8000,
       temperature: 0.45,
-      thinking_effort: "xhigh",
+      thinking_effort: "high",
     }),
   );
 

@@ -14,7 +14,8 @@ export type OutputPolicyViolationCategory =
   | "jixiong"
   | "divination"
   | "fear_mongering"
-  | "chart_fingerprint";
+  | "chart_fingerprint"
+  | "compliance_redline";
 
 export type OutputPolicyViolation = {
   category: OutputPolicyViolationCategory;
@@ -117,6 +118,17 @@ const ZH_BAZI_TERMS: Array<[RegExp, string]> = [
   [/天干|地支/g, "ganzhi"],
 ];
 
+/** Stripe / payment-processor high-risk — even in negation (四产品统一拦截). */
+const ZH_COMPLIANCE_REDLINE: Array<[RegExp, string]> = [
+  [/占卜|命运|宿命|星象/g, "compliance_redline_zh"],
+];
+
+const EN_COMPLIANCE_REDLINE: Array<[RegExp, string]> = [
+  [/\b(?:horoscope|astrology|psychic)\b/gi, "compliance_redline_en"],
+  [/\b(?:fortune[- ]?telling|divination)\b/gi, "compliance_redline_en"],
+  [/\b(?:destiny|fate)\b/gi, "compliance_redline_en"],
+];
+
 const EN_PREDICTION_PATTERNS: RegExp[] = [
   /\bwill\s+(?:marry|get married|become rich|get rich|succeed|win|get promoted)\b/i,
   /\bwill\s+happen\s+(?:on|in|by)\b/i,
@@ -164,6 +176,9 @@ export function detectOutputPolicyViolations(
     for (const [regex, label] of ZH_BAZI_TERMS) {
       pushRegex(text, regex, "bazi_term", label, violations);
     }
+    for (const [regex, label] of ZH_COMPLIANCE_REDLINE) {
+      pushRegex(text, regex, "compliance_redline", label, violations);
+    }
     for (const item of ZH_MARRIAGE_CHART_TERMS) {
       const [regex, label] = typeof item === "string" ? [item, "marriage_zh"] as const : item;
       pushRegex(text, regex, "marriage_chart_term", label, violations);
@@ -181,6 +196,9 @@ export function detectOutputPolicyViolations(
         ? "chart_fingerprint"
         : "bazi_term";
       pushRegex(text, regex, category, label, violations);
+    }
+    for (const [regex, label] of EN_COMPLIANCE_REDLINE) {
+      pushRegex(text, regex, "compliance_redline", label, violations);
     }
     for (const [regex, label] of EN_MARRIAGE_CHART_TERMS) {
       pushRegex(text, regex, "marriage_chart_term", label, violations);

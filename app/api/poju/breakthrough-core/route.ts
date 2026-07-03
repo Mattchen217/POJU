@@ -15,7 +15,7 @@ import type { ProfileStructured } from "@/lib/calculations/build-profile-structu
 export const maxDuration = 300;
 
 const CORE_MAX_TOKENS_INITIAL = 16_000;
-const CORE_MAX_TOKENS_RETRY = 24_000;
+const CORE_MAX_TOKENS_RETRY = 16_000;
 
 class BreakthroughCoreRetryableError extends Error {
   constructor(
@@ -68,9 +68,9 @@ async function callCoreLLM(input: {
     system: input.system,
     messages: [{ role: "user", content: input.userContent }],
     max_tokens: input.max_tokens,
-    thinking_effort: "xhigh",
+    thinking_effort: "high",
     response_format: "json",
-    timeout_ms: 270_000,
+    timeout_ms: 180_000,
     session_id: input.profileId
       ? baseAnalysisCacheSessionId(input.profileId)
       : pojuCacheSessionId(input.sessionId),
@@ -88,7 +88,7 @@ async function fetchCoreContent(input: {
 > {
   let result = await callCoreLLM({ ...input, max_tokens: CORE_MAX_TOKENS_INITIAL });
   if (result.meta.finish_reason === "length") {
-    console.warn("[breakthrough-core] truncated at 16000, retrying at 24000");
+    console.warn("[breakthrough-core] truncated at 16000, retrying at 16000 (cleaner regen)");
     result = await callCoreLLM({ ...input, max_tokens: CORE_MAX_TOKENS_RETRY });
   }
 

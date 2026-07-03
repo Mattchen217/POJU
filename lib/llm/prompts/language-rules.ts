@@ -28,7 +28,7 @@ export const POJULIFE_LANGUAGE_RULES = `
 - pojulife / POJU / Glyph / Syncro / Match (品牌/工具名)
 - reading / analysis / reflection / insight / guidance
 - 解读 / 分析 / 反思 / 洞察 / 指引
-- birth chart / 命盘 / hour pillar / 真太阳时 / 日主 / 用神 (中性术语文案可简短白话解释)
+- structural profile / hour pillar / 真太阳时 / 日主 / 用神 (中性术语文案可简短白话解释)
 
 原因:
 pojulife 是面向现代北美用户的【生活智慧工具】,

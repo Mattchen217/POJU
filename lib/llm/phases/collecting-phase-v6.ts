@@ -259,7 +259,7 @@ export async function callCollectingPhaseV6(input: PhaseLLMInput): Promise<Phase
       call_type: "collection_flash",
       max_tokens: 12000,
       temperature: 0.5,
-      thinking_effort: "xhigh",
+      thinking_effort: "high",
     }),
   );
 

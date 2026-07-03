@@ -108,7 +108,7 @@ export async function callTrackingPhaseV6(input: PhaseLLMInput): Promise<PhaseLL
       call_type: "tracking_flash",
       max_tokens: 10000,
       temperature: 0.45,
-      thinking_effort: "xhigh",
+      thinking_effort: "high",
     }),
   );
 

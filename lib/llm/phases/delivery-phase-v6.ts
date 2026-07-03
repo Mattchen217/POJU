@@ -82,7 +82,7 @@ export async function callDeliveryPhaseV6(input: PhaseLLMInput): Promise<PhaseLL
       phase_name: "delivery",
       max_tokens: 6000,
       temperature: 0.4,
-      thinking_effort: "xhigh",
+      thinking_effort: "high",
     }),
   );
 

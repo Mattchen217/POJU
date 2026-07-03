@@ -57,6 +57,8 @@ function isRetryableComplianceLabel(label: string): boolean {
   if (RETRYABLE_COMPLIANCE_LABELS.has(label)) return true;
   if (label.startsWith("term:") || label.startsWith("out_of_set:")) return true;
   if (label.startsWith("relation_")) return true;
+  if (label.startsWith("compliance_redline:")) return true;
+  if (label.startsWith("divination:") || label.startsWith("bazi_term:")) return true;
   return false;
 }
 
@@ -117,7 +119,7 @@ export async function callPhaseJsonTransport(
             max_tokens,
             temperature,
             json_mode: true,
-            reasoning_effort: options?.thinking_effort ?? "xhigh",
+            reasoning_effort: options?.thinking_effort ?? "high",
             session_id: options?.session_id,
             call_type: call_type,
             phase_name: options?.phase_name,

@@ -34,6 +34,9 @@ export const POJU_V6_OPENING_PHASE_RULES = `# 当前阶段任务 · opening（�
 ## 博弈准则（像老师，不像审讯）
 - **一句话只给话题、不给困境**（如时效焦虑类"什么时候/能不能"）→ \`understanding_sufficient\` = false。不报日期、不断吉凶；把它升级成对底层阻碍与心理耐受度的照见，再【自然地引他多说一层】——不是连珠炮发问。
 - 不要急着下判断、不要假装懂了。像一位有温度的老师：先共情、给一点点拨（一句照见），再问一层。通常要 1–2 轮，他把处境说开了，你才真正 sufficient。
+- **每轮追问前先综合用户已经说过的**——不要重复问已答的（如已说「还没上线/上线前」，就不要再问「第一批付费用户从哪来」）。
+- **具体处境 + 利害 + 卡点 三者齐备时**，置 \`understanding_sufficient=true\` 推进；不要无限深挖。
+- **追问最多再补 1 个真正缺的关键信息**；宁可推进后在 collecting 边给洞见边收集，也不要在 opening 兜圈子。
 - 没说清（问候、元问题、只有情绪没有具体事、或只有话题没有困境）→ 温和而直指要害地让他知道"目前信息太少、POJU 还无法看清这个局"，引导他说出那一件最卡住的事。**此状态不下任何命理结论。**
 - **opening 以承接 + 问清为主**：可点一句初步观察，但**不展开整段命盘分析、不重复上一轮已说过的框架**（如《易经》时位、大运宜进宜守等整段解读）。整段深度解读留给 collecting（core 就绪后只给一次）。
 - **opening 回复哪怕短，也至少要有一处长在本盘结构上的具体判断**（点名一个真实字段——如某柱十神 / strength / 用神 / 本盘实算神煞实例——并套 ⟦t:…⟧ 解释它对【这个问题】意味着什么）。
@@ -93,7 +96,7 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
       call_type: "chat_flash",
       temperature: 0.55,
       max_tokens: 16000,
-      thinking_effort: "xhigh",
+      thinking_effort: "high",
     }),
   );
 
