@@ -1,0 +1,126 @@
+/**
+ * Block 52 — prompt de-overfit + opening ceiling + compliance SaaS labels
+ *
+ *   pnpm exec tsx scripts/test-poju-block52-acceptance.ts
+ */
+import fs from "node:fs";
+import path from "node:path";
+
+import { auditDeliveredText } from "@/lib/llm/sanitize/compliance-terms";
+import { POJU_V6_OPENING_DUTY, POJU_V6_STATIC_SYSTEM } from "@/lib/llm/prompts/poju-base-v6";
+import { POJU_V6_OPENING_PHASE_RULES } from "@/lib/llm/phases/opening-phase-v6";
+import { KEEP_CN_SLUGS, KEEP_CN_VISIBLE_SOFT } from "@/lib/glossary/term-closed-set";
+import {
+  OPENING_MAX_SUBSTANTIVE_TURNS,
+  shouldForceConverge,
+} from "@/lib/poju/state-machine";
+
+const ROOT = path.join(process.cwd());
+const failures: string[] = [];
+
+function read(rel: string): string {
+  return fs.readFileSync(path.join(ROOT, rel), "utf8");
+}
+
+function assert(label: string, ok: boolean): void {
+  if (!ok) failures.push(label);
+  console.log(`  [${ok ? "PASS" : "FAIL"}] ${label}`);
+}
+
+function assertNoOverfit(label: string, text: string, needles: string[]): void {
+  for (const n of needles) {
+    assert(`${label} lacks "${n}"`, !text.includes(n));
+  }
+}
+
+function main(): void {
+  console.log("\n=== Block 52 acceptance ===\n");
+
+  const overfitNeedles = [
+    "藤蔓找依附",
+    "火旺水少",
+    "还没上线",
+    "第一批付费",
+    "你把链条说清楚了",
+    "这两个词恰恰是",
+    "金舆",
+    "国印",
+    "十恶大败",
+    "空亡/国印",
+  ];
+
+  assertNoOverfit("opening-phase-v6", POJU_V6_OPENING_PHASE_RULES, overfitNeedles);
+  assertNoOverfit("poju-base-v6 static", POJU_V6_STATIC_SYSTEM, [
+    "你把链条说清楚了",
+    "这两个词恰恰是",
+  ]);
+  assertNoOverfit("shen-sha-guard", read("lib/llm/prompts/shen-sha-guard.ts"), [
+    "金舆",
+    "国印",
+    "空亡/国印",
+    "天喜/红鸾",
+  ]);
+
+  assert("opening duty macro block present", POJU_V6_OPENING_DUTY.includes("核心困境"));
+  assert(
+    "opening-phase imports duty",
+    read("lib/llm/phases/opening-phase-v6.ts").includes("POJU_V6_OPENING_DUTY"),
+  );
+  assert(
+    "anchor principle (no test quote)",
+    POJU_V6_OPENING_PHASE_RULES.includes("锚点必须落在他真实的结构字段上"),
+  );
+
+  assert("OPENING_MAX = 4", OPENING_MAX_SUBSTANTIVE_TURNS === 4);
+  assert(
+    "shouldForceConverge at 3 turns when base ready",
+    shouldForceConverge(3, true) === true,
+  );
+  assert(
+    "shouldForceConverge false before ceiling-1",
+    shouldForceConverge(2, true) === false,
+  );
+  assert(
+    "force converge block wired",
+    read("lib/llm/phases/oriental-prompt-context-v6.ts").includes(
+      "【控制面指令 · 本轮必须收敛】",
+    ),
+  );
+
+  assert(
+    "decade SaaS soft label",
+    KEEP_CN_VISIBLE_SOFT.decade?.zh === "当前阶段气候",
+  );
+  assert(
+    "year SaaS soft label",
+    KEEP_CN_VISIBLE_SOFT.year?.zh === "当前时空效能",
+  );
+  assert("decade not keep_cn", !KEEP_CN_SLUGS.has("decade"));
+  assert("year not keep_cn", !KEEP_CN_SLUGS.has("year"));
+
+  const jixiongHit = auditDeliveredText("这段分析不涉及吉凶定论。", "zh");
+  assert(
+    "audit blocks 吉凶 in user text",
+    jixiongHit.some((v) => v.label.includes("compliance_redline") || v.label.includes("jixiong")),
+  );
+
+  const bareGz = auditDeliveredText("你当前处于丙午阶段。", "zh");
+  assert(
+    "audit blocks bare stem-branch",
+    bareGz.some((v) => v.label.includes("stem_branch") || v.label.includes("bazi_term")),
+  );
+
+  assert(
+    "shen-sha guard uses instance inventory principle",
+    read("lib/llm/prompts/shen-sha-guard.ts").includes("本盘实例清单里实际算出"),
+  );
+
+  console.log("\n=== Summary ===\n");
+  if (failures.length) {
+    console.error(`FAILED (${failures.length}):`, failures.join(", "));
+    process.exit(1);
+  }
+  console.log("All Block 52 checks passed.\n");
+}
+
+main();

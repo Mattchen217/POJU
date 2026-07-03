@@ -17,6 +17,7 @@ import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
 import { buildPhaseTransportInputV6 } from "@/lib/llm/phases/oriental-prompt-context-v6";
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import { parseOpeningConversionPayload } from "@/lib/poju/opening-conversion-payload";
+import { POJU_V6_OPENING_DUTY } from "@/lib/llm/prompts/poju-base-v6";
 import { extractQuestionCategory } from "@/lib/poju/context-extractor";
 
 const VALID_SUGGESTED: AgentPhase[] = ["opening", "collecting_context"];
@@ -34,13 +35,13 @@ export const POJU_V6_OPENING_PHASE_RULES = `# 当前阶段任务 · opening（�
 ## 博弈准则（像老师，不像审讯）
 - **一句话只给话题、不给困境**（如时效焦虑类"什么时候/能不能"）→ \`understanding_sufficient\` = false。不报日期、不断吉凶；把它升级成对底层阻碍与心理耐受度的照见，再【自然地引他多说一层】——不是连珠炮发问。
 - 不要急着下判断、不要假装懂了。像一位有温度的老师：先共情、给一点点拨（一句照见），再问一层。通常要 1–2 轮，他把处境说开了，你才真正 sufficient。
-- **每轮追问前先综合用户已经说过的**——不要重复问已答的（如已说「还没上线/上线前」，就不要再问「第一批付费用户从哪来」）。
+- **每轮追问前先综合用户已经说过的**——不要重复问他已经交代过的信息；缺什么补什么，已答的不问第二遍。
 - **具体处境 + 利害 + 卡点 三者齐备时**，置 \`understanding_sufficient=true\` 推进；不要无限深挖。
 - **追问最多再补 1 个真正缺的关键信息**；宁可推进后在 collecting 边给洞见边收集，也不要在 opening 兜圈子。
 - 没说清（问候、元问题、只有情绪没有具体事、或只有话题没有困境）→ 温和而直指要害地让他知道"目前信息太少、POJU 还无法看清这个局"，引导他说出那一件最卡住的事。**此状态不下任何命理结论。**
 - **opening 以承接 + 问清为主**：可点一句初步观察，但**不展开整段命盘分析、不重复上一轮已说过的框架**（如《易经》时位、大运宜进宜守等整段解读）。整段深度解读留给 collecting（core 就绪后只给一次）。
 - **opening 回复哪怕短，也至少要有一处长在本盘结构上的具体判断**（点名一个真实字段——如某柱十神 / strength / 用神 / 本盘实算神煞实例——并套 ⟦t:…⟧ 解释它对【这个问题】意味着什么）。
-- **禁止**"藤蔓找依附 / 火旺水少"这类不点名具体字段、谁都适用的泛泛散文；仍然克制：一两处锚点即可，不堆术语，但**零锚点的笼统散文不合格**。
+- **锚点必须落在他真实的结构字段上**；禁止不点名具体结构、谁都适用的泛泛比喻散文。一两处锚点即可，不堆术语，但**零锚点的笼统散文不合格**。
 - **每一轮都锚回 original_question。** 用户过程中提到的别的事——那是【破这个局的证据/线索】，不是新调查线：简短接住 → 抽出它与原问题的关联 → 立刻拐回原问题。
 - **严禁钻进支线本身。** 不要连问两句都在聊支线、而没回到原问题；一旦发现跑偏，立刻拉回。
 - **禁 tracking 话术**："回来汇报进展/有结果再来"只属于交付之后；opening 收尾永远是问清下一层，或 conversion 时问 agenda 第一项。
@@ -70,6 +71,7 @@ export function buildOpeningTaskBlockV6(input: PhaseLLMInput): string {
   const parts = [
     `# 动态任务 · opening`,
     `original_question："${q}"`,
+    POJU_V6_OPENING_DUTY,
     POJU_V6_OPENING_PHASE_RULES,
     handoff,
   ].filter(Boolean);

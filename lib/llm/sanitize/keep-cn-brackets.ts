@@ -1,7 +1,7 @@
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import type { DaYunEntry } from "@/lib/calculations/lunar-dayun";
 import { calculateCurrentYearGanZhi } from "@/lib/llm/prompts/oriental-counselor-base";
-import { KEEP_CN_SLUGS } from "@/lib/glossary/term-closed-set";
+import { KEEP_CN_SLUGS, KEEP_CN_VISIBLE_SOFT } from "@/lib/glossary/term-closed-set";
 import {
   encodeTermMarker,
   parseTermMarkers,
@@ -69,11 +69,15 @@ export function auditEmptyKeepCnBrackets(text: string): OutOfSetAuditHit[] {
 
   const barePatterns: RegExp[] = [
     /\blife phase\s*\(\s*\)/gi,
+    /\bcurrent phase climate\s*\(\s*\)/gi,
     /\byear'?s energy\s*\(\s*\)/gi,
+    /\bcurrent temporal efficacy\s*\(\s*\)/gi,
     /\bcore nature\s*\(\s*\)/gi,
     /\bkey balancing element\s*\(\s*\)/gi,
     /人生阶段[（(]\s*[）)]/g,
+    /当前阶段气候[（(]\s*[）)]/g,
     /流年能量[（(]\s*[）)]/g,
+    /当前时空效能[（(]\s*[）)]/g,
     /核心特质[（(]\s*[）)]/g,
     /用神[（(]\s*[）)]/g,
   ];
@@ -123,17 +127,26 @@ export function repairEmptyKeepCnBrackets(
 
   const bareReplacers: Array<{ re: RegExp; slug: string }> = [
     { re: /\blife phase\s*\(\s*\)/gi, slug: "decade" },
+    { re: /\bcurrent phase climate\s*\(\s*\)/gi, slug: "decade" },
     { re: /\byear'?s energy\s*\(\s*\)/gi, slug: "year" },
+    { re: /\bcurrent temporal efficacy\s*\(\s*\)/gi, slug: "year" },
     { re: /\bcore nature\s*\(\s*\)/gi, slug: "day_master" },
     { re: /\bkey balancing element\s*\(\s*\)/gi, slug: "yong_shen" },
     { re: /人生阶段[（(]\s*[）)]/g, slug: "decade" },
+    { re: /当前阶段气候[（(]\s*[）)]/g, slug: "decade" },
     { re: /流年能量[（(]\s*[）)]/g, slug: "year" },
+    { re: /当前时空效能[（(]\s*[）)]/g, slug: "year" },
     { re: /核心特质[（(]\s*[）)]/g, slug: "day_master" },
     { re: /用神[（(]\s*[）)]/g, slug: "yong_shen" },
   ];
 
   for (const { re, slug } of bareReplacers) {
     result = result.replace(re, (match) => {
+      if (slug === "decade" || slug === "year") {
+        repaired = true;
+        const soft = KEEP_CN_VISIBLE_SOFT[slug];
+        return locale.startsWith("zh") ? soft!.zh : soft!.en;
+      }
       const fill = ganzhiForKeepCnSlug(slug, structured, now);
       if (!fill) {
         unfixable = true;
@@ -142,23 +155,15 @@ export function repairEmptyKeepCnBrackets(
       repaired = true;
       if (locale.startsWith("zh")) {
         const zhLabel =
-          slug === "decade"
-            ? "人生阶段"
-            : slug === "year"
-              ? "流年能量"
-              : slug === "day_master"
-                ? "核心特质"
-                : "用神";
+          slug === "day_master"
+            ? "核心特质"
+            : "用神";
         return `${zhLabel}（${fill}）`;
       }
       const enLabel =
-        slug === "decade"
-          ? "life phase"
-          : slug === "year"
-            ? "year's energy"
-            : slug === "day_master"
-              ? "core nature"
-              : "key balancing element";
+        slug === "day_master"
+          ? "core nature"
+          : "key balancing element";
       return `${enLabel} (${fill})`;
     });
   }

@@ -119,7 +119,7 @@ This is a **shared neutral context base** (like a lab report / raw MBTI readout 
 const BASE_ANALYSIS_BINDING_RULES = `# 绑定计算结果 · 闭集 · 禁幻觉
 
 1. **用神/喜神/忌神/强弱/格局** — 以 structured 为准；只能展开解释，**不得改判或另算**；喜忌方向不得与 structured 相反。
-2. **神煞闭集 · 实例清单** — 神煞**只能逐字取自**本次 \`buildStructuredInstanceInventory\` 列出的项（引擎闭集 9 选 N：天乙贵人/禄神/飞刃/文昌/桃花/驿马/华盖/孤辰/寡宿）。**该清单为空则整篇不得出现任何神煞名**。**严禁**引擎不计算项，显式禁止：**元辰 / 六秀日 / 阴差阳错 / 阴阳差错 / 空亡 / 将星 / 劫煞 / 国印贵人 / 月德合 / 天德合 / 太极贵人 / 福星贵人 / 十恶大败 / 学堂** 等。
+2. **神煞闭集 · 实例清单** — 神煞**只能逐字取自**本次 \`buildStructuredInstanceInventory\` 列出的项。**该清单为空则整篇不得出现任何神煞名**。你只能引用【本盘实例清单里实际算出】的神煞，按名引用；清单之外的任何神煞——无论你训练里多熟——对这个盘都不存在，写了即视为编造、会被拦截重写。
 3. **十神/长生** — 同理，只用 structured 给出的具体条目；禁止类别统称代替或编造。
 4. **data_availability.missing** — pillars_detail 或 da_yun 缺失时，该维度**只做方向性描述**，禁止编造具体干支/神煞/起运岁数。
 5. **术语标记 · 三段位闭合 · 干支禁裸** — 凡命理术语一律 \`⟦t:<id>|<可见软译词>|<该处白话>⟧\` **三段位必须完整闭合**；**禁止**只写可见词不打标记、**禁止**句子在标记处中断截落。**正文任何干支组合**一律不得裸露——要么三段位标记，要么概览段完全不用干支（白话年龄段）。**禁止** \`(癸酉 phase)\`、\`during 壬申\` 半裸写法。
@@ -446,7 +446,7 @@ ${BASE_ANALYSIS_OUTPUT_SECTIONS_ZH.split("\n").slice(1).join("\n")}
 6. 第二人称（你），现代、专业、克制；**每段 ≤120 字**；引导块用**真实标签**（禁 Bold lead/粗体引导 占位词）；**四维各至少 1 个**引导块 **+ 1 个** \`>\` 锚点；**能量平衡锚** 用**多行** \`- \` bullets（每条独占一行，列表前空一行）。
 7. **### 独占一行**，其后空一行再写 \`**引导:**\`；子标题/引导/段落/bullets 块间一律 \`\\n\\n\` 空行（禁 "Drive Type Raw drive:" / "冷却不足 结构短板:" 黏行）。
 8. 挑战类**不得渲染成「灾祸/损失」恐吓**；**禁裸干支**（大运段全有或全无）；**禁止逐柱罗列原始配置**；神煞/十神**只能来自 structured 实例清单**；**每个 ⟦t:…⟧ 三段位必须闭合**、**嵌入完整句**（禁术语当无冠词句首主语）；可见词内禁 the/a/an。
-9. **落库门禁** — 集外神煞（元辰/六秀日/阴差阳错等）、断标记、裸干支、密度超标会导致整篇被拒并重写；可自然提及 POJU / pojulife；禁 astrology / divination / psychic / horoscope。`
+9. **落库门禁** — 集外神煞、断标记、裸干支、密度超标会导致整篇被拒并重写；可自然提及 POJU / pojulife；禁 astrology / divination / psychic / horoscope。`
       : `# Output requirements
 
 1. **Markdown body only** (## sections + ### subheads + lead + pull quotes + bullets)—no JSON, no \`---META---\`, no fenced full-document code block.
@@ -458,7 +458,7 @@ ${BASE_ANALYSIS_OUTPUT_SECTIONS_EN.split("\n").slice(1).join("\n")}
 6. Second person (you); modern, restrained, professional; **≤80 words per paragraph**; lead blocks use **real labels** (never literal "Bold lead" / "Lead"); **each of the four dimensions** needs at least one labeled lead **+ one** \`>\` anchor; **Balancing Anchors** uses **multi-line** \`- \` bullets (one item per line, blank line before list).
 7. **Each \`###\` on its own line**, blank line, then \`**Label:** body\`; blank \`\\n\\n\` between ### / lead / ¶ / bullets (never glued "Drive Type Raw drive:" / "Cooling gap Structural gap:").
 8. Do not frame challenges as doom/scare; **no bare Ganzhi** (decade section: all marked or all age phrases); **no pillar-by-pillar raw config dumps**; shen_sha/ten_gods **only from structured instance inventory**; **every ⟦t:…⟧ fully closed**, **embedded in complete sentences** (no bare term as subject fragment); no the/a/an **inside** visible text.
-9. **Delivery gate** — out-of-set shen_sha (元辰/六秀日/阴差阳错 etc.), broken markers, bare Ganzhi, or density overflow will reject the draft and force rewrite; POJU / pojulife OK; no astrology / divination / psychic / horoscope.`;
+9. **Delivery gate** — out-of-set shen_sha, broken markers, bare Ganzhi, or density overflow will reject the draft and force rewrite; POJU / pojulife OK; no astrology / divination / psychic / horoscope.`;
 
   const forbiddenBlock =
     lang === "zh"

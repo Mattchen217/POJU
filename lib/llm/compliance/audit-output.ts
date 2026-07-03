@@ -120,7 +120,7 @@ const ZH_BAZI_TERMS: Array<[RegExp, string]> = [
 
 /** Stripe / payment-processor high-risk — even in negation (四产品统一拦截). */
 const ZH_COMPLIANCE_REDLINE: Array<[RegExp, string]> = [
-  [/占卜|命运|宿命|星象/g, "compliance_redline_zh"],
+  [/占卜|命运|宿命|星象|吉凶/g, "compliance_redline_zh"],
 ];
 
 const EN_COMPLIANCE_REDLINE: Array<[RegExp, string]> = [

@@ -39,7 +39,11 @@ import {
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import { buildChatFactGuardBlock } from "@/lib/llm/prompts/shen-sha-guard";
 import { buildChatPhaseTermBindingBlock } from "@/lib/llm/prompts/term-closed-set-constraint";
-import { buildTurnContextSnapshot } from "@/lib/poju/state-machine";
+import { countSubstantiveOpeningTurns } from "@/lib/poju/agent";
+import {
+  buildTurnContextSnapshot,
+  shouldForceConverge,
+} from "@/lib/poju/state-machine";
 import {
   applyTurnContext,
   formatPhaseMessageHistory,
@@ -160,6 +164,16 @@ export async function buildPhaseTurnContextV6(
     buildChatPhaseTermBindingBlock(outLoc),
   );
 
+  const substantiveOpeningTurns = countSubstantiveOpeningTurns(input.session.messages);
+  const baseAnalysisReady = Boolean(
+    baseAnalysis ?? input.session.has_profile ?? structured,
+  );
+  const forceConvergeBlock =
+    input.agent_state?.current_phase === "opening" &&
+    shouldForceConverge(substantiveOpeningTurns, baseAnalysisReady)
+      ? `【控制面指令 · 本轮必须收敛】你已通过前几轮充分掌握了核心困境。本轮必须置 understanding_sufficient=true，一次产出完整 envelope（关系结论+破局方向+议程+首问），不再追问。`
+      : "";
+
   return stitchPromptSections(
     langDirective.directive.trim(),
     buildCurrentDateContext(new Date(), outLoc),
@@ -168,6 +182,7 @@ export async function buildPhaseTurnContextV6(
     termPlane,
     buildPojuUserSideControlPlane(outLoc),
     snapshotBlock,
+    forceConvergeBlock,
     taskBlock,
   );
 }

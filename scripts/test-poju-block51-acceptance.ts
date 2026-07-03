@@ -85,8 +85,15 @@ function main(): void {
     read("lib/llm/phases/opening-phase-v6.ts").includes("综合用户已经说过的"),
   );
 
-  // Fix 3 — guard examples
-  assert("fact guard lists 金舆", read("lib/llm/prompts/shen-sha-guard.ts").includes("金舆"));
+  // Fix 3 — guard uses closed-set principle (no enumerated forbidden shen_sha list)
+  assert(
+    "fact guard uses instance inventory principle",
+    read("lib/llm/prompts/shen-sha-guard.ts").includes("本盘实例清单里实际算出"),
+  );
+  assert(
+    "fact guard no enumerated 金舆",
+    !read("lib/llm/prompts/shen-sha-guard.ts").includes("金舆"),
+  );
 
   console.log("\n=== Summary ===\n");
   if (failures.length) {

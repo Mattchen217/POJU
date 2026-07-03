@@ -311,10 +311,13 @@ export function relationPolarityToken(id: string): "green" | "red" | "gold" | nu
   return "gold";
 }
 
+export const KEEP_CN_VISIBLE_SOFT: Record<string, { zh: string; en: string }> = {
+  decade: { zh: "当前阶段气候", en: "current phase climate" },
+  year: { zh: "当前时空效能", en: "current temporal efficacy" },
+};
+
 export const KEEP_CN_SLUGS = new Set([
   "day_master",
-  "decade",
-  "year",
   "fei_ren",
   ...CLOSED_HEAVENLY_STEMS.map((s) => CLOSED_SET_SLUG[s]!),
   ...CLOSED_EARTHLY_BRANCHES.map((b) => CLOSED_SET_SLUG[b]!),

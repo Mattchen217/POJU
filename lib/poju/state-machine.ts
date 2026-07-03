@@ -152,8 +152,22 @@ export function extractModelTurnSignals(source: {
 
 /** Minimum substantive opening turns before entering collecting (unless single message is rich). */
 export const OPENING_RICH_CHARS = 80;
+/** Maximum substantive opening turns before control plane forces convergence. */
+export const OPENING_MAX_SUBSTANTIVE_TURNS = 4;
+
 /** Minimum substantive opening turns when message is below OPENING_RICH_CHARS. */
 export const OPENING_MIN_SUBSTANTIVE_TURNS = 2;
+
+/** Control-plane ceiling: inject force-converge when turns reach max-1 and base analysis is ready. */
+export function shouldForceConverge(
+  substantiveOpeningTurns: number,
+  baseAnalysisReady: boolean,
+): boolean {
+  return (
+    baseAnalysisReady &&
+    substantiveOpeningTurns >= OPENING_MAX_SUBSTANTIVE_TURNS - 1
+  );
+}
 
 /** ② 唯一的确定性流转函数：读模型信号，确定性更新状态 */
 export function advanceStateMachine(

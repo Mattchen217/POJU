@@ -12,6 +12,7 @@ import {
   CLOSED_SHEN_SHA,
   isRelationMarkerId,
   KEEP_CN_SLUGS,
+  KEEP_CN_VISIBLE_SOFT,
   OUT_OF_SET_FORBIDDEN_EN,
   OUT_OF_SET_FORBIDDEN_HAN,
   RELATION_KIND_SOFT,
@@ -40,6 +41,10 @@ export type TermEntry = {
 const DELIVERY_MARKING_GLOSSARY_IDS = CLOSED_SET_REPLACE_IDS.filter((id) => id !== "羊刃");
 
 function softLabel(entry: TermEntry, loc: Locale): string {
+  const override = KEEP_CN_VISIBLE_SOFT[entry.id];
+  if (override) {
+    return loc === "zh" ? override.zh : override.en;
+  }
   return (entry.soft[loc] || entry.soft.en).split(/\s*\/\s*/)[0]!.trim();
 }
 
@@ -155,9 +160,9 @@ export function stripBareTermMarkers(text: string): string {
 export function wrapBareKeepCnSoftTerms(text: string, locale: string): string {
   const gz = "[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]";
   const patterns: Array<{ id: string; label: string }> = [
-    { id: "decade", label: "人生阶段" },
+    { id: "decade", label: "当前阶段气候" },
     { id: "day_master", label: "核心特质" },
-    { id: "year", label: "流年能量" },
+    { id: "year", label: "当前时空效能" },
     { id: "yong_shen", label: "用神" },
     { id: "yong_shen", label: "关键平衡能量" },
   ];
