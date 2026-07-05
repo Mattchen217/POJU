@@ -123,6 +123,85 @@ const ZH_COMPLIANCE_REDLINE: Array<[RegExp, string]> = [
   [/占卜|命运|宿命|星象|吉凶/g, "compliance_redline_zh"],
 ];
 
+/** 未来时间锚 + 结果承诺共现 — 窗口扫描，避免灾难性回溯（Block 54） */
+const ZH_TIME_ANCHOR_RE =
+  /(?:明年|后年|后半年|上半年|下半年|\d{1,2}年后|某个时段|这段时间|下一阶段|\d{1,2}月(?:份)?(?:内|里|时))/g;
+const ZH_OUTCOME_PROMISE_RE =
+  /(?:会|将|必将|一定|就能|就会).{0,12}(?:好转|改善|突破|拐点|转机|结婚|成交|升职|转运|成功|迎来|成局|落实|见效)/;
+const ZH_TURNING_AT_TIME_RE = /(?:迎来|出现).{0,10}(?:拐点|转机|高峰|窗口|突破)/;
+const ZH_SAAS_TIME_RE = /(?:效能拐点|高概率窗口|释放窗口|时空窗口)/g;
+const ZH_SAAS_TIME_IN_RE = /(?:在|于|落在).{0,6}(?:明年|下半年|\d{1,2}月|某个时段)/;
+
+const EN_TIME_ANCHOR_RE =
+  /\b(?:next\s+(?:year|month|quarter)|later\s+this\s+year|in\s+\d+\s+years?|within\s+\d+\s+months?)\b/gi;
+const EN_OUTCOME_PROMISE_RE =
+  /\b(?:will|you(?:'ll|ll)|going\s+to|set\s+to)\b.{0,30}\b(?:marry|succeed|break\s+through|improve|turn\s+a\s+corner|close\s+the\s+deal|land\s+a|get\s+promoted)\b/i;
+const EN_SAAS_TIME_RE =
+  /\b(?:turning\s+point|breakthrough\s+window|inflection\s+point)\b/gi;
+const EN_SAAS_TIME_IN_RE =
+  /\b(?:in|by|around|comes?\s+in)\b.{0,12}\b(?:next\s+)?(?:year|month|quarter|H2)\b/i;
+
+function pushPointPredictionViolations(
+  text: string,
+  locale: string,
+  out: OutputPolicyViolation[],
+): void {
+  if (locale.startsWith("zh")) {
+    ZH_TIME_ANCHOR_RE.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = ZH_TIME_ANCHOR_RE.exec(text)) !== null) {
+      const window = text.slice(m.index, Math.min(text.length, m.index + 48));
+      if (ZH_OUTCOME_PROMISE_RE.test(window) || ZH_TURNING_AT_TIME_RE.test(window)) {
+        out.push({
+          category: "compliance_redline",
+          label: "point_prediction_zh",
+          snippet: snippetAround(text, m.index, Math.min(40, window.length)),
+        });
+        return;
+      }
+    }
+    ZH_SAAS_TIME_RE.lastIndex = 0;
+    while ((m = ZH_SAAS_TIME_RE.exec(text)) !== null) {
+      const window = text.slice(m.index, Math.min(text.length, m.index + 32));
+      if (ZH_SAAS_TIME_IN_RE.test(window)) {
+        out.push({
+          category: "compliance_redline",
+          label: "point_prediction_saas_zh",
+          snippet: snippetAround(text, m.index, Math.min(32, window.length)),
+        });
+        return;
+      }
+    }
+    return;
+  }
+
+  EN_TIME_ANCHOR_RE.lastIndex = 0;
+  let em: RegExpExecArray | null;
+  while ((em = EN_TIME_ANCHOR_RE.exec(text)) !== null) {
+    const window = text.slice(em.index, Math.min(text.length, em.index + 72));
+    if (EN_OUTCOME_PROMISE_RE.test(window)) {
+      out.push({
+        category: "compliance_redline",
+        label: "point_prediction_en",
+        snippet: snippetAround(text, em.index, Math.min(48, window.length)),
+      });
+      return;
+    }
+  }
+  EN_SAAS_TIME_RE.lastIndex = 0;
+  while ((em = EN_SAAS_TIME_RE.exec(text)) !== null) {
+    const window = text.slice(em.index, Math.min(text.length, em.index + 48));
+    if (EN_SAAS_TIME_IN_RE.test(window)) {
+      out.push({
+        category: "compliance_redline",
+        label: "point_prediction_saas_en",
+        snippet: snippetAround(text, em.index, Math.min(40, window.length)),
+      });
+      return;
+    }
+  }
+}
+
 const EN_COMPLIANCE_REDLINE: Array<[RegExp, string]> = [
   [/\b(?:horoscope|astrology|psychic)\b/gi, "compliance_redline_en"],
   [/\b(?:fortune[- ]?telling|divination)\b/gi, "compliance_redline_en"],
@@ -179,6 +258,7 @@ export function detectOutputPolicyViolations(
     for (const [regex, label] of ZH_COMPLIANCE_REDLINE) {
       pushRegex(text, regex, "compliance_redline", label, violations);
     }
+    pushPointPredictionViolations(text, locale, violations);
     for (const item of ZH_MARRIAGE_CHART_TERMS) {
       const [regex, label] = typeof item === "string" ? [item, "marriage_zh"] as const : item;
       pushRegex(text, regex, "marriage_chart_term", label, violations);
@@ -200,6 +280,7 @@ export function detectOutputPolicyViolations(
     for (const [regex, label] of EN_COMPLIANCE_REDLINE) {
       pushRegex(text, regex, "compliance_redline", label, violations);
     }
+    pushPointPredictionViolations(text, locale, violations);
     for (const [regex, label] of EN_MARRIAGE_CHART_TERMS) {
       pushRegex(text, regex, "marriage_chart_term", label, violations);
     }

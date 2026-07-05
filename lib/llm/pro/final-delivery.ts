@@ -17,6 +17,7 @@ import {
   getCurrentLiunian,
 } from "@/lib/calculations/relation-engine";
 import { resolveBaseAnalysisForBreakthrough } from "@/lib/llm/deepseek/breakthrough-core";
+import { POJU_DELIVERY_COMPLIANCE_LINE } from "@/lib/llm/compliance/output-policy";
 import { buildOutputRedLinesBlock } from "@/lib/llm/phases/oriental-prompt-context";
 import {
   buildPojuChatCoreSections,
@@ -160,7 +161,7 @@ function buildDegradedDeliveryRules(agent: POJUAgentState): string {
 
 5. **合规不变**：
    - 重命盘 ≠ 编造：只用 Base Analysis 中真实算出的内容
-   - 仍禁预测具体未来事件、禁吉凶断语、禁招财/催运/Amulet/lucky direction
+   - ${POJU_DELIVERY_COMPLIANCE_LINE}
    - 用户可见须用术语表 soft 词 + ⟦t:id|…⟧ 标记；禁裸合婚排盘术语`;
 }
 
@@ -208,7 +209,7 @@ ${regionalGuidance ? `${regionalGuidance}\n\n` : ""}规则:
 
 【硬约束（不变）】
 - 若选到「环境与空间」：须三步洗白（spatial harmony + 具体动作 + 环境心理学）；禁招财/催运/Amulet/lucky direction
-- 不预测具体未来事件、不下吉凶断语
+- ${POJU_DELIVERY_COMPLIANCE_LINE}
 
 ═══ COMING BACK ═══
 （60–100 字/词；模糊回访；Session 30 天有效；禁止复诊/三个月后再来）
@@ -265,7 +266,7 @@ ${regionalGuidance ? `${regionalGuidance}\n\n` : ""}规则:
 # 关键规则
 
 1. 全文使用用户语言。
-2. 合规与 full 相同：禁预测具体未来、禁吉凶断语、禁招财/催运/lucky direction、禁合婚排盘术语。
+2. 合规与 full 相同：${POJU_DELIVERY_COMPLIANCE_LINE}。
 3. 不暴露 Glyph / Syncro / Match 等产品名。
 4. 总长约 700–1200 词/字。`;
 }
@@ -350,7 +351,7 @@ ${baseStr}`,
 - WHAT TO DO：3 条从「选定方向 × 用户亲口议程证据」生长，禁万能模板；
   每条末尾 Profile basis 引具体结构（如"month.ten_god 七杀 + da_yun 第三步"）。
 - 全程只用本次 structured 实有命理实例；过 auditDeliveredText（集外神煞 / 关系 / 断标记 / 裸干支 → 拒绝落库重生成）。
-- 不预测具体未来事件、不下吉凶断语、不暴露 Glyph/Syncro/Match。
+- ${POJU_DELIVERY_COMPLIANCE_LINE}；不暴露 Glyph/Syncro/Match。
 - 须按 POJU 八字深度解读法则展开 ANALYSIS（含 4b 关系：定向 1–3 条、中性金字、不罗列）；按行动设计原则填写 WHAT TO DO 三条。`,
     POJU_OUTPUT_DATA_DISCIPLINE,
   );

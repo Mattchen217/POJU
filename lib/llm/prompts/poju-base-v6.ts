@@ -7,7 +7,13 @@
  * ⚠️ 影子实现，不替换 poju-base.ts。
  */
 
-import { buildOutputPolicyForPoju } from "@/lib/llm/compliance/output-policy";
+import {
+  buildOutputPolicyForPoju,
+  buildPojuOutputRedLinesBlock,
+  buildPojuPredictionBoundaryBlock,
+  POJU_DELIVERY_COMPLIANCE_LINE,
+  POJU_TIME_ANXIETY_TRANSLATION,
+} from "@/lib/llm/compliance/output-policy";
 import { buildDeliveryGrammarPolishBlock } from "@/lib/llm/prompts/delivery-grammar-polish";
 import {
   POJU_KNOWLEDGE_ROOTS,
@@ -65,13 +71,7 @@ export const POJU_V6_OPENING_DUTY = `【opening 职责很窄：只摸清"核心�
  * ════════════════════════════════════════════════════════════════════ */
 
 export function buildOutputRedLinesBlockV6(): string {
-  return `【输出红线 · 任何阶段绝不跨越】
-1) 不预测具体未来事件/日期/数额；遇"什么时候/能不能/多久"重构为"当前阶段是否就绪/什么在驱动/卡在哪"。
-2) 不做预测、不下结论、不给你标准答案——我陪你把当前这个决策的结构看清、找到可落地的第一步。
-3) 不恐吓收割。 4) 不做保证。
-5) 合婚/双人动力学归 Match：POJU 只谈单人"该不该/准备好没"，不堆双人合盘术语。
-6) 用户可见文字禁止支付风控敏感词（由落库 compliance_redline 审计统一拦截；否定句也拦）。时机用"当前阶段/能量节律/时空效能"，禁公历年份+干支裸写。
-—— 在此之上，五行/阴阳/十神/《易经》作为能量与性格语言【尽情展示】，是灵魂不是违规。`;
+  return buildPojuOutputRedLinesBlock();
 }
 
 /**
