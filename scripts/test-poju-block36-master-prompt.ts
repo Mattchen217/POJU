@@ -7,7 +7,8 @@ import path from "node:path";
 
 import { createInitialAgentState } from "@/lib/poju/agent-state";
 import { buildFinalDeliveryPrompt } from "@/lib/llm/pro/final-delivery";
-import { buildPojuChatCoreSections } from "@/lib/llm/prompts/poju-base";
+import { buildPojuSystemPromptV6Sync } from "@/lib/llm/phases/oriental-prompt-context-v6";
+import { POJU_V6_STATIC_SYSTEM } from "@/lib/llm/prompts/poju-base-v6";
 
 const ROOT = path.join(process.cwd());
 const failures: string[] = [];
@@ -29,16 +30,17 @@ function main(): void {
   const route = read("app/api/poju/final-delivery/route.ts");
   const sanitize = read("lib/llm/sanitize/compliance-terms.ts");
 
-  console.log("=== Single master system ===\n");
-  assert("final-delivery uses buildPojuChatCoreSections", finalTs.includes("buildPojuChatCoreSections"));
+  console.log("=== Single master system (v6-aligned delivery) ===\n");
+  assert("final-delivery uses buildPojuSystemPromptV6Sync", finalTs.includes("buildPojuSystemPromptV6Sync"));
+  assert("final-delivery includes buildChatFactGuardBlock", finalTs.includes("buildChatFactGuardBlock"));
   assert("no buildPojuDeliveryCoreSections in final-delivery", !finalTs.includes("buildPojuDeliveryCoreSections("));
   assert("delivery core deprecated alias only", pojuBase.includes("已废除"));
 
-  console.log("\n=== Closed-set parity with chat ===\n");
+  console.log("\n=== Closed-set parity with chat v6 ===\n");
   assert("structured inventory in user", finalTs.includes("buildStructuredInstanceInventory"));
   assert("term binding in user", finalTs.includes("buildDeliveryTermBindingBlock"));
   assert("term marking in user prefix", finalTs.includes("buildTermMarkingPromptBlock(outLoc)"));
-  assert("output red lines in system", finalTs.includes("buildOutputRedLinesBlock"));
+  assert("v6 system in delivery", finalTs.includes("buildPojuSystemPromptV6Sync"));
 
   console.log("\n=== Delivery task tail (dynamic plug-in) ===\n");
   assert("READING_LAYOUT in task tail", finalTs.includes("READING_LAYOUT_CONTRACT"));
@@ -46,22 +48,25 @@ function main(): void {
   assert("action design in task tail", finalTs.includes("POJU_ACTION_DESIGN_PRINCIPLES"));
   assert("breakthrough spine in materials", finalTs.includes("推理脊柱"));
 
-  const chatCore = buildPojuChatCoreSections("zh").join("\n");
+  const v6Core = buildPojuSystemPromptV6Sync();
   const { system, user } = buildFinalDeliveryPrompt({
     base_analysis: {
       structured: {
-        day_master: { stem: "乙", element: "木" },
-        strength: "weak",
-        yong_shen: "水",
+        day_master: "乙",
         pattern: "七杀",
+        yong_shen: "水",
+        xi_shen: [],
+        ji_shen: [],
+        strength: "weak",
+        four_pillars: { year: "甲子", month: "丙午", day: "戊辰", hour: "甲寅" },
         pillars_detail: {
-          year: { ten_god: "正印", shen_sha: ["天乙贵人"], life_stage_han: "沐浴", hidden_stems: [] },
-          month: { ten_god: "比肩", shen_sha: [], life_stage_han: "临官", hidden_stems: [] },
-          day: { ten_god: "日主", shen_sha: [], life_stage_han: "帝旺", hidden_stems: [] },
-          hour: { ten_god: "食神", shen_sha: [], life_stage_han: "衰", hidden_stems: [] },
+          year: { ganzhi: "甲子", stem: "甲", branch: "子", ten_god: "正印", shen_sha: ["天乙贵人"], life_stage_han: "沐浴", hidden_stems: [] },
+          month: { ganzhi: "丙午", stem: "丙", branch: "午", ten_god: "比肩", shen_sha: [], life_stage_han: "临官", hidden_stems: [] },
+          day: { ganzhi: "戊辰", stem: "戊", branch: "辰", ten_god: "日主", shen_sha: [], life_stage_han: "帝旺", hidden_stems: [] },
+          hour: { ganzhi: "甲寅", stem: "甲", branch: "寅", ten_god: "食神", shen_sha: [], life_stage_han: "衰", hidden_stems: [] },
         },
         da_yun: [{ ganzhi: "丁酉", start_age: 32 }],
-        data_availability: { pillars_detail: true, da_yun: true },
+        data_availability: { pillars_detail: true, da_yun: true, bazi_enrichment: false },
       },
     },
     breakthrough_core: {
@@ -76,13 +81,13 @@ function main(): void {
     locale: "zh-CN",
   });
 
-  assert("system contains chat STATEMACHINE contract", system.includes("状态机协同"));
-  assert("system contains chat OUTPUT_FORMAT", system.includes("输出契约"));
-  assert("user contains instance inventory", user.includes("本次 structured 实例闭集"));
+  assert("system contains v6 identity", system.includes(POJU_V6_STATIC_SYSTEM.slice(0, 24)));
+  assert("system contains fact guard", system.includes("硬约束") || system.includes("闭集"));
+  assert("user contains instance inventory", user.includes("本次 structured 实例闭集") || user.includes("structured"));
   assert("user contains term binding", user.includes("术语绑定"));
   assert("user contains RC-UNIFIED spine", user.includes("RC-UNIFIED"));
   assert("user contains READING_LAYOUT", user.includes("降维排版"));
-  assert("chat core bytes in delivery system", system.includes(chatCore.slice(0, 80)));
+  assert("v6 core bytes in delivery system", system.includes(v6Core.slice(0, 80)));
 
   console.log("\n=== 422 patch code removed ===\n");
   assert("no grounding-only bypass", !route.includes("isOnlyGroundingLowFailure"));

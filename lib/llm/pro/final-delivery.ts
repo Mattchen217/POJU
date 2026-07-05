@@ -13,18 +13,19 @@ import { markCycleDelivered } from "@/lib/poju/cycle-manager";
 import { buildCoveredAgendaEvidence } from "@/lib/poju/investigation-agenda";
 import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-structured-instance-inventory";
 import {
-  buildDirectedRelationInventoryBlock,
+  buildDirectedDynamicRelationInventoryBlock,
+  computeDirectedDynamicRelations,
   getCurrentLiunian,
 } from "@/lib/calculations/relation-engine";
 import { resolveBaseAnalysisForBreakthrough } from "@/lib/llm/deepseek/breakthrough-core";
 import { POJU_DELIVERY_COMPLIANCE_LINE } from "@/lib/llm/compliance/output-policy";
-import { buildOutputRedLinesBlock } from "@/lib/llm/phases/oriental-prompt-context";
+import { buildPojuSystemPromptV6Sync } from "@/lib/llm/phases/oriental-prompt-context-v6";
 import {
-  buildPojuChatCoreSections,
   POJU_ACTION_DESIGN_PRINCIPLES,
   POJU_BAZI_DEEP_METHOD,
   POJU_OUTPUT_DATA_DISCIPLINE,
 } from "@/lib/llm/prompts/poju-base";
+import { buildChatFactGuardBlock } from "@/lib/llm/prompts/shen-sha-guard";
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import { buildChatPhaseTermBindingBlock } from "@/lib/llm/prompts/term-closed-set-constraint";
 import {
@@ -371,9 +372,17 @@ ${baseStr}`,
     forcedOutputLocale: deliveryLang,
   });
 
+  const liunian = structured ? getCurrentLiunian() : null;
+  const directedRelations =
+    structured && liunian
+      ? computeDirectedDynamicRelations(structured, liunian, agent_v2.question_category)
+      : undefined;
+
   const system = stitchPromptSections(
-    ...buildPojuChatCoreSections(deliveryLang),
-    buildOutputRedLinesBlock(),
+    buildPojuSystemPromptV6Sync(),
+    structured
+      ? buildChatFactGuardBlock(structured, { directedRelations: directedRelations ?? [] })
+      : "",
     buildNorthAmericaAdaptation(deliveryLang),
   );
 
@@ -389,9 +398,10 @@ ${baseStr}`,
       ? `Delivery mode: **degraded** — chart-forward, low-risk actions, honest limitation statement required.`
       : `Delivery mode: **full** — spine-fed delivery from breakthrough_core + covered agenda evidence; highly specific actions from user-stated details.`;
 
-  const directedRelationBlock = structured
-    ? buildDirectedRelationInventoryBlock(structured, getCurrentLiunian(), agent_v2.question_category)
-    : "";
+  const directedRelationBlock =
+    structured && liunian
+      ? buildDirectedDynamicRelationInventoryBlock(structured, liunian, agent_v2.question_category)
+      : "";
 
   const user = stitchPromptSections(
     langDirective.directive.trim(),

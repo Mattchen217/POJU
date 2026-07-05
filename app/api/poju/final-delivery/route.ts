@@ -8,10 +8,10 @@ import {
 import { callLLM } from "@/lib/llm/router";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 import { sanitizeDeliveryText } from "@/lib/llm/sanitize/compliance-terms";
-import { detectShenShaPollution, stripOutOfSetFactTerms } from "@/lib/llm/sanitize/closed-set-circuit-breaker";
+import { detectShenShaPollution } from "@/lib/llm/sanitize/closed-set-circuit-breaker";
 import { polishDeliveryGrammar } from "@/lib/llm/sanitize/delivery-grammar-polish";
 import {
-  computeDirectedRelations,
+  computeDirectedDynamicRelations,
   getCurrentLiunian,
 } from "@/lib/calculations/relation-engine";
 import {
@@ -25,6 +25,34 @@ import { normalizeAgentPhase } from "@/lib/poju/agent-state";
 import type { POJUAction } from "@/lib/poju/types";
 
 export const maxDuration = 300;
+
+const WALL_BUDGET_MS = 240_000;
+
+function deliveryRetryableResponse(
+  locale: string,
+  error: "delivery_audit_exhausted" | "delivery_audit_timeout",
+  extra?: Record<string, unknown>,
+) {
+  const zh = locale.startsWith("zh");
+  const message =
+    error === "delivery_audit_timeout"
+      ? zh
+        ? "报告生成接近时间上限。请点击继续，系统将快速重试生成完整报告（不会交付残缺版）。"
+        : "Report generation ran out of time. Tap Continue to retry for a full report (no degraded draft)."
+      : zh
+        ? "报告质量校验未一次通过。请点击继续，系统将快速重试生成完整报告（不会交付残缺版）。"
+        : "Quality check did not pass on the first pass. Tap Continue to retry for a full report (no degraded draft).";
+  return NextResponse.json(
+    {
+      ok: false,
+      error,
+      retryable: true,
+      message,
+      ...extra,
+    },
+    { status: error === "delivery_audit_timeout" ? 503 : 422 },
+  );
+}
 
 function isRecord(x: unknown): x is Record<string, unknown> {
   return Boolean(x) && typeof x === "object" && !Array.isArray(x);
@@ -98,7 +126,7 @@ export async function POST(req: Request) {
     const base_analysis = body.base_analysis === undefined || body.base_analysis === null ? null : body.base_analysis;
     const structured = normalizeBaseAnalysisInput(base_analysis).structured ?? null;
     const directedRelations = structured
-      ? computeDirectedRelations(structured, getCurrentLiunian(), body.agent_v2.question_category)
+      ? computeDirectedDynamicRelations(structured, getCurrentLiunian(), body.agent_v2.question_category)
       : undefined;
     const recent_user_messages = Array.isArray(body.recent_user_messages)
       ? body.recent_user_messages.filter((m): m is string => typeof m === "string" && m.trim().length > 0)
@@ -123,6 +151,7 @@ export async function POST(req: Request) {
     });
 
     const t0 = Date.now();
+    const startedAt = t0;
     const sessionId =
       typeof body.session_id === "string" && body.session_id.trim()
         ? pojuCacheSessionId(body.session_id.trim())
@@ -135,6 +164,10 @@ export async function POST(req: Request) {
     let result: Awaited<ReturnType<typeof callLLM>> | null = null;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      if (Date.now() - startedAt > WALL_BUDGET_MS) {
+        return deliveryRetryableResponse(locale, "delivery_audit_timeout");
+      }
+
       const userContent = hint ? `${user}\n\n${hint}` : user;
       result = await callLLM({
         call_type: "main_delivery",
@@ -174,25 +207,11 @@ export async function POST(req: Request) {
       hint = hints.join("\n\n");
 
       if (attempt === maxRetries) {
-        if (polluted) {
-          console.warn(
-            `[circuit-breaker:final-delivery] ${maxRetries} 次仍脏，剥离集外词后降级交付。`,
-            hits.slice(0, 5),
-          );
-          text = stripOutOfSetFactTerms(text, structured, { relations: directedRelations });
-          text = sanitizeDeliveryText(text, locale);
-          actions = extractActionsFromDelivery(text, null);
-        }
-        if (deepFail) {
-          return NextResponse.json(
-            {
-              ok: false,
-              error: `[circuit-breaker:final-delivery] 合规审计未通过，${maxRetries} 次重试后仍脏，拒绝交付。`,
-            },
-            { status: 422 },
-          );
-        }
-        break;
+        return deliveryRetryableResponse(locale, "delivery_audit_exhausted", {
+          violations: polluted
+            ? hits.slice(0, 5)
+            : deepViolations.slice(0, 5).map((v) => v.label),
+        });
       }
     }
 

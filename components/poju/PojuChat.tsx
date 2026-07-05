@@ -8,7 +8,7 @@
    图标用 emoji 占位,可替换成 lucide-react 等现有图标库。
    ============================================================ */
 
-import { useState, useRef, useEffect, type ReactNode } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useMemo, type ReactNode } from "react";
 import Image from "next/image";
 import pojuLogo from "@/assets/images/POJUlogo.png";
 import { RichReadingText } from "@/components/cross-product/RichReadingText";
@@ -119,6 +119,8 @@ export interface PojuChatProps {
   paywallOverlay?: ReactNode;
   /** First session open: "top" (matrix header); return visits: "bottom". */
   initialScrollPosition?: "top" | "bottom";
+  /** Fired once the pending-reply UI (slots + text) has painted — parent may dismiss activity. */
+  onActivityRenderReady?: () => void;
 }
 
 /* ---------- AI 文本：定稿后走 RichReadingText（金字 + 轻排版） ---------- */
@@ -184,6 +186,7 @@ export default function PojuChat(props: PojuChatProps) {
     messageFollowUpActionsText,
     paywallOverlay,
     initialScrollPosition = "bottom",
+    onActivityRenderReady,
   } = props;
 
   const [input, setInput] = useState("");
@@ -194,12 +197,7 @@ export default function PojuChat(props: PojuChatProps) {
   const [openMenuSessionId, setOpenMenuSessionId] = useState<string | null>(null);
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
   const [sessionDialog, setSessionDialog] = useState<SessionSidebarDialogState | null>(null);
-  const [revealAssistantId, setRevealAssistantId] = useState<string | null>(null);
-  const [replyHandoff, setReplyHandoff] = useState<{ lines: string[]; assistantId: string } | null>(null);
-  const prevPendingRef = useRef(false);
-  const handoffTimerRef = useRef<number | null>(null);
-  const replyHandoffRef = useRef(replyHandoff);
-  replyHandoffRef.current = replyHandoff;
+  const activityRenderReadyRef = useRef<string | null>(null);
   const menuBtnRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const taRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -251,55 +249,55 @@ export default function PojuChat(props: PojuChatProps) {
     pendingActivityLines,
     inlineNotice,
     messageFollowUps,
-    replyHandoff,
     currentSessionId,
   ]);
 
-  useEffect(() => {
-    const pending = Boolean(pendingActivityLines?.length);
+  const pendingReplyId = useMemo(() => {
+    if (!pendingActivityLines?.length && !pendingActivityFading) return null;
     const last = messages[messages.length - 1];
+    if (last?.role !== "assistant") return null;
+    return last.id;
+  }, [pendingActivityLines, pendingActivityFading, messages]);
 
-    if (pending && pendingActivityLines && last?.role === "assistant") {
-      if (handoffTimerRef.current != null) {
-        window.clearTimeout(handoffTimerRef.current);
-        handoffTimerRef.current = null;
-      }
-      setReplyHandoff({ lines: pendingActivityLines, assistantId: last.id });
-    }
+  const activityOverlayVisible = Boolean(
+    pendingReplyId && pendingActivityLines?.length && !pendingActivityFading,
+  );
+  const revealPendingContent = Boolean(
+    pendingReplyId && (pendingActivityFading || !pendingActivityLines?.length),
+  );
+  const pendingOnlyLegacy = Boolean(pendingActivityLines?.length) && !pendingReplyId;
+  const activitySlotVisible = Boolean(
+    !pendingReplyId && (pendingActivityLines?.length || pendingActivityFading),
+  );
 
-    if (prevPendingRef.current && !pending) {
-      if (replyHandoffRef.current) {
-        handoffTimerRef.current = window.setTimeout(() => {
-          setReplyHandoff(null);
-          handoffTimerRef.current = null;
-        }, 200);
-      } else if (last?.role === "assistant") {
-        setRevealAssistantId(last.id);
-      }
-    }
+  useLayoutEffect(() => {
+    if (!pendingReplyId || !pendingActivityLines?.length || pendingActivityFading) return;
+    if (activityRenderReadyRef.current === pendingReplyId) return;
 
-    prevPendingRef.current = pending;
-  }, [pendingActivityLines, messages]);
-
-  useEffect(() => {
+    let cancelled = false;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (cancelled || activityRenderReadyRef.current === pendingReplyId) return;
+        activityRenderReadyRef.current = pendingReplyId;
+        onActivityRenderReady?.();
+      });
+    });
     return () => {
-      if (handoffTimerRef.current != null) window.clearTimeout(handoffTimerRef.current);
+      cancelled = true;
     };
-  }, []);
+  }, [
+    pendingReplyId,
+    pendingActivityLines,
+    pendingActivityFading,
+    messages,
+    messageSlots,
+    messageFollowUps,
+    onActivityRenderReady,
+  ]);
 
   useEffect(() => {
-    if (!revealAssistantId) return;
-    const timer = window.setTimeout(() => setRevealAssistantId(null), 320);
-    return () => window.clearTimeout(timer);
-  }, [revealAssistantId]);
-
-  const pendingOnly = Boolean(pendingActivityLines?.length) && !replyHandoff;
-  const activitySlotVisible =
-    pendingOnly || Boolean(replyHandoff) || Boolean(pendingActivityFading && pendingActivityLines?.length);
-  const handoffAssistant = replyHandoff
-    ? messages.find((m) => m.id === replyHandoff.assistantId)
-    : null;
-  const hiddenHandoffId = replyHandoff?.assistantId ?? null;
+    activityRenderReadyRef.current = null;
+  }, [pendingActivityLines]);
 
   function renderAssistantBody(m: PojuMessage, reveal?: boolean) {
     if (bareMessageSlotIds?.has(m.id) && messageSlots?.[m.id]) {
@@ -309,7 +307,7 @@ export default function PojuChat(props: PojuChatProps) {
       <>
         {messageSlots?.[m.id]
           ? messageSlots[m.id]
-          : renderAiContent(m.content, thinkingLocale ?? "en", reveal ?? m.id === revealAssistantId)}
+          : renderAiContent(m.content, thinkingLocale ?? "en", reveal)}
         {!messageSlots?.[m.id] ? <AssistantMessageActions content={m.content} /> : null}
       </>
     );
@@ -540,7 +538,11 @@ export default function PojuChat(props: PojuChatProps) {
         <div className="pchat__scroll" ref={scrollRef}>
           <div className="pchat__messages">
             {messages.map((m) => {
-              if (m.id === hiddenHandoffId) return null;
+              const isPendingReply = m.id === pendingReplyId;
+              const showPendingBundle =
+                isPendingReply &&
+                m.role === "assistant" &&
+                (activityOverlayVisible || revealPendingContent);
               return (
               <div key={m.id}>
                 <div
@@ -563,6 +565,29 @@ export default function PojuChat(props: PojuChatProps) {
                         </button>
                       ) : null}
                     </>
+                  ) : showPendingBundle ? (
+                    <AiReplyShell>
+                      <div
+                        className={`pchat__pending-bundle${
+                          revealPendingContent ? " is-revealed" : ""
+                        }${pendingActivityFading ? " is-fading" : ""}`}
+                      >
+                        <div
+                          className="pchat__pending-bundle__content"
+                          aria-hidden={!revealPendingContent}
+                        >
+                          {renderAssistantBody(m, revealPendingContent)}
+                        </div>
+                        {activityOverlayVisible && pendingActivityLines?.length ? (
+                          <div className="pchat__pending-bundle__activity">
+                            <PojuActivityIndicator
+                              lines={pendingActivityLines}
+                              thinkingLine={thinkingLiveLine}
+                            />
+                          </div>
+                        ) : null}
+                      </div>
+                    </AiReplyShell>
                   ) : bareMessageSlotIds?.has(m.id) && messageSlots?.[m.id] ? (
                     messageSlots[m.id]
                   ) : (
@@ -593,22 +618,7 @@ export default function PojuChat(props: PojuChatProps) {
               }${pendingActivityFading ? " is-fading" : ""}`}
               aria-hidden={!activitySlotVisible}
             >
-              {replyHandoff && handoffAssistant ? (
-                <div className="pchat__msg pchat__msg--ai pchat__pending-reply">
-                  <AiReplyShell>
-                    <div
-                      className={`pchat__reply-handoff${pendingActivityLines?.length ? "" : " pchat__reply-handoff--done"}`}
-                    >
-                      <div className="pchat__reply-handoff__activity">
-                        <PojuActivityIndicator lines={replyHandoff.lines} thinkingLine={thinkingLiveLine} />
-                      </div>
-                      <div className="pchat__reply-handoff__text">
-                        {renderAssistantBody(handoffAssistant, true)}
-                      </div>
-                    </div>
-                  </AiReplyShell>
-                </div>
-              ) : pendingOnly || (pendingActivityFading && pendingActivityLines?.length) ? (
+              {pendingOnlyLegacy || (pendingActivityFading && !pendingReplyId && pendingActivityLines?.length) ? (
                 <div className="pchat__msg pchat__msg--ai pchat__pending-reply">
                   <AiReplyShell>
                     <PojuActivityIndicator lines={pendingActivityLines!} thinkingLine={thinkingLiveLine} />

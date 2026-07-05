@@ -869,6 +869,39 @@
   min-height: clamp(7rem, 28vw, 11rem);
 }
 
+.pchat__pending-bundle {
+  position: relative;
+  min-height: clamp(7rem, 28vw, 11rem);
+}
+
+.pchat__pending-bundle__content {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.22s ease, visibility 0.22s ease;
+}
+
+.pchat__pending-bundle.is-revealed .pchat__pending-bundle__content {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.pchat__pending-bundle__activity {
+  position: absolute;
+  inset: 0;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.22s ease, visibility 0.22s ease;
+  pointer-events: none;
+}
+
+.pchat__pending-bundle.is-revealed .pchat__pending-bundle__activity,
+.pchat__pending-bundle.is-fading .pchat__pending-bundle__activity {
+  opacity: 0;
+  visibility: hidden;
+}
+
 .pchat__reply-handoff {
   position: relative;
   min-height: clamp(7rem, 28vw, 11rem);

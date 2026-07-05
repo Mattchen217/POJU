@@ -107,8 +107,12 @@ async function main(): Promise<void> {
   assert("guard output is clean after degrade", !out.includes("寅巳相害"));
 
   assert(
-    "final-delivery degrades on pollution exhaust",
-    read("app/api/poju/final-delivery/route.ts").includes("stripOutOfSetFactTerms(text, structured"),
+    "final-delivery returns retryable on audit exhaust (Block 56)",
+    read("app/api/poju/final-delivery/route.ts").includes("delivery_audit_exhausted"),
+  );
+  assert(
+    "final-delivery no strip degrade (Block 56)",
+    !read("app/api/poju/final-delivery/route.ts").includes("stripOutOfSetFactTerms"),
   );
 
   console.log("\n=== Summary ===\n");

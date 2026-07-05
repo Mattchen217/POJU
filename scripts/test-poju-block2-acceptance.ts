@@ -25,6 +25,7 @@ import {
   generateWithClosedSetGuard,
 } from "@/lib/llm/sanitize/closed-set-circuit-breaker";
 import { buildFinalDeliveryPrompt } from "@/lib/llm/pro/final-delivery";
+import { POJU_V6_STATIC_SYSTEM } from "@/lib/llm/prompts/poju-base-v6";
 import { getThinkingConfig } from "@/lib/llm/router";
 
 const ROOT = resolve(__dirname, "..");
@@ -228,10 +229,21 @@ function soulAndCacheTests(): void {
   const { system } = buildBreakthroughCorePrompt({
     base_analysis: {
       structured: {
-        day_master: { stem: "庚", element: "金" },
-        strength: "weak",
-        yong_shen: "水",
+        day_master: "庚",
         pattern: "七杀",
+        yong_shen: "水",
+        xi_shen: [],
+        ji_shen: [],
+        strength: "weak",
+        four_pillars: { year: "甲子", month: "丙午", day: "庚辰", hour: "甲寅" },
+        pillars_detail: {
+          year: { ganzhi: "甲子", stem: "甲", branch: "子", ten_god: "偏财", shen_sha: [], hidden_stems: [], life_stage_han: "沐浴" },
+          month: { ganzhi: "丙午", stem: "丙", branch: "午", ten_god: "正官", shen_sha: [], hidden_stems: [], life_stage_han: "临官" },
+          day: { ganzhi: "庚辰", stem: "庚", branch: "辰", ten_god: "日主", shen_sha: [], hidden_stems: [], life_stage_han: "帝旺" },
+          hour: { ganzhi: "甲寅", stem: "甲", branch: "寅", ten_god: "偏财", shen_sha: [], hidden_stems: [], life_stage_han: "衰" },
+        },
+        da_yun: [],
+        data_availability: { pillars_detail: true, da_yun: false, bazi_enrichment: false },
       },
     },
     agent_v2: null,
@@ -250,7 +262,25 @@ function soulAndCacheTests(): void {
   assert("chat static core excludes spine block fn", !chatCore.includes("buildSpineBlock"));
 
   const { system: deliverySystem, user: deliveryUser } = buildFinalDeliveryPrompt({
-    base_analysis: { x: 1 },
+    base_analysis: {
+      structured: {
+        day_master: "庚",
+        pattern: "七杀",
+        yong_shen: "水",
+        xi_shen: [],
+        ji_shen: [],
+        strength: "weak",
+        four_pillars: { year: "甲子", month: "丙午", day: "庚辰", hour: "甲寅" },
+        pillars_detail: {
+          year: { ganzhi: "甲子", stem: "甲", branch: "子", ten_god: "偏财", shen_sha: [], hidden_stems: [], life_stage_han: "沐浴" },
+          month: { ganzhi: "丙午", stem: "丙", branch: "午", ten_god: "正官", shen_sha: [], hidden_stems: [], life_stage_han: "临官" },
+          day: { ganzhi: "庚辰", stem: "庚", branch: "辰", ten_god: "日主", shen_sha: [], hidden_stems: [], life_stage_han: "帝旺" },
+          hour: { ganzhi: "甲寅", stem: "甲", branch: "寅", ten_god: "偏财", shen_sha: [], hidden_stems: [], life_stage_han: "衰" },
+        },
+        da_yun: [],
+        data_availability: { pillars_detail: true, da_yun: false, bazi_enrichment: false },
+      },
+    },
     breakthrough_core: {
       relationship_conclusion: "RC-TEST",
       breakthrough_directions: [
@@ -263,7 +293,8 @@ function soulAndCacheTests(): void {
     agent_v2: createInitialAgentState({ original_question: "q" }),
     locale: "en",
   });
-  assert("delivery system uses master chat core", deliverySystem.includes("状态机协同"));
+  assert("delivery system uses v6 core + fact guard", deliverySystem.includes(POJU_V6_STATIC_SYSTEM.slice(0, 20)));
+  assert("delivery system has chat fact guard", deliverySystem.includes("硬约束") || deliverySystem.includes("闭集"));
   assert("delivery user embeds RC-TEST spine", deliveryUser.includes("RC-TEST"));
   assert("delivery user no situation_analysis field", !deliveryUser.includes("Situation Analysis"));
 }

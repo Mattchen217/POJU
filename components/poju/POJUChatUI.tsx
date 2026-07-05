@@ -169,6 +169,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const turnInFlightRef = useRef(false);
   /** Synchronous dedupe — blocks same-tick double runUserTurn before turnInFlightRef is visible. */
   const activeTurnKeyRef = useRef<string | null>(null);
+  const awaitingActivityDismissRef = useRef(false);
+  const skipActivityRenderReadyRef = useRef(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const showStateDebug = searchParams.get("debug") !== "0";
@@ -192,14 +194,20 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   );
 
   const clearSlotActivityWithFade = useCallback(() => {
-    if (!slotActivity) return;
+    if (!slotActivity || slotActivityFading) return;
     setSlotActivityFading(true);
     window.setTimeout(() => {
       setSlotActivity(null);
       setSlotActivityFading(false);
       setThinkingLiveLine(null);
     }, 220);
-  }, [slotActivity]);
+  }, [slotActivity, slotActivityFading]);
+
+  const handleActivityRenderReady = useCallback(() => {
+    if (skipActivityRenderReadyRef.current) return;
+    awaitingActivityDismissRef.current = false;
+    clearSlotActivityWithFade();
+  }, [clearSlotActivityWithFade]);
 
   const pendingActivityLines = useMemo(() => {
     if (slotActivity) return getActivityLines(slotActivity);
@@ -423,6 +431,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     setSlotActivity(null);
     setSlotActivityFading(false);
     setThinkingLiveLine(null);
+    awaitingActivityDismissRef.current = false;
+    skipActivityRenderReadyRef.current = false;
     setGenerationStopped(true);
   }
 
@@ -539,7 +549,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       }
 
       onSessionUpdate(toPersist);
-      clearSlotActivityWithFade();
+      const runDegraded = willRunDegradedDelivery(toPersist);
+      if (runDegraded) {
+        skipActivityRenderReadyRef.current = true;
+      } else {
+        skipActivityRenderReadyRef.current = false;
+        awaitingActivityDismissRef.current = true;
+      }
       syncDebugStateLedger(toPersist);
       await savePOJUSession(toPersist);
       if (toPersist.main_delivery_done && !baseSession.main_delivery_done) {
@@ -557,7 +573,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         setDriftReason("");
       }
 
-      if (willRunDegradedDelivery(toPersist)) {
+      if (runDegraded) {
         setPipelineBusy(true);
         setSlotActivity("degraded_delivering");
         try {
@@ -566,6 +582,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
             const { trySaveDeliveryActionsToArchive } = await import("@/lib/archive/archive-service");
             finalSession = await trySaveDeliveryActionsToArchive(finalSession, locale);
           }
+          skipActivityRenderReadyRef.current = false;
+          awaitingActivityDismissRef.current = true;
           onSessionUpdate(finalSession);
           syncDebugStateLedger(finalSession);
           await savePOJUSession(finalSession);
@@ -575,14 +593,22 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         } catch (e) {
           console.warn("[poju] Degraded delivery failed:", e);
           setSituationError(e instanceof Error ? e.message : String(e));
+          setSlotActivity(null);
+          setSlotActivityFading(false);
+          setThinkingLiveLine(null);
+          awaitingActivityDismissRef.current = false;
         } finally {
           setPipelineBusy(false);
-          setSlotActivity(null);
         }
       }
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return;
       console.error("[poju] Send failed:", err);
+      awaitingActivityDismissRef.current = false;
+      skipActivityRenderReadyRef.current = false;
+      setSlotActivity(null);
+      setSlotActivityFading(false);
+      setThinkingLiveLine(null);
       if (errorRestore) {
         onSessionUpdate(errorRestore.rollbackSession);
         setInput(errorRestore.typed);
@@ -601,8 +627,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       if (sendAbortRef.current === ac) sendAbortRef.current = null;
       if (gen === sendGenerationRef.current) {
         setSending(false);
-        setSlotActivity(null);
-        setThinkingLiveLine(null);
+        if (!awaitingActivityDismissRef.current) {
+          setSlotActivity(null);
+          setSlotActivityFading(false);
+          setThinkingLiveLine(null);
+        }
       }
     }
   }
@@ -1124,6 +1153,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           ) : undefined
         }
         initialScrollPosition={initialScrollPosition}
+        onActivityRenderReady={handleActivityRenderReady}
         inputPlaceholder={t("input_placeholder")}
         composerText={input}
         onComposerTextChange={setInput}
