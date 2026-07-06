@@ -2,12 +2,20 @@ import type { GetBaziChartOutput } from "shunshi-bazi-core";
 
 import type { ProfileStrength } from "@/lib/calculations/build-profile-structured";
 import {
+  computeDirectedDynamicRelations,
   computeLiunianRelations,
   getCurrentLiunian,
 } from "@/lib/calculations/relation-engine";
 import { matchUserDisplayLabel } from "@/lib/match/match-user-labels";
 import { getStemInfo } from "@/lib/poju/bazi-matrix-mappings";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
+import { READING_LAYOUT_CONTRACT } from "@/lib/llm/prompts/reading-layout";
+import {
+  inferQuestionCategoryFromText,
+  stitchMatchRelationClosedSet,
+  stitchSingleProfileRelationClosedSet,
+} from "@/lib/llm/prompts/relation-closed-set-context";
+import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
 
 export type MatrixNarrativeProduct = "poju" | "glyph" | "match" | "syncro";
 
@@ -155,7 +163,35 @@ export function getMatrixNarrativeSystemPrompt(product: MatrixNarrativeProduct =
     /"narrative_a"[\s\S]*?"narrative_b"[\s\S]*?\n/,
     "",
   );
-  return `${MATRIX_NARRATIVE_SYSTEM_PROMPT}\n${append}\n# ADDITIONAL JSON FIELDS (append to schema root)${schemaExtra}`;
+  return stitchPromptSections(
+    MATRIX_NARRATIVE_SYSTEM_PROMPT,
+    READING_LAYOUT_CONTRACT,
+    append,
+    `# ADDITIONAL JSON FIELDS (append to schema root)${schemaExtra}`,
+  );
+}
+
+/** 工具预览矩阵 · 闭集数据面（动态段，不进 system 前缀缓存）。 */
+export function buildMatrixNarrativeRelationAppendix(
+  payload: PojuMatrixPayload,
+  product: MatrixNarrativeProduct,
+  opts?: { payloadB?: PojuMatrixPayload },
+): string {
+  if (product === "poju") return "";
+  if (product === "match" && opts?.payloadB) {
+    return stitchMatchRelationClosedSet(
+      payload.structured,
+      opts.payloadB.structured,
+      "relationship compatibility",
+    );
+  }
+  const category =
+    product === "syncro"
+      ? inferQuestionCategoryFromText("timing direction spatial task when where")
+      : product === "glyph"
+        ? null
+        : null;
+  return stitchSingleProfileRelationClosedSet(payload.structured, { questionCategory: category });
 }
 
 export type MatrixNarrativeInput = {
@@ -251,7 +287,12 @@ export function buildMatrixNarrativeInput(
   const birthDate = `${birth.year}-${pad(birth.month)}-${pad(birth.day)}`;
 
   const liunian = getCurrentLiunian();
-  const liunianRelations = computeLiunianRelations(structured, liunian).map((r) => r.han);
+  const directedRelations = computeDirectedDynamicRelations(structured, liunian, null);
+  const liunianRelations = (
+    directedRelations.length > 0
+      ? directedRelations
+      : computeLiunianRelations(structured, liunian)
+  ).map((r) => r.han);
 
   return {
     user_language: localeToUserLanguage(locale),

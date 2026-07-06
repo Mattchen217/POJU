@@ -171,7 +171,7 @@ export async function POST(req: Request) {
     const sessionId = body.session_id.trim();
     const profileId = resolveProfileId({ selected_stored_profile_id: body.selected_stored_profile_id, agent_v2 });
 
-    const { system, user, structured } = buildBreakthroughCorePrompt({
+    const { system, user, structured, auditRelations } = buildBreakthroughCorePrompt({
       base_analysis,
       agent_v2: agent_v2 ?? undefined,
       original_question: body.original_question,
@@ -202,6 +202,7 @@ export async function POST(req: Request) {
       structured: structured as ProfileStructured,
       locale,
       label: "breakthrough-core",
+      opts: { relations: auditRelations },
     });
 
     let mapped: ReturnType<typeof mapBreakthroughCorePayload>;

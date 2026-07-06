@@ -9,6 +9,7 @@ import {
   buildMatchRelationInventoryBlock,
   computeDirectedDynamicRelations,
   computeMatchRelationAuditAllowlist,
+  computeNatalChartRelations,
   computeRelationAuditAllowlist,
   getCurrentLiunian,
   type RelationLabel,
@@ -17,6 +18,37 @@ import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-stru
 import { POJU_OUTPUT_DATA_DISCIPLINE } from "@/lib/llm/prompts/poju-base";
 import { buildChatFactGuardBlock } from "@/lib/llm/prompts/shen-sha-guard";
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
+
+/** breakthrough-core / opening conversion — 与聊天侧同源的定向关系 + 审计闭集。 */
+export function resolveAgendaRelationContext(
+  structured: ProfileStructured,
+  questionCategory: string | null | undefined,
+): {
+  directedDynamic: RelationLabel[];
+  auditAllowlist: RelationLabel[];
+  directedInventoryBlock: string;
+} {
+  const liunian = getCurrentLiunian();
+  const directedDynamic = computeDirectedDynamicRelations(structured, liunian, questionCategory);
+  return {
+    directedDynamic,
+    auditAllowlist: computeRelationAuditAllowlist(structured, liunian, questionCategory),
+    directedInventoryBlock: buildDirectedDynamicRelationInventoryBlock(
+      structured,
+      liunian,
+      questionCategory,
+    ),
+  };
+}
+
+/** 定向为空时回退本命关系（供守卫提示，审计仍用完整 allowlist）。 */
+export function resolveDirectedOrNatalRelations(
+  structured: ProfileStructured,
+  questionCategory: string | null | undefined,
+): RelationLabel[] {
+  const { directedDynamic } = resolveAgendaRelationContext(structured, questionCategory);
+  return directedDynamic.length > 0 ? directedDynamic : computeNatalChartRelations(structured);
+}
 
 /** 本地粗分类（无 LLM）— 供 Glyph/Syncro/Match 定向过滤。 */
 export function inferQuestionCategoryFromText(text: string): string | null {

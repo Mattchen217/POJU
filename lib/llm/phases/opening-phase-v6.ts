@@ -19,6 +19,10 @@ import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-cont
 import { parseOpeningConversionPayload } from "@/lib/poju/opening-conversion-payload";
 import { POJU_V6_OPENING_DUTY } from "@/lib/llm/prompts/poju-base-v6";
 import { extractQuestionCategory } from "@/lib/poju/context-extractor";
+import {
+  inferQuestionCategoryFromText,
+  resolveAgendaRelationContext,
+} from "@/lib/llm/prompts/relation-closed-set-context";
 
 const VALID_SUGGESTED: AgentPhase[] = ["opening", "collecting_context"];
 
@@ -102,7 +106,18 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
     }),
   );
 
-  const structured = normalizeBaseAnalysisInput(input.base_analysis ?? null).structured;
+  const structured = normalizeBaseAnalysisInput(input.base_analysis ?? null).structured ?? null;
+  const inferredCategory =
+    input.agent_state?.question_category ??
+    inferQuestionCategoryFromText(
+      input.agent_state?.original_question ??
+        input.session.original_question ??
+        input.user_message,
+    );
+  const auditRelations =
+    structured != null
+      ? resolveAgendaRelationContext(structured, inferredCategory).auditAllowlist
+      : undefined;
 
   const { parsed, response: rawResponse } = resolvePhaseResponse(result.content, {
     locale: input.locale,
@@ -113,6 +128,7 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
     model: result.model,
     finish_reason: result.finish_reason ?? undefined,
     raw_length: result.content.length,
+    audit_relations: auditRelations,
   });
   let response = rawResponse;
 

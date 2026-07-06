@@ -73,14 +73,6 @@ function buildChartRelationsGuardBlock(structured: ProfileStructured, compact: b
 关系为空是完全正常的——靠十神/用神/喜忌/强弱/当前阶段气候说话即可。写任何关系词都会被拦截、整份重写。`;
 }
 
-/** Breakthrough-core — 神煞 + 本命关系（完整版）。 */
-export function buildFactGuardBlock(structured: ProfileStructured): string {
-  return stitchPromptSections(
-    buildShenShaGuardBlock(structured),
-    buildChartRelationsGuardBlock(structured, false),
-  );
-}
-
 function buildDirectedRelationsGuardBlock(rels: RelationLabel[], compact: boolean): string {
   if (rels.length > 0) {
     const list = rels.map((r) => r.han).join("、");
@@ -104,18 +96,30 @@ function buildDirectedRelationsGuardBlock(rels: RelationLabel[], compact: boolea
 靠本命关系/十神/用神/当前阶段气候说话即可；写任何未列出的流年关系词都会被拦截。`;
 }
 
-/** Chat — 神煞 + 本命关系（紧凑版，与实例清单配套）。 */
+/**
+ * 全站唯一事实守卫入口 — 神煞 + 本命关系 + 可选流年/定向动态关系。
+ * `verbose: true` 用于 breakthrough-core 等内部脊柱（长版措辞）；聊天默认 compact。
+ */
 export function buildChatFactGuardBlock(
   structured: ProfileStructured,
-  opts?: { directedRelations?: RelationLabel[] },
+  opts?: { directedRelations?: RelationLabel[]; verbose?: boolean },
 ): string {
+  const compact = !opts?.verbose;
+  const shenShaBlock = compact
+    ? buildChatShenShaGuardBlock(structured)
+    : buildShenShaGuardBlock(structured);
   const directedGuard =
     opts?.directedRelations !== undefined
-      ? buildDirectedRelationsGuardBlock(opts.directedRelations, true)
+      ? buildDirectedRelationsGuardBlock(opts.directedRelations, compact)
       : "";
   return stitchPromptSections(
-    buildChatShenShaGuardBlock(structured),
-    buildChartRelationsGuardBlock(structured, true),
+    shenShaBlock,
+    buildChartRelationsGuardBlock(structured, compact),
     directedGuard,
   );
+}
+
+/** @deprecated 使用 buildChatFactGuardBlock(structured, { verbose: true, directedRelations }) */
+export function buildFactGuardBlock(structured: ProfileStructured): string {
+  return buildChatFactGuardBlock(structured, { verbose: true });
 }

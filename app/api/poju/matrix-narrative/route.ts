@@ -4,11 +4,13 @@ import { getBaziChart } from "shunshi-bazi-core";
 import { matrixNarrativeCacheSessionId } from "@/lib/llm/cache-session-id";
 import {
   buildMatrixNarrativeInput,
+  buildMatrixNarrativeRelationAppendix,
   buildMatrixNarrativeUserMessage,
   getMatrixNarrativeSystemPrompt,
   parseMatrixNarrativeResponseText,
   type MatrixNarrativeProduct,
 } from "@/lib/llm/prompts/matrix-narrative-prompt";
+import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
 import { callLLM } from "@/lib/llm/router";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
@@ -77,15 +79,24 @@ export async function POST(req: Request) {
     const narrativeInputA = buildMatrixNarrativeInput(payload, chartA, locale);
 
     let userMessage: string;
-    if (product === "match" && isMatrixPayload(body.matrix_payload_b)) {
-      const chartB = chartForPayload(body.matrix_payload_b);
-      const narrativeInputB = buildMatrixNarrativeInput(body.matrix_payload_b, chartB, locale);
+    const payloadB = product === "match" && isMatrixPayload(body.matrix_payload_b) ? body.matrix_payload_b : undefined;
+    if (product === "match" && payloadB) {
+      const chartB = chartForPayload(payloadB);
+      const narrativeInputB = buildMatrixNarrativeInput(payloadB, chartB, locale);
       userMessage = buildMatrixNarrativeUserMessage(narrativeInputA, {
         product: "match",
         inputB: narrativeInputB,
       });
     } else {
       userMessage = buildMatrixNarrativeUserMessage(narrativeInputA, { product });
+    }
+
+    const relationAppendix = buildMatrixNarrativeRelationAppendix(payload, product, { payloadB });
+    if (relationAppendix.trim()) {
+      userMessage = stitchPromptSections(
+        userMessage,
+        `# 引擎实算闭集（仅可引用下列 · 禁止自造关系/神煞）\n${relationAppendix}`,
+      );
     }
 
     const maxAttempts = 3;

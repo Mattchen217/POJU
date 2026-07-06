@@ -38,6 +38,10 @@ import {
 } from "@/lib/llm/prompts/oriental-counselor-base";
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import { buildChatFactGuardBlock } from "@/lib/llm/prompts/shen-sha-guard";
+import {
+  inferQuestionCategoryFromText,
+  resolveAgendaRelationContext,
+} from "@/lib/llm/prompts/relation-closed-set-context";
 import { buildChatPhaseTermBindingBlock } from "@/lib/llm/prompts/term-closed-set-constraint";
 import { countSubstantiveOpeningTurns } from "@/lib/poju/agent";
 import {
@@ -53,6 +57,7 @@ import type { PhaseLLMInput } from "@/lib/llm/phases/types";
 
 /** 下游相位：question_category 已定，流年/定向关系进 user 侧（INV-1 · 不进 system）。 */
 export const POJU_V6_DIRECTED_RELATION_PHASES: ReadonlySet<AgentPhase> = new Set([
+  "opening",
   "collecting_context",
   "awaiting_confirmation",
   "delivered",
@@ -137,7 +142,13 @@ export async function buildPhaseTurnContextV6(
 
   const injectDirected = Boolean(structured && shouldInjectDirectedRelationsV6(input));
   const liunian = injectDirected ? getCurrentLiunian() : null;
-  const questionCategory = input.agent_state?.question_category;
+  const questionCategory =
+    input.agent_state?.question_category ??
+    inferQuestionCategoryFromText(
+      input.agent_state?.original_question ??
+        input.session.original_question ??
+        input.user_message,
+    );
   const directedDynamicRels =
     structured && liunian
       ? computeDirectedDynamicRelations(structured, liunian, questionCategory)

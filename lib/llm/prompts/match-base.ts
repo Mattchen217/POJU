@@ -48,6 +48,7 @@ export const MATCH_HEPAN_METHOD = `# 合盘核心要素（推演必遵 · 内部
 
 ## 6. 当前周期互动
 - 近阶段对关系的引动 — 条件式语言，不铁口日期
+- **须锚定引擎实算闭集**：双人动态关系 / 各盘流年定向关系已在 system 注入；只引用清单实算项，1–3 条织进 combined/conclusion，禁自造刑冲合害
 
 ## 引用要求（用户可见 JSON）
 - **analysis_a / analysis_b**：core nature + **具体十神/配偶宫/神煞**（有则引 structured）+ life cycle + balancing element — 禁只写五行生克一句带过

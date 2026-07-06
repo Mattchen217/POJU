@@ -15,8 +15,10 @@ import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-stru
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
 import { extractJson } from "@/lib/llm/phases/phase-transport";
-import { buildFactGuardBlock } from "@/lib/llm/prompts/shen-sha-guard";
+import { buildChatFactGuardBlock } from "@/lib/llm/prompts/shen-sha-guard";
+import { resolveAgendaRelationContext } from "@/lib/llm/prompts/relation-closed-set-context";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
+import type { RelationLabel } from "@/lib/calculations/relation-engine";
 
 export const DEEP_RECKONING_TASK = `# 角色：破局总设计师（上帝视角 · 零聊天腔）
 
@@ -123,7 +125,7 @@ export function buildBreakthroughCorePrompt(input: {
   agent_v2: POJUAgentState | null | undefined;
   original_question: string;
   locale: string;
-}): { system: string; user: string; structured: ProfileStructured } {
+}): { system: string; user: string; structured: ProfileStructured; auditRelations: RelationLabel[] } {
   const { base_analysis, agent_v2, original_question, locale } = input;
   if (base_analysis == null) {
     throw new Error("[breakthrough-core] structured 命盘为空，拒绝生成脊柱（必锚命盘）。");
@@ -133,6 +135,12 @@ export function buildBreakthroughCorePrompt(input: {
   if (structured == null) {
     throw new Error("[breakthrough-core] structured 命盘为空，拒绝生成脊柱（必锚命盘）。");
   }
+
+  const questionCategory = agent_v2?.question_category ?? null;
+  const { directedDynamic, auditAllowlist, directedInventoryBlock } = resolveAgendaRelationContext(
+    structured,
+    questionCategory,
+  );
 
   const contextText = (() => {
     if (!agent_v2) return "（尚无结构化 agent_v2 语境，仅依赖问题。）";
@@ -144,13 +152,17 @@ export function buildBreakthroughCorePrompt(input: {
   })();
 
   const baseStr = JSON.stringify(base_analysis, null, 2).slice(0, 12000);
-  const shenShaGuard = buildFactGuardBlock(structured);
+  const factGuard = buildChatFactGuardBlock(structured, {
+    directedRelations: directedDynamic,
+    verbose: true,
+  });
 
   const system = stitchPromptSections(
     POJU_IDENTITY,
     POJU_KNOWLEDGE_ROOTS,
     buildOutputPolicyForPoju(),
     buildStructuredInstanceInventory(structured),
+    directedInventoryBlock,
     DEEP_RECKONING_TASK,
   );
 
@@ -163,17 +175,17 @@ ${baseStr}
 "${original_question}"
 
 【问题类别】
-${agent_v2?.question_category ?? "other"}
+${questionCategory ?? "other"}
 
 【收集到的具体上下文】
 ${contextText}
 
-${shenShaGuard}
+${factGuard}
 
 【任务】
 输出上述 JSON（relationship_conclusion + breakthrough_directions + investigation_agenda）。仅 JSON，无 markdown 围栏。`;
 
-  return { system, user, structured };
+  return { system, user, structured, auditRelations: auditAllowlist };
 }
 
 export function parseBreakthroughCoreResponseText(raw: string): unknown {
