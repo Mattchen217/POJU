@@ -47,7 +47,7 @@ import type { UserProfile } from "@/lib/profile/types";
 import { chatPayloadFromWire } from "@/lib/poju/serialize-chat-payload";
 import { buildAgentStateSnapshot } from "@/lib/poju/agent-state-snapshot";
 import { ensureBreakthroughCore, runConfirmationPipeline } from "@/lib/poju/agent-orchestrator";
-import { appendConfirmationInvite, hasConfirmationInviteCue } from "@/lib/poju/confirmation-reply";
+import { classifyConfirmationAffirmative } from "@/lib/poju/confirmation-reply";
 import { applyActionStatusUpdates, parseActionStatusUpdates } from "@/lib/poju/action-status-updates";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -656,12 +656,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     }
   }
 
-  const phaseNow = normalizeAgentPhase(agent_v2.current_phase);
   let finalContent = llmResponse.response;
-
-  if (phaseNow === "awaiting_confirmation" && !hasConfirmationInviteCue(finalContent)) {
-    finalContent = appendConfirmationInvite(finalContent, locale);
-  }
 
   const justConverted =
     advance.trigger_breakthrough_core &&

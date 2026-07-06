@@ -35,19 +35,3 @@ export function classifyConfirmationAffirmative(
 
   return null;
 }
-
-/** Assistant already invited user to confirm / add before delivery. */
-export function hasConfirmationInviteCue(text: string): boolean {
-  return /补充|修正|完整|推演|破局|还有什么|可以|没有了|生成(?:完整)?(?:破局)?方案|立刻生成|anything (?:else|more)|add or correct|ready for (?:the )?(?:full )?(?:analysis|plan)/i.test(
-    text,
-  );
-}
-
-/** Append explicit confirmation CTA when the model summarized without asking. */
-export function appendConfirmationInvite(text: string, locale: string): string {
-  if (hasConfirmationInviteCue(text)) return text;
-  const suffix = locale.startsWith("zh")
-    ? "\n\n——以上是我目前对你的理解。如果准确，请回复「可以」或「没有了」，我立刻为你生成完整破局方案；若要补充或修正，直接告诉我就好。"
-    : "\n\n— That’s my read so far. If it’s accurate, reply **OK** or **nothing else** and I’ll generate your full plan; if you want to add or correct anything, say so now.";
-  return `${text.trimEnd()}${suffix}`;
-}

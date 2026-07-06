@@ -6,6 +6,8 @@
  * 不因 prompt 宽泛化而删减 EN/ZH 行为词与术语指纹 pattern。
  */
 
+import { maskMarkersForAudit } from "@/lib/llm/sanitize/term-marking";
+
 export type OutputPolicyViolationCategory =
   | "bazi_term"
   | "marriage_chart_term"
@@ -250,10 +252,12 @@ export function detectOutputPolicyViolations(
 
   const violations: OutputPolicyViolation[] = [];
   const isZh = locale.startsWith("zh");
+  /** Marker-safe text for bazi/chart fingerprint — avoids false hits on soft-translate visible (e.g. 表达从容（食神）). */
+  const markerSafeText = maskMarkersForAudit(text);
 
   if (isZh) {
     for (const [regex, label] of ZH_BAZI_TERMS) {
-      pushRegex(text, regex, "bazi_term", label, violations);
+      pushRegex(markerSafeText, regex, "bazi_term", label, violations);
     }
     for (const [regex, label] of ZH_COMPLIANCE_REDLINE) {
       pushRegex(text, regex, "compliance_redline", label, violations);
@@ -261,7 +265,7 @@ export function detectOutputPolicyViolations(
     pushPointPredictionViolations(text, locale, violations);
     for (const item of ZH_MARRIAGE_CHART_TERMS) {
       const [regex, label] = typeof item === "string" ? [item, "marriage_zh"] as const : item;
-      pushRegex(text, regex, "marriage_chart_term", label, violations);
+      pushRegex(markerSafeText, regex, "marriage_chart_term", label, violations);
     }
     for (const [regex, label] of ZH_SUPERNATURAL_PROMISE) {
       pushRegex(text, regex, "supernatural_promise", label, violations);
@@ -275,14 +279,14 @@ export function detectOutputPolicyViolations(
       const category: OutputPolicyViolationCategory = label.includes("chart")
         ? "chart_fingerprint"
         : "bazi_term";
-      pushRegex(text, regex, category, label, violations);
+      pushRegex(markerSafeText, regex, category, label, violations);
     }
     for (const [regex, label] of EN_COMPLIANCE_REDLINE) {
       pushRegex(text, regex, "compliance_redline", label, violations);
     }
     pushPointPredictionViolations(text, locale, violations);
     for (const [regex, label] of EN_MARRIAGE_CHART_TERMS) {
-      pushRegex(text, regex, "marriage_chart_term", label, violations);
+      pushRegex(markerSafeText, regex, "marriage_chart_term", label, violations);
     }
     for (const [regex, label] of EN_SUPERNATURAL_PROMISE) {
       pushRegex(text, regex, "supernatural_promise", label, violations);
@@ -293,9 +297,9 @@ export function detectOutputPolicyViolations(
     pushRegex(text, EN_FEAR_REGEX, "fear_mongering", "fear_en", violations);
   }
 
-  // Cross-locale bazi fingerprints
-  pushRegex(text, ZH_STEM_BRANCH_REGEX, "bazi_term", "stem_branch", violations);
-  pushRegex(text, ZH_BRANCH_ELEMENT_REGEX, "bazi_term", "branch_element", violations);
+  // Cross-locale bazi fingerprints (marker-safe — soft-translate display must not false-positive)
+  pushRegex(markerSafeText, ZH_STEM_BRANCH_REGEX, "bazi_term", "stem_branch", violations);
+  pushRegex(markerSafeText, ZH_BRANCH_ELEMENT_REGEX, "bazi_term", "branch_element", violations);
 
   const seen = new Set<string>();
   return violations.filter((v) => {
@@ -312,6 +316,17 @@ export function logOutputPolicyViolations(
 ): void {
   if (violations.length === 0) return;
   console.error(`[${context}] Output policy violations (${violations.length}):`, violations);
+}
+
+export function logBaziTermObservations(text: string, locale: string, context = "final-delivery"): void {
+  const violations = detectOutputPolicyViolations(text, locale).filter(
+    (v) => v.category === "bazi_term" || v.category === "chart_fingerprint",
+  );
+  if (violations.length === 0) return;
+  console.log(
+    `[${context}] bazi_term observe-only (${violations.length}):`,
+    violations.slice(0, 5).map((v) => v.label),
+  );
 }
 
 export function auditOutputPolicyText(

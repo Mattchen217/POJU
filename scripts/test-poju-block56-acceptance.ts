@@ -82,11 +82,11 @@ function main(): void {
   assert("delivery user has instance inventory", user.includes("本次 structured 实例闭集") || user.includes("structured"));
   assert("delivery user has directed dynamic block", user.includes("本盘动态关系实例") || user.includes("流年/定向"));
 
-  console.log("\n=== Fix 3 · no degrade strip in route ===\n");
-  assert("route has wall budget", route.includes("WALL_BUDGET_MS"));
-  assert("route returns retryable on exhaust", route.includes("delivery_audit_exhausted"));
-  assert("route no stripOutOfSetFactTerms", !route.includes("stripOutOfSetFactTerms"));
-  assert("route no degrade deliver log", !route.includes("剥离集外词后降级交付"));
+  console.log("\n=== Fix 3 · single-pass sanitizer (Block 58) ===\n");
+  assert("route single LLM call", route.includes("await callLLM") && !route.includes("for (let attempt"));
+  assert("route no delivery_audit_exhausted", !route.includes("delivery_audit_exhausted"));
+  assert("route uses stripOutOfSetFactTerms in-place", route.includes("stripOutOfSetFactTerms"));
+  assert("route no circuit-breaker retry log", !route.includes("熔断重试"));
 
   console.log("\n=== Fix 4 · marking density unified ===\n");
   assert(

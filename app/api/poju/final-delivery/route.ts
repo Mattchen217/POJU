@@ -8,51 +8,21 @@ import {
 import { callLLM } from "@/lib/llm/router";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 import { sanitizeDeliveryText } from "@/lib/llm/sanitize/compliance-terms";
-import { detectShenShaPollution } from "@/lib/llm/sanitize/closed-set-circuit-breaker";
+import {
+  detectShenShaPollution,
+  stripOutOfSetFactTerms,
+} from "@/lib/llm/sanitize/closed-set-circuit-breaker";
 import { polishDeliveryGrammar } from "@/lib/llm/sanitize/delivery-grammar-polish";
 import {
   computeDirectedDynamicRelations,
   getCurrentLiunian,
 } from "@/lib/calculations/relation-engine";
-import {
-  auditDeepStringFields,
-  buildAuditRegenHint,
-  isCriticalDeliveryAuditFailure,
-} from "@/lib/llm/services/delivery-audit-regen";
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import type { BreakthroughCore, POJUAgentState } from "@/lib/poju/agent-state";
 import { normalizeAgentPhase } from "@/lib/poju/agent-state";
 import type { POJUAction } from "@/lib/poju/types";
 
 export const maxDuration = 300;
-
-const WALL_BUDGET_MS = 240_000;
-
-function deliveryRetryableResponse(
-  locale: string,
-  error: "delivery_audit_exhausted" | "delivery_audit_timeout",
-  extra?: Record<string, unknown>,
-) {
-  const zh = locale.startsWith("zh");
-  const message =
-    error === "delivery_audit_timeout"
-      ? zh
-        ? "报告生成接近时间上限。请点击继续，系统将快速重试生成完整报告（不会交付残缺版）。"
-        : "Report generation ran out of time. Tap Continue to retry for a full report (no degraded draft)."
-      : zh
-        ? "报告质量校验未一次通过。请点击继续，系统将快速重试生成完整报告（不会交付残缺版）。"
-        : "Quality check did not pass on the first pass. Tap Continue to retry for a full report (no degraded draft).";
-  return NextResponse.json(
-    {
-      ok: false,
-      error,
-      retryable: true,
-      message,
-      ...extra,
-    },
-    { status: error === "delivery_audit_timeout" ? 503 : 422 },
-  );
-}
 
 function isRecord(x: unknown): x is Record<string, unknown> {
   return Boolean(x) && typeof x === "object" && !Array.isArray(x);
@@ -151,74 +121,38 @@ export async function POST(req: Request) {
     });
 
     const t0 = Date.now();
-    const startedAt = t0;
     const sessionId =
       typeof body.session_id === "string" && body.session_id.trim()
         ? pojuCacheSessionId(body.session_id.trim())
         : undefined;
 
-    const maxRetries = 2;
-    let hint: string | null = null;
-    let text = "";
-    let actions: POJUAction[] = [];
-    let result: Awaited<ReturnType<typeof callLLM>> | null = null;
+    const result = await callLLM({
+      call_type: "main_delivery",
+      system,
+      messages: [{ role: "user", content: user }],
+      max_tokens: 8000,
+      timeout_ms: 120_000,
+      response_format: "text",
+      session_id: sessionId,
+      temperature: 0.55,
+    });
 
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      if (Date.now() - startedAt > WALL_BUDGET_MS) {
-        return deliveryRetryableResponse(locale, "delivery_audit_timeout");
-      }
+    const polished = polishDeliveryGrammar(result.content.trim(), locale);
+    let text = sanitizeDeliveryText(polished.text, locale);
 
-      const userContent = hint ? `${user}\n\n${hint}` : user;
-      result = await callLLM({
-        call_type: "main_delivery",
-        system,
-        messages: [{ role: "user", content: userContent }],
-        max_tokens: 8000,
-        timeout_ms: 270_000,
-        response_format: "text",
-        session_id: sessionId,
-        temperature: attempt === 0 ? 0.55 : 0.3,
-      });
-
-      const polished = polishDeliveryGrammar(result.content.trim(), locale);
-      text = sanitizeDeliveryText(polished.text, locale);
-      actions = extractActionsFromDelivery(text, null);
-      const auditText = buildDeliveryAuditText(text, actions);
+    if (structured) {
+      let actionsProbe = extractActionsFromDelivery(text, null);
+      const auditText = buildDeliveryAuditText(text, actionsProbe);
       const { polluted, hits } = detectShenShaPollution(auditText, structured, locale, {
         relations: directedRelations,
       });
-      const deepViolations = auditDeepStringFields({ full_text: text, actions }, locale, "poju");
-      const deepFail = isCriticalDeliveryAuditFailure(deepViolations);
-
-      if (!polluted && !deepFail) break;
-
-      console.error(
-        `[circuit-breaker:final-delivery] 交付审计未通过，熔断重试 ${attempt + 1}/${maxRetries}:`,
-        polluted ? hits.slice(0, 5) : deepViolations.slice(0, 5).map((v) => v.label),
-      );
-
-      const hints: string[] = [];
       if (polluted) {
-        hints.push(
-          `⚠️ 你上一次产出包含了集外或不在本盘的神煞：${hits.slice(0, 5).join("、")}。严禁！神煞只能用本次 structured 实际算出的闭集 9 个。删除所有集外神煞，重写。`,
-        );
-      }
-      if (deepFail) hints.push(buildAuditRegenHint(deepViolations, locale));
-      hint = hints.join("\n\n");
-
-      if (attempt === maxRetries) {
-        return deliveryRetryableResponse(locale, "delivery_audit_exhausted", {
-          violations: polluted
-            ? hits.slice(0, 5)
-            : deepViolations.slice(0, 5).map((v) => v.label),
-        });
+        text = stripOutOfSetFactTerms(text, structured, { relations: directedRelations });
+        console.warn("[final-delivery] 集外神煞/关系已就地剥离：", hits.slice(0, 5));
       }
     }
 
-    if (!result) {
-      return NextResponse.json({ ok: false, error: "final_delivery_failed" }, { status: 500 });
-    }
-
+    const actions = extractActionsFromDelivery(text, null);
     const latency_ms = result.meta.latency_ms || Date.now() - t0;
 
     return NextResponse.json({

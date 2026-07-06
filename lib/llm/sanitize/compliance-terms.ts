@@ -20,6 +20,7 @@ import type { ProfileStructured } from "@/lib/calculations/build-profile-structu
 import {
   auditOutputPolicyText,
   detectOutputPolicyViolations,
+  logBaziTermObservations,
 } from "@/lib/llm/compliance/audit-output";
 import {
   BARE_SIGN_POEM_PATTERN,
@@ -435,13 +436,57 @@ export function sanitizeDeepStringFields(value: unknown, locale: string): unknow
 const DELIVERY_MARKER_RE =
   /(═══\s*(?:ANALYSIS|CONCLUSION|WHAT\s+(?:TO\s+DO|YOU\s+CAN\s+DO)|COMING\s+BACK)\s*═══)/gi;
 
-/** Audit POJU final delivery — preserve ═══ marker lines; no mutation. */
+const ZH_PAYMENT_REDLINE_SCRUB: Array<[RegExp, string]> = [
+  [/占卜/g, ""],
+  [/宿命/g, "人生轨迹"],
+  [/命运/g, "人生轨迹"],
+  [/星象/g, "能量节律"],
+  [/吉凶/g, ""],
+];
+
+const EN_PAYMENT_REDLINE_SCRUB: Array<[RegExp, string]> = [
+  [/\bhoroscope\b/gi, "energy rhythm"],
+  [/\bastrology\b/gi, "pattern reading"],
+  [/\bpsychic\b/gi, ""],
+  [/\bfortune[- ]?telling\b/gi, ""],
+  [/\bdivination\b/gi, ""],
+  [/\bdestiny\b/gi, "life trajectory"],
+  [/\bfate\b/gi, "life trajectory"],
+];
+
+function scrubPaymentProcessorRedlines(text: string, locale: string): string {
+  const patterns = locale.startsWith("zh") ? ZH_PAYMENT_REDLINE_SCRUB : EN_PAYMENT_REDLINE_SCRUB;
+  let result = text;
+  for (const [regex, replacement] of patterns) {
+    regex.lastIndex = 0;
+    result = result.replace(regex, replacement);
+  }
+  return result.replace(/\s{2,}/g, " ").replace(/\s+([,.;:!?])/g, "$1");
+}
+
+function sanitizeDeliveryBodyPart(text: string, locale: string): string {
+  let result = filterDeletedTerms(text);
+  result = applySortedTermReplacements(result, locale);
+  if (toGlossaryLocale(locale) === "zh") {
+    result = applyZhRegexReplacements(result, locale);
+  } else {
+    result = applyEnRegexReplacements(result, locale);
+  }
+  result = scrubPaymentProcessorRedlines(result, locale);
+  result = wrapBareKeepCnSoftTerms(result, locale);
+  result = stripBrokenMarkers(result);
+  result = collapseDoubleTranslation(result);
+  result = stripNestedChineseLabelWrappers(result, locale);
+  return result;
+}
+
+/** POJU final delivery — deterministic scrub (redlines, bare terms, gloss wrap). Preserves ═══ marker lines. */
 export function sanitizeDeliveryText(fullText: string, locale: string): string {
   const parts = fullText.split(DELIVERY_MARKER_RE);
-  parts.forEach((part, i) => {
-    if (i % 2 === 0) auditDeliveredText(part, locale);
-  });
-  return fullText;
+  const cleaned = parts.map((part, i) => (i % 2 === 0 ? sanitizeDeliveryBodyPart(part, locale) : part));
+  const text = cleaned.join("");
+  logBaziTermObservations(text, locale, "final-delivery-sanitize");
+  return text;
 }
 
 /** @deprecated Use buildTermMarkingPromptBlock — LLM marks terms at generation time. */

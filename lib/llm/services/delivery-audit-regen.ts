@@ -86,18 +86,10 @@ export function isCriticalDeliveryAuditFailure(
 ): boolean {
   return violations.some(
     (v) =>
-      v.label.startsWith("term:") ||
       v.label === "bare_sign_poem" ||
       v.label === "broken_marker" ||
-      v.label === "grounding_low" ||
-      v.label.startsWith("out_of_set_") ||
-      v.label.startsWith("shen_sha_") ||
-      v.label.startsWith("relation_") ||
-      v.label.startsWith("compliance_redline:") ||
-      v.label.startsWith("divination:") ||
       v.label === "marker_missing_plain" ||
-      v.label.startsWith("marker_visible_") ||
-      v.label.includes("bazi_"),
+      v.label.startsWith("marker_visible_"),
   );
 }
 

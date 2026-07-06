@@ -6,7 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { createInitialAgentState } from "@/lib/poju/agent-state";
-import { classifyConfirmationAffirmative, appendConfirmationInvite, hasConfirmationInviteCue } from "@/lib/poju/confirmation-reply";
+import { classifyConfirmationAffirmative } from "@/lib/poju/confirmation-reply";
 import { formatAgendaProgressLabel } from "@/lib/poju/agenda-progress-label";
 import { advanceStateMachine, extractModelTurnSignals } from "@/lib/poju/state-machine";
 import { wrapBareKeepCnSoftTerms } from "@/lib/llm/sanitize/term-marking";
@@ -66,12 +66,13 @@ function main(): void {
   assert("no empty 深入推演 invite", !base.includes("告诉他你要为他深入推演"));
   assert("first collecting asks current_focus", base.includes("收尾必须立刻问"));
 
-  console.log("\n=== Confirmation invite fallback ===\n");
-  const bareSummary = "这八年，你不是不想走出来，是你把自己关在了一个牢笼里。";
-  assert("bare summary lacks cue", !hasConfirmationInviteCue(bareSummary));
-  const withInvite = appendConfirmationInvite(bareSummary, "zh");
-  assert("append adds 可以/没有了", /可以|没有了/.test(withInvite));
-  assert("agent uses appendConfirmationInvite", read("lib/poju/agent.ts").includes("appendConfirmationInvite"));
+  console.log("\n=== Confirmation — signal-only (Block 58) ===\n");
+  assert("agent does not appendConfirmationInvite", !read("lib/poju/agent.ts").includes("appendConfirmationInvite"));
+  assert(
+    "confirmation-reply has no text-matching invite cue",
+    !read("lib/poju/confirmation-reply.ts").includes("hasConfirmationInviteCue"),
+  );
+  assert("v6 confirmation wrap-up rules exist", read("lib/llm/phases/confirmation-phase-v6.ts").includes("POJU_V6_CONFIRMATION_WRAP_UP_RULES"));
   assert("last agenda directive", read("lib/llm/phases/collecting-phase.ts").includes("buildLastAgendaItemDirective"));
 
   const wrapped = wrapBareKeepCnSoftTerms("缺关键平衡能量（水）。", "zh");
