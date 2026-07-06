@@ -43,3 +43,16 @@ export const READING_LAYOUT_CONTRACT = `# 降维排版（杂志式版面 · 用�
 - **Glyph**：question_response / 命理看此事 / 签文看此事 / synthesis / hidden_tension / your_moment / exploration.text 等均按上式。
 - **POJU 主交付**：═══ ANALYSIS / CONCLUSION / WHAT TO DO / COMING BACK ═══ 各段内小标题+短段；CONCLUSION 直答 + Action 用金句框。
 - **Match**：analysis_a/b.detail、combined.detail、conclusion、recommendations.actions[].detail 同式。`;
+
+/** POJU 主交付专用 — 排版硬约束（解析依赖 · 违反即字墙） */
+export const POJU_DELIVERY_STRUCTURE_MANDATE = `# 主交付排版硬约束（解析依赖 · 违反即字墙）
+
+【必须】ANALYSIS / CONCLUSION / WHAT TO DO / COMING BACK 四段之间用**独立成行**的 \`═══ SECTION ═══\` 分隔（SECTION 名必须英文大写）。
+
+【必须】ANALYSIS 内拆 **3–4 个 \`### 子标题\`**，每个子标题下 **2–3 个短段**（每段 ≤120 中文 / ≤120 英文词），段间 **空一行**。
+
+【必须】每个大段至少 **1 个金句框** \`> **要旨:** …\`（CONCLUSION 直答 original_question 的句子**必须**金句框；WHAT TO DO 每条 Action 核心句优先金句框）。
+
+【必须】并列要点用 \`- \` 列表，**每条独占一行**。
+
+【禁止】任何超过 120 字/词的长段；禁止把多个论点挤进一段；禁止省略 \`═══\` 分隔或省略 ANALYSIS 内 \`###\`。`;

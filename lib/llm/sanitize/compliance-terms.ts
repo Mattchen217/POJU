@@ -38,6 +38,7 @@ import {
   parseTermMarkers,
   plainByTermId,
   repairChatTermMarkers,
+  stripBareTermMarkers,
   stripBrokenMarkers,
   stripForbiddenShenSha,
   stripOutOfSetFactTerms,
@@ -436,15 +437,10 @@ export function sanitizeDeepStringFields(value: unknown, locale: string): unknow
 const DELIVERY_MARKER_RE =
   /(═══\s*(?:ANALYSIS|CONCLUSION|WHAT\s+(?:TO\s+DO|YOU\s+CAN\s+DO)|COMING\s+BACK)\s*═══)/gi;
 
-const ZH_PAYMENT_REDLINE_SCRUB: Array<[RegExp, string]> = [
-  [/占卜/g, ""],
-  [/宿命/g, "人生轨迹"],
-  [/命运/g, "人生轨迹"],
-  [/星象/g, "能量节律"],
-  [/吉凶/g, ""],
-];
+const INTACT_MARKER_CHUNK_RE =
+  /⟦t:[a-zA-Z0-9_:]+\|(?:\\.|[^|\\])*?(?:\|(?:\\.|[^|\\])*?)?⟧|⟦g\|(?:\\.|[^|\\])*?\|(?:\\.|[^|]|\\[^⟧])*?⟧/g;
 
-const EN_PAYMENT_REDLINE_SCRUB: Array<[RegExp, string]> = [
+const EN_PAYMENT_REDLINE_PATTERNS: ReadonlyArray<[RegExp, string]> = [
   [/\bhoroscope\b/gi, "energy rhythm"],
   [/\bastrology\b/gi, "pattern reading"],
   [/\bpsychic\b/gi, ""],
@@ -454,30 +450,98 @@ const EN_PAYMENT_REDLINE_SCRUB: Array<[RegExp, string]> = [
   [/\bfate\b/gi, "life trajectory"],
 ];
 
-function scrubPaymentProcessorRedlines(text: string, locale: string): string {
-  const patterns = locale.startsWith("zh") ? ZH_PAYMENT_REDLINE_SCRUB : EN_PAYMENT_REDLINE_SCRUB;
+const BARE_GANZHI_STANDALONE_RE =
+  /(?<![\u4e00-\u9fff])[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥](?![\u4e00-\u9fff])/g;
+
+function replaceStandaloneZhWord(text: string, word: string, replacement: string): string {
+  const re = new RegExp(`(?<![\\u4e00-\\u9fff])${escapeRegExp(word)}(?![\\u4e00-\\u9fff])`, "g");
+  return text.replace(re, replacement);
+}
+
+/** Stripe redline han words — global replace safe (not substrings of common non-term words). */
+const ZH_STRIPE_GLOBAL_REPLACE: ReadonlyArray<[string, string]> = [
+  ["占卜", ""],
+  ["宿命", "人生轨迹"],
+  ["命运", "人生轨迹"],
+  ["星象", "能量节律"],
+  ["吉凶", ""],
+];
+
+function replaceStandaloneRedlines(text: string, locale: string): string {
   let result = text;
-  for (const [regex, replacement] of patterns) {
-    regex.lastIndex = 0;
-    result = result.replace(regex, replacement);
+  if (locale.startsWith("zh")) {
+    for (const [word, replacement] of ZH_STRIPE_GLOBAL_REPLACE) {
+      if (word === "命运") {
+        result = replaceStandaloneZhWord(result, word, replacement);
+        continue;
+      }
+      result = result.split(word).join(replacement);
+    }
+    result = replaceStandaloneZhWord(result, "大运", "当前阶段气候");
+    result = replaceStandaloneZhWord(result, "流年", "当前时空效能");
+  } else {
+    for (const [regex, replacement] of EN_PAYMENT_REDLINE_PATTERNS) {
+      regex.lastIndex = 0;
+      result = result.replace(regex, replacement);
+    }
   }
   return result.replace(/\s{2,}/g, " ").replace(/\s+([,.;:!?])/g, "$1");
 }
 
-function sanitizeDeliveryBodyPart(text: string, locale: string): string {
-  let result = filterDeletedTerms(text);
-  result = applySortedTermReplacements(result, locale);
-  if (toGlossaryLocale(locale) === "zh") {
-    result = applyZhRegexReplacements(result, locale);
-  } else {
-    result = applyEnRegexReplacements(result, locale);
+function filterDeletedTermsBounded(text: string): string {
+  if (!text?.trim()) return text;
+  let result = text;
+  for (const c of TERM_GLOSSARY) {
+    if (c.surface !== "delete") continue;
+    for (const term of c.forbidden_variants) {
+      if (isChineseVariant(term)) {
+        result = replaceStandaloneZhWord(result, term, "");
+      } else {
+        const re = new RegExp(`\\b${escapeRegExp(term)}\\b`, "gi");
+        result = result.replace(re, "");
+      }
+    }
   }
-  result = scrubPaymentProcessorRedlines(result, locale);
-  result = wrapBareKeepCnSoftTerms(result, locale);
-  result = stripBrokenMarkers(result);
-  result = collapseDoubleTranslation(result);
-  result = stripNestedChineseLabelWrappers(result, locale);
-  return result;
+  return result.replace(/\s{2,}/g, " ").replace(/\s+([,.;:!?])/g, "$1");
+}
+
+function removeStandaloneBareGanzhi(text: string): string {
+  BARE_GANZHI_STANDALONE_RE.lastIndex = 0;
+  return text.replace(BARE_GANZHI_STANDALONE_RE, "");
+}
+
+function transformNonMarkerRegions(text: string, transform: (segment: string) => string): string {
+  INTACT_MARKER_CHUNK_RE.lastIndex = 0;
+  const out: string[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = INTACT_MARKER_CHUNK_RE.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      out.push(transform(text.slice(lastIndex, match.index)));
+    }
+    out.push(match[0]);
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < text.length) {
+    out.push(transform(text.slice(lastIndex)));
+  }
+  return out.join("");
+}
+
+function sanitizeNonMarkerSegment(segment: string, locale: string): string {
+  let s = stripBareTermMarkers(segment);
+  s = s.replace(/⟦(?:(?!⟧).)*$/gm, "");
+  s = s.replace(/⟦(?:(?!⟧).)*?(?=⟦)/g, "");
+  s = s.replace(/⟧/g, "");
+  s = s.replace(/⟦/g, "");
+  s = replaceStandaloneRedlines(s, locale);
+  s = filterDeletedTermsBounded(s);
+  s = removeStandaloneBareGanzhi(s);
+  return s;
+}
+
+function sanitizeDeliveryBodyPart(text: string, locale: string): string {
+  return transformNonMarkerRegions(text, (segment) => sanitizeNonMarkerSegment(segment, locale));
 }
 
 /** POJU final delivery — deterministic scrub (redlines, bare terms, gloss wrap). Preserves ═══ marker lines. */

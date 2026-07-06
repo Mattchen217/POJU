@@ -55,9 +55,9 @@ function main(): void {
   assert("食神 in marker visible does not flag bazi_term", baziHits.length === 0);
 
   console.log("\n=== Q3 · redline scrub ===\n");
-  const scrubbed = sanitizeDeliveryText("═══ ANALYSIS ═══\n这是占卜与命运的结论。", "zh");
+  const scrubbed = sanitizeDeliveryText("═══ ANALYSIS ═══\n涉及占卜。运转与拒绝都正常。", "zh");
   assert("sanitize removes 占卜", !scrubbed.includes("占卜"));
-  assert("sanitize replaces 命运", !scrubbed.includes("命运"));
+  assert("sanitize preserves 拒绝/运转", scrubbed.includes("拒绝") && scrubbed.includes("运转"));
 
   console.log("\n=== Q3 · bazi violations not critical ===\n");
   const baziViolations: ComplianceViolation[] = [

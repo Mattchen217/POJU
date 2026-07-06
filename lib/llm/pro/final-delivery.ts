@@ -33,7 +33,7 @@ import {
   buildNorthAmericaAdaptation,
   stitchPromptSections,
 } from "@/lib/llm/prompts/oriental-counselor-base";
-import { READING_LAYOUT_CONTRACT } from "@/lib/llm/prompts/reading-layout";
+import { POJU_DELIVERY_STRUCTURE_MANDATE, READING_LAYOUT_CONTRACT } from "@/lib/llm/prompts/reading-layout";
 import { buildTermMarkingPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
 import {
   getPojuChatLanguageDirective,
@@ -189,15 +189,15 @@ ${regionalGuidance ? `${regionalGuidance}\n\n` : ""}规则:
 - **分段标记行**（═══ ANALYSIS ═══ 等）必须原样保留；标记内正文用目标语言
 - Action 子标题可保留英文 "### Action 1: ..." 或本地化，但行动**内容**必须用目标语言
 
-# 交付结构（解析依赖 — 四段大标记必须独立成行）
+# 交付结构（解析依赖 — 四段大标记必须独立成行 · 见 POJU_DELIVERY_STRUCTURE_MANDATE）
 
-严格使用 POJU_OUTPUT_BRANDING 中的分段标记。
+严格使用 POJU_OUTPUT_BRANDING 中的分段标记。**缺 ═══ 分隔 = 交付失败。**
 
 ═══ ANALYSIS ═══
-（展开：⟦t:day_master|…⟧ / ⟦t:decade|…⟧ / ⟦t:yong_shen|…⟧ / 困境根源 / 破局方向 — 见 POJU_BAZI_DEEP_METHOD；**小标题+2–3句短段+金句框**，见 READING_LAYOUT；禁裸 chart/Day Master/合婚术语）
+（**3–4 个 ### 子标题**；每子标题 2–3 短段 + ≥1 金句框；**每个子标题至少一处锚定本盘真实结构**——day_master/strength/yong_shen/十神/本命关系实例，中性 ⟦t:…⟧，禁裸术语；若本盘有定向动态关系，织入 1–2 条解释「为什么会卡」）
 
 ═══ CONCLUSION ═══
-（收束：对用户问题的直接判断 + 1–2 句核心建议 — **直答句用金句框** \`> **…:** …\`）
+（**直答 original_question** + **1–2 句展开** + **金句框收束**——禁止一句话收场；依据 = 选定破局方向 × 本盘结构）
 
 ═══ WHAT TO DO ═══
 给 3 条行动，每条用 "### Action N: " 开头 + **自拟标题**（贴合该用户具体处境，不用 Environmental Alignment 等固定名）。
@@ -218,7 +218,7 @@ ${regionalGuidance ? `${regionalGuidance}\n\n` : ""}规则:
 # 关键规则
 
 1. 全文使用用户语言。
-2. 用户可见须 **⟦t:id|软译词 (干支)⟧ 标记** + 禁裸合婚排盘术语 + 禁超自然承诺；五行/I Ching 可保留。
+2. 用户可见须 **⟦t:id|软译词⟧ 三段位标记**（可见软译**禁括号干支**）+ 禁裸合婚排盘术语 + 禁超自然承诺；五行/I Ching 可保留。
 3. WHAT TO DO 三条须极其具体（时间+地点+人+话+可观察结果）。
 4. 不下命运定论；不用中医话术（方子/诊脉/复诊）。
 5. 不暴露 Glyph / Syncro / Match 等产品名。
@@ -300,6 +300,7 @@ function buildDeliveryDynamicTaskTail(input: {
   expertMaterials: string;
 }): string {
   return stitchPromptSections(
+    POJU_DELIVERY_STRUCTURE_MANDATE,
     READING_LAYOUT_CONTRACT,
     POJU_BAZI_DEEP_METHOD,
     POJU_ACTION_DESIGN_PRINCIPLES,
@@ -346,12 +347,11 @@ ${agendaStr}
 ## 命局基础（structured —— 事实源，节选）
 ${baseStr}`,
     `# 整合要求（闭环 · 反断点）
-- ANALYSIS：直接展开 relationship_conclusion，点名命盘真实结构（pillars_detail/yong_shen/da_yun…）；
-  不要重新做一遍困境分析，不要复述命盘。
-- CONCLUSION：落回 original_question，依据 = 被收集证据【选定】的那条破局方向（一句金句框直答）。
+- ANALYSIS：直接展开 relationship_conclusion；**每个 ### 子标题**至少锚定一处本盘 pillars_detail/yong_shen/strength/十神/本命或定向关系实例（中性 ⟦t:…⟧）；3–4 个子标题，短段+金句框，禁字墙。
+- CONCLUSION：落回 original_question **完整直答**（金句框 + 1–2 句展开）；依据 = 被收集证据【选定】破局方向 + 本盘实算关系标签（若有）。
 - WHAT TO DO：3 条从「选定方向 × 用户亲口议程证据」生长，禁万能模板；
   每条末尾 Profile basis 引具体结构（如"month.ten_god 七杀 + da_yun 第三步"）。
-- 全程只用本次 structured 实有命理实例；过 auditDeliveredText（集外神煞 / 关系 / 断标记 / 裸干支 → 拒绝落库重生成）。
+- 全程只用本次 structured 实有命理实例；标记可见词只用术语表 soft 词，**禁括号干支**。
 - ${POJU_DELIVERY_COMPLIANCE_LINE}；不暴露 Glyph/Syncro/Match。
 - 须按 POJU 八字深度解读法则展开 ANALYSIS（含 4b 关系：定向 1–3 条、中性金字、不罗列）；按行动设计原则填写 WHAT TO DO 三条。`,
     POJU_OUTPUT_DATA_DISCIPLINE,

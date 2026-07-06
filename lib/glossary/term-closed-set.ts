@@ -314,7 +314,12 @@ export function relationPolarityToken(id: string): "green" | "red" | "gold" | nu
 export const KEEP_CN_VISIBLE_SOFT: Record<string, { zh: string; en: string }> = {
   decade: { zh: "当前阶段气候", en: "current phase climate" },
   year: { zh: "当前时空效能", en: "current temporal efficacy" },
+  day_master: { zh: "核心特质", en: "core nature" },
+  yong_shen: { zh: "关键平衡能量", en: "key balancing element" },
 };
+
+/** Block 59 — visible soft labels never include stem-branch in parentheses; ganzhi stays in structured data only. */
+export const KEEP_CN_VISIBLE_NO_GANZHI = true as const;
 
 export const KEEP_CN_SLUGS = new Set([
   "day_master",

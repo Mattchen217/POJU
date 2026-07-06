@@ -156,15 +156,14 @@ export function stripBareTermMarkers(text: string): string {
   return text.replace(/(?<!⟦)t:[a-zA-Z0-9_:]+\|([^|]+)\|?/g, "$1");
 }
 
-/** Wrap bare keep_cn soft phrases (e.g. 人生阶段（丁酉）) that lack ⟦t:…⟧ markers. */
+/** Wrap bare keep_cn soft phrases that lack ⟦t:…⟧ markers (visible text = soft label only, no ganzhi). */
 export function wrapBareKeepCnSoftTerms(text: string, locale: string): string {
-  const gz = "[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]";
   const patterns: Array<{ id: string; label: string }> = [
     { id: "decade", label: "当前阶段气候" },
     { id: "day_master", label: "核心特质" },
     { id: "year", label: "当前时空效能" },
-    { id: "yong_shen", label: "用神" },
     { id: "yong_shen", label: "关键平衡能量" },
+    { id: "yong_shen", label: "用神" },
   ];
 
   const parts = text.split(/(⟦[^⟧]*⟧)/g);
@@ -173,15 +172,11 @@ export function wrapBareKeepCnSoftTerms(text: string, locale: string): string {
       if (i % 2 === 1) return part;
       let out = part;
       for (const { id, label } of patterns) {
-        const re = new RegExp(`${label}（(${gz})）`, "g");
+        const re = new RegExp(`(?<![\\u4e00-\\u9fff])${label}(?![（(])`, "g");
         out = out.replace(re, (match) =>
           encodeTermMarker(id, match, plainByTermId(id, locale) ?? undefined),
         );
       }
-      const elementRe = /(?:关键平衡能量|用神)（([金木水火土])）/g;
-      out = out.replace(elementRe, (match) =>
-        encodeTermMarker("yong_shen", match, plainByTermId("yong_shen", locale) ?? undefined),
-      );
       return out;
     })
     .join("");
@@ -259,18 +254,18 @@ export function uiTermById(
 export function buildTermMarkingFewShot(locale: string): string {
   const loc = toGlossaryLocale(locale);
   if (loc === "zh") {
-    return `## 字段 few-shot 示例（必须模仿此形态 · 三段位标记+中文干支+动态白话）
+    return `## 字段 few-shot 示例（必须模仿此形态 · 三段位标记+动态白话 · 可见软译不带干支）
 
 \`\`\`
-"question_response": "你问的是…这支 Glyph 照见的是耐心中的转机。结合你的 ⟦t:day_master|核心特质（乙木）|你像靠人脉和氛围做买卖的人，硬推销反而散劲⟧，此刻更宜先稳住节奏…"
-"命理看此事": "…你的 ⟦t:day_master|核心特质（乙木）|在这件事里，你需要先找能依靠的支点再往外伸⟧。外面这阵 ⟦t:year|流年能量（丙午）|今年这股燥热在推你焦虑乱动，不是你能力不够⟧ 只会让你更乱。**稳住。** 先把 ⟦t:yong_shen|用神（水）|对你就是：整理现有客户名单、把服务流程理顺，像给根须浇水⟧ 做到位，再迈一小步…"
+"question_response": "你问的是…这支 Glyph 照见的是耐心中的转机。结合你的 ⟦t:day_master|核心特质|你像靠人脉和氛围做买卖的人，硬推销反而散劲⟧，此刻更宜先稳住节奏…"
+"命理看此事": "…你的 ⟦t:day_master|核心特质|在这件事里，你需要先找能依靠的支点再往外伸⟧。外面这阵 ⟦t:year|当前时空效能|今年这股燥热在推你焦虑乱动，不是你能力不够⟧ 只会让你更乱。**稳住。** 先把 ⟦t:yong_shen|关键平衡能量|对你就是：整理现有客户名单、把服务流程理顺，像给根须浇水⟧ 做到位，再迈一小步…"
 \`\`\``;
   }
-  return `## Field few-shot examples (copy this exact shape · 3-part markers + Chinese stem-branch + dynamic plain)
+  return `## Field few-shot examples (copy this exact shape · 3-part markers + dynamic plain · visible soft text has NO stem-branch)
 
 \`\`\`
-"question_response": "You asked whether… This Glyph reflects a turn that ripens through patience. Your ⟦t:day_master|core nature (乙木)|In this sentence: you grow through relationships, not hard selling⟧ needs a clear anchor before you stretch further…"
-"命理看此事": "… your ⟦t:day_master|core nature (乙木)|Here: you need a reliable base before reaching out⟧ seeks connection with structure. The current ⟦t:year|year's energy (丙午)|This year feels like heat pushing you to act before you're ready—not a personal failing⟧ nudges one small outward step only after ⟦t:yong_shen|key balancing element (Water)|For you: tidy your offer, call one trusted mentor—like opening a window⟧ is in place…"
+"question_response": "You asked whether… This Glyph reflects a turn that ripens through patience. Your ⟦t:day_master|core nature|In this sentence: you grow through relationships, not hard selling⟧ needs a clear anchor before you stretch further…"
+"命理看此事": "… your ⟦t:day_master|core nature|Here: you need a reliable base before reaching out⟧ seeks connection with structure. The current ⟦t:year|current temporal efficacy|This year feels like heat pushing you to act before you're ready—not a personal failing⟧ nudges one small outward step only after ⟦t:yong_shen|key balancing element|For you: tidy your offer, call one trusted mentor—like opening a window⟧ is in place…"
 \`\`\``;
 }
 
@@ -283,8 +278,8 @@ export function buildTermMarkingPromptBlock(locale: string): string {
     const keep =
       e.keep_cn === true
         ? loc === "zh"
-          ? " + 干支（如 核心特质（乙木））"
-          : " + stem-branch in parens (e.g. core nature (乙木))"
+          ? "（可见软译只用上表词，禁括号干支）"
+          : " (visible soft label only — no stem-branch in parens)"
         : "";
     const sample = e.forbidden.slice(0, 4).join(" / ");
     return `| \`${e.id}\` | ${sample} | **${soft}**${keep} |`;
@@ -299,9 +294,9 @@ export function buildTermMarkingPromptBlock(locale: string): string {
 ${rows}
 
 ## 打标记规则
-1. \`<可见文本>\` = 你写出的软翻译词；若该 id 带干支，拼成 \`软翻译词 (干支)\` — 例：\`⟦t:day_master|core nature (乙木)|You grow through people, not force⟧\`
+1. \`<可见文本>\` = 你写出的软翻译词（**只用上表 soft 词，禁在可见词里加括号干支**）— 例：\`⟦t:day_master|核心特质|You grow through people, not force⟧\`
 2. \`<该处白话>\` = **结合本句意境 + 用户问题**现写的 2–4 句人话（动作 3）：一句比方 + 现实可做的具体事 + 对这件事意味着什么。**同 id 在不同段落白话必须不同**；白话**不出现在正文**，只进标记第 3 段（UI tooltip）
-3. **只用当前交付语言**，整句必须通顺；标记**只包软翻译词（含括号干支）**，**勿把 your/the/as 等前后词包进标记**
+3. **只用当前交付语言**，整句必须通顺；标记**只包软翻译词**，**勿把 your/the/as 等前后词包进标记**，**勿在可见词里加（干支）**
 4. 正文须含贴切的日常比喻（动作 1）；流年/大运类先归因外境再给掌控感（动作 2）
 5. **每段/每字段 ≤120 词（中文 ≤180 字）**；**每段金字 ≤2 为硬约束**——一段里同一/多个术语只在最关键处打标，其余自然行文不打标。紧挨着重复同一词只标第一次；**绝不在别处套过之后，后文把同一个词裸写。** 全文**一个主比喻**，tooltip 小比喻与之呼应（瘦身四条）
 6. **签诗/古文诗句不是术语**：禁逐字引签诗原文；只能意象化转述，**不打术语标记**
