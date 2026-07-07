@@ -163,7 +163,7 @@ function buildDegradedDeliveryRules(agent: POJUAgentState): string {
 5. **合规不变**：
    - 重命盘 ≠ 编造：只用 Base Analysis 中真实算出的内容
    - ${POJU_DELIVERY_COMPLIANCE_LINE}
-   - 用户可见须用术语表 soft 词 + ⟦t:id|…⟧ 标记；禁裸合婚排盘术语`;
+   - 用户可见须 **⟦t:id|<该情景软译词>|<这句话里对他这件事的白话解释>⟧ 三段位硬要求**；第三段须针对当前处境/本句，不是术语通用定义；禁裸合婚排盘术语`;
 }
 
 function buildFullDeliveryTask(
@@ -194,7 +194,7 @@ ${regionalGuidance ? `${regionalGuidance}\n\n` : ""}规则:
 严格使用 POJU_OUTPUT_BRANDING 中的分段标记。**缺 ═══ 分隔 = 交付失败。**
 
 ═══ ANALYSIS ═══
-（**3–4 个 ### 子标题**；每子标题 2–3 短段 + ≥1 金句框；**每个子标题至少一处锚定本盘真实结构**——day_master/strength/yong_shen/十神/本命关系实例，中性 ⟦t:…⟧，禁裸术语；若本盘有定向动态关系，织入 1–2 条解释「为什么会卡」）
+（**3–4 个 ### 子标题**；每子标题 2–3 短段 + ≥1 金句框；**每个子标题至少一处锚定本盘真实结构**——day_master/strength/yong_shen/十神/本命关系实例，**⟦t:id|情景软译|对他这件事的白话⟧ 三段位**，禁裸术语；若本盘有定向动态关系，织入 1–2 条解释「为什么会卡」）
 
 ═══ CONCLUSION ═══
 （**直答 original_question** + **1–2 句展开** + **金句框收束**——禁止一句话收场；依据 = 选定破局方向 × 本盘结构）
@@ -218,7 +218,7 @@ ${regionalGuidance ? `${regionalGuidance}\n\n` : ""}规则:
 # 关键规则
 
 1. 全文使用用户语言。
-2. 用户可见须 **⟦t:id|软译词⟧ 三段位标记**（可见软译**禁括号干支**）+ 禁裸合婚排盘术语 + 禁超自然承诺；五行/I Ching 可保留。
+2. 关键术语 **⟦t:<id>|<该情景下的软译词>|<这句话里对他这件事的白话解释>⟧ 三段位硬要求**（可见软译**禁括号干支**）。第三段必须是【针对他当前处境/这句话】的具体解释，不是术语的通用定义；UI 仅在缺第三段时才回退词表。另：禁裸合婚排盘术语 + 禁超自然承诺；五行/I Ching 可保留。
 3. WHAT TO DO 三条须极其具体（时间+地点+人+话+可观察结果）。
 4. 不下命运定论；不用中医话术（方子/诊脉/复诊）。
 5. 不暴露 Glyph / Syncro / Match 等产品名。
@@ -347,11 +347,11 @@ ${agendaStr}
 ## 命局基础（structured —— 事实源，节选）
 ${baseStr}`,
     `# 整合要求（闭环 · 反断点）
-- ANALYSIS：直接展开 relationship_conclusion；**每个 ### 子标题**至少锚定一处本盘 pillars_detail/yong_shen/strength/十神/本命或定向关系实例（中性 ⟦t:…⟧）；3–4 个子标题，短段+金句框，禁字墙。
+- ANALYSIS：直接展开 relationship_conclusion；**每个 ### 子标题**至少锚定一处本盘 pillars_detail/yong_shen/strength/十神/本命或定向关系实例（**三段位 ⟦t:id|软译|对他这件事的白话⟧**）；3–4 个子标题，短段+金句框，禁字墙。
 - CONCLUSION：落回 original_question **完整直答**（金句框 + 1–2 句展开）；依据 = 被收集证据【选定】破局方向 + 本盘实算关系标签（若有）。
 - WHAT TO DO：3 条从「选定方向 × 用户亲口议程证据」生长，禁万能模板；
   每条末尾 Profile basis 引具体结构（如"month.ten_god 七杀 + da_yun 第三步"）。
-- 全程只用本次 structured 实有命理实例；标记可见词只用术语表 soft 词，**禁括号干支**。
+- 全程只用本次 structured 实有命理实例；标记可见词只用术语表 soft 词，**禁括号干支**；**第三段白话须情景化**，禁词表通用定义当正文。
 - ${POJU_DELIVERY_COMPLIANCE_LINE}；不暴露 Glyph/Syncro/Match。
 - 须按 POJU 八字深度解读法则展开 ANALYSIS（含 4b 关系：定向 1–3 条、中性金字、不罗列）；按行动设计原则填写 WHAT TO DO 三条。`,
     POJU_OUTPUT_DATA_DISCIPLINE,

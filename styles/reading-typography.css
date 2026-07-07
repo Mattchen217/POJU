@@ -126,6 +126,13 @@
   margin-top: 0.35rem;
 }
 
+.pchat__delivery section > div.reading-body,
+.pchat__delivery section > div:not(.pchat__delivery-actions) {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15em;
+}
+
 /* Glyph report */
 .glyph-report {
   gap: 3.5rem; /* 56px between sections */

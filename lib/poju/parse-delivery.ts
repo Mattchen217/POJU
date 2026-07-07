@@ -1,3 +1,5 @@
+import { reflowParagraphList } from "@/lib/reading/reflow-paragraphs";
+
 export type DeliverySectionType = "analysis" | "conclusion" | "actions" | "invitation" | "opening";
 
 export interface DeliverySection {
@@ -28,13 +30,14 @@ export function guessSectionType(title: string): DeliverySectionType {
 }
 
 function splitBodyParagraphs(body: string, type: DeliverySectionType): string[] {
-  if (type === "actions") {
-    return splitActionParagraphs(body);
-  }
-  return body
-    .split(/\n\n+/)
-    .map((p) => p.trim())
-    .filter(Boolean);
+  const raw =
+    type === "actions"
+      ? splitActionParagraphs(body)
+      : body
+          .split(/\n\n+/)
+          .map((p) => p.trim())
+          .filter(Boolean);
+  return reflowParagraphList(raw, type === "actions" ? "actions" : "body");
 }
 
 /** Split WHAT TO DO body into one paragraph per ### Action N block. */

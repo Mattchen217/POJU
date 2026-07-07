@@ -8,6 +8,7 @@ import {
   parseBlockquoteParts,
   parseReadingBlocks,
 } from "@/lib/reading/parse-reading-blocks";
+import { reflowLongParagraph } from "@/lib/reading/reflow-paragraphs";
 
 import "@/styles/reading-typography.css";
 
@@ -104,9 +105,14 @@ export function RichReadingText({ text, locale, className, variant = "body" }: P
   const blocks = useMemo(() => parseReadingBlocks(text), [text]);
 
   if (!blocks.length) {
+    const chunks = reflowLongParagraph(text);
     return (
       <div className={cn("reading-body", variant === "poem" && "reading-body--poem", className)}>
-        <MarkedInline text={text} locale={locale} dedupeScope={dedupeScope} />
+        {chunks.map((chunk, i) => (
+          <p key={i} className="reading-p">
+            <MarkedInline text={chunk} locale={locale} dedupeScope={dedupeScope} keyBase={i * 10} />
+          </p>
+        ))}
       </div>
     );
   }
@@ -134,17 +140,42 @@ export function RichReadingText({ text, locale, className, variant = "body" }: P
             blockKey={keyBase}
           />
         );
-      case "lead":
+      case "lead": {
+        const bodyChunks = reflowLongParagraph(block.body);
+        if (bodyChunks.length <= 1) {
+          return (
+            <LeadBlock
+              key={i}
+              label={block.label}
+              body={block.body}
+              locale={locale}
+              dedupeScope={dedupeScope}
+              blockKey={keyBase}
+            />
+          );
+        }
         return (
-          <LeadBlock
-            key={i}
-            label={block.label}
-            body={block.body}
-            locale={locale}
-            dedupeScope={dedupeScope}
-            blockKey={keyBase}
-          />
+          <div key={i} className="reading-unit">
+            <LeadBlock
+              label={block.label}
+              body={bodyChunks[0]!}
+              locale={locale}
+              dedupeScope={dedupeScope}
+              blockKey={keyBase}
+            />
+            {bodyChunks.slice(1).map((chunk, j) => (
+              <p key={`${i}-b-${j}`} className="reading-p">
+                <MarkedInline
+                  text={chunk}
+                  locale={locale}
+                  dedupeScope={dedupeScope}
+                  keyBase={keyBase + j + 1}
+                />
+              </p>
+            ))}
+          </div>
         );
+      }
       case "blockquote":
         return (
           <BlockquoteContent
@@ -170,17 +201,19 @@ export function RichReadingText({ text, locale, className, variant = "body" }: P
             ))}
           </ul>
         );
-      default:
-        return (
-          <p key={i} className="reading-p">
+      default: {
+        const chunks = reflowLongParagraph(block.content);
+        return chunks.map((chunk, j) => (
+          <p key={`${i}-${j}`} className="reading-p">
             <MarkedInline
-              text={block.content}
+              text={chunk}
               locale={locale}
               dedupeScope={dedupeScope}
-              keyBase={keyBase}
+              keyBase={keyBase + j}
             />
           </p>
-        );
+        ));
+      }
     }
   });
 

@@ -306,6 +306,7 @@ export function MarkedInline({
   dedupeScope?: Set<string>;
   keyBase?: number;
 }) {
+  // Block 62/63 — UI compliance net: autoMarkBareTerms inside prepareTextForGlossaryRender (before parse).
   const prepared = prepareTextForGlossaryRender(text, locale);
   const hasMarkers = prepared.includes("⟦t:") || prepared.includes("⟦g|");
   const nodes = parseMarkedText(prepared, locale, keyBase, dedupeScope);
