@@ -96,9 +96,15 @@ async function circuitBreakerTests(): Promise<void> {
   console.warn = origWarn;
 
   const finalRoute = read("app/api/poju/final-delivery/route.ts");
-  assert("final-delivery route uses circuit-breaker log prefix", finalRoute.includes("[circuit-breaker:final-delivery]"));
+  assert(
+    "final-delivery route does NOT use closed-set guard (Block 62)",
+    !finalRoute.includes("generateWithClosedSetGuard") && !finalRoute.includes("[circuit-breaker:final-delivery]"),
+  );
   const btRoute = read("app/api/poju/breakthrough-core/route.ts");
-  assert("breakthrough-core route uses generateWithClosedSetGuard", btRoute.includes("generateWithClosedSetGuard"));
+  assert(
+    "breakthrough-core route does NOT use generateWithClosedSetGuard (Block 62)",
+    !btRoute.includes("generateWithClosedSetGuard"),
+  );
 }
 
 function agendaGateTests(): void {
@@ -322,7 +328,7 @@ function fileChecklist(): void {
   const deep = getThinkingConfig("deep_analysis");
   assert("deep_analysis thinking enabled", deep.enabled === true);
   const btRouteSrc = read("app/api/poju/breakthrough-core/route.ts");
-  assert("breakthrough-core route xhigh + 16000", btRouteSrc.includes('thinking_effort: "xhigh"') && btRouteSrc.includes("16_000"));
+  assert("breakthrough-core route high + 16000", btRouteSrc.includes('thinking_effort: "high"') && btRouteSrc.includes("16_000"));
 }
 
 async function main(): Promise<void> {

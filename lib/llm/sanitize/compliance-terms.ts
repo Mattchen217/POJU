@@ -30,6 +30,7 @@ import {
   auditRelationsAgainstInstance,
   auditShenShaAgainstInstance,
   auditTermMarkerDensity,
+  autoMarkBareTerms,
   buildTermMarkingPromptBlock,
   buildTermMarkingFewShot,
   detectBrokenMarkers,
@@ -37,6 +38,7 @@ import {
   maskMarkersForAudit,
   parseTermMarkers,
   plainByTermId,
+  prepareTextForGlossaryRender,
   repairChatTermMarkers,
   stripBareTermMarkers,
   stripBrokenMarkers,
@@ -60,12 +62,14 @@ export {
   auditRelationsAgainstInstance,
   auditShenShaAgainstInstance,
   auditTermMarkerDensity,
+  autoMarkBareTerms,
   BARE_SIGN_POEM_PATTERN,
   buildTermMarkingPromptBlock,
   buildTermMarkingFewShot,
   encodeTermMarker,
   parseTermMarkers,
   plainByTermId,
+  prepareTextForGlossaryRender,
   repairChatTermMarkers,
   stripBrokenMarkers,
   stripForbiddenShenSha,
@@ -580,16 +584,6 @@ export function auditDeliveredText(
 
   if (detectBrokenMarkers(text)) {
     violations.push({ label: "broken_marker", snippet: snippetAround(text, text.indexOf("⟦"), 12) });
-  }
-
-  for (const hit of auditOutOfSetTerms(text)) {
-    violations.push(hit);
-  }
-
-  if (structured) {
-    for (const hit of auditRelationsAgainstInstance(text, structured, { relations: opts?.relations })) {
-      violations.push(hit);
-    }
   }
 
   for (const hit of auditBareGanzhi(text)) {

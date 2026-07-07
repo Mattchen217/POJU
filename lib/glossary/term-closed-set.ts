@@ -7,7 +7,7 @@ import { LIFE_STAGE_HAN } from "@/lib/calculations/chang-sheng";
 import type { TenGod } from "@/lib/match/data/stems-branches";
 import { BRANCHES, STEMS } from "@/lib/match/data/stems-branches";
 
-/** A1 — exactly 9 (bazi-shensha-local + match/data/shensha). 飞刃 = 羊刃. */
+/** A1 — engine-computed 神煞 (bazi-shensha-local). */
 export const CLOSED_SHEN_SHA = [
   "天乙贵人",
   "禄神",
@@ -18,6 +18,21 @@ export const CLOSED_SHEN_SHA = [
   "华盖",
   "孤辰",
   "寡宿",
+  "将星",
+  "劫煞",
+  "亡神",
+  "灾煞",
+  "国印",
+  "金舆",
+  "天德",
+  "月德",
+  "福星贵人",
+  "太极贵人",
+  "天医",
+  "学堂",
+  "词馆",
+  "红鸾",
+  "天喜",
 ] as const;
 
 export type ClosedShenSha = (typeof CLOSED_SHEN_SHA)[number];
@@ -95,17 +110,6 @@ export const CLOSED_SET_ALLOW_IDS: readonly string[] = [...CLOSED_WUXING, "五�
 /** Terms the engine NEVER computes — model must not invent. */
 export const OUT_OF_SET_FORBIDDEN_HAN = [
   "空亡",
-  "天德",
-  "月德",
-  "将星",
-  "劫煞",
-  "亡神",
-  "红鸾",
-  "天喜",
-  "天厨",
-  "金舆",
-  "学堂",
-  "词馆",
   "魁罡",
   "十恶大败",
   "孤鸾",
@@ -123,6 +127,7 @@ export const OUT_OF_SET_FORBIDDEN_HAN = [
   "血刃",
   "流霞",
   "隔角",
+  "天厨",
 ] as const;
 
 export const OUT_OF_SET_FORBIDDEN_EN = [
@@ -146,6 +151,21 @@ export const CLOSED_SET_SLUG: Record<string, string> = {
   华盖: "hua_gai",
   孤辰: "gu_chen",
   寡宿: "gua_su",
+  将星: "jiang_xing",
+  劫煞: "jie_sha",
+  亡神: "wang_shen",
+  灾煞: "zai_sha",
+  国印: "guo_yin",
+  金舆: "jin_yu",
+  天德: "tian_de",
+  月德: "yue_de",
+  福星贵人: "fu_xing_gui_ren",
+  太极贵人: "tai_ji_gui_ren",
+  天医: "tian_yi_star",
+  学堂: "xue_tang",
+  词馆: "ci_guan",
+  红鸾: "hong_luan",
+  天喜: "tian_xi",
   比肩: "bi_jian",
   劫财: "jie_cai",
   食神: "shi_shen",

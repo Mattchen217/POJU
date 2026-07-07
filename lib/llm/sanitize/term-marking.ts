@@ -182,6 +182,46 @@ export function wrapBareKeepCnSoftTerms(text: string, locale: string): string {
     .join("");
 }
 
+const BARE_AUTO_MARK_HAN = [...CLOSED_SET_REPLACE_IDS].sort((a, b) => b.length - a.length);
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * UI 渲染兜底：词表内裸命理词（未在 ⟦t:⟧ 内）自动补标 → 软译呈现。
+ * 只匹配闭集整词，带 CJK 词边界，不碰 marker 段。
+ */
+export function autoMarkBareTerms(text: string, locale: string): string {
+  const parts = text.split(/(⟦[^⟧]*⟧)/g);
+  return parts
+    .map((part, i) => {
+      if (i % 2 === 1) return part;
+      let out = part;
+      for (const hanId of BARE_AUTO_MARK_HAN) {
+        const slug = CLOSED_SET_SLUG[hanId] ?? hanId;
+        const ui = uiTermById(slug, locale) ?? uiTermById(hanId, locale);
+        if (!ui) continue;
+        const plain = plainByTermId(slug, locale) ?? ui.plain;
+        const re =
+          hanId.length === 1
+            ? new RegExp(
+                `(?<![\\u4e00-\\u9fff])${escapeRegExp(hanId)}(?![\\u4e00-\\u9fff（(])`,
+                "g",
+              )
+            : new RegExp(`${escapeRegExp(hanId)}(?![（(])`, "g");
+        out = out.replace(re, (match) => encodeTermMarker(slug, ui.soft || match, plain));
+      }
+      return out;
+    })
+    .join("");
+}
+
+/** 先补 keep_cn 软词，再补闭集裸词。 */
+export function prepareTextForGlossaryRender(text: string, locale: string): string {
+  return autoMarkBareTerms(wrapBareKeepCnSoftTerms(text, locale), locale);
+}
+
 /** Remove broken / unclosed markers so users never see raw `⟦`. Intact closed markers become visible text. */
 export function stripBrokenMarkers(text: string): string {
   let r = stripBareTermMarkers(text);
@@ -353,10 +393,6 @@ export function auditOutOfSetTerms(text: string): OutOfSetAuditHit[] {
   }
 
   return hits;
-}
-
-function escapeRegExp(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function blobMatchesOutOfSetForbidden(blob: string): boolean {

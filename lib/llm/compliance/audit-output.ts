@@ -243,7 +243,7 @@ const ZH_WUXING = "金木水火土";
 const ZH_STEM_BRANCH_REGEX = new RegExp(`[甲乙丙丁戊己庚辛壬癸][${ZH_BRANCHES}]`, "g");
 const ZH_BRANCH_ELEMENT_REGEX = new RegExp(`[${ZH_BRANCHES}][${ZH_WUXING}]`, "g");
 
-/** Detect policy violations. Does NOT flag bare Wood/Fire/Metal/Water/Earth or Yin-Yang as personality. */
+/** Block 62 — 仅两条硬红线：① 不报具体日期 ② 不占卜/不宿命。命理词由打标+UI软译，此处不拦截。 */
 export function detectOutputPolicyViolations(
   text: string,
   locale = "en",
@@ -251,58 +251,64 @@ export function detectOutputPolicyViolations(
   if (!text?.trim()) return [];
 
   const violations: OutputPolicyViolation[] = [];
-  const isZh = locale.startsWith("zh");
-  /** Marker-safe text for bazi/chart fingerprint — avoids false hits on soft-translate visible (e.g. 表达从容（食神）). */
-  const markerSafeText = maskMarkersForAudit(text);
 
-  if (isZh) {
-    for (const [regex, label] of ZH_BAZI_TERMS) {
-      pushRegex(markerSafeText, regex, "bazi_term", label, violations);
-    }
+  if (locale.startsWith("zh")) {
     for (const [regex, label] of ZH_COMPLIANCE_REDLINE) {
       pushRegex(text, regex, "compliance_redline", label, violations);
     }
     pushPointPredictionViolations(text, locale, violations);
+    pushPatterns(text, ZH_PREDICTION_PATTERNS, "prediction", "prediction_zh", violations);
+    pushRegex(text, ZH_DIVINATION_REGEX, "divination", "divination_zh", violations);
+  } else {
+    for (const [regex, label] of EN_COMPLIANCE_REDLINE) {
+      pushRegex(text, regex, "compliance_redline", label, violations);
+    }
+    pushPointPredictionViolations(text, locale, violations);
+    pushPatterns(text, EN_PREDICTION_PATTERNS, "prediction", "prediction_en", violations);
+    pushRegex(text, EN_DIVINATION_REGEX, "divination", "divination_en", violations);
+  }
+
+  const seen = new Set<string>();
+  return violations.filter((v) => {
+    const key = `${v.category}:${v.label}:${v.snippet}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/** 命理词观测（log-only · 不触发拦截/重生成）。 */
+function detectBaziTermObservations(text: string, locale: string): OutputPolicyViolation[] {
+  if (!text?.trim()) return [];
+  const markerSafeText = maskMarkersForAudit(text);
+  const observations: OutputPolicyViolation[] = [];
+  const isZh = locale.startsWith("zh");
+
+  if (isZh) {
+    for (const [regex, label] of ZH_BAZI_TERMS) {
+      pushRegex(markerSafeText, regex, "bazi_term", label, observations);
+    }
     for (const item of ZH_MARRIAGE_CHART_TERMS) {
       const [regex, label] = typeof item === "string" ? [item, "marriage_zh"] as const : item;
-      pushRegex(markerSafeText, regex, "marriage_chart_term", label, violations);
+      pushRegex(markerSafeText, regex, "marriage_chart_term", label, observations);
     }
-    for (const [regex, label] of ZH_SUPERNATURAL_PROMISE) {
-      pushRegex(text, regex, "supernatural_promise", label, violations);
-    }
-    pushPatterns(text, ZH_PREDICTION_PATTERNS, "prediction", "prediction_zh", violations);
-    pushRegex(text, ZH_JIXIONG_REGEX, "jixiong", "jixiong_zh", violations);
-    pushRegex(text, ZH_DIVINATION_REGEX, "divination", "divination_zh", violations);
-    pushRegex(text, ZH_FEAR_REGEX, "fear_mongering", "fear_zh", violations);
   } else {
     for (const [regex, label] of EN_BAZI_TERMS) {
       const category: OutputPolicyViolationCategory = label.includes("chart")
         ? "chart_fingerprint"
         : "bazi_term";
-      pushRegex(markerSafeText, regex, category, label, violations);
+      pushRegex(markerSafeText, regex, category, label, observations);
     }
-    for (const [regex, label] of EN_COMPLIANCE_REDLINE) {
-      pushRegex(text, regex, "compliance_redline", label, violations);
-    }
-    pushPointPredictionViolations(text, locale, violations);
     for (const [regex, label] of EN_MARRIAGE_CHART_TERMS) {
-      pushRegex(markerSafeText, regex, "marriage_chart_term", label, violations);
+      pushRegex(markerSafeText, regex, "marriage_chart_term", label, observations);
     }
-    for (const [regex, label] of EN_SUPERNATURAL_PROMISE) {
-      pushRegex(text, regex, "supernatural_promise", label, violations);
-    }
-    pushPatterns(text, EN_PREDICTION_PATTERNS, "prediction", "prediction_en", violations);
-    pushRegex(text, EN_JIXIONG_REGEX, "jixiong", "jixiong_en", violations);
-    pushRegex(text, EN_DIVINATION_REGEX, "divination", "divination_en", violations);
-    pushRegex(text, EN_FEAR_REGEX, "fear_mongering", "fear_en", violations);
   }
 
-  // Cross-locale bazi fingerprints (marker-safe — soft-translate display must not false-positive)
-  pushRegex(markerSafeText, ZH_STEM_BRANCH_REGEX, "bazi_term", "stem_branch", violations);
-  pushRegex(markerSafeText, ZH_BRANCH_ELEMENT_REGEX, "bazi_term", "branch_element", violations);
+  pushRegex(markerSafeText, ZH_STEM_BRANCH_REGEX, "bazi_term", "stem_branch", observations);
+  pushRegex(markerSafeText, ZH_BRANCH_ELEMENT_REGEX, "bazi_term", "branch_element", observations);
 
   const seen = new Set<string>();
-  return violations.filter((v) => {
+  return observations.filter((v) => {
     const key = `${v.category}:${v.label}:${v.snippet}`;
     if (seen.has(key)) return false;
     seen.add(key);
@@ -319,9 +325,7 @@ export function logOutputPolicyViolations(
 }
 
 export function logBaziTermObservations(text: string, locale: string, context = "final-delivery"): void {
-  const violations = detectOutputPolicyViolations(text, locale).filter(
-    (v) => v.category === "bazi_term" || v.category === "chart_fingerprint",
-  );
+  const violations = detectBaziTermObservations(text, locale);
   if (violations.length === 0) return;
   console.log(
     `[${context}] bazi_term observe-only (${violations.length}):`,

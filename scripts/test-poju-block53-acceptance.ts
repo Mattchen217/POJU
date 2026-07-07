@@ -110,12 +110,12 @@ async function main(): Promise<void> {
   assert("guard output is clean after strip", !out.includes("寅巳相害"));
 
   assert(
-    "final-delivery returns retryable on audit exhaust (Block 56)",
-    read("app/api/poju/final-delivery/route.ts").includes("delivery_audit_exhausted"),
+    "final-delivery no strip degrade (Block 56/62)",
+    !read("app/api/poju/final-delivery/route.ts").includes("stripOutOfSetFactTerms"),
   );
   assert(
-    "final-delivery no strip degrade (Block 56)",
-    !read("app/api/poju/final-delivery/route.ts").includes("stripOutOfSetFactTerms"),
+    "final-delivery no delivery_audit_exhausted (Block 56/62)",
+    !read("app/api/poju/final-delivery/route.ts").includes("delivery_audit_exhausted"),
   );
 
   console.log("\n=== Summary ===\n");

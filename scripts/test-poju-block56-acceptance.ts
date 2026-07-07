@@ -85,7 +85,7 @@ function main(): void {
   console.log("\n=== Fix 3 · single-pass sanitizer (Block 58) ===\n");
   assert("route single LLM call", route.includes("await callLLM") && !route.includes("for (let attempt"));
   assert("route no delivery_audit_exhausted", !route.includes("delivery_audit_exhausted"));
-  assert("route uses stripOutOfSetFactTerms in-place", route.includes("stripOutOfSetFactTerms"));
+  assert("route no stripOutOfSetFactTerms (Block 62)", !route.includes("stripOutOfSetFactTerms"));
   assert("route no circuit-breaker retry log", !route.includes("熔断重试"));
 
   console.log("\n=== Fix 4 · marking density unified ===\n");

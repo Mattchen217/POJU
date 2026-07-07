@@ -177,8 +177,8 @@ for (const product of ["glyph", "syncro", "match"] as const) {
     relations,
   });
   assert(
-    `${product} invented relation blocked`,
-    badViolations.some((v) => v.label.startsWith("relation_")),
+    `${product} invented relation not blocked (Block 62 — UI marks, no audit regen)`,
+    !badViolations.some((v) => v.label.startsWith("relation_")),
   );
 }
 

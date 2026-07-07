@@ -8,19 +8,9 @@ import {
 import { callLLM } from "@/lib/llm/router";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 import { sanitizeDeliveryText } from "@/lib/llm/sanitize/compliance-terms";
-import {
-  detectShenShaPollution,
-  stripOutOfSetFactTerms,
-} from "@/lib/llm/sanitize/closed-set-circuit-breaker";
 import { polishDeliveryGrammar } from "@/lib/llm/sanitize/delivery-grammar-polish";
-import {
-  computeDirectedDynamicRelations,
-  getCurrentLiunian,
-} from "@/lib/calculations/relation-engine";
-import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import type { BreakthroughCore, POJUAgentState } from "@/lib/poju/agent-state";
 import { normalizeAgentPhase } from "@/lib/poju/agent-state";
-import type { POJUAction } from "@/lib/poju/types";
 
 export const maxDuration = 300;
 
@@ -41,11 +31,6 @@ function isBreakthroughCore(x: unknown): x is BreakthroughCore {
   if (typeof x.relationship_conclusion !== "string") return false;
   if (!Array.isArray(x.breakthrough_directions)) return false;
   return true;
-}
-
-function buildDeliveryAuditText(fullText: string, actions: POJUAction[]): string {
-  const actionText = actions.map((a) => `${a.text}\n${a.rationale}`).join("\n");
-  return `${fullText}\n${actionText}`;
 }
 
 /**
@@ -94,10 +79,6 @@ export async function POST(req: Request) {
 
     const locale = typeof body.locale === "string" ? body.locale : "en";
     const base_analysis = body.base_analysis === undefined || body.base_analysis === null ? null : body.base_analysis;
-    const structured = normalizeBaseAnalysisInput(base_analysis).structured ?? null;
-    const directedRelations = structured
-      ? computeDirectedDynamicRelations(structured, getCurrentLiunian(), body.agent_v2.question_category)
-      : undefined;
     const recent_user_messages = Array.isArray(body.recent_user_messages)
       ? body.recent_user_messages.filter((m): m is string => typeof m === "string" && m.trim().length > 0)
       : [];
@@ -138,19 +119,7 @@ export async function POST(req: Request) {
     });
 
     const polished = polishDeliveryGrammar(result.content.trim(), locale);
-    let text = sanitizeDeliveryText(polished.text, locale);
-
-    if (structured) {
-      let actionsProbe = extractActionsFromDelivery(text, null);
-      const auditText = buildDeliveryAuditText(text, actionsProbe);
-      const { polluted, hits } = detectShenShaPollution(auditText, structured, locale, {
-        relations: directedRelations,
-      });
-      if (polluted) {
-        text = stripOutOfSetFactTerms(text, structured, { relations: directedRelations });
-        console.warn("[final-delivery] 集外神煞/关系已就地剥离：", hits.slice(0, 5));
-      }
-    }
+    const text = sanitizeDeliveryText(polished.text, locale);
 
     const actions = extractActionsFromDelivery(text, null);
     const latency_ms = result.meta.latency_ms || Date.now() - t0;

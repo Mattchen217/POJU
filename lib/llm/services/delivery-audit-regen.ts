@@ -65,10 +65,6 @@ export function auditDeepStringFields(
         `[compliance-audit] grounding low (${product}): distinct=${grounding.distinctCount} depth=${grounding.depthCount}`,
         grounding.ids,
       );
-      all.push({
-        label: "grounding_low",
-        snippet: `distinct=${grounding.distinctCount} depth=${grounding.depthCount} ids=${grounding.ids.slice(0, 8).join(",")}`,
-      });
     }
   }
 
@@ -99,6 +95,6 @@ export function buildAuditRegenHint(
 ): string {
   const labels = [...new Set(violations.map((v) => v.label))].slice(0, 10).join(", ");
   return locale.startsWith("zh")
-    ? `\n\n【合规复审未通过 — 须重写全部字符串字段】问题类型：${labels}。必须用术语表 soft 词 + ⟦t:id|可见文本|该处白话⟧ 三段位标记（keep_cn 保留中文干支如 乙木/丙午）；正文大白话+比喻入句；须引用 ≥N 个不同盘面结构（十神/神煞/格局/大运，不止四个五行词）；禁 Yi Wood / energy blueprint 等自创委婉词；禁裸签诗原文。返回完整 JSON/text。`
-    : `\n\n[COMPLIANCE RE-AUDIT FAILED — rewrite ALL string fields] Issue types: ${labels}. Use ⟦t:id|visible|context plain⟧ 3-part markers (keep_cn: Chinese stem-branch like 乙木/丙午); body copy in plain language with metaphors; cite ≥N distinct chart structures (ten gods/shen sha/pattern/da yun—not just four elements); NO invented euphemisms; NO verbatim sign-poem lines. Return complete JSON/text.`;
+    ? `\n\n【合规复审未通过 — 须重写全部字符串字段】问题类型：${labels}。仅两条硬红线：① 不报具体日期/时间点（只给阶段趋势）② 不占卜/不宿命。命理词须 ⟦t:id|软译|白话⟧ 打标（漏打 UI 会补）；禁裸签诗原文、禁 broken marker。返回完整 JSON/text。`
+    : `\n\n[COMPLIANCE RE-AUDIT FAILED — rewrite ALL string fields] Issue types: ${labels}. Hard redlines only: (1) no point-in-time date predictions — phase trends only; (2) no divination/fatalism. Use ⟦t:id|soft|plain⟧ markers (UI auto-marks bare terms). NO verbatim sign-poem lines; NO broken markers. Return complete JSON/text.`;
 }

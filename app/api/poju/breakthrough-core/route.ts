@@ -1,16 +1,13 @@
 import { NextResponse } from "next/server";
 import { baseAnalysisCacheSessionId, pojuCacheSessionId } from "@/lib/llm/cache-session-id";
 import {
-  buildBreakthroughCoreAuditText,
   buildBreakthroughCorePrompt,
   mapBreakthroughCorePayload,
   parseBreakthroughCoreResponseText,
 } from "@/lib/llm/deepseek/breakthrough-core";
 import { callLLM } from "@/lib/llm/router";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
-import { generateWithClosedSetGuard } from "@/lib/llm/sanitize/closed-set-circuit-breaker";
 import { normalizeAgentPhase, type POJUAgentState } from "@/lib/poju/agent-state";
-import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 
 export const maxDuration = 300;
 
@@ -171,39 +168,26 @@ export async function POST(req: Request) {
     const sessionId = body.session_id.trim();
     const profileId = resolveProfileId({ selected_stored_profile_id: body.selected_stored_profile_id, agent_v2 });
 
-    const { system, user, structured, auditRelations } = buildBreakthroughCorePrompt({
+    const { system, user } = buildBreakthroughCorePrompt({
       base_analysis,
       agent_v2: agent_v2 ?? undefined,
       original_question: body.original_question,
       locale,
     });
 
-    let rawContent = "";
-    let tokens_used = 0;
-    let model = "unknown";
-
-    await generateWithClosedSetGuard({
-      generate: async (hint) => {
-        const userContent = hint ? `${user}\n\n${hint}` : user;
-        const fetched = await fetchCoreContent({
-          system,
-          userContent,
-          sessionId,
-          profileId,
-        });
-        if (!fetched.ok) {
-          throw new BreakthroughCoreRetryableError(fetched.reason, fetched.error);
-        }
-        rawContent = fetched.content;
-        tokens_used = fetched.tokens_used;
-        model = fetched.model;
-        return buildBreakthroughCoreAuditText(parseBreakthroughCoreResponseText(rawContent));
-      },
-      structured: structured as ProfileStructured,
-      locale,
-      label: "breakthrough-core",
-      opts: { relations: auditRelations },
+    const fetched = await fetchCoreContent({
+      system,
+      userContent: user,
+      sessionId,
+      profileId,
     });
+    if (!fetched.ok) {
+      return retryableResponse(fetched.reason, fetched.error);
+    }
+
+    const rawContent = fetched.content;
+    const tokens_used = fetched.tokens_used;
+    const model = fetched.model;
 
     let mapped: ReturnType<typeof mapBreakthroughCorePayload>;
     try {

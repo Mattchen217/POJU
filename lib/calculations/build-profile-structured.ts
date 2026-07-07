@@ -159,12 +159,20 @@ function enrichPillarsWithBaziFields(
     day: pillars.day.branch,
     hour: pillars.hour.branch,
   };
+  const stems = {
+    year: pillars.year.stem,
+    month: pillars.month.stem,
+    day: pillars.day.stem,
+    hour: pillars.hour.stem,
+  };
 
   const localShenSha = computeLocalShenShaForPillars({
     dayMasterStem,
     branches,
+    stems,
     yearBranch: pillars.year.branch,
     dayBranch: pillars.day.branch,
+    monthBranch: pillars.month.branch,
   });
 
   const keys: PillarKey[] = ["year", "month", "day", "hour"];

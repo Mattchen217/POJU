@@ -10,7 +10,7 @@ import {
   uiTermById,
   unescapeGlossPart,
   unescapeMarkerPart,
-  wrapBareKeepCnSoftTerms,
+  prepareTextForGlossaryRender,
 } from "@/lib/llm/sanitize/compliance-terms";
 import { termPolarityById, type TermPolarity } from "@/lib/glossary/term-polarity";
 import { toGlossaryLocale } from "@/lib/glossary/term-glossary";
@@ -306,7 +306,7 @@ export function MarkedInline({
   dedupeScope?: Set<string>;
   keyBase?: number;
 }) {
-  const prepared = wrapBareKeepCnSoftTerms(text, locale);
+  const prepared = prepareTextForGlossaryRender(text, locale);
   const hasMarkers = prepared.includes("⟦t:") || prepared.includes("⟦g|");
   const nodes = parseMarkedText(prepared, locale, keyBase, dedupeScope);
 

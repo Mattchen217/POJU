@@ -42,7 +42,7 @@ function main(): void {
 
   console.log("\n=== Q3 · single-pass delivery sanitizer ===\n");
   assert("route single generate", !route.includes("maxRetries") && !route.includes("delivery_audit_exhausted"));
-  assert("route sanitize then strip", route.includes("sanitizeDeliveryText") && route.includes("stripOutOfSetFactTerms"));
+  assert("route sanitize pass-through (Block 62)", route.includes("sanitizeDeliveryText") && !route.includes("stripOutOfSetFactTerms"));
   assert("route always ok:true success path", route.includes("ok: true"));
   assert("sanitizeDeliveryText mutates body", compliance.includes("sanitizeDeliveryBodyPart"));
   assert("audit-output uses maskMarkersForAudit for bazi", auditOut.includes("markerSafeText = maskMarkersForAudit"));
