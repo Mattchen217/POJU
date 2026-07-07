@@ -161,8 +161,8 @@ export function buildBreakthroughCorePrompt(input: {
     POJU_IDENTITY,
     POJU_KNOWLEDGE_ROOTS,
     buildOutputPolicyForPoju(),
-    buildStructuredInstanceInventory(structured),
     directedInventoryBlock,
+    buildStructuredInstanceInventory(structured),
     DEEP_RECKONING_TASK,
   );
 

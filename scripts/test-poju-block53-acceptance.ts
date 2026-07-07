@@ -60,12 +60,16 @@ async function main(): Promise<void> {
   const breakerSrc = read("lib/llm/sanitize/closed-set-circuit-breaker.ts");
   assert("circuit breaker does not throw on exhaust", !breakerSrc.includes("throw new Error"));
   assert(
-    "circuit breaker calls stripOutOfSetFactTerms",
-    breakerSrc.includes("stripOutOfSetFactTerms(lastText"),
+    "circuit breaker calls stripOutOfSetFactTerms on hit",
+    breakerSrc.includes("stripOutOfSetFactTerms(text"),
   );
   assert(
-    "circuit breaker logs degrade warn",
-    breakerSrc.includes("剥离集外词后降级交付"),
+    "circuit breaker logs direct strip (no retry loop)",
+    breakerSrc.includes("集外命中，直接剥离"),
+  );
+  assert(
+    "circuit breaker has no retry loop",
+    !breakerSrc.includes("熔断重试"),
   );
 
   assert(
@@ -97,14 +101,13 @@ async function main(): Promise<void> {
     label: "block53-test",
     locale: "zh",
     structured,
-    maxRetries: 2,
     generate: async () => {
       attempts++;
       return dirty;
     },
   });
-  assert("generateWithClosedSetGuard returns without throw", attempts === 3);
-  assert("guard output is clean after degrade", !out.includes("寅巳相害"));
+  assert("generateWithClosedSetGuard returns without throw (single attempt)", attempts === 1);
+  assert("guard output is clean after strip", !out.includes("寅巳相害"));
 
   assert(
     "final-delivery returns retryable on audit exhaust (Block 56)",

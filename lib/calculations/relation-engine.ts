@@ -637,13 +637,15 @@ export function buildDirectedDynamicRelationInventoryBlock(
   const cat = questionCategory?.trim() || "—";
   if (!filtered.length) {
     return [
-      `## 本盘动态关系实例（流年/定向 · question_category=${cat} · 过滤后为空）`,
+      `## ⭐ 优先锚定这些（定向计算 · question_category=${cat} · 本轮过滤后为空）`,
+      "- 无流年/十神张力定向项时，从下方实例清单挑【与本句最相关】的本命关系/十神/大运/用神；勿复读泛泛日主/当前阶段",
       "- 禁止写流年引动/十神张力/伤官见官/枭神夺食等未在本盘本命关系清单中的关系词",
     ].join("\n");
   }
   return [
-    `## 本盘动态关系实例（流年/定向 · question_category=${cat} · 仅可引用下列）`,
+    `## ⭐ 优先锚定这些（定向计算 · question_category=${cat} · 仅对本盘+本问题成立）`,
     `- ${filtered.map((r) => r.han).join("、")}`,
+    "- **锚点首选**以上定向事实；优于泛泛日主/食神/当前阶段；泛化性格底色整场点一次，勿每轮复读",
     "- 禁止写未列出的流年引动/十神张力/伤官见官/枭神夺食等关系词",
   ].join("\n");
 }

@@ -7,7 +7,7 @@ import {
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import type { RelationLabel } from "@/lib/calculations/relation-engine";
 
-/** 命中集外神煞 / 在集内但不在本盘 → 视为污染，必须熔断重生成。 */
+/** 命中集外神煞 / 在集内但不在本盘 → 视为编造，直接剥离（不重试）。 */
 export function detectShenShaPollution(
   text: string,
   structured: ProfileStructured | null,
@@ -25,40 +25,33 @@ export function detectShenShaPollution(
   return { polluted: hits.length > 0, hits };
 }
 
-/** 通用熔断重试：generate() 产文 → 检测 → 脏则带纠正提示重生成；耗尽后剥离降级交付，不抛错。 */
+/**
+ * 闭集守卫：generate() 一次 → 集外命中即 stripOutOfSetFactTerms，不赌重试。
+ * 准确性靠 prompt 侧闭集喂入；剥离只是极少数漏网兜底。
+ */
 export async function generateWithClosedSetGuard(args: {
   generate: (correctiveHint: string | null) => Promise<string>;
   structured: ProfileStructured | null;
   locale: string;
+  /** @deprecated 不再重试；保留参数避免调用方签名破坏 */
   maxRetries?: number;
   label: string;
   opts?: { relations?: RelationLabel[] };
 }): Promise<string> {
-  const maxRetries = args.maxRetries ?? 2;
-  let hint: string | null = null;
-  let lastText = "";
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const text = await args.generate(hint);
-    lastText = text;
-    const { polluted, hits } = detectShenShaPollution(
-      text,
-      args.structured,
-      args.locale,
-      args.opts,
-    );
-    if (!polluted) return text;
-    console.error(
-      `[circuit-breaker:${args.label}] 集外神煞/关系污染，熔断重试 ${attempt + 1}/${maxRetries}:`,
-      hits.slice(0, 5),
-    );
-    hint =
-      `⚠️ 你上一次产出包含了集外或不在本盘的神煞/关系：${hits.slice(0, 5).join("、")}。` +
-      `严禁！神煞只能引用本盘实例清单；关系只能引用本盘动态关系清单。删除所有集外项，重写。`;
-  }
-  console.warn(
-    `[circuit-breaker:${args.label}] ${maxRetries} 次仍脏，剥离集外词后降级交付。`,
+  const text = await args.generate(null);
+  const { polluted, hits } = detectShenShaPollution(
+    text,
+    args.structured,
+    args.locale,
+    args.opts,
   );
-  return stripOutOfSetFactTerms(lastText, args.structured, args.opts);
+  if (!polluted) return text;
+
+  console.warn(
+    `[circuit-breaker:${args.label}] 集外命中，直接剥离：`,
+    hits.slice(0, 5),
+  );
+  return stripOutOfSetFactTerms(text, args.structured, args.opts);
 }
 
 export { stripOutOfSetFactTerms };

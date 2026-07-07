@@ -55,30 +55,29 @@ async function circuitBreakerTests(): Promise<void> {
   assert("clean text passes pollution check", !clean.polluted);
 
   let attempts = 0;
-  let sawRetryLog = false;
-  const origError = console.error;
-  console.error = (...args: unknown[]) => {
+  let sawStripLog = false;
+  const origWarn = console.warn;
+  console.warn = (...args: unknown[]) => {
     const msg = args.map(String).join(" ");
-    if (msg.includes("[circuit-breaker:test-label]")) sawRetryLog = true;
-    origError(...args);
+    if (msg.includes("[circuit-breaker:test-label]") && msg.includes("直接剥离")) sawStripLog = true;
+    origWarn(...args);
   };
 
   try {
-    await generateWithClosedSetGuard({
+    const stripped = await generateWithClosedSetGuard({
       label: "test-label",
       locale: "zh",
       structured: null,
-      maxRetries: 2,
       generate: async () => {
         attempts++;
-        if (attempts >= 3) return "用神为水，顺势而为。";
         return "命带空亡元辰，大凶。";
       },
     });
-    assert("guard succeeds after clean retry", attempts === 3);
-    assert("guard logs circuit-breaker retry", sawRetryLog);
+    assert("guard strips on first dirty hit (single generate)", attempts === 1);
+    assert("guard logs direct strip (no retry)", sawStripLog);
+    assert("stripped output removes forbidden terms", !stripped.includes("空亡") && !stripped.includes("元辰"));
   } catch {
-    assert("guard succeeds after clean retry", false, `attempts=${attempts}`);
+    assert("guard strips on first dirty hit (single generate)", false, `attempts=${attempts}`);
   }
 
   let failAttempts = 0;
@@ -87,15 +86,14 @@ async function circuitBreakerTests(): Promise<void> {
     label: "test-fail",
     locale: "zh",
     structured: null,
-    maxRetries: 2,
     generate: async () => {
       failAttempts++;
       return "空亡元辰六秀日将星国印";
     },
   });
-  assert("guard degrades after 3 dirty attempts (no throw)", failAttempts === 3);
+  assert("guard single attempt then strip (no throw)", failAttempts === 1);
   assert("degraded text strips forbidden terms", !degraded.includes("空亡") && !degraded.includes("元辰"));
-  console.error = origError;
+  console.warn = origWarn;
 
   const finalRoute = read("app/api/poju/final-delivery/route.ts");
   assert("final-delivery route uses circuit-breaker log prefix", finalRoute.includes("[circuit-breaker:final-delivery]"));

@@ -166,8 +166,8 @@ export async function buildPhaseTurnContextV6(
           directedRelations: injectDirected ? directedDynamicRels ?? [] : undefined,
         })
       : "",
-    structured ? buildStructuredInstanceInventory(structured) : "",
     directedInventoryBlock,
+    structured ? buildStructuredInstanceInventory(structured) : "",
   );
 
   const termPlane = stitchPromptSections(
