@@ -7,10 +7,14 @@ import type { ProfileStructured } from "@/lib/calculations/build-profile-structu
 import { computeChartRelations, type RelationLabel } from "@/lib/calculations/relation-engine";
 import { termPolarityById, type TermPolarity } from "@/lib/glossary/term-polarity";
 import {
+  BARE_GANZHI_MARKER,
   CLOSED_SET_REPLACE_IDS,
   CLOSED_SET_SLUG,
   CLOSED_SHEN_SHA,
+  HIGH_RISK_COMPLIANCE_HAN,
+  HIGH_RISK_SOFT_LABEL,
   isRelationMarkerId,
+  isValidSexagenaryGanzhi,
   KEEP_CN_SLUGS,
   KEEP_CN_VISIBLE_SOFT,
   OUT_OF_SET_FORBIDDEN_EN,
@@ -182,27 +186,83 @@ export function wrapBareKeepCnSoftTerms(text: string, locale: string): string {
     .join("");
 }
 
-const BARE_AUTO_MARK_HAN = [...CLOSED_SET_REPLACE_IDS].sort((a, b) => b.length - a.length);
+const BARE_AUTO_MARK_HAN = [
+  ...HIGH_RISK_COMPLIANCE_HAN,
+  ...CLOSED_SET_REPLACE_IDS,
+].sort((a, b) => b.length - a.length);
+
+const BARE_GANZHI_RE = /[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]/g;
 
 function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function highRiskSoftBySlug(slug: string) {
+  return Object.values(HIGH_RISK_SOFT_LABEL).find((h) => h.slug === slug) ?? null;
+}
+
+function resolveBareMarkLabels(
+  hanId: string,
+  locale: string,
+): { slug: string; soft: string; plain: string } | null {
+  const hr = HIGH_RISK_SOFT_LABEL[hanId as keyof typeof HIGH_RISK_SOFT_LABEL];
+  if (hr) {
+    const loc = toGlossaryLocale(locale);
+    const lang = loc === "zh" ? "zh" : "en";
+    return {
+      slug: hr.slug,
+      soft: lang === "zh" ? hr.zh : hr.en,
+      plain: lang === "zh" ? hr.glossZh : hr.glossEn,
+    };
+  }
+  const slug = CLOSED_SET_SLUG[hanId] ?? hanId;
+  const ui = uiTermById(slug, locale) ?? uiTermById(hanId, locale);
+  if (!ui) return null;
+  return {
+    slug,
+    soft: ui.soft,
+    plain: plainByTermId(slug, locale) ?? ui.plain,
+  };
+}
+
+function markBareGanzhiInSegment(segment: string, locale: string): string {
+  if (!segment.trim()) return segment;
+  const loc = toGlossaryLocale(locale);
+  const lang = loc === "zh" ? "zh" : "en";
+  const soft = lang === "zh" ? BARE_GANZHI_MARKER.zh : BARE_GANZHI_MARKER.en;
+  const plain = lang === "zh" ? BARE_GANZHI_MARKER.glossZh : BARE_GANZHI_MARKER.glossEn;
+  const marker = encodeTermMarker(BARE_GANZHI_MARKER.slug, soft, plain);
+
+  const matches: Array<{ index: number; len: number }> = [];
+  BARE_GANZHI_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = BARE_GANZHI_RE.exec(segment)) !== null) {
+    if (!isValidSexagenaryGanzhi(m[0])) continue;
+    matches.push({ index: m.index, len: m[0].length });
+  }
+  if (!matches.length) return segment;
+
+  let out = segment;
+  for (let i = matches.length - 1; i >= 0; i--) {
+    const { index, len } = matches[i]!;
+    out = out.slice(0, index) + marker + out.slice(index + len);
+  }
+  return out;
+}
+
 /**
- * UI 渲染兜底：词表内裸命理词（未在 ⟦t:⟧ 内）自动补标 → 软译呈现。
- * 只匹配闭集整词，带 CJK 词边界，不碰 marker 段。
+ * UI 渲染兜底：词表内裸命理词 + 高危合规词 + 裸干支（未在 ⟦t:⟧ 内）自动补标 → 软译呈现。
+ * 只在标记外正文段扫描；整词替换；幂等（已包过的段不重复处理）。
  */
 export function autoMarkBareTerms(text: string, locale: string): string {
   const parts = text.split(/(⟦[^⟧]*⟧)/g);
   return parts
     .map((part, i) => {
       if (i % 2 === 1) return part;
-      let out = part;
+      let out = markBareGanzhiInSegment(part, locale);
       for (const hanId of BARE_AUTO_MARK_HAN) {
-        const slug = CLOSED_SET_SLUG[hanId] ?? hanId;
-        const ui = uiTermById(slug, locale) ?? uiTermById(hanId, locale);
-        if (!ui) continue;
-        const plain = plainByTermId(slug, locale) ?? ui.plain;
+        const labels = resolveBareMarkLabels(hanId, locale);
+        if (!labels) continue;
         const re =
           hanId.length === 1
             ? new RegExp(
@@ -210,7 +270,9 @@ export function autoMarkBareTerms(text: string, locale: string): string {
                 "g",
               )
             : new RegExp(`${escapeRegExp(hanId)}(?![（(])`, "g");
-        out = out.replace(re, (match) => encodeTermMarker(slug, ui.soft || match, plain));
+        out = out.replace(re, () =>
+          encodeTermMarker(labels.slug, labels.soft, labels.plain),
+        );
       }
       return out;
     })
@@ -278,6 +340,25 @@ export function uiTermById(
       soft: RELATION_KIND_SOFT[relKind][lang],
       plain: RELATION_KIND_SOFT[relKind][lang],
       polarity: termPolarityById(termId),
+    };
+  }
+  if (termId === BARE_GANZHI_MARKER.slug) {
+    const loc = toGlossaryLocale(locale);
+    const lang = loc === "zh" ? "zh" : "en";
+    return {
+      soft: lang === "zh" ? BARE_GANZHI_MARKER.zh : BARE_GANZHI_MARKER.en,
+      plain: lang === "zh" ? BARE_GANZHI_MARKER.glossZh : BARE_GANZHI_MARKER.glossEn,
+      polarity: "neutral",
+    };
+  }
+  const hr = highRiskSoftBySlug(termId);
+  if (hr) {
+    const loc = toGlossaryLocale(locale);
+    const lang = loc === "zh" ? "zh" : "en";
+    return {
+      soft: lang === "zh" ? hr.zh : hr.en,
+      plain: lang === "zh" ? hr.glossZh : hr.glossEn,
+      polarity: "neutral",
     };
   }
   const entry = TERM_BY_ID.get(termId);
@@ -554,8 +635,6 @@ export function auditGroundingMarkers(
   if (ids.length < minDistinct || depthCount < minDepth) return result;
   return null;
 }
-
-const BARE_GANZHI_RE = /[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]/g;
 
 /** Detect bare stem-branch pairs outside term markers (EN deliveries often leak 癸酉/壬申). */
 export function auditBareGanzhi(text: string): OutOfSetAuditHit[] {

@@ -1,10 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
+
+import { toSoftTranslatedPlainText } from "@/lib/llm/sanitize/compliance-terms";
 
 type AssistantMessageActionsProps = {
   content: string;
+  locale?: string;
 };
 
 async function copyTextToClipboard(text: string): Promise<boolean> {
@@ -34,14 +37,19 @@ async function copyTextToClipboard(text: string): Promise<boolean> {
   }
 }
 
-export function AssistantMessageActions({ content }: AssistantMessageActionsProps) {
+export function AssistantMessageActions({ content, locale: localeProp }: AssistantMessageActionsProps) {
   const t = useTranslations("poju.chat");
+  const intlLocale = useLocale();
+  const locale = localeProp ?? intlLocale;
   const [copied, setCopied] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  const plainText = content.trim();
+  const plainText = useMemo(
+    () => toSoftTranslatedPlainText(content, locale).trim(),
+    [content, locale],
+  );
 
   useEffect(() => {
     return () => {

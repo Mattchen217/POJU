@@ -308,7 +308,9 @@ export default function PojuChat(props: PojuChatProps) {
         {messageSlots?.[m.id]
           ? messageSlots[m.id]
           : renderAiContent(m.content, thinkingLocale ?? "en", reveal)}
-        {!messageSlots?.[m.id] ? <AssistantMessageActions content={m.content} /> : null}
+        {!messageSlots?.[m.id] ? (
+          <AssistantMessageActions content={m.content} locale={thinkingLocale ?? "en"} />
+        ) : null}
       </>
     );
   }
@@ -601,7 +603,10 @@ export default function PojuChat(props: PojuChatProps) {
                     <AiReplyShell>
                       {messageFollowUps[m.id]}
                       {messageFollowUpActionsText?.[m.id] ? (
-                        <AssistantMessageActions content={messageFollowUpActionsText[m.id]!} />
+                        <AssistantMessageActions
+                          content={messageFollowUpActionsText[m.id]!}
+                          locale={thinkingLocale ?? "en"}
+                        />
                       ) : null}
                     </AiReplyShell>
                   </div>

@@ -232,7 +232,92 @@ export const CLOSED_SET_SLUG: Record<string, string> = {
   三刑: "san_xing",
   六害: "liu_hai",
   三合: "san_he",
+  占卜: "hr_divination",
+  命运: "hr_fate",
+  宿命: "hr_destiny",
+  吉凶: "hr_auspicious",
+  星象: "hr_astral",
 };
+
+/** Stripe / payment-processor high-risk han — UI auto-mark only (Block 62 Part 3). */
+export const HIGH_RISK_COMPLIANCE_HAN = ["占卜", "命运", "宿命", "吉凶", "星象"] as const;
+
+export type HighRiskComplianceHan = (typeof HIGH_RISK_COMPLIANCE_HAN)[number];
+
+export const HIGH_RISK_SOFT_LABEL: Record<
+  HighRiskComplianceHan,
+  { slug: string; zh: string; en: string; glossZh: string; glossEn: string }
+> = {
+  占卜: {
+    slug: "hr_divination",
+    zh: "情境推演",
+    en: "situational read",
+    glossZh: "从结构与选项看处境，不是占卦断吉凶。",
+    glossEn: "Reading structure and options—not fortune-telling.",
+  },
+  命运: {
+    slug: "hr_fate",
+    zh: "人生轨迹",
+    en: "life trajectory",
+    glossZh: "长期走向与选择叠加出的路径，不是铁定结局。",
+    glossEn: "A path shaped by choices—not a fixed outcome.",
+  },
+  宿命: {
+    slug: "hr_destiny",
+    zh: "人生轨迹",
+    en: "life trajectory",
+    glossZh: "可被选择与行动重塑的长期方向。",
+    glossEn: "Long-range direction you can still steer.",
+  },
+  吉凶: {
+    slug: "hr_auspicious",
+    zh: "倾向窗口",
+    en: "tendency window",
+    glossZh: "阶段性有利/需留意的倾向，不是吉凶断语。",
+    glossEn: "Phase tendencies—not lucky/unlucky verdicts.",
+  },
+  星象: {
+    slug: "hr_astral",
+    zh: "能量节律",
+    en: "energy rhythm",
+    glossZh: "周期性的能量起伏背景，不是占星预言。",
+    glossEn: "Cyclic energy backdrop—not horoscope prophecy.",
+  },
+};
+
+/** Bare stem-branch pairs (60 甲子) — never show ganzhi in user-visible copy. */
+export const BARE_GANZHI_MARKER = {
+  slug: "bare_ganzhi",
+  zh: "当前时空效能",
+  en: "current temporal efficacy",
+  glossZh: "时序背景标识；具体干支仅作底层数据，不对用户展示。",
+  glossEn: "Temporal background—stem-branch stays in data only.",
+} as const;
+
+const YANG_HEAVENLY_STEMS = new Set(["甲", "丙", "戊", "庚", "壬"]);
+const YANG_EARTHLY_BRANCHES = new Set(["子", "寅", "辰", "午", "申", "戌"]);
+
+/** Valid 六十甲子 pair (same yin/yang parity on stem + branch). */
+export function isValidSexagenaryGanzhi(ganzhi: string): boolean {
+  if (ganzhi.length !== 2) return false;
+  const stem = ganzhi.charAt(0);
+  const branch = ganzhi.charAt(1);
+  if (!(stem in STEMS) || !(branch in BRANCHES)) return false;
+  const stemYang = YANG_HEAVENLY_STEMS.has(stem);
+  const branchYang = YANG_EARTHLY_BRANCHES.has(branch);
+  return stemYang === branchYang;
+}
+
+/** All 60 sexagenary pillar labels — for coverage tests / auto-mark validation. */
+export const SEXAGENARY_GANZHI: readonly string[] = (() => {
+  const stems = Object.keys(STEMS);
+  const branches = Object.keys(BRANCHES);
+  const out: string[] = [];
+  for (let i = 0; i < 60; i++) {
+    out.push(`${stems[i % 10]!}${branches[i % 12]!}`);
+  }
+  return out;
+})();
 
 /** relation-engine RelationLabel.id prefixes (dynamic per chart, e.g. chong_午_子). */
 export const RELATION_MARKER_PREFIXES = [

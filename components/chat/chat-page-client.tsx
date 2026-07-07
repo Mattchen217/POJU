@@ -16,6 +16,7 @@ import { ArchiveReturnBanner } from "@/components/archive/archive-return-banner"
 import { useChatStore } from "@/lib/store/chat-store";
 import type { ChatMessage, ChatSession, DrawerKind } from "@/lib/chat/types";
 import { siteConfig } from "@/lib/config/site";
+import { toSoftTranslatedPlainText } from "@/lib/llm/sanitize/compliance-terms";
 import type { ArchiveEntry } from "@/lib/archive/types";
 type ComposerImage = { id: string; dataUrl: string; name: string };
 const ARCHIVE_RUNTIME_KEY = "pojulife_archive_runtime_v1";
@@ -427,7 +428,8 @@ export function ChatPageClient() {
   };
 
   const copyMsg = async (msg: ChatMessage) => {
-    await navigator.clipboard.writeText(msg.text);
+    const locale = /[\u4e00-\u9fff]/.test(msg.text) ? "zh-CN" : "en";
+    await navigator.clipboard.writeText(toSoftTranslatedPlainText(msg.text, locale));
     setCopiedId(msg.id);
     setTimeout(() => setCopiedId(""), 2000);
   };
@@ -440,7 +442,8 @@ export function ChatPageClient() {
       return;
     }
     speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(msg.text);
+    const locale = /[\u4e00-\u9fff]/.test(msg.text) ? "zh-CN" : "en";
+    const u = new SpeechSynthesisUtterance(toSoftTranslatedPlainText(msg.text, locale));
     u.lang = /[\u4e00-\u9fa5]/.test(msg.text) ? "zh-CN" : "en-US";
     u.onend = () => setTtsPlayingId("");
     speakRef.current = u;

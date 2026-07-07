@@ -18,6 +18,12 @@ import {
   autoMarkBareTerms,
   prepareTextForGlossaryRender,
 } from "@/lib/llm/sanitize/term-marking";
+import { toSoftTranslatedPlainText } from "@/lib/llm/sanitize/compliance-terms";
+import {
+  HIGH_RISK_COMPLIANCE_HAN,
+  isValidSexagenaryGanzhi,
+  SEXAGENARY_GANZHI,
+} from "@/lib/glossary/term-closed-set";
 
 const ROOT = path.join(process.cwd());
 const failures: string[] = [];
@@ -71,12 +77,38 @@ function main(): void {
 
   console.log("\n=== Part 3 · UI auto-mark fallback ===\n");
   assert("GlossaryText uses prepareTextForGlossaryRender", glossaryText.includes("prepareTextForGlossaryRender"));
+  assert("AssistantMessageActions uses toSoftTranslatedPlainText", read("components/poju/AssistantMessageActions.tsx").includes("toSoftTranslatedPlainText"));
+  assert("chat copy uses soft export", read("components/chat/chat-page-client.tsx").includes("toSoftTranslatedPlainText"));
+
   const bare = "流年里驿马动，注意节奏。";
   const marked = autoMarkBareTerms(bare, "zh");
   assert("autoMarkBareTerms wraps 流年", marked.includes("⟦t:") && marked.includes("year"));
   assert("autoMarkBareTerms wraps 驿马", marked.includes("yi_ma"));
   const prepared = prepareTextForGlossaryRender(bare, "zh");
   assert("prepareTextForGlossaryRender produces markers", prepared.includes("⟦t:"));
+
+  const modelLeak = "今年流年丙午，走大运。";
+  const softPlain = toSoftTranslatedPlainText(modelLeak, "zh");
+  assert("export strips 流年", !softPlain.includes("流年"), softPlain);
+  assert("export strips 大运", !softPlain.includes("大运"), softPlain);
+  assert("export strips 丙午", !softPlain.includes("丙午"), softPlain);
+  assert("export uses soft labels", softPlain.includes("当前时空效能") || softPlain.includes("阶段"), softPlain);
+
+  for (const hr of HIGH_RISK_COMPLIANCE_HAN) {
+    const out = toSoftTranslatedPlainText(`这里出现${hr}词汇。`, "zh");
+    assert(`export strips ${hr}`, !out.includes(hr), out);
+  }
+
+  const alreadyMarked = "⟦t:year|当前时空效能|年度窗口⟧里不动";
+  const remarked = autoMarkBareTerms(alreadyMarked, "zh");
+  assert("marker interior not double-wrapped", remarked === alreadyMarked);
+
+  const twice = prepareTextForGlossaryRender(prepareTextForGlossaryRender(modelLeak, "zh"), "zh");
+  assert("idempotent prepare", twice === prepareTextForGlossaryRender(modelLeak, "zh"));
+
+  assert("sexagenary list has 60 pairs", SEXAGENARY_GANZHI.length === 60);
+  assert("丙午 is valid ganzhi", isValidSexagenaryGanzhi("丙午"));
+  assert("甲丑 is invalid ganzhi", !isValidSexagenaryGanzhi("甲丑"));
 
   console.log("\n=== Part 4 · shensha 20+ with soft translations ===\n");
   assert("CLOSED_SHEN_SHA count >= 20", CLOSED_SHEN_SHA.length >= 20, `count=${CLOSED_SHEN_SHA.length}`);

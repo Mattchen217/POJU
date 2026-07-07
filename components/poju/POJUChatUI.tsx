@@ -1017,7 +1017,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           slots[mid] = (
             <>
               <MatrixNarrativeReply payload={payload} locale={locale} />
-              {actionsText ? <AssistantMessageActions content={actionsText} /> : null}
+              {actionsText ? (
+                <AssistantMessageActions content={actionsText} locale={locale} />
+              ) : null}
             </>
           );
         }

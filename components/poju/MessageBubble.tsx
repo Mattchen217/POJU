@@ -59,7 +59,7 @@ export const MessageBubble = memo(function MessageBubble({
             <PojuAiAvatar />
             <div className="pchat__ai">
               <MatrixNarrativeReply payload={message.meta.matrix_payload} locale="en" />
-              {narrativeText ? <AssistantMessageActions content={narrativeText} /> : null}
+              {narrativeText ? <AssistantMessageActions content={narrativeText} locale={locale} /> : null}
             </div>
           </div>
         </div>
@@ -106,7 +106,7 @@ export const MessageBubble = memo(function MessageBubble({
           archiveId={actionPlanArchiveId}
           onActionUpdate={onActionUpdate}
         />
-        <AssistantMessageActions content={message.content} />
+        <AssistantMessageActions content={message.content} locale={locale} />
       </div>
     );
   }
@@ -140,7 +140,7 @@ export const MessageBubble = memo(function MessageBubble({
           onResponse={(action) => onToolResponse(message.meta!.tool_suggestion!.tool, action)}
         />
       ) : null}
-      <AssistantMessageActions content={message.content} />
+      <AssistantMessageActions content={message.content} locale={locale} />
     </div>
   );
 }, messageBubblePropsEqual);

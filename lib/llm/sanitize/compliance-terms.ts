@@ -557,6 +557,18 @@ export function sanitizeDeliveryText(fullText: string, locale: string): string {
   return text;
 }
 
+/**
+ * User-visible plain text — auto-mark + soft labels + belt-and-suspenders leak scrub.
+ * Use for copy, TTS, share exports (never raw marked or bare 命理/高危词).
+ */
+export function toSoftTranslatedPlainText(text: string, locale: string): string {
+  if (!text?.trim()) return text ?? "";
+  const prepared = prepareTextForGlossaryRender(text, locale);
+  let plain = stripMarkersForPrompt(prepared);
+  plain = stripBrokenMarkers(plain);
+  return sanitizeNonMarkerSegment(plain, locale);
+}
+
 /** @deprecated Use buildTermMarkingPromptBlock — LLM marks terms at generation time. */
 export function buildComplianceTranslationPromptBlock(_locale: Locale = "en"): string {
   return buildTermMarkingPromptBlock(_locale);
