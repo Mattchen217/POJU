@@ -18,7 +18,10 @@ import {
   getCurrentLiunian,
 } from "@/lib/calculations/relation-engine";
 import { resolveBaseAnalysisForBreakthrough } from "@/lib/llm/deepseek/breakthrough-core";
-import { POJU_DELIVERY_COMPLIANCE_LINE } from "@/lib/llm/compliance/output-policy";
+import {
+  POJU_DELIVERY_COMPLIANCE_LINE,
+  buildPojuConclusionOriginalQuestionBlock,
+} from "@/lib/llm/compliance/output-policy";
 import { buildPojuSystemPromptV6Sync } from "@/lib/llm/phases/oriental-prompt-context-v6";
 import {
   POJU_ACTION_DESIGN_PRINCIPLES,
@@ -199,6 +202,8 @@ ${regionalGuidance ? `${regionalGuidance}\n\n` : ""}规则:
 ═══ CONCLUSION ═══
 （**直答 original_question** + **1–2 句展开** + **金句框收束**——禁止一句话收场；依据 = 选定破局方向 × 本盘结构）
 
+${buildPojuConclusionOriginalQuestionBlock()}
+
 ═══ WHAT TO DO ═══
 给 3 条行动，每条用 "### Action N: " 开头 + **自拟标题**（贴合该用户具体处境，不用 Environmental Alignment 等固定名）。
 
@@ -257,6 +262,8 @@ ${regionalGuidance ? `${regionalGuidance}\n\n` : ""}规则:
 
 ═══ CONCLUSION ═══
 （方向性判断 + 核心提醒：这是基于有限信息 + 命盘的方向，非最终定论）
+
+${buildPojuConclusionOriginalQuestionBlock()}
 
 ═══ WHAT TO DO ═══
 3 条**低-risk**行动：观察/小步试探/厘清/记录/低承诺探索；禁辞职/搬家/大额决策类；格式同 full（### Action N + Profile basis）
@@ -348,7 +355,8 @@ ${agendaStr}
 ${baseStr}`,
     `# 整合要求（闭环 · 反断点）
 - ANALYSIS：直接展开 relationship_conclusion；**每个 ### 子标题**至少锚定一处本盘 pillars_detail/yong_shen/strength/十神/本命或定向关系实例（**三段位 ⟦t:id|软译|对他这件事的白话⟧**）；3–4 个子标题，短段+金句框，禁字墙。
-- CONCLUSION：落回 original_question **完整直答**（金句框 + 1–2 句展开）；依据 = 被收集证据【选定】破局方向 + 本盘实算关系标签（若有）。
+- CONCLUSION：落回 original_question **完整直答**（金句框 + 1–2 句展开）；**正面接住他问的问题本身**，禁止偷换成更好答的问题；含时间诉求时显式用条件成熟 + 可促成行动回应（见下方同源规则）；依据 = 被收集证据【选定】破局方向 + 本盘实算关系标签（若有）。
+${buildPojuConclusionOriginalQuestionBlock()}
 - WHAT TO DO：3 条从「选定方向 × 用户亲口议程证据」生长，禁万能模板；
   每条末尾 Profile basis 引具体结构（如"month.ten_god 七杀 + da_yun 第三步"）。
 - 全程只用本次 structured 实有命理实例；标记可见词只用术语表 soft 词，**禁括号干支**；**第三段白话须情景化**，禁词表通用定义当正文。

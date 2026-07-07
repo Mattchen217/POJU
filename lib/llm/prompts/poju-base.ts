@@ -13,6 +13,7 @@
 import {
   buildOutputPolicyForPoju,
   buildPojuPredictionBoundaryBlock,
+  POJU_CONCLUSION_ORIGINAL_QUESTION_MANDATE,
   POJU_DELIVERY_COMPLIANCE_LINE,
   POJU_TIME_ANXIETY_TRANSLATION,
 } from "@/lib/llm/compliance/output-policy";
@@ -219,7 +220,8 @@ shen_sha（贵人/桃花/驿马/华盖…）与所问之事的关联。
 给出顺势（何时推进）或转向（何时守、何时断）的明确判断；给 1–2 条可验证的破局轴线，决定权留给用户。
 
 ## 7. 正面回答原始问题（CONCLUSION 收口）
-CONCLUSION 段有一句明确收口、落回 original_question；依据可追溯到 core nature / 十神 / 神煞 / life cycle / balancing element 至少 3 项不同结构（实质展开）。你回答的是方向、条件、就绪状态、主动权——把"何时"转译成"何种条件成熟"，全程锚定本盘，不给具体日期/点位预测。
+${POJU_CONCLUSION_ORIGINAL_QUESTION_MANDATE}
+依据可追溯到 core nature / 十神 / 神煞 / life cycle / balancing element 至少 3 项不同结构（实质展开）。${POJU_TIME_ANXIETY_TRANSLATION.replace(/\n/g, " ")}
 
 问诊阶段浅引 profile、言之有物即可；主交付才基于命盘充分展开以上层次。`;
 

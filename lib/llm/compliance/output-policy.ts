@@ -66,6 +66,22 @@ export function buildPojuPredictionBoundaryBlock(): string {
   return `${POJU_POINT_PREDICTION_BOUNDARY}\n${POJU_CONDITIONAL_TIMING_GUIDANCE}`;
 }
 
+/** Block 64 — CONCLUSION 必须正面接住 original_question（含时间诉求），禁止偷换问题。聊天/交付同源。 */
+export const POJU_CONCLUSION_ORIGINAL_QUESTION_MANDATE = `【CONCLUSION 必须正面回应用户的原问题本身，不许重定义】
+- 直答 original_question 时，回应的是【他问的那个问题】，不得把它悄悄改成一个更好答的问题再回答。
+- 若原问题含【时间诉求】（什么时候 / 多久 / 还要等多久 / 何时能……）：必须【显式接住】这个时间焦虑，
+  用"何种条件 / 何种状态成熟时，转机的窗口才会打开"来回应，并点明他现在能主动促成什么，
+  把"什么时候"的主动权交回他手里。
+- 【禁】报具体日期/时间点；【禁】用重定义或回避绕开时间诉求；【禁】占卜宿命。
+- 一句话原则：不给日期，但一定要正面回答"要怎样、到什么程度，那个'好起来'才会到来"。`;
+
+/** 交付 CONCLUSION + Block 54 时间转译（与聊天侧 POJU_SESSION_GUARDRAILS 同源）。 */
+export function buildPojuConclusionOriginalQuestionBlock(): string {
+  return `${POJU_CONCLUSION_ORIGINAL_QUESTION_MANDATE}
+
+${POJU_TIME_ANXIETY_TRANSLATION}`;
+}
+
 /** v6 System 层 + 聊天侧硬红线（与 output-policy 同源） */
 export function buildPojuOutputRedLinesBlock(): string {
   return `【输出红线 · 任何阶段绝不跨越】
