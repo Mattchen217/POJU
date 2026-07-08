@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
-import { toSoftTranslatedPlainText } from "@/lib/llm/sanitize/compliance-terms";
+import { toCompliantPlainText } from "@/lib/glossary/to-compliant-plain-text";
 
 type AssistantMessageActionsProps = {
   content: string;
@@ -46,8 +46,8 @@ export function AssistantMessageActions({ content, locale: localeProp }: Assista
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  const plainText = useMemo(
-    () => toSoftTranslatedPlainText(content, locale).trim(),
+  const compliantText = useMemo(
+    () => toCompliantPlainText(content, locale),
     [content, locale],
   );
 
@@ -61,16 +61,16 @@ export function AssistantMessageActions({ content, locale: localeProp }: Assista
   }, []);
 
   const handleCopy = useCallback(async () => {
-    if (!plainText) return;
-    const ok = await copyTextToClipboard(plainText);
+    if (!compliantText) return;
+    const ok = await copyTextToClipboard(compliantText);
     if (!ok) return;
     setCopied(true);
     if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
     copiedTimerRef.current = setTimeout(() => setCopied(false), 2000);
-  }, [plainText]);
+  }, [compliantText]);
 
   const handleToggleRead = useCallback(() => {
-    if (typeof window === "undefined" || !plainText) return;
+    if (typeof window === "undefined" || !compliantText) return;
 
     if (speaking) {
       window.speechSynthesis.cancel();
@@ -80,8 +80,8 @@ export function AssistantMessageActions({ content, locale: localeProp }: Assista
     }
 
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(plainText);
-    utterance.lang = /[\u4e00-\u9fff]/.test(plainText) ? "zh-CN" : "en-US";
+    const utterance = new SpeechSynthesisUtterance(compliantText);
+    utterance.lang = /[\u4e00-\u9fff]/.test(compliantText) ? "zh-CN" : "en-US";
     utterance.onend = () => {
       utteranceRef.current = null;
       setSpeaking(false);
@@ -93,9 +93,9 @@ export function AssistantMessageActions({ content, locale: localeProp }: Assista
     utteranceRef.current = utterance;
     setSpeaking(true);
     window.speechSynthesis.speak(utterance);
-  }, [plainText, speaking]);
+  }, [compliantText, speaking]);
 
-  if (!plainText) return null;
+  if (!compliantText) return null;
 
   return (
     <div className="pchat__msg-actions">

@@ -8,7 +8,7 @@ import path from "node:path";
 
 import { reflowLongParagraph, reflowParagraphList } from "@/lib/reading/reflow-paragraphs";
 import { parseDeliveryContent } from "@/lib/poju/parse-delivery";
-import { toSoftTranslatedPlainText } from "@/lib/llm/sanitize/compliance-terms";
+import { toCompliantPlainText } from "@/lib/glossary/to-compliant-plain-text";
 import { prepareTextForGlossaryRender } from "@/lib/llm/sanitize/term-marking";
 
 const ROOT = path.join(process.cwd());
@@ -36,12 +36,12 @@ function main(): void {
   assert("GlossaryText autoMark comment", glossary.includes("autoMarkBareTerms"));
   assert("RichReadingText uses MarkedInline", rich.includes("MarkedInline"));
   assert("MainDeliveryView uses RichReadingText", read("components/poju/MainDeliveryView.tsx").includes("RichReadingText"));
-  assert("AssistantMessageActions soft export", read("components/poju/AssistantMessageActions.tsx").includes("toSoftTranslatedPlainText"));
+  assert("AssistantMessageActions compliant export", read("components/poju/AssistantMessageActions.tsx").includes("toCompliantPlainText"));
 
   const leak = "今年流年丙午，走大运。";
   const prepared = prepareTextForGlossaryRender(leak, "zh");
   assert("prepare marks bare terms", prepared.includes("⟦t:"));
-  const exportText = toSoftTranslatedPlainText(leak, "zh");
+  const exportText = toCompliantPlainText(leak, "zh");
   assert("export no 流年", !exportText.includes("流年"), exportText);
   assert("export no 丙午", !exportText.includes("丙午"), exportText);
   assert("export no 大运", !exportText.includes("大运"), exportText);

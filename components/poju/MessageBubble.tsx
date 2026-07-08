@@ -106,7 +106,6 @@ export const MessageBubble = memo(function MessageBubble({
           archiveId={actionPlanArchiveId}
           onActionUpdate={onActionUpdate}
         />
-        <AssistantMessageActions content={message.content} locale={locale} />
       </div>
     );
   }

@@ -40,15 +40,17 @@ function splitSentencesPreserving(text: string): string[] {
 export function reflowLongParagraph(paragraph: string, opts: ReflowOptions = {}): string[] {
   const maxChars = opts.maxChars ?? 84;
   const maxSentences = opts.maxSentences ?? 2;
-  const trimmed = paragraph.trim();
-  if (!trimmed) return [];
+  if (!paragraph.trim()) return [];
 
-  // Never split inside term markers or blockquote lines.
-  if (trimmed.includes("⟦") || trimmed.startsWith(">")) return [trimmed];
-  if (trimmed.length <= maxChars) return [trimmed];
+  const leading = paragraph.match(/^\s*/)?.[0] ?? "";
+  const trailing = paragraph.match(/\s*$/)?.[0] ?? "";
+  const trimmed = paragraph.trim();
+  if (trimmed.startsWith(">")) return [paragraph];
+
+  if (trimmed.length <= maxChars) return [paragraph];
 
   const sentences = splitSentencesPreserving(trimmed);
-  if (sentences.length <= 1) return [trimmed];
+  if (sentences.length <= 1) return [paragraph];
 
   const chunks: string[] = [];
   let current = "";
@@ -68,8 +70,13 @@ export function reflowLongParagraph(paragraph: string, opts: ReflowOptions = {})
   if (current) chunks.push(current);
 
   const joined = chunks.join("");
-  if (joined !== trimmed) return [trimmed];
-  return chunks.length ? chunks : [trimmed];
+  if (joined !== trimmed) return [paragraph];
+
+  if (leading && chunks[0]) chunks[0] = leading + chunks[0];
+  if (trailing && chunks[chunks.length - 1]) {
+    chunks[chunks.length - 1] = chunks[chunks.length - 1]! + trailing;
+  }
+  return chunks.length ? chunks : [paragraph];
 }
 
 /** Reflow an ### Action N block — keep header with first body chunk. */

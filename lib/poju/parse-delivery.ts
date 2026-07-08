@@ -1,4 +1,7 @@
-import { reflowParagraphList } from "@/lib/reading/reflow-paragraphs";
+import { prepareReadingLayoutText } from "@/lib/reading/prepare-reading-layout";
+import { reflowParagraphList, type ReflowOptions } from "@/lib/reading/reflow-paragraphs";
+
+const DELIVERY_REFLOW_OPTS: ReflowOptions = { maxChars: 72, maxSentences: 2 };
 
 export type DeliverySectionType = "analysis" | "conclusion" | "actions" | "invitation" | "opening";
 
@@ -30,14 +33,14 @@ export function guessSectionType(title: string): DeliverySectionType {
 }
 
 function splitBodyParagraphs(body: string, type: DeliverySectionType): string[] {
+  const prepared = prepareReadingLayoutText(body);
   const raw =
     type === "actions"
-      ? splitActionParagraphs(body)
-      : body
+      ? splitActionParagraphs(prepared)
+      : prepared
           .split(/\n\n+/)
-          .map((p) => p.trim())
-          .filter(Boolean);
-  return reflowParagraphList(raw, type === "actions" ? "actions" : "body");
+          .filter((p) => p.trim().length > 0);
+  return reflowParagraphList(raw, type === "actions" ? "actions" : "body", DELIVERY_REFLOW_OPTS);
 }
 
 /** Split WHAT TO DO body into one paragraph per ### Action N block. */

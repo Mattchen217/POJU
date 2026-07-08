@@ -8,9 +8,12 @@ import {
   parseBlockquoteParts,
   parseReadingBlocks,
 } from "@/lib/reading/parse-reading-blocks";
-import { reflowLongParagraph } from "@/lib/reading/reflow-paragraphs";
+import { prepareReadingLayoutText } from "@/lib/reading/prepare-reading-layout";
+import { reflowLongParagraph, type ReflowOptions } from "@/lib/reading/reflow-paragraphs";
 
 import "@/styles/reading-typography.css";
+
+const DELIVERY_REFLOW_OPTS: ReflowOptions = { maxChars: 72, maxSentences: 2 };
 
 type Props = {
   text: string;
@@ -18,6 +21,8 @@ type Props = {
   className?: string;
   /** Short poetic lines (e.g. classical sign) — may stay centered. */
   variant?: "body" | "poem";
+  /** Tighter paragraph breaks for POJU/Match/Glyph delivery panels. */
+  density?: "default" | "delivery";
 };
 
 function LeadBlock({
@@ -99,13 +104,24 @@ function BlockquoteContent({
   );
 }
 
-export function RichReadingText({ text, locale, className, variant = "body" }: Props) {
+export function RichReadingText({
+  text,
+  locale,
+  className,
+  variant = "body",
+  density = "default",
+}: Props) {
   // Fresh Set each render — must not survive across StrictMode/re-renders (mutated during parse).
   const dedupeScope = new Set<string>();
-  const blocks = useMemo(() => parseReadingBlocks(text), [text]);
+  const reflowOpts = density === "delivery" ? DELIVERY_REFLOW_OPTS : undefined;
+  const preparedText = density === "delivery" ? prepareReadingLayoutText(text) : text;
+  const blocks = useMemo(
+    () => parseReadingBlocks(preparedText, { layout: density !== "delivery" }),
+    [preparedText, density],
+  );
 
   if (!blocks.length) {
-    const chunks = reflowLongParagraph(text);
+    const chunks = reflowLongParagraph(preparedText, reflowOpts);
     return (
       <div className={cn("reading-body", variant === "poem" && "reading-body--poem", className)}>
         {chunks.map((chunk, i) => (
@@ -141,7 +157,7 @@ export function RichReadingText({ text, locale, className, variant = "body" }: P
           />
         );
       case "lead": {
-        const bodyChunks = reflowLongParagraph(block.body);
+        const bodyChunks = reflowLongParagraph(block.body, reflowOpts);
         if (bodyChunks.length <= 1) {
           return (
             <LeadBlock
@@ -201,8 +217,10 @@ export function RichReadingText({ text, locale, className, variant = "body" }: P
             ))}
           </ul>
         );
+      case "divider":
+        return <div key={i} className="reading-divider" aria-hidden />;
       default: {
-        const chunks = reflowLongParagraph(block.content);
+        const chunks = reflowLongParagraph(block.content, reflowOpts);
         return chunks.map((chunk, j) => (
           <p key={`${i}-${j}`} className="reading-p">
             <MarkedInline

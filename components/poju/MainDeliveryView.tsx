@@ -2,13 +2,16 @@
 
 import { useLocale, useTranslations } from "next-intl";
 
-import { GlossaryText } from "@/components/cross-product/GlossaryText";
 import { RichReadingText } from "@/components/cross-product/RichReadingText";
+import { AssistantMessageActions } from "@/components/poju/AssistantMessageActions";
 import { ArchiveSavedHint } from "@/components/archive/archive-saved-hint";
 import { TermMarkFirstVisitHint } from "@/components/cross-product/TermMarkFirstVisitHint";
 import type { Locale } from "@/lib/glossary/term-glossary";
 import type { POJUAction } from "@/lib/poju/types";
 import { parseDeliveryContent, type DeliverySection } from "@/lib/poju/parse-delivery";
+import { cn } from "@/lib/utils/classnames";
+
+import "@/styles/glyph-delivery.css";
 
 type Props = {
   fullText: string;
@@ -16,6 +19,33 @@ type Props = {
   archiveId?: string | null;
   onActionUpdate?: (actionId: string, status: POJUAction["status"], feedback?: string) => void;
 };
+
+function buildDeliveryExportText(fullText: string, actions: POJUAction[]): string {
+  if (!actions.length) return fullText;
+  const actionLines = actions
+    .map((a) => [a.title?.trim(), a.text?.trim()].filter(Boolean).join("\n"))
+    .filter(Boolean);
+  return actionLines.length ? `${fullText}\n\n${actionLines.join("\n\n")}` : fullText;
+}
+
+function DeliverySectionHeading({
+  title,
+  variant = "default",
+}: {
+  title: string;
+  variant?: "default" | "moment";
+}) {
+  return (
+    <div
+      className={cn(
+        "glyph-delivery-section-heading",
+        variant === "moment" && "glyph-delivery-section-heading--moment",
+      )}
+    >
+      <h2 className="glyph-delivery-section-title">{title}</h2>
+    </div>
+  );
+}
 
 export function MainDeliveryView({ fullText, actions, archiveId, onActionUpdate }: Props) {
   const tDelivery = useTranslations("poju.delivery");
@@ -25,10 +55,10 @@ export function MainDeliveryView({ fullText, actions, archiveId, onActionUpdate 
   const sections = parseDeliveryContent(fullText);
 
   return (
-    <div className="pchat__delivery">
-      <header className="pchat__delivery-header">
-        <span className="pchat__delivery-badge">{tDelivery("badge")}</span>
-        <p className="pchat__delivery-intro">{tDelivery("intro")}</p>
+    <div className="pchat__delivery poju-delivery-inner">
+      <header className="pchat__delivery-header glyph-delivery-header">
+        <p className="glyph-delivery-eyebrow">{tDelivery("badge")}</p>
+        <p className="pchat__delivery-intro poju-delivery-intro">{tDelivery("intro")}</p>
       </header>
 
       <TermMarkFirstVisitHint />
@@ -38,9 +68,9 @@ export function MainDeliveryView({ fullText, actions, archiveId, onActionUpdate 
       ))}
 
       {actions.length > 0 ? (
-        <div className="pchat__delivery-actions">
-          <h3 className="pchat__delivery-section-title">{tActions("title")}</h3>
-          <div className="flex flex-col gap-4">
+        <section className="glyph-delivery-section poju-delivery-actions">
+          <DeliverySectionHeading title={tActions("title")} />
+          <div className="glyph-delivery-section__body poju-delivery-actions__list">
             {actions.map((action, idx) => (
               <ActionRow
                 key={action.action_id}
@@ -52,10 +82,15 @@ export function MainDeliveryView({ fullText, actions, archiveId, onActionUpdate 
               />
             ))}
           </div>
-        </div>
+        </section>
       ) : null}
 
-      <p className="pchat__delivery-intro">{tDelivery("reminder")}</p>
+      <p className="pchat__delivery-intro poju-delivery-reminder">{tDelivery("reminder")}</p>
+
+      <AssistantMessageActions
+        content={buildDeliveryExportText(fullText, actions)}
+        locale={locale}
+      />
 
       {archiveId ? <ArchiveSavedHint archiveId={archiveId} /> : null}
     </div>
@@ -71,12 +106,44 @@ function DeliverySectionView({
 }) {
   if (section.type === "opening" && section.paragraphs.length === 0) return null;
 
+  const body = (
+    <RichReadingText
+      text={section.paragraphs.join("\n\n")}
+      locale={locale}
+      density="delivery"
+    />
+  );
+
+  if (section.type === "opening") {
+    return <section className="glyph-delivery-intro poju-delivery-opening">{body}</section>;
+  }
+
+  if (section.type === "conclusion" && section.title) {
+    return (
+      <section className="glyph-delivery-section poju-delivery-section--conclusion">
+        <div className="poju-delivery-highlight">
+          <DeliverySectionHeading title={section.title} />
+          <div className="glyph-delivery-section__body">{body}</div>
+        </div>
+      </section>
+    );
+  }
+
   return (
-    <section>
-      {section.title ? <h3 className="pchat__delivery-section-title">{section.title}</h3> : null}
-      <div>
-        <RichReadingText text={section.paragraphs.join("\n\n")} locale={locale} />
-      </div>
+    <section
+      className={cn(
+        "glyph-delivery-section",
+        section.type === "invitation" && "poju-delivery-section--invitation",
+        section.type === "actions" && "poju-delivery-section--actions",
+      )}
+    >
+      {section.title ? (
+        <DeliverySectionHeading
+          title={section.title}
+          variant={section.type === "invitation" ? "moment" : "default"}
+        />
+      ) : null}
+      <div className="glyph-delivery-section__body">{body}</div>
     </section>
   );
 }
@@ -101,17 +168,17 @@ function ActionRow({
   };
   const border =
     action.category === "traditional"
-      ? "border-l-amber-400"
+      ? "poju-delivery-action--traditional"
       : action.category === "modern_decisive"
-        ? "border-l-violet-400"
-        : "border-l-sky-400";
+        ? "poju-delivery-action--decisive"
+        : "poju-delivery-action--reflective";
 
   return (
-    <div className="pchat__delivery-action">
-      <p className="pchat__delivery-action-label">
+    <div className={cn("poju-delivery-action", border)}>
+      <p className="poju-delivery-action__label">
         {index}. {action.title?.trim() || categoryLabels[action.category]}
       </p>
-      <RichReadingText text={action.text} locale={locale} />
+      <RichReadingText text={action.text} locale={locale} density="delivery" />
       {onUpdate && action.status === "pending" ? (
         <div className="pchat__delivery-action-btns">
           <button type="button" onClick={() => onUpdate(action.action_id, "completed")}>

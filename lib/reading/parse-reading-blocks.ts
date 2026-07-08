@@ -1,10 +1,13 @@
+import { prepareReadingLayoutText } from "@/lib/reading/prepare-reading-layout";
+
 export type ReadingBlock =
   | { type: "p"; content: string }
   | { type: "h3"; content: string }
   | { type: "lead"; label: string; body: string }
   | { type: "subhead"; content: string }
   | { type: "blockquote"; content: string }
-  | { type: "ul"; items: string[] };
+  | { type: "ul"; items: string[] }
+  | { type: "divider" };
 
 export const READING_LABEL_PREFIX_RE = /^\*\*([^*]+?):\*\*\s*([\s\S]*)$/;
 
@@ -53,14 +56,20 @@ function parseParagraphChunk(trimmed: string): ReadingBlock[] {
   return [{ type: "p", content: lines.join(" ") }];
 }
 
-export function parseReadingBlocks(raw: string): ReadingBlock[] {
-  const text = raw.trim();
+export function parseReadingBlocks(raw: string, opts?: { layout?: boolean }): ReadingBlock[] {
+  const prepared = opts?.layout === false ? raw : prepareReadingLayoutText(raw);
+  const text = prepared.trim();
   if (!text) return [];
 
   const blocks: ReadingBlock[] = [];
   for (const chunk of text.split(/\n\n+/)) {
     const trimmed = chunk.trim();
     if (!trimmed) continue;
+
+    if (trimmed === "***") {
+      blocks.push({ type: "divider" });
+      continue;
+    }
 
     const lines = trimmed.split("\n");
     const nonEmpty = lines.map((l) => l.trim()).filter(Boolean);

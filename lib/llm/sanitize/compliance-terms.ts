@@ -54,6 +54,10 @@ import {
   wrapBareKeepCnSoftTerms,
 } from "@/lib/llm/sanitize/term-marking";
 import { auditEmptyKeepCnBrackets } from "@/lib/llm/sanitize/keep-cn-brackets";
+import {
+  BARE_GANZHI_MARKER,
+  isValidSexagenaryGanzhi,
+} from "@/lib/glossary/term-closed-set";
 
 export {
   auditBareGanzhi,
@@ -509,9 +513,12 @@ function filterDeletedTermsBounded(text: string): string {
   return result.replace(/\s{2,}/g, " ").replace(/\s+([,.;:!?])/g, "$1");
 }
 
-function removeStandaloneBareGanzhi(text: string): string {
+function removeStandaloneBareGanzhi(text: string, locale: string): string {
+  const loc = locale.startsWith("zh") ? BARE_GANZHI_MARKER.zh : BARE_GANZHI_MARKER.en;
   BARE_GANZHI_STANDALONE_RE.lastIndex = 0;
-  return text.replace(BARE_GANZHI_STANDALONE_RE, "");
+  return text.replace(BARE_GANZHI_STANDALONE_RE, (match) =>
+    isValidSexagenaryGanzhi(match) ? loc : match,
+  );
 }
 
 function transformNonMarkerRegions(text: string, transform: (segment: string) => string): string {
@@ -540,8 +547,13 @@ function sanitizeNonMarkerSegment(segment: string, locale: string): string {
   s = s.replace(/⟦/g, "");
   s = replaceStandaloneRedlines(s, locale);
   s = filterDeletedTermsBounded(s);
-  s = removeStandaloneBareGanzhi(s);
+  s = removeStandaloneBareGanzhi(s, locale);
   return s;
+}
+
+/** Final scrub for copy/TTS/share — replaces (not deletes) any leaked bare 干支/高危词. */
+export function scrubLeakedComplianceTerms(text: string, locale: string): string {
+  return sanitizeNonMarkerSegment(text, locale);
 }
 
 function sanitizeDeliveryBodyPart(text: string, locale: string): string {
@@ -560,13 +572,15 @@ export function sanitizeDeliveryText(fullText: string, locale: string): string {
 /**
  * User-visible plain text — auto-mark + soft labels + belt-and-suspenders leak scrub.
  * Use for copy, TTS, share exports (never raw marked or bare 命理/高危词).
+ * @see lib/glossary/to-compliant-plain-text.ts — canonical export entry
  */
 export function toSoftTranslatedPlainText(text: string, locale: string): string {
+  // Lazy import avoided — inline same pipeline as toCompliantPlainText to prevent circular deps.
   if (!text?.trim()) return text ?? "";
   const prepared = prepareTextForGlossaryRender(text, locale);
   let plain = stripMarkersForPrompt(prepared);
   plain = stripBrokenMarkers(plain);
-  return sanitizeNonMarkerSegment(plain, locale);
+  return scrubLeakedComplianceTerms(plain, locale).trim();
 }
 
 /** @deprecated Use buildTermMarkingPromptBlock — LLM marks terms at generation time. */

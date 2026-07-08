@@ -113,24 +113,114 @@
   margin-bottom: 0;
 }
 
+.reading-divider {
+  height: 1px;
+  margin: 1.25rem 0 1.5rem;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent);
+}
+
 /* POJU main delivery */
+.pchat__delivery.poju-delivery-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 3.5rem;
+  width: 100%;
+  max-width: min(780px, 100%);
+  margin-inline: auto;
+  text-align: left;
+}
+
+.pchat__delivery-header.glyph-delivery-header {
+  padding-bottom: 1.75rem;
+  margin-bottom: 0;
+}
+
+.poju-delivery-intro,
+.poju-delivery-reminder {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.65;
+  color: rgba(228, 230, 234, 0.88);
+}
+
+.poju-delivery-highlight {
+  padding: 1.5rem 1.25rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(197, 168, 128, 0.28);
+  background: rgba(197, 168, 128, 0.045);
+}
+
+.poju-delivery-section--invitation .glyph-delivery-section-title {
+  font-size: 1.125rem;
+  font-weight: 300;
+}
+
+.poju-delivery-actions__list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.poju-delivery-action {
+  padding: 1.25rem 1.25rem 1.25rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(55, 65, 81, 0.55);
+  border-left-width: 3px;
+  background: linear-gradient(180deg, rgba(17, 19, 23, 0.85), rgba(14, 15, 18, 0.92));
+}
+
+.poju-delivery-action--traditional {
+  border-left-color: rgba(251, 191, 36, 0.65);
+}
+
+.poju-delivery-action--decisive {
+  border-left-color: rgba(167, 139, 250, 0.65);
+}
+
+.poju-delivery-action--reflective {
+  border-left-color: rgba(56, 189, 248, 0.65);
+}
+
+.poju-delivery-action__label {
+  margin: 0 0 0.65rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: rgba(212, 175, 55, 0.9);
+}
+
 .pchat__delivery section {
-  margin-bottom: 3.5rem; /* 56px */
+  margin-bottom: 0;
 }
 
 .pchat__delivery-section-title {
   margin-bottom: 0.85rem;
 }
 
-.pchat__delivery-action .reading-body {
+.pchat__delivery-action .reading-body,
+.poju-delivery-action .reading-body {
   margin-top: 0.35rem;
 }
 
+.pchat__delivery .glyph-delivery-section__body .reading-body,
 .pchat__delivery section > div.reading-body,
 .pchat__delivery section > div:not(.pchat__delivery-actions) {
   display: flex;
   flex-direction: column;
-  gap: 0.15em;
+  gap: 0.35rem;
+}
+
+.pchat__delivery .reading-p {
+  margin-bottom: 1.15em;
+}
+
+.pchat__delivery .reading-pullquote {
+  margin: 1rem 0 1.35rem;
+}
+
+.pchat__delivery .reading-lead-block--subhead {
+  margin-top: 1.35rem;
+  margin-bottom: 0.5rem;
 }
 
 /* Glyph report */

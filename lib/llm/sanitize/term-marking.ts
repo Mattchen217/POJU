@@ -238,6 +238,8 @@ function markBareGanzhiInSegment(segment: string, locale: string): string {
   let m: RegExpExecArray | null;
   while ((m = BARE_GANZHI_RE.exec(segment)) !== null) {
     if (!isValidSexagenaryGanzhi(m[0])) continue;
+    const prev = matches[matches.length - 1];
+    if (prev && m.index < prev.index + prev.len) continue;
     matches.push({ index: m.index, len: m[0].length });
   }
   if (!matches.length) return segment;
