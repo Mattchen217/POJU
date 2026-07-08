@@ -196,6 +196,8 @@ export interface POJUSessionState {
   unlock_via?: "payment" | "code";
   /** User question captured at paywall (before unlock). */
   pending_question?: string;
+  /** Preview phase: user acknowledged question-input briefing for this session. */
+  question_briefing_dismissed?: boolean;
   /** Local chart data for Energy Matrix (no LLM). */
   matrix_payload?: import("./build-matrix-payload").PojuMatrixPayload;
   /** OpenRouter supplier pinned after first successful chat turn (prefix cache). */

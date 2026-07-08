@@ -823,6 +823,18 @@
       "birth_flow_intro_cta_hint": "Une fois le message de POJU ci-dessus lu, continuez ici pour saisir les informations de naissance (enregistrées uniquement sur cet appareil).",
       "birth_flow_continue": "Continuer vers le formulaire",
       "birth_flow_skip": "Ignorer pour l'instant",
+      "question_briefing": {
+        "title": "Avant de commencer — comment POJU vous accompagne",
+        "intro": "Quelques points à connaître avant de démarrer :",
+        "item_one_title": "Une seule question centrale à la fois",
+        "item_one_body": "POJU est là pour vous, concentré sur la question la plus importante que vous affrontez en ce moment. Confiez-lui ce que vous souhaitez le plus éclaircir : la profondeur naît de la concentration.",
+        "item_two_title": "Plus vous êtes précis, mieux POJU peut vous rejoindre",
+        "item_two_body": "Plus vous décrivez clairement votre situation, vos ressentis et les détails de ce qui vous préoccupe, plus les réflexions et les pistes proposées par POJU seront adaptées à vous, plutôt que des conseils génériques.",
+        "item_three_title": "Une réponse plus lente signifie qu'il réfléchit soigneusement pour vous",
+        "item_three_body": "Chaque réponse mobilise une analyse importante. Parfois, POJU met un peu plus de temps à « réfléchir » : ce n'est pas une erreur du système, c'est POJU qui calcule attentivement pour vous. Merci de votre patience.",
+        "footer": "POJU propose une auto-réflexion et un regard neuf pour vous aider à voir votre situation plus clairement et à trouver des pistes à explorer. La décision finale vous appartient toujours.",
+        "confirm": "J'ai compris"
+      },
       "birth_flow_analyzing_title": "Analyse de votre profil…",
       "birth_flow_analysis_done_short": "Analyse terminée",
       "birth_flow_analysis_partial": "Enregistré — l'analyse sera relancée plus tard",

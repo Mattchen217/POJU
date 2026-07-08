@@ -20,6 +20,7 @@ import {
   SessionSidebarDialog,
   type SessionSidebarDialogState,
 } from "@/components/poju/SessionSidebarDialog";
+import { QuestionBriefingDialog } from "@/components/poju/QuestionBriefingDialog";
 import "./poju-chat.css";
 import "@/styles/reading-typography.css";
 
@@ -121,6 +122,10 @@ export interface PojuChatProps {
   initialScrollPosition?: "top" | "bottom";
   /** Fired once the pending-reply UI (slots + text) has painted — parent may dismiss activity. */
   onActivityRenderReady?: () => void;
+  /** Preview phase: first composer focus shows question briefing before typing. */
+  questionBriefingEnabled?: boolean;
+  questionBriefingDismissed?: boolean;
+  onQuestionBriefingDismiss?: () => void;
 }
 
 /* ---------- AI 文本：定稿后走 RichReadingText（金字 + 轻排版） ---------- */
@@ -187,9 +192,13 @@ export default function PojuChat(props: PojuChatProps) {
     paywallOverlay,
     initialScrollPosition = "bottom",
     onActivityRenderReady,
+    questionBriefingEnabled = false,
+    questionBriefingDismissed = false,
+    onQuestionBriefingDismiss,
   } = props;
 
   const [input, setInput] = useState("");
+  const [questionBriefingOpen, setQuestionBriefingOpen] = useState(false);
   const textareaValue = composerText ?? input;
   const setTextareaValue = onComposerTextChange ?? setInput;
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -209,6 +218,10 @@ export default function PojuChat(props: PojuChatProps) {
     suppressTailScrollRef.current = initialScrollPosition === "top";
   }, [currentSessionId, initialScrollPosition]);
 
+  useEffect(() => {
+    setQuestionBriefingOpen(false);
+  }, [currentSessionId]);
+
   /* Lock document scroll — only .pchat__scroll may scroll (iOS Safari rubber-band). */
   useEffect(() => {
     document.documentElement.classList.add("pchat-page-lock");
@@ -226,6 +239,33 @@ export default function PojuChat(props: PojuChatProps) {
     ta.style.height = "auto";
     ta.style.height = Math.min(ta.scrollHeight, 200) + "px";
   }, [textareaValue]);
+
+  function shouldGateQuestionBriefing(): boolean {
+    return (
+      questionBriefingEnabled && !questionBriefingDismissed && !composerDisabled
+    );
+  }
+
+  function handleComposerPointerDown(e: React.PointerEvent<HTMLTextAreaElement>) {
+    if (!shouldGateQuestionBriefing()) return;
+    e.preventDefault();
+    setQuestionBriefingOpen(true);
+  }
+
+  function handleComposerFocus(e: React.FocusEvent<HTMLTextAreaElement>) {
+    if (!shouldGateQuestionBriefing()) return;
+    if (questionBriefingOpen) return;
+    e.target.blur();
+    setQuestionBriefingOpen(true);
+  }
+
+  function handleQuestionBriefingConfirm() {
+    onQuestionBriefingDismiss?.();
+    setQuestionBriefingOpen(false);
+    requestAnimationFrame(() => {
+      taRef.current?.focus();
+    });
+  }
 
   /* 新消息 / 流式时自动滚到底；首次进入会话按 initialScrollPosition 定位 */
   useEffect(() => {
@@ -712,6 +752,8 @@ export default function PojuChat(props: PojuChatProps) {
               placeholder={inputPlaceholder ?? "Type your message..."}
               value={textareaValue}
               disabled={isStreaming || composerDisabled}
+              onPointerDown={handleComposerPointerDown}
+              onFocus={handleComposerFocus}
               onChange={(e) => setTextareaValue(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
@@ -748,6 +790,10 @@ export default function PojuChat(props: PojuChatProps) {
         </div>
 
         {editDialog ? <EditMessageDialog open {...editDialog} /> : null}
+        <QuestionBriefingDialog
+          open={questionBriefingOpen}
+          onConfirm={handleQuestionBriefingConfirm}
+        />
       </main>
     </div>
   );

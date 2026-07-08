@@ -992,6 +992,18 @@
       "birth_flow_intro_cta_hint": "When you've read POJU's message above, continue here to enter birth details (saved on this device only).",
       "birth_flow_continue": "Continue to form",
       "birth_flow_skip": "Skip for now",
+      "question_briefing": {
+        "title": "Before we begin — how POJU works with you",
+        "intro": "A few things to know before we start:",
+        "item_one_title": "One core question at a time",
+        "item_one_body": "POJU is here for you, focused on the single most important question you're facing right now. Tell it the one thing you most want to work through — depth comes from focus.",
+        "item_two_title": "The more specific you are, the closer POJU can meet you",
+        "item_two_body": "The more clearly you share your situation, your feelings, and the details of what you're wrestling with, the more tailored POJU's reflections and suggested directions will be — not generic advice.",
+        "item_three_title": "A slower reply means it's thinking carefully for you",
+        "item_three_body": "Every response involves a great deal of analysis. Sometimes POJU takes a little longer to \"think\" — this is not a system error, it's POJU calculating carefully on your behalf. Please be patient with it.",
+        "footer": "POJU offers self-reflection and perspective to help you see your situation more clearly and find directions worth exploring. The final decision always remains yours.",
+        "confirm": "Got it"
+      },
       "birth_flow_analyzing_title": "Analyzing your chart…",
       "birth_flow_analysis_done_short": "Analysis complete",
       "birth_flow_analysis_partial": "Saved — analysis will retry later",

@@ -823,6 +823,18 @@
       "birth_flow_intro_cta_hint": "Cuando hayas leído el mensaje de POJU de arriba, continúa aquí para introducir los datos de nacimiento (se guardan solo en este dispositivo).",
       "birth_flow_continue": "Continuar al formulario",
       "birth_flow_skip": "Omitir por ahora",
+      "question_briefing": {
+        "title": "Antes de empezar — cómo POJU trabaja contigo",
+        "intro": "Unas cosas que conviene saber antes de comenzar:",
+        "item_one_title": "Una sola pregunta central cada vez",
+        "item_one_body": "POJU está aquí para ti, centrado en la única pregunta más importante que enfrentas ahora mismo. Cuéntale aquello que más deseas resolver: la profundidad nace del enfoque.",
+        "item_two_title": "Cuanto más concreto seas, mejor podrá POJU acompañarte",
+        "item_two_body": "Cuanto más claramente compartas tu situación, tus emociones y los detalles de lo que te inquieta, más ajustadas a ti serán las reflexiones y las direcciones que POJU te sugiera, en lugar de consejos genéricos.",
+        "item_three_title": "Una respuesta lenta significa que está pensando con cuidado para ti",
+        "item_three_body": "Cada respuesta implica un gran análisis. A veces POJU tarda un poco más en \"pensar\": no es un error del sistema, es POJU calculando con cuidado para ti. Ten paciencia con él.",
+        "footer": "POJU ofrece autorreflexión y perspectiva para ayudarte a ver tu situación con más claridad y encontrar direcciones que valga la pena explorar. La decisión final siempre es tuya.",
+        "confirm": "Entendido"
+      },
       "birth_flow_analyzing_title": "Analizando tu perfil…",
       "birth_flow_analysis_done_short": "Análisis completo",
       "birth_flow_analysis_partial": "Guardado — el análisis se reintentará más tarde",

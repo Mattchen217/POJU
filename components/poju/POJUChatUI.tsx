@@ -253,6 +253,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const hasUserMessage = visibleMessages.some((m) => m.role === "user");
   const expired = isSessionExpired(session.expires_at);
   const previewComposerBlocked = isPreviewSession(session) && hasPaywallMessage(session);
+  const questionBriefingEnabled =
+    isPreviewSession(session) && !hasPaywallMessage(session) && !session.pending_question?.trim();
   const composerLocked = expired || previewComposerBlocked || unlockBusy || unlockReportGateBlocking;
 
   const openUnlockReportModal = useCallback(() => setUnlockReportModalOpen(true), []);
@@ -660,6 +662,14 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     } finally {
       setUnlockBusy(false);
     }
+  }
+
+  async function handleQuestionBriefingDismiss() {
+    const base = sessionRef.current;
+    if (base.question_briefing_dismissed) return;
+    const updated: POJUSessionState = { ...base, question_briefing_dismissed: true };
+    onSessionUpdate(updated);
+    await savePOJUSession(updated);
   }
 
   async function handlePojuSend(text: string) {
@@ -1192,6 +1202,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         onEditMessage={(id, content) => void handleEditUserMessage(id, content)}
         editDisabled={streaming}
         editLabel={t("edit_message")}
+        questionBriefingEnabled={questionBriefingEnabled}
+        questionBriefingDismissed={Boolean(session.question_briefing_dismissed)}
+        onQuestionBriefingDismiss={() => void handleQuestionBriefingDismiss()}
         onClose={() => router.push("/poju")}
         brandName={t("sidebar_brand_name")}
         brandTooltip={tBrand("navbar_tooltip")}

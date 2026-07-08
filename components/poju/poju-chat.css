@@ -1409,6 +1409,66 @@
   cursor: pointer;
 }
 
+/* ---------- Question briefing (first composer focus) ---------- */
+.pchat-question-briefing-overlay {
+  z-index: 100;
+}
+
+.pchat-question-briefing-dialog {
+  width: min(520px, 100%);
+  max-height: min(88vh, 720px);
+  overflow: auto;
+  text-align: left;
+}
+
+.pchat-question-briefing-dialog__intro {
+  margin: 12px 0 0;
+  font-size: 15px;
+  line-height: 1.65;
+  color: #c9c3da;
+}
+
+.pchat-question-briefing-dialog__list {
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pchat-question-briefing-dialog__item-title {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: #e8e0ff;
+}
+
+.pchat-question-briefing-dialog__item-body {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.65;
+  color: #b8b0cc;
+}
+
+.pchat-question-briefing-dialog__footer {
+  margin: 18px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid rgba(167, 139, 250, 0.18);
+  font-size: 13px;
+  line-height: 1.65;
+  color: #9f97b3;
+}
+
+.pchat-question-briefing-dialog .pchat-expiry-dialog__actions {
+  margin-top: 22px;
+}
+
+.pchat-question-briefing-dialog .pchat-expiry-dialog__title {
+  text-align: left;
+}
+
 /* ---------- 文档级滚动锁定（仅消息区可滚） ---------- */
 html.pchat-page-lock,
 body.pchat-page-lock {
