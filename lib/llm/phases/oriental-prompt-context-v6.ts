@@ -54,6 +54,8 @@ import {
 } from "@/lib/llm/phases/phase-transport";
 import { buildTermMarkingPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
 import type { PhaseLLMInput } from "@/lib/llm/phases/types";
+import { buildAnchoredFactsExclusionBlock } from "@/lib/poju/anchored-fact-tracking";
+import { extractRelationFocusHintsFromText } from "@/lib/poju/relation-focus-hints";
 
 /** 下游相位：question_category 已定，流年/定向关系进 user 侧（INV-1 · 不进 system）。 */
 export const POJU_V6_DIRECTED_RELATION_PHASES: ReadonlySet<AgentPhase> = new Set([
@@ -149,25 +151,36 @@ export async function buildPhaseTurnContextV6(
         input.session.original_question ??
         input.user_message,
     );
-  const directedDynamicRels =
+  const focusHints = extractRelationFocusHintsFromText(input.user_message);
+  const directedDynamicRelsFull =
     structured && liunian
       ? computeDirectedDynamicRelations(structured, liunian, questionCategory)
       : undefined;
   const directedInventoryBlock =
     structured && liunian
-      ? buildDirectedDynamicRelationInventoryBlock(structured, liunian, questionCategory)
+      ? buildDirectedDynamicRelationInventoryBlock(
+          structured,
+          liunian,
+          questionCategory,
+          focusHints,
+        )
       : "";
+  const anchoredFactsBlock = buildAnchoredFactsExclusionBlock(
+    input.agent_state?.anchored_fact_ids,
+    outLoc,
+  );
 
   const dataPlane = stitchPromptSections(
     buildNorthAmericaAdaptation(outLoc),
     buildProfileContextSection(input.profile, baseAnalysis, outLoc),
     structured
       ? buildChatFactGuardBlock(structured, {
-          directedRelations: injectDirected ? directedDynamicRels ?? [] : undefined,
+          directedRelations: injectDirected ? directedDynamicRelsFull ?? [] : undefined,
         })
       : "",
     directedInventoryBlock,
     structured ? buildStructuredInstanceInventory(structured) : "",
+    anchoredFactsBlock,
   );
 
   const termPlane = stitchPromptSections(

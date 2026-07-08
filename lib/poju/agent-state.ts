@@ -200,6 +200,8 @@ export interface POJUAgentState {
   agenda_generated: boolean;
   /** 破局推理脊柱（深测算产出，收集演进，交付消费）。null = 尚未深测算。 */
   breakthrough_core: BreakthroughCore | null;
+  /** Term/relation ids already anchored in visible assistant replies this session. */
+  anchored_fact_ids?: string[];
 }
 
 /** Minimum effective user turns before confirmation (agenda-driven gate). */
@@ -344,6 +346,7 @@ export function createInitialAgentState(input: {
     investigation_agenda: [],
     agenda_generated: false,
     breakthrough_core: null,
+    anchored_fact_ids: [],
   };
 }
 

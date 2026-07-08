@@ -212,11 +212,26 @@ export default function PojuChat(props: PojuChatProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const pendingInitialScrollRef = useRef<"top" | "bottom" | null>(initialScrollPosition);
   const suppressTailScrollRef = useRef(initialScrollPosition === "top");
+  const stickToBottomRef = useRef(initialScrollPosition !== "top");
 
   useEffect(() => {
     pendingInitialScrollRef.current = initialScrollPosition;
     suppressTailScrollRef.current = initialScrollPosition === "top";
+    stickToBottomRef.current = initialScrollPosition !== "top";
   }, [currentSessionId, initialScrollPosition]);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const onScroll = () => {
+      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+      stickToBottomRef.current = distanceFromBottom <= 80;
+    };
+
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [currentSessionId]);
 
   useEffect(() => {
     setQuestionBriefingOpen(false);
@@ -267,7 +282,7 @@ export default function PojuChat(props: PojuChatProps) {
     });
   }
 
-  /* 新消息 / 流式时自动滚到底；首次进入会话按 initialScrollPosition 定位 */
+  /* 新消息时自动滚到底（仅当用户已在底部）；首次进入会话按 initialScrollPosition 定位 */
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -277,20 +292,15 @@ export default function PojuChat(props: PojuChatProps) {
       requestAnimationFrame(() => {
         el.scrollTo({ top: pos === "top" ? 0 : el.scrollHeight, behavior: "auto" });
         pendingInitialScrollRef.current = null;
+        stickToBottomRef.current = pos === "bottom";
       });
       return;
     }
 
-    if (!suppressTailScrollRef.current) {
+    if (!suppressTailScrollRef.current && stickToBottomRef.current) {
       el.scrollTo({ top: el.scrollHeight, behavior: "auto" });
     }
-  }, [
-    messages,
-    pendingActivityLines,
-    inlineNotice,
-    messageFollowUps,
-    currentSessionId,
-  ]);
+  }, [messages, inlineNotice, currentSessionId]);
 
   const pendingReplyId = useMemo(() => {
     if (!pendingActivityLines?.length && !pendingActivityFading) return null;
@@ -387,6 +397,7 @@ export default function PojuChat(props: PojuChatProps) {
     const t = textareaValue.trim();
     if (!t || isStreaming || composerDisabled) return;
     suppressTailScrollRef.current = false;
+    stickToBottomRef.current = true;
     onSend(t);
     setTextareaValue("");
   };

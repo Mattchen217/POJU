@@ -5,6 +5,7 @@
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import type { LiuNianGanzhi } from "@/lib/calculations/liunian";
 import { getCurrentLiunian } from "@/lib/calculations/liunian";
+import type { RelationFocusHints } from "@/lib/poju/relation-focus-hints";
 import {
   analyzeAllBranchInteractions,
   isLiuChong,
@@ -447,17 +448,101 @@ export function filterRelationsByCategory(
   });
 }
 
+function hashRotationSeed(seed: string): number {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) {
+    h = (h * 31 + seed.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
+const PEER_OUTPUT_GODS = new Set<TenGod>(["比肩", "劫财", "食神", "伤官"]);
+
+function relationTouchesPeerOutputPillar(
+  structured: ProfileStructured,
+  r: RelationLabel,
+): boolean {
+  for (const pos of r.positions) {
+    if (pos === "liunian" || pos === "dayun") continue;
+    if (!(POSITIONS as readonly string[]).includes(pos)) continue;
+    const tg = structured.pillars_detail?.[pos as Pos]?.ten_god as TenGod | undefined;
+    if (tg && PEER_OUTPUT_GODS.has(tg)) return true;
+  }
+  return false;
+}
+
+function scoreRelationForFocus(
+  r: RelationLabel,
+  hints: RelationFocusHints,
+  structured?: ProfileStructured | null,
+): number {
+  let score = 0;
+  for (const p of hints.palaceBoost) {
+    if (r.palaces.includes(p)) score += 2;
+  }
+  if (hints.tenGodFocus === "wealth_officer") {
+    if (r.kind === "ten_god_tension" && r.id.includes("shangguan")) score += 4;
+    if (structured && relationTouchesWealthOfficerPillar(structured, r)) score += 3;
+  }
+  if (hints.tenGodFocus === "peer_output") {
+    if (r.kind === "ten_god_tension" && r.id.includes("xiaoshen")) score += 4;
+    if (structured && relationTouchesPeerOutputPillar(structured, r)) score += 3;
+  }
+  if (hints.tenGodFocus === "relationship") {
+    if (r.palaces.includes("spouse")) score += 3;
+    if (structured && relationTouchesWealthOfficerPillar(structured, r)) score += 2;
+  }
+  return score;
+}
+
+/** Pick a focused slice — themes boost score; rotationSeed breaks ties per turn. */
+export function selectFocusedDirectedRelations(
+  rels: RelationLabel[],
+  focusHints: RelationFocusHints | null | undefined,
+  structured?: ProfileStructured | null,
+  maxItems = 4,
+): RelationLabel[] {
+  if (rels.length === 0) return rels;
+  const hints = focusHints ?? {
+    themes: [],
+    palaceBoost: [],
+    tenGodFocus: null,
+    rotationSeed: "default",
+  };
+
+  const scored = rels.map((r) => ({
+    r,
+    score: hints.themes.length ? scoreRelationForFocus(r, hints, structured) : 0,
+  }));
+  scored.sort((a, b) => b.score - a.score || a.r.id.localeCompare(b.r.id));
+
+  const positive = scored.filter((x) => x.score > 0).map((x) => x.r);
+  if (positive.length >= 1) {
+    return positive.slice(0, maxItems);
+  }
+
+  const start = hashRotationSeed(hints.rotationSeed) % rels.length;
+  const picked: RelationLabel[] = [];
+  for (let i = 0; i < Math.min(maxItems, rels.length); i++) {
+    picked.push(rels[(start + i) % rels.length]!);
+  }
+  return picked;
+}
+
 /** 流年 + 十神张力，按 question_category 定向过滤（不含本命，供 v6 user 侧「流年/定向」段）。 */
 export function computeDirectedDynamicRelations(
   structured: ProfileStructured,
   liunian: LiuNianGanzhi,
   questionCategory: string | null | undefined,
+  focusHints?: RelationFocusHints | null,
 ): RelationLabel[] {
   const dynamic = [
     ...computeLiunianRelations(structured, liunian),
     ...detectTenGodTensions(structured, liunian),
   ];
-  return filterRelationsByCategory(dynamic, questionCategory, structured);
+  const filtered = filterRelationsByCategory(dynamic, questionCategory, structured);
+  if (!focusHints) return filtered;
+  return selectFocusedDirectedRelations(filtered, focusHints, structured);
 }
 
 /** 本命 + 流年 + 十神张力，按 question_category 定向过滤。 */
@@ -632,21 +717,32 @@ export function buildDirectedDynamicRelationInventoryBlock(
   structured: ProfileStructured,
   liunian: LiuNianGanzhi,
   questionCategory: string | null | undefined,
+  focusHints?: RelationFocusHints | null,
 ): string {
-  const filtered = computeDirectedDynamicRelations(structured, liunian, questionCategory);
+  const pool = filterRelationsByCategory(
+    [
+      ...computeLiunianRelations(structured, liunian),
+      ...detectTenGodTensions(structured, liunian),
+    ],
+    questionCategory,
+    structured,
+  );
+  const filtered = selectFocusedDirectedRelations(pool, focusHints, structured);
   const cat = questionCategory?.trim() || "—";
+  const focusNote =
+    focusHints?.themes.length ? focusHints.themes.join("+") : "rotation";
   if (!filtered.length) {
     return [
-      `## ⭐ 优先锚定这些（定向计算 · question_category=${cat} · 本轮过滤后为空）`,
+      `## ⭐ 优先锚定这些（定向计算 · question_category=${cat} · focus=${focusNote} · 本轮过滤后为空）`,
       "- 无流年/十神张力定向项时，从下方实例清单挑【与本句最相关】的本命关系/十神/大运/用神；勿复读泛泛日主/当前阶段",
       "- 禁止写流年引动/十神张力/伤官见官/枭神夺食等未在本盘本命关系清单中的关系词",
     ].join("\n");
   }
   return [
-    `## ⭐ 优先锚定这些（定向计算 · question_category=${cat} · 仅对本盘+本问题成立）`,
+    `## ⭐ 优先锚定这些（定向计算 · question_category=${cat} · focus=${focusNote} · 仅对本盘+本问题成立）`,
     `- ${filtered.map((r) => r.han).join("、")}`,
     "- **锚点首选**以上定向事实；优于泛泛日主/食神/当前阶段；泛化性格底色整场点一次，勿每轮复读",
-    "- 禁止写未列出的流年引动/十神张力/伤官见官/枭神夺食等关系词",
+    "- 本轮聚焦随用户最新输入偏移；禁止写未列出的流年引动/十神张力/伤官见官/枭神夺食等关系词",
   ].join("\n");
 }
 

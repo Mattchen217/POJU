@@ -853,6 +853,7 @@
   visibility: hidden;
   transition: opacity 0.22s ease, visibility 0.22s ease, min-height 0.22s ease;
   pointer-events: none;
+  overflow-anchor: none;
 }
 
 .pchat__activity-slot.is-visible {
@@ -872,6 +873,7 @@
 .pchat__pending-bundle {
   position: relative;
   min-height: clamp(7rem, 28vw, 11rem);
+  overflow-anchor: none;
 }
 
 .pchat__pending-bundle__content {

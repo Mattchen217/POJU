@@ -28,6 +28,10 @@ import {
 import { ensureSessionCycles } from "@/lib/poju/cycle-manager";
 import { finalizeToolInjectionTurn, prepareToolInjectionTurn } from "@/lib/poju/prepare-tool-injection-turn";
 import { findPendingToolInjection } from "@/lib/poju/find-pending-tool-injection";
+import {
+  extractAnchoredFactIdsFromAssistant,
+  mergeAnchoredFactIds,
+} from "@/lib/poju/anchored-fact-tracking";
 import { extractQuestionCategory, mergeContextUpdates, recordToLLMContextUpdates } from "@/lib/poju/context-extractor";
 import {
   detectExplicitLanguageSwitch,
@@ -679,6 +683,14 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
         finalContent = `${finalContent.trimEnd()}${lead}${q}`;
       }
     }
+  }
+
+  const anchoredFromReply = extractAnchoredFactIdsFromAssistant(finalContent);
+  if (anchoredFromReply.length > 0) {
+    agent_v2 = {
+      ...agent_v2,
+      anchored_fact_ids: mergeAnchoredFactIds(agent_v2.anchored_fact_ids, anchoredFromReply),
+    };
   }
 
   const assistantMessage: POJUMessage = {
