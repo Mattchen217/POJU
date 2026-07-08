@@ -43,7 +43,9 @@ export function buildStructuredInstanceInventory(
 
   const lines = [
     "## 本次 structured 实例闭集（只能引用以下实际出现的项）",
-    `- 神煞（闭集 9 选 N）: ${shenSha.size ? [...shenSha].join("、") : "（structured 无神煞 — 禁止写任何神煞名）"}`,
+    `- 神煞（本盘实算 ${shenSha.size} 项 · 仅可引用下列 · 清单外禁写）: ${
+      shenSha.size ? [...shenSha].join("、") : "（无 — 禁止写任何神煞名）"
+    }`,
     relationInventoryLine,
     `- 十神: ${tenGods.size ? [...tenGods].join("、") : "（无柱位十神 — 只做方向性描述）"}`,
     `- 十二长生: ${lifeStages.size ? [...lifeStages].join("、") : "（无 — 禁止编造）"}`,

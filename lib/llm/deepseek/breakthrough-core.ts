@@ -53,7 +53,7 @@ export const DEEP_RECKONING_TASK = `# 角色：破局总设计师（上帝视角
 - 十神 / 格局：驱动力与命局格调（pillars_detail.*.ten_god, pattern）
 - 五行强弱 / 用神喜忌：过载还是不足、往哪调（strength, yong_shen / xi_shen / ji_shen）
 - 大运时机：当前这步是顺是逆、该进该守（da_yun）—— 破局的"何时"
-- 神煞（仅闭集 9、且仅本盘实有的那几个）：点出与所问之事相关的助力或隐忧
+- 神煞（仅本盘 structured 实例清单实算项、清单外禁写）：点出与所问之事相关的助力或隐忧
   （pillars_detail.*.shen_sha）；本盘没有相关神煞就不提，严禁编造、严禁集外
 - 十二长生：相关柱的能量处于旺 / 衰哪一阶段（pillars_detail.*.life_stage）—— 力量的"火候"
 至少有 1 条 direction 必须带出 timing（大运视角的进 / 守 / 转判断）。

@@ -7,6 +7,7 @@ import {
   buildMatrixNarrativeRelationAppendix,
   buildMatrixNarrativeUserMessage,
   getMatrixNarrativeSystemPrompt,
+  MATRIX_NARRATIVE_DATA_DISCIPLINE,
   parseMatrixNarrativeResponseText,
   type MatrixNarrativeProduct,
 } from "@/lib/llm/prompts/matrix-narrative-prompt";
@@ -61,6 +62,8 @@ export async function POST(req: Request) {
       matrix_payload_b?: unknown;
       locale?: unknown;
       product?: unknown;
+      /** Optional focus text — shifts directed relations (Block 66 matrix alignment). */
+      focus_text?: unknown;
     };
 
     if (!isMatrixPayload(body.matrix_payload)) {
@@ -75,14 +78,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "match requires matrix_payload_b" }, { status: 400 });
     }
 
+    const focusText =
+      typeof body.focus_text === "string" && body.focus_text.trim()
+        ? body.focus_text.trim()
+        : undefined;
+
     const chartA = chartForPayload(payload);
-    const narrativeInputA = buildMatrixNarrativeInput(payload, chartA, locale);
+    const narrativeInputA = buildMatrixNarrativeInput(payload, chartA, locale, { focusText });
 
     let userMessage: string;
     const payloadB = product === "match" && isMatrixPayload(body.matrix_payload_b) ? body.matrix_payload_b : undefined;
     if (product === "match" && payloadB) {
       const chartB = chartForPayload(payloadB);
-      const narrativeInputB = buildMatrixNarrativeInput(payloadB, chartB, locale);
+      const narrativeInputB = buildMatrixNarrativeInput(payloadB, chartB, locale, { focusText });
       userMessage = buildMatrixNarrativeUserMessage(narrativeInputA, {
         product: "match",
         inputB: narrativeInputB,
@@ -91,13 +99,17 @@ export async function POST(req: Request) {
       userMessage = buildMatrixNarrativeUserMessage(narrativeInputA, { product });
     }
 
-    const relationAppendix = buildMatrixNarrativeRelationAppendix(payload, product, { payloadB });
-    if (relationAppendix.trim()) {
-      userMessage = stitchPromptSections(
-        userMessage,
-        `# 引擎实算闭集（仅可引用下列 · 禁止自造关系/神煞）\n${relationAppendix}`,
-      );
-    }
+    const relationAppendix = buildMatrixNarrativeRelationAppendix(payload, product, {
+      payloadB,
+      focusText,
+    });
+    userMessage = stitchPromptSections(
+      userMessage,
+      MATRIX_NARRATIVE_DATA_DISCIPLINE,
+      relationAppendix.trim()
+        ? `# 引擎实算闭集（仅可引用下列 · 禁止自造关系/神煞）\n${relationAppendix}`
+        : "",
+    );
 
     const maxAttempts = 3;
     let lastResult: Awaited<ReturnType<typeof callLLM>> | null = null;

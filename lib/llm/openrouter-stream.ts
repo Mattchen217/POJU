@@ -1,5 +1,6 @@
 import {
   getOpenRouterDefaultModel,
+  logOpenRouterModelSlug404Hint,
   logOpenRouterProviderServed,
   logOpenRouterRequestRouting,
   openRouterProviderExtras,
@@ -123,6 +124,7 @@ export async function openRouterChatCompletionStream(
     });
     if (!res.ok) {
       const errText = await res.text();
+      logOpenRouterModelSlug404Hint(model, res.status);
       throw new Error(`openrouter_stream_${res.status}: ${errText.slice(0, 900)}`);
     }
     if (!res.body) {

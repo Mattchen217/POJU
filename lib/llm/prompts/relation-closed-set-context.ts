@@ -18,6 +18,10 @@ import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-stru
 import { POJU_OUTPUT_DATA_DISCIPLINE } from "@/lib/llm/prompts/poju-base";
 import { buildChatFactGuardBlock } from "@/lib/llm/prompts/shen-sha-guard";
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
+import {
+  extractRelationFocusHintsFromText,
+  type RelationFocusHints,
+} from "@/lib/poju/relation-focus-hints";
 
 /** breakthrough-core / opening conversion — 与聊天侧同源的定向关系 + 审计闭集。 */
 export function resolveAgendaRelationContext(
@@ -83,15 +87,32 @@ export type SingleProfileRelationClosedSet = {
 /** Glyph / Syncro / 单盘场景。 */
 export function buildSingleProfileRelationClosedSet(
   structured: ProfileStructured,
-  opts?: { questionCategory?: string | null; questionText?: string },
+  opts?: {
+    questionCategory?: string | null;
+    questionText?: string;
+    focusHints?: RelationFocusHints | null;
+  },
 ): SingleProfileRelationClosedSet {
-  const category = opts?.questionCategory ?? inferQuestionCategoryFromText(opts?.questionText ?? "") ?? null;
+  const category =
+    opts?.questionCategory ?? inferQuestionCategoryFromText(opts?.questionText ?? "") ?? null;
+  const focusHints =
+    opts?.focusHints ??
+    (opts?.questionText?.trim() ? extractRelationFocusHintsFromText(opts.questionText) : null);
   const liunian = getCurrentLiunian();
-  const directedDynamic = computeDirectedDynamicRelations(structured, liunian, category);
+  const directedDynamicFull = computeDirectedDynamicRelations(structured, liunian, category);
+  const directedDynamic =
+    focusHints != null
+      ? computeDirectedDynamicRelations(structured, liunian, category, focusHints)
+      : directedDynamicFull;
   return {
     inventoryBlock: buildStructuredInstanceInventory(structured),
-    guardBlock: buildChatFactGuardBlock(structured, { directedRelations: directedDynamic }),
-    directedInventoryBlock: buildDirectedDynamicRelationInventoryBlock(structured, liunian, category),
+    guardBlock: buildChatFactGuardBlock(structured, { directedRelations: directedDynamicFull }),
+    directedInventoryBlock: buildDirectedDynamicRelationInventoryBlock(
+      structured,
+      liunian,
+      category,
+      focusHints,
+    ),
     auditAllowlist: computeRelationAuditAllowlist(structured, liunian, category),
     disciplineBlock: POJU_OUTPUT_DATA_DISCIPLINE,
   };
@@ -99,7 +120,11 @@ export function buildSingleProfileRelationClosedSet(
 
 export function stitchSingleProfileRelationClosedSet(
   structured: ProfileStructured,
-  opts?: { questionCategory?: string | null; questionText?: string },
+  opts?: {
+    questionCategory?: string | null;
+    questionText?: string;
+    focusHints?: RelationFocusHints | null;
+  },
 ): string {
   const blocks = buildSingleProfileRelationClosedSet(structured, opts);
   return stitchPromptSections(

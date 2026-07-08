@@ -16,6 +16,7 @@ import {
   stitchSingleProfileRelationClosedSet,
 } from "@/lib/llm/prompts/relation-closed-set-context";
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
+import { extractRelationFocusHintsFromText } from "@/lib/poju/relation-focus-hints";
 
 export type MatrixNarrativeProduct = "poju" | "glyph" | "match" | "syncro";
 
@@ -102,6 +103,17 @@ You must respond ONLY with a valid JSON matching this exact schema. Each string 
 
 Output raw minified or pretty JSON only. Do not wrap in markdown code blocks.`;
 
+/** User-side data discipline — dynamic, not in system prefix (matrix onboarding). */
+export const MATRIX_NARRATIVE_DATA_DISCIPLINE = `# 矩阵叙事 · 用足数据 + 情景白话（user 侧 · 与主 POJU 链路对齐）
+
+你手里有丰富的本地命理料（各柱位、十神、神煞、大运、关系、流年引动）。
+- **不要只反复用日主/日柱**这类最泛化锚点；针对用户当前处境，主动调用最相关的【具体】块料（十神、神煞、大运、定向关系）。
+- 每次全景矩阵可聚焦不同切面；优先读上方「优先锚定这些」与 structured 实例闭集里**尚未用过的项**。
+
+## 命理术语三段位（中文输出时 · Block 63 对齐）
+凡涉及命理术语，用 \`⟦t:<id>|<该情景软译>|<这句话里对他这件事的白话>⟧\` 三段位打标；
+**第三段必须针对他当前处境/矩阵语境**，不是术语通用定义。英文输出用合规 metaphor，不裸写吉凶术语。`;
+
 const TOOL_PRODUCT_PROMPT_APPEND: Record<Exclude<MatrixNarrativeProduct, "poju">, string> = {
   glyph: `
 # PRODUCT CONTEXT: GLYPH (symbol oracle)
@@ -175,9 +187,25 @@ export function getMatrixNarrativeSystemPrompt(product: MatrixNarrativeProduct =
 export function buildMatrixNarrativeRelationAppendix(
   payload: PojuMatrixPayload,
   product: MatrixNarrativeProduct,
-  opts?: { payloadB?: PojuMatrixPayload },
+  opts?: { payloadB?: PojuMatrixPayload; focusText?: string },
 ): string {
-  if (product === "poju") return "";
+  const focusText =
+    opts?.focusText?.trim() ||
+    (product === "syncro"
+      ? "timing direction spatial task when where"
+      : product === "glyph"
+        ? "symbol decision clarity inner state"
+        : "个人能量矩阵 性格画像 事业方向 资源管理");
+
+  if (product === "poju") {
+    const category = inferQuestionCategoryFromText(focusText) ?? "career";
+    const focusHints = extractRelationFocusHintsFromText(focusText);
+    return stitchSingleProfileRelationClosedSet(payload.structured, {
+      questionCategory: category,
+      questionText: focusText,
+      focusHints,
+    });
+  }
   if (product === "match" && opts?.payloadB) {
     return stitchMatchRelationClosedSet(
       payload.structured,
@@ -187,11 +215,15 @@ export function buildMatrixNarrativeRelationAppendix(
   }
   const category =
     product === "syncro"
-      ? inferQuestionCategoryFromText("timing direction spatial task when where")
+      ? inferQuestionCategoryFromText(focusText) ?? "career"
       : product === "glyph"
         ? null
         : null;
-  return stitchSingleProfileRelationClosedSet(payload.structured, { questionCategory: category });
+  return stitchSingleProfileRelationClosedSet(payload.structured, {
+    questionCategory: category,
+    questionText: focusText,
+    focusHints: extractRelationFocusHintsFromText(focusText),
+  });
 }
 
 export type MatrixNarrativeInput = {
@@ -262,8 +294,13 @@ export function buildMatrixNarrativeInput(
   payload: PojuMatrixPayload,
   chart: GetBaziChartOutput | undefined,
   locale: string,
+  opts?: { focusText?: string },
 ): MatrixNarrativeInput {
   const { structured, wuxing_scores, strength, day_master_en } = payload;
+  const focusText =
+    opts?.focusText?.trim() || "个人能量矩阵 性格画像 事业方向 资源管理";
+  const questionCategory = inferQuestionCategoryFromText(focusText) ?? "career";
+  const focusHints = extractRelationFocusHintsFromText(focusText);
   const sorted = [...wuxing_scores].sort((a, b) => b.pct - a.pct);
   const dominant = sorted[0];
   const deficit = sorted[sorted.length - 1];
@@ -287,7 +324,12 @@ export function buildMatrixNarrativeInput(
   const birthDate = `${birth.year}-${pad(birth.month)}-${pad(birth.day)}`;
 
   const liunian = getCurrentLiunian();
-  const directedRelations = computeDirectedDynamicRelations(structured, liunian, null);
+  const directedRelations = computeDirectedDynamicRelations(
+    structured,
+    liunian,
+    questionCategory,
+    focusHints,
+  );
   const liunianRelations = (
     directedRelations.length > 0
       ? directedRelations

@@ -3,7 +3,7 @@
  *
  * Env:
  * - OPENROUTER_API_KEY — required to use this path
- * - OPENROUTER_MODEL — default `deepseek/deepseek-v4-pro`
+ * - OPENROUTER_MODEL — default {@link DEFAULT_OPENROUTER_MODEL}
  * - OPENROUTER_REASONING_EFFORT — `high` | `xhigh` | `off` (default `high`)
  * - OPENROUTER_PROVIDER_ORDER — comma-separated provider slugs (production: `streamlake`)
  * - OPENROUTER_PROVIDER_IGNORE — comma-separated providers to skip (merged with ORDER)
@@ -33,6 +33,18 @@ export {
 } from "@/lib/llm/openrouter-provider-routing";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+
+/** Fallback when OPENROUTER_MODEL env is unset — must match a live OpenRouter slug (dated). */
+export const DEFAULT_OPENROUTER_MODEL = "deepseek/deepseek-v4-pro-20260423";
+
+/** Log when OpenRouter returns 404 — often an expired model slug. */
+export function logOpenRouterModelSlug404Hint(model: string, httpStatus: number): void {
+  if (httpStatus !== 404) return;
+  console.error(
+    `[openrouter] HTTP 404 — model slug may be expired or invalid (model=${model}). ` +
+      "Set OPENROUTER_MODEL to the current slug from the OpenRouter dashboard.",
+  );
+}
 
 export type OpenRouterChatRole = "system" | "user" | "assistant";
 
@@ -196,7 +208,7 @@ export function isOpenRouterConfigured(): boolean {
 }
 
 export function getOpenRouterDefaultModel(): string {
-  return process.env.OPENROUTER_MODEL?.trim() || "deepseek/deepseek-v4-pro";
+  return process.env.OPENROUTER_MODEL?.trim() || DEFAULT_OPENROUTER_MODEL;
 }
 
 function resolveReasoningEffort(
@@ -292,6 +304,7 @@ export async function openRouterChatCompletion(
       });
       const raw = await res.text();
       if (!res.ok) {
+        logOpenRouterModelSlug404Hint(model, res.status);
         throw new Error(`openrouter_http_${res.status}: ${raw.slice(0, 900)}`);
       }
       return raw;

@@ -79,8 +79,6 @@ export interface CallLLMResult {
   };
 }
 
-const DEFAULT_MODEL = "deepseek/deepseek-v4-pro";
-
 function normalizeCallType(callType: LLMCallType): Exclude<
   LLMCallType,
   | "poju_base_analysis"
@@ -195,7 +193,7 @@ export async function callLLM(input: CallLLMInput): Promise<CallLLMResult> {
 
   const thinkingEnabled = effort !== "off";
   const max_tokens = defaultMaxTokens(thinkingEnabled, input.max_tokens);
-  const model = getOpenRouterDefaultModel() || DEFAULT_MODEL;
+  const model = getOpenRouterDefaultModel();
 
   const msgs: OpenRouterChatMessage[] = [
     { role: "system", content: input.system },
