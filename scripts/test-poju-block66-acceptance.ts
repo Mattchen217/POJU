@@ -18,9 +18,15 @@ import {
   extractAnchoredFactIdsFromAssistant,
   mergeAnchoredFactIds,
 } from "@/lib/poju/anchored-fact-tracking";
+import {
+  buildUsedMetaphorsAvoidBlock,
+  extractUsedMetaphorsFromAssistant,
+  mergeUsedMetaphors,
+} from "@/lib/poju/reply-metaphor-extract";
 import { extractRelationFocusHintsFromText } from "@/lib/poju/relation-focus-hints";
 import {
   buildPojuSystemPromptV6,
+  POJU_V6_METAPHOR_DISCIPLINE,
   POJU_V6_STATIC_SYSTEM,
   POJU_V6_TERM_SELECTION_DISCIPLINE,
 } from "@/lib/llm/prompts/poju-base-v6";
@@ -96,12 +102,15 @@ const v6Ctx = read("lib/llm/phases/oriental-prompt-context-v6.ts");
 assert("v6 uses extractRelationFocusHintsFromText", v6Ctx.includes("extractRelationFocusHintsFromText"));
 assert("v6 passes focusHints to inventory block", v6Ctx.includes("focusHints"));
 assert("v6 uses buildAnchoredFactsExclusionBlock", v6Ctx.includes("buildAnchoredFactsExclusionBlock"));
+assert("v6 uses buildUsedMetaphorsAvoidBlock", v6Ctx.includes("buildUsedMetaphorsAvoidBlock"));
 assert("v6 audit uses full directed pool", v6Ctx.includes("directedDynamicRelsFull"));
 
 const agentTs = read("lib/poju/agent.ts");
 const agentStateTs = read("lib/poju/agent-state.ts");
 assert("agent_state has anchored_fact_ids", agentStateTs.includes("anchored_fact_ids"));
+assert("agent_state has used_metaphors", agentStateTs.includes("used_metaphors"));
 assert("agent merges anchored facts after reply", agentTs.includes("extractAnchoredFactIdsFromAssistant"));
+assert("agent merges used metaphors after reply", agentTs.includes("extractUsedMetaphorsFromAssistant"));
 
 const ids = extractAnchoredFactIdsFromAssistant(
   "你的 ⟦t:day_master|核心特质|像藤蔓式扩散⟧ 和 ⟦t:yong_shen|关键平衡能量|需要冷却窗口⟧ 在这里很关键。",
@@ -114,11 +123,27 @@ const anchoredBlock = buildAnchoredFactsExclusionBlock(["day_master", "yong_shen
 assert("anchored block 勿复述", anchoredBlock.includes("勿复述"));
 assert("anchored block lists labels", anchoredBlock.includes("核心特质"));
 
+const metaphorReply =
+  "你的优势像藤蔓一样扩散，但需要外部支点；内心有个冷却模块在空转，像打卡领通行证。";
+const metaphors = extractUsedMetaphorsFromAssistant(metaphorReply);
+assert("extracts curated metaphors", metaphors.includes("藤蔓") && metaphors.includes("冷却模块"));
+assert("extracts external anchor phrases", metaphors.includes("外部支点"));
+assert("extracts 像…一样 simile core", metaphors.includes("藤蔓"));
+const metaphorMerged = mergeUsedMetaphors(["藤蔓"], ["冷却模块", "藤蔓"]);
+assert("metaphor merge dedupes", metaphorMerged.length === 2 && metaphorMerged[0] === "藤蔓");
+const avoidBlock = buildUsedMetaphorsAvoidBlock(["藤蔓", "冷却模块", "外部支点"], "zh");
+assert("avoid block 勿再用", avoidBlock.includes("勿再用") && avoidBlock.includes("藤蔓"));
+assert("avoid block 直接说本质", avoidBlock.includes("直接说本质"));
+
 assert(
   "selection discipline in user control plane",
   read("lib/llm/prompts/poju-base-v6.ts").includes("POJU_V6_TERM_SELECTION_DISCIPLINE"),
 );
+assert("metaphor discipline in user control plane", read("lib/llm/prompts/poju-base-v6.ts").includes("POJU_V6_METAPHOR_DISCIPLINE"));
 assert("discipline mentions 轮换", POJU_V6_TERM_SELECTION_DISCIPLINE.includes("轮换"));
+assert("metaphor discipline 直接说本质", POJU_V6_METAPHOR_DISCIPLINE.includes("直接说本质"));
+assert("metaphor discipline NOT in static system", !POJU_V6_STATIC_SYSTEM.includes("Insight Memory"));
+assert("used metaphors block NOT in static system", !POJU_V6_STATIC_SYSTEM.includes("已用过的比喻"));
 
 const systemNow = buildPojuSystemPromptV6();
 assert("system === POJU_V6_STATIC_SYSTEM", systemNow === POJU_V6_STATIC_SYSTEM);

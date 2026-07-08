@@ -55,6 +55,7 @@ import {
 import { buildTermMarkingPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
 import type { PhaseLLMInput } from "@/lib/llm/phases/types";
 import { buildAnchoredFactsExclusionBlock } from "@/lib/poju/anchored-fact-tracking";
+import { buildUsedMetaphorsAvoidBlock } from "@/lib/poju/reply-metaphor-extract";
 import { extractRelationFocusHintsFromText } from "@/lib/poju/relation-focus-hints";
 
 /** 下游相位：question_category 已定，流年/定向关系进 user 侧（INV-1 · 不进 system）。 */
@@ -169,6 +170,10 @@ export async function buildPhaseTurnContextV6(
     input.agent_state?.anchored_fact_ids,
     outLoc,
   );
+  const usedMetaphorsBlock = buildUsedMetaphorsAvoidBlock(
+    input.agent_state?.used_metaphors,
+    outLoc,
+  );
 
   const dataPlane = stitchPromptSections(
     buildNorthAmericaAdaptation(outLoc),
@@ -181,6 +186,7 @@ export async function buildPhaseTurnContextV6(
     directedInventoryBlock,
     structured ? buildStructuredInstanceInventory(structured) : "",
     anchoredFactsBlock,
+    usedMetaphorsBlock,
   );
 
   const termPlane = stitchPromptSections(

@@ -1,8 +1,11 @@
 import {
+  callWithOpenRouterModelFallback,
   getOpenRouterDefaultModel,
+  isOpenRouterModelNotFoundHttpStatus,
   logOpenRouterModelSlug404Hint,
   logOpenRouterProviderServed,
   logOpenRouterRequestRouting,
+  markOpenRouterSlugDead,
   openRouterProviderExtras,
   openRouterRequestExtras,
   type OpenRouterChatMessage,
@@ -79,7 +82,17 @@ export async function openRouterChatCompletionStream(
   const apiKey = process.env.OPENROUTER_API_KEY?.trim();
   if (!apiKey) throw new Error("missing_openrouter_api_key");
 
-  const model = getOpenRouterDefaultModel();
+  return callWithOpenRouterModelFallback((model) =>
+    openRouterChatCompletionStreamWithModel(model, options, callbacks, apiKey),
+  );
+}
+
+async function openRouterChatCompletionStreamWithModel(
+  model: string,
+  options: OpenRouterChatOptions,
+  callbacks: OpenRouterStreamCallbacks,
+  apiKey: string,
+): Promise<OpenRouterCompletionResult> {
   const effort = resolveReasoningEffort(options.reasoning_effort);
   const includeReasoning = effort !== "off";
   const routePath = options.route_path ?? "chat";
@@ -124,7 +137,10 @@ export async function openRouterChatCompletionStream(
     });
     if (!res.ok) {
       const errText = await res.text();
-      logOpenRouterModelSlug404Hint(model, res.status);
+      logOpenRouterModelSlug404Hint(model, res.status, errText);
+      if (isOpenRouterModelNotFoundHttpStatus(res.status, errText)) {
+        markOpenRouterSlugDead(model);
+      }
       throw new Error(`openrouter_stream_${res.status}: ${errText.slice(0, 900)}`);
     }
     if (!res.body) {
@@ -220,7 +236,7 @@ export async function openRouterChatCompletionStream(
     onRetry: (info) => {
       transportAttempt = info.attempt + 1;
       console.warn(
-        `[openrouter-stream] retry attempt=${info.attempt} wait_ms=${info.wait_ms} locked=${lockedLabel ?? "none"}`,
+        `[openrouter-stream] retry attempt=${info.attempt} wait_ms=${info.wait_ms} locked=${lockedLabel ?? "none"} model=${model}`,
       );
     },
   });
@@ -274,89 +290,113 @@ export async function openRouterStream(input: OpenRouterStreamInput): Promise<vo
     return;
   }
 
-  const model = input.model ?? getOpenRouterDefaultModel();
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${apiKey}`,
-    "Content-Type": "application/json",
-  };
-  const referer = process.env.OPENROUTER_HTTP_REFERER?.trim() || "https://pojulife.com";
-  const title = process.env.OPENROUTER_APP_TITLE?.trim() || "Pojulife";
-  headers["HTTP-Referer"] = referer;
-  headers["X-Title"] = title;
+  const fixedModel = input.model?.trim();
+  const runWithModel = async (model: string): Promise<void> => {
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    };
+    const referer = process.env.OPENROUTER_HTTP_REFERER?.trim() || "https://pojulife.com";
+    const title = process.env.OPENROUTER_APP_TITLE?.trim() || "Pojulife";
+    headers["HTTP-Referer"] = referer;
+    headers["X-Title"] = title;
 
-  const response = await fetch(OPENROUTER_URL, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      model,
-      stream: true,
-      max_tokens: input.max_tokens ?? 8000,
-      temperature: input.temperature ?? 0.7,
-      messages: [
-        { role: "system", content: input.system },
-        { role: "user", content: input.user },
-      ],
-      ...openRouterRequestExtras(input.session_id),
-    }),
-    signal: input.signal,
-  });
+    const response = await fetch(OPENROUTER_URL, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        model,
+        stream: true,
+        max_tokens: input.max_tokens ?? 8000,
+        temperature: input.temperature ?? 0.7,
+        messages: [
+          { role: "system", content: input.system },
+          { role: "user", content: input.user },
+        ],
+        ...openRouterRequestExtras(input.session_id),
+      }),
+      signal: input.signal,
+    });
 
-  if (!response.ok) {
-    const errText = await response.text();
-    await input.onError(`OpenRouter ${response.status}: ${errText.slice(0, 900)}`);
-    return;
-  }
+    if (!response.ok) {
+      const errText = await response.text();
+      logOpenRouterModelSlug404Hint(model, response.status, errText);
+      if (isOpenRouterModelNotFoundHttpStatus(response.status, errText)) {
+        markOpenRouterSlugDead(model);
+        throw new Error(`openrouter_stream_${response.status}: ${errText.slice(0, 900)}`);
+      }
+      const msg = `OpenRouter ${response.status}: ${errText.slice(0, 900)}`;
+      await input.onError(msg);
+      throw new Error(msg);
+    }
 
-  if (!response.body) {
-    await input.onError("Response body is null");
-    return;
-  }
+    if (!response.body) {
+      const msg = "Response body is null";
+      await input.onError(msg);
+      throw new Error(msg);
+    }
 
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
 
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? "";
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
 
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed || !trimmed.startsWith("data:")) continue;
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith("data:")) continue;
 
-        const data = trimmed.slice(5).trim();
-        if (data === "[DONE]") {
-          await input.onDone();
-          return;
-        }
-
-        try {
-          const parsed = JSON.parse(data) as {
-            choices?: Array<{ delta?: { content?: string } }>;
-          };
-          const content = parsed.choices?.[0]?.delta?.content;
-          if (content) {
-            await input.onChunk(content);
+          const data = trimmed.slice(5).trim();
+          if (data === "[DONE]") {
+            await input.onDone();
+            return;
           }
-        } catch {
-          console.warn("[openrouter-stream] parse chunk failed:", data.slice(0, 100));
+
+          try {
+            const parsed = JSON.parse(data) as {
+              choices?: Array<{ delta?: { content?: string } }>;
+            };
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              await input.onChunk(content);
+            }
+          } catch {
+            console.warn("[openrouter-stream] parse chunk failed:", data.slice(0, 100));
+          }
         }
       }
-    }
 
-    await input.onDone();
-  } catch (e: unknown) {
-    if (e instanceof Error && e.name === "AbortError") {
-      console.log("[openrouter-stream] aborted");
+      await input.onDone();
+    } catch (e: unknown) {
+      if (e instanceof Error && e.name === "AbortError") {
+        console.log("[openrouter-stream] aborted");
+        return;
+      }
+      throw e;
+    } finally {
+      reader.releaseLock();
+    }
+  };
+
+  try {
+    if (fixedModel) {
+      await runWithModel(fixedModel);
       return;
     }
+    await callWithOpenRouterModelFallback(runWithModel);
+  } catch (e: unknown) {
+    if (e instanceof Error && e.message.startsWith("openrouter_stream_")) {
+      throw e;
+    }
     await input.onError(e instanceof Error ? e.message : "Stream error");
-  } finally {
-    reader.releaseLock();
   }
 }
+
+export { getOpenRouterDefaultModel };

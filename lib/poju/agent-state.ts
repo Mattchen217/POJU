@@ -202,6 +202,8 @@ export interface POJUAgentState {
   breakthrough_core: BreakthroughCore | null;
   /** Term/relation ids already anchored in visible assistant replies this session. */
   anchored_fact_ids?: string[];
+  /** Distinctive metaphor / imagery phrases already used this session. */
+  used_metaphors?: string[];
 }
 
 /** Minimum effective user turns before confirmation (agenda-driven gate). */
@@ -347,6 +349,7 @@ export function createInitialAgentState(input: {
     agenda_generated: false,
     breakthrough_core: null,
     anchored_fact_ids: [],
+    used_metaphors: [],
   };
 }
 

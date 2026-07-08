@@ -32,6 +32,10 @@ import {
   extractAnchoredFactIdsFromAssistant,
   mergeAnchoredFactIds,
 } from "@/lib/poju/anchored-fact-tracking";
+import {
+  extractUsedMetaphorsFromAssistant,
+  mergeUsedMetaphors,
+} from "@/lib/poju/reply-metaphor-extract";
 import { extractQuestionCategory, mergeContextUpdates, recordToLLMContextUpdates } from "@/lib/poju/context-extractor";
 import {
   detectExplicitLanguageSwitch,
@@ -690,6 +694,14 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     agent_v2 = {
       ...agent_v2,
       anchored_fact_ids: mergeAnchoredFactIds(agent_v2.anchored_fact_ids, anchoredFromReply),
+    };
+  }
+
+  const metaphorsFromReply = extractUsedMetaphorsFromAssistant(finalContent);
+  if (metaphorsFromReply.length > 0) {
+    agent_v2 = {
+      ...agent_v2,
+      used_metaphors: mergeUsedMetaphors(agent_v2.used_metaphors, metaphorsFromReply),
     };
   }
 
