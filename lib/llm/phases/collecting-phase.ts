@@ -51,6 +51,8 @@ import {
 
   mergeBreakthroughCoreUpdates,
 
+  normalizeAgentPhase,
+
   parseBreakthroughCoreUpdatesFromLlm,
 
 } from "@/lib/poju/agent-state";
@@ -124,13 +126,13 @@ function projectAgentAfterUpdates(
 
   const statusUpdates = extractAgendaStatusUpdates(contextUpdates);
 
-  if (agenda_generated && statusUpdates) {
-
+  if (
+    agenda_generated &&
+    statusUpdates &&
+    normalizeAgentPhase(agent.current_phase) !== "collecting_context"
+  ) {
     investigation_agenda = applyAgendaStatusUpdates(investigation_agenda, statusUpdates);
-
   }
-
-
 
   let breakthrough_core = agent.breakthrough_core;
 

@@ -33,6 +33,10 @@ import {
   mergeAnchoredFactIds,
 } from "@/lib/poju/anchored-fact-tracking";
 import {
+  appendForwardMove,
+  hasQuestionCue,
+} from "@/lib/poju/collecting-focus-reply";
+import {
   extractUsedMetaphorsFromAssistant,
   mergeUsedMetaphors,
 } from "@/lib/poju/reply-metaphor-extract";
@@ -239,7 +243,10 @@ function finalizeAgentV2(
       agenda_generated = true;
       console.info("[agenda] generated:", parsedAgenda.map((a) => a.label));
     }
-  } else if (agendaStatusUpdates) {
+  } else if (
+    agendaStatusUpdates &&
+    normalizeAgentPhase(base.current_phase) !== "collecting_context"
+  ) {
     investigation_agenda = applyAgendaStatusUpdates(investigation_agenda, agendaStatusUpdates);
     console.info("[agenda] status:", agendaStatusUpdates);
   }
@@ -670,23 +677,24 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     advance.trigger_breakthrough_core &&
     agent_v2.breakthrough_core != null &&
     (agent_v2.investigation_agenda?.length ?? 0) > 0;
-  if (justConverted) {
-    const tail = finalContent.slice(-50);
-    const hasQuestion = /[？?]/.test(tail);
-    if (!hasQuestion) {
-      const firstFocus =
-        agent_v2.investigation_agenda!.find((a) => a.status !== "covered") ??
-        agent_v2.investigation_agenda![0];
-      if (firstFocus?.label) {
-        const lead = locale.startsWith("zh")
-          ? "\n\n我想先从一件事开始——"
-          : "\n\nLet's start with one thing—";
-        const q = /[？?]$/.test(firstFocus.label.trim())
-          ? firstFocus.label.trim()
-          : `${firstFocus.label.trim()}？`;
-        finalContent = `${finalContent.trimEnd()}${lead}${q}`;
-      }
-    }
+  const phaseAfter = normalizeAgentPhase(agent_v2.current_phase) ?? agent_v2.current_phase;
+  const envelopeFailedStayedOpening =
+    advance.trigger_breakthrough_core && phaseAfter === "opening";
+  const advancedCleanly =
+    justConverted ||
+    (!envelopeFailedStayedOpening &&
+      (phaseAfter === "awaiting_confirmation" ||
+        phaseAfter === "delivered" ||
+        phaseAfter === "tracking" ||
+        (phaseAfter === "collecting_context" && hasQuestionCue(finalContent))));
+
+  if (!advancedCleanly) {
+    finalContent = appendForwardMove(
+      finalContent,
+      agent_v2,
+      locale,
+      justConverted ? "first" : "continue",
+    );
   }
 
   const anchoredFromReply = extractAnchoredFactIdsFromAssistant(finalContent);

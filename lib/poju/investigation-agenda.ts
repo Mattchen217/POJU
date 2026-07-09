@@ -15,7 +15,12 @@ export interface AgendaItem {
   status: AgendaItemStatus;
   /** Which breakthrough hypothesis this item validates (hidden from user response). */
   supports?: string;
+  /** Collecting turns on this item without reaching covered (control-plane stale detection). */
+  stale_turns?: number;
 }
+
+/** Pending turns before control plane injects a catch-up directive. */
+export const STALE_AGENDA_TURN_THRESHOLD = 2;
 
 const AGENDA_STATUSES: AgendaItemStatus[] = ["unexplored", "partial", "covered"];
 
@@ -136,10 +141,41 @@ export function getUncoveredCriticalLabels(agenda: AgendaItem[]): string[] {
   return agenda.filter((a) => a.critical && a.status !== "covered").map((a) => a.label);
 }
 
-/** Single agenda focus for this turn: critical first, else first pending in agenda order. */
+/** Every agenda item must be covered before confirmation — no skipped angles. */
+export function isAgendaFullyCovered(agenda: AgendaItem[]): boolean {
+  if (agenda.length === 0) return false;
+  return agenda.every((a) => a.status === "covered");
+}
+
+/** User-side catch-up when an angle has been pending too long. */
+export function buildStaleAgendaCatchupBlock(
+  agent: POJUAgentState | null | undefined,
+  locale: string,
+): string {
+  const agenda = agent?.investigation_agenda ?? [];
+  const stale = agenda
+    .filter((a) => a.status !== "covered" && (a.stale_turns ?? 0) >= STALE_AGENDA_TURN_THRESHOLD)
+    .sort((a, b) => (b.stale_turns ?? 0) - (a.stale_turns ?? 0));
+  if (stale.length === 0) return "";
+  const label = stale[0]!.label;
+  if (locale.startsWith("zh")) {
+    return `【控制面指令】议程中「${label}」尚未真正聊到，本轮请聚焦补上它，不要跳过。`;
+  }
+  return `[Control plane] Agenda item "${label}" has not been substantively covered — focus on it this turn; do not skip.`;
+}
+
+/** Single agenda focus: longest-stale pending first, then critical, then agenda order. */
 export function selectCurrentAgendaFocus(agenda: AgendaItem[]): AgendaItem | null {
   const pendingItems = agenda.filter((a) => a.status !== "covered");
-  return pendingItems.find((a) => a.critical) ?? pendingItems[0] ?? null;
+  if (pendingItems.length === 0) return null;
+  const ranked = [...pendingItems].sort((a, b) => {
+    const staleDiff = (b.stale_turns ?? 0) - (a.stale_turns ?? 0);
+    if (staleDiff !== 0) return staleDiff;
+    const critDiff = (b.critical ? 1 : 0) - (a.critical ? 1 : 0);
+    if (critDiff !== 0) return critDiff;
+    return agenda.indexOf(a) - agenda.indexOf(b);
+  });
+  return ranked[0] ?? null;
 }
 
 export function getNextAgendaFocus(agenda: AgendaItem[]): AgendaItem[] {

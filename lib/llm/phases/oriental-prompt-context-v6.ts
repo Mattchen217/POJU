@@ -56,6 +56,7 @@ import { buildTermMarkingPromptBlock } from "@/lib/llm/sanitize/compliance-terms
 import type { PhaseLLMInput } from "@/lib/llm/phases/types";
 import { buildAnchoredFactsExclusionBlock } from "@/lib/poju/anchored-fact-tracking";
 import { buildUsedMetaphorsAvoidBlock } from "@/lib/poju/reply-metaphor-extract";
+import { buildStaleAgendaCatchupBlock } from "@/lib/poju/investigation-agenda";
 import { extractRelationFocusHintsFromText } from "@/lib/poju/relation-focus-hints";
 
 /** 下游相位：question_category 已定，流年/定向关系进 user 侧（INV-1 · 不进 system）。 */
@@ -204,6 +205,11 @@ export async function buildPhaseTurnContextV6(
       ? `【控制面指令 · 本轮必须收敛】你已通过前几轮充分掌握了核心困境。本轮必须置 understanding_sufficient=true，一次产出完整 envelope（关系结论+破局方向+议程+首问），不再追问。`
       : "";
 
+  const agendaCatchupBlock =
+    input.agent_state?.current_phase === "collecting_context"
+      ? buildStaleAgendaCatchupBlock(input.agent_state, outLoc)
+      : "";
+
   return stitchPromptSections(
     langDirective.directive.trim(),
     buildCurrentDateContext(new Date(), outLoc),
@@ -213,6 +219,7 @@ export async function buildPhaseTurnContextV6(
     buildPojuUserSideControlPlane(outLoc),
     snapshotBlock,
     forceConvergeBlock,
+    agendaCatchupBlock,
     taskBlock,
   );
 }

@@ -1,5 +1,6 @@
 import {
   evaluateAgendaCoverage,
+  isAgendaFullyCovered,
   selectCurrentAgendaFocus,
   type AgendaItem,
 } from "@/lib/poju/investigation-agenda";
@@ -210,7 +211,10 @@ export function advanceStateMachine(
       const agenda = agent.investigation_agenda ?? [];
       const focus = selectCurrentAgendaFocus(agenda);
 
-      const reported = new Set(signals.agenda_updates?.completed_in_this_turn ?? []);
+      const reportedRaw = signals.agenda_updates?.completed_in_this_turn ?? [];
+      const reported = new Set(
+        focus ? reportedRaw.filter((label) => label === focus.label) : [],
+      );
       const hasUserInput =
         userInput.trim().length > 0 &&
         userInput.trim() !== "__OPENING__" &&
@@ -219,19 +223,31 @@ export function advanceStateMachine(
       const updated = agenda.map((a) => {
         if (!focus || a.label !== focus.label) return a;
 
-        if (reported.has(a.label)) return { ...a, status: "covered" as const };
+        if (reported.has(a.label) && hasUserInput) {
+          return { ...a, status: "covered" as const, stale_turns: 0 };
+        }
 
         if (hasUserInput) {
-          return a.status === "partial"
-            ? { ...a, status: "covered" as const }
-            : { ...a, status: "partial" as const };
+          const nextStatus = a.status === "partial" ? ("covered" as const) : ("partial" as const);
+          return {
+            ...a,
+            status: nextStatus,
+            stale_turns: nextStatus === "covered" ? 0 : a.stale_turns,
+          };
         }
         return a;
       });
-      next = { ...agent, investigation_agenda: updated };
 
-      const cov = evaluateAgendaCoverage(updated);
-      if (cov.total > 0 && cov.coveredRatio >= 1) {
+      const postFocus = selectCurrentAgendaFocus(updated);
+      const withStale = updated.map((a) => {
+        if (!postFocus || a.label !== postFocus.label) return a;
+        if (a.status === "covered") return { ...a, stale_turns: 0 };
+        return { ...a, stale_turns: (a.stale_turns ?? 0) + 1 };
+      });
+      next = { ...agent, investigation_agenda: withStale };
+
+      const cov = evaluateAgendaCoverage(withStale);
+      if (cov.total > 0 && isAgendaFullyCovered(withStale)) {
         nextState = "awaiting_confirmation";
         transitionReason = `Agenda fully covered (${cov.coveredCount}/${cov.total})`;
       }

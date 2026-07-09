@@ -2,7 +2,7 @@ import {
   MIN_COLLECTING_USER_TURNS,
   type POJUAgentState,
 } from "@/lib/poju/agent-state";
-import { isAgendaSatisfied } from "@/lib/poju/investigation-agenda";
+import { isAgendaFullyCovered } from "@/lib/poju/investigation-agenda";
 export type CollectionProgress = "advancing" | "stalled" | "resistant";
 export type DeliveryMode = "full" | "degraded";
 
@@ -101,7 +101,7 @@ export function isPrematureCollectingPhase(
   if (turns < MIN_COLLECTING_USER_TURNS) return true;
   const agenda = state.investigation_agenda ?? [];
   if (agenda.length === 0) return true;
-  return !isAgendaSatisfied(agenda);
+  return !isAgendaFullyCovered(agenda);
 }
 
 export function projectCollectingStopLoss(
