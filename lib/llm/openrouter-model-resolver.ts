@@ -1,7 +1,10 @@
 import {
   OPENROUTER_MAX_ATTEMPTS,
   OPENROUTER_RETRY_DELAYS_MS,
+  OpenRouterProviderQueueError,
   isRetryableOpenRouterError,
+  isTransientNoEndpoints404,
+  parseOpenRouterErrorStatus,
 } from "@/lib/llm/openrouter-retry";
 
 /** Built-in fallbacks when OPENROUTER_MODEL env is unset. Keep at least one live slug on OpenRouter. */
@@ -74,15 +77,22 @@ export function markOpenRouterSlugDead(slug: string, ttlMs = DEAD_SLUG_TTL_MS): 
   if (preferredModel === t) preferredModel = null;
 }
 
-/** True when OpenRouter reports missing model / endpoint (404 or equivalent body). */
+/** True when OpenRouter reports a bad model slug (not transient provider endpoint outage). */
 export function isOpenRouterModelNotFoundError(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
+  if (isTransientNoEndpoints404(err)) return false;
   const msg = err.message;
-  if (/openrouter_(http|stream)_404\b/.test(msg)) return true;
   const lower = msg.toLowerCase();
-  if (lower.includes("no endpoint") || lower.includes("model not found")) return true;
-  if (msg.includes("找不到") && msg.includes("端点")) return true;
+  if (lower.includes("model not found")) return true;
+  if (msg.includes("找不到") && msg.includes("端点")) return false;
   if (lower.includes("does not exist") && lower.includes("model")) return true;
+  const status = parseOpenRouterErrorStatus(msg);
+  if (status === 404) {
+    return (
+      lower.includes("model not found") ||
+      (lower.includes("does not exist") && lower.includes("model"))
+    );
+  }
   return false;
 }
 
@@ -90,13 +100,17 @@ export function isOpenRouterModelNotFoundHttpStatus(status: number, body = ""): 
   if (status !== 404) return false;
   const lower = body.toLowerCase();
   if (lower.includes("rate limit") || lower.includes("quota")) return false;
+  if (
+    lower.includes("no endpoints") ||
+    lower.includes("no endpoint found") ||
+    lower.includes("no allowed providers")
+  ) {
+    return false;
+  }
   return (
-    lower.includes("no endpoint") ||
     lower.includes("model not found") ||
     lower.includes("does not exist") ||
-    lower.includes("not found") ||
-    body.includes("找不到") ||
-    body.length === 0
+    body.includes("找不到")
   );
 }
 
@@ -158,11 +172,16 @@ export async function callWithOpenRouterModelFallback<T>(
         }
 
         const canRetry = attempt < maxAttempts - 1 && isRetryableOpenRouterError(e);
-        if (!canRetry) throw e;
+        if (!canRetry) {
+          if (isRetryableOpenRouterError(e) && attempt >= maxAttempts - 1) {
+            throw new OpenRouterProviderQueueError();
+          }
+          throw e;
+        }
 
         const wait_ms = OPENROUTER_RETRY_DELAYS_MS[attempt] ?? 6000;
         console.warn(
-          `[openrouter] retry model=${model} attempt=${attempt + 1}/${maxAttempts - 1} wait_ms=${wait_ms}`,
+          `[openrouter] retry model=${model} attempt=${attempt + 1}/${maxAttempts - 1} wait_ms=${wait_ms}${isTransientNoEndpoints404(e) ? " (transient 404 no-endpoints)" : ""}`,
         );
         await sleep(wait_ms);
       }

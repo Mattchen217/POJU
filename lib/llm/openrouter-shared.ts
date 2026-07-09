@@ -52,6 +52,11 @@ export {
   resetOpenRouterModelResolverForTests,
 } from "@/lib/llm/openrouter-model-resolver";
 
+export {
+  isTransientNoEndpoints404,
+  parseOpenRouterErrorStatus,
+} from "@/lib/llm/openrouter-retry";
+
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 /** Log when OpenRouter returns 404 — triggers model slug fallback in caller. */

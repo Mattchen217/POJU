@@ -77,7 +77,7 @@ async function main(): Promise<void> {
   assert("404 switches candidate", out === OPENROUTER_MODEL_CANDIDATES_BUILTIN[1]);
   assert("404 tried both slugs", calls === 2);
 
-  assert("max attempts is 4 (3 retries)", OPENROUTER_MAX_ATTEMPTS === 4);
+  assert("max attempts is 5 (4 retries)", OPENROUTER_MAX_ATTEMPTS === 5);
   assert("busy en matches constant", getPojuServiceBusyMessage("en") === POJU_SERVICE_BUSY_MESSAGES.en);
 
   console.log("\nDone.\n");

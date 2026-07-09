@@ -35,14 +35,20 @@ async function main(): Promise<void> {
     getOpenRouterDefaultModel() === resolveOpenRouterCandidateOrder()[0],
   );
 
-  const err404 = new Error("openrouter_http_404: No endpoint found for model");
-  assert("detects http 404 slug error", isOpenRouterModelNotFoundError(err404));
+  const errSlug = new Error("openrouter_http_404: model not found for slug");
+  assert("detects slug 404 error", isOpenRouterModelNotFoundError(errSlug));
+  assert(
+    "no-endpoints 404 not slug error",
+    !isOpenRouterModelNotFoundError(
+      new Error("openrouter_http_404: No endpoints found for provider"),
+    ),
+  );
 
   let callCount = 0;
   const result = await callWithOpenRouterModelFallback(async (model) => {
     callCount++;
     if (model === OPENROUTER_MODEL_CANDIDATES_BUILTIN[0]) {
-      throw err404;
+      throw errSlug;
     }
     return { ok: true, model };
   });

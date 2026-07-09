@@ -23,8 +23,16 @@ assert("429 retryable", isRetryableOpenRouterHttpStatus(429));
 assert("503 retryable", isRetryableOpenRouterHttpStatus(503));
 assert("502 retryable", isRetryableOpenRouterHttpStatus(502));
 assert("400 not retryable", !isRetryableOpenRouterHttpStatus(400));
-assert("delays 1s/3s/6s", OPENROUTER_RETRY_DELAYS_MS.join(",") === "1000,3000,6000");
-assert("4 total attempts", OPENROUTER_MAX_ATTEMPTS === 4);
+assert("delays 1s/3s/6s/5s", OPENROUTER_RETRY_DELAYS_MS.join(",") === "1000,3000,6000,5000");
+assert("5 total attempts", OPENROUTER_MAX_ATTEMPTS === 5);
+assert(
+  "transient no-endpoints 404 retryable",
+  isRetryableOpenRouterError(new Error("openrouter_http_404: No endpoints found")),
+);
+assert(
+  "model not found 404 not retryable",
+  !isRetryableOpenRouterError(new Error("openrouter_http_404: model not found")),
+);
 assert(
   "http error retryable",
   isRetryableOpenRouterError(new Error("openrouter_http_503: busy")),
@@ -57,8 +65,8 @@ assert(
   } catch (e) {
     assert("throws queue error", e instanceof OpenRouterProviderQueueError);
   }
-  assert("called 4 times", calls === 4);
-  assert("backoff waits", retries.join(",") === "1000,3000,6000");
+  assert("called 5 times", calls === 5);
+  assert("backoff waits", retries.join(",") === "1000,3000,6000,5000");
 })().then(() => {
   console.log(process.exitCode === 1 ? "\nSome checks failed.\n" : "\nAll checks passed.\n");
 });
