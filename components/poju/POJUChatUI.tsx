@@ -30,6 +30,7 @@ import {
 import { AgendaProgressPanel } from "@/components/poju/AgendaProgressPanel";
 import { getLastUserMessageContent } from "@/lib/poju/context-helpers";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
+import { isPojuInfrastructureFailureMessage } from "@/lib/llm/poju-service-busy-message";
 import { generateBaseAnalysis } from "@/lib/llm/deepseek/base-analysis";
 import { profileHasBaseAnalysis } from "@/lib/profile/stored-profiles-service";
 import { markPOJUV4SessionResolved } from "@/lib/poju/v4-lifecycle";
@@ -488,7 +489,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     const alreadyAnswered =
       lastUserMsg?.content.trim() === userMessage.trim() &&
       lastMsg?.role === "assistant" &&
-      !lastMsg.content.includes("未能生成");
+      !isPojuInfrastructureFailureMessage(lastMsg.content);
     if (alreadyAnswered) {
       turnInFlightRef.current = false;
       activeTurnKeyRef.current = null;

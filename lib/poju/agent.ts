@@ -32,6 +32,7 @@ import {
   extractAnchoredFactIdsFromAssistant,
   mergeAnchoredFactIds,
 } from "@/lib/poju/anchored-fact-tracking";
+import { isPojuInfrastructureFailureMessage } from "@/lib/llm/poju-service-busy-message";
 import {
   appendForwardMove,
   hasQuestionCue,
@@ -688,7 +689,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
         phaseAfter === "tracking" ||
         (phaseAfter === "collecting_context" && hasQuestionCue(finalContent))));
 
-  if (!advancedCleanly) {
+  if (!advancedCleanly && !isPojuInfrastructureFailureMessage(finalContent)) {
     finalContent = appendForwardMove(
       finalContent,
       agent_v2,

@@ -12,7 +12,6 @@
 
 import {
   OpenRouterProviderQueueError,
-  withOpenRouterExponentialBackoff,
 } from "@/lib/llm/openrouter-retry";
 import {
   openRouterProviderExtras,
@@ -34,6 +33,7 @@ export {
 
 import {
   callWithOpenRouterModelFallback,
+  callWithRetryAndFallback,
   isOpenRouterModelNotFoundHttpStatus,
   markOpenRouterSlugDead,
 } from "@/lib/llm/openrouter-model-resolver";
@@ -44,6 +44,7 @@ export {
   OPENROUTER_MODEL_CANDIDATES_BUILTIN,
   resolveOpenRouterCandidateOrder,
   callWithOpenRouterModelFallback,
+  callWithRetryAndFallback,
   isOpenRouterModelNotFoundError,
   isOpenRouterModelNotFoundHttpStatus,
   markOpenRouterSlugPreferred,
@@ -263,7 +264,7 @@ export async function openRouterChatCompletion(
     throw new Error("missing_openrouter_api_key");
   }
 
-  return callWithOpenRouterModelFallback((model) =>
+  return callWithRetryAndFallback((model) =>
     openRouterChatCompletionWithModel(model, options, apiKey),
   );
 }
@@ -352,15 +353,7 @@ async function openRouterChatCompletionWithModel(
   }
 
   let transportAttempt = 1;
-  const raw = await withOpenRouterExponentialBackoff(postOnce, {
-    signal: options.signal,
-    onRetry: (info) => {
-      transportAttempt = info.attempt + 1;
-      console.warn(
-        `[openrouter] retry attempt=${info.attempt} wait_ms=${info.wait_ms} locked=${lockedLabel ?? "none"} model=${model}`,
-      );
-    },
-  });
+  const raw = await postOnce();
 
   let data: {
     provider?: string;

@@ -1,6 +1,7 @@
 import {
-  callWithOpenRouterModelFallback,
+  callWithRetryAndFallback,
   getOpenRouterDefaultModel,
+  isOpenRouterModelNotFoundError,
   isOpenRouterModelNotFoundHttpStatus,
   logOpenRouterModelSlug404Hint,
   logOpenRouterProviderServed,
@@ -12,7 +13,6 @@ import {
   type OpenRouterChatOptions,
   type OpenRouterCompletionResult,
 } from "@/lib/llm/openrouter-shared";
-import { withOpenRouterExponentialBackoff } from "@/lib/llm/openrouter-retry";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
@@ -82,7 +82,7 @@ export async function openRouterChatCompletionStream(
   const apiKey = process.env.OPENROUTER_API_KEY?.trim();
   if (!apiKey) throw new Error("missing_openrouter_api_key");
 
-  return callWithOpenRouterModelFallback((model) =>
+  return callWithRetryAndFallback((model) =>
     openRouterChatCompletionStreamWithModel(model, options, callbacks, apiKey),
   );
 }
@@ -231,15 +231,7 @@ async function openRouterChatCompletionStreamWithModel(
   }
 
   let transportAttempt = 1;
-  const result = await withOpenRouterExponentialBackoff(runOnce, {
-    signal: options.signal,
-    onRetry: (info) => {
-      transportAttempt = info.attempt + 1;
-      console.warn(
-        `[openrouter-stream] retry attempt=${info.attempt} wait_ms=${info.wait_ms} locked=${lockedLabel ?? "none"} model=${model}`,
-      );
-    },
-  });
+  const result = await runOnce();
   logOpenRouterProviderServed({
     provider: result.provider,
     finish_reason: result.finish_reason,
@@ -387,10 +379,14 @@ export async function openRouterStream(input: OpenRouterStreamInput): Promise<vo
 
   try {
     if (fixedModel) {
-      await runWithModel(fixedModel);
-      return;
+      try {
+        await runWithModel(fixedModel);
+        return;
+      } catch (e) {
+        if (!isOpenRouterModelNotFoundError(e)) throw e;
+      }
     }
-    await callWithOpenRouterModelFallback(runWithModel);
+    await callWithRetryAndFallback(runWithModel);
   } catch (e: unknown) {
     if (e instanceof Error && e.message.startsWith("openrouter_stream_")) {
       throw e;

@@ -1,7 +1,8 @@
-/**
- * OpenRouter model slug resolver — multi-candidate + 404 auto-fallback + preferred cache.
- * All chat/stream requests should use {@link callWithOpenRouterModelFallback}.
- */
+import {
+  OPENROUTER_MAX_ATTEMPTS,
+  OPENROUTER_RETRY_DELAYS_MS,
+  isRetryableOpenRouterError,
+} from "@/lib/llm/openrouter-retry";
 
 /** Built-in fallbacks when OPENROUTER_MODEL env is unset. Keep at least one live slug on OpenRouter. */
 export const OPENROUTER_MODEL_CANDIDATES_BUILTIN = [
@@ -109,13 +110,19 @@ export type OpenRouterModelFallbackMeta = {
   fallback_path: string[];
 };
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /**
- * Try candidates in order; on model-not-found 404, degrade to next slug.
- * Non-404 errors propagate immediately.
+ * Try candidates in order; retry retryable errors up to maxAttempts per slug;
+ * on model-not-found 404, degrade to next slug.
  */
 export async function callWithOpenRouterModelFallback<T>(
   makeCall: (model: string) => Promise<T>,
+  options?: { maxAttempts?: number },
 ): Promise<T> {
+  const maxAttempts = options?.maxAttempts ?? OPENROUTER_MAX_ATTEMPTS;
   const candidates = resolveOpenRouterCandidateOrder();
   if (candidates.length === 0) {
     throw new Error("openrouter_no_model_candidates");
@@ -126,27 +133,39 @@ export async function callWithOpenRouterModelFallback<T>(
 
   for (let i = 0; i < candidates.length; i++) {
     const model = candidates[i]!;
-    try {
-      const result = await makeCall(model);
-      markOpenRouterSlugPreferred(model);
-      if (tried.length > 0) {
-        console.warn(
-          `[openrouter] model fallback succeeded: ${tried.join(" → ")} → ${model}`,
-        );
-      }
-      return result;
-    } catch (e) {
-      if (isOpenRouterModelNotFoundError(e)) {
-        tried.push(model);
-        markOpenRouterSlugDead(model);
-        const next = candidates[i + 1];
-        console.warn(
-          `[openrouter] slug 失效，降级下一个: ${model}${next ? ` → ${next}` : " (无更多候选)"}`,
-        );
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        const result = await makeCall(model);
+        markOpenRouterSlugPreferred(model);
+        if (tried.length > 0) {
+          console.warn(
+            `[openrouter] model fallback succeeded: ${tried.join(" → ")} → ${model}`,
+          );
+        }
+        return result;
+      } catch (e) {
         lastErr = e;
-        continue;
+
+        if (isOpenRouterModelNotFoundError(e)) {
+          tried.push(model);
+          markOpenRouterSlugDead(model);
+          const next = candidates[i + 1];
+          console.warn(
+            `[openrouter] slug 失效，降级下一个: ${model}${next ? ` → ${next}` : " (无更多候选)"}`,
+          );
+          break;
+        }
+
+        const canRetry = attempt < maxAttempts - 1 && isRetryableOpenRouterError(e);
+        if (!canRetry) throw e;
+
+        const wait_ms = OPENROUTER_RETRY_DELAYS_MS[attempt] ?? 6000;
+        console.warn(
+          `[openrouter] retry model=${model} attempt=${attempt + 1}/${maxAttempts - 1} wait_ms=${wait_ms}`,
+        );
+        await sleep(wait_ms);
       }
-      throw e;
     }
   }
 
@@ -156,6 +175,9 @@ export async function callWithOpenRouterModelFallback<T>(
   );
   throw lastErr instanceof Error ? lastErr : new Error("openrouter_all_model_slugs_failed");
 }
+
+/** Alias — retry per slug + 404 candidate fallback (Block 67/69). */
+export const callWithRetryAndFallback = callWithOpenRouterModelFallback;
 
 /** Test-only reset. */
 export function resetOpenRouterModelResolverForTests(): void {

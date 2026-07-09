@@ -8,6 +8,7 @@ import {
   generateGeminiChatCompletion,
   getGeminiClient,
 } from "@/lib/llm/gemini-shared";
+import { getPojuServiceBusyMessage, isPojuInfrastructureFailureMessage } from "@/lib/llm/poju-service-busy-message";
 import { callLLM, type LLMCallType } from "@/lib/llm/router";
 import { openRouterChatCompletionStream } from "@/lib/llm/openrouter-stream";
 import {
@@ -273,17 +274,7 @@ export function isPhaseParseFailed(parsed: Record<string, unknown>): boolean {
 
 /** Parse phase JSON; sanitize `response` when locale provided (output-side gloss tokens). */
 export function getPhaseResponseFallback(locale?: string): string {
-  const loc = locale?.toLowerCase().startsWith("zh")
-    ? "zh"
-    : locale?.toLowerCase().startsWith("es")
-      ? "es"
-      : "en";
-  const messages: Record<string, string> = {
-    en: "[POJU] Reply could not be generated. Please send again. Your session is saved.",
-    zh: "[POJU] 本轮回复未能生成，请重试发送。会话已保存。",
-    es: "[POJU] No se pudo generar la respuesta. Reintenta. Tu sesión está guardada.",
-  };
-  return messages[loc] ?? messages.en!;
+  return getPojuServiceBusyMessage(locale);
 }
 
 /** Parse phase JSON; sanitize `response` when locale provided (output-side gloss tokens). */
@@ -474,13 +465,7 @@ export function resolvePhaseResponse(
 
 /** True when text is the infrastructure fallback copy (not conversational content). */
 export function isPhaseResponseFallback(text: string): boolean {
-  const t = text.trim();
-  if (!t.startsWith("[POJU]")) return false;
-  return (
-    t.includes("could not be generated") ||
-    t.includes("未能生成") ||
-    t.includes("No se pudo generar")
-  );
+  return isPojuInfrastructureFailureMessage(text);
 }
 
 /** Prefer streamed content over fallback placeholder when parse/salvage failed server-side. */

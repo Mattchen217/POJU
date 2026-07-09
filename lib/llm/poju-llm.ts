@@ -3,6 +3,7 @@ import {
   GEMINI_PRIMARY_MODEL,
   getGeminiClient,
 } from "@/lib/llm/gemini-shared";
+import { getPojuServiceBusyMessage } from "@/lib/llm/poju-service-busy-message";
 import { logPojuError } from "@/lib/poju/base-analysis-diagnostics";
 import { getOpenRouterDefaultModel, isOpenRouterConfigured, resolveSessionLockedProvider } from "@/lib/llm/openrouter-shared";
 import type { POJUActionRecommendationsData } from "@/lib/archive/archive-service";
@@ -188,13 +189,5 @@ function emptyFailureResponse(session: POJUSessionState, locale: string, model: 
 
 /** Infrastructure-only message when the LLM API fails entirely (not conversational coaching). */
 function getLLMFailureMessage(locale: string): string {
-  const messages: Record<string, string> = {
-    en: "[POJU] Reply could not be generated. Please send again. Your session is saved.",
-    zh: "[POJU] 本轮回复未能生成，请重试发送。会话已保存。",
-    es: "[POJU] No se pudo generar la respuesta. Reintenta. Tu sesión está guardada.",
-    fr: "[POJU] Réponse non générée. Réessayez. Session enregistrée.",
-    de: "[POJU] Antwort konnte nicht erzeugt werden. Bitte erneut senden.",
-  };
-  const langCode = locale.split("-")[0];
-  return messages[langCode] || messages.en;
+  return getPojuServiceBusyMessage(locale);
 }

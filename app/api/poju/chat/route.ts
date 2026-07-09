@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getPojuServiceBusyMessage } from "@/lib/llm/poju-service-busy-message";
 import { callPOJULLM } from "@/lib/llm/poju-llm";
 import { createPojuChatStreamResponse } from "@/lib/poju/poju-chat-stream";
 import { pojuLlmToChatPayload } from "@/lib/poju/serialize-chat-payload";
@@ -54,11 +55,8 @@ export async function POST(req: Request) {
   } catch (error: unknown) {
     console.error("[poju/chat] unhandled error:", error);
     const locale = String(body.locale ?? "en");
-    const zh = locale.toLowerCase().startsWith("zh");
     return NextResponse.json({
-      response: zh
-        ? "[POJU] 本轮回复未能生成，请重试发送。会话已保存。"
-        : "[POJU] Reply could not be generated. Please send again. Your session is saved.",
+      response: getPojuServiceBusyMessage(locale),
       model: "",
       tokens_used: 0,
       user_intent: "unclear",
