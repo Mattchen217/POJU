@@ -1701,6 +1701,11 @@ body.pchat-page-lock .pchat:not(.tool-preview-chat) {
   color: #f08a8a;
 }
 
+.poju-llm-debug--empty {
+  opacity: 0.65;
+  font-style: italic;
+}
+
 .poju-agenda-card {
   margin-top: 0.5rem;
   padding: 0.55rem 0.65rem;

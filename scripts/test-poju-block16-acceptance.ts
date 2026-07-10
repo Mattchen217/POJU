@@ -68,7 +68,7 @@ function main(): void {
   assert("PojuStateDebugPanel wired", ui.includes("PojuStateDebugPanel"));
   assert("LLMCallDebugPanel wired", ui.includes("LLMCallDebugPanel"));
   assert("PojuAgendaCard wired", ui.includes("PojuAgendaCard"));
-  assert("debug toggle opt-in", ui.includes('get("debug") === "1"'));
+  assert("debug toggle dev default", ui.includes('NODE_ENV === "development"'));
   assert("investigation_agenda in meta render", ui.includes("m.meta?.investigation_agenda"));
   assert("llm_debug in meta render", ui.includes("m.meta?.llm_debug"));
 

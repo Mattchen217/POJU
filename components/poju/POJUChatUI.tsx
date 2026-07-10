@@ -205,10 +205,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const skipActivityRenderReadyRef = useRef(false);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const debugParam = searchParams.get("debug");
   const showStateDebug =
-    process.env.NEXT_PUBLIC_SHOW_LLM_DEBUG === "true" ||
-    searchParams.get("debug") === "1" ||
-    searchParams.get("debug") === "true";
+    debugParam !== "0" &&
+    (process.env.NEXT_PUBLIC_SHOW_LLM_DEBUG === "true" ||
+      debugParam === "1" ||
+      debugParam === "true" ||
+      process.env.NODE_ENV === "development");
   const speechLang = locale.startsWith("zh") ? "zh-CN" : locale.startsWith("fr") ? "fr-FR" : "en-US";
   const {
     active: voiceActive,
@@ -1178,6 +1181,12 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         if (showStateDebug && m.meta?.llm_debug) {
           below.push(
             <LLMCallDebugPanel key="llm-debug" debug={m.meta.llm_debug} locale={locale} />,
+          );
+        } else if (showStateDebug && process.env.NODE_ENV === "development") {
+          below.push(
+            <div key="llm-debug-missing" className="poju-llm-debug poju-llm-debug--empty">
+              LLM debug: no data on this turn — refresh and send a new message
+            </div>,
           );
         }
         if (showStateDebug && m.meta?.state_snapshot) {
