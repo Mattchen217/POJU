@@ -12,7 +12,27 @@ function parseDebugParam(value: string | null): boolean | null {
   return null;
 }
 
-/** Whether per-reply LLM debug panels should render (URL ?debug=1, env, or persisted session flag). */
+function readPersistedFlag(): boolean {
+  try {
+    return sessionStorage.getItem(STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writePersistedFlag(on: boolean): void {
+  try {
+    if (on) sessionStorage.setItem(STORAGE_KEY, "1");
+    else sessionStorage.removeItem(STORAGE_KEY);
+  } catch {
+    /* private mode / blocked storage */
+  }
+}
+
+/**
+ * LLM debug panel visibility.
+ * Default ON (including Vercel production). Opt out with ?debug=0 or NEXT_PUBLIC_HIDE_LLM_DEBUG=true.
+ */
 export function useLlmDebugEnabled(): boolean {
   const searchParams = useSearchParams();
   const debugParam = searchParams.get("debug");
@@ -21,24 +41,27 @@ export function useLlmDebugEnabled(): boolean {
   useEffect(() => {
     const parsed = parseDebugParam(debugParam);
     if (parsed === false) {
-      sessionStorage.removeItem(STORAGE_KEY);
+      writePersistedFlag(false);
       setPersisted(false);
       return;
     }
     if (parsed === true) {
-      sessionStorage.setItem(STORAGE_KEY, "1");
+      writePersistedFlag(true);
       setPersisted(true);
       return;
     }
-    setPersisted(sessionStorage.getItem(STORAGE_KEY) === "1");
+    setPersisted(readPersistedFlag());
   }, [debugParam]);
 
   return useMemo(() => {
     const fromUrl = parseDebugParam(debugParam);
     if (fromUrl === false) return false;
+    if (process.env.NEXT_PUBLIC_HIDE_LLM_DEBUG === "true") return false;
     if (fromUrl === true) return true;
     if (process.env.NEXT_PUBLIC_SHOW_LLM_DEBUG === "true") return true;
     if (process.env.NODE_ENV === "development") return true;
-    return persisted;
+    if (persisted) return true;
+    // Default visible on deployed builds (Vercel production included).
+    return true;
   }, [debugParam, persisted]);
 }

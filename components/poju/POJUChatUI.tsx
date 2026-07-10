@@ -1110,6 +1110,12 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     const followUps: Record<string, ReactNode> = {};
     const followUpActions: Record<string, string> = {};
     let energyMatrixRendered = false;
+    const lastAssistantMid = [...visibleMessages]
+      .reverse()
+      .find((m) => m.role === "assistant" && !m.is_rejected);
+    const lastAssistantKey = lastAssistantMid
+      ? (lastAssistantMid.client_id ?? lastAssistantMid.timestamp)
+      : null;
 
     for (const m of visibleMessages) {
       const mid = m.client_id ?? m.timestamp;
@@ -1177,12 +1183,18 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           footers[mid] = (
             <LLMCallDebugPanel key="llm-debug" debug={m.meta.llm_debug} locale={locale} />
           );
-        } else if (showStateDebug && !bareIds.has(mid) && !m.meta?.contains_delivery) {
+        } else if (
+          showStateDebug &&
+          mid === lastAssistantKey &&
+          !bareIds.has(mid) &&
+          !m.meta?.contains_delivery &&
+          (m.meta?.llm_model || m.meta?.tokens_used)
+        ) {
           footers[mid] = (
             <div key="llm-debug-missing" className="poju-llm-debug poju-llm-debug--empty">
               {locale.startsWith("zh")
-                ? "无 LLM 调试数据（欢迎语/旧消息）— 发送新消息后可在此查看"
-                : "No LLM debug data (welcome/old message) — send a new message to see stats here"}
+                ? "本轮无 LLM 调试数据（API 未返回 llm_debug）"
+                : "No LLM debug data on this turn (API did not return llm_debug)"}
             </div>
           );
         }

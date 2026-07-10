@@ -191,10 +191,12 @@ export async function callPhaseJsonTransport(
         reasoning_details: result.reasoning_details,
         finish_reason: result.meta.finish_reason,
         provider: result.meta.provider,
-        llm_debug: {
-          ...result.llm_debug,
-          retried: result.llm_debug.retried || Boolean(retry),
-        },
+        llm_debug: result.llm_debug
+          ? {
+              ...result.llm_debug,
+              retried: result.llm_debug.retried || Boolean(retry),
+            }
+          : undefined,
       };
     }
 
