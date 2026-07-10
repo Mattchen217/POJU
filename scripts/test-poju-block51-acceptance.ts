@@ -28,13 +28,15 @@ function assert(label: string, ok: boolean): void {
 function main(): void {
   console.log("\n=== Block 51 acceptance ===\n");
 
-  // Fix 1 — no xhigh in v6 hot path
-  assert("opening-phase-v6 uses high", read("lib/llm/phases/opening-phase-v6.ts").includes('thinking_effort: "high"'));
-  assert(
-    "opening-phase-v6 no xhigh",
-    !read("lib/llm/phases/opening-phase-v6.ts").includes('thinking_effort: "xhigh"'),
-  );
-  assert("breakthrough-core route high", read("app/api/poju/breakthrough-core/route.ts").includes('thinking_effort: "high"'));
+  // Fix 1 — effort tiers: opening high / conversion xhigh; core + delivery xhigh
+  const openingSrc = read("lib/llm/phases/opening-phase-v6.ts");
+  assert("opening-phase-v6 uses high default", openingSrc.includes('"high"'));
+  assert("opening-phase-v6 conversion xhigh branch", openingSrc.includes('openingConversionRound ? "xhigh" : "high"'));
+  assert("opening-phase-v6 uses shouldForceConverge", openingSrc.includes("shouldForceConverge"));
+  assert("breakthrough-core route xhigh", read("app/api/poju/breakthrough-core/route.ts").includes('thinking_effort: "xhigh"'));
+  const finalRoute = read("app/api/poju/final-delivery/route.ts");
+  assert("final-delivery route xhigh", finalRoute.includes('thinking_effort: "xhigh"'));
+  assert("final-delivery max_tokens 16000", finalRoute.includes("16_000"));
   assert(
     "breakthrough-core timeout 180s",
     read("app/api/poju/breakthrough-core/route.ts").includes("timeout_ms: 180_000"),

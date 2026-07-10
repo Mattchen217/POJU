@@ -65,7 +65,7 @@ async function callCoreLLM(input: {
     system: input.system,
     messages: [{ role: "user", content: input.userContent }],
     max_tokens: input.max_tokens,
-    thinking_effort: "high",
+    thinking_effort: "xhigh",
     response_format: "json",
     timeout_ms: 180_000,
     session_id: input.profileId

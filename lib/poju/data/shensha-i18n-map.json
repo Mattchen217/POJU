@@ -80,7 +80,7 @@
         "de": { "label": "Primärer Mentor-Knoten", "gloss": "Erstklassige Mentoren und Rückhalt" },
         "fr": { "label": "Nœud de Mentor Clé", "gloss": "Mentorat de haut niveau et appui décisif" } } },
 
-    "fortune_buffer": { "zh_src": "福星贵人", "aliases": [], "polarity": "support", "axis": "support", "source": "engine",
+    "fortune_buffer": { "zh_src": "福星贵人", "aliases": ["福星"], "polarity": "support", "axis": "support", "source": "engine",
       "i18n": {
         "en": { "label": "Fortune Buffer", "gloss": "Ease and downside cushioning" },
         "zh": { "label": "福气缓冲", "gloss": "顺遂与下行风险的缓冲垫" },
@@ -88,7 +88,7 @@
         "de": { "label": "Glückspuffer", "gloss": "Leichtigkeit und Abfederung von Risiken" },
         "fr": { "label": "Tampon de Fortune", "gloss": "Aisance et amortissement des risques" } } },
 
-    "insight_catalyst": { "zh_src": "太极贵人", "aliases": [], "polarity": "support", "axis": "cognition", "source": "engine",
+    "insight_catalyst": { "zh_src": "太极贵人", "aliases": ["太极"], "polarity": "support", "axis": "cognition", "source": "engine",
       "i18n": {
         "en": { "label": "Insight Catalyst", "gloss": "Aptitude for depth, research and pattern-finding" },
         "zh": { "label": "洞察催化", "gloss": "钻研深度与规律洞察的禀赋" },
@@ -96,7 +96,7 @@
         "de": { "label": "Einsichts-Katalysator", "gloss": "Begabung für Tiefe und Mustererkennung" },
         "fr": { "label": "Catalyseur de Perspicacité", "gloss": "Aptitude à la profondeur et à l'analyse" } } },
 
-    "institutional_authority_node": { "zh_src": "国印贵人", "aliases": [], "polarity": "support", "axis": "authority", "source": "engine",
+    "institutional_authority_node": { "zh_src": "国印贵人", "aliases": ["国印"], "polarity": "support", "axis": "authority", "source": "engine",
       "i18n": {
         "en": { "label": "Institutional Authority Node", "gloss": "Institutional endorsement and mandate" },
         "zh": { "label": "建制授权节点", "gloss": "体制内的背书、权责与话语权" },
@@ -256,7 +256,7 @@
         "de": { "label": "Grundlinien-Volatilität", "gloss": "Latente Unruhe und Unzufriedenheit" },
         "fr": { "label": "Volatilité de Référence", "gloss": "Agitation et insatisfaction de fond" } } },
 
-    "grounded_support": { "zh_src": "月德贵人", "aliases": [], "polarity": "support", "axis": "support", "source": "engine",
+    "grounded_support": { "zh_src": "月德贵人", "aliases": ["月德"], "polarity": "support", "axis": "support", "source": "engine",
       "i18n": {
         "en": { "label": "Grounded Support", "gloss": "Steady, protective day-to-day backing" },
         "zh": { "label": "稳固护持", "gloss": "日常稳定的护持与守护" },
@@ -272,7 +272,7 @@
         "de": { "label": "Unterstützungskopplung", "gloss": "Verstärkte schützende Ausrichtung" },
         "fr": { "label": "Couplage de Soutien", "gloss": "Alignement protecteur renforcé" } } },
 
-    "systemic_support_core": { "zh_src": "天德贵人", "aliases": [], "polarity": "support", "axis": "support", "source": "engine",
+    "systemic_support_core": { "zh_src": "天德贵人", "aliases": ["天德"], "polarity": "support", "axis": "support", "source": "engine",
       "i18n": {
         "en": { "label": "Systemic Support Core", "gloss": "Structural protection at key nodes" },
         "zh": { "label": "系统性核心支持", "gloss": "关键节点的结构性护持与缓冲" },

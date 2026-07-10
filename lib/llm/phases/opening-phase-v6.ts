@@ -5,6 +5,8 @@
  */
 
 import { normalizeAgentPhase, type AgentPhase } from "@/lib/poju/agent-state";
+import { countSubstantiveOpeningTurns } from "@/lib/poju/agent";
+import { shouldForceConverge } from "@/lib/poju/state-machine";
 import {
   callPhaseJsonTransport,
   formatPhaseMessageHistory,
@@ -95,6 +97,14 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
     baseMessages,
   );
 
+  const structured = normalizeBaseAnalysisInput(input.base_analysis ?? null).structured ?? null;
+  const baseAnalysisReady = Boolean(input.base_analysis ?? input.session.has_profile ?? structured);
+  const substantiveOpeningTurns = countSubstantiveOpeningTurns(input.session.messages);
+  const openingConversionRound =
+    input.agent_state?.current_phase === "opening" &&
+    shouldForceConverge(substantiveOpeningTurns, baseAnalysisReady);
+  const openingThinkingEffort = openingConversionRound ? "xhigh" : "high";
+
   const result = await callPhaseJsonTransport(
     system,
     messages,
@@ -102,11 +112,10 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
       call_type: "chat_flash",
       temperature: 0.55,
       max_tokens: 16000,
-      thinking_effort: "high",
+      thinking_effort: openingThinkingEffort,
     }),
   );
 
-  const structured = normalizeBaseAnalysisInput(input.base_analysis ?? null).structured ?? null;
   const inferredCategory =
     input.agent_state?.question_category ??
     inferQuestionCategoryFromText(
