@@ -59,6 +59,8 @@ export interface PhaseLLMResult {
   problem_summary?: string | null;
   /** Collecting escalation — show refund entry (user-initiated only). */
   suggest_refund?: boolean;
+  /** Opening conversion envelope parse failed — orphan dialogue suppressed; core may backfill. */
+  conversion_envelope_failed?: boolean;
   /** OpenRouter upstream provider that served this turn (for session lock). */
   served_provider?: string | null;
   breakthrough_core?: import("@/lib/poju/agent-state").BreakthroughCore | null;

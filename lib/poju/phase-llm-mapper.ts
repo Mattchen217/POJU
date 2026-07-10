@@ -86,6 +86,7 @@ export function mapPhaseResultToChatPayload(
       undefined,
     breakthrough_core_updates: phase.breakthrough_core_updates ?? null,
     action_status_updates: phase.action_status_updates ?? undefined,
+    conversion_envelope_failed: Boolean(phase.conversion_envelope_failed) || undefined,
     llm_debug: enrichLlmDebugPhaseTransition(phase.llm_debug, {
       phase_from: ctx.fallbackPhase,
       phase_to: suggested,

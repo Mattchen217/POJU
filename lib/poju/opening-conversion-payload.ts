@@ -134,6 +134,38 @@ function buildSalvagedBreakthroughCore(
   };
 }
 
+function agendaFromBreakthroughDirections(record: Record<string, unknown>): AgendaItem[] | null {
+  const rawDirs = record.breakthrough_directions;
+  if (!Array.isArray(rawDirs) || rawDirs.length < 2) return null;
+  const items: AgendaItem[] = [];
+  for (let i = 0; i < rawDirs.length; i++) {
+    const d = rawDirs[i];
+    if (!d || typeof d !== "object") continue;
+    const row = d as Record<string, unknown>;
+    const label =
+      (typeof row.what_would_confirm === "string" ? row.what_would_confirm.trim() : "") ||
+      (typeof row.direction === "string" ? row.direction.trim() : "");
+    if (!label) continue;
+    items.push({
+      id: `agenda_${i + 1}`,
+      label: label.slice(0, 40),
+      critical: i < 2,
+      status: "unexplored",
+      supports: typeof row.direction === "string" ? row.direction : "",
+    });
+  }
+  if (items.length < 2) return null;
+  while (items.length < 3) {
+    items.push({
+      id: `agenda_${items.length + 1}`,
+      label: "待补关键信息",
+      critical: false,
+      status: "unexplored",
+    });
+  }
+  return items;
+}
+
 /** Parse conversion fields when opening sets understanding_sufficient=true. */
 export function parseOpeningConversionPayload(
   parsed: Record<string, unknown> | string,
@@ -160,7 +192,15 @@ export function parseOpeningConversionPayload(
       problem_summary: problem_summary || breakthrough_core.relationship_conclusion.slice(0, 200),
     };
   } catch (fullError) {
-    const agenda = parseAgendaLenient(normalized.investigation_agenda);
+    let agenda = parseAgendaLenient(normalized.investigation_agenda);
+    if (!agenda?.length) {
+      agenda = agendaFromBreakthroughDirections(normalized);
+      if (agenda?.length) {
+        console.info("[opening-conversion] salvaged agenda from breakthrough_directions", {
+          agenda: agenda.length,
+        });
+      }
+    }
     if (!agenda?.length) {
       console.warn("[opening-conversion] parse failed — no agenda to salvage:", fullError);
       return null;

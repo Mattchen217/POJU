@@ -9,14 +9,12 @@ import {
   getGeminiClient,
 } from "@/lib/llm/gemini-shared";
 import { getPojuEmptyGenerationMessage, getPojuServiceBusyMessage, isPojuFailurePlaceholderMessage } from "@/lib/llm/poju-service-busy-message";
-import { callLLM, type LLMCallType } from "@/lib/llm/router";
-import type { LLMCallDebug } from "@/lib/llm/llm-debug";
-import { buildLlmDebug } from "@/lib/llm/llm-debug";
-import type { ReasoningEffort } from "@/lib/llm/router";
-import { openRouterChatCompletionStream } from "@/lib/llm/openrouter-stream";
+import { buildLlmDebug, type LLMCallDebug } from "@/lib/llm/llm-debug";
+import type { LLMCallType, ReasoningEffort } from "@/lib/llm/router";
 import {
   getOpenRouterDefaultModel,
   isOpenRouterConfigured,
+  openRouterChatCompletion,
   openRouterProviderExtras,
   type OpenRouterRoutePath,
 } from "@/lib/llm/openrouter-shared";
@@ -37,19 +35,30 @@ export type PhaseTransportResult = {
   llm_debug?: LLMCallDebug;
 };
 
-function resolveStreamProvider(
-  locked_provider?: string,
-  extra_ignore?: string[],
-): Record<string, unknown> | undefined {
-  return openRouterProviderExtras({
-    lockedProvider: locked_provider?.trim() || undefined,
-    extra_ignore,
-  });
-}
-
 /** OpenRouter returned zero-length completion body. */
 export function isEmptyPhaseCompletion(result: PhaseTransportResult): boolean {
   return result.content.trim().length === 0;
+}
+
+/** Try to recover visible JSON/text when content is empty but reasoning has substance. */
+export function salvageContentFromReasoning(result: PhaseTransportResult): PhaseTransportResult {
+  if (!isEmptyPhaseCompletion(result)) return result;
+  const reasoning = result.reasoning?.trim() ?? "";
+  if (reasoning.length < 40) return result;
+
+  const jsonSlice = extractJson(reasoning).trim();
+  if (jsonSlice.startsWith("{") && jsonSlice.length > 20) {
+    console.info("[phase-transport] salvaged content from reasoning JSON block");
+    return { ...result, content: jsonSlice };
+  }
+
+  const salvaged = salvagePhaseResponseText(reasoning).trim();
+  if (salvaged.length > 0) {
+    console.info("[phase-transport] salvaged content from reasoning prose");
+    return { ...result, content: salvaged };
+  }
+
+  return result;
 }
 
 const RETRYABLE_COMPLIANCE_LABELS = new Set([
@@ -99,7 +108,6 @@ export async function callPhaseJsonTransport(
   const temperature = options?.temperature ?? 0.5;
   const max_tokens = options?.max_tokens ?? 2500;
   const call_type = options?.call_type ?? "poju_reply";
-  const streamHooks = options?.stream_hooks;
   const extraIgnore = options?.provider_extra_ignore;
 
   const runOnce = async (retry?: {
@@ -109,94 +117,64 @@ export async function callPhaseJsonTransport(
       ...(extraIgnore ?? []),
       ...(retry?.extra_ignore ?? []),
     ].filter(Boolean);
-    const providerIgnore = mergedIgnore.length > 0 ? [...new Set(mergedIgnore)] : undefined;
     const locked = options?.locked_provider?.trim() || undefined;
     const routePath = options?.route_path ?? "chat";
     const thinking_effort: ReasoningEffort = options?.thinking_effort ?? "high";
     if (isOpenRouterConfigured()) {
-      if (streamHooks) {
-        const chatMessages = [
-          { role: "system" as const, content: system },
-          ...messages.map((m) => ({ role: m.role, content: m.content })),
-        ];
-        const streamStart = Date.now();
-        const streamed = await openRouterChatCompletionStream(
-          {
-            messages: chatMessages,
-            max_tokens,
-            temperature,
-            json_mode: true,
-            reasoning_effort: thinking_effort,
-            session_id: options?.session_id,
-            call_type: call_type,
-            phase_name: options?.phase_name,
-            provider: resolveStreamProvider(locked, providerIgnore),
-            route_path: routePath,
-            locked_provider: locked ?? null,
-            signal: options?.signal,
-          },
-          {
-            onReasoning: streamHooks.onReasoning,
-            onContent: streamHooks.onContent,
-          },
-        );
-        const latency_ms = Date.now() - streamStart;
-        const transport = streamed.transport;
-        return {
-          content: streamed.text,
-          model: streamed.model ?? getOpenRouterDefaultModel(),
-          tokens_used: streamed.tokens_used ?? 0,
-          reasoning: streamed.reasoning,
-          finish_reason: streamed.finish_reason,
-          provider: streamed.provider,
-          llm_debug: buildLlmDebug({
-            phase: options?.phase_name ?? call_type,
-            requested_effort: thinking_effort,
-            max_tokens,
-            model: streamed.model ?? getOpenRouterDefaultModel(),
-            served_provider: streamed.provider,
-            finish_reason: streamed.finish_reason,
-            prompt_tokens: streamed.prompt_tokens,
-            cached_tokens: streamed.cached_tokens,
-            completion_tokens: streamed.completion_tokens,
-            reasoning_tokens: streamed.reasoning_tokens,
-            latency_ms,
-            generation_time_ms: streamed.generation_time_ms,
-            generation_id: streamed.generation_id,
-            attempt: transport?.attempt ?? 1,
-            retried: Boolean(retry),
-            fell_back: transport?.fell_back ?? false,
-          }),
-        };
-      }
-
-      const result = await callLLM({
-        call_type,
-        system,
-        messages,
+      const chatMessages = [
+        { role: "system" as const, content: system },
+        ...messages.map((m) => ({ role: m.role, content: m.content })),
+      ];
+      const defaultModel = getOpenRouterDefaultModel();
+      const uniqueIgnore =
+        mergedIgnore.length > 0 ? [...new Set(mergedIgnore)] : undefined;
+      const startTime = Date.now();
+      const out = await openRouterChatCompletion({
+        messages: chatMessages,
         max_tokens,
         temperature,
-        response_format: "json",
+        json_mode: true,
+        reasoning_effort: thinking_effort,
         session_id: options?.session_id,
+        call_type,
         phase_name: options?.phase_name,
         route_path: routePath,
-        locked_provider: locked,
-        thinking_effort,
+        locked_provider: locked ?? null,
+        provider: openRouterProviderExtras({
+          lockedProvider: locked,
+          extra_ignore: uniqueIgnore,
+        }),
+        signal: options?.signal,
+      });
+      const latency_ms = Date.now() - startTime;
+      const transport = out.transport;
+      const llm_debug = buildLlmDebug({
+        phase: options?.phase_name ?? call_type,
+        requested_effort: thinking_effort,
+        max_tokens,
+        model: out.model || defaultModel,
+        served_provider: out.provider,
+        finish_reason: out.finish_reason,
+        prompt_tokens: out.prompt_tokens,
+        cached_tokens: out.cached_tokens,
+        completion_tokens: out.completion_tokens,
+        reasoning_tokens: out.reasoning_tokens,
+        latency_ms,
+        generation_time_ms: out.generation_time_ms,
+        generation_id: out.generation_id,
+        attempt: transport?.attempt ?? 1,
+        retried: (transport?.retried ?? false) || Boolean(retry),
+        fell_back: transport?.fell_back ?? false,
       });
       return {
-        content: result.content,
-        model: result.actual_model,
-        tokens_used: result.meta.tokens_used,
-        reasoning: result.reasoning,
-        reasoning_details: result.reasoning_details,
-        finish_reason: result.meta.finish_reason,
-        provider: result.meta.provider,
-        llm_debug: result.llm_debug
-          ? {
-              ...result.llm_debug,
-              retried: result.llm_debug.retried || Boolean(retry),
-            }
-          : undefined,
+        content: out.text,
+        model: out.model || defaultModel,
+        tokens_used: out.tokens_used,
+        reasoning: out.reasoning,
+        reasoning_details: out.reasoning_details,
+        finish_reason: out.finish_reason,
+        provider: out.provider,
+        llm_debug,
       };
     }
 
@@ -216,6 +194,8 @@ export async function callPhaseJsonTransport(
   };
 
   let result = await runOnce();
+  result = salvageContentFromReasoning(result);
+
   if (isEmptyPhaseCompletion(result)) {
     const failedProvider = result.provider?.trim();
     const pinned = options?.locked_provider?.trim();
@@ -230,13 +210,29 @@ export async function callPhaseJsonTransport(
         retry_same_provider: Boolean(pinned),
       }),
     );
-    result = await runOnce({
-      extra_ignore: pinned ? undefined : failedProvider ? [failedProvider] : undefined,
-    });
-    if (result.llm_debug) {
-      result = { ...result, llm_debug: { ...result.llm_debug, retried: true } };
+    try {
+      const retried = await runOnce({
+        extra_ignore: pinned ? undefined : failedProvider ? [failedProvider] : undefined,
+      });
+      result = retried;
+      if (result.llm_debug) {
+        result = { ...result, llm_debug: { ...result.llm_debug, retried: true } };
+      }
+    } catch (err) {
+      console.warn(
+        "[phase-transport] empty-content retry threw — not upgrading to provider_queue",
+        err,
+      );
     }
+    result = salvageContentFromReasoning(result);
+
     if (isEmptyPhaseCompletion(result)) {
+      if (result.finish_reason === "length") {
+        console.warn(
+          "[phase-transport] empty content with finish_reason=length — reasoning likely consumed max_tokens",
+          JSON.stringify({ phase: options?.phase_name ?? "—", max_tokens }),
+        );
+      }
       console.warn(
         "[phase-transport] empty completion after retry — will use empty-generation fallback",
         JSON.stringify({

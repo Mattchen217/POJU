@@ -56,7 +56,7 @@ export interface POJUMessage {
     /** Agenda items when first built (shown below bubble, not in body). */
     investigation_agenda?: import("@/lib/poju/investigation-agenda").AgendaItem[];
     /** Collecting escalation — show refund entry (user-initiated). */
-    kind?: "energy_matrix" | "paywall" | "report" | "welcome" | "infra_busy" | "generation_empty";
+    kind?: "energy_matrix" | "paywall" | "report" | "welcome" | "infra_busy" | "generation_empty" | "generation_incomplete";
     /** Preview chat — welcome bubble sourced from matrix synopsis (not generic copy). */
     matrix_welcome?: boolean;
     matrix_payload?: import("./build-matrix-payload").PojuMatrixPayload;

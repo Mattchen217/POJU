@@ -62,6 +62,7 @@ export interface CallLLMInput {
   route_path?: OpenRouterRoutePath;
   /** Chat session pin — single provider in order when set. */
   locked_provider?: string;
+  signal?: AbortSignal;
 }
 
 export interface CallLLMResult {
@@ -242,6 +243,7 @@ export async function callLLM(input: CallLLMInput): Promise<CallLLMResult> {
     route_path: input.route_path ?? "once",
     locked_provider: locked ?? null,
     provider,
+    signal: input.signal,
   });
 
   const latency_ms = Date.now() - startTime;

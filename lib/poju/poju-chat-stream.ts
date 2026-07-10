@@ -49,20 +49,6 @@ export function createPojuChatStreamResponse(body: ChatBody, reqSignal?: AbortSi
           locale: String(body.locale ?? "en"),
           tool_injection_context:
             typeof body.tool_injection_context === "string" ? body.tool_injection_context : null,
-          stream_hooks: {
-            onReasoning: (text) => send({ type: "reasoning", text }),
-            onContent: (raw) => {
-              if (!raw.length) return;
-              const text = extractStreamingResponseText(raw);
-              if (text === lastContentText) return;
-              lastContentText = text;
-              send({
-                type: "content",
-                text,
-                raw_length: raw.length,
-              });
-            },
-          },
           signal: reqSignal,
         });
 

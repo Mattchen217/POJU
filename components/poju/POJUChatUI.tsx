@@ -579,12 +579,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         locale,
         userAlreadyAppended: true,
         signal: ac.signal,
-        onStream: {
-          onReasoning: (text) => {
-            if (gen !== sendGenerationRef.current) return;
-            if (text.trim()) setThinkingLiveLine(text);
-          },
-        },
       });
       if (ac.signal.aborted || gen !== sendGenerationRef.current) return;
 
@@ -1172,7 +1166,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         );
       }
       if (
-        (m.meta?.kind === "infra_busy" || m.meta?.kind === "generation_empty") &&
+        (m.meta?.kind === "infra_busy" ||
+          m.meta?.kind === "generation_empty" ||
+          m.meta?.kind === "generation_incomplete") &&
         m.role === "assistant"
       ) {
         followUps[mid] = (

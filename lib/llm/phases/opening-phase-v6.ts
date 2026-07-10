@@ -53,6 +53,14 @@ export const POJU_V6_OPENING_PHASE_RULES = `# 当前阶段任务 · opening（�
 - **禁 tracking 话术**："回来汇报进展/有结果再来"只属于交付之后；opening 收尾永远是问清下一层，或 conversion 时问 agenda 第一项。
 
 ## conversion envelope（仅 understanding_sufficient=true · 同轮一次 JSON）
+
+### ⚠️ understanding_sufficient=true 硬约束（缺字段 = 格式错误）
+当 \`understanding_sufficient=true\` 时，本轮【必须】在同一个 JSON 里同时输出完整 conversion envelope：
+  \`relationship_conclusion\`、\`breakthrough_directions\`（2–3 条）、\`investigation_agenda\`（3–4 项）、
+  \`question_category\`、\`problem_summary\`，以及 \`response\`。
+\`response\` 必须【直接问 investigation_agenda 的第一项】（带问号）——不得只给与议程无关的泛问。
+**严禁** sufficient=true 却只输出 \`response\` 而不带 agenda / core 字段；否则后端视为格式错误并丢弃该句对话。
+
 - 输出 \`relationship_conclusion\`、\`breakthrough_directions\`（2–3 条，宁少而锐）、\`investigation_agenda\`（3–4 项，label ≤20 字）、\`question_category\`、\`problem_summary\`
 - \`response\` = 关系结论讲给用户 + **直接问 investigation_agenda 的第一项**（带问号）
 - 不要说"我去深入推演"再停顿。understanding_sufficient=false 的普通轮只出 \`response\` + false，不带议程字段。
@@ -168,6 +176,8 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
   let investigation_agenda: PhaseLLMResult["investigation_agenda"] = null;
   let problem_summary: string | null = null;
 
+  let conversion_envelope_failed = false;
+
   if (understanding_sufficient) {
     const conversion = parseOpeningConversionPayload(parsed, response, input.locale);
     if (conversion) {
@@ -182,8 +192,10 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
         category: question_category,
       });
     } else {
+      conversion_envelope_failed = true;
+      response = "";
       console.warn(
-        "[opening-phase-v6] understanding_sufficient but envelope parse failed — fallback core may run",
+        "[opening-phase-v6] understanding_sufficient but envelope parse failed — suppress orphan dialogue; core fallback will supply user-facing question",
       );
     }
   }
@@ -233,6 +245,7 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
     thinking_process: undefined,
     understanding,
     understanding_sufficient,
+    conversion_envelope_failed: conversion_envelope_failed || undefined,
     llm_debug: result.llm_debug
       ? {
           ...result.llm_debug,

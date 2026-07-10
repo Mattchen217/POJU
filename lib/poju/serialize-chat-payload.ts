@@ -37,6 +37,7 @@ export const CHAT_PAYLOAD_FIELDS = [
   "problem_summary",
   "breakthrough_core_updates",
   "action_status_updates",
+  "conversion_envelope_failed",
   "llm_debug",
 ] as const;
 
@@ -91,6 +92,7 @@ export function pojuLlmToChatPayload(
     confirmation_signal: llm.confirmation_signal,
     breakthrough_core_updates: llm.breakthrough_core_updates ?? null,
     action_status_updates: llm.action_status_updates ?? undefined,
+    conversion_envelope_failed: llm.conversion_envelope_failed,
     llm_debug: llm.llm_debug,
     ...overrides,
   });
@@ -152,6 +154,8 @@ export function chatPayloadFromWire(
         : undefined,
     breakthrough_core_updates: data.breakthrough_core_updates ?? null,
     action_status_updates: data.action_status_updates,
+    conversion_envelope_failed:
+      typeof data.conversion_envelope_failed === "boolean" ? data.conversion_envelope_failed : undefined,
     llm_debug:
       data.llm_debug && typeof data.llm_debug === "object" && !Array.isArray(data.llm_debug)
         ? (data.llm_debug as import("@/lib/llm/llm-debug").LLMCallDebug)

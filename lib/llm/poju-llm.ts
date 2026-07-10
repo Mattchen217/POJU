@@ -3,7 +3,11 @@ import {
   GEMINI_PRIMARY_MODEL,
   getGeminiClient,
 } from "@/lib/llm/gemini-shared";
-import { getPojuServiceBusyMessage } from "@/lib/llm/poju-service-busy-message";
+import {
+  getPojuEmptyGenerationMessage,
+  getPojuServiceBusyMessage,
+} from "@/lib/llm/poju-service-busy-message";
+import { OpenRouterProviderQueueError } from "@/lib/llm/openrouter-retry";
 import { logPojuError } from "@/lib/poju/base-analysis-diagnostics";
 import { getOpenRouterDefaultModel, isOpenRouterConfigured, resolveSessionLockedProvider } from "@/lib/llm/openrouter-shared";
 import type { POJUActionRecommendationsData } from "@/lib/archive/archive-service";
@@ -77,6 +81,7 @@ export interface POJULLMResponse {
   breakthrough_core?: import("@/lib/poju/agent-state").BreakthroughCore | null;
   problem_summary?: string | null;
   action_status_updates?: import("@/lib/poju/action-status-updates").ActionStatusPatch[];
+  conversion_envelope_failed?: boolean;
   llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
 }
 
@@ -95,8 +100,11 @@ export async function callPOJULLM(input: CallInput): Promise<POJULLMResponse> {
     return finalizeLockFields(await callPOJULLMPhasePath(input), session);
   } catch (error: unknown) {
     logPojuError("poju-llm:callPOJULLM", error);
+    if (error instanceof OpenRouterProviderQueueError) {
+      throw error;
+    }
     return finalizeLockFields(
-      emptyFailureResponse(session, input.locale, GEMINI_PRIMARY_MODEL),
+      emptyFailureResponse(session, input.locale, GEMINI_PRIMARY_MODEL, "incomplete"),
       session,
     );
   }
@@ -172,13 +180,22 @@ async function callPOJULLMPhasePath(input: CallInput): Promise<POJULLMResponse> 
     confirmation_signal: phase.confirmation_signal,
     breakthrough_core_updates: phase.breakthrough_core_updates ?? null,
     action_status_updates: phase.action_status_updates ?? undefined,
+    conversion_envelope_failed: Boolean(phase.conversion_envelope_failed) || undefined,
     llm_debug: (mapped as { llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug }).llm_debug,
   };
 }
 
-function emptyFailureResponse(session: POJUSessionState, locale: string, model: string): POJULLMResponse {
+function emptyFailureResponse(
+  session: POJUSessionState,
+  locale: string,
+  model: string,
+  kind: "busy" | "incomplete" = "busy",
+): POJULLMResponse {
   return {
-    response: getLLMFailureMessage(locale),
+    response:
+      kind === "incomplete"
+        ? getPojuEmptyGenerationMessage(locale)
+        : getLLMFailureMessage(locale),
     model,
     tokens_used: 0,
     user_intent: "unclear",

@@ -9,11 +9,11 @@ export const POJU_SERVICE_BUSY_MESSAGES = {
 
 /** User-facing copy when the model ran but returned no visible body (not supplier queue busy). */
 export const POJU_EMPTY_GENERATION_MESSAGES = {
-  zh: "本轮回复生成异常（模型未返回正文），请点下方重试。你的会话已保存。",
-  en: "This reply could not be generated (empty model output). Tap retry below. Your session is saved.",
-  es: "No se pudo generar esta respuesta (salida vacía). Pulsa reintentar abajo. Tu sesión está guardada.",
-  de: "Diese Antwort konnte nicht erzeugt werden (leere Modellausgabe). Unten erneut versuchen. Deine Sitzung ist gespeichert.",
-  fr: "Cette réponse n'a pas pu être générée (sortie vide). Appuyez sur réessayer ci-dessous. Votre session est enregistrée.",
+  zh: "这一条没有完整生成，请点下方重试。你的会话已保存。",
+  en: "This response didn't fully generate—please tap retry below. Your session is saved.",
+  es: "Esta respuesta no se generó por completo—pulsa reintentar abajo. Tu sesión está guardada.",
+  de: "Diese Antwort wurde nicht vollständig erzeugt—bitte unten erneut versuchen. Deine Sitzung ist gespeichert.",
+  fr: "Cette réponse n'a pas été entièrement générée—appuyez sur réessayer ci-dessous. Votre session est enregistrée.",
 } as const;
 
 export type PojuBusyLocale = keyof typeof POJU_SERVICE_BUSY_MESSAGES;
@@ -42,6 +42,9 @@ export function getPojuEmptyGenerationMessage(locale?: string): string {
 export function isPojuEmptyGenerationMessage(text: string): boolean {
   const t = text.trim();
   if (!t) return false;
+  if (t.includes("没有完整生成") || t.includes("didn't fully generate")) return true;
+  if (t.includes("no se generó por completo") || t.includes("nicht vollständig erzeugt")) return true;
+  if (t.includes("pas été entièrement générée")) return true;
   if (t.includes("生成异常") || t.includes("empty model output")) return true;
   if (t.includes("salida vacía") || t.includes("leere Modellausgabe")) return true;
   if (t.includes("sortie vide")) return true;

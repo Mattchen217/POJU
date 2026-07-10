@@ -35,6 +35,8 @@ import {
 import { isPojuFailurePlaceholderMessage, isPojuInfrastructureFailureMessage, isPojuEmptyGenerationMessage } from "@/lib/llm/poju-service-busy-message";
 import {
   appendForwardMove,
+  buildCollectingTransitionReplyFromCore,
+  envelopeCoreFallbackRetryHint,
   hasQuestionCue,
 } from "@/lib/poju/collecting-focus-reply";
 import {
@@ -81,12 +83,6 @@ export interface HandleInput {
   /** Session already includes this user turn (optimistic UI); skip rule re-check and duplicate append. */
   userAlreadyAppended?: boolean;
   signal?: AbortSignal;
-  onStream?: {
-    onReasoning?: (text: string) => void;
-    /** First JSON/content byte from the model (reasoning phase ended). */
-    onContentStreamStart?: () => void;
-    onPartialResponse?: (text: string) => void;
-  };
 }
 
 type LLMApiPayload = {
@@ -124,6 +120,7 @@ type LLMApiPayload = {
   user_confirms_delivery?: boolean;
   breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null;
   action_status_updates?: import("@/lib/poju/action-status-updates").ActionStatusPatch[];
+  conversion_envelope_failed?: boolean;
   llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
 };
 
@@ -485,7 +482,7 @@ function normalizeNewActions(raw: unknown[] | undefined): POJUAction[] {
  * - appends assistant message
  */
 export async function handleUserMessage(input: HandleInput): Promise<POJUSessionState> {
-  const { session: sessionIn, userMessage, locale, userAlreadyAppended, signal, onStream } = input;
+  const { session: sessionIn, userMessage, locale, userAlreadyAppended, signal } = input;
   const session = ensureSessionCycles(sessionIn);
   const isOpeningSignal = userMessage.trim() === "__OPENING__";
   const isSystemMessage = userMessage.startsWith("[SYSTEM:") || isOpeningSignal;
@@ -565,7 +562,6 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     locale,
     signal,
     tool_injection_context: injectionPrep.tool_injection_context,
-    onStream,
   });
 
   workingSession = finalizeToolInjectionTurn(workingSession, injectionPrep.pending);
@@ -673,6 +669,11 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     }
   }
 
+  const inlineEnvelopeFromOpening =
+    Boolean(llmResponse.breakthrough_core) &&
+    Array.isArray(llmResponse.investigation_agenda) &&
+    llmResponse.investigation_agenda.length > 0;
+
   let finalContent = llmResponse.response;
 
   const justConverted =
@@ -682,6 +683,15 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   const phaseAfter = normalizeAgentPhase(agent_v2.current_phase) ?? agent_v2.current_phase;
   const envelopeFailedStayedOpening =
     advance.trigger_breakthrough_core && phaseAfter === "opening";
+
+  if (justConverted && !inlineEnvelopeFromOpening) {
+    finalContent = buildCollectingTransitionReplyFromCore(agent_v2, locale);
+  } else if (llmResponse.conversion_envelope_failed && envelopeFailedStayedOpening) {
+    finalContent = envelopeCoreFallbackRetryHint(locale);
+  } else if (llmResponse.conversion_envelope_failed && !finalContent.trim()) {
+    finalContent = envelopeCoreFallbackRetryHint(locale);
+  }
+
   const advancedCleanly =
     justConverted ||
     (!envelopeFailedStayedOpening &&
@@ -740,7 +750,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       ),
       llm_debug: llmResponse.llm_debug,
       ...(isPojuEmptyGenerationMessage(finalContent)
-        ? { kind: "generation_empty" as const }
+        ? { kind: "generation_incomplete" as const }
         : isPojuInfrastructureFailureMessage(finalContent)
           ? { kind: "infra_busy" as const }
           : {}),
@@ -877,7 +887,6 @@ async function callLLMViaAPI(input: {
   locale: string;
   signal?: AbortSignal;
   tool_injection_context?: string | null;
-  onStream?: HandleInput["onStream"];
 }): Promise<{
   response: string;
   model: string;
@@ -914,6 +923,7 @@ async function callLLMViaAPI(input: {
   breakthrough_core?: import("@/lib/poju/agent-state").BreakthroughCore | null;
   problem_summary?: string | null;
   action_status_updates?: import("@/lib/poju/action-status-updates").ActionStatusPatch[];
+  conversion_envelope_failed?: boolean;
   llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
 }> {
   const body = JSON.stringify({
@@ -924,74 +934,6 @@ async function callLLMViaAPI(input: {
     locale: input.locale,
     tool_injection_context: input.tool_injection_context ?? null,
   });
-
-  if (input.onStream) {
-    const response = await fetch("/api/poju/chat?stream=1", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body,
-      signal: input.signal,
-    });
-    if (!response.ok) {
-      throw new Error(`/api/poju/chat stream returned HTTP ${response.status}`);
-    }
-    if (!response.body) {
-      throw new Error("missing stream body from /api/poju/chat");
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-    let complete: LLMApiPayload | null = null;
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const parts = buffer.split("\n\n");
-      buffer = parts.pop() ?? "";
-
-      for (const part of parts) {
-        const line = part.trim();
-        if (!line.startsWith("data:")) continue;
-        const raw = line.slice(5).trim();
-        if (!raw) continue;
-        let event: Record<string, unknown>;
-        try {
-          event = JSON.parse(raw) as Record<string, unknown>;
-        } catch {
-          continue;
-        }
-        const type = event.type;
-        if (type === "reasoning" && typeof event.text === "string") {
-          input.onStream.onReasoning?.(event.text);
-        } else if (type === "content") {
-          if (typeof event.text === "string" && event.text.length > 0) {
-            input.onStream.onContentStreamStart?.();
-            input.onStream.onPartialResponse?.(event.text);
-          }
-        } else if (type === "complete") {
-          complete = event as LLMApiPayload;
-        } else if (type === "error") {
-          if (event.code === "provider_queue") {
-            const err = new Error("openrouter_provider_queue");
-            err.name = "OpenRouterProviderQueueError";
-            throw err;
-          }
-          throw new Error(String(event.message ?? "stream_error"));
-        } else if (type === "aborted") {
-          const err = new Error("AbortError");
-          err.name = "AbortError";
-          throw err;
-        }
-      }
-    }
-
-    if (!complete) {
-      throw new Error("stream ended without complete payload");
-    }
-    return mapLlmApiPayload(complete, input.session);
-  }
 
   const response = await fetch("/api/poju/chat", {
     method: "POST",
@@ -1108,6 +1050,8 @@ function mapLlmApiPayload(
     action_status_updates: Array.isArray(wire.action_status_updates)
       ? parseActionStatusUpdates({ action_status_updates: wire.action_status_updates })
       : undefined,
+    conversion_envelope_failed:
+      typeof wire.conversion_envelope_failed === "boolean" ? wire.conversion_envelope_failed : undefined,
     llm_debug:
       wire.llm_debug && typeof wire.llm_debug === "object" && !Array.isArray(wire.llm_debug)
         ? (wire.llm_debug as import("@/lib/llm/llm-debug").LLMCallDebug)

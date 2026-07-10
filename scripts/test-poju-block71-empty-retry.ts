@@ -41,7 +41,7 @@ function main(): void {
   const emptyZh = getPojuEmptyGenerationMessage("zh");
   const busyZh = getPojuServiceBusyMessage("zh");
   assert("empty zh distinct from busy", emptyZh !== busyZh);
-  assert("empty zh mentions 生成异常", emptyZh.includes("生成异常"));
+  assert("empty zh mentions 没有完整生成", emptyZh.includes("没有完整生成"));
   assert("busy zh mentions 服务繁忙", busyZh.includes("服务繁忙"));
   assert("isPojuEmptyGenerationMessage detects empty copy", isPojuEmptyGenerationMessage(emptyZh));
   assert("isPhaseResponseFallback includes empty", isPhaseResponseFallback(emptyZh));

@@ -15,6 +15,26 @@ function formatFocusQuestion(label: string, locale: string): string {
   return locale.startsWith("zh") ? `${q}？` : `${q}?`;
 }
 
+/** User-facing collecting transition when core fallback replaces a failed opening envelope. */
+export function buildCollectingTransitionReplyFromCore(
+  agent: POJUAgentState,
+  locale: string,
+): string {
+  const rel = agent.breakthrough_core?.relationship_conclusion?.trim() ?? "";
+  const intro =
+    rel ||
+    (locale.startsWith("zh")
+      ? "我先帮你把这件事在本盘结构里的卡点理顺。"
+      : "Let me frame where you're structurally stuck first.");
+  return appendFirstFocusQuestion(intro, agent, locale);
+}
+
+export function envelopeCoreFallbackRetryHint(locale: string): string {
+  return locale.startsWith("zh")
+    ? "我在整理与你问题相关的调查角度时遇到一点异常，请再发一句让我继续。"
+    : "I hit a snag while framing investigation angles for your question — please send another message.";
+}
+
 /** Append first agenda focus when opening→collecting transition reply has no question. */
 export function appendFirstFocusQuestion(
   reply: string,
