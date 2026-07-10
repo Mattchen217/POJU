@@ -1706,6 +1706,28 @@ body.pchat-page-lock .pchat:not(.tool-preview-chat) {
   font-style: italic;
 }
 
+.poju-llm-debug-banner {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.75rem;
+  border-bottom: 1px solid rgba(230, 194, 122, 0.35);
+  background: rgba(230, 194, 122, 0.12);
+  color: #e6c27a;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.poju-llm-debug-banner__dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e6c27a;
+  box-shadow: 0 0 6px rgba(230, 194, 122, 0.75);
+}
+
 .poju-agenda-card {
   margin-top: 0.5rem;
   padding: 0.55rem 0.65rem;

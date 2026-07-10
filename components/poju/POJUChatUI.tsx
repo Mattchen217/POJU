@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import PojuChat from "@/components/poju/PojuChat";
@@ -66,8 +65,10 @@ import { MainDeliveryView } from "@/components/poju/MainDeliveryView";
 import { PojuReportChatCard } from "@/components/poju/PojuReportChatCard";
 import { PojuStateDebugPanel } from "@/components/poju/PojuStateDebugPanel";
 import { LLMCallDebugPanel } from "@/components/poju/LLMCallDebugPanel";
+import { LlmDebugModeBanner } from "@/components/poju/LlmDebugModeBanner";
 import { StateMachineDebugPanel } from "@/components/poju/StateMachineDebugPanel";
 import { buildDevStateLedger } from "@/lib/poju/dev-state-ledger";
+import { useLlmDebugEnabled } from "@/lib/poju/use-llm-debug-enabled";
 import { PojuAgendaCard } from "@/components/poju/PojuAgendaCard";
 import { PojuUnlockReportModal } from "@/components/poju/PojuUnlockReportModal";
 import { hasUnlockReportMessage, prepareUnlockReleaseSession } from "@/lib/poju/finalize-unlock-bazi-session";
@@ -204,14 +205,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const awaitingActivityDismissRef = useRef(false);
   const skipActivityRenderReadyRef = useRef(false);
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const debugParam = searchParams.get("debug");
-  const showStateDebug =
-    debugParam !== "0" &&
-    (process.env.NEXT_PUBLIC_SHOW_LLM_DEBUG === "true" ||
-      debugParam === "1" ||
-      debugParam === "true" ||
-      process.env.NODE_ENV === "development");
+  const showStateDebug = useLlmDebugEnabled();
   const speechLang = locale.startsWith("zh") ? "zh-CN" : locale.startsWith("fr") ? "fr-FR" : "en-US";
   const {
     active: voiceActive,
@@ -1108,10 +1102,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     [visibleMessages],
   );
 
-  const { messageSlots, bareMessageSlotIds, messageFollowUps, messageFollowUpActionsText } =
+  const { messageSlots, bareMessageSlotIds, messageFooters, messageFollowUps, messageFollowUpActionsText } =
     useMemo(() => {
     const slots: Record<string, ReactNode> = {};
     const bareIds = new Set<string>();
+    const footers: Record<string, ReactNode> = {};
     const followUps: Record<string, ReactNode> = {};
     const followUpActions: Record<string, string> = {};
     let energyMatrixRendered = false;
@@ -1179,14 +1174,16 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       if (m.role === "assistant" && !m.is_rejected) {
         const below: ReactNode[] = [];
         if (showStateDebug && m.meta?.llm_debug) {
-          below.push(
-            <LLMCallDebugPanel key="llm-debug" debug={m.meta.llm_debug} locale={locale} />,
+          footers[mid] = (
+            <LLMCallDebugPanel key="llm-debug" debug={m.meta.llm_debug} locale={locale} />
           );
-        } else if (showStateDebug && process.env.NODE_ENV === "development") {
-          below.push(
+        } else if (showStateDebug && !bareIds.has(mid) && !m.meta?.contains_delivery) {
+          footers[mid] = (
             <div key="llm-debug-missing" className="poju-llm-debug poju-llm-debug--empty">
-              LLM debug: no data on this turn — refresh and send a new message
-            </div>,
+              {locale.startsWith("zh")
+                ? "无 LLM 调试数据（欢迎语/旧消息）— 发送新消息后可在此查看"
+                : "No LLM debug data (welcome/old message) — send a new message to see stats here"}
+            </div>
           );
         }
         if (showStateDebug && m.meta?.state_snapshot) {
@@ -1215,6 +1212,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     return {
       messageSlots: slots,
       bareMessageSlotIds: bareIds,
+      messageFooters: footers,
       messageFollowUps: followUps,
       messageFollowUpActionsText: followUpActions,
     };
@@ -1269,6 +1267,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         }}
       />
       <div className="poju-chat-shell">
+        {showStateDebug ? <LlmDebugModeBanner locale={locale} /> : null}
         <div className="poju-chat-shell__main">
       <PojuChat
         sessions={pojuSessions}
@@ -1282,6 +1281,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         composerDisabled={composerLocked}
         messageSlots={messageSlots}
         bareMessageSlotIds={bareMessageSlotIds}
+        messageFooters={messageFooters}
         messageFollowUps={messageFollowUps}
         messageFollowUpActionsText={messageFollowUpActionsText}
         paywallOverlay={

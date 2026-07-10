@@ -112,6 +112,8 @@ export interface PojuChatProps {
   messageSlots?: Record<string, ReactNode>;
   /** Slot ids rendered without avatar shell (full-width embeds). */
   bareMessageSlotIds?: ReadonlySet<string>;
+  /** Inline blocks inside the main assistant bubble (e.g. LLM debug), before copy/speaker actions. */
+  messageFooters?: Record<string, ReactNode>;
   /** Extra AI reply blocks immediately after a parent message id. */
   messageFollowUps?: Record<string, ReactNode>;
   /** Plain text for copy/actions on follow-up blocks. */
@@ -187,6 +189,7 @@ export default function PojuChat(props: PojuChatProps) {
     newSessionLabel = "+ New POJU",
     messageSlots,
     bareMessageSlotIds,
+    messageFooters,
     messageFollowUps,
     messageFollowUpActionsText,
     paywallOverlay,
@@ -341,6 +344,7 @@ export default function PojuChat(props: PojuChatProps) {
     pendingActivityFading,
     messages,
     messageSlots,
+    messageFooters,
     messageFollowUps,
     onActivityRenderReady,
   ]);
@@ -358,6 +362,7 @@ export default function PojuChat(props: PojuChatProps) {
         {messageSlots?.[m.id]
           ? messageSlots[m.id]
           : renderAiContent(m.content, thinkingLocale ?? "en", reveal)}
+        {messageFooters?.[m.id]}
         {!messageSlots?.[m.id] ? (
           <AssistantMessageActions content={m.content} locale={thinkingLocale ?? "en"} />
         ) : null}

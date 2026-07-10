@@ -67,8 +67,10 @@ function main(): void {
   const ui = read("components/poju/POJUChatUI.tsx");
   assert("PojuStateDebugPanel wired", ui.includes("PojuStateDebugPanel"));
   assert("LLMCallDebugPanel wired", ui.includes("LLMCallDebugPanel"));
+  assert("LlmDebugModeBanner wired", ui.includes("LlmDebugModeBanner"));
+  assert("useLlmDebugEnabled hook", ui.includes("useLlmDebugEnabled"));
+  assert("messageFooters passed to PojuChat", ui.includes("messageFooters={messageFooters}"));
   assert("PojuAgendaCard wired", ui.includes("PojuAgendaCard"));
-  assert("debug toggle dev default", ui.includes('NODE_ENV === "development"'));
   assert("investigation_agenda in meta render", ui.includes("m.meta?.investigation_agenda"));
   assert("llm_debug in meta render", ui.includes("m.meta?.llm_debug"));
 
