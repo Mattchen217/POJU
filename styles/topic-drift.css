@@ -62,3 +62,20 @@
   color: #ccc;
   /* border-color removed (Step 1) */
 }
+
+.poju-infra-busy-retry {
+  margin-top: 10px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(212, 175, 55, 0.45);
+  background: rgba(212, 175, 55, 0.12);
+  color: #e8d5a0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.poju-infra-busy-retry:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

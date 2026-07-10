@@ -66,19 +66,32 @@ async function main(): Promise<void> {
   assert("503 retries once then succeeds", attempts === 2);
 
   resetOpenRouterModelResolverForTests();
+  let transientCalls = 0;
+  const transientOut = await callWithRetryAndFallback(async (model) => {
+    transientCalls++;
+    if (transientCalls < 2) {
+      throw new Error("openrouter_http_404: No endpoints found for provider");
+    }
+    return model;
+  });
+  assert("transient 404 retries same slug", transientCalls === 2 && Boolean(transientOut));
+
+  resetOpenRouterModelResolverForTests();
   let calls = 0;
   const out = await callWithRetryAndFallback(async (model) => {
     calls++;
     if (model === OPENROUTER_MODEL_CANDIDATES_BUILTIN[0]) {
-      throw new Error("openrouter_http_404: No endpoint found");
+      throw new Error("openrouter_http_404: model not found for slug");
     }
     return model;
   });
-  assert("404 switches candidate", out === OPENROUTER_MODEL_CANDIDATES_BUILTIN[1]);
-  assert("404 tried both slugs", calls === 2);
+  assert("slug 404 switches candidate", out === OPENROUTER_MODEL_CANDIDATES_BUILTIN[1]);
+  assert("slug 404 tried both slugs", calls === 2);
 
   assert("max attempts is 5 (4 retries)", OPENROUTER_MAX_ATTEMPTS === 5);
   assert("busy en matches constant", getPojuServiceBusyMessage("en") === POJU_SERVICE_BUSY_MESSAGES.en);
+  assert("busy de locale", getPojuServiceBusyMessage("de").includes("Nachfrage"));
+  assert("busy fr locale", getPojuServiceBusyMessage("fr").includes("demande"));
 
   console.log("\nDone.\n");
 }

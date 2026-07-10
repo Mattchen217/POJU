@@ -844,6 +844,7 @@
       "dialog_ok": "Aceptar",
       "dialog_cancel": "Cancelar",
       "dialog_connection_error": "Problema de conexión. Inténtalo de nuevo.",
+      "infra_busy_retry": "Reintentar",
       "dialog_provider_queue": "Aviso del sistema: Para garantizar la calidad de deducción de su informe de consulta profunda, POJU está realizando complejos cálculos de fusión de datos en segundo plano. El servidor se encuentra actualmente bajo una alta carga de trabajo y en cola de espera. Por favor, espere 1-2 minutos antes de volver a intentarlo. Lamentamos sinceramente las molestias ocasionadas.",
       "dialog_create_session_error": "No se puede crear una nueva sesión en este momento. Inténtalo de nuevo.",
       "session_list_new": "Nueva sesión",

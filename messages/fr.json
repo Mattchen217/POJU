@@ -844,6 +844,7 @@
       "dialog_ok": "OK",
       "dialog_cancel": "Annuler",
       "dialog_connection_error": "Problème de connexion. Veuillez réessayer.",
+      "infra_busy_retry": "Réessayer",
       "dialog_provider_queue": "Avis du système : Afin de garantir la qualité de déduction de votre rapport de consultation approfondie, POJU effectue actuellement des calculs complexes de fusion de données en arrière-plan. Le serveur est actuellement en surcharge et les demandes sont placées en file d'attente. Veuillez patienter 1 à 2 minutes avant de réessayer l'envoi. Nous vous prions de nous excuser pour la gêne occasionnée.",
       "dialog_create_session_error": "Impossible de créer une nouvelle session pour le moment. Veuillez réessayer.",
       "session_list_new": "Nouvelle session",

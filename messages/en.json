@@ -1013,6 +1013,7 @@
       "dialog_ok": "OK",
       "dialog_cancel": "Cancel",
       "dialog_connection_error": "Connection issue. Please try again.",
+      "infra_busy_retry": "Try again",
       "dialog_provider_queue": "System Notice: To ensure the deduction quality of your deep consultation report, POJU is currently conducting complex background data fusion calculations. The server is experiencing a high load and requests are being queued. Please wait 1-2 minutes before retrying your submission. We sincerely apologize for any inconvenience caused.",
       "dialog_create_session_error": "Unable to create a new session right now. Please try again.",
       "session_list_new": "New session",

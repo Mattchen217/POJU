@@ -30,7 +30,8 @@ import {
 import { AgendaProgressPanel } from "@/components/poju/AgendaProgressPanel";
 import { getLastUserMessageContent } from "@/lib/poju/context-helpers";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
-import { isPojuInfrastructureFailureMessage } from "@/lib/llm/poju-service-busy-message";
+import { InfraBusyRetryAction } from "@/components/poju/InfraBusyRetryAction";
+import { getPojuServiceBusyMessage, isPojuInfrastructureFailureMessage } from "@/lib/llm/poju-service-busy-message";
 import { generateBaseAnalysis } from "@/lib/llm/deepseek/base-analysis";
 import { profileHasBaseAnalysis } from "@/lib/profile/stored-profiles-service";
 import { markPOJUV4SessionResolved } from "@/lib/poju/v4-lifecycle";
@@ -113,6 +114,27 @@ type ComposerAttachment = {
   dataUrl?: string;
 };
 
+type TurnErrorRestore = {
+  rollbackSession: POJUSessionState;
+  typed: string;
+  attachment: ComposerAttachment | null;
+};
+
+const PROVIDER_QUEUE_SILENT_RETRY_MS = 5000;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function buildOptimisticUserMessage(content: string): POJUMessage {
+  return {
+    role: "user",
+    content,
+    timestamp: new Date().toISOString(),
+    client_id: safeRandomUUID(),
+  };
+}
+
 export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const t = useTranslations("poju.chat");
   const tActivity = useTranslations("poju.activity");
@@ -170,6 +192,14 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const turnInFlightRef = useRef(false);
   /** Synchronous dedupe — blocks same-tick double runUserTurn before turnInFlightRef is visible. */
   const activeTurnKeyRef = useRef<string | null>(null);
+  /** One silent provider-queue retry per user send turn. */
+  const silentRetriedRef = useRef(false);
+  const pendingSilentRetryRef = useRef<{
+    rollbackSession: POJUSessionState;
+    userMessage: string;
+    errorRestore: TurnErrorRestore;
+  } | null>(null);
+  const infraRetryContextRef = useRef<(TurnErrorRestore & { userMessage: string }) | null>(null);
   const awaitingActivityDismissRef = useRef(false);
   const skipActivityRenderReadyRef = useRef(false);
   const router = useRouter();
@@ -470,10 +500,32 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     await runUserTurn(rewound, newContent);
   }
 
+  async function persistInfraBusyTurn(
+    errorRestore: TurnErrorRestore,
+    userMessage: string,
+  ): Promise<void> {
+    const busyMessage: POJUMessage = {
+      role: "assistant",
+      content: getPojuServiceBusyMessage(locale),
+      timestamp: new Date().toISOString(),
+      client_id: safeRandomUUID(),
+      meta: { kind: "infra_busy" },
+    };
+    const userEcho = buildOptimisticUserMessage(userMessage);
+    const nextSession: POJUSessionState = {
+      ...errorRestore.rollbackSession,
+      messages: [...errorRestore.rollbackSession.messages, userEcho, busyMessage],
+    };
+    infraRetryContextRef.current = { ...errorRestore, userMessage };
+    onSessionUpdate(nextSession);
+    await savePOJUSession(nextSession);
+  }
+
+
   async function runUserTurn(
     baseSession: POJUSessionState,
     userMessage: string,
-    errorRestore?: { rollbackSession: POJUSessionState; typed: string; attachment: ComposerAttachment | null },
+    errorRestore?: TurnErrorRestore,
   ) {
     if (turnInFlightRef.current) return;
 
@@ -621,10 +673,46 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         err instanceof Error &&
         (err.name === "OpenRouterProviderQueueError" ||
           err.message === "openrouter_provider_queue");
+
+      if (isProviderQueue && errorRestore) {
+        if (!silentRetriedRef.current) {
+          silentRetriedRef.current = true;
+          pendingSilentRetryRef.current = {
+            rollbackSession: errorRestore.rollbackSession,
+            userMessage,
+            errorRestore,
+          };
+          return;
+        }
+        await persistInfraBusyTurn(errorRestore, userMessage);
+        return;
+      }
+
       await dialog.alert(
         isProviderQueue ? t("dialog_provider_queue") : t("dialog_connection_error"),
       );
     } finally {
+      const pendingSilent = pendingSilentRetryRef.current;
+      if (pendingSilent) {
+        pendingSilentRetryRef.current = null;
+        void (async () => {
+          await sleep(PROVIDER_QUEUE_SILENT_RETRY_MS);
+          if (sendGenerationRef.current !== gen) return;
+          const withUser: POJUSessionState = {
+            ...pendingSilent.rollbackSession,
+            messages: [
+              ...pendingSilent.rollbackSession.messages,
+              buildOptimisticUserMessage(pendingSilent.userMessage),
+            ],
+          };
+          onSessionUpdate(withUser);
+          await runUserTurn(
+            withUser,
+            pendingSilent.userMessage,
+            pendingSilent.errorRestore,
+          );
+        })();
+      }
       turnInFlightRef.current = false;
       if (activeTurnKeyRef.current === turnKey) activeTurnKeyRef.current = null;
       if (sendAbortRef.current === ac) sendAbortRef.current = null;
@@ -638,6 +726,22 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       }
     }
   }
+
+  const onInfraBusyRetry = useCallback(() => {
+    const ctx = infraRetryContextRef.current;
+    if (!ctx || turnInFlightRef.current || sending) return;
+    silentRetriedRef.current = false;
+    const withUser: POJUSessionState = {
+      ...ctx.rollbackSession,
+      messages: [...ctx.rollbackSession.messages, buildOptimisticUserMessage(ctx.userMessage)],
+    };
+    onSessionUpdate(withUser);
+    void runUserTurn(withUser, ctx.userMessage, {
+      rollbackSession: ctx.rollbackSession,
+      typed: ctx.typed,
+      attachment: ctx.attachment,
+    });
+  }, [sending, onSessionUpdate]);
 
   async function handlePreviewUnlock(via: "payment" | "code") {
     if (unlockBusy) return;
@@ -679,6 +783,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     stopVoiceInput();
     const typed = text.trim();
     if ((!typed && !composerAttachment) || sending) return;
+    silentRetriedRef.current = false;
     const attachNote = buildAttachmentNote(composerAttachment);
     const userMessage = typed || attachNote;
     const baseSession = sessionRef.current;
@@ -1059,6 +1164,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           <RefundOfferAction sessionId={session.session_id} variant="message" />
         );
       }
+      if (m.meta?.kind === "infra_busy" && m.role === "assistant") {
+        followUps[mid] = (
+          <InfraBusyRetryAction onRetry={onInfraBusyRetry} disabled={sending} />
+        );
+      }
       if (m.role === "assistant" && !m.is_rejected) {
         const below: ReactNode[] = [];
         if (showStateDebug && m.meta?.state_snapshot) {
@@ -1099,6 +1209,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     openUnlockReportModal,
     getActivityLines,
     showStateDebug,
+    sending,
+    onInfraBusyRetry,
   ]);
 
   const streaming = sending;

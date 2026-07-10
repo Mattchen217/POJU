@@ -844,6 +844,7 @@
       "dialog_ok": "OK",
       "dialog_cancel": "Abbrechen",
       "dialog_connection_error": "Verbindungsproblem. Bitte versuche es erneut.",
+      "infra_busy_retry": "Erneut versuchen",
       "dialog_provider_queue": "Systemhinweis: Um die Analyse- und Ableitungsqualität Ihres fundierten Beratungsberichts zu gewährleisten, führt POJU derzeit komplexe Berechnungen zur Datenfusion im Hintergrund durch. Der Server ist momentan stark ausgelastet und Anfragen werden in eine Warteschlange eingereiht. Bitte warten Sie 1-2 Minuten, bevor Sie das Senden erneut versuchen. Wir bitten für die Unannehmlichkeiten um Entschuldigung.",
       "dialog_create_session_error": "Es kann gerade keine neue Sitzung erstellt werden. Bitte versuche es erneut.",
       "session_list_new": "Neue Sitzung",
