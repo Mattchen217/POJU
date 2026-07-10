@@ -5,7 +5,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { createInitialAgentState } from "@/lib/poju/agent-state";
+import { createInitialAgentState, withCompleteUnderstanding } from "@/lib/poju/agent-state";
 import {
   advanceStateMachine,
   buildStateSnapshot,
@@ -55,7 +55,7 @@ function main(): void {
     ).next_state === "opening",
   );
   const substantiveAdvance = advanceStateMachine(
-    { ...agent, has_base_analysis: true },
+    withCompleteUnderstanding({ ...agent, has_base_analysis: true }),
     extractModelTurnSignals({
       understanding_sufficient: true,
       base_analysis_ready: true,
@@ -63,10 +63,10 @@ function main(): void {
     }),
     "我离婚8年了想重新开始",
   );
-  assert("substantive enters collecting when base ready and turns met", substantiveAdvance.next_state === "collecting_context");
-  assert("trigger core true when sufficient and base ready", substantiveAdvance.trigger_breakthrough_core === true);
+  assert("substantive enters collecting when struct complete and base ready", substantiveAdvance.next_state === "collecting_context");
+  assert("trigger core true when struct complete and base ready", substantiveAdvance.trigger_breakthrough_core === true);
   assert(
-    "first substantive turn stays opening when message short",
+    "first turn stays opening when structure incomplete",
     advanceStateMachine(
       { ...agent, has_base_analysis: true },
       extractModelTurnSignals({
@@ -78,15 +78,15 @@ function main(): void {
     ).next_state === "opening",
   );
   assert(
-    "rich single message enters collecting on first turn",
+    "struct complete enters collecting on first turn",
     advanceStateMachine(
-      { ...agent, has_base_analysis: true },
+      withCompleteUnderstanding({ ...agent, has_base_analysis: true }),
       extractModelTurnSignals({
         understanding_sufficient: true,
         base_analysis_ready: true,
         substantive_opening_turns: 1,
       }),
-      "我".repeat(80),
+      "我离婚8年了想重新开始",
     ).next_state === "collecting_context",
   );
   assert(

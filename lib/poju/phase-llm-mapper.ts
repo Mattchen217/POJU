@@ -71,6 +71,8 @@ export function mapPhaseResultToChatPayload(
     stall_offer: Boolean(phase.stall_offer),
     investigation_agenda: phase.investigation_agenda ?? null,
     breakthrough_core: phase.breakthrough_core ?? null,
+    core_dilemma: phase.core_dilemma ?? null,
+    desired_direction: phase.desired_direction ?? null,
     problem_summary: phase.problem_summary ?? null,
     suggest_refund: Boolean(phase.suggest_refund),
     understanding: phase.understanding ?? null,

@@ -51,6 +51,19 @@ export interface ContextCollection {
   category_specific: Record<string, unknown>;
 }
 
+/** Segment 1 output — concrete dilemma structure (no length cap; all sub-fields required to pass gate). */
+export interface CoreDilemma {
+  concrete_event: string | null;
+  stakes: string | null;
+  sticking_point: string | null;
+}
+
+/** Segment 1 output — what the user wants to move toward (actively elicited in opening). */
+export interface DesiredDirection {
+  wants: string | null;
+  priority: string | null;
+}
+
 export type QuestionCategory =
   | "career"
   | "relationship"
@@ -200,6 +213,14 @@ export interface POJUAgentState {
   agenda_generated: boolean;
   /** 破局推理脊柱（深测算产出，收集演进，交付消费）。null = 尚未深测算。 */
   breakthrough_core: BreakthroughCore | null;
+  /** Segment 1 — core dilemma (event + stakes + sticking point). Control-plane gate input. */
+  core_dilemma: CoreDilemma | null;
+  /** Segment 1 — desired direction (wants + priority). Control-plane gate input. */
+  desired_direction: DesiredDirection | null;
+  /** Segment 3 — per-agenda collected detail (reserved; not filled in segment 1). */
+  agenda_collection_detail?: Record<string, string> | null;
+  /** Segment 4 — delivery report artifact (reserved; populated by delivery pipeline). */
+  delivery_report?: unknown | null;
   /** Term/relation ids already anchored in visible assistant replies this session. */
   anchored_fact_ids?: string[];
   /** Distinctive metaphor / imagery phrases already used this session. */
@@ -309,6 +330,109 @@ function isFilled(v: unknown): boolean {
   return true;
 }
 
+/** Non-empty string check for understanding-gate sub-fields (no minimum length beyond trim). */
+export function isUnderstandingFieldFilled(s?: string | null): boolean {
+  return Boolean(s && s.trim().length > 0);
+}
+
+export function parseCoreDilemmaPatch(raw: unknown): Partial<CoreDilemma> | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const o = raw as Record<string, unknown>;
+  const out: Partial<CoreDilemma> = {};
+  for (const key of ["concrete_event", "stakes", "sticking_point"] as const) {
+    if (typeof o[key] === "string" && o[key].trim()) out[key] = o[key].trim();
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+export function parseDesiredDirectionPatch(raw: unknown): Partial<DesiredDirection> | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const o = raw as Record<string, unknown>;
+  const out: Partial<DesiredDirection> = {};
+  for (const key of ["wants", "priority"] as const) {
+    if (typeof o[key] === "string" && o[key].trim()) out[key] = o[key].trim();
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+export function mergeCoreDilemma(
+  base: CoreDilemma | null,
+  patch: Partial<CoreDilemma> | null | undefined,
+): CoreDilemma | null {
+  if (!patch) return base;
+  const prev: CoreDilemma = base ?? {
+    concrete_event: null,
+    stakes: null,
+    sticking_point: null,
+  };
+  return {
+    concrete_event: isUnderstandingFieldFilled(patch.concrete_event)
+      ? patch.concrete_event!.trim()
+      : prev.concrete_event,
+    stakes: isUnderstandingFieldFilled(patch.stakes) ? patch.stakes!.trim() : prev.stakes,
+    sticking_point: isUnderstandingFieldFilled(patch.sticking_point)
+      ? patch.sticking_point!.trim()
+      : prev.sticking_point,
+  };
+}
+
+export function mergeDesiredDirection(
+  base: DesiredDirection | null,
+  patch: Partial<DesiredDirection> | null | undefined,
+): DesiredDirection | null {
+  if (!patch) return base;
+  const prev: DesiredDirection = base ?? { wants: null, priority: null };
+  return {
+    wants: isUnderstandingFieldFilled(patch.wants) ? patch.wants!.trim() : prev.wants,
+    priority: isUnderstandingFieldFilled(patch.priority) ? patch.priority!.trim() : prev.priority,
+  };
+}
+
+/** Control-plane gate: segment 1 complete when all dilemma + direction sub-fields are non-empty. */
+export function isUnderstandingComplete(
+  state: Pick<POJUAgentState, "core_dilemma" | "desired_direction">,
+): boolean {
+  const d = state.core_dilemma;
+  const dir = state.desired_direction;
+  return Boolean(
+    d &&
+      isUnderstandingFieldFilled(d.concrete_event) &&
+      isUnderstandingFieldFilled(d.stakes) &&
+      isUnderstandingFieldFilled(d.sticking_point) &&
+      dir &&
+      isUnderstandingFieldFilled(dir.wants) &&
+      isUnderstandingFieldFilled(dir.priority),
+  );
+}
+
+export function getUnderstandingMissingFields(state: POJUAgentState): string[] {
+  const missing: string[] = [];
+  const d = state.core_dilemma;
+  const dir = state.desired_direction;
+  if (!d || !isUnderstandingFieldFilled(d.concrete_event)) missing.push("core_dilemma.concrete_event");
+  if (!d || !isUnderstandingFieldFilled(d.stakes)) missing.push("core_dilemma.stakes");
+  if (!d || !isUnderstandingFieldFilled(d.sticking_point)) missing.push("core_dilemma.sticking_point");
+  if (!dir || !isUnderstandingFieldFilled(dir.wants)) missing.push("desired_direction.wants");
+  if (!dir || !isUnderstandingFieldFilled(dir.priority)) missing.push("desired_direction.priority");
+  return missing;
+}
+
+/** Test / fixture helper — fully populated segment-1 understanding. */
+export function withCompleteUnderstanding(agent: POJUAgentState): POJUAgentState {
+  return {
+    ...agent,
+    core_dilemma: {
+      concrete_event: "离婚8年，近期几乎没接触异性",
+      stakes: "怕错过窗口，也怕再受伤",
+      sticking_point: "不知道从哪里开始、自信不足",
+    },
+    desired_direction: {
+      wants: "希望能在合适节奏下建立稳定亲密关系",
+      priority: "先恢复社交能力与自我确认",
+    },
+  };
+}
+
 export function createInitialAgentState(input: {
   original_question: string;
   selected_profile_id?: string | null;
@@ -348,6 +472,10 @@ export function createInitialAgentState(input: {
     investigation_agenda: [],
     agenda_generated: false,
     breakthrough_core: null,
+    core_dilemma: null,
+    desired_direction: null,
+    agenda_collection_detail: null,
+    delivery_report: null,
     anchored_fact_ids: [],
     used_metaphors: [],
   };
@@ -445,12 +573,12 @@ export function decidePhaseTransition(input: PhaseTransitionInput): PhaseTransit
       if (
         user_message !== "__OPENING__" &&
         user_message.trim() &&
-        input.understanding_sufficient === true
+        isUnderstandingComplete(current_state)
       ) {
         return {
           should_transition: true,
           new_phase: "collecting_context",
-          reason: "Understanding sufficient, entering collection",
+          reason: "Understanding structure complete, entering collection",
         };
       }
       break;

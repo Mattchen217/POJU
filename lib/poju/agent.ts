@@ -7,6 +7,7 @@ import {
   applyPhaseTransition,
   calculateCompleteness,
   createInitialAgentState,
+  isUnderstandingComplete,
   mergeBreakthroughCoreUpdates,
   normalizeAgentPhase,
   type AgentPhase,
@@ -223,6 +224,8 @@ function finalizeAgentV2(
     topic_drift_signal?: "none" | "edge" | "off_topic";
     breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null;
     breakthrough_core?: import("@/lib/poju/agent-state").BreakthroughCore | null;
+    core_dilemma?: import("@/lib/poju/agent-state").CoreDilemma | null;
+    desired_direction?: import("@/lib/poju/agent-state").DesiredDirection | null;
     problem_summary?: string | null;
   },
   userMessage: string,
@@ -270,6 +273,14 @@ function finalizeAgentV2(
     agenda_generated,
     breakthrough_core:
       base.breakthrough_core ?? llm.breakthrough_core ?? null,
+    core_dilemma:
+      llm.core_dilemma !== undefined && llm.core_dilemma !== null
+        ? llm.core_dilemma
+        : base.core_dilemma,
+    desired_direction:
+      llm.desired_direction !== undefined && llm.desired_direction !== null
+        ? llm.desired_direction
+        : base.desired_direction,
   };
   if (!base.breakthrough_core && llm.breakthrough_core) {
     console.info("[agent] breakthrough_core from opening conversion envelope");
@@ -288,6 +299,15 @@ function finalizeAgentV2(
     collection_completeness: calculateCompleteness(merged),
     has_situation_analysis: calculateCompleteness(merged) >= 0.4,
   };
+  if (merged.desired_direction?.wants) {
+    merged = {
+      ...merged,
+      context_collected: {
+        ...merged.context_collected,
+        desired_outcome: merged.desired_direction.wants,
+      },
+    };
+  }
   const llmPhase =
     normalizeAgentPhase(llm.agent_suggested_phase) ?? mapLlmHintToAgentPhase(llm.current_state);
   const phaseUserMessage =
@@ -338,6 +358,7 @@ function finalizeAgentV2(
   console.log("[poju-gate]", {
     phase: merged.current_phase,
     understanding_sufficient: llm.understanding_sufficient,
+    understanding_struct_complete: isUnderstandingComplete(merged),
     base_analysis_ready: baseAnalysisReady,
     substantive_opening_turns: substantiveOpeningTurns,
   });
@@ -921,6 +942,8 @@ async function callLLMViaAPI(input: {
   confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";
   breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null;
   breakthrough_core?: import("@/lib/poju/agent-state").BreakthroughCore | null;
+  core_dilemma?: import("@/lib/poju/agent-state").CoreDilemma | null;
+  desired_direction?: import("@/lib/poju/agent-state").DesiredDirection | null;
   problem_summary?: string | null;
   action_status_updates?: import("@/lib/poju/action-status-updates").ActionStatusPatch[];
   conversion_envelope_failed?: boolean;
@@ -1044,6 +1067,18 @@ function mapLlmApiPayload(
       typeof wire.breakthrough_core === "object" &&
       !Array.isArray(wire.breakthrough_core)
         ? (wire.breakthrough_core as import("@/lib/poju/agent-state").BreakthroughCore)
+        : null,
+    core_dilemma:
+      wire.core_dilemma &&
+      typeof wire.core_dilemma === "object" &&
+      !Array.isArray(wire.core_dilemma)
+        ? (wire.core_dilemma as import("@/lib/poju/agent-state").CoreDilemma)
+        : null,
+    desired_direction:
+      wire.desired_direction &&
+      typeof wire.desired_direction === "object" &&
+      !Array.isArray(wire.desired_direction)
+        ? (wire.desired_direction as import("@/lib/poju/agent-state").DesiredDirection)
         : null,
     problem_summary:
       typeof wire.problem_summary === "string" ? wire.problem_summary : null,

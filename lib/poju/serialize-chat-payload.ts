@@ -34,6 +34,8 @@ export const CHAT_PAYLOAD_FIELDS = [
   "user_confirms_delivery",
   "confirmation_signal",
   "breakthrough_core",
+  "core_dilemma",
+  "desired_direction",
   "problem_summary",
   "breakthrough_core_updates",
   "action_status_updates",
@@ -77,6 +79,8 @@ export function pojuLlmToChatPayload(
     thinking_process: llm.thinking_process,
     investigation_agenda: llm.investigation_agenda ?? null,
     breakthrough_core: llm.breakthrough_core ?? null,
+    core_dilemma: llm.core_dilemma ?? null,
+    desired_direction: llm.desired_direction ?? null,
     problem_summary: llm.problem_summary ?? null,
     collection_progress: llm.collection_progress ?? null,
     stall_offer: llm.stall_offer ?? false,
@@ -127,6 +131,16 @@ export function chatPayloadFromWire(
     thinking_process: data.thinking_process,
     investigation_agenda: data.investigation_agenda ?? null,
     breakthrough_core: data.breakthrough_core ?? null,
+    core_dilemma:
+      data.core_dilemma && typeof data.core_dilemma === "object" && !Array.isArray(data.core_dilemma)
+        ? data.core_dilemma
+        : null,
+    desired_direction:
+      data.desired_direction &&
+      typeof data.desired_direction === "object" &&
+      !Array.isArray(data.desired_direction)
+        ? data.desired_direction
+        : null,
     problem_summary:
       typeof data.problem_summary === "string" ? data.problem_summary : null,
     collection_progress: data.collection_progress ?? null,

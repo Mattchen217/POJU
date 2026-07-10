@@ -9,6 +9,8 @@ import {
   type AgentPhase,
   type POJUAgentState,
   createInitialAgentState,
+  getUnderstandingMissingFields,
+  isUnderstandingComplete,
 } from "@/lib/poju/agent-state";
 import type { POJUSessionState } from "@/lib/poju/types";
 import { classifyConfirmationAffirmative } from "@/lib/poju/confirmation-reply";
@@ -37,6 +39,11 @@ export interface StateLedgerSnapshot {
       pending: string[];
       current_focus: string | null;
     };
+    /** Segment 1 gate — control plane only (not model self-report). */
+    understanding_gate: {
+      complete: boolean;
+      missing: string[];
+    };
   };
 }
 
@@ -63,17 +70,19 @@ export function buildStateSnapshot(agent: POJUAgentState): StateLedgerSnapshot {
       original_question: agent.original_question ?? "",
       question_category: agent.question_category ?? null,
       flags: {
-      problem_understood:
-        agentPhaseToPojuState(agent.current_phase) !== "opening" &&
-        Boolean(agent.original_question?.trim()),
-      relationship_conclusion_established: Boolean(core?.relationship_conclusion),
-      breakthrough_direction_confirmed: (core?.breakthrough_directions?.length ?? 0) > 0,
-      agenda_built: agenda.length > 0,
-    },
+        problem_understood: isUnderstandingComplete(agent),
+        relationship_conclusion_established: Boolean(core?.relationship_conclusion),
+        breakthrough_direction_confirmed: (core?.breakthrough_directions?.length ?? 0) > 0,
+        agenda_built: agenda.length > 0,
+      },
       agenda_checklist: {
         completed: agenda.filter((a) => a.status === "covered").map((a) => a.label),
         pending: pendingItems.map((a) => a.label),
         current_focus: focus ? focus.label : null,
+      },
+      understanding_gate: {
+        complete: isUnderstandingComplete(agent),
+        missing: getUnderstandingMissingFields(agent),
       },
     },
   };
@@ -186,14 +195,12 @@ export function advanceStateMachine(
 
   switch (state) {
     case "opening": {
-      const turns = signals.substantive_opening_turns ?? 0;
-      const richSingle = userInput.trim().length >= OPENING_RICH_CHARS;
+      const structComplete = isUnderstandingComplete(agent);
       const canAdvance =
-        signals.understanding_sufficient === true &&
+        structComplete &&
         signals.base_analysis_ready === true &&
         userInput.trim() &&
-        userInput !== "__OPENING__" &&
-        (richSingle || turns >= OPENING_MIN_SUBSTANTIVE_TURNS);
+        userInput !== "__OPENING__";
 
       if (canAdvance) {
         const lockedQuestion =
@@ -201,9 +208,14 @@ export function advanceStateMachine(
         next = { ...agent, original_question: lockedQuestion };
         nextState = "collecting_context";
         triggerCore = true;
-        transitionReason = richSingle
-          ? "Rich single message, base analysis ready, entering collection"
-          : "Substantive opening turns sufficient, entering collection";
+        transitionReason = "Understanding structure complete, entering collection";
+      } else if (signals.understanding_sufficient === true && !structComplete) {
+        transitionReason =
+          "Model reported sufficient but understanding structure incomplete (control plane blocked)";
+        console.info("[poju-gate] blocked opening→collecting", {
+          model_sufficient: true,
+          missing: getUnderstandingMissingFields(agent),
+        });
       }
       break;
     }

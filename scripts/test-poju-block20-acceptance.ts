@@ -5,7 +5,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { createInitialAgentState } from "@/lib/poju/agent-state";
+import { createInitialAgentState, withCompleteUnderstanding } from "@/lib/poju/agent-state";
 import {
   advanceStateMachine,
   extractModelTurnSignals,
@@ -66,7 +66,7 @@ function main(): void {
   console.log("\n=== Fix 3 · base_analysis_ready gate ===\n");
   const sm = read("lib/poju/state-machine.ts");
   assert("state-machine has base_analysis_ready signal", sm.includes("base_analysis_ready"));
-  assert("opening branch requires base_analysis_ready", /base_analysis_ready === true/.test(sm));
+  assert("opening branch requires struct complete", sm.includes("isUnderstandingComplete(agent)"));
   assert("agent passes base_analysis_ready", agentTs.includes("base_analysis_ready:"));
 
   console.log("\n=== INV · collecting_context ⇒ breakthrough_core !== null ===\n");
@@ -91,7 +91,7 @@ function main(): void {
   );
 
   const readyAdvance = advanceStateMachine(
-    { ...agent, has_base_analysis: true },
+    withCompleteUnderstanding({ ...agent, has_base_analysis: true }),
     extractModelTurnSignals({
       understanding_sufficient: true,
       base_analysis_ready: true,

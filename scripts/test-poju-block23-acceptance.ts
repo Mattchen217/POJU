@@ -5,12 +5,10 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { createInitialAgentState } from "@/lib/poju/agent-state";
+import { createInitialAgentState, withCompleteUnderstanding } from "@/lib/poju/agent-state";
 import {
   advanceStateMachine,
   extractModelTurnSignals,
-  OPENING_MIN_SUBSTANTIVE_TURNS,
-  OPENING_RICH_CHARS,
 } from "@/lib/poju/state-machine";
 
 const ROOT = path.join(process.cwd());
@@ -31,35 +29,27 @@ function main(): void {
   console.log("=== Part 1 · opening threshold (control plane only) ===\n");
   const sm = read("lib/poju/state-machine.ts");
   const agentTs = read("lib/poju/agent.ts");
-  assert("OPENING_RICH_CHARS exported", sm.includes("OPENING_RICH_CHARS"));
-  assert("substantive_opening_turns signal", sm.includes("substantive_opening_turns"));
+  assert("isUnderstandingComplete in state-machine", sm.includes("isUnderstandingComplete"));
   assert("countSubstantiveOpeningTurns in agent", agentTs.includes("countSubstantiveOpeningTurns"));
   assert("types has client_id", read("lib/poju/types.ts").includes("client_id"));
 
   const agent = createInitialAgentState({ original_question: "" });
-  const signals = (turns: number) =>
+  const signals = () =>
     extractModelTurnSignals({
       understanding_sufficient: true,
       base_analysis_ready: true,
-      substantive_opening_turns: turns,
+      substantive_opening_turns: 1,
     });
   const short = "离婚8年想再婚";
   assert(
-    "short first turn stays opening",
-    advanceStateMachine({ ...agent, has_base_analysis: true }, signals(1), short).next_state === "opening",
+    "incomplete structure stays opening",
+    advanceStateMachine({ ...agent, has_base_analysis: true }, signals(), short).next_state === "opening",
   );
   assert(
-    "short second turn enters collecting",
-    advanceStateMachine({ ...agent, has_base_analysis: true }, signals(2), short).next_state ===
-      "collecting_context",
+    "struct complete enters collecting on first turn",
+    advanceStateMachine(withCompleteUnderstanding({ ...agent, has_base_analysis: true }), signals(), short)
+      .next_state === "collecting_context",
   );
-  const rich = "婚".repeat(OPENING_RICH_CHARS);
-  assert(
-    "rich single turn enters collecting",
-    advanceStateMachine({ ...agent, has_base_analysis: true }, signals(1), rich).next_state ===
-      "collecting_context",
-  );
-  assert("MIN_OPENING_TURNS is 2", OPENING_MIN_SUBSTANTIVE_TURNS === 2);
 
   console.log("\n=== Part 2 · flash stability ===\n");
   const bubble = read("components/poju/MessageBubble.tsx");

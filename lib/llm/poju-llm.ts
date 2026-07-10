@@ -79,6 +79,8 @@ export interface POJULLMResponse {
   confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";
   breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null;
   breakthrough_core?: import("@/lib/poju/agent-state").BreakthroughCore | null;
+  core_dilemma?: import("@/lib/poju/agent-state").CoreDilemma | null;
+  desired_direction?: import("@/lib/poju/agent-state").DesiredDirection | null;
   problem_summary?: string | null;
   action_status_updates?: import("@/lib/poju/action-status-updates").ActionStatusPatch[];
   conversion_envelope_failed?: boolean;
@@ -167,6 +169,8 @@ async function callPOJULLMPhasePath(input: CallInput): Promise<POJULLMResponse> 
     stall_offer: Boolean(phase.stall_offer),
     investigation_agenda: phase.investigation_agenda ?? null,
     breakthrough_core: phase.breakthrough_core ?? null,
+    core_dilemma: phase.core_dilemma ?? null,
+    desired_direction: phase.desired_direction ?? null,
     problem_summary: phase.problem_summary ?? null,
     suggest_refund: Boolean(phase.suggest_refund),
     served_provider: phase.served_provider ?? null,

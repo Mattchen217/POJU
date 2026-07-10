@@ -17,6 +17,7 @@ import {
   mergeBreakthroughCoreUpdates,
   MIN_COLLECTING_USER_TURNS,
   PUSH_MIN_TURNS,
+  withCompleteUnderstanding,
   type BreakthroughCore,
 } from "@/lib/poju/agent-state";
 import { parseInvestigationAgenda } from "@/lib/poju/investigation-agenda";
@@ -187,10 +188,9 @@ function spineLoopTests(): void {
 function understandingGateTests(): void {
   console.log("\n=== 4. 理解门 ===\n");
 
-  const opening = read("lib/llm/phases/opening-phase.ts");
-  assert("opening uses model understanding_sufficient", opening.includes("parsed.understanding_sufficient"));
-  assert("opening parses understanding", opening.includes("understanding_sufficient"));
-  assert("opening gates suggested_phase on sufficient", opening.includes("understanding.sufficient"));
+  const openingV6 = read("lib/llm/phases/opening-phase-v6.ts");
+  assert("opening v6 parses core_dilemma", openingV6.includes("parseCoreDilemmaPatch"));
+  assert("opening v6 parses desired_direction", openingV6.includes("parseDesiredDirectionPatch"));
 
   const agent = createInitialAgentState({ original_question: "test" });
   agent.current_phase = "opening";
@@ -199,17 +199,17 @@ function understandingGateTests(): void {
     current_state: agent,
     llm_suggested_phase: "collecting_context",
     user_message: "我最近不太顺",
-    understanding_sufficient: false,
-  });
-  assert("vague message blocked when insufficient", !blocked.should_transition);
-
-  const allowed = decidePhaseTransition({
-    current_state: agent,
-    llm_suggested_phase: "collecting_context",
-    user_message: "卡了三年想转行但不敢",
     understanding_sufficient: true,
   });
-  assert("clear message allowed when sufficient", allowed.should_transition && allowed.new_phase === "collecting_context");
+  assert("incomplete structure blocked even if model sufficient", !blocked.should_transition);
+
+  const allowed = decidePhaseTransition({
+    current_state: withCompleteUnderstanding(agent),
+    llm_suggested_phase: "collecting_context",
+    user_message: "卡了三年想转行但不敢",
+    understanding_sufficient: false,
+  });
+  assert("struct complete allowed without model sufficient", allowed.should_transition && allowed.new_phase === "collecting_context");
 
   const orch = read("lib/poju/agent-orchestrator.ts");
   const agentTs = read("lib/poju/agent.ts");
