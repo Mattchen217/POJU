@@ -1,3 +1,7 @@
+/**
+ * Local persistence encoding — plaintext JSON in IndexedDB for the current local-only phase.
+ * Legacy AES-256-GCM payloads (hardcoded secret era) are still readable once for migration.
+ */
 import { gcm } from "@noble/ciphers/aes.js";
 import { pbkdf2 } from "@noble/hashes/pbkdf2.js";
 import { sha256 } from "@noble/hashes/sha2.js";
@@ -65,7 +69,66 @@ export type EncryptedPayload = {
   cipher: string;
 };
 
-export async function encryptJson<T>(secret: string, payload: T): Promise<EncryptedPayload> {
+function isPlaintextPayload(payload: EncryptedPayload): boolean {
+  if (!payload.iv?.trim()) return true;
+  const trimmed = payload.cipher.trim();
+  return trimmed.startsWith("{") || trimmed.startsWith("[");
+}
+
+function tryParsePlainCipher<T>(cipher: string): T | null {
+  try {
+    return JSON.parse(cipher) as T;
+  } catch {
+    return null;
+  }
+}
+
+async function legacyDecryptJson<T>(secret: string, payload: EncryptedPayload): Promise<T> {
+  const iv = fromBase64(payload.iv);
+  const cipher = fromBase64(payload.cipher);
+
+  if (hasSubtle()) {
+    const key = await deriveKeyWebCrypto(secret);
+    const plain = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: asArrayBuffer(iv) },
+      key,
+      asArrayBuffer(cipher),
+    );
+    return JSON.parse(textDecoder.decode(plain)) as T;
+  }
+
+  const key = deriveKeyNoble(secret);
+  const aes = gcm(key, iv);
+  const plain = aes.decrypt(cipher);
+  return JSON.parse(textDecoder.decode(plain)) as T;
+}
+
+/** Store JSON locally — plaintext in `cipher`, empty `iv` (no pseudo-encryption). */
+export async function encryptJson<T>(_secret: string, payload: T): Promise<EncryptedPayload> {
+  return {
+    iv: "",
+    cipher: JSON.stringify(payload),
+  };
+}
+
+/** Read JSON from local storage; falls back to legacy AES payloads once. */
+export async function decryptJson<T>(secret: string, payload: EncryptedPayload): Promise<T> {
+  if (isPlaintextPayload(payload)) {
+    const parsed = tryParsePlainCipher<T>(payload.cipher);
+    if (parsed != null) return parsed;
+  }
+
+  try {
+    return await legacyDecryptJson<T>(secret, payload);
+  } catch (error) {
+    const parsed = tryParsePlainCipher<T>(payload.cipher);
+    if (parsed != null) return parsed;
+    throw error;
+  }
+}
+
+/** @deprecated Retained for tests / one-off migration scripts only. */
+export async function legacyEncryptJson<T>(secret: string, payload: T): Promise<EncryptedPayload> {
   const iv = randomBytes(12);
   const plain = textEncoder.encode(JSON.stringify(payload));
 
@@ -91,22 +154,4 @@ export async function encryptJson<T>(secret: string, payload: T): Promise<Encryp
   };
 }
 
-export async function decryptJson<T>(secret: string, payload: EncryptedPayload): Promise<T> {
-  const iv = fromBase64(payload.iv);
-  const cipher = fromBase64(payload.cipher);
-
-  if (hasSubtle()) {
-    const key = await deriveKeyWebCrypto(secret);
-    const plain = await crypto.subtle.decrypt(
-      { name: "AES-GCM", iv: asArrayBuffer(iv) },
-      key,
-      asArrayBuffer(cipher),
-    );
-    return JSON.parse(textDecoder.decode(plain)) as T;
-  }
-
-  const key = deriveKeyNoble(secret);
-  const aes = gcm(key, iv);
-  const plain = aes.decrypt(cipher);
-  return JSON.parse(textDecoder.decode(plain)) as T;
-}
+export { legacyDecryptJson, isPlaintextPayload };

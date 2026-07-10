@@ -16,6 +16,7 @@ export function QuestionBriefingDialog({ open, onConfirm }: Props) {
     { title: t("item_one_title"), body: t("item_one_body") },
     { title: t("item_two_title"), body: t("item_two_body") },
     { title: t("item_three_title"), body: t("item_three_body") },
+    { title: t("item_four_title"), body: t("item_four_body") },
   ];
 
   return (
@@ -41,6 +42,9 @@ export function QuestionBriefingDialog({ open, onConfirm }: Props) {
           ))}
         </ol>
         <p className="pchat-question-briefing-dialog__footer">{t("footer")}</p>
+        <p className="pchat-question-briefing-dialog__privacy">
+          <em>{t("privacy_footer")}</em>
+        </p>
         <div className="pchat-expiry-dialog__actions">
           <button type="button" className="pchat-expiry-dialog__primary" onClick={onConfirm}>
             {t("confirm")}

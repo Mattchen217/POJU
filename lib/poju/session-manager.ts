@@ -10,7 +10,7 @@ import { syncPojuSessionReportsToStoredProfiles } from "@/lib/profile/sync-poju-
 import { countUserTurns } from "@/lib/poju/summary-readiness";
 import type { POJUSessionState, PojuV4StateHint } from "@/lib/poju/types";
 
-const SESSION_SECRET = "pojulife_v4_poju_session";
+const SESSION_SECRET = "pojulife_v4_poju_session"; // legacy encryptJson arg; not a security boundary (local plaintext phase)
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
 function isLikelyStoredProfileId(id: string): boolean {

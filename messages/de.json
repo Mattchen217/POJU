@@ -825,14 +825,17 @@
       "birth_flow_skip": "Vorerst überspringen",
       "question_briefing": {
         "title": "Bevor wir beginnen — wie POJU dich begleitet",
-        "intro": "Ein paar Dinge, die du vorab wissen solltest:",
+        "intro": "Vier Dinge, die du vorab wissen solltest:",
         "item_one_title": "Immer nur eine zentrale Frage",
         "item_one_body": "POJU ist für dich da und konzentriert sich auf die eine wichtigste Frage, die dich gerade beschäftigt. Nenne ihm das, was du am dringendsten klären möchtest — Tiefe entsteht durch Fokus.",
         "item_two_title": "Je konkreter du bist, desto genauer kann POJU auf dich eingehen",
         "item_two_body": "Je klarer du deine Situation, deine Gefühle und die Details deines Anliegens schilderst, desto passgenauer sind POJUs Reflexionen und vorgeschlagene Richtungen — statt allgemeiner Ratschläge.",
         "item_three_title": "Eine langsamere Antwort bedeutet, dass es sorgfältig für dich nachdenkt",
         "item_three_body": "Hinter jeder Antwort steckt viel Analyse. Manchmal „denkt“ POJU etwas länger — das ist kein Systemfehler, sondern POJU rechnet sorgfältig für dich. Bitte hab etwas Geduld.",
+        "item_four_title": "POJU fragt Schritt für Schritt — beeile dich nicht mit der Antwort",
+        "item_four_body": "Um deine Situation wirklich zu verstehen und dir eine Lösung zu geben, die nur für dich passt, führt POJU mehrere Gesprächsrunden, die jeweils tiefer gehen, statt sofort zu schließen. Bitte begleite es geduldig durch diese Runden — genau in diesem Austausch liegt der Wert deines finalen Plans.",
         "footer": "POJU bietet Selbstreflexion und Perspektive, um dir zu helfen, deine Situation klarer zu sehen und erkundenswerte Richtungen zu finden. Die endgültige Entscheidung liegt immer bei dir.",
+        "privacy_footer": "Deine Gespräche werden nur lokal in deinem Browser gespeichert (beim Browserwechsel oder im Inkognito-Modus gelöscht). Zur Antwortgenerierung werden sie über eine sichere Verbindung an KI-Modelle gesendet (die keine Speicherung und kein Training angeben). Siehe unsere Datenschutzrichtlinie.",
         "confirm": "Verstanden"
       },
       "birth_flow_analyzing_title": "Dein Profil wird analysiert…",

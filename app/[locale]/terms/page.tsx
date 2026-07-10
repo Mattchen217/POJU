@@ -85,7 +85,7 @@ export default function TermsPage() {
       <h2>3. Financial Infrastructure, Billing, and Subscription Framework</h2>
       <p>
         By initiating a checkout, you agree to the pricing matrix active at the moment of your session request.
-        Payments are processed via secure cryptographic routing.
+        Payments are processed via secure HTTPS checkout routing.
       </p>
 
       <h3>A. Dual Transactional Architecture</h3>
@@ -96,7 +96,7 @@ export default function TermsPage() {
           <ul>
             <li>
               <strong>POJU:</strong> US$9.99 per single session initialization. Grants 30 days of conversational access
-              to the specific query thread, structurally archived within your local browser&apos;s storage matrix.
+              to the specific query thread, stored in your browser&apos;s local storage on your device.
             </li>
             <li>
               <strong>Glyph / Syncro / Match:</strong> US$4.99 per independent engine activation or programmatic
@@ -139,7 +139,7 @@ export default function TermsPage() {
 
       <h3>C. Payment Processing and Merchant of Record (MOR)</h3>
       <p>
-        All international credit card processing, local wallet handshakes, and subscription management are securely
+        All international credit card processing and subscription management are securely
         executed by <strong>Dodo Payments</strong> (or its global affiliates) acting as our authorized{" "}
         <strong>Merchant of Record (MOR)</strong>. pojulife never stores, logs, or views your raw credit card numbers.
         Your formal transaction receipt and banking line item will designate Dodo Payments as the legal seller of record
@@ -189,38 +189,28 @@ export default function TermsPage() {
         </li>
       </ul>
 
-      <h2>6. Decentralized Vault Architecture and Local Data Custody</h2>
+      <h2>6. Local Browser Storage and Data on Your Device</h2>
       <p>
-        pojulife operates under a strict, decentralized &quot;Zero-Cloud&quot; local-first architecture. All user history
-        and analytical records are converted into local AES-256 encrypted data, contained within a private Vault tied
-        exclusively to your active device and specific browser environment.
+        pojulife uses a local-first design. Your session history and analytical records are stored in your
+        browser&apos;s local storage (IndexedDB) on your device—not on our servers.
       </p>
       <ul>
         <li>
-          <strong>Zero Cloud &amp; Device-Locked Limitations:</strong> We maintain absolutely zero user accounts,
-          biological identities, or cloud-side history archives on our servers. Switching phones, PCs, or browsers will
-          invariably result in a completely empty Vault, as cross-device or cross-browser synchronization is
-          architecturally non-existent.
+          <strong>Device-bound storage:</strong> We do not maintain cloud-side copies of your conversation logs. Switching
+          phones, PCs, or browsers will start with an empty local history because cross-device sync is not provided.
         </li>
         <li>
-          <strong>Permanent Erasure Risks (Incognito &amp; Cache Hazards):</strong> You assume sole and unreserved
-          responsibility for the preservation and stability of your browser&apos;s local storage environment. Manually
-          clearing your browser cache/cookies/IndexedDB, utilizing strict privacy extensions that auto-wipe site history,
-          or uninstalling the PWA application will permanently and irreversibly wipe your records. Crucially, closing an
-          interface tab or browser window operated in private browsing or Incognito mode will trigger an immediate,
-          automatic browser-level destruction of your local Vault data.
+          <strong>Clearing browser data:</strong> You are responsible for preserving your browser storage. Clearing site
+          data, using strict privacy extensions, uninstalling the PWA, or closing an incognito/private window may
+          permanently remove local records.
         </li>
         <li>
-          <strong>Absolute Inability to Recover:</strong> Because we do not possess your local cryptographic keys, seed
-          logs, or conversational inputs, pojulife has zero technical capacity to restore, reconstruct, or retrieve your
-          lost journey history. Once erased by user action or automated browser security protocols, it is permanently
-          unrecoverable.
+          <strong>No server-side recovery:</strong> Because conversation content is not stored on our servers, pojulife
+          cannot restore lost local history after you clear browser data or switch devices.
         </li>
         <li>
-          <strong>Non-Refundability for Local Data Loss:</strong> The accidental loss, automated browser deletion, or
-          manual erasure of local session logs does not entitle the user to financial refunds, token restitution,
-          chargeback reversals, or complimentary service resets. We hold no liability for data that our infrastructure was
-          designed from inception never to harvest or store.
+          <strong>No refunds for local data loss:</strong> Accidental loss or manual deletion of local session data does
+          not entitle you to financial refunds, token restitution, or complimentary service resets.
         </li>
       </ul>
 

@@ -1463,6 +1463,13 @@
   color: #9f97b3;
 }
 
+.pchat-question-briefing-dialog__privacy {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #8b8399;
+}
+
 .pchat-question-briefing-dialog .pchat-expiry-dialog__actions {
   margin-top: 22px;
 }

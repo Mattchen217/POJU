@@ -11,14 +11,14 @@ export const metadata: Metadata = {
 
 const privacyArchitectureItems = [
   {
-    title: "✦ Your Conversations Stay Encrypted on Your Device",
-    body: 'Your inputs are not "secured on our cloud servers." They are encrypted using industry-standard AES-256-GCM right inside your local browser storage, utilizing a cryptographic key generated locally that we never see and cannot access. Even in the event of an external server breach, there is absolutely zero user conversation data to steal.',
+    title: "✦ Your Conversations Stay on Your Device",
+    body: "Your conversations are stored locally in your own browser (in your device's local storage). They are not stored on our servers, and switching browsers or using incognito mode will clear them. To generate responses, your inputs are sent over a secure (HTTPS) connection to AI model providers (e.g., Anthropic Claude, DeepSeek), who state they do not retain your inputs or use them to train public models.",
     verify:
-      "Verify it yourself: Open your browser's DevTools → Application → IndexedDB. You will see encrypted cryptographic text, never your raw inputs.",
+      "You can inspect local storage in your browser DevTools → Application → IndexedDB to see what is kept on your device.",
   },
   {
-    title: "✦ No Mandatory Account Sign-up or Password Walls",
-    body: "We do not force you to provide an email, phone number, or social login (Google/Apple) to use the interface. Your localized device fingerprint (a secure, one-way cryptographic hash) acts as your temporary identification to validate active sessions and restore authorized usage—nothing more.",
+    title: "✦ No Mandatory Account Sign-up",
+    body: "We do not require an email, phone number, or social login (Google/Apple) to use the interface. A device identifier may be used only to validate active sessions and restore authorized usage where applicable.",
   },
   {
     title: "✦ Transparent & Postponed Email Requests",
@@ -27,8 +27,8 @@ const privacyArchitectureItems = [
       "Your mailbox identity is never used for unsolicited marketing or shared with external data brokers.",
   },
   {
-    title: "✦ Enterprise-Grade Zero Data Retention (ZDR)",
-    body: "Your immediate contextual inputs are processed through secure APIs powered by leading models (including Anthropic Claude and DeepSeek). We interact exclusively via API channels configured to ensure that our processors do not retain your inputs, do not run human reviews on your data, and never use your conversations to train public AI models.",
+    title: "✦ AI Processing via API Providers",
+    body: "Your contextual inputs are processed through secure HTTPS APIs powered by leading models (including Anthropic Claude and DeepSeek). We interact via API channels configured so that our processors state they do not retain your inputs for training public models and do not run routine human review on your data.",
   },
 ] as const;
 
@@ -49,10 +49,9 @@ export default function PrivacyPage() {
             <a href="mailto:privacy@pojulife.com">privacy@pojulife.com</a>
           </p>
           <p>
-            pojulife and its specialized modular engines (POJU, Glyph, Syncro, Match) are built upon a foundation of{" "}
-            <strong>Decentralized Sovereignty</strong>. While most digital products talk about &quot;respecting your
-            privacy&quot; while harvesting your behavior, we engineered an ecosystem that does not need your data to
-            function. This document outlines our architectural commitment to your absolute data autonomy.
+            pojulife and its specialized modular engines (POJU, Glyph, Syncro, Match) are designed so that your
+            conversation history stays in your browser&apos;s local storage by default. This document explains what we
+            collect, what stays on your device, and how third-party processors are involved.
           </p>
         </>
       }
@@ -121,7 +120,14 @@ export default function PrivacyPage() {
         <li>Behavioral pixels or cross-site commercial advertising tracking cookies.</li>
       </ul>
 
-      <h2>3. Data Governance &amp; Third-Party Processors</h2>
+      <h2>3. Birth &amp; Metaphysics Inputs (Sensitive Local Data)</h2>
+      <p>
+        To generate metaphysics-based reflections, POJU uses the birth date, time, and location you provide. Like your
+        conversations, this is stored locally in your browser and sent to AI models only to generate your analysis; it
+        is not used for any other purpose.
+      </p>
+
+      <h2>4. Data Governance &amp; Third-Party Processors</h2>
       <p>We interact with a minimal stack of highly verified global infrastructure providers to serve this application:</p>
       <ul>
         <li>
@@ -150,7 +156,7 @@ export default function PrivacyPage() {
         </li>
       </ul>
 
-      <h2>4. Retention &amp; Deletion Rights</h2>
+      <h2>5. Retention &amp; Deletion Rights</h2>
       <ul>
         <li>
           <strong>Local Data Clearance:</strong> You maintain total execution authority. Clearing your local browser
@@ -169,7 +175,7 @@ export default function PrivacyPage() {
         </li>
       </ul>
 
-      <h2>5. Regional Statutory Compliance (GDPR &amp; CCPA)</h2>
+      <h2>6. Regional Statutory Compliance (GDPR &amp; CCPA)</h2>
       <p>
         Whether you reside in the European Economic Area (EEA) under GDPR jurisdiction or California under the CCPA, our
         architecture natively fulfills your statutory rights: the Right to Erasure (&quot;Right to be Forgotten&quot;),
@@ -184,8 +190,7 @@ export default function PrivacyPage() {
 
       <p className="legal-page__closing-note">
         <em>
-          Updates to this policy will be flagged on the interface dashboard upon subsequent deployments. Sustained
-          engagement with the platform constitutes alignment with these decentralized parameters.
+          Updates to this policy will be flagged on the interface dashboard upon subsequent deployments.
         </em>
       </p>
     </LegalPageShell>

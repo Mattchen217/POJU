@@ -1,5 +1,5 @@
 /**
- * Syncro v5 — encrypted session storage (IndexedDB `syncro_sessions`).
+ * Syncro v5 — local session storage (IndexedDB `syncro_sessions`).
  * @see docs/Syncro_v5.0_Refactor.md Step 4
  */
 
@@ -13,7 +13,7 @@ import {
   isSubmissionTimelineComplete,
 } from "./syncro-submission-timeline";
 
-const SYNCRO_SESSION_SECRET = "pojulife_v5_syncro_session";
+const SYNCRO_SESSION_SECRET = "pojulife_v5_syncro_session"; // legacy encryptJson arg; not a security boundary
 
 export type CreateSyncroSessionInput = {
   profile_id: string;

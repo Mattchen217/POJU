@@ -1,5 +1,5 @@
 /**
- * Match v5 — encrypted session storage (IndexedDB `match_sessions`).
+ * Match v5 — local session storage (IndexedDB `match_sessions`).
  * @see docs/Match_v5.0_New.md Step 1
  */
 
@@ -10,7 +10,7 @@ import { getPojuDeviceId } from "@/lib/poju/client-device-id";
 import { normalizeMatchSessionPayload } from "./synergy-normalize";
 import type { MatchReport, MatchSession, MatchSessionPayload } from "./types";
 
-const MATCH_SESSION_SECRET = "pojulife_v5_match_session";
+const MATCH_SESSION_SECRET = "pojulife_v5_match_session"; // legacy encryptJson arg; not a security boundary
 
 export type CreateMatchSessionInput = {
   a_profile_id: string;

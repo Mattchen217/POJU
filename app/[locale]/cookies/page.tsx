@@ -33,16 +33,10 @@ export default function CookiesPage() {
         </p>
       }
     >
-      <h2>Our Architecture Philosophy</h2>
+      <h2>Our Approach</h2>
       <p>
-        At pojulife, we believe your browser should be a sanctuary, not a surveillance node. While modern consumer
-        platforms deploy invasive cross-site tracking pixels and behavioural analytical scripts to monetize your digital
-        footprint, pojulife is engineered on a foundation of <strong>Absolute Data Sovereignty</strong>.
-      </p>
-      <p>
-        We do not sell your navigation data, we do not partner with data brokers, and we do not use marketing tracking
-        cookies. We utilize cookies and browser local storage environments strictly for operational survival,
-        cryptographic session integrity, and secure billing execution.
+        pojulife uses cookies and browser local storage for basic operation, session continuity, and secure billing. We do
+        not sell your navigation data, partner with data brokers, or use marketing tracking cookies.
       </p>
 
       <h2>1. Strictly Necessary Cookies</h2>
@@ -68,7 +62,7 @@ export default function CookiesPage() {
               </td>
               <td>Internal Engine</td>
               <td>
-                Validates your current cryptographic active session state and maps token execution.
+                Validates your current active session state and maps token execution.
               </td>
               <td>Active Session Only</td>
             </tr>
@@ -144,26 +138,21 @@ export default function CookiesPage() {
         </table>
       </div>
 
-      <h2>3. The Local Storage Layer (Browser Sovereignty Matrix)</h2>
+      <h2>3. Local Storage (Browser)</h2>
       <p>
-        Unlike legacy cloud apps that store your text input records on centralized remote servers, pojulife leverages
-        your browser&apos;s native <strong>IndexedDB</strong> and <strong>Local Storage</strong> environments to preserve
-        your entire conversational universe.
+        pojulife stores your conversation history and session data in your browser&apos;s native{" "}
+        <strong>IndexedDB</strong> and <strong>Local Storage</strong> on your device—not on our servers.
       </p>
-      <p>
-        This data is encrypted locally using <strong>AES-256-GCM</strong> keys and remains entirely under your hardware
-        custody. We utilize this layer to preserve:
-      </p>
+      <p>This local layer may include:</p>
       <ul>
         <li>Your conversation history across the POJU, Glyph, Syncro, and Match modules.</li>
         <li>Your current active premium token balances and Monthly Pass ecosystem voucher entitlements.</li>
-        <li>Your personalized archetypal reflection logs and profile configurations.</li>
+        <li>Your personalized reflection logs and profile configurations.</li>
       </ul>
       <blockquote>
         <p>
-          <strong>Technical Reality Note:</strong> This local cache never leaves your machine in unencrypted plain text.
-          Because this data exists exclusively under your hardware domain, the operator cannot retrieve, restore, or
-          reconstruct your logs if you destroy your device or clear your cache.
+          <strong>Note:</strong> This data stays on your device. Switching browsers or clearing site data removes it. We
+          do not store these conversation logs on our servers and cannot restore them after you clear local storage.
         </p>
       </blockquote>
 
@@ -183,26 +172,22 @@ export default function CookiesPage() {
         </li>
       </ul>
 
-      <h2>5. Sovereign User Jurisdiction &amp; Global Rights (GDPR / CCPA)</h2>
+      <h2>5. User Controls (GDPR / CCPA)</h2>
       <p>
         Whether you operate under the protection of the European Union GDPR, UK GDPR, or California Consumer Privacy Act
-        (CCPA), our decentralized framework naturally respects your statutory digital autonomy by default:
+        (CCPA), you can control local data as follows:
       </p>
       <ul>
         <li>
-          <strong>Granular Autonomy:</strong> We do not track or sell data; therefore, there is no behavioral profile to
-          opt-out of.
+          <strong>No behavioral ad tracking:</strong> We do not track or sell behavioral profiles for advertising.
         </li>
         <li>
-          <strong>Absolute Deletion (The Nuclear Option):</strong> You hold absolute execution power. To wipe every trace
-          of your locally cached token sessions, history matrices, and local cookies, simply access your application
-          dashboard and select the <strong>&quot;End &amp; Wipe&quot;</strong> sequence, or clear your browser site data
-          for <code>pojulife.com</code> directly via your browser configuration panel.
+          <strong>Delete local data:</strong> Use the in-app <strong>&quot;End &amp; Wipe&quot;</strong> action or clear
+          site data for <code>pojulife.com</code> in your browser settings.
         </li>
         <li>
-          <strong>Subscription Alignment Data:</strong> Any email addresses provided voluntarily for Monthly Pass
-          subscription processing or ecosystem voucher synchronization can be permanently erased from our billing relay
-          registries upon direct communication.
+          <strong>Subscription email records:</strong> Email addresses used for Monthly Pass billing can be removed from
+          our billing records upon request.
         </li>
       </ul>
 
