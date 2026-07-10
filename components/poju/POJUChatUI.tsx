@@ -30,7 +30,7 @@ import { AgendaProgressPanel } from "@/components/poju/AgendaProgressPanel";
 import { getLastUserMessageContent } from "@/lib/poju/context-helpers";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import { InfraBusyRetryAction } from "@/components/poju/InfraBusyRetryAction";
-import { getPojuServiceBusyMessage, isPojuInfrastructureFailureMessage } from "@/lib/llm/poju-service-busy-message";
+import { getPojuServiceBusyMessage, isPojuFailurePlaceholderMessage } from "@/lib/llm/poju-service-busy-message";
 import { generateBaseAnalysis } from "@/lib/llm/deepseek/base-analysis";
 import { profileHasBaseAnalysis } from "@/lib/profile/stored-profiles-service";
 import { markPOJUV4SessionResolved } from "@/lib/poju/v4-lifecycle";
@@ -65,7 +65,6 @@ import { MainDeliveryView } from "@/components/poju/MainDeliveryView";
 import { PojuReportChatCard } from "@/components/poju/PojuReportChatCard";
 import { PojuStateDebugPanel } from "@/components/poju/PojuStateDebugPanel";
 import { LLMCallDebugPanel } from "@/components/poju/LLMCallDebugPanel";
-import { LlmDebugModeBanner } from "@/components/poju/LlmDebugModeBanner";
 import { StateMachineDebugPanel } from "@/components/poju/StateMachineDebugPanel";
 import { buildDevStateLedger } from "@/lib/poju/dev-state-ledger";
 import { useLlmDebugEnabled } from "@/lib/poju/use-llm-debug-enabled";
@@ -542,7 +541,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     const alreadyAnswered =
       lastUserMsg?.content.trim() === userMessage.trim() &&
       lastMsg?.role === "assistant" &&
-      !isPojuInfrastructureFailureMessage(lastMsg.content);
+      !isPojuFailurePlaceholderMessage(lastMsg.content);
     if (alreadyAnswered) {
       turnInFlightRef.current = false;
       activeTurnKeyRef.current = null;
@@ -1172,7 +1171,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           <RefundOfferAction sessionId={session.session_id} variant="message" />
         );
       }
-      if (m.meta?.kind === "infra_busy" && m.role === "assistant") {
+      if (
+        (m.meta?.kind === "infra_busy" || m.meta?.kind === "generation_empty") &&
+        m.role === "assistant"
+      ) {
         followUps[mid] = (
           <InfraBusyRetryAction onRetry={onInfraBusyRetry} disabled={sending} />
         );
@@ -1279,7 +1281,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         }}
       />
       <div className="poju-chat-shell">
-        {showStateDebug ? <LlmDebugModeBanner locale={locale} /> : null}
         <div className="poju-chat-shell__main">
       <PojuChat
         sessions={pojuSessions}

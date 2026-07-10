@@ -12,7 +12,7 @@ import { normalizeAgentPhase, type POJUAgentState } from "@/lib/poju/agent-state
 export const maxDuration = 300;
 
 const CORE_MAX_TOKENS_INITIAL = 16_000;
-const CORE_MAX_TOKENS_RETRY = 16_000;
+const CORE_MAX_TOKENS_RETRY = 24_000;
 
 class BreakthroughCoreRetryableError extends Error {
   constructor(
@@ -84,8 +84,11 @@ async function fetchCoreContent(input: {
   | { ok: false; reason: "truncated" | "parse_failed"; error: string }
 > {
   let result = await callCoreLLM({ ...input, max_tokens: CORE_MAX_TOKENS_INITIAL });
-  if (result.meta.finish_reason === "length") {
-    console.warn("[breakthrough-core] truncated at 16000, retrying at 16000 (cleaner regen)");
+  const emptyBody = !result.content.trim();
+  if (result.meta.finish_reason === "length" || emptyBody) {
+    console.warn(
+      `[breakthrough-core] ${emptyBody ? "empty body" : "truncated at 16000"}, retrying at ${CORE_MAX_TOKENS_RETRY}`,
+    );
     result = await callCoreLLM({ ...input, max_tokens: CORE_MAX_TOKENS_RETRY });
   }
 

@@ -1,5 +1,5 @@
 import type { POJUAgentState } from "@/lib/poju/agent-state";
-import { isPojuInfrastructureFailureMessage } from "@/lib/llm/poju-service-busy-message";
+import { isPojuFailurePlaceholderMessage } from "@/lib/llm/poju-service-busy-message";
 import { selectCurrentAgendaFocus } from "@/lib/poju/investigation-agenda";
 
 /** Reply already ends with or recently contains a question mark. */
@@ -31,7 +31,7 @@ export function appendForwardMove(
   locale: string,
   mode: "first" | "continue" = "continue",
 ): string {
-  if (isPojuInfrastructureFailureMessage(reply)) return reply;
+  if (isPojuFailurePlaceholderMessage(reply)) return reply;
   if (hasQuestionCue(reply)) return reply;
 
   const focus = selectCurrentAgendaFocus(agent.investigation_agenda ?? []);

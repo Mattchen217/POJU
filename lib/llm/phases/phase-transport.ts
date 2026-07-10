@@ -8,7 +8,7 @@ import {
   generateGeminiChatCompletion,
   getGeminiClient,
 } from "@/lib/llm/gemini-shared";
-import { getPojuServiceBusyMessage, isPojuInfrastructureFailureMessage } from "@/lib/llm/poju-service-busy-message";
+import { getPojuEmptyGenerationMessage, getPojuServiceBusyMessage, isPojuFailurePlaceholderMessage } from "@/lib/llm/poju-service-busy-message";
 import { callLLM, type LLMCallType } from "@/lib/llm/router";
 import type { LLMCallDebug } from "@/lib/llm/llm-debug";
 import { buildLlmDebug } from "@/lib/llm/llm-debug";
@@ -218,6 +218,7 @@ export async function callPhaseJsonTransport(
   let result = await runOnce();
   if (isEmptyPhaseCompletion(result)) {
     const failedProvider = result.provider?.trim();
+    const pinned = options?.locked_provider?.trim();
     console.warn(
       "[phase-transport] empty completion (raw_length=0) — controlled retry once",
       JSON.stringify({
@@ -225,14 +226,25 @@ export async function callPhaseJsonTransport(
         call_type,
         provider: failedProvider ?? "—",
         finish_reason: result.finish_reason ?? "—",
-        locked: options?.locked_provider?.trim() ?? null,
+        locked: pinned ?? null,
+        retry_same_provider: Boolean(pinned),
       }),
     );
     result = await runOnce({
-      extra_ignore: failedProvider ? [failedProvider] : undefined,
+      extra_ignore: pinned ? undefined : failedProvider ? [failedProvider] : undefined,
     });
     if (result.llm_debug) {
       result = { ...result, llm_debug: { ...result.llm_debug, retried: true } };
+    }
+    if (isEmptyPhaseCompletion(result)) {
+      console.warn(
+        "[phase-transport] empty completion after retry — will use empty-generation fallback",
+        JSON.stringify({
+          phase: options?.phase_name ?? "—",
+          provider: result.provider ?? "—",
+          finish_reason: result.finish_reason ?? "—",
+        }),
+      );
     }
   }
 
@@ -310,6 +322,10 @@ export function isPhaseParseFailed(parsed: Record<string, unknown>): boolean {
 /** Parse phase JSON; sanitize `response` when locale provided (output-side gloss tokens). */
 export function getPhaseResponseFallback(locale?: string): string {
   return getPojuServiceBusyMessage(locale);
+}
+
+export function getPhaseEmptyGenerationFallback(locale?: string): string {
+  return getPojuEmptyGenerationMessage(locale);
 }
 
 /** Parse phase JSON; sanitize `response` when locale provided (output-side gloss tokens). */
@@ -487,10 +503,11 @@ export function resolvePhaseResponse(
   if (ctx.use_fallback === false) {
     return { parsed, response: "", used_fallback: false, compliance_failed: false };
   }
+  const emptyBody = rawText.trim().length === 0;
   logPhaseResponseFallback(rawText, { ...ctx, raw_length: rawText.length });
   return {
     parsed,
-    response: getPhaseResponseFallback(ctx.locale),
+    response: emptyBody ? getPhaseEmptyGenerationFallback(ctx.locale) : getPhaseResponseFallback(ctx.locale),
     used_fallback: true,
     compliance_failed: false,
   };
@@ -500,7 +517,7 @@ export function resolvePhaseResponse(
 
 /** True when text is the infrastructure fallback copy (not conversational content). */
 export function isPhaseResponseFallback(text: string): boolean {
-  return isPojuInfrastructureFailureMessage(text);
+  return isPojuFailurePlaceholderMessage(text);
 }
 
 /** Prefer streamed content over fallback placeholder when parse/salvage failed server-side. */
@@ -515,6 +532,9 @@ export function resolveStreamedCompleteResponse(
   if (streamed) {
     const salvaged = salvagePhaseResponseText(streamed).trim();
     if (salvaged && !isPhaseResponseFallback(salvaged)) return salvaged;
+  }
+  if (!resolved && !streamed.trim()) {
+    return getPhaseEmptyGenerationFallback(locale);
   }
   return getPhaseResponseFallback(locale);
 }

@@ -42,8 +42,12 @@ function main(): void {
     read("app/api/poju/breakthrough-core/route.ts").includes("timeout_ms: 180_000"),
   );
   assert(
-    "core retry max_tokens 16000",
-    read("app/api/poju/breakthrough-core/route.ts").includes("CORE_MAX_TOKENS_RETRY = 16_000"),
+    "core retry max_tokens 24000",
+    read("app/api/poju/breakthrough-core/route.ts").includes("CORE_MAX_TOKENS_RETRY = 24_000"),
+  );
+  assert(
+    "opening conversion max_tokens 20000",
+    openingSrc.includes("openingConversionRound ? 20_000 : 16_000"),
   );
   assert(
     "phase-transport default high",

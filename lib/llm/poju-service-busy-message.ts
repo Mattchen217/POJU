@@ -7,6 +7,15 @@ export const POJU_SERVICE_BUSY_MESSAGES = {
   fr: "La demande est élevée en ce moment. Merci de patienter un instant et de réessayer. Votre session est enregistrée.",
 } as const;
 
+/** User-facing copy when the model ran but returned no visible body (not supplier queue busy). */
+export const POJU_EMPTY_GENERATION_MESSAGES = {
+  zh: "本轮回复生成异常（模型未返回正文），请点下方重试。你的会话已保存。",
+  en: "This reply could not be generated (empty model output). Tap retry below. Your session is saved.",
+  es: "No se pudo generar esta respuesta (salida vacía). Pulsa reintentar abajo. Tu sesión está guardada.",
+  de: "Diese Antwort konnte nicht erzeugt werden (leere Modellausgabe). Unten erneut versuchen. Deine Sitzung ist gespeichert.",
+  fr: "Cette réponse n'a pas pu être générée (sortie vide). Appuyez sur réessayer ci-dessous. Votre session est enregistrée.",
+} as const;
+
 export type PojuBusyLocale = keyof typeof POJU_SERVICE_BUSY_MESSAGES;
 
 export function resolvePojuBusyLocale(locale?: string): PojuBusyLocale {
@@ -22,6 +31,26 @@ export function resolvePojuBusyLocale(locale?: string): PojuBusyLocale {
 export function getPojuServiceBusyMessage(locale?: string): string {
   const key = resolvePojuBusyLocale(locale);
   return POJU_SERVICE_BUSY_MESSAGES[key] ?? POJU_SERVICE_BUSY_MESSAGES.en;
+}
+
+export function getPojuEmptyGenerationMessage(locale?: string): string {
+  const key = resolvePojuBusyLocale(locale);
+  return POJU_EMPTY_GENERATION_MESSAGES[key] ?? POJU_EMPTY_GENERATION_MESSAGES.en;
+}
+
+/** True for empty-body generation failures (distinct from supplier queue busy). */
+export function isPojuEmptyGenerationMessage(text: string): boolean {
+  const t = text.trim();
+  if (!t) return false;
+  if (t.includes("生成异常") || t.includes("empty model output")) return true;
+  if (t.includes("salida vacía") || t.includes("leere Modellausgabe")) return true;
+  if (t.includes("sortie vide")) return true;
+  return false;
+}
+
+/** Infra / fallback placeholders — never append conversational follow-ups. */
+export function isPojuFailurePlaceholderMessage(text: string): boolean {
+  return isPojuInfrastructureFailureMessage(text) || isPojuEmptyGenerationMessage(text);
 }
 
 /** True for infra failure placeholders (never append conversational follow-ups). */

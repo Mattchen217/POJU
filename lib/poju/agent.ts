@@ -32,7 +32,7 @@ import {
   extractAnchoredFactIdsFromAssistant,
   mergeAnchoredFactIds,
 } from "@/lib/poju/anchored-fact-tracking";
-import { isPojuInfrastructureFailureMessage } from "@/lib/llm/poju-service-busy-message";
+import { isPojuFailurePlaceholderMessage, isPojuInfrastructureFailureMessage, isPojuEmptyGenerationMessage } from "@/lib/llm/poju-service-busy-message";
 import {
   appendForwardMove,
   hasQuestionCue,
@@ -690,7 +690,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
         phaseAfter === "tracking" ||
         (phaseAfter === "collecting_context" && hasQuestionCue(finalContent))));
 
-  if (!advancedCleanly && !isPojuInfrastructureFailureMessage(finalContent)) {
+  if (!advancedCleanly && !isPojuFailurePlaceholderMessage(finalContent)) {
     finalContent = appendForwardMove(
       finalContent,
       agent_v2,
@@ -739,6 +739,11 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
         llmResponse.contains_delivery || workingSession.main_delivery_done,
       ),
       llm_debug: llmResponse.llm_debug,
+      ...(isPojuEmptyGenerationMessage(finalContent)
+        ? { kind: "generation_empty" as const }
+        : isPojuInfrastructureFailureMessage(finalContent)
+          ? { kind: "infra_busy" as const }
+          : {}),
     },
   };
 
