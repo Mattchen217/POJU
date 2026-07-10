@@ -53,6 +53,7 @@ function main(): void {
   console.log("\n=== Fix B · state snapshot ===\n");
   const types = read("lib/poju/types.ts");
   assert("meta.state_snapshot type", types.includes("state_snapshot"));
+  assert("meta.llm_debug type", types.includes("llm_debug"));
   assert("agent builds state_snapshot", agent.includes("buildAgentStateSnapshot"));
 
   const snap = buildAgentStateSnapshot(
@@ -65,9 +66,11 @@ function main(): void {
   console.log("\n=== Fix B/C · UI ===\n");
   const ui = read("components/poju/POJUChatUI.tsx");
   assert("PojuStateDebugPanel wired", ui.includes("PojuStateDebugPanel"));
+  assert("LLMCallDebugPanel wired", ui.includes("LLMCallDebugPanel"));
   assert("PojuAgendaCard wired", ui.includes("PojuAgendaCard"));
-  assert("debug toggle default on", ui.includes('get("debug") !== "0"'));
+  assert("debug toggle opt-in", ui.includes('get("debug") === "1"'));
   assert("investigation_agenda in meta render", ui.includes("m.meta?.investigation_agenda"));
+  assert("llm_debug in meta render", ui.includes("m.meta?.llm_debug"));
 
   console.log("\n========================================\n");
   if (failures.length) {

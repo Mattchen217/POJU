@@ -11,6 +11,8 @@ import {
   type OpenRouterRoutePath,
 } from "@/lib/llm/openrouter-shared";
 import type { AgentPhase } from "@/lib/poju/agent-state";
+import { buildLlmDebug } from "@/lib/llm/llm-debug";
+import type { LLMCallDebug } from "@/lib/llm/llm-debug";
 
 export type LLMCallType =
   | "chat_flash"
@@ -38,6 +40,8 @@ export type LLMCallType =
   | "poju_final_delivery";
 
 export type ReasoningEffort = "off" | "low" | "medium" | "high" | "xhigh";
+
+export type { LLMCallDebug };
 
 export interface CallLLMInput {
   call_type: LLMCallType;
@@ -76,7 +80,12 @@ export interface CallLLMResult {
     finish_reason?: string | null;
     completion_tokens?: number;
     provider?: string | null;
+    prompt_tokens?: number;
+    reasoning_tokens?: number;
+    generation_id?: string | null;
+    generation_time_ms?: number | null;
   };
+  llm_debug: LLMCallDebug;
 }
 
 function normalizeCallType(callType: LLMCallType): Exclude<
@@ -236,12 +245,33 @@ export async function callLLM(input: CallLLMInput): Promise<CallLLMResult> {
   });
 
   const latency_ms = Date.now() - startTime;
+  const transport = out.transport;
+
+  const llm_debug = buildLlmDebug({
+    phase: input.phase_name ?? input.call_type,
+    requested_effort: effort,
+    max_tokens,
+    model: out.model || model,
+    served_provider: out.provider,
+    finish_reason: out.finish_reason,
+    prompt_tokens: out.prompt_tokens,
+    cached_tokens: out.cached_tokens,
+    completion_tokens: out.completion_tokens,
+    reasoning_tokens: out.reasoning_tokens,
+    latency_ms,
+    generation_time_ms: out.generation_time_ms,
+    generation_id: out.generation_id,
+    attempt: transport?.attempt ?? 1,
+    retried: transport?.retried ?? false,
+    fell_back: transport?.fell_back ?? false,
+  });
 
   return {
     content: out.text,
     actual_model: out.model || model,
     reasoning: out.reasoning,
     reasoning_details: out.reasoning_details,
+    llm_debug,
     meta: {
       call_type: input.call_type,
       tokens_used: out.tokens_used,
@@ -253,6 +283,10 @@ export async function callLLM(input: CallLLMInput): Promise<CallLLMResult> {
       finish_reason: out.finish_reason,
       completion_tokens: out.completion_tokens,
       provider: out.provider,
+      prompt_tokens: out.prompt_tokens,
+      reasoning_tokens: out.reasoning_tokens,
+      generation_id: out.generation_id,
+      generation_time_ms: out.generation_time_ms,
     },
   };
 }

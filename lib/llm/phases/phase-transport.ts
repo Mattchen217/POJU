@@ -10,6 +10,9 @@ import {
 } from "@/lib/llm/gemini-shared";
 import { getPojuServiceBusyMessage, isPojuInfrastructureFailureMessage } from "@/lib/llm/poju-service-busy-message";
 import { callLLM, type LLMCallType } from "@/lib/llm/router";
+import type { LLMCallDebug } from "@/lib/llm/llm-debug";
+import { buildLlmDebug } from "@/lib/llm/llm-debug";
+import type { ReasoningEffort } from "@/lib/llm/router";
 import { openRouterChatCompletionStream } from "@/lib/llm/openrouter-stream";
 import {
   getOpenRouterDefaultModel,
@@ -31,6 +34,7 @@ export type PhaseTransportResult = {
   reasoning_details?: unknown;
   finish_reason?: string | null;
   provider?: string | null;
+  llm_debug?: LLMCallDebug;
 };
 
 function resolveStreamProvider(
@@ -108,19 +112,21 @@ export async function callPhaseJsonTransport(
     const providerIgnore = mergedIgnore.length > 0 ? [...new Set(mergedIgnore)] : undefined;
     const locked = options?.locked_provider?.trim() || undefined;
     const routePath = options?.route_path ?? "chat";
+    const thinking_effort: ReasoningEffort = options?.thinking_effort ?? "high";
     if (isOpenRouterConfigured()) {
       if (streamHooks) {
         const chatMessages = [
           { role: "system" as const, content: system },
           ...messages.map((m) => ({ role: m.role, content: m.content })),
         ];
+        const streamStart = Date.now();
         const streamed = await openRouterChatCompletionStream(
           {
             messages: chatMessages,
             max_tokens,
             temperature,
             json_mode: true,
-            reasoning_effort: options?.thinking_effort ?? "high",
+            reasoning_effort: thinking_effort,
             session_id: options?.session_id,
             call_type: call_type,
             phase_name: options?.phase_name,
@@ -134,6 +140,8 @@ export async function callPhaseJsonTransport(
             onContent: streamHooks.onContent,
           },
         );
+        const latency_ms = Date.now() - streamStart;
+        const transport = streamed.transport;
         return {
           content: streamed.text,
           model: streamed.model ?? getOpenRouterDefaultModel(),
@@ -141,6 +149,24 @@ export async function callPhaseJsonTransport(
           reasoning: streamed.reasoning,
           finish_reason: streamed.finish_reason,
           provider: streamed.provider,
+          llm_debug: buildLlmDebug({
+            phase: options?.phase_name ?? call_type,
+            requested_effort: thinking_effort,
+            max_tokens,
+            model: streamed.model ?? getOpenRouterDefaultModel(),
+            served_provider: streamed.provider,
+            finish_reason: streamed.finish_reason,
+            prompt_tokens: streamed.prompt_tokens,
+            cached_tokens: streamed.cached_tokens,
+            completion_tokens: streamed.completion_tokens,
+            reasoning_tokens: streamed.reasoning_tokens,
+            latency_ms,
+            generation_time_ms: streamed.generation_time_ms,
+            generation_id: streamed.generation_id,
+            attempt: transport?.attempt ?? 1,
+            retried: Boolean(retry),
+            fell_back: transport?.fell_back ?? false,
+          }),
         };
       }
 
@@ -155,7 +181,7 @@ export async function callPhaseJsonTransport(
         phase_name: options?.phase_name,
         route_path: routePath,
         locked_provider: locked,
-        thinking_effort: options?.thinking_effort,
+        thinking_effort,
       });
       return {
         content: result.content,
@@ -165,6 +191,10 @@ export async function callPhaseJsonTransport(
         reasoning_details: result.reasoning_details,
         finish_reason: result.meta.finish_reason,
         provider: result.meta.provider,
+        llm_debug: {
+          ...result.llm_debug,
+          retried: result.llm_debug.retried || Boolean(retry),
+        },
       };
     }
 
@@ -199,6 +229,9 @@ export async function callPhaseJsonTransport(
     result = await runOnce({
       extra_ignore: failedProvider ? [failedProvider] : undefined,
     });
+    if (result.llm_debug) {
+      result = { ...result, llm_debug: { ...result.llm_debug, retried: true } };
+    }
   }
 
   return result;

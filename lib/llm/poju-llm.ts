@@ -77,6 +77,7 @@ export interface POJULLMResponse {
   breakthrough_core?: import("@/lib/poju/agent-state").BreakthroughCore | null;
   problem_summary?: string | null;
   action_status_updates?: import("@/lib/poju/action-status-updates").ActionStatusPatch[];
+  llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
 }
 
 export async function callPOJULLM(input: CallInput): Promise<POJULLMResponse> {
@@ -171,6 +172,7 @@ async function callPOJULLMPhasePath(input: CallInput): Promise<POJULLMResponse> 
     confirmation_signal: phase.confirmation_signal,
     breakthrough_core_updates: phase.breakthrough_core_updates ?? null,
     action_status_updates: phase.action_status_updates ?? undefined,
+    llm_debug: (mapped as { llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug }).llm_debug,
   };
 }
 

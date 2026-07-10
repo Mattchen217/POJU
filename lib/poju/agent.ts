@@ -124,6 +124,7 @@ type LLMApiPayload = {
   user_confirms_delivery?: boolean;
   breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null;
   action_status_updates?: import("@/lib/poju/action-status-updates").ActionStatusPatch[];
+  llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
 };
 
 function ensureAgentV2(session: POJUSessionState): POJUAgentState {
@@ -737,6 +738,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
         agent_v2,
         llmResponse.contains_delivery || workingSession.main_delivery_done,
       ),
+      llm_debug: llmResponse.llm_debug,
     },
   };
 
@@ -907,6 +909,7 @@ async function callLLMViaAPI(input: {
   breakthrough_core?: import("@/lib/poju/agent-state").BreakthroughCore | null;
   problem_summary?: string | null;
   action_status_updates?: import("@/lib/poju/action-status-updates").ActionStatusPatch[];
+  llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
 }> {
   const body = JSON.stringify({
     session: input.session,
@@ -1100,6 +1103,10 @@ function mapLlmApiPayload(
     action_status_updates: Array.isArray(wire.action_status_updates)
       ? parseActionStatusUpdates({ action_status_updates: wire.action_status_updates })
       : undefined,
+    llm_debug:
+      wire.llm_debug && typeof wire.llm_debug === "object" && !Array.isArray(wire.llm_debug)
+        ? (wire.llm_debug as import("@/lib/llm/llm-debug").LLMCallDebug)
+        : undefined,
   };
 }
 

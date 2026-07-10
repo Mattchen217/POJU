@@ -106,5 +106,6 @@ export async function callDeliveryPhaseV6(input: PhaseLLMInput): Promise<PhaseLL
     model: result.model,
     served_provider: result.provider ?? null,
     thinking_process: thinkingFromPhaseTransport(result, parsed, input.locale),
+    llm_debug: result.llm_debug,
   };
 }

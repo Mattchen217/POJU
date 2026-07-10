@@ -29,23 +29,35 @@ export function QuestionBriefingDialog({ open, onConfirm }: Props) {
         aria-describedby="pchat-question-briefing-desc"
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <h2 id="pchat-question-briefing-title" className="pchat-expiry-dialog__title">
-          {t("title")}
-        </h2>
-        <p className="pchat-question-briefing-dialog__intro">{t("intro")}</p>
-        <ol id="pchat-question-briefing-desc" className="pchat-question-briefing-dialog__list">
-          {items.map((item) => (
-            <li key={item.title}>
-              <p className="pchat-question-briefing-dialog__item-title">{item.title}</p>
-              <p className="pchat-question-briefing-dialog__item-body">{item.body}</p>
-            </li>
-          ))}
-        </ol>
-        <p className="pchat-question-briefing-dialog__footer">{t("footer")}</p>
-        <p className="pchat-question-briefing-dialog__privacy">
-          <em>{t("privacy_footer")}</em>
-        </p>
-        <div className="pchat-expiry-dialog__actions">
+        <header className="pchat-question-briefing-dialog__header">
+          <h2 id="pchat-question-briefing-title" className="pchat-question-briefing-dialog__title">
+            {t("title")}
+          </h2>
+          <p className="pchat-question-briefing-dialog__intro">{t("intro")}</p>
+        </header>
+
+        <div className="pchat-question-briefing-dialog__scroll">
+          <ol id="pchat-question-briefing-desc" className="pchat-question-briefing-dialog__list">
+            {items.map((item, index) => (
+              <li key={item.title} className="pchat-question-briefing-dialog__item">
+                <span className="pchat-question-briefing-dialog__item-num" aria-hidden="true">
+                  {index + 1}
+                </span>
+                <div className="pchat-question-briefing-dialog__item-content">
+                  <p className="pchat-question-briefing-dialog__item-title">{item.title}</p>
+                  <p className="pchat-question-briefing-dialog__item-body">{item.body}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+
+          <footer className="pchat-question-briefing-dialog__foot">
+            <p className="pchat-question-briefing-dialog__footer">{t("footer")}</p>
+            <p className="pchat-question-briefing-dialog__privacy">{t("privacy_footer")}</p>
+          </footer>
+        </div>
+
+        <div className="pchat-expiry-dialog__actions pchat-question-briefing-dialog__actions">
           <button type="button" className="pchat-expiry-dialog__primary" onClick={onConfirm}>
             {t("confirm")}
           </button>

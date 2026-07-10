@@ -6,6 +6,7 @@ import {
   resolveDeliveryMode,
 } from "@/lib/llm/pro/final-delivery";
 import { callLLM } from "@/lib/llm/router";
+import { enrichLlmDebugPhaseTransition } from "@/lib/llm/llm-debug";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 import { sanitizeDeliveryText } from "@/lib/llm/sanitize/compliance-terms";
 import { polishDeliveryGrammar } from "@/lib/llm/sanitize/delivery-grammar-polish";
@@ -124,6 +125,14 @@ export async function POST(req: Request) {
 
     const actions = extractActionsFromDelivery(text, null);
     const latency_ms = result.meta.latency_ms || Date.now() - t0;
+    const llm_debug = enrichLlmDebugPhaseTransition(
+      { ...result.llm_debug, phase: "final_delivery" },
+      {
+        phase_from: body.agent_v2.current_phase,
+        phase_to: "delivered",
+        call_type: "main_delivery",
+      },
+    );
 
     return NextResponse.json({
       ok: true,
@@ -134,6 +143,7 @@ export async function POST(req: Request) {
       latency_ms,
       cost_usd: result.meta.cost_usd,
       delivery_mode,
+      llm_debug,
     });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "final_delivery_failed";

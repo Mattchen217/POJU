@@ -70,5 +70,7 @@ export interface PhaseLLMResult {
   confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";
   /** Tracking phase — patch delivered action status from user progress reports. */
   action_status_updates?: import("@/lib/poju/action-status-updates").ActionStatusPatch[];
+  /** Debug panel — OpenRouter call metrics for this turn. */
+  llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
 }
 

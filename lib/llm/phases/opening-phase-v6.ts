@@ -233,5 +233,11 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
     thinking_process: undefined,
     understanding,
     understanding_sufficient,
+    llm_debug: result.llm_debug
+      ? {
+          ...result.llm_debug,
+          phase: openingConversionRound ? "opening_conversion" : result.llm_debug.phase ?? "opening",
+        }
+      : undefined,
   };
 }

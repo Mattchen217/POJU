@@ -65,6 +65,7 @@ import { PojuPaywallInline } from "@/components/poju/PojuPaywallInline";
 import { MainDeliveryView } from "@/components/poju/MainDeliveryView";
 import { PojuReportChatCard } from "@/components/poju/PojuReportChatCard";
 import { PojuStateDebugPanel } from "@/components/poju/PojuStateDebugPanel";
+import { LLMCallDebugPanel } from "@/components/poju/LLMCallDebugPanel";
 import { StateMachineDebugPanel } from "@/components/poju/StateMachineDebugPanel";
 import { buildDevStateLedger } from "@/lib/poju/dev-state-ledger";
 import { PojuAgendaCard } from "@/components/poju/PojuAgendaCard";
@@ -204,7 +205,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const skipActivityRenderReadyRef = useRef(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const showStateDebug = searchParams.get("debug") !== "0";
+  const showStateDebug =
+    process.env.NEXT_PUBLIC_SHOW_LLM_DEBUG === "true" ||
+    searchParams.get("debug") === "1" ||
+    searchParams.get("debug") === "true";
   const speechLang = locale.startsWith("zh") ? "zh-CN" : locale.startsWith("fr") ? "fr-FR" : "en-US";
   const {
     active: voiceActive,
@@ -1171,6 +1175,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       }
       if (m.role === "assistant" && !m.is_rejected) {
         const below: ReactNode[] = [];
+        if (showStateDebug && m.meta?.llm_debug) {
+          below.push(
+            <LLMCallDebugPanel key="llm-debug" debug={m.meta.llm_debug} locale={locale} />,
+          );
+        }
         if (showStateDebug && m.meta?.state_snapshot) {
           below.push(
             <PojuStateDebugPanel key="state-debug" snapshot={m.meta.state_snapshot} locale={locale} />,

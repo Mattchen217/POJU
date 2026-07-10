@@ -144,6 +144,7 @@ async function handleStallOfferReplyV6(input: PhaseLLMInput): Promise<PhaseLLMRe
     served_provider: result.provider ?? null,
     thinking_process: thinkingFromPhaseTransport(result, parsed, input.locale),
     stall_offer: false,
+    llm_debug: result.llm_debug,
   };
 }
 
@@ -224,5 +225,6 @@ export async function callConfirmationPhaseV6(input: PhaseLLMInput): Promise<Pha
     model: result.model,
     served_provider: result.provider ?? null,
     thinking_process: thinkingFromPhaseTransport(result, parsed, input.locale),
+    llm_debug: result.llm_debug,
   };
 }

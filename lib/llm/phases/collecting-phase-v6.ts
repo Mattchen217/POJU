@@ -384,5 +384,6 @@ async function finishCollectingPhaseV6(
     suggest_refund,
     served_provider: result.provider ?? null,
     ...drift,
+    llm_debug: result.llm_debug,
   };
 }

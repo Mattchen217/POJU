@@ -36,7 +36,9 @@ import {
   callWithRetryAndFallback,
   isOpenRouterModelNotFoundHttpStatus,
   markOpenRouterSlugDead,
+  resolveOpenRouterCandidateOrder,
 } from "@/lib/llm/openrouter-model-resolver";
+import { parseGenerationTimeMs, parseReasoningTokens } from "@/lib/llm/llm-debug";
 
 export {
   DEFAULT_OPENROUTER_MODEL,
@@ -255,10 +257,18 @@ export type OpenRouterCompletionResult = {
   prompt_tokens: number;
   completion_tokens: number;
   cached_tokens: number;
+  reasoning_tokens: number;
   finish_reason?: string | null;
   provider?: string | null;
   reasoning?: string;
   reasoning_details?: unknown;
+  generation_id?: string | null;
+  generation_time_ms?: number | null;
+  transport?: {
+    attempt: number;
+    retried: boolean;
+    fell_back: boolean;
+  };
 };
 
 export async function openRouterChatCompletion(
@@ -269,9 +279,22 @@ export async function openRouterChatCompletion(
     throw new Error("missing_openrouter_api_key");
   }
 
-  return callWithRetryAndFallback((model) =>
-    openRouterChatCompletionWithModel(model, options, apiKey),
-  );
+  const candidates = resolveOpenRouterCandidateOrder();
+  let fell_back = false;
+
+  const result = await callWithRetryAndFallback(async (model) => {
+    if (model !== candidates[0]) fell_back = true;
+    return openRouterChatCompletionWithModel(model, options, apiKey);
+  });
+
+  return {
+    ...result,
+    transport: {
+      attempt: result.transport?.attempt ?? 1,
+      retried: result.transport?.retried ?? false,
+      fell_back: fell_back || Boolean(result.transport?.fell_back),
+    },
+  };
 }
 
 async function openRouterChatCompletionWithModel(
@@ -361,6 +384,7 @@ async function openRouterChatCompletionWithModel(
   const raw = await postOnce();
 
   let data: {
+    id?: string;
     provider?: string;
     model?: string;
     choices?: Array<{
@@ -376,7 +400,11 @@ async function openRouterChatCompletionWithModel(
       prompt_tokens?: number;
       completion_tokens?: number;
       prompt_tokens_details?: { cached_tokens?: number };
+      completion_tokens_details?: { reasoning_tokens?: number };
       native_tokens_cached?: number;
+      native_tokens_reasoning?: number;
+      reasoning_tokens?: number;
+      generation_time?: number;
     };
   };
 
@@ -398,8 +426,11 @@ async function openRouterChatCompletionWithModel(
   const prompt_tokens = typeof u?.prompt_tokens === "number" ? u.prompt_tokens : 0;
   const completion_tokens = typeof u?.completion_tokens === "number" ? u.completion_tokens : 0;
   const cached_tokens = parseCachedTokens(u as Record<string, unknown> | undefined);
+  const reasoning_tokens = parseReasoningTokens(u as Record<string, unknown> | undefined);
   const tokens_used =
     typeof u?.total_tokens === "number" ? u.total_tokens : prompt_tokens + completion_tokens;
+  const generation_id = typeof data.id === "string" ? data.id : null;
+  const generation_time_ms = parseGenerationTimeMs(data as Record<string, unknown>);
 
   logOpenRouterProviderServed({
     provider,
@@ -428,9 +459,17 @@ async function openRouterChatCompletionWithModel(
     prompt_tokens,
     completion_tokens,
     cached_tokens,
+    reasoning_tokens,
     finish_reason,
     provider,
     reasoning,
     reasoning_details: message?.reasoning_details,
+    generation_id,
+    generation_time_ms,
+    transport: {
+      attempt: transportAttempt,
+      retried: false,
+      fell_back: false,
+    },
   };
 }

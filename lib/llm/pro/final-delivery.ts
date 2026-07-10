@@ -51,6 +51,7 @@ export interface FinalDeliveryResult {
   tokens_used: number;
   latency_ms: number;
   cost_usd: number;
+  llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
 }
 
 function safeJsonSlice(value: unknown, max: number): string {
@@ -624,6 +625,10 @@ export async function requestFinalDeliveryFromApi(input: {
     tokens_used: typeof data.tokens_used === "number" ? data.tokens_used : 0,
     latency_ms: typeof data.latency_ms === "number" ? data.latency_ms : 0,
     cost_usd: typeof data.cost_usd === "number" ? data.cost_usd : 0,
+    llm_debug:
+      data.llm_debug && typeof data.llm_debug === "object" && !Array.isArray(data.llm_debug)
+        ? data.llm_debug
+        : undefined,
   };
 }
 
@@ -683,6 +688,7 @@ export async function runFinalDeliveryForSession(
       tokens_used: result.tokens_used,
       contains_delivery: true,
       current_state: "delivered",
+      llm_debug: result.llm_debug,
     },
   };
 

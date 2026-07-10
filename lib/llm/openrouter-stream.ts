@@ -9,10 +9,12 @@ import {
   markOpenRouterSlugDead,
   openRouterProviderExtras,
   openRouterRequestExtras,
+  resolveOpenRouterCandidateOrder,
   type OpenRouterChatMessage,
   type OpenRouterChatOptions,
   type OpenRouterCompletionResult,
 } from "@/lib/llm/openrouter-shared";
+import { parseGenerationTimeMs, parseReasoningTokens } from "@/lib/llm/llm-debug";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
@@ -82,9 +84,22 @@ export async function openRouterChatCompletionStream(
   const apiKey = process.env.OPENROUTER_API_KEY?.trim();
   if (!apiKey) throw new Error("missing_openrouter_api_key");
 
-  return callWithRetryAndFallback((model) =>
-    openRouterChatCompletionStreamWithModel(model, options, callbacks, apiKey),
-  );
+  const candidates = resolveOpenRouterCandidateOrder();
+  let fell_back = false;
+
+  const result = await callWithRetryAndFallback(async (model) => {
+    if (model !== candidates[0]) fell_back = true;
+    return openRouterChatCompletionStreamWithModel(model, options, callbacks, apiKey);
+  });
+
+  return {
+    ...result,
+    transport: {
+      attempt: result.transport?.attempt ?? 1,
+      retried: result.transport?.retried ?? false,
+      fell_back: fell_back || Boolean(result.transport?.fell_back),
+    },
+  };
 }
 
 async function openRouterChatCompletionStreamWithModel(
@@ -154,8 +169,11 @@ async function openRouterChatCompletionStreamWithModel(
     let prompt_tokens = 0;
     let completion_tokens = 0;
     let cached_tokens = 0;
+    let reasoning_tokens = 0;
     let finish_reason: string | null = null;
     let provider: string | null = null;
+    let generation_id: string | null = null;
+    let generation_time_ms: number | null = null;
     let buffer = "";
 
     const reader = res.body.getReader();
@@ -177,6 +195,7 @@ async function openRouterChatCompletionStreamWithModel(
         }
 
         if (typeof parsed.model === "string") modelOut = parsed.model;
+        if (typeof parsed.id === "string") generation_id = parsed.id;
         if (typeof parsed.provider === "string" && parsed.provider.trim()) {
           provider = parsed.provider.trim();
         }
@@ -185,6 +204,7 @@ async function openRouterChatCompletionStreamWithModel(
           if (typeof usage.total_tokens === "number") tokens_used = usage.total_tokens;
           if (typeof usage.prompt_tokens === "number") prompt_tokens = usage.prompt_tokens;
           if (typeof usage.completion_tokens === "number") completion_tokens = usage.completion_tokens;
+          reasoning_tokens = parseReasoningTokens(usage);
           const details = usage.prompt_tokens_details as Record<string, unknown> | undefined;
           if (details && typeof details.cached_tokens === "number") {
             cached_tokens = details.cached_tokens;
@@ -192,6 +212,8 @@ async function openRouterChatCompletionStreamWithModel(
             cached_tokens = usage.native_tokens_cached;
           }
         }
+        const genMs = parseGenerationTimeMs(parsed);
+        if (genMs != null) generation_time_ms = genMs;
 
         const choice = (parsed.choices as Array<Record<string, unknown>> | undefined)?.[0];
         if (choice && typeof choice.finish_reason === "string") {
@@ -224,9 +246,17 @@ async function openRouterChatCompletionStreamWithModel(
       prompt_tokens,
       completion_tokens,
       cached_tokens,
+      reasoning_tokens,
       finish_reason,
       provider,
       reasoning: reasoning.trim() || undefined,
+      generation_id,
+      generation_time_ms,
+      transport: {
+        attempt: transportAttempt,
+        retried: false,
+        fell_back: false,
+      },
     };
   }
 

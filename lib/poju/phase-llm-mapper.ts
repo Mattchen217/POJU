@@ -1,6 +1,7 @@
 import type { AgentPhase } from "@/lib/poju/agent-state";
 import type { PhaseLLMResult } from "@/lib/llm/phases/types";
 import { normalizeAgentPhase } from "@/lib/poju/agent-state";
+import { enrichLlmDebugPhaseTransition } from "@/lib/llm/llm-debug";
 import { topicDriftDetected } from "@/lib/poju/topic-drift";
 import { applyPojuOutputPolicies } from "@/lib/poju/output-policy-pass";
 import type { POJUSessionState, PojuV4ActionRequested } from "@/lib/poju/types";
@@ -85,6 +86,15 @@ export function mapPhaseResultToChatPayload(
       undefined,
     breakthrough_core_updates: phase.breakthrough_core_updates ?? null,
     action_status_updates: phase.action_status_updates ?? undefined,
+    llm_debug: enrichLlmDebugPhaseTransition(phase.llm_debug, {
+      phase_from: ctx.fallbackPhase,
+      phase_to: suggested,
+      understanding_sufficient:
+        typeof phase.understanding_sufficient === "boolean"
+          ? phase.understanding_sufficient
+          : phase.understanding?.sufficient,
+      call_type: ctx.fallbackPhase,
+    }),
   };
 
   return applyPojuOutputPolicies(base, {

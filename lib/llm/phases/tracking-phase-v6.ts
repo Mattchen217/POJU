@@ -160,5 +160,6 @@ export async function callTrackingPhaseV6(input: PhaseLLMInput): Promise<PhaseLL
     new_cycle_question: null,
     breakthrough_core_updates,
     ...drift,
+    llm_debug: result.llm_debug,
   };
 }

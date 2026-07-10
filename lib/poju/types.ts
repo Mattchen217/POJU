@@ -51,6 +51,8 @@ export interface POJUMessage {
     thinking_process?: string;
     /** Debug panel — agent state machine flags after this turn. */
     state_snapshot?: import("@/lib/poju/agent-state-snapshot").PojuStateSnapshot;
+    /** Debug panel — OpenRouter call metrics for this turn. */
+    llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
     /** Agenda items when first built (shown below bubble, not in body). */
     investigation_agenda?: import("@/lib/poju/investigation-agenda").AgendaItem[];
     /** Collecting escalation — show refund entry (user-initiated). */
