@@ -20,6 +20,8 @@ import {
 import {
   callPhaseJsonTransport,
   formatPhaseMessageHistory,
+  getPhaseEmptyGenerationFallback,
+  isPhaseOpeningPayloadUsable,
   resolvePhaseResponse,
   withPhaseStreamOpts,
   isPhaseParseFailed,
@@ -129,28 +131,51 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
       ? resolveAgendaRelationContext(structured, inferredCategory).auditAllowlist
       : undefined;
 
-  const result = await callPhaseJsonTransport(
-    system,
-    messages,
-    withPhaseStreamOpts(input, {
-      call_type: "chat_flash",
-      temperature: 0.55,
-      max_tokens: 16_000,
-      thinking_effort: "high",
-    }),
-  );
+  const transportOpts = withPhaseStreamOpts(input, {
+    call_type: "chat_flash",
+    temperature: 0.55,
+    max_tokens: 16_000,
+    thinking_effort: "medium",
+  });
 
-  const { parsed, response } = resolvePhaseResponse(result.content, {
+  let result = await callPhaseJsonTransport(system, messages, transportOpts);
+
+  const resolveCtx = {
     locale: input.locale,
     structured,
     phase_name: "opening",
-    call_type: "chat_flash",
+    call_type: "chat_flash" as const,
     provider: result.provider ?? undefined,
     model: result.model,
     finish_reason: result.finish_reason ?? undefined,
     raw_length: result.content.length,
     audit_relations: auditRelations,
-  });
+  };
+
+  let { parsed, response } = resolvePhaseResponse(result.content, resolveCtx);
+
+  if (!isPhaseOpeningPayloadUsable(parsed, response)) {
+    console.warn("[opening-v6] unusable JSON payload — controlled retry once");
+    const retried = await callPhaseJsonTransport(system, messages, transportOpts);
+    result = retried;
+    ({ parsed, response } = resolvePhaseResponse(retried.content, {
+      ...resolveCtx,
+      provider: retried.provider ?? undefined,
+      model: retried.model,
+      finish_reason: retried.finish_reason ?? undefined,
+      raw_length: retried.content.length,
+    }));
+  }
+
+  if (!isPhaseOpeningPayloadUsable(parsed, response)) {
+    console.warn("[opening-v6] payload still unusable after retry — empty-generation fallback");
+    response = getPhaseEmptyGenerationFallback(input.locale);
+    parsed = {
+      ...parsed,
+      understanding_sufficient: false,
+      understanding: { sufficient: false, missing: "" },
+    };
+  }
 
   const understanding_sufficient =
     typeof parsed.understanding_sufficient === "boolean"

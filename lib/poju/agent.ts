@@ -660,6 +660,8 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       topic_drift_signal: llmResponse.topic_drift_signal,
       breakthrough_core_updates: llmResponse.breakthrough_core_updates ?? null,
       breakthrough_core: llmResponse.breakthrough_core ?? null,
+      core_dilemma: llmResponse.core_dilemma ?? null,
+      desired_direction: llmResponse.desired_direction ?? null,
       problem_summary: llmResponse.problem_summary ?? null,
     },
     userMessage,

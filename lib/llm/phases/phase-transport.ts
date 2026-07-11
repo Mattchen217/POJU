@@ -19,8 +19,11 @@ import {
   type OpenRouterRoutePath,
 } from "@/lib/llm/openrouter-shared";
 import {
+  isUnderstandingFieldFilled,
   parseCoreDilemmaPatch,
   parseDesiredDirectionPatch,
+  resolveCoreDilemmaRaw,
+  resolveDesiredDirectionRaw,
 } from "@/lib/poju/agent-state";
 
 export type PhaseStreamHooks = {
@@ -464,6 +467,38 @@ export function getPhaseEmptyGenerationFallback(locale?: string): string {
   return getPojuEmptyGenerationMessage(locale);
 }
 
+export function hasSalvagedUnderstandingFields(parsed: Record<string, unknown>): boolean {
+  const dilemma = parseCoreDilemmaPatch(resolveCoreDilemmaRaw(parsed));
+  const direction = parseDesiredDirectionPatch(resolveDesiredDirectionRaw(parsed));
+  const candidates = [
+    dilemma?.concrete_event,
+    dilemma?.stakes,
+    dilemma?.sticking_point,
+    direction?.wants,
+    direction?.priority,
+  ];
+  return candidates.some((v) => isUnderstandingFieldFilled(v));
+}
+
+/** Opening turn is usable when JSON parsed cleanly, or salvage recovered understanding/response field. */
+export function isPhaseOpeningPayloadUsable(
+  parsed: Record<string, unknown>,
+  response: string,
+): boolean {
+  if (isPojuFailurePlaceholderMessage(response)) return false;
+  if (!response.trim()) return false;
+  if (!isPhaseParseFailed(parsed)) return true;
+  if (parsed._prose_salvaged === true) return hasSalvagedUnderstandingFields(parsed);
+  if (hasSalvagedUnderstandingFields(parsed)) return true;
+  const jsonSalvagedResponse =
+    typeof parsed.response === "string" && parsed.response.trim() === response.trim();
+  return jsonSalvagedResponse;
+}
+
+export function getPhaseParseFailureFallback(locale?: string): string {
+  return getPhaseEmptyGenerationFallback(locale);
+}
+
 /** Parse phase JSON; sanitize `response` when locale provided (output-side gloss tokens). */
 export function parsePhaseResult(
   rawText: string,
@@ -506,12 +541,13 @@ export function parsePhaseResult(
   } else if (salvagedRaw) {
     response = sanitizeResponse(salvagedRaw);
     if (!jsonParsed) {
+      parsed._prose_salvaged = true;
       logPhaseSalvage(rawText, options?.logContext, salvagedRaw.startsWith("{") ? "partial_json" : "prose");
     }
   }
 
   if (isPhaseParseFailed(parsed) && !response.trim()) {
-    response = getPhaseResponseFallback(options?.locale);
+    // Defer to resolvePhaseResponse — broken JSON uses empty-generation copy, not busy fallback.
   }
 
   if (typeof parsed.response === "string") parsed.response = response;
@@ -633,7 +669,10 @@ export function resolvePhaseResponse(
     else if (response) parsed.response = response;
   }
 
-  if (response.trim()) {
+  const openingUnusable =
+    ctx.phase_name === "opening" && response.trim() && !isPhaseOpeningPayloadUsable(parsed, response);
+
+  if (response.trim() && !openingUnusable) {
     const violations = auditPhaseChatCompliance(response, ctx.locale ?? "en", ctx.structured, {
       relations: ctx.audit_relations,
     });
@@ -647,14 +686,27 @@ export function resolvePhaseResponse(
     return { parsed, response, used_fallback: false, compliance_failed: false };
   }
 
+  if (openingUnusable) {
+    response = "";
+  }
+
   if (ctx.use_fallback === false) {
     return { parsed, response: "", used_fallback: false, compliance_failed: false };
   }
   const emptyBody = rawText.trim().length === 0;
+  const parseFailed = isPhaseParseFailed(parsed);
+  const salvagedUnderstanding = hasSalvagedUnderstandingFields(parsed);
+  const useEmptyGeneration =
+    emptyBody ||
+    openingUnusable ||
+    (parseFailed && !response.trim() && !salvagedUnderstanding) ||
+    (ctx.phase_name === "opening" && parseFailed && !salvagedUnderstanding);
   logPhaseResponseFallback(rawText, { ...ctx, raw_length: rawText.length });
   return {
     parsed,
-    response: emptyBody ? getPhaseEmptyGenerationFallback(ctx.locale) : getPhaseResponseFallback(ctx.locale),
+    response: useEmptyGeneration
+      ? getPhaseEmptyGenerationFallback(ctx.locale)
+      : getPhaseResponseFallback(ctx.locale),
     used_fallback: true,
     compliance_failed: false,
   };

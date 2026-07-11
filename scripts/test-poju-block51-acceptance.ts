@@ -28,11 +28,9 @@ function assert(label: string, ok: boolean): void {
 function main(): void {
   console.log("\n=== Block 51 acceptance ===\n");
 
-  // Fix 1 — effort tiers: opening high / conversion xhigh; core + delivery xhigh
+  // Fix 1 — effort tiers: opening medium (stable JSON); core + delivery xhigh
   const openingSrc = read("lib/llm/phases/opening-phase-v6.ts");
-  assert("opening-phase-v6 uses high default", openingSrc.includes('"high"'));
-  assert("opening-phase-v6 conversion xhigh branch", openingSrc.includes('openingConversionRound ? "xhigh" : "high"'));
-  assert("opening-phase-v6 uses shouldForceConverge", openingSrc.includes("shouldForceConverge"));
+  assert("opening-phase-v6 uses medium for understanding", openingSrc.includes('thinking_effort: "medium"'));
   assert("breakthrough-core route xhigh", read("app/api/poju/breakthrough-core/route.ts").includes('thinking_effort: "xhigh"'));
   const finalRoute = read("app/api/poju/final-delivery/route.ts");
   assert("final-delivery route xhigh", finalRoute.includes('thinking_effort: "xhigh"'));
@@ -46,8 +44,8 @@ function main(): void {
     read("app/api/poju/breakthrough-core/route.ts").includes("CORE_MAX_TOKENS_RETRY = 24_000"),
   );
   assert(
-    "opening conversion max_tokens 20000",
-    openingSrc.includes("openingConversionRound ? 20_000 : 16_000"),
+    "opening retry on unusable JSON",
+    openingSrc.includes("isPhaseOpeningPayloadUsable"),
   );
   assert(
     "phase-transport default high",
