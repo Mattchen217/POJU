@@ -60,6 +60,13 @@ export default function PojuSessionDeepLinkPage() {
       return;
     }
 
+    const { backfillSessionProfileBinding } = await import("@/lib/poju/session-profile");
+    const backfilled = backfillSessionProfileBinding(local);
+    if (backfilled !== local) {
+      local = backfilled;
+      await savePOJUSession(local);
+    }
+
     if (!resolveSessionHasProfile(local)) {
       router.replace(`/poju/session/${sessionId}/prepare`);
       return;

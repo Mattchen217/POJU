@@ -14,11 +14,26 @@ export function isValidStoredProfileId(id: string | null | undefined): boolean {
   return typeof id === "string" && STORED_PROFILE_UUID_RE.test(id.trim());
 }
 
-/** True only when this session explicitly bound a stored profile or in-session birth submit. */
+/** True when this session explicitly bound a stored profile or in-session birth submit. */
 export function resolveSessionHasProfile(session: POJUSessionState): boolean {
-  if (isValidStoredProfileId(session.selected_stored_profile_id)) return true;
+  const sid = session.selected_stored_profile_id?.trim();
+  if (sid && sid.length > 0) return true;
   if (session.birth_submitted_in_session) return true;
+  const agentSid = session.agent_v2?.selected_profile_id?.trim();
+  if (agentSid && agentSid.length > 0) return true;
+  if (session.agent_v2?.has_base_analysis === true) return true;
   return false;
+}
+
+/** Backfill standard session field when profile id only lives on agent_v2 (legacy rows). */
+export function backfillSessionProfileBinding(session: POJUSessionState): POJUSessionState {
+  const stored = session.selected_stored_profile_id?.trim();
+  if (stored) return session;
+  const agentSid = session.agent_v2?.selected_profile_id?.trim();
+  if (agentSid) {
+    return { ...session, selected_stored_profile_id: agentSid };
+  }
+  return session;
 }
 
 /** Sync legacy `has_profile` flag with resolver (call after profile bind). */
@@ -26,7 +41,7 @@ export function withSessionProfileFlags(
   session: POJUSessionState,
   patch?: Partial<Pick<POJUSessionState, "selected_stored_profile_id" | "birth_submitted_in_session" | "profile_skipped">>,
 ): POJUSessionState {
-  const merged = { ...session, ...patch };
+  const merged = backfillSessionProfileBinding({ ...session, ...patch });
   return {
     ...merged,
     has_profile: resolveSessionHasProfile(merged),
@@ -40,9 +55,9 @@ export async function loadSessionUserProfile(session: POJUSessionState): Promise
 
 function resolveStoredProfileIdForSession(session: POJUSessionState): string | null {
   const sid = session.selected_stored_profile_id?.trim();
-  if (isValidStoredProfileId(sid)) return sid!;
+  if (sid && sid.length > 0) return sid;
   const agentSid = session.agent_v2?.selected_profile_id?.trim();
-  if (isValidStoredProfileId(agentSid)) return agentSid!;
+  if (agentSid && agentSid.length > 0) return agentSid;
   return null;
 }
 
@@ -59,17 +74,20 @@ export async function loadSessionProfileBundle(session: POJUSessionState): Promi
   base_analysis: unknown | null;
 }> {
   if (!resolveSessionHasProfile(session)) return { profile: null, base_analysis: null };
-  const sid = session.selected_stored_profile_id?.trim();
-  if (isValidStoredProfileId(sid)) {
-    const data = await getStoredProfile(sid!);
+
+  const profileId = resolveStoredProfileIdForSession(session);
+  if (profileId) {
+    const data = await getStoredProfile(profileId);
     return {
       profile: data?.user_profile ?? null,
       base_analysis: data?.base_analysis ?? null,
     };
   }
+
   if (session.birth_submitted_in_session) {
     const base_analysis = await loadStoredBaseAnalysis(session);
     return { profile: await getUserProfile(), base_analysis };
   }
+
   return { profile: null, base_analysis: null };
 }

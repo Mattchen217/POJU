@@ -231,6 +231,7 @@ function finalizeAgentV2(
   },
   userMessage: string,
   isSystemMessage: boolean,
+  loadedBaseAnalysis?: unknown | null,
 ): { agent: POJUAgentState; advance: AdvanceResult } {
   const flat = llm.context_updates ?? {};
   const agendaStatusUpdates = extractAgendaStatusUpdates(flat);
@@ -342,7 +343,11 @@ function finalizeAgentV2(
     merged = { ...merged, opening_substantive_turns: substantiveOpeningTurns };
   }
 
-  const baseAnalysisReady = Boolean(merged.has_base_analysis || resolveSessionHasProfile(session));
+  const baseAnalysisReady = Boolean(
+    merged.has_base_analysis ||
+    resolveSessionHasProfile(session) ||
+    loadedBaseAnalysis != null,
+  );
   const openingProblem =
     llm.problem_summary?.trim() || extractOpeningProblem(session.messages);
 
@@ -650,6 +655,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     },
     userMessage,
     isSystemMessage,
+    base_analysis,
   );
   let agent_v2: POJUAgentState = { ...agentCore, actions: mergedActions };
 
