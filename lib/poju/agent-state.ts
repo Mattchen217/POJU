@@ -348,13 +348,102 @@ function hasUnderstandingFieldDraft(s?: string | null): boolean {
   return Boolean(s && s.trim().length > 0);
 }
 
+function normalizePatchKey(k: string): string {
+  return k
+    .toLowerCase()
+    .replace(/[\s"'""''`、]/g, "")
+    .replace(/[^\w\u4e00-\u9fff]/g, "");
+}
+
+/** Fuzzy field pick — tolerates translated / corrupted JSON keys (e.g. w蚂蚁, 行动). */
+export function pickUnderstandingPatchField(
+  o: Record<string, unknown>,
+  aliases: readonly string[],
+  opts?: { keyPrefix?: string },
+): string | undefined {
+  for (const k of Object.keys(o)) {
+    const norm = normalizePatchKey(k);
+    for (const alias of aliases) {
+      const want = normalizePatchKey(alias);
+      if (!want) continue;
+      if (norm === want || norm.includes(want) || want.includes(norm)) {
+        const v = o[k];
+        if (typeof v === "string" && v.trim()) return v.trim();
+      }
+    }
+  }
+  if (opts?.keyPrefix) {
+    const prefix = normalizePatchKey(opts.keyPrefix);
+    for (const k of Object.keys(o)) {
+      const norm = normalizePatchKey(k);
+      if (norm.startsWith(prefix)) {
+        const v = o[k];
+        if (typeof v === "string" && v.trim()) return v.trim();
+      }
+    }
+  }
+  return undefined;
+}
+
+const CONCRETE_EVENT_ALIASES = ["concrete_event", "concreteevent", "具体事件", "事件", "event", "发生了什么"];
+const STAKES_ALIASES = ["stakes", "利害", "在乎", "害怕失去", "怕失去", "代价"];
+const STICKING_POINT_ALIASES = ["sticking_point", "stickingpoint", "卡点", "过不去", "阻碍", "卡在哪"];
+const WANTS_ALIASES = ["wants", "想要", "想要价值", "行动", "方向", "desired", "期望", "希望"];
+const PRIORITY_ALIASES = ["priority", "priorities", "优先", "优先级", "最在意", "首要"];
+
+const DILEMMA_CONTAINER_ALIASES = ["core_dilemma", "coredilemma", "dilemma", "困境", "核心困境"];
+const DIRECTION_CONTAINER_ALIASES = ["desired_direction", "desireddirection", "direction", "期望方向", "行动", "目标方向"];
+
+/** Locate core_dilemma object even when parent key was translated. */
+export function resolveCoreDilemmaRaw(root: Record<string, unknown>): unknown {
+  const direct = root.core_dilemma;
+  if (direct && typeof direct === "object" && !Array.isArray(direct)) return direct;
+  for (const k of Object.keys(root)) {
+    const norm = normalizePatchKey(k);
+    if (
+      DILEMMA_CONTAINER_ALIASES.some((a) => {
+        const want = normalizePatchKey(a);
+        return norm === want || norm.includes(want) || want.includes(norm);
+      })
+    ) {
+      const v = root[k];
+      if (v && typeof v === "object" && !Array.isArray(v)) return v;
+    }
+  }
+  if (parseCoreDilemmaPatch(root)) return root;
+  return null;
+}
+
+/** Locate desired_direction object even when parent key was translated (e.g. "行动"). */
+export function resolveDesiredDirectionRaw(root: Record<string, unknown>): unknown {
+  const direct = root.desired_direction;
+  if (direct && typeof direct === "object" && !Array.isArray(direct)) return direct;
+  for (const k of Object.keys(root)) {
+    const norm = normalizePatchKey(k);
+    if (
+      DIRECTION_CONTAINER_ALIASES.some((a) => {
+        const want = normalizePatchKey(a);
+        return norm === want || norm.includes(want) || want.includes(norm);
+      })
+    ) {
+      const v = root[k];
+      if (v && typeof v === "object" && !Array.isArray(v)) return v;
+    }
+  }
+  if (parseDesiredDirectionPatch(root)) return root;
+  return null;
+}
+
 export function parseCoreDilemmaPatch(raw: unknown): Partial<CoreDilemma> | null {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
   const o = raw as Record<string, unknown>;
   const out: Partial<CoreDilemma> = {};
-  for (const key of ["concrete_event", "stakes", "sticking_point"] as const) {
-    if (typeof o[key] === "string" && o[key].trim()) out[key] = o[key].trim();
-  }
+  const concrete_event = pickUnderstandingPatchField(o, CONCRETE_EVENT_ALIASES);
+  const stakes = pickUnderstandingPatchField(o, STAKES_ALIASES);
+  const sticking_point = pickUnderstandingPatchField(o, STICKING_POINT_ALIASES);
+  if (concrete_event) out.concrete_event = concrete_event;
+  if (stakes) out.stakes = stakes;
+  if (sticking_point) out.sticking_point = sticking_point;
   return Object.keys(out).length > 0 ? out : null;
 }
 
@@ -362,9 +451,10 @@ export function parseDesiredDirectionPatch(raw: unknown): Partial<DesiredDirecti
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
   const o = raw as Record<string, unknown>;
   const out: Partial<DesiredDirection> = {};
-  for (const key of ["wants", "priority"] as const) {
-    if (typeof o[key] === "string" && o[key].trim()) out[key] = o[key].trim();
-  }
+  const wants = pickUnderstandingPatchField(o, WANTS_ALIASES, { keyPrefix: "w" });
+  const priority = pickUnderstandingPatchField(o, PRIORITY_ALIASES, { keyPrefix: "p" });
+  if (wants) out.wants = wants;
+  if (priority) out.priority = priority;
   return Object.keys(out).length > 0 ? out : null;
 }
 
@@ -428,6 +518,19 @@ export function getUnderstandingMissingFields(state: POJUAgentState): string[] {
   if (!dir || !isUnderstandingFieldFilled(dir.wants)) missing.push("desired_direction.wants");
   if (!dir || !isUnderstandingFieldFilled(dir.priority)) missing.push("desired_direction.priority");
   return missing;
+}
+
+/** Softer gate for opening ceiling — accumulated dilemma + direction have substance (not all 5 fields). */
+export function hasSubstantiveDilemmaAndDirection(
+  state: Pick<POJUAgentState, "core_dilemma" | "desired_direction">,
+): boolean {
+  const d = state.core_dilemma;
+  const dir = state.desired_direction;
+  const dilemmaCount = [d?.concrete_event, d?.stakes, d?.sticking_point].filter((v) =>
+    isUnderstandingFieldFilled(v),
+  ).length;
+  const directionCount = [dir?.wants, dir?.priority].filter((v) => isUnderstandingFieldFilled(v)).length;
+  return dilemmaCount >= 2 && directionCount >= 1;
 }
 
 export function formatSegment1UnderstandingForPrompt(state: POJUAgentState): string {

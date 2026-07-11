@@ -13,6 +13,8 @@ import {
   normalizeAgentPhase,
   parseCoreDilemmaPatch,
   parseDesiredDirectionPatch,
+  resolveCoreDilemmaRaw,
+  resolveDesiredDirectionRaw,
   type AgentPhase,
 } from "@/lib/poju/agent-state";
 import {
@@ -59,6 +61,11 @@ response: "给用户看的追问/承接（仅此字段对用户可见）"
   "你最希望这件事往哪个方向走？" / "如果能改变，你最想改变的是哪一点？"
 - 子要素未齐备前，继续追问，不推进、不下命理结论。
 - \`understanding_sufficient\` 仅作你的自评参考；**后端放行只看字段实质齐备**。
+
+## 输出格式（硬约束 · 键名不可翻译）
+输出【必须】是严格 JSON：所有键名用【英文小写】原样，用标准 ASCII 双引号 \`"\`，不得翻译键名、不得用中文引号、不得截断。
+严格按此模板填值（值可用中文，键名不可变）：
+\`{"understanding_sufficient":false,"core_dilemma":{"concrete_event":"","stakes":"","sticking_point":""},"desired_direction":{"wants":"","priority":""},"response":""}\`
 
 ## 博弈准则（像老师，不像审讯）
 - **一句话只给话题、不给困境** → 继续问一层。
@@ -164,11 +171,11 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
 
   const core_dilemma = mergeCoreDilemma(
     input.agent_state?.core_dilemma ?? null,
-    parseCoreDilemmaPatch(parsed.core_dilemma),
+    parseCoreDilemmaPatch(resolveCoreDilemmaRaw(parsed)),
   );
   const desired_direction = mergeDesiredDirection(
     input.agent_state?.desired_direction ?? null,
-    parseDesiredDirectionPatch(parsed.desired_direction),
+    parseDesiredDirectionPatch(resolveDesiredDirectionRaw(parsed)),
   );
   const understandingStructComplete = isUnderstandingComplete({
     core_dilemma,

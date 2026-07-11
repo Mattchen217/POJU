@@ -336,10 +336,13 @@ function finalizeAgentV2(
   const stallOffer = Boolean((llm as { stall_offer?: boolean }).stall_offer);
 
   const userTurns = countUserTurns(session);
+  const substantiveOpeningTurns = countSubstantiveOpeningTurns(session.messages);
   merged = { ...merged, turn_count: userTurns };
+  if ((normalizeAgentPhase(base.current_phase) ?? base.current_phase) === "opening") {
+    merged = { ...merged, opening_substantive_turns: substantiveOpeningTurns };
+  }
 
   const baseAnalysisReady = Boolean(merged.has_base_analysis || resolveSessionHasProfile(session));
-  const substantiveOpeningTurns = countSubstantiveOpeningTurns(session.messages);
   const openingProblem =
     llm.problem_summary?.trim() || extractOpeningProblem(session.messages);
 

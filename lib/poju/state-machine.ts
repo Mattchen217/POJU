@@ -10,6 +10,7 @@ import {
   type POJUAgentState,
   createInitialAgentState,
   getUnderstandingMissingFields,
+  hasSubstantiveDilemmaAndDirection,
   isUnderstandingComplete,
 } from "@/lib/poju/agent-state";
 import type { POJUSessionState } from "@/lib/poju/types";
@@ -196,24 +197,37 @@ export function advanceStateMachine(
   switch (state) {
     case "opening": {
       const structComplete = isUnderstandingComplete(agent);
-      const canAdvance =
-        structComplete &&
-        signals.base_analysis_ready === true &&
-        userInput.trim() &&
-        userInput !== "__OPENING__";
+      const turns = signals.substantive_opening_turns ?? agent.opening_substantive_turns ?? 0;
+      const overCeiling = turns >= OPENING_MAX_SUBSTANTIVE_TURNS;
+      const hasInput = Boolean(userInput.trim() && userInput !== "__OPENING__");
+      const baseReady = signals.base_analysis_ready === true;
 
-      if (canAdvance) {
+      const canAdvance = structComplete && baseReady && hasInput;
+      const forceAdvance =
+        !canAdvance && baseReady && hasInput && overCeiling && hasSubstantiveDilemmaAndDirection(agent);
+
+      if (canAdvance || forceAdvance) {
         const lockedQuestion =
           signals.opening_problem_statement?.trim() || userInput.trim();
         next = { ...agent, original_question: lockedQuestion };
         nextState = "collecting_context";
         triggerCore = true;
-        transitionReason = "Understanding structure complete, entering collection";
+        transitionReason = canAdvance
+          ? "Understanding structure complete, entering collection"
+          : "Opening ceiling reached, accumulated fields substantive — force advance";
+        if (forceAdvance) {
+          console.info("[poju-gate] opening ceiling force advance", {
+            turns,
+            missing: getUnderstandingMissingFields(agent),
+          });
+        }
       } else if (signals.understanding_sufficient === true && !structComplete) {
         transitionReason =
           "Model reported sufficient but understanding structure incomplete (control plane blocked)";
         console.info("[poju-gate] blocked opening→collecting", {
           model_sufficient: true,
+          turns,
+          over_ceiling: overCeiling,
           missing: getUnderstandingMissingFields(agent),
         });
       }
