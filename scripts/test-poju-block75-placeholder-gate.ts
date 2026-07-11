@@ -56,9 +56,7 @@ function main(): void {
   assert("placeholder drafts stored in merge", merged.core_dilemma?.sticking_point?.includes("尚未明确") === true);
   assert("struct incomplete with placeholders", !isUnderstandingComplete(merged));
 
-  assert("opening canRunConversion guard", opening.includes("canRunConversion"));
-  assert("false skips conversion", opening.includes("understanding_sufficient !== false"));
-  assert("false branch shows follow-up", opening.includes("skip conversion, show follow-up"));
+  assert("block75 opening no conversion guard", !read("lib/llm/phases/opening-phase-v6.ts").includes("canRunConversion"));
 
   console.log("\n========================================\n");
   if (failures.length) {

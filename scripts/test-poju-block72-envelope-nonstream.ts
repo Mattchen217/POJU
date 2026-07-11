@@ -1,5 +1,5 @@
 /**
- * Block 72 — conversion envelope orphan suppression + chat non-stream transport
+ * Block 72 — opening non-stream + segment split (conversion removed from opening)
  *
  *   pnpm exec tsx scripts/test-poju-block72-envelope-nonstream.ts
  */
@@ -25,12 +25,12 @@ function main(): void {
   console.log("\n========== POJU Block 72 · Envelope + non-stream ==========\n");
 
   const opening = read("lib/llm/phases/opening-phase-v6.ts");
-  assert("A1 sufficient=true hard constraint in prompt", opening.includes("understanding_sufficient=true 硬约束"));
-  assert("A2 suppress orphan on envelope fail", opening.includes('response = ""'));
-  assert("A2 conversion_envelope_failed flag", opening.includes("conversion_envelope_failed"));
+  assert("opening no conversion side door", !opening.includes("parseOpeningConversionPayload"));
+  assert("opening segment2 deferred", opening.includes("segment2_deferred"));
 
   const agent = read("lib/poju/agent.ts");
-  assert("A2 buildCollectingTransitionReplyFromCore used", agent.includes("buildCollectingTransitionReplyFromCore"));
+  assert("agent buildCollectingTransitionReplyFromCore after segment2", agent.includes("buildCollectingTransitionReplyFromCore"));
+  assert("agent segment2 independent trigger", agent.includes("segment-2 breakthrough-core"));
   assert("client no longer passes onStream", !agent.includes("onStream?:"));
 
   const transport = read("lib/llm/phases/phase-transport.ts");

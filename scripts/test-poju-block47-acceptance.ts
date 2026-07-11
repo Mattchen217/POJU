@@ -33,8 +33,8 @@ function main(): void {
   assert("prompt asks first agenda question in response", base.includes("investigation_agenda 的第一项"));
 
   const agent = read("lib/poju/agent.ts");
-  assert("inline core path", agent.includes("conversion envelope supplied core + agenda"));
-  assert("ensureBreakthroughCore only fallback", agent.includes("inlineCoreReady"));
+  assert("v6 opening no inline conversion", !read("lib/llm/phases/opening-phase-v6.ts").includes("parseOpeningConversionPayload"));
+  assert("segment2 always via ensureBreakthroughCore", agent.includes("segment-2 breakthrough-core"));
   assert("Block 41 append removed", !agent.includes("appendFirstFocusQuestion"));
 
   const sm = read("lib/poju/state-machine.ts");

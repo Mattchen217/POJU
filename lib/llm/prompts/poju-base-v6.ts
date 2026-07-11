@@ -76,11 +76,11 @@ export const POJU_V6_TERM_SELECTION_DISCIPLINE = `# 命理事实选择纪律（B
 - **轮换递进**：已在本场点透的切面（见 turnContext「已锚定命理事实」）禁止再展开；每轮带【新切面】或新追问角度。
 - **优先读「优先锚定这些」**：该块随用户最新输入偏移；先从未用过的定向项里选，再回落实例清单。`;
 
-export const POJU_V6_OPENING_DUTY = `【opening 职责很窄：只摸清"核心困境 + 期望方向"，不做深度诊断】
+export const POJU_V6_OPENING_DUTY = `【opening 职责很窄：只摸清"核心困境 + 期望方向"，不做深度诊断、不生成议程】
 - 每轮增量填写 \`core_dilemma\`（concrete_event / stakes / sticking_point）与 \`desired_direction\`（wants / priority）。
 - **必须主动问期望方向**——用户常只诉苦不说想要什么。
-- 子要素全部非空后后端才放行；\`understanding_sufficient\` 仅作自评参考。
-- 一切需要深挖的诊断性问题，都属于【下一阶段的议程】——会在推进后边给洞见边问，不在 opening 做。`;
+- 子要素全部有实质内容后后端才放行；关系结论/破局/议程由第2段 breakthrough-core 独立 xhigh 生成。
+- \`understanding_sufficient\` 仅作自评参考。`;
 
 /* ════════════════════════════════════════════════════════════════════
  * System 层 · 硬合规红线（任何阶段不可跨越 · 与 v5 对齐）

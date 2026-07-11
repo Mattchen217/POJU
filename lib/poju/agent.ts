@@ -655,46 +655,33 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   }
 
   if (advance.trigger_breakthrough_core) {
-    const inlineCoreReady =
-      agent_v2.breakthrough_core != null && (agent_v2.investigation_agenda?.length ?? 0) > 0;
-    if (inlineCoreReady) {
-      console.info("[agent] conversion envelope supplied core + agenda (single call)");
-    } else {
-      console.warn(
-        "[agent] inline envelope missing — fallback breakthrough-core (2nd model call)",
+    console.info("[agent] segment-2 breakthrough-core (post-gate, independent xhigh)");
+    try {
+      const freshQuestion =
+        agent_v2.original_question?.trim() ||
+        llmResponse.problem_summary?.trim() ||
+        extractOpeningProblem(sessionForAgent.messages) ||
+        resolveOriginalQuestion(agent_v2, phaseUserMessage);
+      const withQ = { ...agent_v2, original_question: freshQuestion };
+      const coreResult = await ensureBreakthroughCore(
+        {
+          ...sessionForAgent,
+          original_question: freshQuestion,
+          agent_v2: { ...withQ, current_phase: "collecting_context" },
+        },
+        locale,
       );
-      try {
-        const freshQuestion =
-          agent_v2.original_question?.trim() ||
-          llmResponse.problem_summary?.trim() ||
-          extractOpeningProblem(sessionForAgent.messages) ||
-          resolveOriginalQuestion(agent_v2, phaseUserMessage);
-        const withQ = { ...agent_v2, original_question: freshQuestion };
-        const coreResult = await ensureBreakthroughCore(
-          {
-            ...sessionForAgent,
-            original_question: freshQuestion,
-            agent_v2: { ...withQ, current_phase: "collecting_context" },
-          },
-          locale,
-        );
-        const coreReady = coreResult.agent_v2?.breakthrough_core != null;
-        if (coreReady) {
-          agent_v2 = { ...coreResult.agent_v2!, actions: mergedActions };
-        } else {
-          agent_v2 = { ...agent_v2, current_phase: "opening" };
-        }
-      } catch (e) {
-        console.warn("[agent] breakthrough-core fallback failed, staying in opening:", e);
+      const coreReady = coreResult.agent_v2?.breakthrough_core != null;
+      if (coreReady) {
+        agent_v2 = { ...coreResult.agent_v2!, actions: mergedActions };
+      } else {
         agent_v2 = { ...agent_v2, current_phase: "opening" };
       }
+    } catch (e) {
+      console.warn("[agent] breakthrough-core failed, staying in opening:", e);
+      agent_v2 = { ...agent_v2, current_phase: "opening" };
     }
   }
-
-  const inlineEnvelopeFromOpening =
-    Boolean(llmResponse.breakthrough_core) &&
-    Array.isArray(llmResponse.investigation_agenda) &&
-    llmResponse.investigation_agenda.length > 0;
 
   let finalContent = llmResponse.response;
 
@@ -706,11 +693,9 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   const envelopeFailedStayedOpening =
     advance.trigger_breakthrough_core && phaseAfter === "opening";
 
-  if (justConverted && !inlineEnvelopeFromOpening) {
+  if (justConverted) {
     finalContent = buildCollectingTransitionReplyFromCore(agent_v2, locale);
-  } else if (llmResponse.conversion_envelope_failed && envelopeFailedStayedOpening) {
-    finalContent = envelopeCoreFallbackRetryHint(locale);
-  } else if (llmResponse.conversion_envelope_failed && !finalContent.trim()) {
+  } else if (envelopeFailedStayedOpening && !finalContent.trim()) {
     finalContent = envelopeCoreFallbackRetryHint(locale);
   }
 

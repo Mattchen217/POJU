@@ -413,13 +413,20 @@ export type PhaseResponseResolveContext = {
   audit_relations?: RelationLabel[];
 };
 
+/** User-visible text for compliance logging — never include reasoning drafts. */
+function userVisibleComplianceText(rawText: string, response: string): string {
+  const visible = response.trim();
+  if (visible) return visible;
+  return rawText.trim();
+}
+
 /** Log compliance violations — alert only, never mutates response. */
 function logPhaseComplianceViolation(
-  rawText: string,
+  complianceTarget: string,
   ctx: PhaseResponseResolveContext,
   violations: Array<{ label: string; snippet?: string }>,
 ): void {
-  const preview = rawText.replace(/\s+/g, " ").trim().slice(0, 400);
+  const preview = complianceTarget.replace(/\s+/g, " ").trim().slice(0, 400);
   console.warn(
     "[phase-transport] phase response compliance alert",
     JSON.stringify({
@@ -429,7 +436,7 @@ function logPhaseComplianceViolation(
       model: ctx.model ?? "—",
       finish_reason: ctx.finish_reason ?? "—",
       violations: violations.slice(0, 6).map((v) => v.label),
-      raw_preview: preview,
+      content_preview: preview,
     }),
   );
 }
@@ -447,7 +454,7 @@ export const logPhaseComplianceFailure = logPhaseComplianceAlert;
 
 /** Log when user-visible fallback copy is shown — includes supplier + finish_reason for triage. */
 export function logPhaseResponseFallback(rawText: string, ctx: PhaseResponseResolveContext): void {
-  const preview = rawText.replace(/\s+/g, " ").trim().slice(0, 400);
+  const preview = userVisibleComplianceText(rawText, "").replace(/\s+/g, " ").trim().slice(0, 400);
   console.warn(
     "[phase-transport] phase response fallback triggered",
     JSON.stringify({
@@ -491,7 +498,11 @@ export function resolvePhaseResponse(
       relations: ctx.audit_relations,
     });
     if (violations.length > 0) {
-      logPhaseComplianceAlert(rawText, { ...ctx, raw_length: rawText.length }, violations);
+      logPhaseComplianceAlert(
+        userVisibleComplianceText(rawText, response),
+        { ...ctx, raw_length: response.length },
+        violations,
+      );
     }
     return { parsed, response, used_fallback: false, compliance_failed: false };
   }

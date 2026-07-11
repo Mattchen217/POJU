@@ -202,7 +202,7 @@ export async function buildPhaseTurnContextV6(
   const forceConvergeBlock =
     input.agent_state?.current_phase === "opening" &&
     shouldForceConverge(substantiveOpeningTurns, baseAnalysisReady)
-      ? `【控制面指令 · 本轮必须收敛】你已通过前几轮充分掌握了核心困境与期望方向。本轮必须填齐 core_dilemma + desired_direction 全部子字段，并一次产出完整 envelope（关系结论+破局方向+议程+首问），不再追问。`
+      ? `【控制面指令 · 本轮必须收敛】你已通过前几轮充分掌握了核心困境与期望方向。本轮必须填齐 core_dilemma + desired_direction 全部实质子字段（禁止"尚未明确"占位），只输出 response 追问或承接——议程由第2段独立生成。`
       : "";
 
   const agendaCatchupBlock =

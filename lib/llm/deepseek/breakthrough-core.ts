@@ -3,7 +3,11 @@
  * LLM 走 `POST /api/poju/breakthrough-core`；结果写入 `agent_v2.breakthrough_core` + `investigation_agenda`。
  */
 
-import type { BreakthroughCore, POJUAgentState } from "@/lib/poju/agent-state";
+import {
+  formatSegment1UnderstandingForPrompt,
+  type BreakthroughCore,
+  type POJUAgentState,
+} from "@/lib/poju/agent-state";
 import { formatContextForPrompt } from "@/lib/poju/context-extractor";
 import { parseInvestigationAgenda, type AgendaItem } from "@/lib/poju/investigation-agenda";
 import type { POJUSessionState } from "@/lib/poju/types";
@@ -69,6 +73,20 @@ export const DEEP_RECKONING_TASK = `# 角色：破局总设计师（上帝视角
 - relationship_conclusion：3–5 句，只写结构性原因，不注水。
 - 每条 direction.structural_basis：一句话点命盘锚点，禁止段落式复述。
 - investigation_agenda：3–4 项即可；每项 label ≤20 字，锐而短，直指验证目标。
+
+# 第1段靶心（硬要求 · 必须显式扣住）
+输入中会提供 core_dilemma（concrete_event / stakes / sticking_point）与 desired_direction（wants / priority）。
+relationship_conclusion 与每条 breakthrough_direction 必须显式对准【他的那件事 + 他想要的方向】，
+不许只复述日主/食神/流年三个泛化标签。
+structural_basis 必须从实例清单【点名至少 3 项具体本地数据】（神煞实例 / 大运当前步 / 流年引动 / 十神张力 / 本命关系等），
+逐项说明它们如何作用于 core_dilemma 与 desired_direction。
+
+# reasoning vs content（硬要求 · 真算但合规）
+- **reasoning（思考过程）**：可自由使用裸命理术语深算（食神/大运/身弱/日主等），合规不检查 reasoning。
+- **输出 JSON 各字符串字段**（relationship_conclusion / direction.* / agenda.label）：
+  凡引用命理概念，必须打标 ⟦t:<id>|<该情景软译>|<对他这件事的白话解释>⟧。
+  例：⟦t:zheng_guan|规则与约束|你现在面对的"新标准、数字化考核"，就是那股约束你的外部力量⟧
+  reasoning 里可裸写；JSON 字段一旦引用命理词，必须打标（UI 渲染前 autoMarkBareTerms 会兜底补漏）。
 
 # 输出（严格 JSON，无围栏，内部推理用中文；此输出不直接给用户看）
 {
@@ -166,7 +184,12 @@ export function buildBreakthroughCorePrompt(input: {
     DEEP_RECKONING_TASK,
   );
 
+  const segment1 = agent_v2 ? formatSegment1UnderstandingForPrompt(agent_v2) : "（第1段理解门字段尚未写入。）";
+
   const user = `【locale】${locale}
+
+【第1段理解门产出（推演靶心 · 必须显式扣住）】
+${segment1}
 
 【命主基础分析（节选/全文）】
 ${baseStr}

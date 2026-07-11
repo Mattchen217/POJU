@@ -1,7 +1,8 @@
 /**
- * POJU v6 Shadow — opening 阶段（理解门 · taskBlock 注入 user 侧）。
+ * POJU v6 Shadow — opening 阶段（理解门 · 第1段 · taskBlock 注入 user 侧）。
  *
  * ⚠️ 影子实现，不替换 opening-phase.ts。
+ * 第1段只做理解；关系结论/破局/议程由控制面放行后 breakthrough-core 独立生成（第2段）。
  */
 
 import {
@@ -14,8 +15,6 @@ import {
   parseDesiredDirectionPatch,
   type AgentPhase,
 } from "@/lib/poju/agent-state";
-import { countSubstantiveOpeningTurns } from "@/lib/poju/agent";
-import { shouldForceConverge } from "@/lib/poju/state-machine";
 import {
   callPhaseJsonTransport,
   formatPhaseMessageHistory,
@@ -27,7 +26,6 @@ import type { PojuV4ActionRequested } from "@/lib/poju/types";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
 import { buildPhaseTransportInputV6 } from "@/lib/llm/phases/oriental-prompt-context-v6";
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
-import { parseOpeningConversionPayload } from "@/lib/poju/opening-conversion-payload";
 import { POJU_V6_OPENING_DUTY } from "@/lib/llm/prompts/poju-base-v6";
 import { extractQuestionCategory } from "@/lib/poju/context-extractor";
 import {
@@ -53,37 +51,25 @@ desired_direction: {
   wants: "他【期望】解决成什么样 / 想要什么",
   priority: "他最在意的那一点 / 想优先往哪走"
 }
+response: "给用户看的追问/承接（仅此字段对用户可见）"
 \`\`\`
 - **不限长度**——越详细越好，它们是第2段深度分析的唯一靶心。
-- **门槛 = 子要素全部非空**（事件+利害+卡点 + 想要+优先项），不是字数。
+- **门槛 = 子要素全部有实质内容**（非空、非"尚未明确/待追问"等占位词）。
 - **必须主动问出 desired_direction**——用户通常只倒苦水、不说"想要什么"，你要专门追问：
   "你最希望这件事往哪个方向走？" / "如果能改变，你最想改变的是哪一点？"
-- 两组字段的子要素【全部】填写完整前，继续追问，不推进、不下命理结论。
-- \`understanding_sufficient\` 仅作你的自评参考；**后端放行只看上述字段是否齐备**，不靠你自报。
+- 子要素未齐备前，继续追问，不推进、不下命理结论。
+- \`understanding_sufficient\` 仅作你的自评参考；**后端放行只看字段实质齐备**。
 
 ## 博弈准则（像老师，不像审讯）
-- **一句话只给话题、不给困境** → 继续问一层，\`understanding_sufficient\` 可 false。
-- 不要急着下判断、不要假装懂了。像一位有温度的老师：先共情、给一点点拨（一句照见），再问一层。通常要 1–2 轮，他把处境说开了再 sufficient。
-- **每轮追问前先综合用户已经说过的**——不要重复问他已经交代过的信息；缺什么补什么，已答的不问第二遍。
-- **追问最多再补 1 个真正缺的关键信息**（优先补 desired_direction 或缺失的子要素）；宁可推进后在 collecting 边给洞见边收集，也不要在 opening 兜圈子。
-- 没说清（问候、元问题、只有情绪没有具体事、或只有话题没有困境）→ 温和而直指要害地让他知道"目前信息太少、POJU 还无法看清这个局"，引导他说出那一件最卡住的事。**此状态不下任何命理结论。**
+- **一句话只给话题、不给困境** → 继续问一层。
+- 每轮追问前先综合用户已经说过的——缺什么补什么，已答的不问第二遍。
+- 没说清 → 温和引导他说出那一件最卡住的事。**此状态不下任何命理结论。**
 - **opening 以承接 + 问清为主**：可点一句初步观察，但**不展开整段命盘分析**。
-- **opening 回复哪怕短，也至少要有一处长在本盘结构上的具体判断**（点名一个真实字段并套 ⟦t:…⟧）。
-- **每一轮都锚回 original_question。** 用户过程中提到的别的事——那是【破这个局的证据/线索】，不是新调查线。
-- **禁 tracking 话术**："回来汇报进展/有结果再来"只属于交付之后。
+- **response 里命理词必须打标** ⟦t:id|软译|白话⟧；**禁止在 opening 输出 relationship_conclusion / breakthrough_directions / investigation_agenda**（那是第2段）。
 
-## conversion envelope（仅 core_dilemma + desired_direction 全部齐备 · 同轮一次 JSON）
-
-### ⚠️ 结构齐备硬约束（缺字段 = 格式错误）
-当两组字段子要素【全部】非空时，本轮【必须】在同一个 JSON 里同时输出完整 conversion envelope：
-  \`relationship_conclusion\`、\`breakthrough_directions\`（2–3 条）、\`investigation_agenda\`（3–4 项）、
-  \`question_category\`、\`problem_summary\`，以及 \`response\`。
-\`response\` 必须【直接问 investigation_agenda 的第一项】（带问号）。
-结构未齐备时只出 \`response\` + 已填写的 core_dilemma/desired_direction，不带议程字段。
-
-## 你不负责
-- 是否进入 collecting（后端控制面校验结构完整性 + base analysis）
-- 议程顺序（conversion 后由状态机写入快照）`;
+## 你不负责（严禁抢跑）
+- **关系结论 / 破局方向 / 调查议程** —— 第2段在控制面放行后由 breakthrough-core 独立 xhigh 生成
+- 是否进入 collecting（后端控制面校验结构完整性 + base analysis）`;
 
 function buildDeliveryHandoffBlockV6(input: PhaseLLMInput): string {
   const deliveryHandoff = Boolean(input.tool_injection_context?.includes("交付页延续"));
@@ -122,24 +108,6 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
   );
 
   const structured = normalizeBaseAnalysisInput(input.base_analysis ?? null).structured ?? null;
-  const baseAnalysisReady = Boolean(input.base_analysis ?? input.session.has_profile ?? structured);
-  const substantiveOpeningTurns = countSubstantiveOpeningTurns(input.session.messages);
-  const openingConversionRound =
-    input.agent_state?.current_phase === "opening" &&
-    shouldForceConverge(substantiveOpeningTurns, baseAnalysisReady);
-  const openingThinkingEffort = openingConversionRound ? "xhigh" : "high";
-
-  const result = await callPhaseJsonTransport(
-    system,
-    messages,
-    withPhaseStreamOpts(input, {
-      call_type: "chat_flash",
-      temperature: 0.55,
-      max_tokens: openingConversionRound ? 20_000 : 16_000,
-      thinking_effort: openingThinkingEffort,
-    }),
-  );
-
   const inferredCategory =
     input.agent_state?.question_category ??
     inferQuestionCategoryFromText(
@@ -152,7 +120,18 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
       ? resolveAgendaRelationContext(structured, inferredCategory).auditAllowlist
       : undefined;
 
-  const { parsed, response: rawResponse } = resolvePhaseResponse(result.content, {
+  const result = await callPhaseJsonTransport(
+    system,
+    messages,
+    withPhaseStreamOpts(input, {
+      call_type: "chat_flash",
+      temperature: 0.55,
+      max_tokens: 16_000,
+      thinking_effort: "high",
+    }),
+  );
+
+  const { parsed, response } = resolvePhaseResponse(result.content, {
     locale: input.locale,
     structured,
     phase_name: "opening",
@@ -163,7 +142,6 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
     raw_length: result.content.length,
     audit_relations: auditRelations,
   });
-  let response = rawResponse;
 
   const understanding_sufficient =
     typeof parsed.understanding_sufficient === "boolean"
@@ -198,50 +176,11 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
   });
 
   const suggestedRaw = typeof parsed.suggested_phase === "string" ? parsed.suggested_phase : null;
-  let suggested = suggestedRaw ? normalizeAgentPhase(suggestedRaw) : null;
-
-  let question_category = extractQuestionCategory(parsed);
-  let breakthrough_core: PhaseLLMResult["breakthrough_core"] = null;
-  let investigation_agenda: PhaseLLMResult["investigation_agenda"] = null;
-  let problem_summary: string | null = null;
-
-  let conversion_envelope_failed = false;
-
-  const canRunConversion =
-    understandingStructComplete && understanding_sufficient !== false;
-
-  if (canRunConversion) {
-    const conversion = parseOpeningConversionPayload(parsed, response, input.locale);
-    if (conversion) {
-      response = conversion.response;
-      breakthrough_core = conversion.breakthrough_core;
-      investigation_agenda = conversion.investigation_agenda;
-      question_category = conversion.question_category ?? question_category;
-      problem_summary = conversion.problem_summary;
-      suggested = "collecting_context";
-      console.info("[opening-phase-v6] conversion envelope parsed", {
-        agenda: investigation_agenda.length,
-        category: question_category,
-      });
-    } else {
-      conversion_envelope_failed = true;
-      response = "";
-      console.warn(
-        "[opening-phase-v6] struct complete but envelope parse failed — suppress orphan dialogue; core fallback will supply user-facing question",
-      );
-    }
-  } else if (understandingStructComplete && understanding_sufficient === false) {
-    console.info(
-      "[opening-phase-v6] struct complete but model reported insufficient — skip conversion, show follow-up",
-    );
-  }
+  const suggested = suggestedRaw ? normalizeAgentPhase(suggestedRaw) : null;
+  const question_category = extractQuestionCategory(parsed);
 
   const suggested_phase =
-    understandingStructComplete && suggested && VALID_SUGGESTED.includes(suggested)
-      ? suggested
-      : understanding.sufficient && suggested && VALID_SUGGESTED.includes(suggested)
-        ? suggested
-        : null;
+    understanding.sufficient && suggested && VALID_SUGGESTED.includes(suggested) ? suggested : null;
 
   console.log("[poju-diag] phase-transition-v6", {
     from: "opening",
@@ -249,8 +188,7 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
     sufficient: understanding.sufficient,
     understanding_sufficient,
     understanding_struct_complete: understandingStructComplete,
-    can_run_conversion: canRunConversion,
-    suggested: suggested_phase,
+    segment2_deferred: true,
     parse_failed: isPhaseParseFailed(parsed),
   });
 
@@ -274,10 +212,10 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
     action_requested,
     context_updates,
     question_category,
-    current_summary: problem_summary,
-    problem_summary,
-    breakthrough_core,
-    investigation_agenda,
+    current_summary: null,
+    problem_summary: null,
+    breakthrough_core: null,
+    investigation_agenda: null,
     core_dilemma,
     desired_direction,
     main_delivery_data: null,
@@ -290,12 +228,8 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
     thinking_process: undefined,
     understanding,
     understanding_sufficient,
-    conversion_envelope_failed: conversion_envelope_failed || undefined,
     llm_debug: result.llm_debug
-      ? {
-          ...result.llm_debug,
-          phase: openingConversionRound ? "opening_conversion" : result.llm_debug.phase ?? "opening",
-        }
+      ? { ...result.llm_debug, phase: result.llm_debug.phase ?? "opening" }
       : undefined,
   };
 }

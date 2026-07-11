@@ -430,6 +430,23 @@ export function getUnderstandingMissingFields(state: POJUAgentState): string[] {
   return missing;
 }
 
+export function formatSegment1UnderstandingForPrompt(state: POJUAgentState): string {
+  const d = state.core_dilemma;
+  const dir = state.desired_direction;
+  if (!d && !dir) return "（第1段理解门字段尚未写入。）";
+  const lines = ["## 第1段理解门产出（第2段推演靶心 · 必须显式扣住）"];
+  if (d) {
+    lines.push(`- concrete_event 具体事件: ${d.concrete_event ?? "—"}`);
+    lines.push(`- stakes 利害: ${d.stakes ?? "—"}`);
+    lines.push(`- sticking_point 卡点: ${d.sticking_point ?? "—"}`);
+  }
+  if (dir) {
+    lines.push(`- wants 期望解决成: ${dir.wants ?? "—"}`);
+    lines.push(`- priority 最在意/优先: ${dir.priority ?? "—"}`);
+  }
+  return lines.join("\n");
+}
+
 /** Test / fixture helper — fully populated segment-1 understanding. */
 export function withCompleteUnderstanding(agent: POJUAgentState): POJUAgentState {
   return {
