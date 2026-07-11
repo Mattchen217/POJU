@@ -53,12 +53,26 @@ export async function loadSessionUserProfile(session: POJUSessionState): Promise
   return bundle.profile;
 }
 
+function collectSessionProfileCandidateIds(session: POJUSessionState): string[] {
+  const raw = [
+    session.selected_stored_profile_id,
+    session.agent_v2?.selected_profile_id,
+    session.matrix_payload?.profile_id,
+  ];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const id of raw) {
+    const trimmed = id?.trim();
+    if (!trimmed || seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    out.push(trimmed);
+  }
+  return out;
+}
+
 function resolveStoredProfileIdForSession(session: POJUSessionState): string | null {
-  const sid = session.selected_stored_profile_id?.trim();
-  if (sid && sid.length > 0) return sid;
-  const agentSid = session.agent_v2?.selected_profile_id?.trim();
-  if (agentSid && agentSid.length > 0) return agentSid;
-  return null;
+  const candidates = collectSessionProfileCandidateIds(session);
+  return candidates[0] ?? null;
 }
 
 async function loadStoredBaseAnalysis(session: POJUSessionState): Promise<unknown | null> {
@@ -72,22 +86,29 @@ async function loadStoredBaseAnalysis(session: POJUSessionState): Promise<unknow
 export async function loadSessionProfileBundle(session: POJUSessionState): Promise<{
   profile: UserProfile | null;
   base_analysis: unknown | null;
+  resolved_profile_id: string | null;
 }> {
-  if (!resolveSessionHasProfile(session)) return { profile: null, base_analysis: null };
-
-  const profileId = resolveStoredProfileIdForSession(session);
-  if (profileId) {
-    const data = await getStoredProfile(profileId);
-    return {
-      profile: data?.user_profile ?? null,
-      base_analysis: data?.base_analysis ?? null,
-    };
+  for (const id of collectSessionProfileCandidateIds(session)) {
+    const data = await getStoredProfile(id);
+    if (data?.base_analysis != null) {
+      return {
+        profile: data.user_profile ?? null,
+        base_analysis: data.base_analysis,
+        resolved_profile_id: id,
+      };
+    }
   }
 
   if (session.birth_submitted_in_session) {
     const base_analysis = await loadStoredBaseAnalysis(session);
-    return { profile: await getUserProfile(), base_analysis };
+    if (base_analysis != null) {
+      return {
+        profile: await getUserProfile(),
+        base_analysis,
+        resolved_profile_id: resolveStoredProfileIdForSession(session),
+      };
+    }
   }
 
-  return { profile: null, base_analysis: null };
+  return { profile: null, base_analysis: null, resolved_profile_id: null };
 }

@@ -344,9 +344,9 @@ function finalizeAgentV2(
   }
 
   const baseAnalysisReady = Boolean(
+    loadedBaseAnalysis != null ||
     merged.has_base_analysis ||
-    resolveSessionHasProfile(session) ||
-    loadedBaseAnalysis != null,
+    resolveSessionHasProfile(session),
   );
   const openingProblem =
     llm.problem_summary?.trim() || extractOpeningProblem(session.messages);
@@ -570,7 +570,18 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
 
   sessionForLlm = { ...sessionForLlm, locked_output_locale: replyOutputLocale };
 
-  const { profile, base_analysis } = await loadSessionProfileBundle(sessionForLlm);
+  let workingSession = sessionBase;
+
+  const bundle = await loadSessionProfileBundle(sessionForLlm);
+  const { profile, base_analysis, resolved_profile_id } = bundle;
+  if (resolved_profile_id) {
+    sessionForLlm = withSessionProfileFlags(sessionForLlm, {
+      selected_stored_profile_id: resolved_profile_id,
+    });
+    workingSession = withSessionProfileFlags(workingSession, {
+      selected_stored_profile_id: resolved_profile_id,
+    });
+  }
   logBaseAnalysisPayload("callLLMViaAPI:before-fetch", base_analysis, {
     session_id: sessionForLlm.session_id,
     has_profile: resolveSessionHasProfile(sessionForLlm),
@@ -581,8 +592,6 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     const { loadArchiveDataForSession } = await import("@/lib/archive/archive-service");
     archive_data = await loadArchiveDataForSession(sessionForLlm.session_id);
   }
-
-  let workingSession = sessionBase;
 
   const llmResponse = await callLLMViaAPI({
     session: sessionForLlm,

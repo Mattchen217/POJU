@@ -55,9 +55,11 @@ function main(): void {
   assert("resolveSessionHasProfile checks has_base_analysis", sessionProfile.includes("has_base_analysis === true"));
   assert("backfillSessionProfileBinding exported", sessionProfile.includes("export function backfillSessionProfileBinding"));
   assert("withSessionProfileFlags uses backfill", sessionProfile.includes("backfillSessionProfileBinding({"));
-  assert("loadSessionProfileBundle uses resolveStoredProfileIdForSession", sessionProfile.includes("resolveStoredProfileIdForSession(session)"));
-  assert("agent base_analysis_ready uses loadedBaseAnalysis", agentTs.includes("loadedBaseAnalysis != null"));
-  assert("session page backfills on load", read("app/[locale]/(marketing)/poju/session/[sessionId]/page.tsx").includes("backfillSessionProfileBinding"));
+  assert("loadSessionProfileBundle tries candidate ids", sessionProfile.includes("collectSessionProfileCandidateIds(session)"));
+  assert("loadSessionProfileBundle not gated by resolveSessionHasProfile", !sessionProfile.includes("if (!resolveSessionHasProfile(session)) return { profile: null, base_analysis: null }"));
+  assert("loadSessionProfileBundle returns resolved_profile_id", sessionProfile.includes("resolved_profile_id"));
+  assert("agent base_analysis_ready prioritizes loadedBaseAnalysis", /loadedBaseAnalysis != null[\s\S]*merged\.has_base_analysis/.test(agentTs));
+  assert("agent backfills resolved profile id", agentTs.includes("resolved_profile_id"));
 
   const legacy = legacyAgentOnlySession();
   assert("legacy agent-only session has profile", resolveSessionHasProfile(legacy));
