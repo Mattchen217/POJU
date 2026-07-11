@@ -330,8 +330,21 @@ function isFilled(v: unknown): boolean {
   return true;
 }
 
-/** Non-empty string check for understanding-gate sub-fields (no minimum length beyond trim). */
+/** Placeholder / unknown markers — treated as unfilled for the understanding gate. */
+export const UNDERSTANDING_PLACEHOLDER_RE =
+  /^(尚未明确|待追问|待确认|待补充|未明确|不明确|尚不清楚|暂无|暂未|未知|待定|n\/?a|tbd|unknown|unclear|to be determined)/i;
+
+/** Substantive fill check for understanding-gate (rejects empty, placeholders, ultra-short). */
 export function isUnderstandingFieldFilled(s?: string | null): boolean {
+  const t = (s ?? "").trim();
+  if (t.length === 0) return false;
+  if (UNDERSTANDING_PLACEHOLDER_RE.test(t)) return false;
+  if (t.length < 4) return false;
+  return true;
+}
+
+/** Any non-empty draft from the model — may include placeholders; stored incrementally, not gate credit. */
+function hasUnderstandingFieldDraft(s?: string | null): boolean {
   return Boolean(s && s.trim().length > 0);
 }
 
@@ -366,11 +379,11 @@ export function mergeCoreDilemma(
     sticking_point: null,
   };
   return {
-    concrete_event: isUnderstandingFieldFilled(patch.concrete_event)
+    concrete_event: hasUnderstandingFieldDraft(patch.concrete_event)
       ? patch.concrete_event!.trim()
       : prev.concrete_event,
-    stakes: isUnderstandingFieldFilled(patch.stakes) ? patch.stakes!.trim() : prev.stakes,
-    sticking_point: isUnderstandingFieldFilled(patch.sticking_point)
+    stakes: hasUnderstandingFieldDraft(patch.stakes) ? patch.stakes!.trim() : prev.stakes,
+    sticking_point: hasUnderstandingFieldDraft(patch.sticking_point)
       ? patch.sticking_point!.trim()
       : prev.sticking_point,
   };
@@ -383,8 +396,8 @@ export function mergeDesiredDirection(
   if (!patch) return base;
   const prev: DesiredDirection = base ?? { wants: null, priority: null };
   return {
-    wants: isUnderstandingFieldFilled(patch.wants) ? patch.wants!.trim() : prev.wants,
-    priority: isUnderstandingFieldFilled(patch.priority) ? patch.priority!.trim() : prev.priority,
+    wants: hasUnderstandingFieldDraft(patch.wants) ? patch.wants!.trim() : prev.wants,
+    priority: hasUnderstandingFieldDraft(patch.priority) ? patch.priority!.trim() : prev.priority,
   };
 }
 

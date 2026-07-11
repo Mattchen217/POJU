@@ -8,6 +8,7 @@ import {
   calculateCompleteness,
   createInitialAgentState,
   isUnderstandingComplete,
+  isUnderstandingFieldFilled,
   mergeBreakthroughCoreUpdates,
   normalizeAgentPhase,
   type AgentPhase,
@@ -299,12 +300,12 @@ function finalizeAgentV2(
     collection_completeness: calculateCompleteness(merged),
     has_situation_analysis: calculateCompleteness(merged) >= 0.4,
   };
-  if (merged.desired_direction?.wants) {
+  if (isUnderstandingFieldFilled(merged.desired_direction?.wants)) {
     merged = {
       ...merged,
       context_collected: {
         ...merged.context_collected,
-        desired_outcome: merged.desired_direction.wants,
+        desired_outcome: merged.desired_direction!.wants,
       },
     };
   }

@@ -5,13 +5,14 @@
  */
 
 import {
-  normalizeAgentPhase,
-  type AgentPhase,
   isUnderstandingComplete,
+  isUnderstandingFieldFilled,
   mergeCoreDilemma,
   mergeDesiredDirection,
+  normalizeAgentPhase,
   parseCoreDilemmaPatch,
   parseDesiredDirectionPatch,
+  type AgentPhase,
 } from "@/lib/poju/agent-state";
 import { countSubstantiveOpeningTurns } from "@/lib/poju/agent";
 import { shouldForceConverge } from "@/lib/poju/state-machine";
@@ -206,7 +207,10 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
 
   let conversion_envelope_failed = false;
 
-  if (understandingStructComplete) {
+  const canRunConversion =
+    understandingStructComplete && understanding_sufficient !== false;
+
+  if (canRunConversion) {
     const conversion = parseOpeningConversionPayload(parsed, response, input.locale);
     if (conversion) {
       response = conversion.response;
@@ -223,9 +227,13 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
       conversion_envelope_failed = true;
       response = "";
       console.warn(
-        "[opening-phase-v6] understanding_sufficient but envelope parse failed — suppress orphan dialogue; core fallback will supply user-facing question",
+        "[opening-phase-v6] struct complete but envelope parse failed — suppress orphan dialogue; core fallback will supply user-facing question",
       );
     }
+  } else if (understandingStructComplete && understanding_sufficient === false) {
+    console.info(
+      "[opening-phase-v6] struct complete but model reported insufficient — skip conversion, show follow-up",
+    );
   }
 
   const suggested_phase =
@@ -241,6 +249,7 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
     sufficient: understanding.sufficient,
     understanding_sufficient,
     understanding_struct_complete: understandingStructComplete,
+    can_run_conversion: canRunConversion,
     suggested: suggested_phase,
     parse_failed: isPhaseParseFailed(parsed),
   });
@@ -254,8 +263,9 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
       ? (parsed.context_updates as Record<string, unknown>)
       : {};
 
-  if (desired_direction?.wants) {
-    context_updates.desired_outcome = desired_direction.wants;
+  const wants = desired_direction?.wants;
+  if (isUnderstandingFieldFilled(wants)) {
+    context_updates.desired_outcome = wants;
   }
 
   return {
