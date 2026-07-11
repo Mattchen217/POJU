@@ -55,6 +55,19 @@ function main(): void {
   assert("salvage extracts JSON from reasoning", salvaged.content.includes('"response"'));
   assert("salvage clears empty flag", !isEmptyPhaseCompletion(salvaged));
 
+  const proseOnly = salvageContentFromReasoning({
+    content: "",
+    model: "test",
+    tokens_used: 100,
+    reasoning:
+      "我先在内部推演：用户的核心困境是徒弟坐了位置，他怕经验烂掉。接下来应该问他最希望往哪个方向走。",
+  });
+  assert("prose reasoning not salvaged as content", isEmptyPhaseCompletion(proseOnly));
+
+  const transport = read("lib/llm/phases/phase-transport.ts");
+  assert("no prose salvage from reasoning", !transport.includes("salvaged content from reasoning prose"));
+  assert("no salvagePhaseResponseText(reasoning)", !transport.includes("salvagePhaseResponseText(reasoning)"));
+
   console.log("\n========================================\n");
   if (failures.length) {
     console.error(`FAILED (${failures.length}):`, failures.join(", "));

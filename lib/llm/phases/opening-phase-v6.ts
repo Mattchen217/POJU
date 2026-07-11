@@ -66,6 +66,8 @@ response: "给用户看的追问/承接（仅此字段对用户可见）"
 输出【必须】是严格 JSON：所有键名用【英文小写】原样，用标准 ASCII 双引号 \`"\`，不得翻译键名、不得用中文引号、不得截断。
 严格按此模板填值（值可用中文，键名不可变）：
 \`{"understanding_sufficient":false,"core_dilemma":{"concrete_event":"","stakes":"","sticking_point":""},"desired_direction":{"wants":"","priority":""},"response":""}\`
+- 你对用户可见的话【必须】写在 JSON 的 \`"response"\` 字段里；思考过程留在 reasoning，**禁止**只把要对用户说的话写在思考里而不填 response。
+- 每轮输出必须包含**非空**的 \`"response"\`。
 
 ## 博弈准则（像老师，不像审讯）
 - **一句话只给话题、不给困境** → 继续问一层。

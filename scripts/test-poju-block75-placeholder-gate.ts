@@ -56,7 +56,8 @@ function main(): void {
   assert("placeholder drafts stored in merge", merged.core_dilemma?.sticking_point?.includes("尚未明确") === true);
   assert("struct incomplete with placeholders", !isUnderstandingComplete(merged));
 
-  assert("block75 opening no conversion guard", !read("lib/llm/phases/opening-phase-v6.ts").includes("canRunConversion"));
+  assert("block75 opening no conversion guard", !opening.includes("canRunConversion"));
+  assert("opening response field required", opening.includes("必须包含**非空**的"));
 
   console.log("\n========================================\n");
   if (failures.length) {

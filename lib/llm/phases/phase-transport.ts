@@ -40,7 +40,7 @@ export function isEmptyPhaseCompletion(result: PhaseTransportResult): boolean {
   return result.content.trim().length === 0;
 }
 
-/** Try to recover visible JSON/text when content is empty but reasoning has substance. */
+/** Try to recover JSON content when body is empty but reasoning contains a JSON block. */
 export function salvageContentFromReasoning(result: PhaseTransportResult): PhaseTransportResult {
   if (!isEmptyPhaseCompletion(result)) return result;
   const reasoning = result.reasoning?.trim() ?? "";
@@ -48,14 +48,8 @@ export function salvageContentFromReasoning(result: PhaseTransportResult): Phase
 
   const jsonSlice = extractJson(reasoning).trim();
   if (jsonSlice.startsWith("{") && jsonSlice.length > 20) {
-    console.info("[phase-transport] salvaged content from reasoning JSON block");
+    console.info("[phase-transport] salvaged JSON from reasoning");
     return { ...result, content: jsonSlice };
-  }
-
-  const salvaged = salvagePhaseResponseText(reasoning).trim();
-  if (salvaged.length > 0) {
-    console.info("[phase-transport] salvaged content from reasoning prose");
-    return { ...result, content: salvaged };
   }
 
   return result;
