@@ -83,42 +83,50 @@ async function fetchCoreContent(input: {
   | { ok: true; content: string; tokens_used: number; model: string; finish_reason: string | null }
   | { ok: false; reason: "truncated" | "parse_failed"; error: string }
 > {
-  let result = await callCoreLLM({ ...input, max_tokens: CORE_MAX_TOKENS_INITIAL });
-  const emptyBody = !result.content.trim();
-  if (result.meta.finish_reason === "length" || emptyBody) {
-    console.warn(
-      `[breakthrough-core] ${emptyBody ? "empty body" : "truncated at 16000"}, retrying at ${CORE_MAX_TOKENS_RETRY}`,
-    );
-    result = await callCoreLLM({ ...input, max_tokens: CORE_MAX_TOKENS_RETRY });
-  }
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const max_tokens = attempt === 0 ? CORE_MAX_TOKENS_INITIAL : CORE_MAX_TOKENS_RETRY;
+    const result = await callCoreLLM({ ...input, max_tokens });
 
-  const finish = result.meta.finish_reason ?? null;
-  if (finish === "length") {
-    console.warn("[breakthrough-core] truncated by length cap");
-    return {
-      ok: false,
-      reason: "truncated",
-      error: "deep analysis output was truncated",
-    };
-  }
+    const finish = result.meta.finish_reason ?? null;
+    const emptyBody = !result.content.trim();
+    if (finish === "length" || emptyBody) {
+      console.warn(
+        `[breakthrough-core] attempt ${attempt + 1}: ${emptyBody ? "empty body" : "truncated"} (max_tokens=${max_tokens})`,
+      );
+      if (attempt === 0) continue;
+      return {
+        ok: false,
+        reason: "truncated",
+        error: "deep analysis output was truncated",
+      };
+    }
 
-  try {
-    parseBreakthroughCoreResponseText(result.content);
-  } catch (e) {
-    console.warn("[breakthrough-core] parse failed:", e);
-    return {
-      ok: false,
-      reason: "parse_failed",
-      error: "deep analysis JSON was incomplete",
-    };
+    try {
+      const parsed = parseBreakthroughCoreResponseText(result.content);
+      mapBreakthroughCorePayload(parsed);
+      return {
+        ok: true,
+        content: result.content,
+        tokens_used: result.meta.tokens_used,
+        model: result.actual_model,
+        finish_reason: finish,
+      };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.warn(`[breakthrough-core] attempt ${attempt + 1} parse/validate failed:`, msg);
+      if (attempt === 0) continue;
+      return {
+        ok: false,
+        reason: "parse_failed",
+        error: "deep analysis JSON was incomplete",
+      };
+    }
   }
 
   return {
-    ok: true,
-    content: result.content,
-    tokens_used: result.meta.tokens_used,
-    model: result.actual_model,
-    finish_reason: finish,
+    ok: false,
+    reason: "parse_failed",
+    error: "deep analysis JSON was incomplete",
   };
 }
 

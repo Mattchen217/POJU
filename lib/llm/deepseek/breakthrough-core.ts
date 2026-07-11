@@ -413,6 +413,8 @@ export async function requestBreakthroughCore(
   console.info(
     "[breakthrough-core] persisted:",
     payload.breakthrough_core.relationship_conclusion.slice(0, 80),
+    "directions:",
+    payload.breakthrough_core.breakthrough_directions.length,
     "agenda:",
     payload.investigation_agenda.map((a) => a.label),
   );

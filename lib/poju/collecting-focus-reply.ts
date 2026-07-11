@@ -1,4 +1,4 @@
-import type { POJUAgentState } from "@/lib/poju/agent-state";
+import type { BreakthroughCore, POJUAgentState } from "@/lib/poju/agent-state";
 import { isPojuFailurePlaceholderMessage } from "@/lib/llm/poju-service-busy-message";
 import { selectCurrentAgendaFocus } from "@/lib/poju/investigation-agenda";
 
@@ -15,18 +15,46 @@ function formatFocusQuestion(label: string, locale: string): string {
   return locale.startsWith("zh") ? `${q}？` : `${q}?`;
 }
 
+/** User-visible breakthrough directions block (segment 2 · 2–3 items). */
+export function formatBreakthroughDirectionsForUser(
+  core: BreakthroughCore | null | undefined,
+  locale: string,
+): string {
+  const dirs = core?.breakthrough_directions ?? [];
+  if (dirs.length === 0) return "";
+  const header = locale.startsWith("zh") ? "\n\n破局方向：" : "\n\nBreakthrough directions:";
+  const lines = dirs.map((d, i) => {
+    const n = i + 1;
+    const basis = d.structural_basis?.trim() ?? "";
+    const timing = d.timing?.trim() ?? "";
+    if (locale.startsWith("zh")) {
+      const parts = [`\n${n}. ${d.direction.trim()}`];
+      if (basis) parts.push(`   结构依据：${basis}`);
+      if (timing) parts.push(`   时机：${timing}`);
+      return parts.join("\n");
+    }
+    const parts = [`\n${n}. ${d.direction.trim()}`];
+    if (basis) parts.push(`   Basis: ${basis}`);
+    if (timing) parts.push(`   Timing: ${timing}`);
+    return parts.join("\n");
+  });
+  return header + lines.join("");
+}
+
 /** User-facing collecting transition when core fallback replaces a failed opening envelope. */
 export function buildCollectingTransitionReplyFromCore(
   agent: POJUAgentState,
   locale: string,
 ): string {
-  const rel = agent.breakthrough_core?.relationship_conclusion?.trim() ?? "";
+  const core = agent.breakthrough_core;
+  const rel = core?.relationship_conclusion?.trim() ?? "";
+  const directions = formatBreakthroughDirectionsForUser(core, locale);
   const intro =
     rel ||
     (locale.startsWith("zh")
       ? "我先帮你把这件事在本盘结构里的卡点理顺。"
       : "Let me frame where you're structurally stuck first.");
-  return appendFirstFocusQuestion(intro, agent, locale);
+  return appendFirstFocusQuestion(`${intro}${directions}`, agent, locale);
 }
 
 export function envelopeCoreFallbackRetryHint(locale: string): string {

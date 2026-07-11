@@ -290,8 +290,8 @@ export const BARE_GANZHI_MARKER = {
   slug: "bare_ganzhi",
   zh: "当前时空效能",
   en: "current temporal efficacy",
-  glossZh: "时序背景标识；具体干支仅作底层数据，不对用户展示。",
-  glossEn: "Temporal background—stem-branch stays in data only.",
+  glossZh: "你此刻所处的时间气候——它像天气一样影响你的状态与外部压力，但不预测具体事件。",
+  glossEn: "The temporal climate you're in—it shapes mood and external pressure like weather, without predicting specific events.",
 } as const;
 
 const YANG_HEAVENLY_STEMS = new Set(["甲", "丙", "戊", "庚", "壬"]);
