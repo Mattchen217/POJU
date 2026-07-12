@@ -16,6 +16,7 @@ export type AgendaItemStatus = import("@/lib/poju/investigation-agenda").AgendaI
 
 export type AgentPhase =
   | "opening"
+  | "awaiting_understanding_confirm"
   | "collecting_context"
   | "awaiting_confirmation"
   | "delivered"
@@ -32,6 +33,7 @@ export function normalizeAgentPhase(phase: string | null | undefined): AgentPhas
     case "awaiting_profile":
       return "collecting_context";
     case "opening":
+    case "awaiting_understanding_confirm":
     case "collecting_context":
     case "awaiting_confirmation":
     case "delivered":
@@ -710,8 +712,8 @@ export function decidePhaseTransition(input: PhaseTransitionInput): PhaseTransit
       ) {
         return {
           should_transition: true,
-          new_phase: "collecting_context",
-          reason: "Understanding structure complete, entering collection",
+          new_phase: "awaiting_understanding_confirm",
+          reason: "Understanding structure complete, awaiting user confirmation",
         };
       }
       break;

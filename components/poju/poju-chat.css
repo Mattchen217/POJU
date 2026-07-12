@@ -1817,6 +1817,41 @@ body.pchat-page-lock .pchat:not(.tool-preview-chat) {
   color: #b8e0ff;
 }
 
+.poju-understanding-gate {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.poju-understanding-gate__btn {
+  flex: 1 1 180px;
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.poju-understanding-gate__btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.poju-understanding-gate__btn--primary {
+  border: 1px solid rgba(212, 175, 55, 0.55);
+  background: linear-gradient(180deg, rgba(212, 175, 55, 0.22), rgba(212, 175, 55, 0.08));
+  color: #f2c994;
+}
+
+.poju-understanding-gate__btn--secondary {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.88);
+}
+
 @media (max-width: 960px) {
   .poju-chat-shell {
     flex-direction: column;

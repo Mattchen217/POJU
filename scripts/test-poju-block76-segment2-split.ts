@@ -44,7 +44,7 @@ function main(): void {
     !agent.includes("breakthrough_core from opening conversion envelope"),
   );
 
-  assert("state-machine triggerCore on gate", sm.includes("triggerCore = true"));
+  assert("state-machine triggerCore on confirm", sm.includes('sig === "confirmed"') && sm.includes("triggerCore = true"));
   assert("compliance uses content_preview not raw reasoning", transport.includes("content_preview"));
   assert("compliance audits response only", transport.includes("auditPhaseChatCompliance(response"));
 

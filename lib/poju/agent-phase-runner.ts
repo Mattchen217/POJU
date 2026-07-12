@@ -85,6 +85,8 @@ async function dispatchPhase(activePhase: AgentPhase, input: PhaseLLMInput): Pro
       return v6 ? callOpeningPhaseV6(input) : callOpeningPhase(input);
     case "collecting_context":
       return v6 ? callCollectingPhaseV6(input) : callCollectingPhase(input);
+    case "awaiting_understanding_confirm":
+      return v6 ? callOpeningPhaseV6(input) : callOpeningPhase(input);
     case "awaiting_confirmation":
       return v6 ? callConfirmationPhaseV6(input) : callConfirmationPhase(input);
     case "delivered":

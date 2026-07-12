@@ -63,8 +63,8 @@ function main(): void {
     }),
     "我离婚8年了想重新开始",
   );
-  assert("substantive enters collecting when struct complete and base ready", substantiveAdvance.next_state === "collecting_context");
-  assert("trigger core true when struct complete and base ready", substantiveAdvance.trigger_breakthrough_core === true);
+  assert("substantive enters understanding gate when struct complete and base ready", substantiveAdvance.next_state === "awaiting_understanding_confirm");
+  assert("gate turn does not trigger core", substantiveAdvance.trigger_breakthrough_core === false);
   assert(
     "first turn stays opening when structure incomplete",
     advanceStateMachine(
@@ -78,7 +78,7 @@ function main(): void {
     ).next_state === "opening",
   );
   assert(
-    "struct complete enters collecting on first turn",
+    "struct complete enters understanding gate on first turn",
     advanceStateMachine(
       withCompleteUnderstanding({ ...agent, has_base_analysis: true }),
       extractModelTurnSignals({
@@ -87,7 +87,7 @@ function main(): void {
         substantive_opening_turns: 1,
       }),
       "我离婚8年了想重新开始",
-    ).next_state === "collecting_context",
+    ).next_state === "awaiting_understanding_confirm",
   );
   assert(
     "sufficient without base stays opening",

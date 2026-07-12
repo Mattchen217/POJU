@@ -15,6 +15,7 @@ export type PojuActivity =
 export function resolveActivityForSend(session: POJUSessionState): PojuActivity {
   const phase = normalizeAgentPhase(session.agent_v2?.current_phase);
   if (phase === "opening") return "understanding";
+  if (phase === "awaiting_understanding_confirm") return "summarizing";
   if (phase === "collecting_context") return "collecting";
   if (phase === "awaiting_confirmation") return "summarizing";
   if (phase === "tracking") return "tracking";

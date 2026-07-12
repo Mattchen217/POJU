@@ -17,7 +17,7 @@ import { getPojuDb } from "@/lib/db/poju-db";
 import { createPOJUSession, loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
 import { clearPendingStoredProfileId, readPendingStoredProfileId } from "@/lib/poju/pending-stored-profile";
 import { runDegradedDeliveryPipeline } from "@/lib/poju/agent-orchestrator";
-import { handleUserMessage, tryHandleRuleRejection } from "@/lib/poju/agent";
+import { handleUnderstandingGateAction, handleUserMessage, tryHandleRuleRejection } from "@/lib/poju/agent";
 import {
   dedupeWelcomeMessages,
   hasFixedWelcomeMessage,
@@ -27,6 +27,7 @@ import {
   seedMatrixWelcomeMessage,
 } from "@/lib/poju/chat-bootstrap";
 import { AgendaProgressPanel } from "@/components/poju/AgendaProgressPanel";
+import { UnderstandingGateActions } from "@/components/poju/UnderstandingGateActions";
 import { getLastUserMessageContent } from "@/lib/poju/context-helpers";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import { InfraBusyRetryAction } from "@/components/poju/InfraBusyRetryAction";
@@ -286,7 +287,14 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const previewComposerBlocked = isPreviewSession(session) && hasPaywallMessage(session);
   const questionBriefingEnabled =
     isPreviewSession(session) && !hasPaywallMessage(session) && !session.pending_question?.trim();
-  const composerLocked = expired || previewComposerBlocked || unlockBusy || unlockReportGateBlocking;
+  const understandingGatePending =
+    session.agent_v2?.current_phase === "awaiting_understanding_confirm";
+  const composerLocked =
+    expired ||
+    previewComposerBlocked ||
+    unlockBusy ||
+    unlockReportGateBlocking ||
+    understandingGatePending;
 
   const openUnlockReportModal = useCallback(() => setUnlockReportModalOpen(true), []);
 
@@ -944,11 +952,63 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       greeting: "agent_phase_opening",
       awaiting_profile: "agent_phase_collecting",
       collecting_context: "agent_phase_collecting",
+      awaiting_understanding_confirm: "agent_phase_confirm",
       awaiting_confirmation: "agent_phase_confirm",
       delivered: "agent_phase_delivered",
       tracking: "agent_phase_tracking",
     };
     return map[phase] ?? "agent_phase_collecting";
+  }
+
+  async function handleUnderstandingGateClick(action: "confirmed" | "wants_to_add") {
+    if (sending || turnInFlightRef.current) return;
+    const baseSession = sessionRef.current;
+    if (baseSession.agent_v2?.current_phase !== "awaiting_understanding_confirm") return;
+
+    turnInFlightRef.current = true;
+    const gen = ++sendGenerationRef.current;
+    setSending(true);
+    setSlotActivity(action === "confirmed" ? "deep_reckoning" : "understanding");
+    setThinkingLiveLine(null);
+    scrollChatToBottom("smooth");
+
+    try {
+      const profileId = baseSession.selected_stored_profile_id?.trim();
+      if (action === "confirmed" && profileId && resolveSessionHasProfile(baseSession)) {
+        const ready = await ensureBaseAnalysisReady(profileId);
+        if (!ready) {
+          await dialog.alert(
+            locale.startsWith("zh")
+              ? "命主基础分析准备中，请稍后再试。"
+              : "Base chart analysis is still preparing. Please wait and try again.",
+          );
+          return;
+        }
+      }
+
+      const updatedSession = await handleUnderstandingGateAction({
+        session: baseSession,
+        action,
+        locale,
+      });
+      if (gen !== sendGenerationRef.current) return;
+
+      onSessionUpdate(updatedSession);
+      skipActivityRenderReadyRef.current = action !== "confirmed";
+      awaitingActivityDismissRef.current = action === "confirmed";
+      syncDebugStateLedger(updatedSession);
+      await savePOJUSession(updatedSession);
+    } catch (err) {
+      console.error("[poju] understanding gate action failed:", err);
+      await dialog.alert(t("dialog_connection_error"));
+    } finally {
+      turnInFlightRef.current = false;
+      if (gen === sendGenerationRef.current) {
+        setSending(false);
+        setSlotActivity(null);
+        setThinkingLiveLine(null);
+      }
+    }
   }
 
   async function handleToolResponse(tool: ToolName, action: "accepted" | "declined") {
@@ -1103,6 +1163,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     const followUps: Record<string, ReactNode> = {};
     const followUpActions: Record<string, string> = {};
     let energyMatrixRendered = false;
+    const understandingGateActive =
+      session.agent_v2?.current_phase === "awaiting_understanding_confirm";
     const lastAssistantMid = [...visibleMessages]
       .reverse()
       .find((m) => m.role === "assistant" && !m.is_rejected);
@@ -1175,6 +1237,24 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           <InfraBusyRetryAction onRetry={onInfraBusyRetry} disabled={sending} />
         );
       }
+      if (
+        understandingGateActive &&
+        m.role === "assistant" &&
+        !m.is_rejected &&
+        mid === lastAssistantKey
+      ) {
+        followUps[mid] = (
+          <>
+            {followUps[mid]}
+            <UnderstandingGateActions
+              locale={locale}
+              busy={sending}
+              onConfirm={() => void handleUnderstandingGateClick("confirmed")}
+              onSupplement={() => void handleUnderstandingGateClick("wants_to_add")}
+            />
+          </>
+        );
+      }
       if (m.role === "assistant" && !m.is_rejected) {
         const below: ReactNode[] = [];
         if (showStateDebug && m.meta?.llm_debug) {
@@ -1235,6 +1315,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     openUnlockReportModal,
     getActivityLines,
     showStateDebug,
+    session.agent_v2,
     sending,
     onInfraBusyRetry,
   ]);

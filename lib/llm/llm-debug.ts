@@ -84,6 +84,7 @@ export function expectedEffortForCall(call_type?: string, phase?: string): Reaso
   }
   if (
     p === "opening" ||
+    p === "awaiting_understanding_confirm" ||
     p === "collecting_context" ||
     p === "awaiting_confirmation" ||
     p === "tracking" ||

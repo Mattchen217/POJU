@@ -9,6 +9,7 @@ export type PojuV4StateHint =
   | "greeting"
   | "collecting_context"
   | "awaiting_profile"
+  | "awaiting_understanding_confirm"
   | "awaiting_confirmation"
   | "analyzing"
   | "delivered"
@@ -55,6 +56,8 @@ export interface POJUMessage {
     llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
     /** Agenda items when first built (shown below bubble, not in body). */
     investigation_agenda?: import("@/lib/poju/investigation-agenda").AgendaItem[];
+    /** Segment-1 understanding gate — show confirm / supplement buttons. */
+    understanding_gate_pending?: boolean;
     /** Collecting escalation — show refund entry (user-initiated). */
     kind?: "energy_matrix" | "paywall" | "report" | "welcome" | "infra_busy" | "generation_empty" | "generation_incomplete";
     /** Preview chat — welcome bubble sourced from matrix synopsis (not generic copy). */

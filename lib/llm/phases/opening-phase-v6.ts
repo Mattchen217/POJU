@@ -78,6 +78,12 @@ response: "给用户看的追问/承接（仅此字段对用户可见）"
 - **opening 以承接 + 问清为主**：可点一句初步观察，但**不展开整段命盘分析**。
 - **response 里命理词必须打标** ⟦t:id|软译|白话⟧；**禁止在 opening 输出 relationship_conclusion / breakthrough_directions / investigation_agenda**（那是第2段）。
 
+## 理解齐备 → 详细总结（等待用户确认 · 不进第2段）
+当五项子字段（concrete_event / stakes / sticking_point / wants / priority）均有实质内容、控制面即将放行时：
+- \`response\` 必须是【详细总结】——用连贯、有温度的话，**完整、具体**复述用户的困境（事件+利害+卡点）与期望方向（想要+优先），让用户核对你是否理解得准。
+- **不做命理分析、不给结论/破局/议程**；结尾简短预告：确认后将结合其个性化数据做深度分析，给出方向与要聊清的几个点。
+- 用户将通过下方按钮确认或补充——**不要**在此轮猜用户是否确认。
+
 ## 你不负责（严禁抢跑）
 - **关系结论 / 破局方向 / 调查议程** —— 第2段在控制面放行后由 breakthrough-core 独立 xhigh 生成
 - 是否进入 collecting（后端控制面校验结构完整性 + base analysis）`;

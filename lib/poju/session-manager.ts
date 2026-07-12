@@ -158,6 +158,7 @@ function getCurrentStateHint(state: POJUSessionState): PojuV4StateHint {
   if (state.main_delivery_done) return "tracking";
   const phase = state.agent_v2?.current_phase;
   if (phase === "awaiting_confirmation") return "analyzing";
+  if (phase === "awaiting_understanding_confirm") return "opening";
   if (phase === "opening") return "opening";
   if (state.messages.length === 0) return "opening";
   if (resolveSessionHasProfile(state)) return "collecting_context";

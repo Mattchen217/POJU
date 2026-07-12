@@ -91,8 +91,8 @@ function main(): void {
     opening_problem_statement: "徒弟坐了我的位置",
   });
   const advance = advanceStateMachine(agent, signals, "我最想保住手艺传承");
-  assert("struct complete + base ready advances opening", advance.next_agent.current_phase === "collecting_context");
-  assert("advance triggers breakthrough core", advance.trigger_breakthrough_core === true);
+  assert("struct complete + base ready advances to understanding gate", advance.next_agent.current_phase === "awaiting_understanding_confirm");
+  assert("gate turn does not trigger breakthrough core", advance.trigger_breakthrough_core === false);
 
   const blocked = advanceStateMachine(
     agent,

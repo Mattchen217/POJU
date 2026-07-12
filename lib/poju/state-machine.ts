@@ -18,6 +18,7 @@ import { classifyConfirmationAffirmative } from "@/lib/poju/confirmation-reply";
 
 export type PojuState =
   | "opening"
+  | "awaiting_understanding_confirm"
   | "collecting_context"
   | "awaiting_confirmation"
   | "delivery"
@@ -210,13 +211,12 @@ export function advanceStateMachine(
         const lockedQuestion =
           signals.opening_problem_statement?.trim() || userInput.trim();
         next = { ...agent, original_question: lockedQuestion };
-        nextState = "collecting_context";
-        triggerCore = true;
+        nextState = "awaiting_understanding_confirm";
         transitionReason = canAdvance
-          ? "Understanding structure complete, entering collection"
-          : "Opening ceiling reached, accumulated fields substantive — force advance";
+          ? "Understanding structure complete, awaiting confirmation"
+          : "Opening ceiling reached — substantive fields, awaiting confirmation";
         if (forceAdvance) {
-          console.info("[poju-gate] opening ceiling force advance", {
+          console.info("[poju-gate] opening ceiling force advance to understanding confirm", {
             turns,
             missing: getUnderstandingMissingFields(agent),
           });
@@ -230,6 +230,21 @@ export function advanceStateMachine(
           over_ceiling: overCeiling,
           missing: getUnderstandingMissingFields(agent),
         });
+      }
+      break;
+    }
+    case "awaiting_understanding_confirm": {
+      const sig = signals.confirmation_signal;
+      if (sig === "confirmed") {
+        nextState = "collecting_context";
+        triggerCore = true;
+        transitionReason = "User confirmed understanding summary, entering collection";
+      } else if (sig === "wants_to_add") {
+        nextState = "opening";
+        transitionReason = "User wants to supplement understanding";
+      } else {
+        nextState = "awaiting_understanding_confirm";
+        transitionReason = "Awaiting explicit understanding confirmation (button)";
       }
       break;
     }

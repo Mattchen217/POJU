@@ -50,8 +50,7 @@ function main(): void {
   assert("wire strip on opening turn", agent.includes("openingTurn ? null : (llmResponse.breakthrough_core ?? null)"));
   assert(
     "segment-2 clears stale core before fetch",
-    agent.includes("breakthrough_core: null,\n        investigation_agenda: []") ||
-      agent.includes("breakthrough_core: null,\r\n        investigation_agenda: []"),
+    agent.includes("runSegment2BreakthroughCore") && agent.includes("breakthrough_core: null"),
   );
   assert("segment-2 independent xhigh log", agent.includes("segment-2 breakthrough-core (post-gate, independent xhigh)"));
 

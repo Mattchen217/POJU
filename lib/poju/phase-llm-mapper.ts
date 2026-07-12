@@ -31,6 +31,10 @@ export function mapPhaseResultToChatPayload(
       current_state = "opening";
       user_intent = "greeting";
       break;
+    case "awaiting_understanding_confirm":
+      current_state = "awaiting_understanding_confirm";
+      user_intent = "sharing_situation";
+      break;
     case "awaiting_confirmation":
       current_state = "awaiting_confirmation";
       user_intent = "sharing_situation";

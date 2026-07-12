@@ -42,6 +42,7 @@ export interface POJUSessionRecord {
     | "greeting"
     | "collecting_context"
     | "awaiting_profile"
+    | "awaiting_understanding_confirm"
     | "awaiting_confirmation"
     | "analyzing"
     | "delivered"

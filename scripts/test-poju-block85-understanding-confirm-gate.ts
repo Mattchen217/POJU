@@ -1,0 +1,87 @@
+/**
+ * Block 85 — Understanding confirmation gate (segment 1 → 2)
+ *
+ *   pnpm exec tsx scripts/test-poju-block85-understanding-confirm-gate.ts
+ */
+import fs from "node:fs";
+import path from "node:path";
+import { createInitialAgentState, withCompleteUnderstanding } from "@/lib/poju/agent-state";
+import { advanceStateMachine, extractModelTurnSignals } from "@/lib/poju/state-machine";
+
+const ROOT = path.join(process.cwd());
+const failures: string[] = [];
+
+function read(rel: string): string {
+  return fs.readFileSync(path.join(ROOT, rel), "utf8");
+}
+
+function assert(label: string, ok: boolean): void {
+  if (!ok) failures.push(label);
+  console.log(`  [${ok ? "PASS" : "FAIL"}] ${label}`);
+}
+
+function main(): void {
+  console.log("\n========== POJU Block 85 · Understanding confirm gate ==========\n");
+
+  const sm = read("lib/poju/state-machine.ts");
+  const agent = read("lib/poju/agent.ts");
+  const opening = read("lib/llm/phases/opening-phase-v6.ts");
+  const ui = read("components/poju/POJUChatUI.tsx");
+  const reply = read("lib/poju/understanding-gate-reply.ts");
+
+  assert("state machine has awaiting_understanding_confirm", sm.includes("awaiting_understanding_confirm"));
+  assert("opening branch targets confirm gate", sm.includes('nextState = "awaiting_understanding_confirm"'));
+  assert("confirm triggers segment2", sm.includes('sig === "confirmed"') && sm.includes("triggerCore = true"));
+  assert("supplement returns opening", sm.includes('sig === "wants_to_add"') && sm.includes('nextState = "opening"'));
+
+  assert("opening prompt detailed summary rule", opening.includes("理解齐备 → 详细总结"));
+  assert("handleUnderstandingGateAction exported", agent.includes("export async function handleUnderstandingGateAction"));
+  assert("resolveUnderstandingGateSummaryContent wired", agent.includes("resolveUnderstandingGateSummaryContent"));
+  assert("understanding_gate_pending meta", agent.includes("understanding_gate_pending"));
+
+  assert("UI understanding gate buttons", ui.includes("UnderstandingGateActions"));
+  assert("UI composer locked at gate", ui.includes("understandingGatePending"));
+  assert("UI handleUnderstandingGateClick", ui.includes("handleUnderstandingGateClick"));
+
+  assert("field recap helper", reply.includes("buildUnderstandingGateSummaryFromFields"));
+
+  const agentState = withCompleteUnderstanding(
+    createInitialAgentState({ original_question: "徒弟坐了我的位置" }),
+  );
+  const toGate = advanceStateMachine(
+    agentState,
+    extractModelTurnSignals({
+      base_analysis_ready: true,
+      substantive_opening_turns: 2,
+      opening_problem_statement: "徒弟坐了我的位置",
+    }),
+    "我最想保住手艺传承",
+  );
+  assert("runtime: struct complete → awaiting_understanding_confirm", toGate.next_agent.current_phase === "awaiting_understanding_confirm");
+  assert("runtime: gate turn does not trigger core", toGate.trigger_breakthrough_core === false);
+
+  const confirmed = advanceStateMachine(
+    toGate.next_agent,
+    extractModelTurnSignals({ confirmation_signal: "confirmed" }),
+    "对，就是这样，开始分析",
+  );
+  assert("runtime: confirmed → collecting", confirmed.next_agent.current_phase === "collecting_context");
+  assert("runtime: confirmed triggers core", confirmed.trigger_breakthrough_core === true);
+
+  const supplement = advanceStateMachine(
+    toGate.next_agent,
+    extractModelTurnSignals({ confirmation_signal: "wants_to_add" }),
+    "我还想补充一点",
+  );
+  assert("runtime: supplement → opening", supplement.next_agent.current_phase === "opening");
+  assert("runtime: supplement no core", supplement.trigger_breakthrough_core === false);
+
+  console.log("\n========================================\n");
+  if (failures.length) {
+    console.error(`FAILED (${failures.length}):`, failures.join(", "));
+    process.exit(1);
+  }
+  console.log("All Block 85 checks passed.\n");
+}
+
+main();

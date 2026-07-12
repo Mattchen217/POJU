@@ -42,6 +42,7 @@ export interface POJULLMResponse {
     | "greeting"
     | "collecting_context"
     | "awaiting_profile"
+    | "awaiting_understanding_confirm"
     | "awaiting_confirmation"
     | "analyzing"
     | "delivered"
@@ -145,7 +146,13 @@ async function callPOJULLMPhasePath(input: CallInput): Promise<POJULLMResponse> 
     user_intent: (mapped.user_intent as POJULLMResponse["user_intent"]) ?? "sharing_situation",
     current_state:
       (mapped.current_state as POJULLMResponse["current_state"]) ??
-      (activePhase === "opening" ? "opening" : "collecting_context"),
+      (activePhase === "opening"
+        ? "opening"
+        : activePhase === "awaiting_understanding_confirm"
+          ? "awaiting_understanding_confirm"
+          : activePhase === "awaiting_confirmation"
+            ? "awaiting_confirmation"
+            : "collecting_context"),
     action_requested: mapped.action_requested as POJULLMResponse["action_requested"],
     topic_drift_detected: Boolean(mapped.topic_drift_detected),
     topic_drift_signal:

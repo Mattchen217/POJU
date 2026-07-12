@@ -62,6 +62,7 @@ import { extractRelationFocusHintsFromText } from "@/lib/poju/relation-focus-hin
 /** 下游相位：question_category 已定，流年/定向关系进 user 侧（INV-1 · 不进 system）。 */
 export const POJU_V6_DIRECTED_RELATION_PHASES: ReadonlySet<AgentPhase> = new Set([
   "opening",
+  "awaiting_understanding_confirm",
   "collecting_context",
   "awaiting_confirmation",
   "delivered",

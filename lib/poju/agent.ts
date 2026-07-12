@@ -66,6 +66,12 @@ import { buildAgentStateSnapshot } from "@/lib/poju/agent-state-snapshot";
 import { ensureBreakthroughCore, runConfirmationPipeline } from "@/lib/poju/agent-orchestrator";
 import { classifyConfirmationAffirmative } from "@/lib/poju/confirmation-reply";
 import { applyActionStatusUpdates, parseActionStatusUpdates } from "@/lib/poju/action-status-updates";
+import {
+  resolveUnderstandingGateSummaryContent,
+  understandingGateConfirmButtonLabel,
+  understandingGateSupplementAck,
+  understandingGateSupplementButtonLabel,
+} from "@/lib/poju/understanding-gate-reply";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 /** Session uses default `userProfiles` slot from device. */
@@ -234,7 +240,8 @@ function finalizeAgentV2(
   loadedBaseAnalysis?: unknown | null,
 ): { agent: POJUAgentState; advance: AdvanceResult } {
   const currentPhase = normalizeAgentPhase(base.current_phase) ?? base.current_phase;
-  const isOpeningTurn = currentPhase === "opening";
+  const isOpeningTurn =
+    currentPhase === "opening" || currentPhase === "awaiting_understanding_confirm";
 
   const flat = llm.context_updates ?? {};
   const agendaStatusUpdates = extractAgendaStatusUpdates(flat);
@@ -643,8 +650,10 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       : isSystemMessage
         ? ""
         : userMessage;
+  const phaseForWire =
+    normalizeAgentPhase(ensureAgentV2(sessionForAgent).current_phase) ?? "opening";
   const openingTurn =
-    (normalizeAgentPhase(ensureAgentV2(sessionForAgent).current_phase) ?? "opening") === "opening";
+    phaseForWire === "opening" || phaseForWire === "awaiting_understanding_confirm";
   const { agent: agentCore, advance } = finalizeAgentV2(
     ensureAgentV2(sessionForAgent),
     sessionForAgent,
@@ -682,38 +691,17 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   }
 
   if (advance.trigger_breakthrough_core) {
-    console.info("[agent] segment-2 breakthrough-core (post-gate, independent xhigh)");
-    try {
-      const freshQuestion =
+    agent_v2 = await runSegment2BreakthroughCore({
+      sessionForAgent,
+      agent_v2,
+      mergedActions,
+      locale,
+      freshQuestion:
         agent_v2.original_question?.trim() ||
         llmResponse.problem_summary?.trim() ||
         extractOpeningProblem(sessionForAgent.messages) ||
-        resolveOriginalQuestion(agent_v2, phaseUserMessage);
-      const withQ = {
-        ...agent_v2,
-        original_question: freshQuestion,
-        breakthrough_core: null,
-        investigation_agenda: [],
-        agenda_generated: false,
-      };
-      const coreResult = await ensureBreakthroughCore(
-        {
-          ...sessionForAgent,
-          original_question: freshQuestion,
-          agent_v2: { ...withQ, current_phase: "collecting_context" },
-        },
-        locale,
-      );
-      const coreReady = coreResult.agent_v2?.breakthrough_core != null;
-      if (coreReady) {
-        agent_v2 = { ...coreResult.agent_v2!, actions: mergedActions };
-      } else {
-        agent_v2 = { ...agent_v2, current_phase: "opening" };
-      }
-    } catch (e) {
-      console.warn("[agent] breakthrough-core failed, staying in opening:", e);
-      agent_v2 = { ...agent_v2, current_phase: "opening" };
-    }
+        resolveOriginalQuestion(agent_v2, phaseUserMessage),
+    });
   }
 
   let finalContent = llmResponse.response;
@@ -723,19 +711,26 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     agent_v2.breakthrough_core != null &&
     (agent_v2.investigation_agenda?.length ?? 0) > 0;
   const phaseAfter = normalizeAgentPhase(agent_v2.current_phase) ?? agent_v2.current_phase;
+  const enteredUnderstandingGate =
+    (normalizeAgentPhase(ensureAgentV2(sessionForAgent).current_phase) ?? "opening") === "opening" &&
+    phaseAfter === "awaiting_understanding_confirm";
   const envelopeFailedStayedOpening =
     advance.trigger_breakthrough_core && phaseAfter === "opening";
 
   if (justConverted) {
     finalContent = buildCollectingTransitionReplyFromCore(agent_v2, locale);
+  } else if (enteredUnderstandingGate) {
+    finalContent = resolveUnderstandingGateSummaryContent(agent_v2, finalContent, locale);
   } else if (envelopeFailedStayedOpening && !finalContent.trim()) {
     finalContent = envelopeCoreFallbackRetryHint(locale);
   }
 
   const advancedCleanly =
     justConverted ||
+    enteredUnderstandingGate ||
     (!envelopeFailedStayedOpening &&
-      (phaseAfter === "awaiting_confirmation" ||
+      (phaseAfter === "awaiting_understanding_confirm" ||
+        phaseAfter === "awaiting_confirmation" ||
         phaseAfter === "delivered" ||
         phaseAfter === "tracking" ||
         (phaseAfter === "collecting_context" && hasQuestionCue(finalContent))));
@@ -789,6 +784,9 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
         llmResponse.contains_delivery || workingSession.main_delivery_done,
       ),
       llm_debug: llmResponse.llm_debug,
+      ...(phaseAfter === "awaiting_understanding_confirm"
+        ? { understanding_gate_pending: true as const }
+        : {}),
       ...(isPojuEmptyGenerationMessage(finalContent)
         ? { kind: "generation_incomplete" as const }
         : isPojuInfrastructureFailureMessage(finalContent)
@@ -824,6 +822,136 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   });
 
   return maybeRunDeliveryPipeline(sessionOut, advance, locale);
+}
+
+async function runSegment2BreakthroughCore(input: {
+  sessionForAgent: POJUSessionState;
+  agent_v2: POJUAgentState;
+  mergedActions: POJUAction[];
+  locale: string;
+  freshQuestion: string;
+}): Promise<POJUAgentState> {
+  let agent_v2 = input.agent_v2;
+  console.info("[agent] segment-2 breakthrough-core (post-gate, independent xhigh)");
+  try {
+    const withQ = {
+      ...agent_v2,
+      original_question: input.freshQuestion,
+      breakthrough_core: null,
+      investigation_agenda: [],
+      agenda_generated: false,
+    };
+    const coreResult = await ensureBreakthroughCore(
+      {
+        ...input.sessionForAgent,
+        original_question: input.freshQuestion,
+        agent_v2: { ...withQ, current_phase: "collecting_context" },
+      },
+      input.locale,
+    );
+    const coreReady = coreResult.agent_v2?.breakthrough_core != null;
+    if (coreReady) {
+      agent_v2 = { ...coreResult.agent_v2!, actions: input.mergedActions };
+    } else {
+      agent_v2 = { ...agent_v2, current_phase: "opening" };
+    }
+  } catch (e) {
+    console.warn("[agent] breakthrough-core failed, staying in opening:", e);
+    agent_v2 = { ...agent_v2, current_phase: "opening" };
+  }
+  return agent_v2;
+}
+
+/** Button-driven understanding gate — no LLM intent guessing. */
+export async function handleUnderstandingGateAction(input: {
+  session: POJUSessionState;
+  action: "confirmed" | "wants_to_add";
+  locale: string;
+}): Promise<POJUSessionState> {
+  const session = ensureSessionCycles(input.session);
+  const baseAgent = ensureAgentV2(session);
+  const phase = normalizeAgentPhase(baseAgent.current_phase);
+  if (phase !== "awaiting_understanding_confirm") return session;
+
+  const userLabel =
+    input.action === "confirmed"
+      ? understandingGateConfirmButtonLabel(input.locale)
+      : understandingGateSupplementButtonLabel(input.locale);
+  const userMessage: POJUMessage = {
+    role: "user",
+    content: userLabel,
+    timestamp: new Date().toISOString(),
+    client_id: safeRandomUUID(),
+  };
+  const messagesWithUser = [...session.messages, userMessage];
+  const signals = extractModelTurnSignals({ confirmation_signal: input.action });
+  const advance = advanceStateMachine(baseAgent, signals, userLabel);
+  let agent_v2 = advance.next_agent;
+
+  if (input.action === "wants_to_add") {
+    const ack: POJUMessage = {
+      role: "assistant",
+      content: understandingGateSupplementAck(input.locale),
+      timestamp: new Date().toISOString(),
+      meta: {
+        current_state: "opening",
+        user_intent: "sharing_situation",
+        action_requested: "continue_chat",
+        state_snapshot: buildAgentStateSnapshot(agent_v2, session.main_delivery_done),
+      },
+    };
+    return withSessionProfileFlags({
+      ...session,
+      messages: [...messagesWithUser, ack],
+      agent_v2,
+      last_interaction_at: new Date().toISOString(),
+    });
+  }
+
+  const freshQuestion =
+    agent_v2.original_question?.trim() ||
+    extractOpeningProblem(messagesWithUser) ||
+    session.original_question?.trim() ||
+    userLabel;
+  agent_v2 = { ...agent_v2, original_question: freshQuestion };
+
+  if (advance.trigger_breakthrough_core) {
+    agent_v2 = await runSegment2BreakthroughCore({
+      sessionForAgent: { ...session, messages: messagesWithUser },
+      agent_v2,
+      mergedActions: agent_v2.actions,
+      locale: input.locale,
+      freshQuestion,
+    });
+  }
+
+  const phaseAfter = normalizeAgentPhase(agent_v2.current_phase) ?? agent_v2.current_phase;
+  const coreReady =
+    agent_v2.breakthrough_core != null && (agent_v2.investigation_agenda?.length ?? 0) > 0;
+  let finalContent = coreReady
+    ? buildCollectingTransitionReplyFromCore(agent_v2, input.locale)
+    : envelopeCoreFallbackRetryHint(input.locale);
+
+  const assistantMessage: POJUMessage = {
+    role: "assistant",
+    content: finalContent,
+    timestamp: new Date().toISOString(),
+    meta: {
+      current_state: phaseAfter === "collecting_context" ? "collecting_context" : "opening",
+      user_intent: "sharing_situation",
+      action_requested: "continue_chat",
+      investigation_agenda: agent_v2.investigation_agenda ?? undefined,
+      state_snapshot: buildAgentStateSnapshot(agent_v2, session.main_delivery_done),
+    },
+  };
+
+  return withSessionProfileFlags({
+    ...session,
+    original_question: freshQuestion,
+    messages: [...messagesWithUser, assistantMessage],
+    agent_v2,
+    last_interaction_at: new Date().toISOString(),
+  });
 }
 
 async function maybeRunDeliveryPipeline(
@@ -1135,6 +1263,7 @@ function sessionStateHint(session: POJUSessionState) {
   const phase = session.agent_v2?.current_phase;
   if (session.main_delivery_done || phase === "delivered") return "tracking" as const;
   if (phase === "awaiting_confirmation") return "awaiting_confirmation" as const;
+  if (phase === "awaiting_understanding_confirm") return "awaiting_understanding_confirm" as const;
   if (phase === "opening") return "opening" as const;
   return "collecting_context" as const;
 }

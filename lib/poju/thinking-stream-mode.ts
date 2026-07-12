@@ -21,7 +21,7 @@ export function resolveThinkingStreamMode(
   if (options?.confirmPipeline) return "preparing_delivery";
 
   const phase = normalizeAgentPhase(session.agent_v2?.current_phase);
-  if (phase === "opening" || phase === "tracking" || phase === "delivered") return "flash";
+  if (phase === "opening" || phase === "awaiting_understanding_confirm" || phase === "tracking" || phase === "delivered") return "flash";
   if (phase === "collecting_context") return "collecting";
   if (phase === "awaiting_confirmation") {
     if (/确认|生成|可以了|yes|confirm|proceed|generate/i.test(userMessage)) {

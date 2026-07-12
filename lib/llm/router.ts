@@ -157,6 +157,7 @@ export function getThinkingConfig(callType: LLMCallType): { enabled: boolean; ef
 export function callTypeForAgentPhase(phase: AgentPhase): LLMCallType {
   switch (phase) {
     case "opening":
+    case "awaiting_understanding_confirm":
       return "chat_flash";
     case "collecting_context":
     case "awaiting_confirmation":

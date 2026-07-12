@@ -46,7 +46,7 @@ function main(): void {
   const agentTs = read("lib/poju/agent.ts");
   const orch = read("lib/poju/agent-orchestrator.ts");
   assert("agent imports ensureBreakthroughCore", agentTs.includes("ensureBreakthroughCore"));
-  assert("agent fallback ensureBreakthroughCore on missing inline core", agentTs.includes("inlineCoreReady"));
+  assert("agent runSegment2BreakthroughCore on gate confirm", agentTs.includes("runSegment2BreakthroughCore"));
   assert("agent reverts to opening when core fails", agentTs.includes('current_phase: "opening"'));
   assert("orchestrator exports ensureBreakthroughCore", orch.includes("export async function ensureBreakthroughCore"));
   assert(
@@ -99,8 +99,8 @@ function main(): void {
     }),
     "我离婚8年了想重新开始",
   );
-  assert("ready advance enters collecting", readyAdvance.next_state === "collecting_context");
-  assert("ready advance triggers core", readyAdvance.trigger_breakthrough_core === true);
+  assert("ready advance enters understanding gate", readyAdvance.next_state === "awaiting_understanding_confirm");
+  assert("ready advance does not trigger core until confirm", readyAdvance.trigger_breakthrough_core === false);
 
   const withCore = {
     ...readyAdvance.next_agent,

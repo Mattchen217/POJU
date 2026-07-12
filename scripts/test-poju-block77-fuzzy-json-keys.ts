@@ -95,8 +95,8 @@ function main(): void {
     extractModelTurnSignals({ base_analysis_ready: true, substantive_opening_turns: OPENING_MAX_SUBSTANTIVE_TURNS }),
     "用户补充",
   );
-  assert("ceiling force advance", force.next_state === "collecting_context");
-  assert("ceiling triggers core", force.trigger_breakthrough_core === true);
+  assert("ceiling force advance", force.next_state === "awaiting_understanding_confirm");
+  assert("ceiling does not trigger core until confirm", force.trigger_breakthrough_core === false);
 
   console.log("\n========================================\n");
   if (failures.length) {
