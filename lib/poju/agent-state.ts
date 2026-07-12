@@ -708,12 +708,13 @@ export function decidePhaseTransition(input: PhaseTransitionInput): PhaseTransit
       if (
         user_message !== "__OPENING__" &&
         user_message.trim() &&
-        isUnderstandingComplete(current_state)
+        isUnderstandingComplete(current_state) &&
+        input.understanding_sufficient === true
       ) {
         return {
           should_transition: true,
           new_phase: "awaiting_understanding_confirm",
-          reason: "Understanding structure complete, awaiting user confirmation",
+          reason: "Understanding structure complete and model sufficient, awaiting user confirmation",
         };
       }
       break;

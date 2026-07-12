@@ -202,8 +202,9 @@ export function advanceStateMachine(
       const overCeiling = turns >= OPENING_MAX_SUBSTANTIVE_TURNS;
       const hasInput = Boolean(userInput.trim() && userInput !== "__OPENING__");
       const baseReady = signals.base_analysis_ready === true;
+      const modelDone = signals.understanding_sufficient === true;
 
-      const canAdvance = structComplete && baseReady && hasInput;
+      const canAdvance = structComplete && baseReady && hasInput && modelDone;
       const forceAdvance =
         !canAdvance && baseReady && hasInput && overCeiling && hasSubstantiveDilemmaAndDirection(agent);
 
@@ -213,7 +214,7 @@ export function advanceStateMachine(
         next = { ...agent, original_question: lockedQuestion };
         nextState = "awaiting_understanding_confirm";
         transitionReason = canAdvance
-          ? "Understanding structure complete, awaiting confirmation"
+          ? "Understanding structure complete and model sufficient, awaiting confirmation"
           : "Opening ceiling reached — substantive fields, awaiting confirmation";
         if (forceAdvance) {
           console.info("[poju-gate] opening ceiling force advance to understanding confirm", {
@@ -221,6 +222,13 @@ export function advanceStateMachine(
             missing: getUnderstandingMissingFields(agent),
           });
         }
+      } else if (structComplete && baseReady && hasInput && !modelDone) {
+        transitionReason =
+          "Structure complete but model still gathering — stay in opening (no confirm gate)";
+        console.info("[poju-gate] struct complete, model not sufficient — continue opening", {
+          turns,
+          over_ceiling: overCeiling,
+        });
       } else if (signals.understanding_sufficient === true && !structComplete) {
         transitionReason =
           "Model reported sufficient but understanding structure incomplete (control plane blocked)";

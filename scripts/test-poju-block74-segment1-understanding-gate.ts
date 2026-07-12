@@ -79,12 +79,21 @@ function main(): void {
   );
 
   assert(
-    "struct complete + base enters collecting",
+    "struct complete + base but model not sufficient stays opening",
     advanceStateMachine(
       { ...complete, has_base_analysis: true },
       extractModelTurnSignals({ understanding_sufficient: false, base_analysis_ready: true }),
       "用户消息",
-    ).next_state === "collecting_context",
+    ).next_state === "opening",
+  );
+
+  assert(
+    "struct complete + base + model sufficient enters confirm gate",
+    advanceStateMachine(
+      { ...complete, has_base_analysis: true },
+      extractModelTurnSignals({ understanding_sufficient: true, base_analysis_ready: true }),
+      "用户消息",
+    ).next_state === "awaiting_understanding_confirm",
   );
 
   assert(
@@ -108,13 +117,21 @@ function main(): void {
   });
   assert("decidePhaseTransition ignores model sufficient", !legacy.should_transition);
 
-  const allowed = decidePhaseTransition({
+  const blockedStruct = decidePhaseTransition({
     current_state: complete,
     llm_suggested_phase: "collecting_context",
     user_message: "卡了三年想转行",
     understanding_sufficient: false,
   });
-  assert("decidePhaseTransition allows struct complete", allowed.should_transition);
+  assert("decidePhaseTransition blocks struct complete without model sufficient", !blockedStruct.should_transition);
+
+  const allowed = decidePhaseTransition({
+    current_state: complete,
+    llm_suggested_phase: "collecting_context",
+    user_message: "卡了三年想转行",
+    understanding_sufficient: true,
+  });
+  assert("decidePhaseTransition allows struct complete with model sufficient", allowed.should_transition);
 
   console.log("\n========================================\n");
   if (failures.length) {

@@ -86,6 +86,7 @@ function main(): void {
     createInitialAgentState({ original_question: "徒弟坐了我的位置" }),
   );
   const signals = extractModelTurnSignals({
+    understanding_sufficient: true,
     base_analysis_ready: true,
     substantive_opening_turns: 2,
     opening_problem_statement: "徒弟坐了我的位置",

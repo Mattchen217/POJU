@@ -30,11 +30,11 @@ function main(): void {
   const reply = read("lib/poju/understanding-gate-reply.ts");
 
   assert("state machine has awaiting_understanding_confirm", sm.includes("awaiting_understanding_confirm"));
-  assert("opening branch targets confirm gate", sm.includes('nextState = "awaiting_understanding_confirm"'));
+  assert("canAdvance requires model sufficient", sm.includes("modelDone") && sm.includes("understanding_sufficient === true"));
   assert("confirm triggers segment2", sm.includes('sig === "confirmed"') && sm.includes("triggerCore = true"));
   assert("supplement returns opening", sm.includes('sig === "wants_to_add"') && sm.includes('nextState = "opening"'));
 
-  assert("opening prompt detailed summary rule", opening.includes("理解齐备 → 详细总结"));
+  assert("opening sufficient=true summary only no追问", opening.includes("understanding_sufficient=true") && opening.includes("不得") && opening.includes("追问"));
   assert("handleUnderstandingGateAction exported", agent.includes("export async function handleUnderstandingGateAction"));
   assert("resolveUnderstandingGateSummaryContent wired", agent.includes("resolveUnderstandingGateSummaryContent"));
   assert("understanding_gate_pending meta", agent.includes("understanding_gate_pending"));
@@ -51,6 +51,7 @@ function main(): void {
   const toGate = advanceStateMachine(
     agentState,
     extractModelTurnSignals({
+      understanding_sufficient: true,
       base_analysis_ready: true,
       substantive_opening_turns: 2,
       opening_problem_statement: "徒弟坐了我的位置",
@@ -59,6 +60,18 @@ function main(): void {
   );
   assert("runtime: struct complete → awaiting_understanding_confirm", toGate.next_agent.current_phase === "awaiting_understanding_confirm");
   assert("runtime: gate turn does not trigger core", toGate.trigger_breakthrough_core === false);
+
+  const structOnly = advanceStateMachine(
+    agentState,
+    extractModelTurnSignals({
+      understanding_sufficient: false,
+      base_analysis_ready: true,
+      substantive_opening_turns: 2,
+    }),
+    "我最想保住手艺传承",
+  );
+  assert("runtime: struct complete but model not sufficient stays opening", structOnly.next_agent.current_phase === "opening");
+  assert("runtime: no confirm gate while model still asking", structOnly.trigger_breakthrough_core === false);
 
   const confirmed = advanceStateMachine(
     toGate.next_agent,

@@ -207,9 +207,20 @@ function understandingGateTests(): void {
     current_state: withCompleteUnderstanding(agent),
     llm_suggested_phase: "collecting_context",
     user_message: "卡了三年想转行但不敢",
+    understanding_sufficient: true,
+  });
+  assert(
+    "struct complete allowed with model sufficient",
+    allowed.should_transition && allowed.new_phase === "awaiting_understanding_confirm",
+  );
+
+  const blockedStruct = decidePhaseTransition({
+    current_state: withCompleteUnderstanding(agent),
+    llm_suggested_phase: "collecting_context",
+    user_message: "卡了三年想转行但不敢",
     understanding_sufficient: false,
   });
-  assert("struct complete allowed without model sufficient", allowed.should_transition && allowed.new_phase === "collecting_context");
+  assert("struct complete blocked without model sufficient", !blockedStruct.should_transition);
 
   const orch = read("lib/poju/agent-orchestrator.ts");
   const agentTs = read("lib/poju/agent.ts");
