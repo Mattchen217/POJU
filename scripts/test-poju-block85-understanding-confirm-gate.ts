@@ -28,6 +28,9 @@ function main(): void {
   const opening = read("lib/llm/phases/opening-phase-v6.ts");
   const ui = read("components/poju/POJUChatUI.tsx");
   const reply = read("lib/poju/understanding-gate-reply.ts");
+  const gateUi = read("components/poju/UnderstandingGateActions.tsx");
+  const zhMsgs = read("messages/zh.json");
+  const enMsgs = read("messages/en.json");
 
   assert("state machine has awaiting_understanding_confirm", sm.includes("awaiting_understanding_confirm"));
   assert("canAdvance requires model sufficient", sm.includes("modelDone") && sm.includes("understanding_sufficient === true"));
@@ -36,14 +39,21 @@ function main(): void {
 
   assert("opening sufficient=true summary only no追问", opening.includes("understanding_sufficient=true") && opening.includes("不得") && opening.includes("追问"));
   assert("handleUnderstandingGateAction exported", agent.includes("export async function handleUnderstandingGateAction"));
+  assert("applyUnderstandingGateSupplement exported", agent.includes("export function applyUnderstandingGateSupplement"));
+  assert("confirm supports optimistic user append", agent.includes("userAlreadyAppended"));
+  assert("UI optimistic confirm flow", ui.includes("buildOptimisticUserMessage(userLabel)"));
+  assert("UI supplement opens composer only", ui.includes("applyUnderstandingGateSupplement"));
   assert("resolveUnderstandingGateSummaryContent wired", agent.includes("resolveUnderstandingGateSummaryContent"));
   assert("understanding_gate_pending meta", agent.includes("understanding_gate_pending"));
 
+  assert("UI uses i18n gate labels", gateUi.includes('t("understanding_gate_confirm")'));
+  assert("gate confirm label zh", zhMsgs.includes('"understanding_gate_confirm": "对，就是这样"'));
+  assert("gate confirm label en", enMsgs.includes('"understanding_gate_confirm": "Yes, that\'s right"'));
   assert("UI understanding gate buttons", ui.includes("UnderstandingGateActions"));
   assert("UI composer locked at gate", ui.includes("understandingGatePending"));
   assert("UI handleUnderstandingGateClick", ui.includes("handleUnderstandingGateClick"));
 
-  assert("field recap helper", reply.includes("buildUnderstandingGateSummaryFromFields"));
+  assert("server gate labels multilingual", reply.includes('confirm: "Ja, genau so"') && reply.includes('confirm: "Sí, es así"'));
 
   const agentState = withCompleteUnderstanding(
     createInitialAgentState({ original_question: "徒弟坐了我的位置" }),
@@ -76,7 +86,7 @@ function main(): void {
   const confirmed = advanceStateMachine(
     toGate.next_agent,
     extractModelTurnSignals({ confirmation_signal: "confirmed" }),
-    "对，就是这样，开始分析",
+    "对，就是这样",
   );
   assert("runtime: confirmed → collecting", confirmed.next_agent.current_phase === "collecting_context");
   assert("runtime: confirmed triggers core", confirmed.trigger_breakthrough_core === true);

@@ -65,27 +65,31 @@ async function ensureBaseAnalysis(session: POJUSessionState): Promise<POJUSessio
 export async function ensureBreakthroughCore(
   session: POJUSessionState,
   locale: string,
-): Promise<POJUSessionState> {
+): Promise<{
+  session: POJUSessionState;
+  llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
+  model?: string;
+}> {
   const agent = session.agent_v2;
   console.log("[poju-diag] breakthrough-core trigger", {
     phase: agent?.current_phase,
     has_core: agent?.breakthrough_core != null,
     has_profile: resolveSessionHasProfile(session),
   });
-  if (!agent) return session;
-  if (agent.current_phase !== "collecting_context") return session;
-  if (agent.breakthrough_core != null) return session;
-  if (!isSubstantiveBreakthroughQuestion(resolveSessionOriginalQuestion(session))) return session;
+  if (!agent) return { session };
+  if (agent.current_phase !== "collecting_context") return { session };
+  if (agent.breakthrough_core != null) return { session };
+  if (!isSubstantiveBreakthroughQuestion(resolveSessionOriginalQuestion(session))) return { session };
 
   const { base_analysis } = await loadSessionProfileBundle(session);
-  if (base_analysis == null) return session;
+  if (base_analysis == null) return { session };
 
   try {
     const out = await requestBreakthroughCore(session, locale, { base_analysis });
-    return out.session;
+    return { session: out.session, llm_debug: out.llm_debug, model: out.model };
   } catch (e) {
     console.warn("[agent-orchestrator] Breakthrough core failed:", e);
-    return session;
+    return { session };
   }
 }
 

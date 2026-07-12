@@ -69,8 +69,6 @@ import { applyActionStatusUpdates, parseActionStatusUpdates } from "@/lib/poju/a
 import {
   resolveUnderstandingGateSummaryContent,
   understandingGateConfirmButtonLabel,
-  understandingGateSupplementAck,
-  understandingGateSupplementButtonLabel,
 } from "@/lib/poju/understanding-gate-reply";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -690,8 +688,11 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     agent_v2 = { ...agent_v2, current_phase: "awaiting_confirmation" };
   }
 
+  let segment2LlmDebug: import("@/lib/llm/llm-debug").LLMCallDebug | undefined;
+  let segment2Model: string | undefined;
+
   if (advance.trigger_breakthrough_core) {
-    agent_v2 = await runSegment2BreakthroughCore({
+    const seg2 = await runSegment2BreakthroughCore({
       sessionForAgent,
       agent_v2,
       mergedActions,
@@ -702,6 +703,9 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
         extractOpeningProblem(sessionForAgent.messages) ||
         resolveOriginalQuestion(agent_v2, phaseUserMessage),
     });
+    agent_v2 = seg2.agent_v2;
+    segment2LlmDebug = seg2.segment2_llm_debug;
+    segment2Model = seg2.segment2_model;
   }
 
   let finalContent = llmResponse.response;
@@ -765,7 +769,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     content: finalContent,
     timestamp: new Date().toISOString(),
     meta: {
-      llm_model: llmResponse.model,
+      llm_model: justConverted && segment2Model ? segment2Model : llmResponse.model,
       tokens_used: llmResponse.tokens_used,
       user_intent: llmResponse.user_intent,
       current_state: llmResponse.current_state,
@@ -783,7 +787,8 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
         agent_v2,
         llmResponse.contains_delivery || workingSession.main_delivery_done,
       ),
-      llm_debug: llmResponse.llm_debug,
+      llm_debug:
+        justConverted && segment2LlmDebug ? segment2LlmDebug : llmResponse.llm_debug,
       ...(phaseAfter === "awaiting_understanding_confirm"
         ? { understanding_gate_pending: true as const }
         : {}),
@@ -830,7 +835,11 @@ async function runSegment2BreakthroughCore(input: {
   mergedActions: POJUAction[];
   locale: string;
   freshQuestion: string;
-}): Promise<POJUAgentState> {
+}): Promise<{
+  agent_v2: POJUAgentState;
+  segment2_llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
+  segment2_model?: string;
+}> {
   let agent_v2 = input.agent_v2;
   console.info("[agent] segment-2 breakthrough-core (post-gate, independent xhigh)");
   try {
@@ -849,64 +858,64 @@ async function runSegment2BreakthroughCore(input: {
       },
       input.locale,
     );
-    const coreReady = coreResult.agent_v2?.breakthrough_core != null;
+    const coreReady = coreResult.session.agent_v2?.breakthrough_core != null;
     if (coreReady) {
-      agent_v2 = { ...coreResult.agent_v2!, actions: input.mergedActions };
-    } else {
-      agent_v2 = { ...agent_v2, current_phase: "opening" };
+      agent_v2 = { ...coreResult.session.agent_v2!, actions: input.mergedActions };
+      return {
+        agent_v2,
+        segment2_llm_debug: coreResult.llm_debug,
+        segment2_model: coreResult.model,
+      };
     }
+    agent_v2 = { ...agent_v2, current_phase: "opening" };
   } catch (e) {
     console.warn("[agent] breakthrough-core failed, staying in opening:", e);
     agent_v2 = { ...agent_v2, current_phase: "opening" };
   }
-  return agent_v2;
+  return { agent_v2 };
 }
 
-/** Button-driven understanding gate — no LLM intent guessing. */
+/** Return to opening for user-typed supplement — no chat messages yet. */
+export function applyUnderstandingGateSupplement(session: POJUSessionState): POJUSessionState {
+  const baseAgent = ensureAgentV2(session);
+  const phase = normalizeAgentPhase(baseAgent.current_phase);
+  if (phase !== "awaiting_understanding_confirm") return session;
+
+  const signals = extractModelTurnSignals({ confirmation_signal: "wants_to_add" });
+  const advance = advanceStateMachine(baseAgent, signals, "");
+  return withSessionProfileFlags({
+    ...session,
+    agent_v2: advance.next_agent,
+    last_interaction_at: new Date().toISOString(),
+  });
+}
+
+/** Button confirm — runs segment-2; user bubble may already be optimistically appended in UI. */
 export async function handleUnderstandingGateAction(input: {
   session: POJUSessionState;
-  action: "confirmed" | "wants_to_add";
+  action: "confirmed";
   locale: string;
+  userAlreadyAppended?: boolean;
 }): Promise<POJUSessionState> {
   const session = ensureSessionCycles(input.session);
   const baseAgent = ensureAgentV2(session);
   const phase = normalizeAgentPhase(baseAgent.current_phase);
   if (phase !== "awaiting_understanding_confirm") return session;
 
-  const userLabel =
-    input.action === "confirmed"
-      ? understandingGateConfirmButtonLabel(input.locale)
-      : understandingGateSupplementButtonLabel(input.locale);
+  const userLabel = understandingGateConfirmButtonLabel(input.locale);
   const userMessage: POJUMessage = {
     role: "user",
     content: userLabel,
     timestamp: new Date().toISOString(),
     client_id: safeRandomUUID(),
   };
-  const messagesWithUser = [...session.messages, userMessage];
-  const signals = extractModelTurnSignals({ confirmation_signal: input.action });
+  const messagesWithUser = input.userAlreadyAppended
+    ? session.messages
+    : [...session.messages, userMessage];
+
+  const signals = extractModelTurnSignals({ confirmation_signal: "confirmed" });
   const advance = advanceStateMachine(baseAgent, signals, userLabel);
   let agent_v2 = advance.next_agent;
-
-  if (input.action === "wants_to_add") {
-    const ack: POJUMessage = {
-      role: "assistant",
-      content: understandingGateSupplementAck(input.locale),
-      timestamp: new Date().toISOString(),
-      meta: {
-        current_state: "opening",
-        user_intent: "sharing_situation",
-        action_requested: "continue_chat",
-        state_snapshot: buildAgentStateSnapshot(agent_v2, session.main_delivery_done),
-      },
-    };
-    return withSessionProfileFlags({
-      ...session,
-      messages: [...messagesWithUser, ack],
-      agent_v2,
-      last_interaction_at: new Date().toISOString(),
-    });
-  }
 
   const freshQuestion =
     agent_v2.original_question?.trim() ||
@@ -915,20 +924,26 @@ export async function handleUnderstandingGateAction(input: {
     userLabel;
   agent_v2 = { ...agent_v2, original_question: freshQuestion };
 
+  let segment2LlmDebug: import("@/lib/llm/llm-debug").LLMCallDebug | undefined;
+  let segment2Model: string | undefined;
+
   if (advance.trigger_breakthrough_core) {
-    agent_v2 = await runSegment2BreakthroughCore({
+    const seg2 = await runSegment2BreakthroughCore({
       sessionForAgent: { ...session, messages: messagesWithUser },
       agent_v2,
       mergedActions: agent_v2.actions,
       locale: input.locale,
       freshQuestion,
     });
+    agent_v2 = seg2.agent_v2;
+    segment2LlmDebug = seg2.segment2_llm_debug;
+    segment2Model = seg2.segment2_model;
   }
 
   const phaseAfter = normalizeAgentPhase(agent_v2.current_phase) ?? agent_v2.current_phase;
   const coreReady =
     agent_v2.breakthrough_core != null && (agent_v2.investigation_agenda?.length ?? 0) > 0;
-  let finalContent = coreReady
+  const finalContent = coreReady
     ? buildCollectingTransitionReplyFromCore(agent_v2, input.locale)
     : envelopeCoreFallbackRetryHint(input.locale);
 
@@ -941,6 +956,8 @@ export async function handleUnderstandingGateAction(input: {
       user_intent: "sharing_situation",
       action_requested: "continue_chat",
       investigation_agenda: agent_v2.investigation_agenda ?? undefined,
+      llm_model: segment2Model,
+      llm_debug: segment2LlmDebug,
       state_snapshot: buildAgentStateSnapshot(agent_v2, session.main_delivery_done),
     },
   };

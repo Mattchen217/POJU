@@ -5,6 +5,7 @@ import {
   mapBreakthroughCorePayload,
   parseBreakthroughCoreResponseText,
 } from "@/lib/llm/deepseek/breakthrough-core";
+import type { LLMCallDebug } from "@/lib/llm/llm-debug";
 import { callLLM } from "@/lib/llm/router";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 import { normalizeAgentPhase, type POJUAgentState } from "@/lib/poju/agent-state";
@@ -62,6 +63,8 @@ async function callCoreLLM(input: {
 }) {
   return callLLM({
     call_type: "deep_analysis",
+    phase_name: "segment2_breakthrough_core",
+    route_path: "once",
     system: input.system,
     messages: [{ role: "user", content: input.userContent }],
     max_tokens: input.max_tokens,
@@ -80,7 +83,14 @@ async function fetchCoreContent(input: {
   sessionId: string;
   profileId: string | null;
 }): Promise<
-  | { ok: true; content: string; tokens_used: number; model: string; finish_reason: string | null }
+  | {
+      ok: true;
+      content: string;
+      tokens_used: number;
+      model: string;
+      finish_reason: string | null;
+      llm_debug: LLMCallDebug;
+    }
   | { ok: false; reason: "truncated" | "parse_failed"; error: string }
 > {
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -104,12 +114,20 @@ async function fetchCoreContent(input: {
     try {
       const parsed = parseBreakthroughCoreResponseText(result.content);
       mapBreakthroughCorePayload(parsed);
+      const llm_debug: LLMCallDebug = {
+        ...result.llm_debug,
+        phase: "segment2_breakthrough_core",
+        requested_effort: "xhigh",
+        attempt: attempt + 1,
+        retried: attempt > 0,
+      };
       return {
         ok: true,
         content: result.content,
         tokens_used: result.meta.tokens_used,
         model: result.actual_model,
         finish_reason: finish,
+        llm_debug,
       };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -215,6 +233,7 @@ export async function POST(req: Request) {
       investigation_agenda: mapped.investigation_agenda,
       model,
       tokens_used,
+      llm_debug: fetched.llm_debug,
     });
   } catch (e: unknown) {
     if (e instanceof BreakthroughCoreRetryableError) {

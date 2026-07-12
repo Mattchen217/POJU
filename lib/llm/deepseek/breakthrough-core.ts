@@ -81,10 +81,26 @@ relationship_conclusion 与每条 breakthrough_direction 必须显式对准【�
 structural_basis 必须从实例清单【点名至少 3 项具体本地数据】（神煞实例 / 大运当前步 / 流年引动 / 十神张力 / 本命关系等），
 逐项说明它们如何作用于 core_dilemma 与 desired_direction。
 
+# 可读性硬要求（给用户看的分析 · 优先于打标密度）
+给用户看的分析（relationship_conclusion / direction.*），首先要是【平实、像人话、贴他这件事】的白话。
+命理术语是你 reasoning 里的推理骨架，但 content 里要【把术语的含义先用大白话讲出来】，
+术语只作点睛，不堆砌。禁止一句话里堆多个打标术语；一段话里打标术语控制在 1-2 个为宜。
+宁可少用术语、把话说透，也不要术语密集、让用户读不懂。
+
+# 术语降噪（首次打标、后续白话）
+同一个术语，仅在【首次出现】时打标 ⟦t:id|软译|白话⟧；后续再提到，直接用它的白话说法，不再打标。
+避免同一术语反复打标造成的视觉噪音。
+
+# 情景白话（贴他这件事）
+每个打标的第三格（情景白话）【必须】结合【这个用户的具体问题】写，能被独立读懂，
+不是通用词典解释。例：不要写"正官代表约束"（通用），要写"就是你面对的那个新领导、
+那套你不认同的数字化考核标准"（贴他）。
+若某个术语无法给出贴合他处境的真实白话，就【直接用大白话表达那个意思，不要硬塞术语】。
+
 # reasoning vs content（硬要求 · 真算但合规）
 - **reasoning（思考过程）**：可自由使用裸命理术语深算（食神/大运/身弱/日主等），合规不检查 reasoning。
 - **输出 JSON 各字符串字段**（relationship_conclusion / direction.* / agenda.label）：
-  凡引用命理概念，必须打标 ⟦t:<id>|<该情景软译>|<对他这件事的白话解释>⟧。
+  凡引用命理概念，必须打标 ⟦t:<id>|<该情景软译>|<对他这件事的白话解释>⟧（遵守上方可读性/降噪/情景白话规则）。
   例：⟦t:zheng_guan|规则与约束|你现在面对的"新标准、数字化考核"，就是那股约束你的外部力量⟧
   reasoning 里可裸写；JSON 字段一旦引用命理词，必须打标（UI 渲染前 autoMarkBareTerms 会兜底补漏）。
 
@@ -311,7 +327,12 @@ export async function requestBreakthroughCore(
   session: POJUSessionState,
   locale: string,
   options?: { base_analysis?: unknown | null },
-): Promise<{ session: POJUSessionState; tokens_used: number }> {
+): Promise<{
+  session: POJUSessionState;
+  tokens_used: number;
+  llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
+  model?: string;
+}> {
   if (typeof window === "undefined") {
     throw new Error("requestBreakthroughCore is browser-only");
   }
@@ -385,6 +406,7 @@ export async function requestBreakthroughCore(
     investigation_agenda?: AgendaItem[];
     model?: string;
     tokens_used?: number;
+    llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
     error?: string;
   };
 
@@ -426,5 +448,7 @@ export async function requestBreakthroughCore(
       tokens_used: session.tokens_used + tokens_used,
     },
     tokens_used,
+    llm_debug: payload.llm_debug,
+    model: payload.model,
   };
 }

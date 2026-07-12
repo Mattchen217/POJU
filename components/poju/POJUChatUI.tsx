@@ -17,7 +17,8 @@ import { getPojuDb } from "@/lib/db/poju-db";
 import { createPOJUSession, loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
 import { clearPendingStoredProfileId, readPendingStoredProfileId } from "@/lib/poju/pending-stored-profile";
 import { runDegradedDeliveryPipeline } from "@/lib/poju/agent-orchestrator";
-import { handleUnderstandingGateAction, handleUserMessage, tryHandleRuleRejection } from "@/lib/poju/agent";
+import { handleUnderstandingGateAction, applyUnderstandingGateSupplement, handleUserMessage, tryHandleRuleRejection } from "@/lib/poju/agent";
+import { understandingGateConfirmButtonLabel } from "@/lib/poju/understanding-gate-reply";
 import {
   dedupeWelcomeMessages,
   hasFixedWelcomeMessage,
@@ -289,6 +290,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     isPreviewSession(session) && !hasPaywallMessage(session) && !session.pending_question?.trim();
   const understandingGatePending =
     session.agent_v2?.current_phase === "awaiting_understanding_confirm";
+  const understandingGateActive = understandingGatePending && !sending;
   const composerLocked =
     expired ||
     previewComposerBlocked ||
@@ -965,18 +967,36 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     const baseSession = sessionRef.current;
     if (baseSession.agent_v2?.current_phase !== "awaiting_understanding_confirm") return;
 
+    if (action === "wants_to_add") {
+      const next = applyUnderstandingGateSupplement(baseSession);
+      onSessionUpdate(next);
+      syncDebugStateLedger(next);
+      await savePOJUSession(next);
+      return;
+    }
+
+    const userLabel = understandingGateConfirmButtonLabel(locale);
+    const withUser: POJUSessionState = {
+      ...baseSession,
+      messages: [...baseSession.messages, buildOptimisticUserMessage(userLabel)],
+    };
+    onSessionUpdate(withUser);
+    scrollChatToBottom("smooth");
+
     turnInFlightRef.current = true;
     const gen = ++sendGenerationRef.current;
     setSending(true);
-    setSlotActivity(action === "confirmed" ? "deep_reckoning" : "understanding");
+    setSlotActivity("deep_reckoning");
     setThinkingLiveLine(null);
-    scrollChatToBottom("smooth");
+    setGenerationStopped(false);
+    awaitingActivityDismissRef.current = true;
 
     try {
       const profileId = baseSession.selected_stored_profile_id?.trim();
-      if (action === "confirmed" && profileId && resolveSessionHasProfile(baseSession)) {
+      if (profileId && resolveSessionHasProfile(baseSession)) {
         const ready = await ensureBaseAnalysisReady(profileId);
         if (!ready) {
+          onSessionUpdate(baseSession);
           await dialog.alert(
             locale.startsWith("zh")
               ? "命主基础分析准备中，请稍后再试。"
@@ -987,26 +1007,30 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       }
 
       const updatedSession = await handleUnderstandingGateAction({
-        session: baseSession,
-        action,
+        session: withUser,
+        action: "confirmed",
         locale,
+        userAlreadyAppended: true,
       });
       if (gen !== sendGenerationRef.current) return;
 
       onSessionUpdate(updatedSession);
-      skipActivityRenderReadyRef.current = action !== "confirmed";
-      awaitingActivityDismissRef.current = action === "confirmed";
+      skipActivityRenderReadyRef.current = false;
       syncDebugStateLedger(updatedSession);
       await savePOJUSession(updatedSession);
     } catch (err) {
-      console.error("[poju] understanding gate action failed:", err);
+      console.error("[poju] understanding gate confirm failed:", err);
+      onSessionUpdate(baseSession);
       await dialog.alert(t("dialog_connection_error"));
     } finally {
       turnInFlightRef.current = false;
       if (gen === sendGenerationRef.current) {
         setSending(false);
-        setSlotActivity(null);
-        setThinkingLiveLine(null);
+        if (!awaitingActivityDismissRef.current) {
+          setSlotActivity(null);
+          setSlotActivityFading(false);
+          setThinkingLiveLine(null);
+        }
       }
     }
   }
@@ -1247,7 +1271,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           <>
             {followUps[mid]}
             <UnderstandingGateActions
-              locale={locale}
               busy={sending}
               onConfirm={() => void handleUnderstandingGateClick("confirmed")}
               onSupplement={() => void handleUnderstandingGateClick("wants_to_add")}
