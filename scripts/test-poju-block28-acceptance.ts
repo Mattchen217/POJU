@@ -51,8 +51,8 @@ function main(): void {
   console.log("\n=== Fix C · breakthrough-core graceful degrade ===\n");
   const agent = read("lib/poju/agent.ts");
   assert(
-    "try/catch on trigger_breakthrough_core",
-    /trigger_breakthrough_core[\s\S]*try[\s\S]*catch \(e\)[\s\S]*staying in opening/.test(agent),
+    "try/catch on trigger_breakthrough_core keeps confirmed understanding",
+    /trigger_breakthrough_core[\s\S]*try[\s\S]*catch \(e\)[\s\S]*keeping confirmed understanding/.test(agent),
   );
 
   console.log("\n=== Fix D · agenda anchors core question ===\n");

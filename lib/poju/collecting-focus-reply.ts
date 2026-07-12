@@ -63,6 +63,17 @@ export function envelopeCoreFallbackRetryHint(locale: string): string {
     : "I hit a snag while framing investigation angles for your question — please send another message.";
 }
 
+/** Segment 2 failed — understanding preserved; user retries via button. */
+export function segment2CoreGenerationFailedMessage(locale: string): string {
+  return locale.startsWith("zh")
+    ? "深度分析这次没能生成完（可能是分析太复杂），点下方按钮我重新为你分析。"
+    : "Deep analysis didn't finish this time (it may have been too complex). Tap the button below and I'll run it again.";
+}
+
+export function segment2RegenerateButtonLabel(locale: string): string {
+  return locale.startsWith("zh") ? "重新生成分析" : "Regenerate analysis";
+}
+
 /** Append first agenda focus when opening→collecting transition reply has no question. */
 export function appendFirstFocusQuestion(
   reply: string,

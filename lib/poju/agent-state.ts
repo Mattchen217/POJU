@@ -227,6 +227,8 @@ export interface POJUAgentState {
   anchored_fact_ids?: string[];
   /** Distinctive metaphor / imagery phrases already used this session. */
   used_metaphors?: string[];
+  /** Segment 2 breakthrough-core failed after user confirmed understanding — retry without reopening. */
+  core_generation_failed?: boolean;
 }
 
 /** Minimum effective user turns before confirmation (agenda-driven gate). */

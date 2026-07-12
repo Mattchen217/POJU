@@ -40,6 +40,8 @@ import {
   buildCollectingTransitionReplyFromCore,
   envelopeCoreFallbackRetryHint,
   hasQuestionCue,
+  segment2CoreGenerationFailedMessage,
+  segment2RegenerateButtonLabel,
 } from "@/lib/poju/collecting-focus-reply";
 import {
   extractUsedMetaphorsFromAssistant,
@@ -690,6 +692,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
 
   let segment2LlmDebug: import("@/lib/llm/llm-debug").LLMCallDebug | undefined;
   let segment2Model: string | undefined;
+  let segment2Failed = false;
 
   if (advance.trigger_breakthrough_core) {
     const seg2 = await runSegment2BreakthroughCore({
@@ -706,6 +709,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     agent_v2 = seg2.agent_v2;
     segment2LlmDebug = seg2.segment2_llm_debug;
     segment2Model = seg2.segment2_model;
+    segment2Failed = Boolean(seg2.core_failed);
   }
 
   let finalContent = llmResponse.response;
@@ -720,9 +724,13 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     phaseAfter === "awaiting_understanding_confirm";
   const envelopeFailedStayedOpening =
     advance.trigger_breakthrough_core && phaseAfter === "opening";
+  const segment2GenerationFailed =
+    advance.trigger_breakthrough_core && !justConverted && segment2Failed;
 
   if (justConverted) {
     finalContent = buildCollectingTransitionReplyFromCore(agent_v2, locale);
+  } else if (segment2GenerationFailed) {
+    finalContent = segment2CoreGenerationFailedMessage(locale);
   } else if (enteredUnderstandingGate) {
     finalContent = resolveUnderstandingGateSummaryContent(agent_v2, finalContent, locale);
   } else if (envelopeFailedStayedOpening && !finalContent.trim()) {
@@ -732,6 +740,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   const advancedCleanly =
     justConverted ||
     enteredUnderstandingGate ||
+    segment2GenerationFailed ||
     (!envelopeFailedStayedOpening &&
       (phaseAfter === "awaiting_understanding_confirm" ||
         phaseAfter === "awaiting_confirmation" ||
@@ -788,7 +797,12 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
         llmResponse.contains_delivery || workingSession.main_delivery_done,
       ),
       llm_debug:
-        justConverted && segment2LlmDebug ? segment2LlmDebug : llmResponse.llm_debug,
+        justConverted && segment2LlmDebug
+          ? segment2LlmDebug
+          : segment2GenerationFailed
+            ? segment2LlmDebug
+            : llmResponse.llm_debug,
+      ...(segment2GenerationFailed ? { core_generation_failed: true as const } : {}),
       ...(phaseAfter === "awaiting_understanding_confirm"
         ? { understanding_gate_pending: true as const }
         : {}),
@@ -839,9 +853,19 @@ async function runSegment2BreakthroughCore(input: {
   agent_v2: POJUAgentState;
   segment2_llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
   segment2_model?: string;
+  core_failed?: boolean;
 }> {
   let agent_v2 = input.agent_v2;
   console.info("[agent] segment-2 breakthrough-core (post-gate, independent xhigh)");
+  const markCoreFailed = (): POJUAgentState => ({
+    ...agent_v2,
+    current_phase: "collecting_context",
+    core_generation_failed: true,
+    breakthrough_core: null,
+    investigation_agenda: [],
+    agenda_generated: false,
+    has_situation_analysis: false,
+  });
   try {
     const withQ = {
       ...agent_v2,
@@ -849,6 +873,7 @@ async function runSegment2BreakthroughCore(input: {
       breakthrough_core: null,
       investigation_agenda: [],
       agenda_generated: false,
+      core_generation_failed: false,
     };
     const coreResult = await ensureBreakthroughCore(
       {
@@ -860,19 +885,25 @@ async function runSegment2BreakthroughCore(input: {
     );
     const coreReady = coreResult.session.agent_v2?.breakthrough_core != null;
     if (coreReady) {
-      agent_v2 = { ...coreResult.session.agent_v2!, actions: input.mergedActions };
+      agent_v2 = {
+        ...coreResult.session.agent_v2!,
+        actions: input.mergedActions,
+        core_generation_failed: false,
+      };
       return {
         agent_v2,
         segment2_llm_debug: coreResult.llm_debug,
         segment2_model: coreResult.model,
       };
     }
-    agent_v2 = { ...agent_v2, current_phase: "opening" };
+    console.warn("[agent] breakthrough-core incomplete, keeping confirmed understanding");
+    agent_v2 = markCoreFailed();
+    return { agent_v2, core_failed: true };
   } catch (e) {
-    console.warn("[agent] breakthrough-core failed, staying in opening:", e);
-    agent_v2 = { ...agent_v2, current_phase: "opening" };
+    console.warn("[agent] breakthrough-core failed, keeping confirmed understanding:", e);
+    agent_v2 = markCoreFailed();
+    return { agent_v2, core_failed: true };
   }
-  return { agent_v2 };
 }
 
 /** Return to opening for user-typed supplement — no chat messages yet. */
@@ -926,6 +957,7 @@ export async function handleUnderstandingGateAction(input: {
 
   let segment2LlmDebug: import("@/lib/llm/llm-debug").LLMCallDebug | undefined;
   let segment2Model: string | undefined;
+  let segment2Failed = false;
 
   if (advance.trigger_breakthrough_core) {
     const seg2 = await runSegment2BreakthroughCore({
@@ -938,6 +970,7 @@ export async function handleUnderstandingGateAction(input: {
     agent_v2 = seg2.agent_v2;
     segment2LlmDebug = seg2.segment2_llm_debug;
     segment2Model = seg2.segment2_model;
+    segment2Failed = Boolean(seg2.core_failed);
   }
 
   const phaseAfter = normalizeAgentPhase(agent_v2.current_phase) ?? agent_v2.current_phase;
@@ -945,20 +978,94 @@ export async function handleUnderstandingGateAction(input: {
     agent_v2.breakthrough_core != null && (agent_v2.investigation_agenda?.length ?? 0) > 0;
   const finalContent = coreReady
     ? buildCollectingTransitionReplyFromCore(agent_v2, input.locale)
-    : envelopeCoreFallbackRetryHint(input.locale);
+    : segment2Failed
+      ? segment2CoreGenerationFailedMessage(input.locale)
+      : envelopeCoreFallbackRetryHint(input.locale);
 
   const assistantMessage: POJUMessage = {
     role: "assistant",
     content: finalContent,
     timestamp: new Date().toISOString(),
     meta: {
-      current_state: phaseAfter === "collecting_context" ? "collecting_context" : "opening",
+      current_state:
+        coreReady || segment2Failed ? "collecting_context" : phaseAfter === "collecting_context" ? "collecting_context" : "opening",
       user_intent: "sharing_situation",
       action_requested: "continue_chat",
       investigation_agenda: agent_v2.investigation_agenda ?? undefined,
       llm_model: segment2Model,
       llm_debug: segment2LlmDebug,
       state_snapshot: buildAgentStateSnapshot(agent_v2, session.main_delivery_done),
+      ...(segment2Failed ? { core_generation_failed: true as const } : {}),
+    },
+  };
+
+  return withSessionProfileFlags({
+    ...session,
+    original_question: freshQuestion,
+    messages: [...messagesWithUser, assistantMessage],
+    agent_v2,
+    last_interaction_at: new Date().toISOString(),
+  });
+}
+
+/** Retry segment-2 breakthrough-core without redoing segment-1 understanding. */
+export async function handleRegenerateBreakthroughCore(input: {
+  session: POJUSessionState;
+  locale: string;
+  userAlreadyAppended?: boolean;
+}): Promise<POJUSessionState> {
+  const session = ensureSessionCycles(input.session);
+  const baseAgent = ensureAgentV2(session);
+  const phase = normalizeAgentPhase(baseAgent.current_phase);
+  if (phase !== "collecting_context") return session;
+  if (baseAgent.breakthrough_core != null) return session;
+
+  const userLabel = segment2RegenerateButtonLabel(input.locale);
+  const userMessage: POJUMessage = {
+    role: "user",
+    content: userLabel,
+    timestamp: new Date().toISOString(),
+    client_id: safeRandomUUID(),
+  };
+  const messagesWithUser = input.userAlreadyAppended
+    ? session.messages
+    : [...session.messages, userMessage];
+
+  const freshQuestion =
+    baseAgent.original_question?.trim() ||
+    extractOpeningProblem(messagesWithUser) ||
+    session.original_question?.trim() ||
+    userLabel;
+
+  const seg2 = await runSegment2BreakthroughCore({
+    sessionForAgent: { ...session, messages: messagesWithUser },
+    agent_v2: { ...baseAgent, original_question: freshQuestion, current_phase: "collecting_context" },
+    mergedActions: baseAgent.actions,
+    locale: input.locale,
+    freshQuestion,
+  });
+
+  const agent_v2 = seg2.agent_v2;
+  const coreReady =
+    agent_v2.breakthrough_core != null && (agent_v2.investigation_agenda?.length ?? 0) > 0;
+  const segment2Failed = Boolean(seg2.core_failed);
+  const finalContent = coreReady
+    ? buildCollectingTransitionReplyFromCore(agent_v2, input.locale)
+    : segment2CoreGenerationFailedMessage(input.locale);
+
+  const assistantMessage: POJUMessage = {
+    role: "assistant",
+    content: finalContent,
+    timestamp: new Date().toISOString(),
+    meta: {
+      current_state: "collecting_context",
+      user_intent: "sharing_situation",
+      action_requested: "continue_chat",
+      investigation_agenda: agent_v2.investigation_agenda ?? undefined,
+      llm_model: seg2.segment2_model,
+      llm_debug: seg2.segment2_llm_debug,
+      state_snapshot: buildAgentStateSnapshot(agent_v2, session.main_delivery_done),
+      ...(segment2Failed ? { core_generation_failed: true as const } : {}),
     },
   };
 

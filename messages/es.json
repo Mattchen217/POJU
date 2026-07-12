@@ -811,6 +811,8 @@
       "understanding_gate_confirm": "Sí, es así",
       "understanding_gate_supplement": "Quiero añadir algo",
       "understanding_gate_group_label": "Confirmación de comprensión",
+      "segment2_regenerate_analysis": "Regenerar análisis",
+      "segment2_regenerate_group_label": "Regenerar análisis profundo",
       "agent_phase_delivered": "Entregado",
       "agent_phase_tracking": "Seguimiento",
       "context_summary_title": "Confirma lo que entendimos",

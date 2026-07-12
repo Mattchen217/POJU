@@ -980,6 +980,8 @@
       "understanding_gate_confirm": "Yes, that's right",
       "understanding_gate_supplement": "I want to add something",
       "understanding_gate_group_label": "Understanding confirmation",
+      "segment2_regenerate_analysis": "Regenerate analysis",
+      "segment2_regenerate_group_label": "Regenerate deep analysis",
       "agent_phase_delivered": "Delivered",
       "agent_phase_tracking": "Tracking",
       "context_summary_title": "Confirm what we understood",

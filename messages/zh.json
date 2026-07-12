@@ -995,6 +995,8 @@
       "understanding_gate_confirm": "对，就是这样",
       "understanding_gate_supplement": "我还想补充一点",
       "understanding_gate_group_label": "理解确认",
+      "segment2_regenerate_analysis": "重新生成分析",
+      "segment2_regenerate_group_label": "重新生成深度分析",
       "agent_phase_delivered": "已交付",
       "agent_phase_tracking": "跟进",
       "context_summary_title": "请确认我们理解的事实",

@@ -12,8 +12,8 @@ import { normalizeAgentPhase, type POJUAgentState } from "@/lib/poju/agent-state
 
 export const maxDuration = 300;
 
-const CORE_MAX_TOKENS_INITIAL = 16_000;
-const CORE_MAX_TOKENS_RETRY = 24_000;
+const CORE_MAX_TOKENS_INITIAL = 12_000;
+const CORE_MAX_TOKENS_RETRY = 16_000;
 
 class BreakthroughCoreRetryableError extends Error {
   constructor(
@@ -70,7 +70,7 @@ async function callCoreLLM(input: {
     max_tokens: input.max_tokens,
     thinking_effort: "xhigh",
     response_format: "json",
-    timeout_ms: 180_000,
+    timeout_ms: 90_000,
     session_id: input.profileId
       ? baseAnalysisCacheSessionId(input.profileId)
       : pojuCacheSessionId(input.sessionId),

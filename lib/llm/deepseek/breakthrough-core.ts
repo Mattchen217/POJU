@@ -367,7 +367,7 @@ export async function requestBreakthroughCore(
   console.info("[breakthrough-core] input original_question:", original_question.slice(0, 120));
 
   const ac = new AbortController();
-  const softTimeoutMs = 240_000;
+  const softTimeoutMs = 210_000;
   const timer = window.setTimeout(() => ac.abort(), softTimeoutMs);
 
   let res: Response;
@@ -389,8 +389,8 @@ export async function requestBreakthroughCore(
     if (e instanceof Error && e.name === "AbortError") {
       throw new Error(
         locale.startsWith("zh")
-          ? "深测算超时未完成，再发一句继续即可。"
-          : "Deep analysis timed out — send another message to retry.",
+          ? "深测算超时未完成，请点「重新生成分析」再试。"
+          : "Deep analysis timed out — tap Regenerate analysis to retry.",
       );
     }
     throw e;

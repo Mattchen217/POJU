@@ -17,7 +17,7 @@ import { getPojuDb } from "@/lib/db/poju-db";
 import { createPOJUSession, loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
 import { clearPendingStoredProfileId, readPendingStoredProfileId } from "@/lib/poju/pending-stored-profile";
 import { runDegradedDeliveryPipeline } from "@/lib/poju/agent-orchestrator";
-import { handleUnderstandingGateAction, applyUnderstandingGateSupplement, handleUserMessage, tryHandleRuleRejection } from "@/lib/poju/agent";
+import { handleUnderstandingGateAction, applyUnderstandingGateSupplement, handleUserMessage, handleRegenerateBreakthroughCore, tryHandleRuleRejection } from "@/lib/poju/agent";
 import { understandingGateConfirmButtonLabel } from "@/lib/poju/understanding-gate-reply";
 import {
   dedupeWelcomeMessages,
@@ -29,6 +29,8 @@ import {
 } from "@/lib/poju/chat-bootstrap";
 import { AgendaProgressPanel } from "@/components/poju/AgendaProgressPanel";
 import { UnderstandingGateActions } from "@/components/poju/UnderstandingGateActions";
+import { RegenerateAnalysisAction } from "@/components/poju/RegenerateAnalysisAction";
+import { segment2RegenerateButtonLabel } from "@/lib/poju/collecting-focus-reply";
 import { getLastUserMessageContent } from "@/lib/poju/context-helpers";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import { InfraBusyRetryAction } from "@/components/poju/InfraBusyRetryAction";
@@ -1035,6 +1037,71 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     }
   }
 
+  async function handleRegenerateAnalysisClick() {
+    if (sending || turnInFlightRef.current) return;
+    const baseSession = sessionRef.current;
+    if (baseSession.agent_v2?.current_phase !== "collecting_context") return;
+    if (baseSession.agent_v2.breakthrough_core != null) return;
+
+    const userLabel = segment2RegenerateButtonLabel(locale);
+    const withUser: POJUSessionState = {
+      ...baseSession,
+      messages: [...baseSession.messages, buildOptimisticUserMessage(userLabel)],
+    };
+    onSessionUpdate(withUser);
+    scrollChatToBottom("smooth");
+
+    turnInFlightRef.current = true;
+    const gen = ++sendGenerationRef.current;
+    setSending(true);
+    setSlotActivity("deep_reckoning");
+    setThinkingLiveLine(null);
+    setGenerationStopped(false);
+    awaitingActivityDismissRef.current = true;
+
+    try {
+      const profileId = baseSession.selected_stored_profile_id?.trim();
+      if (profileId && resolveSessionHasProfile(baseSession)) {
+        const ready = await ensureBaseAnalysisReady(profileId);
+        if (!ready) {
+          onSessionUpdate(baseSession);
+          await dialog.alert(
+            locale.startsWith("zh")
+              ? "命主基础分析准备中，请稍后再试。"
+              : "Base chart analysis is still preparing. Please wait and try again.",
+          );
+          return;
+        }
+      }
+
+      const updatedSession = await handleRegenerateBreakthroughCore({
+        session: withUser,
+        locale,
+        userAlreadyAppended: true,
+      });
+      if (gen !== sendGenerationRef.current) return;
+
+      onSessionUpdate(updatedSession);
+      skipActivityRenderReadyRef.current = false;
+      syncDebugStateLedger(updatedSession);
+      await savePOJUSession(updatedSession);
+    } catch (err) {
+      console.error("[poju] segment-2 regenerate failed:", err);
+      onSessionUpdate(baseSession);
+      await dialog.alert(t("dialog_connection_error"));
+    } finally {
+      turnInFlightRef.current = false;
+      if (gen === sendGenerationRef.current) {
+        setSending(false);
+        if (!awaitingActivityDismissRef.current) {
+          setSlotActivity(null);
+          setSlotActivityFading(false);
+          setThinkingLiveLine(null);
+        }
+      }
+    }
+  }
+
   async function handleToolResponse(tool: ToolName, action: "accepted" | "declined") {
     const s = sessionRef.current;
     const next = recordUserResponse(s, tool, action);
@@ -1259,6 +1326,19 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       ) {
         followUps[mid] = (
           <InfraBusyRetryAction onRetry={onInfraBusyRetry} disabled={sending} />
+        );
+      }
+      if (
+        m.meta?.core_generation_failed &&
+        m.role === "assistant" &&
+        !m.is_rejected &&
+        mid === lastAssistantKey
+      ) {
+        followUps[mid] = (
+          <>
+            {followUps[mid]}
+            <RegenerateAnalysisAction busy={sending} onRegenerate={() => void handleRegenerateAnalysisClick()} />
+          </>
         );
       }
       if (
