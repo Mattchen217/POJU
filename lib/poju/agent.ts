@@ -233,6 +233,9 @@ function finalizeAgentV2(
   isSystemMessage: boolean,
   loadedBaseAnalysis?: unknown | null,
 ): { agent: POJUAgentState; advance: AdvanceResult } {
+  const currentPhase = normalizeAgentPhase(base.current_phase) ?? base.current_phase;
+  const isOpeningTurn = currentPhase === "opening";
+
   const flat = llm.context_updates ?? {};
   const agendaStatusUpdates = extractAgendaStatusUpdates(flat);
   const contextFlat = stripAgendaFieldsFromContextUpdates(flat);
@@ -240,7 +243,7 @@ function finalizeAgentV2(
   let investigation_agenda = base.investigation_agenda ?? [];
   let agenda_generated = base.agenda_generated ?? false;
 
-  if (!agenda_generated) {
+  if (!isOpeningTurn && !agenda_generated) {
     const parsedAgenda = parseInvestigationAgenda(llm.investigation_agenda);
     if (parsedAgenda) {
       investigation_agenda = parsedAgenda;
@@ -271,10 +274,11 @@ function finalizeAgentV2(
     profile_skipped: session.profile_skipped,
     has_base_analysis: session.has_profile,
     selected_profile_id: resolveSelectedProfileId(session, base),
-    investigation_agenda,
-    agenda_generated,
-    breakthrough_core:
-      base.breakthrough_core ?? llm.breakthrough_core ?? null,
+    investigation_agenda: isOpeningTurn ? (base.investigation_agenda ?? []) : investigation_agenda,
+    agenda_generated: isOpeningTurn ? (base.agenda_generated ?? false) : agenda_generated,
+    breakthrough_core: isOpeningTurn
+      ? (base.breakthrough_core ?? null)
+      : (base.breakthrough_core ?? llm.breakthrough_core ?? null),
     core_dilemma:
       llm.core_dilemma !== undefined && llm.core_dilemma !== null
         ? llm.core_dilemma
@@ -284,10 +288,12 @@ function finalizeAgentV2(
         ? llm.desired_direction
         : base.desired_direction,
   };
-  if (!base.breakthrough_core && llm.breakthrough_core) {
-    console.info("[agent] breakthrough_core from opening conversion envelope");
-  }
-  if (merged.breakthrough_core && (llm as { breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null }).breakthrough_core_updates) {
+  if (
+    !isOpeningTurn &&
+    merged.breakthrough_core &&
+    (llm as { breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null })
+      .breakthrough_core_updates
+  ) {
     const updates = (llm as { breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null }).breakthrough_core_updates;
     if (updates) {
       merged = {
@@ -319,7 +325,6 @@ function finalizeAgentV2(
         ? ""
         : userMessage;
 
-  const currentPhase = normalizeAgentPhase(base.current_phase) ?? base.current_phase;
   const collectionProgress = parseCollectionProgress(llm.collection_progress);
   const isCollectingTurn = currentPhase === "collecting_context" && !isSystemMessage;
   const counters = applyCollectingTurnCounters(base, {
@@ -638,6 +643,8 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       : isSystemMessage
         ? ""
         : userMessage;
+  const openingTurn =
+    (normalizeAgentPhase(ensureAgentV2(sessionForAgent).current_phase) ?? "opening") === "opening";
   const { agent: agentCore, advance } = finalizeAgentV2(
     ensureAgentV2(sessionForAgent),
     sessionForAgent,
@@ -651,18 +658,18 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       main_delivery: llmResponse.main_delivery,
       collection_progress: llmResponse.collection_progress,
       stall_offer: llmResponse.stall_offer,
-      investigation_agenda: llmResponse.investigation_agenda,
+      investigation_agenda: openingTurn ? null : llmResponse.investigation_agenda,
       understanding: llmResponse.understanding ?? null,
       understanding_sufficient: llmResponse.understanding_sufficient,
-      agenda_updates: llmResponse.agenda_updates,
+      agenda_updates: openingTurn ? undefined : llmResponse.agenda_updates,
       user_confirms_delivery: llmResponse.user_confirms_delivery,
       confirmation_signal: llmResponse.confirmation_signal,
       topic_drift_signal: llmResponse.topic_drift_signal,
-      breakthrough_core_updates: llmResponse.breakthrough_core_updates ?? null,
-      breakthrough_core: llmResponse.breakthrough_core ?? null,
+      breakthrough_core_updates: openingTurn ? null : (llmResponse.breakthrough_core_updates ?? null),
+      breakthrough_core: openingTurn ? null : (llmResponse.breakthrough_core ?? null),
       core_dilemma: llmResponse.core_dilemma ?? null,
       desired_direction: llmResponse.desired_direction ?? null,
-      problem_summary: llmResponse.problem_summary ?? null,
+      problem_summary: openingTurn ? null : llmResponse.problem_summary ?? null,
     },
     userMessage,
     isSystemMessage,
@@ -682,7 +689,13 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
         llmResponse.problem_summary?.trim() ||
         extractOpeningProblem(sessionForAgent.messages) ||
         resolveOriginalQuestion(agent_v2, phaseUserMessage);
-      const withQ = { ...agent_v2, original_question: freshQuestion };
+      const withQ = {
+        ...agent_v2,
+        original_question: freshQuestion,
+        breakthrough_core: null,
+        investigation_agenda: [],
+        agenda_generated: false,
+      };
       const coreResult = await ensureBreakthroughCore(
         {
           ...sessionForAgent,

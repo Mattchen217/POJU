@@ -38,6 +38,11 @@ function main(): void {
   assert("agent always ensureBreakthroughCore on trigger", agent.includes("segment-2 breakthrough-core"));
   assert("agent no inlineCoreReady", !agent.includes("inlineCoreReady"));
   assert("agent no inlineEnvelopeFromOpening", !agent.includes("inlineEnvelopeFromOpening"));
+  assert("agent opening hard-rejects llm core", agent.includes("isOpeningTurn"));
+  assert(
+    "agent no opening conversion envelope log",
+    !agent.includes("breakthrough_core from opening conversion envelope"),
+  );
 
   assert("state-machine triggerCore on gate", sm.includes("triggerCore = true"));
   assert("compliance uses content_preview not raw reasoning", transport.includes("content_preview"));
