@@ -982,6 +982,8 @@
       "understanding_gate_group_label": "Understanding confirmation",
       "segment2_regenerate_analysis": "Regenerate analysis",
       "segment2_regenerate_group_label": "Regenerate deep analysis",
+      "opening_understanding_retry": "Retry",
+      "opening_understanding_retry_group_label": "Retry understanding turn",
       "agent_phase_delivered": "Delivered",
       "agent_phase_tracking": "Tracking",
       "context_summary_title": "Confirm what we understood",

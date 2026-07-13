@@ -58,8 +58,10 @@ export interface POJUMessage {
     investigation_agenda?: import("@/lib/poju/investigation-agenda").AgendaItem[];
     /** Segment-1 understanding gate — show confirm / supplement buttons. */
     understanding_gate_pending?: boolean;
-    /** Segment-2 core generation failed — show regenerate button. */
-    core_generation_failed?: boolean;
+  /** Segment-2 core generation failed — show regenerate button. */
+  core_generation_failed?: boolean;
+  /** Segment-1 opening resends exhausted — show retry button. */
+  understanding_generation_failed?: boolean;
     /** Collecting escalation — show refund entry (user-initiated). */
     kind?: "energy_matrix" | "paywall" | "report" | "welcome" | "infra_busy" | "generation_empty" | "generation_incomplete";
     /** Preview chat — welcome bubble sourced from matrix synopsis (not generic copy). */

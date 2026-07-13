@@ -40,6 +40,8 @@ export type PhaseTransportResult = {
   finish_reason?: string | null;
   provider?: string | null;
   llm_debug?: LLMCallDebug;
+  /** Opening-only: transport-level resend count (empty / bad JSON). */
+  opening_resends?: number;
 };
 
 /** OpenRouter returned zero-length completion body. */
@@ -60,6 +62,17 @@ export function salvageContentFromReasoning(result: PhaseTransportResult): Phase
   }
 
   return result;
+}
+
+/** Opening segment-1: empty body or parse failed without salvaged understanding fields → resend. */
+export const MAX_OPENING_TRANSPORT_RESEND = 4;
+
+export function isOpeningTransportResendNeeded(rawContent: string): boolean {
+  if (!rawContent.trim()) return true;
+  const { parsed, response } = parsePhaseResult(rawContent, {});
+  if (isPhaseOpeningPayloadUsable(parsed, response)) return false;
+  if (!isPhaseParseFailed(parsed)) return !response.trim();
+  return !hasSalvagedUnderstandingFields(parsed);
 }
 
 const RETRYABLE_COMPLIANCE_LABELS = new Set([
@@ -196,6 +209,47 @@ export async function callPhaseJsonTransport(
 
   let result = await runOnce();
   result = salvageContentFromReasoning(result);
+
+  if (options?.phase_name === "opening") {
+    let openingResends = 0;
+    for (let i = 1; i < MAX_OPENING_TRANSPORT_RESEND; i++) {
+      const emptyRaw = isEmptyPhaseCompletion(result);
+      const badJson = isOpeningTransportResendNeeded(result.content);
+      if (!emptyRaw && !badJson) break;
+
+      openingResends = i;
+      const failedProvider = result.provider?.trim();
+      const pinned = options?.locked_provider?.trim();
+      console.info(
+        `[phase-transport] opening resend ${i}/${MAX_OPENING_TRANSPORT_RESEND - 1}`,
+        JSON.stringify({
+          phase: options?.phase_name ?? "opening",
+          call_type,
+          empty: emptyRaw,
+          bad_json: badJson && !emptyRaw,
+          provider: failedProvider ?? "—",
+          locked: pinned ?? null,
+        }),
+      );
+      try {
+        const retried = await runOnce({
+          extra_ignore: pinned ? undefined : failedProvider ? [failedProvider] : undefined,
+        });
+        result = retried;
+        if (result.llm_debug) {
+          result = {
+            ...result,
+            llm_debug: { ...result.llm_debug, retried: true, attempt: i + 1 },
+          };
+        }
+      } catch (err) {
+        console.warn("[phase-transport] opening resend threw — stopping resend loop", err);
+        break;
+      }
+      result = salvageContentFromReasoning(result);
+    }
+    return { ...result, opening_resends: openingResends };
+  }
 
   if (isEmptyPhaseCompletion(result)) {
     const failedProvider = result.provider?.trim();

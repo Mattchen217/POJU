@@ -34,8 +34,9 @@ function main(): void {
 
   assert("opening effort medium", opening.includes('thinking_effort: "medium"'));
   assert("opening no high effort", !opening.includes('thinking_effort: "high"'));
-  assert("opening retry on unusable", opening.includes("unusable JSON payload"));
-  assert("opening empty-gen fallback", opening.includes("getPhaseEmptyGenerationFallback"));
+  assert("opening transport resend in phase-transport", transport.includes("MAX_OPENING_TRANSPORT_RESEND"));
+  assert("opening understanding_generation_failed flag", opening.includes("understanding_generation_failed"));
+  assert("opening no duplicate v6 transport retry", !opening.includes("controlled retry once"));
   assert("isPhaseOpeningPayloadUsable exported", transport.includes("export function isPhaseOpeningPayloadUsable"));
   assert("parse failure uses empty gen path", transport.includes("useEmptyGeneration"));
 

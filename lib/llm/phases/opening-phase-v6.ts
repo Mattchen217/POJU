@@ -20,12 +20,12 @@ import {
 import {
   callPhaseJsonTransport,
   formatPhaseMessageHistory,
-  getPhaseEmptyGenerationFallback,
   isPhaseOpeningPayloadUsable,
   resolvePhaseResponse,
   withPhaseStreamOpts,
   isPhaseParseFailed,
 } from "@/lib/llm/phases/phase-transport";
+import { openingUnderstandingGenerationFailedMessage } from "@/lib/poju/collecting-focus-reply";
 import type { PojuV4ActionRequested } from "@/lib/poju/types";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
 import { buildPhaseTransportInputV6 } from "@/lib/llm/phases/oriental-prompt-context-v6";
@@ -164,22 +164,13 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
 
   let { parsed, response } = resolvePhaseResponse(result.content, resolveCtx);
 
-  if (!isPhaseOpeningPayloadUsable(parsed, response)) {
-    console.warn("[opening-v6] unusable JSON payload — controlled retry once");
-    const retried = await callPhaseJsonTransport(system, messages, transportOpts);
-    result = retried;
-    ({ parsed, response } = resolvePhaseResponse(retried.content, {
-      ...resolveCtx,
-      provider: retried.provider ?? undefined,
-      model: retried.model,
-      finish_reason: retried.finish_reason ?? undefined,
-      raw_length: retried.content.length,
-    }));
-  }
-
-  if (!isPhaseOpeningPayloadUsable(parsed, response)) {
-    console.warn("[opening-v6] payload still unusable after retry — empty-generation fallback");
-    response = getPhaseEmptyGenerationFallback(input.locale);
+  const understanding_generation_failed = !isPhaseOpeningPayloadUsable(parsed, response);
+  if (understanding_generation_failed) {
+    console.warn("[opening-v6] payload unusable after transport resends — understanding_generation_failed", {
+      opening_resends: result.opening_resends ?? 0,
+      parse_failed: isPhaseParseFailed(parsed),
+    });
+    response = openingUnderstandingGenerationFailedMessage(input.locale);
     parsed = {
       ...parsed,
       understanding_sufficient: false,
@@ -272,6 +263,7 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
     thinking_process: undefined,
     understanding,
     understanding_sufficient,
+    understanding_generation_failed,
     llm_debug: result.llm_debug
       ? { ...result.llm_debug, phase: result.llm_debug.phase ?? "opening" }
       : undefined,

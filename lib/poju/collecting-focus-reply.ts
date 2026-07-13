@@ -63,6 +63,17 @@ export function envelopeCoreFallbackRetryHint(locale: string): string {
     : "I hit a snag while framing investigation angles for your question — please send another message.";
 }
 
+/** Segment 1 opening — transport resends exhausted; user retries via button. */
+export function openingUnderstandingGenerationFailedMessage(locale: string): string {
+  return locale.startsWith("zh")
+    ? "网络不太稳，我这次没能把理解整理好。点下方按钮重试。"
+    : "The connection was unstable and I couldn't finish understanding this turn. Tap the button below to retry.";
+}
+
+export function openingUnderstandingRetryButtonLabel(locale: string): string {
+  return locale.startsWith("zh") ? "点击重试" : "Retry";
+}
+
 /** Segment 2 failed — understanding preserved; user retries via button. */
 export function segment2CoreGenerationFailedMessage(locale: string): string {
   return locale.startsWith("zh")
@@ -106,9 +117,5 @@ export function appendForwardMove(
     return `${reply.trimEnd()}${lead}${formatFocusQuestion(focus.label, locale)}`;
   }
 
-  const lead = locale.startsWith("zh") ? "\n\n能再多说一点吗——" : "\n\nCould you tell me a bit more—";
-  const fallback = locale.startsWith("zh")
-    ? "你此刻最想解决的是哪一块？"
-    : "what feels most urgent to you right now?";
-  return `${reply.trimEnd()}${lead}${fallback}`;
+  return reply;
 }

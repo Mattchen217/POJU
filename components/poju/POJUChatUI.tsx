@@ -17,7 +17,7 @@ import { getPojuDb } from "@/lib/db/poju-db";
 import { createPOJUSession, loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
 import { clearPendingStoredProfileId, readPendingStoredProfileId } from "@/lib/poju/pending-stored-profile";
 import { runDegradedDeliveryPipeline } from "@/lib/poju/agent-orchestrator";
-import { handleUnderstandingGateAction, applyUnderstandingGateSupplement, handleUserMessage, handleRegenerateBreakthroughCore, tryHandleRuleRejection } from "@/lib/poju/agent";
+import { handleUnderstandingGateAction, applyUnderstandingGateSupplement, handleUserMessage, handleRegenerateBreakthroughCore, handleRetryOpeningUnderstanding, tryHandleRuleRejection } from "@/lib/poju/agent";
 import { understandingGateConfirmButtonLabel } from "@/lib/poju/understanding-gate-reply";
 import {
   dedupeWelcomeMessages,
@@ -30,6 +30,7 @@ import {
 import { AgendaProgressPanel } from "@/components/poju/AgendaProgressPanel";
 import { UnderstandingGateActions } from "@/components/poju/UnderstandingGateActions";
 import { RegenerateAnalysisAction } from "@/components/poju/RegenerateAnalysisAction";
+import { RegenerateOpeningAction } from "@/components/poju/RegenerateOpeningAction";
 import { segment2RegenerateButtonLabel } from "@/lib/poju/collecting-focus-reply";
 import { getLastUserMessageContent } from "@/lib/poju/context-helpers";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
@@ -1109,6 +1110,44 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     }
   }
 
+  async function handleRetryOpeningUnderstandingClick() {
+    if (sending || turnInFlightRef.current) return;
+    const baseSession = sessionRef.current;
+
+    turnInFlightRef.current = true;
+    const gen = ++sendGenerationRef.current;
+    setSending(true);
+    setSlotActivity("deep_reckoning");
+    setThinkingLiveLine(null);
+    setGenerationStopped(false);
+    awaitingActivityDismissRef.current = true;
+
+    try {
+      const updatedSession = await handleRetryOpeningUnderstanding({
+        session: baseSession,
+        locale,
+      });
+      if (gen !== sendGenerationRef.current) return;
+      onSessionUpdate(updatedSession);
+      skipActivityRenderReadyRef.current = false;
+      syncDebugStateLedger(updatedSession);
+      await savePOJUSession(updatedSession);
+    } catch (err) {
+      console.error("[poju] opening understanding retry failed:", err);
+      await dialog.alert(t("dialog_connection_error"));
+    } finally {
+      turnInFlightRef.current = false;
+      if (gen === sendGenerationRef.current) {
+        setSending(false);
+        if (!awaitingActivityDismissRef.current) {
+          setSlotActivity(null);
+          setSlotActivityFading(false);
+          setThinkingLiveLine(null);
+        }
+      }
+    }
+  }
+
   async function handleToolResponse(tool: ToolName, action: "accepted" | "declined") {
     const s = sessionRef.current;
     const next = recordUserResponse(s, tool, action);
@@ -1345,6 +1384,19 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           <>
             {followUps[mid]}
             <RegenerateAnalysisAction busy={sending} onRegenerate={() => void handleRegenerateAnalysisClick()} />
+          </>
+        );
+      }
+      if (
+        m.meta?.understanding_generation_failed &&
+        m.role === "assistant" &&
+        !m.is_rejected &&
+        mid === lastAssistantKey
+      ) {
+        followUps[mid] = (
+          <>
+            {followUps[mid]}
+            <RegenerateOpeningAction busy={sending} onRetry={() => void handleRetryOpeningUnderstandingClick()} />
           </>
         );
       }

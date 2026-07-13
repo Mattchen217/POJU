@@ -75,6 +75,7 @@ export interface POJULLMResponse {
   /** Opening Deep Judge gate signal. */
   understanding?: { sufficient: boolean; missing: string } | null;
   understanding_sufficient?: boolean;
+  understanding_generation_failed?: boolean;
   agenda_updates?: { completed_in_this_turn?: string[] };
   user_confirms_delivery?: boolean;
   confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";
@@ -186,6 +187,7 @@ async function callPOJULLMPhasePath(input: CallInput): Promise<POJULLMResponse> 
       typeof phase.understanding_sufficient === "boolean"
         ? phase.understanding_sufficient
         : phase.understanding?.sufficient,
+    understanding_generation_failed: phase.understanding_generation_failed === true || undefined,
     agenda_updates: phase.agenda_updates,
     user_confirms_delivery: phase.user_confirms_delivery,
     confirmation_signal: phase.confirmation_signal,

@@ -40,6 +40,7 @@ import {
   buildCollectingTransitionReplyFromCore,
   envelopeCoreFallbackRetryHint,
   hasQuestionCue,
+  openingUnderstandingGenerationFailedMessage,
   segment2CoreGenerationFailedMessage,
   segment2RegenerateButtonLabel,
 } from "@/lib/poju/collecting-focus-reply";
@@ -124,6 +125,7 @@ type LLMApiPayload = {
   locked_provider?: string;
   understanding?: { sufficient: boolean; missing: string } | null;
   understanding_sufficient?: boolean;
+  understanding_generation_failed?: boolean;
   agenda_updates?: { completed_in_this_turn?: string[] };
   user_confirms_delivery?: boolean;
   breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null;
@@ -225,6 +227,7 @@ function finalizeAgentV2(
     investigation_agenda?: unknown;
     understanding?: { sufficient: boolean; missing: string } | null;
     understanding_sufficient?: boolean;
+    understanding_generation_failed?: boolean;
     agenda_updates?: { completed_in_this_turn?: string[] };
     user_confirms_delivery?: boolean;
     confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";
@@ -724,6 +727,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     advance.trigger_breakthrough_core && phaseAfter === "opening";
   const segment2GenerationFailed =
     advance.trigger_breakthrough_core && !justConverted && segment2Failed;
+  const understandingGenerationFailed = Boolean(llmResponse.understanding_generation_failed);
 
   if (justConverted) {
     finalContent = buildCollectingTransitionReplyFromCore(agent_v2, locale);
@@ -731,6 +735,8 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     finalContent = buildUnderstandingGateSummaryFromFields(agent_v2, locale);
   } else if (segment2GenerationFailed) {
     finalContent = segment2CoreGenerationFailedMessage(locale);
+  } else if (understandingGenerationFailed) {
+    finalContent = openingUnderstandingGenerationFailedMessage(locale);
   } else if (envelopeFailedStayedOpening && !finalContent.trim()) {
     finalContent = envelopeCoreFallbackRetryHint(locale);
   }
@@ -739,6 +745,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     justConverted ||
     isUnderstandingGateTurn ||
     segment2GenerationFailed ||
+    understandingGenerationFailed ||
     (!envelopeFailedStayedOpening &&
       (phaseAfter === "awaiting_confirmation" ||
         phaseAfter === "delivered" ||
@@ -800,6 +807,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
             ? segment2LlmDebug
             : llmResponse.llm_debug,
       ...(segment2GenerationFailed ? { core_generation_failed: true as const } : {}),
+      ...(understandingGenerationFailed ? { understanding_generation_failed: true as const } : {}),
       ...(phaseAfter === "awaiting_understanding_confirm"
         ? { understanding_gate_pending: true as const }
         : {}),
@@ -1079,6 +1087,29 @@ export async function handleRegenerateBreakthroughCore(input: {
   });
 }
 
+/** Retry segment-1 opening turn after transport resends exhausted (bad JSON / empty). */
+export async function handleRetryOpeningUnderstanding(input: {
+  session: POJUSessionState;
+  locale: string;
+}): Promise<POJUSessionState> {
+  const session = ensureSessionCycles(input.session);
+  let messages = [...session.messages];
+  const last = messages[messages.length - 1];
+  if (last?.role === "assistant" && last.meta?.understanding_generation_failed) {
+    messages = messages.slice(0, -1);
+  }
+
+  const lastUser = [...messages].reverse().find((m) => m.role === "user");
+  const userMessage = lastUser?.content?.trim() || "__OPENING__";
+
+  return handleUserMessage({
+    session: { ...session, messages },
+    userMessage,
+    locale: input.locale,
+    userAlreadyAppended: true,
+  });
+}
+
 async function maybeRunDeliveryPipeline(
   session: POJUSessionState,
   advance: AdvanceResult,
@@ -1209,6 +1240,7 @@ async function callLLMViaAPI(input: {
   locked_provider?: string;
   understanding?: { sufficient: boolean; missing: string } | null;
   understanding_sufficient?: boolean;
+  understanding_generation_failed?: boolean;
   agenda_updates?: { completed_in_this_turn?: string[] };
   user_confirms_delivery?: boolean;
   confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";
@@ -1314,6 +1346,8 @@ function mapLlmApiPayload(
         : null,
     understanding_sufficient:
       typeof wire.understanding_sufficient === "boolean" ? wire.understanding_sufficient : undefined,
+    understanding_generation_failed:
+      wire.understanding_generation_failed === true ? true : undefined,
     agenda_updates:
       wire.agenda_updates &&
       typeof wire.agenda_updates === "object" &&

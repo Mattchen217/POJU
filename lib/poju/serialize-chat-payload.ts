@@ -30,6 +30,7 @@ export const CHAT_PAYLOAD_FIELDS = [
   "locked_provider",
   "understanding",
   "understanding_sufficient",
+  "understanding_generation_failed",
   "agenda_updates",
   "user_confirms_delivery",
   "confirmation_signal",
@@ -91,6 +92,7 @@ export function pojuLlmToChatPayload(
     locked_provider: llm.locked_provider,
     understanding: llm.understanding ?? null,
     understanding_sufficient: llm.understanding_sufficient,
+    understanding_generation_failed: llm.understanding_generation_failed,
     agenda_updates: llm.agenda_updates ?? null,
     user_confirms_delivery: llm.user_confirms_delivery,
     confirmation_signal: llm.confirmation_signal,
@@ -154,6 +156,8 @@ export function chatPayloadFromWire(
     understanding: data.understanding ?? null,
     understanding_sufficient:
       typeof data.understanding_sufficient === "boolean" ? data.understanding_sufficient : undefined,
+    understanding_generation_failed:
+      data.understanding_generation_failed === true ? true : undefined,
     agenda_updates:
       data.agenda_updates && typeof data.agenda_updates === "object" && !Array.isArray(data.agenda_updates)
         ? (data.agenda_updates as { completed_in_this_turn?: string[] })
