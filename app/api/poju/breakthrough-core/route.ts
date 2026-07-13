@@ -12,8 +12,8 @@ import { normalizeAgentPhase, type POJUAgentState } from "@/lib/poju/agent-state
 
 export const maxDuration = 300;
 
-/** xhigh segment-2 output budget — 8500 tok typical; no auto-retry with larger cap. */
-const CORE_MAX_TOKENS = 12_000;
+/** xhigh segment-2 budget — reasoning ~7–11k + content ~6–8.5k; single attempt, no auto-retry. */
+const CORE_MAX_TOKENS = 22_000;
 /** Must exceed xhigh wall time (~168s observed); under maxDuration 300s. */
 const CORE_TIMEOUT_MS = 240_000;
 

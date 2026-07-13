@@ -30,7 +30,7 @@ function main(): void {
 
   assert("route maxDuration 300", route.includes("maxDuration = 300"));
   assert("route timeout 240s", route.includes("CORE_TIMEOUT_MS = 240_000"));
-  assert("route max_tokens 12000", route.includes("CORE_MAX_TOKENS = 12_000"));
+  assert("route max_tokens 22000", route.includes("CORE_MAX_TOKENS = 22_000"));
   assert("route single xhigh attempt", route.includes("max_attempts: 1"));
   assert("no fetchCoreContent retry loop", !route.includes("for (let attempt = 0; attempt < 2"));
   assert("no 90s route timeout", !route.includes("timeout_ms: 90_000"));
