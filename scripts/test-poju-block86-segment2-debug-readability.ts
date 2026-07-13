@@ -29,7 +29,7 @@ function main(): void {
 
   assert("route returns llm_debug in JSON", route.includes("llm_debug: fetched.llm_debug"));
   assert("route sets phase segment2_breakthrough_core", route.includes('phase: "segment2_breakthrough_core"'));
-  assert("route thinking_effort xhigh", route.includes('thinking_effort: "xhigh"'));
+  assert("route thinking_effort xhigh", route.includes('reasoning_effort: "xhigh"'));
   assert("route passes phase_name", route.includes('phase_name: "segment2_breakthrough_core"'));
 
   assert("client requestBreakthroughCore returns llm_debug", corePrompt.includes("llm_debug: payload.llm_debug"));

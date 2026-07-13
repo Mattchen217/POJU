@@ -6,9 +6,16 @@ import {
   parseAndMapBreakthroughCore,
 } from "@/lib/llm/deepseek/breakthrough-core";
 import type { LLMCallDebug } from "@/lib/llm/llm-debug";
-import { callLLM } from "@/lib/llm/router";
-import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
+import { buildLlmDebug } from "@/lib/llm/llm-debug";
+import {
+  getOpenRouterDefaultModel,
+  isOpenRouterConfigured,
+  openRouterProviderExtras,
+  type OpenRouterChatMessage,
+} from "@/lib/llm/openrouter-shared";
+import { openRouterChatCompletionStream } from "@/lib/llm/openrouter-stream";
 import { OpenRouterProviderQueueError } from "@/lib/llm/openrouter-retry";
+import { estimateCostUsd } from "@/lib/llm/router";
 import { normalizeAgentPhase, type POJUAgentState } from "@/lib/poju/agent-state";
 
 export const maxDuration = 300;
@@ -62,7 +69,11 @@ function retryableResponse(reason: BreakthroughRetryReason, error: string) {
 function isProviderTransportFailure(e: unknown): boolean {
   if (e instanceof OpenRouterProviderQueueError) return true;
   if (e instanceof Error) {
-    return e.message === "openrouter_provider_queue" || e.message === "llm_timeout";
+    return (
+      e.message === "openrouter_provider_queue" ||
+      e.message === "llm_timeout" ||
+      e.message === "openrouter_empty_response"
+    );
   }
   return false;
 }
@@ -73,22 +84,71 @@ async function callCoreLLM(input: {
   sessionId: string;
   profileId: string | null;
 }) {
-  return callLLM({
-    call_type: "deep_analysis",
-    phase_name: "segment2_breakthrough_core",
-    route_path: "once",
-    system: input.system,
-    messages: [{ role: "user", content: input.userContent }],
+  const session_id = input.profileId
+    ? baseAnalysisCacheSessionId(input.profileId)
+    : pojuCacheSessionId(input.sessionId);
+  const messages: OpenRouterChatMessage[] = [
+    { role: "system", content: input.system },
+    { role: "user", content: input.userContent },
+  ];
+  const defaultModel = getOpenRouterDefaultModel();
+  const startTime = Date.now();
+
+  const out = await openRouterChatCompletionStream(
+    {
+      messages,
+      max_tokens: CORE_MAX_TOKENS,
+      json_mode: true,
+      reasoning_effort: "xhigh",
+      timeout_ms: CORE_TIMEOUT_MS,
+      // Single transport attempt — resolver maxAttempts>1 exhausts into provider_queue.
+      max_attempts: 1,
+      session_id,
+      call_type: "deep_analysis",
+      phase_name: "segment2_breakthrough_core",
+      route_path: "once",
+      provider: openRouterProviderExtras(),
+    },
+    {},
+  );
+
+  const latency_ms = Date.now() - startTime;
+  const transport = out.transport;
+  const llm_debug = buildLlmDebug({
+    phase: "segment2_breakthrough_core",
+    requested_effort: "xhigh",
     max_tokens: CORE_MAX_TOKENS,
-    thinking_effort: "xhigh",
-    response_format: "json",
-    timeout_ms: CORE_TIMEOUT_MS,
-    // Single transport attempt — resolver maxAttempts>1 exhausts into provider_queue (regression bcec1e5).
-    max_attempts: 1,
-    session_id: input.profileId
-      ? baseAnalysisCacheSessionId(input.profileId)
-      : pojuCacheSessionId(input.sessionId),
+    model: out.model || defaultModel,
+    served_provider: out.provider,
+    finish_reason: out.finish_reason,
+    prompt_tokens: out.prompt_tokens,
+    cached_tokens: out.cached_tokens,
+    completion_tokens: out.completion_tokens,
+    reasoning_tokens: out.reasoning_tokens,
+    latency_ms,
+    generation_time_ms: out.generation_time_ms,
+    generation_id: out.generation_id,
+    attempt: transport?.attempt ?? 1,
+    retried: transport?.retried ?? false,
+    fell_back: transport?.fell_back ?? false,
   });
+
+  return {
+    content: out.text,
+    actual_model: out.model || defaultModel,
+    reasoning: out.reasoning,
+    llm_debug,
+    meta: {
+      tokens_used: out.tokens_used,
+      finish_reason: out.finish_reason ?? null,
+      completion_tokens: out.completion_tokens,
+      provider: out.provider,
+      prompt_tokens: out.prompt_tokens,
+      reasoning_tokens: out.reasoning_tokens,
+      cost_usd: estimateCostUsd(out.prompt_tokens, out.completion_tokens, out.cached_tokens),
+      latency_ms,
+    },
+  };
 }
 
 async function fetchCoreContent(input: {

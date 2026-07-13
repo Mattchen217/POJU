@@ -17,6 +17,7 @@ import {
 import { parseGenerationTimeMs, parseReasoningTokens } from "@/lib/llm/llm-debug";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+const OPENROUTER_STREAM_FETCH_TIMEOUT_MS = 90_000;
 
 export type OpenRouterStreamCallbacks = {
   onReasoning?: (fullReasoning: string) => void;
@@ -87,10 +88,13 @@ export async function openRouterChatCompletionStream(
   const candidates = resolveOpenRouterCandidateOrder();
   let fell_back = false;
 
-  const result = await callWithRetryAndFallback(async (model) => {
-    if (model !== candidates[0]) fell_back = true;
-    return openRouterChatCompletionStreamWithModel(model, options, callbacks, apiKey);
-  });
+  const result = await callWithRetryAndFallback(
+    async (model) => {
+      if (model !== candidates[0]) fell_back = true;
+      return openRouterChatCompletionStreamWithModel(model, options, callbacks, apiKey);
+    },
+    { maxAttempts: options.max_attempts },
+  );
 
   return {
     ...result,
@@ -144,120 +148,143 @@ async function openRouterChatCompletionStreamWithModel(
   if (title) headers["X-Title"] = title;
 
   async function runOnce() {
-    const res = await fetch(OPENROUTER_URL, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(buildBody()),
-      signal: options.signal,
-    });
-    if (!res.ok) {
-      const errText = await res.text();
-      logOpenRouterModelSlug404Hint(model, res.status, errText);
-      if (isOpenRouterModelNotFoundHttpStatus(res.status, errText)) {
-        markOpenRouterSlugDead(model);
+    const timeoutMs = options.timeout_ms ?? OPENROUTER_STREAM_FETCH_TIMEOUT_MS;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    const onAbort = () => controller.abort();
+    options.signal?.addEventListener("abort", onAbort, { once: true });
+
+    let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
+    try {
+      const res = await fetch(OPENROUTER_URL, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(buildBody()),
+        signal: controller.signal,
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        logOpenRouterModelSlug404Hint(model, res.status, errText);
+        if (isOpenRouterModelNotFoundHttpStatus(res.status, errText)) {
+          markOpenRouterSlugDead(model);
+        }
+        throw new Error(`openrouter_stream_${res.status}: ${errText.slice(0, 900)}`);
       }
-      throw new Error(`openrouter_stream_${res.status}: ${errText.slice(0, 900)}`);
-    }
-    if (!res.body) {
-      throw new Error("openrouter_stream_500: no_response_body");
-    }
+      if (!res.body) {
+        throw new Error("openrouter_stream_500: no_response_body");
+      }
 
-    let reasoning = "";
-    let content = "";
-    let modelOut = model;
-    let tokens_used = 0;
-    let prompt_tokens = 0;
-    let completion_tokens = 0;
-    let cached_tokens = 0;
-    let reasoning_tokens = 0;
-    let finish_reason: string | null = null;
-    let provider: string | null = null;
-    let generation_id: string | null = null;
-    let generation_time_ms: number | null = null;
-    let buffer = "";
+      let reasoning = "";
+      let content = "";
+      let modelOut = model;
+      let tokens_used = 0;
+      let prompt_tokens = 0;
+      let completion_tokens = 0;
+      let cached_tokens = 0;
+      let reasoning_tokens = 0;
+      let finish_reason: string | null = null;
+      let provider: string | null = null;
+      let generation_id: string | null = null;
+      let generation_time_ms: number | null = null;
+      let buffer = "";
 
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
+      reader = res.body.getReader();
+      const decoder = new TextDecoder();
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const { events, rest } = parseSseJsonBlocks(buffer);
-      buffer = rest;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const { events, rest } = parseSseJsonBlocks(buffer);
+        buffer = rest;
 
-      for (const raw of events) {
-        let parsed: Record<string, unknown>;
-        try {
-          parsed = JSON.parse(raw) as Record<string, unknown>;
-        } catch {
-          continue;
-        }
+        for (const raw of events) {
+          let parsed: Record<string, unknown>;
+          try {
+            parsed = JSON.parse(raw) as Record<string, unknown>;
+          } catch {
+            continue;
+          }
 
-        if (typeof parsed.model === "string") modelOut = parsed.model;
-        if (typeof parsed.id === "string") generation_id = parsed.id;
-        if (typeof parsed.provider === "string" && parsed.provider.trim()) {
-          provider = parsed.provider.trim();
-        }
-        const usage = parsed.usage as Record<string, unknown> | undefined;
-        if (usage) {
-          if (typeof usage.total_tokens === "number") tokens_used = usage.total_tokens;
-          if (typeof usage.prompt_tokens === "number") prompt_tokens = usage.prompt_tokens;
-          if (typeof usage.completion_tokens === "number") completion_tokens = usage.completion_tokens;
-          reasoning_tokens = parseReasoningTokens(usage);
-          const details = usage.prompt_tokens_details as Record<string, unknown> | undefined;
-          if (details && typeof details.cached_tokens === "number") {
-            cached_tokens = details.cached_tokens;
-          } else if (typeof usage.native_tokens_cached === "number") {
-            cached_tokens = usage.native_tokens_cached;
+          if (typeof parsed.model === "string") modelOut = parsed.model;
+          if (typeof parsed.id === "string") generation_id = parsed.id;
+          if (typeof parsed.provider === "string" && parsed.provider.trim()) {
+            provider = parsed.provider.trim();
+          }
+          const usage = parsed.usage as Record<string, unknown> | undefined;
+          if (usage) {
+            if (typeof usage.total_tokens === "number") tokens_used = usage.total_tokens;
+            if (typeof usage.prompt_tokens === "number") prompt_tokens = usage.prompt_tokens;
+            if (typeof usage.completion_tokens === "number") completion_tokens = usage.completion_tokens;
+            reasoning_tokens = parseReasoningTokens(usage);
+            const details = usage.prompt_tokens_details as Record<string, unknown> | undefined;
+            if (details && typeof details.cached_tokens === "number") {
+              cached_tokens = details.cached_tokens;
+            } else if (typeof usage.native_tokens_cached === "number") {
+              cached_tokens = usage.native_tokens_cached;
+            }
+          }
+          const genMs = parseGenerationTimeMs(parsed);
+          if (genMs != null) generation_time_ms = genMs;
+
+          const choice = (parsed.choices as Array<Record<string, unknown>> | undefined)?.[0];
+          if (choice && typeof choice.finish_reason === "string") {
+            finish_reason = choice.finish_reason;
+          }
+          const delta = choice?.delta as Record<string, unknown> | undefined;
+          const message = choice?.message as Record<string, unknown> | undefined;
+
+          const rDelta = extractReasoningDelta(delta);
+          if (rDelta) {
+            reasoning += rDelta;
+            callbacks.onReasoning?.(reasoning);
+          } else if (message && typeof message.reasoning === "string") {
+            reasoning = message.reasoning;
+            callbacks.onReasoning?.(reasoning);
+          }
+
+          const cDelta = typeof delta?.content === "string" ? delta.content : "";
+          if (cDelta) {
+            content += cDelta;
+            callbacks.onContent?.(content);
           }
         }
-        const genMs = parseGenerationTimeMs(parsed);
-        if (genMs != null) generation_time_ms = genMs;
-
-        const choice = (parsed.choices as Array<Record<string, unknown>> | undefined)?.[0];
-        if (choice && typeof choice.finish_reason === "string") {
-          finish_reason = choice.finish_reason;
-        }
-        const delta = choice?.delta as Record<string, unknown> | undefined;
-        const message = choice?.message as Record<string, unknown> | undefined;
-
-        const rDelta = extractReasoningDelta(delta);
-        if (rDelta) {
-          reasoning += rDelta;
-          callbacks.onReasoning?.(reasoning);
-        } else if (message && typeof message.reasoning === "string") {
-          reasoning = message.reasoning;
-          callbacks.onReasoning?.(reasoning);
-        }
-
-        const cDelta = typeof delta?.content === "string" ? delta.content : "";
-        if (cDelta) {
-          content += cDelta;
-          callbacks.onContent?.(content);
-        }
       }
-    }
 
-    return {
-      text: content.trim(),
-      model: modelOut,
-      tokens_used,
-      prompt_tokens,
-      completion_tokens,
-      cached_tokens,
-      reasoning_tokens,
-      finish_reason,
-      provider,
-      reasoning: reasoning.trim() || undefined,
-      generation_id,
-      generation_time_ms,
-      transport: {
-        attempt: transportAttempt,
-        retried: false,
-        fell_back: false,
-      },
-    };
+      return {
+        text: content.trim(),
+        model: modelOut,
+        tokens_used,
+        prompt_tokens,
+        completion_tokens,
+        cached_tokens,
+        reasoning_tokens,
+        finish_reason,
+        provider,
+        reasoning: reasoning.trim() || undefined,
+        generation_id,
+        generation_time_ms,
+        transport: {
+          attempt: transportAttempt,
+          retried: false,
+          fell_back: false,
+        },
+      };
+    } catch (e: unknown) {
+      if (e instanceof Error && e.name === "AbortError") {
+        if (options.signal?.aborted) {
+          const err = new Error("AbortError");
+          err.name = "AbortError";
+          throw err;
+        }
+        throw new Error("llm_timeout");
+      }
+      throw e;
+    } finally {
+      clearTimeout(timeoutId);
+      options.signal?.removeEventListener("abort", onAbort);
+      reader?.releaseLock();
+    }
   }
 
   let transportAttempt = 1;

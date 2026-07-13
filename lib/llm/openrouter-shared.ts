@@ -388,6 +388,11 @@ async function openRouterChatCompletionWithModel(
   let transportAttempt = 1;
   const raw = await postOnce();
 
+  if (!raw || !raw.trim()) {
+    console.error("[openrouter] empty HTTP response body (non-stream)");
+    throw new Error("openrouter_empty_response");
+  }
+
   let data: {
     id?: string;
     provider?: string;

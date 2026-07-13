@@ -32,6 +32,8 @@ function main(): void {
   assert("route timeout 240s", route.includes("CORE_TIMEOUT_MS = 240_000"));
   assert("route max_tokens 22000", route.includes("CORE_MAX_TOKENS = 22_000"));
   assert("route max_attempts 1", route.includes("max_attempts: 1"));
+  assert("route uses streaming LLM", route.includes("openRouterChatCompletionStream"));
+  assert("no non-stream callLLM in route", !route.includes("callLLM("));
   assert("no transport max_attempts constant", !route.includes("CORE_TRANSPORT_MAX_ATTEMPTS"));
   assert("route content single generation", !route.includes("for (let attempt = 0; attempt < 2"));
   assert("route provider_busy retryable", route.includes('"provider_busy"'));
@@ -56,6 +58,7 @@ function main(): void {
   const shared = read("lib/llm/openrouter-shared.ts");
   assert("router passes max_attempts", router.includes("max_attempts: input.max_attempts"));
   assert("openrouter shared max_attempts option", shared.includes("maxAttempts: options.max_attempts"));
+  assert("openrouter empty response error", shared.includes("openrouter_empty_response"));
 
   console.log("\n" + (failures.length === 0 ? "✅ All checks passed." : `❌ ${failures.length} failure(s):\n  - ${failures.join("\n  - ")}`));
   process.exit(failures.length === 0 ? 0 : 1);
