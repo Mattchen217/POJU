@@ -20,10 +20,12 @@ import { normalizeAgentPhase, type POJUAgentState } from "@/lib/poju/agent-state
 
 export const maxDuration = 300;
 
-/** xhigh segment-2 budget — reasoning ~7–11k + content ~6–8.5k; one content generation per request. */
-const CORE_MAX_TOKENS = 22_000;
+/** DIAG ONLY — high vs xhigh wall experiment; revert to xhigh + 22_000 after one run. */
+const CORE_MAX_TOKENS = 16_000;
 /** Must exceed xhigh wall time (~168s observed); under maxDuration 300s. */
 const CORE_TIMEOUT_MS = 240_000;
+/** DIAG ONLY — temporary effort for latency wall experiment. */
+const CORE_DIAG_EFFORT = "high" as const;
 
 type BreakthroughRetryReason = "truncated" | "parse_failed" | "provider_busy";
 
@@ -99,7 +101,7 @@ async function callCoreLLM(input: {
       messages,
       max_tokens: CORE_MAX_TOKENS,
       json_mode: true,
-      reasoning_effort: "xhigh",
+      reasoning_effort: CORE_DIAG_EFFORT,
       timeout_ms: CORE_TIMEOUT_MS,
       // Single transport attempt — resolver maxAttempts>1 exhausts into provider_queue.
       max_attempts: 1,
@@ -116,7 +118,7 @@ async function callCoreLLM(input: {
   const transport = out.transport;
   const llm_debug = buildLlmDebug({
     phase: "segment2_breakthrough_core",
-    requested_effort: "xhigh",
+    requested_effort: CORE_DIAG_EFFORT,
     max_tokens: CORE_MAX_TOKENS,
     model: out.model || defaultModel,
     served_provider: out.provider,
@@ -197,7 +199,7 @@ async function fetchCoreContent(input: {
     const llm_debug: LLMCallDebug = {
       ...result.llm_debug,
       phase: "segment2_breakthrough_core",
-      requested_effort: "xhigh",
+      requested_effort: CORE_DIAG_EFFORT,
       attempt: 1,
       retried: false,
     };
