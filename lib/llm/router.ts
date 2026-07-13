@@ -54,6 +54,8 @@ export interface CallLLMInput {
   temperature?: number;
   /** OpenRouter HTTP timeout (ms). Defaults to 90s; deep_analysis uses 180s. */
   timeout_ms?: number;
+  /** OpenRouter transport retries per slug (default OPENROUTER_MAX_ATTEMPTS). Segment-2 xhigh uses 1. */
+  max_attempts?: number;
   /** OpenRouter session key for observability (see lib/llm/cache-session-id.ts). Supplier pin = OPENROUTER_PROVIDER_ORDER. */
   session_id?: string;
   /** POJU phase label for cache observability. */
@@ -238,6 +240,7 @@ export async function callLLM(input: CallLLMInput): Promise<CallLLMResult> {
     json_mode: input.response_format === "json",
     reasoning_effort: effort,
     timeout_ms,
+    max_attempts: input.max_attempts,
     session_id: input.session_id,
     call_type: input.call_type,
     phase_name: input.phase_name,

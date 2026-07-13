@@ -29,11 +29,11 @@ function main(): void {
   const types = read("lib/poju/types.ts");
 
   assert("route maxDuration 300", route.includes("maxDuration = 300"));
-  assert("route timeout 90s", route.includes("timeout_ms: 90_000"));
-  assert("route max_tokens initial 12000", route.includes("CORE_MAX_TOKENS_INITIAL = 12_000"));
-  assert("route max_tokens retry 16000", route.includes("CORE_MAX_TOKENS_RETRY = 16_000"));
-  assert("no 180_000 route timeout", !route.includes("180_000"));
-  assert("no 24000 retry tokens", !route.includes("24_000"));
+  assert("route timeout 240s", route.includes("CORE_TIMEOUT_MS = 240_000"));
+  assert("route max_tokens 12000", route.includes("CORE_MAX_TOKENS = 12_000"));
+  assert("route single xhigh attempt", route.includes("max_attempts: 1"));
+  assert("no fetchCoreContent retry loop", !route.includes("for (let attempt = 0; attempt < 2"));
+  assert("no 90s route timeout", !route.includes("timeout_ms: 90_000"));
 
   assert("agent no staying in opening on core fail", !agent.includes("staying in opening"));
   assert("agent keeps confirmed understanding", agent.includes("keeping confirmed understanding"));
@@ -50,7 +50,10 @@ function main(): void {
 
   assert("RegenerateAnalysisAction in UI", ui.includes("RegenerateAnalysisAction"));
   assert("handleRegenerateAnalysisClick", ui.includes("handleRegenerateAnalysisClick"));
-  assert("handleRegenerateBreakthroughCore import", ui.includes("handleRegenerateBreakthroughCore"));
+  const router = read("lib/llm/router.ts");
+  const shared = read("lib/llm/openrouter-shared.ts");
+  assert("router passes max_attempts", router.includes("max_attempts: input.max_attempts"));
+  assert("openrouter shared max_attempts option", shared.includes("maxAttempts: options.max_attempts"));
 
   console.log("\n" + (failures.length === 0 ? "✅ All checks passed." : `❌ ${failures.length} failure(s):\n  - ${failures.join("\n  - ")}`));
   process.exit(failures.length === 0 ? 0 : 1);

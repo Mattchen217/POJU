@@ -36,7 +36,7 @@ function main(): void {
   assert("formatBreakthroughDirectionsForUser exported", collecting.includes("formatBreakthroughDirectionsForUser"));
   assert("transition includes directions block", collecting.includes("formatBreakthroughDirectionsForUser(core"));
   assert("core route validates mapBreakthroughCorePayload", route.includes("mapBreakthroughCorePayload(parsed)"));
-  assert("core route retry loop", route.includes("for (let attempt = 0; attempt < 2; attempt++)"));
+  assert("core route single attempt", route.includes("max_attempts: 1"));
 
   assert("bare ganzhi gloss user-facing", !BARE_GANZHI_MARKER.glossZh.includes("底层数据"));
   assert("bare ganzhi gloss scenario", BARE_GANZHI_MARKER.glossZh.includes("时间气候"));

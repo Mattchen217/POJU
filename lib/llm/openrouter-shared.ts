@@ -91,6 +91,8 @@ export type OpenRouterChatOptions = {
   reasoning_effort?: "off" | "low" | "medium" | "high" | "xhigh";
   /** Override default 90s abort (ms). */
   timeout_ms?: number;
+  /** Per-slug OpenRouter transport retries (default OPENROUTER_MAX_ATTEMPTS). */
+  max_attempts?: number;
   /** Observability / session affinity — does NOT pin upstream supplier for DeepSeek prefix cache. */
   session_id?: string;
   /** Router call_type — for cache observability logs. */
@@ -282,10 +284,13 @@ export async function openRouterChatCompletion(
   const candidates = resolveOpenRouterCandidateOrder();
   let fell_back = false;
 
-  const result = await callWithRetryAndFallback(async (model) => {
-    if (model !== candidates[0]) fell_back = true;
-    return openRouterChatCompletionWithModel(model, options, apiKey);
-  });
+  const result = await callWithRetryAndFallback(
+    async (model) => {
+      if (model !== candidates[0]) fell_back = true;
+      return openRouterChatCompletionWithModel(model, options, apiKey);
+    },
+    { maxAttempts: options.max_attempts },
+  );
 
   return {
     ...result,

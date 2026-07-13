@@ -12,8 +12,10 @@ import { normalizeAgentPhase, type POJUAgentState } from "@/lib/poju/agent-state
 
 export const maxDuration = 300;
 
-const CORE_MAX_TOKENS_INITIAL = 12_000;
-const CORE_MAX_TOKENS_RETRY = 16_000;
+/** xhigh segment-2 output budget — 8500 tok typical; no auto-retry with larger cap. */
+const CORE_MAX_TOKENS = 12_000;
+/** Must exceed xhigh wall time (~168s observed); under maxDuration 300s. */
+const CORE_TIMEOUT_MS = 240_000;
 
 class BreakthroughCoreRetryableError extends Error {
   constructor(
@@ -57,7 +59,6 @@ function retryableResponse(reason: "truncated" | "parse_failed", error: string) 
 async function callCoreLLM(input: {
   system: string;
   userContent: string;
-  max_tokens: number;
   sessionId: string;
   profileId: string | null;
 }) {
@@ -67,10 +68,11 @@ async function callCoreLLM(input: {
     route_path: "once",
     system: input.system,
     messages: [{ role: "user", content: input.userContent }],
-    max_tokens: input.max_tokens,
+    max_tokens: CORE_MAX_TOKENS,
     thinking_effort: "xhigh",
     response_format: "json",
-    timeout_ms: 90_000,
+    timeout_ms: CORE_TIMEOUT_MS,
+    max_attempts: 1,
     session_id: input.profileId
       ? baseAnalysisCacheSessionId(input.profileId)
       : pojuCacheSessionId(input.sessionId),
@@ -93,59 +95,48 @@ async function fetchCoreContent(input: {
     }
   | { ok: false; reason: "truncated" | "parse_failed"; error: string }
 > {
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const max_tokens = attempt === 0 ? CORE_MAX_TOKENS_INITIAL : CORE_MAX_TOKENS_RETRY;
-    const result = await callCoreLLM({ ...input, max_tokens });
+  const result = await callCoreLLM(input);
 
-    const finish = result.meta.finish_reason ?? null;
-    const emptyBody = !result.content.trim();
-    if (finish === "length" || emptyBody) {
-      console.warn(
-        `[breakthrough-core] attempt ${attempt + 1}: ${emptyBody ? "empty body" : "truncated"} (max_tokens=${max_tokens})`,
-      );
-      if (attempt === 0) continue;
-      return {
-        ok: false,
-        reason: "truncated",
-        error: "deep analysis output was truncated",
-      };
-    }
-
-    try {
-      const parsed = parseBreakthroughCoreResponseText(result.content);
-      mapBreakthroughCorePayload(parsed);
-      const llm_debug: LLMCallDebug = {
-        ...result.llm_debug,
-        phase: "segment2_breakthrough_core",
-        requested_effort: "xhigh",
-        attempt: attempt + 1,
-        retried: attempt > 0,
-      };
-      return {
-        ok: true,
-        content: result.content,
-        tokens_used: result.meta.tokens_used,
-        model: result.actual_model,
-        finish_reason: finish,
-        llm_debug,
-      };
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      console.warn(`[breakthrough-core] attempt ${attempt + 1} parse/validate failed:`, msg);
-      if (attempt === 0) continue;
-      return {
-        ok: false,
-        reason: "parse_failed",
-        error: "deep analysis JSON was incomplete",
-      };
-    }
+  const finish = result.meta.finish_reason ?? null;
+  const emptyBody = !result.content.trim();
+  if (finish === "length" || emptyBody) {
+    console.warn(
+      `[breakthrough-core] ${emptyBody ? "empty body" : "truncated"} (max_tokens=${CORE_MAX_TOKENS})`,
+    );
+    return {
+      ok: false,
+      reason: "truncated",
+      error: "deep analysis output was truncated",
+    };
   }
 
-  return {
-    ok: false,
-    reason: "parse_failed",
-    error: "deep analysis JSON was incomplete",
-  };
+  try {
+    const parsed = parseBreakthroughCoreResponseText(result.content);
+    mapBreakthroughCorePayload(parsed);
+    const llm_debug: LLMCallDebug = {
+      ...result.llm_debug,
+      phase: "segment2_breakthrough_core",
+      requested_effort: "xhigh",
+      attempt: 1,
+      retried: false,
+    };
+    return {
+      ok: true,
+      content: result.content,
+      tokens_used: result.meta.tokens_used,
+      model: result.actual_model,
+      finish_reason: finish,
+      llm_debug,
+    };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.warn("[breakthrough-core] parse/validate failed:", msg);
+    return {
+      ok: false,
+      reason: "parse_failed",
+      error: "deep analysis JSON was incomplete",
+    };
+  }
 }
 
 export async function POST(req: Request) {
