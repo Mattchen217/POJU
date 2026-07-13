@@ -3,7 +3,7 @@ import { baseAnalysisCacheSessionId, pojuCacheSessionId } from "@/lib/llm/cache-
 import {
   buildBreakthroughCorePrompt,
   mapBreakthroughCorePayload,
-  parseBreakthroughCoreResponseText,
+  parseAndMapBreakthroughCore,
 } from "@/lib/llm/deepseek/breakthrough-core";
 import type { LLMCallDebug } from "@/lib/llm/llm-debug";
 import { callLLM } from "@/lib/llm/router";
@@ -111,8 +111,7 @@ async function fetchCoreContent(input: {
   }
 
   try {
-    const parsed = parseBreakthroughCoreResponseText(result.content);
-    mapBreakthroughCorePayload(parsed);
+    parseAndMapBreakthroughCore(result.content);
     const llm_debug: LLMCallDebug = {
       ...result.llm_debug,
       phase: "segment2_breakthrough_core",
@@ -211,11 +210,11 @@ export async function POST(req: Request) {
 
     let mapped: ReturnType<typeof mapBreakthroughCorePayload>;
     try {
-      mapped = mapBreakthroughCorePayload(parseBreakthroughCoreResponseText(rawContent));
+      mapped = parseAndMapBreakthroughCore(rawContent);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Invalid breakthrough core payload";
-      console.warn("[breakthrough-core] map failed:", msg);
-      return retryableResponse("parse_failed", "deep analysis JSON was incomplete");
+      console.warn("[breakthrough-core] parse/map failed:", msg);
+      return retryableResponse("parse_failed", msg.includes("core_parse_failed") ? msg : "deep analysis JSON was incomplete");
     }
 
     return NextResponse.json({
@@ -231,6 +230,7 @@ export async function POST(req: Request) {
       return retryableResponse(e.reason, e.message);
     }
     const msg = e instanceof Error ? e.message : "Breakthrough core failed";
-    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+    console.warn("[breakthrough-core] request failed:", msg);
+    return retryableResponse("parse_failed", msg);
   }
 }

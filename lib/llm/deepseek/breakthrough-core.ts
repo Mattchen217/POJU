@@ -18,7 +18,8 @@ import { buildOutputPolicyForPoju } from "@/lib/llm/compliance/output-policy";
 import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-structured-instance-inventory";
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
-import { extractJson } from "@/lib/llm/phases/phase-transport";
+import { extractJson, tolerantJsonRepair, tryParseJsonObject } from "@/lib/llm/phases/phase-transport";
+import { normalizeAgendaFromLlm } from "@/lib/poju/opening-conversion-payload";
 import { buildChatFactGuardBlock } from "@/lib/llm/prompts/shen-sha-guard";
 import { resolveAgendaRelationContext } from "@/lib/llm/prompts/relation-closed-set-context";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
@@ -105,6 +106,9 @@ structural_basis 必须从实例清单【点名至少 3 项具体本地数据】
   reasoning 里可裸写；JSON 字段一旦引用命理词，必须打标（UI 渲染前 autoMarkBareTerms 会兜底补漏）。
 
 # 输出（严格 JSON，无围栏，内部推理用中文；此输出不直接给用户看）
+# 输出格式（硬约束 · 键名不可翻译）
+输出必须是严格 JSON：所有键名用【英文小写】原样（relationship_conclusion / breakthrough_directions / investigation_agenda），
+用标准 ASCII 双引号 \`"\`，不得翻译键名、不得用中文引号、不得截断、不得 markdown 围栏。
 {
   "relationship_conclusion": "...",
   "breakthrough_directions": [
@@ -227,8 +231,190 @@ ${factGuard}
   return { system, user, structured, auditRelations: auditAllowlist };
 }
 
+export class BreakthroughCoreParseError extends Error {
+  constructor(message = "core_parse_failed") {
+    super(message);
+    this.name = "BreakthroughCoreParseError";
+  }
+}
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function grabSalvageStringField(text: string, keyAliases: string[]): string | undefined {
+  for (const k of keyAliases) {
+    const key = escapeRegExp(k);
+    const re = new RegExp(
+      `["'「」]?${key}["'「」]?\\s*[:：]\\s*["'「」]((?:[^"'「」\\\\]|\\\\.)*)["'「」]`,
+      "i",
+    );
+    const m = text.match(re);
+    if (m?.[1]?.trim()) {
+      return m[1].replace(/\\"/g, '"').replace(/\\n/g, "\n").trim();
+    }
+  }
+  return undefined;
+}
+
+function extractJsonArrayBlock(text: string, containerAliases: string[]): string | null {
+  for (const key of containerAliases) {
+    const re = new RegExp(`["'「」]?${escapeRegExp(key)}["'「」]?\\s*[:：]\\s*\\[`, "i");
+    const m = re.exec(text);
+    if (!m || m.index === undefined) continue;
+    const start = text.indexOf("[", m.index);
+    if (start < 0) continue;
+    let depth = 0;
+    for (let i = start; i < text.length; i++) {
+      if (text[i] === "[") depth++;
+      else if (text[i] === "]") {
+        depth--;
+        if (depth === 0) return text.slice(start, i + 1);
+      }
+    }
+    if (depth > 0) return text.slice(start);
+  }
+  return null;
+}
+
+function tryParseJsonArray(raw: string): unknown[] | null {
+  const attempts = [
+    raw,
+    raw.replace(/,(\s*[}\]])/g, "$1"),
+    tolerantJsonRepair(raw),
+    tolerantJsonRepair(raw.replace(/,(\s*[}\]])/g, "$1")),
+  ];
+  for (const attempt of attempts) {
+    try {
+      const parsed = JSON.parse(attempt) as unknown;
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      /* next */
+    }
+  }
+  return null;
+}
+
+function normalizeSalvagedDirections(raw: unknown): Array<Record<string, string>> {
+  if (!Array.isArray(raw)) return [];
+  const out: Array<Record<string, string>> = [];
+  for (const d of raw) {
+    if (!d || typeof d !== "object") continue;
+    const row = d as Record<string, unknown>;
+    const direction = typeof row.direction === "string" ? row.direction.trim() : "";
+    const structural_basis = typeof row.structural_basis === "string" ? row.structural_basis.trim() : "";
+    const timing = typeof row.timing === "string" ? row.timing.trim() : "";
+    const what_would_confirm =
+      typeof row.what_would_confirm === "string" ? row.what_would_confirm.trim() : "";
+    if (!direction && !structural_basis && !timing && !what_would_confirm) continue;
+    out.push({
+      direction: direction || structural_basis.slice(0, 80) || "待补方向",
+      structural_basis: structural_basis || "待补结构依据",
+      timing: timing || "当前阶段",
+      what_would_confirm: what_would_confirm || direction || "待补验证点",
+    });
+  }
+  return out;
+}
+
+function agendaFromSalvagedDirections(
+  directions: Array<Record<string, string>>,
+): AgendaItem[] | null {
+  if (directions.length < 2) return null;
+  const items: AgendaItem[] = [];
+  for (let i = 0; i < directions.length; i++) {
+    const d = directions[i]!;
+    const label = (d.what_would_confirm || d.direction).trim().slice(0, 40);
+    if (!label) continue;
+    items.push({
+      id: `agenda_${i + 1}`,
+      label,
+      critical: i < 2,
+      status: "unexplored",
+      supports: d.direction,
+    });
+  }
+  if (items.length < 2) return null;
+  while (items.length < 3) {
+    items.push({
+      id: `agenda_${items.length + 1}`,
+      label: "待补关键信息",
+      critical: false,
+      status: "unexplored",
+    });
+  }
+  return items;
+}
+
+/** Field-level salvage when xhigh JSON is malformed but content is present. */
+export function salvageBreakthroughFields(cleaned: string): Record<string, unknown> | null {
+  const base = tryParseJsonObject(cleaned) ?? {};
+
+  const relationship_conclusion =
+    (typeof base.relationship_conclusion === "string" ? base.relationship_conclusion.trim() : "") ||
+    grabSalvageStringField(cleaned, ["relationship_conclusion", "关系结论"]) ||
+    "";
+  if (!relationship_conclusion) return null;
+
+  let directions = normalizeSalvagedDirections(base.breakthrough_directions);
+  if (directions.length < 2) {
+    const block = extractJsonArrayBlock(cleaned, ["breakthrough_directions", "破局方向"]);
+    if (block) directions = normalizeSalvagedDirections(tryParseJsonArray(block));
+  }
+  if (directions.length < 2) return null;
+
+  let investigation_agenda =
+    parseInvestigationAgenda(base.investigation_agenda) ??
+    normalizeAgendaFromLlm(base.investigation_agenda);
+  if (!investigation_agenda) {
+    const agendaBlock = extractJsonArrayBlock(cleaned, ["investigation_agenda", "调查议程"]);
+    if (agendaBlock) {
+      investigation_agenda = normalizeAgendaFromLlm(tryParseJsonArray(agendaBlock));
+    }
+  }
+  if (!investigation_agenda) {
+    investigation_agenda = agendaFromSalvagedDirections(directions);
+  }
+  if (!investigation_agenda) return null;
+
+  return {
+    relationship_conclusion,
+    breakthrough_directions: directions,
+    investigation_agenda,
+    _parse_salvaged: true,
+  };
+}
+
 export function parseBreakthroughCoreResponseText(raw: string): unknown {
-  return JSON.parse(extractJson(raw)) as unknown;
+  const jsonStr = extractJson(raw);
+  const direct = tryParseJsonObject(jsonStr);
+  if (direct) return direct;
+
+  const salvaged = salvageBreakthroughFields(jsonStr);
+  if (salvaged) {
+    console.info("[breakthrough-core] salvaged partial JSON from xhigh output");
+    return salvaged;
+  }
+
+  throw new BreakthroughCoreParseError();
+}
+
+/** Parse + map with salvage retry when strict map fails on loosely-parsed JSON. */
+export function parseAndMapBreakthroughCore(raw: string): ReturnType<typeof mapBreakthroughCorePayload> {
+  let parsed: unknown;
+  try {
+    parsed = parseBreakthroughCoreResponseText(raw);
+  } catch (e) {
+    throw e instanceof BreakthroughCoreParseError ? e : new BreakthroughCoreParseError();
+  }
+  try {
+    return mapBreakthroughCorePayload(parsed);
+  } catch (firstError) {
+    const salvaged = salvageBreakthroughFields(extractJson(raw));
+    if (!salvaged) throw firstError;
+    console.info("[breakthrough-core] map retry after field salvage");
+    return mapBreakthroughCorePayload(salvaged);
+  }
 }
 
 export function buildBreakthroughCoreAuditText(parsed: unknown): string {

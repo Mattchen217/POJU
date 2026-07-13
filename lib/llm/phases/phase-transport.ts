@@ -310,7 +310,7 @@ function extractNestedJsonBlock(text: string, containerAliases: string[]): strin
   return null;
 }
 
-function tryParseJsonObject(raw: string): Record<string, unknown> | null {
+export function tryParseJsonObject(raw: string): Record<string, unknown> | null {
   const attempts = [
     raw,
     raw.replace(/,(\s*[}\]])/g, "$1"),
