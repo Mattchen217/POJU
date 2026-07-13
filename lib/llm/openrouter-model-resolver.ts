@@ -9,7 +9,6 @@ import {
 
 /** Built-in fallbacks when OPENROUTER_MODEL env is unset. Keep at least one live slug on OpenRouter. */
 export const OPENROUTER_MODEL_CANDIDATES_BUILTIN = [
-  "deepseek/deepseek-v4-pro-20260423",
   "deepseek/deepseek-v4-pro",
 ] as const;
 
@@ -171,6 +170,16 @@ export async function callWithOpenRouterModelFallback<T>(
           break;
         }
 
+        if (isTransientNoEndpoints404(e)) {
+          tried.push(model);
+          markOpenRouterSlugDead(model);
+          const next = candidates[i + 1];
+          console.warn(
+            `[openrouter] 404 no-endpoints — 标记 slug 失效并切换候选: ${model}${next ? ` → ${next}` : " (无更多候选)"}`,
+          );
+          break;
+        }
+
         const canRetry = attempt < maxAttempts - 1 && isRetryableOpenRouterError(e);
         if (!canRetry) {
           if (isRetryableOpenRouterError(e) && attempt >= maxAttempts - 1) {
@@ -181,7 +190,7 @@ export async function callWithOpenRouterModelFallback<T>(
 
         const wait_ms = OPENROUTER_RETRY_DELAYS_MS[attempt] ?? 6000;
         console.warn(
-          `[openrouter] retry model=${model} attempt=${attempt + 1}/${maxAttempts - 1} wait_ms=${wait_ms}${isTransientNoEndpoints404(e) ? " (transient 404 no-endpoints)" : ""}`,
+          `[openrouter] retry model=${model} attempt=${attempt + 1}/${maxAttempts - 1} wait_ms=${wait_ms}`,
         );
         await sleep(wait_ms);
       }

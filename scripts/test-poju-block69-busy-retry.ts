@@ -66,27 +66,39 @@ async function main(): Promise<void> {
   assert("503 retries once then succeeds", attempts === 2);
 
   resetOpenRouterModelResolverForTests();
+  const prevEnv = process.env.OPENROUTER_MODEL;
+  const ENV_FALLBACK = "deepseek/deepseek-v4-pro-env-fallback-test";
+  process.env.OPENROUTER_MODEL = ENV_FALLBACK;
+
   let transientCalls = 0;
   const transientOut = await callWithRetryAndFallback(async (model) => {
     transientCalls++;
-    if (transientCalls < 2) {
+    if (model === ENV_FALLBACK) {
       throw new Error("openrouter_http_404: No endpoints found for provider");
     }
     return model;
   });
-  assert("transient 404 retries same slug", transientCalls === 2 && Boolean(transientOut));
+  assert(
+    "no-endpoints 404 switches candidate",
+    transientCalls === 2 && transientOut === OPENROUTER_MODEL_CANDIDATES_BUILTIN[0],
+  );
 
   resetOpenRouterModelResolverForTests();
+  process.env.OPENROUTER_MODEL = ENV_FALLBACK;
   let calls = 0;
   const out = await callWithRetryAndFallback(async (model) => {
     calls++;
-    if (model === OPENROUTER_MODEL_CANDIDATES_BUILTIN[0]) {
+    if (model === ENV_FALLBACK) {
       throw new Error("openrouter_http_404: model not found for slug");
     }
     return model;
   });
-  assert("slug 404 switches candidate", out === OPENROUTER_MODEL_CANDIDATES_BUILTIN[1]);
-  assert("slug 404 tried both slugs", calls === 2);
+  assert("slug 404 switches candidate", out === OPENROUTER_MODEL_CANDIDATES_BUILTIN[0]);
+  assert("slug 404 tried env then built-in", calls === 2);
+
+  if (prevEnv === undefined) delete process.env.OPENROUTER_MODEL;
+  else process.env.OPENROUTER_MODEL = prevEnv;
+  resetOpenRouterModelResolverForTests();
 
   assert("max attempts is 5 (4 retries)", OPENROUTER_MAX_ATTEMPTS === 5);
   assert("busy en matches constant", getPojuServiceBusyMessage("en") === POJU_SERVICE_BUSY_MESSAGES.en);
