@@ -69,7 +69,7 @@ import { ensureBreakthroughCore, runConfirmationPipeline } from "@/lib/poju/agen
 import { classifyConfirmationAffirmative } from "@/lib/poju/confirmation-reply";
 import { applyActionStatusUpdates, parseActionStatusUpdates } from "@/lib/poju/action-status-updates";
 import {
-  resolveUnderstandingGateSummaryContent,
+  buildUnderstandingGateSummaryFromFields,
   understandingGateConfirmButtonLabel,
 } from "@/lib/poju/understanding-gate-reply";
 
@@ -719,9 +719,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     agent_v2.breakthrough_core != null &&
     (agent_v2.investigation_agenda?.length ?? 0) > 0;
   const phaseAfter = normalizeAgentPhase(agent_v2.current_phase) ?? agent_v2.current_phase;
-  const enteredUnderstandingGate =
-    (normalizeAgentPhase(ensureAgentV2(sessionForAgent).current_phase) ?? "opening") === "opening" &&
-    phaseAfter === "awaiting_understanding_confirm";
+  const isUnderstandingGateTurn = phaseAfter === "awaiting_understanding_confirm";
   const envelopeFailedStayedOpening =
     advance.trigger_breakthrough_core && phaseAfter === "opening";
   const segment2GenerationFailed =
@@ -729,21 +727,20 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
 
   if (justConverted) {
     finalContent = buildCollectingTransitionReplyFromCore(agent_v2, locale);
+  } else if (isUnderstandingGateTurn) {
+    finalContent = buildUnderstandingGateSummaryFromFields(agent_v2, locale);
   } else if (segment2GenerationFailed) {
     finalContent = segment2CoreGenerationFailedMessage(locale);
-  } else if (enteredUnderstandingGate) {
-    finalContent = resolveUnderstandingGateSummaryContent(agent_v2, finalContent, locale);
   } else if (envelopeFailedStayedOpening && !finalContent.trim()) {
     finalContent = envelopeCoreFallbackRetryHint(locale);
   }
 
   const advancedCleanly =
     justConverted ||
-    enteredUnderstandingGate ||
+    isUnderstandingGateTurn ||
     segment2GenerationFailed ||
     (!envelopeFailedStayedOpening &&
-      (phaseAfter === "awaiting_understanding_confirm" ||
-        phaseAfter === "awaiting_confirmation" ||
+      (phaseAfter === "awaiting_confirmation" ||
         phaseAfter === "delivered" ||
         phaseAfter === "tracking" ||
         (phaseAfter === "collecting_context" && hasQuestionCue(finalContent))));

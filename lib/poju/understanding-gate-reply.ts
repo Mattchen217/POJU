@@ -50,7 +50,7 @@ const GATE_COPY: Record<
     summaryFooter:
       "After you confirm, I'll run a deeper analysis using your personal chart data and outline directions plus what we should clarify next.",
     summaryCta:
-      'If this looks right, tap **"Yes, that\'s right"** below. To add or correct anything, tap **"I want to add something"**.',
+      'If this looks right, tap "Yes, that\'s right" below. To add or correct anything, tap "I want to add something".',
     fieldEvent: "What happened",
     fieldStakes: "What you care about or fear losing",
     fieldSticking: "Where you're stuck",
@@ -67,7 +67,7 @@ const GATE_COPY: Record<
     summaryFooter:
       "Tras confirmar, haré un análisis más profundo con tus datos personales y señalaré direcciones y puntos a aclarar.",
     summaryCta:
-      'Si encaja, pulsa **"Sí, es así"** abajo. Para añadir o corregir algo, pulsa **"Quiero añadir algo"**.',
+      'Si encaja, pulsa "Sí, es así" abajo. Para añadir o corregir algo, pulsa "Quiero añadir algo".',
     fieldEvent: "Qué ocurrió",
     fieldStakes: "Qué te importa o temes perder",
     fieldSticking: "Dónde estás atascado/a",
@@ -84,7 +84,7 @@ const GATE_COPY: Record<
     summaryFooter:
       "Nach deiner Bestätigung folgt eine tiefere Analyse mit deinen persönlichen Daten sowie Richtungen und Klärungspunkten.",
     summaryCta:
-      'Wenn das passt, tippe unten auf **"Ja, genau so"**. Zum Ergänzen oder Korrigieren: **"Ich möchte noch etwas ergänzen"**.',
+      'Wenn das passt, tippe unten auf "Ja, genau so". Zum Ergänzen oder Korrigieren: "Ich möchte noch etwas ergänzen".',
     fieldEvent: "Was passiert ist",
     fieldStakes: "Was dir wichtig ist oder du fürchtest zu verlieren",
     fieldSticking: "Wo es hakt",
@@ -101,7 +101,7 @@ const GATE_COPY: Record<
     summaryFooter:
       "Après confirmation, j'approfondirai l'analyse avec tes données personnelles et proposerai des directions et des points à clarifier.",
     summaryCta:
-      'Si c\'est correct, appuie sur **"Oui, c\'est bien ça"** ci-dessous. Pour ajouter ou corriger, appuie sur **"J\'aimerais ajouter quelque chose"**.',
+      'Si c\'est correct, appuie sur "Oui, c\'est bien ça" ci-dessous. Pour ajouter ou corriger, appuie sur "J\'aimerais ajouter quelque chose".',
     fieldEvent: "Ce qui s'est passé",
     fieldStakes: "Ce qui compte pour toi ou ce que tu crains de perdre",
     fieldSticking: "Où tu es bloqué(e)",
@@ -110,7 +110,7 @@ const GATE_COPY: Record<
   },
 };
 
-/** Natural-language recap of segment-1 fields (no metaphysics) — fallback if model summary is thin. */
+/** Natural-language recap of segment-1 fields (no metaphysics, no model freeform). */
 export function buildUnderstandingGateSummaryFromFields(
   agent: POJUAgentState,
   locale: string,
@@ -124,19 +124,44 @@ export function buildUnderstandingGateSummaryFromFields(
   const wants = dir?.wants?.trim() || copy.summaryPending;
   const priority = dir?.priority?.trim() || copy.summaryPending;
 
-  return [
-    copy.summaryIntro,
-    "",
-    `**${copy.fieldEvent}:** ${event}`,
-    `**${copy.fieldStakes}:** ${stakes}`,
-    `**${copy.fieldSticking}:** ${sticking}`,
-    "",
-    `**${copy.fieldWants}:** ${wants}`,
-    `**${copy.fieldPriority}:** ${priority}`,
-    "",
-    copy.summaryCta,
-    copy.summaryFooter,
-  ].join("\n");
+  const lang = resolveGateLocale(locale);
+
+  const narrative =
+    lang === "zh"
+      ? `你面对的是：${event}。这背后你在意的是 ${stakes}，现在最卡住的是 ${sticking}。\n\n你期望的是 ${wants}，其中你最想优先的是 ${priority}。`
+      : lang === "es"
+        ? `Lo que enfrentas: ${event}. Te importa ${stakes}, y lo que más te traba ahora es ${sticking}.\n\nQuieres ${wants}, y tu prioridad principal es ${priority}.`
+        : lang === "de"
+          ? `Du stehst vor: ${event}. Dir wichtig ist ${stakes}, und am meisten hakt es gerade bei ${sticking}.\n\nDu willst ${wants}, und deine oberste Priorität ist ${priority}.`
+          : lang === "fr"
+            ? `Tu fais face à : ${event}. Ce qui compte pour toi : ${stakes}, et ce qui te bloque le plus : ${sticking}.\n\nTu veux ${wants}, et ta priorité principale est ${priority}.`
+            : `What you're facing: ${event}. You care about ${stakes}, and what's stuck right now is ${sticking}.\n\nYou want ${wants}, and your top priority is ${priority}.`;
+
+  return [copy.summaryIntro, "", narrative, "", copy.summaryCta, "", copy.summaryFooter].join("\n");
+}
+
+/** Strip follow-up questions and analysis leakage from a model summary (fallback only). */
+export function sanitizeUnderstandingGateModelResponse(response: string): string {
+  let text = response.replace(/\r\n/g, "\n").trim();
+  if (!text) return text;
+
+  const paragraphs = text.split(/\n\n+/);
+  const kept: string[] = [];
+  for (const para of paragraphs) {
+    const trimmed = para.trim();
+    if (!trimmed) continue;
+    const sentences = trimmed.split(/(?<=[。！？!?…])\s+/);
+    const safe = sentences.filter((s) => {
+      const t = s.trim();
+      if (!t) return false;
+      if (/[？?]\s*$/.test(t)) return false;
+      if (/(?:是…还是…|还是…|能不能|有没有|是否|会不会|要不要|吗\s*$)/.test(t)) return false;
+      if (/(?:破局|方向|代价|命盘|日主|大运|流年|食神|正官|七杀|藤蔓|冷却)/.test(t)) return false;
+      return true;
+    });
+    if (safe.length > 0) kept.push(safe.join(""));
+  }
+  return kept.join("\n\n").trim();
 }
 
 export function understandingGateSupplementAck(locale: string): string {
@@ -151,13 +176,11 @@ export function understandingGateSupplementButtonLabel(locale: string): string {
   return GATE_COPY[resolveGateLocale(locale)].supplement;
 }
 
-/** Prefer model summary; use field recap if response is too short for a gate turn. */
+/** Gate turn display — always deterministic from confirmed fields (never model freeform). */
 export function resolveUnderstandingGateSummaryContent(
   agent: POJUAgentState,
-  modelResponse: string,
+  _modelResponse: string,
   locale: string,
 ): string {
-  const trimmed = modelResponse.trim();
-  if (trimmed.length >= 120) return trimmed;
   return buildUnderstandingGateSummaryFromFields(agent, locale);
 }

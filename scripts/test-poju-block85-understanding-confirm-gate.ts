@@ -43,7 +43,7 @@ function main(): void {
   assert("confirm supports optimistic user append", agent.includes("userAlreadyAppended"));
   assert("UI optimistic confirm flow", ui.includes("buildOptimisticUserMessage(userLabel)"));
   assert("UI supplement opens composer only", ui.includes("applyUnderstandingGateSupplement"));
-  assert("resolveUnderstandingGateSummaryContent wired", agent.includes("resolveUnderstandingGateSummaryContent"));
+  assert("buildUnderstandingGateSummaryFromFields wired", agent.includes("buildUnderstandingGateSummaryFromFields"));
   assert("understanding_gate_pending meta", agent.includes("understanding_gate_pending"));
 
   assert("UI uses i18n gate labels", gateUi.includes('t("understanding_gate_confirm")'));
