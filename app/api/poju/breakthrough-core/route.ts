@@ -17,8 +17,6 @@ export const maxDuration = 300;
 const CORE_MAX_TOKENS = 22_000;
 /** Must exceed xhigh wall time (~168s observed); under maxDuration 300s. */
 const CORE_TIMEOUT_MS = 240_000;
-/** Transport-level retries (503/queue jitter) — fast backoff, not a second full generation. */
-const CORE_TRANSPORT_MAX_ATTEMPTS = 3;
 
 type BreakthroughRetryReason = "truncated" | "parse_failed" | "provider_busy";
 
@@ -85,7 +83,8 @@ async function callCoreLLM(input: {
     thinking_effort: "xhigh",
     response_format: "json",
     timeout_ms: CORE_TIMEOUT_MS,
-    max_attempts: CORE_TRANSPORT_MAX_ATTEMPTS,
+    // Single transport attempt — resolver maxAttempts>1 exhausts into provider_queue (regression bcec1e5).
+    max_attempts: 1,
     session_id: input.profileId
       ? baseAnalysisCacheSessionId(input.profileId)
       : pojuCacheSessionId(input.sessionId),
