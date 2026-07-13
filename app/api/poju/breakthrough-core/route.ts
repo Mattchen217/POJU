@@ -8,14 +8,19 @@ import {
 import type { LLMCallDebug } from "@/lib/llm/llm-debug";
 import { callLLM } from "@/lib/llm/router";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
+import { OpenRouterProviderQueueError } from "@/lib/llm/openrouter-retry";
 import { normalizeAgentPhase, type POJUAgentState } from "@/lib/poju/agent-state";
 
 export const maxDuration = 300;
 
-/** xhigh segment-2 budget — reasoning ~7–11k + content ~6–8.5k; single attempt, no auto-retry. */
+/** xhigh segment-2 budget — reasoning ~7–11k + content ~6–8.5k; one content generation per request. */
 const CORE_MAX_TOKENS = 22_000;
 /** Must exceed xhigh wall time (~168s observed); under maxDuration 300s. */
 const CORE_TIMEOUT_MS = 240_000;
+/** Transport-level retries (503/queue jitter) — fast backoff, not a second full generation. */
+const CORE_TRANSPORT_MAX_ATTEMPTS = 3;
+
+type BreakthroughRetryReason = "truncated" | "parse_failed" | "provider_busy";
 
 class BreakthroughCoreRetryableError extends Error {
   constructor(
@@ -52,8 +57,16 @@ function resolveProfileId(body: {
   return null;
 }
 
-function retryableResponse(reason: "truncated" | "parse_failed", error: string) {
+function retryableResponse(reason: BreakthroughRetryReason, error: string) {
   return NextResponse.json({ ok: false, retryable: true, reason, error }, { status: 200 });
+}
+
+function isProviderTransportFailure(e: unknown): boolean {
+  if (e instanceof OpenRouterProviderQueueError) return true;
+  if (e instanceof Error) {
+    return e.message === "openrouter_provider_queue" || e.message === "llm_timeout";
+  }
+  return false;
 }
 
 async function callCoreLLM(input: {
@@ -72,7 +85,7 @@ async function callCoreLLM(input: {
     thinking_effort: "xhigh",
     response_format: "json",
     timeout_ms: CORE_TIMEOUT_MS,
-    max_attempts: 1,
+    max_attempts: CORE_TRANSPORT_MAX_ATTEMPTS,
     session_id: input.profileId
       ? baseAnalysisCacheSessionId(input.profileId)
       : pojuCacheSessionId(input.sessionId),
@@ -93,9 +106,19 @@ async function fetchCoreContent(input: {
       finish_reason: string | null;
       llm_debug: LLMCallDebug;
     }
-  | { ok: false; reason: "truncated" | "parse_failed"; error: string }
+  | { ok: false; reason: BreakthroughRetryReason; error: string }
 > {
-  const result = await callCoreLLM(input);
+  let result: Awaited<ReturnType<typeof callCoreLLM>>;
+  try {
+    result = await callCoreLLM(input);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (isProviderTransportFailure(e)) {
+      console.warn("[breakthrough-core] transport retries exhausted:", msg);
+      return { ok: false, reason: "provider_busy", error: msg };
+    }
+    throw e;
+  }
 
   const finish = result.meta.finish_reason ?? null;
   const emptyBody = !result.content.trim();
@@ -231,6 +254,9 @@ export async function POST(req: Request) {
     }
     const msg = e instanceof Error ? e.message : "Breakthrough core failed";
     console.warn("[breakthrough-core] request failed:", msg);
+    if (isProviderTransportFailure(e)) {
+      return retryableResponse("provider_busy", msg);
+    }
     return retryableResponse("parse_failed", msg);
   }
 }

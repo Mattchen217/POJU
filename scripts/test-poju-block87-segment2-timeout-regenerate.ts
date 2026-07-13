@@ -31,8 +31,9 @@ function main(): void {
   assert("route maxDuration 300", route.includes("maxDuration = 300"));
   assert("route timeout 240s", route.includes("CORE_TIMEOUT_MS = 240_000"));
   assert("route max_tokens 22000", route.includes("CORE_MAX_TOKENS = 22_000"));
-  assert("route single xhigh attempt", route.includes("max_attempts: 1"));
-  assert("no fetchCoreContent retry loop", !route.includes("for (let attempt = 0; attempt < 2"));
+  assert("route transport max_attempts 3", route.includes("CORE_TRANSPORT_MAX_ATTEMPTS = 3"));
+  assert("route content single generation", !route.includes("for (let attempt = 0; attempt < 2"));
+  assert("route provider_busy retryable", route.includes('"provider_busy"'));
   assert("no 90s route timeout", !route.includes("timeout_ms: 90_000"));
 
   assert("agent no staying in opening on core fail", !agent.includes("staying in opening"));
