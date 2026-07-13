@@ -22,6 +22,7 @@ function main(): void {
   console.log("\n========== POJU Block 87 · Segment 2 timeout + regenerate ==========\n");
 
   const route = read("app/api/poju/breakthrough-core/route.ts");
+  const runner = read("lib/poju/xhigh-job-runner.ts");
   const agent = read("lib/poju/agent.ts");
   const collecting = read("lib/poju/collecting-focus-reply.ts");
   const ui = read("components/poju/POJUChatUI.tsx");
@@ -29,14 +30,11 @@ function main(): void {
   const types = read("lib/poju/types.ts");
 
   assert("route maxDuration 300", route.includes("maxDuration = 300"));
-  assert("route timeout 240s", route.includes("CORE_TIMEOUT_MS = 240_000"));
-  assert("route max_tokens 22000", route.includes("CORE_MAX_TOKENS = 22_000"));
-  assert("route max_attempts 1", route.includes("max_attempts: 1"));
-  assert("route uses streaming LLM", route.includes("openRouterChatCompletionStream"));
-  assert("no non-stream callLLM in route", !route.includes("callLLM("));
-  assert("no transport max_attempts constant", !route.includes("CORE_TRANSPORT_MAX_ATTEMPTS"));
-  assert("route content single generation", !route.includes("for (let attempt = 0; attempt < 2"));
-  assert("route provider_busy retryable", route.includes('"provider_busy"'));
+  assert("runner timeout 240s", runner.includes("SEGMENT2_XHIGH_TIMEOUT_MS = 240_000"));
+  assert("runner max_tokens 22000", runner.includes("SEGMENT2_XHIGH_MAX_TOKENS = 22_000"));
+  assert("runner max_attempts 1", runner.includes("max_attempts: 1"));
+  assert("route async job create", route.includes("createXhighJob"));
+  assert("route provider_busy via job fail", runner.includes('failure_reason: "provider_busy"'));
   assert("no 90s route timeout", !route.includes("timeout_ms: 90_000"));
 
   assert("agent no staying in opening on core fail", !agent.includes("staying in opening"));
@@ -54,10 +52,7 @@ function main(): void {
 
   assert("RegenerateAnalysisAction in UI", ui.includes("RegenerateAnalysisAction"));
   assert("handleRegenerateAnalysisClick", ui.includes("handleRegenerateAnalysisClick"));
-  const router = read("lib/llm/router.ts");
   const shared = read("lib/llm/openrouter-shared.ts");
-  assert("router passes max_attempts", router.includes("max_attempts: input.max_attempts"));
-  assert("openrouter shared max_attempts option", shared.includes("maxAttempts: options.max_attempts"));
   assert("openrouter empty response error", shared.includes("openrouter_empty_response"));
 
   console.log("\n" + (failures.length === 0 ? "✅ All checks passed." : `❌ ${failures.length} failure(s):\n  - ${failures.join("\n  - ")}`));

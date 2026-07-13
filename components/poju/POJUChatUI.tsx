@@ -1013,6 +1013,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         action: "confirmed",
         locale,
         userAlreadyAppended: true,
+        onSegment2Progress: (chars) => {
+          setThinkingLiveLine(
+            locale.startsWith("zh")
+              ? `正在深度分析…（${chars} 字符）`
+              : `Deep analysis… (${chars} chars)`,
+          );
+        },
       });
       if (gen !== sendGenerationRef.current) return;
 

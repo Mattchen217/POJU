@@ -65,6 +65,7 @@ async function ensureBaseAnalysis(session: POJUSessionState): Promise<POJUSessio
 export async function ensureBreakthroughCore(
   session: POJUSessionState,
   locale: string,
+  opts?: { onProgress?: (accumulated_chars: number) => void },
 ): Promise<{
   session: POJUSessionState;
   llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
@@ -85,7 +86,10 @@ export async function ensureBreakthroughCore(
   if (base_analysis == null) return { session };
 
   try {
-    const out = await requestBreakthroughCore(session, locale, { base_analysis });
+    const out = await requestBreakthroughCore(session, locale, {
+      base_analysis,
+      onProgress: opts?.onProgress,
+    });
     return { session: out.session, llm_debug: out.llm_debug, model: out.model };
   } catch (e) {
     console.warn("[agent-orchestrator] Breakthrough core failed:", e);

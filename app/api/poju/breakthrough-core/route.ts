@@ -1,43 +1,22 @@
-import { NextResponse } from "next/server";
-import { baseAnalysisCacheSessionId, pojuCacheSessionId } from "@/lib/llm/cache-session-id";
-import {
-  buildBreakthroughCorePrompt,
-  mapBreakthroughCorePayload,
-  parseAndMapBreakthroughCore,
-} from "@/lib/llm/deepseek/breakthrough-core";
-import type { LLMCallDebug } from "@/lib/llm/llm-debug";
-import { buildLlmDebug } from "@/lib/llm/llm-debug";
-import {
-  getOpenRouterDefaultModel,
-  isOpenRouterConfigured,
-  openRouterProviderExtras,
-  type OpenRouterChatMessage,
-} from "@/lib/llm/openrouter-shared";
-import { openRouterChatCompletionStream } from "@/lib/llm/openrouter-stream";
-import { OpenRouterProviderQueueError } from "@/lib/llm/openrouter-retry";
-import { estimateCostUsd } from "@/lib/llm/router";
-import { normalizeAgentPhase, type POJUAgentState } from "@/lib/poju/agent-state";
+import { after, NextResponse } from "next/server";
 
+import { normalizeAgentPhase, type POJUAgentState } from "@/lib/poju/agent-state";
+import {
+  acquireXhighSessionLock,
+  createXhighJob,
+  findLatestXhighJobForSession,
+  getXhighJob,
+  releaseXhighSessionLock,
+} from "@/lib/poju/xhigh-job-store";
+import { runSegment2BreakthroughCoreJob } from "@/lib/poju/xhigh-job-runner";
+import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-/** DIAG ONLY — high vs xhigh wall experiment; revert to xhigh + 22_000 after one run. */
-const CORE_MAX_TOKENS = 16_000;
-/** Must exceed xhigh wall time (~168s observed); under maxDuration 300s. */
-const CORE_TIMEOUT_MS = 240_000;
-/** DIAG ONLY — temporary effort for latency wall experiment. */
-const CORE_DIAG_EFFORT = "high" as const;
-
-type BreakthroughRetryReason = "truncated" | "parse_failed" | "provider_busy";
-
-class BreakthroughCoreRetryableError extends Error {
-  constructor(
-    readonly reason: "truncated" | "parse_failed",
-    message: string,
-  ) {
-    super(message);
-    this.name = "BreakthroughCoreRetryableError";
-  }
-}
+/** If a running job has not progressed this long, allow a fresh job. */
+const STALE_RUNNING_MS = 3 * 60 * 1000;
 
 function isRecord(x: unknown): x is Record<string, unknown> {
   return Boolean(x) && typeof x === "object" && !Array.isArray(x);
@@ -64,162 +43,47 @@ function resolveProfileId(body: {
   return null;
 }
 
-function retryableResponse(reason: BreakthroughRetryReason, error: string) {
-  return NextResponse.json({ ok: false, retryable: true, reason, error }, { status: 200 });
-}
-
-function isProviderTransportFailure(e: unknown): boolean {
-  if (e instanceof OpenRouterProviderQueueError) return true;
-  if (e instanceof Error) {
-    return (
-      e.message === "openrouter_provider_queue" ||
-      e.message === "llm_timeout" ||
-      e.message === "openrouter_empty_response"
-    );
-  }
-  return false;
-}
-
-async function callCoreLLM(input: {
-  system: string;
-  userContent: string;
-  sessionId: string;
-  profileId: string | null;
-}) {
-  const session_id = input.profileId
-    ? baseAnalysisCacheSessionId(input.profileId)
-    : pojuCacheSessionId(input.sessionId);
-  const messages: OpenRouterChatMessage[] = [
-    { role: "system", content: input.system },
-    { role: "user", content: input.userContent },
-  ];
-  const defaultModel = getOpenRouterDefaultModel();
-  const startTime = Date.now();
-
-  const out = await openRouterChatCompletionStream(
-    {
-      messages,
-      max_tokens: CORE_MAX_TOKENS,
-      json_mode: true,
-      reasoning_effort: CORE_DIAG_EFFORT,
-      timeout_ms: CORE_TIMEOUT_MS,
-      // Single transport attempt — resolver maxAttempts>1 exhausts into provider_queue.
-      max_attempts: 1,
-      session_id,
-      call_type: "deep_analysis",
-      phase_name: "segment2_breakthrough_core",
-      route_path: "once",
-      provider: openRouterProviderExtras(),
-    },
-    {},
-  );
-
-  const latency_ms = Date.now() - startTime;
-  const transport = out.transport;
-  const llm_debug = buildLlmDebug({
-    phase: "segment2_breakthrough_core",
-    requested_effort: CORE_DIAG_EFFORT,
-    max_tokens: CORE_MAX_TOKENS,
-    model: out.model || defaultModel,
-    served_provider: out.provider,
-    finish_reason: out.finish_reason,
-    prompt_tokens: out.prompt_tokens,
-    cached_tokens: out.cached_tokens,
-    completion_tokens: out.completion_tokens,
-    reasoning_tokens: out.reasoning_tokens,
-    latency_ms,
-    generation_time_ms: out.generation_time_ms,
-    generation_id: out.generation_id,
-    attempt: transport?.attempt ?? 1,
-    retried: transport?.retried ?? false,
-    fell_back: transport?.fell_back ?? false,
-  });
-
-  return {
-    content: out.text,
-    actual_model: out.model || defaultModel,
-    reasoning: out.reasoning,
-    llm_debug,
-    meta: {
-      tokens_used: out.tokens_used,
-      finish_reason: out.finish_reason ?? null,
-      completion_tokens: out.completion_tokens,
-      provider: out.provider,
-      prompt_tokens: out.prompt_tokens,
-      reasoning_tokens: out.reasoning_tokens,
-      cost_usd: estimateCostUsd(out.prompt_tokens, out.completion_tokens, out.cached_tokens),
-      latency_ms,
-    },
-  };
-}
-
-async function fetchCoreContent(input: {
-  system: string;
-  userContent: string;
-  sessionId: string;
-  profileId: string | null;
-}): Promise<
-  | {
-      ok: true;
-      content: string;
-      tokens_used: number;
-      model: string;
-      finish_reason: string | null;
-      llm_debug: LLMCallDebug;
-    }
-  | { ok: false; reason: BreakthroughRetryReason; error: string }
-> {
-  let result: Awaited<ReturnType<typeof callCoreLLM>>;
-  try {
-    result = await callCoreLLM(input);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    if (isProviderTransportFailure(e)) {
-      console.warn("[breakthrough-core] transport retries exhausted:", msg);
-      return { ok: false, reason: "provider_busy", error: msg };
-    }
-    throw e;
-  }
-
-  const finish = result.meta.finish_reason ?? null;
-  const emptyBody = !result.content.trim();
-  if (finish === "length" || emptyBody) {
-    console.warn(
-      `[breakthrough-core] ${emptyBody ? "empty body" : "truncated"} (max_tokens=${CORE_MAX_TOKENS})`,
-    );
-    return {
-      ok: false,
-      reason: "truncated",
-      error: "deep analysis output was truncated",
-    };
-  }
-
-  try {
-    parseAndMapBreakthroughCore(result.content);
-    const llm_debug: LLMCallDebug = {
-      ...result.llm_debug,
-      phase: "segment2_breakthrough_core",
-      requested_effort: CORE_DIAG_EFFORT,
-      attempt: 1,
-      retried: false,
-    };
-    return {
+function jobStatusResponse(job: NonNullable<Awaited<ReturnType<typeof getXhighJob>>>) {
+  if (job.status === "completed" && job.result) {
+    return NextResponse.json({
       ok: true,
-      content: result.content,
-      tokens_used: result.meta.tokens_used,
-      model: result.actual_model,
-      finish_reason: finish,
-      llm_debug,
-    };
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.warn("[breakthrough-core] parse/validate failed:", msg);
-    return {
-      ok: false,
-      reason: "parse_failed",
-      error: "deep analysis JSON was incomplete",
-    };
+      job_id: job.job_id,
+      status: job.status,
+      breakthrough_core: job.result.breakthrough_core,
+      investigation_agenda: job.result.investigation_agenda,
+      model: job.model,
+      tokens_used: job.tokens_used,
+      llm_debug: job.llm_debug,
+    });
   }
+  if (job.status === "failed") {
+    return NextResponse.json({
+      ok: false,
+      job_id: job.job_id,
+      status: job.status,
+      retryable: job.retryable ?? true,
+      reason: job.failure_reason ?? "provider_busy",
+      error: job.error ?? "segment2 job failed",
+    });
+  }
+  return NextResponse.json({
+    ok: true,
+    job_id: job.job_id,
+    status: job.status,
+    accumulated_content: job.accumulated_content,
+  });
+}
+
+function scheduleSegment2Job(job_id: string, session_id: string): void {
+  after(async () => {
+    try {
+      await runSegment2BreakthroughCoreJob(job_id);
+    } catch (e) {
+      console.error("[breakthrough-core] background job failed:", e);
+    } finally {
+      await releaseXhighSessionLock("segment2_breakthrough_core", session_id);
+    }
+  });
 }
 
 export async function POST(req: Request) {
@@ -238,7 +102,16 @@ export async function POST(req: Request) {
       base_analysis?: unknown;
       locale?: unknown;
       selected_stored_profile_id?: unknown;
+      resume_job_id?: unknown;
     };
+
+    if (typeof body.resume_job_id === "string" && body.resume_job_id.trim()) {
+      const job = await getXhighJob(body.resume_job_id.trim());
+      if (!job) {
+        return NextResponse.json({ ok: false, error: "job_not_found" }, { status: 404 });
+      }
+      return jobStatusResponse(job);
+    }
 
     if (typeof body.session_id !== "string" || !body.session_id.trim()) {
       return NextResponse.json({ ok: false, error: "Missing session_id" }, { status: 400 });
@@ -271,53 +144,57 @@ export async function POST(req: Request) {
     const sessionId = body.session_id.trim();
     const profileId = resolveProfileId({ selected_stored_profile_id: body.selected_stored_profile_id, agent_v2 });
 
-    const { system, user } = buildBreakthroughCorePrompt({
-      base_analysis,
-      agent_v2: agent_v2 ?? undefined,
-      original_question: body.original_question,
-      locale,
-    });
-
-    const fetched = await fetchCoreContent({
-      system,
-      userContent: user,
-      sessionId,
-      profileId,
-    });
-    if (!fetched.ok) {
-      return retryableResponse(fetched.reason, fetched.error);
+    const latest = await findLatestXhighJobForSession("segment2_breakthrough_core", sessionId);
+    if (latest) {
+      const ageMs = Date.now() - latest.updated_at;
+      const staleRunning =
+        (latest.status === "pending" || latest.status === "running") && ageMs > STALE_RUNNING_MS;
+      if (latest.status === "pending" || (latest.status === "running" && !staleRunning)) {
+        if (latest.status === "pending") {
+          scheduleSegment2Job(latest.job_id, sessionId);
+        }
+        return jobStatusResponse(latest);
+      }
     }
 
-    const rawContent = fetched.content;
-    const tokens_used = fetched.tokens_used;
-    const model = fetched.model;
+    const locked = await acquireXhighSessionLock("segment2_breakthrough_core", sessionId);
+    if (!locked) {
+      const retry = await findLatestXhighJobForSession("segment2_breakthrough_core", sessionId);
+      if (retry) return jobStatusResponse(retry);
+      return NextResponse.json({ ok: false, error: "segment2_job_in_progress" }, { status: 409 });
+    }
 
-    let mapped: ReturnType<typeof mapBreakthroughCorePayload>;
+    let job;
     try {
-      mapped = parseAndMapBreakthroughCore(rawContent);
+      job = await createXhighJob({
+        phase: "segment2_breakthrough_core",
+        session_id: sessionId,
+        locale,
+        job_input: {
+          session_id: sessionId,
+          original_question: body.original_question,
+          locale,
+          profile_id: profileId,
+          agent_v2,
+          base_analysis,
+        },
+      });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Invalid breakthrough core payload";
-      console.warn("[breakthrough-core] parse/map failed:", msg);
-      return retryableResponse("parse_failed", msg.includes("core_parse_failed") ? msg : "deep analysis JSON was incomplete");
+      await releaseXhighSessionLock("segment2_breakthrough_core", sessionId);
+      throw e;
     }
+
+    console.info("[breakthrough-core] created async xhigh job", { job_id: job.job_id, sessionId });
+    scheduleSegment2Job(job.job_id, sessionId);
 
     return NextResponse.json({
       ok: true,
-      breakthrough_core: mapped.breakthrough_core,
-      investigation_agenda: mapped.investigation_agenda,
-      model,
-      tokens_used,
-      llm_debug: fetched.llm_debug,
+      job_id: job.job_id,
+      status: job.status,
     });
   } catch (e: unknown) {
-    if (e instanceof BreakthroughCoreRetryableError) {
-      return retryableResponse(e.reason, e.message);
-    }
     const msg = e instanceof Error ? e.message : "Breakthrough core failed";
     console.warn("[breakthrough-core] request failed:", msg);
-    if (isProviderTransportFailure(e)) {
-      return retryableResponse("provider_busy", msg);
-    }
-    return retryableResponse("parse_failed", msg);
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
 }

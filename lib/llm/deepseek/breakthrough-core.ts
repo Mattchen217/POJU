@@ -11,6 +11,7 @@ import {
 import { formatContextForPrompt } from "@/lib/poju/context-extractor";
 import { parseInvestigationAgenda, type AgendaItem } from "@/lib/poju/investigation-agenda";
 import type { POJUSessionState } from "@/lib/poju/types";
+import { pollBreakthroughCoreJobUntilDone, XHIGH_JOB_POLL_MAX_MS } from "@/lib/poju/poll-segment2-xhigh-job";
 import { loadSessionProfileBundle } from "@/lib/poju/session-profile";
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 import { POJU_IDENTITY, POJU_KNOWLEDGE_ROOTS } from "@/lib/llm/prompts/poju-base";
@@ -512,7 +513,10 @@ function uuidLike(s: string | null | undefined): string | null {
 export async function requestBreakthroughCore(
   session: POJUSessionState,
   locale: string,
-  options?: { base_analysis?: unknown | null },
+  options?: {
+    base_analysis?: unknown | null;
+    onProgress?: (accumulated_chars: number) => void;
+  },
 ): Promise<{
   session: POJUSessionState;
   tokens_used: number;
@@ -553,12 +557,16 @@ export async function requestBreakthroughCore(
   console.info("[breakthrough-core] input original_question:", original_question.slice(0, 120));
 
   const ac = new AbortController();
-  const softTimeoutMs = 210_000;
-  const timer = window.setTimeout(() => ac.abort(), softTimeoutMs);
+  const timer = window.setTimeout(() => ac.abort(), XHIGH_JOB_POLL_MAX_MS);
 
-  let res: Response;
+  let breakthrough_core: BreakthroughCore | undefined;
+  let investigation_agenda: AgendaItem[] | undefined;
+  let tokens_used = 0;
+  let llm_debug: import("@/lib/llm/llm-debug").LLMCallDebug | undefined;
+  let model: string | undefined;
+
   try {
-    res = await fetch("/api/poju/breakthrough-core", {
+    const res = await fetch("/api/poju/breakthrough-core", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -571,6 +579,59 @@ export async function requestBreakthroughCore(
       }),
       signal: ac.signal,
     });
+    const createPayload = (await res.json().catch(() => ({}))) as {
+      ok?: boolean;
+      job_id?: string;
+      status?: string;
+      retryable?: boolean;
+      reason?: string;
+      breakthrough_core?: BreakthroughCore;
+      investigation_agenda?: AgendaItem[];
+      model?: string;
+      tokens_used?: number;
+      llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
+      error?: string;
+    };
+    if (!res.ok && !createPayload.job_id) {
+      throw new Error(createPayload.error || `Breakthrough core create failed (${res.status})`);
+    }
+
+    breakthrough_core = createPayload.breakthrough_core;
+    investigation_agenda = createPayload.investigation_agenda;
+    tokens_used = typeof createPayload.tokens_used === "number" ? createPayload.tokens_used : 0;
+    llm_debug = createPayload.llm_debug;
+    model = createPayload.model;
+
+    if (!breakthrough_core || !investigation_agenda) {
+      const job_id = createPayload.job_id;
+      if (!job_id) {
+        if (createPayload.ok === false && createPayload.retryable) {
+          console.warn("[breakthrough-core] soft failure (retryable):", createPayload.reason, createPayload.error);
+          return { session, tokens_used: 0 };
+        }
+        throw new Error(createPayload.error || "Breakthrough core job missing job_id");
+      }
+
+      console.info("[breakthrough-core] async xhigh job started:", job_id);
+      const polled = await pollBreakthroughCoreJobUntilDone({
+        job_id,
+        signal: ac.signal,
+        callbacks: {
+          onProgress: (chars) => options?.onProgress?.(chars),
+        },
+      });
+
+      if (!polled.ok) {
+        console.warn("[breakthrough-core] job failed (retryable):", polled.reason, polled.error);
+        return { session, tokens_used: 0 };
+      }
+
+      breakthrough_core = polled.breakthrough_core;
+      investigation_agenda = polled.investigation_agenda;
+      tokens_used = typeof polled.tokens_used === "number" ? polled.tokens_used : 0;
+      llm_debug = polled.llm_debug;
+      model = polled.model;
+    }
   } catch (e) {
     if (e instanceof Error && e.name === "AbortError") {
       throw new Error(
@@ -584,47 +645,25 @@ export async function requestBreakthroughCore(
     window.clearTimeout(timer);
   }
 
-  const payload = (await res.json().catch(() => ({}))) as {
-    ok?: boolean;
-    retryable?: boolean;
-    reason?: string;
-    breakthrough_core?: BreakthroughCore;
-    investigation_agenda?: AgendaItem[];
-    model?: string;
-    tokens_used?: number;
-    llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
-    error?: string;
-  };
-
-  if (payload.ok === false && payload.retryable) {
-    console.warn(
-      "[breakthrough-core] soft failure (retryable):",
-      payload.reason ?? "unknown",
-      payload.error ?? "",
-    );
-    return { session, tokens_used: 0 };
+  if (!breakthrough_core || !investigation_agenda) {
+    throw new Error("Breakthrough core incomplete after job");
   }
 
-  if (!payload.ok || !payload.breakthrough_core || !payload.investigation_agenda) {
-    throw new Error(payload.error || `Breakthrough core failed (${res.status})`);
-  }
-
-  const tokens_used = typeof payload.tokens_used === "number" ? payload.tokens_used : 0;
   const nextAgent: POJUAgentState = {
     ...agent,
-    breakthrough_core: payload.breakthrough_core,
-    investigation_agenda: payload.investigation_agenda,
+    breakthrough_core,
+    investigation_agenda,
     agenda_generated: true,
     has_situation_analysis: true,
   };
 
   console.info(
     "[breakthrough-core] persisted:",
-    payload.breakthrough_core.relationship_conclusion.slice(0, 80),
+    breakthrough_core.relationship_conclusion.slice(0, 80),
     "directions:",
-    payload.breakthrough_core.breakthrough_directions.length,
+    breakthrough_core.breakthrough_directions.length,
     "agenda:",
-    payload.investigation_agenda.map((a) => a.label),
+    investigation_agenda.map((a) => a.label),
   );
 
   return {
@@ -634,7 +673,7 @@ export async function requestBreakthroughCore(
       tokens_used: session.tokens_used + tokens_used,
     },
     tokens_used,
-    llm_debug: payload.llm_debug,
-    model: payload.model,
+    llm_debug,
+    model,
   };
 }

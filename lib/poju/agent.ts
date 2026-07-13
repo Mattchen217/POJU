@@ -846,6 +846,7 @@ async function runSegment2BreakthroughCore(input: {
   mergedActions: POJUAction[];
   locale: string;
   freshQuestion: string;
+  onSegment2Progress?: (accumulated_chars: number) => void;
 }): Promise<{
   agent_v2: POJUAgentState;
   segment2_llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
@@ -879,6 +880,7 @@ async function runSegment2BreakthroughCore(input: {
         agent_v2: { ...withQ, current_phase: "collecting_context" },
       },
       input.locale,
+      { onProgress: input.onSegment2Progress },
     );
     const coreReady = coreResult.session.agent_v2?.breakthrough_core != null;
     if (coreReady) {
@@ -924,6 +926,7 @@ export async function handleUnderstandingGateAction(input: {
   action: "confirmed";
   locale: string;
   userAlreadyAppended?: boolean;
+  onSegment2Progress?: (accumulated_chars: number) => void;
 }): Promise<POJUSessionState> {
   const session = ensureSessionCycles(input.session);
   const baseAgent = ensureAgentV2(session);
@@ -963,6 +966,7 @@ export async function handleUnderstandingGateAction(input: {
       mergedActions: agent_v2.actions,
       locale: input.locale,
       freshQuestion,
+      onSegment2Progress: input.onSegment2Progress,
     });
     agent_v2 = seg2.agent_v2;
     segment2LlmDebug = seg2.segment2_llm_debug;

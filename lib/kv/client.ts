@@ -9,4 +9,6 @@ export const kv = Redis.fromEnv();
 export const KV_TTL = {
   BASE_ANALYSIS_JOB: 60 * 60 * 2,
   BASE_ANALYSIS_LOCK: 60 * 5,
+  POJU_XHIGH_JOB: 60 * 60 * 2,
+  POJU_XHIGH_LOCK: 60 * 5,
 } as const;

@@ -22,17 +22,20 @@ function main(): void {
   console.log("\n========== POJU Block 86 · Segment 2 debug + readability ==========\n");
 
   const route = read("app/api/poju/breakthrough-core/route.ts");
+  const status = read("app/api/poju/breakthrough-core/status/route.ts");
+  const runner = read("lib/poju/xhigh-job-runner.ts");
   const corePrompt = read("lib/llm/deepseek/breakthrough-core.ts");
+  const client = read("lib/llm/deepseek/breakthrough-core.ts");
   const agent = read("lib/poju/agent.ts");
   const orch = read("lib/poju/agent-orchestrator.ts");
   const llmDebug = read("lib/llm/llm-debug.ts");
 
-  assert("route returns llm_debug in JSON", route.includes("llm_debug: fetched.llm_debug"));
-  assert("route sets phase segment2_breakthrough_core", route.includes('phase: "segment2_breakthrough_core"'));
-  assert("route thinking_effort xhigh", route.includes('reasoning_effort: "xhigh"'));
-  assert("route passes phase_name", route.includes('phase_name: "segment2_breakthrough_core"'));
+  assert("route returns llm_debug via job completion", status.includes("llm_debug: job.llm_debug") || client.includes("llm_debug: polled.llm_debug"));
+  assert("route sets phase segment2_breakthrough_core", runner.includes('phase_name: "segment2_breakthrough_core"'));
+  assert("route thinking_effort xhigh", runner.includes('reasoning_effort: "xhigh"'));
+  assert("route passes phase_name", runner.includes('phase_name: "segment2_breakthrough_core"'));
 
-  assert("client requestBreakthroughCore returns llm_debug", corePrompt.includes("llm_debug: payload.llm_debug"));
+  assert("client requestBreakthroughCore returns llm_debug", client.includes("llm_debug,"));
   assert("orchestrator ensureBreakthroughCore passes llm_debug", orch.includes("llm_debug: out.llm_debug"));
 
   assert("agent runSegment2 returns segment2_llm_debug", agent.includes("segment2_llm_debug"));

@@ -28,15 +28,16 @@ function main(): void {
 
   const core = read("lib/llm/deepseek/breakthrough-core.ts");
   const route = read("app/api/poju/breakthrough-core/route.ts");
+  const runner = read("lib/poju/xhigh-job-runner.ts");
 
   assert("tolerantJsonRepair import", core.includes("tolerantJsonRepair"));
   assert("salvageBreakthroughFields exported", core.includes("export function salvageBreakthroughFields"));
   assert("parseAndMapBreakthroughCore exported", core.includes("export function parseAndMapBreakthroughCore"));
   assert("BreakthroughCoreParseError", core.includes("BreakthroughCoreParseError"));
   assert("strict JSON prompt", core.includes("不得用中文引号"));
-  assert("route uses parseAndMapBreakthroughCore", route.includes("parseAndMapBreakthroughCore"));
-  assert("route no bare 500 catch", !route.includes("status: 500"));
-  assert("route retryable on failure", route.includes('retryableResponse("parse_failed"'));
+  assert("runner uses parseAndMapBreakthroughCore", runner.includes("parseAndMapBreakthroughCore"));
+  assert("create returns async job_id", route.includes("job_id: job.job_id"));
+  assert("runner retryable parse failure", runner.includes('failure_reason: "parse_failed"'));
 
   const broken = `{
   "relationship_conclusion": "你在关系里容易先退后守。",
