@@ -29,7 +29,8 @@ function main(): void {
   console.log("\n========== POJU Block 82 · Opening medium + JSON retry ==========\n");
 
   const opening = read("lib/llm/phases/opening-phase-v6.ts");
-  const transport = read("lib/llm/phases/phase-transport.ts");
+  const transport = read("lib/poju/shared/transport.ts");
+  const jsonTools = read("lib/poju/shared/json-tools.ts");
   const agent = read("lib/poju/agent.ts");
 
   assert("opening effort medium", opening.includes('thinking_effort: "medium"'));
@@ -37,7 +38,7 @@ function main(): void {
   assert("opening transport resend in phase-transport", transport.includes("MAX_OPENING_TRANSPORT_RESEND"));
   assert("opening understanding_generation_failed flag", opening.includes("understanding_generation_failed"));
   assert("opening no duplicate v6 transport retry", !opening.includes("controlled retry once"));
-  assert("isPhaseOpeningPayloadUsable exported", transport.includes("export function isPhaseOpeningPayloadUsable"));
+  assert("isPhaseOpeningPayloadUsable exported", jsonTools.includes("export function isPhaseOpeningPayloadUsable"));
   assert("parse failure uses empty gen path", transport.includes("useEmptyGeneration"));
 
   const clean = parsePhaseJson(

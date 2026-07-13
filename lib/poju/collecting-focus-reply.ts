@@ -1,6 +1,16 @@
 import type { BreakthroughCore, POJUAgentState } from "@/lib/poju/agent-state";
 import { isPojuFailurePlaceholderMessage } from "@/lib/llm/poju-service-busy-message";
 import { selectCurrentAgendaFocus } from "@/lib/poju/investigation-agenda";
+import {
+  envelopeCoreFallbackRetryHint as openingEnvelopeHint,
+  openingUnderstandingGenerationFailedMessage,
+  openingUnderstandingRetryButtonLabel,
+} from "@/lib/poju/phases/opening/display";
+
+export {
+  openingUnderstandingGenerationFailedMessage,
+  openingUnderstandingRetryButtonLabel,
+};
 
 /** Reply already ends with or recently contains a question mark. */
 export function hasQuestionCue(text: string): boolean {
@@ -58,20 +68,7 @@ export function buildCollectingTransitionReplyFromCore(
 }
 
 export function envelopeCoreFallbackRetryHint(locale: string): string {
-  return locale.startsWith("zh")
-    ? "我在整理与你问题相关的调查角度时遇到一点异常，请再发一句让我继续。"
-    : "I hit a snag while framing investigation angles for your question — please send another message.";
-}
-
-/** Segment 1 opening — transport resends exhausted; user retries via button. */
-export function openingUnderstandingGenerationFailedMessage(locale: string): string {
-  return locale.startsWith("zh")
-    ? "网络不太稳，我这次没能把理解整理好。点下方按钮重试。"
-    : "The connection was unstable and I couldn't finish understanding this turn. Tap the button below to retry.";
-}
-
-export function openingUnderstandingRetryButtonLabel(locale: string): string {
-  return locale.startsWith("zh") ? "点击重试" : "Retry";
+  return openingEnvelopeHint(locale);
 }
 
 /** Segment 2 failed — understanding preserved; user retries via button. */

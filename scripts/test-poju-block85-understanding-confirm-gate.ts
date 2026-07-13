@@ -39,12 +39,13 @@ function main(): void {
 
   assert("opening sufficient=true summary only no追问", opening.includes("understanding_sufficient=true") && opening.includes("不得") && opening.includes("追问"));
   assert("handleUnderstandingGateAction exported", agent.includes("export async function handleUnderstandingGateAction"));
-  assert("applyUnderstandingGateSupplement exported", agent.includes("export function applyUnderstandingGateSupplement"));
+  assert("applyUnderstandingGateSupplement exported", read("lib/poju/phases/opening/control.ts").includes("export function applyUnderstandingGateSupplement"));
   assert("confirm supports optimistic user append", agent.includes("userAlreadyAppended"));
   assert("UI optimistic confirm flow", ui.includes("buildOptimisticUserMessage(userLabel)"));
   assert("UI supplement opens composer only", ui.includes("applyUnderstandingGateSupplement"));
-  assert("buildUnderstandingGateSummaryFromFields wired", agent.includes("buildUnderstandingGateSummaryFromFields"));
+  assert("buildUnderstandingGateSummaryFromFields via opening display", read("lib/poju/phases/opening/display.ts").includes("buildUnderstandingGateSummaryFromFields") && agent.includes("resolveOpeningTurnReply"));
   assert("understanding_gate_pending meta", agent.includes("understanding_gate_pending"));
+  assert("UI imports phase-router", ui.includes("@/lib/poju/phase-router"));
 
   assert("UI uses i18n gate labels", gateUi.includes('t("understanding_gate_confirm")'));
   assert("gate confirm label zh", zhMsgs.includes('"understanding_gate_confirm": "对，就是这样"'));

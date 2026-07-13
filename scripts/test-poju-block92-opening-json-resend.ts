@@ -28,7 +28,7 @@ function assert(label: string, ok: boolean): void {
 function main(): void {
   console.log("\n========== POJU Block 92 · Opening JSON resend ==========\n");
 
-  const transport = read("lib/llm/phases/phase-transport.ts");
+  const transport = read("lib/poju/shared/transport.ts");
   const opening = read("lib/llm/phases/opening-phase-v6.ts");
   const collecting = read("lib/poju/collecting-focus-reply.ts");
   const agent = read("lib/poju/agent.ts");
@@ -45,11 +45,15 @@ function main(): void {
   assert("no 能再多说一点 fallback", !collecting.includes("能再多说一点"));
   assert("opening failure message", openingUnderstandingGenerationFailedMessage("zh").includes("网络不太稳"));
 
-  assert("agent handleRetryOpeningUnderstanding", agent.includes("export async function handleRetryOpeningUnderstanding"));
+  assert("agent handleRetryOpeningUnderstanding", agent.includes("handleRetryOpeningUnderstanding"));
+  assert("opening control owns retry", read("lib/poju/phases/opening/control.ts").includes("export async function handleRetryOpeningUnderstanding"));
   assert("agent understanding_generation_failed meta", agent.includes("understanding_generation_failed: true"));
+  assert("opening display owns fail copy", read("lib/poju/phases/opening/display.ts").includes("openingUnderstandingGenerationFailedMessage"));
+  assert("phase-router exports opening handlers", read("lib/poju/phase-router.ts").includes("handleRetryOpeningUnderstanding"));
 
   assert("RegenerateOpeningAction in UI", ui.includes("RegenerateOpeningAction"));
   assert("handleRetryOpeningUnderstandingClick", ui.includes("handleRetryOpeningUnderstandingClick"));
+  assert("UI imports phase-router", ui.includes("@/lib/poju/phase-router"));
 
   assert("empty needs resend", isOpeningTransportResendNeeded(""));
   assert("broken json needs resend", isOpeningTransportResendNeeded('{"response":"","core_dilemma":{'));

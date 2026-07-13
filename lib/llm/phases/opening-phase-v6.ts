@@ -25,7 +25,7 @@ import {
   withPhaseStreamOpts,
   isPhaseParseFailed,
 } from "@/lib/llm/phases/phase-transport";
-import { openingUnderstandingGenerationFailedMessage } from "@/lib/poju/collecting-focus-reply";
+import { openingUnderstandingGenerationFailedMessage } from "@/lib/poju/phases/opening/display";
 import type { PojuV4ActionRequested } from "@/lib/poju/types";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
 import { buildPhaseTransportInputV6 } from "@/lib/llm/phases/oriental-prompt-context-v6";

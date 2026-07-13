@@ -17,7 +17,8 @@ import { getPojuDb } from "@/lib/db/poju-db";
 import { createPOJUSession, loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
 import { clearPendingStoredProfileId, readPendingStoredProfileId } from "@/lib/poju/pending-stored-profile";
 import { runDegradedDeliveryPipeline } from "@/lib/poju/agent-orchestrator";
-import { handleUnderstandingGateAction, applyUnderstandingGateSupplement, handleUserMessage, handleRegenerateBreakthroughCore, handleRetryOpeningUnderstanding, tryHandleRuleRejection } from "@/lib/poju/agent";
+import { handleUnderstandingGateAction, handleUserMessage, handleRegenerateBreakthroughCore, tryHandleRuleRejection } from "@/lib/poju/phase-router";
+import { applyUnderstandingGateSupplement, handleRetryOpeningUnderstanding } from "@/lib/poju/phases/opening/control";
 import { understandingGateConfirmButtonLabel } from "@/lib/poju/understanding-gate-reply";
 import {
   dedupeWelcomeMessages,

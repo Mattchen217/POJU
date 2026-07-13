@@ -40,10 +40,18 @@ import {
   buildCollectingTransitionReplyFromCore,
   envelopeCoreFallbackRetryHint,
   hasQuestionCue,
-  openingUnderstandingGenerationFailedMessage,
   segment2CoreGenerationFailedMessage,
   segment2RegenerateButtonLabel,
 } from "@/lib/poju/collecting-focus-reply";
+import {
+  openingReplyIsComplete,
+  resolveOpeningTurnReply,
+} from "@/lib/poju/phases/opening/display";
+import {
+  applyUnderstandingGateSupplement,
+  handleRetryOpeningUnderstanding,
+  isOpeningControlPhase,
+} from "@/lib/poju/phases/opening/control";
 import {
   extractUsedMetaphorsFromAssistant,
   mergeUsedMetaphors,
@@ -69,10 +77,9 @@ import { buildAgentStateSnapshot } from "@/lib/poju/agent-state-snapshot";
 import { ensureBreakthroughCore, runConfirmationPipeline } from "@/lib/poju/agent-orchestrator";
 import { classifyConfirmationAffirmative } from "@/lib/poju/confirmation-reply";
 import { applyActionStatusUpdates, parseActionStatusUpdates } from "@/lib/poju/action-status-updates";
-import {
-  buildUnderstandingGateSummaryFromFields,
-  understandingGateConfirmButtonLabel,
-} from "@/lib/poju/understanding-gate-reply";
+import { understandingGateConfirmButtonLabel } from "@/lib/poju/understanding-gate-reply";
+
+export { applyUnderstandingGateSupplement, handleRetryOpeningUnderstanding, isOpeningControlPhase };
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 /** Session uses default `userProfiles` slot from device. */
@@ -655,8 +662,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
         : userMessage;
   const phaseForWire =
     normalizeAgentPhase(ensureAgentV2(sessionForAgent).current_phase) ?? "opening";
-  const openingTurn =
-    phaseForWire === "opening" || phaseForWire === "awaiting_understanding_confirm";
+  const openingTurn = isOpeningControlPhase(phaseForWire);
   const { agent: agentCore, advance } = finalizeAgentV2(
     ensureAgentV2(sessionForAgent),
     sessionForAgent,
@@ -722,30 +728,35 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     agent_v2.breakthrough_core != null &&
     (agent_v2.investigation_agenda?.length ?? 0) > 0;
   const phaseAfter = normalizeAgentPhase(agent_v2.current_phase) ?? agent_v2.current_phase;
-  const isUnderstandingGateTurn = phaseAfter === "awaiting_understanding_confirm";
   const envelopeFailedStayedOpening =
     advance.trigger_breakthrough_core && phaseAfter === "opening";
   const segment2GenerationFailed =
     advance.trigger_breakthrough_core && !justConverted && segment2Failed;
   const understandingGenerationFailed = Boolean(llmResponse.understanding_generation_failed);
 
+  const openingReplyInput = {
+    locale,
+    agent: agent_v2,
+    llmResponse: finalContent,
+    understandingGenerationFailed,
+    phaseAfter,
+    envelopeFailedStayedOpening,
+  };
+
   if (justConverted) {
+    // Segment-2 display (temporary owner until phases/segment2/display.ts).
     finalContent = buildCollectingTransitionReplyFromCore(agent_v2, locale);
-  } else if (isUnderstandingGateTurn) {
-    finalContent = buildUnderstandingGateSummaryFromFields(agent_v2, locale);
   } else if (segment2GenerationFailed) {
     finalContent = segment2CoreGenerationFailedMessage(locale);
-  } else if (understandingGenerationFailed) {
-    finalContent = openingUnderstandingGenerationFailedMessage(locale);
-  } else if (envelopeFailedStayedOpening && !finalContent.trim()) {
-    finalContent = envelopeCoreFallbackRetryHint(locale);
+  } else {
+    const openingOwned = resolveOpeningTurnReply(openingReplyInput);
+    if (openingOwned != null) finalContent = openingOwned;
   }
 
   const advancedCleanly =
     justConverted ||
-    isUnderstandingGateTurn ||
     segment2GenerationFailed ||
-    understandingGenerationFailed ||
+    openingReplyIsComplete(openingReplyInput) ||
     (!envelopeFailedStayedOpening &&
       (phaseAfter === "awaiting_confirmation" ||
         phaseAfter === "delivered" ||
@@ -913,20 +924,8 @@ async function runSegment2BreakthroughCore(input: {
   }
 }
 
-/** Return to opening for user-typed supplement — no chat messages yet. */
-export function applyUnderstandingGateSupplement(session: POJUSessionState): POJUSessionState {
-  const baseAgent = ensureAgentV2(session);
-  const phase = normalizeAgentPhase(baseAgent.current_phase);
-  if (phase !== "awaiting_understanding_confirm") return session;
-
-  const signals = extractModelTurnSignals({ confirmation_signal: "wants_to_add" });
-  const advance = advanceStateMachine(baseAgent, signals, "");
-  return withSessionProfileFlags({
-    ...session,
-    agent_v2: advance.next_agent,
-    last_interaction_at: new Date().toISOString(),
-  });
-}
+/** Return to opening for user-typed supplement — owned by phases/opening/control. */
+// applyUnderstandingGateSupplement — re-exported from opening/control above
 
 /** Button confirm — runs segment-2; user bubble may already be optimistically appended in UI. */
 export async function handleUnderstandingGateAction(input: {
@@ -1087,28 +1086,8 @@ export async function handleRegenerateBreakthroughCore(input: {
   });
 }
 
-/** Retry segment-1 opening turn after transport resends exhausted (bad JSON / empty). */
-export async function handleRetryOpeningUnderstanding(input: {
-  session: POJUSessionState;
-  locale: string;
-}): Promise<POJUSessionState> {
-  const session = ensureSessionCycles(input.session);
-  let messages = [...session.messages];
-  const last = messages[messages.length - 1];
-  if (last?.role === "assistant" && last.meta?.understanding_generation_failed) {
-    messages = messages.slice(0, -1);
-  }
-
-  const lastUser = [...messages].reverse().find((m) => m.role === "user");
-  const userMessage = lastUser?.content?.trim() || "__OPENING__";
-
-  return handleUserMessage({
-    session: { ...session, messages },
-    userMessage,
-    locale: input.locale,
-    userAlreadyAppended: true,
-  });
-}
+/** Retry segment-1 opening turn — owned by phases/opening/control. */
+// handleRetryOpeningUnderstanding — re-exported from opening/control above
 
 async function maybeRunDeliveryPipeline(
   session: POJUSessionState,
