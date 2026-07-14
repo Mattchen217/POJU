@@ -17,8 +17,15 @@ import { getPojuDb } from "@/lib/db/poju-db";
 import { createPOJUSession, loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
 import { clearPendingStoredProfileId, readPendingStoredProfileId } from "@/lib/poju/pending-stored-profile";
 import { runDegradedDeliveryPipeline } from "@/lib/poju/agent-orchestrator";
-import { handleUnderstandingGateAction, handleUserMessage, handleRegenerateBreakthroughCore, tryHandleRuleRejection } from "@/lib/poju/phase-router";
+import { handleUserMessage, tryHandleRuleRejection } from "@/lib/poju/phase-router";
 import { applyUnderstandingGateSupplement, handleRetryOpeningUnderstanding } from "@/lib/poju/phases/opening/control";
+import {
+  applySegment2PollSuccess,
+  finalizeSegment2JobFailure,
+  startSegment2AfterGateConfirm,
+  startSegment2Regenerate,
+  segment2RegenerateButtonLabel,
+} from "@/lib/poju/phases/segment2";
 import { understandingGateConfirmButtonLabel } from "@/lib/poju/understanding-gate-reply";
 import {
   dedupeWelcomeMessages,
@@ -32,7 +39,7 @@ import { AgendaProgressPanel } from "@/components/poju/AgendaProgressPanel";
 import { UnderstandingGateActions } from "@/components/poju/UnderstandingGateActions";
 import { RegenerateAnalysisAction } from "@/components/poju/RegenerateAnalysisAction";
 import { RegenerateOpeningAction } from "@/components/poju/RegenerateOpeningAction";
-import { segment2RegenerateButtonLabel } from "@/lib/poju/collecting-focus-reply";
+import { Segment2AnalysisPreparing } from "@/components/poju/Segment2AnalysisPreparing";
 import { getLastUserMessageContent } from "@/lib/poju/context-helpers";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import { InfraBusyRetryAction } from "@/components/poju/InfraBusyRetryAction";
@@ -165,6 +172,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const [slotActivity, setSlotActivity] = useState<PojuActivity | null>(null);
   const [slotActivityFading, setSlotActivityFading] = useState(false);
   const [thinkingLiveLine, setThinkingLiveLine] = useState<string | null>(null);
+  const [segment2JobId, setSegment2JobId] = useState<string | null>(null);
   const [debugStateLedger, setDebugStateLedger] = useState<unknown>(null);
   const [generationStopped, setGenerationStopped] = useState(false);
   const [showOffTopicAction, setShowOffTopicAction] = useState(false);
@@ -300,7 +308,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     previewComposerBlocked ||
     unlockBusy ||
     unlockReportGateBlocking ||
-    understandingGatePending;
+    understandingGatePending ||
+    Boolean(segment2JobId);
 
   const openUnlockReportModal = useCallback(() => setUnlockReportModalOpen(true), []);
 
@@ -967,7 +976,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   }
 
   async function handleUnderstandingGateClick(action: "confirmed" | "wants_to_add") {
-    if (sending || turnInFlightRef.current) return;
+    if (sending || turnInFlightRef.current || segment2JobId) return;
     const baseSession = sessionRef.current;
     if (baseSession.agent_v2?.current_phase !== "awaiting_understanding_confirm") return;
 
@@ -1010,44 +1019,81 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         }
       }
 
-      const updatedSession = await handleUnderstandingGateAction({
+      const started = await startSegment2AfterGateConfirm({
         session: withUser,
-        action: "confirmed",
         locale,
         userAlreadyAppended: true,
-        onSegment2Progress: (chars) => {
-          setThinkingLiveLine(
-            locale.startsWith("zh")
-              ? `正在深度分析…（${chars} 字符）`
-              : `Deep analysis… (${chars} chars)`,
-          );
-        },
       });
       if (gen !== sendGenerationRef.current) return;
 
-      onSessionUpdate(updatedSession);
-      skipActivityRenderReadyRef.current = false;
-      syncDebugStateLedger(updatedSession);
-      await savePOJUSession(updatedSession);
-    } catch (err) {
-      console.error("[poju] understanding gate confirm failed:", err);
-      onSessionUpdate(baseSession);
-      await dialog.alert(t("dialog_connection_error"));
-    } finally {
-      turnInFlightRef.current = false;
-      if (gen === sendGenerationRef.current) {
+      onSessionUpdate(started.session);
+      syncDebugStateLedger(started.session);
+      await savePOJUSession(started.session);
+
+      if (started.already_complete || !started.job_id) {
+        skipActivityRenderReadyRef.current = false;
         setSending(false);
         if (!awaitingActivityDismissRef.current) {
           setSlotActivity(null);
           setSlotActivityFading(false);
           setThinkingLiveLine(null);
         }
+        return;
       }
+
+      setSegment2JobId(started.job_id);
+      setThinkingLiveLine(
+        locale.startsWith("zh") ? "正在深度分析…" : "Running deep analysis…",
+      );
+      // Keep sending/activity until prepare onComplete/onError.
+    } catch (err) {
+      console.error("[poju] understanding gate confirm failed:", err);
+      onSessionUpdate(baseSession);
+      await dialog.alert(t("dialog_connection_error"));
+      setSending(false);
+      setSlotActivity(null);
+      setSlotActivityFading(false);
+      setThinkingLiveLine(null);
+    } finally {
+      turnInFlightRef.current = false;
     }
   }
 
+  async function handleSegment2JobComplete(
+    result: Parameters<typeof applySegment2PollSuccess>[2],
+  ) {
+    const base = sessionRef.current;
+    const next = applySegment2PollSuccess(base, locale, result);
+    setSegment2JobId(null);
+    onSessionUpdate(next);
+    skipActivityRenderReadyRef.current = false;
+    syncDebugStateLedger(next);
+    await savePOJUSession(next);
+    setSending(false);
+    setSlotActivity(null);
+    setSlotActivityFading(false);
+    setThinkingLiveLine(null);
+    awaitingActivityDismissRef.current = false;
+    scrollChatToBottom("smooth");
+  }
+
+  async function handleSegment2JobError(error: string) {
+    console.warn("[poju] segment2 job failed:", error);
+    const base = sessionRef.current;
+    const next = finalizeSegment2JobFailure({ session: base, locale, error });
+    setSegment2JobId(null);
+    onSessionUpdate(next);
+    syncDebugStateLedger(next);
+    await savePOJUSession(next);
+    setSending(false);
+    setSlotActivity(null);
+    setSlotActivityFading(false);
+    setThinkingLiveLine(null);
+    awaitingActivityDismissRef.current = false;
+  }
+
   async function handleRegenerateAnalysisClick() {
-    if (sending || turnInFlightRef.current) return;
+    if (sending || turnInFlightRef.current || segment2JobId) return;
     const baseSession = sessionRef.current;
     if (baseSession.agent_v2?.current_phase !== "collecting_context") return;
     if (baseSession.agent_v2.breakthrough_core != null) return;
@@ -1083,31 +1129,34 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         }
       }
 
-      const updatedSession = await handleRegenerateBreakthroughCore({
+      const started = await startSegment2Regenerate({
         session: withUser,
         locale,
         userAlreadyAppended: true,
       });
       if (gen !== sendGenerationRef.current) return;
 
-      onSessionUpdate(updatedSession);
-      skipActivityRenderReadyRef.current = false;
-      syncDebugStateLedger(updatedSession);
-      await savePOJUSession(updatedSession);
+      onSessionUpdate(started.session);
+      syncDebugStateLedger(started.session);
+      await savePOJUSession(started.session);
+
+      if (started.already_complete || !started.job_id) {
+        skipActivityRenderReadyRef.current = false;
+        setSending(false);
+        return;
+      }
+
+      setSegment2JobId(started.job_id);
+      setThinkingLiveLine(
+        locale.startsWith("zh") ? "正在深度分析…" : "Running deep analysis…",
+      );
     } catch (err) {
       console.error("[poju] segment-2 regenerate failed:", err);
       onSessionUpdate(baseSession);
       await dialog.alert(t("dialog_connection_error"));
+      setSending(false);
     } finally {
       turnInFlightRef.current = false;
-      if (gen === sendGenerationRef.current) {
-        setSending(false);
-        if (!awaitingActivityDismissRef.current) {
-          setSlotActivity(null);
-          setSlotActivityFading(false);
-          setThinkingLiveLine(null);
-        }
-      }
     }
   }
 
@@ -1604,9 +1653,28 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                 setDriftReason("");
               }}
             />
-          ) : session.agent_v2 ? (
-            <AgendaProgressPanel agent={session.agent_v2} locale={locale} />
-          ) : null
+          ) : (
+            <>
+              {segment2JobId ? (
+                <Segment2AnalysisPreparing
+                  job_id={segment2JobId}
+                  locale={locale}
+                  onProgress={(chars) => {
+                    setThinkingLiveLine(
+                      locale.startsWith("zh")
+                        ? `正在深度分析…已生成 ${chars} 字`
+                        : `Deep analysis… ${chars} chars`,
+                    );
+                  }}
+                  onComplete={(result) => void handleSegment2JobComplete(result)}
+                  onError={(error) => void handleSegment2JobError(error)}
+                />
+              ) : null}
+              {session.agent_v2 ? (
+                <AgendaProgressPanel agent={session.agent_v2} locale={locale} />
+              ) : null}
+            </>
+          )
         }
         editDialog={
           editDialog

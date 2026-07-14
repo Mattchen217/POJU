@@ -1,7 +1,7 @@
 /**
  * Opening phase (segment 1) — control flow.
  * Owns understanding turns + gate supplement/retry.
- * Does NOT run segment-2 xhigh (that stays outside until phases/segment2 exists).
+ * Does NOT run segment 2 xhigh (that lives in phases/segment2).
  */
 import { advanceStateMachine, extractModelTurnSignals } from "@/lib/poju/state-machine";
 import {

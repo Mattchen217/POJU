@@ -1,8 +1,7 @@
-import type { BreakthroughCore, POJUAgentState } from "@/lib/poju/agent-state";
+import type { POJUAgentState } from "@/lib/poju/agent-state";
 import { isPojuFailurePlaceholderMessage } from "@/lib/llm/poju-service-busy-message";
 import { selectCurrentAgendaFocus } from "@/lib/poju/investigation-agenda";
 import {
-  envelopeCoreFallbackRetryHint as openingEnvelopeHint,
   openingUnderstandingGenerationFailedMessage,
   openingUnderstandingRetryButtonLabel,
 } from "@/lib/poju/phases/opening/display";
@@ -11,6 +10,16 @@ export {
   openingUnderstandingGenerationFailedMessage,
   openingUnderstandingRetryButtonLabel,
 };
+
+/** Segment-2 display — owned by phases/segment2/display (compat re-exports). */
+export {
+  formatBreakthroughDirectionsForUser,
+  buildCollectingTransitionReplyFromCore,
+  buildSegment2AnalysisReply,
+  envelopeCoreFallbackRetryHint,
+  segment2CoreGenerationFailedMessage,
+  segment2RegenerateButtonLabel,
+} from "@/lib/poju/phases/segment2/display";
 
 /** Reply already ends with or recently contains a question mark. */
 export function hasQuestionCue(text: string): boolean {
@@ -23,63 +32,6 @@ function formatFocusQuestion(label: string, locale: string): string {
   const q = label.trim();
   if (/[？?]$/.test(q)) return q;
   return locale.startsWith("zh") ? `${q}？` : `${q}?`;
-}
-
-/** User-visible breakthrough directions block (segment 2 · 2–3 items). */
-export function formatBreakthroughDirectionsForUser(
-  core: BreakthroughCore | null | undefined,
-  locale: string,
-): string {
-  const dirs = core?.breakthrough_directions ?? [];
-  if (dirs.length === 0) return "";
-  const header = locale.startsWith("zh") ? "\n\n破局方向：" : "\n\nBreakthrough directions:";
-  const lines = dirs.map((d, i) => {
-    const n = i + 1;
-    const basis = d.structural_basis?.trim() ?? "";
-    const timing = d.timing?.trim() ?? "";
-    if (locale.startsWith("zh")) {
-      const parts = [`\n${n}. ${d.direction.trim()}`];
-      if (basis) parts.push(`   结构依据：${basis}`);
-      if (timing) parts.push(`   时机：${timing}`);
-      return parts.join("\n");
-    }
-    const parts = [`\n${n}. ${d.direction.trim()}`];
-    if (basis) parts.push(`   Basis: ${basis}`);
-    if (timing) parts.push(`   Timing: ${timing}`);
-    return parts.join("\n");
-  });
-  return header + lines.join("");
-}
-
-/** User-facing collecting transition when core fallback replaces a failed opening envelope. */
-export function buildCollectingTransitionReplyFromCore(
-  agent: POJUAgentState,
-  locale: string,
-): string {
-  const core = agent.breakthrough_core;
-  const rel = core?.relationship_conclusion?.trim() ?? "";
-  const directions = formatBreakthroughDirectionsForUser(core, locale);
-  const intro =
-    rel ||
-    (locale.startsWith("zh")
-      ? "我先帮你把这件事在本盘结构里的卡点理顺。"
-      : "Let me frame where you're structurally stuck first.");
-  return appendFirstFocusQuestion(`${intro}${directions}`, agent, locale);
-}
-
-export function envelopeCoreFallbackRetryHint(locale: string): string {
-  return openingEnvelopeHint(locale);
-}
-
-/** Segment 2 failed — understanding preserved; user retries via button. */
-export function segment2CoreGenerationFailedMessage(locale: string): string {
-  return locale.startsWith("zh")
-    ? "深度分析这次没能生成完（可能是分析太复杂），点下方按钮我重新为你分析。"
-    : "Deep analysis didn't finish this time (it may have been too complex). Tap the button below and I'll run it again.";
-}
-
-export function segment2RegenerateButtonLabel(locale: string): string {
-  return locale.startsWith("zh") ? "重新生成分析" : "Regenerate analysis";
 }
 
 /** Append first agenda focus when opening→collecting transition reply has no question. */

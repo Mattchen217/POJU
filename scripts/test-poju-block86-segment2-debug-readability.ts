@@ -30,6 +30,9 @@ function main(): void {
   const orch = read("lib/poju/agent-orchestrator.ts");
   const llmDebug = read("lib/llm/llm-debug.ts");
 
+  const control = read("lib/poju/phases/segment2/control.ts");
+  const ui = read("components/poju/POJUChatUI.tsx");
+
   assert("route returns llm_debug via job completion", status.includes("llm_debug: job.llm_debug") || client.includes("llm_debug: polled.llm_debug"));
   assert("route sets phase segment2_breakthrough_core", runner.includes('phase_name: "segment2_breakthrough_core"'));
   assert("route thinking_effort xhigh", runner.includes('reasoning_effort: "xhigh"'));
@@ -38,9 +41,9 @@ function main(): void {
   assert("client requestBreakthroughCore returns llm_debug", client.includes("llm_debug,"));
   assert("orchestrator ensureBreakthroughCore passes llm_debug", orch.includes("llm_debug: out.llm_debug"));
 
-  assert("agent runSegment2 returns segment2_llm_debug", agent.includes("segment2_llm_debug"));
-  assert("gate confirm attaches llm_debug to assistant meta", agent.includes("llm_debug: segment2LlmDebug"));
-  assert("handleUserMessage prefers segment2 debug when justConverted", agent.includes("justConverted && segment2LlmDebug"));
+  assert("segment2 finalize attaches llm_debug", control.includes("llm_debug: input.llm_debug"));
+  assert("UI applySegment2PollSuccess", ui.includes("applySegment2PollSuccess"));
+  assert("agent skips sync justConverted path", !agent.includes("justConverted && segment2LlmDebug"));
 
   assert("readability hard rule in prompt", corePrompt.includes("可读性硬要求"));
   assert("first-tag-only降噪 rule", corePrompt.includes("术语降噪") && corePrompt.includes("首次出现"));

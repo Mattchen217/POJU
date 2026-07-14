@@ -25,16 +25,23 @@ function main(): void {
   assert("opening no 8192 cap", !opening.includes("max_tokens: 8192"));
 
   const agent = read("lib/poju/agent.ts");
-  assert("justConverted fallback", agent.includes("justConverted"));
-  assert("tail question check", agent.includes("finalContent.slice(-50)"));
-  assert("no appendFirstFocusQuestion import", !agent.includes("appendFirstFocusQuestion"));
+  assert("no sync justConverted in agent", !agent.includes("justConverted"));
+  assert(
+    "segment2 display owns analysis reply",
+    read("lib/poju/phases/segment2/display.ts").includes("buildSegment2AnalysisReply"),
+  );
+  assert("no appendFirstFocusQuestion import in agent", !agent.includes("appendFirstFocusQuestion"));
 
   const chatUi = read("components/poju/POJUChatUI.tsx");
   assert("turnInFlightRef guard", chatUi.includes("turnInFlightRef.current"));
   assert("alreadyAnswered guard", chatUi.includes("alreadyAnswered"));
-  assert("failed reply allows retry", chatUi.includes('includes("未能生成")'));
+  assert(
+    "failed reply allows retry",
+    chatUi.includes("isPojuFailurePlaceholderMessage") || chatUi.includes("generation_incomplete"),
+  );
   assert("no lastTurnSigRef", !chatUi.includes("lastTurnSigRef"));
   assert("unlock release alreadySent guard kept", chatUi.includes("alreadySent"));
+  assert("segment2 preparing mounted", chatUi.includes("Segment2AnalysisPreparing"));
 
   console.log("\n=== Summary ===\n");
   if (failures.length) {

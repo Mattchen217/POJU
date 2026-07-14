@@ -37,11 +37,7 @@ import {
 import { isPojuFailurePlaceholderMessage, isPojuInfrastructureFailureMessage, isPojuEmptyGenerationMessage } from "@/lib/llm/poju-service-busy-message";
 import {
   appendForwardMove,
-  buildCollectingTransitionReplyFromCore,
-  envelopeCoreFallbackRetryHint,
   hasQuestionCue,
-  segment2CoreGenerationFailedMessage,
-  segment2RegenerateButtonLabel,
 } from "@/lib/poju/collecting-focus-reply";
 import {
   openingReplyIsComplete,
@@ -74,12 +70,17 @@ import type { ToolSuggestionPayload } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
 import { chatPayloadFromWire } from "@/lib/poju/serialize-chat-payload";
 import { buildAgentStateSnapshot } from "@/lib/poju/agent-state-snapshot";
-import { ensureBreakthroughCore, runConfirmationPipeline } from "@/lib/poju/agent-orchestrator";
+import { runConfirmationPipeline } from "@/lib/poju/agent-orchestrator";
 import { classifyConfirmationAffirmative } from "@/lib/poju/confirmation-reply";
 import { applyActionStatusUpdates, parseActionStatusUpdates } from "@/lib/poju/action-status-updates";
-import { understandingGateConfirmButtonLabel } from "@/lib/poju/understanding-gate-reply";
 
 export { applyUnderstandingGateSupplement, handleRetryOpeningUnderstanding, isOpeningControlPhase };
+/** Segment-2 handlers live in phases/segment2 — prefer phase-router. */
+export {
+  startSegment2AfterGateConfirm as handleUnderstandingGateActionAsync,
+  startSegment2Regenerate as handleRegenerateBreakthroughCoreAsync,
+} from "@/lib/poju/phases/segment2/control";
+
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 /** Session uses default `userProfiles` slot from device. */
@@ -699,39 +700,19 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     agent_v2 = { ...agent_v2, current_phase: "awaiting_confirmation" };
   }
 
-  let segment2LlmDebug: import("@/lib/llm/llm-debug").LLMCallDebug | undefined;
-  let segment2Model: string | undefined;
-  let segment2Failed = false;
-
+  // Segment-2 xhigh is async (phases/segment2 + Segment2AnalysisPreparing).
+  // Gate confirm must not sync-block here — UI creates job + polls + display onComplete.
   if (advance.trigger_breakthrough_core) {
-    const seg2 = await runSegment2BreakthroughCore({
-      sessionForAgent,
-      agent_v2,
-      mergedActions,
-      locale,
-      freshQuestion:
-        agent_v2.original_question?.trim() ||
-        llmResponse.problem_summary?.trim() ||
-        extractOpeningProblem(sessionForAgent.messages) ||
-        resolveOriginalQuestion(agent_v2, phaseUserMessage),
-    });
-    agent_v2 = seg2.agent_v2;
-    segment2LlmDebug = seg2.segment2_llm_debug;
-    segment2Model = seg2.segment2_model;
-    segment2Failed = Boolean(seg2.core_failed);
+    console.info(
+      "[agent] trigger_breakthrough_core in handleUserMessage — segment2 owned by phases/segment2 async job, skipping sync await",
+    );
   }
 
   let finalContent = llmResponse.response;
 
-  const justConverted =
-    advance.trigger_breakthrough_core &&
-    agent_v2.breakthrough_core != null &&
-    (agent_v2.investigation_agenda?.length ?? 0) > 0;
   const phaseAfter = normalizeAgentPhase(agent_v2.current_phase) ?? agent_v2.current_phase;
   const envelopeFailedStayedOpening =
     advance.trigger_breakthrough_core && phaseAfter === "opening";
-  const segment2GenerationFailed =
-    advance.trigger_breakthrough_core && !justConverted && segment2Failed;
   const understandingGenerationFailed = Boolean(llmResponse.understanding_generation_failed);
 
   const openingReplyInput = {
@@ -743,19 +724,10 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     envelopeFailedStayedOpening,
   };
 
-  if (justConverted) {
-    // Segment-2 display (temporary owner until phases/segment2/display.ts).
-    finalContent = buildCollectingTransitionReplyFromCore(agent_v2, locale);
-  } else if (segment2GenerationFailed) {
-    finalContent = segment2CoreGenerationFailedMessage(locale);
-  } else {
-    const openingOwned = resolveOpeningTurnReply(openingReplyInput);
-    if (openingOwned != null) finalContent = openingOwned;
-  }
+  const openingOwned = resolveOpeningTurnReply(openingReplyInput);
+  if (openingOwned != null) finalContent = openingOwned;
 
   const advancedCleanly =
-    justConverted ||
-    segment2GenerationFailed ||
     openingReplyIsComplete(openingReplyInput) ||
     (!envelopeFailedStayedOpening &&
       (phaseAfter === "awaiting_confirmation" ||
@@ -764,12 +736,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
         (phaseAfter === "collecting_context" && hasQuestionCue(finalContent))));
 
   if (!advancedCleanly && !isPojuFailurePlaceholderMessage(finalContent)) {
-    finalContent = appendForwardMove(
-      finalContent,
-      agent_v2,
-      locale,
-      justConverted ? "first" : "continue",
-    );
+    finalContent = appendForwardMove(finalContent, agent_v2, locale, "continue");
   }
 
   const anchoredFromReply = extractAnchoredFactIdsFromAssistant(finalContent);
@@ -793,7 +760,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     content: finalContent,
     timestamp: new Date().toISOString(),
     meta: {
-      llm_model: justConverted && segment2Model ? segment2Model : llmResponse.model,
+      llm_model: llmResponse.model,
       tokens_used: llmResponse.tokens_used,
       user_intent: llmResponse.user_intent,
       current_state: llmResponse.current_state,
@@ -811,13 +778,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
         agent_v2,
         llmResponse.contains_delivery || workingSession.main_delivery_done,
       ),
-      llm_debug:
-        justConverted && segment2LlmDebug
-          ? segment2LlmDebug
-          : segment2GenerationFailed
-            ? segment2LlmDebug
-            : llmResponse.llm_debug,
-      ...(segment2GenerationFailed ? { core_generation_failed: true as const } : {}),
+      llm_debug: llmResponse.llm_debug,
       ...(understandingGenerationFailed ? { understanding_generation_failed: true as const } : {}),
       ...(phaseAfter === "awaiting_understanding_confirm"
         ? { understanding_gate_pending: true as const }
@@ -859,235 +820,8 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   return maybeRunDeliveryPipeline(sessionOut, advance, locale);
 }
 
-async function runSegment2BreakthroughCore(input: {
-  sessionForAgent: POJUSessionState;
-  agent_v2: POJUAgentState;
-  mergedActions: POJUAction[];
-  locale: string;
-  freshQuestion: string;
-  onSegment2Progress?: (accumulated_chars: number) => void;
-}): Promise<{
-  agent_v2: POJUAgentState;
-  segment2_llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
-  segment2_model?: string;
-  core_failed?: boolean;
-}> {
-  let agent_v2 = input.agent_v2;
-  console.info("[agent] segment-2 breakthrough-core (post-gate, independent xhigh)");
-  const markCoreFailed = (): POJUAgentState => ({
-    ...agent_v2,
-    current_phase: "collecting_context",
-    core_generation_failed: true,
-    breakthrough_core: null,
-    investigation_agenda: [],
-    agenda_generated: false,
-    has_situation_analysis: false,
-  });
-  try {
-    const withQ = {
-      ...agent_v2,
-      original_question: input.freshQuestion,
-      breakthrough_core: null,
-      investigation_agenda: [],
-      agenda_generated: false,
-      core_generation_failed: false,
-    };
-    const coreResult = await ensureBreakthroughCore(
-      {
-        ...input.sessionForAgent,
-        original_question: input.freshQuestion,
-        agent_v2: { ...withQ, current_phase: "collecting_context" },
-      },
-      input.locale,
-      { onProgress: input.onSegment2Progress },
-    );
-    const coreReady = coreResult.session.agent_v2?.breakthrough_core != null;
-    if (coreReady) {
-      agent_v2 = {
-        ...coreResult.session.agent_v2!,
-        actions: input.mergedActions,
-        core_generation_failed: false,
-      };
-      return {
-        agent_v2,
-        segment2_llm_debug: coreResult.llm_debug,
-        segment2_model: coreResult.model,
-      };
-    }
-    console.warn("[agent] breakthrough-core incomplete, keeping confirmed understanding");
-    agent_v2 = markCoreFailed();
-    return { agent_v2, core_failed: true };
-  } catch (e) {
-    console.warn("[agent] breakthrough-core failed, keeping confirmed understanding:", e);
-    agent_v2 = markCoreFailed();
-    return { agent_v2, core_failed: true };
-  }
-}
-
 /** Return to opening for user-typed supplement — owned by phases/opening/control. */
 // applyUnderstandingGateSupplement — re-exported from opening/control above
-
-/** Button confirm — runs segment-2; user bubble may already be optimistically appended in UI. */
-export async function handleUnderstandingGateAction(input: {
-  session: POJUSessionState;
-  action: "confirmed";
-  locale: string;
-  userAlreadyAppended?: boolean;
-  onSegment2Progress?: (accumulated_chars: number) => void;
-}): Promise<POJUSessionState> {
-  const session = ensureSessionCycles(input.session);
-  const baseAgent = ensureAgentV2(session);
-  const phase = normalizeAgentPhase(baseAgent.current_phase);
-  if (phase !== "awaiting_understanding_confirm") return session;
-
-  const userLabel = understandingGateConfirmButtonLabel(input.locale);
-  const userMessage: POJUMessage = {
-    role: "user",
-    content: userLabel,
-    timestamp: new Date().toISOString(),
-    client_id: safeRandomUUID(),
-  };
-  const messagesWithUser = input.userAlreadyAppended
-    ? session.messages
-    : [...session.messages, userMessage];
-
-  const signals = extractModelTurnSignals({ confirmation_signal: "confirmed" });
-  const advance = advanceStateMachine(baseAgent, signals, userLabel);
-  let agent_v2 = advance.next_agent;
-
-  const freshQuestion =
-    agent_v2.original_question?.trim() ||
-    extractOpeningProblem(messagesWithUser) ||
-    session.original_question?.trim() ||
-    userLabel;
-  agent_v2 = { ...agent_v2, original_question: freshQuestion };
-
-  let segment2LlmDebug: import("@/lib/llm/llm-debug").LLMCallDebug | undefined;
-  let segment2Model: string | undefined;
-  let segment2Failed = false;
-
-  if (advance.trigger_breakthrough_core) {
-    const seg2 = await runSegment2BreakthroughCore({
-      sessionForAgent: { ...session, messages: messagesWithUser },
-      agent_v2,
-      mergedActions: agent_v2.actions,
-      locale: input.locale,
-      freshQuestion,
-      onSegment2Progress: input.onSegment2Progress,
-    });
-    agent_v2 = seg2.agent_v2;
-    segment2LlmDebug = seg2.segment2_llm_debug;
-    segment2Model = seg2.segment2_model;
-    segment2Failed = Boolean(seg2.core_failed);
-  }
-
-  const phaseAfter = normalizeAgentPhase(agent_v2.current_phase) ?? agent_v2.current_phase;
-  const coreReady =
-    agent_v2.breakthrough_core != null && (agent_v2.investigation_agenda?.length ?? 0) > 0;
-  const finalContent = coreReady
-    ? buildCollectingTransitionReplyFromCore(agent_v2, input.locale)
-    : segment2Failed
-      ? segment2CoreGenerationFailedMessage(input.locale)
-      : envelopeCoreFallbackRetryHint(input.locale);
-
-  const assistantMessage: POJUMessage = {
-    role: "assistant",
-    content: finalContent,
-    timestamp: new Date().toISOString(),
-    meta: {
-      current_state:
-        coreReady || segment2Failed ? "collecting_context" : phaseAfter === "collecting_context" ? "collecting_context" : "opening",
-      user_intent: "sharing_situation",
-      action_requested: "continue_chat",
-      investigation_agenda: agent_v2.investigation_agenda ?? undefined,
-      llm_model: segment2Model,
-      llm_debug: segment2LlmDebug,
-      state_snapshot: buildAgentStateSnapshot(agent_v2, session.main_delivery_done),
-      ...(segment2Failed ? { core_generation_failed: true as const } : {}),
-    },
-  };
-
-  return withSessionProfileFlags({
-    ...session,
-    original_question: freshQuestion,
-    messages: [...messagesWithUser, assistantMessage],
-    agent_v2,
-    last_interaction_at: new Date().toISOString(),
-  });
-}
-
-/** Retry segment-2 breakthrough-core without redoing segment-1 understanding. */
-export async function handleRegenerateBreakthroughCore(input: {
-  session: POJUSessionState;
-  locale: string;
-  userAlreadyAppended?: boolean;
-}): Promise<POJUSessionState> {
-  const session = ensureSessionCycles(input.session);
-  const baseAgent = ensureAgentV2(session);
-  const phase = normalizeAgentPhase(baseAgent.current_phase);
-  if (phase !== "collecting_context") return session;
-  if (baseAgent.breakthrough_core != null) return session;
-
-  const userLabel = segment2RegenerateButtonLabel(input.locale);
-  const userMessage: POJUMessage = {
-    role: "user",
-    content: userLabel,
-    timestamp: new Date().toISOString(),
-    client_id: safeRandomUUID(),
-  };
-  const messagesWithUser = input.userAlreadyAppended
-    ? session.messages
-    : [...session.messages, userMessage];
-
-  const freshQuestion =
-    baseAgent.original_question?.trim() ||
-    extractOpeningProblem(messagesWithUser) ||
-    session.original_question?.trim() ||
-    userLabel;
-
-  const seg2 = await runSegment2BreakthroughCore({
-    sessionForAgent: { ...session, messages: messagesWithUser },
-    agent_v2: { ...baseAgent, original_question: freshQuestion, current_phase: "collecting_context" },
-    mergedActions: baseAgent.actions,
-    locale: input.locale,
-    freshQuestion,
-  });
-
-  const agent_v2 = seg2.agent_v2;
-  const coreReady =
-    agent_v2.breakthrough_core != null && (agent_v2.investigation_agenda?.length ?? 0) > 0;
-  const segment2Failed = Boolean(seg2.core_failed);
-  const finalContent = coreReady
-    ? buildCollectingTransitionReplyFromCore(agent_v2, input.locale)
-    : segment2CoreGenerationFailedMessage(input.locale);
-
-  const assistantMessage: POJUMessage = {
-    role: "assistant",
-    content: finalContent,
-    timestamp: new Date().toISOString(),
-    meta: {
-      current_state: "collecting_context",
-      user_intent: "sharing_situation",
-      action_requested: "continue_chat",
-      investigation_agenda: agent_v2.investigation_agenda ?? undefined,
-      llm_model: seg2.segment2_model,
-      llm_debug: seg2.segment2_llm_debug,
-      state_snapshot: buildAgentStateSnapshot(agent_v2, session.main_delivery_done),
-      ...(segment2Failed ? { core_generation_failed: true as const } : {}),
-    },
-  };
-
-  return withSessionProfileFlags({
-    ...session,
-    original_question: freshQuestion,
-    messages: [...messagesWithUser, assistantMessage],
-    agent_v2,
-    last_interaction_at: new Date().toISOString(),
-  });
-}
-
-/** Retry segment-1 opening turn — owned by phases/opening/control. */
-// handleRetryOpeningUnderstanding — re-exported from opening/control above
 
 async function maybeRunDeliveryPipeline(
   session: POJUSessionState,

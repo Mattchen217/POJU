@@ -27,8 +27,10 @@ function assertCollectingCoreInvariant(
   agent: ReturnType<typeof createInitialAgentState>,
   label: string,
 ): void {
-  if (agent.current_phase === "collecting_context") {
-    assert(`${label}: collecting ⇒ core non-null`, agent.breakthrough_core != null);
+  // Async segment2 allows collecting_context with null core while job is running.
+  // Invariant after finalize: if agenda generated, core must exist.
+  if (agent.current_phase === "collecting_context" && agent.agenda_generated) {
+    assert(`${label}: agenda_generated ⇒ core non-null`, agent.breakthrough_core != null);
   }
 }
 
@@ -42,12 +44,13 @@ function postTurnOrchestrationBody(source: string): string {
 function main(): void {
   console.log("\n========== POJU Block 20 Acceptance ==========\n");
 
-  console.log("=== Fix 1 · sync core in handleUserMessage, no post-turn trigger ===\n");
+  console.log("=== Fix 1 · segment2 async job (no sync await in handleUserMessage) ===\n");
   const agentTs = read("lib/poju/agent.ts");
   const orch = read("lib/poju/agent-orchestrator.ts");
-  assert("agent imports ensureBreakthroughCore", agentTs.includes("ensureBreakthroughCore"));
-  assert("agent runSegment2BreakthroughCore on gate confirm", agentTs.includes("runSegment2BreakthroughCore"));
-  assert("agent reverts to opening when core fails", agentTs.includes('current_phase: "opening"'));
+  const seg2 = read("lib/poju/phases/segment2/control.ts");
+  assert("agent does not sync-await segment2", agentTs.includes("skipping sync await"));
+  assert("segment2 start after gate", seg2.includes("startSegment2AfterGateConfirm"));
+  assert("segment2 creates xhigh job", seg2.includes("createSegment2XhighJob"));
   assert("orchestrator exports ensureBreakthroughCore", orch.includes("export async function ensureBreakthroughCore"));
   assert(
     "post-turn no deferred breakthrough trigger",
@@ -56,6 +59,7 @@ function main(): void {
   assert("post-turn no per-turn ensureBaseAnalysis", !postTurnOrchestrationBody(orch).includes("ensureBaseAnalysis"));
   assert("confirmation pipeline still ensures base analysis", /runConfirmationPipeline[\s\S]*ensureBaseAnalysis/.test(orch));
   assert("UI ensures base analysis before send", read("components/poju/POJUChatUI.tsx").includes("ensureBaseAnalysisReady"));
+  assert("UI mounts preparing", read("components/poju/POJUChatUI.tsx").includes("Segment2AnalysisPreparing"));
 
   console.log("\n=== Fix 2 · collecting null-core guard + first insight once ===\n");
   const collecting = read("lib/llm/phases/collecting-phase.ts");

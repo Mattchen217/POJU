@@ -50,9 +50,14 @@ function main(): void {
   assert("wire strip on opening turn", agent.includes("openingTurn ? null : (llmResponse.breakthrough_core ?? null)"));
   assert(
     "segment-2 clears stale core before fetch",
-    agent.includes("runSegment2BreakthroughCore") && agent.includes("breakthrough_core: null"),
+    read("lib/poju/phases/segment2/control.ts").includes("breakthrough_core: null") &&
+      read("lib/poju/phases/segment2/control.ts").includes("createSegment2XhighJob"),
   );
-  assert("segment-2 independent xhigh log", agent.includes("segment-2 breakthrough-core (post-gate, independent xhigh)"));
+  assert(
+    "segment-2 independent via phases module",
+    read("lib/poju/phases/segment2/control.ts").includes("startSegment2AfterGateConfirm"),
+  );
+  assert("agent skips sync segment2 await", agent.includes("skipping sync await"));
 
   console.log("\n========================================\n");
   if (failures.length) {

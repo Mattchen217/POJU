@@ -12,6 +12,7 @@ export type Segment2AnalysisPreparingProps = {
   locale: string;
   onComplete: (result: Extract<Segment2JobPollResult, { ok: true }>) => void | Promise<void>;
   onError?: (error: string) => void;
+  onProgress?: (accumulated_chars: number) => void;
 };
 
 /**
@@ -22,14 +23,17 @@ export function Segment2AnalysisPreparing({
   locale,
   onComplete,
   onError,
+  onProgress,
 }: Segment2AnalysisPreparingProps) {
   const [accumulatedChars, setAccumulatedChars] = useState(0);
   const [status, setStatus] = useState<"pending" | "running" | "completed" | "failed">("pending");
   const startedRef = useRef(false);
   const onCompleteRef = useRef(onComplete);
   const onErrorRef = useRef(onError);
+  const onProgressRef = useRef(onProgress);
   onCompleteRef.current = onComplete;
   onErrorRef.current = onError;
+  onProgressRef.current = onProgress;
 
   const run = useCallback(async () => {
     try {
@@ -39,6 +43,7 @@ export function Segment2AnalysisPreparing({
           onProgress: (chars, st) => {
             setAccumulatedChars(chars);
             setStatus(st);
+            onProgressRef.current?.(chars);
           },
         },
       });

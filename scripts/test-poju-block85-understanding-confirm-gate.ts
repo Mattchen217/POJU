@@ -38,14 +38,18 @@ function main(): void {
   assert("supplement returns opening", sm.includes('sig === "wants_to_add"') && sm.includes('nextState = "opening"'));
 
   assert("opening sufficient=true summary only no追问", opening.includes("understanding_sufficient=true") && opening.includes("不得") && opening.includes("追问"));
-  assert("handleUnderstandingGateAction exported", agent.includes("export async function handleUnderstandingGateAction"));
+  assert(
+    "segment2 start after gate confirm",
+    read("lib/poju/phases/segment2/control.ts").includes("export async function startSegment2AfterGateConfirm"),
+  );
   assert("applyUnderstandingGateSupplement exported", read("lib/poju/phases/opening/control.ts").includes("export function applyUnderstandingGateSupplement"));
-  assert("confirm supports optimistic user append", agent.includes("userAlreadyAppended"));
+  assert("confirm supports optimistic user append", ui.includes("userAlreadyAppended: true"));
   assert("UI optimistic confirm flow", ui.includes("buildOptimisticUserMessage(userLabel)"));
   assert("UI supplement opens composer only", ui.includes("applyUnderstandingGateSupplement"));
   assert("buildUnderstandingGateSummaryFromFields via opening display", read("lib/poju/phases/opening/display.ts").includes("buildUnderstandingGateSummaryFromFields") && agent.includes("resolveOpeningTurnReply"));
   assert("understanding_gate_pending meta", agent.includes("understanding_gate_pending"));
   assert("UI imports phase-router", ui.includes("@/lib/poju/phase-router"));
+  assert("UI mounts Segment2AnalysisPreparing", ui.includes("Segment2AnalysisPreparing"));
 
   assert("UI uses i18n gate labels", gateUi.includes('t("understanding_gate_confirm")'));
   assert("gate confirm label zh", zhMsgs.includes('"understanding_gate_confirm": "对，就是这样"'));

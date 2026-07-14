@@ -21,8 +21,8 @@ import {
 } from "@/lib/poju/xhigh-job-store";
 import type { PojuXhighJob, PojuXhighJobPhase } from "@/lib/poju/xhigh-job-types";
 
-/** Segment-2 xhigh — reasoning ~7–11k + content ~6–8.5k. */
-export const SEGMENT2_XHIGH_MAX_TOKENS = 22_000;
+/** Segment-2 xhigh — reasoning ~7–11k + full analysis content ~8–12k + headroom. */
+export const SEGMENT2_XHIGH_MAX_TOKENS = 32_000;
 /** Wall budget for xhigh (~168s observed); job runner uses full Vercel maxDuration. */
 export const SEGMENT2_XHIGH_TIMEOUT_MS = 240_000;
 

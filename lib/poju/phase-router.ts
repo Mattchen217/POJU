@@ -1,13 +1,10 @@
 /**
  * Thin phase router — prefer this entry over importing agent.ts god-file branches.
  *
- * Today: opening-owned handlers live in phases/opening; other phases still flow through agent.
- * Next steps: segment2 / collecting / delivery / tracking each get their own control module.
+ * Opening + segment2 own their handlers; remaining phases still flow through agent.
  */
 export {
   handleUserMessage,
-  handleUnderstandingGateAction,
-  handleRegenerateBreakthroughCore,
   tryHandleRuleRejection,
   countSubstantiveOpeningTurns,
   extractOpeningProblem,
@@ -18,3 +15,16 @@ export {
   handleRetryOpeningUnderstanding,
   isOpeningControlPhase,
 } from "@/lib/poju/phases/opening/control";
+
+export {
+  startSegment2AfterGateConfirm,
+  startSegment2Regenerate,
+  applySegment2PollSuccess,
+  finalizeSegment2JobSuccess,
+  finalizeSegment2JobFailure,
+  createSegment2XhighJob,
+  buildSegment2AnalysisReply,
+  buildCollectingTransitionReplyFromCore,
+  segment2CoreGenerationFailedMessage,
+  segment2RegenerateButtonLabel,
+} from "@/lib/poju/phases/segment2";

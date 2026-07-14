@@ -26,8 +26,10 @@ function main(): void {
   const store = read("lib/poju/xhigh-job-store.ts");
   const runner = read("lib/poju/xhigh-job-runner.ts");
   const poll = read("lib/poju/poll-segment2-xhigh-job.ts");
-  const client = read("lib/llm/deepseek/breakthrough-core.ts");
-  const ui = read("components/poju/Segment2AnalysisPreparing.tsx");
+  const prepare = read("components/poju/Segment2AnalysisPreparing.tsx");
+  const ui = read("components/poju/POJUChatUI.tsx");
+  const control = read("lib/poju/phases/segment2/control.ts");
+  const display = read("lib/poju/phases/segment2/display.ts");
 
   assert("route uses after() for background job", route.includes("after("));
   assert("route createJob via xhigh store", route.includes("createXhighJob"));
@@ -43,16 +45,18 @@ function main(): void {
   assert("generic phase final_delivery reserved", read("lib/poju/xhigh-job-types.ts").includes("final_delivery"));
 
   assert("runner xhigh effort", runner.includes('reasoning_effort: "xhigh"'));
-  assert("runner max_tokens 22000", runner.includes("SEGMENT2_XHIGH_MAX_TOKENS = 22_000"));
+  assert("runner max_tokens 32000", runner.includes("SEGMENT2_XHIGH_MAX_TOKENS = 32_000"));
   assert("runner uses openRouterChatCompletionStream", runner.includes("openRouterChatCompletionStream"));
   assert("runner generic runXhighJob export", runner.includes("export async function runXhighJob"));
 
-  assert("client polls job", client.includes("pollBreakthroughCoreJobUntilDone"));
-  assert("client no blocking sync LLM in route import", !client.includes("openRouterChatCompletionStream"));
   assert("poll interval 3s", poll.includes("XHIGH_JOB_POLL_INTERVAL_MS = 3000"));
 
-  assert("Segment2AnalysisPreparing component", ui.includes("Segment2AnalysisPreparing"));
-  assert("POJUChatUI progress callback", read("components/poju/POJUChatUI.tsx").includes("onSegment2Progress"));
+  assert("Segment2AnalysisPreparing component", prepare.includes("Segment2AnalysisPreparing"));
+  assert("POJUChatUI mounts preparing", ui.includes("Segment2AnalysisPreparing") && ui.includes("segment2JobId"));
+  assert("POJUChatUI startSegment2AfterGateConfirm", ui.includes("startSegment2AfterGateConfirm"));
+  assert("POJUChatUI applySegment2PollSuccess", ui.includes("applySegment2PollSuccess"));
+  assert("segment2 control creates job", control.includes("createSegment2XhighJob"));
+  assert("segment2 display full reply", display.includes("buildSegment2AnalysisReply"));
 
   console.log("\n" + (failures.length === 0 ? "✅ All checks passed." : `❌ ${failures.length} failure(s):\n  - ${failures.join("\n  - ")}`));
   process.exit(failures.length === 0 ? 0 : 1);
