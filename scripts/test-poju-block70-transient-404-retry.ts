@@ -94,6 +94,20 @@ async function main(): Promise<void> {
   });
   assert("same slug on retry", fallbackCalls === 2 && Boolean(sameModel));
 
+  resetOpenRouterModelResolverForTests();
+  let queueThrown = false;
+  let exhaustedCalls = 0;
+  try {
+    await callWithRetryAndFallback(async () => {
+      exhaustedCalls++;
+      throw transient404;
+    });
+  } catch (e) {
+    queueThrown = e instanceof OpenRouterProviderQueueError;
+  }
+  assert("transient exhaustion → provider queue", queueThrown);
+  assert("transient exhaustion tried maxAttempts", exhaustedCalls === OPENROUTER_MAX_ATTEMPTS);
+
   console.log("\nDone.\n");
 }
 

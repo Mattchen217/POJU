@@ -50,7 +50,8 @@ function isProviderTransportFailure(e: unknown): boolean {
     return (
       e.message === "openrouter_provider_queue" ||
       e.message === "llm_timeout" ||
-      e.message === "openrouter_empty_response"
+      e.message === "openrouter_empty_response" ||
+      e.message === "openrouter_empty_after_resend"
     );
   }
   return false;

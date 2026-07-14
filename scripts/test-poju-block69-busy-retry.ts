@@ -78,9 +78,11 @@ async function main(): Promise<void> {
     }
     return model;
   });
+  // Same-slug backoff exhausts OPENROUTER_MAX_ATTEMPTS on ENV, then falls to built-in.
   assert(
-    "no-endpoints 404 switches candidate",
-    transientCalls === 2 && transientOut === OPENROUTER_MODEL_CANDIDATES_BUILTIN[0],
+    "no-endpoints 404 retries same slug then switches candidate",
+    transientCalls === OPENROUTER_MAX_ATTEMPTS + 1 &&
+      transientOut === OPENROUTER_MODEL_CANDIDATES_BUILTIN[0],
   );
 
   resetOpenRouterModelResolverForTests();

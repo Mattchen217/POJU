@@ -11,7 +11,10 @@
  */
 
 import {
+  MAX_EMPTY_CONTENT_RESEND,
+  OPENROUTER_EMPTY_AFTER_RESEND,
   OpenRouterProviderQueueError,
+  isEmptyResponseError,
 } from "@/lib/llm/openrouter-retry";
 import {
   openRouterProviderExtras,
@@ -19,7 +22,7 @@ import {
   type OpenRouterRoutePath,
 } from "@/lib/llm/openrouter-provider-routing";
 
-export { OpenRouterProviderQueueError } from "@/lib/llm/openrouter-retry";
+export { OpenRouterProviderQueueError, isEmptyResponseError, MAX_EMPTY_CONTENT_RESEND } from "@/lib/llm/openrouter-retry";
 
 export {
   openRouterProviderExtras,
@@ -385,15 +388,7 @@ async function openRouterChatCompletionWithModel(
     }
   }
 
-  let transportAttempt = 1;
-  const raw = await postOnce();
-
-  if (!raw || !raw.trim()) {
-    console.error("[openrouter] empty HTTP response body (non-stream)");
-    throw new Error("openrouter_empty_response");
-  }
-
-  let data: {
+  type ParsedEnvelope = {
     id?: string;
     provider?: string;
     model?: string;
@@ -418,68 +413,97 @@ async function openRouterChatCompletionWithModel(
     };
   };
 
-  try {
-    data = JSON.parse(raw) as typeof data;
-  } catch {
-    const snippet = raw.slice(0, 400).replace(/\s+/g, " ").trim();
-    console.error("[openrouter] Invalid JSON envelope:", snippet);
-    throw new Error("openrouter_invalid_json_response");
+  // Same slug / same body / same effort — invisible resend when billed empty content.
+  for (let attempt = 1; attempt <= MAX_EMPTY_CONTENT_RESEND; attempt++) {
+    const raw = await postOnce();
+
+    if (!raw || !raw.trim()) {
+      console.info(
+        `[openrouter] empty HTTP body, invisible resend ${attempt}/${MAX_EMPTY_CONTENT_RESEND} (same params)`,
+      );
+      continue;
+    }
+
+    let data: ParsedEnvelope;
+    try {
+      data = JSON.parse(raw) as ParsedEnvelope;
+    } catch {
+      const snippet = raw.slice(0, 400).replace(/\s+/g, " ").trim();
+      console.error("[openrouter] Invalid JSON envelope:", snippet);
+      throw new Error("openrouter_invalid_json_response");
+    }
+
+    const message = data.choices?.[0]?.message;
+    const text = String(message?.content ?? "").trim();
+    const modelOut = typeof data.model === "string" ? data.model : model;
+    const finish_reason = data.choices?.[0]?.finish_reason ?? null;
+    const provider =
+      typeof data.provider === "string" && data.provider.trim() ? data.provider.trim() : null;
+    const u = data.usage;
+    const prompt_tokens = typeof u?.prompt_tokens === "number" ? u.prompt_tokens : 0;
+    const completion_tokens = typeof u?.completion_tokens === "number" ? u.completion_tokens : 0;
+    const cached_tokens = parseCachedTokens(u as Record<string, unknown> | undefined);
+    const reasoning_tokens = parseReasoningTokens(u as Record<string, unknown> | undefined);
+    const tokens_used =
+      typeof u?.total_tokens === "number" ? u.total_tokens : prompt_tokens + completion_tokens;
+    const generation_id = typeof data.id === "string" ? data.id : null;
+    const generation_time_ms = parseGenerationTimeMs(data as Record<string, unknown>);
+    const reasoning =
+      typeof message?.reasoning === "string" && message.reasoning.trim()
+        ? message.reasoning.trim()
+        : undefined;
+
+    logOpenRouterProviderServed({
+      provider,
+      finish_reason,
+      cached_tokens,
+      prompt_tokens,
+      completion_tokens,
+      session_id: options.session_id,
+      call_type: options.call_type,
+      phase_name: options.phase_name,
+      reasoning: includeReasoning ? "on" : "off",
+      path: routePath,
+      locked: lockedLabel,
+      attempt,
+    });
+
+    if (text) {
+      return {
+        text,
+        model: modelOut,
+        tokens_used,
+        prompt_tokens,
+        completion_tokens,
+        cached_tokens,
+        reasoning_tokens,
+        finish_reason,
+        provider,
+        reasoning,
+        reasoning_details: message?.reasoning_details,
+        generation_id,
+        generation_time_ms,
+        transport: {
+          attempt,
+          retried: attempt > 1,
+          fell_back: false,
+        },
+      };
+    }
+
+    // Billed call with reasoning but no user-visible content — slug is fine; same-param resend.
+    console.info(
+      `[openrouter] empty content, invisible resend ${attempt}/${MAX_EMPTY_CONTENT_RESEND} (same params)`,
+      JSON.stringify({
+        model,
+        provider: provider ?? "—",
+        finish_reason: finish_reason ?? "—",
+        has_reasoning: Boolean(reasoning),
+        reasoning_tokens,
+        completion_tokens,
+      }),
+    );
   }
 
-  const message = data.choices?.[0]?.message;
-  const text = String(message?.content ?? "").trim();
-  const modelOut = typeof data.model === "string" ? data.model : model;
-  const finish_reason = data.choices?.[0]?.finish_reason ?? null;
-  const provider =
-    typeof data.provider === "string" && data.provider.trim() ? data.provider.trim() : null;
-  const u = data.usage;
-  const prompt_tokens = typeof u?.prompt_tokens === "number" ? u.prompt_tokens : 0;
-  const completion_tokens = typeof u?.completion_tokens === "number" ? u.completion_tokens : 0;
-  const cached_tokens = parseCachedTokens(u as Record<string, unknown> | undefined);
-  const reasoning_tokens = parseReasoningTokens(u as Record<string, unknown> | undefined);
-  const tokens_used =
-    typeof u?.total_tokens === "number" ? u.total_tokens : prompt_tokens + completion_tokens;
-  const generation_id = typeof data.id === "string" ? data.id : null;
-  const generation_time_ms = parseGenerationTimeMs(data as Record<string, unknown>);
-
-  logOpenRouterProviderServed({
-    provider,
-    finish_reason,
-    cached_tokens,
-    prompt_tokens,
-    completion_tokens,
-    session_id: options.session_id,
-    call_type: options.call_type,
-    phase_name: options.phase_name,
-    reasoning: includeReasoning ? "on" : "off",
-    path: routePath,
-    locked: lockedLabel,
-    attempt: transportAttempt,
-  });
-
-  const reasoning =
-    typeof message?.reasoning === "string" && message.reasoning.trim()
-      ? message.reasoning.trim()
-      : undefined;
-
-  return {
-    text,
-    model: modelOut,
-    tokens_used,
-    prompt_tokens,
-    completion_tokens,
-    cached_tokens,
-    reasoning_tokens,
-    finish_reason,
-    provider,
-    reasoning,
-    reasoning_details: message?.reasoning_details,
-    generation_id,
-    generation_time_ms,
-    transport: {
-      attempt: transportAttempt,
-      retried: false,
-      fell_back: false,
-    },
-  };
+  throw new Error(OPENROUTER_EMPTY_AFTER_RESEND);
 }

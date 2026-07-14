@@ -982,11 +982,18 @@ async function callLLMViaAPI(input: {
     signal: input.signal,
   });
 
+  const data = (await response.json().catch(() => ({}))) as LLMApiPayload & { error?: string };
+  if (
+    data.error === "openrouter_provider_queue" ||
+    (!response.ok && response.status === 503)
+  ) {
+    const err = new Error("openrouter_provider_queue");
+    err.name = "OpenRouterProviderQueueError";
+    throw err;
+  }
   if (!response.ok) {
     throw new Error(`/api/poju/chat returned HTTP ${response.status}`);
   }
-
-  const data = (await response.json()) as LLMApiPayload;
   if (data.error) {
     throw new Error(String(data.error));
   }

@@ -14,6 +14,10 @@ import {
   type OpenRouterChatOptions,
   type OpenRouterCompletionResult,
 } from "@/lib/llm/openrouter-shared";
+import {
+  MAX_EMPTY_CONTENT_RESEND,
+  OPENROUTER_EMPTY_AFTER_RESEND,
+} from "@/lib/llm/openrouter-retry";
 import { parseGenerationTimeMs, parseReasoningTokens } from "@/lib/llm/llm-debug";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
@@ -265,7 +269,7 @@ async function openRouterChatCompletionStreamWithModel(
         generation_id,
         generation_time_ms,
         transport: {
-          attempt: transportAttempt,
+          attempt: 1,
           retried: false,
           fell_back: false,
         },
@@ -287,8 +291,33 @@ async function openRouterChatCompletionStreamWithModel(
     }
   }
 
-  let transportAttempt = 1;
-  const result = await runOnce();
+  // Same slug / same params — invisible resend when stream finishes with empty content.
+  let result: OpenRouterCompletionResult | null = null;
+  for (let attempt = 1; attempt <= MAX_EMPTY_CONTENT_RESEND; attempt++) {
+    const once = await runOnce();
+    once.transport = {
+      attempt,
+      retried: attempt > 1,
+      fell_back: false,
+    };
+    if (once.text.trim()) {
+      result = once;
+      break;
+    }
+    console.info(
+      `[openrouter] empty stream content, invisible resend ${attempt}/${MAX_EMPTY_CONTENT_RESEND} (same params)`,
+      JSON.stringify({
+        model,
+        provider: once.provider ?? "—",
+        finish_reason: once.finish_reason ?? "—",
+        has_reasoning: Boolean(once.reasoning),
+        reasoning_tokens: once.reasoning_tokens,
+      }),
+    );
+  }
+  if (!result) {
+    throw new Error(OPENROUTER_EMPTY_AFTER_RESEND);
+  }
   logOpenRouterProviderServed({
     provider: result.provider,
     finish_reason: result.finish_reason,
@@ -301,7 +330,7 @@ async function openRouterChatCompletionStreamWithModel(
     reasoning: includeReasoning ? "on" : "off",
     path: routePath,
     locked: lockedLabel,
-    attempt: transportAttempt,
+    attempt: result.transport?.attempt ?? 1,
   });
   return result;
 }

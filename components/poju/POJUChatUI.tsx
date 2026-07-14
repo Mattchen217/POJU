@@ -135,6 +135,8 @@ type TurnErrorRestore = {
 };
 
 const PROVIDER_QUEUE_SILENT_RETRY_MS = 5000;
+/** Silent auto-retries before showing the user-facing infra retry button. */
+const MAX_SILENT_INFRA_RETRIES = 3;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -207,8 +209,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const turnInFlightRef = useRef(false);
   /** Synchronous dedupe — blocks same-tick double runUserTurn before turnInFlightRef is visible. */
   const activeTurnKeyRef = useRef<string | null>(null);
-  /** One silent provider-queue retry per user send turn. */
-  const silentRetriedRef = useRef(false);
+  /** Silent provider-queue / soft-infra retries per user send turn (then show retry button). */
+  const silentRetryCountRef = useRef(0);
   const pendingSilentRetryRef = useRef<{
     rollbackSession: POJUSessionState;
     userMessage: string;
@@ -620,6 +622,44 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         }
       }
 
+      const lastAssistantPreview = [...toPersist.messages]
+        .reverse()
+        .find((m) => m.role === "assistant" && !m.is_rejected);
+      const softInfraFailure =
+        Boolean(errorRestore) &&
+        Boolean(lastAssistantPreview) &&
+        (lastAssistantPreview?.meta?.kind === "infra_busy" ||
+          lastAssistantPreview?.meta?.kind === "generation_empty" ||
+          lastAssistantPreview?.meta?.kind === "generation_incomplete" ||
+          lastAssistantPreview?.meta?.understanding_generation_failed === true ||
+          (typeof lastAssistantPreview?.content === "string" &&
+            isPojuFailurePlaceholderMessage(lastAssistantPreview.content)));
+
+      if (softInfraFailure && errorRestore && silentRetryCountRef.current < MAX_SILENT_INFRA_RETRIES) {
+        silentRetryCountRef.current += 1;
+        console.warn(
+          `[poju] soft infra failure — silent retry ${silentRetryCountRef.current}/${MAX_SILENT_INFRA_RETRIES}`,
+        );
+        // Keep the optimistic user bubble; drop the failure placeholder until retries exhaust.
+        onSessionUpdate({
+          ...errorRestore.rollbackSession,
+          messages: [
+            ...errorRestore.rollbackSession.messages,
+            buildOptimisticUserMessage(userMessage),
+          ],
+        });
+        pendingSilentRetryRef.current = {
+          rollbackSession: errorRestore.rollbackSession,
+          userMessage,
+          errorRestore,
+        };
+        return;
+      }
+
+      if (softInfraFailure && errorRestore) {
+        infraRetryContextRef.current = { ...errorRestore, userMessage };
+      }
+
       onSessionUpdate(toPersist);
       const runDegraded = willRunDegradedDelivery(toPersist);
       if (runDegraded) {
@@ -692,8 +732,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           err.message === "openrouter_provider_queue");
 
       if (isProviderQueue && errorRestore) {
-        if (!silentRetriedRef.current) {
-          silentRetriedRef.current = true;
+        if (silentRetryCountRef.current < MAX_SILENT_INFRA_RETRIES) {
+          silentRetryCountRef.current += 1;
+          console.warn(
+            `[poju] provider queue — silent retry ${silentRetryCountRef.current}/${MAX_SILENT_INFRA_RETRIES}`,
+          );
           pendingSilentRetryRef.current = {
             rollbackSession: errorRestore.rollbackSession,
             userMessage,
@@ -747,7 +790,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const onInfraBusyRetry = useCallback(() => {
     const ctx = infraRetryContextRef.current;
     if (!ctx || turnInFlightRef.current || sending) return;
-    silentRetriedRef.current = false;
+    silentRetryCountRef.current = 0;
     const withUser: POJUSessionState = {
       ...ctx.rollbackSession,
       messages: [...ctx.rollbackSession.messages, buildOptimisticUserMessage(ctx.userMessage)],
@@ -800,7 +843,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     stopVoiceInput();
     const typed = text.trim();
     if ((!typed && !composerAttachment) || sending) return;
-    silentRetriedRef.current = false;
+    silentRetryCountRef.current = 0;
     const attachNote = buildAttachmentNote(composerAttachment);
     const userMessage = typed || attachNote;
     const baseSession = sessionRef.current;

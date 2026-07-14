@@ -2,10 +2,13 @@ import {
   OPENROUTER_MAX_ATTEMPTS,
   OPENROUTER_RETRY_DELAYS_MS,
   OpenRouterProviderQueueError,
+  isEmptyResponseError,
   isRetryableOpenRouterError,
   isTransientNoEndpoints404,
   parseOpenRouterErrorStatus,
 } from "@/lib/llm/openrouter-retry";
+
+export { isEmptyResponseError, MAX_EMPTY_CONTENT_RESEND } from "@/lib/llm/openrouter-retry";
 
 /** Built-in fallbacks when OPENROUTER_MODEL env is unset. Keep at least one live slug on OpenRouter. */
 export const OPENROUTER_MODEL_CANDIDATES_BUILTIN = [
@@ -129,7 +132,8 @@ function sleep(ms: number): Promise<void> {
 
 /**
  * Try candidates in order; retry retryable errors up to maxAttempts per slug;
- * on model-not-found 404, degrade to next slug.
+ * on true model-not-found 404, degrade to next slug immediately;
+ * on transient No-endpoints 404, retry same slug (Streamlake) then next candidate.
  */
 export async function callWithOpenRouterModelFallback<T>(
   makeCall: (model: string) => Promise<T>,
@@ -143,6 +147,7 @@ export async function callWithOpenRouterModelFallback<T>(
 
   let lastErr: unknown;
   const tried: string[] = [];
+  let sawRetryableExhaustion = false;
 
   for (let i = 0; i < candidates.length; i++) {
     const model = candidates[i]!;
@@ -160,6 +165,15 @@ export async function callWithOpenRouterModelFallback<T>(
       } catch (e) {
         lastErr = e;
 
+        // Empty content / empty body: Fix1 already same-param resent inside the call.
+        // Never markSlugDead / never switch candidates / never report "全部 slug 失效".
+        if (isEmptyResponseError(e)) {
+          console.warn(
+            `[openrouter] empty response after same-param resends (model=${model}) — not a slug failure`,
+          );
+          throw e;
+        }
+
         if (isOpenRouterModelNotFoundError(e)) {
           tried.push(model);
           markOpenRouterSlugDead(model);
@@ -170,31 +184,43 @@ export async function callWithOpenRouterModelFallback<T>(
           break;
         }
 
-        if (isTransientNoEndpoints404(e)) {
-          tried.push(model);
-          markOpenRouterSlugDead(model);
-          const next = candidates[i + 1];
-          console.warn(
-            `[openrouter] 404 no-endpoints — 标记 slug 失效并切换候选: ${model}${next ? ` → ${next}` : " (无更多候选)"}`,
-          );
-          break;
-        }
-
+        // Transient No-endpoints: retry same slug with backoff (not a dead slug yet).
         const canRetry = attempt < maxAttempts - 1 && isRetryableOpenRouterError(e);
-        if (!canRetry) {
-          if (isRetryableOpenRouterError(e) && attempt >= maxAttempts - 1) {
-            throw new OpenRouterProviderQueueError();
-          }
-          throw e;
+        if (canRetry) {
+          const wait_ms = OPENROUTER_RETRY_DELAYS_MS[attempt] ?? 6000;
+          const kind = isTransientNoEndpoints404(e) ? "no-endpoints" : "retryable";
+          console.warn(
+            `[openrouter] retry model=${model} kind=${kind} attempt=${attempt + 1}/${maxAttempts - 1} wait_ms=${wait_ms}`,
+          );
+          await sleep(wait_ms);
+          continue;
         }
 
-        const wait_ms = OPENROUTER_RETRY_DELAYS_MS[attempt] ?? 6000;
-        console.warn(
-          `[openrouter] retry model=${model} attempt=${attempt + 1}/${maxAttempts - 1} wait_ms=${wait_ms}`,
-        );
-        await sleep(wait_ms);
+        if (isRetryableOpenRouterError(e)) {
+          sawRetryableExhaustion = true;
+          tried.push(model);
+          // Prefer next candidate (if any) after this slug's backoff budget is spent.
+          if (isTransientNoEndpoints404(e)) {
+            markOpenRouterSlugDead(model);
+            const next = candidates[i + 1];
+            console.warn(
+              `[openrouter] 404 no-endpoints — 同 slug 重试耗尽，切换候选: ${model}${next ? ` → ${next}` : " (无更多候选)"}`,
+            );
+            break;
+          }
+          throw new OpenRouterProviderQueueError();
+        }
+
+        throw e;
       }
     }
+  }
+
+  if (sawRetryableExhaustion || isRetryableOpenRouterError(lastErr)) {
+    console.warn(
+      `[openrouter] 全部候选在重试后仍忙（已试: ${tried.join(" → ") || candidates.join(" → ")}）— 视为 provider queue。`,
+    );
+    throw new OpenRouterProviderQueueError();
   }
 
   console.error(

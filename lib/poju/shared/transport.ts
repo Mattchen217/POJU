@@ -74,6 +74,12 @@ export function salvageContentFromReasoning(result: PhaseTransportResult): Phase
 /** Opening segment-1: empty body or parse failed without salvaged understanding fields → resend. */
 export const MAX_OPENING_TRANSPORT_RESEND = 4;
 
+/**
+ * Non-opening empty-content resends at transport layer (same params — never provider ignore).
+ * OpenRouter call layer also same-param resends (MAX_EMPTY_CONTENT_RESEND); this is a safety net.
+ */
+export const MAX_EMPTY_TRANSPORT_RESEND = 3;
+
 export function isOpeningTransportResendNeeded(rawContent: string): boolean {
   if (!rawContent.trim()) return true;
   const { parsed, response } = parsePhaseResult(rawContent, {});
@@ -236,11 +242,19 @@ export async function callPhaseJsonTransport(
           bad_json: badJson && !emptyRaw,
           provider: failedProvider ?? "—",
           locked: pinned ?? null,
+          same_params: emptyRaw,
         }),
       );
       try {
+        // Empty content: same params (never provider ignore — quality must not drop).
+        // Bad JSON only: may ignore failed provider once (not an empty-reply case).
         const retried = await runOnce({
-          extra_ignore: pinned ? undefined : failedProvider ? [failedProvider] : undefined,
+          extra_ignore:
+            emptyRaw || pinned
+              ? undefined
+              : failedProvider
+                ? [failedProvider]
+                : undefined,
         });
         result = retried;
         if (result.llm_debug) {
@@ -258,52 +272,51 @@ export async function callPhaseJsonTransport(
     return { ...result, opening_resends: openingResends };
   }
 
-  if (isEmptyPhaseCompletion(result)) {
-    const failedProvider = result.provider?.trim();
-    const pinned = options?.locked_provider?.trim();
-    console.warn(
-      "[phase-transport] empty completion (raw_length=0) — controlled retry once",
+  // Empty content: same-param invisible resends (never provider ignore / never degrade effort).
+  for (let i = 1; i < MAX_EMPTY_TRANSPORT_RESEND && isEmptyPhaseCompletion(result); i++) {
+    console.info(
+      `[phase-transport] empty completion — invisible same-param resend ${i}/${MAX_EMPTY_TRANSPORT_RESEND - 1}`,
       JSON.stringify({
         phase: options?.phase_name ?? "—",
         call_type,
-        provider: failedProvider ?? "—",
+        provider: result.provider ?? "—",
         finish_reason: result.finish_reason ?? "—",
-        locked: pinned ?? null,
-        retry_same_provider: Boolean(pinned),
       }),
     );
     try {
-      const retried = await runOnce({
-        extra_ignore: pinned ? undefined : failedProvider ? [failedProvider] : undefined,
-      });
+      const retried = await runOnce();
       result = retried;
       if (result.llm_debug) {
-        result = { ...result, llm_debug: { ...result.llm_debug, retried: true } };
+        result = {
+          ...result,
+          llm_debug: { ...result.llm_debug, retried: true, attempt: i + 1 },
+        };
       }
     } catch (err) {
       console.warn(
-        "[phase-transport] empty-content retry threw — not upgrading to provider_queue",
+        "[phase-transport] empty-content same-param resend threw — not upgrading to provider_queue / slug fail",
         err,
       );
+      break;
     }
     result = salvageContentFromReasoning(result);
+  }
 
-    if (isEmptyPhaseCompletion(result)) {
-      if (result.finish_reason === "length") {
-        console.warn(
-          "[phase-transport] empty content with finish_reason=length — reasoning likely consumed max_tokens",
-          JSON.stringify({ phase: options?.phase_name ?? "—", max_tokens }),
-        );
-      }
+  if (isEmptyPhaseCompletion(result)) {
+    if (result.finish_reason === "length") {
       console.warn(
-        "[phase-transport] empty completion after retry — will use empty-generation fallback",
-        JSON.stringify({
-          phase: options?.phase_name ?? "—",
-          provider: result.provider ?? "—",
-          finish_reason: result.finish_reason ?? "—",
-        }),
+        "[phase-transport] empty content with finish_reason=length — reasoning likely consumed max_tokens",
+        JSON.stringify({ phase: options?.phase_name ?? "—", max_tokens }),
       );
     }
+    console.warn(
+      "[phase-transport] empty completion after same-param resends — empty-generation fallback",
+      JSON.stringify({
+        phase: options?.phase_name ?? "—",
+        provider: result.provider ?? "—",
+        finish_reason: result.finish_reason ?? "—",
+      }),
+    );
   }
 
   return result;

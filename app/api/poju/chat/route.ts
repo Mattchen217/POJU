@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPojuServiceBusyMessage } from "@/lib/llm/poju-service-busy-message";
 import { callPOJULLM } from "@/lib/llm/poju-llm";
+import { OpenRouterProviderQueueError } from "@/lib/llm/openrouter-retry";
 import { createPojuChatStreamResponse } from "@/lib/poju/poju-chat-stream";
 import { pojuLlmToChatPayload } from "@/lib/poju/serialize-chat-payload";
 import { attachDevStateLedger } from "@/lib/poju/dev-state-ledger";
@@ -54,6 +55,16 @@ export async function POST(req: Request) {
     return NextResponse.json(attachDevStateLedger(payload, body.session));
   } catch (error: unknown) {
     console.error("[poju/chat] unhandled error:", error);
+    if (
+      error instanceof OpenRouterProviderQueueError ||
+      (error instanceof Error && error.message === "openrouter_provider_queue")
+    ) {
+      // Let the client silent-retry (×3) before showing the user-facing retry button.
+      return NextResponse.json(
+        { error: "openrouter_provider_queue" },
+        { status: 503 },
+      );
+    }
     const locale = String(body.locale ?? "en");
     return NextResponse.json({
       response: getPojuServiceBusyMessage(locale),

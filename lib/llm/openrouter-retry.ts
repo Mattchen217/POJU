@@ -3,6 +3,24 @@ export const OPENROUTER_RETRY_DELAYS_MS = [1000, 3000, 6000, 5000] as const;
 
 export const OPENROUTER_MAX_ATTEMPTS = OPENROUTER_RETRY_DELAYS_MS.length + 1;
 
+/**
+ * Same-slug / same-params invisible resends when the model returns billed empty content
+ * (reasoning only) or an empty HTTP body. Never mark slug dead / never switch candidates.
+ */
+export const MAX_EMPTY_CONTENT_RESEND = 3;
+
+export const OPENROUTER_EMPTY_RESPONSE = "openrouter_empty_response";
+export const OPENROUTER_EMPTY_AFTER_RESEND = "openrouter_empty_after_resend";
+
+/** True for empty-body / empty-content (slug is fine — do not degrade candidates). */
+export function isEmptyResponseError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return (
+    error.message === OPENROUTER_EMPTY_RESPONSE ||
+    error.message === OPENROUTER_EMPTY_AFTER_RESEND
+  );
+}
+
 export function isRetryableOpenRouterHttpStatus(status: number): boolean {
   return status === 429 || status === 503 || status >= 500;
 }
