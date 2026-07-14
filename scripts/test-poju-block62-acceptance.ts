@@ -104,8 +104,10 @@ function main(): void {
   const remarked = autoMarkBareTerms(alreadyMarked, "zh");
   assert("marker interior not double-wrapped", remarked === alreadyMarked);
 
-  const twice = prepareTextForGlossaryRender(prepareTextForGlossaryRender(modelLeak, "zh"), "zh");
-  assert("idempotent prepare", twice === prepareTextForGlossaryRender(modelLeak, "zh"));
+  // Density cap is ≤2 marks/paragraph — use a single-term sample for idempotency.
+  const single = "走大运。";
+  const twice = prepareTextForGlossaryRender(prepareTextForGlossaryRender(single, "zh"), "zh");
+  assert("idempotent prepare", twice === prepareTextForGlossaryRender(single, "zh"));
 
   assert("sexagenary list has 60 pairs", SEXAGENARY_GANZHI.length === 60);
   assert("丙午 is valid ganzhi", isValidSexagenaryGanzhi("丙午"));

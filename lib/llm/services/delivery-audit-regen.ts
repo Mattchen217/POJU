@@ -85,7 +85,8 @@ export function isCriticalDeliveryAuditFailure(
       v.label === "bare_sign_poem" ||
       v.label === "broken_marker" ||
       v.label === "marker_missing_plain" ||
-      v.label.startsWith("marker_visible_"),
+      v.label.startsWith("marker_visible_") ||
+      v.label.startsWith("payment_leak:"),
   );
 }
 
@@ -95,6 +96,6 @@ export function buildAuditRegenHint(
 ): string {
   const labels = [...new Set(violations.map((v) => v.label))].slice(0, 10).join(", ");
   return locale.startsWith("zh")
-    ? `\n\n【合规复审未通过 — 须重写全部字符串字段】问题类型：${labels}。仅两条硬红线：① 不报具体日期/时间点（只给阶段趋势）② 不占卜/不宿命。命理词须 ⟦t:id|软译|白话⟧ 打标（漏打 UI 会补）；禁裸签诗原文、禁 broken marker。返回完整 JSON/text。`
-    : `\n\n[COMPLIANCE RE-AUDIT FAILED — rewrite ALL string fields] Issue types: ${labels}. Hard redlines only: (1) no point-in-time date predictions — phase trends only; (2) no divination/fatalism. Use ⟦t:id|soft|plain⟧ markers (UI auto-marks bare terms). NO verbatim sign-poem lines; NO broken markers. Return complete JSON/text.`;
+    ? `\n\n【合规复审未通过 — 须重写全部字符串字段】问题类型：${labels}。仅两条硬红线：① 不报具体日期/时间点（只给阶段趋势）② 不占卜/不宿命。另：用户可见字段禁裸大运/流年/日柱/煞名/五行相克短语——只写软译白话；⟦t:id|软译|白话⟧ 软译格绝不填煞/刃原名。禁裸签诗、禁 broken marker。返回完整 JSON/text。`
+    : `\n\n[COMPLIANCE RE-AUDIT FAILED — rewrite ALL string fields] Issue types: ${labels}. Hard redlines only: (1) no point-in-time date predictions — phase trends only; (2) no divination/fatalism. Also: no bare Da Yun / Day Pillar / shensha originals / element-clash phrases in user-visible fields — soft vernacular only; marker soft slot never original 煞 names. NO verbatim sign-poem lines; NO broken markers. Return complete JSON/text.`;
 }

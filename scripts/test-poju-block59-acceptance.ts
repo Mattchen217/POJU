@@ -32,7 +32,12 @@ function main(): void {
 
   console.log("=== Fix 1 · surgical sanitize ===\n");
   assert("no applySortedTermReplacements in body sanitize", !compliance.includes("applySortedTermReplacements(result, locale)"));
-  assert("no stripBrokenMarkers in body sanitize", !compliance.match(/sanitizeDeliveryBodyPart[\s\S]*stripBrokenMarkers/));
+  {
+    const start = compliance.indexOf("function sanitizeDeliveryBodyPart");
+    const end = compliance.indexOf("export function sanitizePaymentAuditLeaks");
+    const bodySlice = start >= 0 && end > start ? compliance.slice(start, end) : "";
+    assert("no stripBrokenMarkers in body sanitize", !bodySlice.includes("stripBrokenMarkers"));
+  }
   assert("uses transformNonMarkerRegions", compliance.includes("transformNonMarkerRegions"));
   assert("uses replaceStandaloneRedlines", compliance.includes("replaceStandaloneRedlines"));
 

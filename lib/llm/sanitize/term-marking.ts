@@ -35,7 +35,10 @@ import { buildClosedSetConstraintPromptBlock } from "@/lib/llm/prompts/term-clos
 import { STEMS } from "@/lib/match/data/stems-branches";
 import {
   allShenshaHanSurfaces,
+  normalizeShenshaLocale,
+  resolveShensha,
   resolveShenshaSoftLabels,
+  toShenshaId,
 } from "@/lib/poju/shensha";
 
 export type TermEntry = {
@@ -100,6 +103,58 @@ function normalizeTermMarkerId(raw: string): string {
   return TERM_BY_ID.has(leaf) ? leaf : raw;
 }
 
+/**
+ * Fix C — 神煞 marker 软译格只填白话，绝不填 煞/刃 原名。
+ * 原名可留在 id（如 shensha_孤鸾 / shensha.孤鸾煞），用户只见 soft label。
+ */
+export function repairShenshaMarkerSoftLabels(text: string, locale: string): string {
+  if (!text?.trim() || !text.includes("⟦t:")) return text ?? "";
+  TERM_MARKER_PATTERN.lastIndex = 0;
+  return text.replace(
+    TERM_MARKER_PATTERN,
+    (raw, rawId: string, visEsc: string, plainEsc?: string) => {
+      const vis = unescapeMarkerPart(visEsc);
+      const plain = plainEsc?.trim() ? unescapeMarkerPart(plainEsc) : undefined;
+
+      let labels = resolveShenshaSoftLabels(vis, locale);
+      if (!labels) {
+        const leaf = String(rawId).includes(":")
+          ? String(rawId).split(":").pop()!
+          : String(rawId).replace(/^shensha_/, "");
+        labels = resolveShenshaSoftLabels(leaf, locale);
+        if (!labels && toShenshaId(leaf)) {
+          const view = resolveShensha(leaf, normalizeShenshaLocale(locale));
+          if (view.id !== "unknown" && view.label?.trim()) {
+            labels = {
+              slug: `shensha_${view.id}`,
+              soft: view.label.trim(),
+              plain: view.gloss?.trim() || view.label.trim(),
+            };
+          }
+        }
+      }
+      if (!labels && String(rawId).startsWith("shensha_")) {
+        const view = resolveShensha(String(rawId).slice("shensha_".length), normalizeShenshaLocale(locale));
+        if (view.id !== "unknown" && view.label?.trim()) {
+          labels = {
+            slug: `shensha_${view.id}`,
+            soft: view.label.trim(),
+            plain: view.gloss?.trim() || view.label.trim(),
+          };
+        }
+      }
+      if (!labels) return raw;
+
+      // Soft slot must never carry 煞/刃 原名 or zh_src / alias.
+      if (vis === labels.soft && !/[煞刃]/.test(vis)) {
+        if (rawId === labels.slug) return raw;
+        return encodeTermMarker(labels.slug, labels.soft, plain ?? labels.plain);
+      }
+      return encodeTermMarker(labels.slug, labels.soft, plain ?? labels.plain);
+    },
+  );
+}
+
 export function repairChatTermMarkers(text: string, locale: string): string {
   if (!text?.trim()) return text ?? "";
   let out = text.replace(
@@ -125,7 +180,7 @@ export function repairChatTermMarkers(text: string, locale: string): string {
       return encodeTermMarker(id, vis, plain);
     },
   );
-  return out;
+  return repairShenshaMarkerSoftLabels(out, locale);
 }
 
 function escapeMarkerPart(s: string): string {

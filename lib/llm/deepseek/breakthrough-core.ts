@@ -25,6 +25,12 @@ import { buildChatFactGuardBlock } from "@/lib/llm/prompts/shen-sha-guard";
 import { resolveAgendaRelationContext } from "@/lib/llm/prompts/relation-closed-set-context";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import type { RelationLabel } from "@/lib/calculations/relation-engine";
+import {
+  auditPaymentLeakResiduals,
+  sanitizePaymentAuditLeaks,
+  type ComplianceViolation,
+} from "@/lib/llm/sanitize/compliance-terms";
+import { isCriticalDeliveryAuditFailure } from "@/lib/llm/services/delivery-audit-regen";
 
 export const DEEP_RECKONING_TASK = `# 角色：破局总设计师（上帝视角 · 零聊天腔）
 
@@ -80,8 +86,18 @@ export const DEEP_RECKONING_TASK = `# 角色：破局总设计师（上帝视角
 输入中会提供 core_dilemma（concrete_event / stakes / sticking_point）与 desired_direction（wants / priority）。
 relationship_conclusion 与每条 breakthrough_direction 必须显式对准【他的那件事 + 他想要的方向】，
 不许只复述日主/食神/流年三个泛化标签。
-structural_basis 必须从实例清单【点名至少 3 项具体本地数据】（神煞实例 / 大运当前步 / 流年引动 / 十神张力 / 本命关系等），
-逐项说明它们如何作用于 core_dilemma 与 desired_direction。
+structural_basis 必须从实例清单【锚定至少 3 项具体本地结构】（神煞倾向 / 当前人生阶段步伐 / 当前时空效能引动 / 十神张力 / 本命关系等），
+用软译白话讲清它们如何作用于 core_dilemma 与 desired_direction。
+【锚定 = 讲清那个结构的意思】，不是把 大运/流年/神煞原名/生克短语 原样写进用户可见字段。
+
+# 合规硬要求（用户可见字段 · 过支付审计）
+给用户看的字段里（relationship_conclusion / direction.* / timing / what_would_confirm / first_question），
+【禁止】出现以下裸词，必须用软译后的白话概念表达：
+- 四柱结构词：大运/流年/日柱/月柱/时柱/年柱/命盘/八字/命局/四柱 → 用"当前的人生阶段/这段时期/你的能量结构"等；
+- 带"煞/刃"的神煞名（孤鸾煞/寡宿/羊刃等）→ 【只说它的软译白话】（如"情感上容易孤立的倾向"/"执行锋芒"），【绝不出现"煞/刃"字样的原名】；
+- 自创的五行生克短语：火金相克/火旺木焚/火金相战/相生相克/水火交战 等 → 【禁止】，改用大白话描述那股张力
+  （如"你内在这股劲和外部的压力正较着劲，两边都在耗你"）。
+reasoning 里可自由用命理词推演；输出给用户的字段必须软译。
 
 # 输出表达硬要求（从源头保证通顺 · 白话重组，禁止抠词替换）
 你在 reasoning 里用命理词深算（食神/正印/大运/火燥金克…）——这是你的推理骨架。
@@ -89,15 +105,17 @@ structural_basis 必须从实例清单【点名至少 3 项具体本地数据】
 你必须：想通命理逻辑后，【用纯大白话【重新组织】这句话】，让意思由自然的人话承载，
 软译词只作【轻锚】自然融入，或根本不出现。
 
-反例（抠词替换·生硬）：
+反例（抠词替换·生硬 / 合规漏词）：
   ✗ "你的表达力被火烧，唤醒表达从容的柔性"
   ✗ "命局火燥金克，正印被合走"
+  ✗ "大运火金相克，叠孤鸾煞"
 正例（白话重组·通顺）：
   ✓ "你那些拿手的方案和想法，本来是你最趁手的武器，现在因为心里太焦躁，反而使不出来了（这在你的结构里叫'表达力'过旺失衡）"
   ✓ "你原本靠十几年经验攒下的底气，在这个新环境里反而被当成'倚老卖老'，让你有口难辩"
+  ✓ "你这段时期里，内在那股冲劲和外部约束正较着劲；情感上又容易先把自己孤立开"
 
 自检：读一遍你写的正文——像不像一个人在好好说话？
-若有"XX被YY克/合/烧"这种命理句式残留，重写成大白话。
+若有"XX被YY克/合/烧"这种命理句式残留，或裸露 大运/流年/日柱/煞名/相克短语，重写成大白话。
 核心：先有通顺的白话正文，软译词是点缀不是主语。通顺在源头保证，不是靠白话解释补救。
 
 # 排版硬要求（金字软译 + [···]；白话按通顺决定）
@@ -558,6 +576,91 @@ export function mapBreakthroughCorePayload(parsed: unknown): {
       generated_at: now,
     },
     investigation_agenda,
+  };
+}
+
+function scrubUserField(s: string, locale: string): string {
+  return sanitizePaymentAuditLeaks(s, locale);
+}
+
+/**
+ * Fix B — mutate user-visible breakthrough fields, then hard-block if payment leaks remain.
+ */
+export function sanitizeBreakthroughCoreMapped(
+  mapped: {
+    breakthrough_core: BreakthroughCore;
+    investigation_agenda: AgendaItem[];
+  },
+  locale: string,
+): {
+  breakthrough_core: BreakthroughCore;
+  investigation_agenda: AgendaItem[];
+  violations: ComplianceViolation[];
+} {
+  const core = mapped.breakthrough_core;
+  const breakthrough_core: BreakthroughCore = {
+    ...core,
+    relationship_conclusion: scrubUserField(core.relationship_conclusion, locale),
+    breakthrough_directions: core.breakthrough_directions.map((d) => ({
+      ...d,
+      direction: scrubUserField(d.direction, locale),
+      structural_basis: scrubUserField(d.structural_basis, locale),
+      timing: scrubUserField(d.timing, locale),
+      what_would_confirm: scrubUserField(d.what_would_confirm, locale),
+    })),
+    ...(core.first_question
+      ? { first_question: scrubUserField(core.first_question, locale) }
+      : {}),
+  };
+  const investigation_agenda = mapped.investigation_agenda.map((a) => ({
+    ...a,
+    label: scrubUserField(a.label, locale),
+  }));
+
+  const auditBlob = [
+    breakthrough_core.relationship_conclusion,
+    ...breakthrough_core.breakthrough_directions.flatMap((d) => [
+      d.direction,
+      d.structural_basis,
+      d.timing,
+      d.what_would_confirm,
+    ]),
+    ...(breakthrough_core.first_question ? [breakthrough_core.first_question] : []),
+  ].join("\n");
+
+  const violations = auditPaymentLeakResiduals(auditBlob, locale);
+  return { breakthrough_core, investigation_agenda, violations };
+}
+
+export class BreakthroughCoreComplianceError extends Error {
+  readonly violations: ComplianceViolation[];
+  constructor(violations: ComplianceViolation[]) {
+    const labels = [...new Set(violations.map((v) => v.label))].slice(0, 8).join(",");
+    super(`compliance_block: ${labels}`);
+    this.name = "BreakthroughCoreComplianceError";
+    this.violations = violations;
+  }
+}
+
+/** Parse + map + payment-audit sanitize; throws BreakthroughCoreComplianceError on residual leaks. */
+export function parseSanitizeBreakthroughCore(
+  raw: string,
+  locale: string,
+): {
+  breakthrough_core: BreakthroughCore;
+  investigation_agenda: AgendaItem[];
+} {
+  const mapped = parseAndMapBreakthroughCore(raw);
+  const sanitized = sanitizeBreakthroughCoreMapped(mapped, locale);
+  if (
+    sanitized.violations.length > 0 &&
+    isCriticalDeliveryAuditFailure(sanitized.violations)
+  ) {
+    throw new BreakthroughCoreComplianceError(sanitized.violations);
+  }
+  return {
+    breakthrough_core: sanitized.breakthrough_core,
+    investigation_agenda: sanitized.investigation_agenda,
   };
 }
 

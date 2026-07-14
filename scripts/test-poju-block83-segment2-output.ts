@@ -37,7 +37,12 @@ function main(): void {
 
   assert("formatBreakthroughDirectionsForUser exported", display.includes("formatBreakthroughDirectionsForUser") || collecting.includes("formatBreakthroughDirectionsForUser"));
   assert("transition includes directions block", display.includes("formatBreakthroughDirectionsForUser(core"));
-  assert("core runner validates mapBreakthroughCorePayload", runner.includes("mapBreakthroughCorePayload") || runner.includes("parseAndMapBreakthroughCore"));
+  assert(
+    "core runner validates breakthrough map/sanitize",
+    runner.includes("mapBreakthroughCorePayload") ||
+      runner.includes("parseAndMapBreakthroughCore") ||
+      runner.includes("parseSanitizeBreakthroughCore"),
+  );
   assert("core route async job", route.includes("createXhighJob"));
 
   assert("bare ganzhi gloss user-facing", !BARE_GANZHI_MARKER.gloss.zh.includes("底层数据"));

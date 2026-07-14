@@ -35,7 +35,10 @@ function main(): void {
   assert("parseAndMapBreakthroughCore exported", core.includes("export function parseAndMapBreakthroughCore"));
   assert("BreakthroughCoreParseError", core.includes("BreakthroughCoreParseError"));
   assert("strict JSON prompt", core.includes("不得用中文引号"));
-  assert("runner uses parseAndMapBreakthroughCore", runner.includes("parseAndMapBreakthroughCore"));
+  assert(
+    "runner uses parseSanitizeBreakthroughCore",
+    runner.includes("parseSanitizeBreakthroughCore") || runner.includes("parseAndMapBreakthroughCore"),
+  );
   assert("create returns async job_id", route.includes("job_id: job.job_id"));
   assert("runner retryable parse failure", runner.includes('failure_reason: "parse_failed"'));
 

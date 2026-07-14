@@ -1,6 +1,6 @@
 /**
  * Shared blacklist → whitelist term maps for LLM output compliance.
- * Prompt translation suggestions + audit detection (audit-only, no mutation).
+ * Delivery sanitize mutates payment-audit leaks; chat sanitize may stay audit-only.
  * Single glossary source: lib/glossary/term-glossary.ts
  * @see lib/llm/compliance/output-policy.ts — prompt defense blocks
  * @see lib/llm/compliance/audit-output.ts — detection rules
@@ -40,6 +40,7 @@ import {
   plainByTermId,
   prepareTextForGlossaryRender,
   repairChatTermMarkers,
+  repairShenshaMarkerSoftLabels,
   stripBareTermMarkers,
   stripBrokenMarkers,
   stripForbiddenShenSha,
@@ -58,6 +59,7 @@ import {
   BARE_GANZHI_MARKER,
   isValidSexagenaryGanzhi,
 } from "@/lib/glossary/term-closed-set";
+import { allShenshaHanSurfaces, resolveShenshaSoftLabels } from "@/lib/poju/shensha";
 
 export {
   auditBareGanzhi,
@@ -75,6 +77,7 @@ export {
   plainByTermId,
   prepareTextForGlossaryRender,
   repairChatTermMarkers,
+  repairShenshaMarkerSoftLabels,
   stripBrokenMarkers,
   stripForbiddenShenSha,
   stripOutOfSetFactTerms,
@@ -445,8 +448,9 @@ export function sanitizeDeepStringFields(value: unknown, locale: string): unknow
 const DELIVERY_MARKER_RE =
   /(═══\s*(?:ANALYSIS|CONCLUSION|WHAT\s+(?:TO\s+DO|YOU\s+CAN\s+DO)|COMING\s+BACK)\s*═══)/gi;
 
+/** Intact markers — id may include unicode (e.g. shensha.孤鸾煞) before Fix C normalize. */
 const INTACT_MARKER_CHUNK_RE =
-  /⟦t:[a-zA-Z0-9_:]+\|(?:\\.|[^|\\])*?(?:\|(?:\\.|[^|\\])*?)?⟧|⟦g\|(?:\\.|[^|\\])*?\|(?:\\.|[^|]|\\[^⟧])*?⟧/g;
+  /⟦t:[^|⟦⟧]+\|(?:\\.|[^|\\])*?(?:\|(?:\\.|[^|\\])*?)?⟧|⟦g\|(?:\\.|[^|\\])*?\|(?:\\.|[^|]|\\[^⟧])*?⟧/g;
 
 const EN_PAYMENT_REDLINE_PATTERNS: ReadonlyArray<[RegExp, string]> = [
   [/\bhoroscope\b/gi, "energy rhythm"],
@@ -475,6 +479,67 @@ const ZH_STRIPE_GLOBAL_REPLACE: ReadonlyArray<[string, string]> = [
   ["吉凶", ""],
 ];
 
+/** Bare pillar / chart structure words → SaaS soft gloss (payment audit). */
+const ZH_STRUCTURE_SOFT_REPLACE: ReadonlyArray<[string, string]> = [
+  ["大运", "当前阶段气候"],
+  ["流年", "当前时空效能"],
+  ["日柱", "你的能量结构"],
+  ["月柱", "你的能量结构"],
+  ["时柱", "你的能量结构"],
+  ["年柱", "你的能量结构"],
+  ["命盘", "你的能量结构"],
+  ["命局", "你的能量结构"],
+  ["八字", "你的能量结构"],
+  ["四柱", "你的能量结构"],
+];
+
+const EN_STRUCTURE_SOFT_REPLACE: ReadonlyArray<[RegExp, string]> = [
+  [/\bDa\s*Yun\b/gi, "current life phase"],
+  [/\bMajor\s*Luck\b/gi, "current life phase"],
+  [/\bLuck\s*(?:Cycle|Pillar)\b/gi, "current life phase"],
+  [/\bLiu\s*Nian\b/gi, "current temporal window"],
+  [/\b(?:Day|Month|Year|Hour)\s+Pillar\b/gi, "your energy structure"],
+  [/\bFour\s*Pillars\b/gi, "your energy structure"],
+  [/\bBa\s*Zi\b/gi, "your energy structure"],
+  [/\bBazi\b/gi, "your energy structure"],
+  [/\bnatal\s+chart\b/gi, "your energy structure"],
+];
+
+/** Model-invented wuxing clash phrases — replace with vernacular tension. */
+const ZH_WUXING_CLASH_RES: ReadonlyArray<RegExp> = [
+  /相生相克/g,
+  /[金木水火土]\s*[金木水火土]?\s*相[克战生冲合刑害]/g,
+  /[金木水火土][金木水火土]交战/g,
+  /[金木水火土]旺[金木水火土][焚烁泄克战]/g,
+  /[金木水火土][燥湿冷热焚泻][金木水火土][克泄生战冲]/g,
+];
+
+/** Payment-audit tokens may abut other Han (大运火金相克 / 叠孤鸾煞) — no Char-boundary. */
+function replaceZhTokenGlobal(text: string, word: string, replacement: string): string {
+  if (!word || !text.includes(word)) return text;
+  return text.split(word).join(replacement);
+}
+
+function replaceWuxingClashPhrases(text: string): string {
+  let result = text;
+  for (const re of ZH_WUXING_CLASH_RES) {
+    re.lastIndex = 0;
+    result = result.replace(re, "两股力量相互较劲");
+  }
+  return result;
+}
+
+function replaceBareShenshaWithSoft(text: string, locale: string): string {
+  let result = text;
+  for (const han of allShenshaHanSurfaces()) {
+    if (!result.includes(han)) continue;
+    const labels = resolveShenshaSoftLabels(han, locale);
+    if (!labels?.soft || labels.soft === han) continue;
+    result = replaceZhTokenGlobal(result, han, labels.soft);
+  }
+  return result;
+}
+
 function replaceStandaloneRedlines(text: string, locale: string): string {
   let result = text;
   if (locale.startsWith("zh")) {
@@ -485,10 +550,17 @@ function replaceStandaloneRedlines(text: string, locale: string): string {
       }
       result = result.split(word).join(replacement);
     }
-    result = replaceStandaloneZhWord(result, "大运", "当前阶段气候");
-    result = replaceStandaloneZhWord(result, "流年", "当前时空效能");
+    for (const [word, replacement] of ZH_STRUCTURE_SOFT_REPLACE) {
+      result = replaceZhTokenGlobal(result, word, replacement);
+    }
+    result = replaceWuxingClashPhrases(result);
+    result = replaceBareShenshaWithSoft(result, locale);
   } else {
     for (const [regex, replacement] of EN_PAYMENT_REDLINE_PATTERNS) {
+      regex.lastIndex = 0;
+      result = result.replace(regex, replacement);
+    }
+    for (const [regex, replacement] of EN_STRUCTURE_SOFT_REPLACE) {
       regex.lastIndex = 0;
       result = result.replace(regex, replacement);
     }
@@ -569,10 +641,22 @@ function sanitizeDeliveryBodyPart(text: string, locale: string): string {
   return transformNonMarkerRegions(text, (segment) => sanitizeNonMarkerSegment(segment, locale));
 }
 
+/**
+ * Payment-audit mutation pass: repair 神煞 marker soft slots, then replace bare
+ * 大运/流年/日柱… / 生克短语 / 煞名 in non-marker regions.
+ */
+export function sanitizePaymentAuditLeaks(text: string, locale: string): string {
+  if (!text?.trim()) return text ?? "";
+  const repaired = repairShenshaMarkerSoftLabels(text, locale);
+  return sanitizeDeliveryBodyPart(repaired, locale);
+}
+
 /** POJU final delivery — deterministic scrub (redlines, bare terms, gloss wrap). Preserves ═══ marker lines. */
 export function sanitizeDeliveryText(fullText: string, locale: string): string {
   const parts = fullText.split(DELIVERY_MARKER_RE);
-  const cleaned = parts.map((part, i) => (i % 2 === 0 ? sanitizeDeliveryBodyPart(part, locale) : part));
+  const cleaned = parts.map((part, i) =>
+    i % 2 === 0 ? sanitizePaymentAuditLeaks(part, locale) : part,
+  );
   const text = cleaned.join("");
   logBaziTermObservations(text, locale, "final-delivery-sanitize");
   return text;
@@ -607,6 +691,68 @@ export function sanitizeChatResponse(text: string, locale: string): string {
   return text;
 }
 
+/** Residual payment-audit leaks in user-visible text (after stripMarkers = what UI shows). */
+export function auditPaymentLeakResiduals(
+  text: string,
+  locale: string,
+): ComplianceViolation[] {
+  if (!text?.trim()) return [];
+  const visible = stripMarkersForPrompt(text);
+  const violations: ComplianceViolation[] = [];
+
+  if (locale.startsWith("zh")) {
+    for (const [word] of ZH_STRUCTURE_SOFT_REPLACE) {
+      const idx = visible.indexOf(word);
+      if (idx >= 0) {
+        violations.push({
+          label: `payment_leak:${word}`,
+          snippet: snippetAround(visible, idx, word.length),
+        });
+      }
+    }
+    for (const re of ZH_WUXING_CLASH_RES) {
+      re.lastIndex = 0;
+      const m = re.exec(visible);
+      if (m) {
+        violations.push({
+          label: "payment_leak:wuxing_clash",
+          snippet: snippetAround(visible, m.index, m[0].length),
+        });
+        break;
+      }
+    }
+    for (const han of allShenshaHanSurfaces()) {
+      if (!/[煞刃]/.test(han) && han !== "寡宿") continue;
+      const idx = visible.indexOf(han);
+      if (idx >= 0) {
+        violations.push({
+          label: `payment_leak:shensha:${han}`,
+          snippet: snippetAround(visible, idx, han.length),
+        });
+      }
+    }
+  } else {
+    for (const [regex, _rep] of EN_STRUCTURE_SOFT_REPLACE) {
+      regex.lastIndex = 0;
+      const m = regex.exec(visible);
+      if (m) {
+        violations.push({
+          label: `payment_leak:${m[0]}`,
+          snippet: snippetAround(visible, m.index, m[0].length),
+        });
+      }
+    }
+  }
+
+  const seen = new Set<string>();
+  return violations.filter((v) => {
+    const key = `${v.label}:${v.snippet}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 /** Read-only delivery audit: bare forbidden terms, bare sign poems, broken markers, red lines. */
 export function auditDeliveredText(
   text: string,
@@ -630,6 +776,10 @@ export function auditDeliveredText(
   }
 
   for (const hit of auditTermMarkerDensity(text)) {
+    violations.push(hit);
+  }
+
+  for (const hit of auditPaymentLeakResiduals(text, locale)) {
     violations.push(hit);
   }
 
@@ -732,7 +882,8 @@ export type ComplianceSanitizeResult = {
 };
 
 /**
- * Output-side pass-through + audit only. LLM marks terms; UI renders markers.
+ * Output-side payment-audit mutate + re-audit.
+ * Soft-replaces bare structure/生克/煞名; repairs 神煞 marker soft slots.
  */
 export function applyComplianceSanitize(text: string, locale: string): ComplianceSanitizeResult {
   if (!text?.trim()) {
@@ -740,7 +891,9 @@ export function applyComplianceSanitize(text: string, locale: string): Complianc
   }
 
   const violationsBefore = auditDeliveredText(text, locale);
-  return { text, violationsBefore, violationsAfter: violationsBefore };
+  const next = sanitizePaymentAuditLeaks(text, locale);
+  const violationsAfter = auditDeliveredText(next, locale);
+  return { text: next, violationsBefore, violationsAfter };
 }
 
 export { auditOutputPolicyText, detectOutputPolicyViolations, toGlossaryLocale };

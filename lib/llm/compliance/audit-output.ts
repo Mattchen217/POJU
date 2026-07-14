@@ -120,6 +120,16 @@ const ZH_BAZI_TERMS: Array<[RegExp, string]> = [
   [/天干|地支/g, "ganzhi"],
 ];
 
+/** User-visible payment-audit residuals — block persist/regen (not observe-only). */
+export const ZH_PAYMENT_STRUCTURE_LEAK_RE =
+  /(?<![\u4e00-\u9fff])(?:大运|流年|日柱|月柱|时柱|年柱|命盘|命局|八字|四柱)(?![\u4e00-\u9fff])/g;
+
+export const ZH_WUXING_CLASH_LEAK_RE =
+  /相生相克|[金木水火土]\s*[金木水火土]?\s*相[克战生冲合刑害]|[金木水火土][金木水火土]交战|[金木水火土]旺[金木水火土][焚烁泄克战]|[金木水火土][燥湿冷热焚泻][金木水火土][克泄生战冲]/g;
+
+export const ZH_SHENSHA_NAME_LEAK_RE =
+  /(?<![\u4e00-\u9fff])(?:孤鸾煞|羊刃|飞刃|血刃|红艳煞|寡宿|劫煞|灾煞|勾绞煞|童子煞)(?![\u4e00-\u9fff])/g;
+
 /** Stripe / payment-processor high-risk — even in negation (四产品统一拦截). */
 const ZH_COMPLIANCE_REDLINE: Array<[RegExp, string]> = [
   [/占卜|命运|宿命|星象|吉凶/g, "compliance_redline_zh"],
@@ -243,7 +253,42 @@ const ZH_WUXING = "金木水火土";
 const ZH_STEM_BRANCH_REGEX = new RegExp(`[甲乙丙丁戊己庚辛壬癸][${ZH_BRANCHES}]`, "g");
 const ZH_BRANCH_ELEMENT_REGEX = new RegExp(`[${ZH_BRANCHES}][${ZH_WUXING}]`, "g");
 
-/** Block 62 — 仅两条硬红线：① 不报具体日期 ② 不占卜/不宿命。命理词由打标+UI软译，此处不拦截。 */
+/**
+ * Residual fortune-telling fingerprints in user-visible copy.
+ * Used after sanitize mutation — still present → block persist / regenerate.
+ */
+export function detectPaymentAuditLeakViolations(
+  text: string,
+  locale = "en",
+): OutputPolicyViolation[] {
+  if (!text?.trim()) return [];
+  const violations: OutputPolicyViolation[] = [];
+  const masked = maskMarkersForAudit(text);
+
+  if (locale.startsWith("zh")) {
+    pushRegex(masked, ZH_PAYMENT_STRUCTURE_LEAK_RE, "compliance_redline", "payment_leak_structure_zh", violations);
+    pushRegex(masked, ZH_WUXING_CLASH_LEAK_RE, "compliance_redline", "payment_leak_wuxing_zh", violations);
+    pushRegex(masked, ZH_SHENSHA_NAME_LEAK_RE, "compliance_redline", "payment_leak_shensha_zh", violations);
+  } else {
+    pushRegex(
+      masked,
+      /\b(?:Da\s*Yun|Major\s*Luck|Liu\s*Nian|(?:Day|Month|Year|Hour)\s+Pillar|Four\s*Pillars|Ba\s*Zi|Bazi|natal\s+chart)\b/gi,
+      "compliance_redline",
+      "payment_leak_structure_en",
+      violations,
+    );
+  }
+
+  const seen = new Set<string>();
+  return violations.filter((v) => {
+    const key = `${v.category}:${v.label}:${v.snippet}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/** Block 62 — 仅两条硬红线：① 不报具体日期 ② 不占卜/不宿命。支付漏词见 detectPaymentAuditLeakViolations + auditPaymentLeakResiduals。 */
 export function detectOutputPolicyViolations(
   text: string,
   locale = "en",

@@ -1,7 +1,7 @@
 import { baseAnalysisCacheSessionId, pojuCacheSessionId } from "@/lib/llm/cache-session-id";
 import {
   buildBreakthroughCorePrompt,
-  parseAndMapBreakthroughCore,
+  parseSanitizeBreakthroughCore,
 } from "@/lib/llm/deepseek/breakthrough-core";
 import { buildLlmDebug } from "@/lib/llm/llm-debug";
 import {
@@ -79,8 +79,8 @@ export const SEGMENT2_XHIGH_RUNNER_CONFIG: XhighJobRunnerConfig = {
       : pojuCacheSessionId(input.session_id);
     return { system, user, sessionCacheId };
   },
-  finalizeContent(content) {
-    const mapped = parseAndMapBreakthroughCore(content);
+  finalizeContent(content, job) {
+    const mapped = parseSanitizeBreakthroughCore(content, job.locale || job.input.locale || "zh");
     return {
       result: {
         breakthrough_core: mapped.breakthrough_core,
