@@ -25,6 +25,7 @@ import {
   startSegment2AfterGateConfirm,
   startSegment2Regenerate,
   segment2RegenerateButtonLabel,
+  SHOW_SEGMENT2_TEST_REGENERATE,
 } from "@/lib/poju/phases/segment2";
 import { understandingGateConfirmButtonLabel } from "@/lib/poju/understanding-gate-reply";
 import {
@@ -1139,7 +1140,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     if (sending || turnInFlightRef.current || segment2JobId) return;
     const baseSession = sessionRef.current;
     if (baseSession.agent_v2?.current_phase !== "collecting_context") return;
-    if (baseSession.agent_v2.breakthrough_core != null) return;
 
     const userLabel = segment2RegenerateButtonLabel(locale);
     const withUser: POJUSessionState = {
@@ -1467,11 +1467,17 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           <InfraBusyRetryAction onRetry={onInfraBusyRetry} disabled={sending} />
         );
       }
+      const looksLikeSegment2Delivery =
+        m.meta?.segment2_analysis === true ||
+        (Array.isArray(m.meta?.investigation_agenda) &&
+          (m.meta?.investigation_agenda.length ?? 0) > 0 &&
+          session.agent_v2?.breakthrough_core != null);
       if (
-        m.meta?.core_generation_failed &&
         m.role === "assistant" &&
         !m.is_rejected &&
-        mid === lastAssistantKey
+        mid === lastAssistantKey &&
+        (m.meta?.core_generation_failed ||
+          (SHOW_SEGMENT2_TEST_REGENERATE && looksLikeSegment2Delivery))
       ) {
         followUps[mid] = (
           <>

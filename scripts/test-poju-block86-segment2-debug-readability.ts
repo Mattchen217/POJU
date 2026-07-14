@@ -46,7 +46,7 @@ function main(): void {
   assert("agent skips sync justConverted path", !agent.includes("justConverted && segment2LlmDebug"));
 
   assert("readability hard rule in prompt", corePrompt.includes("可读性硬要求"));
-  assert("paren layout rule in prompt", corePrompt.includes("排版硬要求") && corePrompt.includes("括号补充"));
+  assert("paren layout rule in prompt", corePrompt.includes("排版硬要求") && corePrompt.includes("轻量软译点缀"));
   assert("first-tag-only降噪 rule", corePrompt.includes("术语降噪") && corePrompt.includes("首次出现"));
   assert("situational gloss rule", corePrompt.includes("情景白话") && corePrompt.includes("贴他这件事"));
   assert("paragraph term density cap", corePrompt.includes("一段话里打标术语控制在 1-2 个"));

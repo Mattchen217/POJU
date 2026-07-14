@@ -33,13 +33,13 @@ function main(): void {
   const display = read("lib/poju/phases/segment2/display.ts");
   const marking = read("lib/llm/sanitize/term-marking.ts");
 
-  assert("prompt paren layout rule", prompt.includes("排版硬要求") && prompt.includes("括号补充"));
+  assert("prompt paren layout rule", prompt.includes("排版硬要求") && prompt.includes("轻量软译点缀"));
   assert("prompt forbids inline interrupt example", prompt.includes("错误示范（禁止）"));
-  assert("GlossaryText paren class", glossary.includes("term-mark__paren") && glossary.includes("（{parenBody}）"));
+  assert("GlossaryText paren class", glossary.includes("term-mark__paren") && glossary.includes("（{softLabel}）"));
   assert("uses paren button not info dots", glossary.includes("term-mark__paren") && !glossary.includes("term-mark__info"));
   assert("css paren style", css.includes(".term-mark__paren"));
   assert("display clear question helper", display.includes("formatFocusQuestionAsClearQuestion"));
-  assert("display lead asks clearly", display.includes("我们先从最关键的一件开始"));
+  assert("display model first_question path", display.includes("appendModelFirstQuestion"));
   assert("marking STEM_ELEMENT_COMPOUNDS", marking.includes("STEM_ELEMENT_COMPOUNDS"));
   assert("marking shensha surfaces", marking.includes("allShenshaHanSurfaces"));
 
@@ -66,15 +66,17 @@ function main(): void {
         what_would_confirm: "对方愿意按你的节奏来",
       },
     ],
+    first_question:
+      "要把边界稳住，我想先知道最近一次对方越过你底线时，你有没有当场表达清楚——那次具体是怎么发生的？",
     generated_at: new Date().toISOString(),
   };
   agent.investigation_agenda = [
     { id: "a1", label: "最近一次越界是什么", status: "unexplored", critical: true },
   ];
   const reply = buildSegment2AnalysisReply(agent, "zh");
-  assert("reply has clear ask lead", reply.includes("我们先从最关键的一件开始"));
+  assert("reply uses model first_question", reply.includes("当场表达清楚"));
   assert("reply ends with question mark", /[？?]\s*$/.test(reply.trim()));
-  assert("reply asks first focus", reply.includes("越界"));
+  assert("reply does not dump raw agenda label", !reply.includes("最近一次越界是什么？"));
 
   console.log(
     "\n" +

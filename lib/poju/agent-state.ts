@@ -104,6 +104,11 @@ export interface BreakthroughDirection {
 export interface BreakthroughCore {
   relationship_conclusion: string;
   breakthrough_directions: BreakthroughDirection[];
+  /**
+   * Model-written warm opening question for the first agenda item
+   * (user-facing; not the internal agenda label).
+   */
+  first_question?: string;
   generated_at: string;
   evolved_at?: string;
 }
@@ -115,6 +120,9 @@ export function parseBreakthroughCoreUpdatesFromLlm(raw: unknown): Partial<Break
   const out: Partial<BreakthroughCore> = {};
   if (typeof o.relationship_conclusion === "string" && o.relationship_conclusion.trim()) {
     out.relationship_conclusion = o.relationship_conclusion.trim();
+  }
+  if (typeof o.first_question === "string" && o.first_question.trim()) {
+    out.first_question = o.first_question.trim();
   }
   const dirsRaw = o.breakthrough_directions ?? o.revised_directions;
   if (Array.isArray(dirsRaw) && dirsRaw.length > 0) {
@@ -167,6 +175,7 @@ export function mergeBreakthroughCoreUpdates(
   return {
     relationship_conclusion: updates.relationship_conclusion?.trim() || base.relationship_conclusion,
     breakthrough_directions,
+    first_question: updates.first_question?.trim() || base.first_question,
     generated_at: base.generated_at,
     evolved_at: now,
   };

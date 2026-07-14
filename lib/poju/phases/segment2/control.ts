@@ -267,7 +267,12 @@ export async function startSegment2AfterGateConfirm(input: {
   return { session: sessionPending, job_id: created.job_id };
 }
 
-/** Regenerate segment-2 without redoing opening understanding. */
+function isSegment2AssistantBubble(m: POJUMessage | undefined): boolean {
+  if (!m || m.role !== "assistant") return false;
+  return Boolean(m.meta?.core_generation_failed || m.meta?.segment2_analysis);
+}
+
+/** Regenerate segment-2 without redoing opening understanding (also clears a prior successful core). */
 export async function startSegment2Regenerate(input: {
   session: POJUSessionState;
   locale: string;
@@ -277,7 +282,6 @@ export async function startSegment2Regenerate(input: {
   const baseAgent = ensureAgentV2(session);
   const phase = normalizeAgentPhase(baseAgent.current_phase);
   if (phase !== "collecting_context") return { session, job_id: null };
-  if (baseAgent.breakthrough_core != null) return { session, job_id: null };
 
   const userLabel = segment2RegenerateButtonLabel(input.locale);
   const userMessage: POJUMessage = {
@@ -290,17 +294,13 @@ export async function startSegment2Regenerate(input: {
     ? session.messages
     : [...session.messages, userMessage];
 
-  // Drop previous failed assistant bubble if present.
+  // Drop previous segment-2 assistant bubble (failed or success) so the new run replaces it.
   let msgs = messagesWithUser;
   const last = msgs[msgs.length - 1];
   const prev = msgs[msgs.length - 2];
-  if (
-    last?.role === "user" &&
-    prev?.role === "assistant" &&
-    prev.meta?.core_generation_failed
-  ) {
+  if (last?.role === "user" && isSegment2AssistantBubble(prev)) {
     msgs = [...msgs.slice(0, -2), last];
-  } else if (last?.role === "assistant" && last.meta?.core_generation_failed) {
+  } else if (isSegment2AssistantBubble(last)) {
     msgs = msgs.slice(0, -1);
   }
 
@@ -404,6 +404,7 @@ export function finalizeSegment2JobSuccess(input: {
       current_state: "collecting_context",
       user_intent: "sharing_situation",
       action_requested: "continue_chat",
+      segment2_analysis: true,
       investigation_agenda: agent_v2.investigation_agenda ?? undefined,
       llm_model: input.model,
       llm_debug: input.llm_debug,

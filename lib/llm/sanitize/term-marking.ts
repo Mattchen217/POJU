@@ -267,13 +267,21 @@ function resolveBareMarkLabels(
   return resolveShenshaSoftLabels(hanId, locale);
 }
 
-function markBareGanzhiInSegment(segment: string, locale: string): string {
+function markBareGanzhiInSegment(
+  segment: string,
+  locale: string,
+  seenSlugs?: Set<string>,
+  tryClaimMark?: () => boolean,
+): string {
   if (!segment.trim()) return segment;
+  const slug = BARE_GANZHI_MARKER.slug;
+  if (seenSlugs?.has(slug)) return segment;
+
   const loc = toGlossaryLocale(locale);
   const lang = loc === "zh" ? "zh" : "en";
   const soft = lang === "zh" ? BARE_GANZHI_MARKER.zh : BARE_GANZHI_MARKER.en;
   const plain = lang === "zh" ? BARE_GANZHI_MARKER.glossZh : BARE_GANZHI_MARKER.glossEn;
-  const marker = encodeTermMarker(BARE_GANZHI_MARKER.slug, soft, plain);
+  const marker = encodeTermMarker(slug, soft, plain);
 
   const matches: Array<{ index: number; len: number }> = [];
   BARE_GANZHI_RE.lastIndex = 0;
@@ -286,39 +294,60 @@ function markBareGanzhiInSegment(segment: string, locale: string): string {
   }
   if (!matches.length) return segment;
 
-  let out = segment;
-  for (let i = matches.length - 1; i >= 0; i--) {
-    const { index, len } = matches[i]!;
-    out = out.slice(0, index) + marker + out.slice(index + len);
-  }
-  return out;
+  // First occurrence only for ganzhi-style auto marks.
+  const first = matches[0]!;
+  if (tryClaimMark && !tryClaimMark()) return segment;
+  seenSlugs?.add(slug);
+  return segment.slice(0, first.index) + marker + segment.slice(first.index + first.len);
 }
 
 /**
  * UI 渲染兜底：词表内裸命理词 + 高危合规词 + 裸干支（未在 ⟦t:⟧ 内）自动补标 → 软译呈现。
  * 只在标记外正文段扫描；整词替换；幂等（已包过的段不重复处理）。
+ * 同一术语全文仅首次补标；每段（空行分段）最多补 2 个，降低括号密度。
  */
 export function autoMarkBareTerms(text: string, locale: string): string {
-  const parts = text.split(/(⟦[^⟧]*⟧)/g);
-  return parts
-    .map((part, i) => {
-      if (i % 2 === 1) return part;
-      let out = markBareGanzhiInSegment(part, locale);
-      for (const hanId of BARE_AUTO_MARK_HAN) {
-        const labels = resolveBareMarkLabels(hanId, locale);
-        if (!labels) continue;
-        const re =
-          hanId.length === 1
-            ? new RegExp(
-                `(?<![\\u4e00-\\u9fff])${escapeRegExp(hanId)}(?![\\u4e00-\\u9fff（(])`,
-                "g",
-              )
-            : new RegExp(`${escapeRegExp(hanId)}(?![（(])`, "g");
-        out = out.replace(re, () =>
-          encodeTermMarker(labels.slug, labels.soft, labels.plain),
-        );
-      }
-      return out;
+  const seenSlugs = new Set<string>();
+  // Seed with ids already marked by the model so auto-mark doesn't re-open them.
+  for (const m of text.matchAll(/⟦t:([a-zA-Z0-9_:]+)\|/g)) {
+    if (m[1]) seenSlugs.add(m[1]);
+  }
+
+  const paragraphs = text.split(/(\n\n+)/);
+  return paragraphs
+    .map((para) => {
+      if (/^\n\n+$/.test(para)) return para;
+      let marksInPara = 0;
+      const parts = para.split(/(⟦[^⟧]*⟧)/g);
+      return parts
+        .map((part, i) => {
+          if (i % 2 === 1) return part;
+          let out = markBareGanzhiInSegment(part, locale, seenSlugs, () => {
+            if (marksInPara >= 2) return false;
+            marksInPara += 1;
+            return true;
+          });
+          for (const hanId of BARE_AUTO_MARK_HAN) {
+            if (marksInPara >= 2) break;
+            const labels = resolveBareMarkLabels(hanId, locale);
+            if (!labels || seenSlugs.has(labels.slug)) continue;
+            const re =
+              hanId.length === 1
+                ? new RegExp(
+                    `(?<![\\u4e00-\\u9fff])${escapeRegExp(hanId)}(?![\\u4e00-\\u9fff（(])`,
+                    "g",
+                  )
+                : new RegExp(`${escapeRegExp(hanId)}(?![（(])`, "g");
+            out = out.replace(re, () => {
+              if (seenSlugs.has(labels.slug) || marksInPara >= 2) return hanId;
+              seenSlugs.add(labels.slug);
+              marksInPara += 1;
+              return encodeTermMarker(labels.slug, labels.soft, labels.plain);
+            });
+          }
+          return out;
+        })
+        .join("");
     })
     .join("");
 }

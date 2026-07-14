@@ -149,12 +149,8 @@ function TermMark({
       </span>
     ) : null;
 
-  // Paren-supplement form: （软译 · 白话）— fluent reading, not inline interrupt chips.
-  const parenBody = plain.trim()
-    ? visible.trim() && visible.trim() !== plain.trim()
-      ? `${visible.trim()} · ${plain.trim()}`
-      : plain.trim() || visible.trim()
-    : visible.trim();
+  // Light paren: only the short soft label in body. Detail (plain) lives in hover/click pop.
+  const softLabel = (visible.trim() || plain.trim()).slice(0, 12);
 
   return (
     <span ref={anchorRef} className={`term-mark term-mark--${polarity} term-mark--paren`}>
@@ -170,7 +166,7 @@ function TermMark({
         onBlur={() => setOpen(false)}
         onClick={toggle}
       >
-        （{parenBody}）
+        （{softLabel}）
       </button>
       {typeof document !== "undefined" && popNode ? createPortal(popNode, document.body) : null}
     </span>
@@ -240,15 +236,20 @@ function findNextMarker(
   };
 }
 
+/** Max paren term marks rendered per paragraph (density cap). */
+const MAX_PAREN_MARKS_PER_PARAGRAPH = 2;
+
 function parseMarkedText(
   text: string,
   locale: string,
   keyBase: number,
   dedupeScope?: Set<string>,
+  maxParenMarks = MAX_PAREN_MARKS_PER_PARAGRAPH,
 ): ReactNode[] {
   const nodes: ReactNode[] = [];
   const glossaryLocale = toGlossaryLocale(locale);
   const seenInParagraph = dedupeScope ?? new Set<string>();
+  let parenMarks = 0;
   let cursor = 0;
   let keyIdx = 0;
 
@@ -268,15 +269,18 @@ function parseMarkedText(
       const ui = uiTermById(termId, glossaryLocale);
       const plain = dynamicPlain || ui?.plain || "";
       const polarity = ui?.polarity ?? termPolarityById(termId);
-      if (seenInParagraph.has(termId)) {
-        // Soft re-mention only — no second paren interrupt.
-        nodes.push(<span key={`t-dup-${keyBase}-${keyIdx++}`}>{visible}</span>);
+      const softOnly = visible.trim() || ui?.soft || "";
+      if (seenInParagraph.has(termId) || parenMarks >= maxParenMarks) {
+        // Re-mention / density overflow — keep soft word as plain prose, no paren interrupt.
+        nodes.push(<span key={`t-dup-${keyBase}-${keyIdx++}`}>{softOnly}</span>);
+        seenInParagraph.add(termId);
       } else {
         seenInParagraph.add(termId);
+        parenMarks += 1;
         nodes.push(
           <TermMark
             key={`t-${keyBase}-${keyIdx++}`}
-            visible={visible}
+            visible={softOnly}
             plain={plain}
             polarity={polarity}
           />,
@@ -310,7 +314,24 @@ export function MarkedInline({
   // Block 62/63 — UI compliance net: autoMarkBareTerms inside prepareTextForGlossaryRender (before parse).
   const prepared = prepareTextForGlossaryRender(text, locale);
   const hasMarkers = prepared.includes("⟦t:") || prepared.includes("⟦g|");
-  const nodes = parseMarkedText(prepared, locale, keyBase, dedupeScope);
+
+  // Paragraph-scoped density: ≤2 paren marks / paragraph; first occurrence only.
+  const paragraphs = prepared.split(/(\n\n+)/);
+  const globalSeen = dedupeScope ?? new Set<string>();
+  const nodes: ReactNode[] = [];
+  let kb = keyBase;
+  for (let i = 0; i < paragraphs.length; i++) {
+    const chunk = paragraphs[i]!;
+    if (/^\n\n+$/.test(chunk)) {
+      nodes.push(<span key={`para-sep-${kb++}`}>{chunk}</span>);
+      continue;
+    }
+    const paraSeen = new Set<string>(globalSeen);
+    nodes.push(
+      ...parseMarkedText(chunk, locale, kb++, paraSeen, MAX_PAREN_MARKS_PER_PARAGRAPH),
+    );
+    for (const id of paraSeen) globalSeen.add(id);
+  }
 
   if (!hasMarkers) {
     const clean = stripBrokenMarkers(prepared);

@@ -89,44 +89,49 @@ structural_basis 必须从实例清单【点名至少 3 项具体本地数据】
 禁止一句话里堆多个打标术语；一段话里打标术语控制在 1-2 个为宜。
 宁可少用术语、把话说透，也不要术语密集、让用户读不懂。
 
-# 排版硬要求（可读性优先 · 括号补充，禁止内嵌打断）
-先把分析写成一段【通顺、像人话、能一口气读下去】的白话全文。
-命理术语【不要用术语词硬插在句子中间打断阅读】，而是：
-在正文自然讲清某概念后，在其后用三段位标记放【软译 + 白话解释】——UI 会渲染成全角括号补充。
+# 排版硬要求（可读性优先 · 轻量软译点缀，禁止内嵌打断 / 禁止三段全塞正文）
+先把分析写成【通顺、像人话、能一口气读下去】的白话全文。
+命理术语【不要用术语词硬插在句子中间打断阅读】。
+打标格式仍是 ⟦t:id|简洁软译|详细白话⟧，但：
+- 第二格 = 极短软译词（≤6 字，如"表达力""靠山""冷却力"）；
+- 第三格 = 详细白话解释（给 UI 的 hover/点击浮层，【不】塞进正文）；
+- UI 正文只会显示：通顺白话 + （简洁软译）——详细白话不进正文。
 正确示范：
   "你天生需要一个能依靠的结构⟦t:day_master|藤蔓型|像藤蔓需要攀附架子才能生长⟧，孤独硬撑只会越耗越空。"
-  （读者读到的是通顺白话；括号里的术语解释是补充，可读可跳过。）
+  （读者读到：…结构（藤蔓型），…；点括号才看详解。）
 错误示范（禁止）：
   "你的⟦t:day_master|乙木|藤蔓型⟧需要依靠"——术语内嵌打断主线。
-原则：先读懂白话，再看括号解释；标记只包「软译词」，前后的叙述句落在标记外。
+  "⟦t:shi_shen|食神 · 就是你提的那些方案…|一长串⟧"——软译格塞成长句，正文挤成一团。
+原则：通读像人话；术语是轻点缀；想深究再点开。
 
-# 术语降噪（首次打标、后续白话）
-同一个术语，仅在【首次出现】时打标 ⟦t:id|软译|白话⟧；后续再提到，直接用它的白话说法，不再打标。
-避免同一术语反复打标造成的视觉噪音。
+# 术语降噪（首次打标、后续白话 · 一段最多 1–2 个）
+同一个术语，仅在【首次出现】时打标；后续再提到，直接用白话，不再打标。
+每一段话打标术语控制在 1–2 个；宁可少标、把话说透，也不要密密麻麻。
 
-# 情景白话（贴他这件事）
-每个打标的第三格（情景白话）【必须】结合【这个用户的具体问题】写，能被独立读懂，
+# 情景白话（贴他这件事 · 仅第三格）
+第三格详细白话【必须】结合【这个用户的具体问题】写，能被独立读懂，
 不是通用词典解释。例：不要写"正官代表约束"（通用），要写"就是你面对的那个新领导、
 那套你不认同的数字化考核标准"（贴他）。
 若某个术语无法给出贴合他处境的真实白话，就【直接用大白话表达那个意思，不要硬塞术语】。
 
 # reasoning vs content（硬要求 · 真算但合规）
 - **reasoning（思考过程）**：可自由使用裸命理术语深算（食神/大运/身弱/日主等），合规不检查 reasoning。
-- **输出 JSON 各字符串字段**（relationship_conclusion / direction.* / agenda.label）：
-  先写通顺白话，再在该概念后打标 ⟦t:<id>|<该情景软译>|<对他这件事的白话解释>⟧（遵守上方排版/降噪/情景白话规则）。
-  例：…你面对那套外部规则与考核⟦t:zheng_guan|规则与约束|就是你面对的"新标准、数字化考核"⟧…
+- **输出 JSON 各字符串字段**（relationship_conclusion / direction.* / first_question；agenda.label 除外）：
+  先写通顺白话，再在该概念后打标 ⟦t:<id>|<简洁软译≤6字>|<贴他的详细白话>⟧。
+  例：…你面对那套外部规则与考核⟦t:zheng_guan|规则感|就是你面对的"新标准、数字化考核"⟧…
   reasoning 里可裸写；JSON 字段一旦引用命理词，必须打标（UI 渲染前 autoMarkBareTerms 会兜底补漏）。
 
 # 输出（严格 JSON，无围栏，内部推理用中文；此输出不直接给用户看）
 # 输出格式（硬约束 · 键名不可翻译）
-输出必须是严格 JSON：所有键名用【英文小写】原样（relationship_conclusion / breakthrough_directions / investigation_agenda），
+输出必须是严格 JSON：所有键名用【英文小写】原样（relationship_conclusion / breakthrough_directions / investigation_agenda / first_question），
 用标准 ASCII 双引号 \`"\`，不得翻译键名、不得用中文引号、不得截断、不得 markdown 围栏。
 {
   "relationship_conclusion": "...",
   "breakthrough_directions": [
     { "direction": "...", "structural_basis": "...", "timing": "...", "what_would_confirm": "..." }
   ],
-  "investigation_agenda": [ … 见下方议程段 ]
+  "investigation_agenda": [ … 见下方议程段 ],
+  "first_question": "…"
 }
 
 # 任务：从破局方向【倒推所需收集的信息】（Agenda Engine）
@@ -170,7 +175,29 @@ structural_basis 必须从实例清单【点名至少 3 项具体本地数据】
 ## 追加进上面的 JSON：
 "investigation_agenda": [
   { "id":"...", "label":"...", "critical":true, "status":"unexplored", "supports":"落地方向：…" }
-]`;
+],
+
+# 任务（续）：首问（first_question · 给用户看的引导提问）
+investigation_agenda 的 label 是【内部收集清单】——【禁止】直接甩给用户当提问。
+额外生成 first_question：针对【第一个议程项】及其服务的破局方向，写一句详细、有温度、引导性的提问。
+
+要求：
+- 先用一句话说明"为什么要问这个"（连到它所服务的破局方向），再自然地问出来；
+- 具体、引导用户好回答，像顾问在对话，不是甩一个标签；
+- 针对 first agenda item（为落地某条破局方向所需收集的信息）；
+- 用用户能直接开口回答的口语，可含 1–2 个具体场景提示。
+
+正例（议程 label="现有冷却方式与独处时间"，服务破局方向"建立冷却机制"）：
+  "要帮你把『先降火再回家』这个方向落地，我得先了解你现在有没有属于自己的冷却时间——
+   比如下班到进家门之间，有没有一段哪怕十分钟、完全不被打扰、能让你缓一口气的空档？
+   你现在是怎么给自己降温的，还是基本没有这个环节？"
+
+反例（禁止）：
+  ✗ "现有冷却方式与独处时间？"（把内部 label 加问号）
+  ✗ "你有冷却时间吗？"（太短、不连破局方向）
+
+"first_question": "…"
+`;
 
 export type BreakthroughCoreLLMResponse = {
   relationship_conclusion: string;
@@ -181,6 +208,7 @@ export type BreakthroughCoreLLMResponse = {
     what_would_confirm: string;
   }>;
   investigation_agenda: unknown;
+  first_question?: string;
 };
 
 export function buildBreakthroughCorePrompt(input: {
@@ -251,7 +279,7 @@ ${contextText}
 ${factGuard}
 
 【任务】
-输出上述 JSON（relationship_conclusion + breakthrough_directions + investigation_agenda）。仅 JSON，无 markdown 围栏。`;
+输出上述 JSON（relationship_conclusion + breakthrough_directions + investigation_agenda + first_question）。仅 JSON，无 markdown 围栏。`;
 
   return { system, user, structured, auditRelations: auditAllowlist };
 }
@@ -402,10 +430,16 @@ export function salvageBreakthroughFields(cleaned: string): Record<string, unkno
   }
   if (!investigation_agenda) return null;
 
+  const first_question =
+    (typeof base.first_question === "string" ? base.first_question.trim() : "") ||
+    grabSalvageStringField(cleaned, ["first_question", "首问"]) ||
+    "";
+
   return {
     relationship_conclusion,
     breakthrough_directions: directions,
     investigation_agenda,
+    ...(first_question ? { first_question } : {}),
     _parse_salvaged: true,
   };
 }
@@ -461,6 +495,7 @@ export function buildBreakthroughCoreAuditText(parsed: unknown): string {
   if (agenda) {
     for (const item of agenda) parts.push(item.label);
   }
+  if (typeof o.first_question === "string") parts.push(o.first_question);
   return parts.join("\n");
 }
 
@@ -502,11 +537,17 @@ export function mapBreakthroughCorePayload(parsed: unknown): {
     throw new Error("investigation_agenda failed parseInvestigationAgenda validation");
   }
 
+  const first_question =
+    typeof o.first_question === "string" && o.first_question.trim()
+      ? o.first_question.trim()
+      : undefined;
+
   const now = new Date().toISOString();
   return {
     breakthrough_core: {
       relationship_conclusion,
       breakthrough_directions,
+      ...(first_question ? { first_question } : {}),
       generated_at: now,
     },
     investigation_agenda,

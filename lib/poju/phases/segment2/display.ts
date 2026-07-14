@@ -24,8 +24,8 @@ export function formatFocusQuestionAsClearQuestion(label: string, locale: string
 }
 
 /**
- * End the segment-2 analysis by clearly asking the first agenda question.
- * Always leave the user knowing exactly what to answer next.
+ * Legacy fallback when older cores lack model-written first_question.
+ * Prefer appendModelFirstQuestion — do not surface raw agenda labels as the primary path.
  */
 function appendFirstFocusQuestion(
   reply: string,
@@ -47,6 +47,26 @@ function appendFirstFocusQuestion(
     ? reply.trimEnd().replace(/[？?]\s*$/, "").trimEnd()
     : reply.trimEnd();
   return `${base}${lead}${question}`;
+}
+
+/** Append model-written first_question (warm, detailed, direction-linked). */
+export function appendModelFirstQuestion(
+  reply: string,
+  firstQuestion: string | null | undefined,
+  locale: string,
+  agent?: POJUAgentState,
+): string {
+  if (isPojuFailurePlaceholderMessage(reply)) return reply;
+  const fq = firstQuestion?.trim() ?? "";
+  if (!fq) {
+    return agent ? appendFirstFocusQuestion(reply, agent, locale) : reply;
+  }
+
+  const base = hasQuestionCue(reply)
+    ? reply.trimEnd().replace(/[？?]\s*$/, "").trimEnd()
+    : reply.trimEnd();
+  if (base.includes(fq)) return base;
+  return `${base}\n\n${fq}`;
 }
 
 /** User-visible breakthrough directions block (segment 2 · 2–3 items). */
@@ -76,7 +96,7 @@ export function formatBreakthroughDirectionsForUser(
 }
 
 /**
- * Full segment-2 user reply: relationship_conclusion + directions + first agenda focus.
+ * Full segment-2 user reply: relationship_conclusion + directions + model first_question.
  * Driven by async job completion — not by sync justConverted.
  */
 export function buildSegment2AnalysisReply(
@@ -91,7 +111,7 @@ export function buildSegment2AnalysisReply(
     (locale.startsWith("zh")
       ? "我先帮你把这件事在本盘结构里的卡点理顺。"
       : "Let me frame where you're structurally stuck first.");
-  return appendFirstFocusQuestion(`${intro}${directions}`, agent, locale);
+  return appendModelFirstQuestion(`${intro}${directions}`, core?.first_question, locale, agent);
 }
 
 /** @deprecated Prefer buildSegment2AnalysisReply — kept as alias for call sites. */
@@ -112,6 +132,12 @@ export function segment2CoreGenerationFailedMessage(locale: string): string {
 export function segment2RegenerateButtonLabel(locale: string): string {
   return locale.startsWith("zh") ? "重新生成分析" : "Regenerate analysis";
 }
+
+/**
+ * TEMP test hook — show 「重新生成」under successful segment-2 delivery bubbles.
+ * Set to `false` (or delete the UI branch) when QA is done.
+ */
+export const SHOW_SEGMENT2_TEST_REGENERATE = true;
 
 export function envelopeCoreFallbackRetryHint(locale: string): string {
   return locale.startsWith("zh")
