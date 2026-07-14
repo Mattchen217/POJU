@@ -9,7 +9,8 @@ export type Segment2PollFailureReason =
   | PojuXhighJobFailureReason
   | "completed_without_core"
   | "completed_without_result"
-  | "poll_timeout";
+  | "poll_timeout"
+  | "stale_running";
 
 export type XhighJobPollCallbacks = {
   onProgress?: (accumulated_chars: number, status: PojuXhighJob["status"]) => void;

@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { getXhighJob } from "@/lib/poju/xhigh-job-store";
+import { failXhighJob, getXhighJob } from "@/lib/poju/xhigh-job-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+/** No updated_at refresh for this long while status=running → treat as zombie. */
+export const STALE_RUNNING_MS = 90_000;
 
 export async function GET(req: NextRequest) {
   const job_id = req.nextUrl.searchParams.get("job_id")?.trim();
@@ -26,9 +29,33 @@ export async function GET(req: NextRequest) {
     has_core,
     has_agenda,
     agenda_len: has_agenda ? job.result!.investigation_agenda.length : 0,
+    updated_at: job.updated_at,
   });
 
-  // Fix 2 — completed but no result must fail visibly (never look like pending).
+  // Fix B — running too long without updates = zombie → terminal fail (don't spin poll).
+  if (job.status === "running" && Date.now() - job.updated_at > STALE_RUNNING_MS) {
+    console.warn("[xhigh-status] stale running job", {
+      job_id: job.job_id,
+      stale_ms: Date.now() - job.updated_at,
+    });
+    await failXhighJob(job.job_id, "job stalled without updates", {
+      retryable: true,
+      failure_reason: "stale_running",
+      accumulated_content: job.accumulated_content,
+    }).catch(() => undefined);
+    return NextResponse.json({
+      ok: false,
+      job_id: job.job_id,
+      status: "failed",
+      retryable: true,
+      reason: "stale_running",
+      error: "job stalled without updates",
+      accumulated_content: job.accumulated_content,
+      updated_at: job.updated_at,
+    });
+  }
+
+  // completed but no result must fail visibly (never look like pending).
   if (job.status === "completed" && !job.result) {
     return NextResponse.json({
       ok: false,
@@ -44,7 +71,6 @@ export async function GET(req: NextRequest) {
   }
 
   if (job.status === "completed" && job.result) {
-    // Always include agenda as an array so JSON never drops the field.
     const agenda = Array.isArray(job.result.investigation_agenda)
       ? job.result.investigation_agenda
       : [];

@@ -26,6 +26,16 @@ export const SEGMENT2_XHIGH_MAX_TOKENS = 32_000;
 /** Wall budget for xhigh (~168s observed); job runner uses full Vercel maxDuration. */
 export const SEGMENT2_XHIGH_TIMEOUT_MS = 240_000;
 
+/**
+ * Fix A — bounded outer retries for transient provider queue failures.
+ * Each attempt still uses max_attempts:1 (resolver exhaustion → provider_queue).
+ * Total backoff ≈ 35s; async jobs have no ~90s gateway wall.
+ */
+export const CORE_RETRY_DELAYS_MS = [5_000, 10_000, 20_000] as const;
+
+/** Heartbeat while a single stream attempt is in-flight (reasoning may be silent for a while). */
+export const XHIGH_JOB_HEARTBEAT_MS = 30_000;
+
 export type XhighJobRunnerConfig = {
   phase: PojuXhighJobPhase;
   phase_name: string;
@@ -44,7 +54,7 @@ export type XhighJobRunnerConfig = {
   };
 };
 
-function isProviderTransportFailure(e: unknown): boolean {
+export function isProviderTransportFailure(e: unknown): boolean {
   if (e instanceof OpenRouterProviderQueueError) return true;
   if (e instanceof Error) {
     return (
@@ -55,6 +65,10 @@ function isProviderTransportFailure(e: unknown): boolean {
     );
   }
   return false;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export const SEGMENT2_XHIGH_RUNNER_CONFIG: XhighJobRunnerConfig = {
@@ -102,12 +116,12 @@ export async function runXhighJob(job_id: string, config: XhighJobRunnerConfig):
 
   const job = await getXhighJob(job_id);
   if (!job) {
-    console.warn("[xhigh-job] run skipped — job not found:", job_id);
+    console.warn("[xhigh-job] run skipped — job not found:", { job_id });
     return;
   }
   if (job.status === "completed") return;
   if (job.status === "running" && Date.now() - job.updated_at < 15_000) {
-    console.info("[xhigh-job] run skipped — already running:", job_id);
+    console.info("[xhigh-job] run skipped — already running:", { job_id });
     return;
   }
   if (job.phase !== config.phase) {
@@ -126,42 +140,74 @@ export async function runXhighJob(job_id: string, config: XhighJobRunnerConfig):
   const startTime = Date.now();
   let lastPersistedLen = 0;
 
-  let out: Awaited<ReturnType<typeof openRouterChatCompletionStream>>;
-  try {
-    out = await openRouterChatCompletionStream(
-      {
-        messages,
-        max_tokens: config.max_tokens,
-        json_mode: true,
-        reasoning_effort: config.reasoning_effort,
-        timeout_ms: config.timeout_ms,
-        max_attempts: config.max_attempts,
-        session_id: sessionCacheId,
-        call_type: config.call_type,
-        phase_name: config.phase_name,
-        route_path: "once",
-        provider: openRouterProviderExtras(),
-      },
-      {
-        onContent: (full) => {
-          const delta = full.slice(lastPersistedLen);
-          if (!delta) return;
-          lastPersistedLen = full.length;
-          void appendXhighJobChunk(job_id, delta);
+  let out: Awaited<ReturnType<typeof openRouterChatCompletionStream>> | null = null;
+  let lastErr: unknown = null;
+
+  for (let attempt = 0; attempt <= CORE_RETRY_DELAYS_MS.length; attempt++) {
+    lastPersistedLen = 0;
+    const heartbeat = setInterval(() => {
+      void updateXhighJobStatus(job_id, "running", {});
+    }, XHIGH_JOB_HEARTBEAT_MS);
+
+    try {
+      out = await openRouterChatCompletionStream(
+        {
+          messages,
+          max_tokens: config.max_tokens,
+          json_mode: true,
+          reasoning_effort: config.reasoning_effort,
+          timeout_ms: config.timeout_ms,
+          max_attempts: config.max_attempts,
+          session_id: sessionCacheId,
+          call_type: config.call_type,
+          phase_name: config.phase_name,
+          route_path: "once",
+          provider: openRouterProviderExtras(),
         },
-      },
-    );
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.warn(`[xhigh-job] ${config.phase} transport failed:`, msg);
-    if (isProviderTransportFailure(e)) {
+        {
+          onContent: (full) => {
+            const delta = full.slice(lastPersistedLen);
+            if (!delta) return;
+            lastPersistedLen = full.length;
+            void appendXhighJobChunk(job_id, delta);
+          },
+        },
+      );
+      lastErr = null;
+      clearInterval(heartbeat);
+      break;
+    } catch (e) {
+      clearInterval(heartbeat);
+      lastErr = e;
+      const msg = e instanceof Error ? e.message : String(e);
+      console.warn(`[xhigh-job] ${config.phase} transport attempt ${attempt + 1} failed`, {
+        job_id,
+        attempt: attempt + 1,
+        msg,
+      });
+      if (!isProviderTransportFailure(e) || attempt === CORE_RETRY_DELAYS_MS.length) {
+        break;
+      }
+      // Heartbeat + clear partial stream so the next attempt starts clean.
+      await updateXhighJobStatus(job_id, "running", { accumulated_content: "" });
+      await sleep(CORE_RETRY_DELAYS_MS[attempt]!);
+    }
+  }
+
+  if (lastErr || !out) {
+    const msg = lastErr instanceof Error ? lastErr.message : String(lastErr ?? "transport_failed");
+    console.warn(`[xhigh-job] ${config.phase} transport failed`, { job_id, msg });
+    if (isProviderTransportFailure(lastErr)) {
       await failXhighJob(job_id, msg, {
         retryable: true,
         failure_reason: "provider_busy",
       });
       return;
     }
-    await failXhighJob(job_id, msg, { retryable: false });
+    await failXhighJob(job_id, msg, {
+      retryable: false,
+      failure_reason: "transport_error",
+    });
     return;
   }
 
@@ -170,7 +216,10 @@ export async function runXhighJob(job_id: string, config: XhighJobRunnerConfig):
   const finish = out.finish_reason ?? null;
 
   if (finish === "length" || !content) {
-    console.warn(`[xhigh-job] ${config.phase} truncated/empty (max_tokens=${config.max_tokens})`);
+    console.warn(`[xhigh-job] ${config.phase} truncated/empty`, {
+      job_id,
+      max_tokens: config.max_tokens,
+    });
     await failXhighJob(job_id, "deep analysis output was truncated", {
       retryable: true,
       failure_reason: "truncated",
@@ -184,7 +233,7 @@ export async function runXhighJob(job_id: string, config: XhighJobRunnerConfig):
     parsed = config.finalizeContent(content, job).result;
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    console.warn(`[xhigh-job] ${config.phase} parse failed:`, msg);
+    console.warn(`[xhigh-job] ${config.phase} parse failed`, { job_id, msg });
     await failXhighJob(job_id, "deep analysis JSON was incomplete", {
       retryable: true,
       failure_reason: "parse_failed",

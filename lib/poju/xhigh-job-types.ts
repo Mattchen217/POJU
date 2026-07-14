@@ -25,9 +25,11 @@ export type PojuXhighJobFailureReason =
   | "truncated"
   | "parse_failed"
   | "provider_busy"
+  | "transport_error"
   | "completed_without_result"
   | "completed_without_core"
-  | "poll_timeout";
+  | "poll_timeout"
+  | "stale_running";
 
 export interface PojuXhighJob {
   job_id: string;
