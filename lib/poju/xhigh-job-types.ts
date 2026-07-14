@@ -29,7 +29,8 @@ export type PojuXhighJobFailureReason =
   | "completed_without_result"
   | "completed_without_core"
   | "poll_timeout"
-  | "stale_running";
+  | "stale_running"
+  | "job_abandoned";
 
 export interface PojuXhighJob {
   job_id: string;

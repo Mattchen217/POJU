@@ -27,7 +27,8 @@ function main(): void {
   const types = read("lib/poju/xhigh-job-types.ts");
 
   assert("CORE_RETRY_DELAYS_MS present", runner.includes("CORE_RETRY_DELAYS_MS = [5_000, 10_000, 20_000]"));
-  assert("outer retry loop", runner.includes("attempt <= CORE_RETRY_DELAYS_MS.length"));
+  assert("retry budget 90s", runner.includes("JOB_RETRY_BUDGET_MS = 90_000"));
+  assert("outer retry uses budgetLeft", runner.includes("budgetLeft <= delay"));
   assert("per-attempt max_attempts stays 1", runner.includes("max_attempts: config.max_attempts"));
   assert("config still max_attempts 1", runner.includes("max_attempts: 1"));
   assert("heartbeat during stream", runner.includes("XHIGH_JOB_HEARTBEAT_MS"));
@@ -35,6 +36,8 @@ function main(): void {
   assert("completed logs job_id", runner.includes("[xhigh-job] ${config.phase} completed"));
 
   assert("stale running guard", status.includes("STALE_RUNNING_MS = 90_000"));
+  assert("age guard MAX_JOB_AGE_MS", status.includes("MAX_JOB_AGE_MS = 300_000"));
+  assert("age guard job_abandoned", status.includes('reason: "job_abandoned"'));
   assert("stale returns failed", status.includes('reason: "stale_running"'));
   assert("stale persists failXhighJob", status.includes("failXhighJob"));
 

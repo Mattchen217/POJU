@@ -11,7 +11,10 @@ import {
   type OpenRouterChatMessage,
 } from "@/lib/llm/openrouter-shared";
 import { openRouterChatCompletionStream } from "@/lib/llm/openrouter-stream";
-import { OpenRouterProviderQueueError } from "@/lib/llm/openrouter-retry";
+import {
+  OpenRouterProviderQueueError,
+  parseOpenRouterErrorStatus,
+} from "@/lib/llm/openrouter-retry";
 import {
   appendXhighJobChunk,
   completeXhighJob,
@@ -23,17 +26,23 @@ import type { PojuXhighJob, PojuXhighJobPhase } from "@/lib/poju/xhigh-job-types
 
 /** Segment-2 xhigh — reasoning ~7–11k + full analysis content ~8–12k + headroom. */
 export const SEGMENT2_XHIGH_MAX_TOKENS = 32_000;
-/** Wall budget for xhigh (~168s observed); job runner uses full Vercel maxDuration. */
-export const SEGMENT2_XHIGH_TIMEOUT_MS = 240_000;
+/** Per-attempt stream timeout (successful long regen still needs headroom). */
+export const SEGMENT2_XHIGH_TIMEOUT_MS = 180_000;
 
 /**
- * Fix A — bounded outer retries for transient provider queue failures.
- * Each attempt still uses max_attempts:1 (resolver exhaustion → provider_queue).
- * Total backoff ≈ 35s; async jobs have no ~90s gateway wall.
+ * Fix 1 — wall budget for *retrying* after transport failures (fail-fast for the UI).
+ * Must stay well below Vercel maxDuration (300s) so failXhighJob always runs.
  */
+export const JOB_RETRY_BUDGET_MS = 90_000;
+
+/** Leave spare before Vercel kill so we can always write terminal status. */
+export const INVOCATION_WRITE_HEADROOM_MS = 20_000;
+export const INVOCATION_HARD_DEADLINE_MS = 280_000;
+
+/** Backoff between outer retries (total sleep ≤ 35s under the 90s budget). */
 export const CORE_RETRY_DELAYS_MS = [5_000, 10_000, 20_000] as const;
 
-/** Heartbeat while a single stream attempt is in-flight (reasoning may be silent for a while). */
+/** Heartbeat while a stream attempt is in-flight (silence during reasoning). */
 export const XHIGH_JOB_HEARTBEAT_MS = 30_000;
 
 export type XhighJobRunnerConfig = {
@@ -69,6 +78,26 @@ export function isProviderTransportFailure(e: unknown): boolean {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Fix 3 — surface real provider HTTP status / body (not just "provider_queue"). */
+export function describeTransportError(e: unknown): {
+  msg: string;
+  http_status: number | null;
+  provider: string | null;
+  body_snippet: string;
+} {
+  const msg = e instanceof Error ? e.message : String(e);
+  const anyE = e as { status?: number; provider?: string; body?: unknown };
+  const cause = e instanceof Error ? e.cause : undefined;
+  const causeMsg = cause instanceof Error ? cause.message : cause != null ? String(cause) : "";
+  const http_status =
+    (typeof anyE.status === "number" ? anyE.status : null) ??
+    parseOpenRouterErrorStatus(msg) ??
+    (causeMsg ? parseOpenRouterErrorStatus(causeMsg) : null);
+  const provider = typeof anyE.provider === "string" ? anyE.provider : null;
+  const body_snippet = String(anyE.body ?? (causeMsg || msg)).slice(0, 300);
+  return { msg, http_status, provider, body_snippet };
 }
 
 export const SEGMENT2_XHIGH_RUNNER_CONFIG: XhighJobRunnerConfig = {
@@ -107,6 +136,7 @@ export const SEGMENT2_XHIGH_RUNNER_CONFIG: XhighJobRunnerConfig = {
 /**
  * Run an xhigh job in the background (scheduled via Next.js `after()`).
  * Streams LLM output into KV; parses + completes or fails the job.
+ * Iron rule: every exit path writes a terminal status before returning.
  */
 export async function runXhighJob(job_id: string, config: XhighJobRunnerConfig): Promise<void> {
   if (!isOpenRouterConfigured()) {
@@ -137,14 +167,25 @@ export async function runXhighJob(job_id: string, config: XhighJobRunnerConfig):
     { role: "user", content: user },
   ];
   const defaultModel = getOpenRouterDefaultModel();
-  const startTime = Date.now();
+  const invocationStartedAt = Date.now();
+  const retryBudgetStartedAt = Date.now();
   let lastPersistedLen = 0;
 
   let out: Awaited<ReturnType<typeof openRouterChatCompletionStream>> | null = null;
   let lastErr: unknown = null;
 
-  for (let attempt = 0; attempt <= CORE_RETRY_DELAYS_MS.length; attempt++) {
+  for (let attempt = 0; ; attempt++) {
     lastPersistedLen = 0;
+
+    // Cap each attempt so we never run into Vercel kill without writing fail.
+    const wallLeft =
+      INVOCATION_HARD_DEADLINE_MS - (Date.now() - invocationStartedAt) - INVOCATION_WRITE_HEADROOM_MS;
+    if (wallLeft < 8_000) {
+      lastErr = lastErr ?? new Error("invocation_deadline_exhausted");
+      break;
+    }
+    const attemptTimeoutMs = Math.min(config.timeout_ms, wallLeft);
+
     const heartbeat = setInterval(() => {
       void updateXhighJobStatus(job_id, "running", {});
     }, XHIGH_JOB_HEARTBEAT_MS);
@@ -156,7 +197,7 @@ export async function runXhighJob(job_id: string, config: XhighJobRunnerConfig):
           max_tokens: config.max_tokens,
           json_mode: true,
           reasoning_effort: config.reasoning_effort,
-          timeout_ms: config.timeout_ms,
+          timeout_ms: attemptTimeoutMs,
           max_attempts: config.max_attempts,
           session_id: sessionCacheId,
           call_type: config.call_type,
@@ -179,39 +220,52 @@ export async function runXhighJob(job_id: string, config: XhighJobRunnerConfig):
     } catch (e) {
       clearInterval(heartbeat);
       lastErr = e;
-      const msg = e instanceof Error ? e.message : String(e);
+      const detail = describeTransportError(e);
+      const transient = isProviderTransportFailure(e);
+      const budgetLeft = JOB_RETRY_BUDGET_MS - (Date.now() - retryBudgetStartedAt);
+      const delay =
+        CORE_RETRY_DELAYS_MS[Math.min(attempt, CORE_RETRY_DELAYS_MS.length - 1)] ?? 20_000;
+
       console.warn(`[xhigh-job] ${config.phase} transport attempt ${attempt + 1} failed`, {
         job_id,
         attempt: attempt + 1,
-        msg,
+        msg: detail.msg,
+        http_status: detail.http_status,
+        provider: detail.provider,
+        body_snippet: detail.body_snippet,
+        budget_left_ms: budgetLeft,
+        transient,
       });
-      if (!isProviderTransportFailure(e) || attempt === CORE_RETRY_DELAYS_MS.length) {
+
+      // Fix 1 — budget exhausted / non-transient → write fail now (never ride to Vercel kill).
+      if (!transient || budgetLeft <= delay) {
         break;
       }
-      // Heartbeat + clear partial stream so the next attempt starts clean.
+
       await updateXhighJobStatus(job_id, "running", { accumulated_content: "" });
-      await sleep(CORE_RETRY_DELAYS_MS[attempt]!);
+      await sleep(delay);
     }
   }
 
   if (lastErr || !out) {
-    const msg = lastErr instanceof Error ? lastErr.message : String(lastErr ?? "transport_failed");
-    console.warn(`[xhigh-job] ${config.phase} transport failed`, { job_id, msg });
-    if (isProviderTransportFailure(lastErr)) {
-      await failXhighJob(job_id, msg, {
-        retryable: true,
-        failure_reason: "provider_busy",
-      });
-      return;
-    }
-    await failXhighJob(job_id, msg, {
-      retryable: false,
-      failure_reason: "transport_error",
+    const detail = describeTransportError(lastErr ?? new Error("transport_failed"));
+    const transient = isProviderTransportFailure(lastErr);
+    console.warn(`[xhigh-job] ${config.phase} transport failed`, {
+      job_id,
+      msg: detail.msg,
+      http_status: detail.http_status,
+      provider: detail.provider,
+      body_snippet: detail.body_snippet,
+    });
+    await failXhighJob(job_id, detail.msg, {
+      retryable: transient,
+      failure_reason: transient ? "provider_busy" : "transport_error",
+      error_detail: detail.body_snippet,
     });
     return;
   }
 
-  const latency_ms = Date.now() - startTime;
+  const latency_ms = Date.now() - invocationStartedAt;
   const content = out.text.trim();
   const finish = out.finish_reason ?? null;
 

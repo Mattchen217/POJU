@@ -208,7 +208,7 @@ export async function callWithOpenRouterModelFallback<T>(
             );
             break;
           }
-          throw new OpenRouterProviderQueueError();
+          throw new OpenRouterProviderQueueError(undefined, { cause: e });
         }
 
         throw e;
@@ -220,7 +220,7 @@ export async function callWithOpenRouterModelFallback<T>(
     console.warn(
       `[openrouter] 全部候选在重试后仍忙（已试: ${tried.join(" → ") || candidates.join(" → ")}）— 视为 provider queue。`,
     );
-    throw new OpenRouterProviderQueueError();
+    throw new OpenRouterProviderQueueError(undefined, { cause: lastErr });
   }
 
   console.error(

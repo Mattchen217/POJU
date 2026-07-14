@@ -61,8 +61,8 @@ export function isRetryableOpenRouterError(error: unknown): boolean {
 }
 
 export class OpenRouterProviderQueueError extends Error {
-  constructor(message = "openrouter_provider_queue") {
-    super(message);
+  constructor(message = "openrouter_provider_queue", options?: ErrorOptions) {
+    super(message, options);
     this.name = "OpenRouterProviderQueueError";
   }
 }
@@ -123,7 +123,7 @@ export async function withOpenRouterExponentialBackoff<T>(
           attempt >= OPENROUTER_RETRY_DELAYS_MS.length &&
           isRetryableOpenRouterError(error)
         ) {
-          throw new OpenRouterProviderQueueError();
+          throw new OpenRouterProviderQueueError(undefined, { cause: error });
         }
         throw error;
       }
