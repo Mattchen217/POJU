@@ -53,6 +53,35 @@ export function toShenshaId(token: string): string | null {
   return null;
 }
 
+/** All zh_src + aliases from the map, longest-first — for bare-term auto-mark coverage. */
+export function allShenshaHanSurfaces(): string[] {
+  const set = new Set<string>();
+  for (const id of Object.keys(TERMS)) {
+    const t = TERMS[id]!;
+    if (t.zh_src?.trim()) set.add(t.zh_src.trim());
+    for (const a of t.aliases ?? []) {
+      if (a?.trim()) set.add(a.trim());
+    }
+  }
+  return [...set].sort((a, b) => b.length - a.length);
+}
+
+/** Soft label + gloss for a bare神煞 han surface (auto-mark). */
+export function resolveShenshaSoftLabels(
+  han: string,
+  locale: string,
+): { slug: string; soft: string; plain: string } | null {
+  const id = toShenshaId(han);
+  if (!id) return null;
+  const view = resolveShensha(id, normalizeShenshaLocale(locale));
+  if (!view.label?.trim()) return null;
+  return {
+    slug: `shensha_${id}`,
+    soft: view.label.trim(),
+    plain: view.gloss?.trim() || view.label.trim(),
+  };
+}
+
 export interface ShenshaView {
   id: string;
   zh_src: string;     // 中文原名（作括号字形保留）

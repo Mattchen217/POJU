@@ -32,6 +32,11 @@ import {
   toGlossaryLocale,
 } from "@/lib/glossary/term-glossary";
 import { buildClosedSetConstraintPromptBlock } from "@/lib/llm/prompts/term-closed-set-constraint";
+import { STEMS } from "@/lib/match/data/stems-branches";
+import {
+  allShenshaHanSurfaces,
+  resolveShenshaSoftLabels,
+} from "@/lib/poju/shensha";
 
 export type TermEntry = {
   id: string;
@@ -186,11 +191,25 @@ export function wrapBareKeepCnSoftTerms(text: string, locale: string): string {
     .join("");
 }
 
+/** 天干+五行常见合称（壬水/甲木…）——单字天干 lookahead 拦不住完整合称。 */
+const STEM_ELEMENT_COMPOUNDS: string[] = Object.entries(STEMS).map(
+  ([stem, info]) => `${stem}${info.wuxing}`,
+);
+
+/**
+ * UI 兜底扫描集：合规高危 + 闭集全量 + 天干五行合称 + 神煞 i18n 全表（含孤鸾煞等）。
+ * 按长度降序，避免短词先吃掉长词。
+ */
 const BARE_AUTO_MARK_HAN = [
-  ...HIGH_RISK_COMPLIANCE_HAN,
-  ...CLOSED_SET_REPLACE_IDS,
+  ...new Set([
+    ...HIGH_RISK_COMPLIANCE_HAN,
+    ...CLOSED_SET_REPLACE_IDS,
+    ...STEM_ELEMENT_COMPOUNDS,
+    ...allShenshaHanSurfaces(),
+  ]),
 ].sort((a, b) => b.length - a.length);
 
+/** 六十甲子干支对。裸单字天干/地支走 BARE_AUTO_MARK_HAN（带汉字边界，避免「孩子」误伤）。 */
 const BARE_GANZHI_RE = /[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]/g;
 
 function escapeRegExp(s: string): string {
@@ -215,14 +234,37 @@ function resolveBareMarkLabels(
       plain: lang === "zh" ? hr.glossZh : hr.glossEn,
     };
   }
+
+  // 天干+五行合称（如壬水）→ 标为对应天干
+  if (hanId.length === 2) {
+    const stem = hanId[0]!;
+    const element = hanId[1]!;
+    const stemInfo = STEMS[stem as keyof typeof STEMS];
+    if (stemInfo && stemInfo.wuxing === element) {
+      const slug = CLOSED_SET_SLUG[stem] ?? stem;
+      const ui = uiTermById(slug, locale) ?? uiTermById(stem, locale);
+      if (ui) {
+        return {
+          slug,
+          soft: ui.soft,
+          plain: plainByTermId(slug, locale) ?? ui.plain,
+        };
+      }
+    }
+  }
+
   const slug = CLOSED_SET_SLUG[hanId] ?? hanId;
   const ui = uiTermById(slug, locale) ?? uiTermById(hanId, locale);
-  if (!ui) return null;
-  return {
-    slug,
-    soft: ui.soft,
-    plain: plainByTermId(slug, locale) ?? ui.plain,
-  };
+  if (ui) {
+    return {
+      slug,
+      soft: ui.soft,
+      plain: plainByTermId(slug, locale) ?? ui.plain,
+    };
+  }
+
+  // 神煞 i18n 全表兜底（孤鸾煞/寡宿 等）
+  return resolveShenshaSoftLabels(hanId, locale);
 }
 
 function markBareGanzhiInSegment(segment: string, locale: string): string {

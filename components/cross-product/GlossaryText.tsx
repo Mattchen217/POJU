@@ -149,12 +149,20 @@ function TermMark({
       </span>
     ) : null;
 
+  // Paren-supplement form: （软译 · 白话）— fluent reading, not inline interrupt chips.
+  const parenBody = plain.trim()
+    ? visible.trim() && visible.trim() !== plain.trim()
+      ? `${visible.trim()} · ${plain.trim()}`
+      : plain.trim() || visible.trim()
+    : visible.trim();
+
   return (
-    <span ref={anchorRef} className={`term-mark term-mark--${polarity}`}>
-      <span
-        className="term-mark__word"
+    <span ref={anchorRef} className={`term-mark term-mark--${polarity} term-mark--paren`}>
+      <button
+        type="button"
+        className="term-mark__paren"
         tabIndex={0}
-        role="button"
+        aria-label="Explain term"
         aria-describedby={open ? id : undefined}
         onMouseEnter={openFromHover}
         onMouseLeave={scheduleHoverClose}
@@ -162,15 +170,7 @@ function TermMark({
         onBlur={() => setOpen(false)}
         onClick={toggle}
       >
-        {visible}
-      </span>
-      <button
-        type="button"
-        className="term-mark__info"
-        aria-label="Explain term"
-        onClick={toggle}
-      >
-        [···]
+        （{parenBody}）
       </button>
       {typeof document !== "undefined" && popNode ? createPortal(popNode, document.body) : null}
     </span>
@@ -269,6 +269,7 @@ function parseMarkedText(
       const plain = dynamicPlain || ui?.plain || "";
       const polarity = ui?.polarity ?? termPolarityById(termId);
       if (seenInParagraph.has(termId)) {
+        // Soft re-mention only — no second paren interrupt.
         nodes.push(<span key={`t-dup-${keyBase}-${keyIdx++}`}>{visible}</span>);
       } else {
         seenInParagraph.add(termId);

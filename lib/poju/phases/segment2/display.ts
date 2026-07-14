@@ -14,25 +14,39 @@ function hasQuestionCue(text: string): boolean {
   return /[？?]/.test(trimmed.slice(-60));
 }
 
-function formatFocusQuestion(label: string, locale: string): string {
-  const q = label.trim();
-  if (/[？?]$/.test(q)) return q;
+/** Ensure the agenda focus is a clear, complete question ending with ？/?. */
+export function formatFocusQuestionAsClearQuestion(label: string, locale: string): string {
+  const q = label.trim().replace(/[？?]+$/g, "");
+  if (!q) {
+    return locale.startsWith("zh") ? "你现在最想先弄清哪一件事？" : "What do you want to clarify first?";
+  }
   return locale.startsWith("zh") ? `${q}？` : `${q}?`;
 }
 
+/**
+ * End the segment-2 analysis by clearly asking the first agenda question.
+ * Always leave the user knowing exactly what to answer next.
+ */
 function appendFirstFocusQuestion(
   reply: string,
   agent: POJUAgentState,
   locale: string,
 ): string {
   if (isPojuFailurePlaceholderMessage(reply)) return reply;
-  if (hasQuestionCue(reply)) return reply;
   const focus = selectCurrentAgendaFocus(agent.investigation_agenda ?? []);
   if (!focus?.label?.trim()) return reply;
+
+  const question = formatFocusQuestionAsClearQuestion(focus.label, locale);
+  if (hasQuestionCue(reply) && reply.trimEnd().endsWith(question)) return reply;
+
   const lead = locale.startsWith("zh")
-    ? "\n\n我想先从一件事开始弄清楚——"
-    : "\n\nLet's start with one thing—";
-  return `${reply.trimEnd()}${lead}${formatFocusQuestion(focus.label, locale)}`;
+    ? "\n\n接下来，我想和你一起把几件事弄清楚，才能给你落地的走法。我们先从最关键的一件开始——"
+    : "\n\nNext, I want us to clarify a few things together so the advice can land. Let's start with the most important one—";
+
+  const base = hasQuestionCue(reply)
+    ? reply.trimEnd().replace(/[？?]\s*$/, "").trimEnd()
+    : reply.trimEnd();
+  return `${base}${lead}${question}`;
 }
 
 /** User-visible breakthrough directions block (segment 2 · 2–3 items). */

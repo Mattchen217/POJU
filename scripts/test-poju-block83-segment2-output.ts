@@ -29,13 +29,15 @@ function assert(label: string, ok: boolean): void {
 function main(): void {
   console.log("\n========== POJU Block 83 · Segment 2 output ==========\n");
 
+  const display = read("lib/poju/phases/segment2/display.ts");
   const collecting = read("lib/poju/collecting-focus-reply.ts");
   const route = read("app/api/poju/breakthrough-core/route.ts");
+  const runner = read("lib/poju/xhigh-job-runner.ts");
   const shensha = read("lib/poju/data/shensha-i18n-map.json");
 
-  assert("formatBreakthroughDirectionsForUser exported", collecting.includes("formatBreakthroughDirectionsForUser"));
-  assert("transition includes directions block", collecting.includes("formatBreakthroughDirectionsForUser(core"));
-  assert("core route validates mapBreakthroughCorePayload", route.includes("mapBreakthroughCorePayload(parsed)"));
+  assert("formatBreakthroughDirectionsForUser exported", display.includes("formatBreakthroughDirectionsForUser") || collecting.includes("formatBreakthroughDirectionsForUser"));
+  assert("transition includes directions block", display.includes("formatBreakthroughDirectionsForUser(core"));
+  assert("core runner validates mapBreakthroughCorePayload", runner.includes("mapBreakthroughCorePayload") || runner.includes("parseAndMapBreakthroughCore"));
   assert("core route async job", route.includes("createXhighJob"));
 
   assert("bare ganzhi gloss user-facing", !BARE_GANZHI_MARKER.glossZh.includes("底层数据"));

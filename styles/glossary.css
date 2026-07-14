@@ -1,4 +1,4 @@
-/* Term marks — golden word + [···] info affordance (no underline mutation) */
+/* Term marks — fullwidth paren supplement (soft · plain); hover/click for tooltip */
 
 .term-mark {
   display: inline;
@@ -6,8 +6,9 @@
 }
 
 .term-mark__word,
-.term-mark__info {
-  white-space: nowrap;
+.term-mark__info,
+.term-mark__paren {
+  white-space: normal;
 }
 
 .term-mark__word {
@@ -15,18 +16,35 @@
   cursor: help;
 }
 
+.term-mark__paren {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: 450;
+  line-height: inherit;
+  cursor: help;
+  vertical-align: baseline;
+  color: inherit;
+}
+
 .term-mark--neutral .term-mark__word,
-.term-mark--neutral .term-mark__info {
+.term-mark--neutral .term-mark__info,
+.term-mark--neutral .term-mark__paren {
   color: #c5a880;
 }
 
 .term-mark--favorable .term-mark__word,
-.term-mark--favorable .term-mark__info {
+.term-mark--favorable .term-mark__info,
+.term-mark--favorable .term-mark__paren {
   color: #7fc4a8;
 }
 
 .term-mark--caution .term-mark__word,
-.term-mark--caution .term-mark__info {
+.term-mark--caution .term-mark__info,
+.term-mark--caution .term-mark__paren {
   color: #e07a5f;
 }
 
@@ -43,11 +61,9 @@
 }
 
 /* legacy default gold when no polarity class */
-.term-mark:not([class*="term-mark--"]) .term-mark__word {
-  color: #d4af37;
-}
-
-.term-mark:not([class*="term-mark--"]) .term-mark__info {
+.term-mark:not([class*="term-mark--"]) .term-mark__word,
+.term-mark:not([class*="term-mark--"]) .term-mark__info,
+.term-mark:not([class*="term-mark--"]) .term-mark__paren {
   color: #d4af37;
 }
 
