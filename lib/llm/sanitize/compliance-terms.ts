@@ -35,9 +35,11 @@ import {
   buildTermMarkingFewShot,
   detectBrokenMarkers,
   encodeTermMarker,
+  fillMissingMarkerPlain,
   maskMarkersForAudit,
   parseTermMarkers,
   plainByTermId,
+  normalizeTermMarkerIds,
   prepareTextForGlossaryRender,
   repairChatTermMarkers,
   repairShenshaMarkerSoftLabels,
@@ -73,8 +75,10 @@ export {
   buildTermMarkingPromptBlock,
   buildTermMarkingFewShot,
   encodeTermMarker,
+  fillMissingMarkerPlain,
   parseTermMarkers,
   plainByTermId,
+  normalizeTermMarkerIds,
   prepareTextForGlossaryRender,
   repairChatTermMarkers,
   repairShenshaMarkerSoftLabels,
@@ -647,8 +651,10 @@ function sanitizeDeliveryBodyPart(text: string, locale: string): string {
  */
 export function sanitizePaymentAuditLeaks(text: string, locale: string): string {
   if (!text?.trim()) return text ?? "";
-  const repaired = repairShenshaMarkerSoftLabels(text, locale);
-  return sanitizeDeliveryBodyPart(repaired, locale);
+  const normalized = normalizeTermMarkerIds(text, locale);
+  const repaired = repairShenshaMarkerSoftLabels(normalized, locale);
+  const filled = fillMissingMarkerPlain(repaired, locale);
+  return sanitizeDeliveryBodyPart(filled, locale);
 }
 
 /** POJU final delivery — deterministic scrub (redlines, bare terms, gloss wrap). Preserves ═══ marker lines. */

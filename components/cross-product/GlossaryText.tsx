@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 
 import {
   GLOSS_TOKEN_PATTERN,
+  plainByTermId,
   stripBrokenMarkers,
   TERM_MARKER_PATTERN,
   uiTermById,
@@ -271,7 +272,8 @@ function parseMarkedText(
       const visible = unescapeMarkerPart(next.groups[1]);
       const dynamicPlain = next.groups[2] ? unescapeMarkerPart(next.groups[2]).trim() : "";
       const ui = uiTermById(termId, glossaryLocale);
-      const plain = dynamicPlain || ui?.plain || "";
+      // Fix C — missing 3rd-field plain falls back to fixed 5-locale gloss.
+      const plain = dynamicPlain || ui?.plain || plainByTermId(termId, glossaryLocale) || "";
       const polarity = ui?.polarity ?? termPolarityById(termId);
       const softOnly = visible.trim() || ui?.soft || "";
       if (seenInParagraph.has(termId) || parenMarks >= maxParenMarks) {

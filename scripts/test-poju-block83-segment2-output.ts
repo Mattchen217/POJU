@@ -36,7 +36,14 @@ function main(): void {
   const shensha = read("lib/poju/data/shensha-i18n-map.json");
 
   assert("formatBreakthroughDirectionsForUser exported", display.includes("formatBreakthroughDirectionsForUser") || collecting.includes("formatBreakthroughDirectionsForUser"));
-  assert("transition includes directions block", display.includes("formatBreakthroughDirectionsForUser(core"));
+  assert(
+    "transition includes directions block",
+    display.includes("formatBreakthroughDirectionsForUser(core") ||
+      display.includes("formatBreakthroughDirectionsForUser("),
+  );
+  assert("fixed template h3 conclusion", display.includes("### 你为什么卡在这里"));
+  assert("fixed template direction h3", display.includes("### 破局方向"));
+  assert("fixed template lead why", display.includes("**为什么是这条路:**"));
   assert(
     "core runner validates breakthrough map/sanitize",
     runner.includes("mapBreakthroughCorePayload") ||
@@ -84,7 +91,8 @@ function main(): void {
   } as unknown as POJUAgentState;
 
   const dirs = formatBreakthroughDirectionsForUser(agent.breakthrough_core, "zh");
-  assert("directions block has header", dirs.includes("破局方向"));
+  assert("directions block has h3", dirs.includes("### 破局方向"));
+  assert("directions block has lead why", dirs.includes("**为什么是这条路:**"));
   assert("directions block has timing", dirs.includes("今年下半年"));
 
   const reply = buildCollectingTransitionReplyFromCore(agent, "zh");

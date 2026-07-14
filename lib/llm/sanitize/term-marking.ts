@@ -13,6 +13,7 @@ import {
   CLOSED_SHEN_SHA,
   HIGH_RISK_COMPLIANCE_HAN,
   HIGH_RISK_SOFT_LABEL,
+  isClosedSetMarkerId,
   isRelationMarkerId,
   isValidSexagenaryGanzhi,
   KEEP_CN_SLUGS,
@@ -416,8 +417,150 @@ export function autoMarkBareTerms(text: string, locale: string): string {
 }
 
 /** 先补 keep_cn 软词，再补闭集裸词。 */
+/**
+ * Common pinyin / typo aliases the model invents → closed-set English slugs.
+ * Unknown compound ids (wu_yin_ban_he …) are demoted to soft text instead.
+ */
+export const MARKER_ID_ALIASES: Readonly<Record<string, string>> = {
+  da_yun: "decade",
+  dayun: "decade",
+  major_luck: "decade",
+  luck_pillar: "decade",
+  liu_nian: "year",
+  liunian: "year",
+  ji_shen: "unfavorable_element",
+  jishen: "unfavorable_element",
+  xi_shen: "favorable_element",
+  xishen: "favorable_element",
+  yong_shen: "yong_shen",
+  shen_ruo: "weak_self",
+  shenruo: "weak_self",
+  shen_qiang: "strong_self",
+  shenqiang: "strong_self",
+  ge_ju: "pattern",
+  geju: "pattern",
+  ming_pan: "natal_profile",
+  mingpan: "natal_profile",
+  ba_zi: "bazi",
+  bazi: "bazi",
+  si_zhu: "four_pillars",
+  ri_zhu: "day_master",
+  ri_zhu_day: "day_master",
+  day_master_dm: "day_master",
+  shi_shen: "shi_shen",
+  shang_guan: "shang_guan",
+  zheng_guan: "zheng_guan",
+  qi_sha: "qi_sha",
+  pian_cai: "pian_cai",
+  zheng_cai: "zheng_cai",
+  pian_yin: "pian_yin",
+  zheng_yin: "zheng_yin",
+  bi_jian: "bi_jian",
+  jie_cai: "jie_cai",
+  gua_su: "gua_su",
+  guasu: "gua_su",
+  yang_ren: "fei_ren",
+  yangren: "fei_ren",
+  fei_ren: "fei_ren",
+  yang_blades: "fei_ren",
+};
+
+/** Invented pinyin that maps to 神煞 zh_src (then → shensha_* slug). */
+const SHENSHA_PINYIN_TO_HAN: Readonly<Record<string, string>> = {
+  gu_luan_sha: "孤鸾煞",
+  guluan_sha: "孤鸾煞",
+  gu_luan: "孤鸾煞",
+  guluan: "孤鸾煞",
+  yang_ren: "羊刃",
+  yangren: "羊刃",
+  gua_su_sha: "寡宿",
+};
+
+function stripOuterFullwidthParens(s: string): string {
+  const t = s.trim();
+  if (/^[（(].+[）)]$/.test(t) && t.length >= 3) {
+    return t.slice(1, -1).trim() || t;
+  }
+  return t;
+}
+
+function isKnownRenderableMarkerId(id: string, locale: string): boolean {
+  if (!id) return false;
+  if (TERM_BY_ID.has(id)) return true;
+  if (isClosedSetMarkerId(id)) return true;
+  if (isRelationMarkerId(id)) return true;
+  if (id === BARE_GANZHI_MARKER.slug) return true;
+  if (highRiskSoftBySlug(id)) return true;
+  if (id.startsWith("shensha_") && toShenshaId(id.slice("shensha_".length))) return true;
+  if (uiTermById(id, locale)) return true;
+  return false;
+}
+
+/**
+ * Fix B — map invented pinyin marker ids to closed-set slugs;
+ * demote unknown compounds to soft text (no broken paren-only render).
+ * Also strips model-added outer （） around markers (Fix D belt).
+ */
+export function normalizeTermMarkerIds(text: string, locale: string): string {
+  if (!text?.trim() || !text.includes("⟦t:")) return text ?? "";
+
+  // Fix D belt — model must not wrap markers in extra parentheses.
+  let out = text.replace(/[（(]\s*(⟦t:[^⟧]+⟧)\s*[）)]/g, "$1");
+
+  TERM_MARKER_PATTERN.lastIndex = 0;
+  out = out.replace(
+    TERM_MARKER_PATTERN,
+    (raw, rawId: string, visEsc: string, plainEsc?: string) => {
+      const leaf = normalizeTermMarkerId(String(rawId));
+      const alias = MARKER_ID_ALIASES[leaf] ?? MARKER_ID_ALIASES[leaf.toLowerCase()];
+      let id = alias ?? leaf;
+      const vis = stripOuterFullwidthParens(unescapeMarkerPart(visEsc));
+      const plain = plainEsc?.trim() ? unescapeMarkerPart(plainEsc) : undefined;
+
+      // shensha surfaces / invented pinyin like gu_luan_sha → closed soft slug when known
+      if (!isKnownRenderableMarkerId(id, locale)) {
+        const fromVis = resolveShenshaSoftLabels(vis, locale);
+        if (fromVis) {
+          id = fromVis.slug;
+        } else {
+          const han =
+            SHENSHA_PINYIN_TO_HAN[leaf] ??
+            SHENSHA_PINYIN_TO_HAN[leaf.toLowerCase()] ??
+            leaf.replace(/^shensha[._]/, "");
+          const fromId = resolveShenshaSoftLabels(han, locale);
+          if (fromId) id = fromId.slug;
+        }
+      }
+
+      if (isKnownRenderableMarkerId(id, locale)) {
+        if (id !== String(rawId) || vis !== unescapeMarkerPart(visEsc)) {
+          if (id !== leaf) {
+            console.warn(`[term-marking] normalized marker id ${leaf} → ${id}`);
+          }
+          return encodeTermMarker(id, vis, plain);
+        }
+        return raw;
+      }
+
+      console.warn(
+        `[term-marking] unknown marker id demoted to soft text: ${leaf}`,
+        { visible: vis.slice(0, 40) },
+      );
+      return vis;
+    },
+  );
+
+  // Collapse double fullwidth parens left by demotion / model wrapping.
+  out = out.replace(/（{2,}([^（）]+)）{2,}/g, "（$1）");
+  return out;
+}
+
 export function prepareTextForGlossaryRender(text: string, locale: string): string {
-  return autoMarkBareTerms(wrapBareKeepCnSoftTerms(text, locale), locale);
+  const normalized = fillMissingMarkerPlain(
+    repairShenshaMarkerSoftLabels(normalizeTermMarkerIds(text, locale), locale),
+    locale,
+  );
+  return autoMarkBareTerms(wrapBareKeepCnSoftTerms(normalized, locale), locale);
 }
 
 /** Remove broken / unclosed markers so users never see raw `⟦`. Intact closed markers become visible text. */

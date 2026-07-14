@@ -27,6 +27,7 @@ import type { ProfileStructured } from "@/lib/calculations/build-profile-structu
 import type { RelationLabel } from "@/lib/calculations/relation-engine";
 import {
   auditPaymentLeakResiduals,
+  buildTermMarkingPromptBlock,
   sanitizePaymentAuditLeaks,
   type ComplianceViolation,
 } from "@/lib/llm/sanitize/compliance-terms";
@@ -78,9 +79,17 @@ export const DEEP_RECKONING_TASK = `# 角色：破局总设计师（上帝视角
   严禁集外神煞（国印/空亡/元辰/六秀日/阴差阳错…一律禁止）。
 
 # 篇幅节制（硬要求 · 缩短生成、一次跑完）
-- relationship_conclusion：3–5 句，只写结构性原因，不注水。
+- relationship_conclusion：写成【2–4 个短段】，段与段之间空一行；每段 ≤120 字、只讲一个论点；只写结构性原因，不注水。每段打标术语 ≤2 个。
 - 每条 direction.structural_basis：一句话点命盘锚点，禁止段落式复述。
 - investigation_agenda：3–4 项即可；每项 label ≤20 字，锐而短，直指「落地某条破局方向前必须先知道」的信息。
+
+# 字段=纯内容，排版由前端负责（硬要求）
+各字段只写【内容本身】——前端用固定模板排版（### / 粗体引导块），你写了标题会重复：
+- 【禁止】在字段里写标题、编号、markdown（如 "破局方向：1." "### " "**加粗**" "结构依据："）。
+- direction：一句话方向本身（不带"方向一/1./破局方向"前缀）。
+- structural_basis / timing：直接写内容（不带"结构依据："/"时机："前缀）。
+- what_would_confirm：只供议程倒推，【不会】展示给用户。
+- first_question：一句完整收尾提问（不带引导小标题）。
 
 # 第1段靶心（硬要求 · 必须显式扣住）
 输入中会提供 core_dilemma（concrete_event / stakes / sticking_point）与 desired_direction（wants / priority）。
@@ -120,7 +129,7 @@ reasoning 里可自由用命理词推演；输出给用户的字段必须软译�
 
 # 排版硬要求（金字软译 + [···]；白话按通顺决定）
 先写成【通顺、像人话、能一口气读下去】的白话全文。
-需要锚定术语时，用 ⟦t:id|简洁软译|白话?⟧：
+需要锚定术语时，用 ⟦t:<闭集英文slug>|简洁软译|白话?⟧：
 - 第二格 = 极短软译词（≤6 字），UI 以金字呈现，旁附 [···] 可点开；
 - 第三格白话解释按"通顺与否"决定：
   · 若该软译词在你写的句子里已经通顺自然 → 第3格可省（留空；UI 回退固定 gloss 也可接受）；
@@ -129,12 +138,26 @@ reasoning 里可自由用命理词推演；输出给用户的字段必须软译�
 正确示范：
   "你那些拿手的方案和想法，现在因为太焦躁反而使不出来了⟦t:shi_shen|表达力|⟧。"
   （软译自然融入；白话可空）
+  "你正处在⟦t:decade|当前阶段|这段时期外界对你的压力明显升温⟧，先别硬冲。"
   "你面对那套外部规则与考核⟦t:zheng_guan|规则感|就是你面对的'新标准、数字化考核'⟧时，尤其别硬扛。"
-  （软译偏生硬时，第3格给贴情景白话）
 错误示范（禁止）：
   ✗ "你的表达力被火烧"——命理句式抠词残留
-  ✗ "⟦t:shi_shen|食神 · 就是你提的那些方案…|一长串⟧"——软译格塞成长句
+  ✗ "⟦t:da_yun|当前阶段|…⟧" / "⟦t:ji_shen|…⟧"——自造拼音 id（必须用 decade / unfavorable_element）
+  ✗ "（⟦t:decade|当前阶段|…⟧）"——标记外再套括号（前端已渲染金字，套括号会变成（（…）））
+  ✗ "⟦t:wu_yin_ban_he|午寅半合|…⟧"——闭集没有的临时组合，禁止打标，直接白话讲清
 原则：通读像人话；金字软译是轻点缀；想深究再点 [···]。
+
+# 打标 id 硬规则（过支付呈现 · 金字能否点开取决于 id）
+⟦t:<id>|<软译>|<情景白话>⟧ 的 <id> 【必须】取自下方【闭集 slug 清单】（英文 slug），【严禁自造 id】。
+常见对应：
+  大运→decade   流年→year   忌神→unfavorable_element   喜神→favorable_element
+  身弱→weak_self   身强→strong_self   格局→pattern   命盘→natal_profile
+  日主→day_master   用神→yong_shen   食神→shi_shen   正官→zheng_guan
+自造 id（如 da_yun / ji_shen / wu_yin_ban_he）会导致前端无法渲染 → 用户看到的只是一对光秃秃的括号。
+若某个概念在闭集里【没有】对应 slug（如"午寅半合火局""乙庚合"这类临时组合）：
+  → 【不要打标】，直接用大白话把那个意思讲出来（本来就该白话重组）。
+标记 ⟦t:…⟧ 本身就会被前端渲染成【金色词 + 可点开的解释】。
+【不要】自己在标记外再套括号。
 
 # 术语降噪（首次打标、后续白话 · 一段最多 1–2 个）
 同一个术语，仅在【首次出现】时打标；后续再提到，直接用白话，不再打标。
@@ -277,6 +300,7 @@ export function buildBreakthroughCorePrompt(input: {
     POJU_IDENTITY,
     POJU_KNOWLEDGE_ROOTS,
     buildOutputPolicyForPoju(),
+    buildTermMarkingPromptBlock(locale),
     directedInventoryBlock,
     buildStructuredInstanceInventory(structured),
     DEEP_RECKONING_TASK,

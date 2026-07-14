@@ -1,6 +1,6 @@
 /**
  * Segment 2 (analysis + directions + agenda) — user-visible reply assembly.
- * Owns full relationship_conclusion + directions + agenda rendering.
+ * Layout = fixed code template (RichReadingText markdown); content = model fields only.
  * Does not import opening or other phase modules.
  */
 import type { BreakthroughCore, POJUAgentState } from "@/lib/poju/agent-state";
@@ -25,31 +25,18 @@ export function formatFocusQuestionAsClearQuestion(label: string, locale: string
 
 /**
  * Legacy fallback when older cores lack model-written first_question.
- * Prefer appendModelFirstQuestion — do not surface raw agenda labels as the primary path.
+ * Prefer model first_question — do not surface raw agenda labels as the primary path.
  */
-function appendFirstFocusQuestion(
-  reply: string,
-  agent: POJUAgentState,
-  locale: string,
-): string {
-  if (isPojuFailurePlaceholderMessage(reply)) return reply;
+function formatLegacyFocusQuestion(agent: POJUAgentState, locale: string): string | null {
   const focus = selectCurrentAgendaFocus(agent.investigation_agenda ?? []);
-  if (!focus?.label?.trim()) return reply;
-
-  const question = formatFocusQuestionAsClearQuestion(focus.label, locale);
-  if (hasQuestionCue(reply) && reply.trimEnd().endsWith(question)) return reply;
-
-  const lead = locale.startsWith("zh")
-    ? "\n\n接下来，我想和你一起把几件事弄清楚，才能给你落地的走法。我们先从最关键的一件开始——"
-    : "\n\nNext, I want us to clarify a few things together so the advice can land. Let's start with the most important one—";
-
-  const base = hasQuestionCue(reply)
-    ? reply.trimEnd().replace(/[？?]\s*$/, "").trimEnd()
-    : reply.trimEnd();
-  return `${base}${lead}${question}`;
+  if (!focus?.label?.trim()) return null;
+  return formatFocusQuestionAsClearQuestion(focus.label, locale);
 }
 
-/** Append model-written first_question (warm, detailed, direction-linked). */
+/**
+ * @deprecated Prefer buildSegment2AnalysisReply (template includes first_question).
+ * Kept for callers/tests that append a question onto an existing body.
+ */
 export function appendModelFirstQuestion(
   reply: string,
   firstQuestion: string | null | undefined,
@@ -59,9 +46,17 @@ export function appendModelFirstQuestion(
   if (isPojuFailurePlaceholderMessage(reply)) return reply;
   const fq = firstQuestion?.trim() ?? "";
   if (!fq) {
-    return agent ? appendFirstFocusQuestion(reply, agent, locale) : reply;
+    if (!agent) return reply;
+    const legacy = formatLegacyFocusQuestion(agent, locale);
+    if (!legacy) return reply;
+    const lead = locale.startsWith("zh")
+      ? "\n\n接下来，我想和你一起把几件事弄清楚，才能给你落地的走法。我们先从最关键的一件开始——"
+      : "\n\nNext, I want us to clarify a few things together so the advice can land. Let's start with the most important one—";
+    const base = hasQuestionCue(reply)
+      ? reply.trimEnd().replace(/[？?]\s*$/, "").trimEnd()
+      : reply.trimEnd();
+    return `${base}${lead}${legacy}`;
   }
-
   const base = hasQuestionCue(reply)
     ? reply.trimEnd().replace(/[？?]\s*$/, "").trimEnd()
     : reply.trimEnd();
@@ -69,49 +64,101 @@ export function appendModelFirstQuestion(
   return `${base}\n\n${fq}`;
 }
 
-/** User-visible breakthrough directions block (segment 2 · 2–3 items). */
+/** Strip model-added numbering / section prefixes so the fixed template doesn't double up. */
+function stripContentChrome(text: string, kind: "direction" | "basis" | "timing"): string {
+  let t = text.trim();
+  if (!t) return t;
+  if (kind === "direction") {
+    t = t.replace(
+      /^(?:破局方向\s*[一二三123]|方向\s*[一二三123]|[123][\.、．)）]|Direction\s*[123])\s*[·•:\-—]?\s*/iu,
+      "",
+    );
+  }
+  if (kind === "basis") {
+    t = t.replace(/^(?:结构依据|依据|为什么是这条路|Basis|Why this path)\s*[:：]\s*/iu, "");
+  }
+  if (kind === "timing") {
+    t = t.replace(/^(?:时机|现在该怎么走|Timing|What to do now)\s*[:：]\s*/iu, "");
+  }
+  t = t.replace(/^#+\s+/, "").replace(/^\*\*?/, "").replace(/\*\*$/, "");
+  return t.trim();
+}
+
+const ZH_DIRECTION_ORDINAL = ["一", "二", "三"] as const;
+
+/**
+ * Fixed-template directions: each path is its own ### h3 + two lead blocks.
+ * Uses RichReadingText-native syntax (### / **label:**) — never space-indented plain text.
+ */
 export function formatBreakthroughDirectionsForUser(
   core: BreakthroughCore | null | undefined,
   locale: string,
 ): string {
   const dirs = core?.breakthrough_directions ?? [];
   if (dirs.length === 0) return "";
-  const header = locale.startsWith("zh") ? "\n\n破局方向：" : "\n\nBreakthrough directions:";
-  const lines = dirs.map((d, i) => {
-    const n = i + 1;
-    const basis = d.structural_basis?.trim() ?? "";
-    const timing = d.timing?.trim() ?? "";
-    if (locale.startsWith("zh")) {
-      const parts = [`\n${n}. ${d.direction.trim()}`];
-      if (basis) parts.push(`   结构依据：${basis}`);
-      if (timing) parts.push(`   时机：${timing}`);
-      return parts.join("\n");
+
+  const zh = locale.startsWith("zh");
+  const blocks: string[] = [];
+
+  dirs.forEach((d, i) => {
+    const direction = stripContentChrome(d.direction ?? "", "direction");
+    if (!direction) return;
+    const basis = stripContentChrome(d.structural_basis ?? "", "basis");
+    const timing = stripContentChrome(d.timing ?? "", "timing");
+
+    if (zh) {
+      const n = ZH_DIRECTION_ORDINAL[i] ?? String(i + 1);
+      blocks.push(`### 破局方向${n} · ${direction}`);
+      if (basis) blocks.push(`**为什么是这条路:** ${basis}`);
+      if (timing) blocks.push(`**现在该怎么走:** ${timing}`);
+    } else {
+      blocks.push(`### Direction ${i + 1} · ${direction}`);
+      if (basis) blocks.push(`**Why this path:** ${basis}`);
+      if (timing) blocks.push(`**What to do now:** ${timing}`);
     }
-    const parts = [`\n${n}. ${d.direction.trim()}`];
-    if (basis) parts.push(`   Basis: ${basis}`);
-    if (timing) parts.push(`   Timing: ${timing}`);
-    return parts.join("\n");
   });
-  return header + lines.join("");
+
+  return blocks.join("\n\n");
 }
 
 /**
- * Full segment-2 user reply: relationship_conclusion + directions + model first_question.
- * Driven by async job completion — not by sync justConverted.
+ * Full segment-2 user reply — layout from fixed template, content from model fields.
+ * what_would_confirm + agenda list stay off the body (agenda panel / engine only).
  */
 export function buildSegment2AnalysisReply(
   agent: POJUAgentState,
   locale: string,
 ): string {
   const core = agent.breakthrough_core;
-  const rel = core?.relationship_conclusion?.trim() ?? "";
-  const directions = formatBreakthroughDirectionsForUser(core, locale);
-  const intro =
-    rel ||
-    (locale.startsWith("zh")
-      ? "我先帮你把这件事在本盘结构里的卡点理顺。"
+  const zh = locale.startsWith("zh");
+  const blocks: string[] = [];
+
+  const rel =
+    core?.relationship_conclusion?.trim() ||
+    (zh
+      ? "我先帮你把这件事在结构里的卡点理顺。"
       : "Let me frame where you're structurally stuck first.");
-  return appendModelFirstQuestion(`${intro}${directions}`, core?.first_question, locale, agent);
+
+  blocks.push(zh ? "### 你为什么卡在这里" : "### Why you're stuck here");
+  blocks.push(rel);
+
+  const directions = formatBreakthroughDirectionsForUser(core, locale);
+  if (directions) blocks.push(directions);
+
+  const firstQuestion = core?.first_question?.trim() ?? "";
+  if (firstQuestion && !isPojuFailurePlaceholderMessage(firstQuestion)) {
+    blocks.push(firstQuestion);
+  } else {
+    const legacy = formatLegacyFocusQuestion(agent, locale);
+    if (legacy) {
+      const lead = zh
+        ? "接下来，我想和你一起把几件事弄清楚，才能给你落地的走法。我们先从最关键的一件开始——"
+        : "Next, I want us to clarify a few things together so the advice can land. Let's start with the most important one—";
+      blocks.push(`${lead}${legacy}`);
+    }
+  }
+
+  return blocks.join("\n\n");
 }
 
 /** @deprecated Prefer buildSegment2AnalysisReply — kept as alias for call sites. */
