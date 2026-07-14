@@ -281,8 +281,15 @@ export async function runXhighJob(job_id: string, config: XhighJobRunnerConfig):
   if (lastErr || !out) {
     const detail = describeTransportError(lastErr ?? new Error("transport_failed"));
     const resolved = resolveTransportFailureReason(lastErr);
-    console.warn(`[xhigh-job] ${config.phase} transport failed`, {
+    const snap = await getXhighJob(job_id).catch(() => null);
+    const content_len = snap?.accumulated_content?.length ?? lastPersistedLen;
+    console.warn(`[xhigh-job] ${config.phase} failed`, {
       job_id,
+      elapsed_ms: Date.now() - invocationStartedAt,
+      content_len,
+      prompt_tokens: out?.prompt_tokens ?? null,
+      completion_tokens: out?.completion_tokens ?? null,
+      finish_reason: out?.finish_reason ?? null,
       msg: detail.msg,
       http_status: detail.http_status,
       provider: detail.provider,
@@ -293,6 +300,7 @@ export async function runXhighJob(job_id: string, config: XhighJobRunnerConfig):
       retryable: resolved.retryable,
       failure_reason: resolved.failure_reason,
       error_detail: detail.body_snippet,
+      accumulated_content: snap?.accumulated_content || undefined,
     });
     return;
   }
@@ -301,9 +309,22 @@ export async function runXhighJob(job_id: string, config: XhighJobRunnerConfig):
   const content = out.text.trim();
   const finish = out.finish_reason ?? null;
 
+  console.info(`[xhigh-job] ${config.phase} stream done`, {
+    job_id,
+    elapsed_ms: latency_ms,
+    content_len: content.length,
+    prompt_tokens: out.prompt_tokens ?? null,
+    completion_tokens: out.completion_tokens ?? null,
+    finish_reason: finish,
+  });
+
   if (finish === "length" || !content) {
     console.warn(`[xhigh-job] ${config.phase} truncated/empty`, {
       job_id,
+      elapsed_ms: latency_ms,
+      content_len: content.length,
+      prompt_tokens: out.prompt_tokens ?? null,
+      finish_reason: finish,
       max_tokens: config.max_tokens,
     });
     await failXhighJob(job_id, "deep analysis output was truncated", {

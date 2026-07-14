@@ -28,6 +28,7 @@ export async function GET(req: NextRequest) {
   const has_core = Boolean(job.result?.breakthrough_core);
   const has_agenda = Array.isArray(job.result?.investigation_agenda);
   const age_ms = Date.now() - job.created_at;
+  const content_len = job.accumulated_content?.length ?? 0;
   console.info("[xhigh-status]", {
     job_id: job.job_id,
     status: job.status,
@@ -35,6 +36,7 @@ export async function GET(req: NextRequest) {
     has_core,
     has_agenda,
     agenda_len: has_agenda ? job.result!.investigation_agenda.length : 0,
+    content_len,
     updated_at: job.updated_at,
     created_at: job.created_at,
     age_ms,
