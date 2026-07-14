@@ -49,12 +49,22 @@ export type TermEntry = {
 /** Glossary rows injected into delivery prompts (closed-set 命理 · cache-stable). */
 const DELIVERY_MARKING_GLOSSARY_IDS = CLOSED_SET_REPLACE_IDS.filter((id) => id !== "羊刃");
 
+function pickFiveLocale(
+  bag: Partial<Record<Locale, string>> | undefined,
+  loc: Locale,
+): string {
+  if (!bag) return "";
+  return (bag[loc] || bag.en || bag.zh || "").trim();
+}
+
 function softLabel(entry: TermEntry, loc: Locale): string {
   const override = KEEP_CN_VISIBLE_SOFT[entry.id];
   if (override) {
-    return loc === "zh" ? override.zh : override.en;
+    return pickFiveLocale(override, loc);
   }
-  return (entry.soft[loc] || entry.soft.en).split(/\s*\/\s*/)[0]!.trim();
+  return (entry.soft[loc] || entry.soft.en || entry.soft.zh || "")
+    .split(/\s*\/\s*/)[0]!
+    .trim();
 }
 
 function conceptToTermEntry(c: GlossaryConcept): TermEntry | null {
@@ -227,11 +237,10 @@ function resolveBareMarkLabels(
   const hr = HIGH_RISK_SOFT_LABEL[hanId as keyof typeof HIGH_RISK_SOFT_LABEL];
   if (hr) {
     const loc = toGlossaryLocale(locale);
-    const lang = loc === "zh" ? "zh" : "en";
     return {
       slug: hr.slug,
-      soft: lang === "zh" ? hr.zh : hr.en,
-      plain: lang === "zh" ? hr.glossZh : hr.glossEn,
+      soft: pickFiveLocale(hr.soft, loc),
+      plain: pickFiveLocale(hr.gloss, loc),
     };
   }
 
@@ -278,9 +287,8 @@ function markBareGanzhiInSegment(
   if (seenSlugs?.has(slug)) return segment;
 
   const loc = toGlossaryLocale(locale);
-  const lang = loc === "zh" ? "zh" : "en";
-  const soft = lang === "zh" ? BARE_GANZHI_MARKER.zh : BARE_GANZHI_MARKER.en;
-  const plain = lang === "zh" ? BARE_GANZHI_MARKER.glossZh : BARE_GANZHI_MARKER.glossEn;
+  const soft = pickFiveLocale(BARE_GANZHI_MARKER.soft, loc);
+  const plain = pickFiveLocale(BARE_GANZHI_MARKER.gloss, loc);
   const marker = encodeTermMarker(slug, soft, plain);
 
   const matches: Array<{ index: number; len: number }> = [];
@@ -375,71 +383,54 @@ export function stripBrokenMarkers(text: string): string {
 }
 
 export function plainByTermId(termId: string, locale: string): string | null {
+  const loc = toGlossaryLocale(locale);
   const tension = TEN_GOD_TENSION_SOFT[termId as keyof typeof TEN_GOD_TENSION_SOFT];
-  if (tension) {
-    const loc = toGlossaryLocale(locale);
-    return tension[loc === "zh" ? "zh" : "en"];
-  }
+  if (tension) return pickFiveLocale(tension, loc) || null;
   const relKind = relationKindFromMarkerId(termId);
-  if (relKind) {
-    const loc = toGlossaryLocale(locale);
-    return RELATION_KIND_SOFT[relKind][loc === "zh" ? "zh" : "en"];
-  }
+  if (relKind) return pickFiveLocale(RELATION_KIND_SOFT[relKind], loc) || null;
+  if (termId === BARE_GANZHI_MARKER.slug) return pickFiveLocale(BARE_GANZHI_MARKER.gloss, loc) || null;
+  const hr = highRiskSoftBySlug(termId);
+  if (hr) return pickFiveLocale(hr.gloss, loc) || null;
   const entry = TERM_BY_ID.get(termId);
   if (!entry) return null;
-  const loc = toGlossaryLocale(locale);
-  return entry.plain[loc] || entry.plain.en || null;
+  return pickFiveLocale(entry.plain, loc) || null;
 }
 
 export function uiTermById(
   termId: string,
   locale: string,
 ): { soft: string; plain: string; polarity: TermPolarity } | null {
+  const loc = toGlossaryLocale(locale);
   const tension = TEN_GOD_TENSION_SOFT[termId as keyof typeof TEN_GOD_TENSION_SOFT];
   if (tension) {
-    const loc = toGlossaryLocale(locale);
-    const lang = loc === "zh" ? "zh" : "en";
-    return {
-      soft: tension[lang],
-      plain: tension[lang],
-      polarity: termPolarityById(termId),
-    };
+    const soft = pickFiveLocale(tension, loc);
+    return { soft, plain: soft, polarity: termPolarityById(termId) };
   }
   const relKind = relationKindFromMarkerId(termId);
   if (relKind) {
-    const loc = toGlossaryLocale(locale);
-    const lang = loc === "zh" ? "zh" : "en";
-    return {
-      soft: RELATION_KIND_SOFT[relKind][lang],
-      plain: RELATION_KIND_SOFT[relKind][lang],
-      polarity: termPolarityById(termId),
-    };
+    const soft = pickFiveLocale(RELATION_KIND_SOFT[relKind], loc);
+    return { soft, plain: soft, polarity: termPolarityById(termId) };
   }
   if (termId === BARE_GANZHI_MARKER.slug) {
-    const loc = toGlossaryLocale(locale);
-    const lang = loc === "zh" ? "zh" : "en";
     return {
-      soft: lang === "zh" ? BARE_GANZHI_MARKER.zh : BARE_GANZHI_MARKER.en,
-      plain: lang === "zh" ? BARE_GANZHI_MARKER.glossZh : BARE_GANZHI_MARKER.glossEn,
+      soft: pickFiveLocale(BARE_GANZHI_MARKER.soft, loc),
+      plain: pickFiveLocale(BARE_GANZHI_MARKER.gloss, loc),
       polarity: "neutral",
     };
   }
   const hr = highRiskSoftBySlug(termId);
   if (hr) {
-    const loc = toGlossaryLocale(locale);
-    const lang = loc === "zh" ? "zh" : "en";
     return {
-      soft: lang === "zh" ? hr.zh : hr.en,
-      plain: lang === "zh" ? hr.glossZh : hr.glossEn,
+      soft: pickFiveLocale(hr.soft, loc),
+      plain: pickFiveLocale(hr.gloss, loc),
       polarity: "neutral",
     };
   }
   const entry = TERM_BY_ID.get(termId);
   if (!entry) return null;
-  const loc = toGlossaryLocale(locale);
   return {
     soft: softLabel(entry, loc),
-    plain: entry.plain[loc] || entry.plain.en,
+    plain: pickFiveLocale(entry.plain, loc),
     polarity: termPolarityById(termId),
   };
 }

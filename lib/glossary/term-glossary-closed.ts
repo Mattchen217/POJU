@@ -249,59 +249,87 @@ const TEN_GODS: GlossaryConcept[] = [
   ce("正印", ["Direct Resource", "Zheng Yin"], sg("steady support", "稳定支持力", "apoyo estable", "soutien stable", "beständige Stütze", "Structured care and learning.", "有结构的照护与学习。", "Apoyo estructurado.", "Soutien structuré.", "Strukturierte Stütze.")),
 ];
 
-const LIFE_STAGE_ROWS: Array<[string, string, string, string, string]> = [
-  ["长生", "fresh start", "新生起步", "Like a seed breaking soil — new phase, fragile but full of potential.", "如种子破土——新阶段，潜力大但脆弱。"],
-  ["沐浴", "reset phase", "洗礼调整", "Like a shower after a long trip — shedding, sensitive.", "如长途后洗澡——脱旧感，敏感。"],
-  ["冠带", "stepping up", "整装上岗", "Like getting your first uniform — stepping into a role.", "如第一次穿上制服——进入角色。"],
-  ["临官", "in charge", "当家掌权", "Like running your own shift — others rely on you.", "如自己带班——他人会依赖你。"],
-  ["帝旺", "peak strength", "巅峰状态", "Like mid-season form — energy high, don't burn out.", "如赛季中段状态——能量高，别透支。"],
-  ["衰", "easing off", "退潮放缓", "Like after the holiday rush — pace must soften.", "如旺季过后——节奏要放缓。"],
-  ["病", "running low", "精力下滑", "Like a phone at 15% — conserve, avoid heavy loads.", "如手机剩15%——省电、别扛重。"],
-  ["死", "closed chapter", "收束阶段", "Like closing for renovation — endings make space.", "如关店装修——结束为腾出空间。"],
-  ["墓", "storage mode", "库存沉淀", "Like winter inventory — hold and review.", "如冬藏——盘点、别强推。"],
-  ["绝", "bare minimum", "极简归零", "Like an empty shelf — strip to essentials.", "如空架——只留必要。"],
-  ["胎", "gestation", "孕育酝酿", "Like an idea in a notebook — forming quietly.", "如笔记本里的点子——悄悄成形。"],
-  ["养", "nurturing", "滋养培育", "Like watering seedlings — small care feeds the next rise.", "如浇苗——小照料换下一波生长。"],
+const LIFE_STAGE_ROWS: Array<
+  [string, string, string, string, string, string, string, string, string, string, string]
+> = [
+  ["长生", "fresh start", "新生起步", "nuevo comienzo", "Neuanfang", "nouveau départ", "Like a seed breaking soil — new phase, fragile but full of potential.", "如种子破土——新阶段，潜力大但脆弱。", "Como una semilla rompiendo tierra — fase nueva, frágil pero con potencial.", "Wie ein Keimling — neue Phase, empfindlich, aber voll Potenzial.", "Comme une graine qui perce — phase nouvelle, fragile mais pleine de potentiel."],
+  ["沐浴", "reset phase", "洗礼调整", "fase de reinicio", "Reset-Phase", "phase de reset", "Like a shower after a long trip — shedding, sensitive.", "如长途后洗澡——脱旧感，敏感。", "Como una ducha tras un viaje largo — soltar, sensible.", "Wie eine Dusche nach langer Reise — Ablegen, sensibel.", "Comme une douche après un long trajet — lâcher prise, sensible."],
+  ["冠带", "stepping up", "整装上岗", "asumir el rol", "in die Rolle treten", "prendre le rôle", "Like getting your first uniform — stepping into a role.", "如第一次穿上制服——进入角色。", "Como tu primer uniforme — entrar en un rol.", "Wie die erste Uniform — in eine Rolle eintreten.", "Comme le premier uniforme — entrer dans un rôle."],
+  ["临官", "in charge", "当家掌权", "al mando", "verantwortlich", "aux commandes", "Like running your own shift — others rely on you.", "如自己带班——他人会依赖你。", "Como llevar tu propio turno — otros dependen de ti.", "Wie die eigene Schicht führen — andere verlassen sich auf dich.", "Comme gérer votre propre vacation — les autres comptent sur vous."],
+  ["帝旺", "peak strength", "巅峰状态", "pico de fuerza", "Peakkraft", "force de pic", "Like mid-season form — energy high, don't burn out.", "如赛季中段状态——能量高，别透支。", "Como forma a mitad de temporada — energía alta, no te quemes.", "Wie Hochform in der Saisonmitte — viel Energie, nicht ausbrennen.", "Comme la forme en mi-saison — énergie haute, ne vous épuisez pas."],
+  ["衰", "easing off", "退潮放缓", "aflojando", "nachlassen", "ralentir", "Like after the holiday rush — pace must soften.", "如旺季过后——节奏要放缓。", "Como después de la temporada alta — el ritmo debe suavizarse.", "Wie nach dem Feiertagsrummel — Tempo drosseln.", "Comme après la ruée des fêtes — le rythme doit adoucir."],
+  ["病", "running low", "精力下滑", "energía baja", "Energie niedrig", "énergie basse", "Like a phone at 15% — conserve, avoid heavy loads.", "如手机剩15%——省电、别扛重。", "Como un móvil al 15% — conserva, evita cargas pesadas.", "Wie ein Akku bei 15% — schonen, schwere Lasten meiden.", "Comme un téléphone à 15% — économisez, évitez les lourdes charges."],
+  ["死", "closed chapter", "收束阶段", "capítulo cerrado", "abgeschlossenes Kapitel", "chapitre clos", "Like closing for renovation — endings make space.", "如关店装修——结束为腾出空间。", "Como cerrar por reforma — los finales abren espacio.", "Wie schließen für Renovation — Enden schaffen Raum.", "Comme fermer pour rénovation — les fins font de la place."],
+  ["墓", "storage mode", "库存沉淀", "modo almacén", "Speichermodus", "mode stockage", "Like winter inventory — hold and review.", "如冬藏——盘点、别强推。", "Como inventario de invierno — guarda y revisa.", "Wie Winterinventar — halten und prüfen.", "Comme un inventaire d'hiver — tenir et revoir."],
+  ["绝", "bare minimum", "极简归零", "mínimo esencial", "Minimum", "minimum vital", "Like an empty shelf — strip to essentials.", "如空架——只留必要。", "Como un estante vacío — quédate con lo esencial.", "Wie ein leeres Regal — auf Wesentliches reduzieren.", "Comme une étagère vide — aller à l'essentiel."],
+  ["胎", "gestation", "孕育酝酿", "gestación", "Keimen", "gestation", "Like an idea in a notebook — forming quietly.", "如笔记本里的点子——悄悄成形。", "Como una idea en un cuaderno — formándose en silencio.", "Wie eine Idee im Notizbuch — still wachsend.", "Comme une idée dans un carnet — qui se forme en silence."],
+  ["养", "nurturing", "滋养培育", "nutrición", "Nähren", "nourrir", "Like watering seedlings — small care feeds the next rise.", "如浇苗——小照料换下一波生长。", "Como regar plantones — el pequeño cuidado alimenta el siguiente crecimiento.", "Wie Setzlinge gießen — kleine Pflege nährt den nächsten Aufstieg.", "Comme arroser des semis — un petit soin nourrit la prochaine poussée."],
 ];
 
-const LIFE_STAGES: GlossaryConcept[] = LIFE_STAGE_ROWS.map(([han, en, zh, glossEn, glossZh]) =>
-  ce(han, [], sg(en, zh, en, en, en, glossEn, glossZh, glossEn, glossEn, glossEn)),
+const LIFE_STAGES: GlossaryConcept[] = LIFE_STAGE_ROWS.map(
+  ([han, en, zh, es, de, fr, glossEn, glossZh, glossEs, glossDe, glossFr]) =>
+    // Row order after zh soft: es, de, fr soft, then glossEn/Zh/Es/De/Fr.
+    ce(han, [], sg(en, zh, es, fr, de, glossEn, glossZh, glossEs, glossFr, glossDe)),
 );
 
-function stemEntry(stem: string, en: string, zh: string, glossEn: string, glossZh: string): GlossaryConcept {
-  return ce(stem, [stem], sg(en, zh, en, en, en, glossEn, glossZh, glossEn, glossEn, glossEn));
+function stemEntry(
+  stem: string,
+  en: string,
+  zh: string,
+  es: string,
+  de: string,
+  fr: string,
+  glossEn: string,
+  glossZh: string,
+  glossEs: string,
+  glossDe: string,
+  glossFr: string,
+): GlossaryConcept {
+  return ce(stem, [stem], sg(en, zh, es, fr, de, glossEn, glossZh, glossEs, glossFr, glossDe));
 }
 
 const STEMS: GlossaryConcept[] = [
-  stemEntry("甲", "Jia stem", "甲", "Yang Wood — initiating, upward.", "阳木——启动向上。"),
-  stemEntry("乙", "Yi stem", "乙", "Yin Wood — flexible growth.", "阴木——柔韧生长。"),
-  stemEntry("丙", "Bing stem", "丙", "Yang Fire — visible heat.", "阳火——外显热度。"),
-  stemEntry("丁", "Ding stem", "丁", "Yin Fire — steady inner flame.", "阴火——稳定内焰。"),
-  stemEntry("戊", "Wu stem", "戊", "Yang Earth — mountain, structure.", "阳土——山、结构。"),
-  stemEntry("己", "Ji stem", "己", "Yin Earth — soil, nurture.", "阴土——土壤、滋养。"),
-  stemEntry("庚", "Geng stem", "庚", "Yang Metal — blade, standards.", "阳金——刀锋、标准。"),
-  stemEntry("辛", "Xin stem", "辛", "Yin Metal — jewel, refinement.", "阴金——珠宝、精炼。"),
-  stemEntry("壬", "Ren stem", "壬", "Yang Water — river flow.", "阳水——江河流动。"),
-  stemEntry("癸", "Gui stem", "癸", "Yin Water — rain, quiet depth.", "阴水——雨、静深。"),
+  stemEntry("甲", "Jia wood", "甲木启发", "madera Jia", "Jia-Holz", "bois Jia", "Yang Wood — initiating, upward.", "阳木——启动向上。", "Madera yang — inicio ascendente.", "Yang-Holz — startet aufwärts.", "Bois yang — élan vers le haut."),
+  stemEntry("乙", "Yi wood", "乙木柔韧", "madera Yi", "Yi-Holz", "bois Yi", "Yin Wood — flexible growth.", "阴木——柔韧生长。", "Madera yin — crecimiento flexible.", "Yin-Holz — flexibles Wachstum.", "Bois yin — croissance souple."),
+  stemEntry("丙", "Bing fire", "丙火外显", "fuego Bing", "Bing-Feuer", "feu Bing", "Yang Fire — visible heat.", "阳火——外显热度。", "Fuego yang — calor visible.", "Yang-Feuer — sichtbare Hitze.", "Feu yang — chaleur visible."),
+  stemEntry("丁", "Ding fire", "丁火内焰", "fuego Ding", "Ding-Feuer", "feu Ding", "Yin Fire — steady inner flame.", "阴火——稳定内焰。", "Fuego yin — llama interior estable.", "Yin-Feuer — stetige innere Flamme.", "Feu yin — flamme intérieure stable."),
+  stemEntry("戊", "Wu earth", "戊土厚载", "tierra Wu", "Wu-Erde", "terre Wu", "Yang Earth — mountain, structure.", "阳土——山、结构。", "Tierra yang — montaña, estructura.", "Yang-Erde — Berg, Struktur.", "Terre yang — montagne, structure."),
+  stemEntry("己", "Ji earth", "己土滋养", "tierra Ji", "Ji-Erde", "terre Ji", "Yin Earth — soil, nurture.", "阴土——土壤、滋养。", "Tierra yin — suelo, nutrición.", "Yin-Erde — Boden, Nährung.", "Terre yin — sol, nutrition."),
+  stemEntry("庚", "Geng metal", "庚金锋利", "metal Geng", "Geng-Metall", "métal Geng", "Yang Metal — blade, standards.", "阳金——刀锋、标准。", "Metal yang — filo, estándares.", "Yang-Metall — Klinge, Maßstäbe.", "Métal yang — lame, standards."),
+  stemEntry("辛", "Xin metal", "辛金精炼", "metal Xin", "Xin-Metall", "métal Xin", "Yin Metal — jewel, refinement.", "阴金——珠宝、精炼。", "Metal yin — joya, refinamiento.", "Yin-Metall — Juwel, Verfeinerung.", "Métal yin — joyau, raffinement."),
+  stemEntry("壬", "Ren water", "壬水奔流", "agua Ren", "Ren-Wasser", "eau Ren", "Yang Water — river flow.", "阳水——江河流动。", "Agua yang — flujo de río.", "Yang-Wasser — Flusslauf.", "Eau yang — flux de rivière."),
+  stemEntry("癸", "Gui water", "癸水静深", "agua Gui", "Gui-Wasser", "eau Gui", "Yin Water — rain, quiet depth.", "阴水——雨、静深。", "Agua yin — lluvia, profundidad quieta.", "Yin-Wasser — Regen, stille Tiefe.", "Eau yin — pluie, profondeur calme."),
 ];
 
-function branchEntry(branch: string, en: string, zh: string, glossEn: string, glossZh: string): GlossaryConcept {
-  return ce(branch, [branch], sg(en, zh, en, en, en, glossEn, glossZh, glossEn, glossEn, glossEn));
+function branchEntry(
+  branch: string,
+  en: string,
+  zh: string,
+  es: string,
+  de: string,
+  fr: string,
+  glossEn: string,
+  glossZh: string,
+  glossEs: string,
+  glossDe: string,
+  glossFr: string,
+): GlossaryConcept {
+  return ce(branch, [branch], sg(en, zh, es, fr, de, glossEn, glossZh, glossEs, glossFr, glossDe));
 }
 
 const BRANCHES: GlossaryConcept[] = [
-  branchEntry("子", "Zi branch", "子", "Midnight water — cycle start.", "子夜水——周期始。"),
-  branchEntry("丑", "Chou branch", "丑", "Stored earth — slow build.", "藏土——慢积。"),
-  branchEntry("寅", "Yin branch", "寅", "Spring wood — bold start.", "春木——勇起。"),
-  branchEntry("卯", "Mao branch", "卯", "Soft wood — social spring.", "柔木——社交春。"),
-  branchEntry("辰", "Chen branch", "辰", "Damp earth — transition.", "湿土——过渡。"),
-  branchEntry("巳", "Si branch", "巳", "Hidden fire — strategy.", "藏火——谋略。"),
-  branchEntry("午", "Wu branch", "午", "Noon fire — peak visibility.", "午火——可见之巅。"),
-  branchEntry("未", "Wei branch", "未", "Summer earth — harvest prep.", "夏土——收前准备。"),
-  branchEntry("申", "Shen branch", "申", "Metal shift — agile change.", "金气转——灵动变。"),
-  branchEntry("酉", "You branch", "酉", "Pure metal — order.", "纯金——秩序。"),
-  branchEntry("戌", "Xu branch", "戌", "Dry earth — guard.", "燥土——守。"),
-  branchEntry("亥", "Hai branch", "亥", "Winter water — rest before renewal.", "冬水——renewal前休。"),
+  branchEntry("子", "Zi water", "子水位", "rama Zi", "Zi-Zweig", "branche Zi", "Midnight water — cycle start.", "子夜水——周期始。", "Agua de medianoche — inicio de ciclo.", "Mitternachtswasser — Zyklusbeginn.", "Eau de minuit — début de cycle."),
+  branchEntry("丑", "Chou earth", "丑土积", "rama Chou", "Chou-Zweig", "branche Chou", "Stored earth — slow build.", "藏土——慢积。", "Tierra almacenada — construcción lenta.", "Gespeicherte Erde — langsamer Aufbau.", "Terre stockée — construction lente."),
+  branchEntry("寅", "Yin wood", "寅木起", "rama Yin", "Yin-Zweig", "branche Yin", "Spring wood — bold start.", "春木——勇起。", "Madera de primavera — inicio audaz.", "Frühlingsholz — mutiger Start.", "Bois de printemps — départ audacieux."),
+  branchEntry("卯", "Mao wood", "卯木开", "rama Mao", "Mao-Zweig", "branche Mao", "Soft wood — social spring.", "柔木——社交春。", "Madera suave — primavera social.", "Weiches Holz — sozialer Frühling.", "Bois souple — printemps social."),
+  branchEntry("辰", "Chen earth", "辰土转", "rama Chen", "Chen-Zweig", "branche Chen", "Damp earth — transition.", "湿土——过渡。", "Tierra húmeda — transición.", "Feuchte Erde — Übergang.", "Terre humide — transition."),
+  branchEntry("巳", "Si fire", "巳火藏", "rama Si", "Si-Zweig", "branche Si", "Hidden fire — strategy.", "藏火——谋略。", "Fuego oculto — estrategia.", "Verborgenes Feuer — Strategie.", "Feu caché — stratégie."),
+  branchEntry("午", "Wu fire", "午火峰", "rama Wu", "Wu-Zweig", "branche Wu", "Noon fire — peak visibility.", "午火——可见之巅。", "Fuego del mediodía — máxima visibilidad.", "Mittagsfeuer — höchste Sichtbarkeit.", "Feu de midi — visibilité maximale."),
+  branchEntry("未", "Wei earth", "未土收", "rama Wei", "Wei-Zweig", "branche Wei", "Summer earth — harvest prep.", "夏土——收前准备。", "Tierra de verano — prep. de cosecha.", "Sommererde — Erntevorbereitung.", "Terre d'été — préparation de récolte."),
+  branchEntry("申", "Shen metal", "申金变", "rama Shen", "Shen-Zweig", "branche Shen", "Metal shift — agile change.", "金气转——灵动变。", "Cambio metálico — cambio ágil.", "Metallwechsel — agiler Wandel.", "Virage métal — changement agile."),
+  branchEntry("酉", "You metal", "酉金序", "rama You", "You-Zweig", "branche You", "Pure metal — order.", "纯金——秩序。", "Metal puro — orden.", "Reines Metall — Ordnung.", "Métal pur — ordre."),
+  branchEntry("戌", "Xu earth", "戌土守", "rama Xu", "Xu-Zweig", "branche Xu", "Dry earth — guard.", "燥土——守。", "Tierra seca — custodia.", "Trockene Erde — Wache.", "Terre sèche — garde."),
+  branchEntry("亥", "Hai water", "亥水休", "rama Hai", "Hai-Zweig", "branche Hai", "Winter water — rest before renewal.", "冬水——更新前休。", "Agua de invierno — descanso antes de renovar.", "Winterwasser — Ruhe vor Erneuerung.", "Eau d'hiver — repos avant renouveau."),
 ];
 
 const STRUCTURAL: GlossaryConcept[] = [

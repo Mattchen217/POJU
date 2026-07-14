@@ -125,8 +125,11 @@ function TermMark({
 
   const toggle = () => setOpen((o) => !o);
 
+  const softLabel = (visible.trim() || plain.trim()).slice(0, 12);
+  const detail = plain.trim();
+
   const popNode =
-    open && plain && popStyle ? (
+    open && detail && popStyle ? (
       <span
         ref={popRef}
         id={id}
@@ -144,30 +147,31 @@ function TermMark({
         onMouseEnter={cancelHoverClose}
         onMouseLeave={scheduleHoverClose}
       >
-        <span className="glossary-pop__title">{visible}</span>
-        <span className="glossary-pop__body">{plain}</span>
+        <span className="glossary-pop__title">{softLabel}</span>
+        <span className="glossary-pop__body">{detail}</span>
       </span>
     ) : null;
 
-  // Light paren: only the short soft label in body. Detail (plain) lives in hover/click pop.
-  const softLabel = (visible.trim() || plain.trim()).slice(0, 12);
-
+  // Golden soft word + [···] opener. Detail plain lives in hover/click pop (fixed gloss ok if fluent).
   return (
-    <span ref={anchorRef} className={`term-mark term-mark--${polarity} term-mark--paren`}>
-      <button
-        type="button"
-        className="term-mark__paren"
-        tabIndex={0}
-        aria-label="Explain term"
-        aria-describedby={open ? id : undefined}
-        onMouseEnter={openFromHover}
-        onMouseLeave={scheduleHoverClose}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setOpen(false)}
-        onClick={toggle}
-      >
-        （{softLabel}）
-      </button>
+    <span ref={anchorRef} className={`term-mark term-mark--${polarity}`}>
+      <span className="term-mark__word">{softLabel}</span>
+      {detail ? (
+        <button
+          type="button"
+          className="term-mark__info"
+          tabIndex={0}
+          aria-label="Explain term"
+          aria-describedby={open ? id : undefined}
+          onMouseEnter={openFromHover}
+          onMouseLeave={scheduleHoverClose}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setOpen(false)}
+          onClick={toggle}
+        >
+          [···]
+        </button>
+      ) : null}
       {typeof document !== "undefined" && popNode ? createPortal(popNode, document.body) : null}
     </span>
   );

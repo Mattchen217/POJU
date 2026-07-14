@@ -40,8 +40,8 @@ function main(): void {
   assert("core runner validates mapBreakthroughCorePayload", runner.includes("mapBreakthroughCorePayload") || runner.includes("parseAndMapBreakthroughCore"));
   assert("core route async job", route.includes("createXhighJob"));
 
-  assert("bare ganzhi gloss user-facing", !BARE_GANZHI_MARKER.glossZh.includes("底层数据"));
-  assert("bare ganzhi gloss scenario", BARE_GANZHI_MARKER.glossZh.includes("时间气候"));
+  assert("bare ganzhi gloss user-facing", !BARE_GANZHI_MARKER.gloss.zh.includes("底层数据"));
+  assert("bare ganzhi gloss scenario", BARE_GANZHI_MARKER.gloss.zh.includes("时间气候"));
 
   assert("execution_edge aliases", shensha.includes('"execution_edge"') && /羊刃/.test(shensha));
   assert("disruption_friction aliases", shensha.includes('"disruption_friction"') && shensha.includes('"劫煞"'));

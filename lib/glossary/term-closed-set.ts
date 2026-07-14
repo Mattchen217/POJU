@@ -244,54 +244,118 @@ export const HIGH_RISK_COMPLIANCE_HAN = ["占卜", "命运", "宿命", "吉凶",
 
 export type HighRiskComplianceHan = (typeof HIGH_RISK_COMPLIANCE_HAN)[number];
 
-export const HIGH_RISK_SOFT_LABEL: Record<
-  HighRiskComplianceHan,
-  { slug: string; zh: string; en: string; glossZh: string; glossEn: string }
-> = {
+/** Soft + fixed gloss in all 5 product locales (zh/en/es/de/fr). */
+export type FiveLocaleSoftGloss = {
+  slug: string;
+  soft: { zh: string; en: string; es: string; de: string; fr: string };
+  gloss: { zh: string; en: string; es: string; de: string; fr: string };
+};
+
+export const HIGH_RISK_SOFT_LABEL: Record<HighRiskComplianceHan, FiveLocaleSoftGloss> = {
   占卜: {
     slug: "hr_divination",
-    zh: "情境推演",
-    en: "situational read",
-    glossZh: "从结构与选项看处境，不是占卦断吉凶。",
-    glossEn: "Reading structure and options—not fortune-telling.",
+    soft: {
+      zh: "情境推演",
+      en: "situational read",
+      es: "lectura situacional",
+      de: "situative Lesart",
+      fr: "lecture situationnelle",
+    },
+    gloss: {
+      zh: "从结构与选项看处境，不是占卦断吉凶。",
+      en: "Reading structure and options—not fortune-telling.",
+      es: "Leer estructura y opciones—no adivinación.",
+      de: "Struktur und Optionen lesen—kein Wahrsagen.",
+      fr: "Lire structure et options—pas de divination.",
+    },
   },
   命运: {
     slug: "hr_fate",
-    zh: "人生轨迹",
-    en: "life trajectory",
-    glossZh: "长期走向与选择叠加出的路径，不是铁定结局。",
-    glossEn: "A path shaped by choices—not a fixed outcome.",
+    soft: {
+      zh: "人生轨迹",
+      en: "life trajectory",
+      es: "trayectoria de vida",
+      de: "Lebensverlauf",
+      fr: "trajectoire de vie",
+    },
+    gloss: {
+      zh: "长期走向与选择叠加出的路径，不是铁定结局。",
+      en: "A path shaped by choices—not a fixed outcome.",
+      es: "Un camino moldeado por elecciones—no un final fijo.",
+      de: "Ein Pfad aus Wahlen—kein festes Ende.",
+      fr: "Un chemin façonné par des choix—pas une issue figée.",
+    },
   },
   宿命: {
     slug: "hr_destiny",
-    zh: "人生轨迹",
-    en: "life trajectory",
-    glossZh: "可被选择与行动重塑的长期方向。",
-    glossEn: "Long-range direction you can still steer.",
+    soft: {
+      zh: "人生轨迹",
+      en: "life trajectory",
+      es: "trayectoria de vida",
+      de: "Lebensverlauf",
+      fr: "trajectoire de vie",
+    },
+    gloss: {
+      zh: "可被选择与行动重塑的长期方向。",
+      en: "Long-range direction you can still steer.",
+      es: "Dirección de largo plazo que aún puedes guiar.",
+      de: "Langfristige Richtung, die du noch steuern kannst.",
+      fr: "Direction de long terme que vous pouvez encore orienter.",
+    },
   },
   吉凶: {
     slug: "hr_auspicious",
-    zh: "倾向窗口",
-    en: "tendency window",
-    glossZh: "阶段性有利/需留意的倾向，不是吉凶断语。",
-    glossEn: "Phase tendencies—not lucky/unlucky verdicts.",
+    soft: {
+      zh: "倾向窗口",
+      en: "tendency window",
+      es: "ventana de tendencia",
+      de: "Tendenzfenster",
+      fr: "fenêtre de tendance",
+    },
+    gloss: {
+      zh: "阶段性有利/需留意的倾向，不是吉凶断语。",
+      en: "Phase tendencies—not lucky/unlucky verdicts.",
+      es: "Tendencias de fase—no veredictos de suerte.",
+      de: "Phasentendenzen—keine Glücks-/Unglücksurteile.",
+      fr: "Tendances de phase—pas de verdicts de chance.",
+    },
   },
   星象: {
     slug: "hr_astral",
-    zh: "能量节律",
-    en: "energy rhythm",
-    glossZh: "周期性的能量起伏背景，不是占星预言。",
-    glossEn: "Cyclic energy backdrop—not horoscope prophecy.",
+    soft: {
+      zh: "能量节律",
+      en: "energy rhythm",
+      es: "ritmo energético",
+      de: "Energierhythmus",
+      fr: "rythme énergétique",
+    },
+    gloss: {
+      zh: "周期性的能量起伏背景，不是占星预言。",
+      en: "Cyclic energy backdrop—not horoscope prophecy.",
+      es: "Fondo de energía cíclica—no profecía astral.",
+      de: "Zyklischer Energiehintergrund—keine Horoskop-Prophezeiung.",
+      fr: "Fond énergétique cyclique—pas de prophétie astrale.",
+    },
   },
 };
 
 /** Bare stem-branch pairs (60 甲子) — never show ganzhi in user-visible copy. */
 export const BARE_GANZHI_MARKER = {
   slug: "bare_ganzhi",
-  zh: "当前时空效能",
-  en: "current temporal efficacy",
-  glossZh: "你此刻所处的时间气候——它像天气一样影响你的状态与外部压力，但不预测具体事件。",
-  glossEn: "The temporal climate you're in—it shapes mood and external pressure like weather, without predicting specific events.",
+  soft: {
+    zh: "当前时空效能",
+    en: "current temporal efficacy",
+    es: "eficacia temporal actual",
+    de: "aktuelle Zeiteffizienz",
+    fr: "efficacité temporelle actuelle",
+  },
+  gloss: {
+    zh: "你此刻所处的时间气候——它像天气一样影响你的状态与外部压力，但不预测具体事件。",
+    en: "The temporal climate you're in—it shapes mood and external pressure like weather, without predicting specific events.",
+    es: "El clima temporal en el que estás—moldea ánimo y presión externa como el clima, sin predecir eventos.",
+    de: "Das Zeitklima, in dem du bist—formt Stimmung und äußeren Druck wie Wetter, ohne Ereignisse vorherzusagen.",
+    fr: "Le climat temporel dans lequel vous êtes—il façonne humeur et pression externe comme la météo, sans prédire d'événements.",
+  },
 } as const;
 
 const YANG_HEAVENLY_STEMS = new Set(["甲", "丙", "戊", "庚", "壬"]);
@@ -332,18 +396,59 @@ export const RELATION_MARKER_PREFIXES = [
 
 export type RelationMarkerPrefix = (typeof RELATION_MARKER_PREFIXES)[number];
 
+type FiveLocaleText = { zh: string; en: string; es: string; de: string; fr: string };
+
 /** Soft-label guidance per relation kind (marker visible / plain fallback). */
-export const RELATION_KIND_SOFT: Record<
-  RelationMarkerPrefix,
-  { zh: string; en: string }
-> = {
-  chong: { zh: "两股力的正面顶撞", en: "head-on friction between two forces" },
-  xing: { zh: "关系里的拉扯张力", en: "pull-and-push tension in the pattern" },
-  hai: { zh: "暗处的消耗摩擦", en: "slow drain between two pulls" },
-  liuhe: { zh: "自然的契合引力", en: "natural affinity pulling together" },
-  banhe: { zh: "部分合力成势", en: "partial alliance building momentum" },
-  sanhe: { zh: "三方合力成局", en: "triple-branch combined momentum" },
-  stemhe: { zh: "天干层面的相合牵引", en: "stem-level mutual pull" },
+export const RELATION_KIND_SOFT: Record<RelationMarkerPrefix, FiveLocaleText> = {
+  chong: {
+    zh: "两股力的正面顶撞",
+    en: "head-on friction between two forces",
+    es: "fricción frontal entre dos fuerzas",
+    de: "frontale Reibung zwischen zwei Kräften",
+    fr: "friction frontale entre deux forces",
+  },
+  xing: {
+    zh: "关系里的拉扯张力",
+    en: "pull-and-push tension in the pattern",
+    es: "tensión de tira y afloja en el patrón",
+    de: "Hin-und-Her-Spannung im Muster",
+    fr: "tension de va-et-vient dans le schéma",
+  },
+  hai: {
+    zh: "暗处的消耗摩擦",
+    en: "slow drain between two pulls",
+    es: "desgaste lento entre dos tirones",
+    de: "langsamer Verschleiß zwischen zwei Zügen",
+    fr: "usure lente entre deux tiraillements",
+  },
+  liuhe: {
+    zh: "自然的契合引力",
+    en: "natural affinity pulling together",
+    es: "afinidad natural que une",
+    de: "natürliche Anziehung, die zusammenführt",
+    fr: "affinité naturelle qui rapproche",
+  },
+  banhe: {
+    zh: "部分合力成势",
+    en: "partial alliance building momentum",
+    es: "alianza parcial que toma impulso",
+    de: "teilweise Allianz mit Aufbau von Momentum",
+    fr: "alliance partielle qui prend de l'élan",
+  },
+  sanhe: {
+    zh: "三方合力成局",
+    en: "triple-branch combined momentum",
+    es: "impulso combinado de tres ramas",
+    de: "kombiniertes Momentum dreier Zweige",
+    fr: "élan combiné de trois branches",
+  },
+  stemhe: {
+    zh: "天干层面的相合牵引",
+    en: "stem-level mutual pull",
+    es: "atracción mutua a nivel de tallos",
+    de: "gegenseitiger Zug auf Stamm-Ebene",
+    fr: "attraction mutuelle au niveau des tiges",
+  },
 };
 
 /** 十神张力闭集 slug（S5 · 中性软译，禁凶断）。 */
@@ -351,15 +456,21 @@ export const TEN_GOD_TENSION_MARKER_IDS = ["shangguan_jianguan", "xiaoshen_duosh
 
 export const TEN_GOD_TENSION_SOFT: Record<
   (typeof TEN_GOD_TENSION_MARKER_IDS)[number],
-  { zh: string; en: string }
+  FiveLocaleText
 > = {
   shangguan_jianguan: {
     zh: "外部约束下的对抗张力",
     en: "tension between expression and external norms",
+    es: "tensión entre expresión y normas externas",
+    de: "Spannung zwischen Ausdruck und äußeren Normen",
+    fr: "tension entre expression et normes externes",
   },
   xiaoshen_duoshi: {
     zh: "内省本能对表达的挤占张力",
     en: "inner pressure crowding out expression",
+    es: "presión interior que ahoga la expresión",
+    de: "innerer Druck, der Ausdruck verdrängt",
+    fr: "pression intérieure qui étouffe l'expression",
   },
 };
 
@@ -416,11 +527,35 @@ export function relationPolarityToken(id: string): "green" | "red" | "gold" | nu
   return "gold";
 }
 
-export const KEEP_CN_VISIBLE_SOFT: Record<string, { zh: string; en: string }> = {
-  decade: { zh: "当前阶段气候", en: "current phase climate" },
-  year: { zh: "当前时空效能", en: "current temporal efficacy" },
-  day_master: { zh: "核心特质", en: "core nature" },
-  yong_shen: { zh: "关键平衡能量", en: "key balancing element" },
+export const KEEP_CN_VISIBLE_SOFT: Record<string, FiveLocaleText> = {
+  decade: {
+    zh: "当前阶段气候",
+    en: "current phase climate",
+    es: "clima de fase actual",
+    de: "aktuelles Phasenklima",
+    fr: "climat de phase actuel",
+  },
+  year: {
+    zh: "当前时空效能",
+    en: "current temporal efficacy",
+    es: "eficacia temporal actual",
+    de: "aktuelle Zeiteffizienz",
+    fr: "efficacité temporelle actuelle",
+  },
+  day_master: {
+    zh: "核心特质",
+    en: "core nature",
+    es: "naturaleza esencial",
+    de: "Urnatur",
+    fr: "nature profonde",
+  },
+  yong_shen: {
+    zh: "关键平衡能量",
+    en: "key balancing element",
+    es: "energía clave de equilibrio",
+    de: "Schlüsselenergie zum Ausgleich",
+    fr: "énergie clé d'équilibre",
+  },
 };
 
 /** Block 59 — visible soft labels never include stem-branch in parentheses; ganzhi stays in structured data only. */

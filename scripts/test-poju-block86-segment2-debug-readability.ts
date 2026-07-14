@@ -45,11 +45,11 @@ function main(): void {
   assert("UI applySegment2PollSuccess", ui.includes("applySegment2PollSuccess"));
   assert("agent skips sync justConverted path", !agent.includes("justConverted && segment2LlmDebug"));
 
-  assert("readability hard rule in prompt", corePrompt.includes("可读性硬要求"));
-  assert("paren layout rule in prompt", corePrompt.includes("排版硬要求") && corePrompt.includes("轻量软译点缀"));
+  assert("fluency source rule in prompt", corePrompt.includes("从源头保证通顺") && corePrompt.includes("白话重组"));
+  assert("fluency rewrite rule in prompt", corePrompt.includes("白话重组") && corePrompt.includes("禁止抠词替换"));
   assert("first-tag-only降噪 rule", corePrompt.includes("术语降噪") && corePrompt.includes("首次出现"));
-  assert("situational gloss rule", corePrompt.includes("情景白话") && corePrompt.includes("贴他这件事"));
-  assert("paragraph term density cap", corePrompt.includes("一段话里打标术语控制在 1-2 个"));
+  assert("situational gloss rule", corePrompt.includes("贴他处境的实时白话") || corePrompt.includes("贴情景白话"));
+  assert("paragraph term density cap", corePrompt.includes("每一段话打标术语控制在 1–2 个") || corePrompt.includes("一段最多 1–2 个"));
 
   assert("expectedEffort includes segment2_breakthrough_core", llmDebug.includes("segment2_breakthrough_core"));
 

@@ -32,10 +32,10 @@ function main(): void {
   const prompt = read("lib/llm/deepseek/breakthrough-core.ts");
   const display = read("lib/poju/phases/segment2/display.ts");
 
-  assert("paren shows soft only (no · join)", glossary.includes("Light paren") || glossary.includes("softLabel"));
+  assert("golden soft + dots UI", glossary.includes("term-mark__word") && glossary.includes("[···]"));
   assert("no soft · plain join in UI", !glossary.includes("${visible.trim()} · ${plain.trim()}"));
   assert("paragraph density cap", glossary.includes("MAX_PAREN_MARKS_PER_PARAGRAPH = 2"));
-  assert("prompt forbids dense soft dump", prompt.includes("禁止三段全塞正文") && prompt.includes("first_question"));
+  assert("prompt fluency + first_question", prompt.includes("白话重组") && prompt.includes("first_question"));
   assert("prompt first_question task", prompt.includes("首问（first_question"));
   assert("display uses appendModelFirstQuestion", display.includes("appendModelFirstQuestion"));
   assert("display prefers model first_question", display.includes("core?.first_question"));

@@ -514,7 +514,16 @@ function filterDeletedTermsBounded(text: string): string {
 }
 
 function removeStandaloneBareGanzhi(text: string, locale: string): string {
-  const loc = locale.startsWith("zh") ? BARE_GANZHI_MARKER.zh : BARE_GANZHI_MARKER.en;
+  const locKey = locale.startsWith("zh")
+    ? "zh"
+    : locale.startsWith("es")
+      ? "es"
+      : locale.startsWith("de")
+        ? "de"
+        : locale.startsWith("fr")
+          ? "fr"
+          : "en";
+  const loc = BARE_GANZHI_MARKER.soft[locKey] || BARE_GANZHI_MARKER.soft.en;
   BARE_GANZHI_STANDALONE_RE.lastIndex = 0;
   return text.replace(BARE_GANZHI_STANDALONE_RE, (match) =>
     isValidSexagenaryGanzhi(match) ? loc : match,

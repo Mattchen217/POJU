@@ -33,11 +33,11 @@ function main(): void {
   const display = read("lib/poju/phases/segment2/display.ts");
   const marking = read("lib/llm/sanitize/term-marking.ts");
 
-  assert("prompt paren layout rule", prompt.includes("排版硬要求") && prompt.includes("轻量软译点缀"));
+  assert("prompt fluency rewrite rule", prompt.includes("白话重组") && prompt.includes("禁止抠词替换"));
   assert("prompt forbids inline interrupt example", prompt.includes("错误示范（禁止）"));
-  assert("GlossaryText paren class", glossary.includes("term-mark__paren") && glossary.includes("（{softLabel}）"));
-  assert("uses paren button not info dots", glossary.includes("term-mark__paren") && !glossary.includes("term-mark__info"));
-  assert("css paren style", css.includes(".term-mark__paren"));
+  assert("GlossaryText golden soft + dots", glossary.includes("term-mark__word") && glossary.includes("[···]"));
+  assert("uses info dots opener", glossary.includes("term-mark__info"));
+  assert("css golden word style", css.includes(".term-mark__word"));
   assert("display clear question helper", display.includes("formatFocusQuestionAsClearQuestion"));
   assert("display model first_question path", display.includes("appendModelFirstQuestion"));
   assert("marking STEM_ELEMENT_COMPOUNDS", marking.includes("STEM_ELEMENT_COMPOUNDS"));
