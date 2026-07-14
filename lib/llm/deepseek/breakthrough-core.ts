@@ -605,7 +605,7 @@ export function sanitizeBreakthroughCoreMapped(
       ...d,
       direction: scrubUserField(d.direction, locale),
       structural_basis: scrubUserField(d.structural_basis, locale),
-      timing: scrubUserField(d.timing, locale),
+      ...(d.timing != null ? { timing: scrubUserField(d.timing, locale) } : {}),
       what_would_confirm: scrubUserField(d.what_would_confirm, locale),
     })),
     ...(core.first_question
@@ -619,12 +619,11 @@ export function sanitizeBreakthroughCoreMapped(
 
   const auditBlob = [
     breakthrough_core.relationship_conclusion,
-    ...breakthrough_core.breakthrough_directions.flatMap((d) => [
-      d.direction,
-      d.structural_basis,
-      d.timing,
-      d.what_would_confirm,
-    ]),
+    ...breakthrough_core.breakthrough_directions.flatMap((d) =>
+      [d.direction, d.structural_basis, d.timing, d.what_would_confirm].filter(
+        (s): s is string => typeof s === "string" && s.length > 0,
+      ),
+    ),
     ...(breakthrough_core.first_question ? [breakthrough_core.first_question] : []),
   ].join("\n");
 
