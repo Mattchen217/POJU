@@ -27,7 +27,7 @@ function main(): void {
   const ui = read("components/poju/POJUChatUI.tsx");
   const control = read("lib/poju/phases/segment2/control.ts");
 
-  assert("poll timeout 240s", poll.includes("XHIGH_JOB_POLL_MAX_MS = 240_000"));
+  assert("poll timeout 290s", poll.includes("XHIGH_JOB_POLL_MAX_MS = 290_000"));
   assert("poll completed is terminal", poll.includes('if (status === "completed")'));
   assert(
     "poll does not require both core && agenda",

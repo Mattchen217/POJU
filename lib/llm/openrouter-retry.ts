@@ -50,14 +50,8 @@ export function isTransientNoEndpoints404(error: unknown): boolean {
   );
 }
 
-export function isRetryableOpenRouterError(error: unknown): boolean {
-  if (!(error instanceof Error)) return false;
-  if (isTransientNoEndpoints404(error)) return true;
-  if (error.message === "llm_timeout") return true;
-  const status = parseOpenRouterErrorStatus(error.message);
-  if (status != null) return isRetryableOpenRouterHttpStatus(status);
-  if (error.name === "TypeError") return true;
-  return false;
+export function isLlmTimeoutError(error: unknown): boolean {
+  return error instanceof Error && error.message === "llm_timeout";
 }
 
 export class OpenRouterProviderQueueError extends Error {
@@ -65,6 +59,32 @@ export class OpenRouterProviderQueueError extends Error {
     super(message, options);
     this.name = "OpenRouterProviderQueueError";
   }
+}
+
+export function isRetryableOpenRouterError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  if (isTransientNoEndpoints404(error)) return true;
+  if (isLlmTimeoutError(error)) return true;
+  const status = parseOpenRouterErrorStatus(error.message);
+  if (status != null) return isRetryableOpenRouterHttpStatus(status);
+  if (error.name === "TypeError") return true;
+  return false;
+}
+
+/**
+ * Fast capacity/queue errors that may escalate to `openrouter_provider_queue`.
+ * NEVER includes `llm_timeout` — a long stream abort must stay llm_timeout (not mislabeled queue).
+ */
+export function isProviderQueueClassError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  if (isLlmTimeoutError(error)) return false;
+  if (error instanceof OpenRouterProviderQueueError) return true;
+  if (error.message === "openrouter_provider_queue") return true;
+  if (isTransientNoEndpoints404(error)) return true;
+  const status = parseOpenRouterErrorStatus(error.message);
+  if (status != null) return isRetryableOpenRouterHttpStatus(status);
+  if (error.name === "TypeError") return true;
+  return false;
 }
 
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {
@@ -121,7 +141,7 @@ export async function withOpenRouterExponentialBackoff<T>(
       if (!canRetry) {
         if (
           attempt >= OPENROUTER_RETRY_DELAYS_MS.length &&
-          isRetryableOpenRouterError(error)
+          isProviderQueueClassError(error)
         ) {
           throw new OpenRouterProviderQueueError(undefined, { cause: error });
         }

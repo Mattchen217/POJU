@@ -170,7 +170,15 @@ export function buildCollectingTransitionReplyFromCore(
 }
 
 /** Segment 2 failed — understanding preserved; user retries via button. */
-export function segment2CoreGenerationFailedMessage(locale: string): string {
+export function segment2CoreGenerationFailedMessage(
+  locale: string,
+  reason?: string,
+): string {
+  if (reason === "llm_timeout") {
+    return locale.startsWith("zh")
+      ? "这次分析用时过长，点下方按钮重试。"
+      : "This analysis took too long. Tap the button below to retry.";
+  }
   return locale.startsWith("zh")
     ? "深度分析这次没能生成完（可能是分析太复杂），点下方按钮我重新为你分析。"
     : "Deep analysis didn't finish this time (it may have been too complex). Tap the button below and I'll run it again.";

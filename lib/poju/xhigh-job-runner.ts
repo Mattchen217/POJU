@@ -12,7 +12,8 @@ import {
 } from "@/lib/llm/openrouter-shared";
 import { openRouterChatCompletionStream } from "@/lib/llm/openrouter-stream";
 import {
-  OpenRouterProviderQueueError,
+  isLlmTimeoutError,
+  isProviderQueueClassError,
   parseOpenRouterErrorStatus,
 } from "@/lib/llm/openrouter-retry";
 import {
@@ -22,22 +23,29 @@ import {
   getXhighJob,
   updateXhighJobStatus,
 } from "@/lib/poju/xhigh-job-store";
-import type { PojuXhighJob, PojuXhighJobPhase } from "@/lib/poju/xhigh-job-types";
-
-/** Segment-2 xhigh — reasoning ~7–11k + full analysis content ~8–12k + headroom. */
-export const SEGMENT2_XHIGH_MAX_TOKENS = 32_000;
-/** Per-attempt stream timeout (successful long regen still needs headroom). */
-export const SEGMENT2_XHIGH_TIMEOUT_MS = 180_000;
+import type { PojuXhighJob, PojuXhighJobFailureReason, PojuXhighJobPhase } from "@/lib/poju/xhigh-job-types";
 
 /**
- * Fix 1 — wall budget for *retrying* after transport failures (fail-fast for the UI).
- * Must stay well below Vercel maxDuration (300s) so failXhighJob always runs.
+ * Segment-2 xhigh — successful runs ~11k tokens; keep budget below 32k so thinking finishes sooner.
+ * (If still timing out often.)
+ */
+export const SEGMENT2_XHIGH_MAX_TOKENS = 26_000;
+/**
+ * Per-attempt stream timeout. Evidence: xhigh finishes ~152–167s; 180s was too tight.
+ * Job runs in background (no 90s wall on the stream itself). maxDuration 300s → leave ~30s to write terminal.
+ */
+export const SEGMENT2_XHIGH_TIMEOUT_MS = 270_000;
+
+/**
+ * Wall budget for *retrying* after fast transport failures only (429/503/no-endpoints).
+ * Does NOT cap a single successful/long xhigh stream. Must stay well below maxDuration.
  */
 export const JOB_RETRY_BUDGET_MS = 90_000;
 
 /** Leave spare before Vercel kill so we can always write terminal status. */
-export const INVOCATION_WRITE_HEADROOM_MS = 20_000;
-export const INVOCATION_HARD_DEADLINE_MS = 280_000;
+export const INVOCATION_WRITE_HEADROOM_MS = 30_000;
+/** Align with Vercel maxDuration so attemptTimeout can reach SEGMENT2_XHIGH_TIMEOUT_MS. */
+export const INVOCATION_HARD_DEADLINE_MS = 300_000;
 
 /** Backoff between outer retries (total sleep ≤ 35s under the 90s budget). */
 export const CORE_RETRY_DELAYS_MS = [5_000, 10_000, 20_000] as const;
@@ -63,24 +71,21 @@ export type XhighJobRunnerConfig = {
   };
 };
 
+/** Fast provider capacity errors — safe to outer-retry within JOB_RETRY_BUDGET_MS. */
+export function isFastTransientProviderFailure(e: unknown): boolean {
+  return isProviderQueueClassError(e);
+}
+
+/** @deprecated Prefer isFastTransientProviderFailure — kept for older smokes. */
 export function isProviderTransportFailure(e: unknown): boolean {
-  if (e instanceof OpenRouterProviderQueueError) return true;
-  if (e instanceof Error) {
-    return (
-      e.message === "openrouter_provider_queue" ||
-      e.message === "llm_timeout" ||
-      e.message === "openrouter_empty_response" ||
-      e.message === "openrouter_empty_after_resend"
-    );
-  }
-  return false;
+  return isFastTransientProviderFailure(e);
 }
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** Fix 3 — surface real provider HTTP status / body (not just "provider_queue"). */
+/** Surface real provider HTTP status / body (not just "provider_queue"). */
 export function describeTransportError(e: unknown): {
   msg: string;
   http_status: number | null;
@@ -98,6 +103,19 @@ export function describeTransportError(e: unknown): {
   const provider = typeof anyE.provider === "string" ? anyE.provider : null;
   const body_snippet = String(anyE.body ?? (causeMsg || msg)).slice(0, 300);
   return { msg, http_status, provider, body_snippet };
+}
+
+function resolveTransportFailureReason(e: unknown): {
+  failure_reason: PojuXhighJobFailureReason;
+  retryable: boolean;
+} {
+  if (isLlmTimeoutError(e)) {
+    return { failure_reason: "llm_timeout", retryable: true };
+  }
+  if (isFastTransientProviderFailure(e)) {
+    return { failure_reason: "provider_busy", retryable: true };
+  }
+  return { failure_reason: "transport_error", retryable: false };
 }
 
 export const SEGMENT2_XHIGH_RUNNER_CONFIG: XhighJobRunnerConfig = {
@@ -221,7 +239,20 @@ export async function runXhighJob(job_id: string, config: XhighJobRunnerConfig):
       clearInterval(heartbeat);
       lastErr = e;
       const detail = describeTransportError(e);
-      const transient = isProviderTransportFailure(e);
+
+      // llm_timeout: never outer-retry (each attempt burns 180–270s → blows maxDuration → zombie running).
+      if (isLlmTimeoutError(e)) {
+        console.warn(`[xhigh-job] ${config.phase} llm_timeout — fail without retry`, {
+          job_id,
+          attempt: attempt + 1,
+          msg: detail.msg,
+          http_status: detail.http_status,
+          body_snippet: detail.body_snippet,
+        });
+        break;
+      }
+
+      const transient = isFastTransientProviderFailure(e);
       const budgetLeft = JOB_RETRY_BUDGET_MS - (Date.now() - retryBudgetStartedAt);
       const delay =
         CORE_RETRY_DELAYS_MS[Math.min(attempt, CORE_RETRY_DELAYS_MS.length - 1)] ?? 20_000;
@@ -237,7 +268,7 @@ export async function runXhighJob(job_id: string, config: XhighJobRunnerConfig):
         transient,
       });
 
-      // Fix 1 — budget exhausted / non-transient → write fail now (never ride to Vercel kill).
+      // Budget exhausted / non-transient → write fail now (never ride to Vercel kill).
       if (!transient || budgetLeft <= delay) {
         break;
       }
@@ -249,17 +280,18 @@ export async function runXhighJob(job_id: string, config: XhighJobRunnerConfig):
 
   if (lastErr || !out) {
     const detail = describeTransportError(lastErr ?? new Error("transport_failed"));
-    const transient = isProviderTransportFailure(lastErr);
+    const resolved = resolveTransportFailureReason(lastErr);
     console.warn(`[xhigh-job] ${config.phase} transport failed`, {
       job_id,
       msg: detail.msg,
       http_status: detail.http_status,
       provider: detail.provider,
       body_snippet: detail.body_snippet,
+      failure_reason: resolved.failure_reason,
     });
     await failXhighJob(job_id, detail.msg, {
-      retryable: transient,
-      failure_reason: transient ? "provider_busy" : "transport_error",
+      retryable: resolved.retryable,
+      failure_reason: resolved.failure_reason,
       error_detail: detail.body_snippet,
     });
     return;

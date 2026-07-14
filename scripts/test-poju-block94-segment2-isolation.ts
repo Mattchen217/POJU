@@ -34,7 +34,7 @@ function main(): void {
   assert("opening does not import segment2/", !opening.includes('from "@/lib/poju/phases/segment2'));
   assert("segment2 imports shared xhigh-job", control.includes("@/lib/poju/shared/xhigh-job"));
 
-  assert("max tokens 32000", SEGMENT2_XHIGH_MAX_TOKENS === 32_000);
+  assert("max tokens 26000", SEGMENT2_XHIGH_MAX_TOKENS === 26_000);
 
   const ui = read("components/poju/POJUChatUI.tsx");
   assert("UI mounts Segment2AnalysisPreparing", ui.includes("<Segment2AnalysisPreparing"));

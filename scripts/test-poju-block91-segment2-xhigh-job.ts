@@ -45,12 +45,12 @@ function main(): void {
   assert("generic phase final_delivery reserved", read("lib/poju/xhigh-job-types.ts").includes("final_delivery"));
 
   assert("runner xhigh effort", runner.includes('reasoning_effort: "xhigh"'));
-  assert("runner max_tokens 32000", runner.includes("SEGMENT2_XHIGH_MAX_TOKENS = 32_000"));
+  assert("runner max_tokens 26000", runner.includes("SEGMENT2_XHIGH_MAX_TOKENS = 26_000"));
   assert("runner uses openRouterChatCompletionStream", runner.includes("openRouterChatCompletionStream"));
   assert("runner generic runXhighJob export", runner.includes("export async function runXhighJob"));
 
   assert("poll interval 3s", poll.includes("XHIGH_JOB_POLL_INTERVAL_MS = 3000"));
-  assert("poll max 240s hard timeout", poll.includes("XHIGH_JOB_POLL_MAX_MS = 240_000") || poll.includes("240_000"));
+  assert("poll max 290s hard timeout", poll.includes("XHIGH_JOB_POLL_MAX_MS = 290_000"));
 
   assert("Segment2AnalysisPreparing component", prepare.includes("Segment2AnalysisPreparing"));
   assert("POJUChatUI mounts preparing", ui.includes("Segment2AnalysisPreparing") && ui.includes("segment2JobId"));

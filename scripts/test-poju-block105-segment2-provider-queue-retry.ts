@@ -41,7 +41,7 @@ function main(): void {
   assert("stale returns failed", status.includes('reason: "stale_running"'));
   assert("stale persists failXhighJob", status.includes("failXhighJob"));
 
-  assert("poll hard timeout 240s", poll.includes("XHIGH_JOB_POLL_MAX_MS = 240_000"));
+  assert("poll hard timeout 290s", poll.includes("XHIGH_JOB_POLL_MAX_MS = 290_000"));
   assert("poll_timeout reason", poll.includes('reason: "poll_timeout"'));
 
   assert("failure reason stale_running", types.includes('"stale_running"'));

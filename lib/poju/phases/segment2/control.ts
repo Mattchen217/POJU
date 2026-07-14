@@ -431,12 +431,13 @@ export function finalizeSegment2JobFailure(input: {
   session: POJUSessionState;
   locale: string;
   error?: string;
+  reason?: string;
 }): POJUSessionState {
   const session = ensureSessionCycles(input.session);
   const agent_v2 = markCoreFailed(ensureAgentV2(session));
   const assistantMessage: POJUMessage = {
     role: "assistant",
-    content: segment2CoreGenerationFailedMessage(input.locale),
+    content: segment2CoreGenerationFailedMessage(input.locale, input.reason),
     timestamp: new Date().toISOString(),
     meta: {
       current_state: "collecting_context",

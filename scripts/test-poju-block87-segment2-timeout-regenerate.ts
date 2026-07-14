@@ -30,8 +30,8 @@ function main(): void {
   const types = read("lib/poju/types.ts");
 
   assert("route maxDuration 300", route.includes("maxDuration = 300"));
-  assert("runner timeout 240s", runner.includes("SEGMENT2_XHIGH_TIMEOUT_MS = 240_000"));
-  assert("runner max_tokens 32000", runner.includes("SEGMENT2_XHIGH_MAX_TOKENS = 32_000"));
+  assert("runner timeout 270s", runner.includes("SEGMENT2_XHIGH_TIMEOUT_MS = 270_000"));
+  assert("runner max_tokens 26000", runner.includes("SEGMENT2_XHIGH_MAX_TOKENS = 26_000"));
   assert("runner max_attempts 1", runner.includes("max_attempts: 1"));
   assert("route async job create", route.includes("createXhighJob"));
   assert("route provider_busy via job fail", runner.includes('failure_reason: "provider_busy"'));
@@ -41,6 +41,7 @@ function main(): void {
   assert("segment2 core_generation_failed flag", control.includes("core_generation_failed: true"));
   assert("startSegment2Regenerate exported", control.includes("export async function startSegment2Regenerate"));
   assert("failed message via display", display.includes("深度分析这次没能生成完"));
+  assert("timeout message via display", display.includes("这次分析用时过长"));
   assert("regenerate button label helper", display.includes("segment2RegenerateButtonLabel"));
 
   assert("agent state core_generation_failed field", agentState.includes("core_generation_failed?: boolean"));
@@ -49,8 +50,8 @@ function main(): void {
   assert("RegenerateAnalysisAction in UI", ui.includes("RegenerateAnalysisAction"));
   assert("handleRegenerateAnalysisClick", ui.includes("handleRegenerateAnalysisClick"));
   assert("UI startSegment2Regenerate", ui.includes("startSegment2Regenerate"));
-  const shared = read("lib/llm/openrouter-shared.ts");
-  assert("openrouter empty response error", shared.includes("openrouter_empty_response"));
+  const retry = read("lib/llm/openrouter-retry.ts");
+  assert("openrouter empty response error", retry.includes("OPENROUTER_EMPTY_RESPONSE"));
 
   console.log("\n" + (failures.length === 0 ? "✅ All checks passed." : `❌ ${failures.length} failure(s):\n  - ${failures.join("\n  - ")}`));
   process.exit(failures.length === 0 ? 0 : 1);

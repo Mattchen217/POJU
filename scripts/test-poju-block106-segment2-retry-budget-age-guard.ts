@@ -27,11 +27,11 @@ function main(): void {
   const retry = read("lib/llm/openrouter-retry.ts");
 
   assert("JOB_RETRY_BUDGET_MS 90s", runner.includes("JOB_RETRY_BUDGET_MS = 90_000"));
-  assert("invocation hard deadline", runner.includes("INVOCATION_HARD_DEADLINE_MS = 280_000"));
+  assert("invocation hard deadline", runner.includes("INVOCATION_HARD_DEADLINE_MS = 300_000"));
   assert("budgetLeft check", runner.includes("budgetLeft <= delay"));
   assert("describeTransportError", runner.includes("describeTransportError"));
   assert("logs http_status", runner.includes("http_status: detail.http_status"));
-  assert("fail path always written", runner.includes('failure_reason: transient ? "provider_busy"'));
+  assert("fail path always written", runner.includes("resolveTransportFailureReason"));
 
   assert("age guard MAX_JOB_AGE_MS", status.includes("MAX_JOB_AGE_MS = 300_000"));
   assert("age guard job_abandoned", status.includes('reason: "job_abandoned"'));

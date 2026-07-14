@@ -2,8 +2,8 @@ import type { AgendaItem } from "@/lib/poju/investigation-agenda";
 import type { PojuXhighJob, PojuXhighJobFailureReason } from "@/lib/poju/xhigh-job-types";
 
 export const XHIGH_JOB_POLL_INTERVAL_MS = 3000;
-/** xhigh ~168s observed + headroom; hard stop so UI never silently spins. */
-export const XHIGH_JOB_POLL_MAX_MS = 240_000;
+/** Must exceed SEGMENT2_XHIGH_TIMEOUT_MS (270s) so client doesn't abort a still-running job. */
+export const XHIGH_JOB_POLL_MAX_MS = 290_000;
 
 export type Segment2PollFailureReason =
   | PojuXhighJobFailureReason

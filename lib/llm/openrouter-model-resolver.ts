@@ -3,7 +3,8 @@ import {
   OPENROUTER_RETRY_DELAYS_MS,
   OpenRouterProviderQueueError,
   isEmptyResponseError,
-  isRetryableOpenRouterError,
+  isLlmTimeoutError,
+  isProviderQueueClassError,
   isTransientNoEndpoints404,
   parseOpenRouterErrorStatus,
 } from "@/lib/llm/openrouter-retry";
@@ -184,8 +185,13 @@ export async function callWithOpenRouterModelFallback<T>(
           break;
         }
 
-        // Transient No-endpoints: retry same slug with backoff (not a dead slug yet).
-        const canRetry = attempt < maxAttempts - 1 && isRetryableOpenRouterError(e);
+        // Never wrap / never silently sink llm_timeout as provider_queue.
+        if (isLlmTimeoutError(e)) {
+          throw e;
+        }
+
+        // Transient No-endpoints / 429 / 503: retry same slug with backoff (not a dead slug yet).
+        const canRetry = attempt < maxAttempts - 1 && isProviderQueueClassError(e);
         if (canRetry) {
           const wait_ms = OPENROUTER_RETRY_DELAYS_MS[attempt] ?? 6000;
           const kind = isTransientNoEndpoints404(e) ? "no-endpoints" : "retryable";
@@ -196,7 +202,7 @@ export async function callWithOpenRouterModelFallback<T>(
           continue;
         }
 
-        if (isRetryableOpenRouterError(e)) {
+        if (isProviderQueueClassError(e)) {
           sawRetryableExhaustion = true;
           tried.push(model);
           // Prefer next candidate (if any) after this slug's backoff budget is spent.
@@ -216,7 +222,7 @@ export async function callWithOpenRouterModelFallback<T>(
     }
   }
 
-  if (sawRetryableExhaustion || isRetryableOpenRouterError(lastErr)) {
+  if (sawRetryableExhaustion || isProviderQueueClassError(lastErr)) {
     console.warn(
       `[openrouter] 全部候选在重试后仍忙（已试: ${tried.join(" → ") || candidates.join(" → ")}）— 视为 provider queue。`,
     );

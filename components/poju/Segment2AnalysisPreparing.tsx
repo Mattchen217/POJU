@@ -11,7 +11,7 @@ export type Segment2AnalysisPreparingProps = {
   job_id: string;
   locale: string;
   onComplete: (result: Extract<Segment2JobPollResult, { ok: true }>) => void | Promise<void>;
-  onError?: (error: string) => void;
+  onError?: (error: string, reason?: string) => void;
   onProgress?: (accumulated_chars: number) => void;
 };
 
@@ -49,7 +49,7 @@ export function Segment2AnalysisPreparing({
         },
       });
       if (!result.ok) {
-        onErrorRef.current?.(result.error);
+        onErrorRef.current?.(result.error, result.reason);
         return;
       }
       await onCompleteRef.current(result);

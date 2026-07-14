@@ -1124,10 +1124,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     scrollChatToBottom("smooth");
   }
 
-  async function handleSegment2JobError(error: string) {
-    console.warn("[poju] segment2 job failed:", error);
+  async function handleSegment2JobError(error: string, reason?: string) {
+    console.warn("[poju] segment2 job failed:", error, reason);
     const base = sessionRef.current;
-    const next = finalizeSegment2JobFailure({ session: base, locale, error });
+    const next = finalizeSegment2JobFailure({ session: base, locale, error, reason });
     setSegment2JobId(null);
     onSessionUpdate(next);
     syncDebugStateLedger(next);
@@ -1722,7 +1722,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
                     );
                   }}
                   onComplete={(result) => void handleSegment2JobComplete(result)}
-                  onError={(error) => void handleSegment2JobError(error)}
+                  onError={(error, reason) => void handleSegment2JobError(error, reason)}
                 />
               ) : null}
               {session.agent_v2 ? (

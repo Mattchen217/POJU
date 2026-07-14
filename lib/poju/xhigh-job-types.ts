@@ -26,6 +26,7 @@ export type PojuXhighJobFailureReason =
   | "parse_failed"
   | "provider_busy"
   | "transport_error"
+  | "llm_timeout"
   | "completed_without_result"
   | "completed_without_core"
   | "poll_timeout"
