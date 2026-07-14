@@ -33,218 +33,110 @@ import {
 } from "@/lib/llm/sanitize/compliance-terms";
 import { isCriticalDeliveryAuditFailure } from "@/lib/llm/services/delivery-audit-regen";
 
-export const DEEP_RECKONING_TASK = `# 角色：破局总设计师（上帝视角 · 零聊天腔）
+/**
+ * Call A (xhigh) — report only. NO agenda / first_question rules (those belong to Call B).
+ * Splitting rules is as important as splitting the call: dumping both handbooks still blows reasoning.
+ */
+export const DEEP_RECKONING_REPORT_TASK = `# 角色：破局总设计师（上帝视角 · 零聊天腔）
 
 你不是在跟用户对话。你是在一间没有用户在场的作战室里，对着这个人【真实排算出的命盘结构】
 和他的问题，做一次冷静、硬核、不注水的深度推演。你的产出是后续整个破局流程的【唯一推理脊柱】
-—— 议程、收集、交付全都长在它上面。彻底剥离聊天语气：不寒暄、不安慰、不用第二人称对话腔。
-（注意：你仍是身份头里那位博学、有判断力、直指要害的智者——只是此刻不寒暄、不用对话腔，
-因为这是内部脊柱，不直接给用户看。人设的"深度与判断力"正是这一步要的。）
+—— 稍后另一次调用会据此倒推议程；本次【只产出报告】。彻底剥离聊天语气。
 
-# 输入（structured 是你唯一的事实源，引擎确定性算出）
+# 输入（structured 是你唯一的事实源）
 - day_master / pattern / strength / yong_shen / xi_shen / ji_shen
 - four_pillars 与 pillars_detail.{year|month|day|hour}.{ten_god, hidden_stems, shen_sha, life_stage}
 - da_yun（当前走到第几步、主题、何时转）
 - 用户原始问题 + 已确认处境
 
-# 任务：高维度「玄学 × 心理学」交叉推演
-1. relationship_conclusion（关系结论）：
-   这个人的命盘结构，为什么会让他卡在这个问题上？把"困境"翻译成"结构性原因"。
-   必须点名 structured 的具体字段（如 month.ten_god=七杀、strength=weak、da_yun 第三步、ji_shen=X），
-   不许只报四个五行词、不许泛泛而谈。这是"人与问题的关系"，不是命盘复述。
-2. breakthrough_directions（破局方向，2–3 条，宁少而锐）：
-   基于关系结论深思，每条 = {
-     direction: 一句话方向（顺势 / 守 / 转 / 立断 的判断，不替用户决定、不预测事件日期）,
-     structural_basis: 锚在哪些命盘结构（见下方「维度织入」硬要求）,
-     timing: 基于 da_yun 当前这步（顺/逆/进/守），现在是该进、该守、还是该转的窗口
-             —— 只说能量节律，禁公历年 / 干支纪年 / 具体日期,
-     what_would_confirm: 要验证 / 证伪它成立，需从用户那儿知道什么
-   }
+# 任务（仅此两项）
+1. relationship_conclusion：把"困境"翻译成结构性原因；点名 structured 具体字段；不许泛泛而谈。
+2. breakthrough_directions（2–3 条，宁少而锐）：
+   { direction, structural_basis, timing(能量节律·禁公历日期), what_would_confirm }
 
-# 维度织入（硬要求 · 反"只看五行"）
-每条 direction 的 structural_basis 必须整合【至少 2 个不同维度】，不许只报五行 / 强弱：
-- 十神 / 格局：驱动力与命局格调（pillars_detail.*.ten_god, pattern）
-- 五行强弱 / 用神喜忌：过载还是不足、往哪调（strength, yong_shen / xi_shen / ji_shen）
-- 大运时机：当前这步是顺是逆、该进该守（da_yun）—— 破局的"何时"
-- 神煞（仅本盘 structured 实例清单实算项、清单外禁写）：点出与所问之事相关的助力或隐忧
-  （pillars_detail.*.shen_sha）；本盘没有相关神煞就不提，严禁编造、严禁集外
-- 十二长生：相关柱的能量处于旺 / 衰哪一阶段（pillars_detail.*.life_stage）—— 力量的"火候"
-至少有 1 条 direction 必须带出 timing（大运视角的进 / 守 / 转判断）。
-若某维度本盘确实无可用实例，跳过该维度即可，但不得用其它维度凑数式堆砌，更不得编造。
+# 维度织入（反"只看五行"）
+structural_basis ≥2 个不同维度：十神/格局、五行强弱/用神喜忌、大运时机、本盘实算神煞、十二长生。
+≥1 条须带 timing。本盘无实例就跳过，禁编造。
 
-# 硬核标准（反注水）
-- 每条结论/方向都必须能追溯到 structured 的具体字段，否则删掉重写。
-- 宁可少而锐：两条致命方向 > 三条平庸方向。
-- 命理词只能用本次 structured 实有的实例（见下方实例清单）；
-  严禁集外神煞（国印/空亡/元辰/六秀日/阴差阳错…一律禁止）。
+# 硬核标准
+- 每条结论/方向可追溯到 structured，否则删掉。
+- 两条致命方向 > 三条平庸方向。
+- 命理词只用本次 structured 实例；严禁集外神煞。
 
-# 篇幅节制（硬要求 · 缩短生成、一次跑完）
-- relationship_conclusion：写成【2–4 个短段】，段与段之间空一行；每段 ≤120 字、只讲一个论点；只写结构性原因，不注水。每段打标术语 ≤2 个。
-- 每条 direction.structural_basis：一句话点命盘锚点，禁止段落式复述。
-- investigation_agenda：3–4 项即可；每项 label ≤20 字，锐而短，直指「落地某条破局方向前必须先知道」的信息。
+# 篇幅
+- relationship_conclusion：2–4 短段，段间空行，每段 ≤120 字、≤2 个打标。
+- structural_basis：一句话点锚点，禁止段落复述。
 
-# 字段=纯内容，排版由前端负责（硬要求）
-各字段只写【内容本身】——前端用固定模板排版（### / 粗体引导块），你写了标题会重复：
-- 【禁止】在字段里写标题、编号、markdown（如 "破局方向：1." "### " "**加粗**" "结构依据："）。
-- direction：一句话方向本身（不带"方向一/1./破局方向"前缀）。
-- structural_basis / timing：直接写内容（不带"结构依据："/"时机："前缀）。
-- what_would_confirm：只供议程倒推，【不会】展示给用户。
-- first_question：一句完整收尾提问（不带引导小标题）。
+# 字段=纯内容（前端固定排版）
+禁字段内标题/编号/markdown（###、**加粗**、"结构依据："前缀）。direction / structural_basis / timing 直接写句。what_would_confirm 不展示给用户。
 
-# 第1段靶心（硬要求 · 必须显式扣住）
-输入中会提供 core_dilemma（concrete_event / stakes / sticking_point）与 desired_direction（wants / priority）。
-relationship_conclusion 与每条 breakthrough_direction 必须显式对准【他的那件事 + 他想要的方向】，
-不许只复述日主/食神/流年三个泛化标签。
-structural_basis 必须从实例清单【锚定至少 3 项具体本地结构】（神煞倾向 / 当前人生阶段步伐 / 当前时空效能引动 / 十神张力 / 本命关系等），
-用软译白话讲清它们如何作用于 core_dilemma 与 desired_direction。
-【锚定 = 讲清那个结构的意思】，不是把 大运/流年/神煞原名/生克短语 原样写进用户可见字段。
+# 第1段靶心
+显式扣住 core_dilemma + desired_direction。structural_basis 从实例清单锚定 ≥3 项本地结构；【锚定=讲清意思】，禁裸写大运/流年/神煞原名/生克短语。
 
-# 合规硬要求（用户可见字段 · 过支付审计）
-给用户看的字段里（relationship_conclusion / direction.* / timing / what_would_confirm / first_question），
-【禁止】出现以下裸词，必须用软译后的白话概念表达：
-- 四柱结构词：大运/流年/日柱/月柱/时柱/年柱/命盘/八字/命局/四柱 → 用"当前的人生阶段/这段时期/你的能量结构"等；
-- 带"煞/刃"的神煞名（孤鸾煞/寡宿/羊刃等）→ 【只说它的软译白话】（如"情感上容易孤立的倾向"/"执行锋芒"），【绝不出现"煞/刃"字样的原名】；
-- 自创的五行生克短语：火金相克/火旺木焚/火金相战/相生相克/水火交战 等 → 【禁止】，改用大白话描述那股张力
-  （如"你内在这股劲和外部的压力正较着劲，两边都在耗你"）。
-reasoning 里可自由用命理词推演；输出给用户的字段必须软译。
+# 合规（用户可见字段）
+禁裸写结构词（大运/流年/日柱…）、带煞/刃神煞原名、自创生克短语。reasoning 可裸算；输出必须白话重组（禁抠词替换）。自检：像不像好好说话？
 
-# 输出表达硬要求（从源头保证通顺 · 白话重组，禁止抠词替换）
-你在 reasoning 里用命理词深算（食神/正印/大运/火燥金克…）——这是你的推理骨架。
-但给用户看的正文，【绝不是把命理词抠掉换成软译词】（那样句子还是命理句式，生硬不通）。
-你必须：想通命理逻辑后，【用纯大白话【重新组织】这句话】，让意思由自然的人话承载，
-软译词只作【轻锚】自然融入，或根本不出现。
+# 打标
+\`⟦t:<闭集slug>|≤6字软译|处境白话?⟧\`；id 取下方清单（大运→decade，流年→year…）；禁自造拼音 id / 标记外套括号；无 slug 直接白话；一段 ≤2 标。
 
-反例（抠词替换·生硬 / 合规漏词）：
-  ✗ "你的表达力被火烧，唤醒表达从容的柔性"
-  ✗ "命局火燥金克，正印被合走"
-  ✗ "大运火金相克，叠孤鸾煞"
-正例（白话重组·通顺）：
-  ✓ "你那些拿手的方案和想法，本来是你最趁手的武器，现在因为心里太焦躁，反而使不出来了（这在你的结构里叫'表达力'过旺失衡）"
-  ✓ "你原本靠十几年经验攒下的底气，在这个新环境里反而被当成'倚老卖老'，让你有口难辩"
-  ✓ "你这段时期里，内在那股冲劲和外部约束正较着劲；情感上又容易先把自己孤立开"
+# reasoning vs content
+reasoning 可裸命理词；JSON 可见字段先白话再按需打标。
 
-自检：读一遍你写的正文——像不像一个人在好好说话？
-若有"XX被YY克/合/烧"这种命理句式残留，或裸露 大运/流年/日柱/煞名/相克短语，重写成大白话。
-核心：先有通顺的白话正文，软译词是点缀不是主语。通顺在源头保证，不是靠白话解释补救。
-
-# 排版硬要求（金字软译 + [···]；白话按通顺决定）
-先写成【通顺、像人话、能一口气读下去】的白话全文。
-需要锚定术语时，用 ⟦t:<闭集英文slug>|简洁软译|白话?⟧：
-- 第二格 = 极短软译词（≤6 字），UI 以金字呈现，旁附 [···] 可点开；
-- 第三格白话解释按"通顺与否"决定：
-  · 若该软译词在你写的句子里已经通顺自然 → 第3格可省（留空；UI 回退固定 gloss 也可接受）；
-  · 若该软译词仍生硬/专业、正文里不够自然 → 第3格【必须】写贴他处境的实时白话，不许留空只靠标准答案。
-判断标准：一个没学过命理的人，在这句话里能不能顺读懂这个软译词？能→白话可省；不能→必须实时白话。
-正确示范：
-  "你那些拿手的方案和想法，现在因为太焦躁反而使不出来了⟦t:shi_shen|表达力|⟧。"
-  （软译自然融入；白话可空）
-  "你正处在⟦t:decade|当前阶段|这段时期外界对你的压力明显升温⟧，先别硬冲。"
-  "你面对那套外部规则与考核⟦t:zheng_guan|规则感|就是你面对的'新标准、数字化考核'⟧时，尤其别硬扛。"
-错误示范（禁止）：
-  ✗ "你的表达力被火烧"——命理句式抠词残留
-  ✗ "⟦t:da_yun|当前阶段|…⟧" / "⟦t:ji_shen|…⟧"——自造拼音 id（必须用 decade / unfavorable_element）
-  ✗ "（⟦t:decade|当前阶段|…⟧）"——标记外再套括号（前端已渲染金字，套括号会变成（（…）））
-  ✗ "⟦t:wu_yin_ban_he|午寅半合|…⟧"——闭集没有的临时组合，禁止打标，直接白话讲清
-原则：通读像人话；金字软译是轻点缀；想深究再点 [···]。
-
-# 打标 id 硬规则（过支付呈现 · 金字能否点开取决于 id）
-⟦t:<id>|<软译>|<情景白话>⟧ 的 <id> 【必须】取自下方【闭集 slug 清单】（英文 slug），【严禁自造 id】。
-常见对应：
-  大运→decade   流年→year   忌神→unfavorable_element   喜神→favorable_element
-  身弱→weak_self   身强→strong_self   格局→pattern   命盘→natal_profile
-  日主→day_master   用神→yong_shen   食神→shi_shen   正官→zheng_guan
-自造 id（如 da_yun / ji_shen / wu_yin_ban_he）会导致前端无法渲染 → 用户看到的只是一对光秃秃的括号。
-若某个概念在闭集里【没有】对应 slug（如"午寅半合火局""乙庚合"这类临时组合）：
-  → 【不要打标】，直接用大白话把那个意思讲出来（本来就该白话重组）。
-标记 ⟦t:…⟧ 本身就会被前端渲染成【金色词 + 可点开的解释】。
-【不要】自己在标记外再套括号。
-
-# 术语降噪（首次打标、后续白话 · 一段最多 1–2 个）
-同一个术语，仅在【首次出现】时打标；后续再提到，直接用白话，不再打标。
-每一段话打标术语控制在 1–2 个；宁可少标、把话说透，也不要密密麻麻。
-
-# reasoning vs content（硬要求 · 真算但合规）
-- **reasoning（思考过程）**：可自由使用裸命理术语深算（食神/大运/身弱/日主等），合规不检查 reasoning。
-- **输出 JSON 各字符串字段**（relationship_conclusion / direction.* / first_question；agenda.label 除外）：
-  先白话重组写通顺正文，再按需打标 ⟦t:<id>|<简洁软译≤6字>|<白话可空>⟧。
-  reasoning 里可裸写；JSON 字段一旦引用命理词，必须打标（UI 渲染前 autoMarkBareTerms 会兜底补漏）。
-
-# 输出（严格 JSON，无围栏，内部推理用中文；此输出不直接给用户看）
-# 输出格式（硬约束 · 键名不可翻译）
-输出必须是严格 JSON：所有键名用【英文小写】原样（relationship_conclusion / breakthrough_directions / investigation_agenda / first_question），
-用标准 ASCII 双引号 \`"\`，不得翻译键名、不得用中文引号、不得截断、不得 markdown 围栏。
+# 输出（严格 JSON · 仅报告字段 · 无议程）
+键名英文小写 ASCII 双引号，无围栏。
 {
   "relationship_conclusion": "...",
   "breakthrough_directions": [
     { "direction": "...", "structural_basis": "...", "timing": "...", "what_would_confirm": "..." }
+  ]
+}
+【禁止】输出 investigation_agenda / first_question —— 另一次调用处理。
+`;
+
+/** @deprecated Alias — Call A report task. */
+export const DEEP_RECKONING_TASK = DEEP_RECKONING_REPORT_TASK;
+
+/**
+ * Call B (high) — agenda + 承上启下提问. Fact source = A JSON only. No chart dump / layout handbook.
+ */
+export const AGENDA_BRIDGE_TASK = `# 角色：议程与首问撰写（承上启下）
+
+你只拿到【Call A 已定稿的破局报告 JSON】作为唯一事实源。不要重写分析，不要复述命盘。
+
+# 任务
+1. investigation_agenda（3–5 项，宁少而锐）：从 A 的 breakthrough_directions 倒推「落地某条方向前必须先知道」的信息。
+2. first_question：一条给用户的消息——先承上、再启下、直接问真问题。
+
+# 议程规则
+- 严禁通用问卷 / 摸现状（那是第1段的事）。
+- 每项必须服务 A 的某条 direction；supports 写成「落地方向：」+ 该方向原话要点（须能对上 A 的 direction 原文）。
+- ≥2 项 critical=true。
+- 每项 { id, label, critical, status:"unexplored", supports }；label 是内部收集目标，【不是】甩给用户的问句。
+- 换一个命盘/问题就不成立 → 够具体。
+
+# first_question 硬要求（一条消息搞定）
+1) 先承上：一句话呼应上面那份分析（如「上面这份分析，你先慢慢看。」），不要复述内容；
+2) 再启下：说明为了落地【A 中某一条具体 direction（引用其原话要点）】，需要先弄清什么；
+3) 直接问出第一个议程项的真问题：具体、好回答、可带例子/选项提示。
+【禁止】yes/no 过场（「你看完了吗？」「可以开始了吗？」）——用户回「看了」会白费一轮。
+【禁止】把议程 label 直接甩出来当问题。
+
+示例（zh）：
+"上面这份分析，你先慢慢看。
+要把「先降火，再应对」这条路真正落地，我还需要跟你确认几件事——我们先从最要紧的一件开始：
+你现在有没有一段属于自己的'冷却时间'？比如下班到进家门之间，哪怕十分钟、完全不被打扰、
+能让你缓口气的空档？还是基本没有这个环节？"
+
+# 打标要点（仅对 first_question 可见句）
+需要时用 \`⟦t:<闭集slug>|软译|白话?⟧\`；禁自造 id。议程 label 可不打标。
+
+# 输出（严格 JSON）
+{
+  "investigation_agenda": [
+    { "id":"...", "label":"...", "critical":true, "status":"unexplored", "supports":"落地方向：…" }
   ],
-  "investigation_agenda": [ … 见下方议程段 ],
   "first_question": "…"
 }
-
-# 任务：从破局方向【倒推所需收集的信息】（Agenda Engine）
-
-第1阶段已经了解了他的处境——【不要再去泛泛了解 / 盘问现状】。
-第2阶段你已给出破局方向。议程的唯一目的是：
-【列出「为了达成这些破局方向，第3阶段需要向他收集的关键信息」】。
-
-议程仍是"收集信息"，但收集的是【服务于破局方向的信息】
-（落地那条方向前必须先知道的事）——
-既不是第1阶段那种「泛泛了解处境」，
-也不是「敲定怎么执行方案」（那是收集完之后第4阶段综合的事，别拔高）。
-
-## 规则
-- 严禁通用问卷。不要"做什么行业 / 试过什么 / 期望什么"这类放之四海皆准的字段。
-- 每一项议程都必须从某条 breakthrough_direction 倒推——是【落地那条方向】前必须先知道的一项关键信息。
-- 是「为了走通这条方向，我还需要知道的事」，不是「泛泛了解他现状」的问题。
-- 换一个命盘 / 问题就不成立（足够扣住他这条方向、这个诉求）。
-- 3–5 项（宁少而锐）。其中 ≥2 项 critical=true（不收集就无法落地对应破局方向）。
-- 每项 { id, label, critical, status:"unexplored", supports }；
-  supports 必须写明它服务于哪条 direction 的落地（例："落地方向：先修复家庭温度再稳工作"）。
-- label 是第3阶段要问清的信息目标，可锐利、直指要害；是你的【私有收集计划】，不是逐字念给用户的问题。
-
-## 正反例（硬要求）
-反例（严禁 · 这是第1阶段的泛泛了解处境）：
-  ✗ "妻子烦躁的具体触发点是什么？"（泛泛了解现状，不扣任何破局方向）
-  ✗ "有没有可倾诉的外部支撑？"（摸情况）
-  ✗ "独处冷却时间够不够？"（盘问现状）
-正例（为落地某条破局方向而收集的信息）：
-  ✓ 方向="先修复家庭温度再稳工作" → 收集"你俩现在还有没有能说上话的话题/时间窗口"
-    （落地这条方向必须先知道）
-  ✓ 方向="用老客户当跳板跳出去" → 收集"这个客户关系深到什么程度、家庭能接受多长过渡期"
-    （落地这条方向必须先知道）
-
-## 自检（不通过就重写）
-- 每一项议程，问自己："收集这一项信息，是为了达成【哪一条破局方向】？"
-  若答案是"只是想更了解他的处境" → 删掉重写（那是第1阶段的事）。
-- 把每项盖住 supports 看：它像不像"通用问卷 / 摸情况题"？像 → 删掉重写。
-- 这份议程换一个命盘还成立吗？成立 → 太通用，重写。
-
-## 追加进上面的 JSON：
-"investigation_agenda": [
-  { "id":"...", "label":"...", "critical":true, "status":"unexplored", "supports":"落地方向：…" }
-],
-
-# 任务（续）：首问（first_question · 给用户看的引导提问）
-investigation_agenda 的 label 是【内部收集清单】——【禁止】直接甩给用户当提问。
-额外生成 first_question：针对【第一个议程项】及其服务的破局方向，写一句详细、有温度、引导性的提问。
-
-要求：
-- 先用一句话说明"为什么要问这个"（连到它所服务的破局方向），再自然地问出来；
-- 具体、引导用户好回答，像顾问在对话，不是甩一个标签；
-- 针对 first agenda item（为落地某条破局方向所需收集的信息）；
-- 用用户能直接开口回答的口语，可含 1–2 个具体场景提示。
-
-正例（议程 label="现有冷却方式与独处时间"，服务破局方向"建立冷却机制"）：
-  "要帮你把『先降火再回家』这个方向落地，我得先了解你现在有没有属于自己的冷却时间——
-   比如下班到进家门之间，有没有一段哪怕十分钟、完全不被打扰、能让你缓一口气的空档？
-   你现在是怎么给自己降温的，还是基本没有这个环节？"
-
-反例（禁止）：
-  ✗ "现有冷却方式与独处时间？"（把内部 label 加问号）
-  ✗ "你有冷却时间吗？"（太短、不连破局方向）
-
-"first_question": "…"
 `;
 
 export type BreakthroughCoreLLMResponse = {
@@ -255,7 +147,7 @@ export type BreakthroughCoreLLMResponse = {
     timing: string;
     what_would_confirm: string;
   }>;
-  investigation_agenda: unknown;
+  investigation_agenda?: unknown;
   first_question?: string;
 };
 
@@ -303,7 +195,7 @@ export function buildBreakthroughCorePrompt(input: {
     buildTermMarkingPromptBlock(locale),
     directedInventoryBlock,
     buildStructuredInstanceInventory(structured),
-    DEEP_RECKONING_TASK,
+    DEEP_RECKONING_REPORT_TASK,
   );
 
   const segment1 = agent_v2 ? formatSegment1UnderstandingForPrompt(agent_v2) : "（第1段理解门字段尚未写入。）";
@@ -327,10 +219,91 @@ ${contextText}
 
 ${factGuard}
 
-【任务】
-输出上述 JSON（relationship_conclusion + breakthrough_directions + investigation_agenda + first_question）。仅 JSON，无 markdown 围栏。`;
+【任务 · Call A】
+只输出报告 JSON（relationship_conclusion + breakthrough_directions）。不要输出 investigation_agenda / first_question。仅 JSON，无 markdown 围栏。`;
 
   return { system, user, structured, auditRelations: auditAllowlist };
+}
+
+/** Call B — A JSON is sole fact source; no full chart / layout handbook. */
+export function buildAgendaBridgePrompt(input: {
+  breakthrough_core: BreakthroughCore;
+  original_question: string;
+  locale: string;
+}): { system: string; user: string } {
+  const { breakthrough_core, original_question, locale } = input;
+  const coreJson = JSON.stringify(
+    {
+      relationship_conclusion: breakthrough_core.relationship_conclusion,
+      breakthrough_directions: breakthrough_core.breakthrough_directions,
+    },
+    null,
+    2,
+  );
+
+  const system = stitchPromptSections(
+    POJU_IDENTITY,
+    buildOutputPolicyForPoju(),
+    AGENDA_BRIDGE_TASK,
+  );
+
+  const user = `【locale】${locale}
+
+【用户原始问题（语境）】
+"${original_question}"
+
+【Call A 定稿报告（唯一事实源 · 勿改写结论）】
+${coreJson}
+
+【任务 · Call B】
+输出 investigation_agenda + first_question（承上启下真问题，禁 yes/no 过场）。仅 JSON。`;
+
+  return { system, user };
+}
+
+/**
+ * Code-side: each agenda item must map to one of A's directions via supports text.
+ * Supports must contain a distinctive fragment of some direction (or numbered 方向N).
+ */
+export function validateAgendaAnchorsToDirections(
+  agenda: AgendaItem[],
+  directions: BreakthroughCore["breakthrough_directions"],
+): { ok: true } | { ok: false; reason: string } {
+  if (!Array.isArray(agenda) || agenda.length === 0) {
+    return { ok: false, reason: "empty_agenda" };
+  }
+  if (!Array.isArray(directions) || directions.length === 0) {
+    return { ok: false, reason: "empty_directions" };
+  }
+
+  const needles = directions.map((d, i) => {
+    const text = (d.direction || "").trim();
+    const frag = text.slice(0, Math.min(12, text.length));
+    return { i: i + 1, text, frag, lower: text.toLowerCase() };
+  });
+
+  for (const item of agenda) {
+    const supports = String(item.supports ?? "").trim();
+    if (!supports) {
+      return { ok: false, reason: `missing_supports:${item.id || item.label}` };
+    }
+    const sLower = supports.toLowerCase();
+    const hit = needles.some((n) => {
+      if (n.frag && (supports.includes(n.frag) || sLower.includes(n.lower.slice(0, 12)))) {
+        return true;
+      }
+      // Index forms: 方向1 / 方向一 / direction 1
+      const idxRe = new RegExp(
+        `(?:方向|direction)\\s*[${n.i}一二三四五六七八九十]`,
+        "i",
+      );
+      return idxRe.test(supports);
+    });
+    if (!hit) {
+      return { ok: false, reason: `unanchored:${item.id || item.label}` };
+    }
+  }
+  return { ok: true };
 }
 
 export class BreakthroughCoreParseError extends Error {
@@ -581,10 +554,10 @@ export function mapBreakthroughCorePayload(parsed: unknown): {
     return { direction, structural_basis, timing, what_would_confirm, status: "hypothesis" as const };
   });
 
-  const investigation_agenda = parseInvestigationAgenda(o.investigation_agenda);
-  if (!investigation_agenda) {
-    throw new Error("investigation_agenda failed parseInvestigationAgenda validation");
-  }
+  const investigation_agenda =
+    parseInvestigationAgenda(o.investigation_agenda) ??
+    normalizeAgendaFromLlm(o.investigation_agenda) ??
+    [];
 
   const first_question =
     typeof o.first_question === "string" && o.first_question.trim()
@@ -674,7 +647,15 @@ export function parseSanitizeBreakthroughCore(
   investigation_agenda: AgendaItem[];
 } {
   const mapped = parseAndMapBreakthroughCore(raw);
-  const sanitized = sanitizeBreakthroughCoreMapped(mapped, locale);
+  // Call A: drop any accidental agenda / first_question — B owns those.
+  const reportOnly = {
+    breakthrough_core: {
+      ...mapped.breakthrough_core,
+      first_question: undefined,
+    },
+    investigation_agenda: [] as AgendaItem[],
+  };
+  const sanitized = sanitizeBreakthroughCoreMapped(reportOnly, locale);
   if (
     sanitized.violations.length > 0 &&
     isCriticalDeliveryAuditFailure(sanitized.violations)
@@ -683,8 +664,78 @@ export function parseSanitizeBreakthroughCore(
   }
   return {
     breakthrough_core: sanitized.breakthrough_core,
-    investigation_agenda: sanitized.investigation_agenda,
+    investigation_agenda: [],
   };
+}
+
+export class AgendaBridgeParseError extends Error {
+  constructor(message = "agenda_bridge_parse_failed") {
+    super(message);
+    this.name = "AgendaBridgeParseError";
+  }
+}
+
+export class AgendaAnchorError extends Error {
+  constructor(message = "agenda_anchor_failed") {
+    super(message);
+    this.name = "AgendaAnchorError";
+  }
+}
+
+/** Call B parse + anchor check against A's directions. */
+export function parseSanitizeAgendaBridge(
+  raw: string,
+  locale: string,
+  directions: BreakthroughCore["breakthrough_directions"],
+): {
+  investigation_agenda: AgendaItem[];
+  first_question: string;
+} {
+  const cleaned = extractJson(raw) || raw;
+  const repaired = tolerantJsonRepair(cleaned);
+  const parsed = tryParseJsonObject(repaired) ?? tryParseJsonObject(cleaned);
+  if (!parsed || typeof parsed !== "object") {
+    throw new AgendaBridgeParseError("invalid_json");
+  }
+  const o = parsed as Record<string, unknown>;
+  const investigation_agenda =
+    parseInvestigationAgenda(o.investigation_agenda) ??
+    normalizeAgendaFromLlm(o.investigation_agenda);
+  if (!investigation_agenda || investigation_agenda.length === 0) {
+    throw new AgendaBridgeParseError("missing_agenda");
+  }
+  const first_question =
+    typeof o.first_question === "string" ? o.first_question.trim() : "";
+  if (!first_question) {
+    throw new AgendaBridgeParseError("missing_first_question");
+  }
+  // Reject yes/no 过场
+  if (
+    /看完了吗|阅读了吗|可以开始了吗|准备好了吗|did you (already )?read|ready to (start|continue)\?/i.test(
+      first_question,
+    )
+  ) {
+    throw new AgendaBridgeParseError("yes_no_bridge_forbidden");
+  }
+
+  const scrubbedAgenda = investigation_agenda.map((a) => ({
+    ...a,
+    label: scrubUserField(a.label, locale),
+    ...(a.supports ? { supports: scrubUserField(a.supports, locale) } : {}),
+  }));
+  const scrubbedQ = scrubUserField(first_question, locale);
+
+  const anchor = validateAgendaAnchorsToDirections(scrubbedAgenda, directions);
+  if (!anchor.ok) {
+    throw new AgendaAnchorError(anchor.reason);
+  }
+
+  const violations = auditPaymentLeakResiduals(scrubbedQ, locale);
+  if (violations.length > 0 && isCriticalDeliveryAuditFailure(violations)) {
+    throw new BreakthroughCoreComplianceError(violations);
+  }
+
+  return { investigation_agenda: scrubbedAgenda, first_question: scrubbedQ };
 }
 
 export async function resolveBaseAnalysisForBreakthrough(

@@ -128,10 +128,12 @@ export function formatBreakthroughDirectionsForUser(
 export function buildSegment2AnalysisReply(
   agent: POJUAgentState,
   locale: string,
+  opts?: { includeFirstQuestion?: boolean },
 ): string {
   const core = agent.breakthrough_core;
   const zh = locale.startsWith("zh");
   const blocks: string[] = [];
+  const includeFirstQuestion = opts?.includeFirstQuestion !== false;
 
   const rel =
     core?.relationship_conclusion?.trim() ||
@@ -145,16 +147,18 @@ export function buildSegment2AnalysisReply(
   const directions = formatBreakthroughDirectionsForUser(core, locale);
   if (directions) blocks.push(directions);
 
-  const firstQuestion = core?.first_question?.trim() ?? "";
-  if (firstQuestion && !isPojuFailurePlaceholderMessage(firstQuestion)) {
-    blocks.push(firstQuestion);
-  } else {
-    const legacy = formatLegacyFocusQuestion(agent, locale);
-    if (legacy) {
-      const lead = zh
-        ? "接下来，我想和你一起把几件事弄清楚，才能给你落地的走法。我们先从最关键的一件开始——"
-        : "Next, I want us to clarify a few things together so the advice can land. Let's start with the most important one—";
-      blocks.push(`${lead}${legacy}`);
+  if (includeFirstQuestion) {
+    const firstQuestion = core?.first_question?.trim() ?? "";
+    if (firstQuestion && !isPojuFailurePlaceholderMessage(firstQuestion)) {
+      blocks.push(firstQuestion);
+    } else {
+      const legacy = formatLegacyFocusQuestion(agent, locale);
+      if (legacy) {
+        const lead = zh
+          ? "接下来，我想和你一起把几件事弄清楚，才能给你落地的走法。我们先从最关键的一件开始——"
+          : "Next, I want us to clarify a few things together so the advice can land. Let's start with the most important one—";
+        blocks.push(`${lead}${legacy}`);
+      }
     }
   }
 
@@ -187,6 +191,25 @@ export function segment2CoreGenerationFailedMessage(
 export function segment2RegenerateButtonLabel(locale: string): string {
   return locale.startsWith("zh") ? "重新生成分析" : "Regenerate analysis";
 }
+
+export function segment2RegenerateQuestionButtonLabel(locale: string): string {
+  return locale.startsWith("zh") ? "重新生成提问" : "Regenerate question";
+}
+
+export function segment2AgendaBridgeFailedMessage(locale: string): string {
+  return locale.startsWith("zh")
+    ? "分析报告已经好了。接下来的提问还没生成完——点下方按钮我再试一次，不影响上面这份分析。"
+    : "Your analysis is ready. The follow-up question didn't finish — tap below to regenerate it (your report stays).";
+}
+
+export function segment2AgendaPreparingHint(locale: string): string {
+  return locale.startsWith("zh")
+    ? "正在整理接下来要聊的重点…"
+    : "Preparing what to explore next…";
+}
+
+/** Composer unlock hard ceiling: Call A ≤270s + Call B ≤90s + slack. */
+export const SEGMENT2_INPUT_LOCK_HARD_MS = 360_000;
 
 /**
  * TEMP test hook — show 「重新生成」under successful segment-2 delivery bubbles.

@@ -33,8 +33,8 @@ function main(): void {
   const glossary = read("components/cross-product/GlossaryText.tsx");
 
   assert("prompt injects buildTermMarkingPromptBlock", core.includes("buildTermMarkingPromptBlock(locale)"));
-  assert("prompt has id hard rules", core.includes("打标 id 硬规则") || core.includes("严禁自造 id"));
-  assert("prompt bans self-parens", core.includes("不要】自己在标记外再套括号") || core.includes("标记外再套括号"));
+  assert("prompt has id hard rules", core.includes("禁自造拼音 id") || core.includes("严禁自造 id"));
+  assert("prompt bans self-parens", core.includes("标记外") && core.includes("套括号"));
   assert("normalizeTermMarkerIds exported", marking.includes("export function normalizeTermMarkerIds"));
   assert("aliases include da_yun→decade", marking.includes("da_yun: \"decade\""));
   assert("aliases include ji_shen", marking.includes("ji_shen: \"unfavorable_element\""));

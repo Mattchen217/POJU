@@ -1,6 +1,10 @@
 import { baseAnalysisCacheSessionId, pojuCacheSessionId } from "@/lib/llm/cache-session-id";
 import {
+  AgendaAnchorError,
+  AgendaBridgeParseError,
+  buildAgendaBridgePrompt,
   buildBreakthroughCorePrompt,
+  parseSanitizeAgendaBridge,
   parseSanitizeBreakthroughCore,
 } from "@/lib/llm/deepseek/breakthrough-core";
 import { buildLlmDebug } from "@/lib/llm/llm-debug";
@@ -24,17 +28,20 @@ import {
   updateXhighJobStatus,
 } from "@/lib/poju/xhigh-job-store";
 import type { PojuXhighJob, PojuXhighJobFailureReason, PojuXhighJobPhase } from "@/lib/poju/xhigh-job-types";
+import { isSegment2AgendaInput, isSegment2ReportInput } from "@/lib/poju/xhigh-job-types";
 
 /**
- * Segment-2 xhigh — successful runs ~11k tokens; keep budget below 32k so thinking finishes sooner.
- * (If still timing out often.)
+ * Segment-2 Call A (xhigh) — report only.
  */
 export const SEGMENT2_XHIGH_MAX_TOKENS = 26_000;
 /**
- * Per-attempt stream timeout. Evidence: xhigh finishes ~152–167s; 180s was too tight.
- * Job runs in background (no 90s wall on the stream itself). maxDuration 300s → leave ~30s to write terminal.
+ * Call A stream timeout. maxDuration 300s → leave ~30s to write terminal.
  */
 export const SEGMENT2_XHIGH_TIMEOUT_MS = 270_000;
+
+/** Call B (high) — short; fail/unlock if over ~90s. */
+export const SEGMENT2_AGENDA_MAX_TOKENS = 8_000;
+export const SEGMENT2_AGENDA_TIMEOUT_MS = 90_000;
 
 /**
  * Wall budget for *retrying* after fast transport failures only (429/503/no-endpoints).
@@ -127,6 +134,9 @@ export const SEGMENT2_XHIGH_RUNNER_CONFIG: XhighJobRunnerConfig = {
   timeout_ms: SEGMENT2_XHIGH_TIMEOUT_MS,
   max_attempts: 1,
   buildMessages(job) {
+    if (!isSegment2ReportInput(job.input)) {
+      throw new Error("segment2_report_input_expected");
+    }
     const { input } = job;
     const profileId = input.profile_id;
     const { system, user } = buildBreakthroughCorePrompt({
@@ -141,15 +151,81 @@ export const SEGMENT2_XHIGH_RUNNER_CONFIG: XhighJobRunnerConfig = {
     return { system, user, sessionCacheId };
   },
   finalizeContent(content, job) {
-    const mapped = parseSanitizeBreakthroughCore(content, job.locale || job.input.locale || "zh");
+    const mapped = parseSanitizeBreakthroughCore(content, job.locale || "zh");
     return {
       result: {
         breakthrough_core: mapped.breakthrough_core,
-        investigation_agenda: mapped.investigation_agenda,
+        investigation_agenda: [],
       },
     };
   },
 };
+
+/** Call B — high effort, short timeout; input = A JSON. */
+export const SEGMENT2_AGENDA_RUNNER_CONFIG: XhighJobRunnerConfig = {
+  phase: "segment2_agenda_bridge",
+  phase_name: "segment2_agenda_bridge",
+  call_type: "agenda_bridge",
+  reasoning_effort: "high",
+  max_tokens: SEGMENT2_AGENDA_MAX_TOKENS,
+  timeout_ms: SEGMENT2_AGENDA_TIMEOUT_MS,
+  max_attempts: 1,
+  buildMessages(job) {
+    if (!isSegment2AgendaInput(job.input)) {
+      throw new Error("segment2_agenda_input_expected");
+    }
+    const { system, user } = buildAgendaBridgePrompt({
+      breakthrough_core: job.input.breakthrough_core,
+      original_question: job.input.original_question,
+      locale: job.input.locale,
+    });
+    return {
+      system,
+      user,
+      sessionCacheId: pojuCacheSessionId(job.input.session_id),
+    };
+  },
+  finalizeContent(content, job) {
+    if (!isSegment2AgendaInput(job.input)) {
+      throw new Error("segment2_agenda_input_expected");
+    }
+    try {
+      const mapped = parseSanitizeAgendaBridge(
+        content,
+        job.locale || job.input.locale || "zh",
+        job.input.breakthrough_core.breakthrough_directions,
+      );
+      return {
+        result: {
+          breakthrough_core: {
+            ...job.input.breakthrough_core,
+            first_question: mapped.first_question,
+          },
+          investigation_agenda: mapped.investigation_agenda,
+          first_question: mapped.first_question,
+        },
+      };
+    } catch (e) {
+      if (e instanceof AgendaAnchorError) {
+        const err = new Error(e.message);
+        (err as Error & { failure_reason?: string }).failure_reason = "agenda_anchor_failed";
+        throw err;
+      }
+      if (e instanceof AgendaBridgeParseError) {
+        throw e;
+      }
+      throw e;
+    }
+  },
+};
+
+export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<void> {
+  return runXhighJob(job_id, SEGMENT2_XHIGH_RUNNER_CONFIG);
+}
+
+export async function runSegment2AgendaBridgeJob(job_id: string): Promise<void> {
+  return runXhighJob(job_id, SEGMENT2_AGENDA_RUNNER_CONFIG);
+}
 
 /**
  * Run an xhigh job in the background (scheduled via Next.js `after()`).
@@ -340,10 +416,14 @@ export async function runXhighJob(job_id: string, config: XhighJobRunnerConfig):
     parsed = config.finalizeContent(content, job).result;
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    console.warn(`[xhigh-job] ${config.phase} parse failed`, { job_id, msg });
-    await failXhighJob(job_id, "deep analysis JSON was incomplete", {
+    const isAnchor =
+      e instanceof AgendaAnchorError ||
+      (e instanceof Error &&
+        (e as Error & { failure_reason?: string }).failure_reason === "agenda_anchor_failed");
+    console.warn(`[xhigh-job] ${config.phase} parse failed`, { job_id, msg, isAnchor });
+    await failXhighJob(job_id, isAnchor ? msg : "deep analysis JSON was incomplete", {
       retryable: true,
-      failure_reason: "parse_failed",
+      failure_reason: isAnchor ? "agenda_anchor_failed" : "parse_failed",
       accumulated_content: content,
       error_detail: msg,
     });
@@ -393,8 +473,4 @@ export async function runXhighJob(job_id: string, config: XhighJobRunnerConfig):
     reasoning_tokens: out.reasoning_tokens,
     finish_reason: finish,
   });
-}
-
-export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<void> {
-  return runXhighJob(job_id, SEGMENT2_XHIGH_RUNNER_CONFIG);
 }

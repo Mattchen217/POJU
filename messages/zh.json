@@ -997,6 +997,8 @@
       "understanding_gate_group_label": "理解确认",
       "segment2_regenerate_analysis": "重新生成分析",
       "segment2_regenerate_group_label": "重新生成深度分析",
+      "segment2_regenerate_question": "重新生成提问",
+      "segment2_regen_question_group_label": "重新生成承上启下提问",
       "opening_understanding_retry": "点击重试",
       "opening_understanding_retry_group_label": "重试理解对话",
       "agent_phase_delivered": "已交付",

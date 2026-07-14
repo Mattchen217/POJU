@@ -23,6 +23,7 @@ export type Segment2JobPollResult =
       job_id: string;
       breakthrough_core: NonNullable<PojuXhighJob["result"]>["breakthrough_core"];
       investigation_agenda: AgendaItem[];
+      first_question?: string;
       model?: string;
       tokens_used?: number;
       llm_debug?: PojuXhighJob["llm_debug"];
@@ -42,6 +43,7 @@ type StatusPayload = {
   accumulated_content?: string;
   breakthrough_core?: Segment2JobPollResult extends { ok: true; breakthrough_core: infer B } ? B : never;
   investigation_agenda?: AgendaItem[] | null;
+  first_question?: string | null;
   model?: string;
   tokens_used?: number;
   llm_debug?: PojuXhighJob["llm_debug"];
@@ -108,6 +110,12 @@ export async function pollBreakthroughCoreJobUntilDone(input: {
           job_id: input.job_id,
           breakthrough_core: data.breakthrough_core,
           investigation_agenda: agenda,
+          first_question:
+            (typeof data.first_question === "string" ? data.first_question : undefined) ??
+            (data.breakthrough_core &&
+            typeof (data.breakthrough_core as { first_question?: string }).first_question === "string"
+              ? (data.breakthrough_core as { first_question?: string }).first_question
+              : undefined),
           model: data.model,
           tokens_used: data.tokens_used,
           llm_debug: data.llm_debug,

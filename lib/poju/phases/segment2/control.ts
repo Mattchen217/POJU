@@ -1,6 +1,6 @@
 /**
- * Segment 2 (analysis + directions + agenda) — control flow.
- * Owns: gate-confirm → create xhigh job → apply job result into session display.
+ * Segment 2 (analysis + directions + agenda) ??control flow.
+ * Owns: gate-confirm ??create xhigh job ??apply job result into session display.
  * Polling UI owns Progress (Segment2AnalysisPreparing); this module does not await the job.
  *
  * Only imports shared/ + agent-state / session helpers. Never imports opening/ or other phases/.
@@ -22,6 +22,7 @@ import { understandingGateConfirmButtonLabel } from "@/lib/poju/understanding-ga
 import type { Segment2JobPollResult } from "@/lib/poju/shared/xhigh-job";
 import {
   buildSegment2AnalysisReply,
+  segment2AgendaBridgeFailedMessage,
   segment2CoreGenerationFailedMessage,
   segment2RegenerateButtonLabel,
 } from "@/lib/poju/phases/segment2/display";
@@ -84,7 +85,7 @@ export type CreateSegment2JobResult =
     }
   | { ok: false; error: string; retryable?: boolean };
 
-/** POST create (or resume) segment-2 xhigh job — does not poll. */
+/** POST create (or resume) segment-2 xhigh job ??does not poll. */
 export async function createSegment2XhighJob(input: {
   session: POJUSessionState;
   locale: string;
@@ -105,7 +106,7 @@ export async function createSegment2XhighJob(input: {
     return {
       ok: false,
       error:
-        "[segment2] 命主基础分析缺失，无法锚定深测算。selected_stored_profile_id=" +
+        "[segment2] ?????????????????selected_stored_profile_id=" +
         (input.session.selected_stored_profile_id ?? "null"),
     };
   }
@@ -172,7 +173,7 @@ export type Segment2StartResult = {
   already_complete?: boolean;
 };
 
-/** Gate confirm → advance SM → create async xhigh job (UI mounts preparing + polls). */
+/** Gate confirm ??advance SM ??create async xhigh job (UI mounts preparing + polls). */
 export async function startSegment2AfterGateConfirm(input: {
   session: POJUSessionState;
   locale: string;
@@ -274,7 +275,12 @@ export async function startSegment2AfterGateConfirm(input: {
 
 function isSegment2AssistantBubble(m: POJUMessage | undefined): boolean {
   if (!m || m.role !== "assistant") return false;
-  return Boolean(m.meta?.core_generation_failed || m.meta?.segment2_analysis);
+  return Boolean(
+    m.meta?.core_generation_failed ||
+      m.meta?.segment2_analysis ||
+      m.meta?.segment2_bridge_question ||
+      m.meta?.segment2_agenda_bridge_failed,
+  );
 }
 
 /** Regenerate segment-2 without redoing opening understanding (also clears a prior successful core). */
@@ -378,29 +384,36 @@ export async function startSegment2Regenerate(input: {
   return { session: sessionPending, job_id: created.job_id };
 }
 
-/** Apply successful poll result → full segment-2 analysis bubble. */
-export function finalizeSegment2JobSuccess(input: {
+/** Apply successful poll result ??full segment-2 analysis bubble. */
+
+/** Apply Call A poll success ? report bubble (no first_question yet). Input stays locked in UI. */
+export function finalizeSegment2ReportSuccess(input: {
   session: POJUSessionState;
   locale: string;
   breakthrough_core: BreakthroughCore;
-  investigation_agenda: AgendaItem[];
   model?: string;
   tokens_used?: number;
   llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
 }): POJUSessionState {
   const session = ensureSessionCycles(input.session);
   const base = ensureAgentV2(session);
+  const coreWithoutQ: BreakthroughCore = {
+    ...input.breakthrough_core,
+    first_question: undefined,
+  };
   const agent_v2: POJUAgentState = {
     ...base,
     current_phase: "collecting_context",
-    breakthrough_core: input.breakthrough_core,
-    investigation_agenda: input.investigation_agenda,
-    agenda_generated: true,
+    breakthrough_core: coreWithoutQ,
+    investigation_agenda: [],
+    agenda_generated: false,
     has_situation_analysis: true,
     core_generation_failed: false,
   };
 
-  const finalContent = buildSegment2AnalysisReply(agent_v2, input.locale);
+  const finalContent = buildSegment2AnalysisReply(agent_v2, input.locale, {
+    includeFirstQuestion: false,
+  });
   const assistantMessage: POJUMessage = {
     role: "assistant",
     content: finalContent,
@@ -410,7 +423,6 @@ export function finalizeSegment2JobSuccess(input: {
       user_intent: "sharing_situation",
       action_requested: "continue_chat",
       segment2_analysis: true,
-      investigation_agenda: agent_v2.investigation_agenda ?? undefined,
       llm_model: input.model,
       llm_debug: input.llm_debug,
       tokens_used: input.tokens_used,
@@ -424,6 +436,35 @@ export function finalizeSegment2JobSuccess(input: {
     agent_v2,
     tokens_used: session.tokens_used + (input.tokens_used ?? 0),
     last_interaction_at: new Date().toISOString(),
+  });
+}
+
+/** @deprecated Prefer finalizeSegment2ReportSuccess + finalizeSegment2AgendaBridgeSuccess. */
+export function finalizeSegment2JobSuccess(input: {
+  session: POJUSessionState;
+  locale: string;
+  breakthrough_core: BreakthroughCore;
+  investigation_agenda: AgendaItem[];
+  model?: string;
+  tokens_used?: number;
+  llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
+}): POJUSessionState {
+  const withReport = finalizeSegment2ReportSuccess({
+    session: input.session,
+    locale: input.locale,
+    breakthrough_core: input.breakthrough_core,
+    model: input.model,
+    tokens_used: input.tokens_used,
+    llm_debug: input.llm_debug,
+  });
+  if (!input.investigation_agenda?.length && !input.breakthrough_core.first_question) {
+    return withReport;
+  }
+  return finalizeSegment2AgendaBridgeSuccess({
+    session: withReport,
+    locale: input.locale,
+    investigation_agenda: input.investigation_agenda,
+    first_question: input.breakthrough_core.first_question ?? "",
   });
 }
 
@@ -455,19 +496,182 @@ export function finalizeSegment2JobFailure(input: {
   });
 }
 
-/** Helper for Preparing onComplete payload → session. */
+/** POST create Call B job ? does not poll. */
+export async function createSegment2AgendaJob(input: {
+  session: POJUSessionState;
+  locale: string;
+  breakthrough_core: BreakthroughCore;
+}): Promise<{ ok: true; job_id: string } | { ok: false; error: string; retryable?: boolean }> {
+  if (typeof window === "undefined") {
+    throw new Error("createSegment2AgendaJob is browser-only");
+  }
+  const original_question =
+    input.session.agent_v2?.original_question?.trim() ||
+    input.session.original_question?.trim() ||
+    "";
+  const res = await fetch("/api/poju/breakthrough-core/agenda", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      session_id: input.session.session_id,
+      locale: input.locale,
+      original_question,
+      breakthrough_core: input.breakthrough_core,
+    }),
+  });
+  const payload = (await res.json().catch(() => ({}))) as {
+    ok?: boolean;
+    job_id?: string;
+    error?: string;
+    retryable?: boolean;
+  };
+  if (!payload.job_id) {
+    return {
+      ok: false,
+      error: payload.error || `agenda job create failed (${res.status})`,
+      retryable: payload.retryable ?? true,
+    };
+  }
+  console.info("[segment2] agenda job created", { job_id: payload.job_id });
+  return { ok: true, job_id: payload.job_id };
+}
+
+/** Call B success ? append bridge question + set agenda; UI unlocks. */
+export function finalizeSegment2AgendaBridgeSuccess(input: {
+  session: POJUSessionState;
+  locale: string;
+  investigation_agenda: AgendaItem[];
+  first_question: string;
+  model?: string;
+  tokens_used?: number;
+  llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
+}): POJUSessionState {
+  const session = ensureSessionCycles(input.session);
+  const base = ensureAgentV2(session);
+  if (!base.breakthrough_core) {
+    return session;
+  }
+  const first_question = input.first_question.trim();
+  const breakthrough_core: BreakthroughCore = {
+    ...base.breakthrough_core,
+    ...(first_question ? { first_question } : {}),
+  };
+  const agent_v2: POJUAgentState = {
+    ...base,
+    breakthrough_core,
+    investigation_agenda: input.investigation_agenda,
+    agenda_generated: true,
+    has_situation_analysis: true,
+    core_generation_failed: false,
+  };
+
+  const bridgeContent =
+    first_question ||
+    (input.locale.startsWith("zh")
+      ? "????????????????????????????????"
+      : "Take your time with the analysis above. Next we will clarify the most important point together.");
+
+  const assistantMessage: POJUMessage = {
+    role: "assistant",
+    content: bridgeContent,
+    timestamp: new Date().toISOString(),
+    meta: {
+      current_state: "collecting_context",
+      user_intent: "sharing_situation",
+      action_requested: "continue_chat",
+      segment2_bridge_question: true,
+      investigation_agenda: agent_v2.investigation_agenda ?? undefined,
+      llm_model: input.model,
+      llm_debug: input.llm_debug,
+      tokens_used: input.tokens_used,
+      state_snapshot: buildAgentStateSnapshot(agent_v2, session.main_delivery_done),
+    },
+  };
+
+  return withSessionProfileFlags({
+    ...session,
+    messages: [...session.messages, assistantMessage],
+    agent_v2,
+    tokens_used: session.tokens_used + (input.tokens_used ?? 0),
+    last_interaction_at: new Date().toISOString(),
+  });
+}
+
+/** Call B failed ? keep A report; show regenerate-question; unlock. */
+export function finalizeSegment2AgendaBridgeFailure(input: {
+  session: POJUSessionState;
+  locale: string;
+  error?: string;
+}): POJUSessionState {
+  const session = ensureSessionCycles(input.session);
+  const agent_v2 = ensureAgentV2(session);
+  const assistantMessage: POJUMessage = {
+    role: "assistant",
+    content: segment2AgendaBridgeFailedMessage(input.locale),
+    timestamp: new Date().toISOString(),
+    meta: {
+      current_state: "collecting_context",
+      user_intent: "sharing_situation",
+      action_requested: "continue_chat",
+      segment2_agenda_bridge_failed: true,
+      state_snapshot: buildAgentStateSnapshot(agent_v2, session.main_delivery_done),
+    },
+  };
+  return withSessionProfileFlags({
+    ...session,
+    messages: [...session.messages, assistantMessage],
+    agent_v2,
+    last_interaction_at: new Date().toISOString(),
+  });
+}
+
+/** Helper for Preparing onComplete ? Call A report. */
 export function applySegment2PollSuccess(
   session: POJUSessionState,
   locale: string,
   result: Extract<Segment2JobPollResult, { ok: true }>,
 ): POJUSessionState {
-  return finalizeSegment2JobSuccess({
+  return finalizeSegment2ReportSuccess({
     session,
     locale,
     breakthrough_core: result.breakthrough_core!,
-    investigation_agenda: result.investigation_agenda as AgendaItem[],
     model: result.model,
     tokens_used: result.tokens_used,
     llm_debug: result.llm_debug,
   });
+}
+
+export async function startSegment2AgendaRegenerate(input: {
+  session: POJUSessionState;
+  locale: string;
+}): Promise<{ session: POJUSessionState; job_id: string | null }> {
+  const session = ensureSessionCycles(input.session);
+  const core = ensureAgentV2(session).breakthrough_core;
+  if (!core) {
+    return { session, job_id: null };
+  }
+  const messages = session.messages.filter(
+    (m) =>
+      !(
+        m.role === "assistant" &&
+        (m.meta?.segment2_bridge_question || m.meta?.segment2_agenda_bridge_failed)
+      ),
+  );
+  const cleaned = { ...session, messages };
+  const created = await createSegment2AgendaJob({
+    session: cleaned,
+    locale: input.locale,
+    breakthrough_core: core,
+  });
+  if (!created.ok) {
+    return {
+      session: finalizeSegment2AgendaBridgeFailure({
+        session: cleaned,
+        locale: input.locale,
+        error: created.error,
+      }),
+      job_id: null,
+    };
+  }
+  return { session: cleaned, job_id: created.job_id };
 }

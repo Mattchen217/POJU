@@ -103,16 +103,17 @@ export async function GET(req: NextRequest) {
   }
 
   if (job.status === "completed" && job.result) {
-    const agenda = Array.isArray(job.result.investigation_agenda)
-      ? job.result.investigation_agenda
-      : [];
     return NextResponse.json({
       ok: true,
       job_id: job.job_id,
       status: job.status,
       accumulated_content: job.accumulated_content,
       breakthrough_core: job.result.breakthrough_core,
-      investigation_agenda: agenda,
+      investigation_agenda: Array.isArray(job.result.investigation_agenda)
+        ? job.result.investigation_agenda
+        : [],
+      first_question:
+        job.result.first_question ?? job.result.breakthrough_core?.first_question ?? null,
       model: job.model,
       tokens_used: job.tokens_used,
       llm_debug: job.llm_debug,

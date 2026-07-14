@@ -60,8 +60,12 @@ export interface POJUMessage {
     understanding_gate_pending?: boolean;
   /** Segment-2 core generation failed — show regenerate button. */
   core_generation_failed?: boolean;
-  /** Segment-2 success delivery bubble (relationship + directions + agenda ask). */
+  /** Segment-2 success delivery bubble (relationship + directions). */
   segment2_analysis?: boolean;
+  /** Call B bridge question bubble. */
+  segment2_bridge_question?: boolean;
+  /** Call B failed after A delivered — show regenerate-question button; input unlocked. */
+  segment2_agenda_bridge_failed?: boolean;
   /** Segment-1 opening resends exhausted — show retry button. */
   understanding_generation_failed?: boolean;
     /** Collecting escalation — show refund entry (user-initiated). */

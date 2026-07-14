@@ -21,11 +21,17 @@ import { handleUserMessage, tryHandleRuleRejection } from "@/lib/poju/phase-rout
 import { applyUnderstandingGateSupplement, handleRetryOpeningUnderstanding } from "@/lib/poju/phases/opening/control";
 import {
   applySegment2PollSuccess,
+  createSegment2AgendaJob,
+  finalizeSegment2AgendaBridgeFailure,
+  finalizeSegment2AgendaBridgeSuccess,
   finalizeSegment2JobFailure,
   startSegment2AfterGateConfirm,
+  startSegment2AgendaRegenerate,
   startSegment2Regenerate,
+  segment2AgendaPreparingHint,
   segment2RegenerateButtonLabel,
   SHOW_SEGMENT2_TEST_REGENERATE,
+  SEGMENT2_INPUT_LOCK_HARD_MS,
 } from "@/lib/poju/phases/segment2";
 import { understandingGateConfirmButtonLabel } from "@/lib/poju/understanding-gate-reply";
 import {
@@ -39,6 +45,7 @@ import {
 import { AgendaProgressPanel } from "@/components/poju/AgendaProgressPanel";
 import { UnderstandingGateActions } from "@/components/poju/UnderstandingGateActions";
 import { RegenerateAnalysisAction } from "@/components/poju/RegenerateAnalysisAction";
+import { RegenerateQuestionAction } from "@/components/poju/RegenerateQuestionAction";
 import { RegenerateOpeningAction } from "@/components/poju/RegenerateOpeningAction";
 import { Segment2AnalysisPreparing } from "@/components/poju/Segment2AnalysisPreparing";
 import { getLastUserMessageContent } from "@/lib/poju/context-helpers";
@@ -176,6 +183,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   const [slotActivityFading, setSlotActivityFading] = useState(false);
   const [thinkingLiveLine, setThinkingLiveLine] = useState<string | null>(null);
   const [segment2JobId, setSegment2JobId] = useState<string | null>(null);
+  /** report = Call A; agenda = Call B. */
+  const [segment2Stage, setSegment2Stage] = useState<"report" | "agenda" | null>(null);
+  /** Stays true from A start until B success/fail or hard timer — never permanently lock. */
+  const [segment2PipelineLock, setSegment2PipelineLock] = useState(false);
+  const segment2LockTimerRef = useRef<number | null>(null);
   const [debugStateLedger, setDebugStateLedger] = useState<unknown>(null);
   const [generationStopped, setGenerationStopped] = useState(false);
   const [showOffTopicAction, setShowOffTopicAction] = useState(false);
@@ -312,6 +324,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     unlockBusy ||
     unlockReportGateBlocking ||
     understandingGatePending ||
+    segment2PipelineLock ||
     Boolean(segment2JobId);
 
   const openUnlockReportModal = useCallback(() => setUnlockReportModalOpen(true), []);
@@ -1075,6 +1088,31 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       await savePOJUSession(started.session);
 
       if (started.already_complete || !started.job_id) {
+        const core = started.session.agent_v2?.breakthrough_core;
+        if (started.already_complete && core && !started.session.agent_v2?.agenda_generated) {
+          armSegment2PipelineLock();
+          setSegment2Stage("agenda");
+          setThinkingLiveLine(segment2AgendaPreparingHint(locale));
+          const created = await createSegment2AgendaJob({
+            session: started.session,
+            locale,
+            breakthrough_core: core,
+          });
+          if (!created.ok) {
+            const failed = finalizeSegment2AgendaBridgeFailure({
+              session: started.session,
+              locale,
+              error: created.error,
+            });
+            unlockSegment2Pipeline();
+            onSessionUpdate(failed);
+            await savePOJUSession(failed);
+            setSending(false);
+            return;
+          }
+          setSegment2JobId(created.job_id);
+          return;
+        }
         skipActivityRenderReadyRef.current = false;
         setSending(false);
         if (!awaitingActivityDismissRef.current) {
@@ -1086,6 +1124,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       }
 
       // Fix 5 — only poll this create's job_id (never reuse a stale id).
+      armSegment2PipelineLock();
+      setSegment2Stage("report");
       setSegment2JobId(null);
       console.info("[segment2] job created (ui)", { job_id: started.job_id });
       setSegment2JobId(started.job_id);
@@ -1106,29 +1146,127 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     }
   }
 
+  function clearSegment2LockTimer() {
+    if (segment2LockTimerRef.current != null) {
+      window.clearTimeout(segment2LockTimerRef.current);
+      segment2LockTimerRef.current = null;
+    }
+  }
+
+  function unlockSegment2Pipeline() {
+    clearSegment2LockTimer();
+    setSegment2PipelineLock(false);
+    setSegment2JobId(null);
+    setSegment2Stage(null);
+  }
+
+  function armSegment2PipelineLock() {
+    clearSegment2LockTimer();
+    setSegment2PipelineLock(true);
+    segment2LockTimerRef.current = window.setTimeout(() => {
+      console.warn("[segment2] hard unlock timer fired");
+      setSegment2PipelineLock(false);
+      setSegment2JobId(null);
+      setSegment2Stage(null);
+    }, SEGMENT2_INPUT_LOCK_HARD_MS);
+  }
+
   async function handleSegment2JobComplete(
     result: Parameters<typeof applySegment2PollSuccess>[2],
   ) {
     const base = sessionRef.current;
+
+    // Call B complete
+    if (segment2Stage === "agenda") {
+      const next = finalizeSegment2AgendaBridgeSuccess({
+        session: base,
+        locale,
+        investigation_agenda: result.investigation_agenda ?? [],
+        first_question:
+          result.first_question ??
+          result.breakthrough_core?.first_question ??
+          "",
+        model: result.model,
+        tokens_used: result.tokens_used,
+        llm_debug: result.llm_debug,
+      });
+      unlockSegment2Pipeline();
+      onSessionUpdate(next);
+      syncDebugStateLedger(next);
+      await savePOJUSession(next);
+      setSending(false);
+      setSlotActivity(null);
+      setSlotActivityFading(false);
+      setThinkingLiveLine(null);
+      awaitingActivityDismissRef.current = false;
+      scrollChatToBottom("smooth");
+      return;
+    }
+
+    // Call A complete → render report, keep lock, start Call B
     const next = applySegment2PollSuccess(base, locale, result);
-    setSegment2JobId(null);
     onSessionUpdate(next);
-    skipActivityRenderReadyRef.current = false;
     syncDebugStateLedger(next);
     await savePOJUSession(next);
-    setSending(false);
-    setSlotActivity(null);
-    setSlotActivityFading(false);
-    setThinkingLiveLine(null);
-    awaitingActivityDismissRef.current = false;
     scrollChatToBottom("smooth");
+
+    const core = next.agent_v2?.breakthrough_core;
+    if (!core) {
+      unlockSegment2Pipeline();
+      setSending(false);
+      return;
+    }
+
+    setSegment2Stage("agenda");
+    setThinkingLiveLine(segment2AgendaPreparingHint(locale));
+    setSegment2JobId(null); // remount preparing on new id
+
+    const created = await createSegment2AgendaJob({
+      session: next,
+      locale,
+      breakthrough_core: core,
+    });
+    if (!created.ok) {
+      const failed = finalizeSegment2AgendaBridgeFailure({
+        session: next,
+        locale,
+        error: created.error,
+      });
+      unlockSegment2Pipeline();
+      onSessionUpdate(failed);
+      syncDebugStateLedger(failed);
+      await savePOJUSession(failed);
+      setSending(false);
+      setSlotActivity(null);
+      setThinkingLiveLine(null);
+      awaitingActivityDismissRef.current = false;
+      return;
+    }
+
+    setSegment2JobId(created.job_id);
+    // stay locked + sending until B finishes
   }
 
   async function handleSegment2JobError(error: string, reason?: string) {
-    console.warn("[poju] segment2 job failed:", error, reason);
+    console.warn("[poju] segment2 job failed:", error, reason, segment2Stage);
     const base = sessionRef.current;
+
+    if (segment2Stage === "agenda") {
+      const next = finalizeSegment2AgendaBridgeFailure({ session: base, locale, error });
+      unlockSegment2Pipeline();
+      onSessionUpdate(next);
+      syncDebugStateLedger(next);
+      await savePOJUSession(next);
+      setSending(false);
+      setSlotActivity(null);
+      setSlotActivityFading(false);
+      setThinkingLiveLine(null);
+      awaitingActivityDismissRef.current = false;
+      return;
+    }
+
     const next = finalizeSegment2JobFailure({ session: base, locale, error, reason });
-    setSegment2JobId(null);
+    unlockSegment2Pipeline();
     onSessionUpdate(next);
     syncDebugStateLedger(next);
     await savePOJUSession(next);
@@ -1137,6 +1275,39 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     setSlotActivityFading(false);
     setThinkingLiveLine(null);
     awaitingActivityDismissRef.current = false;
+  }
+
+  async function handleRegenerateQuestionClick() {
+    if (sending || turnInFlightRef.current || segment2JobId || segment2PipelineLock) return;
+    const baseSession = sessionRef.current;
+    if (!baseSession.agent_v2?.breakthrough_core) return;
+
+    turnInFlightRef.current = true;
+    setSending(true);
+    setThinkingLiveLine(segment2AgendaPreparingHint(locale));
+    try {
+      const started = await startSegment2AgendaRegenerate({
+        session: baseSession,
+        locale,
+      });
+      onSessionUpdate(started.session);
+      await savePOJUSession(started.session);
+      if (!started.job_id) {
+        setSending(false);
+        setThinkingLiveLine(null);
+        return;
+      }
+      armSegment2PipelineLock();
+      setSegment2Stage("agenda");
+      setSegment2JobId(started.job_id);
+    } catch (err) {
+      console.error("[poju] regenerate question failed:", err);
+      unlockSegment2Pipeline();
+      setSending(false);
+      setThinkingLiveLine(null);
+    } finally {
+      turnInFlightRef.current = false;
+    }
   }
 
   async function handleRegenerateAnalysisClick() {
@@ -1187,11 +1358,38 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       await savePOJUSession(started.session);
 
       if (started.already_complete || !started.job_id) {
+        const core = started.session.agent_v2?.breakthrough_core;
+        if (started.already_complete && core && !started.session.agent_v2?.agenda_generated) {
+          armSegment2PipelineLock();
+          setSegment2Stage("agenda");
+          setThinkingLiveLine(segment2AgendaPreparingHint(locale));
+          const created = await createSegment2AgendaJob({
+            session: started.session,
+            locale,
+            breakthrough_core: core,
+          });
+          if (!created.ok) {
+            const failed = finalizeSegment2AgendaBridgeFailure({
+              session: started.session,
+              locale,
+              error: created.error,
+            });
+            unlockSegment2Pipeline();
+            onSessionUpdate(failed);
+            await savePOJUSession(failed);
+            setSending(false);
+            return;
+          }
+          setSegment2JobId(created.job_id);
+          return;
+        }
         skipActivityRenderReadyRef.current = false;
         setSending(false);
         return;
       }
 
+      armSegment2PipelineLock();
+      setSegment2Stage("report");
       setSegment2JobId(null);
       console.info("[segment2] job created (ui regenerate)", { job_id: started.job_id });
       setSegment2JobId(started.job_id);
@@ -1477,6 +1675,19 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         (Array.isArray(m.meta?.investigation_agenda) &&
           (m.meta?.investigation_agenda.length ?? 0) > 0 &&
           session.agent_v2?.breakthrough_core != null);
+      if (
+        m.role === "assistant" &&
+        !m.is_rejected &&
+        mid === lastAssistantKey &&
+        m.meta?.segment2_agenda_bridge_failed
+      ) {
+        followUps[mid] = (
+          <>
+            {followUps[mid]}
+            <RegenerateQuestionAction busy={sending} onRegenerate={() => void handleRegenerateQuestionClick()} />
+          </>
+        );
+      }
       if (
         m.role === "assistant" &&
         !m.is_rejected &&

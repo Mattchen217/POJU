@@ -4,7 +4,6 @@ import {
   type PojuXhighJob,
   type PojuXhighJobPhase,
   type PojuXhighJobStatus,
-  type Segment2JobInput,
   xhighJobKey,
   xhighSessionLatestKey,
   xhighSessionLockKey,
@@ -14,7 +13,7 @@ export async function createXhighJob(input: {
   phase: PojuXhighJobPhase;
   session_id: string;
   locale: string;
-  job_input: Segment2JobInput;
+  job_input: PojuXhighJob["input"];
 }): Promise<PojuXhighJob> {
   const job: PojuXhighJob = {
     job_id: generateXhighJobId(input.phase, input.session_id),
