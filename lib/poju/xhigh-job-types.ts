@@ -21,7 +21,13 @@ export type Segment2JobResult = {
   investigation_agenda: AgendaItem[];
 };
 
-export type PojuXhighJobFailureReason = "truncated" | "parse_failed" | "provider_busy";
+export type PojuXhighJobFailureReason =
+  | "truncated"
+  | "parse_failed"
+  | "provider_busy"
+  | "completed_without_result"
+  | "completed_without_core"
+  | "poll_timeout";
 
 export interface PojuXhighJob {
   job_id: string;

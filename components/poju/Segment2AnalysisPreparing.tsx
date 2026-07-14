@@ -27,7 +27,7 @@ export function Segment2AnalysisPreparing({
 }: Segment2AnalysisPreparingProps) {
   const [accumulatedChars, setAccumulatedChars] = useState(0);
   const [status, setStatus] = useState<"pending" | "running" | "completed" | "failed">("pending");
-  const startedRef = useRef(false);
+  const startedForJobRef = useRef<string | null>(null);
   const onCompleteRef = useRef(onComplete);
   const onErrorRef = useRef(onError);
   const onProgressRef = useRef(onProgress);
@@ -36,6 +36,7 @@ export function Segment2AnalysisPreparing({
   onProgressRef.current = onProgress;
 
   const run = useCallback(async () => {
+    console.info("[segment2] preparing poll start", { job_id });
     try {
       const result = await pollBreakthroughCoreJobUntilDone({
         job_id,
@@ -58,11 +59,14 @@ export function Segment2AnalysisPreparing({
     }
   }, [job_id]);
 
+  // Fix 5 — only poll the job_id this mount was given; re-run if id changes.
   useEffect(() => {
-    if (startedRef.current) return;
-    startedRef.current = true;
+    if (startedForJobRef.current === job_id) return;
+    startedForJobRef.current = job_id;
+    setAccumulatedChars(0);
+    setStatus("pending");
     void run();
-  }, [run]);
+  }, [job_id, run]);
 
   const label = locale.startsWith("zh") ? "正在深度分析…" : "Running deep analysis…";
 

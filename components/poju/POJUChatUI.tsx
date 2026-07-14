@@ -1085,6 +1085,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         return;
       }
 
+      // Fix 5 — only poll this create's job_id (never reuse a stale id).
+      setSegment2JobId(null);
+      console.info("[segment2] job created (ui)", { job_id: started.job_id });
       setSegment2JobId(started.job_id);
       setThinkingLiveLine(
         locale.startsWith("zh") ? "正在深度分析…" : "Running deep analysis…",
@@ -1189,6 +1192,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         return;
       }
 
+      setSegment2JobId(null);
+      console.info("[segment2] job created (ui regenerate)", { job_id: started.job_id });
       setSegment2JobId(started.job_id);
       setThinkingLiveLine(
         locale.startsWith("zh") ? "正在深度分析…" : "Running deep analysis…",
@@ -1706,6 +1711,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
             <>
               {segment2JobId ? (
                 <Segment2AnalysisPreparing
+                  key={segment2JobId}
                   job_id={segment2JobId}
                   locale={locale}
                   onProgress={(chars) => {

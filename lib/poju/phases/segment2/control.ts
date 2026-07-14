@@ -136,13 +136,17 @@ export async function createSegment2XhighJob(input: {
     retryable?: boolean;
   };
 
-  if (payload.breakthrough_core && payload.investigation_agenda && payload.job_id) {
+  // Resume of a finished job: core is enough; agenda may be missing after JSON round-trip.
+  if (payload.breakthrough_core && payload.job_id) {
+    console.info("[segment2] job already complete on create", { job_id: payload.job_id });
     return {
       ok: true,
       job_id: payload.job_id,
       already_complete: true,
       breakthrough_core: payload.breakthrough_core,
-      investigation_agenda: payload.investigation_agenda,
+      investigation_agenda: Array.isArray(payload.investigation_agenda)
+        ? payload.investigation_agenda
+        : [],
       model: payload.model,
       tokens_used: payload.tokens_used,
       llm_debug: payload.llm_debug,
@@ -157,6 +161,7 @@ export async function createSegment2XhighJob(input: {
     };
   }
 
+  console.info("[segment2] job created", { job_id: payload.job_id });
   return { ok: true, job_id: payload.job_id };
 }
 

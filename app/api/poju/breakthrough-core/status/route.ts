@@ -16,14 +16,45 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "job_not_found" }, { status: 404 });
   }
 
+  const has_result = Boolean(job.result);
+  const has_core = Boolean(job.result?.breakthrough_core);
+  const has_agenda = Array.isArray(job.result?.investigation_agenda);
+  console.info("[xhigh-status]", {
+    job_id: job.job_id,
+    status: job.status,
+    has_result,
+    has_core,
+    has_agenda,
+    agenda_len: has_agenda ? job.result!.investigation_agenda.length : 0,
+  });
+
+  // Fix 2 — completed but no result must fail visibly (never look like pending).
+  if (job.status === "completed" && !job.result) {
+    return NextResponse.json({
+      ok: false,
+      job_id: job.job_id,
+      status: "failed",
+      retryable: true,
+      reason: "completed_without_result",
+      error: "job completed but result missing",
+      accumulated_content: job.accumulated_content,
+      updated_at: job.updated_at,
+      completed_at: job.completed_at,
+    });
+  }
+
   if (job.status === "completed" && job.result) {
+    // Always include agenda as an array so JSON never drops the field.
+    const agenda = Array.isArray(job.result.investigation_agenda)
+      ? job.result.investigation_agenda
+      : [];
     return NextResponse.json({
       ok: true,
       job_id: job.job_id,
       status: job.status,
       accumulated_content: job.accumulated_content,
       breakthrough_core: job.result.breakthrough_core,
-      investigation_agenda: job.result.investigation_agenda,
+      investigation_agenda: agenda,
       model: job.model,
       tokens_used: job.tokens_used,
       llm_debug: job.llm_debug,

@@ -819,14 +819,15 @@ export async function requestBreakthroughCore(
     window.clearTimeout(timer);
   }
 
-  if (!breakthrough_core || !investigation_agenda) {
+  if (!breakthrough_core) {
     throw new Error("Breakthrough core incomplete after job");
   }
+  const agenda = investigation_agenda ?? [];
 
   const nextAgent: POJUAgentState = {
     ...agent,
     breakthrough_core,
-    investigation_agenda,
+    investigation_agenda: agenda,
     agenda_generated: true,
     has_situation_analysis: true,
   };
@@ -837,7 +838,7 @@ export async function requestBreakthroughCore(
     "directions:",
     breakthrough_core.breakthrough_directions.length,
     "agenda:",
-    investigation_agenda.map((a) => a.label),
+    agenda.map((a) => a.label),
   );
 
   return {

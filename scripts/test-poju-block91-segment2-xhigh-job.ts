@@ -50,6 +50,7 @@ function main(): void {
   assert("runner generic runXhighJob export", runner.includes("export async function runXhighJob"));
 
   assert("poll interval 3s", poll.includes("XHIGH_JOB_POLL_INTERVAL_MS = 3000"));
+  assert("poll max 240s hard timeout", poll.includes("XHIGH_JOB_POLL_MAX_MS = 240_000") || poll.includes("240_000"));
 
   assert("Segment2AnalysisPreparing component", prepare.includes("Segment2AnalysisPreparing"));
   assert("POJUChatUI mounts preparing", ui.includes("Segment2AnalysisPreparing") && ui.includes("segment2JobId"));
