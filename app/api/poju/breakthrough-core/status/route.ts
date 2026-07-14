@@ -5,8 +5,8 @@ import { failXhighJob, getXhighJob } from "@/lib/poju/xhigh-job-store";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** No updated_at refresh for this long while status=running → treat as zombie. */
-export const STALE_RUNNING_MS = 90_000;
+/** No updated_at refresh for this long while status=running → treat as zombie. (not a Route export) */
+const STALE_RUNNING_MS = 90_000;
 
 export async function GET(req: NextRequest) {
   const job_id = req.nextUrl.searchParams.get("job_id")?.trim();
