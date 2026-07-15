@@ -16,6 +16,7 @@ import {
   updateJobStatus,
 } from "@/lib/base-analysis/job-store";
 import { auditBaseAnalysisDelivery } from "@/lib/base-analysis/delivery-gate";
+import { generateCoreJudgmentsForProfile } from "@/lib/base-analysis/generate-core-judgments";
 import { streamBaseAnalysisWithDeliveryGate } from "@/lib/base-analysis/stream-llm-with-gate";
 import { applyComplianceSanitize } from "@/lib/llm/sanitize/compliance-terms";
 import { getOpenRouterDefaultModel, isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
@@ -181,6 +182,20 @@ export async function POST(req: NextRequest) {
 
         send("start", { job_id: activeJob.job_id });
 
+        const sessionId = baseAnalysisCacheSessionId(profileId);
+
+        // Option ② — independent medium call for Layer-1 interpretive fields (refs from code).
+        const cj = await generateCoreJudgmentsForProfile({
+          structured: body.local_data.structured,
+          locale: activeJob.locale,
+          session_id: sessionId,
+        });
+        send("core_judgments", {
+          job_id: activeJob.job_id,
+          source: cj.source,
+          judgments: cj.judgments,
+        });
+
         const resetContent = activeJob.status === "failed" || activeJob.status === "pending";
         await updateJobStatus(activeJob.job_id, "streaming", {
           ...(resetContent ? { accumulated_content: "", error: undefined, error_detail: undefined } : {}),
@@ -192,7 +207,7 @@ export async function POST(req: NextRequest) {
           locale: activeJob.locale,
           structured: body.local_data.structured,
           output_language: body.local_data.output_language,
-          session_id: baseAnalysisCacheSessionId(profileId),
+          session_id: sessionId,
           model,
           max_tokens: 10_000,
           onAttemptStart: async (attempt) => {
@@ -200,6 +215,17 @@ export async function POST(req: NextRequest) {
               send("reset", { job_id: activeJob.job_id, attempt: attempt + 1 });
               await setJobContent(activeJob.job_id, "");
             }
+          },
+          onRepairStart: async (repairIndex) => {
+            send("reset", {
+              job_id: activeJob.job_id,
+              attempt: `repair:${repairIndex + 1}`,
+              repair: true,
+            });
+            await setJobContent(activeJob.job_id, "");
+            console.warn(
+              `[base-analysis/stream] surgical repair ${repairIndex + 1} — clearing draft for ${activeJob.job_id}`,
+            );
           },
           onChunk: async (chunk: string) => {
             send("chunk", { text: chunk });
@@ -217,7 +243,13 @@ export async function POST(req: NextRequest) {
               ? gen.violations.map((v) => v.label).join(", ")
               : gen.error;
           await failJob(activeJob.job_id, gen.error, detail);
-          send("error", { error: gen.error, gate_violations: gen.violations.slice(0, 8) });
+          // Layer-1 still delivered so four products keep working even if narrative dies.
+          send("error", {
+            error: gen.error,
+            gate_violations: gen.violations.slice(0, 8),
+            core_judgments: cj.judgments,
+            core_judgments_source: cj.source,
+          });
           console.error(`[base-analysis/stream] failed ${activeJob.job_id}: ${detail}`);
           return;
         }
@@ -225,7 +257,13 @@ export async function POST(req: NextRequest) {
         await setJobContent(activeJob.job_id, gen.content);
 
         const glossed = gen.content;
-        const meta = extractMetaFromStreamContent(glossed);
+        const meta = {
+          ...extractMetaFromStreamContent(glossed),
+          core_judgments: cj.judgments,
+          core_judgments_source: cj.source,
+          gate_attempts: gen.attempts,
+          gate_repairs: gen.repairs,
+        };
 
         await finalizeJob(activeJob.job_id, meta);
 
@@ -235,10 +273,11 @@ export async function POST(req: NextRequest) {
           final_length: glossed.length,
           sanitized: true,
           gate_attempts: gen.attempts,
+          gate_repairs: gen.repairs,
         });
 
         console.log(
-          `[base-analysis/stream] completed ${activeJob.job_id}, length=${glossed.length}, attempts=${gen.attempts}`,
+          `[base-analysis/stream] completed ${activeJob.job_id}, length=${glossed.length}, attempts=${gen.attempts}, repairs=${gen.repairs}, cj=${cj.source}`,
         );
       } catch (e: unknown) {
         const message = e instanceof Error ? e.message : "stream_error";

@@ -9,6 +9,7 @@ import { ORIENTAL_SHARED_GUARDRAILS } from "@/lib/llm/prompts/glyph-guanyin-base
 import { READING_LAYOUT_CONTRACT } from "@/lib/llm/prompts/reading-layout";
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
 import { buildTermMarkingPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
+import { buildForbiddenTermsPromptBlock } from "@/lib/llm/compliance/banned-terms";
 
 export type BaseAnalysisStreamLocalData = {
   structured: ProfileStructured;
@@ -99,7 +100,7 @@ const BASE_ANALYSIS_NEUTRALITY_RULES_ZH = `# 中立元报告 · 硬禁（场景�
 
 ## 比喻边界（本盘唯一主隐喻）
 - 全文**最多一条主隐喻**，由本盘 \`day_master\` + \`strength\` + \`yong_shen\` **现定**；服务于解释能量机制，**不编造现实情节**。
-- **黑名单（禁抄）：** 手机散热片 / 持续燃烧的引擎 / 随时能翻的参考书 / 散热缺口 / 冷却模块 / 引擎 / 藤蔓。
+- **黑名单（禁抄，勿抄持续燃烧的引擎等）** — 与绝对禁词块同源：引擎 / 手机散热片 / 散热缺口 / 冷却模块 / 随时能翻的参考书（**以 \`buildForbiddenTermsPromptBlock\` 注入块为准，勿另维护**）。
 - 自检：**「换一个命盘还成立吗？」**——成立就必须重写。`;
 
 const BASE_ANALYSIS_NEUTRALITY_RULES_EN = `# Neutral meta-report · hard bans (scenarios belong to downstream POJU/Glyph/Match/Syncro)
@@ -117,7 +118,7 @@ This is a **shared neutral context base** (like a lab report / raw MBTI readout 
 
 ## Metaphor boundary (one main metaphor per chart)
 - **At most one** main metaphor, determined by this chart's \`day_master\` + \`strength\` + \`yong_shen\`; explains mechanism only—**no** life plot.
-- **Blacklist (never copy):** phone heatsink / steady-burning engine / always-open reference book / heat-dissipation gap / cooling module / engine / vine.
+- **Blacklist (never copy)** — same source as the absolute-bans block: engine / phone heatsink / always-open reference book / heat-dissipation gap / cooling module / steady-burning engine (**\`buildForbiddenTermsPromptBlock\` is authoritative**).
 - Self-check: **"Would this still work for another chart?"**—if yes, rewrite.`;
 
 const BASE_ANALYSIS_NARRATIVE_BREVITY_ZH = `# 叙事精简 · 禁止逐柱复述（准确性）
@@ -135,30 +136,6 @@ const BASE_ANALYSIS_NARRATIVE_BREVITY_EN = `# Narrative brevity · no pillar dum
 - **Do not** write "Four-Pillar Configuration" or "Decade Energy Climate Overview" sections; timing and Ganzhi years belong downstream.
 - You may name **pattern / favorable directions / key ten-god mechanisms** in the five sections—**structured fields only**; **no new shen_sha**.
 - \`strength\` is for your reasoning only—**never** write "weak self / strong self / 身弱 / 身强" in user copy; soft-translate ("fuel runs short easily" / "deep fuel reserves").`;
-
-const BASE_ANALYSIS_USER_VISIBLE_BANS_ZH = `# 用户可见正文 · 绝对禁词与软译（违反=重生成，浪费一次付费调用）
-
-1) **强弱**：structured 的 \`strength\` 仅供你推理，【禁止】写出「身弱/身强/身旺」。
-   ✓「你的能量供给容易跟不上」  ✗「你的核心配置是'身弱'的丙火」
-2) **裸干支**：【禁止】写出任何天干地支（丙/丁/壬/午/未…）及「丙火」类合称——要么 \`⟦t:…⟧\` 三段位，要么纯白话。
-   ✓「你的核心是一股向外辐射的火」
-3) **「命」字族**：全面禁止 命运/命定/命理/命盘/命局/宿命/判决/天注定。
-   收尾【不要】用「这不是命运/不是命定」的否定式——那会诱使你写出禁词。
-   ✓「这是你的能量配置读数。怎么用它，取决于你自己。」
-   ✗「不是你的命运判决书」
-4) **比喻黑名单（含引擎）**：引擎 / 手机散热片 / 随时能翻的参考书 / 散热缺口 / 冷却模块 / 持续燃烧的引擎——全文禁用。
-   主比喻必须由本盘 \`day_master\` + \`strength\` + \`yong_shen\` 现定；自检：换盘还成立？成立=套话=重写。`;
-
-const BASE_ANALYSIS_USER_VISIBLE_BANS_EN = `# User-visible body · absolute bans (violation = regen, wastes a paid call)
-
-1) **Strength**: \`strength\` is reasoning-only — **never** write weak-self / strong-self / 身弱 / 身强.
-   ✓ "Your energy supply struggles to keep up"  ✗ "Your core is a 'weak' Bing fire"
-2) **Bare Ganzhi**: **never** write stems/branches (Bing/Ding/Ren/Wu…) or "Bing fire" compounds — full \`⟦t:…⟧\` or plain vernacular only.
-3) **Fate lexicon**: ban fate / destiny / natal chart as fate / verdict / destined.
-   Do **not** close with "this is not fate" negations — that invites the banned words.
-   ✓ "This is your energy-config readout. How you use it is yours."
-4) **Metaphor blacklist (incl. engine)**: engine / phone heatsink / always-open reference book / heat-dissipation gap / cooling module / steady-burning engine — banned.
-   Main metaphor from this chart's \`day_master\` + \`strength\` + \`yong_shen\`; self-check: still fits another chart? → rewrite.`;
 
 const BASE_ANALYSIS_BINDING_RULES = `# 绑定计算结果 · 闭集 · 禁幻觉
 
@@ -515,7 +492,7 @@ ${BASE_ANALYSIS_OUTPUT_SECTIONS_EN.split("\n").slice(1).join("\n")}
   const system = stitchPromptSections(
     taskBlock,
     lang === "zh" ? BASE_ANALYSIS_NEUTRALITY_RULES_ZH : BASE_ANALYSIS_NEUTRALITY_RULES_EN,
-    lang === "zh" ? BASE_ANALYSIS_USER_VISIBLE_BANS_ZH : BASE_ANALYSIS_USER_VISIBLE_BANS_EN,
+    buildForbiddenTermsPromptBlock(lang),
     lang === "zh" ? BASE_ANALYSIS_NARRATIVE_BREVITY_ZH : BASE_ANALYSIS_NARRATIVE_BREVITY_EN,
     ...buildPlainspeakVoiceSections(PLAINSPEAK_STYLE_EXAMPLE_BASE_ANALYSIS),
     READING_LAYOUT_CONTRACT,

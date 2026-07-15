@@ -97,7 +97,7 @@ function main(): void {
     engineIdx < 0 ? "" : system.slice(Math.max(0, engineIdx - 48), engineIdx + 24);
   assert(
     "engine metaphor only as ban/anti",
-    engineIdx < 0 || /黑名单|禁止|✗|勿抄/.test(engineWindow),
+    engineIdx < 0 || /黑名单|禁止|禁用|✗|勿抄/.test(engineWindow),
   );
   assert("SaaS report name", system.includes("个人能量分析报告"));
   assert("blacklist present", system.includes("手机散热片") || system.includes("散热缺口"));

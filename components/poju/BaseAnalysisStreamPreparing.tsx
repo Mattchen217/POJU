@@ -16,6 +16,7 @@ import {
   saveBaseAnalysisFromStream,
   saveCoreJudgmentsForProfile,
 } from "@/lib/profile/stored-profiles-service";
+import { isCoreJudgments } from "@/lib/base-analysis/core-judgments";
 
 export type BaseAnalysisStreamPreparingProps = {
   profile: StoredProfileData;
@@ -120,6 +121,17 @@ export function BaseAnalysisStreamPreparing({
     local_data: localData,
     resume_job_id: resumeJobId,
     onComplete: handleComplete,
+    onCoreJudgments: (judgments) => {
+      if (!isCoreJudgments(judgments)) return;
+      void saveCoreJudgmentsForProfile({
+        profile_id: profileId,
+        structured: localData.structured,
+        locale,
+        core_judgments: judgments,
+      }).catch((e) => {
+        console.warn("[fallback] early saveCoreJudgmentsForProfile failed", e);
+      });
+    },
     onError: (error) => {
       console.error(`[${logLabel}] stream error:`, error);
       console.warn("[fallback] base-analysis stream failed — persisting Layer-1 judgments only", {

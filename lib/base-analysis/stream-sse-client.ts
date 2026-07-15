@@ -4,6 +4,8 @@ export type StreamSseCallbacks = {
   onStart?: (job_id: string) => void;
   onChunk?: (text: string, accumulated: string) => void;
   onPollContent?: (accumulated: string) => void;
+  /** Layer-1 judgments arrive before narrative (or on narrative failure). */
+  onCoreJudgments?: (judgments: unknown, source?: string) => void;
 };
 
 export type StreamSseResult = {
@@ -132,6 +134,9 @@ export async function consumeBaseAnalysisStream(input: {
         accumulatedContent = String(ev.accumulated ?? "");
         if (ev.poll_only) return "poll";
         return null;
+      case "core_judgments":
+        input.callbacks?.onCoreJudgments?.(ev.judgments, String(ev.source ?? ""));
+        return null;
       case "done":
         return {
           content: accumulatedContent,
@@ -139,6 +144,12 @@ export async function consumeBaseAnalysisStream(input: {
           job_id: jobId,
         };
       case "error":
+        if (ev.core_judgments) {
+          input.callbacks?.onCoreJudgments?.(
+            ev.core_judgments,
+            String(ev.core_judgments_source ?? ""),
+          );
+        }
         throw new Error(String(ev.error ?? "stream error"));
       default:
         return null;

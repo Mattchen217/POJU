@@ -253,16 +253,35 @@ function climateNow(
 
 /**
  * Expand structured into Layer-1 judgments. Never invent career/scene/metaphor.
+ * Deterministic fallback used when the independent medium LLM call fails.
  */
+
+/** refs are always code-filled from structured — never model-generated. */
+export function buildCoreJudgmentsRefsFromStructured(
+  structured: ProfileStructured,
+): CoreJudgmentsRefs {
+  const step = resolveCurrentDaYunStep(structured.da_yun);
+  const relations = computeNatalChartRelations(structured).map((r) => r.id);
+  return {
+    day_master: structured.day_master,
+    strength: structured.strength,
+    yong_shen: structured.yong_shen,
+    xi_shen: [...(structured.xi_shen ?? [])],
+    ji_shen: [...(structured.ji_shen ?? [])],
+    pattern: structured.pattern,
+    da_yun_step: step,
+    shensha_instances: collectShensha(structured),
+    natal_relations: relations,
+  };
+}
+
 export function buildCoreJudgmentsFromStructured(
   structured: ProfileStructured,
   locale = "zh",
 ): CoreJudgments {
   const dmWx = stemWuxing(structured.day_master);
   const gods = tenGodsPresent(structured);
-  const step = resolveCurrentDaYunStep(structured.da_yun);
-  const relations = computeNatalChartRelations(structured).map((r) => r.id);
-
+  const refs = buildCoreJudgmentsRefsFromStructured(structured);
   const zh = locale.startsWith("zh");
 
   return {
@@ -274,18 +293,8 @@ export function buildCoreJudgmentsFromStructured(
     leverage_state: zh
       ? "用神得力、节奏可控时最易突破（不预测事件、不指定行业）"
       : "Breakthrough is easiest when favorable gods hold and rhythm is controllable (no event forecast, no industry)",
-    climate_now: climateNow(structured, step, locale),
-    refs: {
-      day_master: structured.day_master,
-      strength: structured.strength,
-      yong_shen: structured.yong_shen,
-      xi_shen: [...(structured.xi_shen ?? [])],
-      ji_shen: [...(structured.ji_shen ?? [])],
-      pattern: structured.pattern,
-      da_yun_step: step,
-      shensha_instances: collectShensha(structured),
-      natal_relations: relations,
-    },
+    climate_now: climateNow(structured, refs.da_yun_step, locale),
+    refs,
   };
 }
 

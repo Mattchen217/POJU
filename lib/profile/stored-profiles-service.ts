@@ -3,7 +3,11 @@
  */
 import { safeRandomUUID } from "@/lib/client/safe-crypto";
 import { assertBaseAnalysisDeliveryGate } from "@/lib/base-analysis/assert-delivery-gate";
-import { buildCoreJudgmentsFromStructured } from "@/lib/base-analysis/core-judgments";
+import {
+  buildCoreJudgmentsFromStructured,
+  isCoreJudgments,
+  type CoreJudgments,
+} from "@/lib/base-analysis/core-judgments";
 import { encryptJson, decryptJson } from "@/lib/crypto";
 import { sha256Hex } from "@/lib/sha256";
 import { calculateProfile } from "@/lib/calculations";
@@ -317,6 +321,8 @@ export async function saveCoreJudgmentsForProfile(input: {
   structured: import("@/lib/calculations/build-profile-structured").ProfileStructured;
   locale: string;
   generated_at?: string;
+  /** Prefer LLM-expanded judgments from server; refs already code-filled. */
+  core_judgments?: CoreJudgments;
 }): Promise<void> {
   assertBrowser();
   const db = getPojuDb();
@@ -328,10 +334,9 @@ export async function saveCoreJudgmentsForProfile(input: {
     cipher: record.encrypted_data,
   });
 
-  const core_judgments = buildCoreJudgmentsFromStructured(
-    input.structured,
-    input.locale || "zh",
-  );
+  const core_judgments =
+    input.core_judgments ??
+    buildCoreJudgmentsFromStructured(input.structured, input.locale || "zh");
   const generated_at = input.generated_at ?? new Date().toISOString();
   const prev = data.base_analysis;
 
@@ -368,9 +373,17 @@ export async function saveBaseAnalysisFromStream(input: {
   generated_at: string;
   /** @deprecated legacy — defaults to display_text */
   content?: string;
+  /** Server-expanded Layer-1 (refs code-filled). */
+  core_judgments?: CoreJudgments;
 }): Promise<void> {
   assertBrowser();
   const normalizedDisplay = stripMetaSectionForStorage(input.display_text.trim());
+
+  const fromMeta =
+    input.core_judgments ??
+    (input.meta && isCoreJudgments(input.meta.core_judgments)
+      ? input.meta.core_judgments
+      : undefined);
 
   // Layer 1 first — never blocked by narrative compliance (products keep working).
   await saveCoreJudgmentsForProfile({
@@ -378,6 +391,7 @@ export async function saveBaseAnalysisFromStream(input: {
     structured: input.structured,
     locale: input.locale,
     generated_at: input.generated_at,
+    core_judgments: fromMeta,
   });
 
   assertBaseAnalysisDeliveryGate(normalizedDisplay, input.locale, input.structured);
@@ -402,10 +416,10 @@ export async function saveBaseAnalysisFromStream(input: {
   // Preserve birth_location — only update base_analysis (+ tst_meta on birth_info).
   const preservedBirthLocation = data.user_profile.birth?.birth_location ?? data.birth_info.birth_location;
 
-  const core_judgments = buildCoreJudgmentsFromStructured(
-    input.structured,
-    input.locale || "zh",
-  );
+  const core_judgments =
+    fromMeta ??
+    data.base_analysis?.core_judgments ??
+    buildCoreJudgmentsFromStructured(input.structured, input.locale || "zh");
 
   data.base_analysis = {
     generated_at: input.generated_at,

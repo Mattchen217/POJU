@@ -13,6 +13,7 @@ export interface UseStreamingAnalysisOptions {
 
   onComplete: (content: string, meta: BaseAnalysisJob['meta'] | Record<string, unknown>) => void;
   onError: (error: string) => void;
+  onCoreJudgments?: (judgments: unknown, source?: string) => void;
 }
 
 export interface StreamingState {
@@ -101,6 +102,9 @@ export function useStreamingAnalysis(opts: UseStreamingAnalysisOptions) {
           },
           onPollContent: (accumulated) => {
             bumpStreamProgress(accumulated);
+          },
+          onCoreJudgments: (judgments, source) => {
+            optsRef.current.onCoreJudgments?.(judgments, source);
           },
         },
       });

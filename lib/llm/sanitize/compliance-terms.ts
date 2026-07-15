@@ -66,6 +66,11 @@ import {
   BARE_GANZHI_MARKER,
   isValidSexagenaryGanzhi,
 } from "@/lib/glossary/term-closed-set";
+import {
+  BANNED_TERMS_ZH,
+  bannedTermSoftReplacePairsZh,
+  metaphorBlacklistForLocale,
+} from "@/lib/llm/compliance/banned-terms";
 import { allShenshaHanSurfaces, resolveShenshaSoftLabels } from "@/lib/poju/shensha";
 
 export {
@@ -517,24 +522,6 @@ const UNREADABLE_SOFT_COMBOS = [
   "靠「滋养培育」出来的",
 ] as const;
 
-const METAPHOR_BLACKLIST_ZH = [
-  "持续燃烧的引擎",
-  "手机散热片",
-  "随时能翻的参考书",
-  "散热缺口",
-  "冷却模块",
-  "引擎",
-] as const;
-
-const METAPHOR_BLACKLIST_EN = [
-  "steady-burning engine",
-  "phone heatsink",
-  "always-open reference book",
-  "heat-dissipation gap",
-  "cooling module",
-  "engine",
-] as const;
-
 /** Protect `"养"` / 「冲」 style rhetorical single chars — never soft-replace them. */
 export function protectQuotedSingleChars(text: string): {
   text: string;
@@ -543,14 +530,15 @@ export function protectQuotedSingleChars(text: string): {
   return protectQuotedSingleHanChars(text);
 }
 
-/** Soft-visible façade bans after GlossaryText strip (身弱 / 命字族). */
+/** Soft-visible façade bans after GlossaryText strip — reads single source BANNED_TERMS_ZH. */
 export function auditUserFacingBannedLeaks(
   softVisible: string,
   locale: string,
 ): ComplianceViolation[] {
   if (!softVisible?.trim() || !locale.startsWith("zh")) return [];
   const violations: ComplianceViolation[] = [];
-  for (const term of ["身弱", "身强", "身旺", "命运", "命定", "命理", "命盘", "命局", "宿命"]) {
+  // Longer first so 身弱 matches before 弱, etc.
+  for (const term of [...BANNED_TERMS_ZH].sort((a, b) => b.length - a.length)) {
     const idx = softVisible.indexOf(term);
     if (idx >= 0) {
       violations.push({
@@ -562,14 +550,14 @@ export function auditUserFacingBannedLeaks(
   return violations;
 }
 
-/** Blacklisted stock metaphors (incl. 引擎) — must not reach users. */
+/** Blacklisted stock metaphors — single source METAPHOR_BLACKLIST_*. */
 export function auditMetaphorBlacklist(
   softVisible: string,
   locale: string,
 ): ComplianceViolation[] {
   if (!softVisible?.trim()) return [];
   const violations: ComplianceViolation[] = [];
-  const list = locale.startsWith("zh") ? METAPHOR_BLACKLIST_ZH : METAPHOR_BLACKLIST_EN;
+  const list = metaphorBlacklistForLocale(locale);
   const lower = locale.startsWith("zh") ? softVisible : softVisible.toLowerCase();
   for (const phrase of list) {
     const needle = locale.startsWith("zh") ? phrase : phrase.toLowerCase();
@@ -610,18 +598,32 @@ export function auditSoftReplaceReadability(
   return violations;
 }
 
-/** Bare pillar / chart structure words → SaaS soft gloss (payment audit). */
+/** Bare pillar / chart structure words → SaaS soft gloss (from banned-terms single source). */
 const ZH_STRUCTURE_SOFT_REPLACE: ReadonlyArray<[string, string]> = [
-  ["大运", "当前阶段气候"],
-  ["流年", "当前时空效能"],
-  ["日柱", "你的能量结构"],
-  ["月柱", "你的能量结构"],
-  ["时柱", "你的能量结构"],
-  ["年柱", "你的能量结构"],
-  ["命盘", "你的能量结构"],
-  ["命局", "你的能量结构"],
-  ["八字", "你的能量结构"],
-  ["四柱", "你的能量结构"],
+  ...bannedTermSoftReplacePairsZh().filter(([word]) =>
+    [
+      "日主",
+      "大运",
+      "流年",
+      "日柱",
+      "月柱",
+      "时柱",
+      "年柱",
+      "命盘",
+      "命局",
+      "八字",
+      "四柱",
+      "用神",
+      "喜神",
+      "忌神",
+      "天干",
+      "地支",
+      "藏干",
+      "身弱",
+      "身强",
+      "身旺",
+    ].includes(word),
+  ),
 ];
 
 const EN_STRUCTURE_SOFT_REPLACE: ReadonlyArray<[RegExp, string]> = [

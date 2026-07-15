@@ -1,12 +1,13 @@
 /**
  * Mandatory delivery gate for base-analysis — shared POJU/Glyph/Match/Syncro context base.
  * Blocks incomplete / out-of-set content before KV or IndexedDB persistence.
- * PART 2: audit runs on **final soft-visible text** (sanitize → auto-mark → strip), not raw model only.
+ * Audits final soft-visible text; hard bans come from lib/llm/compliance/banned-terms.ts only.
  */
 
 import { softVisibleForAudit } from "@/lib/base-analysis/prepare-display-pipeline";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import { computeNatalChartRelations } from "@/lib/calculations/relation-engine";
+import { isHardBannedTermLabel } from "@/lib/llm/compliance/banned-terms";
 import {
   auditDeliveredText,
   auditMetaphorBlacklist,
@@ -45,9 +46,6 @@ export function auditBaseAnalysisDelivery(
   locale: string,
   structured: ProfileStructured,
 ): BaseAnalysisGateResult {
-  // Marked = sanitize+autoMark; soft-visible = what users read after GlossaryText.
-  // stem_element / bare_ganzhi: audit masked marked text (soft inside ⟦t:⟧ is intentional).
-  // 身弱/命/引擎/可读性: audit soft-visible (façade — soft labels must not reintroduce them).
   const marked = prepareTextForGlossaryRender(text, locale);
   const softVisible = softVisibleForAudit(text, locale);
   const maskedMarked = maskMarkersForAudit(marked);
@@ -57,15 +55,11 @@ export function auditBaseAnalysisDelivery(
       relations: computeNatalChartRelations(structured),
     }),
     ...auditUserFacingBannedLeaks(softVisible, locale),
+    ...auditUserFacingBannedLeaks(maskedMarked, locale),
     ...auditMetaphorBlacklist(softVisible, locale),
     ...auditSoftReplaceReadability(softVisible, locale),
-    // If markers strip and soft still shows bare stem compounds, catch on soft too.
-    ...auditDeliveredText(stripMarkersForPrompt(marked), locale).filter(
-      (v) =>
-        v.label === "term:身弱" ||
-        v.label === "term:身强" ||
-        v.label === "term:身旺" ||
-        v.label.startsWith("term:命"),
+    ...auditDeliveredText(stripMarkersForPrompt(marked), locale).filter((v) =>
+      isHardBannedTermLabel(v.label),
     ),
     ...auditMarkerCompleteness(marked),
     ...auditShenShaAgainstInstance(marked, structured),
@@ -81,7 +75,7 @@ export function auditBaseAnalysisDelivery(
   return { ok: !isBaseAnalysisGateFailure(violations), violations };
 }
 
-/** Critical failures that must block persist / trigger one-shot regen. */
+/** Critical failures that must block persist / trigger repair (then optional full regen). */
 export function isBaseAnalysisGateFailure(violations: ComplianceViolation[]): boolean {
   return violations.some(
     (v) =>
@@ -95,22 +89,19 @@ export function isBaseAnalysisGateFailure(violations: ComplianceViolation[]): bo
       v.label.startsWith("term_density:") ||
       v.label === "marker_missing_plain" ||
       v.label.startsWith("marker_visible_") ||
-      v.label === "term:身弱" ||
-      v.label === "term:身强" ||
-      v.label === "term:身旺" ||
-      v.label.startsWith("term:命") ||
+      isHardBannedTermLabel(v.label) ||
       v.label === "soft_replace_unreadable" ||
-      v.label === "metaphor_blacklist" ||
       v.label === "payment_leak:chained_soft_replace",
   );
 }
 
+/** Last-resort full rewrite hint — prefer repairViolationsOnly first. */
 export function buildBaseAnalysisRegenHint(
   violations: ComplianceViolation[],
   locale: string,
 ): string {
   const labels = [...new Set(violations.map((v) => v.label))].slice(0, 12).join(", ");
   return locale.startsWith("zh")
-    ? `\n\n【元报告落库门禁未通过 — 须完整重写 Markdown 正文】问题：${labels}。神煞只能逐字取自本次 structured 实例清单；严禁 元辰/六秀日/阴差阳错/空亡/将星/劫煞 等引擎不计算项。每个 ⟦t:id|可见词|白话⟧ 必须三段位闭合；禁止断标记、禁止可见词前加 the/a；每段 ≤2 金字。全文须含身份锚 + 五块分区（含能量交换）+ 收尾，零大运/零年龄段时间锚。返回完整正文，勿截断。`
-    : `\n\n[BASE-ANALYSIS DELIVERY GATE FAILED — rewrite COMPLETE Markdown body] Issues: ${labels}. Shen_sha ONLY from this structured instance inventory; NEVER 元辰/六秀日/阴差阳错/Void/General Star/etc. Every ⟦t:id|visible|plain⟧ must be fully closed with plain tooltip; no broken markers; visible text = noun phrase without leading "the/a"; ≤2 markers per paragraph, ≤2 per pillar block. Return complete text—do not truncate.`;
+    ? `\n\n【元报告落库门禁仍未通过（定点修补已用尽）— 须完整重写 Markdown 正文】问题：${labels}。神煞只能逐字取自本次 structured 实例清单；每个 ⟦t:id|可见词|白话⟧ 必须三段位闭合；禁裸干支/禁词见 system 禁词块；零大运/零年龄段时间锚。返回完整正文，勿截断。`
+    : `\n\n[BASE-ANALYSIS DELIVERY GATE STILL FAILING after surgical repair — rewrite COMPLETE Markdown body] Issues: ${labels}. Shen_sha ONLY from structured inventory; every ⟦t:id|visible|plain⟧ fully closed; honor system banned-terms block; zero decade/age-band anchors. Return complete text.`;
 }
