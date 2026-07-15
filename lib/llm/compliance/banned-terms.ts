@@ -190,7 +190,15 @@ export function buildForbiddenTermsPromptBlock(locale: string): string {
   → 必须软译（对照）：${softLines}…
 【禁用比喻·黑名单】${METAPHOR_BLACKLIST_ZH.join(" / ")}
   → 主比喻必须由此人 structured（day_master 五行 + strength + yong_shen）现定；换盘还成立 = 套话 = 重写
-【禁裸干支】甲乙丙丁戊己庚辛壬癸 / 子丑寅卯辰巳午未申酉戌亥 及「丙火」类合称一律不得裸露——要么 ⟦t:…⟧ 三段位，要么纯白话
+
+【禁词/禁用比喻 = 字面禁止出现】
+不得以【任何形式】出现，包括：否定式、对比式、引用式、加引号提及。
+  ✗「你不是引擎」  ✗「不像散热片那样」  ✗「所谓的命运」  ✗「这不是命定」
+要表达「你不靠硬撑」→【直接正面说】，不要拿禁词当反面例子。
+  ✓「你的力量来自吸收与转化，而不是自我消耗。」
+
+【禁裸干支】甲乙丙丁戊己庚辛壬癸 / 子丑寅卯辰巳午未申酉戌亥 及「丙火/乙木」类合称一律不得裸露——要么 ⟦t:…⟧ 三段位（且第2格软译本身也【不得】含裸干支），要么纯白话。
+【标记】id 必须取自闭集 slug 清单；自造 slug（如 da_yun / ji_shen / stem_foo）= 直接拒绝。闭集没有对应概念 → 【不打标，直接白话讲】。
 【收尾】禁「这不是命运/不是命定」否定式。✓「这是你的能量配置读数。怎么用它，取决于你自己。」`;
   }
 
@@ -200,7 +208,13 @@ export function buildForbiddenTermsPromptBlock(locale: string): string {
   → Soft-translate (e.g. day master → "your core nature"; weak self → "fuel runs short easily")
 [Metaphor blacklist] ${METAPHOR_BLACKLIST_EN.join(" / ")}
   → Main metaphor from this chart's day_master + strength + yong_shen only
-[No bare Ganzhi] Never bare stems/branches or "Bing fire" compounds — full ⟦t:…⟧ or plain vernacular
+
+[Literal ban] Banned words/metaphors must NOT appear in ANY form — including negation, contrast, quotation, or scare-quotes.
+  ✗ "you are not an engine"  ✗ "unlike a heatsink"  ✗ "so-called fate"  ✗ "this is not destiny"
+  To say "you don't hard-brace" → say it positively. ✓ "Your power comes from absorption and conversion, not self-burn."
+
+[No bare Ganzhi] Never bare stems/branches or "Bing fire"/"Yi wood" compounds — full ⟦t:…⟧ (slot-2 soft must itself be Ganzhi-free) or plain vernacular
+[Markers] ids must be closed-set slugs only; invented ids are rejected. No closed concept → plain vernacular, no marker.
 [Closing] Never "this is not fate" negations. ✓ "This is your energy-config readout. How you use it is yours."`;
 }
 
@@ -221,18 +235,18 @@ export function buildViolationRepairInstruction(
       })
       .filter(Boolean)
       .join("；");
-    return `下列违规点需要补丁。只输出 JSON {"patches":[{"find":"...","replace":"..."}]}，【禁止】重吐全文：
+    return `下列违规点需要补丁。只输出 JSON {"patches":[{"find":"<含违规词的整句>","replace":"<改写后的整句>"}]}，【禁止】重吐全文：
 
 ${lines.join("\n")}
 ${softHint ? `\n软译对照：${softHint}` : ""}
-${hits.some((v) => v.label === "metaphor_blacklist") ? "\n黑名单比喻：只改含禁词的最短片段（如标签「你的核心引擎」→「你的核心转化力」）。" : ""}
+${hits.some((v) => v.label === "metaphor_blacklist") ? "\n黑名单比喻：重写【整句】使其通顺且字面不再出现禁词（含否定式提及也不行）。勿只替换最短词。" : ""}
 
-find 必须是原文中真实出现的子串；找不到的 find 会被拒。`;
+规则：find = 原文中真实存在的整句；replace = 自然通顺的合规整句；找不到的 find 会被拒。`;
   }
 
-  return `Emit ONLY JSON {"patches":[{"find":"...","replace":"..."}]} — never rewrite the full document.
+  return `Emit ONLY JSON {"patches":[{"find":"<full sentence>","replace":"<rewritten sentence>"}]} — never rewrite the full document.
 
 ${lines.join("\n")}
 
-find must be an exact substring of the original; missing finds are rejected.`;
+Rewrite the full sentence containing each hit so it is natural and contains no banned words (including negated mentions). find must be exact; missing finds are rejected.`;
 }

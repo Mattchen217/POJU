@@ -24,7 +24,14 @@ import {
   maskKnownSoftLabelsZh,
 } from "@/lib/llm/compliance/banned-terms";
 import { KEEP_CN_VISIBLE_SOFT } from "@/lib/glossary/term-closed-set";
-import { detectComplianceViolations } from "@/lib/llm/sanitize/compliance-terms";
+import {
+  auditMetaphorBlacklist,
+  detectComplianceViolations,
+} from "@/lib/llm/sanitize/compliance-terms";
+import {
+  auditMarkerCompleteness,
+  auditOutOfSetTerms,
+} from "@/lib/llm/sanitize/term-marking";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 
 const ROOT = path.resolve(__dirname, "..");
@@ -86,6 +93,44 @@ function main() {
   );
   assert("repair asks for patches JSON", repairSrc.includes('"patches"'));
   assert("repair never asks to re-emit full doc", repairSrc.includes("禁止】输出整篇"));
+  assert("repair uses reasoning_effort off", repairSrc.includes('reasoning_effort: "off"'));
+  assert("repair max_tokens >= 3000", /max_tokens:\s*3000/.test(repairSrc));
+  assert("repair rewrites whole sentence", repairSrc.includes("整句") || repairSrc.includes("FULL sentence"));
+  assert("repair forbids shortest fragment", repairSrc.includes("最短片段") || repairSrc.includes("shortest"));
+
+  const banBlockSrc = fs.readFileSync(
+    path.join(ROOT, "lib/llm/compliance/banned-terms.ts"),
+    "utf8",
+  );
+  assert("ban block forbids negated mention", banBlockSrc.includes("否定式") && banBlockSrc.includes("你不是引擎"));
+  assert("ban block forbids soft ganzhi", banBlockSrc.includes("软译本身也【不得】含裸干支") || banBlockSrc.includes("Ganzhi-free"));
+
+  const stemSoftSrc = fs.readFileSync(
+    path.join(ROOT, "lib/glossary/term-glossary-closed.ts"),
+    "utf8",
+  );
+  assert("乙 soft is 柔韧攀援型", stemSoftSrc.includes('"柔韧攀援型"'));
+  assert("no 乙木柔韧 soft", !stemSoftSrc.includes('"乙木柔韧"'));
+  assert("no 甲木启发 soft", !stemSoftSrc.includes('"甲木启发"'));
+
+  const softGanzhiHits = auditMarkerCompleteness("⟦t:stem_yi|乙木柔韧|plain⟧");
+  assert(
+    "marker soft with 乙木 fails",
+    softGanzhiHits.some((h) => h.label === "marker_visible_ganzhi"),
+  );
+  const softCleanHits = auditMarkerCompleteness("⟦t:stem_yi|柔韧攀援型|借力生长⟧");
+  assert(
+    "marker soft vernacular ok",
+    !softCleanHits.some((h) => h.label === "marker_visible_ganzhi"),
+  );
+  const inventHits = auditOutOfSetTerms("⟦t:da_yun|当前阶段|x⟧");
+  assert(
+    "invented slug da_yun rejected",
+    inventHits.some((h) => h.label === "out_of_set_marker_id:da_yun"),
+  );
+
+  const metaNeg = auditMetaphorBlacklist("你不是一台靠自己燃烧的引擎。", "zh");
+  assert("negated 引擎 still metaphor hit", metaNeg.some((h) => h.label === "metaphor_blacklist"));
 
   // Bug 2 — climate_now from code
   const structured = fixtureStructured();

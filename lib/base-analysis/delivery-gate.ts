@@ -54,6 +54,10 @@ export function auditBaseAnalysisDelivery(
     ...auditDeliveredText(maskedMarked, locale, structured, {
       relations: computeNatalChartRelations(structured),
     }),
+    // Soft-visible (markers → slot-2) must itself be stem_element-clean.
+    ...auditDeliveredText(softVisible, locale).filter(
+      (v) => v.label === "stem_element" || v.label === "bare_ganzhi",
+    ),
     ...auditUserFacingBannedLeaks(softVisible, locale),
     ...auditUserFacingBannedLeaks(maskedMarked, locale),
     ...auditMetaphorBlacklist(softVisible, locale),
@@ -86,6 +90,7 @@ export function isBaseAnalysisGateFailure(violations: ComplianceViolation[]): bo
       v.label.startsWith("relation_") ||
       v.label === "bare_ganzhi" ||
       v.label === "stem_element" ||
+      v.label === "marker_visible_ganzhi" ||
       v.label.startsWith("term_density:") ||
       v.label === "marker_missing_plain" ||
       v.label.startsWith("marker_visible_") ||

@@ -100,7 +100,8 @@ const BASE_ANALYSIS_NEUTRALITY_RULES_ZH = `# 中立元报告 · 硬禁（场景�
 
 ## 比喻边界（本盘唯一主隐喻）
 - 全文**最多一条主隐喻**，由本盘 \`day_master\` + \`strength\` + \`yong_shen\` **现定**；服务于解释能量机制，**不编造现实情节**。
-- **黑名单（禁抄，勿抄持续燃烧的引擎等）** — 与绝对禁词块同源：引擎 / 手机散热片 / 散热缺口 / 冷却模块 / 随时能翻的参考书（**以 \`buildForbiddenTermsPromptBlock\` 注入块为准，勿另维护**）。
+- **黑名单（禁抄）** — 与绝对禁词块同源：引擎 / 手机散热片 / 散热缺口 / 冷却模块 / 随时能翻的参考书（**以 \`buildForbiddenTermsPromptBlock\` 注入块为准**）。
+- **黑名单 = 字面禁止**：否定式/对比式/引用式同样违规。✗「你不是一台引擎」✗「不像散热片」→ 请正面直说。✓「你的力量来自吸收与转化，而不是自我消耗。」
 - 自检：**「换一个命盘还成立吗？」**——成立就必须重写。`;
 
 const BASE_ANALYSIS_NEUTRALITY_RULES_EN = `# Neutral meta-report · hard bans (scenarios belong to downstream POJU/Glyph/Match/Syncro)
@@ -119,6 +120,7 @@ This is a **shared neutral context base** (like a lab report / raw MBTI readout 
 ## Metaphor boundary (one main metaphor per chart)
 - **At most one** main metaphor, determined by this chart's \`day_master\` + \`strength\` + \`yong_shen\`; explains mechanism only—**no** life plot.
 - **Blacklist (never copy)** — same source as the absolute-bans block: engine / phone heatsink / always-open reference book / heat-dissipation gap / cooling module / steady-burning engine (**\`buildForbiddenTermsPromptBlock\` is authoritative**).
+- **Literal ban**: negation / contrast / quotation still count. ✗ "you are not an engine" ✗ "unlike a heatsink" → say it positively. ✓ "Your power comes from absorption and conversion, not self-burn."
 - Self-check: **"Would this still work for another chart?"**—if yes, rewrite.`;
 
 const BASE_ANALYSIS_NARRATIVE_BREVITY_ZH = `# 叙事精简 · 禁止逐柱复述（准确性）

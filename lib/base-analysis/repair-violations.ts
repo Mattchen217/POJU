@@ -75,36 +75,35 @@ export async function repairViolationsOnly(
 
   const instruction = buildViolationRepairInstruction(critical, input.locale);
   const system = input.locale.startsWith("zh")
-    ? `你是合规补丁编辑。只输出 JSON：{"patches":[{"find":"原文精确子串","replace":"替换串"},...]}
+    ? `你是合规补丁编辑。只输出 JSON：{"patches":[{"find":"原文整句","replace":"改写后整句"},...]}
 规则：
-1) find 必须是下方原文中【逐字存在】的最短违规子串（含标签里的黑名单词）
-2) replace 为合规替代表达；保持标点与邻近字合理
-3) 【禁止】输出整篇 Markdown / 解释 / 代码块包裹全文
-4) 【禁止】改动未点名的句子；只有 patches 里声明的替换会被执行
-5) 原文换行与 ## 标题由代码保留——你不得重排版`
-    : `You are a compliance patch editor. Output ONLY JSON: {"patches":[{"find":"...","replace":"..."},...]}
+1) 找到【包含违规词的那一整句】（以句号/问号/感叹号/换行或 Markdown 行边界切），重写这一句，使其自然通顺且不含任何禁词/黑名单词
+2) 【只改点名的句子】；未点名段落一字不动
+3) 【不要】追求「最短片段」替换——只换单字常会语法不通（如「引擎」→「转化力」变成「一台燃烧的转化力」）
+4) 【禁止】输出整篇 Markdown / 解释；只有 patches 会被代码执行
+5) find 必须逐字存在于原文；原文换行与 ## 由代码保留`
+    : `You are a compliance patch editor. Output ONLY JSON: {"patches":[{"find":"<exact full sentence>","replace":"<rewritten sentence>"},...]}
 Rules:
-1) find must be an exact substring present in the original
-2) replace is compliant vernacular
-3) NEVER re-emit the full Markdown
-4) Only declared patches are applied by code
-5) Newlines / ## headings are preserved by code — do not reformat`;
+1) Find the FULL sentence containing the violation; rewrite that sentence so it is natural and contains no banned/blacklist words
+2) Change only named sentences; leave all other paragraphs untouched
+3) Do NOT prefer shortest-token swaps — they often break grammar
+4) NEVER re-emit the full Markdown
+5) find must be an exact substring; newlines / ## are preserved by code`;
 
-  // Cap context: violations + short snippets; include full text so find can be exact
-  // but ask for patches only (max_tokens small).
   try {
     const result = await openRouterChatCompletion({
       messages: [
         { role: "system", content: system },
         {
           role: "user",
-          content: `${instruction}\n\n---ORIGINAL (find must match exactly; do not rewrite)---\n${input.text}\n---END---`,
+          content: `${instruction}\n\n---ORIGINAL (find must match exactly; do not rewrite the whole doc)---\n${input.text}\n---END---`,
         },
       ],
       temperature: 0.1,
-      max_tokens: 1200,
+      max_tokens: 3000,
       json_mode: true,
-      reasoning_effort: "medium",
+      // Mechanical patching — deep reasoning burns the budget and finish=length with empty JSON.
+      reasoning_effort: "off",
       session_id: input.session_id,
       call_type: "base_analysis_repair",
       phase_name: "base_analysis_repair_patches",

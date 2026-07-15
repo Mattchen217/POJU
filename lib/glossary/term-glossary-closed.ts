@@ -289,16 +289,16 @@ function stemEntry(
 }
 
 const STEMS: GlossaryConcept[] = [
-  stemEntry("甲", "Jia wood", "甲木启发", "madera Jia", "Jia-Holz", "bois Jia", "Yang Wood — initiating, upward.", "阳木——启动向上。", "Madera yang — inicio ascendente.", "Yang-Holz — startet aufwärts.", "Bois yang — élan vers le haut."),
-  stemEntry("乙", "Yi wood", "乙木柔韧", "madera Yi", "Yi-Holz", "bois Yi", "Yin Wood — flexible growth.", "阴木——柔韧生长。", "Madera yin — crecimiento flexible.", "Yin-Holz — flexibles Wachstum.", "Bois yin — croissance souple."),
-  stemEntry("丙", "Bing fire", "丙火外显", "fuego Bing", "Bing-Feuer", "feu Bing", "Yang Fire — visible heat.", "阳火——外显热度。", "Fuego yang — calor visible.", "Yang-Feuer — sichtbare Hitze.", "Feu yang — chaleur visible."),
-  stemEntry("丁", "Ding fire", "丁火内焰", "fuego Ding", "Ding-Feuer", "feu Ding", "Yin Fire — steady inner flame.", "阴火——稳定内焰。", "Fuego yin — llama interior estable.", "Yin-Feuer — stetige innere Flamme.", "Feu yin — flamme intérieure stable."),
-  stemEntry("戊", "Wu earth", "戊土厚载", "tierra Wu", "Wu-Erde", "terre Wu", "Yang Earth — mountain, structure.", "阳土——山、结构。", "Tierra yang — montaña, estructura.", "Yang-Erde — Berg, Struktur.", "Terre yang — montagne, structure."),
-  stemEntry("己", "Ji earth", "己土滋养", "tierra Ji", "Ji-Erde", "terre Ji", "Yin Earth — soil, nurture.", "阴土——土壤、滋养。", "Tierra yin — suelo, nutrición.", "Yin-Erde — Boden, Nährung.", "Terre yin — sol, nutrition."),
-  stemEntry("庚", "Geng metal", "庚金锋利", "metal Geng", "Geng-Metall", "métal Geng", "Yang Metal — blade, standards.", "阳金——刀锋、标准。", "Metal yang — filo, estándares.", "Yang-Metall — Klinge, Maßstäbe.", "Métal yang — lame, standards."),
-  stemEntry("辛", "Xin metal", "辛金精炼", "metal Xin", "Xin-Metall", "métal Xin", "Yin Metal — jewel, refinement.", "阴金——珠宝、精炼。", "Metal yin — joya, refinamiento.", "Yin-Metall — Juwel, Verfeinerung.", "Métal yin — joyau, raffinement."),
-  stemEntry("壬", "Ren water", "壬水奔流", "agua Ren", "Ren-Wasser", "eau Ren", "Yang Water — river flow.", "阳水——江河流动。", "Agua yang — flujo de río.", "Yang-Wasser — Flusslauf.", "Eau yang — flux de rivière."),
-  stemEntry("癸", "Gui water", "癸水静深", "agua Gui", "Gui-Wasser", "eau Gui", "Yin Water — rain, quiet depth.", "阴水——雨、静深。", "Agua yin — lluvia, profundidad quieta.", "Yin-Wasser — Regen, stille Tiefe.", "Eau yin — pluie, profondeur calme."),
+  stemEntry("甲", "ascending initiator", "启发向上型", "arranque ascendente", "aufwärts startend", "élan vers le haut", "Yang Wood — initiating, upward.", "阳木——启动向上。", "Madera yang — inicio ascendente.", "Yang-Holz — startet aufwärts.", "Bois yang — élan vers le haut."),
+  stemEntry("乙", "flexible climber", "柔韧攀援型", "trepadora flexible", "flexibel kletternd", "grimpeur souple", "Yin Wood — flexible growth.", "阴木——柔韧生长。", "Madera yin — crecimiento flexible.", "Yin-Holz — flexibles Wachstum.", "Bois yin — croissance souple."),
+  stemEntry("丙", "visible radiator", "外显热度型", "calor visible", "sichtbare Hitze", "chaleur visible", "Yang Fire — visible heat.", "阳火——外显热度。", "Fuego yang — calor visible.", "Yang-Feuer — sichtbare Hitze.", "Feu yang — chaleur visible."),
+  stemEntry("丁", "inner flame", "内焰恒定型", "llama interior", "innere Flamme", "flamme intérieure", "Yin Fire — steady inner flame.", "阴火——稳定内焰。", "Fuego yin — llama interior estable.", "Yin-Feuer — stetige innere Flamme.", "Feu yin — flamme intérieure stable."),
+  stemEntry("戊", "thick carrier", "厚载承托型", "carga maciza", "tragende Masse", "portance dense", "Yang Earth — mountain, structure.", "阳土——山、结构。", "Tierra yang — montaña, estructura.", "Yang-Erde — Berg, Struktur.", "Terre yang — montagne, structure."),
+  stemEntry("己", "nurturing soil", "滋养承载型", "suelo nutricia", "nährender Boden", "sol nourricier", "Yin Earth — soil, nurture.", "阴土——土壤、滋养。", "Tierra yin — suelo, nutrición.", "Yin-Erde — Boden, Nährung.", "Terre yin — sol, nutrition."),
+  stemEntry("庚", "sharp calibrator", "锋利校准型", "filo calibrador", "scharfe Kalibrierung", "lame calibrante", "Yang Metal — blade, standards.", "阳金——刀锋、标准。", "Metal yang — filo, estándares.", "Yang-Metall — Klinge, Maßstäbe.", "Métal yang — lame, standards."),
+  stemEntry("辛", "refined edge", "精炼锋芒型", "filo refinado", "verfeinerte Schärfe", "tranchant raffiné", "Yin Metal — jewel, refinement.", "阴金——珠宝、精炼。", "Metal yin — joya, refinamiento.", "Yin-Metall — Juwel, Verfeinerung.", "Métal yin — joyau, raffinement."),
+  stemEntry("壬", "running current", "奔流贯通型", "corriente abierta", "strömende Bahn", "courant courant", "Yang Water — river flow.", "阳水——江河流动。", "Agua yang — flujo de río.", "Yang-Wasser — Flusslauf.", "Eau yang — flux de rivière."),
+  stemEntry("癸", "quiet reservoir", "静深蓄积型", "reservorio quieto", "stille Tiefe", "réservoir calme", "Yin Water — rain, quiet depth.", "阴水——雨、静深。", "Agua yin — lluvia, profundidad quieta.", "Yin-Wasser — Regen, stille Tiefe.", "Eau yin — pluie, profondeur calme."),
 ];
 
 function branchEntry(
@@ -318,18 +318,18 @@ function branchEntry(
 }
 
 const BRANCHES: GlossaryConcept[] = [
-  branchEntry("子", "Zi water", "子水位", "rama Zi", "Zi-Zweig", "branche Zi", "Midnight water — cycle start.", "子夜水——周期始。", "Agua de medianoche — inicio de ciclo.", "Mitternachtswasser — Zyklusbeginn.", "Eau de minuit — début de cycle."),
-  branchEntry("丑", "Chou earth", "丑土积", "rama Chou", "Chou-Zweig", "branche Chou", "Stored earth — slow build.", "藏土——慢积。", "Tierra almacenada — construcción lenta.", "Gespeicherte Erde — langsamer Aufbau.", "Terre stockée — construction lente."),
-  branchEntry("寅", "Yin wood", "寅木起", "rama Yin", "Yin-Zweig", "branche Yin", "Spring wood — bold start.", "春木——勇起。", "Madera de primavera — inicio audaz.", "Frühlingsholz — mutiger Start.", "Bois de printemps — départ audacieux."),
-  branchEntry("卯", "Mao wood", "卯木开", "rama Mao", "Mao-Zweig", "branche Mao", "Soft wood — social spring.", "柔木——社交春。", "Madera suave — primavera social.", "Weiches Holz — sozialer Frühling.", "Bois souple — printemps social."),
-  branchEntry("辰", "Chen earth", "辰土转", "rama Chen", "Chen-Zweig", "branche Chen", "Damp earth — transition.", "湿土——过渡。", "Tierra húmeda — transición.", "Feuchte Erde — Übergang.", "Terre humide — transition."),
-  branchEntry("巳", "Si fire", "巳火藏", "rama Si", "Si-Zweig", "branche Si", "Hidden fire — strategy.", "藏火——谋略。", "Fuego oculto — estrategia.", "Verborgenes Feuer — Strategie.", "Feu caché — stratégie."),
-  branchEntry("午", "Wu fire", "午火峰", "rama Wu", "Wu-Zweig", "branche Wu", "Noon fire — peak visibility.", "午火——可见之巅。", "Fuego del mediodía — máxima visibilidad.", "Mittagsfeuer — höchste Sichtbarkeit.", "Feu de midi — visibilité maximale."),
-  branchEntry("未", "Wei earth", "未土收", "rama Wei", "Wei-Zweig", "branche Wei", "Summer earth — harvest prep.", "夏土——收前准备。", "Tierra de verano — prep. de cosecha.", "Sommererde — Erntevorbereitung.", "Terre d'été — préparation de récolte."),
-  branchEntry("申", "Shen metal", "申金变", "rama Shen", "Shen-Zweig", "branche Shen", "Metal shift — agile change.", "金气转——灵动变。", "Cambio metálico — cambio ágil.", "Metallwechsel — agiler Wandel.", "Virage métal — changement agile."),
-  branchEntry("酉", "You metal", "酉金序", "rama You", "You-Zweig", "branche You", "Pure metal — order.", "纯金——秩序。", "Metal puro — orden.", "Reines Metall — Ordnung.", "Métal pur — ordre."),
-  branchEntry("戌", "Xu earth", "戌土守", "rama Xu", "Xu-Zweig", "branche Xu", "Dry earth — guard.", "燥土——守。", "Tierra seca — custodia.", "Trockene Erde — Wache.", "Terre sèche — garde."),
-  branchEntry("亥", "Hai water", "亥水休", "rama Hai", "Hai-Zweig", "branche Hai", "Winter water — rest before renewal.", "冬水——更新前休。", "Agua de invierno — descanso antes de renovar.", "Winterwasser — Ruhe vor Erneuerung.", "Eau d'hiver — repos avant renouveau."),
+  branchEntry("子", "midnight tide", "深夜潮位", "marea nocturna", "Mitternachtswelle", "marée de minuit", "Midnight water — cycle start.", "子夜水——周期始。", "Agua de medianoche — inicio de ciclo.", "Mitternachtswasser — Zyklusbeginn.", "Eau de minuit — début de cycle."),
+  branchEntry("丑", "slow buildup", "缓积承载位", "acumulación lenta", "langsamer Aufbau", "construction lente", "Stored earth — slow build.", "藏土——慢积。", "Tierra almacenada — construcción lenta.", "Gespeicherte Erde — langsamer Aufbau.", "Terre stockée — construction lente."),
+  branchEntry("寅", "bold spring start", "勇起启动位", "arranque audaz", "mutiger Start", "départ audacieux", "Spring wood — bold start.", "春木——勇起。", "Madera de primavera — inicio audaz.", "Frühlingsholz — mutiger Start.", "Bois de printemps — départ audacieux."),
+  branchEntry("卯", "social spring", "开柔社交位", "primavera social", "sozialer Frühling", "printemps social", "Soft wood — social spring.", "柔木——社交春。", "Madera suave — primavera social.", "Weiches Holz — sozialer Frühling.", "Bois souple — printemps social."),
+  branchEntry("辰", "transition damper", "过渡转换位", "transición", "Übergang", "transition", "Damp earth — transition.", "湿土——过渡。", "Tierra húmeda — transición.", "Feuchte Erde — Übergang.", "Terre humide — transition."),
+  branchEntry("巳", "strategic heat", "藏谋策略位", "calor estratégico", "Strategiefeuer", "chaleur stratégique", "Hidden fire — strategy.", "藏火——谋略。", "Fuego oculto — estrategia.", "Verborgenes Feuer — Strategie.", "Feu caché — stratégie."),
+  branchEntry("午", "peak visibility", "日中高显位", "visibilidad pico", "Mittagsspitze", "visibilité maximale", "Noon fire — peak visibility.", "午火——可见之巅。", "Fuego del mediodía — máxima visibilidad.", "Mittagsfeuer — höchste Sichtbarkeit.", "Feu de midi — visibilité maximale."),
+  branchEntry("未", "harvest prep", "收前准备位", "prep. cosecha", "Erntevorbereitung", "préparation de récolte", "Summer earth — harvest prep.", "夏土——收前准备。", "Tierra de verano — prep. de cosecha.", "Sommererde — Erntevorbereitung.", "Terre d'été — préparation de récolte."),
+  branchEntry("申", "agile shift", "灵动变位", "cambio ágil", "agiler Wandel", "virage agile", "Metal shift — agile change.", "金气转——灵动变。", "Cambio metálico — cambio ágil.", "Metallwechsel — agiler Wandel.", "Virage métal — changement agile."),
+  branchEntry("酉", "order grid", "纯序校准位", "orden puro", "reine Ordnung", "ordre pur", "Pure metal — order.", "纯金——秩序。", "Metal puro — orden.", "Reines Metall — Ordnung.", "Métal pur — ordre."),
+  branchEntry("戌", "guard hold", "燥守边界位", "custodia", "Wache", "garde", "Dry earth — guard.", "燥土——守。", "Tierra seca — custodia.", "Trockene Erde — Wache.", "Terre sèche — garde."),
+  branchEntry("亥", "rest before renewal", "休整蓄势位", "reposo previo", "Ruhe vor Erneuerung", "repos avant renouveau", "Winter water — rest before renewal.", "冬水——更新前休。", "Agua de invierno — descanso antes de renovar.", "Winterwasser — Ruhe vor Erneuerung.", "Eau d'hiver — repos avant renouveau."),
 ];
 
 const STRUCTURAL: GlossaryConcept[] = [

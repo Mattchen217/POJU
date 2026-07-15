@@ -708,15 +708,15 @@ export function buildTermMarkingPromptBlock(
 
   const rules = principlesOnly
     ? `## 打标记规则（原则 · 严禁过拟合示例）
-1. \`<可见文本>\` = 软翻译词（短）；**正文只出现这一格**。
+1. \`<可见文本>\` = 软翻译词（短）；**正文只出现这一格**；**软译词本身不得含裸干支或「乙木/丙火」类合称**。
 2. \`<该处白话>\` **只进 tooltip**，【禁止】写进正文句子；必须引用【这位用户亲口说过的具体词/场景】；禁止通用词典比方。
 3. 自检：换用户还成立？成立 → 重写。
-4. 一段金字 ≤2；禁自造 id；标记外勿套括号。
+4. 一段金字 ≤2；**id 必须取自上表闭集 slug**；自造 id（da_yun / ji_shen 等）= 拒绝；闭集没有 → **不打标，直接白话**；标记外勿套括号。
 5. 守六条语义红线（不预测/不算命/不占卜/不决吉凶/不恐吓/不超自然承诺）。
 
 ${buildTermMarkingFewShot(locale)}`
     : `## 打标记规则
-1. \`<可见文本>\` = 你写出的软翻译词（**只用上表 soft 词，禁在可见词里加括号干支**）
+1. \`<可见文本>\` = 你写出的软翻译词（**只用上表 soft 词；禁裸干支、禁「乙木/丙火」类合称、禁括号干支**）
 2. \`<该处白话>\` = **结合本句意境 + 用户问题**现写的人话；白话**不出现在正文**，只进标记第 3 段（UI tooltip）；必须引用该用户亲口元素，禁套用固定比方。
 3. **只用当前交付语言**；标记**只包软翻译词**
 4. 流年/大运类先归因外境再给掌控感
@@ -724,6 +724,7 @@ ${buildTermMarkingFewShot(locale)}`
 6. **签诗/古文不是术语**，不打标
 7. 守六条语义红线（不预测/不算命/不占卜/不决吉凶/不恐吓/不超自然承诺）
 8. 若漏写第 3 段白话，UI 会回退静态词典——**务必写全三段位**；但禁止用与用户无关的通用词典句凑数
+9. **id 必须取自闭集**；自造 slug = 拒绝；没有对应概念 → 不打标、直接白话讲
 
 ${buildTermMarkingFewShot(locale)}
 
@@ -900,9 +901,13 @@ export function auditOutOfSetTerms(text: string): OutOfSetAuditHit[] {
       hits.push({ label: `out_of_set_marker_id:${m.id}`, snippet: m.raw.slice(0, 40) });
     } else if (
       !closedSlugs.has(m.id) &&
-      !TERM_BY_ID.has(m.id)
+      !TERM_BY_ID.has(m.id) &&
+      !isRelationMarkerId(m.id) &&
+      m.id !== BARE_GANZHI_MARKER.slug &&
+      !m.id.startsWith("shensha_")
     ) {
-      // unknown marker id — may be compliance term; skip unless clearly grouped
+      // Invented slug (e.g. da_yun / ji_shen) — reject; closed set miss → vernacular, no marker.
+      hits.push({ label: `out_of_set_marker_id:${m.id}`, snippet: m.raw.slice(0, 40) });
     }
   }
 
@@ -1265,6 +1270,9 @@ export function auditMarkerCompleteness(text: string): OutOfSetAuditHit[] {
     });
   }
 
+  const GANZHI_IN_SOFT =
+    /[甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥]|[甲乙丙丁戊己庚辛壬癸][木火土金水]/;
+
   for (const m of parseTermMarkers(text)) {
     if (!m.plain?.trim()) {
       hits.push({ label: "marker_missing_plain", snippet: m.raw.slice(0, 48) });
@@ -1274,6 +1282,10 @@ export function auditMarkerCompleteness(text: string): OutOfSetAuditHit[] {
       hits.push({ label: "marker_visible_article_dup", snippet: vis.slice(0, 40) });
     } else if (/^(the|a|an)\s/i.test(vis)) {
       hits.push({ label: "marker_visible_leading_article", snippet: vis.slice(0, 40) });
+    }
+    // Slot-2 soft must be vernacular — never leak stem+element or bare Ganzhi into user-visible text.
+    if (GANZHI_IN_SOFT.test(vis)) {
+      hits.push({ label: "marker_visible_ganzhi", snippet: vis.slice(0, 40) });
     }
   }
 
