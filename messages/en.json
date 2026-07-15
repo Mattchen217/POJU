@@ -1012,9 +1012,12 @@
         "item_three_body": "Every response involves a great deal of analysis. Sometimes POJU takes a little longer to \"think\" — this is not a system error, it's POJU calculating carefully on your behalf. Please be patient with it.",
         "item_four_title": "POJU asks step by step — don't rush to the answer",
         "item_four_body": "To truly understand your situation and give you a solution that fits only you, POJU works through a few rounds of conversation, going deeper each time, rather than concluding at once. Please bear with it through these rounds — this back-and-forth is exactly where the value of your final plan comes from.",
+        "footer_label": "Decision & responsibility",
         "footer": "POJU offers self-reflection and perspective to help you see your situation more clearly and find directions worth exploring. The final decision always remains yours.",
         "privacy_footer": "Your conversations are stored only in your local browser (cleared when you switch browsers or use incognito). To generate responses they're sent over a secure connection to AI models (which state no retention and no training). See our Privacy Policy.",
-        "confirm": "Got it"
+        "privacy_link": "[Read the Privacy Policy →]",
+        "acknowledge": "I understand how POJU works and agree to continue under the Terms of Service, Privacy Policy, and these points.",
+        "confirm": "Continue with POJU"
       },
       "birth_flow_analyzing_title": "Analyzing your chart…",
       "birth_flow_analysis_done_short": "Analysis complete",

@@ -101,13 +101,13 @@ function driveFromTenGods(gods: string[], locale: string): string {
   const joined = gods.join("");
   if (/食神|伤官/.test(joined) && /财/.test(joined)) {
     return zh
-      ? "产出→资源回流的闭环效率高（十神组合机制转译，不谈职业）"
-      : "Produce→resource-return loop runs efficiently (ten-god mechanism only; no career typing)";
+      ? "产出→资源回流的闭环效率高（机制转译，不谈职业）"
+      : "Produce→resource-return loop runs efficiently (mechanism only; no career typing)";
   }
   if (/印/.test(joined) && /官|杀/.test(joined)) {
     return zh
-      ? "约束与补给互相咬合时系统最稳（官印类机制，不谈职场情节）"
-      : "Constraint and supply lock best when officer-seal linkage holds (mechanism only)";
+      ? "约束与补给互相咬合时系统最稳（机制转译，不谈职场情节）"
+      : "Constraint and supply lock best when linkage holds (mechanism only)";
   }
   if (/比肩|劫财/.test(joined)) {
     return zh
@@ -115,8 +115,8 @@ function driveFromTenGods(gods: string[], locale: string): string {
       : "Parallel alliance amplifies drive; solo hard-push drains faster";
   }
   return zh
-    ? "关键链路在于把本盘主导十神机制跑通，而非换赛道式折腾"
-    : "Leverage comes from running this chart’s dominant ten-god mechanism—not channel-hopping";
+    ? "关键链路在于把本盘主导驱动机制跑通，而非换赛道式折腾"
+    : "Leverage comes from running this chart’s dominant drive mechanism—not channel-hopping";
 }
 
 function exchangeFromTenGods(gods: string[], locale: string): string {
@@ -200,8 +200,8 @@ function balanceAnchor(structured: ProfileStructured, locale: string): string {
   const yongTune = yong ? WUXING_TUNE[yong] : null;
   const xiTune = xi[0] ? WUXING_TUNE[xi[0]] : null;
   if (zh) {
-    const a = yong && yongTune ? `需补【${yong}】：${yongTune.zh}` : "按用神方向补平衡机制";
-    const b = xi[0] && xiTune && xi[0] !== yong ? `；喜【${xi[0]}】：${xiTune.zh}` : "";
+    const a = yong && yongTune ? `需补【${yong}】：${yongTune.zh}` : "按补给方向补关键平衡机制";
+    const b = xi[0] && xiTune && xi[0] !== yong ? `；辅【${xi[0]}】：${xiTune.zh}` : "";
     return `${a}${b}（含方位/色彩/时段锚；禁动作清单）`;
   }
   const a =
@@ -239,16 +239,25 @@ function climateNow(
   };
   if (yongWx && (dayunWx === yongWx || generates[dayunWx] === yongWx)) {
     return zh
-      ? "当前这步：用神侧偏顺，可择机推进"
-      : "Current step: favorable side is coherent — selective advance ok";
+      ? "当前这步：补给侧偏顺，可择机推进"
+      : "Current step: supply side coherent — selective advance ok";
   }
   if (yongWx && generates[yongWx] === dayunWx) {
     return zh ? "当前这步：偏耗泄，宜守" : "Current step: drain-leaning — prefer hold";
   }
   if (dayunWx === "火" && yongWx === "水") {
-    return zh ? "当前这步：偏燥耗，宜守" : "Current step: dry-drain lean — prefer hold";
+    return zh ? "当前这步：燥热偏耗，宜守" : "Current step: dry-heat drain lean — prefer hold";
   }
   return zh ? "当前这步：气候交织，宜守" : "Current step: mixed climate — prefer hold";
+}
+
+/** Code-only climate readout — never ask the model to invent this. */
+export function buildClimateNowFromStructured(
+  structured: ProfileStructured,
+  locale = "zh",
+): string {
+  const step = resolveCurrentDaYunStep(structured.da_yun);
+  return climateNow(structured, step, locale);
 }
 
 /**
@@ -291,8 +300,8 @@ export function buildCoreJudgmentsFromStructured(
     balance_anchor: balanceAnchor(structured, locale),
     exchange_mode: exchangeFromTenGods(gods, locale),
     leverage_state: zh
-      ? "用神得力、节奏可控时最易突破（不预测事件、不指定行业）"
-      : "Breakthrough is easiest when favorable gods hold and rhythm is controllable (no event forecast, no industry)",
+      ? "关键补给到位、节奏可控时最易突破（不预测事件、不指定行业）"
+      : "Breakthrough is easiest when key supply holds and rhythm is controllable (no event forecast, no industry)",
     climate_now: climateNow(structured, refs.da_yun_step, locale),
     refs,
   };

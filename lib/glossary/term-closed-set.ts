@@ -543,7 +543,7 @@ export const KEEP_CN_VISIBLE_SOFT: Record<string, FiveLocaleText> = {
     fr: "efficacité temporelle actuelle",
   },
   day_master: {
-    zh: "核心特质",
+    zh: "你的核心特质",
     en: "core nature",
     es: "naturaleza esencial",
     de: "Urnatur",

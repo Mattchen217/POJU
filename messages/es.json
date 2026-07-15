@@ -840,8 +840,11 @@
         "item_four_title": "POJU pregunta paso a paso — no te apresures a la respuesta",
         "item_four_body": "Para comprender de verdad tu situación y ofrecerte una solución que encaje solo contigo, POJU avanza en varias rondas de conversación, profundizando en cada una, en lugar de concluir de inmediato. Acompáñalo con paciencia en estas rondas: ese ida y vuelta es justo de donde sale el valor de tu plan final.",
         "footer": "POJU ofrece autorreflexión y perspectiva para ayudarte a ver tu situación con más claridad y encontrar direcciones que valga la pena explorar. La decisión final siempre es tuya.",
+        "footer_label": "Decisión y responsabilidad",
         "privacy_footer": "Tus conversaciones se guardan solo en tu navegador local (se borran al cambiar de navegador o usar modo incógnito). Para generar respuestas se envían por conexión segura a modelos de IA (que declaran no retener datos ni usarlos para entrenamiento). Consulta nuestra Política de Privacidad.",
-        "confirm": "Entendido"
+        "privacy_link": "[Leer la Política de Privacidad →]",
+        "acknowledge": "Entiendo cómo funciona POJU y acepto continuar bajo los Términos de Servicio, la Política de Privacidad y estos puntos.",
+        "confirm": "Continuar con POJU"
       },
       "birth_flow_analyzing_title": "Analizando tu perfil…",
       "birth_flow_analysis_done_short": "Análisis completo",

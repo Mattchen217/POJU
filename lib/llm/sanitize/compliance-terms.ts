@@ -64,11 +64,14 @@ import {
 import { auditEmptyKeepCnBrackets } from "@/lib/llm/sanitize/keep-cn-brackets";
 import {
   BARE_GANZHI_MARKER,
+  KEEP_CN_VISIBLE_SOFT,
   isValidSexagenaryGanzhi,
 } from "@/lib/glossary/term-closed-set";
 import {
   BANNED_TERMS_ZH,
   bannedTermSoftReplacePairsZh,
+  collectCanonicalSoftLabelsZh,
+  maskKnownSoftLabelsZh,
   metaphorBlacklistForLocale,
 } from "@/lib/llm/compliance/banned-terms";
 import { allShenshaHanSurfaces, resolveShenshaSoftLabels } from "@/lib/poju/shensha";
@@ -989,10 +992,17 @@ export function detectComplianceViolations(text: string, locale: string): Compli
     pushRegex(ZH_STEM_ELEMENT_REGEX, "stem_element");
     pushRegex(ZH_WUXING_YONGXI_REGEX, "wuxing_yongxi");
     pushRegex(ZH_GUIRen_REGEX, "guiren");
+    // Mask approved soft labels first — e.g. 「平衡」 must not fire inside 「关键平衡能量」.
+    const softExtras = Object.values(KEEP_CN_VISIBLE_SOFT).map((x) => x.zh);
+    softExtras.push("随境调整型", "关键平衡能量");
+    const auditBody = maskKnownSoftLabelsZh(
+      text,
+      collectCanonicalSoftLabelsZh(softExtras),
+    );
     for (const term of FORBIDDEN_VARIANTS_ALL) {
       if (!isChineseVariant(term) || term.length < 2) continue;
       if (shouldSkipAuditTerm(term)) continue;
-      if (text.includes(term)) {
+      if (auditBody.includes(term)) {
         violations.push({
           label: `term:${term}`,
           snippet: snippetAround(text, text.indexOf(term), term.length),

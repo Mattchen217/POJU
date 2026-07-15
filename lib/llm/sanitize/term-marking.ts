@@ -235,7 +235,7 @@ export function stripBareTermMarkers(text: string): string {
 export function wrapBareKeepCnSoftTerms(text: string, locale: string): string {
   const patterns: Array<{ id: string; label: string }> = [
     { id: "decade", label: "当前阶段气候" },
-    { id: "day_master", label: "核心特质" },
+    { id: "day_master", label: "你的核心特质" },
     { id: "year", label: "当前时空效能" },
     { id: "yong_shen", label: "关键平衡能量" },
     { id: "yong_shen", label: "用神" },

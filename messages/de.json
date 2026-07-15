@@ -840,8 +840,11 @@
         "item_four_title": "POJU fragt Schritt für Schritt — beeile dich nicht mit der Antwort",
         "item_four_body": "Um deine Situation wirklich zu verstehen und dir eine Lösung zu geben, die nur für dich passt, führt POJU mehrere Gesprächsrunden, die jeweils tiefer gehen, statt sofort zu schließen. Bitte begleite es geduldig durch diese Runden — genau in diesem Austausch liegt der Wert deines finalen Plans.",
         "footer": "POJU bietet Selbstreflexion und Perspektive, um dir zu helfen, deine Situation klarer zu sehen und erkundenswerte Richtungen zu finden. Die endgültige Entscheidung liegt immer bei dir.",
+        "footer_label": "Entscheidung & Verantwortung",
         "privacy_footer": "Deine Gespräche werden nur lokal in deinem Browser gespeichert (beim Browserwechsel oder im Inkognito-Modus gelöscht). Zur Antwortgenerierung werden sie über eine sichere Verbindung an KI-Modelle gesendet (die keine Speicherung und kein Training angeben). Siehe unsere Datenschutzrichtlinie.",
-        "confirm": "Verstanden"
+        "privacy_link": "[Datenschutzrichtlinie lesen →]",
+        "acknowledge": "Ich verstehe, wie POJU arbeitet, und stimme zu, unter den Nutzungsbedingungen, der Datenschutzrichtlinie und diesen Punkten fortzufahren.",
+        "confirm": "Mit POJU fortfahren"
       },
       "birth_flow_analyzing_title": "Dein Profil wird analysiert…",
       "birth_flow_analysis_done_short": "Analyse abgeschlossen",

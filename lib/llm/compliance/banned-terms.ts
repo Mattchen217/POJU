@@ -103,6 +103,55 @@ export const BANNED_TERMS_EN = [
   "liu nian",
 ] as const;
 
+/** Unique zh soft labels used by ban map + KEEP_CN façade (for audit mask + collision scan). */
+export function collectCanonicalSoftLabelsZh(
+  extra: readonly string[] = [],
+): string[] {
+  const set = new Set<string>();
+  for (const v of Object.values(BANNED_TERM_SOFT_ZH)) {
+    const t = v.trim();
+    if (t.length >= 2) set.add(t);
+  }
+  for (const v of extra) {
+    const t = v.trim();
+    if (t.length >= 2) set.add(t);
+  }
+  return [...set].sort((a, b) => b.length - a.length);
+}
+
+/**
+ * Soft labels must not be mutual substrings (else term-audit includes()-match false-fires).
+ * Returns colliding pairs [shorter, longer].
+ */
+export function findSoftLabelSubstringCollisions(
+  softs: readonly string[],
+): Array<[string, string]> {
+  const unique = [...new Set(softs.map((s) => s.trim()).filter((s) => s.length >= 2))];
+  const hits: Array<[string, string]> = [];
+  for (let i = 0; i < unique.length; i++) {
+    for (let j = 0; j < unique.length; j++) {
+      if (i === j) continue;
+      const a = unique[i]!;
+      const b = unique[j]!;
+      if (b.includes(a) && a !== b) hits.push([a, b]);
+    }
+  }
+  return hits;
+}
+
+/** Mask known soft labels so forbidden-term includes() cannot hit inside approved softs (e.g. 「平衡」 inside 「关键平衡能量」). */
+export function maskKnownSoftLabelsZh(text: string, softs: readonly string[]): string {
+  let out = text;
+  const sorted = [...softs].sort((a, b) => b.length - a.length);
+  for (const soft of sorted) {
+    if (!soft || soft.length < 2) continue;
+    if (!out.includes(soft)) continue;
+    const ph = "\uFFFC".repeat(soft.length);
+    out = out.split(soft).join(ph);
+  }
+  return out;
+}
+
 /** Terms that hard-block delivery when still bare in soft-visible / masked text. */
 export function isHardBannedTermLabel(label: string): boolean {
   if (label === "metaphor_blacklist") return true;
@@ -155,13 +204,13 @@ export function buildForbiddenTermsPromptBlock(locale: string): string {
 [Closing] Never "this is not fate" negations. ✓ "This is your energy-config readout. How you use it is yours."`;
 }
 
-/** Compact repair instruction from concrete gate hits. */
+/** Compact repair instruction — model returns patches JSON only, not full document. */
 export function buildViolationRepairInstruction(
   violations: ReadonlyArray<{ label: string; snippet: string }>,
   locale: string,
 ): string {
   const hits = violations.slice(0, 12);
-  const lines = hits.map((v, i) => `${i + 1}. ${v.label} @ 「${v.snippet.slice(0, 48)}」`);
+  const lines = hits.map((v, i) => `${i + 1}. ${v.label} @ 「${v.snippet.slice(0, 64)}」`);
   if (locale.startsWith("zh")) {
     const softHint = hits
       .filter((v) => v.label.startsWith("term:"))
@@ -172,20 +221,18 @@ export function buildViolationRepairInstruction(
       })
       .filter(Boolean)
       .join("；");
-    return `下面这份报告只有几处违规。请【只修这几处】，其余【一字不动】：
+    return `下列违规点需要补丁。只输出 JSON {"patches":[{"find":"...","replace":"..."}]}，【禁止】重吐全文：
 
 ${lines.join("\n")}
 ${softHint ? `\n软译对照：${softHint}` : ""}
-${hits.some((v) => v.label === "metaphor_blacklist") ? "\n若标签/句子含黑名单词（如「引擎」），只换该标签或该句，【禁止】改动全文比喻主线。" : ""}
+${hits.some((v) => v.label === "metaphor_blacklist") ? "\n黑名单比喻：只改含禁词的最短片段（如标签「你的核心引擎」→「你的核心转化力」）。" : ""}
 
-【禁止】重写其他段落、【禁止】改动未标出的好句子、【禁止】增删章节。
-原样返回整篇 Markdown（含未改动部分），不要 JSON、不要前言。`;
+find 必须是原文中真实出现的子串；找不到的 find 会被拒。`;
   }
 
-  return `This report has only a few violations. Fix ONLY these spots; leave everything else BYTE-IDENTICAL:
+  return `Emit ONLY JSON {"patches":[{"find":"...","replace":"..."}]} — never rewrite the full document.
 
 ${lines.join("\n")}
 
-Do NOT rewrite other paragraphs, do NOT change the main metaphor arc, do NOT add/remove sections.
-Return the full Markdown (including untouched parts). No JSON, no preamble.`;
+find must be an exact substring of the original; missing finds are rejected.`;
 }

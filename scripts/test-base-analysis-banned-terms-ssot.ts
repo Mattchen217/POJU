@@ -87,9 +87,10 @@ function main() {
     ],
     "zh",
   );
-  assert("repair says 只修这几处", repairHint.includes("只修这几处"));
+  assert("repair says patches-only JSON", repairHint.includes("patches") && repairHint.includes("禁止"));
   assert("repair soft-maps 日主", repairHint.includes("核心特质"));
   assert("repair mentions 引擎标签", repairHint.includes("引擎") || repairHint.includes("黑名单"));
+  assert("repair forbids full rewrite", repairHint.includes("重吐全文") || repairHint.includes("patches"));
 
   // Live prompt assembly needs plausible structured — read system from file inject check is enough.
   // Smoke that buildBaseAnalysisStreamPrompt still callable via inventory needs full structured;
