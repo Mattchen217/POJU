@@ -18,8 +18,10 @@ export function prepareReadingLayoutText(text: string): string {
   out = out.replace(/([。！？!?…])\s*(>+\s)/g, "$1\n\n$2");
   out = out.replace(/([^\n>])\s+(>+\s)/g, "$1\n\n$2");
 
-  out = out.replace(/([。！？!?…])\s*(###\s)/g, "$1\n\n$2");
-  out = out.replace(/([^\n#*\s])\s+(###\s)/g, "$1\n\n$2");
+  out = out.replace(/([。！？!?…])\s*(#{2,3}\s)/g, "$1\n\n$2");
+  out = out.replace(/([^\n#*\s])\s+(#{2,3}\s)/g, "$1\n\n$2");
+  // Ensure ATX ## / ### start on their own paragraph boundary.
+  out = out.replace(/([^\n])\n(#{2,3}\s)/g, "$1\n\n$2");
 
   out = out.replace(/([。！？!?…])\s*(\*\*[^*\n]+:\*\*)/g, "$1\n\n$2");
 

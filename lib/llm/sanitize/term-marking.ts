@@ -282,6 +282,27 @@ function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+/** Protect `"养"` / 「冲」 rhetorical single chars from auto-mark / soft-replace. */
+export function protectQuotedSingleHanChars(text: string): {
+  text: string;
+  restore: (s: string) => string;
+} {
+  const slots: string[] = [];
+  const masked = text.replace(
+    /(?:'([\u4e00-\u9fff])'|"([\u4e00-\u9fff])"|「([\u4e00-\u9fff])」|『([\u4e00-\u9fff])』)/g,
+    (full) => {
+      const i = slots.length;
+      slots.push(full);
+      return `\uE050${i}\uE051`;
+    },
+  );
+  return {
+    text: masked,
+    restore: (s: string) =>
+      s.replace(/\uE050(\d+)\uE051/g, (_, idx: string) => slots[Number(idx)] ?? ""),
+  };
+}
+
 function highRiskSoftBySlug(slug: string) {
   return Object.values(HIGH_RISK_SOFT_LABEL).find((h) => h.slug === slug) ?? null;
 }
@@ -372,7 +393,9 @@ function markBareGanzhiInSegment(
  */
 export function autoMarkBareTerms(text: string, locale: string): string {
   // Phrase-first: never mark 月柱/正印/壬水 as three abutting softs.
-  const folded = collapseChainedSoftReplaceArtifacts(replaceZhMingliStacks(text));
+  // Quoted single chars ("养") are rhetorical — do not auto-mark.
+  const { text: protectedText, restore } = protectQuotedSingleHanChars(text);
+  const folded = collapseChainedSoftReplaceArtifacts(replaceZhMingliStacks(protectedText));
   const seenSlugs = new Set<string>();
   // Seed with ids already marked by the model so auto-mark doesn't re-open them.
   for (const m of folded.matchAll(/⟦t:([a-zA-Z0-9_:]+)\|/g)) {
@@ -380,43 +403,45 @@ export function autoMarkBareTerms(text: string, locale: string): string {
   }
 
   const paragraphs = folded.split(/(\n\n+)/);
-  return collapseChainedSoftReplaceArtifacts(
-    paragraphs
-      .map((para) => {
-        if (/^\n\n+$/.test(para)) return para;
-        let marksInPara = 0;
-        const parts = para.split(/(⟦[^⟧]*⟧)/g);
-        return parts
-          .map((part, i) => {
-            if (i % 2 === 1) return part;
-            let out = markBareGanzhiInSegment(part, locale, seenSlugs, () => {
-              if (marksInPara >= 2) return false;
-              marksInPara += 1;
-              return true;
-            });
-            for (const hanId of BARE_AUTO_MARK_HAN) {
-              if (marksInPara >= 2) break;
-              const labels = resolveBareMarkLabels(hanId, locale);
-              if (!labels || seenSlugs.has(labels.slug)) continue;
-              const re =
-                hanId.length === 1
-                  ? new RegExp(
-                      `(?<![\\u4e00-\\u9fff])${escapeRegExp(hanId)}(?![\\u4e00-\\u9fff（(])`,
-                      "g",
-                    )
-                  : new RegExp(`${escapeRegExp(hanId)}(?![（(])`, "g");
-              out = out.replace(re, () => {
-                if (seenSlugs.has(labels.slug) || marksInPara >= 2) return hanId;
-                seenSlugs.add(labels.slug);
+  return restore(
+    collapseChainedSoftReplaceArtifacts(
+      paragraphs
+        .map((para) => {
+          if (/^\n\n+$/.test(para)) return para;
+          let marksInPara = 0;
+          const parts = para.split(/(⟦[^⟧]*⟧)/g);
+          return parts
+            .map((part, i) => {
+              if (i % 2 === 1) return part;
+              let out = markBareGanzhiInSegment(part, locale, seenSlugs, () => {
+                if (marksInPara >= 2) return false;
                 marksInPara += 1;
-                return encodeTermMarker(labels.slug, labels.soft, labels.plain);
+                return true;
               });
-            }
-            return out;
-          })
-          .join("");
-      })
-      .join(""),
+              for (const hanId of BARE_AUTO_MARK_HAN) {
+                if (marksInPara >= 2) break;
+                const labels = resolveBareMarkLabels(hanId, locale);
+                if (!labels || seenSlugs.has(labels.slug)) continue;
+                const re =
+                  hanId.length === 1
+                    ? new RegExp(
+                        `(?<![\\u4e00-\\u9fff])${escapeRegExp(hanId)}(?![\\u4e00-\\u9fff（(])`,
+                        "g",
+                      )
+                    : new RegExp(`${escapeRegExp(hanId)}(?![（(])`, "g");
+                out = out.replace(re, () => {
+                  if (seenSlugs.has(labels.slug) || marksInPara >= 2) return hanId;
+                  seenSlugs.add(labels.slug);
+                  marksInPara += 1;
+                  return encodeTermMarker(labels.slug, labels.soft, labels.plain);
+                });
+              }
+              return out;
+            })
+            .join("");
+        })
+        .join(""),
+    ),
   );
 }
 

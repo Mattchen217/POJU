@@ -136,6 +136,7 @@ export function RichReadingText({
   const nodes: ReactNode[] = blocks.map((block, i) => {
     const keyBase = i * 10;
     switch (block.type) {
+      case "h2":
       case "h3":
         return (
           <SubheadBlock

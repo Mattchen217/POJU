@@ -45,6 +45,7 @@ import {
   plainByTermId,
   normalizeTermMarkerIds,
   prepareTextForGlossaryRender,
+  protectQuotedSingleHanChars,
   repairChatTermMarkers,
   repairShenshaMarkerSoftLabels,
   stripBareTermMarkers,
@@ -88,6 +89,7 @@ export {
   plainByTermId,
   normalizeTermMarkerIds,
   prepareTextForGlossaryRender,
+  protectQuotedSingleHanChars,
   repairChatTermMarkers,
   repairShenshaMarkerSoftLabels,
   stripBrokenMarkers,
@@ -491,6 +493,123 @@ const ZH_STRIPE_GLOBAL_REPLACE: ReadonlyArray<[string, string]> = [
   ["吉凶", ""],
 ];
 
+/**
+ * Whole-phrase first — never chew "不是你的命运判决书" into
+ * "不是你的人生轨迹判决书" via per-token 命运→人生轨迹.
+ */
+const ZH_PHRASE_WHOLESALE_REPLACE: ReadonlyArray<[string, string]> = [
+  ["不是你的命运判决书", "这不是判决，是读数"],
+  ["不是命运判决书", "这不是判决，是读数"],
+  ["命运判决书", "这不是判决，是读数"],
+  ["人生轨迹判决书", "这不是判决，是读数"],
+  ["不是命运定论", "这是配置读数"],
+  ["不是你的命运定论", "这是配置读数"],
+  ["命运定论", "配置读数"],
+  ["不是命定", "怎么用，取决于你自己"],
+  ["这不是命定", "怎么用，取决于你自己"],
+];
+
+const UNREADABLE_SOFT_COMBOS = [
+  "人生轨迹判决书",
+  "人生轨迹定论",
+  "靠'滋养培育'出来的",
+  "靠“滋养培育”出来的",
+  "靠「滋养培育」出来的",
+] as const;
+
+const METAPHOR_BLACKLIST_ZH = [
+  "持续燃烧的引擎",
+  "手机散热片",
+  "随时能翻的参考书",
+  "散热缺口",
+  "冷却模块",
+  "引擎",
+] as const;
+
+const METAPHOR_BLACKLIST_EN = [
+  "steady-burning engine",
+  "phone heatsink",
+  "always-open reference book",
+  "heat-dissipation gap",
+  "cooling module",
+  "engine",
+] as const;
+
+/** Protect `"养"` / 「冲」 style rhetorical single chars — never soft-replace them. */
+export function protectQuotedSingleChars(text: string): {
+  text: string;
+  restore: (s: string) => string;
+} {
+  return protectQuotedSingleHanChars(text);
+}
+
+/** Soft-visible façade bans after GlossaryText strip (身弱 / 命字族). */
+export function auditUserFacingBannedLeaks(
+  softVisible: string,
+  locale: string,
+): ComplianceViolation[] {
+  if (!softVisible?.trim() || !locale.startsWith("zh")) return [];
+  const violations: ComplianceViolation[] = [];
+  for (const term of ["身弱", "身强", "身旺", "命运", "命定", "命理", "命盘", "命局", "宿命"]) {
+    const idx = softVisible.indexOf(term);
+    if (idx >= 0) {
+      violations.push({
+        label: `term:${term}`,
+        snippet: snippetAround(softVisible, idx, term.length),
+      });
+    }
+  }
+  return violations;
+}
+
+/** Blacklisted stock metaphors (incl. 引擎) — must not reach users. */
+export function auditMetaphorBlacklist(
+  softVisible: string,
+  locale: string,
+): ComplianceViolation[] {
+  if (!softVisible?.trim()) return [];
+  const violations: ComplianceViolation[] = [];
+  const list = locale.startsWith("zh") ? METAPHOR_BLACKLIST_ZH : METAPHOR_BLACKLIST_EN;
+  const lower = locale.startsWith("zh") ? softVisible : softVisible.toLowerCase();
+  for (const phrase of list) {
+    const needle = locale.startsWith("zh") ? phrase : phrase.toLowerCase();
+    const idx = lower.indexOf(needle);
+    if (idx >= 0) {
+      violations.push({
+        label: "metaphor_blacklist",
+        snippet: snippetAround(softVisible, idx, phrase.length),
+      });
+      break;
+    }
+  }
+  return violations;
+}
+
+/** Post-replace readability: unreadable combos or abutting soft gloss chains → reject+regen. */
+export function auditSoftReplaceReadability(
+  softVisible: string,
+  locale: string,
+): ComplianceViolation[] {
+  if (!softVisible?.trim() || !locale.startsWith("zh")) return [];
+  const violations: ComplianceViolation[] = [];
+  for (const combo of UNREADABLE_SOFT_COMBOS) {
+    const idx = softVisible.indexOf(combo);
+    if (idx >= 0) {
+      violations.push({
+        label: "soft_replace_unreadable",
+        snippet: snippetAround(softVisible, idx, combo.length),
+      });
+    }
+  }
+  if (hasChainedSoftReplaceArtifacts(softVisible)) {
+    violations.push({
+      label: "soft_replace_unreadable",
+      snippet: snippetAround(softVisible, 0, Math.min(48, softVisible.length)),
+    });
+  }
+  return violations;
+}
+
 /** Bare pillar / chart structure words → SaaS soft gloss (payment audit). */
 const ZH_STRUCTURE_SOFT_REPLACE: ReadonlyArray<[string, string]> = [
   ["大运", "当前阶段气候"],
@@ -555,7 +674,12 @@ function replaceBareShenshaWithSoft(text: string, locale: string): string {
 function replaceStandaloneRedlines(text: string, locale: string): string {
   let result = text;
   if (locale.startsWith("zh")) {
-    // Phrase-first — never chew "月柱正印壬水" into adjacent soft tokens.
+    const { text: protectedText, restore } = protectQuotedSingleChars(result);
+    result = protectedText;
+    // Phrase-first — never chew "月柱正印壬水" / "命运判决书" into adjacent soft tokens.
+    for (const [phrase, replacement] of ZH_PHRASE_WHOLESALE_REPLACE) {
+      result = result.split(phrase).join(replacement);
+    }
     result = replaceZhMingliStacks(result);
     for (const [word, replacement] of ZH_STRIPE_GLOBAL_REPLACE) {
       if (word === "命运") {
@@ -572,6 +696,7 @@ function replaceStandaloneRedlines(text: string, locale: string): string {
     result = collapseChainedSoftReplaceArtifacts(result);
     result = replaceWuxingClashPhrases(result);
     result = replaceBareShenshaWithSoft(result, locale);
+    result = restore(result);
   } else {
     for (const [regex, replacement] of EN_PAYMENT_REDLINE_PATTERNS) {
       regex.lastIndex = 0;

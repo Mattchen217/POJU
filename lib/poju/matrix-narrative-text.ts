@@ -42,8 +42,10 @@ export function matrixSynopsisNarrativeState(display: MatrixSynopsisDisplay): {
 } {
   const src = display.narrative_source;
   const isLlmNarrative = src === "llm";
+  // PART 2: template/stored is the intended path — never spin forever waiting for LLM.
   const showTemplateFallback =
-    display.narrative_failed === true || src === "template" || src === "stored";
-  const narrativeLoading = !isLlmNarrative && !showTemplateFallback;
-  return { isLlmNarrative, showTemplateFallback, narrativeLoading };
+    display.narrative_failed === true || src === "template" || src === "stored" || !src;
+  const narrativeLoading = false;
+  void isLlmNarrative;
+  return { isLlmNarrative: false, showTemplateFallback, narrativeLoading };
 }

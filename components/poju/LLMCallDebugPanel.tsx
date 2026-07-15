@@ -76,6 +76,13 @@ export function LLMCallDebugPanel({ debug, locale }: Props) {
         {debug.retried ? " · retried" : ""}
         {debug.fell_back ? " · fallback" : ""}
       </div>
+      {debug.fell_back ? (
+        <div className={"poju-llm-debug__line" + dangerClass(true)}>
+          {zh
+            ? "⚠ 当前内容为兜底（模型调用失败）"
+            : "⚠ Fallback content (model call failed)"}
+        </div>
+      ) : null}
       <div className={"poju-llm-debug__line" + warnClass(cacheMiss)}>
         prompt: {formatTokenCount(promptTokens)}
         {" · "}

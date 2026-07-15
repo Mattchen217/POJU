@@ -1,17 +1,25 @@
 /**
  * Mandatory delivery gate for base-analysis — shared POJU/Glyph/Match/Syncro context base.
  * Blocks incomplete / out-of-set content before KV or IndexedDB persistence.
+ * PART 2: audit runs on **final soft-visible text** (sanitize → auto-mark → strip), not raw model only.
  */
 
+import { softVisibleForAudit } from "@/lib/base-analysis/prepare-display-pipeline";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import { computeNatalChartRelations } from "@/lib/calculations/relation-engine";
 import {
   auditDeliveredText,
+  auditMetaphorBlacklist,
+  auditSoftReplaceReadability,
+  auditUserFacingBannedLeaks,
   type ComplianceViolation,
 } from "@/lib/llm/sanitize/compliance-terms";
 import {
   auditMarkerCompleteness,
   auditShenShaAgainstInstance,
+  maskMarkersForAudit,
+  prepareTextForGlossaryRender,
+  stripMarkersForPrompt,
 } from "@/lib/llm/sanitize/term-marking";
 
 export const BASE_ANALYSIS_GATE_ERROR = "BASE_ANALYSIS_DELIVERY_GATE_FAILED";
@@ -37,12 +45,30 @@ export function auditBaseAnalysisDelivery(
   locale: string,
   structured: ProfileStructured,
 ): BaseAnalysisGateResult {
+  // Marked = sanitize+autoMark; soft-visible = what users read after GlossaryText.
+  // stem_element / bare_ganzhi: audit masked marked text (soft inside ⟦t:⟧ is intentional).
+  // 身弱/命/引擎/可读性: audit soft-visible (façade — soft labels must not reintroduce them).
+  const marked = prepareTextForGlossaryRender(text, locale);
+  const softVisible = softVisibleForAudit(text, locale);
+  const maskedMarked = maskMarkersForAudit(marked);
+
   const violations = dedupeViolations([
-    ...auditDeliveredText(text, locale, structured, {
+    ...auditDeliveredText(maskedMarked, locale, structured, {
       relations: computeNatalChartRelations(structured),
     }),
-    ...auditMarkerCompleteness(text),
-    ...auditShenShaAgainstInstance(text, structured),
+    ...auditUserFacingBannedLeaks(softVisible, locale),
+    ...auditMetaphorBlacklist(softVisible, locale),
+    ...auditSoftReplaceReadability(softVisible, locale),
+    // If markers strip and soft still shows bare stem compounds, catch on soft too.
+    ...auditDeliveredText(stripMarkersForPrompt(marked), locale).filter(
+      (v) =>
+        v.label === "term:身弱" ||
+        v.label === "term:身强" ||
+        v.label === "term:身旺" ||
+        v.label.startsWith("term:命"),
+    ),
+    ...auditMarkerCompleteness(marked),
+    ...auditShenShaAgainstInstance(marked, structured),
   ]);
 
   if (violations.length > 0) {
@@ -65,9 +91,17 @@ export function isBaseAnalysisGateFailure(violations: ComplianceViolation[]): bo
       v.label.startsWith("shen_sha_") ||
       v.label.startsWith("relation_") ||
       v.label === "bare_ganzhi" ||
+      v.label === "stem_element" ||
       v.label.startsWith("term_density:") ||
       v.label === "marker_missing_plain" ||
-      v.label.startsWith("marker_visible_"),
+      v.label.startsWith("marker_visible_") ||
+      v.label === "term:身弱" ||
+      v.label === "term:身强" ||
+      v.label === "term:身旺" ||
+      v.label.startsWith("term:命") ||
+      v.label === "soft_replace_unreadable" ||
+      v.label === "metaphor_blacklist" ||
+      v.label === "payment_leak:chained_soft_replace",
   );
 }
 

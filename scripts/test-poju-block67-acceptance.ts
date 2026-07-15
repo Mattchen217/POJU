@@ -113,7 +113,7 @@ assert("inventory dynamic shensha count", inventory.includes("本盘实算 3 项
 assert("no 9选N", !inventory.includes("9 选") && !inventory.includes("闭集 9"));
 assert("breakthrough-core no 闭集 9", !read("lib/llm/deepseek/breakthrough-core.ts").includes("闭集 9"));
 
-// Fix 2+3 — matrix alignment
+// Fix 2+3 — matrix alignment (prompt lib kept; route is PART-2 template-only / 410)
 const matrixPromptTs = read("lib/llm/prompts/matrix-narrative-prompt.ts");
 const matrixRouteTs = read("app/api/poju/matrix-narrative/route.ts");
 assert("matrix input uses focusHints", matrixPromptTs.includes("extractRelationFocusHintsFromText"));
@@ -121,7 +121,10 @@ assert("matrix poju relation appendix not empty", !matrixPromptTs.includes('if (
 assert("matrix data discipline block", matrixPromptTs.includes("MATRIX_NARRATIVE_DATA_DISCIPLINE"));
 assert("matrix 三段位", MATRIX_NARRATIVE_DATA_DISCIPLINE.includes("三段位"));
 assert("matrix 用足数据", MATRIX_NARRATIVE_DATA_DISCIPLINE.includes("不要只反复用日主"));
-assert("route injects discipline user-side", matrixRouteTs.includes("MATRIX_NARRATIVE_DATA_DISCIPLINE"));
+assert(
+  "route retired LLM (PART 2 template-only)",
+  matrixRouteTs.includes("matrix_narrative_removed") || matrixRouteTs.includes("410"),
+);
 
 const payload = makePayload(makeStructured());
 const wealthAppendix = buildMatrixNarrativeRelationAppendix(payload, "poju", {

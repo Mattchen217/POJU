@@ -14,6 +14,7 @@ import type { StoredProfileData } from "@/lib/db/poju-db";
 import { parseAppLocale } from "@/lib/prompts/language-directive";
 import {
   saveBaseAnalysisFromStream,
+  saveCoreJudgmentsForProfile,
 } from "@/lib/profile/stored-profiles-service";
 
 export type BaseAnalysisStreamPreparingProps = {
@@ -103,6 +104,10 @@ export function BaseAnalysisStreamPreparing({
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         console.error(`[${logLabel}] save failed:`, e);
+        console.warn("[fallback] base-analysis save failed — Layer-1 judgments already attempted", {
+          profile_id: profileId,
+          reason: msg,
+        });
         onErrorRef.current?.(msg);
       }
     },
@@ -117,6 +122,17 @@ export function BaseAnalysisStreamPreparing({
     onComplete: handleComplete,
     onError: (error) => {
       console.error(`[${logLabel}] stream error:`, error);
+      console.warn("[fallback] base-analysis stream failed — persisting Layer-1 judgments only", {
+        profile_id: profileId,
+        reason: error,
+      });
+      void saveCoreJudgmentsForProfile({
+        profile_id: profileId,
+        structured: localData.structured,
+        locale,
+      }).catch((e) => {
+        console.warn("[fallback] saveCoreJudgmentsForProfile failed", e);
+      });
       onErrorRef.current?.(error);
     },
   });

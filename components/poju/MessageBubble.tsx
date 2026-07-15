@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type { POJUAction, POJUMessage, ToolName } from "@/lib/poju/types";
 import { RichReadingText } from "@/components/cross-product/RichReadingText";
 import { RefundOfferAction } from "@/components/poju/RefundOfferAction";
@@ -44,6 +44,7 @@ export const MessageBubble = memo(function MessageBubble({
   onToolResponse,
 }: MessageBubbleProps) {
   const locale = useLocale();
+  const tReport = useTranslations("base_analysis_view");
   const isUser = message.role === "user";
   const isWelcomePanel = isAssistantWelcomeMessage(message);
   if (isWelcomePanel && hideWelcomePanel) return null;
@@ -73,7 +74,7 @@ export const MessageBubble = memo(function MessageBubble({
     return (
       <div className="pchat__msg pchat__msg--ai">
         <div className="pchat__report">
-          <div className="pchat__report-k">Base Analysis Report</div>
+          <div className="pchat__report-k">{tReport("title")}</div>
           <RichReadingText
             text={message.meta.report_text ?? message.content}
             locale={locale}

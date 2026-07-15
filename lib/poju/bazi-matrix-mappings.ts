@@ -101,14 +101,6 @@ export const ZODIAC_HAN_PINYIN: Record<string, string> = {
   猪: "zhū",
 };
 
-const ELEMENT_ZH: Record<string, string> = {
-  Wood: "木",
-  Fire: "火",
-  Earth: "土",
-  Metal: "金",
-  Water: "水",
-};
-
 const ZODIAN_EN_TO_HAN: Record<string, string> = Object.fromEntries(
   Object.entries(ZODIAN_HAN_TO_EN).map(([han, en]) => [en, han]),
 );
@@ -136,8 +128,47 @@ export function isZhMatrixLocale(locale: string): boolean {
   return locale.toLowerCase().startsWith("zh");
 }
 
+export const ELEMENT_ZH: Record<string, string> = {
+  Wood: "木",
+  Fire: "火",
+  Earth: "土",
+  Metal: "金",
+  Water: "水",
+};
+
+const ELEMENT_ES: Record<string, string> = {
+  Wood: "Madera",
+  Fire: "Fuego",
+  Earth: "Tierra",
+  Metal: "Metal",
+  Water: "Agua",
+};
+
+const ELEMENT_DE: Record<string, string> = {
+  Wood: "Holz",
+  Fire: "Feuer",
+  Earth: "Erde",
+  Metal: "Metall",
+  Water: "Wasser",
+};
+
+const ELEMENT_FR: Record<string, string> = {
+  Wood: "Bois",
+  Fire: "Feu",
+  Earth: "Terre",
+  Metal: "Métal",
+  Water: "Eau",
+};
+
+/** Locale-aware element labels for matrix templates (never leave bare English in non-en UI). */
 export function elementLabelLocalized(element: string, locale: string): string {
-  return isZhMatrixLocale(locale) ? (ELEMENT_ZH[element] ?? element) : element;
+  const key = element.trim();
+  const lang = locale.toLowerCase().slice(0, 2);
+  if (lang === "zh") return ELEMENT_ZH[key] ?? key;
+  if (lang === "es") return ELEMENT_ES[key] ?? key;
+  if (lang === "de") return ELEMENT_DE[key] ?? key;
+  if (lang === "fr") return ELEMENT_FR[key] ?? key;
+  return key; // en keeps Wood/Fire/…
 }
 
 export function formatStemDisplay(stem: string, locale: string): string {

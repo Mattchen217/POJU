@@ -1314,7 +1314,7 @@
   },
   "poju_matrix": {
     "eyebrow": "Raumzeitliche Ausrichtung",
-    "main_title": "Astro-Chronologische Matrix",
+    "main_title": "Persönliches Energieprofil",
     "main_description": "Eine systemische Dekonstruktion Ihrer Geburtsarchitektur, berechnet über raumzeitliche und geografische Koordinaten, entwickelt für fortgeschrittene strategische Entscheidungen.",
     "section_label": "Natales Raumzeit-Profil · Präzisionskalibrierung",
     "born": "GEBOREN",
@@ -2128,13 +2128,13 @@
     }
   },
   "base_analysis_view": {
-    "eyebrow": "Persönliches Charakterporträt",
-    "title": "Vollständiges persönliches Charakterporträt",
+    "eyebrow": "Persönlicher Energieanalysebericht",
+    "title": "Persönlicher Energieanalysebericht",
     "close": "Schließen",
     "loading": "Wird geladen…",
     "not_found": "Keine gespeicherte Analyse gefunden.",
-    "poju_cta_title": "Mit diesem Porträt zu POJU",
-    "poju_cta_description": "Dein Chart ist schon im Kontext — stell Nachfragen.",
+    "poju_cta_title": "Mit diesem Bericht zu POJU",
+    "poju_cta_description": "Dein Energie-Readout ist schon im Kontext — stell Nachfragen.",
     "poju_cta_button": "POJU öffnen"
   },
   "birth_form": {

@@ -1,3 +1,8 @@
+/**
+ * Matrix welcome LLM path removed (PART 2) — front-of-paywall must be template-only.
+ * Callers should use ensureProfileMatrixList / buildMatrixDisplayData.
+ */
+
 import type {
   MatrixNarrativeProduct,
   MatrixNarrativeResponse,
@@ -14,7 +19,7 @@ export type MatrixNarrativeApiResult = {
   error?: string;
 };
 
-/** Browser-only: fetch LLM narrative for Energy Matrix (fast DeepSeek, no thinking). */
+/** @deprecated PART 2 — always throws; matrix welcome is template-only. */
 export async function requestMatrixNarrative(input: {
   matrix_payload: PojuMatrixPayload;
   matrix_payload_b?: PojuMatrixPayload;
@@ -22,29 +27,11 @@ export async function requestMatrixNarrative(input: {
   product?: MatrixNarrativeProduct;
   signal?: AbortSignal;
 }): Promise<MatrixNarrativeResponse> {
-  if (typeof window === "undefined") {
-    throw new Error("requestMatrixNarrative is browser-only");
-  }
-
-  const product = input.product ?? "poju";
-
-  const res = await fetch("/api/poju/matrix-narrative", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      matrix_payload: input.matrix_payload,
-      matrix_payload_b: input.matrix_payload_b,
-      locale: input.locale,
-      product,
-    }),
-    signal: input.signal,
+  console.warn("[fallback] requestMatrixNarrative called — LLM path removed; use template ensureProfileMatrixList", {
+    product: input.product ?? "poju",
+    locale: input.locale,
   });
-
-  const payload = (await res.json().catch(() => ({}))) as MatrixNarrativeApiResult;
-
-  if (!res.ok || !payload.ok || !payload.narrative) {
-    throw new Error(payload.error || `Matrix narrative failed (${res.status})`);
-  }
-
-  return payload.narrative;
+  throw new Error(
+    "matrix_narrative_removed: welcome copy is template-only — use ensureProfileMatrixList",
+  );
 }

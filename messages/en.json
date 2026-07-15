@@ -1311,12 +1311,12 @@
     "error_create_profile": "Failed to save your information. Please try again."
   },
   "base_analysis_view": {
-    "eyebrow": "Personal Energy Profile",
-    "title": "Full Personal Energy Profile",
+    "eyebrow": "Personal Energy Analysis Report",
+    "title": "Personal Energy Analysis Report",
     "close": "Close",
     "loading": "Loading…",
     "not_found": "No saved analysis found.",
-    "poju_cta_title": "Take this profile into POJU",
+    "poju_cta_title": "Take this report into POJU",
     "poju_cta_description": "Ask follow-up questions with your energy readout already in context.",
     "poju_cta_button": "Open POJU"
   },
@@ -1484,7 +1484,7 @@
   },
   "poju_matrix": {
     "eyebrow": "Spatiotemporal Alignment",
-    "main_title": "Astro-Chronological Matrix",
+    "main_title": "Personal Energy Profile",
     "main_description": "A systemic deconstruction of your natal architecture computed via spatiotemporal and geographic coordinates, engineered for advanced strategic decision-making.",
     "section_label": "Natal Spatiotemporal Profile · Precision Calibration",
     "born": "BORN",

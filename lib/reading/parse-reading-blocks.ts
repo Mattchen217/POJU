@@ -2,6 +2,7 @@ import { prepareReadingLayoutText } from "@/lib/reading/prepare-reading-layout";
 
 export type ReadingBlock =
   | { type: "p"; content: string }
+  | { type: "h2"; content: string }
   | { type: "h3"; content: string }
   | { type: "lead"; label: string; body: string }
   | { type: "subhead"; content: string }
@@ -82,8 +83,13 @@ export function parseReadingBlocks(raw: string, opts?: { layout?: boolean }): Re
       continue;
     }
 
+    // Prefer ### before ## (### starts with ## too).
     if (trimmed.startsWith("### ")) {
       blocks.push({ type: "h3", content: trimmed.slice(4).trim() });
+      continue;
+    }
+    if (trimmed.startsWith("## ")) {
+      blocks.push({ type: "h2", content: trimmed.slice(3).trim() });
       continue;
     }
 

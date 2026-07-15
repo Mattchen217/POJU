@@ -135,7 +135,7 @@ async function main() {
   console.log("has multi-line bullet rule:", system.includes("独占一行") || system.includes("per line") ? "PASS" : "FAIL");
   console.log("has natal relation anchor:", system.includes("本命结构关系") && system.includes("最多点一处") ? "PASS" : "FAIL");
   console.log("ignores liunian in base:", system.includes("流年/动态") || system.includes("liunian") ? "PASS" : "FAIL");
-  console.log("SaaS title 个人能量画像:", system.includes("个人能量画像") ? "PASS" : "FAIL");
+  console.log("SaaS title 个人能量分析报告:", system.includes("个人能量分析报告") ? "PASS" : "FAIL");
   console.log("zero decade narrative:", system.includes("零大运") || system.includes("零年龄段") ? "PASS" : "FAIL");
 
   if (!isOpenRouterConfigured()) {

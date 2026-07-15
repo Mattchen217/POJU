@@ -605,7 +605,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         if (!ready) {
           await dialog.alert(
             locale.startsWith("zh")
-              ? "个人能量画像准备中，请稍后再发送。"
+              ? "个人能量分析报告准备中，请稍后再发送。"
               : "Base chart analysis is still preparing. Please wait and try again.",
           );
           return;
@@ -1069,7 +1069,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           onSessionUpdate(baseSession);
           await dialog.alert(
             locale.startsWith("zh")
-              ? "个人能量画像准备中，请稍后再试。"
+              ? "个人能量分析报告准备中，请稍后再试。"
               : "Base chart analysis is still preparing. Please wait and try again.",
           );
           return;
@@ -1339,7 +1339,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           onSessionUpdate(baseSession);
           await dialog.alert(
             locale.startsWith("zh")
-              ? "个人能量画像准备中，请稍后再试。"
+              ? "个人能量分析报告准备中，请稍后再试。"
               : "Base chart analysis is still preparing. Please wait and try again.",
           );
           return;

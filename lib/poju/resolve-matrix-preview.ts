@@ -1,15 +1,12 @@
+/**
+ * Persist template-only matrix preview (no LLM).
+ * Front-of-paywall copy must be 100% controllable — PART 2 cancels matrix-narrative model calls.
+ */
+
 import type { StoredProfileMatrixList } from "@/lib/db/poju-db";
-import { applyToolMatrixNarrative, applyToolMatrixNarrativeFailed } from "@/lib/cross-product/apply-tool-matrix-narrative";
-import { requestMatrixNarrative } from "@/lib/llm/deepseek/matrix-narrative";
-import type { MatrixNarrativeResponse } from "@/lib/llm/prompts/matrix-narrative-prompt";
-import {
-  applyMatrixNarrativeToDisplay,
-  applyMatrixNarrativeToPayload,
-  markMatrixNarrativeFailed,
-} from "@/lib/poju/apply-matrix-narrative";
 import type { MatrixDisplayData } from "@/lib/poju/build-matrix-display";
-import { buildMatrixPayloadFromProfile, refreshMatrixPayload } from "@/lib/poju/build-matrix-payload";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
+import { buildMatrixPayloadFromProfile, refreshMatrixPayload } from "@/lib/poju/build-matrix-payload";
 import { getOnboardingCopy } from "@/lib/poju/onboarding-templates";
 import type { ToolName } from "@/lib/poju/types";
 import {
@@ -23,24 +20,31 @@ export type MatrixPreviewProduct = ToolName | "poju";
 
 export type EnsureMatrixListResult = {
   list: StoredProfileMatrixList | null;
-  narrative: MatrixNarrativeResponse | null;
+  /** Always null — LLM narrative path removed (PART 2). */
+  narrative: null;
   fromStorage: boolean;
+  template_only: boolean;
 };
 
-export function matrixListFromNarrative(
-  narrative: MatrixNarrativeResponse,
+export function matrixListFromTemplateDisplay(
+  display: MatrixDisplayData,
   locale: string,
 ): StoredProfileMatrixList {
   return {
-    elemental_breakdown: narrative.elemental_breakdown,
-    structural_dynamics: narrative.structural_dynamics,
-    annual_transit_2026: narrative.annual_transit_2026,
+    elemental_breakdown: {
+      caption: display.enote_caption ?? "",
+    },
+    structural_dynamics: display.structural_dynamics,
+    annual_transit_2026: {
+      title: display.annual_transit.stem_en || String(display.annual_transit.year),
+      description: display.annual_transit.narrative,
+    },
     generated_at: new Date().toISOString(),
     locale,
     poju_onboarding: {
-      archetype_intro: narrative.poju_onboarding.archetype_intro,
-      core_conflict: narrative.poju_onboarding.core_conflict,
-      call_to_action: narrative.poju_onboarding.call_to_action,
+      archetype_intro: display.synopsis.archetype,
+      core_conflict: display.synopsis.friction,
+      call_to_action: display.synopsis.prompt || getOnboardingCopy("poju", locale),
     },
   };
 }
@@ -51,17 +55,24 @@ export function applyMatrixListToDisplay(
 ): MatrixDisplayData {
   return {
     ...display,
-    enote_caption: list.elemental_breakdown.caption,
-    structural_dynamics: list.structural_dynamics,
+    enote_caption: list.elemental_breakdown.caption || display.enote_caption,
+    structural_dynamics: list.structural_dynamics ?? display.structural_dynamics,
     annual_transit: {
       ...display.annual_transit,
       stem_en:
         list.annual_transit_2026.title.split("/")[0]?.trim() || display.annual_transit.stem_en,
-      narrative: list.annual_transit_2026.description,
+      narrative: list.annual_transit_2026.description || display.annual_transit.narrative,
     },
-    narrative_source: "stored",
+    narrative_source: "template",
     narrative_failed: false,
     narrative_locale: list.locale,
+    synopsis: list.poju_onboarding
+      ? {
+          archetype: list.poju_onboarding.archetype_intro,
+          friction: list.poju_onboarding.core_conflict,
+          prompt: list.poju_onboarding.call_to_action,
+        }
+      : display.synopsis,
   };
 }
 
@@ -70,26 +81,13 @@ export function applyStoredMatrixPreview(
   list: StoredProfileMatrixList,
   product: MatrixPreviewProduct,
   locale: string,
-  matchPerson?: "a" | "b",
+  _matchPerson?: "a" | "b",
 ): PojuMatrixPayload {
   const display = payload.display;
   if (!display) return payload;
 
   const guide = getOnboardingCopy(product, locale);
   const updatedDisplay = applyMatrixListToDisplay(display, list);
-
-  if (product === "match") {
-    return {
-      ...payload,
-      display: {
-        ...updatedDisplay,
-        synopsis: {
-          ...updatedDisplay.synopsis,
-          prompt: guide,
-        },
-      },
-    };
-  }
 
   if (product === "poju") {
     const onboarding = list.poju_onboarding;
@@ -123,46 +121,49 @@ export function applyStoredMatrixPreview(
   };
 }
 
-/** Read stored matrix_list or generate once (full poju prompt) and persist. */
+/** Read stored matrix_list or build + persist deterministic template (zero LLM). */
 export async function ensureProfileMatrixList(opts: {
   profileId: string;
   userProfile: UserProfile;
   locale: string;
   signal?: AbortSignal;
 }): Promise<EnsureMatrixListResult> {
+  void opts.signal;
   const row = await getStoredProfile(opts.profileId);
   if (storedMatrixListPresent(row)) {
-    return { list: row!.matrix_list!, narrative: null, fromStorage: true };
+    return {
+      list: row!.matrix_list!,
+      narrative: null,
+      fromStorage: true,
+      template_only: true,
+    };
   }
 
   let payload = buildMatrixPayloadFromProfile(opts.profileId, opts.userProfile, {
     locale: opts.locale,
   });
   payload = refreshMatrixPayload(payload, opts.locale);
-
-  try {
-    const narrative = await requestMatrixNarrative({
-      matrix_payload: payload,
-      locale: opts.locale,
-      product: "poju",
-      signal: opts.signal,
+  const display = payload.display;
+  if (!display) {
+    console.warn("[fallback] ensureProfileMatrixList: no display — cannot persist template", {
+      profile_id: opts.profileId,
+      reason: "missing_display",
     });
-
-    const list = matrixListFromNarrative(narrative, opts.locale);
-    await saveMatrixList(opts.profileId, list);
-    return { list, narrative, fromStorage: false };
-  } catch (e) {
-    console.warn(
-      "[ensureProfileMatrixList] matrix narrative failed — static matrix fallback",
-      e instanceof Error ? e.message : String(e),
-    );
-    return { list: null, narrative: null, fromStorage: false };
+    return { list: null, narrative: null, fromStorage: false, template_only: true };
   }
+
+  const list = matrixListFromTemplateDisplay(display, opts.locale);
+  try {
+    await saveMatrixList(opts.profileId, list);
+  } catch (e) {
+    console.warn("[fallback] ensureProfileMatrixList: saveMatrixList failed", {
+      profile_id: opts.profileId,
+      reason: e instanceof Error ? e.message : String(e),
+    });
+  }
+  return { list, narrative: null, fromStorage: false, template_only: true };
 }
 
-/**
- * Profile view / report modal: stored matrix_list or one-time legacy backfill, then payload for UI.
- */
 export async function resolveProfileMatrixPayload(opts: {
   profileId: string;
   userProfile: UserProfile;
@@ -190,19 +191,6 @@ export async function resolveProfileMatrixPayload(opts: {
   return applyMatrixPreviewToPayload(payload, ensured, product, opts.locale);
 }
 
-export function applyFreshNarrativeToPayload(
-  payload: PojuMatrixPayload,
-  narrative: MatrixNarrativeResponse,
-  product: MatrixPreviewProduct,
-  locale: string,
-  matchPerson?: "a" | "b",
-): PojuMatrixPayload {
-  if (product === "poju") {
-    return applyMatrixNarrativeToPayload(payload, narrative, locale);
-  }
-  return applyToolMatrixNarrative(payload, narrative, product, locale, matchPerson);
-}
-
 export function applyMatrixPreviewToPayload(
   payload: PojuMatrixPayload,
   ensured: EnsureMatrixListResult,
@@ -210,31 +198,15 @@ export function applyMatrixPreviewToPayload(
   locale: string,
   matchPerson?: "a" | "b",
 ): PojuMatrixPayload {
-  if (ensured.fromStorage) {
-    if (!ensured.list) {
-      throw new Error("Stored matrix preview missing matrix_list");
-    }
-    return applyStoredMatrixPreview(payload, ensured.list, product, locale, matchPerson);
+  void matchPerson;
+  if (ensured.list) {
+    return applyStoredMatrixPreview(payload, ensured.list, product, locale);
   }
-  if (ensured.narrative) {
-    return applyFreshNarrativeToPayload(payload, ensured.narrative, product, locale, matchPerson);
-  }
-  if (product === "poju") {
-    const failed = markMatrixNarrativeFailed(payload);
-    const display = failed.display;
-    if (!display) return failed;
-    return {
-      ...failed,
-      display: {
-        ...display,
-        synopsis: {
-          ...display.synopsis,
-          prompt: getOnboardingCopy("poju", locale),
-        },
-      },
-    };
-  }
-  return applyToolMatrixNarrativeFailed(payload, product, locale);
+  console.warn("[fallback] applyMatrixPreviewToPayload: using in-memory template", {
+    reason: "no_persisted_list",
+    product,
+  });
+  return buildStaticMatrixPreviewPayload(payload, product, locale);
 }
 
 /** Matrix preview without LLM — stored matrix_list or deterministic static fallback. */
@@ -243,14 +215,14 @@ export function buildStaticMatrixPreviewPayload(
   product: MatrixPreviewProduct,
   locale: string,
 ): PojuMatrixPayload {
-  const failed = markMatrixNarrativeFailed(payload);
-  const display = failed.display;
-  if (!display) return failed;
+  const display = payload.display;
+  if (!display) return payload;
   return {
-    ...failed,
+    ...payload,
     display: {
       ...display,
-      narrative_source: "stored",
+      narrative_source: "template",
+      narrative_failed: false,
       synopsis: {
         ...display.synopsis,
         prompt: getOnboardingCopy(product, locale),
@@ -260,9 +232,7 @@ export function buildStaticMatrixPreviewPayload(
   };
 }
 
-/**
- * Profile view / preview prep / report modal — never calls matrix narrative LLM.
- */
+/** Sync-friendly: prefer stored list, else refresh template display (no LLM). */
 export async function resolveProfileMatrixPayloadWithoutLlm(opts: {
   profileId: string;
   userProfile: UserProfile;
@@ -274,11 +244,9 @@ export async function resolveProfileMatrixPayloadWithoutLlm(opts: {
   });
   payload = refreshMatrixPayload(payload, opts.locale);
   const product = opts.product ?? "poju";
-
   const row = await getStoredProfile(opts.profileId);
   if (storedMatrixListPresent(row)) {
     return applyStoredMatrixPreview(payload, row!.matrix_list!, product, opts.locale);
   }
-
   return buildStaticMatrixPreviewPayload(payload, product, opts.locale);
 }

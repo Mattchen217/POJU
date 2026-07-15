@@ -60,7 +60,8 @@ ${BASE_ANALYSIS_NATAL_RELATION_ANCHOR_ZH}
 
 ## 收尾（无 ## 标题）
 
-- 全文末尾**一句短收束**：这是配置读数，不是命运定论——plain prose，**不是** \`##\` 分区。`;
+- 全文末尾**一句短收束**：这是你的能量配置读数。怎么用它，取决于你自己。——plain prose，**不是** \`##\` 分区。
+- **禁止**用「这不是命运 / 不是命定 / 不是判决书」等否定式收尾——会诱使写出禁词。`;
 
 const BASE_ANALYSIS_OUTPUT_SECTIONS_EN = `# Output sections (all required)
 
@@ -80,7 +81,8 @@ ${BASE_ANALYSIS_NATAL_RELATION_ANCHOR_EN}
 
 ## Closing (no ## heading)
 
-- End with **one short line**: this is a config readout, not fate—plain prose, **not** a \`##\` section.`;
+- End with **one short line**: this is your energy-config readout; how you use it is yours—plain prose, **not** a \`##\` section.
+- **Never** close with "this is not fate / not destiny / not a verdict" negations—those invite banned words.`;
 
 const BASE_ANALYSIS_NEUTRALITY_RULES_ZH = `# 中立元报告 · 硬禁（场景化留给下游 POJU/Glyph/Match/Syncro）
 
@@ -123,14 +125,40 @@ const BASE_ANALYSIS_NARRATIVE_BREVITY_ZH = `# 叙事精简 · 禁止逐柱复述
 - 正文保持**五块综合判断**的精简中立文本即可——**禁止**为「显得详细」而逐柱罗列原始数据（各柱藏干/十神/神煞/长生/干支表）。
 - 原始配置由 **structured JSON** 完整注入下游；叙事复述既冗余，又是**神煞幻觉高发区**。
 - **不要**写「四柱命盘数据」「大运能量气候概览」分区；时机与干支纪年留给下游。
-- 允许在五块中点名：**身强/身弱、格局、用神/喜忌方向、关键十神机制组合**——只能引用 structured 实有字段，**不得新增神煞**。`;
+- 允许在五块中点名：**格局、用神/喜忌方向、关键十神机制组合**——只能引用 structured 实有字段，**不得新增神煞**。
+- \`strength\`（强弱）**仅供你推理**——用户正文【禁止】写出「身弱/身强/身旺」；软译成「燃料容易跟不上 / 燃料底盘充沛」等。`;
 
 const BASE_ANALYSIS_NARRATIVE_BREVITY_EN = `# Narrative brevity · no pillar dumps (accuracy)
 
 - Keep body copy as **concise neutral synthesis across the five sections**—**never** pad with pillar-by-pillar raw dumps (hidden stems / ten gods / shen_sha / life stages / pillar tables).
 - Raw config is injected downstream via **structured JSON**; narrative re-listing is redundant and a **shen_sha hallucination hotspot**.
 - **Do not** write "Four-Pillar Configuration" or "Decade Energy Climate Overview" sections; timing and Ganzhi years belong downstream.
-- You may name **strength/pattern/favorable directions/key ten-god mechanisms** in the five sections—**structured fields only**; **no new shen_sha**.`;
+- You may name **pattern / favorable directions / key ten-god mechanisms** in the five sections—**structured fields only**; **no new shen_sha**.
+- \`strength\` is for your reasoning only—**never** write "weak self / strong self / 身弱 / 身强" in user copy; soft-translate ("fuel runs short easily" / "deep fuel reserves").`;
+
+const BASE_ANALYSIS_USER_VISIBLE_BANS_ZH = `# 用户可见正文 · 绝对禁词与软译（违反=重生成，浪费一次付费调用）
+
+1) **强弱**：structured 的 \`strength\` 仅供你推理，【禁止】写出「身弱/身强/身旺」。
+   ✓「你的能量供给容易跟不上」  ✗「你的核心配置是'身弱'的丙火」
+2) **裸干支**：【禁止】写出任何天干地支（丙/丁/壬/午/未…）及「丙火」类合称——要么 \`⟦t:…⟧\` 三段位，要么纯白话。
+   ✓「你的核心是一股向外辐射的火」
+3) **「命」字族**：全面禁止 命运/命定/命理/命盘/命局/宿命/判决/天注定。
+   收尾【不要】用「这不是命运/不是命定」的否定式——那会诱使你写出禁词。
+   ✓「这是你的能量配置读数。怎么用它，取决于你自己。」
+   ✗「不是你的命运判决书」
+4) **比喻黑名单（含引擎）**：引擎 / 手机散热片 / 随时能翻的参考书 / 散热缺口 / 冷却模块 / 持续燃烧的引擎——全文禁用。
+   主比喻必须由本盘 \`day_master\` + \`strength\` + \`yong_shen\` 现定；自检：换盘还成立？成立=套话=重写。`;
+
+const BASE_ANALYSIS_USER_VISIBLE_BANS_EN = `# User-visible body · absolute bans (violation = regen, wastes a paid call)
+
+1) **Strength**: \`strength\` is reasoning-only — **never** write weak-self / strong-self / 身弱 / 身强.
+   ✓ "Your energy supply struggles to keep up"  ✗ "Your core is a 'weak' Bing fire"
+2) **Bare Ganzhi**: **never** write stems/branches (Bing/Ding/Ren/Wu…) or "Bing fire" compounds — full \`⟦t:…⟧\` or plain vernacular only.
+3) **Fate lexicon**: ban fate / destiny / natal chart as fate / verdict / destined.
+   Do **not** close with "this is not fate" negations — that invites the banned words.
+   ✓ "This is your energy-config readout. How you use it is yours."
+4) **Metaphor blacklist (incl. engine)**: engine / phone heatsink / always-open reference book / heat-dissipation gap / cooling module / steady-burning engine — banned.
+   Main metaphor from this chart's \`day_master\` + \`strength\` + \`yong_shen\`; self-check: still fits another chart? → rewrite.`;
 
 const BASE_ANALYSIS_BINDING_RULES = `# 绑定计算结果 · 闭集 · 禁幻觉
 
@@ -435,12 +463,12 @@ export function buildBaseAnalysisStreamPrompt(input: BaseAnalysisStreamPromptInp
     lang === "zh"
       ? `# 你的任务
 
-基于以下 **structured JSON（本地排盘引擎真算结果）**，生成一份 **「个人能量画像」**（Markdown 正文 only）。
+基于以下 **structured JSON（本地排盘引擎真算结果）**，生成一份 **「个人能量分析报告」**（Markdown 正文 only）。
 
 这是 POJU / Glyph / Match / Syncro **四个产品共用的中立底座**。本层只写**用户可见叙事**；下游**不接收**这篇叙事——机器侧另取 structured + core_judgments。仍须写出完整 Markdown，给用户读。像体检报告 / MBTI 原始读数 / 仪器说明书——客观配置读数 + 人话注解，**不是**人生故事、职业定性或算命。`
       : `# Your task
 
-From the **structured JSON (locally computed chart engine)** below, write a **Personal Energy Profile** (Markdown body only).
+From the **structured JSON (locally computed chart engine)** below, write a **Personal Energy Analysis Report** (Markdown body only).
 
 Shared neutral base for **four products**: POJU / Glyph / Match / Syncro. This layer is **user-facing narrative only**; downstream does **NOT** receive this narrative—machines get structured + core_judgments separately. Still write full Markdown for the user. Read like a **lab report / raw MBTI readout / instrument manual**—objective config + plain notes, **not** life story, career typing, or fortune-telling.`;
 
@@ -487,6 +515,7 @@ ${BASE_ANALYSIS_OUTPUT_SECTIONS_EN.split("\n").slice(1).join("\n")}
   const system = stitchPromptSections(
     taskBlock,
     lang === "zh" ? BASE_ANALYSIS_NEUTRALITY_RULES_ZH : BASE_ANALYSIS_NEUTRALITY_RULES_EN,
+    lang === "zh" ? BASE_ANALYSIS_USER_VISIBLE_BANS_ZH : BASE_ANALYSIS_USER_VISIBLE_BANS_EN,
     lang === "zh" ? BASE_ANALYSIS_NARRATIVE_BREVITY_ZH : BASE_ANALYSIS_NARRATIVE_BREVITY_EN,
     ...buildPlainspeakVoiceSections(PLAINSPEAK_STYLE_EXAMPLE_BASE_ANALYSIS),
     READING_LAYOUT_CONTRACT,
@@ -505,14 +534,14 @@ ${BASE_ANALYSIS_OUTPUT_SECTIONS_EN.split("\n").slice(1).join("\n")}
 
   const user =
     lang === "zh"
-      ? `structured JSON（内部数据 — 据此写「个人能量画像」；守实例闭集、术语标记、中立硬禁）:
+      ? `structured JSON（内部数据 — 据此写「个人能量分析报告」；守实例闭集、术语标记、中立硬禁）:
 
 \`\`\`json
 ${JSON.stringify(input.local_data.structured, null, 2)}
 \`\`\`
 
 现在开始写完整 Markdown。**降维排版**（开篇身份锚 + 五块 ## + ### + **现发明标签:** 引导块 + 短段 + > 锚点 + 可选方向 bullets + 收尾）；约 **800–1200 词、身份锚+五块+收尾齐全**；零大运/零年龄段时间锚；不逐柱罗列；术语三段位；**禁裸干支**；神煞/十神不得超出 structured；避免语义红线词（${redLine}）。`
-      : `structured JSON (internal — write Personal Energy Profile; honor closed-set, term markers, neutral hard bans):
+      : `structured JSON (internal — write Personal Energy Analysis Report; honor closed-set, term markers, neutral hard bans):
 
 \`\`\`json
 ${JSON.stringify(input.local_data.structured, null, 2)}

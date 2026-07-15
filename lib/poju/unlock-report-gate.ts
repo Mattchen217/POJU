@@ -1,4 +1,5 @@
 import { POJU_RELEASE_PENDING_QUESTION_FLAG } from "@/lib/poju/preview-unlock";
+import { truncateReadingTeaser } from "@/lib/reading/truncate-reading-teaser";
 import type { POJUMessage, POJUSessionState } from "@/lib/poju/types";
 
 export function getUnlockReportMessage(session: POJUSessionState): POJUMessage | undefined {
@@ -39,10 +40,10 @@ export function isUnlockReportReturnRoute(sessionId: string): boolean {
   return isPendingUnlockQuestionRelease(sessionId);
 }
 
-/** Raw report text for card preview — keeps term markers for RichReadingText (CSS line-clamp). */
-export function reportPreviewForCard(text: string, maxChars = 480): string {
-  const normalized = text.replace(/\r\n/g, "\n").trim();
-  if (!normalized) return "";
-  if (normalized.length <= maxChars) return normalized;
-  return `${normalized.slice(0, maxChars).trim()}…`;
+/**
+ * Card preview = same parseReadingBlocks pipeline as full report, truncated by blocks.
+ * Never char-slice raw markdown (that leaks literal `##` and skips auto-mark).
+ */
+export function reportPreviewForCard(text: string, maxBlocks = 5): string {
+  return truncateReadingTeaser(text, maxBlocks);
 }

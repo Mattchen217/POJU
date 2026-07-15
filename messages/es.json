@@ -1314,7 +1314,7 @@
   },
   "poju_matrix": {
     "eyebrow": "Alineación Espaciotemporal",
-    "main_title": "Matriz Astro-Cronológica",
+    "main_title": "Perfil energético personal",
     "main_description": "Una deconstrucción sistémica de tu arquitectura natal calculada a través de coordenadas espaciotemporales y geográficas, diseñada para la toma de decisiones estratégicas avanzadas.",
     "section_label": "Perfil Espaciotemporal Natal · Calibración de Precisión",
     "born": "NACIDO",
@@ -2128,13 +2128,13 @@
     }
   },
   "base_analysis_view": {
-    "eyebrow": "Retrato personal de carácter",
-    "title": "Retrato personal completo de carácter",
+    "eyebrow": "Informe de análisis energético personal",
+    "title": "Informe de análisis energético personal",
     "close": "Cerrar",
     "loading": "Cargando…",
     "not_found": "No se encontró ningún análisis guardado.",
-    "poju_cta_title": "Lleva este retrato a POJU",
-    "poju_cta_description": "Tu carta ya está en contexto — haz preguntas de seguimiento.",
+    "poju_cta_title": "Lleva este informe a POJU",
+    "poju_cta_description": "Tu lectura energética ya está en contexto — haz preguntas de seguimiento.",
     "poju_cta_button": "Abrir POJU"
   },
   "birth_form": {

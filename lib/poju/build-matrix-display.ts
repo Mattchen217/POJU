@@ -5,6 +5,7 @@ import type { ProfileStrength, ProfileStructured, PillarDetail } from "@/lib/cal
 import type { DaYunEntry } from "@/lib/calculations/lunar-dayun";
 import {
   DA_YUN_THEMES,
+  ELEMENT_ZH,
   elementLabelLocalized,
   formatHiddenStemsDisplay,
   getBranchInfo,
@@ -87,18 +88,8 @@ const JIEQI_EN: Record<string, string> = {
   大寒: "Major Cold",
 };
 
-const ELEMENT_ZH: Record<string, string> = {
-  Wood: "木",
-  Fire: "火",
-  Earth: "土",
-  Metal: "金",
-  Water: "水",
-};
-
 function elementLabel(element: string, locale: string): string {
-  return normalizeMatrixLocale(locale) === "zh"
-    ? (ELEMENT_ZH[element] ?? element)
-    : element.toLowerCase();
+  return elementLabelLocalized(element, locale) || ELEMENT_ZH[element] || element;
 }
 
 function monthElementLabel(monthElement: string | undefined, locale: string): string {
@@ -191,9 +182,9 @@ function buildAnnualTransit(
   const progress_pct = Math.round(((now.getTime() - start) / (end - start)) * 100);
 
   const narrative = tMatrix(locale, "template.annual_transit", {
-    element: stemInfo?.element ?? "Transit",
-    dominant,
-    deficit,
+    element: elementLabel(stemInfo?.element ?? "Transit", locale),
+    dominant: elementLabel(dominant, locale),
+    deficit: elementLabel(deficit, locale),
   });
 
   return {
@@ -228,7 +219,10 @@ function buildStructuralDynamics(
   const tension =
     xc?.地支?.[0] != null
       ? tMatrix(locale, "template.tension_branch", { interaction: xc.地支[0] })
-      : tMatrix(locale, "template.tension_default", { dominant, deficit });
+      : tMatrix(locale, "template.tension_default", {
+          dominant: elementLabel(dominant, locale),
+          deficit: elementLabel(deficit, locale),
+        });
 
   const reading =
     dmElement === "Wood"
@@ -255,8 +249,8 @@ function buildSynopsis(
   const friction = tMatrix(locale, "template.friction", {
     element: elementLabel(dmElement, locale),
     month_element: monthElementLabel(monthBranch?.element, locale),
-    dominant,
-    deficit,
+    dominant: elementLabel(dominant, locale),
+    deficit: elementLabel(deficit, locale),
   });
 
   void strength;

@@ -312,6 +312,53 @@ export async function saveMatrixList(
   console.log("[saveMatrixList] saved matrix_list", profileId);
 }
 
+export async function saveCoreJudgmentsForProfile(input: {
+  profile_id: string;
+  structured: import("@/lib/calculations/build-profile-structured").ProfileStructured;
+  locale: string;
+  generated_at?: string;
+}): Promise<void> {
+  assertBrowser();
+  const db = getPojuDb();
+  const record = await db.stored_profiles.get(input.profile_id);
+  if (!record) throw new Error("profile not found");
+
+  const data = await decryptJson<StoredProfileData>(STORED_PROFILES_SECRET, {
+    iv: record.iv,
+    cipher: record.encrypted_data,
+  });
+
+  const core_judgments = buildCoreJudgmentsFromStructured(
+    input.structured,
+    input.locale || "zh",
+  );
+  const generated_at = input.generated_at ?? new Date().toISOString();
+  const prev = data.base_analysis;
+
+  data.base_analysis = {
+    generated_at: prev?.generated_at ?? generated_at,
+    model: prev?.model ?? "v5_structured_judgments_display",
+    tokens_used: prev?.tokens_used ?? 0,
+    structured: input.structured,
+    core_judgments,
+    display_text: prev?.display_text,
+    content: prev?.content ?? prev?.display_text ?? "",
+    used_true_solar_time: prev?.used_true_solar_time ?? data.user_profile.used_true_solar_time,
+    tst_meta: prev?.tst_meta,
+    stream_meta: prev?.stream_meta,
+    locale: input.locale,
+    computation_version: "v5_structured_judgments_display",
+  };
+
+  const enc = await encryptJson(STORED_PROFILES_SECRET, data);
+  await db.stored_profiles.update(input.profile_id, {
+    encrypted_data: enc.cipher,
+    iv: enc.iv,
+    last_used_at: new Date(),
+  });
+  console.log("[saveCoreJudgmentsForProfile] Layer-1 judgments saved (no narrative gate)", input.profile_id);
+}
+
 export async function saveBaseAnalysisFromStream(input: {
   profile_id: string;
   display_text: string;
@@ -324,6 +371,15 @@ export async function saveBaseAnalysisFromStream(input: {
 }): Promise<void> {
   assertBrowser();
   const normalizedDisplay = stripMetaSectionForStorage(input.display_text.trim());
+
+  // Layer 1 first — never blocked by narrative compliance (products keep working).
+  await saveCoreJudgmentsForProfile({
+    profile_id: input.profile_id,
+    structured: input.structured,
+    locale: input.locale,
+    generated_at: input.generated_at,
+  });
+
   assertBaseAnalysisDeliveryGate(normalizedDisplay, input.locale, input.structured);
 
   const db = getPojuDb();
