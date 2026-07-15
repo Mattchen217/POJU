@@ -48,15 +48,15 @@ function fixtureStructured(): ProfileStructured {
     pattern: "食伤生财",
     four_pillars: { year: "甲子", month: "丙寅", day: "乙巳", hour: "庚辰" },
     da_yun: [
-      { ganzhi: "戊午", start_year: 2016, end_year: 2025 },
-      { ganzhi: "己未", start_year: 2026, end_year: 2035 },
+      { ganzhi: "戊午", start_age: 28, start_year: 2016 },
+      { ganzhi: "己未", start_age: 38, start_year: 2026 },
     ],
     data_availability: {
-      has_hour: true,
-      has_da_yun: true,
-      has_gender: true,
+      pillars_detail: false,
+      da_yun: true,
+      bazi_enrichment: false,
     },
-  } as ProfileStructured;
+  };
 }
 
 function main() {
