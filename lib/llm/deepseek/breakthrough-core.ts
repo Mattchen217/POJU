@@ -47,12 +47,18 @@ export const DEEP_RECKONING_REPORT_TASK = `# 角色：破局总设计师（上�
 - day_master / pattern / strength / yong_shen / xi_shen / ji_shen
 - four_pillars 与 pillars_detail.{year|month|day|hour}.{ten_god, hidden_stems, shen_sha, life_stage}
 - da_yun（当前走到第几步、主题、何时转）
-- 用户原始问题 + 已确认处境
+- 用户原始问题 + 已确认处境（第1段他说过的具体词句）
 
 # 任务（仅此两项）
 1. relationship_conclusion：把"困境"翻译成结构性原因；点名 structured 具体字段；不许泛泛而谈。
 2. breakthrough_directions（2–3 条，宁少而锐）：
-   { direction, structural_basis, timing(能量节律·禁公历日期), what_would_confirm }
+   { direction, structural_basis, timing, what_would_confirm }
+
+# timing（硬约束 · 只判进/守/转）
+timing 只写【进 / 守 / 转 的时机判断】（如"当前宜守不宜攻，不是硬碰的时候"）。
+【严禁】写具体行动步骤（"每天半小时"、"约老同事喝茶"、"写下方法论"…）——
+那是第4段【完整交付】的任务；第2段只给【方向 + 结构依据 + 时机判断】。
+第2段还没收集任何信息，此时给的"怎么做"必然是万能模板，会毁掉交付价值。
 
 # 维度织入（反"只看五行"）
 structural_basis ≥2 个不同维度：十神/格局、五行强弱/用神喜忌、大运时机、本盘实算神煞、十二长生。
@@ -71,13 +77,19 @@ structural_basis ≥2 个不同维度：十神/格局、五行强弱/用神喜�
 禁字段内标题/编号/markdown（###、**加粗**、"结构依据："前缀）。direction / structural_basis / timing 直接写句。what_would_confirm 不展示给用户。
 
 # 第1段靶心
-显式扣住 core_dilemma + desired_direction。structural_basis 从实例清单锚定 ≥3 项本地结构；【锚定=讲清意思】，禁裸写大运/流年/神煞原名/生克短语。
+显式扣住 core_dilemma + desired_direction。structural_basis 从实例清单锚定 ≥3 项本地结构；【锚定=讲清意思】。
 
-# 合规（用户可见字段）
-禁裸写结构词（大运/流年/日柱…）、带煞/刃神煞原名、自创生克短语。reasoning 可裸算；输出必须白话重组（禁抠词替换）。自检：像不像好好说话？
+# 合规（用户可见字段 · 加强）
+正文【严禁】裸写：大运/流年/年柱/月柱/日柱/时柱/命盘/八字、正印/食神/伤官等十神原名、甲乙…壬癸 + 子丑…亥 / 金木水火土 连写（如"壬水"）、带煞/刃神煞原名、自创生克短语。
+reasoning 可裸算；输出必须白话重组（禁抠词替换）。
 
-# 打标
-\`⟦t:<闭集slug>|≤6字软译|处境白话?⟧\`；id 取下方清单（大运→decade，流年→year…）；禁自造拼音 id / 标记外套括号；无 slug 直接白话；一段 ≤2 标。
+# 打标（正文只留软译 · 白话只进第3格）
+\`⟦t:<闭集slug>|≤6字软译|处境白话?⟧\`
+- 正文只能出现【软译词】；**第3格白话绝不写进正文句子**（UI 只在 tooltip 显示）。
+- 第3格白话【必须引用他亲口说过的东西】（第1段/原问题里的具体词、场景、说法）；【禁止】套用通用比方词典。
+- 自检：这条白话，换一个用户还成立吗？→ 成立 = 通用词典 = 不合格，重写。
+- 禁自造拼音 id / 标记外套括号；无 slug 直接白话；一段 ≤2 标。
+- 【禁止】在提示或训练惯性里照抄任何具体比方模板；只写原则下的当场新写。
 
 # reasoning vs content
 reasoning 可裸命理词；JSON 可见字段先白话再按需打标。
@@ -111,29 +123,27 @@ export const AGENDA_BRIDGE_TASK = `# 角色：议程与首问撰写（承上启�
 - 严禁通用问卷 / 摸现状（那是第1段的事）。
 - 每项必须服务 A 的某条 direction；supports 写成「落地方向：」+ 该方向原话要点（须能对上 A 的 direction 原文）。
 - ≥2 项 critical=true。
-- 每项 { id, label, critical, status:"unexplored", supports }；label 是内部收集目标，【不是】甩给用户的问句。
+- 每项 { id, label, critical, status:"unexplored", supports }。
+- **label（用户面板可见）**：必须用【第二人称】短名词短语（如"你的冷却时段"、"能吐槽的人"、"最硬的那块经验"）。
+  【禁止】第三人称内部笔记句（"他目前有没有…"、"了解其冷却方式"）。
+  【禁止】把完整问句当 label——完整问句只放 first_question。
 - 换一个命盘/问题就不成立 → 够具体。
 
 # first_question 硬要求（一条消息搞定）
-1) 先承上：一句话呼应上面那份分析（如「上面这份分析，你先慢慢看。」），不要复述内容；
+1) 先承上：一句话呼应上面那份分析（不要复述内容）；
 2) 再启下：说明为了落地【A 中某一条具体 direction（引用其原话要点）】，需要先弄清什么；
-3) 直接问出第一个议程项的真问题：具体、好回答、可带例子/选项提示。
-【禁止】yes/no 过场（「你看完了吗？」「可以开始了吗？」）——用户回「看了」会白费一轮。
+3) 直接问出第一个议程项的真问题：具体、好回答、可带场景提示。
+【禁止】yes/no 过场（「你看完了吗？」「可以开始了吗？」）。
 【禁止】把议程 label 直接甩出来当问题。
+【禁止】照抄任何固定范文——必须对着这位用户的报告现场写。
 
-示例（zh）：
-"上面这份分析，你先慢慢看。
-要把「先降火，再应对」这条路真正落地，我还需要跟你确认几件事——我们先从最要紧的一件开始：
-你现在有没有一段属于自己的'冷却时间'？比如下班到进家门之间，哪怕十分钟、完全不被打扰、
-能让你缓口气的空档？还是基本没有这个环节？"
-
-# 打标要点（仅对 first_question 可见句）
-需要时用 \`⟦t:<闭集slug>|软译|白话?⟧\`；禁自造 id。议程 label 可不打标。
+# 打标要点（仅对 first_question）
+需要时用 \`⟦t:<闭集slug>|软译|白话?⟧\`；白话只进第3格；禁自造 id。议程 label 不打标。
 
 # 输出（严格 JSON）
 {
   "investigation_agenda": [
-    { "id":"...", "label":"...", "critical":true, "status":"unexplored", "supports":"落地方向：…" }
+    { "id":"...", "label":"你的冷却时段", "critical":true, "status":"unexplored", "supports":"落地方向：…" }
   ],
   "first_question": "…"
 }
@@ -192,7 +202,7 @@ export function buildBreakthroughCorePrompt(input: {
     POJU_IDENTITY,
     POJU_KNOWLEDGE_ROOTS,
     buildOutputPolicyForPoju(),
-    buildTermMarkingPromptBlock(locale),
+    buildTermMarkingPromptBlock(locale, { principlesOnly: true }),
     directedInventoryBlock,
     buildStructuredInstanceInventory(structured),
     DEEP_RECKONING_REPORT_TASK,

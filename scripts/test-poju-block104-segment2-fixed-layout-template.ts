@@ -31,9 +31,22 @@ function main(): void {
   const prompt = read("lib/llm/deepseek/breakthrough-core.ts");
 
   assert("no space-indent structural_basis", !display.includes("   结构依据："));
-  assert("prompt content-only fields", prompt.includes("字段=纯内容，排版由前端负责"));
-  assert("prompt short paragraphs", prompt.includes("2–4 个短段") || prompt.includes("2-4 个短段"));
-  assert("prompt forbids field markdown", prompt.includes("禁止】在字段里写标题") || prompt.includes("禁止在字段里写标题"));
+  assert(
+    "prompt content-only fields",
+    prompt.includes("字段=纯内容") || prompt.includes("字段内标题"),
+  );
+  assert(
+    "prompt short paragraphs",
+    prompt.includes("2–4 短段") || prompt.includes("2-4 短段") || prompt.includes("2–4 个短段"),
+  );
+  assert(
+    "prompt forbids field markdown",
+    prompt.includes("禁字段内标题") || prompt.includes("禁止】在字段里写标题") || prompt.includes("禁止在字段里写标题"),
+  );
+  assert("timing is 进/守/转 only", prompt.includes("只判进/守/转") || prompt.includes("进 / 守 / 转"));
+  assert("timing bans action steps", prompt.includes("严禁】写具体行动步骤") || prompt.includes("严禁写具体行动"));
+  assert("agenda label 2nd person", prompt.includes("第二人称") && prompt.includes("短名词短语"));
+  assert("plain cites user words", prompt.includes("亲口说过") || prompt.includes("亲口元素"));
 
   const agent = createInitialAgentState({ original_question: "q" });
   agent.breakthrough_core = {
@@ -66,8 +79,10 @@ function main(): void {
   assert("has direction two h3", reply.includes("### 破局方向二 · 换通道发力"), reply);
   assert("strips model direction numbering", !reply.includes("1. 先稳住边界"), reply);
   assert("strips model basis prefix", !reply.includes("结构依据：正官"), reply);
-  assert("has why lead", reply.includes("**为什么是这条路:**"), reply);
-  assert("has how lead", reply.includes("**现在该怎么走:**"), reply);
+  assert("has basis lead", reply.includes("**结构依据:**"), reply);
+  assert("has timing lead", reply.includes("**时机判断:**"), reply);
+  assert("no old how lead", !reply.includes("**现在该怎么走:**"), reply);
+  assert("no old why lead", !reply.includes("**为什么是这条路:**"), reply);
   assert("no what_would_confirm in body", !reply.includes("对方愿意按你的节奏来"), reply);
   assert("first_question at end", reply.trim().endsWith("？") || reply.includes("当场说清楚"), reply);
   assert("agenda label not dumped", !reply.includes("最近一次越界是什么？"), reply);
@@ -80,7 +95,8 @@ function main(): void {
 
   const en = formatBreakthroughDirectionsForUser(agent.breakthrough_core, "en");
   assert("en isomorphic Direction h3", en.includes("### Direction 1 ·"), en);
-  assert("en isomorphic lead", en.includes("**Why this path:**"), en);
+  assert("en isomorphic lead", en.includes("**Structural basis:**"), en);
+  assert("en timing verdict", en.includes("**Timing verdict:**"), en);
 
   console.log(
     "\n" +

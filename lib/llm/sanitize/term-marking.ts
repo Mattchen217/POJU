@@ -371,49 +371,53 @@ function markBareGanzhiInSegment(
  * 同一术语全文仅首次补标；每段（空行分段）最多补 2 个，降低括号密度。
  */
 export function autoMarkBareTerms(text: string, locale: string): string {
+  // Phrase-first: never mark 月柱/正印/壬水 as three abutting softs.
+  const folded = collapseChainedSoftReplaceArtifacts(replaceZhMingliStacks(text));
   const seenSlugs = new Set<string>();
   // Seed with ids already marked by the model so auto-mark doesn't re-open them.
-  for (const m of text.matchAll(/⟦t:([a-zA-Z0-9_:]+)\|/g)) {
+  for (const m of folded.matchAll(/⟦t:([a-zA-Z0-9_:]+)\|/g)) {
     if (m[1]) seenSlugs.add(m[1]);
   }
 
-  const paragraphs = text.split(/(\n\n+)/);
-  return paragraphs
-    .map((para) => {
-      if (/^\n\n+$/.test(para)) return para;
-      let marksInPara = 0;
-      const parts = para.split(/(⟦[^⟧]*⟧)/g);
-      return parts
-        .map((part, i) => {
-          if (i % 2 === 1) return part;
-          let out = markBareGanzhiInSegment(part, locale, seenSlugs, () => {
-            if (marksInPara >= 2) return false;
-            marksInPara += 1;
-            return true;
-          });
-          for (const hanId of BARE_AUTO_MARK_HAN) {
-            if (marksInPara >= 2) break;
-            const labels = resolveBareMarkLabels(hanId, locale);
-            if (!labels || seenSlugs.has(labels.slug)) continue;
-            const re =
-              hanId.length === 1
-                ? new RegExp(
-                    `(?<![\\u4e00-\\u9fff])${escapeRegExp(hanId)}(?![\\u4e00-\\u9fff（(])`,
-                    "g",
-                  )
-                : new RegExp(`${escapeRegExp(hanId)}(?![（(])`, "g");
-            out = out.replace(re, () => {
-              if (seenSlugs.has(labels.slug) || marksInPara >= 2) return hanId;
-              seenSlugs.add(labels.slug);
+  const paragraphs = folded.split(/(\n\n+)/);
+  return collapseChainedSoftReplaceArtifacts(
+    paragraphs
+      .map((para) => {
+        if (/^\n\n+$/.test(para)) return para;
+        let marksInPara = 0;
+        const parts = para.split(/(⟦[^⟧]*⟧)/g);
+        return parts
+          .map((part, i) => {
+            if (i % 2 === 1) return part;
+            let out = markBareGanzhiInSegment(part, locale, seenSlugs, () => {
+              if (marksInPara >= 2) return false;
               marksInPara += 1;
-              return encodeTermMarker(labels.slug, labels.soft, labels.plain);
+              return true;
             });
-          }
-          return out;
-        })
-        .join("");
-    })
-    .join("");
+            for (const hanId of BARE_AUTO_MARK_HAN) {
+              if (marksInPara >= 2) break;
+              const labels = resolveBareMarkLabels(hanId, locale);
+              if (!labels || seenSlugs.has(labels.slug)) continue;
+              const re =
+                hanId.length === 1
+                  ? new RegExp(
+                      `(?<![\\u4e00-\\u9fff])${escapeRegExp(hanId)}(?![\\u4e00-\\u9fff（(])`,
+                      "g",
+                    )
+                  : new RegExp(`${escapeRegExp(hanId)}(?![（(])`, "g");
+              out = out.replace(re, () => {
+                if (seenSlugs.has(labels.slug) || marksInPara >= 2) return hanId;
+                seenSlugs.add(labels.slug);
+                marksInPara += 1;
+                return encodeTermMarker(labels.slug, labels.soft, labels.plain);
+              });
+            }
+            return out;
+          })
+          .join("");
+      })
+      .join(""),
+  );
 }
 
 /** 先补 keep_cn 软词，再补闭集裸词。 */
@@ -635,27 +639,36 @@ export function uiTermById(
 
 /** Prompt projection: forbidden → id + soft (+ keep_cn hint). Plain excluded to save tokens. */
 export function buildTermMarkingFewShot(locale: string): string {
+  // Principles only — never seed concrete metaphors (models overfit and copy them).
   const loc = toGlossaryLocale(locale);
   if (loc === "zh") {
-    return `## 字段 few-shot 示例（必须模仿此形态 · 三段位标记+动态白话 · 可见软译不带干支）
-
-\`\`\`
-"question_response": "你问的是…这支 Glyph 照见的是耐心中的转机。结合你的 ⟦t:day_master|核心特质|你像靠人脉和氛围做买卖的人，硬推销反而散劲⟧，此刻更宜先稳住节奏…"
-"命理看此事": "…你的 ⟦t:day_master|核心特质|在这件事里，你需要先找能依靠的支点再往外伸⟧。外面这阵 ⟦t:year|当前时空效能|今年这股燥热在推你焦虑乱动，不是你能力不够⟧ 只会让你更乱。**稳住。** 先把 ⟦t:yong_shen|关键平衡能量|对你就是：整理现有客户名单、把服务流程理顺，像给根须浇水⟧ 做到位，再迈一小步…"
-\`\`\``;
+    return `## 打标形态（原则 · 勿照抄任何具体比方）
+\`⟦t:<id>|<≤6字软译>|<必须引用该用户亲口元素的白话>⟧\`
+- 正文只留软译词；白话**只**在第3格（tooltip）。
+- 白话自检：换一个用户还成立？成立 → 不合格。`;
   }
-  return `## Field few-shot examples (copy this exact shape · 3-part markers + dynamic plain · visible soft text has NO stem-branch)
-
-\`\`\`
-"question_response": "You asked whether… This Glyph reflects a turn that ripens through patience. Your ⟦t:day_master|core nature|In this sentence: you grow through relationships, not hard selling⟧ needs a clear anchor before you stretch further…"
-"命理看此事": "… your ⟦t:day_master|core nature|Here: you need a reliable base before reaching out⟧ seeks connection with structure. The current ⟦t:year|current temporal efficacy|This year feels like heat pushing you to act before you're ready—not a personal failing⟧ nudges one small outward step only after ⟦t:yong_shen|key balancing element|For you: tidy your offer, call one trusted mentor—like opening a window⟧ is in place…"
-\`\`\``;
+  return `## Marker shape (principles only — do not copy stock metaphors)
+\`⟦t:<id>|<short soft label>|<plain that cites THIS user's own words>⟧\`
+- Body shows soft label only; plain is tooltip-only.
+- Self-check: would this plain still fit another user? If yes → rewrite.`;
 }
 
-export function buildTermMarkingPromptBlock(locale: string): string {
+export type TermMarkingPromptOptions = {
+  /**
+   * Skip heavy few-shot / metaphor cues — for latency + anti-overfit (segment2 Call A).
+   * Still includes closed-set id table + hard rules.
+   */
+  principlesOnly?: boolean;
+};
+
+export function buildTermMarkingPromptBlock(
+  locale: string,
+  opts?: TermMarkingPromptOptions,
+): string {
   const loc = toGlossaryLocale(locale);
   const langLabel =
     loc === "zh" ? "中文" : loc === "en" ? "English" : loc.toUpperCase();
+  const principlesOnly = opts?.principlesOnly === true;
   const rows = DELIVERY_MARKING_ENTRIES.map((e) => {
     const soft = softLabel(e, loc);
     const keep =
@@ -664,9 +677,32 @@ export function buildTermMarkingPromptBlock(locale: string): string {
           ? "（可见软译只用上表词，禁括号干支）"
           : " (visible soft label only — no stem-branch in parens)"
         : "";
-    const sample = e.forbidden.slice(0, 4).join(" / ");
+    const sample = e.forbidden.slice(0, principlesOnly ? 2 : 4).join(" / ");
     return `| \`${e.id}\` | ${sample} | **${soft}**${keep} |`;
   }).join("\n");
+
+  const rules = principlesOnly
+    ? `## 打标记规则（原则 · 严禁过拟合示例）
+1. \`<可见文本>\` = 软翻译词（短）；**正文只出现这一格**。
+2. \`<该处白话>\` **只进 tooltip**，【禁止】写进正文句子；必须引用【这位用户亲口说过的具体词/场景】；禁止通用词典比方。
+3. 自检：换用户还成立？成立 → 重写。
+4. 一段金字 ≤2；禁自造 id；标记外勿套括号。
+5. 守六条语义红线（不预测/不算命/不占卜/不决吉凶/不恐吓/不超自然承诺）。
+
+${buildTermMarkingFewShot(locale)}`
+    : `## 打标记规则
+1. \`<可见文本>\` = 你写出的软翻译词（**只用上表 soft 词，禁在可见词里加括号干支**）
+2. \`<该处白话>\` = **结合本句意境 + 用户问题**现写的人话；白话**不出现在正文**，只进标记第 3 段（UI tooltip）；必须引用该用户亲口元素，禁套用固定比方。
+3. **只用当前交付语言**；标记**只包软翻译词**
+4. 流年/大运类先归因外境再给掌控感
+5. **每段金字 ≤2**；首次打标、后文白话
+6. **签诗/古文不是术语**，不打标
+7. 守六条语义红线（不预测/不算命/不占卜/不决吉凶/不恐吓/不超自然承诺）
+8. 若漏写第 3 段白话，UI 会回退静态词典——**务必写全三段位**；但禁止用与用户无关的通用词典句凑数
+
+${buildTermMarkingFewShot(locale)}
+
+${buildClosedSetConstraintPromptBlock(locale)}`;
 
   return `# 术语软翻译 + 标记（输出 JSON 字符串 · ${langLabel}）
 
@@ -676,22 +712,130 @@ export function buildTermMarkingPromptBlock(locale: string): string {
 |---|---|---|
 ${rows}
 
-## 打标记规则
-1. \`<可见文本>\` = 你写出的软翻译词（**只用上表 soft 词，禁在可见词里加括号干支**）— 例：\`⟦t:day_master|核心特质|You grow through people, not force⟧\`
-2. \`<该处白话>\` = **结合本句意境 + 用户问题**现写的 2–4 句人话（动作 3）：一句比方 + 现实可做的具体事 + 对这件事意味着什么。**同 id 在不同段落白话必须不同**；白话**不出现在正文**，只进标记第 3 段（UI tooltip）
-3. **只用当前交付语言**，整句必须通顺；标记**只包软翻译词**，**勿把 your/the/as 等前后词包进标记**，**勿在可见词里加（干支）**
-4. 正文须含贴切的日常比喻（动作 1）；流年/大运类先归因外境再给掌控感（动作 2）
-5. **每段/每字段 ≤120 词（中文 ≤180 字）**；**每段金字 ≤2 为硬约束**——一段里同一/多个术语只在最关键处打标，其余自然行文不打标。紧挨着重复同一词只标第一次；**绝不在别处套过之后，后文把同一个词裸写。** 全文**一个主比喻**，tooltip 小比喻与之呼应（瘦身四条）
-6. **签诗/古文诗句不是术语**：禁逐字引签诗原文；只能意象化转述，**不打术语标记**
-7. 守六条语义红线（不预测/不算命/不占卜/不决吉凶/不恐吓/不超自然承诺）
-8. 若漏写第 3 段白话，UI 会回退静态词典——**务必写全三段位**
-
-${buildTermMarkingFewShot(locale)}
-
-${buildClosedSetConstraintPromptBlock(locale)}`;
+${rules}`;
 }
 
-export type OutOfSetAuditHit = { label: string; snippet: string };
+/**
+ * Remove marker-plain text that leaked into body prose next to the marker.
+ * Plain belongs only in tooltip (3rd field).
+ */
+export function stripLeakedMarkerPlainFromBody(text: string): string {
+  if (!text?.trim() || !text.includes("⟦t:")) return text ?? "";
+  let out = text;
+  for (const m of parseTermMarkers(out)) {
+    const plain = m.plain?.trim();
+    if (!plain || plain.length < 8) continue;
+    const idx = out.indexOf(m.raw);
+    if (idx < 0) continue;
+    const afterStart = idx + m.raw.length;
+    const after = out.slice(afterStart);
+    // Prefer removing plain immediately after the marker (possibly with light punctuation).
+    const immediate = after.match(new RegExp(`^([，,、\\s]*)${escapeRegExp(plain)}`));
+    if (immediate) {
+      out = out.slice(0, afterStart) + after.slice(immediate[0].length);
+      continue;
+    }
+    // Also strip a free-standing duplicate of the plain elsewhere in the same paragraph chunk.
+    if (after.includes(plain)) {
+      out = out.slice(0, afterStart) + after.replace(plain, "");
+    }
+  }
+  return out.replace(/\s{2,}/g, " ").trim();
+}
+
+const TEN_GOD_STACK = "正印|偏印|食神|伤官|正官|七杀|正财|偏财|比肩|劫财";
+const STEM_COMPOUND_STACK =
+  "[甲乙丙丁戊己庚辛壬癸](?:[子丑寅卯辰巳午未申酉戌亥]|[金木水火土])";
+
+/** Single clean soft phrase — never build from per-token soft glosses. */
+export const MINGLI_STACK_SOFT_PHRASE = "你内在那一股关键的支撑力";
+
+/**
+ * Whole-phrase replace for bare 命理 stacks (before per-token soft/auto-mark).
+ * "月柱正印壬水" → one concept — not 你的能量结构+稳定支持力+壬水奔流.
+ */
+export function replaceZhMingliStacks(text: string): string {
+  if (!text?.trim()) return text ?? "";
+  let result = text;
+  // 月柱正印壬水 / 月柱正印 / 日柱甲木
+  result = result.replace(
+    new RegExp(
+      `(?:年|月|日|时)柱(?:(?:${TEN_GOD_STACK})(?:${STEM_COMPOUND_STACK})?|(?:${STEM_COMPOUND_STACK}))`,
+      "g",
+    ),
+    MINGLI_STACK_SOFT_PHRASE,
+  );
+  // After pillar soft-replace left "你的能量结构正印壬水"
+  result = result.replace(
+    new RegExp(
+      `(?:你的能量结构|当前阶段气候|当前时空效能)(?:(?:${TEN_GOD_STACK})(?:${STEM_COMPOUND_STACK})?|(?:${STEM_COMPOUND_STACK}))`,
+      "g",
+    ),
+    MINGLI_STACK_SOFT_PHRASE,
+  );
+  // 正印壬水 (no pillar)
+  result = result.replace(
+    new RegExp(`(?:${TEN_GOD_STACK})(?:${STEM_COMPOUND_STACK})`, "g"),
+    MINGLI_STACK_SOFT_PHRASE,
+  );
+  return result;
+}
+
+const CHAIN_SOFT_GLOSSES = [
+  "你的能量结构",
+  "当前阶段气候",
+  "当前时空效能",
+  "稳定支持力",
+  "有利特质",
+  "表达力",
+  "规则感",
+  "壬水奔流",
+] as const;
+
+/** Collapse abutting soft-replace glosses left by older token-chain sanitize / auto-mark. */
+export function collapseChainedSoftReplaceArtifacts(text: string): string {
+  if (!text?.trim()) return text ?? "";
+  let result = text;
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const a of CHAIN_SOFT_GLOSSES) {
+      for (const b of CHAIN_SOFT_GLOSSES) {
+        if (a === b) continue;
+        const pair = a + b;
+        if (result.includes(pair)) {
+          result = result.split(pair).join(MINGLI_STACK_SOFT_PHRASE);
+          changed = true;
+        }
+      }
+    }
+  }
+  result = result.replace(
+    /(?:你的能量结构|稳定支持力|有利特质|当前阶段气候|当前时空效能)[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥金木水火土]/g,
+    MINGLI_STACK_SOFT_PHRASE,
+  );
+  return result;
+}
+
+/** True when ≥2 soft glosses abut — sentence was chewed by token chaining. */
+export function hasChainedSoftReplaceArtifacts(text: string): boolean {
+  if (!text?.trim()) return false;
+  const masked = maskMarkersForAudit(text);
+  for (let i = 0; i < CHAIN_SOFT_GLOSSES.length; i++) {
+    for (let j = 0; j < CHAIN_SOFT_GLOSSES.length; j++) {
+      if (i === j) continue;
+      if (masked.includes(CHAIN_SOFT_GLOSSES[i]! + CHAIN_SOFT_GLOSSES[j]!)) return true;
+    }
+  }
+  if (
+    /(?:你的能量结构|稳定支持力|有利特质)[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥金木水火土]/.test(
+      masked,
+    )
+  ) {
+    return true;
+  }
+  return false;
+}
 
 export function fillMissingMarkerPlain(text: string, locale: string): string {
   let out = text;

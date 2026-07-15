@@ -28,14 +28,34 @@ function main(): void {
 
   console.log("=== A · 深测算立体化 ===\n");
 
-  assert("DEEP_RECKONING has timing field", DEEP_RECKONING_TASK.includes("timing:"));
+  assert(
+    "DEEP_RECKONING has timing field",
+    DEEP_RECKONING_TASK.includes("timing") &&
+      (DEEP_RECKONING_TASK.includes("timing:") || DEEP_RECKONING_TASK.includes("# timing")),
+  );
   assert("DEEP_RECKONING has 维度织入", DEEP_RECKONING_TASK.includes("# 维度织入"));
-  assert("DEEP_RECKONING requires 2+ dimensions", DEEP_RECKONING_TASK.includes("至少 2 个不同维度"));
-  assert("DEEP_RECKONING mentions da_yun timing", DEEP_RECKONING_TASK.includes("至少有 1 条 direction 必须带出 timing"));
-  assert("DEEP_RECKONING mentions shen_sha", DEEP_RECKONING_TASK.includes("pillars_detail.*.shen_sha"));
-  assert("DEEP_RECKONING mentions life_stage", DEEP_RECKONING_TASK.includes("pillars_detail.*.life_stage"));
+  assert(
+    "DEEP_RECKONING requires 2+ dimensions",
+    DEEP_RECKONING_TASK.includes("≥2 个不同维度") || DEEP_RECKONING_TASK.includes("至少 2 个不同维度"),
+  );
+  assert(
+    "DEEP_RECKONING mentions da_yun timing",
+    DEEP_RECKONING_TASK.includes("≥1 条须带 timing") ||
+      DEEP_RECKONING_TASK.includes("至少有 1 条 direction 必须带出 timing"),
+  );
+  assert(
+    "DEEP_RECKONING mentions shen_sha",
+    DEEP_RECKONING_TASK.includes("shen_sha") || DEEP_RECKONING_TASK.includes("神煞"),
+  );
+  assert(
+    "DEEP_RECKONING mentions life_stage",
+    DEEP_RECKONING_TASK.includes("life_stage") || DEEP_RECKONING_TASK.includes("十二长生"),
+  );
   assert("DEEP_RECKONING JSON example has timing", DEEP_RECKONING_TASK.includes('"timing": "..."'));
-
+  assert(
+    "DEEP_RECKONING timing bans actions",
+    DEEP_RECKONING_TASK.includes("只判进/守/转") || DEEP_RECKONING_TASK.includes("进 / 守 / 转"),
+  );
   const mapped = mapBreakthroughCorePayload({
     relationship_conclusion: "test rc",
     breakthrough_directions: [

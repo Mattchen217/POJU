@@ -75,10 +75,16 @@ function stripContentChrome(text: string, kind: "direction" | "basis" | "timing"
     );
   }
   if (kind === "basis") {
-    t = t.replace(/^(?:结构依据|依据|为什么是这条路|Basis|Why this path)\s*[:：]\s*/iu, "");
+    t = t.replace(
+      /^(?:结构依据|依据|为什么是这条路|Basis|Structural basis|Why this path)\s*[:：]\s*/iu,
+      "",
+    );
   }
   if (kind === "timing") {
-    t = t.replace(/^(?:时机|现在该怎么走|Timing|What to do now)\s*[:：]\s*/iu, "");
+    t = t.replace(
+      /^(?:时机判断|时机|现在该怎么走|Timing|Timing verdict|What to do now)\s*[:：]\s*/iu,
+      "",
+    );
   }
   t = t.replace(/^#+\s+/, "").replace(/^\*\*?/, "").replace(/\*\*$/, "");
   return t.trim();
@@ -109,12 +115,12 @@ export function formatBreakthroughDirectionsForUser(
     if (zh) {
       const n = ZH_DIRECTION_ORDINAL[i] ?? String(i + 1);
       blocks.push(`### 破局方向${n} · ${direction}`);
-      if (basis) blocks.push(`**为什么是这条路:** ${basis}`);
-      if (timing) blocks.push(`**现在该怎么走:** ${timing}`);
+      if (basis) blocks.push(`**结构依据:** ${basis}`);
+      if (timing) blocks.push(`**时机判断:** ${timing}`);
     } else {
       blocks.push(`### Direction ${i + 1} · ${direction}`);
-      if (basis) blocks.push(`**Why this path:** ${basis}`);
-      if (timing) blocks.push(`**What to do now:** ${timing}`);
+      if (basis) blocks.push(`**Structural basis:** ${basis}`);
+      if (timing) blocks.push(`**Timing verdict:** ${timing}`);
     }
   });
 

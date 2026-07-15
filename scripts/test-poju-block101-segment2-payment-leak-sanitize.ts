@@ -44,8 +44,20 @@ function main() {
   const runner = read("lib/poju/xhigh-job-runner.ts");
   const auditOut = read("lib/llm/compliance/audit-output.ts");
 
-  assert("prompt bans bare structure words", core.includes("合规硬要求（用户可见字段"));
-  assert("prompt anchors with soft vernacular", core.includes("锚定 = 讲清那个结构的意思") || core.includes("【锚定 = 讲清"));
+  assert(
+    "prompt bans bare structure words",
+    core.includes("合规（用户可见字段") || core.includes("合规硬要求（用户可见字段"),
+  );
+  assert(
+    "prompt anchors with soft vernacular",
+    core.includes("锚定=讲清意思") ||
+      core.includes("锚定 = 讲清那个结构的意思") ||
+      core.includes("【锚定 = 讲清") ||
+      core.includes("【锚定=讲清"),
+  );
+  assert("phrase stack replace present", compliance.includes("replaceZhMingliStacks"));
+  assert("plain leak strip present", marking.includes("stripLeakedMarkerPlainFromBody"));
+  assert("chained soft detect present", compliance.includes("hasChainedSoftReplaceArtifacts"));
   assert("sanitizePaymentAuditLeaks exported", compliance.includes("export function sanitizePaymentAuditLeaks"));
   assert("structure soft replace includes 日柱", compliance.includes('["日柱"'));
   assert("wuxing clash replace present", compliance.includes("replaceWuxingClashPhrases"));
@@ -63,6 +75,28 @@ function main() {
   assert("scrub removes 火金相克", !visible.includes("火金相克") && !visible.includes("相克"), visible);
   assert("scrub removes 孤鸾煞 from visible", !visible.includes("孤鸾煞"), visible);
   assert("scrub keeps vernacular tension", visible.includes("较劲") || visible.includes("阶段"), visible);
+
+  const stackIn = "找到支撑时，月柱正印壬水也需要木来转化。";
+  const stackOut = sanitizePaymentAuditLeaks(stackIn, "zh");
+  const stackVis = stripMarkersForPrompt(stackOut);
+  assert("stack not 能量结构稳定支持力", !/能量结构稳定支持力/.test(stackVis), stackVis);
+  assert("stack not 稳定支持力壬水", !/稳定支持力壬水/.test(stackVis), stackVis);
+  assert("stack uses whole phrase soft", stackVis.includes("你内在那一股关键的支撑力"), stackVis);
+  assert(
+    "no chained soft residual",
+    !auditPaymentLeakResiduals(stackOut, "zh").some((v) => v.label.includes("chained")),
+    JSON.stringify(auditPaymentLeakResiduals(stackOut, "zh")),
+  );
+
+  const plainLeak =
+    "木是⟦t:favorable_element|有利特质|木像你说的路径依赖那样托住你，比单打独斗有效十倍⟧比单打独斗有效十倍，你先停一下。";
+  const plainOut = sanitizePaymentAuditLeaks(plainLeak, "zh");
+  const plainVis = stripMarkersForPrompt(plainOut);
+  assert(
+    "plain does not duplicate into body",
+    (plainVis.match(/比单打独斗有效十倍/g) ?? []).length <= 1,
+    plainVis,
+  );
 
   const markerOnly = repairShenshaMarkerSoftLabels(
     "倾向⟦t:shensha.孤鸾煞|孤鸾煞|情感孤立⟧会先撤退",

@@ -36,6 +36,10 @@ import {
   detectBrokenMarkers,
   encodeTermMarker,
   fillMissingMarkerPlain,
+  stripLeakedMarkerPlainFromBody,
+  replaceZhMingliStacks,
+  collapseChainedSoftReplaceArtifacts,
+  hasChainedSoftReplaceArtifacts,
   maskMarkersForAudit,
   parseTermMarkers,
   plainByTermId,
@@ -76,6 +80,10 @@ export {
   buildTermMarkingFewShot,
   encodeTermMarker,
   fillMissingMarkerPlain,
+  stripLeakedMarkerPlainFromBody,
+  replaceZhMingliStacks,
+  collapseChainedSoftReplaceArtifacts,
+  hasChainedSoftReplaceArtifacts,
   parseTermMarkers,
   plainByTermId,
   normalizeTermMarkerIds,
@@ -547,6 +555,8 @@ function replaceBareShenshaWithSoft(text: string, locale: string): string {
 function replaceStandaloneRedlines(text: string, locale: string): string {
   let result = text;
   if (locale.startsWith("zh")) {
+    // Phrase-first — never chew "月柱正印壬水" into adjacent soft tokens.
+    result = replaceZhMingliStacks(result);
     for (const [word, replacement] of ZH_STRIPE_GLOBAL_REPLACE) {
       if (word === "命运") {
         result = replaceStandaloneZhWord(result, word, replacement);
@@ -557,6 +567,9 @@ function replaceStandaloneRedlines(text: string, locale: string): string {
     for (const [word, replacement] of ZH_STRUCTURE_SOFT_REPLACE) {
       result = replaceZhTokenGlobal(result, word, replacement);
     }
+    // Fold "你的能量结构正印壬水" left by bare-pillar soft replace.
+    result = replaceZhMingliStacks(result);
+    result = collapseChainedSoftReplaceArtifacts(result);
     result = replaceWuxingClashPhrases(result);
     result = replaceBareShenshaWithSoft(result, locale);
   } else {
@@ -654,7 +667,8 @@ export function sanitizePaymentAuditLeaks(text: string, locale: string): string 
   const normalized = normalizeTermMarkerIds(text, locale);
   const repaired = repairShenshaMarkerSoftLabels(normalized, locale);
   const filled = fillMissingMarkerPlain(repaired, locale);
-  return sanitizeDeliveryBodyPart(filled, locale);
+  const noPlainLeak = stripLeakedMarkerPlainFromBody(filled);
+  return sanitizeDeliveryBodyPart(noPlainLeak, locale);
 }
 
 /** POJU final delivery — deterministic scrub (redlines, bare terms, gloss wrap). Preserves ═══ marker lines. */
@@ -715,6 +729,12 @@ export function auditPaymentLeakResiduals(
           snippet: snippetAround(visible, idx, word.length),
         });
       }
+    }
+    if (hasChainedSoftReplaceArtifacts(visible)) {
+      violations.push({
+        label: "payment_leak:chained_soft_replace",
+        snippet: snippetAround(visible, 0, Math.min(48, visible.length)),
+      });
     }
     for (const re of ZH_WUXING_CLASH_RES) {
       re.lastIndex = 0;
