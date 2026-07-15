@@ -13,6 +13,11 @@ export interface AgendaItem {
   label: string;
   critical: boolean;
   status: AgendaItemStatus;
+  /**
+   * Call B: 1-based index into breakthrough_directions (deterministic anchor).
+   * Prefer this over text-matching `supports`.
+   */
+  direction_index?: number;
   /** Which breakthrough hypothesis this item validates (hidden from user response). */
   supports?: string;
   /** Collecting turns on this item without reaching covered (control-plane stale detection). */
@@ -23,6 +28,23 @@ export interface AgendaItem {
 export const STALE_AGENDA_TURN_THRESHOLD = 2;
 
 const AGENDA_STATUSES: AgendaItemStatus[] = ["unexplored", "partial", "covered"];
+
+/** Parse 1-based direction_index from LLM JSON (number or numeric string). */
+export function parseAgendaDirectionIndex(raw: unknown): number | undefined {
+  if (typeof raw === "number" && Number.isInteger(raw) && raw >= 1 && raw <= 9) {
+    return raw;
+  }
+  if (typeof raw === "string") {
+    const m = raw.trim().match(/^([1-9])(?:\s*[.．、)]?)?$/);
+    if (m) return Number(m[1]);
+    const loose = raw.trim().match(/(?:方向|direction)\s*([1-9一二三])/i);
+    if (loose) {
+      const map: Record<string, number> = { "1": 1, "2": 2, "3": 3, 一: 1, 二: 2, 三: 3 };
+      return map[loose[1]!] ?? undefined;
+    }
+  }
+  return undefined;
+}
 
 /** User asks for delivery/report mid-collection (not hard skip-ahead). */
 export function detectDeliveryRequest(userMessage: string): boolean {
@@ -87,11 +109,13 @@ export function parseInvestigationAgenda(raw: unknown): AgendaItem[] | null {
     const status = AGENDA_STATUSES.includes(statusRaw as AgendaItemStatus)
       ? (statusRaw as AgendaItemStatus)
       : "unexplored";
+    const direction_index = parseAgendaDirectionIndex(o.direction_index);
     items.push({
       id,
       label,
       critical: Boolean(o.critical),
       status,
+      ...(direction_index != null ? { direction_index } : {}),
       supports: typeof o.supports === "string" ? o.supports.trim() : "",
     });
   }
@@ -186,7 +210,10 @@ export function getNextAgendaFocus(agenda: AgendaItem[]): AgendaItem[] {
   const uncoveredByHypothesis = new Map<string, number>();
   for (const item of agenda) {
     if (!item.critical) continue;
-    const key = item.supports?.trim();
+    const key =
+      item.direction_index != null
+        ? `dir:${item.direction_index}`
+        : item.supports?.trim();
     if (!key || item.status === "covered") continue;
     uncoveredByHypothesis.set(key, (uncoveredByHypothesis.get(key) ?? 0) + 1);
   }
@@ -198,7 +225,11 @@ export function getNextAgendaFocus(agenda: AgendaItem[]): AgendaItem[] {
     const prioritized: AgendaItem[] = [];
     for (const hyp of rankedHypotheses) {
       for (const item of pool) {
-        if (item.supports?.trim() === hyp) prioritized.push(item);
+        const itemKey =
+          item.direction_index != null
+            ? `dir:${item.direction_index}`
+            : item.supports?.trim();
+        if (itemKey === hyp) prioritized.push(item);
       }
     }
     if (prioritized.length > 0) return prioritized.slice(0, 2);
@@ -214,7 +245,12 @@ export function formatAgendaForPrompt(agenda: AgendaItem[]): string {
       const tag = a.critical ? "必查" : "补充";
       const status =
         a.status === "covered" ? "已覆盖" : a.status === "partial" ? "部分" : "未探";
-      const supportNote = a.supports?.trim() ? ` · 支撑「${a.supports}」` : "";
+      const supportNote =
+        a.direction_index != null
+          ? ` · 方向#${a.direction_index}`
+          : a.supports?.trim()
+            ? ` · 支撑「${a.supports}」`
+            : "";
       return `- [${tag}] ${a.label} (${a.id}) — ${status}${supportNote}`;
     })
     .join("\n");

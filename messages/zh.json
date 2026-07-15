@@ -1073,13 +1073,13 @@
       "attach_menu_document": "添加文档",
       "attach_menu_image": "添加图片",
       "attach_menu_pdf": "添加 PDF",
-      "unlock_report_modal_title": "完整个人性格画像",
-      "unlock_report_modal_hint": "可随时在聊天记录中再次打开完整个人性格画像。",
-      "unlock_report_gate_hint": "请阅读您的完整个人性格画像分析。关闭后，POJU 将继续针对您的问题对话。",
+      "unlock_report_modal_title": "完整个人能量画像",
+      "unlock_report_modal_hint": "可随时在聊天记录中再次打开完整个人能量画像。",
+      "unlock_report_gate_hint": "请阅读您的完整个人能量画像。关闭后，POJU 将继续针对您的问题对话。",
       "unlock_report_close": "关闭",
       "unlock_report_close_continue": "关闭并继续对话",
-      "unlock_report_card_label": "完整个人性格画像",
-      "unlock_report_card_title": "您的完整个人性格画像已就绪",
+      "unlock_report_card_label": "完整个人能量画像",
+      "unlock_report_card_title": "您的完整个人能量画像已就绪",
       "unlock_report_view_full": "查看完整报告",
       "session_picker": {
         "close": "关闭",
@@ -1326,13 +1326,13 @@
     "error_create_profile": "保存失败，请重试。"
   },
   "base_analysis_view": {
-    "eyebrow": "个人性格画像",
-    "title": "完整个人性格画像",
+    "eyebrow": "个人能量画像",
+    "title": "完整个人能量画像",
     "close": "关闭",
     "loading": "正在加载…",
     "not_found": "未找到已保存的分析。",
     "poju_cta_title": "带着这份画像进入 POJU",
-    "poju_cta_description": "你的命盘已在上下文中，可直接追问、深聊。",
+    "poju_cta_description": "你的能量配置已在上下文中，可直接追问、深聊。",
     "poju_cta_button": "打开 POJU"
   },
   "refund": {

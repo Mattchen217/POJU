@@ -103,15 +103,14 @@ export const PLAINSPEAK_STYLE_EXAMPLE_SYNCRO = `# 风格范例（只示范写法
 「接下来几小时，你的**执行效率像在早市刚开门**——脑子清醒、手脚跟得上 ⟦t:day_master|核心特质（乙木）|你适合温和启动，不宜一上来就高强度⟧。但别被**外面"必须立刻瘦"的噪音** ⟦t:year|流年能量（丙午）|外界总在催结果，容易让你乱节食⟧ 带跑。**稳住**：这窗口做 20 分钟散步 + 正常吃一份蛋白质，比饿一顿更有效 ⟦t:yong_shen|用神（水）|对你就是：补水、睡够、别用极端法⟧。」
 ${STYLE_EXAMPLE_FOOTER}`;
 
-export const PLAINSPEAK_STYLE_EXAMPLE_BASE_ANALYSIS = `# 风格范例（中立元报告 · 只示范写法 · 勿套用领域）
+export const PLAINSPEAK_STYLE_EXAMPLE_BASE_ANALYSIS = `# 风格范例（个人能量画像 · 只示范写法 · 勿抄意象）
 
 **改造前（学术 · 不合格）：**
 「日主乙木，正官格成格，用神水，忌神火，当前大运癸酉，神煞国印贵人、月德合。」
 
-**改造后（合格 · 中立能量读数示意 · 禁场景）：**
-「**原始驱动:** 延展型木性能量 ⟦t:day_master|核心特质（乙木）|像藤蔓式扩散——靠连接与节奏蓄力，硬顶单点高压易散劲⟧。**结构短板:** 冷却模块（水）偏弱 → 决策窗口缩短。**调谐锚:** ⟦t:yong_shen|用神（水）|规则网格 + 固定复盘时段，给输出加缓冲⟧。**禁:** 开咖啡馆、换工作、结婚时机等场景断言；structured 里若只有文昌、驿马，就只谈这两项，**禁止编造国印/空亡**。»
+**改造后（合格 · 中立能量读数示意 · 禁场景 · 禁通用比方）：**
+「开篇身份锚用一句结构化读数点出能量怎么放大——须绑定本盘 day_master + strength + yong_shen，换盘必须换写。软译白话禁套散热片/引擎/参考书等黑名单。禁: 开咖啡馆、换工作、结婚时机；structured 神煞清单外不得编造。」
 ${STYLE_EXAMPLE_FOOTER}`;
-
 /** POJU / Glyph / Match / Syncro / Base Analysis core sections 共用 voice 块（顺序固定）。 */
 export function buildPlainspeakVoiceSections(styleExample: string): string[] {
   return [

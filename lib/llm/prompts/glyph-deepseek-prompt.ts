@@ -224,7 +224,8 @@ ${GLYPH_OUTPUT_SELF_CHECK}`;
     relationClosedSetBlock,
     `# 当前任务：Glyph 深度解读
 
-结合【命主 base_analysis structured + display_text】+【完整签文原文（仅内部分析用）】+【user 消息中的用户问题与签象数据】，按上文解签法则做一次【深度双视角解读】。
+结合【能量底座 Layer1：structured + core_judgments】+【完整签文原文（仅内部分析用）】+【user 消息中的用户问题与签象数据】，按上文解签法则做一次【深度双视角解读】。
+开口口径以 core_judgments.identity_anchor 为准；**禁止**改判 structured。
 输出 JSON 字符串必须 100% 遵守 OUTPUT POLICY + GLYPH_LAYOUT_CONTRACT + Glyph 措辞统一（禁签/sign/lot）。`,
     buildDeliveryGrammarPolishBlock(outputLang),
   );

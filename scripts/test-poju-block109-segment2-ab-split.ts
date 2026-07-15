@@ -39,6 +39,7 @@ function main(): void {
   assert("A has no Agenda Engine section", !DEEP_RECKONING_REPORT_TASK.includes("Agenda Engine"));
   assert("B has 承上启下", AGENDA_BRIDGE_TASK.includes("承上"));
   assert("B bans yes/no", AGENDA_BRIDGE_TASK.includes("yes/no"));
+  assert("B has direction_index", AGENDA_BRIDGE_TASK.includes("direction_index"));
   assert("B has no full chart dump instruction", !AGENDA_BRIDGE_TASK.includes("pillars_detail"));
   assert("A runner xhigh", runner.includes('reasoning_effort: "xhigh"'));
   assert("B runner high", runner.includes('reasoning_effort: "high"'));
@@ -54,33 +55,94 @@ function main(): void {
   assert("UI regenerate question", ui.includes("handleRegenerateQuestionClick"));
   assert("validateAgendaAnchors exported", core.includes("validateAgendaAnchorsToDirections"));
 
-  const ok = validateAgendaAnchorsToDirections(
+  const dirs = [
+    {
+      direction: "先把火浇灭：建立强制冷却的独处时段",
+      structural_basis: "x",
+      what_would_confirm: "y",
+    },
+    {
+      direction: "把经验沉淀成可复用模块",
+      structural_basis: "x",
+      what_would_confirm: "y",
+    },
+  ];
+
+  const byIndex = validateAgendaAnchorsToDirections(
     [
       {
-        id: "a1",
-        label: "冷却时间",
+        id: "cool",
+        label: "你的冷却时段",
         critical: true,
         status: "unexplored",
-        supports: "落地方向：先降火，再应对",
+        direction_index: 1,
+        supports: "落地方向：先把火浇灭——建立强制冷却的独处时段",
+      },
+      {
+        id: "mod",
+        label: "最硬的那块经验",
+        critical: true,
+        status: "unexplored",
+        direction_index: 2,
+        supports: "随便写",
       },
     ],
-    [{ direction: "先降火，再应对", structural_basis: "x", what_would_confirm: "y" }],
+    dirs,
   );
-  assert("anchor validates matching supports", ok.ok === true);
+  assert("anchor accepts direction_index (punctuation-diff supports ok)", byIndex.ok === true);
+
+  const punctOnly = validateAgendaAnchorsToDirections(
+    [
+      {
+        id: "cool",
+        label: "你的冷却时段",
+        critical: true,
+        status: "unexplored",
+        // no index — fuzzy fallback must survive ： vs ——
+        supports: "落地方向：先把火浇灭——建立强制冷却的独处时段",
+      },
+    ],
+    [
+      {
+        direction: "先把火浇灭：建立强制冷却的独处时段",
+        structural_basis: "x",
+        what_would_confirm: "y",
+      },
+    ],
+  );
+  assert("fuzzy fallback survives punctuation diff", punctOnly.ok === true);
+  if (punctOnly.ok) {
+    assert("fuzzy fills direction_index=1", punctOnly.agenda[0]?.direction_index === 1);
+  }
 
   const bad = validateAgendaAnchorsToDirections(
     [
       {
         id: "a1",
-        label: " demography",
+        label: "无关项",
         critical: true,
         status: "unexplored",
-        supports: "落地方向：无关话题",
+        supports: "落地方向：月球殖民计划与外卖配送",
       },
     ],
     [{ direction: "先降火，再应对", structural_basis: "x", what_would_confirm: "y" }],
   );
-  assert("anchor rejects unmapped supports", bad.ok === false);
+  assert("anchor rejects unmapped supports without index", bad.ok === false);
+
+  const badIdx = validateAgendaAnchorsToDirections(
+    [
+      {
+        id: "a1",
+        label: "越界",
+        critical: true,
+        status: "unexplored",
+        direction_index: 9,
+        supports: "x",
+      },
+    ],
+    [{ direction: "先降火，再应对", structural_basis: "x", what_would_confirm: "y" }],
+  );
+  assert("anchor rejects out-of-range index without fuzzy hit", badIdx.ok === false);
 
   console.log(
     "\n" +

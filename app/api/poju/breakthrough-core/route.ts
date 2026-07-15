@@ -133,7 +133,7 @@ export async function POST(req: Request) {
         {
           ok: false,
           error:
-            "[breakthrough-core] 命主基础分析缺失，无法锚定深测算（必锚命盘）。selected_stored_profile_id=" +
+            "[breakthrough-core] 能量底座缺失，无法锚定深测算（必锚 structured）。selected_stored_profile_id=" +
             String(body.selected_stored_profile_id ?? "null"),
         },
         { status: 422 },

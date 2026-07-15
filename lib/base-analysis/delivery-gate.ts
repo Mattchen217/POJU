@@ -77,6 +77,6 @@ export function buildBaseAnalysisRegenHint(
 ): string {
   const labels = [...new Set(violations.map((v) => v.label))].slice(0, 12).join(", ");
   return locale.startsWith("zh")
-    ? `\n\n【元报告落库门禁未通过 — 须完整重写 Markdown 正文】问题：${labels}。神煞只能逐字取自本次 structured 实例清单；严禁 元辰/六秀日/阴差阳错/空亡/将星/劫煞 等引擎不计算项。每个 ⟦t:id|可见词|白话⟧ 必须三段位闭合；禁止断标记、禁止可见词前加 the/a；四柱逐柱段每柱最多 1–2 个金字；每段 ≤2 金字。返回完整正文，勿截断。`
+    ? `\n\n【元报告落库门禁未通过 — 须完整重写 Markdown 正文】问题：${labels}。神煞只能逐字取自本次 structured 实例清单；严禁 元辰/六秀日/阴差阳错/空亡/将星/劫煞 等引擎不计算项。每个 ⟦t:id|可见词|白话⟧ 必须三段位闭合；禁止断标记、禁止可见词前加 the/a；每段 ≤2 金字。全文须含身份锚 + 五块分区（含能量交换）+ 收尾，零大运/零年龄段时间锚。返回完整正文，勿截断。`
     : `\n\n[BASE-ANALYSIS DELIVERY GATE FAILED — rewrite COMPLETE Markdown body] Issues: ${labels}. Shen_sha ONLY from this structured instance inventory; NEVER 元辰/六秀日/阴差阳错/Void/General Star/etc. Every ⟦t:id|visible|plain⟧ must be fully closed with plain tooltip; no broken markers; visible text = noun phrase without leading "the/a"; ≤2 markers per paragraph, ≤2 per pillar block. Return complete text—do not truncate.`;
 }

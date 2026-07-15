@@ -1,0 +1,306 @@
+/**
+ * Layer 1 — machine-facing core judgments (expand structured, never re-judge).
+ * Shared by POJU / Match / Glyph / Syncro. No metaphor · no scene · no age plot.
+ */
+
+import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
+import type { DaYunEntry } from "@/lib/calculations/lunar-dayun";
+import { computeNatalChartRelations } from "@/lib/calculations/relation-engine";
+import { STEMS, type HeavenlyStem, type WuXing } from "@/lib/match/data/stems-branches";
+
+export type CoreJudgmentsRefs = {
+  day_master: string;
+  strength: string;
+  yong_shen: string;
+  xi_shen: string[];
+  ji_shen: string[];
+  pattern: string;
+  /** 0-based index into structured.da_yun for the current step; null if unknown. */
+  da_yun_step: number | null;
+  shensha_instances: string[];
+  natal_relations: string[];
+};
+
+/**
+ * Compressed neutral judgments — one source of "what this chart means"
+ * so four products do not invent conflicting narratives.
+ */
+export type CoreJudgments = {
+  identity_anchor: string;
+  drive_mechanism: string;
+  structural_gap: string;
+  balance_anchor: string;
+  exchange_mode: string;
+  leverage_state: string;
+  /** Current step climate only — no age / Ganzhi / calendar year. */
+  climate_now: string;
+  refs: CoreJudgmentsRefs;
+};
+
+const WUXING_TUNE: Record<WuXing, { zh: string; en: string }> = {
+  木: { zh: "同类支持、节奏化生长", en: "peer support and paced growth" },
+  火: { zh: "可见表达与分段输出", en: "visible expression and segmented output" },
+  土: { zh: "承载节奏与边界稳定", en: "holding rhythm and stable boundaries" },
+  金: { zh: "规则网格与收敛校准", en: "rule grid and convergent calibration" },
+  水: { zh: "节律/独处/复盘冷却", en: "rhythm / solitude / review cooling" },
+};
+
+function isStem(s: string): s is HeavenlyStem {
+  return s in STEMS;
+}
+
+function stemWuxing(stem: string): WuXing | null {
+  const ch = stem.trim().charAt(0);
+  return isStem(ch) ? STEMS[ch].wuxing : null;
+}
+
+function elementFromAny(raw: string): WuXing | null {
+  const t = raw.trim();
+  if (/[木火土金水]/.test(t)) {
+    const m = t.match(/[木火土金水]/);
+    return (m?.[0] as WuXing) ?? null;
+  }
+  return stemWuxing(t);
+}
+
+export function resolveCurrentDaYunStep(
+  da_yun: DaYunEntry[],
+  nowYear = new Date().getFullYear(),
+): number | null {
+  if (!Array.isArray(da_yun) || da_yun.length === 0) return null;
+  let step = 0;
+  for (let i = 0; i < da_yun.length; i++) {
+    if ((da_yun[i]?.start_year ?? 0) <= nowYear) step = i;
+  }
+  return step;
+}
+
+function collectShensha(structured: ProfileStructured): string[] {
+  const out = new Set<string>();
+  const detail = structured.pillars_detail;
+  if (!detail) return [];
+  for (const p of [detail.year, detail.month, detail.day, detail.hour]) {
+    for (const s of p.shen_sha ?? []) {
+      const t = String(s).trim();
+      if (t) out.add(t);
+    }
+  }
+  return [...out];
+}
+
+function tenGodsPresent(structured: ProfileStructured): string[] {
+  const detail = structured.pillars_detail;
+  if (!detail) return [];
+  return [detail.year, detail.month, detail.day, detail.hour]
+    .map((p) => String(p.ten_god ?? "").trim())
+    .filter(Boolean);
+}
+
+function driveFromTenGods(gods: string[], locale: string): string {
+  const zh = locale.startsWith("zh");
+  const joined = gods.join("");
+  if (/食神|伤官/.test(joined) && /财/.test(joined)) {
+    return zh
+      ? "产出→资源回流的闭环效率高（十神组合机制转译，不谈职业）"
+      : "Produce→resource-return loop runs efficiently (ten-god mechanism only; no career typing)";
+  }
+  if (/印/.test(joined) && /官|杀/.test(joined)) {
+    return zh
+      ? "约束与补给互相咬合时系统最稳（官印类机制，不谈职场情节）"
+      : "Constraint and supply lock best when officer-seal linkage holds (mechanism only)";
+  }
+  if (/比肩|劫财/.test(joined)) {
+    return zh
+      ? "并行协作能放大推进力，单打硬顶更易内耗"
+      : "Parallel alliance amplifies drive; solo hard-push drains faster";
+  }
+  return zh
+    ? "关键链路在于把本盘主导十神机制跑通，而非换赛道式折腾"
+    : "Leverage comes from running this chart’s dominant ten-god mechanism—not channel-hopping";
+}
+
+function exchangeFromTenGods(gods: string[], locale: string): string {
+  const zh = locale.startsWith("zh");
+  const needSupply = gods.some((g) => /印/.test(g));
+  const giveExpress = gods.some((g) => /食神|伤官/.test(g));
+  const giveStructure = gods.some((g) => /官|杀/.test(g));
+  const parts: string[] = [];
+  if (needSupply) {
+    parts.push(zh ? "需要被稳定结构供给" : "needs steady structural supply");
+  } else {
+    parts.push(zh ? "对外索取不宜过猛" : "should not over-draw from outside");
+  }
+  if (giveExpress) {
+    parts.push(zh ? "擅长以协调与表达给出" : "gives best through coordination and expression");
+  } else if (giveStructure) {
+    parts.push(zh ? "擅长以边界与秩序给出" : "gives best through boundary and order");
+  } else {
+    parts.push(zh ? "擅长以并行推进给出" : "gives best through parallel momentum");
+  }
+  return parts.join(zh ? "；" : "; ");
+}
+
+function identityAnchor(
+  dmWx: WuXing | null,
+  strength: ProfileStructured["strength"],
+  locale: string,
+): string {
+  const zh = locale.startsWith("zh");
+  const wxLabel = dmWx ?? (zh ? "未知" : "unknown");
+  if (strength === "weak") {
+    return zh
+      ? `借力生长型（${wxLabel}）：能量靠连接与节奏放大，硬撑则折`
+      : `Borrow-to-grow type (${wxLabel}): energy scales via connection and rhythm; hard brace breaks`;
+  }
+  if (strength === "strong") {
+    return zh
+      ? `外放主导型（${wxLabel}）：能量主动外溢，需泄中求衡`
+      : `Outward-drive type (${wxLabel}): energy spills outward; balance via controlled release`;
+  }
+  return zh
+    ? `均衡运行型（${wxLabel}）：进出大致相当，怕骤然过载或突然断供`
+    : `Balanced-run type (${wxLabel}): inflow≈outflow; fragile to sudden overload or cut-off`;
+}
+
+function structuralGap(structured: ProfileStructured, locale: string): string {
+  const zh = locale.startsWith("zh");
+  const ji = structured.ji_shen ?? [];
+  const jiEl = ji.map(elementFromAny).filter(Boolean) as WuXing[];
+  if (jiEl.includes("水") || ji.some((j) => j.includes("水"))) {
+    return zh
+      ? "冷却机制不足 → 信息未齐即锁定决策"
+      : "Cooling capacity runs low → locks decisions before inputs are complete";
+  }
+  if (jiEl.includes("金") || ji.some((j) => j.includes("金"))) {
+    return zh
+      ? "收敛网格偏弱 → 输出易散、难收口"
+      : "Convergent grid runs thin → output scatters, hard to close loops";
+  }
+  if (structured.strength === "strong") {
+    return zh
+      ? "外放偏多 → 连续高压后内耗累积"
+      : "Outward drive runs high → internal friction accumulates after chained pressure";
+  }
+  if (structured.strength === "weak") {
+    return zh
+      ? "补给不稳 → 单点硬顶时易折"
+      : "Supply is uneven → single-point hard pushes snap easier";
+  }
+  return zh
+    ? "配置短板在过载窗口：节律一乱，判断先糊"
+    : "Config weak point is overload windows: when rhythm breaks, judgment blurs first";
+}
+
+function balanceAnchor(structured: ProfileStructured, locale: string): string {
+  const zh = locale.startsWith("zh");
+  const yong = elementFromAny(structured.yong_shen) ?? elementFromAny(structured.xi_shen?.[0] ?? "");
+  const xi = (structured.xi_shen ?? [])
+    .map(elementFromAny)
+    .filter(Boolean) as WuXing[];
+  const yongTune = yong ? WUXING_TUNE[yong] : null;
+  const xiTune = xi[0] ? WUXING_TUNE[xi[0]] : null;
+  if (zh) {
+    const a = yong && yongTune ? `需补【${yong}】：${yongTune.zh}` : "按用神方向补平衡机制";
+    const b = xi[0] && xiTune && xi[0] !== yong ? `；喜【${xi[0]}】：${xiTune.zh}` : "";
+    return `${a}${b}（含方位/色彩/时段锚；禁动作清单）`;
+  }
+  const a =
+    yong && yongTune
+      ? `Favor 【${yong}】: ${yongTune.en}`
+      : "Tune toward structured favorable direction";
+  const b =
+    xi[0] && xiTune && xi[0] !== yong ? `; support 【${xi[0]}】: ${xiTune.en}` : "";
+  return `${a}${b} (direction/color/time anchors only; no action checklists)`;
+}
+
+function climateNow(
+  structured: ProfileStructured,
+  step: number | null,
+  locale: string,
+): string {
+  const zh = locale.startsWith("zh");
+  if (step == null || !structured.da_yun[step]) {
+    return zh ? "当前这步：节奏不明，宜守" : "Current step: climate unclear — prefer hold";
+  }
+  const gz = structured.da_yun[step]!.ganzhi;
+  const dayunWx = stemWuxing(gz);
+  const yongWx = elementFromAny(structured.yong_shen);
+  if (!dayunWx) {
+    return zh
+      ? "当前这步：气候平稳，宜守中带进"
+      : "Current step: steady climate — hold with selective advance";
+  }
+  const generates: Record<WuXing, WuXing> = {
+    木: "火",
+    火: "土",
+    土: "金",
+    金: "水",
+    水: "木",
+  };
+  if (yongWx && (dayunWx === yongWx || generates[dayunWx] === yongWx)) {
+    return zh
+      ? "当前这步：用神侧偏顺，可择机推进"
+      : "Current step: favorable side is coherent — selective advance ok";
+  }
+  if (yongWx && generates[yongWx] === dayunWx) {
+    return zh ? "当前这步：偏耗泄，宜守" : "Current step: drain-leaning — prefer hold";
+  }
+  if (dayunWx === "火" && yongWx === "水") {
+    return zh ? "当前这步：偏燥耗，宜守" : "Current step: dry-drain lean — prefer hold";
+  }
+  return zh ? "当前这步：气候交织，宜守" : "Current step: mixed climate — prefer hold";
+}
+
+/**
+ * Expand structured into Layer-1 judgments. Never invent career/scene/metaphor.
+ */
+export function buildCoreJudgmentsFromStructured(
+  structured: ProfileStructured,
+  locale = "zh",
+): CoreJudgments {
+  const dmWx = stemWuxing(structured.day_master);
+  const gods = tenGodsPresent(structured);
+  const step = resolveCurrentDaYunStep(structured.da_yun);
+  const relations = computeNatalChartRelations(structured).map((r) => r.id);
+
+  const zh = locale.startsWith("zh");
+
+  return {
+    identity_anchor: identityAnchor(dmWx, structured.strength, locale),
+    drive_mechanism: driveFromTenGods(gods, locale),
+    structural_gap: structuralGap(structured, locale),
+    balance_anchor: balanceAnchor(structured, locale),
+    exchange_mode: exchangeFromTenGods(gods, locale),
+    leverage_state: zh
+      ? "用神得力、节奏可控时最易突破（不预测事件、不指定行业）"
+      : "Breakthrough is easiest when favorable gods hold and rhythm is controllable (no event forecast, no industry)",
+    climate_now: climateNow(structured, step, locale),
+    refs: {
+      day_master: structured.day_master,
+      strength: structured.strength,
+      yong_shen: structured.yong_shen,
+      xi_shen: [...(structured.xi_shen ?? [])],
+      ji_shen: [...(structured.ji_shen ?? [])],
+      pattern: structured.pattern,
+      da_yun_step: step,
+      shensha_instances: collectShensha(structured),
+      natal_relations: relations,
+    },
+  };
+}
+
+export function isCoreJudgments(v: unknown): v is CoreJudgments {
+  if (!v || typeof v !== "object") return false;
+  const o = v as Record<string, unknown>;
+  return (
+    typeof o.identity_anchor === "string" &&
+    typeof o.drive_mechanism === "string" &&
+    typeof o.structural_gap === "string" &&
+    typeof o.balance_anchor === "string" &&
+    typeof o.exchange_mode === "string" &&
+    typeof o.leverage_state === "string" &&
+    typeof o.climate_now === "string" &&
+    o.refs != null &&
+    typeof o.refs === "object"
+  );
+}

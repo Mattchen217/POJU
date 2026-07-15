@@ -3,6 +3,7 @@
  */
 import { safeRandomUUID } from "@/lib/client/safe-crypto";
 import { assertBaseAnalysisDeliveryGate } from "@/lib/base-analysis/assert-delivery-gate";
+import { buildCoreJudgmentsFromStructured } from "@/lib/base-analysis/core-judgments";
 import { encryptJson, decryptJson } from "@/lib/crypto";
 import { sha256Hex } from "@/lib/sha256";
 import { calculateProfile } from "@/lib/calculations";
@@ -345,18 +346,24 @@ export async function saveBaseAnalysisFromStream(input: {
   // Preserve birth_location — only update base_analysis (+ tst_meta on birth_info).
   const preservedBirthLocation = data.user_profile.birth?.birth_location ?? data.birth_info.birth_location;
 
+  const core_judgments = buildCoreJudgmentsFromStructured(
+    input.structured,
+    input.locale || "zh",
+  );
+
   data.base_analysis = {
     generated_at: input.generated_at,
-    model: "v4_structured_display",
+    model: "v5_structured_judgments_display",
     tokens_used: 0,
     structured: input.structured,
+    core_judgments,
     display_text: displayText,
     content: input.content?.trim() || displayText,
     used_true_solar_time,
     tst_meta,
     stream_meta: input.meta,
     locale: input.locale,
-    computation_version: "v4_structured_display",
+    computation_version: "v5_structured_judgments_display",
   };
 
   if (tst_meta && data.birth_info) {

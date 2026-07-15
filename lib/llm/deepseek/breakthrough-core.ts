@@ -17,7 +17,7 @@ import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 import { POJU_IDENTITY, POJU_KNOWLEDGE_ROOTS } from "@/lib/llm/prompts/poju-base";
 import { buildOutputPolicyForPoju } from "@/lib/llm/compliance/output-policy";
 import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-structured-instance-inventory";
-import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
+import { formatBaseAnalysisForPrompt, normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
 import { extractJson, tolerantJsonRepair, tryParseJsonObject } from "@/lib/llm/phases/phase-transport";
 import { normalizeAgendaFromLlm } from "@/lib/poju/opening-conversion-payload";
@@ -43,10 +43,11 @@ export const DEEP_RECKONING_REPORT_TASK = `# 角色：破局总设计师（上�
 和他的问题，做一次冷静、硬核、不注水的深度推演。你的产出是后续整个破局流程的【唯一推理脊柱】
 —— 稍后另一次调用会据此倒推议程；本次【只产出报告】。彻底剥离聊天语气。
 
-# 输入（structured 是你唯一的事实源）
+# 输入（structured + core_judgments 是你唯一的事实源）
 - day_master / pattern / strength / yong_shen / xi_shen / ji_shen
 - four_pillars 与 pillars_detail.{year|month|day|hour}.{ten_god, hidden_stems, shen_sha, life_stage}
 - da_yun（当前走到第几步、主题、何时转）
+- core_judgments（已裁定展开：identity_anchor / drive_mechanism / structural_gap / balance_anchor / exchange_mode / leverage_state / climate_now）——**以它统一口径，禁止改判 structured**
 - 用户原始问题 + 已确认处境（第1段他说过的具体词句）
 
 # 任务（仅此两项）
@@ -121,9 +122,10 @@ export const AGENDA_BRIDGE_TASK = `# 角色：议程与首问撰写（承上启�
 
 # 议程规则
 - 严禁通用问卷 / 摸现状（那是第1段的事）。
-- 每项必须服务 A 的某条 direction；supports 写成「落地方向：」+ 该方向原话要点（须能对上 A 的 direction 原文）。
+- 每项议程必须标注它服务于【A 报告里第几条破局方向】：direction_index（1 / 2 / 3）。
+  supports 写自然语言说明即可（如「落地方向：先把火浇灭」），【不必照抄】方向原文——锚定以 direction_index 为准。
 - ≥2 项 critical=true。
-- 每项 { id, label, critical, status:"unexplored", supports }。
+- 每项 { id, label, critical, status:"unexplored", direction_index, supports }。
 - **label（用户面板可见）**：必须用【第二人称】短名词短语（如"你的冷却时段"、"能吐槽的人"、"最硬的那块经验"）。
   【禁止】第三人称内部笔记句（"他目前有没有…"、"了解其冷却方式"）。
   【禁止】把完整问句当 label——完整问句只放 first_question。
@@ -143,7 +145,7 @@ export const AGENDA_BRIDGE_TASK = `# 角色：议程与首问撰写（承上启�
 # 输出（严格 JSON）
 {
   "investigation_agenda": [
-    { "id":"...", "label":"你的冷却时段", "critical":true, "status":"unexplored", "supports":"落地方向：…" }
+    { "id":"...", "label":"你的冷却时段", "critical":true, "status":"unexplored", "direction_index":1, "supports":"落地方向：先把火浇灭" }
   ],
   "first_question": "…"
 }
@@ -192,7 +194,8 @@ export function buildBreakthroughCorePrompt(input: {
     }
   })();
 
-  const baseStr = JSON.stringify(base_analysis, null, 2).slice(0, 12000);
+  // Layer 1 only — structured + core_judgments; never inject display_text narrative.
+  const baseStr = formatBaseAnalysisForPrompt(base_analysis, locale);
   const factGuard = buildChatFactGuardBlock(structured, {
     directedRelations: directedDynamic,
     verbose: true,
@@ -215,7 +218,7 @@ export function buildBreakthroughCorePrompt(input: {
 【第1段理解门产出（推演靶心 · 必须显式扣住）】
 ${segment1}
 
-【命主基础分析（节选/全文）】
+【能量底座 Layer1（structured + core_judgments · 无用户叙事）】
 ${baseStr}
 
 【用户原始问题】
@@ -272,13 +275,14 @@ ${coreJson}
 }
 
 /**
- * Code-side: each agenda item must map to one of A's directions via supports text.
- * Supports must contain a distinctive fragment of some direction (or numbered 方向N).
+ * Deterministic Call B anchor: prefer direction_index (1-based).
+ * Fallback only when index missing — fuzzy match supports vs direction text
+ * (strip punctuation/whitespace; LCS ratio ≥ 0.6). No exact string match.
  */
 export function validateAgendaAnchorsToDirections(
   agenda: AgendaItem[],
   directions: BreakthroughCore["breakthrough_directions"],
-): { ok: true } | { ok: false; reason: string } {
+): { ok: true; agenda: AgendaItem[] } | { ok: false; reason: string } {
   if (!Array.isArray(agenda) || agenda.length === 0) {
     return { ok: false, reason: "empty_agenda" };
   }
@@ -286,34 +290,78 @@ export function validateAgendaAnchorsToDirections(
     return { ok: false, reason: "empty_directions" };
   }
 
-  const needles = directions.map((d, i) => {
-    const text = (d.direction || "").trim();
-    const frag = text.slice(0, Math.min(12, text.length));
-    return { i: i + 1, text, frag, lower: text.toLowerCase() };
-  });
+  const max = directions.length;
+  const resolved: AgendaItem[] = [];
 
   for (const item of agenda) {
-    const supports = String(item.supports ?? "").trim();
-    if (!supports) {
-      return { ok: false, reason: `missing_supports:${item.id || item.label}` };
-    }
-    const sLower = supports.toLowerCase();
-    const hit = needles.some((n) => {
-      if (n.frag && (supports.includes(n.frag) || sLower.includes(n.lower.slice(0, 12)))) {
-        return true;
+    let idx =
+      typeof item.direction_index === "number" && Number.isInteger(item.direction_index)
+        ? item.direction_index
+        : undefined;
+
+    if (idx == null || idx < 1 || idx > max) {
+      const fuzzy = fuzzyMatchDirectionIndex(String(item.supports ?? ""), directions);
+      if (fuzzy == null) {
+        return { ok: false, reason: `unanchored:${item.id || item.label}` };
       }
-      // Index forms: 方向1 / 方向一 / direction 1
-      const idxRe = new RegExp(
-        `(?:方向|direction)\\s*[${n.i}一二三四五六七八九十]`,
-        "i",
-      );
-      return idxRe.test(supports);
-    });
-    if (!hit) {
-      return { ok: false, reason: `unanchored:${item.id || item.label}` };
+      idx = fuzzy;
+    }
+
+    resolved.push({ ...item, direction_index: idx });
+  }
+
+  return { ok: true, agenda: resolved };
+}
+
+/** Strip punctuation / whitespace / common prefixes for fuzzy direction compare. */
+function normalizeForDirectionAnchor(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/落地方向\s*[:：\-—–]*/g, "")
+    .replace(/方向\s*[123一二三]\s*[:：\-—–]*/g, "")
+    .replace(/[\s\u3000]+/g, "")
+    .replace(/[，。、“”‘’！？：；、·•\-—–~～'".,:;!?()（）【】\[\]{}<>《》/\\|+*=]/g, "");
+}
+
+function longestCommonSubstringLen(a: string, b: string): number {
+  if (!a || !b) return 0;
+  const m = a.length;
+  const n = b.length;
+  let prev = new Array<number>(n + 1).fill(0);
+  let best = 0;
+  for (let i = 1; i <= m; i++) {
+    const cur = new Array<number>(n + 1).fill(0);
+    for (let j = 1; j <= n; j++) {
+      if (a[i - 1] === b[j - 1]) {
+        cur[j] = prev[j - 1]! + 1;
+        if (cur[j]! > best) best = cur[j]!;
+      }
+    }
+    prev = cur;
+  }
+  return best;
+}
+
+function fuzzyMatchDirectionIndex(
+  supports: string,
+  directions: BreakthroughCore["breakthrough_directions"],
+): number | null {
+  const needle = normalizeForDirectionAnchor(supports);
+  if (needle.length < 2) return null;
+
+  let bestIdx = -1;
+  let bestRatio = 0;
+  for (let i = 0; i < directions.length; i++) {
+    const hay = normalizeForDirectionAnchor(directions[i]?.direction ?? "");
+    if (hay.length < 2) continue;
+    const lcs = longestCommonSubstringLen(needle, hay);
+    const ratio = lcs / Math.max(needle.length, hay.length);
+    if (ratio > bestRatio) {
+      bestRatio = ratio;
+      bestIdx = i + 1;
     }
   }
-  return { ok: true };
+  return bestRatio >= 0.6 ? bestIdx : null;
 }
 
 export class BreakthroughCoreParseError extends Error {
@@ -416,6 +464,7 @@ function agendaFromSalvagedDirections(
       label,
       critical: i < 2,
       status: "unexplored",
+      direction_index: i + 1,
       supports: d.direction,
     });
   }
@@ -745,7 +794,7 @@ export function parseSanitizeAgendaBridge(
     throw new BreakthroughCoreComplianceError(violations);
   }
 
-  return { investigation_agenda: scrubbedAgenda, first_question: scrubbedQ };
+  return { investigation_agenda: anchor.agenda, first_question: scrubbedQ };
 }
 
 export async function resolveBaseAnalysisForBreakthrough(

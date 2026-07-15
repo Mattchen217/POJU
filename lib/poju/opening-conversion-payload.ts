@@ -8,7 +8,10 @@ import type { BreakthroughCore, QuestionCategory } from "@/lib/poju/agent-state"
 import { parseBreakthroughCoreUpdatesFromLlm } from "@/lib/poju/agent-state";
 import { extractQuestionCategory } from "@/lib/poju/context-extractor";
 import type { AgendaItem } from "@/lib/poju/investigation-agenda";
-import { parseInvestigationAgenda } from "@/lib/poju/investigation-agenda";
+import {
+  parseAgendaDirectionIndex,
+  parseInvestigationAgenda,
+} from "@/lib/poju/investigation-agenda";
 
 export type OpeningConversionPayload = {
   response: string;
@@ -50,11 +53,13 @@ function parseAgendaLenient(raw: unknown): AgendaItem[] | null {
       o.status === "partial" || o.status === "covered" || o.status === "unexplored"
         ? o.status
         : "unexplored";
+    const direction_index = parseAgendaDirectionIndex(o.direction_index);
     items.push({
       id,
       label,
       critical: typeof o.critical === "boolean" ? o.critical : false,
       status,
+      ...(direction_index != null ? { direction_index } : {}),
       supports: typeof o.supports === "string" ? o.supports : "",
     });
   }
@@ -151,6 +156,7 @@ function agendaFromBreakthroughDirections(record: Record<string, unknown>): Agen
       label: label.slice(0, 40),
       critical: i < 2,
       status: "unexplored",
+      direction_index: i + 1,
       supports: typeof row.direction === "string" ? row.direction : "",
     });
   }

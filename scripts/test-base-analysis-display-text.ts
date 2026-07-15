@@ -33,12 +33,11 @@ function loadEnvLocal() {
 }
 
 const REQUIRED_SECTIONS_ZH = [
-  "核心底色",
-  "系统脆弱点",
-  "能量平衡锚",
-  "高杠杆发力区",
-  "四柱命盘数据",
-  "大运能量气候概览",
+  "你的核心配置",
+  "容易卡住的地方",
+  "怎么把自己调回来",
+  "你和外部的能量交换",
+  "什么状态下你最容易突破",
 ];
 
 function buildTestProfile(): { profile: UserProfile; chart: ReturnType<typeof getBaziChart> } {
@@ -114,13 +113,30 @@ async function main() {
   console.log("has term marking block:", system.includes("⟦t:") ? "PASS" : "FAIL");
   console.log("has closed-set rule:", system.includes("国印贵人") ? "PASS" : "FAIL");
   console.log("has data_availability:", system.includes("data_availability") ? "PASS" : "FAIL");
-  console.log("has four-dimension framework:", system.includes("核心底色") && system.includes("系统脆弱点") ? "PASS" : "FAIL");
+  console.log(
+    "has five-section framework:",
+    system.includes("你的核心配置") && system.includes("你和外部的能量交换") ? "PASS" : "FAIL",
+  );
+  console.log(
+    "dropped 四柱/大运 as required sections:",
+    !system.includes("5. **## 四柱命盘数据") && !system.includes("6. **## 大运能量气候")
+      ? "PASS"
+      : "FAIL",
+  );
   console.log("has neutrality ban:", system.includes("开咖啡馆") || system.includes("café") ? "PASS" : "FAIL");
-  console.log("bans Bold lead placeholder:", !system.includes("**Bold lead:**") && system.includes("严禁") ? "PASS" : "FAIL");
+  const eng = system.indexOf("持续燃烧的引擎");
+  const engWin = eng < 0 ? "" : system.slice(Math.max(0, eng - 40), eng + 20);
+  console.log(
+    "few-shot engine only as ban:",
+    eng < 0 || /黑名单|禁止|✗/.test(engWin) ? "PASS" : "FAIL",
+  );
+  console.log("has metaphor blacklist:", system.includes("手机散热片") || system.includes("散热缺口") ? "PASS" : "FAIL");
+  console.log("bans Bold lead placeholder:", system.includes("Bold lead") && system.includes("禁止") ? "PASS" : "FAIL");
   console.log("has multi-line bullet rule:", system.includes("独占一行") || system.includes("per line") ? "PASS" : "FAIL");
-  console.log("has synthesis not pillar dump:", system.includes("综合解读") || system.includes("Synthesized config") ? "PASS" : "FAIL");
   console.log("has natal relation anchor:", system.includes("本命结构关系") && system.includes("最多点一处") ? "PASS" : "FAIL");
   console.log("ignores liunian in base:", system.includes("流年/动态") || system.includes("liunian") ? "PASS" : "FAIL");
+  console.log("SaaS title 个人能量画像:", system.includes("个人能量画像") ? "PASS" : "FAIL");
+  console.log("zero decade narrative:", system.includes("零大运") || system.includes("零年龄段") ? "PASS" : "FAIL");
 
   if (!isOpenRouterConfigured()) {
     console.log("\n⚠ OPENROUTER_API_KEY not set — skipping live display_text generation.");

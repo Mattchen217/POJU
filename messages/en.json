@@ -1311,13 +1311,13 @@
     "error_create_profile": "Failed to save your information. Please try again."
   },
   "base_analysis_view": {
-    "eyebrow": "Personal personality portrait",
-    "title": "Complete personal personality portrait",
+    "eyebrow": "Personal Energy Profile",
+    "title": "Full Personal Energy Profile",
     "close": "Close",
     "loading": "Loading…",
     "not_found": "No saved analysis found.",
-    "poju_cta_title": "Take this portrait into POJU",
-    "poju_cta_description": "Ask follow-up questions with your chart already in context.",
+    "poju_cta_title": "Take this profile into POJU",
+    "poju_cta_description": "Ask follow-up questions with your energy readout already in context.",
     "poju_cta_button": "Open POJU"
   },
   "refund": {

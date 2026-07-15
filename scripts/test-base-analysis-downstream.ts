@@ -76,10 +76,21 @@ function buildFixture() {
 function main() {
   const { profile, v4Bundle, legacyBundle, structured } = buildFixture();
 
-  console.log("=== buildProfileContextSection (v4) ===");
+  console.log("=== buildProfileContextSection (v5 Layer1) ===");
   const ctxV4 = buildProfileContextSection(profile, v4Bundle);
-  console.log(ctxV4.includes("## 能量底座·结构数据（内部精确") ? "✓ has structured block" : "✗ missing structured");
-  console.log(ctxV4.includes("## 中立能量元报告（用户向白榜") ? "✓ has display_text block" : "✗ missing display_text");
+  console.log(
+    ctxV4.includes("## 能量底座·结构数据") ? "✓ has structured block" : "✗ missing structured",
+  );
+  console.log(
+    ctxV4.includes("core_judgments") || ctxV4.includes("identity_anchor")
+      ? "✓ has core_judgments"
+      : "✗ missing core_judgments",
+  );
+  console.log(
+    !ctxV4.includes("持续燃烧的引擎") && !ctxV4.includes("（白榜示例）")
+      ? "✓ display_text NOT injected"
+      : "✗ still injecting narrative",
+  );
   console.log(ctxV4.includes('"da_yun"') ? "✓ structured JSON includes da_yun" : "✗ da_yun missing");
 
   console.log("\n=== formatBaseAnalysisForPrompt excerpt ===");
@@ -87,14 +98,17 @@ function main() {
   console.log(formatted.slice(0, 600), "\n…");
   console.log(
     formatted.includes(BASE_ANALYSIS_DOWNSTREAM_BANNER_ZH)
-      ? "✓ downstream neutral banner present"
+      ? "✓ downstream Layer1 banner present"
       : "✗ missing downstream banner",
   );
 
   console.log("\n=== legacy fallback (v3 content only) ===");
   const ctxLegacy = buildProfileContextSection(profile, legacyBundle);
-  console.log(ctxLegacy.includes("legacy JSON") || ctxLegacy.includes("命主基础") ? "✓ legacy renders" : "✗ legacy broken");
-
+  console.log(
+    ctxLegacy.includes("legacy JSON") || ctxLegacy.includes("用神")
+      ? "✓ legacy renders"
+      : "✗ legacy broken",
+  );
   console.log("\n=== Match parseProfileForMatrix ===");
   const parsedV4 = parseProfileForMatrix(wrapProfileForMatrix(profile, v4Bundle));
   console.log("yongShen:", parsedV4.yongShen, "(expected 土 from structured)");
