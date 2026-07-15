@@ -848,6 +848,8 @@ export function fillMissingMarkerPlain(text: string, locale: string): string {
   return out;
 }
 
+export type OutOfSetAuditHit = { label: string; snippet: string };
+
 /** Detect engine-out-of-set 神煞/术语 in delivery text (audit-only). */
 export function auditOutOfSetTerms(text: string): OutOfSetAuditHit[] {
   if (!text?.trim()) return [];
