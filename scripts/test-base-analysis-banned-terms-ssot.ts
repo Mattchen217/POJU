@@ -61,9 +61,11 @@ function main() {
   assert("stream uses repairViolationsOnly", streamSrc.includes("repairViolationsOnly"));
   assert("MAX_REPAIRS = 2", streamSrc.includes("MAX_REPAIRS = 2"));
   assert("full regen is last resort", streamSrc.includes("repairs exhausted") || streamSrc.includes("last-resort"));
+  assert("stream has onRepairFail loud path", streamSrc.includes("onRepairFail"));
 
   const routeSrc = read("app/api/profile/base-analysis/stream/route.ts");
   assert("route has onRepairStart", routeSrc.includes("onRepairStart"));
+  assert("route has onRepairFail", routeSrc.includes("onRepairFail"));
   assert("route generates core_judgments", routeSrc.includes("generateCoreJudgmentsForProfile"));
 
   assert("term:日主 is hard ban", isHardBannedTermLabel("term:日主"));
@@ -80,17 +82,13 @@ function main() {
   const metaHits = auditMetaphorBlacklist("你的心智引擎在空转。", "zh");
   assert("audit catches 引擎", metaHits.some((h) => h.label === "metaphor_blacklist"));
 
-  const repairHint = buildViolationRepairInstruction(
-    [
-      { label: "term:日主", snippet: "日主偏旺" },
-      { label: "metaphor_blacklist", snippet: "你的心智引擎" },
-    ],
+  const repairSrc = read("lib/base-analysis/repair-violations.ts");
+  assert("repair locates line (no model find)", repairSrc.includes("locateViolationLine"));
+  assert("repair rewrites one line", repairSrc.includes("rewriteViolationLine"));
+  assert("repair soft-maps available", buildViolationRepairInstruction(
+    [{ label: "term:日主", snippet: "日主偏旺" }],
     "zh",
-  );
-  assert("repair says patches-only JSON", repairHint.includes("patches") && repairHint.includes("禁止"));
-  assert("repair soft-maps 日主", repairHint.includes("核心特质"));
-  assert("repair mentions 引擎标签", repairHint.includes("引擎") || repairHint.includes("黑名单"));
-  assert("repair forbids full rewrite", repairHint.includes("重吐全文") || repairHint.includes("patches"));
+  ).includes("核心特质"));
 
   // Live prompt assembly needs plausible structured — read system from file inject check is enough.
   // Smoke that buildBaseAnalysisStreamPrompt still callable via inventory needs full structured;

@@ -8,6 +8,7 @@ import { computeChartRelations, type RelationLabel } from "@/lib/calculations/re
 import { termPolarityById, type TermPolarity } from "@/lib/glossary/term-polarity";
 import {
   BARE_GANZHI_MARKER,
+  CLOSED_MATCH_RELATIONS,
   CLOSED_SET_REPLACE_IDS,
   CLOSED_SET_SLUG,
   CLOSED_SHEN_SHA,
@@ -895,9 +896,16 @@ export function auditOutOfSetTerms(text: string): OutOfSetAuditHit[] {
   }
 
   const closedSlugs = new Set(Object.values(CLOSED_SET_SLUG));
+  /** Generic Match-relation glossary slugs — not instance RelationLabel ids; must not be used as markers (use vernacular). */
+  const genericRelationGlossarySlugs = new Set(
+    CLOSED_MATCH_RELATIONS.map((han) => CLOSED_SET_SLUG[han]).filter(Boolean) as string[],
+  );
   const groupedForbidden = new Set(["ten_gods", "auxiliary_stars", "noble_support", "wealth_stars", "officer_stars", "resource_stars", "peer_stars", "punishment", "clash", "six_harmonies"]);
   for (const m of parseTermMarkers(text)) {
     if (groupedForbidden.has(m.id)) {
+      hits.push({ label: `out_of_set_marker_id:${m.id}`, snippet: m.raw.slice(0, 40) });
+    } else if (genericRelationGlossarySlugs.has(m.id)) {
+      // e.g. liu_chong — closed glossary exists but base-analysis must use vernacular / instance chong_* ids only
       hits.push({ label: `out_of_set_marker_id:${m.id}`, snippet: m.raw.slice(0, 40) });
     } else if (
       !closedSlugs.has(m.id) &&

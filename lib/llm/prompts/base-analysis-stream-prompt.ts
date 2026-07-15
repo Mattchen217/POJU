@@ -30,7 +30,7 @@ const BASE_ANALYSIS_NATAL_RELATION_ANCHOR_ZH = `【用本盘动态关系锚定�
   用它把「容易卡住的地方」或「你的核心配置」锚到真实结构张力上——
   例：「结构里有一处彼此消耗的拉扯」（源自相刑）、「核心与外部有一股要合而未合的牵引」（源自天干合）。
 - 【最多点一处】，织进叙事，【禁枚举】关系名（不写「你有寅巳相刑、巳酉半合…」）。
-- 关系词走软翻译 ⟦t:<relation_slug>|软译|白话⟧，中性化（禁凶/灾/克死）。
+- **关系类【不打标】**：刑/冲/合/害等只写中性白话；禁止 \`⟦t:liu_chong|…⟧\` / \`⟦t:liu_he|…⟧\` 等自造或套用关系 glossary slug。
 - 【只用 source=natal 的本命关系】；实例清单里的【流年/动态关系一律忽略】——
   底座是稳定中立读数，流年剧情留给下游。`;
 
@@ -39,7 +39,7 @@ const BASE_ANALYSIS_NATAL_RELATION_ANCHOR_EN = `[Anchor structure on natal relat
   use **one** to anchor **Where You Stick** or **Your Core Configuration** to real structural tension—
   e.g. "a mutually draining pull inside the structure" (from penalty), "core and outer field share an almost-merge pull" (from stem combine).
 - **At most one mention**, woven into narrative—**never enumerate** ("you have Yin-Si penalty AND Si-You half-combo…").
-- Relation terms: soft ⟦t:<relation_slug>|soft label|plain⟧, neutralized (no doom / disaster / fatalism).
+- **No relation markers**: describe clash/combine in neutral vernacular only — never \`⟦t:liu_chong|…⟧\` / glossary relation slugs.
 - **Natal only (\`source=natal\`)**; ignore any liunian/directed/dynamic relations—stable neutral base; plot timing belongs downstream.`;
 
 /** Five energy sections + identity open + readout close (no 四柱 / 大运 sections). */
@@ -157,7 +157,7 @@ const BASE_ANALYSIS_BINDING_RULES = `# 绑定计算结果 · 闭集 · 禁幻觉
 11. **金色词密度** — **每段最多 1–2 个** ⟦t:…⟧；同 id 不重复刷标记。
 12. **禁止逐柱复述** — **禁止**在正文逐柱枚举藏干/十神/神煞/长生；不要另开四柱/大运展示段。
 13. **禁止假设**「输出端会软翻译」——你必须在生成时直接写好标记与软译词。
-14. **本命结构关系 · 锚定不枚举** — 关系**只能**来自实例清单【本命结构关系】（\`source=natal\`）；**最多一处**织进「你的核心配置」或「容易卡住的地方」；**禁**流年/定向/十神张力词；**禁**裸写刑冲合害或关系清单；须 ⟦t:<relation_slug>|软译|白话⟧ + 中性化。清单为空则**不得**硬塞关系词。`;
+14. **本命结构关系 · 锚定不枚举** — 关系**只能**来自实例清单【本命结构关系】（\`source=natal\`）；**最多一处**织进「你的核心配置」或「容易卡住的地方」；**禁**流年/定向/十神张力词；**禁**裸写刑冲合害或关系清单；**关系类不打标、直接中性白话**（禁止 \`liu_chong\` / \`liu_he\` 等 glossary slug 标记）。清单为空则**不得**硬塞关系词。`;
 
 const BASE_ANALYSIS_LEAD_LABEL_RULE_ZH = `# 引导块标签（严禁占位词与模板标签）
 

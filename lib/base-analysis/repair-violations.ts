@@ -1,17 +1,24 @@
 /**
  * Surgical repair after delivery-gate failure.
- * Model returns ONLY JSON patches; code applies them so newlines / ## layout stay intact.
+ * Code locates the violation LINE; model only rewrites that one line;
+ * code replaces by line index — never ask the model to construct `find`.
  */
 
 import {
-  buildViolationRepairInstruction,
+  BANNED_TERM_SOFT_ZH,
+  METAPHOR_BLACKLIST_ZH,
 } from "@/lib/llm/compliance/banned-terms";
 import type { ComplianceViolation } from "@/lib/llm/sanitize/compliance-terms";
 import {
   openRouterChatCompletion,
 } from "@/lib/llm/openrouter-shared";
 
-export type RepairPatch = { find: string; replace: string };
+export type LineRepair = {
+  lineIdx: number;
+  original: string;
+  rewritten: string;
+  label: string;
+};
 
 export type RepairViolationsInput = {
   text: string;
@@ -19,38 +26,79 @@ export type RepairViolationsInput = {
   locale: string;
   session_id?: string;
   signal?: AbortSignal;
+  profile_id?: string;
 };
 
 export type RepairViolationsResult =
-  | { ok: true; text: string; patches: RepairPatch[] }
-  | { ok: false; error: string };
+  | { ok: true; text: string; line_repairs: LineRepair[] }
+  | { ok: false; error: string; detail?: string };
 
-function parsePatchesJson(raw: string): RepairPatch[] | null {
-  const trimmed = raw.trim();
-  const start = trimmed.indexOf("{");
-  const end = trimmed.lastIndexOf("}");
-  if (start < 0 || end <= start) return null;
-  try {
-    const obj = JSON.parse(trimmed.slice(start, end + 1)) as {
-      patches?: unknown;
-    };
-    if (!Array.isArray(obj.patches)) return null;
-    const patches: RepairPatch[] = [];
-    for (const p of obj.patches) {
-      if (!p || typeof p !== "object") return null;
-      const find = (p as { find?: unknown }).find;
-      const replace = (p as { replace?: unknown }).replace;
-      if (typeof find !== "string" || typeof replace !== "string") return null;
-      if (!find.length) return null;
-      patches.push({ find, replace });
-    }
-    return patches;
-  } catch {
-    return null;
-  }
+/** Compact for cross-matching softVisible snippets vs markdown source lines. */
+export function compactForLineMatch(s: string): string {
+  return s
+    .replace(/\*+/g, "")
+    .replace(/^[>|]+\s*/g, "")
+    .replace(/\s+/g, "")
+    .trim();
 }
 
-/** Apply find→replace patches; throw if any find is missing (hallucinated patch). */
+/** Needle from violation label (term:引擎 / metaphor → 引擎 / stem_element → snippet). */
+export function violationNeedle(v: ComplianceViolation): string {
+  if (v.label === "metaphor_blacklist") {
+    for (const phrase of METAPHOR_BLACKLIST_ZH) {
+      if (v.snippet.includes(phrase)) return phrase;
+    }
+    return "引擎";
+  }
+  if (v.label.startsWith("term:")) {
+    return v.label.slice("term:".length);
+  }
+  if (v.label.startsWith("out_of_set_marker_id:")) {
+    return v.label.slice("out_of_set_marker_id:".length);
+  }
+  if (v.label === "marker_visible_ganzhi" || v.label === "stem_element") {
+    const m = v.snippet.match(/[甲乙丙丁戊己庚辛壬癸][木火土金水]?/);
+    if (m) return m[0]!;
+  }
+  // First substantial Han / latin run from snippet
+  const run = v.snippet.match(/[\u4e00-\u9fff]{2,12}|[A-Za-z_]{3,24}/);
+  return run?.[0] ?? v.snippet.slice(0, 12);
+}
+
+/**
+ * Deterministic line index from audit snippet / needle.
+ * Soft-visible snippets often lack `**` / `>` — match after stripping markdown noise.
+ */
+export function locateViolationLine(
+  text: string,
+  violation: ComplianceViolation,
+): number {
+  const lines = text.split("\n");
+  const snippetCompact = compactForLineMatch(violation.snippet);
+  const needle = violationNeedle(violation);
+
+  if (snippetCompact.length >= 4) {
+    const probe = snippetCompact.slice(0, Math.min(32, snippetCompact.length));
+    for (let i = 0; i < lines.length; i++) {
+      const lc = compactForLineMatch(lines[i]!);
+      if (lc.includes(probe) || (probe.length >= 8 && probe.includes(lc) && lc.length >= 8)) {
+        return i;
+      }
+    }
+  }
+
+  if (needle.length >= 2) {
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i]!.includes(needle)) return i;
+    }
+  }
+
+  return -1;
+}
+
+/** @deprecated find/replace patches — kept for unit tests of string apply only. */
+export type RepairPatch = { find: string; replace: string };
+
 export function applyRepairPatches(text: string, patches: RepairPatch[]): string {
   let fixed = text;
   for (const p of patches) {
@@ -62,77 +110,194 @@ export function applyRepairPatches(text: string, patches: RepairPatch[]): string
   return fixed;
 }
 
+export function applyLineRepairs(
+  text: string,
+  repairs: ReadonlyArray<{ lineIdx: number; rewritten: string }>,
+): string {
+  const lines = text.split("\n");
+  for (const r of repairs) {
+    if (r.lineIdx < 0 || r.lineIdx >= lines.length) {
+      throw new Error(`repair_line_oob:${r.lineIdx}`);
+    }
+    lines[r.lineIdx] = r.rewritten;
+  }
+  return lines.join("\n");
+}
+
+function bannedHintsForViolation(v: ComplianceViolation, locale: string): string {
+  if (!locale.startsWith("zh")) return v.label;
+  if (v.label === "metaphor_blacklist") {
+    return `黑名单词（字面禁，含否定式）：${METAPHOR_BLACKLIST_ZH.join(" / ")}`;
+  }
+  if (v.label.startsWith("term:")) {
+    const term = v.label.slice("term:".length);
+    const soft = BANNED_TERM_SOFT_ZH[term];
+    return soft ? `禁词「${term}」→ 可改为「${soft}」或同义白话` : `禁词「${term}」`;
+  }
+  if (v.label === "stem_element" || v.label === "marker_visible_ganzhi") {
+    return "禁裸干支 /「乙木丙火」类合称；软译用纯白话";
+  }
+  if (v.label.startsWith("out_of_set_marker_id:")) {
+    return "自造或不在闭集的标记 id → 拆掉标记，改成纯白话（不要再打 ⟦t:…⟧）";
+  }
+  return `违规：${v.label}`;
+}
+
+function stripWrappingQuotes(raw: string): string {
+  let t = raw.trim();
+  // Drop accidental fences / labels
+  t = t.replace(/^```[\s\S]*?\n/, "").replace(/\n```$/, "").trim();
+  t = t.replace(/^改写后[：:]\s*/i, "").trim();
+  if (
+    (t.startsWith('"') && t.endsWith('"')) ||
+    (t.startsWith("'") && t.endsWith("'")) ||
+    (t.startsWith("「") && t.endsWith("」")) ||
+    (t.startsWith("“") && t.endsWith("”"))
+  ) {
+    t = t.slice(1, -1).trim();
+  }
+  // Model sometimes returns multi-line; keep first non-empty line only
+  const first = t.split(/\r?\n/).map((l) => l.trimEnd()).find((l) => l.length > 0);
+  return first ?? "";
+}
+
 /**
- * Ask model for minimal JSON patches only — never re-emit the full document.
+ * Ask model for ONE rewritten line — never the full doc, never a find string.
+ */
+export async function rewriteViolationLine(input: {
+  originalLine: string;
+  violation: ComplianceViolation;
+  locale: string;
+  session_id?: string;
+  signal?: AbortSignal;
+}): Promise<string | null> {
+  const hints = bannedHintsForViolation(input.violation, input.locale);
+  const zh = input.locale.startsWith("zh");
+  const system = zh
+    ? `你是合规单行编辑。只输出【改写后的这一行】本身，不要解释、不要 JSON、不要引号包裹、不要重吐全文。
+规则：
+1) 完整保留原有格式标记与前缀（如行首的 > 、缩进、**加粗**、: 、⟦t:…⟧ 的结构若仍合规可留）
+2) 去掉/改写违规内容，使该行自然通顺且不含任何禁词（含否定式提及也不行）
+3) 不要新增其它段落或换行`
+    : `You are a single-line compliance editor. Output ONLY the rewritten line — no explanation, no JSON, no wrapping quotes, no full document.
+Rules:
+1) Preserve markdown prefixes (>, indentation, **bold**, :)
+2) Remove/rewrite the violation so the line is natural and ban-word-free (including negated mentions)
+3) Do not add other paragraphs or newlines`;
+
+  const user = zh
+    ? `原行：
+${input.originalLine}
+
+违规标签：${input.violation.label}
+上下文片段：${input.violation.snippet.slice(0, 80)}
+${hints}
+
+请只返回改写后的这一行：`
+    : `Original line:
+${input.originalLine}
+
+Violation: ${input.violation.label}
+Snippet: ${input.violation.snippet.slice(0, 80)}
+${hints}
+
+Return only the rewritten line:`;
+
+  const result = await openRouterChatCompletion({
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: user },
+    ],
+    temperature: 0.1,
+    max_tokens: 800,
+    json_mode: false,
+    reasoning_effort: "off",
+    session_id: input.session_id,
+    call_type: "base_analysis_repair",
+    phase_name: "base_analysis_repair_line",
+    signal: input.signal,
+  });
+
+  const line = stripWrappingQuotes(result.text ?? "");
+  if (!line) return null;
+  return line;
+}
+
+/**
+ * Locate violation lines → rewrite each once → replace by line index.
  */
 export async function repairViolationsOnly(
   input: RepairViolationsInput,
 ): Promise<RepairViolationsResult> {
   const critical = input.violations.filter((v) => v.label && v.snippet);
   if (!critical.length) {
-    return { ok: true, text: input.text, patches: [] };
+    return { ok: true, text: input.text, line_repairs: [] };
   }
 
-  const instruction = buildViolationRepairInstruction(critical, input.locale);
-  const system = input.locale.startsWith("zh")
-    ? `你是合规补丁编辑。只输出 JSON：{"patches":[{"find":"原文整句","replace":"改写后整句"},...]}
-规则：
-1) 找到【包含违规词的那一整句】（以句号/问号/感叹号/换行或 Markdown 行边界切），重写这一句，使其自然通顺且不含任何禁词/黑名单词
-2) 【只改点名的句子】；未点名段落一字不动
-3) 【不要】追求「最短片段」替换——只换单字常会语法不通（如「引擎」→「转化力」变成「一台燃烧的转化力」）
-4) 【禁止】输出整篇 Markdown / 解释；只有 patches 会被代码执行
-5) find 必须逐字存在于原文；原文换行与 ## 由代码保留`
-    : `You are a compliance patch editor. Output ONLY JSON: {"patches":[{"find":"<exact full sentence>","replace":"<rewritten sentence>"},...]}
-Rules:
-1) Find the FULL sentence containing the violation; rewrite that sentence so it is natural and contains no banned/blacklist words
-2) Change only named sentences; leave all other paragraphs untouched
-3) Do NOT prefer shortest-token swaps — they often break grammar
-4) NEVER re-emit the full Markdown
-5) find must be an exact substring; newlines / ## are preserved by code`;
+  const lines = input.text.split("\n");
+  const lineRepairs: LineRepair[] = [];
+  const doneLines = new Set<number>();
 
   try {
-    const result = await openRouterChatCompletion({
-      messages: [
-        { role: "system", content: system },
-        {
-          role: "user",
-          content: `${instruction}\n\n---ORIGINAL (find must match exactly; do not rewrite the whole doc)---\n${input.text}\n---END---`,
-        },
-      ],
-      temperature: 0.1,
-      max_tokens: 3000,
-      json_mode: true,
-      // Mechanical patching — deep reasoning burns the budget and finish=length with empty JSON.
-      reasoning_effort: "off",
-      session_id: input.session_id,
-      call_type: "base_analysis_repair",
-      phase_name: "base_analysis_repair_patches",
-      signal: input.signal,
-    });
+    for (const v of critical.slice(0, 8)) {
+      const lineIdx = locateViolationLine(input.text, v);
+      if (lineIdx < 0) {
+        const detail = `label=${v.label}; snippet=${v.snippet.slice(0, 60)}`;
+        console.error("[repair] patch application FAILED — line not found", {
+          profile_id: input.profile_id,
+          violation: v.label,
+          snippet_preview: v.snippet.slice(0, 80),
+        });
+        return { ok: false, error: "repair_line_not_found", detail };
+      }
+      if (doneLines.has(lineIdx)) continue;
+      doneLines.add(lineIdx);
 
-    const patches = parsePatchesJson(result.text ?? "");
-    if (!patches || patches.length === 0) {
-      console.warn("[fallback] repairViolationsOnly: no patches parsed", {
-        finish_reason: result.finish_reason,
-        preview: (result.text ?? "").slice(0, 160),
+      const originalLine = lines[lineIdx]!;
+      const rewritten = await rewriteViolationLine({
+        originalLine,
+        violation: v,
+        locale: input.locale,
+        session_id: input.session_id,
+        signal: input.signal,
       });
-      return { ok: false, error: "repair_patches_empty" };
+
+      if (!rewritten) {
+        console.error("[repair] patch application FAILED — empty rewrite", {
+          profile_id: input.profile_id,
+          violation: v.label,
+          lineIdx,
+          original_preview: originalLine.slice(0, 80),
+        });
+        return { ok: false, error: "repair_line_empty", detail: originalLine.slice(0, 80) };
+      }
+
+      // Must still be a single line
+      if (rewritten.includes("\n")) {
+        console.error("[repair] patch application FAILED — multi-line rewrite", {
+          profile_id: input.profile_id,
+          violation: v.label,
+          lineIdx,
+        });
+        return { ok: false, error: "repair_line_multiline", detail: rewritten.slice(0, 80) };
+      }
+
+      lines[lineIdx] = rewritten;
+      lineRepairs.push({
+        lineIdx,
+        original: originalLine,
+        rewritten,
+        label: v.label,
+      });
     }
 
-    try {
-      const fixed = applyRepairPatches(input.text, patches);
-      return { ok: true, text: fixed, patches };
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      console.warn("[fallback] repairViolationsOnly: patch apply failed", {
-        reason: msg,
-        patches: patches.slice(0, 4),
-      });
-      return { ok: false, error: msg };
-    }
+    return { ok: true, text: lines.join("\n"), line_repairs: lineRepairs };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    console.warn("[fallback] repairViolationsOnly failed", { reason: msg });
+    console.error("[repair] patch application FAILED — falling back to full regeneration", {
+      profile_id: input.profile_id,
+      reason: msg,
+    });
     return { ok: false, error: msg };
   }
 }

@@ -227,6 +227,19 @@ export async function POST(req: NextRequest) {
               `[base-analysis/stream] surgical repair ${repairIndex + 1} — clearing draft for ${activeJob.job_id}`,
             );
           },
+          onRepairFail: async ({ reason, detail, repairIndex }) => {
+            send("repair_failed", {
+              job_id: activeJob.job_id,
+              reason,
+              detail,
+              repair_index: repairIndex,
+              note: "本次为整篇重生成（补丁未命中）",
+            });
+            console.error(
+              `[base-analysis/stream] repair_failed → full regen annot for ${activeJob.job_id}: ${reason}`,
+              detail,
+            );
+          },
           onChunk: async (chunk: string) => {
             send("chunk", { text: chunk });
             try {
@@ -263,6 +276,7 @@ export async function POST(req: NextRequest) {
           core_judgments_source: cj.source,
           gate_attempts: gen.attempts,
           gate_repairs: gen.repairs,
+          regenerated_after_repair_miss: gen.regenerated_after_repair_miss ?? false,
         };
 
         await finalizeJob(activeJob.job_id, meta);
@@ -274,10 +288,15 @@ export async function POST(req: NextRequest) {
           sanitized: true,
           gate_attempts: gen.attempts,
           gate_repairs: gen.repairs,
+          regenerated_after_repair_miss: gen.regenerated_after_repair_miss ?? false,
+          ...(gen.regenerated_after_repair_miss
+            ? { note: "本次为整篇重生成（补丁未命中）" }
+            : {}),
         });
 
         console.log(
-          `[base-analysis/stream] completed ${activeJob.job_id}, length=${glossed.length}, attempts=${gen.attempts}, repairs=${gen.repairs}, cj=${cj.source}`,
+          `[base-analysis/stream] completed ${activeJob.job_id}, length=${glossed.length}, attempts=${gen.attempts}, repairs=${gen.repairs}, cj=${cj.source}` +
+            (gen.regenerated_after_repair_miss ? ", REGEN_AFTER_REPAIR_MISS" : ""),
         );
       } catch (e: unknown) {
         const message = e instanceof Error ? e.message : "stream_error";

@@ -189,6 +189,8 @@ function isChineseVariant(v: string): boolean {
 }
 
 function shouldSkipAuditTerm(term: string): boolean {
+  // Everyday Chinese — strength soft is 「随境调整型」; bare 「平衡」 false-fires lead labels.
+  if (term === "平衡") return true;
   if (AUDIT_ALLOW_LABELS.has(term)) return true;
   for (const label of AUDIT_ALLOW_LABELS) {
     if (term.toLowerCase() === label.toLowerCase()) return true;

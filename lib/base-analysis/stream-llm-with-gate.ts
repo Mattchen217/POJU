@@ -1,6 +1,6 @@
 /**
  * Generate base-analysis markdown with delivery-gate validation.
- * Prefer surgical repair (keep good draft) over full regeneration.
+ * Prefer surgical line-repair (keep good draft) over full regeneration.
  */
 
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
@@ -27,17 +27,34 @@ export type StreamLlmWithGateInput = {
   onAttemptStart?: (attempt: number) => Promise<void>;
   /** Called when starting a surgical repair (0-based repair index). */
   onRepairStart?: (repairIndex: number) => Promise<void>;
+  /**
+   * Loud fail when line-repair cannot apply — caller should annotate UI
+   * "本次为整篇重生成（补丁未命中）" before full regen.
+   */
+  onRepairFail?: (info: {
+    reason: string;
+    detail?: string;
+    repairIndex: number;
+  }) => Promise<void>;
   signal?: AbortSignal;
 };
 
 export type StreamLlmWithGateResult =
-  | { ok: true; content: string; attempts: number; repairs: number }
+  | {
+      ok: true;
+      content: string;
+      attempts: number;
+      repairs: number;
+      /** True when a full regen ran after repair miss. */
+      regenerated_after_repair_miss?: boolean;
+    }
   | {
       ok: false;
       error: string;
       violations: ReturnType<typeof auditBaseAnalysisDelivery>["violations"];
       attempts?: number;
       repairs?: number;
+      regenerated_after_repair_miss?: boolean;
     };
 
 const MAX_REPAIRS = 2;
@@ -77,7 +94,7 @@ async function generateOnce(
 
 /**
  * Stream narrative → sanitize → gate.
- * On critical fail: repairViolationsOnly up to 2× (cheap) before one full regen.
+ * On critical fail: line-repair up to 2× (cheap) before one full regen (loud).
  */
 export async function streamBaseAnalysisWithDeliveryGate(
   input: StreamLlmWithGateInput,
@@ -90,6 +107,7 @@ export async function streamBaseAnalysisWithDeliveryGate(
   let lastViolations: ReturnType<typeof auditBaseAnalysisDelivery>["violations"] = [];
   let totalRepairs = 0;
   let fullGens = 0;
+  let regeneratedAfterRepairMiss = false;
 
   for (let fullAttempt = 0; fullAttempt < MAX_FULL_GENERATIONS; fullAttempt++) {
     const gen = await generateOnce(input, system, userContent, fullAttempt);
@@ -102,6 +120,7 @@ export async function streamBaseAnalysisWithDeliveryGate(
         violations: lastViolations,
         attempts: fullGens,
         repairs: totalRepairs,
+        regenerated_after_repair_miss: regeneratedAfterRepairMiss,
       };
     }
 
@@ -114,12 +133,14 @@ export async function streamBaseAnalysisWithDeliveryGate(
         content: draft,
         attempts: fullGens,
         repairs: totalRepairs,
+        regenerated_after_repair_miss: regeneratedAfterRepairMiss,
       };
     }
 
     lastViolations = gate.violations;
 
-    // Surgical repair before throwing away a good first draft.
+    // Surgical line-repair before throwing away a good first draft.
+    let repairMiss = false;
     for (let r = 0; r < MAX_REPAIRS; r++) {
       console.warn(
         `[base-analysis/stream] gate fail → surgical repair ${r + 1}/${MAX_REPAIRS} for ${input.profileId}`,
@@ -132,20 +153,31 @@ export async function streamBaseAnalysisWithDeliveryGate(
         locale: input.locale,
         session_id: input.session_id,
         signal: input.signal,
+        profile_id: input.profileId,
       });
       totalRepairs += 1;
 
       if (!repaired.ok) {
-        console.warn("[fallback] surgical repair failed", {
-          profile_id: input.profileId,
+        console.error(
+          "[repair] patch application FAILED — falling back to full regeneration",
+          {
+            profile_id: input.profileId,
+            reason: repaired.error,
+            detail: repaired.detail,
+            repair_index: r,
+            violations: gate.violations.slice(0, 5),
+          },
+        );
+        await input.onRepairFail?.({
           reason: repaired.error,
-          repair_index: r,
+          detail: repaired.detail,
+          repairIndex: r,
         });
+        repairMiss = true;
         break;
       }
 
       draft = applyComplianceSanitize(repaired.text, input.locale).text;
-      // Replace streamed draft with repaired full text (caller should have cleared via onRepairStart).
       await input.onChunk(draft);
       gate = auditBaseAnalysisDelivery(draft, input.locale, input.structured);
 
@@ -155,15 +187,18 @@ export async function streamBaseAnalysisWithDeliveryGate(
           content: draft,
           attempts: fullGens,
           repairs: totalRepairs,
+          regenerated_after_repair_miss: regeneratedAfterRepairMiss,
         };
       }
       lastViolations = gate.violations;
     }
 
-    // Last resort: full regen once with hint.
+    // Last resort: full regen once with hint (never silent).
     if (fullAttempt < MAX_FULL_GENERATIONS - 1) {
-      console.warn(
-        `[base-analysis/stream] repairs exhausted → full regen for ${input.profileId}`,
+      if (repairMiss) regeneratedAfterRepairMiss = true;
+      console.error(
+        `[base-analysis/stream] repairs exhausted → full regen for ${input.profileId}` +
+          (repairMiss ? " (补丁未命中 — 本次为整篇重生成)" : ""),
         lastViolations.slice(0, 5),
       );
       userContent = baseUser + buildBaseAnalysisRegenHint(lastViolations, input.locale);
@@ -176,5 +211,6 @@ export async function streamBaseAnalysisWithDeliveryGate(
     violations: lastViolations,
     attempts: fullGens,
     repairs: totalRepairs,
+    regenerated_after_repair_miss: regeneratedAfterRepairMiss,
   };
 }
