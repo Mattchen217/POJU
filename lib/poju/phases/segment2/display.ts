@@ -115,12 +115,12 @@ export function formatBreakthroughDirectionsForUser(
     if (zh) {
       const n = ZH_DIRECTION_ORDINAL[i] ?? String(i + 1);
       blocks.push(`### 破局方向${n} · ${direction}`);
-      if (basis) blocks.push(`**结构依据:** ${basis}`);
-      if (timing) blocks.push(`**时机判断:** ${timing}`);
+      const evidence = [basis, timing].filter(Boolean).join(" ");
+      if (evidence) blocks.push(`**依据与推理:** ${evidence}`);
     } else {
       blocks.push(`### Direction ${i + 1} · ${direction}`);
-      if (basis) blocks.push(`**Structural basis:** ${basis}`);
-      if (timing) blocks.push(`**Timing verdict:** ${timing}`);
+      const evidence = [basis, timing].filter(Boolean).join(" ");
+      if (evidence) blocks.push(`**Evidence & reasoning:** ${evidence}`);
     }
   });
 

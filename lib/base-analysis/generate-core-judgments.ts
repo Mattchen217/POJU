@@ -88,42 +88,46 @@ function buildCoreJudgmentsLlmPrompt(
   const climate_now = buildClimateNowFromStructured(structured, locale);
 
   const system = zh
-    ? `# core_judgments = 【已裁定的中立判断层】，不是术语复述
+    ? `# core_judgments = 【机制读数】给机器的中立判断层（不是诗意、不是术语复述）
 
-你把 structured 的技术数据，翻译成【中立、白话、可被下游四产品直接引用】的判断。
+把 structured 译成【具体、可被下游直接引用】的机制读数。
 
 规则：
 1) 只输出 JSON；字段仅：identity_anchor, drive_mechanism, structural_gap, balance_anchor, exchange_mode, leverage_state
 2) 【禁止】输出 refs / climate_now（代码已算好）
 3) 只展开 structured，【禁止】改判强弱/用神方向/喜忌/格局
-4) 无比喻套话、无职业/婚恋场景、无年龄/干支纪年/公历年
-5) 每字段 1 句中性短读数（中文）
+4) 无比喻套话、无职业/婚恋场景、无年龄/干支纪年
+5) 每字段 1 句——写【机制】（供给/消耗/缺口/杠杆），不要抽象意境
 
-【禁止】出现：裸干支（乙/庚/寅/巳…）、日主、身弱/身强、用神/喜神/忌神、刑/冲/合/害/穿 等关系黑话。
-【必须】用普通人能懂的中性机制语言。
+【禁止】裸干支、日主、身弱/身强、用神/喜神/忌神、刑冲合害原词。
 
-反例（术语复述 · 零价值 · 会传染下游）：
+反例（术语复述 / 空诗意）：
   ✗ "identity_anchor": "乙木日主，根基偏弱，依赖水木生扶。"
-  ✗ "exchange_mode": "天干乙庚合，地支寅巳刑害。"
-正例（中立判断 · 下游可直接用）：
-  ✓ "identity_anchor": "借力生长型：能量靠连接与节奏放大，硬撑则折。"
-  ✓ "exchange_mode": "需要被稳定结构供给；擅长以协调与表达给出。"
-  ✓ "structural_gap": "冷却机制不足，信息未齐就容易锁定决策。"
+  ✗ "identity_anchor": "像一场温柔却坚定的苏醒。"
+正例（机制读数 · 下游可直接用）：
+  ✓ "identity_anchor": "供给端靠连接放大；硬撑独扛时输出会断。"
+  ✓ "drive_mechanism": "表达与协调是主引擎；外部认可加速推进。"
+  ✓ "structural_gap": "冷却阀偏弱——信息未齐就容易锁死决策。"
+  ✓ "balance_anchor": "补稳定供给、减持续消耗，比加新任务更有效。"
 
-自检：这句话如果被 POJU/Match/Glyph/Syncro 直接引用给用户看，会不会露出命理黑话？会 → 重写。`
-    : `# core_judgments = settled neutral Layer-1 judgments — NOT jargon restatement
+自检：下游能否直接写成「锚元不足 + 耗元偏重 → …」式依据？不能 → 重写。`
+    : `# core_judgments = mechanism readouts for machines (not poetry, not jargon)
 
-Translate structured tech data into neutral vernacular judgments four products can quote to users.
+Translate structured into concrete mechanism lines four products can quote.
 
 Rules:
 1) JSON only; keys: identity_anchor, drive_mechanism, structural_gap, balance_anchor, exchange_mode, leverage_state
-2) Never output refs / climate_now (code fills them)
+2) Never output refs / climate_now
 3) Expand only — never re-judge strength / favorable directions / pattern
-4) No stock metaphors, career/romance scenes, age/Ganzhi/calendar years
-5) One short neutral sentence per field (English)
+4) No metaphors, career/romance scenes, age/calendar years
+5) One sentence per field — write mechanisms (supply / drain / gap / leverage), not vibes
 
-Banned: bare Ganzhi, day-master / weak-self jargon, clash/combine relation jargon.
-Self-check: if POJU/Match/Glyph/Syncro quotes this to a user, would it leak chart jargon? If yes → rewrite.`;
+Banned: bare Ganzhi, day-master / weak-self jargon, clash/combine jargon.
+
+Bad: poetic abstraction or chart jargon.
+Good: "Supply scales via connection; solo forcing cuts output." / "Cooling valve is weak — locks decisions before data is in."
+
+Self-check: can a product turn this into an evidence line like "anchor short + drain heavy → …"? If not → rewrite.`;
 
   const user = `${zh ? "structured 摘要 + 代码已填字段（只读）" : "structured summary + code-filled fields (read-only)"}:\n\`\`\`json\n${JSON.stringify(
     {

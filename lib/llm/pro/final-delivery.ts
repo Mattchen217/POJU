@@ -37,6 +37,7 @@ import {
   stitchPromptSections,
 } from "@/lib/llm/prompts/oriental-counselor-base";
 import { POJU_DELIVERY_STRUCTURE_MANDATE, READING_LAYOUT_CONTRACT } from "@/lib/llm/prompts/reading-layout";
+import { buildDualLayerDeliveryPromptBlock } from "@/lib/llm/prompts/dual-layer-delivery";
 import { buildTermMarkingPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
 import {
   getPojuChatLanguageDirective,
@@ -355,14 +356,14 @@ ${agendaStr}
 ## 命局基础（structured —— 事实源，节选）
 ${baseStr}`,
     `# 整合要求（闭环 · 反断点）
-- ANALYSIS：直接展开 relationship_conclusion；**每个 ### 子标题**至少锚定一处本盘 pillars_detail/yong_shen/strength/十神/本命或定向关系实例（**三段位 ⟦t:id|软译|对他这件事的白话⟧**）；3–4 个子标题，短段+金句框，禁字墙。
-- CONCLUSION：落回 original_question **完整直答**（金句框 + 1–2 句展开）；**正面接住他问的问题本身**，禁止偷换成更好答的问题；含时间诉求时显式用条件成熟 + 可促成行动回应（见下方同源规则）；依据 = 被收集证据【选定】破局方向 + 本盘实算关系标签（若有）。
+- ANALYSIS：直接展开 relationship_conclusion；**每个 ### 子标题**正文零标记；段末加 \`**依据与推理:**\`（≤2 句 / ≤3 金字 \`⟦t:slug|贴题白话⟧\`）；3–4 个子标题，短段+金句框，禁字墙。
+- CONCLUSION：落回 original_question **完整直答**（金句框 + 1–2 句展开）；**正面接住他问的问题本身**；含时间诉求时显式用条件成熟 + 可促成行动回应；依据块写「选定方向 × 本盘锚点」。
 ${buildPojuConclusionOriginalQuestionBlock()}
 - WHAT TO DO：3 条从「选定方向 × 用户亲口议程证据」生长，禁万能模板；
-  每条末尾 Profile basis 引具体结构（如"month.ten_god 七杀 + da_yun 第三步"）。
-- 全程只用本次 structured 实有命理实例；标记可见词只用术语表 soft 词，**禁括号干支**；**第三段白话须情景化**，禁词表通用定义当正文。
+  每条末尾 \`Profile basis:\`（= 依据与推理）写「这条为什么对你成立」——可打标，正文行动句零标记。
+- 软译词不用写（系统从术语表填入）；贴题白话须情景化。
 - ${POJU_DELIVERY_COMPLIANCE_LINE}；不暴露 Glyph/Syncro/Match。
-- 须按 POJU 八字深度解读法则展开 ANALYSIS（含 4b 关系：定向 1–3 条、中性金字、不罗列）；按行动设计原则填写 WHAT TO DO 三条。`,
+- 须按 POJU 八字深度解读法则展开 ANALYSIS；按行动设计原则填写 WHAT TO DO 三条。`,
     POJU_OUTPUT_DATA_DISCIPLINE,
   );
 
@@ -415,6 +416,7 @@ ${buildPojuConclusionOriginalQuestionBlock()}
   const user = stitchPromptSections(
     langDirective.directive.trim(),
     buildCurrentDateContext(new Date(), outLoc),
+    buildDualLayerDeliveryPromptBlock(outLoc),
     buildTermMarkingPromptBlock(outLoc),
     structured ? buildStructuredInstanceInventory(structured) : "",
     directedRelationBlock,

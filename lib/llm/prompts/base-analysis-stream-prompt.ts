@@ -8,6 +8,7 @@ import {
 import { ORIENTAL_SHARED_GUARDRAILS } from "@/lib/llm/prompts/glyph-guanyin-base";
 import { READING_LAYOUT_CONTRACT } from "@/lib/llm/prompts/reading-layout";
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
+import { buildDualLayerDeliveryPromptBlock } from "@/lib/llm/prompts/dual-layer-delivery";
 import { buildTermMarkingPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
 import { buildForbiddenTermsPromptBlock } from "@/lib/llm/compliance/banned-terms";
 
@@ -145,7 +146,7 @@ const BASE_ANALYSIS_BINDING_RULES = `# 绑定计算结果 · 闭集 · 禁幻觉
 2. **神煞闭集 · 实例清单** — 神煞**只能逐字取自**本次 \`buildStructuredInstanceInventory\` 列出的项。**该清单为空则整篇不得出现任何神煞名**。你只能引用【本盘实例清单里实际算出】的神煞，按名引用；清单之外的任何神煞——无论你训练里多熟——对这个盘都不存在，写了即视为编造、会被拦截重写。
 3. **十神/长生** — 同理，只用 structured 给出的具体条目；禁止类别统称代替或编造。
 4. **data_availability.missing** — pillars_detail 或 da_yun 缺失时，该维度**只做方向性描述**，禁止编造具体干支/神煞/起运岁数。
-5. **术语标记 · 三段位闭合 · 干支禁裸** — 凡命理术语一律 \`⟦t:<id>|<可见软译词>|<该处白话>⟧\` **三段位必须完整闭合**；**禁止**只写可见词不打标记、**禁止**句子在标记处中断截落。**正文任何干支组合**一律不得裸露——要么三段位标记，要么完全不用干支（白话）。**禁止** \`(癸酉 phase)\`、\`during 壬申\` 半裸写法。
+5. **双层 + 术语标记 · 干支禁裸** — **正文零标记**；每个 ## 分区末尾加 \`**依据与推理:**\`（≤2 句 / ≤3 金字），格式 \`⟦t:<slug>|<贴题白话>⟧\`（软译词不用写，系统填入）。**正文任何干支组合**不得裸露。**禁止** \`(癸酉 phase)\`、\`during 壬申\` 半裸写法。
 6. **时间锚 · 零大运叙事** — 用户报告**零大运 / 零年龄段 / 零公历年 / 零干支纪年**时间锚；时机留给下游；底座叙事**不要写大运气候概览**，也不要为「显得完整」硬塞 decade 策略。
 7. **标记嵌入完整句（语法）** — ⟦t:…⟧ **必须**嵌入通顺完整句；可见词**前**要有自然冠词/物主词/连接词（在标记**外**），**禁止**把标记当作无冠词句首主语或句首碎片后接大写动词新句。
    - ✗ \`mobility pulse (驿马)[···] Pairs with a sharp…\`
@@ -153,10 +154,10 @@ const BASE_ANALYSIS_BINDING_RULES = `# 绑定计算结果 · 闭集 · 禁幻觉
    - **标记内** \`<可见文本>\` 仍用名词短语，**禁止**在可见词**里面**写 the/a/an（避免双冠词）；冠词/物主词写在标记**外面**。
 8. **可见词形态** — \`<可见文本>\` 用**名词短语**；英文如 \`refined core (癸)\`、\`mobility pulse (驿马)\`（**不在**可见词内加 the/a/an）。
 9. **藏干/十神禁罗列** — **禁止** \`Hidden stems (Wu earth, Xin metal…)\` 英文堆砌；藏干用**一句机制白话**，必要时最多 1 个 ⟦t:…⟧。
-10. **标记排版** — 标记**紧贴**软译词，**禁止**在标记前插入裸换行。
+10. **标记排版** — 标记只出现在依据块内，**禁止**在标记前插入裸换行。
 11. **金色词密度** — **每段最多 1–2 个** ⟦t:…⟧；同 id 不重复刷标记。
 12. **禁止逐柱复述** — **禁止**在正文逐柱枚举藏干/十神/神煞/长生；不要另开四柱/大运展示段。
-13. **禁止假设**「输出端会软翻译」——你必须在生成时直接写好标记与软译词。
+13. **软译词由系统填入**——你只选 slug + 写贴题白话；勿自造软译。
 14. **本命结构关系 · 锚定不枚举** — 关系**只能**来自实例清单【本命结构关系】（\`source=natal\`）；**最多一处**织进「你的核心配置」或「容易卡住的地方」；**禁**流年/定向/十神张力词；**禁**裸写刑冲合害或关系清单；**关系类不打标、直接中性白话**（禁止 \`liu_chong\` / \`liuhe\` 等 glossary slug 标记）。清单为空则**不得**硬塞关系词。`;
 
 const BASE_ANALYSIS_LEAD_LABEL_RULE_ZH = `# 引导块标签（严禁占位词与模板标签）
@@ -463,7 +464,7 @@ ${BASE_ANALYSIS_OUTPUT_SECTIONS_ZH.split("\n").slice(1).join("\n")}
 5. **压缩水分，不砍信息** — 删解释性铺垫、安慰性排比、同义重复、场景化举例、黑名单隐喻；保留每个分区的关键能量结论与中立调谐**方向**（作息/环境/决策习惯，非职业/关系打卡）。
 6. 第二人称（你），现代、专业、克制；**每段 ≤120 字**；引导块用**现发明真实标签**（禁 Bold lead / 驱动类型 等模板）；**五块各至少 1 个**引导块 **+ 1 个** \`>\` 锚点；调谐段若用列表须**多行** \`- \`（每条独占一行，列表前空一行，非打卡）。
 7. **### 独占一行**，其后空一行再写 \`**引导:**\`；子标题/引导/段落/bullets 块间一律 \`\\n\\n\` 空行（禁黏行）。
-8. 挑战类**不得渲染成「灾祸/损失」恐吓**；**禁裸干支**；**用户报告零大运/零年龄段/零公历年/零干支纪年时间锚**；**禁止逐柱罗列**；神煞/十神**只能来自 structured 实例清单**；**每个 ⟦t:…⟧ 三段位必须闭合**、**嵌入完整句**；可见词内禁 the/a/an。
+8. 挑战类**不得渲染成「灾祸/损失」恐吓**；**禁裸干支**；**用户报告零大运/零年龄段/零公历年/零干支纪年时间锚**；**禁止逐柱罗列**；神煞/十神**只能来自 structured 实例清单**；**正文零标记**；依据块 \`⟦t:slug|贴题白话⟧\` 闭合完整。
 9. **落库门禁** — 集外神煞、断标记、裸干支、密度超标会导致整篇被拒并重写；可自然提及 POJU / pojulife；禁 astrology / divination / psychic / horoscope。`
       : `# Output requirements
 
@@ -503,6 +504,7 @@ ${BASE_ANALYSIS_OUTPUT_SECTIONS_EN.split("\n").slice(1).join("\n")}
     lang === "zh" ? BASE_ANALYSIS_BULLET_RULE_ZH : BASE_ANALYSIS_BULLET_RULE_EN,
     lang === "zh" ? BASE_ANALYSIS_LAYOUT_ZH : BASE_ANALYSIS_LAYOUT_EN,
     BASE_ANALYSIS_BINDING_RULES,
+    buildDualLayerDeliveryPromptBlock(lang),
     buildTermMarkingPromptBlock(lang, { principlesOnly: true }),
     lang === "zh" ? BASE_ANALYSIS_FEW_SHOT_ZH : BASE_ANALYSIS_FEW_SHOT_EN,
     outputBlock,
@@ -519,7 +521,7 @@ ${BASE_ANALYSIS_OUTPUT_SECTIONS_EN.split("\n").slice(1).join("\n")}
 ${JSON.stringify(input.local_data.structured, null, 2)}
 \`\`\`
 
-现在开始写完整 Markdown。**降维排版**（开篇身份锚 + 五块 ## + ### + **现发明标签:** 引导块 + 短段 + > 锚点 + 可选方向 bullets + 收尾）；约 **800–1200 词、身份锚+五块+收尾齐全**；零大运/零年龄段时间锚；不逐柱罗列；术语三段位；**禁裸干支**；神煞/十神不得超出 structured；避免语义红线词（${redLine}）。`
+现在开始写完整 Markdown。**双层排版**（开篇身份锚 + 五块 ##：正文白话零标记 + 每块末尾 \`**依据与推理:**\` 含金字）；约 **800–1200 词、身份锚+五块+收尾齐全**；零大运/零年龄段时间锚；不逐柱罗列；**禁裸干支**；神煞/十神不得超出 structured；避免语义红线词（${redLine}）。`
       : `structured JSON (internal — write Personal Energy Analysis Report; honor closed-set, term markers, neutral hard bans):
 
 \`\`\`json

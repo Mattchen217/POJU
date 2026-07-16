@@ -22,6 +22,7 @@ import {
   detectLanguage,
   stitchPromptSections,
 } from "@/lib/llm/prompts/oriental-counselor-base";
+import { buildDualLayerDeliveryPromptBlock } from "@/lib/llm/prompts/dual-layer-delivery";
 import { buildTermMarkingPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import { stitchSingleProfileRelationClosedSet } from "@/lib/llm/prompts/relation-closed-set-context";
@@ -212,6 +213,7 @@ ${GLYPH_OUTPUT_SELF_CHECK}`;
     READING_LAYOUT_CONTRACT,
     GLYPH_OUTPUT_FRAMING,
     GLYPH_OUTPUT_DEFENSE_TERMS,
+    buildDualLayerDeliveryPromptBlock(outputLang),
     buildTermMarkingPromptBlock(outputLang),
     GLYPH_OUTPUT_DEFENSE_NARRATIVE,
     GLYPH_OUTPUT_ICHING_FRAMEWORK,

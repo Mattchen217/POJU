@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 import { useEffect, useLayoutEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
+import { EvidenceBlock } from "@/components/cross-product/EvidenceBlock";
 import { GlossaryText } from "@/components/cross-product/GlossaryText";
 import { RichReadingText } from "@/components/cross-product/RichReadingText";
 import { GlyphDeliveryChart } from "@/components/glyph/GlyphDeliveryChart";
@@ -152,14 +153,18 @@ export function MatchReport({ session, locale }: MatchReportProps) {
         <section className="glyph-delivery-section glyph-dual-section">
           <SectionHeading title={report.combined.title} />
           <RichReadingText text={report.combined.detail} locale={locale} />
-          <div className="glyph-dual-block">
-            <span className="glyph-dual-pill">{t("five_elements")}</span>
-            <RichReadingText text={report.combined.five_elements_interaction} locale={locale} />
-          </div>
-          <div className="glyph-dual-block">
-            <span className="glyph-dual-pill">{t("timing_dynamic")}</span>
-            <RichReadingText text={report.combined.timing_dynamic} locale={locale} />
-          </div>
+          <EvidenceBlock
+            label={locale.startsWith("zh") ? "依据与推理" : "Evidence & reasoning"}
+          >
+            <div className="glyph-dual-block">
+              <span className="glyph-dual-pill">{t("five_elements")}</span>
+              <RichReadingText text={report.combined.five_elements_interaction} locale={locale} />
+            </div>
+            <div className="glyph-dual-block">
+              <span className="glyph-dual-pill">{t("timing_dynamic")}</span>
+              <RichReadingText text={report.combined.timing_dynamic} locale={locale} />
+            </div>
+          </EvidenceBlock>
         </section>
 
         <section className="glyph-delivery-section">

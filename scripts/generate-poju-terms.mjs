@@ -261,8 +261,8 @@ function emitTs(entries) {
   POJU_TERMS.map((t) => [\`\${t.ns}:\${t.slug}\`, t] as const),
 );
 
-/** @deprecated Use TERM_BY_KEY */
-export const TERM_BY_SLUG = TERM_BY_KEY;
+/** Slug → term (globally unique). Markers need not carry ns. */
+export const TERM_BY_SLUG = new Map(POJU_TERMS.map((t) => [t.slug, t] as const));
 
 export const TERM_BY_TRADITIONAL = new Map(
   POJU_TERMS.map((t) => [\`\${t.ns}:\${t.traditional}\`, t] as const),
@@ -289,23 +289,42 @@ function pickLocale(bag: Record<TermLocale, string>, locale: string): string {
   return "";
 }
 
-export function termOf(ns: TermNs, slug: string, locale: string): string | null {
-  const t = TERM_BY_KEY.get(\`\${ns}:\${slug}\`);
+export function termOf(slug: string, locale: string): string | null;
+export function termOf(ns: TermNs, slug: string, locale: string): string | null;
+export function termOf(
+  nsOrSlug: TermNs | string,
+  slugOrLocale: string,
+  locale?: string,
+): string | null {
+  if (locale === undefined) {
+    const t = TERM_BY_SLUG.get(nsOrSlug);
+    if (!t) return null;
+    return pickLocale(t.term, slugOrLocale) || null;
+  }
+  const t = TERM_BY_KEY.get(\`\${nsOrSlug}:\${slugOrLocale}\`);
   if (!t) return null;
-  const v = pickLocale(t.term, locale);
-  return v || null;
+  return pickLocale(t.term, locale) || null;
 }
 
-export function glossOf(ns: TermNs, slug: string, locale: string): string | null {
-  const t = TERM_BY_KEY.get(\`\${ns}:\${slug}\`);
+export function glossOf(slug: string, locale: string): string | null;
+export function glossOf(ns: TermNs, slug: string, locale: string): string | null;
+export function glossOf(
+  nsOrSlug: TermNs | string,
+  slugOrLocale: string,
+  locale?: string,
+): string | null {
+  if (locale === undefined) {
+    const t = TERM_BY_SLUG.get(nsOrSlug);
+    if (!t) return null;
+    return pickLocale(t.definition, slugOrLocale) || null;
+  }
+  const t = TERM_BY_KEY.get(\`\${nsOrSlug}:\${slugOrLocale}\`);
   if (!t) return null;
-  const v = pickLocale(t.definition, locale);
-  return v || null;
+  return pickLocale(t.definition, locale) || null;
 }
 
-/** Lookup by slug alone (slugs are unique across landed namespaces). */
 export function pojuTermBySlug(slug: string): PojuTerm | undefined {
-  return POJU_TERMS.find((t) => t.slug === slug);
+  return TERM_BY_SLUG.get(slug);
 }
 
 export function pojuTermByTraditional(

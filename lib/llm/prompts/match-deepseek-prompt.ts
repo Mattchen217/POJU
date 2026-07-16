@@ -11,6 +11,7 @@ import {
   detectLanguage,
   stitchPromptSections,
 } from "@/lib/llm/prompts/oriental-counselor-base";
+import { buildDualLayerDeliveryPromptBlock } from "@/lib/llm/prompts/dual-layer-delivery";
 import { buildTermMarkingPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import { stitchMatchRelationClosedSet } from "@/lib/llm/prompts/relation-closed-set-context";
@@ -64,6 +65,7 @@ export function buildMatchPrompt(input: BuildMatchPromptInput): BuildMatchPrompt
 
   const system = stitchPromptSections(
     ...buildMatchCorePromptSections(detectedLanguage),
+    buildDualLayerDeliveryPromptBlock(locale),
     buildTermMarkingPromptBlock(locale),
 
     `# 命主 A 的完整命盘

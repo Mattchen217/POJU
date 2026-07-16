@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 
+import { EvidenceBlock } from "@/components/cross-product/EvidenceBlock";
 import { GlossaryText } from "@/components/cross-product/GlossaryText";
 import { sanitizeSyncroRationale } from "@/lib/syncro/sanitize-rationale";
 
@@ -103,23 +104,31 @@ export function SyncroCenterInfo({
 
       {!showDetail ? (
         <button type="button" onClick={onToggleDetail} className="why-button">
-          {t("why_this")} ↓
+          {isZh ? "▸ 依据与推理" : "▸ Evidence & reasoning"}
         </button>
       ) : null}
 
       {showDetail ? (
         <div className="detail-section">
-          <h4>{t("detailed_label")}</h4>
-          <p>
-            <GlossaryText text={combination.detailed_advice} locale={locale} />
-          </p>
-          <h4>{t("rationale_label")}</h4>
-          <p>
-            <GlossaryText
-              text={sanitizeSyncroRationale(combination.rationale, locale)}
-              locale={locale}
-            />
-          </p>
+          {combination.detailed_advice?.trim() ? (
+            <>
+              <h4>{t("detailed_label")}</h4>
+              <p>
+                <GlossaryText text={combination.detailed_advice} locale={locale} />
+              </p>
+            </>
+          ) : null}
+          <EvidenceBlock
+            label={isZh ? "依据与推理" : "Evidence & reasoning"}
+            defaultOpen
+          >
+            <p>
+              <GlossaryText
+                text={sanitizeSyncroRationale(combination.rationale, locale)}
+                locale={locale}
+              />
+            </p>
+          </EvidenceBlock>
           <button type="button" onClick={onToggleDetail} className="collapse-button">
             {t("collapse")} ↑
           </button>

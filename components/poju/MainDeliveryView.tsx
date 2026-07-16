@@ -2,6 +2,7 @@
 
 import { useLocale, useTranslations } from "next-intl";
 
+import { EvidenceBlock } from "@/components/cross-product/EvidenceBlock";
 import { RichReadingText } from "@/components/cross-product/RichReadingText";
 import { AssistantMessageActions } from "@/components/poju/AssistantMessageActions";
 import { ArchiveSavedHint } from "@/components/archive/archive-saved-hint";
@@ -173,12 +174,20 @@ function ActionRow({
         ? "poju-delivery-action--decisive"
         : "poju-delivery-action--reflective";
 
+  const rationale = action.rationale?.trim() ?? "";
+  const evidenceLabel = locale.startsWith("zh") ? "依据与推理" : "Evidence & reasoning";
+
   return (
     <div className={cn("poju-delivery-action", border)}>
       <p className="poju-delivery-action__label">
         {index}. {action.title?.trim() || categoryLabels[action.category]}
       </p>
       <RichReadingText text={action.text} locale={locale} density="delivery" />
+      {rationale ? (
+        <EvidenceBlock label={evidenceLabel}>
+          <RichReadingText text={rationale} locale={locale} density="delivery" />
+        </EvidenceBlock>
+      ) : null}
       {onUpdate && action.status === "pending" ? (
         <div className="pchat__delivery-action-btns">
           <button type="button" onClick={() => onUpdate(action.action_id, "completed")}>

@@ -2,6 +2,10 @@
 
 import { useMemo, type ReactNode } from "react";
 
+import {
+  EvidenceBlock,
+  isEvidenceLeadLabel,
+} from "@/components/cross-product/EvidenceBlock";
 import { MarkedInline } from "@/components/cross-product/GlossaryText";
 import { cn } from "@/lib/utils/classnames";
 import {
@@ -40,6 +44,18 @@ function LeadBlock({
   blockKey: number;
   inQuote?: boolean;
 }) {
+  if (!inQuote && isEvidenceLeadLabel(label)) {
+    return (
+      <EvidenceBlock label={label}>
+        {body ? (
+          <p className="reading-p">
+            <MarkedInline text={body} locale={locale} dedupeScope={dedupeScope} keyBase={blockKey} />
+          </p>
+        ) : null}
+      </EvidenceBlock>
+    );
+  }
+
   return (
     <div className={cn("reading-unit", inQuote && "reading-unit--in-quote")}>
       <div className={cn("reading-lead-block", inQuote && "reading-lead-block--pullquote")}>

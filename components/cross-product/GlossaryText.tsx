@@ -13,6 +13,7 @@ import {
   unescapeMarkerPart,
   prepareTextForGlossaryRender,
 } from "@/lib/llm/sanitize/compliance-terms";
+import { glossOf, termOf } from "@/lib/glossary/pojulife-terms";
 import { termPolarityById, type TermPolarity } from "@/lib/glossary/term-polarity";
 import { toGlossaryLocale } from "@/lib/glossary/term-glossary";
 
@@ -269,15 +270,27 @@ function parseMarkedText(
     }
     if (next.kind === "t") {
       const termId = next.groups[0];
-      const visible = unescapeMarkerPart(next.groups[1]);
-      const dynamicPlain = next.groups[2] ? unescapeMarkerPart(next.groups[2]).trim() : "";
+      const slot2 = unescapeMarkerPart(next.groups[1] ?? "").trim();
+      // 2-slot `⟦t:slug|plain⟧` has one `|`; 3-slot `⟦t:slug|soft|plain⟧` / `⟦t:slug||plain⟧` has two.
+      const isThreeSlot = (next.raw.match(/\|/g) || []).length >= 2;
+      const slot3 = isThreeSlot ? unescapeMarkerPart(next.groups[2] ?? "").trim() : "";
       const ui = uiTermById(termId, glossaryLocale);
-      // Fix C — missing 3rd-field plain falls back to fixed 5-locale gloss.
-      const plain = dynamicPlain || ui?.plain || plainByTermId(termId, glossaryLocale) || "";
+      // SSOT owns visible soft label — model soft is always overwritten.
+      const softOnly = termOf(termId, glossaryLocale) || ui?.soft || "";
+      // Plain: 3rd slot if present, else 2-slot body (= contextual plain), else glossOf.
+      const plain =
+        (isThreeSlot ? slot3 : slot2) ||
+        glossOf(termId, glossaryLocale) ||
+        ui?.plain ||
+        plainByTermId(termId, glossaryLocale) ||
+        "";
       const polarity = ui?.polarity ?? termPolarityById(termId);
-      const softOnly = visible.trim() || ui?.soft || "";
-      if (seenInParagraph.has(termId) || parenMarks >= maxParenMarks) {
-        // Re-mention / density overflow — keep soft word as plain prose, no paren interrupt.
+      if (!softOnly) {
+        // Unknown slug — demote to plain prose (never show model's possibly-banned soft).
+        nodes.push(
+          <span key={`t-unk-${keyBase}-${keyIdx++}`}>{plain || slot2 || termId}</span>,
+        );
+      } else if (seenInParagraph.has(termId) || parenMarks >= maxParenMarks) {
         nodes.push(<span key={`t-dup-${keyBase}-${keyIdx++}`}>{softOnly}</span>);
         seenInParagraph.add(termId);
       } else {

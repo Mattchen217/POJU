@@ -234,12 +234,16 @@ export function unescapeMarkerPart(s: string): string {
   return s.replace(/\\(.)/g, "$1");
 }
 
+/**
+ * Encode marker. Soft label is SSOT-owned at render — prefer 2-slot `⟦t:id|plain⟧`.
+ * `visible` is ignored when `plain` is provided (kept for call-site compatibility).
+ */
 export function encodeTermMarker(id: string, visible: string, plain?: string): string {
-  const vis = escapeMarkerPart(visible);
   if (plain?.trim()) {
-    return `⟦t:${id}|${vis}|${escapeMarkerPart(plain)}⟧`;
+    return `⟦t:${id}|${escapeMarkerPart(plain.trim())}⟧`;
   }
-  return `⟦t:${id}|${vis}⟧`;
+  // Auto-mark without contextual plain: seed with SSOT soft as placeholder; render still overwrites.
+  return `⟦t:${id}|${escapeMarkerPart(visible)}⟧`;
 }
 
 export type ParsedTermMarker = { id: string; visible: string; plain?: string; raw: string };
@@ -259,13 +263,18 @@ export function parseTermMarkers(text: string): ParsedTermMarker[] {
   return out;
 }
 
-/** Strip markers for LLM history — visible text only; dynamic plain + id never enter prefix. */
-export function stripMarkersForPrompt(text: string): string {
+/** Strip markers for LLM history — SSOT soft label only; never model soft / contextual plain. */
+export function stripMarkersForPrompt(text: string, locale = "en"): string {
   TERM_MARKER_PATTERN.lastIndex = 0;
-  return text.replace(
-    TERM_MARKER_PATTERN,
-    (_, _id: string, visible: string, _plain?: string) => unescapeMarkerPart(visible),
-  );
+  return text.replace(TERM_MARKER_PATTERN, (raw, rawId: string, slot2: string, slot3?: string) => {
+    const id = normalizeTermMarkerId(rawId);
+    const ssot = termOf(id, locale);
+    if (ssot) return ssot;
+    const isThreeSlot = (raw.match(/\|/g) || []).length >= 2;
+    if (isThreeSlot) return unescapeMarkerPart(slot2) || id;
+    // 2-slot without SSOT: slot2 is contextual plain — don't leak into history as "term".
+    return id;
+  });
 }
 
 /** Remove bare t: leaks (no ⟦⟧) and broken markers so users never see raw tokens. */
@@ -626,9 +635,40 @@ export function normalizeTermMarkerIds(text: string, locale: string): string {
   return out;
 }
 
+/**
+ * Overwrite marker soft slots with SSOT terms so audits/history never see model-invented soft
+ * (historical failure: stem_yi with bare stem-element in soft slot).
+ * Also normalizes 2-slot id|plain into 3-slot id|SSOT|plain for parsers.
+ */
+export function rewriteMarkersWithSsotSoft(text: string, locale: string): string {
+  if (!text?.includes("⟦t:")) return text ?? "";
+  const loc = toGlossaryLocale(locale);
+  TERM_MARKER_PATTERN.lastIndex = 0;
+  return text.replace(
+    TERM_MARKER_PATTERN,
+    (raw, rawId: string, slot2: string, slot3?: string) => {
+      const id = normalizeTermMarkerId(rawId);
+      const soft = termOf(id, loc);
+      const isThreeSlot = (raw.match(/\|/g) || []).length >= 2;
+      const plain = (
+        isThreeSlot ? (slot3 ? unescapeMarkerPart(slot3) : "") : unescapeMarkerPart(slot2)
+      ).trim();
+      if (!soft) {
+        if (!isThreeSlot && plain) {
+          return `⟦t:${id}||${escapeMarkerPart(plain)}⟧`;
+        }
+        return raw;
+      }
+      const plainOut = plain || glossOf(id, loc) || soft;
+      return `⟦t:${id}|${escapeMarkerPart(soft)}|${escapeMarkerPart(plainOut)}⟧`;
+    },
+  );
+}
+
 export function prepareTextForGlossaryRender(text: string, locale: string): string {
+  const rewritten = rewriteMarkersWithSsotSoft(text, locale);
   const normalized = fillMissingMarkerPlain(
-    repairShenshaMarkerSoftLabels(normalizeTermMarkerIds(text, locale), locale),
+    repairShenshaMarkerSoftLabels(normalizeTermMarkerIds(rewritten, locale), locale),
     locale,
   );
   return autoMarkBareTerms(wrapBareKeepCnSoftTerms(normalized, locale), locale);
@@ -657,8 +697,7 @@ export function plainByTermId(termId: string, locale: string): string | null {
   if (tension) return pickFiveLocale(tension, loc) || null;
   const relKind = relationKindFromMarkerId(termId);
   if (relKind) {
-    // Prefer SSOT definition for bare relation kind slugs (chong / liuhe / …).
-    const ssotKind = glossOf("bazi", relKind, loc);
+    const ssotKind = glossOf(relKind, loc);
     if (ssotKind && termId === relKind) return ssotKind;
     return pickFiveLocale(RELATION_KIND_SOFT[relKind], loc) || null;
   }
@@ -667,10 +706,8 @@ export function plainByTermId(termId: string, locale: string): string | null {
   if (hr) return pickFiveLocale(hr.gloss, loc) || null;
 
   const leaf = termId.includes(":") ? termId.split(":").pop()! : termId;
-  const poju = pojuTermBySlug(leaf) ?? pojuTermBySlug(termId);
-  if (poju) {
-    return glossOf(poju.ns, poju.slug, loc);
-  }
+  const fromSsot = glossOf(leaf, loc) ?? glossOf(termId, loc);
+  if (fromSsot) return fromSsot;
 
   const entry = TERM_BY_ID.get(termId) ?? TERM_BY_ID.get(leaf);
   if (!entry) return null;
@@ -712,8 +749,8 @@ export function uiTermById(
   const poju = pojuTermBySlug(leaf) ?? pojuTermBySlug(termId);
   if (poju) {
     return {
-      soft: termOf(poju.ns, poju.slug, loc) ?? poju.term.en,
-      plain: glossOf(poju.ns, poju.slug, loc) ?? poju.definition.en,
+      soft: termOf(poju.slug, loc) ?? poju.term.en,
+      plain: glossOf(poju.slug, loc) ?? poju.definition.en,
       polarity: poju.polarity,
     };
   }
@@ -729,18 +766,19 @@ export function uiTermById(
 
 /** Prompt projection: forbidden → id + soft (+ keep_cn hint). Plain excluded to save tokens. */
 export function buildTermMarkingFewShot(locale: string): string {
-  // Principles only — never seed concrete metaphors (models overfit and copy them).
   const loc = toGlossaryLocale(locale);
   if (loc === "zh") {
     return `## 打标形态（原则 · 勿照抄任何具体比方）
-\`⟦t:<id>|<≤6字软译>|<必须引用该用户亲口元素的白话>⟧\`
-- 正文只留软译词；白话**只**在第3格（tooltip）。
-- 白话自检：换一个用户还成立？成立 → 不合格。`;
+\`⟦t:<slug>|<必须引用该用户亲口元素的贴题白话>⟧\`
+- 软译词【不用你写】——系统从术语表填入；你写了也会被覆盖。
+- 白话自检：换一个用户还成立？成立 → 不合格。
+- 标记只出现在「依据与推理」块；正文零标记。`;
   }
   return `## Marker shape (principles only — do not copy stock metaphors)
-\`⟦t:<id>|<short soft label>|<plain that cites THIS user's own words>⟧\`
-- Body shows soft label only; plain is tooltip-only.
-- Self-check: would this plain still fit another user? If yes → rewrite.`;
+\`⟦t:<slug>|<contextual plain that cites THIS user's own words>⟧\`
+- Soft label is SSOT-filled; anything you write in that slot is overwritten.
+- Self-check: would this plain still fit another user? If yes → rewrite.
+- Markers only inside Evidence & reasoning; zero markers in body.`;
 }
 
 export type TermMarkingPromptOptions = {
@@ -773,33 +811,33 @@ export function buildTermMarkingPromptBlock(
 
   const rules = principlesOnly
     ? `## 打标记规则（原则 · 严禁过拟合示例）
-1. \`<可见文本>\` = 软翻译词（短）；**正文只出现这一格**；**软译词本身不得含裸干支或「乙木/丙火」类合称**。
-2. \`<该处白话>\` **只进 tooltip**，【禁止】写进正文句子；必须引用【这位用户亲口说过的具体词/场景】；禁止通用词典比方。
+1. 格式：\`⟦t:<slug>|<贴题白话>⟧\` —— **软译词不用你写**（系统从术语表填入官方术语）。
+2. 贴题白话必须引用【这位用户亲口说过的具体词/场景】；禁止通用词典比方。
 3. 自检：换用户还成立？成立 → 重写。
-4. 一段金字 ≤2；**id 必须取自上表闭集 slug**；自造 id（da_yun / ji_shen 等）= 拒绝；闭集没有 → **不打标，直接白话**；标记外勿套括号。
+4. **正文零标记**；标记只出现在「依据与推理」；一段依据 ≤3 金字；**slug 必须取自上表**；自造 id = 拒绝；闭集没有 → 不打标、直接白话。
 5. 守六条语义红线（不预测/不算命/不占卜/不决吉凶/不恐吓/不超自然承诺）。
 
 ${buildTermMarkingFewShot(locale)}`
     : `## 打标记规则
-1. \`<可见文本>\` = 你写出的软翻译词（**只用上表 soft 词；禁裸干支、禁「乙木/丙火」类合称、禁括号干支**）
-2. \`<该处白话>\` = **结合本句意境 + 用户问题**现写的人话；白话**不出现在正文**，只进标记第 3 段（UI tooltip）；必须引用该用户亲口元素，禁套用固定比方。
-3. **只用当前交付语言**；标记**只包软翻译词**
-4. 流年/大运类先归因外境再给掌控感
-5. **每段金字 ≤2**；首次打标、后文白话
+1. 格式：\`⟦t:<slug>|<贴题白话>⟧\` 或 \`⟦t:<slug>||<贴题白话>⟧\`
+2. **软译词【不用写】**——上表 soft 仅供你识别概念；系统渲染时用官方术语覆盖你写的任何软译。
+3. 贴题白话 = 结合本句意境 + 用户问题的人话；只进 tooltip；必须引用该用户亲口元素。
+4. **正文零标记**；金字集中在「依据与推理」块；每段依据 ≤3 金字
+5. 流年/大运类先归因外境再给掌控感
 6. **签诗/古文不是术语**，不打标
 7. 守六条语义红线（不预测/不算命/不占卜/不决吉凶/不恐吓/不超自然承诺）
-8. 若漏写第 3 段白话，UI 会回退静态词典——**务必写全三段位**；但禁止用与用户无关的通用词典句凑数
-9. **id 必须取自闭集**；自造 slug = 拒绝；没有对应概念 → 不打标、直接白话讲
+8. 若漏写贴题白话，UI 回退静态 gloss——禁止用与用户无关的通用句凑数
+9. **slug 必须取自闭集**；自造 = 拒绝；没有对应概念 → 不打标、直接白话讲
 
 ${buildTermMarkingFewShot(locale)}
 
 ${buildClosedSetConstraintPromptBlock(locale)}`;
 
-  return `# 术语软翻译 + 标记（输出 JSON 字符串 · ${langLabel}）
+  return `# 术语标记（输出 JSON 字符串 · ${langLabel}）
 
-凡涉及下表命理术语，**用对应语言的软翻译词替换原文**，并打 **三段位**标记：\`⟦t:<id>|<可见文本>|<该处白话>⟧\`
+凡在「依据与推理」中引用下表概念：打 \`⟦t:<slug>|<贴题白话>⟧\`。**软译词由系统从术语表填入**（下表 soft 列仅供对照）。
 
-| id | 禁/术语示例 | 软翻译 (${langLabel}) |
+| slug | 禁/术语示例 | 官方术语 (${langLabel}) |
 |---|---|---|
 ${rows}
 

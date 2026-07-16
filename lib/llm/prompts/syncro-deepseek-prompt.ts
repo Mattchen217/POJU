@@ -26,6 +26,7 @@ import {
 } from "@/lib/prompts/language-directive";
 import type { MatrixCell, SyncroMatrixMetadata } from "@/lib/syncro/calculate-matrix";
 import type { CurrentLevel } from "@/lib/syncro/current-system";
+import { buildDualLayerDeliveryPromptBlock } from "@/lib/llm/prompts/dual-layer-delivery";
 import { buildTermMarkingPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
 import type { UserProfile } from "@/lib/profile/types";
 
@@ -125,12 +126,12 @@ export function buildSyncroPrompt(input: BuildSyncroPromptInput): {
 ## 取据于（内部已计算 → 合规输出）
 1. **已计算的 current_level**：从全矩阵高 level 组合中挑选——绝不另判等级。参考：
 ${topWindowsSummary}
-2. **奇门 / 用神方位 / 时辰天干**：_internal.key_factors / qimen_data——内化后输出 Syncro 语言。
+2. **奇门 / 用神方位 / 时辰天干**：_internal.key_factors / qimen_data——内化后，在 rationale 用 **SSOT qimen 软译术语**（\`qm_*\` slug 打标）说明「这个方位/时段为什么对你有利」。
 3. **真太阳时**：窗口基于用户真实地理位置。
 
 ## 合规接法
-- ✓ 就任务直答：推荐时机窗口 + 方向 + 任务视角依据（大白话）。
-- ✗ 禁：报具体公历日期吉凶、承诺"必成"、写八门/奇门/用神等术语。
+- ✓ 就任务直答：推荐时机窗口 + 方向 + 任务视角依据。
+- ✗ 禁：报具体公历日期吉凶、承诺"必成"、写奇门/遁甲/用神等**原名**（用官方软译 + 打标）。
 
 ${SYNCRO_TASK_RESPONSE_FOCUS}`
     : `# 本批不产出 task_response（仅在最后一批汇总；本批 ${input.batch_index ?? 1}/${input.batch_total ?? 1}）。`;
@@ -167,39 +168,30 @@ ${SYNCRO_TASK_RESPONSE_FOCUS}`
 
 写作要求：
 
-1. **short_advice**（30–50 字/词）
+1. **short_advice**（30–50 字/词）· 正文层
    - 直接行动指引，符合该方位 × 时辰 × **已有** current_level
-   - 不重复等级英文名（Open Current 等）
+   - **零标记**、纯白话；不重复等级英文名
    - 英文建议动词开头：Move… / Wait… / Pause…
 
-2. **detailed_advice**（100–200 字/词）
-   - 展开命理依据 + 具体行动
-   - **必须引用该用户命局的具体一项**（用神所喜五行、当前大运主题、关键神煞、旺衰倾向等 — 见「用户命局背景」）
-   - 可内化 _internal.qimen_data 中的门星神信号，**用户可见处用 Syncro 语言**，不写八门/奇门遁甲
+2. **detailed_advice**（100–200 字/词）· 正文层扩展
+   - 具体行动展开；**零标记**
+   - **必须引用该用户命局的具体一项**（见「用户命局背景」）
 
-3. **rationale**（100–150 字/词）
-   - ⚠️ 针对用户【具体任务】解释为何此时此向适合（或不适合）去做这件事
-   - **必须引用命局背景 ≥1 项**，让用户感到「这是按我的八字算的」，不是通用黄历
-   - 把 _internal.key_factors 当作内心依据，**禁止**在文案中写出原始字段名（如 qimen、yong_shen_direction、day_master_direction、hour_yong_shen、task_direction）
-   - **禁止**「主要因素：…」或「Key factors: …」及逗号罗列内部 key 的句式
-   - 用大白话说明对用户任务的含义，不堆术语、不写八门/奇门/用神等词
+3. **rationale**（100–150 字/词）· **依据与推理**（UI 折叠）
+   - 针对用户【具体任务】解释为何此时此向适合（或不适合）
+   - **必须引用命局背景 ≥1 项** + 可打 2–3 个 SSOT 术语：\`⟦t:qm_*|贴题白话⟧\` / bazi slug
+   - 把 _internal.key_factors / qimen_data 当作内心依据；**禁止**写出原始字段名
+   - 软译词不用写（系统填入）；禁奇门/遁甲/用神**原名**与吉凶预测
 
-   ❌ 错误：
-   - 「主要因素:qimen, yong_shen_direction」
-   - 「yong_shen_direction 对当前 hour pillar 有 sheng 关系」
-
-   ✅ 正确（用户问会议谈判）：
-   - 「会议谈判需要你的气场稳定且能影响对方。这个时辰和方位的组合让你既有底气，又不咄咄逼人。」
-
-   ✅ 正确（用户问签合同）：
-   - 「签合同需要清醒判断。这个组合让你头脑清晰，避开了情绪化决策的时段。」
+   ❌ 「主要因素:qimen, yong_shen_direction」
+   ✅ 「这个时段你的气场更稳——⟦t:qm_kai_men|谈判开口更容易被听见⟧，适合推进你要的那次会议。」
 
 # 关键规则
 
 1. **本批所有 key 必须全部填充**
 2. **输出 JSON 每个 cell 仅含 3 个字段**：short_advice、detailed_advice、rationale
-3. **品牌 + 四道防线**：用户可见处只用 Syncro + Current 五流 + 共振/效率语言；禁奇门/风水/吉凶/预测成功；须 I Ching 时位框架
-4. **task_response 必填**（仅最后一批）：从已计算的高 level 组合中汇总推荐窗口+方向，任务视角给依据；不报日期吉凶、不承诺成功、不写奇门/用神术语。
+3. **品牌 + 四道防线**：短建议用白话；依据块用 SSOT 官方术语（非原名）；禁风水/吉凶/预测成功
+4. **task_response 必填**（仅最后一批）：汇总推荐窗口+方向；不报日期吉凶、不承诺成功。
 
 ${SYNCRO_OUTPUT_SELF_CHECK}
 
@@ -249,6 +241,7 @@ ${taskResponseBlock}
 
   const system = stitchPromptSections(
     ...buildSyncroFullPromptSections(),
+    buildDualLayerDeliveryPromptBlock(outputLocale),
     buildTermMarkingPromptBlock(outputLocale),
     baziContextSection,
     relationClosedSetBlock,

@@ -31,6 +31,7 @@ import {
   sanitizePaymentAuditLeaks,
   type ComplianceViolation,
 } from "@/lib/llm/sanitize/compliance-terms";
+import { buildDualLayerDeliveryPromptBlock } from "@/lib/llm/prompts/dual-layer-delivery";
 import { isCriticalDeliveryAuditFailure } from "@/lib/llm/services/delivery-audit-regen";
 
 /**
@@ -84,16 +85,14 @@ structural_basis ≥2 个不同维度：十神/格局、五行强弱/用神喜�
 正文【严禁】裸写：大运/流年/年柱/月柱/日柱/时柱/命盘/八字、正印/食神/伤官等十神原名、甲乙…壬癸 + 子丑…亥 / 金木水火土 连写（如"壬水"）、带煞/刃神煞原名、自创生克短语。
 reasoning 可裸算；输出必须白话重组（禁抠词替换）。
 
-# 打标（正文只留软译 · 白话只进第3格）
-\`⟦t:<闭集slug>|≤6字软译|处境白话?⟧\`
-- 正文只能出现【软译词】；**第3格白话绝不写进正文句子**（UI 只在 tooltip 显示）。
-- 第3格白话【必须引用他亲口说过的东西】（第1段/原问题里的具体词、场景、说法）；【禁止】套用通用比方词典。
-- 自检：这条白话，换一个用户还成立吗？→ 成立 = 通用词典 = 不合格，重写。
-- 禁自造拼音 id / 标记外套括号；无 slug 直接白话；一段 ≤2 标。
-- 【禁止】在提示或训练惯性里照抄任何具体比方模板；只写原则下的当场新写。
+# 双层 + 打标（软译词不用写）
+- **direction / relationship_conclusion**：纯白话、【零标记】。
+- **structural_basis / timing**：依据层——可打 \`⟦t:<slug>|<贴题白话>⟧\`（≤3 金字合计）；软译由系统填入。
+- 贴题白话【必须引用他亲口说过的东西】；换用户还成立 → 重写。
+- 禁自造 slug；无 slug 直接白话。
 
 # reasoning vs content
-reasoning 可裸命理词；JSON 可见字段先白话再按需打标。
+reasoning 可裸命理词；JSON 可见字段先白话；依据字段按需打标。
 
 # 输出（严格 JSON · 仅报告字段 · 无议程）
 键名英文小写 ASCII 双引号，无围栏。
@@ -205,6 +204,7 @@ export function buildBreakthroughCorePrompt(input: {
     POJU_IDENTITY,
     POJU_KNOWLEDGE_ROOTS,
     buildOutputPolicyForPoju(),
+    buildDualLayerDeliveryPromptBlock(locale),
     buildTermMarkingPromptBlock(locale, { principlesOnly: true }),
     directedInventoryBlock,
     buildStructuredInstanceInventory(structured),

@@ -3,6 +3,7 @@
 import { AlertTriangle } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
+import { EvidenceBlock } from "@/components/cross-product/EvidenceBlock";
 import { MarkedInline } from "@/components/cross-product/GlossaryText";
 import { RichReadingText } from "@/components/cross-product/RichReadingText";
 import { GlyphCanvas } from "@/components/glyph/GlyphCanvas";
@@ -157,21 +158,24 @@ export function GlyphReport({ reading, glyph, question, baseReportText }: Props)
 
         <section className="glyph-delivery-section glyph-dual-section">
           <SectionHeading title={sectionLabels.section_dual_view} />
+          <EvidenceBlock
+            label={outputLang.startsWith("zh") ? "依据与推理" : "Evidence & reasoning"}
+          >
+            <div className="glyph-dual-block">
+              <span className="glyph-dual-pill">{sectionLabels.view_bazi_title}</span>
+              <RichReadingText text={safeReading.命理双视角.命理看此事} locale={outputLang} />
+            </div>
 
-          <div className="glyph-dual-block">
-            <span className="glyph-dual-pill">{sectionLabels.view_bazi_title}</span>
-            <RichReadingText text={safeReading.命理双视角.命理看此事} locale={outputLang} />
-          </div>
+            <div className="glyph-dual-block">
+              <span className="glyph-dual-pill">{sectionLabels.view_glyph_title}</span>
+              <RichReadingText text={safeReading.命理双视角.签文看此事} locale={outputLang} />
+            </div>
 
-          <div className="glyph-dual-block">
-            <span className="glyph-dual-pill">{sectionLabels.view_glyph_title}</span>
-            <RichReadingText text={safeReading.命理双视角.签文看此事} locale={outputLang} />
-          </div>
-
-          <div className="glyph-dual-alignment">
-            <h3 className="glyph-dual-alignment__title">{sectionLabels.alignment_title}</h3>
-            <RichReadingText text={safeReading.命理双视角.两者印证或冲突} locale={outputLang} />
-          </div>
+            <div className="glyph-dual-alignment">
+              <h3 className="glyph-dual-alignment__title">{sectionLabels.alignment_title}</h3>
+              <RichReadingText text={safeReading.命理双视角.两者印证或冲突} locale={outputLang} />
+            </div>
+          </EvidenceBlock>
         </section>
 
         {synthesisText ? (
