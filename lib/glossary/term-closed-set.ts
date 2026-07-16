@@ -62,6 +62,41 @@ export const CLOSED_EARTHLY_BRANCHES = Object.keys(BRANCHES) as (keyof typeof BR
 export const CLOSED_WUXING = ["木", "火", "土", "金", "水"] as const;
 export const CLOSED_YINYANG = ["阴", "阳"] as const;
 
+/** Slug for each wuxing element (marker / pojulife-terms). */
+export const WUXING_SLUG = {
+  木: "wood",
+  火: "fire",
+  土: "earth",
+  金: "metal",
+  水: "water",
+} as const;
+
+/** Slug for yin/yang polarity. */
+export const YINYANG_SLUG = { 阳: "yang", 阴: "yin" } as const;
+
+/** Allow-surface concept slugs (not engine-computed pillars). */
+export const ALLOW_CONCEPT_SLUG = {
+  五行: "wuxing",
+  阴阳: "yin_yang",
+  易经: "i_ching",
+  气: "qi",
+  道: "tao",
+} as const;
+
+/**
+ * Relation slugs — aligned with RELATION_MARKER_PREFIXES (engine fact source).
+ * 六合/三合 use liuhe/sanhe (no underscore), not liu_he/san_he.
+ */
+export const RELATION_SLUG = {
+  冲: "chong",
+  刑: "xing",
+  害: "hai",
+  六合: "liuhe",
+  半合: "banhe",
+  三合: "sanhe",
+  天干合: "stemhe",
+} as const;
+
 /** A6 — structural concepts from build-profile-structured / yongshen. */
 export const CLOSED_STRUCTURAL = [
   "日主",
@@ -227,11 +262,11 @@ export const CLOSED_SET_SLUG: Record<string, string> = {
   地支: "earthly_branch",
   藏干: "hidden_stem",
   配偶宫: "spouse_palace",
-  六合: "liu_he",
+  六合: "liuhe",
   六冲: "liu_chong",
   三刑: "san_xing",
   六害: "liu_hai",
-  三合: "san_he",
+  三合: "sanhe",
   占卜: "hr_divination",
   命运: "hr_fate",
   宿命: "hr_destiny",
@@ -574,4 +609,16 @@ export function closedSetSlug(hanId: string): string {
 
 export function isClosedSetMarkerId(id: string): boolean {
   return Object.values(CLOSED_SET_SLUG).includes(id);
+}
+
+/** Resolve expected slug for a traditional han id (bazi closed-set + allow concepts). */
+export function slugForTraditional(traditional: string): string | undefined {
+  if (traditional in CLOSED_SET_SLUG) return CLOSED_SET_SLUG[traditional]!;
+  if (traditional in WUXING_SLUG) return WUXING_SLUG[traditional as keyof typeof WUXING_SLUG];
+  if (traditional in YINYANG_SLUG) return YINYANG_SLUG[traditional as keyof typeof YINYANG_SLUG];
+  if (traditional in ALLOW_CONCEPT_SLUG) {
+    return ALLOW_CONCEPT_SLUG[traditional as keyof typeof ALLOW_CONCEPT_SLUG];
+  }
+  if (traditional in RELATION_SLUG) return RELATION_SLUG[traditional as keyof typeof RELATION_SLUG];
+  return undefined;
 }

@@ -1,0 +1,2472 @@
+// lib/glossary/pojulife-terms.ts —— Batch B1 (41/157)
+export const baziCoreGlossary = [
+  /* ==========================================
+     1. 结构类 (17)
+     ========================================== */
+  {
+    ns: "bazi",
+    slug: "day_master",
+    traditional: "日主",
+    polarity: "neutral",
+    term: {
+      zh: "本元",
+      en: "Core",
+      es: "Núcleo",
+      de: "Kern",
+      fr: "Noyau"
+    },
+    definition: {
+      zh: "个性的最深层内核，代表本我能量的初始状态。",
+      en: "The deepest core of personality, representing the initial state of self-energy.",
+      es: "El núcleo más profundo de la personalidad, que representa el estado inicial de la autoenergía.",
+      de: "Der tiefste Kern der Persönlichkeit, der den Urzustand der Eigenenergie darstellt.",
+      fr: "Le noyau le plus profond de la personnalité, représentant l'état initial de l'énergie du soi."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "yong_shen",
+    traditional: "用神",
+    polarity: "favorable",
+    term: {
+      zh: "锚元",
+      en: "Anchor",
+      es: "Ancla",
+      de: "Anker",
+      fr: "Ancre"
+    },
+    definition: {
+      zh: "最能带来内在平衡与支持的关键能量点。",
+      en: "The key energy point that brings the most inner balance and support.",
+      es: "El punto de energía clave que aporta el mayor equilibrio y apoyo internos.",
+      de: "Der wichtigste Energiepunkt, der das meiste innere Gleichgewicht und die meiste Unterstützung bringt.",
+      fr: "Le point d'énergie clé qui apporte le plus d'équilibre intérieur et de soutien."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "favorable_element",
+    traditional: "喜神",
+    polarity: "favorable",
+    term: {
+      zh: "助元",
+      en: "Booster",
+      es: "Refuerzo",
+      de: "Rückenwind",
+      fr: "Allié"
+    },
+    definition: {
+      zh: "辅助并强化核心平衡，提供积极推动力的能量。",
+      en: "Energy that assists and strengthens core balance, providing a positive driving force.",
+      es: "Energía que asiste y fortalece el equilibrio central, proporcionando una fuerza motriz positiva.",
+      de: "Energie, die das Kerngleichgewicht unterstützt und stärkt und eine positive Antriebskraft darstellt.",
+      fr: "Énergie qui aide et renforce l'équilibre central, fournissant une force motrice positive."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "unfavorable_element",
+    traditional: "忌神",
+    polarity: "caution",
+    term: {
+      zh: "耗元",
+      en: "Drainer",
+      es: "Lastre",
+      de: "Gegenwind",
+      fr: "Frein"
+    },
+    definition: {
+      zh: "容易打破原有平衡、导致能量过度消耗的阻力点。",
+      en: "The point of resistance that easily disrupts balance and leads to excessive energy drain.",
+      es: "El punto de resistencia que altera fácilmente el equilibrio y provoca un desgaste excesivo de energía.",
+      de: "Der Widerstandspunkt, der das Gleichgewicht leicht stört und zu übermäßigem Energieverlust führt.",
+      fr: "Le point de résistance qui perturbe facilement l'équilibre et entraîne une perte d'énergie excessive."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "strong_self",
+    traditional: "身强",
+    polarity: "neutral",
+    term: {
+      zh: "充沛",
+      en: "Abundant",
+      es: "Abundante",
+      de: "Vollgeladen",
+      fr: "Abondant"
+    },
+    definition: {
+      zh: "内在能量储备充裕，主动输出与抗压能力强。",
+      en: "Rich inner energy reserves with strong capacity for active output and stress tolerance.",
+      es: "Ricas reservas de energía interna con fuerte capacidad de rendimiento activo y tolerancia al estrés.",
+      de: "Reichhaltige innere Energiereserven mit hoher Kapazität für aktiven Output und Stresstoleranz.",
+      fr: "Riches réserves d'énergie interne avec une forte capacité de production active et de tolérance au stress."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "weak_self",
+    traditional: "身弱",
+    polarity: "neutral",
+    term: {
+      zh: "需养",
+      en: "Conserving",
+      es: "Conservador",
+      de: "Schonend",
+      fr: "Conservateur"
+    },
+    definition: {
+      zh: "内在能量敏感内敛，倾向于温和吸纳、保存实力。",
+      en: "Sensitive and introverted inner energy, leaning towards gentle absorption and preserving strength.",
+      es: "Energía interna sensible e introvertida, orientada a la absorción suave y a la conservación de fuerzas.",
+      de: "Sensible und introvertierte innere Energie, die zu sanfter Aufnahme und Ressourcenschonung neigt.",
+      fr: "Énergie interne sensible et introvertie, axée sur l'absorption douce et la conservation des forces."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "balanced_self",
+    traditional: "平衡",
+    polarity: "favorable",
+    term: {
+      zh: "均势",
+      en: "Balanced",
+      es: "Equilibrado",
+      de: "Ausgeglichen",
+      fr: "Équilibré"
+    },
+    definition: {
+      zh: "能量分配适中，具有极佳的自我调节与适应力。",
+      en: "Moderate energy distribution, featuring excellent self-regulation and adaptability.",
+      es: "Distribución moderada de la energía, con una excelente autorregulación y adaptabilidad.",
+      de: "Moderate Energieverteilung mit hervorragender Selbstregulation und Anpassungsfähigkeit.",
+      fr: "Distribution d'énergie modérée, caractérisée par une excellente autorégulation et adaptabilité."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "pattern",
+    traditional: "格局",
+    polarity: "neutral",
+    term: {
+      zh: "型格",
+      en: "Archetype",
+      es: "Arquetipo",
+      de: "Archetyp",
+      fr: "Archétype"
+    },
+    definition: {
+      zh: "人生的宏观行为系统与核心运作机制模型。",
+      en: "The macroscopic behavioral system and core operating mechanism of life.",
+      es: "El sistema de comportamiento macroscópico y el mecanismo operativo central de la vida.",
+      de: "Das makroskopische Verhaltenssystem und der zentrale Betriebsmechanismus des Lebens.",
+      fr: "Le système comportemental macroscopique et le mécanisme opérationnel central de la vie."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "decade",
+    traditional: "大运",
+    polarity: "neutral",
+    term: {
+      zh: "纪元",
+      en: "Era",
+      es: "Era",
+      de: "Epoche",
+      fr: "Ère"
+    },
+    definition: {
+      zh: "长达十年的成长阶段，定义了这段时期的环境底色。",
+      en: "A ten-year growth phase defining the underlying environmental tone of the period.",
+      es: "Una fase de crecimiento de diez años que define el tono ambiental subyacente de este período.",
+      de: "Eine zehnjährige Wachstumsphase, die den grundlegenden Ton dieser Zeit bestimmt.",
+      fr: "Une phase de croissance de dix ans définissant le ton environnemental sous-jacent de cette période."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "year",
+    traditional: "流年",
+    polarity: "neutral",
+    term: {
+      zh: "岁环",
+      en: "Transit",
+      es: "Tránsito",
+      de: "Transit",
+      fr: "Transit"
+    },
+    definition: {
+      zh: "当年的即时能量变动，带来具体的机遇与波动。",
+      en: "Immediate energy fluctuations of the current year, bringing specific opportunities and shifts.",
+      es: "Fluctuaciones inmediatas de energía del año en curso, que traen oportunidades y cambios específicos.",
+      de: "Unmittelbare Energieschwankungen des aktuellen Jahres, die spezifische Chancen und Veränderungen mit sich bringen.",
+      fr: "Fluctuations immédiates d'énergie de l'année en cours, apportant des opportunités et des changements spécifiques."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "bazi",
+    traditional: "八字",
+    polarity: "neutral",
+    term: {
+      zh: "源图",
+      en: "Blueprint",
+      es: "Plano",
+      de: "Bauplan",
+      fr: "Plan"
+    },
+    definition: {
+      zh: "个人核心潜能系统与出厂设置图谱的总称。",
+      en: "The collective map of an individual's core potential and factory-set systems.",
+      es: "El mapa colectivo del potencial central de un individuo y sus sistemas preconfigurados.",
+      de: "Die Gesamtdarstellung des Kernpotenzials und der angeborenen Systeme einer Person.",
+      fr: "La carte collective du potentiel de base d'un individu et de ses systèmes d'origine."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "four_pillars",
+    traditional: "四柱",
+    polarity: "neutral",
+    term: {
+      zh: "柱界",
+      en: "Pillars",
+      es: "Pilares",
+      de: "Säulen",
+      fr: "Piliers"
+    },
+    definition: {
+      zh: "构成人生体验的四个基础能量象限与生命周期。",
+      en: "The four basic energy quadrants and life stages that form human experience.",
+      es: "Los cuatro cuadrantes de energía básicos y etapas de la vida que conforman la experiencia humana.",
+      de: "Die vier grundlegenden Energiequadranten und Lebensphasen, die die menschliche Erfahrung prägen.",
+      fr: "Les quatre quadrants énergétiques de base et étapes de la vie qui forment l'expérience humaine."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "natal_profile",
+    traditional: "命盘",
+    polarity: "neutral",
+    term: {
+      zh: "矩阵",
+      en: "Matrix",
+      es: "Matriz",
+      de: "Matrix",
+      fr: "Matrice"
+    },
+    definition: {
+      zh: "可视化排出的全部个人潜能关系网络面板。",
+      en: "The visualized panel showing the network of all personal potential relations.",
+      es: "El panel visual que muestra la red de todas las relaciones de potencial personal.",
+      de: "Das visualisierte Dashboard, das das Netzwerk aller persönlichen Potenzialbeziehungen zeigt.",
+      fr: "Le panneau visualisé montrant le réseau de toutes les relations de potentiel personnel."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "heavenly_stem",
+    traditional: "天干",
+    polarity: "neutral",
+    term: {
+      zh: "显元",
+      en: "Manifest",
+      es: "Manifiesto",
+      de: "Manifest",
+      fr: "Manifeste"
+    },
+    definition: {
+      zh: "意识、外在行为以及易于被外界感知的能量层面。",
+      en: "Consciousness, external behaviors, and the energy level easily perceived by others.",
+      es: "La conciencia, los comportamientos externos y el nivel de energía fácilmente percibido por los demás.",
+      de: "Bewusstsein, äußere Verhaltensweisen und die für andere leicht wahrnehmbare Energieebene.",
+      fr: "La conscience, les comportements externes et le niveau d'énergie facilement perçu par les autres."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "earthly_branch",
+    traditional: "地支",
+    polarity: "neutral",
+    term: {
+      zh: "潜元",
+      en: "Latent",
+      es: "Latente",
+      de: "Latent",
+      fr: "Latent"
+    },
+    definition: {
+      zh: "深层心理、潜意识以及个人真实的内在环境根基。",
+      en: "Deep psychology, subconsciousness, and the true inner foundation of self.",
+      es: "La psicología profunda, el subconsciente y el verdadero fundamento interno de uno mismo.",
+      de: "Tiefe Psychologie, Unterbewusstsein und das wahre innere Fundament des Selbst.",
+      fr: "La psychologie profonde, le subconscient et le véritable fondement interne de soi."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "hidden_stem",
+    traditional: "藏干",
+    polarity: "neutral",
+    term: {
+      zh: "蕴元",
+      en: "Potential",
+      es: "Potencial",
+      de: "Potenzial",
+      fr: "Potentiel"
+    },
+    definition: {
+      zh: "隐于内在、在特定环境激活时方显现的隐藏能量。",
+      en: "Energy hidden within, only manifesting when activated by specific environments.",
+      es: "Energía oculta en el interior, que solo se manifiesta al ser activada por entornos específicos.",
+      de: "Innere, verborgene Energie, die sich erst manifestiert, wenn sie durch bestimmte Bedingungen aktiviert wird.",
+      fr: "Énergie cachée à l'intérieur, qui ne se manifeste que lorsqu'elle est activée par des environnements spécifiques."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "spouse_palace",
+    traditional: "配偶宫",
+    polarity: "neutral",
+    term: {
+      zh: "盟位",
+      en: "Alliance",
+      es: "Alianza",
+      de: "Bündnis",
+      fr: "Alliance"
+    },
+    definition: {
+      zh: "读取亲密关系理想模式、核心连接与内在安全感的位置。",
+      en: "The key position for reading relationship patterns, core connection, and inner security.",
+      es: "La posición clave para interpretar los patrones de relación, la conexión central y la seguridad interna.",
+      de: "Die Schlüsselposition zum Lesen von Beziehungsmustern, der Kernverbindung und der inneren Sicherheit.",
+      fr: "La position clé pour lire les schémas relationnels, la connexion centrale et la sécurité intérieure."
+    }
+  },
+
+  /* ==========================================
+     2. 十神 (10)
+     ========================================== */
+  {
+    ns: "bazi",
+    slug: "bi_jian",
+    traditional: "比肩",
+    polarity: "neutral",
+    term: {
+      zh: "同侪",
+      en: "Peer",
+      es: "Par",
+      de: "Gefährte",
+      fr: "Pair"
+    },
+    definition: {
+      zh: "自我认同、独立性，以及与同辈平等互动合作的特质。",
+      en: "Self-identity, independence, and qualities of equal interaction with peers.",
+      es: "Autoidentidad, independencia y cualidades de interacción equitativa con los pares.",
+      de: "Selbstidentität, Unabhängigkeit und Qualitäten der gleichberechtigten Interaktion mit Gleichaltrigen.",
+      fr: "Identité de soi, indépendance et qualités d'interaction équitable avec les pairs."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "jie_cai",
+    traditional: "劫财",
+    polarity: "caution",
+    term: {
+      zh: "竞合",
+      en: "Rival",
+      es: "Rival",
+      de: "Rivale",
+      fr: "Rival"
+    },
+    definition: {
+      zh: "在资源博弈中显现的竞争意识，伴随分化或共赢可能。",
+      en: "Competitive awareness shown in resource games, with potential for division or win-win outcomes.",
+      es: "Conciencia competitiva en el juego de recursos, con potencial de división o de beneficio mutuo.",
+      de: "Wettbewerbsbewusstsein in Ressourcenspielen, mit Potenzial für Spaltung oder Win-Win-Ergebnisse.",
+      fr: "Sensibilisation à la concurrence dans les jeux de ressources, avec un potentiel de division ou de résultats gagnant-gagnant."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "shi_shen",
+    traditional: "食神",
+    polarity: "favorable",
+    term: {
+      zh: "流展",
+      en: "Flow",
+      es: "Flujo",
+      de: "Fluss",
+      fr: "Flux"
+    },
+    definition: {
+      zh: "自然、顺畅的才华倾吐与创造力，享受生活本真。",
+      en: "Natural, smooth expression of talent and creativity, enjoying the true essence of life.",
+      es: "Expresión natural y fluida del talento y la creatividad, disfrutando de la verdadera esencia de la vida.",
+      de: "Natürlicher, reibungsloser Ausdruck von Talent und Kreativität, um das wahre Leben zu genießen.",
+      fr: "Expression naturelle et fluide du talent et de la créativité, pour savourer la véritable essence de la vie."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "shang_guan",
+    traditional: "伤官",
+    polarity: "neutral",
+    term: {
+      zh: "锋锐",
+      en: "Spark",
+      es: "Destello",
+      de: "Funke",
+      fr: "Étincelle"
+    },
+    definition: {
+      zh: "带有批判性与前卫色彩的耀眼锋芒，挑战既有规则。",
+      en: "A dazzling brilliance with a critical and avant-garde edge, challenging existing rules.",
+      es: "Un brillo deslumbrante con un toque crítico y vanguardista, que desafía las reglas existentes.",
+      de: "Ein glänzender Ausdruck mit kritischer und avantgardistischer Note, der bestehende Regeln herausfordert.",
+      fr: "Un éclat éblouissant teinté de critique et d'avant-gardisme, défiant les règles établies."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "pian_cai",
+    traditional: "偏财",
+    polarity: "favorable",
+    term: {
+      zh: "遇资",
+      en: "Venture",
+      es: "Ventura",
+      de: "Wagnis",
+      fr: "Aventure"
+    },
+    definition: {
+      zh: "对外部机会、流动性资源的敏锐捕获，带有开拓性。",
+      en: "Keen capture of external opportunities and fluid resources, carrying an pioneering spirit.",
+      es: "Captura perspicaz de oportunidades externas y recursos fluidos, con un espíritu pionero.",
+      de: "Scharfsinnige Erfassung externer Gelegenheiten und flexibler Ressourcen mit Pioniergeist.",
+      fr: "Saisie perspicace d'opportunités externes et de ressources fluides, avec un esprit pionnier."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "zheng_cai",
+    traditional: "正财",
+    polarity: "favorable",
+    term: {
+      zh: "固资",
+      en: "Asset",
+      es: "Activo",
+      de: "Besitz",
+      fr: "Actif"
+    },
+    definition: {
+      zh: "长期、稳定、通过确切付出获得的持续性保障资源。",
+      en: "Long-term, stable, and secure resources obtained through solid contribution and effort.",
+      es: "Recursos estables y seguros a largo plazo, obtenidos mediante una contribución y un esfuerzo sólidos.",
+      de: "Langfristige, stabile und sichere Ressourcen, die durch solide Leistung und Mühe erworben werden.",
+      fr: "Ressources à long terme, stables et sécurisées obtenues grâce à une contribution et un effort constants."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "qi_sha",
+    traditional: "七杀",
+    polarity: "caution",
+    term: {
+      zh: "淬炼",
+      en: "Crucible",
+      es: "Crisol",
+      de: "Prüfstein",
+      fr: "Creuset"
+    },
+    definition: {
+      zh: "高强度的现实重压、竞争与突发危机，是极具颠覆性的淬火考验。",
+      en: "High-intensity pressure, competition, and sudden crisis, acting as a transformative crucible.",
+      es: "Presión de alta intensidad, competencia y crisis repentinas, que actúan como un crisol transformador.",
+      de: "Hochintensiver Druck, Wettbewerb und plötzliche Krisen, die als transformativer Prüfstein wirken.",
+      fr: "Pression de haute intensité, concurrence et crises soudaines, agissant comme un creuset transformateur."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "zheng_guan",
+    traditional: "正官",
+    polarity: "favorable",
+    term: {
+      zh: "框架",
+      en: "Frame",
+      es: "Marco",
+      de: "Rahmen",
+      fr: "Cadre"
+    },
+    definition: {
+      zh: "代表内在秩序、契约精神、社会规则与天然责任感。",
+      en: "Represents internal order, spirit of contract, social rules, and innate responsibility.",
+      es: "Representa el orden interno, el espíritu de pacto, las normas sociales y la responsabilidad innata.",
+      de: "Steht für innere Ordnung, Vertragstreue, gesellschaftliche Regeln und angeborene Verantwortung.",
+      fr: "Représente l'ordre interne, l'esprit de contrat, les règles sociales et la responsabilité innée."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "pian_yin",
+    traditional: "偏印",
+    polarity: "neutral",
+    term: {
+      zh: "妙启",
+      en: "Intuition",
+      es: "Intuición",
+      de: "Intuition",
+      fr: "Intuition"
+    },
+    definition: {
+      zh: "极强的敏锐直觉，擅于探究边缘领域的深层抽象本质。",
+      en: "Strong intuitive power, excellent at exploring the deep abstract essence of marginal areas.",
+      es: "Fuerte poder intuitivo, excelente para explorar la profunda esencia abstracta de áreas marginales.",
+      de: "Starke intuitive Kraft, hervorragend geeignet, um die tiefe abstrakte Essenz von Randbereichen zu erforschen.",
+      fr: "Fort pouvoir intuitif, excellent pour explorer l'essence abstraite profonde des domaines marginaux."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "zheng_yin",
+    traditional: "正印",
+    polarity: "favorable",
+    term: {
+      zh: "供源",
+      en: "Source",
+      es: "Fuente",
+      de: "Quelle",
+      fr: "Source"
+    },
+    definition: {
+      zh: "无条件的稳定滋养、长辈庇护，以及经典的知识传承。",
+      en: "Unconditional, stable nourishment, elder protection, and classical knowledge inheritance.",
+      es: "Nutrición estable e incondicional, protección de los mayores y herencia de conocimientos clásicos.",
+      de: "Bedingungslose, stabile Nahrung, elterlicher Schutz und klassisches Wissenserbe.",
+      fr: "Nourriture stable et inconditionnelle, protection des aînés et héritage des connaissances classiques."
+    }
+  },
+
+  /* ==========================================
+     3. 五行 (5)
+     ========================================== */
+  {
+    ns: "bazi",
+    slug: "wood",
+    traditional: "木",
+    polarity: "neutral",
+    term: {
+      zh: "舒展",
+      en: "Growth",
+      es: "Crecimiento",
+      de: "Wachstum",
+      fr: "Croissance"
+    },
+    definition: {
+      zh: "向上生发、舒展延伸、充满生命力与复原力的能量特质。",
+      en: "Energy quality characterized by upward development, expansion, and high resilience.",
+      es: "Calidad de energía caracterizada por el desarrollo ascendente, la expansión y la alta resiliencia.",
+      de: "Energiequalität, die sich durch Aufwärtsentwicklung, Ausdehnung und hohe Widerstandskraft auszeichnet.",
+      fr: "Qualité d'énergie caractérisée par le développement vers le haut, l'expansion et une grande résilience."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "fire",
+    traditional: "火",
+    polarity: "neutral",
+    term: {
+      zh: "发散",
+      en: "Radiance",
+      es: "Radiancia",
+      de: "Strahlung",
+      fr: "Éclat"
+    },
+    definition: {
+      zh: "温暖上升、耀眼扩散、充满感染力与展现欲望的能量特质。",
+      en: "Warm rising, dazzling diffusion, infectious and expressive energy quality.",
+      es: "Ascenso cálido, difusión deslumbrante, calidad de energía infecciosa y expresiva.",
+      de: "Warmer Aufstieg, blendende Verbreitung, ansteckende und ausdrucksstarke Energiequalität.",
+      fr: "Élévation chaleureuse, diffusion éblouissante, qualité d'énergie contagieuse et expressive."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "earth",
+    traditional: "土",
+    polarity: "neutral",
+    term: {
+      zh: "承托",
+      en: "Grounding",
+      es: "Arraigo",
+      de: "Erdung",
+      fr: "Ancrage"
+    },
+    definition: {
+      zh: "稳定厚重、包容承载、擅于沉淀与转化的能量特质。",
+      en: "Stable, heavy, inclusive, and grounding energy quality excels at consolidation.",
+      es: "Calidad de energía estable, densa, inclusiva y con arraigo, excelente en la consolidación.",
+      de: "Stabile, schwere, integrative und erdende Energiequalität, die hervorragend festigt.",
+      fr: "Qualité d'énergie stable, lourde, inclusive et d'ancrage, excellente pour la consolidation."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "metal",
+    traditional: "金",
+    polarity: "neutral",
+    term: {
+      zh: "精练",
+      en: "Refinement",
+      es: "Refinamiento",
+      de: "Veredelung",
+      fr: "Raffinement"
+    },
+    definition: {
+      zh: "收敛聚焦、坚硬果断、追求规则、极致与决断的能量特质。",
+      en: "Convergent focus, hard resolve, and pursuing precision, rules, and decisiveness.",
+      es: "Enfoque convergente, resolución firme y búsqueda de precisión, reglas y decisión.",
+      de: "Konvergenter Fokus, harte Entschlossenheit und das Streben nach Präzision, Regeln und Entschiedenheit.",
+      fr: "Focalisation convergente, ferme résolution et poursuite de la précision, des règles et de la décisivité."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "water",
+    traditional: "水",
+    polarity: "neutral",
+    term: {
+      zh: "润流",
+      en: "Fluidity",
+      es: "Fluidez",
+      de: "Fluidität",
+      fr: "Fluidité"
+    },
+    definition: {
+      zh: "无形而流、深邃滋润、代表智慧、敏捷渗透的流动性特质。",
+      en: "Formless and flowing, deep and nourishing, representing intellectual and flexible permeation.",
+      es: "Sinuoso e informe, profundo y nutritivo, que representa una permeabilidad intelectual y flexible.",
+      de: "Formlos und fließend, tief und nährend, steht für intellektuelle und flexible Durchdringung.",
+      fr: "Informe et fluide, profond et nourrissant, représentant une imprégnation intellectuelle et flexible."
+    }
+  },
+
+  /* ==========================================
+     4. 阴阳 (2)
+     ========================================== */
+  {
+    ns: "bazi",
+    slug: "yang",
+    traditional: "阳",
+    polarity: "neutral",
+    term: {
+      zh: "动能",
+      en: "Active",
+      es: "Activo",
+      de: "Aktiv",
+      fr: "Actif"
+    },
+    definition: {
+      zh: "向外、向上、主动、显性的扩张与探索属性。",
+      en: "Outward, upward, active, and manifest property of expansion and exploration.",
+      es: "Propiedad exterior, ascendente, activa y manifiesta de expansión y exploración.",
+      de: "Nach außen gerichtete, aufwärtsstrebende, aktive und manifeste Eigenschaft von Expansion und Erkundung.",
+      fr: "Propriété extérieure, ascendante, active et manifeste d'expansion et d'exploration."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "yin",
+    traditional: "阴",
+    polarity: "neutral",
+    term: {
+      zh: "静能",
+      en: "Receptive",
+      es: "Receptivo",
+      de: "Rezeptiv",
+      fr: "Réceptif"
+    },
+    definition: {
+      zh: "向内、向下、静态、隐性的收敛与涵养属性。",
+      en: "Inward, downward, static, and hidden property of convergence and cultivation.",
+      es: "Propiedad interior, descendente, estática y oculta de convergencia y cultivo.",
+      de: "Nach innen gerichtete, abwärtsstrebende, statische und verborgene Eigenschaft der Konvergenz und Reifung.",
+      fr: "Propriété intérieure, descendante, statique et cachée de convergence et de culture."
+    }
+  },
+
+  /* ==========================================
+     5. 关系 (7)
+     ========================================== */
+  {
+    ns: "bazi",
+    slug: "clash",
+    traditional: "冲",
+    polarity: "caution",
+    term: {
+      zh: "撞击",
+      en: "Impact",
+      es: "Impacto",
+      de: "Aufprall",
+      fr: "Impact"
+    },
+    definition: {
+      zh: "两股对立力量的正面触碰，激发剧烈变动与关系重塑。",
+      en: "A head-on collision of opposing forces, sparking dramatic shifts and relationship reshaping.",
+      es: "Un choque frontal de fuerzas opuestas que desencadena cambios dramáticos y reconfiguraciones de relaciones.",
+      de: "Ein frontaler Zusammenstoß gegensätzlicher Kräfte, der dramatische Veränderungen und Beziehungsneugestaltungen auslöst.",
+      fr: "Une collision frontale de forces opposées, déclenchant des changements spectaculaires et une recomposition des relations."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "punishment",
+    traditional: "刑",
+    polarity: "caution",
+    term: {
+      zh: "磨蚀",
+      en: "Friction",
+      es: "Fricción",
+      de: "Reibung",
+      fr: "Friction"
+    },
+    definition: {
+      zh: "内在秩序的相互摩擦纠缠，伴随着秩序修正前的隐痛磨损。",
+      en: "Mutual rubbing and entanglement of internal orders, accompanied by subtle wear before order correction.",
+      es: "Roce mutuo y enredo de órdenes internos, acompañados de un sutil desgaste antes de la corrección del orden.",
+      de: "Gegenseitige Reibung und Verflechtung innerer Ordnungen, begleitet von subtilem Verschleiß vor der Ordnungsumstellung.",
+      fr: "Frottement mutuel et enchevêtrement des ordres internes, accompagnés d'une usure subtile avant la correction de l'ordre."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "harm",
+    traditional: "害",
+    polarity: "caution",
+    term: {
+      zh: "潜耗",
+      en: "Erosion",
+      es: "Erosión",
+      de: "Erosion",
+      fr: "Érosion"
+    },
+    definition: {
+      zh: "隐而不发的缓慢拆台或关系拆损，需要警惕暗中的慢性内耗。",
+      en: "Slow, hidden undoing or weakening of relationships, warning against chronic internal drain.",
+      es: "Desmantelamiento o debilitamiento lento y oculto de las relaciones, advirtiendo contra un desgaste interno crónico.",
+      de: "Langsamer, verborgener Abbau oder Schwächung von Beziehungen, der vor chronischer innerer Erschöpfung warnt.",
+      fr: "Démantèlement ou affaiblissement lent et caché des relations, mettant en garde contre un épuisement interne chronique."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "liu_he",
+    traditional: "六合",
+    polarity: "favorable",
+    term: {
+      zh: "双契",
+      en: "Affinity",
+      es: "Afinidad",
+      de: "Affinität",
+      fr: "Affinité"
+    },
+    definition: {
+      zh: "两股能量由于强烈吸引而实现深度共振与一对一绑定。",
+      en: "Two energies achieving deep resonance and one-on-one bonding due to intense attraction.",
+      es: "Dos energías que logran una profunda resonancia y un vínculo uno a uno debido a una intensa atracción.",
+      de: "Zwei Energien, die aufgrund intensiver Anziehung eine tiefe Resonanz und eine Eins-zu-eins-Bindung eingehen.",
+      fr: "Deux énergies parvenant à une résonance profonde et à une liaison en tête-à-tête en raison d'une attraction intense."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "half_combination",
+    traditional: "半合",
+    polarity: "favorable",
+    term: {
+      zh: "偏契",
+      en: "Resonance",
+      es: "Resonancia",
+      de: "Resonanz",
+      fr: "Résonance"
+    },
+    definition: {
+      zh: "局部能量的吸引和靠拢，表现为默契的温和连结。",
+      en: "Local attraction and convergence of energies, showing as an unspoken gentle connection.",
+      es: "Atracción local y convergencia de energías, que se manifiesta como una conexión sutil no expresada.",
+      de: "Lokale Anziehung und Annäherung von Energien, die sich als unausgesprochene, sanfte Verbindung zeigt.",
+      fr: "Attraction locale et convergence des énergies, se manifestant par une connexion douce et tacite."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "san_he",
+    traditional: "三合",
+    polarity: "favorable",
+    term: {
+      zh: "聚势",
+      en: "Synergy",
+      es: "Sinergia",
+      de: "Synergie",
+      fr: "Synergie"
+    },
+    definition: {
+      zh: "多方力量为了共同目标凝聚成一股势不可挡的庞大浪潮。",
+      en: "Multi-party forces gathering into an unstoppable, massive wave for a common goal.",
+      es: "Fuerzas de múltiples partes que se agrupan en una ola masiva e imparable hacia un objetivo común.",
+      de: "Kräfte mehrerer Parteien, die sich für ein gemeinsames Ziel zu einer unaufhaltsamen, gewaltigen Welle formieren.",
+      fr: "Forces de multiples parties se rassemblant en une vague massive et irrésistible pour un objectif commun."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "stem_combination",
+    traditional: "天干合",
+    polarity: "neutral",
+    term: {
+      zh: "共缠",
+      en: "Entanglement",
+      es: "Enredo",
+      de: "Verflechtung",
+      fr: "Enchevêtrement"
+    },
+    definition: {
+      zh: "意志维度的深层契约，形成你中有我、身不由己的深度黏合。",
+      en: "Deep contract in the realm of will, creating an inseparable bonding and entanglement.",
+      es: "Contrato profundo en el ámbito de la voluntad, que crea un vínculo inseparable y un enredo.",
+      de: "Tiefe Vertrag im Bereich des Willens, der eine untrennbare Bindung und Verflechtung schafft.",
+      fr: "Contrat profond dans le domaine de la volonté, créant un lien et un enchevêtrement inséparables."
+    }
+  }
+];
+// B2 · qimen 核心（34）· Syncro
+const qimenCoreTerms = [
+  // ==================== 八神（8）· 场域角色 ====================
+  {
+    ns: "qimen",
+    slug: "qm_zhi_fu",
+    traditional: "值符",
+    polarity: "favorable",
+    term: { zh: "领航", en: "Sovereign", es: "Soberano", de: "Souverän", fr: "Souverain" },
+    definition: {
+      zh: "主导整体局势的核心引领力量，带来关键资源与贵人助力。",
+      en: "The core leading force that governs the overall situation, bringing key resources and noble support.",
+      es: "La fuerza rectora central que gobierna la situación general, atrayendo recursos clave y apoyo noble.",
+      de: "Die zentrale Führungskraft, die die Gesamtsituation lenkt und wichtige Ressourcen sowie noble Unterstützung bringt.",
+      fr: "La force directrice centrale qui régit la situation globale, apportant des ressources clés et un soutien noble."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_teng_she",
+    traditional: "騰蛇",
+    polarity: "caution",
+    term: { zh: "纠缠", en: "Entanglement", es: "Enredo", de: "Verstrickung", fr: "Enchevêtrement" },
+    definition: {
+      zh: "带来焦虑、执念与反复纠缠的隐蔽磁场，需防范虚幻假象。",
+      en: "A hidden energetic field causing anxiety, obsession, and repetitive loops; beware of illusions.",
+      es: "Un campo energético oculto que causa ansiedad, obsesión y bucles repetitivos; cuidado con las ilusiones.",
+      de: "Ein verborgenes Energiefeld, das Angst, Besessenheit und sich wiederholende Schleifen verursacht; Vorsicht vor Illusionen.",
+      fr: "Un champ énergétique caché causant de l'anxiété, de l'obsession et des boucles répétitives ; attention aux illusions."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_tai_yin",
+    traditional: "太陰",
+    polarity: "favorable",
+    term: { zh: "隐庇", en: "Sanctuary", es: "Santuario", de: "Heiligtum", fr: "Sanctuaire" },
+    definition: {
+      zh: "柔和深沉的隐形守护力量，适合积蓄能量、不宜张扬。",
+      en: "A gentle, deep, and invisible protective force, ideal for gathering energy and maintaining privacy.",
+      es: "Una fuerza protectora invisible, suave y profunda, ideal para acumular energía y mantener la privacidad.",
+      de: "Eine sanfte, tiefe und unsichtbare Schutzkraft, ideal, um Energie zu sammeln und die Privatsphäre zu wahren.",
+      fr: "Une force protectrice invisible, douce et profonde, idéale pour rassembler de l'énergie et préserver la discrétion."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_liu_he",
+    traditional: "六合",
+    polarity: "favorable",
+    term: { zh: "纽带", en: "Nexus", es: "Nexo", de: "Nexus", fr: "Lien" },
+    definition: {
+      zh: "象征合作、连接与顺畅沟通的桥梁力量，有利于促成各种共识。",
+      en: "A bridging force symbolizing cooperation, connection, and smooth communication, highly favorable for consensus.",
+      es: "Una fuerza de enlace que simboliza la cooperación, la conexión y la comunicación fluida, muy favorable para el consenso.",
+      de: "Eine verbindende Kraft, die Kooperation, Verbindung und reibungslose Kommunikation symbolisiert und Konsens fördert.",
+      fr: "Une force de liaison symbolisant la coopération, la connexion et une communication fluide, très favorable au consensus."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_bai_hu",
+    traditional: "白虎",
+    polarity: "caution",
+    term: { zh: "冲击", en: "Impact", es: "Impacto", de: "Aufprall", fr: "Impact" },
+    definition: {
+      zh: "具有强烈破坏性或突破性的刚猛能量，代表冲突、压力与突发的变动。",
+      en: "A fierce, powerful energy of breakthrough or disruption, representing conflicts, pressure, and sudden changes.",
+      es: "Una energía feroz y poderosa de ruptura o alteración, que representa conflictos, presión y cambios repentinos.",
+      de: "Eine heftige, kraftvolle Energie des Durchbruchs oder der Störung, die Konflikte, Druck und plötzliche Veränderungen darstellt.",
+      fr: "Une énergie féroce et puissante de rupture ou de perturbation, représentant des conflits, de la pression et des changements soudains."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_xuan_wu",
+    traditional: "玄武",
+    polarity: "caution",
+    term: { zh: "迷雾", en: "Mist", es: "Niebla", de: "Nebel", fr: "Brume" },
+    definition: {
+      zh: "隐藏在暗处的模糊磁场，易造成认知偏差、暗中损耗或细节疏漏。",
+      en: "A vague energy field hidden in the dark, prone to causing cognitive bias, subtle leaks, or overlooked details.",
+      es: "Un campo de energía vago oculto en la oscuridad, propenso a causar sesgos cognitivos, fugas sutiles o detalles pasados por alto.",
+      de: "Ein im Dunkeln verborgenes, vages Energiefeld, das leicht zu kognitiven Verzerrungen, subtilen Verlusten oder übersehenen Details führt.",
+      fr: "Un champ d'énergie vague caché dans l'ombre, susceptible de provoquer des biais cognitifs, des fuites subtiles ou des détails négligés."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_jiu_di",
+    traditional: "九地",
+    polarity: "neutral",
+    term: { zh: "磐石", en: "Bedrock", es: "Cimiento", de: "Fundament", fr: "Socle" },
+    definition: {
+      zh: "稳固、包容且极具耐心的蓄势能量，适合坚守阵地与深度积累。",
+      en: "A stable, inclusive, and highly patient energy of accumulation, ideal for holding ground and deep cultivation.",
+      es: "Una energía estable, inclusiva y muy paciente de acumulación, ideal para mantener la posición y cultivar profundamente.",
+      de: "Eine stabile, integrative und sehr geduldige Energie der Akkumulation, ideal, um die Stellung zu halten und tief zu kultivieren.",
+      fr: "Une énergie stable, inclusive et très patiente d'accumulation, idéale pour maintenir sa position et se cultiver en profondeur."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_jiu_tian",
+    traditional: "九天",
+    polarity: "neutral",
+    term: { zh: "凌霄", en: "Zenith", es: "Cénit", de: "Zenit", fr: "Zénith" },
+    definition: {
+      zh: "高远、宏大且极具开拓性的上升能量，适合展现自我、实施长远规划。",
+      en: "A lofty, grand, and highly pioneering upward energy, ideal for self-expression and long-term vision.",
+      es: "Una energía ascendente elevada, grandiosa y pionera, ideal para la autoexpresión y la visión a largo plazo.",
+      de: "Eine erhabene, großartige und zukunftsweisende Aufwärtsenergie, ideal zur Selbstdarstellung und für langfristige Visionen.",
+      fr: "Une énergie ascendante élevée, grandiose et pionnière, idéale pour l'expression de soi et la vision à long terme."
+    }
+  },
+
+  // ==================== 九星（9）· 能量品质 ====================
+  {
+    ns: "qimen",
+    slug: "qm_tian_peng",
+    traditional: "天蓬",
+    polarity: "caution",
+    term: { zh: "暗涌", en: "Undercurrent", es: "Corriente", de: "Unterströmung", fr: "Sous-courant" },
+    definition: {
+      zh: "充满变数与隐藏危机的深水能量，虽伴随高风险，亦孕育着颠覆性的机遇。",
+      en: "A deep-water energy filled with variables and hidden crises; though highly risky, it also harbors revolutionary opportunities.",
+      es: "Una energía de aguas profundas llena de variables y crisis ocultas; aunque de alto riesgo, también alberga oportunidades revolucionarias.",
+      de: "Eine tiefere Wasserenergie voller Variablen und verborgener Krisen; obwohl sie sehr riskant ist, birgt sie auch revolutionäre Chancen.",
+      fr: "Une énergie d'eau profonde remplie de variables et de crises cachées ; bien que très risquée, elle recèle également des opportunités révolutionnaires."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_tian_ren",
+    traditional: "天任",
+    polarity: "favorable",
+    term: { zh: "承托", en: "Sustainer", es: "Sostenedor", de: "Erhalter", fr: "Soutien" },
+    definition: {
+      zh: "稳健、厚重且富有责任感的耕耘能量，能够默默承受压力并建立长期功业。",
+      en: "A stable, solid, and highly responsible nurturing energy, capable of quietly enduring pressure and building long-term foundations.",
+      es: "Una energía nutritiva estable, sólida y muy responsable, capaz de soportar silenciosamente la presión y construir bases a largo plazo.",
+      de: "Eine stabile, solide und hochverantwortliche nährende Energie, die in der Lage ist, Druck im Stillen zu ertragen und langfristige Fundamente zu bauen.",
+      fr: "Une énergie nourricière stable, solide et hautement responsable, capable d'endurer silencieusement la pression et de bâtir des fondations à long terme."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_tian_chong",
+    traditional: "天冲",
+    polarity: "neutral",
+    term: { zh: "先锋", en: "Vanguard", es: "Vanguardia", de: "Vorreiter", fr: "Avant-garde" },
+    definition: {
+      zh: "势如破竹、迅猛果敢的行动派能量，具有极强的爆发力与突破惯性的冲劲。",
+      en: "A rapid and decisive pioneering energy, possessing immense explosive power and the drive to break through inertia.",
+      es: "Una energía pionera rápida y decisiva, que posee un inmenso poder explosivo y el impulso para romper la inercia.",
+      de: "Eine schnelle und entschlossene Pionierenergie mit immenser Sprengkraft und dem Drang, die Trägheit zu durchbrechen.",
+      fr: "Une énergie pionnière rapide et décisive, dotée d'une immense puissance explosive et de l'élan nécessaire pour briser l'inertie."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_tian_fu",
+    traditional: "天輔",
+    polarity: "favorable",
+    term: { zh: "贤哲", en: "Mentor", es: "Mentor", de: "Mentor", fr: "Mentor" },
+    definition: {
+      zh: "温和文雅、注重传播与教化的辅助力量，利于求知、文教及建立良好人际。",
+      en: "A gentle, refined, and educational auxiliary force, highly favorable for seeking knowledge, academic pursuits, and harmony.",
+      es: "Una fuerza auxiliar suave, refinada y educativa, muy favorable para la búsqueda de conocimiento, la educación y la armonía.",
+      de: "Eine sanfte, kultivierte und bildende Hilfskraft, sehr vorteilhaft für den Wissenserwerb, akademische Bestrebungen und Harmonie.",
+      fr: "Une force auxiliaire douce, raffinée et éducative, très favorable à la recherche de connaissances, aux études académiques et à l'harmonie."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_tian_ying",
+    traditional: "天英",
+    polarity: "neutral",
+    term: { zh: "曜光", en: "Radiance", es: "Radiancia", de: "Strahlung", fr: "Radiance" },
+    definition: {
+      zh: "绚丽夺目、充满热情与表现欲的明亮能量，追求瞩目但也容易流于急躁。",
+      en: "A brilliant, passionate, and expressive energy that seeks attention, though it can easily lapse into impatience.",
+      es: "Una energía brillante, apasionada y expresiva que busca atención, aunque puede caer fácilmente en la impaciencia.",
+      de: "Eine brillante, leidenschaftliche und ausdrucksstarke Energie, die nach Aufmerksamkeit sucht, aber leicht in Ungeduld verfallen kann.",
+      fr: "Une énergie brillante, passionnée et expressive qui cherche l'attention, bien qu'elle puisse facilement sombrer dans l'impatience."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_tian_rui",
+    traditional: "天芮",
+    polarity: "caution",
+    term: { zh: "磨炼", en: "Crucible", es: "Crisol", de: "Schmelztiegel", fr: "Creuset" },
+    definition: {
+      zh: "代表吸收、反思与消耗的沉降力量，常在试炼与修补问题中积累经验。",
+      en: "A heavy, receptive energy representing absorption, reflection, and consumption, accumulating wisdom through trials and fixing flaws.",
+      es: "Una energía pesada y receptiva que representa la absorción, la reflexión y el consumo, acumulando sabiduría a través de pruebas y reparando fallas.",
+      de: "Eine schwere, empfängliche Energie, die Absorption, Reflexion und Verbrauch darstellt und durch Prüfungen und das Beheben von Fehlern Weisheit ansammelt.",
+      fr: "Une énergie lourde et réceptive représentant l'absorption, la réflexion et la consommation, accumulant de la sagesse à travers les épreuves et la correction des défauts."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_tian_zhu",
+    traditional: "天柱",
+    polarity: "caution",
+    term: { zh: "诤言", en: "Clarion", es: "Clarín", de: "Fanfarenton", fr: "Clairon" },
+    definition: {
+      zh: "具有摧折与辩驳特质的刚烈能量，擅长以锐利之言打破常规，也易招致口舌。",
+      en: "A fierce energy characterized by breaking and arguing, skilled at shattering norms with sharp words but prone to disputes.",
+      es: "Una energía feroz caracterizada por la ruptura y la disputa, hábil para romper normas con palabras afiladas pero propensa a disputas.",
+      de: "Eine heftige Energie, die durch Brechen und Argumentieren gekennzeichnet ist, geschickt darin, Normen mit scharfen Worten zu zertrümmern, aber anfällig für Streitigkeiten.",
+      fr: "Une énergie féroce caractérisée par la rupture et la dispute, habile à briser les normes avec des mots tranchants mais sujette aux disputes."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_tian_xin",
+    traditional: "天心",
+    polarity: "favorable",
+    term: { zh: "睿断", en: "Discernment", es: "Discernimiento", de: "Einsicht", fr: "Discernement" },
+    definition: {
+      zh: "具有全局观、疗愈力与果断决策力的智慧之光，擅长系统谋划并化解危机。",
+      en: "A light of wisdom with systemic vision, healing power, and decisive judgment, skilled at planning and defusing crises.",
+      es: "Una luz de sabiduría con visión sistémica, poder curativo y juicio decisivo, hábil para planificar y calmar crisis.",
+      de: "Ein Licht der Weisheit mit systemischer Vision, Heilkraft und entscheidendem Urteilsvermögen, geschickt im Planen und Entschärfen von Krisen.",
+      fr: "Une lumière de sagesse dotée d'une vision systémique, d'un pouvoir de guérison et d'un jugement décisif, habile à planifier et à désamorcer les crises."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_tian_qin",
+    traditional: "天禽",
+    polarity: "neutral",
+    term: { zh: "中枢", en: "Pivot", es: "Pivote", de: "Drehpunkt", fr: "Pivot" },
+    definition: {
+      zh: "居于核心、中正不偏且具极强协调力的中枢能量，起到统筹全局的作用。",
+      en: "A central, balanced, and highly coordinating core energy that plays a key role in orchestrating the overall picture.",
+      es: "Una energía central, equilibrada y altamente coordinadora que desempeña un papel clave en la orquestación del panorama general.",
+      de: "Eine zentrale, ausgewogene und hoch koordinierende Kernenergie, die eine Schlüsselrolle bei der Orchestrierung des Gesamtbildes spielt.",
+      fr: "Une énergie centrale, équilibrée et hautement coordonnée qui joue un rôle clé dans l'orchestration de la vue d'ensemble."
+    }
+  },
+
+  // ==================== 八門（8）· 行动方式 ====================
+  {
+    ns: "qimen",
+    slug: "qm_xiu_men",
+    traditional: "休門",
+    polarity: "favorable",
+    term: { zh: "养息", en: "Tranquility", es: "Tranquilidad", de: "Ruhe", fr: "Tranquillité" },
+    definition: {
+      zh: "放缓节奏、休养生息的温和行动方式，利于恢复能量、消解紧张感。",
+      en: "A gentle approach of slowing down and resting, highly beneficial for restoring energy and relieving tension.",
+      es: "Un enfoque suave para desacelerar y descansar, muy beneficioso para restaurar la energía y aliviar la tensión.",
+      de: "Ein sanfter Ansatz zur Entschleunigung und Ruhe, der sich positiv auf die Regeneration und den Abbau von Spannungen auswirkt.",
+      fr: "Une approche douce de ralentissement et de repos, très bénéfique pour restaurer l'énergie et soulager les tensions."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_sheng_men",
+    traditional: "生門",
+    polarity: "favorable",
+    term: { zh: "生机", en: "Vitality", es: "Vitalidad", de: "Vitalität", fr: "Vitalité" },
+    definition: {
+      zh: "充满蓬勃朝气与持续增益的行动方式，象征新的开始、财富与生发。",
+      en: "An action style full of vigorous energy and continuous gain, symbolizing new beginnings, wealth, and growth.",
+      es: "Un estilo de acción lleno de energía vigorosa y ganancia continua, que simboliza nuevos comienzos, riqueza y crecimiento.",
+      de: "Ein Handlungsstil voller vitaler Energie und kontinuierlichem Gewinn, der für Neuanfänge, Wohlstand und Wachstum steht.",
+      fr: "Un style d'action plein d'énergie vigoureuse et de gain continu, symbolisant de nouveaux départs, la richesse et la croissance."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_shang_men",
+    traditional: "傷門", // ☠️ 已改名：由"损伤争斗"转换为高消耗的"攻坚/磨砺"
+    polarity: "caution",
+    term: { zh: "攻坚", en: "Friction", es: "Fricción", de: "Reibung", fr: "Friction" },
+    definition: {
+      zh: "带有摩擦力与高强度对抗的刚性行动，利于破除阻碍，但易产生损耗。",
+      en: "A rigid style of action involving friction and high-intensity confrontation, good for breaking barriers but prone to depletion.",
+      es: "Un estilo de acción rígido que implica fricción y confrontación de alta intensidad, bueno para romper barreras pero propenso al desgaste.",
+      de: "Ein starrer Handlungsstil, der Reibung und hochintensive Konfrontation beinhaltet, gut zum Durchbrechen von Barrieren, aber anfällig für Erschöpfung.",
+      fr: "Un style d'action rigide impliquant de la friction et une confrontation de haute intensité, idéal pour briser les barrières mais sujet à l'épuisement."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_du_men",
+    traditional: "杜門",
+    polarity: "neutral",
+    term: { zh: "潜修", en: "Seclusion", es: "Retiro", de: "Rückzug", fr: "Retraite" },
+    definition: {
+      zh: "暂时屏障外界、内向闭关的低调行动方式，利于静心钻研、规避纷扰。",
+      en: "A low-profile action style of temporarily blocking external noise, ideal for deep focus and avoiding distractions.",
+      es: "Un estilo de acción de bajo perfil que bloquea temporalmente el ruido externo, ideal para el enfoque profundo y evitar distracciones.",
+      de: "Ein unaufdringlicher Handlungsstil, der externen Lärm vorübergehend ausblendet, ideal für tiefen Fokus und zur Vermeidung von Ablenkungen.",
+      fr: "Un style d'action discret qui bloque temporairement le bruit extérieur, idéal pour une concentration profonde et pour éviter les distractions."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_jing_men",
+    traditional: "景門",
+    polarity: "neutral",
+    term: { zh: "呈显", en: "Display", es: "Muestra", de: "Präsentation", fr: "Exhibition" },
+    definition: {
+      zh: "华丽显眼、注重传播与外在呈现的行动方式，利于展示才华、宣传与合同签约。",
+      en: "A striking, expressive action style focused on public presentation, highly favorable for showing talent, promotion, and signing agreements.",
+      es: "Un estilo de acción llamativo y expresivo centrado en la presentación pública, muy favorable para mostrar el talento, la promoción y la firma de acuerdos.",
+      de: "Ein auffälliger, ausdrucksstarker Handlungsstil, der auf öffentliche Präsentation abzielt und Talentförderung, Werbung und Vertragsabschlüsse unterstützt.",
+      fr: "Un style d'action frappant et expressif axé sur la présentation publique, très favorable à la démonstration des talents, à la promotion et à la signature d'accords."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_si_men",
+    traditional: "死門", // ☠️ 已改名：转换为不带恐惧感的"收束/了结/Closure"
+    polarity: "caution",
+    term: { zh: "收束", en: "Closure", es: "Cierre", de: "Abschluss", fr: "Clôture" },
+    definition: {
+      zh: "彻底停止、收紧边界并走向终结的收束状态，虽缺乏活力，但利于彻底了结与尘埃落定。",
+      en: "A state of complete halt and tight boundaries leading to finality; though lacking vitality, it is ideal for closure and settling matters.",
+      es: "Un estado de parada completa y límites estrictos que conduce a la finalidad; aunque carece de vitalidad, es ideal para el cierre y resolver asuntos.",
+      de: "Ein Zustand des völligen Stillstands und enger Grenzen, der zum Abschluss führt; Obwohl es an Vitalität mangelt, ist es ideal, um Angelegenheiten abzuschließen.",
+      fr: "Un état d'arrêt complet et de limites strictes menant à la clôture ; bien qu'il manque de vitalité, il est idéal pour clore et régler les affaires."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_jing2_men",
+    traditional: "驚門", // ☠️ 已改名：转换为"扰动/波澜/Agitation"
+    polarity: "caution",
+    term: { zh: "扰动", en: "Agitation", es: "Agitación", de: "Unruhe", fr: "Agitation" },
+    definition: {
+      zh: "充满扰动、变数与口舌之辩的活跃能量，虽容易引发意外和焦虑，也带来发声的机会。",
+      en: "A restless energy field filled with disturbances, variables, and debates; though prone to causing anxiety, it also brings a chance to speak out.",
+      es: "Una energía inquieta llena de perturbaciones, variables y debates; aunque propensa a causar ansiedad, también brinda la oportunidad de expresarse.",
+      de: "Eine unruhige Energie voller Störungen, Variablen und Debatten; Obwohl sie leicht Ängste auslöst, bietet sie auch die Chance, sich Gehör zu verschaffen.",
+      fr: "Une énergie agitée, pleine de perturbations, de variables et de débats ; bien que sujette à l'anxiété, elle apporte aussi une chance de s'exprimer."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_kai_men",
+    traditional: "開門",
+    polarity: "favorable",
+    term: { zh: "拓新", en: "Initiation", es: "Iniciación", de: "Initiation", fr: "Initiation" },
+    definition: {
+      zh: "坦诚公开、积极向外拓展的行动方式，适合推进事业、公开行动及开展新项目。",
+      en: "An action style of open clarity and active outward expansion, ideal for advancing careers, public actions, and starting new projects.",
+      es: "Un estilo de acción de claridad abierta y expansión activa hacia el exterior, ideal para avanzar en la carrera, acciones públicas y nuevos proyectos.",
+      de: "Ein Handlungsstil von offener Klarheit und aktiver Expansion nach außen, ideal für Karrierefortschritte, öffentliche Aktionen und neue Projekte.",
+      fr: "Un style d'action axé sur la clarté ouverte et une expansion active vers l'extérieur, idéal pour faire progresser sa carrière, mener des actions publiques et lancer de nouveaux projets."
+    }
+  },
+
+  // ==================== 宮位（9）· 方位 × 空间 ====================
+  {
+    ns: "qimen",
+    slug: "qm_gong_kan",
+    traditional: "坎一宮",
+    polarity: "neutral",
+    term: { zh: "幽潭", en: "Depths", es: "Profundidades", de: "Tiefen", fr: "Profondeurs" },
+    definition: {
+      zh: "代表北方与深沉水元素的潜藏空间，充满未知、冷静与险中求生存的智谋。",
+      en: "A hidden space representing the North and deep water elements, full of unknowns, calm focus, and survival intelligence.",
+      es: "Un espacio oculto que representa el norte y los elementos de agua profunda, lleno de incógnitas, enfoque tranquilo e inteligencia de supervivencia.",
+      de: "Ein verborgener Raum, der den Norden und tiefe Wasserelemente repräsentiert, voller Unbekanntem, ruhigem Fokus und Überlebensintelligenz.",
+      fr: "Un espace caché représentant le Nord et les éléments d'eau profonde, plein d'inconnues, de calme et d'intelligence de survie."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_gong_kun",
+    traditional: "坤二宮",
+    polarity: "neutral",
+    term: { zh: "原野", en: "Plains", es: "Llanura", de: "Ebene", fr: "Plaine" },
+    definition: {
+      zh: "代表西南与温和土元素的承载空间，象征包容、滋养、大众与稳健基础。",
+      en: "A bearing space representing the Southwest and gentle earth elements, symbolizing inclusiveness, nourishment, and a solid foundation.",
+      es: "Un espacio portador que representa el suroeste y los elementos suaves de tierra, que simboliza la inclusión, el alimento y una base sólida.",
+      de: "Ein tragender Raum, der den Südwesten und sanfte Erdelemente repräsentiert, was Inklusivität, Nahrung und ein solides Fundament symbolisiert.",
+      fr: "Un espace porteur représentant le Sud-Ouest et les éléments de terre douce, symbolisant l'inclusivité, la nourriture et une base solide."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_gong_zhen",
+    traditional: "震三宮",
+    polarity: "neutral",
+    term: { zh: "雷霆", en: "Thunder", es: "Trueno", de: "Donner", fr: "Tonnerre" },
+    definition: {
+      zh: "代表东方与强力木元素的启动空间，象征突破、新声、快速觉醒与爆发式的启动。",
+      en: "An initiating space representing the East and powerful wood elements, symbolizing breakthroughs, rapid awakening, and explosive starts.",
+      es: "Un espacio iniciador que representa el este y los poderosos elementos de madera, que simboliza avances, despertar rápido e inicios explosivos.",
+      de: "Ein initiierender Raum, der den Osten und kraftvolle Holzelemente repräsentiert, was Durchbrüche, schnelles Erwachen und explosive Starts symbolisiert.",
+      fr: "Un espace initiateur représentant l'Est et les puissants éléments de bois, symbolisant des percées, un éveil rapide et des démarrages explosifs."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_gong_xun",
+    traditional: "巽四宮",
+    polarity: "neutral",
+    term: { zh: "风谷", en: "Vortex", es: "Vórtice", de: "Wirbel", fr: "Vortex" },
+    definition: {
+      zh: "代表东南与流动风元素的渐进空间，象征细节渗透、持续渗透、渐进式的成长。",
+      en: "A progressive space representing the Southeast and flowing wind elements, symbolizing detailed penetration and incremental growth.",
+      es: "Un espacio progresivo que representa el sureste y los elementos de viento fluyente, que simboliza la penetración detallada y el crecimiento incremental.",
+      de: "Ein progressiver Raum, der den Südosten und strömende Windelemente repräsentiert, was detaillierte Durchdringung und schrittweises Wachstum symbolisiert.",
+      fr: "Un espace progressif représentant le Sud-Est et les éléments de vent fluide, symbolisant une pénétration détaillée et une croissance progressive."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_gong_zhong",
+    traditional: "中五宮",
+    polarity: "neutral",
+    term: { zh: "元心", en: "Nucleus", es: "Núcleo", de: "Kern", fr: "Noyau" },
+    definition: {
+      zh: "代表中央与核心土元素的调和空间，是统筹全局、维持平衡的黄金枢纽。",
+      en: "A harmonizing space representing the Center and core earth elements, serving as the golden pivot to coordinate and maintain balance.",
+      es: "Un espacio armonizador que representa el centro y los elementos de tierra centrales, sirviendo como el pivote dorado para coordinar y mantener el equilibrio.",
+      de: "Ein harmonisierender Raum, der das Zentrum und die Kernwerdelemente repräsentiert und als goldene Drehscheibe dient, um das Gleichgewicht zu koordinieren und aufrechtzuerhalten.",
+      fr: "Un espace d'harmonisation représentant le Centre et les éléments de terre centraux, servant de pivot d'or pour coordonner et maintenir l'équilibre."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_gong_qian",
+    traditional: "乾六宮",
+    polarity: "neutral",
+    term: { zh: "天穹", en: "Canopy", es: "Cúpula", de: "Kuppel", fr: "Canopée" },
+    definition: {
+      zh: "代表西北与至尊金元素的权威空间，象征高阶秩序、决断、尊贵与领导力。",
+      en: "An authoritative space representing the Northwest and elite metal elements, symbolizing high-level order, decision, and leadership.",
+      es: "Un espacio autoritario que representa el noroeste y los elementos de metal de élite, que simboliza el orden de alto nivel, la decisión y el liderazgo.",
+      de: "Ein autoritärer Raum, der den Nordwesten und elitäre Metallelemente repräsentiert und hochrangige Ordnung, Entscheidung und Führung symbolisiert.",
+      fr: "Un espace d'autorité représentant le Nord-Ouest et les éléments métalliques d'élite, symbolisant l'ordre de haut niveau, la décision et le leadership."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_gong_dui",
+    traditional: "兌七宮",
+    polarity: "neutral",
+    term: { zh: "悦泽", en: "Lagoon", es: "Laguna", de: "Lagune", fr: "Lagune" },
+    definition: {
+      zh: "代表西方与润泽金元素的交互空间，象征喜悦、顺畅交流与精致的艺术感。",
+      en: "An interactive space representing the West and moist metal elements, symbolizing joy, smooth communication, and refined artistic sense.",
+      es: "Un espacio interactivo que representa el oeste y los elementos metálicos húmedos, que simboliza la alegría, la comunicación fluida y un sentido artístico refinado.",
+      de: "Ein interaktiver Raum, der den Westen und feuchte Metallelemente repräsentiert, was Freude, reibungslose Kommunikation und raffinierten künstlerischen Sinn symbolisiert.",
+      fr: "Un espace interactif représentant l'Ouest et les éléments métalliques humides, symbolisant la joie, une communication fluide et un sens artistique raffiné."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_gong_gen",
+    traditional: "艮八宮",
+    polarity: "neutral",
+    term: { zh: "崇山", en: "Ridge", es: "Cresta", de: "Grat", fr: "Crête" },
+    definition: {
+      zh: "代表东北与高山土元素的转折空间，象征边界、静止、转折与深沉的定力。",
+      en: "A transition space representing the Northeast and mountain earth elements, symbolizing boundaries, stillness, and deep stability.",
+      es: "Un espacio de transición que representa el noreste y los elementos de tierra de montaña, que simboliza límites, quietud y estabilidad profunda.",
+      de: "Ein Übergangsraum, der den Nordosten und Gebirgserdelemente repräsentiert, was Grenzen, Stille und tiefe Stabilität symbolisiert.",
+      fr: "Un espace de transition représentant le Nord-Est et les éléments de terre montagneux, symbolisant les limites, l'immobilité et une stabilité profonde."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_gong_li",
+    traditional: "離九宮",
+    polarity: "neutral",
+    term: { zh: "朱明", en: "Beacon", es: "Faro", de: "Leuchtfeuer", fr: "Phare" },
+    definition: {
+      zh: "代表南方与显耀火元素的温暖空间，象征明亮、名望、外放展现与极致的生命力。",
+      en: "A prominent space representing the South and dazzling fire elements, symbolizing clarity, fame, outward expression, and ultimate vitality.",
+      es: "Un espacio prominente que representa el sur y los elementos de fuego deslumbrantes, que simboliza la claridad, la fama, la expresión externa y la vitalidad máxima.",
+      de: "Ein markanter Raum, der den Süden und blendende Feuerelemente repräsentiert, was Klarheit, Ruhm, äußeren Ausdruck und ultimative Vitalität symbolisiert.",
+      fr: "Un espace de premier plan représentant le Sud et les éléments de feu éblouissants, symbolisant la clarté, la renommée, l'expression extérieure et l'ultime vitalité."
+    }
+  }
+];
+// B3 · bazi 扩展（36）
+const baziExtensionTerms = [
+  // ==================== 神煞（24）====================
+  {
+    ns: "bazi",
+    slug: "tian_yi_gui_ren",
+    traditional: "天乙贵人",
+    polarity: "favorable",
+    term: { zh: "提携", en: "Patron", es: "Patrón", de: "Förderer", fr: "Protecteur" },
+    definition: {
+      zh: "人生路上的关键支持者与提升力量，常能化解困局、带来突破契机。",
+      en: "A key supporter and elevating force on life's path, often dissolving crises and bringing breakthrough opportunities.",
+      es: "Un apoyo clave y fuerza de elevación en el camino de la vida, que a menudo disuelve crisis y aporta oportunidades de avance.",
+      de: "Ein wichtiger Unterstützer und Förderer auf dem Lebensweg, der oft Krisen auflöst und Durchbruchschancen bietet.",
+      fr: "Un soutien clé et une force d'élévation sur le chemin de la vie, dissolvant souvent les crises et apportant des opportunités de percée."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "lu_shen",
+    traditional: "禄神",
+    polarity: "favorable",
+    term: { zh: "丰享", en: "Abundance", es: "Abundancia", de: "Fülle", fr: "Abondance" },
+    definition: {
+      zh: "稳定且源源不断的物质供养与内在丰盈感，是生活最扎实的支撑底盘。",
+      en: "A steady and continuous source of material nourishment and inner abundance, serving as life's most solid foundation.",
+      es: "Una fuente constante y continua de nutrición material y abundancia interna, que sirve como la base más sólida de la vida.",
+      de: "Eine stetige und kontinuierliche Quelle materieller Nahrung und innerer Fülle, die als das solideste Fundament des Lebens dient.",
+      fr: "Une source constante et continue de subsistance matérielle et d'abondance intérieure, servant de fondation la plus solide à la vie."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "fei_ren",
+    traditional: "飞刃",
+    polarity: "caution",
+    term: { zh: "锋芒", en: "Edge", es: "Filo", de: "Kante", fr: "Tranchant" },
+    definition: {
+      zh: "极其锐利、果决且具冲击力的突破性能量，需防范因过刚而伤及自身或人际。",
+      en: "An extremely sharp, decisive, and impactful energy of breakthrough, requiring care not to cause self-harm or strain relationships.",
+      es: "Una energía de avance extremadamente aguda, decisiva e impactante, que requiere cuidado para no autolesionarse ni dañar relaciones.",
+      de: "Eine extrem scharfe, entschlossene und wirkungsvolle Durchbruchsenergie, die Vorsicht erfordert, um sich nicht selbst oder Beziehungen zu schaden.",
+      fr: "Une énergie de percée extrêmement tranchante, décisive et percutante, exigeant de la prudence pour ne pas se blesser ou nuire aux relations."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "wen_chang",
+    traditional: "文昌",
+    polarity: "favorable",
+    term: { zh: "慧思", en: "Intellect", es: "Intelecto", de: "Intellekt", fr: "Intellect" },
+    definition: {
+      zh: "卓越的理解力、求知欲与表达天赋，利于学术研究、创意工作与智慧开悟。",
+      en: "Outstanding comprehension, thirst for knowledge, and expressive talent, highly favorable for academic, creative, and intellectual pursuits.",
+      es: "Comprensión sobresaliente, sed de conocimiento y talento expresivo, muy favorable para la academia, la creatividad y el intelecto.",
+      de: "Hervorragendes Auffassungsvermögen, Wissensdurst und Ausdruckstalent, sehr vorteilhaft für akademische, kreative und geistige Bestrebungen.",
+      fr: "Compréhension exceptionnelle, soif de connaissances et talent d'expression, très favorables aux quêtes académiques, créatives et intellectuelles."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "tao_hua",
+    traditional: "桃花",
+    polarity: "neutral",
+    term: { zh: "倾慕", en: "Allure", es: "Atracción", de: "Reiz", fr: "Attrait" },
+    definition: {
+      zh: "散发独特的个人磁场与吸引力，能轻松建立亲和力并自然汇聚目光。",
+      en: "Radiating a unique personal magnetism and attraction, easily building rapport and naturally gathering attention.",
+      es: "Irradia un magnetismo y atracción personal únicos, creando afinidad fácilmente y captando la atención de forma natural.",
+      de: "Ausstrahlung eines einzigartigen persönlichen Magnetismus, der leicht Verbundenheit aufbaut und natürlich Aufmerksamkeit erregt.",
+      fr: "Rayonner d'un magnétisme et d'une attraction personnels uniques, créant facilement des liens et captant naturellement l'attention."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "yi_ma",
+    traditional: "驿马",
+    polarity: "neutral",
+    term: { zh: "迁徙", en: "Mobility", es: "Movilidad", de: "Mobilität", fr: "Mobilité" },
+    definition: {
+      zh: "充满活力与探索欲的流动能量，通过环境变换与远行来实现人生跃迁。",
+      en: "A dynamic and exploring energy of flow, achieving life transitions through environmental changes and long-distance travels.",
+      es: "Una energía de flujo dinámica y exploradora, que logra transiciones de vida a través de cambios de entorno y viajes largos.",
+      de: "Eine dynamische und erkundende Energie des Wandels, die Übergänge durch Ortswechsel und weite Reisen ermöglicht.",
+      fr: "Une énergie de flux dynamique et exploratrice, réalisant les transitions de vie par des changements d'environnement et de lointains voyages."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "hua_gai",
+    traditional: "华盖",
+    polarity: "neutral",
+    term: { zh: "绝尘", en: "Solitude", es: "Soledad", de: "Einsamkeit", fr: "Solitude" },
+    definition: {
+      zh: "孤高而清雅的精神追求，习惯在独处与深度思考中汲取最深邃的灵感。",
+      en: "A lofty and elegant spiritual pursuit, accustomed to drawing the deepest inspiration from solitude and deep contemplation.",
+      es: "Una búsqueda espiritual elevada y elegante, acostumbrada a extraer la inspiración más profunda de la soledad y la meditación profunda.",
+      de: "Ein erhabenes und elegantes geistiges Streben, das tiefste Inspiration aus dem Alleinsein und tiefem Nachdenken schöpft.",
+      fr: "Une quête spirituelle noble et élégante, habituée à puiser l'inspiration la plus profonde dans la solitude et la contemplation."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "gu_chen",
+    traditional: "孤辰",
+    polarity: "caution",
+    term: { zh: "离群", en: "Isolation", es: "Aislamiento", de: "Isolation", fr: "Isolement" },
+    definition: {
+      zh: "主动拉开社交距离的内向防御倾向，需要在完全独立的空间中重构自我。",
+      en: "An introverted defensive tendency to actively create social distance, needing to reconstruct the self in independent spaces.",
+      es: "Una tendencia defensiva introvertida a crear activamente distancia social, necesitando reconstruir el ser en espacios independientes.",
+      de: "Eine introvertierte defensive Tendenz zur aktiven sozialen Distanzierung, um das Selbst in völlig unabhängigen Räumen zu rekonstruieren.",
+      fr: "Une tendance défensive introvertie à créer activement une distance sociale, nécessitant de reconstruire le soi dans des espaces indépendants."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "gua_su",
+    traditional: "寡宿",
+    polarity: "caution",
+    term: { zh: "疏离", en: "Distance", es: "Distancia", de: "Distanz", fr: "Distance" },
+    definition: {
+      zh: "情感上的防备与高边界感，通过保持适度距离来维护自身的安全感。",
+      en: "Emotional defensiveness and a high sense of boundaries, maintaining a moderate distance to preserve inner safety.",
+      es: "Defensa emocional y un alto sentido de los límites, manteniendo una distancia moderada para preservar la seguridad interna.",
+      de: "Emotionale Abwehr und ein ausgeprägtes Grenzbewusstsein, das eine moderate Distanz wahrt, um die innere Sicherheit zu schützen.",
+      fr: "Défense émotionnelle et sens aigu des limites, maintenant une distance modérée pour préserver sa sécurité intérieure."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "jiang_xing",
+    traditional: "将星",
+    polarity: "favorable",
+    term: { zh: "统御", en: "Command", es: "Mando", de: "Führung", fr: "Commandement" },
+    definition: {
+      zh: "强大的领导磁场与决断力，擅长统领全局、承担重任并建立稳固的秩序。",
+      en: "Strong presence and decisiveness, skilled at leading the overall situation, bearing heavy responsibilities, and establishing order.",
+      es: "Gran presencia y decisión, hábil para liderar la situación general, asumir responsabilidades y establecer un orden firme.",
+      de: "Starke Präsenz und Entschlossenheit, geschickt darin, die Gesamtsituation zu führen, Pflichten zu tragen und feste Ordnung zu schaffen.",
+      fr: "Forte présence et esprit de décision, habile à diriger la situation globale, à assumer des responsabilités et à établir un ordre solide."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "jie_sha",
+    traditional: "劫煞",
+    polarity: "caution",
+    term: { zh: "侵蚀", en: "Depletion", es: "Agotamiento", de: "Erschöpfung", fr: "Épuisement" },
+    definition: {
+      zh: "遭遇突发阻力或资源分流的考验，需在防御中重新优化自身的精力与资产配置。",
+      en: "Facing sudden external resistance or resource diversion, requiring optimization of energy and asset allocation under defense.",
+      es: "Enfrentar resistencia externa repentina o desvío de recursos, lo que requiere optimizar la energía y la asignación de activos bajo defensa.",
+      de: "Plötzlicher externer Widerstand oder Ressourcenablenkung, die eine Optimierung der Energie- und Ressourcenverteilung unter Schutz erfordern.",
+      fr: "Confronter une résistance externe soudaine ou un détournement de ressources, nécessitant d'optimiser l'énergie et l'allocation des actifs sous défense."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "wang_shen",
+    traditional: "亡神",
+    polarity: "caution",
+    term: { zh: "神散", en: "Dissipation", es: "Disipación", de: "Zerstreuung", fr: "Dissipation" },
+    definition: {
+      zh: "注意力容易分散、内在精力悄然流失的耗能状态，需及时通过专注来收敛心神。",
+      en: "An energy-consuming state of easily dispersed attention and inner loss, requiring timely focus to gather the mind.",
+      es: "Un estado de consumo de energía con atención dispersa y pérdida interna, que requiere enfoque oportuno para centrar la mente.",
+      de: "Ein energieaufzehrender Zustand leichter Ablenkung und inneren Verlusts, der rechtzeitigen Fokus erfordert, um den Geist zu sammeln.",
+      fr: "Un état énergivore d'attention facilement dispersée et de perte intérieure, nécessitant de se recentrer à temps pour rassembler l'esprit."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "zai_sha",
+    traditional: "灾煞",
+    polarity: "caution",
+    term: { zh: "波折", en: "Setback", es: "Contratiempo", de: "Rückschlag", fr: "Obstacle" },
+    definition: {
+      zh: "发展道路上的插曲或偶发的阻碍，虽打乱节奏，却能强有力地锤炼应变能力。",
+      en: "Minor disruptions or occasional fluctuations on the path, disrupting the rhythm but powerfully tempering adaptability.",
+      es: "Pequeñas interrupciones o fluctuaciones ocasionales en el camino, alterando el ritmo pero templando la adaptabilidad.",
+      de: "Kleinere Unterbrechungen oder gelegentliche Schwankungen auf dem Weg, die den Rhythmus stören, aber die Anpassungsfähigkeit stärken.",
+      fr: "Perturbations mineures ou fluctuations occasionnelles sur le chemin, perturbant le rythme mais renforçant l'adaptabilité."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "guo_yin",
+    traditional: "国印",
+    polarity: "favorable",
+    term: { zh: "印鉴", en: "Seal", es: "Sello", de: "Siegel", fr: "Sceau" },
+    definition: {
+      zh: "获得权威系统或社会秩序的官方认可，象征合规、信誉、契约与体面名分。",
+      en: "Gaining official recognition from authoritative systems, symbolizing compliance, credibility, contracts, and status.",
+      es: "Obtener el reconocimiento oficial de los sistemas de autoridad, simbolizando cumplimiento, credibilidad, contratos y estatus.",
+      de: "Erlangung offizieller Anerkennung durch autoritative Systeme, was Konformität, Glaubwürdigkeit, Verträge und Status symbolisiert.",
+      fr: "Obtenir la reconnaissance officielle de systèmes d'autorité, symbolisant la conformité, la crédibilité, les contrats et le statut."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "jin_yu",
+    traditional: "金舆",
+    polarity: "favorable",
+    term: { zh: "华舆", en: "Carriage", es: "Carruaje", de: "Gefährt", fr: "Carrosse" },
+    definition: {
+      zh: "带来顺遂享受与体面生活的优质载体，极大地提升了人生旅途中的安全与舒适感。",
+      en: "A premium vehicle bringing smooth journeys and comfortable living, greatly enhancing safety and comfort in life.",
+      es: "Un vehículo premium que brinda viajes fluidos y una vida cómoda, mejorando enormemente la seguridad y la comodidad.",
+      de: "Ein erstklassiges Gefährt, das reibungslose Reisen und komfortables Leben ermöglicht und Sicherheit und Komfort erhöht.",
+      fr: "Un vecteur de qualité supérieure offrant des voyages fluides et une vie confortable, renforçant grandement la sécurité et le confort."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "tian_de",
+    traditional: "天德",
+    polarity: "favorable",
+    term: { zh: "昭德", en: "Grace", es: "Gracia", de: "Gnade", fr: "Grâce" },
+    definition: {
+      zh: "浩瀚宽广的天然庇护，能自然化解外界的敌意与宿怨，带来无形顺遂。",
+      en: "A vast and natural protective shield, naturally dissolving external hostility and bringing invisible smooth sailing.",
+      es: "Un escudo protector vasto y natural, que disuelve de forma natural la hostilidad externa y aporta un rumbo invisible y fluido.",
+      de: "Ein weiter und natürlicher Schutzschild, der externe Feindseligkeiten auflöst und unsichtbaren Erfolg bringt.",
+      fr: "Un vaste bouclier protecteur naturel, dissolvant naturellement l'hostilité externe et apportant une fluidité invisible."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "yue_de",
+    traditional: "月德",
+    polarity: "favorable",
+    term: { zh: "润德", en: "Favor", es: "Favor", de: "Gunst", fr: "Faveur" },
+    definition: {
+      zh: "温润如水的和谐感化力量，极其擅长在人际交互中消弭戾气、建立深层信任。",
+      en: "A gentle, water-like harmonizing power, highly skilled at dissolving hostility and building deep trust in interactions.",
+      es: "Un poder armonizador suave como el agua, muy hábil para disolver la hostilidad y construir una confianza profunda.",
+      de: "Eine sanfte, wasserähnliche harmonisierende Kraft, geschickt darin, Feindseligkeiten abzubauen und tiefes Vertrauen aufzubauen.",
+      fr: "Un pouvoir harmonisateur doux, semblable à l'eau, très habile à disoudre l'hostilité et à instaurer une confiance profonde."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "fu_xing_gui_ren",
+    traditional: "福星贵人",
+    polarity: "favorable",
+    term: { zh: "祥瑞", en: "Felicity", es: "Felicidad", de: "Glück", fr: "Félicité" },
+    definition: {
+      zh: "顺遂无忧的幸运气场，保护自己免受繁杂斗争的消耗，轻松享受当下的安宁。",
+      en: "A smooth and worry-free field of luck, protecting oneself from exhausting disputes and enjoying peace.",
+      es: "Un campo de suerte fluido y sin preocupaciones, que protege de disputas agotadoras y permite disfrutar de la paz.",
+      de: "Ein reibungsloses und sorgenfreies Glücksfeld, das vor aufreibenden Streitigkeiten schützt und Frieden ermöglicht.",
+      fr: "Un champ de chance fluide et sans souci, protégeant des conflits épuisants et permettant de profiter de la paix."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "tai_ji_gui_ren",
+    traditional: "太极贵人",
+    polarity: "favorable",
+    term: { zh: "玄览", en: "Gnosis", es: "Gnosis", de: "Gnosis", fr: "Gnose" },
+    definition: {
+      zh: "对事物底层规律与玄奥真理的非凡悟性，擅长在庞杂混乱的信息中直取本质。",
+      en: "Extraordinary comprehension of underlying patterns and profound truths, excelling at capturing the essence amidst chaos.",
+      es: "Comprensión extraordinaria de los patrones subyacentes y las verdades profundas, sobresaliendo en capturar la esencia en el caos.",
+      de: "Außergewöhnliches Verständnis zugrundeliegender Muster und tiefer Wahrheiten, hervorragend darin, das Wesentliche im Chaos zu erfassen.",
+      fr: "Compréhension extraordinaire des schémas sous-jacents et des vérités profondes, excellant à saisir l'essence au milieu du chaos."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "tian_yi_star",
+    traditional: "天医",
+    polarity: "favorable",
+    term: { zh: "疗愈", en: "Healer", es: "Sanador", de: "Heiler", fr: "Guérisseur" },
+    definition: {
+      zh: "强大的自我修复与安抚、照顾他人的温和能量，能有效打破失衡、重建健康秩序。",
+      en: "A powerful energy of self-repair and soothing others, capable of breaking imbalance and restoring healthy order.",
+      es: "Una poderosa energía de autorreparación y consuelo, capaz de romper el desequilibrio y restaurar un orden saludable.",
+      de: "Eine kraftvolle Energie der Selbstheilung und des Trostes, die Ungleichgewichte abbauen und eine gesunde Ordnung wiederherstellen kann.",
+      fr: "Une force puissante d'auto-réparation et d'apaisement, capable de briser le déséquilibre et de restaurer un ordre sain."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "xue_tang",
+    traditional: "学堂",
+    polarity: "favorable",
+    term: { zh: "书苑", en: "Academy", es: "Academia", de: "Akademie", fr: "Académie" },
+    definition: {
+      zh: "优质的精神土壤，利于接受系统性的知识熏陶，培养深厚扎实的专业素养。",
+      en: "Premium mental soil, highly favorable for receiving systematic knowledge and cultivating solid professional skills.",
+      es: "Terreno mental de calidad, muy favorable para recibir conocimientos sistemáticos y cultivar habilidades profesionales sólidas.",
+      de: "Erstklassiger geistiger Nährboden, sehr vorteilhaft für den systematischen Wissenserwerb und die Pflege solider Fähigkeiten.",
+      fr: "Un terreau mental d'exception, très favorable à l'acquisition de connaissances systématiques et à la culture de compétences professionnelles solides."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "ci_guan",
+    traditional: "词馆",
+    polarity: "favorable",
+    term: { zh: "词章", en: "Eloquence", es: "Elocuencia", de: "Eloquenz", fr: "Éloquence" },
+    definition: {
+      zh: "敏捷的文字感知与高超的辞令天赋，擅长将精微思想转化为极具感染力的表达。",
+      en: "Agile word perception and superb rhetorical talent, skilled at transforming subtle thoughts into highly infectious expressions.",
+      es: "Percepción ágil de las palabras y talento retórico soberbio, hábil para transformar pensamientos sutiles en expresiones contagiosas.",
+      de: "Schnelle Wahrnehmung von Worten und hervorragendes rhetorisches Talent, geschickt darin, subtile Gedanken in ansteckende Ausdrücke zu verwandeln.",
+      fr: "Perception agile des mots et superbe talent rhétorique, habile à transformer des pensées subtiles en expressions hautement contagieuses."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "hong_luan",
+    traditional: "红鸾",
+    polarity: "favorable",
+    term: { zh: "情愫", en: "Affection", es: "Afecto", de: "Zuneigung", fr: "Affection" },
+    definition: {
+      zh: "温暖而真挚的浪漫情感投射，开启深层亲密连接与两情相悦的机会之门。",
+      en: "A warm and sincere romantic emotional projection, opening the door of opportunity for deep intimacy and mutual affection.",
+      es: "Una proyección emocional romántica cálida y sincera, que abre la puerta a la oportunidad de una intimidad profunda y afecto mutuo.",
+      de: "Eine warme und aufrichtige romantische Projektion, die die Tür für tiefe Intimität und gegenseitige Zuneigung öffnet.",
+      fr: "Une projection émotionnelle romantique, chaleureuse et sincère, ouvrant la porte à l'intimité profonde et à l'affection mutuelle."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "tian_xi",
+    traditional: "天喜",
+    polarity: "favorable",
+    term: { zh: "喜乐", en: "Joy", es: "Alegría", de: "Freude", fr: "Joie" },
+    definition: {
+      zh: "充满活力与庆典色彩的愉悦心境，能自然吸引好运，并在互动中感染周围的人。",
+      en: "A joyful state of mind filled with vitality and celebratory spirit, naturally attracting good luck and inspiring others.",
+      es: "Un estado de ánimo alegre lleno de vitalidad y espíritu de celebración, que atrae la buena suerte e inspira a otros.",
+      de: "Ein freudiger Geisteszustand voller Vitalität und Feierstimmung, der natürlich Glück anzieht und andere inspiriert.",
+      fr: "Un état d'esprit joyeux, empreint de vitalité et d'esprit de fête, attirant naturellement la chance et inspirant les autres."
+    }
+  },
+
+  // ==================== 十二长生（12）====================
+  {
+    ns: "bazi",
+    slug: "life_changsheng",
+    traditional: "长生",
+    polarity: "favorable",
+    term: { zh: "萌发", en: "Emergence", es: "Emergencia", de: "Entstehung", fr: "Émergence" },
+    definition: {
+      zh: "全新事物或项目诞生、破土的初生阶段，充满无限可塑性与蓬勃的原始生命力。",
+      en: "The initial stage of a new project or life breaking soil, full of infinite plasticity and vigorous original vitality.",
+      es: "La etapa inicial de un nuevo proyecto o vida abriendo camino, llena de infinita plasticidad y vigorosa vitalidad original.",
+      de: "Die Anfangsphase eines neuen Projekts oder Lebens, das den Boden durchbricht, voller unendlicher Formbarkeit und vitaler Kraft.",
+      fr: "L'étape initiale d'un nouveau projet ou d'une nouvelle vie qui éclot, pleine d'une plasticité infinie et d'une vitalité vigoureuse."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "life_muyu",
+    traditional: "沐浴",
+    polarity: "neutral",
+    term: { zh: "展露", en: "Exposure", es: "Exposición", de: "Exposition", fr: "Exposition" },
+    definition: {
+      zh: "卸下防备、直面外界并探索自我的敏感阶段，伴随着高开放度与试错的阵痛。",
+      en: "A sensitive stage of lowering guard, facing the world, and self-exploration, accompanied by high openness and trial pain.",
+      es: "Una etapa sensible de bajar la guardia, enfrentar al mundo y autoexplorarse, acompañada de alta apertura y dolor de prueba.",
+      de: "Eine sensible Phase des Ablegens der Deckung, der Konfrontation mit der Welt und der Selbsterkundung, begleitet von Offenheit.",
+      fr: "Une étape sensible d'abandon des défenses, de face-à-face avec le monde et d'auto-exploration, accompagnée d'une grande ouverture."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "life_guandai",
+    traditional: "冠带",
+    polarity: "favorable",
+    term: { zh: "束装", en: "Equipping", es: "Preparación", de: "Rüstung", fr: "Équipement" },
+    definition: {
+      zh: "整装待发、渐入佳境的成型阶段，拥有了基础的行为边界与社会化工具。",
+      en: "The shaping stage of getting ready and hit the stride, possessing basic behavioral boundaries and socialized tools.",
+      es: "La etapa de formación para prepararse y encarrilarse, que posee límites de comportamiento básicos y herramientas sociales.",
+      de: "Die Phase der Vorbereitung und Ausrichtung, in der grundlegende Verhaltensgrenzen und soziale Werkzeuge erworben werden.",
+      fr: "L'étape de structuration et de préparation, dotée de limites comportementales de base et d'outils de socialisation."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "life_linguan",
+    traditional: "临官",
+    polarity: "favorable",
+    term: { zh: "执掌", en: "Ascendancy", es: "Ascendencia", de: "Aufstieg", fr: "Ascendance" },
+    definition: {
+      zh: "能力全面成熟并独立担当的关键时期，逐步确立在所属领域中的掌控力与主导权。",
+      en: "A key period when abilities fully mature and independent responsibility begins, gradually establishing control in fields.",
+      es: "Un período clave en el que las habilidades maduran y comienza la responsabilidad independiente, estableciendo el control.",
+      de: "Eine Schlüsselphase, in der Fähigkeiten reifen und Eigenverantwortung beginnt, um die Kontrolle in Bereichen zu etablieren.",
+      fr: "Une période clé où les compétences mûrissent et où la responsabilité s'établit, prenant progressivement le contrôle dans son domaine."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "life_diwang",
+    traditional: "帝旺",
+    polarity: "neutral",
+    term: { zh: "登峰", en: "Apex", es: "Ápice", de: "Gipfel", fr: "Apex" },
+    definition: {
+      zh: "能量释放的极盛顶点，展现出最强的主导性与巅峰成就，但也容易走向刚直过激。",
+      en: "The absolute peak of energy release, displaying peak achievements but also carrying risks of overstretching.",
+      es: "La cumbre absoluta de liberación de energía, que muestra logros máximos pero también conlleva riesgos de exceso.",
+      de: "Der absolute Höhepunkt der Energiefreisetzung, der Höchstleistungen zeigt, aber auch Risiken des Übermaßes birgt.",
+      fr: "L'apogée absolue de la libération d'énergie, affichant des réalisations maximales mais comportant des risques d'excès."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "life_shuai",
+    traditional: "衰",
+    polarity: "neutral",
+    term: { zh: "内敛", en: "Waning", es: "Menguante", de: "Abklingen", fr: "Déclin" },
+    definition: {
+      zh: "主动收拢锋芒、退居幕后的沉淀阶段，外显能量虽有减退，内在智谋却更具深度。",
+      en: "A settling stage of gathering edges and stepping backstage; outward energy fades but inner depth increases.",
+      es: "Una etapa de asentamiento que reúne los bordes y pasa a un segundo plano; la energía externa se desvanece pero la profundidad aumenta.",
+      de: "Eine Phase des Rückzugs hinter die Kulissen; die äußere Energie lässt nach, aber die innere Tiefe nimmt zu.",
+      fr: "Une étape de transition en coulisses ; l'énergie extérieure s'estompe mais la profondeur intérieure s'accroît."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "life_bing",
+    traditional: "病", // ☠️ 已改名：由"病/力量受损"转换为温和无害的"疲态"
+    polarity: "caution",
+    term: { zh: "疲态", en: "Fatigue", es: "Fatiga", de: "Müdigkeit", fr: "Fatigue" },
+    definition: {
+      zh: "长期高负荷运转后的阶段性修整信号，能量流转放缓，警示需要暂停与维护。",
+      en: "A periodic signal for rest after long high-load operation, warning that energy flow is slowing and needs care.",
+      es: "Una señal periódica de descanso tras un largo funcionamiento, que advierte que el flujo de energía se ralentiza.",
+      de: "Ein periodisches Ruhezeichen nach langem Hochlastbetrieb, das anzeigt, dass der Energiefluss nachlässt und Pflege benötigt.",
+      fr: "Un signal périodique de repos après une longue période d'activité, avertissant que le flux d'énergie ralentit."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "life_si",
+    traditional: "死", // ☠️ 已改名：由"死/能量停滞"转换为大自然冬眠式的"蛰伏"
+    polarity: "caution",
+    term: { zh: "蛰伏", en: "Dormancy", es: "Latencia", de: "Latenz", fr: "Latence" },
+    definition: {
+      zh: "能量流动彻底暂停、陷入静默的蓄势状态，主动屏除外界干涉以保留重生的潜能。",
+      en: "A silent state where energy flow completely pauses, actively blocking external interference to preserve potential.",
+      es: "Un estado silencioso donde el flujo de energía se detiene, bloqueando la interferencia para preservar el potencial.",
+      de: "Ein stiller Zustand, in dem der Energiefluss pausiert, um das Potenzial für einen Neuanfang zu bewahren.",
+      fr: "Un état silencieux où le flux d'énergie s'interrompt, bloquant l'interférence extérieure pour préserver le potentiel de renouveau."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "life_mu",
+    traditional: "墓",
+    polarity: "neutral",
+    term: { zh: "秘藏", en: "Preservation", es: "Preservación", de: "Bewahrung", fr: "Préservation" },
+    definition: {
+      zh: "将全部资源、精力高度向内凝聚的安全封存状态，利于秘密蓄力与守护核心底牌。",
+      en: "A secure state of highly consolidating resources inward, ideal for silently accumulating strength and protecting assets.",
+      es: "Un estado seguro de consolidación interna de recursos, ideal para acumular fuerza silenciosamente y proteger activos.",
+      de: "Ein sicherer Zustand der starken internen Konsolidierung, ideal zum Schutz von Werten und zum stillen Kraftsammeln.",
+      fr: "Un état de sécurisation et de consolidation interne des ressources, idéal pour accumuler ses forces et protéger ses actifs."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "life_jue",
+    traditional: "绝", // ☠️ 已改名：由"断绝/最低点"转换为科技感和新生前夕的"归零"
+    polarity: "caution",
+    term: { zh: "归零", en: "Void", es: "Vacío", de: "Leere", fr: "Vide" },
+    definition: {
+      zh: "旧有结构彻底清理瓦解、处于绝对空白的转折前夜，旧事已了，新机已在酝酿。",
+      en: "A turning point of completely clearing old structures and being in a blank space; old things end, new seeds brew.",
+      es: "Un punto de inflexión para limpiar las viejas estructuras y estar en un espacio vacío; lo viejo termina, surge lo nuevo.",
+      de: "Ein Wendepunkt der Bereinigung alter Strukturen; das Alte endet, während neue Ideen keimen.",
+      fr: "Un tournant de purification complète des anciennes structures, dans un espace vide ; le passé s'achève, le renouveau se prépare."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "life_tai",
+    traditional: "胎",
+    polarity: "favorable",
+    term: { zh: "孕育", en: "Incubation", es: "Incubación", de: "Inkubation", fr: "Incubation" },
+    definition: {
+      zh: "能量极其微弱却充满张力的最初成形阶段，在隐秘安全的温床中勾勒未来的可能。",
+      en: "The initial forming stage, extremely delicate yet full of vitality, silently sketching future blueprints.",
+      es: "La etapa de formación inicial, extremadamente delicada pero llena de vitalidad, esbozando futuros planos en secreto.",
+      de: "Die erste Formgebungsphase, extrem zart und dennoch voller Vitalität, die im Stillen zukünftige Pläne entwirft.",
+      fr: "L'étape de formation initiale, extrêmement délicate mais pleine de vitalité, esquissant silencieusement l'avenir à l'abri des regards."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "life_yang",
+    traditional: "养",
+    polarity: "favorable",
+    term: { zh: "颐养", en: "Nurture", es: "Nutrición", de: "Pflege", fr: "Nutrition" },
+    definition: {
+      zh: "在温润舒适的环境中持续汲取养分、积累动力的培育期，稳步推进，蓄势待发。",
+      en: "A nurturing period of continuously gaining nourishment in a comfortable environment, moving forward steadily.",
+      es: "Un período de nutrición constante en un entorno cómodo, que avanza con paso firme hacia adelante.",
+      de: "Eine nährende Phase des kontinuierlichen Wachstums in einer sicheren Umgebung, um stetig voranzukommen.",
+      fr: "Une période de maturation et d'assimilation de nutriments dans un environnement sûr, progressant de manière stable."
+    }
+  }
+];
+// B4 · bazi 干支（22）· Elements & Cycles
+const baziStemsAndBranches = [
+  // ==================== 天干（10）· 元能量品质 ====================
+  {
+    ns: "bazi",
+    slug: "tg_jia",
+    traditional: "甲",
+    polarity: "neutral",
+    term: { zh: "挺秀", en: "Verdure", es: "Verdor", de: "Grün", fr: "Verdure" },
+    definition: {
+      zh: "象征挺拔、不屈与积极向上的开拓能量，展现出明确的目标感与强大的抗压韧性。",
+      en: "Symbolizing uprightness, resilience, and proactive pioneering energy, demonstrating a clear sense of purpose and strong pressure resistance.",
+      es: "Simboliza la rectitud, la resiliencia y la energía pionera proactiva, demostrando un sentido claro de propósito y resistencia.",
+      de: "Symbolisiert Aufrichtigkeit, Widerstandskraft und proaktive Pionierenergie, was ein klares Zielbewusstsein und starke Belastbarkeit zeigt.",
+      fr: "Symbolise la droiture, la résilience et l'énergie pionnière proactive, démontrant un sens clair du but et une forte résistance au stress."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "tg_yi",
+    traditional: "乙",
+    polarity: "neutral",
+    term: { zh: "柔蔓", en: "Tendril", es: "Zarcillo", de: "Ranke", fr: "Vrille" },
+    definition: {
+      zh: "象征柔和、协调与高度流动的适应能量，擅长在变化的环境中建立连接并实现有机增长。",
+      en: "Symbolizing gentle, coordinating, and highly adaptable energy, excelling at building connections and achieving organic growth in changing environments.",
+      es: "Simboliza una energía suave, coordinadora y altamente adaptable, que sobresale en la creación de conexiones y el crecimiento orgánico.",
+      de: "Symbolisiert sanfte, koordinierende und anpassungsfähige Energie, hervorragend darin, Verbindungen aufzubauen und organisches Wachstum zu fördern.",
+      fr: "Symbolise une énergie douce, coordinatrice et hautement adaptable, excellant à établir des liens et à réaliser une croissance organique."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "tg_bing",
+    traditional: "丙",
+    polarity: "neutral",
+    term: { zh: "曜阳", en: "Solar", es: "Solar", de: "Solar", fr: "Solaire" },
+    definition: {
+      zh: "象征炽热、明亮与外放的辐射能量，充满阳光与热情，极其擅长影响与照亮周围的人。",
+      en: "Symbolizing blazing, bright, and expressive radiant energy, full of sunshine and enthusiasm, highly skilled at influencing and illuminating others.",
+      es: "Simboliza una energía radiante ardiente, brillante y expresiva, llena de sol y entusiasmo, hábil para influir e iluminar a otros.",
+      de: "Symbolisiert lodernde, helle und ausdrucksstarke strahlende Energie, voller Optimismus und Enthusiasmus, hervorragend darin, andere zu inspirieren.",
+      fr: "Symbolise une énergie radiante ardente, brillante et expressive, pleine de soleil et d'enthousiasme, très habile à influencer et éclairer les autres."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "tg_ding",
+    traditional: "丁",
+    polarity: "neutral",
+    term: { zh: "烛荧", en: "Glow", es: "Destello", de: "Glimmen", fr: "Lueur" },
+    definition: {
+      zh: "象征温和、内敛且极具专注力的细节能量，拥有敏锐的感官、深度专注力以及默默照亮他人的温情。",
+      en: "Symbolizing gentle, introverted, and highly focused detail energy, possessing sharp senses, deep concentration, and a quiet warmth that illuminates others.",
+      es: "Simboliza una energía de detalle suave, introvertida y muy enfocada, que posee sentidos agudos, concentración profunda y una calidez silenciosa.",
+      de: "Symbolisiert sanfte, introvertierte und fokussierte Detailenergie, die sich durch scharfe Sinne, tiefe Konzentration und stille Wärme auszeichnet.",
+      fr: "Symbolise une énergie de détail douce, introvertie et hautement concentrée, possédant des sens aigus, une concentration profonde et une douce chaleur."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "tg_wu",
+    traditional: "戊",
+    polarity: "neutral",
+    term: { zh: "崇峰", en: "Massif", es: "Macizo", de: "Massiv", fr: "Massif" },
+    definition: {
+      zh: "象征厚重、稳定且值得信任的承载能量，代表高安全感、强大的包容力与坚持自我的磐石意志。",
+      en: "Symbolizing solid, stable, and trustworthy bearing energy, representing a high sense of security, immense tolerance, and rock-like willpower.",
+      es: "Simboliza una energía portadora sólida, estable y confiable, que representa seguridad, inmensa tolerancia y una fuerza de voluntad firme.",
+      de: "Symbolisiert solide, stabile und vertrauenswürdige Tragfähigkeit, die für Sicherheit, große Toleranz und eine felsenfeste Willenskraft steht.",
+      fr: "Symbolise une énergie porteuse solide, stable et digne de confiance, représentant la sécurité, une immense tolérance et une volonté de fer."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "tg_ji",
+    traditional: "己",
+    polarity: "neutral",
+    term: { zh: "润壤", en: "Loam", es: "Limo", de: "Lehm", fr: "Limon" },
+    definition: {
+      zh: "象征温润、包容且极具滋养力的孕育能量，擅长无私奉献、接纳异己，并在包容中成就他人的价值。",
+      en: "Symbolizing moist, inclusive, and highly nurturing energy, excelling at selflessness, accepting differences, and fostering growth in others.",
+      es: "Simboliza una energía húmeda, inclusiva y altamente nutricia, excelente en la entrega desinteresada y el fomento del crecimiento de los demás.",
+      de: "Symbolisiert feuchte, integrative und nährende Energie, hervorragend im selbstlosen Handeln und der Förderung des Wachstums anderer.",
+      fr: "Symbolise une énergie humide, inclusive et hautement nourricière, excellant dans l'altruisme et la promotion de la croissance des autres."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "tg_geng",
+    traditional: "庚",
+    polarity: "neutral",
+    term: { zh: "刚锋", en: "Blade", es: "Hoja", de: "Klinge", fr: "Lame" },
+    definition: {
+      zh: "象征刚强、果决与极富原则的批判性能量，追求正义、高效与绝对的秩序，具有打破陈规的锐气。",
+      en: "Symbolizing strong, decisive, and principled critical energy, pursuing justice, efficiency, and absolute order, with a sharp edge to break old patterns.",
+      es: "Simboliza una energía crítica fuerte, decisiva y de principios, que busca la justicia, la eficiencia y el orden absoluto.",
+      de: "Symbolisiert starke, entschlossene und prinzipientreue kritische Energie, die nach Gerechtigkeit, Effizienz und absoluter Ordnung strebt.",
+      fr: "Symbolise une énergie critique forte, décisive et de principes, poursuivant la justice, l'efficacité et l'ordre absolu."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "tg_xin",
+    traditional: "辛",
+    polarity: "neutral",
+    term: { zh: "莹珠", en: "Jewel", es: "Joya", de: "Juwel", fr: "Joyau" },
+    definition: {
+      zh: "象征精致、优雅且高度敏锐的审美能量，注重完美细节，追求独特品位，常展现出高超的自我塑造力。",
+      en: "Symbolizing refined, elegant, and highly sensitive aesthetic energy, focusing on perfect details, seeking unique taste, and self-reinvention.",
+      es: "Simboliza una energía estética refinada, elegante y altamente sensible, centrada en detalles perfectos, el gusto único y la reinvención.",
+      de: "Symbolisiert feine, elegante und hochsensible ästhetische Energie, die sich auf perfekte Details, einzigartigen Geschmack und Selbsterfindung konzentriert.",
+      fr: "Symbolise une énergie esthétique raffinée, élégante et hautement sensible, axée sur les détails parfaits, le goût unique et l'auto-réinvention."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "tg_ren",
+    traditional: "壬",
+    polarity: "neutral",
+    term: { zh: "潮涌", en: "Surge", es: "Oleada", de: "Woge", fr: "Vague" },
+    definition: {
+      zh: "象征辽阔、流动且极富远见的宏大智慧，拥有广博的视野与惊人的资源调动能力，充满奔流不息的活力。",
+      en: "Symbolizing vast, flowing, and highly visionary wisdom, possessing a broad horizon and immense resource-mobilizing capabilities.",
+      es: "Simboliza una sabiduría vasta, fluida y altamente visionaria, que posee un horizonte amplio y una inmensa capacidad para movilizar recursos.",
+      de: "Symbolisiert weite, fließende und zukunftsweisende Weisheit, die sich durch einen breiten Horizont und immense Fähigkeiten auszeichnet.",
+      fr: "Symbolise une sagesse vaste, fluide et hautement visionnaire, possédant un large horizon et d'immenses capacités de mobilisation."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "tg_gui",
+    traditional: "癸",
+    polarity: "neutral",
+    term: { zh: "凝露", en: "Dew", es: "Rocío", de: "Tau", fr: "Rosée" },
+    definition: {
+      zh: "象征细腻、灵动且直觉敏锐的微观智慧，善于默默渗透、深层同理，并在静水中孕育最深邃的洞察。",
+      en: "Symbolizing delicate, agile, and intuitive micro-wisdom, skilled at silent penetration, deep empathy, and nurturing insights.",
+      es: "Simboliza una sabiduría micro-delicada, ágil e intuitiva, hábil para la penetración silenciosa, la empatía profunda y la percepción.",
+      de: "Symbolisiert feine, bewegliche und intuitive Mikro-Weisheit, hervorragend im stillen Durchdringen, tiefer Empathie und Erkenntnis.",
+      fr: "Symbolise une micro-sagesse délicate, agile et intuitive, excellente pour la pénétration silencieuse, l'empathie profonde et la perspicacité."
+    }
+  },
+
+  // ==================== 地支（12）· 时空原力维度 ====================
+  {
+    ns: "bazi",
+    slug: "dz_zi",
+    traditional: "子",
+    polarity: "neutral",
+    term: { zh: "潜流", en: "Underflow", es: "Subcorriente", de: "Unterströmung", fr: "Sous-courant" },
+    definition: {
+      zh: "对应深冬纯水之境，代表最纯粹的潜能、沉静理智思考以及在暗处悄然积蓄的复苏力量。",
+      en: "Corresponding to the pure water of deep winter, representing pure potential, calm rational thinking, and the quiet gathering of restorative power.",
+      es: "Correspondiente a las aguas puras del invierno profundo, representa el potencial, el pensamiento racional y el poder restaurador.",
+      de: "Entspricht dem reinen Wasser des tiefsten Winters und repräsentiert reines Potenzial, ruhiges rationales Denken und verborgene Erneuerungskraft.",
+      fr: "Correspondant à l'eau pure du cœur de l'hiver, représentant le potentiel pur, la pensée rationnelle calme et le pouvoir de renouveau."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "dz_chou",
+    traditional: "丑",
+    polarity: "neutral",
+    term: { zh: "凝砂", en: "Tundra", es: "Tundra", de: "Tundra", fr: "Toundra" },
+    definition: {
+      zh: "对应冰冻湿润的冬末之土，象征极具耐心、坚韧抗压的蓄力状态，在寂静中守护生命的温度并等待突破。",
+      en: "Corresponding to the frozen soil of late winter, representing patience and resilience under pressure, preserving vitality in silence.",
+      es: "Correspondiente al suelo helado del final del invierno, representa la paciencia y la resiliencia bajo presión, preservando la vitalidad en silencio.",
+      de: "Entspricht dem gefrorenen Boden des Spätwinters, steht für Geduld und Belastbarkeit unter Druck und bewahrt die Lebenskraft in der Stille.",
+      fr: "Correspondant au sol gelé de la fin de l'hiver, représentant la patience et la résilience sous pression, préservant la vitalité dans le silence."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "dz_yin",
+    traditional: "寅",
+    polarity: "neutral",
+    term: { zh: "春醒", en: "Awakening", es: "Despertar", de: "Erwachen", fr: "Éveil" },
+    definition: {
+      zh: "对应早春勃发的初生之木，代表打破沉寂的巨大冲劲、蓬勃的探索欲以及在黎明中睁开双眼的开创性力量。",
+      en: "Corresponding to the early spring wood, representing the immense momentum of breaking silence, vigorous desire for exploration, and pioneering force.",
+      es: "Correspondiente a la madera del inicio de la primavera, representa el impulso de romper el silencio, el deseo de exploración y la fuerza pionera.",
+      de: "Entspricht dem Holz des Frühfrühlings und steht für den Impuls, das Schweigen zu brechen, einen ausgeprägten Entdeckerdrang und Pionierkraft.",
+      fr: "Correspondant au bois du début du printemps, représentant l'élan de briser le silence, un vif désir d'exploration et une force pionnière."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "dz_mao",
+    traditional: "卯",
+    polarity: "neutral",
+    term: { zh: "繁枝", en: "Foliage", es: "Follaje", de: "Laub", fr: "Feuillage" },
+    definition: {
+      zh: "对应春色正浓的舒展之木，代表旺盛的生命蔓延、极佳的社交亲和力以及擅长借助外部力量实现自我拓展。",
+      en: "Corresponding to the lush wood of mid-spring, representing vibrant growth, social affinity, and the skill to expand by leveraging external resources.",
+      es: "Correspondiente a la madera exuberante de la primavera media, representa el crecimiento vibrante, la afinidad social y la expansión exitosa.",
+      de: "Entspricht dem üppigen Holz des Mittfrühlings, steht für lebendiges Wachstum, soziale Affinität und die Fähigkeit, durch externe Netzwerke zu expandieren.",
+      fr: "Correspondant au bois luxuriant du milieu du printemps, représentant une croissance vibrante, une affinité sociale et l'art de s'étendre grâce aux autres."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "dz_chen",
+    traditional: "辰",
+    polarity: "neutral",
+    term: { zh: "潮壤", en: "Delta", es: "Delta", de: "Delta", fr: "Delta" },
+    definition: {
+      zh: "对应春末温润的聚水之土，象征巨大的包容性、极强的跨界融合能力与整合多元资源的系统智慧。",
+      en: "Corresponding to the warm, water-rich soil of late spring, representing vast inclusiveness, cross-boundary synthesis, and systemic intelligence.",
+      es: "Correspondiente al suelo húmedo de finales de la primavera, representa la inclusión, la síntesis interdisciplinaria y la inteligencia sistémica.",
+      de: "Entspricht dem wasserreichen Boden des Spätfrühlings, steht für integrative Fähigkeiten, fächerübergreifende Synthese und systemische Intelligenz.",
+      fr: "Correspondant au sol humide de la fin du printemps, représentant une grande inclusivité, une synthèse transfrontalière et une intelligence systémique."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "dz_si",
+    traditional: "巳",
+    polarity: "neutral",
+    term: { zh: "初照", en: "Kindle", es: "Encendido", de: "Entzünden", fr: "Lueur" },
+    definition: {
+      zh: "对应初夏冉冉升起的温煦之火，象征思维的快速迭代、对外展现的强烈欲望以及如清晨阳光般清澈的执行力。",
+      en: "Corresponding to the rising heat of early summer, representing rapid cognitive iteration, desire for self-expression, and clear execution.",
+      es: "Correspondiente al calor del inicio del verano, representa la rápida iteración cognitiva, el deseo de autoexpresión y la ejecución clara.",
+      de: "Entspricht der Wärme des Frühsommers und steht für schnelle kognitive Entwicklung, das Bedürfnis nach Selbstdarstellung und klare Umsetzung.",
+      fr: "Correspondant à la chaleur naissante du début de l'été, représentant une itération cognitive rapide, le désir de s'exprimer et une exécution claire."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "dz_wu",
+    traditional: "午",
+    polarity: "neutral",
+    term: { zh: "烈焰", en: "Blaze", es: "Llama", de: "Glut", fr: "Braise" },
+    definition: {
+      zh: "对应仲夏最炽烈的光影之火，代表极致的热情、耀眼的表现力以及追求极致、决不妥协的纯粹性格。",
+      en: "Corresponding to the peak fire of mid-summer, representing extreme passion, dazzling expressiveness, and an uncompromised pursuit of perfection.",
+      es: "Correspondiente al fuego máximo de la mitad del verano, representa la pasión extrema, la expresividad deslumbrante y la búsqueda de la perfección.",
+      de: "Entspricht dem Spitzenfeuer des Mittsommers, steht für extreme Leidenschaft, schillernde Ausdruckskraft und das kompromisslose Streben nach Perfektion.",
+      fr: "Correspondant au feu de l'été, représentant une passion extrême, une expressivité éblouissante et la quête de perfection sans compromis."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "dz_wei",
+    traditional: "未",
+    polarity: "neutral",
+    term: { zh: "暖沙", en: "Dunes", es: "Dunas", de: "Dünen", fr: "Dunes" },
+    definition: {
+      zh: "对应夏末干燥的藏火之土，象征沉稳厚重却饱含内在热忱，在平实低调中稳步推进长期宏图。",
+      en: "Corresponding to the dry, heat-rich soil of late summer, representing a calm and solid exterior with burning inner passion, advancing long-term visions.",
+      es: "Correspondiente al suelo seco y cálido del final del verano, representa un exterior tranquilo con una ardiente pasión interna que avanza visiones.",
+      de: "Entspricht dem trockenen, warmen Boden des Spätsommers, steht für eine ruhige, solide Ausstrahlung bei brennender innerer Leidenschaft.",
+      fr: "Correspondant au sol sec et chaud de la fin de l'été, représentant un extérieur calme avec une passion intérieure ardente pour porter ses projets."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "dz_shen",
+    traditional: "申",
+    polarity: "neutral",
+    term: { zh: "冷锋", en: "Frost", es: "Escarcha", de: "Frost", fr: "Givre" },
+    definition: {
+      zh: "对应初秋刚烈清冷之金，代表高度的理性、雷厉风行的决断力以及擅长通过系统性重塑打破混乱局面的魄力。",
+      en: "Corresponding to the sharp and cool metal of early autumn, representing high rationality, decisive actions, and the boldness to break chaos.",
+      es: "Correspondiente al metal afilado y frío de principios de otoño, representa racionalidad, acciones decisivas y audacia para romper el caos.",
+      de: "Entspricht dem kühlen Metall des Frühherbstes, steht für hohe Rationalität, entschlossenes Handeln und die Kühnheit, Chaos zu ordnen.",
+      fr: "Correspondant au métal tranchant du début de l'automne, représentant une grande rationalité, des décisions rapides et l'audace de briser le chaos."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "dz_you",
+    traditional: "酉",
+    polarity: "neutral",
+    term: { zh: "凝华", en: "Essence", es: "Esencia", de: "Essenz", fr: "Essence" },
+    definition: {
+      zh: "对应深秋纯净剔透之金，代表精益求精的工匠精神、高度敏感的审美天赋以及将复杂经验浓缩为核心成果的能力。",
+      en: "Corresponding to the pure metal of mid-autumn, representing craftsmanship, highly sensitive aesthetic talent, and the ability to condense complexity.",
+      es: "Correspondiente al metal puro de mediados de otoño, representa artesanía, sensibilidad estética y la capacidad de condensar la complejidad.",
+      de: "Entspricht dem reinen Metall des Mittherbstes, steht für handwerkliche Perfektion, sensible Ästhetik und die Gabe, Komplexität zu bündeln.",
+      fr: "Correspondant au métal pur du milieu de l'automne, représentant le savoir-faire, une sensibilité esthétique et l'aptitude à condenser la complexité."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "dz_xu",
+    traditional: "戌",
+    polarity: "neutral",
+    term: { zh: "燥岩", en: "Crag", es: "Risco", de: "Klippe", fr: "Rocher" },
+    definition: {
+      zh: "对应深秋干燥沉稳之土，代表极高的安全边界、深刻的思想防线以及在喧嚣中坚守自我阵地的孤傲信念。",
+      en: "Corresponding to the dry, solid soil of late autumn, representing high security boundaries, deep defenses, and the faith to hold ground in chaos.",
+      es: "Correspondiente al suelo seco de finales de otoño, representa límites de seguridad, defensas profundas y la fe para mantener la posición.",
+      de: "Entspricht dem trockenen Boden des Spätherbstes, steht für ausgeprägte Sicherheitsgrenzen, tiefen Schutz und die Stärke, die eigene Position zu wahren.",
+      fr: "Correspondant au sol sec de la fin de l'automne, représentant de solides limites de sécurité, des défenses profondes et la force de maintenir sa position."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "dz_hai",
+    traditional: "亥",
+    polarity: "neutral",
+    term: { zh: "渊流", en: "Chasm", es: "Abismo", de: "Abgrund", fr: "Abîme" },
+    definition: {
+      zh: "对应初冬开阔涌动之水，代表深不可测的直觉天赋、海纳百川的精神气度以及对人性与客观世界本源的深刻领悟。",
+      en: "Corresponding to the vast flowing water of early winter, representing deep intuitive talent, immense spiritual breadth, and understanding of the world.",
+      es: "Correspondiente al agua de principios de invierno, representa talento intuitivo, inmensa amplitud espiritual y comprensión del mundo.",
+      de: "Entspricht dem strömenden Wasser des Frühwinters, steht für tiefes intuitives Talent, immense geistige Weite und Weltverständnis.",
+      fr: "Correspondant à l'eau du début de l'hiver, représentant un profond talent intuitif, une immense grandeur d'esprit et une compréhension du monde."
+    }
+  }
+];
+// B5批次 · glyph（17）· Houses & Levels
+const glyphHousesAndLevels = [
+  // ==================== 十二宫（12）· 生命能量表达面向 ====================
+  {
+    ns: "glyph",
+    slug: "gl_house_self",
+    traditional: "命宮",
+    polarity: "neutral",
+    term: { zh: "本源", en: "Genesis", es: "Génesis", de: "Genesis", fr: "Genèse" },
+    definition: {
+      zh: "核心自我与根本存在，决定了你最基础的生命基调与核心人格。",
+      en: "The core self and fundamental existence, defining your most basic life theme and core personality.",
+      es: "El yo central y la existencia fundamental, que define el tema más básico de la vida y la personalidad central.",
+      de: "Das Kernselbst und die grundlegende Existenz, die das grundlegendste Lebensthema und die Kernpersönlichkeit bestimmen.",
+      fr: "Le soi central et l'existence fondamentale, définissant le thème de vie le plus basique et la personnalité centrale."
+    }
+  },
+  {
+    ns: "glyph",
+    slug: "gl_house_allies",
+    traditional: "兄弟宮",
+    polarity: "neutral",
+    term: { zh: "同侪", en: "Peers", es: "Pares", de: "Gleichgesinnte", fr: "Pairs" },
+    definition: {
+      zh: "描述与同辈、合作伙伴及亲密盟友的互动模式与能量共鸣。",
+      en: "Describing the interaction patterns and energetic resonance with peers, partners, and close allies.",
+      es: "Describe los patrones de interacción y la resonancia energética con pares, socios y aliados cercanos.",
+      de: "Beschreibt die Interaktionsmuster und die energetische Resonanz mit Gleichgesinnten, Partnern und engen Verbündeten.",
+      fr: "Décrit les schémas d'interaction et la résonance énergétique avec les pairs, les partenaires et les proches alliés."
+    }
+  },
+  {
+    ns: "glyph",
+    slug: "gl_house_union",
+    traditional: "夫妻宮",
+    polarity: "neutral",
+    term: { zh: "契合", en: "Union", es: "Unión", de: "Verbindung", fr: "Union" },
+    definition: {
+      zh: "深度情感连接、亲密关系模式，以及你下意识寻找的灵魂镜面。",
+      en: "Deep emotional connections, intimate relationship patterns, and the soul mirror you unconsciously seek.",
+      es: "Conexiones emocionales profundas, patrones de relaciones íntimas y el espejo del alma que buscas inconscientemente.",
+      de: "Tiefe emotionale Verbindungen, intime Beziehungsmuster und der Spiegel der Seele, den Sie unbewusst suchen.",
+      fr: "Connexions émotionnelles profondes, schémas de relations intimes et miroir de l'âme que vous recherchez inconsciemment."
+    }
+  },
+  {
+    ns: "glyph",
+    slug: "gl_house_creation",
+    traditional: "子女宮",
+    polarity: "neutral",
+    term: { zh: "衍化", en: "Progeny", es: "Progenie", de: "Nachkommen", fr: "Progéniture" },
+    definition: {
+      zh: "创造力、艺术表达、后代传递，以及向外投射新生事物的能量。",
+      en: "Creativity, artistic expression, offspring, and the energy of projecting new creations outward.",
+      es: "Creatividad, expresión artística, descendencia y la energía de proyectar nuevas creaciones hacia el exterior.",
+      de: "Kreativität, künstlerischer Ausdruck, Nachkommen und die Energie, neue Kreationen nach außen zu tragen.",
+      fr: "Créativité, expression artistique, descendance et l'énergie de projeter de nouvelles créations vers l'extérieur."
+    }
+  },
+  {
+    ns: "glyph",
+    slug: "gl_house_treasury",
+    traditional: "財帛宮",
+    polarity: "neutral",
+    term: { zh: "丰盈", en: "Prosperity", es: "Prosperidad", de: "Wohlstand", fr: "Prospérité" },
+    definition: {
+      zh: "物质资源的获取方式、财富流转逻辑，以及你对价值的感知与显化。",
+      en: "Methods of acquiring material resources, wealth flow logic, and your perception and manifestation of value.",
+      es: "Métodos para adquirir recursos materiales, lógica del flujo de riqueza y tu percepción y manifestación del valor.",
+      de: "Methoden zum Erwerb materieller Ressourcen, Logik des Geldflusses sowie Ihre Wahrnehmung und Manifestation von Werten.",
+      fr: "Méthodes d'acquisition des ressources matérielles, logique du flux de richesse, et votre perception et manifestation de la valeur."
+    }
+  },
+  {
+    ns: "glyph",
+    slug: "gl_house_vessel",
+    traditional: "疾厄宮",
+    polarity: "neutral",
+    term: { zh: "形躯", en: "Vessel", es: "Templo", de: "Hülle", fr: "Vaisseau" },
+    definition: {
+      zh: "身体容器的生命状态、本能感知、健康模式以及潜意识压力的生理投射。",
+      en: "The vital state of the physical vessel, instinctual perception, health patterns, and somatic projections of subconscious stress.",
+      es: "El estado vital del templo físico, la percepción instintiva, los patrones de salud y las proyecciones somáticas del estrés subconsciente.",
+      de: "Der vitale Zustand des physischen Körpers, instinktive Wahrnehmung, Gesundheitssysteme und somatische Projektionen von unbewusstem Stress.",
+      fr: "L'état vital de l'enveloppe physique, la perception instinctive, les schémas de santé et les projections somatiques du stress inconscient."
+    }
+  },
+  {
+    ns: "glyph",
+    slug: "gl_house_horizon",
+    traditional: "遷移宮",
+    polarity: "neutral",
+    term: { zh: "远景", en: "Horizon", es: "Horizonte", de: "Horizont", fr: "Horizon" },
+    definition: {
+      zh: "社交面貌、外部环境适应力、远行以及你在陌生领域探索的能量表现。",
+      en: "Social projection, adaptation to external environments, travel, and your energetic performance when exploring unfamiliar domains.",
+      es: "Proyección social, adaptación a entornos externos, viajes y tu desempeño energético al explorar dominios desconocidos.",
+      de: "Soziale Außenwirkung, Anpassung an neue Umgebungen, Reisen und Ihre energetische Präsenz beim Erkunden unbekannter Bereiche.",
+      fr: "Projection sociale, adaptation aux environnements externes, voyages et votre performance énergétique lors de l'exploration de domaines inconnus."
+    }
+  },
+  {
+    ns: "glyph",
+    slug: "gl_house_network",
+    traditional: "交友宮",
+    polarity: "neutral",
+    term: { zh: "共生", en: "Synergy", es: "Sinergia", de: "Synergie", fr: "Synergie" },
+    definition: {
+      zh: "与更广泛社会群体的协作交互模式，代表团队、社群以及集体共鸣。",
+      en: "Collaborative interaction patterns with broader social groups, representing teams, communities, and collective resonance.",
+      es: "Patrones de interacción colaborativa con grupos sociales más amplios, representando equipos, comunidades y resonancia colectiva.",
+      de: "Kollaborative Interaktionsmuster mit breiteren sozialen Gruppen, die Teams, Gemeinschaften und kollektive Resonanz darstellen.",
+      fr: "Schémas d'interaction collaborative avec des groupes sociaux plus larges, représentant les équipes, les communautés et la résonance collective."
+    }
+  },
+  {
+    ns: "glyph",
+    slug: "gl_house_calling",
+    traditional: "官祿宮",
+    polarity: "neutral",
+    term: { zh: "志业", en: "Vocation", es: "Vocación", de: "Berufung", fr: "Vocation" },
+    definition: {
+      zh: "职业追求、社会定位与自我价值的显化通路，代表你的天职与创造性贡献。",
+      en: "Career pursuits, social positioning, and the manifestation path of self-worth, representing your vocation and creative contribution.",
+      es: "Búsquedas profesionales, posicionamiento social y el camino de manifestación de la autoestima, representando tu vocación y contribución creativa.",
+      de: "Karrieredynamik, gesellschaftliche Positionierung und der Manifestationsweg des Selbstwerts, der Ihre Berufung und Ihren kreativen Beitrag darstellt.",
+      fr: "Poursuites professionnelles, positionnement social et chemin de manifestation de l'estime de soi, représentant votre vocation et votre contribution créative."
+    }
+  },
+  {
+    ns: "glyph",
+    slug: "gl_house_sanctuary",
+    traditional: "田宅宮",
+    polarity: "neutral",
+    term: { zh: "栖所", en: "Haven", es: "Refugio", de: "Hort", fr: "Refuge" },
+    definition: {
+      zh: "居住环境、安全感根基、家族潜移默化的影响，以及你深度放松和充能的安全屋。",
+      en: "Living environment, the foundation of safety, family heritage influence, and the safe haven where you deeply relax and recharge.",
+      es: "Entorno de vida, base de la seguridad, influencia de la herencia familiar y el refugio seguro donde te relajas y recargas profundamente.",
+      de: "Wohnumgebung, das Fundament der Sicherheit, Einflüsse des familiären Erbes und der sichere Hafen, an dem Sie tief entspannen und Kraft tanken.",
+      fr: "Environnement de vie, fondement de la sécurité, influence de l'héritage familial et refuge sûr où se détendre et se ressourcer en profondeur."
+    }
+  },
+  {
+    ns: "glyph",
+    slug: "gl_house_psyche",
+    traditional: "福德宮",
+    polarity: "neutral",
+    term: { zh: "心域", en: "Psyche", es: "Psique", de: "Psyche", fr: "Psyché" },
+    definition: {
+      zh: "精神世界、潜意识福报、内在宁静感，以及你消解烦恼的自我精神疗愈机制。",
+      en: "The spiritual world, subconscious fortune, inner peace, and your self-healing mechanisms for releasing worries.",
+      es: "El mundo espiritual, la fortuna subconsciente, la paz interior y tus mecanismos de autocuración para liberar preocupaciones.",
+      de: "Die geistige Welt, unbewusstes Glück, innerer Frieden und Ihre Selbstheilungsmechanismen zur Bewältigung von Sorgen.",
+      fr: "Le monde spirituel, la fortune subconsciente, la paix intérieure et vos mécanismes d'auto-guérison pour libérer les soucis."
+    }
+  },
+  {
+    ns: "glyph",
+    slug: "gl_house_lineage",
+    traditional: "父母宮",
+    polarity: "neutral",
+    term: { zh: "溯源", en: "Lineage", es: "Linaje", de: "Ahnenlinie", fr: "Lignage" },
+    definition: {
+      zh: "原生家庭的能量打底、父辈遗传影响，以及你面对更高阶权威和规则时的态度。",
+      en: "The energetic blueprint of your family of origin, parental genetic influence, and your attitude toward higher authority and rules.",
+      es: "El plano energético de tu familia de origen, la influencia genética de los padres y tu actitud hacia la autoridad y las reglas superiores.",
+      de: "Die energetische Blaupause der Herkunftsfamilie, der elterliche genetische Einfluss und Ihre Einstellung gegenüber höherer Autorität und Regeln.",
+      fr: "Le schéma énergétique de votre famille d'origine, l'influence génétique parentale et votre attitude face aux autorités et règles supérieures."
+    }
+  },
+
+  // ==================== 等级（5）· 星盘能量状态 ====================
+  {
+    ns: "glyph",
+    slug: "gl_level_brilliance",
+    traditional: "廟",
+    polarity: "neutral",
+    term: { zh: "炽曜", en: "Brilliance", es: "Brillantez", de: "Glanz", fr: "Brillance" },
+    definition: {
+      zh: "能量呈极盛绽放状态，毫无保留地投射其特质，主导并引领当下维度。",
+      en: "Energy in a state of peak bloom, unreservedly projecting its traits, dominating and leading the current dimension.",
+      es: "Energía en un estado de máxima floración, proyectando sus rasgos sin reservas, dominando y liderando la dimensión actual.",
+      de: "Energie im Zustand der maximalen Entfaltung, die ihre Eigenschaften uneingeschränkt entfaltet und die aktuelle Dimension dominiert.",
+      fr: "L'énergie à son apogée, projetant ses caractéristiques sans réserve, dominant et guidant la dimension actuelle."
+    }
+  },
+  {
+    ns: "glyph",
+    slug: "gl_level_vigor",
+    traditional: "旺",
+    polarity: "neutral",
+    term: { zh: "充沛", en: "Vigor", es: "Vigor", de: "Vitalität", fr: "Vigueur" },
+    definition: {
+      zh: "能量丰沛、稳定且充满建设性，能积极、顺畅地输出高品质特质。",
+      en: "Abundant, stable, and constructive energy, capable of actively and smoothly exporting high-quality traits.",
+      es: "Energía abundante, estable y constructiva, capaz de exportar de manera activa y fluida rasgos de alta calidad.",
+      de: "Reichliche, stabile und konstruktive Energie, die in der Lage ist, aktiv und reibungslos hochwertige Eigenschaften einzubringen.",
+      fr: "Énergie abondante, stable et constructive, capable d'exprimer activement et de manière fluide des caractéristiques de qualité supérieure."
+    }
+  },
+  {
+    ns: "glyph",
+    slug: "gl_level_equilibrium",
+    traditional: "得",
+    polarity: "neutral",
+    term: { zh: "平衡", en: "Equilibrium", es: "Equilibrio", de: "Gleichgewicht", fr: "Équilibre" },
+    definition: {
+      zh: "能量温和、中规中矩，处于不偏不倚的守恒状态，表现稳定且不具有侵略性。",
+      en: "Gentle and moderate energy, in an unbiased state of conservation, with stable performance and no aggressiveness.",
+      es: "Energía suave y moderada, en un estado de conservación imparcial, con un rendimiento estable y sin agresividad.",
+      de: "Sanfte und moderate Energie im ausgeglichenen Erhaltungszustand, mit stabiler Wirkung und ohne Aggressivität.",
+      fr: "Énergie douce et modérée, dans un état de conservation impartial, avec une performance stable et sans agressivité."
+    }
+  },
+  {
+    ns: "glyph",
+    slug: "gl_level_subtle",
+    traditional: "閒",
+    polarity: "neutral",
+    term: { zh: "隐微", en: "Subtle", es: "Sutil", de: "Subtil", fr: "Subtil" },
+    definition: {
+      zh: "能量表现偏于低调、平淡，不温不火地日常维持，缺乏鲜明的爆发力。",
+      en: "The energy expression is low-key and plain, maintaining a lukewarm daily routine without distinct explosive power.",
+      es: "La expresión de la energía es discreta y simple, manteniendo una rutina diaria templada sin un poder explosivo claro.",
+      de: "Die Energie ist unaufdringlich und schlicht, erhält eine ausgeglichene Alltagsroutine aufrecht, ohne ausgeprägte Dynamik.",
+      fr: "L'expression de l'énergie est discrète et simple, maintenant une routine quotidienne tiède sans puissance explosive marquée."
+    }
+  },
+  {
+    ns: "glyph",
+    slug: "gl_level_eclipse",
+    traditional: "陷",
+    polarity: "neutral",
+    term: { zh: "掩蔽", en: "Eclipse", es: "Eclipse", de: "Finsternis", fr: "Éclipse" },
+    definition: {
+      zh: "能量高度内敛或被遮蔽，外显受阻，需通过深度反思与内部转化来唤醒其潜能。",
+      en: "Highly introverted or obscured energy, with outward expression blocked; needs deep reflection and internal transformation to awaken potential.",
+      es: "Energía altamente introvertida u oscurecida, con expresión externa bloqueada; requiere una reflexión profunda y transformación interna para despertar su potencial.",
+      de: "Stark introvertierte oder verdeckte Energie, deren Ausdruck nach außen blockiert ist; erfordert tiefe Reflexion und Transformation, um das Potenzial zu wecken.",
+      fr: "Énergie hautement introvertie ou obscurcie, dont l'expression extérieure est bloquée ; nécessite une réflexion profonde et une transformation interne pour éveiller son potentiel."
+    }
+  }
+];
+// B6批次 · qimen 其余（5）· Cycles & Phases
+const qimenCyclesAndPhases = [
+  // ==================== 二遁（2）· 能量流动大势 ====================
+  {
+    ns: "qimen",
+    slug: "qm_dun_yang",
+    traditional: "阳遁",
+    polarity: "neutral",
+    term: { zh: "升演", en: "Ascent", es: "Ascenso", de: "Aufstieg", fr: "Ascension" },
+    definition: {
+      zh: "奇门能量的顺行扩张周期，象征生机复苏、外显表达与主动向外的能量拓展。",
+      en: "The forward-moving, expanding cycle of Qimen energy, symbolizing the recovery of vitality, outward expression, and active expansion.",
+      es: "El ciclo de expansión y avance de la energía Qimen, que simboliza la recuperación de la vitalidad, la expresión externa y la expansión activa.",
+      de: "Der vorwärtsgerichtete, expandierende Zyklus der Qimen-Energie, der die Erholung der Vitalität, den äußeren Ausdruck und die aktive Expansion symbolisiert.",
+      fr: "Le cycle d'expansion et de progression de l'énergie Qimen, symbolisant la récupération de la vitalité, l'expression extérieure et l'expansion active."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_dun_yin",
+    traditional: "阴遁",
+    polarity: "neutral",
+    term: { zh: "潜演", en: "Descent", es: "Descenso", de: "Abstieg", fr: "Descente" },
+    definition: {
+      zh: "奇门能量的逆行内敛周期，象征事物沉淀、向内观照与深度储能的转化过程。",
+      en: "The backward-moving, contracting cycle of Qimen energy, symbolizing consolidation, inward reflection, and the deep storage of energy.",
+      es: "El ciclo de contracción e interiorización de la energía Qimen, que simboliza la consolidación, la reflexión interna y el almacenamiento profundo de energía.",
+      de: "Der rückwärtsgerichtete, kontrahierende Zyklus der Qimen-Energie, der Konsolidierung, innere Reflexion und tiefe Energiespeicherung symbolisiert.",
+      fr: "Le cycle de contraction et d'intériorisation de l'énergie Qimen, symbolisant la consolidation, la réflexion interne et l'accumulation profonde d'énergie."
+    }
+  },
+
+  // ==================== 三元（3）· 演化时序阶段 ====================
+  {
+    ns: "qimen",
+    slug: "qm_yuan_upper",
+    traditional: "上元",
+    polarity: "neutral",
+    term: { zh: "启序", en: "Inception", es: "Preludio", de: "Auftakt", fr: "Prélude" },
+    definition: {
+      zh: "能量周期的初始激发阶段，代表新趋势的破土与第一波震荡，充满爆发性与探索力。",
+      en: "The initial phase of an energy cycle, representing the breakthrough of a new trend and the first wave of vibration, full of explosive power.",
+      es: "La fase inicial de un ciclo energético, que representa el surgimiento de una nueva tendencia y la primera ola de vibración.",
+      de: "Die erste Phase eines Energiezyklus, die den Durchbruch eines neuen Trends und die erste Schwingungswelle darstellt.",
+      fr: "La phase initiale d'un cycle énergétique, représentant l'émergence d'une nouvelle tendance et la première vague de vibration."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_yuan_middle",
+    traditional: "中元",
+    polarity: "neutral",
+    term: { zh: "承序", en: "Resonance", es: "Resonancia", de: "Resonanz", fr: "Résonance" },
+    definition: {
+      zh: "能量周期的稳定共鸣阶段，事物进入自我协调与深度共振，展现出规律性的自我维持。",
+      en: "The stable resonance phase of an energy cycle, where events enter self-coordination and deep resonance, displaying systematic maintenance.",
+      es: "La fase de resonancia estable de un ciclo energético, donde las situaciones entran en autocoordinación y resonancia profunda.",
+      de: "Die stabile Resonanzphase eines Energiezyklus, in der die Dynamik in eine Phase der Harmonisierung und tiefen Resonanz übergeht.",
+      fr: "La phase de résonance stable d'un cycle énergétique, où les événements entrent en auto-coordination et en résonance profonde."
+    }
+  },
+  {
+    ns: "qimen",
+    slug: "qm_yuan_lower",
+    traditional: "下元",
+    polarity: "neutral",
+    term: { zh: "归序", en: "Resolution", es: "Resolución", de: "Ausklang", fr: "Résolution" },
+    definition: {
+      zh: "能量周期的收尾与沉淀阶段，代表结果的显化、系统的整合以及为下一轮周期做准备的静默过渡。",
+      en: "The concluding and consolidating phase of an energy cycle, representing the manifestation of results, system integration, and quiet transition.",
+      es: "La fase final y de consolidación de un ciclo energético, que representa la manifestación de resultados y la transición silenciosa.",
+      de: "Die abschließende Phase eines Energiezyklus, die die Manifestation von Ergebnissen, Systemintegration und den stillen Übergang darstellt.",
+      fr: "La phase finale et de consolidation d'un cycle énergétique, représentant la manifestation des résultats et la transition silencieuse."
+    }
+  }
+];

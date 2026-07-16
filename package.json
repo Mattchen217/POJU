@@ -45,7 +45,8 @@
     "test:bazi-tst-step4": "tsx scripts/test-bazi-tst-step4.ts",
     "test:bazi-tst-step5": "tsx scripts/test-bazi-tst-step5.ts",
     "test:bazi-tst-step6": "tsx scripts/test-bazi-tst-step6-e2e.ts",
-    "test:bazi-tst": "pnpm test:bazi-library && pnpm test:bazi-tst-step2 && pnpm test:bazi-tst-step3 && pnpm test:bazi-tst-step4 && pnpm test:bazi-tst-step5 && pnpm test:bazi-tst-step6"
+    "test:bazi-tst": "pnpm test:bazi-library && pnpm test:bazi-tst-step2 && pnpm test:bazi-tst-step3 && pnpm test:bazi-tst-step4 && pnpm test:bazi-tst-step5 && pnpm test:bazi-tst-step6",
+    "verify:terms": "tsx scripts/verify-terms.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",

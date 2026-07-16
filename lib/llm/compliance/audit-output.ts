@@ -74,7 +74,7 @@ const EN_BAZI_TERMS: Array<[RegExp, string]> = [
 
 /** Match / marriage charting terms — translate to synergy/tension language in output. */
 const EN_MARRIAGE_CHART_TERMS: Array<[RegExp, string]> = [
-  [/\b(?:Liu He|Six Harmonies?|six harmony)\b/gi, "liu_he"],
+  [/\b(?:Liu He|Six Harmonies?|six harmony)\b/gi, "liuhe"],
   [/\b(?:Six Clash|Liu Chong|clash pattern)\b/gi, "chong"],
   [/\bheavenly connection\b/gi, "heavenly_connection"],
   [/\b(?:Liu Hai|Six Harms?)\b/gi, "liu_hai"],
