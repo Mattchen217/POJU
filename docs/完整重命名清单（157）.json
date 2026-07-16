@@ -1,3 +1,7 @@
+// LANDING_155 — bazi 99 + qimen 39 + glyph 17 全量落地。
+// Fix A: stem_*/branch_*/liuhe/sanhe；Fix B: 金舆 de Wagen；
+// Fix C: 跨 ns 中文撞名 — glyph 卯/酉→蔓展/精锻，qimen 天任→承稳。
+// Fix D: glyph level 单词检查白名单（en 由代码固定）。
 // lib/glossary/pojulife-terms.ts —— Batch B1 (41/157)
 export const baziCoreGlossary = [
   /* ==========================================
@@ -701,7 +705,7 @@ export const baziCoreGlossary = [
      ========================================== */
   {
     ns: "bazi",
-    slug: "clash",
+    slug: "chong",
     traditional: "冲",
     polarity: "caution",
     term: {
@@ -721,7 +725,7 @@ export const baziCoreGlossary = [
   },
   {
     ns: "bazi",
-    slug: "punishment",
+    slug: "xing",
     traditional: "刑",
     polarity: "caution",
     term: {
@@ -741,7 +745,7 @@ export const baziCoreGlossary = [
   },
   {
     ns: "bazi",
-    slug: "harm",
+    slug: "hai",
     traditional: "害",
     polarity: "caution",
     term: {
@@ -761,7 +765,7 @@ export const baziCoreGlossary = [
   },
   {
     ns: "bazi",
-    slug: "liu_he",
+    slug: "liuhe",
     traditional: "六合",
     polarity: "favorable",
     term: {
@@ -781,7 +785,7 @@ export const baziCoreGlossary = [
   },
   {
     ns: "bazi",
-    slug: "half_combination",
+    slug: "banhe",
     traditional: "半合",
     polarity: "favorable",
     term: {
@@ -801,7 +805,7 @@ export const baziCoreGlossary = [
   },
   {
     ns: "bazi",
-    slug: "san_he",
+    slug: "sanhe",
     traditional: "三合",
     polarity: "favorable",
     term: {
@@ -821,7 +825,7 @@ export const baziCoreGlossary = [
   },
   {
     ns: "bazi",
-    slug: "stem_combination",
+    slug: "stemhe",
     traditional: "天干合",
     polarity: "neutral",
     term: {
@@ -976,7 +980,7 @@ const qimenCoreTerms = [
     slug: "qm_tian_ren",
     traditional: "天任",
     polarity: "favorable",
-    term: { zh: "承托", en: "Sustainer", es: "Sostenedor", de: "Erhalter", fr: "Soutien" },
+    term: { zh: "承稳", en: "Sustainer", es: "Sostenedor", de: "Erhalter", fr: "Soutien" },
     definition: {
       zh: "稳健、厚重且富有责任感的耕耘能量，能够默默承受压力并建立长期功业。",
       en: "A stable, solid, and highly responsible nurturing energy, capable of quietly enduring pressure and building long-term foundations.",
@@ -1530,7 +1534,7 @@ const baziExtensionTerms = [
     slug: "jin_yu",
     traditional: "金舆",
     polarity: "favorable",
-    term: { zh: "华舆", en: "Carriage", es: "Carruaje", de: "Gefährt", fr: "Carrosse" },
+    term: { zh: "华舆", en: "Carriage", es: "Carruaje", de: "Wagen", fr: "Carrosse" },
     definition: {
       zh: "带来顺遂享受与体面生活的优质载体，极大地提升了人生旅途中的安全与舒适感。",
       en: "A premium vehicle bringing smooth journeys and comfortable living, greatly enhancing safety and comfort in life.",
@@ -1841,7 +1845,7 @@ const baziStemsAndBranches = [
   // ==================== 天干（10）· 元能量品质 ====================
   {
     ns: "bazi",
-    slug: "tg_jia",
+    slug: "stem_jia",
     traditional: "甲",
     polarity: "neutral",
     term: { zh: "挺秀", en: "Verdure", es: "Verdor", de: "Grün", fr: "Verdure" },
@@ -1855,7 +1859,7 @@ const baziStemsAndBranches = [
   },
   {
     ns: "bazi",
-    slug: "tg_yi",
+    slug: "stem_yi",
     traditional: "乙",
     polarity: "neutral",
     term: { zh: "柔蔓", en: "Tendril", es: "Zarcillo", de: "Ranke", fr: "Vrille" },
@@ -1869,7 +1873,7 @@ const baziStemsAndBranches = [
   },
   {
     ns: "bazi",
-    slug: "tg_bing",
+    slug: "stem_bing",
     traditional: "丙",
     polarity: "neutral",
     term: { zh: "曜阳", en: "Solar", es: "Solar", de: "Solar", fr: "Solaire" },
@@ -1883,7 +1887,7 @@ const baziStemsAndBranches = [
   },
   {
     ns: "bazi",
-    slug: "tg_ding",
+    slug: "stem_ding",
     traditional: "丁",
     polarity: "neutral",
     term: { zh: "烛荧", en: "Glow", es: "Destello", de: "Glimmen", fr: "Lueur" },
@@ -1897,7 +1901,7 @@ const baziStemsAndBranches = [
   },
   {
     ns: "bazi",
-    slug: "tg_wu",
+    slug: "stem_wu",
     traditional: "戊",
     polarity: "neutral",
     term: { zh: "崇峰", en: "Massif", es: "Macizo", de: "Massiv", fr: "Massif" },
@@ -1911,7 +1915,7 @@ const baziStemsAndBranches = [
   },
   {
     ns: "bazi",
-    slug: "tg_ji",
+    slug: "stem_ji",
     traditional: "己",
     polarity: "neutral",
     term: { zh: "润壤", en: "Loam", es: "Limo", de: "Lehm", fr: "Limon" },
@@ -1925,7 +1929,7 @@ const baziStemsAndBranches = [
   },
   {
     ns: "bazi",
-    slug: "tg_geng",
+    slug: "stem_geng",
     traditional: "庚",
     polarity: "neutral",
     term: { zh: "刚锋", en: "Blade", es: "Hoja", de: "Klinge", fr: "Lame" },
@@ -1939,7 +1943,7 @@ const baziStemsAndBranches = [
   },
   {
     ns: "bazi",
-    slug: "tg_xin",
+    slug: "stem_xin",
     traditional: "辛",
     polarity: "neutral",
     term: { zh: "莹珠", en: "Jewel", es: "Joya", de: "Juwel", fr: "Joyau" },
@@ -1953,7 +1957,7 @@ const baziStemsAndBranches = [
   },
   {
     ns: "bazi",
-    slug: "tg_ren",
+    slug: "stem_ren",
     traditional: "壬",
     polarity: "neutral",
     term: { zh: "潮涌", en: "Surge", es: "Oleada", de: "Woge", fr: "Vague" },
@@ -1967,7 +1971,7 @@ const baziStemsAndBranches = [
   },
   {
     ns: "bazi",
-    slug: "tg_gui",
+    slug: "stem_gui",
     traditional: "癸",
     polarity: "neutral",
     term: { zh: "凝露", en: "Dew", es: "Rocío", de: "Tau", fr: "Rosée" },
@@ -1983,7 +1987,7 @@ const baziStemsAndBranches = [
   // ==================== 地支（12）· 时空原力维度 ====================
   {
     ns: "bazi",
-    slug: "dz_zi",
+    slug: "branch_zi",
     traditional: "子",
     polarity: "neutral",
     term: { zh: "潜流", en: "Underflow", es: "Subcorriente", de: "Unterströmung", fr: "Sous-courant" },
@@ -1997,7 +2001,7 @@ const baziStemsAndBranches = [
   },
   {
     ns: "bazi",
-    slug: "dz_chou",
+    slug: "branch_chou",
     traditional: "丑",
     polarity: "neutral",
     term: { zh: "凝砂", en: "Tundra", es: "Tundra", de: "Tundra", fr: "Toundra" },
@@ -2011,7 +2015,7 @@ const baziStemsAndBranches = [
   },
   {
     ns: "bazi",
-    slug: "dz_yin",
+    slug: "branch_yin",
     traditional: "寅",
     polarity: "neutral",
     term: { zh: "春醒", en: "Awakening", es: "Despertar", de: "Erwachen", fr: "Éveil" },
@@ -2025,7 +2029,7 @@ const baziStemsAndBranches = [
   },
   {
     ns: "bazi",
-    slug: "dz_mao",
+    slug: "branch_mao",
     traditional: "卯",
     polarity: "neutral",
     term: { zh: "繁枝", en: "Foliage", es: "Follaje", de: "Laub", fr: "Feuillage" },
@@ -2039,7 +2043,7 @@ const baziStemsAndBranches = [
   },
   {
     ns: "bazi",
-    slug: "dz_chen",
+    slug: "branch_chen",
     traditional: "辰",
     polarity: "neutral",
     term: { zh: "潮壤", en: "Delta", es: "Delta", de: "Delta", fr: "Delta" },
@@ -2053,7 +2057,7 @@ const baziStemsAndBranches = [
   },
   {
     ns: "bazi",
-    slug: "dz_si",
+    slug: "branch_si",
     traditional: "巳",
     polarity: "neutral",
     term: { zh: "初照", en: "Kindle", es: "Encendido", de: "Entzünden", fr: "Lueur" },
@@ -2067,7 +2071,7 @@ const baziStemsAndBranches = [
   },
   {
     ns: "bazi",
-    slug: "dz_wu",
+    slug: "branch_wu",
     traditional: "午",
     polarity: "neutral",
     term: { zh: "烈焰", en: "Blaze", es: "Llama", de: "Glut", fr: "Braise" },
@@ -2081,7 +2085,7 @@ const baziStemsAndBranches = [
   },
   {
     ns: "bazi",
-    slug: "dz_wei",
+    slug: "branch_wei",
     traditional: "未",
     polarity: "neutral",
     term: { zh: "暖沙", en: "Dunes", es: "Dunas", de: "Dünen", fr: "Dunes" },
@@ -2095,7 +2099,7 @@ const baziStemsAndBranches = [
   },
   {
     ns: "bazi",
-    slug: "dz_shen",
+    slug: "branch_shen",
     traditional: "申",
     polarity: "neutral",
     term: { zh: "冷锋", en: "Frost", es: "Escarcha", de: "Frost", fr: "Givre" },
@@ -2109,7 +2113,7 @@ const baziStemsAndBranches = [
   },
   {
     ns: "bazi",
-    slug: "dz_you",
+    slug: "branch_you",
     traditional: "酉",
     polarity: "neutral",
     term: { zh: "凝华", en: "Essence", es: "Esencia", de: "Essenz", fr: "Essence" },
@@ -2123,7 +2127,7 @@ const baziStemsAndBranches = [
   },
   {
     ns: "bazi",
-    slug: "dz_xu",
+    slug: "branch_xu",
     traditional: "戌",
     polarity: "neutral",
     term: { zh: "燥岩", en: "Crag", es: "Risco", de: "Klippe", fr: "Rocher" },
@@ -2137,7 +2141,7 @@ const baziStemsAndBranches = [
   },
   {
     ns: "bazi",
-    slug: "dz_hai",
+    slug: "branch_hai",
     traditional: "亥",
     polarity: "neutral",
     term: { zh: "渊流", en: "Chasm", es: "Abismo", de: "Abgrund", fr: "Abîme" },
@@ -2150,247 +2154,247 @@ const baziStemsAndBranches = [
     }
   }
 ];
-// B5批次 · glyph（17）· Houses & Levels
+// B5 批次 · Glyph 观音灵签（17）· Houses & Levels
 const glyphHousesAndLevels = [
-  // ==================== 十二宫（12）· 生命能量表达面向 ====================
+  // ==================== 一、十二宫（12）· 地支宫 ====================
   {
     ns: "glyph",
-    slug: "gl_house_self",
-    traditional: "命宮",
+    slug: "gp_zi",
+    traditional: "子宮",
     polarity: "neutral",
-    term: { zh: "本源", en: "Genesis", es: "Génesis", de: "Genesis", fr: "Genèse" },
+    term: { zh: "孕萌", en: "Gestation", es: "Gestación", de: "Keimung", fr: "Gestation" },
     definition: {
-      zh: "核心自我与根本存在，决定了你最基础的生命基调与核心人格。",
-      en: "The core self and fundamental existence, defining your most basic life theme and core personality.",
-      es: "El yo central y la existencia fundamental, que define el tema más básico de la vida y la personalidad central.",
-      de: "Das Kernselbst und die grundlegende Existenz, die das grundlegendste Lebensthema und die Kernpersönlichkeit bestimmen.",
-      fr: "Le soi central et l'existence fondamentale, définissant le thème de vie le plus basique et la personnalité centrale."
+      zh: "象征潜藏于黑暗中的生命起点，在静默中孕育未来的无限潜能。",
+      en: "Symbolizing the starting point of life hidden in the dark, nurturing infinite future potential in silence.",
+      es: "Simboliza el punto de partida de la vida oculta en la oscuridad, nutriendo el potencial futuro en silencio.",
+      de: "Symbolisiert den im Dunkeln verborgenen Ausgangspunkt des Lebens, der in der Stille unbegrenztes Zukunftspotenzial nährt.",
+      fr: "Symbolise le point de départ de la vie cachée dans l'obscurité, nourrissant un potentiel futur infini dans le silence."
     }
   },
   {
     ns: "glyph",
-    slug: "gl_house_allies",
-    traditional: "兄弟宮",
+    slug: "gp_chou",
+    traditional: "丑宮",
     polarity: "neutral",
-    term: { zh: "同侪", en: "Peers", es: "Pares", de: "Gleichgesinnte", fr: "Pairs" },
+    term: { zh: "蓄藏", en: "Storage", es: "Almacén", de: "Speicher", fr: "Stockage" },
     definition: {
-      zh: "描述与同辈、合作伙伴及亲密盟友的互动模式与能量共鸣。",
-      en: "Describing the interaction patterns and energetic resonance with peers, partners, and close allies.",
-      es: "Describe los patrones de interacción y la resonancia energética con pares, socios y aliados cercanos.",
-      de: "Beschreibt die Interaktionsmuster und die energetische Resonanz mit Gleichgesinnten, Partnern und engen Verbündeten.",
-      fr: "Décrit les schémas d'interaction et la résonance énergétique avec les pairs, les partenaires et les proches alliés."
+      zh: "象征在寒冬大地下的能量积蓄，蓄势隐忍，默默守护生命的温度。",
+      en: "Symbolizing the accumulation of energy beneath the winter earth, conserving strength and preserving vitality.",
+      es: "Simboliza la acumulación de energía bajo la tierra invernal, conservando la fuerza y preservando la vitalidad.",
+      de: "Symbolisiert die Ansammlung von Energie unter der winterlichen Erde, die Kräfte schont und die Lebenskraft bewahrt.",
+      fr: "Symbolise l'accumulation d'énergie sous la terre hivernale, préservant la force et la vitalité en silence."
     }
   },
   {
     ns: "glyph",
-    slug: "gl_house_union",
-    traditional: "夫妻宮",
+    slug: "gp_yin",
+    traditional: "寅宮",
     polarity: "neutral",
-    term: { zh: "契合", en: "Union", es: "Unión", de: "Verbindung", fr: "Union" },
+    term: { zh: "破晓", en: "Dawn", es: "Amanecer", de: "Erwachen", fr: "Aube" },
     definition: {
-      zh: "深度情感连接、亲密关系模式，以及你下意识寻找的灵魂镜面。",
-      en: "Deep emotional connections, intimate relationship patterns, and the soul mirror you unconsciously seek.",
-      es: "Conexiones emocionales profundas, patrones de relaciones íntimas y el espejo del alma que buscas inconscientemente.",
-      de: "Tiefe emotionale Verbindungen, intime Beziehungsmuster und der Spiegel der Seele, den Sie unbewusst suchen.",
-      fr: "Connexions émotionnelles profondes, schémas de relations intimes et miroir de l'âme que vous recherchez inconsciemment."
+      zh: "象征黎明破晓时的初生力量，代表冲破重重迷雾、锐意启动的新生势能。",
+      en: "Symbolizing the nascent power at break of dawn, representing the vital momentum of breaking through the mist.",
+      es: "Simboliza el poder naciente al amanecer, que representa el impulso vital de romper la niebla.",
+      de: "Symbolisiert die aufkeimende Kraft bei Tagesanbruch und steht für den vitalen Schwung, den Nebel zu durchbrechen.",
+      fr: "Symbolise le pouvoir naissant à l'aube, représentant l'élan vital de percer la brume."
     }
   },
   {
     ns: "glyph",
-    slug: "gl_house_creation",
-    traditional: "子女宮",
+    slug: "gp_mao",
+    traditional: "卯宮",
     polarity: "neutral",
-    term: { zh: "衍化", en: "Progeny", es: "Progenie", de: "Nachkommen", fr: "Progéniture" },
+    term: { zh: "蔓展", en: "Flourish", es: "Despliegue", de: "Entfaltung", fr: "Déploiement" },
     definition: {
-      zh: "创造力、艺术表达、后代传递，以及向外投射新生事物的能量。",
-      en: "Creativity, artistic expression, offspring, and the energy of projecting new creations outward.",
-      es: "Creatividad, expresión artística, descendencia y la energía de proyectar nuevas creaciones hacia el exterior.",
-      de: "Kreativität, künstlerischer Ausdruck, Nachkommen und die Energie, neue Kreationen nach außen zu tragen.",
-      fr: "Créativité, expression artistique, descendance et l'énergie de projeter de nouvelles créations vers l'extérieur."
+      zh: "象征春和景明时的枝叶伸展，代表顺应外界环境、蓬勃向上的生命张力。",
+      en: "Symbolizing the unfolding of branches in mid-spring, representing vibrant vitality adapting to the environment.",
+      es: "Simboliza el despliegue de las ramas a mediados de la primavera, representando la vitalidad que se adapta.",
+      de: "Symbolisiert das Entfalten der Zweige im Frühling und steht für lebendige Vitalität, die sich anpasst.",
+      fr: "Symbolise le déploiement des branches au milieu du printemps, représentant une vitalité vibrante qui s'adapte."
     }
   },
   {
     ns: "glyph",
-    slug: "gl_house_treasury",
-    traditional: "財帛宮",
+    slug: "gp_chen",
+    traditional: "辰宮",
     polarity: "neutral",
-    term: { zh: "丰盈", en: "Prosperity", es: "Prosperidad", de: "Wohlstand", fr: "Prospérité" },
+    term: { zh: "汇融", en: "Synthesis", es: "Síntesis", de: "Synthese", fr: "Synthèse" },
     definition: {
-      zh: "物质资源的获取方式、财富流转逻辑，以及你对价值的感知与显化。",
-      en: "Methods of acquiring material resources, wealth flow logic, and your perception and manifestation of value.",
-      es: "Métodos para adquirir recursos materiales, lógica del flujo de riqueza y tu percepción y manifestación del valor.",
-      de: "Methoden zum Erwerb materieller Ressourcen, Logik des Geldflusses sowie Ihre Wahrnehmung und Manifestation von Werten.",
-      fr: "Méthodes d'acquisition des ressources matérielles, logique du flux de richesse, et votre perception et manifestation de la valeur."
+      zh: "象征汇聚春末雨露的包容之土，代表极强的资源整合力与跨界承载力。",
+      en: "Symbolizing the inclusive soil of late spring, representing strong resource integration and cross-boundary capacity.",
+      es: "Simboliza el suelo inclusivo de finales de primavera, que representa una gran integración de recursos.",
+      de: "Symbolisiert den fruchtbaren Boden des Spätfrühlings und steht für starke Ressourcenintegration.",
+      fr: "Symbolise le sol inclusif de la fin du printemps, représentant une forte intégration des ressources."
     }
   },
   {
     ns: "glyph",
-    slug: "gl_house_vessel",
-    traditional: "疾厄宮",
+    slug: "gp_si",
+    traditional: "巳宮",
     polarity: "neutral",
-    term: { zh: "形躯", en: "Vessel", es: "Templo", de: "Hülle", fr: "Vaisseau" },
+    term: { zh: "微明", en: "Glimmer", es: "Vislumbre", de: "Schimmer", fr: "Lueur" },
     definition: {
-      zh: "身体容器的生命状态、本能感知、健康模式以及潜意识压力的生理投射。",
-      en: "The vital state of the physical vessel, instinctual perception, health patterns, and somatic projections of subconscious stress.",
-      es: "El estado vital del templo físico, la percepción instintiva, los patrones de salud y las proyecciones somáticas del estrés subconsciente.",
-      de: "Der vitale Zustand des physischen Körpers, instinktive Wahrnehmung, Gesundheitssysteme und somatische Projektionen von unbewusstem Stress.",
-      fr: "L'état vital de l'enveloppe physique, la perception instinctive, les schémas de santé et les projections somatiques du stress inconscient."
+      zh: "象征初夏清晨的温煦微光，代表思维在静默中的快速蜕变与内在智慧的觉醒。",
+      en: "Symbolizing the gentle glimmer of early summer, representing the rapid transformation of thoughts and inner wisdom.",
+      es: "Simboliza el suave vislumbre del inicio del verano, que representa la transformación del pensamiento.",
+      de: "Symbolisiert den sanften Schimmer des Frühsommers und steht für die Transformation des Denkens.",
+      fr: "Symbolise la douce lueur du début de l'été, représentant la transformation de la pensée."
     }
   },
   {
     ns: "glyph",
-    slug: "gl_house_horizon",
-    traditional: "遷移宮",
+    slug: "gp_wu",
+    traditional: "午宮",
     polarity: "neutral",
-    term: { zh: "远景", en: "Horizon", es: "Horizonte", de: "Horizont", fr: "Horizon" },
+    term: { zh: "显耀", en: "Radiance", es: "Radiancia", de: "Strahlkraft", fr: "Rayonnement" },
     definition: {
-      zh: "社交面貌、外部环境适应力、远行以及你在陌生领域探索的能量表现。",
-      en: "Social projection, adaptation to external environments, travel, and your energetic performance when exploring unfamiliar domains.",
-      es: "Proyección social, adaptación a entornos externos, viajes y tu desempeño energético al explorar dominios desconocidos.",
-      de: "Soziale Außenwirkung, Anpassung an neue Umgebungen, Reisen und Ihre energetische Präsenz beim Erkunden unbekannter Bereiche.",
-      fr: "Projection sociale, adaptation aux environnements externes, voyages et votre performance énergétique lors de l'exploration de domaines inconnus."
+      zh: "象征仲夏正午的极致光芒，代表能量的无保留释放与追求完美的极致展现。",
+      en: "Symbolizing the peak light of mid-summer noon, representing the unreserved release of energy.",
+      es: "Simboliza la luz máxima del mediodía de verano, que representa la liberación de energía sin reservas.",
+      de: "Symbolisiert das strahlende Licht des Mittsommers und steht für die uneingeschränkte Freisetzung von Energie.",
+      fr: "Symbolise la lumière maximale du milieu de l'été, représentant la libération d'énergie sans réserve."
     }
   },
   {
     ns: "glyph",
-    slug: "gl_house_network",
-    traditional: "交友宮",
+    slug: "gp_wei",
+    traditional: "未宮",
     polarity: "neutral",
-    term: { zh: "共生", en: "Synergy", es: "Sinergia", de: "Synergie", fr: "Synergie" },
+    term: { zh: "沉敛", en: "Consolidation", es: "Consolidación", de: "Konsolidierung", fr: "Consolidation" },
     definition: {
-      zh: "与更广泛社会群体的协作交互模式，代表团队、社群以及集体共鸣。",
-      en: "Collaborative interaction patterns with broader social groups, representing teams, communities, and collective resonance.",
-      es: "Patrones de interacción colaborativa con grupos sociales más amplios, representando equipos, comunidades y resonancia colectiva.",
-      de: "Kollaborative Interaktionsmuster mit breiteren sozialen Gruppen, die Teams, Gemeinschaften und kollektive Resonanz darstellen.",
-      fr: "Schémas d'interaction collaborative avec des groupes sociaux plus larges, représentant les équipes, les communautés et la résonance collective."
+      zh: "象征热度退去后的沉静大地，代表事物在繁华过后的稳步落地与内在品质的沉淀。",
+      en: "Symbolizing the calm earth after heat recedes, representing steady grounding and inner sedimentation.",
+      es: "Simboliza la tierra tranquila después de que el calor disminuye, representando el asentamiento estable.",
+      de: "Symbolisiert die ruhige Erde nach dem Abklingen der Hitze und steht für Stabilität und innere Reife.",
+      fr: "Symbolise la terre calme après la baisse de la chaleur, représentant la stabilité et la maturation intérieure."
     }
   },
   {
     ns: "glyph",
-    slug: "gl_house_calling",
-    traditional: "官祿宮",
+    slug: "gp_shen",
+    traditional: "申宮",
     polarity: "neutral",
-    term: { zh: "志业", en: "Vocation", es: "Vocación", de: "Berufung", fr: "Vocation" },
+    term: { zh: "重塑", en: "Reshaping", es: "Remodelación", de: "Umgestaltung", fr: "Remodelage" },
     definition: {
-      zh: "职业追求、社会定位与自我价值的显化通路，代表你的天职与创造性贡献。",
-      en: "Career pursuits, social positioning, and the manifestation path of self-worth, representing your vocation and creative contribution.",
-      es: "Búsquedas profesionales, posicionamiento social y el camino de manifestación de la autoestima, representando tu vocación y contribución creativa.",
-      de: "Karrieredynamik, gesellschaftliche Positionierung und der Manifestationsweg des Selbstwerts, der Ihre Berufung und Ihren kreativen Beitrag darstellt.",
-      fr: "Poursuites professionnelles, positionnement social et chemin de manifestation de l'estime de soi, représentant votre vocation et votre contribution créative."
+      zh: "象征初秋肃杀风中的理智重组，代表打破混乱秩序、果决开辟新格局的变革行动。",
+      en: "Symbolizing rational reorganization in early autumn, representing decisive action to break chaos and reshape patterns.",
+      es: "Simboliza la reorganización racional a principios de otoño, que representa una acción decisiva.",
+      de: "Symbolisiert die rationale Reorganisation im Frühherbst und steht für entschlossenes Handeln zur Neuordnung.",
+      fr: "Symbolise la réorganisation rationnelle au début de l'automne, représentant une action décisive pour réorganiser."
     }
   },
   {
     ns: "glyph",
-    slug: "gl_house_sanctuary",
-    traditional: "田宅宮",
+    slug: "gp_you",
+    traditional: "酉宮",
     polarity: "neutral",
-    term: { zh: "栖所", en: "Haven", es: "Refugio", de: "Hort", fr: "Refuge" },
+    term: { zh: "精锻", en: "Refinement", es: "Refinamiento", de: "Verfeinerung", fr: "Raffinement" },
     definition: {
-      zh: "居住环境、安全感根基、家族潜移默化的影响，以及你深度放松和充能的安全屋。",
-      en: "Living environment, the foundation of safety, family heritage influence, and the safe haven where you deeply relax and recharge.",
-      es: "Entorno de vida, base de la seguridad, influencia de la herencia familiar y el refugio seguro donde te relajas y recargas profundamente.",
-      de: "Wohnumgebung, das Fundament der Sicherheit, Einflüsse des familiären Erbes und der sichere Hafen, an dem Sie tief entspannen und Kraft tanken.",
-      fr: "Environnement de vie, fondement de la sécurité, influence de l'héritage familial et refuge sûr où se détendre et se ressourcer en profondeur."
+      zh: "象征深秋金石的提纯与雕琢，代表对自我技艺的极致追求与完美经验的结晶。",
+      en: "Symbolizing the purification of autumn metal, representing the ultimate pursuit of craftsmanship.",
+      es: "Simboliza la purificación del metal de otoño, que representa la búsqueda del refinamiento.",
+      de: "Symbolisiert die Veredelung des herbstlichen Metalls und steht für das Streben nach Perfektion.",
+      fr: "Symbolise la purification du métal d'automne, représentant la quête de perfection et de raffinement."
     }
   },
   {
     ns: "glyph",
-    slug: "gl_house_psyche",
-    traditional: "福德宮",
+    slug: "gp_xu",
+    traditional: "戌宮",
     polarity: "neutral",
-    term: { zh: "心域", en: "Psyche", es: "Psique", de: "Psyche", fr: "Psyché" },
+    term: { zh: "守御", en: "Guardianship", es: "Custodia", de: "Bewahrung", fr: "Garde" },
     definition: {
-      zh: "精神世界、潜意识福报、内在宁静感，以及你消解烦恼的自我精神疗愈机制。",
-      en: "The spiritual world, subconscious fortune, inner peace, and your self-healing mechanisms for releasing worries.",
-      es: "El mundo espiritual, la fortuna subconsciente, la paz interior y tus mecanismos de autocuración para liberar preocupaciones.",
-      de: "Die geistige Welt, unbewusstes Glück, innerer Frieden und Ihre Selbstheilungsmechanismen zur Bewältigung von Sorgen.",
-      fr: "Le monde spirituel, la fortune subconsciente, la paix intérieure et vos mécanismes d'auto-guérison pour libérer les soucis."
+      zh: "象征深秋大地的坚固防线，代表建立清晰的边界，默默守护事物的核心财富。",
+      en: "Symbolizing the firm defense of the late autumn earth, representing establishing clear boundaries to guard core values.",
+      es: "Simboliza la defensa firme de la tierra a finales de otoño, estableciendo límites claros para proteger valores.",
+      de: "Symbolisiert die feste Verteidigung des Spätherbstes, um klare Grenzen zum Schutz des Kerns zu ziehen.",
+      fr: "Symbolise la défense ferme de la fin de l'automne, établissant des limites claires pour protéger le cœur."
     }
   },
   {
     ns: "glyph",
-    slug: "gl_house_lineage",
-    traditional: "父母宮",
+    slug: "gp_hai",
+    traditional: "亥宮",
     polarity: "neutral",
-    term: { zh: "溯源", en: "Lineage", es: "Linaje", de: "Ahnenlinie", fr: "Lignage" },
+    term: { zh: "循复", en: "Recursion", es: "Recursión", de: "Rekursion", fr: "Récursion" },
     definition: {
-      zh: "原生家庭的能量打底、父辈遗传影响，以及你面对更高阶权威和规则时的态度。",
-      en: "The energetic blueprint of your family of origin, parental genetic influence, and your attitude toward higher authority and rules.",
-      es: "El plano energético de tu familia de origen, la influencia genética de los padres y tu actitud hacia la autoridad y las reglas superiores.",
-      de: "Die energetische Blaupause der Herkunftsfamilie, der elterliche genetische Einfluss und Ihre Einstellung gegenüber höherer Autorität und Regeln.",
-      fr: "Le schéma énergétique de votre famille d'origine, l'influence génétique parentale et votre attitude face aux autorités et règles supérieures."
+      zh: "象征万水汇流的冬日循环，代表旧阶段的圆满收尾与生命能量在静默中的迭代过渡。",
+      en: "Symbolizing the winter water cycle, representing the completion of a phase and iterative transition.",
+      es: "Simboliza el ciclo del agua en invierno, que representa la finalización de una fase y la transición.",
+      de: "Symbolisiert den winterlichen Wasserkreislauf und steht für den Abschluss einer Phase und den Übergang.",
+      fr: "Symbolise le cycle de l'eau en hiver, représentant l'achèvement d'une phase et la transition."
     }
   },
 
-  // ==================== 等级（5）· 星盘能量状态 ====================
+  // ==================== 二、等级（5）· 势能状态 ====================
   {
     ns: "glyph",
-    slug: "gl_level_brilliance",
+    slug: "divine_tailwind",
     traditional: "廟",
-    polarity: "neutral",
-    term: { zh: "炽曜", en: "Brilliance", es: "Brillantez", de: "Glanz", fr: "Brillance" },
+    polarity: "favorable",
+    term: { zh: "乘风", en: "Soaring Tailwind", es: "Viento Favorable", de: "Rückenwind", fr: "Vent Arrière" },
     definition: {
-      zh: "能量呈极盛绽放状态，毫无保留地投射其特质，主导并引领当下维度。",
-      en: "Energy in a state of peak bloom, unreservedly projecting its traits, dominating and leading the current dimension.",
-      es: "Energía en un estado de máxima floración, proyectando sus rasgos sin reservas, dominando y liderando la dimensión actual.",
-      de: "Energie im Zustand der maximalen Entfaltung, die ihre Eigenschaften uneingeschränkt entfaltet und die aktuelle Dimension dominiert.",
-      fr: "L'énergie à son apogée, projetant ses caractéristiques sans réserve, dominant et guidant la dimension actuelle."
+      zh: "势能极盛且顺畅无阻的状态，如同乘风翱翔，推动事物高效向前发展。",
+      en: "A state of peak and unobstructed momentum, like soaring with the wind, driving rapid forward development.",
+      es: "Un estado de impulso máximo y sin obstáculos, como planear con el viento, impulsando un rápido avance.",
+      de: "Ein Zustand maximaler und ungehinderter Dynamik, wie das Segeln mit dem Wind, der eine rasche Entwicklung vorantreibt.",
+      fr: "Un état d'élan maximal et sans obstacle, comme planer avec le vent, favorisant un développement rapide."
     }
   },
   {
     ns: "glyph",
-    slug: "gl_level_vigor",
+    slug: "fair_sky",
     traditional: "旺",
-    polarity: "neutral",
-    term: { zh: "充沛", en: "Vigor", es: "Vigor", de: "Vitalität", fr: "Vigueur" },
+    polarity: "favorable",
+    term: { zh: "晴空", en: "Fair Sky", es: "Cielo Despejado", de: "Heiterer Himmel", fr: "Ciel Dégagé" },
     definition: {
-      zh: "能量丰沛、稳定且充满建设性，能积极、顺畅地输出高品质特质。",
-      en: "Abundant, stable, and constructive energy, capable of actively and smoothly exporting high-quality traits.",
-      es: "Energía abundante, estable y constructiva, capaz de exportar de manera activa y fluida rasgos de alta calidad.",
-      de: "Reichliche, stabile und konstruktive Energie, die in der Lage ist, aktiv und reibungslos hochwertige Eigenschaften einzubringen.",
-      fr: "Énergie abondante, stable et constructive, capable d'exprimer activement et de manière fluide des caractéristiques de qualité supérieure."
+      zh: "环境开阔且阻力微弱的状态，如同行于晴空之下，利于稳步推进既定计划。",
+      en: "A state of open environment and low resistance, like walking under a clear sky, favorable for steady progress.",
+      es: "Un estado de entorno abierto y baja resistencia, como caminar bajo un cielo despejado, ideal para avanzar con firmeza.",
+      de: "Ein Zustand offener Umgebung und geringen Widerstands, wie das Gehen unter klarem Himmel, ideal für stetigen Fortschritt.",
+      fr: "Un état d'environnement ouvert et de faible résistance, comme marcher sous un ciel dégagé, propice à un progrès régulier."
     }
   },
   {
     ns: "glyph",
-    slug: "gl_level_equilibrium",
+    slug: "still_water",
     traditional: "得",
     polarity: "neutral",
-    term: { zh: "平衡", en: "Equilibrium", es: "Equilibrio", de: "Gleichgewicht", fr: "Équilibre" },
+    term: { zh: "止水", en: "Still Water", es: "Agua Calma", de: "Stilles Wasser", fr: "Eau Calme" },
     definition: {
-      zh: "能量温和、中规中矩，处于不偏不倚的守恒状态，表现稳定且不具有侵略性。",
-      en: "Gentle and moderate energy, in an unbiased state of conservation, with stable performance and no aggressiveness.",
-      es: "Energía suave y moderada, en un estado de conservación imparcial, con un rendimiento estable y sin agresividad.",
-      de: "Sanfte und moderate Energie im ausgeglichenen Erhaltungszustand, mit stabiler Wirkung und ohne Aggressivität.",
-      fr: "Énergie douce et modérée, dans un état de conservation impartial, avec une performance stable et sans agressivité."
+      zh: "能量均衡、波澜不惊的守恒状态，如同深潭止水，适合沉淀思绪与保持现状。",
+      en: "A balanced and undisturbed state of energy, like deep still water, suitable for consolidating thoughts and maintaining status.",
+      es: "Un estado de energía equilibrado y sin perturbaciones, como el agua calma, ideal para consolidar pensamientos.",
+      de: "Ein ausgeglichener und ruhiger Zustand der Energie, wie stilles Wasser, ideal zum Sammeln von Gedanken.",
+      fr: "Un état d'énergie équilibré et imperturbable, comme une eau calme, propice à la consolidation des pensées."
     }
   },
   {
     ns: "glyph",
-    slug: "gl_level_subtle",
+    slug: "crosswind",
     traditional: "閒",
-    polarity: "neutral",
-    term: { zh: "隐微", en: "Subtle", es: "Sutil", de: "Subtil", fr: "Subtil" },
+    polarity: "caution",
+    term: { zh: "侧风", en: "Crosswind", es: "Viento Cruzado", de: "Seitenwind", fr: "Vent Latéral" },
     definition: {
-      zh: "能量表现偏于低调、平淡，不温不火地日常维持，缺乏鲜明的爆发力。",
-      en: "The energy expression is low-key and plain, maintaining a lukewarm daily routine without distinct explosive power.",
-      es: "La expresión de la energía es discreta y simple, manteniendo una rutina diaria templada sin un poder explosivo claro.",
-      de: "Die Energie ist unaufdringlich und schlicht, erhält eine ausgeglichene Alltagsroutine aufrecht, ohne ausgeprägte Dynamik.",
-      fr: "L'expression de l'énergie est discrète et simple, maintenant une routine quotidienne tiède sans puissance explosive marquée."
+      zh: "遭遇侧向干扰、需要调整航向的状态，如同面对侧风，适合减缓节奏并灵活应对。",
+      en: "A state of experiencing lateral interference, like facing a crosswind, suitable for slowing down and adjusting course.",
+      es: "Un estado que experimenta interferencia lateral, como enfrentar un viento cruzado, ideal para reducir el ritmo.",
+      de: "Ein Zustand mit seitlichen Störungen, wie bei Seitenwind, ideal, um das Tempo zu drosseln und den Kurs anzupassen.",
+      fr: "Un état subissant des interférences latérales, comme faire face à un vent de travers, propice à ralentir et s'ajuster."
     }
   },
   {
     ns: "glyph",
-    slug: "gl_level_eclipse",
+    slug: "eye_of_storm",
     traditional: "陷",
-    polarity: "neutral",
-    term: { zh: "掩蔽", en: "Eclipse", es: "Eclipse", de: "Finsternis", fr: "Éclipse" },
+    polarity: "caution",
+    term: { zh: "风眼", en: "Eye of Storm", es: "Ojo de la Tormenta", de: "Auge des Sturms", fr: "Œil de la Tempête" },
     definition: {
-      zh: "能量高度内敛或被遮蔽，外显受阻，需通过深度反思与内部转化来唤醒其潜能。",
-      en: "Highly introverted or obscured energy, with outward expression blocked; needs deep reflection and internal transformation to awaken potential.",
-      es: "Energía altamente introvertida u oscurecida, con expresión externa bloqueada; requiere una reflexión profunda y transformación interna para despertar su potencial.",
-      de: "Stark introvertierte oder verdeckte Energie, deren Ausdruck nach außen blockiert ist; erfordert tiefe Reflexion und Transformation, um das Potenzial zu wecken.",
-      fr: "Énergie hautement introvertie ou obscurcie, dont l'expression extérieure est bloquée ; nécessite une réflexion profonde et une transformation interne pour éveiller son potentiel."
+      zh: "处于剧烈波动核心的短暂平静状态，如同身处风眼，适合保持绝对定力、以静制动。",
+      en: "A state of temporary calm at the center of intense fluctuations, like being in the eye of a storm, requiring absolute stillness.",
+      es: "Un estado de calma temporal en el centro de fluctuaciones intensas, como estar en el ojo de la tormenta, que exige quietud.",
+      de: "Ein Zustand vorübergehender Stille im Zentrum intensiver Schwankungen, wie im Auge des Sturms, der absolute Ruhe erfordert.",
+      fr: "Un état de calme temporaire au centre de fluctuations intenses, comme être dans l'œil de la tempête, exigeant le calme absolu."
     }
   }
 ];
@@ -2399,8 +2403,8 @@ const qimenCyclesAndPhases = [
   // ==================== 二遁（2）· 能量流动大势 ====================
   {
     ns: "qimen",
-    slug: "qm_dun_yang",
-    traditional: "阳遁",
+    slug: "qm_yang_dun",
+    traditional: "陽遁",
     polarity: "neutral",
     term: { zh: "升演", en: "Ascent", es: "Ascenso", de: "Aufstieg", fr: "Ascension" },
     definition: {
@@ -2413,8 +2417,8 @@ const qimenCyclesAndPhases = [
   },
   {
     ns: "qimen",
-    slug: "qm_dun_yin",
-    traditional: "阴遁",
+    slug: "qm_yin_dun",
+    traditional: "陰遁",
     polarity: "neutral",
     term: { zh: "潜演", en: "Descent", es: "Descenso", de: "Abstieg", fr: "Descente" },
     definition: {
@@ -2429,7 +2433,7 @@ const qimenCyclesAndPhases = [
   // ==================== 三元（3）· 演化时序阶段 ====================
   {
     ns: "qimen",
-    slug: "qm_yuan_upper",
+    slug: "qm_yuan_shang",
     traditional: "上元",
     polarity: "neutral",
     term: { zh: "启序", en: "Inception", es: "Preludio", de: "Auftakt", fr: "Prélude" },
@@ -2443,7 +2447,7 @@ const qimenCyclesAndPhases = [
   },
   {
     ns: "qimen",
-    slug: "qm_yuan_middle",
+    slug: "qm_yuan_zhong",
     traditional: "中元",
     polarity: "neutral",
     term: { zh: "承序", en: "Resonance", es: "Resonancia", de: "Resonanz", fr: "Résonance" },
@@ -2457,7 +2461,7 @@ const qimenCyclesAndPhases = [
   },
   {
     ns: "qimen",
-    slug: "qm_yuan_lower",
+    slug: "qm_yuan_xia",
     traditional: "下元",
     polarity: "neutral",
     term: { zh: "归序", en: "Resolution", es: "Resolución", de: "Ausklang", fr: "Résolution" },

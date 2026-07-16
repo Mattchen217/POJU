@@ -1,8 +1,10 @@
 /**
  * Closed-set glossary entries (A1–A7) — one independent row per engine-computed term.
+ * Soft labels + gloss overlay from POJU_TERMS (SSOT); forbidden_variants stay here.
  */
 
 import type { GlossaryConcept, Locale } from "@/lib/glossary/term-glossary";
+import { pojuTermByTraditional } from "@/lib/glossary/pojulife-terms";
 
 type SoftGloss = { soft: Record<Locale, string>; gloss: Record<Locale, string> };
 
@@ -360,7 +362,32 @@ const MATCH_RELATIONS: GlossaryConcept[] = [
   ce("三合", ["San He", "Three Harmonies"], sg("triple alliance", "三合联盟", "alianza", "alliance", "Bündnis", "Three branches forming combined momentum.", "三支合力成势。", "Alianza triple.", "Alliance triple.", "Dreierbündnis.")),
 ];
 
-export const CLOSED_SET_GLOSSARY_ENTRIES: GlossaryConcept[] = [
+function overlayPojuSoftGloss(entries: GlossaryConcept[]): GlossaryConcept[] {
+  return entries.map((c) => {
+    const t = pojuTermByTraditional(c.id, "bazi") ?? pojuTermByTraditional(c.id);
+    if (!t) return c;
+    return {
+      ...c,
+      soft: {
+        zh: t.term.zh,
+        en: t.term.en,
+        es: t.term.es,
+        de: t.term.de,
+        fr: t.term.fr,
+      },
+      gloss: {
+        zh: t.definition.zh,
+        en: t.definition.en,
+        es: t.definition.es,
+        de: t.definition.de,
+        fr: t.definition.fr,
+      },
+    };
+  });
+}
+
+/** Soft/gloss from POJU_TERMS when present; forbidden_variants remain local. */
+export const CLOSED_SET_GLOSSARY_ENTRIES: GlossaryConcept[] = overlayPojuSoftGloss([
   ...SHEN_SHA,
   ...TEN_GODS,
   ...LIFE_STAGES,
@@ -368,7 +395,7 @@ export const CLOSED_SET_GLOSSARY_ENTRIES: GlossaryConcept[] = [
   ...BRANCHES,
   ...STRUCTURAL,
   ...MATCH_RELATIONS,
-];
+]);
 
 export const SUPERSEDED_GLOSSARY_IDS = new Set([
   "十神", "正财偏财", "正官偏官", "正印偏印", "比肩劫财", "神煞", "贵人",

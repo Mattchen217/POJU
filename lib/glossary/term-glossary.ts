@@ -9,6 +9,10 @@ import {
   SUPERSEDED_GLOSSARY_IDS,
 } from "@/lib/glossary/term-glossary-closed";
 import { CLOSED_SET_REPLACE_IDS } from "@/lib/glossary/term-closed-set";
+import {
+  pojuTermBySlug,
+  pojuTermByTraditional,
+} from "@/lib/glossary/pojulife-terms";
 
 export type Locale = "en" | "zh" | "es" | "fr" | "de";
 export type Surface = "replace" | "allow" | "delete";
@@ -973,6 +977,11 @@ export const AUDIT_ALLOW_LABELS: Set<string> = new Set(
 );
 
 export function softFor(id: string, locale: Locale): string {
+  const fromPoju =
+    pojuTermByTraditional(id) ?? pojuTermByTraditional(id, "bazi") ?? pojuTermBySlug(id);
+  if (fromPoju) {
+    return fromPoju.term[locale] || fromPoju.term.en || fromPoju.term.zh || "";
+  }
   const c = TERM_GLOSSARY.find((x) => x.id === id);
   return c?.soft[locale] ?? "";
 }

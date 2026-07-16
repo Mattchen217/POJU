@@ -1,0 +1,36 @@
+name: Verify terms
+
+on:
+  push:
+    paths:
+      - "lib/glossary/**"
+      - "lib/glyph/glyph-slug.ts"
+      - "lib/qimen/qimen-slug.ts"
+      - "docs/完整重命名清单（157）.json"
+      - "scripts/verify-terms.ts"
+      - "scripts/generate-poju-terms.mjs"
+      - "package.json"
+  pull_request:
+    paths:
+      - "lib/glossary/**"
+      - "lib/glyph/glyph-slug.ts"
+      - "lib/qimen/qimen-slug.ts"
+      - "docs/完整重命名清单（157）.json"
+      - "scripts/verify-terms.ts"
+      - "scripts/generate-poju-terms.mjs"
+      - "package.json"
+
+jobs:
+  verify-terms:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run verify:terms

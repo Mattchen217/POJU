@@ -33,6 +33,13 @@ import {
   type Locale,
   toGlossaryLocale,
 } from "@/lib/glossary/term-glossary";
+import {
+  POJU_TERMS,
+  glossOf,
+  pojuTermBySlug,
+  termOf,
+  type PojuTerm,
+} from "@/lib/glossary/pojulife-terms";
 import { buildClosedSetConstraintPromptBlock } from "@/lib/llm/prompts/term-closed-set-constraint";
 import { STEMS } from "@/lib/match/data/stems-branches";
 import {
@@ -51,8 +58,31 @@ export type TermEntry = {
   plain: Record<Locale, string>;
 };
 
-/** Glossary rows injected into delivery prompts (closed-set 命理 · cache-stable). */
-const DELIVERY_MARKING_GLOSSARY_IDS = CLOSED_SET_REPLACE_IDS.filter((id) => id !== "羊刃");
+/** Glossary rows injected into delivery prompts — from POJU_TERMS SSOT. */
+function pojuToTermEntry(t: PojuTerm): TermEntry {
+  const closed = CLOSED_SET_GLOSSARY_ENTRIES.find(
+    (c) => c.id === t.traditional || CLOSED_SET_SLUG[c.id] === t.slug,
+  );
+  return {
+    id: t.slug,
+    forbidden: closed ? [...closed.forbidden_variants] : [t.traditional],
+    soft: {
+      zh: t.term.zh,
+      en: t.term.en,
+      es: t.term.es,
+      de: t.term.de,
+      fr: t.term.fr,
+    },
+    keep_cn: KEEP_CN_SLUGS.has(t.slug),
+    plain: {
+      zh: t.definition.zh,
+      en: t.definition.en,
+      es: t.definition.es,
+      de: t.definition.de,
+      fr: t.definition.fr,
+    },
+  };
+}
 
 function pickFiveLocale(
   bag: Partial<Record<Locale, string>> | undefined,
@@ -63,6 +93,11 @@ function pickFiveLocale(
 }
 
 function softLabel(entry: TermEntry, loc: Locale): string {
+  // SSOT soft labels from POJU_TERMS win over KEEP_CN_VISIBLE_SOFT overrides.
+  const poju = pojuTermBySlug(entry.id);
+  if (poju) {
+    return (poju.term[loc] || poju.term.en || poju.term.zh || "").trim();
+  }
   const override = KEEP_CN_VISIBLE_SOFT[entry.id];
   if (override) {
     return pickFiveLocale(override, loc);
@@ -75,6 +110,8 @@ function softLabel(entry: TermEntry, loc: Locale): string {
 function conceptToTermEntry(c: GlossaryConcept): TermEntry | null {
   if (c.surface === "delete" || c.surface === "allow") return null;
   const id = CLOSED_SET_SLUG[c.id] ?? c.id.replace(/[^a-zA-Z0-9_]/g, "_");
+  const poju = pojuTermBySlug(id) ?? (CLOSED_SET_SLUG[c.id] ? pojuTermBySlug(CLOSED_SET_SLUG[c.id]!) : undefined);
+  if (poju) return pojuToTermEntry(poju);
   return {
     id,
     forbidden: [...c.forbidden_variants],
@@ -84,16 +121,20 @@ function conceptToTermEntry(c: GlossaryConcept): TermEntry | null {
   };
 }
 
-export const TERM_ENTRIES: TermEntry[] = TERM_GLOSSARY.map(conceptToTermEntry).filter(
-  (e): e is TermEntry => e !== null,
-);
+export const TERM_ENTRIES: TermEntry[] = (() => {
+  const fromPoju = POJU_TERMS.map(pojuToTermEntry);
+  const byId = new Map(fromPoju.map((e) => [e.id, e]));
+  for (const c of TERM_GLOSSARY) {
+    const e = conceptToTermEntry(c);
+    if (!e) continue;
+    if (!byId.has(e.id)) byId.set(e.id, e);
+  }
+  return [...byId.values()];
+})();
 
 const TERM_BY_ID = new Map(TERM_ENTRIES.map((e) => [e.id, e]));
 
-const DELIVERY_MARKING_ENTRIES: TermEntry[] = DELIVERY_MARKING_GLOSSARY_IDS.map((hanId) => {
-  const concept = CLOSED_SET_GLOSSARY_ENTRIES.find((c) => c.id === hanId);
-  return concept ? conceptToTermEntry(concept) : null;
-}).filter((e): e is TermEntry => e !== null);
+const DELIVERY_MARKING_ENTRIES: TermEntry[] = POJU_TERMS.map(pojuToTermEntry);
 
 /** LLM term marker — UI parses `⟦t:id|visible|plain⟧` (plain optional). Legacy 2-segment + `⟦g|…⟧` supported. */
 export const TERM_MARKER_PATTERN =
@@ -615,11 +656,23 @@ export function plainByTermId(termId: string, locale: string): string | null {
   const tension = TEN_GOD_TENSION_SOFT[termId as keyof typeof TEN_GOD_TENSION_SOFT];
   if (tension) return pickFiveLocale(tension, loc) || null;
   const relKind = relationKindFromMarkerId(termId);
-  if (relKind) return pickFiveLocale(RELATION_KIND_SOFT[relKind], loc) || null;
+  if (relKind) {
+    // Prefer SSOT definition for bare relation kind slugs (chong / liuhe / …).
+    const ssotKind = glossOf("bazi", relKind, loc);
+    if (ssotKind && termId === relKind) return ssotKind;
+    return pickFiveLocale(RELATION_KIND_SOFT[relKind], loc) || null;
+  }
   if (termId === BARE_GANZHI_MARKER.slug) return pickFiveLocale(BARE_GANZHI_MARKER.gloss, loc) || null;
   const hr = highRiskSoftBySlug(termId);
   if (hr) return pickFiveLocale(hr.gloss, loc) || null;
-  const entry = TERM_BY_ID.get(termId);
+
+  const leaf = termId.includes(":") ? termId.split(":").pop()! : termId;
+  const poju = pojuTermBySlug(leaf) ?? pojuTermBySlug(termId);
+  if (poju) {
+    return glossOf(poju.ns, poju.slug, loc);
+  }
+
+  const entry = TERM_BY_ID.get(termId) ?? TERM_BY_ID.get(leaf);
   if (!entry) return null;
   return pickFiveLocale(entry.plain, loc) || null;
 }
@@ -635,7 +688,7 @@ export function uiTermById(
     return { soft, plain: soft, polarity: termPolarityById(termId) };
   }
   const relKind = relationKindFromMarkerId(termId);
-  if (relKind) {
+  if (relKind && termId !== relKind) {
     const soft = pickFiveLocale(RELATION_KIND_SOFT[relKind], loc);
     return { soft, plain: soft, polarity: termPolarityById(termId) };
   }
@@ -654,7 +707,18 @@ export function uiTermById(
       polarity: "neutral",
     };
   }
-  const entry = TERM_BY_ID.get(termId);
+
+  const leaf = termId.includes(":") ? termId.split(":").pop()! : termId;
+  const poju = pojuTermBySlug(leaf) ?? pojuTermBySlug(termId);
+  if (poju) {
+    return {
+      soft: termOf(poju.ns, poju.slug, loc) ?? poju.term.en,
+      plain: glossOf(poju.ns, poju.slug, loc) ?? poju.definition.en,
+      polarity: poju.polarity,
+    };
+  }
+
+  const entry = TERM_BY_ID.get(termId) ?? TERM_BY_ID.get(leaf);
   if (!entry) return null;
   return {
     soft: softLabel(entry, loc),
