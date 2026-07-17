@@ -130,7 +130,7 @@ const BASE_ANALYSIS_NARRATIVE_BREVITY_ZH = `# 叙事精简 · 禁止逐柱复述
 - 原始配置由 **structured JSON** 完整注入下游；叙事复述既冗余，又是**神煞幻觉高发区**。
 - **不要**写「四柱命盘数据」「大运能量气候概览」分区；时机与干支纪年留给下游。
 - 允许在五块中点名：**格局、用神/喜忌方向、关键十神机制组合**——只能引用 structured 实有字段，**不得新增神煞**。
-- \`strength\`（强弱）**仅供你推理**——用户正文【禁止】写出「身弱/身强/身旺」；软译成「燃料容易跟不上 / 燃料底盘充沛」等。`;
+- \`strength\`（强弱）**仅供你推理**——用户正文【禁止】写出「身弱/身强/身旺」；软译说法**一律以上方【绝对禁词】块里的对照表为准**，这里不另立第二套说法。`;
 
 const BASE_ANALYSIS_NARRATIVE_BREVITY_EN = `# Narrative brevity · no pillar dumps (accuracy)
 
@@ -138,7 +138,7 @@ const BASE_ANALYSIS_NARRATIVE_BREVITY_EN = `# Narrative brevity · no pillar dum
 - Raw config is injected downstream via **structured JSON**; narrative re-listing is redundant and a **shen_sha hallucination hotspot**.
 - **Do not** write "Four-Pillar Configuration" or "Decade Energy Climate Overview" sections; timing and Ganzhi years belong downstream.
 - You may name **pattern / favorable directions / key ten-god mechanisms** in the five sections—**structured fields only**; **no new shen_sha**.
-- \`strength\` is for your reasoning only—**never** write "weak self / strong self / 身弱 / 身强" in user copy; soft-translate ("fuel runs short easily" / "deep fuel reserves").`;
+- \`strength\` is for your reasoning only—**never** write "weak self / strong self / 身弱 / 身强" in user copy; use the soft-translation table in the absolute-bans block above—do not invent a second wording here.`;
 
 const BASE_ANALYSIS_BINDING_RULES = `# 绑定计算结果 · 闭集 · 禁幻觉
 

@@ -44,6 +44,7 @@ import {
 } from "@/lib/glossary/pojulife-terms";
 import {
   BANNED_TERMS_ZH,
+  BANNED_TERM_SOFT_ZH,
   metaphorBlacklistForLocale,
 } from "@/lib/llm/compliance/banned-terms";
 import { buildClosedSetConstraintPromptBlock } from "@/lib/llm/prompts/term-closed-set-constraint";
@@ -330,15 +331,38 @@ export function stripBareTermMarkers(text: string): string {
   return text.replace(/(?<!⟦)t:[a-zA-Z0-9_:]+\|([^|]+)\|?/g, "$1");
 }
 
+/**
+ * 白话 → 金字 的桥（双层制的接缝）。
+ *
+ * 上游 scrub 把裸词换成【正文白话】(BANNED_TERM_SOFT_ZH)；依据层要把白话升回【金字】(POJU_TERMS)。
+ * 因此 label **必须从 BANNED_TERM_SOFT_ZH 取** —— scrub 产什么，桥就得认什么，绝不手抄。
+ *
+ * 手抄过一次的后果（实测）：decade 被抄成「当前阶段气候」，而 scrub 实产的是「当前这个阶段」
+ * →「大运」被 scrub 成白话后，桥认不出来 → 永远升不成金字「纪元[···]」。
+ * （banned-terms.ts:264 自己的注释就写着 never hand-maintain a parallel list。）
+ */
+function keepCnBridgeLabel(traditional: string): string | null {
+  const plain = BANNED_TERM_SOFT_ZH[traditional];
+  if (!plain) {
+    // 表改了、桥没跟上 —— 静默的话这个词会永远停在白话层，没人看得见（铁律 #5）
+    console.warn(
+      `[term-marking] keep_cn 桥断了：BANNED_TERM_SOFT_ZH 里没有「${traditional}」，该词将停在白话层，升不成金字。`,
+    );
+    return null;
+  }
+  return plain;
+}
+
 /** Wrap bare keep_cn soft phrases that lack ⟦t:…⟧ markers (visible text = soft label only, no ganzhi). */
 export function wrapBareKeepCnSoftTerms(text: string, locale: string): string {
+  // 覆盖面维持现状（4 个 keep_cn slug）—— 扩到全部 14 条属于「双层制推广」，见文档末尾。
   const patterns: Array<{ id: string; label: string }> = [
-    { id: "decade", label: "当前阶段气候" },
-    { id: "day_master", label: "你的核心特质" },
-    { id: "year", label: "当前时空效能" },
-    { id: "yong_shen", label: "关键平衡能量" },
-    { id: "yong_shen", label: "用神" },
-  ];
+    { id: "decade", label: keepCnBridgeLabel("大运") },
+    { id: "day_master", label: keepCnBridgeLabel("日主") },
+    { id: "year", label: keepCnBridgeLabel("流年") },
+    { id: "yong_shen", label: keepCnBridgeLabel("用神") },
+    { id: "yong_shen", label: "用神" }, // 裸词漏网时也接住（原表就有这行，保留）
+  ].filter((p): p is { id: string; label: string } => Boolean(p.label));
 
   const parts = text.split(/(⟦[^⟧]*⟧)/g);
   return parts
