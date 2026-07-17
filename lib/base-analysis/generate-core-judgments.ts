@@ -15,6 +15,25 @@ import {
 import {
   openRouterChatCompletion,
 } from "@/lib/llm/openrouter-shared";
+import { isEmptyResponseError } from "@/lib/llm/openrouter-retry";
+
+/**
+ * 预算按【真实胃口】给,不按想当然(铁律 #7 —— 已在 90s超时 / 12000token / max_attempts:1 上栽过三次)。
+ *
+ * 900 是「照抄时代」的数:当时提示词里有 4 条示范句,模型抄一遍几乎不用 reasoning。
+ * 示范句删掉后它开始【真推导】,而 reasoning token 是【计入 max_tokens 的】——
+ * 实测 7 次调用 output 全部卡死在 900、finish_reason 全部 length、content 一个字都没吐。
+ *
+ * 对照同仓基线:底座叙事 10,000(route.ts)、违规修补 1,400(repair-violations.ts)。
+ * max_tokens 是【上限不是预付】—— 给宽不花钱,给窄会把整条链锁死。
+ */
+const CORE_JUDGMENTS_MAX_TOKENS = 4000;
+
+/** 外层重试次数。注意:传输层自己还有 MAX_EMPTY_CONTENT_RESEND=3,两层会相乘 —— 见下方 catch。 */
+const MAX_ATTEMPTS = 3;
+
+/** core_judgments 失败不该让用户看不到报告 —— route 目前 await 在叙事流之前。 */
+const CORE_JUDGMENTS_TOTAL_TIMEOUT_MS = 45_000;
 
 /** Model only writes these — climate_now / refs are code. */
 const LLM_INTERPRETIVE_KEYS = [
@@ -229,65 +248,108 @@ export async function generateCoreJudgmentsForProfile(input: {
   const climate_now = buildClimateNowFromStructured(input.structured, input.locale);
   const fallback = buildCoreJudgmentsFromStructured(input.structured, input.locale);
 
-  const MAX_ATTEMPTS = 3;
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    try {
-      const { system, user } = buildCoreJudgmentsLlmPrompt(input.structured, input.locale);
-      const result = await openRouterChatCompletion({
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: user },
-        ],
-        temperature: 0.35,
-        max_tokens: 900,
-        json_mode: true,
-        reasoning_effort: "medium",
-        session_id: input.session_id,
-        call_type: "core_judgments",
-        phase_name: "core_judgments_medium",
-        signal: input.signal,
-      });
+  // 总超时:core_judgments 是 Layer1 给机器的,它失败【不该】让用户看不到 Layer2 报告。
+  // route 目前是 await 在叙事流【之前】的 —— 在改成并行之前,这道闸是页面不卡死的唯一保证。
+  const ctrl = new AbortController();
+  const timer = setTimeout(
+    () => ctrl.abort(new Error("core_judgments_total_timeout")),
+    CORE_JUDGMENTS_TOTAL_TIMEOUT_MS,
+  );
+  input.signal?.addEventListener("abort", () => ctrl.abort(input.signal?.reason), { once: true });
+  const deadline = Date.now() + CORE_JUDGMENTS_TOTAL_TIMEOUT_MS;
 
-      const interpretive = parseLlmInterpretiveJson(result.text ?? "");
-      if (!interpretive) {
+  try {
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      if (Date.now() > deadline) {
         console.warn(
-          `[core_judgments] attempt ${attempt}/${MAX_ATTEMPTS} — parse failed, resending same params`,
+          `[core_judgments] 总超时用尽(attempt ${attempt}/${MAX_ATTEMPTS})—— 落代码模板,绝不拖住叙事流。`,
         );
-        continue;
+        break;
       }
-      if (hasCoreJudgmentsBlackspeak(Object.values(interpretive).join("\n"))) {
+      try {
+        const { system, user } = buildCoreJudgmentsLlmPrompt(input.structured, input.locale);
+        const result = await openRouterChatCompletion({
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: user },
+          ],
+          temperature: 0.35,
+          max_tokens: CORE_JUDGMENTS_MAX_TOKENS,
+          json_mode: true,
+          reasoning_effort: "medium",
+          session_id: input.session_id,
+          call_type: "core_judgments",
+          phase_name: "core_judgments_medium",
+          signal: ctrl.signal,
+        });
+
+        // 【确定性失败】必须响亮 —— 这是 2026-07 那次「7 次调用 + 页面卡死」的唯一真信号,
+        // 当时它被 "call failed" 那句糊掉了整整一轮排查(铁律 #5)。
+        if (result.finish_reason === "length") {
+          console.warn(
+            `[core_judgments] ⚠️ finish_reason=length —— max_tokens(${CORE_JUDGMENTS_MAX_TOKENS}) 被吃光。` +
+              `这是【确定性失败】:同参数重发多少次都还是 length。要【加预算】,不是加重试。`,
+            { text_preview: (result.text ?? "").slice(0, 80) },
+          );
+        }
+
+        const interpretive = parseLlmInterpretiveJson(result.text ?? "");
+        if (!interpretive) {
+          console.warn(
+            `[core_judgments] attempt ${attempt}/${MAX_ATTEMPTS} — parse failed, resending same params`,
+            { finish_reason: result.finish_reason },
+          );
+          continue;
+        }
+        if (hasCoreJudgmentsBlackspeak(Object.values(interpretive).join("\n"))) {
+          console.warn(
+            `[core_judgments] attempt ${attempt}/${MAX_ATTEMPTS} — blackspeak, resending same params`,
+          );
+          continue;
+        }
+        const copy = looksCopiedFromPromptOrTemplate(interpretive, fallback);
+        if (copy.copied) {
+          console.warn(
+            `[core_judgments] attempt ${attempt}/${MAX_ATTEMPTS} — 疑似照抄/套话,同参数重发`,
+            { hits: copy.hits },
+          );
+          continue;
+        }
+        const merged: CoreJudgments = { ...interpretive, climate_now, refs };
+        if (!isCoreJudgments(merged)) {
+          console.warn(
+            `[core_judgments] attempt ${attempt}/${MAX_ATTEMPTS} — shape invalid, resending same params`,
+          );
+          continue;
+        }
+        return { judgments: merged, source: "llm" };
+      } catch (e) {
+        // 传输层已经同参数重发过 MAX_EMPTY_CONTENT_RESEND=3 次了。
+        // 外层【绝不能】再套一圈 —— 那不是"重试",那是把 3 次变成 9 次。
+        // 连续空回复 = 确定性失败(多半 max_tokens 不够,reasoning 吃光预算),重发解决不了。
+        if (isEmptyResponseError(e)) {
+          console.warn(
+            "[core_judgments] 传输层重发已用尽(openrouter_empty_after_resend)—— 外层不再重试,直接落模板。" +
+              "【多半是 max_tokens 不够,先查 finish_reason 是不是 length,别加重试。】",
+          );
+          break;
+        }
+        if (ctrl.signal.aborted) {
+          console.warn("[core_judgments] 已中止(超时或上游取消)—— 落模板。");
+          break;
+        }
         console.warn(
-          `[core_judgments] attempt ${attempt}/${MAX_ATTEMPTS} — blackspeak, resending same params`,
+          `[core_judgments] attempt ${attempt}/${MAX_ATTEMPTS} — call failed, resending same params`,
+          { reason: e instanceof Error ? e.message : String(e) },
         );
-        continue;
       }
-      const copy = looksCopiedFromPromptOrTemplate(interpretive, fallback);
-      if (copy.copied) {
-        console.warn(
-          `[core_judgments] attempt ${attempt}/${MAX_ATTEMPTS} — 疑似照抄/套话，同参数重发`,
-          { hits: copy.hits },
-        );
-        continue;
-      }
-      const merged: CoreJudgments = { ...interpretive, climate_now, refs };
-      if (!isCoreJudgments(merged)) {
-        console.warn(
-          `[core_judgments] attempt ${attempt}/${MAX_ATTEMPTS} — shape invalid, resending same params`,
-        );
-        continue;
-      }
-      return { judgments: merged, source: "llm" };
-    } catch (e) {
-      console.warn(
-        `[core_judgments] attempt ${attempt}/${MAX_ATTEMPTS} — call failed, resending same params`,
-        {
-          reason: e instanceof Error ? e.message : String(e),
-        },
-      );
     }
+  } finally {
+    clearTimeout(timer);
   }
+
   console.warn(
-    "[fallback] core_judgments — 3 次均未拿到合格读数，落代码模板。**这份底座是套话，四产品都会受影响。**",
+    "[fallback] core_judgments 落代码模板。**这份底座是套话,四产品都会受影响** —— 别当正常情况放过。",
   );
   return { judgments: fallback, source: "template_fallback" };
 }
