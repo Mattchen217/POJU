@@ -86,16 +86,42 @@ function main() {
   const gateBroken = auditBaseAnalysisDelivery(broken, "en", structured);
   assert(!gateBroken.ok, "gate blocks broken markers");
 
-  console.log("\n=== missing plain + leading article ===");
-  const noPlain = encodeTermMarker("fei_ren", "double-edged drive");
+  console.log("\n=== missing plain + 2-slot standard + leading article ===");
+  // Standard 2-slot ⟦t:slug|plain⟧ — must NOT be flagged as missing_plain
   assert(
-    auditMarkerCompleteness(`Text ${noPlain} end.`).some((h) => h.label === "marker_missing_plain"),
-    "missing plain segment",
+    !auditMarkerCompleteness("⟦t:day_master|柔韧的吸收与转化者⟧").some(
+      (h) => h.label === "marker_missing_plain",
+    ),
+    "2-slot standard form accepted (plain in slot2)",
   );
-  const badArticle = encodeTermMarker("fei_ren", "the the refined core", "plain here");
+  assert(
+    !auditMarkerCompleteness("⟦t:yong_shen|润泽与滋养⟧").some((h) => h.label === "marker_missing_plain"),
+    "2-slot yong_shen accepted",
+  );
+  // Truly empty plain only
+  assert(
+    auditMarkerCompleteness("Text ⟦t:fei_ren|⟧ end.").some((h) => h.label === "marker_missing_plain"),
+    "empty plain segment still flagged",
+  );
+  // encodeTermMarker(id, visible) without plain seeds slot2 — valid 2-slot, not missing
+  const twoSlotSeed = encodeTermMarker("fei_ren", "double-edged drive");
+  assert(
+    !auditMarkerCompleteness(`Text ${twoSlotSeed} end.`).some((h) => h.label === "marker_missing_plain"),
+    "encodeTermMarker 2-slot seed is not missing_plain",
+  );
+  // marker_visible_* only on compat 3-slot (model-written soft)
+  assert(
+    !auditMarkerCompleteness("⟦t:stem_yi|乙木柔韧⟧").some((h) => h.label === "marker_visible_ganzhi"),
+    "2-slot does not run marker_visible_ganzhi (slot2 is plain, soft is SSOT)",
+  );
+  assert(
+    auditMarkerCompleteness("⟦t:stem_yi|乙木柔韧|plain⟧").some((h) => h.label === "marker_visible_ganzhi"),
+    "3-slot compat still flags ganzhi in soft slot",
+  );
+  const badArticle = "⟦t:fei_ren|the the refined core|plain here⟧";
   assert(
     auditMarkerCompleteness(`X ${badArticle}`).some((h) => h.label === "marker_visible_article_dup"),
-    "article dup in visible",
+    "article dup in visible (3-slot only)",
   );
 
   console.log("\n=== instance shen_sha inventory ===");

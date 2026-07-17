@@ -25,6 +25,7 @@ import {
   collectCanonicalSoftLabelsZh,
   findSoftLabelSubstringCollisions,
   maskKnownSoftLabelsZh,
+  scrubBannedMetaphorInLeadLabels,
 } from "@/lib/llm/compliance/banned-terms";
 import { KEEP_CN_VISIBLE_SOFT } from "@/lib/glossary/term-closed-set";
 import {
@@ -133,6 +134,18 @@ function main() {
   );
   assert("stream has onRepairFail", streamSrc.includes("onRepairFail"));
   assert("stream logs regen after miss", streamSrc.includes("补丁未命中"));
+  assert(
+    "stream logs re-audit still failing",
+    streamSrc.includes("re-audit still failing after patch"),
+  );
+
+  const scrubbedLabel = scrubBannedMetaphorInLeadLabels("> **你的核心引擎:** 吸收与转化。", "zh");
+  assert(
+    "lead-label scrub rewrites 引擎 only in label",
+    scrubbedLabel.includes("**你的核心方式:**") && scrubbedLabel.includes("吸收与转化"),
+  );
+  const bodyKept = scrubBannedMetaphorInLeadLabels("正文里写引擎也不该被标签 scrub 误伤。", "zh");
+  assert("lead-label scrub does not touch body 引擎", bodyKept.includes("引擎"));
 
   const routeSrc = fs.readFileSync(
     path.join(ROOT, "app/api/profile/base-analysis/stream/route.ts"),

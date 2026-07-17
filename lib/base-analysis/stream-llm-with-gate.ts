@@ -190,16 +190,45 @@ export async function streamBaseAnalysisWithDeliveryGate(
           regenerated_after_repair_miss: regeneratedAfterRepairMiss,
         };
       }
+
+      // Patch applied but re-audit still failing — loud (some labels can't be fixed by one line).
+      console.error("[repair] re-audit still failing after patch", {
+        profile_id: input.profileId,
+        job_id: input.session_id,
+        repair_index: r,
+        remaining_violations: gate.violations.map((h) => h.label),
+        next: r < MAX_REPAIRS - 1 ? "retry_repair" : "full_regen",
+      });
       lastViolations = gate.violations;
     }
 
     // Last resort: full regen once with hint (never silent).
     if (fullAttempt < MAX_FULL_GENERATIONS - 1) {
-      if (repairMiss) regeneratedAfterRepairMiss = true;
+      if (repairMiss) {
+        regeneratedAfterRepairMiss = true;
+        // onRepairFail already fired when patch application failed
+      } else if (isBaseAnalysisGateFailure(lastViolations)) {
+        regeneratedAfterRepairMiss = true;
+        console.error(
+          "[repair] re-audit still failing after patch — falling back to full regeneration",
+          {
+            profile_id: input.profileId,
+            job_id: input.session_id,
+            remaining_violations: lastViolations.map((h) => h.label),
+          },
+        );
+        await input.onRepairFail?.({
+          reason: "re_audit_still_failing",
+          detail: lastViolations.map((v) => v.label).slice(0, 8).join(", "),
+          repairIndex: Math.max(0, totalRepairs - 1),
+        });
+      }
       console.error(
         `[base-analysis/stream] repairs exhausted → full regen for ${input.profileId}` +
-          (repairMiss ? " (补丁未命中 — 本次为整篇重生成)" : ""),
-        lastViolations.slice(0, 5),
+          (regeneratedAfterRepairMiss ? " (补丁未命中/复审仍失败 — 本次为整篇重生成)" : ""),
+        {
+          remaining_violations: lastViolations.map((h) => h.label).slice(0, 12),
+        },
       );
       userContent = baseUser + buildBaseAnalysisRegenHint(lastViolations, input.locale);
     }

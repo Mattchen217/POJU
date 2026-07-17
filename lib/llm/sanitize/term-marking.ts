@@ -1,6 +1,7 @@
 /**
  * LLM term marking architecture — single source projections for prompt + UI.
- * LLM writes ⟦t:id|visible⟧; UI reads markers; audit detects leaks (no mutate).
+ * LLM writes ⟦t:id|plain⟧ (2-slot standard); UI fills soft via termOf SSOT.
+ * Compatibility 3-slot ⟦t:id|soft|plain⟧ still parsed; soft is ignored at render.
  */
 
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
@@ -248,16 +249,40 @@ export function encodeTermMarker(id: string, visible: string, plain?: string): s
 
 export type ParsedTermMarker = { id: string; visible: string; plain?: string; raw: string };
 
+/** True when marker is compatibility 3-slot `⟦t:id|soft|plain⟧` (two `|`). */
+export function isThreeSlotTermMarker(raw: string): boolean {
+  return (raw.match(/\|/g) || []).length >= 2;
+}
+
+/**
+ * Resolve contextual plain from a parsed marker.
+ * Standard 2-slot: slot2 = plain. Compatibility 3-slot: slot3 = plain.
+ */
+export function resolveMarkerPlain(m: Pick<ParsedTermMarker, "raw" | "visible" | "plain">): string {
+  if (isThreeSlotTermMarker(m.raw)) return (m.plain ?? "").trim();
+  return (m.plain ?? m.visible ?? "").trim();
+}
+
 export function parseTermMarkers(text: string): ParsedTermMarker[] {
   const out: ParsedTermMarker[] = [];
   TERM_MARKER_PATTERN.lastIndex = 0;
   let m: RegExpExecArray | null;
   while ((m = TERM_MARKER_PATTERN.exec(text)) !== null) {
+    const raw = m[0];
+    const slot2 = unescapeMarkerPart(m[2]);
+    const isThreeSlot = isThreeSlotTermMarker(raw);
+    // 3-slot: plain = slot3 (may be ""). 2-slot standard: plain = slot2 (contextual vernacular).
+    const plain = isThreeSlot
+      ? m[3] != null
+        ? unescapeMarkerPart(m[3])
+        : ""
+      : slot2;
     out.push({
       id: normalizeTermMarkerId(m[1]),
-      visible: unescapeMarkerPart(m[2]),
-      plain: m[3] ? unescapeMarkerPart(m[3]) : undefined,
-      raw: m[0],
+      // Slot2 kept as `.visible` for 3-slot soft audits; render always overwrites via termOf.
+      visible: slot2,
+      plain,
+      raw,
     });
   }
   return out;
@@ -969,9 +994,10 @@ export function hasChainedSoftReplaceArtifacts(text: string): boolean {
 export function fillMissingMarkerPlain(text: string, locale: string): string {
   let out = text;
   for (const m of parseTermMarkers(text)) {
-    if (m.plain?.trim()) continue;
+    if (resolveMarkerPlain(m)) continue;
     const fallback = plainByTermId(m.id, locale);
     if (!fallback) continue;
+    // 2-slot standard: only contextual plain; SSOT soft applied at render via termOf.
     out = out.replace(m.raw, encodeTermMarker(m.id, m.visible, fallback));
   }
   return out;
@@ -1384,16 +1410,21 @@ export function auditMarkerCompleteness(text: string): OutOfSetAuditHit[] {
     /[甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥]|[甲乙丙丁戊己庚辛壬癸][木火土金水]/;
 
   for (const m of parseTermMarkers(text)) {
-    if (!m.plain?.trim()) {
+    // Standard 2-slot `⟦t:slug|plain⟧` — plain is slot2. Compat 3-slot — plain is slot3.
+    // Only report when plain is truly empty (not "missing because we expected a 3rd slot").
+    if (!resolveMarkerPlain(m)) {
       hits.push({ label: "marker_missing_plain", snippet: m.raw.slice(0, 48) });
     }
+    // Model-written soft only exists on compatibility 3-slot. On 2-slot, slot2 is contextual
+    // plain (SSOT owns visible soft via termOf) — never run marker_visible_* against it.
+    if (!isThreeSlotTermMarker(m.raw)) continue;
     const vis = m.visible.trim();
     if (/^(the|a|an)\s+(the|a|an)\b/i.test(vis)) {
       hits.push({ label: "marker_visible_article_dup", snippet: vis.slice(0, 40) });
     } else if (/^(the|a|an)\s/i.test(vis)) {
       hits.push({ label: "marker_visible_leading_article", snippet: vis.slice(0, 40) });
     }
-    // Slot-2 soft must be vernacular — never leak stem+element or bare Ganzhi into user-visible text.
+    // Compat slot-2 soft must be vernacular — never leak stem+element or bare Ganzhi.
     if (GANZHI_IN_SOFT.test(vis)) {
       hits.push({ label: "marker_visible_ganzhi", snippet: vis.slice(0, 40) });
     }

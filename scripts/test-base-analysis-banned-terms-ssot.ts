@@ -62,6 +62,14 @@ function main() {
   assert("MAX_REPAIRS = 2", streamSrc.includes("MAX_REPAIRS = 2"));
   assert("full regen is last resort", streamSrc.includes("repairs exhausted") || streamSrc.includes("last-resort"));
   assert("stream has onRepairFail loud path", streamSrc.includes("onRepairFail"));
+  assert(
+    "stream loud-logs re-audit fail before full regen",
+    streamSrc.includes("re-audit still failing after patch"),
+  );
+  assert(
+    "sanitize runs lead-label metaphor scrub",
+    complianceSrc.includes("scrubBannedMetaphorInLeadLabels"),
+  );
 
   const routeSrc = read("app/api/profile/base-analysis/stream/route.ts");
   assert("route has onRepairStart", routeSrc.includes("onRepairStart"));

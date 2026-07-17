@@ -107,6 +107,6 @@ export function buildBaseAnalysisRegenHint(
 ): string {
   const labels = [...new Set(violations.map((v) => v.label))].slice(0, 12).join(", ");
   return locale.startsWith("zh")
-    ? `\n\n【元报告落库门禁仍未通过（定点修补已用尽）— 须完整重写 Markdown 正文】问题：${labels}。神煞只能逐字取自本次 structured 实例清单；每个 ⟦t:id|可见词|白话⟧ 必须三段位闭合；禁裸干支/禁词见 system 禁词块；零大运/零年龄段时间锚。返回完整正文，勿截断。`
-    : `\n\n[BASE-ANALYSIS DELIVERY GATE STILL FAILING after surgical repair — rewrite COMPLETE Markdown body] Issues: ${labels}. Shen_sha ONLY from structured inventory; every ⟦t:id|visible|plain⟧ fully closed; honor system banned-terms block; zero decade/age-band anchors. Return complete text.`;
+    ? `\n\n【元报告落库门禁仍未通过（定点修补已用尽）— 须完整重写 Markdown 正文】问题：${labels}。神煞只能逐字取自本次 structured 实例清单；标记用标准形 ⟦t:<slug>|<贴题白话>⟧（软译由系统填；第2格白话不得为空）；禁裸干支/禁词见 system 禁词块；零大运/零年龄段时间锚。返回完整正文，勿截断。`
+    : `\n\n[BASE-ANALYSIS DELIVERY GATE STILL FAILING after surgical repair — rewrite COMPLETE Markdown body] Issues: ${labels}. Shen_sha ONLY from structured inventory; markers as ⟦t:<slug>|<contextual plain>⟧ (system fills soft; plain slot must be non-empty); honor system banned-terms block; zero decade/age-band anchors. Return complete text.`;
 }

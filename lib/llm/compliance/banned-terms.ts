@@ -90,6 +90,67 @@ export const METAPHOR_BLACKLIST_EN = [
   "engine",
 ] as const;
 
+/**
+ * Soft stand-ins used ONLY inside bold lead labels (`**label:**`).
+ * Never apply these as full-document find/replace (historical: 养→滋养培育 broke good prose).
+ */
+export const LEAD_LABEL_METAPHOR_SOFT_ZH: Readonly<Record<string, string>> = {
+  持续燃烧的引擎: "持续运转的核心",
+  手机散热片: "调节出口",
+  随时能翻的参考书: "随时可查阅的依据",
+  散热缺口: "调节不足",
+  冷却模块: "调节环节",
+  引擎: "方式",
+};
+
+export const LEAD_LABEL_METAPHOR_SOFT_EN: Readonly<Record<string, string>> = {
+  "steady-burning engine": "steady core drive",
+  "phone heatsink": "release valve",
+  "always-open reference book": "ready reference",
+  "heat-dissipation gap": "release shortfall",
+  "cooling module": "release step",
+  engine: "drive",
+};
+
+/**
+ * Deterministic pre-gate scrub: rewrite metaphor-blacklist hits ONLY inside
+ * bold lead labels (`**…:**` / `> **…:**`). Body copy is untouched.
+ */
+export function scrubBannedMetaphorInLeadLabels(text: string, locale: string): string {
+  if (!text?.trim()) return text ?? "";
+  const softMap = locale.startsWith("zh")
+    ? LEAD_LABEL_METAPHOR_SOFT_ZH
+    : LEAD_LABEL_METAPHOR_SOFT_EN;
+  const bans = [...metaphorBlacklistForLocale(locale)].sort((a, b) => b.length - a.length);
+  // Lead label: optional blockquote/list prefix, then **label:** (label ≤40 chars, no newline).
+  return text.replace(
+    /^([ \t]*(?:>\s*)?\*\*)([^*:\n]{1,40})(:\*\*)/gm,
+    (full, open: string, label: string, close: string) => {
+      const hay = locale.startsWith("zh") ? label : label.toLowerCase();
+      if (!bans.some((b) => hay.includes(locale.startsWith("zh") ? b : b.toLowerCase()))) {
+        return full;
+      }
+      let next = label;
+      for (const ban of bans) {
+        const soft = softMap[ban];
+        if (!soft) continue;
+        if (locale.startsWith("zh")) {
+          if (next.includes(ban)) next = next.split(ban).join(soft);
+        } else {
+          const re = new RegExp(ban.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "ig");
+          if (re.test(next)) next = next.replace(re, soft);
+        }
+      }
+      if (next === label) return full;
+      console.warn("[scrub-lead-label] rewrote banned metaphor in label slot", {
+        from: label,
+        to: next,
+      });
+      return `${open}${next}${close}`;
+    },
+  );
+}
+
 export const BANNED_TERMS_EN = [
   "day master",
   "weak self",
@@ -197,7 +258,7 @@ export function buildForbiddenTermsPromptBlock(locale: string): string {
 要表达「你不靠硬撑」→【直接正面说】，不要拿禁词当反面例子。
   ✓「你的力量来自吸收与转化，而不是自我消耗。」
 
-【禁裸干支】甲乙丙丁戊己庚辛壬癸 / 子丑寅卯辰巳午未申酉戌亥 及「丙火/乙木」类合称一律不得裸露——要么 ⟦t:…⟧ 三段位（且第2格软译本身也【不得】含裸干支），要么纯白话。
+【禁裸干支】甲乙丙丁戊己庚辛壬癸 / 子丑寅卯辰巳午未申酉戌亥 及「丙火/乙木」类合称一律不得裸露——要么 ⟦t:<slug>|<贴题白话>⟧（软译由系统填；兼容形第2格软译也【不得】含裸干支），要么纯白话。
 【标记】id 必须取自闭集 slug 清单；自造 slug（如 da_yun / ji_shen / stem_foo）= 直接拒绝。闭集没有对应概念 → 【不打标，直接白话讲】。
 【收尾】禁「这不是命运/不是命定」否定式。✓「这是你的能量配置读数。怎么用它，取决于你自己。」`;
   }
@@ -213,7 +274,7 @@ export function buildForbiddenTermsPromptBlock(locale: string): string {
   ✗ "you are not an engine"  ✗ "unlike a heatsink"  ✗ "so-called fate"  ✗ "this is not destiny"
   To say "you don't hard-brace" → say it positively. ✓ "Your power comes from absorption and conversion, not self-burn."
 
-[No bare Ganzhi] Never bare stems/branches or "Bing fire"/"Yi wood" compounds — full ⟦t:…⟧ (slot-2 soft must itself be Ganzhi-free) or plain vernacular
+[No bare Ganzhi] Never bare stems/branches or "Bing fire"/"Yi wood" compounds — use ⟦t:<slug>|<contextual plain>⟧ (system fills soft; compat soft slot must itself be Ganzhi-free) or plain vernacular
 [Markers] ids must be closed-set slugs only; invented ids are rejected. No closed concept → plain vernacular, no marker.
 [Closing] Never "this is not fate" negations. ✓ "This is your energy-config readout. How you use it is yours."`;
 }

@@ -96,6 +96,6 @@ export function buildAuditRegenHint(
 ): string {
   const labels = [...new Set(violations.map((v) => v.label))].slice(0, 10).join(", ");
   return locale.startsWith("zh")
-    ? `\n\n【合规复审未通过 — 须重写全部字符串字段】问题类型：${labels}。仅两条硬红线：① 不报具体日期/时间点（只给阶段趋势）② 不占卜/不宿命。另：用户可见字段禁裸大运/流年/日柱/煞名/五行相克短语——只写软译白话；⟦t:id|软译|白话⟧ 软译格绝不填煞/刃原名。禁裸签诗、禁 broken marker。返回完整 JSON/text。`
-    : `\n\n[COMPLIANCE RE-AUDIT FAILED — rewrite ALL string fields] Issue types: ${labels}. Hard redlines only: (1) no point-in-time date predictions — phase trends only; (2) no divination/fatalism. Also: no bare Da Yun / Day Pillar / shensha originals / element-clash phrases in user-visible fields — soft vernacular only; marker soft slot never original 煞 names. NO verbatim sign-poem lines; NO broken markers. Return complete JSON/text.`;
+    ? `\n\n【合规复审未通过 — 须重写全部字符串字段】问题类型：${labels}。仅两条硬红线：① 不报具体日期/时间点（只给阶段趋势）② 不占卜/不宿命。另：用户可见字段禁裸大运/流年/日柱/煞名/五行相克短语——只写软译白话；标记用 ⟦t:<slug>|<贴题白话>⟧（软译由系统填；白话不得为空；兼容形软译格绝不填煞/刃原名）。禁裸签诗、禁 broken marker。返回完整 JSON/text。`
+    : `\n\n[COMPLIANCE RE-AUDIT FAILED — rewrite ALL string fields] Issue types: ${labels}. Hard redlines only: (1) no point-in-time date predictions — phase trends only; (2) no divination/fatalism. Also: no bare Da Yun / Day Pillar / shensha originals / element-clash phrases in user-visible fields — soft vernacular only; markers as ⟦t:<slug>|<contextual plain>⟧ (system fills soft; plain non-empty; compat soft never original 煞 names). NO verbatim sign-poem lines; NO broken markers. Return complete JSON/text.`;
 }

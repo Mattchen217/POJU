@@ -73,6 +73,7 @@ import {
   collectCanonicalSoftLabelsZh,
   maskKnownSoftLabelsZh,
   metaphorBlacklistForLocale,
+  scrubBannedMetaphorInLeadLabels,
 } from "@/lib/llm/compliance/banned-terms";
 import { allShenshaHanSurfaces, resolveShenshaSoftLabels } from "@/lib/poju/shensha";
 
@@ -796,7 +797,9 @@ function sanitizeDeliveryBodyPart(text: string, locale: string): string {
  */
 export function sanitizePaymentAuditLeaks(text: string, locale: string): string {
   if (!text?.trim()) return text ?? "";
-  const normalized = normalizeTermMarkerIds(text, locale);
+  // Pre-gate: scrub metaphor blacklist only in **lead labels:** (never full-doc replace).
+  const labelScrubbed = scrubBannedMetaphorInLeadLabels(text, locale);
+  const normalized = normalizeTermMarkerIds(labelScrubbed, locale);
   const repaired = repairShenshaMarkerSoftLabels(normalized, locale);
   const filled = fillMissingMarkerPlain(repaired, locale);
   const noPlainLeak = stripLeakedMarkerPlainFromBody(filled);
