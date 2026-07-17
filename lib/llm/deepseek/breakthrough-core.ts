@@ -28,6 +28,7 @@ import type { RelationLabel } from "@/lib/calculations/relation-engine";
 import {
   auditPaymentLeakResiduals,
   buildTermMarkingPromptBlock,
+  degradeMarkersToPlain,
   sanitizePaymentAuditLeaks,
   type ComplianceViolation,
 } from "@/lib/llm/sanitize/compliance-terms";
@@ -138,8 +139,9 @@ export const AGENDA_BRIDGE_TASK = `# 角色：议程与首问撰写（承上启�
 【禁止】把议程 label 直接甩出来当问题。
 【禁止】照抄任何固定范文——必须对着这位用户的报告现场写。
 
-# 打标要点（仅对 first_question）
-需要时用 \`⟦t:<闭集slug>|软译|白话?⟧\`；白话只进第3格；禁自造 id。议程 label 不打标。
+# 零标记（硬约束）
+first_question 与议程 label 都是【正文层】——**一个标记都不许写**，全部白话。
+本次调用没有注入实例闭集，你写的任何 slug 都是猜的；代码会剥掉标记，只会让句子变难读。
 
 # 输出（严格 JSON）
 {
@@ -640,6 +642,28 @@ function scrubUserField(s: string, locale: string): string {
 }
 
 /**
+ * 正文层字段（relationship_conclusion / direction / first_question）：
+ * 合规清洗后【物理剥掉】所有标记，只留模型写的贴题白话。
+ * 提示词禁标记不够 —— 「提示词禁 ≠ 代码禁」，出口必须代码焊死。
+ * 泄漏必须响亮：静默降级 = 提示词被稀释了也没人知道。
+ */
+function scrubBodyField(
+  s: string,
+  locale: string,
+  field: string,
+): { text: string; leaks: number } {
+  const scrubbed = scrubUserField(s, locale);
+  const markers = scrubbed.match(/⟦t:[^⟧]+⟧/g);
+  if (!markers?.length) return { text: scrubbed, leaks: 0 };
+  console.warn(
+    `[breakthrough-core] BODY MARKER LEAK — ${field} 正文层出现 ${markers.length} 个标记，已降级为白话。` +
+      `模型违反「正文零标记」（见 DEEP_RECKONING_REPORT_TASK「双层 + 打标」段）。`,
+    { field, sample: markers.slice(0, 3) },
+  );
+  return { text: degradeMarkersToPlain(scrubbed, locale), leaks: markers.length };
+}
+
+/**
  * Fix B — mutate user-visible breakthrough fields, then hard-block if payment leaks remain.
  */
 export function sanitizeBreakthroughCoreMapped(
@@ -652,21 +676,29 @@ export function sanitizeBreakthroughCoreMapped(
   breakthrough_core: BreakthroughCore;
   investigation_agenda: AgendaItem[];
   violations: ComplianceViolation[];
+  body_marker_leaks: number;
 } {
   const core = mapped.breakthrough_core;
+  let bodyLeaks = 0;
+  const body = (s: string, field: string): string => {
+    const r = scrubBodyField(s, locale, field);
+    bodyLeaks += r.leaks;
+    return r.text;
+  };
+
   const breakthrough_core: BreakthroughCore = {
     ...core,
-    relationship_conclusion: scrubUserField(core.relationship_conclusion, locale),
-    breakthrough_directions: core.breakthrough_directions.map((d) => ({
+    // ↓ 正文层：零标记
+    relationship_conclusion: body(core.relationship_conclusion, "relationship_conclusion"),
+    breakthrough_directions: core.breakthrough_directions.map((d, i) => ({
       ...d,
-      direction: scrubUserField(d.direction, locale),
+      direction: body(d.direction, `directions[${i}].direction`),
+      // ↓ 依据层：标记保留，渲染层负责镀金 + [···]
       structural_basis: scrubUserField(d.structural_basis, locale),
       ...(d.timing != null ? { timing: scrubUserField(d.timing, locale) } : {}),
       what_would_confirm: scrubUserField(d.what_would_confirm, locale),
     })),
-    ...(core.first_question
-      ? { first_question: scrubUserField(core.first_question, locale) }
-      : {}),
+    ...(core.first_question ? { first_question: body(core.first_question, "first_question") } : {}),
   };
   const investigation_agenda = mapped.investigation_agenda.map((a) => ({
     ...a,
@@ -684,7 +716,12 @@ export function sanitizeBreakthroughCoreMapped(
   ].join("\n");
 
   const violations = auditPaymentLeakResiduals(auditBlob, locale);
-  return { breakthrough_core, investigation_agenda, violations };
+  if (bodyLeaks > 0) {
+    console.warn(
+      `[breakthrough-core] 本轮共 ${bodyLeaks} 处正文标记被降级 —— 持续出现则回查提示词第 89 行是否被稀释。`,
+    );
+  }
+  return { breakthrough_core, investigation_agenda, violations, body_marker_leaks: bodyLeaks };
 }
 
 export class BreakthroughCoreComplianceError extends Error {
@@ -782,7 +819,8 @@ export function parseSanitizeAgendaBridge(
     label: scrubUserField(a.label, locale),
     ...(a.supports ? { supports: scrubUserField(a.supports, locale) } : {}),
   }));
-  const scrubbedQ = scrubUserField(first_question, locale);
+  // first_question 是发给用户的正文 —— 零金字。
+  const scrubbedQ = scrubBodyField(first_question, locale, "first_question").text;
 
   const anchor = validateAgendaAnchorsToDirections(scrubbedAgenda, directions);
   if (!anchor.ok) {

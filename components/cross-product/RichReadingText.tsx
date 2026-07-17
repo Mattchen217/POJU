@@ -14,6 +14,7 @@ import {
 } from "@/lib/reading/parse-reading-blocks";
 import { prepareReadingLayoutText } from "@/lib/reading/prepare-reading-layout";
 import { reflowLongParagraph, type ReflowOptions } from "@/lib/reading/reflow-paragraphs";
+import type { MarkLayer } from "@/lib/llm/sanitize/compliance-terms";
 
 import "@/styles/reading-typography.css";
 
@@ -27,6 +28,11 @@ type Props = {
   variant?: "body" | "poem";
   /** Tighter paragraph breaks for POJU/Match/Glyph delivery panels. */
   density?: "default" | "delivery";
+  /**
+   * 双层制开关。true：正文零金字 + 「依据与推理」块金字集中。
+   * false（默认）：完全等于改动前 —— Glyph / Match / 底座不受影响。
+   */
+  dualLayer?: boolean;
 };
 
 function LeadBlock({
@@ -36,6 +42,7 @@ function LeadBlock({
   dedupeScope,
   blockKey,
   inQuote,
+  layer,
 }: {
   label: string;
   body: string;
@@ -43,13 +50,22 @@ function LeadBlock({
   dedupeScope: Set<string>;
   blockKey: number;
   inQuote?: boolean;
+  layer: MarkLayer;
 }) {
   if (!inQuote && isEvidenceLeadLabel(label)) {
     return (
       <EvidenceBlock label={label}>
         {body ? (
           <p className="reading-p">
-            <MarkedInline text={body} locale={locale} dedupeScope={dedupeScope} keyBase={blockKey} />
+            {/* 依据块自成一体（折叠、独立阅读）→ 用自己的 dedupe scope，
+                别被正文/上一段已出现过的同名词挤成没有 [···] 的裸金字。 */}
+            <MarkedInline
+              text={body}
+              locale={locale}
+              dedupeScope={new Set<string>()}
+              keyBase={blockKey}
+              layer="evidence"
+            />
           </p>
         ) : null}
       </EvidenceBlock>
@@ -63,7 +79,7 @@ function LeadBlock({
       </div>
       {body ? (
         <p className="reading-p">
-          <MarkedInline text={body} locale={locale} dedupeScope={dedupeScope} keyBase={blockKey} />
+          <MarkedInline text={body} locale={locale} dedupeScope={dedupeScope} keyBase={blockKey} layer={layer} />
         </p>
       ) : null}
     </div>
@@ -75,16 +91,18 @@ function SubheadBlock({
   locale,
   dedupeScope,
   blockKey,
+  layer,
 }: {
   content: string;
   locale: string;
   dedupeScope: Set<string>;
   blockKey: number;
+  layer: MarkLayer;
 }) {
   return (
     <div className="reading-lead-block reading-lead-block--subhead">
       <strong className="reading-lead">
-        <MarkedInline text={content} locale={locale} dedupeScope={dedupeScope} keyBase={blockKey} />
+        <MarkedInline text={content} locale={locale} dedupeScope={dedupeScope} keyBase={blockKey} layer={layer} />
       </strong>
     </div>
   );
@@ -95,11 +113,13 @@ function BlockquoteContent({
   locale,
   dedupeScope,
   blockKey,
+  layer,
 }: {
   content: string;
   locale: string;
   dedupeScope: Set<string>;
   blockKey: number;
+  layer: MarkLayer;
 }) {
   const { label, body } = parseBlockquoteParts(content);
   return (
@@ -112,9 +132,10 @@ function BlockquoteContent({
           dedupeScope={dedupeScope}
           blockKey={blockKey}
           inQuote
+          layer={layer}
         />
       ) : (
-        <MarkedInline text={body} locale={locale} dedupeScope={dedupeScope} keyBase={blockKey} />
+        <MarkedInline text={body} locale={locale} dedupeScope={dedupeScope} keyBase={blockKey} layer={layer} />
       )}
     </blockquote>
   );
@@ -126,7 +147,9 @@ export function RichReadingText({
   className,
   variant = "body",
   density = "default",
+  dualLayer = false,
 }: Props) {
+  const bodyLayer: MarkLayer = dualLayer ? "body" : "legacy";
   // Fresh Set each render — must not survive across StrictMode/re-renders (mutated during parse).
   const dedupeScope = new Set<string>();
   const reflowOpts = density === "delivery" ? DELIVERY_REFLOW_OPTS : undefined;
@@ -142,7 +165,7 @@ export function RichReadingText({
       <div className={cn("reading-body", variant === "poem" && "reading-body--poem", className)}>
         {chunks.map((chunk, i) => (
           <p key={i} className="reading-p">
-            <MarkedInline text={chunk} locale={locale} dedupeScope={dedupeScope} keyBase={i * 10} />
+            <MarkedInline text={chunk} locale={locale} dedupeScope={dedupeScope} keyBase={i * 10} layer={bodyLayer} />
           </p>
         ))}
       </div>
@@ -161,6 +184,7 @@ export function RichReadingText({
             locale={locale}
             dedupeScope={dedupeScope}
             blockKey={keyBase}
+            layer={bodyLayer}
           />
         );
       case "subhead":
@@ -171,12 +195,14 @@ export function RichReadingText({
             locale={locale}
             dedupeScope={dedupeScope}
             blockKey={keyBase}
+            layer={bodyLayer}
           />
         );
       case "lead": {
         const bodyChunks = reflowLongParagraph(block.body, reflowOpts);
         // Evidence fold must wrap the FULL body (all reflow chunks) — never leak gold marks outside.
         if (isEvidenceLeadLabel(block.label)) {
+          const evidenceScope = new Set<string>();
           return (
             <EvidenceBlock key={i} label={block.label}>
               {bodyChunks.map((chunk, j) =>
@@ -185,8 +211,9 @@ export function RichReadingText({
                     <MarkedInline
                       text={chunk}
                       locale={locale}
-                      dedupeScope={dedupeScope}
+                      dedupeScope={evidenceScope}
                       keyBase={keyBase + j}
+                      layer="evidence"
                     />
                   </p>
                 ) : null,
@@ -203,6 +230,7 @@ export function RichReadingText({
               locale={locale}
               dedupeScope={dedupeScope}
               blockKey={keyBase}
+              layer={bodyLayer}
             />
           );
         }
@@ -214,6 +242,7 @@ export function RichReadingText({
               locale={locale}
               dedupeScope={dedupeScope}
               blockKey={keyBase}
+              layer={bodyLayer}
             />
             {bodyChunks.slice(1).map((chunk, j) => (
               <p key={`${i}-b-${j}`} className="reading-p">
@@ -222,6 +251,7 @@ export function RichReadingText({
                   locale={locale}
                   dedupeScope={dedupeScope}
                   keyBase={keyBase + j + 1}
+                  layer={bodyLayer}
                 />
               </p>
             ))}
@@ -236,6 +266,7 @@ export function RichReadingText({
             locale={locale}
             dedupeScope={dedupeScope}
             blockKey={keyBase}
+            layer={bodyLayer}
           />
         );
       case "ul":
@@ -248,6 +279,7 @@ export function RichReadingText({
                   locale={locale}
                   dedupeScope={dedupeScope}
                   keyBase={keyBase + j}
+                  layer={bodyLayer}
                 />
               </li>
             ))}
@@ -264,6 +296,7 @@ export function RichReadingText({
               locale={locale}
               dedupeScope={dedupeScope}
               keyBase={keyBase + j}
+              layer={bodyLayer}
             />
           </p>
         ));

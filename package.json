@@ -11,6 +11,7 @@
     "start:standalone": "node scripts/run-standalone.cjs",
     "lint": "next lint",
     "copy:oracle-wind-cards": "node scripts/copy-oracle-wind-cards.cjs",
+    "test:poju-dual-layer": "tsx scripts/test-poju-segment2-dual-layer.ts",
     "test:poju-stepk": "tsx scripts/test-poju-v5-stepk.ts",
     "test:poju-stepk:live": "tsx scripts/test-poju-v5-stepk.ts --live",
     "test:glyph-step7": "tsx scripts/test-glyph-v5-step7.ts",

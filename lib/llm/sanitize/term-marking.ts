@@ -307,6 +307,24 @@ export function stripMarkersForPrompt(text: string, locale = "en"): string {
   });
 }
 
+/**
+ * 正文层降级：⟦t:id|贴题白话⟧ / ⟦t:id|软译|贴题白话⟧ → **只留贴题白话**（无软译、无金字、无 [···]）。
+ * 与 stripMarkersForPrompt 的区别：那个留金字给 prompt/history，这个留白话给用户正文。
+ * 模型没写贴题白话时退到软译，并留痕 —— 静默兜底 = 失败永远看不见。
+ */
+export function degradeMarkersToPlain(text: string, locale = "en"): string {
+  if (!text?.includes("⟦t:")) return text ?? "";
+  TERM_MARKER_PATTERN.lastIndex = 0;
+  return text.replace(TERM_MARKER_PATTERN, (raw, rawId: string, slot2: string, slot3?: string) => {
+    const id = normalizeTermMarkerId(rawId);
+    const isThreeSlot = (raw.match(/\|/g) || []).length >= 2;
+    const contextual = unescapeMarkerPart(isThreeSlot ? (slot3 ?? "") : slot2).trim();
+    if (contextual) return contextual;
+    console.warn("[term-marking] body marker has no contextual plain — fell back to soft label", { id });
+    return termOf(id, locale) || id;
+  });
+}
+
 /** Remove bare t: leaks (no ⟦⟧) and broken markers so users never see raw tokens. */
 export function stripBareTermMarkers(text: string): string {
   return text.replace(/(?<!⟦)t:[a-zA-Z0-9_:]+\|([^|]+)\|?/g, "$1");
@@ -344,6 +362,14 @@ const STEM_ELEMENT_COMPOUNDS: string[] = Object.entries(STEMS).map(
 );
 
 /**
+ * 与闭集表面撞名的【日常汉语词】—— 永不自动补标。
+ * 「平衡」是 CLOSED_STRUCTURAL 里唯一的日常词，且常作动词：自动补标会把模型写的白话
+ * 「需要重新调整平衡」改写成金字「…调整均势[···]」，甚至把动词换成名词（"来均势耗元"）。
+ * 显式 ⟦t:balanced_self|…⟧ 仍正常渲染 —— 这里只关掉"猜"，不动闭集。
+ */
+const AUTO_MARK_EXCLUDE_HAN: ReadonlySet<string> = new Set(["平衡"]);
+
+/**
  * UI 兜底扫描集：合规高危 + 闭集全量 + 天干五行合称 + 神煞 i18n 全表（含孤鸾煞等）。
  * 按长度降序，避免短词先吃掉长词。
  */
@@ -354,7 +380,9 @@ const BARE_AUTO_MARK_HAN = [
     ...STEM_ELEMENT_COMPOUNDS,
     ...allShenshaHanSurfaces(),
   ]),
-].sort((a, b) => b.length - a.length);
+]
+  .filter((han) => !AUTO_MARK_EXCLUDE_HAN.has(han))
+  .sort((a, b) => b.length - a.length);
 
 /** 六十甲子干支对。裸单字天干/地支走 BARE_AUTO_MARK_HAN（带汉字边界，避免「孩子」误伤）。 */
 const BARE_GANZHI_RE = /[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]/g;
@@ -695,6 +723,14 @@ export function rewriteMarkersWithSsotSoft(text: string, locale: string): string
   );
 }
 
+/**
+ * 双层交付的渲染层身份：
+ * - body     正文层 —— 零金字。标记降级成贴题白话；裸词走「替换成白话」的合规网。
+ * - evidence 依据层 —— 金字集中、默认折叠、允许"不好读"，密度上限放宽到 ≤3。
+ * - legacy   未接双层制的老界面（Glyph / Match / 底座）—— 行为与改动前 100% 一致。
+ */
+export type MarkLayer = "body" | "evidence" | "legacy";
+
 export function prepareTextForGlossaryRender(text: string, locale: string): string {
   const rewritten = rewriteMarkersWithSsotSoft(text, locale);
   const normalized = fillMissingMarkerPlain(
@@ -951,6 +987,22 @@ const CHAIN_SOFT_GLOSSES = [
   "壬水奔流",
 ] as const;
 
+/**
+ * 软译词自带限定语 → 用户原句的限定语变重复：「当前流年」→「当前当前时空效能」。
+ * 这一步不修，双字病还会顶掉 wrapBareKeepCnSoftTerms 的汉字 lookbehind，
+ * 让本该变成金字「岁环[···]」的依据退化成裸露的 SaaS 词（第2段实测症状）。
+ */
+const DUP_SOFT_PREFIX_ZH = ["当前", "你的", "这个", "目前"] as const;
+
+export function collapseDuplicatedSoftPrefix(text: string): string {
+  if (!text?.trim()) return text ?? "";
+  let out = text;
+  for (const p of DUP_SOFT_PREFIX_ZH) {
+    out = out.replace(new RegExp(`${p}(?=${p})`, "g"), "");
+  }
+  return out;
+}
+
 /** Collapse abutting soft-replace glosses left by older token-chain sanitize / auto-mark. */
 export function collapseChainedSoftReplaceArtifacts(text: string): string {
   if (!text?.trim()) return text ?? "";
@@ -973,6 +1025,7 @@ export function collapseChainedSoftReplaceArtifacts(text: string): string {
     /(?:你的能量结构|稳定支持力|有利特质|当前阶段气候|当前时空效能)[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥金木水火土]/g,
     MINGLI_STACK_SOFT_PHRASE,
   );
+  result = collapseDuplicatedSoftPrefix(result);
   return result;
 }
 

@@ -130,12 +130,13 @@ export interface PojuChatProps {
   onQuestionBriefingDismiss?: () => void;
 }
 
-/* ---------- AI 文本：定稿后走 RichReadingText（金字 + 轻排版） ---------- */
+/* ---------- AI 文本：定稿后走 RichReadingText（双层制：正文白话 / 依据金字） ---------- */
 function renderAiContent(text: string, locale: string, reveal?: boolean): ReactNode {
   return (
     <RichReadingText
       text={text}
       locale={locale}
+      dualLayer
       className={`pchat__reading-body${reveal ? " pchat__reading-reveal" : ""}`}
     />
   );

@@ -12,6 +12,8 @@ import {
   unescapeGlossPart,
   unescapeMarkerPart,
   prepareTextForGlossaryRender,
+  prepareBodyTextForGlossaryRender,
+  type MarkLayer,
 } from "@/lib/llm/sanitize/compliance-terms";
 import { glossOf, termOf } from "@/lib/glossary/pojulife-terms";
 import { termPolarityById, type TermPolarity } from "@/lib/glossary/term-polarity";
@@ -244,6 +246,11 @@ function findNextMarker(
 
 /** Max paren term marks rendered per paragraph (density cap). */
 const MAX_PAREN_MARKS_PER_PARAGRAPH = 2;
+/**
+ * 依据层：金字集中、默认折叠、允许"不好读" —— 对齐提示词的「≤3 金字」上限。
+ * 用 2 会让第 3 个金字裸奔（有金字、无 [···]、点不开），实测「磨蚀」就是这么掉的。
+ */
+const MAX_PAREN_MARKS_EVIDENCE = 3;
 
 function parseMarkedText(
   text: string,
@@ -324,14 +331,23 @@ export function MarkedInline({
   locale,
   dedupeScope,
   keyBase = 0,
+  layer = "legacy",
 }: {
   text: string;
   locale: string;
   dedupeScope?: Set<string>;
   keyBase?: number;
+  /** 双层制：body=正文零金字 / evidence=金字集中 / legacy=未接双层制的老界面（默认，零回归）。 */
+  layer?: MarkLayer;
 }) {
   // Block 62/63 — UI compliance net: autoMarkBareTerms inside prepareTextForGlossaryRender (before parse).
-  const prepared = prepareTextForGlossaryRender(text, locale);
+  // body 层不走这条 —— 正文零金字，裸词改走「替换成白话」的 prepareBodyTextForGlossaryRender。
+  const prepared =
+    layer === "body"
+      ? prepareBodyTextForGlossaryRender(text, locale)
+      : prepareTextForGlossaryRender(text, locale);
+  const maxParenMarks =
+    layer === "evidence" ? MAX_PAREN_MARKS_EVIDENCE : MAX_PAREN_MARKS_PER_PARAGRAPH;
   const hasMarkers = prepared.includes("⟦t:") || prepared.includes("⟦g|");
 
   // Paragraph-scoped density: ≤2 paren marks / paragraph; first occurrence only.
@@ -347,7 +363,7 @@ export function MarkedInline({
     }
     const paraSeen = new Set<string>(globalSeen);
     nodes.push(
-      ...parseMarkedText(chunk, locale, kb++, paraSeen, MAX_PAREN_MARKS_PER_PARAGRAPH),
+      ...parseMarkedText(chunk, locale, kb++, paraSeen, maxParenMarks),
     );
     for (const id of paraSeen) globalSeen.add(id);
   }

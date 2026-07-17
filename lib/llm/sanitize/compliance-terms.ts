@@ -35,11 +35,13 @@ import {
   buildTermMarkingPromptBlock,
   buildTermMarkingFewShot,
   detectBrokenMarkers,
+  degradeMarkersToPlain,
   encodeTermMarker,
   fillMissingMarkerPlain,
   stripLeakedMarkerPlainFromBody,
   replaceZhMingliStacks,
   collapseChainedSoftReplaceArtifacts,
+  collapseDuplicatedSoftPrefix,
   hasChainedSoftReplaceArtifacts,
   maskMarkersForAudit,
   parseTermMarkers,
@@ -56,6 +58,7 @@ import {
   stripMarkersForPrompt,
   TERM_ENTRIES,
   TERM_MARKER_PATTERN,
+  type MarkLayer,
   type ParsedTermMarker,
   type TermEntry,
   uiTermById,
@@ -95,6 +98,7 @@ export {
   stripLeakedMarkerPlainFromBody,
   replaceZhMingliStacks,
   collapseChainedSoftReplaceArtifacts,
+  collapseDuplicatedSoftPrefix,
   hasChainedSoftReplaceArtifacts,
   parseTermMarkers,
   plainByTermId,
@@ -107,8 +111,10 @@ export {
   stripForbiddenShenSha,
   stripOutOfSetFactTerms,
   stripMarkersForPrompt,
+  degradeMarkersToPlain,
   TERM_ENTRIES,
   TERM_MARKER_PATTERN,
+  type MarkLayer,
   type ParsedTermMarker,
   type TermEntry,
   uiTermById,
@@ -796,6 +802,25 @@ export function scrubLeakedComplianceTerms(text: string, locale: string): string
 
 function sanitizeDeliveryBodyPart(text: string, locale: string): string {
   return transformNonMarkerRegions(text, (segment) => sanitizeNonMarkerSegment(segment, locale));
+}
+
+/**
+ * 正文层渲染准备（双层制）：零金字。
+ * 1) id 归一（拦自造 slug）
+ * 2) 标记 → 贴题白话（不镀金、不加 [···]）
+ * 3) 裸命理词仍然拦 —— 但**替换成白话**，不是替换成金字（合规网不撤，只换出口）
+ * 正文里出现标记 = 模型违反「正文零标记」，必须响亮，不许静默降级。
+ */
+export function prepareBodyTextForGlossaryRender(text: string, locale: string): string {
+  if (!text?.trim()) return text ?? "";
+  const normalized = normalizeTermMarkerIds(text, locale);
+  if (normalized.includes("⟦t:")) {
+    console.warn(
+      "[glossary] BODY MARKER LEAK — 正文层出现标记，已降级为白话。金字只该进「依据与推理」。",
+      { sample: normalized.match(/⟦t:[^⟧]+⟧/g)?.slice(0, 3) },
+    );
+  }
+  return sanitizeNonMarkerSegment(degradeMarkersToPlain(normalized, locale), locale);
 }
 
 /**
