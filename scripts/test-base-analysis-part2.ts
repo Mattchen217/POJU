@@ -46,8 +46,8 @@ function main() {
       !read("lib/poju/resolve-matrix-preview.ts").includes("requestMatrixNarrative"),
   );
 
-  assert("zh Earth→土", elementLabelLocalized("Earth", "zh") === "土");
-  assert("zh Metal→金", elementLabelLocalized("Metal", "zh") === "金");
+  assert("zh Earth→承托", elementLabelLocalized("Earth", "zh") === "承托");
+  assert("zh Metal→精练", elementLabelLocalized("Metal", "zh") === "精练");
   assert("es Earth localized", elementLabelLocalized("Earth", "es").length > 0 && elementLabelLocalized("Earth", "es") !== "Earth");
   assert("de Metal localized", elementLabelLocalized("Metal", "de") !== "Metal");
   assert("fr Water localized", elementLabelLocalized("Water", "fr") !== "Water");
@@ -70,7 +70,16 @@ function main() {
 
   const fate = sanitizePaymentAuditLeaks("这不是你的命运判决书。", "zh");
   assert("phrase wholesale avoids 人生轨迹判决书", !fate.includes("人生轨迹判决书"), fate);
-  assert("phrase → 读数", fate.includes("读数") || fate.includes("判决"), fate);
+  assert("phrase does not re-inject 判决", !fate.includes("判决"), fate);
+  assert("phrase → 读数/配置", fate.includes("读数") || fate.includes("配置"), fate);
+
+  const invented = sanitizePaymentAuditLeaks(
+    "盘中见阴阳差错、大耗、小耗、五鬼、白虎、天狗、隔角。",
+    "zh",
+  );
+  assert("out-of-set 阴阳差错 stripped", !invented.includes("阴阳差错"), invented);
+  assert("out-of-set 大耗 stripped", !invented.includes("大耗"), invented);
+  assert("out-of-set 白虎 stripped", !invented.includes("白虎"), invented);
 
   const quoted = autoMarkBareTerms("这是靠'养'出来的。", "zh");
   const quotedPlain = stripMarkersForPrompt(quoted);

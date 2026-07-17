@@ -212,7 +212,7 @@ Return only the rewritten line:`;
       { role: "user", content: user },
     ],
     temperature: 0.1,
-    max_tokens: 800,
+    max_tokens: 1400,
     json_mode: false,
     reasoning_effort: "off",
     session_id: input.session_id,

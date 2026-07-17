@@ -129,7 +129,7 @@ function main() {
   assert("repair uses rewriteViolationLine", repairSrc.includes("rewriteViolationLine"));
   assert("repair does not ask model for find JSON", !repairSrc.includes('"patches":[{"find"'));
   assert("repair uses reasoning_effort off", repairSrc.includes('reasoning_effort: "off"'));
-  assert("repair max_tokens 800 for line", /max_tokens:\s*800/.test(repairSrc));
+  assert("repair max_tokens 1400 for line", /max_tokens:\s*1400/.test(repairSrc));
   assert("repair logs FAILED loudly", repairSrc.includes("patch application FAILED"));
 
   const streamSrc = fs.readFileSync(

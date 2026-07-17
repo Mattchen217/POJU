@@ -344,10 +344,10 @@ async function openRouterChatCompletionWithModel(
     Authorization: `Bearer ${apiKey}`,
     "Content-Type": "application/json",
   };
-  const referer = process.env.OPENROUTER_HTTP_REFERER?.trim();
-  const title = process.env.OPENROUTER_APP_TITLE?.trim();
-  if (referer) headers["HTTP-Referer"] = referer;
-  if (title) headers["X-Title"] = title;
+  const referer = process.env.OPENROUTER_HTTP_REFERER?.trim() || "https://pojulife.com";
+  const title = process.env.OPENROUTER_APP_TITLE?.trim() || "Pojulife";
+  headers["HTTP-Referer"] = referer;
+  headers["X-Title"] = title;
 
   const timeoutMs = options.timeout_ms ?? OPENROUTER_FETCH_TIMEOUT_MS;
 

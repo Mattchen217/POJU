@@ -509,12 +509,13 @@ const ZH_STRIPE_GLOBAL_REPLACE: ReadonlyArray<[string, string]> = [
 /**
  * Whole-phrase first — never chew "不是你的命运判决书" into
  * "不是你的人生轨迹判决书" via per-token 命运→人生轨迹.
+ * Replacement MUST NOT re-introduce banned 判决 / 命运.
  */
 const ZH_PHRASE_WHOLESALE_REPLACE: ReadonlyArray<[string, string]> = [
-  ["不是你的命运判决书", "这不是判决，是读数"],
-  ["不是命运判决书", "这不是判决，是读数"],
-  ["命运判决书", "这不是判决，是读数"],
-  ["人生轨迹判决书", "这不是判决，是读数"],
+  ["不是你的命运判决书", "这是配置读数，不是定论"],
+  ["不是命运判决书", "这是配置读数，不是定论"],
+  ["命运判决书", "配置读数"],
+  ["人生轨迹判决书", "配置读数"],
   ["不是命运定论", "这是配置读数"],
   ["不是你的命运定论", "这是配置读数"],
   ["命运定论", "配置读数"],
@@ -630,6 +631,10 @@ const ZH_STRUCTURE_SOFT_REPLACE: ReadonlyArray<[string, string]> = [
       "身弱",
       "身强",
       "身旺",
+      "判决",
+      "命定",
+      "命理",
+      "天注定",
     ].includes(word),
   ),
 ];
@@ -805,7 +810,9 @@ export function sanitizePaymentAuditLeaks(text: string, locale: string): string 
   const repaired = repairShenshaMarkerSoftLabels(normalized, locale);
   const filled = fillMissingMarkerPlain(repaired, locale);
   const noPlainLeak = stripLeakedMarkerPlainFromBody(filled);
-  return sanitizeDeliveryBodyPart(noPlainLeak, locale);
+  // Deterministic strip of engine-out-of-set 神煞 (阴阳差错/大耗/白虎…) — never burn LLM repair on inventable names.
+  const noOutOfSet = stripForbiddenShenSha(noPlainLeak);
+  return sanitizeDeliveryBodyPart(noOutOfSet, locale);
 }
 
 /** POJU final delivery — deterministic scrub (redlines, bare terms, gloss wrap). Preserves ═══ marker lines. */
