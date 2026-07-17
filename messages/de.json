@@ -1379,7 +1379,10 @@
       "strength_balanced": "Dynamisches Gleichgewicht",
       "colon": ": ",
       "hidden_prefix": "Verborgen",
-      "hidden_empty": "Verborgen: —"
+      "hidden_empty": "Verborgen: —",
+      "lunar": "Mondkalender",
+      "layers_title": "Vier-Schichten-Lesung",
+      "layers_em": "Mechanismus-Schichten"
     },
     "template": {
       "season_transition": "Jahreszeitenübergang im Gange",

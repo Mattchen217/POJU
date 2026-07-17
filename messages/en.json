@@ -520,11 +520,26 @@
         "intro": "Each direction × hour combination is classified into one of five patterns:",
         "footer": "These are reflective categories, not definitive labels.",
         "items": [
-          { "name": "Open Current · 顺势", "desc": "Move with confidence." },
-          { "name": "Following Current · 应时", "desc": "The way supports you, with effort." },
-          { "name": "Stillwater · 守静", "desc": "Pause and observe." },
-          { "name": "Crosscurrent · 横阻", "desc": "Reconsider this direction or moment." },
-          { "name": "Undertow · 险滞", "desc": "Strong friction — choose another path." }
+          {
+            "name": "Open Current · 顺势",
+            "desc": "Move with confidence."
+          },
+          {
+            "name": "Following Current · 应时",
+            "desc": "The way supports you, with effort."
+          },
+          {
+            "name": "Stillwater · 守静",
+            "desc": "Pause and observe."
+          },
+          {
+            "name": "Crosscurrent · 横阻",
+            "desc": "Reconsider this direction or moment."
+          },
+          {
+            "name": "Undertow · 险滞",
+            "desc": "Strong friction — choose another path."
+          }
         ]
       },
       "why_mobile": {
@@ -1174,9 +1189,18 @@
     "title": "Your Archive",
     "hero_intro": "Welcome to your private, encrypted Vault. All your journey records have been converted into local AES-encrypted data, tied exclusively to this active device.",
     "hero_points": [
-      { "icon": "lock", "text": "Zero Cloud: No accounts. Our servers store absolutely zero data." },
-      { "icon": "alert", "text": "Device-Locked: Switching phones, PCs, or browsers will result in an empty vault (no sync)." },
-      { "icon": "erase", "text": "Erase Warning: Clearing browser data, closing pages browsed in private/Incognito mode, or uninstalling the PWA app will permanently wipe your records. They cannot be recovered." }
+      {
+        "icon": "lock",
+        "text": "Zero Cloud: No accounts. Our servers store absolutely zero data."
+      },
+      {
+        "icon": "alert",
+        "text": "Device-Locked: Switching phones, PCs, or browsers will result in an empty vault (no sync)."
+      },
+      {
+        "icon": "erase",
+        "text": "Erase Warning: Clearing browser data, closing pages browsed in private/Incognito mode, or uninstalling the PWA app will permanently wipe your records. They cannot be recovered."
+      }
     ],
     "loading": "Loading…",
     "load_error": "Could not read your local archive. Close and reopen the app, then try again.",
@@ -1390,8 +1414,8 @@
   },
   "bazi": {
     "gender": {
-      "qian": "Qián Natal Matrix (乾造)",
-      "kun": "Kūn Natal Matrix (坤造)"
+      "qian": "Male",
+      "kun": "Female"
     },
     "strength": {
       "strong": "Strong (身旺)",
@@ -1472,17 +1496,17 @@
       "tong_zi_sha": "Child Spirit (童子煞)",
       "kong_wang": "Void & Emptiness (空亡)"
     },
-    "yongshen_label": "Useful God (喜用神)",
-    "optimizing_vector": "Optimizing Vector (用神):",
+    "yongshen_label": "Anchor",
+    "optimizing_vector": "Anchor:",
     "pillar_slot": {
-      "year_stem": "Year Stem",
-      "year_branch": "Year Branch",
-      "month_stem": "Month Stem",
-      "month_branch": "Month Branch",
-      "day_stem": "Day Stem",
-      "day_branch": "Day Branch",
-      "hour_stem": "Hour Stem",
-      "hour_branch": "Hour Branch"
+      "year_stem": "Root",
+      "year_branch": "Root",
+      "month_stem": "Outer",
+      "month_branch": "Outer",
+      "day_stem": "Core",
+      "day_branch": "Core",
+      "hour_stem": "Horizon",
+      "hour_branch": "Horizon"
     }
   },
   "poju_matrix": {
@@ -1497,24 +1521,24 @@
     "element_map_sep": ", ",
     "card": {
       "calendar_alignment": "Calendar Alignment",
-      "calendar_alignment_em": "calendar",
+      "calendar_alignment_em": "solar · lunar",
       "gregorian": "Gregorian",
       "true_solar_time": "True Solar Time",
-      "true_solar_time_em": "TST",
+      "true_solar_time_em": "astronomy",
       "standard_time": "Standard",
       "true_solar": "True Solar",
       "longitude_correction": "Longitude correction",
       "eq_of_time": "EoT",
       "solar_term": "Solar Term",
-      "solar_term_em": "jieqi",
+      "solar_term_em": "UNESCO · sky",
       "next_term": "Next",
       "elemental_signature": "Elemental Signature",
       "elemental_signature_em": "wuxing",
       "radar_matrix": "Radar Matrix",
       "radar_matrix_em": "wuxing radar",
-      "pillars_em": "pillars",
+      "pillars_em": "layered readout",
       "elemental_breakdown": "Elemental Breakdown",
-      "day_master": "Day Master",
+      "day_master": "Core",
       "with_surplus": ", with ",
       "surplus_and": " surplus and ",
       "deficit_period": " deficit.",
@@ -1527,40 +1551,43 @@
       "dominant_vector": "Dominant vector",
       "deficit": "Deficit",
       "key_gap": "Key gap",
-      "macro_lifecycle": "Macro-Lifecycle Field",
-      "macro_lifecycle_em": "dayun",
+      "macro_lifecycle": "Life-phase field",
+      "macro_lifecycle_em": "timeline",
       "timeline_matrix": "Timeline Matrix",
       "dayun_you_are_here": "You are here",
       "structural_dynamics": "Structural Dynamics",
       "resonance_label": "RESONANCE",
       "tension_label": "TENSION",
       "reading_label": "READING",
-      "annual_transit": "Annual Transit",
-      "transit_progress": "Transit Progress",
-      "your_sign_tag": "Your Sign · 生肖",
-      "pillar_year": "Year",
-      "pillar_month": "Month",
-      "pillar_day": "Day · Self",
-      "pillar_hour": "Hour",
+      "annual_transit": "Annual momentum",
+      "transit_progress": "Year progress",
+      "your_sign_tag": "Zodiac accent",
+      "pillar_year": "Root layer",
+      "pillar_month": "Outer field",
+      "pillar_day": "Core self",
+      "pillar_hour": "Horizon",
       "narrative_loading": "POJU is reading…",
       "default_timezone": "Default timezone",
       "strength_strong": "Dominant",
       "strength_weak": "Receptive Core",
       "strength_balanced": "Dynamic Balance",
       "colon": ": ",
-      "hidden_prefix": "Hidden",
-      "hidden_empty": "Hidden: —"
+      "hidden_prefix": "Potential",
+      "hidden_empty": "Potential: —",
+      "lunar": "Lunar",
+      "layers_title": "Four-layer readout",
+      "layers_em": "mechanism layers"
     },
     "template": {
       "season_transition": "Season transition in progress",
-      "zodiac_note": "Your outward self — how others first read you.",
+      "zodiac_note": "Cultural accent — how others first associate you (not a prediction).",
       "lunar_prefix": "Lunar ",
-      "pattern_line": "Year of the {zodiac} · Day Master {day_master}",
-      "calendar_mid": "Year pillar {year_pillar} · Day Master {day_master}",
+      "pattern_line": "Year of the {zodiac} · Core leans {day_master}",
+      "calendar_mid": "{year_pillar} · Core leans {day_master}",
       "annual_transit": "{element} energy meets your {dominant} surplus while {deficit} stays thin — this year's momentum sits beneath the back-and-forth you feel now.",
-      "resonance_stem": "Stem-layer {interaction} — two drives align at the surface.",
-      "resonance_default": "{year_branch} anchors how others first read you — a stable outward reference.",
-      "tension_branch": "Branch-layer {interaction} — workable tension between inner will and outer structure.",
+      "resonance_stem": "Surface drives align — {interaction}.",
+      "resonance_default": "{year_branch} anchors how others first read you.",
+      "tension_branch": "Inner structure holds workable tension — {interaction}.",
       "tension_default": "{dominant} surplus vs {deficit} deficit — a live pull between expansion and constraint.",
       "reading_wood": "You build by adapting, not forcing — your edge is finding the opening others miss under pressure.",
       "reading_default": "You move by adjusting within structure — reading the field clearly before you act.",

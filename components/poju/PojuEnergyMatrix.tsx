@@ -8,16 +8,18 @@ import { PojuDaYunTimeline } from "@/components/poju/PojuDaYunTimeline";
 import {
   elementCssClass,
   formatBranchDisplay,
-  formatStemDisplay,
   isZhMatrixLocale,
   yongshenChipsForLocale,
 } from "@/lib/poju/bazi-matrix-mappings";
-import { buildElementPillarMap, type ElementKey, type ElementPillarAssignment } from "@/lib/poju/build-element-pillar-map";
 import { buildMatrixDisplayData } from "@/lib/poju/build-matrix-display";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
 import { activePillarByAge } from "@/lib/poju/matrix-life-segment";
 import { matrixSynopsisNarrativeState } from "@/lib/poju/matrix-narrative-text";
 import { computeYearTransitProgress } from "@/lib/poju/matrix-transit-progress";
+import {
+  annualTransitHeadline,
+  matrixLayerCap,
+} from "@/lib/poju/matrix-term-labels";
 import { resolveBaziLabel } from "@/lib/poju/resolve-bazi-i18n";
 import { normalizeShenshaLocale, resolveShenshaList } from "@/lib/poju/shensha";
 import { tMatrix } from "@/lib/poju/poju-matrix-i18n";
@@ -54,19 +56,20 @@ const ELEMENT_BAR_CLASS: Record<string, string> = {
 
 const MAJOR_SHENSHA = new Set(["天乙贵人", "禄神", "prime_mentor_node", "provision_anchor"]);
 
-function formatLifeStageBranch(
-  pl: { branch: string; branch_en: string; life_stage_label: string | null },
-  lifeStageKey: string | undefined,
-  tb: (key: string) => string,
+function formatLayerStageLine(
+  pl: {
+    branch: string;
+    branch_en: string;
+    life_stage_label: string | null;
+  },
   locale: string,
 ): string {
-  const stageLabel = resolveBaziLabel(lifeStageKey, tb, pl.life_stage_label ?? undefined);
+  // Zodiac animal + element (+ soft life-stage). Lookup uses branch char; output never shows 干支.
+  const stage = pl.life_stage_label?.trim() || null;
   if (isZhMatrixLocale(locale)) {
-    return formatBranchDisplay(pl.branch, locale, stageLabel || pl.life_stage_label);
+    return formatBranchDisplay(pl.branch, locale, stage);
   }
-  if (!stageLabel) return pl.branch_en;
-  const han = pl.life_stage_label ?? "";
-  return han && !stageLabel.includes(han) ? `${pl.branch_en} · ${stageLabel} (${han})` : `${pl.branch_en} · ${stageLabel}`;
+  return stage ? `${pl.branch_en} · ${stage}` : pl.branch_en;
 }
 
 function NarrativePlaceholder({ label }: { label: string }) {
@@ -177,21 +180,6 @@ function RadarChart({ scores }: { scores: PojuMatrixPayload["wuxing_scores"] }) 
   return <div className="radar radar--compact" ref={ref} aria-hidden />;
 }
 
-function formatElementAttribution(
-  assignments: ElementPillarAssignment[],
-  isZhLocale: boolean,
-  tb: (key: string) => string,
-  colon: string,
-  sep: string,
-): string {
-  return assignments
-    .map((a) => {
-      const glyph = isZhLocale ? a.han : a.display_glyph;
-      return `${tb(`pillar_slot.${a.slot}`)}${colon}${glyph}`;
-    })
-    .join(sep);
-}
-
 export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNarrative = false, subjectPrefix }: Props) {
   const { structured, user_profile, wuxing_scores, strength, matrix_id } = payload;
   const shenshaLocale = normalizeShenshaLocale(locale);
@@ -199,19 +187,6 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
   const tb = useTranslations("bazi");
   const tm = useTranslations("poju_matrix");
   const tc = useTranslations("poju_matrix.card");
-
-  const elementPillarRows = useMemo(
-    () => buildElementPillarMap(structured.pillars_detail, locale),
-    [structured.pillars_detail, locale],
-  );
-
-  const assignmentsByElement = useMemo(() => {
-    const map = new Map<ElementKey, ElementPillarAssignment[]>();
-    for (const row of elementPillarRows) {
-      map.set(row.element, row.assignments);
-    }
-    return map;
-  }, [elementPillarRows]);
 
   const display = useMemo(() => {
     const base = buildMatrixDisplayData({
@@ -280,13 +255,6 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
     [structured.bazi_enrichment?.yongshen_analysis, locale],
   );
 
-  const pillarLabels: Record<string, string> = {
-    year: tc("pillar_year"),
-    month: tc("pillar_month"),
-    day: tc("pillar_day"),
-    hour: tc("pillar_hour"),
-  };
-
   return (
     <div className={`pem${compact ? " pem--compact" : ""}`}>
       <header className="rhead">
@@ -339,8 +307,8 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
             <div className="topband__calibration-head">
               <p className="topband__calibration-title">{tm("section_label")}</p>
             </div>
-            <div className="topband__calibration-grid">
-          <div className="tcard a tcard--nested">
+            <div className="topband__calibration-grid topband__calibration-grid--hero">
+          <div className="tcard a tcard--nested tcard--hero-cal">
             <div className="k">
               <span className="bull" />
               {tc("calendar_alignment")} <em>· {tc("calendar_alignment_em")}</em>
@@ -348,14 +316,19 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
             <div className="v">
               {display.calendar.gregorian} <small>{tc("gregorian")}</small>
             </div>
+            {display.calendar.lunar ? (
+              <div className="v v--lunar">
+                {display.calendar.lunar} <small>{tc("lunar")}</small>
+              </div>
+            ) : null}
             <div className="mid">
               {display.calendar.headline}
               {genderLabel ? <span className="pem__gender-tag">{genderLabel}</span> : null}
             </div>
-            <div className="s">{display.calendar.lunar || display.calendar.mid}</div>
+            <div className="s">{display.calendar.mid}</div>
           </div>
 
-          <div className="tcard a tcard--nested">
+          <div className="tcard a tcard--nested tcard--hero-tst">
             <div className="k">
               <span className="bull" />
               {tc("true_solar_time")} <em>· {tc("true_solar_time_em")}</em>
@@ -387,6 +360,9 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
                   {tst.eq_of_time_minutes != null
                     ? ` · ${tc("eq_of_time")} ${tst.eq_of_time_minutes > 0 ? "+" : ""}${tst.eq_of_time_minutes}m`
                     : null}
+                  {tst.longitude != null
+                    ? ` · ${Math.abs(tst.longitude).toFixed(2)}°${tst.longitude >= 0 ? "E" : "W"}`
+                    : null}
                 </div>
               </>
             ) : (
@@ -394,7 +370,7 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
             )}
           </div>
 
-          <div className="tcard a tcard--nested">
+          <div className="tcard a tcard--nested tcard--hero-jieqi">
             <div className="k">
               <span className="bull" />
               {tc("solar_term")} <em>· {tc("solar_term_em")}</em>
@@ -429,18 +405,12 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
             </div>
             <div className="elist">
               {wuxing_scores.map((row) => {
-                const assignments = assignmentsByElement.get(row.element as ElementKey) ?? [];
-                const attribution =
-                  assignments.length > 0
-                    ? `(${formatElementAttribution(assignments, isZh, tb, tc("colon"), tm("element_map_sep"))})`
-                    : null;
                 return (
                   <div className="erow" key={row.element}>
                     <div className="erow__head">
                       <span className="erow__names">
                         <span className={`ename ${ELEMENT_CLASS[row.element] ?? ""}`}>{row.element}</span>
                         <span className="ecn">{row.element_zh}</span>
-                        {attribution ? <span className="erow__attrib">{attribution}</span> : null}
                       </span>
                       <span className="ecount">{row.count}</span>
                     </div>
@@ -476,7 +446,7 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
                 display.enote_caption
               ) : !suppressNarrative && showTemplateFallback ? (
                 <>
-                  {tc("day_master")} <b>{display.day_master.en}</b>
+                  {tc("day_master")} <b>{display.day_master.element}</b>
                   {tc("with_surplus")}
                   <b>{dominant?.element}</b>
                   {tc("surplus_and")}
@@ -583,14 +553,20 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
               <div className="ro__k">
                 {tc("annual_transit")} · {display.annual_transit.year}
               </div>
-              <div className="ro__v">
-                <span className={elementCssClass(display.annual_transit.stem_en.split(" ")[1] ?? "")}>
-                  {formatStemDisplay(display.annual_transit.ganzhi.charAt(0), locale)}
-                </span>
-                <span className="pct" style={{ flexBasis: "100%" }}>
-                  {display.annual_transit.ganzhi} · {display.annual_transit.pinyin}
-                </span>
-              </div>
+              {(() => {
+                const el =
+                  display.annual_transit.stem_en.split(" ").pop() ||
+                  display.annual_transit.stem_en;
+                const head = annualTransitHeadline(el, locale);
+                return (
+                  <div className="ro__v">
+                    <span className={elementCssClass(el)}>{head.title}</span>
+                    <span className="pct" style={{ flexBasis: "100%" }}>
+                      {head.subtitle}
+                    </span>
+                  </div>
+                );
+              })()}
               <p className="transit-note">
                 {suppressNarrative && narrativeLoading ? null : narrativeLoading ? (
                   <NarrativePlaceholder label={tc("narrative_loading")} />
@@ -613,43 +589,32 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
           </div>
         </div>
 
-        <div className="pillars">
+        <div className="pillars pillars--layers">
+          <div className="pillars__head">
+            {tc("layers_title")} <em>· {tc("layers_em")}</em>
+          </div>
           {display.pillars.map((pl, idx) => {
             const keys = ["year", "month", "day", "hour"] as const;
             const key = keys[idx] ?? "year";
             const isDay = key === "day";
             const isLifeSegment = lifeSegmentPillar === key;
+            const roleSoft = isZh ? pl.ten_god : pl.ten_god_en;
             return (
               <div
                 key={key}
-                className={`pl${isDay ? " day" : ""}${isLifeSegment ? " pl--segment-active" : ""}`}
+                className={`pl pl--layer${isDay ? " day" : ""}${isLifeSegment ? " pl--segment-active" : ""}`}
               >
-                <div className="cap">{pillarLabels[key]}</div>
+                <div className="cap">{matrixLayerCap(key, locale)}</div>
                 <div className="role" style={isDay ? { color: "var(--gold-soft)" } : undefined}>
-                  {isZh ? pl.ten_god : pl.ten_god_en}
-                  {!isZh ? <span className="cn">{pl.ten_god}</span> : null}
+                  {roleSoft}
                 </div>
                 <div className="stem">
                   <div className={`en ${elementCssClass(pl.stem_element)}`}>
-                    {formatStemDisplay(pl.stem, locale)}
-                  </div>
-                  <div className="sub">
-                    <span className="seal">{pl.stem}</span>
-                    <span className="pin">{pl.stem_pinyin}</span>
+                    {pl.stem_element || (isZh ? "—" : "—")}
                   </div>
                 </div>
                 <div className="branch">
-                  <div className="en">
-                    {formatLifeStageBranch(
-                      pl,
-                      payload.structured.pillars_detail?.[key]?.life_stage,
-                      tb,
-                      locale,
-                    )}
-                  </div>
-                  <div className="sub">
-                    {pl.branch} {pl.branch_pinyin}
-                  </div>
+                  <div className="en">{formatLayerStageLine(pl, locale)}</div>
                 </div>
                 <div className="meta">
                   {pl.hidden_display}

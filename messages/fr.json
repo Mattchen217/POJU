@@ -1379,7 +1379,10 @@
       "strength_balanced": "Équilibre Dynamique",
       "colon": " : ",
       "hidden_prefix": "Caché",
-      "hidden_empty": "Caché : —"
+      "hidden_empty": "Caché : —",
+      "lunar": "Lunaire",
+      "layers_title": "Lecture à quatre couches",
+      "layers_em": "couches de mécanisme"
     },
     "template": {
       "season_transition": "Transition saisonnière en cours",

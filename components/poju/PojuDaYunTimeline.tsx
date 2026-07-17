@@ -96,10 +96,11 @@ export function PojuDaYunTimeline({ daYun, currentIndex, currentAge, locale }: P
                 </div>
               </div>
               <div className="dayun-timeline__gz">
-                <span className="dayun-timeline__ganzhi">{phase.entry.ganzhi}</span>
                 {phase.isNow ? (
                   <span className="dayun-timeline__here">{tc("dayun_you_are_here")}</span>
-                ) : null}
+                ) : (
+                  <span className="dayun-timeline__phase">{phase.theme}</span>
+                )}
               </div>
             </div>
           ))}

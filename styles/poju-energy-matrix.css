@@ -2530,3 +2530,37 @@
     background-color: var(--pem-surface) !important;
   }
 }
+
+/* Fa?ade compliance ¡¤ amplify calibration ¡¤ layered pillars (no ganzhi seals) */
+.pem-matrix-body .topband__calibration-grid--hero {
+  gap: 0.75rem;
+}
+.pem-matrix-body .tcard--hero-tst {
+  box-shadow: inset 0 0 0 1px rgba(242, 201, 148, 0.28);
+  background: linear-gradient(165deg, rgba(242, 201, 148, 0.1), rgba(255, 255, 255, 0.03));
+}
+.pem-matrix-body .tcard--hero-tst .vv.gold {
+  font-size: 1.35em;
+  letter-spacing: 0.02em;
+}
+.pem-matrix-body .tcard--hero-cal .v--lunar {
+  margin-top: 0.2rem;
+  opacity: 0.92;
+}
+.pem-matrix-body .pillars__head {
+  grid-column: 1 / -1;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 0.15rem;
+}
+.pem-matrix-body .pillars__head em {
+  font-style: normal;
+  color: rgba(242, 201, 148, 0.75);
+}
+.pem-matrix-body .dayun-timeline__phase {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.04em;
+}

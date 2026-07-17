@@ -1379,7 +1379,10 @@
       "strength_balanced": "Equilibrio Dinámico",
       "colon": ": ",
       "hidden_prefix": "Oculto",
-      "hidden_empty": "Oculto: —"
+      "hidden_empty": "Oculto: —",
+      "lunar": "Lunar",
+      "layers_title": "Lectura en cuatro capas",
+      "layers_em": "capas de mecanismo"
     },
     "template": {
       "season_transition": "Transición estacional en curso",

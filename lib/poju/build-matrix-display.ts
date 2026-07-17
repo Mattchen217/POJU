@@ -15,6 +15,10 @@ import {
   splitGanzhi,
 } from "@/lib/poju/bazi-matrix-mappings";
 import { normalizeMatrixLocale, tMatrix } from "@/lib/poju/poju-matrix-i18n";
+import {
+  matrixSoftTerm,
+  stripGanzhiFromLunar,
+} from "@/lib/poju/matrix-term-labels";
 import type { UserProfile } from "@/lib/profile/types";
 
 export type MatrixPillarDisplay = PillarDetail & {
@@ -120,18 +124,27 @@ function dayunAgeRange(entry: DaYunEntry, next: DaYunEntry | undefined): string 
 function enrichPillar(p: PillarDetail, locale: string): MatrixPillarDisplay {
   const stemInfo = getStemInfo(p.stem);
   const branchInfo = getBranchInfo(p.branch);
+  const tenSoft = matrixSoftTerm(p.ten_god, locale);
+  const stageSoft = p.life_stage_han
+    ? matrixSoftTerm(p.life_stage_han, locale)
+    : null;
   return {
     ...p,
     stem_en: stemInfo?.en ?? p.stem,
     stem_pinyin: stemInfo?.pinyin ?? "",
     stem_element: stemInfo?.element ?? "",
-    branch_en: branchInfo ? `${branchInfo.zodiac_en} · ${branchInfo.element}` : p.branch,
+    // Zodiac animal + element only — no branch glyph.
+    branch_en: branchInfo
+      ? `${branchInfo.zodiac_en} · ${branchInfo.element}`
+      : p.branch,
     branch_pinyin: branchInfo?.pinyin ?? "",
     branch_element: branchInfo?.element ?? "",
-    ten_god_en: getTenGodArchetype(p.ten_god),
+    ten_god_en: tenSoft || getTenGodArchetype(p.ten_god),
+    // Overwrite raw Han ten_god for façade consumers that still read `.ten_god`
+    ten_god: tenSoft || p.ten_god,
     hidden_display: formatHiddenStemsDisplay(p.hidden_stems, locale) || tMatrix(locale, "card.hidden_empty"),
     star_label: p.shen_sha[0] ? `✦ ${p.shen_sha[0]}` : null,
-    life_stage_label: p.life_stage_han ?? null,
+    life_stage_label: stageSoft,
     star_labels: p.shen_sha,
   };
 }
@@ -213,7 +226,7 @@ function buildStructuralDynamics(
     xc?.天干?.[0] != null
       ? tMatrix(locale, "template.resonance_stem", { interaction: xc.天干[0] })
       : tMatrix(locale, "template.resonance_default", {
-          year_branch: yearBranch?.zodiac_en ?? (normalizeMatrixLocale(locale) === "zh" ? "年支" : "Year-branch"),
+          year_branch: yearBranch?.zodiac_en ?? (normalizeMatrixLocale(locale) === "zh" ? "外场姿态" : "outward posture"),
         });
 
   const tension =
@@ -303,15 +316,24 @@ export function buildMatrixDisplayData(input: {
     : `${monthNames[b.month - 1]} ${b.day}, ${b.year}`;
 
   const yearGanzhi = pd?.year.ganzhi ?? profile.bazi.yearPillar;
+  void yearGanzhi;
+  const coreLabel = matrixSoftTerm("日主", locale);
   const pattern_line = tMatrix(locale, "template.pattern_line", {
     zodiac: zhDate ? zodiacDisplay.han : zodiacEn,
-    day_master: dmInfo?.en ?? dmStem,
+    day_master: dmInfo ? elementLabel(dmInfo.element, locale) : coreLabel,
   });
 
+  // Façade mid-line: culture + element only — never 年柱干支 / 日主干.
   const calendarMid = tMatrix(locale, "template.calendar_mid", {
-    year_pillar: yearGanzhi,
-    day_master: dmStem,
+    year_pillar: zhDate ? `${zodiacDisplay.han}年` : `Year of the ${zodiacEn}`,
+    day_master: dmInfo ? elementLabel(dmInfo.element, locale) : coreLabel,
   });
+
+  const rawLunar = String(chart?.八字?.农历 ?? "");
+  const lunarClean = stripGanzhiFromLunar(
+    rawLunar.replace(/^农历/, ""),
+    locale,
+  );
 
   const age = resolveCurrentAge(b.year);
   const dayunIdx = resolveDayunIndex(structured.da_yun, age);
@@ -337,7 +359,7 @@ export function buildMatrixDisplayData(input: {
     calendar: {
       gregorian,
       headline: pattern_line,
-      lunar: String(chart?.八字?.农历 ?? "").replace(/^农历/, tMatrix(locale, "template.lunar_prefix")),
+      lunar: lunarClean,
       mid: calendarMid,
     },
     solar_term: buildSolarTerm(b, locale),

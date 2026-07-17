@@ -218,13 +218,14 @@ export function splitGanzhi(ganzhi: string): { stem: string; branch: string } {
 }
 
 export function formatHiddenStemsDisplay(stems: string[], locale: string): string {
-  if (!stems.length) return isZhMatrixLocale(locale) ? "无" : "—";
+  if (!stems.length) return isZhMatrixLocale(locale) ? "—" : "—";
   const parts = stems.map((st) => {
     const info = getStemInfo(st);
     return info ? elementLabelLocalized(info.element, locale) : st;
   });
   const unique = [...new Set(parts)];
-  const label = isZhMatrixLocale(locale) ? "藏干" : "Hidden";
+  // Façade: element blend only — never 「藏干」+ stem glyphs.
+  const label = isZhMatrixLocale(locale) ? "蕴元" : "Potential";
   return `${label}: ${unique.join("·")}`;
 }
 
