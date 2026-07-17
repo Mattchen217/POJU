@@ -165,7 +165,7 @@ function main() {
     path.join(ROOT, "lib/base-analysis/generate-core-judgments.ts"),
     "utf8",
   );
-  assert("CJ self-check: 泄身≠驱动", cjSrc.includes("泄身的通道不是驱动源"));
+  assert("CJ self-check: 泄身≠驱动", cjSrc.includes("泄身通道是**消耗**") || cjSrc.includes("泄身通道是消耗"));
 
   const evidenceMd =
     "## 节\n\n正文。\n\n**依据与推理:**\n\n因为 ⟦t:day_master|柔韧生长力⟧ 所以结论。";

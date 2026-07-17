@@ -79,6 +79,32 @@ export function hasCoreJudgmentsBlackspeak(text: string): boolean {
   return bans.some((b) => text.includes(b));
 }
 
+/**
+ * 提示词里的任何常量串一旦出现在输出里 = 照抄 = 这个用户拿到的是别人的读数。
+ * 铁律 #1：示范句会被逐字照抄。示范句已删，这道闸负责它以后别再长回来。
+ * 同时比对代码兜底模板 —— 输出 ≈ 兜底 = 这次 LLM 调用白烧，也该重发。
+ */
+export function looksCopiedFromPromptOrTemplate(
+  interpretive: Record<string, string>,
+  fallback: CoreJudgments,
+): { copied: boolean; hits: string[] } {
+  const hits: string[] = [];
+  const norm = (s: string) => s.replace(/[\s。；;,，.…—\-"'「」“”]/g, "");
+  for (const [key, value] of Object.entries(interpretive)) {
+    const v = norm(value);
+    if (v.length < 8) {
+      hits.push(`${key}: too short to be a readout`);
+      continue;
+    }
+    const tpl = norm(String((fallback as Record<string, unknown>)[key] ?? ""));
+    // 与代码兜底几乎一致 → LLM 没带来任何东西
+    if (tpl && (v === tpl || v.includes(tpl) || tpl.includes(v))) {
+      hits.push(`${key}: ≈ template fallback`);
+    }
+  }
+  return { copied: hits.length > 0, hits };
+}
+
 function buildCoreJudgmentsLlmPrompt(
   structured: ProfileStructured,
   locale: string,
@@ -92,49 +118,76 @@ function buildCoreJudgmentsLlmPrompt(
 
 把 structured 译成【具体、可被下游直接引用】的机制读数。
 
-规则：
-1) 只输出 JSON；字段仅：identity_anchor, drive_mechanism, structural_gap, balance_anchor, exchange_mode, leverage_state
-2) 【禁止】输出 refs / climate_now（代码已算好）
-3) 只展开 structured，【禁止】改判强弱/用神方向/喜忌/格局
-4) 无比喻套话、无职业/婚恋场景、无年龄/干支纪年
-5) 每字段 1 句——写【机制】（供给/消耗/缺口/杠杆），不要抽象意境
+## 六个字段各自读什么（这是定义，不是可选项）
 
-【禁止】裸干支、日主、身弱/身强、用神/喜神/忌神、刑冲合害原词。
+- identity_anchor —— **这套系统靠什么维持自己**。读 day_master 五行 + strength：
+  供给从哪来、在什么条件下会断。写"运转条件"，不写性格形容词。
+- drive_mechanism —— **什么动作能真的推进它**。读 pattern + 在场十神 + strength：
+  哪条通道是推进、哪条是消耗。⚠️ 供给偏弱时，泄身通道是**消耗**，不是驱动 —— 别把消耗写成驱动。
+- structural_gap —— **它最先在哪里失效**。读 ji_shen + strength + natal_relations：
+  过载时先垮的是哪个环节。写失效点，不写"缺点"。
+- balance_anchor —— **补哪一路能把它拉回可用区**。读 yong_shen + xi_shen：
+  只写"补什么方向"，**不写做什么动作**（行动是下游第4段的活，这里越界会锁死下游）。
+- exchange_mode —— **它跟外界怎么换能量**。读在场十神的进/出两侧：
+  需要外界给什么、最擅长给出什么。
+- leverage_state —— **哪一个条件成熟时收益最大**。读 yong_shen 得力与否 + natal_relations：
+  写"条件"，不写"时机"，不写"你应该"。
 
-反例（术语复述 / 空诗意 / 把消耗当驱动）：
-  ✗ "identity_anchor": "乙木日主，根基偏弱，依赖水木生扶。"
-  ✗ "identity_anchor": "像一场温柔却坚定的苏醒。"
-  ✗ "drive_mechanism": "表达与创造是主引擎"（当 strength 偏弱且食伤为忌时——泄身通道是消耗，不是驱动）
-正例（机制读数 · 下游可直接用）：
-  ✓ "identity_anchor": "供给端靠连接放大；硬撑独扛时输出会断。"
-  ✓ "drive_mechanism": "吸收转化与协同合作是主要推进方式；硬输出反而加速透支。"
-  ✓ "structural_gap": "调节阀偏弱——信息未齐就容易锁死决策。"
-  ✓ "balance_anchor": "补稳定供给、减持续消耗，比加新任务更有效。"
+## 硬规则
 
-自检（写完每条后自问）：
-- 能量供给偏弱时，【泄身的通道不是驱动源，是消耗源】——drive_mechanism 别把消耗当驱动。
-- 每条判断必须与 structured 的强弱/用神方向一致，不得自相矛盾。
-- 下游能否直接写成「锚元不足 + 耗元偏重 → …」式依据？不能 → 重写。`
+1) 只输出 JSON；字段仅上述六项，每项 1 句。
+2) 【禁止】输出 refs / climate_now（代码已算好）。
+3) 只展开 structured，【禁止】改判强弱/用神方向/喜忌/格局。
+4) 【禁止】裸干支、日主、身弱/身强、用神/喜神/忌神、刑冲合害原词。
+5) 【禁止】比喻、职业/婚恋场景、年龄/干支纪年、行动清单。
+6) **每条必须能被换成另一个命盘时失效** —— 六条里有任何一条换盘还成立，那条就是套话，重写。
+7) refs 里的 shensha_instances 与 natal_relations 是这盘**独有**的算料：
+   至少 structural_gap 与 leverage_state 必须落到其中具体条目上，不能只用强弱/喜忌三标签。
+
+## 反例（照这个方向避）
+
+  ✗ "identity_anchor": "乙木日主，根基偏弱，依赖水木生扶。"（术语复述 + 裸干支）
+  ✗ "identity_anchor": "像一场温柔却坚定的苏醒。"（空诗意，无机制）
+  ✗ "drive_mechanism": "表达与创造是主引擎"（当供给偏弱、泄身为忌时：把消耗当驱动）
+  ✗ "balance_anchor": "多做冥想、每天早起半小时。"（越界写成行动清单）
+  ✗ 任何一条读起来像「大部分人都这样」的句子。`
     : `# core_judgments = mechanism readouts for machines (not poetry, not jargon)
 
 Translate structured into concrete mechanism lines four products can quote.
 
-Rules:
-1) JSON only; keys: identity_anchor, drive_mechanism, structural_gap, balance_anchor, exchange_mode, leverage_state
-2) Never output refs / climate_now
-3) Expand only — never re-judge strength / favorable directions / pattern
-4) No metaphors, career/romance scenes, age/calendar years
-5) One sentence per field — write mechanisms (supply / drain / gap / leverage), not vibes
+## What each field reads (definitions — not optional)
 
-Banned: bare Ganzhi, day-master / weak-self jargon, clash/combine jargon.
+- identity_anchor —— **what keeps this system running**. Read day_master element + strength:
+  where supply comes from, and under what conditions it cuts off. Write operating conditions, not personality adjectives.
+- drive_mechanism —— **which actions actually advance it**. Read pattern + present ten-gods + strength:
+  which channel is propulsion vs drain. When supply is weak, depleting outlets are **drains**, not drive — never write a drain as drive.
+- structural_gap —— **where it fails first**. Read ji_shen + strength + natal_relations:
+  which link collapses under overload. Write the failure point, not a "flaw".
+- balance_anchor —— **which direction restores usability**. Read yong_shen + xi_shen:
+  only "what to replenish" — **not** action checklists (actions belong to downstream delivery).
+- exchange_mode —— **how it swaps energy with the outside**. Read present ten-gods on intake/output sides:
+  what it needs from outside, what it gives best.
+- leverage_state —— **which condition unlocks the highest payoff**. Read whether yong_shen is supported + natal_relations:
+  write the condition — not timing, not "you should".
 
-Bad: poetic abstraction, chart jargon, or calling a drain channel the "drive" when supply is weak.
-Good: "Supply scales via connection; solo forcing cuts output." / "Absorption + collaboration is the main propulsion; hard output accelerates drain."
+## Hard rules
 
-Self-check after each field:
-- When supply is weak, depleting outlets are drains — NOT drive_mechanism sources.
-- Every judgment must agree with structured strength / favorable directions — no self-contradiction.
-- Can a product turn this into "anchor short + drain heavy → …"? If not → rewrite.`;
+1) JSON only; the six keys above; one sentence each.
+2) Never output refs / climate_now (code-filled).
+3) Expand only — never re-judge strength / favorable directions / pattern.
+4) Banned: bare Ganzhi, day-master / weak-self / favorable-element jargon, clash/combine jargon.
+5) Banned: metaphors, career/romance scenes, age/calendar years, action lists.
+6) **Every line must fail on a different chart** — if any line still fits most people, rewrite it.
+7) refs.shensha_instances and natal_relations are this chart's unique material:
+   at least structural_gap and leverage_state must land on a concrete item from them — not only strength / xi-ji labels.
+
+## Bad (avoid these directions)
+
+  ✗ "identity_anchor": bare Ganzhi + "weak self needs water/wood support" (jargon restatement)
+  ✗ "identity_anchor": poetic abstraction with no mechanism
+  ✗ "drive_mechanism": calling a depleting outlet the drive when supply is weak
+  ✗ "balance_anchor": meditation / wake-up checklists (action overreach)
+  ✗ any sentence that still works for most other charts`;
 
   const user = `${zh ? "structured 摘要 + 代码已填字段（只读）" : "structured summary + code-filled fields (read-only)"}:\n\`\`\`json\n${JSON.stringify(
     {
@@ -164,7 +217,7 @@ export type GenerateCoreJudgmentsResult = {
 
 /**
  * Per-profile medium call. refs + climate_now from code.
- * On failure / blackspeak → deterministic template + loud warn.
+ * On failure / blackspeak / copy → same-params retry (max 3), then deterministic template + loud warn.
  */
 export async function generateCoreJudgmentsForProfile(input: {
   structured: ProfileStructured;
@@ -176,50 +229,65 @@ export async function generateCoreJudgmentsForProfile(input: {
   const climate_now = buildClimateNowFromStructured(input.structured, input.locale);
   const fallback = buildCoreJudgmentsFromStructured(input.structured, input.locale);
 
-  try {
-    const { system, user } = buildCoreJudgmentsLlmPrompt(input.structured, input.locale);
-    const result = await openRouterChatCompletion({
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: user },
-      ],
-      temperature: 0.35,
-      max_tokens: 900,
-      json_mode: true,
-      reasoning_effort: "medium",
-      session_id: input.session_id,
-      call_type: "core_judgments",
-      phase_name: "core_judgments_medium",
-      signal: input.signal,
-    });
-
-    const interpretive = parseLlmInterpretiveJson(result.text ?? "");
-    if (!interpretive) {
-      console.warn("[fallback] core_judgments LLM parse failed — using template", {
-        finish_reason: result.finish_reason,
-        preview: (result.text ?? "").slice(0, 120),
+  const MAX_ATTEMPTS = 3;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const { system, user } = buildCoreJudgmentsLlmPrompt(input.structured, input.locale);
+      const result = await openRouterChatCompletion({
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user },
+        ],
+        temperature: 0.35,
+        max_tokens: 900,
+        json_mode: true,
+        reasoning_effort: "medium",
+        session_id: input.session_id,
+        call_type: "core_judgments",
+        phase_name: "core_judgments_medium",
+        signal: input.signal,
       });
-      return { judgments: fallback, source: "template_fallback" };
-    }
 
-    const joined = Object.values(interpretive).join("\n");
-    if (hasCoreJudgmentsBlackspeak(joined)) {
-      console.warn("[fallback] core_judgments LLM blackspeak rejected — using template", {
-        preview: joined.slice(0, 160),
-      });
-      return { judgments: fallback, source: "template_fallback" };
+      const interpretive = parseLlmInterpretiveJson(result.text ?? "");
+      if (!interpretive) {
+        console.warn(
+          `[core_judgments] attempt ${attempt}/${MAX_ATTEMPTS} — parse failed, resending same params`,
+        );
+        continue;
+      }
+      if (hasCoreJudgmentsBlackspeak(Object.values(interpretive).join("\n"))) {
+        console.warn(
+          `[core_judgments] attempt ${attempt}/${MAX_ATTEMPTS} — blackspeak, resending same params`,
+        );
+        continue;
+      }
+      const copy = looksCopiedFromPromptOrTemplate(interpretive, fallback);
+      if (copy.copied) {
+        console.warn(
+          `[core_judgments] attempt ${attempt}/${MAX_ATTEMPTS} — 疑似照抄/套话，同参数重发`,
+          { hits: copy.hits },
+        );
+        continue;
+      }
+      const merged: CoreJudgments = { ...interpretive, climate_now, refs };
+      if (!isCoreJudgments(merged)) {
+        console.warn(
+          `[core_judgments] attempt ${attempt}/${MAX_ATTEMPTS} — shape invalid, resending same params`,
+        );
+        continue;
+      }
+      return { judgments: merged, source: "llm" };
+    } catch (e) {
+      console.warn(
+        `[core_judgments] attempt ${attempt}/${MAX_ATTEMPTS} — call failed, resending same params`,
+        {
+          reason: e instanceof Error ? e.message : String(e),
+        },
+      );
     }
-
-    const merged: CoreJudgments = { ...interpretive, climate_now, refs };
-    if (!isCoreJudgments(merged)) {
-      console.warn("[fallback] core_judgments LLM shape invalid — using template");
-      return { judgments: fallback, source: "template_fallback" };
-    }
-    return { judgments: merged, source: "llm" };
-  } catch (e) {
-    console.warn("[fallback] core_judgments LLM call failed — using template", {
-      reason: e instanceof Error ? e.message : String(e),
-    });
-    return { judgments: fallback, source: "template_fallback" };
   }
+  console.warn(
+    "[fallback] core_judgments — 3 次均未拿到合格读数，落代码模板。**这份底座是套话，四产品都会受影响。**",
+  );
+  return { judgments: fallback, source: "template_fallback" };
 }

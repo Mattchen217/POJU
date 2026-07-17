@@ -282,12 +282,11 @@ export function buildForbiddenTermsPromptBlock(locale: string): string {
 【禁词/禁用比喻 = 字面禁止出现】
 不得以【任何形式】出现，包括：否定式、对比式、引用式、加引号提及。
   ✗「你不是引擎」  ✗「不像散热片那样」  ✗「所谓的命运」  ✗「这不是命定」
-要表达「你不靠硬撑」→【直接正面说】，不要拿禁词当反面例子。
-  ✓「你的力量来自吸收与转化，而不是自我消耗。」
+要表达「你不靠硬撑」→【直接正面说】，不要拿禁词当反面例子。用这个盘自己的机制说，不要套用任何现成句式。
 
 【禁裸干支】甲乙丙丁戊己庚辛壬癸 / 子丑寅卯辰巳午未申酉戌亥 及「丙火/乙木」类合称一律不得裸露——要么 ⟦t:<slug>|<贴题白话>⟧（软译由系统填；兼容形第2格软译也【不得】含裸干支），要么纯白话。
 【标记】id 必须取自闭集 slug 清单；自造 slug（如 da_yun / ji_shen / stem_foo）= 直接拒绝。闭集没有对应概念 → 【不打标，直接白话讲】。
-【收尾】禁「这不是命运/不是命定」否定式。✓「这是你的能量配置读数。怎么用它，取决于你自己。」`;
+【收尾】禁「这不是命运/不是命定」否定式。收尾句由系统统一追加，你不用写。`;
   }
 
   return `# User-visible body · absolute bans (violation = rejected = wasted paid call)
@@ -299,11 +298,11 @@ export function buildForbiddenTermsPromptBlock(locale: string): string {
 
 [Literal ban] Banned words/metaphors must NOT appear in ANY form — including negation, contrast, quotation, or scare-quotes.
   ✗ "you are not an engine"  ✗ "unlike a heatsink"  ✗ "so-called fate"  ✗ "this is not destiny"
-  To say "you don't hard-brace" → say it positively. ✓ "Your power comes from absorption and conversion, not self-burn."
+  To say "you don't hard-brace" → say it positively from THIS chart's mechanism — never reuse stock sentences.
 
 [No bare Ganzhi] Never bare stems/branches or "Bing fire"/"Yi wood" compounds — use ⟦t:<slug>|<contextual plain>⟧ (system fills soft; compat soft slot must itself be Ganzhi-free) or plain vernacular
 [Markers] ids must be closed-set slugs only; invented ids are rejected. No closed concept → plain vernacular, no marker.
-[Closing] Never "this is not fate" negations. ✓ "This is your energy-config readout. How you use it is yours."`;
+[Closing] Never "this is not fate" negations. Closing line is appended by the system — do not write one.`;
 }
 
 /** Compact repair instruction — model returns patches JSON only, not full document. */

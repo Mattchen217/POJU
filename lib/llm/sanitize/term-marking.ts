@@ -698,6 +698,26 @@ export function normalizeTermMarkerIds(text: string, locale: string): string {
  * (historical failure: stem_yi with bare stem-element in soft slot).
  * Also normalizes 2-slot id|plain into 3-slot id|SSOT|plain for parsers.
  */
+/** SSOT 全部软译词（全 locale）—— 用来识别"模型把软译抄进了白话槽"。 */
+const ALL_SOFT_LABEL_SURFACES: ReadonlySet<string> = new Set(
+  POJU_TERMS.flatMap((t) => Object.values(t.term))
+    .map((s) => String(s).trim())
+    .filter(Boolean),
+);
+
+/**
+ * 白话槽里填的是软译词（或术语原词）= 没解释，等于"用这个词解释这个词"。
+ * 实测底座 13 个标记 12 个如此（⟦t:weak_self|需养⟧ → tooltip 弹出「需养」）。
+ * 判空 → 让 SSOT definition 顶上。留痕，别静默（铁律 #5）。
+ */
+export function isNonExplanatoryPlain(plain: string, id: string, loc: string): boolean {
+  const p = plain.trim();
+  if (!p) return true;
+  if (p === termOf(id, loc)) return true; // 抄了自己的软译
+  if (p.length <= 6 && ALL_SOFT_LABEL_SURFACES.has(p)) return true; // 抄了别的术语的软译
+  return false;
+}
+
 export function rewriteMarkersWithSsotSoft(text: string, locale: string): string {
   if (!text?.includes("⟦t:")) return text ?? "";
   const loc = toGlossaryLocale(locale);
@@ -717,7 +737,12 @@ export function rewriteMarkersWithSsotSoft(text: string, locale: string): string
         }
         return raw;
       }
-      const plainOut = plain || glossOf(id, loc) || soft;
+      // 白话槽 = 软译词 → 视为没写，让 SSOT 固定白话顶上（铁律 #4：代码能定的别让模型做）
+      const usable = isNonExplanatoryPlain(plain, id, loc) ? "" : plain;
+      if (plain && !usable) {
+        console.warn("[term-marking] 白话槽抄了软译词，已回落 SSOT 定义", { id, wrote: plain });
+      }
+      const plainOut = usable || glossOf(id, loc) || soft;
       return `⟦t:${id}|${escapeMarkerPart(soft)}|${escapeMarkerPart(plainOut)}⟧`;
     },
   );
@@ -853,6 +878,11 @@ export type TermMarkingPromptOptions = {
    * Still includes closed-set id table + hard rules.
    */
   principlesOnly?: boolean;
+  /**
+   * 底座专用：这一层【没有用户情景】→「贴题白话」是伪需求。
+   * 模型只选 slug，白话由代码从 pojulife-terms.definition 填（固定模板 · 5 语言已齐）。
+   */
+  ssotPlainOnly?: boolean;
 };
 
 export function buildTermMarkingPromptBlock(
@@ -863,6 +893,7 @@ export function buildTermMarkingPromptBlock(
   const langLabel =
     loc === "zh" ? "中文" : loc === "en" ? "English" : loc.toUpperCase();
   const principlesOnly = opts?.principlesOnly === true;
+  const ssotPlainOnly = opts?.ssotPlainOnly === true;
   const rows = DELIVERY_MARKING_ENTRIES.map((e) => {
     const soft = softLabel(e, loc);
     const keep =
@@ -871,12 +902,22 @@ export function buildTermMarkingPromptBlock(
           ? "（可见软译只用上表词，禁括号干支）"
           : " (visible soft label only — no stem-branch in parens)"
         : "";
-    const sample = e.forbidden.slice(0, principlesOnly ? 2 : 4).join(" / ");
+    const sample = e.forbidden.slice(0, principlesOnly || ssotPlainOnly ? 2 : 4).join(" / ");
+    if (ssotPlainOnly) {
+      return `| \`${e.id}\` | ${sample} |`;
+    }
     return `| \`${e.id}\` | ${sample} | **${soft}**${keep} |`;
   }).join("\n");
 
-  const rules = principlesOnly
-    ? `## 打标记规则（原则 · 严禁过拟合示例）
+  const rules = ssotPlainOnly
+    ? `## 打标记规则（底座 · 只选 slug）
+1. 格式固定：\`⟦t:<slug>|⟧\` —— **竖线保留，后面留空**。软译词和白话解释都由系统从术语表填入。
+2. 你唯一要做的是**选对 slug**。这一层没有用户的具体处境，任何"贴题白话"都是你编的，会被丢弃。
+3. **正文零标记**；标记只出现在「依据与推理」；一段依据 ≤3 金字。
+4. **slug 必须取自上表**；自造 id = 拒绝；闭集里没有 → 不打标、直接白话讲。
+5. 守六条语义红线（不预测/不算命/不占卜/不决吉凶/不恐吓/不超自然承诺）。`
+    : principlesOnly
+      ? `## 打标记规则（原则 · 严禁过拟合示例）
 1. 格式：\`⟦t:<slug>|<贴题白话>⟧\` —— **软译词不用你写**（系统从术语表填入官方术语）。
 2. 贴题白话必须引用【这位用户亲口说过的具体词/场景】；禁止通用词典比方。
 3. 自检：换用户还成立？成立 → 重写。
@@ -884,7 +925,7 @@ export function buildTermMarkingPromptBlock(
 5. 守六条语义红线（不预测/不算命/不占卜/不决吉凶/不恐吓/不超自然承诺）。
 
 ${buildTermMarkingFewShot(locale)}`
-    : `## 打标记规则
+      : `## 打标记规则
 1. 格式：\`⟦t:<slug>|<贴题白话>⟧\` 或 \`⟦t:<slug>||<贴题白话>⟧\`
 2. **软译词【不用写】**——上表 soft 仅供你识别概念；系统渲染时用官方术语覆盖你写的任何软译。
 3. 贴题白话 = 结合本句意境 + 用户问题的人话；只进 tooltip；必须引用该用户亲口元素。
@@ -899,12 +940,21 @@ ${buildTermMarkingFewShot(locale)}
 
 ${buildClosedSetConstraintPromptBlock(locale)}`;
 
+  const tableHeader = ssotPlainOnly
+    ? `| slug | 禁/术语示例 |
+|---|---|`
+    : `| slug | 禁/术语示例 | 官方术语 (${langLabel}) |
+|---|---|---|`;
+
+  const intro = ssotPlainOnly
+    ? `凡在「依据与推理」中引用下表概念：打 \`⟦t:<slug>|⟧\`（竖线后留空）。软译与白话由系统从术语表填入。`
+    : `凡在「依据与推理」中引用下表概念：打 \`⟦t:<slug>|<贴题白话>⟧\`。**软译词由系统从术语表填入**（下表 soft 列仅供对照）。`;
+
   return `# 术语标记（输出 JSON 字符串 · ${langLabel}）
 
-凡在「依据与推理」中引用下表概念：打 \`⟦t:<slug>|<贴题白话>⟧\`。**软译词由系统从术语表填入**（下表 soft 列仅供对照）。
+${intro}
 
-| slug | 禁/术语示例 | 官方术语 (${langLabel}) |
-|---|---|---|
+${tableHeader}
 ${rows}
 
 ${rules}`;

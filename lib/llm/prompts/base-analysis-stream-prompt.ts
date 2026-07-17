@@ -93,7 +93,7 @@ const BASE_ANALYSIS_NEUTRALITY_RULES_ZH = `# 中立元报告 · 硬禁（场景�
 ## 禁止任何现实情节与定性
 - **禁**职业/行业/经营状态/雇佣/婚育/资产/具体人际关系断言。
 - **禁例:** 「你适合开咖啡馆」「hire a part-time helper」「running a food stall」「该换工作了」「适合结婚」。
-- **正例方向:** 「你的核心能量偏高频输出，执行锋芒强，但长期缓冲弱——需要规则网格约束蒸发」——只谈机制，不编情节。
+- **只谈机制，不编情节**：说这套系统怎么运转、在什么条件下失效；不说他是谁、做什么、会遇到什么。
 - **禁**未来事件预测（新合伙/扩张/机会到来/某年会…）— 只给**能量倾向**。
 - **禁**医疗与脏腑点名：健康相关改为中立的「系统过载 / 内耗 / 节律失衡」能量描述 + 作息环境类调谐方向；**不点名器官、不给饮食医嘱**。
 - 职业/关系若**必须**提及，只能作为「能量投射的中立举例」，并显式标注「**举例，非定性**」— **但优先完全不提**，把投射留给下游。
@@ -102,7 +102,7 @@ const BASE_ANALYSIS_NEUTRALITY_RULES_ZH = `# 中立元报告 · 硬禁（场景�
 ## 比喻边界（本盘唯一主隐喻）
 - 全文**最多一条主隐喻**，由本盘 \`day_master\` + \`strength\` + \`yong_shen\` **现定**；服务于解释能量机制，**不编造现实情节**。
 - **黑名单（禁抄）** — 与绝对禁词块同源：引擎 / 手机散热片 / 散热缺口 / 冷却模块 / 随时能翻的参考书（**以 \`buildForbiddenTermsPromptBlock\` 注入块为准**）。
-- **黑名单 = 字面禁止**：否定式/对比式/引用式同样违规。✗「你不是一台引擎」✗「不像散热片」→ 请正面直说。✓「你的力量来自吸收与转化，而不是自我消耗。」
+- **黑名单 = 字面禁止**：否定式/对比式/引用式同样违规。✗「你不是一台引擎」✗「不像散热片」→ 想说"他不靠硬撑"，就**直接正面说**，别拿禁词当反面参照。
 - 自检：**「换一个命盘还成立吗？」**——成立就必须重写。`;
 
 const BASE_ANALYSIS_NEUTRALITY_RULES_EN = `# Neutral meta-report · hard bans (scenarios belong to downstream POJU/Glyph/Match/Syncro)
@@ -112,7 +112,7 @@ This is a **shared neutral context base** (like a lab report / raw MBTI readout 
 ## No real-world plot or typing
 - **Ban** career/industry/business status/hiring/marriage/parenting/assets/specific relationship assertions.
 - **Bad:** "You should run a café," "hire a part-time helper," "running a food stall," "time to switch jobs," "ready for marriage."
-- **Good direction:** "Core energy leans high-frequency output with sharp execution edge but weak long buffer—needs a rule grid to limit evaporation"—mechanism only, no plot.
+- **Mechanism only, no plot**: describe how the system runs and where it fails; never who he is, what he does, or what will happen to him.
 - **Ban** future-event predictions (new partner, expansion, opportunity arriving, "in 2027…")—**energy tendency only**.
 - **Ban** medical/organ naming: health = neutral "system overload / internal friction / rhythm drift" + rhythm/environment retune direction—**no organs, no diet prescriptions**.
 - Career/relationship mentions, if unavoidable, must be labeled "**example only—not a typing**"—**prefer omitting entirely**; downstream handles projection.
@@ -121,7 +121,7 @@ This is a **shared neutral context base** (like a lab report / raw MBTI readout 
 ## Metaphor boundary (one main metaphor per chart)
 - **At most one** main metaphor, determined by this chart's \`day_master\` + \`strength\` + \`yong_shen\`; explains mechanism only—**no** life plot.
 - **Blacklist (never copy)** — same source as the absolute-bans block: engine / phone heatsink / always-open reference book / heat-dissipation gap / cooling module / steady-burning engine (**\`buildForbiddenTermsPromptBlock\` is authoritative**).
-- **Literal ban**: negation / contrast / quotation still count. ✗ "you are not an engine" ✗ "unlike a heatsink" → say it positively. ✓ "Your power comes from absorption and conversion, not self-burn."
+- **Literal ban**: negation / contrast / quotation still count. ✗ "you are not an engine" ✗ "unlike a heatsink" → say "doesn't hard-brace" **positively**, without using banned words as a foil.
 - Self-check: **"Would this still work for another chart?"**—if yes, rewrite.`;
 
 const BASE_ANALYSIS_NARRATIVE_BREVITY_ZH = `# 叙事精简 · 禁止逐柱复述（准确性）
@@ -146,19 +146,21 @@ const BASE_ANALYSIS_BINDING_RULES = `# 绑定计算结果 · 闭集 · 禁幻觉
 2. **神煞闭集 · 实例清单** — 神煞**只能逐字取自**本次 \`buildStructuredInstanceInventory\` 列出的项。**该清单为空则整篇不得出现任何神煞名**。你只能引用【本盘实例清单里实际算出】的神煞，按名引用；清单之外的任何神煞——无论你训练里多熟——对这个盘都不存在，写了即视为编造、会被拦截重写。
 3. **十神/长生** — 同理，只用 structured 给出的具体条目；禁止类别统称代替或编造。
 4. **data_availability.missing** — pillars_detail 或 da_yun 缺失时，该维度**只做方向性描述**，禁止编造具体干支/神煞/起运岁数。
-5. **双层 + 术语标记 · 干支禁裸** — **正文零标记**；每个 ## 分区末尾加 \`**依据与推理:**\`（**3–5 句 / ≤5 金字**；默认折叠不占主阅读流），格式 \`⟦t:<slug>|<贴题白话>⟧\`（软译词不用写，系统填入）。仍禁：数据罗列（逐柱）、犹豫措辞（可能/也许）、裸词；须有锚点 + 推导闭合（「因为 A＋B → 所以结论」）。**正文任何干支组合**不得裸露。**禁止** \`(癸酉 phase)\`、\`during 壬申\` 半裸写法。
-6. **贴题白话 = 用户可见** — \`⟦t:<slug>|<贴题白话>⟧\` 的【贴题白话】适用与正文【完全相同】的禁词规则：无裸干支、无日主/身弱/用神/十神原词（食神/伤官/正印/七杀…）、无「命」字族、无黑名单比喻。白话是解释给他听的话，不是术语复述——术语由系统从表里填。
-   - ✗ \`⟦t:day_master|乙木⟧\`  ✗ \`⟦t:day_master|如盆景般需精准滋养的乙木⟧\`  ✗ \`⟦t:shi_shen|将感受化为产出的食神⟧\`
-   - ✓ \`⟦t:day_master|如盆景般需精准滋养的柔韧生长力⟧\`  ✓ \`⟦t:shi_shen|把感受化为产出的通道⟧\`
+5. **双层 + 术语标记 · 干支禁裸** — **正文零标记**；每个 ## 分区末尾加 \`**依据与推理:**\`（**3–5 句 / ≤5 金字**；默认折叠不占主阅读流），格式 \`⟦t:<slug>|⟧\`（竖线后留空；软译与白话由系统填）。仍禁：数据罗列（逐柱）、犹豫措辞（可能/也许）、裸词；须有锚点 + 推导闭合（「因为 A＋B → 所以结论」）。**正文任何干支组合**不得裸露。**禁止** \`(癸酉 phase)\`、\`during 壬申\` 半裸写法。
+6. **白话槽留空 · 系统填** — 格式 \`⟦t:<slug>|⟧\`（竖线保留、后面不写）。
+   这一层是四产品共用的中立底座，**没有这位用户的具体处境**——任何"贴题白话"都是你编的，
+   系统会丢弃并用术语表里的固定释义覆盖。你唯一要做的是**选对 slug**。
+   - ✗ \`⟦t:day_master|乙木⟧\`（裸干支）
+   - ✗ \`⟦t:weak_self|需养⟧\`（把软译抄进白话槽 = 用这个词解释这个词）
+   - ✗ \`⟦t:shi_shen|将感受化为产出的食神⟧\`（白话里留了术语原词）
 7. **时间锚 · 零大运叙事** — 用户报告**零大运 / 零年龄段 / 零公历年 / 零干支纪年**时间锚；时机留给下游；底座叙事**不要写大运气候概览**，也不要为「显得完整」硬塞 decade 策略。
 8. **标记嵌入完整句（语法）** — ⟦t:…⟧ **必须**嵌入通顺完整句；软译词**前**要有自然冠词/物主词/连接词（在标记**外**），**禁止**把标记当作无冠词句首主语或句首碎片后接大写动词新句。
    - ✗ \`mobility pulse (驿马)[···] Pairs with a sharp…\`
-   - ✓ \`Your mobility pulse (驿马) keeps you in motion—it pairs with a sharp…\`
 9. **藏干/十神禁罗列** — **禁止** \`Hidden stems (Wu earth, Xin metal…)\` 英文堆砌；藏干用**一句机制白话**，必要时最多 1 个 ⟦t:…⟧。
 10. **标记排版** — 标记只出现在依据块内，**禁止**在标记前插入裸换行；\`**依据与推理:**\` 与其后整段须连成一块（勿空行拆开，以免金字漏在折叠外）。
 11. **金色词密度** — 正文段落最多 1–2 个 ⟦t:…⟧；**依据与推理**块最多 5 个；同 id 不重复刷标记。
 12. **禁止逐柱复述** — **禁止**在正文逐柱枚举藏干/十神/神煞/长生；不要另开四柱/大运展示段。
-13. **软译词由系统填入**——你只选 slug + 写贴题白话；勿自造软译。
+13. **软译词与白话由系统填入**——你只选 slug；白话槽留空；勿自造软译。
 14. **本命结构关系 · 锚定不枚举** — 关系**只能**来自实例清单【本命结构关系】（\`source=natal\`）；**最多一处**织进「你的核心配置」或「容易卡住的地方」；**禁**流年/定向/十神张力词；**禁**裸写刑冲合害或关系清单；**关系类不打标、直接中性白话**（禁止 \`liu_chong\` / \`liuhe\` 等 glossary slug 标记）。清单为空则**不得**硬塞关系词。`;
 
 const BASE_ANALYSIS_LEAD_LABEL_RULE_ZH = `# 引导块标签（严禁占位词与模板标签）
@@ -506,7 +508,7 @@ ${BASE_ANALYSIS_OUTPUT_SECTIONS_EN.split("\n").slice(1).join("\n")}
     lang === "zh" ? BASE_ANALYSIS_LAYOUT_ZH : BASE_ANALYSIS_LAYOUT_EN,
     BASE_ANALYSIS_BINDING_RULES,
     buildDualLayerDeliveryPromptBlock(lang),
-    buildTermMarkingPromptBlock(lang, { principlesOnly: true }),
+    buildTermMarkingPromptBlock(lang, { principlesOnly: true, ssotPlainOnly: true }),
     lang === "zh" ? BASE_ANALYSIS_FEW_SHOT_ZH : BASE_ANALYSIS_FEW_SHOT_EN,
     outputBlock,
     forbiddenBlock,
