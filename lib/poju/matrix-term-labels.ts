@@ -1,6 +1,6 @@
 /**
  * Front-of-paywall matrix labels — always resolve via POJU_TERMS SSOT.
- * Never surface 日主/用神/十神/长生/藏干/大运/流年 raw Han on the façade.
+ * Never surface 日主/用神/十神/长生/藏干/大运/流年/金木水火土 raw on the façade.
  */
 
 import { CLOSED_SET_SLUG } from "@/lib/glossary/term-closed-set";
@@ -41,25 +41,69 @@ const LIFE_STAGE_HAN_TO_SLUG: Record<string, string> = {
   养: "life_yang",
 };
 
-/** Soft label for a traditional Han term (十神 / 日主 / 长生…). */
+/** English / Han / slug → POJU element slug. */
+const ELEMENT_TO_SLUG: Record<string, string> = {
+  Wood: "wood",
+  Fire: "fire",
+  Earth: "earth",
+  Metal: "metal",
+  Water: "water",
+  wood: "wood",
+  fire: "fire",
+  earth: "earth",
+  metal: "metal",
+  water: "water",
+  木: "wood",
+  火: "fire",
+  土: "earth",
+  金: "metal",
+  水: "water",
+};
+
+export function elementToSlug(element: string): string | null {
+  const t = element.trim();
+  if (!t) return null;
+  return ELEMENT_TO_SLUG[t] ?? ELEMENT_TO_SLUG[t.charAt(0)] ?? null;
+}
+
+/**
+ * Five-element soft label from SSOT (舒展/发散/承托/精练/润流 · Growth/Radiance/…).
+ * Falls back to input only when unknown.
+ */
+export function matrixElementSoft(element: string, locale: string): string {
+  const slug = elementToSlug(element);
+  if (!slug) return element.trim();
+  return termOf(slug, locale) ?? element.trim();
+}
+
+/** Soft label for a traditional Han term (十神 / 日主 / 长生 / 五行…). */
 export function matrixSoftTerm(traditionalOrSlug: string, locale: string): string {
   const raw = traditionalOrSlug.trim();
   if (!raw) return "";
-  // Already a slug?
+  if (elementToSlug(raw)) return matrixElementSoft(raw, locale);
   const bySlug = termOf(raw, locale);
   if (bySlug) return bySlug;
   const byTrad = pojuTermByTraditional(raw);
   if (byTrad) return termOf(byTrad.slug, locale) ?? byTrad.term.zh;
   const slug = CLOSED_SET_SLUG[raw] ?? LIFE_STAGE_HAN_TO_SLUG[raw];
   if (slug) return termOf(slug, locale) ?? raw;
-  // 日元 / 元男 / 元女 → 本元
-  if (/^(日元|元男|元女)$/.test(raw)) return termOf("day_master", locale) ?? (locale.startsWith("zh") ? "本元" : "Core");
+  if (/^(日元|元男|元女)$/.test(raw)) {
+    return termOf("day_master", locale) ?? (locale.startsWith("zh") ? "本元" : "Core");
+  }
+  if (/^(身旺|身强)$/.test(raw)) {
+    return termOf("strong_self", locale) ?? raw;
+  }
+  if (raw === "中和") {
+    return termOf("balanced_self", locale) ?? raw;
+  }
   return raw;
 }
 
 export function matrixSoftGloss(traditionalOrSlug: string, locale: string): string {
   const raw = traditionalOrSlug.trim();
   if (!raw) return "";
+  const elSlug = elementToSlug(raw);
+  if (elSlug) return glossOf(elSlug, locale) ?? "";
   const byTrad = pojuTermByTraditional(raw);
   if (byTrad) return glossOf(byTrad.slug, locale) ?? "";
   const slug = CLOSED_SET_SLUG[raw] ?? LIFE_STAGE_HAN_TO_SLUG[raw] ?? raw;
@@ -77,9 +121,7 @@ export function matrixLayerCap(
 export function stripGanzhiFromLunar(lunar: string, locale: string): string {
   if (!lunar?.trim()) return "";
   let s = lunar.trim();
-  // Drop leading 干支年
   s = s.replace(/^[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]年/, "");
-  // Drop any remaining stem-branch pairs
   s = s.replace(/[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]/g, "");
   s = s.replace(/\s{2,}/g, " ").replace(/^[·\s，,]+|[·\s，,]+$/g, "").trim();
   if (!s) return locale.startsWith("zh") ? "农历" : "Lunar";
@@ -87,14 +129,14 @@ export function stripGanzhiFromLunar(lunar: string, locale: string): string {
   return s;
 }
 
-/** Element-only annual transit headline (no 丙午 / bing wu). */
+/** Element-only annual transit headline — soft element via SSOT. */
 export function annualTransitHeadline(
   stemElement: string,
   locale: string,
 ): { title: string; subtitle: string } {
-  const el = stemElement || (locale.startsWith("zh") ? "流势" : "Transit");
+  const soft = matrixElementSoft(stemElement, locale) || stemElement;
   if (locale.startsWith("zh")) {
-    return { title: `${el}势`, subtitle: "本年动能背景" };
+    return { title: `${soft}势`, subtitle: "本年动能背景" };
   }
-  return { title: `${el} tide`, subtitle: "This year's momentum field" };
+  return { title: `${soft} tide`, subtitle: "This year's momentum field" };
 }

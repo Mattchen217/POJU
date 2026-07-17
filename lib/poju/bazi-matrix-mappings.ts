@@ -1,5 +1,7 @@
 /** Deterministic lookup tables for Energy Matrix (zero LLM). */
 
+import { matrixElementSoft, matrixSoftTerm } from "@/lib/poju/matrix-term-labels";
+
 export type StemInfo = {
   han: string;
   pinyin: string;
@@ -160,25 +162,28 @@ const ELEMENT_FR: Record<string, string> = {
   Water: "Eau",
 };
 
-/** Locale-aware element labels for matrix templates (never leave bare English in non-en UI). */
+/** Locale-aware element labels — SSOT soft terms (舒展/Growth…), never bare 木/Wood on façade. */
 export function elementLabelLocalized(element: string, locale: string): string {
+  const soft = matrixElementSoft(element, locale);
   const key = element.trim();
+  // Known five-element keys always soft — never fall back to 木/Wood.
+  if (soft && soft !== key) return soft;
+  if (/^(Wood|Fire|Earth|Metal|Water|木|火|土|金|水)$/i.test(key)) {
+    return soft || key;
+  }
   const lang = locale.toLowerCase().slice(0, 2);
   if (lang === "zh") return ELEMENT_ZH[key] ?? key;
   if (lang === "es") return ELEMENT_ES[key] ?? key;
   if (lang === "de") return ELEMENT_DE[key] ?? key;
   if (lang === "fr") return ELEMENT_FR[key] ?? key;
-  return key; // en keeps Wood/Fire/…
+  return key;
 }
 
 export function formatStemDisplay(stem: string, locale: string): string {
   const info = getStemInfo(stem);
   if (!info) return stem;
-  if (isZhMatrixLocale(locale)) {
-    const yy = info.yin_yang === "Yin" ? "阴" : "阳";
-    return `${yy}${ELEMENT_ZH[info.element]}`;
-  }
-  return info.en;
+  // Façade: soft element only (发散 / Radiance) — no 阴火 / Yin Fire.
+  return elementLabelLocalized(info.element, locale);
 }
 
 export function formatBranchDisplay(
@@ -188,14 +193,18 @@ export function formatBranchDisplay(
 ): string {
   const info = getBranchInfo(branch);
   if (!info) return branch;
+  const elSoft = elementLabelLocalized(info.element, locale);
+  const stageSoft = lifeStage?.trim()
+    ? matrixSoftTerm(lifeStage.trim(), locale) || lifeStage.trim()
+    : null;
   if (isZhMatrixLocale(locale)) {
     const zodiac = ZODIAN_EN_TO_HAN[info.zodiac_en] ?? info.zodiac_en;
-    const parts = [zodiac, ELEMENT_ZH[info.element]];
-    if (lifeStage) parts.push(lifeStage);
+    const parts = [zodiac, elSoft];
+    if (stageSoft) parts.push(stageSoft);
     return parts.join(" · ");
   }
-  const base = `${info.zodiac_en} · ${info.element}`;
-  return lifeStage ? `${base} · ${lifeStage}` : base;
+  const base = `${info.zodiac_en} · ${elSoft}`;
+  return stageSoft ? `${base} · ${stageSoft}` : base;
 }
 
 export function getStemInfo(stem: string): StemInfo | null {
@@ -239,7 +248,7 @@ const WUXING_HAN_TO_EN: Record<string, string> = {
 
 export type YongshenChipDisplay = { label: string; elementKey: string };
 
-/** Locale-aware 用神 chips: zh shows 木水火土金, en shows Wood/Fire/…. */
+/** Locale-aware 锚元 chips: SSOT soft element labels (舒展/润流 · Growth/Fluidity). */
 export function yongshenChipsForLocale(
   analysis: { elements_en?: string[]; elements_han?: string[] } | null | undefined,
   locale: string,
@@ -247,13 +256,14 @@ export function yongshenChipsForLocale(
   if (!analysis) return [];
   const han = analysis.elements_han ?? [];
   const en = analysis.elements_en ?? [];
-  if (isZhMatrixLocale(locale)) {
-    return han.map((h, i) => ({
-      label: String(h),
-      elementKey: en[i] ?? WUXING_HAN_TO_EN[String(h)] ?? String(h),
-    }));
-  }
-  return en.map((e) => ({ label: e, elementKey: e }));
+  const keys = en.length ? en : han.map((h) => WUXING_HAN_TO_EN[String(h)] ?? String(h));
+  return keys.map((e, i) => {
+    const elementKey = en[i] ?? WUXING_HAN_TO_EN[String(han[i] ?? "")] ?? String(e);
+    return {
+      label: elementLabelLocalized(elementKey, locale),
+      elementKey,
+    };
+  });
 }
 
 export function elementCssClass(element: string): string {

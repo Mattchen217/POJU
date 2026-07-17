@@ -1418,30 +1418,30 @@
       "kun": "Female"
     },
     "strength": {
-      "strong": "Strong (身旺)",
-      "weak": "Weak (身弱)",
-      "balanced": "Balanced (中和)"
+      "strong": "Abundant",
+      "weak": "Conserving",
+      "balanced": "Balanced"
     },
     "element": {
-      "wood": "Wood",
-      "fire": "Fire",
-      "earth": "Earth",
-      "metal": "Metal",
-      "water": "Water"
+      "wood": "Growth",
+      "fire": "Radiance",
+      "earth": "Grounding",
+      "metal": "Refinement",
+      "water": "Fluidity"
     },
     "life_stage": {
-      "changsheng": "Birth (长生)",
-      "muyu": "Bathing (沐浴)",
-      "guandai": "Crown (冠带)",
-      "linguan": "Officer (临官)",
-      "diwang": "Peak (帝旺)",
-      "shuai": "Decline (衰)",
-      "bing": "Sickness (病)",
-      "si": "Death (死)",
-      "mu": "Tomb (墓)",
-      "jue": "Extinction (绝)",
-      "tai": "Embryo (胎)",
-      "yang": "Nurture (养)"
+      "changsheng": "Emergence",
+      "muyu": "Exposure",
+      "guandai": "Equipping",
+      "linguan": "Ascendancy",
+      "diwang": "Apex",
+      "shuai": "Waning",
+      "bing": "Fatigue",
+      "si": "Dormancy",
+      "mu": "Preservation",
+      "jue": "Void",
+      "tai": "Incubation",
+      "yang": "Nurture"
     },
     "shensha": {
       "tian_yi_gui_ren": "Heavenly Noble (天乙贵人)",

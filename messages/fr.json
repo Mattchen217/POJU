@@ -1224,30 +1224,30 @@
       "kun": "Matrice natale Kūn (坤造)"
     },
     "strength": {
-      "strong": "Fort (身旺)",
-      "weak": "Faible (身弱)",
-      "balanced": "Équilibré (中和)"
+      "strong": "Abondant",
+      "weak": "Conservateur",
+      "balanced": "Équilibré"
     },
     "element": {
-      "wood": "Bois",
-      "fire": "Feu",
-      "earth": "Terre",
-      "metal": "Métal",
-      "water": "Eau"
+      "wood": "Croissance",
+      "fire": "Éclat",
+      "earth": "Ancrage",
+      "metal": "Raffinement",
+      "water": "Fluidité"
     },
     "life_stage": {
-      "changsheng": "Naissance (长生)",
-      "muyu": "Bain (沐浴)",
-      "guandai": "Couronne (冠带)",
-      "linguan": "Officier (临官)",
-      "diwang": "Sommet (帝旺)",
-      "shuai": "Déclin (衰)",
-      "bing": "Maladie (病)",
-      "si": "Mort (死)",
-      "mu": "Tombe (墓)",
-      "jue": "Extinction (绝)",
-      "tai": "Embryon (胎)",
-      "yang": "Nourriture (养)"
+      "changsheng": "Émergence",
+      "muyu": "Exposition",
+      "guandai": "Équipement",
+      "linguan": "Ascendance",
+      "diwang": "Apex",
+      "shuai": "Déclin",
+      "bing": "Fatigue",
+      "si": "Latence",
+      "mu": "Préservation",
+      "jue": "Vide",
+      "tai": "Incubation",
+      "yang": "Nutrition"
     },
     "shensha": {
       "tian_yi_gui_ren": "Noble céleste (天乙贵人)",
@@ -1302,8 +1302,8 @@
       "tong_zi_sha": "Esprit enfantin (童子煞)",
       "kong_wang": "Vide et néant (空亡)"
     },
-    "yongshen_label": "Dieu utile (喜用神)",
-    "optimizing_vector": "Vecteur d'optimisation (用神):",
+    "yongshen_label": "Ancre",
+    "optimizing_vector": "Ancre:",
     "pillar_slot": {
       "year_stem": "Tige de l'Année",
       "year_branch": "Branche de l'Année",
@@ -1344,7 +1344,7 @@
       "radar_matrix_em": "wuxing radar",
       "pillars_em": "piliers",
       "elemental_breakdown": "Répartition Élémentaire",
-      "day_master": "Maître du Jour",
+      "day_master": "Noyau",
       "with_surplus": ", avec ",
       "surplus_and": " en excès et ",
       "deficit_period": " en déficit.",
@@ -1388,8 +1388,8 @@
       "season_transition": "Transition saisonnière en cours",
       "zodiac_note": "Votre moi extérieur — comment les autres vous lisent au premier regard.",
       "lunar_prefix": "Lunaire ",
-      "pattern_line": "Année du {zodiac} · Maître du Jour {day_master}",
-      "calendar_mid": "Pilier de l'année {year_pillar} · Maître du Jour {day_master}",
+      "pattern_line": "Année du {zodiac} · Noyau incline vers {day_master}",
+      "calendar_mid": "{year_pillar} · Noyau incline vers {day_master}",
       "annual_transit": "L'énergie {element} rencontre votre excédent de {dominant} tandis que {deficit} reste faible — l'élan de cette année sous-tend le va-et-vient que vous ressentez maintenant.",
       "resonance_stem": "Couche de tiges {interaction} — deux impulsions s'alignent en surface.",
       "resonance_default": "{year_branch} ancre la façon dont les autres vous lisent d'abord — une référence extérieure stable.",
@@ -1414,7 +1414,7 @@
     "pillar_month": "Mois",
     "pillar_day": "Jour (Soi)",
     "pillar_hour": "Heure",
-    "day_master_label": "Maître du jour",
+    "day_master_label": "Noyau",
     "strength_label": "Force",
     "current_phase_label": "Phase actuelle (10 ans)",
     "hint_first_time": "Construction de votre matrice énergétique. Veuillez rester sur cet écran.",

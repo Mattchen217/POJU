@@ -133,9 +133,9 @@ function enrichPillar(p: PillarDetail, locale: string): MatrixPillarDisplay {
     stem_en: stemInfo?.en ?? p.stem,
     stem_pinyin: stemInfo?.pinyin ?? "",
     stem_element: stemInfo?.element ?? "",
-    // Zodiac animal + element only — no branch glyph.
+    // Zodiac animal + soft element only — no branch glyph / bare Wood.
     branch_en: branchInfo
-      ? `${branchInfo.zodiac_en} · ${branchInfo.element}`
+      ? `${branchInfo.zodiac_en} · ${elementLabel(branchInfo.element, locale)}`
       : p.branch,
     branch_pinyin: branchInfo?.pinyin ?? "",
     branch_element: branchInfo?.element ?? "",

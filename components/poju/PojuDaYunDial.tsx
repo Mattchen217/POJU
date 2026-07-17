@@ -108,9 +108,9 @@ export function PojuDaYunDial({ daYun, currentIndex, hub, currentAge, locale }: 
           >
             <div className="age">{ageLabel(phase.entry, phase.next)}</div>
             <div className="theme">{phase.theme}</div>
-            <div className="gz">{phase.entry.ganzhi}</div>
+            <div className="gz">{phase.theme}</div>
             {phase.isNow ? (
-              <div className="nowtag">{zh ? "当前大运" : "Current decade"}</div>
+              <div className="nowtag">{zh ? "当前纪元" : "Current era"}</div>
             ) : null}
           </div>
         );
@@ -121,7 +121,7 @@ export function PojuDaYunDial({ daYun, currentIndex, hub, currentAge, locale }: 
         <div className="hubage">{zh ? `年龄 ${currentAge}` : `Age ${currentAge}`}</div>
         <div className="hubphase">{hub.theme}</div>
         <div className="hubsub">
-          {zh ? "大运" : "Decade"} {hub.age_range} · {new Date().getFullYear()}
+          {zh ? "纪元" : "Era"} {hub.age_range} · {new Date().getFullYear()}
         </div>
       </div>
     </div>

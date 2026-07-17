@@ -1224,30 +1224,30 @@
       "kun": "Kūn-Natalmatrix (坤造)"
     },
     "strength": {
-      "strong": "Stark (身旺)",
-      "weak": "Schwach (身弱)",
-      "balanced": "Ausgeglichen (中和)"
+      "strong": "Vollgeladen",
+      "weak": "Schonend",
+      "balanced": "Ausgeglichen"
     },
     "element": {
-      "wood": "Holz",
-      "fire": "Feuer",
-      "earth": "Erde",
-      "metal": "Metall",
-      "water": "Wasser"
+      "wood": "Wachstum",
+      "fire": "Strahlung",
+      "earth": "Erdung",
+      "metal": "Veredelung",
+      "water": "Fluidität"
     },
     "life_stage": {
-      "changsheng": "Geburt (长生)",
-      "muyu": "Bad (沐浴)",
-      "guandai": "Krone (冠带)",
-      "linguan": "Beamter (临官)",
-      "diwang": "Gipfel (帝旺)",
-      "shuai": "Abnahme (衰)",
-      "bing": "Krankheit (病)",
-      "si": "Tod (死)",
-      "mu": "Grab (墓)",
-      "jue": "Erlöschen (绝)",
-      "tai": "Embryo (胎)",
-      "yang": "Pflege (养)"
+      "changsheng": "Entstehung",
+      "muyu": "Exposition",
+      "guandai": "Rüstung",
+      "linguan": "Aufstieg",
+      "diwang": "Gipfel",
+      "shuai": "Abklingen",
+      "bing": "Müdigkeit",
+      "si": "Latenz",
+      "mu": "Bewahrung",
+      "jue": "Leere",
+      "tai": "Inkubation",
+      "yang": "Pflege"
     },
     "shensha": {
       "tian_yi_gui_ren": "Himmlischer Edler (天乙贵人)",
@@ -1302,8 +1302,8 @@
       "tong_zi_sha": "Kindergeist (童子煞)",
       "kong_wang": "Leere & Nichtigkeit (空亡)"
     },
-    "yongshen_label": "Nützlicher Gott (喜用神)",
-    "optimizing_vector": "Optimierungsvektor (用神):",
+    "yongshen_label": "Anker",
+    "optimizing_vector": "Anker:",
     "pillar_slot": {
       "year_stem": "Jahresstamm",
       "year_branch": "Jahreszweig",
@@ -1344,7 +1344,7 @@
       "radar_matrix_em": "wuxing radar",
       "pillars_em": "Säulen",
       "elemental_breakdown": "Elementare Aufschlüsselung",
-      "day_master": "Tagesmeister",
+      "day_master": "Kern",
       "with_surplus": ", mit ",
       "surplus_and": " Überschuss und ",
       "deficit_period": " Defizit.",
@@ -1388,8 +1388,8 @@
       "season_transition": "Jahreszeitenübergang im Gange",
       "zodiac_note": "Dein äußeres Selbst — wie andere dich auf den ersten Blick lesen.",
       "lunar_prefix": "Lunar ",
-      "pattern_line": "Jahr des {zodiac} · Tagesmeister {day_master}",
-      "calendar_mid": "Jahressäule {year_pillar} · Tagesmeister {day_master}",
+      "pattern_line": "Jahr des {zodiac} · Kern neigt zu {day_master}",
+      "calendar_mid": "{year_pillar} · Kern neigt zu {day_master}",
       "annual_transit": "{element}-Energie trifft auf deinen {dominant}-Überschuss, während {deficit} dünn bleibt — das Jahresmomentum liegt unter dem Hin und Her, das du jetzt spürst.",
       "resonance_stem": "Stängelschicht {interaction} — zwei Antriebe richten sich an der Oberfläche aus.",
       "resonance_default": "{year_branch} verankert, wie andere dich zuerst lesen — eine stabile äußere Referenz.",
@@ -1414,7 +1414,7 @@
     "pillar_month": "Monat",
     "pillar_day": "Tag (Selbst)",
     "pillar_hour": "Stunde",
-    "day_master_label": "Tagesmeister",
+    "day_master_label": "Kern",
     "strength_label": "Stärke",
     "current_phase_label": "Aktuelle 10-Jahres-Phase",
     "hint_first_time": "Deine Energiematrix wird aufgebaut. Bitte bleib auf diesem Bildschirm.",

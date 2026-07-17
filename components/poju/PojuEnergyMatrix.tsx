@@ -18,6 +18,7 @@ import { matrixSynopsisNarrativeState } from "@/lib/poju/matrix-narrative-text";
 import { computeYearTransitProgress } from "@/lib/poju/matrix-transit-progress";
 import {
   annualTransitHeadline,
+  matrixElementSoft,
   matrixLayerCap,
 } from "@/lib/poju/matrix-term-labels";
 import { resolveBaziLabel } from "@/lib/poju/resolve-bazi-i18n";
@@ -64,12 +65,9 @@ function formatLayerStageLine(
   },
   locale: string,
 ): string {
-  // Zodiac animal + element (+ soft life-stage). Lookup uses branch char; output never shows 干支.
+  // Zodiac animal + soft element (+ soft life-stage). Lookup uses branch char; output never shows 干支.
   const stage = pl.life_stage_label?.trim() || null;
-  if (isZhMatrixLocale(locale)) {
-    return formatBranchDisplay(pl.branch, locale, stage);
-  }
-  return stage ? `${pl.branch_en} · ${stage}` : pl.branch_en;
+  return formatBranchDisplay(pl.branch, locale, stage);
 }
 
 function NarrativePlaceholder({ label }: { label: string }) {
@@ -114,7 +112,13 @@ function vitalityPin(strength: PojuMatrixPayload["strength"]): string {
   return "50%";
 }
 
-function RadarChart({ scores }: { scores: PojuMatrixPayload["wuxing_scores"] }) {
+function RadarChart({
+  scores,
+  locale,
+}: {
+  scores: PojuMatrixPayload["wuxing_scores"];
+  locale: string;
+}) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -145,7 +149,10 @@ function RadarChart({ scores }: { scores: PojuMatrixPayload["wuxing_scores"] }) 
           splitLine: { lineStyle: { color: "rgba(255,255,255,0.13)" } },
           splitArea: { areaStyle: { color: ["rgba(255,255,255,0.02)", "rgba(255,255,255,0.05)"] } },
           axisLine: { lineStyle: { color: "rgba(255,255,255,0.15)" } },
-          indicator: scores.map((s) => ({ name: s.element, max: max * 1.1 })),
+          indicator: scores.map((s) => ({
+            name: matrixElementSoft(s.element, locale),
+            max: max * 1.1,
+          })),
         },
         series: [
           {
@@ -175,7 +182,7 @@ function RadarChart({ scores }: { scores: PojuMatrixPayload["wuxing_scores"] }) 
       ro?.disconnect();
       chart?.dispose();
     };
-  }, [scores]);
+  }, [scores, locale]);
 
   return <div className="radar radar--compact" ref={ref} aria-hidden />;
 }
@@ -396,7 +403,7 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
               {tc("radar_matrix")} <em>· {tc("radar_matrix_em")}</em>
             </div>
             <div className="pem-panel__body pem-panel__body--radar">
-              <RadarChart scores={wuxing_scores} />
+              <RadarChart scores={wuxing_scores} locale={locale} />
             </div>
           </div>
           <div className="pem-panel pem-panel--bars ro ro--wuxing">
@@ -405,12 +412,12 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
             </div>
             <div className="elist">
               {wuxing_scores.map((row) => {
+                const soft = matrixElementSoft(row.element, locale);
                 return (
                   <div className="erow" key={row.element}>
                     <div className="erow__head">
                       <span className="erow__names">
-                        <span className={`ename ${ELEMENT_CLASS[row.element] ?? ""}`}>{row.element}</span>
-                        <span className="ecn">{row.element_zh}</span>
+                        <span className={`ename ${ELEMENT_CLASS[row.element] ?? ""}`}>{soft}</span>
                       </span>
                       <span className="ecount">{row.count}</span>
                     </div>
@@ -446,11 +453,11 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
                 display.enote_caption
               ) : !suppressNarrative && showTemplateFallback ? (
                 <>
-                  {tc("day_master")} <b>{display.day_master.element}</b>
+                  {tc("day_master")} <b>{matrixElementSoft(display.day_master.element, locale)}</b>
                   {tc("with_surplus")}
-                  <b>{dominant?.element}</b>
+                  <b>{dominant ? matrixElementSoft(dominant.element, locale) : ""}</b>
                   {tc("surplus_and")}
-                  <b>{deficit?.element}</b>
+                  <b>{deficit ? matrixElementSoft(deficit.element, locale) : ""}</b>
                   {tc("deficit_period")}
                 </>
               ) : null}
@@ -479,7 +486,7 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
                 <div className="pem-equilibrium-item">
                   <div className="ro__v ro__v--metric">
                     <span className={`ro__v-accent ${ELEMENT_CLASS[dominant.element] ?? ""}`}>
-                      {dominant.element}
+                      {matrixElementSoft(dominant.element, locale)}
                     </span>
                     <span className="pct">
                       {tc("surplus")} · {dominant.pct}%
@@ -489,7 +496,7 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
                     <i style={{ width: `${dominant.pct}%` }} className={ELEMENT_BAR_CLASS[dominant.element] ?? ""} />
                   </div>
                   <div className="ro__tag up">
-                    ▲ {tc("dominant_vector")} · {dominant.element.toLowerCase()}
+                    ▲ {tc("dominant_vector")} · {matrixElementSoft(dominant.element, locale)}
                   </div>
                 </div>
               ) : null}
@@ -497,7 +504,7 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
                 <div className="pem-equilibrium-item">
                   <div className="ro__v ro__v--metric">
                     <span className={`ro__v-accent ${ELEMENT_CLASS[deficit.element] ?? ""}`}>
-                      {deficit.element}
+                      {matrixElementSoft(deficit.element, locale)}
                     </span>
                     <span className="pct">
                       {tc("deficit")} · {deficit.pct}%
@@ -507,7 +514,7 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
                     <i style={{ width: `${Math.max(deficit.pct, 5)}%` }} className={ELEMENT_BAR_CLASS[deficit.element] ?? ""} />
                   </div>
                   <div className="ro__tag down">
-                    ▼ {tc("key_gap")} · {deficit.element.toLowerCase()}
+                    ▼ {tc("key_gap")} · {matrixElementSoft(deficit.element, locale)}
                   </div>
                 </div>
               ) : null}
@@ -610,7 +617,7 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
                 </div>
                 <div className="stem">
                   <div className={`en ${elementCssClass(pl.stem_element)}`}>
-                    {pl.stem_element || (isZh ? "—" : "—")}
+                    {pl.stem_element ? matrixElementSoft(pl.stem_element, locale) : "—"}
                   </div>
                 </div>
                 <div className="branch">
