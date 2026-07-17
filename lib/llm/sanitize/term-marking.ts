@@ -356,7 +356,7 @@ function keepCnBridgeLabel(traditional: string): string | null {
 /** Wrap bare keep_cn soft phrases that lack ⟦t:…⟧ markers (visible text = soft label only, no ganzhi). */
 export function wrapBareKeepCnSoftTerms(text: string, locale: string): string {
   // 覆盖面维持现状（4 个 keep_cn slug）—— 扩到全部 14 条属于「双层制推广」，见文档末尾。
-  const patterns: Array<{ id: string; label: string }> = [
+  const patterns = [
     { id: "decade", label: keepCnBridgeLabel("大运") },
     { id: "day_master", label: keepCnBridgeLabel("日主") },
     { id: "year", label: keepCnBridgeLabel("流年") },
