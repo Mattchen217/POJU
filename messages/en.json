@@ -1561,7 +1561,7 @@
       "reading_label": "READING",
       "annual_transit": "Annual momentum",
       "transit_progress": "Year progress",
-      "your_sign_tag": "Zodiac accent",
+      "your_sign_tag": "Your Sign · 生肖",
       "pillar_year": "Root layer",
       "pillar_month": "Outer field",
       "pillar_day": "Core self",
@@ -1580,7 +1580,7 @@
     },
     "template": {
       "season_transition": "Season transition in progress",
-      "zodiac_note": "Cultural accent — how others first associate you (not a prediction).",
+      "zodiac_note": "Your outward self — how others first read you.",
       "lunar_prefix": "Lunar ",
       "pattern_line": "Year of the {zodiac} · Core leans {day_master}",
       "calendar_mid": "{year_pillar} · Core leans {day_master}",

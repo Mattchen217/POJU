@@ -1561,7 +1561,7 @@
       "reading_label": "READING",
       "annual_transit": "本年动能",
       "transit_progress": "年度进度",
-      "your_sign_tag": "生肖点缀",
+      "your_sign_tag": "你的生肖 · Your Sign",
       "pillar_year": "根基层",
       "pillar_month": "外场层",
       "pillar_day": "本我层",
@@ -1580,7 +1580,7 @@
     },
     "template": {
       "season_transition": "节气交接中",
-      "zodiac_note": "文化点缀 — 他人如何第一眼联想到你（非预测）。",
+      "zodiac_note": "你的外在姿态 — 他人如何第一眼读你。",
       "lunar_prefix": "农历",
       "pattern_line": "{zodiac}年 · 本元偏 {day_master}",
       "calendar_mid": "{year_pillar} · 本元偏 {day_master}",
