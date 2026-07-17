@@ -26,6 +26,7 @@ import {
   BARE_SIGN_POEM_PATTERN,
   auditBareGanzhi,
   auditMarkerCompleteness,
+  auditMarkerPlainBanned,
   auditOutOfSetTerms,
   auditRelationsAgainstInstance,
   auditShenShaAgainstInstance,
@@ -80,6 +81,7 @@ import { allShenshaHanSurfaces, resolveShenshaSoftLabels } from "@/lib/poju/shen
 export {
   auditBareGanzhi,
   auditMarkerCompleteness,
+  auditMarkerPlainBanned,
   auditOutOfSetTerms,
   auditRelationsAgainstInstance,
   auditShenShaAgainstInstance,

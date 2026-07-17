@@ -137,6 +137,9 @@ function bannedHintsForViolation(v: ComplianceViolation, locale: string): string
   if (v.label === "stem_element" || v.label === "marker_visible_ganzhi") {
     return "禁裸干支 /「乙木丙火」类合称；软译用纯白话";
   }
+  if (v.label.startsWith("marker_plain_banned")) {
+    return "标记贴题白话格禁裸干支/十神原词/命字族/黑名单比喻——改成纯机制白话（术语由系统填）";
+  }
   if (v.label.startsWith("out_of_set_marker_id:")) {
     return "自造或不在闭集的标记 id → 拆掉标记，改成纯白话（不要再打 ⟦t:…⟧）";
   }

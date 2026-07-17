@@ -101,16 +101,20 @@ function buildCoreJudgmentsLlmPrompt(
 
 【禁止】裸干支、日主、身弱/身强、用神/喜神/忌神、刑冲合害原词。
 
-反例（术语复述 / 空诗意）：
+反例（术语复述 / 空诗意 / 把消耗当驱动）：
   ✗ "identity_anchor": "乙木日主，根基偏弱，依赖水木生扶。"
   ✗ "identity_anchor": "像一场温柔却坚定的苏醒。"
+  ✗ "drive_mechanism": "表达与创造是主引擎"（当 strength 偏弱且食伤为忌时——泄身通道是消耗，不是驱动）
 正例（机制读数 · 下游可直接用）：
   ✓ "identity_anchor": "供给端靠连接放大；硬撑独扛时输出会断。"
-  ✓ "drive_mechanism": "表达与协调是主引擎；外部认可加速推进。"
-  ✓ "structural_gap": "冷却阀偏弱——信息未齐就容易锁死决策。"
+  ✓ "drive_mechanism": "吸收转化与协同合作是主要推进方式；硬输出反而加速透支。"
+  ✓ "structural_gap": "调节阀偏弱——信息未齐就容易锁死决策。"
   ✓ "balance_anchor": "补稳定供给、减持续消耗，比加新任务更有效。"
 
-自检：下游能否直接写成「锚元不足 + 耗元偏重 → …」式依据？不能 → 重写。`
+自检（写完每条后自问）：
+- 能量供给偏弱时，【泄身的通道不是驱动源，是消耗源】——drive_mechanism 别把消耗当驱动。
+- 每条判断必须与 structured 的强弱/用神方向一致，不得自相矛盾。
+- 下游能否直接写成「锚元不足 + 耗元偏重 → …」式依据？不能 → 重写。`
     : `# core_judgments = mechanism readouts for machines (not poetry, not jargon)
 
 Translate structured into concrete mechanism lines four products can quote.
@@ -124,10 +128,13 @@ Rules:
 
 Banned: bare Ganzhi, day-master / weak-self jargon, clash/combine jargon.
 
-Bad: poetic abstraction or chart jargon.
-Good: "Supply scales via connection; solo forcing cuts output." / "Cooling valve is weak — locks decisions before data is in."
+Bad: poetic abstraction, chart jargon, or calling a drain channel the "drive" when supply is weak.
+Good: "Supply scales via connection; solo forcing cuts output." / "Absorption + collaboration is the main propulsion; hard output accelerates drain."
 
-Self-check: can a product turn this into an evidence line like "anchor short + drain heavy → …"? If not → rewrite.`;
+Self-check after each field:
+- When supply is weak, depleting outlets are drains — NOT drive_mechanism sources.
+- Every judgment must agree with structured strength / favorable directions — no self-contradiction.
+- Can a product turn this into "anchor short + drain heavy → …"? If not → rewrite.`;
 
   const user = `${zh ? "structured 摘要 + 代码已填字段（只读）" : "structured summary + code-filled fields (read-only)"}:\n\`\`\`json\n${JSON.stringify(
     {

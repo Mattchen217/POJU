@@ -13,6 +13,7 @@ import {
   CLOSED_SET_REPLACE_IDS,
   CLOSED_SET_SLUG,
   CLOSED_SHEN_SHA,
+  CLOSED_TEN_GODS,
   HIGH_RISK_COMPLIANCE_HAN,
   HIGH_RISK_SOFT_LABEL,
   isClosedSetMarkerId,
@@ -41,6 +42,10 @@ import {
   termOf,
   type PojuTerm,
 } from "@/lib/glossary/pojulife-terms";
+import {
+  BANNED_TERMS_ZH,
+  metaphorBlacklistForLocale,
+} from "@/lib/llm/compliance/banned-terms";
 import { buildClosedSetConstraintPromptBlock } from "@/lib/llm/prompts/term-closed-set-constraint";
 import { STEMS } from "@/lib/match/data/stems-branches";
 import {
@@ -1227,14 +1232,21 @@ export function auditBareGanzhi(text: string): OutOfSetAuditHit[] {
 export function auditTermMarkerDensity(
   text: string,
   maxPerParagraph = 2,
+  /** Folded「依据与推理」allows denser gold marks (default-collapsed). */
+  maxEvidenceParagraph = 5,
 ): OutOfSetAuditHit[] {
   if (!text?.trim()) return [];
   const hits: OutOfSetAuditHit[] = [];
   for (const chunk of text.split(/\n\n+/)) {
     const trimmed = chunk.trim();
     if (!trimmed || trimmed.startsWith("##")) continue;
+    const isEvidence =
+      /^\*\*依据与推理/.test(trimmed) ||
+      /^\*\*Evidence\b/i.test(trimmed) ||
+      /^\*\*Rationale\b/i.test(trimmed);
+    const max = isEvidence ? maxEvidenceParagraph : maxPerParagraph;
     const count = parseTermMarkers(chunk).length;
-    if (count > maxPerParagraph) {
+    if (count > max) {
       hits.push({
         label: `term_density:${count}`,
         snippet: trimmed.replace(/\s+/g, " ").slice(0, 72),
@@ -1393,8 +1405,70 @@ export function auditRelationsAgainstInstance(
   return hits;
 }
 
+/** Ganzhi / stem-element surfaces banned in user-visible plain (tooltip) slots. */
+const PLAIN_SLOT_GANZHI_RE =
+  /[甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥]|[甲乙丙丁戊己庚辛壬癸][木火土金水]/;
+
+/** Ten-god originals + umbrella — must not appear in contextual plain (tooltip). */
+const PLAIN_SLOT_TEN_GOD_BANS_ZH = ["十神", ...CLOSED_TEN_GODS] as const;
+
+/**
+ * Contextual plain (2-slot slot2 / 3-slot slot3) is user-visible tooltip copy.
+ * Apply the same ban families as body text — never treat plain as a jargon dump.
+ */
+export function auditMarkerPlainBanned(text: string, locale = "zh"): OutOfSetAuditHit[] {
+  if (!text?.trim()) return [];
+  const hits: OutOfSetAuditHit[] = [];
+  const zh = locale.startsWith("zh");
+  const metaphors = metaphorBlacklistForLocale(locale);
+  const termBansZh = zh
+    ? [...new Set([...BANNED_TERMS_ZH, ...PLAIN_SLOT_TEN_GOD_BANS_ZH])].sort(
+        (a, b) => b.length - a.length,
+      )
+    : [];
+
+  for (const m of parseTermMarkers(text)) {
+    const plain = resolveMarkerPlain(m);
+    if (!plain) continue;
+    const snippet = plain.slice(0, 48);
+
+    if (zh) {
+      const ganzhi = plain.match(PLAIN_SLOT_GANZHI_RE);
+      if (ganzhi) {
+        hits.push({ label: `marker_plain_banned:${ganzhi[0]}`, snippet });
+      }
+      for (const term of termBansZh) {
+        if (plain.includes(term)) {
+          hits.push({ label: `marker_plain_banned:${term}`, snippet });
+          break;
+        }
+      }
+      for (const phrase of metaphors) {
+        if (plain.includes(phrase)) {
+          hits.push({ label: `marker_plain_banned:${phrase}`, snippet });
+          break;
+        }
+      }
+    } else {
+      const lower = plain.toLowerCase();
+      for (const phrase of metaphors) {
+        if (lower.includes(phrase.toLowerCase())) {
+          hits.push({ label: `marker_plain_banned:${phrase}`, snippet });
+          break;
+        }
+      }
+      // EN stem-element compounds sometimes leak as "Yi wood" / bare pinyin — light check
+      if (/\b(yi|jia|bing|ding|wu|ji|geng|xin|ren|gui)\s+(wood|fire|earth|metal|water)\b/i.test(plain)) {
+        hits.push({ label: "marker_plain_banned:stem_element", snippet });
+      }
+    }
+  }
+
+  return hits;
+}
+
 /** Broken / incomplete markers and visible-text shape issues. */
-export function auditMarkerCompleteness(text: string): OutOfSetAuditHit[] {
+export function auditMarkerCompleteness(text: string, locale = "zh"): OutOfSetAuditHit[] {
   if (!text?.trim()) return [];
   const hits: OutOfSetAuditHit[] = [];
 
@@ -1429,6 +1503,9 @@ export function auditMarkerCompleteness(text: string): OutOfSetAuditHit[] {
       hits.push({ label: "marker_visible_ganzhi", snippet: vis.slice(0, 40) });
     }
   }
+
+  // Plain slot = user-visible tooltip — same ban families as body.
+  hits.push(...auditMarkerPlainBanned(text, locale));
 
   return hits;
 }

@@ -60,12 +60,15 @@ export function auditBaseAnalysisDelivery(
     ),
     ...auditUserFacingBannedLeaks(softVisible, locale),
     ...auditUserFacingBannedLeaks(maskedMarked, locale),
+    // Metaphor on soft-visible AND on post-sanitize draft (labels/blockquote leads).
+    // softVisible alone can miss label-slot hits if a strip path transforms them.
     ...auditMetaphorBlacklist(softVisible, locale),
+    ...auditMetaphorBlacklist(text, locale),
     ...auditSoftReplaceReadability(softVisible, locale),
     ...auditDeliveredText(stripMarkersForPrompt(marked), locale).filter((v) =>
       isHardBannedTermLabel(v.label),
     ),
-    ...auditMarkerCompleteness(marked),
+    ...auditMarkerCompleteness(marked, locale),
     ...auditShenShaAgainstInstance(marked, structured),
   ]);
 
@@ -93,6 +96,7 @@ export function isBaseAnalysisGateFailure(violations: ComplianceViolation[]): bo
       v.label === "marker_visible_ganzhi" ||
       v.label.startsWith("term_density:") ||
       v.label === "marker_missing_plain" ||
+      v.label.startsWith("marker_plain_banned") ||
       v.label.startsWith("marker_visible_") ||
       isHardBannedTermLabel(v.label) ||
       v.label === "soft_replace_unreadable" ||

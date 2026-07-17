@@ -175,6 +175,25 @@ export function RichReadingText({
         );
       case "lead": {
         const bodyChunks = reflowLongParagraph(block.body, reflowOpts);
+        // Evidence fold must wrap the FULL body (all reflow chunks) — never leak gold marks outside.
+        if (isEvidenceLeadLabel(block.label)) {
+          return (
+            <EvidenceBlock key={i} label={block.label}>
+              {bodyChunks.map((chunk, j) =>
+                chunk ? (
+                  <p key={`${i}-ev-${j}`} className="reading-p">
+                    <MarkedInline
+                      text={chunk}
+                      locale={locale}
+                      dedupeScope={dedupeScope}
+                      keyBase={keyBase + j}
+                    />
+                  </p>
+                ) : null,
+              )}
+            </EvidenceBlock>
+          );
+        }
         if (bodyChunks.length <= 1) {
           return (
             <LeadBlock

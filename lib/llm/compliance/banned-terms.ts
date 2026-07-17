@@ -79,6 +79,7 @@ export const METAPHOR_BLACKLIST_ZH = [
   "散热缺口",
   "冷却模块",
   "引擎",
+  "藤蔓",
 ] as const;
 
 export const METAPHOR_BLACKLIST_EN = [
@@ -88,6 +89,7 @@ export const METAPHOR_BLACKLIST_EN = [
   "heat-dissipation gap",
   "cooling module",
   "engine",
+  "vine",
 ] as const;
 
 /**
@@ -101,6 +103,7 @@ export const LEAD_LABEL_METAPHOR_SOFT_ZH: Readonly<Record<string, string>> = {
   散热缺口: "调节不足",
   冷却模块: "调节环节",
   引擎: "方式",
+  藤蔓: "攀援",
 };
 
 export const LEAD_LABEL_METAPHOR_SOFT_EN: Readonly<Record<string, string>> = {
@@ -110,11 +113,13 @@ export const LEAD_LABEL_METAPHOR_SOFT_EN: Readonly<Record<string, string>> = {
   "heat-dissipation gap": "release shortfall",
   "cooling module": "release step",
   engine: "drive",
+  vine: "climb",
 };
 
 /**
  * Deterministic pre-gate scrub: rewrite metaphor-blacklist hits ONLY inside
- * bold lead labels (`**…:**` / `> **…:**`). Body copy is untouched.
+ * bold lead / pull-quote labels (`**…:**` / `> **…:**` / fullwidth `：`).
+ * Body copy is untouched.
  */
 export function scrubBannedMetaphorInLeadLabels(text: string, locale: string): string {
   if (!text?.trim()) return text ?? "";
@@ -122,26 +127,32 @@ export function scrubBannedMetaphorInLeadLabels(text: string, locale: string): s
     ? LEAD_LABEL_METAPHOR_SOFT_ZH
     : LEAD_LABEL_METAPHOR_SOFT_EN;
   const bans = [...metaphorBlacklistForLocale(locale)].sort((a, b) => b.length - a.length);
-  // Lead label: optional blockquote/list prefix, then **label:** (label ≤40 chars, no newline).
-  return text.replace(
-    /^([ \t]*(?:>\s*)?\*\*)([^*:\n]{1,40})(:\*\*)/gm,
+
+  const rewriteLabel = (label: string): string | null => {
+    const hay = locale.startsWith("zh") ? label : label.toLowerCase();
+    if (!bans.some((b) => hay.includes(locale.startsWith("zh") ? b : b.toLowerCase()))) {
+      return null;
+    }
+    let next = label;
+    for (const ban of bans) {
+      const soft = softMap[ban];
+      if (!soft) continue;
+      if (locale.startsWith("zh")) {
+        if (next.includes(ban)) next = next.split(ban).join(soft);
+      } else {
+        const re = new RegExp(ban.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "ig");
+        if (re.test(next)) next = next.replace(re, soft);
+      }
+    }
+    return next === label ? null : next;
+  };
+
+  // Form A: **label:** / **label：** (colon inside bold)
+  let out = text.replace(
+    /^([ \t]*(?:>\s*)?\*\*)([^*:\n：]{1,40})([:：]\*\*)/gm,
     (full, open: string, label: string, close: string) => {
-      const hay = locale.startsWith("zh") ? label : label.toLowerCase();
-      if (!bans.some((b) => hay.includes(locale.startsWith("zh") ? b : b.toLowerCase()))) {
-        return full;
-      }
-      let next = label;
-      for (const ban of bans) {
-        const soft = softMap[ban];
-        if (!soft) continue;
-        if (locale.startsWith("zh")) {
-          if (next.includes(ban)) next = next.split(ban).join(soft);
-        } else {
-          const re = new RegExp(ban.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "ig");
-          if (re.test(next)) next = next.replace(re, soft);
-        }
-      }
-      if (next === label) return full;
+      const next = rewriteLabel(label);
+      if (!next) return full;
       console.warn("[scrub-lead-label] rewrote banned metaphor in label slot", {
         from: label,
         to: next,
@@ -149,6 +160,22 @@ export function scrubBannedMetaphorInLeadLabels(text: string, locale: string): s
       return `${open}${next}${close}`;
     },
   );
+
+  // Form B: **label**: / **label**： (colon outside bold — common LLM variant)
+  out = out.replace(
+    /^([ \t]*(?:>\s*)?\*\*)([^*\n]{1,40})(\*\*[ \t]*[:：])/gm,
+    (full, open: string, label: string, close: string) => {
+      const next = rewriteLabel(label);
+      if (!next) return full;
+      console.warn("[scrub-lead-label] rewrote banned metaphor in label slot (colon-out)", {
+        from: label,
+        to: next,
+      });
+      return `${open}${next}${close}`;
+    },
+  );
+
+  return out;
 }
 
 export const BANNED_TERMS_EN = [

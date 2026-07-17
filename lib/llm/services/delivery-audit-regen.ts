@@ -85,6 +85,7 @@ export function isCriticalDeliveryAuditFailure(
       v.label === "bare_sign_poem" ||
       v.label === "broken_marker" ||
       v.label === "marker_missing_plain" ||
+      v.label.startsWith("marker_plain_banned") ||
       v.label.startsWith("marker_visible_") ||
       v.label.startsWith("payment_leak:"),
   );

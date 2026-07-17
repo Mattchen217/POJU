@@ -36,6 +36,10 @@ import {
   auditMarkerCompleteness,
   auditOutOfSetTerms,
 } from "@/lib/llm/sanitize/term-marking";
+import {
+  isEvidenceLeadLabel,
+  parseReadingBlocks,
+} from "@/lib/reading/parse-reading-blocks";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 
 const ROOT = path.resolve(__dirname, "..");
@@ -144,8 +148,35 @@ function main() {
     "lead-label scrub rewrites 引擎 only in label",
     scrubbedLabel.includes("**你的核心方式:**") && scrubbedLabel.includes("吸收与转化"),
   );
+  const scrubbedFw = scrubBannedMetaphorInLeadLabels("> **你的核心引擎：** 吸收与转化。", "zh");
+  assert(
+    "lead-label scrub handles fullwidth colon",
+    scrubbedFw.includes("核心方式") && !scrubbedFw.includes("引擎"),
+  );
+  const scrubbedOut = scrubBannedMetaphorInLeadLabels("**你的核心引擎**: 吸收与转化。", "zh");
+  assert(
+    "lead-label scrub handles colon outside bold",
+    scrubbedOut.includes("核心方式") && !scrubbedOut.includes("引擎"),
+  );
   const bodyKept = scrubBannedMetaphorInLeadLabels("正文里写引擎也不该被标签 scrub 误伤。", "zh");
   assert("lead-label scrub does not touch body 引擎", bodyKept.includes("引擎"));
+
+  const cjSrc = fs.readFileSync(
+    path.join(ROOT, "lib/base-analysis/generate-core-judgments.ts"),
+    "utf8",
+  );
+  assert("CJ self-check: 泄身≠驱动", cjSrc.includes("泄身的通道不是驱动源"));
+
+  const evidenceMd =
+    "## 节\n\n正文。\n\n**依据与推理:**\n\n因为 ⟦t:day_master|柔韧生长力⟧ 所以结论。";
+  const evBlocks = parseReadingBlocks(evidenceMd);
+  const evLead = evBlocks.find(
+    (b) => b.type === "lead" && isEvidenceLeadLabel(b.label),
+  );
+  assert(
+    "evidence fold merges trailing paragraph into lead body",
+    Boolean(evLead && evLead.type === "lead" && evLead.body.includes("day_master")),
+  );
 
   const routeSrc = fs.readFileSync(
     path.join(ROOT, "app/api/profile/base-analysis/stream/route.ts"),

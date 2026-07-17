@@ -86,13 +86,43 @@ function main() {
   const gateBroken = auditBaseAnalysisDelivery(broken, "en", structured);
   assert(!gateBroken.ok, "gate blocks broken markers");
 
-  console.log("\n=== missing plain + 2-slot standard + leading article ===");
+  console.log("\n=== missing plain + 2-slot standard + plain-slot bans ===");
   // Standard 2-slot ⟦t:slug|plain⟧ — must NOT be flagged as missing_plain
   assert(
     !auditMarkerCompleteness("⟦t:day_master|柔韧的吸收与转化者⟧").some(
       (h) => h.label === "marker_missing_plain",
     ),
     "2-slot standard form accepted (plain in slot2)",
+  );
+  assert(
+    auditMarkerCompleteness("⟦t:day_master|乙木⟧", "zh").some((h) =>
+      h.label.startsWith("marker_plain_banned"),
+    ),
+    "plain slot bare 乙木 blocked",
+  );
+  assert(
+    auditMarkerCompleteness("⟦t:day_master|如盆景般需精准滋养的乙木⟧", "zh").some((h) =>
+      h.label.startsWith("marker_plain_banned"),
+    ),
+    "plain slot 乙木 inside phrase blocked",
+  );
+  assert(
+    auditMarkerCompleteness("⟦t:shi_shen|将感受化为产出的食神⟧", "zh").some(
+      (h) => h.label === "marker_plain_banned:食神",
+    ),
+    "plain slot 食神 blocked",
+  );
+  assert(
+    auditMarkerCompleteness("⟦t:zheng_yin|来自知识与长辈的供源正印⟧", "zh").some(
+      (h) => h.label === "marker_plain_banned:正印",
+    ),
+    "plain slot 正印 blocked",
+  );
+  assert(
+    !auditMarkerCompleteness("⟦t:day_master|如盆景般需精准滋养的柔韧生长力⟧", "zh").some((h) =>
+      h.label.startsWith("marker_plain_banned"),
+    ),
+    "clean vernacular plain passes",
   );
   assert(
     !auditMarkerCompleteness("⟦t:yong_shen|润泽与滋养⟧").some((h) => h.label === "marker_missing_plain"),

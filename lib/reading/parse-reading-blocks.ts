@@ -10,10 +10,47 @@ export type ReadingBlock =
   | { type: "ul"; items: string[] }
   | { type: "divider" };
 
-export const READING_LABEL_PREFIX_RE = /^\*\*([^*]+?):\*\*\s*([\s\S]*)$/;
+export const READING_LABEL_PREFIX_RE = /^\*\*([^*]+?)[:：]\*\*\s*([\s\S]*)$/;
 
-const BOLD_TITLE_LINE_RE = /^\*\*([^*]+)\*\*:?\s*$/;
-const LEAD_LINE_RE = /^\*\*([^*]+):\*\*\s*(.*)$/;
+const BOLD_TITLE_LINE_RE = /^\*\*([^*]+)\*\*[:：]?\s*$/;
+const LEAD_LINE_RE = /^\*\*([^*]+)[:：]\*\*\s*(.*)$/;
+
+/** Lead labels that fold as evidence (shared by parser + EvidenceBlock UI). */
+export function isEvidenceLeadLabel(label: string): boolean {
+  const t = label.replace(/[:：]\s*$/, "").trim();
+  return /依据|推理|结构依据|时机判断|Profile\s*basis|Structural\s*basis|Timing\s*verdict|Evidence|Rationale|为什么这条|Why this/i.test(
+    t,
+  );
+}
+
+/** Absorb following paragraphs into「依据与推理」so gold marks stay inside the fold. */
+function mergeEvidenceTrailingParagraphs(blocks: ReadingBlock[]): ReadingBlock[] {
+  const out: ReadingBlock[] = [];
+  for (let i = 0; i < blocks.length; i++) {
+    const b = blocks[i]!;
+    if (b.type === "lead" && isEvidenceLeadLabel(b.label)) {
+      const parts = [b.body].filter(Boolean);
+      while (i + 1 < blocks.length && blocks[i + 1]!.type === "p") {
+        i += 1;
+        parts.push((blocks[i] as { type: "p"; content: string }).content);
+      }
+      out.push({ type: "lead", label: b.label, body: parts.join("\n\n").trim() });
+      continue;
+    }
+    if (b.type === "subhead" && isEvidenceLeadLabel(b.content)) {
+      const parts: string[] = [];
+      while (i + 1 < blocks.length && blocks[i + 1]!.type === "p") {
+        i += 1;
+        parts.push((blocks[i] as { type: "p"; content: string }).content);
+      }
+      const label = /[:：]\s*$/.test(b.content) ? b.content : `${b.content}:`;
+      out.push({ type: "lead", label, body: parts.join("\n\n").trim() });
+      continue;
+    }
+    out.push(b);
+  }
+  return out;
+}
 
 export function parseBoldTitleLine(line: string): string | null {
   const m = line.trim().match(BOLD_TITLE_LINE_RE);
@@ -104,7 +141,7 @@ export function parseReadingBlocks(raw: string, opts?: { layout?: boolean }): Re
     blocks.push(...parseParagraphChunk(trimmed));
   }
 
-  return blocks;
+  return mergeEvidenceTrailingParagraphs(blocks);
 }
 
 export function parseReadingLabel(content: string): { label: string; body: string } | null {

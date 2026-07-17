@@ -3,8 +3,11 @@
 import { useId, useState, type ReactNode } from "react";
 
 import { cn } from "@/lib/utils/classnames";
+import { isEvidenceLeadLabel } from "@/lib/reading/parse-reading-blocks";
 
 import "@/styles/evidence-block.css";
+
+export { isEvidenceLeadLabel };
 
 type Props = {
   /** Visible summary label, e.g. "依据与推理" */
@@ -16,8 +19,8 @@ type Props = {
 };
 
 /**
- * Dual-layer delivery: folded "▸ 依据与推理" evidence block.
- * Body stays marker-free; gold terms live here.
+ * Dual-layer delivery: folded golden "▸ 依据与推理[···]" evidence block.
+ * Same visual language as term-mark gold + [···] (user already knows = tappable).
  */
 export function EvidenceBlock({
   label,
@@ -45,20 +48,22 @@ export function EvidenceBlock({
           {open ? "▾" : "▸"}
         </span>
         <span className="evidence-block__label">{title}</span>
+        {!open ? (
+          <span className="evidence-block__ellipsis" aria-hidden>
+            [···]
+          </span>
+        ) : null}
       </button>
-      {open ? (
-        <div id={panelId} className="evidence-block__panel" role="region">
-          {children}
-        </div>
-      ) : null}
+      {/* Keep panel mounted when collapsed — unmount+remount re-runs MarkedInline against
+          the parent dedupeScope Set and demotes gold terms to plain soft text. */}
+      <div
+        id={panelId}
+        className="evidence-block__panel"
+        role="region"
+        hidden={!open}
+      >
+        {children}
+      </div>
     </div>
-  );
-}
-
-/** Lead labels that should render as folded evidence (not always-visible chrome). */
-export function isEvidenceLeadLabel(label: string): boolean {
-  const t = label.replace(/[:：]\s*$/, "").trim();
-  return /依据|推理|结构依据|时机判断|Profile\s*basis|Structural\s*basis|Timing\s*verdict|Evidence|Rationale|为什么这条|Why this/i.test(
-    t,
   );
 }
