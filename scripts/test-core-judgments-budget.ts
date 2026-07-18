@@ -27,6 +27,11 @@ function main(): void {
   assert(`max_tokens ≥ 3000(reasoning 计入预算)`, budget >= 3000);
   assert("函数里不再硬写 max_tokens: 900", !/max_tokens:\s*900/.test(src));
 
+  // ⑧ 超时是兜底不是预算 —— 45s 曾经掐死过一次完全合格的输出
+  const t = src.match(/CORE_JUDGMENTS_TOTAL_TIMEOUT_MS\s*=\s*([\d_]+)/);
+  const ms = t ? Number(t[1]!.replace(/_/g, "")) : 0;
+  assert(`总超时 ≥ 150s(实测单次 ~80s，实得 ${ms}ms)`, ms >= 150_000);
+
   // ② 不许两层重发相乘
   assert("外层遇 empty_after_resend 不再重试", src.includes("isEmptyResponseError"));
   assert("catch 里有 break(终态)", /isEmptyResponseError[\s\S]{0,400}break;/.test(src));

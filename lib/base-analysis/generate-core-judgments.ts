@@ -33,8 +33,19 @@ const CORE_JUDGMENTS_MAX_TOKENS = 4000;
 /** 外层重试次数。注意:传输层自己还有 MAX_EMPTY_CONTENT_RESEND=3,两层会相乘 —— 见下方 catch。 */
 const MAX_ATTEMPTS = 3;
 
-/** core_judgments 失败不该让用户看不到报告 —— route 目前 await 在叙事流之前。 */
-const CORE_JUDGMENTS_TOTAL_TIMEOUT_MS = 45_000;
+/**
+ * 兜底,不是预算(铁律 #7 —— 已在 90s超时 / 12000token / max_attempts:1 / 900-token 预算上栽过四次)。
+ *
+ * 真实胃口:2026-07-17 生产实测【单次约 80 秒】—— 示范句删掉后模型开始真推导,
+ * reasoning 里要逐条自检「换个命盘会不会失效」、要把判断锚到 refs 的具体条目上。
+ * 上一版给 45 秒 → 第 45 秒 abort → 一次【完全合格】的输出被丢掉 → 落套话模板。
+ *
+ * 这道闸只防"卡到天荒地老",不该参与决定成败:
+ * 页面不卡死已由「外层不重试 openrouter_empty_after_resend」保证(最多 3 次调用)。
+ * 3 次 × ~80s ≈ 240s,给 180s 意味着最多吃掉最后一次重试 —— 可接受。
+ * ⚠️ 改小之前先看 OpenRouter 后台的真实耗时,别想当然。
+ */
+const CORE_JUDGMENTS_TOTAL_TIMEOUT_MS = 180_000;
 
 /** Model only writes these — climate_now / refs are code. */
 const LLM_INTERPRETIVE_KEYS = [
