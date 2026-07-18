@@ -2474,3 +2474,121 @@ const qimenCyclesAndPhases = [
     }
   }
 ];
+  // B4 · bazi 神煞补充（3）· Psychological Profiles
+const baziShenShaSupplement = [
+  {
+    ns: "bazi",
+    slug: "ss_hongyan",
+    traditional: "紅艷煞",
+    polarity: "neutral",
+    term: { zh: "魅引", en: "Allure", es: "Atracción", de: "Anziehung", fr: "Attrait" },
+    definition: {
+      zh: "象征强烈的情感吸引力与独特的感官磁场，极易引发周围人的情感共鸣，具有天然的感召力。",
+      en: "Symbolizing strong emotional attraction and a unique sensory magnetic field, easily triggering emotional resonance and possessing natural charisma.",
+      es: "Simboliza una fuerte atracción emocional y un campo magnético sensorial único, provocando resonancia y poseyendo un carisma natural.",
+      de: "Symbolisiert eine starke emotionale Anziehungskraft und ein einzigartiges sensorisches Magnetfeld, das emotionale Resonanz und natürliches Charisma erzeugt.",
+      fr: "Symbolise une forte attraction émotionnelle et un champ magnétique sensoriel unique, déclenchant une résonance et possédant un charisme naturel."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "ss_pima",
+    traditional: "披麻",
+    polarity: "neutral",
+    term: { zh: "素释", en: "Catharsis", es: "Catarsis", de: "Katharsis", fr: "Catharsis" },
+    definition: {
+      zh: "象征对生命周期中告别与结束的高度敏感性，擅长在断舍离中释放过去，实现心灵的净化重整。",
+      en: "Symbolizing high sensitivity to goodbyes and endings in life cycles, excelling at releasing the past and achieving spiritual purification.",
+      es: "Simboliza una alta sensibilidad hacia las despedidas y cierres en los ciclos vitales, sobresaliendo en liberar el pasado y lograr la purificación.",
+      de: "Symbolisiert eine hohe Sensibilität für Abschiede und Enden in Lebenszyklen, hervorragend darin, die Vergangenheit loszulassen und Reinigung zu erlangen.",
+      fr: "Symbolise une grande sensibilité aux adieux et aux fins dans les cycles de vie, excellant à libérer le passé et à atteindre la purification."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "ss_tianchu",
+    traditional: "天廚貴人",
+    polarity: "neutral",
+    term: { zh: "滋颐", en: "Savor", es: "Deleite", de: "Genuss", fr: "Saveur" },
+    definition: {
+      zh: "象征对生活美学与感官体验的高度品位，擅长通过日常的滋养与享受调理能量，保持内在富足。",
+      en: "Symbolizing high taste in life aesthetics and sensory experiences, excelling at regulating energy through daily nourishment and enjoyment.",
+      es: "Simboliza un alto gusto en la estética de la vida y las experiencias sensoriales, excelente para regular la energía a través del deleite diario.",
+      de: "Symbolisiert einen hohen Geschmack an Lebensästhetik und sensorischen Erfahrungen, hervorragend darin, die Energie durch täglichen Genuss zu regulieren.",
+      fr: "Symbolise un goût élevé pour l'esthétique de la vie et les expériences sensorielles, excellant à réguler l'énergie par le ressourcement quotidien."
+    }
+  }
+];
+// B4 · bazi 神煞补充（5）· Energetic Archetypes
+const baziShenShaSupplementPart2 = [
+  {
+    ns: "bazi",
+    slug: "ss_dexiu",
+    traditional: "德秀貴人",
+    polarity: "neutral",
+    term: { zh: "涵粹", en: "Grace", es: "Gracia", de: "Anmut", fr: "Grâce" },
+    definition: {
+      zh: "象征内敛而纯粹的人格美德与文化涵养，具备天然的调和能力，常在才华展现中散发优雅气场。",
+      en: "Symbolizing introverted and pure personal virtue and cultural cultivation, possessing natural harmonizing abilities and radiating an elegant aura.",
+      es: "Simboliza la virtud personal pura y la cultivación cultural introvertida, poseyendo habilidades armónicas naturales y un aura elegante.",
+      de: "Symbolisiert introvertierte und reine persönliche Tugend und kulturelle Kultivierung, besitzt natürliche harmonisierende Fähigkeiten und eine elegante Ausstrahlung.",
+      fr: "Symbolise la vertu personnelle pure et la culture intellectuelle introvertie, possédant des capacités d'harmonisation naturelles et une aura élégante."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "ss_jinshen",
+    traditional: "金神",
+    polarity: "neutral",
+    term: { zh: "坚铮", en: "Fortitude", es: "Fortaleza", de: "Festigkeit", fr: "Force" },
+    definition: {
+      zh: "象征坚定不移、渴望通过挑战来淬炼自我的强烈意志，展现出极高的抱负、抗压性与打破僵局的魄力。",
+      en: "Symbolizing unwavering willpower and a strong desire to refine oneself through challenges, demonstrating high ambition and resilience.",
+      es: "Simboliza una voluntad inquebrantable y un fuerte deseo de perfeccionarse a través de desafíos, demostrando alta ambición y resiliencia.",
+      de: "Symbolisiert unerschütterliche Willenskraft und den Wunsch, sich durch Herausforderungen zu fordern, zeigt hohen Ehrgeiz und Belastbarkeit.",
+      fr: "Symbolise une volonté inébranlable et un fort désir de se perfectionner à travers les défis, démontrant une grande ambition et de la résilience."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "ss_tianshe",
+    traditional: "天赦日",
+    polarity: "neutral",
+    term: { zh: "豁涤", en: "Absolution", es: "Absolución", de: "Loslassung", fr: "Absolution" },
+    definition: {
+      zh: "象征极大的容错空间、包容力与自我重塑机制，擅长在危机或困境中消解负累，实现清零式的重获新生。",
+      en: "Symbolizing immense fault tolerance, inclusiveness, and self-reinvention mechanisms, excelling at neutralizing burdens to restart.",
+      es: "Simboliza una inmensa tolerancia al error y mecanismos de reinvención, sobresaliendo en neutralizar cargas para un reinicio completo.",
+      de: "Symbolisiert enorme Fehlertoleranz und Mechanismen der Selbsterneuerung, hervorragend darin, Altlasten für einen echten Neustart zu lösen.",
+      fr: "Symbolise une immense tolérance aux erreurs et des mécanismes de réinvention, excellant à dissoudre les fardeaux pour un nouveau départ."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "ss_zhengxuetang",
+    traditional: "正學堂",
+    polarity: "neutral",
+    term: { zh: "睿思", en: "Intellect", es: "Intelecto", de: "Intellekt", fr: "Intellect" },
+    definition: {
+      zh: "象征深度的认知沉淀与出众的系统化学习天赋，拥有旺盛的求知欲，擅长将复杂知识转化为深层智慧。",
+      en: "Symbolizing deep cognitive precipitation and exceptional systematic learning talent, possessing a strong desire for knowledge.",
+      es: "Simboliza una profunda precipitación cognitiva y un talento excepcional para el aprendizaje sistemático, con un fuerte deseo de conocimiento.",
+      de: "Symbolisiert tiefe kognitive Reife und außergewöhnliches Talent für systematisches Lernen, geprägt von starkem Wissensdrang.",
+      fr: "Symbolise une profonde maturation cognitive et un talent exceptionnel pour l'apprentissage systématique, animé d'un fort désir de savoir."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "ss_yangren",
+    traditional: "羊刃",
+    polarity: "neutral",
+    term: { zh: "激芒", en: "Edge", es: "Filo", de: "Schärfe", fr: "Tranchant" },
+    definition: {
+      zh: "象征极致的执行驱动力与高度聚焦的破障能量，在关键时刻展现出惊人的决断力与极高爆发性。",
+      en: "Symbolizing ultimate executive drive and highly focused obstacle-breaking energy, showing incredible decisiveness at critical moments.",
+      es: "Simboliza el máximo impulso ejecutivo y una energía enfocada para romper obstáculos, mostrando una decisión increíble en momentos críticos.",
+      de: "Symbolisiert ultimative Tatkraft und hochfokussierte Durchbruchsenergie, die in kritischen Momenten immense Entschlossenheit zeigt.",
+      fr: "Symbolise une force d'exécution ultime et une énergie hautement focalisée pour briser les obstacles, faisant preuve d'une décision incroyable."
+    }
+  }
+];

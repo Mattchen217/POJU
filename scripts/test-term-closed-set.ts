@@ -47,9 +47,15 @@ function main() {
   assert(closedIds.has("羊刃"), "羊刃 in closed entries");
 
   const feiRen = TERM_GLOSSARY.find((c) => c.id === "飞刃");
+  // Soft/gloss overlay from POJU_TERMS SSOT (锋芒/Edge); legacy glossary had "double-edged drive"
   assert(
-    !!(feiRen?.soft.en.includes("double-edged") || feiRen?.soft.en.includes("cutting")),
-    "飞刃 soft ≠ external support (double-edged drive)",
+    !!(
+      feiRen?.soft.en.includes("double-edged") ||
+      feiRen?.soft.en.includes("cutting") ||
+      feiRen?.soft.en === "Edge" ||
+      feiRen?.soft.zh === "锋芒"
+    ),
+    "飞刃 soft from SSOT (Edge/锋芒) or legacy double-edged",
   );
 
   console.log("\n=== slug → term entry ===");
@@ -63,7 +69,8 @@ function main() {
   const bad = "命盘带空亡与将星，需防红鸾冲克。";
   const hits = auditOutOfSetTerms(bad);
   assert(hits.some((h) => h.label.includes("空亡")), "detects 空亡");
-  assert(hits.some((h) => h.label.includes("将星")), "detects 将星");
+  // 将星是闭集神煞，不是 OUT_OF_SET —— 不应被 out-of-set 闸误杀
+  assert(!hits.some((h) => h.snippet === "将星"), "闭集「将星」不进 out-of-set");
   assert(auditOutOfSetTerms("命带元辰与六秀日").some((h) => h.snippet === "元辰"), "detects 元辰");
   assert(auditOutOfSetTerms("阴差阳错配置").some((h) => h.snippet === "阴差阳错"), "detects 阴差阳错");
 

@@ -1,7 +1,7 @@
 /**
  * pojulife terminology — single source of truth (SSOT).
  * Generated from docs/完整重命名清单（157）.json with Fix A/B/C applied.
- * 155 = bazi 99 + qimen 39 + glyph 17. Do not parallel-maintain soft labels elsewhere.
+ * 163 = bazi 107 + qimen 39 + glyph 17. Do not parallel-maintain soft labels elsewhere.
  *
  * Regenerate: node scripts/generate-poju-terms.mjs
  */
@@ -3119,6 +3119,168 @@ export const POJU_TERMS: readonly PojuTerm[] = [
       es: "La fase final y de consolidación de un ciclo energético, que representa la manifestación de resultados y la transición silenciosa.",
       de: "Die abschließende Phase eines Energiezyklus, die die Manifestation von Ergebnissen, Systemintegration und den stillen Übergang darstellt.",
       fr: "La phase finale et de consolidation d'un cycle énergétique, représentant la manifestation des résultats et la transition silencieuse.",
+    },
+  },
+  // ── 神煞补充（8）· 对齐引擎输出名（简体 + 后缀）──
+  // traditional 必须 === 引擎吐的字（shensha-i18n-map），简繁/后缀错一个字就匹配失败。
+  {
+    ns: "bazi",
+    slug: "ss_hongyan",
+    traditional: "红艳煞",
+    polarity: "neutral",
+    term: {
+      zh: "魅引",
+      en: "Allure",
+      es: "Atracción",
+      de: "Anziehung",
+      fr: "Attrait",
+    },
+    definition: {
+      zh: "象征强烈的情感吸引力与独特的感官磁场，极易引发周围人的情感共鸣，具有天然的感召力。",
+      en: "Strong emotional attraction and a unique sensory magnetism that easily stirs resonance; natural charisma.",
+      es: "Fuerte atracción emocional y un magnetismo sensorial único que despierta resonancia; carisma natural.",
+      de: "Starke emotionale Anziehung und ein einzigartiger sinnlicher Magnetismus, der Resonanz weckt; natürliches Charisma.",
+      fr: "Forte attraction émotionnelle et un magnétisme sensoriel unique qui suscite la résonance ; charisme naturel.",
+    },
+  },
+  {
+    ns: "bazi",
+    slug: "ss_pima",
+    traditional: "披麻",
+    polarity: "neutral",
+    term: {
+      zh: "素释",
+      en: "Catharsis",
+      es: "Catarsis",
+      de: "Katharsis",
+      fr: "Catharsis",
+    },
+    definition: {
+      zh: "象征对生命周期中告别与结束的高度敏感性，擅长在断舍离中释放过去，实现心灵的净化重整。",
+      en: "High sensitivity to endings and farewells; skilled at releasing the past and achieving renewal.",
+      es: "Alta sensibilidad a los finales y despedidas; hábil para liberar el pasado y renovarse.",
+      de: "Hohe Sensibilität für Enden und Abschiede; geübt darin, die Vergangenheit loszulassen und sich zu erneuern.",
+      fr: "Grande sensibilité aux fins et aux adieux ; apte à libérer le passé et à se renouveler.",
+    },
+  },
+  {
+    ns: "bazi",
+    slug: "ss_tianchu",
+    traditional: "天厨贵人",
+    polarity: "neutral",
+    term: {
+      zh: "滋颐",
+      en: "Savor",
+      es: "Deleite",
+      de: "Genuss",
+      fr: "Saveur",
+    },
+    definition: {
+      zh: "象征对生活美学与感官体验的高度品位，擅长通过日常的滋养与享受调理能量，保持内在富足。",
+      en: "Refined taste for life's aesthetics and the senses; regulates energy through daily nourishment.",
+      es: "Gusto refinado por la estética y los sentidos; regula la energía mediante el disfrute diario.",
+      de: "Verfeinerter Geschmack für Ästhetik und Sinne; reguliert Energie durch tägliche Nährung.",
+      fr: "Goût raffiné pour l'esthétique et les sens ; régule l'énergie par le ressourcement quotidien.",
+    },
+  },
+  {
+    ns: "bazi",
+    slug: "ss_dexiu",
+    traditional: "德秀贵人",
+    polarity: "favorable",
+    term: {
+      zh: "德辉",
+      en: "Grace",
+      es: "Gracia",
+      de: "Anmut",
+      fr: "Grâce",
+    },
+    definition: {
+      zh: "象征才德兼备、内外兼修的出众气质，在群体中自然散发令人信服的温润光彩。",
+      en: "Talent joined with character—a poised presence that naturally radiates quiet, convincing warmth in a group.",
+      es: "Talento unido a carácter: una presencia serena que irradia naturalmente un calor convincente en el grupo.",
+      de: "Talent und Charakter vereint—eine gelassene Präsenz, die in der Gruppe natürlich überzeugende Wärme ausstrahlt.",
+      fr: "Talent et caractère réunis — une présence posée qui irradie naturellement une chaleur convaincante dans le groupe.",
+    },
+  },
+  {
+    ns: "bazi",
+    slug: "ss_jinshen",
+    traditional: "金神",
+    polarity: "neutral",
+    term: {
+      zh: "锐锋",
+      en: "Edge",
+      es: "Filo",
+      de: "Schärfe",
+      fr: "Tranchant",
+    },
+    definition: {
+      zh: "象征刚锐果决的行动力与破局魄力，在关键时刻能以锋芒斩断纠缠、开辟通路。",
+      en: "Sharp, decisive drive and breakthrough force—able to cut through tangles and open a path at the critical moment.",
+      es: "Impulso agudo y decisivo y fuerza de ruptura: capaz de cortar enredos y abrir camino en el momento crítico.",
+      de: "Scharfer, entschlossener Antrieb und Durchbruchskraft—kann im entscheidenden Moment Verwicklungen durchtrennen und Wege öffnen.",
+      fr: "Élan tranchant et décisif et force de percée — capable de trancher les enchevêtrements et d'ouvrir une voie au moment critique.",
+    },
+  },
+  {
+    ns: "bazi",
+    slug: "ss_tianshe",
+    traditional: "天赦日",
+    polarity: "favorable",
+    term: {
+      zh: "纾解",
+      en: "Reprieve",
+      es: "Alivio",
+      de: "Milderung",
+      fr: "Répit",
+    },
+    definition: {
+      zh: "象征逢难得解、化重为轻的宽宥之力，善于在困局中找到松动与转圜的空间。",
+      en: "A pardoning force that lightens what feels heavy—skilled at finding slack and room to turn in a bind.",
+      es: "Una fuerza de indulgencia que alivia lo pesado; hábil para hallar holgura y margen de giro en un aprieto.",
+      de: "Eine lindernde Kraft, die Schweres erleichtert—geschickt darin, in der Enge Spielraum und Wendung zu finden.",
+      fr: "Une force d'indulgence qui allège ce qui pèse — apte à trouver du jeu et de la marge de manœuvre dans l'impasse.",
+    },
+  },
+  {
+    ns: "bazi",
+    slug: "ss_xuetang",
+    traditional: "正学堂",
+    polarity: "favorable",
+    term: {
+      zh: "砚席",
+      en: "Scholarship",
+      es: "Erudición",
+      de: "Gelehrsamkeit",
+      fr: "Érudition",
+    },
+    definition: {
+      zh: "象征沉静治学、厚积薄发的求知之力，擅长在系统性的钻研中建立扎实的知识根基。",
+      en: "Quiet scholarly focus and deep accumulation—building a solid knowledge base through systematic study.",
+      es: "Enfoque académico sereno y acumulación profunda; construye una base sólida mediante el estudio sistemático.",
+      de: "Ruhiger Wissensdrang und tiefes Anhäufen—baut durch systematisches Studium ein solides Wissensfundament.",
+      fr: "Focus savant et accumulation profonde — bâtit une base solide par une étude systématique.",
+    },
+  },
+  {
+    ns: "bazi",
+    slug: "ss_yangren",
+    traditional: "羊刃",
+    polarity: "neutral",
+    term: {
+      zh: "烈锋",
+      en: "Blaze",
+      es: "Ímpetu",
+      de: "Ungestüm",
+      fr: "Fougue",
+    },
+    definition: {
+      zh: "象征强烈的爆发力与双刃般的锐气，用之得当则势如破竹，需以规则与节律加以引导。",
+      en: "Intense burst force and double-edged sharpness—powerful when guided by rules and rhythm.",
+      es: "Fuerza explosiva e filo de doble filo; potente si se guía con reglas y ritmo.",
+      de: "Starke Ausbruchskraft und zweischneidige Schärfe—wirksam, wenn Regeln und Rhythmus sie führen.",
+      fr: "Force explosive et tranchant à double tranchant — puissant s'il est guidé par règles et rythme.",
     },
   },
 ];

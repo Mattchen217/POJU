@@ -24,6 +24,7 @@ import {
   OUT_OF_SET_FORBIDDEN_EN,
   OUT_OF_SET_FORBIDDEN_HAN,
   RELATION_KIND_SOFT,
+  RELATION_SLUG,
   RELATION_SURFACE_TERMS_ZH,
   TEN_GOD_TENSION_SOFT,
   relationKindFromMarkerId,
@@ -39,9 +40,11 @@ import {
   POJU_TERMS,
   glossOf,
   pojuTermBySlug,
+  pojuTermByTraditional,
   termOf,
   type PojuTerm,
 } from "@/lib/glossary/pojulife-terms";
+import { normalizeShenshaName } from "@/lib/poju/shensha-alias";
 import {
   BANNED_TERMS_ZH,
   BANNED_TERM_SOFT_ZH,
@@ -516,6 +519,8 @@ const BARE_AUTO_MARK_HAN = [
     ...CLOSED_SET_REPLACE_IDS,
     ...STEM_ELEMENT_COMPOUNDS,
     ...allShenshaHanSurfaces(),
+    // 关系原词（刑/冲/害…）—— core_judgments 真词真算后输出端必须能打回金字
+    ...Object.keys(RELATION_SLUG),
   ]),
 ]
   .filter((han) => !AUTO_MARK_EXCLUDE_HAN.has(han))
@@ -565,6 +570,23 @@ function resolveBareMarkLabels(
       soft: pickFiveLocale(hr.soft, loc),
       plain: pickFiveLocale(hr.gloss, loc),
     };
+  }
+
+  // SSOT 优先（含神煞别名：文昌贵人→文昌；新补 ss_* 术语）
+  {
+    const key = normalizeShenshaName(hanId);
+    const poju =
+      pojuTermByTraditional(hanId, "bazi") ??
+      pojuTermByTraditional(key, "bazi") ??
+      pojuTermByTraditional(key);
+    if (poju) {
+      const loc = toGlossaryLocale(locale);
+      return {
+        slug: poju.slug,
+        soft: pickFiveLocale(poju.term, loc),
+        plain: pickFiveLocale(poju.definition, loc),
+      };
+    }
   }
 
   // 天干+五行合称（如壬水）→ 标为对应天干

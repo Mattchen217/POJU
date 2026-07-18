@@ -142,12 +142,13 @@ export const CLOSED_SET_REPLACE_IDS: readonly string[] = [
 /** allow-surface ids (not marked, kept as energy language). */
 export const CLOSED_SET_ALLOW_IDS: readonly string[] = [...CLOSED_WUXING, "五行", "易经", "阴阳", "气", "道"];
 
-/** Terms the engine NEVER computes — model must not invent. */
+/** Terms the engine NEVER computes — or computes but are redline (恐吓/宿命), never feed. */
 export const OUT_OF_SET_FORBIDDEN_HAN = [
   "空亡",
   "魁罡",
   "十恶大败",
   "孤鸾",
+  "孤鸾煞",
   "阴阳差错",
   "阴差阳错",
   "元辰",
@@ -162,7 +163,15 @@ export const OUT_OF_SET_FORBIDDEN_HAN = [
   "血刃",
   "流霞",
   "隔角",
-  "天厨",
+  // 引擎会算、但属恐吓/宿命，不喂真算（用户红线）
+  "勾绞煞",
+  "童子煞",
+  "地网",
+  "天罗",
+  "八专日",
+  "十灵日",
+  "九丑日",
+  // 天厨 已移除 —— 现为合法术语 ss_tianchu
 ] as const;
 
 export const OUT_OF_SET_FORBIDDEN_EN = [

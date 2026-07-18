@@ -10,6 +10,7 @@ import {
   buildCoreJudgmentsFromStructured,
   buildCoreJudgmentsRefsFromStructured,
   isCoreJudgments,
+  softMarkCoreJudgmentsRefs,
   type CoreJudgments,
 } from "@/lib/base-analysis/core-judgments";
 import { OUT_OF_SET_FORBIDDEN_HAN } from "@/lib/glossary/term-closed-set";
@@ -17,6 +18,27 @@ import {
   openRouterChatCompletion,
 } from "@/lib/llm/openrouter-shared";
 import { isEmptyResponseError } from "@/lib/llm/openrouter-retry";
+import { autoMarkBareTerms } from "@/lib/llm/sanitize/term-marking";
+
+const CJ_INTERPRETIVE_KEYS = [
+  "identity_anchor",
+  "drive_mechanism",
+  "structural_gap",
+  "balance_anchor",
+  "exchange_mode",
+  "leverage_state",
+] as const;
+
+function softMarkInterpretiveFields(
+  interpretive: Record<string, string>,
+  locale: string,
+): Record<string, string> {
+  const marked: Record<string, string> = {};
+  for (const [k, v] of Object.entries(interpretive)) {
+    marked[k] = autoMarkBareTerms(String(v), locale);
+  }
+  return marked;
+}
 
 /**
  * 预算按【真实胃口】给,不按想当然(铁律 #7 —— 已在 90s超时 / 12000token / max_attempts:1 上栽过三次)。
@@ -112,7 +134,7 @@ export function hasCoreJudgmentsBlackspeak(text: string): boolean {
     ...(OUT_OF_SET_FORBIDDEN_HAN as readonly string[]),
     "贵人",
     "神煞",
-    // 关系原词(refs 已软译,写出原词 = 它绕开了 refs 去读 structured)
+    // 关系原词(喂真词真算后,输出端应已打标;仍裸写 = 打标漏网或绕开 refs)
     // 单字「煞」易误伤「煞费苦心」等 —— 宁可漏,不可误伤后落模板。
     "自刑",
     "半合",
@@ -335,9 +357,11 @@ export async function generateCoreJudgmentsForProfile(input: {
           );
           continue;
         }
-        if (hasCoreJudgmentsBlackspeak(Object.values(interpretive).join("\n"))) {
+        // 真词进→软译金字出：先打标，再过黑话闸（打标能软译的变金字；兜不住的才重发）
+        const marked = softMarkInterpretiveFields(interpretive, input.locale);
+        if (hasCoreJudgmentsBlackspeak(Object.values(marked).join("\n"))) {
           console.warn(
-            `[core_judgments] attempt ${attempt}/${MAX_ATTEMPTS} — blackspeak, resending same params`,
+            `[core_judgments] attempt ${attempt}/${MAX_ATTEMPTS} — 打标后仍有裸词，重发`,
           );
           continue;
         }
@@ -349,7 +373,11 @@ export async function generateCoreJudgmentsForProfile(input: {
           );
           continue;
         }
-        const merged: CoreJudgments = { ...interpretive, climate_now, refs };
+        const merged: CoreJudgments = {
+          ...(marked as Pick<CoreJudgments, (typeof CJ_INTERPRETIVE_KEYS)[number]>),
+          climate_now,
+          refs: softMarkCoreJudgmentsRefs(refs, input.locale),
+        };
         if (!isCoreJudgments(merged)) {
           console.warn(
             `[core_judgments] attempt ${attempt}/${MAX_ATTEMPTS} — shape invalid, resending same params`,
@@ -385,5 +413,15 @@ export async function generateCoreJudgmentsForProfile(input: {
   console.warn(
     "[fallback] core_judgments 落代码模板。**这份底座是套话,四产品都会受影响** —— 别当正常情况放过。",
   );
-  return { judgments: fallback, source: "template_fallback" };
+  // 模板路径同样落库：refs 真词 → 金字，避免裸奔进下游
+  const safeFallback: CoreJudgments = {
+    ...fallback,
+    ...softMarkInterpretiveFields(
+      Object.fromEntries(CJ_INTERPRETIVE_KEYS.map((k) => [k, fallback[k]])),
+      input.locale,
+    ),
+    climate_now: fallback.climate_now,
+    refs: softMarkCoreJudgmentsRefs(fallback.refs, input.locale),
+  };
+  return { judgments: safeFallback, source: "template_fallback" };
 }

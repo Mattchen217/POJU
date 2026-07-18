@@ -7,8 +7,23 @@ import type { ProfileStructured } from "@/lib/calculations/build-profile-structu
 import type { DaYunEntry } from "@/lib/calculations/lunar-dayun";
 import { computeNatalChartRelations } from "@/lib/calculations/relation-engine";
 import { OUT_OF_SET_FORBIDDEN_HAN } from "@/lib/glossary/term-closed-set";
-import { pojuTermByTraditional, termOf } from "@/lib/glossary/pojulife-terms";
+import { pojuTermByTraditional } from "@/lib/glossary/pojulife-terms";
 import { STEMS, type HeavenlyStem, type WuXing } from "@/lib/match/data/stems-branches";
+import { normalizeShenshaName } from "@/lib/poju/shensha-alias";
+import type { RelationKind } from "@/lib/calculations/relation-engine";
+import { autoMarkBareTerms } from "@/lib/llm/sanitize/term-marking";
+
+/** RelationKind → 中文原词（喂模型真算；勿喂软译「磨蚀」）。 */
+const RELATION_KIND_HAN: Readonly<Record<RelationKind, string>> = {
+  chong: "冲",
+  xing: "刑",
+  hai: "害",
+  liuhe: "六合",
+  banhe: "半合",
+  sanhe: "三合",
+  stem_he: "天干合",
+  ten_god_tension: "十神张力",
+};
 
 export type CoreJudgmentsRefs = {
   day_master: string;
@@ -268,25 +283,21 @@ export function buildClimateNowFromStructured(
  */
 
 /**
- * 关系条目脱敏:`xing_酉_酉` / `stemhe_乙_庚` 这些 id 是【裸干支】。
- * 直接喂给模型 = 一边喂裸词一边禁裸词 = 提示词自相矛盾 = 模型必然违规 = 必然落模板。
- * (铁律 #2 推论:输入端喂了裸词,就别指望提示词让它别用。)
- * RelationKind 恰好就是闭集 slug(xing→磨蚀 / banhe→偏契 / stemhe→共缠),直接软译。
- * positions 是 year/month/day/hour —— 英文、安全、且带位置信息,够模型做真推导。
+ * 关系条目：喂【真词】给模型真算（刑@year-day，不是「磨蚀@year-day」）。
+ * RelationKind → 中文原词；positions 是 year/month/day/hour。
+ * 合规在输出端 autoMarkBareTerms，不在这儿阉割。
  */
 function desensitizeRelations(structured: ProfileStructured): string[] {
   return computeNatalChartRelations(structured).map((r) => {
-    // relation-engine 用 stem_he；术语表 slug 是 stemhe
-    const slug = r.kind === "stem_he" ? "stemhe" : r.kind;
-    const soft = termOf(slug, "zh") || slug;
-    return r.positions.length ? `${soft}@${r.positions.join("-")}` : soft;
+    const kindHan = RELATION_KIND_HAN[r.kind] ?? r.kind;
+    return r.positions.length ? `${kindHan}@${r.positions.join("-")}` : kindHan;
   });
 }
 
 /**
- * 神煞脱敏:`collectShensha` 原样吐引擎算出的汉字名,里面躺着 `十恶大败` / `孤鸾煞`
- * —— OUT_OF_SET_FORBIDDEN_HAN 里的【禁词】。而黑话闸不查神煞 → 静默进 core_judgments → 注入四产品。
- * 规则:黑名单直接丢;闭集里有软译的 → 只给软译;没软译的 → 丢(汉字名会撞门禁,如「贵人」)。
+ * 神煞：喂【真词】给模型真算（天乙贵人，不是「提携」）。
+ * 黑名单（恐吓/宿命）仍丢；须能在输出端软译回来（SSOT 有对应术语，含别名归一）。
+ * 合规在输出端做，不在输入端阉割。
  */
 function desensitizeShensha(structured: ProfileStructured): string[] {
   const out: string[] = [];
@@ -300,12 +311,16 @@ function desensitizeShensha(structured: ProfileStructured): string[] {
       dropped.push(`${han}(黑名单)`);
       continue;
     }
-    const t = pojuTermByTraditional(han, "bazi") ?? pojuTermByTraditional(han);
+    const key = normalizeShenshaName(han);
+    const t =
+      pojuTermByTraditional(han, "bazi") ??
+      pojuTermByTraditional(key, "bazi") ??
+      pojuTermByTraditional(key);
     if (!t) {
-      dropped.push(`${han}(无软译)`);
+      dropped.push(`${han}(SSOT无对应术语,输出端无法软译→丢)`);
       continue;
     }
-    out.push(t.term.zh);
+    out.push(han);
   }
   if (dropped.length) {
     // 响亮:丢掉的是这盘的算料,丢多了 core_judgments 就没东西可锚(铁律 #5)
@@ -329,6 +344,22 @@ export function buildCoreJudgmentsRefsFromStructured(
     da_yun_step: step,
     shensha_instances: desensitizeShensha(structured),
     natal_relations: desensitizeRelations(structured),
+  };
+}
+
+/** 落库/注入用：refs 真词 → 金字，避免裸命理词进下游 content。 */
+export function softMarkCoreJudgmentsRefs(
+  refs: CoreJudgmentsRefs,
+  locale: string,
+): CoreJudgmentsRefs {
+  return {
+    ...refs,
+    shensha_instances: refs.shensha_instances.map((s) => autoMarkBareTerms(s, locale)),
+    natal_relations: refs.natal_relations.map((s) => {
+      const at = s.indexOf("@");
+      if (at < 0) return autoMarkBareTerms(s, locale);
+      return `${autoMarkBareTerms(s.slice(0, at), locale)}@${s.slice(at + 1)}`;
+    }),
   };
 }
 
