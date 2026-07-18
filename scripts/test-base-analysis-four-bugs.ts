@@ -143,20 +143,11 @@ function main() {
     streamSrc.includes("re-audit still failing after patch"),
   );
 
+  // 黑名单已清空 → lead-label scrub 为 no-op（机制保留，表空则不改写）
   const scrubbedLabel = scrubBannedMetaphorInLeadLabels("> **你的核心引擎:** 吸收与转化。", "zh");
   assert(
-    "lead-label scrub rewrites 引擎 only in label",
-    scrubbedLabel.includes("**你的核心方式:**") && scrubbedLabel.includes("吸收与转化"),
-  );
-  const scrubbedFw = scrubBannedMetaphorInLeadLabels("> **你的核心引擎：** 吸收与转化。", "zh");
-  assert(
-    "lead-label scrub handles fullwidth colon",
-    scrubbedFw.includes("核心方式") && !scrubbedFw.includes("引擎"),
-  );
-  const scrubbedOut = scrubBannedMetaphorInLeadLabels("**你的核心引擎**: 吸收与转化。", "zh");
-  assert(
-    "lead-label scrub handles colon outside bold",
-    scrubbedOut.includes("核心方式") && !scrubbedOut.includes("引擎"),
+    "empty blacklist → lead-label scrub is no-op",
+    scrubbedLabel.includes("**你的核心引擎:**") && scrubbedLabel.includes("吸收与转化"),
   );
   const bodyKept = scrubBannedMetaphorInLeadLabels("正文里写引擎也不该被标签 scrub 误伤。", "zh");
   assert("lead-label scrub does not touch body 引擎", bodyKept.includes("引擎"));
@@ -191,7 +182,7 @@ function main() {
     path.join(ROOT, "lib/llm/compliance/banned-terms.ts"),
     "utf8",
   );
-  assert("ban block forbids negated mention", banBlockSrc.includes("否定式") && banBlockSrc.includes("你不是引擎"));
+  assert("ban block forbids negated mention", banBlockSrc.includes("否定式"));
 
   const stemSoftSrc = fs.readFileSync(
     path.join(ROOT, "lib/glossary/term-glossary-closed.ts"),
@@ -217,7 +208,7 @@ function main() {
   );
 
   const metaNeg = auditMetaphorBlacklist("你不是一台靠自己燃烧的引擎。", "zh");
-  assert("negated 引擎 still metaphor hit", metaNeg.some((h) => h.label === "metaphor_blacklist"));
+  assert("empty blacklist → negated 引擎 not metaphor-hit", metaNeg.length === 0);
 
   const promptSrc = fs.readFileSync(
     path.join(ROOT, "lib/llm/prompts/base-analysis-stream-prompt.ts"),

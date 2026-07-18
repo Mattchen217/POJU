@@ -91,7 +91,7 @@ function main() {
   assert("restore quoted char", restore(masked).includes("「冲」"));
 
   const engineHits = auditMetaphorBlacklist("你的引擎在空转。", "zh");
-  assert("engine metaphor blacklisted", engineHits.some((h) => h.label === "metaphor_blacklist"));
+  assert("empty blacklist → engine not metaphor-hit", engineHits.length === 0);
 
   const bareStrength = auditUserFacingBannedLeaks("你的核心是身弱的配置。", "zh");
   assert("身弱 user-facing banned", bareStrength.some((h) => h.label === "term:身弱"));
@@ -101,7 +101,7 @@ function main() {
 
   const promptSrc = read("lib/llm/prompts/base-analysis-stream-prompt.ts");
   assert("prompt bans 身弱 bare write", promptSrc.includes("禁止】写出「身弱") || promptSrc.includes("【禁止】写出「身弱"));
-  assert("prompt bans 引擎", promptSrc.includes("引擎"));
+  assert("prompt has chart-native metaphor constraint", promptSrc.includes("现定") || promptSrc.includes("主隐喻"));
   assert("prompt closing avoids 不是命定 trap", promptSrc.includes("怎么用它，取决于你自己") || promptSrc.includes("取决于你自己"));
   assert("brevity no longer invites 身弱 write", !promptSrc.includes("允许在五块中点名：**身强/身弱"));
 

@@ -101,8 +101,7 @@ const BASE_ANALYSIS_NEUTRALITY_RULES_ZH = `# 中立元报告 · 硬禁（场景�
 
 ## 比喻边界（本盘唯一主隐喻）
 - 全文**最多一条主隐喻**，由本盘 \`day_master\` + \`strength\` + \`yong_shen\` **现定**；服务于解释能量机制，**不编造现实情节**。
-- **黑名单（禁抄）** — 与绝对禁词块同源：引擎 / 手机散热片 / 散热缺口 / 冷却模块 / 随时能翻的参考书（**以 \`buildForbiddenTermsPromptBlock\` 注入块为准**）。
-- **黑名单 = 字面禁止**：否定式/对比式/引用式同样违规。✗「你不是一台引擎」✗「不像散热片」→ 想说"他不靠硬撑"，就**直接正面说**，别拿禁词当反面参照。
+- **现定**：主比喻从这盘的 day_master / strength / yong_shen 长出来；别套用任何现成意象（含机械词）。
 - 自检：**「换一个命盘还成立吗？」**——成立就必须重写。`;
 
 const BASE_ANALYSIS_NEUTRALITY_RULES_EN = `# Neutral meta-report · hard bans (scenarios belong to downstream POJU/Glyph/Match/Syncro)
@@ -120,8 +119,7 @@ This is a **shared neutral context base** (like a lab report / raw MBTI readout 
 
 ## Metaphor boundary (one main metaphor per chart)
 - **At most one** main metaphor, determined by this chart's \`day_master\` + \`strength\` + \`yong_shen\`; explains mechanism only—**no** life plot.
-- **Blacklist (never copy)** — same source as the absolute-bans block: engine / phone heatsink / always-open reference book / heat-dissipation gap / cooling module / steady-burning engine (**\`buildForbiddenTermsPromptBlock\` is authoritative**).
-- **Literal ban**: negation / contrast / quotation still count. ✗ "you are not an engine" ✗ "unlike a heatsink" → say "doesn't hard-brace" **positively**, without using banned words as a foil.
+- **Chart-native**: the metaphor grows from this chart's day_master / strength / yong_shen — never reuse canned imagery (including mechanical stock).
 - Self-check: **"Would this still work for another chart?"**—if yes, rewrite.`;
 
 const BASE_ANALYSIS_NARRATIVE_BREVITY_ZH = `# 叙事精简 · 禁止逐柱复述（准确性）
@@ -158,7 +156,7 @@ const BASE_ANALYSIS_BINDING_RULES = `# 绑定计算结果 · 闭集 · 禁幻觉
    - ✗ \`mobility pulse (驿马)[···] Pairs with a sharp…\`
 9. **藏干/十神禁罗列** — **禁止** \`Hidden stems (Wu earth, Xin metal…)\` 英文堆砌；藏干用**一句机制白话**，必要时最多 1 个 ⟦t:…⟧。
 10. **标记排版** — 标记只出现在依据块内，**禁止**在标记前插入裸换行；\`**依据与推理:**\` 与其后整段须连成一块（勿空行拆开，以免金字漏在折叠外）。
-11. **金色词密度** — 正文段落最多 1–2 个 ⟦t:…⟧；**依据与推理**块最多 5 个；同 id 不重复刷标记。
+11. **金色词密度** — **正文零标记**（与第 5 条一致，别在正文打任何 ⟦t:…⟧）；**依据与推理**块 **3–5 个**（下限 3）；同 id 不重复刷标记。
 12. **禁止逐柱复述** — **禁止**在正文逐柱枚举藏干/十神/神煞/长生；不要另开四柱/大运展示段。
 13. **软译词与白话由系统填入**——你只选 slug；白话槽留空；勿自造软译。
 14. **本命结构关系 · 锚定不枚举** — 关系**只能**来自实例清单【本命结构关系】（\`source=natal\`）；**最多一处**织进「你的核心配置」或「容易卡住的地方」；**禁**流年/定向/十神张力词；**禁**裸写刑冲合害或关系清单；**关系类不打标、直接中性白话**（禁止 \`liu_chong\` / \`liuhe\` 等 glossary slug 标记）。清单为空则**不得**硬塞关系词。`;
@@ -315,7 +313,7 @@ Read like **precise neutral readout + plain-language notes**—not a life story.
 - **All five energy sections mandatory**; opening identity + closing required.
 - Every ## section: at least one invented-label lead; **How to Retune** needs at least one \`>\` pull quote **or** multi-line directional bullets (not a checklist).`;
 
-const BASE_ANALYSIS_FEW_SHOT_ZH = `# 分区骨架与反例（只学结构 · 禁抄完整示范句 · 禁黑名单隐喻）
+const BASE_ANALYSIS_FEW_SHOT_ZH = `# 分区骨架与反例（只学结构 · 禁抄完整示范句 · 主比喻须现定）
 
 ## 正确骨架（\`<尖括号槽位>\` · 勿填成示范作文）
 
@@ -364,16 +362,15 @@ const BASE_ANALYSIS_FEW_SHOT_ZH = `# 分区骨架与反例（只学结构 · 禁
 - ✗ 现实剧情（咖啡馆、换工作、结婚、升职、某某年会…）
 - ✗ 输出 **Bold lead:** / **粗体引导:** / **驱动类型:** / **冷却不足:** / **调谐机制:** 等占位或人人照抄标签
 - ✗ 写 \`## 四柱命盘数据\` 或 \`## 大运能量气候概览\`
-- ✗ 黑名单隐喻：持续燃烧的引擎 / 散热缺口 / 冷却模块 / 手机散热片 / 随时能翻的参考书 / 藤蔓
-- ✗ 完整示范式标记句如 \`⟦t:day_master|…|像持续燃烧的引擎⟧\`（过拟合）
+- ✗ 套用现成机械意象或人人通用的隐喻（换盘还成立）
+- ✗ 完整示范式标记句（过拟合）
 - ✗ 通用隐喻：换一个命盘还成立 → 必须重写
 
 ## 隐喻硬规则
 1. 全文一条主隐喻，由 \`day_master\` + \`strength\` + \`yong_shen\` 现定
-2. 黑名单上列全部禁用
-3. 自检：「换盘还成立吗？」成立即重写`;
+2. 自检：「换盘还成立吗？」成立即重写`;
 
-const BASE_ANALYSIS_FEW_SHOT_EN = `# Section skeleton + anti-examples (structure only · no full demo sentences · no blacklisted metaphors)
+const BASE_ANALYSIS_FEW_SHOT_EN = `# Section skeleton + anti-examples (structure only · no full demo sentences · chart-native metaphor)
 
 ## Correct skeleton (\`<angle-bracket slots>\` · do not fill into sample essays)
 
@@ -422,14 +419,13 @@ const BASE_ANALYSIS_FEW_SHOT_EN = `# Section skeleton + anti-examples (structure
 - ✗ Real-life plot (café, job switch, marriage, promotion, "in year X…")
 - ✗ **Bold lead:** / **Lead:** / **Raw drive:** / **Cooling gap:** / **Tuning mechanism:** placeholders or everyone-copies labels
 - ✗ Writing \`## Four-Pillar Configuration\` or \`## Decade Energy Climate Overview\`
-- ✗ Blacklisted metaphors: steady-burning engine / heat-dissipation gap / cooling module / phone heatsink / always-open reference book / vine
-- ✗ Full demo marker lines like \`⟦t:day_master|…|Like a steady-burning engine⟧\` (overfit)
+- ✗ Canned mechanical imagery or metaphors that still fit another chart
+- ✗ Full demo marker lines (overfit)
 - ✗ Generic metaphors that still work on another chart → must rewrite
 
 ## Metaphor hard rules
 1. One main metaphor for the whole piece, set by \`day_master\` + \`strength\` + \`yong_shen\`
-2. Entire blacklist above is banned
-3. Self-check: "Would this still fit another chart?" If yes, rewrite`;
+2. Self-check: "Would this still fit another chart?" If yes, rewrite`;
 
 export function buildBaseAnalysisStreamPrompt(input: BaseAnalysisStreamPromptInput): {
   system: string;

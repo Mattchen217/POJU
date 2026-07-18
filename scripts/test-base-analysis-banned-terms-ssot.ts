@@ -38,11 +38,11 @@ function main() {
 
   assert("banned-terms file exists", fs.existsSync(path.join(ROOT, "lib/llm/compliance/banned-terms.ts")));
   assert("日主 in BANNED_TERMS", BANNED_TERMS_ZH.includes("日主"));
-  assert("引擎 in metaphor blacklist", (METAPHOR_BLACKLIST_ZH as readonly string[]).includes("引擎"));
+  assert("metaphor blacklist empty (2026-07 clear)", METAPHOR_BLACKLIST_ZH.length === 0);
 
   const block = buildForbiddenTermsPromptBlock("zh");
   assert("prompt block has 日主", block.includes("日主"));
-  assert("prompt block has 引擎", block.includes("引擎"));
+  assert("prompt block has 主比喻·现定", block.includes("主比喻·现定"));
   assert("prompt block has soft map 日主", block.includes("核心特质"));
 
   const promptSrc = read("lib/llm/prompts/base-analysis-stream-prompt.ts");
@@ -88,7 +88,7 @@ function main() {
   assert("audit catches 身弱", leaks.some((h) => h.label === "term:身弱"));
 
   const metaHits = auditMetaphorBlacklist("你的心智引擎在空转。", "zh");
-  assert("audit catches 引擎", metaHits.some((h) => h.label === "metaphor_blacklist"));
+  assert("empty blacklist → 引擎 not a metaphor hit", metaHits.length === 0);
 
   const repairSrc = read("lib/base-analysis/repair-violations.ts");
   assert("repair locates line (no model find)", repairSrc.includes("locateViolationLine"));

@@ -16,6 +16,7 @@
     "test:cj-budget": "tsx scripts/test-core-judgments-budget.ts",
     "test:marker-contract": "tsx scripts/test-base-layer-marker-contract.ts",
     "test:newlines": "tsx scripts/test-sanitize-preserves-newlines.ts",
+    "test:blacklist-empty": "tsx scripts/test-metaphor-blacklist-empty.ts",
     "test:poju-dual-layer": "tsx scripts/test-poju-segment2-dual-layer.ts",
     "test:poju-stepk": "tsx scripts/test-poju-v5-stepk.ts",
     "test:poju-stepk:live": "tsx scripts/test-poju-v5-stepk.ts --live",

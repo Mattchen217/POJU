@@ -72,25 +72,21 @@ export const BANNED_TERM_SOFT_ZH: Readonly<Record<string, string>> = {
   天注定: "外部定论",
 };
 
-export const METAPHOR_BLACKLIST_ZH = [
-  "持续燃烧的引擎",
-  "手机散热片",
-  "随时能翻的参考书",
-  "散热缺口",
-  "冷却模块",
-  "引擎",
-  "藤蔓",
-] as const;
+/**
+ * 比喻黑名单 —— 已清空（2026-07-17）。
+ *
+ * 病史：机械比喻(引擎/散热片…)进表，是因为当年提示词拿它们当【示范句】→ 全员传染(事故 #1)；
+ * 藤蔓被连坐误伤 —— 它是乙木的正确自然意象，禁它导致每个乙木盘烧 2 次 repair。
+ * 示范句已在上一批清干净，病根已切 → 禁词表失去存在理由。
+ *
+ * 机制保留（门禁 hook / 否定式检测 / 三处消费点都是 for-of，空表 = 干净 no-op）：
+ * 将来若真发现某个【有害】比喻，往这里加【一个词】即可，不必重建机制。
+ * ⚠️ 防"所有用户比喻雷同"现在【只】靠提示词「主比喻由 day_master 现定」约束。
+ * 若又雷同 → 加强那条约束或做「比喻↔五行匹配」代码检查，【不要】把词填回这里。
+ */
+export const METAPHOR_BLACKLIST_ZH: readonly string[] = [];
 
-export const METAPHOR_BLACKLIST_EN = [
-  "steady-burning engine",
-  "phone heatsink",
-  "always-open reference book",
-  "heat-dissipation gap",
-  "cooling module",
-  "engine",
-  "vine",
-] as const;
+export const METAPHOR_BLACKLIST_EN: readonly string[] = [];
 
 /**
  * Soft stand-ins used ONLY inside bold lead labels (`**label:**`).
@@ -276,12 +272,12 @@ export function buildForbiddenTermsPromptBlock(locale: string): string {
 
 【禁词】${BANNED_TERMS_ZH.join(" / ")}
   → 必须软译（对照）：${softLines}…
-【禁用比喻·黑名单】${METAPHOR_BLACKLIST_ZH.join(" / ")}
-  → 主比喻必须由此人 structured（day_master 五行 + strength + yong_shen）现定；换盘还成立 = 套话 = 重写
+【主比喻·现定】主比喻必须由**这个人的** structured（day_master 五行 + strength + yong_shen）现场生成；
+  换一个命盘还成立 = 套话 = 重写。别套用任何现成意象，让比喻从这盘的能量结构里长出来。
 
-【禁词/禁用比喻 = 字面禁止出现】
+【禁词 = 字面禁止出现】
 不得以【任何形式】出现，包括：否定式、对比式、引用式、加引号提及。
-  ✗「你不是引擎」  ✗「不像散热片那样」  ✗「所谓的命运」  ✗「这不是命定」
+  ✗「所谓的命运」  ✗「这不是命定」
 要表达「你不靠硬撑」→【直接正面说】，不要拿禁词当反面例子。用这个盘自己的机制说，不要套用任何现成句式。
 
 【禁裸干支】甲乙丙丁戊己庚辛壬癸 / 子丑寅卯辰巳午未申酉戌亥 及「丙火/乙木」类合称一律不得裸露——要么 ⟦t:<slug>|<贴题白话>⟧（软译由系统填；兼容形第2格软译也【不得】含裸干支），要么纯白话。
@@ -293,11 +289,11 @@ export function buildForbiddenTermsPromptBlock(locale: string): string {
 
 [Banned] ${BANNED_TERMS_EN.join(" / ")}
   → Soft-translate (e.g. day master → "your core nature"; weak self → "fuel runs short easily")
-[Metaphor blacklist] ${METAPHOR_BLACKLIST_EN.join(" / ")}
-  → Main metaphor from this chart's day_master + strength + yong_shen only
+[Main metaphor · chart-native] Main metaphor must be generated from THIS person's structured (day_master element + strength + yong_shen);
+  if it still fits another chart = stock = rewrite. Do not reuse canned imagery — let the metaphor grow from this chart's energy structure.
 
-[Literal ban] Banned words/metaphors must NOT appear in ANY form — including negation, contrast, quotation, or scare-quotes.
-  ✗ "you are not an engine"  ✗ "unlike a heatsink"  ✗ "so-called fate"  ✗ "this is not destiny"
+[Literal ban] Banned words must NOT appear in ANY form — including negation, contrast, quotation, or scare-quotes.
+  ✗ "so-called fate"  ✗ "this is not destiny"
   To say "you don't hard-brace" → say it positively from THIS chart's mechanism — never reuse stock sentences.
 
 [No bare Ganzhi] Never bare stems/branches or "Bing fire"/"Yi wood" compounds — use ⟦t:<slug>|<contextual plain>⟧ (system fills soft; compat soft slot must itself be Ganzhi-free) or plain vernacular

@@ -184,8 +184,13 @@ function buildCoreJudgmentsLlmPrompt(
 5) 【禁止】比喻、职业/婚恋场景、年龄/干支纪年、行动清单。
 6) **每条必须能被换成另一个命盘时失效** —— 六条里有任何一条换盘还成立，那条就是套话，重写。
 7) refs 里的 shensha_instances 与 natal_relations 是这盘**独有**的算料（已软译，可直接引用）：
-   至少 structural_gap 与 leverage_state 要落到其中具体条目上，不能只用强弱/喜忌三标签。
-   \`磨蚀@month-day\` 读作「month 与 day 两个位置之间有磨蚀」——**引用软译名与位置即可，不要去还原原词**。
+   structural_gap、leverage_state、balance_anchor **各自至少锚住其中一条具体条目**，不能只用强弱/喜忌三标签。
+   - \`磨蚀@month-day\` 读作「month 与 day 两个位置之间有磨蚀」——引用软译名与位置即可，不要还原原词。
+   - balance_anchor 尤其容易写成套话（「补入温暖与务实的方向」换任何同类盘都成立）——
+     它必须说清「补哪一路，是为了解开**这盘的哪条具体张力/缺口**」。
+   - **两个清单都空**（有些盘确实如此）→ 就锚 pattern 里的具体十神组合，并说清
+     「这个组合在【当前强弱与喜忌方向】下是推进还是消耗」——那也是这盘独有的。
+     **不要为了凑条目而编造 refs 里没有的东西。**
 
 ## 反例（照这个方向避）
 
@@ -221,8 +226,13 @@ Translate structured into concrete mechanism lines four products can quote.
 4) Banned: bare Ganzhi, day-master / weak-self / favorable-element jargon, clash/combine jargon.
 5) Banned: metaphors, career/romance scenes, age/calendar years, action lists.
 6) **Every line must fail on a different chart** — if any line still fits most people, rewrite it.
-7) refs.shensha_instances and natal_relations are this chart's unique material:
-   at least structural_gap and leverage_state must land on a concrete item from them — not only strength / xi-ji labels.
+7) refs.shensha_instances and natal_relations are this chart's unique material (already soft-labeled — cite directly):
+   structural_gap, leverage_state, and balance_anchor must each land on at least one concrete item — not only strength / xi-ji labels.
+   - balance_anchor especially drifts into stock ("replenish warmth and pragmatism" fits any similar chart) —
+     it must say which direction unlocks **which specific tension/gap on THIS chart**.
+   - If both lists are empty → anchor a concrete ten-god combo from pattern and say whether it is
+     propulsion or drain under current strength / xi-ji — that is still chart-unique.
+     Never invent items absent from refs.
 
 ## Bad (avoid these directions)
 
