@@ -12,6 +12,7 @@ import {
   isCoreJudgments,
   type CoreJudgments,
 } from "@/lib/base-analysis/core-judgments";
+import { OUT_OF_SET_FORBIDDEN_HAN } from "@/lib/glossary/term-closed-set";
 import {
   openRouterChatCompletion,
 } from "@/lib/llm/openrouter-shared";
@@ -94,6 +95,17 @@ export function hasCoreJudgmentsBlackspeak(text: string): boolean {
     "相害",
     "刑害",
     "十神",
+    // 神煞原词 —— 上一版一个都不查,`十恶大败` 就是这么【静默】进 core_judgments 的。
+    // 黑名单神煞(OUT_OF_SET_FORBIDDEN_HAN)现在已在 refs 侧丢弃,这里是第二道:
+    // 模型仍可能从 structured.pillars_detail 自己捡。
+    ...(OUT_OF_SET_FORBIDDEN_HAN as readonly string[]),
+    "贵人",
+    "神煞",
+    // 关系原词(refs 已软译,写出原词 = 它绕开了 refs 去读 structured)
+    // 单字「煞」易误伤「煞费苦心」等 —— 宁可漏,不可误伤后落模板。
+    "自刑",
+    "半合",
+    "天干合",
   ];
   return bans.some((b) => text.includes(b));
 }
@@ -160,8 +172,9 @@ function buildCoreJudgmentsLlmPrompt(
 4) 【禁止】裸干支、日主、身弱/身强、用神/喜神/忌神、刑冲合害原词。
 5) 【禁止】比喻、职业/婚恋场景、年龄/干支纪年、行动清单。
 6) **每条必须能被换成另一个命盘时失效** —— 六条里有任何一条换盘还成立，那条就是套话，重写。
-7) refs 里的 shensha_instances 与 natal_relations 是这盘**独有**的算料：
-   至少 structural_gap 与 leverage_state 必须落到其中具体条目上，不能只用强弱/喜忌三标签。
+7) refs 里的 shensha_instances 与 natal_relations 是这盘**独有**的算料（已软译，可直接引用）：
+   至少 structural_gap 与 leverage_state 要落到其中具体条目上，不能只用强弱/喜忌三标签。
+   \`磨蚀@month-day\` 读作「month 与 day 两个位置之间有磨蚀」——**引用软译名与位置即可，不要去还原原词**。
 
 ## 反例（照这个方向避）
 

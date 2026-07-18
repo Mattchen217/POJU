@@ -756,6 +756,10 @@ export function rewriteMarkersWithSsotSoft(text: string, locale: string): string
         isThreeSlot ? (slot3 ? unescapeMarkerPart(slot3) : "") : unescapeMarkerPart(slot2)
       ).trim();
       if (!soft) {
+        console.warn(
+          `[term-marking] 闭集外 slug「${id}」—— 模型自造。标记会被剥掉、句子会缺字。` +
+            `若这个概念确实需要,要么进 pojulife-terms.ts,要么在提示词里要求它直接白话讲。`,
+        );
         if (!isThreeSlot && plain) {
           return `⟦t:${id}||${escapeMarkerPart(plain)}⟧`;
         }
@@ -903,10 +907,15 @@ export type TermMarkingPromptOptions = {
    */
   principlesOnly?: boolean;
   /**
-   * 底座专用：这一层【没有用户情景】→「贴题白话」是伪需求。
-   * 模型只选 slug，白话由代码从 pojulife-terms.definition 填（固定模板 · 5 语言已齐）。
+   * 中立底座档:这一层【没有用户的具体处境】,所以不要求"贴题白话"。
+   *
+   * ⚠️ 名字只描述【提示词档位】,不描述代码行为。
+   * 上一版叫 ssotPlainOnly —— 用代码行为给提示词档命名,结果我把
+   * 「代码会用 SSOT 覆盖」当成指令写给了模型(「写了也会被丢弃」),
+   * 模型失去载体 → 把术语解释挪进正文 → 门禁死循环 → 底座整个挂掉。
+   * **代码要干什么,提示词不需要知道。** 别再往这一档里塞实现细节。
    */
-  ssotPlainOnly?: boolean;
+  neutralBase?: boolean;
 };
 
 export function buildTermMarkingPromptBlock(
@@ -917,7 +926,7 @@ export function buildTermMarkingPromptBlock(
   const langLabel =
     loc === "zh" ? "中文" : loc === "en" ? "English" : loc.toUpperCase();
   const principlesOnly = opts?.principlesOnly === true;
-  const ssotPlainOnly = opts?.ssotPlainOnly === true;
+  const neutralBase = opts?.neutralBase === true;
   const rows = DELIVERY_MARKING_ENTRIES.map((e) => {
     const soft = softLabel(e, loc);
     const keep =
@@ -926,19 +935,24 @@ export function buildTermMarkingPromptBlock(
           ? "（可见软译只用上表词，禁括号干支）"
           : " (visible soft label only — no stem-branch in parens)"
         : "";
-    const sample = e.forbidden.slice(0, principlesOnly || ssotPlainOnly ? 2 : 4).join(" / ");
-    if (ssotPlainOnly) {
-      return `| \`${e.id}\` | ${sample} |`;
+    const sample = e.forbidden.slice(0, principlesOnly || neutralBase ? 2 : 4).join(" / ");
+    if (neutralBase) {
+      // 必须让它看见【标记会渲染成什么】—— 上一版把这两列撤了(怕它抄软译),
+      // 结果它连自己在标什么都不知道,只好在正文里自己解释一遍 → 裸术语 → 门禁炸。
+      // 抄不抄无所谓:forceSsotPlainInMarkers() 会无条件覆盖,抄了也是白抄。
+      return `| \`${e.id}\` | ${sample} | **${soft}** | ${glossOf(e.id, loc) ?? ""} |`;
     }
     return `| \`${e.id}\` | ${sample} | **${soft}**${keep} |`;
   }).join("\n");
 
-  const rules = ssotPlainOnly
-    ? `## 打标记规则（底座 · 只选 slug）
-1. 格式固定：\`⟦t:<slug>|⟧\` —— **竖线保留，后面留空**。软译词和白话解释都由系统从术语表填入。
-2. 你唯一要做的是**选对 slug**。这一层没有用户的具体处境，任何"贴题白话"都是你编的，会被丢弃。
+  const rules = neutralBase
+    ? `## 打标记规则（中立底座）
+1. 格式：\`⟦t:<slug>|⟧\` —— **竖线保留，后面留空**。
+2. 它会渲染成上表的【官方术语】，读者**点一下就展开【官方释义】那一整句**。
+   也就是说，**这个术语已经自带解释了** —— 所以**不要在正文里再解释它一遍**，
+   更不要为了解释它而写出它的术语原词（第 2 列那些）。标记本身就是解释。
 3. **正文零标记**；标记只出现在「依据与推理」；一段依据 ≤3 金字。
-4. **slug 必须取自上表**；自造 id = 拒绝；闭集里没有 → 不打标、直接白话讲。
+4. **slug 必须取自上表**；自造 id 无效、句子会缺字 —— 上表没有的概念，**直接用白话讲，不打标**。
 5. 守六条语义红线（不预测/不算命/不占卜/不决吉凶/不恐吓/不超自然承诺）。`
     : principlesOnly
       ? `## 打标记规则（原则 · 严禁过拟合示例）
@@ -964,14 +978,14 @@ ${buildTermMarkingFewShot(locale)}
 
 ${buildClosedSetConstraintPromptBlock(locale)}`;
 
-  const tableHeader = ssotPlainOnly
-    ? `| slug | 禁/术语示例 |
-|---|---|`
+  const tableHeader = neutralBase
+    ? `| slug | 禁/术语示例 | 官方术语 (${langLabel}) | 官方释义（读者点开就看到这句） |
+|---|---|---|---|`
     : `| slug | 禁/术语示例 | 官方术语 (${langLabel}) |
 |---|---|---|`;
 
-  const intro = ssotPlainOnly
-    ? `凡在「依据与推理」中引用下表概念：打 \`⟦t:<slug>|⟧\`（竖线后留空）。软译与白话由系统从术语表填入。`
+  const intro = neutralBase
+    ? `凡在「依据与推理」中引用下表概念：打 \`⟦t:<slug>|⟧\`（竖线后留空）。标记会渲染成上表的官方术语，点开即见官方释义。`
     : `凡在「依据与推理」中引用下表概念：打 \`⟦t:<slug>|<贴题白话>⟧\`。**软译词由系统从术语表填入**（下表 soft 列仅供对照）。`;
 
   return `# 术语标记（输出 JSON 字符串 · ${langLabel}）
@@ -982,6 +996,32 @@ ${tableHeader}
 ${rows}
 
 ${rules}`;
+}
+
+/**
+ * 中立底座专用:**无条件**用 SSOT 的官方术语 + 官方释义覆盖标记的两个槽。
+ *
+ * 这是【唯一】知道"底座 tooltip 用固定模板"这件事的地方 —— 提示词不知道、模型不知道。
+ * 底座只有八字、没有用户处境 →「贴题白话」是伪需求(铁律 #4);
+ * 但**别把这个决定翻译成对模型的指令** —— 上一版那么干,模型失去载体、
+ * 把术语解释挪进正文,门禁把底座整个卡死。
+ *
+ * 下游(POJU 第2/4段 / Match / Glyph / Syncro)有用户处境 → 贴题白话是真需求 → 不许调这个函数。
+ */
+export function forceSsotPlainInMarkers(text: string, locale: string): string {
+  if (!text?.includes("⟦t:")) return text ?? "";
+  const loc = toGlossaryLocale(locale);
+  TERM_MARKER_PATTERN.lastIndex = 0;
+  return text.replace(TERM_MARKER_PATTERN, (raw, rawId: string) => {
+    const id = normalizeTermMarkerId(String(rawId));
+    const soft = termOf(id, loc);
+    if (!soft) {
+      // 闭集外 slug —— 保持原样交给 rewriteMarkersWithSsotSoft 的告警去管,别在这儿静默吃掉
+      return raw;
+    }
+    const gloss = glossOf(id, loc) || soft;
+    return `⟦t:${id}|${escapeMarkerPart(soft)}|${escapeMarkerPart(gloss)}⟧`;
+  });
 }
 
 /**

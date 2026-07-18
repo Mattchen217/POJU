@@ -508,7 +508,7 @@ ${BASE_ANALYSIS_OUTPUT_SECTIONS_EN.split("\n").slice(1).join("\n")}
     lang === "zh" ? BASE_ANALYSIS_LAYOUT_ZH : BASE_ANALYSIS_LAYOUT_EN,
     BASE_ANALYSIS_BINDING_RULES,
     buildDualLayerDeliveryPromptBlock(lang),
-    buildTermMarkingPromptBlock(lang, { principlesOnly: true, ssotPlainOnly: true }),
+    buildTermMarkingPromptBlock(lang, { principlesOnly: true, neutralBase: true }),
     lang === "zh" ? BASE_ANALYSIS_FEW_SHOT_ZH : BASE_ANALYSIS_FEW_SHOT_EN,
     outputBlock,
     forbiddenBlock,

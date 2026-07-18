@@ -65,9 +65,9 @@ function main(): void {
   const empty = rewriteMarkersWithSsotSoft("⟦t:zheng_guan|⟧", "zh");
   assert("⟦t:slug|⟧ 回落 SSOT", empty.includes("代表内在秩序"));
 
-  // ⑥ 底座提示词走 ssotPlainOnly
+  // ⑥ 底座提示词走中立底座档（neutralBase；代码覆盖在 forceSsotPlainInMarkers）
   const basePrompt = read("lib/llm/prompts/base-analysis-stream-prompt.ts");
-  assert("底座启用 ssotPlainOnly", basePrompt.includes("ssotPlainOnly"));
+  assert("底座启用 neutralBase", basePrompt.includes("neutralBase"));
 
   console.log(
     "\n" +

@@ -6,6 +6,8 @@
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import type { DaYunEntry } from "@/lib/calculations/lunar-dayun";
 import { computeNatalChartRelations } from "@/lib/calculations/relation-engine";
+import { OUT_OF_SET_FORBIDDEN_HAN } from "@/lib/glossary/term-closed-set";
+import { pojuTermByTraditional, termOf } from "@/lib/glossary/pojulife-terms";
 import { STEMS, type HeavenlyStem, type WuXing } from "@/lib/match/data/stems-branches";
 
 export type CoreJudgmentsRefs = {
@@ -265,12 +267,58 @@ export function buildClimateNowFromStructured(
  * Deterministic fallback used when the independent medium LLM call fails.
  */
 
+/**
+ * 关系条目脱敏:`xing_酉_酉` / `stemhe_乙_庚` 这些 id 是【裸干支】。
+ * 直接喂给模型 = 一边喂裸词一边禁裸词 = 提示词自相矛盾 = 模型必然违规 = 必然落模板。
+ * (铁律 #2 推论:输入端喂了裸词,就别指望提示词让它别用。)
+ * RelationKind 恰好就是闭集 slug(xing→磨蚀 / banhe→偏契 / stemhe→共缠),直接软译。
+ * positions 是 year/month/day/hour —— 英文、安全、且带位置信息,够模型做真推导。
+ */
+function desensitizeRelations(structured: ProfileStructured): string[] {
+  return computeNatalChartRelations(structured).map((r) => {
+    // relation-engine 用 stem_he；术语表 slug 是 stemhe
+    const slug = r.kind === "stem_he" ? "stemhe" : r.kind;
+    const soft = termOf(slug, "zh") || slug;
+    return r.positions.length ? `${soft}@${r.positions.join("-")}` : soft;
+  });
+}
+
+/**
+ * 神煞脱敏:`collectShensha` 原样吐引擎算出的汉字名,里面躺着 `十恶大败` / `孤鸾煞`
+ * —— OUT_OF_SET_FORBIDDEN_HAN 里的【禁词】。而黑话闸不查神煞 → 静默进 core_judgments → 注入四产品。
+ * 规则:黑名单直接丢;闭集里有软译的 → 只给软译;没软译的 → 丢(汉字名会撞门禁,如「贵人」)。
+ */
+function desensitizeShensha(structured: ProfileStructured): string[] {
+  const out: string[] = [];
+  const dropped: string[] = [];
+  for (const han of collectShensha(structured)) {
+    if (
+      (OUT_OF_SET_FORBIDDEN_HAN as readonly string[]).some(
+        (b) => han === b || han.includes(b),
+      )
+    ) {
+      dropped.push(`${han}(黑名单)`);
+      continue;
+    }
+    const t = pojuTermByTraditional(han, "bazi") ?? pojuTermByTraditional(han);
+    if (!t) {
+      dropped.push(`${han}(无软译)`);
+      continue;
+    }
+    out.push(t.term.zh);
+  }
+  if (dropped.length) {
+    // 响亮:丢掉的是这盘的算料,丢多了 core_judgments 就没东西可锚(铁律 #5)
+    console.warn(`[core_judgments] refs 神煞脱敏丢弃 ${dropped.length} 项:${dropped.join("、")}`);
+  }
+  return out;
+}
+
 /** refs are always code-filled from structured — never model-generated. */
 export function buildCoreJudgmentsRefsFromStructured(
   structured: ProfileStructured,
 ): CoreJudgmentsRefs {
   const step = resolveCurrentDaYunStep(structured.da_yun);
-  const relations = computeNatalChartRelations(structured).map((r) => r.id);
   return {
     day_master: structured.day_master,
     strength: structured.strength,
@@ -279,8 +327,8 @@ export function buildCoreJudgmentsRefsFromStructured(
     ji_shen: [...(structured.ji_shen ?? [])],
     pattern: structured.pattern,
     da_yun_step: step,
-    shensha_instances: collectShensha(structured),
-    natal_relations: relations,
+    shensha_instances: desensitizeShensha(structured),
+    natal_relations: desensitizeRelations(structured),
   };
 }
 

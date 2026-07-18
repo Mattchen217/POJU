@@ -12,6 +12,7 @@ import {
 import { repairViolationsOnly } from "@/lib/base-analysis/repair-violations";
 import { buildBaseAnalysisStreamPrompt } from "@/lib/llm/prompts/base-analysis-stream-prompt";
 import { applyComplianceSanitize } from "@/lib/llm/sanitize/compliance-terms";
+import { forceSsotPlainInMarkers } from "@/lib/llm/sanitize/term-marking";
 import { openRouterStream } from "@/lib/llm/openrouter-stream";
 
 export type StreamLlmWithGateInput = {
@@ -124,7 +125,12 @@ export async function streamBaseAnalysisWithDeliveryGate(
       };
     }
 
-    let draft = applyComplianceSanitize(gen.text, input.locale).text;
+    // 底座专属:标记的白话槽一律用 SSOT 官方释义(模型写什么都覆盖)。
+    // 必须在 gate 之前 —— gate 审的就是这份 draft。
+    let draft = forceSsotPlainInMarkers(
+      applyComplianceSanitize(gen.text, input.locale).text,
+      input.locale,
+    );
     let gate = auditBaseAnalysisDelivery(draft, input.locale, input.structured);
 
     if (gate.ok || !isBaseAnalysisGateFailure(gate.violations)) {
@@ -177,7 +183,10 @@ export async function streamBaseAnalysisWithDeliveryGate(
         break;
       }
 
-      draft = applyComplianceSanitize(repaired.text, input.locale).text;
+      draft = forceSsotPlainInMarkers(
+        applyComplianceSanitize(repaired.text, input.locale).text,
+        input.locale,
+      );
       await input.onChunk(draft);
       gate = auditBaseAnalysisDelivery(draft, input.locale, input.structured);
 
