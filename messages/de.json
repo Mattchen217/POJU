@@ -2184,5 +2184,11 @@
       "accept": "Ein Glyph ziehen",
       "decline": "Überspringen · Weiter"
     }
+  },
+  "contact": {
+    "meta": {
+      "title": "Kontakt",
+      "description": "Fragen oder Feedback? Kontaktieren Sie das POJU-Team."
+    }
   }
 }

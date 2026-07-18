@@ -1,7 +1,7 @@
 /**
  * pojulife terminology — single source of truth (SSOT).
  * Generated from docs/完整重命名清单（157）.json with Fix A/B/C applied.
- * 163 = bazi 107 + qimen 39 + glyph 17. Do not parallel-maintain soft labels elsewhere.
+ * 167 = bazi 111 + qimen 39 + glyph 17. Do not parallel-maintain soft labels elsewhere.
  *
  * Regenerate: node scripts/generate-poju-terms.mjs
  */
@@ -3281,6 +3281,88 @@ export const POJU_TERMS: readonly PojuTerm[] = [
       es: "Fuerza explosiva e filo de doble filo; potente si se guía con reglas y ritmo.",
       de: "Starke Ausbruchskraft und zweischneidige Schärfe—wirksam, wenn Regeln und Rhythmus sie führen.",
       fr: "Force explosive et tranchant à double tranchant — puissant s'il est guidé par règles et rythme.",
+    },
+  },
+  // ── bazi 柱位结构（4）· Spatiotemporal Structures ──
+  // traditional === 引擎输出名（年柱/月柱/日柱/时柱），与 ZH_STRUCTURE_SOFT_REPLACE 的 key 一致。
+  {
+    ns: "bazi",
+    slug: "pl_year",
+    traditional: "年柱",
+    polarity: "neutral",
+    term: {
+      zh: "世络",
+      en: "Framework",
+      es: "Marco",
+      de: "Rahmen",
+      fr: "Cadre",
+    },
+    definition: {
+      zh: "象征个体与宏观世界、社会环境及家族传承的连接纽带，代表初见的外在面貌与宏观能量背景。",
+      en: "The link between the individual and the macro world, society, and ancestral heritage—the external persona and macro background.",
+      es: "El vínculo entre el individuo y el macromundo, la sociedad y la herencia ancestral—la fachada externa y el trasfondo macro.",
+      de: "Die Verbindung zwischen Individuum, Makrowelt, Gesellschaft und familiärem Erbe—die äußere Persona und der Makrohintergrund.",
+      fr: "Le lien entre l'individu, le macro-monde, la société et l'héritage ancestral—la persona externe et l'arrière-plan macro.",
+    },
+  },
+  {
+    ns: "bazi",
+    slug: "pl_month",
+    traditional: "月柱",
+    polarity: "neutral",
+    term: {
+      zh: "时脉",
+      en: "Rhythm",
+      es: "Ritmo",
+      de: "Rhythmus",
+      fr: "Rythme",
+    },
+    definition: {
+      zh: "象征主导行为动力与深层情绪的核心节律，代表个体在社会立足、职业发展及环境适应中的主能动性。",
+      en: "The core rhythm governing behavioral drive and deep emotion—social standing, career dynamics, and adaptation.",
+      es: "El ritmo central que rige el impulso conductual y la emoción profunda—posición social y dinámica profesional.",
+      de: "Der Kernrhythmus von Verhaltensantrieb und tiefer Emotion—soziale Stellung und berufliche Dynamik.",
+      fr: "Le rythme central de la pulsion comportementale et de l'émotion profonde—position sociale et dynamique professionnelle.",
+    },
+  },
+  {
+    ns: "bazi",
+    slug: "pl_day",
+    traditional: "日柱",
+    polarity: "neutral",
+    term: {
+      zh: "元核",
+      en: "Core",
+      es: "Núcleo",
+      de: "Kern",
+      fr: "Noyau",
+    },
+    definition: {
+      zh: "象征绝对的核心自我与本质人格，代表个体内在的精神世界、最真实的情感归属与独立意志。",
+      en: "The absolute core self and essential personality—the inner spiritual world, true belonging, and independent will.",
+      es: "El yo central absoluto y la personalidad esencial—el mundo espiritual interno y la voluntad independiente.",
+      de: "Das absolute Kernselbst und die wesentliche Persönlichkeit—die innere geistige Welt und der unabhängige Wille.",
+      fr: "Le soi central absolu et la personnalité essentielle—le monde spirituel intérieur et la volonté indépendante.",
+    },
+  },
+  {
+    ns: "bazi",
+    slug: "pl_hour",
+    traditional: "时柱",
+    polarity: "neutral",
+    term: {
+      zh: "隐域",
+      en: "Domain",
+      es: "Dominio",
+      de: "Domäne",
+      fr: "Domaine",
+    },
+    definition: {
+      zh: "象征深层的潜意识世界、私人隐秘思维与创造力结晶，代表事物的最终走向与长远成果。",
+      en: "The deep subconscious, private inner thought, and creative crystallization—long-term outcomes and direction.",
+      es: "El subconsciente profundo, el pensamiento interno privado y la cristalización creativa—resultados a largo plazo.",
+      de: "Das tiefe Unbewusste, privates inneres Denken und kreative Kristallisation—langfristige Ergebnisse.",
+      fr: "Le subconscient profond, la pensée intérieure privée et la cristallisation créative—résultats à long terme.",
     },
   },
 ];

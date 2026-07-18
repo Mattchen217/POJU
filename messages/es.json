@@ -2184,5 +2184,11 @@
       "accept": "Sacar un Glyph",
       "decline": "Omitir · Continuar"
     }
+  },
+  "contact": {
+    "meta": {
+      "title": "Contáctanos",
+      "description": "¿Preguntas o comentarios? Contacta al equipo de POJU."
+    }
   }
 }

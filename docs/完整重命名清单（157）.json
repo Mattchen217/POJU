@@ -2592,3 +2592,62 @@ const baziShenShaSupplementPart2 = [
     }
   }
 ];
+// B4 · bazi 柱位结构（4）· Spatiotemporal Structures
+const baziPillarsStructure = [
+  {
+    ns: "bazi",
+    slug: "pl_year",
+    traditional: "年柱",
+    polarity: "neutral",
+    term: { zh: "世络", en: "Framework", es: "Marco", de: "Rahmen", fr: "Cadre" },
+    definition: {
+      zh: "象征个体与宏观世界、社会环境及家族传承的连接纽带，代表初见的外在面貌与宏观能量背景。",
+      en: "Symbolizing the link between the individual and the macro world, social environment, and ancestral heritage, representing the external persona and macro background.",
+      es: "Simboliza el vínculo entre el individuo y el macro mundo, el entorno social y la herencia ancestral, representando la fachada externa.",
+      de: "Symbolisiert die Verbindung zwischen dem Individuum und der Makrowelt, dem sozialen Umfeld und dem familiären Erbe, und steht für den äußeren Hintergrund.",
+      fr: "Symbolise le lien entre l'individu et le macro-monde, l'environnement social et l'héritage ancestral, représentant l'arrière-plan macro."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "pl_month",
+    traditional: "月柱",
+    polarity: "neutral",
+    term: { zh: "时脉", en: "Rhythm", es: "Ritmo", de: "Rhythmus", fr: "Rythme" },
+    definition: {
+      zh: "象征主导行为动力与深层情绪的核心节律，代表个体在社会立足、职业发展及环境适应中的主能动性。",
+      en: "Symbolizing the core rhythm governing behavioral drives and deep emotions, representing social standing, career dynamics, and environmental adaptation.",
+      es: "Simboliza el ritmo central que rige los impulsos de comportamiento y las emociones profundas, representando la dinámica profesional.",
+      de: "Symbolisiert den Kernrhythmus, der Verhaltensantriebe und tiefe Emotionen steuert, und steht für die berufliche Dynamik.",
+      fr: "Symbolise le rythme central régissant les pulsions comportementales et les émotions profondes, représentant la dynamique professionnelle."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "pl_day",
+    traditional: "日柱",
+    polarity: "neutral",
+    term: { zh: "元核", en: "Core", es: "Núcleo", de: "Kern", fr: "Noyau" },
+    definition: {
+      zh: "象征绝对的核心自我与本质人格，代表个体内在的精神世界、最真实的情感归属与独立意志。",
+      en: "Symbolizing the absolute core self and essential personality, representing the internal spiritual world, true emotional belonging, and independent will.",
+      es: "Simboliza el yo central absoluto y la personalidad esencial, representando el mundo espiritual interno, la pertenencia real y la voluntad independiente.",
+      de: "Symbolisiert das absolute Kernselbst und die wesentliche Persönlichkeit, und steht für die innere geistige Welt und den unabhängigen Willen.",
+      fr: "Symbolise le soi central absolu et la personnalité essentielle, représentant le monde spirituel intérieur et la volonté indépendante."
+    }
+  },
+  {
+    ns: "bazi",
+    slug: "pl_hour",
+    traditional: "时柱",
+    polarity: "neutral",
+    term: { zh: "隐域", en: "Domain", es: "Dominio", de: "Domäne", fr: "Domaine" },
+    definition: {
+      zh: "象征深层的潜意识世界、私人隐秘思维与创造力结晶，代表事物的最终走向与长远成果。",
+      en: "Symbolizing the deep subconscious world, private inner thoughts, and creative crystallization, representing the long-term outcomes and direction.",
+      es: "Simboliza el mundo subconsciente profundo, los pensamientos internos privados y la cristalización creativa, representando los resultados a largo plazo.",
+      de: "Symbolisiert die tiefe unbewusste Welt, private innere Gedanken und kreative Kristallisation, und steht für die langfristigen Ergebnisse.",
+      fr: "Symbolise le monde subconscient profond, les pensées intérieures privées et la cristallisation créative, représentant les résultats à long terme."
+    }
+  }
+];

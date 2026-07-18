@@ -501,6 +501,39 @@ export function wrapBareTenGods(text: string, locale: string): string {
   return out;
 }
 
+/** 柱位 → 闭集 slug（pl_year/pl_month/pl_day/pl_hour）。 */
+const PILLAR_TO_SLUG: Readonly<Record<string, string>> = {
+  年柱: "pl_year",
+  月柱: "pl_month",
+  日柱: "pl_day",
+  时柱: "pl_hour",
+};
+
+/**
+ * 裸柱位词 → 标记。第五类确定性打标器（前四类：天干/五行/十神/神煞）。
+ *
+ * 生产 2026-07-18：柱位无打标器 + SSOT 无术语 → 模型自造 ⟦t:hour|时柱⟧ →
+ * 明文「时柱」经 stripMarkersForPrompt 漏进可见文本 → payment_leak → 页面「准备失败」。
+ *
+ * ⚠️ 顺序：必须在 replaceZhMingliStacks（phrase-first，把「月柱正印壬水」当一个概念）【之后】跑，
+ * 否则会把组合词的「月柱」先单独打标、拆散组合。见 compliance-terms sanitizeNonMarkerSegment。
+ * 柱位都是双字；中文正文前后几乎总贴汉字，Han 双边界会 100% 漏网（「你的时柱藏…」）。
+ * 只挡「年柱运 / 月柱格」这类后缀粘连——与 wrapBareTenGods 同款。
+ */
+export function wrapBarePillars(text: string, locale: string): string {
+  if (!text?.trim()) return text ?? "";
+  const loc = toGlossaryLocale(locale);
+  let out = text;
+  for (const [han, id] of Object.entries(PILLAR_TO_SLUG)) {
+    if (!termOf(id, loc)) continue;
+    out = out.replace(
+      new RegExp(`${escapeRegExp(han)}(?![运格星局宫])`, "g"),
+      `⟦t:${id}|⟧`,
+    );
+  }
+  return out;
+}
+
 /**
  * 与闭集表面撞名的【日常汉语词】—— 永不自动补标。
  * 「平衡」是 CLOSED_STRUCTURAL 里唯一的日常词，且常作动词：自动补标会把模型写的白话

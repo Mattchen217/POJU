@@ -2223,5 +2223,11 @@
       "add_to_home_title_ios": "添加到主屏幕",
       "add_to_home_desc": "将 pojulife 添加到手机桌面，减少干扰，方便下次快速打开。"
     }
+  },
+  "contact": {
+    "meta": {
+      "title": "联系我们",
+      "description": "有问题或建议？通过以下方式联系 POJU 团队。"
+    }
   }
 }

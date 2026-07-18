@@ -2223,5 +2223,11 @@
       "add_to_home_title_ios": "Add to Home Screen",
       "add_to_home_desc": "Add pojulife to your phone's home screen for fewer interruptions and quicker access next time."
     }
+  },
+  "contact": {
+    "meta": {
+      "title": "Contact Us",
+      "description": "Questions or feedback? Reach the POJU team below."
+    }
   }
 }

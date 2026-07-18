@@ -64,6 +64,7 @@ import {
   uiTermById,
   unescapeMarkerPart,
   wrapBareKeepCnSoftTerms,
+  wrapBarePillars,
   wrapBareStemElements,
   wrapBareTenGods,
   wrapBareWuxingInMingliContext,
@@ -812,11 +813,14 @@ function sanitizeNonMarkerSegment(
   s = filterDeletedTermsBounded(s);
   s = removeStandaloneBareGanzhi(s, locale);
   // 必须放最后 —— 上面几行会剥掉 ⟦⟧，先打标会被自己吃掉。
-  // 四类确定性打标器（天干/五行/十神），把"门禁拦得住、清洗器修不掉"的裸词全部收口。
+  // 五类确定性打标器（天干/五行/十神/柱位；神煞走 autoMark/清单），把裸词全部收口。
   if (opts?.wrapStems) {
+    // 顺序：组合词(phrase-first)已在上游 replaceZhMingliStacks 处理；这里打单字/单词裸词。
+    // 柱位放最后——它最"泛"，等十神/五行/天干先把「月柱正印壬水」里的成分处理完再兜柱位。
     s = wrapBareStemElements(s, locale);
     s = wrapBareWuxingInMingliContext(s, locale);
     s = wrapBareTenGods(s, locale);
+    s = wrapBarePillars(s, locale);
   }
   return s;
 }
@@ -908,13 +912,18 @@ export function sanitizeChatResponse(text: string, locale: string): string {
   return text;
 }
 
-/** Residual payment-audit leaks in user-visible text (after stripMarkers = what UI shows). */
+/**
+ * Residual payment-audit leaks in user-visible text.
+ * 只查【标记外】裸词：标记内明文（含自造 slug 的 slot）是待渲染内容，不是用户可见裸词。
+ * 若用 stripMarkersForPrompt 还原，会把 ⟦t:hour|时柱⟧ 里的「时柱」漏进来误判 payment_leak。
+ */
 export function auditPaymentLeakResiduals(
   text: string,
   locale: string,
 ): ComplianceViolation[] {
   if (!text?.trim()) return [];
-  const visible = stripMarkersForPrompt(text);
+  const outsideMarkers = text.replace(TERM_MARKER_PATTERN, " ");
+  const visible = stripMarkersForPrompt(outsideMarkers);
   const violations: ComplianceViolation[] = [];
 
   if (locale.startsWith("zh")) {
