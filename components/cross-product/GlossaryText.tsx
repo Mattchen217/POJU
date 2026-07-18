@@ -56,10 +56,13 @@ function TermMark({
   visible,
   plain,
   polarity = "neutral",
+  /** ellipsis = soft + [···]; hover = soft only, whole word opens gloss (matrix / zodiac). */
+  mode = "ellipsis",
 }: {
   visible: string;
   plain: string;
   polarity?: TermPolarity;
+  mode?: "ellipsis" | "hover";
 }) {
   const [open, setOpen] = useState(false);
   const [popStyle, setPopStyle] = useState<{
@@ -129,7 +132,8 @@ function TermMark({
 
   const toggle = () => setOpen((o) => !o);
 
-  const softLabel = (visible.trim() || plain.trim()).slice(0, 12);
+  const fullLabel = (visible.trim() || plain.trim());
+  const softLabel = mode === "hover" ? fullLabel : fullLabel.slice(0, 12);
   const detail = plain.trim();
 
   const popNode =
@@ -156,6 +160,32 @@ function TermMark({
       </span>
     ) : null;
 
+  const portal =
+    typeof document !== "undefined" && popNode
+      ? createPortal(popNode, document.body)
+      : null;
+
+  // Matrix / zodiac: gold soft word only — hover / focus / click opens gloss (no [···]).
+  if (mode === "hover") {
+    return (
+      <span
+        ref={anchorRef}
+        className={`term-mark term-mark--${polarity} term-mark--hover`}
+        tabIndex={detail ? 0 : undefined}
+        aria-label={detail ? "Explain term" : undefined}
+        aria-describedby={open ? id : undefined}
+        onMouseEnter={detail ? openFromHover : undefined}
+        onMouseLeave={detail ? scheduleHoverClose : undefined}
+        onFocus={detail ? () => setOpen(true) : undefined}
+        onBlur={detail ? () => setOpen(false) : undefined}
+        onClick={detail ? toggle : undefined}
+      >
+        <span className="term-mark__word">{softLabel}</span>
+        {portal}
+      </span>
+    );
+  }
+
   // Golden soft word + [···] opener. Detail plain lives in hover/click pop (fixed gloss ok if fluent).
   return (
     <span ref={anchorRef} className={`term-mark term-mark--${polarity}`}>
@@ -176,7 +206,34 @@ function TermMark({
           [···]
         </button>
       ) : null}
-      {typeof document !== "undefined" && popNode ? createPortal(popNode, document.body) : null}
+      {portal}
+    </span>
+  );
+}
+
+/** SSOT soft label + hover gloss — no [···]. For matrix / zodiac façades. */
+export function SoftTermHover({
+  slug,
+  locale,
+  fallback,
+  className,
+}: {
+  slug: string;
+  locale: string;
+  fallback?: string;
+  className?: string;
+}) {
+  const soft = termOf(slug, locale) ?? fallback ?? "";
+  const plain = glossOf(slug, locale) ?? "";
+  if (!soft) return fallback ? <>{fallback}</> : null;
+  return (
+    <span className={className}>
+      <TermMark
+        visible={soft}
+        plain={plain}
+        polarity={termPolarityById(slug)}
+        mode="hover"
+      />
     </span>
   );
 }

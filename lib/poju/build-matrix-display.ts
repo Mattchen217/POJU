@@ -32,6 +32,8 @@ export type MatrixPillarDisplay = PillarDetail & {
   branch_en: string;
   branch_pinyin: string;
   branch_element: string;
+  /** Traditional 十神 before façade soft overwrite of `.ten_god`. */
+  ten_god_han: string;
   ten_god_en: string;
   hidden_display: string;
   star_label: string | null;
@@ -145,6 +147,7 @@ function enrichPillar(p: PillarDetail, locale: string): MatrixPillarDisplay {
       : p.branch,
     branch_pinyin: branchInfo?.pinyin ?? "",
     branch_element: branchInfo?.element ?? "",
+    ten_god_han: p.ten_god,
     ten_god_en: tenSoft || getTenGodArchetype(p.ten_god),
     // Overwrite raw Han ten_god for façade consumers that still read `.ten_god`
     ten_god: tenSoft || p.ten_god,

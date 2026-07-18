@@ -66,6 +66,67 @@ export function elementToSlug(element: string): string | null {
   return ELEMENT_TO_SLUG[t] ?? ELEMENT_TO_SLUG[t.charAt(0)] ?? null;
 }
 
+const ZODIAC_HAN_TO_SLUG: Record<string, string> = {
+  鼠: "zd_rat",
+  牛: "zd_ox",
+  虎: "zd_tiger",
+  兔: "zd_rabbit",
+  龙: "zd_dragon",
+  龍: "zd_dragon",
+  蛇: "zd_snake",
+  马: "zd_horse",
+  馬: "zd_horse",
+  羊: "zd_goat",
+  猴: "zd_monkey",
+  鸡: "zd_rooster",
+  雞: "zd_rooster",
+  狗: "zd_dog",
+  猪: "zd_pig",
+  豬: "zd_pig",
+};
+
+/** Year-animal han (鼠/龙…) → zodiac SSOT slug. */
+export function zodiacHanToSlug(han: string): string | null {
+  const t = han.trim();
+  if (!t) return null;
+  return ZODIAC_HAN_TO_SLUG[t] ?? ZODIAC_HAN_TO_SLUG[t.charAt(0)] ?? null;
+}
+
+/** Traditional / soft surface → SSOT slug when known. */
+export function matrixTermSlug(traditionalOrSoft: string): string | null {
+  const raw = traditionalOrSoft.trim();
+  if (!raw) return null;
+  const el = elementToSlug(raw);
+  if (el) return el;
+  const zd = zodiacHanToSlug(raw);
+  if (zd) return zd;
+  const byTrad = pojuTermByTraditional(raw);
+  if (byTrad) return byTrad.slug;
+  const closed = CLOSED_SET_SLUG[raw] ?? LIFE_STAGE_HAN_TO_SLUG[raw];
+  return closed ?? null;
+}
+
+const PILLAR_SLOT_SLUG = {
+  year: "pl_year",
+  month: "pl_month",
+  day: "pl_day",
+  hour: "pl_hour",
+} as const;
+
+export function pillarSlotSlug(
+  slot: "year" | "month" | "day" | "hour",
+): string {
+  return PILLAR_SLOT_SLUG[slot];
+}
+
+export function strengthToSlug(
+  strength: "strong" | "weak" | "balanced",
+): string {
+  if (strength === "strong") return "strong_self";
+  if (strength === "weak") return "weak_self";
+  return "balanced_self";
+}
+
 /**
  * Five-element soft label from SSOT (舒展/发散/承托/精练/润流 · Growth/Radiance/…).
  * Falls back to input only when unknown.

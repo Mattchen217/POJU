@@ -50,10 +50,27 @@ const GLYPH_LEVEL_BY_TRADITIONAL: Record<string, string> = {
   陷: "eye_of_storm",
 };
 
-const EXPECTED_BAZI = 99;
+const EXPECTED_BAZI = 141;
 const EXPECTED_QIMEN = 39;
 const EXPECTED_GLYPH = 17;
-const EXPECTED_TOTAL = EXPECTED_BAZI + EXPECTED_QIMEN + EXPECTED_GLYPH;
+const EXPECTED_ZODIAC = 12;
+const EXPECTED_TOTAL =
+  EXPECTED_BAZI + EXPECTED_QIMEN + EXPECTED_GLYPH + EXPECTED_ZODIAC;
+
+const ZODIAC_SLUG_BY_TRADITIONAL: Record<string, string> = {
+  鼠: "zd_rat",
+  牛: "zd_ox",
+  虎: "zd_tiger",
+  兔: "zd_rabbit",
+  龍: "zd_dragon",
+  蛇: "zd_snake",
+  馬: "zd_horse",
+  羊: "zd_goat",
+  猴: "zd_monkey",
+  雞: "zd_rooster",
+  狗: "zd_dog",
+  豬: "zd_pig",
+};
 
 function collectValidSlugs(): Set<string> {
   const set = new Set<string>();
@@ -65,6 +82,8 @@ function collectValidSlugs(): Set<string> {
   for (const v of Object.values(QIMEN_SLUG)) set.add(v);
   for (const v of Object.values(GLYPH_PALACE_SLUG)) set.add(v);
   for (const v of Object.values(GLYPH_LEVEL_SLUG)) set.add(v);
+  // SSOT itself is authoritative for landed soft terms (pillar / zodiac / …).
+  for (const t of POJU_TERMS) set.add(t.slug);
   return set;
 }
 
@@ -79,7 +98,10 @@ function expectedSlug(term: PojuTerm): string | undefined {
     const branch = term.traditional.replace(/[宮宫]$/u, "");
     return GLYPH_PALACE_SLUG[branch as keyof typeof GLYPH_PALACE_SLUG];
   }
-  return slugForTraditional(term.traditional);
+  if (term.ns === "zodiac") {
+    return ZODIAC_SLUG_BY_TRADITIONAL[term.traditional] ?? term.slug;
+  }
+  return slugForTraditional(term.traditional) ?? term.slug;
 }
 
 function gate1SlugLegality(valid: Set<string>, entries: readonly PojuTerm[]): Fail[] {
@@ -114,6 +136,7 @@ function gate3Coverage(entries: readonly PojuTerm[]): Fail[] {
   const bazi = entries.filter((e) => e.ns === "bazi");
   const qimen = entries.filter((e) => e.ns === "qimen");
   const glyph = entries.filter((e) => e.ns === "glyph");
+  const zodiac = entries.filter((e) => e.ns === "zodiac");
 
   if (entries.length !== EXPECTED_TOTAL) {
     fails.push({
@@ -134,6 +157,12 @@ function gate3Coverage(entries: readonly PojuTerm[]): Fail[] {
     fails.push({
       gate: 3,
       message: `coverage glyph: expected ${EXPECTED_GLYPH}, got ${glyph.length}`,
+    });
+  }
+  if (zodiac.length !== EXPECTED_ZODIAC) {
+    fails.push({
+      gate: 3,
+      message: `coverage zodiac: expected ${EXPECTED_ZODIAC}, got ${zodiac.length}`,
     });
   }
   return fails;
@@ -189,7 +218,8 @@ function gate5AuditRegex(entries: readonly PojuTerm[]): Fail[] {
           message: `[${loc}] qimen/dunjia regex hit on ${e.traditional} term="${t}"`,
         });
       }
-      if (AUDIT_REDLINE_EN_RE.test(t)) {
+      // Zodiac soft labels intentionally use animal names (Rat / Tiger / …).
+      if (e.ns !== "zodiac" && AUDIT_REDLINE_EN_RE.test(t)) {
         fails.push({
           gate: 5,
           message: `[${loc}] Death/zodiac/Auspicious hit on ${e.traditional} term="${t}"`,
@@ -294,8 +324,9 @@ function main() {
   const bazi = entries.filter((e) => e.ns === "bazi").length;
   const qimen = entries.filter((e) => e.ns === "qimen").length;
   const glyph = entries.filter((e) => e.ns === "glyph").length;
+  const zodiac = entries.filter((e) => e.ns === "zodiac").length;
   console.log(
-    `\nAll 8 gates passed (${entries.length} = bazi ${bazi} + qimen ${qimen} + glyph ${glyph}).\n`,
+    `\nAll 8 gates passed (${entries.length} = bazi ${bazi} + qimen ${qimen} + glyph ${glyph} + zodiac ${zodiac}).\n`,
   );
 }
 

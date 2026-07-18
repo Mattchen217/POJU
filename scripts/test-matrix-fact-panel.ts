@@ -89,6 +89,8 @@ function main(): void {
   assert("yong soft present", Boolean(fp.balance.yong_soft));
   assert("no bare 水 in yong", fp.balance.yong_soft !== "水");
   assert("structure arrays exist", Array.isArray(fp.structure.bonds));
+  assert("balance xi chips", Array.isArray(fp.balance.xi));
+  assert("strength slug", fp.balance.strength_slug === "weak_self");
 
   console.log(
     "\n" +

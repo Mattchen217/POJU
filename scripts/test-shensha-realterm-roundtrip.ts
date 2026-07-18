@@ -90,13 +90,13 @@ function main(): void {
     );
   }
 
-  // ⑤ 术语总数 197（含柱位结构系列 + 合化）
+  // ⑤ 术语总数 209（含柱位结构系列 + 合化 + 生肖）
   const t = fs.readFileSync(
     path.join(process.cwd(), "lib/glossary/pojulife-terms.ts"),
     "utf8",
   );
   const count = (t.match(/slug:\s*"/g) ?? []).length;
-  assert(`术语总数 197（实得 ${count}）`, count === 197);
+  assert(`术语总数 209（实得 ${count}）`, count === 209);
 
   // ⑥ 喂真词：desensitize 后 refs 含真词而非软译「提携」
   // 最小 structured 不够触发引擎神煞时，至少保证别名归一后 push 的是 han 不是 soft

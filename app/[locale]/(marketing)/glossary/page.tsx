@@ -20,6 +20,7 @@ const NS_LABEL: Record<TermNs, string> = {
   bazi: "Profile",
   qimen: "Vector",
   glyph: "Glyph",
+  zodiac: "Zodiac",
 };
 
 const POLARITY_LABEL: Record<TermPolarity, string> = {
@@ -33,6 +34,7 @@ export default async function GlossaryPage() {
   const bazi = POJU_TERMS.filter((t) => t.ns === "bazi");
   const qimen = POJU_TERMS.filter((t) => t.ns === "qimen");
   const glyph = POJU_TERMS.filter((t) => t.ns === "glyph");
+  const zodiac = POJU_TERMS.filter((t) => t.ns === "zodiac");
 
   return (
     <LegalPageShell
@@ -48,6 +50,7 @@ export default async function GlossaryPage() {
       <Section title={`${NS_LABEL.bazi} (${bazi.length})`} terms={bazi} locale={locale} />
       <Section title={`${NS_LABEL.qimen} (${qimen.length})`} terms={qimen} locale={locale} />
       <Section title={`${NS_LABEL.glyph} (${glyph.length})`} terms={glyph} locale={locale} />
+      <Section title={`${NS_LABEL.zodiac} (${zodiac.length})`} terms={zodiac} locale={locale} />
     </LegalPageShell>
   );
 }

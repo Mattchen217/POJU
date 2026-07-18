@@ -197,13 +197,13 @@ function main(): void {
     !hasCoreJudgmentsBlackspeak(relMarked),
   );
 
-  // 术语总数 197
+  // 术语总数 209
   const src = fs.readFileSync(
     path.join(process.cwd(), "lib/glossary/pojulife-terms.ts"),
     "utf8",
   );
   const count = (src.match(/slug:\s*"/g) ?? []).length;
-  assert(`术语总数 197（实得 ${count}）`, count === 197);
+  assert(`术语总数 209（实得 ${count}）`, count === 209);
 
   // SHENSHA_ALIAS 第二事实源已清
   const aliasSrc = fs.readFileSync(

@@ -67,6 +67,15 @@
   color: #d4af37;
 }
 
+.term-mark--hover {
+  cursor: help;
+}
+
+.term-mark--hover .term-mark__word {
+  border-bottom: 1px dotted currentColor;
+  border-bottom-color: color-mix(in srgb, currentColor 35%, transparent);
+}
+
 .term-mark__info {
   display: inline;
   margin-left: 2px;

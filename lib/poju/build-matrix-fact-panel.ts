@@ -18,13 +18,18 @@ import {
 } from "@/lib/match/data/stems-branches";
 import { getStemInfo } from "@/lib/poju/bazi-matrix-mappings";
 import {
+  elementToSlug,
   matrixElementSoft,
   matrixSoftTerm,
+  matrixTermSlug,
+  strengthToSlug,
 } from "@/lib/poju/matrix-term-labels";
-import { termOf } from "@/lib/glossary/pojulife-terms";
+import { pojuTermByTraditional, termOf } from "@/lib/glossary/pojulife-terms";
 
 export type MatrixFactChip = {
   soft: string;
+  /** SSOT slug for SoftTermHover gloss (kind / element / ten-god…). */
+  slug: string | null;
   polarity: "green" | "red" | "gold" | "neutral";
 };
 
@@ -34,11 +39,14 @@ export type MatrixFactPanel = {
     age_range: string;
     start_year: number;
     ten_god_soft: string | null;
+    ten_god_slug: string | null;
     stem_element_soft: string | null;
+    stem_element_slug: string | null;
   };
   year_pulse: {
     year: number;
     stem_element_soft: string;
+    stem_element_slug: string | null;
     progress_pct: number;
     links: MatrixFactChip[];
   };
@@ -48,9 +56,11 @@ export type MatrixFactPanel = {
   };
   balance: {
     strength_soft: string;
+    strength_slug: string;
     yong_soft: string | null;
-    xi_softs: string[];
-    ji_softs: string[];
+    yong_slug: string | null;
+    xi: MatrixFactChip[];
+    ji: MatrixFactChip[];
   };
 };
 
@@ -89,6 +99,7 @@ function relationSoft(r: RelationLabel, locale: string): string {
 function toChip(r: RelationLabel, locale: string): MatrixFactChip {
   return {
     soft: relationSoft(r, locale),
+    slug: KIND_SLUG[r.kind] ?? null,
     polarity: r.polarity,
   };
 }
@@ -125,18 +136,26 @@ function strengthSoft(
   return matrixSoftTerm("中和", locale);
 }
 
-function elementListSoft(items: string[], locale: string, limit: number): string[] {
-  const out: string[] = [];
+function elementListChips(
+  items: string[],
+  locale: string,
+  limit: number,
+  polarity: MatrixFactChip["polarity"],
+): MatrixFactChip[] {
+  const out: MatrixFactChip[] = [];
   const seen = new Set<string>();
   for (const raw of items) {
     const soft = matrixSoftTerm(raw, locale) || matrixElementSoft(raw, locale);
     if (!soft || seen.has(soft)) continue;
-    // Skip if still looks like bare traditional stem/element jargon without soft map
     if (soft === raw && /[甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥格]/.test(raw)) {
       continue;
     }
     seen.add(soft);
-    out.push(soft);
+    out.push({
+      soft,
+      slug: elementToSlug(raw) ?? matrixTermSlug(raw),
+      polarity,
+    });
     if (out.length >= limit) break;
   }
   return out;
@@ -167,20 +186,28 @@ export function buildMatrixFactPanel(input: {
 
   const currentDy = structured.da_yun[dayunIndex];
   let ten_god_soft: string | null = null;
+  let ten_god_slug: string | null = null;
   let stem_element_soft: string | null = null;
+  let stem_element_slug: string | null = null;
   if (currentDy?.ganzhi) {
     const dyStem = currentDy.ganzhi.charAt(0) as HeavenlyStem;
     const dmStem = (structured.day_master.charAt(0) ||
       structured.pillars_detail?.day.stem ||
       "") as HeavenlyStem;
     const stemInfo = getStemInfo(dyStem);
+    stem_element_slug = stemInfo?.element
+      ? elementToSlug(stemInfo.element)
+      : null;
     stem_element_soft = stemInfo?.element
       ? matrixElementSoft(stemInfo.element, locale)
       : null;
     if (dmStem && dyStem) {
       try {
         const tg = calculateTenGod(dmStem, dyStem);
-        ten_god_soft = tg ? matrixSoftTerm(tg, locale) : null;
+        if (tg) {
+          ten_god_soft = matrixSoftTerm(tg, locale);
+          ten_god_slug = pojuTermByTraditional(tg)?.slug ?? null;
+        }
       } catch {
         ten_god_soft = null;
       }
@@ -195,6 +222,9 @@ export function buildMatrixFactPanel(input: {
   const yongSoft = yongRaw ? matrixElementSoft(yongRaw, locale) || matrixSoftTerm(yongRaw, locale) : "";
   const yong_soft =
     yongSoft && !/[甲乙丙丁戊己庚辛壬癸格柱]/.test(yongSoft) ? yongSoft : null;
+  const yong_slug = yongRaw
+    ? elementToSlug(yongRaw) ?? matrixTermSlug(yongRaw) ?? "yong_shen"
+    : null;
 
   return {
     era: {
@@ -202,11 +232,14 @@ export function buildMatrixFactPanel(input: {
       age_range: dayunAgeRange,
       start_year: dayunStartYear,
       ten_god_soft,
+      ten_god_slug,
       stem_element_soft,
+      stem_element_slug,
     },
     year_pulse: {
       year: transitYear,
       stem_element_soft: matrixElementSoft(transitStemElement, locale),
+      stem_element_slug: elementToSlug(transitStemElement),
       progress_pct: transitProgressPct,
       links: pickDistinct(liunianRels, locale, 3),
     },
@@ -219,9 +252,11 @@ export function buildMatrixFactPanel(input: {
     },
     balance: {
       strength_soft: strengthSoft(structured.strength, locale),
+      strength_slug: strengthToSlug(structured.strength),
       yong_soft,
-      xi_softs: elementListSoft(structured.xi_shen ?? [], locale, 3),
-      ji_softs: elementListSoft(structured.ji_shen ?? [], locale, 2),
+      yong_slug: yong_soft ? yong_slug : null,
+      xi: elementListChips(structured.xi_shen ?? [], locale, 3, "green"),
+      ji: elementListChips(structured.ji_shen ?? [], locale, 2, "red"),
     },
   };
 }

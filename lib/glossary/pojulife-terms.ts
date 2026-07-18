@@ -1,12 +1,12 @@
 /**
  * pojulife terminology — single source of truth (SSOT).
  * Generated from docs/完整重命名清单（157）.json with Fix A/B/C applied.
- * 197 = bazi 141 + qimen 39 + glyph 17. Do not parallel-maintain soft labels elsewhere.
+ * 209 = bazi 141 + qimen 39 + glyph 17 + zodiac 12. Do not parallel-maintain soft labels elsewhere.
  *
  * Regenerate: node scripts/generate-poju-terms.mjs
  */
 
-export type TermNs = "bazi" | "qimen" | "glyph";
+export type TermNs = "bazi" | "qimen" | "glyph" | "zodiac";
 export type TermPolarity = "favorable" | "caution" | "neutral";
 export type TermLocale = "zh" | "en" | "es" | "de" | "fr";
 
@@ -3999,6 +3999,180 @@ export const POJU_TERMS: readonly PojuTerm[] = [
       es: "Simboliza el arquetipo de pareja proyectado y el ancla emocional en el subconsciente, representando el modelo cognitivo interno de la otra mitad.",
       de: "Symbolisiert den projizierten Partner-Archetyp und die emotionale Verankerung im Unterbewusstsein, die das innere kognitive Modell der anderen Hälfte darstellt.",
       fr: "Symbolise l'archétype du partenaire projeté et l'ancre émotionnelle dans le subconscient, représentant le modèle cognitif intérieur de l'autre moitié.",
+    },
+  },
+  // ── zodiac 十二生肖时间原型（12）· Eastern Temporal Totems ──
+  // traditional 用繁体（龍/馬/雞/豬）；aliases 收简体，与矩阵 UI（龙/马/鸡/猪）对齐。
+  {
+    ns: "zodiac",
+    slug: "zd_rat",
+    traditional: "鼠",
+    polarity: "neutral",
+    term: { zh: "鼠", en: "Rat", es: "Rata", de: "Ratte", fr: "Rat" },
+    definition: {
+      zh: "东方传统中以12年为闭环周期、将出生年份时间轴具象化的一种时间符号。它利用特定的动物意象作为岁时图腾，来描绘该年份诞生的集体能量背景与潜在天赋；你的出生年份正对应着这一体系中的“鼠”年。",
+      en: "A symbolic personification of birth time in Eastern culture, structured in a 12-year cyclical rhythm. It uses specific animal imagery as a temporal totem to describe the collective energetic background of a birth year; your birth year corresponds to the Rat sign in this system.",
+      es: "Una personificación simbólica del tiempo de nacimiento en la cultura oriental, estructurada en un ritmo cíclico de 12 años. Utiliza imágenes de animales como un tótem temporal para describir el trasfondo energético de un año; tu año de nacimiento corresponde a la Rata en este sistema.",
+      de: "Eine symbolische Personifizierung der Geburtszeit in der östlichen Kultur, strukturiert in einem 12-jährigen zyklischen Rhythmus. Sie nutzt Tierbilder als zeitliches Totem, um den energetischen Hintergrund eines Geburtsjahres zu beschreiben; Ihr Geburtsjahr entspricht in diesem System der Ratte.",
+      fr: "Une personnification symbolique de l'heure de naissance dans la culture orientale, structurée selon un rythme cyclique de 12 ans. Elle utilise l'imagerie animale comme un totem temporel pour décrire le fond énergétique d'une année ; votre année de naissance correspond au Rat dans ce système.",
+    },
+  },
+  {
+    ns: "zodiac",
+    slug: "zd_ox",
+    traditional: "牛",
+    polarity: "neutral",
+    term: { zh: "牛", en: "Ox", es: "Buey", de: "Büffel", fr: "Buffle" },
+    definition: {
+      zh: "东方传统中以12年为闭环周期、将出生年份时间轴具象化的一种时间符号。它利用特定的动物意象作为岁时图腾，来描绘该年份诞生的集体能量背景与潜在天赋；你的出生年份正对应着这一体系中的“牛”年。",
+      en: "A symbolic personification of birth time in Eastern culture, structured in a 12-year cyclical rhythm. It uses specific animal imagery as a temporal totem to describe the collective energetic background of a birth year; your birth year corresponds to the Ox sign in this system.",
+      es: "Una personificación simbólica del tiempo de nacimiento en la cultura oriental, estructurada en un ritmo cíclico de 12 años. Utiliza imágenes de animales como un tótem temporal para describir el trasfondo energético de un año; tu año de nacimiento corresponde al Buey en este sistema.",
+      de: "Eine symbolische Personifizierung der Geburtszeit in der östlichen Kultur, strukturiert in einem 12-jährigen zyklischen Rhythmus. Sie nutzt Tierbilder als zeitliches Totem, um den energetischen Hintergrund eines Geburtsjahres zu beschreiben; Ihr Geburtsjahr entspricht in diesem System dem Büffel.",
+      fr: "Une personnification symbolique de l'heure de naissance dans la culture orientale, structurée selon un rythme cyclique de 12 ans. Elle utilise l'imagerie animale comme un totem temporel pour décrire le fond énergétique d'une année ; votre année de naissance correspond au Buffle dans ce système.",
+    },
+  },
+  {
+    ns: "zodiac",
+    slug: "zd_tiger",
+    traditional: "虎",
+    polarity: "neutral",
+    term: { zh: "虎", en: "Tiger", es: "Tigre", de: "Tiger", fr: "Tigre" },
+    definition: {
+      zh: "东方传统中以12年为闭环周期、将出生年份时间轴具象化的一种时间符号。它利用特定的动物意象作为岁时图腾，来描绘该年份诞生的集体能量背景与潜在天赋；你的出生年份正对应着这一体系中的“虎”年。",
+      en: "A symbolic personification of birth time in Eastern culture, structured in a 12-year cyclical rhythm. It uses specific animal imagery as a temporal totem to describe the collective energetic background of a birth year; your birth year corresponds to the Tiger sign in this system.",
+      es: "Una personificación simbólica del tiempo de nacimiento en la cultura oriental, estructurada en un ritmo cíclico de 12 años. Utiliza imágenes de animales como un tótem temporal para describir el trasfondo energético de un año; tu año de nacimiento corresponde al Tigre en este sistema.",
+      de: "Eine symbolische Personifizierung der Geburtszeit in der östlichen Kultur, strukturiert in einem 12-jährigen zyklischen Rhythmus. Sie nutzt Tierbilder als zeitliches Totem, um den energetischen Hintergrund eines Geburtsjahres zu beschreiben; Ihr Geburtsjahr entspricht in diesem System dem Tiger.",
+      fr: "Une personnification symbolique de l'heure de naissance dans la culture orientale, structurée selon un rythme cyclique de 12 ans. Elle utilise l'imagerie animale comme un totem temporel pour décrire le fond énergétique d'une année ; votre année de naissance correspond au Tigre dans ce système.",
+    },
+  },
+  {
+    ns: "zodiac",
+    slug: "zd_rabbit",
+    traditional: "兔",
+    polarity: "neutral",
+    term: { zh: "兔", en: "Rabbit", es: "Conejo", de: "Hase", fr: "Lapin" },
+    definition: {
+      zh: "东方传统中以12年为闭环周期、将出生年份时间轴具象化的一种时间符号。它利用特定的动物意象作为岁时图腾，来描绘该年份诞生的集体能量背景与潜在天赋；你的出生年份正对应着这一体系中的“兔”年。",
+      en: "A symbolic personification of birth time in Eastern culture, structured in a 12-year cyclical rhythm. It uses specific animal imagery as a temporal totem to describe the collective energetic background of a birth year; your birth year corresponds to the Rabbit sign in this system.",
+      es: "Una personificación simbólica del tiempo de nacimiento en la cultura oriental, estructurada en un ritmo cíclico de 12 años. Utiliza imágenes de animales como un tótem temporal para describir el trasfondo energético de un año; tu año de nacimiento corresponde al Conejo en este sistema.",
+      de: "Eine symbolische Personifizierung der Geburtszeit in der östlichen Kultur, strukturiert in einem 12-jährigen zyklischen Rhythmus. Sie nutzt Tierbilder als zeitliches Totem, um den energetischen Hintergrund eines Geburtsjahres zu beschreiben; Ihr Geburtsjahr entspricht in diesem System dem Hasen.",
+      fr: "Une personnification symbolique de l'heure de naissance dans la culture orientale, structurée selon un rythme cyclique de 12 ans. Elle utilise l'imagerie animale comme un totem temporel pour décrire le fond énergétique d'une année ; votre année de naissance correspond au Lapin dans ce système.",
+    },
+  },
+  {
+    ns: "zodiac",
+    slug: "zd_dragon",
+    traditional: "龍",
+    aliases: ["龙"],
+    polarity: "neutral",
+    term: { zh: "龙", en: "Dragon", es: "Dragón", de: "Drache", fr: "Dragon" },
+    definition: {
+      zh: "东方传统中以12年为闭环周期、将出生年份时间轴具象化的一种时间符号。它利用特定的动物意象作为岁时图腾，来描绘该年份诞生的集体能量背景与潜在天赋；你的出生年份正对应着这一体系中的“龙”年。",
+      en: "A symbolic personification of birth time in Eastern culture, structured in a 12-year cyclical rhythm. It uses specific animal imagery as a temporal totem to describe the collective energetic background of a birth year; your birth year corresponds to the Dragon sign in this system.",
+      es: "Una personificación simbólica del tiempo de nacimiento en la cultura oriental, estructurada en un ritmo cíclico de 12 años. Utiliza imágenes de animales como un tótem temporal para describir el trasfondo energético de un año; tu año de nacimiento corresponde al Dragón en este sistema.",
+      de: "Eine symbolische Personifizierung der Geburtszeit in der östlichen Kultur, strukturiert in einem 12-jährigen zyklischen Rhythmus. Sie nutzt Tierbilder als zeitliches Totem, um den energetischen Hintergrund eines Geburtsjahres zu beschreiben; Ihr Geburtsjahr entspricht in diesem System dem Drachen.",
+      fr: "Une personnification symbolique de l'heure de naissance dans la culture orientale, structurée selon un rythme cyclique de 12 ans. Elle utilise l'imagerie animale comme un totem temporel pour décrire le fond énergétique d'une année ; votre année de naissance correspond au Dragon dans ce système.",
+    },
+  },
+  {
+    ns: "zodiac",
+    slug: "zd_snake",
+    traditional: "蛇",
+    polarity: "neutral",
+    term: { zh: "蛇", en: "Snake", es: "Serpiente", de: "Schlange", fr: "Serpent" },
+    definition: {
+      zh: "东方传统中以12年为闭环周期、将出生年份时间轴具象化的一种时间符号。它利用特定的动物意象作为岁时图腾，来描绘该年份诞生的集体能量背景与潜在天赋；你的出生年份正对应着这一体系中的“蛇”年。",
+      en: "A symbolic personification of birth time in Eastern culture, structured in a 12-year cyclical rhythm. It uses specific animal imagery as a temporal totem to describe the collective energetic background of a birth year; your birth year corresponds to the Snake sign in this system.",
+      es: "Una personificación simbólica del tiempo de nacimiento en la cultura oriental, estructurada en un ritmo cíclico de 12 años. Utiliza imágenes de animales como un tótem temporal para describir el trasfondo energético de un año; tu año de nacimiento corresponde a la Serpiente en este sistema.",
+      de: "Eine symbolische Personifizierung der Geburtszeit in der östlichen Kultur, strukturiert in einem 12-jährigen zyklischen Rhythmus. Sie nutzt Tierbilder als zeitliches Totem, um den energetischen Hintergrund eines Geburtsjahres zu beschreiben; Ihr Geburtsjahr entspricht in diesem System der Schlange.",
+      fr: "Une personnification symbolique de l'heure de naissance dans la culture orientale, structurée selon un rythme cyclique de 12 ans. Elle utilise l'imagerie animale comme un totem temporel pour décrire le fond énergétique d'une année ; votre année de naissance correspond au Serpent dans ce système.",
+    },
+  },
+  {
+    ns: "zodiac",
+    slug: "zd_horse",
+    traditional: "馬",
+    aliases: ["马"],
+    polarity: "neutral",
+    term: { zh: "马", en: "Horse", es: "Caballo", de: "Pferd", fr: "Cheval" },
+    definition: {
+      zh: "东方传统中以12年为闭环周期、将出生年份时间轴具象化的一种时间符号。它利用特定的动物意象作为岁时图腾，来描绘该年份诞生的集体能量背景与潜在天赋；你的出生年份正对应着这一体系中的“马”年。",
+      en: "A symbolic personification of birth time in Eastern culture, structured in a 12-year cyclical rhythm. It uses specific animal imagery as a temporal totem to describe the collective energetic background of a birth year; your birth year corresponds to the Horse sign in this system.",
+      es: "Una personificación simbólica del tiempo de nacimiento en la cultura oriental, estructurada en un ritmo cíclico de 12 años. Utiliza imágenes de animales como un tótem temporal para describir el trasfondo energético de un año; tu año de nacimiento corresponde al Caballo en este sistema.",
+      de: "Eine symbolische Personifizierung der Geburtszeit in der östlichen Kultur, strukturiert in einem 12-jährigen zyklischen Rhythmus. Sie nutzt Tierbilder als zeitliches Totem, um den energetischen Hintergrund eines Geburtsjahres zu beschreiben; Ihr Geburtsjahr entspricht in diesem System dem Pferd.",
+      fr: "Une personnification symbolique de l'heure de naissance dans la culture orientale, structurée selon un rythme cyclique de 12 ans. Elle utilise l'imagerie animale comme un totem temporel pour décrire le fond énergétique d'une année ; votre année de naissance correspond au Cheval dans ce système.",
+    },
+  },
+  {
+    ns: "zodiac",
+    slug: "zd_goat",
+    traditional: "羊",
+    polarity: "neutral",
+    term: { zh: "羊", en: "Goat", es: "Cabra", de: "Ziege", fr: "Chèvre" },
+    definition: {
+      zh: "东方传统中以12年为闭环周期、将出生年份时间轴具象化的一种时间符号。它利用特定的动物意象作为岁时图腾，来描绘该年份诞生的集体能量背景与潜在天赋；你的出生年份正对应着这一体系中的“羊”年。",
+      en: "A symbolic personification of birth time in Eastern culture, structured in a 12-year cyclical rhythm. It uses specific animal imagery as a temporal totem to describe the collective energetic background of a birth year; your birth year corresponds to the Goat sign in this system.",
+      es: "Una personificación simbólica del tiempo de nacimiento en la cultura oriental, estructurada en un ritmo cíclico de 12 años. Utiliza imágenes de animales como un tótem temporal para describir el trasfondo energético de un año; tu año de nacimiento corresponde a la Cabra en este sistema.",
+      de: "Eine symbolische Personifizierung der Geburtszeit in der östlichen Kultur, strukturiert in einem 12-jährigen zyklischen Rhythmus. Sie nutzt Tierbilder als zeitliches Totem, um den energetischen Hintergrund eines Geburtsjahres zu beschreiben; Ihr Geburtsjahr entspricht in diesem System der Ziege.",
+      fr: "Une personnification symbolique de l'heure de naissance dans la culture orientale, structurée selon un rythme cyclique de 12 ans. Elle utilise l'imagerie animale comme un totem temporel pour décrire le fond énergétique d'une année ; votre année de naissance correspond à la Chèvre dans ce système.",
+    },
+  },
+  {
+    ns: "zodiac",
+    slug: "zd_monkey",
+    traditional: "猴",
+    polarity: "neutral",
+    term: { zh: "猴", en: "Monkey", es: "Mono", de: "Affe", fr: "Singe" },
+    definition: {
+      zh: "东方传统中以12年为闭环周期、将出生年份时间轴具象化的一种时间符号。它利用特定的动物意象作为岁时图腾，来描绘该年份诞生的集体能量背景与潜在天赋；你的出生年份正对应着这一体系中的“猴”年。",
+      en: "A symbolic personification of birth time in Eastern culture, structured in a 12-year cyclical rhythm. It uses specific animal imagery as a temporal totem to describe the collective energetic background of a birth year; your birth year corresponds to the Monkey sign in this system.",
+      es: "Una personificación simbólica del tiempo de nacimiento en la cultura oriental, estructurada en un ritmo cíclico de 12 años. Utiliza imágenes de animales como un tótem temporal para describir el trasfondo energético de un año; tu año de nacimiento corresponde al Mono en este sistema.",
+      de: "Eine symbolische Personifizierung der Geburtszeit in der östlichen Kultur, strukturiert in einem 12-jährigen zyklischen Rhythmus. Sie nutzt Tierbilder als zeitliches Totem, um den energetischen Hintergrund eines Geburtsjahres zu beschreiben; Ihr Geburtsjahr entspricht in diesem System dem Affen.",
+      fr: "Une personnification symbolique de l'heure de naissance dans la culture orientale, structurée selon un rythme cyclique de 12 ans. Elle utilise l'imagerie animale comme un totem temporel pour décrire le fond énergétique d'une année ; votre année de naissance correspond au Singe dans ce système.",
+    },
+  },
+  {
+    ns: "zodiac",
+    slug: "zd_rooster",
+    traditional: "雞",
+    aliases: ["鸡"],
+    polarity: "neutral",
+    term: { zh: "鸡", en: "Rooster", es: "Gallo", de: "Hahn", fr: "Coq" },
+    definition: {
+      zh: "东方传统中以12年为闭环周期、将出生年份时间轴具象化的一种时间符号。它利用特定的动物意象作为岁时图腾，来描绘该年份诞生的集体能量背景与潜在天赋；你的出生年份正对应着这一体系中的“鸡”年。",
+      en: "A symbolic personification of birth time in Eastern culture, structured in a 12-year cyclical rhythm. It uses specific animal imagery as a temporal totem to describe the collective energetic background of a birth year; your birth year corresponds to the Rooster sign in this system.",
+      es: "Una personificación simbólica del tiempo de nacimiento en la cultura oriental, estructurada en un ritmo cíclico de 12 años. Utiliza imágenes de animales como un tótem temporal para describir el trasfondo energético de un año; tu año de nacimiento corresponde al Gallo en este sistema.",
+      de: "Eine symbolische Personifizierung der Geburtszeit in der östlichen Kultur, strukturiert in einem 12-jährigen zyklischen Rhythmus. Sie nutzt Tierbilder als zeitliches Totem, um den energetischen Hintergrund eines Geburtsjahres zu beschreiben; Ihr Geburtsjahr entspricht in diesem System dem Hahn.",
+      fr: "Une personnification symbolique de l'heure de naissance dans la culture orientale, structurée selon un rythme cyclique de 12 ans. Elle utilise l'imagerie animale comme un totem temporel pour décrire le fond énergétique d'une année ; votre année de naissance correspond au Coq dans ce système.",
+    },
+  },
+  {
+    ns: "zodiac",
+    slug: "zd_dog",
+    traditional: "狗",
+    polarity: "neutral",
+    term: { zh: "狗", en: "Dog", es: "Perro", de: "Hund", fr: "Chien" },
+    definition: {
+      zh: "东方传统中以12年为闭环周期、将出生年份时间轴具象化的一种时间符号。它利用特定的动物意象作为岁时图腾，来描绘该年份诞生的集体能量背景与潜在天赋；你的出生年份正对应着这一体系中的“狗”年。",
+      en: "A symbolic personification of birth time in Eastern culture, structured in a 12-year cyclical rhythm. It uses specific animal imagery as a temporal totem to describe the collective energetic background of a birth year; your birth year corresponds to the Dog sign in this system.",
+      es: "Una personificación simbólica del tiempo de nacimiento en la cultura oriental, estructurada en un ritmo cíclico de 12 años. Utiliza imágenes de animales como un tótem temporal para describir el trasfondo energético de un año; tu año de nacimiento corresponde al Perro en este sistema.",
+      de: "Eine symbolische Personifizierung der Geburtszeit in der östlichen Kultur, strukturiert in einem 12-jährigen zyklischen Rhythmus. Sie nutzt Tierbilder als zeitliches Totem, um den energetischen Hintergrund eines Geburtsjahres zu beschreiben; Ihr Geburtsjahr entspricht in diesem System dem Hund.",
+      fr: "Une personnification symbolique de l'heure de naissance dans la culture orientale, structurée selon un rythme cyclique de 12 ans. Elle utilise l'imagerie animale comme un totem temporel pour décrire le fond énergétique d'une année ; votre année de naissance correspond au Chien dans ce système.",
+    },
+  },
+  {
+    ns: "zodiac",
+    slug: "zd_pig",
+    traditional: "豬",
+    aliases: ["猪"],
+    polarity: "neutral",
+    term: { zh: "猪", en: "Pig", es: "Cerdo", de: "Schwein", fr: "Cochon" },
+    definition: {
+      zh: "东方传统中以12年为闭环周期、将出生年份时间轴具象化的一种时间符号。它利用特定的动物意象作为岁时图腾，来描绘该年份诞生的集体能量背景与潜在天赋；你的出生年份正对应着这一体系中的“猪”年。",
+      en: "A symbolic personification of birth time in Eastern culture, structured in a 12-year cyclical rhythm. It uses specific animal imagery as a temporal totem to describe the collective energetic background of a birth year; your birth year corresponds to the Pig sign in this system.",
+      es: "Una personificación simbólica del tiempo de nacimiento en la cultura oriental, estructurada en un ritmo cíclico de 12 años. Utiliza imágenes de animales como un tótem temporal para describir el trasfondo energético de un año; tu año de nacimiento corresponde al Cerdo en este sistema.",
+      de: "Eine symbolische Personifizierung der Geburtszeit in der östlichen Kultur, strukturiert in einem 12-jährigen zyklischen Rhythmus. Sie nutzt Tierbilder als zeitliches Totem, um den energetischen Hintergrund eines Geburtsjahres zu beschreiben; Ihr Geburtsjahr entspricht in diesem System dem Schwein.",
+      fr: "Une personnification symbolique de l'heure de naissance dans la culture orientale, structurée selon un rythme cyclique de 12 ans. Elle utilise l'imagerie animale comme un totem temporel pour décrire le fond énergétique d'une année ; votre année de naissance correspond au Cochon dans ce système.",
     },
   },
 ];

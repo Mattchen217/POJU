@@ -5,7 +5,11 @@ import { useTranslations } from "next-intl";
 
 import { DA_YUN_THEMES, getStemInfo } from "@/lib/poju/bazi-matrix-mappings";
 import type { DaYunEntry } from "@/lib/calculations/lunar-dayun";
-import { matrixElementSoft } from "@/lib/poju/matrix-term-labels";
+import { SoftTermHover } from "@/components/cross-product/GlossaryText";
+import {
+  elementToSlug,
+  matrixElementSoft,
+} from "@/lib/poju/matrix-term-labels";
 
 type Props = {
   daYun: DaYunEntry[];
@@ -100,17 +104,24 @@ export function PojuDaYunTimeline({ daYun, currentIndex, currentAge, locale }: P
                 {(() => {
                   const stemEl = getStemInfo(phase.entry.ganzhi.charAt(0))?.element;
                   const elSoft = stemEl ? matrixElementSoft(stemEl, locale) : "";
+                  const elSlug = stemEl ? elementToSlug(stemEl) : null;
+                  const elNode =
+                    elSlug && elSoft ? (
+                      <SoftTermHover slug={elSlug} locale={locale} fallback={elSoft} />
+                    ) : (
+                      elSoft
+                    );
                   if (phase.isNow) {
                     return (
                       <span className="dayun-timeline__here">
                         {tc("dayun_you_are_here")}
-                        {elSoft ? ` · ${elSoft}` : ""}
+                        {elNode ? <> · {elNode}</> : null}
                       </span>
                     );
                   }
                   return (
                     <span className="dayun-timeline__phase">
-                      {elSoft || phase.theme}
+                      {elNode || phase.theme}
                     </span>
                   );
                 })()}

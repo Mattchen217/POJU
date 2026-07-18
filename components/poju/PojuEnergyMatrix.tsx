@@ -8,17 +8,26 @@ import { PojuDaYunTimeline } from "@/components/poju/PojuDaYunTimeline";
 import {
   elementCssClass,
   formatBranchDisplay,
+  getBranchInfo,
   isZhMatrixLocale,
   yongshenChipsForLocale,
+  zodiacAnimalHanFromBranch,
 } from "@/lib/poju/bazi-matrix-mappings";
 import { buildMatrixDisplayData } from "@/lib/poju/build-matrix-display";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
 import { activePillarByAge } from "@/lib/poju/matrix-life-segment";
 import { matrixSynopsisNarrativeState } from "@/lib/poju/matrix-narrative-text";
 import { computeYearTransitProgress } from "@/lib/poju/matrix-transit-progress";
+import { SoftTermHover } from "@/components/cross-product/GlossaryText";
+import { MatrixSoftChip } from "@/lib/poju/matrix-soft-chip";
 import {
+  elementToSlug,
   matrixElementSoft,
-  matrixLayerCap,
+  matrixSoftTerm,
+  matrixTermSlug,
+  pillarSlotSlug,
+  strengthToSlug,
+  zodiacHanToSlug,
 } from "@/lib/poju/matrix-term-labels";
 import { resolveBaziLabel } from "@/lib/poju/resolve-bazi-i18n";
 import { normalizeShenshaLocale, resolveShenshaList } from "@/lib/poju/shensha";
@@ -300,9 +309,39 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
                 <span>{display.zodiac.han}</span>
               )}
             </div>
-            <div className="zsign__en">{display.zodiac.en}</div>
+            <div className="zsign__en">
+              {(() => {
+                const zdSlug = zodiacHanToSlug(display.zodiac.han);
+                return zdSlug ? (
+                  <SoftTermHover
+                    slug={zdSlug}
+                    locale={locale}
+                    fallback={display.zodiac.en}
+                  />
+                ) : (
+                  display.zodiac.en
+                );
+              })()}
+            </div>
             <div className="zsign__cn">
-              {display.zodiac.han} · {display.zodiac.pinyin}
+              {(() => {
+                const zdSlug = zodiacHanToSlug(display.zodiac.han);
+                return zdSlug ? (
+                  <>
+                    <SoftTermHover
+                      slug={zdSlug}
+                      locale={locale.startsWith("zh") ? locale : "zh"}
+                      fallback={display.zodiac.han}
+                    />
+                    {" · "}
+                    {display.zodiac.pinyin}
+                  </>
+                ) : (
+                  <>
+                    {display.zodiac.han} · {display.zodiac.pinyin}
+                  </>
+                );
+              })()}
             </div>
             <div className="zsign__tag">{tc("your_sign_tag")}</div>
             <div className="zsign__note">{display.zodiac.note}</div>
@@ -411,11 +450,18 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
             <div className="elist">
               {wuxing_scores.map((row) => {
                 const soft = matrixElementSoft(row.element, locale);
+                const elSlug = elementToSlug(row.element);
                 return (
                   <div className="erow" key={row.element}>
                     <div className="erow__head">
                       <span className="erow__names">
-                        <span className={`ename ${ELEMENT_CLASS[row.element] ?? ""}`}>{soft}</span>
+                        <span className={`ename ${ELEMENT_CLASS[row.element] ?? ""}`}>
+                          {elSlug ? (
+                            <SoftTermHover slug={elSlug} locale={locale} fallback={soft} />
+                          ) : (
+                            soft
+                          )}
+                        </span>
                       </span>
                       <span className="ecount">{row.count}</span>
                     </div>
@@ -433,14 +479,25 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
               <div className="pem__yongshen-row">
                 <span className="pem__yongshen-label">{tb("optimizing_vector")}</span>
                 <span className="pem__yongshen-chips">
-                  {yongshenChips.map((chip) => (
-                    <span
-                      key={chip.label}
-                      className={`pem__yongshen-chip ${elementCssClass(chip.elementKey)}`}
-                    >
-                      {chip.label}
-                    </span>
-                  ))}
+                  {yongshenChips.map((chip) => {
+                    const elSlug = elementToSlug(chip.elementKey);
+                    return (
+                      <span
+                        key={chip.label}
+                        className={`pem__yongshen-chip ${elementCssClass(chip.elementKey)}`}
+                      >
+                        {elSlug ? (
+                          <SoftTermHover
+                            slug={elSlug}
+                            locale={locale}
+                            fallback={chip.label}
+                          />
+                        ) : (
+                          chip.label
+                        )}
+                      </span>
+                    );
+                  })}
                 </span>
               </div>
             ) : null}
@@ -451,11 +508,46 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
                 display.enote_caption
               ) : !suppressNarrative && showTemplateFallback ? (
                 <>
-                  {tc("day_master")} <b>{matrixElementSoft(display.day_master.element, locale)}</b>
+                  <SoftTermHover slug="day_master" locale={locale} fallback={tc("day_master")} />{" "}
+                  <b>
+                    {(() => {
+                      const elSlug = elementToSlug(display.day_master.element);
+                      const soft = matrixElementSoft(display.day_master.element, locale);
+                      return elSlug ? (
+                        <SoftTermHover slug={elSlug} locale={locale} fallback={soft} />
+                      ) : (
+                        soft
+                      );
+                    })()}
+                  </b>
                   {tc("with_surplus")}
-                  <b>{dominant ? matrixElementSoft(dominant.element, locale) : ""}</b>
+                  <b>
+                    {dominant
+                      ? (() => {
+                          const elSlug = elementToSlug(dominant.element);
+                          const soft = matrixElementSoft(dominant.element, locale);
+                          return elSlug ? (
+                            <SoftTermHover slug={elSlug} locale={locale} fallback={soft} />
+                          ) : (
+                            soft
+                          );
+                        })()
+                      : ""}
+                  </b>
                   {tc("surplus_and")}
-                  <b>{deficit ? matrixElementSoft(deficit.element, locale) : ""}</b>
+                  <b>
+                    {deficit
+                      ? (() => {
+                          const elSlug = elementToSlug(deficit.element);
+                          const soft = matrixElementSoft(deficit.element, locale);
+                          return elSlug ? (
+                            <SoftTermHover slug={elSlug} locale={locale} fallback={soft} />
+                          ) : (
+                            soft
+                          );
+                        })()
+                      : ""}
+                  </b>
                   {tc("deficit_period")}
                 </>
               ) : null}
@@ -466,7 +558,13 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
         <div className="pem-row pem-row--duo">
           <div className="pem-panel ro ro--wuxing">
             <div className="ro__k">{tc("core_vitality")}</div>
-            <div className="ro__v ro__v--metric">{strengthLabel(strength, tc)}</div>
+            <div className="ro__v ro__v--metric">
+              <SoftTermHover
+                slug={strengthToSlug(strength)}
+                locale={locale}
+                fallback={strengthLabel(strength, tc)}
+              />
+            </div>
             <div className="vtrack">
               <div className="mid" />
               <div className="pin" style={{ left: vitalityPin(strength) }} />
@@ -484,7 +582,15 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
                 <div className="pem-equilibrium-item">
                   <div className="ro__v ro__v--metric">
                     <span className={`ro__v-accent ${ELEMENT_CLASS[dominant.element] ?? ""}`}>
-                      {matrixElementSoft(dominant.element, locale)}
+                      {(() => {
+                        const elSlug = elementToSlug(dominant.element);
+                        const soft = matrixElementSoft(dominant.element, locale);
+                        return elSlug ? (
+                          <SoftTermHover slug={elSlug} locale={locale} fallback={soft} />
+                        ) : (
+                          soft
+                        );
+                      })()}
                     </span>
                     <span className="pct">
                       {tc("surplus")} · {dominant.pct}%
@@ -494,7 +600,16 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
                     <i style={{ width: `${dominant.pct}%` }} className={ELEMENT_BAR_CLASS[dominant.element] ?? ""} />
                   </div>
                   <div className="ro__tag up">
-                    ▲ {tc("dominant_vector")} · {matrixElementSoft(dominant.element, locale)}
+                    ▲ {tc("dominant_vector")} ·{" "}
+                    {(() => {
+                      const elSlug = elementToSlug(dominant.element);
+                      const soft = matrixElementSoft(dominant.element, locale);
+                      return elSlug ? (
+                        <SoftTermHover slug={elSlug} locale={locale} fallback={soft} />
+                      ) : (
+                        soft
+                      );
+                    })()}
                   </div>
                 </div>
               ) : null}
@@ -502,7 +617,15 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
                 <div className="pem-equilibrium-item">
                   <div className="ro__v ro__v--metric">
                     <span className={`ro__v-accent ${ELEMENT_CLASS[deficit.element] ?? ""}`}>
-                      {matrixElementSoft(deficit.element, locale)}
+                      {(() => {
+                        const elSlug = elementToSlug(deficit.element);
+                        const soft = matrixElementSoft(deficit.element, locale);
+                        return elSlug ? (
+                          <SoftTermHover slug={elSlug} locale={locale} fallback={soft} />
+                        ) : (
+                          soft
+                        );
+                      })()}
                     </span>
                     <span className="pct">
                       {tc("deficit")} · {deficit.pct}%
@@ -512,7 +635,16 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
                     <i style={{ width: `${Math.max(deficit.pct, 5)}%` }} className={ELEMENT_BAR_CLASS[deficit.element] ?? ""} />
                   </div>
                   <div className="ro__tag down">
-                    ▼ {tc("key_gap")} · {matrixElementSoft(deficit.element, locale)}
+                    ▼ {tc("key_gap")} ·{" "}
+                    {(() => {
+                      const elSlug = elementToSlug(deficit.element);
+                      const soft = matrixElementSoft(deficit.element, locale);
+                      return elSlug ? (
+                        <SoftTermHover slug={elSlug} locale={locale} fallback={soft} />
+                      ) : (
+                        soft
+                      );
+                    })()}
                   </div>
                 </div>
               ) : null}
@@ -553,12 +685,19 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
                     </div>
                     <div className="fact-chips">
                       {fp.era.stem_element_soft ? (
-                        <span className="fact-chip fact-chip--gold">
-                          {fp.era.stem_element_soft}
-                        </span>
+                        <MatrixSoftChip
+                          soft={fp.era.stem_element_soft}
+                          slug={fp.era.stem_element_slug}
+                          locale={locale}
+                          tone="gold"
+                        />
                       ) : null}
                       {fp.era.ten_god_soft ? (
-                        <span className="fact-chip">{fp.era.ten_god_soft}</span>
+                        <MatrixSoftChip
+                          soft={fp.era.ten_god_soft}
+                          slug={fp.era.ten_god_slug}
+                          locale={locale}
+                        />
                       ) : null}
                     </div>
                   </div>
@@ -574,19 +713,28 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
                             display.annual_transit.stem_en,
                         )}
                       >
-                        {fp.year_pulse.stem_element_soft}
+                        {fp.year_pulse.stem_element_slug ? (
+                          <SoftTermHover
+                            slug={fp.year_pulse.stem_element_slug}
+                            locale={locale}
+                            fallback={fp.year_pulse.stem_element_soft}
+                          />
+                        ) : (
+                          fp.year_pulse.stem_element_soft
+                        )}
                       </span>
                       <span className="pct">{tc("fact_year_pulse_em")}</span>
                     </div>
                     <div className="fact-chips">
                       {fp.year_pulse.links.length > 0 ? (
                         fp.year_pulse.links.map((c) => (
-                          <span
+                          <MatrixSoftChip
                             key={c.soft}
-                            className={`fact-chip fact-chip--${c.polarity}`}
-                          >
-                            {c.soft}
-                          </span>
+                            soft={c.soft}
+                            slug={c.slug}
+                            locale={locale}
+                            tone={c.polarity}
+                          />
                         ))
                       ) : (
                         <span className="fact-chip fact-chip--muted">{emptyLinks}</span>
@@ -614,12 +762,13 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
                       <div className="fact-chips">
                         {fp.structure.bonds.length > 0 ? (
                           fp.structure.bonds.map((c) => (
-                            <span
+                            <MatrixSoftChip
                               key={`b-${c.soft}`}
-                              className="fact-chip fact-chip--green"
-                            >
-                              {c.soft}
-                            </span>
+                              soft={c.soft}
+                              slug={c.slug}
+                              locale={locale}
+                              tone="green"
+                            />
                           ))
                         ) : (
                           <span className="fact-chip fact-chip--muted">{emptyLinks}</span>
@@ -631,12 +780,13 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
                       <div className="fact-chips">
                         {fp.structure.tensions.length > 0 ? (
                           fp.structure.tensions.map((c) => (
-                            <span
+                            <MatrixSoftChip
                               key={`t-${c.soft}`}
-                              className="fact-chip fact-chip--red"
-                            >
-                              {c.soft}
-                            </span>
+                              soft={c.soft}
+                              slug={c.slug}
+                              locale={locale}
+                              tone="red"
+                            />
                           ))
                         ) : (
                           <span className="fact-chip fact-chip--muted">{emptyLinks}</span>
@@ -650,26 +800,47 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
                       {tc("fact_balance")} <em>· {tc("fact_balance_em")}</em>
                     </div>
                     <div className="ro__v ro__v--metric">
-                      <span>{fp.balance.strength_soft}</span>
+                      <SoftTermHover
+                        slug={fp.balance.strength_slug}
+                        locale={locale}
+                        fallback={fp.balance.strength_soft}
+                      />
                       {fp.balance.yong_soft ? (
                         <span className="pct">
-                          {tc("fact_anchor")} · {fp.balance.yong_soft}
+                          {tc("fact_anchor")} ·{" "}
+                          {fp.balance.yong_slug ? (
+                            <SoftTermHover
+                              slug={fp.balance.yong_slug}
+                              locale={locale}
+                              fallback={fp.balance.yong_soft}
+                            />
+                          ) : (
+                            fp.balance.yong_soft
+                          )}
                         </span>
                       ) : null}
                     </div>
                     <div className="fact-chips">
-                      {fp.balance.xi_softs.map((s) => (
-                        <span key={`xi-${s}`} className="fact-chip fact-chip--green">
-                          {s}
-                        </span>
+                      {fp.balance.xi.map((c) => (
+                        <MatrixSoftChip
+                          key={`xi-${c.soft}`}
+                          soft={c.soft}
+                          slug={c.slug}
+                          locale={locale}
+                          tone="green"
+                        />
                       ))}
-                      {fp.balance.ji_softs.map((s) => (
-                        <span key={`ji-${s}`} className="fact-chip fact-chip--red">
-                          {s}
-                        </span>
+                      {fp.balance.ji.map((c) => (
+                        <MatrixSoftChip
+                          key={`ji-${c.soft}`}
+                          soft={c.soft}
+                          slug={c.slug}
+                          locale={locale}
+                          tone="red"
+                        />
                       ))}
-                      {fp.balance.xi_softs.length === 0 &&
-                      fp.balance.ji_softs.length === 0 &&
+                      {fp.balance.xi.length === 0 &&
+                      fp.balance.ji.length === 0 &&
                       !fp.balance.yong_soft ? (
                         <span className="fact-chip fact-chip--muted">{emptyLinks}</span>
                       ) : null}
@@ -691,22 +862,101 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
             const isDay = key === "day";
             const isLifeSegment = lifeSegmentPillar === key;
             const roleSoft = isZh ? pl.ten_god : pl.ten_god_en;
+            const roleSlug =
+              isDay &&
+              (!pl.ten_god_han || pl.ten_god_han === "日主" || pl.ten_god === "日主")
+                ? "day_master"
+                : matrixTermSlug(pl.ten_god_han) ??
+                  matrixTermSlug(pl.ten_god) ??
+                  matrixTermSlug(pl.ten_god_en);
+            const stemSlug = pl.stem_element ? elementToSlug(pl.stem_element) : null;
+            const stageHan = pl.life_stage_han?.trim() || null;
+            const stageSlug = stageHan ? matrixTermSlug(stageHan) : null;
+            const branchInfo = getBranchInfo(pl.branch);
+            const zdHan = zodiacAnimalHanFromBranch(pl.branch);
+            const zdSlug = zodiacHanToSlug(zdHan);
+            const branchElSlug = branchInfo
+              ? elementToSlug(branchInfo.element)
+              : null;
             return (
               <div
                 key={key}
                 className={`pl pl--layer${isDay ? " day" : ""}${isLifeSegment ? " pl--segment-active" : ""}`}
               >
-                <div className="cap">{matrixLayerCap(key, locale)}</div>
+                <div className="cap">
+                  <SoftTermHover slug={pillarSlotSlug(key)} locale={locale} />
+                </div>
                 <div className="role" style={isDay ? { color: "var(--gold-soft)" } : undefined}>
-                  {roleSoft}
+                  {roleSlug ? (
+                    <SoftTermHover slug={roleSlug} locale={locale} fallback={roleSoft} />
+                  ) : (
+                    roleSoft
+                  )}
                 </div>
                 <div className="stem">
                   <div className={`en ${elementCssClass(pl.stem_element)}`}>
-                    {pl.stem_element ? matrixElementSoft(pl.stem_element, locale) : "—"}
+                    {pl.stem_element ? (
+                      stemSlug ? (
+                        <SoftTermHover
+                          slug={stemSlug}
+                          locale={locale}
+                          fallback={matrixElementSoft(pl.stem_element, locale)}
+                        />
+                      ) : (
+                        matrixElementSoft(pl.stem_element, locale)
+                      )
+                    ) : (
+                      "—"
+                    )}
                   </div>
                 </div>
                 <div className="branch">
-                  <div className="en">{formatLayerStageLine(pl, locale)}</div>
+                  <div className="en">
+                    {branchInfo ? (
+                      <>
+                        {zdSlug ? (
+                          <SoftTermHover
+                            slug={zdSlug}
+                            locale={locale}
+                            fallback={isZh ? zdHan : branchInfo.zodiac_en}
+                          />
+                        ) : isZh ? (
+                          zdHan
+                        ) : (
+                          branchInfo.zodiac_en
+                        )}
+                        {" · "}
+                        {branchElSlug ? (
+                          <SoftTermHover
+                            slug={branchElSlug}
+                            locale={locale}
+                            fallback={matrixElementSoft(branchInfo.element, locale)}
+                          />
+                        ) : (
+                          matrixElementSoft(branchInfo.element, locale)
+                        )}
+                        {stageHan ? (
+                          <>
+                            {" · "}
+                            {stageSlug ? (
+                              <SoftTermHover
+                                slug={stageSlug}
+                                locale={locale}
+                                fallback={
+                                  pl.life_stage_label ||
+                                  matrixSoftTerm(stageHan, locale)
+                                }
+                              />
+                            ) : (
+                              pl.life_stage_label || matrixSoftTerm(stageHan, locale)
+                            )}
+                          </>
+                        ) : null}
+                      </>
+                    ) : (
+                      formatLayerStageLine(pl, locale)
+                    )}
+                  </div>
                 </div>
                 <div className="meta">
                   {pl.hidden_display}
@@ -717,9 +967,13 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
                         <span
                           key={star.id}
                           className={`star star--${star.polarity}${MAJOR_SHENSHA.has(star.id) || MAJOR_SHENSHA.has(star.zh_src) ? " star--major" : ""}`}
-                          title={star.gloss}
                         >
-                          ✦ {star.label}
+                          ✦{" "}
+                          <SoftTermHover
+                            slug={star.id}
+                            locale={locale}
+                            fallback={star.label}
+                          />
                         </span>
                       ))}
                     </>
