@@ -426,6 +426,78 @@ export function wrapBareStemElements(text: string, locale: string): string {
   return out;
 }
 
+/** 五行 → 闭集 slug（pojulife-terms 里已齐：舒展/发散/承托/精练/润流）。 */
+const WUXING_TO_SLUG: Readonly<Record<string, string>> = {
+  木: "wood",
+  火: "fire",
+  土: "earth",
+  金: "metal",
+  水: "water",
+};
+
+/**
+ * 裸五行 → 标记，**只在命理语境里**。
+ * ⚠️ 绝不全局单字打标：木/树木、金/金钱、水/水平、火/上火、土/土地 会被啃烂
+ * （CLOSED_WUXING 当初进 ALLOW 表就是这个护栏，那张表现在虽死，意图对）。
+ * 只认两类句式：前置(为|是|属|主)+五行；后置 五行+(主|性|气|局)。均要求前后不贴汉字。
+ */
+export function wrapBareWuxingInMingliContext(text: string, locale: string): string {
+  if (!text?.trim()) return text ?? "";
+  const loc = toGlossaryLocale(locale);
+  let out = text;
+  for (const [han, id] of Object.entries(WUXING_TO_SLUG)) {
+    if (!termOf(id, loc)) continue;
+    // 前置：为火与土 / 是木，—— 后接与/和/顿号很常见，不能要求「后不贴汉字」
+    // 只挡「为火主」「是木性」被切成两半的歧义续写
+    out = out.replace(
+      new RegExp(`(?<=[为是属主])${han}(?![主性气局木火土金水])`, "g"),
+      `⟦t:${id}|⟧`,
+    );
+    // 后置：木主 / 火性 —— 要求前不贴汉字，避免树木/上火误伤
+    out = out.replace(new RegExp(`(?<![\\u4e00-\\u9fff])${han}(?=[主性气局])`, "g"), `⟦t:${id}|⟧`);
+  }
+  return out;
+}
+
+/** 十神 → 闭集 slug（十个软译全在 pojulife-terms：流展/遇资/供源…）。 */
+const TEN_GOD_TO_SLUG: Readonly<Record<string, string>> = {
+  比肩: "bi_jian",
+  劫财: "jie_cai",
+  食神: "shi_shen",
+  伤官: "shang_guan",
+  偏财: "pian_cai",
+  正财: "zheng_cai",
+  七杀: "qi_sha",
+  正官: "zheng_guan",
+  偏印: "pian_yin",
+  正印: "zheng_yin",
+};
+
+/**
+ * 裸十神 → 标记。这是"门禁拦得住、清洗器修不掉"那一类的最后一块。
+ *
+ * 生产实况(2026-07-18)：报告写「你通过展现才华（食神）获取机会（偏财）」→
+ * 门禁 term:食神/term:偏财 拦下 → 服务端无十神打标器 → 只能烧 repair 或卡住。
+ * 天干(wrapBareStemElements)/五行(wrapBareWuxing)都做了，十神这一类一直空着。
+ *
+ * 十神都是双字、且不与常用汉语词撞（食神/偏财/七杀…不会误伤），比五行安全得多，
+ * 但仍要求前后不贴汉字，避免吃掉「正财运」这类更长组合的一部分。
+ * 长度降序，防「偏财」先被「财」类短词吃掉（这里都是双字，主要防将来扩表）。
+ */
+export function wrapBareTenGods(text: string, locale: string): string {
+  if (!text?.trim()) return text ?? "";
+  const loc = toGlossaryLocale(locale);
+  let out = text;
+  const entries = Object.entries(TEN_GOD_TO_SLUG).sort((a, b) => b[0].length - a[0].length);
+  for (const [han, id] of entries) {
+    if (!termOf(id, loc)) continue;
+    // 「以食神换」「正印生身」前后几乎总贴汉字；Han 双边界会 100% 漏网。
+    // 只挡「正财运 / 食神格 / 偏财星」这类后缀粘连（文档要防的那种）。
+    out = out.replace(new RegExp(`${escapeRegExp(han)}(?![运格星局宫])`, "g"), `⟦t:${id}|⟧`);
+  }
+  return out;
+}
+
 /**
  * 与闭集表面撞名的【日常汉语词】—— 永不自动补标。
  * 「平衡」是 CLOSED_STRUCTURAL 里唯一的日常词，且常作动词：自动补标会把模型写的白话

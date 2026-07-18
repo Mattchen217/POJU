@@ -25,6 +25,32 @@ import {
 
 export const BASE_ANALYSIS_GATE_ERROR = "BASE_ANALYSIS_DELIVERY_GATE_FAILED";
 
+/** 依据块最少金字数 —— 与提示词的「3–5 个」对齐。 */
+const MIN_EVIDENCE_MARKS = 3;
+
+/**
+ * 每个「**依据与推理:**」块至少 3 个金字。少于 3 = 锚点不够 = 在写套话。
+ * 提示词写下限也没用 —— 铁律 #2：关键边界必须代码兜死。
+ */
+export function auditEvidenceMarkDensity(text: string): ComplianceViolation[] {
+  const out: ComplianceViolation[] = [];
+  const re = /\*\*依据与推理:\*\*([\s\S]*?)(?=\n#{2,3}\s|\n*$)/g;
+  let m: RegExpExecArray | null;
+  let idx = 0;
+  while ((m = re.exec(text)) !== null) {
+    idx += 1;
+    const marks = new Set(m[1]?.match(/⟦t:[^|⟧]+/g) ?? []);
+    if (marks.size < MIN_EVIDENCE_MARKS) {
+      out.push({
+        label: `evidence_marks_thin:${marks.size}`,
+        snippet: (m[1] ?? "").trim().slice(0, 60),
+      });
+    }
+  }
+  if (idx === 0) out.push({ label: "evidence_block_missing", snippet: text.slice(0, 60) });
+  return out;
+}
+
 export type BaseAnalysisGateResult = {
   ok: boolean;
   violations: ComplianceViolation[];
@@ -70,6 +96,7 @@ export function auditBaseAnalysisDelivery(
     ),
     ...auditMarkerCompleteness(marked, locale),
     ...auditShenShaAgainstInstance(marked, structured),
+    ...auditEvidenceMarkDensity(text),
   ]);
 
   if (violations.length > 0) {
@@ -100,7 +127,10 @@ export function isBaseAnalysisGateFailure(violations: ComplianceViolation[]): bo
       v.label.startsWith("marker_visible_") ||
       isHardBannedTermLabel(v.label) ||
       v.label === "soft_replace_unreadable" ||
-      v.label === "payment_leak:chained_soft_replace",
+      v.label === "payment_leak:chained_soft_replace" ||
+      // 金字不够 = 锚点不够 = 内容问题，单行 repair 救不了，必须整篇重生成。
+      v.label.startsWith("evidence_marks_thin") ||
+      v.label === "evidence_block_missing",
   );
 }
 

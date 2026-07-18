@@ -65,6 +65,8 @@ import {
   unescapeMarkerPart,
   wrapBareKeepCnSoftTerms,
   wrapBareStemElements,
+  wrapBareTenGods,
+  wrapBareWuxingInMingliContext,
 } from "@/lib/llm/sanitize/term-marking";
 import { auditEmptyKeepCnBrackets } from "@/lib/llm/sanitize/keep-cn-brackets";
 import {
@@ -809,8 +811,13 @@ function sanitizeNonMarkerSegment(
   s = replaceStandaloneRedlines(s, locale);
   s = filterDeletedTermsBounded(s);
   s = removeStandaloneBareGanzhi(s, locale);
-  // 必须放最后 —— 上面那几行会把 ⟦⟧ 全剥掉，先打标会被自己吃掉。
-  if (opts?.wrapStems) s = wrapBareStemElements(s, locale);
+  // 必须放最后 —— 上面几行会剥掉 ⟦⟧，先打标会被自己吃掉。
+  // 四类确定性打标器（天干/五行/十神），把"门禁拦得住、清洗器修不掉"的裸词全部收口。
+  if (opts?.wrapStems) {
+    s = wrapBareStemElements(s, locale);
+    s = wrapBareWuxingInMingliContext(s, locale);
+    s = wrapBareTenGods(s, locale);
+  }
   return s;
 }
 

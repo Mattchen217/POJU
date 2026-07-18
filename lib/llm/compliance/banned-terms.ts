@@ -239,6 +239,8 @@ export function maskKnownSoftLabelsZh(text: string, softs: readonly string[]): s
 /** Terms that hard-block delivery when still bare in soft-visible / masked text. */
 export function isHardBannedTermLabel(label: string): boolean {
   if (label === "metaphor_blacklist") return true;
+  // 金字不够 = 锚点不够 = 内容问题，单行 repair 救不了（只会硬塞两个标记），必须整篇重生成。
+  if (label.startsWith("evidence_marks_thin") || label === "evidence_block_missing") return true;
   if (!label.startsWith("term:")) return false;
   const term = label.slice("term:".length);
   if (BANNED_TERMS_ZH.includes(term as BannedTermZh)) return true;

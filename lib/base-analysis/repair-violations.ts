@@ -253,6 +253,29 @@ export async function repairViolationsOnly(
     return { ok: true, text: input.text, line_repairs: [] };
   }
 
+  // 金字不够 = 锚点不够 —— 单行 repair 只会硬塞标记，必须整篇重生成。
+  if (
+    critical.some(
+      (v) =>
+        v.label.startsWith("evidence_marks_thin") || v.label === "evidence_block_missing",
+    )
+  ) {
+    console.error("[repair] evidence density / missing block — refuse surgical repair, need full regen", {
+      labels: critical.map((v) => v.label),
+    });
+    return {
+      ok: false,
+      error: "repair_unrepaireable_evidence_density",
+      detail: critical
+        .filter(
+          (v) =>
+            v.label.startsWith("evidence_marks_thin") || v.label === "evidence_block_missing",
+        )
+        .map((v) => v.label)
+        .join(","),
+    };
+  }
+
   const lines = input.text.split("\n");
 
   // 这是【行级】编辑器:按行号定位、按行号打补丁。
