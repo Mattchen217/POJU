@@ -534,6 +534,48 @@ export function wrapBarePillars(text: string, locale: string): string {
   return out;
 }
 
+/** 关系词（含引擎变体）→ slug。从 aliases 自动构建，不手抄。 */
+const RELATION_MARK_SLUGS = new Set([
+  "xing",
+  "chong",
+  "hai",
+  "liuhe",
+  "banhe",
+  "sanhe",
+  "stemhe",
+  "rel_transmutation",
+]);
+
+const RELATION_WORD_TO_SLUG: Readonly<Record<string, string>> = (() => {
+  const map: Record<string, string> = {};
+  for (const t of POJU_TERMS) {
+    if (!RELATION_MARK_SLUGS.has(t.slug)) continue;
+    map[t.traditional] = t.slug;
+    for (const a of t.aliases ?? []) map[a] = t.slug;
+  }
+  return map;
+})();
+
+/**
+ * 裸关系词（相刑/相冲/半合…）→ 标记。长度降序，先吃长词。
+ * 中文正文前后几乎总贴汉字（「子午相刑」），Han 双边界会漏网——只挡后缀粘连。
+ */
+export function wrapBareRelations(text: string, locale: string): string {
+  if (!text?.trim()) return text ?? "";
+  const loc = toGlossaryLocale(locale);
+  const words = Object.keys(RELATION_WORD_TO_SLUG).sort((a, b) => b.length - a.length);
+  let out = text;
+  for (const w of words) {
+    const id = RELATION_WORD_TO_SLUG[w]!;
+    if (!termOf(id, loc)) continue;
+    out = out.replace(
+      new RegExp(`${escapeRegExp(w)}(?![运格星局宫支])`, "g"),
+      `⟦t:${id}|⟧`,
+    );
+  }
+  return out;
+}
+
 /**
  * 与闭集表面撞名的【日常汉语词】—— 永不自动补标。
  * 「平衡」是 CLOSED_STRUCTURAL 里唯一的日常词，且常作动词：自动补标会把模型写的白话
@@ -552,8 +594,9 @@ const BARE_AUTO_MARK_HAN = [
     ...CLOSED_SET_REPLACE_IDS,
     ...STEM_ELEMENT_COMPOUNDS,
     ...allShenshaHanSurfaces(),
-    // 关系原词（刑/冲/害…）—— core_judgments 真词真算后输出端必须能打回金字
+    // 关系原词（刑/冲/害… + aliases 相刑/相冲…）—— 从 SSOT 自动展开
     ...Object.keys(RELATION_SLUG),
+    ...Object.keys(RELATION_WORD_TO_SLUG),
   ]),
 ]
   .filter((han) => !AUTO_MARK_EXCLUDE_HAN.has(han))

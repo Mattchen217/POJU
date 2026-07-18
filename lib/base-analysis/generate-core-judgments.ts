@@ -18,7 +18,10 @@ import {
   openRouterChatCompletion,
 } from "@/lib/llm/openrouter-shared";
 import { isEmptyResponseError } from "@/lib/llm/openrouter-retry";
-import { autoMarkBareTerms } from "@/lib/llm/sanitize/term-marking";
+import {
+  autoMarkBareTerms,
+  wrapBareRelations,
+} from "@/lib/llm/sanitize/term-marking";
 
 const CJ_INTERPRETIVE_KEYS = [
   "identity_anchor",
@@ -35,7 +38,9 @@ function softMarkInterpretiveFields(
 ): Record<string, string> {
   const marked: Record<string, string> = {};
   for (const [k, v] of Object.entries(interpretive)) {
-    marked[k] = autoMarkBareTerms(String(v), locale);
+    // autoMark 未含「相刑」等引擎变体；wrapBareRelations 从 SSOT aliases 吃掉，
+    // 否则黑话闸抓裸「相刑」→ core_judgments 落模板。
+    marked[k] = wrapBareRelations(autoMarkBareTerms(String(v), locale), locale);
   }
   return marked;
 }

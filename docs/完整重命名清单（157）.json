@@ -2651,3 +2651,20 @@ const baziPillarsStructure = [
     }
   }
 ];
+// B4 · bazi 能量关系（1）· Energetic Transmutations
+const baziRelationsSupplement = [
+  {
+    ns: "bazi",
+    slug: "rel_transmutation",
+    traditional: "合化",
+    polarity: "neutral",
+    term: { zh: "嬗化", en: "Transmutation", es: "Transmutación", de: "Transmutation", fr: "Transmutation" },
+    definition: {
+      zh: "象征两种截然不同的元能量品质在特定条件下发生深度共鸣，跨越原有边界并融合成全新能量状态的质变过程。",
+      en: "Symbolizing a qualitative process where two distinct elemental energies deeply resonate under specific conditions, crossing original boundaries to fuse into a brand-new energetic state.",
+      es: "Simboliza un proceso cualitativo donde dos energías elementales distintas resuenan profundamente bajo condiciones específicas, cruzando fronteras originales para fusionarse en un estado completamente nuevo.",
+      de: "Symbolisiert einen qualitativen Prozess, bei dem zwei verschiedene elementare Energien unter bestimmten Bedingungen tief in Resonanz treten und ursprüngliche Grenzen überschreiten, um mit einem völlig neuen Zustand zu verschmelzen.",
+      fr: "Symbolise un processus qualitatif où deux énergies élémentales distinctes entrent en résonance profonde sous des conditions spécifiques, franchissant les frontières originelles pour fusionner dans un tout nouvel état."
+    }
+  }
+];

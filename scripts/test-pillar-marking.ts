@@ -68,13 +68,13 @@ function main(): void {
       cleaned.includes("⟦t:pl_hour"),
   );
 
-  // ⑤ 术语总数 167
+  // ⑤ 术语总数 168
   const src = fs.readFileSync(
     path.join(process.cwd(), "lib/glossary/pojulife-terms.ts"),
     "utf8",
   );
   const count = (src.match(/slug:\s*"/g) ?? []).length;
-  assert(`术语总数 167（实得 ${count}）`, count === 167);
+  assert(`术语总数 168（实得 ${count}）`, count === 168);
 
   // ⑥ contact.meta 五语言
   for (const l of ["zh", "en", "es", "de", "fr"]) {

@@ -20,6 +20,7 @@
     "test:base-full": "tsx scripts/test-base-analysis-full.ts",
     "test:shensha-realterm": "tsx scripts/test-shensha-realterm-roundtrip.ts",
     "test:pillar-marking": "tsx scripts/test-pillar-marking.ts",
+    "test:ssot-align": "tsx scripts/test-engine-ssot-alignment.ts",
     "test:poju-dual-layer": "tsx scripts/test-poju-segment2-dual-layer.ts",
     "test:poju-stepk": "tsx scripts/test-poju-v5-stepk.ts",
     "test:poju-stepk:live": "tsx scripts/test-poju-v5-stepk.ts --live",

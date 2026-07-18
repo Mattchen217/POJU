@@ -65,6 +65,7 @@ import {
   unescapeMarkerPart,
   wrapBareKeepCnSoftTerms,
   wrapBarePillars,
+  wrapBareRelations,
   wrapBareStemElements,
   wrapBareTenGods,
   wrapBareWuxingInMingliContext,
@@ -821,6 +822,7 @@ function sanitizeNonMarkerSegment(
     s = wrapBareWuxingInMingliContext(s, locale);
     s = wrapBareTenGods(s, locale);
     s = wrapBarePillars(s, locale);
+    s = wrapBareRelations(s, locale);
   }
   return s;
 }

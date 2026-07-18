@@ -1,7 +1,7 @@
 /**
  * pojulife terminology — single source of truth (SSOT).
  * Generated from docs/完整重命名清单（157）.json with Fix A/B/C applied.
- * 167 = bazi 111 + qimen 39 + glyph 17. Do not parallel-maintain soft labels elsewhere.
+ * 168 = bazi 112 + qimen 39 + glyph 17. Do not parallel-maintain soft labels elsewhere.
  *
  * Regenerate: node scripts/generate-poju-terms.mjs
  */
@@ -15,6 +15,12 @@ export interface PojuTerm {
   slug: string;
   /** Internal traditional han — never user-facing output. */
   traditional: string;
+  /**
+   * 引擎/模型可能吐的其他写法（相刑=刑、文昌贵人=文昌、身旺=身强…）。
+   * 单一事实源：所有变体由术语【自己声明】，不再散落在 shensha-alias.ts。
+   * 引擎新增写法 → 加进这里，绝不改 traditional（改 traditional 会波及别处硬写规范词的地方）。
+   */
+  aliases?: readonly string[];
   polarity: TermPolarity;
   term: Record<TermLocale, string>;
   definition: Record<TermLocale, string>;
@@ -105,6 +111,7 @@ export const POJU_TERMS: readonly PojuTerm[] = [
     ns: "bazi",
     slug: "strong_self",
     traditional: "身强",
+    aliases: ["身旺"],
     polarity: "neutral",
     term: {
       zh: "充沛",
@@ -265,6 +272,7 @@ export const POJU_TERMS: readonly PojuTerm[] = [
     ns: "bazi",
     slug: "natal_profile",
     traditional: "命盘",
+    aliases: ["命局"],
     polarity: "neutral",
     term: {
       zh: "矩阵",
@@ -705,6 +713,7 @@ export const POJU_TERMS: readonly PojuTerm[] = [
     ns: "bazi",
     slug: "chong",
     traditional: "冲",
+    aliases: ["相冲", "六冲"],
     polarity: "caution",
     term: {
       zh: "撞击",
@@ -725,6 +734,7 @@ export const POJU_TERMS: readonly PojuTerm[] = [
     ns: "bazi",
     slug: "xing",
     traditional: "刑",
+    aliases: ["相刑", "三刑"],
     polarity: "caution",
     term: {
       zh: "磨蚀",
@@ -745,6 +755,7 @@ export const POJU_TERMS: readonly PojuTerm[] = [
     ns: "bazi",
     slug: "hai",
     traditional: "害",
+    aliases: ["相害", "六害"],
     polarity: "caution",
     term: {
       zh: "潜耗",
@@ -825,6 +836,7 @@ export const POJU_TERMS: readonly PojuTerm[] = [
     ns: "bazi",
     slug: "stemhe",
     traditional: "天干合",
+    aliases: ["相合"],
     polarity: "neutral",
     term: {
       zh: "共缠",
@@ -1585,6 +1597,7 @@ export const POJU_TERMS: readonly PojuTerm[] = [
     ns: "bazi",
     slug: "wen_chang",
     traditional: "文昌",
+    aliases: ["文昌贵人"],
     polarity: "favorable",
     term: {
       zh: "慧思",
@@ -1785,6 +1798,7 @@ export const POJU_TERMS: readonly PojuTerm[] = [
     ns: "bazi",
     slug: "guo_yin",
     traditional: "国印",
+    aliases: ["国印贵人"],
     polarity: "favorable",
     term: {
       zh: "印鉴",
@@ -1825,6 +1839,7 @@ export const POJU_TERMS: readonly PojuTerm[] = [
     ns: "bazi",
     slug: "tian_de",
     traditional: "天德",
+    aliases: ["天德贵人", "天德合"],
     polarity: "favorable",
     term: {
       zh: "昭德",
@@ -1845,6 +1860,7 @@ export const POJU_TERMS: readonly PojuTerm[] = [
     ns: "bazi",
     slug: "yue_de",
     traditional: "月德",
+    aliases: ["月德贵人", "月德合"],
     polarity: "favorable",
     term: {
       zh: "润德",
@@ -3365,6 +3381,26 @@ export const POJU_TERMS: readonly PojuTerm[] = [
       fr: "Le subconscient profond, la pensée intérieure privée et la cristallisation créative—résultats à long terme.",
     },
   },
+  {
+    ns: "bazi",
+    slug: "rel_transmutation",
+    traditional: "合化",
+    polarity: "neutral",
+    term: {
+      zh: "嬗化",
+      en: "Transmutation",
+      es: "Transmutación",
+      de: "Transmutation",
+      fr: "Transmutation",
+    },
+    definition: {
+      zh: "象征两种截然不同的元能量品质在特定条件下发生深度共鸣，跨越原有边界并融合成全新能量状态的质变过程。",
+      en: "A qualitative process where two distinct elemental energies deeply resonate under specific conditions, crossing original boundaries to fuse into a brand-new energetic state.",
+      es: "Un proceso cualitativo donde dos energías elementales distintas resuenan profundamente, cruzando fronteras para fusionarse en un estado completamente nuevo.",
+      de: "Ein qualitativer Prozess, bei dem zwei verschiedene elementare Energien tief in Resonanz treten und Grenzen überschreiten, um zu einem völlig neuen Zustand zu verschmelzen.",
+      fr: "Un processus qualitatif où deux énergies élémentales distinctes entrent en résonance profonde, franchissant les frontières pour fusionner en un tout nouvel état.",
+    },
+  },
 ];
 
 /** ns-isolated lookup key: `${ns}:${slug}`. */
@@ -3448,8 +3484,15 @@ export function pojuTermByTraditional(
   traditional: string,
   ns?: TermNs,
 ): PojuTerm | undefined {
-  if (ns) return TERM_BY_TRADITIONAL.get(`${ns}:${traditional}`);
-  return POJU_TERMS.find((t) => t.traditional === traditional);
+  // ① 精确命中 traditional
+  const exact = ns
+    ? TERM_BY_TRADITIONAL.get(`${ns}:${traditional}`)
+    : POJU_TERMS.find((t) => t.traditional === traditional);
+  if (exact) return exact;
+  // ② 别名兜底：引擎写法（相刑/文昌贵人…）→ 术语自己声明的 aliases
+  return POJU_TERMS.find(
+    (t) => (!ns || t.ns === ns) && t.aliases?.includes(traditional),
+  );
 }
 
 /** Soft-label inject block for product prompts (available slug + 5-locale terms). */
