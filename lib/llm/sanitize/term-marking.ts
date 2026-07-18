@@ -385,6 +385,47 @@ const STEM_ELEMENT_COMPOUNDS: string[] = Object.entries(STEMS).map(
   ([stem, info]) => `${stem}${info.wuxing}`,
 );
 
+/** 天干 → 闭集 slug（stem_xin → 莹珠，十个全在 pojulife-terms.ts 里）。 */
+const STEM_TO_SLUG: Readonly<Record<string, string>> = {
+  甲: "stem_jia",
+  乙: "stem_yi",
+  丙: "stem_bing",
+  丁: "stem_ding",
+  戊: "stem_wu",
+  己: "stem_ji",
+  庚: "stem_geng",
+  辛: "stem_xin",
+  壬: "stem_ren",
+  癸: "stem_gui",
+};
+
+/**
+ * 裸「干+五行」合称（辛金 / 乙木 / 丙火 …）→ 打成标记。
+ *
+ * 为什么必须在【服务端】做（铁律 #4：代码能确定的，绝不让模型做）：
+ * 这张表(STEM_ELEMENT_COMPOUNDS)一直只接在 render 层的 autoMarkBareTerms 上；
+ * 而门禁(delivery-gate stem_element)跑在服务端 —— 于是「辛金」变成一类
+ * 【门禁拦得住、清洗器修不掉】的词，每次都得多烧一次 LLM repair 去改。
+ * 2026-07-17 生产:底座因此从 2 次调用变 3 次，第 3 次还被截断、用残篇盖掉了完整报告。
+ * replaceZhMingliStacks 只管「正印壬水」这种十神+干支组合，
+ * removeStandaloneBareGanzhi 只管六十甲子(戊辰/丙辰)——「辛金」两头都不管。
+ */
+export function wrapBareStemElements(text: string, locale: string): string {
+  if (!text?.trim()) return text ?? "";
+  const loc = toGlossaryLocale(locale);
+  let out = text;
+  for (const compound of STEM_ELEMENT_COMPOUNDS) {
+    const stem = compound[0]!;
+    const id = STEM_TO_SLUG[stem];
+    if (!id || !termOf(id, loc)) continue;
+    // 与 autoMarkBareTerms 双字合称同款：中文正文里「特质辛金与…」前后几乎总贴汉字，
+    // 若用 Han 边界会 100% 漏网（正是 2026-07-17 生产那句）。只挡括号续写。
+    const re = new RegExp(`${escapeRegExp(compound)}(?![（(])`, "g");
+    out = out.replace(re, () => `⟦t:${id}|⟧`);
+  }
+  return out;
+}
+
 /**
  * 与闭集表面撞名的【日常汉语词】—— 永不自动补标。
  * 「平衡」是 CLOSED_STRUCTURAL 里唯一的日常词，且常作动词：自动补标会把模型写的白话
@@ -1049,7 +1090,12 @@ export function stripLeakedMarkerPlainFromBody(text: string): string {
       out = out.slice(0, afterStart) + after.replace(plain, "");
     }
   }
-  return out.replace(/\s{2,}/g, " ").trim();
+  // ⚠️ 绝不能用 /\s{2,}/ —— \s 含 \n，会把 \n\n 段落分隔吃成一个空格、整篇拍成一行。
+  // 后果(2026-07-17 生产):repair-violations 是行级编辑器(split("\n") → 按行号打补丁)，
+  // 换行没了 → lines.length===1 → 整篇当"一行"塞进 max_tokens:1400 → 截断 → 残篇覆盖完整报告。
+  // 渲染层会 reflow，所以这个 bug 在页面上看不出来 —— 只有 repair 会踩。
+  // [^\S\r\n] = 只并横向空白(空格/制表)，换行原样保留。
+  return out.replace(/[^\S\r\n]{2,}/g, " ").trim();
 }
 
 const TEN_GOD_STACK = "正印|偏印|食神|伤官|正官|七杀|正财|偏财|比肩|劫财";
@@ -1237,8 +1283,9 @@ function cleanupAfterOutOfSetStrip(text: string): string {
   return text
     .replace(/\[···\]/g, "")
     .replace(/[、，,]{2,}/g, "，")
-    .replace(/\s{2,}/g, " ")
-    .replace(/\s+([,.;:!?])/g, "$1")
+    // ⚠️ 绝不能用 /\s{2,}/ —— \s 含 \n，会把段落分隔吃成空格（见 stripLeakedMarkerPlainFromBody）。
+    .replace(/[^\S\r\n]{2,}/g, " ")
+    .replace(/[^\S\r\n]+([,.;:!?])/g, "$1")
     .trim();
 }
 

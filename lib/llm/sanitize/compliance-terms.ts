@@ -64,6 +64,7 @@ import {
   uiTermById,
   unescapeMarkerPart,
   wrapBareKeepCnSoftTerms,
+  wrapBareStemElements,
 } from "@/lib/llm/sanitize/term-marking";
 import { auditEmptyKeepCnBrackets } from "@/lib/llm/sanitize/keep-cn-brackets";
 import {
@@ -222,7 +223,13 @@ export function filterDeletedTerms(text: string): string {
       }
     }
   }
-  return result.replace(/\s{2,}/g, " ").replace(/\s+([,.;:!?])/g, "$1").trim();
+  // ⚠️ 绝不能用 /\s{2,}/ —— \s 含 \n，会把 \n\n 段落分隔吃成一个空格、整篇拍成一行。
+  // 后果(2026-07-17 生产):repair-violations 是行级编辑器，换行没了 → 整篇当"一行"截断 → 残篇覆盖完整报告。
+  // [^\S\r\n] = 只并横向空白(空格/制表)，换行原样保留。
+  return result
+    .replace(/[^\S\r\n]{2,}/g, " ")
+    .replace(/[^\S\r\n]+([,.;:!?])/g, "$1")
+    .trim();
 }
 
 /** Private gloss markup — UI parses `⟦g|display|plain⟧`. */
@@ -728,7 +735,10 @@ function replaceStandaloneRedlines(text: string, locale: string): string {
       result = result.replace(regex, replacement);
     }
   }
-  return result.replace(/\s{2,}/g, " ").replace(/\s+([,.;:!?])/g, "$1");
+  // ⚠️ 绝不能用 /\s{2,}/ —— \s 含 \n（见 filterDeletedTerms 同款注释）。
+  return result
+    .replace(/[^\S\r\n]{2,}/g, " ")
+    .replace(/[^\S\r\n]+([,.;:!?])/g, "$1");
 }
 
 function filterDeletedTermsBounded(text: string): string {
@@ -745,7 +755,10 @@ function filterDeletedTermsBounded(text: string): string {
       }
     }
   }
-  return result.replace(/\s{2,}/g, " ").replace(/\s+([,.;:!?])/g, "$1");
+  // ⚠️ 绝不能用 /\s{2,}/ —— \s 含 \n（见 filterDeletedTerms 同款注释）。
+  return result
+    .replace(/[^\S\r\n]{2,}/g, " ")
+    .replace(/[^\S\r\n]+([,.;:!?])/g, "$1");
 }
 
 function removeStandaloneBareGanzhi(text: string, locale: string): string {
@@ -783,7 +796,11 @@ function transformNonMarkerRegions(text: string, transform: (segment: string) =>
   return out.join("");
 }
 
-function sanitizeNonMarkerSegment(segment: string, locale: string): string {
+function sanitizeNonMarkerSegment(
+  segment: string,
+  locale: string,
+  opts?: { wrapStems?: boolean },
+): string {
   let s = stripBareTermMarkers(segment);
   s = s.replace(/⟦(?:(?!⟧).)*$/gm, "");
   s = s.replace(/⟦(?:(?!⟧).)*?(?=⟦)/g, "");
@@ -792,6 +809,8 @@ function sanitizeNonMarkerSegment(segment: string, locale: string): string {
   s = replaceStandaloneRedlines(s, locale);
   s = filterDeletedTermsBounded(s);
   s = removeStandaloneBareGanzhi(s, locale);
+  // 必须放最后 —— 上面那几行会把 ⟦⟧ 全剥掉，先打标会被自己吃掉。
+  if (opts?.wrapStems) s = wrapBareStemElements(s, locale);
   return s;
 }
 
@@ -801,7 +820,9 @@ export function scrubLeakedComplianceTerms(text: string, locale: string): string
 }
 
 function sanitizeDeliveryBodyPart(text: string, locale: string): string {
-  return transformNonMarkerRegions(text, (segment) => sanitizeNonMarkerSegment(segment, locale));
+  return transformNonMarkerRegions(text, (segment) =>
+    sanitizeNonMarkerSegment(segment, locale, { wrapStems: true }),
+  );
 }
 
 /**

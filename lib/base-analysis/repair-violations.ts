@@ -221,6 +221,22 @@ Return only the rewritten line:`;
     signal: input.signal,
   });
 
+  // 截断 = 残篇。这个函数的返回值会【覆盖原文】—— 残篇覆盖完整报告 = 用户看到半句话。
+  // 2026-07-17 生产:1,957 tok 输入 / max_tokens 1,400 → length → 页面停在「…找到一个」。
+  // 确定性失败,重发无用(铁律 #8),必须丢弃并让上游走整篇重生成。
+  if (result.finish_reason === "length") {
+    console.error(
+      "[repair] 输出被 max_tokens 截断 —— 丢弃，绝不用残篇覆盖原文。",
+      {
+        max_tokens: 1400,
+        input_chars: input.originalLine.length,
+        violation: input.violation.label,
+        tail: (result.text ?? "").slice(-40),
+      },
+    );
+    return null;
+  }
+
   const line = stripWrappingQuotes(result.text ?? "");
   if (!line) return null;
   return line;
@@ -238,6 +254,23 @@ export async function repairViolationsOnly(
   }
 
   const lines = input.text.split("\n");
+
+  // 这是【行级】编辑器:按行号定位、按行号打补丁。
+  // 如果整篇只有 1-2 行,说明上游把换行洗掉了 —— 此时 lines[idx] = 整篇,
+  // 会被当成"一行"塞进 max_tokens:1400 → 必然截断 → 残篇覆盖原文。
+  // 宁可整篇重生成,也不能在这种输入上动刀。
+  if (lines.length <= 2 && input.text.length > 400) {
+    console.error(
+      "[repair] 输入不是行级的 —— 拒绝改写。换行在上游清洗链里就没了(查 compliance-terms 的 /\\s{2,}/ 系列)。",
+      { lines: lines.length, chars: input.text.length, head: input.text.slice(0, 120) },
+    );
+    return {
+      ok: false,
+      error: "repair_input_not_line_split",
+      detail: `lines=${lines.length} chars=${input.text.length}`,
+    };
+  }
+
   const lineRepairs: LineRepair[] = [];
   const doneLines = new Set<number>();
 
