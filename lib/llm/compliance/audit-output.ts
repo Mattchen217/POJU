@@ -112,7 +112,7 @@ const ZH_SUPERNATURAL_PROMISE: Array<[RegExp, string]> = [
 
 const ZH_MARRIAGE_CHART_TERMS: Array<[RegExp, string]> = [
   [/六合|六害|三刑|刑冲|合冲|刑害|宜婚|不宜婚/g, "marriage_zh"],
-  [/年柱|月柱|日柱|时柱|干支/g, "pillar_zh"],
+  [/年柱|月柱|日柱|时柱|年干|月干|日干|时干|年支|月支|日支|时支|主星|副星|通根|透干|坐支|坐干|本[氣气]|中[氣气]|余[氣气]|干合|支合|干支|調候|调候|納音|纳音|墓庫|墓库|小運|小运|流月|流日|流時|流时|真太陽時|真太阳时|夫妻星|配偶星/g, "pillar_zh"],
 ];
 
 const ZH_BAZI_TERMS: Array<[RegExp, string]> = [
@@ -122,7 +122,7 @@ const ZH_BAZI_TERMS: Array<[RegExp, string]> = [
 
 /** User-visible payment-audit residuals — block persist/regen (not observe-only). */
 export const ZH_PAYMENT_STRUCTURE_LEAK_RE =
-  /(?<![\u4e00-\u9fff])(?:大运|流年|日柱|月柱|时柱|年柱|命盘|命局|八字|四柱)(?![\u4e00-\u9fff])/g;
+  /(?<![\u4e00-\u9fff])(?:大运|流年|日柱|月柱|时柱|年柱|年干|月干|日干|时干|年支|月支|日支|时支|主星|副星|通根|透干|坐支|坐干|本[氣气]|中[氣气]|余[氣气]|干合|支合|干支|調候|调候|納音|纳音|墓庫|墓库|小運|小运|流月|流日|流時|流时|真太陽時|真太阳时|夫妻星|配偶星|命盘|命局|八字|四柱)(?![\u4e00-\u9fff])/g;
 
 export const ZH_WUXING_CLASH_LEAK_RE =
   /相生相克|[金木水火土]\s*[金木水火土]?\s*相[克战生冲合刑害]|[金木水火土][金木水火土]交战|[金木水火土]旺[金木水火土][焚烁泄克战]|[金木水火土][燥湿冷热焚泻][金木水火土][克泄生战冲]/g;

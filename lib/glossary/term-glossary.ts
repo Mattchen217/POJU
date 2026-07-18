@@ -235,7 +235,12 @@ const LEGACY_TERM_GLOSSARY: GlossaryConcept[] = [
     id: "柱",
     surface: "replace",
     forbidden_variants: [
-      "时柱", "日柱", "月柱", "年柱", "Hour Pillar", "Day Pillar", "Month Pillar", "Year Pillar",
+      "时柱", "日柱", "月柱", "年柱", "年干", "月干", "日干", "时干", "年支", "月支", "日支", "时支",
+      "主星", "副星", "通根", "透干", "坐支", "坐干",
+      "本氣", "本气", "中氣", "中气", "余氣", "余气", "干支", "干合", "支合",
+      "調候", "调候", "納音", "纳音", "墓庫", "墓库", "小運", "小运", "流月", "流日", "流時", "流时",
+      "真太陽時", "真太阳时",
+      "Hour Pillar", "Day Pillar", "Month Pillar", "Year Pillar",
       "hour pillar", "day pillar", "month pillar", "year pillar",
     ],
     ...sg(
@@ -453,7 +458,7 @@ const LEGACY_TERM_GLOSSARY: GlossaryConcept[] = [
   {
     id: "配偶星",
     surface: "replace",
-    forbidden_variants: ["配偶星", "夫妻宫", "婚姻宫", "spouse star", "marriage palace"],
+    forbidden_variants: ["配偶星", "夫妻星", "夫妻宫", "婚姻宫", "spouse star", "marriage palace"],
     ...sg(
       "partner-role pattern", "伴侣角色模式", "patrón del rol de pareja", "modèle de rôle du partenaire", "Partner-Rollenmuster",
       "Your psychological baseline blueprint for intimate projection.",

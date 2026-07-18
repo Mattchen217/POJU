@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslations } from "next-intl";
 
-import { DA_YUN_THEMES } from "@/lib/poju/bazi-matrix-mappings";
+import { DA_YUN_THEMES, getStemInfo } from "@/lib/poju/bazi-matrix-mappings";
 import type { DaYunEntry } from "@/lib/calculations/lunar-dayun";
+import { matrixElementSoft } from "@/lib/poju/matrix-term-labels";
 
 type Props = {
   daYun: DaYunEntry[];
@@ -96,11 +97,23 @@ export function PojuDaYunTimeline({ daYun, currentIndex, currentAge, locale }: P
                 </div>
               </div>
               <div className="dayun-timeline__gz">
-                {phase.isNow ? (
-                  <span className="dayun-timeline__here">{tc("dayun_you_are_here")}</span>
-                ) : (
-                  <span className="dayun-timeline__phase">{phase.theme}</span>
-                )}
+                {(() => {
+                  const stemEl = getStemInfo(phase.entry.ganzhi.charAt(0))?.element;
+                  const elSoft = stemEl ? matrixElementSoft(stemEl, locale) : "";
+                  if (phase.isNow) {
+                    return (
+                      <span className="dayun-timeline__here">
+                        {tc("dayun_you_are_here")}
+                        {elSoft ? ` · ${elSoft}` : ""}
+                      </span>
+                    );
+                  }
+                  return (
+                    <span className="dayun-timeline__phase">
+                      {elSoft || phase.theme}
+                    </span>
+                  );
+                })()}
               </div>
             </div>
           ))}

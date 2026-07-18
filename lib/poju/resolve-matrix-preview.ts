@@ -56,6 +56,8 @@ export function applyMatrixListToDisplay(
   return {
     ...display,
     enote_caption: list.elemental_breakdown.caption || display.enote_caption,
+    // Keep local fact_panel; do not overlay stored prose onto lifecycle cards.
+    fact_panel: display.fact_panel,
     structural_dynamics: list.structural_dynamics ?? display.structural_dynamics,
     annual_transit: {
       ...display.annual_transit,

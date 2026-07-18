@@ -7,6 +7,7 @@ import { BaseAnalysisIdentityBand } from "@/components/base-analysis/BaseAnalysi
 import { RichReadingText } from "@/components/cross-product/RichReadingText";
 import { Link } from "@/i18n/navigation";
 import { parseBaseAnalysisSections } from "@/lib/base-analysis/parse-base-analysis-sections";
+import { stripBaseAnalysisClosingLines } from "@/lib/base-analysis/report-closing";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import type { UserProfile } from "@/lib/profile/types";
 
@@ -39,7 +40,8 @@ export function BaseAnalysisDeliveryView({
   showPageHeader = true,
 }: Props) {
   const t = useTranslations("base_analysis_view");
-  const sections = parseBaseAnalysisSections(displayText);
+  // 收尾句由本组件固定渲染在五块之外；剥掉模型写进正文/依据块的重复句。
+  const sections = parseBaseAnalysisSections(stripBaseAnalysisClosingLines(displayText));
   const showCta = variant === "page" && profileId;
 
   return (
@@ -87,6 +89,8 @@ export function BaseAnalysisDeliveryView({
               </section>
             ))}
           </div>
+
+          <p className="base-analysis-delivery__closing">{t("closing")}</p>
 
           {showCta ? (
             <div className="poju-deep-dive-cta base-analysis-delivery__poju-card">

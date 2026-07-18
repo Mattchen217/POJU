@@ -60,9 +60,10 @@ ${BASE_ANALYSIS_NATAL_RELATION_ANCHOR_ZH}
 4. **## 你和外部的能量交换** — 你**需要外界补给什么**、你**最擅长向外给出什么**；双向能量交换读数。**禁止**恋爱分型 /「适合的伴侣」/ 婚恋推荐。
 5. **## 什么状态下你最容易突破** — 只描述**能量状态**（用神得力 / 格局成时系统最易出信噪比）；**不预测事件、不指定行业、不点年龄段**。
 
-## 收尾（无 ## 标题）
+## 收尾（系统渲染 · 模型勿写）
 
-- 全文末尾**一句短收束**：这是你的能量配置读数。怎么用它，取决于你自己。——plain prose，**不是** \`##\` 分区。
+- **禁止**在 Markdown 里写收尾句。界面会在五块分区之外固定展示：「这是你的能量配置读数。怎么用它，取决于你自己。」
+- **禁止**把该句写进任何 \`**依据与推理:**\` 块（会进折叠依据、用户看不见完整收尾）。
 - **禁止**用「这不是命运 / 不是命定 / 不是判决书」等否定式收尾——会诱使写出禁词。`;
 
 const BASE_ANALYSIS_OUTPUT_SECTIONS_EN = `# Output sections (all required)
@@ -81,9 +82,10 @@ ${BASE_ANALYSIS_NATAL_RELATION_ANCHOR_EN}
 4. **## Energy Exchange With Others** — what you need **supplied** from outside vs what you **give best**; two-way energy exchange readout. **No** romance typing / "suitable partner" / marriage advice.
 5. **## When Breakthrough Comes Easiest** — **energy state only** (favorable god active / pattern coherent → high signal-to-noise); **no events, industries, or age bands**.
 
-## Closing (no ## heading)
+## Closing (system-rendered · do not write)
 
-- End with **one short line**: this is your energy-config readout; how you use it is yours—plain prose, **not** a \`##\` section.
+- **Do not** write a closing line in the Markdown. The UI always shows below the five sections: "This is your energy-config readout. How you use it is up to you."
+- **Never** put that line inside any \`**Evidence & reasoning:**\` block (it would fold into evidence and vanish as a report closer).
 - **Never** close with "this is not fate / not destiny / not a verdict" negations—those invite banned words.`;
 
 const BASE_ANALYSIS_NEUTRALITY_RULES_ZH = `# 中立元报告 · 硬禁（场景化留给下游 POJU/Glyph/Match/Syncro）
@@ -298,7 +300,7 @@ const BASE_ANALYSIS_LAYOUT_ZH = `# 降维排版（中立元报告 · 奢侈品�
 ## 全文骨架
 1. **开篇身份锚**（无 ##）— 一句
 2. **五个 ## 分区** — 见输出分区
-3. **收尾**（无 ##）— 一句「配置读数非命运」
+3. **收尾** — **勿写**；由界面在五块之外固定展示「配置读数 / 怎么用取决于你」
 
 ## 每个 ## 分区内部结构
 1. **### 小标题** — 长分区拆成 **2–3 个** \`###\` 子块；**独占一行 + 后空一行**（见块间距规则）。
@@ -308,11 +310,11 @@ const BASE_ANALYSIS_LAYOUT_ZH = `# 降维排版（中立元报告 · 奢侈品�
 5. **列表** — 仅调谐方向可用；见列表格式规则。
 
 ## 篇幅与完整性
-- 全文约 **800–1200 词**（中文同等篇幅）；**身份锚 + 五块 + 收尾必须齐全**—宁可略超，**不可**为压字数砍掉任何块；**不要**再写四柱/大运展示段。
+- 全文约 **800–1200 词**（中文同等篇幅）；**身份锚 + 五块必须齐全**—宁可略超，**不可**为压字数砍掉任何块；**不要**再写四柱/大运展示段；**不要**手写收尾句。
 - 压缩对象是**水分**（铺垫、排比、同义重复、场景举例、**逐柱原始数据罗列**、黑名单隐喻）。
 
 ## 分区硬约束
-- **五块一个都不能少**；开篇身份锚与收尾必有。
+- **五块一个都不能少**；开篇身份锚必有；收尾由系统渲染、模型勿写。
 - 每个 ## 分区至少 **1 个** 现发明标签引导块；「怎么把自己调回来」至少 **1 个** \`>\` 金句框 **或** 多行方向 bullets（非打卡）。`;
 
 const BASE_ANALYSIS_LAYOUT_EN = `# Layout (neutral meta-report · luxury tier · mandatory)
@@ -322,7 +324,7 @@ Read like **precise neutral readout + plain-language notes**—not a life story.
 ## Full-document skeleton
 1. **Opening identity anchor** (no ##) — one sentence
 2. **Five ## sections** — see output sections
-3. **Closing** (no ##) — one line: config readout, not fate
+3. **Closing** — **do not write**; UI always shows the config-readout closer below the five sections
 
 ## Inside each ## section
 1. **### subheads** — Split into **2–3** \`###\` blocks; **own line + blank line after** (see block-spacing rules).
@@ -332,11 +334,11 @@ Read like **precise neutral readout + plain-language notes**—not a life story.
 5. **Bullets** — retune section only, as directions (see bullet rules).
 
 ## Length & completeness
-- About **800–1200 words** total; **identity + five blocks + closing required**—slightly over is OK; never drop a block; **do not** add pillar/decade display sections.
+- About **800–1200 words** total; **identity + five blocks required**—slightly over is OK; never drop a block; **do not** add pillar/decade display sections; **do not** hand-write a closing line.
 - Cut **fluff** (padding, reassurance loops, scenario examples, **pillar dumps**, blacklisted metaphors).
 
 ## Section hard rules
-- **All five energy sections mandatory**; opening identity + closing required.
+- **All five energy sections mandatory**; opening identity required; closing is system-rendered (model must not write it).
 - Every ## section: at least one invented-label lead; **How to Retune** needs at least one \`>\` pull quote **or** multi-line directional bullets (not a checklist).`;
 
 const BASE_ANALYSIS_FEW_SHOT_ZH = `# 分区骨架与反例（只学结构 · 禁抄完整示范句 · 主比喻须现定）
@@ -380,7 +382,7 @@ const BASE_ANALYSIS_FEW_SHOT_ZH = `# 分区骨架与反例（只学结构 · 禁
 
 **<现发明引导标签>:** <能量状态条件 · 禁事件/行业/年龄段>
 
-<一句收尾：配置读数，不是命运>
+（收尾句勿写——界面固定展示）
 \`\`\`
 
 ## 反例（禁止）
@@ -437,7 +439,7 @@ const BASE_ANALYSIS_FEW_SHOT_EN = `# Section skeleton + anti-examples (structure
 
 **<invented lead label>:** <energy-state conditions · no events / industries / age bands>
 
-<one closing line: config readout, not fate>
+(do not write closing — UI renders it)
 \`\`\`
 
 ## Anti-examples (forbidden)
@@ -481,11 +483,11 @@ Shared neutral base for **four products**: POJU / Glyph / Match / Syncro. This l
     lang === "zh"
       ? `# 输出要求
 
-1. **只输出** Markdown 正文（开篇身份锚 + ## 五块 + ### 小标题 + lead + 金句框 + 可选方向 bullets + 收尾），不要 JSON，不要 \`---META---\`，不要代码块包裹全文。
+1. **只输出** Markdown 正文（开篇身份锚 + ## 五块 + ### 小标题 + lead + 金句框 + 可选方向 bullets；**勿写收尾**），不要 JSON，不要 \`---META---\`，不要代码块包裹全文。
 2. 语言: **${langLabel}** — 全文使用这一种语言。
-3. **身份锚 + 五块 + 收尾必须齐全**（标题措辞固定见下；勿再写四柱/大运段）：
+3. **身份锚 + 五块必须齐全**（标题措辞固定见下；勿再写四柱/大运段；收尾由界面渲染）：
 ${BASE_ANALYSIS_OUTPUT_SECTIONS_ZH.split("\n").slice(1).join("\n")}
-4. 约 **800–1200 词**（中文同等篇幅）— **优先保证身份锚、五块与收尾完整**；宁可略超，**不可**为压字数砍块。
+4. 约 **800–1200 词**（中文同等篇幅）— **优先保证身份锚与五块完整**；宁可略超，**不可**为压字数砍块。
 5. **压缩水分，不砍信息** — 删解释性铺垫、安慰性排比、同义重复、场景化举例、黑名单隐喻；保留每个分区的关键能量结论与中立调谐**方向**（作息/环境/决策习惯，非职业/关系打卡）。
 6. 第二人称（你），现代、专业、克制；**每段 ≤120 字**；引导块用**现发明真实标签**（禁 Bold lead / 驱动类型 等模板）；**五块各至少 1 个**引导块 **+ 1 个** \`>\` 锚点；调谐段若用列表须**多行** \`- \`（每条独占一行，列表前空一行，非打卡）。
 7. **### 独占一行**，其后空一行再写 \`**引导:**\`；子标题/引导/段落/bullets 块间一律 \`\\n\\n\` 空行（禁黏行）。
@@ -493,11 +495,11 @@ ${BASE_ANALYSIS_OUTPUT_SECTIONS_ZH.split("\n").slice(1).join("\n")}
 9. **落库门禁** — 集外神煞、断标记、裸干支、密度超标会导致整篇被拒并重写；可自然提及 POJU / pojulife；禁 astrology / divination / psychic / horoscope。`
       : `# Output requirements
 
-1. **Markdown body only** (opening identity + five ## sections + ### subheads + lead + pull quotes + optional directional bullets + closing)—no JSON, no \`---META---\`, no fenced full-document code block.
+1. **Markdown body only** (opening identity + five ## sections + ### subheads + lead + pull quotes + optional directional bullets; **no closing line**)—no JSON, no \`---META---\`, no fenced full-document code block.
 2. Language: **${langLabel}** throughout.
-3. **Identity + five sections + closing required** (fixed semantics below; no pillar/decade display sections):
+3. **Identity + five sections required** (fixed semantics below; no pillar/decade display sections; closing is UI-rendered):
 ${BASE_ANALYSIS_OUTPUT_SECTIONS_EN.split("\n").slice(1).join("\n")}
-4. About **800–1200 words**—**identity, five blocks, and closing complete first**; slightly over is OK; never drop a block for word cap.
+4. About **800–1200 words**—**identity and five blocks complete first**; slightly over is OK; never drop a block for word cap.
 5. **Cut fluff, not facts** — drop padding, reassurance loops, scenario examples, blacklisted metaphors; keep each section's key energy read + **neutral retune direction** (rhythm/environment/decision habits—not career/relationship checklists).
 6. Second person (you); modern, restrained, professional; **≤80 words per paragraph**; lead blocks use **invented real labels** (never "Bold lead" / "Raw drive" templates); **each of the five sections** needs at least one labeled lead **+ one** \`>\` anchor; retune lists (if any) use **multi-line** \`- \` (one per line, blank line before list, not a checklist).
 7. **Each \`###\` on its own line**, blank line, then \`**Label:** body\`; blank \`\\n\\n\` between ### / lead / ¶ / bullets (never glued).
@@ -546,14 +548,14 @@ ${BASE_ANALYSIS_OUTPUT_SECTIONS_EN.split("\n").slice(1).join("\n")}
 ${JSON.stringify(input.local_data.structured, null, 2)}
 \`\`\`
 
-现在开始写完整 Markdown。**双层排版**（开篇身份锚 + 五块 ##：正文白话零标记 + 每块末尾 \`**依据与推理:**\` 含金字）；约 **800–1200 词、身份锚+五块+收尾齐全**；零大运/零年龄段时间锚；不逐柱罗列；**禁裸干支**；神煞/十神不得超出 structured；避免语义红线词（${redLine}）。`
+现在开始写完整 Markdown。**双层排版**（开篇身份锚 + 五块 ##：正文白话零标记 + 每块末尾 \`**依据与推理:**\` 含金字）；约 **800–1200 词、身份锚+五块齐全**；**勿写收尾句**（界面固定展示）；零大运/零年龄段时间锚；不逐柱罗列；**禁裸干支**；神煞/十神不得超出 structured；避免语义红线词（${redLine}）。`
       : `structured JSON (internal — write Personal Energy Analysis Report; honor closed-set, term markers, neutral hard bans):
 
 \`\`\`json
 ${JSON.stringify(input.local_data.structured, null, 2)}
 \`\`\`
 
-Write the full Markdown now. **Magazine layout** (opening identity + five ## + ### + **invented label:** lead + short ¶ + > anchor + optional directional bullets + closing); about **800–1200 words, identity + five blocks + closing complete**; zero decade/age-band timing anchors; no pillar dumps; 3-part term markers; **no bare Ganzhi**; shen_sha/ten_gods within structured; never output literal "Bold lead" or template leads like "Raw drive"; avoid red-line words (${redLine}).`;
+Write the full Markdown now. **Magazine layout** (opening identity + five ## + ### + **invented label:** lead + short ¶ + > anchor + optional directional bullets; **no closing line**—UI renders it); about **800–1200 words, identity + five blocks complete**; zero decade/age-band timing anchors; no pillar dumps; 3-part term markers; **no bare Ganzhi**; shen_sha/ten_gods within structured; never output literal "Bold lead" or template leads like "Raw drive"; avoid red-line words (${redLine}).`;
 
   return { system, user };
 }

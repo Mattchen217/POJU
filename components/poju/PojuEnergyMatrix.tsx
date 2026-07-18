@@ -17,7 +17,6 @@ import { activePillarByAge } from "@/lib/poju/matrix-life-segment";
 import { matrixSynopsisNarrativeState } from "@/lib/poju/matrix-narrative-text";
 import { computeYearTransitProgress } from "@/lib/poju/matrix-transit-progress";
 import {
-  annualTransitHeadline,
   matrixElementSoft,
   matrixLayerCap,
 } from "@/lib/poju/matrix-term-labels";
@@ -205,31 +204,30 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
     });
     const cached = payload.display;
     if (!cached) return base;
+    // Lifecycle right column always uses local fact_panel (no LLM prose overlay).
     if (cached.narrative_source === "llm") {
       return {
         ...base,
         synopsis: cached.synopsis,
-        structural_dynamics: cached.structural_dynamics,
-        annual_transit: { ...base.annual_transit, narrative: cached.annual_transit.narrative },
         enote_caption: cached.enote_caption,
         narrative_source: cached.narrative_source,
         narrative_locale: cached.narrative_locale,
         narrative_failed: cached.narrative_failed,
+        fact_panel: base.fact_panel,
       };
     }
     if (cached.narrative_failed) {
       return {
         ...base,
         synopsis: cached.synopsis,
-        structural_dynamics: cached.structural_dynamics,
-        annual_transit: { ...base.annual_transit, narrative: cached.annual_transit.narrative },
         enote_caption: cached.enote_caption,
         narrative_source: cached.narrative_source ?? "template",
         narrative_locale: cached.narrative_locale,
         narrative_failed: true,
+        fact_panel: base.fact_panel,
       };
     }
-    return base;
+    return { ...base, fact_panel: base.fact_panel };
   }, [payload.display, user_profile, structured, strength, wuxing_scores, locale]);
 
   const zodiacIcon = ZODIAC_ICON_BY_HAN[display.zodiac.han];
@@ -534,65 +532,152 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
               locale={locale}
             />
           </div>
-          <div className="side">
-            <div className="ro ro__friction">
-              <div className="ro__k">{tc("structural_dynamics")}</div>
-              {suppressNarrative && narrativeLoading ? null : narrativeLoading ? (
-                <NarrativePlaceholder label={tc("narrative_loading")} />
-              ) : (
+          <div className="side side--facts">
+            {(() => {
+              const fp = display.fact_panel;
+              const emptyLinks = tc("fact_empty_links");
+              return (
                 <>
-                  <div className="fr">
-                    <span className="fk res">{tc("resonance_label")}</span>
-                    <span>{display.structural_dynamics.resonance}</span>
+                  <div className="ro ro--fact">
+                    <div className="ro__k">
+                      {tc("fact_era")} <em>· {tc("fact_era_em")}</em>
+                    </div>
+                    <div className="ro__v ro__v--metric">
+                      <span className="fact-theme">{fp.era.theme}</span>
+                      <span className="pct">
+                        {fp.era.age_range}
+                        {fp.era.start_year
+                          ? ` · ${fp.era.start_year}`
+                          : ""}
+                      </span>
+                    </div>
+                    <div className="fact-chips">
+                      {fp.era.stem_element_soft ? (
+                        <span className="fact-chip fact-chip--gold">
+                          {fp.era.stem_element_soft}
+                        </span>
+                      ) : null}
+                      {fp.era.ten_god_soft ? (
+                        <span className="fact-chip">{fp.era.ten_god_soft}</span>
+                      ) : null}
+                    </div>
                   </div>
-                  <div className="fr">
-                    <span className="fk ten">{tc("tension_label")}</span>
-                    <span>{display.structural_dynamics.tension}</span>
+
+                  <div className="ro ro--fact">
+                    <div className="ro__k">
+                      {tc("fact_year_pulse")} · {fp.year_pulse.year}
+                    </div>
+                    <div className="ro__v ro__v--metric">
+                      <span
+                        className={elementCssClass(
+                          display.annual_transit.stem_en.split(" ").pop() ||
+                            display.annual_transit.stem_en,
+                        )}
+                      >
+                        {fp.year_pulse.stem_element_soft}
+                      </span>
+                      <span className="pct">{tc("fact_year_pulse_em")}</span>
+                    </div>
+                    <div className="fact-chips">
+                      {fp.year_pulse.links.length > 0 ? (
+                        fp.year_pulse.links.map((c) => (
+                          <span
+                            key={c.soft}
+                            className={`fact-chip fact-chip--${c.polarity}`}
+                          >
+                            {c.soft}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="fact-chip fact-chip--muted">{emptyLinks}</span>
+                      )}
+                    </div>
+                    <div className="tprog">
+                      <div className="tprog__bar">
+                        <i style={{ width: `${transitProgress}%` }} />
+                      </div>
+                      <div className="tprog__lab">
+                        <span>
+                          {fp.year_pulse.year} {tc("transit_progress")}
+                        </span>
+                        <span className="blink">{transitProgress}% ▮</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="fr">
-                    <span className="fk neu">{tc("reading_label")}</span>
-                    <span>{display.structural_dynamics.reading}</span>
+
+                  <div className="ro ro--fact">
+                    <div className="ro__k">
+                      {tc("fact_structure")} <em>· {tc("fact_structure_em")}</em>
+                    </div>
+                    <div className="fact-row">
+                      <span className="fact-row__lab res">{tc("fact_bonds")}</span>
+                      <div className="fact-chips">
+                        {fp.structure.bonds.length > 0 ? (
+                          fp.structure.bonds.map((c) => (
+                            <span
+                              key={`b-${c.soft}`}
+                              className="fact-chip fact-chip--green"
+                            >
+                              {c.soft}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="fact-chip fact-chip--muted">{emptyLinks}</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="fact-row">
+                      <span className="fact-row__lab ten">{tc("fact_tensions")}</span>
+                      <div className="fact-chips">
+                        {fp.structure.tensions.length > 0 ? (
+                          fp.structure.tensions.map((c) => (
+                            <span
+                              key={`t-${c.soft}`}
+                              className="fact-chip fact-chip--red"
+                            >
+                              {c.soft}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="fact-chip fact-chip--muted">{emptyLinks}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="ro ro--fact">
+                    <div className="ro__k">
+                      {tc("fact_balance")} <em>· {tc("fact_balance_em")}</em>
+                    </div>
+                    <div className="ro__v ro__v--metric">
+                      <span>{fp.balance.strength_soft}</span>
+                      {fp.balance.yong_soft ? (
+                        <span className="pct">
+                          {tc("fact_anchor")} · {fp.balance.yong_soft}
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="fact-chips">
+                      {fp.balance.xi_softs.map((s) => (
+                        <span key={`xi-${s}`} className="fact-chip fact-chip--green">
+                          {s}
+                        </span>
+                      ))}
+                      {fp.balance.ji_softs.map((s) => (
+                        <span key={`ji-${s}`} className="fact-chip fact-chip--red">
+                          {s}
+                        </span>
+                      ))}
+                      {fp.balance.xi_softs.length === 0 &&
+                      fp.balance.ji_softs.length === 0 &&
+                      !fp.balance.yong_soft ? (
+                        <span className="fact-chip fact-chip--muted">{emptyLinks}</span>
+                      ) : null}
+                    </div>
                   </div>
                 </>
-              )}
-            </div>
-            <div className="ro">
-              <div className="ro__k">
-                {tc("annual_transit")} · {display.annual_transit.year}
-              </div>
-              {(() => {
-                const el =
-                  display.annual_transit.stem_en.split(" ").pop() ||
-                  display.annual_transit.stem_en;
-                const head = annualTransitHeadline(el, locale);
-                return (
-                  <div className="ro__v">
-                    <span className={elementCssClass(el)}>{head.title}</span>
-                    <span className="pct" style={{ flexBasis: "100%" }}>
-                      {head.subtitle}
-                    </span>
-                  </div>
-                );
-              })()}
-              <p className="transit-note">
-                {suppressNarrative && narrativeLoading ? null : narrativeLoading ? (
-                  <NarrativePlaceholder label={tc("narrative_loading")} />
-                ) : (
-                  display.annual_transit.narrative
-                )}
-              </p>
-              <div className="tprog">
-                <div className="tprog__bar">
-                  <i style={{ width: `${transitProgress}%` }} />
-                </div>
-                <div className="tprog__lab">
-                  <span>
-                    {display.annual_transit.year} {tc("transit_progress")}
-                  </span>
-                  <span className="blink">{transitProgress}% ▮</span>
-                </div>
-              </div>
-            </div>
+              );
+            })()}
           </div>
         </div>
 

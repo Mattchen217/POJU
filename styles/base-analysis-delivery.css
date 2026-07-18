@@ -147,6 +147,17 @@
   gap: 2.5rem;
 }
 
+/* 全文收尾：五块分区之外、CTA 之上，不进「依据与推理」 */
+.base-analysis-delivery__closing {
+  margin: 2.25rem auto 0;
+  max-width: 40rem;
+  text-align: center;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  letter-spacing: 0.02em;
+  color: rgba(212, 196, 168, 0.78);
+}
+
 .base-analysis-delivery__card {
   margin-top: 0.75rem;
   padding: 1.25rem 1.15rem;

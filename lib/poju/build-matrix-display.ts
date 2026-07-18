@@ -20,6 +20,10 @@ import {
   stripGanzhiFromLunar,
 } from "@/lib/poju/matrix-term-labels";
 import type { UserProfile } from "@/lib/profile/types";
+import {
+  buildMatrixFactPanel,
+  type MatrixFactPanel,
+} from "@/lib/poju/build-matrix-fact-panel";
 
 export type MatrixPillarDisplay = PillarDetail & {
   stem_en: string;
@@ -55,6 +59,8 @@ export type MatrixDisplayData = {
   current_age: number;
   current_dayun_index: number;
   dayun_hub: { theme: string; age_range: string; start_year: number };
+  /** Local fact cards for lifecycle right column (replaces prose dynamics). */
+  fact_panel: MatrixFactPanel;
   /** LLM-generated caption for Elemental Breakdown (replaces enote template). */
   enote_caption?: string;
   /** template = local fallback; llm = DeepSeek matrix narrative; stored = IndexedDB matrix_list */
@@ -383,6 +389,37 @@ export function buildMatrixDisplayData(input: {
           start_year: currentDy.start_year,
         }
       : { theme, age_range: "—", start_year: b.year },
+    fact_panel: (() => {
+      const hub = currentDy
+        ? {
+            theme,
+            age_range: dayunAgeRange(currentDy, nextDy),
+            start_year: currentDy.start_year,
+          }
+        : { theme, age_range: "—", start_year: b.year };
+      const annual = buildAnnualTransit(
+        transitYear,
+        dmElement,
+        dominant,
+        deficit,
+        locale,
+      );
+      const stemEl =
+        getStemInfo(splitGanzhi(annual.ganzhi).stem)?.element ??
+        annual.stem_en.split(" ").pop() ??
+        "Wood";
+      return buildMatrixFactPanel({
+        structured,
+        dayunIndex: dayunIdx,
+        dayunTheme: hub.theme,
+        dayunAgeRange: hub.age_range,
+        dayunStartYear: hub.start_year,
+        transitYear: annual.year,
+        transitProgressPct: annual.progress_pct,
+        transitStemElement: stemEl,
+        locale,
+      });
+    })(),
     narrative_source: "template",
   };
 }

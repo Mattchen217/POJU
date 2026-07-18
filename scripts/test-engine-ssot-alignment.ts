@@ -79,11 +79,50 @@ const ENGINE_WORDS = [
   "正官",
   "偏印",
   "正印",
-  // 柱位 + 结构
+  // 柱位 + 干支拆解 + 结构
   "年柱",
   "月柱",
   "日柱",
   "时柱",
+  "年干",
+  "月干",
+  "日干",
+  "时干",
+  "年支",
+  "月支",
+  "日支",
+  "时支",
+  "主星",
+  "副星",
+  "通根",
+  "透干",
+  "坐支",
+  "坐干",
+  "本氣",
+  "本气",
+  "中氣",
+  "中气",
+  "余氣",
+  "余气",
+  "干支",
+  "干合",
+  "支合",
+  "調候",
+  "调候",
+  "納音",
+  "纳音",
+  "墓庫",
+  "墓库",
+  "小運",
+  "小运",
+  "流月",
+  "流日",
+  "流時",
+  "流时",
+  "真太陽時",
+  "真太阳时",
+  "夫妻星",
+  "配偶星",
   "日主",
   "大运",
   "流年",
@@ -158,13 +197,13 @@ function main(): void {
     !hasCoreJudgmentsBlackspeak(relMarked),
   );
 
-  // 术语总数 168
+  // 术语总数 197
   const src = fs.readFileSync(
     path.join(process.cwd(), "lib/glossary/pojulife-terms.ts"),
     "utf8",
   );
   const count = (src.match(/slug:\s*"/g) ?? []).length;
-  assert(`术语总数 168（实得 ${count}）`, count === 168);
+  assert(`术语总数 197（实得 ${count}）`, count === 197);
 
   // SHENSHA_ALIAS 第二事实源已清
   const aliasSrc = fs.readFileSync(

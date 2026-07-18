@@ -501,16 +501,56 @@ export function wrapBareTenGods(text: string, locale: string): string {
   return out;
 }
 
-/** 柱位 → 闭集 slug（pl_year/pl_month/pl_day/pl_hour）。 */
-const PILLAR_TO_SLUG: Readonly<Record<string, string>> = {
-  年柱: "pl_year",
-  月柱: "pl_month",
-  日柱: "pl_day",
-  时柱: "pl_hour",
-};
+/**
+ * 柱位结构 / 藏干细分 → 闭集 slug。
+ * 含 aliases（本气→本氣）：从 SSOT 展开，避免简繁漏标。
+ */
+const STRUCTURE_MARK_SLUGS = new Set([
+  "pl_year",
+  "pl_month",
+  "pl_day",
+  "pl_hour",
+  "pl_year_stem",
+  "pl_month_stem",
+  "pl_day_stem",
+  "pl_hour_stem",
+  "pl_year_branch",
+  "pl_month_branch",
+  "pl_day_branch",
+  "pl_hour_branch",
+  "pl_main_role",
+  "pl_sub_role",
+  "pl_rooting",
+  "pl_protrusion",
+  "pl_stem_on_branch",
+  "pl_branch_under_stem",
+  "comp_main_qi",
+  "comp_middle_qi",
+  "comp_residual_qi",
+  "rel_stem_branch",
+  "ch_tiaohou",
+  "ch_nayin",
+  "ch_muku",
+  "tm_xiaoyun",
+  "tm_liuyue",
+  "tm_liuri",
+  "tm_liushi",
+  "tm_true_solar_time",
+  "ss_spouse_star",
+]);
+
+const PILLAR_TO_SLUG: Readonly<Record<string, string>> = (() => {
+  const map: Record<string, string> = {};
+  for (const t of POJU_TERMS) {
+    if (!STRUCTURE_MARK_SLUGS.has(t.slug)) continue;
+    map[t.traditional] = t.slug;
+    for (const a of t.aliases ?? []) map[a] = t.slug;
+  }
+  return map;
+})();
 
 /**
- * 裸柱位词 → 标记。第五类确定性打标器（前四类：天干/五行/十神/神煞）。
+ * 裸柱位/结构词 → 标记。第五类确定性打标器（前四类：天干/五行/十神/神煞）。
  *
  * 生产 2026-07-18：柱位无打标器 + SSOT 无术语 → 模型自造 ⟦t:hour|时柱⟧ →
  * 明文「时柱」经 stripMarkersForPrompt 漏进可见文本 → payment_leak → 页面「准备失败」。
@@ -519,12 +559,15 @@ const PILLAR_TO_SLUG: Readonly<Record<string, string>> = {
  * 否则会把组合词的「月柱」先单独打标、拆散组合。见 compliance-terms sanitizeNonMarkerSegment。
  * 柱位都是双字；中文正文前后几乎总贴汉字，Han 双边界会 100% 漏网（「你的时柱藏…」）。
  * 只挡「年柱运 / 月柱格」这类后缀粘连——与 wrapBareTenGods 同款。
+ * 长度降序，避免短词误吞长词子串。
  */
 export function wrapBarePillars(text: string, locale: string): string {
   if (!text?.trim()) return text ?? "";
   const loc = toGlossaryLocale(locale);
+  const words = Object.keys(PILLAR_TO_SLUG).sort((a, b) => b.length - a.length);
   let out = text;
-  for (const [han, id] of Object.entries(PILLAR_TO_SLUG)) {
+  for (const han of words) {
+    const id = PILLAR_TO_SLUG[han]!;
     if (!termOf(id, loc)) continue;
     out = out.replace(
       new RegExp(`${escapeRegExp(han)}(?![运格星局宫])`, "g"),
@@ -544,6 +587,8 @@ const RELATION_MARK_SLUGS = new Set([
   "sanhe",
   "stemhe",
   "rel_transmutation",
+  "rel_stem_harmony",
+  "rel_branch_harmony",
 ]);
 
 const RELATION_WORD_TO_SLUG: Readonly<Record<string, string>> = (() => {
