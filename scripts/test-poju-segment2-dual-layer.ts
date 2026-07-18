@@ -68,7 +68,8 @@ function main(): void {
   const core = read("lib/llm/deepseek/breakthrough-core.ts");
   assert(
     "GlossaryText 有 layer",
-    glossary.includes('layer = "legacy"') && glossary.includes("MAX_PAREN_MARKS_EVIDENCE = 3"),
+    glossary.includes('layer = "legacy"') &&
+      glossary.includes("MAX_PAREN_MARKS_EVIDENCE = Number.POSITIVE_INFINITY"),
   );
   assert("GlossaryText 保留旧常量(老测试断言)", glossary.includes("MAX_PAREN_MARKS_PER_PARAGRAPH = 2"));
   assert("RichReadingText 有 dualLayer", rich.includes("dualLayer") && rich.includes('layer="evidence"'));

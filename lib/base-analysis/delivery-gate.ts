@@ -25,12 +25,9 @@ import {
 
 export const BASE_ANALYSIS_GATE_ERROR = "BASE_ANALYSIS_DELIVERY_GATE_FAILED";
 
-/** 依据块最少金字数 —— 与提示词的「3–5 个」对齐。 */
-const MIN_EVIDENCE_MARKS = 3;
-
 /**
- * 每个「**依据与推理:**」块至少 3 个金字。少于 3 = 锚点不够 = 在写套话。
- * 提示词写下限也没用 —— 铁律 #2：关键边界必须代码兜死。
+ * 依据块锚点闸：只杀 0 锚点（结论悬空 / 假装有依据）。
+ * 不设数字下限：任何 ≥1 的下限都会误杀"完整的最短承重证据链"，并逼模型注水凑数。
  */
 export function auditEvidenceMarkDensity(text: string): ComplianceViolation[] {
   const out: ComplianceViolation[] = [];
@@ -40,9 +37,12 @@ export function auditEvidenceMarkDensity(text: string): ComplianceViolation[] {
   while ((m = re.exec(text)) !== null) {
     idx += 1;
     const marks = new Set(m[1]?.match(/⟦t:[^|⟧]+/g) ?? []);
-    if (marks.size < MIN_EVIDENCE_MARKS) {
+    // 不设数字下限：任何 ≥1 的数字下限都会误杀"完整的最短承重证据链"（真 2 环完整就该 2 环），
+    // 并逼模型注水凑数。质量由「完整的最短」内容约束 + 推理端「完整承重链」自检 + 人工验收管。
+    // 代码只兜最硬一条：依据块存在、却一个承重锚点都没有 = 结论悬空 = 假装有依据。
+    if (marks.size === 0) {
       out.push({
-        label: `evidence_marks_thin:${marks.size}`,
+        label: "evidence_zero_anchor",
         snippet: (m[1] ?? "").trim().slice(0, 60),
       });
     }
@@ -128,8 +128,8 @@ export function isBaseAnalysisGateFailure(violations: ComplianceViolation[]): bo
       isHardBannedTermLabel(v.label) ||
       v.label === "soft_replace_unreadable" ||
       v.label === "payment_leak:chained_soft_replace" ||
-      // 金字不够 = 锚点不够 = 内容问题，单行 repair 救不了，必须整篇重生成。
-      v.label.startsWith("evidence_marks_thin") ||
+      // 依据块 0 锚点 = 结论悬空 = 假装有依据；单行 repair 救不了，整篇重生成。
+      v.label === "evidence_zero_anchor" ||
       v.label === "evidence_block_missing",
   );
 }

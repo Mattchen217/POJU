@@ -1518,8 +1518,15 @@ export function auditBareGanzhi(text: string): OutOfSetAuditHit[] {
 export function auditTermMarkerDensity(
   text: string,
   maxPerParagraph = 2,
-  /** Folded「依据与推理」allows denser gold marks (default-collapsed). */
-  maxEvidenceParagraph = 5,
+  /**
+   * 「依据与推理」块【不设金字上限】。
+   * 依据块默认折叠、且金字个数由"本段结论需要几个承重锚点"内容侧决定（见 base-analysis
+   * 提示词「依据=总结，只留承重锚点」）——强命盘神煞多，6–7 个是合理的，不是堆砌。
+   * 2026-07-18：上限 5 撞上金字下限 3 + "五行/十神必打标"，强丙火盘 6–7 个金字 → 死循环 → 「准备失败」。
+   * 堆砌由提示词内容约束控，不由数字硬砍（硬砍会和下限/必打标打架）。
+   * 正文段落仍 ≤2（正文本就该零标记，这个上限要留）。
+   */
+  maxEvidenceParagraph = Number.POSITIVE_INFINITY,
 ): OutOfSetAuditHit[] {
   if (!text?.trim()) return [];
   const hits: OutOfSetAuditHit[] = [];

@@ -63,23 +63,38 @@ function main(): void {
   );
   assert("换行没被吃（repair 能按行切）", cleaned.includes("\n"));
 
-  // ── 金字下限闸 ──
-  console.log("\n[金字下限闸]");
+  // ── 金字闸：只杀 0 锚点；上限取消 ──
+  console.log("\n[金字闸 · 0 锚点 / 无上限]");
   assert(
-    "2 个金字→判失败",
+    "0 锚点(纯断言)→判失败",
     auditEvidenceMarkDensity(
-      "## A\n\n**依据与推理:** ⟦t:day_master|⟧ 与 ⟦t:fire|⟧。\n",
-    ).some((v) => v.label.startsWith("evidence_marks_thin")),
+      "## A\n\n**依据与推理:** 你的系统天生稳定，无需外求。\n",
+    ).some(
+      (v) =>
+        v.label === "evidence_zero_anchor" || v.label === "evidence_block_missing",
+    ),
   );
   assert(
-    "3 个金字→放行",
+    "2 个金字→放行(不再误杀完整短链)",
     auditEvidenceMarkDensity(
-      "## A\n\n**依据与推理:** ⟦t:day_master|⟧、⟦t:fire|⟧、⟦t:wood|⟧ 闭合。\n",
+      "## A\n\n**依据与推理:** ⟦t:day_master|⟧ 靠 ⟦t:fire|⟧ 维持。\n",
     ).length === 0,
   );
+  const dense =
+    "## A\n\n**依据与推理:** ⟦t:day_master|⟧、⟦t:fire|⟧、⟦t:shi_shen|⟧、⟦t:zheng_cai|⟧、⟦t:zheng_yin|⟧、⟦t:water|⟧ 协同。\n";
+  assert("6 个金字不再判密度失败", auditEvidenceMarkDensity(dense).length === 0);
+  const g = read("lib/base-analysis/delivery-gate.ts");
+  assert("evidence_marks_thin 已删除", !g.includes("evidence_marks_thin"));
+  assert("0 锚点闸接进 gate failure", g.includes("evidence_zero_anchor"));
+  const tm = read("lib/llm/sanitize/term-marking.ts");
   assert(
-    "下限闸接进 auditBaseAnalysisDelivery",
-    read("lib/base-analysis/delivery-gate.ts").includes("auditEvidenceMarkDensity"),
+    "依据密度上限已取消(Infinity)",
+    /maxEvidenceParagraph\s*=\s*Number\.POSITIVE_INFINITY/.test(tm),
+  );
+  const gl = read("components/cross-product/GlossaryText.tsx");
+  assert(
+    "渲染依据层不封顶",
+    /MAX_PAREN_MARKS_EVIDENCE\s*=\s*Number\.POSITIVE_INFINITY/.test(gl),
   );
 
   // ── 黑名单空 ──
@@ -101,10 +116,24 @@ function main(): void {
     p.includes("至少 1 个必须是 shensha") || p.includes("至少 1 个必须来自 shensha"),
   );
   assert("删依据自检", p.includes("把依据块整个删掉"));
-  // 源码是模板字符串转义 \`…\`，readFile 看到的是带反斜杠的形式
   assert("五行必打标", p.includes("⟦t:wood|⟧") && p.includes("不写「木」"));
   assert("十神必打标", p.includes("⟦t:shi_shen|⟧") && p.includes("不写「食神」"));
-  assert("金字下限 3", p.includes("下限 3"));
+  assert("推理端：完整的承重证据链(求全)", p.includes("完整的承重证据链"));
+  assert(
+    "推理端：宁多不漏自检",
+    p.includes("宁可多算一环") || p.includes("不可漏算关键一环"),
+  );
+  assert("输出端：完整的最短承重证据链(求精)", p.includes("完整的最短承重证据链"));
+  assert("输出端：只放本段结论真正依赖的", p.includes("只放本段结论真正依赖的"));
+  assert(
+    "输出端：自检双向",
+    p.includes("站得住 = 那环是凑数") && p.includes("站不住 = 那环是承重"),
+  );
+  const seg = p.slice(p.indexOf("依据先行"), p.indexOf("依据先行") + 900);
+  assert(
+    "推理/依据规格不含具体锚点数(如 2-3 个/≥3/3-5 个)",
+    !/[0-9]\s*[-–]\s*[0-9]\s*个|[≥>]\s*[0-9]\s*个|[0-9]\s*个锚点|[0-9]\s*环/.test(seg),
+  );
 
   // ── core_judgments ──
   console.log("\n[core_judgments]");

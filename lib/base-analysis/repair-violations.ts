@@ -253,14 +253,13 @@ export async function repairViolationsOnly(
     return { ok: true, text: input.text, line_repairs: [] };
   }
 
-  // 金字不够 = 锚点不够 —— 单行 repair 只会硬塞标记，必须整篇重生成。
+  // 0 锚点 / 缺依据块 —— 单行 repair 只会硬塞标记，必须整篇重生成。
   if (
     critical.some(
-      (v) =>
-        v.label.startsWith("evidence_marks_thin") || v.label === "evidence_block_missing",
+      (v) => v.label === "evidence_zero_anchor" || v.label === "evidence_block_missing",
     )
   ) {
-    console.error("[repair] evidence density / missing block — refuse surgical repair, need full regen", {
+    console.error("[repair] evidence zero-anchor / missing block — refuse surgical repair, need full regen", {
       labels: critical.map((v) => v.label),
     });
     return {
@@ -268,8 +267,7 @@ export async function repairViolationsOnly(
       error: "repair_unrepaireable_evidence_density",
       detail: critical
         .filter(
-          (v) =>
-            v.label.startsWith("evidence_marks_thin") || v.label === "evidence_block_missing",
+          (v) => v.label === "evidence_zero_anchor" || v.label === "evidence_block_missing",
         )
         .map((v) => v.label)
         .join(","),

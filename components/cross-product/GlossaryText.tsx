@@ -247,10 +247,12 @@ function findNextMarker(
 /** Max paren term marks rendered per paragraph (density cap). */
 const MAX_PAREN_MARKS_PER_PARAGRAPH = 2;
 /**
- * 依据层：金字集中、默认折叠、允许"不好读" —— 对齐提示词的「≤3 金字」上限。
- * 用 2 会让第 3 个金字裸奔（有金字、无 [···]、点不开），实测「磨蚀」就是这么掉的。
+ * 依据层：金字全显、默认折叠、允许"不好读"。
+ * 【不封顶】—— 必须与门禁 auditTermMarkerDensity 的依据上限一致（那边已取消上限）。
+ * 若这里留一个有限值，门禁放行 7 个、渲染只显 N 个 → 第 N+1 个起有金字无 [···]、点不开
+ * （就是反复出现过的"金字点不开"）。个数由内容侧「只留承重锚点」控，不在渲染层砍。
  */
-const MAX_PAREN_MARKS_EVIDENCE = 3;
+const MAX_PAREN_MARKS_EVIDENCE = Number.POSITIVE_INFINITY;
 
 function parseMarkedText(
   text: string,
