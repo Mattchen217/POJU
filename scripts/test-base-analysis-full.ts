@@ -113,7 +113,9 @@ function main(): void {
   assert("依据先行", p.includes("依据先行"));
   assert(
     "锚点含神煞/关系",
-    p.includes("至少 1 个必须是 shensha") || p.includes("至少 1 个必须来自 shensha"),
+    p.includes("至少 1 个必须是 shensha") ||
+      p.includes("至少 1 个必须来自 shensha") ||
+      p.includes("至少 1 个锚点是 shensha"),
   );
   assert("删依据自检", p.includes("把依据块整个删掉"));
   assert("五行必打标", p.includes("⟦t:wood|⟧") && p.includes("不要写五行的原字"));

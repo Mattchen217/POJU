@@ -219,7 +219,14 @@ function main() {
     path.join(ROOT, "lib/llm/prompts/base-analysis-stream-prompt.ts"),
     "utf8",
   );
-  assert("prompt bans relation markers", promptSrc.includes("关系类【不打标】") || promptSrc.includes("No relation markers"));
+  assert(
+    "prompt bans relation markers",
+    promptSrc.includes("关系类【不打标】") ||
+      promptSrc.includes("关系类直接中性白话，不打标") ||
+      promptSrc.includes("**不打标**、不写关系") ||
+      promptSrc.includes("No relation markers") ||
+      promptSrc.includes("no markers, no relation glossary"),
+  );
 
   // climate_now + CJ
   const structured = fixtureStructured();

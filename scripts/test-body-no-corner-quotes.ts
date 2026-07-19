@@ -28,7 +28,7 @@ function main(): void {
   const p = read("lib/llm/prompts/base-analysis-stream-prompt.ts");
   assert(
     "提示词有正文禁用规则",
-    p.includes("正文禁用") || p.includes("不要给任何词加"),
+    p.includes("正文禁用") || p.includes("不要给任何词加") || p.includes("正文不用角引号"),
   );
   // 五行/十神不再用「」框
   assert("不再有 不写「木」", !p.includes("不写「木」"));
