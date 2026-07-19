@@ -1609,7 +1609,13 @@
       "hidden_empty": "Potential: —",
       "lunar": "Lunar",
       "layers_title": "Four-layer readout",
-      "layers_em": "mechanism layers"
+      "layers_em": "mechanism layers",
+      "welcome": {
+        "title": "Welcome to POJU",
+        "intro": "POJU weaves three millennia of Eastern temporal wisdom with modern scientific method—to help you work through the specific question or stuck place you're facing now. Not fortune-telling: clear guidance aligned to your energy structure.",
+        "cta": "Write the dilemma you can't settle yet in the box below, then send. I'll read it against your matrix and walk through it with you, step by step.",
+        "loading": "POJU is getting ready…"
+      }
     },
     "template": {
       "season_transition": "Season transition in progress",

@@ -1414,7 +1414,13 @@
       "hidden_empty": "Caché : —",
       "lunar": "Lunaire",
       "layers_title": "Lecture à quatre couches",
-      "layers_em": "couches de mécanisme"
+      "layers_em": "couches de mécanisme",
+      "welcome": {
+        "title": "Bienvenue sur POJU",
+        "intro": "POJU allie trois millénaires de sagesse temporelle orientale et une méthode scientifique moderne — pour la question ou le blocage précis que vous vivez maintenant. Pas de prédiction : une guidance claire, alignée sur votre structure énergétique.",
+        "cta": "Écrivez ci-dessous le dilemme que vous n'arrivez pas à trancher, puis envoyez. Je le lirai à la lumière de votre matrice, et nous le déplierons pas à pas.",
+        "loading": "POJU se prépare…"
+      }
     },
     "template": {
       "season_transition": "Transition saisonnière en cours",

@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useTranslations } from "next-intl";
 
+import pojuMark from "@/assets/icons/P.png";
 import { SoftTermHover } from "@/components/cross-product/GlossaryText";
 import { PojuDaYunTimeline } from "@/components/poju/PojuDaYunTimeline";
 import {
@@ -805,8 +806,21 @@ export function PojuEnergyMatrix({
       <div className="pcm__stars" aria-hidden />
       <div className="pcm__wrap">
         <header className="pcm__header">
-          <h1 className="pcm__title pcm__title--gradient">{tm("main_title")}</h1>
-          <p className="pcm__header-desc">{tm("main_description")}</p>
+          <div className="pcm__header-mark" aria-hidden>
+            <Image
+              src={pojuMark}
+              alt=""
+              width={56}
+              height={56}
+              className="pcm__header-mark-img"
+            />
+          </div>
+          <h1 className="pcm__title pcm__title--gradient">
+            {tMatrix(locale, "main_title")}
+          </h1>
+          <p className="pcm__header-desc">
+            {tMatrix(locale, "main_description")}
+          </p>
           <div className="pcm__header-meta">
             {subjectPrefix ? (
               <span>
@@ -814,13 +828,14 @@ export function PojuEnergyMatrix({
               </span>
             ) : null}
             <span>
-              {tm("born")} {formatBornLine(user_profile)}
+              {tMatrix(locale, "born")} {formatBornLine(user_profile)}
             </span>
             <span>
-              {tm("coordinates")} {formatCoordinates(user_profile, locale)}
+              {tMatrix(locale, "coordinates")}{" "}
+              {formatCoordinates(user_profile, locale)}
             </span>
             <span>
-              {tm("matrix_id")} {matrix_id}
+              {tMatrix(locale, "matrix_id")} {matrix_id}
             </span>
           </div>
         </header>

@@ -7,8 +7,7 @@ import { RichReadingText } from "@/components/cross-product/RichReadingText";
 import { RefundOfferAction } from "@/components/poju/RefundOfferAction";
 import { AssistantMessageActions } from "@/components/poju/AssistantMessageActions";
 import { MainDeliveryView } from "@/components/poju/MainDeliveryView";
-import { MatrixNarrativeReply, matrixNarrativeActionsText } from "@/components/poju/MatrixNarrativeReply";
-import { PojuAiAvatar } from "@/components/poju/PojuAiAvatar";
+import { MatrixNarrativeReply } from "@/components/poju/MatrixNarrativeReply";
 import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
 import { ToolSuggestionCard } from "@/components/poju/ToolSuggestionCard";
 import "@/styles/poju-energy-matrix.css";
@@ -48,23 +47,19 @@ export const MessageBubble = memo(function MessageBubble({
   const isUser = message.role === "user";
   const isWelcomePanel = isAssistantWelcomeMessage(message);
   if (isWelcomePanel && hideWelcomePanel) return null;
+  if (
+    message.role === "assistant" &&
+    message.meta?.kind === "welcome" &&
+    message.meta.matrix_welcome &&
+    message.meta.matrix_payload
+  ) {
+    return <MatrixNarrativeReply payload={message.meta.matrix_payload} locale={locale} />;
+  }
   if (message.role === "assistant" && message.meta?.kind === "energy_matrix" && message.meta.matrix_payload) {
-    const narrativeText = matrixNarrativeActionsText(message.meta.matrix_payload, "en");
     return (
-      <>
-        <div className="pchat__msg pchat__msg--ai">
-          <PojuEnergyMatrix payload={message.meta.matrix_payload} locale="en" compact />
-        </div>
-        <div className="pchat__msg pchat__msg--ai">
-          <div className="pchat__ai-row">
-            <PojuAiAvatar />
-            <div className="pchat__ai">
-              <MatrixNarrativeReply payload={message.meta.matrix_payload} locale="en" />
-              {narrativeText ? <AssistantMessageActions content={narrativeText} locale={locale} /> : null}
-            </div>
-          </div>
-        </div>
-      </>
+      <div className="pchat__msg pchat__msg--ai">
+        <PojuEnergyMatrix payload={message.meta.matrix_payload} locale={locale} compact />
+      </div>
     );
   }
   if (message.role === "assistant" && message.meta?.kind === "paywall") {

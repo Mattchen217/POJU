@@ -1,0 +1,123 @@
+/* Fixed matrix welcome — centered, not chat-bubble layout */
+
+.pmw {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 36rem;
+  margin: 2.75rem auto 1.5rem;
+  padding: 0 1.25rem 0.5rem;
+  text-align: center;
+  color: var(--pcm-on, #e3e0f1);
+}
+
+.pmw__mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 5.5rem;
+  height: 5.5rem;
+  margin: 0 auto 1.35rem;
+  border-radius: 50%;
+  border: 1px solid rgba(242, 202, 80, 0.35);
+  background:
+    radial-gradient(circle at 40% 30%, rgba(242, 202, 80, 0.18), transparent 55%),
+    rgba(27, 26, 38, 0.85);
+  box-shadow:
+    0 0 28px rgba(242, 202, 80, 0.18),
+    inset 0 0 20px rgba(242, 202, 80, 0.06);
+}
+
+.pmw__mark--pulse {
+  animation: pmw-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes pmw-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 20px rgba(242, 202, 80, 0.12),
+      inset 0 0 16px rgba(242, 202, 80, 0.05);
+  }
+  50% {
+    box-shadow:
+      0 0 36px rgba(242, 202, 80, 0.28),
+      inset 0 0 22px rgba(242, 202, 80, 0.1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pmw__mark--pulse {
+    animation: none;
+  }
+}
+
+.pmw__mark-img {
+  width: 2.75rem;
+  height: 2.75rem;
+  object-fit: contain;
+  opacity: 0.95;
+}
+
+.pmw__title {
+  margin: 0 0 1rem;
+  font-family: "Plus Jakarta Sans", var(--font-geist-sans), system-ui, sans-serif;
+  font-size: clamp(1.5rem, 3.5vw, 1.85rem);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.25;
+  color: #fff;
+  background: linear-gradient(135deg, #fff 30%, #f2ca50 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.pmw__intro {
+  margin: 0 auto 1.35rem;
+  max-width: 32rem;
+  font-family: Inter, "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-size: 0.9375rem;
+  font-weight: 400;
+  line-height: 1.7;
+  color: var(--pcm-on-variant, #d0c5af);
+}
+
+.pmw__cta {
+  margin: 0 auto;
+  max-width: 30rem;
+  padding: 1rem 1.15rem;
+  font-family: Inter, "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.65;
+  color: #e3e0f1;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(242, 202, 80, 0.22);
+  background: rgba(242, 202, 80, 0.06);
+}
+
+.pmw__loading {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--pcm-on-variant, #d0c5af);
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 640px) {
+  .pmw {
+    margin-top: 2rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .pmw__mark {
+    width: 4.75rem;
+    height: 4.75rem;
+    margin-bottom: 1.1rem;
+  }
+
+  .pmw__mark-img {
+    width: 2.35rem;
+    height: 2.35rem;
+  }
+}

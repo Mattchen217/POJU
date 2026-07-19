@@ -1414,7 +1414,13 @@
       "hidden_empty": "Oculto: —",
       "lunar": "Lunar",
       "layers_title": "Lectura en cuatro capas",
-      "layers_em": "capas de mecanismo"
+      "layers_em": "capas de mecanismo",
+      "welcome": {
+        "title": "Bienvenido a POJU",
+        "intro": "POJU une tres milenios de sabiduría temporal oriental con el método científico moderno para ayudarte con la pregunta o el bloqueo concreto que enfrentas ahora. No es adivinación: es una guía clara alineada con tu estructura energética.",
+        "cta": "Escribe abajo el dilema que aún no puedes decidir y envíalo. Lo leeré junto a tu matriz y lo desglosaremos paso a paso.",
+        "loading": "POJU se está preparando…"
+      }
     },
     "template": {
       "season_transition": "Transición estacional en curso",

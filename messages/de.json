@@ -1414,7 +1414,13 @@
       "hidden_empty": "Verborgen: —",
       "lunar": "Mondkalender",
       "layers_title": "Vier-Schichten-Lesung",
-      "layers_em": "Mechanismus-Schichten"
+      "layers_em": "Mechanismus-Schichten",
+      "welcome": {
+        "title": "Willkommen bei POJU",
+        "intro": "POJU verbindet dreitausend Jahre östlicher Zeit-Weisheit mit moderner wissenschaftlicher Methode — für die konkrete Frage oder Blockade, vor der du jetzt stehst. Kein Wahrsagen: klare Orientierung, abgestimmt auf deine Energiestruktur.",
+        "cta": "Schreibe unten das Dilemma, das du noch nicht entscheiden kannst, und sende es. Ich lese es an deiner Matrix und wir gehen es Schritt für Schritt durch.",
+        "loading": "POJU bereitet sich vor…"
+      }
     },
     "template": {
       "season_transition": "Jahreszeitenübergang im Gange",

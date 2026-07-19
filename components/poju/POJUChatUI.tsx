@@ -78,8 +78,7 @@ import {
   setExpiryReminderSnoozed,
   shouldShowExpiryWarning,
 } from "@/lib/poju/expiry-reminder";
-import { MatrixNarrativeReply, matrixNarrativeActionsText } from "@/components/poju/MatrixNarrativeReply";
-import { AssistantMessageActions } from "@/components/poju/AssistantMessageActions";
+import { MatrixNarrativeReply } from "@/components/poju/MatrixNarrativeReply";
 import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
 import { PojuPaywallInline } from "@/components/poju/PojuPaywallInline";
 import { MainDeliveryView } from "@/components/poju/MainDeliveryView";
@@ -1625,15 +1624,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       if (isMatrixWelcomeMessage(m)) {
         const payload = m.meta?.matrix_payload ?? session.matrix_payload;
         if (payload) {
-          const actionsText = matrixNarrativeActionsText(payload, locale);
-          slots[mid] = (
-            <>
-              <MatrixNarrativeReply payload={payload} locale={locale} />
-              {actionsText ? (
-                <AssistantMessageActions content={actionsText} locale={locale} />
-              ) : null}
-            </>
-          );
+          bareIds.add(mid);
+          slots[mid] = <MatrixNarrativeReply payload={payload} locale={locale} />;
         }
       }
       if (m.meta?.contains_delivery) {
