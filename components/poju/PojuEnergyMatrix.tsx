@@ -143,16 +143,19 @@ function RadarChart({
       chart.setOption({
         backgroundColor: "transparent",
         radar: {
+          // Leave headroom for axis labels (esp. top 「精炼」) — large radius clips canvas edges.
           center: ["50%", "52%"],
-          radius: "86%",
+          radius: "62%",
           startAngle: 90,
           splitNumber: 4,
+          axisNameGap: 12,
           axisName: {
-            color: "rgba(255,255,255,0.78)",
-            fontSize: 11,
-            fontWeight: 500,
-            fontFamily: "Inter, system-ui, sans-serif",
-            padding: [0, 4],
+            color: "rgba(255,255,255,0.94)",
+            fontSize: 15,
+            fontWeight: 600,
+            fontFamily:
+              '"Noto Sans SC", "PingFang SC", "Microsoft YaHei", Inter, system-ui, sans-serif',
+            padding: [2, 6],
           },
           splitLine: { lineStyle: { color: "rgba(255,255,255,0.13)" } },
           splitArea: { areaStyle: { color: ["rgba(255,255,255,0.02)", "rgba(255,255,255,0.05)"] } },
@@ -301,8 +304,8 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
                 <Image
                   src={zodiacIcon}
                   alt=""
-                  width={56}
-                  height={56}
+                  width={72}
+                  height={72}
                   className="zsign__icon"
                 />
               ) : (
@@ -316,35 +319,40 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
                   <SoftTermHover
                     slug={zdSlug}
                     locale={locale}
-                    fallback={display.zodiac.en}
+                    fallback={isZh ? display.zodiac.han : display.zodiac.en}
                   />
+                ) : isZh ? (
+                  display.zodiac.han
                 ) : (
                   display.zodiac.en
                 );
               })()}
             </div>
             <div className="zsign__cn">
-              {(() => {
-                const zdSlug = zodiacHanToSlug(display.zodiac.han);
-                return zdSlug ? (
-                  <>
-                    <SoftTermHover
-                      slug={zdSlug}
-                      locale={locale.startsWith("zh") ? locale : "zh"}
-                      fallback={display.zodiac.han}
-                    />
-                    {" · "}
-                    {display.zodiac.pinyin}
-                  </>
-                ) : (
-                  <>
-                    {display.zodiac.han} · {display.zodiac.pinyin}
-                  </>
-                );
-              })()}
+              {isZh ? (
+                display.zodiac.pinyin
+              ) : (
+                (() => {
+                  const zdSlug = zodiacHanToSlug(display.zodiac.han);
+                  return zdSlug ? (
+                    <>
+                      <SoftTermHover
+                        slug={zdSlug}
+                        locale="zh"
+                        fallback={display.zodiac.han}
+                      />
+                      {" · "}
+                      {display.zodiac.pinyin}
+                    </>
+                  ) : (
+                    <>
+                      {display.zodiac.han} · {display.zodiac.pinyin}
+                    </>
+                  );
+                })()
+              )}
             </div>
             <div className="zsign__tag">{tc("your_sign_tag")}</div>
-            <div className="zsign__note">{display.zodiac.note}</div>
           </div>
 
           <div className="topband__calibration">
@@ -375,7 +383,8 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
           <div className="tcard a tcard--nested tcard--hero-tst">
             <div className="k">
               <span className="bull" />
-              {tc("true_solar_time")} <em>· {tc("true_solar_time_em")}</em>
+              <SoftTermHover slug="tm_true_solar_time" locale={locale} />
+              <em>· {tc("true_solar_time_em")}</em>
             </div>
             {tst ? (
               <>
@@ -388,7 +397,9 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
                     <div className="arr">→</div>
                     <div className="t">
                       <div className="vv gold">{tst.true_solar_time}</div>
-                      <div className="kk">{tc("true_solar")}</div>
+                      <div className="kk">
+                        <SoftTermHover slug="tm_true_solar_time" locale={locale} />
+                      </div>
                     </div>
                   </div>
                   {tst.diff_minutes !== 0 ? (
@@ -675,13 +686,10 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
                       {tc("fact_era")} <em>· {tc("fact_era_em")}</em>
                     </div>
                     <div className="ro__v ro__v--metric">
-                      <span className="fact-theme">{fp.era.theme}</span>
-                      <span className="pct">
-                        {fp.era.age_range}
-                        {fp.era.start_year
-                          ? ` · ${fp.era.start_year}`
-                          : ""}
-                      </span>
+                      <span className="fact-theme">{fp.era.age_range}</span>
+                      {fp.era.start_year ? (
+                        <span className="pct">{fp.era.start_year}</span>
+                      ) : null}
                     </div>
                     <div className="fact-chips">
                       {fp.era.stem_element_soft ? (
@@ -968,12 +976,7 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
                           key={star.id}
                           className={`star star--${star.polarity}${MAJOR_SHENSHA.has(star.id) || MAJOR_SHENSHA.has(star.zh_src) ? " star--major" : ""}`}
                         >
-                          ✦{" "}
-                          <SoftTermHover
-                            slug={star.id}
-                            locale={locale}
-                            fallback={star.label}
-                          />
+                          ✦ {star.label}
                         </span>
                       ))}
                     </>

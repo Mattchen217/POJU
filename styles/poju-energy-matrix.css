@@ -1,4 +1,4 @@
-/* POJU Energy Matrix — scoped from POJU Space-Time Matrix (EN).html */
+/* POJU Energy Matrix ? scoped from POJU Space-Time Matrix (EN).html */
 .pem {
   --bg: #08070d;
   --panel: rgba(255, 255, 255, 0.028);
@@ -112,7 +112,7 @@
   margin-top: 0;
   position: relative;
   border-radius: 28px;
-  /* Dark solid base — backdrop-filter is enhancement only (iOS Reduce Transparency / no blur) */
+  /* Dark solid base ? backdrop-filter is enhancement only (iOS Reduce Transparency / no blur) */
   background-color: rgba(10, 8, 18, 0.96);
   background-image: linear-gradient(180deg, rgba(28, 22, 46, 0.9), rgba(10, 8, 18, 0.96));
   backdrop-filter: var(--glass-blur);
@@ -427,7 +427,7 @@
   margin-bottom: 18px;
 }
 
-/* ── Five Elements dashboard: 2 left + 3 right balanced grid ── */
+/* ?? Five Elements dashboard: 2 left + 3 right balanced grid ?? */
 .pem-wuxing-grid {
   align-items: stretch;
 }
@@ -698,7 +698,7 @@
   justify-content: flex-start;
 }
 
-/* Inside chat column — stack wuxing panels full width (mobile only) */
+/* Inside chat column ? stack wuxing panels full width (mobile only) */
 @media (max-width: 767px) {
   .pchat__ai .pem-wuxing-grid {
     grid-template-columns: 1fr;
@@ -834,21 +834,29 @@
 }
 
 .pem .block--fill .side .ro {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
-/* Lifecycle right column: local fact cards (aligned to timeline height) */
+.pem .block--fill .side--facts .ro {
+  flex: unset;
+  height: 100%;
+}
+
+/* Lifecycle right column: 2?2 fact cards (less tall empty stretch) */
 .pem .side--facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 10px;
   min-height: 0;
+  align-content: stretch;
 }
 
 .pem .side--facts .ro--fact {
-  flex: 1 1 0;
+  flex: unset;
   min-height: 0;
+  min-width: 0;
   justify-content: flex-start;
   gap: 6px;
   padding: 12px 14px;
@@ -872,7 +880,7 @@
 .pem .fact-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 10px 14px;
   margin-top: 2px;
 }
 
@@ -880,35 +888,37 @@
   display: inline-flex;
   align-items: center;
   font-family: var(--mono);
-  font-size: 10.5px;
-  line-height: 1.2;
-  padding: 3px 8px;
-  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1.25;
+  padding: 0;
+  border-radius: 0;
   color: var(--ink-dim);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: none;
+  border: none;
 }
 
 .pem .fact-chip--green {
   color: var(--w);
-  background: rgba(84, 179, 148, 0.12);
-  border-color: rgba(84, 179, 148, 0.22);
+  background: none;
+  border: none;
 }
 
 .pem .fact-chip--red {
   color: var(--f);
-  background: rgba(223, 111, 87, 0.12);
-  border-color: rgba(223, 111, 87, 0.22);
+  background: none;
+  border: none;
 }
 
 .pem .fact-chip--gold {
   color: var(--gold-soft, #f2c994);
-  background: rgba(242, 201, 148, 0.12);
-  border-color: rgba(242, 201, 148, 0.22);
+  background: none;
+  border: none;
 }
 
 .pem .fact-chip--muted {
   opacity: 0.55;
+  background: none;
+  border: none;
 }
 
 .pem .fact-row {
@@ -923,9 +933,11 @@
   font-family: var(--mono);
   font-size: 10px;
   font-weight: 600;
-  padding: 2px 6px;
-  border-radius: 5px;
+  padding: 0;
+  border-radius: 0;
   margin-top: 1px;
+  background: none;
+  border: none;
 }
 
 .pem .side--facts .tprog {
@@ -1357,7 +1369,7 @@
 }
 
 .pem .pl.day {
-  /* Day · Self cap styling only — segment highlight via pl--segment-active */
+  /* Day ? Self cap styling only ? segment highlight via pl--segment-active */
 }
 
 .pem .pl.pl--segment-active {
@@ -1429,16 +1441,10 @@
   margin-top: 4px;
 }
 
-.pem .pl .star--support {
-  color: rgba(251, 191, 36, 0.88);
-}
-
-.pem .pl .star--edge {
-  color: rgba(255, 255, 255, 0.75);
-}
-
+.pem .pl .star--support,
+.pem .pl .star--edge,
 .pem .pl .star--pressure {
-  color: rgba(217, 169, 120, 0.82);
+  color: var(--ink-mute);
 }
 
 .pem .pl .star__glyph {
@@ -1524,7 +1530,7 @@
   display: block;
   font-size: 11.5px;
   line-height: 1.45;
-  color: var(--gold-soft);
+  color: var(--ink-mute);
   margin-top: 5px;
 }
 
@@ -1609,7 +1615,7 @@
   margin-bottom: 1em;
 }
 
-/* ── Matrix embedded in chat (bare slot — not inside .pchat__ai) ── */
+/* ?? Matrix embedded in chat (bare slot ? not inside .pchat__ai) ?? */
 .pchat .pem {
   width: 100%;
   min-width: 0;
@@ -1918,7 +1924,7 @@
   margin-bottom: 10px;
 }
 
-/* iOS「降低透明度」/ 不支持 backdrop-filter 时 — 去掉毛玻璃，保留深色实底 */
+/* iOS???????/ ??? backdrop-filter ? ? ???????????? */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .pem .device,
   .pem .tcard,
@@ -1953,7 +1959,7 @@
   }
 }
 
-/* ── v2: transparent matrix on starfield (bazibiaoge layout) ── */
+/* ?? v2: transparent matrix on starfield (bazibiaoge layout) ?? */
 
 .pem-matrix-body {
   --pem-surface: rgba(18, 20, 26, 0.42);
@@ -2002,42 +2008,47 @@
 }
 
 .pem-matrix-body .tcard.zsign {
-  padding: 14px 12px 12px;
+  padding: 22px 16px 20px;
   max-width: 220px;
   width: 100%;
   justify-self: start;
+  justify-content: center;
 }
 
 .pem-matrix-body .zsign__art {
-  width: 72px;
-  height: 72px;
-  margin-bottom: 10px;
+  width: 88px;
+  height: 88px;
+  margin-bottom: 14px;
+}
+
+.pem-matrix-body .zsign__art span {
+  font-size: 40px;
 }
 
 .pem-matrix-body .zsign__icon {
-  width: 56px;
-  height: 56px;
+  width: 72px;
+  height: 72px;
 }
 
 .pem-matrix-body .zsign__en {
-  font-size: 19px;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  color: var(--gold-soft);
 }
 
 .pem-matrix-body .zsign__cn {
-  font-size: 12px;
-  margin-top: 4px;
+  font-size: 14px;
+  margin-top: 8px;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .pem-matrix-body .zsign__tag {
-  font-size: 9px;
-  margin-top: 8px;
-}
-
-.pem-matrix-body .zsign__note {
-  font-size: 10.5px;
-  line-height: 1.45;
-  margin-top: 8px;
-  padding-top: 8px;
+  font-size: 11px;
+  margin-top: 14px;
+  letter-spacing: 0.14em;
 }
 
 .pem-matrix-body .tcard {
@@ -2154,12 +2165,13 @@
   background: var(--pem-surface);
   border: 1px solid var(--pem-border);
   border-radius: 12px;
-  padding: 16px 18px 12px;
-  min-height: 300px;
+  padding: 16px 18px 14px;
+  min-height: 320px;
   display: flex;
   flex-direction: column;
   position: relative;
-  overflow: hidden;
+  /* visible so top axis label (??) is not clipped by the panel edge */
+  overflow: visible;
 }
 
 .pem-matrix-body .pem-panel--radar::before {
@@ -2219,20 +2231,22 @@
 
 .pem-matrix-body .pem-panel__body--radar {
   flex: 1;
-  min-height: 240px;
+  min-height: 260px;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
   z-index: 1;
+  /* Avoid clipping ECharts axis names at the top edge. */
+  overflow: visible;
 }
 
 .pem-matrix-body .pem-panel__body--radar .radar,
 .pem-matrix-body .pem-panel__body--radar .radar.radar--compact {
   width: 100%;
-  min-height: 260px;
-  height: 260px;
-  max-height: 320px;
+  min-height: 280px;
+  height: 280px;
+  max-height: 340px;
 }
 
 .pem-matrix-body .pem-panel--bars .erow {
@@ -2505,13 +2519,30 @@
 
 @media (min-width: 1024px) {
   .pem-matrix-body .block.block--fill {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
     align-items: stretch;
   }
 }
 
 .pem-matrix-body .block.block--fill .side {
   height: 100%;
+}
+
+.pem-matrix-body .side--facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.pem-matrix-body .side--facts .ro--fact {
+  min-height: 0;
+}
+
+@media (max-width: 767px) {
+  .pem .side--facts,
+  .pem-matrix-body .side--facts {
+    grid-template-columns: 1fr;
+  }
 }
 
 .pem-matrix-body .dialpanel::before,
@@ -2600,8 +2631,8 @@
 
   .pem-matrix-body .pem-panel__body--radar .radar,
   .pem-matrix-body .pem-panel__body--radar .radar.radar--compact {
-    min-height: 220px;
-    height: 220px;
+    min-height: 240px;
+    height: 240px;
   }
 
   .pem-matrix-body .pillars {
@@ -2623,7 +2654,7 @@
   }
 }
 
-/* Fa?ade compliance �� amplify calibration �� layered pillars (no ganzhi seals) */
+/* Fa?ade compliance ?? amplify calibration ?? layered pillars (no ganzhi seals) */
 .pem-matrix-body .topband__calibration-grid--hero {
   gap: 0.75rem;
 }

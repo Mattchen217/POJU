@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { getBaziChart } from "shunshi-bazi-core";
 
+import { SoftTermHover } from "@/components/cross-product/GlossaryText";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import { buildMatrixTopbandData } from "@/lib/poju/build-matrix-display";
 import { resolveBaziLabel } from "@/lib/poju/resolve-bazi-i18n";
@@ -85,7 +86,6 @@ export function BaseAnalysisIdentityBand({
               {display.zodiac.han} · {display.zodiac.pinyin}
             </div>
             <div className="zsign__tag">{tc("your_sign_tag")}</div>
-            <div className="zsign__note">{display.zodiac.note}</div>
           </div>
 
           <div className="topband__calibration">
@@ -108,7 +108,8 @@ export function BaseAnalysisIdentityBand({
               <div className="tcard a tcard--nested">
                 <div className="k">
                   <span className="bull" />
-                  {tc("true_solar_time")} <em>· {tc("true_solar_time_em")}</em>
+                  <SoftTermHover slug="tm_true_solar_time" locale={locale} />
+                  <em>· {tc("true_solar_time_em")}</em>
                 </div>
                 {tst ? (
                   <>
@@ -121,7 +122,9 @@ export function BaseAnalysisIdentityBand({
                         <div className="arr">→</div>
                         <div className="t">
                           <div className="vv gold">{tst.true_solar_time}</div>
-                          <div className="kk">{tc("true_solar")}</div>
+                          <div className="kk">
+                            <SoftTermHover slug="tm_true_solar_time" locale={locale} />
+                          </div>
                         </div>
                       </div>
                       {tst.diff_minutes !== 0 ? (

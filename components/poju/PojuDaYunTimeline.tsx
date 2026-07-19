@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslations } from "next-intl";
 
-import { DA_YUN_THEMES, getStemInfo } from "@/lib/poju/bazi-matrix-mappings";
+import { getStemInfo } from "@/lib/poju/bazi-matrix-mappings";
 import type { DaYunEntry } from "@/lib/calculations/lunar-dayun";
 import { SoftTermHover } from "@/components/cross-product/GlossaryText";
 import {
@@ -35,7 +35,6 @@ export function PojuDaYunTimeline({ daYun, currentIndex, currentAge, locale }: P
     return list.map((entry, i) => ({
       entry,
       next: list[i + 1],
-      theme: DA_YUN_THEMES[i] ?? DA_YUN_THEMES[0],
       isNow: i === currentIndex,
       isFirst: i === 0,
       isLast: i === list.length - 1,
@@ -91,7 +90,8 @@ export function PojuDaYunTimeline({ daYun, currentIndex, currentAge, locale }: P
                 ) : null}
                 <div className="dayun-timeline__copy">
                   <div className="dayun-timeline__range">
-                    {ageLabel(phase.entry, phase.next)} · {phase.theme}
+                    {ageLabel(phase.entry, phase.next)}
+                    {phase.entry.start_year ? ` · ${phase.entry.start_year}` : ""}
                   </div>
                   {phase.isNow ? (
                     <div className="dayun-timeline__sub">
@@ -119,11 +119,9 @@ export function PojuDaYunTimeline({ daYun, currentIndex, currentAge, locale }: P
                       </span>
                     );
                   }
-                  return (
-                    <span className="dayun-timeline__phase">
-                      {elNode || phase.theme}
-                    </span>
-                  );
+                  return elNode ? (
+                    <span className="dayun-timeline__phase">{elNode}</span>
+                  ) : null;
                 })()}
               </div>
             </div>

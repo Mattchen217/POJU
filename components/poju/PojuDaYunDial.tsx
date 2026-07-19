@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 
-import { DA_YUN_THEMES } from "@/lib/poju/bazi-matrix-mappings";
+import { dayunThemeLabel } from "@/lib/poju/bazi-matrix-mappings";
 import type { DaYunEntry } from "@/lib/calculations/lunar-dayun";
 
 type Props = {
@@ -55,10 +55,10 @@ export function PojuDaYunDial({ daYun, currentIndex, hub, currentAge, locale }: 
     return list.map((entry, i) => ({
       entry,
       next: list[i + 1],
-      theme: DA_YUN_THEMES[i] ?? DA_YUN_THEMES[0],
+      theme: dayunThemeLabel(i, locale),
       isNow: i === currentIndex,
     }));
-  }, [daYun, currentIndex]);
+  }, [daYun, currentIndex, locale]);
 
   const zh = locale.startsWith("zh");
 

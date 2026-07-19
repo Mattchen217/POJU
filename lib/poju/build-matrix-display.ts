@@ -4,7 +4,7 @@ import { Solar } from "lunar-typescript";
 import type { ProfileStrength, ProfileStructured, PillarDetail } from "@/lib/calculations/build-profile-structured";
 import type { DaYunEntry } from "@/lib/calculations/lunar-dayun";
 import {
-  DA_YUN_THEMES,
+  dayunThemeLabel,
   ELEMENT_ZH,
   elementLabelLocalized,
   formatHiddenStemsDisplay,
@@ -348,7 +348,7 @@ export function buildMatrixDisplayData(input: {
   const dayunIdx = resolveDayunIndex(structured.da_yun, age);
   const currentDy = structured.da_yun[dayunIdx];
   const nextDy = structured.da_yun[dayunIdx + 1];
-  const theme = DA_YUN_THEMES[dayunIdx] ?? DA_YUN_THEMES[0];
+  const theme = dayunThemeLabel(dayunIdx, locale);
 
   const pillars: MatrixPillarDisplay[] = pd
     ? (["year", "month", "day", "hour"] as const).map((k) => enrichPillar(pd[k], locale))

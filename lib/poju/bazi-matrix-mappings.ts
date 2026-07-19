@@ -61,6 +61,10 @@ export const TEN_GOD_ARCHETYPE: Record<string, string> = {
   元女: "The Self",
 };
 
+/**
+ * Decorative decade-slot themes (by 大运 index) — local façade labels, not SSOT 命理 terms.
+ * English kept as default; resolve via `dayunThemeLabel(index, locale)`.
+ */
 export const DA_YUN_THEMES = [
   "Resource",
   "Expression",
@@ -71,6 +75,51 @@ export const DA_YUN_THEMES = [
   "Wisdom",
   "Return",
 ] as const;
+
+const DA_YUN_THEMES_I18N: Record<"zh" | "en" | "es" | "de" | "fr", readonly string[]> = {
+  en: DA_YUN_THEMES,
+  zh: ["蓄源", "展露", "显扬", "锤炼", "扎根", "掌局", "通明", "归复"],
+  es: [
+    "Recurso",
+    "Expresión",
+    "Visibilidad",
+    "Forja",
+    "Raíz",
+    "Autoridad",
+    "Sabiduría",
+    "Retorno",
+  ],
+  de: [
+    "Ressource",
+    "Ausdruck",
+    "Sichtbarkeit",
+    "Schmiede",
+    "Verwurzelung",
+    "Autorität",
+    "Weisheit",
+    "Rückkehr",
+  ],
+  fr: [
+    "Ressource",
+    "Expression",
+    "Visibilité",
+    "Forge",
+    "Enracinement",
+    "Autorité",
+    "Sagesse",
+    "Retour",
+  ],
+};
+
+/** Locale-aware decade theme for the current 大运 slot (not an SSOT soft term). */
+export function dayunThemeLabel(index: number, locale: string): string {
+  const base = (locale || "en").toLowerCase().split(/[-_]/)[0]!;
+  const loc =
+    base === "zh" || base === "es" || base === "de" || base === "fr" ? base : "en";
+  const list = DA_YUN_THEMES_I18N[loc];
+  const i = Math.max(0, Math.min(index, list.length - 1));
+  return list[i] ?? list[0]!;
+}
 
 export const ZODIAN_HAN_TO_EN: Record<string, string> = {
   鼠: "Rat",

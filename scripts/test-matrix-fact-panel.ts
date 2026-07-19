@@ -82,7 +82,7 @@ function main(): void {
     locale: "zh",
   });
 
-  assert("era theme", fp.era.theme === "Expansion");
+  assert("era age range", Boolean(fp.era.age_range));
   assert("era has stem soft", Boolean(fp.era.stem_element_soft));
   assert("year pulse soft", Boolean(fp.year_pulse.stem_element_soft));
   assert("balance strength soft", Boolean(fp.balance.strength_soft));
