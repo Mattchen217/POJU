@@ -1841,9 +1841,49 @@ export function auditRelationsAgainstInstance(
   return hits;
 }
 
-/** Ganzhi / stem-element surfaces banned in user-visible plain (tooltip) slots. */
-const PLAIN_SLOT_GANZHI_RE =
-  /[甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥]|[甲乙丙丁戊己庚辛壬癸][木火土金水]/;
+/**
+ * 白话槽（tooltip）里的裸命理词检测 —— 【只抓 2 字以上】，从 SSOT 派生。
+ *
+ * ⚠️ 绝不逐字匹配单个天干/地支/五行：己=自己、子=日子、午=中午、金=资金、水=水流…全是日常字。
+ * 2026-07-19：单字正则把「保护自己」的「己」判为裸天干 → repair 死循环 → 用户等到关闭。
+ *
+ * 真正该抓的裸命理词全是 ≥2 字：
+ *   · 干支组合：辛金 / 己土 / 戊辰 / 丙寅
+ *   · 关系：相刑 / 相冲 / 半合 / 三合
+ *   · 十神：食神 / 偏财  · 柱位：时柱 / 年柱  · 神煞：天乙贵人…
+ * 单字五行（水/木）能不能打标由【上下文】决定 → 是打标器 wrapBareWuxingInMingliContext 的活，
+ * 不是审计的活。审计对单字五行【什么都不做】。
+ */
+const BARE_GANZHI_COMPOUND_RE =
+  // 干支+五行(辛金/己土) | 天干+地支(戊辰) | 地支+地支+相?+刑冲害合(巳寅相刑/子午冲)
+  /[甲乙丙丁戊己庚辛壬癸][木火土金水]|[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]|[子丑寅卯辰巳午未申酉戌亥]{2}相?[冲刑害合破]/;
+
+/** SSOT 里所有 ≥2 字的 traditional + aliases（关系/十神/柱位/神煞…），审计据此查表。 */
+const SSOT_BARE_TERMS_ZH: readonly string[] = (() => {
+  const out = new Set<string>();
+  for (const t of POJU_TERMS) {
+    if (t.ns !== "bazi") continue;
+    for (const w of [t.traditional, ...(t.aliases ?? [])]) {
+      // 只收 ≥2 字，且不是纯单字五行/干支（那些交打标器）
+      if (w && w.length >= 2) out.add(w);
+    }
+  }
+  return [...out].sort((a, b) => b.length - a.length); // 长词优先
+})();
+
+/**
+ * 白话槽里有没有裸命理词（2+字）。有 → 返回命中的词；无 → null。
+ * 替代旧的单字 PLAIN_SLOT_GANZHI_RE / GANZHI_IN_SOFT。
+ */
+export function bareMingliWordInPlain(plain: string): string | null {
+  if (!plain) return null;
+  const compound = plain.match(BARE_GANZHI_COMPOUND_RE);
+  if (compound) return compound[0];
+  for (const w of SSOT_BARE_TERMS_ZH) {
+    if (plain.includes(w)) return w;
+  }
+  return null;
+}
 
 /** Ten-god originals + umbrella — must not appear in contextual plain (tooltip). */
 const PLAIN_SLOT_TEN_GOD_BANS_ZH = ["十神", ...CLOSED_TEN_GODS] as const;
@@ -1869,9 +1909,10 @@ export function auditMarkerPlainBanned(text: string, locale = "zh"): OutOfSetAud
     const snippet = plain.slice(0, 48);
 
     if (zh) {
-      const ganzhi = plain.match(PLAIN_SLOT_GANZHI_RE);
-      if (ganzhi) {
-        hits.push({ label: `marker_plain_banned:${ganzhi[0]}`, snippet });
+      // 只抓 2+字裸命理词（查 SSOT 表）；单字五行/干支交打标器上下文判，审计不碰。
+      const bare = bareMingliWordInPlain(plain);
+      if (bare) {
+        hits.push({ label: `marker_plain_banned:${bare}`, snippet });
       }
       for (const term of termBansZh) {
         if (plain.includes(term)) {
@@ -1916,8 +1957,7 @@ export function auditMarkerCompleteness(text: string, locale = "zh"): OutOfSetAu
     });
   }
 
-  const GANZHI_IN_SOFT =
-    /[甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥]|[甲乙丙丁戊己庚辛壬癸][木火土金水]/;
+  // 已删除单字 GANZHI_IN_SOFT —— 改用 bareMingliWordInPlain（2+字，SSOT 派生）。
 
   for (const m of parseTermMarkers(text)) {
     // Standard 2-slot `⟦t:slug|plain⟧` — plain is slot2. Compat 3-slot — plain is slot3.
@@ -1934,8 +1974,8 @@ export function auditMarkerCompleteness(text: string, locale = "zh"): OutOfSetAu
     } else if (/^(the|a|an)\s/i.test(vis)) {
       hits.push({ label: "marker_visible_leading_article", snippet: vis.slice(0, 40) });
     }
-    // Compat slot-2 soft must be vernacular — never leak stem+element or bare Ganzhi.
-    if (GANZHI_IN_SOFT.test(vis)) {
+    // Compat slot-2 soft must be vernacular — only 2+字裸命理词（单字干支/五行不碰）。
+    if (bareMingliWordInPlain(vis) !== null) {
       hits.push({ label: "marker_visible_ganzhi", snippet: vis.slice(0, 40) });
     }
   }

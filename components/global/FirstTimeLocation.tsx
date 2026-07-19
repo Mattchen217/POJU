@@ -35,6 +35,7 @@ async function detectAndCacheLocation(): Promise<void> {
   const runIp = async () => {
     try {
       const loc = await ipLocate();
+      if (!loc) return; // located:false → 手动选择，不 toast
       cacheUserLocation({ ...loc, source: "ip", cached_at: Date.now() });
     } catch {
       // BirthLocationField falls back to timezone city
@@ -47,25 +48,26 @@ async function detectAndCacheLocation(): Promise<void> {
   }
 }
 
-async function ipLocate(): Promise<Omit<UserLocation, "source" | "cached_at">> {
+async function ipLocate(): Promise<Omit<UserLocation, "source" | "cached_at"> | null> {
   const res = await fetch("/api/location/ip-locate");
-  if (!res.ok) {
-    throw new Error(`ip_locate_${res.status}`);
-  }
+  if (!res.ok) return null;
   const data = (await res.json()) as {
+    located?: boolean;
     city?: string;
     region?: string;
     country_name?: string;
     latitude?: number;
     longitude?: number;
   };
+  // 查不到 → 静默回退手动选择，不当错误 toast。
   if (
+    data.located === false ||
     !data.city ||
     !data.country_name ||
     typeof data.latitude !== "number" ||
     typeof data.longitude !== "number"
   ) {
-    throw new Error("ip_locate_incomplete");
+    return null;
   }
   return {
     city: data.city,

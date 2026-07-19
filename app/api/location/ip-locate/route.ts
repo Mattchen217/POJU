@@ -10,12 +10,16 @@ export async function GET(req: Request) {
 
   const url = userIp ? `https://ipapi.co/${userIp}/json/` : "https://ipapi.co/json/";
 
+  // 地理预填是非关键功能：查不到就让前端回退到手动选择，绝不 502/500 报错阻塞。
+  // 统一返回 200，用 { located: false } 告诉前端"没查到，走手动"，不当错误处理。
   try {
-    const res = await fetch(url, { next: { revalidate: 3600 } });
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 3000); // 免费库慢，3s 超时即放弃
+    const res = await fetch(url, { next: { revalidate: 3600 }, signal: ctrl.signal });
+    clearTimeout(timer);
     if (!res.ok) {
-      return NextResponse.json({ error: "ip_lookup_failed" }, { status: 502 });
+      return NextResponse.json({ located: false, reason: "lookup_unavailable" }, { status: 200 });
     }
-
     const data = (await res.json()) as {
       city?: string;
       region?: string;
@@ -25,15 +29,14 @@ export async function GET(req: Request) {
       error?: boolean;
       reason?: string;
     };
-
     if (data.error || !data.city || !data.country_name) {
       return NextResponse.json(
-        { error: data.reason ?? "ip_lookup_incomplete" },
-        { status: 422 },
+        { located: false, reason: data.reason ?? "incomplete" },
+        { status: 200 },
       );
     }
-
     return NextResponse.json({
+      located: true,
       city: data.city,
       region: data.region,
       country_name: data.country_name,
@@ -41,7 +44,8 @@ export async function GET(req: Request) {
       longitude: data.longitude,
     });
   } catch (e) {
-    console.error("[location/ip-locate]", e);
-    return NextResponse.json({ error: "ip_lookup_error" }, { status: 500 });
+    // 超时/网络错误也是"没查到"，不是服务器错误。debug 级日志，不刷 error。
+    console.debug("[location/ip-locate] soft-fail:", (e as Error)?.name ?? e);
+    return NextResponse.json({ located: false, reason: "lookup_error" }, { status: 200 });
   }
 }
