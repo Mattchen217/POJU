@@ -384,7 +384,10 @@ export function PojuEnergyMatrix({
                     <span className="pcm-cal__unit">{tc("gregorian")}</span>
                   </div>
                   {display.calendar.lunar ? (
-                    <div className="pcm-cal__sub">{display.calendar.lunar}</div>
+                    <div className="pcm-cal__sub">
+                      {display.calendar.lunar}{" "}
+                      <span className="pcm-cal__unit">{tc("lunar")}</span>
+                    </div>
                   ) : null}
                   <div className="pcm-cal__accent">
                     {display.calendar.headline}
@@ -653,37 +656,75 @@ export function PojuEnergyMatrix({
             </div>
 
             <div className="pcm-facts pcm__span-8">
-              <div className="pcm-card">
-                <div className="pcm-label pcm-label--flush pcm-label--gold">
-                  {tc("fact_era")} · {tc("fact_era_em")}
-                </div>
-                <div className="pcm-type-xl" style={{ fontFamily: "var(--pcm-mono)", letterSpacing: "0.04em" }}>
-                  {fp.era.age_range}{" "}
-                  <span className="pcm-type-body" style={{ fontWeight: 400, color: "var(--pcm-on-variant)", marginLeft: "0.5rem" }}>
-                    {[fp.era.start_year, fp.era.stem_element_soft, fp.era.ten_god_soft]
-                      .filter(Boolean)
-                      .join(" ")}
-                  </span>
-                </div>
-                <div className="pcm-chips" style={{ marginTop: "1.25rem" }}>
-                  {fp.era.stem_element_soft ? (
-                    <PcmChip
-                      soft={fp.era.stem_element_soft}
-                      slug={fp.era.stem_element_slug}
-                      locale={locale}
-                      tone="gold"
-                    />
-                  ) : null}
-                  {fp.era.ten_god_soft ? (
-                    <PcmChip
-                      soft={fp.era.ten_god_soft}
-                      slug={fp.era.ten_god_slug}
-                      locale={locale}
-                      tone="cyan"
-                    />
-                  ) : null}
-                </div>
-              </div>
+              {(() => {
+                const layerKeys = ["year", "month", "day", "hour"] as const;
+                const layerIdx = layerKeys.indexOf(lifeSegmentPillar);
+                const activePl = display.pillars[layerIdx >= 0 ? layerIdx : 0];
+                const layerRoleSoft = activePl
+                  ? isZh
+                    ? activePl.ten_god
+                    : activePl.ten_god_en
+                  : "";
+                const layerRoleSlug = activePl
+                  ? lifeSegmentPillar === "day" &&
+                    (!activePl.ten_god_han ||
+                      activePl.ten_god_han === "日主" ||
+                      activePl.ten_god === "日主")
+                    ? "day_master"
+                    : matrixTermSlug(activePl.ten_god_han) ??
+                      matrixTermSlug(activePl.ten_god) ??
+                      matrixTermSlug(activePl.ten_god_en)
+                  : null;
+                const layerStemSlug = activePl?.stem_element
+                  ? elementToSlug(activePl.stem_element)
+                  : null;
+                return (
+                  <div className="pcm-card">
+                    <div className="pcm-label pcm-label--flush pcm-label--gold">
+                      {tc("fact_era")} · {tc("fact_era_em")}
+                    </div>
+                    <div
+                      className="pcm-type-xl"
+                      style={{
+                        fontFamily: "var(--pcm-headline)",
+                        letterSpacing: "0.04em",
+                      }}
+                    >
+                      <SoftTermHover
+                        slug={pillarSlotSlug(lifeSegmentPillar)}
+                        locale={locale}
+                      />
+                    </div>
+                    <div
+                      className="pcm-type-body"
+                      style={{
+                        color: "var(--pcm-on-variant)",
+                        marginTop: "0.35rem",
+                      }}
+                    >
+                      {tc("fact_layer_age", { age: String(display.current_age) })}
+                    </div>
+                    <div className="pcm-chips" style={{ marginTop: "1.25rem" }}>
+                      {activePl?.stem_element ? (
+                        <PcmChip
+                          soft={matrixElementSoft(activePl.stem_element, locale)}
+                          slug={layerStemSlug}
+                          locale={locale}
+                          tone="gold"
+                        />
+                      ) : null}
+                      {layerRoleSoft ? (
+                        <PcmChip
+                          soft={layerRoleSoft}
+                          slug={layerRoleSlug}
+                          locale={locale}
+                          tone="cyan"
+                        />
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div className="pcm-card">
                 <div className="pcm-label pcm-label--flush pcm-label--cyan">

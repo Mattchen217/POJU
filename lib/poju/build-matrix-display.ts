@@ -339,10 +339,21 @@ export function buildMatrixDisplayData(input: {
   });
 
   const rawLunar = String(chart?.八字?.农历 ?? "");
-  const lunarClean = stripGanzhiFromLunar(
+  let lunarClean = stripGanzhiFromLunar(
     rawLunar.replace(/^农历/, ""),
     locale,
   );
+  // Fallback: local Solar→Lunar when chart omits 农历 (lunar-typescript).
+  if (!lunarClean || lunarClean === "农历" || lunarClean === "Lunar") {
+    try {
+      const lunar = Solar.fromYmd(b.year, b.month, b.day).getLunar();
+      const m = lunar.getMonthInChinese();
+      const d = lunar.getDayInChinese();
+      lunarClean = zhDate ? `农历${m}月${d}` : `Lunar ${m}/${d}`;
+    } catch {
+      lunarClean = "";
+    }
+  }
 
   const age = resolveCurrentAge(b.year);
   const dayunIdx = resolveDayunIndex(structured.da_yun, age);
