@@ -193,15 +193,15 @@ function FactLayerStack({
   );
 }
 
-/** Circular year-progress ring + 12 month ticks (岁环). */
+/** Circular year-progress ring + 12 month ticks (年度脉冲). */
 function FactYearRing({
-  year,
   progress,
   progressLabel,
+  monthLabel,
 }: {
-  year: number;
   progress: number;
   progressLabel: string;
+  monthLabel: string;
 }) {
   const r = 34;
   const c = 2 * Math.PI * r;
@@ -233,24 +233,14 @@ function FactYearRing({
         />
         <text
           x="40"
-          y="38"
+          y="44"
           textAnchor="middle"
           fill="#fff"
-          fontSize="14"
+          fontSize="16"
           fontWeight="700"
           fontFamily="var(--pcm-mono)"
         >
           {pct}%
-        </text>
-        <text
-          x="40"
-          y="52"
-          textAnchor="middle"
-          fill="var(--pcm-on-variant)"
-          fontSize="8"
-          fontFamily="var(--pcm-mono)"
-        >
-          {year}
         </text>
       </svg>
       <div className="pcm-fviz-ring__meta">
@@ -270,7 +260,7 @@ function FactYearRing({
         </div>
         <div className="pcm-fviz__caption">
           <span>{progressLabel}</span>
-          <span>{pct}%</span>
+          <span>{monthLabel}</span>
         </div>
       </div>
     </div>
@@ -387,7 +377,11 @@ function FactStructureGraph({
   );
 }
 
-/** Balance scale + strength continuum (调衡). */
+/**
+ * Balance scale + strength continuum.
+ * Left pan = Support (xi), right pan = Drain (ji).
+ * Heavier side sinks: more Drain → clockwise tilt (right down).
+ */
 function FactBalanceViz({
   strength,
   xiCount,
@@ -410,65 +404,106 @@ function FactBalanceViz({
   anchorLabel: string;
 }) {
   const balPct = strength === "weak" ? 22 : strength === "strong" ? 78 : 50;
-  const tilt = strength === "weak" ? -12 : strength === "strong" ? 12 : 0;
-  const xiPct = Math.min(100, xiCount * 30 + (xiCount ? 20 : 0));
-  const jiPct = Math.min(100, jiCount * 36 + (jiCount ? 16 : 0));
+  const delta = jiCount - xiCount;
+  // Positive rotate = clockwise = right (Drain) goes down.
+  const tilt =
+    delta === 0 ? 0 : Math.max(-16, Math.min(16, delta * 8));
+  const leftH = 10 + xiCount * 6;
+  const rightH = 10 + jiCount * 6;
   return (
     <div className="pcm-fviz pcm-fviz-balance" aria-hidden>
-      <svg className="pcm-fviz-scale" viewBox="0 0 200 56" preserveAspectRatio="xMidYMid meet">
+      <svg className="pcm-fviz-scale" viewBox="0 0 200 68" preserveAspectRatio="xMidYMid meet">
         <line
           x1="100"
-          y1="8"
+          y1="6"
           x2="100"
-          y2="28"
+          y2="26"
           stroke="rgba(208,197,175,0.45)"
           strokeWidth="1.5"
         />
-        <g transform={`rotate(${tilt} 100 28)`}>
+        <g transform={`rotate(${tilt} 100 26)`}>
           <line
             x1="36"
-            y1="28"
+            y1="26"
             x2="164"
-            y2="28"
+            y2="26"
             stroke="var(--pcm-primary)"
             strokeWidth="2"
             strokeLinecap="round"
           />
           <rect
             x="28"
-            y="32"
+            y={30}
             width="28"
-            height="14"
+            height={leftH}
             rx="2"
-            fill="rgba(0,238,252,0.15)"
+            fill="rgba(0,238,252,0.18)"
             stroke="var(--pcm-secondary-container)"
             strokeWidth="1"
           />
+          <text
+            x="42"
+            y={30 + leftH / 2 + 3}
+            textAnchor="middle"
+            fill="var(--pcm-secondary-container)"
+            fontSize="7"
+            fontFamily="var(--pcm-mono)"
+          >
+            {xiCount}
+          </text>
           <rect
             x="144"
-            y="32"
+            y={30}
             width="28"
-            height="14"
+            height={rightH}
             rx="2"
-            fill="rgba(255,149,148,0.15)"
+            fill="rgba(255,149,148,0.18)"
             stroke="var(--pcm-tertiary-container)"
             strokeWidth="1"
           />
+          <text
+            x="158"
+            y={30 + rightH / 2 + 3}
+            textAnchor="middle"
+            fill="var(--pcm-tertiary-container)"
+            fontSize="7"
+            fontFamily="var(--pcm-mono)"
+          >
+            {jiCount}
+          </text>
         </g>
         <circle
           cx="100"
-          cy="28"
+          cy="26"
           r="4"
           fill="var(--pcm-primary)"
           style={{ filter: "drop-shadow(0 0 4px rgba(242,202,80,0.6))" }}
         />
+        <text
+          x="42"
+          y="64"
+          textAnchor="middle"
+          fill="var(--pcm-on-variant)"
+          fontSize="7"
+        >
+          {xiLabel}
+        </text>
+        <text
+          x="158"
+          y="64"
+          textAnchor="middle"
+          fill="var(--pcm-on-variant)"
+          fontSize="7"
+        >
+          {jiLabel}
+        </text>
         {yongSoft ? (
           <text
             x="100"
-            y="52"
+            y="64"
             textAnchor="middle"
             fill="var(--pcm-primary-fixed)"
-            fontSize="8"
+            fontSize="7"
             fontFamily="var(--pcm-mono)"
           >
             {anchorLabel} · {yongSoft}
@@ -485,30 +520,6 @@ function FactBalanceViz({
         <div className="pcm-fviz-continuum__labels">
           <span>{weakLabel}</span>
           <span>{strongLabel}</span>
-        </div>
-      </div>
-      <div className="pcm-fviz-xi-ji">
-        <div>
-          <div className="pcm-fviz-xi-ji__k">
-            {xiLabel} · {xiCount}
-          </div>
-          <div className="pcm-fviz-xi-ji__bar">
-            <div
-              className="pcm-fviz-xi-ji__fill--xi"
-              style={{ "--pcm-meter-pct": `${xiPct}%` } as CSSProperties}
-            />
-          </div>
-        </div>
-        <div>
-          <div className="pcm-fviz-xi-ji__k">
-            {jiLabel} · {jiCount}
-          </div>
-          <div className="pcm-fviz-xi-ji__bar">
-            <div
-              className="pcm-fviz-xi-ji__fill--ji"
-              style={{ "--pcm-meter-pct": `${jiPct}%` } as CSSProperties}
-            />
-          </div>
         </div>
       </div>
     </div>
@@ -1256,7 +1267,9 @@ export function PojuEnergyMatrix({
 
               <div className="pcm-card">
                 <div className="pcm-label pcm-label--flush pcm-label--cyan">
-                  {tc("fact_year_pulse")} · {fp.year_pulse.year}
+                  <SoftTermHover slug="year" locale={locale} fallback={tc("fact_year_pulse")} />
+                  {" · "}
+                  {fp.year_pulse.year}
                 </div>
                 <div className="pcm-type-lg" style={{ color: "#fff", marginBottom: "0.5rem" }}>
                   {fp.year_pulse.stem_element_slug ? (
@@ -1272,7 +1285,23 @@ export function PojuEnergyMatrix({
                     {tc("fact_year_pulse_em")}
                   </span>
                 </div>
-                <div className="pcm-chips" style={{ marginBottom: "0.25rem" }}>
+                <div className="pcm-chips" style={{ marginBottom: "0.5rem" }}>
+                  {fp.year_sign.zodiac_soft ? (
+                    <PcmChip
+                      soft={fp.year_sign.zodiac_soft}
+                      slug={fp.year_sign.zodiac_slug}
+                      locale={locale}
+                      tone="gold"
+                    />
+                  ) : null}
+                  {fp.year_sign.branch_element_soft ? (
+                    <PcmChip
+                      soft={fp.year_sign.branch_element_soft}
+                      slug={fp.year_sign.branch_element_slug}
+                      locale={locale}
+                      tone="cyan"
+                    />
+                  ) : null}
                   {fp.year_pulse.links.length > 0 ? (
                     fp.year_pulse.links.map((c) => (
                       <PcmChip
@@ -1289,14 +1318,35 @@ export function PojuEnergyMatrix({
                         }
                       />
                     ))
-                  ) : (
+                  ) : !fp.year_sign.zodiac_soft ? (
                     <span className="pcm-chip pcm-chip--neutral">{emptyLinks}</span>
-                  )}
+                  ) : null}
+                </div>
+                <div
+                  className="pcm-type-body"
+                  style={{
+                    color: "var(--pcm-on-variant)",
+                    fontSize: "0.8125rem",
+                    marginBottom: "0.35rem",
+                  }}
+                >
+                  {tc("fact_year_pulse_hint", {
+                    bonds: String(
+                      fp.year_pulse.links.filter((c) => c.polarity === "green").length,
+                    ),
+                    tensions: String(
+                      fp.year_pulse.links.filter((c) => c.polarity === "red").length,
+                    ),
+                  })}
                 </div>
                 <FactYearRing
-                  year={fp.year_pulse.year}
                   progress={transitProgress}
-                  progressLabel={`${fp.year_pulse.year} ${tc("transit_progress")}`}
+                  progressLabel={tc("transit_progress")}
+                  monthLabel={tc("fact_year_month", {
+                    month: String(
+                      Math.min(12, Math.max(1, Math.ceil((transitProgress / 100) * 12))),
+                    ),
+                  })}
                 />
               </div>
 
@@ -1440,7 +1490,9 @@ export function PojuEnergyMatrix({
           <div className="pcm-facts-extra">
             <div className="pcm-card">
               <div className="pcm-label pcm-label--flush pcm-label--gold">
-                {tc("fact_dayun")} · {tc("fact_dayun_em")}
+                <SoftTermHover slug="decade" locale={locale} fallback={tc("fact_dayun")} />
+                {" · "}
+                {tc("fact_dayun_em")}
               </div>
               <div
                 className="pcm-type-xl"
