@@ -378,62 +378,62 @@ function FactStructureGraph({
 }
 
 /**
- * Balance scale + strength continuum.
- * Left pan = Support (xi), right pan = Drain (ji).
- * Heavier side sinks: more Drain → clockwise tilt (right down).
+ * Balance scale + continuum — both driven by Support(xi) vs Drain(ji).
+ * Left = Support, right = Drain. Heavier side sinks; pin slides toward heavier side.
  */
 function FactBalanceViz({
-  strength,
   xiCount,
   jiCount,
   yongSoft,
-  weakLabel,
-  strongLabel,
   xiLabel,
   jiLabel,
   anchorLabel,
 }: {
-  strength: "strong" | "weak" | "balanced";
   xiCount: number;
   jiCount: number;
   yongSoft: string | null;
-  weakLabel: string;
-  strongLabel: string;
   xiLabel: string;
   jiLabel: string;
   anchorLabel: string;
 }) {
-  const balPct = strength === "weak" ? 22 : strength === "strong" ? 78 : 50;
+  const total = xiCount + jiCount;
+  // Same axis as scale: 0% = all Support (left), 100% = all Drain (right).
+  const balPct =
+    total === 0 ? 50 : Math.round((jiCount / total) * 100);
   const delta = jiCount - xiCount;
   // Positive rotate = clockwise = right (Drain) goes down.
   const tilt =
     delta === 0 ? 0 : Math.max(-16, Math.min(16, delta * 8));
-  const leftH = 10 + xiCount * 6;
-  const rightH = 10 + jiCount * 6;
+  const leftH = 10 + Math.min(xiCount, 4) * 5;
+  const rightH = 10 + Math.min(jiCount, 4) * 5;
   return (
     <div className="pcm-fviz pcm-fviz-balance" aria-hidden>
-      <svg className="pcm-fviz-scale" viewBox="0 0 200 68" preserveAspectRatio="xMidYMid meet">
+      <svg
+        className="pcm-fviz-scale"
+        viewBox="0 0 200 58"
+        preserveAspectRatio="xMidYMid meet"
+      >
         <line
           x1="100"
-          y1="6"
+          y1="4"
           x2="100"
-          y2="26"
+          y2="22"
           stroke="rgba(208,197,175,0.45)"
           strokeWidth="1.5"
         />
-        <g transform={`rotate(${tilt} 100 26)`}>
+        <g transform={`rotate(${tilt} 100 22)`}>
           <line
             x1="36"
-            y1="26"
+            y1="22"
             x2="164"
-            y2="26"
+            y2="22"
             stroke="var(--pcm-primary)"
             strokeWidth="2"
             strokeLinecap="round"
           />
           <rect
             x="28"
-            y={30}
+            y={26}
             width="28"
             height={leftH}
             rx="2"
@@ -443,17 +443,17 @@ function FactBalanceViz({
           />
           <text
             x="42"
-            y={30 + leftH / 2 + 3}
+            y={26 + leftH / 2 + 3}
             textAnchor="middle"
             fill="var(--pcm-secondary-container)"
-            fontSize="7"
+            fontSize="8"
             fontFamily="var(--pcm-mono)"
           >
             {xiCount}
           </text>
           <rect
             x="144"
-            y={30}
+            y={26}
             width="28"
             height={rightH}
             rx="2"
@@ -463,10 +463,10 @@ function FactBalanceViz({
           />
           <text
             x="158"
-            y={30 + rightH / 2 + 3}
+            y={26 + rightH / 2 + 3}
             textAnchor="middle"
             fill="var(--pcm-tertiary-container)"
-            fontSize="7"
+            fontSize="8"
             fontFamily="var(--pcm-mono)"
           >
             {jiCount}
@@ -474,42 +474,17 @@ function FactBalanceViz({
         </g>
         <circle
           cx="100"
-          cy="26"
+          cy="22"
           r="4"
           fill="var(--pcm-primary)"
           style={{ filter: "drop-shadow(0 0 4px rgba(242,202,80,0.6))" }}
         />
-        <text
-          x="42"
-          y="64"
-          textAnchor="middle"
-          fill="var(--pcm-on-variant)"
-          fontSize="7"
-        >
-          {xiLabel}
-        </text>
-        <text
-          x="158"
-          y="64"
-          textAnchor="middle"
-          fill="var(--pcm-on-variant)"
-          fontSize="7"
-        >
-          {jiLabel}
-        </text>
-        {yongSoft ? (
-          <text
-            x="100"
-            y="64"
-            textAnchor="middle"
-            fill="var(--pcm-primary-fixed)"
-            fontSize="7"
-            fontFamily="var(--pcm-mono)"
-          >
-            {anchorLabel} · {yongSoft}
-          </text>
-        ) : null}
       </svg>
+      {yongSoft ? (
+        <div className="pcm-fviz-balance__anchor">
+          {anchorLabel} · {yongSoft}
+        </div>
+      ) : null}
       <div>
         <div
           className="pcm-fviz-continuum"
@@ -518,8 +493,8 @@ function FactBalanceViz({
           <span className="pcm-fviz-continuum__pin" />
         </div>
         <div className="pcm-fviz-continuum__labels">
-          <span>{weakLabel}</span>
-          <span>{strongLabel}</span>
+          <span>{xiLabel}</span>
+          <span>{jiLabel}</span>
         </div>
       </div>
     </div>
@@ -1467,12 +1442,9 @@ export function PojuEnergyMatrix({
                   </div>
                 ) : null}
                 <FactBalanceViz
-                  strength={strength}
                   xiCount={fp.balance.xi.length}
                   jiCount={fp.balance.ji.length}
                   yongSoft={fp.balance.yong_soft}
-                  weakLabel={tc("strength_weak")}
-                  strongLabel={tc("strength_strong")}
                   xiLabel={tc("fact_viz_xi")}
                   jiLabel={tc("fact_viz_ji")}
                   anchorLabel={tc("fact_anchor")}

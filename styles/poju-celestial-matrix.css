@@ -1420,12 +1420,22 @@
 .pcm-fviz-balance {
   display: flex;
   flex-direction: column;
-  gap: 1.1rem;
+  gap: 0.65rem;
 }
 
 .pcm-fviz-scale {
   width: 100%;
-  height: 4.25rem;
+  height: 3.5rem;
+  margin-bottom: 0.15rem;
+}
+
+.pcm-fviz-balance__anchor {
+  text-align: center;
+  font-family: var(--pcm-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  color: var(--pcm-primary-fixed);
+  margin: 0.15rem 0 0.35rem;
 }
 
 .pcm-fviz-continuum {
