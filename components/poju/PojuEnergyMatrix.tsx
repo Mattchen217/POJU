@@ -1,9 +1,16 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { useTranslations } from "next-intl";
 
+import { SoftTermHover } from "@/components/cross-product/GlossaryText";
 import { PojuDaYunTimeline } from "@/components/poju/PojuDaYunTimeline";
 import {
   elementCssClass,
@@ -14,9 +21,6 @@ import { buildMatrixDisplayData } from "@/lib/poju/build-matrix-display";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
 import { activePillarByAge } from "@/lib/poju/matrix-life-segment";
 import { matrixSynopsisNarrativeState } from "@/lib/poju/matrix-narrative-text";
-import { computeYearTransitProgress } from "@/lib/poju/matrix-transit-progress";
-import { SoftTermHover } from "@/components/cross-product/GlossaryText";
-import { MatrixSoftChip } from "@/lib/poju/matrix-soft-chip";
 import {
   elementToSlug,
   matrixElementSoft,
@@ -26,42 +30,44 @@ import {
   strengthToSlug,
   zodiacHanToSlug,
 } from "@/lib/poju/matrix-term-labels";
+import { computeYearTransitProgress } from "@/lib/poju/matrix-transit-progress";
+import { tMatrix } from "@/lib/poju/poju-matrix-i18n";
 import { resolveBaziLabel } from "@/lib/poju/resolve-bazi-i18n";
 import { normalizeShenshaLocale, resolveShenshaList } from "@/lib/poju/shensha";
-import { tMatrix } from "@/lib/poju/poju-matrix-i18n";
-import { formatBirthClockTime } from "@/lib/profile/birth-info-utils";
 import { ZODIAC_ICON_BY_HAN } from "@/lib/poju/zodiac-icon-assets";
+import { formatBirthClockTime } from "@/lib/profile/birth-info-utils";
 import type { UserProfile } from "@/lib/profile/types";
-import "@/styles/poju-energy-matrix.css";
+import "@/styles/poju-celestial-matrix.css";
 
 type Props = {
   payload: PojuMatrixPayload;
   locale: string;
   compact?: boolean;
-  /** Chat: synopsis lives in MatrixNarrativeReply — hide enote / loading placeholders here. */
   suppressNarrative?: boolean;
-  /** Match preview: e.g. 用户A： before born / coordinates / matrix id. */
   subjectPrefix?: string;
 };
 
-const ELEMENT_CLASS: Record<string, string> = {
-  Wood: "el-w",
-  Fire: "el-f",
-  Earth: "el-e",
-  Metal: "el-m",
-  Water: "el-water",
+const BAR_FILL: Record<string, string> = {
+  Wood: "pcm-bar__fill--wood",
+  Fire: "pcm-bar__fill--fire",
+  Earth: "pcm-bar__fill--earth",
+  Metal: "pcm-bar__fill--metal",
+  Water: "pcm-bar__fill--water",
 };
 
-const ELEMENT_BAR_CLASS: Record<string, string> = {
-  Wood: "ebar-fill--wood",
-  Fire: "ebar-fill--fire",
-  Earth: "ebar-fill--earth",
-  Metal: "ebar-fill--metal",
-  Water: "ebar-fill--water",
-};
+function strengthLabel(
+  strength: "strong" | "weak" | "balanced",
+  tc: (k: string) => string,
+): string {
+  if (strength === "strong") return tc("strength_strong");
+  if (strength === "weak") return tc("strength_weak");
+  return tc("strength_balanced");
+}
 
-function NarrativePlaceholder({ label }: { label: string }) {
-  return <span className="pem__narrative-loading">{label}</span>;
+function vitalityPin(strength: "strong" | "weak" | "balanced"): string {
+  if (strength === "weak") return "22%";
+  if (strength === "balanced") return "50%";
+  return "78%";
 }
 
 function formatBornLine(profile: UserProfile): string {
@@ -71,8 +77,8 @@ function formatBornLine(profile: UserProfile): string {
     profile.tst_meta?.original_time ??
     profile.birth.tst_meta?.original_time ??
     formatBirthClockTime(b);
-  const date = `${b.year} · ${pad(b.month)} · ${pad(b.day)}`;
-  return time ? `${date} — ${time}` : date;
+  const date = `${b.year} - ${pad(b.month)} - ${pad(b.day)}`;
+  return time ? `${date} - ${time}` : date;
 }
 
 function formatCoordinates(profile: UserProfile, locale: string): string {
@@ -83,23 +89,47 @@ function formatCoordinates(profile: UserProfile, locale: string): string {
     const dir = lon >= 0 ? "E" : "W";
     return `${loc.name} ${Math.abs(lon).toFixed(2)}°${dir}`;
   }
-  if (loc?.name && !loc.use_defaults) return loc.name;
   return profile.birth.timezone || tMatrix(locale, "card.default_timezone");
 }
 
-function strengthLabel(
-  strength: PojuMatrixPayload["strength"],
-  tc: (key: string) => string,
-): string {
-  if (strength === "strong") return tc("strength_strong");
-  if (strength === "weak") return tc("strength_weak");
-  return tc("strength_balanced");
+function SoftEl({
+  element,
+  locale,
+}: {
+  element: string;
+  locale: string;
+}) {
+  const slug = elementToSlug(element);
+  const soft = matrixElementSoft(element, locale);
+  if (!soft) return null;
+  return slug ? (
+    <SoftTermHover slug={slug} locale={locale} fallback={soft} />
+  ) : (
+    <>{soft}</>
+  );
 }
 
-function vitalityPin(strength: PojuMatrixPayload["strength"]): string {
-  if (strength === "strong") return "72%";
-  if (strength === "weak") return "32%";
-  return "50%";
+function PcmChip({
+  soft,
+  slug,
+  locale,
+  tone = "neutral",
+}: {
+  soft: string;
+  slug?: string | null;
+  locale: string;
+  tone?: "cyan" | "coral" | "gold" | "neutral";
+}) {
+  if (!soft) return null;
+  return (
+    <span className={`pcm-chip pcm-chip--${tone}`}>
+      {slug ? (
+        <SoftTermHover slug={slug} locale={locale} fallback={soft} />
+      ) : (
+        soft
+      )}
+    </span>
+  );
 }
 
 function RadarChart({
@@ -114,7 +144,11 @@ function RadarChart({
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    let chart: { resize: () => void; dispose: () => void; setOption: (o: unknown) => void } | null = null;
+    let chart: {
+      resize: () => void;
+      dispose: () => void;
+      setOption: (o: unknown) => void;
+    } | null = null;
     let cancelled = false;
 
     void (async () => {
@@ -125,23 +159,26 @@ function RadarChart({
       chart.setOption({
         backgroundColor: "transparent",
         radar: {
-          // Leave headroom for axis labels (esp. top 「精炼」) — large radius clips canvas edges.
           center: ["50%", "52%"],
           radius: "62%",
           startAngle: 90,
           splitNumber: 4,
           axisNameGap: 12,
           axisName: {
-            color: "rgba(255,255,255,0.94)",
-            fontSize: 15,
+            color: "rgba(227,224,241,0.92)",
+            fontSize: 14,
             fontWeight: 600,
             fontFamily:
-              '"Noto Sans SC", "PingFang SC", "Microsoft YaHei", Inter, system-ui, sans-serif',
+              '"Plus Jakarta Sans", "Noto Sans SC", "PingFang SC", Inter, sans-serif',
             padding: [2, 6],
           },
-          splitLine: { lineStyle: { color: "rgba(255,255,255,0.13)" } },
-          splitArea: { areaStyle: { color: ["rgba(255,255,255,0.02)", "rgba(255,255,255,0.05)"] } },
-          axisLine: { lineStyle: { color: "rgba(255,255,255,0.15)" } },
+          splitLine: { lineStyle: { color: "rgba(255,255,255,0.2)" } },
+          splitArea: {
+            areaStyle: {
+              color: ["rgba(255,255,255,0.02)", "rgba(255,255,255,0.04)"],
+            },
+          },
+          axisLine: { lineStyle: { color: "rgba(255,255,255,0.18)" } },
           indicator: scores.map((s) => ({
             name: matrixElementSoft(s.element, locale),
             max: max * 1.1,
@@ -151,13 +188,13 @@ function RadarChart({
           {
             type: "radar",
             symbol: "circle",
-            symbolSize: 6,
+            symbolSize: 5,
             data: [
               {
                 value: scores.map((s) => s.count),
-                lineStyle: { color: "#f2c994", width: 2.4 },
-                itemStyle: { color: "#f2c994" },
-                areaStyle: { color: "rgba(242,201,148,0.30)" },
+                lineStyle: { color: "#00eefc", width: 2 },
+                itemStyle: { color: "#f2ca50" },
+                areaStyle: { color: "rgba(0,238,252,0.12)" },
               },
             ],
           },
@@ -167,7 +204,8 @@ function RadarChart({
 
     const onResize = () => chart?.resize();
     window.addEventListener("resize", onResize);
-    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(onResize) : null;
+    const ro =
+      typeof ResizeObserver !== "undefined" ? new ResizeObserver(onResize) : null;
     ro?.observe(el);
     return () => {
       cancelled = true;
@@ -177,10 +215,16 @@ function RadarChart({
     };
   }, [scores, locale]);
 
-  return <div className="radar radar--compact" ref={ref} aria-hidden />;
+  return <div className="pcm-radar__canvas" ref={ref} aria-hidden />;
 }
 
-export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNarrative = false, subjectPrefix }: Props) {
+export function PojuEnergyMatrix({
+  payload,
+  locale,
+  compact = false,
+  suppressNarrative = false,
+  subjectPrefix,
+}: Props) {
   const { structured, user_profile, wuxing_scores, strength, matrix_id } = payload;
   const shenshaLocale = normalizeShenshaLocale(locale);
   const isZh = isZhMatrixLocale(locale);
@@ -198,7 +242,6 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
     });
     const cached = payload.display;
     if (!cached) return base;
-    // Lifecycle right column always uses local fact_panel (no LLM prose overlay).
     if (cached.narrative_source === "llm") {
       return {
         ...base,
@@ -225,12 +268,13 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
   }, [payload.display, user_profile, structured, strength, wuxing_scores, locale]);
 
   const zodiacIcon = ZODIAC_ICON_BY_HAN[display.zodiac.han];
-
   const maxCount = Math.max(...wuxing_scores.map((s) => s.count), 1);
   const sorted = [...wuxing_scores].sort((a, b) => b.pct - a.pct);
   const dominant = sorted[0];
   const deficit = sorted[sorted.length - 1];
   const tst = user_profile.tst_meta ?? user_profile.birth.tst_meta;
+  const fp = display.fact_panel;
+  const lifeSegmentPillar = activePillarByAge(display.current_age);
 
   const genderLabel = structured.bazi_enrichment?.gender_label
     ? resolveBaziLabel(structured.bazi_enrichment.gender_label, tb)
@@ -238,66 +282,77 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
       ? tb("gender.qian")
       : tb("gender.kun");
 
-  const { isLlmNarrative, showTemplateFallback, narrativeLoading } =
-    matrixSynopsisNarrativeState(display);
-
-  const [transitProgress, setTransitProgress] = useState(() => computeYearTransitProgress());
-  useEffect(() => {
-    setTransitProgress(computeYearTransitProgress());
-    const id = window.setInterval(() => setTransitProgress(computeYearTransitProgress()), 60_000);
-    return () => window.clearInterval(id);
-  }, []);
-
-  const lifeSegmentPillar = activePillarByAge(display.current_age);
   const yongshenChips = useMemo(
-    () => yongshenChipsForLocale(structured.bazi_enrichment?.yongshen_analysis, locale),
+    () =>
+      yongshenChipsForLocale(
+        structured.bazi_enrichment?.yongshen_analysis,
+        locale,
+      ),
     [structured.bazi_enrichment?.yongshen_analysis, locale],
   );
 
-  return (
-    <div className={`pem${compact ? " pem--compact" : ""}`}>
-      <header className="rhead">
-        <div className="eyebrow">{tm("eyebrow")}</div>
-        <h2>{tm("main_title")}</h2>
-        <p className="tag">{tm("main_description")}</p>
-        <div className="subject">
-          {subjectPrefix ? (
-            <span className="pem__subject-prefix">
-              <b>{subjectPrefix}</b>
-            </span>
-          ) : null}
-          <span>
-            {tm("born")} <b>{formatBornLine(user_profile)}</b>
-          </span>
-          <span>
-            {tm("coordinates")} <b>{formatCoordinates(user_profile, locale)}</b>
-          </span>
-          <span>
-            {tm("matrix_id")} <b>{matrix_id}</b>
-          </span>
-        </div>
-      </header>
+  const { isLlmNarrative, showTemplateFallback, narrativeLoading } =
+    matrixSynopsisNarrativeState(display);
 
-      <section className="device pem-matrix-body">
-        <div className="topband">
-          <div className="tcard zsign">
-            <div className="zsign__art">
-              {zodiacIcon ? (
-                <Image
-                  src={zodiacIcon}
-                  alt=""
-                  width={72}
-                  height={72}
-                  className="zsign__icon"
-                />
-              ) : (
-                <span>{display.zodiac.han}</span>
-              )}
-            </div>
-            <div className="zsign__en">
-              {(() => {
-                const zdSlug = zodiacHanToSlug(display.zodiac.han);
-                return zdSlug ? (
+  const [transitProgress, setTransitProgress] = useState(() =>
+    computeYearTransitProgress(),
+  );
+  useEffect(() => {
+    setTransitProgress(computeYearTransitProgress());
+    const id = window.setInterval(
+      () => setTransitProgress(computeYearTransitProgress()),
+      60_000,
+    );
+    return () => window.clearInterval(id);
+  }, []);
+
+  const zdSlug = zodiacHanToSlug(display.zodiac.han);
+  const emptyLinks = tc("fact_empty_links");
+
+  return (
+    <div className={`pcm${compact ? " pcm--compact pcm--embedded" : ""}`}>
+      <div className="pcm__stars" aria-hidden />
+      <div className="pcm__wrap">
+        <header className="pcm__header">
+          <h1 className="pcm__title pcm__title--gradient">{tm("main_title")}</h1>
+          <p className="pcm__header-desc">{tm("main_description")}</p>
+          <div className="pcm__header-meta">
+            {subjectPrefix ? (
+              <span>
+                <b>{subjectPrefix}</b>
+              </span>
+            ) : null}
+            <span>
+              {tm("born")} {formatBornLine(user_profile)}
+            </span>
+            <span>
+              {tm("coordinates")} {formatCoordinates(user_profile, locale)}
+            </span>
+            <span>
+              {tm("matrix_id")} {matrix_id}
+            </span>
+          </div>
+        </header>
+
+        {/* ── 1. Zodiac + Calibration ── */}
+        <section className="pcm__section">
+          <div className="pcm__grid-12">
+            <div className="pcm-card pcm-card--center pcm-zodiac pcm__span-3">
+              <div className="pcm-zodiac__art">
+                {zodiacIcon ? (
+                  <Image
+                    src={zodiacIcon}
+                    alt=""
+                    width={96}
+                    height={96}
+                    className="pcm-zodiac__art-img"
+                  />
+                ) : (
+                  <span className="pcm-zodiac__name">{display.zodiac.han}</span>
+                )}
+              </div>
+              <div className="pcm-zodiac__name">
+                {zdSlug ? (
                   <SoftTermHover
                     slug={zdSlug}
                     locale={locale}
@@ -307,614 +362,579 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
                   display.zodiac.han
                 ) : (
                   display.zodiac.en
-                );
-              })()}
-            </div>
-            <div className="zsign__cn">
-              {isZh ? (
-                display.zodiac.pinyin
-              ) : (
-                (() => {
-                  const zdSlug = zodiacHanToSlug(display.zodiac.han);
-                  return zdSlug ? (
-                    <>
-                      <SoftTermHover
-                        slug={zdSlug}
-                        locale="zh"
-                        fallback={display.zodiac.han}
-                      />
-                      {" · "}
-                      {display.zodiac.pinyin}
-                    </>
-                  ) : (
-                    <>
-                      {display.zodiac.han} · {display.zodiac.pinyin}
-                    </>
-                  );
-                })()
-              )}
-            </div>
-            <div className="zsign__tag">{tc("your_sign_tag")}</div>
-          </div>
-
-          <div className="tcard calband">
-            <div className="calband__head">
-              <span className="calband__bull" />
-              <span>{tm("section_label")}</span>
-            </div>
-            <div className="calband__grid">
-              <div className="calband__col">
-                <div className="calband__k">
-                  {tc("calendar_alignment")} · {tc("calendar_alignment_em")}
-                </div>
-                <div className="calband__v">
-                  {display.calendar.gregorian}{" "}
-                  <small>{tc("gregorian")}</small>
-                </div>
-                {display.calendar.lunar ? (
-                  <div className="calband__sub">{display.calendar.lunar}</div>
-                ) : null}
-                <div className="calband__mid">
-                  {display.calendar.headline}
-                  {genderLabel ? (
-                    <span className="pem__gender-tag">{genderLabel}</span>
-                  ) : null}
-                </div>
+                )}
               </div>
+              <div className="pcm-zodiac__pinyin">{display.zodiac.pinyin}</div>
+              <div className="pcm-zodiac__year">
+                {user_profile.birth.year}
+                {isZh ? "年" : ""}
+              </div>
+              <p className="pcm-zodiac__caption">{tc("your_sign_tag")}</p>
+            </div>
 
-              <div className="calband__col">
-                <div className="calband__k">
-                  <SoftTermHover slug="tm_true_solar_time" locale={locale} />
-                  {" · "}
-                  {tc("true_solar_time_em")}
+            <div className="pcm-card pcm-cal pcm__span-9">
+              <div className="pcm-label pcm-label--gold">{tm("section_label")}</div>
+              <div className="pcm-cal__grid">
+                <div className="pcm-cal__cell">
+                  <div className="pcm-cal__kicker">
+                    {tc("calendar_alignment")} · {tc("calendar_alignment_em")}
+                  </div>
+                  <div className="pcm-cal__value">
+                    {display.calendar.gregorian}{" "}
+                    <span className="pcm-cal__unit">{tc("gregorian")}</span>
+                  </div>
+                  {display.calendar.lunar ? (
+                    <div className="pcm-cal__sub">{display.calendar.lunar}</div>
+                  ) : null}
+                  <div className="pcm-cal__accent">
+                    {display.calendar.headline}
+                    {genderLabel ? ` ${genderLabel}` : ""}
+                  </div>
                 </div>
-                {tst ? (
-                  <>
-                    <div className="tst tst--calband">
-                      <div className="tst__times">
-                        <div className="t">
-                          <div className="vv">{tst.original_time}</div>
-                          <div className="kk">{tc("standard_time")}</div>
+
+                <div className="pcm-cal__cell">
+                  <div className="pcm-cal__kicker">
+                    <SoftTermHover slug="tm_true_solar_time" locale={locale} />
+                    {" · "}
+                    {tc("true_solar_time_em")}
+                  </div>
+                  {tst ? (
+                    <>
+                      <div className="pcm-cal__times">
+                        <div>
+                          <div className="pcm-cal__time-val">
+                            {tst.original_time}
+                          </div>
+                          <div className="pcm-cal__time-label">
+                            {tc("standard_time")}
+                          </div>
                         </div>
-                        <div className="arr">→</div>
-                        <div className="t">
-                          <div className="vv gold">{tst.true_solar_time}</div>
-                          <div className="kk">
-                            <SoftTermHover slug="tm_true_solar_time" locale={locale} />
+                        <div className="pcm-cal__arrow">→</div>
+                        <div>
+                          <div className="pcm-cal__time-val pcm-cal__time-val--dim">
+                            {tst.true_solar_time}
+                          </div>
+                          <div className="pcm-cal__time-label">
+                            <SoftTermHover
+                              slug="tm_true_solar_time"
+                              locale={locale}
+                            />
                           </div>
                         </div>
                       </div>
                       {tst.diff_minutes !== 0 ? (
-                        <div className="tst__chip">
+                        <div className="pcm-cal__delta">
                           {tst.diff_minutes > 0 ? "+" : "−"}
                           {Math.abs(Number(tst.diff_minutes.toFixed(2)))}m
                         </div>
                       ) : null}
-                    </div>
-                    <div className="calband__foot">
-                      {tc("longitude_correction")} ·{" "}
-                      {tst.longitude_diff_minutes ?? tst.diff_minutes}m
-                      {tst.eq_of_time_minutes != null
-                        ? ` · ${tc("eq_of_time")} ${tst.eq_of_time_minutes > 0 ? "+" : ""}${tst.eq_of_time_minutes}m`
-                        : null}
-                      {tst.longitude != null
-                        ? ` · ${Math.abs(tst.longitude).toFixed(2)}°${tst.longitude >= 0 ? "E" : "W"}`
-                        : null}
-                    </div>
-                  </>
-                ) : (
-                  <div className="calband__v">—</div>
-                )}
-              </div>
+                      <div className="pcm-cal__note">
+                        {tc("longitude_correction")} ·{" "}
+                        {tst.longitude_diff_minutes ?? tst.diff_minutes}m
+                        {tst.eq_of_time_minutes != null
+                          ? ` · ${tc("eq_of_time")} ${tst.eq_of_time_minutes > 0 ? "+" : ""}${tst.eq_of_time_minutes}m`
+                          : null}
+                        {tst.longitude != null
+                          ? ` · ${Math.abs(tst.longitude).toFixed(2)}°${tst.longitude >= 0 ? "E" : "W"}`
+                          : null}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="pcm-cal__value">—</div>
+                  )}
+                </div>
 
-              <div className="calband__col">
-                <div className="calband__k">
-                  {tc("solar_term")} · {tc("solar_term_em")}
-                </div>
-                <div className="calband__v">
-                  {isZh ? display.solar_term.name : display.solar_term.name_en}{" "}
-                  <small>
-                    {isZh ? display.solar_term.name_en : display.solar_term.name}
-                  </small>
-                </div>
-                <div className="calband__sub">{display.solar_term.season}</div>
-                <div className="calband__foot calband__foot--bar">
-                  <span>
-                    {tc("next_term")}: {display.solar_term.next_name}
-                  </span>
-                </div>
-                <div className="term">
-                  <i style={{ width: `${display.solar_term.progress_pct}%` }} />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="pem-row pem-row--duo">
-          <div className="pem-panel pem-panel--radar">
-            <div className="pem-panel__label">
-              {tc("radar_matrix")} <em>· {tc("radar_matrix_em")}</em>
-            </div>
-            <div className="pem-panel__body pem-panel__body--radar">
-              <RadarChart scores={wuxing_scores} locale={locale} />
-            </div>
-          </div>
-          <div className="pem-panel pem-panel--bars ro ro--wuxing">
-            <div className="ro__k">
-              {tc("elemental_signature")} <em>· {tc("elemental_signature_em")}</em>
-            </div>
-            <div className="elist">
-              {wuxing_scores.map((row) => {
-                const soft = matrixElementSoft(row.element, locale);
-                const elSlug = elementToSlug(row.element);
-                return (
-                  <div className="erow" key={row.element}>
-                    <div className="erow__head">
-                      <span className="erow__names">
-                        <span className={`ename ${ELEMENT_CLASS[row.element] ?? ""}`}>
-                          {elSlug ? (
-                            <SoftTermHover slug={elSlug} locale={locale} fallback={soft} />
-                          ) : (
-                            soft
-                          )}
-                        </span>
-                      </span>
-                      <span className="ecount">{row.count}</span>
-                    </div>
-                    <span className="ebar">
-                      <i
-                        style={{ width: `${Math.round((row.count / maxCount) * 100)}%` }}
-                        className={ELEMENT_BAR_CLASS[row.element] ?? ""}
-                      />
+                <div className="pcm-cal__cell">
+                  <div className="pcm-cal__kicker">
+                    {tc("solar_term")} · {tc("solar_term_em")}
+                  </div>
+                  <div className="pcm-cal__value">
+                    {isZh
+                      ? display.solar_term.name
+                      : display.solar_term.name_en}{" "}
+                    <span className="pcm-cal__unit">
+                      {isZh
+                        ? display.solar_term.name_en
+                        : display.solar_term.name}
                     </span>
                   </div>
-                );
-              })}
-            </div>
-            {yongshenChips.length > 0 ? (
-              <div className="pem__yongshen-row">
-                <span className="pem__yongshen-label">{tb("optimizing_vector")}</span>
-                <span className="pem__yongshen-chips">
-                  {yongshenChips.map((chip) => {
-                    const elSlug = elementToSlug(chip.elementKey);
-                    return (
-                      <span
-                        key={chip.label}
-                        className={`pem__yongshen-chip ${elementCssClass(chip.elementKey)}`}
-                      >
-                        {elSlug ? (
-                          <SoftTermHover
-                            slug={elSlug}
-                            locale={locale}
-                            fallback={chip.label}
-                          />
-                        ) : (
-                          chip.label
-                        )}
+                  <div className="pcm-cal__sub">{display.solar_term.season}</div>
+                  <div className="pcm-term">
+                    <div className="pcm-term__head">
+                      <span>{tc("solar_term")}</span>
+                      <span>
+                        {tc("next_term")}: {display.solar_term.next_name}
                       </span>
-                    );
-                  })}
-                </span>
+                    </div>
+                    <div className="pcm-term__track">
+                      <div
+                        className="pcm-term__fill"
+                        style={
+                          {
+                            "--pcm-term-pct": `${display.solar_term.progress_pct}%`,
+                          } as CSSProperties
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
-            ) : null}
-            <div className="enote">
+            </div>
+          </div>
+        </section>
+
+        {/* ── 2. Radar + Bars ── */}
+        <section className="pcm__section">
+          <div className="pcm__grid-12">
+            <div className="pcm-card pcm-radar pcm__span-5">
+              <div className="pcm-label pcm-label--cyan">
+                {tc("radar_matrix")} · {tc("radar_matrix_em")}
+              </div>
+              <div className="pcm-radar__chart">
+                <RadarChart scores={wuxing_scores} locale={locale} />
+              </div>
+            </div>
+
+            <div className="pcm-card pcm-bars pcm__span-7">
+              <div className="pcm-label pcm-label--cyan-soft">
+                {tc("elemental_signature")} · {tc("elemental_signature_em")}
+              </div>
+              <div className="pcm-bars__list">
+                {wuxing_scores.map((row) => {
+                  const pct = Math.round((row.count / maxCount) * 100);
+                  return (
+                    <div className="pcm-bar" key={row.element}>
+                      <div className="pcm-bar__meta">
+                        <span className="pcm-bar__name">
+                          <SoftEl element={row.element} locale={locale} />
+                        </span>
+                        <span className="pcm-bar__value">{row.count}</span>
+                      </div>
+                      <div className="pcm-bar__track">
+                        <div
+                          className={`pcm-bar__fill ${BAR_FILL[row.element] ?? ""}`}
+                          style={{ "--pcm-bar-pct": `${pct}%` } as CSSProperties}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="pcm-bars__footer">
+                <span className="pcm-bars__id">
+                  {tm("matrix_id")} · {matrix_id}
+                </span>
+                {yongshenChips.length > 0 ? (
+                  <div className="pcm-chips">
+                    <span className="pcm-chip pcm-chip--caps pcm-chip--neutral">
+                      {tc("fact_anchor")} ·{" "}
+                      {yongshenChips.map((c) => c.label).join(" · ")}
+                    </span>
+                  </div>
+                ) : null}
+              </div>
               {!suppressNarrative && narrativeLoading ? (
-                <NarrativePlaceholder label={tc("narrative_loading")} />
-              ) : !suppressNarrative && isLlmNarrative && display.enote_caption ? (
-                display.enote_caption
-              ) : !suppressNarrative && showTemplateFallback ? (
-                <>
-                  <SoftTermHover slug="day_master" locale={locale} fallback={tc("day_master")} />{" "}
-                  <b>
-                    {(() => {
-                      const elSlug = elementToSlug(display.day_master.element);
-                      const soft = matrixElementSoft(display.day_master.element, locale);
-                      return elSlug ? (
-                        <SoftTermHover slug={elSlug} locale={locale} fallback={soft} />
-                      ) : (
-                        soft
-                      );
-                    })()}
-                  </b>
-                  {tc("with_surplus")}
-                  <b>
-                    {dominant
-                      ? (() => {
-                          const elSlug = elementToSlug(dominant.element);
-                          const soft = matrixElementSoft(dominant.element, locale);
-                          return elSlug ? (
-                            <SoftTermHover slug={elSlug} locale={locale} fallback={soft} />
-                          ) : (
-                            soft
-                          );
-                        })()
-                      : ""}
-                  </b>
-                  {tc("surplus_and")}
-                  <b>
-                    {deficit
-                      ? (() => {
-                          const elSlug = elementToSlug(deficit.element);
-                          const soft = matrixElementSoft(deficit.element, locale);
-                          return elSlug ? (
-                            <SoftTermHover slug={elSlug} locale={locale} fallback={soft} />
-                          ) : (
-                            soft
-                          );
-                        })()
-                      : ""}
-                  </b>
-                  {tc("deficit_period")}
-                </>
+                <p className="pcm-cal__note">{tc("narrative_loading")}</p>
+              ) : null}
+              {!suppressNarrative && isLlmNarrative && display.enote_caption ? (
+                <p className="pcm-cal__note">{display.enote_caption}</p>
+              ) : null}
+              {!suppressNarrative && showTemplateFallback ? (
+                <p className="pcm-cal__note">
+                  <SoftTermHover
+                    slug="day_master"
+                    locale={locale}
+                    fallback={tc("day_master")}
+                  />{" "}
+                  <SoftEl element={display.day_master.element} locale={locale} />
+                  {dominant ? (
+                    <>
+                      {" · "}
+                      <SoftEl element={dominant.element} locale={locale} />
+                    </>
+                  ) : null}
+                  {deficit ? (
+                    <>
+                      {" / "}
+                      <SoftEl element={deficit.element} locale={locale} />
+                    </>
+                  ) : null}
+                </p>
               ) : null}
             </div>
           </div>
-        </div>
 
-        <div className="pem-row pem-row--duo pem-row--vitality">
-          <div className="pem-panel ro ro--wuxing pem-panel--vitality">
-            <div className="ro__k">{tc("core_vitality")}</div>
-            <div className="ro__v ro__v--metric ro__v--vitality-title">
-              <SoftTermHover
-                slug={strengthToSlug(strength)}
+          {/* ── 3. Vitality + Equilibrium ── */}
+          <div className="pcm__grid-12">
+            <div className="pcm-card pcm-vitality pcm__span-5">
+              <div className="pcm-label pcm-label--coral">
+                {tc("core_vitality")}
+              </div>
+              <h3 className="pcm-vitality__title">
+                {tc("core_vitality")}:{" "}
+                <SoftTermHover
+                  slug={strengthToSlug(strength)}
+                  locale={locale}
+                  fallback={strengthLabel(strength, tc)}
+                />
+              </h3>
+              <div className="pcm-vtrack">
+                <div
+                  className="pcm-vtrack__pin"
+                  style={{ left: vitalityPin(strength) }}
+                />
+              </div>
+              <div className="pcm-vtrack__labels">
+                <span>{tc("vitality_receptive")}</span>
+                <span>{tc("vitality_balance")}</span>
+                <span>{tc("vitality_dominant")}</span>
+              </div>
+            </div>
+
+            <div className="pcm-card pcm-eq pcm__span-7">
+              <div className="pcm-label pcm-label--sand">
+                {tc("elemental_equilibrium")}
+              </div>
+              <div className="pcm-eq__grid">
+                {dominant ? (
+                  <div className="pcm-eq__card">
+                    <div className="pcm-eq__title">
+                      <SoftEl element={dominant.element} locale={locale} />{" "}
+                      {tc("surplus")}{" "}
+                      <span className="pcm-eq__pct">{dominant.pct}%</span>
+                    </div>
+                    <div className="pcm-eq__segments">
+                      <i className="pcm-eq__seg pcm-eq__seg--coral" />
+                      <i className="pcm-eq__seg pcm-eq__seg--coral" style={{ opacity: 0.5 }} />
+                      <i className="pcm-eq__seg pcm-eq__seg--dim" />
+                    </div>
+                    <div className="pcm-eq__hint pcm-eq__hint--up">
+                      ▲ {tc("dominant_vector")}
+                    </div>
+                  </div>
+                ) : null}
+                {deficit ? (
+                  <div className="pcm-eq__card">
+                    <div className="pcm-eq__title">
+                      <SoftEl element={deficit.element} locale={locale} />{" "}
+                      {tc("deficit")}{" "}
+                      <span className="pcm-eq__pct">{deficit.pct}%</span>
+                    </div>
+                    <div className="pcm-eq__segments">
+                      <i className="pcm-eq__seg pcm-eq__seg--cyan" />
+                      <i className="pcm-eq__seg pcm-eq__seg--dim" />
+                    </div>
+                    <div className="pcm-eq__hint pcm-eq__hint--down">
+                      ▼ {tc("key_gap")}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── 4. Timeline + 2×2 facts ── */}
+        <section className="pcm__section">
+          <div className="pcm__grid-12">
+            <div className="pcm-card pcm-timeline pcm__span-4">
+              <div className="pcm-label pcm-label--gold">
+                {tc("macro_lifecycle")} · {tc("macro_lifecycle_em")}
+              </div>
+              <h3 className="pcm-type-lg" style={{ margin: "0 0 1.25rem", color: "#fff" }}>
+                {tc("timeline_matrix")}
+              </h3>
+              <PojuDaYunTimeline
+                daYun={structured.da_yun}
+                currentIndex={display.current_dayun_index}
+                currentAge={display.current_age}
                 locale={locale}
-                fallback={strengthLabel(strength, tc)}
               />
             </div>
-            <div className="vtrack">
-              <div className="mid" />
-              <div className="pin" style={{ left: vitalityPin(strength) }} />
-            </div>
-            <div className="vscale">
-              <span>{tc("vitality_receptive")}</span>
-              <span>{tc("vitality_balance")}</span>
-              <span>{tc("vitality_dominant")}</span>
-            </div>
-          </div>
-          <div className="pem-panel ro ro--wuxing pem-panel--equilibrium">
-            <div className="ro__k">{tc("elemental_equilibrium")}</div>
-            <div className="pem-equilibrium-grid">
-              {dominant ? (
-                <div className="pem-equilibrium-item">
-                  <div className="ro__v ro__v--metric">
-                    <span className={`ro__v-accent ${ELEMENT_CLASS[dominant.element] ?? ""}`}>
-                      {(() => {
-                        const elSlug = elementToSlug(dominant.element);
-                        const soft = matrixElementSoft(dominant.element, locale);
-                        return elSlug ? (
-                          <SoftTermHover slug={elSlug} locale={locale} fallback={soft} />
-                        ) : (
-                          soft
-                        );
-                      })()}
-                    </span>
-                    <span className="pct">
-                      {tc("surplus")} · {dominant.pct}%
-                    </span>
-                  </div>
-                  <div className="ebar pem-equilibrium-bar">
-                    <i style={{ width: `${dominant.pct}%` }} className={ELEMENT_BAR_CLASS[dominant.element] ?? ""} />
-                  </div>
-                  <div className="ro__tag up">
-                    ▲ {tc("dominant_vector")}
-                  </div>
-                </div>
-              ) : null}
-              {deficit ? (
-                <div className="pem-equilibrium-item">
-                  <div className="ro__v ro__v--metric">
-                    <span className={`ro__v-accent ${ELEMENT_CLASS[deficit.element] ?? ""}`}>
-                      {(() => {
-                        const elSlug = elementToSlug(deficit.element);
-                        const soft = matrixElementSoft(deficit.element, locale);
-                        return elSlug ? (
-                          <SoftTermHover slug={elSlug} locale={locale} fallback={soft} />
-                        ) : (
-                          soft
-                        );
-                      })()}
-                    </span>
-                    <span className="pct">
-                      {tc("deficit")} · {deficit.pct}%
-                    </span>
-                  </div>
-                  <div className="ebar pem-equilibrium-bar">
-                    <i style={{ width: `${Math.max(deficit.pct, 5)}%` }} className={ELEMENT_BAR_CLASS[deficit.element] ?? ""} />
-                  </div>
-                  <div className="ro__tag down">
-                    ▼ {tc("key_gap")}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        </div>
 
-        <div className="pem-row pem-row--lifecycle block block--fill">
-          <div className="dialpanel dialpanel--timeline">
-            <div className="rp__k">
-              {tc("macro_lifecycle")} <em>· {tc("macro_lifecycle_em")}</em>
-            </div>
-            <PojuDaYunTimeline
-              daYun={structured.da_yun}
-              currentIndex={display.current_dayun_index}
-              currentAge={display.current_age}
-              locale={locale}
-            />
-          </div>
-          <div className="side side--facts">
-            {(() => {
-              const fp = display.fact_panel;
-              const emptyLinks = tc("fact_empty_links");
-              return (
-                <>
-                  <div className="ro ro--fact">
-                    <div className="ro__k">
-                      {tc("fact_era")} <em>· {tc("fact_era_em")}</em>
-                    </div>
-                    <div className="ro__v ro__v--metric">
-                      <span className="fact-theme">{fp.era.age_range}</span>
-                      {fp.era.start_year ? (
-                        <span className="pct">{fp.era.start_year}</span>
-                      ) : null}
-                    </div>
-                    <div className="fact-chips">
-                      {fp.era.stem_element_soft ? (
-                        <MatrixSoftChip
-                          soft={fp.era.stem_element_soft}
-                          slug={fp.era.stem_element_slug}
-                          locale={locale}
-                          tone="gold"
-                        />
-                      ) : null}
-                      {fp.era.ten_god_soft ? (
-                        <MatrixSoftChip
-                          soft={fp.era.ten_god_soft}
-                          slug={fp.era.ten_god_slug}
-                          locale={locale}
-                        />
-                      ) : null}
-                    </div>
-                  </div>
+            <div className="pcm-facts pcm__span-8">
+              <div className="pcm-card">
+                <div className="pcm-label pcm-label--flush pcm-label--gold">
+                  {tc("fact_era")} · {tc("fact_era_em")}
+                </div>
+                <div className="pcm-type-xl" style={{ fontFamily: "var(--pcm-mono)", letterSpacing: "0.04em" }}>
+                  {fp.era.age_range}{" "}
+                  <span className="pcm-type-body" style={{ fontWeight: 400, color: "var(--pcm-on-variant)", marginLeft: "0.5rem" }}>
+                    {[fp.era.start_year, fp.era.stem_element_soft, fp.era.ten_god_soft]
+                      .filter(Boolean)
+                      .join(" ")}
+                  </span>
+                </div>
+                <div className="pcm-chips" style={{ marginTop: "1.25rem" }}>
+                  {fp.era.stem_element_soft ? (
+                    <PcmChip
+                      soft={fp.era.stem_element_soft}
+                      slug={fp.era.stem_element_slug}
+                      locale={locale}
+                      tone="gold"
+                    />
+                  ) : null}
+                  {fp.era.ten_god_soft ? (
+                    <PcmChip
+                      soft={fp.era.ten_god_soft}
+                      slug={fp.era.ten_god_slug}
+                      locale={locale}
+                      tone="cyan"
+                    />
+                  ) : null}
+                </div>
+              </div>
 
-                  <div className="ro ro--fact">
-                    <div className="ro__k">
-                      {tc("fact_year_pulse")} · {fp.year_pulse.year}
+              <div className="pcm-card">
+                <div className="pcm-label pcm-label--flush pcm-label--cyan">
+                  {tc("fact_year_pulse")} · {fp.year_pulse.year}
+                </div>
+                <div className="pcm-type-lg" style={{ color: "#fff", marginBottom: "0.5rem" }}>
+                  {fp.year_pulse.stem_element_slug ? (
+                    <SoftTermHover
+                      slug={fp.year_pulse.stem_element_slug}
+                      locale={locale}
+                      fallback={fp.year_pulse.stem_element_soft}
+                    />
+                  ) : (
+                    fp.year_pulse.stem_element_soft
+                  )}{" "}
+                  <span className="pcm-type-body" style={{ color: "var(--pcm-on-variant)" }}>
+                    {tc("fact_year_pulse_em")}
+                  </span>
+                </div>
+                <div className="pcm-chips" style={{ marginBottom: "1rem" }}>
+                  {fp.year_pulse.links.length > 0 ? (
+                    fp.year_pulse.links.map((c) => (
+                      <PcmChip
+                        key={c.soft}
+                        soft={c.soft}
+                        slug={c.slug}
+                        locale={locale}
+                        tone={
+                          c.polarity === "green"
+                            ? "cyan"
+                            : c.polarity === "red"
+                              ? "coral"
+                              : "gold"
+                        }
+                      />
+                    ))
+                  ) : (
+                    <span className="pcm-chip pcm-chip--neutral">{emptyLinks}</span>
+                  )}
+                </div>
+                <div className="pcm-term__track">
+                  <div
+                    className="pcm-term__fill"
+                    style={
+                      { "--pcm-term-pct": `${transitProgress}%` } as CSSProperties
+                    }
+                  />
+                </div>
+                <div className="pcm-term__head" style={{ marginTop: "0.5rem" }}>
+                  <span>
+                    {fp.year_pulse.year} {tc("transit_progress")}
+                  </span>
+                  <span>{transitProgress}%</span>
+                </div>
+              </div>
+
+              <div className="pcm-card">
+                <div className="pcm-label pcm-label--flush pcm-label--sand">
+                  {tc("fact_structure")} · {tc("fact_structure_em")}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                  <div>
+                    <div className="pcm-type-body" style={{ marginBottom: "0.5rem" }}>
+                      {tc("fact_bonds")}
                     </div>
-                    <div className="ro__v ro__v--metric">
-                      <span
-                        className={elementCssClass(
-                          display.annual_transit.stem_en.split(" ").pop() ||
-                            display.annual_transit.stem_en,
-                        )}
-                      >
-                        {fp.year_pulse.stem_element_slug ? (
-                          <SoftTermHover
-                            slug={fp.year_pulse.stem_element_slug}
-                            locale={locale}
-                            fallback={fp.year_pulse.stem_element_soft}
-                          />
-                        ) : (
-                          fp.year_pulse.stem_element_soft
-                        )}
-                      </span>
-                      <span className="pct">{tc("fact_year_pulse_em")}</span>
-                    </div>
-                    <div className="fact-chips">
-                      {fp.year_pulse.links.length > 0 ? (
-                        fp.year_pulse.links.map((c) => (
-                          <MatrixSoftChip
-                            key={c.soft}
+                    <div className="pcm-chips">
+                      {fp.structure.bonds.length > 0 ? (
+                        fp.structure.bonds.map((c) => (
+                          <PcmChip
+                            key={`b-${c.soft}`}
                             soft={c.soft}
                             slug={c.slug}
                             locale={locale}
-                            tone={c.polarity}
+                            tone="cyan"
                           />
                         ))
                       ) : (
-                        <span className="fact-chip fact-chip--muted">{emptyLinks}</span>
+                        <span className="pcm-chip pcm-chip--neutral">{emptyLinks}</span>
                       )}
                     </div>
-                    <div className="tprog">
-                      <div className="tprog__bar">
-                        <i style={{ width: `${transitProgress}%` }} />
-                      </div>
-                      <div className="tprog__lab">
-                        <span>
-                          {fp.year_pulse.year} {tc("transit_progress")}
-                        </span>
-                        <span className="blink">{transitProgress}% ▮</span>
-                      </div>
-                    </div>
                   </div>
-
-                  <div className="ro ro--fact">
-                    <div className="ro__k">
-                      {tc("fact_structure")} <em>· {tc("fact_structure_em")}</em>
+                  <div>
+                    <div className="pcm-type-body" style={{ marginBottom: "0.5rem" }}>
+                      {tc("fact_tensions")}
                     </div>
-                    <div className="fact-row">
-                      <span className="fact-row__lab res">{tc("fact_bonds")}</span>
-                      <div className="fact-chips">
-                        {fp.structure.bonds.length > 0 ? (
-                          fp.structure.bonds.map((c) => (
-                            <MatrixSoftChip
-                              key={`b-${c.soft}`}
-                              soft={c.soft}
-                              slug={c.slug}
-                              locale={locale}
-                              tone="green"
-                            />
-                          ))
-                        ) : (
-                          <span className="fact-chip fact-chip--muted">{emptyLinks}</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="fact-row">
-                      <span className="fact-row__lab ten">{tc("fact_tensions")}</span>
-                      <div className="fact-chips">
-                        {fp.structure.tensions.length > 0 ? (
-                          fp.structure.tensions.map((c) => (
-                            <MatrixSoftChip
-                              key={`t-${c.soft}`}
-                              soft={c.soft}
-                              slug={c.slug}
-                              locale={locale}
-                              tone="red"
-                            />
-                          ))
-                        ) : (
-                          <span className="fact-chip fact-chip--muted">{emptyLinks}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="ro ro--fact">
-                    <div className="ro__k">
-                      {tc("fact_balance")} <em>· {tc("fact_balance_em")}</em>
-                    </div>
-                    <div className="ro__v ro__v--metric">
-                      <SoftTermHover
-                        slug={fp.balance.strength_slug}
-                        locale={locale}
-                        fallback={fp.balance.strength_soft}
-                      />
-                      {fp.balance.yong_soft ? (
-                        <span className="pct">
-                          {tc("fact_anchor")} ·{" "}
-                          {fp.balance.yong_slug ? (
-                            <SoftTermHover
-                              slug={fp.balance.yong_slug}
-                              locale={locale}
-                              fallback={fp.balance.yong_soft}
-                            />
-                          ) : (
-                            fp.balance.yong_soft
-                          )}
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="fact-chips">
-                      {fp.balance.xi.map((c) => (
-                        <MatrixSoftChip
-                          key={`xi-${c.soft}`}
-                          soft={c.soft}
-                          slug={c.slug}
-                          locale={locale}
-                          tone="green"
-                        />
-                      ))}
-                      {fp.balance.ji.map((c) => (
-                        <MatrixSoftChip
-                          key={`ji-${c.soft}`}
-                          soft={c.soft}
-                          slug={c.slug}
-                          locale={locale}
-                          tone="red"
-                        />
-                      ))}
-                      {fp.balance.xi.length === 0 &&
-                      fp.balance.ji.length === 0 &&
-                      !fp.balance.yong_soft ? (
-                        <span className="fact-chip fact-chip--muted">{emptyLinks}</span>
-                      ) : null}
-                    </div>
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-        </div>
-
-        <div className="pillars pillars--v3">
-          <div className="pillars__head">
-            {tc("layers_title")} <em>· {tc("layers_em")}</em>
-          </div>
-          <div className="pillars__grid">
-            {display.pillars.map((pl, idx) => {
-              const keys = ["year", "month", "day", "hour"] as const;
-              const key = keys[idx] ?? "year";
-              const isDay = key === "day";
-              const isLifeSegment = lifeSegmentPillar === key;
-              const roleSoft = isZh ? pl.ten_god : pl.ten_god_en;
-              const roleSlug =
-                isDay &&
-                (!pl.ten_god_han || pl.ten_god_han === "日主" || pl.ten_god === "日主")
-                  ? "day_master"
-                  : matrixTermSlug(pl.ten_god_han) ??
-                    matrixTermSlug(pl.ten_god) ??
-                    matrixTermSlug(pl.ten_god_en);
-              const stemSlug = pl.stem_element ? elementToSlug(pl.stem_element) : null;
-              const stageHan = pl.life_stage_han?.trim() || null;
-              const stageSlug = stageHan ? matrixTermSlug(stageHan) : null;
-              const stageSoft =
-                pl.life_stage_label ||
-                (stageHan ? matrixSoftTerm(stageHan, locale) : "");
-              const stars = resolveShenshaList(pl.star_labels, shenshaLocale);
-              return (
-                <div
-                  key={key}
-                  className={`pl-card pl-card--${key}${isDay ? " pl-card--day" : ""}${isLifeSegment ? " pl-card--segment" : ""}`}
-                >
-                  <div className="pl-card__cap">
-                    <SoftTermHover slug={pillarSlotSlug(key)} locale={locale} />
-                  </div>
-                  <div className="pl-card__role">
-                    {roleSlug ? (
-                      <SoftTermHover slug={roleSlug} locale={locale} fallback={roleSoft} />
-                    ) : (
-                      roleSoft
-                    )}
-                  </div>
-                  <div className={`pl-card__element ${elementCssClass(pl.stem_element)}`}>
-                    {pl.stem_element ? (
-                      stemSlug ? (
-                        <SoftTermHover
-                          slug={stemSlug}
-                          locale={locale}
-                          fallback={matrixElementSoft(pl.stem_element, locale)}
-                        />
+                    <div className="pcm-chips">
+                      {fp.structure.tensions.length > 0 ? (
+                        fp.structure.tensions.map((c) => (
+                          <PcmChip
+                            key={`t-${c.soft}`}
+                            soft={c.soft}
+                            slug={c.slug}
+                            locale={locale}
+                            tone="coral"
+                          />
+                        ))
                       ) : (
-                        matrixElementSoft(pl.stem_element, locale)
-                      )
-                    ) : (
-                      "—"
-                    )}
-                  </div>
-                  {stageSoft ? (
-                    <div className="pl-card__stage">
-                      {stageSlug ? (
-                        <SoftTermHover
-                          slug={stageSlug}
-                          locale={locale}
-                          fallback={stageSoft}
-                        />
-                      ) : (
-                        stageSoft
+                        <span className="pcm-chip pcm-chip--neutral">{emptyLinks}</span>
                       )}
                     </div>
-                  ) : null}
-                  <div className="pl-card__hidden">{pl.hidden_display}</div>
-                  {stars.length > 0 ? (
-                    <ul className="pl-card__stars">
-                      {stars.map((star) => (
-                        <li key={star.id}>
-                          <span className="pl-card__star-mark" aria-hidden>
-                            ◆
-                          </span>
-                          {star.label}
-                        </li>
-                      ))}
-                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pcm-card">
+                <div className="pcm-label pcm-label--flush pcm-label--coral">
+                  {tc("fact_balance")} · {tc("fact_balance_em")}
+                </div>
+                <div className="pcm-type-lg" style={{ color: "#fff", marginBottom: "0.75rem" }}>
+                  <SoftTermHover
+                    slug={fp.balance.strength_slug}
+                    locale={locale}
+                    fallback={fp.balance.strength_soft}
+                  />
+                  {fp.balance.yong_soft ? (
+                    <span className="pcm-type-body" style={{ color: "var(--pcm-on-variant)", marginLeft: "0.5rem" }}>
+                      {tc("fact_anchor")}{" "}
+                      {fp.balance.yong_slug ? (
+                        <SoftTermHover
+                          slug={fp.balance.yong_slug}
+                          locale={locale}
+                          fallback={fp.balance.yong_soft}
+                        />
+                      ) : (
+                        fp.balance.yong_soft
+                      )}
+                    </span>
                   ) : null}
                 </div>
-              );
-            })}
+                <div className="pcm-chips">
+                  {fp.balance.xi.map((c) => (
+                    <PcmChip
+                      key={`xi-${c.soft}`}
+                      soft={c.soft}
+                      slug={c.slug}
+                      locale={locale}
+                      tone="cyan"
+                    />
+                  ))}
+                  {fp.balance.ji.map((c) => (
+                    <PcmChip
+                      key={`ji-${c.soft}`}
+                      soft={c.soft}
+                      slug={c.slug}
+                      locale={locale}
+                      tone="coral"
+                    />
+                  ))}
+                  {fp.balance.xi.length === 0 &&
+                  fp.balance.ji.length === 0 &&
+                  !fp.balance.yong_soft ? (
+                    <span className="pcm-chip pcm-chip--neutral">{emptyLinks}</span>
+                  ) : null}
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+
+        {/* ── 5. Four pillars ── */}
+        <section className="pcm__section">
+          <div className="pcm-label pcm-label--white">
+            {tc("layers_title")} · {tc("layers_em")}
+          </div>
+          <div className="pcm-pillars">
+              {display.pillars.map((pl, idx) => {
+                const keys = ["year", "month", "day", "hour"] as const;
+                const key = keys[idx] ?? "year";
+                const isDay = key === "day";
+                const isLifeSegment = lifeSegmentPillar === key;
+                const roleSoft = isZh ? pl.ten_god : pl.ten_god_en;
+                const roleSlug =
+                  isDay &&
+                  (!pl.ten_god_han ||
+                    pl.ten_god_han === "日主" ||
+                    pl.ten_god === "日主")
+                    ? "day_master"
+                    : matrixTermSlug(pl.ten_god_han) ??
+                      matrixTermSlug(pl.ten_god) ??
+                      matrixTermSlug(pl.ten_god_en);
+                const stemSlug = pl.stem_element
+                  ? elementToSlug(pl.stem_element)
+                  : null;
+                const stageHan = pl.life_stage_han?.trim() || null;
+                const stageSlug = stageHan ? matrixTermSlug(stageHan) : null;
+                const stageSoft =
+                  pl.life_stage_label ||
+                  (stageHan ? matrixSoftTerm(stageHan, locale) : "");
+                const stars = resolveShenshaList(pl.star_labels, shenshaLocale);
+
+                return (
+                  <div
+                    key={key}
+                    className={`pcm-card pcm-pl pcm-pl--${key}${isLifeSegment ? " pcm-card--glow" : ""}`}
+                  >
+                    <div className="pcm-pl__slot">
+                      <SoftTermHover slug={pillarSlotSlug(key)} locale={locale} />
+                    </div>
+                    <div className="pcm-pl__role">
+                      {roleSlug ? (
+                        <SoftTermHover
+                          slug={roleSlug}
+                          locale={locale}
+                          fallback={roleSoft}
+                        />
+                      ) : (
+                        roleSoft
+                      )}
+                    </div>
+                    <div className={`pcm-pl__stem ${elementCssClass(pl.stem_element)}`}>
+                      {pl.stem_element ? (
+                        stemSlug ? (
+                          <SoftTermHover
+                            slug={stemSlug}
+                            locale={locale}
+                            fallback={matrixElementSoft(pl.stem_element, locale)}
+                          />
+                        ) : (
+                          matrixElementSoft(pl.stem_element, locale)
+                        )
+                      ) : (
+                        "—"
+                      )}
+                    </div>
+                    {stageSoft ? (
+                      <div className="pcm-pl__branch">
+                        {stageSlug ? (
+                          <SoftTermHover
+                            slug={stageSlug}
+                            locale={locale}
+                            fallback={stageSoft}
+                          />
+                        ) : (
+                          stageSoft
+                        )}
+                      </div>
+                    ) : null}
+                    <div className="pcm-pl__hidden">{pl.hidden_display}</div>
+                    {stars.length > 0 ? (
+                      <ul className="pcm-pl__list">
+                        {stars.map((star) => (
+                          <li key={star.id}>{star.label}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                );
+              })}
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

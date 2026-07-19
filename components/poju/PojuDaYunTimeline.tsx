@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 
+import { SoftTermHover } from "@/components/cross-product/GlossaryText";
 import { getStemInfo } from "@/lib/poju/bazi-matrix-mappings";
 import type { DaYunEntry } from "@/lib/calculations/lunar-dayun";
-import { SoftTermHover } from "@/components/cross-product/GlossaryText";
 import {
   elementToSlug,
   matrixElementSoft,
@@ -23,12 +23,15 @@ function ageLabel(entry: DaYunEntry, next: DaYunEntry | undefined): string {
   return `${entry.start_age}–${end}`;
 }
 
-export function PojuDaYunTimeline({ daYun, currentIndex, currentAge, locale }: Props) {
+export function PojuDaYunTimeline({
+  daYun,
+  currentIndex,
+  currentAge,
+  locale,
+}: Props) {
   const tc = useTranslations("poju_matrix.card");
   const zh = locale.startsWith("zh");
   const year = new Date().getFullYear();
-  const rootRef = useRef<HTMLDivElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
 
   const phases = useMemo(() => {
     const list = daYun.slice(0, 8);
@@ -36,98 +39,61 @@ export function PojuDaYunTimeline({ daYun, currentIndex, currentAge, locale }: P
       entry,
       next: list[i + 1],
       isNow: i === currentIndex,
-      isFirst: i === 0,
-      isLast: i === list.length - 1,
     }));
   }, [daYun, currentIndex]);
 
-  useEffect(() => {
-    const root = rootRef.current;
-    const list = listRef.current;
-    if (!root || !list) return;
-
-    const syncScale = () => {
-      const h = root.clientHeight;
-      const row = list.querySelector<HTMLElement>(".dayun-timeline__row:not(.dayun-timeline__row--now)");
-      const rowH = row?.offsetHeight ?? 28;
-      const scale = Math.max(0.82, Math.min(1.28, h / 340));
-      root.style.setProperty("--dayun-scale", String(scale));
-      root.style.setProperty("--dayun-row-h", `${rowH}px`);
-    };
-
-    syncScale();
-    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(syncScale) : null;
-    ro?.observe(root);
-    window.addEventListener("resize", syncScale);
-    return () => {
-      ro?.disconnect();
-      window.removeEventListener("resize", syncScale);
-    };
-  }, [phases.length, currentIndex]);
-
   return (
-    <div className="dayun-timeline dayun-timeline--fill" ref={rootRef}>
-      <h3 className="dayun-timeline__title">{tc("timeline_matrix")}</h3>
-      <div className="dayun-timeline__viewport">
-        <div className="dayun-timeline__list" ref={listRef}>
-          {phases.map((phase, i) => (
+    <div className="pcm-timeline__list">
+      {phases.map((phase, i) => {
+        const stemEl = getStemInfo(phase.entry.ganzhi.charAt(0))?.element;
+        const elSoft = stemEl ? matrixElementSoft(stemEl, locale) : "";
+        const elSlug = stemEl ? elementToSlug(stemEl) : null;
+        const elNode =
+          elSlug && elSoft ? (
+            <SoftTermHover slug={elSlug} locale={locale} fallback={elSoft} />
+          ) : (
+            elSoft
+          );
+
+        if (phase.isNow) {
+          return (
             <div
               key={`${phase.entry.ganzhi}-${i}`}
-              className={[
-                "dayun-timeline__row",
-                phase.isNow ? "dayun-timeline__row--now" : "",
-                phase.isFirst ? "dayun-timeline__row--edge-first" : "",
-                phase.isLast ? "dayun-timeline__row--edge-last" : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
+              className="pcm-timeline-row pcm-timeline-row--now"
             >
-              <div className="dayun-timeline__main">
-                {phase.isNow ? (
-                  <span className="dayun-timeline__bullet" aria-hidden>
-                    ✦
-                  </span>
-                ) : null}
-                <div className="dayun-timeline__copy">
-                  <div className="dayun-timeline__range">
-                    {ageLabel(phase.entry, phase.next)}
-                    {phase.entry.start_year ? ` · ${phase.entry.start_year}` : ""}
-                  </div>
-                  {phase.isNow ? (
-                    <div className="dayun-timeline__sub">
-                      {zh ? `${currentAge}岁 · ${year}年` : `Age ${currentAge} · ${year}`}
-                    </div>
-                  ) : null}
-                </div>
+              <div className="pcm-timeline-row__range">
+                {ageLabel(phase.entry, phase.next)}
+                {phase.entry.start_year ? ` · ${phase.entry.start_year}` : ""}
               </div>
-              <div className="dayun-timeline__gz">
-                {(() => {
-                  const stemEl = getStemInfo(phase.entry.ganzhi.charAt(0))?.element;
-                  const elSoft = stemEl ? matrixElementSoft(stemEl, locale) : "";
-                  const elSlug = stemEl ? elementToSlug(stemEl) : null;
-                  const elNode =
-                    elSlug && elSoft ? (
-                      <SoftTermHover slug={elSlug} locale={locale} fallback={elSoft} />
-                    ) : (
-                      elSoft
-                    );
-                  if (phase.isNow) {
-                    return (
-                      <span className="dayun-timeline__here">
-                        {tc("dayun_you_are_here")}
-                        {elNode ? <> · {elNode}</> : null}
-                      </span>
-                    );
-                  }
-                  return elNode ? (
-                    <span className="dayun-timeline__phase">{elNode}</span>
-                  ) : null;
-                })()}
+              <div className="pcm-timeline-row__meta">
+                <span className="pcm-timeline-row__meta-left">
+                  {zh
+                    ? `${currentAge}岁 · ${year}年 ${tc("dayun_you_are_here")}`
+                    : `Age ${currentAge} · ${year} · ${tc("dayun_you_are_here")}`}
+                </span>
+                {elNode ? (
+                  <span className="pcm-timeline-row__el">{elNode}</span>
+                ) : null}
               </div>
             </div>
-          ))}
-        </div>
-      </div>
+          );
+        }
+
+        return (
+          <div
+            key={`${phase.entry.ganzhi}-${i}`}
+            className={`pcm-timeline-row${i < currentIndex ? " pcm-timeline-row--mute" : ""}`}
+          >
+            <span className="pcm-timeline-row__range">
+              {ageLabel(phase.entry, phase.next)}
+              {phase.entry.start_year ? ` · ${phase.entry.start_year}` : ""}
+            </span>
+            {elNode ? (
+              <span className="pcm-timeline-row__el">{elNode}</span>
+            ) : null}
+          </div>
+        );
+      })}
     </div>
   );
 }
