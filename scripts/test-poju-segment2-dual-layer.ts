@@ -35,9 +35,9 @@ function main(): void {
   assert("『孤鸾煞』仍 auto-mark", autoMarkBareTerms("盘里有孤鸾煞牵制。", "zh").includes("⟦t:"));
 
   // ③ 双字病
-  assert("当前当前 折叠", collapseDuplicatedSoftPrefix("当前当前时空效能引动") === "当前时空效能引动");
-  assert("你的你的 折叠", collapseDuplicatedSoftPrefix("你的你的能量结构") === "你的能量结构");
-  assert("正常句不动", collapseDuplicatedSoftPrefix("当前这个阶段很关键") === "当前这个阶段很关键");
+  assert("当前当前 折叠", collapseDuplicatedSoftPrefix("当前当前岁环引动") === "当前岁环引动");
+  assert("你的你的 折叠", collapseDuplicatedSoftPrefix("你的你的本元") === "你的本元");
+  assert("正常句不动", collapseDuplicatedSoftPrefix("当前岁环很关键") === "当前岁环很关键");
 
   // ④ 正文层零金字
   const bodyIn = "你需要的是⟦t:yong_shen|一段没人打扰的清晨⟧，不是硬撑。";

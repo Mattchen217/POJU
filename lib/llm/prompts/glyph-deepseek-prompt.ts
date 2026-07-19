@@ -1,4 +1,4 @@
-import {
+﻿import {
   GLYPH_EXPLORATION_GUIDANCE,
   GLYPH_GUANYIN_100_LOTS_IDENTITY,
   GLYPH_GUANYIN_INTERPRETATION_METHOD,
@@ -121,7 +121,7 @@ ${windCategoryToneBlock(glyph.wind_category)}
 → 给出对用户问题的**原型层面明确表态**：不是"会不会、何时"，而是"这面镜子照出你该看清的是什么、此刻的势在助你还是在拦你、下一步的方向感"。
 
 ## 合规接法（原型反思语域，不算命）
-- ✓ 「就你问的『此事』，这支 Glyph 照出的是【意象】——结合你的 ⟦t:day_master|core nature (乙木)⟧（或中文版 ⟦t:day_master|核心特质（乙木）⟧），此刻的势更利于【方向】而非【方向】」。
+- ✓ 「就你问的『此事』，这支 Glyph 照出的是【意象】——结合你的 ⟦t:day_master|core nature (乙木)⟧（或中文版 ⟦t:day_master|本元（乙木）⟧），此刻的势更利于【方向】而非【方向】」。
 - ✓ 「Glyph 象与你当前的 ⟦t:decade|life phase (癸酉)⟧ 都指向：真正的关口不在『何时发生』，而在你是否先完成【内在动作】」。
 - ✓ （应对所有「时间/确定性」问题的通用公式）：如果用户问「什么时候/能不能/结果如何」，**必须正面回应其对确定性的焦虑，但须将“绝对时空点”转化为“能量天气的周期节律”**。
   - 通用直答框架：

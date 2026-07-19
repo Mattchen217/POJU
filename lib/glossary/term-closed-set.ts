@@ -387,11 +387,11 @@ export const HIGH_RISK_SOFT_LABEL: Record<HighRiskComplianceHan, FiveLocaleSoftG
 export const BARE_GANZHI_MARKER = {
   slug: "bare_ganzhi",
   soft: {
-    zh: "当前时空效能",
-    en: "current temporal efficacy",
-    es: "eficacia temporal actual",
-    de: "aktuelle Zeiteffizienz",
-    fr: "efficacité temporelle actuelle",
+    zh: "岁环",
+    en: "Transit",
+    es: "Tránsito",
+    de: "Transit",
+    fr: "Transit",
   },
   gloss: {
     zh: "你此刻所处的时间气候——它像天气一样影响你的状态与外部压力，但不预测具体事件。",
@@ -574,7 +574,7 @@ export function relationPolarityToken(id: string): "green" | "red" | "gold" | nu
 /**
  * keep_cn façade softs — MUST match POJU_TERMS.term for the same slug.
  * softLabel() already prefers SSOT; this map is for keep-cn-brackets / audit mask extras.
- * Do not invent a second vernacular set (e.g. 「当前阶段气候」).
+ * Do not invent a second vernacular soft set outside POJU_TERMS.
  */
 export const KEEP_CN_VISIBLE_SOFT: Record<string, FiveLocaleText> = {
   decade: {

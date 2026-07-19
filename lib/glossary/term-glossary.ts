@@ -89,7 +89,7 @@ const LEGACY_TERM_GLOSSARY: GlossaryConcept[] = [
     surface: "replace",
     forbidden_variants: ["日主", "Day Master", "day master"],
     ...sg(
-      "core nature", "核心特质", "naturaleza esencial", "nature profonde", "Urnatur",
+      "Core", "本元", "Núcleo", "Noyau", "Kern",
       "The central signature of your energy profile — the anchor trait everything else is read against. A lens on temperament.",
       "你能量画像的中枢特质，其余特质都以它为参照，是看性情的视角。",
       "La firma central de tu perfil energético: el rasgo de anclaje con el que se contrasta todo lo demás.",
@@ -102,7 +102,7 @@ const LEGACY_TERM_GLOSSARY: GlossaryConcept[] = [
     surface: "replace",
     forbidden_variants: ["用神", "Yong Shen", "Useful God", "yong shen"],
     ...sg(
-      "key balancing element", "关键平衡能量", "energía de equilibrio clave", "énergie d'équilibre clé", "Schlüsselenergie des Ausgleichs",
+      "Anchor", "锚元", "Ancla", "Ancre", "Anker",
       "The quality that brings your profile into balance — what restores you when over-extended. A quality worth cultivating.",
       "让你的画像趋于平衡的能量——过度消耗时靠它回血，是值得养护的倾向。",
       "La cualidad que equilibra tu perfil: aquello que te restaura cuando te excedes.",
@@ -115,7 +115,7 @@ const LEGACY_TERM_GLOSSARY: GlossaryConcept[] = [
     surface: "replace",
     forbidden_variants: ["大运", "Da Yun", "Luck Pillar", "Luck Cycle", "Major Luck", "Decade Luck"],
     ...sg(
-      "life phase", "人生阶段", "fase vital", "phase de vie", "Lebensphase",
+      "Era", "纪元", "Era", "Ère", "Epoche",
       "The longer chapter of energy you are moving through — a multi-year rhythm that shapes how your traits express over time.",
       "你正在经历的一段较长时序章节——多年节律，影响特质如何随时间展开。",
       "El capítulo energético más largo por el que transitas — un ritmo de varios años.",
@@ -128,7 +128,7 @@ const LEGACY_TERM_GLOSSARY: GlossaryConcept[] = [
     surface: "replace",
     forbidden_variants: ["流年", "Liu Nian", "Fleeting Year", "Annual Pillar"],
     ...sg(
-      "year's energy", "流年能量", "energía del año", "énergie de l'année", "Jahresenergie",
+      "Transit", "岁环", "Tránsito", "Transit", "Transit",
       "The specific annual window of energy you are navigating right now — a shorter rhythm layered on top of your longer life phase.",
       "你当下正在经历的年度能量窗口——叠在更长人生阶段之上的较短节律。",
       "La ventana anual de energía específica por la que transitas ahora.",
@@ -197,7 +197,7 @@ const LEGACY_TERM_GLOSSARY: GlossaryConcept[] = [
     surface: "replace",
     forbidden_variants: ["天干", "Heavenly Stem", "heavenly stem"],
     ...sg(
-      "core trait", "核心特质", "rasgo principal", "trait principal", "Kerneigenschaft",
+      "Manifest", "显元", "Manifiesto", "Manifeste", "Manifest",
       "The conscious, visible layer of your personality. It represents your active expressions, deliberate choices, and the qualities you project outwardly to the world.",
       "你性格中可被显性觉察的层面。它代表了你的主动表达、自觉选择以及你向外界所展现的特质。",
       "La capa consciente y visible de tu personalidad.",
@@ -210,7 +210,7 @@ const LEGACY_TERM_GLOSSARY: GlossaryConcept[] = [
     surface: "replace",
     forbidden_variants: ["地支", "Earthly Branch", "earthly branch"],
     ...sg(
-      "core trait", "核心特质", "rasgo principal", "trait principal", "Kerneigenschaft",
+      "Latent", "潜元", "Latente", "Latent", "Latent",
       "The subconscious, foundational layer of your personality. It governs your deep-seated motivations, emotional reserves, and hidden psychological drivers.",
       "你性格中隐性的底层基础。它决定了你深层的动机、情感储备以及潜意识中的心理驱动力。",
       "La capa subconsciente y fundacional de tu personalidad.",
@@ -244,8 +244,8 @@ const LEGACY_TERM_GLOSSARY: GlossaryConcept[] = [
       "hour pillar", "day pillar", "month pillar", "year pillar",
     ],
     ...sg(
-      "life phase / profile layer", "人生阶段 / 画像图层",
-      "fase de vida / capa del perfil", "phase de vie / couche du profil", "Lebensphase / Profilebene",
+      "Framework / Rhythm / Core / Domain", "世络 / 时脉 / 元核 / 隐域",
+      "Marco / Ritmo / Núcleo / Dominio", "Cadre / Rythme / Noyau / Domaine", "Rahmen / Rhythmus / Kern / Domäne",
       "A specific contextual layer of your psychological map, organizing your traits according to different areas of focus.",
       "你心理地图中特定的情境图层，根据不同的关注领域来组织和划分你的特质。",
       "Una capa contextual específica de tu mapa psicológico.",
@@ -379,7 +379,7 @@ const LEGACY_TERM_GLOSSARY: GlossaryConcept[] = [
     surface: "replace",
     forbidden_variants: ["喜神", "Xi Shen", "Favorable Element", "Favorable God"],
     ...sg(
-      "beneficial quality", "有利特质", "cualidad beneficiosa", "qualité bénéfique", "vorteilhafte Eigenschaft",
+      "Booster", "助元", "Refuerzo", "Allié", "Rückenwind",
       "A supportive energy vibration that introduces clarity, ease, and constructive momentum into your current profile structure.",
       "一种能为你的内在结构带来清晰度、舒适感与建设性推进力的核心能量。",
       "Una vibración energética de apoyo que aporta claridad, fluidez y un impulso constructivo.",
@@ -610,8 +610,8 @@ const LEGACY_TERM_GLOSSARY: GlossaryConcept[] = [
     surface: "replace",
     forbidden_variants: ["正印", "Direct Resource", "Zheng Yin"],
     ...sg(
-      "steady support", "稳定支持力",
-      "apoyo estable", "soutien stable", "beständige Stütze",
+      "Source", "供源",
+      "Fuente", "Source", "Quelle",
       "Learning and care received in structured, reliable ways — mentors, routines, and frameworks that nourish you.",
       "以稳定、可靠的方式获得的学习与照护——导师、惯例和能滋养你的框架。",
       "Aprendizaje y cuidado recibidos de forma estructurada y fiable.",

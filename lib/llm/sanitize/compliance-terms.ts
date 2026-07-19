@@ -318,9 +318,9 @@ const EUPHEMISM_BEFORE_GLOSS_RE =
 function stripNestedChineseLabelWrappers(text: string, locale: string): string {
   if (toGlossaryLocale(locale) === "zh") return text;
   return text
-    .replace(/核心特质[（(]([甲乙丙丁戊己庚辛壬癸][金木水火土])[）)]/g, "$1")
-    .replace(/人生阶段[（(]([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])[）)]/g, "$1")
-    .replace(/流年能量[（(]([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])[）)]/g, "$1");
+    .replace(/本元[（(]([甲乙丙丁戊己庚辛壬癸][金木水火土])[）)]/g, "$1")
+    .replace(/纪元[（(]([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])[）)]/g, "$1")
+    .replace(/岁环[（(]([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])[）)]/g, "$1");
 }
 
 /** Strip leftover model euphemisms once gloss tokens exist. */
@@ -762,7 +762,7 @@ function replaceStandaloneRedlines(text: string, locale: string): string {
     for (const [word, replacement] of ZH_STRUCTURE_SOFT_REPLACE) {
       result = replaceZhTokenGlobal(result, word, replacement);
     }
-    // Fold "你的能量结构正印壬水" left by bare-pillar soft replace.
+    // Fold "元核正印壬水" 这类柱位软译粘连（SSOT 后柱位是世络/时脉/元核/隐域）。
     result = replaceZhMingliStacks(result);
     result = collapseChainedSoftReplaceArtifacts(result);
     result = replaceWuxingClashPhrases(result);
@@ -1151,9 +1151,9 @@ export function detectComplianceViolations(text: string, locale: string): Compli
     pushRegex(ZH_STEM_ELEMENT_REGEX, "stem_element");
     pushRegex(ZH_WUXING_YONGXI_REGEX, "wuxing_yongxi");
     pushRegex(ZH_GUIRen_REGEX, "guiren");
-    // Mask approved soft labels first — e.g. 「平衡」 must not fire inside 「关键平衡能量」.
+    // Mask approved soft labels first — e.g. 「平衡」 must not fire inside 「均势」/「锚元」.
     const softExtras = Object.values(KEEP_CN_VISIBLE_SOFT).map((x) => x.zh);
-    softExtras.push("随境调整型", "锚元", "关键平衡能量");
+    softExtras.push("随境调整型", "锚元", "均势");
     const auditBody = maskKnownSoftLabelsZh(
       text,
       collectCanonicalSoftLabelsZh(softExtras),

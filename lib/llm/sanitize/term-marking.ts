@@ -361,20 +361,13 @@ function keepCnBridgeLabel(traditional: string): string | null {
 
 /** Wrap bare keep_cn soft phrases that lack ⟦t:…⟧ markers (visible text = soft label only, no ganzhi). */
 export function wrapBareKeepCnSoftTerms(text: string, locale: string): string {
-  // SSOT softs via bridge + legacy vernacular aliases (cached model output / migration).
+  // keep_cn 桥只认 SSOT 派生的 keepCnBridgeLabel；产品未上线，不保留 pre-SSOT 白话。
   const patterns = [
     { id: "decade", label: keepCnBridgeLabel("大运") },
     { id: "day_master", label: keepCnBridgeLabel("日主") },
     { id: "year", label: keepCnBridgeLabel("流年") },
     { id: "yong_shen", label: keepCnBridgeLabel("用神") },
     { id: "yong_shen", label: "用神" },
-    // legacy softs (pre-SSOT consolidation) — still lift into markers
-    { id: "decade", label: "当前阶段气候" },
-    { id: "decade", label: "当前这个阶段" },
-    { id: "year", label: "当前时空效能" },
-    { id: "day_master", label: "你的核心特质" },
-    { id: "day_master", label: "核心特质" },
-    { id: "yong_shen", label: "关键平衡能量" },
   ].filter((p): p is { id: string; label: string } => Boolean(p.label));
 
   const parts = text.split(/(⟦[^⟧]*⟧)/g);
@@ -1365,7 +1358,7 @@ export const MINGLI_STACK_SOFT_PHRASE = "你内在那一股关键的支撑力";
 
 /**
  * Whole-phrase replace for bare 命理 stacks (before per-token soft/auto-mark).
- * "月柱正印壬水" → one concept — not 你的能量结构+稳定支持力+壬水奔流.
+ * "月柱正印壬水" → one concept — not 时脉+供源+stem 粘连。
  */
 export function replaceZhMingliStacks(text: string): string {
   if (!text?.trim()) return text ?? "";
@@ -1378,10 +1371,10 @@ export function replaceZhMingliStacks(text: string): string {
     ),
     MINGLI_STACK_SOFT_PHRASE,
   );
-  // After pillar soft-replace left "你的能量结构正印壬水"
+  // After pillar soft-replace left "元核正印壬水" / "纪元正印…"
   result = result.replace(
     new RegExp(
-      `(?:你的能量结构|当前阶段气候|当前时空效能|纪元|岁环|本元|锚元)(?:(?:${TEN_GOD_STACK})(?:${STEM_COMPOUND_STACK})?|(?:${STEM_COMPOUND_STACK}))`,
+      `(?:世络|时脉|元核|隐域|纪元|岁环|本元|锚元|助元|显元|潜元)(?:(?:${TEN_GOD_STACK})(?:${STEM_COMPOUND_STACK})?|(?:${STEM_COMPOUND_STACK}))`,
       "g",
     ),
     MINGLI_STACK_SOFT_PHRASE,
@@ -1394,25 +1387,29 @@ export function replaceZhMingliStacks(text: string): string {
   return result;
 }
 
+/** SSOT soft glosses that may abut after token-chain sanitize — fold into one phrase. */
 const CHAIN_SOFT_GLOSSES = [
-  "你的能量结构",
-  "当前阶段气候",
-  "当前时空效能",
+  "世络",
+  "时脉",
+  "元核",
+  "隐域",
   "纪元",
   "岁环",
   "本元",
   "锚元",
-  "稳定支持力",
-  "有利特质",
-  "表达力",
-  "规则感",
-  "壬水奔流",
+  "助元",
+  "显元",
+  "潜元",
+  "供源",
+  "均势",
+  "充沛",
+  "需养",
 ] as const;
 
 /**
- * 软译词自带限定语 → 用户原句的限定语变重复：「当前流年」→「当前当前时空效能」。
+ * 软译词自带限定语 → 用户原句的限定语变重复：「当前流年」→「当前当前岁环」。
  * 这一步不修，双字病还会顶掉 wrapBareKeepCnSoftTerms 的汉字 lookbehind，
- * 让本该变成金字「岁环[···]」的依据退化成裸露的 SaaS 词（第2段实测症状）。
+ * 让本该变成标记「岁环」的依据退化成裸露软译（第2段实测症状）。
  */
 const DUP_SOFT_PREFIX_ZH = ["当前", "你的", "这个", "目前"] as const;
 
@@ -1444,7 +1441,7 @@ export function collapseChainedSoftReplaceArtifacts(text: string): string {
     }
   }
   result = result.replace(
-    /(?:你的能量结构|稳定支持力|有利特质|当前阶段气候|当前时空效能|纪元|岁环|本元|锚元)[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥金木水火土]/g,
+    /(?:世络|时脉|元核|隐域|纪元|岁环|本元|锚元|助元|显元|潜元|供源|均势|充沛|需养)[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥金木水火土]/g,
     MINGLI_STACK_SOFT_PHRASE,
   );
   result = collapseDuplicatedSoftPrefix(result);
@@ -1462,7 +1459,7 @@ export function hasChainedSoftReplaceArtifacts(text: string): boolean {
     }
   }
   if (
-    /(?:你的能量结构|稳定支持力|有利特质)[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥金木水火土]/.test(
+    /(?:世络|时脉|元核|隐域|纪元|岁环|本元|锚元|助元|显元|潜元|供源|均势|充沛|需养)[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥金木水火土]/.test(
       masked,
     )
   ) {

@@ -86,7 +86,7 @@ ${wall}
   assert("parse-delivery keeps wall text", analysisParas.join("").includes(wall));
 
   console.log("\n=== Fix 2 · render prefers dynamic plain ===\n");
-  const scenarioPlain = "⟦t:year|当前时空效能|对你而言，这是项目进入兑现窗口、不宜再拖的那一年。⟧";
+  const scenarioPlain = "⟦t:year|岁环|对你而言，这是项目进入兑现窗口、不宜再拖的那一年。⟧";
   const preparedScenario = prepareTextForGlossaryRender(scenarioPlain, "zh");
   assert("marked scenario preserved", preparedScenario.includes("项目进入兑现窗口"));
 

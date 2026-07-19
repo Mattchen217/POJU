@@ -14,14 +14,14 @@ function assert(label: string, ok: boolean): void {
 function main(): void {
   console.log("\n========== POJU Block 31 Acceptance ==========\n");
 
-  const goodMarker = "⟦t:decade|人生阶段（丁酉）|这段路像走窄桥⟧";
+  const goodMarker = "⟦t:decade|纪元|这段路像走窄桥⟧";
   assert(
     "well-formed marker unchanged",
     wrapBareKeepCnSoftTerms(goodMarker, "zh") === goodMarker,
   );
 
   const nestedBug =
-    "⟦t:decade|⟦t:decade|人生阶段（丁酉）|正在经历的较长章节。⟧|语境白话⟧";
+    "⟦t:decade|⟦t:decade|纪元|正在经历的较长章节。⟧|语境白话⟧";
   assert(
     "does not double-wrap marker interior",
     !wrapBareKeepCnSoftTerms(goodMarker, "zh").includes("⟦t:decade|⟦t:"),
@@ -31,20 +31,21 @@ function main(): void {
     wrapBareKeepCnSoftTerms(nestedBug, "zh") === nestedBug,
   );
 
-  const bare = wrapBareKeepCnSoftTerms("当前人生阶段（丁酉）偏守。", "zh");
-  assert("bare soft term still wrapped", bare.includes("⟦t:decade|人生阶段（丁酉）|"));
-  assert("bare wrap uses glossary plain", bare.includes("⟧") && bare !== "当前人生阶段（丁酉）偏守。");
+  const bare = wrapBareKeepCnSoftTerms("纪元里偏守。", "zh");
+  assert("bare SSOT soft still wrapped", bare.includes("⟦t:decade|"));
+  assert("bare wrap closes marker", bare.includes("⟧") && bare !== "纪元里偏守。");
 
-  const mixed = `前文 ${goodMarker} 后文人生阶段（丙午）继续。`;
+  const mixed = `前文 ${goodMarker} 后文纪元里继续。`;
   const mixedOut = wrapBareKeepCnSoftTerms(mixed, "zh");
   assert("marker in mixed text preserved", mixedOut.includes(goodMarker));
-  assert("bare term outside marker wrapped", mixedOut.includes("⟦t:decade|人生阶段（丙午）|"));
+  assert("bare term outside marker wrapped", /⟦t:decade\|/.test(mixedOut));
 
-  const yiMu = wrapBareKeepCnSoftTerms("核心特质（乙木）需要支点。", "zh");
-  assert("stem-only 乙木 not forced into decade-style wrap", yiMu === "核心特质（乙木）需要支点。");
+  // Soft + paren is not auto-wrapped (lookbehind / lookahead) — stem-only stays plain.
+  const yiMu = wrapBareKeepCnSoftTerms("本元（乙木）需要支点。", "zh");
+  assert("stem-only 乙木 not forced into decade-style wrap", yiMu === "本元（乙木）需要支点。");
 
-  const jiaZi = wrapBareKeepCnSoftTerms("核心特质（甲子）需要支点。", "zh");
-  assert("day_master stem-branch bare wrap", jiaZi.includes("⟦t:day_master|核心特质（甲子）|"));
+  const jiaZi = wrapBareKeepCnSoftTerms("本元里需要支点。", "zh");
+  assert("day_master SSOT soft wraps", jiaZi.includes("⟦t:day_master|"));
 
   console.log("\n========================================\n");
   if (failures.length) {

@@ -248,7 +248,7 @@ const TEN_GODS: GlossaryConcept[] = [
   ce("七杀", ["Seven Killings", "Qi Sha"], sg("external pressure", "外部压力", "presión externa", "pression externe", "äußerer Druck", "High-stakes push from outside.", "来自外部的高压。", "Presión externa.", "Pression externe.", "Druck von außen.")),
   ce("正官", ["Direct Officer", "Zheng Guan"], sg("order and duty", "秩序与责任", "orden y deber", "ordre et devoir", "Ordnung und Pflicht", "Rules, roles, accountability.", "规则、角色与责任。", "Reglas y roles.", "Règles et rôles.", "Regeln und Rollen.")),
   ce("偏印", ["Indirect Resource", "Pian Yin"], sg("sideways learning", "旁路学习", "aprendizaje lateral", "apprentissage latéral", "seitliches Lernen", "Unusual mentors and niche knowledge.", "非常规导师与小众知识。", "Aprendizaje lateral.", "Apprentissage latéral.", "Seitliches Lernen.")),
-  ce("正印", ["Direct Resource", "Zheng Yin"], sg("steady support", "稳定支持力", "apoyo estable", "soutien stable", "beständige Stütze", "Structured care and learning.", "有结构的照护与学习。", "Apoyo estructurado.", "Soutien structuré.", "Strukturierte Stütze.")),
+  ce("正印", ["Direct Resource", "Zheng Yin"], sg("Source", "供源", "Fuente", "Source", "Quelle", "Structured care and learning.", "有结构的照护与学习。", "Apoyo estructurado.", "Soutien structuré.", "Strukturierte Stütze.")),
 ];
 
 const LIFE_STAGE_ROWS: Array<
@@ -335,21 +335,21 @@ const BRANCHES: GlossaryConcept[] = [
 ];
 
 const STRUCTURAL: GlossaryConcept[] = [
-  ce("日主", ["Day Master", "day master"], sg("core nature", "核心特质", "naturaleza esencial", "nature profonde", "Urnatur", "Central signature of your profile.", "能量画像的中枢特质。", "Firma central.", "Signature centrale.", "Zentrale Signatur.")),
-  ce("用神", ["Yong Shen", "Useful God", "yong shen"], sg("key balancing element", "关键平衡能量", "energía clave", "énergie clé", "Schlüsselenergie", "What restores balance when over-extended.", "过度消耗时靠它回血。", "Equilibrio.", "Équilibre.", "Ausgleich.")),
-  ce("喜神", ["Xi Shen", "Favorable God"], sg("beneficial quality", "有利特质", "cualidad beneficiosa", "qualité bénéfique", "vorteilhafte Eigenschaft", "Supportive constructive momentum.", "带来建设性推力的支持。", "Apoyo.", "Soutien.", "Stütze.")),
+  ce("日主", ["Day Master", "day master"], sg("Core", "本元", "Núcleo", "Noyau", "Kern", "Central signature of your profile.", "能量画像的中枢特质。", "Firma central.", "Signature centrale.", "Zentrale Signatur.")),
+  ce("用神", ["Yong Shen", "Useful God", "yong shen"], sg("Anchor", "锚元", "Ancla", "Ancre", "Anker", "What restores balance when over-extended.", "过度消耗时靠它回血。", "Equilibrio.", "Équilibre.", "Ausgleich.")),
+  ce("喜神", ["Xi Shen", "Favorable God"], sg("Booster", "助元", "Refuerzo", "Allié", "Rückenwind", "Supportive constructive momentum.", "带来建设性推力的支持。", "Apoyo.", "Soutien.", "Stütze.")),
   ce("忌神", ["Ji Shen", "Unfavorable Element", "仇神"], sg("quality to watch", "需留意的特质", "cualidad a vigilar", "qualité à surveiller", "zu beachtende Eigenschaft", "Over-emphasized trait when excessive.", "过载时易出问题的特质。", "Exceso.", "Excès.", "Übermaß.")),
-  ce("身强", ["Strong Self", "身旺"], sg("deep fuel reserves", "燃料底盘充沛", "reservas profundas", "réserves profondes", "tiefe Reserven", "Deep inner reserves — can carry load.", "内在底气足——能扛事。", "Reservas profundas.", "Réserves profondes.", "Tiefe Reserven.")),
-  ce("身弱", ["Weak Self"], sg("fuel runs short easily", "燃料容易跟不上", "combustible corto", "carburant limité", "Treibstoff knapper", "Energy depletes faster — pace and allies matter.", "能量消耗快——靠节奏与盟友。", "Ritmo clave.", "Rythme clé.", "Tempo zählt.")),
+  ce("身强", ["Strong Self", "身旺"], sg("Abundant", "充沛", "Abundante", "Abondant", "Vollgeladen", "Deep inner reserves — can carry load.", "内在底气足——能扛事。", "Reservas profundas.", "Réserves profondes.", "Tiefe Reserven.")),
+  ce("身弱", ["Weak Self"], sg("Conserving", "需养", "Conservador", "Conservateur", "Schonend", "Energy depletes faster — pace and allies matter.", "能量消耗快——靠节奏与盟友。", "Ritmo clave.", "Rythme clé.", "Tempo zählt.")),
   ce("平衡", ["Balanced", "中和"], sg("balanced baseline", "随境调整型", "equilibrio", "équilibre", "Balance", "Neither extreme — adapt by context.", "非极端——随境调整。", "Adaptación.", "Adaptation.", "Anpassung.")),
   ce("格局", ["Ge Ju", "Geju"], sg("personality pattern", "性格模式", "patrón", "profil", "Muster", "Overarching cognitive blueprint style.", "整体认知蓝图风格。", "Estilo cognitivo.", "Style cognitif.", "Kognitiver Stil.")),
-  ce("大运", ["Da Yun", "Luck Pillar", "Major Luck"], sg("current phase climate", "当前阶段气候", "clima de fase", "climat de phase", "Phasenklima", "Longer chapter you are moving through.", "正在经历的较长章节。", "Capítulo largo.", "Chapitre long.", "Langes Kapitel.")),
-  ce("流年", ["Liu Nian", "Fleeting Year"], sg("current temporal efficacy", "当前时空效能", "eficacia temporal", "efficacité temporelle", "Zeiteffizienz", "Annual window on your life phase.", "叠在大运上的年度窗口。", "Ventana anual.", "Fenêtre annuelle.", "Jahresfenster.")),
+  ce("大运", ["Da Yun", "Luck Pillar", "Major Luck"], sg("Era", "纪元", "Era", "Ère", "Epoche", "Longer chapter you are moving through.", "正在经历的较长章节。", "Capítulo largo.", "Chapitre long.", "Langes Kapitel.")),
+  ce("流年", ["Liu Nian", "Fleeting Year"], sg("Transit", "岁环", "Tránsito", "Transit", "Transit", "Annual window on your life phase.", "叠在大运上的年度窗口。", "Ventana anual.", "Fenêtre annuelle.", "Jahresfenster.")),
   ce("八字", ["Bazi", "BaZi", "Four Pillars"], sg("personality profile", "性格画像", "perfil", "profil", "Profil", "Behavioral map from birth alignment.", "出生时空的行为地图。", "Mapa conductual.", "Cartographie.", "Verhaltensmodell.")),
   ce("四柱", ["Four Pillars"], sg("personality structure", "性格结构", "estructura", "structure", "Struktur", "Four layers of life conditioning.", "四层生命条件交织。", "Cuatro capas.", "Quatre couches.", "Vier Ebenen.")),
   ce("命盘", ["natal chart", "birth chart", "命局"], sg("personality profile", "性格画像", "perfil", "profil", "Profil", "Full matrix of trait interactions.", "特质相互作用的全景矩阵。", "Matriz completa.", "Matrice complète.", "Vollständige Matrix.")),
-  ce("天干", ["Heavenly Stem", "heavenly stem"], sg("active trait layer", "显性特质层", "capa activa", "couche active", "aktive Schicht", "Conscious visible layer.", "向外展现的层面。", "Capa visible.", "Couche visible.", "Sichtbare Ebene.")),
-  ce("地支", ["Earthly Branch", "earthly branch"], sg("inner trait layer", "隐性特质层", "capa interior", "couche intérieure", "innere Schicht", "Subconscious foundation.", "深层动机与驱动。", "Capa interior.", "Couche intérieure.", "Innere Ebene.")),
+  ce("天干", ["Heavenly Stem", "heavenly stem"], sg("Manifest", "显元", "Manifiesto", "Manifeste", "Manifest", "Conscious visible layer.", "向外展现的层面。", "Capa visible.", "Couche visible.", "Sichtbare Ebene.")),
+  ce("地支", ["Earthly Branch", "earthly branch"], sg("Latent", "潜元", "Latente", "Latent", "Latent", "Subconscious foundation.", "深层动机与驱动。", "Capa interior.", "Couche intérieure.", "Innere Ebene.")),
   ce("藏干", ["Hidden Stem", "hidden stem"], sg("inner support stem", "藏干支持", "tallo oculto", "tige cachée", "verborgener Stamm", "Hidden stems inside a branch.", "藏在地支里的辅助天干。", "Tallo oculto.", "Tige cachée.", "Verborgener Stamm.")),
   ce("配偶宫", ["marriage palace", "spouse palace", "夫妻宫"], sg("partner-role pattern", "伴侣角色模式", "patrón de pareja", "modèle partenaire", "Partnermuster", "Baseline for intimate partnership.", "亲密关系的心理基准。", "Base de pareja.", "Base partenaire.", "Partnerschaftsbasis.")),
 ];

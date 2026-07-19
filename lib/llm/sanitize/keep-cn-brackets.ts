@@ -67,26 +67,15 @@ export function auditEmptyKeepCnBrackets(text: string): OutOfSetAuditHit[] {
     }
   }
 
+  // SSOT softs only — empty paren after soft label.
   const barePatterns: RegExp[] = [
-    /\blife phase\s*\(\s*\)/gi,
-    /\bcurrent phase climate\s*\(\s*\)/gi,
     /\bEra\s*\(\s*\)/gi,
-    /\byear'?s energy\s*\(\s*\)/gi,
-    /\bcurrent temporal efficacy\s*\(\s*\)/gi,
     /\bTransit\s*\(\s*\)/gi,
-    /\bcore nature\s*\(\s*\)/gi,
     /\bCore\s*\(\s*\)/gi,
-    /\bkey balancing element\s*\(\s*\)/gi,
     /\bAnchor\s*\(\s*\)/gi,
-    /人生阶段[（(]\s*[）)]/g,
-    /当前阶段气候[（(]\s*[）)]/g,
     /纪元[（(]\s*[）)]/g,
-    /流年能量[（(]\s*[）)]/g,
-    /当前时空效能[（(]\s*[）)]/g,
     /岁环[（(]\s*[）)]/g,
-    /核心特质[（(]\s*[）)]/g,
     /本元[（(]\s*[）)]/g,
-    /关键平衡能量[（(]\s*[）)]/g,
     /锚元[（(]\s*[）)]/g,
     /用神[（(]\s*[）)]/g,
   ];
@@ -135,25 +124,13 @@ export function repairEmptyKeepCnBrackets(
   });
 
   const bareReplacers: Array<{ re: RegExp; slug: string }> = [
-    { re: /\blife phase\s*\(\s*\)/gi, slug: "decade" },
-    { re: /\bcurrent phase climate\s*\(\s*\)/gi, slug: "decade" },
     { re: /\bEra\s*\(\s*\)/gi, slug: "decade" },
-    { re: /\byear'?s energy\s*\(\s*\)/gi, slug: "year" },
-    { re: /\bcurrent temporal efficacy\s*\(\s*\)/gi, slug: "year" },
     { re: /\bTransit\s*\(\s*\)/gi, slug: "year" },
-    { re: /\bcore nature\s*\(\s*\)/gi, slug: "day_master" },
     { re: /\bCore\s*\(\s*\)/gi, slug: "day_master" },
-    { re: /\bkey balancing element\s*\(\s*\)/gi, slug: "yong_shen" },
     { re: /\bAnchor\s*\(\s*\)/gi, slug: "yong_shen" },
-    { re: /人生阶段[（(]\s*[）)]/g, slug: "decade" },
-    { re: /当前阶段气候[（(]\s*[）)]/g, slug: "decade" },
     { re: /纪元[（(]\s*[）)]/g, slug: "decade" },
-    { re: /流年能量[（(]\s*[）)]/g, slug: "year" },
-    { re: /当前时空效能[（(]\s*[）)]/g, slug: "year" },
     { re: /岁环[（(]\s*[）)]/g, slug: "year" },
-    { re: /核心特质[（(]\s*[）)]/g, slug: "day_master" },
     { re: /本元[（(]\s*[）)]/g, slug: "day_master" },
-    { re: /关键平衡能量[（(]\s*[）)]/g, slug: "yong_shen" },
     { re: /锚元[（(]\s*[）)]/g, slug: "yong_shen" },
     { re: /用神[（(]\s*[）)]/g, slug: "yong_shen" },
   ];

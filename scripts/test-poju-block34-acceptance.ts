@@ -77,8 +77,8 @@ function main(): void {
 
   const wrapped = wrapBareKeepCnSoftTerms("锚元里。", "zh");
   assert("锚元 auto-wrapped", wrapped.includes("⟦t:yong_shen|"));
-  const legacyWrapped = wrapBareKeepCnSoftTerms("关键平衡能量里。", "zh");
-  assert("legacy 关键平衡能量 still wrapped", legacyWrapped.includes("⟦t:yong_shen|"));
+  const bareYong = wrapBareKeepCnSoftTerms("用神里。", "zh");
+  assert("裸用神 still wrapped", bareYong.includes("⟦t:yong_shen|"));
 
   console.log("\n========================================\n");
   if (failures.length) {
