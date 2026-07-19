@@ -574,6 +574,20 @@ export function wrapBarePillars(text: string, locale: string): string {
   const loc = toGlossaryLocale(locale);
   const words = Object.keys(PILLAR_TO_SLUG).sort((a, b) => b.length - a.length);
   let out = text;
+
+  // ── 诊断（临时）──
+  const PILLAR_PROBE = /(年柱|月柱|日柱|时柱|年支|月支|日支|时支|年干|月干|日干|时干)/;
+  const hitIn = text.match(new RegExp(PILLAR_PROBE, "g"));
+  if (hitIn) {
+    console.warn(
+      "[DIAG wrapBarePillars] 入口含柱位:",
+      JSON.stringify([...new Set(hitIn)]),
+      "| 片段:",
+      text.slice(Math.max(0, text.search(PILLAR_PROBE) - 8), text.search(PILLAR_PROBE) + 12),
+    );
+  }
+  // ── /诊断 ──
+
   for (const han of words) {
     const id = PILLAR_TO_SLUG[han]!;
     if (!termOf(id, loc)) continue;
@@ -582,6 +596,20 @@ export function wrapBarePillars(text: string, locale: string): string {
       `⟦t:${id}|⟧`,
     );
   }
+
+  // ── 诊断（临时）──
+  const hitOut = out.match(new RegExp(PILLAR_PROBE, "g"));
+  if (hitIn && hitOut) {
+    console.warn(
+      "[DIAG wrapBarePillars] ⚠️ 打标后【仍有】裸柱位:",
+      JSON.stringify([...new Set(hitOut)]),
+      "— 正则没匹配上（可能前后有意外字符）",
+    );
+  } else if (hitIn) {
+    console.warn("[DIAG wrapBarePillars] ✅ 打标成功，柱位已全部包成标记");
+  }
+  // ── /诊断 ──
+
   return out;
 }
 

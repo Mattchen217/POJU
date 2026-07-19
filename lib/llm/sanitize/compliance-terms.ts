@@ -844,6 +844,16 @@ function sanitizeNonMarkerSegment(
   locale: string,
   opts?: { wrapStems?: boolean },
 ): string {
+  // ── 诊断（临时）──
+  if (/(年柱|月柱|日柱|时柱|年支|月支|日支|时支|年干|月干|日干|时干)/.test(segment)) {
+    console.warn(
+      "[DIAG sanitizeNonMarkerSegment] 收到含柱位的段, wrapStems =",
+      opts?.wrapStems,
+      "| 片段:",
+      segment.slice(0, 40),
+    );
+  }
+  // ── /诊断 ──
   let s = stripBareTermMarkers(segment);
   s = s.replace(/⟦(?:(?!⟧).)*$/gm, "");
   s = s.replace(/⟦(?:(?!⟧).)*?(?=⟦)/g, "");
@@ -971,6 +981,27 @@ export function auditPaymentLeakResiduals(
     for (const [word] of ZH_STRUCTURE_SOFT_REPLACE) {
       const idx = visible.indexOf(word);
       if (idx >= 0) {
+        // ── 诊断（临时）──
+        if (/(年柱|月柱|日柱|时柱|年支|月支|日支|时支)/.test(word)) {
+          const inRawText = text.includes(word); // 原始文本里就有裸柱位?
+          const inVisibleOnly = !inRawText; // 还是 strip 标记后才冒出来的?
+          console.warn(
+            `[DIAG payment_leak] 命中「${word}」| 原文裸露=${inRawText} | 仅还原后出现=${inVisibleOnly}`,
+            "| visible片段:",
+            snippetAround(visible, idx, word.length),
+          );
+          if (inVisibleOnly) {
+            // 找出是哪个标记还原成了它
+            const mk = text.match(
+              new RegExp(`⟦t:[^|⟧]*\\|[^⟧]*${word}[^⟧]*⟧|⟦t:pl_[^|⟧]*\\|`),
+            );
+            console.warn(
+              `[DIAG payment_leak] 「${word}」是标记还原来的 → 元凶标记:`,
+              mk?.[0] ?? "(未定位,可能是软译反查)",
+            );
+          }
+        }
+        // ── /诊断 ──
         violations.push({
           label: `payment_leak:${word}`,
           snippet: snippetAround(visible, idx, word.length),

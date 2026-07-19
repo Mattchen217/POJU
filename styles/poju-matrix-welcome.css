@@ -1,4 +1,4 @@
-/* Fixed matrix welcome — full measure of chat list, not a nested card */
+/* Fixed matrix welcome — same measure as chat list (or a hair under) */
 
 .pmw {
   box-sizing: border-box;
@@ -73,25 +73,35 @@
   -webkit-text-fill-color: transparent;
 }
 
+/*
+ * Copy width = list column (≈100%). Former max-width:40rem (~640px) forced each
+ * authored \n line to wrap again → 4 visual lines. Keep i18n's two-line breaks.
+ */
 .pmw__intro,
 .pmw__cta {
+  box-sizing: border-box;
   width: 100%;
-  max-width: 40rem;
-  margin: 0 auto;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
   font-family: "Plus Jakarta Sans", "Microsoft YaHei", "PingFang SC", var(--font-geist-sans), sans-serif;
-  /* Welcome voice — larger than chat bubbles; designed as two balanced lines */
-  font-size: clamp(1.28rem, 2.9vw, 1.62rem);
+  /* Large but sized so ~35 CJK chars fit on one line inside pchat read column */
+  font-size: clamp(1.125rem, 1.55vw + 0.55rem, 1.375rem);
   font-weight: 450;
-  line-height: 1.55;
+  line-height: 1.65;
   letter-spacing: 0.01em;
-  text-align: center;
+  text-align: justify;
+  text-justify: inter-ideograph;
+  text-align-last: justify;
   hyphens: none;
 }
 
 .pmw__line {
   display: block;
   width: 100%;
-  text-align: center;
+  text-align: justify;
+  text-justify: inter-ideograph;
+  text-align-last: justify;
 }
 
 .pmw__intro {
@@ -99,7 +109,6 @@
   color: rgba(232, 228, 244, 0.92);
 }
 
-/* Same type measure as intro — welcome CTA, not chat copy */
 .pmw__cta {
   padding: 0;
   font-weight: 500;
@@ -117,15 +126,21 @@
   letter-spacing: 0.04em;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 719px) {
   .pmw {
     margin-top: 2rem;
   }
 
   .pmw__intro,
   .pmw__cta {
-    font-size: clamp(1.2rem, 4.2vw, 1.4rem);
-    line-height: 1.5;
-    max-width: 100%;
+    font-size: clamp(1.05rem, 3.6vw, 1.2rem);
+    line-height: 1.6;
+    text-align: justify;
+    text-align-last: left;
+  }
+
+  .pmw__line {
+    text-align: justify;
+    text-align-last: left;
   }
 }

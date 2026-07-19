@@ -1,7 +1,8 @@
 "use client";
 
 import { Link } from "@/i18n/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 
 type Props = {
@@ -11,12 +12,19 @@ type Props = {
 
 /**
  * First composer-focus gate — same shell / typography / CTA as site DisclaimerModal.
+ * Portaled to document.body so `.pchat [class*="text-sm"] { font-size: inherit }`
+ * (19px chat body) cannot inflate disclaimer-scale type.
  */
 export function QuestionBriefingDialog({ open, onConfirm }: Props) {
   const t = useTranslations("poju.chat.question_briefing");
   const [checked, setChecked] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  if (!open) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!open || !mounted) return null;
 
   const items = [
     { label: t("item_one_title"), body: t("item_one_body") },
@@ -31,7 +39,7 @@ export function QuestionBriefingDialog({ open, onConfirm }: Props) {
     onConfirm();
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[500] bg-black/70">
       <div className="flex min-h-full items-center justify-center overflow-y-auto overscroll-contain p-4 sm:p-6">
         <div
@@ -97,6 +105,7 @@ export function QuestionBriefingDialog({ open, onConfirm }: Props) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
