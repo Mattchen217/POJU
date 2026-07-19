@@ -314,18 +314,26 @@ export function stripMarkersForPrompt(text: string, locale = "en"): string {
 /**
  * 正文层降级：⟦t:id|贴题白话⟧ / ⟦t:id|软译|贴题白话⟧ → **只留贴题白话**（无软译、无金字、无 [···]）。
  * 与 stripMarkersForPrompt 的区别：那个留金字给 prompt/history，这个留白话给用户正文。
- * 模型没写贴题白话时退到软译，并留痕 —— 静默兜底 = 失败永远看不见。
+ * 空槽（无白话原字）→ 整个删除，绝不降成软译（正文里「火→发散」必然不通顺）。
  */
 export function degradeMarkersToPlain(text: string, locale = "en"): string {
   if (!text?.includes("⟦t:")) return text ?? "";
+  void locale;
   TERM_MARKER_PATTERN.lastIndex = 0;
   return text.replace(TERM_MARKER_PATTERN, (raw, rawId: string, slot2: string, slot3?: string) => {
     const id = normalizeTermMarkerId(rawId);
     const isThreeSlot = (raw.match(/\|/g) || []).length >= 2;
     const contextual = unescapeMarkerPart(isThreeSlot ? (slot3 ?? "") : slot2).trim();
     if (contextual) return contextual;
-    console.warn("[term-marking] body marker has no contextual plain — fell back to soft label", { id });
-    return termOf(id, locale) || id;
+    // 空槽 = 模型在正文打了标却没写白话原字（本就违反"正文零标记"）。
+    // 【绝不】降成软译 termOf(id)——正文里"火→发散"必然不通顺（2026-07-19 生产）。
+    // 正文层唯一安全的兜底：整个删掉标记外壳，让句子回到白话。
+    // 真该显示的五行意象字，模型应直接写在正文（不打标），不依赖这里还原。
+    console.warn("[term-marking] 正文空槽标记 —— 已删除（模型不该在正文打标）", {
+      id,
+      raw: raw.slice(0, 24),
+    });
+    return "";
   });
 }
 

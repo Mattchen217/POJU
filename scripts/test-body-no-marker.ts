@@ -1,0 +1,52 @@
+/**
+ * 正文零标记 · 守卫
+ *   pnpm exec tsx scripts/test-body-no-marker.ts
+ *
+ * 守 2026-07-19：模型在正文打了 ⟦t:fire|⟧ → 空槽 → 裸标记穿透 / 降成"发散"不通顺。
+ */
+import fs from "node:fs";
+import path from "node:path";
+import { prepareBodyTextForGlossaryRender } from "@/lib/llm/sanitize/compliance-terms";
+
+const failures: string[] = [];
+const assert = (l: string, ok: boolean) => {
+  if (!ok) failures.push(l);
+  console.log(`  [${ok ? "PASS" : "FAIL"}] ${l}`);
+};
+
+function main(): void {
+  console.log("\n===== 正文零标记 =====\n");
+
+  // ① 正文空槽标记 → 不残留裸标记、不冒出软译突兀词
+  const body = "你像一团被安置在陶罐里的 ⟦t:fire|⟧ ——天生温热。";
+  const rendered = prepareBodyTextForGlossaryRender(body, "zh");
+  assert("正文无裸 marker", !rendered.includes("⟦t:"));
+  assert("正文无残留 t:fire", !rendered.includes("t:fire"));
+  assert("空槽不降成软译发散", !rendered.includes("发散"));
+
+  // ② 带白话原字的 3-slot 标记 → 保留白话（兼容老格式）
+  const withPlain = "你像一团 ⟦t:fire|发散|温暖扩散⟧ 的能量。";
+  const r2 = prepareBodyTextForGlossaryRender(withPlain, "zh");
+  assert("3-slot 保留白话原字", !r2.includes("⟦t:") && r2.includes("温暖扩散"));
+
+  // ③ 提示词:只反例无正例 + 有判断标准
+  const p = fs.readFileSync(
+    path.join(process.cwd(), "lib/llm/prompts/base-analysis-stream-prompt.ts"),
+    "utf8",
+  );
+  const start = p.indexOf("正文零标记 · 硬错");
+  const seg = start >= 0 ? p.slice(start, start + 600) : "";
+  assert("提示词有反例叉号", seg.includes("✗"));
+  assert("提示词无正例勾号", !seg.includes("✓"));
+  assert("提示词有判断标准不通顺", seg.includes("不通顺"));
+  assert("提示词覆盖开篇身份锚", seg.includes("开篇身份锚"));
+
+  console.log(
+    "\n" +
+      (failures.length === 0
+        ? "全过。"
+        : `${failures.length} 项失败：\n  - ${failures.join("\n  - ")}`),
+  );
+  if (failures.length) process.exit(1);
+}
+main();
