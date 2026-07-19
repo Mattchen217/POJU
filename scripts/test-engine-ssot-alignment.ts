@@ -11,7 +11,7 @@ import path from "node:path";
 import { pojuTermByTraditional } from "@/lib/glossary/pojulife-terms";
 import { OUT_OF_SET_FORBIDDEN_HAN } from "@/lib/glossary/term-closed-set";
 import { wrapBareRelations } from "@/lib/llm/sanitize/term-marking";
-import { hasCoreJudgmentsBlackspeak } from "@/lib/base-analysis/generate-core-judgments";
+import { hasCoreJudgmentsRedline } from "@/lib/base-analysis/generate-core-judgments";
 
 const failures: string[] = [];
 const assert = (l: string, ok: boolean) => {
@@ -188,14 +188,15 @@ function main(): void {
     );
   }
 
-  // 关系打标：相刑 → ⟦t:xing|⟧，打标后黑话闸不拦
+  // 关系打标：相刑 → ⟦t:xing|⟧（叙事输出端）；core_judgments 闸只拦恐吓红线
   const relMarked = wrapBareRelations("结构上有相刑的张力。", "zh");
   assert("相刑→⟦t:xing", relMarked.includes("⟦t:xing"));
   assert("打标后无裸相刑", !relMarked.includes("相刑"));
   assert(
-    "打标后黑话闸不拦相刑",
-    !hasCoreJudgmentsBlackspeak(relMarked),
+    "裸相刑放行（中性真词）",
+    !hasCoreJudgmentsRedline("结构上有相刑的张力。"),
   );
+  assert("恐吓红线仍拦", hasCoreJudgmentsRedline("此盘有十恶大败"));
 
   // 术语总数 209
   const src = fs.readFileSync(

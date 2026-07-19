@@ -139,8 +139,9 @@ function main(): void {
   console.log("\n[core_judgments]");
   const cj = read("lib/base-analysis/generate-core-judgments.ts");
   assert(
-    "rule7 含 balance_anchor",
-    /structural_gap、leverage_state、balance_anchor/.test(cj),
+    "板块二 锚 refs：structural_gap / leverage / balance",
+    /structural_gap\s*\/\s*leverage_state\s*\/\s*balance_anchor/.test(cj) ||
+      cj.includes("structural_gap / leverage_state / balance_anchor"),
   );
   assert("超时 180s", /180_000/.test(cj));
   assert("正例仍为 0", !cj.includes("正例"));

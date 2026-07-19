@@ -18,7 +18,7 @@ import {
   buildCoreJudgmentsRefsFromStructured,
 } from "@/lib/base-analysis/core-judgments";
 import {
-  hasCoreJudgmentsBlackspeak,
+  hasCoreJudgmentsRedline,
 } from "@/lib/base-analysis/generate-core-judgments";
 import {
   BANNED_TERM_SOFT_ZH,
@@ -156,7 +156,12 @@ function main() {
     path.join(ROOT, "lib/base-analysis/generate-core-judgments.ts"),
     "utf8",
   );
-  assert("CJ self-check: 泄身≠驱动", cjSrc.includes("泄身通道是**消耗**") || cjSrc.includes("泄身通道是消耗"));
+  assert(
+    "CJ self-check: 泄身≠驱动",
+    cjSrc.includes("泄身通道是**消耗**") ||
+      cjSrc.includes("泄身通道是消耗") ||
+      cjSrc.includes("泄身通道是【消耗】"),
+  );
 
   const evidenceMd =
     "## 节\n\n正文。\n\n**依据与推理:**\n\n因为 ⟦t:day_master|柔韧生长力⟧ 所以结论。";
@@ -239,7 +244,7 @@ function main() {
     cj.leverage_state,
     cj.climate_now,
   ].join("\n");
-  assert("template CJ no blackspeak", !hasCoreJudgmentsBlackspeak(joined), joined.slice(0, 200));
+  assert("template CJ no redline fear terms", !hasCoreJudgmentsRedline(joined), joined.slice(0, 200));
 
   // soft labels — 平衡 everyday is skipped, not false-fired as strength jargon
   assert("glossary soft 随境调整型", stemSoftSrc.includes('"随境调整型"'));

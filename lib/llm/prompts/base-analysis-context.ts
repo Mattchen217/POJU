@@ -2,10 +2,8 @@ import type { ProfileStructured } from "@/lib/calculations/build-profile-structu
 import {
   buildCoreJudgmentsFromStructured,
   isCoreJudgments,
-  softMarkCoreJudgmentsRefs,
   type CoreJudgments,
 } from "@/lib/base-analysis/core-judgments";
-import { autoMarkBareTerms } from "@/lib/llm/sanitize/term-marking";
 
 /** Normalized base_analysis payload for prompts + local calculations. */
 export type BaseAnalysisBundle = {
@@ -108,28 +106,15 @@ export const BASE_ANALYSIS_DOWNSTREAM_BANNER_EN =
   "(Neutral Layer-1 energy base: structured + core_judgments—no user narrative; must not infer career, relationship, or events.)";
 
 /**
- * 注入下游前：六字段 + refs 神煞/关系打成金字（幂等）。
- * structured 展开的模板路径 refs 仍是真词，必须过这一层。
+ * 下游拿【原始真词】—— 不打标。core_judgments 是给机器的中间数据，
+ * 真词真算最准；打标是叙事【输出端】给用户时才做的事。
+ * （此函数从"打标"降为"透传"，保留签名以免动所有调用点。）
  */
-function softMarkJudgmentsForDownstream(
+export function softMarkJudgmentsForDownstream(
   judgments: CoreJudgments,
-  locale: string,
+  _locale: string,
 ): CoreJudgments {
-  const keys = [
-    "identity_anchor",
-    "drive_mechanism",
-    "structural_gap",
-    "balance_anchor",
-    "exchange_mode",
-    "leverage_state",
-    "climate_now",
-  ] as const;
-  const marked = { ...judgments };
-  for (const k of keys) {
-    marked[k] = autoMarkBareTerms(String(judgments[k] ?? ""), locale);
-  }
-  marked.refs = softMarkCoreJudgmentsRefs(judgments.refs, locale);
-  return marked;
+  return judgments;
 }
 
 /**

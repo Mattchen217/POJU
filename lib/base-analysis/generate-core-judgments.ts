@@ -2,6 +2,9 @@
  * Option ② — independent medium call for interpretive core_judgments fields.
  * refs + climate_now ALWAYS filled from structured in code (never model).
  * Fallback = deterministic expand.
+ *
+ * core_judgments 给下游【原始真词】（零打标）—— 合规在叙事输出端。
+ * 只拦恐吓/宿命红线（OUT_OF_SET_FORBIDDEN_HAN）。
  */
 
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
@@ -10,7 +13,6 @@ import {
   buildCoreJudgmentsFromStructured,
   buildCoreJudgmentsRefsFromStructured,
   isCoreJudgments,
-  softMarkCoreJudgmentsRefs,
   type CoreJudgments,
 } from "@/lib/base-analysis/core-judgments";
 import { OUT_OF_SET_FORBIDDEN_HAN } from "@/lib/glossary/term-closed-set";
@@ -18,10 +20,6 @@ import {
   openRouterChatCompletion,
 } from "@/lib/llm/openrouter-shared";
 import { isEmptyResponseError } from "@/lib/llm/openrouter-retry";
-import {
-  autoMarkBareTerms,
-  wrapBareRelations,
-} from "@/lib/llm/sanitize/term-marking";
 
 const CJ_INTERPRETIVE_KEYS = [
   "identity_anchor",
@@ -32,18 +30,8 @@ const CJ_INTERPRETIVE_KEYS = [
   "leverage_state",
 ] as const;
 
-function softMarkInterpretiveFields(
-  interpretive: Record<string, string>,
-  locale: string,
-): Record<string, string> {
-  const marked: Record<string, string> = {};
-  for (const [k, v] of Object.entries(interpretive)) {
-    // autoMark 未含「相刑」等引擎变体；wrapBareRelations 从 SSOT aliases 吃掉，
-    // 否则黑话闸抓裸「相刑」→ core_judgments 落模板。
-    marked[k] = wrapBareRelations(autoMarkBareTerms(String(v), locale), locale);
-  }
-  return marked;
-}
+// softMarkInterpretiveFields 已删 —— core_judgments 给下游原始真词，不打标。
+// 合规在叙事【输出端】做（叙事有 5 类打标器+审计）。
 
 /**
  * 预算按【真实胃口】给,不按想当然(铁律 #7 —— 已在 90s超时 / 12000token / max_attempts:1 上栽过三次)。
@@ -105,47 +93,17 @@ function parseLlmInterpretiveJson(raw: string): LlmInterpretive | null {
   }
 }
 
-/** Reject charts blackspeak that must never reach four products. */
-export function hasCoreJudgmentsBlackspeak(text: string): boolean {
+/**
+ * 只拦【恐吓/宿命红线】进 core_judgments —— 十恶大败/孤鸾煞/空亡这类，
+ * 即使给下游也会把宿命论算进推理（用户原则：带恐吓的真算也不喂）。
+ *
+ * 【中性真词全部放行】：喜神/大运/相刑/贵人/十神… 都是下游真算的数据源，
+ * core_judgments 给原始真词，合规在叙事【输出端】做。不再禁中性命理词。
+ * 裸干支（甲乙…）也放行 —— 下游要它真算；叙事输出端会打标软译。
+ */
+export function hasCoreJudgmentsRedline(text: string): boolean {
   if (!text?.trim()) return false;
-  if (/[甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥]/.test(text)) return true;
-  const bans = [
-    "日主",
-    "身弱",
-    "身强",
-    "身旺",
-    "用神",
-    "喜神",
-    "忌神",
-    "天干",
-    "地支",
-    "藏干",
-    "大运",
-    "流年",
-    "刑冲",
-    "合冲",
-    "相冲",
-    "相刑",
-    "相合",
-    "六合",
-    "三合",
-    "穿害",
-    "相害",
-    "刑害",
-    "十神",
-    // 神煞原词 —— 上一版一个都不查,`十恶大败` 就是这么【静默】进 core_judgments 的。
-    // 黑名单神煞(OUT_OF_SET_FORBIDDEN_HAN)现在已在 refs 侧丢弃,这里是第二道:
-    // 模型仍可能从 structured.pillars_detail 自己捡。
-    ...(OUT_OF_SET_FORBIDDEN_HAN as readonly string[]),
-    "贵人",
-    "神煞",
-    // 关系原词(喂真词真算后,输出端应已打标;仍裸写 = 打标漏网或绕开 refs)
-    // 单字「煞」易误伤「煞费苦心」等 —— 宁可漏,不可误伤后落模板。
-    "自刑",
-    "半合",
-    "天干合",
-  ];
-  return bans.some((b) => text.includes(b));
+  return (OUT_OF_SET_FORBIDDEN_HAN as readonly string[]).some((b) => text.includes(b));
 }
 
 /**
@@ -183,91 +141,84 @@ function buildCoreJudgmentsLlmPrompt(
   const climate_now = buildClimateNowFromStructured(structured, locale);
 
   const system = zh
-    ? `# core_judgments = 【机制读数】给机器的中立判断层（不是诗意、不是术语复述）
+    ? `# core_judgments · 给下游机器的机制读数（不是给用户、不是诗意）
 
-把 structured 译成【具体、可被下游直接引用】的机制读数。
+你把 structured 译成【具体、可被下游直接引用】的机制读数。下游是机器，给它【原始真词】——
+需要写"喜神/大运/相刑/日主"这些命理词就【直接写】，不用软译、不用回避。合规是下游输出时的事，不是你的事。
 
-## 六个字段各自读什么（这是定义，不是可选项）
+## 板块一 · 六个字段各读什么（定义）
 
-- identity_anchor —— **这套系统靠什么维持自己**。读 day_master 五行 + strength：
-  供给从哪来、在什么条件下会断。写"运转条件"，不写性格形容词。
-- drive_mechanism —— **什么动作能真的推进它**。读 pattern + 在场十神 + strength：
-  哪条通道是推进、哪条是消耗。⚠️ 供给偏弱时，泄身通道是**消耗**，不是驱动 —— 别把消耗写成驱动。
-- structural_gap —— **它最先在哪里失效**。读 ji_shen + strength + natal_relations：
-  过载时先垮的是哪个环节。写失效点，不写"缺点"。
-- balance_anchor —— **补哪一路能把它拉回可用区**。读 yong_shen + xi_shen：
-  只写"补什么方向"，**不写做什么动作**（行动是下游第4段的活，这里越界会锁死下游）。
-- exchange_mode —— **它跟外界怎么换能量**。读在场十神的进/出两侧：
-  需要外界给什么、最擅长给出什么。
-- leverage_state —— **哪一个条件成熟时收益最大**。读 yong_shen 得力与否 + natal_relations：
-  写"条件"，不写"时机"，不写"你应该"。
+- identity_anchor —— 这套系统靠什么维持自己。读 day_master 五行 + strength：
+  供给从哪来、什么条件下会断。写运转条件，不写性格形容词。
+- drive_mechanism —— 什么动作能真的推进它。读 pattern + 在场十神 + strength：
+  哪条通道推进、哪条消耗。⚠️ 供给偏弱时，泄身通道是【消耗】不是驱动——别把消耗写成驱动。
+- structural_gap —— 它最先在哪里失效。读 ji_shen + strength + natal_relations：过载时先垮哪个环节。
+- balance_anchor —— 补哪一路能拉回可用区。读 yong_shen + xi_shen：只写补什么方向，不写做什么动作（行动是下游第4段的活）。
+- exchange_mode —— 它跟外界怎么换能量。读在场十神进/出两侧：需要外界给什么、最擅长给出什么。
+- leverage_state —— 哪个条件成熟时收益最大。读 yong_shen 得力与否 + natal_relations：写条件，不写时机、不写"你应该"。
 
-## 硬规则
+## 板块二 · 质量红线（这决定读数有没有用）
 
-1) 只输出 JSON；字段仅上述六项，每项 1 句。
-2) 【禁止】输出 refs / climate_now（代码已算好）。
-3) 只展开 structured，【禁止】改判强弱/用神方向/喜忌/格局。
-4) 【禁止】裸干支、日主、身弱/身强、用神/喜神/忌神、刑冲合害原词。
-5) 【禁止】比喻、职业/婚恋场景、年龄/干支纪年、行动清单。
-6) **每条必须能被换成另一个命盘时失效** —— 六条里有任何一条换盘还成立，那条就是套话，重写。
-7) refs 里的 shensha_instances 与 natal_relations 是这盘**独有**的算料（已软译，可直接引用）：
-   structural_gap、leverage_state、balance_anchor **各自至少锚住其中一条具体条目**，不能只用强弱/喜忌三标签。
-   - \`磨蚀@month-day\` 读作「month 与 day 两个位置之间有磨蚀」——引用软译名与位置即可，不要还原原词。
-   - balance_anchor 尤其容易写成套话（「补入温暖与务实的方向」换任何同类盘都成立）——
-     它必须说清「补哪一路，是为了解开**这盘的哪条具体张力/缺口**」。
-   - **两个清单都空**（有些盘确实如此）→ 就锚 pattern 里的具体十神组合，并说清
-     「这个组合在【当前强弱与喜忌方向】下是推进还是消耗」——那也是这盘独有的。
-     **不要为了凑条目而编造 refs 里没有的东西。**
+- **每条换个命盘就该失效**：六条里任一条换盘还成立 = 套话 = 重写。这是最重要的一条。
+- **锚到这盘独有的算料**：structural_gap / leverage_state / balance_anchor 各自【至少锚住 refs 里一条具体条目】
+  （某个 shensha_instance 或 natal_relation），不能只用强弱/喜忌三标签。
+  · balance_anchor 尤其容易套话——必须说清"补哪一路，为了解开【这盘的哪条具体张力/缺口】"。
+  · refs 两个清单都空的盘 → 锚 pattern 里的具体十神组合，说清它在当前强弱+喜忌下是推进还是消耗。
+  · 【不为凑条目编造 refs 里没有的东西】。
 
-## 反例（照这个方向避）
+## 板块三 · 只拦一类词（其余全放行）
 
-  ✗ "identity_anchor": "乙木日主，根基偏弱，依赖水木生扶。"（术语复述 + 裸干支）
+- 唯一不能写的：恐吓/宿命词（十恶大败、孤鸾煞、空亡、血刃这类）——它们不是中性数据。
+- 除此以外【所有命理真词随便用】：喜神/忌神/用神/大运/流年/相刑/相冲/十神/贵人/日主…
+  下游要靠这些真词真算。你只管写准，不用替下游做合规。
+
+## 板块四 · 输出格式
+
+- 只输出 JSON；就这六个字段；每项一句。
+- 不输出 refs / climate_now（代码已算好）。
+- 只展开 structured，不改判强弱/用神方向/喜忌/格局。
+- 不写比喻、不写职业/婚恋场景、不写年龄/纪年、不写行动清单。
+
+## 反例（往反方向避）
+
   ✗ "identity_anchor": "像一场温柔却坚定的苏醒。"（空诗意，无机制）
-  ✗ "drive_mechanism": "表达与创造是主引擎"（当供给偏弱、泄身为忌时：把消耗当驱动）
-  ✗ "balance_anchor": "多做冥想、每天早起半小时。"（越界写成行动清单）
-  ✗ 任何一条读起来像「大部分人都这样」的句子。`
-    : `# core_judgments = mechanism readouts for machines (not poetry, not jargon)
+  ✗ "drive_mechanism": 供给偏弱、泄身为忌时，把消耗当驱动
+  ✗ "balance_anchor": "多做冥想、每天早起。"（越界写行动清单）
+  ✗ 任何一条读起来像"大部分人都这样"的句子（套话）`
+    : `# core_judgments · mechanism readouts for the downstream machine (not user-facing, not poetry)
 
-Translate structured into concrete mechanism lines four products can quote.
+Translate structured into concrete mechanism lines the downstream can quote. The downstream is a machine —
+give it RAW real terms. If you need to write jargon (favorable-element, luck-pillar, punishment, day-master), write it
+DIRECTLY — no soft-labeling, no avoidance. Compliance is the downstream's output job, not yours.
 
-## What each field reads (definitions — not optional)
+## Block 1 · What each field reads (definitions)
+- identity_anchor — what keeps this system running. day_master element + strength: where supply comes from, when it cuts off.
+- drive_mechanism — which actions advance it. pattern + present ten-gods + strength: propulsion vs drain (weak supply → outlets are drains).
+- structural_gap — where it fails first. ji_shen + strength + natal_relations.
+- balance_anchor — which direction restores usability. yong_shen + xi_shen: direction only, no action lists.
+- exchange_mode — how it swaps energy outside. present ten-gods intake/output.
+- leverage_state — which condition unlocks highest payoff. yong_shen support + natal_relations: condition, not timing/"you should".
 
-- identity_anchor —— **what keeps this system running**. Read day_master element + strength:
-  where supply comes from, and under what conditions it cuts off. Write operating conditions, not personality adjectives.
-- drive_mechanism —— **which actions actually advance it**. Read pattern + present ten-gods + strength:
-  which channel is propulsion vs drain. When supply is weak, depleting outlets are **drains**, not drive — never write a drain as drive.
-- structural_gap —— **where it fails first**. Read ji_shen + strength + natal_relations:
-  which link collapses under overload. Write the failure point, not a "flaw".
-- balance_anchor —— **which direction restores usability**. Read yong_shen + xi_shen:
-  only "what to replenish" — **not** action checklists (actions belong to downstream delivery).
-- exchange_mode —— **how it swaps energy with the outside**. Read present ten-gods on intake/output sides:
-  what it needs from outside, what it gives best.
-- leverage_state —— **which condition unlocks the highest payoff**. Read whether yong_shen is supported + natal_relations:
-  write the condition — not timing, not "you should".
+## Block 2 · Quality line (this decides if the readout is useful)
+- **Every line must fail on a different chart** — any line that still fits most people = stock = rewrite. Most important rule.
+- **Anchor this chart's unique material**: structural_gap / leverage_state / balance_anchor each land on ≥1 concrete refs item
+  (a shensha_instance or natal_relation), not just strength/xi-ji labels. Never invent items absent from refs.
 
-## Hard rules
+## Block 3 · Only one class is banned (everything else allowed)
+- The only forbidden words: fear/fate terms (the catastrophic-shensha class). Not neutral data.
+- Every other real term is allowed: favorable/unfavorable-element, luck-pillar, punishment/clash, ten-gods, day-master…
+  The downstream needs them to compute. Write accurately; don't do the downstream's compliance.
 
-1) JSON only; the six keys above; one sentence each.
-2) Never output refs / climate_now (code-filled).
-3) Expand only — never re-judge strength / favorable directions / pattern.
-4) Banned: bare Ganzhi, day-master / weak-self / favorable-element jargon, clash/combine jargon.
-5) Banned: metaphors, career/romance scenes, age/calendar years, action lists.
-6) **Every line must fail on a different chart** — if any line still fits most people, rewrite it.
-7) refs.shensha_instances and natal_relations are this chart's unique material (already soft-labeled — cite directly):
-   structural_gap, leverage_state, and balance_anchor must each land on at least one concrete item — not only strength / xi-ji labels.
-   - balance_anchor especially drifts into stock ("replenish warmth and pragmatism" fits any similar chart) —
-     it must say which direction unlocks **which specific tension/gap on THIS chart**.
-   - If both lists are empty → anchor a concrete ten-god combo from pattern and say whether it is
-     propulsion or drain under current strength / xi-ji — that is still chart-unique.
-     Never invent items absent from refs.
+## Block 4 · Output format
+- JSON only; the six keys; one sentence each. Never output refs / climate_now.
+- Expand only — never re-judge strength / directions / pattern.
+- No metaphors, no career/romance scenes, no ages/calendar years, no action lists.
 
-## Bad (avoid these directions)
-
-  ✗ "identity_anchor": bare Ganzhi + "weak self needs water/wood support" (jargon restatement)
-  ✗ "identity_anchor": poetic abstraction with no mechanism
-  ✗ "drive_mechanism": calling a depleting outlet the drive when supply is weak
-  ✗ "balance_anchor": meditation / wake-up checklists (action overreach)
-  ✗ any sentence that still works for most other charts`;
+## Bad (avoid)
+  ✗ poetic abstraction with no mechanism
+  ✗ calling a depleting outlet the drive when supply is weak
+  ✗ action checklists in balance_anchor
+  ✗ any sentence that fits most other charts`;
 
   const user = `${zh ? "structured 摘要 + 代码已填字段（只读）" : "structured summary + code-filled fields (read-only)"}:\n\`\`\`json\n${JSON.stringify(
     {
@@ -297,7 +248,7 @@ export type GenerateCoreJudgmentsResult = {
 
 /**
  * Per-profile medium call. refs + climate_now from code.
- * On failure / blackspeak / copy → same-params retry (max 3), then deterministic template + loud warn.
+ * On failure / redline / copy → same-params retry (max 3), then deterministic template + loud warn.
  */
 export async function generateCoreJudgmentsForProfile(input: {
   structured: ProfileStructured;
@@ -362,11 +313,11 @@ export async function generateCoreJudgmentsForProfile(input: {
           );
           continue;
         }
-        // 真词进→软译金字出：先打标，再过黑话闸（打标能软译的变金字；兜不住的才重发）
-        const marked = softMarkInterpretiveFields(interpretive, input.locale);
-        if (hasCoreJudgmentsBlackspeak(Object.values(marked).join("\n"))) {
+        // 给下游【原始真词】—— 不打标。只拦【恐吓宿命红线】（十恶大败/孤鸾煞…），
+        // 中性真词（喜神/大运/相刑）放行，下游据此真算。合规在叙事输出端。
+        if (hasCoreJudgmentsRedline(Object.values(interpretive).join("\n"))) {
           console.warn(
-            `[core_judgments] attempt ${attempt}/${MAX_ATTEMPTS} — 打标后仍有裸词，重发`,
+            `[core_judgments] attempt ${attempt}/${MAX_ATTEMPTS} — 出现恐吓宿命红线词，重发`,
           );
           continue;
         }
@@ -379,24 +330,22 @@ export async function generateCoreJudgmentsForProfile(input: {
           continue;
         }
         const merged: CoreJudgments = {
-          ...(marked as Pick<CoreJudgments, (typeof CJ_INTERPRETIVE_KEYS)[number]>),
+          ...(interpretive as Pick<CoreJudgments, (typeof CJ_INTERPRETIVE_KEYS)[number]>),
           climate_now,
-          refs: softMarkCoreJudgmentsRefs(refs, input.locale),
+          refs,
         };
         if (!isCoreJudgments(merged)) {
           console.warn(
-            `[core_judgments] attempt ${attempt}/${MAX_ATTEMPTS} — shape invalid, resending same params`,
+            `[core_judgments] attempt ${attempt}/${MAX_ATTEMPTS} — shape invalid after merge, resending`,
           );
           continue;
         }
+        console.log(`[core_judgments] ok on attempt ${attempt}/${MAX_ATTEMPTS} (raw terms → downstream)`);
         return { judgments: merged, source: "llm" };
       } catch (e) {
-        // 传输层已经同参数重发过 MAX_EMPTY_CONTENT_RESEND=3 次了。
-        // 外层【绝不能】再套一圈 —— 那不是"重试",那是把 3 次变成 9 次。
-        // 连续空回复 = 确定性失败(多半 max_tokens 不够,reasoning 吃光预算),重发解决不了。
         if (isEmptyResponseError(e)) {
           console.warn(
-            "[core_judgments] 传输层重发已用尽(openrouter_empty_after_resend)—— 外层不再重试,直接落模板。" +
+            `[core_judgments] attempt ${attempt}/${MAX_ATTEMPTS} — empty after transport resend。` +
               "【多半是 max_tokens 不够,先查 finish_reason 是不是 length,别加重试。】",
           );
           break;
@@ -418,15 +367,12 @@ export async function generateCoreJudgmentsForProfile(input: {
   console.warn(
     "[fallback] core_judgments 落代码模板。**这份底座是套话,四产品都会受影响** —— 别当正常情况放过。",
   );
-  // 模板路径同样落库：refs 真词 → 金字，避免裸奔进下游
+  // 模板路径同样给下游【原始真词】—— 不打标
   const safeFallback: CoreJudgments = {
     ...fallback,
-    ...softMarkInterpretiveFields(
-      Object.fromEntries(CJ_INTERPRETIVE_KEYS.map((k) => [k, fallback[k]])),
-      input.locale,
-    ),
+    ...Object.fromEntries(CJ_INTERPRETIVE_KEYS.map((k) => [k, fallback[k]])),
     climate_now: fallback.climate_now,
-    refs: softMarkCoreJudgmentsRefs(fallback.refs, input.locale),
+    refs: fallback.refs,
   };
   return { judgments: safeFallback, source: "template_fallback" };
 }
