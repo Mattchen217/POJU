@@ -76,21 +76,30 @@ function main(): void {
     dayunTheme: "Expansion",
     dayunAgeRange: "18–27",
     dayunStartYear: 2010,
+    currentAge: 28,
     transitYear: 2026,
     transitProgressPct: 40,
     transitStemElement: "Fire",
+    luckOnsetRaw: "4岁",
+    luckOnsetDate: "1994-03-01",
     locale: "zh",
   });
 
   assert("era age range", Boolean(fp.era.age_range));
   assert("era has stem soft", Boolean(fp.era.stem_element_soft));
+  assert("era progress", typeof fp.era.progress_pct === "number");
   assert("year pulse soft", Boolean(fp.year_pulse.stem_element_soft));
+  assert("year pulse links array", Array.isArray(fp.year_pulse.links));
   assert("balance strength soft", Boolean(fp.balance.strength_soft));
   assert("yong soft present", Boolean(fp.balance.yong_soft));
   assert("no bare 水 in yong", fp.balance.yong_soft !== "水");
   assert("structure arrays exist", Array.isArray(fp.structure.bonds));
+  assert("structure bonds cap", fp.structure.bonds.length <= 5);
   assert("balance xi chips", Array.isArray(fp.balance.xi));
   assert("strength slug", fp.balance.strength_slug === "weak_self");
+  assert("year_sign zodiac", Boolean(fp.year_sign.zodiac_soft));
+  assert("shensha highlights array", Array.isArray(fp.shensha_highlights));
+  assert("luck onset age", fp.luck_onset.start_age === 4);
 
   console.log(
     "\n" +

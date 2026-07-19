@@ -1493,6 +1493,203 @@
   color: var(--pcm-on-variant);
 }
 
+/* Extra fact row (大运 / 岁君 / 神煞 / 起运) */
+.pcm-facts-extra {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--pcm-gutter);
+}
+
+@media (min-width: 640px) {
+  .pcm-facts-extra {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1100px) {
+  .pcm-facts-extra {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.pcm-facts-extra > .pcm-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.pcm-facts-extra > .pcm-card > .pcm-fviz {
+  margin-top: auto;
+  padding-top: 1.1rem;
+}
+
+.pcm-fviz-dayun__track {
+  position: relative;
+  height: 0.45rem;
+  border-radius: var(--pcm-radius-full);
+  background: var(--pcm-surface-highest);
+  overflow: visible;
+}
+
+.pcm-fviz-dayun__fill {
+  height: 100%;
+  width: var(--pcm-layer-pct, 50%);
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    rgba(242, 202, 80, 0.3),
+    var(--pcm-primary)
+  );
+  box-shadow: 0 0 10px rgba(242, 202, 80, 0.35);
+}
+
+.pcm-fviz-dayun__pin {
+  position: absolute;
+  top: 50%;
+  left: var(--pcm-layer-pct, 50%);
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--pcm-primary);
+  border: 1.5px solid #fff;
+  box-shadow: 0 0 8px rgba(242, 202, 80, 0.7);
+  transform: translate(-50%, -50%);
+}
+
+.pcm-fviz-sign {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.pcm-fviz-sign__ring {
+  flex-shrink: 0;
+  width: 4.25rem;
+  height: 4.25rem;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 238, 252, 0.45);
+  box-shadow:
+    0 0 16px rgba(0, 238, 252, 0.2),
+    inset 0 0 20px rgba(0, 238, 252, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+}
+
+.pcm-fviz-sign__year {
+  font-family: var(--pcm-mono);
+  font-size: 0.75rem;
+  color: var(--pcm-on-variant);
+}
+
+.pcm-fviz-sign__zodiac {
+  font-family: var(--pcm-headline);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--pcm-secondary-container);
+}
+
+.pcm-fviz-sign__orbit {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-content: center;
+}
+
+.pcm-fviz-sign__dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--pcm-surface-highest);
+}
+
+.pcm-fviz-sign__dot--lit {
+  background: var(--pcm-secondary-container);
+  box-shadow: 0 0 6px rgba(0, 238, 252, 0.45);
+}
+
+.pcm-fviz-stars {
+  position: relative;
+}
+
+.pcm-fviz-stars__badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0 0.35rem;
+  border-radius: var(--pcm-radius-full);
+  background: rgba(242, 202, 80, 0.12);
+  border: 1px solid rgba(242, 202, 80, 0.35);
+  color: var(--pcm-primary);
+  font-family: var(--pcm-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pcm-fviz-stars__list {
+  list-style: none;
+  margin: 0;
+  padding: 0 1.75rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.pcm-fviz-stars__list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--pcm-on);
+}
+
+.pcm-fviz-stars__mark {
+  color: var(--pcm-primary-fixed);
+  font-size: 0.65rem;
+}
+
+.pcm-fviz-onset__rail {
+  position: relative;
+  height: 0.35rem;
+  border-radius: var(--pcm-radius-full);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 149, 148, 0.35),
+    rgba(242, 202, 80, 0.45),
+    rgba(0, 238, 252, 0.35)
+  );
+  margin-top: 0.35rem;
+}
+
+.pcm-fviz-onset__mark {
+  position: absolute;
+  top: 50%;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.pcm-fviz-onset__mark--start {
+  background: var(--pcm-tertiary-container);
+  border: 1.5px solid #fff;
+  box-shadow: 0 0 8px rgba(255, 149, 148, 0.5);
+}
+
+.pcm-fviz-onset__mark--now {
+  background: var(--pcm-primary);
+  border: 1.5px solid #fff;
+  box-shadow: 0 0 8px rgba(242, 202, 80, 0.6);
+}
+
 .pcm-fact__label {
   margin: 0 0 0.75rem;
   font-family: var(--pcm-mono);

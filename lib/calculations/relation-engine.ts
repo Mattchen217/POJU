@@ -362,6 +362,8 @@ function relationTouchesWealthOfficerPillar(
 export function detectTenGodTensions(
   structured: ProfileStructured,
   liunian: LiuNianGanzhi,
+  /** Current 大运 index; defaults to 0 when omitted (legacy callers). */
+  dayunIndex = 0,
 ): RelationLabel[] {
   if (!isDayMasterWeak(structured)) return [];
 
@@ -399,12 +401,16 @@ export function detectTenGodTensions(
     });
   }
 
-  const dayunStem = structured.da_yun?.[0]?.ganzhi?.charAt(0);
+  const dyIdx = Math.max(
+    0,
+    Math.min(dayunIndex, Math.max(0, (structured.da_yun?.length ?? 1) - 1)),
+  );
+  const dayunStem = structured.da_yun?.[dyIdx]?.ganzhi?.charAt(0);
   if (dayunStem) {
     const dyGod = stemTenGod(structured, dayunStem);
     if (dyGod === "伤官" && gods.has("正官")) {
       push({
-        id: "shangguan_jianguan",
+        id: "shangguan_jianguan_dayun",
         han: "表达力与规范约束的外力拉扯(大运引动)",
         kind: "ten_god_tension",
         source: "dayun",
@@ -415,7 +421,7 @@ export function detectTenGodTensions(
     }
     if (dyGod === "偏印" && gods.has("食神")) {
       push({
-        id: "xiaoshen_duoshi",
+        id: "xiaoshen_duoshi_dayun",
         han: "内省本能对表达节奏的挤占张力(大运引动)",
         kind: "ten_god_tension",
         source: "dayun",

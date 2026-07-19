@@ -36,7 +36,7 @@ import { resolveBaziLabel } from "@/lib/poju/resolve-bazi-i18n";
 import { normalizeShenshaLocale, resolveShenshaList } from "@/lib/poju/shensha";
 import { ZODIAC_ICON_BY_HAN } from "@/lib/poju/zodiac-icon-assets";
 import { formatBirthClockTime } from "@/lib/profile/birth-info-utils";
-import type { UserProfile } from "@/lib/profile/types";
+import { HOUR_PERIOD_INFO, type UserProfile } from "@/lib/profile/types";
 import "@/styles/poju-celestial-matrix.css";
 
 type Props = {
@@ -515,6 +515,128 @@ function FactBalanceViz({
   );
 }
 
+/** Decade progress within current 大运. */
+function FactDayunBar({
+  progress,
+  ageRange,
+  startYear,
+}: {
+  progress: number;
+  ageRange: string;
+  startYear: number;
+}) {
+  const pct = Math.min(100, Math.max(0, progress));
+  return (
+    <div className="pcm-fviz" aria-hidden>
+      <div
+        className="pcm-fviz-dayun"
+        style={{ "--pcm-layer-pct": `${pct}%` } as CSSProperties}
+      >
+        <div className="pcm-fviz-dayun__track">
+          <div className="pcm-fviz-dayun__fill" />
+          <span className="pcm-fviz-dayun__pin" />
+        </div>
+        <div className="pcm-fviz__caption">
+          <span>{ageRange}</span>
+          <span>
+            {startYear} · {pct}%
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Year-sign badge ring. */
+function FactYearSignBadge({
+  year,
+  zodiacLabel,
+}: {
+  year: number;
+  zodiacLabel: string;
+}) {
+  return (
+    <div className="pcm-fviz pcm-fviz-sign" aria-hidden>
+      <div className="pcm-fviz-sign__ring">
+        <span className="pcm-fviz-sign__year">{year}</span>
+        <span className="pcm-fviz-sign__zodiac">{zodiacLabel}</span>
+      </div>
+      <div className="pcm-fviz-sign__orbit">
+        {Array.from({ length: 8 }, (_, i) => (
+          <span
+            key={i}
+            className={`pcm-fviz-sign__dot${i % 3 === 0 ? " pcm-fviz-sign__dot--lit" : ""}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Shensha star list viz. */
+function FactShenshaStars({
+  items,
+  emptyLabel,
+}: {
+  items: Array<{ id: string; label: string }>;
+  emptyLabel: string;
+}) {
+  return (
+    <div className="pcm-fviz pcm-fviz-stars" aria-hidden>
+      <div className="pcm-fviz-stars__badge">{items.length}</div>
+      {items.length > 0 ? (
+        <ul className="pcm-fviz-stars__list">
+          {items.map((s) => (
+            <li key={s.id}>
+              <span className="pcm-fviz-stars__mark">✦</span>
+              {s.label}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div className="pcm-fviz__caption">{emptyLabel}</div>
+      )}
+    </div>
+  );
+}
+
+/** Luck-onset timeline rail. */
+function FactOnsetRail({
+  startAge,
+  startYear,
+  currentAge,
+}: {
+  startAge: number | null;
+  startYear: number | null;
+  currentAge: number;
+}) {
+  const onset = startAge ?? 0;
+  const span = Math.max(onset + 10, currentAge + 2, 20);
+  const onsetPct = Math.min(92, Math.max(4, (onset / span) * 100));
+  const nowPct = Math.min(96, Math.max(6, (currentAge / span) * 100));
+  return (
+    <div className="pcm-fviz pcm-fviz-onset" aria-hidden>
+      <div className="pcm-fviz-onset__rail">
+        <span
+          className="pcm-fviz-onset__mark pcm-fviz-onset__mark--start"
+          style={{ left: `${onsetPct}%` }}
+        />
+        <span
+          className="pcm-fviz-onset__mark pcm-fviz-onset__mark--now"
+          style={{ left: `${nowPct}%` }}
+        />
+      </div>
+      <div className="pcm-fviz__caption">
+        <span>
+          {startAge != null ? `${startAge}` : "—"}
+          {startYear != null ? ` · ${startYear}` : ""}
+        </span>
+        <span>{currentAge}</span>
+      </div>
+    </div>
+  );
+}
+
 function RadarChart({
   scores,
   locale,
@@ -821,9 +943,33 @@ export function PojuEnergyMatrix({
                           ? ` · ${Math.abs(tst.longitude).toFixed(2)}°${tst.longitude >= 0 ? "E" : "W"}`
                           : null}
                       </div>
+                      {(() => {
+                        const hp = user_profile.birth.hour_period;
+                        const info = hp ? HOUR_PERIOD_INFO[hp] : null;
+                        if (!info) return null;
+                        const label = isZh ? info.chinese_name : info.en_label;
+                        return (
+                          <div className="pcm-cal__accent" style={{ marginTop: "0.65rem" }}>
+                            {tc("birth_hour_period")} · {label}
+                          </div>
+                        );
+                      })()}
                     </>
                   ) : (
-                    <div className="pcm-cal__value">—</div>
+                    <>
+                      <div className="pcm-cal__value">—</div>
+                      {(() => {
+                        const hp = user_profile.birth.hour_period;
+                        const info = hp ? HOUR_PERIOD_INFO[hp] : null;
+                        if (!info) return null;
+                        const label = isZh ? info.chinese_name : info.en_label;
+                        return (
+                          <div className="pcm-cal__accent" style={{ marginTop: "0.65rem" }}>
+                            {tc("birth_hour_period")} · {label}
+                          </div>
+                        );
+                      })()}
+                    </>
                   )}
                 </div>
 
@@ -1258,6 +1404,18 @@ export function PojuEnergyMatrix({
                     <span className="pcm-chip pcm-chip--neutral">{emptyLinks}</span>
                   ) : null}
                 </div>
+                {fp.balance.status_soft ? (
+                  <div
+                    className="pcm-type-body"
+                    style={{
+                      color: "var(--pcm-on-variant)",
+                      marginTop: "0.65rem",
+                      fontSize: "0.8125rem",
+                    }}
+                  >
+                    {tc("fact_balance_status")} · {fp.balance.status_soft}
+                  </div>
+                ) : null}
                 <FactBalanceViz
                   strength={strength}
                   xiCount={fp.balance.xi.length}
@@ -1270,6 +1428,187 @@ export function PojuEnergyMatrix({
                   anchorLabel={tc("fact_anchor")}
                 />
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── 4b. Extended fact panels (大运 / 岁君 / 神煞 / 起运) ── */}
+        <section className="pcm__section">
+          <div className="pcm-label pcm-label--gold">
+            {tc("fact_extra_title")} · {tc("fact_extra_em")}
+          </div>
+          <div className="pcm-facts-extra">
+            <div className="pcm-card">
+              <div className="pcm-label pcm-label--flush pcm-label--gold">
+                {tc("fact_dayun")} · {tc("fact_dayun_em")}
+              </div>
+              <div
+                className="pcm-type-xl"
+                style={{
+                  fontFamily: "var(--pcm-headline)",
+                  letterSpacing: "0.04em",
+                  color: "var(--pcm-primary)",
+                }}
+              >
+                {fp.era.age_range}
+              </div>
+              <div
+                className="pcm-type-body"
+                style={{ color: "var(--pcm-on-variant)", marginTop: "0.35rem" }}
+              >
+                {fp.era.start_year} · {fp.era.theme}
+              </div>
+              <div className="pcm-chips" style={{ marginTop: "0.85rem" }}>
+                {fp.era.stem_element_soft ? (
+                  <PcmChip
+                    soft={fp.era.stem_element_soft}
+                    slug={fp.era.stem_element_slug}
+                    locale={locale}
+                    tone="gold"
+                  />
+                ) : null}
+                {fp.era.ten_god_soft ? (
+                  <PcmChip
+                    soft={fp.era.ten_god_soft}
+                    slug={fp.era.ten_god_slug}
+                    locale={locale}
+                    tone="cyan"
+                  />
+                ) : null}
+                {!fp.era.stem_element_soft && !fp.era.ten_god_soft ? (
+                  <span className="pcm-chip pcm-chip--neutral">{emptyLinks}</span>
+                ) : null}
+              </div>
+              <FactDayunBar
+                progress={fp.era.progress_pct}
+                ageRange={fp.era.age_range}
+                startYear={fp.era.start_year}
+              />
+            </div>
+
+            <div className="pcm-card">
+              <div className="pcm-label pcm-label--flush pcm-label--cyan">
+                {tc("fact_year_sign")} · {tc("fact_year_sign_em")}
+              </div>
+              <div className="pcm-type-xl" style={{ fontFamily: "var(--pcm-headline)" }}>
+                {fp.year_sign.zodiac_slug ? (
+                  <SoftTermHover
+                    slug={fp.year_sign.zodiac_slug}
+                    locale={locale}
+                    fallback={fp.year_sign.zodiac_soft}
+                  />
+                ) : (
+                  fp.year_sign.zodiac_soft
+                )}
+              </div>
+              <div
+                className="pcm-type-body"
+                style={{ color: "var(--pcm-on-variant)", marginTop: "0.35rem" }}
+              >
+                {fp.year_sign.year}
+                {fp.year_sign.branch_element_soft ? (
+                  <>
+                    {" · "}
+                    {fp.year_sign.branch_element_slug ? (
+                      <SoftTermHover
+                        slug={fp.year_sign.branch_element_slug}
+                        locale={locale}
+                        fallback={fp.year_sign.branch_element_soft}
+                      />
+                    ) : (
+                      fp.year_sign.branch_element_soft
+                    )}
+                  </>
+                ) : null}
+              </div>
+              <div className="pcm-chips" style={{ marginTop: "0.85rem" }}>
+                {fp.year_sign.links.length > 0 ? (
+                  fp.year_sign.links.map((c) => (
+                    <PcmChip
+                      key={`ys-${c.soft}`}
+                      soft={c.soft}
+                      slug={c.slug}
+                      locale={locale}
+                      tone={
+                        c.polarity === "green"
+                          ? "cyan"
+                          : c.polarity === "red"
+                            ? "coral"
+                            : "gold"
+                      }
+                    />
+                  ))
+                ) : (
+                  <span className="pcm-chip pcm-chip--neutral">{emptyLinks}</span>
+                )}
+              </div>
+              <FactYearSignBadge
+                year={fp.year_sign.year}
+                zodiacLabel={fp.year_sign.zodiac_soft}
+              />
+            </div>
+
+            <div className="pcm-card">
+              <div className="pcm-label pcm-label--flush pcm-label--sand">
+                {tc("fact_shensha")} · {tc("fact_shensha_em")}
+              </div>
+              <div
+                className="pcm-type-lg"
+                style={{ color: "#fff", marginBottom: "0.5rem" }}
+              >
+                {tc("fact_shensha_count", {
+                  count: String(fp.shensha_highlights.length),
+                })}
+              </div>
+              <FactShenshaStars
+                items={fp.shensha_highlights}
+                emptyLabel={emptyLinks}
+              />
+            </div>
+
+            <div className="pcm-card">
+              <div className="pcm-label pcm-label--flush pcm-label--coral">
+                {tc("fact_onset")} · {tc("fact_onset_em")}
+              </div>
+              <div
+                className="pcm-type-xl"
+                style={{ fontFamily: "var(--pcm-mono)", color: "#fff" }}
+              >
+                {fp.luck_onset.start_age != null
+                  ? tc("fact_onset_age", {
+                      age: String(fp.luck_onset.start_age),
+                    })
+                  : emptyLinks}
+              </div>
+              <div
+                className="pcm-type-body"
+                style={{ color: "var(--pcm-on-variant)", marginTop: "0.35rem" }}
+              >
+                {fp.luck_onset.start_year != null
+                  ? tc("fact_onset_year", {
+                      year: String(fp.luck_onset.start_year),
+                    })
+                  : fp.luck_onset.raw_onset ||
+                    fp.luck_onset.start_date ||
+                    "—"}
+              </div>
+              {fp.luck_onset.start_date ? (
+                <div
+                  className="pcm-type-body"
+                  style={{
+                    color: "var(--pcm-on-variant)",
+                    marginTop: "0.25rem",
+                    fontSize: "0.75rem",
+                  }}
+                >
+                  {fp.luck_onset.start_date}
+                </div>
+              ) : null}
+              <FactOnsetRail
+                startAge={fp.luck_onset.start_age}
+                startYear={fp.luck_onset.start_year}
+                currentAge={display.current_age}
+              />
             </div>
           </div>
         </section>

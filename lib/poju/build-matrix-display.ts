@@ -434,15 +434,21 @@ export function buildMatrixDisplayData(input: {
         getStemInfo(splitGanzhi(annual.ganzhi).stem)?.element ??
         annual.stem_en.split(" ").pop() ??
         "Wood";
+      const onsetRaw = chart?.八字?.起运 != null ? String(chart.八字.起运) : null;
+      const onsetDate =
+        chart?.八字?.起运日期 != null ? String(chart.八字.起运日期) : null;
       return buildMatrixFactPanel({
         structured,
         dayunIndex: dayunIdx,
         dayunTheme: hub.theme,
         dayunAgeRange: hub.age_range,
         dayunStartYear: hub.start_year,
+        currentAge: age,
         transitYear: annual.year,
         transitProgressPct: annual.progress_pct,
         transitStemElement: stemEl,
+        luckOnsetRaw: onsetRaw,
+        luckOnsetDate: onsetDate,
         locale,
       });
     })(),

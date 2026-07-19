@@ -8,6 +8,7 @@ import { getCurrentLiunian } from "@/lib/calculations/liunian";
 import {
   computeLiunianRelations,
   computeNatalChartRelations,
+  detectTenGodTensions,
   type Palace,
   type RelationKind,
   type RelationLabel,
@@ -16,15 +17,22 @@ import {
   calculateTenGod,
   type HeavenlyStem,
 } from "@/lib/match/data/stems-branches";
-import { getStemInfo } from "@/lib/poju/bazi-matrix-mappings";
+import {
+  getBranchInfo,
+  getStemInfo,
+  zodiacAnimalHanFromBranch,
+} from "@/lib/poju/bazi-matrix-mappings";
 import {
   elementToSlug,
   matrixElementSoft,
   matrixSoftTerm,
   matrixTermSlug,
   strengthToSlug,
+  zodiacHanToSlug,
 } from "@/lib/poju/matrix-term-labels";
+import { normalizeShenshaLocale, resolveShenshaList } from "@/lib/poju/shensha";
 import { pojuTermByTraditional, termOf } from "@/lib/glossary/pojulife-terms";
+import { normalizeMatrixLocale } from "@/lib/poju/poju-matrix-i18n";
 
 export type MatrixFactChip = {
   soft: string;
@@ -38,6 +46,8 @@ export type MatrixFactPanel = {
     theme: string;
     age_range: string;
     start_year: number;
+    start_age: number | null;
+    progress_pct: number;
     ten_god_soft: string | null;
     ten_god_slug: string | null;
     stem_element_soft: string | null;
@@ -59,8 +69,29 @@ export type MatrixFactPanel = {
     strength_slug: string;
     yong_soft: string | null;
     yong_slug: string | null;
+    /** Soft line from yongshen_analysis.status_strength (façade-safe). */
+    status_soft: string | null;
     xi: MatrixFactChip[];
     ji: MatrixFactChip[];
+  };
+  /** Current 流年 branch → zodiac + element soft (岁君). */
+  year_sign: {
+    year: number;
+    zodiac_han: string;
+    zodiac_slug: string | null;
+    zodiac_soft: string;
+    branch_element_soft: string;
+    branch_element_slug: string | null;
+    links: MatrixFactChip[];
+  };
+  /** Chart-wide shensha highlights (plain labels, no SoftTermHover). */
+  shensha_highlights: Array<{ id: string; label: string }>;
+  /** Luck-cycle onset (起运) — no 干支 on façade. */
+  luck_onset: {
+    start_age: number | null;
+    start_year: number | null;
+    start_date: string | null;
+    raw_onset: string | null;
   };
 };
 
@@ -84,6 +115,16 @@ const PALACE_TRAD: Record<Palace, string> = {
 };
 
 function relationSoft(r: RelationLabel, locale: string): string {
+  if (r.kind === "ten_god_tension") {
+    const zh = normalizeMatrixLocale(locale) === "zh";
+    if (zh) {
+      return r.han.replace(/[（(](?:流年|大运)引动[）)]/g, "").trim();
+    }
+    if (r.id.startsWith("shangguan")) {
+      return "Expression vs structure pull";
+    }
+    return "Inner focus vs expression pull";
+  }
   const kindSoft =
     termOf(KIND_SLUG[r.kind], locale) ?? matrixSoftTerm(r.kind, locale);
   const palace = r.palaces[0];
@@ -99,7 +140,7 @@ function relationSoft(r: RelationLabel, locale: string): string {
 function toChip(r: RelationLabel, locale: string): MatrixFactChip {
   return {
     soft: relationSoft(r, locale),
-    slug: KIND_SLUG[r.kind] ?? null,
+    slug: r.kind === "ten_god_tension" ? null : (KIND_SLUG[r.kind] ?? null),
     polarity: r.polarity,
   };
 }
@@ -161,15 +202,53 @@ function elementListChips(
   return out;
 }
 
+/** Parse shunshi 起运 strings like "3岁" / "3年2个月" → approximate age years. */
+function parseOnsetAge(raw: string | null | undefined): number | null {
+  if (!raw) return null;
+  const m = raw.match(/(\d+)\s*岁/) ?? raw.match(/^(\d+)/);
+  if (!m) return null;
+  const n = Number(m[1]);
+  return Number.isFinite(n) ? n : null;
+}
+
+function stripGanzhiNoise(s: string): string {
+  return s
+    .replace(/[甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function collectShenshaHighlights(
+  structured: ProfileStructured,
+  locale: string,
+  limit: number,
+): Array<{ id: string; label: string }> {
+  const tokens: string[] = [];
+  const pd = structured.pillars_detail;
+  if (pd) {
+    for (const key of ["year", "month", "day", "hour"] as const) {
+      const stars = pd[key]?.shen_sha ?? [];
+      tokens.push(...stars);
+    }
+  }
+  const views = resolveShenshaList(tokens, normalizeShenshaLocale(locale));
+  return views.slice(0, limit).map((v) => ({ id: v.id, label: v.label }));
+}
+
 export function buildMatrixFactPanel(input: {
   structured: ProfileStructured;
   dayunIndex: number;
   dayunTheme: string;
   dayunAgeRange: string;
   dayunStartYear: number;
+  currentAge: number;
   transitYear: number;
   transitProgressPct: number;
   transitStemElement: string;
+  /** Raw 起运 from shunshi chart (may include units). */
+  luckOnsetRaw?: string | null;
+  /** Raw 起运日期 from shunshi chart. */
+  luckOnsetDate?: string | null;
   locale: string;
 }): MatrixFactPanel {
   const {
@@ -178,9 +257,12 @@ export function buildMatrixFactPanel(input: {
     dayunTheme,
     dayunAgeRange,
     dayunStartYear,
+    currentAge,
     transitYear,
     transitProgressPct,
     transitStemElement,
+    luckOnsetRaw,
+    luckOnsetDate,
     locale,
   } = input;
 
@@ -214,9 +296,38 @@ export function buildMatrixFactPanel(input: {
     }
   }
 
+  const startAge = currentDy?.start_age ?? null;
+  let eraProgress = 50;
+  if (startAge != null) {
+    eraProgress = Math.min(
+      100,
+      Math.max(0, Math.round(((currentAge - startAge) / 10) * 100)),
+    );
+  }
+
   const natal = computeNatalChartRelations(structured);
   const liunian = getCurrentLiunian();
   const liunianRels = computeLiunianRelations(structured, liunian);
+  const tenGodTensions = detectTenGodTensions(
+    structured,
+    liunian,
+    dayunIndex,
+  );
+
+  const yearLinks = [
+    ...pickDistinct(tenGodTensions, locale, 2),
+    ...pickDistinct(liunianRels, locale, 4),
+  ].slice(0, 5);
+
+  const branchInfo = getBranchInfo(liunian.branch);
+  const zodiacHan = zodiacAnimalHanFromBranch(liunian.branch);
+  const zodiacSlug = zodiacHanToSlug(zodiacHan);
+  const zodiacSoft =
+    (zodiacSlug ? termOf(zodiacSlug, locale) : null) ??
+    (normalizeMatrixLocale(locale) === "zh" ? zodiacHan : branchInfo?.zodiac_en ?? zodiacHan);
+  const branchEl = branchInfo?.element ?? "";
+  const branchElSlug = branchEl ? elementToSlug(branchEl) : null;
+  const branchElSoft = branchEl ? matrixElementSoft(branchEl, locale) : "";
 
   const yongRaw = (structured.yong_shen || "").trim();
   const yongSoft = yongRaw ? matrixElementSoft(yongRaw, locale) || matrixSoftTerm(yongRaw, locale) : "";
@@ -226,11 +337,24 @@ export function buildMatrixFactPanel(input: {
     ? elementToSlug(yongRaw) ?? matrixTermSlug(yongRaw) ?? "yong_shen"
     : null;
 
+  const ya = structured.bazi_enrichment?.yongshen_analysis;
+  const status_soft = ya
+    ? strengthSoft(ya.status_strength, locale)
+    : null;
+
+  const firstDy = structured.da_yun[0];
+  const onsetFromChart = parseOnsetAge(luckOnsetRaw ?? null);
+  const onsetAge = onsetFromChart ?? firstDy?.start_age ?? null;
+  const onsetDateRaw = luckOnsetDate ? stripGanzhiNoise(luckOnsetDate) : null;
+  const onsetRawClean = luckOnsetRaw ? stripGanzhiNoise(luckOnsetRaw) : null;
+
   return {
     era: {
       theme: dayunTheme,
       age_range: dayunAgeRange,
       start_year: dayunStartYear,
+      start_age: startAge,
+      progress_pct: eraProgress,
       ten_god_soft,
       ten_god_slug,
       stem_element_soft,
@@ -241,22 +365,39 @@ export function buildMatrixFactPanel(input: {
       stem_element_soft: matrixElementSoft(transitStemElement, locale),
       stem_element_slug: elementToSlug(transitStemElement),
       progress_pct: transitProgressPct,
-      links: pickDistinct(liunianRels, locale, 3),
+      links: yearLinks,
     },
     structure: {
       bonds: [
-        ...pickDistinct(natal, locale, 3, "green"),
-        ...pickDistinct(natal, locale, 2, "gold"),
-      ].slice(0, 3),
-      tensions: pickDistinct(natal, locale, 3, "red"),
+        ...pickDistinct(natal, locale, 4, "green"),
+        ...pickDistinct(natal, locale, 3, "gold"),
+      ].slice(0, 5),
+      tensions: pickDistinct(natal, locale, 5, "red"),
     },
     balance: {
       strength_soft: strengthSoft(structured.strength, locale),
       strength_slug: strengthToSlug(structured.strength),
       yong_soft,
       yong_slug: yong_soft ? yong_slug : null,
+      status_soft,
       xi: elementListChips(structured.xi_shen ?? [], locale, 3, "green"),
       ji: elementListChips(structured.ji_shen ?? [], locale, 2, "red"),
+    },
+    year_sign: {
+      year: transitYear,
+      zodiac_han: zodiacHan,
+      zodiac_slug: zodiacSlug,
+      zodiac_soft: zodiacSoft,
+      branch_element_soft: branchElSoft,
+      branch_element_slug: branchElSlug,
+      links: pickDistinct(liunianRels, locale, 2),
+    },
+    shensha_highlights: collectShenshaHighlights(structured, locale, 6),
+    luck_onset: {
+      start_age: onsetAge,
+      start_year: firstDy?.start_year ?? null,
+      start_date: onsetDateRaw || null,
+      raw_onset: onsetRawClean || null,
     },
   };
 }
