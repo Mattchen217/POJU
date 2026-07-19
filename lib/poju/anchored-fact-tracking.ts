@@ -3,12 +3,12 @@
  */
 
 const FACT_ID_LABELS: Record<string, string> = {
-  day_master: "核心特质",
-  yong_shen: "关键平衡能量",
+  day_master: "本元",
+  yong_shen: "锚元",
   xi_shen: "顺势能量",
   ji_shen: "结构张力",
   eating_god: "表达从容",
-  year: "当前时空效能",
+  year: "岁环",
   month: "事业宫",
   day: "配偶宫",
   hour: "成果宫",

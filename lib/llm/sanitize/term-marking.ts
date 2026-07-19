@@ -343,21 +343,16 @@ export function stripBareTermMarkers(text: string): string {
 }
 
 /**
- * 白话 → 金字 的桥（双层制的接缝）。
+ * Scrub 软译 → 标记 的桥。
  *
- * 上游 scrub 把裸词换成【正文白话】(BANNED_TERM_SOFT_ZH)；依据层要把白话升回【金字】(POJU_TERMS)。
- * 因此 label **必须从 BANNED_TERM_SOFT_ZH 取** —— scrub 产什么，桥就得认什么，绝不手抄。
- *
- * 手抄过一次的后果（实测）：decade 被抄成「当前阶段气候」，而 scrub 实产的是「当前这个阶段」
- * →「大运」被 scrub 成白话后，桥认不出来 → 永远升不成金字「纪元[···]」。
- * （banned-terms.ts:264 自己的注释就写着 never hand-maintain a parallel list。）
+ * BANNED_TERM_SOFT_ZH 已从 SSOT 派生（大运→纪元…），与 POJU_TERMS.term.zh 同一套。
+ * 桥认这些软译，把裸软译升成 ⟦t:slug|⟧；禁止再手抄第二套白话。
  */
 function keepCnBridgeLabel(traditional: string): string | null {
   const plain = BANNED_TERM_SOFT_ZH[traditional];
   if (!plain) {
-    // 表改了、桥没跟上 —— 静默的话这个词会永远停在白话层，没人看得见（铁律 #5）
     console.warn(
-      `[term-marking] keep_cn 桥断了：BANNED_TERM_SOFT_ZH 里没有「${traditional}」，该词将停在白话层，升不成金字。`,
+      `[term-marking] keep_cn 桥断了：BANNED_TERM_SOFT_ZH 里没有「${traditional}」，该词将停在白话层，升不成标记。`,
     );
     return null;
   }
@@ -366,13 +361,20 @@ function keepCnBridgeLabel(traditional: string): string | null {
 
 /** Wrap bare keep_cn soft phrases that lack ⟦t:…⟧ markers (visible text = soft label only, no ganzhi). */
 export function wrapBareKeepCnSoftTerms(text: string, locale: string): string {
-  // 覆盖面维持现状（4 个 keep_cn slug）—— 扩到全部 14 条属于「双层制推广」，见文档末尾。
+  // SSOT softs via bridge + legacy vernacular aliases (cached model output / migration).
   const patterns = [
     { id: "decade", label: keepCnBridgeLabel("大运") },
     { id: "day_master", label: keepCnBridgeLabel("日主") },
     { id: "year", label: keepCnBridgeLabel("流年") },
     { id: "yong_shen", label: keepCnBridgeLabel("用神") },
-    { id: "yong_shen", label: "用神" }, // 裸词漏网时也接住（原表就有这行，保留）
+    { id: "yong_shen", label: "用神" },
+    // legacy softs (pre-SSOT consolidation) — still lift into markers
+    { id: "decade", label: "当前阶段气候" },
+    { id: "decade", label: "当前这个阶段" },
+    { id: "year", label: "当前时空效能" },
+    { id: "day_master", label: "你的核心特质" },
+    { id: "day_master", label: "核心特质" },
+    { id: "yong_shen", label: "关键平衡能量" },
   ].filter((p): p is { id: string; label: string } => Boolean(p.label));
 
   const parts = text.split(/(⟦[^⟧]*⟧)/g);
@@ -1379,7 +1381,7 @@ export function replaceZhMingliStacks(text: string): string {
   // After pillar soft-replace left "你的能量结构正印壬水"
   result = result.replace(
     new RegExp(
-      `(?:你的能量结构|当前阶段气候|当前时空效能)(?:(?:${TEN_GOD_STACK})(?:${STEM_COMPOUND_STACK})?|(?:${STEM_COMPOUND_STACK}))`,
+      `(?:你的能量结构|当前阶段气候|当前时空效能|纪元|岁环|本元|锚元)(?:(?:${TEN_GOD_STACK})(?:${STEM_COMPOUND_STACK})?|(?:${STEM_COMPOUND_STACK}))`,
       "g",
     ),
     MINGLI_STACK_SOFT_PHRASE,
@@ -1396,6 +1398,10 @@ const CHAIN_SOFT_GLOSSES = [
   "你的能量结构",
   "当前阶段气候",
   "当前时空效能",
+  "纪元",
+  "岁环",
+  "本元",
+  "锚元",
   "稳定支持力",
   "有利特质",
   "表达力",
@@ -1438,7 +1444,7 @@ export function collapseChainedSoftReplaceArtifacts(text: string): string {
     }
   }
   result = result.replace(
-    /(?:你的能量结构|稳定支持力|有利特质|当前阶段气候|当前时空效能)[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥金木水火土]/g,
+    /(?:你的能量结构|稳定支持力|有利特质|当前阶段气候|当前时空效能|纪元|岁环|本元|锚元)[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥金木水火土]/g,
     MINGLI_STACK_SOFT_PHRASE,
   );
   result = collapseDuplicatedSoftPrefix(result);

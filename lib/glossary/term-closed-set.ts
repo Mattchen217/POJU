@@ -571,34 +571,39 @@ export function relationPolarityToken(id: string): "green" | "red" | "gold" | nu
   return "gold";
 }
 
+/**
+ * keep_cn façade softs — MUST match POJU_TERMS.term for the same slug.
+ * softLabel() already prefers SSOT; this map is for keep-cn-brackets / audit mask extras.
+ * Do not invent a second vernacular set (e.g. 「当前阶段气候」).
+ */
 export const KEEP_CN_VISIBLE_SOFT: Record<string, FiveLocaleText> = {
   decade: {
-    zh: "当前阶段气候",
-    en: "current phase climate",
-    es: "clima de fase actual",
-    de: "aktuelles Phasenklima",
-    fr: "climat de phase actuel",
+    zh: "纪元",
+    en: "Era",
+    es: "Era",
+    de: "Epoche",
+    fr: "Ère",
   },
   year: {
-    zh: "当前时空效能",
-    en: "current temporal efficacy",
-    es: "eficacia temporal actual",
-    de: "aktuelle Zeiteffizienz",
-    fr: "efficacité temporelle actuelle",
+    zh: "岁环",
+    en: "Transit",
+    es: "Tránsito",
+    de: "Transit",
+    fr: "Transit",
   },
   day_master: {
-    zh: "你的核心特质",
-    en: "core nature",
-    es: "naturaleza esencial",
-    de: "Urnatur",
-    fr: "nature profonde",
+    zh: "本元",
+    en: "Core",
+    es: "Núcleo",
+    de: "Kern",
+    fr: "Noyau",
   },
   yong_shen: {
-    zh: "关键平衡能量",
-    en: "key balancing element",
-    es: "energía clave de equilibrio",
-    de: "Schlüsselenergie zum Ausgleich",
-    fr: "énergie clé d'équilibre",
+    zh: "锚元",
+    en: "Anchor",
+    es: "Ancla",
+    de: "Anker",
+    fr: "Ancre",
   },
 };
 

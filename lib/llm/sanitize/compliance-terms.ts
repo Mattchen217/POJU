@@ -1153,7 +1153,7 @@ export function detectComplianceViolations(text: string, locale: string): Compli
     pushRegex(ZH_GUIRen_REGEX, "guiren");
     // Mask approved soft labels first — e.g. 「平衡」 must not fire inside 「关键平衡能量」.
     const softExtras = Object.values(KEEP_CN_VISIBLE_SOFT).map((x) => x.zh);
-    softExtras.push("随境调整型", "关键平衡能量");
+    softExtras.push("随境调整型", "锚元", "关键平衡能量");
     const auditBody = maskKnownSoftLabelsZh(
       text,
       collectCanonicalSoftLabelsZh(softExtras),

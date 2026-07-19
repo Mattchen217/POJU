@@ -43,7 +43,9 @@ function main() {
   const block = buildForbiddenTermsPromptBlock("zh");
   assert("prompt block has 日主", block.includes("日主"));
   assert("prompt block has 主比喻·现定", block.includes("主比喻·现定"));
-  assert("prompt block has soft map 日主", block.includes("核心特质"));
+  assert("prompt block points to SSOT marking", block.includes("只走 SSOT") || block.includes("⟦t:<slug>|⟧"));
+  assert("prompt block no second soft map 当前这个阶段", !block.includes("当前这个阶段"));
+  assert("prompt block no 核心特质 soft map", !block.includes("核心特质"));
 
   const promptSrc = read("lib/llm/prompts/base-analysis-stream-prompt.ts");
   assert("prompt injects buildForbiddenTermsPromptBlock", promptSrc.includes("buildForbiddenTermsPromptBlock"));
@@ -93,10 +95,10 @@ function main() {
   const repairSrc = read("lib/base-analysis/repair-violations.ts");
   assert("repair locates line (no model find)", repairSrc.includes("locateViolationLine"));
   assert("repair rewrites one line", repairSrc.includes("rewriteViolationLine"));
-  assert("repair soft-maps available", buildViolationRepairInstruction(
+  assert("repair soft-maps use SSOT 本元", buildViolationRepairInstruction(
     [{ label: "term:日主", snippet: "日主偏旺" }],
     "zh",
-  ).includes("核心特质"));
+  ).includes("本元"));
 
   // Live prompt assembly needs plausible structured — read system from file inject check is enough.
   // Smoke that buildBaseAnalysisStreamPrompt still callable via inventory needs full structured;

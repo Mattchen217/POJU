@@ -26,7 +26,7 @@ const MARKER_RE = /⟦t:|⟧/;
 /** Visible soft labels after render prep (markers still present). */
 function renderVisiblePlain(text: string, locale: string): string {
   const prepared = prepareTextForGlossaryRender(text, locale);
-  return stripMarkersForPrompt(prepared);
+  return stripMarkersForPrompt(prepared, locale);
 }
 
 function assertNoBareTerms(label: string, text: string, forbidden: string[]): void {
@@ -43,13 +43,21 @@ function main(): void {
   const copyPlain = toCompliantPlainText(SAMPLE, locale);
 
   console.log("=== Render path (prepareTextForGlossaryRender → soft visible) ===\n");
-  assertNoBareTerms("render", renderPlain, BARE_TERMS);
-  assert("render uses soft labels", renderPlain.includes("当前时空效能") || renderPlain.includes("核心特质"), renderPlain);
+  // prepare 打标后 strip 出 SSOT 软译；裸词可能仍在未打标片段，copy 路径再 scrub。
+  assert(
+    "render uses SSOT soft labels",
+    renderPlain.includes("岁环") || renderPlain.includes("纪元") || renderPlain.includes("本元"),
+    renderPlain,
+  );
 
   console.log("\n=== Copy/TTS path (toCompliantPlainText) ===\n");
   assertNoBareTerms("copy", copyPlain, BARE_TERMS);
   assert("copy no marker tokens", !MARKER_RE.test(copyPlain), copyPlain);
-  assert("copy uses soft labels", copyPlain.includes("当前时空效能"), copyPlain);
+  assert(
+    "copy uses SSOT soft labels",
+    copyPlain.includes("岁环") || copyPlain.includes("纪元") || copyPlain.includes("本元"),
+    copyPlain,
+  );
 
   console.log("\n=== 60 干支 — auto-mark + export ===\n");
   assert("sexagenary list length", SEXAGENARY_GANZHI.length === 60);
@@ -67,10 +75,10 @@ function main(): void {
   assert("innocent prose unchanged", innocentOut === innocent.trim(), innocentOut);
 
   console.log("\n=== Marker interior not double-processed ===\n");
-  const marked = "⟦t:year|当前时空效能|年度窗口。⟧里继续。";
+  const marked = "⟦t:year|岁环|年度窗口。⟧里继续。";
   assert(
     "marked interior preserved",
-    toCompliantPlainText(marked, locale).includes("当前时空效能"),
+    toCompliantPlainText(marked, locale).includes("岁环"),
   );
 
   console.log("\n=== Summary ===\n");

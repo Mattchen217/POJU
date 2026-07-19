@@ -19,7 +19,7 @@ import { scrubLeakedComplianceTerms } from "@/lib/llm/sanitize/compliance-terms"
 export function toCompliantPlainText(text: string, locale: string): string {
   if (!text?.trim()) return text ?? "";
   const prepared = prepareTextForGlossaryRender(text, locale);
-  let plain = stripMarkersForPrompt(prepared);
+  let plain = stripMarkersForPrompt(prepared, locale);
   plain = stripBrokenMarkers(plain);
   return scrubLeakedComplianceTerms(plain, locale).trim();
 }

@@ -113,7 +113,7 @@ assert("agent merges anchored facts after reply", agentTs.includes("extractAncho
 assert("agent merges used metaphors after reply", agentTs.includes("extractUsedMetaphorsFromAssistant"));
 
 const ids = extractAnchoredFactIdsFromAssistant(
-  "你的 ⟦t:day_master|核心特质|像藤蔓式扩散⟧ 和 ⟦t:yong_shen|关键平衡能量|需要冷却窗口⟧ 在这里很关键。",
+  "你的 ⟦t:day_master|本元|像藤蔓式扩散⟧ 和 ⟦t:yong_shen|锚元|需要冷却窗口⟧ 在这里很关键。",
 );
 assert("extracts term marker ids", ids.includes("day_master") && ids.includes("yong_shen"));
 const merged = mergeAnchoredFactIds(["day_master"], ["yong_shen", "day_master"]);
@@ -121,7 +121,7 @@ assert("merge dedupes", merged.length === 2 && merged[0] === "day_master");
 
 const anchoredBlock = buildAnchoredFactsExclusionBlock(["day_master", "yong_shen"], "zh");
 assert("anchored block 勿复述", anchoredBlock.includes("勿复述"));
-assert("anchored block lists labels", anchoredBlock.includes("核心特质"));
+assert("anchored block lists labels", anchoredBlock.includes("本元"));
 
 const metaphorReply =
   "你的优势像藤蔓一样扩散，但需要外部支点；内心有个冷却模块在空转，像打卡领通行证。";

@@ -41,9 +41,9 @@ function main(): void {
   assert("uses transformNonMarkerRegions", compliance.includes("transformNonMarkerRegions"));
   assert("uses replaceStandaloneRedlines", compliance.includes("replaceStandaloneRedlines"));
 
-  const intactMarker = encodeTermMarker("year", "当前时空效能", "This year pushes pace.");
+  const intactMarker = "⟦t:year|岁环|This year pushes pace.⟧";
   const scrubbedMarker = sanitizeDeliveryText(`═══ ANALYSIS ═══\n${intactMarker}`, "zh");
-  assert("intact marker preserved", scrubbedMarker.includes("⟦t:year|当前时空效能|"));
+  assert("intact marker preserved", scrubbedMarker.includes("⟦t:year|岁环|"));
 
   const corrupted = sanitizeDeliveryText("他拒绝会不会被堵住，运转正常。", "zh");
   assert("拒绝 not corrupted", corrupted.includes("拒绝"));
@@ -53,7 +53,7 @@ function main(): void {
   const redline = sanitizeDeliveryText("涉及占卜。命运安排另说。", "zh");
   assert("standalone 占卜 removed", !redline.includes("占卜"));
 
-  const bareLeak = sanitizeDeliveryText("t:year|当前时空效能（丙午）|plain", "zh");
+  const bareLeak = sanitizeDeliveryText("t:year|岁环（丙午）|plain", "zh");
   assert("bare t: leak stripped", !bareLeak.includes("t:year|"));
 
   console.log("\n=== Fix 2 · layout mandate + parse fallback ===\n");

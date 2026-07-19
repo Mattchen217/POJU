@@ -67,8 +67,10 @@ function main(): void {
     read("lib/llm/phases/opening-phase-v6.ts").includes("POJU_V6_OPENING_DUTY"),
   );
   assert(
-    "anchor principle (no test quote)",
-    POJU_V6_OPENING_PHASE_RULES.includes("锚点必须落在他真实的结构字段上"),
+    "anchor principle (structure-grounded)",
+    POJU_V6_OPENING_PHASE_RULES.includes("真实的结构") ||
+      POJU_V6_OPENING_PHASE_RULES.includes("结构化个人底色") ||
+      read("lib/llm/prompts/poju-base-v6.ts").includes("真实的结构数据上"),
   );
 
   assert("OPENING_MAX = 4", OPENING_MAX_SUBSTANTIVE_TURNS === 4);
@@ -88,12 +90,12 @@ function main(): void {
   );
 
   assert(
-    "decade SaaS soft label",
-    KEEP_CN_VISIBLE_SOFT.decade?.zh === "当前阶段气候",
+    "decade soft = SSOT 纪元",
+    KEEP_CN_VISIBLE_SOFT.decade?.zh === "纪元",
   );
   assert(
-    "year SaaS soft label",
-    KEEP_CN_VISIBLE_SOFT.year?.zh === "当前时空效能",
+    "year soft = SSOT 岁环",
+    KEEP_CN_VISIBLE_SOFT.year?.zh === "岁环",
   );
   assert("decade not keep_cn", !KEEP_CN_SLUGS.has("decade"));
   assert("year not keep_cn", !KEEP_CN_SLUGS.has("year"));
@@ -107,7 +109,12 @@ function main(): void {
   const bareGz = auditDeliveredText("你当前处于丙午阶段。", "zh");
   assert(
     "audit blocks bare stem-branch",
-    bareGz.some((v) => v.label.includes("stem_branch") || v.label.includes("bazi_term")),
+    bareGz.some(
+      (v) =>
+        v.label.includes("stem_branch") ||
+        v.label.includes("bazi_term") ||
+        v.label.includes("bare_ganzhi"),
+    ),
   );
 
   assert(

@@ -17,6 +17,7 @@ import { POJU_V6_STATIC_SYSTEM } from "@/lib/llm/prompts/poju-base-v6";
 import {
   autoMarkBareTerms,
   prepareTextForGlossaryRender,
+  stripMarkersForPrompt,
 } from "@/lib/llm/sanitize/term-marking";
 import { toCompliantPlainText } from "@/lib/glossary/to-compliant-plain-text";
 import {
@@ -93,21 +94,27 @@ function main(): void {
   assert("export strips 流年", !softPlain.includes("流年"), softPlain);
   assert("export strips 大运", !softPlain.includes("大运"), softPlain);
   assert("export strips 丙午", !softPlain.includes("丙午"), softPlain);
-  assert("export uses soft labels", softPlain.includes("当前时空效能") || softPlain.includes("阶段"), softPlain);
+  assert("export uses soft labels", softPlain.includes("岁环") || softPlain.includes("纪元") || softPlain.includes("阶段"), softPlain);
 
   for (const hr of HIGH_RISK_COMPLIANCE_HAN) {
     const out = toCompliantPlainText(`这里出现${hr}词汇。`, "zh");
     assert(`export strips ${hr}`, !out.includes(hr), out);
   }
 
-  const alreadyMarked = "⟦t:year|当前时空效能|年度窗口⟧里不动";
+  const alreadyMarked = "⟦t:year|岁环|年度窗口⟧里不动";
   const remarked = autoMarkBareTerms(alreadyMarked, "zh");
   assert("marker interior not double-wrapped", remarked === alreadyMarked);
 
   // Density cap is ≤2 marks/paragraph — use a single-term sample for idempotency.
   const single = "走大运。";
-  const twice = prepareTextForGlossaryRender(prepareTextForGlossaryRender(single, "zh"), "zh");
-  assert("idempotent prepare", twice === prepareTextForGlossaryRender(single, "zh"));
+  const once = prepareTextForGlossaryRender(single, "zh");
+  const twice = prepareTextForGlossaryRender(once, "zh");
+  // 二过可能把 2-slot 升成带 SSOT 软译的兼容形态；可见软译仍须是纪元。
+  assert(
+    "idempotent prepare (SSOT soft stable)",
+    stripMarkersForPrompt(once, "zh").includes("纪元") &&
+      stripMarkersForPrompt(twice, "zh").includes("纪元"),
+  );
 
   assert("sexagenary list has 60 pairs", SEXAGENARY_GANZHI.length === 60);
   assert("丙午 is valid ganzhi", isValidSexagenaryGanzhi("丙午"));

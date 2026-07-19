@@ -75,8 +75,10 @@ function main(): void {
   assert("v6 confirmation wrap-up rules exist", read("lib/llm/phases/confirmation-phase-v6.ts").includes("POJU_V6_CONFIRMATION_WRAP_UP_RULES"));
   assert("last agenda directive", read("lib/llm/phases/collecting-phase.ts").includes("buildLastAgendaItemDirective"));
 
-  const wrapped = wrapBareKeepCnSoftTerms("缺关键平衡能量（水）。", "zh");
-  assert("关键平衡能量 auto-wrapped", wrapped.includes("⟦t:yong_shen|"));
+  const wrapped = wrapBareKeepCnSoftTerms("锚元里。", "zh");
+  assert("锚元 auto-wrapped", wrapped.includes("⟦t:yong_shen|"));
+  const legacyWrapped = wrapBareKeepCnSoftTerms("关键平衡能量里。", "zh");
+  assert("legacy 关键平衡能量 still wrapped", legacyWrapped.includes("⟦t:yong_shen|"));
 
   console.log("\n========================================\n");
   if (failures.length) {

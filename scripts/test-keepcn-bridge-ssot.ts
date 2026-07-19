@@ -1,5 +1,5 @@
 /**
- * 双层桥 · 守卫（白话 → 金字）
+ * SSOT soft 桥 · 守卫（scrub 软译 ≡ POJU_TERMS → 升成标记）
  *   pnpm exec tsx scripts/test-keepcn-bridge-ssot.ts
  */
 import fs from "node:fs";
@@ -24,24 +24,26 @@ const BRIDGED: ReadonlyArray<[string, string]> = [
 ];
 
 function main(): void {
-  console.log("\n===== 双层桥 · 白话 → 金字 =====\n");
+  console.log("\n===== SSOT soft 桥 · scrub → 标记 =====\n");
 
-  // ① 桥必须认得 scrub 的实际产出（decade 曾抄成「当前阶段气候」，scrub 实产「当前这个阶段」）
-  // lookbehind 要求 label 前不是汉字 —— 用句首触发。
+  // ① scrub 软译 = SSOT term.zh；桥必须能把裸软译升成标记
   for (const [trad, slug] of BRIDGED) {
     const plain = BANNED_TERM_SOFT_ZH[trad];
+    const gold = pojuTermByTraditional(trad, "bazi") ?? pojuTermByTraditional(trad);
     assert(`BANNED_TERM_SOFT_ZH 有「${trad}」`, Boolean(plain));
+    assert(`「${trad}」软译 === SSOT「${gold?.term.zh}」`, plain === gold?.term.zh);
     if (!plain) continue;
     const out = wrapBareKeepCnSoftTerms(`${plain}里。`, "zh");
-    assert(`「${trad}」→「${plain}」能升成金字`, out.includes("⟦t:"));
+    assert(`「${trad}」→「${plain}」能升成标记`, out.includes("⟦t:"));
     assert(`「${trad}」升成的是 ${slug}`, out.includes(`⟦t:${slug}`));
   }
 
-  // ② 桥里不许再出现手抄字面量
+  // ② 桥函数本身不许再手抄字面量（legacy 别名可留在 wrapBare 列表）
   const src = read("lib/llm/sanitize/term-marking.ts");
   const start = src.indexOf("function keepCnBridgeLabel");
-  const bridge = src.slice(start, src.indexOf("const parts = text.split", start));
-  assert("桥从 BANNED_TERM_SOFT_ZH 取值", bridge.includes('keepCnBridgeLabel("'));
+  const end = src.indexOf("export function wrapBareKeepCnSoftTerms", start);
+  const bridge = src.slice(start, end > 0 ? end : start + 800);
+  assert("桥从 BANNED_TERM_SOFT_ZH 取值", bridge.includes("BANNED_TERM_SOFT_ZH[traditional]"));
   assert("桥不再手抄「当前阶段气候」", !bridge.includes("当前阶段气候"));
   assert("桥不再手抄「你的核心特质」", !bridge.includes("你的核心特质"));
 
@@ -50,17 +52,22 @@ function main(): void {
   assert("底座提示词不再手写「燃料容易跟不上」", !basePrompt.includes("燃料容易跟不上"));
   assert("底座提示词不再手写「deep fuel reserves」", !basePrompt.includes("deep fuel reserves"));
 
-  // ④ 两层不许混用：正文白话表里的值，不许等于任何金字
-  const golds = new Map<string, string>();
-  for (const trad of Object.keys(BANNED_TERM_SOFT_ZH)) {
+  // ④ 禁词软译必须从 SSOT 派生（与金字同一事实源）
+  const drift: string[] = [];
+  for (const [trad, soft] of Object.entries(BANNED_TERM_SOFT_ZH)) {
     const t = pojuTermByTraditional(trad, "bazi") ?? pojuTermByTraditional(trad);
-    if (t) golds.set(t.term.zh, trad);
+    if (!t) continue; // fate lexicon / out-of-set — no SSOT row
+    if (soft !== t.term.zh) drift.push(`${trad}→${soft}≠${t.term.zh}`);
   }
-  const mixed = Object.entries(BANNED_TERM_SOFT_ZH).filter(([, v]) => golds.has(v));
   assert(
-    `正文白话表未混入金字（发现 ${mixed.length} 处：${mixed.map(([k, v]) => `${k}→${v}`).join(" ")}）`,
-    mixed.length === 0,
+    `术语软译与 SSOT 对齐（漂移 ${drift.length}：${drift.slice(0, 6).join(" ")}）`,
+    drift.length === 0,
   );
+
+  // ⑤ 提示词禁词块不再塞第二套白话对照
+  const bannedSrc = read("lib/llm/compliance/banned-terms.ts");
+  assert("禁词块不再手写旧白话软译表", !bannedSrc.includes("大运→当前") && !bannedSrc.includes("当前这个阶段"));
+  assert("禁词块声明只认 SSOT", bannedSrc.includes("只走 SSOT") || bannedSrc.includes("只认 SSOT"));
 
   console.log(
     "\n" +

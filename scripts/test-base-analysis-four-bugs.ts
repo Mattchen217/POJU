@@ -244,7 +244,8 @@ function main() {
   // soft labels — 平衡 everyday is skipped, not false-fired as strength jargon
   assert("glossary soft 随境调整型", stemSoftSrc.includes('"随境调整型"'));
   assert("glossary no 平衡型 soft", !stemSoftSrc.includes('"平衡型"'));
-  assert("yong_shen soft kept", BANNED_TERM_SOFT_ZH["用神"] === "关键平衡能量");
+  assert("yong_shen soft = SSOT 锚元", BANNED_TERM_SOFT_ZH["用神"] === "锚元");
+  assert("KEEP_CN yong = SSOT", KEEP_CN_VISIBLE_SOFT.yong_shen?.zh === "锚元");
 
   const softs = collectCanonicalSoftLabelsZh([
     ...Object.values(KEEP_CN_VISIBLE_SOFT).map((x) => x.zh),
@@ -257,9 +258,9 @@ function main() {
     collisions.map(([a, b]) => `${a}⊂${b}`).join("; "),
   );
 
-  const softText = "你最关键的关键平衡能量是「润泽」；配置是随境调整型。";
+  const softText = "你最关键的锚元是「润泽」；配置是随境调整型。";
   const masked = maskKnownSoftLabelsZh(softText, softs);
-  assert("mask hides 关键平衡能量", !masked.includes("平衡"));
+  assert("mask hides 锚元", !masked.includes("锚元"));
   const falseHits = detectComplianceViolations(
     '**秩序与表达的平衡:** 两端互哺。',
     "zh",

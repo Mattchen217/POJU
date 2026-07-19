@@ -1,13 +1,20 @@
 /**
- * Single source of truth for user-visible bans (base-analysis façade + payment audit).
- * Gate · sanitizer · prompts MUST all read from here — never maintain parallel lists.
+ * User-visible bare-term bans (base-analysis façade + payment audit).
+ *
+ * 【职责分裂 · 2026-07 收口】
+ * - BANNED_TERMS_ZH = 哪些原词禁止裸露（审计视图）
+ * - 软译值 = 一律从 SSOT POJU_TERMS 派生（termOf / traditional），不再手抄第二套
+ * - 命运红线 = 薄表 FATE_LEXICON_SCRUB_ZH（无 SSOT 行，只禁+scrub，不是术语软译）
+ *
+ * Gate · sanitizer · prompts MUST all read from here — never maintain parallel soft maps.
  */
 
 import { OUT_OF_SET_FORBIDDEN_HAN } from "@/lib/glossary/term-closed-set";
+import { pojuTermByTraditional } from "@/lib/glossary/pojulife-terms";
 
-/** Bare technical terms that must not appear in soft-visible user copy (use soft map). */
+/** Bare technical / fate terms that must not appear in soft-visible user copy. */
 export const BANNED_TERMS_ZH = [
-  // Keep_cn / structural — PART 2 missed 日主; Fix C closes the gap
+  // Keep_cn / structural
   "日主",
   "身弱",
   "身强",
@@ -68,80 +75,24 @@ export const BANNED_TERMS_ZH = [
   "四柱",
   "命盘",
   "命局",
-  // Fate lexicon
+  // Fate lexicon (no SSOT row — see FATE_LEXICON_SCRUB_ZH)
   "命运",
   "命定",
   "命理",
   "宿命",
   "判决",
   "天注定",
-  // Out-of-set engine terms (never invent)
+  // Out-of-set engine terms (never invent; audit-only, no soft replace)
   ...OUT_OF_SET_FORBIDDEN_HAN,
 ] as const;
 
 export type BannedTermZh = (typeof BANNED_TERMS_ZH)[number];
 
-/** Required soft gloss for each high-traffic banned term (prompt + sanitize). */
-export const BANNED_TERM_SOFT_ZH: Readonly<Record<string, string>> = {
-  日主: "你的核心特质",
-  身弱: "能量供给容易跟不上",
-  身强: "燃料底盘充沛",
-  身旺: "燃料底盘充沛",
-  用神: "关键平衡能量",
-  喜神: "有利特质",
-  忌神: "需留意的特质",
-  天干: "显性特质层",
-  地支: "隐性特质层",
-  藏干: "内在支撑层",
-  大运: "当前这个阶段",
-  流年: "当前时空效能",
-  日柱: "你的能量结构",
-  月柱: "你的能量结构",
-  时柱: "你的能量结构",
-  年柱: "你的能量结构",
-  年干: "世彰",
-  月干: "脉呈",
-  日干: "核赋",
-  时干: "域微",
-  年支: "世蕴",
-  月支: "脉囿",
-  日支: "核渊",
-  时支: "域筑",
-  主星: "首枢",
-  副星: "底织",
-  通根: "深贯",
-  透干: "浮见",
-  坐支: "凭托",
-  坐干: "负冠",
-  本氣: "主禀",
-  本气: "主禀",
-  中氣: "兼含",
-  中气: "兼含",
-  余氣: "余存",
-  余气: "余存",
-  干支: "时耦",
-  干合: "显契",
-  支合: "隐契",
-  調候: "候谐",
-  调候: "候谐",
-  納音: "潜弦",
-  纳音: "潜弦",
-  墓庫: "归匮",
-  墓库: "归匮",
-  小運: "纤漪",
-  小运: "纤漪",
-  流月: "月潮",
-  流日: "日轨",
-  流時: "辰瞬",
-  流时: "辰瞬",
-  真太陽時: "曜准",
-  真太阳时: "曜准",
-  夫妻星: "俪模",
-  配偶星: "俪模",
-  八字: "你的能量结构",
-  四柱: "你的能量结构",
-  命盘: "你的能量结构",
-  命局: "你的能量结构",
+/**
+ * 非 SSOT 命运/合规红线：scrub 用的极薄替换（不是术语软译词典）。
+ * 有 POJU_TERMS 行的词【禁止】写进这里。
+ */
+export const FATE_LEXICON_SCRUB_ZH: Readonly<Record<string, string>> = {
   命运: "人生轨迹",
   命定: "人生轨迹",
   命理: "能量配置",
@@ -149,6 +100,27 @@ export const BANNED_TERM_SOFT_ZH: Readonly<Record<string, string>> = {
   判决: "读数",
   天注定: "外部定论",
 };
+
+/** Resolve scrub/repair soft for a banned traditional — SSOT first, fate scrub second. */
+export function softForBannedTraditionalZh(traditional: string): string | null {
+  const t = pojuTermByTraditional(traditional, "bazi") ?? pojuTermByTraditional(traditional);
+  if (t?.term.zh?.trim()) return t.term.zh.trim();
+  const fate = FATE_LEXICON_SCRUB_ZH[traditional];
+  return fate?.trim() || null;
+}
+
+/**
+ * Derived view: banned traditional → soft (SSOT term.zh, or fate scrub).
+ * 【不再手抄】大运/日柱等术语软译；与金字 termOf 同一事实源。
+ */
+export const BANNED_TERM_SOFT_ZH: Readonly<Record<string, string>> = (() => {
+  const out: Record<string, string> = {};
+  for (const word of BANNED_TERMS_ZH) {
+    const soft = softForBannedTraditionalZh(word);
+    if (soft) out[word] = soft;
+  }
+  return out;
+})();
 
 /**
  * 比喻黑名单 —— 已清空（2026-07-17）。
@@ -301,7 +273,7 @@ export function findSoftLabelSubstringCollisions(
   return hits;
 }
 
-/** Mask known soft labels so forbidden-term includes() cannot hit inside approved softs (e.g. 「平衡」 inside 「关键平衡能量」). */
+/** Mask known soft labels so forbidden-term includes() cannot hit inside approved softs. */
 export function maskKnownSoftLabelsZh(text: string, softs: readonly string[]): string {
   let out = text;
   const sorted = [...softs].sort((a, b) => b.length - a.length);
@@ -340,43 +312,37 @@ export function bannedTermSoftReplacePairsZh(): ReadonlyArray<[string, string]> 
 }
 
 /**
- * Auto-injected into base-analysis system prompt — never hand-maintain a parallel list.
+ * Auto-injected into base-analysis system prompt.
+ * 【一套事实源】术语软译只认 SSOT；本块不再塞第二套白话对照表。
  */
 export function buildForbiddenTermsPromptBlock(locale: string): string {
   if (locale.startsWith("zh")) {
-    const softLines = Object.entries(BANNED_TERM_SOFT_ZH)
-      .slice(0, 18)
-      .map(([k, v]) => `${k}→「${v}」`)
-      .join("；");
-    return `# 用户可见正文 · 绝对禁词（写了 = 整篇被拦 = 白烧一次调用）
+    return `# 用户可见正文 · 绝对禁词（裸露原词 = 整篇被拦 = 白烧一次调用）
 
-【禁词】${BANNED_TERMS_ZH.join(" / ")}
-  → 必须软译（对照）：${softLines}…
+【禁裸原词】命理传统字面（日主/大运/流年/四柱/用神/身弱…及集外神煞名等）禁止以【任何形式】裸露出现，包括否定式、对比式、引用式。
+  ✗ 所谓的命运  ✗ 这不是命定  ✗ 裸写「大运」「日柱」
+术语概念可以讲，但【只走 SSOT 打标】：\`⟦t:<slug>|⟧\`（竖线后留空；可见软译由系统按术语表填入，如大运→纪元、日柱→元核）。
+【禁止】自造第二套白话软译（对照表外的说法一律不要写）。
+
+【命运红线】命运/命定/命理/宿命/判决/天注定 — 禁止出现；不要拿它们当反面例子。用这个盘自己的机制正面说。
+
 【主比喻·现定】主比喻必须由**这个人的** structured（day_master 五行 + strength + yong_shen）现场生成；
   换一个命盘还成立 = 套话 = 重写。别套用任何现成意象，让比喻从这盘的能量结构里长出来。
 
-【禁词 = 字面禁止出现】
-不得以【任何形式】出现，包括：否定式、对比式、引用式、加引号提及。
-  ✗「所谓的命运」  ✗「这不是命定」
-要表达「你不靠硬撑」→【直接正面说】，不要拿禁词当反面例子。用这个盘自己的机制说，不要套用任何现成句式。
-
-【禁裸干支】甲乙丙丁戊己庚辛壬癸 / 子丑寅卯辰巳午未申酉戌亥 及「丙火/乙木」类合称一律不得裸露——要么 ⟦t:<slug>|<贴题白话>⟧（软译由系统填；兼容形第2格软译也【不得】含裸干支），要么纯白话。
-【标记】id 必须取自闭集 slug 清单；自造 slug（如 da_yun / ji_shen / stem_foo）= 直接拒绝。闭集没有对应概念 → 【不打标，直接白话讲】。
+【禁裸干支】甲乙丙丁戊己庚辛壬癸 / 子丑寅卯辰巳午未申酉戌亥 及丙火/乙木类合称一律不得裸露——要么 ⟦t:<slug>|⟧（软译由系统填），要么纯白话意象。
+【标记】id 必须取自闭集 slug 清单；自造 slug（如 da_yun / ji_shen）= 直接拒绝。闭集没有对应概念 → 【不打标，直接白话讲】。
 【收尾】禁「这不是命运/不是命定」否定式。收尾句由系统统一追加，你不用写。`;
   }
 
-  return `# User-visible body · absolute bans (violation = rejected = wasted paid call)
+  return `# User-visible body · absolute bans (bare jargon = rejected = wasted paid call)
 
-[Banned] ${BANNED_TERMS_EN.join(" / ")}
-  → Soft-translate (e.g. day master → "your core nature"; weak self → "fuel runs short easily")
+[Bare jargon ban] Traditional chart jargon must not appear literally in any form (including negation/scare-quotes).
+  Concepts OK only via SSOT markers: \`⟦t:<slug>|⟧\` (system fills soft from the term table — one soft set only).
+  Do NOT invent a second vernacular soft map.
+[Fate red line] fate / destiny / verdict-style words — never, including "this is not fate".
 [Main metaphor · chart-native] Main metaphor must be generated from THIS person's structured (day_master element + strength + yong_shen);
-  if it still fits another chart = stock = rewrite. Do not reuse canned imagery — let the metaphor grow from this chart's energy structure.
-
-[Literal ban] Banned words must NOT appear in ANY form — including negation, contrast, quotation, or scare-quotes.
-  ✗ "so-called fate"  ✗ "this is not destiny"
-  To say "you don't hard-brace" → say it positively from THIS chart's mechanism — never reuse stock sentences.
-
-[No bare Ganzhi] Never bare stems/branches or "Bing fire"/"Yi wood" compounds — use ⟦t:<slug>|<contextual plain>⟧ (system fills soft; compat soft slot must itself be Ganzhi-free) or plain vernacular
+  if it still fits another chart = stock = rewrite.
+[No bare Ganzhi] Never bare stems/branches or "Bing fire"/"Yi wood" compounds — use \`⟦t:<slug>|⟧\` or plain vernacular.
 [Markers] ids must be closed-set slugs only; invented ids are rejected. No closed concept → plain vernacular, no marker.
 [Closing] Never "this is not fate" negations. Closing line is appended by the system — do not write one.`;
 }
@@ -393,18 +359,18 @@ export function buildViolationRepairInstruction(
       .filter((v) => v.label.startsWith("term:"))
       .map((v) => {
         const term = v.label.slice("term:".length);
-        const soft = BANNED_TERM_SOFT_ZH[term];
-        return soft ? `「${term}」→「${soft}」` : null;
+        const soft = softForBannedTraditionalZh(term);
+        return soft ? `「${term}」→「${soft}」(SSOT)` : null;
       })
       .filter(Boolean)
       .join("；");
     return `下列违规点需要补丁。只输出 JSON {"patches":[{"find":"<含违规词的整句>","replace":"<改写后的整句>"}]}，【禁止】重吐全文：
 
 ${lines.join("\n")}
-${softHint ? `\n软译对照：${softHint}` : ""}
+${softHint ? `\n软译对照（SSOT）：${softHint}` : ""}
 ${hits.some((v) => v.label === "metaphor_blacklist") ? "\n黑名单比喻：重写【整句】使其通顺且字面不再出现禁词（含否定式提及也不行）。勿只替换最短词。" : ""}
 
-规则：find = 原文中真实存在的整句；replace = 自然通顺的合规整句；找不到的 find 会被拒。`;
+规则：find = 原文中真实存在的整句；replace = 自然通顺的合规整句；术语软译只认 SSOT；找不到的 find 会被拒。`;
   }
 
   return `Emit ONLY JSON {"patches":[{"find":"<full sentence>","replace":"<rewritten sentence>"}]} — never rewrite the full document.
