@@ -89,19 +89,16 @@
   font-size: clamp(1.125rem, 1.55vw + 0.55rem, 1.375rem);
   font-weight: 450;
   line-height: 1.65;
-  letter-spacing: 0.01em;
-  text-align: justify;
-  text-justify: inter-ideograph;
-  text-align-last: justify;
+  letter-spacing: normal;
+  text-align: center;
   hyphens: none;
 }
 
 .pmw__line {
   display: block;
   width: 100%;
-  text-align: justify;
-  text-justify: inter-ideograph;
-  text-align-last: justify;
+  text-align: center;
+  letter-spacing: normal;
 }
 
 .pmw__intro {
@@ -135,12 +132,5 @@
   .pmw__cta {
     font-size: clamp(1.05rem, 3.6vw, 1.2rem);
     line-height: 1.6;
-    text-align: justify;
-    text-align-last: left;
-  }
-
-  .pmw__line {
-    text-align: justify;
-    text-align-last: left;
   }
 }

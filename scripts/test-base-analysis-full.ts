@@ -116,8 +116,8 @@ function main(): void {
     p.includes("至少 1 个必须是 shensha") || p.includes("至少 1 个必须来自 shensha"),
   );
   assert("删依据自检", p.includes("把依据块整个删掉"));
-  assert("五行必打标", p.includes("⟦t:wood|⟧") && p.includes("不写「木」"));
-  assert("十神必打标", p.includes("⟦t:shi_shen|⟧") && p.includes("不写「食神」"));
+  assert("五行必打标", p.includes("⟦t:wood|⟧") && p.includes("不要写五行的原字"));
+  assert("十神必打标", p.includes("⟦t:shi_shen|⟧") && p.includes("不要写十神原词"));
   assert("推理端：完整的承重证据链(求全)", p.includes("完整的承重证据链"));
   assert(
     "推理端：宁多不漏自检",

@@ -903,7 +903,18 @@ export function prepareBodyTextForGlossaryRender(text: string, locale: string): 
       { sample: normalized.match(/⟦t:[^⟧]+⟧/g)?.slice(0, 3) },
     );
   }
-  return sanitizeNonMarkerSegment(degradeMarkersToPlain(normalized, locale), locale);
+  const cleaned = sanitizeNonMarkerSegment(degradeMarkersToPlain(normalized, locale), locale);
+  // 正文兜底：剥掉模型给词加的「」强调（保留内容）。底座正文无合法「」用途
+  // （不会有整句引用/对话），出现的都是突兀强调（2026-07-19 doc48：「精准释放」「水」「木」）。
+  // 只在【正文层】做——依据层不调本函数，不受影响。
+  return stripBodyCornerQuotes(cleaned);
+}
+
+/** 剥正文里给词/短语加的「」强调，保留内容。成对「」才剥，孤立的不动（避免误伤半截标点）。 */
+function stripBodyCornerQuotes(text: string): string {
+  if (!text?.includes("「")) return text;
+  // 成对「x」→ x；跨度限制在 ~20 字内，避免吞掉整段（万一有长引用也只在正文层、且底座本无引用）
+  return text.replace(/「([^「」]{1,20})」/g, "$1");
 }
 
 /**
