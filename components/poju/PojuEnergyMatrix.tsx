@@ -7,11 +7,8 @@ import { useTranslations } from "next-intl";
 import { PojuDaYunTimeline } from "@/components/poju/PojuDaYunTimeline";
 import {
   elementCssClass,
-  formatBranchDisplay,
-  getBranchInfo,
   isZhMatrixLocale,
   yongshenChipsForLocale,
-  zodiacAnimalHanFromBranch,
 } from "@/lib/poju/bazi-matrix-mappings";
 import { buildMatrixDisplayData } from "@/lib/poju/build-matrix-display";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
@@ -62,21 +59,6 @@ const ELEMENT_BAR_CLASS: Record<string, string> = {
   Metal: "ebar-fill--metal",
   Water: "ebar-fill--water",
 };
-
-const MAJOR_SHENSHA = new Set(["天乙贵人", "禄神", "prime_mentor_node", "provision_anchor"]);
-
-function formatLayerStageLine(
-  pl: {
-    branch: string;
-    branch_en: string;
-    life_stage_label: string | null;
-  },
-  locale: string,
-): string {
-  // Zodiac animal + soft element (+ soft life-stage). Lookup uses branch char; output never shows 干支.
-  const stage = pl.life_stage_label?.trim() || null;
-  return formatBranchDisplay(pl.branch, locale, stage);
-}
 
 function NarrativePlaceholder({ label }: { label: string }) {
   return <span className="pem__narrative-loading">{label}</span>;
@@ -355,92 +337,96 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
             <div className="zsign__tag">{tc("your_sign_tag")}</div>
           </div>
 
-          <div className="topband__calibration">
-            <div className="topband__calibration-head">
-              <p className="topband__calibration-title">{tm("section_label")}</p>
+          <div className="tcard calband">
+            <div className="calband__head">
+              <span className="calband__bull" />
+              <span>{tm("section_label")}</span>
             </div>
-            <div className="topband__calibration-grid topband__calibration-grid--hero">
-          <div className="tcard a tcard--nested tcard--hero-cal">
-            <div className="k">
-              <span className="bull" />
-              {tc("calendar_alignment")} <em>· {tc("calendar_alignment_em")}</em>
-            </div>
-            <div className="v">
-              {display.calendar.gregorian} <small>{tc("gregorian")}</small>
-            </div>
-            {display.calendar.lunar ? (
-              <div className="v v--lunar">
-                {display.calendar.lunar} <small>{tc("lunar")}</small>
-              </div>
-            ) : null}
-            <div className="mid">
-              {display.calendar.headline}
-              {genderLabel ? <span className="pem__gender-tag">{genderLabel}</span> : null}
-            </div>
-            <div className="s">{display.calendar.mid}</div>
-          </div>
-
-          <div className="tcard a tcard--nested tcard--hero-tst">
-            <div className="k">
-              <span className="bull" />
-              <SoftTermHover slug="tm_true_solar_time" locale={locale} />
-              <em>· {tc("true_solar_time_em")}</em>
-            </div>
-            {tst ? (
-              <>
-                <div className="tst">
-                  <div className="tst__times">
-                    <div className="t">
-                      <div className="vv">{tst.original_time}</div>
-                      <div className="kk">{tc("standard_time")}</div>
-                    </div>
-                    <div className="arr">→</div>
-                    <div className="t">
-                      <div className="vv gold">{tst.true_solar_time}</div>
-                      <div className="kk">
-                        <SoftTermHover slug="tm_true_solar_time" locale={locale} />
-                      </div>
-                    </div>
-                  </div>
-                  {tst.diff_minutes !== 0 ? (
-                    <div className="tst__chip">
-                      {tst.diff_minutes > 0 ? "+" : "−"}
-                      {Math.abs(Number(tst.diff_minutes.toFixed(2)))}m
-                    </div>
+            <div className="calband__grid">
+              <div className="calband__col">
+                <div className="calband__k">
+                  {tc("calendar_alignment")} · {tc("calendar_alignment_em")}
+                </div>
+                <div className="calband__v">
+                  {display.calendar.gregorian}{" "}
+                  <small>{tc("gregorian")}</small>
+                </div>
+                {display.calendar.lunar ? (
+                  <div className="calband__sub">{display.calendar.lunar}</div>
+                ) : null}
+                <div className="calband__mid">
+                  {display.calendar.headline}
+                  {genderLabel ? (
+                    <span className="pem__gender-tag">{genderLabel}</span>
                   ) : null}
                 </div>
-                <div className="s">
-                  {tc("longitude_correction")} ·{" "}
-                  {tst.longitude_diff_minutes ?? tst.diff_minutes}m
-                  {tst.eq_of_time_minutes != null
-                    ? ` · ${tc("eq_of_time")} ${tst.eq_of_time_minutes > 0 ? "+" : ""}${tst.eq_of_time_minutes}m`
-                    : null}
-                  {tst.longitude != null
-                    ? ` · ${Math.abs(tst.longitude).toFixed(2)}°${tst.longitude >= 0 ? "E" : "W"}`
-                    : null}
-                </div>
-              </>
-            ) : (
-              <div className="v">—</div>
-            )}
-          </div>
+              </div>
 
-          <div className="tcard a tcard--nested tcard--hero-jieqi">
-            <div className="k">
-              <span className="bull" />
-              {tc("solar_term")} <em>· {tc("solar_term_em")}</em>
-            </div>
-            <div className="v">
-              {display.solar_term.name_en} <small>{display.solar_term.name}</small>
-            </div>
-            <div className="mid">{display.solar_term.season}</div>
-            <div className="s">
-              {tc("next_term")}: {display.solar_term.next_name}
-            </div>
-            <div className="term">
-              <i style={{ width: `${display.solar_term.progress_pct}%` }} />
-            </div>
-          </div>
+              <div className="calband__col">
+                <div className="calband__k">
+                  <SoftTermHover slug="tm_true_solar_time" locale={locale} />
+                  {" · "}
+                  {tc("true_solar_time_em")}
+                </div>
+                {tst ? (
+                  <>
+                    <div className="tst tst--calband">
+                      <div className="tst__times">
+                        <div className="t">
+                          <div className="vv">{tst.original_time}</div>
+                          <div className="kk">{tc("standard_time")}</div>
+                        </div>
+                        <div className="arr">→</div>
+                        <div className="t">
+                          <div className="vv gold">{tst.true_solar_time}</div>
+                          <div className="kk">
+                            <SoftTermHover slug="tm_true_solar_time" locale={locale} />
+                          </div>
+                        </div>
+                      </div>
+                      {tst.diff_minutes !== 0 ? (
+                        <div className="tst__chip">
+                          {tst.diff_minutes > 0 ? "+" : "−"}
+                          {Math.abs(Number(tst.diff_minutes.toFixed(2)))}m
+                        </div>
+                      ) : null}
+                    </div>
+                    <div className="calband__foot">
+                      {tc("longitude_correction")} ·{" "}
+                      {tst.longitude_diff_minutes ?? tst.diff_minutes}m
+                      {tst.eq_of_time_minutes != null
+                        ? ` · ${tc("eq_of_time")} ${tst.eq_of_time_minutes > 0 ? "+" : ""}${tst.eq_of_time_minutes}m`
+                        : null}
+                      {tst.longitude != null
+                        ? ` · ${Math.abs(tst.longitude).toFixed(2)}°${tst.longitude >= 0 ? "E" : "W"}`
+                        : null}
+                    </div>
+                  </>
+                ) : (
+                  <div className="calband__v">—</div>
+                )}
+              </div>
+
+              <div className="calband__col">
+                <div className="calband__k">
+                  {tc("solar_term")} · {tc("solar_term_em")}
+                </div>
+                <div className="calband__v">
+                  {isZh ? display.solar_term.name : display.solar_term.name_en}{" "}
+                  <small>
+                    {isZh ? display.solar_term.name_en : display.solar_term.name}
+                  </small>
+                </div>
+                <div className="calband__sub">{display.solar_term.season}</div>
+                <div className="calband__foot calband__foot--bar">
+                  <span>
+                    {tc("next_term")}: {display.solar_term.next_name}
+                  </span>
+                </div>
+                <div className="term">
+                  <i style={{ width: `${display.solar_term.progress_pct}%` }} />
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -566,10 +552,10 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
           </div>
         </div>
 
-        <div className="pem-row pem-row--duo">
-          <div className="pem-panel ro ro--wuxing">
+        <div className="pem-row pem-row--duo pem-row--vitality">
+          <div className="pem-panel ro ro--wuxing pem-panel--vitality">
             <div className="ro__k">{tc("core_vitality")}</div>
-            <div className="ro__v ro__v--metric">
+            <div className="ro__v ro__v--metric ro__v--vitality-title">
               <SoftTermHover
                 slug={strengthToSlug(strength)}
                 locale={locale}
@@ -611,16 +597,7 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
                     <i style={{ width: `${dominant.pct}%` }} className={ELEMENT_BAR_CLASS[dominant.element] ?? ""} />
                   </div>
                   <div className="ro__tag up">
-                    ▲ {tc("dominant_vector")} ·{" "}
-                    {(() => {
-                      const elSlug = elementToSlug(dominant.element);
-                      const soft = matrixElementSoft(dominant.element, locale);
-                      return elSlug ? (
-                        <SoftTermHover slug={elSlug} locale={locale} fallback={soft} />
-                      ) : (
-                        soft
-                      );
-                    })()}
+                    ▲ {tc("dominant_vector")}
                   </div>
                 </div>
               ) : null}
@@ -646,16 +623,7 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
                     <i style={{ width: `${Math.max(deficit.pct, 5)}%` }} className={ELEMENT_BAR_CLASS[deficit.element] ?? ""} />
                   </div>
                   <div className="ro__tag down">
-                    ▼ {tc("key_gap")} ·{" "}
-                    {(() => {
-                      const elSlug = elementToSlug(deficit.element);
-                      const soft = matrixElementSoft(deficit.element, locale);
-                      return elSlug ? (
-                        <SoftTermHover slug={elSlug} locale={locale} fallback={soft} />
-                      ) : (
-                        soft
-                      );
-                    })()}
+                    ▼ {tc("key_gap")}
                   </div>
                 </div>
               ) : null}
@@ -860,49 +828,47 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
           </div>
         </div>
 
-        <div className="pillars pillars--layers">
+        <div className="pillars pillars--v3">
           <div className="pillars__head">
             {tc("layers_title")} <em>· {tc("layers_em")}</em>
           </div>
-          {display.pillars.map((pl, idx) => {
-            const keys = ["year", "month", "day", "hour"] as const;
-            const key = keys[idx] ?? "year";
-            const isDay = key === "day";
-            const isLifeSegment = lifeSegmentPillar === key;
-            const roleSoft = isZh ? pl.ten_god : pl.ten_god_en;
-            const roleSlug =
-              isDay &&
-              (!pl.ten_god_han || pl.ten_god_han === "日主" || pl.ten_god === "日主")
-                ? "day_master"
-                : matrixTermSlug(pl.ten_god_han) ??
-                  matrixTermSlug(pl.ten_god) ??
-                  matrixTermSlug(pl.ten_god_en);
-            const stemSlug = pl.stem_element ? elementToSlug(pl.stem_element) : null;
-            const stageHan = pl.life_stage_han?.trim() || null;
-            const stageSlug = stageHan ? matrixTermSlug(stageHan) : null;
-            const branchInfo = getBranchInfo(pl.branch);
-            const zdHan = zodiacAnimalHanFromBranch(pl.branch);
-            const zdSlug = zodiacHanToSlug(zdHan);
-            const branchElSlug = branchInfo
-              ? elementToSlug(branchInfo.element)
-              : null;
-            return (
-              <div
-                key={key}
-                className={`pl pl--layer${isDay ? " day" : ""}${isLifeSegment ? " pl--segment-active" : ""}`}
-              >
-                <div className="cap">
-                  <SoftTermHover slug={pillarSlotSlug(key)} locale={locale} />
-                </div>
-                <div className="role" style={isDay ? { color: "var(--gold-soft)" } : undefined}>
-                  {roleSlug ? (
-                    <SoftTermHover slug={roleSlug} locale={locale} fallback={roleSoft} />
-                  ) : (
-                    roleSoft
-                  )}
-                </div>
-                <div className="stem">
-                  <div className={`en ${elementCssClass(pl.stem_element)}`}>
+          <div className="pillars__grid">
+            {display.pillars.map((pl, idx) => {
+              const keys = ["year", "month", "day", "hour"] as const;
+              const key = keys[idx] ?? "year";
+              const isDay = key === "day";
+              const isLifeSegment = lifeSegmentPillar === key;
+              const roleSoft = isZh ? pl.ten_god : pl.ten_god_en;
+              const roleSlug =
+                isDay &&
+                (!pl.ten_god_han || pl.ten_god_han === "日主" || pl.ten_god === "日主")
+                  ? "day_master"
+                  : matrixTermSlug(pl.ten_god_han) ??
+                    matrixTermSlug(pl.ten_god) ??
+                    matrixTermSlug(pl.ten_god_en);
+              const stemSlug = pl.stem_element ? elementToSlug(pl.stem_element) : null;
+              const stageHan = pl.life_stage_han?.trim() || null;
+              const stageSlug = stageHan ? matrixTermSlug(stageHan) : null;
+              const stageSoft =
+                pl.life_stage_label ||
+                (stageHan ? matrixSoftTerm(stageHan, locale) : "");
+              const stars = resolveShenshaList(pl.star_labels, shenshaLocale);
+              return (
+                <div
+                  key={key}
+                  className={`pl-card pl-card--${key}${isDay ? " pl-card--day" : ""}${isLifeSegment ? " pl-card--segment" : ""}`}
+                >
+                  <div className="pl-card__cap">
+                    <SoftTermHover slug={pillarSlotSlug(key)} locale={locale} />
+                  </div>
+                  <div className="pl-card__role">
+                    {roleSlug ? (
+                      <SoftTermHover slug={roleSlug} locale={locale} fallback={roleSoft} />
+                    ) : (
+                      roleSoft
+                    )}
+                  </div>
+                  <div className={`pl-card__element ${elementCssClass(pl.stem_element)}`}>
                     {pl.stem_element ? (
                       stemSlug ? (
                         <SoftTermHover
@@ -917,74 +883,36 @@ export function PojuEnergyMatrix({ payload, locale, compact = false, suppressNar
                       "—"
                     )}
                   </div>
-                </div>
-                <div className="branch">
-                  <div className="en">
-                    {branchInfo ? (
-                      <>
-                        {zdSlug ? (
-                          <SoftTermHover
-                            slug={zdSlug}
-                            locale={locale}
-                            fallback={isZh ? zdHan : branchInfo.zodiac_en}
-                          />
-                        ) : isZh ? (
-                          zdHan
-                        ) : (
-                          branchInfo.zodiac_en
-                        )}
-                        {" · "}
-                        {branchElSlug ? (
-                          <SoftTermHover
-                            slug={branchElSlug}
-                            locale={locale}
-                            fallback={matrixElementSoft(branchInfo.element, locale)}
-                          />
-                        ) : (
-                          matrixElementSoft(branchInfo.element, locale)
-                        )}
-                        {stageHan ? (
-                          <>
-                            {" · "}
-                            {stageSlug ? (
-                              <SoftTermHover
-                                slug={stageSlug}
-                                locale={locale}
-                                fallback={
-                                  pl.life_stage_label ||
-                                  matrixSoftTerm(stageHan, locale)
-                                }
-                              />
-                            ) : (
-                              pl.life_stage_label || matrixSoftTerm(stageHan, locale)
-                            )}
-                          </>
-                        ) : null}
-                      </>
-                    ) : (
-                      formatLayerStageLine(pl, locale)
-                    )}
-                  </div>
-                </div>
-                <div className="meta">
-                  {pl.hidden_display}
-                  {pl.star_labels.length > 0 ? (
-                    <>
-                      <br />
-                      {resolveShenshaList(pl.star_labels, shenshaLocale).map((star) => (
-                        <span
-                          key={star.id}
-                          className={`star star--${star.polarity}${MAJOR_SHENSHA.has(star.id) || MAJOR_SHENSHA.has(star.zh_src) ? " star--major" : ""}`}
-                        >
-                          ✦ {star.label}
-                        </span>
+                  {stageSoft ? (
+                    <div className="pl-card__stage">
+                      {stageSlug ? (
+                        <SoftTermHover
+                          slug={stageSlug}
+                          locale={locale}
+                          fallback={stageSoft}
+                        />
+                      ) : (
+                        stageSoft
+                      )}
+                    </div>
+                  ) : null}
+                  <div className="pl-card__hidden">{pl.hidden_display}</div>
+                  {stars.length > 0 ? (
+                    <ul className="pl-card__stars">
+                      {stars.map((star) => (
+                        <li key={star.id}>
+                          <span className="pl-card__star-mark" aria-hidden>
+                            ◆
+                          </span>
+                          {star.label}
+                        </li>
                       ))}
-                    </>
+                    </ul>
                   ) : null}
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </section>
     </div>
