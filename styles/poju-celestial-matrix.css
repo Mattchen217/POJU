@@ -1212,8 +1212,285 @@
 
 .pcm-facts > .pcm-card,
 .pcm-fact {
-  justify-content: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
   min-height: 0;
+}
+
+.pcm-facts > .pcm-card > .pcm-fviz {
+  margin-top: auto;
+  padding-top: 1.25rem;
+}
+
+/* --------------------------------------------------------------------------
+   Fact-card visual diagrams
+   -------------------------------------------------------------------------- */
+
+.pcm-fviz {
+  width: 100%;
+}
+
+.pcm-fviz__caption {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  font-family: var(--pcm-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  color: var(--pcm-on-variant);
+}
+
+/* 1. Four-layer stack — age activation */
+.pcm-fviz-layers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.pcm-fviz-layers__row {
+  display: grid;
+  grid-template-columns: 2.75rem 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 1.35rem;
+}
+
+.pcm-fviz-layers__name {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--pcm-on-variant);
+  opacity: 0.55;
+}
+
+.pcm-fviz-layers__name .term-mark__word,
+.pcm-fviz-layers__name .term-mark__info,
+.pcm-fviz-layers__name .term-mark__paren {
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  border-bottom-color: color-mix(in srgb, currentColor 35%, transparent);
+}
+
+.pcm-fviz-layers__row--on .pcm-fviz-layers__name {
+  color: var(--pcm-primary);
+  opacity: 1;
+}
+
+.pcm-fviz-layers__track {
+  position: relative;
+  height: 0.4rem;
+  border-radius: var(--pcm-radius-full);
+  background: var(--pcm-surface-highest);
+  overflow: visible;
+}
+
+.pcm-fviz-layers__fill {
+  height: 100%;
+  border-radius: inherit;
+  background: rgba(208, 197, 175, 0.22);
+  width: 28%;
+}
+
+.pcm-fviz-layers__row--on .pcm-fviz-layers__fill {
+  width: var(--pcm-layer-pct, 50%);
+  background: linear-gradient(
+    90deg,
+    rgba(242, 202, 80, 0.35),
+    var(--pcm-primary)
+  );
+  box-shadow: 0 0 10px rgba(242, 202, 80, 0.35);
+}
+
+.pcm-fviz-layers__pin {
+  position: absolute;
+  top: 50%;
+  left: var(--pcm-layer-pct, 50%);
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--pcm-primary);
+  border: 1.5px solid #fff;
+  box-shadow: 0 0 8px rgba(242, 202, 80, 0.7);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.pcm-fviz-layers__band {
+  font-family: var(--pcm-mono);
+  font-size: 0.625rem;
+  color: var(--pcm-on-variant);
+  opacity: 0.5;
+}
+
+.pcm-fviz-layers__row--on .pcm-fviz-layers__band {
+  color: var(--pcm-primary-fixed);
+  opacity: 1;
+}
+
+/* 2. Year pulse ring */
+.pcm-fviz-ring {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.pcm-fviz-ring__svg {
+  flex-shrink: 0;
+  width: 5.5rem;
+  height: 5.5rem;
+}
+
+.pcm-fviz-ring__meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.pcm-fviz-ring__ticks {
+  display: flex;
+  gap: 0.2rem;
+  margin-bottom: 0.65rem;
+}
+
+.pcm-fviz-ring__tick {
+  flex: 1;
+  height: 0.28rem;
+  border-radius: 1px;
+  background: var(--pcm-surface-highest);
+}
+
+.pcm-fviz-ring__tick--on {
+  background: var(--pcm-secondary-container);
+  box-shadow: 0 0 6px rgba(0, 238, 252, 0.35);
+}
+
+.pcm-fviz-ring__tick--now {
+  background: var(--pcm-primary);
+  box-shadow: 0 0 6px rgba(242, 202, 80, 0.5);
+}
+
+/* 3. Structure node graph */
+.pcm-fviz-graph {
+  width: 100%;
+  height: 5.5rem;
+}
+
+.pcm-fviz-meters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.pcm-fviz-meter__label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.3rem;
+  font-size: 0.6875rem;
+  color: var(--pcm-on-variant);
+}
+
+.pcm-fviz-meter__track {
+  height: 0.35rem;
+  border-radius: var(--pcm-radius-full);
+  background: var(--pcm-surface-highest);
+  overflow: hidden;
+}
+
+.pcm-fviz-meter__fill--bond {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--pcm-secondary-container);
+  box-shadow: 0 0 8px rgba(0, 238, 252, 0.35);
+  width: var(--pcm-meter-pct, 0%);
+}
+
+.pcm-fviz-meter__fill--tension {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--pcm-tertiary-container);
+  box-shadow: 0 0 8px rgba(255, 149, 148, 0.35);
+  width: var(--pcm-meter-pct, 0%);
+}
+
+/* 4. Balance scale + continuum */
+.pcm-fviz-balance {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.pcm-fviz-scale {
+  width: 100%;
+  height: 3.25rem;
+}
+
+.pcm-fviz-continuum {
+  position: relative;
+  height: 0.4rem;
+  border-radius: var(--pcm-radius-full);
+  background: linear-gradient(
+    90deg,
+    var(--pcm-secondary-fixed-dim),
+    var(--pcm-primary) 50%,
+    var(--pcm-tertiary-container)
+  );
+}
+
+.pcm-fviz-continuum__pin {
+  position: absolute;
+  top: 50%;
+  left: var(--pcm-bal-pct, 50%);
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--pcm-primary);
+  box-shadow: 0 0 10px rgba(242, 202, 80, 0.55);
+  transform: translate(-50%, -50%);
+}
+
+.pcm-fviz-continuum__labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.4rem;
+  font-size: 0.625rem;
+  letter-spacing: 0.04em;
+  color: var(--pcm-on-variant);
+}
+
+.pcm-fviz-xi-ji {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+.pcm-fviz-xi-ji__bar {
+  height: 0.3rem;
+  border-radius: var(--pcm-radius-full);
+  background: var(--pcm-surface-highest);
+  overflow: hidden;
+  margin-top: 0.25rem;
+}
+
+.pcm-fviz-xi-ji__fill--xi {
+  height: 100%;
+  background: var(--pcm-secondary-container);
+  width: var(--pcm-meter-pct, 0%);
+}
+
+.pcm-fviz-xi-ji__fill--ji {
+  height: 100%;
+  background: var(--pcm-tertiary-container);
+  width: var(--pcm-meter-pct, 0%);
+}
+
+.pcm-fviz-xi-ji__k {
+  font-size: 0.6875rem;
+  color: var(--pcm-on-variant);
 }
 
 .pcm-fact__label {
@@ -1455,22 +1732,14 @@
 .pcm-pl__slot {
   position: relative;
   z-index: 1;
-  margin: 0 0 0.65rem;
-  font-family: var(--pcm-headline);
-  font-size: 1.5rem;
-  font-weight: 700;
+  margin: 0 0 0.25rem;
+  font-family: var(--pcm-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
   line-height: 1.25;
-  letter-spacing: 0.06em;
-  text-transform: none;
-  color: #fff;
-}
-
-.pcm-pl__slot .term-mark__word {
-  font-family: inherit;
-  font-size: inherit;
-  font-weight: inherit;
-  letter-spacing: inherit;
-  color: inherit;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pcm-on-variant);
 }
 
 .pcm-pl__role {
@@ -1480,6 +1749,7 @@
   letter-spacing: 0.12em;
 }
 
+/* Design: year/hour coral · month cyan · day gold */
 .pcm-pl--year .pcm-pl__role,
 .pcm-pl--hour .pcm-pl__role {
   color: var(--pcm-tertiary-container);
@@ -1514,6 +1784,41 @@
 .pcm-pl--day .pcm-pl__branch {
   color: var(--pcm-on);
   font-weight: 500;
+}
+
+/* SoftTermHover inherits pillar accent colors (not global gold). */
+.pcm-pl .term-mark__word,
+.pcm-pl .term-mark__info,
+.pcm-pl .term-mark__paren,
+.pcm-pl .term-mark--neutral .term-mark__word,
+.pcm-pl .term-mark--neutral .term-mark__info,
+.pcm-pl .term-mark--neutral .term-mark__paren,
+.pcm-pl .term-mark--favorable .term-mark__word,
+.pcm-pl .term-mark--favorable .term-mark__info,
+.pcm-pl .term-mark--favorable .term-mark__paren,
+.pcm-pl .term-mark--caution .term-mark__word,
+.pcm-pl .term-mark--caution .term-mark__info,
+.pcm-pl .term-mark--caution .term-mark__paren,
+.pcm-pl .term-mark:not([class*="term-mark--"]) .term-mark__word,
+.pcm-pl .term-mark:not([class*="term-mark--"]) .term-mark__info,
+.pcm-pl .term-mark:not([class*="term-mark--"]) .term-mark__paren {
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+}
+
+.pcm-pl .term-mark--hover .term-mark__word {
+  border-bottom: 1px dotted color-mix(in srgb, currentColor 40%, transparent);
+}
+
+.pcm-pl .term-mark--hover .term-mark__word,
+.pcm-pl .term-mark:hover .term-mark__word,
+.pcm-pl .term-mark:focus-within .term-mark__word {
+  color: inherit;
+  border-bottom-color: color-mix(in srgb, currentColor 55%, transparent);
+  text-shadow: none;
 }
 
 .pcm-pl__hidden {

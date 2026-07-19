@@ -132,6 +132,389 @@ function PcmChip({
   );
 }
 
+type PillarSlot = "year" | "month" | "day" | "hour";
+
+const LAYER_BANDS: Array<{
+  key: PillarSlot;
+  band: string;
+  progress: (age: number) => number;
+}> = [
+  { key: "year", band: "0–16", progress: (a) => Math.min(100, (a / 16) * 100) },
+  {
+    key: "month",
+    band: "17–32",
+    progress: (a) => Math.min(100, Math.max(0, ((a - 16) / 16) * 100)),
+  },
+  {
+    key: "day",
+    band: "33–48",
+    progress: (a) => Math.min(100, Math.max(0, ((a - 32) / 16) * 100)),
+  },
+  {
+    key: "hour",
+    band: "49+",
+    progress: (a) => Math.min(100, Math.max(0, ((a - 48) / 16) * 100)),
+  },
+];
+
+/** Age → four-layer stack with active pin (激活层). */
+function FactLayerStack({
+  active,
+  age,
+  locale,
+}: {
+  active: PillarSlot;
+  age: number;
+  locale: string;
+}) {
+  return (
+    <div className="pcm-fviz pcm-fviz-layers" aria-hidden>
+      {LAYER_BANDS.map((row) => {
+        const on = row.key === active;
+        const pct = on ? Math.round(row.progress(age)) : 28;
+        return (
+          <div
+            key={row.key}
+            className={`pcm-fviz-layers__row${on ? " pcm-fviz-layers__row--on" : ""}`}
+            style={{ "--pcm-layer-pct": `${pct}%` } as CSSProperties}
+          >
+            <span className="pcm-fviz-layers__name">
+              <SoftTermHover slug={pillarSlotSlug(row.key)} locale={locale} />
+            </span>
+            <div className="pcm-fviz-layers__track">
+              <div className="pcm-fviz-layers__fill" />
+              {on ? <span className="pcm-fviz-layers__pin" /> : null}
+            </div>
+            <span className="pcm-fviz-layers__band">{row.band}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Circular year-progress ring + 12 month ticks (岁环). */
+function FactYearRing({
+  year,
+  progress,
+  progressLabel,
+}: {
+  year: number;
+  progress: number;
+  progressLabel: string;
+}) {
+  const r = 34;
+  const c = 2 * Math.PI * r;
+  const pct = Math.min(100, Math.max(0, progress));
+  const dash = (pct / 100) * c;
+  const month = Math.min(11, Math.floor((pct / 100) * 12));
+  return (
+    <div className="pcm-fviz pcm-fviz-ring" aria-hidden>
+      <svg className="pcm-fviz-ring__svg" viewBox="0 0 80 80">
+        <circle
+          cx="40"
+          cy="40"
+          r={r}
+          fill="none"
+          stroke="rgba(52,52,64,0.95)"
+          strokeWidth="6"
+        />
+        <circle
+          cx="40"
+          cy="40"
+          r={r}
+          fill="none"
+          stroke="var(--pcm-primary)"
+          strokeWidth="6"
+          strokeLinecap="round"
+          strokeDasharray={`${dash} ${c - dash}`}
+          transform="rotate(-90 40 40)"
+          style={{ filter: "drop-shadow(0 0 6px rgba(242,202,80,0.45))" }}
+        />
+        <text
+          x="40"
+          y="38"
+          textAnchor="middle"
+          fill="#fff"
+          fontSize="14"
+          fontWeight="700"
+          fontFamily="var(--pcm-mono)"
+        >
+          {pct}%
+        </text>
+        <text
+          x="40"
+          y="52"
+          textAnchor="middle"
+          fill="var(--pcm-on-variant)"
+          fontSize="8"
+          fontFamily="var(--pcm-mono)"
+        >
+          {year}
+        </text>
+      </svg>
+      <div className="pcm-fviz-ring__meta">
+        <div className="pcm-fviz-ring__ticks">
+          {Array.from({ length: 12 }, (_, i) => (
+            <span
+              key={i}
+              className={`pcm-fviz-ring__tick${
+                i < month
+                  ? " pcm-fviz-ring__tick--on"
+                  : i === month
+                    ? " pcm-fviz-ring__tick--now"
+                    : ""
+              }`}
+            />
+          ))}
+        </div>
+        <div className="pcm-fviz__caption">
+          <span>{progressLabel}</span>
+          <span>{pct}%</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Natal bond/tension node graph + meters (结构联接). */
+function FactStructureGraph({
+  bondCount,
+  tensionCount,
+  bondLabel,
+  tensionLabel,
+}: {
+  bondCount: number;
+  tensionCount: number;
+  bondLabel: string;
+  tensionLabel: string;
+}) {
+  const nodes = [
+    { x: 28, y: 28 },
+    { x: 132, y: 22 },
+    { x: 48, y: 78 },
+    { x: 118, y: 72 },
+  ];
+  const bondEdges = [
+    [0, 1],
+    [0, 2],
+    [1, 3],
+  ].slice(0, Math.max(1, Math.min(3, bondCount || 1)));
+  const tensionEdges = [
+    [1, 2],
+    [2, 3],
+  ].slice(0, Math.max(0, Math.min(2, tensionCount)));
+  const bondPct = Math.min(100, bondCount * 28 + (bondCount ? 16 : 0));
+  const tensionPct = Math.min(100, tensionCount * 32 + (tensionCount ? 12 : 0));
+  return (
+    <div className="pcm-fviz" aria-hidden>
+      <svg className="pcm-fviz-graph" viewBox="0 0 160 100" preserveAspectRatio="xMidYMid meet">
+        {bondEdges.map(([a, b], i) => (
+          <line
+            key={`b-${i}`}
+            x1={nodes[a]!.x}
+            y1={nodes[a]!.y}
+            x2={nodes[b]!.x}
+            y2={nodes[b]!.y}
+            stroke="var(--pcm-secondary-container)"
+            strokeWidth="1.5"
+            strokeOpacity="0.55"
+          />
+        ))}
+        {tensionEdges.map(([a, b], i) => (
+          <line
+            key={`t-${i}`}
+            x1={nodes[a]!.x}
+            y1={nodes[a]!.y}
+            x2={nodes[b]!.x}
+            y2={nodes[b]!.y}
+            stroke="var(--pcm-tertiary-container)"
+            strokeWidth="1.5"
+            strokeOpacity="0.65"
+            strokeDasharray="4 3"
+          />
+        ))}
+        {nodes.map((n, i) => (
+          <g key={i}>
+            <circle
+              cx={n.x}
+              cy={n.y}
+              r="7"
+              fill="var(--pcm-surface-high)"
+              stroke={
+                i === 2
+                  ? "var(--pcm-primary)"
+                  : "rgba(208,197,175,0.45)"
+              }
+              strokeWidth="1.5"
+            />
+            <circle
+              cx={n.x}
+              cy={n.y}
+              r="2.2"
+              fill={i === 2 ? "var(--pcm-primary)" : "var(--pcm-on-variant)"}
+            />
+          </g>
+        ))}
+      </svg>
+      <div className="pcm-fviz-meters">
+        <div>
+          <div className="pcm-fviz-meter__label">
+            <span>{bondLabel}</span>
+            <span>{bondCount}</span>
+          </div>
+          <div className="pcm-fviz-meter__track">
+            <div
+              className="pcm-fviz-meter__fill--bond"
+              style={{ "--pcm-meter-pct": `${bondPct}%` } as CSSProperties}
+            />
+          </div>
+        </div>
+        <div>
+          <div className="pcm-fviz-meter__label">
+            <span>{tensionLabel}</span>
+            <span>{tensionCount}</span>
+          </div>
+          <div className="pcm-fviz-meter__track">
+            <div
+              className="pcm-fviz-meter__fill--tension"
+              style={{ "--pcm-meter-pct": `${tensionPct}%` } as CSSProperties}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Balance scale + strength continuum (调衡). */
+function FactBalanceViz({
+  strength,
+  xiCount,
+  jiCount,
+  yongSoft,
+  weakLabel,
+  strongLabel,
+  xiLabel,
+  jiLabel,
+  anchorLabel,
+}: {
+  strength: "strong" | "weak" | "balanced";
+  xiCount: number;
+  jiCount: number;
+  yongSoft: string | null;
+  weakLabel: string;
+  strongLabel: string;
+  xiLabel: string;
+  jiLabel: string;
+  anchorLabel: string;
+}) {
+  const balPct = strength === "weak" ? 22 : strength === "strong" ? 78 : 50;
+  const tilt = strength === "weak" ? -12 : strength === "strong" ? 12 : 0;
+  const xiPct = Math.min(100, xiCount * 30 + (xiCount ? 20 : 0));
+  const jiPct = Math.min(100, jiCount * 36 + (jiCount ? 16 : 0));
+  return (
+    <div className="pcm-fviz pcm-fviz-balance" aria-hidden>
+      <svg className="pcm-fviz-scale" viewBox="0 0 200 56" preserveAspectRatio="xMidYMid meet">
+        <line
+          x1="100"
+          y1="8"
+          x2="100"
+          y2="28"
+          stroke="rgba(208,197,175,0.45)"
+          strokeWidth="1.5"
+        />
+        <g transform={`rotate(${tilt} 100 28)`}>
+          <line
+            x1="36"
+            y1="28"
+            x2="164"
+            y2="28"
+            stroke="var(--pcm-primary)"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+          <rect
+            x="28"
+            y="32"
+            width="28"
+            height="14"
+            rx="2"
+            fill="rgba(0,238,252,0.15)"
+            stroke="var(--pcm-secondary-container)"
+            strokeWidth="1"
+          />
+          <rect
+            x="144"
+            y="32"
+            width="28"
+            height="14"
+            rx="2"
+            fill="rgba(255,149,148,0.15)"
+            stroke="var(--pcm-tertiary-container)"
+            strokeWidth="1"
+          />
+        </g>
+        <circle
+          cx="100"
+          cy="28"
+          r="4"
+          fill="var(--pcm-primary)"
+          style={{ filter: "drop-shadow(0 0 4px rgba(242,202,80,0.6))" }}
+        />
+        {yongSoft ? (
+          <text
+            x="100"
+            y="52"
+            textAnchor="middle"
+            fill="var(--pcm-primary-fixed)"
+            fontSize="8"
+            fontFamily="var(--pcm-mono)"
+          >
+            {anchorLabel} · {yongSoft}
+          </text>
+        ) : null}
+      </svg>
+      <div>
+        <div
+          className="pcm-fviz-continuum"
+          style={{ "--pcm-bal-pct": `${balPct}%` } as CSSProperties}
+        >
+          <span className="pcm-fviz-continuum__pin" />
+        </div>
+        <div className="pcm-fviz-continuum__labels">
+          <span>{weakLabel}</span>
+          <span>{strongLabel}</span>
+        </div>
+      </div>
+      <div className="pcm-fviz-xi-ji">
+        <div>
+          <div className="pcm-fviz-xi-ji__k">
+            {xiLabel} · {xiCount}
+          </div>
+          <div className="pcm-fviz-xi-ji__bar">
+            <div
+              className="pcm-fviz-xi-ji__fill--xi"
+              style={{ "--pcm-meter-pct": `${xiPct}%` } as CSSProperties}
+            />
+          </div>
+        </div>
+        <div>
+          <div className="pcm-fviz-xi-ji__k">
+            {jiLabel} · {jiCount}
+          </div>
+          <div className="pcm-fviz-xi-ji__bar">
+            <div
+              className="pcm-fviz-xi-ji__fill--ji"
+              style={{ "--pcm-meter-pct": `${jiPct}%` } as CSSProperties}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function RadarChart({
   scores,
   locale,
@@ -384,10 +767,7 @@ export function PojuEnergyMatrix({
                     <span className="pcm-cal__unit">{tc("gregorian")}</span>
                   </div>
                   {display.calendar.lunar ? (
-                    <div className="pcm-cal__sub">
-                      {display.calendar.lunar}{" "}
-                      <span className="pcm-cal__unit">{tc("lunar")}</span>
-                    </div>
+                    <div className="pcm-cal__sub">{display.calendar.lunar}</div>
                   ) : null}
                   <div className="pcm-cal__accent">
                     {display.calendar.headline}
@@ -666,10 +1046,7 @@ export function PojuEnergyMatrix({
                     : activePl.ten_god_en
                   : "";
                 const layerRoleSlug = activePl
-                  ? lifeSegmentPillar === "day" &&
-                    (!activePl.ten_god_han ||
-                      activePl.ten_god_han === "日主" ||
-                      activePl.ten_god === "日主")
+                  ? lifeSegmentPillar === "day"
                     ? "day_master"
                     : matrixTermSlug(activePl.ten_god_han) ??
                       matrixTermSlug(activePl.ten_god) ??
@@ -704,7 +1081,7 @@ export function PojuEnergyMatrix({
                     >
                       {tc("fact_layer_age", { age: String(display.current_age) })}
                     </div>
-                    <div className="pcm-chips" style={{ marginTop: "1.25rem" }}>
+                    <div className="pcm-chips" style={{ marginTop: "1rem" }}>
                       {activePl?.stem_element ? (
                         <PcmChip
                           soft={matrixElementSoft(activePl.stem_element, locale)}
@@ -722,6 +1099,11 @@ export function PojuEnergyMatrix({
                         />
                       ) : null}
                     </div>
+                    <FactLayerStack
+                      active={lifeSegmentPillar}
+                      age={display.current_age}
+                      locale={locale}
+                    />
                   </div>
                 );
               })()}
@@ -744,7 +1126,7 @@ export function PojuEnergyMatrix({
                     {tc("fact_year_pulse_em")}
                   </span>
                 </div>
-                <div className="pcm-chips" style={{ marginBottom: "1rem" }}>
+                <div className="pcm-chips" style={{ marginBottom: "0.25rem" }}>
                   {fp.year_pulse.links.length > 0 ? (
                     fp.year_pulse.links.map((c) => (
                       <PcmChip
@@ -765,29 +1147,20 @@ export function PojuEnergyMatrix({
                     <span className="pcm-chip pcm-chip--neutral">{emptyLinks}</span>
                   )}
                 </div>
-                <div className="pcm-term__track">
-                  <div
-                    className="pcm-term__fill"
-                    style={
-                      { "--pcm-term-pct": `${transitProgress}%` } as CSSProperties
-                    }
-                  />
-                </div>
-                <div className="pcm-term__head" style={{ marginTop: "0.5rem" }}>
-                  <span>
-                    {fp.year_pulse.year} {tc("transit_progress")}
-                  </span>
-                  <span>{transitProgress}%</span>
-                </div>
+                <FactYearRing
+                  year={fp.year_pulse.year}
+                  progress={transitProgress}
+                  progressLabel={`${fp.year_pulse.year} ${tc("transit_progress")}`}
+                />
               </div>
 
               <div className="pcm-card">
                 <div className="pcm-label pcm-label--flush pcm-label--sand">
                   {tc("fact_structure")} · {tc("fact_structure_em")}
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
                   <div>
-                    <div className="pcm-type-body" style={{ marginBottom: "0.5rem" }}>
+                    <div className="pcm-type-body" style={{ marginBottom: "0.4rem" }}>
                       {tc("fact_bonds")}
                     </div>
                     <div className="pcm-chips">
@@ -807,7 +1180,7 @@ export function PojuEnergyMatrix({
                     </div>
                   </div>
                   <div>
-                    <div className="pcm-type-body" style={{ marginBottom: "0.5rem" }}>
+                    <div className="pcm-type-body" style={{ marginBottom: "0.4rem" }}>
                       {tc("fact_tensions")}
                     </div>
                     <div className="pcm-chips">
@@ -827,6 +1200,12 @@ export function PojuEnergyMatrix({
                     </div>
                   </div>
                 </div>
+                <FactStructureGraph
+                  bondCount={fp.structure.bonds.length}
+                  tensionCount={fp.structure.tensions.length}
+                  bondLabel={tc("fact_bonds")}
+                  tensionLabel={tc("fact_tensions")}
+                />
               </div>
 
               <div className="pcm-card">
@@ -879,6 +1258,17 @@ export function PojuEnergyMatrix({
                     <span className="pcm-chip pcm-chip--neutral">{emptyLinks}</span>
                   ) : null}
                 </div>
+                <FactBalanceViz
+                  strength={strength}
+                  xiCount={fp.balance.xi.length}
+                  jiCount={fp.balance.ji.length}
+                  yongSoft={fp.balance.yong_soft}
+                  weakLabel={tc("strength_weak")}
+                  strongLabel={tc("strength_strong")}
+                  xiLabel={tc("fact_viz_xi")}
+                  jiLabel={tc("fact_viz_ji")}
+                  anchorLabel={tc("fact_anchor")}
+                />
               </div>
             </div>
           </div>
@@ -895,16 +1285,17 @@ export function PojuEnergyMatrix({
                 const key = keys[idx] ?? "year";
                 const isDay = key === "day";
                 const isLifeSegment = lifeSegmentPillar === key;
-                const roleSoft = isZh ? pl.ten_god : pl.ten_god_en;
-                const roleSlug =
-                  isDay &&
-                  (!pl.ten_god_han ||
-                    pl.ten_god_han === "日主" ||
-                    pl.ten_god === "日主")
-                    ? "day_master"
-                    : matrixTermSlug(pl.ten_god_han) ??
-                      matrixTermSlug(pl.ten_god) ??
-                      matrixTermSlug(pl.ten_god_en);
+                // Day pillar role is always 本元/day_master (engine may send 日主/日元/本元).
+                const roleSlug = isDay
+                  ? "day_master"
+                  : matrixTermSlug(pl.ten_god_han) ??
+                    matrixTermSlug(pl.ten_god) ??
+                    matrixTermSlug(pl.ten_god_en);
+                const roleSoft = isDay
+                  ? undefined
+                  : isZh
+                    ? pl.ten_god
+                    : pl.ten_god_en;
                 const stemSlug = pl.stem_element
                   ? elementToSlug(pl.stem_element)
                   : null;
@@ -931,7 +1322,7 @@ export function PojuEnergyMatrix({
                           fallback={roleSoft}
                         />
                       ) : (
-                        roleSoft
+                        roleSoft || "—"
                       )}
                     </div>
                     <div className={`pcm-pl__stem ${elementCssClass(pl.stem_element)}`}>

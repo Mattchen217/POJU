@@ -92,6 +92,18 @@ export function zodiacHanToSlug(han: string): string | null {
   return ZODIAC_HAN_TO_SLUG[t] ?? ZODIAC_HAN_TO_SLUG[t.charAt(0)] ?? null;
 }
 
+/** Soft façade labels that already went through SSOT (本元 / Core…). */
+const SOFT_LABEL_TO_SLUG: Record<string, string> = {
+  本元: "day_master",
+  Core: "day_master",
+  Núcleo: "day_master",
+  Kern: "day_master",
+  Noyau: "day_master",
+  日元: "day_master",
+  元男: "day_master",
+  元女: "day_master",
+};
+
 /** Traditional / soft surface → SSOT slug when known. */
 export function matrixTermSlug(traditionalOrSoft: string): string | null {
   const raw = traditionalOrSoft.trim();
@@ -100,6 +112,8 @@ export function matrixTermSlug(traditionalOrSoft: string): string | null {
   if (el) return el;
   const zd = zodiacHanToSlug(raw);
   if (zd) return zd;
+  const softHit = SOFT_LABEL_TO_SLUG[raw];
+  if (softHit) return softHit;
   const byTrad = pojuTermByTraditional(raw);
   if (byTrad) return byTrad.slug;
   const closed = CLOSED_SET_SLUG[raw] ?? LIFE_STAGE_HAN_TO_SLUG[raw];

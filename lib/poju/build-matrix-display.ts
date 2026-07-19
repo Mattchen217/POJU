@@ -163,6 +163,23 @@ function ymdToMs(ymd: string): number {
   return new Date(y!, m! - 1, d!).getTime();
 }
 
+/** Locale-aware lunar date line (no trailing "农历/Lunar" unit label). */
+function formatLunarDisplay(
+  lunar: { getMonthInChinese: () => string; getDayInChinese: () => string; getMonth: () => number; getDay: () => number },
+  locale: string,
+): string {
+  const loc = normalizeMatrixLocale(locale);
+  const mZh = lunar.getMonthInChinese();
+  const dZh = lunar.getDayInChinese();
+  const m = lunar.getMonth();
+  const d = lunar.getDay();
+  if (loc === "zh") return `农历${mZh}月${dZh}`;
+  if (loc === "es") return `Lunar: mes ${m}, día ${d}`;
+  if (loc === "de") return `Mondkalender: Monat ${m}, Tag ${d}`;
+  if (loc === "fr") return `Calendrier lunaire : mois ${m}, jour ${d}`;
+  return `Lunar month ${m}, day ${d}`;
+}
+
 function buildSolarTerm(birth: UserProfile["birth"], locale: string) {
   const solar = Solar.fromYmd(birth.year, birth.month, birth.day);
   const lunar = solar.getLunar();
@@ -338,21 +355,16 @@ export function buildMatrixDisplayData(input: {
     day_master: dmInfo ? elementLabel(dmInfo.element, locale) : coreLabel,
   });
 
-  const rawLunar = String(chart?.八字?.农历 ?? "");
-  let lunarClean = stripGanzhiFromLunar(
-    rawLunar.replace(/^农历/, ""),
-    locale,
-  );
-  // Fallback: local Solar→Lunar when chart omits 农历 (lunar-typescript).
-  if (!lunarClean || lunarClean === "农历" || lunarClean === "Lunar") {
-    try {
-      const lunar = Solar.fromYmd(b.year, b.month, b.day).getLunar();
-      const m = lunar.getMonthInChinese();
-      const d = lunar.getDayInChinese();
-      lunarClean = zhDate ? `农历${m}月${d}` : `Lunar ${m}/${d}`;
-    } catch {
-      lunarClean = "";
-    }
+  // Prefer local Solar→Lunar so each locale gets one clean line (no duplicate “农历/Lunar”).
+  let lunarClean = "";
+  try {
+    lunarClean = formatLunarDisplay(
+      Solar.fromYmd(b.year, b.month, b.day).getLunar(),
+      locale,
+    );
+  } catch {
+    const rawLunar = String(chart?.八字?.农历 ?? "");
+    lunarClean = stripGanzhiFromLunar(rawLunar.replace(/^农历/, ""), locale);
   }
 
   const age = resolveCurrentAge(b.year);
