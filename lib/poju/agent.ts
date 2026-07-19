@@ -100,6 +100,7 @@ export interface HandleInput {
   /** Session already includes this user turn (optimistic UI); skip rule re-check and duplicate append. */
   userAlreadyAppended?: boolean;
   signal?: AbortSignal;
+  attachment?: import("@/lib/poju/attachments/types").PojuChatAttachment | null;
 }
 
 type LLMApiPayload = {
@@ -130,6 +131,8 @@ type LLMApiPayload = {
   stall_offer?: boolean;
   investigation_agenda?: unknown;
   suggest_refund?: boolean;
+  scope_signal?: "in_scope" | "unclear" | "out_of_scope" | null;
+  attachments_unlocked?: boolean;
   locked_provider?: string;
   understanding?: { sufficient: boolean; missing: string } | null;
   understanding_sufficient?: boolean;
@@ -245,6 +248,7 @@ function finalizeAgentV2(
     core_dilemma?: import("@/lib/poju/agent-state").CoreDilemma | null;
     desired_direction?: import("@/lib/poju/agent-state").DesiredDirection | null;
     problem_summary?: string | null;
+    attachments_unlocked?: boolean;
   },
   userMessage: string,
   isSystemMessage: boolean,
@@ -305,6 +309,10 @@ function finalizeAgentV2(
       llm.desired_direction !== undefined && llm.desired_direction !== null
         ? llm.desired_direction
         : base.desired_direction,
+    attachments_unlocked:
+      base.attachments_unlocked === true || llm.attachments_unlocked === true
+        ? true
+        : (base.attachments_unlocked ?? false),
   };
   if (
     !isOpeningTurn &&
@@ -535,7 +543,7 @@ function normalizeNewActions(raw: unknown[] | undefined): POJUAction[] {
  * - appends assistant message
  */
 export async function handleUserMessage(input: HandleInput): Promise<POJUSessionState> {
-  const { session: sessionIn, userMessage, locale, userAlreadyAppended, signal } = input;
+  const { session: sessionIn, userMessage, locale, userAlreadyAppended, signal, attachment } = input;
   const session = ensureSessionCycles(sessionIn);
   const isOpeningSignal = userMessage.trim() === "__OPENING__";
   const isSystemMessage = userMessage.startsWith("[SYSTEM:") || isOpeningSignal;
@@ -624,6 +632,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     locale,
     signal,
     tool_injection_context: injectionPrep.tool_injection_context,
+    attachment: attachment ?? null,
   });
 
   workingSession = finalizeToolInjectionTurn(workingSession, injectionPrep.pending);
@@ -689,6 +698,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       core_dilemma: llmResponse.core_dilemma ?? null,
       desired_direction: llmResponse.desired_direction ?? null,
       problem_summary: openingTurn ? null : llmResponse.problem_summary ?? null,
+      attachments_unlocked: llmResponse.attachments_unlocked === true,
     },
     userMessage,
     isSystemMessage,
@@ -770,6 +780,8 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       drift_reason: llmResponse.drift_reason ?? undefined,
       should_show_new_session_button: llmResponse.should_show_new_session_button,
       suggest_refund: llmResponse.suggest_refund,
+      scope_mismatch: llmResponse.scope_signal === "out_of_scope" || undefined,
+      ...(llmResponse.scope_signal === "out_of_scope" ? { kind: "scope_mismatch" as const } : {}),
       contains_delivery: llmResponse.contains_delivery,
       tool_suggestion: linking.tool_suggestion ?? undefined,
       tool_suggestion_message_id: linking.tool_suggestion ? assistantMessageId : undefined,
@@ -924,6 +936,7 @@ async function callLLMViaAPI(input: {
   locale: string;
   signal?: AbortSignal;
   tool_injection_context?: string | null;
+  attachment?: import("@/lib/poju/attachments/types").PojuChatAttachment | null;
 }): Promise<{
   response: string;
   model: string;
@@ -950,6 +963,8 @@ async function callLLMViaAPI(input: {
   stall_offer?: boolean;
   investigation_agenda?: unknown;
   suggest_refund?: boolean;
+  scope_signal?: "in_scope" | "unclear" | "out_of_scope" | null;
+  attachments_unlocked?: boolean;
   locked_provider?: string;
   understanding?: { sufficient: boolean; missing: string } | null;
   understanding_sufficient?: boolean;
@@ -973,6 +988,7 @@ async function callLLMViaAPI(input: {
     archive_data: input.archive_data ?? null,
     locale: input.locale,
     tool_injection_context: input.tool_injection_context ?? null,
+    attachment: input.attachment ?? null,
   });
 
   const response = await fetch("/api/poju/chat", {
@@ -1051,6 +1067,13 @@ function mapLlmApiPayload(
     stall_offer: wire.stall_offer === true,
     investigation_agenda: wire.investigation_agenda ?? null,
     suggest_refund: wire.suggest_refund === true,
+    scope_signal:
+      wire.scope_signal === "in_scope" ||
+      wire.scope_signal === "unclear" ||
+      wire.scope_signal === "out_of_scope"
+        ? wire.scope_signal
+        : null,
+    attachments_unlocked: wire.attachments_unlocked === true ? true : undefined,
     locked_provider:
       typeof wire.locked_provider === "string" && wire.locked_provider.trim()
         ? wire.locked_provider.trim()

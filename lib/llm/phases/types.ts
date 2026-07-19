@@ -71,6 +71,10 @@ export interface PhaseLLMResult {
   understanding_sufficient?: boolean;
   /** Opening transport resends exhausted — UI shows retry, not fallback copy. */
   understanding_generation_failed?: boolean;
+  /** Opening scope gate. */
+  scope_signal?: import("@/lib/poju/scope-mismatch").ScopeSignal;
+  /** Unlock composer attachments after a non-out-of-scope opening turn. */
+  attachments_unlocked?: boolean;
   agenda_updates?: { completed_in_this_turn?: string[] };
   user_confirms_delivery?: boolean;
   confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";

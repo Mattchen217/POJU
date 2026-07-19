@@ -888,6 +888,10 @@
       "attach_menu_document": "Documento",
       "attach_menu_image": "Imagen",
       "attach_menu_pdf": "PDF",
+      "ctx_cut": "Cortar",
+      "ctx_copy": "Copiar",
+      "ctx_paste": "Pegar",
+      "ctx_select_all": "Seleccionar todo",
       "unlock_report_modal_title": "Retrato personal completo de carácter",
       "unlock_report_modal_hint": "Puedes volver a abrir este retrato completo desde el chat en cualquier momento.",
       "unlock_report_gate_hint": "Lee primero tu análisis completo de retrato personal de carácter. Al cerrar, POJU continuará con tu pregunta.",
@@ -1017,6 +1021,9 @@
       "title": "Se detectó un tema diferente",
       "start_new_session": "Abrir una nueva sesión de POJU",
       "continue_current": "Continuar con el tema original"
+    },
+    "scope_mismatch": {
+      "body": "POJU está pensado para una persona concreta y un dilema o decisión específica, para ofrecer un camino accionable. Lo que enviaste no parece estar dentro de ese alcance. Describe tu situación con palabras; si prefieres no continuar, puedes solicitar un reembolso."
     },
     "summary_editor": {
       "title": "Revisa tu información",

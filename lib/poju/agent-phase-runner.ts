@@ -28,6 +28,11 @@ import { countUserTurns } from "@/lib/poju/summary-readiness";
 import { getLastUserMessageContent } from "@/lib/poju/context-helpers";
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
+import type { PojuChatAttachment } from "@/lib/poju/attachments/types";
+import {
+  attachmentErrorMessage,
+  processChatAttachment,
+} from "@/lib/poju/attachments/process-attachment";
 
 export type AgentPhaseLLMResult = Record<string, unknown> & {
   phase: PhaseLLMResult;
@@ -98,6 +103,15 @@ async function dispatchPhase(activePhase: AgentPhase, input: PhaseLLMInput): Pro
   }
 }
 
+function dilemmaHintFromAgent(session: POJUSessionState): string | null {
+  const d = session.agent_v2?.core_dilemma;
+  if (!d) return null;
+  const parts = [d.concrete_event, d.stakes, d.sticking_point].filter(
+    (x): x is string => typeof x === "string" && x.trim().length > 0,
+  );
+  return parts.length ? parts.join(" / ") : null;
+}
+
 /** Run the active agent phase LLM module and map to chat API payload shape. */
 export async function executeAgentPhaseLLM(input: {
   session: POJUSessionState;
@@ -108,6 +122,7 @@ export async function executeAgentPhaseLLM(input: {
   tool_injection_context?: string | null;
   stream_hooks?: PhaseLLMInput["stream_hooks"];
   signal?: AbortSignal;
+  attachment?: PojuChatAttachment | null;
 }): Promise<AgentPhaseLLMResult> {
   const {
     session,
@@ -118,14 +133,72 @@ export async function executeAgentPhaseLLM(input: {
     tool_injection_context,
     stream_hooks,
     signal,
+    attachment,
   } = input;
 
-  const activePhase = resolveActiveAgentPhase(session);
+  let workingSession = session;
+  if (attachment?.data_url) {
+    const lastUser = [...session.messages].reverse().find((m) => m.role === "user");
+    const userText = lastUser?.content ?? "";
+    const processed = await processChatAttachment({
+      attachment,
+      userText,
+      locale,
+      dilemmaHint: dilemmaHintFromAgent(session),
+      signal,
+    });
+    if (processed.error && !processed.context_text) {
+      const msg = attachmentErrorMessage(processed.error, locale);
+      return {
+        response: msg,
+        model: "poju-attachment",
+        tokens_used: 0,
+        user_intent: "unclear",
+        current_state: resolveActiveAgentPhase(session),
+        action_requested: "continue_chat",
+        topic_drift_detected: false,
+        topic_drift_signal: "none",
+        should_show_new_session_button: false,
+        context_updates: {},
+        contains_delivery: false,
+        suggest_refund: false,
+        agent_suggested_phase: resolveActiveAgentPhase(session),
+        phase: {
+          response: msg,
+          suggested_phase: null,
+          context_updates: {},
+          question_category: null,
+          current_summary: null,
+          main_delivery_data: null,
+          actions: [],
+          tokens_used: 0,
+          total_cost: 0,
+          call_count: 0,
+        },
+        activePhase: resolveActiveAgentPhase(session),
+      } as AgentPhaseLLMResult;
+    }
+    if (processed.context_text && lastUser) {
+      const enriched = userText.trim()
+        ? `${userText.trim()}\n\n${processed.context_text}`
+        : processed.context_text;
+      workingSession = {
+        ...session,
+        messages: session.messages.map((m, i) =>
+          i === session.messages.length - 1 && m.role === "user"
+            ? { ...m, content: enriched }
+            : m,
+        ),
+      };
+    }
+  }
+
+  const activePhase = resolveActiveAgentPhase(workingSession);
   if (isPojuV6Enabled()) {
-    console.info("[poju-v6] transport active", { activePhase, session_id: session.session_id });
+    console.info("[poju-v6] transport active", { activePhase, session_id: workingSession.session_id });
   }
   const phaseInput = buildPhaseInput(
-    session,
+    workingSession,
     profile,
     locale,
     base_analysis,
@@ -137,7 +210,7 @@ export async function executeAgentPhaseLLM(input: {
   );
   const phase = await dispatchPhase(activePhase, phaseInput);
   const mapped = mapPhaseResultToChatPayload(phase, {
-    session,
+    session: workingSession,
     profile,
     locale,
     fallbackPhase: activePhase,

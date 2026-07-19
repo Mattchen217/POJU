@@ -27,6 +27,7 @@ export async function POST(req: Request) {
     base_analysis?: unknown | null;
     archive_data?: POJUActionRecommendationsData | null;
     tool_injection_context?: string | null;
+    attachment?: import("@/lib/poju/attachments/types").PojuChatAttachment | null;
   };
 
   if (!body.session || typeof body.session !== "object" || typeof body.session.session_id !== "string") {
@@ -49,6 +50,7 @@ export async function POST(req: Request) {
       locale: String(body.locale ?? "en"),
       tool_injection_context:
         typeof body.tool_injection_context === "string" ? body.tool_injection_context : null,
+      attachment: body.attachment ?? null,
     });
 
     const payload = pojuLlmToChatPayload(llm);

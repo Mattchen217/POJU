@@ -888,6 +888,10 @@
       "attach_menu_document": "Dokument",
       "attach_menu_image": "Bild",
       "attach_menu_pdf": "PDF",
+      "ctx_cut": "Ausschneiden",
+      "ctx_copy": "Kopieren",
+      "ctx_paste": "Einfügen",
+      "ctx_select_all": "Alles auswählen",
       "unlock_report_modal_title": "Vollständiges persönliches Charakterporträt",
       "unlock_report_modal_hint": "Du kannst dieses vollständige Charakterporträt jederzeit erneut im Chat öffnen.",
       "unlock_report_gate_hint": "Bitte lies zuerst deine vollständige persönliche Charakterporträt-Analyse. Nach dem Schließen setzt POJU mit deiner Frage fort.",
@@ -1017,6 +1021,9 @@
       "title": "Anderes Thema erkannt",
       "start_new_session": "Eine neue POJU-Sitzung öffnen",
       "continue_current": "Mit dem ursprünglichen Thema fortfahren"
+    },
+    "scope_mismatch": {
+      "body": "POJU richtet sich an eine konkrete Person und ein bestimmtes Problem oder Dilemma — mit umsetzbaren nächsten Schritten. Deine Eingabe scheint außerhalb dieses Rahmens zu liegen. Bitte beschreibe deine Situation in Worten; wenn du nicht fortfahren möchtest, kannst du eine Rückerstattung beantragen."
     },
     "summary_editor": {
       "title": "Überprüfe deine Angaben",

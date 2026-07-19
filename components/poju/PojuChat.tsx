@@ -74,12 +74,28 @@ export interface PojuChatProps {
   };
   inputPlaceholder?: string;
   onAttachPick?: (kind: PojuAttachKind) => void;
+  /** When false, attach button is greyed and drag/file-paste are blocked. */
+  attachEnabled?: boolean;
+  attachLockedHint?: string;
+  onAttachFiles?: (files: File[]) => void;
+  composerAttachmentPreview?: {
+    name: string;
+    kind: PojuAttachKind;
+    previewUrl?: string;
+  } | null;
+  onClearAttachment?: () => void;
   attachMenuLabels?: {
     document: string;
     image: string;
     pdf: string;
   };
   attachMenuLabel?: string;
+  contextMenuLabels?: {
+    cut: string;
+    copy: string;
+    paste: string;
+    selectAll: string;
+  };
   onVoice?: () => void;
   voiceActive?: boolean;
   voiceStartLabel?: string;
@@ -166,8 +182,14 @@ export default function PojuChat(props: PojuChatProps) {
     sessionDialogLabels,
     inputPlaceholder,
     onAttachPick,
+    attachEnabled = true,
+    attachLockedHint,
+    onAttachFiles,
+    composerAttachmentPreview,
+    onClearAttachment,
     attachMenuLabels,
     attachMenuLabel,
+    contextMenuLabels,
     onVoice,
     voiceActive,
     voiceStartLabel,
@@ -209,6 +231,9 @@ export default function PojuChat(props: PojuChatProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [openMenuSessionId, setOpenMenuSessionId] = useState<string | null>(null);
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
+  const longPressTimerRef = useRef<number | null>(null);
   const [sessionDialog, setSessionDialog] = useState<SessionSidebarDialogState | null>(null);
   const activityRenderReadyRef = useRef<string | null>(null);
   const menuBtnRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
@@ -398,6 +423,83 @@ export default function PojuChat(props: PojuChatProps) {
       document.removeEventListener("keydown", onKey);
     };
   }, [attachMenuOpen]);
+
+  useEffect(() => {
+    if (!ctxMenu) return;
+    const close = () => setCtxMenu(null);
+    document.addEventListener("click", close);
+    document.addEventListener("scroll", close, true);
+    return () => {
+      document.removeEventListener("click", close);
+      document.removeEventListener("scroll", close, true);
+    };
+  }, [ctxMenu]);
+
+  function ingestDroppedFiles(fileList: FileList | File[] | null | undefined) {
+    if (!fileList || !onAttachFiles) return;
+    const files = Array.from(fileList).filter(Boolean);
+    if (!files.length) return;
+    if (!attachEnabled) {
+      window.alert(attachLockedHint || "Please describe your question in text first");
+      return;
+    }
+    onAttachFiles(files.slice(0, 1));
+  }
+
+  async function runCtxAction(action: "cut" | "copy" | "paste" | "selectAll") {
+    setCtxMenu(null);
+    const ta = taRef.current;
+    if (!ta || ta.disabled) return;
+    ta.focus();
+    const start = ta.selectionStart ?? 0;
+    const end = ta.selectionEnd ?? 0;
+    const value = textareaValue;
+
+    if (action === "selectAll") {
+      ta.setSelectionRange(0, value.length);
+      return;
+    }
+    if (action === "copy") {
+      const selected = value.slice(start, end);
+      if (selected) await navigator.clipboard.writeText(selected).catch(() => undefined);
+      return;
+    }
+    if (action === "cut") {
+      const selected = value.slice(start, end);
+      if (!selected) return;
+      await navigator.clipboard.writeText(selected).catch(() => undefined);
+      setTextareaValue(value.slice(0, start) + value.slice(end));
+      requestAnimationFrame(() => ta.setSelectionRange(start, start));
+      return;
+    }
+    if (action === "paste") {
+      try {
+        const clip = await navigator.clipboard.read();
+        for (const item of clip) {
+          const imageType = item.types.find((t) => t.startsWith("image/"));
+          if (imageType) {
+            const blob = await item.getType(imageType);
+            const ext = imageType.split("/")[1] || "png";
+            const file = new File([blob], `paste.${ext}`, { type: imageType });
+            ingestDroppedFiles([file]);
+            return;
+          }
+        }
+      } catch {
+        /* fall through to text paste */
+      }
+      try {
+        const text = await navigator.clipboard.readText();
+        if (!text) return;
+        const next = value.slice(0, start) + text + value.slice(end);
+        setTextareaValue(next);
+        const caret = start + text.length;
+        requestAnimationFrame(() => ta.setSelectionRange(caret, caret));
+      } catch {
+        /* ignore */
+      }
+    }
+  }
 
   const send = () => {
     const t = textareaValue.trim();
@@ -704,22 +806,73 @@ export default function PojuChat(props: PojuChatProps) {
 
         {/* 输入框 */}
         <div className="pchat__inputbar">
-          <div className="pchat__inputwrap">
+          {composerAttachmentPreview ? (
+            <div className="pchat__attach-preview">
+              {composerAttachmentPreview.kind === "image" && composerAttachmentPreview.previewUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={composerAttachmentPreview.previewUrl}
+                  alt=""
+                  className="pchat__attach-preview-thumb"
+                />
+              ) : (
+                <span className="material-symbols-outlined pchat__attach-preview-icon">
+                  {composerAttachmentPreview.kind === "pdf" ? "picture_as_pdf" : "description"}
+                </span>
+              )}
+              <span className="pchat__attach-preview-name">{composerAttachmentPreview.name}</span>
+              {onClearAttachment ? (
+                <button
+                  type="button"
+                  className="pchat__attach-preview-clear"
+                  aria-label="Remove attachment"
+                  onClick={onClearAttachment}
+                >
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+          <div
+            className={`pchat__inputwrap${dragOver ? " pchat__inputwrap--drag" : ""}${!attachEnabled ? " pchat__inputwrap--attach-locked" : ""}`}
+            onDragEnter={(e) => {
+              e.preventDefault();
+              if (e.dataTransfer.types.includes("Files")) setDragOver(true);
+            }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = attachEnabled ? "copy" : "none";
+            }}
+            onDragLeave={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOver(false);
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              ingestDroppedFiles(e.dataTransfer.files);
+            }}
+          >
             {onAttachPick ? (
               <div className="pchat__attach-wrap">
                 <button
                   type="button"
-                  className="icon-btn pchat__composer-btn"
+                  className={`icon-btn pchat__composer-btn${!attachEnabled ? " pchat__composer-btn--disabled" : ""}`}
                   aria-label={attachMenuLabel ?? "Attach"}
                   aria-expanded={attachMenuOpen}
+                  aria-disabled={!attachEnabled}
+                  title={!attachEnabled ? attachLockedHint : undefined}
                   onClick={(e) => {
                     e.stopPropagation();
+                    if (!attachEnabled) {
+                      window.alert(attachLockedHint || "Please describe your question in text first");
+                      return;
+                    }
                     setAttachMenuOpen((v) => !v);
                   }}
                 >
                   <span className="material-symbols-outlined">attach_file</span>
                 </button>
-                {attachMenuOpen ? (
+                {attachMenuOpen && attachEnabled ? (
                   <div
                     className="pchat__attach-menu"
                     role="menu"
@@ -772,6 +925,46 @@ export default function PojuChat(props: PojuChatProps) {
               onPointerDown={handleComposerPointerDown}
               onFocus={handleComposerFocus}
               onChange={(e) => setTextareaValue(e.target.value)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setCtxMenu({ x: e.clientX, y: e.clientY });
+              }}
+              onTouchStart={(e) => {
+                if (longPressTimerRef.current) window.clearTimeout(longPressTimerRef.current);
+                const t = e.touches[0];
+                if (!t) return;
+                longPressTimerRef.current = window.setTimeout(() => {
+                  setCtxMenu({ x: t.clientX, y: t.clientY });
+                }, 480);
+              }}
+              onTouchEnd={() => {
+                if (longPressTimerRef.current) {
+                  window.clearTimeout(longPressTimerRef.current);
+                  longPressTimerRef.current = null;
+                }
+              }}
+              onTouchMove={() => {
+                if (longPressTimerRef.current) {
+                  window.clearTimeout(longPressTimerRef.current);
+                  longPressTimerRef.current = null;
+                }
+              }}
+              onPaste={(e) => {
+                const files: File[] = [];
+                const items = e.clipboardData?.items;
+                if (items) {
+                  for (let i = 0; i < items.length; i++) {
+                    if (items[i].kind === "file") {
+                      const f = items[i].getAsFile();
+                      if (f) files.push(f);
+                    }
+                  }
+                }
+                if (files.length) {
+                  e.preventDefault();
+                  ingestDroppedFiles(files);
+                }
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -804,6 +997,27 @@ export default function PojuChat(props: PojuChatProps) {
               <span className="material-symbols-outlined">{isStreaming ? "stop" : "arrow_upward"}</span>
             </button>
           </div>
+          {ctxMenu ? (
+            <div
+              className="pchat__ctx-menu"
+              style={{ left: ctxMenu.x, top: ctxMenu.y }}
+              role="menu"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button type="button" role="menuitem" onClick={() => void runCtxAction("cut")}>
+                {contextMenuLabels?.cut ?? "Cut"}
+              </button>
+              <button type="button" role="menuitem" onClick={() => void runCtxAction("copy")}>
+                {contextMenuLabels?.copy ?? "Copy"}
+              </button>
+              <button type="button" role="menuitem" onClick={() => void runCtxAction("paste")}>
+                {contextMenuLabels?.paste ?? "Paste"}
+              </button>
+              <button type="button" role="menuitem" onClick={() => void runCtxAction("selectAll")}>
+                {contextMenuLabels?.selectAll ?? "Select all"}
+              </button>
+            </div>
+          ) : null}
         </div>
 
         {editDialog ? <EditMessageDialog open {...editDialog} /> : null}

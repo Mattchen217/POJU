@@ -27,6 +27,8 @@ export const CHAT_PAYLOAD_FIELDS = [
   "start_new_cycle",
   "new_cycle_question",
   "suggest_refund",
+  "scope_signal",
+  "attachments_unlocked",
   "locked_provider",
   "understanding",
   "understanding_sufficient",
@@ -89,6 +91,9 @@ export function pojuLlmToChatPayload(
     start_new_cycle: llm.start_new_cycle ?? false,
     new_cycle_question: llm.new_cycle_question ?? null,
     suggest_refund: llm.suggest_refund ?? false,
+    scope_signal: (llm as { scope_signal?: unknown }).scope_signal ?? null,
+    attachments_unlocked:
+      (llm as { attachments_unlocked?: unknown }).attachments_unlocked === true ? true : undefined,
     locked_provider: llm.locked_provider,
     understanding: llm.understanding ?? null,
     understanding_sufficient: llm.understanding_sufficient,
@@ -152,6 +157,13 @@ export function chatPayloadFromWire(
     new_cycle_question:
       typeof data.new_cycle_question === "string" ? data.new_cycle_question : null,
     suggest_refund: data.suggest_refund === true,
+    scope_signal:
+      data.scope_signal === "in_scope" ||
+      data.scope_signal === "unclear" ||
+      data.scope_signal === "out_of_scope"
+        ? data.scope_signal
+        : null,
+    attachments_unlocked: data.attachments_unlocked === true ? true : undefined,
     locked_provider: data.locked_provider,
     understanding: data.understanding ?? null,
     understanding_sufficient:

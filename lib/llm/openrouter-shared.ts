@@ -78,15 +78,21 @@ export function logOpenRouterModelSlug404Hint(model: string, httpStatus: number,
 
 export type OpenRouterChatRole = "system" | "user" | "assistant";
 
+export type OpenRouterMultimodalContent =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } };
+
 export type OpenRouterChatMessage = {
   role: OpenRouterChatRole;
-  content: string;
+  content: string | OpenRouterMultimodalContent[];
 };
 
 const OPENROUTER_FETCH_TIMEOUT_MS = 90_000;
 
 export type OpenRouterChatOptions = {
   messages: OpenRouterChatMessage[];
+  /** Optional OpenRouter model slug override (e.g. vision bridge). */
+  model?: string;
   temperature?: number;
   max_tokens?: number;
   /** When true, sets response_format json_object (still instruct JSON in prompts). */
@@ -284,12 +290,15 @@ export async function openRouterChatCompletion(
     throw new Error("missing_openrouter_api_key");
   }
 
-  const candidates = resolveOpenRouterCandidateOrder();
+  const overrideModel = options.model?.trim();
+  const candidates = overrideModel
+    ? [overrideModel]
+    : resolveOpenRouterCandidateOrder();
   let fell_back = false;
 
   const result = await callWithRetryAndFallback(
     async (model) => {
-      if (model !== candidates[0]) fell_back = true;
+      if (!overrideModel && model !== candidates[0]) fell_back = true;
       return openRouterChatCompletionWithModel(model, options, apiKey);
     },
     { maxAttempts: options.max_attempts },

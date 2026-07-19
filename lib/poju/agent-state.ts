@@ -238,6 +238,8 @@ export interface POJUAgentState {
   used_metaphors?: string[];
   /** Segment 2 breakthrough-core failed after user confirmed understanding — retry without reopening. */
   core_generation_failed?: boolean;
+  /** Composer attachments enabled after first non-out-of-scope opening turn. */
+  attachments_unlocked?: boolean;
 }
 
 /** Minimum effective user turns before confirmation (agenda-driven gate). */
@@ -620,6 +622,7 @@ export function createInitialAgentState(input: {
     breakthrough_core: null,
     core_dilemma: null,
     desired_direction: null,
+    attachments_unlocked: false,
     agenda_collection_detail: null,
     delivery_report: null,
     anchored_fact_ids: [],

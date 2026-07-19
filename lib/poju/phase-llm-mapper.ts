@@ -79,6 +79,8 @@ export function mapPhaseResultToChatPayload(
     desired_direction: phase.desired_direction ?? null,
     problem_summary: phase.problem_summary ?? null,
     suggest_refund: Boolean(phase.suggest_refund),
+    scope_signal: phase.scope_signal ?? null,
+    attachments_unlocked: phase.attachments_unlocked === true ? true : undefined,
     understanding: phase.understanding ?? null,
     understanding_sufficient:
       typeof phase.understanding_sufficient === "boolean"

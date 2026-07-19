@@ -1076,6 +1076,10 @@
       "attach_menu_document": "添加文档",
       "attach_menu_image": "添加图片",
       "attach_menu_pdf": "添加 PDF",
+      "ctx_cut": "剪切",
+      "ctx_copy": "复制",
+      "ctx_paste": "粘贴",
+      "ctx_select_all": "全选",
       "unlock_report_modal_title": "个人能量分析报告",
       "unlock_report_modal_hint": "可随时在聊天记录中再次打开个人能量分析报告。",
       "unlock_report_gate_hint": "请阅读您的个人能量分析报告。关闭后，POJU 将继续针对您的问题对话。",
@@ -1096,6 +1100,9 @@
       "title": "检测到话题转换",
       "start_new_session": "开启新 Session 聊这个",
       "continue_current": "回到原话题"
+    },
+    "scope_mismatch": {
+      "body": "POJU 面向特定的人、一件具体的问题或困境，帮助你找到可落地的破局方向。当前内容看不出属于可服务范围。请用文字重新描述你的情况；若暂时不适合继续，可申请退款。"
     },
     "refund_offer": {
       "hint": "如果暂时不适合深入聊，可以申请退款，准备好再回来。",

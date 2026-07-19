@@ -17,6 +17,7 @@ type ChatBody = {
   base_analysis?: unknown | null;
   archive_data?: POJUActionRecommendationsData | null;
   tool_injection_context?: string | null;
+  attachment?: import("@/lib/poju/attachments/types").PojuChatAttachment | null;
 };
 
 function sseEncode(encoder: TextEncoder, payload: Record<string, unknown>): Uint8Array {
@@ -50,6 +51,7 @@ export function createPojuChatStreamResponse(body: ChatBody, reqSignal?: AbortSi
           tool_injection_context:
             typeof body.tool_injection_context === "string" ? body.tool_injection_context : null,
           signal: reqSignal,
+          attachment: body.attachment ?? null,
         });
 
         send({

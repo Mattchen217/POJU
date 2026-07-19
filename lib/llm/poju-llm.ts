@@ -23,6 +23,7 @@ interface CallInput {
   tool_injection_context?: string | null;
   stream_hooks?: import("@/lib/llm/phases/phase-transport").PhaseStreamHooks;
   signal?: AbortSignal;
+  attachment?: import("@/lib/poju/attachments/types").PojuChatAttachment | null;
 }
 
 export interface POJULLMResponse {
@@ -68,6 +69,8 @@ export interface POJULLMResponse {
   stall_offer?: boolean;
   investigation_agenda?: import("@/lib/poju/investigation-agenda").AgendaItem[] | null;
   suggest_refund?: boolean;
+  scope_signal?: import("@/lib/poju/scope-mismatch").ScopeSignal | null;
+  attachments_unlocked?: boolean;
   /** OpenRouter provider that served this turn. */
   served_provider?: string | null;
   /** Resolved session lock (existing or newly set from served_provider). */
@@ -138,6 +141,7 @@ async function callPOJULLMPhasePath(input: CallInput): Promise<POJULLMResponse> 
     tool_injection_context: input.tool_injection_context ?? null,
     stream_hooks: input.stream_hooks,
     signal: input.signal,
+    attachment: input.attachment ?? null,
   });
 
   return {
@@ -181,6 +185,8 @@ async function callPOJULLMPhasePath(input: CallInput): Promise<POJULLMResponse> 
     desired_direction: phase.desired_direction ?? null,
     problem_summary: phase.problem_summary ?? null,
     suggest_refund: Boolean(phase.suggest_refund),
+    scope_signal: phase.scope_signal ?? null,
+    attachments_unlocked: phase.attachments_unlocked === true ? true : undefined,
     served_provider: phase.served_provider ?? null,
     understanding: phase.understanding ?? null,
     understanding_sufficient:

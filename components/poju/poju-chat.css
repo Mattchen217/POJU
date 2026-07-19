@@ -712,6 +712,97 @@
   color: var(--pchat-ink-mute);
 }
 
+.pchat__inputwrap--drag {
+  border-color: rgba(167, 139, 250, 0.72) !important;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.34), 0 0 0 3px rgba(124, 92, 255, 0.22);
+}
+
+.pchat__composer-btn--disabled,
+.pchat__composer-btn--disabled:hover {
+  opacity: 0.38;
+  cursor: not-allowed;
+  background: none !important;
+}
+
+.pchat__attach-preview {
+  max-width: var(--pchat-read-max);
+  margin: 0 auto 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--pchat-hair-strong);
+  background: rgba(24, 18, 34, 0.72);
+}
+
+.pchat__attach-preview-thumb {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 8px;
+  flex: 0 0 auto;
+}
+
+.pchat__attach-preview-icon {
+  font-size: 28px;
+  color: var(--pchat-ink-mute);
+}
+
+.pchat__attach-preview-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  color: var(--pchat-ink-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pchat__attach-preview-clear {
+  border: none;
+  background: none;
+  color: var(--pchat-ink-mute);
+  cursor: pointer;
+  display: flex;
+  padding: 4px;
+  border-radius: 50%;
+}
+
+.pchat__attach-preview-clear:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.pchat__ctx-menu {
+  position: fixed;
+  z-index: 80;
+  min-width: 148px;
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid var(--pchat-hair-strong);
+  background: rgba(24, 18, 34, 0.98);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  transform: translate(-8px, -8px);
+}
+
+.pchat__ctx-menu button {
+  display: block;
+  width: 100%;
+  border: none;
+  background: none;
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.88);
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.pchat__ctx-menu button:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
 .pchat__inputwrap .icon-btn,
 .pchat__inputwrap .pchat__composer-btn {
   display: flex; align-items: center; justify-content: center;

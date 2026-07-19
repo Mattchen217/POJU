@@ -1076,6 +1076,10 @@
       "attach_menu_document": "Document",
       "attach_menu_image": "Image",
       "attach_menu_pdf": "PDF",
+      "ctx_cut": "Cut",
+      "ctx_copy": "Copy",
+      "ctx_paste": "Paste",
+      "ctx_select_all": "Select all",
       "unlock_report_modal_title": "Complete personal personality portrait",
       "unlock_report_modal_hint": "You can reopen this complete personality portrait from the chat at any time.",
       "unlock_report_gate_hint": "Please read your complete personal personality portrait analysis. After you close, POJU will continue with your question.",
@@ -1096,6 +1100,9 @@
       "title": "Different topic detected",
       "start_new_session": "Open a new POJU Session",
       "continue_current": "Continue with the original topic"
+    },
+    "scope_mismatch": {
+      "body": "POJU is for a specific person and a concrete dilemma or decision — with actionable next steps. What you sent doesn’t look like that. Please restate your situation in words; if you’d rather not continue, you can request a refund."
     },
     "refund_offer": {
       "hint": "If this isn't the right time to go deeper, you can request a refund and come back when you're ready.",

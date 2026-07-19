@@ -36,6 +36,7 @@ import {
   inferQuestionCategoryFromText,
   resolveAgendaRelationContext,
 } from "@/lib/llm/prompts/relation-closed-set-context";
+import { parseScopeSignal, scopeMismatchMessage } from "@/lib/poju/scope-mismatch";
 
 const VALID_SUGGESTED: AgentPhase[] = ["opening", "collecting_context"];
 
@@ -46,6 +47,7 @@ export const POJU_V6_OPENING_PHASE_RULES = `# 当前阶段任务 · opening（�
 
 每轮 JSON 必须输出（增量填写，已知的保留、新获知的更新）：
 \`\`\`
+scope_signal: "in_scope" | "unclear" | "out_of_scope"
 core_dilemma: {
   concrete_event: "具体发生了什么事（不是笼统话题）",
   stakes: "利害：他在意/害怕失去什么",
@@ -57,17 +59,23 @@ desired_direction: {
 }
 response: "给用户看的追问/承接（仅此字段对用户可见）"
 \`\`\`
+
+## 业务范围闸门（scope_signal · 规则，无示例）
+POJU 业务：帮助**特定对象**上的**具体问题/困境/决策**，给出可落地方向；亦可结合用户上传的图像可见信息（含用户主动要求的手部/面部等维度）进行分析——**前提是困境已锚定或正在追问锚定**。
+- \`out_of_scope\`：与上述业务无关（闲聊、百科、纯娱乐、无法识别任何个人困境意图等）。此时 \`understanding_sufficient=false\`，结构化字段可留空；\`response\` 可短，后端会替换为固定说明。
+- \`unclear\`：落在业务能力内，但具体困境未说清（含只表达想结合手部/面部等可见信息、尚未锚定某件具体事）。**必须追问**把困境问清楚；需要视觉材料时，可提示上传对应照片。不得拒业务、不得引导退款。
+- \`in_scope\`：已能识别可服务的具体困境（可同时要求结合图像可见信息）。继续填写结构字段；若需要照片，引导上传。
+
 - **不限长度**——越详细越好，它们是第2段深度分析的唯一靶心。
 - **门槛 = 子要素全部有实质内容**（非空、非"尚未明确/待追问"等占位词）。
-- **必须主动问出 desired_direction**——用户通常只倒苦水、不说"想要什么"，你要专门追问：
-  "你最希望这件事往哪个方向走？" / "如果能改变，你最想改变的是哪一点？"
+- **必须主动问出 desired_direction**——用户通常只倒苦水、不说"想要什么"，你要专门追问期望方向与优先点。
 - 子要素未齐备前，继续追问，不推进、不下命理结论。
-- \`understanding_sufficient\` 仅作你的自评参考；**后端放行只看字段实质齐备**。
+- \`understanding_sufficient\` 仅作你的自评参考；**后端放行只看字段实质齐备**。\`out_of_scope\` 时必须为 false。
 
 ## 输出格式（硬约束 · 键名不可翻译）
 输出【必须】是严格 JSON：所有键名用【英文小写】原样，用标准 ASCII 双引号 \`"\`，不得翻译键名、不得用中文引号、不得截断。
 严格按此模板填值（值可用中文，键名不可变）：
-\`{"understanding_sufficient":false,"core_dilemma":{"concrete_event":"","stakes":"","sticking_point":""},"desired_direction":{"wants":"","priority":""},"response":""}\`
+\`{"scope_signal":"unclear","understanding_sufficient":false,"core_dilemma":{"concrete_event":"","stakes":"","sticking_point":""},"desired_direction":{"wants":"","priority":""},"response":""}\`
 - 你对用户可见的话【必须】写在 JSON 的 \`"response"\` 字段里；思考过程留在 reasoning，**禁止**只把要对用户说的话写在思考里而不填 response。
 - 每轮输出必须包含**非空**的 \`"response"\`。
 
@@ -241,9 +249,18 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
     context_updates.desired_outcome = wants;
   }
 
+  const scope_signal = parseScopeSignal(parsed.scope_signal) ?? "unclear";
+  const outOfScope = scope_signal === "out_of_scope";
+  const finalUnderstandingSufficient = outOfScope ? false : understanding_sufficient;
+  const finalUnderstanding = outOfScope
+    ? { sufficient: false, missing: understanding.missing }
+    : understanding;
+  const finalResponse = outOfScope ? scopeMismatchMessage(input.locale) : response;
+  const finalSuggested = outOfScope ? null : suggested_phase;
+
   return {
-    response,
-    suggested_phase,
+    response: finalResponse,
+    suggested_phase: finalSuggested,
     action_requested,
     context_updates,
     question_category,
@@ -251,8 +268,8 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
     problem_summary: null,
     breakthrough_core: null,
     investigation_agenda: null,
-    core_dilemma,
-    desired_direction,
+    core_dilemma: outOfScope ? (input.agent_state?.core_dilemma ?? null) : core_dilemma,
+    desired_direction: outOfScope ? (input.agent_state?.desired_direction ?? null) : desired_direction,
     main_delivery_data: null,
     actions: [],
     tokens_used: result.tokens_used,
@@ -261,9 +278,12 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
     model: result.model,
     served_provider: result.provider ?? null,
     thinking_process: undefined,
-    understanding,
-    understanding_sufficient,
+    understanding: finalUnderstanding,
+    understanding_sufficient: finalUnderstandingSufficient,
     understanding_generation_failed,
+    scope_signal,
+    suggest_refund: outOfScope,
+    attachments_unlocked: !outOfScope,
     llm_debug: result.llm_debug
       ? { ...result.llm_debug, phase: result.llm_debug.phase ?? "opening" }
       : undefined,

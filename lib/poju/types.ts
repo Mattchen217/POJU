@@ -43,6 +43,15 @@ export interface POJUMessage {
     drift_reason?: string;
     should_show_new_session_button?: boolean;
     suggest_refund?: boolean;
+    /** Opening scope mismatch — fixed copy + refund offer. */
+    scope_mismatch?: boolean;
+    /** Optional attachment preview on user message (not full bytes in IndexedDB long-term). */
+    attachment_preview?: {
+      name: string;
+      kind: "image" | "document" | "pdf";
+      mime?: string;
+      data_url?: string;
+    };
     contains_delivery?: boolean;
     /** Tool_Linking Step 2 — pending tool card on this assistant turn. */
     tool_suggestion?: ToolSuggestionPayload;
@@ -69,7 +78,7 @@ export interface POJUMessage {
   /** Segment-1 opening resends exhausted — show retry button. */
   understanding_generation_failed?: boolean;
     /** Collecting escalation — show refund entry (user-initiated). */
-    kind?: "energy_matrix" | "paywall" | "report" | "welcome" | "infra_busy" | "generation_empty" | "generation_incomplete";
+    kind?: "energy_matrix" | "paywall" | "report" | "welcome" | "infra_busy" | "generation_empty" | "generation_incomplete" | "scope_mismatch";
     /** Preview chat — welcome bubble sourced from matrix synopsis (not generic copy). */
     matrix_welcome?: boolean;
     matrix_payload?: import("./build-matrix-payload").PojuMatrixPayload;

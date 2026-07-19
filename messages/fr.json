@@ -888,6 +888,10 @@
       "attach_menu_document": "Document",
       "attach_menu_image": "Image",
       "attach_menu_pdf": "PDF",
+      "ctx_cut": "Couper",
+      "ctx_copy": "Copier",
+      "ctx_paste": "Coller",
+      "ctx_select_all": "Tout sélectionner",
       "unlock_report_modal_title": "Portrait personnel complet de caractère",
       "unlock_report_modal_hint": "Vous pouvez rouvrir ce portrait complet depuis le chat à tout moment.",
       "unlock_report_gate_hint": "Veuillez lire votre analyse complète de portrait personnel de caractère. Après fermeture, POJU poursuivra avec votre question.",
@@ -1017,6 +1021,9 @@
       "title": "Sujet différent détecté",
       "start_new_session": "Ouvrir une nouvelle session POJU",
       "continue_current": "Continuer avec le sujet d'origine"
+    },
+    "scope_mismatch": {
+      "body": "POJU s’adresse à une personne précise et à un dilemme ou une décision concrète, pour proposer une voie actionnable. Votre message ne semble pas entrer dans ce cadre. Décrivez votre situation en mots ; si vous préférez ne pas continuer, vous pouvez demander un remboursement."
     },
     "summary_editor": {
       "title": "Vérifiez vos informations",

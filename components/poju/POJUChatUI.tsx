@@ -53,6 +53,14 @@ import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import { InfraBusyRetryAction } from "@/components/poju/InfraBusyRetryAction";
 import { getPojuServiceBusyMessage, isPojuFailurePlaceholderMessage } from "@/lib/llm/poju-service-busy-message";
 import { generateBaseAnalysis } from "@/lib/llm/deepseek/base-analysis";
+import {
+  acceptForAttachKind,
+  attachmentClientErrorMessage,
+  fileToComposerAttachment,
+  isLikelyMobileClient,
+  type ComposerAttachmentLocal,
+} from "@/lib/poju/attachments/client";
+import type { PojuChatAttachment } from "@/lib/poju/attachments/types";
 import { profileHasBaseAnalysis } from "@/lib/profile/stored-profiles-service";
 import { markPOJUV4SessionResolved } from "@/lib/poju/v4-lifecycle";
 import {
@@ -129,11 +137,7 @@ type SessionListRow = {
   last_interaction_at: Date;
 };
 
-type ComposerAttachment = {
-  name: string;
-  kind: "image" | "document" | "pdf";
-  dataUrl?: string;
-};
+type ComposerAttachment = ComposerAttachmentLocal;
 
 type TurnErrorRestore = {
   rollbackSession: POJUSessionState;
@@ -611,12 +615,21 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         }
       }
 
+      const attachWire: PojuChatAttachment | null = errorRestore?.attachment?.data_url
+        ? {
+            name: errorRestore.attachment.name,
+            kind: errorRestore.attachment.kind,
+            mime: errorRestore.attachment.mime,
+            data_url: errorRestore.attachment.data_url,
+          }
+        : null;
       const updatedSession = await handleUserMessage({
         session: baseSession,
         userMessage,
         locale,
         userAlreadyAppended: true,
         signal: ac.signal,
+        attachment: attachWire,
       });
       if (ac.signal.aborted || gen !== sendGenerationRef.current) return;
 
@@ -907,6 +920,19 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       content: userMessage,
       timestamp: nowIso,
       client_id: safeRandomUUID(),
+      meta: savedComposerAttachment
+        ? {
+            attachment_preview: {
+              name: savedComposerAttachment.name,
+              kind: savedComposerAttachment.kind,
+              mime: savedComposerAttachment.mime,
+              data_url:
+                savedComposerAttachment.kind === "image"
+                  ? savedComposerAttachment.data_url
+                  : undefined,
+            },
+          }
+        : undefined,
     };
     const withUser: POJUSessionState = {
       ...baseSession,
@@ -947,23 +973,39 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
     }
   }
 
-  function handleAttachImageFile(file: File) {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = String(reader.result || "");
-      setComposerAttachment({ name: file.name, kind: "image", dataUrl });
-    };
-    reader.readAsDataURL(file);
-  }
+  const agentPhase = session.agent_v2?.current_phase;
+  const attachmentsUnlocked =
+    Boolean(session.agent_v2?.attachments_unlocked) ||
+    Boolean(agentPhase && agentPhase !== "opening");
 
-  function handleAttachNamedFile(file: File, kind: "document" | "pdf") {
-    setComposerAttachment({ name: file.name, kind });
+  async function ingestComposerFiles(files: File[]) {
+    if (!attachmentsUnlocked) {
+      await dialog.alert(attachmentClientErrorMessage("attach_locked", locale));
+      return;
+    }
+    const file = files[0];
+    if (!file) return;
+    try {
+      const att = await fileToComposerAttachment(file);
+      setComposerAttachment(att);
+    } catch (e) {
+      const code = e instanceof Error ? e.message : "unsupported_type";
+      await dialog.alert(attachmentClientErrorMessage(code, locale));
+    }
   }
 
   function handleAttachPick(kind: "image" | "document" | "pdf") {
-    if (kind === "image") fileRef.current?.click();
-    else if (kind === "document") documentFileRef.current?.click();
-    else pdfFileRef.current?.click();
+    if (!attachmentsUnlocked) {
+      void dialog.alert(attachmentClientErrorMessage("attach_locked", locale));
+      return;
+    }
+    const mobile = isLikelyMobileClient();
+    const inputEl =
+      kind === "image" ? fileRef.current : kind === "document" ? documentFileRef.current : pdfFileRef.current;
+    if (inputEl) {
+      inputEl.accept = acceptForAttachKind(kind, mobile);
+      inputEl.click();
+    }
   }
 
   async function handleCreateNewSession() {
@@ -1796,22 +1838,22 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       <input
         ref={fileRef}
         type="file"
-        accept="image/png,image/jpeg,image/webp,image/heic"
+        accept="image/*"
         hidden
         onChange={(e) => {
           const f = e.target.files?.[0];
-          if (f) handleAttachImageFile(f);
+          if (f) void ingestComposerFiles([f]);
           e.target.value = "";
         }}
       />
       <input
         ref={documentFileRef}
         type="file"
-        accept=".doc,.docx,.txt,.md,.rtf,.odt,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+        accept=".txt,.md,.json,text/plain,text/markdown,application/json"
         hidden
         onChange={(e) => {
           const f = e.target.files?.[0];
-          if (f) handleAttachNamedFile(f, "document");
+          if (f) void ingestComposerFiles([f]);
           e.target.value = "";
         }}
       />
@@ -1822,7 +1864,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         hidden
         onChange={(e) => {
           const f = e.target.files?.[0];
-          if (f) handleAttachNamedFile(f, "pdf");
+          if (f) void ingestComposerFiles([f]);
           e.target.value = "";
         }}
       />
@@ -1860,6 +1902,16 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         composerText={input}
         onComposerTextChange={setInput}
         composerHasAttachment={composerAttachment !== null}
+        composerAttachmentPreview={
+          composerAttachment
+            ? {
+                name: composerAttachment.name,
+                kind: composerAttachment.kind,
+                previewUrl: composerAttachment.previewUrl,
+              }
+            : null
+        }
+        onClearAttachment={() => setComposerAttachment(null)}
         onSend={(text) => void handlePojuSend(text)}
         onNewSession={() => void handleCreateNewSession()}
         onSelectSession={(id) => router.push(`/poju/session/${id}`)}
@@ -1877,11 +1929,20 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           ok: t("dialog_ok"),
         }}
         onAttachPick={handleAttachPick}
+        onAttachFiles={(files) => void ingestComposerFiles(files)}
+        attachEnabled={attachmentsUnlocked}
+        attachLockedHint={attachmentClientErrorMessage("attach_locked", locale)}
         attachMenuLabel={t("attach_menu_label")}
         attachMenuLabels={{
           document: t("attach_menu_document"),
           image: t("attach_menu_image"),
           pdf: t("attach_menu_pdf"),
+        }}
+        contextMenuLabels={{
+          cut: t("ctx_cut"),
+          copy: t("ctx_copy"),
+          paste: t("ctx_paste"),
+          selectAll: t("ctx_select_all"),
         }}
         onVoice={toggleVoiceInput}
         voiceActive={voiceActive}
