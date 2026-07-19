@@ -1600,7 +1600,7 @@
       "fact_onset_age": "Starts at age {age}",
       "fact_onset_year": "First 10-year block · {year}",
       "birth_hour_period": "Birth hour",
-      "fact_empty_links": "None detected",
+      "fact_empty_links": "Steady natal hold",
       "your_sign_tag": "Your Sign · 生肖",
       "pillar_year": "Root layer",
       "pillar_month": "Outer field",
@@ -1619,8 +1619,8 @@
       "layers_em": "mechanism layers",
       "welcome": {
         "title": "Welcome to POJU",
-        "intro": "POJU weaves three millennia of Eastern temporal wisdom with modern scientific method—to help you work through the specific question or stuck place you're facing now. Not fortune-telling: clear guidance aligned to your energy structure.",
-        "cta": "Write the dilemma you can't settle yet in the box below, then send. I'll read it against your matrix and walk through it with you, step by step.",
+        "intro": "POJU weaves three millennia of Eastern temporal wisdom with modern scientific method—\nclear guidance for the stuck place you're facing now, aligned to your energy structure.",
+        "cta": "Write the dilemma you can't settle yet in the box below, then send.\nI'll read it against your matrix and walk through it with you, step by step.",
         "loading": "POJU is getting ready…"
       }
     },

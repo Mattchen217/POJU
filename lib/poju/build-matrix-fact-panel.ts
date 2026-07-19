@@ -329,6 +329,76 @@ export function buildMatrixFactPanel(input: {
   const branchElSlug = branchEl ? elementToSlug(branchEl) : null;
   const branchElSoft = branchEl ? matrixElementSoft(branchEl, locale) : "";
 
+  /** When no 流年冲合刑害 hits, still show temperament signals (never a blank "not detected"). */
+  const yearSignLinksFromRels = pickDistinct(liunianRels, locale, 2);
+  const yearSignLinks: MatrixFactChip[] = [...yearSignLinksFromRels];
+  if (yearSignLinks.length === 0) {
+    const dmStem = (structured.day_master.charAt(0) ||
+      structured.pillars_detail?.day.stem ||
+      "") as HeavenlyStem;
+    if (dmStem && liunian.stem) {
+      try {
+        const tg = calculateTenGod(dmStem, liunian.stem);
+        if (tg) {
+          const soft = matrixSoftTerm(tg, locale);
+          if (soft) {
+            yearSignLinks.push({
+              soft,
+              slug: pojuTermByTraditional(tg)?.slug ?? null,
+              polarity: "green",
+            });
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    const natalBranch =
+      structured.pillars_detail?.year.branch ||
+      structured.four_pillars.year.trim().charAt(1) ||
+      "";
+    if (natalBranch) {
+      const natalHan = zodiacAnimalHanFromBranch(natalBranch);
+      const natalSlug = zodiacHanToSlug(natalHan);
+      const natalSoft =
+        (natalSlug ? termOf(natalSlug, locale) : null) ??
+        (normalizeMatrixLocale(locale) === "zh"
+          ? natalHan
+          : getBranchInfo(natalBranch)?.zodiac_en ?? natalHan);
+      // Prefer natal sign when it differs from the transit year animal (temperament contrast).
+      if (
+        natalSoft &&
+        natalHan !== zodiacHan &&
+        !yearSignLinks.some((c) => c.soft === natalSoft)
+      ) {
+        yearSignLinks.push({
+          soft: natalSoft,
+          slug: natalSlug,
+          polarity: "gold",
+        });
+      }
+    }
+    if (yearSignLinks.length < 2 && transitStemElement) {
+      const stemSoft = matrixElementSoft(transitStemElement, locale);
+      if (stemSoft && !yearSignLinks.some((c) => c.soft === stemSoft)) {
+        yearSignLinks.push({
+          soft: stemSoft,
+          slug: elementToSlug(transitStemElement),
+          polarity: "neutral",
+        });
+      }
+    }
+    if (yearSignLinks.length < 2 && branchElSoft) {
+      if (!yearSignLinks.some((c) => c.soft === branchElSoft)) {
+        yearSignLinks.push({
+          soft: branchElSoft,
+          slug: branchElSlug,
+          polarity: "neutral",
+        });
+      }
+    }
+  }
+
   const yongRaw = (structured.yong_shen || "").trim();
   const yongSoft = yongRaw ? matrixElementSoft(yongRaw, locale) || matrixSoftTerm(yongRaw, locale) : "";
   const yong_soft =
@@ -390,7 +460,7 @@ export function buildMatrixFactPanel(input: {
       zodiac_soft: zodiacSoft,
       branch_element_soft: branchElSoft,
       branch_element_slug: branchElSlug,
-      links: pickDistinct(liunianRels, locale, 2),
+      links: yearSignLinks.slice(0, 2),
     },
     shensha_highlights: collectShenshaHighlights(structured, locale, 6),
     luck_onset: {

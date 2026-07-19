@@ -1405,7 +1405,7 @@
       "fact_onset_age": "À partir de {age} ans",
       "fact_onset_year": "Premier bloc de 10 ans · {year}",
       "birth_hour_period": "Heure de naissance",
-      "fact_empty_links": "Non détecté",
+      "fact_empty_links": "Socle calme",
       "your_sign_tag": "Votre Signe · 生肖",
       "pillar_year": "Année",
       "pillar_month": "Mois",
@@ -1424,8 +1424,8 @@
       "layers_em": "couches de mécanisme",
       "welcome": {
         "title": "Bienvenue sur POJU",
-        "intro": "POJU allie trois millénaires de sagesse temporelle orientale et une méthode scientifique moderne — pour la question ou le blocage précis que vous vivez maintenant. Pas de prédiction : une guidance claire, alignée sur votre structure énergétique.",
-        "cta": "Écrivez ci-dessous le dilemme que vous n'arrivez pas à trancher, puis envoyez. Je le lirai à la lumière de votre matrice, et nous le déplierons pas à pas.",
+        "intro": "POJU allie trois millénaires de sagesse temporelle orientale et une méthode moderne—\nguidance claire pour le blocage que vous vivez, alignée sur votre structure énergétique.",
+        "cta": "Écrivez ci-dessous le dilemme que vous n'arrivez pas à trancher, puis envoyez.\nJe le lirai à la lumière de votre matrice, et nous le déplierons pas à pas.",
         "loading": "POJU se prépare…"
       }
     },

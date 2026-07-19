@@ -76,28 +76,34 @@
 .pmw__intro,
 .pmw__cta {
   width: 100%;
-  max-width: none;
-  margin: 0;
-  font-family: Inter, "Microsoft YaHei", "PingFang SC", sans-serif;
-  font-size: clamp(1.0625rem, 2.1vw, 1.25rem);
-  font-weight: 400;
-  line-height: 1.7;
-  text-align: justify;
-  text-justify: inter-ideograph;
-  text-align-last: left;
-  hyphens: auto;
+  max-width: 40rem;
+  margin: 0 auto;
+  font-family: "Plus Jakarta Sans", "Microsoft YaHei", "PingFang SC", var(--font-geist-sans), sans-serif;
+  /* Welcome voice — larger than chat bubbles; designed as two balanced lines */
+  font-size: clamp(1.28rem, 2.9vw, 1.62rem);
+  font-weight: 450;
+  line-height: 1.55;
+  letter-spacing: 0.01em;
+  text-align: center;
+  hyphens: none;
+}
+
+.pmw__line {
+  display: block;
+  width: 100%;
+  text-align: center;
 }
 
 .pmw__intro {
-  margin-bottom: 1.15rem;
-  color: var(--pcm-on-variant, #d0c5af);
+  margin-bottom: 1.35rem;
+  color: rgba(232, 228, 244, 0.92);
 }
 
-/* No card chrome — same type measure as intro */
+/* Same type measure as intro — welcome CTA, not chat copy */
 .pmw__cta {
   padding: 0;
   font-weight: 500;
-  color: #e8e4f4;
+  color: #fff;
   border: none;
   border-radius: 0;
   background: transparent;
@@ -118,7 +124,8 @@
 
   .pmw__intro,
   .pmw__cta {
-    font-size: 1.0625rem;
-    line-height: 1.65;
+    font-size: clamp(1.2rem, 4.2vw, 1.4rem);
+    line-height: 1.5;
+    max-width: 100%;
   }
 }

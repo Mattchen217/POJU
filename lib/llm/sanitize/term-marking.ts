@@ -630,12 +630,17 @@ export function wrapBareRelations(text: string, locale: string): string {
 }
 
 /**
- * 与闭集表面撞名的【日常汉语词】—— 永不自动补标。
- * 「平衡」是 CLOSED_STRUCTURAL 里唯一的日常词，且常作动词：自动补标会把模型写的白话
- * 「需要重新调整平衡」改写成金字「…调整均势[···]」，甚至把动词换成名词（"来均势耗元"）。
- * 显式 ⟦t:balanced_self|…⟧ 仍正常渲染 —— 这里只关掉"猜"，不动闭集。
+ * 与闭集表面撞名的【日常汉语词】—— 单一豁免表，打标器 / 审计 / 清洗器【统一读它】。
+ *
+ * 「平衡」是 CLOSED_STRUCTURAL 里唯一的日常词，且常作动词。它有三重身份问题：
+ *   · 打标器：自动补标会把白话「调整平衡」改成金字「调整均势[···]」→ 已排除（下方 :655）
+ *   · 审计：把白话「找到平衡」当裸术语判 marker_plain_banned → 2026-07-19 死循环，本次修
+ *   · 引擎从不吐中文「平衡」(strength 字段是英文 balanced)，所以「平衡」出现时 100% 是白话
+ * 显式 ⟦t:balanced_self|…⟧ 仍正常渲染「均势」—— 豁免只关掉"把裸『平衡』当术语"，不动闭集。
+ *
+ * ⚠️ 新增日常词术语时（traditional 是常用汉语词），加进这里 → 打标/审计/清洗一处生效，别各防各的。
  */
-const AUTO_MARK_EXCLUDE_HAN: ReadonlySet<string> = new Set(["平衡"]);
+export const DAILY_WORD_EXEMPT_HAN: ReadonlySet<string> = new Set(["平衡"]);
 
 /**
  * UI 兜底扫描集：合规高危 + 闭集全量 + 天干五行合称 + 神煞 i18n 全表（含孤鸾煞等）。
@@ -652,7 +657,7 @@ const BARE_AUTO_MARK_HAN = [
     ...Object.keys(RELATION_WORD_TO_SLUG),
   ]),
 ]
-  .filter((han) => !AUTO_MARK_EXCLUDE_HAN.has(han))
+  .filter((han) => !DAILY_WORD_EXEMPT_HAN.has(han))
   .sort((a, b) => b.length - a.length);
 
 /** 六十甲子干支对。裸单字天干/地支走 BARE_AUTO_MARK_HAN（带汉字边界，避免「孩子」误伤）。 */
@@ -1872,8 +1877,8 @@ const SSOT_BARE_TERMS_ZH: readonly string[] = (() => {
   for (const t of POJU_TERMS) {
     if (t.ns !== "bazi") continue;
     for (const w of [t.traditional, ...(t.aliases ?? [])]) {
-      // 只收 ≥2 字，且不是纯单字五行/干支（那些交打标器）
-      if (w && w.length >= 2) out.add(w);
+      // 只收 ≥2 字；日常词（平衡…）走豁免表——它出现时是白话，不是术语，审计不抓。
+      if (w && w.length >= 2 && !DAILY_WORD_EXEMPT_HAN.has(w)) out.add(w);
     }
   }
   return [...out].sort((a, b) => b.length - a.length); // 长词优先

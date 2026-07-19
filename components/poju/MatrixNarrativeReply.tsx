@@ -17,6 +17,22 @@ type Props = {
   locale: string;
 };
 
+function WelcomeBlock({ text, className }: { text: string; className: string }) {
+  const lines = text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  return (
+    <p className={className}>
+      {lines.map((line, i) => (
+        <span key={i} className="pmw__line">
+          {line}
+        </span>
+      ))}
+    </p>
+  );
+}
+
 /** Fixed centered welcome — not a chat-style matrix synopsis. */
 export function MatrixNarrativeReply({ payload, locale }: Props) {
   const display = resolveMatrixDisplay(payload, locale);
@@ -39,8 +55,8 @@ export function MatrixNarrativeReply({ payload, locale }: Props) {
         <Image src={pojuMark} alt="" width={40} height={40} className="pmw__mark-img" />
       </div>
       <h2 className="pmw__title">{tMatrix(locale, "card.welcome.title")}</h2>
-      <p className="pmw__intro">{tMatrix(locale, "card.welcome.intro")}</p>
-      <p className="pmw__cta">{tMatrix(locale, "card.welcome.cta")}</p>
+      <WelcomeBlock className="pmw__intro" text={tMatrix(locale, "card.welcome.intro")} />
+      <WelcomeBlock className="pmw__cta" text={tMatrix(locale, "card.welcome.cta")} />
     </section>
   );
 }

@@ -1405,7 +1405,7 @@
       "fact_onset_age": "Ab Alter {age}",
       "fact_onset_year": "Erster 10-Jahres-Block · {year}",
       "birth_hour_period": "Geburtsstunde",
-      "fact_empty_links": "Nicht erkannt",
+      "fact_empty_links": "Ruhiges Grundbild",
       "your_sign_tag": "Dein Zeichen · 生肖",
       "pillar_year": "Jahr",
       "pillar_month": "Monat",
@@ -1424,8 +1424,8 @@
       "layers_em": "Mechanismus-Schichten",
       "welcome": {
         "title": "Willkommen bei POJU",
-        "intro": "POJU verbindet dreitausend Jahre östlicher Zeit-Weisheit mit moderner wissenschaftlicher Methode — für die konkrete Frage oder Blockade, vor der du jetzt stehst. Kein Wahrsagen: klare Orientierung, abgestimmt auf deine Energiestruktur.",
-        "cta": "Schreibe unten das Dilemma, das du noch nicht entscheiden kannst, und sende es. Ich lese es an deiner Matrix und wir gehen es Schritt für Schritt durch.",
+        "intro": "POJU verbindet dreitausend Jahre östlicher Zeit-Weisheit mit moderner Methode—\nklare Orientierung für die Blockade vor dir, abgestimmt auf deine Energiestruktur.",
+        "cta": "Schreibe unten das Dilemma, das du noch nicht entscheiden kannst, und sende es.\nIch lese es an deiner Matrix und wir gehen es Schritt für Schritt durch.",
         "loading": "POJU bereitet sich vor…"
       }
     },
