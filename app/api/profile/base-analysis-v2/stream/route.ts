@@ -21,8 +21,8 @@ import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-/** 三次 high：compute 总超时可达 ~900s + 并行正文/依据。 */
-export const maxDuration = 800;
+/** Hobby plan max is 300s; Pro can raise later. after() inherits this ceiling. */
+export const maxDuration = 300;
 
 /** If a streaming/pending v2 job has not progressed this long, allow a fresh job. */
 const STALE_JOB_MS = 15 * 60 * 1000;

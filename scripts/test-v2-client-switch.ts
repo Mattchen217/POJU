@@ -28,7 +28,8 @@ assert(
 assert("client POST 走 v2 path 常量", client.includes("BASE_ANALYSIS_STREAM_PATH"));
 assert("client 不再硬编码 v1 stream", !client.includes('"/api/profile/base-analysis/stream"'));
 assert("client 轮询 status", client.includes("/api/profile/base-analysis/status"));
-assert("client 轮询上限 ≥800s", /POLL_MAX_MS\s*=\s*900_000/.test(client));
+assert("client 轮询上限 ≥300s", /POLL_MAX_MS\s*=\s*320_000/.test(client));
+assert("v2 route maxDuration=300 (Hobby)", /export const maxDuration = 300/.test(route));
 assert("v2 route after()", route.includes("after("));
 assert("v2 route runReportV2", route.includes("runReportV2"));
 

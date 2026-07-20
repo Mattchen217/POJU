@@ -24,8 +24,8 @@ export type StreamSseResult = {
 export const BASE_ANALYSIS_STREAM_PATH = "/api/profile/base-analysis-v2/stream";
 
 const POLL_INTERVAL_MS = 2_500;
-/** Above server `maxDuration` (800s) + reconnect slack. */
-const POLL_MAX_MS = 900_000;
+/** Slightly above server `maxDuration` (300s Hobby) + reconnect slack. */
+const POLL_MAX_MS = 320_000;
 
 type StatusPayload = {
   job_id?: string;
