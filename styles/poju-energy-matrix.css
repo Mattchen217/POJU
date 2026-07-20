@@ -2098,7 +2098,42 @@
 @media (min-width: 768px) {
   .pem-matrix-body .topband__calibration-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: stretch;
   }
+}
+
+.pem-matrix-body .tcard--cal-col {
+  height: 100%;
+  justify-content: flex-start;
+}
+
+.pem-matrix-body .tcard--cal-col > .k {
+  flex: 0 0 auto;
+  min-height: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.pem-matrix-body .tcard--cal-col .tcard__body {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.pem-matrix-body .tcard--cal-col .tcard__foot {
+  flex: 0 0 auto;
+  margin-top: auto;
+  padding-top: 0.65rem;
+  min-height: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.pem-matrix-body .tcard--cal-col .mid {
+  margin: 0;
+}
+
+.pem-matrix-body .tcard--cal-col .mid--inline {
+  margin: 0.35rem 0;
 }
 
 .pem-matrix-body .zsign__tag {

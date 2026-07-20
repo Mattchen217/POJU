@@ -885,16 +885,20 @@ export function PojuEnergyMatrix({
                   <div className="pcm-cal__kicker">
                     {tc("calendar_alignment")} · {tc("calendar_alignment_em")}
                   </div>
-                  <div className="pcm-cal__value">
-                    {display.calendar.gregorian}{" "}
-                    <span className="pcm-cal__unit">{tc("gregorian")}</span>
+                  <div className="pcm-cal__body">
+                    <div className="pcm-cal__value">
+                      {display.calendar.gregorian}{" "}
+                      <span className="pcm-cal__unit">{tc("gregorian")}</span>
+                    </div>
+                    {display.calendar.lunar ? (
+                      <div className="pcm-cal__sub">{display.calendar.lunar}</div>
+                    ) : null}
                   </div>
-                  {display.calendar.lunar ? (
-                    <div className="pcm-cal__sub">{display.calendar.lunar}</div>
-                  ) : null}
-                  <div className="pcm-cal__accent">
-                    {display.calendar.headline}
-                    {genderLabel ? ` ${genderLabel}` : ""}
+                  <div className="pcm-cal__foot">
+                    <div className="pcm-cal__accent">
+                      {display.calendar.headline}
+                      {genderLabel ? ` ${genderLabel}` : ""}
+                    </div>
                   </div>
                 </div>
 
@@ -904,98 +908,91 @@ export function PojuEnergyMatrix({
                     {" · "}
                     {tc("true_solar_time_em")}
                   </div>
-                  {tst ? (
-                    <>
-                      <div className="pcm-cal__times">
-                        <div>
-                          <div className="pcm-cal__time-val">
-                            {tst.original_time}
+                  <div className="pcm-cal__body">
+                    {tst ? (
+                      <>
+                        <div className="pcm-cal__times">
+                          <div>
+                            <div className="pcm-cal__time-val">
+                              {tst.original_time}
+                            </div>
+                            <div className="pcm-cal__time-label">
+                              {tc("standard_time")}
+                            </div>
                           </div>
-                          <div className="pcm-cal__time-label">
-                            {tc("standard_time")}
+                          <div className="pcm-cal__arrow">→</div>
+                          <div>
+                            <div className="pcm-cal__time-val pcm-cal__time-val--dim">
+                              {tst.true_solar_time}
+                            </div>
+                            <div className="pcm-cal__time-label">
+                              <SoftTermHover
+                                slug="tm_true_solar_time"
+                                locale={locale}
+                              />
+                            </div>
                           </div>
                         </div>
-                        <div className="pcm-cal__arrow">→</div>
-                        <div>
-                          <div className="pcm-cal__time-val pcm-cal__time-val--dim">
-                            {tst.true_solar_time}
+                        {tst.diff_minutes !== 0 ? (
+                          <div className="pcm-cal__delta">
+                            {tst.diff_minutes > 0 ? "+" : "−"}
+                            {Math.abs(Number(tst.diff_minutes.toFixed(2)))}m
                           </div>
-                          <div className="pcm-cal__time-label">
-                            <SoftTermHover
-                              slug="tm_true_solar_time"
-                              locale={locale}
-                            />
-                          </div>
+                        ) : null}
+                        <div className="pcm-cal__note">
+                          {tc("longitude_correction")} ·{" "}
+                          {tst.longitude_diff_minutes ?? tst.diff_minutes}m
+                          {tst.eq_of_time_minutes != null
+                            ? ` · ${tc("eq_of_time")} ${tst.eq_of_time_minutes > 0 ? "+" : ""}${tst.eq_of_time_minutes}m`
+                            : null}
+                          {tst.longitude != null
+                            ? ` · ${Math.abs(tst.longitude).toFixed(2)}°${tst.longitude >= 0 ? "E" : "W"}`
+                            : null}
                         </div>
-                      </div>
-                      {tst.diff_minutes !== 0 ? (
-                        <div className="pcm-cal__delta">
-                          {tst.diff_minutes > 0 ? "+" : "−"}
-                          {Math.abs(Number(tst.diff_minutes.toFixed(2)))}m
-                        </div>
-                      ) : null}
-                      <div className="pcm-cal__note">
-                        {tc("longitude_correction")} ·{" "}
-                        {tst.longitude_diff_minutes ?? tst.diff_minutes}m
-                        {tst.eq_of_time_minutes != null
-                          ? ` · ${tc("eq_of_time")} ${tst.eq_of_time_minutes > 0 ? "+" : ""}${tst.eq_of_time_minutes}m`
-                          : null}
-                        {tst.longitude != null
-                          ? ` · ${Math.abs(tst.longitude).toFixed(2)}°${tst.longitude >= 0 ? "E" : "W"}`
-                          : null}
-                      </div>
-                      {(() => {
-                        const hp = user_profile.birth.hour_period;
-                        const info = hp ? HOUR_PERIOD_INFO[hp] : null;
-                        if (!info) return null;
-                        const label = isZh ? info.chinese_name : info.en_label;
-                        return (
-                          <div className="pcm-cal__accent" style={{ marginTop: "0.65rem" }}>
-                            {tc("birth_hour_period")} · {label}
-                          </div>
-                        );
-                      })()}
-                    </>
-                  ) : (
-                    <>
+                      </>
+                    ) : (
                       <div className="pcm-cal__value">—</div>
-                      {(() => {
-                        const hp = user_profile.birth.hour_period;
-                        const info = hp ? HOUR_PERIOD_INFO[hp] : null;
-                        if (!info) return null;
-                        const label = isZh ? info.chinese_name : info.en_label;
-                        return (
-                          <div className="pcm-cal__accent" style={{ marginTop: "0.65rem" }}>
-                            {tc("birth_hour_period")} · {label}
-                          </div>
-                        );
-                      })()}
-                    </>
-                  )}
+                    )}
+                  </div>
+                  <div className="pcm-cal__foot">
+                    {(() => {
+                      const hp = user_profile.birth.hour_period;
+                      const info = hp ? HOUR_PERIOD_INFO[hp] : null;
+                      if (!info) return <div className="pcm-cal__accent pcm-cal__accent--spacer" aria-hidden="true" />;
+                      const label = isZh ? info.chinese_name : info.en_label;
+                      return (
+                        <div className="pcm-cal__accent">
+                          {tc("birth_hour_period")} · {label}
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </div>
 
                 <div className="pcm-cal__cell">
                   <div className="pcm-cal__kicker">
                     {tc("solar_term")} · {tc("solar_term_em")}
                   </div>
-                  <div className="pcm-cal__value">
-                    {isZh
-                      ? display.solar_term.name
-                      : display.solar_term.name_en}{" "}
-                    <span className="pcm-cal__unit">
+                  <div className="pcm-cal__body">
+                    <div className="pcm-cal__value">
                       {isZh
-                        ? display.solar_term.name_en
-                        : display.solar_term.name}
-                    </span>
-                  </div>
-                  <div className="pcm-cal__sub">{display.solar_term.season}</div>
-                  <div className="pcm-term">
-                    <div className="pcm-term__head">
+                        ? display.solar_term.name
+                        : display.solar_term.name_en}{" "}
+                      <span className="pcm-cal__unit">
+                        {isZh
+                          ? display.solar_term.name_en
+                          : display.solar_term.name}
+                      </span>
+                    </div>
+                    <div className="pcm-cal__sub">{display.solar_term.season}</div>
+                    <div className="pcm-term__head pcm-term__head--inline">
                       <span>{tc("solar_term")}</span>
                       <span>
                         {tc("next_term")}: {display.solar_term.next_name}
                       </span>
                     </div>
+                  </div>
+                  <div className="pcm-cal__foot">
                     <div className="pcm-term__track">
                       <div
                         className="pcm-term__fill"

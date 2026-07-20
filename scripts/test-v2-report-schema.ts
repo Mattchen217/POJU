@@ -68,6 +68,13 @@ const goodResult = validateReportComputed(good);
 assert("完整对象通过", goodResult.ok === true);
 
 assert("缺段被拦", validateReportComputed({}).ok === false);
+{
+  const empty = validateReportComputed({});
+  assert(
+    "空对象 fatal",
+    empty.ok === false && empty.severity === "fatal",
+  );
+}
 assert("段路径数=19", SEGMENT_PATHS.length === 19);
 
 const missingSeg = structuredClone(good) as ReportComputed;
@@ -75,8 +82,10 @@ const energyMapHole = missingSeg.energy_map as unknown as Record<string, unknown
 delete energyMapHole.regulator;
 const missingResult = validateReportComputed(missingSeg);
 assert(
-  "删一段被拦",
-  missingResult.ok === false && missingResult.reason.includes("energy_map.regulator"),
+  "删一段 soft(不废整份)",
+  missingResult.ok === false &&
+    missingResult.severity === "soft" &&
+    missingResult.reason.includes("energy_map.regulator"),
 );
 
 const emptyConclusion = structuredClone(good) as ReportComputed;

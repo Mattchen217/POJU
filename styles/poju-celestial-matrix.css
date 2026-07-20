@@ -618,6 +618,8 @@
 
 .pcm-cal {
   grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
   justify-content: space-between;
 }
 
@@ -633,6 +635,7 @@
   gap: var(--pcm-gutter);
   flex: 1;
   min-height: 0;
+  align-items: stretch;
 }
 
 @media (min-width: 768px) {
@@ -644,8 +647,11 @@
 .pcm-cal__cell {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
+  align-self: stretch;
+  height: 100%;
   min-width: 0;
+  min-height: 0;
   padding-bottom: 1.5rem;
   border-bottom: 1px solid rgba(77, 70, 53, 0.5);
 }
@@ -673,10 +679,36 @@
   }
 }
 
+/* 顶栏齐平：固定 kicker 行高，避免换行后三列顶标错位 */
 .pcm-cal__kicker {
-  margin: 0 0 0.5rem;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  min-height: 2.5rem;
+  margin: 0 0 0.75rem;
   font-size: 0.75rem;
+  line-height: 1.35;
   color: var(--pcm-on-variant);
+}
+
+/* 中部吃掉剩余高度 */
+.pcm-cal__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+/* 底栏齐平：蛇年 / 出生时辰 / 进度条同一基线 */
+.pcm-cal__foot {
+  flex: 0 0 auto;
+  margin-top: auto;
+  padding-top: 0.75rem;
+  min-height: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
 }
 
 .pcm-cal__value {
@@ -702,10 +734,20 @@
 }
 
 .pcm-cal__accent {
-  margin-top: 0.75rem;
+  margin: 0;
   font-size: 0.875rem;
   font-weight: 500;
+  line-height: 1.4;
   color: var(--pcm-primary);
+}
+
+.pcm-cal__accent--spacer {
+  visibility: hidden;
+  min-height: 1.25rem;
+}
+
+.pcm-term__head--inline {
+  margin-top: 0.5rem;
 }
 
 .pcm-cal__times {

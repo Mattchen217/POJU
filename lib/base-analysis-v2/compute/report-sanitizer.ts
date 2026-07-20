@@ -1,5 +1,6 @@
 import type { ReportComputed } from "@/lib/base-analysis-v2/report-schema";
 import type { TenGodContext } from "@/lib/base-analysis-v2/compute/ten-god-context";
+import { applyPlainFallback } from "@/lib/base-analysis-v2/compute/plain-fallback-map";
 
 function pickDual(
   hasA: boolean,
@@ -52,10 +53,14 @@ export function cleanReportComputed<T>(obj: T, ctx: TenGodContext): T {
   return obj;
 }
 
-/** Typed convenience wrapper for ReportComputed. */
+/**
+ * 上下文还原简称 → 【】合称平替兜底（不含单称，避免毁掉 bazi_basis 全称）。
+ */
 export function sanitizeReportComputed(
   report: ReportComputed,
   ctx: TenGodContext,
 ): ReportComputed {
-  return cleanReportComputed(report, ctx);
+  return applyPlainFallback(cleanReportComputed(report, ctx), {
+    includeSingles: false,
+  });
 }

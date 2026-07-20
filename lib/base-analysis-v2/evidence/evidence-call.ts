@@ -3,9 +3,12 @@ import {
   SIMP_RE,
   TIME_ANCHOR_RE,
 } from "@/lib/base-analysis-v2/compute/compute-call";
+import { applyPlainFallbackToText } from "@/lib/base-analysis-v2/compute/plain-fallback-map";
+import { stripTimeAnchor } from "@/lib/base-analysis-v2/compute/strip-time-anchor";
 import { buildEvidencePrompt } from "@/lib/base-analysis-v2/evidence/evidence-prompt";
 import type { ReportComputed } from "@/lib/base-analysis-v2/report-schema";
 import {
+  fillMissingSegmentTexts,
   findSegmentText,
   mapSegmentTexts,
   validateSegmentKeys,
@@ -178,38 +181,33 @@ export async function runEvidence(
           continue;
         }
 
+        let tree: ReportSegmentTextTree;
         const keyErr = validateSegmentKeys(parsed, "evidence");
         if (keyErr) {
-          lastReason = `keys_invalid:${keyErr}`;
-          retryHint = locale.startsWith("zh")
-            ? `上一轮 key 结构不齐：${keyErr}。必须与输入同 key，每个段落值为含打标的依据字符串（不是嵌套对象）。`
-            : `Previous key structure invalid: ${keyErr}. Mirror keys; each segment must be an evidence string (not a nested object).`;
-          console.warn(
-            `[v2/evidence] attempt ${attempt}/${MAX_ATTEMPTS} — ${keyErr}，带纠错重发`,
-          );
-          continue;
+          console.warn(`[v2/evidence] ℹ️ ${keyErr} — 占位补全,不打回`);
+          tree = fillMissingSegmentTexts(parsed, "evidence", locale);
+        } else {
+          tree = parsed as ReportSegmentTextTree;
         }
 
-        // Layer: v1 打标器兜底（裸真词补标）+ 强制空槽填 SSOT
-        const polished = mapSegmentTexts(parsed as ReportSegmentTextTree, (seg) =>
+        // 不打回 —— 打标兜底 + 合称【】平替 + 时间锚就地清洗
+        let polished = mapSegmentTexts(tree, (seg) =>
           polishEvidenceSegment(seg, locale),
         );
+        polished = mapSegmentTexts(polished, (seg) =>
+          applyPlainFallbackToText(seg, { includeSingles: false }),
+        );
+        polished = mapSegmentTexts(polished, (seg) => stripTimeAnchor(seg, locale));
 
-        const leak = findEvidenceLeak(polished, locale);
-        if (leak) {
-          lastReason = `evidence_leak:${leak}`;
-          retryHint = locale.startsWith("zh")
-            ? `上一轮的依据里出现了时间锚(如2026年/丙午大运)、简称(如官杀/比劫)、或未打标的裸真词，这是错的。依据里不能有任何年份岁数大运名；命理词一律全称并打成 ⟦t:<slug>|⟧（竖线后留空）。详情：${leak}`
-            : `Previous evidence had a time anchor, Ten-God abbreviation, or bare unmarked term. No years/ages/named decades; mark full terms as ⟦t:<slug>|⟧ with empty slot. Detail: ${leak}`;
+        const evResidue = findEvidenceLeak(polished, locale);
+        if (evResidue) {
           console.warn(
-            `[v2/evidence] attempt ${attempt}/${MAX_ATTEMPTS} — 依据泄漏，带纠错重发`,
-            { leak },
+            `[v2/evidence] ℹ️ 清洗后依据残留(${evResidue}) — 放行,不打回`,
           );
-          continue;
         }
 
         console.log(
-          `[v2/evidence] ✅ 依据树就绪 (attempt ${attempt}/${MAX_ATTEMPTS}, fell_back=${result.transport?.fell_back ?? false})`,
+          `[v2/evidence] ✅ 依据树就绪 (attempt ${attempt}/${MAX_ATTEMPTS}, 首生成保留, fell_back=${result.transport?.fell_back ?? false})`,
         );
         return { ok: true, value: polished, attempts: attempt };
       } catch (e) {

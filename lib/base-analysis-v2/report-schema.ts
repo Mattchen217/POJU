@@ -166,41 +166,124 @@ function readPath(obj: unknown, path: string): unknown {
   }, obj);
 }
 
-/** 运行时校验：结构完整 + 每段双钥匙非空。第1次调用后跑,坏结构→重发。 */
-export function validateReportComputed(
-  obj: unknown,
-): { ok: true; value: ReportComputed } | { ok: false; reason: string } {
-  if (!obj || typeof obj !== "object") return { ok: false, reason: "not an object" };
+function writePath(obj: Record<string, unknown>, path: string, value: unknown): void {
+  const parts = path.split(".");
+  let cur: Record<string, unknown> = obj;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const key = parts[i]!;
+    if (!cur[key] || typeof cur[key] !== "object" || Array.isArray(cur[key])) {
+      cur[key] = {};
+    }
+    cur = cur[key] as Record<string, unknown>;
+  }
+  cur[parts[parts.length - 1]!] = value;
+}
+
+function isSegmentOk(seg: unknown): boolean {
+  if (!seg || typeof seg !== "object") return false;
+  const record = seg as Record<string, unknown>;
+  if (typeof record.core_conclusion !== "string" || !record.core_conclusion.trim()) return false;
+  if (!Array.isArray(record.bazi_basis) || record.bazi_basis.length === 0) return false;
+  return true;
+}
+
+function isSummaryOk(summary: unknown): boolean {
+  if (!summary || typeof summary !== "object") return false;
+  const s = summary as Record<string, unknown>;
+  if (!Array.isArray(s.keywords) || s.keywords.length === 0) return false;
+  if (typeof s.current_theme !== "string" || !s.current_theme.trim()) return false;
+  if (!Array.isArray(s.dos) || s.dos.length === 0) return false;
+  if (!Array.isArray(s.donts) || s.donts.length === 0) return false;
+  return true;
+}
+
+const PLACEHOLDER_SEG: SegmentComputed = {
+  core_conclusion: "（本段结论暂缺，其余段落仍保留首生成内容。）",
+  bazi_basis: ["（依据暂缺）"],
+};
+
+/**
+ * 缺段占位：保住已有黄金段落，缺的填最小占位。
+ */
+export function fillMissingSegments(obj: unknown): ReportComputed {
+  const root: Record<string, unknown> =
+    obj && typeof obj === "object" && !Array.isArray(obj)
+      ? structuredClone(obj as Record<string, unknown>)
+      : {};
 
   for (const path of SEGMENT_PATHS) {
-    const seg = readPath(obj, path);
-    if (!seg || typeof seg !== "object") return { ok: false, reason: `missing segment: ${path}` };
-    const record = seg as Record<string, unknown>;
-    if (typeof record.core_conclusion !== "string" || !record.core_conclusion.trim()) {
-      return { ok: false, reason: `empty core_conclusion: ${path}` };
-    }
-    if (!Array.isArray(record.bazi_basis) || record.bazi_basis.length === 0) {
-      return { ok: false, reason: `empty bazi_basis: ${path}` };
+    if (!isSegmentOk(readPath(root, path))) {
+      writePath(root, path, { ...PLACEHOLDER_SEG });
     }
   }
 
-  const summary = (obj as Record<string, unknown>).summary;
-  if (!summary || typeof summary !== "object") {
-    return { ok: false, reason: "summary incomplete" };
+  const summary =
+    root.summary && typeof root.summary === "object"
+      ? (root.summary as Record<string, unknown>)
+      : {};
+  if (!Array.isArray(summary.keywords) || summary.keywords.length === 0) {
+    summary.keywords = ["待补"];
   }
-  const s = summary as Record<string, unknown>;
-  if (!Array.isArray(s.keywords) || s.keywords.length === 0) {
-    return { ok: false, reason: "summary incomplete" };
+  if (typeof summary.current_theme !== "string" || !summary.current_theme.trim()) {
+    summary.current_theme = "（主旋律暂缺）";
   }
-  if (typeof s.current_theme !== "string" || !s.current_theme.trim()) {
-    return { ok: false, reason: "summary incomplete" };
+  if (!Array.isArray(summary.dos) || summary.dos.length === 0) {
+    summary.dos = ["（建议暂缺）"];
   }
-  if (!Array.isArray(s.dos) || s.dos.length === 0) {
-    return { ok: false, reason: "summary incomplete" };
+  if (!Array.isArray(summary.donts) || summary.donts.length === 0) {
+    summary.donts = ["（避项暂缺）"];
   }
-  if (!Array.isArray(s.donts) || s.donts.length === 0) {
-    return { ok: false, reason: "summary incomplete" };
+  if (!isSegmentOk(summary.card_basis)) {
+    summary.card_basis = { ...PLACEHOLDER_SEG };
+  }
+  root.summary = summary;
+
+  return root as unknown as ReportComputed;
+}
+
+export type ValidateReportComputedResult =
+  | { ok: true; value: ReportComputed }
+  | {
+      ok: false;
+      reason: string;
+      /** fatal = 结构严重损坏(<50% 可用)→可重试；soft = 个别段缺→占位放行 */
+      severity: "fatal" | "soft";
+      value?: ReportComputed;
+    };
+
+/**
+ * 运行时校验。缺段不再一律 fatal——补全率 ≥50% 标 soft，由调用方占位放行。
+ */
+export function validateReportComputed(obj: unknown): ValidateReportComputedResult {
+  if (!obj || typeof obj !== "object") {
+    return { ok: false, reason: "not an object", severity: "fatal" };
   }
 
-  return { ok: true, value: obj as ReportComputed };
+  let okCount = 0;
+  const missing: string[] = [];
+  for (const path of SEGMENT_PATHS) {
+    if (isSegmentOk(readPath(obj, path))) okCount += 1;
+    else missing.push(path);
+  }
+
+  const summaryOk = isSummaryOk((obj as Record<string, unknown>).summary);
+  if (missing.length === 0 && summaryOk) {
+    return { ok: true, value: obj as ReportComputed };
+  }
+
+  const rate = okCount / SEGMENT_PATHS.length;
+  const reasonParts = [...missing];
+  if (!summaryOk) reasonParts.push("summary incomplete");
+  const reason = reasonParts.join("; ") || "incomplete";
+
+  if (rate < 0.5) {
+    return { ok: false, reason, severity: "fatal" };
+  }
+
+  return {
+    ok: false,
+    reason,
+    severity: "soft",
+    value: obj as ReportComputed,
+  };
 }

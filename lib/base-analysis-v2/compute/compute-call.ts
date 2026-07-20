@@ -4,6 +4,7 @@ import {
   isEmptyResponseError,
 } from "@/lib/llm/openrouter-shared";
 import {
+  fillMissingSegments,
   SEGMENT_PATHS,
   validateReportComputed,
   type ReportComputed,
@@ -12,36 +13,19 @@ import {
 import { buildComputePrompt } from "@/lib/base-analysis-v2/compute/compute-prompt";
 import { sanitizeReportComputed } from "@/lib/base-analysis-v2/compute/report-sanitizer";
 import { extractTenGodContext } from "@/lib/base-analysis-v2/compute/ten-god-context";
+import {
+  SIMP_RE,
+  TIME_ANCHOR_RE,
+} from "@/lib/base-analysis-v2/compute/leak-patterns";
 
-const COMPUTE_MAX_TOKENS = 16_000; // 上限不预付:19段+真算推理,给宽
+export { SIMP_RE, TIME_ANCHOR_RE };
+
+const COMPUTE_MAX_TOKENS = 16_000; // 正常 JSON~3600 + 真算推理空间；不压制输出
 const MAX_ATTEMPTS = 3;
 /** 单次 OpenRouter fetch 超时 —— 对齐 v1 xhigh（high 推理 + 宽 max_tokens）。 */
 const COMPUTE_ATTEMPT_TIMEOUT_MS = 270_000;
-/** 总超时：覆盖最多 3 次 attempt。 */
+/** 总超时：覆盖最多 3 次 attempt（仅真失败重试）。 */
 const COMPUTE_TOTAL_TIMEOUT_MS = 900_000;
-
-/**
- * 时间锚兜底(补丁1 代码侧双保险)。
- * ⚠️ 关键微调:采纳朋友"扩覆盖",但【放行】补丁1 允许的中性词——
- *   放行:大运逢印 / 流年引动 / 岁运相冲(不带具体干支/数字/岁数)
- *   禁止:2026年 / 35岁 / 丙午大运 / 丙午流年 / 虚岁35 / 第三步大运 / 二〇二六年 / 交运
- * 所以【不】单独禁"流年|大运"二字(会误杀中性词),只禁它们跟具体干支/数字连用,
- * 以及独立的年份/岁数/序数大运/交运起运。
- */
-export const TIME_ANCHOR_RE = new RegExp(
-  [
-    "(19|20)\\d{2}\\s*年?", // 2026 / 2026年
-    "[一二三四五六七八九〇零]{2,4}年", // 二〇二六年
-    "[1-9]\\d?\\s*(岁|周岁|虚岁)", // 35岁
-    "(虚岁|周岁)\\s*[1-9]\\d?", // 虚岁35
-    "第[一二三四五六七八九十\\d]+步?大运", // 第三步大运
-    "[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]\\s*(大运|流年|年|运)", // 丙午大运/丙午流年/丙午年
-    "交运|起运", // 交运/起运(隐含时间点)
-  ].join("|"),
-);
-
-/** Layer-3: Ten-God compound abbreviations that must not survive sanitizer. */
-export const SIMP_RE = /(比劫|官杀|食伤|印枭|枭印|财官|杀印|财官杀)/;
 
 function readSegment(rc: ReportComputed, path: string): SegmentComputed | undefined {
   const parts = path.split(".");
@@ -66,7 +50,6 @@ function scanSegments(
       if (test(String(b))) return `${path}.bazi_basis:${b}`;
     }
   }
-  // summary top-level strings (not only card_basis)
   const s = rc.summary;
   if (test(s.current_theme ?? "")) return "summary.current_theme";
   for (const k of s.keywords ?? []) {
@@ -81,17 +64,18 @@ function scanSegments(
   return null;
 }
 
+/** 诊断用：不触发重发。 */
 export function findTimeAnchorLeak(rc: ReportComputed): string | null {
   return scanSegments(rc, (t) => TIME_ANCHOR_RE.test(t));
 }
 
-/** Layer-3: catch Ten-God compound abbreviations that Layer-2 did not expand. */
+/** 诊断用：不触发重发。 */
 export function findSimpLeak(rc: ReportComputed): string | null {
   return scanSegments(rc, (t) => SIMP_RE.test(t));
 }
 
 /**
- * 抽 JSON —— 强壮版(采纳朋友漏洞1):
+ * 抽 JSON —— 强壮版:
  * high 模型可能在 JSON 前吐思维链前缀,带 ^ 锚点的旧正则会失败。
  * 改成抓【最外层 { ... }】,忽略前后所有 Markdown/废话。
  */
@@ -112,8 +96,8 @@ export type RunComputeOptions = {
 
 /**
  * 第1次调用:真算 → ReportComputed。
- * 三层纵深：Prompt 约束 → 上下文简称清洗 → 正则拦简称/时间锚并同参重发。
- * 全失败→ error(不落库、不进第2/3次),由 orchestrate 决定提示重试。
+ * 黄金首生成优先：除空/截断/JSON 解析失败/结构 fatal 外一律不打回；
+ * 简称靠 sanitizer+【】平替；时间锚留给第3次输出端清洗。
  */
 export async function runCompute(
   structured: ProfileStructured,
@@ -159,15 +143,14 @@ export async function runCompute(
         let result;
         try {
           result = await openRouterChatCompletion({
-            // 不传 model —— 走内置候选池(与 v1 一致,无占位符、无非法 slug)
             messages: [
               { role: "system", content: system },
               { role: "user", content: user },
             ],
             temperature: 0.35,
             max_tokens: COMPUTE_MAX_TOKENS,
-            json_mode: true, // 强制 JSON(与 core_judgments 一致)
-            reasoning_effort: "high", // 三次调用全 high
+            json_mode: true,
+            reasoning_effort: "high",
             timeout_ms: COMPUTE_ATTEMPT_TIMEOUT_MS,
             session_id: opts.session_id,
             call_type: "v2_compute",
@@ -202,42 +185,34 @@ export async function runCompute(
         }
 
         const v = validateReportComputed(parsed);
-        if (!v.ok) {
+        let report: ReportComputed;
+        if (v.ok) {
+          report = v.value;
+        } else if (v.severity === "fatal") {
           lastReason = `schema_invalid:${v.reason}`;
-          const summary =
-            parsed && typeof parsed === "object"
-              ? (parsed as Record<string, unknown>).summary
-              : undefined;
           console.warn(
-            `[v2/compute] attempt ${attempt}/${MAX_ATTEMPTS} — 结构校验失败(${v.reason})，重发`,
-            { summary_preview: summary },
+            `[v2/compute] attempt ${attempt}/${MAX_ATTEMPTS} — 结构严重损坏(${v.reason})，重发`,
           );
           continue;
+        } else {
+          console.warn(
+            `[v2/compute] ℹ️ 个别段缺失(${v.reason}) — 占位补全,不打回`,
+          );
+          report = fillMissingSegments(parsed);
         }
 
-        // Layer-2: expand 官杀/食伤/比劫/印枭 using natal Ten-God context (0ms, $0)
-        const cleaned = sanitizeReportComputed(v.value, tenGodCtx);
+        // 黄金首生成：简称代码清洗；时间锚不在此打回（输出端第3次清）
+        const cleaned = sanitizeReportComputed(report, tenGodCtx);
 
-        const simpLeak = findSimpLeak(cleaned);
-        if (simpLeak) {
-          lastReason = `simp_leak:${simpLeak}`;
+        const simpResidue = findSimpLeak(cleaned);
+        if (simpResidue) {
           console.warn(
-            `[v2/compute] attempt ${attempt}/${MAX_ATTEMPTS} — 简称泄漏(${simpLeak})，重发`,
+            `[v2/compute] ℹ️ 清洗后简称残留(${simpResidue}) — 放行,不打回`,
           );
-          continue;
-        }
-
-        const timeLeak = findTimeAnchorLeak(cleaned);
-        if (timeLeak) {
-          lastReason = `time_anchor_leak:${timeLeak}`;
-          console.warn(
-            `[v2/compute] attempt ${attempt}/${MAX_ATTEMPTS} — 时间锚泄漏(${timeLeak})，重发`,
-          );
-          continue;
         }
 
         console.log(
-          `[v2/compute] ✅ ReportComputed 就绪 (attempt ${attempt}/${MAX_ATTEMPTS}, fell_back=${result.transport?.fell_back ?? false})`,
+          `[v2/compute] ✅ ReportComputed 就绪 (attempt ${attempt}/${MAX_ATTEMPTS}, 黄金首生成保留, fell_back=${result.transport?.fell_back ?? false})`,
         );
         return { ok: true, value: cleaned, attempts: attempt };
       } catch (e) {

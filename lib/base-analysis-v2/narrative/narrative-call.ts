@@ -1,9 +1,11 @@
 import {
   extractJson,
 } from "@/lib/base-analysis-v2/compute/compute-call";
+import { applyPlainFallbackToText } from "@/lib/base-analysis-v2/compute/plain-fallback-map";
 import { buildNarrativePrompt } from "@/lib/base-analysis-v2/narrative/narrative-prompt";
 import type { ReportComputed } from "@/lib/base-analysis-v2/report-schema";
 import {
+  fillMissingSegmentTexts,
   findSegmentText,
   mapSegmentTexts,
   validateSegmentKeys,
@@ -164,38 +166,34 @@ export async function runNarrative(
           continue;
         }
 
+        let tree: ReportSegmentTextTree;
         const keyErr = validateSegmentKeys(parsed, "narrative");
         if (keyErr) {
-          lastReason = `keys_invalid:${keyErr}`;
-          retryHint = locale.startsWith("zh")
-            ? `上一轮 key 结构不齐：${keyErr}。必须与输入 JSON 完全同 key，每个段落值为非空白话字符串。`
-            : `Previous key structure invalid: ${keyErr}. Mirror input keys; each segment must be a non-empty prose string.`;
           console.warn(
-            `[v2/narrative] attempt ${attempt}/${MAX_ATTEMPTS} — ${keyErr}，带纠错重发`,
+            `[v2/narrative] ℹ️ ${keyErr} — 占位补全,不打回`,
           );
-          continue;
+          tree = fillMissingSegmentTexts(parsed, "narrative", locale);
+        } else {
+          tree = parsed as ReportSegmentTextTree;
         }
 
-        const bodyLeak = findNarrativeBodyLeak(parsed, locale);
-        if (bodyLeak) {
-          lastReason = `body_leak:${bodyLeak}`;
-          retryHint = locale.startsWith("zh")
-            ? `上一轮的正文里出现了角引号「」或命理术语或术语标记，这是错的。正文必须是纯白话，一个命理词、一个「」、一个 ⟦t:⟧ 都不能有。详情：${bodyLeak}`
-            : `Previous body had corner quotes, metaphysics terms, or markers. Plain prose only. Detail: ${bodyLeak}`;
-          console.warn(
-            `[v2/narrative] attempt ${attempt}/${MAX_ATTEMPTS} — 正文泄漏，带纠错重发`,
-            { bodyLeak },
-          );
-          continue;
-        }
-
-        // 通过后走 v1 正文渲染准备（剥残留强调等）——校验已过，此处仅抛光
-        const polished = mapSegmentTexts(parsed as ReportSegmentTextTree, (seg) =>
+        // 不打回 —— 角引号/标记/命理词全部代码清洗后放行
+        let polished = mapSegmentTexts(tree, (seg) =>
           prepareBodyTextForGlossaryRender(seg, locale),
         );
+        polished = mapSegmentTexts(polished, (seg) =>
+          applyPlainFallbackToText(seg, { includeSingles: true }),
+        );
+
+        const bodyResidue = findNarrativeBodyLeak(polished, locale);
+        if (bodyResidue) {
+          console.warn(
+            `[v2/narrative] ℹ️ 清洗后正文残留(${bodyResidue}) — 放行,不打回`,
+          );
+        }
 
         console.log(
-          `[v2/narrative] ✅ 正文树就绪 (attempt ${attempt}/${MAX_ATTEMPTS}, fell_back=${result.transport?.fell_back ?? false})`,
+          `[v2/narrative] ✅ 正文树就绪 (attempt ${attempt}/${MAX_ATTEMPTS}, 首生成保留, fell_back=${result.transport?.fell_back ?? false})`,
         );
         return { ok: true, value: polished, attempts: attempt };
       } catch (e) {

@@ -101,3 +101,46 @@ export function findSegmentText(
   }
   return null;
 }
+
+/**
+ * 缺 key / 空段占位 —— 不打回，保住其余首生成段落。
+ */
+export function fillMissingSegmentTexts(
+  obj: unknown,
+  kind: "narrative" | "evidence",
+  locale: string,
+): ReportSegmentTextTree {
+  const zh = locale.startsWith("zh");
+  const placeholder =
+    kind === "narrative"
+      ? zh
+        ? "（本段内容暂缺。）"
+        : "(This section is temporarily unavailable.)"
+      : zh
+        ? "（本段依据暂缺。）"
+        : "(Evidence for this section is temporarily unavailable.)";
+
+  const root: Record<string, unknown> =
+    obj && typeof obj === "object" && !Array.isArray(obj)
+      ? structuredClone(obj as Record<string, unknown>)
+      : {};
+
+  for (const path of SEGMENT_PATHS) {
+    const parts = path.split(".");
+    let cur = root;
+    for (let i = 0; i < parts.length - 1; i++) {
+      const k = parts[i]!;
+      if (!cur[k] || typeof cur[k] !== "object" || Array.isArray(cur[k])) {
+        cur[k] = {};
+      }
+      cur = cur[k] as Record<string, unknown>;
+    }
+    const leaf = parts[parts.length - 1]!;
+    const v = cur[leaf];
+    if (typeof v !== "string" || !v.trim()) {
+      cur[leaf] = placeholder;
+    }
+  }
+
+  return root as unknown as ReportSegmentTextTree;
+}

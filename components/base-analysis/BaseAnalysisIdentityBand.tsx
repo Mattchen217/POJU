@@ -90,77 +90,88 @@ export function BaseAnalysisIdentityBand({
 
           <div className="topband__calibration">
             <div className="topband__calibration-grid">
-              <div className="tcard a tcard--nested">
+              <div className="tcard a tcard--nested tcard--cal-col">
                 <div className="k">
                   <span className="bull" />
                   {tc("calendar_alignment")} <em>· {tc("calendar_alignment_em")}</em>
                 </div>
-                <div className="v">
-                  {display.calendar.gregorian} <small>{tc("gregorian")}</small>
+                <div className="tcard__body">
+                  <div className="v">
+                    {display.calendar.gregorian} <small>{tc("gregorian")}</small>
+                  </div>
+                  <div className="s">{display.calendar.lunar || display.calendar.mid}</div>
                 </div>
-                <div className="mid">
-                  {display.calendar.headline}
-                  {genderLabel ? <span className="pem__gender-tag">{genderLabel}</span> : null}
+                <div className="tcard__foot">
+                  <div className="mid">
+                    {display.calendar.headline}
+                    {genderLabel ? <span className="pem__gender-tag">{genderLabel}</span> : null}
+                  </div>
                 </div>
-                <div className="s">{display.calendar.lunar || display.calendar.mid}</div>
               </div>
 
-              <div className="tcard a tcard--nested">
+              <div className="tcard a tcard--nested tcard--cal-col">
                 <div className="k">
                   <span className="bull" />
                   <SoftTermHover slug="tm_true_solar_time" locale={locale} />
                   <em>· {tc("true_solar_time_em")}</em>
                 </div>
-                {tst ? (
-                  <>
-                    <div className="tst">
-                      <div className="tst__times">
-                        <div className="t">
-                          <div className="vv">{tst.original_time}</div>
-                          <div className="kk">{tc("standard_time")}</div>
-                        </div>
-                        <div className="arr">→</div>
-                        <div className="t">
-                          <div className="vv gold">{tst.true_solar_time}</div>
-                          <div className="kk">
-                            <SoftTermHover slug="tm_true_solar_time" locale={locale} />
+                <div className="tcard__body">
+                  {tst ? (
+                    <>
+                      <div className="tst">
+                        <div className="tst__times">
+                          <div className="t">
+                            <div className="vv">{tst.original_time}</div>
+                            <div className="kk">{tc("standard_time")}</div>
+                          </div>
+                          <div className="arr">→</div>
+                          <div className="t">
+                            <div className="vv gold">{tst.true_solar_time}</div>
+                            <div className="kk">
+                              <SoftTermHover slug="tm_true_solar_time" locale={locale} />
+                            </div>
                           </div>
                         </div>
+                        {tst.diff_minutes !== 0 ? (
+                          <div className="tst__chip">
+                            {tst.diff_minutes > 0 ? "+" : "−"}
+                            {Math.abs(Number(tst.diff_minutes.toFixed(2)))}m
+                          </div>
+                        ) : null}
                       </div>
-                      {tst.diff_minutes !== 0 ? (
-                        <div className="tst__chip">
-                          {tst.diff_minutes > 0 ? "+" : "−"}
-                          {Math.abs(Number(tst.diff_minutes.toFixed(2)))}m
-                        </div>
-                      ) : null}
-                    </div>
-                    <div className="s">
-                      {tc("longitude_correction")} ·{" "}
-                      {tst.longitude_diff_minutes ?? tst.diff_minutes}m
-                      {tst.eq_of_time_minutes != null
-                        ? ` · ${tc("eq_of_time")} ${tst.eq_of_time_minutes > 0 ? "+" : ""}${tst.eq_of_time_minutes}m`
-                        : null}
-                    </div>
-                  </>
-                ) : (
-                  <div className="v">—</div>
-                )}
+                      <div className="s">
+                        {tc("longitude_correction")} ·{" "}
+                        {tst.longitude_diff_minutes ?? tst.diff_minutes}m
+                        {tst.eq_of_time_minutes != null
+                          ? ` · ${tc("eq_of_time")} ${tst.eq_of_time_minutes > 0 ? "+" : ""}${tst.eq_of_time_minutes}m`
+                          : null}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="v">—</div>
+                  )}
+                </div>
+                <div className="tcard__foot" aria-hidden="true" />
               </div>
 
-              <div className="tcard a tcard--nested">
+              <div className="tcard a tcard--nested tcard--cal-col">
                 <div className="k">
                   <span className="bull" />
                   {tc("solar_term")} <em>· {tc("solar_term_em")}</em>
                 </div>
-                <div className="v">
-                  {display.solar_term.name_en} <small>{display.solar_term.name}</small>
+                <div className="tcard__body">
+                  <div className="v">
+                    {display.solar_term.name_en} <small>{display.solar_term.name}</small>
+                  </div>
+                  <div className="mid mid--inline">{display.solar_term.season}</div>
+                  <div className="s">
+                    {tc("next_term")}: {display.solar_term.next_name}
+                  </div>
                 </div>
-                <div className="mid">{display.solar_term.season}</div>
-                <div className="s">
-                  {tc("next_term")}: {display.solar_term.next_name}
-                </div>
-                <div className="term">
-                  <i style={{ width: `${display.solar_term.progress_pct}%` }} />
+                <div className="tcard__foot">
+                  <div className="term">
+                    <i style={{ width: `${display.solar_term.progress_pct}%` }} />
+                  </div>
                 </div>
               </div>
             </div>

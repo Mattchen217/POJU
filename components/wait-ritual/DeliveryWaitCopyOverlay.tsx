@@ -123,10 +123,16 @@ export function DeliveryWaitCopyOverlay({
     ? t(`progress.${liveProgressStage}` as "progress.chart_ready")
     : t(steps[stepIndex % steps.length] as "bazi.steps.0");
 
+  // 底座 bazi 等待：去掉上方长段开场，只留实时状态 + 底部小字提示
+  const showValue = copyPhase !== "bazi" && valueShown;
+
   return (
     <PreparingStatusOverlay>
-      {valueShown ? <p className="delivery-wait-copy__value">{t(valueKey)}</p> : null}
-      <p key={statusLine} className="delivery-wait-copy__status">
+      {showValue ? <p className="delivery-wait-copy__value">{t(valueKey)}</p> : null}
+      <p
+        key={statusLine}
+        className="delivery-wait-copy__status delivery-wait-copy__status--breathe"
+      >
         {statusLine}
       </p>
       <p className="delivery-wait-copy__subtitle">{t(subtitleKey)}</p>
