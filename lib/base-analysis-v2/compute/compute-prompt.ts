@@ -35,7 +35,7 @@ export const REPORT_COMPUTED_JSON_SKELETON = `{
     "awareness": { "core_conclusion": "", "bazi_basis": [] }
   },
   "summary": {
-    "keywords": "",
+    "keywords": [],
     "current_theme": "",
     "dos": [],
     "donts": [],

@@ -78,10 +78,10 @@ export interface RetuneModule {
  * card_basis 是卡片底部【统一的核心依据折叠块】= 日主格局+核心用神喜神+阶段能量场特征。
  */
 export interface SummaryModule {
-  keywords: string; // 核心性格关键词
+  keywords: readonly string[]; // 核心性格关键词（2-4）
   current_theme: string; // 当下阶段主旋律(状态,非时间)
-  dos: readonly string[]; // Do's
-  donts: readonly string[]; // Don'ts
+  dos: readonly string[]; // Do's（正好 3）
+  donts: readonly string[]; // Don'ts（正好 3）
   card_basis: SegmentComputed; // 卡片底部统一折叠依据(双钥匙)
 }
 
@@ -189,10 +189,16 @@ export function validateReportComputed(
     return { ok: false, reason: "summary incomplete" };
   }
   const s = summary as Record<string, unknown>;
-  if (typeof s.keywords !== "string" || !s.keywords.trim()) {
+  if (!Array.isArray(s.keywords) || s.keywords.length === 0) {
     return { ok: false, reason: "summary incomplete" };
   }
   if (typeof s.current_theme !== "string" || !s.current_theme.trim()) {
+    return { ok: false, reason: "summary incomplete" };
+  }
+  if (!Array.isArray(s.dos) || s.dos.length === 0) {
+    return { ok: false, reason: "summary incomplete" };
+  }
+  if (!Array.isArray(s.donts) || s.donts.length === 0) {
     return { ok: false, reason: "summary incomplete" };
   }
 

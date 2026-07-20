@@ -53,7 +53,7 @@ function buildGood(): ReportComputed {
       awareness: emptySeg(),
     },
     summary: {
-      keywords: "focus, depth",
+      keywords: ["focus", "depth"],
       current_theme: "settling before expansion",
       dos: ["deep work blocks"],
       donts: ["scatter across too many fronts"],
@@ -91,7 +91,10 @@ emptyBasis.interpersonal.synergy = { core_conclusion: "ok", bazi_basis: [] };
 assert("空 bazi_basis 被拦", validateReportComputed(emptyBasis).ok === false);
 
 const incompleteSummary = structuredClone(good) as ReportComputed;
-incompleteSummary.summary.keywords = "";
+incompleteSummary.summary = {
+  ...incompleteSummary.summary,
+  keywords: [],
+};
 assert("summary 缺 keywords 被拦", validateReportComputed(incompleteSummary).ok === false);
 
 // Skeleton field names must match SEGMENT_PATHS + summary top-level keys
@@ -108,7 +111,7 @@ for (const path of SEGMENT_PATHS) {
   );
 }
 const summary = skeleton.summary as Record<string, unknown> | undefined;
-assert("骨架含 summary.keywords", typeof summary?.keywords === "string");
+assert("骨架含 summary.keywords", Array.isArray(summary?.keywords));
 assert("骨架含 summary.current_theme", typeof summary?.current_theme === "string");
 assert("骨架含 summary.dos", Array.isArray(summary?.dos));
 assert("骨架含 summary.donts", Array.isArray(summary?.donts));
