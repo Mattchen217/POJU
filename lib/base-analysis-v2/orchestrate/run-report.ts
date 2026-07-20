@@ -134,10 +134,12 @@ export function mergeToMarkdown(
         continue;
       }
       const body = seg(narrative, path).trim();
-      const ev = seg(evidence, path).trim();
+      // 依据内多空行压成单换行，保证与 lead 同 chunk，避免被 parser 拆成「下一段正文」误吞。
+      const ev = seg(evidence, path).trim().replace(/\n{2,}/g, "\n");
       // 正文与依据块之间用 \n\n 分段（parseReadingBlocks 按空行切块）；
       // 标签与依据正文之间只单换行，避免金字漏出折叠。
-      parts.push(body);
+      // 每段 = 正文 + 该段依据（顺序 1:1；前端 dualLayer 同容器配对）。
+      if (body) parts.push(body);
       parts.push(`${lead}\n${ev}`);
     }
   }

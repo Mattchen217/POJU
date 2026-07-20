@@ -105,7 +105,7 @@
 
 .delivery-wait-copy__status {
   margin: 0 0 0.75rem;
-  font-size: clamp(14px, 2.2vw, 17px);
+  font-size: clamp(16px, 2.6vw, 20px);
   line-height: 1.5;
   color: rgba(255, 255, 255, 0.88);
   font-weight: 400;
@@ -139,8 +139,8 @@
 
 .delivery-wait-copy__subtitle {
   margin: 0 auto;
-  max-width: clamp(280px, 70vw, 420px);
-  font-size: clamp(11px, 1.8vw, 13px);
+  max-width: clamp(300px, 72vw, 480px);
+  font-size: clamp(13px, 2.2vw, 15px);
   line-height: 1.55;
   color: rgba(255, 255, 255, 0.52);
   font-weight: 400;

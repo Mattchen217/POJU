@@ -172,7 +172,7 @@ export function RichReadingText({
     );
   }
 
-  const nodes: ReactNode[] = blocks.map((block, i) => {
+  const renderBlock = (block: (typeof blocks)[number], i: number): ReactNode => {
     const keyBase = i * 10;
     switch (block.type) {
       case "h2":
@@ -302,7 +302,60 @@ export function RichReadingText({
         ));
       }
     }
-  });
+  };
+
+  /**
+   * dualLayer：把「正文块… + 紧随的依据 lead」装进同一子容器，1:1 交错，
+   * 避免正文/依据分两个独立循环导致漏段后整体错位。
+   */
+  const nodes: ReactNode[] = (() => {
+    if (!dualLayer) {
+      return blocks.map((block, i) => renderBlock(block, i));
+    }
+    const out: ReactNode[] = [];
+    let i = 0;
+    let segIdx = 0;
+    while (i < blocks.length) {
+      const b = blocks[i]!;
+      if (b.type === "h2" || b.type === "h3" || b.type === "divider") {
+        out.push(renderBlock(b, i));
+        i += 1;
+        continue;
+      }
+      if (b.type === "lead" && isEvidenceLeadLabel(b.label)) {
+        // 孤立依据（前无正文）仍单独渲染
+        out.push(renderBlock(b, i));
+        i += 1;
+        continue;
+      }
+      const start = i;
+      const bodyParts: ReactNode[] = [];
+      while (i < blocks.length) {
+        const cur = blocks[i]!;
+        if (cur.type === "h2" || cur.type === "h3" || cur.type === "divider") break;
+        if (cur.type === "lead" && isEvidenceLeadLabel(cur.label)) break;
+        bodyParts.push(renderBlock(cur, i));
+        i += 1;
+      }
+      let evidenceNode: ReactNode = null;
+      if (
+        i < blocks.length &&
+        blocks[i]!.type === "lead" &&
+        isEvidenceLeadLabel((blocks[i] as { type: "lead"; label: string }).label)
+      ) {
+        evidenceNode = renderBlock(blocks[i]!, i);
+        i += 1;
+      }
+      out.push(
+        <div key={`seg-${segIdx}-${start}`} className="reading-segment">
+          {bodyParts}
+          {evidenceNode}
+        </div>,
+      );
+      segIdx += 1;
+    }
+    return out;
+  })();
 
   return (
     <div className={cn("reading-body", variant === "poem" && "reading-body--poem", className)}>

@@ -2,18 +2,32 @@
  * Offline guards for v2 narrative + evidence (no OpenRouter).
  *   pnpm exec tsx scripts/test-v2-narrative-evidence-guards.ts
  */
-import { findNarrativeBodyLeak } from "@/lib/base-analysis-v2/narrative/narrative-call";
-import { extractConclusions, buildNarrativePrompt } from "@/lib/base-analysis-v2/narrative/narrative-prompt";
+import {
+  findNarrativeBodyLeak,
+  NARRATIVE_TASKS,
+  fillFromComputeIfMissing,
+  mergeTaskTrees,
+} from "@/lib/base-analysis-v2/narrative/narrative-call";
+import {
+  extractConclusions,
+  buildNarrativePrompt,
+  pickConclusions,
+} from "@/lib/base-analysis-v2/narrative/narrative-prompt";
 import {
   findEvidenceLeak,
   polishEvidenceSegment,
 } from "@/lib/base-analysis-v2/evidence/evidence-call";
 import { buildEvidencePrompt } from "@/lib/base-analysis-v2/evidence/evidence-prompt";
-import type { ReportComputed, SegmentComputed } from "@/lib/base-analysis-v2/report-schema";
+import {
+  SEGMENT_PATHS,
+  type ReportComputed,
+  type SegmentComputed,
+} from "@/lib/base-analysis-v2/report-schema";
 import {
   validateSegmentKeys,
   type ReportSegmentTextTree,
 } from "@/lib/base-analysis-v2/segment-text";
+import { parseReadingBlocks, isEvidenceLeadLabel } from "@/lib/reading/parse-reading-blocks";
 
 const failures: string[] = [];
 const assert = (label: string, ok: boolean) => {
@@ -82,13 +96,20 @@ function fillTree(text: string): ReportSegmentTextTree {
   return walk(conclusions) as ReportSegmentTextTree;
 }
 
-// —— extractConclusions: 去掉 bazi_basis ——
+// —— extractConclusions: 只 SEGMENT_PATHS，去掉 bazi_basis / dos / keywords ——
 {
   const c = extractConclusions(buildRc());
   const dm = (c.energy_map as Record<string, unknown>).day_master_nature;
   assert("结论树是字符串(非对象)", typeof dm === "string");
   assert("结论树不含 bazi_basis 字面", !JSON.stringify(c).includes("bazi_basis"));
-  assert("结论树保留 summary.keywords", Array.isArray((c.summary as Record<string, unknown>).keywords));
+  assert(
+    "结论树不含 keywords（不经第2次）",
+    !JSON.stringify(c).includes("keywords"),
+  );
+  assert(
+    "结论树不含 dos/donts",
+    !JSON.stringify(c).includes('"dos"') && !JSON.stringify(c).includes('"donts"'),
+  );
   assert(
     "card_basis 已压成字符串",
     typeof (c.summary as Record<string, unknown>).card_basis === "string",
@@ -166,12 +187,18 @@ function fillTree(text: string): ReportSegmentTextTree {
 
 // —— prompts: slug 空槽 + 结论不含 basis ——
 {
-  const np = buildNarrativePrompt(buildRc(), "zh");
+  const conclusions = extractConclusions(buildRc());
+  const np = buildNarrativePrompt(conclusions, "zh");
   assert("narrative system 禁角引号", np.system.includes("「」"));
+  assert(
+    "narrative system 纠正术语假设",
+    np.system.includes("可能包含命理术语"),
+  );
   assert("narrative user 无 bazi_basis", !np.user.includes("bazi_basis"));
+  assert("narrative user 无 dos 数组", !np.user.includes('"dos"'));
   assert(
     "narrative retryHint 拼入 user",
-    buildNarrativePrompt(buildRc(), "zh", "测试纠错").user.includes("测试纠错"),
+    buildNarrativePrompt(conclusions, "zh", "测试纠错").user.includes("测试纠错"),
   );
 
   const ep = buildEvidencePrompt(buildRc(), "zh");
@@ -181,6 +208,80 @@ function fillTree(text: string): ReportSegmentTextTree {
   assert(
     "evidence retryHint 拼入 user",
     buildEvidencePrompt(buildRc(), "zh", "依据纠错").user.includes("依据纠错"),
+  );
+}
+
+// —— 4 Task 分组：19 段无遗漏无重叠 ——
+{
+  const all = NARRATIVE_TASKS.flatMap((t) => [...t.paths]);
+  assert("4 Task", NARRATIVE_TASKS.length === 4);
+  assert("合计 19 段", all.length === 19);
+  assert(
+    "与 SEGMENT_PATHS 一致",
+    all.length === SEGMENT_PATHS.length &&
+      SEGMENT_PATHS.every((p) => all.includes(p)),
+  );
+  assert("无重复", new Set(all).size === all.length);
+  assert(
+    "Task sizes 4+6+4+5",
+    NARRATIVE_TASKS.map((t) => t.paths.length).join(",") === "4,6,4,5",
+  );
+  const pick = pickConclusions(buildRc(), NARRATIVE_TASKS[0]!.paths);
+  assert(
+    "pickConclusions 只含 energy_map",
+    Object.keys(pick).length === 1 && "energy_map" in pick,
+  );
+}
+
+// —— 合并缺段用 core_conclusion 兜底 ——
+{
+  const rc = buildRc();
+  const partial = mergeTaskTrees([
+    {
+      energy_map: {
+        day_master_nature: "扩写后的日主正文",
+      },
+    },
+  ]);
+  const filled = fillFromComputeIfMissing(partial, rc, "zh");
+  assert(
+    "已有段保留",
+    filled.energy_map.day_master_nature === "扩写后的日主正文",
+  );
+  assert(
+    "缺段用 core_conclusion",
+    filled.work_style.value_creation === "靠独立专业输出",
+  );
+  assert(
+    "不是暂缺废话",
+    !filled.work_style.value_creation.includes("暂缺"),
+  );
+}
+
+// —— 前端 1:1：依据不吞下一段正文 ——
+{
+  const md = [
+    "你偏沉稳内敛，做事不急。",
+    "",
+    "**依据与推理:**",
+    "因 ⟦t:day_master|⟧ 偏稳。",
+    "",
+    "五行里火最旺，整体偏旺。",
+    "",
+    "**依据与推理:**",
+    "因 ⟦t:wuxing|⟧ 火旺。",
+  ].join("\n");
+  const blocks = parseReadingBlocks(md, { layout: false });
+  const ps = blocks.filter((b) => b.type === "p");
+  const leads = blocks.filter(
+    (b) => b.type === "lead" && isEvidenceLeadLabel(b.label),
+  );
+  assert("两段正文都在", ps.length === 2);
+  assert("两段依据都在", leads.length === 2);
+  assert(
+    "第一段依据未吞第二段正文",
+    leads[0]!.type === "lead" &&
+      !leads[0]!.body.includes("五行里火最旺"),
   );
 }
 

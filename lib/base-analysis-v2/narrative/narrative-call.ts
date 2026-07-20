@@ -2,13 +2,19 @@ import {
   extractJson,
 } from "@/lib/base-analysis-v2/compute/compute-call";
 import { applyPlainFallbackToText } from "@/lib/base-analysis-v2/compute/plain-fallback-map";
-import { buildNarrativePrompt } from "@/lib/base-analysis-v2/narrative/narrative-prompt";
-import type { ReportComputed } from "@/lib/base-analysis-v2/report-schema";
 import {
-  fillMissingSegmentTexts,
+  buildNarrativePrompt,
+  pickConclusions,
+} from "@/lib/base-analysis-v2/narrative/narrative-prompt";
+import {
+  SEGMENT_PATHS,
+  type ReportComputed,
+  type SegmentComputed,
+} from "@/lib/base-analysis-v2/report-schema";
+import {
   findSegmentText,
   mapSegmentTexts,
-  validateSegmentKeys,
+  readPath,
   type ReportSegmentTextTree,
 } from "@/lib/base-analysis-v2/segment-text";
 import {
@@ -18,10 +24,12 @@ import {
 import { prepareBodyTextForGlossaryRender } from "@/lib/llm/sanitize/compliance-terms";
 import { bareMingliWordInPlain } from "@/lib/llm/sanitize/term-marking";
 
-const NARRATIVE_MAX_TOKENS = 12_000;
+/** 单 Task 4–6 段，远小于此；给足防截断。 */
+const NARRATIVE_TASK_MAX_TOKENS = 4096;
+const NARRATIVE_TEMPERATURE = 0.65;
 const MAX_ATTEMPTS = 3;
-const ATTEMPT_TIMEOUT_MS = 270_000;
-const TOTAL_TIMEOUT_MS = 900_000;
+const ATTEMPT_TIMEOUT_MS = 180_000;
+const TOTAL_TIMEOUT_MS = 300_000;
 
 const CORNER_QUOTE_RE = /「[^「」]{1,40}」/;
 
@@ -33,6 +41,102 @@ export type RunNarrativeOptions = {
   session_id?: string;
   signal?: AbortSignal;
 };
+
+type NarrativeTask = { name: string; paths: readonly string[] };
+
+function pathsOf(prefix: string): string[] {
+  return SEGMENT_PATHS.filter((p) => p.startsWith(`${prefix}.`));
+}
+
+/**
+ * 业务模块分组（按 SECTION_LAYOUT，4 Task）
+ * Task1 energy_map(4) · Task2 work+interpersonal(6) · Task3 phase(4) · Task4 retune+card(5)
+ * = 19，无遗漏无重叠；keywords/dos/donts 不进任何 Task。
+ */
+export const NARRATIVE_TASKS: readonly NarrativeTask[] = [
+  { name: "energy_map", paths: pathsOf("energy_map") },
+  {
+    name: "work_interpersonal",
+    paths: [...pathsOf("work_style"), ...pathsOf("interpersonal")],
+  },
+  { name: "phase_states", paths: pathsOf("phase_states") },
+  {
+    name: "retune_card",
+    paths: [...pathsOf("retune"), "summary.card_basis"],
+  },
+] as const;
+
+/** 校验指定 paths 是否都有非空字符串（单 Task 用）。 */
+export function validateTaskPaths(
+  obj: unknown,
+  paths: readonly string[],
+  taskName: string,
+): string | null {
+  if (!obj || typeof obj !== "object") {
+    return `narrative/${taskName}: not an object`;
+  }
+  for (const path of paths) {
+    const v = readPath(obj, path);
+    if (typeof v !== "string" || !v.trim()) {
+      return `narrative/${taskName}: missing/empty: ${path}`;
+    }
+  }
+  return null;
+}
+
+function setPath(obj: Record<string, unknown>, path: string, value: unknown): void {
+  const parts = path.split(".");
+  let cur = obj;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const k = parts[i]!;
+    if (!cur[k] || typeof cur[k] !== "object" || Array.isArray(cur[k])) {
+      cur[k] = {};
+    }
+    cur = cur[k] as Record<string, unknown>;
+  }
+  cur[parts[parts.length - 1]!] = value;
+}
+
+/** 深合并多个 Task 树（后写覆盖前写同路径）。 */
+export function mergeTaskTrees(
+  trees: readonly Record<string, unknown>[],
+): ReportSegmentTextTree {
+  const out: Record<string, unknown> = {};
+  for (const tree of trees) {
+    for (const path of SEGMENT_PATHS) {
+      const v = readPath(tree, path);
+      if (typeof v === "string" && v.trim()) {
+        setPath(out, path, v);
+      }
+    }
+  }
+  return out as unknown as ReportSegmentTextTree;
+}
+
+/**
+ * 合并后缺段 → 用第1次 core_conclusion 兜底（真内容），不填「暂缺」废话。
+ */
+export function fillFromComputeIfMissing(
+  merged: ReportSegmentTextTree,
+  rc: ReportComputed,
+  locale: string,
+): ReportSegmentTextTree {
+  const root = structuredClone(merged) as unknown as Record<string, unknown>;
+  const zh = locale.startsWith("zh");
+  for (const path of SEGMENT_PATHS) {
+    const v = readPath(root, path);
+    if (typeof v === "string" && v.trim()) continue;
+    const seg = readPath(rc, path) as SegmentComputed | undefined;
+    const fallback =
+      typeof seg?.core_conclusion === "string" && seg.core_conclusion.trim()
+        ? seg.core_conclusion.trim()
+        : zh
+          ? "（本段内容暂缺。）"
+          : "(This section is temporarily unavailable.)";
+    setPath(root, path, fallback);
+  }
+  return root as unknown as ReportSegmentTextTree;
+}
 
 /**
  * 第2次正文校验：零标记 / 零角引号 / 零裸命理词。
@@ -71,9 +175,145 @@ export function findNarrativeBodyLeak(
   return null;
 }
 
+function polishNarrativeTree(
+  tree: ReportSegmentTextTree,
+  locale: string,
+): ReportSegmentTextTree {
+  let polished = mapSegmentTexts(tree, (seg) =>
+    prepareBodyTextForGlossaryRender(seg, locale),
+  );
+  polished = mapSegmentTexts(polished, (seg) =>
+    applyPlainFallbackToText(seg, { includeSingles: true }),
+  );
+  return polished;
+}
+
 /**
- * 第2次调用：消费钥匙A → 白话正文树。
- * 概率性失败无感重发；确定性失败（结构/角引号/命理词/标记）带 ErrorMessage 重发。
+ * 单 Task：只喂这几段的 core_conclusion，输出这几段白话。
+ * 只留真失败重试；角引号/术语 → 代码清洗放行。
+ */
+async function runNarrativeTask(
+  task: NarrativeTask,
+  rc: ReportComputed,
+  locale: string,
+  opts: {
+    session_id?: string;
+    signal: AbortSignal;
+    deadline: number;
+  },
+): Promise<{ ok: true; value: Record<string, unknown>; attempts: number } | { ok: false; reason: string; attempts: number }> {
+  let lastReason = "unknown";
+  let retryHint: string | null = null;
+  const subset = pickConclusions(rc, task.paths);
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    if (Date.now() > opts.deadline || opts.signal.aborted) {
+      lastReason = "total_timeout";
+      console.warn(
+        `[v2/narrative/${task.name}] 总超时用尽(attempt ${attempt}/${MAX_ATTEMPTS})`,
+      );
+      break;
+    }
+
+    const { system, user } = buildNarrativePrompt(subset, locale, retryHint);
+
+    try {
+      const attemptStartedAt = Date.now();
+      const heartbeat = setInterval(() => {
+        const sec = Math.round((Date.now() - attemptStartedAt) / 1000);
+        console.warn(
+          `[v2/narrative/${task.name}] attempt ${attempt}/${MAX_ATTEMPTS} — still waiting (${sec}s)…`,
+        );
+      }, 30_000);
+
+      let result;
+      try {
+        result = await openRouterChatCompletion({
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: user },
+          ],
+          temperature: NARRATIVE_TEMPERATURE,
+          max_tokens: NARRATIVE_TASK_MAX_TOKENS,
+          json_mode: true,
+          reasoning_effort: "high",
+          timeout_ms: ATTEMPT_TIMEOUT_MS,
+          session_id: opts.session_id,
+          call_type: "v2_narrative",
+          phase_name: `v2_narrative_${task.name}`,
+          signal: opts.signal,
+        });
+      } finally {
+        clearInterval(heartbeat);
+      }
+
+      const text = result.text ?? "";
+      if (!text.trim()) {
+        lastReason = "empty_response";
+        retryHint = null;
+        console.warn(
+          `[v2/narrative/${task.name}] attempt ${attempt}/${MAX_ATTEMPTS} — 空回复，重发`,
+        );
+        continue;
+      }
+      if (result.finish_reason === "length") {
+        lastReason = "truncated";
+        retryHint = null;
+        console.warn(
+          `[v2/narrative/${task.name}] attempt ${attempt}/${MAX_ATTEMPTS} — finish_reason=length，重发`,
+        );
+        continue;
+      }
+
+      let parsed: unknown;
+      try {
+        parsed = extractJson(text);
+      } catch {
+        lastReason = "json_parse_failed";
+        retryHint = null;
+        console.warn(
+          `[v2/narrative/${task.name}] attempt ${attempt}/${MAX_ATTEMPTS} — JSON 解析失败，重发`,
+        );
+        continue;
+      }
+
+      const keyErr = validateTaskPaths(parsed, task.paths, task.name);
+      if (keyErr) {
+        // 软缺：保留已有段，缺的不在这里补（合并后再用 core_conclusion 兜底）
+        console.warn(`[v2/narrative/${task.name}] ℹ️ ${keyErr} — 保留已出段,合并后兜底`);
+      }
+
+      const partial = parsed as Record<string, unknown>;
+      console.log(
+        `[v2/narrative/${task.name}] ✅ Task 就绪 (attempt ${attempt}/${MAX_ATTEMPTS}, fell_back=${result.transport?.fell_back ?? false})`,
+      );
+      return { ok: true, value: partial, attempts: attempt };
+    } catch (e) {
+      if (isEmptyResponseError(e)) {
+        lastReason = "openrouter_empty";
+        retryHint = null;
+        console.warn(
+          `[v2/narrative/${task.name}] attempt ${attempt}/${MAX_ATTEMPTS} — openrouter 空，重发`,
+        );
+        continue;
+      }
+      lastReason = `call_error:${e instanceof Error ? e.message : String(e)}`;
+      retryHint = null;
+      console.warn(
+        `[v2/narrative/${task.name}] attempt ${attempt}/${MAX_ATTEMPTS} — 调用异常(${lastReason})，重发`,
+      );
+      continue;
+    }
+  }
+
+  console.error(
+    `[v2/narrative/${task.name}] ❌ ${MAX_ATTEMPTS} 次用尽，最后原因：${lastReason}`,
+  );
+  return { ok: false, reason: lastReason, attempts: MAX_ATTEMPTS };
+}
+
+/**
+ * 第2次调用：4 Task 并发扩写 → 合并 → core_conclusion 兜底缺段 → 代码清洗。
  */
 export async function runNarrative(
   rc: ReportComputed,
@@ -84,9 +324,6 @@ export async function runNarrative(
     typeof session_idOrOpts === "string" || session_idOrOpts === undefined
       ? { session_id: session_idOrOpts }
       : session_idOrOpts;
-
-  let lastReason = "unknown";
-  let retryHint: string | null = null;
 
   const ctrl = new AbortController();
   const timer = setTimeout(
@@ -99,122 +336,44 @@ export async function runNarrative(
   const deadline = Date.now() + TOTAL_TIMEOUT_MS;
 
   try {
-    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-      if (Date.now() > deadline || ctrl.signal.aborted) {
-        lastReason = "total_timeout";
-        console.warn(
-          `[v2/narrative] 总超时用尽(attempt ${attempt}/${MAX_ATTEMPTS})—— 停止重发。`,
-        );
-        break;
-      }
+    const results = await Promise.all(
+      NARRATIVE_TASKS.map((t) =>
+        runNarrativeTask(t, rc, locale, {
+          session_id: opts.session_id,
+          signal: ctrl.signal,
+          deadline,
+        }),
+      ),
+    );
 
-      const { system, user } = buildNarrativePrompt(rc, locale, retryHint);
-
-      try {
-        const attemptStartedAt = Date.now();
-        const heartbeat = setInterval(() => {
-          const sec = Math.round((Date.now() - attemptStartedAt) / 1000);
-          console.warn(
-            `[v2/narrative] attempt ${attempt}/${MAX_ATTEMPTS} — still waiting on OpenRouter (${sec}s)…`,
-          );
-        }, 30_000);
-
-        let result;
-        try {
-          result = await openRouterChatCompletion({
-            messages: [
-              { role: "system", content: system },
-              { role: "user", content: user },
-            ],
-            temperature: 0.45,
-            max_tokens: NARRATIVE_MAX_TOKENS,
-            json_mode: true,
-            reasoning_effort: "high",
-            timeout_ms: ATTEMPT_TIMEOUT_MS,
-            session_id: opts.session_id,
-            call_type: "v2_narrative",
-            phase_name: "v2_narrative_high",
-            signal: ctrl.signal,
-          });
-        } finally {
-          clearInterval(heartbeat);
-        }
-
-        const text = result.text ?? "";
-        if (!text.trim()) {
-          lastReason = "empty_response";
-          retryHint = null; // 概率性：无感重发
-          console.warn(`[v2/narrative] attempt ${attempt}/${MAX_ATTEMPTS} — 空回复，重发`);
-          continue;
-        }
-        if (result.finish_reason === "length") {
-          lastReason = "truncated";
-          retryHint = null;
-          console.warn(
-            `[v2/narrative] attempt ${attempt}/${MAX_ATTEMPTS} — finish_reason=length，重发`,
-          );
-          continue;
-        }
-
-        let parsed: unknown;
-        try {
-          parsed = extractJson(text);
-        } catch {
-          lastReason = "json_parse_failed";
-          retryHint = null;
-          console.warn(`[v2/narrative] attempt ${attempt}/${MAX_ATTEMPTS} — JSON 解析失败，重发`);
-          continue;
-        }
-
-        let tree: ReportSegmentTextTree;
-        const keyErr = validateSegmentKeys(parsed, "narrative");
-        if (keyErr) {
-          console.warn(
-            `[v2/narrative] ℹ️ ${keyErr} — 占位补全,不打回`,
-          );
-          tree = fillMissingSegmentTexts(parsed, "narrative", locale);
-        } else {
-          tree = parsed as ReportSegmentTextTree;
-        }
-
-        // 不打回 —— 角引号/标记/命理词全部代码清洗后放行
-        let polished = mapSegmentTexts(tree, (seg) =>
-          prepareBodyTextForGlossaryRender(seg, locale),
-        );
-        polished = mapSegmentTexts(polished, (seg) =>
-          applyPlainFallbackToText(seg, { includeSingles: true }),
-        );
-
-        const bodyResidue = findNarrativeBodyLeak(polished, locale);
-        if (bodyResidue) {
-          console.warn(
-            `[v2/narrative] ℹ️ 清洗后正文残留(${bodyResidue}) — 放行,不打回`,
-          );
-        }
-
-        console.log(
-          `[v2/narrative] ✅ 正文树就绪 (attempt ${attempt}/${MAX_ATTEMPTS}, 首生成保留, fell_back=${result.transport?.fell_back ?? false})`,
-        );
-        return { ok: true, value: polished, attempts: attempt };
-      } catch (e) {
-        if (isEmptyResponseError(e)) {
-          lastReason = "openrouter_empty";
-          retryHint = null;
-          console.warn(`[v2/narrative] attempt ${attempt}/${MAX_ATTEMPTS} — openrouter 空，重发`);
-          continue;
-        }
-        lastReason = `call_error:${e instanceof Error ? e.message : String(e)}`;
-        retryHint = null;
-        console.warn(
-          `[v2/narrative] attempt ${attempt}/${MAX_ATTEMPTS} — 调用异常(${lastReason})，重发`,
-        );
-        continue;
-      }
+    const failed = results.filter((r) => !r.ok);
+    if (failed.length === results.length) {
+      const reason = failed.map((f) => (!f.ok ? f.reason : "")).join(";");
+      console.error(`[v2/narrative] ❌ 全部 Task 失败：${reason}`);
+      return { ok: false, reason: reason || "all_tasks_failed", attempts: MAX_ATTEMPTS };
     }
+
+    const trees = results
+      .filter((r): r is { ok: true; value: Record<string, unknown>; attempts: number } => r.ok)
+      .map((r) => r.value);
+    const merged = mergeTaskTrees(trees);
+    const filled = fillFromComputeIfMissing(merged, rc, locale);
+    const polished = polishNarrativeTree(filled, locale);
+
+    const bodyResidue = findNarrativeBodyLeak(polished, locale);
+    if (bodyResidue) {
+      console.warn(
+        `[v2/narrative] ℹ️ 清洗后正文残留(${bodyResidue}) — 放行,不打回`,
+      );
+    }
+
+    const attempts = Math.max(...results.map((r) => r.attempts), 1);
+    const okCount = results.filter((r) => r.ok).length;
+    console.log(
+      `[v2/narrative] ✅ 正文树就绪 (${okCount}/${NARRATIVE_TASKS.length} tasks ok, attempts_max=${attempts})`,
+    );
+    return { ok: true, value: polished, attempts };
   } finally {
     clearTimeout(timer);
   }
-
-  console.error(`[v2/narrative] ❌ ${MAX_ATTEMPTS} 次用尽，最后原因：${lastReason}`);
-  return { ok: false, reason: lastReason, attempts: MAX_ATTEMPTS };
 }

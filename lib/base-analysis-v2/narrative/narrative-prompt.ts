@@ -1,22 +1,27 @@
-import type { ReportComputed, SegmentComputed } from "@/lib/base-analysis-v2/report-schema";
+import {
+  SEGMENT_PATHS,
+  type ReportComputed,
+  type SegmentComputed,
+} from "@/lib/base-analysis-v2/report-schema";
+import { readPath } from "@/lib/base-analysis-v2/segment-text";
 
 /**
  * 第2次·写正文。只拿钥匙A(core_conclusion)扩成白话——不碰命理真词、不打标。
- * 每段:一个 core_conclusion → 一段通顺、温暖、SaaS 化的白话。
+ * 输入可能含术语；正文必须重新翻译成纯白话。
+ *
+ * @param conclusions 本 Task 的结论子集（几段的 nested tree），不是整份 ReportComputed
  */
 export function buildNarrativePrompt(
-  rc: ReportComputed,
+  conclusions: Record<string, unknown>,
   locale: string,
   retryHint?: string | null,
 ): { system: string; user: string } {
   const zh = locale.startsWith("zh");
   const system = zh ? NARRATIVE_SYSTEM_ZH : NARRATIVE_SYSTEM_EN;
-  // 只把每段的 core_conclusion 喂给第2次(不给 bazi_basis —— 正文不需要真词)
-  const conclusions = extractConclusions(rc);
   const payload = JSON.stringify(conclusions, null, 2);
   let user = zh
-    ? `以下是这份报告每一段【已经算好的核心结论】（JSON）。请逐段把结论扩写成通顺易懂的白话正文。\n\`\`\`json\n${payload}\n\`\`\``
-    : `Below are the pre-computed core conclusions per segment (JSON). Expand each into fluent plain-language prose.\n\`\`\`json\n${payload}\n\`\`\``;
+    ? `以下是这份报告若干段【已经算好的核心结论】（JSON）。请把每一段结论扩写成通顺易懂的白话正文；输出 JSON 必须包含输入里的【所有】key，不得省略。\n\`\`\`json\n${payload}\n\`\`\``
+    : `Below are pre-computed core conclusions for several segments (JSON). Expand each into fluent plain-language prose. Your JSON MUST include every key from the input — do not omit any.\n\`\`\`json\n${payload}\n\`\`\``;
   if (retryHint?.trim()) {
     user += zh
       ? `\n\n【纠错 · 上一轮失败原因】\n${retryHint.trim()}\n请按此重写，只输出 JSON。`
@@ -25,63 +30,125 @@ export function buildNarrativePrompt(
   return { system, user };
 }
 
-/** 抽每段 core_conclusion(去掉 bazi_basis) —— 正文调用不该看到命理真词,避免它抄进正文。 */
+function setPath(obj: Record<string, unknown>, path: string, value: unknown): void {
+  const parts = path.split(".");
+  let cur = obj;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const k = parts[i]!;
+    if (!cur[k] || typeof cur[k] !== "object" || Array.isArray(cur[k])) {
+      cur[k] = {};
+    }
+    cur = cur[k] as Record<string, unknown>;
+  }
+  cur[parts[parts.length - 1]!] = value;
+}
+
+/**
+ * 只抽 SEGMENT_PATHS（带双钥匙的 19 段，含 summary.card_basis）的 core_conclusion。
+ * keywords/dos/donts/current_theme 不在 SEGMENT_PATHS → 天然不喂给正文调用，
+ * 它们由 rc 直接渲染，不经第2次改写。
+ */
 export function extractConclusions(rc: ReportComputed): Record<string, unknown> {
-  const walk = (o: unknown): unknown => {
-    if (o && typeof o === "object" && !Array.isArray(o) && "core_conclusion" in o) {
-      return (o as SegmentComputed).core_conclusion;
+  const out: Record<string, unknown> = {};
+  for (const path of SEGMENT_PATHS) {
+    const seg = readPath(rc, path);
+    if (seg && typeof seg === "object" && "core_conclusion" in seg) {
+      setPath(out, path, (seg as SegmentComputed).core_conclusion);
     }
-    if (Array.isArray(o)) return o.map(walk);
-    if (o && typeof o === "object") {
-      const out: Record<string, unknown> = {};
-      for (const k of Object.keys(o as object)) {
-        out[k] = walk((o as Record<string, unknown>)[k]);
-      }
-      return out;
+  }
+  return out;
+}
+
+/** 只抽指定 paths 的 core_conclusion（单 Task 用）。 */
+export function pickConclusions(
+  rc: ReportComputed,
+  paths: readonly string[],
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const path of paths) {
+    const seg = readPath(rc, path);
+    if (seg && typeof seg === "object" && "core_conclusion" in seg) {
+      setPath(out, path, (seg as SegmentComputed).core_conclusion);
     }
-    return o;
-  };
-  return walk(rc) as Record<string, unknown>;
+  }
+  return out;
 }
 
 const NARRATIVE_SYSTEM_ZH = `# 你是谁
 
-你是一位很会说人话的性格分析写作者。有人已经把一个人的能量分析【算好了】，
-每一段给了你一句"核心结论"。你的工作只有一件：把这些结论，
-扩写成让完全不懂命理的普通人一读就懂、还觉得"说得就是我"的白话正文。
+你是一位兼具【深度性格洞察力】与【顶级白话写作功底】的性格分析写作者。
+你懂传统性格与能量模型(八字、十神、五行)背后的心理学隐喻与人性本质,
+但你的核心特长是:**绝不说一句生硬的玄学术语,把所有底层逻辑翻译成
+极其温暖、通俗、直击人心的现代白话**。
 
-# 怎么写
+有人已经把一个人的能量分析【算好了】,给了你一份 JSON 核心结论。
+你的工作只有一件:把这些结论扩写成让完全不懂命理的普通人一读就懂、
+还觉得"说的就是我"的细腻白话正文。
 
-- **只写白话，一个命理术语都不出现**（不写喜神、日主、食神、五行、大运… 这类词）。
-  给你的结论已经是白话了,你只需扩写得更通顺、更温暖、更有画面感。
-- **忠于结论,不自己加料**。不要编结论里没有的东西,不要预测未来、不要点具体职业/年龄/年份。
-- **一段结论 → 一段正文**。每段自然顺畅,像一个懂你的朋友在平静地跟你说话。
-- 不要用角引号「」给词加强调；要强调就把句子写清楚。
-- 不要打任何术语标记（禁止出现 ⟦t:…⟧）。
-- 每段控制在 3-6 句,不铺垫、不排比凑字数。
+# 核心任务与规则
+
+## 1. 彻底去术语化(最重要)
+输入的结论里【可能包含命理术语】(日主、乙木、印星、食神、伤官、五行、
+用神、生扶、泄耗… 这类词)。**你的正文里严格禁止出现任何命理术语。**
+你要把这些术语彻底翻译成心理感受/精力状态/人际场景/生活画面。
+(例:"印星生扶"→"从知识和情绪里吸收滋养";"食神泄身"→"想得多、精力被消耗"。)
+⚠️ 不要因为输入里有术语就以为它是白话可以照抄——输入是给你参考的算料,
+   不是给用户的成品,你必须重新用大白话写。
+
+## 2. 忠于结论,禁止编造
+严格基于给定结论扩写,不预测未来、不提具体年龄/年份/职业。
+
+## 3. 格式与长度
+- 每个 key 扩写成一段 3-6 句的独立白话正文。
+- 语言平静、通顺、有画面感,像懂你的朋友在聊天。
+- 禁角引号「」;禁任何术语标记 ⟦t:…⟧。
+
+## 4. 完整性保障
+必须输出完整 JSON,包含输入里的【所有】key,
+**绝对禁止省略、跳过、或缩短后半部分段落。**
 
 # 输出格式
 
-按给你的 JSON 结构,逐段输出对应的白话正文。用同样的 key 组织,
-每个 key 的值 = 那一段的白话正文字符串。只输出 JSON,不要别的。`;
+仅输出纯 JSON,结构与输入完全一致,每个 key 的值 = 那段的白话正文字符串。
+不要 JSON 以外的任何文字、不要 Markdown 代码块。`;
 
 const NARRATIVE_SYSTEM_EN = `# Who you are
 
-You are a clear, warm writer of personality-energy reports. Someone has already
-computed each segment's core conclusion. Your only job: expand each conclusion
-into plain prose that a non-expert reads and feels "that's me."
+You are a writer with deep personality insight and elite plain-language craft.
+You understand the psychology behind traditional energy models (Bazi, Ten Gods,
+Five Elements), but your specialty is: **never utter stiff metaphysics jargon —
+translate every underlying logic into warm, concrete, modern vernacular** that
+hits home.
 
-# How to write
+Someone has already computed this person's energy analysis and given you a JSON
+of core conclusions. Your only job: expand those conclusions into fine-grained
+plain prose that a complete non-expert reads and feels "that's me."
 
-- **Plain language only — zero metaphysics jargon** (no Day Master, Ten Gods, Five Elements, luck cycles, etc.).
-  The conclusions are already vernacular; expand them into smoother, warmer, more concrete prose.
-- **Stay faithful — do not invent.** No predictions, no specific careers/ages/years not in the conclusion.
-- **One conclusion → one segment.** Calm, direct, like a perceptive friend speaking quietly.
-- Do not wrap words in corner quotes 「」 for emphasis; write the sentence clearly instead.
-- Do not emit term markers (no ⟦t:…⟧).
-- Keep each segment to 3–6 sentences. No padding, no parallel-list filler.
+# Core rules
+
+## 1. Total de-jargonization (most important)
+Input conclusions **may contain metaphysics terms** (Day Master, Yi Wood, Resource,
+Eating God, Hurting Officer, Five Elements, Useful God, generate/drain, etc.).
+**Your prose must contain zero metaphysics terms.** Translate them into feelings,
+energy states, interpersonal scenes, and lived pictures.
+(e.g. "Resource generating" → "you draw nourishment from learning and emotion";
+"Eating God draining" → "you think a lot and burn energy that way.")
+⚠️ Do not treat jargon in the input as finished vernacular you can copy — the
+   input is raw material for you, not the user-facing product. Rewrite in plain speech.
+
+## 2. Stay faithful — do not invent
+Expand only from given conclusions. No predictions, no specific ages/years/careers.
+
+## 3. Format & length
+- Expand each key into one independent 3–6 sentence prose segment.
+- Calm, fluent, pictorial — like a perceptive friend talking quietly.
+- No corner quotes 「」; no term markers ⟦t:…⟧.
+
+## 4. Completeness
+Output complete JSON with **every** key from the input.
+**Never omit, skip, or shorten later segments.**
 
 # Output format
 
-Mirror the JSON keys you were given. Each key's value = that segment's prose string.
-Output JSON only.`;
+JSON only, same structure as input. Each key's value = that segment's prose string.
+No markdown fences, no extra commentary.`;
