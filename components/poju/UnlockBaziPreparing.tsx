@@ -82,6 +82,7 @@ export function UnlockBaziPreparing({
   const [retryKey, setRetryKey] = useState(0);
   const [streamDone, setStreamDone] = useState(false);
   const [waitVisualDone, setWaitVisualDone] = useState(false);
+  const [liveProgressStage, setLiveProgressStage] = useState<string | null>(null);
 
   usePreparingBlockInput(true);
 
@@ -114,11 +115,13 @@ export function UnlockBaziPreparing({
   return (
     <DeliveryWaitFrame
       wait={waitFlow}
+      liveProgressStage={liveProgressStage}
       error={error}
       onRetry={() => {
         setError(null);
         setStreamDone(false);
         setWaitVisualDone(false);
+        setLiveProgressStage(null);
         setRetryKey((k) => k + 1);
       }}
       onRefund={onRefund}
@@ -141,6 +144,7 @@ export function UnlockBaziPreparing({
             logLabel="POJUUnlockPreparing"
             hideStreamView
             reportOutputLanguageFromUi
+            onProgress={(p) => setLiveProgressStage(p.stage)}
             onComplete={async (displayText) => {
               const finalSession = finalizeUnlockBaziSession(session, displayText, profileId);
               await savePOJUSession(finalSession);

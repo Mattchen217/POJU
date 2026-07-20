@@ -336,6 +336,7 @@ function StreamingPhase({
   onComplete: () => void | Promise<void>;
   onError: (error: string) => void;
 }) {
+  const [liveProgressStage, setLiveProgressStage] = useState<string | null>(null);
   usePreparingBlockInput(true);
 
   return (
@@ -347,6 +348,7 @@ function StreamingPhase({
         logLabel="POJUPreparing"
         hideStreamView
         reportOutputLanguageFromUi
+        onProgress={(p) => setLiveProgressStage(p.stage)}
         preStreamWork={async () => {
           await ensureProfileMatrixList({
             profileId,
@@ -365,6 +367,7 @@ function StreamingPhase({
         onRefund={() => {}}
         locale={locale}
         variant="portrait"
+        liveProgressStage={liveProgressStage}
       />
     </>
   );

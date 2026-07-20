@@ -67,6 +67,7 @@ export function GlyphReadingPage() {
   const [skipBaziAtDelivery, setSkipBaziAtDelivery] = useState(false);
   const [waitVisualDone, setWaitVisualDone] = useState(false);
   const [finishCrossfadeStarted, setFinishCrossfadeStarted] = useState(false);
+  const [liveProgressStage, setLiveProgressStage] = useState<string | null>(null);
   const glyphProductStartedRef = useRef(false);
   const startedRef = useRef(false);
   const mountedRef = useRef(true);
@@ -365,6 +366,7 @@ export function GlyphReadingPage() {
       <DeliveryWaitFrame
         wait={waitFlow}
         isReturningUser={isReturningUser}
+        liveProgressStage={liveProgressStage}
         error={error}
         exitAnimationExternal
         onRetry={() => {
@@ -377,6 +379,7 @@ export function GlyphReadingPage() {
           setProductComplete(false);
           setWaitVisualDone(false);
           setFinishCrossfadeStarted(false);
+          setLiveProgressStage(null);
           startedRef.current = false;
           void beginUnlockPipeline();
         }}
@@ -391,6 +394,7 @@ export function GlyphReadingPage() {
               logLabel="GlyphUnlockPreparing"
               hideStreamView
               reportOutputLanguageFromUi
+              onProgress={(p) => setLiveProgressStage(p.stage)}
               preStreamWork={async () => {
                 await ensureProfileMatrixList({
                   profileId,
@@ -439,6 +443,7 @@ export function GlyphReadingPage() {
       <DeliveryWaitFrame
         wait={waitFlow}
         isReturningUser={isReturningUser}
+        liveProgressStage={liveProgressStage}
         error={error}
         onRetry={() => {
           visibilityRetryUsedRef.current = false;
@@ -450,6 +455,7 @@ export function GlyphReadingPage() {
           setProductComplete(false);
           setWaitVisualDone(false);
           setFinishCrossfadeStarted(false);
+          setLiveProgressStage(null);
           startedRef.current = false;
           void beginUnlockPipeline();
         }}
@@ -464,6 +470,7 @@ export function GlyphReadingPage() {
               logLabel="GlyphUnlockPreparing"
               hideStreamView
               reportOutputLanguageFromUi
+              onProgress={(p) => setLiveProgressStage(p.stage)}
               preStreamWork={async () => {
                 await ensureProfileMatrixList({
                   profileId,

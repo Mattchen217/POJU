@@ -10,6 +10,8 @@ import {
   type SegmentComputed,
 } from "@/lib/base-analysis-v2/report-schema";
 import { buildComputePrompt } from "@/lib/base-analysis-v2/compute/compute-prompt";
+import { sanitizeReportComputed } from "@/lib/base-analysis-v2/compute/report-sanitizer";
+import { extractTenGodContext } from "@/lib/base-analysis-v2/compute/ten-god-context";
 
 const COMPUTE_MAX_TOKENS = 16_000; // 上限不预付:19段+真算推理,给宽
 const MAX_ATTEMPTS = 3;
@@ -38,6 +40,9 @@ export const TIME_ANCHOR_RE = new RegExp(
   ].join("|"),
 );
 
+/** Layer-3: Ten-God compound abbreviations that must not survive sanitizer. */
+export const SIMP_RE = /(比劫|官杀|食伤|印枭|枭印|财官|杀印|财官杀)/;
+
 function readSegment(rc: ReportComputed, path: string): SegmentComputed | undefined {
   const parts = path.split(".");
   let cur: unknown = rc;
@@ -49,16 +54,40 @@ function readSegment(rc: ReportComputed, path: string): SegmentComputed | undefi
   return cur as SegmentComputed;
 }
 
-export function findTimeAnchorLeak(rc: ReportComputed): string | null {
+function scanSegments(
+  rc: ReportComputed,
+  test: (text: string) => boolean,
+): string | null {
   for (const path of SEGMENT_PATHS) {
     const seg = readSegment(rc, path);
     if (!seg) continue;
-    if (TIME_ANCHOR_RE.test(seg.core_conclusion ?? "")) return `${path}.core_conclusion`;
+    if (test(seg.core_conclusion ?? "")) return `${path}.core_conclusion`;
     for (const b of seg.bazi_basis ?? []) {
-      if (TIME_ANCHOR_RE.test(String(b))) return `${path}.bazi_basis:${b}`;
+      if (test(String(b))) return `${path}.bazi_basis:${b}`;
     }
   }
+  // summary top-level strings (not only card_basis)
+  const s = rc.summary;
+  if (test(s.current_theme ?? "")) return "summary.current_theme";
+  for (const k of s.keywords ?? []) {
+    if (test(String(k))) return `summary.keywords:${k}`;
+  }
+  for (const d of s.dos ?? []) {
+    if (test(String(d))) return `summary.dos:${d}`;
+  }
+  for (const d of s.donts ?? []) {
+    if (test(String(d))) return `summary.donts:${d}`;
+  }
   return null;
+}
+
+export function findTimeAnchorLeak(rc: ReportComputed): string | null {
+  return scanSegments(rc, (t) => TIME_ANCHOR_RE.test(t));
+}
+
+/** Layer-3: catch Ten-God compound abbreviations that Layer-2 did not expand. */
+export function findSimpLeak(rc: ReportComputed): string | null {
+  return scanSegments(rc, (t) => SIMP_RE.test(t));
 }
 
 /**
@@ -83,7 +112,7 @@ export type RunComputeOptions = {
 
 /**
  * 第1次调用:真算 → ReportComputed。
- * 失败(空/截断/坏JSON/结构不全/时间锚泄漏)→ 同参重发,最多 MAX_ATTEMPTS。
+ * 三层纵深：Prompt 约束 → 上下文简称清洗 → 正则拦简称/时间锚并同参重发。
  * 全失败→ error(不落库、不进第2/3次),由 orchestrate 决定提示重试。
  */
 export async function runCompute(
@@ -97,6 +126,7 @@ export async function runCompute(
       : session_idOrOpts;
 
   const { system, user } = buildComputePrompt(structured, locale);
+  const tenGodCtx = extractTenGodContext(structured);
   let lastReason = "unknown";
 
   const ctrl = new AbortController();
@@ -185,11 +215,23 @@ export async function runCompute(
           continue;
         }
 
-        const leak = findTimeAnchorLeak(v.value);
-        if (leak) {
-          lastReason = `time_anchor_leak:${leak}`;
+        // Layer-2: expand 官杀/食伤/比劫/印枭 using natal Ten-God context (0ms, $0)
+        const cleaned = sanitizeReportComputed(v.value, tenGodCtx);
+
+        const simpLeak = findSimpLeak(cleaned);
+        if (simpLeak) {
+          lastReason = `simp_leak:${simpLeak}`;
           console.warn(
-            `[v2/compute] attempt ${attempt}/${MAX_ATTEMPTS} — 时间锚泄漏(${leak})，重发`,
+            `[v2/compute] attempt ${attempt}/${MAX_ATTEMPTS} — 简称泄漏(${simpLeak})，重发`,
+          );
+          continue;
+        }
+
+        const timeLeak = findTimeAnchorLeak(cleaned);
+        if (timeLeak) {
+          lastReason = `time_anchor_leak:${timeLeak}`;
+          console.warn(
+            `[v2/compute] attempt ${attempt}/${MAX_ATTEMPTS} — 时间锚泄漏(${timeLeak})，重发`,
           );
           continue;
         }
@@ -197,7 +239,7 @@ export async function runCompute(
         console.log(
           `[v2/compute] ✅ ReportComputed 就绪 (attempt ${attempt}/${MAX_ATTEMPTS}, fell_back=${result.transport?.fell_back ?? false})`,
         );
-        return { ok: true, value: v.value, attempts: attempt };
+        return { ok: true, value: cleaned, attempts: attempt };
       } catch (e) {
         if (isEmptyResponseError(e)) {
           lastReason = "openrouter_empty";

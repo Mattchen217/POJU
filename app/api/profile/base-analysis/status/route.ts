@@ -22,6 +22,8 @@ export async function GET(req: NextRequest) {
     profile_id: job.profile_id,
     status: job.status,
     accumulated_content: job.accumulated_content,
+    progress_stage: job.progress_stage ?? null,
+    progress_updated_at: job.progress_updated_at ?? null,
     meta: job.meta,
     error: job.error,
     error_detail: job.error_detail,

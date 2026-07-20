@@ -13,6 +13,8 @@ import "@/styles/wait-ritual.css";
 type Props = {
   wait: DeliveryWaitPhaseState;
   isReturningUser?: boolean;
+  /** Live SSE progress stage for status line (bazi wait). */
+  liveProgressStage?: string | null;
   error?: string | null;
   onRetry?: () => void;
   onRefund?: () => void;
@@ -27,6 +29,7 @@ type Props = {
 export function DeliveryWaitFrame({
   wait,
   isReturningUser,
+  liveProgressStage = null,
   error,
   onRetry,
   onRefund,
@@ -54,6 +57,7 @@ export function DeliveryWaitFrame({
         phase={wait.phase}
         stepIndex={wait.stepIndex}
         isReturningUser={isReturningUser}
+        liveProgressStage={liveProgressStage}
         error={error}
         onRetry={onRetry}
         onRefund={onRefund}

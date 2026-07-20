@@ -4,7 +4,9 @@
  */
 import {
   extractJson,
+  findSimpLeak,
   findTimeAnchorLeak,
+  SIMP_RE,
   TIME_ANCHOR_RE,
 } from "@/lib/base-analysis-v2/compute/compute-call";
 import {
@@ -12,6 +14,8 @@ import {
   type ReportComputed,
   type SegmentComputed,
 } from "@/lib/base-analysis-v2/report-schema";
+import { cleanText } from "@/lib/base-analysis-v2/compute/report-sanitizer";
+import type { TenGodContext } from "@/lib/base-analysis-v2/compute/ten-god-context";
 
 const failures: string[] = [];
 const assert = (label: string, ok: boolean) => {
@@ -118,6 +122,44 @@ assert(
 );
 
 assert("SEGMENT_PATHS=19", SEGMENT_PATHS.length === 19);
+
+// Layer-3 simp leak
+assert("SIMP_RE 官杀", SIMP_RE.test("官杀混杂"));
+assert("SIMP_RE 不误伤正官", !SIMP_RE.test("正官透干"));
+assert(
+  "简称泄漏可定位",
+  findSimpLeak(
+    buildRc((rc) => {
+      rc.work_style.value_creation = {
+        core_conclusion: "靠专业输出",
+        bazi_basis: ["食伤生财"],
+      };
+    }),
+  )?.includes("食伤") === true,
+);
+assert(
+  "干净盘无简称",
+  findSimpLeak(
+    buildRc((rc) => {
+      rc.work_style.value_creation = {
+        core_conclusion: "靠专业输出",
+        bazi_basis: ["食神生财"],
+      };
+    }),
+  ) === null,
+);
+
+const ctxQiShaOnly: TenGodContext = {
+  hasZhengGuan: false,
+  hasQiSha: true,
+  hasShiShen: false,
+  hasShangGuan: false,
+  hasBiJian: false,
+  hasJieCai: false,
+  hasZhengYin: false,
+  hasPianYin: false,
+};
+assert("L2 仅七杀：官杀→七杀", cleanText("官杀攻身", ctxQiShaOnly) === "七杀攻身");
 
 console.log(failures.length ? "❌ compute-call guards failed" : "✅ compute-call guards ready");
 if (failures.length) {

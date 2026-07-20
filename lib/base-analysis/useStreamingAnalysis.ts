@@ -3,6 +3,10 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 
 import type { BaseAnalysisJob } from '@/lib/base-analysis/job-types';
+import type {
+  BaseAnalysisProgressStage,
+  ProgressPayload,
+} from '@/lib/base-analysis/progress-stages';
 import { consumeBaseAnalysisStream } from '@/lib/base-analysis/stream-sse-client';
 
 export interface UseStreamingAnalysisOptions {
@@ -14,6 +18,7 @@ export interface UseStreamingAnalysisOptions {
   onComplete: (content: string, meta: BaseAnalysisJob['meta'] | Record<string, unknown>) => void;
   onError: (error: string) => void;
   onCoreJudgments?: (judgments: unknown, source?: string) => void;
+  onProgress?: (payload: ProgressPayload) => void;
 }
 
 export interface StreamingState {
@@ -22,6 +27,7 @@ export interface StreamingState {
   job_id: string | null;
   error: string | null;
   bytes_received: number;
+  progress_stage: BaseAnalysisProgressStage | null;
 }
 
 export function stripMetaSection(content: string): string {
@@ -39,6 +45,7 @@ export function useStreamingAnalysis(opts: UseStreamingAnalysisOptions) {
     job_id: null,
     error: null,
     bytes_received: 0,
+    progress_stage: null,
   });
 
   const abortRef = useRef<AbortController | null>(null);
@@ -77,6 +84,7 @@ export function useStreamingAnalysis(opts: UseStreamingAnalysisOptions) {
       job_id: null,
       error: null,
       bytes_received: 0,
+      progress_stage: null,
     });
 
     const abort = new AbortController();
@@ -96,6 +104,13 @@ export function useStreamingAnalysis(opts: UseStreamingAnalysisOptions) {
               status: 'streaming',
               job_id,
             }));
+          },
+          onProgress: (payload) => {
+            setState((prev) => ({
+              ...prev,
+              progress_stage: payload.stage,
+            }));
+            optsRef.current.onProgress?.(payload);
           },
           onChunk: (_text, accumulated) => {
             bumpStreamProgress(accumulated);

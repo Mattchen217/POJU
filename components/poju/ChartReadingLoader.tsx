@@ -23,6 +23,8 @@ export interface ChartReadingLoaderProps {
   hintOverride?: string;
   /** 非 POJU 会话时用，例如 Syncro「返回」 */
   secondaryActionLabel?: string;
+  /** Live SSE progress stage — replaces rotating steps when set. */
+  liveProgressStage?: string | null;
 }
 
 export function ChartReadingLoader({
@@ -33,8 +35,10 @@ export function ChartReadingLoader({
   variant = "matrix",
   hintOverride,
   secondaryActionLabel,
+  liveProgressStage = null,
 }: ChartReadingLoaderProps) {
   const t = useTranslations(variant === "portrait" ? "portrait_loader" : "chart_loader");
+  const tWait = useTranslations("wait_ritual");
   const steps = useMemo(
     () => Array.from({ length: STEP_COUNT }, (_, i) => t(`step_${i}` as "step_0")),
     [t],
@@ -42,6 +46,7 @@ export function ChartReadingLoader({
   const [animatedStep, setAnimatedStep] = useState(0);
 
   useEffect(() => {
+    if (liveProgressStage) return;
     if (currentStep === "error" || currentStep === "done") return;
 
     const interval = setInterval(() => {
@@ -57,7 +62,7 @@ export function ChartReadingLoader({
     }, ACTIVITY_CAPTION_ROTATE_MS);
 
     return () => clearInterval(interval);
-  }, [currentStep, steps.length]);
+  }, [currentStep, steps.length, liveProgressStage]);
 
   if (currentStep === "error" && error) {
     return (
@@ -70,7 +75,9 @@ export function ChartReadingLoader({
     );
   }
 
-  const statusLine = steps[animatedStep] ?? steps[0] ?? "";
+  const statusLine = liveProgressStage
+    ? tWait(`progress.${liveProgressStage}` as "progress.chart_ready")
+    : (steps[animatedStep] ?? steps[0] ?? "");
   const hint =
     hintOverride ??
     (currentStep === "using_cache" ? t("hint_using_cache") : t("hint_first_time"));

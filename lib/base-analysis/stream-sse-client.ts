@@ -1,4 +1,8 @@
 import type { BaseAnalysisJob } from "@/lib/base-analysis/job-types";
+import {
+  isBaseAnalysisProgressStage,
+  type ProgressPayload,
+} from "@/lib/base-analysis/progress-stages";
 
 export type StreamSseCallbacks = {
   onStart?: (job_id: string) => void;
@@ -6,6 +10,8 @@ export type StreamSseCallbacks = {
   onPollContent?: (accumulated: string) => void;
   /** Layer-1 judgments arrive before narrative (or on narrative failure). */
   onCoreJudgments?: (judgments: unknown, source?: string) => void;
+  /** Wait-UI progress stage (chart_ready → streaming → repair…). */
+  onProgress?: (payload: ProgressPayload) => void;
 };
 
 export type StreamSseResult = {
@@ -38,11 +44,23 @@ const POLL_INTERVAL_MS = 3000;
 /** Slightly above server `maxDuration` (300s) + reconnect slack. */
 const POLL_MAX_MS = 320_000;
 
+function emitProgressFromPoll(
+  data: { progress_stage?: unknown },
+  callbacks?: StreamSseCallbacks,
+  lastStageRef?: { current: string | null },
+): void {
+  if (!isBaseAnalysisProgressStage(data.progress_stage)) return;
+  if (lastStageRef && lastStageRef.current === data.progress_stage) return;
+  if (lastStageRef) lastStageRef.current = data.progress_stage;
+  callbacks?.onProgress?.({ stage: data.progress_stage });
+}
+
 async function pollJobUntilDone(
   job_id: string,
   callbacks?: StreamSseCallbacks,
 ): Promise<StreamSseResult> {
   const startedAt = Date.now();
+  const lastStageRef = { current: null as string | null };
   while (true) {
     if (Date.now() - startedAt > POLL_MAX_MS) {
       throw new Error("BASE_ANALYSIS_POLL_TIMEOUT");
@@ -54,6 +72,7 @@ async function pollJobUntilDone(
     const data = await res.json();
     const accumulated = String(data.accumulated_content ?? "");
     callbacks?.onPollContent?.(accumulated);
+    emitProgressFromPoll(data, callbacks, lastStageRef);
 
     if (data.status === "completed") {
       return {
@@ -113,6 +132,16 @@ export async function consumeBaseAnalysisStream(input: {
         jobId = String(ev.job_id);
         input.callbacks?.onStart?.(jobId);
         return null;
+      case "progress": {
+        if (isBaseAnalysisProgressStage(ev.stage)) {
+          input.callbacks?.onProgress?.({
+            stage: ev.stage,
+            elapsed_ms: typeof ev.elapsed_ms === "number" ? ev.elapsed_ms : undefined,
+            attempt: typeof ev.attempt === "number" ? ev.attempt : undefined,
+          });
+        }
+        return null;
+      }
       case "chunk": {
         const text = String(ev.text ?? "");
         accumulatedContent += text;

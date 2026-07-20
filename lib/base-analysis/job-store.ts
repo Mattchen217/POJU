@@ -7,6 +7,7 @@ import {
   profileLatestKey,
   profileLockKey,
 } from "@/lib/base-analysis/job-types";
+import type { BaseAnalysisProgressStage } from "@/lib/base-analysis/progress-stages";
 
 export async function createJob(input: {
   profile_id: string;
@@ -60,6 +61,19 @@ export async function updateJobStatus(
   };
 
   await kv.set(jobKey(job_id), updated, { ex: KV_TTL.BASE_ANALYSIS_JOB });
+}
+
+/** Persist wait-UI progress for SSE clients that fall back to status poll. */
+export async function setJobProgress(
+  job_id: string,
+  stage: BaseAnalysisProgressStage,
+): Promise<void> {
+  const job = await getJob(job_id);
+  if (!job) return;
+  job.progress_stage = stage;
+  job.progress_updated_at = Date.now();
+  job.updated_at = Date.now();
+  await kv.set(jobKey(job_id), job, { ex: KV_TTL.BASE_ANALYSIS_JOB });
 }
 
 export async function appendChunk(job_id: string, chunk: string): Promise<void> {

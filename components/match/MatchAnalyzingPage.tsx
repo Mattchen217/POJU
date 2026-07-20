@@ -59,6 +59,7 @@ export function MatchAnalyzingPage() {
   const [skipBaziAtDelivery, setSkipBaziAtDelivery] = useState(false);
   const [waitVisualDone, setWaitVisualDone] = useState(false);
   const [productComplete, setProductComplete] = useState(false);
+  const [liveProgressStage, setLiveProgressStage] = useState<string | null>(null);
   const matchAnalyzeStartedRef = useRef(false);
   const startedRef = useRef(false);
 
@@ -289,6 +290,7 @@ export function MatchAnalyzingPage() {
     return (
       <DeliveryWaitFrame
         wait={waitFlow}
+        liveProgressStage={liveProgressStage}
         hiddenWork={
           <BaseAnalysisStreamPreparing
             key={`base-a-${basePrepKey}`}
@@ -298,6 +300,7 @@ export function MatchAnalyzingPage() {
             logLabel="MatchUnlockPreparingA"
             hideStreamView
             reportOutputLanguageFromUi
+            onProgress={(p) => setLiveProgressStage(p.stage)}
             preStreamWork={async () => {
               await ensureProfileMatrixList({
                 profileId: aId,
@@ -305,7 +308,10 @@ export function MatchAnalyzingPage() {
                 locale,
               });
             }}
-            onComplete={() => void afterBaseAComplete()}
+            onComplete={() => {
+              setLiveProgressStage(null);
+              void afterBaseAComplete();
+            }}
             onError={(err) => {
               setError(err);
               setPhase("error");
@@ -320,6 +326,7 @@ export function MatchAnalyzingPage() {
     return (
       <DeliveryWaitFrame
         wait={waitFlow}
+        liveProgressStage={liveProgressStage}
         hiddenWork={
           <BaseAnalysisStreamPreparing
             key={`base-b-${basePrepKey}`}
@@ -329,6 +336,7 @@ export function MatchAnalyzingPage() {
             logLabel="MatchUnlockPreparingB"
             hideStreamView
             reportOutputLanguageFromUi
+            onProgress={(p) => setLiveProgressStage(p.stage)}
             preStreamWork={async () => {
               await ensureProfileMatrixList({
                 profileId: bId,
@@ -336,7 +344,10 @@ export function MatchAnalyzingPage() {
                 locale,
               });
             }}
-            onComplete={() => void afterBaseBComplete()}
+            onComplete={() => {
+              setLiveProgressStage(null);
+              void afterBaseBComplete();
+            }}
             onError={(err) => {
               setError(err);
               setPhase("error");

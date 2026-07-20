@@ -125,10 +125,11 @@ core_conclusion 和 bazi_basis【绝对不能出现】任何时间：
 
 # 三条硬规矩
 
-1. **每段 bazi_basis 用命理全称，不用简称合称**。
-   （什么叫简称：把两个词缩成一个，比如把"比肩、劫财"缩成"比劫"，把"正官、七杀"缩成"官杀"，
-    把"食神、伤官"缩成"食伤"——这一类缩写全都不许用。要同时讲两个十神，就把两个全称都写出来。）
-2. **恐吓宿命词、时间锚词，都不许进 bazi_basis**：
+1. **绝对禁止十神合称与简称**（core_conclusion 与 bazi_basis 一律适用）。
+   禁止出现：官杀、食伤、比劫、印枭、枭印、财官、杀印、财官杀。
+   必须用全称：要讲两个十神就写两个全称（如"正官与七杀"），不要缩成一个合称。
+   （简称=把两个词缩成一个："比肩、劫财"→"比劫"、"正官、七杀"→"官杀"、"食神、伤官"→"食伤"——全禁。）
+2. **恐吓宿命词、时间锚词，都不许进 bazi_basis，也不许进 core_conclusion**：
    - 禁恐吓宿命词：十恶大败、孤鸾煞、空亡、血刃这类——它们不是中性数据。
      （中性真词随便用：喜神/忌神/大运/相刑/食神/日主/印绶… 都可以。）
    - 禁时间锚词：不许出现带年份、岁数、具体大运名称的词
@@ -221,10 +222,11 @@ Describe only three 【states】 — recognition cues + response strategies — 
 
 # Three hard rules
 
-1. In bazi_basis, use FULL term names, never abbreviations/combinations.
-   (An abbreviation merges two terms into one — don't merge "比肩/劫财" into "比劫", "正官/七杀" into "官杀".
-    Name both in full when you mean both.)
-2. Never put fear/fate words OR time-anchor words into bazi_basis:
+1. **Never use Ten-God compound abbreviations** (applies to every core_conclusion and bazi_basis).
+   Forbidden: 官杀, 食伤, 比劫, 印枭, 枭印, 财官, 杀印, 财官杀.
+   Use full names only — if you mean both gods, write both full names (e.g. 正官与七杀), never a merged compound.
+   (Abbreviation = collapsing two terms into one — don't merge 比肩/劫财 into 比劫, 正官/七杀 into 官杀.)
+2. Never put fear/fate words OR time-anchor words into bazi_basis or core_conclusion:
    - No fear/fate words (the catastrophic-shensha class). Neutral real terms are fine (favorable/unfavorable god, luck-pillar, punishment, day-master…).
    - No time anchors: no calendar year, no age, no specific luck-pillar name (never "2026", "age 35", "the 丙午 pillar").
      For fortune-level meaning use only non-dated neutral phrasing (e.g. "luck-pillar meets Seal", "annual-luck clash"), or natal-chart terms only.

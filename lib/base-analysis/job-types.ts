@@ -1,3 +1,5 @@
+import type { BaseAnalysisProgressStage } from "@/lib/base-analysis/progress-stages";
+
 export type BaseAnalysisJobStatus = "pending" | "streaming" | "completed" | "failed";
 
 export interface BaseAnalysisJob {
@@ -9,6 +11,10 @@ export interface BaseAnalysisJob {
 
   /** Streamed LLM content (markdown narrative). */
   accumulated_content: string;
+
+  /** Latest wait-UI progress stage (SSE + poll). */
+  progress_stage?: BaseAnalysisProgressStage;
+  progress_updated_at?: number;
 
   /** Parsed from trailing `---META---` JSON block. */
   meta?: {

@@ -10,6 +10,7 @@ import {
   appLocaleToOutputLanguage,
 } from "@/lib/base-analysis/resolve-output-language";
 import { useStreamingAnalysis } from "@/lib/base-analysis/useStreamingAnalysis";
+import type { ProgressPayload } from "@/lib/base-analysis/progress-stages";
 import type { StoredProfileData } from "@/lib/db/poju-db";
 import { parseAppLocale } from "@/lib/prompts/language-directive";
 import {
@@ -26,6 +27,8 @@ export type BaseAnalysisStreamPreparingProps = {
   logLabel: string;
   onComplete: (displayText: string, meta?: Record<string, unknown>) => void | Promise<void>;
   onError?: (error: string) => void;
+  /** Wait-UI progress stage updates from SSE. */
+  onProgress?: (payload: ProgressPayload) => void;
   resumeJobId?: string;
   /** `replay` skips SSE (handled by overlay); default `live` consumes stream. */
   mode?: "replay" | "live";
@@ -54,6 +57,7 @@ export function BaseAnalysisStreamPreparing({
   logLabel,
   onComplete,
   onError,
+  onProgress,
   resumeJobId,
   mode = "live",
   hideStreamView = false,
@@ -73,8 +77,10 @@ export function BaseAnalysisStreamPreparing({
   const startedRef = useRef(false);
   const onCompleteRef = useRef(onComplete);
   const onErrorRef = useRef(onError);
+  const onProgressRef = useRef(onProgress);
   onCompleteRef.current = onComplete;
   onErrorRef.current = onError;
+  onProgressRef.current = onProgress;
 
   useEffect(() => {
     console.group(`[${logLabel}] Local computation result`);
@@ -121,6 +127,9 @@ export function BaseAnalysisStreamPreparing({
     local_data: localData,
     resume_job_id: resumeJobId,
     onComplete: handleComplete,
+    onProgress: (payload) => {
+      onProgressRef.current?.(payload);
+    },
     onCoreJudgments: (judgments) => {
       if (!isCoreJudgments(judgments)) return;
       void saveCoreJudgmentsForProfile({

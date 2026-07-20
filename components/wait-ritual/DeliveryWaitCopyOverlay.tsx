@@ -11,6 +11,8 @@ type Props = {
   phase: DeliveryWaitPhaseState["phase"];
   stepIndex: number;
   isReturningUser?: boolean;
+  /** Live SSE progress stage — replaces rotating steps when set. */
+  liveProgressStage?: string | null;
   error?: string | null;
   onRetry?: () => void;
   onRefund?: () => void;
@@ -29,6 +31,7 @@ export function DeliveryWaitCopyOverlay({
   phase,
   stepIndex,
   isReturningUser = false,
+  liveProgressStage = null,
   error,
   onRetry,
   onRefund,
@@ -116,7 +119,9 @@ export function DeliveryWaitCopyOverlay({
     copyPhase === "bazi" ? "bazi.value" : `${copyPhase}.value`;
   const subtitleKey =
     copyPhase === "bazi" && isReturningUser ? "bazi.subtitle_cached" : `${copyPhase}.subtitle`;
-  const statusLine = t(steps[stepIndex % steps.length] as "bazi.steps.0");
+  const statusLine = liveProgressStage
+    ? t(`progress.${liveProgressStage}` as "progress.chart_ready")
+    : t(steps[stepIndex % steps.length] as "bazi.steps.0");
 
   return (
     <PreparingStatusOverlay>

@@ -13,8 +13,10 @@ import {
   getJob,
   releaseLock,
   setJobContent,
+  setJobProgress,
   updateJobStatus,
 } from "@/lib/base-analysis/job-store";
+import type { BaseAnalysisProgressStage } from "@/lib/base-analysis/progress-stages";
 import { auditBaseAnalysisDelivery } from "@/lib/base-analysis/delivery-gate";
 import { generateCoreJudgmentsForProfile } from "@/lib/base-analysis/generate-core-judgments";
 import { streamBaseAnalysisWithDeliveryGate } from "@/lib/base-analysis/stream-llm-with-gate";
@@ -27,6 +29,8 @@ export const maxDuration = 300;
 
 /** If KV job has not progressed this long, treat as zombie and restart LLM. */
 const STALE_STREAMING_MS = 3 * 60 * 1000;
+/** Heartbeat while core_judgments LLM is still running. */
+const COMPUTE_WAIT_HEARTBEAT_MS = 30_000;
 
 type RequestBody = {
   profile_id: string;
@@ -116,12 +120,24 @@ export async function POST(req: NextRequest) {
     async start(controller) {
       let closed = false;
 
+      const startedAt = Date.now();
+
       const send = (type: string, data: Record<string, unknown>) => {
         if (closed) return;
         try {
           controller.enqueue(sseEncode(encoder, type, data));
         } catch {
           // client disconnected
+        }
+      };
+
+      const emitProgress = async (stage: BaseAnalysisProgressStage) => {
+        const elapsed_ms = Date.now() - startedAt;
+        send("progress", { job_id: activeJob.job_id, stage, elapsed_ms });
+        try {
+          await setJobProgress(activeJob.job_id, stage);
+        } catch (e) {
+          console.warn("[base-analysis/stream] setJobProgress failed:", e);
         }
       };
 
@@ -181,15 +197,26 @@ export async function POST(req: NextRequest) {
         }
 
         send("start", { job_id: activeJob.job_id });
+        await emitProgress("chart_ready");
 
         const sessionId = baseAnalysisCacheSessionId(profileId);
 
         // Option ② — independent medium call for Layer-1 interpretive fields (refs from code).
-        const cj = await generateCoreJudgmentsForProfile({
-          structured: body.local_data.structured,
-          locale: activeJob.locale,
-          session_id: sessionId,
-        });
+        await emitProgress("v2_compute");
+        const computeWaitHeartbeat = setInterval(() => {
+          void emitProgress("v2_compute_wait");
+        }, COMPUTE_WAIT_HEARTBEAT_MS);
+
+        let cj: Awaited<ReturnType<typeof generateCoreJudgmentsForProfile>>;
+        try {
+          cj = await generateCoreJudgmentsForProfile({
+            structured: body.local_data.structured,
+            locale: activeJob.locale,
+            session_id: sessionId,
+          });
+        } finally {
+          clearInterval(computeWaitHeartbeat);
+        }
         send("core_judgments", {
           job_id: activeJob.job_id,
           source: cj.source,
@@ -200,6 +227,9 @@ export async function POST(req: NextRequest) {
         await updateJobStatus(activeJob.job_id, "streaming", {
           ...(resetContent ? { accumulated_content: "", error: undefined, error_detail: undefined } : {}),
         });
+
+        await emitProgress("v2_narrative");
+        let streamingProgressSent = false;
 
         const model = getOpenRouterDefaultModel();
         const gen = await streamBaseAnalysisWithDeliveryGate({
@@ -214,15 +244,19 @@ export async function POST(req: NextRequest) {
             if (attempt > 0) {
               send("reset", { job_id: activeJob.job_id, attempt: attempt + 1 });
               await setJobContent(activeJob.job_id, "");
+              streamingProgressSent = false;
+              await emitProgress("v2_narrative");
             }
           },
           onRepairStart: async (repairIndex) => {
+            await emitProgress("repair");
             send("reset", {
               job_id: activeJob.job_id,
               attempt: `repair:${repairIndex + 1}`,
               repair: true,
             });
             await setJobContent(activeJob.job_id, "");
+            streamingProgressSent = false;
             console.warn(
               `[base-analysis/stream] surgical repair ${repairIndex + 1} — clearing draft for ${activeJob.job_id}`,
             );
@@ -241,6 +275,10 @@ export async function POST(req: NextRequest) {
             );
           },
           onChunk: async (chunk: string) => {
+            if (!streamingProgressSent) {
+              streamingProgressSent = true;
+              await emitProgress("streaming");
+            }
             send("chunk", { text: chunk });
             try {
               await appendChunk(activeJob.job_id, chunk);
