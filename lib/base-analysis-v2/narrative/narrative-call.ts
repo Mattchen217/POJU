@@ -71,14 +71,15 @@ export function validateTaskPaths(
   obj: unknown,
   paths: readonly string[],
   taskName: string,
+  kind: "narrative" | "evidence" = "narrative",
 ): string | null {
   if (!obj || typeof obj !== "object") {
-    return `narrative/${taskName}: not an object`;
+    return `${kind}/${taskName}: not an object`;
   }
   for (const path of paths) {
     const v = readPath(obj, path);
     if (typeof v !== "string" || !v.trim()) {
-      return `narrative/${taskName}: missing/empty: ${path}`;
+      return `${kind}/${taskName}: missing/empty: ${path}`;
     }
   }
   return null;

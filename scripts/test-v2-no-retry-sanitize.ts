@@ -165,6 +165,11 @@ function buildRc(): ReportComputed {
   assert("evidence 无 evidence_leak continue", !/evidence_leak[\s\S]{0,120}continue/.test(evidence));
   assert("narrative 放行日志", narrative.includes("放行,不打回"));
   assert("evidence 放行日志", evidence.includes("放行,不打回"));
+  assert(
+    "evidence 单Task MAX=4096",
+    /EVIDENCE_TASK_MAX_TOKENS\s*=\s*4096/.test(evidence),
+  );
+  assert("evidence 4-Task Promise.all", evidence.includes("EVIDENCE_TASKS") && /Promise\.all/.test(evidence));
 }
 
 console.log(failures.length ? "❌ no-retry sanitize failed" : "✅ no-retry sanitize ready");

@@ -1,28 +1,75 @@
-import type { ReportComputed } from "@/lib/base-analysis-v2/report-schema";
+import {
+  SEGMENT_PATHS,
+  type ReportComputed,
+  type SegmentComputed,
+} from "@/lib/base-analysis-v2/report-schema";
+import { readPath } from "@/lib/base-analysis-v2/segment-text";
 import { buildTermMarkingPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
 
 /**
  * 第3次·写依据。拿钥匙A+B(core_conclusion + bazi_basis)出金字依据。
  * 照 bazi_basis 的真词打标 ⟦t:slug|⟧,不用猜、不用从白话反推。
+ *
+ * @param segments 本 Task 的段落子集（几段的 nested tree），不是整份 ReportComputed
  */
 export function buildEvidencePrompt(
-  rc: ReportComputed,
+  segments: Record<string, unknown>,
   locale: string,
   retryHint?: string | null,
 ): { system: string; user: string } {
   const zh = locale.startsWith("zh");
   const markingBlock = buildTermMarkingPromptBlock(locale, { neutralBase: true });
   const system = `${zh ? EVIDENCE_SYSTEM_ZH : EVIDENCE_SYSTEM_EN}\n\n${markingBlock}`;
-  const payload = JSON.stringify(rc, null, 2);
+  const payload = JSON.stringify(segments, null, 2);
   let user = zh
-    ? `以下是每段的【核心结论】和【命理依据真词】（JSON）。请逐段生成一小段"依据与推理"：\n用结论锚住方向，用命理真词解释为什么，命理词打标成 ⟦t:<slug>|⟧（竖线后留空，软译由系统填）。\n\`\`\`json\n${payload}\n\`\`\``
-    : `Below is each segment's core_conclusion and bazi_basis (JSON). For each, write a short evidence note:\nanchor on the conclusion, explain with the given true terms, mark them as ⟦t:<slug>|⟧ (leave the slot after | empty — the system fills soft labels).\n\`\`\`json\n${payload}\n\`\`\``;
+    ? `以下是若干段的【核心结论】和【命理依据真词】（JSON）。请逐段生成一小段"依据与推理"：\n用结论锚住方向，用命理真词解释为什么，命理词打标成 ⟦t:<slug>|⟧（竖线后留空，软译由系统填）。\n输出 JSON 必须包含输入里的【所有】key，不得省略。\n\`\`\`json\n${payload}\n\`\`\``
+    : `Below are several segments' core_conclusion and bazi_basis (JSON). For each, write a short evidence note:\nanchor on the conclusion, explain with the given true terms, mark them as ⟦t:<slug>|⟧ (leave the slot after | empty — the system fills soft labels).\nYour JSON MUST include every key from the input — do not omit any.\n\`\`\`json\n${payload}\n\`\`\``;
   if (retryHint?.trim()) {
     user += zh
       ? `\n\n【纠错 · 上一轮失败原因】\n${retryHint.trim()}\n请按此重写，只输出 JSON。`
       : `\n\n【Correction from previous attempt】\n${retryHint.trim()}\nRewrite accordingly. Output JSON only.`;
   }
   return { system, user };
+}
+
+function setPath(obj: Record<string, unknown>, path: string, value: unknown): void {
+  const parts = path.split(".");
+  let cur = obj;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const k = parts[i]!;
+    if (!cur[k] || typeof cur[k] !== "object" || Array.isArray(cur[k])) {
+      cur[k] = {};
+    }
+    cur = cur[k] as Record<string, unknown>;
+  }
+  cur[parts[parts.length - 1]!] = value;
+}
+
+/**
+ * 只抽指定 paths 的双钥匙段（core_conclusion + bazi_basis）。
+ * keywords/dos/donts 不在 SEGMENT_PATHS → 天然不喂给依据 Task。
+ */
+export function pickSegments(
+  rc: ReportComputed,
+  paths: readonly string[],
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const path of paths) {
+    const seg = readPath(rc, path);
+    if (seg && typeof seg === "object" && "core_conclusion" in seg) {
+      const s = seg as SegmentComputed;
+      setPath(out, path, {
+        core_conclusion: s.core_conclusion,
+        bazi_basis: s.bazi_basis,
+      });
+    }
+  }
+  return out;
+}
+
+/** 整份 RC 的双钥匙子集（测试 / 全量兜底用）。 */
+export function pickAllSegments(rc: ReportComputed): Record<string, unknown> {
+  return pickSegments(rc, SEGMENT_PATHS);
 }
 
 const EVIDENCE_SYSTEM_ZH = `# 你是谁
@@ -43,6 +90,11 @@ const EVIDENCE_SYSTEM_ZH = `# 你是谁
   命理真词只用于逻辑解释,不做时间预测、不做医疗判断。
 - **禁用十神合称简称**:不写官杀/食伤/比劫/印枭/枭印/财官/杀印；一律用全称并打标。
 - 每段依据 2-4 句,只放支撑这段结论的真词,不堆砌。
+
+# 完整性保障
+
+必须输出完整 JSON,包含输入里的【所有】key,
+**绝对禁止省略、跳过、或缩短后半部分段落。**
 
 # 输出格式
 
@@ -67,6 +119,11 @@ Your job: organize those terms into a restrained professional note explaining wh
 - **Never appear**: calendar years (2026), ages (35), named luck cycles (Bing-Wu decade), medical claims.
 - **No Ten-God compound abbreviations**: no 官杀/食伤/比劫/印枭/枭印/财官/杀印 — full names + markers only.
 - 2–4 sentences per segment; only terms that support this conclusion.
+
+# Completeness
+
+Output complete JSON with **every** key from the input.
+**Never omit, skip, or shorten later segments.**
 
 # Output format
 

@@ -2,6 +2,8 @@
  * Offline guards for v2 narrative + evidence (no OpenRouter).
  *   pnpm exec tsx scripts/test-v2-narrative-evidence-guards.ts
  */
+import fs from "node:fs";
+import path from "node:path";
 import {
   findNarrativeBodyLeak,
   NARRATIVE_TASKS,
@@ -16,8 +18,14 @@ import {
 import {
   findEvidenceLeak,
   polishEvidenceSegment,
+  EVIDENCE_TASKS,
+  EVIDENCE_TASK_MAX_TOKENS,
 } from "@/lib/base-analysis-v2/evidence/evidence-call";
-import { buildEvidencePrompt } from "@/lib/base-analysis-v2/evidence/evidence-prompt";
+import {
+  buildEvidencePrompt,
+  pickSegments,
+  pickAllSegments,
+} from "@/lib/base-analysis-v2/evidence/evidence-prompt";
 import {
   SEGMENT_PATHS,
   type ReportComputed,
@@ -201,13 +209,52 @@ function fillTree(text: string): ReportSegmentTextTree {
     buildNarrativePrompt(conclusions, "zh", "测试纠错").user.includes("测试纠错"),
   );
 
-  const ep = buildEvidencePrompt(buildRc(), "zh");
+  const ep = buildEvidencePrompt(pickAllSegments(buildRc()), "zh");
   assert("evidence 注入打标块", ep.system.includes("⟦t:<slug>|⟧"));
   assert("evidence 明示竖线后留空", ep.system.includes("竖线后留空") || ep.system.includes("后面留空"));
   assert("evidence user 含双钥匙", ep.user.includes("bazi_basis") && ep.user.includes("core_conclusion"));
+  assert("evidence user 无 dos", !ep.user.includes('"dos"'));
   assert(
     "evidence retryHint 拼入 user",
-    buildEvidencePrompt(buildRc(), "zh", "依据纠错").user.includes("依据纠错"),
+    buildEvidencePrompt(pickAllSegments(buildRc()), "zh", "依据纠错").user.includes("依据纠错"),
+  );
+  const energyOnly = pickSegments(buildRc(), EVIDENCE_TASKS[0]!.paths);
+  assert(
+    "pickSegments 只含 energy_map",
+    Object.keys(energyOnly).length === 1 && "energy_map" in energyOnly,
+  );
+  assert("EVIDENCE_TASK_MAX_TOKENS=4096", EVIDENCE_TASK_MAX_TOKENS === 4096);
+  assert(
+    "EVIDENCE_TASKS 与 NARRATIVE 同分组",
+    EVIDENCE_TASKS.map((t) => t.paths.length).join(",") === "4,6,4,5",
+  );
+}
+
+// —— 锁 TTL + 去重 pending + job 幂等（防跑两遍）——
+{
+  const root = process.cwd();
+  const kv = fs.readFileSync(path.join(root, "lib/kv/client.ts"), "utf8");
+  const route = fs.readFileSync(
+    path.join(root, "app/api/profile/base-analysis-v2/stream/route.ts"),
+    "utf8",
+  );
+  const evidence = fs.readFileSync(
+    path.join(root, "lib/base-analysis-v2/evidence/evidence-call.ts"),
+    "utf8",
+  );
+  assert(
+    "锁 TTL=600s",
+    /BASE_ANALYSIS_LOCK:\s*60\s*\*\s*10/.test(kv),
+  );
+  assert("去重含 pending", route.includes('"pending"') && route.includes("ACTIVE_STATUSES"));
+  assert("runV2Job 幂等跳过", route.includes("跳过重复执行"));
+  assert(
+    "evidence 4-Task 并发",
+    evidence.includes("EVIDENCE_TASKS") && evidence.includes("Promise.all"),
+  );
+  assert(
+    "evidence 单Task 4096",
+    /EVIDENCE_TASK_MAX_TOKENS\s*=\s*4096/.test(evidence),
   );
 }
 

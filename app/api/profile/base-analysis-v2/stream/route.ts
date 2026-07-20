@@ -55,6 +55,12 @@ async function runV2Job(job_id: string, profile_id: string): Promise<void> {
   const job = await getJob(job_id);
   if (!job) return;
 
+  // 幂等：同一 job 已在跑/已完成则跳过，且不 releaseLock（所有者仍持有或已释放）。
+  if (job.status === "completed" || job.status === "streaming") {
+    console.warn(`[v2/job] ${job_id} 已是 ${job.status},跳过重复执行`);
+    return;
+  }
+
   try {
     await updateJobStatus(job_id, "streaming", {
       accumulated_content: "",
@@ -135,7 +141,9 @@ export async function POST(req: Request) {
   const profileId = body.profile_id.trim();
   const locale = body.locale.trim();
 
-  // Resume existing v2 job if still in flight / completed
+  const ACTIVE_STATUSES = new Set(["completed", "streaming", "pending"]);
+
+  // Resume existing v2 job if still in flight / completed（含 pending：刚建 job 尚未转 streaming）
   if (body.resume_job_id?.trim()) {
     const candidate = await getJob(body.resume_job_id.trim());
     if (
@@ -143,7 +151,7 @@ export async function POST(req: Request) {
       candidate.profile_id === profileId &&
       candidate.kind === "base_analysis_v2"
     ) {
-      if (candidate.status === "completed" || candidate.status === "streaming") {
+      if (ACTIVE_STATUSES.has(candidate.status)) {
         return NextResponse.json({ ok: true, ...jobPollPayload(candidate) });
       }
     }
@@ -153,7 +161,7 @@ export async function POST(req: Request) {
   if (
     latest &&
     latest.kind === "base_analysis_v2" &&
-    (latest.status === "streaming" || latest.status === "completed")
+    ACTIVE_STATUSES.has(latest.status)
   ) {
     const age = Date.now() - latest.updated_at;
     if (latest.status === "completed" || age <= STALE_JOB_MS) {
