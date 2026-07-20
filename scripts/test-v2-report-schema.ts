@@ -95,20 +95,23 @@ incompleteSummary.summary.keywords = "";
 assert("summary 缺 keywords 被拦", validateReportComputed(incompleteSummary).ok === false);
 
 // Skeleton field names must match SEGMENT_PATHS + summary top-level keys
-const skeleton = JSON.parse(REPORT_COMPUTED_JSON_SKELETON) as ReportComputed;
+const skeletonRoot = JSON.parse(REPORT_COMPUTED_JSON_SKELETON) as unknown;
+assert("骨架是对象", !!skeletonRoot && typeof skeletonRoot === "object");
+const skeleton = skeletonRoot as Record<string, unknown>;
 for (const path of SEGMENT_PATHS) {
-  const parts = path.split(".") as [keyof ReportComputed, string];
-  const mod = skeleton[parts[0]] as Record<string, unknown> | undefined;
-  const seg = mod?.[parts[1]];
+  const [modKey, segKey] = path.split(".");
+  const mod = skeleton[modKey!] as Record<string, unknown> | undefined;
+  const seg = mod?.[segKey!];
   assert(
     `骨架含段 ${path}`,
     !!seg && typeof seg === "object" && "core_conclusion" in (seg as object) && "bazi_basis" in (seg as object),
   );
 }
-assert("骨架含 summary.keywords", typeof skeleton.summary?.keywords === "string");
-assert("骨架含 summary.current_theme", typeof skeleton.summary?.current_theme === "string");
-assert("骨架含 summary.dos", Array.isArray(skeleton.summary?.dos));
-assert("骨架含 summary.donts", Array.isArray(skeleton.summary?.donts));
+const summary = skeleton.summary as Record<string, unknown> | undefined;
+assert("骨架含 summary.keywords", typeof summary?.keywords === "string");
+assert("骨架含 summary.current_theme", typeof summary?.current_theme === "string");
+assert("骨架含 summary.dos", Array.isArray(summary?.dos));
+assert("骨架含 summary.donts", Array.isArray(summary?.donts));
 
 // Exhaustiveness: every path is a known SegmentPath (runtime mirror of the const)
 const pathSet = new Set<string>(SEGMENT_PATHS);
