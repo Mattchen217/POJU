@@ -5,6 +5,7 @@ import { runNarrative } from "@/lib/base-analysis-v2/narrative/narrative-call";
 import { runEvidence } from "@/lib/base-analysis-v2/evidence/evidence-call";
 import type { ReportComputed } from "@/lib/base-analysis-v2/report-schema";
 import { readPath, type ReportSegmentTextTree } from "@/lib/base-analysis-v2/segment-text";
+import { forceSsotPlainInMarkers } from "@/lib/llm/sanitize/term-marking";
 
 export type ReportV2Outcome =
   | { ok: true; markdown: string; timings: ReportV2Timings }
@@ -115,6 +116,7 @@ export function renderSummaryCard(
 /**
  * 合并:每段 = 正文(第2次) + 折叠依据(第3次)。
  * 卡片特例走 renderSummaryCard（用 rc.summary 短词 + 第3次依据）。
+ * 末尾 forceSsotPlainInMarkers：把 ⟦t:slug|⟧ 空槽填成 SSOT 软译+释义（v1 同款；漏了会渲染崩 + gate 误伤）。
  */
 export function mergeToMarkdown(
   rc: ReportComputed,
@@ -144,7 +146,9 @@ export function mergeToMarkdown(
     }
   }
 
-  return parts.join("\n\n");
+  const raw = parts.join("\n\n");
+  // ★ 依据块空槽填充（与 v1 stream-llm-with-gate 同函数）
+  return forceSsotPlainInMarkers(raw, locale);
 }
 
 /**

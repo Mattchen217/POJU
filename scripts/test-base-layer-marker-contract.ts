@@ -39,9 +39,14 @@ function main(): void {
   const empty = forceSsotPlainInMarkers("依据:⟦t:life_linguan|⟧。", "zh");
   assert("空槽也填满", empty.includes("执掌") && empty.includes("能力全面成熟"));
 
-  // ④ 底座路径接上了,且只接底座
+  // ④ 底座路径接上了,且只接底座（含 v2 merge + route）
   const gate = read("lib/base-analysis/stream-llm-with-gate.ts");
   assert("gate 之前就覆盖", gate.includes("forceSsotPlainInMarkers"));
+  const v2Merge = read("lib/base-analysis-v2/orchestrate/run-report.ts");
+  const v2Route = read("app/api/profile/base-analysis-v2/stream/route.ts");
+  assert("v2 merge 填空槽", v2Merge.includes("forceSsotPlainInMarkers"));
+  assert("v2 route 填空槽", v2Route.includes("forceSsotPlainInMarkers"));
+  assert("v2 route 不因 gate failJob", !/failJob\([^)]*delivery_gate_failed/.test(v2Route));
   for (const f of ["lib/llm/deepseek/breakthrough-core.ts", "lib/llm/pro/final-delivery.ts"]) {
     assert(`${f} 没有误用 force(下游要贴题白话)`, !read(f).includes("forceSsotPlainInMarkers"));
   }

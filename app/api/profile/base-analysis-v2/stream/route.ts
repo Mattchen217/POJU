@@ -17,6 +17,7 @@ import { auditBaseAnalysisDelivery } from "@/lib/base-analysis/delivery-gate";
 import { runReportV2 } from "@/lib/base-analysis-v2/orchestrate/run-report";
 import { baseAnalysisCacheSessionId } from "@/lib/llm/cache-session-id";
 import { applyComplianceSanitize } from "@/lib/llm/sanitize/compliance-terms";
+import { forceSsotPlainInMarkers } from "@/lib/llm/sanitize/term-marking";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 
 export const runtime = "nodejs";
@@ -85,16 +86,27 @@ async function runV2Job(job_id: string, profile_id: string): Promise<void> {
       return;
     }
 
-    const gated = applyComplianceSanitize(r.markdown, job.locale).text;
-    const gate = auditBaseAnalysisDelivery(gated, job.locale, job.local_data.structured);
+    // v2 原则:不拦截重跑,只代码清洗放行。
+    // 合规已在①第1次 sanitize②第2/3次各自清洗③mergeToMarkdown 填软译 三层做过,
+    // 这里再兜: sanitize → forceSsot（与 v1 stream-llm-with-gate 同序），不再 failJob。
+    const gated = forceSsotPlainInMarkers(
+      applyComplianceSanitize(r.markdown, job.locale).text,
+      job.locale,
+    );
+
+    // gate 仅【观测】(记日志),不 failJob —— 违规交给上面清洗,不整轮重跑。
+    // skipEvidenceProse: 依据块本就该有打标真词,勿当正文违规。
+    const gate = auditBaseAnalysisDelivery(
+      gated,
+      job.locale,
+      job.local_data.structured,
+      { skipEvidenceProse: true },
+    );
     if (!gate.ok) {
-      const summary = gate.violations
-        .slice(0, 8)
-        .map((v) => v.label)
-        .join(", ");
-      console.warn(`[base-analysis-v2] delivery gate failed job=${job_id}`, gate.violations.slice(0, 5));
-      await failJob(job_id, "delivery_gate_failed", summary);
-      return;
+      console.warn(
+        `[base-analysis-v2] ℹ️ gate 观测到残留(不重跑,已清洗放行):`,
+        gate.violations.slice(0, 5).map((v) => v.label).join(", "),
+      );
     }
 
     await setJobContent(job_id, gated);

@@ -249,6 +249,15 @@ function fillTree(text: string): ReportSegmentTextTree {
   assert("去重含 pending", route.includes('"pending"') && route.includes("ACTIVE_STATUSES"));
   assert("runV2Job 幂等跳过", route.includes("跳过重复执行"));
   assert(
+    "v2 route 填软译 forceSsot",
+    route.includes("forceSsotPlainInMarkers"),
+  );
+  assert(
+    "v2 gate 观测不 failJob",
+    route.includes("不重跑,已清洗放行") && !/failJob\(job_id,\s*"delivery_gate_failed"/.test(route),
+  );
+  assert("v2 gate skipEvidenceProse", route.includes("skipEvidenceProse"));
+  assert(
     "evidence 4-Task 并发",
     evidence.includes("EVIDENCE_TASKS") && evidence.includes("Promise.all"),
   );

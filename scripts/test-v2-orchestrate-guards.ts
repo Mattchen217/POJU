@@ -103,13 +103,36 @@ function fillTree(prefix: string): ReportSegmentTextTree {
   assert("关键词来自 rc", md.includes("**关键词:**") && md.includes("沉稳"));
   assert("dos 来自 rc", md.includes("独处充电"));
   assert("donts 来自 rc", md.includes("多线并行"));
-  assert("卡片依据有金字", md.includes("⟦t:zheng_yin|⟧"));
+  assert(
+    "卡片依据有金字(空槽已填)",
+    md.includes("⟦t:zheng_yin|") && !/⟦t:zheng_yin\|⟧/.test(md),
+  );
   assert("常规段正文保留", md.includes("BODY:energy_map.day_master_nature"));
   assert("常规段依据折叠", md.includes("**依据与推理:**"));
   // 正文与依据块之间有空行；标签后紧跟依据（无空行）
   assert(
     "正文与依据块分段",
     /BODY:energy_map\.day_master_nature:[^\n]+\n\n\*\*依据与推理:\*\*\n/.test(md),
+  );
+
+  // 空槽 → SSOT 软译（mergeToMarkdown 末尾 forceSsotPlainInMarkers）
+  const emptySlotMd = mergeToMarkdown(
+    rc,
+    narrative,
+    {
+      ...evidence,
+      energy_map: {
+        ...evidence.energy_map,
+        day_master_nature: "因 ⟦t:day_master|⟧ 偏稳。",
+      },
+    },
+    "zh",
+  );
+  assert(
+    "merge 填空槽软译",
+    emptySlotMd.includes("⟦t:day_master|") &&
+      !/⟦t:day_master\|⟧/.test(emptySlotMd) &&
+      emptySlotMd.includes("本元"),
   );
 
   const sections = parseBaseAnalysisSections(md);

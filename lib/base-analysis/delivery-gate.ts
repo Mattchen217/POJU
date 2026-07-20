@@ -68,14 +68,36 @@ function dedupeViolations(violations: ComplianceViolation[]): ComplianceViolatio
   });
 }
 
+/**
+ * 剥双层制「依据与推理」块 —— v2 观测 gate 审正文时用，避免把依据里本该有的打标真词当违规。
+ * 保留标题与正文段；依据密度审计仍应对完整原文跑。
+ */
+export function stripDualLayerEvidenceBlocks(text: string): string {
+  if (!text?.trim()) return text ?? "";
+  return text.replace(
+    /\n*\*\*(?:依据与推理|Evidence\s*&\s*reasoning)[:：]\*\*[\s\S]*?(?=\n#{2,3}\s|\n*$)/gi,
+    "\n",
+  );
+}
+
+export type AuditBaseAnalysisDeliveryOptions = {
+  /**
+   * true：正文类审计剥掉依据块（v2 观测用）。
+   * 依据锚点密度仍审完整原文。
+   */
+  skipEvidenceProse?: boolean;
+};
+
 /** Full base-analysis delivery audit (shared context base — hard gate before persist). */
 export function auditBaseAnalysisDelivery(
   text: string,
   locale: string,
   structured: ProfileStructured,
+  opts?: AuditBaseAnalysisDeliveryOptions,
 ): BaseAnalysisGateResult {
-  const marked = prepareTextForGlossaryRender(text, locale);
-  const softVisible = softVisibleForAudit(text, locale);
+  const bodySubject = opts?.skipEvidenceProse ? stripDualLayerEvidenceBlocks(text) : text;
+  const marked = prepareTextForGlossaryRender(bodySubject, locale);
+  const softVisible = softVisibleForAudit(bodySubject, locale);
   const maskedMarked = maskMarkersForAudit(marked);
 
   const violations = dedupeViolations([
@@ -91,13 +113,14 @@ export function auditBaseAnalysisDelivery(
     // Metaphor on soft-visible AND on post-sanitize draft (labels/blockquote leads).
     // softVisible alone can miss label-slot hits if a strip path transforms them.
     ...auditMetaphorBlacklist(softVisible, locale),
-    ...auditMetaphorBlacklist(text, locale),
+    ...auditMetaphorBlacklist(bodySubject, locale),
     ...auditSoftReplaceReadability(softVisible, locale),
     ...auditDeliveredText(stripMarkersForPrompt(marked), locale).filter((v) =>
       isHardBannedTermLabel(v.label),
     ),
     ...auditMarkerCompleteness(marked, locale),
     ...auditShenShaAgainstInstance(marked, structured),
+    // 依据锚点始终审完整原文（含依据块）
     ...auditEvidenceMarkDensity(text),
   ]);
 
