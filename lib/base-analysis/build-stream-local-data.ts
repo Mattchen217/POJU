@@ -24,7 +24,7 @@ function normalizeStructuredAvailability(
   };
 }
 
-/** Build POST body for `/api/profile/base-analysis/stream` (structured computed locally). */
+/** Build POST body for `/api/profile/base-analysis-v2/stream` (structured computed locally). */
 export function buildStreamLocalDataFromProfile(
   profile: UserProfile,
   options?: { user_input?: string; output_language?: "zh" | "en" },

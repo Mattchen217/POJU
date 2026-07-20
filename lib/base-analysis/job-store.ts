@@ -13,11 +13,13 @@ export async function createJob(input: {
   profile_id: string;
   locale: string;
   local_data: BaseAnalysisJob["local_data"];
+  kind?: BaseAnalysisJob["kind"];
 }): Promise<BaseAnalysisJob> {
   const job: BaseAnalysisJob = {
     job_id: generateJobId(input.profile_id),
     profile_id: input.profile_id,
     locale: input.locale,
+    kind: input.kind ?? "base_analysis",
     status: "pending",
     accumulated_content: "",
     local_data: input.local_data,

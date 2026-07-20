@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     job_id: job.job_id,
     profile_id: job.profile_id,
+    kind: job.kind ?? "base_analysis",
     status: job.status,
     accumulated_content: job.accumulated_content,
     progress_stage: job.progress_stage ?? null,

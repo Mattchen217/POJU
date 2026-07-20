@@ -2,10 +2,15 @@ import type { BaseAnalysisProgressStage } from "@/lib/base-analysis/progress-sta
 
 export type BaseAnalysisJobStatus = "pending" | "streaming" | "completed" | "failed";
 
+export type BaseAnalysisJobKind = "base_analysis" | "base_analysis_v2";
+
 export interface BaseAnalysisJob {
   job_id: string;
   profile_id: string;
   locale: string;
+
+  /** v1 stream vs v2 three-call orchestrate. Default / omitted = base_analysis. */
+  kind?: BaseAnalysisJobKind;
 
   status: BaseAnalysisJobStatus;
 

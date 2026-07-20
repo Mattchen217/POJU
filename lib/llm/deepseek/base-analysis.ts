@@ -207,7 +207,7 @@ async function readCachedBaseAnalysis(profileId: string): Promise<string | null>
 }
 
 /**
- * 读取缓存；若无则调用流式 `/api/profile/base-analysis/stream` 并写入 IndexedDB。
+ * 读取缓存；若无则调用 `/api/profile/base-analysis-v2/stream`（job+轮询）并写入 IndexedDB。
  */
 export async function generateBaseAnalysis(
   profileId: string,

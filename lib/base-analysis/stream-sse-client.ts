@@ -8,9 +8,9 @@ export type StreamSseCallbacks = {
   onStart?: (job_id: string) => void;
   onChunk?: (text: string, accumulated: string) => void;
   onPollContent?: (accumulated: string) => void;
-  /** Layer-1 judgments arrive before narrative (or on narrative failure). */
+  /** Layer-1 judgments (v1 only; v2 does not emit). */
   onCoreJudgments?: (judgments: unknown, source?: string) => void;
-  /** Wait-UI progress stage (chart_ready → streaming → repair…). */
+  /** Wait-UI progress stage (chart_ready → v2_compute → v2_narrative…). */
   onProgress?: (payload: ProgressPayload) => void;
 };
 
@@ -20,32 +20,26 @@ export type StreamSseResult = {
   job_id: string | null;
 };
 
-type SseEvent = { type: string; [key: string]: unknown };
+/** v2 stream endpoint — three-call orchestrate (compute → narrative∥evidence). */
+export const BASE_ANALYSIS_STREAM_PATH = "/api/profile/base-analysis-v2/stream";
 
-function parseSseEvents(buffer: string): { events: SseEvent[]; rest: string } {
-  const parts = buffer.split("\n\n");
-  const rest = parts.pop() || "";
-  const events: SseEvent[] = [];
+const POLL_INTERVAL_MS = 2_500;
+/** Above server `maxDuration` (800s) + reconnect slack. */
+const POLL_MAX_MS = 900_000;
 
-  for (const block of parts) {
-    const line = block.trim();
-    if (!line.startsWith("data: ")) continue;
-    try {
-      events.push(JSON.parse(line.slice(6)) as SseEvent);
-    } catch (e) {
-      console.warn("[stream-sse-client] parse failed:", e, line.slice(0, 80));
-    }
-  }
-
-  return { events, rest };
-}
-
-const POLL_INTERVAL_MS = 3000;
-/** Slightly above server `maxDuration` (300s) + reconnect slack. */
-const POLL_MAX_MS = 320_000;
+type StatusPayload = {
+  job_id?: string;
+  status?: string;
+  accumulated_content?: string;
+  progress_stage?: unknown;
+  meta?: BaseAnalysisJob["meta"] | Record<string, unknown>;
+  error?: string;
+  error_detail?: string;
+  ok?: boolean;
+};
 
 function emitProgressFromPoll(
-  data: { progress_stage?: unknown },
+  data: StatusPayload,
   callbacks?: StreamSseCallbacks,
   lastStageRef?: { current: string | null },
 ): void {
@@ -58,18 +52,27 @@ function emitProgressFromPoll(
 async function pollJobUntilDone(
   job_id: string,
   callbacks?: StreamSseCallbacks,
+  signal?: AbortSignal,
 ): Promise<StreamSseResult> {
   const startedAt = Date.now();
   const lastStageRef = { current: null as string | null };
+
   while (true) {
+    if (signal?.aborted) {
+      throw new DOMException("Aborted", "AbortError");
+    }
     if (Date.now() - startedAt > POLL_MAX_MS) {
       throw new Error("BASE_ANALYSIS_POLL_TIMEOUT");
     }
-    const res = await fetch(`/api/profile/base-analysis/status?job_id=${job_id}`);
+
+    const res = await fetch(
+      `/api/profile/base-analysis/status?job_id=${encodeURIComponent(job_id)}`,
+      { signal },
+    );
     if (!res.ok) {
       throw new Error(`status poll failed (${res.status})`);
     }
-    const data = await res.json();
+    const data = (await res.json()) as StatusPayload;
     const accumulated = String(data.accumulated_content ?? "");
     callbacks?.onPollContent?.(accumulated);
     emitProgressFromPoll(data, callbacks, lastStageRef);
@@ -82,15 +85,28 @@ async function pollJobUntilDone(
       };
     }
     if (data.status === "failed") {
-      throw new Error(String(data.error || "base analysis job failed"));
+      const detail = data.error_detail ? `: ${data.error_detail}` : "";
+      throw new Error(String(data.error || "base analysis job failed") + detail);
     }
 
-    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+    await new Promise<void>((resolve, reject) => {
+      const t = setTimeout(resolve, POLL_INTERVAL_MS);
+      const onAbort = () => {
+        clearTimeout(t);
+        reject(new DOMException("Aborted", "AbortError"));
+      };
+      if (signal?.aborted) {
+        onAbort();
+        return;
+      }
+      signal?.addEventListener("abort", onAbort, { once: true });
+    });
   }
 }
 
 /**
- * POST stream endpoint until done / error; falls back to status polling when needed.
+ * Start v2 base-analysis job and poll until completed / failed.
+ * Same public shape as the old SSE client so hooks/callers stay unchanged.
  */
 export async function consumeBaseAnalysisStream(input: {
   profile_id: string;
@@ -100,7 +116,7 @@ export async function consumeBaseAnalysisStream(input: {
   signal?: AbortSignal;
   callbacks?: StreamSseCallbacks;
 }): Promise<StreamSseResult> {
-  const res = await fetch("/api/profile/base-analysis/stream", {
+  const res = await fetch(BASE_ANALYSIS_STREAM_PATH, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -116,97 +132,34 @@ export async function consumeBaseAnalysisStream(input: {
     const errText = await res.text();
     throw new Error(`${res.status}: ${errText}`);
   }
-  if (!res.body) {
-    throw new Error("no response body");
-  }
 
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  let accumulatedContent = "";
-  let jobId: string | null = null;
-
-  const finishFromEvent = (ev: SseEvent): StreamSseResult | "poll" | null => {
-    switch (ev.type) {
-      case "start":
-        jobId = String(ev.job_id);
-        input.callbacks?.onStart?.(jobId);
-        return null;
-      case "progress": {
-        if (isBaseAnalysisProgressStage(ev.stage)) {
-          input.callbacks?.onProgress?.({
-            stage: ev.stage,
-            elapsed_ms: typeof ev.elapsed_ms === "number" ? ev.elapsed_ms : undefined,
-            attempt: typeof ev.attempt === "number" ? ev.attempt : undefined,
-          });
-        }
-        return null;
-      }
-      case "chunk": {
-        const text = String(ev.text ?? "");
-        accumulatedContent += text;
-        input.callbacks?.onChunk?.(text, accumulatedContent);
-        return null;
-      }
-      case "reset":
-        accumulatedContent = "";
-        input.callbacks?.onPollContent?.("");
-        return null;
-      case "resumed":
-        return {
-          content: String(ev.accumulated ?? ""),
-          meta: (ev.meta as BaseAnalysisJob["meta"]) ?? {},
-          job_id: String(ev.job_id),
-        };
-      case "resumed_partial":
-        jobId = String(ev.job_id);
-        accumulatedContent = String(ev.accumulated ?? "");
-        if (ev.poll_only) return "poll";
-        return null;
-      case "core_judgments":
-        input.callbacks?.onCoreJudgments?.(ev.judgments, String(ev.source ?? ""));
-        return null;
-      case "done":
-        return {
-          content: accumulatedContent,
-          meta: (ev.meta as BaseAnalysisJob["meta"]) ?? {},
-          job_id: jobId,
-        };
-      case "error":
-        if (ev.core_judgments) {
-          input.callbacks?.onCoreJudgments?.(
-            ev.core_judgments,
-            String(ev.core_judgments_source ?? ""),
-          );
-        }
-        throw new Error(String(ev.error ?? "stream error"));
-      default:
-        return null;
-    }
+  const data = (await res.json()) as StatusPayload & {
+    poll?: string;
+    kind?: string;
   };
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-    const { events, rest } = parseSseEvents(buffer);
-    buffer = rest;
-
-    for (const ev of events) {
-      const outcome = finishFromEvent(ev);
-      if (outcome === "poll" && jobId) {
-        return pollJobUntilDone(jobId, input.callbacks);
-      }
-      if (outcome && outcome !== "poll") {
-        return outcome;
-      }
-    }
+  if (data.ok === false) {
+    throw new Error(String(data.error || "base analysis v2 start failed"));
   }
 
-  if (jobId) {
-    return pollJobUntilDone(jobId, input.callbacks);
+  const jobId = String(data.job_id ?? "").trim();
+  if (!jobId) {
+    throw new Error("base analysis v2: missing job_id");
   }
 
-  throw new Error("stream ended without result");
+  input.callbacks?.onStart?.(jobId);
+  emitProgressFromPoll(data, input.callbacks);
+
+  // Resume / cache hit: content already final
+  if (data.status === "completed") {
+    const content = String(data.accumulated_content ?? "");
+    input.callbacks?.onPollContent?.(content);
+    return {
+      content,
+      meta: data.meta ?? {},
+      job_id: jobId,
+    };
+  }
+
+  return pollJobUntilDone(jobId, input.callbacks, input.signal);
 }

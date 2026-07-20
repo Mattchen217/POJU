@@ -31,7 +31,9 @@ export const BASE_ANALYSIS_GATE_ERROR = "BASE_ANALYSIS_DELIVERY_GATE_FAILED";
  */
 export function auditEvidenceMarkDensity(text: string): ComplianceViolation[] {
   const out: ComplianceViolation[] = [];
-  const re = /\*\*依据与推理:\*\*([\s\S]*?)(?=\n#{2,3}\s|\n*$)/g;
+  // ZH + EN dual-layer labels (v1 RichReadingText / isEvidenceLeadLabel)
+  const re =
+    /\*\*(?:依据与推理|Evidence\s*&\s*reasoning)[:：]\*\*([\s\S]*?)(?=\n#{2,3}\s|\n*$)/gi;
   let m: RegExpExecArray | null;
   let idx = 0;
   while ((m = re.exec(text)) !== null) {

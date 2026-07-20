@@ -1,0 +1,200 @@
+import { after, NextResponse } from "next/server";
+
+import {
+  acquireLock,
+  createJob,
+  failJob,
+  finalizeJob,
+  findLatestJobForProfile,
+  getJob,
+  releaseLock,
+  setJobContent,
+  setJobProgress,
+  updateJobStatus,
+} from "@/lib/base-analysis/job-store";
+import type { BaseAnalysisJob } from "@/lib/base-analysis/job-types";
+import { auditBaseAnalysisDelivery } from "@/lib/base-analysis/delivery-gate";
+import { runReportV2 } from "@/lib/base-analysis-v2/orchestrate/run-report";
+import { baseAnalysisCacheSessionId } from "@/lib/llm/cache-session-id";
+import { applyComplianceSanitize } from "@/lib/llm/sanitize/compliance-terms";
+import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+/** 三次 high：compute 总超时可达 ~900s + 并行正文/依据。 */
+export const maxDuration = 800;
+
+/** If a streaming/pending v2 job has not progressed this long, allow a fresh job. */
+const STALE_JOB_MS = 15 * 60 * 1000;
+
+type RequestBody = {
+  profile_id: string;
+  locale: string;
+  local_data: BaseAnalysisJob["local_data"];
+  resume_job_id?: string;
+};
+
+function jobPollPayload(job: BaseAnalysisJob) {
+  return {
+    job_id: job.job_id,
+    profile_id: job.profile_id,
+    kind: job.kind ?? "base_analysis_v2",
+    status: job.status,
+    accumulated_content: job.accumulated_content,
+    progress_stage: job.progress_stage ?? null,
+    progress_updated_at: job.progress_updated_at ?? null,
+    meta: job.meta,
+    error: job.error,
+    error_detail: job.error_detail,
+    updated_at: job.updated_at,
+    completed_at: job.completed_at,
+  };
+}
+
+async function runV2Job(job_id: string, profile_id: string): Promise<void> {
+  const job = await getJob(job_id);
+  if (!job) return;
+
+  try {
+    await updateJobStatus(job_id, "streaming", {
+      accumulated_content: "",
+      error: undefined,
+      error_detail: undefined,
+    });
+
+    const sessionId = baseAnalysisCacheSessionId(profile_id);
+    const r = await runReportV2(job.local_data.structured, job.locale, {
+      session_id: sessionId,
+      onProgress: async (stage) => {
+        try {
+          await setJobProgress(job_id, stage);
+        } catch (e) {
+          console.warn("[base-analysis-v2] setJobProgress failed:", e);
+        }
+      },
+    });
+
+    if (!r.ok) {
+      await failJob(job_id, `${r.stage}_failed`, r.reason);
+      return;
+    }
+
+    const gated = applyComplianceSanitize(r.markdown, job.locale).text;
+    const gate = auditBaseAnalysisDelivery(gated, job.locale, job.local_data.structured);
+    if (!gate.ok) {
+      const summary = gate.violations
+        .slice(0, 8)
+        .map((v) => v.label)
+        .join(", ");
+      console.warn(`[base-analysis-v2] delivery gate failed job=${job_id}`, gate.violations.slice(0, 5));
+      await failJob(job_id, "delivery_gate_failed", summary);
+      return;
+    }
+
+    await setJobContent(job_id, gated);
+    await finalizeJob(job_id, {
+      pipeline: "base_analysis_v2",
+      timings: r.timings,
+    });
+    console.log(`[base-analysis-v2] ✅ job ${job_id} completed`, r.timings);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(`[base-analysis-v2] job ${job_id} crashed:`, message);
+    await failJob(job_id, "orchestrate_error", message);
+  } finally {
+    await releaseLock(profile_id);
+  }
+}
+
+/**
+ * v2 三调用底座：立即返回 job_id，后台 after() 跑真算→正文/依据并行→合并→门禁→落库。
+ * 前端轮询复用 `GET /api/profile/base-analysis/status?job_id=…`。
+ */
+export async function POST(req: Request) {
+  if (!isOpenRouterConfigured()) {
+    return NextResponse.json(
+      { ok: false, error: "OpenRouter is not configured" },
+      { status: 503 },
+    );
+  }
+
+  let body: RequestBody;
+  try {
+    body = (await req.json()) as RequestBody;
+  } catch {
+    return NextResponse.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
+  }
+
+  if (!body.profile_id?.trim() || !body.locale?.trim() || !body.local_data?.structured) {
+    return NextResponse.json(
+      { ok: false, error: "Missing required fields: profile_id, locale, local_data.structured" },
+      { status: 400 },
+    );
+  }
+
+  const profileId = body.profile_id.trim();
+  const locale = body.locale.trim();
+
+  // Resume existing v2 job if still in flight / completed
+  if (body.resume_job_id?.trim()) {
+    const candidate = await getJob(body.resume_job_id.trim());
+    if (
+      candidate &&
+      candidate.profile_id === profileId &&
+      candidate.kind === "base_analysis_v2"
+    ) {
+      if (candidate.status === "completed" || candidate.status === "streaming") {
+        return NextResponse.json({ ok: true, ...jobPollPayload(candidate) });
+      }
+    }
+  }
+
+  const latest = await findLatestJobForProfile(profileId);
+  if (
+    latest &&
+    latest.kind === "base_analysis_v2" &&
+    (latest.status === "streaming" || latest.status === "completed")
+  ) {
+    const age = Date.now() - latest.updated_at;
+    if (latest.status === "completed" || age <= STALE_JOB_MS) {
+      return NextResponse.json({ ok: true, ...jobPollPayload(latest) });
+    }
+  }
+
+  const locked = await acquireLock(profileId);
+  if (!locked) {
+    return NextResponse.json(
+      { ok: false, error: "Another analysis is in progress" },
+      { status: 409 },
+    );
+  }
+
+  let job: BaseAnalysisJob;
+  try {
+    job = await createJob({
+      profile_id: profileId,
+      locale,
+      local_data: {
+        structured: body.local_data.structured,
+        output_language: body.local_data.output_language ?? (locale.startsWith("zh") ? "zh" : "en"),
+      },
+      kind: "base_analysis_v2",
+    });
+  } catch (e) {
+    await releaseLock(profileId);
+    const message = e instanceof Error ? e.message : "Create job failed";
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+  }
+
+  after(async () => {
+    await runV2Job(job.job_id, profileId);
+  });
+
+  return NextResponse.json({
+    ok: true,
+    job_id: job.job_id,
+    status: job.status,
+    kind: "base_analysis_v2",
+    poll: `/api/profile/base-analysis/status?job_id=${encodeURIComponent(job.job_id)}`,
+  });
+}
