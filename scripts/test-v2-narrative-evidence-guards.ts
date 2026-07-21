@@ -273,7 +273,11 @@ function fillTree(text: string): ReportSegmentTextTree {
   assert("evidence 标记代替真词", ep.system.includes("标记【代替】真词") || ep.system.includes("代替】那个词"));
   assert("evidence 最短完整承重链", ep.system.includes("最短完整承重链"));
   assert("evidence 出现就打标", ep.system.includes("出现就打标") || ep.system.includes("一律打标"));
+  assert("evidence 白话连接铁律", ep.system.includes("连接术语的必须是大白话"));
+  assert("evidence 禁文言黑话举例", ep.system.includes("坐辰土得生扶") && ep.system.includes("一律不许用"));
+  assert("evidence 无数量不限诱导", !ep.system.includes("数量不限") && !ep.system.includes("不设上限"));
   assert("evidence 无2-4句锚定", !ep.system.includes("2-4 句"));
+  assert("evidence 无组织成一小段专业", !ep.system.includes("组织成一小段专业但克制"));
   assert("evidence user 含双钥匙", ep.user.includes("bazi_basis") && ep.user.includes("core_conclusion"));
   assert("evidence user 无 dos", !ep.user.includes('"dos"'));
   assert("evidence 无纠错段落", !ep.user.includes("纠错"));
