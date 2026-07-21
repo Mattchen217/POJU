@@ -357,6 +357,11 @@ function fillTree(text: string): ReportSegmentTextTree {
     route.includes("collectUnmarkedMingliCandidates"),
   );
   assert(
+    "ops 控制台无主站链入",
+    !fs.readFileSync(path.join(root, "app/[locale]/(marketing)/page.tsx"), "utf8").includes("/ops") &&
+      fs.existsSync(path.join(root, "app/ops/page.tsx")),
+  );
+  assert(
     "evidence 单Task 16000",
     evidence.includes("V2_OUTPUT_MAX_TOKENS") &&
       /EVIDENCE_TASK_MAX_TOKENS\s*=\s*V2_OUTPUT_MAX_TOKENS/.test(evidence),

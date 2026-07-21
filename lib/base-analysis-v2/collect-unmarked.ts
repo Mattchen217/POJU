@@ -1,10 +1,6 @@
-/**
- * 旁路收集器：从最终交付 markdown 里抓「未打标的疑似命理词」进 KV 候选池。
- * 只收集、不修复；失败绝不影响交付。
- */
 import { kv } from "@/lib/kv/client";
 
-const CANDIDATE_KEY = "mingli:unmarked-candidates";
+export const UNMARKED_CANDIDATES_KEY = "mingli:unmarked-candidates";
 
 /** 宽松疑似命理词（可误杀；人工复核）。 */
 const SUSPECT_PATTERNS: readonly RegExp[] = [
@@ -36,9 +32,25 @@ export async function collectUnmarkedMingliCandidates(
   }
   if (found.size === 0) return;
 
-  const existing = ((await kv.get(CANDIDATE_KEY)) as Record<string, number> | null) ?? {};
+  const existing =
+    ((await kv.get(UNMARKED_CANDIDATES_KEY)) as Record<string, number> | null) ?? {};
   for (const w of found) {
     existing[w] = (existing[w] ?? 0) + 1;
   }
-  await kv.set(CANDIDATE_KEY, existing);
+  await kv.set(UNMARKED_CANDIDATES_KEY, existing);
+}
+
+export async function readUnmarkedCandidates(): Promise<Record<string, number>> {
+  return ((await kv.get(UNMARKED_CANDIDATES_KEY)) as Record<string, number> | null) ?? {};
+}
+
+export async function removeUnmarkedCandidate(word: string): Promise<Record<string, number>> {
+  const existing = await readUnmarkedCandidates();
+  delete existing[word];
+  await kv.set(UNMARKED_CANDIDATES_KEY, existing);
+  return existing;
+}
+
+export async function clearUnmarkedCandidates(): Promise<void> {
+  await kv.set(UNMARKED_CANDIDATES_KEY, {});
 }
