@@ -17,15 +17,11 @@ import { buildTermMarkingPromptBlock } from "@/lib/llm/sanitize/compliance-terms
 export function buildEvidencePrompt(
   segments: Record<string, unknown>,
   _locale: string,
-  retryHint?: string | null,
 ): { system: string; user: string } {
   const markingBlock = buildTermMarkingPromptBlock("zh", { neutralBase: true });
   const system = `${EVIDENCE_SYSTEM_ZH}\n\n${markingBlock}`;
   const payload = JSON.stringify(segments, null, 2);
-  let user = `以下是若干段的【核心结论】和【命理依据真词】（JSON）。请逐段生成一小段"依据与推理"：\n用结论锚住方向，用命理真词解释为什么，命理词打标成 ⟦t:<slug>|⟧（竖线后留空，软译由系统填）。\n输出 JSON 必须包含输入里的【所有】key，不得省略。\n\`\`\`json\n${payload}\n\`\`\``;
-  if (retryHint?.trim()) {
-    user += `\n\n【纠错 · 上一轮失败原因】\n${retryHint.trim()}\n请按此重写，只输出 JSON。`;
-  }
+  const user = `以下是若干段的【核心结论】和【命理依据真词】（JSON）。请逐段生成一小段"依据与推理"：\n用结论锚住方向，用命理真词解释为什么，命理词打标成 ⟦t:<slug>|⟧（竖线后留空，软译由系统填）。\n输出 JSON 必须包含输入里的【所有】key，不得省略。\n\`\`\`json\n${payload}\n\`\`\``;
   return { system, user };
 }
 

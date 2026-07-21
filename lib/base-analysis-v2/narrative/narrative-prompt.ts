@@ -14,15 +14,11 @@ import { readPath } from "@/lib/base-analysis-v2/segment-text";
 export function buildNarrativePrompt(
   conclusions: Record<string, unknown>,
   _locale: string,
-  retryHint?: string | null,
 ): { system: string; user: string } {
   // v2 多语言架构：第2次正文永远中文；外文由第4次翻译层处理。
   const system = NARRATIVE_SYSTEM_ZH;
   const payload = JSON.stringify(conclusions, null, 2);
-  let user = `以下是这份报告若干段【已经算好的核心结论】（JSON）。请把每一段结论扩写成通顺易懂的白话正文；输出 JSON 必须包含输入里的【所有】key，不得省略。\n\`\`\`json\n${payload}\n\`\`\``;
-  if (retryHint?.trim()) {
-    user += `\n\n【纠错 · 上一轮失败原因】\n${retryHint.trim()}\n请按此重写，只输出 JSON。`;
-  }
+  const user = `以下是这份报告若干段【已经算好的核心结论】（JSON）。请把每一段结论扩写成通顺易懂的白话正文；输出 JSON 必须包含输入里的【所有】key，不得省略。\n\`\`\`json\n${payload}\n\`\`\``;
   return { system, user };
 }
 

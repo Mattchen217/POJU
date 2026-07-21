@@ -16,6 +16,7 @@ import {
   extractMarkers,
   findMarkerDrift,
   pickTextPaths,
+  restoreMarkersInOrder,
 } from "@/lib/base-analysis-v2/translate/translate-call";
 import type { ReportSegmentTextTree } from "@/lib/base-analysis-v2/segment-text";
 
@@ -43,23 +44,19 @@ assert("词典含代号 yong_shen", dict.includes("代号 yong_shen："));
 assert("词典含真词用神", dict.includes("「用神」"));
 assert("词典不含完整标记形态", !dict.includes("⟦t:"));
 assert("词典不含自造软译锚元行", !dict.includes("锚元"));
-assert("词典不含等号诱导", !dict.includes(" = "));
 
-const { system, user } = buildTranslatePrompt(
-  "en",
-  {
-    narrative: { energy_map: { day_master_nature: "你像一株藤蔓。" } },
-    evidence: {
-      energy_map: { day_master_nature: "因⟦t:day_master|⟧偏弱。" },
-    },
+const { system, user } = buildTranslatePrompt("en", {
+  narrative: { energy_map: { day_master_nature: "你像一株藤蔓。" } },
+  evidence: {
+    energy_map: { day_master_nature: "因⟦t:day_master|⟧偏弱。" },
   },
-  null,
-);
-assert("translate system 有四步标记处理", system.includes("文本里的标记怎么处理"));
-assert("translate system 禁止填空槽", system.includes("竖线后永远是空的"));
+});
+assert("translate 禁粘贴中文依据", system.includes("绝对禁止") && system.includes("evidence"));
+assert("translate 岛外必须译", system.includes("标记以外") || system.includes("岛以外"));
+assert("translate 形态含空竖线", system.includes("⟦t:yong_shen|⟧") || system.includes("⟦t:xxxx|⟧"));
 assert("translate system 注入代号表", system.includes("代号 day_master："));
-assert("translate system 无正例箭头对照", !/⟦t:[^⟧]+⟧[^。\n]{0,40}→/.test(system));
 assert("translate user 含 payload", user.includes("你像一株藤蔓"));
+assert("translate user 禁 evidence 粘贴中文", user.includes("禁止 evidence 粘贴中文"));
 
 assert(
   "extractMarkers 排序稳定",
@@ -81,6 +78,14 @@ assert(
       true,
   );
 }
+
+assert(
+  "restoreMarkersInOrder 回填岛",
+  restoreMarkersInOrder(
+    "因⟦t:day_master|⟧与⟦t:yong_shen|⟧。",
+    "Because ⟦t:DAY|x⟧ and ⟦t:wrong|⟧.",
+  ) === "Because ⟦t:day_master|⟧ and ⟦t:yong_shen|⟧.",
+);
 
 {
   const tree = {
@@ -120,6 +125,17 @@ assert("progress 含 v2_translate", stages.includes('"v2_translate"'));
 const translateCall = read("lib/base-analysis-v2/translate/translate-call.ts");
 assert('translate reasoning=medium', translateCall.includes('reasoning_effort: "medium"'));
 assert("translate 压回空槽", translateCall.includes("collapseMarkersToEmptySlots"));
+assert("marker 漂移代码回填不重试", translateCall.includes("已代码回填标记,不重试"));
+assert(
+  "无因 drift continue",
+  !/findMarkerDrift[\s\S]{0,280}continue/.test(translateCall),
+);
+assert("translate 无 MAX_ATTEMPTS", !/MAX_ATTEMPTS\s*=/.test(translateCall));
+assert("translate 无 retryHint", !translateCall.includes("retryHint"));
+assert(
+  "translate-prompt 无纠错重译",
+  !read("lib/base-analysis-v2/translate/translate-prompt.ts").includes("纠错"),
+);
 
 const evidenceCall = read("lib/base-analysis-v2/evidence/evidence-call.ts");
 assert(

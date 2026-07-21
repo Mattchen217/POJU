@@ -211,10 +211,7 @@ function fillTree(text: string): ReportSegmentTextTree {
   );
   assert("narrative user 无 bazi_basis", !np.user.includes("bazi_basis"));
   assert("narrative user 无 dos 数组", !np.user.includes('"dos"'));
-  assert(
-    "narrative retryHint 拼入 user",
-    buildNarrativePrompt(conclusions, "zh", "测试纠错").user.includes("测试纠错"),
-  );
+  assert("narrative 无纠错段落", !np.user.includes("纠错"));
 
   const ep = buildEvidencePrompt(pickAllSegments(buildRc()), "zh");
   assert("evidence 注入打标块", ep.system.includes("⟦t:<slug>|⟧"));
@@ -222,10 +219,7 @@ function fillTree(text: string): ReportSegmentTextTree {
   assert("evidence ZH 要求中文输出", ep.system.includes("整段依据用中文写"));
   assert("evidence user 含双钥匙", ep.user.includes("bazi_basis") && ep.user.includes("core_conclusion"));
   assert("evidence user 无 dos", !ep.user.includes('"dos"'));
-  assert(
-    "evidence retryHint 拼入 user",
-    buildEvidencePrompt(pickAllSegments(buildRc()), "zh", "依据纠错").user.includes("依据纠错"),
-  );
+  assert("evidence 无纠错段落", !ep.user.includes("纠错"));
 
   const epEn = buildEvidencePrompt(pickAllSegments(buildRc()), "en");
   assert("evidence en locale 仍用中文 system", epEn.system === ep.system);

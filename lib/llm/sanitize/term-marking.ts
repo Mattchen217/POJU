@@ -1375,8 +1375,9 @@ export function forceSsotPlainInMarkers(text: string, locale: string): string {
 }
 
 /**
- * 把任意已填槽标记压回干净空槽 `⟦t:slug|⟧`（给第4次翻译 / 中间态存盘用）。
- * 软译+释义只在 merge 给用户看之前由 forceSsotPlainInMarkers 填。
+ * 把任意已填槽标记压回前端可解析的中间态空槽 `⟦t:slug|⟧`。
+ * GlossaryText / TERM_MARKER_PATTERN **要求**带 `|`；无竖线的 `⟦t:slug⟧` 前端认不出。
+ * 软译+释义只在 merge 给用户看之前由 forceSsotPlainInMarkers 填成三段位。
  */
 export function collapseMarkersToEmptySlots(text: string): string {
   if (!text?.includes("⟦t:")) return text ?? "";

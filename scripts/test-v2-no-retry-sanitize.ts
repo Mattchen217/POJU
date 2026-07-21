@@ -161,15 +161,41 @@ function buildRc(): ReportComputed {
   assert("compute 无 simp_leak continue", !/simp_leak[\s\S]{0,80}continue/.test(compute));
   assert("compute 无 time_anchor continue", !/time_anchor_leak[\s\S]{0,80}continue/.test(compute));
   assert("compute MAX_TOKENS=16000", /COMPUTE_MAX_TOKENS\s*=\s*16_000/.test(compute));
+  assert("compute 无 MAX_ATTEMPTS 循环", !/MAX_ATTEMPTS\s*=/.test(compute));
+  assert("compute 无「重发」continue", !/重发[\s\S]{0,40}continue/.test(compute) && !/continue;[\s\S]{0,40}重发/.test(compute));
   assert("narrative 无 body_leak continue", !/body_leak[\s\S]{0,120}continue/.test(narrative));
   assert("evidence 无 evidence_leak continue", !/evidence_leak[\s\S]{0,120}continue/.test(evidence));
   assert("narrative 放行日志", narrative.includes("放行,不打回"));
   assert("evidence 放行日志", evidence.includes("放行,不打回"));
+  assert("narrative 无 MAX_ATTEMPTS", !/MAX_ATTEMPTS\s*=/.test(narrative));
+  assert("evidence 无 MAX_ATTEMPTS", !/MAX_ATTEMPTS\s*=/.test(evidence));
+  assert("narrative 无 retryHint", !narrative.includes("retryHint"));
+  assert("evidence 无 retryHint", !evidence.includes("retryHint"));
   assert(
     "evidence 单Task MAX=4096",
     /EVIDENCE_TASK_MAX_TOKENS\s*=\s*4096/.test(evidence),
   );
   assert("evidence 4-Task Promise.all", evidence.includes("EVIDENCE_TASKS") && /Promise\.all/.test(evidence));
+
+  const translate = fs.readFileSync(
+    path.join(process.cwd(), "lib/base-analysis-v2/translate/translate-call.ts"),
+    "utf8",
+  );
+  const translatePrompt = fs.readFileSync(
+    path.join(process.cwd(), "lib/base-analysis-v2/translate/translate-prompt.ts"),
+    "utf8",
+  );
+  assert("translate 无 MAX_ATTEMPTS", !/MAX_ATTEMPTS\s*=/.test(translate));
+  assert("translate 无 retryHint", !translate.includes("retryHint"));
+  assert("translate-prompt 无纠错重译", !translatePrompt.includes("纠错"));
+  assert("narrative-prompt 无纠错", !fs.readFileSync(
+    path.join(process.cwd(), "lib/base-analysis-v2/narrative/narrative-prompt.ts"),
+    "utf8",
+  ).includes("纠错"));
+  assert("evidence-prompt 无纠错", !fs.readFileSync(
+    path.join(process.cwd(), "lib/base-analysis-v2/evidence/evidence-prompt.ts"),
+    "utf8",
+  ).includes("纠错"));
 }
 
 console.log(failures.length ? "❌ no-retry sanitize failed" : "✅ no-retry sanitize ready");
