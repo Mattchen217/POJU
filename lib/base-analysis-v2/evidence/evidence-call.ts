@@ -28,6 +28,7 @@ import {
 import {
   autoMarkBareTerms,
   bareMingliWordInPlain,
+  dedupeBareTermBeforeMarker,
   demoteWuxingMarkers,
   maskMarkersForAudit,
 } from "@/lib/llm/sanitize/term-marking";
@@ -56,10 +57,11 @@ export type RunEvidenceOptions = {
   signal?: AbortSignal;
 };
 
-/** 打标器兜底 + 五行还原；★ 不填软译槽 —— 留给 merge/finalize，翻译只吃干净代号。 */
+/** 打标器兜底 + 真词/标记去重 + 五行还原；★ 不填软译槽 —— 留给 merge/finalize。 */
 export function polishEvidenceSegment(text: string, locale: string): string {
   const marked = autoMarkBareTerms(text, locale);
-  return demoteWuxingMarkers(marked);
+  const deduped = dedupeBareTermBeforeMarker(marked);
+  return demoteWuxingMarkers(deduped);
 }
 
 /**

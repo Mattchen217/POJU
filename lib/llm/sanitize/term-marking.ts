@@ -563,6 +563,34 @@ const PILLAR_TO_SLUG: Readonly<Record<string, string>> = (() => {
 })();
 
 /**
+ * 真词 → slug：删「真词 + 紧邻同义标记」冗余真词用。
+ * 十神 + 柱位结构词 + 日主/用神等基础真词。
+ */
+const BARE_TERM_TO_SLUG: Readonly<Record<string, string>> = {
+  ...TEN_GOD_TO_SLUG,
+  ...PILLAR_TO_SLUG,
+  日主: "day_master",
+  用神: "yong_shen",
+};
+
+/**
+ * 删掉「真词 + 紧邻同义标记」里的冗余真词。
+ * 「日主⟦t:day_master|…⟧」→「⟦t:day_master|…⟧」；
+ * 「丁火食神⟦t:shi_shen|…⟧」→「丁火⟦t:shi_shen|…⟧」（只删紧贴标记的食神）。
+ * 只删与紧邻标记 slug 对应的真词，不误删干支或其他文字。
+ */
+export function dedupeBareTermBeforeMarker(text: string): string {
+  if (!text?.includes("⟦t:")) return text ?? "";
+  let out = text;
+  const entries = Object.entries(BARE_TERM_TO_SLUG).sort((a, b) => b[0].length - a[0].length);
+  for (const [term, slug] of entries) {
+    const reDirect = new RegExp(`${escapeRegExp(term)}(?=⟦t:${escapeRegExp(slug)}[|⟧])`, "g");
+    out = out.replace(reDirect, "");
+  }
+  return out;
+}
+
+/**
  * 裸柱位/结构词 → 标记。第五类确定性打标器（前四类：天干/五行/十神/神煞）。
  *
  * 生产 2026-07-18：柱位无打标器 + SSOT 无术语 → 模型自造 ⟦t:hour|时柱⟧ →
@@ -1257,7 +1285,11 @@ export function buildTermMarkingPromptBlock(
    更不要为了解释它而写出它的术语原词（第 2 列那些）。标记本身就是解释。
 3. **正文零标记**；标记只出现在「依据与推理」；一段依据 ≤3 金字。
 4. **slug 必须取自上表**；自造 id 无效、句子会缺字 —— 上表没有的概念，**直接用白话讲，不打标**。
-5. 守六条语义红线（不预测/不算命/不占卜/不决吉凶/不恐吓/不超自然承诺）。`
+5. 守六条语义红线（不预测/不算命/不占卜/不决吉凶/不恐吓/不超自然承诺）。
+6. **标记是用来【代替】那个词的，不是加在那个词后面。**
+   要标注一个命理概念时，直接写 \`⟦t:代号|⟧\` 就够了——标记本身【就代表】那个概念。
+   - 【不允许】把概念的中文名字写出来、再在后面补一个标记（等于同一个词说了两遍）。
+   - 标记出现的地方，就是那个概念该在的地方，它前面不要再放这个概念的中文真词。`
       : `## Marking rules (neutral base)
 1. Format: \`⟦t:<slug>|⟧\` — **keep the pipe, leave the slot after it empty**.
 2. It renders as the official term above; the reader taps to expand the official gloss.
@@ -1265,7 +1297,11 @@ export function buildTermMarkingPromptBlock(
    and do not write the raw jargon from column 2. The marker is the explanation.
 3. **Zero markers in body prose**; markers only in the evidence note; ≤3 markers per evidence segment.
 4. **slug must come from the table**; invented ids are invalid — for concepts not listed, **use plain language, no marker**.
-5. Keep the six semantic red lines (no prediction / fate-telling / divination / omen verdicts / fear / supernatural promises).`
+5. Keep the six semantic red lines (no prediction / fate-telling / divination / omen verdicts / fear / supernatural promises).
+6. **A marker REPLACES the term — it is not appended after the term.**
+   When marking a concept, write only \`⟦t:slug|⟧\` — the marker itself stands for that concept.
+   - Do **not** write the Chinese jargon and then a marker next to it (that says the same thing twice).
+   - Where the marker appears is where the concept belongs; do not put the Chinese real-term immediately before it.`
     : principlesOnly
       ? zh
         ? `## 打标记规则（原则 · 严禁过拟合示例）

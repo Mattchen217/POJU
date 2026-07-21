@@ -139,13 +139,22 @@
 
 .delivery-wait-copy__subtitle {
   margin: 0 auto;
-  max-width: clamp(300px, 72vw, 480px);
-  font-size: clamp(13px, 2.2vw, 15px);
-  line-height: 1.55;
+  max-width: min(100%, 92vw);
+  padding-inline: 8px;
+  font-size: clamp(11px, 2vw, 15px);
+  line-height: 1.4;
   color: rgba(255, 255, 255, 0.52);
   font-weight: 400;
   letter-spacing: 0.01em;
   text-shadow: none;
+  white-space: nowrap;
+  text-align: center;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.delivery-wait-copy__subtitle::-webkit-scrollbar {
+  display: none;
 }
 
 .delivery-wait-copy__bridge {

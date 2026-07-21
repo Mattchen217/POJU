@@ -198,6 +198,25 @@ function fillTree(text: string): ReportSegmentTextTree {
     "抓简称",
     findEvidenceLeak(fillTree("官杀混杂导致压力。"), "zh")?.includes("简称") === true,
   );
+
+  assert(
+    "去重 日主+标记",
+    polishEvidenceSegment("日主⟦t:day_master|⟧偏弱", "zh") === "⟦t:day_master|⟧偏弱",
+  );
+  {
+    const shi = polishEvidenceSegment("丁火食神⟦t:shi_shen|⟧吐秀", "zh");
+    assert("去重 食神+标记 无残留真词", !shi.includes("食神") && shi.includes("⟦t:shi_shen|⟧"));
+  }
+  assert(
+    "去重 伤官+标记",
+    polishEvidenceSegment("巳火伤官⟦t:shang_guan|⟧", "zh") === "巳火⟦t:shang_guan|⟧" ||
+      (!polishEvidenceSegment("巳火伤官⟦t:shang_guan|⟧", "zh").includes("伤官") &&
+        polishEvidenceSegment("巳火伤官⟦t:shang_guan|⟧", "zh").includes("⟦t:shang_guan|⟧")),
+  );
+  assert(
+    "去重 年干+标记",
+    polishEvidenceSegment("年干⟦t:pl_year_stem|⟧透出", "zh") === "⟦t:pl_year_stem|⟧透出",
+  );
 }
 
 // —— prompts: slug 空槽 + 结论不含 basis ——
@@ -217,6 +236,7 @@ function fillTree(text: string): ReportSegmentTextTree {
   assert("evidence 注入打标块", ep.system.includes("⟦t:<slug>|⟧"));
   assert("evidence 明示竖线后留空", ep.system.includes("竖线后留空") || ep.system.includes("后面留空"));
   assert("evidence ZH 要求中文输出", ep.system.includes("整段依据用中文写"));
+  assert("evidence 标记代替真词", ep.system.includes("标记【代替】真词") || ep.system.includes("代替】那个词"));
   assert("evidence user 含双钥匙", ep.user.includes("bazi_basis") && ep.user.includes("core_conclusion"));
   assert("evidence user 无 dos", !ep.user.includes('"dos"'));
   assert("evidence 无纠错段落", !ep.user.includes("纠错"));
