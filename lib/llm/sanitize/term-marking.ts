@@ -606,7 +606,6 @@ export function wrapBarePillars(text: string, locale: string): string {
   if (!text?.trim()) return text ?? "";
   const loc = toGlossaryLocale(locale);
   const words = Object.keys(PILLAR_TO_SLUG).sort((a, b) => b.length - a.length);
-  let out = text;
 
   // ── 诊断（临时）──
   const PILLAR_PROBE = /(年柱|月柱|日柱|时柱|年支|月支|日支|时支|年干|月干|日干|时干)/;
@@ -621,14 +620,23 @@ export function wrapBarePillars(text: string, locale: string): string {
   }
   // ── /诊断 ──
 
-  for (const han of words) {
-    const id = PILLAR_TO_SLUG[han]!;
-    if (!termOf(id, loc)) continue;
-    out = out.replace(
-      new RegExp(`${escapeRegExp(han)}(?![运格星局宫])`, "g"),
-      `⟦t:${id}|⟧`,
-    );
-  }
+  // 只改标记外片段，避免「年干⟦t:pl_year_stem|⟧」再包一层成双标记。
+  const parts = text.split(/(⟦[^⟧]*⟧)/g);
+  const out = parts
+    .map((part, i) => {
+      if (i % 2 === 1) return part;
+      let seg = part;
+      for (const han of words) {
+        const id = PILLAR_TO_SLUG[han]!;
+        if (!termOf(id, loc)) continue;
+        seg = seg.replace(
+          new RegExp(`${escapeRegExp(han)}(?![运格星局宫])`, "g"),
+          `⟦t:${id}|⟧`,
+        );
+      }
+      return seg;
+    })
+    .join("");
 
   // ── 诊断（临时）──
   const hitOut = out.match(new RegExp(PILLAR_PROBE, "g"));
@@ -849,20 +857,37 @@ function markBareGanzhiInSegment(
   return segment.slice(0, first.index) + marker + segment.slice(first.index + first.len);
 }
 
+export type AutoMarkBareTermsOpts = {
+  /** 每段（空行分段）最多补几个；默认 2（正文防密度）。依据传 Infinity。 */
+  maxPerPara?: number;
+  /** 同一 slug 全文仅首次补标；默认 true。依据传 false（出现即打）。 */
+  oncePerText?: boolean;
+};
+
 /**
  * UI 渲染兜底：词表内裸命理词 + 高危合规词 + 裸干支（未在 ⟦t:⟧ 内）自动补标 → 软译呈现。
  * 只在标记外正文段扫描；整词替换；幂等（已包过的段不重复处理）。
- * 同一术语全文仅首次补标；每段（空行分段）最多补 2 个，降低括号密度。
+ * 默认：同一术语全文仅首次 + 每段最多 2 个（正文防密度）。
+ * 依据块传 `{ maxPerPara: Infinity, oncePerText: false }` → 出现的命理词无条件全打。
  */
-export function autoMarkBareTerms(text: string, locale: string): string {
+export function autoMarkBareTerms(
+  text: string,
+  locale: string,
+  opts?: AutoMarkBareTermsOpts,
+): string {
+  const maxPerPara = opts?.maxPerPara ?? 2;
+  const oncePerText = opts?.oncePerText ?? true;
+
   // Phrase-first: never mark 月柱/正印/壬水 as three abutting softs.
   // Quoted single chars ("养") are rhetorical — do not auto-mark.
   const { text: protectedText, restore } = protectQuotedSingleHanChars(text);
   const folded = collapseChainedSoftReplaceArtifacts(replaceZhMingliStacks(protectedText));
   const seenSlugs = new Set<string>();
-  // Seed with ids already marked by the model so auto-mark doesn't re-open them.
-  for (const m of folded.matchAll(/⟦t:([a-zA-Z0-9_:]+)\|/g)) {
-    if (m[1]) seenSlugs.add(m[1]);
+  // 正文限流时：已有标记 seed，避免同 slug 再开。依据全打时不 seed（裸词仍要补）。
+  if (oncePerText) {
+    for (const m of folded.matchAll(/⟦t:([a-zA-Z0-9_:]+)\|/g)) {
+      if (m[1]) seenSlugs.add(m[1]);
+    }
   }
 
   const paragraphs = folded.split(/(\n\n+)/);
@@ -876,15 +901,21 @@ export function autoMarkBareTerms(text: string, locale: string): string {
           return parts
             .map((part, i) => {
               if (i % 2 === 1) return part;
-              let out = markBareGanzhiInSegment(part, locale, seenSlugs, () => {
-                if (marksInPara >= 2) return false;
-                marksInPara += 1;
-                return true;
-              });
+              let out = markBareGanzhiInSegment(
+                part,
+                locale,
+                oncePerText ? seenSlugs : undefined,
+                () => {
+                  if (marksInPara >= maxPerPara) return false;
+                  marksInPara += 1;
+                  return true;
+                },
+              );
               for (const hanId of BARE_AUTO_MARK_HAN) {
-                if (marksInPara >= 2) break;
+                if (marksInPara >= maxPerPara) break;
                 const labels = resolveBareMarkLabels(hanId, locale);
-                if (!labels || seenSlugs.has(labels.slug)) continue;
+                if (!labels) continue;
+                if (oncePerText && seenSlugs.has(labels.slug)) continue;
                 const re =
                   hanId.length === 1
                     ? new RegExp(
@@ -893,8 +924,9 @@ export function autoMarkBareTerms(text: string, locale: string): string {
                       )
                     : new RegExp(`${escapeRegExp(hanId)}(?![（(])`, "g");
                 out = out.replace(re, () => {
-                  if (seenSlugs.has(labels.slug) || marksInPara >= 2) return hanId;
-                  seenSlugs.add(labels.slug);
+                  if (marksInPara >= maxPerPara) return hanId;
+                  if (oncePerText && seenSlugs.has(labels.slug)) return hanId;
+                  if (oncePerText) seenSlugs.add(labels.slug);
                   marksInPara += 1;
                   return encodeTermMarker(labels.slug, labels.soft, labels.plain);
                 });

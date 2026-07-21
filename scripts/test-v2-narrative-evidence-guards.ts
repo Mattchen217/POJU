@@ -4,6 +4,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { autoMarkBareTerms } from "@/lib/llm/sanitize/term-marking";
 import {
   findNarrativeBodyLeak,
   NARRATIVE_TASKS,
@@ -217,6 +218,32 @@ function fillTree(text: string): ReportSegmentTextTree {
     "去重 年干+标记",
     polishEvidenceSegment("年干⟦t:pl_year_stem|⟧透出", "zh") === "⟦t:pl_year_stem|⟧透出",
   );
+
+  {
+    const dense =
+      "日主为乙木，得正印壬水生扶，食神透出，伤官泄秀，偏财被克。";
+    const allMarked = polishEvidenceSegment(dense, "zh");
+    const markCount = (allMarked.match(/⟦t:/g) ?? []).length;
+    assert("依据取消每段2个上限(≥4标)", markCount >= 4);
+    assert(
+      "依据承重词全打无裸十神",
+      !/(日主|正印|食神|伤官|偏财)/.test(allMarked.replace(/⟦[^⟧]*⟧/g, "")),
+    );
+  }
+  {
+    const pillar = polishEvidenceSegment("年干透出壬水，日支藏根。", "zh");
+    assert("柱位年干打标", pillar.includes("⟦t:pl_year_stem|"));
+    assert("柱位日支打标", pillar.includes("⟦t:pl_day_branch|"));
+    assert("裸年干已清", !pillar.replace(/⟦[^⟧]*⟧/g, "").includes("年干"));
+  }
+  {
+    const bodyDefault = autoMarkBareTerms(
+      "日主偏旺，食神吐秀，正印生扶，伤官泄秀。",
+      "zh",
+    );
+    const bodyMarks = (bodyDefault.match(/⟦t:/g) ?? []).length;
+    assert("正文默认仍限流≤2", bodyMarks <= 2);
+  }
 }
 
 // —— prompts: slug 空槽 + 结论不含 basis ——
@@ -237,6 +264,9 @@ function fillTree(text: string): ReportSegmentTextTree {
   assert("evidence 明示竖线后留空", ep.system.includes("竖线后留空") || ep.system.includes("后面留空"));
   assert("evidence ZH 要求中文输出", ep.system.includes("整段依据用中文写"));
   assert("evidence 标记代替真词", ep.system.includes("标记【代替】真词") || ep.system.includes("代替】那个词"));
+  assert("evidence 最短完整承重链", ep.system.includes("最短完整承重链"));
+  assert("evidence 出现就打标", ep.system.includes("出现就打标") || ep.system.includes("一律打标"));
+  assert("evidence 无2-4句锚定", !ep.system.includes("2-4 句"));
   assert("evidence user 含双钥匙", ep.user.includes("bazi_basis") && ep.user.includes("core_conclusion"));
   assert("evidence user 无 dos", !ep.user.includes('"dos"'));
   assert("evidence 无纠错段落", !ep.user.includes("纠错"));
@@ -251,7 +281,7 @@ function fillTree(text: string): ReportSegmentTextTree {
     "pickSegments 只含 energy_map",
     Object.keys(energyOnly).length === 1 && "energy_map" in energyOnly,
   );
-  assert("EVIDENCE_TASK_MAX_TOKENS=4096", EVIDENCE_TASK_MAX_TOKENS === 4096);
+  assert("EVIDENCE_TASK_MAX_TOKENS=16000", EVIDENCE_TASK_MAX_TOKENS === 16_000);
   assert(
     "EVIDENCE_TASKS 与 NARRATIVE 同分组",
     EVIDENCE_TASKS.map((t) => t.paths.length).join(",") === "4,6,4,5",
@@ -309,8 +339,15 @@ function fillTree(text: string): ReportSegmentTextTree {
     evidence.includes("EVIDENCE_TASKS") && evidence.includes("Promise.all"),
   );
   assert(
-    "evidence 单Task 4096",
-    /EVIDENCE_TASK_MAX_TOKENS\s*=\s*4096/.test(evidence),
+    "evidence polish 接 wrapBarePillars + 全打",
+    evidence.includes("wrapBarePillars") &&
+      evidence.includes("maxPerPara: Infinity") &&
+      evidence.includes("oncePerText: false"),
+  );
+  assert(
+    "evidence 单Task 16000",
+    evidence.includes("V2_OUTPUT_MAX_TOKENS") &&
+      /EVIDENCE_TASK_MAX_TOKENS\s*=\s*V2_OUTPUT_MAX_TOKENS/.test(evidence),
   );
 }
 

@@ -23,12 +23,14 @@ import {
 } from "@/lib/llm/openrouter-shared";
 import { prepareBodyTextForGlossaryRender } from "@/lib/llm/sanitize/compliance-terms";
 import { bareMingliWordInPlain } from "@/lib/llm/sanitize/term-marking";
+import {
+  V2_HARD_MAX_ATTEMPTS,
+  V2_OUTPUT_MAX_TOKENS,
+} from "@/lib/base-analysis-v2/v2-llm-budget";
 
-/** 单 Task 4–6 段，远小于此；给足防截断。 */
-const NARRATIVE_TASK_MAX_TOKENS = 4096;
 const NARRATIVE_TEMPERATURE = 0.65;
-/** 单次生成；不预留打回重发。 */
-const ATTEMPT_TIMEOUT_MS = 180_000;
+/** 单次硬尝试 fetch 超时；硬重试共用 phase 总墙。 */
+const ATTEMPT_TIMEOUT_MS = 120_000;
 /** 4 Task 并发墙，对齐 Hobby 300s。 */
 const TOTAL_TIMEOUT_MS = 300_000;
 
@@ -192,8 +194,8 @@ function polishNarrativeTree(
 
 /**
  * 单 Task：只喂这几段的 core_conclusion，输出这几段白话。
- * ★ 单次生成、不打回：空/坏 JSON/调用失败 → Task 失败；缺段合并后用 core_conclusion 兜底；
- *   角引号/术语 → 代码清洗放行。质量靠 prompt/数据，不靠重发。
+ * ★ 硬错误可重试（空/截断/坏 JSON/连不上）；缺段合并后兜底；角引号/术语清洗放行。
+ *   质量问题不打回。
  */
 async function runNarrativeTask(
   task: NarrativeTask,
@@ -205,77 +207,97 @@ async function runNarrativeTask(
     deadline: number;
   },
 ): Promise<{ ok: true; value: Record<string, unknown>; attempts: number } | { ok: false; reason: string; attempts: number }> {
-  if (Date.now() > opts.deadline || opts.signal.aborted) {
-    console.error(`[v2/narrative/${task.name}] ❌ total_timeout（不重发）`);
-    return { ok: false, reason: "total_timeout", attempts: 1 };
-  }
-
   const subset = pickConclusions(rc, task.paths);
   const { system, user } = buildNarrativePrompt(subset, locale);
+  let lastReason = "unknown";
 
-  try {
-    const attemptStartedAt = Date.now();
-    const heartbeat = setInterval(() => {
-      const sec = Math.round((Date.now() - attemptStartedAt) / 1000);
-      console.warn(`[v2/narrative/${task.name}] still waiting (${sec}s)…`);
-    }, 30_000);
+  for (let attempt = 1; attempt <= V2_HARD_MAX_ATTEMPTS; attempt++) {
+    if (Date.now() > opts.deadline || opts.signal.aborted) {
+      lastReason = "total_timeout";
+      break;
+    }
 
-    let result;
     try {
-      result = await openRouterChatCompletion({
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: user },
-        ],
-        temperature: NARRATIVE_TEMPERATURE,
-        max_tokens: NARRATIVE_TASK_MAX_TOKENS,
-        json_mode: true,
-        reasoning_effort: "high",
-        timeout_ms: ATTEMPT_TIMEOUT_MS,
-        session_id: opts.session_id,
-        call_type: "v2_narrative",
-        phase_name: `v2_narrative_${task.name}`,
-        signal: opts.signal,
-      });
-    } finally {
-      clearInterval(heartbeat);
-    }
+      const attemptStartedAt = Date.now();
+      const heartbeat = setInterval(() => {
+        const sec = Math.round((Date.now() - attemptStartedAt) / 1000);
+        console.warn(
+          `[v2/narrative/${task.name}] hard attempt ${attempt}/${V2_HARD_MAX_ATTEMPTS} — still waiting (${sec}s)…`,
+        );
+      }, 30_000);
 
-    const text = result.text ?? "";
-    if (!text.trim()) {
-      console.error(`[v2/narrative/${task.name}] ❌ 空回复（不重发）`);
-      return { ok: false, reason: "empty_response", attempts: 1 };
-    }
-    if (result.finish_reason === "length") {
-      console.warn(
-        `[v2/narrative/${task.name}] ℹ️ finish_reason=length — 仍尝试解析，不重发`,
+      let result;
+      try {
+        result = await openRouterChatCompletion({
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: user },
+          ],
+          temperature: NARRATIVE_TEMPERATURE,
+          max_tokens: V2_OUTPUT_MAX_TOKENS,
+          json_mode: true,
+          reasoning_effort: "high",
+          timeout_ms: ATTEMPT_TIMEOUT_MS,
+          session_id: opts.session_id,
+          call_type: "v2_narrative",
+          phase_name: `v2_narrative_${task.name}`,
+          signal: opts.signal,
+        });
+      } finally {
+        clearInterval(heartbeat);
+      }
+
+      const text = result.text ?? "";
+      if (!text.trim()) {
+        lastReason = "empty_response";
+        console.warn(
+          `[v2/narrative/${task.name}] hard attempt ${attempt}/${V2_HARD_MAX_ATTEMPTS} — 空回复，硬重试`,
+        );
+        continue;
+      }
+      if (result.finish_reason === "length") {
+        lastReason = "truncated";
+        console.warn(
+          `[v2/narrative/${task.name}] hard attempt ${attempt}/${V2_HARD_MAX_ATTEMPTS} — finish_reason=length，硬重试`,
+        );
+        continue;
+      }
+
+      let parsed: unknown;
+      try {
+        parsed = extractJson(text);
+      } catch {
+        lastReason = "json_parse_failed";
+        console.warn(
+          `[v2/narrative/${task.name}] hard attempt ${attempt}/${V2_HARD_MAX_ATTEMPTS} — JSON 解析失败，硬重试`,
+        );
+        continue;
+      }
+
+      const keyErr = validateTaskPaths(parsed, task.paths, task.name);
+      if (keyErr) {
+        console.warn(`[v2/narrative/${task.name}] ℹ️ ${keyErr} — 保留已出段,合并后兜底`);
+      }
+
+      console.log(
+        `[v2/narrative/${task.name}] ✅ Task 就绪 (hard attempt ${attempt}/${V2_HARD_MAX_ATTEMPTS}, fell_back=${result.transport?.fell_back ?? false})`,
       );
+      return { ok: true, value: parsed as Record<string, unknown>, attempts: attempt };
+    } catch (e) {
+      lastReason = isEmptyResponseError(e)
+        ? "openrouter_empty"
+        : `call_error:${e instanceof Error ? e.message : String(e)}`;
+      console.warn(
+        `[v2/narrative/${task.name}] hard attempt ${attempt}/${V2_HARD_MAX_ATTEMPTS} — ${lastReason}，硬重试`,
+      );
+      continue;
     }
-
-    let parsed: unknown;
-    try {
-      parsed = extractJson(text);
-    } catch {
-      console.error(`[v2/narrative/${task.name}] ❌ JSON 解析失败（不重发）`);
-      return { ok: false, reason: "json_parse_failed", attempts: 1 };
-    }
-
-    const keyErr = validateTaskPaths(parsed, task.paths, task.name);
-    if (keyErr) {
-      console.warn(`[v2/narrative/${task.name}] ℹ️ ${keyErr} — 保留已出段,合并后兜底`);
-    }
-
-    console.log(
-      `[v2/narrative/${task.name}] ✅ Task 就绪 (单次生成, fell_back=${result.transport?.fell_back ?? false})`,
-    );
-    return { ok: true, value: parsed as Record<string, unknown>, attempts: 1 };
-  } catch (e) {
-    const reason = isEmptyResponseError(e)
-      ? "openrouter_empty"
-      : `call_error:${e instanceof Error ? e.message : String(e)}`;
-    console.error(`[v2/narrative/${task.name}] ❌ ${reason}（不重发）`);
-    return { ok: false, reason, attempts: 1 };
   }
+
+  console.error(
+    `[v2/narrative/${task.name}] ❌ 硬重试用尽，最后原因：${lastReason}`,
+  );
+  return { ok: false, reason: lastReason, attempts: V2_HARD_MAX_ATTEMPTS };
 }
 
 /**

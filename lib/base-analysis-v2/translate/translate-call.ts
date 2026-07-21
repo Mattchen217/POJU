@@ -19,12 +19,14 @@ import {
   isEmptyResponseError,
 } from "@/lib/llm/openrouter-shared";
 import { collapseMarkersToEmptySlots } from "@/lib/llm/sanitize/term-marking";
+import {
+  V2_HARD_MAX_ATTEMPTS,
+  V2_OUTPUT_MAX_TOKENS,
+} from "@/lib/base-analysis-v2/v2-llm-budget";
 
-/** 正文+依据同 Task，段数约翻倍；给足防截断。 */
-const TRANSLATE_TASK_MAX_TOKENS = 8192;
 const TRANSLATE_TEMPERATURE = 0.35;
-/** 单次生成；不预留打回重发。 */
-const ATTEMPT_TIMEOUT_MS = 180_000;
+/** 单次硬尝试 fetch 超时；硬重试共用 phase 总墙。 */
+const ATTEMPT_TIMEOUT_MS = 120_000;
 const TOTAL_TIMEOUT_MS = 300_000;
 
 const MARKER_RE = /⟦t:[^⟧]+⟧/g;
@@ -221,11 +223,6 @@ async function runTranslateTask(
     }
   | { ok: false; reason: string; attempts: number }
 > {
-  if (Date.now() > opts.deadline || opts.signal.aborted) {
-    console.error(`[v2/translate/${task.name}] ❌ total_timeout（不重发）`);
-    return { ok: false, reason: "total_timeout", attempts: 1 };
-  }
-
   const includeSummary = task.name === "retune_card";
   const srcNar = pickTextPaths(input.narrative, task.paths);
   const srcEv = pickTextPaths(input.evidence, task.paths);
@@ -244,116 +241,150 @@ async function runTranslateTask(
   }
 
   const { system, user } = buildTranslatePrompt(locale, payload);
+  let lastReason = "unknown";
 
-  try {
-    const attemptStartedAt = Date.now();
-    const heartbeat = setInterval(() => {
-      const sec = Math.round((Date.now() - attemptStartedAt) / 1000);
-      console.warn(`[v2/translate/${task.name}] still waiting (${sec}s)…`);
-    }, 30_000);
+  for (let attempt = 1; attempt <= V2_HARD_MAX_ATTEMPTS; attempt++) {
+    if (Date.now() > opts.deadline || opts.signal.aborted) {
+      lastReason = "total_timeout";
+      break;
+    }
 
-    let result;
     try {
-      result = await openRouterChatCompletion({
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: user },
-        ],
-        temperature: TRANSLATE_TEMPERATURE,
-        max_tokens: TRANSLATE_TASK_MAX_TOKENS,
-        json_mode: true,
-        reasoning_effort: "medium",
-        timeout_ms: ATTEMPT_TIMEOUT_MS,
-        session_id: opts.session_id,
-        call_type: "v2_translate",
-        phase_name: `v2_translate_${task.name}`,
-        signal: opts.signal,
-      });
-    } finally {
-      clearInterval(heartbeat);
-    }
+      const attemptStartedAt = Date.now();
+      const heartbeat = setInterval(() => {
+        const sec = Math.round((Date.now() - attemptStartedAt) / 1000);
+        console.warn(
+          `[v2/translate/${task.name}] hard attempt ${attempt}/${V2_HARD_MAX_ATTEMPTS} — still waiting (${sec}s)…`,
+        );
+      }, 30_000);
 
-    const text = result.text ?? "";
-    if (!text.trim()) {
-      console.error(`[v2/translate/${task.name}] ❌ 空回复（不重发）`);
-      return { ok: false, reason: "empty_response", attempts: 1 };
-    }
-    if (result.finish_reason === "length") {
-      console.warn(
-        `[v2/translate/${task.name}] ℹ️ finish_reason=length — 仍尝试解析，不重发`,
+      let result;
+      try {
+        result = await openRouterChatCompletion({
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: user },
+          ],
+          temperature: TRANSLATE_TEMPERATURE,
+          max_tokens: V2_OUTPUT_MAX_TOKENS,
+          json_mode: true,
+          reasoning_effort: "medium",
+          timeout_ms: ATTEMPT_TIMEOUT_MS,
+          session_id: opts.session_id,
+          call_type: "v2_translate",
+          phase_name: `v2_translate_${task.name}`,
+          signal: opts.signal,
+        });
+      } finally {
+        clearInterval(heartbeat);
+      }
+
+      const text = result.text ?? "";
+      if (!text.trim()) {
+        lastReason = "empty_response";
+        console.warn(
+          `[v2/translate/${task.name}] hard attempt ${attempt}/${V2_HARD_MAX_ATTEMPTS} — 空回复，硬重试`,
+        );
+        continue;
+      }
+      if (result.finish_reason === "length") {
+        lastReason = "truncated";
+        console.warn(
+          `[v2/translate/${task.name}] hard attempt ${attempt}/${V2_HARD_MAX_ATTEMPTS} — finish_reason=length，硬重试`,
+        );
+        continue;
+      }
+
+      let parsed: unknown;
+      try {
+        parsed = extractJson(text);
+      } catch {
+        lastReason = "json_parse_failed";
+        console.warn(
+          `[v2/translate/${task.name}] hard attempt ${attempt}/${V2_HARD_MAX_ATTEMPTS} — JSON 解析失败，硬重试`,
+        );
+        continue;
+      }
+
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        lastReason = "not_object";
+        console.warn(
+          `[v2/translate/${task.name}] hard attempt ${attempt}/${V2_HARD_MAX_ATTEMPTS} — not_object，硬重试`,
+        );
+        continue;
+      }
+      const root = parsed as Record<string, unknown>;
+      const outNar = root.narrative;
+      const outEv = root.evidence;
+      if (!outNar || typeof outNar !== "object" || Array.isArray(outNar)) {
+        lastReason = "missing_narrative";
+        console.warn(
+          `[v2/translate/${task.name}] hard attempt ${attempt}/${V2_HARD_MAX_ATTEMPTS} — missing_narrative，硬重试`,
+        );
+        continue;
+      }
+      if (!outEv || typeof outEv !== "object" || Array.isArray(outEv)) {
+        lastReason = "missing_evidence";
+        console.warn(
+          `[v2/translate/${task.name}] hard attempt ${attempt}/${V2_HARD_MAX_ATTEMPTS} — missing_evidence，硬重试`,
+        );
+        continue;
+      }
+
+      const narErr = validateTaskPaths(outNar, task.paths, task.name, "narrative");
+      const evErr = validateTaskPaths(outEv, task.paths, task.name, "evidence");
+      if (narErr || evErr) {
+        console.warn(
+          `[v2/translate/${task.name}] ℹ️ ${narErr ?? evErr} — 保留已出段,合并后用中文兜底`,
+        );
+      }
+
+      // 标记漂移 / 未译：代码回填或观测放行（软，不重发）
+      let evidenceOut = outEv as Record<string, unknown>;
+      const drift = findMarkerDrift(srcEv, evidenceOut, task.paths);
+      if (drift) {
+        evidenceOut = restoreEvidenceMarkers(srcEv, evidenceOut, task.paths);
+        console.warn(
+          `[v2/translate/${task.name}] ℹ️ ${drift} — 已代码回填标记,不重试`,
+        );
+      }
+
+      const stillZh = findEvidenceStillChinese(srcEv, evidenceOut, task.paths);
+      if (stillZh) {
+        console.warn(
+          `[v2/translate/${task.name}] ℹ️ ${stillZh} — 观测放行,不打回（调 prompt/数据）`,
+        );
+      }
+
+      const summary = includeSummary
+        ? parseSummary(root.summary, input.summary)
+        : undefined;
+
+      console.log(
+        `[v2/translate/${task.name}] ✅ Task 就绪 (hard attempt ${attempt}/${V2_HARD_MAX_ATTEMPTS}, fell_back=${result.transport?.fell_back ?? false})`,
       );
-    }
-
-    let parsed: unknown;
-    try {
-      parsed = extractJson(text);
-    } catch {
-      console.error(`[v2/translate/${task.name}] ❌ JSON 解析失败（不重发）`);
-      return { ok: false, reason: "json_parse_failed", attempts: 1 };
-    }
-
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      console.error(`[v2/translate/${task.name}] ❌ not_object（不重发）`);
-      return { ok: false, reason: "not_object", attempts: 1 };
-    }
-    const root = parsed as Record<string, unknown>;
-    const outNar = root.narrative;
-    const outEv = root.evidence;
-    if (!outNar || typeof outNar !== "object" || Array.isArray(outNar)) {
-      console.error(`[v2/translate/${task.name}] ❌ missing_narrative（不重发）`);
-      return { ok: false, reason: "missing_narrative", attempts: 1 };
-    }
-    if (!outEv || typeof outEv !== "object" || Array.isArray(outEv)) {
-      console.error(`[v2/translate/${task.name}] ❌ missing_evidence（不重发）`);
-      return { ok: false, reason: "missing_evidence", attempts: 1 };
-    }
-
-    const narErr = validateTaskPaths(outNar, task.paths, task.name, "narrative");
-    const evErr = validateTaskPaths(outEv, task.paths, task.name, "evidence");
-    if (narErr || evErr) {
+      return {
+        ok: true,
+        narrative: outNar as Record<string, unknown>,
+        evidence: evidenceOut,
+        summary,
+        attempts: attempt,
+      };
+    } catch (e) {
+      lastReason = isEmptyResponseError(e)
+        ? "openrouter_empty"
+        : `call_error:${e instanceof Error ? e.message : String(e)}`;
       console.warn(
-        `[v2/translate/${task.name}] ℹ️ ${narErr ?? evErr} — 保留已出段,合并后用中文兜底`,
+        `[v2/translate/${task.name}] hard attempt ${attempt}/${V2_HARD_MAX_ATTEMPTS} — ${lastReason}，硬重试`,
       );
+      continue;
     }
-
-    // 标记漂移：代码按序回填原文岛（不重发）
-    let evidenceOut = outEv as Record<string, unknown>;
-    const drift = findMarkerDrift(srcEv, evidenceOut, task.paths);
-    if (drift) {
-      evidenceOut = restoreEvidenceMarkers(srcEv, evidenceOut, task.paths);
-      console.warn(
-        `[v2/translate/${task.name}] ℹ️ ${drift} — 已代码回填标记,不重试`,
-      );
-    }
-
-    const stillZh = findEvidenceStillChinese(srcEv, evidenceOut, task.paths);
-    if (stillZh) {
-      console.warn(
-        `[v2/translate/${task.name}] ℹ️ ${stillZh} — 观测放行,不打回（调 prompt/数据）`,
-      );
-    }
-
-    const summary = includeSummary
-      ? parseSummary(root.summary, input.summary)
-      : undefined;
-
-    console.log(
-      `[v2/translate/${task.name}] ✅ Task 就绪 (单次生成, fell_back=${result.transport?.fell_back ?? false})`,
-    );
-    return {
-      ok: true,
-      narrative: outNar as Record<string, unknown>,
-      evidence: evidenceOut,
-      summary,
-      attempts: 1,
-    };
-  } catch (e) {
-    const reason = isEmptyResponseError(e)
-      ? "openrouter_empty"
-      : `call_error:${e instanceof Error ? e.message : String(e)}`;
-    console.error(`[v2/translate/${task.name}] ❌ ${reason}（不重发）`);
-    return { ok: false, reason, attempts: 1 };
   }
+
+  console.error(
+    `[v2/translate/${task.name}] ❌ 硬重试用尽，最后原因：${lastReason}`,
+  );
+  return { ok: false, reason: lastReason, attempts: V2_HARD_MAX_ATTEMPTS };
 }
 
 /**

@@ -169,7 +169,8 @@ assert(
   "无因 drift continue",
   !/findMarkerDrift[\s\S]{0,280}continue/.test(translateCall),
 );
-assert("translate 无 MAX_ATTEMPTS", !/MAX_ATTEMPTS\s*=/.test(translateCall));
+assert("translate 用 V2_HARD_MAX_ATTEMPTS", translateCall.includes("V2_HARD_MAX_ATTEMPTS"));
+assert("translate MAX=16000", translateCall.includes("V2_OUTPUT_MAX_TOKENS"));
 assert("translate 无 retryHint", !translateCall.includes("retryHint"));
 assert(
   "translate-prompt 无纠错重译",

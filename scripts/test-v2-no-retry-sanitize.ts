@@ -160,20 +160,28 @@ function buildRc(): ReportComputed {
   );
   assert("compute 无 simp_leak continue", !/simp_leak[\s\S]{0,80}continue/.test(compute));
   assert("compute 无 time_anchor continue", !/time_anchor_leak[\s\S]{0,80}continue/.test(compute));
-  assert("compute MAX_TOKENS=16000", /COMPUTE_MAX_TOKENS\s*=\s*16_000/.test(compute));
-  assert("compute 无 MAX_ATTEMPTS 循环", !/MAX_ATTEMPTS\s*=/.test(compute));
-  assert("compute 无「重发」continue", !/重发[\s\S]{0,40}continue/.test(compute) && !/continue;[\s\S]{0,40}重发/.test(compute));
+  assert(
+    "compute MAX_TOKENS=16000",
+    compute.includes("V2_OUTPUT_MAX_TOKENS") &&
+      fs
+        .readFileSync(path.join(process.cwd(), "lib/base-analysis-v2/v2-llm-budget.ts"), "utf8")
+        .includes("V2_OUTPUT_MAX_TOKENS = 16_000"),
+  );
+  assert("compute 用 V2_HARD_MAX_ATTEMPTS", compute.includes("V2_HARD_MAX_ATTEMPTS"));
+  assert("compute 硬重试含 json_parse", compute.includes("JSON 解析失败，硬重试"));
+  assert("compute 无质量 retryHint", !compute.includes("retryHint"));
   assert("narrative 无 body_leak continue", !/body_leak[\s\S]{0,120}continue/.test(narrative));
   assert("evidence 无 evidence_leak continue", !/evidence_leak[\s\S]{0,120}continue/.test(evidence));
   assert("narrative 放行日志", narrative.includes("放行,不打回"));
   assert("evidence 放行日志", evidence.includes("放行,不打回"));
-  assert("narrative 无 MAX_ATTEMPTS", !/MAX_ATTEMPTS\s*=/.test(narrative));
-  assert("evidence 无 MAX_ATTEMPTS", !/MAX_ATTEMPTS\s*=/.test(evidence));
+  assert("narrative 用 V2_HARD_MAX_ATTEMPTS", narrative.includes("V2_HARD_MAX_ATTEMPTS"));
+  assert("evidence 用 V2_HARD_MAX_ATTEMPTS", evidence.includes("V2_HARD_MAX_ATTEMPTS"));
   assert("narrative 无 retryHint", !narrative.includes("retryHint"));
   assert("evidence 无 retryHint", !evidence.includes("retryHint"));
   assert(
-    "evidence 单Task MAX=4096",
-    /EVIDENCE_TASK_MAX_TOKENS\s*=\s*4096/.test(evidence),
+    "evidence 单Task MAX=16000",
+    evidence.includes("V2_OUTPUT_MAX_TOKENS") &&
+      /EVIDENCE_TASK_MAX_TOKENS\s*=\s*V2_OUTPUT_MAX_TOKENS/.test(evidence),
   );
   assert("evidence 4-Task Promise.all", evidence.includes("EVIDENCE_TASKS") && /Promise\.all/.test(evidence));
 
@@ -185,8 +193,9 @@ function buildRc(): ReportComputed {
     path.join(process.cwd(), "lib/base-analysis-v2/translate/translate-prompt.ts"),
     "utf8",
   );
-  assert("translate 无 MAX_ATTEMPTS", !/MAX_ATTEMPTS\s*=/.test(translate));
+  assert("translate 用 V2_HARD_MAX_ATTEMPTS", translate.includes("V2_HARD_MAX_ATTEMPTS"));
   assert("translate 无 retryHint", !translate.includes("retryHint"));
+  assert("translate MAX=16000", translate.includes("V2_OUTPUT_MAX_TOKENS"));
   assert("translate-prompt 无纠错重译", !translatePrompt.includes("纠错"));
   assert("narrative-prompt 无纠错", !fs.readFileSync(
     path.join(process.cwd(), "lib/base-analysis-v2/narrative/narrative-prompt.ts"),

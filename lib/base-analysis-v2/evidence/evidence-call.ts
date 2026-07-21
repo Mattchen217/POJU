@@ -31,14 +31,19 @@ import {
   dedupeBareTermBeforeMarker,
   demoteWuxingMarkers,
   maskMarkersForAudit,
+  wrapBarePillars,
 } from "@/lib/llm/sanitize/term-marking";
+import {
+  V2_HARD_MAX_ATTEMPTS,
+  V2_OUTPUT_MAX_TOKENS,
+} from "@/lib/base-analysis-v2/v2-llm-budget";
 
-/** 单 Task 4–6 段依据，远小于此；给足防截断（原全量 12000 → 拆后 4096）。 */
-export const EVIDENCE_TASK_MAX_TOKENS = 4096;
+/** @deprecated 用 V2_OUTPUT_MAX_TOKENS；保留别名给守卫/旧 import。 */
+export const EVIDENCE_TASK_MAX_TOKENS = V2_OUTPUT_MAX_TOKENS;
 const EVIDENCE_TEMPERATURE = 0.35;
-/** 单次生成；不预留打回重发。 */
-const ATTEMPT_TIMEOUT_MS = 180_000;
-/** 4 Task 并发；单轮墙内完成，总预算对齐 Hobby 300s。 */
+/** 单次硬尝试 fetch 超时；硬重试共用 phase 总墙。 */
+const ATTEMPT_TIMEOUT_MS = 120_000;
+/** 4 Task 并发；对齐 Hobby 300s。 */
 const TOTAL_TIMEOUT_MS = 300_000;
 
 /** 与第2次正文同款分组（4+6+4+5=19）。 */
@@ -57,11 +62,20 @@ export type RunEvidenceOptions = {
   signal?: AbortSignal;
 };
 
-/** 打标器兜底 + 真词/标记去重 + 五行还原；★ 不填软译槽 —— 留给 merge/finalize。 */
+/**
+ * 打标器兜底 + 柱位补标 + 真词/标记去重 + 五行还原；★ 不填软译槽 —— 留给 merge/finalize。
+ * 依据里出现的命理词无条件全打（不限每段2个）；承重筛选交给 prompt。
+ * 先 dedupe 再打标，避免「日主⟦t:day_master|⟧」在全打下被打成双标记。
+ */
 export function polishEvidenceSegment(text: string, locale: string): string {
-  const marked = autoMarkBareTerms(text, locale);
-  const deduped = dedupeBareTermBeforeMarker(marked);
-  return demoteWuxingMarkers(deduped);
+  let marked = dedupeBareTermBeforeMarker(text);
+  marked = autoMarkBareTerms(marked, locale, {
+    maxPerPara: Infinity,
+    oncePerText: false,
+  });
+  marked = wrapBarePillars(marked, locale);
+  marked = dedupeBareTermBeforeMarker(marked);
+  return demoteWuxingMarkers(marked);
 }
 
 /**
@@ -117,8 +131,8 @@ type EvidenceTask = (typeof EVIDENCE_TASKS)[number];
 
 /**
  * 单 Task：只喂这几段的双钥匙，输出这几段依据。
- * ★ 单次生成、不打回：空/坏 JSON/调用失败 → Task 失败；缺段合并后兜底；
- *   时间锚/简称/裸词 → 代码清洗放行。质量靠 prompt/数据，不靠重发。
+ * ★ 硬错误可重试（空/截断/坏 JSON/连不上）；缺段合并后兜底；时间锚/简称/裸词清洗放行。
+ *   质量问题不打回。
  */
 async function runEvidenceTask(
   task: EvidenceTask,
@@ -133,79 +147,99 @@ async function runEvidenceTask(
   | { ok: true; value: Record<string, unknown>; attempts: number }
   | { ok: false; reason: string; attempts: number }
 > {
-  if (Date.now() > opts.deadline || opts.signal.aborted) {
-    console.error(`[v2/evidence/${task.name}] ❌ total_timeout（不重发）`);
-    return { ok: false, reason: "total_timeout", attempts: 1 };
-  }
-
   const subset = pickSegments(rc, task.paths);
   const { system, user } = buildEvidencePrompt(subset, locale);
+  let lastReason = "unknown";
 
-  try {
-    const attemptStartedAt = Date.now();
-    const heartbeat = setInterval(() => {
-      const sec = Math.round((Date.now() - attemptStartedAt) / 1000);
-      console.warn(`[v2/evidence/${task.name}] still waiting (${sec}s)…`);
-    }, 30_000);
+  for (let attempt = 1; attempt <= V2_HARD_MAX_ATTEMPTS; attempt++) {
+    if (Date.now() > opts.deadline || opts.signal.aborted) {
+      lastReason = "total_timeout";
+      break;
+    }
 
-    let result;
     try {
-      result = await openRouterChatCompletion({
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: user },
-        ],
-        temperature: EVIDENCE_TEMPERATURE,
-        max_tokens: EVIDENCE_TASK_MAX_TOKENS,
-        json_mode: true,
-        reasoning_effort: "high",
-        timeout_ms: ATTEMPT_TIMEOUT_MS,
-        session_id: opts.session_id,
-        call_type: "v2_evidence",
-        phase_name: `v2_evidence_${task.name}`,
-        signal: opts.signal,
-      });
-    } finally {
-      clearInterval(heartbeat);
-    }
+      const attemptStartedAt = Date.now();
+      const heartbeat = setInterval(() => {
+        const sec = Math.round((Date.now() - attemptStartedAt) / 1000);
+        console.warn(
+          `[v2/evidence/${task.name}] hard attempt ${attempt}/${V2_HARD_MAX_ATTEMPTS} — still waiting (${sec}s)…`,
+        );
+      }, 30_000);
 
-    const text = result.text ?? "";
-    if (!text.trim()) {
-      console.error(`[v2/evidence/${task.name}] ❌ 空回复（不重发）`);
-      return { ok: false, reason: "empty_response", attempts: 1 };
-    }
-    if (result.finish_reason === "length") {
-      console.warn(
-        `[v2/evidence/${task.name}] ℹ️ finish_reason=length — 仍尝试解析，不重发`,
+      let result;
+      try {
+        result = await openRouterChatCompletion({
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: user },
+          ],
+          temperature: EVIDENCE_TEMPERATURE,
+          max_tokens: V2_OUTPUT_MAX_TOKENS,
+          json_mode: true,
+          reasoning_effort: "high",
+          timeout_ms: ATTEMPT_TIMEOUT_MS,
+          session_id: opts.session_id,
+          call_type: "v2_evidence",
+          phase_name: `v2_evidence_${task.name}`,
+          signal: opts.signal,
+        });
+      } finally {
+        clearInterval(heartbeat);
+      }
+
+      const text = result.text ?? "";
+      if (!text.trim()) {
+        lastReason = "empty_response";
+        console.warn(
+          `[v2/evidence/${task.name}] hard attempt ${attempt}/${V2_HARD_MAX_ATTEMPTS} — 空回复，硬重试`,
+        );
+        continue;
+      }
+      if (result.finish_reason === "length") {
+        lastReason = "truncated";
+        console.warn(
+          `[v2/evidence/${task.name}] hard attempt ${attempt}/${V2_HARD_MAX_ATTEMPTS} — finish_reason=length，硬重试`,
+        );
+        continue;
+      }
+
+      let parsed: unknown;
+      try {
+        parsed = extractJson(text);
+      } catch {
+        lastReason = "json_parse_failed";
+        console.warn(
+          `[v2/evidence/${task.name}] hard attempt ${attempt}/${V2_HARD_MAX_ATTEMPTS} — JSON 解析失败，硬重试`,
+        );
+        continue;
+      }
+
+      const keyErr = validateTaskPaths(parsed, task.paths, task.name, "evidence");
+      if (keyErr) {
+        console.warn(
+          `[v2/evidence/${task.name}] ℹ️ ${keyErr} — 保留已出段,合并后兜底`,
+        );
+      }
+
+      console.log(
+        `[v2/evidence/${task.name}] ✅ Task 就绪 (hard attempt ${attempt}/${V2_HARD_MAX_ATTEMPTS}, fell_back=${result.transport?.fell_back ?? false})`,
       );
-    }
-
-    let parsed: unknown;
-    try {
-      parsed = extractJson(text);
-    } catch {
-      console.error(`[v2/evidence/${task.name}] ❌ JSON 解析失败（不重发）`);
-      return { ok: false, reason: "json_parse_failed", attempts: 1 };
-    }
-
-    const keyErr = validateTaskPaths(parsed, task.paths, task.name, "evidence");
-    if (keyErr) {
+      return { ok: true, value: parsed as Record<string, unknown>, attempts: attempt };
+    } catch (e) {
+      lastReason = isEmptyResponseError(e)
+        ? "openrouter_empty"
+        : `call_error:${e instanceof Error ? e.message : String(e)}`;
       console.warn(
-        `[v2/evidence/${task.name}] ℹ️ ${keyErr} — 保留已出段,合并后兜底`,
+        `[v2/evidence/${task.name}] hard attempt ${attempt}/${V2_HARD_MAX_ATTEMPTS} — ${lastReason}，硬重试`,
       );
+      continue;
     }
-
-    console.log(
-      `[v2/evidence/${task.name}] ✅ Task 就绪 (单次生成, fell_back=${result.transport?.fell_back ?? false})`,
-    );
-    return { ok: true, value: parsed as Record<string, unknown>, attempts: 1 };
-  } catch (e) {
-    const reason = isEmptyResponseError(e)
-      ? "openrouter_empty"
-      : `call_error:${e instanceof Error ? e.message : String(e)}`;
-    console.error(`[v2/evidence/${task.name}] ❌ ${reason}（不重发）`);
-    return { ok: false, reason, attempts: 1 };
   }
+
+  console.error(
+    `[v2/evidence/${task.name}] ❌ 硬重试用尽，最后原因：${lastReason}`,
+  );
+  return { ok: false, reason: lastReason, attempts: V2_HARD_MAX_ATTEMPTS };
 }
 
 /**

@@ -17,12 +17,16 @@ import {
   SIMP_RE,
   TIME_ANCHOR_RE,
 } from "@/lib/base-analysis-v2/compute/leak-patterns";
+import {
+  V2_HARD_MAX_ATTEMPTS,
+  V2_OUTPUT_MAX_TOKENS,
+} from "@/lib/base-analysis-v2/v2-llm-budget";
 
 export { SIMP_RE, TIME_ANCHOR_RE };
 
-const COMPUTE_MAX_TOKENS = 16_000; // 正常 JSON~3600 + 真算推理空间；不压制输出
-/** 单次 OpenRouter fetch 超时 —— 对齐 Vercel phase 300s 墙，不预留重试。 */
-const COMPUTE_ATTEMPT_TIMEOUT_MS = 270_000;
+/** 单次 fetch 超时；硬重试共用总墙 270s（对齐 phase 300s）。 */
+const COMPUTE_TOTAL_TIMEOUT_MS = 270_000;
+const COMPUTE_FETCH_TIMEOUT_MS = 240_000;
 
 function readSegment(rc: ReportComputed, path: string): SegmentComputed | undefined {
   const parts = path.split(".");
@@ -93,8 +97,7 @@ export type RunComputeOptions = {
 
 /**
  * 第1次调用:真算 → ReportComputed。
- * ★ 单次生成、不打回：空/坏 JSON/结构 fatal → 本阶段失败（由上层/客户端决定是否再开一轮 phase）；
- *   soft 缺段 → 占位补全；简称 → sanitizer。质量靠 prompt/数据，不靠重发。
+ * ★ 硬错误可重试（空/截断/坏 JSON/连不上）；质量/简称等只清洗放行，不打回。
  */
 export async function runCompute(
   structured: ProfileStructured,
@@ -112,95 +115,122 @@ export async function runCompute(
   const ctrl = new AbortController();
   const timer = setTimeout(
     () => ctrl.abort(new Error("v2_compute_timeout")),
-    COMPUTE_ATTEMPT_TIMEOUT_MS,
+    COMPUTE_TOTAL_TIMEOUT_MS,
   );
   opts.signal?.addEventListener("abort", () => ctrl.abort(opts.signal?.reason), { once: true });
+  const deadline = Date.now() + COMPUTE_TOTAL_TIMEOUT_MS;
+  let lastReason = "unknown";
 
   try {
-    const attemptStartedAt = Date.now();
-    const heartbeat = setInterval(() => {
-      const sec = Math.round((Date.now() - attemptStartedAt) / 1000);
-      console.warn(`[v2/compute] still waiting on OpenRouter (${sec}s)…`);
-    }, 30_000);
-
-    let result;
-    try {
-      result = await openRouterChatCompletion({
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: user },
-        ],
-        temperature: 0.35,
-        max_tokens: COMPUTE_MAX_TOKENS,
-        json_mode: true,
-        reasoning_effort: "high",
-        timeout_ms: COMPUTE_ATTEMPT_TIMEOUT_MS,
-        session_id: opts.session_id,
-        call_type: "v2_compute",
-        phase_name: "v2_compute_high",
-        signal: ctrl.signal,
-      });
-    } finally {
-      clearInterval(heartbeat);
-    }
-
-    const text = result.text ?? "";
-    if (!text.trim()) {
-      console.error(`[v2/compute] ❌ 空回复（不重发）`);
-      return { ok: false, reason: "empty_response", attempts: 1 };
-    }
-    if (result.finish_reason === "length") {
-      console.warn(
-        `[v2/compute] ℹ️ finish_reason=length — 仍尝试解析，不重发`,
-      );
-    }
-
-    let parsed: unknown;
-    try {
-      parsed = extractJson(text);
-    } catch {
-      console.error(`[v2/compute] ❌ JSON 解析失败（不重发）`);
-      return { ok: false, reason: "json_parse_failed", attempts: 1 };
-    }
-
-    const v = validateReportComputed(parsed);
-    let report: ReportComputed;
-    if (v.ok) {
-      report = v.value;
-    } else if (v.severity === "fatal") {
-      // 仍尝试占位补全；补全后若几乎不可用再失败
-      console.warn(
-        `[v2/compute] ℹ️ 结构严重损坏(${v.reason}) — 占位补全尝试，不重发`,
-      );
-      report = fillMissingSegments(parsed);
-      const v2 = validateReportComputed(report);
-      if (!v2.ok && v2.severity === "fatal") {
-        console.error(`[v2/compute] ❌ 占位后仍 fatal（不重发）`);
-        return { ok: false, reason: `schema_invalid:${v.reason}`, attempts: 1 };
+    for (let attempt = 1; attempt <= V2_HARD_MAX_ATTEMPTS; attempt++) {
+      if (Date.now() > deadline || ctrl.signal.aborted) {
+        lastReason = "total_timeout";
+        break;
       }
-    } else {
-      console.warn(`[v2/compute] ℹ️ 个别段缺失(${v.reason}) — 占位补全,不打回`);
-      report = fillMissingSegments(parsed);
+
+      try {
+        const attemptStartedAt = Date.now();
+        const heartbeat = setInterval(() => {
+          const sec = Math.round((Date.now() - attemptStartedAt) / 1000);
+          console.warn(
+            `[v2/compute] hard attempt ${attempt}/${V2_HARD_MAX_ATTEMPTS} — still waiting (${sec}s)…`,
+          );
+        }, 30_000);
+
+        let result;
+        try {
+          result = await openRouterChatCompletion({
+            messages: [
+              { role: "system", content: system },
+              { role: "user", content: user },
+            ],
+            temperature: 0.35,
+            max_tokens: V2_OUTPUT_MAX_TOKENS,
+            json_mode: true,
+            reasoning_effort: "high",
+            timeout_ms: COMPUTE_FETCH_TIMEOUT_MS,
+            session_id: opts.session_id,
+            call_type: "v2_compute",
+            phase_name: "v2_compute_high",
+            signal: ctrl.signal,
+          });
+        } finally {
+          clearInterval(heartbeat);
+        }
+
+        const text = result.text ?? "";
+        if (!text.trim()) {
+          lastReason = "empty_response";
+          console.warn(
+            `[v2/compute] hard attempt ${attempt}/${V2_HARD_MAX_ATTEMPTS} — 空回复，硬重试`,
+          );
+          continue;
+        }
+        if (result.finish_reason === "length") {
+          lastReason = "truncated";
+          console.warn(
+            `[v2/compute] hard attempt ${attempt}/${V2_HARD_MAX_ATTEMPTS} — finish_reason=length，硬重试`,
+          );
+          continue;
+        }
+
+        let parsed: unknown;
+        try {
+          parsed = extractJson(text);
+        } catch {
+          lastReason = "json_parse_failed";
+          console.warn(
+            `[v2/compute] hard attempt ${attempt}/${V2_HARD_MAX_ATTEMPTS} — JSON 解析失败，硬重试`,
+          );
+          continue;
+        }
+
+        const v = validateReportComputed(parsed);
+        let report: ReportComputed;
+        if (v.ok) {
+          report = v.value;
+        } else if (v.severity === "fatal") {
+          console.warn(
+            `[v2/compute] ℹ️ 结构严重损坏(${v.reason}) — 占位补全尝试，不因质量打回`,
+          );
+          report = fillMissingSegments(parsed);
+          const v2 = validateReportComputed(report);
+          if (!v2.ok && v2.severity === "fatal") {
+            lastReason = `schema_invalid:${v.reason}`;
+            console.warn(
+              `[v2/compute] hard attempt ${attempt}/${V2_HARD_MAX_ATTEMPTS} — 占位后仍 fatal，硬重试`,
+            );
+            continue;
+          }
+        } else {
+          console.warn(`[v2/compute] ℹ️ 个别段缺失(${v.reason}) — 占位补全,不打回`);
+          report = fillMissingSegments(parsed);
+        }
+
+        const cleaned = sanitizeReportComputed(report, tenGodCtx);
+        const simpResidue = findSimpLeak(cleaned);
+        if (simpResidue) {
+          console.warn(`[v2/compute] ℹ️ 清洗后简称残留(${simpResidue}) — 放行,不打回`);
+        }
+
+        console.log(
+          `[v2/compute] ✅ ReportComputed 就绪 (hard attempt ${attempt}/${V2_HARD_MAX_ATTEMPTS}, fell_back=${result.transport?.fell_back ?? false})`,
+        );
+        return { ok: true, value: cleaned, attempts: attempt };
+      } catch (e) {
+        lastReason = isEmptyResponseError(e)
+          ? "openrouter_empty"
+          : `call_error:${e instanceof Error ? e.message : String(e)}`;
+        console.warn(
+          `[v2/compute] hard attempt ${attempt}/${V2_HARD_MAX_ATTEMPTS} — ${lastReason}，硬重试`,
+        );
+        continue;
+      }
     }
-
-    const cleaned = sanitizeReportComputed(report, tenGodCtx);
-
-    const simpResidue = findSimpLeak(cleaned);
-    if (simpResidue) {
-      console.warn(`[v2/compute] ℹ️ 清洗后简称残留(${simpResidue}) — 放行,不打回`);
-    }
-
-    console.log(
-      `[v2/compute] ✅ ReportComputed 就绪 (单次生成, fell_back=${result.transport?.fell_back ?? false})`,
-    );
-    return { ok: true, value: cleaned, attempts: 1 };
-  } catch (e) {
-    const reason = isEmptyResponseError(e)
-      ? "openrouter_empty"
-      : `call_error:${e instanceof Error ? e.message : String(e)}`;
-    console.error(`[v2/compute] ❌ ${reason}（不重发）`);
-    return { ok: false, reason, attempts: 1 };
   } finally {
     clearTimeout(timer);
   }
+
+  console.error(`[v2/compute] ❌ 硬重试用尽，最后原因：${lastReason}`);
+  return { ok: false, reason: lastReason, attempts: V2_HARD_MAX_ATTEMPTS };
 }
