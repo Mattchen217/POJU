@@ -8,6 +8,8 @@ export type BaseAnalysisProgressStage =
   | "v2_narrative"
   | "v2_evidence"
   | "v2_translate"
+  | "v2_semantic_text"
+  | "v2_final_audit"
   | "streaming"
   | "repair";
 
@@ -16,7 +18,7 @@ export type BaseAnalysisArtifactKind = "compute" | "narrative" | "evidence" | "t
 
 export type ProgressPayload = {
   stage: BaseAnalysisProgressStage;
-  /** Fired when a phase checkpoint completes — drives wait-page document icons. */
+  /** Fired when a phase document should appear on the wait desk. */
   artifact?: BaseAnalysisArtifactKind;
   /** Wall time since stream job started (optional). */
   elapsed_ms?: number;
@@ -30,6 +32,8 @@ export const BASE_ANALYSIS_PROGRESS_STAGES = [
   "v2_narrative",
   "v2_evidence",
   "v2_translate",
+  "v2_semantic_text",
+  "v2_final_audit",
   "streaming",
   "repair",
 ] as const satisfies readonly BaseAnalysisProgressStage[];

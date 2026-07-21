@@ -28,6 +28,19 @@ export const WAIT_FLASH_MS = 300;
 export const WAIT_BAZI_CACHED_MIN_MS = 10_000;
 export const WAIT_STEP_INTERVAL_MS = ACTIVITY_CAPTION_ROTATE_MS;
 
+/** Non-zh finalize theater: show artifact ④ + convert copy. */
+export const WAIT_SEMANTIC_ARTIFACT_MS = 60_000;
+/** Non-zh finalize theater: switch to final-audit copy. */
+export const WAIT_FINAL_AUDIT_MS = 120_000;
+/** A4 center hold before flying to top-left slot. */
+export const WAIT_ARTIFACT_CENTER_HOLD_MS = 2000;
+/** Spawn scale-up + seat flight (must cover CSS transitions). */
+export const WAIT_ARTIFACT_SPAWN_MS = 400;
+export const WAIT_ARTIFACT_SEAT_MS = 850;
+/** Full intro ritual before tearing down wait UI after a late artifact. */
+export const WAIT_ARTIFACT_INTRO_TOTAL_MS =
+  WAIT_ARTIFACT_SPAWN_MS + WAIT_ARTIFACT_CENTER_HOLD_MS + WAIT_ARTIFACT_SEAT_MS;
+
 export function productScene(product: DeliveryWaitProduct): string {
   if (product === "poju") return DELIVERY_WAIT_SCENES.bazi;
   return DELIVERY_WAIT_SCENES[product];

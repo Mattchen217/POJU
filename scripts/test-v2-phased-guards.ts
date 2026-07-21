@@ -33,6 +33,9 @@ assert.match(client, /phase\/evidence/);
 assert.match(client, /phase\/finalize/);
 assert.match(client, /saveV2Checkpoint|persistCheckpoint/);
 assert.match(client, /v2_evidence/);
+assert.match(client, /WAIT_SEMANTIC_ARTIFACT_MS/);
+assert.match(client, /WAIT_FINAL_AUDIT_MS/);
+assert.doesNotMatch(client, /emit\([^)]*"v2_translate",\s*"translate"\)/);
 
 const checkpoint = read("lib/base-analysis/v2-checkpoint-store.ts");
 assert.match(checkpoint, /base_analysis_v2_checkpoints/);
@@ -40,14 +43,19 @@ assert.match(checkpoint, /base_analysis_v2_checkpoints/);
 const progress = read("lib/base-analysis/progress-stages.ts");
 assert.match(progress, /BaseAnalysisArtifactKind/);
 assert.match(progress, /artifact\?/);
+assert.match(progress, /v2_semantic_text/);
+assert.match(progress, /v2_final_audit/);
 
 const zh = read("messages/zh.json");
-assert.match(zh, /正在标注推理依据/);
-assert.match(zh, /您的能量结构分析已经完成/);
-assert.match(zh, /报告的依据与推理已经标注完成/);
+assert.match(zh, /正在推演证据链与底层依据/);
+assert.match(zh, /多维度能量结构分析已完成/);
+assert.match(zh, /逻辑与推演依据已标注/);
+assert.match(zh, /深度语义构建已完成/);
 
 const en = read("messages/en.json");
-assert.match(en, /Marking the reasoning evidence/);
+assert.match(en, /Deducing evidence chain/);
 assert.match(en, /compute_done/);
+assert.match(en, /Converting high-dimensional/);
+assert.doesNotMatch(en, /Translating into your language/);
 
 console.log("✅ v2 phased guards PASS");

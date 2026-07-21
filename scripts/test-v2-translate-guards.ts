@@ -121,7 +121,46 @@ assert(
 
 const stages = read("lib/base-analysis/progress-stages.ts");
 assert("progress 含 v2_translate", stages.includes('"v2_translate"'));
+assert("progress 含 v2_semantic_text", stages.includes('"v2_semantic_text"'));
+assert("progress 含 v2_final_audit", stages.includes('"v2_final_audit"'));
 
+const sseClient = read("lib/base-analysis/stream-sse-client.ts");
+assert(
+  "translate artifact 不在 finalize 起点与 v2_translate 同发",
+  !/emit\([^)]*"v2_translate",\s*"translate"\)/.test(sseClient),
+);
+assert(
+  "60s 发 semantic_text + translate artifact",
+  sseClient.includes("WAIT_SEMANTIC_ARTIFACT_MS") &&
+    sseClient.includes('"v2_semantic_text"') &&
+    /"translate"/.test(sseClient),
+);
+assert("120s final audit", sseClient.includes("WAIT_FINAL_AUDIT_MS"));
+assert("入场仪式 INTRO_TOTAL", sseClient.includes("WAIT_ARTIFACT_INTRO_TOTAL_MS"));
+
+const waitConstants = read("lib/wait-ritual/constants.ts");
+assert(
+  "center hold 2000",
+  waitConstants.includes("WAIT_ARTIFACT_CENTER_HOLD_MS = 2000"),
+);
+
+const artifactUi = read("components/wait-ritual/WaitArtifactDocs.tsx");
+assert("spawn hold seated", artifactUi.includes('"spawn"') && artifactUi.includes('"hold"') && artifactUi.includes('"seated"'));
+
+const artifactCss = read("styles/wait-ritual.css");
+assert("top-left seat", artifactCss.includes("safe-area-inset-top") && artifactCss.includes("wait-artifact-doc--seated"));
+
+const enProgress = read("messages/en.json");
+assert(
+  "en 无 Translating into your language",
+  !enProgress.includes("Translating into your language"),
+);
+assert("en convert 用 Converting", enProgress.includes("Converting high-dimensional"));
+assert("en semantic construction copy", enProgress.includes("deep semantic construction"));
+
+const zhProgress = read("messages/zh.json");
+assert("zh 语义构建", zhProgress.includes("深度语义构建"));
+assert("zh 终审", zhProgress.includes("交叉校验与推演终审"));
 const translateCall = read("lib/base-analysis-v2/translate/translate-call.ts");
 assert('translate reasoning=medium', translateCall.includes('reasoning_effort: "medium"'));
 assert("translate 压回空槽", translateCall.includes("collapseMarkersToEmptySlots"));

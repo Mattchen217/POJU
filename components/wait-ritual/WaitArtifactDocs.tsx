@@ -1,10 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { useTranslations } from "next-intl";
 import { clsx } from "clsx";
 
 import type { BaseAnalysisArtifactKind } from "@/lib/base-analysis/progress-stages";
+import {
+  WAIT_ARTIFACT_CENTER_HOLD_MS,
+  WAIT_ARTIFACT_SPAWN_MS,
+} from "@/lib/wait-ritual/constants";
 
 type Props = {
   artifacts: BaseAnalysisArtifactKind[];
@@ -12,14 +16,14 @@ type Props = {
   includeTranslate: boolean;
 };
 
-type SeatState = "entering" | "seated";
+/** spawn → hold (center) → seated (top-left slot). */
+type SeatState = "spawn" | "hold" | "seated";
 
 const ORDER: BaseAnalysisArtifactKind[] = ["compute", "narrative", "evidence", "translate"];
 
 function Glyph({ kind }: { kind: BaseAnalysisArtifactKind }) {
   switch (kind) {
     case "compute":
-      // think / structure
       return (
         <svg viewBox="0 0 24 24" aria-hidden className="wait-artifact-doc__glyph">
           <circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" strokeWidth="1.5" />
@@ -33,7 +37,6 @@ function Glyph({ kind }: { kind: BaseAnalysisArtifactKind }) {
         </svg>
       );
     case "narrative":
-      // body text lines
       return (
         <svg viewBox="0 0 24 24" aria-hidden className="wait-artifact-doc__glyph">
           <path
@@ -46,7 +49,6 @@ function Glyph({ kind }: { kind: BaseAnalysisArtifactKind }) {
         </svg>
       );
     case "evidence":
-      // annotate / highlight
       return (
         <svg viewBox="0 0 24 24" aria-hidden className="wait-artifact-doc__glyph">
           <path
@@ -92,26 +94,43 @@ function ArtifactDoc({
   slotCount: number;
   caption: string;
 }) {
-  const [state, setState] = useState<SeatState>("entering");
-  const reducedRef = useRef(false);
+  const [state, setState] = useState<SeatState>("spawn");
 
   useEffect(() => {
-    reducedRef.current =
+    const reduced =
       typeof window !== "undefined" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reducedRef.current) {
+    if (reduced) {
       setState("seated");
       return;
     }
-    const t = window.setTimeout(() => setState("seated"), 40);
-    return () => window.clearTimeout(t);
+
+    // Kick spawn → hold after scale-up finishes.
+    const toHold = window.setTimeout(() => setState("hold"), WAIT_ARTIFACT_SPAWN_MS);
+    const toSeat = window.setTimeout(
+      () => setState("seated"),
+      WAIT_ARTIFACT_SPAWN_MS + WAIT_ARTIFACT_CENTER_HOLD_MS,
+    );
+    return () => {
+      window.clearTimeout(toHold);
+      window.clearTimeout(toSeat);
+    };
+  }, []);
+
+  // First paint: start at scale 0.35 then next frame promote to hold-size spawn.
+  const [spawnActive, setSpawnActive] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setSpawnActive(true));
+    return () => cancelAnimationFrame(id);
   }, []);
 
   return (
     <div
       className={clsx(
         "wait-artifact-doc",
-        state === "entering" && "wait-artifact-doc--entering",
+        state === "spawn" && "wait-artifact-doc--spawn",
+        state === "spawn" && spawnActive && "wait-artifact-doc--spawn-active",
+        state === "hold" && "wait-artifact-doc--hold",
         state === "seated" && "wait-artifact-doc--seated",
       )}
       style={
@@ -122,9 +141,11 @@ function ArtifactDoc({
       }
       aria-hidden
     >
-      <div className="wait-artifact-doc__paper">
-        <span className="wait-artifact-doc__fold" />
-        <Glyph kind={kind} />
+      <div className="wait-artifact-doc__sheet">
+        <div className="wait-artifact-doc__paper">
+          <Glyph kind={kind} />
+        </div>
+        <span className="wait-artifact-doc__fold" aria-hidden />
       </div>
       <p className="wait-artifact-doc__caption">{caption}</p>
     </div>
@@ -132,7 +153,7 @@ function ArtifactDoc({
 }
 
 /**
- * Wait-ritual document stack: A4 fold-corner papers that enter at center then seat in a row.
+ * Wait-ritual documents: center scale-up → hold 2s → seat in top-left row.
  * Non-interactive — progress only.
  */
 export function WaitArtifactDocs({ artifacts, includeTranslate }: Props) {

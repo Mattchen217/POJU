@@ -2140,20 +2140,22 @@
       "finish": "Deine Zeitfenster sind ausgerichtet."
     },
     "progress": {
-      "chart_ready": "Kalibriere deinen Geburtsmoment…",
-      "v2_compute": "Berechne deine Energiestruktur…",
-      "v2_compute_wait": "Tiefe Berechnung läuft — noch etwa 1–3 Minuten",
-      "v2_narrative": "Schreibe den Berichtskörper…",
-      "v2_evidence": "Markiere die Begründungshinweise…",
-      "v2_translate": "Übersetze in deine Sprache…",
-      "streaming": "Dein Bericht nimmt Form an…",
-      "repair": "Letzte Korrektur…"
+      "chart_ready": "Kalibrierung Ihres Geburtsmoments und Ihrer Raum-Zeit-Koordinaten...",
+      "v2_compute": "Ableitung Ihrer gebürtigen Energiestruktur...",
+      "v2_compute_wait": "Berechnung der Kernenergiematrix und multidimensionalen Aspektkorrelationen... (Geschätzte Restzeit: 1–3 Minuten)",
+      "v2_narrative": "Aufbau des narrativen Hauptstrangs des Berichts...",
+      "v2_evidence": "Ableitung der Beweiskette und der zugrunde liegenden Logik...",
+      "v2_translate": "Durchführung der tiefen semantischen Konstruktion der hochdimensionalen Ableitungsmatrix...",
+      "v2_semantic_text": "Umwandlung hochdimensionaler Ableitungen in Ihren persönlichen Interpretationstext...",
+      "v2_final_audit": "Durchführung der Kreuzvalidierung und finalen Ableitungsprüfung...",
+      "streaming": "Durchführung der Kreuzvalidierung und finalen Ableitungsprüfung...",
+      "repair": "Durchführung der Kreuzvalidierung und finalen Ableitungsprüfung..."
     },
     "artifacts": {
-      "compute_done": "Deine Energiestruktur-Analyse ist fertig",
-      "narrative_done": "Der Berichtskörper ist geschrieben",
-      "evidence_done": "Belege und Begründung sind annotiert",
-      "translate_done": "Der Bericht wurde in deine Sprache übersetzt"
+      "compute_done": "Multidimensionale Energiestrukturanalyse abgeschlossen",
+      "narrative_done": "Hauptinhalt des Berichts abgeschlossen",
+      "evidence_done": "Logik und Ableitungsnachweise annotiert",
+      "translate_done": "Tiefe semantische Konstruktion abgeschlossen"
     }
   },
   "reading_ritual": {

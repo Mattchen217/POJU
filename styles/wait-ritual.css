@@ -1,4 +1,4 @@
-/* Full-page wait ritual ‚Äî breath / flash / converge + responsive copy */
+/* Full-page wait ritual ? breath / flash / converge + responsive copy */
 
 .delivery-wait-page {
   min-height: 100dvh;
@@ -170,7 +170,7 @@
   animation: delivery-wait-value-in 0.6s ease;
 }
 
-/* Crossfade: delivery underneath, wait on top duringÊî∂Êùü */
+/* Crossfade: delivery underneath, wait on top during converge */
 .delivery-wait-crossfade {
   position: relative;
   min-height: 100dvh;
@@ -206,7 +206,7 @@
   object-fit: cover;
 }
 
-/* Glyph / Match / Syncro / POJU ‚Äî copy anchored near page bottom */
+/* Glyph / Match / Syncro / POJU ? copy anchored near page bottom */
 .delivery-wait-page .preparing-spline-page__overlay:not(.preparing-spline-page__overlay--error) {
   bottom: max(1.25rem, calc(env(safe-area-inset-bottom) + 0.75rem));
   padding: 12px 20px max(0.5rem, env(safe-area-inset-bottom));
@@ -224,56 +224,85 @@
   }
 }
 
-/* ©§©§ Phased v2 document artifacts (A4 fold papers) ©§©§ */
+/* Phased v2 document artifacts (A4 fold papers) */
 
 .wait-artifact-layer {
   position: fixed;
   inset: 0;
   z-index: 3;
   pointer-events: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .wait-artifact-doc {
   position: absolute;
   left: 50%;
-  top: 42%;
+  top: 46%;
   width: clamp(72px, 14vmin, 110px);
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  transform: translate(-50%, -50%) scale(1.35);
+  transform: translate(-50%, -50%) scale(0.35);
   opacity: 0;
   transition:
     left 0.85s cubic-bezier(0.22, 1, 0.36, 1),
     top 0.85s cubic-bezier(0.22, 1, 0.36, 1),
     transform 0.85s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.35s ease,
+    width 0.85s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.wait-artifact-doc--spawn {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(0.35);
+}
+
+.wait-artifact-doc--spawn-active {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.2);
+  transition:
+    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
     opacity 0.35s ease;
 }
 
-.wait-artifact-doc--entering {
+.wait-artifact-doc--hold {
   opacity: 1;
-  transform: translate(-50%, -50%) scale(1.35);
+  left: 50%;
+  top: 46%;
+  width: clamp(72px, 14vmin, 110px);
+  transform: translate(-50%, -50%) scale(1.2);
 }
 
 .wait-artifact-doc--seated {
   opacity: 1;
-  /* Seat in a horizontal row across the mid-lower spline area */
+  top: max(16px, calc(env(safe-area-inset-top, 0px) + 12px));
   left: calc(
-    50% + (var(--artifact-slot) - (var(--artifact-count) - 1) / 2) * clamp(88px, 18vmin, 130px)
+    max(16px, env(safe-area-inset-left, 0px) + 12px) +
+      (var(--artifact-slot) * (clamp(44px, 9vmin, 64px) + 10px)) +
+      (clamp(44px, 9vmin, 64px) / 2)
   );
-  top: 58%;
-  transform: translate(-50%, -50%) scale(1);
+  width: clamp(44px, 9vmin, 64px);
+  transform: translate(-50%, 0) scale(1);
+  gap: 4px;
 }
 
-.wait-artifact-doc__paper {
+.wait-artifact-doc--seated .wait-artifact-doc__caption {
+  font-size: clamp(8px, 1.4vw, 10px);
+  max-width: 4.8rem;
+  line-height: 1.25;
+}
+
+.wait-artifact-doc__sheet {
   position: relative;
   width: 100%;
   aspect-ratio: 210 / 297;
-  border-radius: 4px;
+}
+
+.wait-artifact-doc__paper {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(0% 0%, 82% 0%, 100% 12%, 100% 100%, 0% 100%);
+  border-radius: 4px 0 4px 4px;
   background: linear-gradient(
     155deg,
     rgba(255, 255, 255, 0.14) 0%,
@@ -290,23 +319,23 @@
   align-items: center;
   justify-content: center;
   color: rgba(192, 132, 252, 0.95);
-  overflow: hidden;
 }
 
 .wait-artifact-doc__fold {
   position: absolute;
   top: 0;
   right: 0;
-  width: 22%;
-  height: 16%;
+  width: 18%;
+  height: 12%;
   background: linear-gradient(
-    225deg,
-    rgba(255, 255, 255, 0.22) 0%,
-    rgba(167, 139, 250, 0.18) 55%,
-    transparent 56%
+    215deg,
+    rgba(255, 255, 255, 0.34) 0%,
+    rgba(167, 139, 250, 0.3) 48%,
+    rgba(109, 40, 217, 0.22) 100%
   );
-  border-bottom-left-radius: 2px;
-  box-shadow: -1px 1px 0 rgba(167, 139, 250, 0.25);
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+  box-shadow: -1px 1px 0 rgba(167, 139, 250, 0.35);
+  pointer-events: none;
 }
 
 .wait-artifact-doc__glyph {
@@ -329,8 +358,18 @@
   .wait-artifact-doc {
     transition: opacity 0.2s ease;
   }
-  .wait-artifact-doc--entering,
+  .wait-artifact-doc--spawn,
+  .wait-artifact-doc--spawn-active,
+  .wait-artifact-doc--hold,
   .wait-artifact-doc--seated {
-    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+    top: max(16px, calc(env(safe-area-inset-top, 0px) + 12px));
+    left: calc(
+      max(16px, env(safe-area-inset-left, 0px) + 12px) +
+        (var(--artifact-slot) * (clamp(44px, 9vmin, 64px) + 10px)) +
+        (clamp(44px, 9vmin, 64px) / 2)
+    );
+    width: clamp(44px, 9vmin, 64px);
+    transform: translate(-50%, 0) scale(1);
   }
 }

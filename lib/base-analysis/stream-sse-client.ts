@@ -12,6 +12,12 @@ import {
 import type { ReportComputed } from "@/lib/base-analysis-v2/report-schema";
 import type { ReportSegmentTextTree } from "@/lib/base-analysis-v2/segment-text";
 import { ACTIVITY_CAPTION_ROTATE_MS } from "@/lib/ui/activity-caption-timing";
+import {
+  WAIT_ARTIFACT_INTRO_TOTAL_MS,
+  WAIT_ARTIFACT_SEAT_MS,
+  WAIT_FINAL_AUDIT_MS,
+  WAIT_SEMANTIC_ARTIFACT_MS,
+} from "@/lib/wait-ritual/constants";
 
 export type StreamSseCallbacks = {
   onStart?: (job_id: string) => void;
@@ -230,35 +236,88 @@ export async function consumeBaseAnalysisStream(input: {
     }
 
     // ── Phase 3: finalize (± translate) ───────────────────────────
-    if (!siteLocale.startsWith("zh")) {
-      emit(input.callbacks, "v2_translate");
+    // Non-zh: timed "semantic construction" theater (no translation wording).
+    // Zh: merge-only finalize — short audit, no 60/120 timers, no 4th artifact.
+    const isZh = siteLocale.startsWith("zh");
+    let translateArtifactEmitted = false;
+    const theaterTimers: ReturnType<typeof setTimeout>[] = [];
+
+    const clearTheaterTimers = () => {
+      for (const t of theaterTimers) clearTimeout(t);
+      theaterTimers.length = 0;
+    };
+
+    const waitMs = (ms: number) =>
+      new Promise<void>((resolve) => {
+        const t = setTimeout(resolve, ms);
+        theaterTimers.push(t);
+        input.signal?.addEventListener(
+          "abort",
+          () => {
+            clearTimeout(t);
+            resolve();
+          },
+          { once: true },
+        );
+      });
+
+    if (isZh) {
+      emit(input.callbacks, "v2_final_audit");
     } else {
-      emit(input.callbacks, "streaming");
+      emit(input.callbacks, "v2_translate");
+      theaterTimers.push(
+        setTimeout(() => {
+          translateArtifactEmitted = true;
+          emit(input.callbacks, "v2_semantic_text", "translate");
+        }, WAIT_SEMANTIC_ARTIFACT_MS),
+      );
+      theaterTimers.push(
+        setTimeout(() => {
+          emit(input.callbacks, "v2_final_audit");
+        }, WAIT_FINAL_AUDIT_MS),
+      );
     }
 
-    const final = await postJson<{
+    let final: {
       markdown: string;
       translated?: boolean;
       timings?: Record<string, number>;
-    }>(
-      PHASE.finalize,
-      {
-        profile_id: input.profile_id,
-        locale: siteLocale,
-        local_data: input.local_data,
-        report_computed: reportComputed,
-        narrative,
-        evidence,
-      },
-      input.signal,
-    );
+    };
+    try {
+      final = await postJson<{
+        markdown: string;
+        translated?: boolean;
+        timings?: Record<string, number>;
+      }>(
+        PHASE.finalize,
+        {
+          profile_id: input.profile_id,
+          locale: siteLocale,
+          local_data: input.local_data,
+          report_computed: reportComputed,
+          narrative,
+          evidence,
+        },
+        input.signal,
+      );
+    } finally {
+      clearTheaterTimers();
+    }
     lockHeld = false;
 
-    if (final.translated) {
-      emit(input.callbacks, "v2_translate", "translate");
+    if (!isZh && final.translated) {
+      if (!translateArtifactEmitted) {
+        translateArtifactEmitted = true;
+        emit(input.callbacks, "v2_semantic_text", "translate");
+        // Wait for center spawn → hold 2s → seat before tearing down wait UI.
+        await waitMs(WAIT_ARTIFACT_INTRO_TOTAL_MS);
+      } else {
+        emit(input.callbacks, "v2_final_audit");
+        await waitMs(WAIT_ARTIFACT_SEAT_MS);
+      }
+    } else if (isZh) {
+      emit(input.callbacks, "v2_final_audit");
     }
-    emit(input.callbacks, "streaming");
-    emit(input.callbacks, "repair");
 
     await clearV2Checkpoint(input.profile_id);
 
