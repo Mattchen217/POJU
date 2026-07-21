@@ -901,6 +901,7 @@
       "v2_compute_wait": "深度演算中，约还需 1–3 分钟",
       "v2_narrative": "正在撰写报告正文……",
       "v2_evidence": "正在标注命理依据……",
+      "v2_translate": "正在翻译成你的语言……",
       "streaming": "报告成形中……",
       "repair": "最后校对中……"
     }

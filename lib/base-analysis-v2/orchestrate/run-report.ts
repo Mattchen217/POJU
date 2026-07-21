@@ -3,19 +3,32 @@ import type { BaseAnalysisProgressStage } from "@/lib/base-analysis/progress-sta
 import { runCompute } from "@/lib/base-analysis-v2/compute/compute-call";
 import { runNarrative } from "@/lib/base-analysis-v2/narrative/narrative-call";
 import { runEvidence } from "@/lib/base-analysis-v2/evidence/evidence-call";
+import {
+  applyTranslatedSummary,
+  runTranslate,
+} from "@/lib/base-analysis-v2/translate/translate-call";
 import type { ReportComputed } from "@/lib/base-analysis-v2/report-schema";
 import { readPath, type ReportSegmentTextTree } from "@/lib/base-analysis-v2/segment-text";
 import { forceSsotPlainInMarkers, demoteWuxingMarkers } from "@/lib/llm/sanitize/term-marking";
 
+/** 第1/2/3次永远中文（命理零失真）；外文走第4次翻译。 */
+const PIPELINE_LOCALE = "zh";
+
 export type ReportV2Outcome =
   | { ok: true; markdown: string; timings: ReportV2Timings }
-  | { ok: false; stage: "compute" | "narrative" | "evidence"; reason: string; timings: ReportV2Timings };
+  | {
+      ok: false;
+      stage: "compute" | "narrative" | "evidence" | "translate";
+      reason: string;
+      timings: ReportV2Timings;
+    };
 
 export type ReportV2Timings = {
   compute?: number;
   narrative?: number;
   evidence?: number;
   parallel?: number;
+  translate?: number;
   total?: number;
 };
 
@@ -86,8 +99,8 @@ export function seg(tree: ReportSegmentTextTree, path: string): string {
 }
 
 /**
- * 一页纸卡片：keywords/dos/donts 来自第1次 rc.summary；
- * 统一折叠依据来自第3次 summary.card_basis。
+ * 一页纸卡片：keywords/dos/donts 来自第1次 rc.summary（外文站已由第4次译过）；
+ * 统一折叠依据来自第3次 summary.card_basis（外文站已译）。
  */
 export function renderSummaryCard(
   rc: ReportComputed,
@@ -151,16 +164,17 @@ export function mergeToMarkdown(
   }
 
   const raw = parts.join("\n\n");
-  // ★ 空槽填 SSOT 软译 + 五行标记还原成原字（火/水…，不软译成发散/润流）
+  // ★ 空槽填 SSOT 软译（按网站语言）+ 五行标记还原成原字
   return demoteWuxingMarkers(forceSsotPlainInMarkers(raw, locale));
 }
 
 /**
- * 三次调用串联：
- *   第1次 runCompute (串行先行)
- *   → Promise.all([runNarrative, runEvidence]) (并行)
- *   → 按 SEGMENT_PATHS 合并成双层 Markdown
- * 总时长 ≈ 第1次 + max(第2次,第3次)。
+ * 调用链：
+ *   第1次 runCompute(zh) 串行
+ *   → Promise.all([runNarrative(zh), runEvidence(zh)]) 并行
+ *   → [外文] runTranslate(target) 4 Task 并发
+ *   → mergeToMarkdown(site locale)
+ * 中文站 3 次；外文站 4 次。
  */
 export async function runReportV2(
   structured: ProfileStructured,
@@ -174,11 +188,12 @@ export async function runReportV2(
 
   const timings: ReportV2Timings = {};
   const t0 = Date.now();
+  const siteLocale = locale;
 
   await opts.onProgress?.("chart_ready");
   await opts.onProgress?.("v2_compute");
 
-  const compute = await runCompute(structured, locale, {
+  const compute = await runCompute(structured, PIPELINE_LOCALE, {
     session_id: opts.session_id,
     signal: opts.signal,
   });
@@ -187,7 +202,7 @@ export async function runReportV2(
     timings.total = Date.now() - t0;
     return { ok: false, stage: "compute", reason: compute.reason, timings };
   }
-  const rc = compute.value;
+  let rc = compute.value;
 
   // 并行阶段：UI 用 v2_narrative 表示「写正文+依据进行中」
   await opts.onProgress?.("v2_narrative");
@@ -195,14 +210,18 @@ export async function runReportV2(
   const narStarted = Date.now();
   const evStarted = Date.now();
   const [narrative, evidence] = await Promise.all([
-    runNarrative(rc, locale, { session_id: opts.session_id, signal: opts.signal }).then((r) => {
-      timings.narrative = Date.now() - narStarted;
-      return r;
-    }),
-    runEvidence(rc, locale, { session_id: opts.session_id, signal: opts.signal }).then((r) => {
-      timings.evidence = Date.now() - evStarted;
-      return r;
-    }),
+    runNarrative(rc, PIPELINE_LOCALE, { session_id: opts.session_id, signal: opts.signal }).then(
+      (r) => {
+        timings.narrative = Date.now() - narStarted;
+        return r;
+      },
+    ),
+    runEvidence(rc, PIPELINE_LOCALE, { session_id: opts.session_id, signal: opts.signal }).then(
+      (r) => {
+        timings.evidence = Date.now() - evStarted;
+        return r;
+      },
+    ),
   ]);
   timings.parallel = Date.now() - tPar;
 
@@ -215,13 +234,45 @@ export async function runReportV2(
     return { ok: false, stage: "evidence", reason: evidence.reason, timings };
   }
 
+  let finalNarrative = narrative.value;
+  let finalEvidence = evidence.value;
+
+  if (!siteLocale.startsWith("zh")) {
+    await opts.onProgress?.("v2_translate");
+    const tTr = Date.now();
+    const translated = await runTranslate(
+      {
+        narrative: narrative.value,
+        evidence: evidence.value,
+        summary: {
+          keywords: rc.summary.keywords,
+          current_theme: rc.summary.current_theme,
+          dos: rc.summary.dos,
+          donts: rc.summary.donts,
+        },
+      },
+      siteLocale,
+      { session_id: opts.session_id, signal: opts.signal },
+    );
+    timings.translate = Date.now() - tTr;
+    if (!translated.ok) {
+      timings.total = Date.now() - t0;
+      return { ok: false, stage: "translate", reason: translated.reason, timings };
+    }
+    finalNarrative = translated.narrative;
+    finalEvidence = translated.evidence;
+    rc = applyTranslatedSummary(rc, translated.summary);
+  }
+
   await opts.onProgress?.("streaming");
-  const markdown = mergeToMarkdown(rc, narrative.value, evidence.value, locale);
+  const markdown = mergeToMarkdown(rc, finalNarrative, finalEvidence, siteLocale);
   timings.total = Date.now() - t0;
 
   console.log(
     `[v2/orchestrate] ✅ 报告就绪 compute=${timings.compute}ms parallel=${timings.parallel}ms` +
-      ` (nar=${timings.narrative}ms ev=${timings.evidence}ms) total=${timings.total}ms`,
+      ` (nar=${timings.narrative}ms ev=${timings.evidence}ms)` +
+      (timings.translate != null ? ` translate=${timings.translate}ms` : "") +
+      ` total=${timings.total}ms`,
   );
   return { ok: true, markdown, timings };
 }

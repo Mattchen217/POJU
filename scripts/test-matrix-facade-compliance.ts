@@ -52,17 +52,17 @@ assert("Fire→火 zh", matrixElementSoft("Fire", "zh") === "火");
 assert("Earth→土 zh", matrixElementSoft("Earth", "zh") === "土");
 assert("Metal→金 zh", matrixElementSoft("Metal", "zh") === "金");
 assert("Water→水 zh", matrixElementSoft("Water", "zh") === "水");
-assert("Wood→Wood (木) en", matrixElementSoft("Wood", "en") === "Wood (木)");
-assert("Fire→Fire (火) en", matrixElementSoft("Fire", "en") === "Fire (火)");
-assert("Earth→Earth (土) en", matrixElementSoft("Earth", "en") === "Earth (土)");
-assert("Metal→Metal (金) en", matrixElementSoft("Metal", "en") === "Metal (金)");
-assert("Water→Water (水) en", matrixElementSoft("Water", "en") === "Water (水)");
-assert("Wood→Madera (木) es", matrixElementSoft("Wood", "es") === "Madera (木)");
-assert("Wood→Holz (木) de", matrixElementSoft("Wood", "de") === "Holz (木)");
-assert("Wood→Bois (木) fr", matrixElementSoft("Wood", "fr") === "Bois (木)");
+assert("Wood→Wood en", matrixElementSoft("Wood", "en") === "Wood");
+assert("Fire→Fire en", matrixElementSoft("Fire", "en") === "Fire");
+assert("Earth→Earth en", matrixElementSoft("Earth", "en") === "Earth");
+assert("Metal→Metal en", matrixElementSoft("Metal", "en") === "Metal");
+assert("Water→Water en", matrixElementSoft("Water", "en") === "Water");
+assert("Wood→Madera es", matrixElementSoft("Wood", "es") === "Madera");
+assert("Wood→Holz de", matrixElementSoft("Wood", "de") === "Holz");
+assert("Wood→Bois fr", matrixElementSoft("Wood", "fr") === "Bois");
 assert("金→金 via localized", elementLabelLocalized("金", "zh") === "金");
 assert("branch has 木 zh", formatBranchDisplay("寅", "zh").includes("木"));
-assert("branch Wood (木) en", formatBranchDisplay("寅", "en").includes("Wood (木)"));
+assert("branch Wood en", formatBranchDisplay("寅", "en").includes("Wood") && !formatBranchDisplay("寅", "en").includes("(木)"));
 assert(
   "yongshen chips classic zh",
   yongshenChipsForLocale({ elements_en: ["Wood", "Water"] }, "zh").every((c) =>

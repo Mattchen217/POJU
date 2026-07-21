@@ -221,13 +221,9 @@ function fillTree(text: string): ReportSegmentTextTree {
   );
 
   const epEn = buildEvidencePrompt(pickAllSegments(buildRc()), "en");
-  assert(
-    "evidence EN 要求英文输出",
-    epEn.system.includes("Write the entire explanation in English"),
-  );
-  assert("evidence EN 打标块英文 intro", epEn.system.includes("When referencing a concept below"));
-  assert("evidence EN 打标块无中文 intro", !epEn.system.includes("凡在「依据与推理」"));
-  assert("evidence EN user 强调英文", epEn.user.includes("entirely in English"));
+  assert("evidence en locale 仍用中文 system", epEn.system === ep.system);
+  assert("evidence en locale 仍用中文 user 骨架", epEn.user.includes("命理依据真词"));
+  assert("evidence 无 Write entirely in English", !epEn.system.includes("Write the entire explanation in English"));
 
   const energyOnly = pickSegments(buildRc(), EVIDENCE_TASKS[0]!.paths);
   assert(

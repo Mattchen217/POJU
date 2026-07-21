@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  matrixElementHan,
+  elementToSlug,
   matrixElementPrimary,
 } from "@/lib/poju/matrix-term-labels";
 
@@ -11,20 +11,24 @@ type Props = {
   className?: string;
 };
 
+/** Label color class for five-element façade text (金金/木绿/水蓝/火红/土棕). */
+export function matrixElementColorClass(element: string): string {
+  const slug = elementToSlug(element);
+  return slug ? `pcm-el-label pcm-el-label--${slug}` : "pcm-el-label";
+}
+
 /**
  * Matrix façade five-element label:
- * zh → 木；en/es/de/fr → Wood + gray (木).
+ * zh → 木；en/es/de/fr → Wood / Madera… (no parenthetical Han).
+ * Colored by element: metal gold · wood green · water blue · fire red · earth brown.
  */
 export function MatrixElementLabel({ element, locale, className }: Props) {
   const primary = matrixElementPrimary(element, locale);
   if (!primary) return null;
-  const han =
-    locale.toLowerCase().startsWith("zh") ? null : matrixElementHan(element);
-
+  const colorClass = matrixElementColorClass(element);
   return (
-    <span className={className}>
+    <span className={[colorClass, className].filter(Boolean).join(" ")}>
       {primary}
-      {han ? <span className="pcm-el-han"> ({han})</span> : null}
     </span>
   );
 }

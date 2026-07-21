@@ -177,15 +177,11 @@ export function matrixElementPrimary(element: string, locale: string): string {
 }
 
 /**
- * Five-element façade label: zh「木」; en/es/de/fr「Wood (木)」.
- * Falls back to input only when unknown.
+ * Five-element façade label: zh「木」; en「Wood」; es/de/fr localized primary.
+ * No parenthetical Han (charts show colored primary only).
  */
 export function matrixElementSoft(element: string, locale: string): string {
-  const primary = matrixElementPrimary(element, locale);
-  if (!elementToSlug(element)) return primary;
-  if (locale.toLowerCase().startsWith("zh")) return primary;
-  const han = matrixElementHan(element);
-  return han ? `${primary} (${han})` : primary;
+  return matrixElementPrimary(element, locale);
 }
 
 /** Soft label for a traditional Han term (十神 / 日主 / 长生 / 五行…). */

@@ -10,24 +10,21 @@ import { buildTermMarkingPromptBlock } from "@/lib/llm/sanitize/compliance-terms
  * 第3次·写依据。拿钥匙A+B(core_conclusion + bazi_basis)出金字依据。
  * 照 bazi_basis 的真词打标 ⟦t:slug|⟧,不用猜、不用从白话反推。
  *
+ * v2 多语言架构：第3次依据永远中文；外文由第4次翻译层处理。
+ *
  * @param segments 本 Task 的段落子集（几段的 nested tree），不是整份 ReportComputed
  */
 export function buildEvidencePrompt(
   segments: Record<string, unknown>,
-  locale: string,
+  _locale: string,
   retryHint?: string | null,
 ): { system: string; user: string } {
-  const zh = locale.startsWith("zh");
-  const markingBlock = buildTermMarkingPromptBlock(locale, { neutralBase: true });
-  const system = `${zh ? EVIDENCE_SYSTEM_ZH : EVIDENCE_SYSTEM_EN}\n\n${markingBlock}`;
+  const markingBlock = buildTermMarkingPromptBlock("zh", { neutralBase: true });
+  const system = `${EVIDENCE_SYSTEM_ZH}\n\n${markingBlock}`;
   const payload = JSON.stringify(segments, null, 2);
-  let user = zh
-    ? `以下是若干段的【核心结论】和【命理依据真词】（JSON）。请逐段生成一小段"依据与推理"：\n用结论锚住方向，用命理真词解释为什么，命理词打标成 ⟦t:<slug>|⟧（竖线后留空，软译由系统填）。\n输出 JSON 必须包含输入里的【所有】key，不得省略。\n\`\`\`json\n${payload}\n\`\`\``
-    : `Below are several segments' core_conclusion and bazi_basis (JSON). For each, write a short evidence note **entirely in English** (you may reason in Chinese; OUTPUT must be English):\nanchor on the conclusion, explain with the given true terms, mark them as ⟦t:<slug>|⟧ (leave the slot after | empty — the system fills soft labels).\nYour JSON MUST include every key from the input — do not omit any.\n\`\`\`json\n${payload}\n\`\`\``;
+  let user = `以下是若干段的【核心结论】和【命理依据真词】（JSON）。请逐段生成一小段"依据与推理"：\n用结论锚住方向，用命理真词解释为什么，命理词打标成 ⟦t:<slug>|⟧（竖线后留空，软译由系统填）。\n输出 JSON 必须包含输入里的【所有】key，不得省略。\n\`\`\`json\n${payload}\n\`\`\``;
   if (retryHint?.trim()) {
-    user += zh
-      ? `\n\n【纠错 · 上一轮失败原因】\n${retryHint.trim()}\n请按此重写，只输出 JSON。`
-      : `\n\n【Correction from previous attempt】\n${retryHint.trim()}\nRewrite accordingly. Output JSON only.`;
+    user += `\n\n【纠错 · 上一轮失败原因】\n${retryHint.trim()}\n请按此重写，只输出 JSON。`;
   }
   return { system, user };
 }
@@ -105,37 +102,3 @@ const EVIDENCE_SYSTEM_ZH = `# 你是谁
 按给你的 JSON 结构,逐段输出对应的依据文本(含 \`⟦t:<slug>|⟧\` 打标)。
 用同样的 key 组织,**每个 key 的值 = 那段的依据字符串**(不是再嵌套 core_conclusion/bazi_basis 对象)。
 只输出 JSON。`;
-
-const EVIDENCE_SYSTEM_EN = `# Who you are
-
-You are a senior Bazi analyst writing short "evidence & reasoning" notes for an energy report.
-Each segment already has a core_conclusion and a bazi_basis list of true terms.
-Your job: organize those terms into a restrained professional note explaining why that conclusion follows.
-
-# How to write
-
-- **Write the entire explanation in English.** You may reason in Chinese internally
-  (the source terms are Chinese), but every word you OUTPUT in the evidence text must be English,
-  except the marked terms ⟦t:slug|⟧ (which the system renders) and the Five-Element characters 金木水火土.
-  Never output Chinese sentences like "生于寅月得令" — write "born in the Yin month when Wood is in season".
-- **Anchor on the given core_conclusion** — explain its metaphysical basis; do not invent a different thesis.
-- **Mark terms from bazi_basis**: wrap each as \`⟦t:<slug>|⟧\` with the slot **after the pipe left empty** (the system fills soft labels).
-  Mark from the list only — do not guess or reverse-engineer from vernacular.
-  ⚠️ Never write \`⟦t:zheng_guan|正官⟧\` (filling the slot with the raw term). The slot must stay empty.
-- **Five Elements exception**: write 金/木/水/火/土 (or Metal/Wood/Water/Fire/Earth) as plain characters — **do not mark them**.
-  Only mark Ten Gods, Shen Sha, Heavenly Stems, Useful/Favorable God style terms.
-- **Natal relations (clash / punishment / six-harmony) exception**: plain neutral wording, no markers.
-- Keep the explanation **neutral and objective** — no luck/omen verdicts.
-- **Never appear**: calendar years (2026), ages (35), named luck cycles (Bing-Wu decade), medical claims.
-- **No Ten-God compound abbreviations**: no 官杀/食伤/比劫/印枭/枭印/财官/杀印 — full names + markers only.
-- 2–4 sentences per segment; only terms that support this conclusion.
-
-# Completeness
-
-Output complete JSON with **every** key from the input.
-**Never omit, skip, or shorten later segments.**
-
-# Output format
-
-Mirror the JSON keys you were given. Each key's value = that segment's evidence string
-(not a nested {core_conclusion,bazi_basis} object). Output JSON only.`;

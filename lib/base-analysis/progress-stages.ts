@@ -8,6 +8,7 @@ export type BaseAnalysisProgressStage =
   | "v2_compute_wait"
   | "v2_narrative"
   | "v2_evidence"
+  | "v2_translate"
   | "streaming"
   | "repair";
 
@@ -24,6 +25,7 @@ export const BASE_ANALYSIS_PROGRESS_STAGES = [
   "v2_compute_wait",
   "v2_narrative",
   "v2_evidence",
+  "v2_translate",
   "streaming",
   "repair",
 ] as const satisfies readonly BaseAnalysisProgressStage[];

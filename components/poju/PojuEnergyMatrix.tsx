@@ -25,7 +25,6 @@ import { activePillarByAge } from "@/lib/poju/matrix-life-segment";
 import { matrixSynopsisNarrativeState } from "@/lib/poju/matrix-narrative-text";
 import {
   elementToSlug,
-  matrixElementHan,
   matrixElementPrimary,
   matrixElementSoft,
   matrixSoftTerm,
@@ -653,26 +652,46 @@ function RadarChart({
           splitNumber: 4,
           axisNameGap: 12,
           axisName: {
-            color: "rgba(227,224,241,0.92)",
             fontSize: 14,
             fontWeight: 600,
             fontFamily:
               '"Plus Jakarta Sans", "Noto Sans SC", "PingFang SC", Inter, sans-serif',
             padding: [2, 6],
             rich: {
-              a: {
-                color: "rgba(227,224,241,0.92)",
+              wood: {
+                color: "#22C55E",
                 fontSize: 14,
                 fontWeight: 600,
                 fontFamily:
                   '"Plus Jakarta Sans", "Noto Sans SC", "PingFang SC", Inter, sans-serif',
               },
-              b: {
-                color: "rgba(161,161,170,0.9)",
-                fontSize: 12,
-                fontWeight: 500,
+              fire: {
+                color: "#EF4444",
+                fontSize: 14,
+                fontWeight: 600,
                 fontFamily:
-                  '"Noto Sans SC", "PingFang SC", "Plus Jakarta Sans", sans-serif',
+                  '"Plus Jakarta Sans", "Noto Sans SC", "PingFang SC", Inter, sans-serif',
+              },
+              earth: {
+                color: "#A16207",
+                fontSize: 14,
+                fontWeight: 600,
+                fontFamily:
+                  '"Plus Jakarta Sans", "Noto Sans SC", "PingFang SC", Inter, sans-serif',
+              },
+              metal: {
+                color: "#D4AF37",
+                fontSize: 14,
+                fontWeight: 600,
+                fontFamily:
+                  '"Plus Jakarta Sans", "Noto Sans SC", "PingFang SC", Inter, sans-serif',
+              },
+              water: {
+                color: "#3B82F6",
+                fontSize: 14,
+                fontWeight: 600,
+                fontFamily:
+                  '"Plus Jakarta Sans", "Noto Sans SC", "PingFang SC", Inter, sans-serif',
               },
             },
           },
@@ -685,11 +704,9 @@ function RadarChart({
           axisLine: { lineStyle: { color: "rgba(255,255,255,0.18)" } },
           indicator: scores.map((s) => {
             const primary = matrixElementPrimary(s.element, locale);
-            const han = locale.toLowerCase().startsWith("zh")
-              ? null
-              : matrixElementHan(s.element);
+            const slug = elementToSlug(s.element) ?? "metal";
             return {
-              name: han ? `{a|${primary}}{b| (${han})}` : primary,
+              name: `{${slug}|${primary}}`,
               max: max * 1.1,
             };
           }),
@@ -1148,10 +1165,15 @@ export function PojuEnergyMatrix({
                       {tc("surplus")}{" "}
                       <span className="pcm-eq__pct">{dominant.pct}%</span>
                     </div>
-                    <div className="pcm-eq__segments">
-                      <i className="pcm-eq__seg pcm-eq__seg--coral" />
-                      <i className="pcm-eq__seg pcm-eq__seg--coral" style={{ opacity: 0.5 }} />
-                      <i className="pcm-eq__seg pcm-eq__seg--dim" />
+                    <div className="pcm-bar__track pcm-eq__bar" aria-hidden>
+                      <div
+                        className={`pcm-bar__fill ${BAR_FILL[dominant.element] ?? ""}`}
+                        style={
+                          {
+                            "--pcm-bar-pct": `${Math.min(100, Math.max(0, dominant.pct))}%`,
+                          } as CSSProperties
+                        }
+                      />
                     </div>
                     <div className="pcm-eq__hint pcm-eq__hint--up">
                       ▲ {tc("dominant_vector")}
@@ -1165,9 +1187,15 @@ export function PojuEnergyMatrix({
                       {tc("deficit")}{" "}
                       <span className="pcm-eq__pct">{deficit.pct}%</span>
                     </div>
-                    <div className="pcm-eq__segments">
-                      <i className="pcm-eq__seg pcm-eq__seg--cyan" />
-                      <i className="pcm-eq__seg pcm-eq__seg--dim" />
+                    <div className="pcm-bar__track pcm-eq__bar" aria-hidden>
+                      <div
+                        className={`pcm-bar__fill ${BAR_FILL[deficit.element] ?? ""}`}
+                        style={
+                          {
+                            "--pcm-bar-pct": `${Math.min(100, Math.max(0, deficit.pct))}%`,
+                          } as CSSProperties
+                        }
+                      />
                     </div>
                     <div className="pcm-eq__hint pcm-eq__hint--down">
                       ▼ {tc("key_gap")}

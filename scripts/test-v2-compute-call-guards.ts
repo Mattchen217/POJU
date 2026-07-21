@@ -164,16 +164,11 @@ const ctxQiShaOnly: TenGodContext = {
 assert("L2 仅七杀：官杀→七杀", cleanText("官杀攻身", ctxQiShaOnly) === "七杀攻身");
 
 {
+  const { system: zhSys } = buildComputePrompt({} as ProfileStructured, "zh");
   const { system: enSys } = buildComputePrompt({} as ProfileStructured, "en");
-  assert(
-    "COMPUTE_EN summary 短词跟英文",
-    enSys.includes("# Summary block language") &&
-      enSys.includes("keywords / current_theme / dos / donts: output in ENGLISH"),
-  );
-  assert(
-    "COMPUTE_EN basis 仍中文真词",
-    enSys.includes("core_conclusion / bazi_basis: keep Chinese true terms"),
-  );
+  assert("COMPUTE 永远中文 system", zhSys.includes("你是一位有三十年经验的命理分析师"));
+  assert("COMPUTE en locale 仍用中文 prompt", enSys === zhSys);
+  assert("COMPUTE 无 Summary block language 英分叉", !enSys.includes("# Summary block language"));
 }
 
 console.log(failures.length ? "❌ compute-call guards failed" : "✅ compute-call guards ready");

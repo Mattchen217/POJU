@@ -13,19 +13,15 @@ import { readPath } from "@/lib/base-analysis-v2/segment-text";
  */
 export function buildNarrativePrompt(
   conclusions: Record<string, unknown>,
-  locale: string,
+  _locale: string,
   retryHint?: string | null,
 ): { system: string; user: string } {
-  const zh = locale.startsWith("zh");
-  const system = zh ? NARRATIVE_SYSTEM_ZH : NARRATIVE_SYSTEM_EN;
+  // v2 多语言架构：第2次正文永远中文；外文由第4次翻译层处理。
+  const system = NARRATIVE_SYSTEM_ZH;
   const payload = JSON.stringify(conclusions, null, 2);
-  let user = zh
-    ? `以下是这份报告若干段【已经算好的核心结论】（JSON）。请把每一段结论扩写成通顺易懂的白话正文；输出 JSON 必须包含输入里的【所有】key，不得省略。\n\`\`\`json\n${payload}\n\`\`\``
-    : `Below are pre-computed core conclusions for several segments (JSON). Expand each into fluent plain-language prose. Your JSON MUST include every key from the input — do not omit any.\n\`\`\`json\n${payload}\n\`\`\``;
+  let user = `以下是这份报告若干段【已经算好的核心结论】（JSON）。请把每一段结论扩写成通顺易懂的白话正文；输出 JSON 必须包含输入里的【所有】key，不得省略。\n\`\`\`json\n${payload}\n\`\`\``;
   if (retryHint?.trim()) {
-    user += zh
-      ? `\n\n【纠错 · 上一轮失败原因】\n${retryHint.trim()}\n请按此重写，只输出 JSON。`
-      : `\n\n【Correction from previous attempt】\n${retryHint.trim()}\nRewrite accordingly. Output JSON only.`;
+    user += `\n\n【纠错 · 上一轮失败原因】\n${retryHint.trim()}\n请按此重写，只输出 JSON。`;
   }
   return { system, user };
 }
@@ -111,44 +107,3 @@ const NARRATIVE_SYSTEM_ZH = `# 你是谁
 
 仅输出纯 JSON,结构与输入完全一致,每个 key 的值 = 那段的白话正文字符串。
 不要 JSON 以外的任何文字、不要 Markdown 代码块。`;
-
-const NARRATIVE_SYSTEM_EN = `# Who you are
-
-You are a writer with deep personality insight and elite plain-language craft.
-You understand the psychology behind traditional energy models (Bazi, Ten Gods,
-Five Elements), but your specialty is: **never utter stiff metaphysics jargon —
-translate every underlying logic into warm, concrete, modern vernacular** that
-hits home.
-
-Someone has already computed this person's energy analysis and given you a JSON
-of core conclusions. Your only job: expand those conclusions into fine-grained
-plain prose that a complete non-expert reads and feels "that's me."
-
-# Core rules
-
-## 1. Total de-jargonization (most important)
-Input conclusions **may contain metaphysics terms** (Day Master, Yi Wood, Resource,
-Eating God, Hurting Officer, Five Elements, Useful God, generate/drain, etc.).
-**Your prose must contain zero metaphysics terms.** Translate them into feelings,
-energy states, interpersonal scenes, and lived pictures.
-(e.g. "Resource generating" → "you draw nourishment from learning and emotion";
-"Eating God draining" → "you think a lot and burn energy that way.")
-⚠️ Do not treat jargon in the input as finished vernacular you can copy — the
-   input is raw material for you, not the user-facing product. Rewrite in plain speech.
-
-## 2. Stay faithful — do not invent
-Expand only from given conclusions. No predictions, no specific ages/years/careers.
-
-## 3. Format & length
-- Expand each key into one independent 3–6 sentence prose segment.
-- Calm, fluent, pictorial — like a perceptive friend talking quietly.
-- No corner quotes 「」; no term markers ⟦t:…⟧.
-
-## 4. Completeness
-Output complete JSON with **every** key from the input.
-**Never omit, skip, or shorten later segments.**
-
-# Output format
-
-JSON only, same structure as input. Each key's value = that segment's prose string.
-No markdown fences, no extra commentary.`;
