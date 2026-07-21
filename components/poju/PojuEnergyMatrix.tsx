@@ -12,6 +12,7 @@ import { useTranslations } from "next-intl";
 
 import pojuMark from "@/assets/icons/P.png";
 import { SoftTermHover } from "@/components/cross-product/GlossaryText";
+import { MatrixElementLabel } from "@/components/poju/MatrixElementLabel";
 import { PojuDaYunTimeline } from "@/components/poju/PojuDaYunTimeline";
 import {
   elementCssClass,
@@ -24,6 +25,8 @@ import { activePillarByAge } from "@/lib/poju/matrix-life-segment";
 import { matrixSynopsisNarrativeState } from "@/lib/poju/matrix-narrative-text";
 import {
   elementToSlug,
+  matrixElementHan,
+  matrixElementPrimary,
   matrixElementSoft,
   matrixSoftTerm,
   matrixTermSlug,
@@ -100,14 +103,7 @@ function SoftEl({
   element: string;
   locale: string;
 }) {
-  const slug = elementToSlug(element);
-  const soft = matrixElementSoft(element, locale);
-  if (!soft) return null;
-  return slug ? (
-    <SoftTermHover slug={slug} locale={locale} fallback={soft} />
-  ) : (
-    <>{soft}</>
-  );
+  return <MatrixElementLabel element={element} locale={locale} />;
 }
 
 function PcmChip({
@@ -663,6 +659,22 @@ function RadarChart({
             fontFamily:
               '"Plus Jakarta Sans", "Noto Sans SC", "PingFang SC", Inter, sans-serif',
             padding: [2, 6],
+            rich: {
+              a: {
+                color: "rgba(227,224,241,0.92)",
+                fontSize: 14,
+                fontWeight: 600,
+                fontFamily:
+                  '"Plus Jakarta Sans", "Noto Sans SC", "PingFang SC", Inter, sans-serif',
+              },
+              b: {
+                color: "rgba(161,161,170,0.9)",
+                fontSize: 12,
+                fontWeight: 500,
+                fontFamily:
+                  '"Noto Sans SC", "PingFang SC", "Plus Jakarta Sans", sans-serif',
+              },
+            },
           },
           splitLine: { lineStyle: { color: "rgba(255,255,255,0.2)" } },
           splitArea: {
@@ -671,10 +683,16 @@ function RadarChart({
             },
           },
           axisLine: { lineStyle: { color: "rgba(255,255,255,0.18)" } },
-          indicator: scores.map((s) => ({
-            name: matrixElementSoft(s.element, locale),
-            max: max * 1.1,
-          })),
+          indicator: scores.map((s) => {
+            const primary = matrixElementPrimary(s.element, locale);
+            const han = locale.toLowerCase().startsWith("zh")
+              ? null
+              : matrixElementHan(s.element);
+            return {
+              name: han ? `{a|${primary}}{b| (${han})}` : primary,
+              max: max * 1.1,
+            };
+          }),
         },
         series: [
           {

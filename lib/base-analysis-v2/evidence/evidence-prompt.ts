@@ -23,7 +23,7 @@ export function buildEvidencePrompt(
   const payload = JSON.stringify(segments, null, 2);
   let user = zh
     ? `以下是若干段的【核心结论】和【命理依据真词】（JSON）。请逐段生成一小段"依据与推理"：\n用结论锚住方向，用命理真词解释为什么，命理词打标成 ⟦t:<slug>|⟧（竖线后留空，软译由系统填）。\n输出 JSON 必须包含输入里的【所有】key，不得省略。\n\`\`\`json\n${payload}\n\`\`\``
-    : `Below are several segments' core_conclusion and bazi_basis (JSON). For each, write a short evidence note:\nanchor on the conclusion, explain with the given true terms, mark them as ⟦t:<slug>|⟧ (leave the slot after | empty — the system fills soft labels).\nYour JSON MUST include every key from the input — do not omit any.\n\`\`\`json\n${payload}\n\`\`\``;
+    : `Below are several segments' core_conclusion and bazi_basis (JSON). For each, write a short evidence note **entirely in English** (you may reason in Chinese; OUTPUT must be English):\nanchor on the conclusion, explain with the given true terms, mark them as ⟦t:<slug>|⟧ (leave the slot after | empty — the system fills soft labels).\nYour JSON MUST include every key from the input — do not omit any.\n\`\`\`json\n${payload}\n\`\`\``;
   if (retryHint?.trim()) {
     user += zh
       ? `\n\n【纠错 · 上一轮失败原因】\n${retryHint.trim()}\n请按此重写，只输出 JSON。`
@@ -80,6 +80,8 @@ const EVIDENCE_SYSTEM_ZH = `# 你是谁
 
 # 怎么写
 
+- **整段依据用中文写。** 推理可用中文（数据本是中文），输出给用户的解释句也必须是中文。
+  例外：标记 \`⟦t:slug|⟧\`（系统渲染）与五行原字 金木水火土。
 - **依据要紧扣给你的 core_conclusion**——你是在解释这个结论的命理由来,不是另讲一套。
 - **命理词照给你的 bazi_basis 打标**:每个真词包成 \`⟦t:<slug>|⟧\`,**竖线后留空**(系统会填软译)。
   照清单里的真词打,不要自己猜别的、不要从白话里反推。
@@ -112,6 +114,10 @@ Your job: organize those terms into a restrained professional note explaining wh
 
 # How to write
 
+- **Write the entire explanation in English.** You may reason in Chinese internally
+  (the source terms are Chinese), but every word you OUTPUT in the evidence text must be English,
+  except the marked terms ⟦t:slug|⟧ (which the system renders) and the Five-Element characters 金木水火土.
+  Never output Chinese sentences like "生于寅月得令" — write "born in the Yin month when Wood is in season".
 - **Anchor on the given core_conclusion** — explain its metaphysical basis; do not invent a different thesis.
 - **Mark terms from bazi_basis**: wrap each as \`⟦t:<slug>|⟧\` with the slot **after the pipe left empty** (the system fills soft labels).
   Mark from the list only — do not guess or reverse-engineer from vernacular.

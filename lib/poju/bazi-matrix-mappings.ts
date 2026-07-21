@@ -1,6 +1,10 @@
 /** Deterministic lookup tables for Energy Matrix (zero LLM). */
 
-import { matrixElementSoft, matrixSoftTerm } from "@/lib/poju/matrix-term-labels";
+import {
+  elementToSlug,
+  matrixElementSoft,
+  matrixSoftTerm,
+} from "@/lib/poju/matrix-term-labels";
 
 export type StemInfo = {
   han: string;
@@ -211,15 +215,11 @@ const ELEMENT_FR: Record<string, string> = {
   Water: "Eau",
 };
 
-/** Locale-aware element labels — SSOT soft terms (舒展/Growth…), never bare 木/Wood on façade. */
+/** Locale-aware element labels — classic 金木水火土 / Wood (木) on matrix façade. */
 export function elementLabelLocalized(element: string, locale: string): string {
   const soft = matrixElementSoft(element, locale);
   const key = element.trim();
-  // Known five-element keys always soft — never fall back to 木/Wood.
-  if (soft && soft !== key) return soft;
-  if (/^(Wood|Fire|Earth|Metal|Water|木|火|土|金|水)$/i.test(key)) {
-    return soft || key;
-  }
+  if (elementToSlug(key)) return soft;
   const lang = locale.toLowerCase().slice(0, 2);
   if (lang === "zh") return ELEMENT_ZH[key] ?? key;
   if (lang === "es") return ELEMENT_ES[key] ?? key;
@@ -231,7 +231,7 @@ export function elementLabelLocalized(element: string, locale: string): string {
 export function formatStemDisplay(stem: string, locale: string): string {
   const info = getStemInfo(stem);
   if (!info) return stem;
-  // Façade: soft element only (发散 / Radiance) — no 阴火 / Yin Fire.
+  // Façade: classic element only (木 / Wood (木)) — no 阴火 / Yin Fire.
   return elementLabelLocalized(info.element, locale);
 }
 
@@ -297,7 +297,7 @@ const WUXING_HAN_TO_EN: Record<string, string> = {
 
 export type YongshenChipDisplay = { label: string; elementKey: string };
 
-/** Locale-aware 锚元 chips: SSOT soft element labels (舒展/润流 · Growth/Fluidity). */
+/** Locale-aware 锚元 chips: classic element labels (木 / Wood (木)). */
 export function yongshenChipsForLocale(
   analysis: { elements_en?: string[]; elements_han?: string[] } | null | undefined,
   locale: string,

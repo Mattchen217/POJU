@@ -1040,8 +1040,7 @@
         "footer": "POJU 提供的是自我反思与参考视角，帮助你把问题看得更清、找到可尝试的方向，最终的决定始终在你手中。",
         "privacy_footer": "你的对话只保存在你的浏览器本地（换浏览器或无痕模式将清除）；为生成回应会通过安全连接发送给 AI 模型（其声明不留存、不用于训练）。详见隐私政策。",
         "privacy_link": "[阅读隐私政策 →]",
-        "acknowledge": "我已了解 POJU 的使用方式，并同意继续（适用服务条款与隐私政策）。",
-        "confirm": "继续使用 POJU"
+        "confirm": "我知道了"
       },
       "birth_flow_analyzing_title": "正在分析性格画像…",
       "birth_flow_analysis_done_short": "分析完成",
@@ -1440,11 +1439,11 @@
       "balanced": "均势"
     },
     "element": {
-      "wood": "舒展",
-      "fire": "发散",
-      "earth": "承托",
-      "metal": "精练",
-      "water": "润流"
+      "wood": "木",
+      "fire": "火",
+      "earth": "土",
+      "metal": "金",
+      "water": "水"
     },
     "life_stage": {
       "changsheng": "萌发",

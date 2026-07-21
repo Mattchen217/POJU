@@ -46,11 +46,11 @@ function main() {
       !read("lib/poju/resolve-matrix-preview.ts").includes("requestMatrixNarrative"),
   );
 
-  assert("zh Earth→承托", elementLabelLocalized("Earth", "zh") === "承托");
-  assert("zh Metal→精练", elementLabelLocalized("Metal", "zh") === "精练");
-  assert("es Earth localized", elementLabelLocalized("Earth", "es").length > 0 && elementLabelLocalized("Earth", "es") !== "Earth");
-  assert("de Metal localized", elementLabelLocalized("Metal", "de") !== "Metal");
-  assert("fr Water localized", elementLabelLocalized("Water", "fr") !== "Water");
+  assert("zh Earth→土", elementLabelLocalized("Earth", "zh") === "土");
+  assert("zh Metal→金", elementLabelLocalized("Metal", "zh") === "金");
+  assert("es Earth localized", elementLabelLocalized("Earth", "es").includes("Tierra") && elementLabelLocalized("Earth", "es").includes("土"));
+  assert("de Metal localized", elementLabelLocalized("Metal", "de").includes("Metall"));
+  assert("fr Water localized", elementLabelLocalized("Water", "fr").includes("Eau"));
 
   const md = `开篇身份。
 

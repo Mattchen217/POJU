@@ -843,8 +843,7 @@
         "footer_label": "Decisión y responsabilidad",
         "privacy_footer": "Tus conversaciones se guardan solo en tu navegador local (se borran al cambiar de navegador o usar modo incógnito). Para generar respuestas se envían por conexión segura a modelos de IA (que declaran no retener datos ni usarlos para entrenamiento). Consulta nuestra Política de Privacidad.",
         "privacy_link": "[Leer la Política de Privacidad →]",
-        "acknowledge": "Entiendo cómo funciona POJU y acepto continuar bajo los Términos de Servicio, la Política de Privacidad y estos puntos.",
-        "confirm": "Continuar con POJU"
+        "confirm": "Entendido"
       },
       "birth_flow_analyzing_title": "Analizando tu perfil…",
       "birth_flow_analysis_done_short": "Análisis completo",
@@ -1236,11 +1235,11 @@
       "balanced": "Equilibrado"
     },
     "element": {
-      "wood": "Crecimiento",
-      "fire": "Radiancia",
-      "earth": "Arraigo",
-      "metal": "Refinamiento",
-      "water": "Fluidez"
+      "wood": "Madera",
+      "fire": "Fuego",
+      "earth": "Tierra",
+      "metal": "Metal",
+      "water": "Agua"
     },
     "life_stage": {
       "changsheng": "Emergencia",

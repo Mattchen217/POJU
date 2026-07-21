@@ -9,6 +9,7 @@ import {
   SIMP_RE,
   TIME_ANCHOR_RE,
 } from "@/lib/base-analysis-v2/compute/compute-call";
+import { buildComputePrompt } from "@/lib/base-analysis-v2/compute/compute-prompt";
 import {
   SEGMENT_PATHS,
   type ReportComputed,
@@ -16,6 +17,7 @@ import {
 } from "@/lib/base-analysis-v2/report-schema";
 import { cleanText } from "@/lib/base-analysis-v2/compute/report-sanitizer";
 import type { TenGodContext } from "@/lib/base-analysis-v2/compute/ten-god-context";
+import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 
 const failures: string[] = [];
 const assert = (label: string, ok: boolean) => {
@@ -160,6 +162,19 @@ const ctxQiShaOnly: TenGodContext = {
   hasPianYin: false,
 };
 assert("L2 仅七杀：官杀→七杀", cleanText("官杀攻身", ctxQiShaOnly) === "七杀攻身");
+
+{
+  const { system: enSys } = buildComputePrompt({} as ProfileStructured, "en");
+  assert(
+    "COMPUTE_EN summary 短词跟英文",
+    enSys.includes("# Summary block language") &&
+      enSys.includes("keywords / current_theme / dos / donts: output in ENGLISH"),
+  );
+  assert(
+    "COMPUTE_EN basis 仍中文真词",
+    enSys.includes("core_conclusion / bazi_basis: keep Chinese true terms"),
+  );
+}
 
 console.log(failures.length ? "❌ compute-call guards failed" : "✅ compute-call guards ready");
 if (failures.length) {

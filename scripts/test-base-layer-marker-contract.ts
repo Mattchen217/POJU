@@ -31,6 +31,15 @@ function main(): void {
   assert("底座档表头有官方术语列", /\|\s*官方术语/.test(block));
   assert("底座档表头有官方释义列", /\|\s*官方释义/.test(block));
 
+  // ①b EN 打标块跟随 locale（避免中文 intro 带偏英文依据）
+  const blockEn = buildTermMarkingPromptBlock("en", { neutralBase: true });
+  assert("EN 底座档标题英文", blockEn.includes("# Term marking"));
+  assert("EN 底座档 intro 英文", blockEn.includes("When referencing a concept below"));
+  assert("EN 底座档无中文 intro", !blockEn.includes("凡在「依据与推理」"));
+  assert("EN 底座档表头英文", blockEn.includes("official term") && blockEn.includes("official gloss"));
+  assert("EN 底座档规则英文", blockEn.includes("## Marking rules (neutral base)"));
+  assert("EN 底座档禁止正文重复解释", blockEn.includes("do not re-explain"));
+
   // ③ 代码无条件覆盖(这是唯一知道 SSOT 的地方)
   const forced = forceSsotPlainInMarkers("依据:⟦t:zheng_yin|我瞎写的白话⟧。", "zh");
   assert("模型的白话被覆盖", !forced.includes("我瞎写的白话"));

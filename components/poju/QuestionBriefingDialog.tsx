@@ -14,10 +14,10 @@ type Props = {
  * First composer-focus gate — same shell / typography / CTA as site DisclaimerModal.
  * Portaled to document.body so `.pchat [class*="text-sm"] { font-size: inherit }`
  * (19px chat body) cannot inflate disclaimer-scale type.
+ * No checkbox: one tap on「我知道了」dismisses.
  */
 export function QuestionBriefingDialog({ open, onConfirm }: Props) {
   const t = useTranslations("poju.chat.question_briefing");
-  const [checked, setChecked] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -32,12 +32,6 @@ export function QuestionBriefingDialog({ open, onConfirm }: Props) {
     { label: t("item_three_title"), body: t("item_three_body") },
     { label: t("item_four_title"), body: t("item_four_body") },
   ];
-
-  const handleConfirm = () => {
-    if (!checked) return;
-    setChecked(false);
-    onConfirm();
-  };
 
   return createPortal(
     <div className="fixed inset-0 z-[500] bg-black/70">
@@ -84,20 +78,9 @@ export function QuestionBriefingDialog({ open, onConfirm }: Props) {
           </div>
 
           <div className="mt-4 shrink-0 border-t border-glass-border/60 pt-4">
-            <label className="flex cursor-pointer items-start gap-3 text-sm leading-relaxed text-text-secondary">
-              <input
-                checked={checked}
-                className="mt-1 size-4 shrink-0 accent-purple-vivid"
-                onChange={(event) => setChecked(event.target.checked)}
-                type="checkbox"
-              />
-              <span>{t("acknowledge")}</span>
-            </label>
-
             <button
-              className="poju-button-primary mt-4 w-full disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={!checked}
-              onClick={handleConfirm}
+              className="poju-button-primary w-full"
+              onClick={onConfirm}
               type="button"
             >
               {t("confirm")}

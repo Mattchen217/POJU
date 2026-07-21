@@ -1,6 +1,6 @@
 /**
- * Front-of-paywall matrix labels — always resolve via POJU_TERMS SSOT.
- * Never surface 日主/用神/十神/长生/藏干/大运/流年/金木水火土 raw on the façade.
+ * Front-of-paywall matrix labels — resolve via POJU_TERMS SSOT for closed-set terms.
+ * Five elements on the façade use classic 金木水火土 / Wood (木) (not soft Growth/Radiance…).
  */
 
 import { CLOSED_SET_SLUG } from "@/lib/glossary/term-closed-set";
@@ -141,14 +141,51 @@ export function strengthToSlug(
   return "balanced_self";
 }
 
+const ELEMENT_HAN: Record<string, string> = {
+  wood: "木",
+  fire: "火",
+  earth: "土",
+  metal: "金",
+  water: "水",
+};
+
+const ELEMENT_PRIMARY: Record<string, Record<string, string>> = {
+  zh: { wood: "木", fire: "火", earth: "土", metal: "金", water: "水" },
+  en: { wood: "Wood", fire: "Fire", earth: "Earth", metal: "Metal", water: "Water" },
+  es: { wood: "Madera", fire: "Fuego", earth: "Tierra", metal: "Metal", water: "Agua" },
+  de: { wood: "Holz", fire: "Feuer", earth: "Erde", metal: "Metall", water: "Wasser" },
+  fr: { wood: "Bois", fire: "Feu", earth: "Terre", metal: "Métal", water: "Eau" },
+};
+
+/** Han glyph for a five-element key (木/火/土/金/水). */
+export function matrixElementHan(element: string): string | null {
+  const slug = elementToSlug(element);
+  if (!slug) return null;
+  return ELEMENT_HAN[slug] ?? null;
+}
+
 /**
- * Five-element soft label from SSOT (舒展/发散/承托/精练/润流 · Growth/Radiance/…).
+ * Locale primary for five elements — zh「木」; en「Wood」; es/de/fr localized.
+ * No parenthetical Han (use matrixElementSoft / MatrixElementLabel for that).
+ */
+export function matrixElementPrimary(element: string, locale: string): string {
+  const slug = elementToSlug(element);
+  if (!slug) return element.trim();
+  const lang = locale.toLowerCase().slice(0, 2);
+  const table = ELEMENT_PRIMARY[lang] ?? ELEMENT_PRIMARY.en;
+  return table?.[slug] ?? ELEMENT_PRIMARY.en[slug] ?? element.trim();
+}
+
+/**
+ * Five-element façade label: zh「木」; en/es/de/fr「Wood (木)」.
  * Falls back to input only when unknown.
  */
 export function matrixElementSoft(element: string, locale: string): string {
-  const slug = elementToSlug(element);
-  if (!slug) return element.trim();
-  return termOf(slug, locale) ?? element.trim();
+  const primary = matrixElementPrimary(element, locale);
+  if (!elementToSlug(element)) return primary;
+  if (locale.toLowerCase().startsWith("zh")) return primary;
+  const han = matrixElementHan(element);
+  return han ? `${primary} (${han})` : primary;
 }
 
 /** Soft label for a traditional Han term (十神 / 日主 / 长生 / 五行…). */
@@ -204,14 +241,14 @@ export function stripGanzhiFromLunar(lunar: string, locale: string): string {
   return s;
 }
 
-/** Element-only annual transit headline — soft element via SSOT. */
+/** Element-only annual transit headline — classic element name (no parenthetical). */
 export function annualTransitHeadline(
   stemElement: string,
   locale: string,
 ): { title: string; subtitle: string } {
-  const soft = matrixElementSoft(stemElement, locale) || stemElement;
+  const primary = matrixElementPrimary(stemElement, locale) || stemElement;
   if (locale.startsWith("zh")) {
-    return { title: `${soft}势`, subtitle: "本年动能背景" };
+    return { title: `${primary}势`, subtitle: "本年动能背景" };
   }
-  return { title: `${soft} tide`, subtitle: "This year's momentum field" };
+  return { title: `${primary} tide`, subtitle: "This year's momentum field" };
 }

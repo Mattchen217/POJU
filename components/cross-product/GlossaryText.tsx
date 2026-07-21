@@ -18,8 +18,11 @@ import {
 import { glossOf, termOf } from "@/lib/glossary/pojulife-terms";
 import { termPolarityById, type TermPolarity } from "@/lib/glossary/term-polarity";
 import { toGlossaryLocale } from "@/lib/glossary/term-glossary";
+import { MatrixElementLabel } from "@/components/poju/MatrixElementLabel";
 
 import "@/styles/glossary.css";
+
+const WUXING_SLUGS = new Set(["wood", "fire", "earth", "metal", "water"]);
 
 type Props = { text: string; locale: string };
 
@@ -223,6 +226,12 @@ export function SoftTermHover({
   fallback?: string;
   className?: string;
 }) {
+  // Matrix façade: classic 金木水火土 / Wood (木) — not soft Growth/Radiance.
+  if (WUXING_SLUGS.has(slug)) {
+    return (
+      <MatrixElementLabel element={slug} locale={locale} className={className} />
+    );
+  }
   const soft = termOf(slug, locale) ?? fallback ?? "";
   const plain = glossOf(slug, locale) ?? "";
   if (!soft) return fallback ? <>{fallback}</> : null;

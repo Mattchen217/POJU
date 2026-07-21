@@ -220,6 +220,10 @@ Describe only three 【states】 — recognition cues + response strategies — 
 - donts: exactly 3 behaviors to avoid (string array)
 - card_basis: the unified core evidence under the whole card (Day Master pattern + key Useful/Favorable Gods + phase energy-field traits)
 
+# Summary block language
+- keywords / current_theme / dos / donts: output in ENGLISH (site language).
+- core_conclusion / bazi_basis: keep Chinese true terms (needed for marking downstream).
+
 # Three hard rules
 
 1. **Never use Ten-God compound abbreviations** (applies to every core_conclusion and bazi_basis).

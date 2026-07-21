@@ -1225,6 +1225,7 @@ export function buildTermMarkingPromptBlock(
   opts?: TermMarkingPromptOptions,
 ): string {
   const loc = toGlossaryLocale(locale);
+  const zh = loc === "zh";
   const langLabel =
     loc === "zh" ? "中文" : loc === "en" ? "English" : loc.toUpperCase();
   const principlesOnly = opts?.principlesOnly === true;
@@ -1233,7 +1234,7 @@ export function buildTermMarkingPromptBlock(
     const soft = softLabel(e, loc);
     const keep =
       e.keep_cn === true
-        ? loc === "zh"
+        ? zh
           ? "（可见软译只用上表词，禁括号干支）"
           : " (visible soft label only — no stem-branch in parens)"
         : "";
@@ -1248,7 +1249,8 @@ export function buildTermMarkingPromptBlock(
   }).join("\n");
 
   const rules = neutralBase
-    ? `## 打标记规则（中立底座）
+    ? zh
+      ? `## 打标记规则（中立底座）
 1. 格式：\`⟦t:<slug>|⟧\` —— **竖线保留，后面留空**。
 2. 它会渲染成上表的【官方术语】，读者**点一下就展开【官方释义】那一整句**。
    也就是说，**这个术语已经自带解释了** —— 所以**不要在正文里再解释它一遍**，
@@ -1256,8 +1258,17 @@ export function buildTermMarkingPromptBlock(
 3. **正文零标记**；标记只出现在「依据与推理」；一段依据 ≤3 金字。
 4. **slug 必须取自上表**；自造 id 无效、句子会缺字 —— 上表没有的概念，**直接用白话讲，不打标**。
 5. 守六条语义红线（不预测/不算命/不占卜/不决吉凶/不恐吓/不超自然承诺）。`
+      : `## Marking rules (neutral base)
+1. Format: \`⟦t:<slug>|⟧\` — **keep the pipe, leave the slot after it empty**.
+2. It renders as the official term above; the reader taps to expand the official gloss.
+   The term already carries its explanation — **do not re-explain it in the prose**,
+   and do not write the raw jargon from column 2. The marker is the explanation.
+3. **Zero markers in body prose**; markers only in the evidence note; ≤3 markers per evidence segment.
+4. **slug must come from the table**; invented ids are invalid — for concepts not listed, **use plain language, no marker**.
+5. Keep the six semantic red lines (no prediction / fate-telling / divination / omen verdicts / fear / supernatural promises).`
     : principlesOnly
-      ? `## 打标记规则（原则 · 严禁过拟合示例）
+      ? zh
+        ? `## 打标记规则（原则 · 严禁过拟合示例）
 1. 格式：\`⟦t:<slug>|<贴题白话>⟧\` —— **软译词不用你写**（系统从术语表填入官方术语）。
 2. 贴题白话必须引用【这位用户亲口说过的具体词/场景】；禁止通用词典比方。
 3. 自检：换用户还成立？成立 → 重写。
@@ -1265,7 +1276,16 @@ export function buildTermMarkingPromptBlock(
 5. 守六条语义红线（不预测/不算命/不占卜/不决吉凶/不恐吓/不超自然承诺）。
 
 ${buildTermMarkingFewShot(locale)}`
-      : `## 打标记规则
+        : `## Marking rules (principles · no overfit examples)
+1. Format: \`⟦t:<slug>|<context plain>⟧\` — **do not invent soft labels** (system fills the official term).
+2. Context plain must cite words/scenes the user actually said; no generic dictionary metaphors.
+3. Self-check: would this still fit another user? If yes → rewrite.
+4. **Zero markers in body prose**; markers only in evidence; ≤3 per segment; **slug from the table only**; invented id = reject; not in closed set → plain language, no marker.
+5. Keep the six semantic red lines (no prediction / fate-telling / divination / omen verdicts / fear / supernatural promises).
+
+${buildTermMarkingFewShot(locale)}`
+      : zh
+        ? `## 打标记规则
 1. 格式：\`⟦t:<slug>|<贴题白话>⟧\` 或 \`⟦t:<slug>||<贴题白话>⟧\`
 2. **软译词【不用写】**——上表 soft 仅供你识别概念；系统渲染时用官方术语覆盖你写的任何软译。
 3. 贴题白话 = 结合本句意境 + 用户问题的人话；只进 tooltip；必须引用该用户亲口元素。
@@ -1278,19 +1298,47 @@ ${buildTermMarkingFewShot(locale)}`
 
 ${buildTermMarkingFewShot(locale)}
 
+${buildClosedSetConstraintPromptBlock(locale)}`
+        : `## Marking rules
+1. Format: \`⟦t:<slug>|<context plain>⟧\` or \`⟦t:<slug>||<context plain>⟧\`
+2. **Do not invent soft labels** — the soft column is for recognition only; the system overwrites with the official term.
+3. Context plain = this sentence + the user's question, in everyday language; tooltip only; must cite the user's own words.
+4. **Zero markers in body prose**; markers concentrate in the evidence block; ≤3 per evidence segment
+5. For year/decade luck: attribute to outer conditions first, then restore agency
+6. **Oracle verse / classical quotes are not terms** — do not mark
+7. Keep the six semantic red lines (no prediction / fate-telling / divination / omen verdicts / fear / supernatural promises)
+8. If context plain is missing, UI falls back to static gloss — never pad with generic unrelated lines
+9. **slug must come from the closed set**; invented = reject; no matching concept → plain language, no marker
+
+${buildTermMarkingFewShot(locale)}
+
 ${buildClosedSetConstraintPromptBlock(locale)}`;
 
   const tableHeader = neutralBase
-    ? `| slug | 禁/术语示例 | 官方术语 (${langLabel}) | 官方释义（读者点开就看到这句） |
+    ? zh
+      ? `| slug | 禁/术语示例 | 官方术语 (${langLabel}) | 官方释义（读者点开就看到这句） |
 |---|---|---|---|`
-    : `| slug | 禁/术语示例 | 官方术语 (${langLabel}) |
+      : `| slug | banned / term examples | official term (${langLabel}) | official gloss (shown on tap) |
+|---|---|---|---|`
+    : zh
+      ? `| slug | 禁/术语示例 | 官方术语 (${langLabel}) |
+|---|---|---|`
+      : `| slug | banned / term examples | official term (${langLabel}) |
 |---|---|---|`;
 
   const intro = neutralBase
-    ? `凡在「依据与推理」中引用下表概念：打 \`⟦t:<slug>|⟧\`（竖线后留空）。标记会渲染成上表的官方术语，点开即见官方释义。`
-    : `凡在「依据与推理」中引用下表概念：打 \`⟦t:<slug>|<贴题白话>⟧\`。**软译词由系统从术语表填入**（下表 soft 列仅供对照）。`;
+    ? zh
+      ? `凡在「依据与推理」中引用下表概念：打 \`⟦t:<slug>|⟧\`（竖线后留空）。标记会渲染成上表的官方术语，点开即见官方释义。`
+      : `When referencing a concept below in the evidence note, mark it \`⟦t:<slug>|⟧\` (leave the slot after the pipe empty). The system renders the official term; the reader taps to see the official gloss.`
+    : zh
+      ? `凡在「依据与推理」中引用下表概念：打 \`⟦t:<slug>|<贴题白话>⟧\`。**软译词由系统从术语表填入**（下表 soft 列仅供对照）。`
+      : `When referencing a concept below in the evidence note, mark it \`⟦t:<slug>|<context plain>⟧\`. **Soft labels are filled from the glossary by the system** (the soft column is for recognition only).`;
 
-  return `# 术语标记（输出 JSON 字符串 · ${langLabel}）
+  const title = zh
+    ? `# 术语标记（输出 JSON 字符串 · ${langLabel}）`
+    : `# Term marking (output JSON strings · ${langLabel})`;
+
+  return `${title}
 
 ${intro}
 

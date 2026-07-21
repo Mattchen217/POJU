@@ -212,12 +212,23 @@ function fillTree(text: string): ReportSegmentTextTree {
   const ep = buildEvidencePrompt(pickAllSegments(buildRc()), "zh");
   assert("evidence 注入打标块", ep.system.includes("⟦t:<slug>|⟧"));
   assert("evidence 明示竖线后留空", ep.system.includes("竖线后留空") || ep.system.includes("后面留空"));
+  assert("evidence ZH 要求中文输出", ep.system.includes("整段依据用中文写"));
   assert("evidence user 含双钥匙", ep.user.includes("bazi_basis") && ep.user.includes("core_conclusion"));
   assert("evidence user 无 dos", !ep.user.includes('"dos"'));
   assert(
     "evidence retryHint 拼入 user",
     buildEvidencePrompt(pickAllSegments(buildRc()), "zh", "依据纠错").user.includes("依据纠错"),
   );
+
+  const epEn = buildEvidencePrompt(pickAllSegments(buildRc()), "en");
+  assert(
+    "evidence EN 要求英文输出",
+    epEn.system.includes("Write the entire explanation in English"),
+  );
+  assert("evidence EN 打标块英文 intro", epEn.system.includes("When referencing a concept below"));
+  assert("evidence EN 打标块无中文 intro", !epEn.system.includes("凡在「依据与推理」"));
+  assert("evidence EN user 强调英文", epEn.user.includes("entirely in English"));
+
   const energyOnly = pickSegments(buildRc(), EVIDENCE_TASKS[0]!.paths);
   assert(
     "pickSegments 只含 energy_map",

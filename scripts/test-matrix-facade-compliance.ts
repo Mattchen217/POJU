@@ -45,32 +45,32 @@ assert(
 );
 assert("annual no ganzhi", !annualTransitHeadline("Fire", "zh").title.includes("丙"));
 
-// Five-element soft labels — locale-aware
-assert("木→舒展 zh", matrixElementSoft("木", "zh") === "舒展");
-assert("Wood→舒展 zh", matrixElementSoft("Wood", "zh") === "舒展");
-assert("Fire→发散 zh", matrixElementSoft("Fire", "zh") === "发散");
-assert("Earth→承托 zh", matrixElementSoft("Earth", "zh") === "承托");
-assert("Metal→精练 zh", matrixElementSoft("Metal", "zh") === "精练");
-assert("Water→润流 zh", matrixElementSoft("Water", "zh") === "润流");
-assert("Wood→Growth en", matrixElementSoft("Wood", "en") === "Growth");
-assert("Fire→Radiance en", matrixElementSoft("Fire", "en") === "Radiance");
-assert("Earth→Grounding en", matrixElementSoft("Earth", "en") === "Grounding");
-assert("Metal→Refinement en", matrixElementSoft("Metal", "en") === "Refinement");
-assert("Water→Fluidity en", matrixElementSoft("Water", "en") === "Fluidity");
-assert("Wood→Crecimiento es", matrixElementSoft("Wood", "es") === "Crecimiento");
-assert("Wood→Wachstum de", matrixElementSoft("Wood", "de") === "Wachstum");
-assert("Wood→Croissance fr", matrixElementSoft("Wood", "fr") === "Croissance");
-assert("金→精练 via localized", elementLabelLocalized("金", "zh") === "精练");
-assert("no bare Wood in branch zh", !formatBranchDisplay("寅", "zh").includes("木"));
-assert("branch soft Growth en", formatBranchDisplay("寅", "en").includes("Growth"));
+// Five-element classic labels — locale-aware
+assert("木→木 zh", matrixElementSoft("木", "zh") === "木");
+assert("Wood→木 zh", matrixElementSoft("Wood", "zh") === "木");
+assert("Fire→火 zh", matrixElementSoft("Fire", "zh") === "火");
+assert("Earth→土 zh", matrixElementSoft("Earth", "zh") === "土");
+assert("Metal→金 zh", matrixElementSoft("Metal", "zh") === "金");
+assert("Water→水 zh", matrixElementSoft("Water", "zh") === "水");
+assert("Wood→Wood (木) en", matrixElementSoft("Wood", "en") === "Wood (木)");
+assert("Fire→Fire (火) en", matrixElementSoft("Fire", "en") === "Fire (火)");
+assert("Earth→Earth (土) en", matrixElementSoft("Earth", "en") === "Earth (土)");
+assert("Metal→Metal (金) en", matrixElementSoft("Metal", "en") === "Metal (金)");
+assert("Water→Water (水) en", matrixElementSoft("Water", "en") === "Water (水)");
+assert("Wood→Madera (木) es", matrixElementSoft("Wood", "es") === "Madera (木)");
+assert("Wood→Holz (木) de", matrixElementSoft("Wood", "de") === "Holz (木)");
+assert("Wood→Bois (木) fr", matrixElementSoft("Wood", "fr") === "Bois (木)");
+assert("金→金 via localized", elementLabelLocalized("金", "zh") === "金");
+assert("branch has 木 zh", formatBranchDisplay("寅", "zh").includes("木"));
+assert("branch Wood (木) en", formatBranchDisplay("寅", "en").includes("Wood (木)"));
 assert(
-  "yongshen chips soft zh",
+  "yongshen chips classic zh",
   yongshenChipsForLocale({ elements_en: ["Wood", "Water"] }, "zh").every((c) =>
-    ["舒展", "润流"].includes(c.label),
+    ["木", "水"].includes(c.label),
   ),
 );
-assert("annual Fire→发散势", annualTransitHeadline("Fire", "zh").title === "发散势");
-assert("annual Fire→Radiance tide", annualTransitHeadline("Fire", "en").title === "Radiance tide");
+assert("annual Fire→火势", annualTransitHeadline("Fire", "zh").title === "火势");
+assert("annual Fire→Fire tide", annualTransitHeadline("Fire", "en").title === "Fire tide");
 assert("Core for day_master en", matrixSoftTerm("日主", "en") === "Core");
 assert("Núcleo for day_master es", matrixSoftTerm("日主", "es") === "Núcleo");
 assert("Kern for day_master de", matrixSoftTerm("日主", "de") === "Kern");
