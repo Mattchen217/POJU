@@ -6,6 +6,7 @@ import {
 } from "@/lib/base-analysis-v2/narrative/narrative-call";
 import type { ReportComputed } from "@/lib/base-analysis-v2/report-schema";
 import {
+  mapSegmentTexts,
   readPath,
   type ReportSegmentTextTree,
 } from "@/lib/base-analysis-v2/segment-text";
@@ -17,6 +18,7 @@ import {
   openRouterChatCompletion,
   isEmptyResponseError,
 } from "@/lib/llm/openrouter-shared";
+import { collapseMarkersToEmptySlots } from "@/lib/llm/sanitize/term-marking";
 
 /** 正文+依据同 Task，段数约翻倍；给足防截断。 */
 const TRANSLATE_TASK_MAX_TOKENS = 8192;
@@ -206,7 +208,7 @@ async function runTranslateTask(
           temperature: TRANSLATE_TEMPERATURE,
           max_tokens: TRANSLATE_TASK_MAX_TOKENS,
           json_mode: true,
-          reasoning_effort: "high",
+          reasoning_effort: "medium",
           timeout_ms: ATTEMPT_TIMEOUT_MS,
           session_id: opts.session_id,
           call_type: "v2_translate",
@@ -368,6 +370,15 @@ export async function runTranslate(
     };
   }
 
+  // 旧 checkpoint / 误填软译槽：压回干净代号，再喂翻译（字典只认 slug→用神）
+  const evidenceClean = mapSegmentTexts(input.evidence, (t) =>
+    collapseMarkersToEmptySlots(t),
+  );
+  const translateInput: TranslateInput = {
+    ...input,
+    evidence: evidenceClean,
+  };
+
   const opts: RunTranslateOptions =
     typeof session_idOrOpts === "string" || session_idOrOpts === undefined
       ? { session_id: session_idOrOpts }
@@ -386,7 +397,7 @@ export async function runTranslate(
   try {
     const results = await Promise.all(
       NARRATIVE_TASKS.map((t) =>
-        runTranslateTask(t, input, locale, {
+        runTranslateTask(t, translateInput, locale, {
           session_id: opts.session_id,
           signal: ctrl.signal,
           deadline,
@@ -421,11 +432,11 @@ export async function runTranslate(
 
     const narMerged = fillMissingFromZh(
       mergeTaskTrees(okResults.map((r) => r.narrative)),
-      input.narrative,
+      translateInput.narrative,
     );
     const evMerged = fillMissingFromZh(
       mergeTaskTrees(okResults.map((r) => r.evidence)),
-      input.evidence,
+      translateInput.evidence,
     );
 
     const summaryFromTask =

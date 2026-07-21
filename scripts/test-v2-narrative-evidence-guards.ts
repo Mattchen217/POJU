@@ -172,8 +172,15 @@ function fillTree(text: string): ReportSegmentTextTree {
 {
   const polished = polishEvidenceSegment("原局见食神吐秀，日主偏旺。", "zh");
   assert("打标器补标", polished.includes("⟦t:"));
-  assert("forceSsot 后无空槽裸竖线残留可渲染", polished.includes("⟦t:"));
-
+  assert(
+    "依据中间态保持空槽(不填锚元)",
+    /⟦t:[a-z0-9_:]+\|⟧/.test(polishEvidenceSegment("因 ⟦t:shi_shen|⟧ 吐秀。", "zh")),
+  );
+  assert(
+    "不预填软译金字",
+    !polishEvidenceSegment("因 ⟦t:shi_shen|⟧ 吐秀。", "zh").includes("流展") &&
+      !polishEvidenceSegment("因 ⟦t:yong_shen|⟧ 制衡。", "zh").includes("锚元"),
+  );
   const cleanEv = fillTree(
     polishEvidenceSegment("因 ⟦t:shi_shen|⟧ 吐秀，格局偏向独立输出。", "zh"),
   );
@@ -250,8 +257,8 @@ function fillTree(text: string): ReportSegmentTextTree {
     "utf8",
   );
   assert(
-    "锁 TTL=600s",
-    /BASE_ANALYSIS_LOCK:\s*60\s*\*\s*10/.test(kv),
+    "锁 TTL=45min",
+    /BASE_ANALYSIS_LOCK:\s*60\s*\*\s*45/.test(kv),
   );
   assert("去重含 pending", route.includes('"pending"') && route.includes("ACTIVE_STATUSES"));
   assert("runV2Job 幂等跳过", route.includes("跳过重复执行"));

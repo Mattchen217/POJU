@@ -1375,6 +1375,19 @@ export function forceSsotPlainInMarkers(text: string, locale: string): string {
 }
 
 /**
+ * 把任意已填槽标记压回干净空槽 `⟦t:slug|⟧`（给第4次翻译 / 中间态存盘用）。
+ * 软译+释义只在 merge 给用户看之前由 forceSsotPlainInMarkers 填。
+ */
+export function collapseMarkersToEmptySlots(text: string): string {
+  if (!text?.includes("⟦t:")) return text ?? "";
+  TERM_MARKER_PATTERN.lastIndex = 0;
+  return text.replace(TERM_MARKER_PATTERN, (_raw, rawId: string) => {
+    const id = normalizeTermMarkerId(String(rawId));
+    return `⟦t:${id}|⟧`;
+  });
+}
+
+/**
  * Remove marker-plain text that leaked into body prose next to the marker.
  * Plain belongs only in tooltip (3rd field).
  */

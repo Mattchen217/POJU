@@ -117,6 +117,16 @@ assert(
 const stages = read("lib/base-analysis/progress-stages.ts");
 assert("progress 含 v2_translate", stages.includes('"v2_translate"'));
 
+const translateCall = read("lib/base-analysis-v2/translate/translate-call.ts");
+assert('translate reasoning=medium', translateCall.includes('reasoning_effort: "medium"'));
+assert("translate 压回空槽", translateCall.includes("collapseMarkersToEmptySlots"));
+
+const evidenceCall = read("lib/base-analysis-v2/evidence/evidence-call.ts");
+assert(
+  "evidence polish 不预填 forceSsot",
+  !/polishEvidenceSegment[\s\S]{0,200}forceSsotPlainInMarkers/.test(evidenceCall),
+);
+
 console.log(failures.length ? "❌ translate guards failed" : "✅ translate guards ready");
 if (failures.length) {
   console.error(failures);
