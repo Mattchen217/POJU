@@ -185,9 +185,16 @@ function fillTree(text: string): ReportSegmentTextTree {
   const cleanEv = fillTree(
     polishEvidenceSegment("因 ⟦t:shi_shen|⟧ 吐秀，格局偏向独立输出。", "zh"),
   );
-  // 关系白话允许
-  const withRel = fillTree("年月相刑形成张力，但不改结论方向。");
-  assert("相刑白话放行", findEvidenceLeak(withRel, "zh") === null);
+  // 关系词统一打标（不再白话放行）
+  const relPolished = polishEvidenceSegment(
+    "年月相刑形成张力，但不改结论方向。",
+    "zh",
+  );
+  assert("关系词相刑已打标", /⟦t:[a-z0-9_:]+\|/.test(relPolished));
+  assert(
+    "关系词打标后无泄漏",
+    findEvidenceLeak(fillTree(relPolished), "zh") === null,
+  );
 
   assert("干净依据(已打标)无泄漏", findEvidenceLeak(cleanEv, "zh") === null);
 
@@ -343,6 +350,11 @@ function fillTree(text: string): ReportSegmentTextTree {
     evidence.includes("wrapBarePillars") &&
       evidence.includes("maxPerPara: Infinity") &&
       evidence.includes("oncePerText: false"),
+  );
+  assert("evidence 接 wrapBareRelations", evidence.includes("wrapBareRelations"));
+  assert(
+    "v2 route 旁路 collect",
+    route.includes("collectUnmarkedMingliCandidates"),
   );
   assert(
     "evidence 单Task 16000",

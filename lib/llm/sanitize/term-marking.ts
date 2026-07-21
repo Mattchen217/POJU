@@ -681,21 +681,28 @@ const RELATION_WORD_TO_SLUG: Readonly<Record<string, string>> = (() => {
 /**
  * 裸关系词（相刑/相冲/半合…）→ 标记。长度降序，先吃长词。
  * 中文正文前后几乎总贴汉字（「子午相刑」），Han 双边界会漏网——只挡后缀粘连。
+ * 只改标记外片段，避免双标记。
  */
 export function wrapBareRelations(text: string, locale: string): string {
   if (!text?.trim()) return text ?? "";
   const loc = toGlossaryLocale(locale);
   const words = Object.keys(RELATION_WORD_TO_SLUG).sort((a, b) => b.length - a.length);
-  let out = text;
-  for (const w of words) {
-    const id = RELATION_WORD_TO_SLUG[w]!;
-    if (!termOf(id, loc)) continue;
-    out = out.replace(
-      new RegExp(`${escapeRegExp(w)}(?![运格星局宫支])`, "g"),
-      `⟦t:${id}|⟧`,
-    );
-  }
-  return out;
+  const parts = text.split(/(⟦[^⟧]*⟧)/g);
+  return parts
+    .map((part, i) => {
+      if (i % 2 === 1) return part;
+      let seg = part;
+      for (const w of words) {
+        const id = RELATION_WORD_TO_SLUG[w]!;
+        if (!termOf(id, loc)) continue;
+        seg = seg.replace(
+          new RegExp(`${escapeRegExp(w)}(?![运格星局宫支])`, "g"),
+          `⟦t:${id}|⟧`,
+        );
+      }
+      return seg;
+    })
+    .join("");
 }
 
 /**

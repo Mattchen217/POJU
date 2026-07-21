@@ -15,6 +15,7 @@ import {
 import type { BaseAnalysisJob } from "@/lib/base-analysis/job-types";
 import { auditBaseAnalysisDelivery } from "@/lib/base-analysis/delivery-gate";
 import { runReportV2 } from "@/lib/base-analysis-v2/orchestrate/run-report";
+import { collectUnmarkedMingliCandidates } from "@/lib/base-analysis-v2/collect-unmarked";
 import { baseAnalysisCacheSessionId } from "@/lib/llm/cache-session-id";
 import { applyComplianceSanitize } from "@/lib/llm/sanitize/compliance-terms";
 import { forceSsotPlainInMarkers, demoteWuxingMarkers } from "@/lib/llm/sanitize/term-marking";
@@ -108,6 +109,16 @@ async function runV2Job(job_id: string, profile_id: string): Promise<void> {
       console.warn(
         `[base-analysis-v2] ℹ️ gate 观测到残留(不重跑,已清洗放行):`,
         gate.violations.slice(0, 5).map((v) => v.label).join(", "),
+      );
+    }
+
+    // 旁路收集漏网疑似命理词 → KV 候选池；失败不影响交付
+    try {
+      await collectUnmarkedMingliCandidates(gated, job.locale);
+    } catch (e) {
+      console.warn(
+        "[collect] 收集失败(不影响交付):",
+        e instanceof Error ? e.message : String(e),
       );
     }
 

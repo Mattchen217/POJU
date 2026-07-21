@@ -6,7 +6,11 @@
  *
  * ⚠️ 不替代 ⟦t:slug|⟧。已打标区域必须跳过。
  * ⚠️ 第1次真算只跑「合称」平替，避免把 bazi_basis 里合法全称（七杀/伤官）误平替掉。
+ * ⚠️ 依据/正文输出层 includeSingles:true → 手写表 + SSOT 派生 + 通用字尾兜底（覆盖最广）。
  */
+
+import { POJU_TERMS } from "@/lib/glossary/pojulife-terms";
+import { DAILY_WORD_EXEMPT_HAN } from "@/lib/llm/sanitize/term-marking";
 
 /** 十神合称 / 合称漏网 —— sanitizer 上下文还原之后仍可能残留。 */
 export const PLAIN_FALLBACK_COMPOUNDS: Readonly<Record<string, string>> = {
@@ -21,7 +25,7 @@ export const PLAIN_FALLBACK_COMPOUNDS: Readonly<Record<string, string>> = {
 };
 
 /**
- * 正文漏网单称 —— 仅用于第2次白话层（不应出现真词）。
+ * 正文/依据漏网单称 —— 仅用于输出层（不应裸露真词）。
  * 第1次 bazi_basis 禁止跑这张表。
  */
 export const PLAIN_FALLBACK_BODY_SINGLES: Readonly<Record<string, string>> = {
@@ -46,8 +50,37 @@ export const PLAIN_FALLBACK_BODY_SINGLES: Readonly<Record<string, string>> = {
   八字: "【能量结构】",
 };
 
+/**
+ * 从 SSOT 全量自动派生 —— 保证平替覆盖 ⊇ SSOT（双字以上；单字五行等不误伤）。
+ * 手写表优先；此处只填缺口。
+ */
+export const SSOT_DERIVED_FALLBACK: ReadonlyMap<string, string> = (() => {
+  const m = new Map<string, string>();
+  for (const t of POJU_TERMS) {
+    if (t.ns !== "bazi") continue;
+    const plain = `【${t.term.zh}】`;
+    for (const w of [t.traditional, ...(t.aliases ?? [])]) {
+      if (!w || w.length < 2) continue;
+      if (DAILY_WORD_EXEMPT_HAN.has(w)) continue;
+      if (!m.has(w)) m.set(w, plain);
+    }
+  }
+  return m;
+})();
+
+/**
+ * SSOT 都没有的生僻命理词 —— 字尾特征兜底（保守，避免误伤「精神/明星」）。
+ * 在标记/【】已保护的文本上跑。
+ */
+const MINGLI_SUFFIX_RE = /[\u4e00-\u9fa5]{1,3}(煞|刃|星|宫|格|禄|贵人)/g;
+
+export function genericMingliFallback(text: string): string {
+  if (!text) return text;
+  return text.replace(MINGLI_SUFFIX_RE, "【能量要素】");
+}
+
 export type PlainFallbackOptions = {
-  /** Include body-only singles (七杀/日主…). Default false — compute must omit. */
+  /** Include body-only singles + SSOT 派生 + 通用字尾. Default false — compute must omit. */
   includeSingles?: boolean;
 };
 
@@ -55,6 +88,9 @@ function buildMap(opts?: PlainFallbackOptions): ReadonlyArray<[string, string]> 
   const merged: Record<string, string> = { ...PLAIN_FALLBACK_COMPOUNDS };
   if (opts?.includeSingles) {
     Object.assign(merged, PLAIN_FALLBACK_BODY_SINGLES);
+    for (const [w, plain] of SSOT_DERIVED_FALLBACK) {
+      if (!(w in merged)) merged[w] = plain;
+    }
   }
   return Object.entries(merged).sort((a, b) => b[0].length - a[0].length);
 }
@@ -76,6 +112,18 @@ export function applyPlainFallbackToText(
   let out = protectedText;
   for (const [from, to] of buildMap(opts)) {
     if (out.includes(from)) out = out.split(from).join(to);
+  }
+
+  if (opts?.includeSingles) {
+    // 已平替的【】先护住，避免字尾正则再吃「【孤鸾煞】」类
+    const brackets: string[] = [];
+    out = out.replace(/【[^】]*】/g, (m) => {
+      const i = brackets.length;
+      brackets.push(m);
+      return `\u0000B${i}\u0000`;
+    });
+    out = genericMingliFallback(out);
+    out = out.replace(/\u0000B(\d+)\u0000/g, (_, i: string) => brackets[Number(i)] ?? "");
   }
 
   return out.replace(/\u0000M(\d+)\u0000/g, (_, i: string) => markers[Number(i)] ?? "");

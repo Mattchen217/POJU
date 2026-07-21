@@ -32,6 +32,7 @@ import {
   demoteWuxingMarkers,
   maskMarkersForAudit,
   wrapBarePillars,
+  wrapBareRelations,
 } from "@/lib/llm/sanitize/term-marking";
 import {
   V2_HARD_MAX_ATTEMPTS,
@@ -49,10 +50,6 @@ const TOTAL_TIMEOUT_MS = 300_000;
 /** 与第2次正文同款分组（4+6+4+5=19）。 */
 export const EVIDENCE_TASKS = NARRATIVE_TASKS;
 
-/** 本命关系词：prompt 允许白话不打标；审计时不因残留而判 deterministic 失败。 */
-const RELATION_PLAIN_ALLOW =
-  /相刑|相冲|相害|相合|六合|半合|三合|刑冲|冲克/;
-
 export type EvidenceOutcome =
   | { ok: true; value: ReportSegmentTextTree; attempts: number }
   | { ok: false; reason: string; attempts: number };
@@ -63,7 +60,26 @@ export type RunEvidenceOptions = {
 };
 
 /**
- * 打标器兜底 + 柱位补标 + 真词/标记去重 + 五行还原；★ 不填软译槽 —— 留给 merge/finalize。
+ * 最后保险：对残留裸词，先尽力补打标（含柱位/关系词），再对补不上的走【】平替。
+ * 不打回；代码兜死零裸露。
+ */
+export function forceRemarkAndFallback(text: string, locale: string): string {
+  let out = dedupeBareTermBeforeMarker(text);
+  out = autoMarkBareTerms(out, locale, {
+    maxPerPara: Infinity,
+    oncePerText: false,
+  });
+  out = wrapBarePillars(out, locale);
+  out = wrapBareRelations(out, locale);
+  out = dedupeBareTermBeforeMarker(out);
+  out = demoteWuxingMarkers(out);
+  out = applyPlainFallbackToText(out, { includeSingles: true });
+  out = stripTimeAnchor(out, locale);
+  return out;
+}
+
+/**
+ * 打标器兜底 + 柱位/关系词补标 + 真词/标记去重 + 五行还原；★ 不填软译槽 —— 留给 merge/finalize。
  * 依据里出现的命理词无条件全打（不限每段2个）；承重筛选交给 prompt。
  * 先 dedupe 再打标，避免「日主⟦t:day_master|⟧」在全打下被打成双标记。
  */
@@ -74,6 +90,7 @@ export function polishEvidenceSegment(text: string, locale: string): string {
     oncePerText: false,
   });
   marked = wrapBarePillars(marked, locale);
+  marked = wrapBareRelations(marked, locale);
   marked = dedupeBareTermBeforeMarker(marked);
   return demoteWuxingMarkers(marked);
 }
@@ -81,6 +98,7 @@ export function polishEvidenceSegment(text: string, locale: string): string {
 /**
  * 第3次依据校验（在打标兜底之后）：无时间锚 / 无简称 / 无残留裸真词。
  * 返回 deterministic 失败文案；null = 通过。
+ * 关系词也要求打标（与产品统一金字），裸相刑/相冲计为泄漏。
  */
 export function findEvidenceLeak(tree: unknown, locale: string): string | null {
   const timePath = findSegmentText(tree, (t) => TIME_ANCHOR_RE.test(t));
@@ -100,9 +118,7 @@ export function findEvidenceLeak(tree: unknown, locale: string): string | null {
   let bareWord: string | null = null;
   const barePath = findSegmentText(tree, (t) => {
     const masked = maskMarkersForAudit(t);
-    // 关系例外：允许相刑/相冲等白话
-    const scrubbed = masked.replace(RELATION_PLAIN_ALLOW, "");
-    bareWord = bareMingliWordInPlain(scrubbed);
+    bareWord = bareMingliWordInPlain(masked);
     return bareWord !== null;
   });
   if (barePath) {
@@ -121,7 +137,7 @@ function polishEvidenceTree(
 ): ReportSegmentTextTree {
   let polished = mapSegmentTexts(tree, (seg) => polishEvidenceSegment(seg, locale));
   polished = mapSegmentTexts(polished, (seg) =>
-    applyPlainFallbackToText(seg, { includeSingles: false }),
+    applyPlainFallbackToText(seg, { includeSingles: true }),
   );
   polished = mapSegmentTexts(polished, (seg) => stripTimeAnchor(seg, locale));
   return polished;
@@ -291,13 +307,23 @@ export async function runEvidence(
       .map((r) => r.value);
     const merged = mergeTaskTrees(trees);
     const filled = fillFromComputeIfMissing(merged, rc, locale);
-    const polished = polishEvidenceTree(filled, locale);
+    let polished = polishEvidenceTree(filled, locale);
 
-    const evResidue = findEvidenceLeak(polished, locale);
+    // ★ 最后保险:检测到裸词 → 强制补救(不打回,代码兜死)
+    let evResidue = findEvidenceLeak(polished, locale);
     if (evResidue) {
-      console.warn(
-        `[v2/evidence] ℹ️ 清洗后依据残留(${evResidue}) — 放行,不打回`,
+      console.warn(`[v2/evidence] ⚠️ 首轮清洗后残留(${evResidue}) — 强制补救`);
+      polished = mapSegmentTexts(polished, (seg) =>
+        forceRemarkAndFallback(seg, locale),
       );
+      evResidue = findEvidenceLeak(polished, locale);
+      if (evResidue) {
+        console.warn(
+          `[v2/evidence] ⚠️ 补救后仍残留(${evResidue}) — 需补 SSOT/平替表`,
+        );
+      } else {
+        console.log(`[v2/evidence] ✅ 强制补救成功,依据无裸词`);
+      }
     }
 
     const attempts = Math.max(...results.map((r) => r.attempts), 1);

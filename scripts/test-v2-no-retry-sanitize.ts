@@ -173,7 +173,30 @@ function buildRc(): ReportComputed {
   assert("narrative 无 body_leak continue", !/body_leak[\s\S]{0,120}continue/.test(narrative));
   assert("evidence 无 evidence_leak continue", !/evidence_leak[\s\S]{0,120}continue/.test(evidence));
   assert("narrative 放行日志", narrative.includes("放行,不打回"));
-  assert("evidence 放行日志", evidence.includes("放行,不打回"));
+  assert(
+    "evidence 强制补救闭环",
+    evidence.includes("强制补救") && evidence.includes("forceRemarkAndFallback"),
+  );
+  assert("evidence 无裸词静默放行", !evidence.includes("放行,不打回"));
+  assert(
+    "evidence polish 接关系词",
+    evidence.includes("wrapBareRelations"),
+  );
+  assert(
+    "evidence 平替 includeSingles",
+    /includeSingles:\s*true/.test(evidence),
+  );
+
+  assert(
+    "SSOT 派生平替覆盖柱位",
+    applyPlainFallbackToText("月干透出", { includeSingles: true }).includes("【") &&
+      !applyPlainFallbackToText("月干透出", { includeSingles: true }).includes("月干"),
+  );
+  assert(
+    "通用字尾兜底",
+    applyPlainFallbackToText("见孤鸾煞牵制", { includeSingles: true }).includes("【能量要素】") ||
+      applyPlainFallbackToText("见孤鸾煞牵制", { includeSingles: true }).includes("【"),
+  );
   assert("narrative 用 V2_HARD_MAX_ATTEMPTS", narrative.includes("V2_HARD_MAX_ATTEMPTS"));
   assert("evidence 用 V2_HARD_MAX_ATTEMPTS", evidence.includes("V2_HARD_MAX_ATTEMPTS"));
   assert("narrative 无 retryHint", !narrative.includes("retryHint"));
