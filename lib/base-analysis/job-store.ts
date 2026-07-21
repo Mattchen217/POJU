@@ -121,6 +121,15 @@ export async function acquireLock(profile_id: string): Promise<boolean> {
   return result === "OK";
 }
 
+/** Extend lock TTL while a phased client still owns the profile. */
+export async function renewLockIfHeld(profile_id: string): Promise<boolean> {
+  const key = profileLockKey(profile_id);
+  const existing = await kv.get(key);
+  if (existing == null) return false;
+  await kv.set(key, Date.now(), { ex: KV_TTL.BASE_ANALYSIS_LOCK });
+  return true;
+}
+
 export async function releaseLock(profile_id: string): Promise<void> {
   await kv.del(profileLockKey(profile_id));
 }

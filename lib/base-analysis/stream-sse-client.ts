@@ -1,8 +1,17 @@
 import type { BaseAnalysisJob } from "@/lib/base-analysis/job-types";
 import {
-  isBaseAnalysisProgressStage,
+  type BaseAnalysisArtifactKind,
+  type BaseAnalysisProgressStage,
   type ProgressPayload,
 } from "@/lib/base-analysis/progress-stages";
+import {
+  clearV2Checkpoint,
+  loadV2Checkpoint,
+  saveV2Checkpoint,
+} from "@/lib/base-analysis/v2-checkpoint-store";
+import type { ReportComputed } from "@/lib/base-analysis-v2/report-schema";
+import type { ReportSegmentTextTree } from "@/lib/base-analysis-v2/segment-text";
+import { ACTIVITY_CAPTION_ROTATE_MS } from "@/lib/ui/activity-caption-timing";
 
 export type StreamSseCallbacks = {
   onStart?: (job_id: string) => void;
@@ -10,7 +19,7 @@ export type StreamSseCallbacks = {
   onPollContent?: (accumulated: string) => void;
   /** Layer-1 judgments (v1 only; v2 does not emit). */
   onCoreJudgments?: (judgments: unknown, source?: string) => void;
-  /** Wait-UI progress stage (chart_ready → v2_compute → v2_narrative…). */
+  /** Wait-UI progress stage + optional artifact when a phase completes. */
   onProgress?: (payload: ProgressPayload) => void;
 };
 
@@ -20,93 +29,67 @@ export type StreamSseResult = {
   job_id: string | null;
 };
 
-/** v2 stream endpoint — three-call orchestrate (compute → narrative∥evidence). */
+/** Legacy monolith job endpoint — kept for resume of in-flight old jobs only. */
 export const BASE_ANALYSIS_STREAM_PATH = "/api/profile/base-analysis-v2/stream";
 
-const POLL_INTERVAL_MS = 2_500;
-/** Slightly above server `maxDuration` (300s Hobby) + reconnect slack. */
-const POLL_MAX_MS = 320_000;
+const PHASE = {
+  compute: "/api/profile/base-analysis-v2/phase/compute",
+  narrative: "/api/profile/base-analysis-v2/phase/narrative",
+  evidence: "/api/profile/base-analysis-v2/phase/evidence",
+  finalize: "/api/profile/base-analysis-v2/phase/finalize",
+  abort: "/api/profile/base-analysis-v2/phase/abort",
+} as const;
 
-type StatusPayload = {
-  job_id?: string;
-  status?: string;
-  accumulated_content?: string;
-  progress_stage?: unknown;
-  meta?: BaseAnalysisJob["meta"] | Record<string, unknown>;
-  error?: string;
-  error_detail?: string;
+const COMPUTE_WAIT_HINT_MS = 60_000;
+
+type PhaseErrorBody = {
   ok?: boolean;
+  error?: string;
+  detail?: string;
 };
 
-function emitProgressFromPoll(
-  data: StatusPayload,
-  callbacks?: StreamSseCallbacks,
-  lastStageRef?: { current: string | null },
+function emit(
+  callbacks: StreamSseCallbacks | undefined,
+  stage: BaseAnalysisProgressStage,
+  artifact?: BaseAnalysisArtifactKind,
 ): void {
-  if (!isBaseAnalysisProgressStage(data.progress_stage)) return;
-  if (lastStageRef && lastStageRef.current === data.progress_stage) return;
-  if (lastStageRef) lastStageRef.current = data.progress_stage;
-  callbacks?.onProgress?.({ stage: data.progress_stage });
+  callbacks?.onProgress?.({ stage, artifact });
 }
 
-async function pollJobUntilDone(
-  job_id: string,
-  callbacks?: StreamSseCallbacks,
+async function postJson<T>(
+  path: string,
+  body: unknown,
   signal?: AbortSignal,
-): Promise<StreamSseResult> {
-  const startedAt = Date.now();
-  const lastStageRef = { current: null as string | null };
+): Promise<T> {
+  const res = await fetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal,
+  });
+  const data = (await res.json()) as T & PhaseErrorBody;
+  if (!res.ok || data.ok === false) {
+    const detail = data.detail ? `: ${data.detail}` : "";
+    throw new Error(`${data.error || `phase failed (${res.status})`}${detail}`);
+  }
+  return data;
+}
 
-  while (true) {
-    if (signal?.aborted) {
-      throw new DOMException("Aborted", "AbortError");
-    }
-    if (Date.now() - startedAt > POLL_MAX_MS) {
-      throw new Error("BASE_ANALYSIS_POLL_TIMEOUT");
-    }
-
-    const res = await fetch(
-      `/api/profile/base-analysis/status?job_id=${encodeURIComponent(job_id)}`,
-      { signal },
-    );
-    if (!res.ok) {
-      throw new Error(`status poll failed (${res.status})`);
-    }
-    const data = (await res.json()) as StatusPayload;
-    const accumulated = String(data.accumulated_content ?? "");
-    callbacks?.onPollContent?.(accumulated);
-    emitProgressFromPoll(data, callbacks, lastStageRef);
-
-    if (data.status === "completed") {
-      return {
-        content: accumulated,
-        meta: data.meta ?? {},
-        job_id,
-      };
-    }
-    if (data.status === "failed") {
-      const detail = data.error_detail ? `: ${data.error_detail}` : "";
-      throw new Error(String(data.error || "base analysis job failed") + detail);
-    }
-
-    await new Promise<void>((resolve, reject) => {
-      const t = setTimeout(resolve, POLL_INTERVAL_MS);
-      const onAbort = () => {
-        clearTimeout(t);
-        reject(new DOMException("Aborted", "AbortError"));
-      };
-      if (signal?.aborted) {
-        onAbort();
-        return;
-      }
-      signal?.addEventListener("abort", onAbort, { once: true });
+async function abortLock(profile_id: string): Promise<void> {
+  try {
+    await fetch(PHASE.abort, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ profile_id }),
     });
+  } catch {
+    /* best-effort */
   }
 }
 
 /**
- * Start v2 base-analysis job and poll until completed / failed.
- * Same public shape as the old SSE client so hooks/callers stay unchanged.
+ * Phased v2: compute → (narrative ∥ evidence) → finalize.
+ * Intermediates live in IndexedDB; each HTTP call stays under Vercel 300s.
  */
 export async function consumeBaseAnalysisStream(input: {
   profile_id: string;
@@ -116,50 +99,188 @@ export async function consumeBaseAnalysisStream(input: {
   signal?: AbortSignal;
   callbacks?: StreamSseCallbacks;
 }): Promise<StreamSseResult> {
-  const res = await fetch(BASE_ANALYSIS_STREAM_PATH, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      profile_id: input.profile_id,
-      locale: input.locale,
-      local_data: input.local_data,
-      resume_job_id: input.resume_job_id,
-    }),
-    signal: input.signal,
-  });
+  const jobId = `v2-phased-${input.profile_id.slice(0, 8)}-${Date.now()}`;
+  input.callbacks?.onStart?.(jobId);
 
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`${res.status}: ${errText}`);
+  const siteLocale = input.locale;
+  let cp = await loadV2Checkpoint(input.profile_id);
+  if (cp && cp.locale !== siteLocale) {
+    await clearV2Checkpoint(input.profile_id);
+    cp = null;
   }
 
-  const data = (await res.json()) as StatusPayload & {
-    poll?: string;
-    kind?: string;
+  emit(input.callbacks, "chart_ready");
+
+  let reportComputed: ReportComputed | undefined = cp?.report_computed;
+  let narrative: ReportSegmentTextTree | undefined = cp?.narrative;
+  let evidence: ReportSegmentTextTree | undefined = cp?.evidence;
+  let lockHeld = Boolean(reportComputed);
+
+  const onAbort = () => {
+    if (lockHeld) void abortLock(input.profile_id);
+  };
+  input.signal?.addEventListener("abort", onAbort, { once: true });
+
+  const persistCheckpoint = async (patch: {
+    report_computed?: ReportComputed;
+    narrative?: ReportSegmentTextTree;
+    evidence?: ReportSegmentTextTree;
+  }) => {
+    const latest = (await loadV2Checkpoint(input.profile_id)) ?? {
+      locale: siteLocale,
+      updated_at: Date.now(),
+    };
+    await saveV2Checkpoint(input.profile_id, {
+      locale: siteLocale,
+      report_computed: patch.report_computed ?? latest.report_computed ?? reportComputed,
+      narrative: patch.narrative ?? latest.narrative ?? narrative,
+      evidence: patch.evidence ?? latest.evidence ?? evidence,
+      updated_at: Date.now(),
+    });
   };
 
-  if (data.ok === false) {
-    throw new Error(String(data.error || "base analysis v2 start failed"));
-  }
+  try {
+    // ── Phase 1: compute ──────────────────────────────────────────
+    if (!reportComputed) {
+      emit(input.callbacks, "v2_compute");
+      const waitHint = setTimeout(() => {
+        emit(input.callbacks, "v2_compute_wait");
+      }, COMPUTE_WAIT_HINT_MS);
+      try {
+        const data = await postJson<{
+          report_computed: ReportComputed;
+          timing_ms?: number;
+        }>(
+          PHASE.compute,
+          {
+            profile_id: input.profile_id,
+            locale: siteLocale,
+            local_data: input.local_data,
+          },
+          input.signal,
+        );
+        reportComputed = data.report_computed;
+        lockHeld = true;
+        await persistCheckpoint({ report_computed: reportComputed });
+        emit(input.callbacks, "v2_compute", "compute");
+      } finally {
+        clearTimeout(waitHint);
+      }
+    } else {
+      emit(input.callbacks, "v2_compute", "compute");
+    }
 
-  const jobId = String(data.job_id ?? "").trim();
-  if (!jobId) {
-    throw new Error("base analysis v2: missing job_id");
-  }
+    // ── Phase 2: narrative ∥ evidence ─────────────────────────────
+    const needNar = !narrative;
+    const needEv = !evidence;
 
-  input.callbacks?.onStart?.(jobId);
-  emitProgressFromPoll(data, input.callbacks);
+    if (needNar || needEv) {
+      let rotateOn = true;
+      let showNar = true;
+      const tick = () => {
+        if (!rotateOn) return;
+        emit(input.callbacks, showNar ? "v2_narrative" : "v2_evidence");
+        showNar = !showNar;
+      };
+      tick();
+      const rotateTimer = setInterval(tick, ACTIVITY_CAPTION_ROTATE_MS);
 
-  // Resume / cache hit: content already final
-  if (data.status === "completed") {
-    const content = String(data.accumulated_content ?? "");
+      try {
+        await Promise.all([
+          (async () => {
+            if (!needNar) {
+              emit(input.callbacks, "v2_narrative", "narrative");
+              return;
+            }
+            const data = await postJson<{ narrative: ReportSegmentTextTree }>(
+              PHASE.narrative,
+              { profile_id: input.profile_id, report_computed: reportComputed },
+              input.signal,
+            );
+            narrative = data.narrative;
+            await persistCheckpoint({ narrative });
+            emit(input.callbacks, "v2_narrative", "narrative");
+          })(),
+          (async () => {
+            if (!needEv) {
+              emit(input.callbacks, "v2_evidence", "evidence");
+              return;
+            }
+            const data = await postJson<{ evidence: ReportSegmentTextTree }>(
+              PHASE.evidence,
+              { profile_id: input.profile_id, report_computed: reportComputed },
+              input.signal,
+            );
+            evidence = data.evidence;
+            await persistCheckpoint({ evidence });
+            emit(input.callbacks, "v2_evidence", "evidence");
+          })(),
+        ]);
+      } finally {
+        rotateOn = false;
+        clearInterval(rotateTimer);
+      }
+    } else {
+      emit(input.callbacks, "v2_narrative", "narrative");
+      emit(input.callbacks, "v2_evidence", "evidence");
+    }
+
+    if (!narrative || !evidence || !reportComputed) {
+      throw new Error("phased pipeline incomplete after write phase");
+    }
+
+    // ── Phase 3: finalize (± translate) ───────────────────────────
+    if (!siteLocale.startsWith("zh")) {
+      emit(input.callbacks, "v2_translate");
+    } else {
+      emit(input.callbacks, "streaming");
+    }
+
+    const final = await postJson<{
+      markdown: string;
+      translated?: boolean;
+      timings?: Record<string, number>;
+    }>(
+      PHASE.finalize,
+      {
+        profile_id: input.profile_id,
+        locale: siteLocale,
+        local_data: input.local_data,
+        report_computed: reportComputed,
+        narrative,
+        evidence,
+      },
+      input.signal,
+    );
+    lockHeld = false;
+
+    if (final.translated) {
+      emit(input.callbacks, "v2_translate", "translate");
+    }
+    emit(input.callbacks, "streaming");
+    emit(input.callbacks, "repair");
+
+    await clearV2Checkpoint(input.profile_id);
+
+    const content = final.markdown;
     input.callbacks?.onPollContent?.(content);
+
     return {
       content,
-      meta: data.meta ?? {},
+      meta: {
+        pipeline: "base_analysis_v2_phased",
+        timings: final.timings,
+      },
       job_id: jobId,
     };
+  } catch (e) {
+    // Keep checkpoint + lock for resume unless aborted.
+    if (input.signal?.aborted) {
+      await abortLock(input.profile_id);
+      lockHeld = false;
+    }
+    throw e;
+  } finally {
+    input.signal?.removeEventListener("abort", onAbort);
   }
-
-  return pollJobUntilDone(jobId, input.callbacks, input.signal);
 }

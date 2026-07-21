@@ -227,6 +227,14 @@ export interface DeviceUsageRecord {
   total_cost_usd: number;
 }
 
+/** Encrypted phased v2 intermediates (Never Stored server-side). */
+export type BaseAnalysisV2CheckpointRecord = {
+  profile_id: string;
+  cipher: string;
+  iv: string;
+  updated_at: number;
+};
+
 export class PojuDb extends Dexie {
   userProfiles!: EntityTable<EncryptedRecord, "id">;
   glyphHistory!: EntityTable<EncryptedRecord, "id">;
@@ -243,6 +251,8 @@ export class PojuDb extends Dexie {
   match_sessions!: EntityTable<MatchSessionRecord, "match_id">;
   poju_cycles!: EntityTable<POJUCycleRecord, "cycle_id">;
   poju_tool_suggestions!: EntityTable<POJUToolSuggestionRecord, "suggestion_id">;
+  /** v2 base-analysis phased intermediates (encrypted JSON blob). */
+  base_analysis_v2_checkpoints!: EntityTable<BaseAnalysisV2CheckpointRecord, "profile_id">;
 
   constructor() {
     super("pojulife_v4");
@@ -348,6 +358,26 @@ export class PojuDb extends Dexie {
         "cycle_id, session_id, device_id, cycle_index, is_active, is_delivered, started_at, delivery_completed_at",
       poju_tool_suggestions:
         "suggestion_id, session_id, cycle_id, tool, user_action, suggested_at, tool_completed_at",
+    });
+    this.version(10).stores({
+      userProfiles: "id, updatedAt",
+      glyphHistory: "id, updatedAt",
+      syncroCache: "id, updatedAt",
+      pojuSessions: "id, updatedAt",
+      usage: "id, dayKey, product, updatedAt",
+      pojuSessionRecords:
+        "session_id, device_id, status, expires_at, last_interaction_at, active_cycle_id",
+      pojuSessionArchive: "session_id, device_id, archived_at",
+      stored_profiles: "profile_id, device_id, birth_info_hash, last_used_at, has_base_analysis",
+      archive: "archive_id, device_id, type, session_id, created_at, product",
+      device_usage: "id, device_id, product, last_used_at",
+      syncro_sessions: "session_id, device_id, profile_id, created_at, expires_at",
+      match_sessions: "match_id, device_id, a_profile_id, b_profile_id, created_at",
+      poju_cycles:
+        "cycle_id, session_id, device_id, cycle_index, is_active, is_delivered, started_at, delivery_completed_at",
+      poju_tool_suggestions:
+        "suggestion_id, session_id, cycle_id, tool, user_action, suggested_at, tool_completed_at",
+      base_analysis_v2_checkpoints: "profile_id, updated_at",
     });
   }
 }

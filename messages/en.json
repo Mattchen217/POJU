@@ -900,10 +900,16 @@
       "v2_compute": "Computing your energy structure…",
       "v2_compute_wait": "Deep computation in progress — about 1–3 minutes more",
       "v2_narrative": "Writing your report…",
-      "v2_evidence": "Marking the chart evidence…",
+      "v2_evidence": "Marking the reasoning evidence…",
       "v2_translate": "Translating into your language…",
       "streaming": "Your report is taking shape…",
       "repair": "Final proofreading…"
+    },
+    "artifacts": {
+      "compute_done": "Your energy structure analysis is complete",
+      "narrative_done": "The report body has been written",
+      "evidence_done": "Evidence and reasoning have been annotated",
+      "translate_done": "Your report has been translated into your language"
     }
   },
   "poju": {

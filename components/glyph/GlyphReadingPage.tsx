@@ -9,6 +9,7 @@ import { ToolPaywallInline } from "@/components/cross-product/ToolPaywallInline"
 import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
 import { DeliveryWaitFrame } from "@/components/wait-ritual/DeliveryWaitFrame";
 import { DeliveryWaitCrossfade } from "@/components/wait-ritual/DeliveryWaitCrossfade";
+import { useBaseAnalysisWaitProgress } from "@/lib/base-analysis/use-base-analysis-wait-progress";
 import { saveGlyphReadingToArchive } from "@/lib/archive/archive-service";
 import { markArchiveUnread } from "@/lib/archive/archive-unread";
 import { prepareToolUnlockBase } from "@/lib/cross-product/finalize-tool-unlock";
@@ -67,7 +68,8 @@ export function GlyphReadingPage() {
   const [skipBaziAtDelivery, setSkipBaziAtDelivery] = useState(false);
   const [waitVisualDone, setWaitVisualDone] = useState(false);
   const [finishCrossfadeStarted, setFinishCrossfadeStarted] = useState(false);
-  const [liveProgressStage, setLiveProgressStage] = useState<string | null>(null);
+  const waitProgress = useBaseAnalysisWaitProgress();
+  const includeTranslate = !locale.startsWith("zh");
   const glyphProductStartedRef = useRef(false);
   const startedRef = useRef(false);
   const mountedRef = useRef(true);
@@ -366,7 +368,7 @@ export function GlyphReadingPage() {
       <DeliveryWaitFrame
         wait={waitFlow}
         isReturningUser={isReturningUser}
-        liveProgressStage={liveProgressStage}
+        liveProgressStage={waitProgress.liveProgressStage} completedArtifacts={waitProgress.completedArtifacts} includeTranslateArtifact={includeTranslate}
         error={error}
         exitAnimationExternal
         onRetry={() => {
@@ -379,7 +381,7 @@ export function GlyphReadingPage() {
           setProductComplete(false);
           setWaitVisualDone(false);
           setFinishCrossfadeStarted(false);
-          setLiveProgressStage(null);
+          waitProgress.reset();
           startedRef.current = false;
           void beginUnlockPipeline();
         }}
@@ -394,7 +396,7 @@ export function GlyphReadingPage() {
               logLabel="GlyphUnlockPreparing"
               hideStreamView
               reportOutputLanguageFromUi
-              onProgress={(p) => setLiveProgressStage(p.stage)}
+              onProgress={waitProgress.onProgress}
               preStreamWork={async () => {
                 await ensureProfileMatrixList({
                   profileId,
@@ -443,7 +445,7 @@ export function GlyphReadingPage() {
       <DeliveryWaitFrame
         wait={waitFlow}
         isReturningUser={isReturningUser}
-        liveProgressStage={liveProgressStage}
+        liveProgressStage={waitProgress.liveProgressStage} completedArtifacts={waitProgress.completedArtifacts} includeTranslateArtifact={includeTranslate}
         error={error}
         onRetry={() => {
           visibilityRetryUsedRef.current = false;
@@ -455,7 +457,7 @@ export function GlyphReadingPage() {
           setProductComplete(false);
           setWaitVisualDone(false);
           setFinishCrossfadeStarted(false);
-          setLiveProgressStage(null);
+          waitProgress.reset();
           startedRef.current = false;
           void beginUnlockPipeline();
         }}
@@ -470,7 +472,7 @@ export function GlyphReadingPage() {
               logLabel="GlyphUnlockPreparing"
               hideStreamView
               reportOutputLanguageFromUi
-              onProgress={(p) => setLiveProgressStage(p.stage)}
+              onProgress={waitProgress.onProgress}
               preStreamWork={async () => {
                 await ensureProfileMatrixList({
                   profileId,

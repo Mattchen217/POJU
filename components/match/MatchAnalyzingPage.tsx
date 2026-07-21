@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 
 import { DeliveryWaitFrame } from "@/components/wait-ritual/DeliveryWaitFrame";
 import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
+import { useBaseAnalysisWaitProgress } from "@/lib/base-analysis/use-base-analysis-wait-progress";
 import { useRouter } from "@/i18n/navigation";
 import { saveMatchToArchive } from "@/lib/archive/archive-service";
 import { registerPendingDeliveryArchive } from "@/lib/archive/archive-delivery-pending";
@@ -59,7 +60,8 @@ export function MatchAnalyzingPage() {
   const [skipBaziAtDelivery, setSkipBaziAtDelivery] = useState(false);
   const [waitVisualDone, setWaitVisualDone] = useState(false);
   const [productComplete, setProductComplete] = useState(false);
-  const [liveProgressStage, setLiveProgressStage] = useState<string | null>(null);
+  const waitProgress = useBaseAnalysisWaitProgress();
+  const includeTranslate = !locale.startsWith("zh");
   const matchAnalyzeStartedRef = useRef(false);
   const startedRef = useRef(false);
 
@@ -290,7 +292,7 @@ export function MatchAnalyzingPage() {
     return (
       <DeliveryWaitFrame
         wait={waitFlow}
-        liveProgressStage={liveProgressStage}
+        liveProgressStage={waitProgress.liveProgressStage} completedArtifacts={waitProgress.completedArtifacts} includeTranslateArtifact={includeTranslate}
         hiddenWork={
           <BaseAnalysisStreamPreparing
             key={`base-a-${basePrepKey}`}
@@ -300,7 +302,7 @@ export function MatchAnalyzingPage() {
             logLabel="MatchUnlockPreparingA"
             hideStreamView
             reportOutputLanguageFromUi
-            onProgress={(p) => setLiveProgressStage(p.stage)}
+            onProgress={waitProgress.onProgress}
             preStreamWork={async () => {
               await ensureProfileMatrixList({
                 profileId: aId,
@@ -309,7 +311,7 @@ export function MatchAnalyzingPage() {
               });
             }}
             onComplete={() => {
-              setLiveProgressStage(null);
+              waitProgress.reset();
               void afterBaseAComplete();
             }}
             onError={(err) => {
@@ -326,7 +328,7 @@ export function MatchAnalyzingPage() {
     return (
       <DeliveryWaitFrame
         wait={waitFlow}
-        liveProgressStage={liveProgressStage}
+        liveProgressStage={waitProgress.liveProgressStage} completedArtifacts={waitProgress.completedArtifacts} includeTranslateArtifact={includeTranslate}
         hiddenWork={
           <BaseAnalysisStreamPreparing
             key={`base-b-${basePrepKey}`}
@@ -336,7 +338,7 @@ export function MatchAnalyzingPage() {
             logLabel="MatchUnlockPreparingB"
             hideStreamView
             reportOutputLanguageFromUi
-            onProgress={(p) => setLiveProgressStage(p.stage)}
+            onProgress={waitProgress.onProgress}
             preStreamWork={async () => {
               await ensureProfileMatrixList({
                 profileId: bId,
@@ -345,7 +347,7 @@ export function MatchAnalyzingPage() {
               });
             }}
             onComplete={() => {
-              setLiveProgressStage(null);
+              waitProgress.reset();
               void afterBaseBComplete();
             }}
             onError={(err) => {
@@ -370,7 +372,7 @@ export function MatchAnalyzingPage() {
     return (
       <main className="match-analyzing match-analyzing--error">
         <div className="match-analyzing-error-icon" aria-hidden>
-          âœ•
+          âœ?
         </div>
         <h2>{t("error_title")}</h2>
         <p>{error}</p>

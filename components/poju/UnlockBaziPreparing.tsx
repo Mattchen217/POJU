@@ -7,6 +7,7 @@ import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStrea
 import { DeliveryWaitFrame } from "@/components/wait-ritual/DeliveryWaitFrame";
 import { usePreparingBlockInput } from "@/components/poju/preparing-spline-control";
 import { markedTextFromStoredBaseAnalysis } from "@/lib/base-analysis/resolve-display-text";
+import { useBaseAnalysisWaitProgress } from "@/lib/base-analysis/use-base-analysis-wait-progress";
 import type { StoredProfileData } from "@/lib/db/poju-db";
 import { finalizeUnlockBaziSession } from "@/lib/poju/finalize-unlock-bazi-session";
 import { POJU_RELEASE_PENDING_QUESTION_FLAG } from "@/lib/poju/preview-unlock";
@@ -82,7 +83,8 @@ export function UnlockBaziPreparing({
   const [retryKey, setRetryKey] = useState(0);
   const [streamDone, setStreamDone] = useState(false);
   const [waitVisualDone, setWaitVisualDone] = useState(false);
-  const [liveProgressStage, setLiveProgressStage] = useState<string | null>(null);
+  const waitProgress = useBaseAnalysisWaitProgress();
+  const includeTranslate = !locale.startsWith("zh");
 
   usePreparingBlockInput(true);
 
@@ -115,13 +117,15 @@ export function UnlockBaziPreparing({
   return (
     <DeliveryWaitFrame
       wait={waitFlow}
-      liveProgressStage={liveProgressStage}
+      liveProgressStage={waitProgress.liveProgressStage}
+      completedArtifacts={waitProgress.completedArtifacts}
+      includeTranslateArtifact={includeTranslate}
       error={error}
       onRetry={() => {
         setError(null);
         setStreamDone(false);
         setWaitVisualDone(false);
-        setLiveProgressStage(null);
+        waitProgress.reset();
         setRetryKey((k) => k + 1);
       }}
       onRefund={onRefund}
@@ -144,7 +148,7 @@ export function UnlockBaziPreparing({
             logLabel="POJUUnlockPreparing"
             hideStreamView
             reportOutputLanguageFromUi
-            onProgress={(p) => setLiveProgressStage(p.stage)}
+            onProgress={waitProgress.onProgress}
             onComplete={async (displayText) => {
               const finalSession = finalizeUnlockBaziSession(session, displayText, profileId);
               await savePOJUSession(finalSession);

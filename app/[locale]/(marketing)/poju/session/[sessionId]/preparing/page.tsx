@@ -337,7 +337,11 @@ function StreamingPhase({
   onError: (error: string) => void;
 }) {
   const [liveProgressStage, setLiveProgressStage] = useState<string | null>(null);
+  const [completedArtifacts, setCompletedArtifacts] = useState<
+    import("@/lib/base-analysis/progress-stages").BaseAnalysisArtifactKind[]
+  >([]);
   usePreparingBlockInput(true);
+  const includeTranslate = !locale.startsWith("zh");
 
   return (
     <>
@@ -348,7 +352,14 @@ function StreamingPhase({
         logLabel="POJUPreparing"
         hideStreamView
         reportOutputLanguageFromUi
-        onProgress={(p) => setLiveProgressStage(p.stage)}
+        onProgress={(p) => {
+          setLiveProgressStage(p.stage);
+          if (p.artifact) {
+            setCompletedArtifacts((prev) =>
+              prev.includes(p.artifact!) ? prev : [...prev, p.artifact!],
+            );
+          }
+        }}
         preStreamWork={async () => {
           await ensureProfileMatrixList({
             profileId,
@@ -368,6 +379,8 @@ function StreamingPhase({
         locale={locale}
         variant="portrait"
         liveProgressStage={liveProgressStage}
+        completedArtifacts={completedArtifacts}
+        includeTranslateArtifact={includeTranslate}
       />
     </>
   );

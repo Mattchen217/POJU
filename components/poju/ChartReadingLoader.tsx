@@ -4,7 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { StoredProfileData } from "@/lib/db/poju-db";
 import { PreparingStatusOverlay } from "@/components/poju/PreparingStatusOverlay";
+import { WaitArtifactDocs } from "@/components/wait-ritual/WaitArtifactDocs";
+import type { BaseAnalysisArtifactKind } from "@/lib/base-analysis/progress-stages";
 import { ACTIVITY_CAPTION_ROTATE_MS } from "@/lib/ui/activity-caption-timing";
+
+import "@/styles/wait-ritual.css";
 
 const STEP_COUNT = 9;
 
@@ -25,6 +29,8 @@ export interface ChartReadingLoaderProps {
   secondaryActionLabel?: string;
   /** Live SSE progress stage — replaces rotating steps when set. */
   liveProgressStage?: string | null;
+  completedArtifacts?: BaseAnalysisArtifactKind[];
+  includeTranslateArtifact?: boolean;
 }
 
 export function ChartReadingLoader({
@@ -36,6 +42,8 @@ export function ChartReadingLoader({
   hintOverride,
   secondaryActionLabel,
   liveProgressStage = null,
+  completedArtifacts = [],
+  includeTranslateArtifact = false,
 }: ChartReadingLoaderProps) {
   const t = useTranslations(variant === "portrait" ? "portrait_loader" : "chart_loader");
   const tWait = useTranslations("wait_ritual");
@@ -83,18 +91,26 @@ export function ChartReadingLoader({
     (currentStep === "using_cache" ? t("hint_using_cache") : t("hint_first_time"));
 
   return (
-    <PreparingStatusOverlay>
-      {currentStep !== "done" ? (
-        <>
-          <p key={statusLine} className="preparing-spline-page__status">
-            {statusLine}
-          </p>
-          <p className="preparing-spline-page__hint">{hint}</p>
-        </>
-      ) : (
-        <p className="preparing-spline-page__status">{t("done_message")}</p>
-      )}
-    </PreparingStatusOverlay>
+    <>
+      {completedArtifacts.length > 0 ? (
+        <WaitArtifactDocs
+          artifacts={completedArtifacts}
+          includeTranslate={includeTranslateArtifact}
+        />
+      ) : null}
+      <PreparingStatusOverlay>
+        {currentStep !== "done" ? (
+          <>
+            <p key={statusLine} className="preparing-spline-page__status">
+              {statusLine}
+            </p>
+            <p className="preparing-spline-page__hint">{hint}</p>
+          </>
+        ) : (
+          <p className="preparing-spline-page__status">{t("done_message")}</p>
+        )}
+      </PreparingStatusOverlay>
+    </>
   );
 }
 

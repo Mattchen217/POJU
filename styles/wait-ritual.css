@@ -223,3 +223,114 @@
     padding-right: clamp(20px, 4vw, 48px);
   }
 }
+
+/* ©¤©¤ Phased v2 document artifacts (A4 fold papers) ©¤©¤ */
+
+.wait-artifact-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wait-artifact-doc {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  width: clamp(72px, 14vmin, 110px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transform: translate(-50%, -50%) scale(1.35);
+  opacity: 0;
+  transition:
+    left 0.85s cubic-bezier(0.22, 1, 0.36, 1),
+    top 0.85s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.85s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.35s ease;
+}
+
+.wait-artifact-doc--entering {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.35);
+}
+
+.wait-artifact-doc--seated {
+  opacity: 1;
+  /* Seat in a horizontal row across the mid-lower spline area */
+  left: calc(
+    50% + (var(--artifact-slot) - (var(--artifact-count) - 1) / 2) * clamp(88px, 18vmin, 130px)
+  );
+  top: 58%;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.wait-artifact-doc__paper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 210 / 297;
+  border-radius: 4px;
+  background: linear-gradient(
+    155deg,
+    rgba(255, 255, 255, 0.14) 0%,
+    rgba(167, 139, 250, 0.12) 45%,
+    rgba(139, 92, 246, 0.08) 100%
+  );
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  box-shadow:
+    0 8px 28px rgba(11, 8, 21, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(192, 132, 252, 0.95);
+  overflow: hidden;
+}
+
+.wait-artifact-doc__fold {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 22%;
+  height: 16%;
+  background: linear-gradient(
+    225deg,
+    rgba(255, 255, 255, 0.22) 0%,
+    rgba(167, 139, 250, 0.18) 55%,
+    transparent 56%
+  );
+  border-bottom-left-radius: 2px;
+  box-shadow: -1px 1px 0 rgba(167, 139, 250, 0.25);
+}
+
+.wait-artifact-doc__glyph {
+  width: 42%;
+  height: 42%;
+}
+
+.wait-artifact-doc__caption {
+  margin: 0;
+  max-width: 9.5rem;
+  text-align: center;
+  font-size: clamp(10px, 1.8vw, 12px);
+  line-height: 1.35;
+  color: rgba(228, 228, 231, 0.78);
+  font-weight: 400;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.55);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wait-artifact-doc {
+    transition: opacity 0.2s ease;
+  }
+  .wait-artifact-doc--entering,
+  .wait-artifact-doc--seated {
+    transform: translate(-50%, -50%) scale(1);
+  }
+}

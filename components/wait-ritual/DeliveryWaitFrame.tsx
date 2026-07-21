@@ -4,8 +4,10 @@ import type { ReactNode } from "react";
 import { clsx } from "clsx";
 
 import { DeliveryWaitCopyOverlay } from "@/components/wait-ritual/DeliveryWaitCopyOverlay";
+import { WaitArtifactDocs } from "@/components/wait-ritual/WaitArtifactDocs";
 import { WaitFxLayer } from "@/components/wait-ritual/WaitFxLayer";
 import { PreparingSplineShell } from "@/components/poju/PreparingSplineShell";
+import type { BaseAnalysisArtifactKind } from "@/lib/base-analysis/progress-stages";
 import type { DeliveryWaitPhaseState } from "@/lib/wait-ritual/use-delivery-wait-phase";
 
 import "@/styles/wait-ritual.css";
@@ -15,6 +17,10 @@ type Props = {
   isReturningUser?: boolean;
   /** Live SSE progress stage for status line (bazi wait). */
   liveProgressStage?: string | null;
+  /** Completed phase documents for the wait ritual (zh=3, non-zh=4). */
+  completedArtifacts?: BaseAnalysisArtifactKind[];
+  /** Show translate artifact slot (false for zh). */
+  includeTranslateArtifact?: boolean;
   error?: string | null;
   onRetry?: () => void;
   onRefund?: () => void;
@@ -30,6 +36,8 @@ export function DeliveryWaitFrame({
   wait,
   isReturningUser,
   liveProgressStage = null,
+  completedArtifacts = [],
+  includeTranslateArtifact = false,
   error,
   onRetry,
   onRefund,
@@ -38,6 +46,11 @@ export function DeliveryWaitFrame({
   hiddenWork,
   children,
 }: Props) {
+  const showArtifacts =
+    !error &&
+    (wait.phase === "bazi" || wait.phase === "product") &&
+    completedArtifacts.length > 0;
+
   return (
     <PreparingSplineShell
       blockInteraction
@@ -52,6 +65,12 @@ export function DeliveryWaitFrame({
         showFlash={wait.showFlash}
         showConverge={wait.showConverge}
       />
+      {showArtifacts ? (
+        <WaitArtifactDocs
+          artifacts={completedArtifacts}
+          includeTranslate={includeTranslateArtifact}
+        />
+      ) : null}
       <DeliveryWaitCopyOverlay
         copyPhase={wait.copyPhase}
         phase={wait.phase}

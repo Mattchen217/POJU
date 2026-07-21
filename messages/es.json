@@ -2138,6 +2138,22 @@
         "3": "Trayendo tus ventanas más fuertes al centro de atención…"
       },
       "finish": "Tus ventanas de oportunidad están alineadas."
+    },
+    "progress": {
+      "chart_ready": "Calibrando tu momento de nacimiento…",
+      "v2_compute": "Calculando tu estructura energética…",
+      "v2_compute_wait": "Cálculo profundo en curso — unos 1–3 minutos más",
+      "v2_narrative": "Redactando el cuerpo del informe…",
+      "v2_evidence": "Anotando la evidencia del razonamiento…",
+      "v2_translate": "Traduciendo a tu idioma…",
+      "streaming": "Tu informe está tomando forma…",
+      "repair": "Revisión final…"
+    },
+    "artifacts": {
+      "compute_done": "Tu análisis de estructura energética está listo",
+      "narrative_done": "El cuerpo del informe ya está escrito",
+      "evidence_done": "La evidencia y el razonamiento ya están anotados",
+      "translate_done": "El informe se ha traducido a tu idioma"
     }
   },
   "reading_ritual": {

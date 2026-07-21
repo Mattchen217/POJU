@@ -2138,6 +2138,22 @@
         "3": "Mise en lumière de vos fenêtres les plus favorables…"
       },
       "finish": "Vos fenêtres de timing sont alignées."
+    },
+    "progress": {
+      "chart_ready": "Calibrage de votre moment de naissance…",
+      "v2_compute": "Calcul de votre structure énergétique…",
+      "v2_compute_wait": "Calcul approfondi en cours — encore environ 1 à 3 minutes",
+      "v2_narrative": "Rédaction du corps du rapport…",
+      "v2_evidence": "Annotation des preuves de raisonnement…",
+      "v2_translate": "Traduction dans votre langue…",
+      "streaming": "Votre rapport prend forme…",
+      "repair": "Relecture finale…"
+    },
+    "artifacts": {
+      "compute_done": "L'analyse de votre structure énergétique est terminée",
+      "narrative_done": "Le corps du rapport a été rédigé",
+      "evidence_done": "Les preuves et le raisonnement ont été annotés",
+      "translate_done": "Le rapport a été traduit dans votre langue"
     }
   },
   "reading_ritual": {
