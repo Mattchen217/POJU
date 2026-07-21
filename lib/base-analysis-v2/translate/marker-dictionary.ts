@@ -1,27 +1,15 @@
-import {
-  POJU_TERMS,
-  type TermLocale,
-} from "@/lib/glossary/pojulife-terms";
-
-const TERM_LOCALES = new Set<string>(["zh", "en", "es", "de", "fr"]);
-
-function toTermLocale(locale: string): TermLocale {
-  const lang = locale.toLowerCase().slice(0, 2);
-  return (TERM_LOCALES.has(lang) ? lang : "en") as TermLocale;
-}
+import { POJU_TERMS } from "@/lib/glossary/pojulife-terms";
 
 /**
- * 从 SSOT 生成「标记→目标语言语义」词典，注入翻译 prompt。
- * 仅含 bazi 命名空间（底座报告相关），避免 prompt 过胖。
- * 用途：让模型理解 ⟦t:slug|⟧ 语义；【不要翻译这张表本身】。
+ * 从 SSOT 生成「代号→命理真词」对照表，注入翻译 prompt。
+ * 仅含 bazi 命名空间。
+ *
+ * ★ 只给 traditional 真词（用神/身弱…）——模型是命理专家，秒懂。
+ * ★ 不给自造软译（锚元）——模型训练数据里没有，反添乱。
+ * ★ 不写 ⟦t:slug|⟧ 完整标记、不用 "=" —— 避免诱导往空槽填。
  */
-export function buildMarkerDictionary(locale: string): string {
-  const lang = toTermLocale(locale);
+export function buildMarkerDictionary(_locale: string): string {
   return POJU_TERMS.filter((t) => t.ns === "bazi")
-    .map((t) => {
-      const soft = t.term[lang] ?? t.term.en;
-      const gloss = t.definition[lang] ?? t.definition.en;
-      return `⟦t:${t.slug}|⟧ = ${soft}（${t.traditional}／${gloss}）`;
-    })
+    .map((t) => `代号 ${t.slug}：就是命理里的「${t.traditional}」`)
     .join("\n");
 }

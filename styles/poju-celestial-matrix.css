@@ -59,12 +59,12 @@
     sans-serif;
   --pcm-mono: var(--font-geist-sans), Geist, ui-monospace, monospace;
 
-  /* Wuxing bar accents */
-  --pcm-el-wood: #00eefc;
-  --pcm-el-fire: #ff9594;
-  --pcm-el-earth: #f2ca50;
-  --pcm-el-metal: #e3e0f1;
-  --pcm-el-water: #00dbe9;
+  /* Wuxing accents — label + bar share the same token */
+  --pcm-el-metal: #d4af37; /* 金 · gold */
+  --pcm-el-wood: #22c55e; /* 木 · green */
+  --pcm-el-water: #3b82f6; /* 水 · blue */
+  --pcm-el-fire: #ef4444; /* 火 · red */
+  --pcm-el-earth: #a16207; /* 土 · brown */
 
   position: relative;
   box-sizing: border-box;
@@ -991,23 +991,23 @@
 }
 
 .pcm-el-label--metal {
-  color: #d4af37; /* 金 · gold */
+  color: var(--pcm-el-metal);
 }
 
 .pcm-el-label--wood {
-  color: #22c55e; /* 木 · green */
+  color: var(--pcm-el-wood);
 }
 
 .pcm-el-label--water {
-  color: #3b82f6; /* 水 · blue */
+  color: var(--pcm-el-water);
 }
 
 .pcm-el-label--fire {
-  color: #ef4444; /* 火 · red */
+  color: var(--pcm-el-fire);
 }
 
 .pcm-el-label--earth {
-  color: #a16207; /* 土 · brown */
+  color: var(--pcm-el-earth);
 }
 
 .pcm-bar__value {
@@ -1047,7 +1047,7 @@
 
 .pcm-bar__fill--earth {
   background: var(--pcm-el-earth);
-  box-shadow: 0 0 8px rgba(242, 202, 80, 0.5);
+  box-shadow: 0 0 8px rgba(161, 98, 7, 0.45);
 }
 
 .pcm-bar__fill--metal {

@@ -39,9 +39,11 @@ assert("人设含英语", persona.includes("英语"));
 assert("人设含易经八字", persona.includes("易经") && persona.includes("八字"));
 
 const dict = buildMarkerDictionary("en");
-assert("词典含 day_master", dict.includes("⟦t:day_master|⟧"));
-assert("词典含 Core", dict.includes("Core"));
-assert("词典含本元传统", dict.includes("日主"));
+assert("词典含代号 yong_shen", dict.includes("代号 yong_shen："));
+assert("词典含真词用神", dict.includes("「用神」"));
+assert("词典不含完整标记形态", !dict.includes("⟦t:"));
+assert("词典不含自造软译锚元行", !dict.includes("锚元"));
+assert("词典不含等号诱导", !dict.includes(" = "));
 
 const { system, user } = buildTranslatePrompt(
   "en",
@@ -53,8 +55,10 @@ const { system, user } = buildTranslatePrompt(
   },
   null,
 );
-assert("translate system 要求标记原样", system.includes("标记原样保留"));
-assert("translate system 注入词典", system.includes("⟦t:day_master|⟧"));
+assert("translate system 有四步标记处理", system.includes("文本里的标记怎么处理"));
+assert("translate system 禁止填空槽", system.includes("竖线后永远是空的"));
+assert("translate system 注入代号表", system.includes("代号 day_master："));
+assert("translate system 无正例箭头对照", !/⟦t:[^⟧]+⟧[^。\n]{0,40}→/.test(system));
 assert("translate user 含 payload", user.includes("你像一株藤蔓"));
 
 assert(
