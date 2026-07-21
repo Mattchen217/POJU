@@ -19,6 +19,7 @@ import {
 import {
   findEvidenceLeak,
   polishEvidenceSegment,
+  backfillZeroAnchorSegment,
   EVIDENCE_TASKS,
   EVIDENCE_TASK_MAX_TOKENS,
 } from "@/lib/base-analysis-v2/evidence/evidence-call";
@@ -269,22 +270,58 @@ function fillTree(text: string): ReportSegmentTextTree {
   const ep = buildEvidencePrompt(pickAllSegments(buildRc()), "zh");
   assert("evidence 注入打标块", ep.system.includes("⟦t:<slug>|⟧"));
   assert("evidence 明示竖线后留空", ep.system.includes("竖线后留空") || ep.system.includes("后面留空"));
-  assert("evidence ZH 要求中文输出", ep.system.includes("整段依据用中文写"));
-  assert("evidence 标记代替真词", ep.system.includes("标记【代替】真词") || ep.system.includes("代替】那个词"));
+  assert("evidence 不是第二遍正文", ep.system.includes("不是第二遍正文"));
+  assert(
+    "evidence 禁止零金字/零标记",
+    ep.system.includes("零金字") || ep.system.includes("零标记"),
+  );
+  assert(
+    "evidence 白话不替代术语",
+    ep.system.includes("不是用来") &&
+      ep.system.includes("替代") &&
+      ep.system.includes("术语"),
+  );
+  assert(
+    "evidence 铁律一是承重打标(非白话第一)",
+    ep.system.includes("铁律一") &&
+      ep.system.includes("承重真词作证") &&
+      !ep.system.includes("# 最重要的一条：连接术语"),
+  );
+  assert(
+    "evidence 禁口语喜忌",
+    ep.system.includes("喜木") && ep.system.includes("喜火") && ep.system.includes("禁口语喜忌"),
+  );
+  assert("evidence 标记代替真词", ep.system.includes("标记代替真词"));
   assert("evidence 最短完整承重链", ep.system.includes("最短完整承重链"));
-  assert("evidence 出现就打标", ep.system.includes("出现就打标") || ep.system.includes("一律打标"));
-  assert("evidence 白话连接铁律", ep.system.includes("连接术语的必须是大白话"));
-  assert("evidence 禁文言黑话举例", ep.system.includes("坐辰土得生扶") && ep.system.includes("一律不许用"));
+  assert(
+    "evidence 白话连接铁律二",
+    ep.system.includes("铁律二") && ep.system.includes("连接术语的话必须是大白话"),
+  );
+  assert(
+    "evidence 禁文言黑话举例",
+    ep.system.includes("坐辰土得生扶") && ep.system.includes("一律不许"),
+  );
   assert("evidence 无数量不限诱导", !ep.system.includes("数量不限") && !ep.system.includes("不设上限"));
   assert("evidence 无2-4句锚定", !ep.system.includes("2-4 句"));
   assert("evidence 无组织成一小段专业", !ep.system.includes("组织成一小段专业但克制"));
   assert("evidence user 含双钥匙", ep.user.includes("bazi_basis") && ep.user.includes("core_conclusion"));
+  assert(
+    "evidence user 硬约束至少一枚标记",
+    ep.user.includes("至少含一枚") && ep.user.includes("⟦t:"),
+  );
+  assert(
+    "evidence user 禁套key与喜木火",
+    ep.user.includes("依据与推理") && ep.user.includes("喜木火"),
+  );
   assert("evidence user 无 dos", !ep.user.includes('"dos"'));
   assert("evidence 无纠错段落", !ep.user.includes("纠错"));
 
   const epEn = buildEvidencePrompt(pickAllSegments(buildRc()), "en");
   assert("evidence en locale 仍用中文 system", epEn.system === ep.system);
-  assert("evidence en locale 仍用中文 user 骨架", epEn.user.includes("命理依据真词"));
+  assert(
+    "evidence en locale 仍用中文 user 骨架",
+    epEn.user.includes("依据与推理") && epEn.user.includes("bazi_basis"),
+  );
   assert("evidence 无 Write entirely in English", !epEn.system.includes("Write the entire explanation in English"));
 
   const energyOnly = pickSegments(buildRc(), EVIDENCE_TASKS[0]!.paths);
@@ -297,6 +334,26 @@ function fillTree(text: string): ReportSegmentTextTree {
     "EVIDENCE_TASKS 与 NARRATIVE 同分组",
     EVIDENCE_TASKS.map((t) => t.paths.length).join(",") === "4,6,4,5",
   );
+}
+
+// —— 段级0锚点补锚 ——
+{
+  const plain =
+    "你需要学会慢下来，建议多休息，把注意力放在自己能掌控的事情上。";
+  const filled = backfillZeroAnchorSegment(plain, ["日主偏旺", "正印"], "zh");
+  assert("零标记+非空basis → 补锚出⟦t:", filled.includes("⟦t:"));
+  assert(
+    "补锚保留原段并追加承重点",
+    filled.startsWith(plain) && filled.includes("主要命理依据"),
+  );
+  const already = backfillZeroAnchorSegment(
+    "因 ⟦t:day_master|⟧ 偏稳。",
+    ["日主偏旺"],
+    "zh",
+  );
+  assert("已有金字不动", already === "因 ⟦t:day_master|⟧ 偏稳。");
+  const emptyBasis = backfillZeroAnchorSegment(plain, [], "zh");
+  assert("空basis放行", emptyBasis === plain);
 }
 
 // —— 锁 TTL + 去重 pending + job 幂等（防跑两遍）——
@@ -340,10 +397,10 @@ function fillTree(text: string): ReportSegmentTextTree {
     rich.includes("reading-p--evidence") && !/EvidenceBlock[\s\S]{0,200}bodyChunks\.map/.test(rich),
   );
   assert(
-    "evidence prompt 五行例外",
+    "evidence prompt 五行原字不打标",
     fs
       .readFileSync(path.join(root, "lib/base-analysis-v2/evidence/evidence-prompt.ts"), "utf8")
-      .includes("五行例外"),
+      .includes("五行原字不打标"),
   );
   assert(
     "evidence 4-Task 并发",
@@ -356,6 +413,11 @@ function fillTree(text: string): ReportSegmentTextTree {
       evidence.includes("oncePerText: false"),
   );
   assert("evidence 接 wrapBareRelations", evidence.includes("wrapBareRelations"));
+  assert(
+    "evidence 段级0锚点补锚",
+    evidence.includes("backfillZeroAnchorSegment") &&
+      evidence.includes("段零锚点"),
+  );
   assert(
     "v2 route 旁路 collect",
     route.includes("collectUnmarkedMingliCandidates"),

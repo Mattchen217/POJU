@@ -15,10 +15,14 @@ import {
   NARRATIVE_TASKS,
   validateTaskPaths,
 } from "@/lib/base-analysis-v2/narrative/narrative-call";
-import type { ReportComputed } from "@/lib/base-analysis-v2/report-schema";
+import type {
+  ReportComputed,
+  SegmentComputed,
+} from "@/lib/base-analysis-v2/report-schema";
 import {
   findSegmentText,
   mapSegmentTexts,
+  readPath,
   type ReportSegmentTextTree,
 } from "@/lib/base-analysis-v2/segment-text";
 import {
@@ -58,6 +62,25 @@ export type RunEvidenceOptions = {
   session_id?: string;
   signal?: AbortSignal;
 };
+
+/**
+ * 段级0锚点保险：纯白话段（零金字）且 bazi_basis 非空时，从 basis 补一句带金字的承重点。
+ * 不打回；补 prompt 死角，避免 evidence_zero_anchor 整单失败。
+ */
+export function backfillZeroAnchorSegment(
+  segText: string,
+  basis: string[],
+  locale: string,
+): string {
+  if (/⟦t:/.test(segText)) return segText;
+  if (!basis || basis.length === 0) return segText;
+  const marked = autoMarkBareTerms(basis.join("、"), locale, {
+    maxPerPara: Infinity,
+    oncePerText: false,
+  });
+  console.warn(`[v2/evidence] ⚠️ 段零锚点 → 已从 bazi_basis 补锚`);
+  return `${segText}\n（这段结论的主要命理依据：${marked}。）`;
+}
 
 /**
  * 最后保险：对残留裸词，先尽力补打标（含柱位/关系词），再对补不上的走【】平替。
@@ -307,7 +330,22 @@ export async function runEvidence(
       .map((r) => r.value);
     const merged = mergeTaskTrees(trees);
     const filled = fillFromComputeIfMissing(merged, rc, locale);
-    let polished = polishEvidenceTree(filled, locale);
+
+    // ★ 段级0锚点：零金字 + basis 非空 → 从 bazi_basis 补锚（不打回）
+    const backfilled = mapSegmentTexts(filled, (seg, path) => {
+      const raw = readPath(rc, path);
+      const basis =
+        raw && typeof raw === "object" && "bazi_basis" in raw
+          ? (raw as SegmentComputed).bazi_basis
+          : [];
+      return backfillZeroAnchorSegment(
+        seg,
+        Array.isArray(basis) ? basis : [],
+        locale,
+      );
+    });
+
+    let polished = polishEvidenceTree(backfilled, locale);
 
     // ★ 最后保险:检测到裸词 → 强制补救(不打回,代码兜死)
     let evResidue = findEvidenceLeak(polished, locale);
