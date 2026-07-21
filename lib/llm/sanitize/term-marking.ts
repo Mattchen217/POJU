@@ -678,9 +678,38 @@ const RELATION_WORD_TO_SLUG: Readonly<Record<string, string>> = (() => {
   return map;
 })();
 
+/** 地支字符（关系词边界：只在「地支/相 + 冲刑害」语境打单字）。 */
+const BRANCH_CHARS_FOR_RELATION = "子丑寅卯辰巳午未申酉戌亥";
+
+/**
+ * 单字关系词打标边界：前必须是地支或「相」，后不能接日常词续写。
+ * 治「冲突→撞击突 / 冲动→撞击动 / 刑法→磨蚀法 / 害怕→潜耗怕」。
+ */
+const RELATION_SINGLE_CHAR_GUARD: Readonly<
+  Record<string, { lookbehind: string; forbidAfter: string }>
+> = {
+  冲: {
+    lookbehind: `[${BRANCH_CHARS_FOR_RELATION}相]`,
+    forbidAfter: "突动击刺",
+  },
+  刑: {
+    lookbehind: `[${BRANCH_CHARS_FOR_RELATION}相]`,
+    forbidAfter: "法罚",
+  },
+  害: {
+    lookbehind: `[${BRANCH_CHARS_FOR_RELATION}相]`,
+    forbidAfter: "怕羞",
+  },
+  合: {
+    lookbehind: `[${BRANCH_CHARS_FOR_RELATION}相]`,
+    forbidAfter: "作适同理计并",
+  },
+};
+
 /**
  * 裸关系词（相刑/相冲/半合…）→ 标记。长度降序，先吃长词。
  * 中文正文前后几乎总贴汉字（「子午相刑」），Han 双边界会漏网——只挡后缀粘连。
+ * 单字「冲/刑/害/合」必须带地支/相 lookbehind，否则误伤日常词。
  * 只改标记外片段，避免双标记。
  */
 export function wrapBareRelations(text: string, locale: string): string {
@@ -695,10 +724,14 @@ export function wrapBareRelations(text: string, locale: string): string {
       for (const w of words) {
         const id = RELATION_WORD_TO_SLUG[w]!;
         if (!termOf(id, loc)) continue;
-        seg = seg.replace(
-          new RegExp(`${escapeRegExp(w)}(?![运格星局宫支])`, "g"),
-          `⟦t:${id}|⟧`,
-        );
+        const guard = w.length === 1 ? RELATION_SINGLE_CHAR_GUARD[w] : undefined;
+        const re = guard
+          ? new RegExp(
+              `(?<=${guard.lookbehind})${escapeRegExp(w)}(?![${guard.forbidAfter}])`,
+              "g",
+            )
+          : new RegExp(`${escapeRegExp(w)}(?![运格星局宫支])`, "g");
+        seg = seg.replace(re, `⟦t:${id}|⟧`);
       }
       return seg;
     })
@@ -923,8 +956,16 @@ export function autoMarkBareTerms(
                 const labels = resolveBareMarkLabels(hanId, locale);
                 if (!labels) continue;
                 if (oncePerText && seenSlugs.has(labels.slug)) continue;
-                const re =
+                const relGuard =
                   hanId.length === 1
+                    ? RELATION_SINGLE_CHAR_GUARD[hanId]
+                    : undefined;
+                const re = relGuard
+                  ? new RegExp(
+                      `(?<=${relGuard.lookbehind})${escapeRegExp(hanId)}(?![${relGuard.forbidAfter}])`,
+                      "g",
+                    )
+                  : hanId.length === 1
                     ? new RegExp(
                         `(?<![\\u4e00-\\u9fff])${escapeRegExp(hanId)}(?![\\u4e00-\\u9fff（(])`,
                         "g",
@@ -1277,6 +1318,7 @@ export type TermMarkingPromptOptions = {
   principlesOnly?: boolean;
   /**
    * 中立底座档:这一层【没有用户的具体处境】,所以不要求"贴题白话"。
+   * 词典只给 slug|真词（不给自造软译、不给整句释义）——软译/释义是渲染层的事。
    *
    * ⚠️ 名字只描述【提示词档位】,不描述代码行为。
    * 上一版叫 ssotPlainOnly —— 用代码行为给提示词档命名,结果我把
@@ -1298,6 +1340,13 @@ export function buildTermMarkingPromptBlock(
   const principlesOnly = opts?.principlesOnly === true;
   const neutralBase = opts?.neutralBase === true;
   const rows = DELIVERY_MARKING_ENTRIES.map((e) => {
+    if (neutralBase) {
+      // 只给 slug ↔ 真词。模型是命理专家,认识"日主/用神/七杀"真词,秒懂。
+      // 【不给】自造软译(本元/锚元——模型不认识,反添乱)。
+      // 【不给】整句释义(那是渲染时读者点开看的,模型写依据用不到,纯占token)。
+      const realTerm = e.forbidden[0] ?? e.id; // forbidden[0] 就是真词(日主/用神…)
+      return `| \`${e.id}\` | ${realTerm} |`;
+    }
     const soft = softLabel(e, loc);
     const keep =
       e.keep_cn === true
@@ -1305,13 +1354,7 @@ export function buildTermMarkingPromptBlock(
           ? "（可见软译只用上表词，禁括号干支）"
           : " (visible soft label only — no stem-branch in parens)"
         : "";
-    const sample = e.forbidden.slice(0, principlesOnly || neutralBase ? 2 : 4).join(" / ");
-    if (neutralBase) {
-      // 必须让它看见【标记会渲染成什么】—— 上一版把这两列撤了(怕它抄软译),
-      // 结果它连自己在标什么都不知道,只好在正文里自己解释一遍 → 裸术语 → 门禁炸。
-      // 抄不抄无所谓:forceSsotPlainInMarkers() 会无条件覆盖,抄了也是白抄。
-      return `| \`${e.id}\` | ${sample} | **${soft}** | ${glossOf(e.id, loc) ?? ""} |`;
-    }
+    const sample = e.forbidden.slice(0, principlesOnly ? 2 : 4).join(" / ");
     return `| \`${e.id}\` | ${sample} | **${soft}**${keep} |`;
   }).join("\n");
 
@@ -1319,25 +1362,19 @@ export function buildTermMarkingPromptBlock(
     ? zh
       ? `## 打标记规则（中立底座）
 1. 格式：\`⟦t:<slug>|⟧\` —— **竖线保留，后面留空**。
-2. 它会渲染成上表的【官方术语】，读者**点一下就展开【官方释义】那一整句**。
-   也就是说，**这个术语已经自带解释了** —— 所以**不要在正文里再解释它一遍**，
-   更不要为了解释它而写出它的术语原词（第 2 列那些）。标记本身就是解释。
-3. **正文零标记**；标记只出现在「依据与推理」；一段依据 ≤3 金字。
-4. **slug 必须取自上表**；自造 id 无效、句子会缺字 —— 上表没有的概念，**直接用白话讲，不打标**。
-5. 守六条语义红线（不预测/不算命/不占卜/不决吉凶/不恐吓/不超自然承诺）。
-6. **标记是用来【代替】那个词的，不是加在那个词后面。**
+2. **正文零标记**；标记只出现在「依据与推理」；一段依据 ≤3 金字。
+3. **slug 必须取自上表**；自造 id 无效、句子会缺字 —— 上表没有的概念，**直接用白话讲，不打标**。
+4. 守六条语义红线（不预测/不算命/不占卜/不决吉凶/不恐吓/不超自然承诺）。
+5. **标记是用来【代替】那个词的，不是加在那个词后面。**
    要标注一个命理概念时，直接写 \`⟦t:代号|⟧\` 就够了——标记本身【就代表】那个概念。
    - 【不允许】把概念的中文名字写出来、再在后面补一个标记（等于同一个词说了两遍）。
    - 标记出现的地方，就是那个概念该在的地方，它前面不要再放这个概念的中文真词。`
       : `## Marking rules (neutral base)
 1. Format: \`⟦t:<slug>|⟧\` — **keep the pipe, leave the slot after it empty**.
-2. It renders as the official term above; the reader taps to expand the official gloss.
-   The term already carries its explanation — **do not re-explain it in the prose**,
-   and do not write the raw jargon from column 2. The marker is the explanation.
-3. **Zero markers in body prose**; markers only in the evidence note; ≤3 markers per evidence segment.
-4. **slug must come from the table**; invented ids are invalid — for concepts not listed, **use plain language, no marker**.
-5. Keep the six semantic red lines (no prediction / fate-telling / divination / omen verdicts / fear / supernatural promises).
-6. **A marker REPLACES the term — it is not appended after the term.**
+2. **Zero markers in body prose**; markers only in the evidence note; ≤3 markers per evidence segment.
+3. **slug must come from the table**; invented ids are invalid — for concepts not listed, **use plain language, no marker**.
+4. Keep the six semantic red lines (no prediction / fate-telling / divination / omen verdicts / fear / supernatural promises).
+5. **A marker REPLACES the term — it is not appended after the term.**
    When marking a concept, write only \`⟦t:slug|⟧\` — the marker itself stands for that concept.
    - Do **not** write the Chinese jargon and then a marker next to it (that says the same thing twice).
    - Where the marker appears is where the concept belongs; do not put the Chinese real-term immediately before it.`
@@ -1391,10 +1428,10 @@ ${buildClosedSetConstraintPromptBlock(locale)}`;
 
   const tableHeader = neutralBase
     ? zh
-      ? `| slug | 禁/术语示例 | 官方术语 (${langLabel}) | 官方释义（读者点开就看到这句） |
-|---|---|---|---|`
-      : `| slug | banned / term examples | official term (${langLabel}) | official gloss (shown on tap) |
-|---|---|---|---|`
+      ? `| slug | 这个代号指的命理概念 |
+|---|---|`
+      : `| slug | real term this code refers to |
+|---|---|`
     : zh
       ? `| slug | 禁/术语示例 | 官方术语 (${langLabel}) |
 |---|---|---|`
@@ -1403,8 +1440,8 @@ ${buildClosedSetConstraintPromptBlock(locale)}`;
 
   const intro = neutralBase
     ? zh
-      ? `凡在「依据与推理」中引用下表概念：打 \`⟦t:<slug>|⟧\`（竖线后留空）。标记会渲染成上表的官方术语，点开即见官方释义。`
-      : `When referencing a concept below in the evidence note, mark it \`⟦t:<slug>|⟧\` (leave the slot after the pipe empty). The system renders the official term; the reader taps to see the official gloss.`
+      ? `凡在「依据与推理」中引用下表概念：认识真词后打成 \`⟦t:<slug>|⟧\`（竖线后留空）。`
+      : `When referencing a concept below in the evidence note, recognize the real term and mark it \`⟦t:<slug>|⟧\` (leave the slot after the pipe empty).`
     : zh
       ? `凡在「依据与推理」中引用下表概念：打 \`⟦t:<slug>|<贴题白话>⟧\`。**软译词由系统从术语表填入**（下表 soft 列仅供对照）。`
       : `When referencing a concept below in the evidence note, mark it \`⟦t:<slug>|<context plain>⟧\`. **Soft labels are filled from the glossary by the system** (the soft column is for recognition only).`;
@@ -1424,6 +1461,25 @@ ${rules}`;
 }
 
 /**
+ * 去掉相邻重复短语 / 相邻重复标记（A、A → A）。
+ * 治「支撑力…支撑力」软译重复；补锚/填槽后兜底。
+ */
+export function collapseAdjacentDuplicatePhrases(text: string): string {
+  if (!text?.trim()) return text ?? "";
+  let out = text;
+  // 完全相同的相邻标记
+  out = out.replace(/(⟦t:[^⟧]+⟧)、\1/g, "$1");
+  // 相邻标记软译相同（slug 可不同）
+  out = out.replace(
+    /(⟦t:[a-zA-Z0-9_:]+\|([^|⟧]+)(?:\|[^⟧]*)?⟧)、⟦t:[a-zA-Z0-9_:]+\|\2(?:\|[^⟧]*)?⟧/g,
+    "$1",
+  );
+  // 相邻重复的软译/白话短语（A、A → A）
+  out = out.replace(/([^、。;，⟦⟧]{4,})、\1/g, "$1");
+  return out;
+}
+
+/**
  * 中立底座专用:**无条件**用 SSOT 的官方术语 + 官方释义覆盖标记的两个槽。
  *
  * 这是【唯一】知道"底座 tooltip 用固定模板"这件事的地方 —— 提示词不知道、模型不知道。
@@ -1437,7 +1493,7 @@ export function forceSsotPlainInMarkers(text: string, locale: string): string {
   if (!text?.includes("⟦t:")) return text ?? "";
   const loc = toGlossaryLocale(locale);
   TERM_MARKER_PATTERN.lastIndex = 0;
-  return text.replace(TERM_MARKER_PATTERN, (raw, rawId: string) => {
+  const filled = text.replace(TERM_MARKER_PATTERN, (raw, rawId: string) => {
     const id = normalizeTermMarkerId(String(rawId));
     const soft = termOf(id, loc);
     if (!soft) {
@@ -1447,6 +1503,7 @@ export function forceSsotPlainInMarkers(text: string, locale: string): string {
     const gloss = glossOf(id, loc) || soft;
     return `⟦t:${id}|${escapeMarkerPart(soft)}|${escapeMarkerPart(gloss)}⟧`;
   });
+  return collapseAdjacentDuplicatePhrases(filled);
 }
 
 /**
@@ -1592,6 +1649,7 @@ export function collapseChainedSoftReplaceArtifacts(text: string): string {
     MINGLI_STACK_SOFT_PHRASE,
   );
   result = collapseDuplicatedSoftPrefix(result);
+  result = collapseAdjacentDuplicatePhrases(result);
   return result;
 }
 

@@ -32,6 +32,7 @@ import {
 import {
   autoMarkBareTerms,
   bareMingliWordInPlain,
+  collapseAdjacentDuplicatePhrases,
   dedupeBareTermBeforeMarker,
   demoteWuxingMarkers,
   maskMarkersForAudit,
@@ -64,7 +65,8 @@ export type RunEvidenceOptions = {
 };
 
 /**
- * 段级0锚点保险：纯白话段（零金字）且 bazi_basis 非空时，从 basis 补一句带金字的承重点。
+ * 段级0锚点保险：纯白话段（零金字）且 bazi_basis 非空时，补一句短白话承重点。
+ * 只取前 1–2 个承重真词打标 + 固定白话模板；不堆全部原始真词（避免文言黑话）。
  * 不打回；补 prompt 死角，避免 evidence_zero_anchor 整单失败。
  */
 export function backfillZeroAnchorSegment(
@@ -74,12 +76,17 @@ export function backfillZeroAnchorSegment(
 ): string {
   if (/⟦t:/.test(segText)) return segText;
   if (!basis || basis.length === 0) return segText;
-  const marked = autoMarkBareTerms(basis.join("、"), locale, {
-    maxPerPara: Infinity,
-    oncePerText: false,
-  });
+  // 只取前 1-2 个承重真词打标,固定白话引导,不堆全部原始真词
+  const topTerms = basis.slice(0, 2);
+  const marked = topTerms
+    .map((t) =>
+      autoMarkBareTerms(t, locale, { maxPerPara: Infinity, oncePerText: false }),
+    )
+    .join("、");
   console.warn(`[v2/evidence] ⚠️ 段零锚点 → 已从 bazi_basis 补锚`);
-  return `${segText}\n（这段结论的主要命理依据：${marked}。）`;
+  return collapseAdjacentDuplicatePhrases(
+    `${segText}\n（这段主要看 ${marked}。）`,
+  );
 }
 
 /**

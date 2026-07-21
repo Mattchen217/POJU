@@ -263,11 +263,20 @@ function fillTree(text: string): ReportSegmentTextTree {
     "narrative system 纠正术语假设",
     np.system.includes("可能包含命理术语"),
   );
+  assert(
+    "narrative system 能读懂算料术语",
+    np.system.includes("能准确读懂算料里给你的每一个专业命理术语"),
+  );
   assert("narrative user 无 bazi_basis", !np.user.includes("bazi_basis"));
   assert("narrative user 无 dos 数组", !np.user.includes('"dos"'));
   assert("narrative 无纠错段落", !np.user.includes("纠错"));
 
   const ep = buildEvidencePrompt(pickAllSegments(buildRc()), "zh");
+  assert(
+    "evidence system 双能力人设",
+    ep.system.includes("精通中国传统命理的专家") &&
+      ep.system.includes("用大白话讲清推理"),
+  );
   assert("evidence 注入打标块", ep.system.includes("⟦t:<slug>|⟧"));
   assert("evidence 明示竖线后留空", ep.system.includes("竖线后留空") || ep.system.includes("后面留空"));
   assert("evidence 不是第二遍正文", ep.system.includes("不是第二遍正文"));
@@ -343,9 +352,10 @@ function fillTree(text: string): ReportSegmentTextTree {
   const filled = backfillZeroAnchorSegment(plain, ["日主偏旺", "正印"], "zh");
   assert("零标记+非空basis → 补锚出⟦t:", filled.includes("⟦t:"));
   assert(
-    "补锚保留原段并追加承重点",
-    filled.startsWith(plain) && filled.includes("主要命理依据"),
+    "补锚保留原段并追加短白话承重点",
+    filled.startsWith(plain) && filled.includes("这段主要看"),
   );
+  assert("补锚不堆文言模板", !filled.includes("主要命理依据"));
   const already = backfillZeroAnchorSegment(
     "因 ⟦t:day_master|⟧ 偏稳。",
     ["日主偏旺"],
@@ -401,6 +411,31 @@ function fillTree(text: string): ReportSegmentTextTree {
     fs
       .readFileSync(path.join(root, "lib/base-analysis-v2/evidence/evidence-prompt.ts"), "utf8")
       .includes("五行原字不打标"),
+  );
+  assert(
+    "evidence prompt 专家人设",
+    fs
+      .readFileSync(path.join(root, "lib/base-analysis-v2/evidence/evidence-prompt.ts"), "utf8")
+      .includes("精通中国传统命理的专家"),
+  );
+  assert(
+    "evidence prompt 双能力人设(论证+白话)",
+    fs
+      .readFileSync(path.join(root, "lib/base-analysis-v2/evidence/evidence-prompt.ts"), "utf8")
+      .includes("用大白话讲清推理") &&
+      fs
+        .readFileSync(path.join(root, "lib/base-analysis-v2/evidence/evidence-prompt.ts"), "utf8")
+        .includes("为什么会得出这个结论"),
+  );
+  assert(
+    "narrative prompt 能读懂算料术语",
+    fs
+      .readFileSync(path.join(root, "lib/base-analysis-v2/narrative/narrative-prompt.ts"), "utf8")
+      .includes("能准确读懂算料里给你的每一个专业命理术语"),
+  );
+  assert(
+    "evidence 补锚白话模板",
+    evidence.includes("这段主要看") && !evidence.includes("主要命理依据"),
   );
   assert(
     "evidence 4-Task 并发",

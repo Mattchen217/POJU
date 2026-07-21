@@ -20,25 +20,26 @@ const assert = (label: string, ok: boolean) => {
 function main(): void {
   console.log("\n===== 底座 · 打标契约 =====\n");
 
-  // ① 提示词不许再出现实现细节
+  // ① 提示词不许再出现实现细节；词典只给 slug|真词（不给自造软译/整句释义）
   const block = buildTermMarkingPromptBlock("zh", { principlesOnly: true, neutralBase: true });
   assert("底座档不提「会被丢弃」", !block.includes("会被丢弃"));
   assert("底座档不提 SSOT/系统会填", !/SSOT|系统.{0,4}填/.test(block));
-  assert("底座档告诉模型标记会渲染成什么", block.includes("官方释义"));
-  assert("底座档明确禁止在正文重复解释", block.includes("不要在正文里再解释"));
-
-  // ② 表必须让模型看见术语和释义(上一版撤掉了这两列 → 它瞎标)
-  assert("底座档表头有官方术语列", /\|\s*官方术语/.test(block));
-  assert("底座档表头有官方释义列", /\|\s*官方释义/.test(block));
+  assert("底座档不塞渲染/释义话术", !block.includes("官方释义") && !block.includes("渲染成"));
+  assert("底座档不塞自造软译列", !block.includes("| **本元**"));
+  assert("底座档有 slug|真词 表头", block.includes("| slug | 这个代号指的命理概念 |"));
+  assert("底座档含真词日主", /\|\s*`day_master`\s*\|\s*日主\s*\|/.test(block));
+  assert("底座档无整句释义列", !/\|\s*官方释义/.test(block));
+  assert("底座档明确标记代替真词", block.includes("标记是用来【代替】那个词的"));
 
   // ①b EN 打标块跟随 locale（避免中文 intro 带偏英文依据）
   const blockEn = buildTermMarkingPromptBlock("en", { neutralBase: true });
   assert("EN 底座档标题英文", blockEn.includes("# Term marking"));
   assert("EN 底座档 intro 英文", blockEn.includes("When referencing a concept below"));
   assert("EN 底座档无中文 intro", !blockEn.includes("凡在「依据与推理」"));
-  assert("EN 底座档表头英文", blockEn.includes("official term") && blockEn.includes("official gloss"));
+  assert("EN 底座档表头两列真词", blockEn.includes("real term this code refers to"));
+  assert("EN 底座档无 official gloss 列", !blockEn.includes("official gloss"));
   assert("EN 底座档规则英文", blockEn.includes("## Marking rules (neutral base)"));
-  assert("EN 底座档禁止正文重复解释", blockEn.includes("do not re-explain"));
+  assert("EN 底座档标记代替术语", blockEn.includes("A marker REPLACES the term"));
 
   // ③ 代码无条件覆盖(这是唯一知道 SSOT 的地方)
   const forced = forceSsotPlainInMarkers("依据:⟦t:zheng_yin|我瞎写的白话⟧。", "zh");
