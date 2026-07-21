@@ -36,8 +36,9 @@ function main(): void {
     "关键平衡能量是木，需留意为火与土。木主生长。",
     "zh",
   );
-  assert("五行：是木→标记", wx.includes("⟦t:wood"));
-  assert("五行：为火→标记", wx.includes("⟦t:fire"));
+  assert("五行：不再自动打标(是木)", !wx.includes("⟦t:wood"));
+  assert("五行：不再自动打标(为火)", !wx.includes("⟦t:fire"));
+  assert("五行：原字保留", wx.includes("是木") && wx.includes("为火"));
   for (const s of ["多去有树木水流的地方", "他有金钱观念", "水平不错", "别上火", "这片土地"]) {
     assert(
       `五行不误伤日常词：${s}`,
@@ -118,7 +119,7 @@ function main(): void {
       p.includes("至少 1 个锚点是 shensha"),
   );
   assert("删依据自检", p.includes("把依据块整个删掉"));
-  assert("五行必打标", p.includes("⟦t:wood|⟧") && p.includes("不要写五行的原字"));
+  assert("五行不打标(原字)", p.includes("五行例外") && p.includes("不要打标"));
   assert("十神必打标", p.includes("⟦t:shi_shen|⟧") && p.includes("不要写十神原词"));
   assert("推理端：完整的承重证据链(求全)", p.includes("完整的承重证据链"));
   assert(
@@ -160,7 +161,7 @@ function main(): void {
   // ── 接线守卫 ──
   console.log("\n[接线]");
   const ct = read("lib/llm/sanitize/compliance-terms.ts");
-  assert("交付清洗接五行", ct.includes("wrapBareWuxingInMingliContext"));
+  assert("交付清洗不再接五行自动打标", !/wrapBareWuxingInMingliContext\s*\(/.test(ct));
   assert("交付清洗接十神", ct.includes("wrapBareTenGods"));
   const rp = read("lib/base-analysis/repair-violations.ts");
   assert(

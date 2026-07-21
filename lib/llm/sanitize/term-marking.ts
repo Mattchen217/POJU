@@ -144,7 +144,18 @@ export const TERM_ENTRIES: TermEntry[] = (() => {
 
 const TERM_BY_ID = new Map(TERM_ENTRIES.map((e) => [e.id, e]));
 
-const DELIVERY_MARKING_ENTRIES: TermEntry[] = POJU_TERMS.map(pojuToTermEntry);
+/** 五行 slug（仍保留在 POJU_TERMS 供矩阵等 UI；交付打标/提示词清单剔除）。 */
+export const WUXING_ELEMENT_SLUGS: ReadonlySet<string> = new Set([
+  "wood",
+  "fire",
+  "earth",
+  "metal",
+  "water",
+]);
+
+const DELIVERY_MARKING_ENTRIES: TermEntry[] = POJU_TERMS.map(pojuToTermEntry).filter(
+  (e) => !WUXING_ELEMENT_SLUGS.has(e.id),
+);
 
 /** LLM term marker — UI parses `⟦t:id|visible|plain⟧` (plain optional). Legacy 2-segment + `⟦g|…⟧` supported. */
 export const TERM_MARKER_PATTERN =
@@ -432,37 +443,36 @@ export function wrapBareStemElements(text: string, locale: string): string {
   return out;
 }
 
-/** 五行 → 闭集 slug（pojulife-terms 里已齐：舒展/发散/承托/精练/润流）。 */
-const WUXING_TO_SLUG: Readonly<Record<string, string>> = {
-  木: "wood",
-  火: "fire",
-  土: "earth",
-  金: "metal",
-  水: "water",
+/** 五行原字汉（交付不打标；矩阵等 UI 仍可用 slug）。 */
+const WUXING_SLUG_TO_HAN: Readonly<Record<string, string>> = {
+  wood: "木",
+  fire: "火",
+  earth: "土",
+  metal: "金",
+  water: "水",
 };
 
 /**
- * 裸五行 → 标记，**只在命理语境里**。
- * ⚠️ 绝不全局单字打标：木/树木、金/金钱、水/水平、火/上火、土/土地 会被啃烂
- * （CLOSED_WUXING 当初进 ALLOW 表就是这个护栏，那张表现在虽死，意图对）。
- * 只认两类句式：前置(为|是|属|主)+五行；后置 五行+(主|性|气|局)。均要求前后不贴汉字。
+ * 把已打上的五行标记还原成原字（⟦t:fire|…⟧→火）。
+ * 模型若仍打标五行，交付前剥掉，保证用户见「火」而非「发散」。
  */
-export function wrapBareWuxingInMingliContext(text: string, locale: string): string {
-  if (!text?.trim()) return text ?? "";
-  const loc = toGlossaryLocale(locale);
-  let out = text;
-  for (const [han, id] of Object.entries(WUXING_TO_SLUG)) {
-    if (!termOf(id, loc)) continue;
-    // 前置：为火与土 / 是木，—— 后接与/和/顿号很常见，不能要求「后不贴汉字」
-    // 只挡「为火主」「是木性」被切成两半的歧义续写
-    out = out.replace(
-      new RegExp(`(?<=[为是属主])${han}(?![主性气局木火土金水])`, "g"),
-      `⟦t:${id}|⟧`,
-    );
-    // 后置：木主 / 火性 —— 要求前不贴汉字，避免树木/上火误伤
-    out = out.replace(new RegExp(`(?<![\\u4e00-\\u9fff])${han}(?=[主性气局])`, "g"), `⟦t:${id}|⟧`);
-  }
-  return out;
+export function demoteWuxingMarkers(text: string): string {
+  if (!text?.includes("⟦t:")) return text ?? "";
+  TERM_MARKER_PATTERN.lastIndex = 0;
+  return text.replace(TERM_MARKER_PATTERN, (raw, rawId: string) => {
+    const id = normalizeTermMarkerId(String(rawId));
+    const han = WUXING_SLUG_TO_HAN[id];
+    return han ?? raw;
+  });
+}
+
+/**
+ * 裸五行 → 标记，**已停用**（恒等返回）。
+ * 保留函数名供旧测试/调用点兼容；五行原字直接合规，无需打标。
+ * 历史：曾在命理语境把「为火/是木」打成 ⟦t:fire|⟧；2026-07-20 停用——软译负收益且标记密度致依据拆行。
+ */
+export function wrapBareWuxingInMingliContext(text: string, _locale: string): string {
+  return text ?? "";
 }
 
 /** 十神 → 闭集 slug（十个软译全在 pojulife-terms：流展/遇资/供源…）。 */

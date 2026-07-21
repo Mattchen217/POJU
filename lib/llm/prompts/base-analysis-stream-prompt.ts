@@ -160,9 +160,8 @@ const BASE_ANALYSIS_EVIDENCE_RULES_ZH = `# 依据与推理块 · 写法与打标
 
 ## 打标格式
 - 每个 ## 分区末尾加 \`**依据与推理:**\`（默认折叠）；格式 \`⟦t:<slug>|⟧\`，竖线后留空——**软译白话由系统填，你只选对 slug**。
-- 打标覆盖：五行/十神/干支/神煞/柱位——依据里引用到就打标，不裸露。
-  - 五行：\`⟦t:wood|⟧\` \`⟦t:fire|⟧\`（土/金/水同理），不要写五行的原字。
-    ✗ 增加木性让火烧得更旺（依据里裸写五行原字 → 错）
+- 打标覆盖：十神/干支/神煞/柱位——依据里引用到就打标，不裸露。
+  - **五行例外**：金/木/水/火/土直接写原字，**不要打标**（用户看得懂原字；软译成「发散/润流」是负收益）。
   - 十神：\`⟦t:shi_shen|⟧\` \`⟦t:pian_cai|⟧\`，不要写十神原词。
     ✗ 展现才华（食神）获取资源（偏财）（依据里裸写十神原词 → 错）
   - 干支：任何干支组合都不得裸露，禁 \`(癸酉 phase)\`、\`during 壬申\` 半裸写法。
@@ -195,8 +194,8 @@ Reason for completeness (prefer extra links); evidence for precision (keep only 
 
 ## Marking format
 - End each ## section with \`**Evidence & reasoning:**\` (folded by default); format \`⟦t:<slug>|⟧\` with empty after the bar—**system fills soft**; you only pick the right slug.
-- Mark elements / ten-gods / Ganzhi / shen_sha / pillars when cited in evidence—never bare.
-  - Elements: \`⟦t:wood|⟧\` \`⟦t:fire|⟧\` (same for earth/metal/water)—do not write bare element characters.
+- Mark ten-gods / Ganzhi / shen_sha / pillars when cited in evidence—never bare.
+  - **Five Elements exception**: write 金/木/水/火/土 (Metal/Wood/Water/Fire/Earth) as plain characters—**do not mark** (soft labels like "radiate/flow" hurt readability).
   - Ten-gods: \`⟦t:shi_shen|⟧\` \`⟦t:pian_cai|⟧\`—do not write bare ten-god jargon.
   - Ganzhi: never bare; ban half-bare forms like \`(Gui-You phase)\` / \`during Ren-Shen\`.
 - **Relations (punishment / clash / six-harmony)**: neutral vernacular only—**no markers**, no relation glossary slugs (see Neutral · closed-set · relations).

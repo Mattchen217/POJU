@@ -84,6 +84,8 @@ const EVIDENCE_SYSTEM_ZH = `# 你是谁
 - **命理词照给你的 bazi_basis 打标**:每个真词包成 \`⟦t:<slug>|⟧\`,**竖线后留空**(系统会填软译)。
   照清单里的真词打,不要自己猜别的、不要从白话里反推。
   ⚠️ 禁止写成 \`⟦t:zheng_guan|正官⟧\` 这种往槽里填真词的格式——槽必须空。
+- **五行例外**:金、木、水、火、土是常用字,直接写原字,**不要打标**。
+  只有十神、神煞、天干、用神喜忌这类专业词才打标。
 - **本命关系(相刑/相冲/六合)例外**:直接中性白话,不打标。
 - 解释文案保持**中立、客观**,不带吉凶断言。
 - **绝不出现**:具体公历年份(2026年)、岁数(35岁)、具体大运名(丙午大运)、疾病断言。
@@ -114,6 +116,8 @@ Your job: organize those terms into a restrained professional note explaining wh
 - **Mark terms from bazi_basis**: wrap each as \`⟦t:<slug>|⟧\` with the slot **after the pipe left empty** (the system fills soft labels).
   Mark from the list only — do not guess or reverse-engineer from vernacular.
   ⚠️ Never write \`⟦t:zheng_guan|正官⟧\` (filling the slot with the raw term). The slot must stay empty.
+- **Five Elements exception**: write 金/木/水/火/土 (or Metal/Wood/Water/Fire/Earth) as plain characters — **do not mark them**.
+  Only mark Ten Gods, Shen Sha, Heavenly Stems, Useful/Favorable God style terms.
 - **Natal relations (clash / punishment / six-harmony) exception**: plain neutral wording, no markers.
 - Keep the explanation **neutral and objective** — no luck/omen verdicts.
 - **Never appear**: calendar years (2026), ages (35), named luck cycles (Bing-Wu decade), medical claims.

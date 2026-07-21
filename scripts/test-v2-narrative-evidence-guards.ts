@@ -257,6 +257,25 @@ function fillTree(text: string): ReportSegmentTextTree {
     route.includes("不重跑,已清洗放行") && !/failJob\(job_id,\s*"delivery_gate_failed"/.test(route),
   );
   assert("v2 gate skipEvidenceProse", route.includes("skipEvidenceProse"));
+  const rich = fs.readFileSync(
+    path.join(root, "components/cross-product/RichReadingText.tsx"),
+    "utf8",
+  );
+  assert(
+    "dualLayer 丢弃孤立依据",
+    rich.includes("直接丢弃") && !rich.includes("孤立依据（前无正文）仍单独渲染"),
+  );
+  assert("dualLayer 无正文整段丢弃", rich.includes("只有落单依据"));
+  assert(
+    "依据不 reflow 拆多段",
+    rich.includes("reading-p--evidence") && !/EvidenceBlock[\s\S]{0,200}bodyChunks\.map/.test(rich),
+  );
+  assert(
+    "evidence prompt 五行例外",
+    fs
+      .readFileSync(path.join(root, "lib/base-analysis-v2/evidence/evidence-prompt.ts"), "utf8")
+      .includes("五行例外"),
+  );
   assert(
     "evidence 4-Task 并发",
     evidence.includes("EVIDENCE_TASKS") && evidence.includes("Promise.all"),

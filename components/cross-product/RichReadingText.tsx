@@ -199,28 +199,26 @@ export function RichReadingText({
           />
         );
       case "lead": {
-        const bodyChunks = reflowLongParagraph(block.body, reflowOpts);
-        // Evidence fold must wrap the FULL body (all reflow chunks) — never leak gold marks outside.
+        // 依据块：禁止 reflow 切成多个 <p>（标记密集长句会被拆成「一行一个金字」）。
         if (isEvidenceLeadLabel(block.label)) {
           const evidenceScope = new Set<string>();
           return (
             <EvidenceBlock key={i} label={block.label}>
-              {bodyChunks.map((chunk, j) =>
-                chunk ? (
-                  <p key={`${i}-ev-${j}`} className="reading-p">
-                    <MarkedInline
-                      text={chunk}
-                      locale={locale}
-                      dedupeScope={evidenceScope}
-                      keyBase={keyBase + j}
-                      layer="evidence"
-                    />
-                  </p>
-                ) : null,
-              )}
+              {block.body ? (
+                <p className="reading-p reading-p--evidence">
+                  <MarkedInline
+                    text={block.body}
+                    locale={locale}
+                    dedupeScope={evidenceScope}
+                    keyBase={keyBase}
+                    layer="evidence"
+                  />
+                </p>
+              ) : null}
             </EvidenceBlock>
           );
         }
+        const bodyChunks = reflowLongParagraph(block.body, reflowOpts);
         if (bodyChunks.length <= 1) {
           return (
             <LeadBlock
@@ -323,8 +321,8 @@ export function RichReadingText({
         continue;
       }
       if (b.type === "lead" && isEvidenceLeadLabel(b.label)) {
-        // 孤立依据（前无正文）仍单独渲染
-        out.push(renderBlock(b, i));
+        // 1对1 兜底:孤立依据(前面没有配对正文)直接丢弃,不显示。
+        // 宁可少一段依据,不出现「一段正文两段依据」或孤立依据错乱。
         i += 1;
         continue;
       }
@@ -345,6 +343,11 @@ export function RichReadingText({
       ) {
         evidenceNode = renderBlock(blocks[i]!, i);
         i += 1;
+      }
+      if (bodyParts.length === 0) {
+        // 这段没有正文(只有落单依据)→ 整段丢弃,不显示(1对1)
+        segIdx += 1;
+        continue;
       }
       out.push(
         <div key={`seg-${segIdx}-${start}`} className="reading-segment">

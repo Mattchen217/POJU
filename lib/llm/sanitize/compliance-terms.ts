@@ -68,7 +68,6 @@ import {
   wrapBareRelations,
   wrapBareStemElements,
   wrapBareTenGods,
-  wrapBareWuxingInMingliContext,
 } from "@/lib/llm/sanitize/term-marking";
 import { auditEmptyKeepCnBrackets } from "@/lib/llm/sanitize/keep-cn-brackets";
 import {
@@ -863,12 +862,11 @@ function sanitizeNonMarkerSegment(
   s = filterDeletedTermsBounded(s);
   s = removeStandaloneBareGanzhi(s, locale);
   // 必须放最后 —— 上面几行会剥掉 ⟦⟧，先打标会被自己吃掉。
-  // 五类确定性打标器（天干/五行/十神/柱位；神煞走 autoMark/清单），把裸词全部收口。
+  // 确定性打标器（天干/十神/柱位；神煞走 autoMark/清单）。五行单字不打标（原字合规）。
   if (opts?.wrapStems) {
     // 顺序：组合词(phrase-first)已在上游 replaceZhMingliStacks 处理；这里打单字/单词裸词。
-    // 柱位放最后——它最"泛"，等十神/五行/天干先把「月柱正印壬水」里的成分处理完再兜柱位。
+    // 柱位放最后——它最"泛"，等十神/天干先把「月柱正印壬水」里的成分处理完再兜柱位。
     s = wrapBareStemElements(s, locale);
-    s = wrapBareWuxingInMingliContext(s, locale);
     s = wrapBareTenGods(s, locale);
     s = wrapBarePillars(s, locale);
     s = wrapBareRelations(s, locale);

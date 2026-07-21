@@ -107,6 +107,42 @@ function fillTree(prefix: string): ReportSegmentTextTree {
     "卡片依据有金字(空槽已填)",
     md.includes("⟦t:zheng_yin|") && !/⟦t:zheng_yin\|⟧/.test(md),
   );
+  // 五行标记应被还原成原字
+  const withFire = mergeToMarkdown(
+    rc,
+    narrative,
+    {
+      ...evidence,
+      energy_map: {
+        ...evidence.energy_map,
+        day_master_nature: "全局 ⟦t:fire|⟧ 旺，喜 ⟦t:water|⟧。",
+      },
+    },
+    "zh",
+  );
+  assert(
+    "merge 五行还原原字",
+    withFire.includes("火") &&
+      withFire.includes("水") &&
+      !withFire.includes("⟦t:fire") &&
+      !withFire.includes("发散"),
+  );
+  const flatEvMd = mergeToMarkdown(
+    rc,
+    narrative,
+    {
+      ...evidence,
+      energy_map: {
+        ...evidence.energy_map,
+        day_master_nature: "第一句。\n第二句。",
+      },
+    },
+    "zh",
+  );
+  assert(
+    "依据换行已剥成单句",
+    flatEvMd.includes("**依据与推理:**\n第一句。第二句。"),
+  );
   assert("常规段正文保留", md.includes("BODY:energy_map.day_master_nature"));
   assert("常规段依据折叠", md.includes("**依据与推理:**"));
   // 正文与依据块之间有空行；标签后紧跟依据（无空行）
@@ -133,6 +169,47 @@ function fillTree(prefix: string): ReportSegmentTextTree {
     emptySlotMd.includes("⟦t:day_master|") &&
       !/⟦t:day_master\|⟧/.test(emptySlotMd) &&
       emptySlotMd.includes("本元"),
+  );
+
+  // 正文内 \n\n 压成单换行 → 与依据仍只隔一个 \n\n 块界
+  const multiParaBody = mergeToMarkdown(
+    rc,
+    {
+      ...narrative,
+      energy_map: {
+        ...narrative.energy_map,
+        day_master_nature: "第一句完整。\n\n第二句另起。\n\n\n第三句。",
+      },
+    },
+    evidence,
+    "zh",
+  );
+  assert(
+    "正文内空行压成单块",
+    /第一句完整。\n第二句另起。\n第三句。\n\n\*\*依据与推理:\*\*/.test(multiParaBody),
+  );
+  // 无正文则不推孤立依据
+  const noBody = mergeToMarkdown(
+    rc,
+    {
+      ...narrative,
+      energy_map: {
+        ...narrative.energy_map,
+        day_master_nature: "   ",
+      },
+    },
+    {
+      ...evidence,
+      energy_map: {
+        ...evidence.energy_map,
+        day_master_nature: "因 ⟦t:day_master|⟧ 偏稳。",
+      },
+    },
+    "zh",
+  );
+  assert(
+    "无正文不推该段依据",
+    !noBody.includes("因 ⟦t:day_master|") && !noBody.includes("BODY:energy_map.day_master_nature"),
   );
 
   const sections = parseBaseAnalysisSections(md);

@@ -5,7 +5,7 @@ import { runNarrative } from "@/lib/base-analysis-v2/narrative/narrative-call";
 import { runEvidence } from "@/lib/base-analysis-v2/evidence/evidence-call";
 import type { ReportComputed } from "@/lib/base-analysis-v2/report-schema";
 import { readPath, type ReportSegmentTextTree } from "@/lib/base-analysis-v2/segment-text";
-import { forceSsotPlainInMarkers } from "@/lib/llm/sanitize/term-marking";
+import { forceSsotPlainInMarkers, demoteWuxingMarkers } from "@/lib/llm/sanitize/term-marking";
 
 export type ReportV2Outcome =
   | { ok: true; markdown: string; timings: ReportV2Timings }
@@ -135,20 +135,24 @@ export function mergeToMarkdown(
         parts.push(renderSummaryCard(rc, seg(evidence, path), locale));
         continue;
       }
-      const body = seg(narrative, path).trim();
-      // 依据内多空行压成单换行，保证与 lead 同 chunk，避免被 parser 拆成「下一段正文」误吞。
-      const ev = seg(evidence, path).trim().replace(/\n{2,}/g, "\n");
+      // 正文内多余空行压成单换行 → 整段是一个 block，不被 parseReadingBlocks 按 \n\n 切碎，
+      // 与依据严格 1:1（不依赖模型段内是否碰巧写了空行）。
+      const body = seg(narrative, path).trim().replace(/\n{2,}/g, "\n");
+      // 依据本是一整句连贯话：去掉一切换行，避免被切成多块/多段渲染。
+      const ev = seg(evidence, path).trim().replace(/\s*\n+\s*/g, "");
       // 正文与依据块之间用 \n\n 分段（parseReadingBlocks 按空行切块）；
       // 标签与依据正文之间只单换行，避免金字漏出折叠。
       // 每段 = 正文 + 该段依据（顺序 1:1；前端 dualLayer 同容器配对）。
-      if (body) parts.push(body);
-      parts.push(`${lead}\n${ev}`);
+      if (body) {
+        parts.push(body);
+        parts.push(`${lead}\n${ev}`);
+      }
     }
   }
 
   const raw = parts.join("\n\n");
-  // ★ 依据块空槽填充（与 v1 stream-llm-with-gate 同函数）
-  return forceSsotPlainInMarkers(raw, locale);
+  // ★ 空槽填 SSOT 软译 + 五行标记还原成原字（火/水…，不软译成发散/润流）
+  return demoteWuxingMarkers(forceSsotPlainInMarkers(raw, locale));
 }
 
 /**

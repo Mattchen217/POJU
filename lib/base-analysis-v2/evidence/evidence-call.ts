@@ -28,6 +28,7 @@ import {
 import {
   autoMarkBareTerms,
   bareMingliWordInPlain,
+  demoteWuxingMarkers,
   forceSsotPlainInMarkers,
   maskMarkersForAudit,
 } from "@/lib/llm/sanitize/term-marking";
@@ -56,10 +57,10 @@ export type RunEvidenceOptions = {
   signal?: AbortSignal;
 };
 
-/** v1 打标器兜底 + 中立底座强制 SSOT 软译槽。 */
+/** v1 打标器兜底 + 中立底座强制 SSOT 软译槽；五行标记还原成原字。 */
 export function polishEvidenceSegment(text: string, locale: string): string {
   const marked = autoMarkBareTerms(text, locale);
-  return forceSsotPlainInMarkers(marked, locale);
+  return demoteWuxingMarkers(forceSsotPlainInMarkers(marked, locale));
 }
 
 /**

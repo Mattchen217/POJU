@@ -44,7 +44,7 @@ function mergeEvidenceTrailingParagraphs(blocks: ReadingBlock[]): ReadingBlock[]
         i += 1;
         parts.push(next);
       }
-      out.push({ type: "lead", label: b.label, body: parts.join("\n\n").trim() });
+      out.push({ type: "lead", label: b.label, body: parts.join("").trim() });
       continue;
     }
     if (b.type === "subhead" && isEvidenceLeadLabel(b.content)) {
@@ -54,7 +54,7 @@ function mergeEvidenceTrailingParagraphs(blocks: ReadingBlock[]): ReadingBlock[]
         parts.push((blocks[i] as { type: "p"; content: string }).content);
       }
       const label = /[:：]\s*$/.test(b.content) ? b.content : `${b.content}:`;
-      out.push({ type: "lead", label, body: parts.join("\n\n").trim() });
+      out.push({ type: "lead", label, body: parts.join("").trim() });
       continue;
     }
     out.push(b);
