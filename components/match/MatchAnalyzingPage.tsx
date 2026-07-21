@@ -292,7 +292,9 @@ export function MatchAnalyzingPage() {
     return (
       <DeliveryWaitFrame
         wait={waitFlow}
-        liveProgressStage={waitProgress.liveProgressStage} completedArtifacts={waitProgress.completedArtifacts} includeTranslateArtifact={includeTranslate}
+        liveProgressStage={waitProgress.liveProgressStage}
+        completedArtifacts={waitProgress.completedArtifacts}
+        includeTranslateArtifact={includeTranslate}
         hiddenWork={
           <BaseAnalysisStreamPreparing
             key={`base-a-${basePrepKey}`}
@@ -328,7 +330,9 @@ export function MatchAnalyzingPage() {
     return (
       <DeliveryWaitFrame
         wait={waitFlow}
-        liveProgressStage={waitProgress.liveProgressStage} completedArtifacts={waitProgress.completedArtifacts} includeTranslateArtifact={includeTranslate}
+        liveProgressStage={waitProgress.liveProgressStage}
+        completedArtifacts={waitProgress.completedArtifacts}
+        includeTranslateArtifact={includeTranslate}
         hiddenWork={
           <BaseAnalysisStreamPreparing
             key={`base-b-${basePrepKey}`}
@@ -372,7 +376,7 @@ export function MatchAnalyzingPage() {
     return (
       <main className="match-analyzing match-analyzing--error">
         <div className="match-analyzing-error-icon" aria-hidden>
-          âœ?
+          âœ•
         </div>
         <h2>{t("error_title")}</h2>
         <p>{error}</p>
