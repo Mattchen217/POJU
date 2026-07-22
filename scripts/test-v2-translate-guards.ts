@@ -174,7 +174,7 @@ assert(
 );
 assert(
   "seated keeps caption",
-  !/wait-artifact-doc--seated\s+\.wait-artifact-doc__caption\s*\{[^}]*display:\s*none/s.test(
+  !/wait-artifact-doc--seated\s+\.wait-artifact-doc__caption\s*\{[^}]*display:\s*none/.test(
     artifactCss,
   ),
 );
