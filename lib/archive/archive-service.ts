@@ -474,6 +474,14 @@ export async function deleteArchiveItem(archiveId: string): Promise<void> {
   notifyArchiveUpdated();
 }
 
+/** Rename a vault row title (client IndexedDB only). */
+export async function renameArchiveItem(archiveId: string, title: string): Promise<void> {
+  const next = title.trim();
+  if (!next) return;
+  await getPojuDb().archive.update(archiveId, { title: next });
+  notifyArchiveUpdated();
+}
+
 /** Client-only: completed actions from the action-plan archive for this session (tracking prompts). */
 export async function loadArchiveDataForSession(
   sessionId: string,

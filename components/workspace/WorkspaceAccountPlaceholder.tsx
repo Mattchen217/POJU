@@ -1,26 +1,65 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 type Props = {
+  /** Optional registered email; falls back to placeholder until auth ships. */
+  email?: string | null;
   compact?: boolean;
   className?: string;
+  onClick?: () => void;
+  active?: boolean;
 };
 
-/** Reserved account chip for future auth — avatar + name/email slots. */
-export function WorkspaceAccountPlaceholder({ compact = false, className }: Props) {
-  return (
-    <div
-      className={["workspace-account-chip", className].filter(Boolean).join(" ")}
-      title="Account — coming soon"
-    >
-      <span className="workspace-account-chip__avatar" aria-hidden>
-        G
+/** Account row: person icon + email only. Click opens Profile panel. */
+export function WorkspaceAccountPlaceholder({
+  email,
+  compact = false,
+  className,
+  onClick,
+  active = false,
+}: Props) {
+  const t = useTranslations("workspace");
+  const displayEmail = (email?.trim() || t("emailPlaceholder")).trim();
+  const classes = [
+    "workspace-account-chip",
+    onClick ? "workspace-account-chip--button" : "",
+    active ? "is-active" : "",
+    className,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const inner = (
+    <>
+      <span className="material-symbols-outlined workspace-account-chip__icon" aria-hidden>
+        person
       </span>
       {!compact ? (
-        <span className="workspace-account-chip__text">
-          <span style={{ display: "block", fontSize: 11, color: "var(--ws-text, #fff)" }}>Guest</span>
-          <span style={{ display: "block", fontSize: 10, opacity: 0.7 }}>email@coming.soon</span>
-        </span>
+        <span className="workspace-account-chip__email">{displayEmail}</span>
       ) : null}
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        className={classes}
+        title={displayEmail}
+        aria-label={displayEmail}
+        aria-current={active ? "page" : undefined}
+        onClick={onClick}
+        data-tooltip={displayEmail}
+      >
+        {inner}
+      </button>
+    );
+  }
+
+  return (
+    <div className={classes} title={displayEmail}>
+      {inner}
     </div>
   );
 }

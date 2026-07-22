@@ -1,16 +1,21 @@
 "use client";
 
 import { useEffect, useId, useRef } from "react";
+import { useTranslations } from "next-intl";
 
 import { WorkspaceSidebar } from "@/components/workspace/WorkspaceSidebar";
+import type { WorkspaceProductId } from "@/components/workspace/use-workspace-product-history";
 import type { WorkspaceTab } from "@/lib/ui-shell/resolve-ui-shell";
 
 type Props = {
   open: boolean;
   onClose: () => void;
   activeTab: WorkspaceTab;
-  onSelect: (tab: WorkspaceTab) => void;
+  activeArchiveId: string | null;
+  onSelectNew: (tab: WorkspaceTab) => void;
+  onSelectArchive: (product: WorkspaceProductId, archiveId: string) => void;
   onOpenLegal: () => void;
+  onSelectProfile: () => void;
   labelledBy?: string;
   id?: string;
 };
@@ -19,11 +24,15 @@ export function WorkspaceMobileDrawer({
   open,
   onClose,
   activeTab,
-  onSelect,
+  activeArchiveId,
+  onSelectNew,
+  onSelectArchive,
   onOpenLegal,
+  onSelectProfile,
   labelledBy,
   id = "workspace-mobile-drawer",
 }: Props) {
+  const t = useTranslations("workspace");
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
 
@@ -53,7 +62,7 @@ export function WorkspaceMobileDrawer({
       <button
         type="button"
         className="workspace-mobile-drawer__backdrop"
-        aria-label="Close menu"
+        aria-label={t("menuClose")}
         tabIndex={open ? 0 : -1}
         onClick={onClose}
       />
@@ -65,18 +74,28 @@ export function WorkspaceMobileDrawer({
         aria-labelledby={labelledBy ?? titleId}
       >
         <span id={titleId} className="sr-only">
-          Workspace menu
+          {t("menuTitle")}
         </span>
         <WorkspaceSidebar
           activeTab={activeTab}
-          onSelect={(tab) => {
-            onSelect(tab);
+          activeArchiveId={activeArchiveId}
+          onSelectNew={(tab) => {
+            onSelectNew(tab);
+            onClose();
+          }}
+          onSelectArchive={(product, archiveId) => {
+            onSelectArchive(product, archiveId);
             onClose();
           }}
           onOpenLegal={() => {
             onOpenLegal();
             onClose();
           }}
+          onSelectProfile={() => {
+            onSelectProfile();
+            onClose();
+          }}
+          onLocaleChange={onClose}
         />
       </div>
     </div>

@@ -1,16 +1,17 @@
 "use client";
 
 import { useEffect } from "react";
+import { useTranslations } from "next-intl";
 
 import { Link } from "@/i18n/navigation";
 
 const LEGAL_LINKS = [
-  { href: "/disclaimer", label: "Disclaimer" },
-  { href: "/privacy", label: "Privacy Policy" },
-  { href: "/terms", label: "Terms of Service" },
-  { href: "/refund", label: "Refund Policy" },
-  { href: "/cookies", label: "Cookie Policy" },
-  { href: "/contact", label: "Contact" },
+  { href: "/disclaimer", key: "disclaimer" as const },
+  { href: "/privacy", key: "privacy" as const },
+  { href: "/terms", key: "terms" as const },
+  { href: "/refund", key: "refund" as const },
+  { href: "/cookies", key: "cookies" as const },
+  { href: "/contact", key: "contact" as const },
 ] as const;
 
 type Props = {
@@ -19,6 +20,9 @@ type Props = {
 };
 
 export function WorkspaceLegalDrawer({ open, onClose }: Props) {
+  const t = useTranslations("workspace");
+  const tNav = useTranslations("nav");
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -35,7 +39,7 @@ export function WorkspaceLegalDrawer({ open, onClose }: Props) {
       <button
         type="button"
         className="workspace-legal-drawer__backdrop"
-        aria-label="Close legal"
+        aria-label={t("legalClose")}
         onClick={onClose}
       />
       <div
@@ -46,12 +50,12 @@ export function WorkspaceLegalDrawer({ open, onClose }: Props) {
       >
         <div className="flex items-center justify-between gap-3">
           <h2 id="workspace-legal-title" className="text-base font-semibold tracking-wide">
-            Legal & Policies
+            {t("legalTitle")}
           </h2>
           <button
             type="button"
             className="workspace-topbar__menu-btn"
-            aria-label="Close"
+            aria-label={t("legalClose")}
             onClick={onClose}
           >
             <span className="material-symbols-outlined text-[20px]" aria-hidden>
@@ -59,10 +63,10 @@ export function WorkspaceLegalDrawer({ open, onClose }: Props) {
             </span>
           </button>
         </div>
-        <nav className="workspace-legal-drawer__list" aria-label="Legal links">
+        <nav className="workspace-legal-drawer__list" aria-label={t("legalTitle")}>
           {LEGAL_LINKS.map((item) => (
             <Link key={item.href} href={item.href} onClick={onClose}>
-              {item.label}
+              {tNav(item.key)}
             </Link>
           ))}
         </nav>

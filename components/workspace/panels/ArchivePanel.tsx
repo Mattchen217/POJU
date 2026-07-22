@@ -1,20 +1,20 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 import { Link } from "@/i18n/navigation";
 
 export function ArchivePanel() {
+  const t = useTranslations("workspace.archive");
+
   return (
     <div className="workspace-panel">
-      <h2 className="workspace-panel__headline">Your past readings, kept on this device.</h2>
-      <p className="workspace-panel__guidance">
-        Open the Archive vault to browse reports and sessions you have already generated.
-      </p>
+      <h2 className="workspace-panel__headline">{t("headline")}</h2>
+      <p className="workspace-panel__guidance">{t("guidance")}</p>
       <div className="workspace-glass-card flex flex-col items-start gap-4">
-        <p className="m-0 text-sm text-[var(--ws-text-secondary,#9a9cae)]">
-          Archive uses the existing vault — no data is moved to the server.
-        </p>
+        <p className="m-0 text-sm text-[var(--ws-text-secondary,#9a9cae)]">{t("body")}</p>
         <Link href="/archive" className="workspace-link-btn">
-          Open Archive
+          {t("cta")}
         </Link>
       </div>
     </div>

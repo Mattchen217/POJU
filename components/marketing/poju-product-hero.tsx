@@ -23,7 +23,14 @@ export type PojuProductHeroCopy = {
   billingNotice: string;
 };
 
-export function PojuProductHero({ copy }: { copy: PojuProductHeroCopy }) {
+export function PojuProductHero({
+  copy,
+  hideActions = false,
+}: {
+  copy: PojuProductHeroCopy;
+  /** Workspace center: no CTA / billing strip */
+  hideActions?: boolean;
+}) {
   return (
     <ProductMarketingHero
       theme="poju"
@@ -46,15 +53,19 @@ export function PojuProductHero({ copy }: { copy: PojuProductHeroCopy }) {
             <HeroInlineBold text={copy.tagline} />
           </ProductHeroAccent>
         ) : null}
-        <ProductHeroActions>
-          <NotPWA>
-            <PojuSessionStarter className="pj-pill-outline pj-pill-outline--gold px-[30px] py-3.5 text-[15px]">
-              {copy.ctaPrimary}
-            </PojuSessionStarter>
-            {copy.billingNotice ? <ProductHeroBillingNotice>{copy.billingNotice}</ProductHeroBillingNotice> : null}
-          </NotPWA>
-          <AppModeHeroActions productId="poju" price="$9.99" />
-        </ProductHeroActions>
+        {hideActions ? null : (
+          <ProductHeroActions>
+            <NotPWA>
+              <PojuSessionStarter className="pj-pill-outline pj-pill-outline--gold px-[30px] py-3.5 text-[15px]">
+                {copy.ctaPrimary}
+              </PojuSessionStarter>
+              {copy.billingNotice ? (
+                <ProductHeroBillingNotice>{copy.billingNotice}</ProductHeroBillingNotice>
+              ) : null}
+            </NotPWA>
+            <AppModeHeroActions productId="poju" price="$9.99" />
+          </ProductHeroActions>
+        )}
       </ProductHeroContent>
     </ProductMarketingHero>
   );

@@ -33,6 +33,156 @@
     "aria": "Language",
     "mobileSection": "Language"
   },
+  "workspace": {
+    "tabs": {
+      "atmos": "Atmos",
+      "poju": "POJU",
+      "match": "Match",
+      "syncro": "Syncro",
+      "glyph": "Glyph",
+      "archive": "Archive",
+      "profile": "Profile",
+      "legal": "Legal"
+    },
+    "blurb": {
+      "atmos": "Daily Cosmic Resonance",
+      "poju": "Strategic Decision Framework",
+      "match": "Dual Dynamics & Alignment",
+      "syncro": "24h Optimal Action Window",
+      "glyph": "Structural Pattern Matrix"
+    },
+    "passActive": "Pass: Active",
+    "passLabel": "Pass",
+    "passStatus": "Active",
+    "menuOpen": "Open menu",
+    "menuTitle": "Workspace menu",
+    "menuClose": "Close menu",
+    "legalTitle": "Legal & Policies",
+    "legalClose": "Close",
+    "profileSlot": "Profile slot",
+    "slotA": "Slot A · Primary",
+    "slotB": "Slot B · Secondary",
+    "guest": "Guest",
+    "emailPlaceholder": "email@coming.soon",
+    "accountComingSoon": "Account — coming soon",
+    "dilemmaLabel": "Context or dilemma",
+    "dilemmaHint": "Notes stay on this canvas for now. Begin opens the existing {product} flow.",
+    "atmos": {
+      "headline": "Sense the field around this moment.",
+      "guidance": "Atmos will surface ambient timing and field cues. The canvas is reserved — feature coming soon.",
+      "badge": "Coming soon",
+      "title": "Atmos",
+      "body": "A calm read of the energy weather around you. We are holding this place for the full experience."
+    },
+    "poju": {
+      "headline": "Deep Strategic Consult for Life Crossroads.",
+      "guidance": "Select a profile and state your core dilemma below.",
+      "placeholder": "What deadlock are you facing? Be specific about the fork in the road…"
+    },
+    "match": {
+      "headline": "Two charts. One relationship field.",
+      "guidance": "Select a profile slot, then begin to choose both people in the existing Match flow.",
+      "placeholder": "Optional note about the relationship question you want clarity on…"
+    },
+    "syncro": {
+      "headline": "Align your space with this exact moment.",
+      "guidance": "Select a profile, then begin Syncro to scan direction and timing.",
+      "placeholder": "Optional note about the space or task you want to align…"
+    },
+    "glyph": {
+      "headline": "A sincere question. An ancient sign.",
+      "guidance": "Select a profile, then begin Glyph to draw your reading.",
+      "placeholder": "Optional note about the question you bring to the draw…"
+    },
+    "archive": {
+      "headline": "Your past readings, kept on this device.",
+      "guidance": "Open the Archive vault to browse reports and sessions you have already generated.",
+      "body": "Archive uses the existing vault — no data is moved to the server.",
+      "cta": "Open Archive"
+    },
+    "profile": {
+      "headline": "Profiles and account.",
+      "guidance": "Manage birth-chart slots here. Sign-in will land in the account area when registration ships.",
+      "accountSection": "Account (coming soon)",
+      "accountBody": "Email is your account name after registration. Sign-in will land here when auth ships.",
+      "slotsSection": "Chart slots",
+      "setupCta": "Set up or edit a profile"
+    },
+    "language": {
+      "siteLabel": "Site language"
+    },
+    "density": {
+      "newSession": "New Session",
+      "newProduct": "New {name}",
+      "pastSessions": "Past Sessions ({count})",
+      "pastRecords": "Past Records ({count})",
+      "collapseSidebar": "Close sidebar",
+      "expandSidebar": "Open sidebar",
+      "collapseRightSidebar": "Close right panel",
+      "expandRightSidebar": "Open right panel",
+      "rightDrawerIdle": "Select an engine to see field status, methodology, and recent records here.",
+      "historyMenu": "Record actions",
+      "rename": "Rename",
+      "delete": "Delete",
+      "renamePrompt": "Rename this record",
+      "deleteConfirm": "Delete this record? This cannot be undone.",
+      "backToNew": "Back to new session",
+      "contextLabel": "Context panel",
+      "statusEyebrow": "System status",
+      "statusTitle": "Field snapshot",
+      "activeProfile": "Active profile",
+      "slotAShort": "Slot A · Primary",
+      "solarTerm": "Solar term",
+      "solarTermValue": "Awaiting Atmos",
+      "matrix": "Spatiotemporal matrix",
+      "matrixValue": "Local device clock",
+      "methodEyebrow": "Methodology",
+      "historyEyebrow": "Quick history",
+      "historyTitle": "Recent for this engine",
+      "historyEmpty": "No saved reports yet for this tool.",
+      "historyEmptyShort": "No history yet",
+      "historyLoading": "Loading…",
+      "viewReport": "View Report",
+      "openFullVault": "Open full Archive vault →",
+      "untitled": "Untitled report",
+      "privacyBadge": "Zero-cloud raw storage · Local-first",
+      "presetsLabel": "Prompt presets",
+      "addSlot": "+ $9.99 Add Slot",
+      "addSlotSoon": "Additional slots coming soon",
+      "presets": {
+        "career": {
+          "label": "Career Transition",
+          "prompt": "I am at a career crossroads and need a clear strategic read on timing, leverage, and the safer path forward."
+        },
+        "relationship": {
+          "label": "Relationship Crossroads",
+          "prompt": "I need clarity on a relationship deadlock — what pattern I am in, and what move restores agency without self-abandonment."
+        },
+        "timing": {
+          "label": "Strategic Timing",
+          "prompt": "Help me read the timing window for a high-stakes decision: what to push now, what to hold, and what signal to watch."
+        }
+      },
+      "methodology": {
+        "poju": {
+          "title": "Why POJU",
+          "body": "POJU walks a single life crossroads with multi-layer chart logic and structured dialogue — not generic advice. It turns a deadlock into a sequenced decision path you can act on today."
+        },
+        "match": {
+          "title": "Why Match",
+          "body": "Match overlays two charts as one relational field. It surfaces friction, complementarity, and timing so you can see the bond as a system — not a blame story."
+        },
+        "syncro": {
+          "title": "Why Syncro",
+          "body": "Syncro binds your chart to place and hour. It shows which directions carry workable energy now, so space becomes a tactical instrument instead of guesswork."
+        },
+        "glyph": {
+          "title": "Why Glyph",
+          "body": "Glyph answers a sincere question with an archetypal sign drawn from a closed pattern set. It compresses complexity into one resonant image you can carry into the day."
+        }
+      }
+    }
+  },
   "home": {
     "hero": {
       "brand": "pojulife",
@@ -1410,8 +1560,24 @@
     "description": "These details enable a precise reading tailored to your unique energy.",
     "birth_date": "Date of Birth",
     "birth_hour": "Time of Birth",
+    "birth_datetime": "Birth date & time",
     "hour_hint": "Don't know the exact time? Choose your best estimate.",
     "shichen_preview": "Traditional period · {period}",
+    "col_year": "Year",
+    "col_month": "Month",
+    "col_day": "Day",
+    "col_hour": "Hour",
+    "col_minute": "Minute",
+    "side_title": "Begin Your Session",
+    "side_body": "Please enter your birth details. This information allows us to accurately calibrate your unique energy for a personalized, high-precision consult.",
+    "side_privacy_title": "Your Privacy First",
+    "side_privacy_intro": "At Pojulife, your privacy is our highest priority. Please rest assured: we never store your personal information on our servers.",
+    "side_local_title": "Stored Locally Only",
+    "side_local_body": "All data stays exclusively inside your current browser.",
+    "side_wipe_title": "Automatic Wipe",
+    "side_wipe_body": "Clearing your browser cache or closing an incognito window instantly erases all information.",
+    "side_isolation_title": "Device Isolation",
+    "side_isolation_body": "Switching browsers or devices—even when logged into the same account—will never reveal past records. Your data stays 100% in your control.",
     "gender": "Gender",
     "male": "Male",
     "female": "Female",

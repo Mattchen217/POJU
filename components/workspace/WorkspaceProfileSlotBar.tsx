@@ -1,25 +1,23 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 export type ProfileSlotId = "a" | "b";
 
 type Props = {
   value?: ProfileSlotId;
   onChange?: (slot: ProfileSlotId) => void;
-  /** Reserved affordance — presentational only; no pricing logic. */
   showAddAffordance?: boolean;
 };
 
-/**
- * Placeholder Profile Slot A / B selector for engine canvases.
- * Local UI state only — not wired to profile store yet.
- */
 export function WorkspaceProfileSlotBar({
   value: controlled,
   onChange,
   showAddAffordance = true,
 }: Props) {
+  const t = useTranslations("workspace");
+  const tDensity = useTranslations("workspace.density");
   const [internal, setInternal] = useState<ProfileSlotId>("a");
   const value = controlled ?? internal;
 
@@ -30,14 +28,14 @@ export function WorkspaceProfileSlotBar({
 
   return (
     <div className="workspace-profile-slot-bar">
-      <div className="workspace-profile-slot-bar__chips" role="group" aria-label="Profile slot">
+      <div className="workspace-profile-slot-bar__chips" role="group" aria-label={t("profileSlot")}>
         <button
           type="button"
           className="workspace-profile-slot-bar__chip"
           aria-pressed={value === "a"}
           onClick={() => select("a")}
         >
-          Slot A · Primary
+          {t("slotA")}
         </button>
         <button
           type="button"
@@ -45,13 +43,13 @@ export function WorkspaceProfileSlotBar({
           aria-pressed={value === "b"}
           onClick={() => select("b")}
         >
-          Slot B · Secondary
+          {t("slotB")}
         </button>
       </div>
       {showAddAffordance ? (
-        <span className="workspace-profile-slot-bar__add" aria-hidden>
-          + $9.99
-        </span>
+        <button type="button" className="workspace-add-slot-btn" disabled title={tDensity("addSlotSoon")}>
+          {tDensity("addSlot")}
+        </button>
       ) : null}
     </div>
   );

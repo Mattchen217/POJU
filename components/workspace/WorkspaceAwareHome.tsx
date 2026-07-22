@@ -1,41 +1,12 @@
 "use client";
 
-import { Suspense, useEffect, useMemo } from "react";
+import { Suspense, useEffect, type ReactNode } from "react";
 
-import { DsHomePage, type DsHomeCopy } from "@/components/ds/DsHomePage";
 import { useUiShell } from "@/components/workspace/use-ui-shell";
 import { useRouter } from "@/i18n/navigation";
-import {
-  hasWorkspaceEntered,
-  mapProductHrefForShell,
-} from "@/lib/ui-shell/resolve-ui-shell";
+import { hasWorkspaceEntered } from "@/lib/ui-shell/resolve-ui-shell";
 
-function remapHomeCopy(copy: DsHomeCopy, shell: "classic" | "workspace"): DsHomeCopy {
-  if (shell !== "workspace") return copy;
-  return {
-    ...copy,
-    products: copy.products.map((p) => ({
-      ...p,
-      href: mapProductHrefForShell(p.href, shell),
-    })),
-    meetsMoment: {
-      ...copy.meetsMoment,
-      cards: copy.meetsMoment.cards.map((c) => ({
-        ...c,
-        href: mapProductHrefForShell(c.href, shell),
-      })),
-    },
-    finalCta: {
-      ...copy.finalCta,
-      items: copy.finalCta.items.map((item) => ({
-        ...item,
-        href: mapProductHrefForShell(item.href, shell),
-      })),
-    },
-  };
-}
-
-function WorkspaceLandingInner({ copy }: { copy: DsHomeCopy }) {
+function ReturningVisitorRedirect() {
   const { shell, ready } = useUiShell();
   const router = useRouter();
 
@@ -46,16 +17,41 @@ function WorkspaceLandingInner({ copy }: { copy: DsHomeCopy }) {
     }
   }, [ready, shell, router]);
 
-  const remapped = useMemo(() => remapHomeCopy(copy, shell), [copy, shell]);
-
-  return <DsHomePage copy={remapped} />;
+  return null;
 }
 
-/** When shell=workspace, remaps product CTAs to `/app?tab=` and may skip landing for returners. */
-export function WorkspaceAwareHome({ copy }: { copy: DsHomeCopy }) {
+function ShellHomeSwitchInner({
+  classic,
+  workspace,
+}: {
+  classic: ReactNode;
+  workspace: ReactNode;
+}) {
+  const { shell, ready } = useUiShell();
+  if (!ready) return <>{classic}</>;
+  return <>{shell === "workspace" ? workspace : classic}</>;
+}
+
+/**
+ * Server passes two pre-built DsHomePage trees (classic vs workspace hrefs).
+ * This client gate only picks which tree to show + optional returner redirect.
+ * Keeps DsHomePage (and node:fs) out of the client bundle.
+ */
+export function WorkspaceAwareHome({
+  classic,
+  workspace,
+}: {
+  classic: ReactNode;
+  workspace: ReactNode;
+}) {
   return (
-    <Suspense fallback={<DsHomePage copy={copy} />}>
-      <WorkspaceLandingInner copy={copy} />
-    </Suspense>
+    <>
+      <Suspense fallback={null}>
+        <ReturningVisitorRedirect />
+      </Suspense>
+      <Suspense fallback={<>{classic}</>}>
+        <ShellHomeSwitchInner classic={classic} workspace={workspace} />
+      </Suspense>
+    </>
   );
 }

@@ -33,6 +33,156 @@
     "aria": "选择界面语言",
     "mobileSection": "语言"
   },
+  "workspace": {
+    "tabs": {
+      "atmos": "Atmos",
+      "poju": "POJU",
+      "match": "Match",
+      "syncro": "Syncro",
+      "glyph": "Glyph",
+      "archive": "存档",
+      "profile": "档案",
+      "legal": "法律条款"
+    },
+    "blurb": {
+      "atmos": "每日时空共振",
+      "poju": "深度战略决策框架",
+      "match": "双人关系气场共振",
+      "syncro": "24小时最佳行动窗口",
+      "glyph": "系统结构矩阵拆解"
+    },
+    "passActive": "通行：有效",
+    "passLabel": "通行",
+    "passStatus": "有效",
+    "menuOpen": "打开菜单",
+    "menuTitle": "工作站菜单",
+    "menuClose": "关闭菜单",
+    "legalTitle": "法律与政策",
+    "legalClose": "关闭",
+    "profileSlot": "档案位",
+    "slotA": "卡槽 A · 主档案",
+    "slotB": "卡槽 B · 副档案",
+    "guest": "访客",
+    "emailPlaceholder": "email@coming.soon",
+    "accountComingSoon": "账号功能即将推出",
+    "dilemmaLabel": "情境或困局",
+    "dilemmaHint": "备注仅留在此画布。开始后进入既有的 {product} 流程。",
+    "atmos": {
+      "headline": "感知这一刻周围的场域。",
+      "guidance": "Atmos 将呈现氛围时机与场域线索。此处先占位 — 功能即将上线。",
+      "badge": "即将推出",
+      "title": "Atmos",
+      "body": "平静地读取你周遭的能量天气。我们正在为完整体验预留这个位置。"
+    },
+    "poju": {
+      "headline": "人生十字路口的深度战略咨询。",
+      "guidance": "选择档案，并在下方写下你的核心困局。",
+      "placeholder": "你正面对怎样的僵局？请尽量具体描述那个分叉口…"
+    },
+    "match": {
+      "headline": "两张盘。一段关系场域。",
+      "guidance": "选择档案位，然后开始，在既有 Match 流程中选定双方。",
+      "placeholder": "可选：写下你想厘清的关系问题…"
+    },
+    "syncro": {
+      "headline": "让空间与这一刻对齐。",
+      "guidance": "选择档案，然后开始 Syncro，扫描方位与时机。",
+      "placeholder": "可选：写下你想对齐的空间或任务…"
+    },
+    "glyph": {
+      "headline": "一个真诚的问题。一个古老的征兆。",
+      "guidance": "选择档案，然后开始 Glyph 抽取你的启示。",
+      "placeholder": "可选：写下你带到抽取中的问题…"
+    },
+    "archive": {
+      "headline": "过往解读，留在这台设备上。",
+      "guidance": "打开存档库，浏览你已生成的报告与会话。",
+      "body": "存档沿用既有保险库 — 数据不会上传到服务器。",
+      "cta": "打开存档"
+    },
+    "profile": {
+      "headline": "档案与账号。",
+      "guidance": "在此管理生辰盘卡槽。注册上线后，登录入口会落在账号区。",
+      "accountSection": "账号（即将推出）",
+      "accountBody": "注册后邮箱即账号名。登录功能上线后会落在此区。",
+      "slotsSection": "命盘卡槽",
+      "setupCta": "创建或编辑档案"
+    },
+    "language": {
+      "siteLabel": "网站语言"
+    },
+    "density": {
+      "newSession": "新建会话",
+      "newProduct": "新建 {name}",
+      "pastSessions": "历史会话 ({count})",
+      "pastRecords": "历史记录 ({count})",
+      "collapseSidebar": "收起侧边栏",
+      "expandSidebar": "打开侧边栏",
+      "collapseRightSidebar": "收起右侧栏",
+      "expandRightSidebar": "打开右侧栏",
+      "rightDrawerIdle": "选择一个引擎后，这里会显示场域状态、方法论与最近记录。",
+      "historyMenu": "记录操作",
+      "rename": "重命名",
+      "delete": "删除",
+      "renamePrompt": "重命名此记录",
+      "deleteConfirm": "确定删除此记录？删除后无法恢复。",
+      "backToNew": "返回新建会话",
+      "contextLabel": "上下文面板",
+      "statusEyebrow": "系统状态",
+      "statusTitle": "场域快照",
+      "activeProfile": "当前档案",
+      "slotAShort": "卡槽 A · 主档案",
+      "solarTerm": "节气",
+      "solarTermValue": "等待 Atmos",
+      "matrix": "时空矩阵",
+      "matrixValue": "本机时钟",
+      "methodEyebrow": "方法论",
+      "historyEyebrow": "快捷历史",
+      "historyTitle": "本引擎最近记录",
+      "historyEmpty": "此工具尚无已保存报告。",
+      "historyEmptyShort": "暂无历史",
+      "historyLoading": "加载中…",
+      "viewReport": "查看报告",
+      "openFullVault": "打开完整存档库 →",
+      "untitled": "未命名报告",
+      "privacyBadge": "原始数据零上云 · 本地优先",
+      "presetsLabel": "提示预设",
+      "addSlot": "+ $9.99 增加卡槽",
+      "addSlotSoon": "额外卡槽即将推出",
+      "presets": {
+        "career": {
+          "label": "职业转折",
+          "prompt": "我正处在职业十字路口，需要一份关于时机、杠杆与更稳妥路径的清晰战略解读。"
+        },
+        "relationship": {
+          "label": "关系僵局",
+          "prompt": "我需要厘清一段关系僵局——我卡在什么模式里，怎样行动能恢复主动权而不自我放弃。"
+        },
+        "timing": {
+          "label": "战略时机",
+          "prompt": "请帮我读取一次高风险决策的时机窗口：此刻该推进什么、该按住什么、该盯住什么信号。"
+        }
+      },
+      "methodology": {
+        "poju": {
+          "title": "为何选 POJU",
+          "body": "POJU 用多层盘理与结构化对话陪伴单一人生十字路口——不是泛泛建议。它把僵局变成今天就能执行的决策序列。"
+        },
+        "match": {
+          "title": "为何选 Match",
+          "body": "Match 把两张盘叠成一段关系场域，呈现摩擦、互补与时机，让你把关系看成系统，而不是指责故事。"
+        },
+        "syncro": {
+          "title": "为何选 Syncro",
+          "body": "Syncro 把你的盘与空间、时辰绑定，指出此刻可借力的方位，让空间成为战术工具，而不是猜测。"
+        },
+        "glyph": {
+          "title": "为何选 Glyph",
+          "body": "Glyph 以封闭原型集回应一个真诚的问题，把复杂压成一张可带走的征兆图像，陪伴你过完这一天。"
+        }
+      }
+    }
+  },
   "home": {
     "hero": {
       "brand": "pojulife",
@@ -1410,8 +1560,24 @@
     "description": "这些信息让 POJU 能基于你独特的能量做出精准解读。",
     "birth_date": "出生日期",
     "birth_hour": "出生时间",
+    "birth_datetime": "出生日期与时间",
     "hour_hint": "不知道准确时间？选最接近的估计。",
     "shichen_preview": "对应时辰 · {period}",
+    "col_year": "年",
+    "col_month": "月",
+    "col_day": "日",
+    "col_hour": "时",
+    "col_minute": "分",
+    "side_title": "开启专属会话",
+    "side_body": "请填写您的出生信息。这些信息将用于精准匹配您的独特能量，为您生成专属的高精度决策解读。",
+    "side_privacy_title": "隐私安全无忧",
+    "side_privacy_intro": "Pojulife 极度重视您的隐私，请您放心：我们绝不会在服务器上保存您的任何个人隐私信息。",
+    "side_local_title": "仅存于本地",
+    "side_local_body": "所有信息只保存在您当前的浏览器中。",
+    "side_wipe_title": "自动彻底清除",
+    "side_wipe_body": "清理浏览器缓存或关闭无痕隐身窗口，所有数据将立刻自动销毁。",
+    "side_isolation_title": "终端彻底隔离",
+    "side_isolation_body": "切换浏览器或更换设备，哪怕登录同一个账户，也看不到以往的任何记录，确保绝对安全。",
     "gender": "性别",
     "male": "男",
     "female": "女",

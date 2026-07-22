@@ -20,6 +20,7 @@ assert(mapProductHrefForShell("/poju", "workspace") === "/app?tab=poju", "remap 
 assert(mapProductHrefForShell("/match", "workspace") === "/app?tab=match", "remap match");
 assert(mapProductHrefForShell("/poju", "classic") === "/poju", "classic unchanged");
 assert(getWorkspaceHref("atmos") === "/app?tab=atmos", "atmos href");
+assert(mapProductHrefForShell("/archive", "workspace") === "/archive", "archive stays vault");
 assert(parseWorkspaceTab("glyph") === "glyph", "tab glyph");
 assert(parseWorkspaceTab("x") === "atmos", "tab default atmos");
 

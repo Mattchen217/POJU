@@ -34,7 +34,6 @@ const PRODUCT_TO_TAB: Record<string, WorkspaceTab> = {
   glyph: "glyph",
   syncro: "syncro",
   match: "match",
-  archive: "archive",
 };
 
 export function parseUiShellValue(raw: string | null | undefined): UiShellMode | null {
@@ -133,6 +132,7 @@ export function mapProductHrefForShell(href: string, shell: UiShellMode): string
   if (shell !== "workspace") return href;
   const path = href.split("?")[0] ?? href;
   const segment = path.replace(/^\//, "").split("/")[0] ?? "";
+  if (segment === "archive") return "/archive";
   const tab = PRODUCT_TO_TAB[segment];
   if (!tab) return href;
   return getWorkspaceHref(tab);
