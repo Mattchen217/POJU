@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 import {
@@ -170,7 +170,7 @@ function TermMark({
 
   // Soft word + dotted underline carries interaction (desktop hover / tap / keyboard).
   // No bracket-ellipsis opener — keeps dense evidence readable.
-  const onWordKeyDown = (e: KeyboardEvent<HTMLSpanElement>) => {
+  const onWordKeyDown = (e: ReactKeyboardEvent<HTMLSpanElement>) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       toggle();
