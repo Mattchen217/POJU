@@ -305,8 +305,12 @@
 }
 
 .wait-artifact-doc__sheet {
-  /* Dog-ear size: top-right isosceles triangle cut + flap folded onto page */
+  /*
+   * Dog-ear: square measured from WIDTH only.
+   * Paper cut Y must use the same length (not 40% of height — that overshoots on A4).
+   */
   --fold-size: 40%;
+  --fold-y: calc(var(--fold-size) * 210 / 297);
   position: relative;
   width: 100%;
   aspect-ratio: 210 / 297;
@@ -315,11 +319,11 @@
 .wait-artifact-doc__paper {
   position: absolute;
   inset: 0;
-  /* Missing top-right corner (folded away) — not a full rectangle */
+  /* Crease = fold hypotenuse: (100%-fold, 0) → (100%, fold-as-width) */
   clip-path: polygon(
     0% 0%,
     calc(100% - var(--fold-size)) 0%,
-    100% var(--fold-size),
+    100% var(--fold-y),
     100% 100%,
     0% 100%
   );
@@ -342,34 +346,27 @@
   overflow: hidden;
 }
 
-/*
- * Cover: caption vertically centered on the page; glyph sits directly above it.
- * Middle row = caption; top 1fr ends with glyph so icon is above centered copy.
- */
+/* Cover: large glyph centered; caption below with clear gap */
 .wait-artifact-doc__cover {
   position: absolute;
   inset: 0;
-  display: grid;
-  grid-template-rows: 1fr auto 1fr;
-  grid-template-columns: 1fr;
-  justify-items: center;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  padding: 12% 14% 14%;
+  justify-content: center;
+  gap: clamp(20px, 5.5vmin, 36px);
+  padding: 18% 12% 16%;
   box-sizing: border-box;
-  row-gap: clamp(6px, 1.6vmin, 12px);
 }
 
 .wait-artifact-doc__glyph {
-  grid-row: 1;
-  align-self: end;
-  width: 28%;
+  width: 42%;
   height: auto;
   flex-shrink: 0;
   filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.6));
 }
 
 .wait-artifact-doc__caption {
-  grid-row: 2;
   margin: 0;
   width: 100%;
   text-align: center;
@@ -384,31 +381,28 @@
   overflow: hidden;
 }
 
-/* Seated: keep icon + caption, scaled down with the sheet */
+/* Seated: icon only */
 .wait-artifact-doc--seated .wait-artifact-doc__cover {
-  padding: 10% 8% 14%;
-  row-gap: 4px;
+  padding: 18% 14%;
+  gap: 0;
 }
 
 .wait-artifact-doc--seated .wait-artifact-doc__glyph {
-  width: 26%;
+  width: 46%;
 }
 
 .wait-artifact-doc--seated .wait-artifact-doc__caption {
-  font-size: clamp(6px, 1.35vmin, 9px);
-  line-height: 1.25;
-  -webkit-line-clamp: 3;
+  display: none;
 }
 
 /*
- * Folded flap: the cut-off corner folded down onto the page
- * (lower-left half of the top-right square — sits ON the paper, not in the void).
+ * Folded flap: same WIDTH-based square as paper cut; crease edges align.
  */
 .wait-artifact-doc__fold {
   position: absolute;
   top: 0;
   right: 0;
-  width: 40%;
+  width: var(--fold-size);
   aspect-ratio: 1;
   pointer-events: none;
   z-index: 2;
@@ -418,7 +412,6 @@
 .wait-artifact-doc__fold-face {
   position: absolute;
   inset: 0;
-  /* Tip was (100%,0); after fold it lands at (0,100%) along the crease */
   clip-path: polygon(0 0, 100% 100%, 0 100%);
   background: linear-gradient(
     135deg,

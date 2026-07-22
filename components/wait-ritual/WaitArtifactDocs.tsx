@@ -178,7 +178,7 @@ function ArtifactDoc({
 
 /**
  * Wait-ritual documents: center scale-up → hold 5s → seat in centered-left 2×2 slots.
- * Cover: caption vertically centered; glyph above. Seated keeps icon+caption scaled.
+ * Cover: large centered glyph + caption below. Seated: icon only.
  */
 export function WaitArtifactDocs({ artifacts, includeTranslate }: Props) {
   const t = useTranslations("wait_ritual.artifacts");

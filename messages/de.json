@@ -2142,7 +2142,7 @@
     "progress": {
       "chart_ready": "Kalibrierung Ihres Geburtsmoments und Ihrer Raum-Zeit-Koordinaten...",
       "v2_compute": "Ableitung Ihrer gebürtigen Energiestruktur...",
-      "v2_compute_wait": "Berechnung der Kernenergiematrix und multidimensionalen Aspektkorrelationen... (Geschätzte Restzeit: 1–3 Minuten)",
+      "v2_compute_wait": "Berechnung der Kernenergiematrix und multidimensionalen Aspektkorrelationen...",
       "v2_narrative": "Aufbau des narrativen Hauptstrangs des Berichts...",
       "v2_evidence": "Ableitung der Beweiskette und der zugrunde liegenden Logik...",
       "v2_translate": "Durchführung der tiefen semantischen Konstruktion der hochdimensionalen Ableitungsmatrix...",

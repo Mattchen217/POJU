@@ -7,12 +7,18 @@ import path from "node:path";
 import { NARRATIVE_TASKS } from "@/lib/base-analysis-v2/narrative/narrative-call";
 import { buildMarkerDictionary } from "@/lib/base-analysis-v2/translate/marker-dictionary";
 import {
+  collapseRenderBracketsToMarkers,
+  expandMarkersToRenderBrackets,
+  stripTranslateIslands,
+} from "@/lib/base-analysis-v2/translate/render-for-translate";
+import {
   buildTranslatePersona,
   buildTranslatePrompt,
   NATIVE_PERSONA,
   resolveNativePersona,
 } from "@/lib/base-analysis-v2/translate/translate-prompt";
 import {
+  countHanOutsideMarkers,
   extractMarkers,
   findMarkerDrift,
   pickTextPaths,
@@ -45,18 +51,53 @@ assert("词典含真词用神", dict.includes("「用神」"));
 assert("词典不含完整标记形态", !dict.includes("⟦t:"));
 assert("词典不含自造软译锚元行", !dict.includes("锚元"));
 
+{
+  const { text, slugs } = expandMarkersToRenderBrackets(
+    "因⟦t:day_master|⟧偏弱，⟦t:yong_shen|⟧是木。",
+    "zh",
+  );
+  assert("展开为方括号软译", text.includes("[") && text.includes(":") && !text.includes("⟦t:"));
+  assert("展开记录 slug 序", slugs.join(",") === "day_master,yong_shen");
+  assert(
+    "回填按序还原空槽",
+    collapseRenderBracketsToMarkers(text, slugs) ===
+      "因⟦t:day_master|⟧偏弱，⟦t:yong_shen|⟧是木。",
+  );
+  assert(
+    "译后改了括号内文仍按序回填",
+    collapseRenderBracketsToMarkers(
+      "Because [Core:changed] is weak, [Anchor:x] is Wood.",
+      slugs,
+    ) === "Because ⟦t:day_master|⟧ is weak, ⟦t:yong_shen|⟧ is Wood.",
+  );
+  assert(
+    "strip 岛后不计软译汉字",
+    !stripTranslateIslands(text).includes("本元") &&
+      stripTranslateIslands(text).includes("偏弱"),
+  );
+}
+
 const { system, user } = buildTranslatePrompt("en", {
   narrative: { energy_map: { day_master_nature: "你像一株藤蔓。" } },
   evidence: {
-    energy_map: { day_master_nature: "因⟦t:day_master|⟧偏弱。" },
+    energy_map: {
+      day_master_nature: "[本元:个性的最深层内核，代表本我能量的初始状态。]偏弱。",
+    },
   },
 });
 assert("translate 禁粘贴中文依据", system.includes("绝对禁止") && system.includes("evidence"));
-assert("translate 岛外必须译", system.includes("标记以外") || system.includes("岛以外"));
-assert("translate 形态含空竖线", system.includes("⟦t:yong_shen|⟧") || system.includes("⟦t:xxxx|⟧"));
-assert("translate system 注入代号表", system.includes("代号 day_master："));
+assert("translate 强调意译禁直译", system.includes("意译") && system.includes("字面直译"));
+assert("translate 含直译反例", system.includes("helps the body") && system.includes("has root qi"));
+assert("translate 方括号岛", system.includes("[软译:释义]") || system.includes("`[…]`"));
+assert("translate system 无代号表", !system.includes("代号含义表") && !system.includes("代号 day_master"));
+assert("translate system 无真算", !system.includes("bazi_basis") && !system.includes("core_conclusion"));
 assert("translate user 含 payload", user.includes("你像一株藤蔓"));
 assert("translate user 禁 evidence 粘贴中文", user.includes("禁止 evidence 粘贴中文"));
+assert("translate user 渲染态岛", user.includes("[本元:"));
+assert(
+  "countHan 不计括号岛内汉字",
+  countHanOutsideMarkers("[本元:很长的中文释义在这里面。]is weak.") < 3,
+);
 
 assert(
   "extractMarkers 排序稳定",
@@ -162,25 +203,31 @@ assert(
 assert("dog-ear fold face", artifactUi.includes("wait-artifact-doc__fold-face"));
 assert("center hold size enlarged", artifactCss.includes("--artifact-hold-w"));
 assert("completed check badge", artifactUi.includes("wait-artifact-doc__done"));
-assert("deeper dog-ear fold", artifactCss.includes("width: 40%"));
+assert("deeper dog-ear fold", artifactCss.includes("--fold-size: 40%"));
 assert(
   "paper missing top-right corner",
   artifactCss.includes("calc(100% - var(--fold-size))") &&
-    artifactCss.includes("100% var(--fold-size)"),
+    artifactCss.includes("var(--fold-y)"),
 );
 assert(
   "fold flap on paper (not void)",
   artifactCss.includes("polygon(0 0, 100% 100%, 0 100%)"),
 );
 assert(
-  "seated keeps caption",
-  !/wait-artifact-doc--seated\s+\.wait-artifact-doc__caption\s*\{[^}]*display:\s*none/.test(
+  "fold crease width-aligned (A4)",
+  artifactCss.includes("--fold-y: calc(var(--fold-size) * 210 / 297)"),
+);
+assert(
+  "seated hides caption",
+  /wait-artifact-doc--seated\s+\.wait-artifact-doc__caption\s*\{[^}]*display:\s*none/.test(
     artifactCss,
   ),
 );
 assert(
-  "cover caption vertically centered grid",
-  artifactCss.includes("grid-template-rows: 1fr auto 1fr"),
+  "cover flex glyph + caption gap",
+  artifactCss.includes("flex-direction: column") &&
+    artifactCss.includes("justify-content: center") &&
+    !artifactCss.includes("grid-template-rows: 1fr auto 1fr"),
 );
 assert(
   "narrative→evidence copy gated (no rotate)",
@@ -204,6 +251,8 @@ assert("zh 终审", zhProgress.includes("交叉校验与推演终审"));
 const translateCall = read("lib/base-analysis-v2/translate/translate-call.ts");
 assert('translate reasoning=medium', translateCall.includes('reasoning_effort: "medium"'));
 assert("translate 压回空槽", translateCall.includes("collapseMarkersToEmptySlots"));
+assert("translate 渲染态展开", translateCall.includes("expandMarkersToRenderBrackets"));
+assert("translate 渲染态回填", translateCall.includes("collapseRenderBracketsToMarkers"));
 assert("marker 漂移代码回填不重试", translateCall.includes("已代码回填标记,不重试"));
 assert(
   "无因 drift continue",

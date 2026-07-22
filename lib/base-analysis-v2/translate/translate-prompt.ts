@@ -1,5 +1,3 @@
-import { buildMarkerDictionary } from "@/lib/base-analysis-v2/translate/marker-dictionary";
-
 /** 母语者人设：国籍 + 母语（加新语言只加一行）。 */
 export const NATIVE_PERSONA: Record<
   string,
@@ -36,54 +34,72 @@ export type TranslateSummaryInput = {
 /**
  * 第4次翻译 prompt。
  *
- * ★ 主任务：narrative + evidence 的普通文字全部译成目标语（禁止 evidence 粘贴中文）。
- * ★ 标记是「岛」：唯一形态 `⟦t:<slug>|⟧`，系统会用代码校正标记，你专注把岛外文字译对。
- * ★ 零正例。
+ * ★ 入参已是「页面渲染态」：术语岛为 `[软译:释义]`，无 SSOT 大表、无真算数据。
+ * ★ 先理解整段意思，再意译；禁止字面直译。
+ * ★ `[…]` 是岛：位置/个数/内容原样保留；系统事后回填正式标记。
+ * ★ 零正例；可用反例钉「字面直译」失败模式。
  */
 export function buildTranslatePrompt(
   locale: string,
   payload: Record<string, unknown>,
 ): { system: string; user: string } {
   const p = resolveNativePersona(locale);
-  const dictionary = buildMarkerDictionary(locale);
   const system = `${buildTranslatePersona(locale)}
 
 # 你的任务（最重要）
 
-把下面 JSON 里**每一段普通文字**都翻译成【${p.langLabel}】。
+下面 JSON 里的文字，是已经过代码平替、按**页面读者能看到的样子**展开后的中文：
+术语位置写成 \`[软译:一句释义]\`，方便你读懂整段在讲什么。
+请把**每一段普通文字**意译成地道的【${p.langLabel}】。
+
 输入含 narrative（正文）与 evidence（依据）；若有 summary 短词也一并译。
+【没有】术语对照表、【没有】算料底稿——你只读这一份待译正文。
 
-## 硬规则 · 必须翻译的范围
-- narrative 的每一段 → 全部译成${p.langLabel}
-- evidence 的每一段 → **标记以外的每一个字**都译成${p.langLabel}
-- 【绝对禁止】把 evidence 整段原样留成中文（这是最严重的错误；正文译了、依据不译 = 失败）
-- 【绝对禁止】为了「保护标记」而放弃翻译依据——标记会由系统校正，你只管把依据周围的中文译掉
+## 翻译方法（硬）
 
-# 标记（句子里的「岛」——只保留，不翻译岛本身）
+1. **先通读整段，理解它在判断什么、论证什么**，再写成${p.language}母语者会说的话。
+2. **意译，绝不字面直译。** 中文里大量词组/习语/命理连接说法，不能按汉字逐个搬进${p.langLabel}；合格翻译只传达意思与语气。
+3. 你已懂命理，读得懂「透出、帮身」等说法——但输出时必须用母语把**意思**说清楚，禁止教材式/修仙式硬搬字。
 
-依据里会出现：\`⟦t:xxxx|⟧\`
-- 形态：\`⟦t:\` + 代号 + \`|\` + \`⟧\`（竖线后永远空）
-- 例：\`⟦t:yong_shen|⟧\`
-- 岛里的代号用下面【代号含义表】在心里看懂，好让周围句子译得通顺
-- 输出时：岛尽量原样留下；若你改动了岛，系统会自动改回，**不要因此把整句中文粘回去**
+## 字面直译 = 不合格（反例 · 禁止输出这类）
 
-【不允许】在竖线后填字；【不允许】把岛删掉换成普通词。
+以下都是**失败的字面搬字**（不止这些；凡同类直译都不合格）：
+- 帮身 → helps the body
+- 透出 → seeps out / leaks out
+- 有根气 → has root qi
+- 制杀 → controls the kill
+- 半合水局 → half-combines into a water bureau
+- 调候 → regulates the climate
+- 天干/地支 → Heavenly Stems / Earthly Branches（教材腔）
 
-# 代号含义表（只心里看懂，不要写进标记，不要输出本表）
+看到类似写法，停下来：回到整段意思，用自然的${p.langLabel}重说。
 
-${dictionary}
+## 方括号岛 \`[…]\`（硬 · 与标记同等重要）
 
-# 其他
-- 译文要通顺、地道，像${p.language}母语者写的性格分析
+依据里会出现：\`[软译:释义]\`
+- **位置、个数、括号内每一个字都原样保留**——不翻译、不删、不改、不把释义抄进正文
+- 你的译文写在岛的**两边**；岛本身像不可拆的占位符
+- 【不允许】把 \`[…]\` 改成普通词；【不允许】为了「保护岛」而把整段中文原样粘贴
+
+## 必须翻译的范围
+- narrative 的每一段 → 全部意译成${p.langLabel}（通常无 \`[…]\`）
+- evidence 的每一段 → **\`[…]\` 以外的每一个字**都意译成${p.langLabel}
+- 【绝对禁止】把 evidence 整段原样留成中文（正文译了、依据不译 = 失败）
+- 【绝对禁止】为了「保护方括号」而放弃翻译依据——岛由系统回填，你只管把岛外中文译掉
+
+## 其他
+- 译文要通顺、地道、专业，像${p.language}母语者写的性格/能量分析
 - 保持 JSON 的 key 结构与输入完全一致，只翻译 value 字符串
-- 五行原字 金木水火土可按目标语习惯写；\`⟦t:…|⟧\` 岛本身不要动
+- 五行 金木水火土 可按目标语习惯写（Wood/Fire…）
 - 只输出同结构 JSON，不要 Markdown 代码块，不要说明
 
 # 输出前自检
-1. evidence 每一段，去掉所有 \`⟦t:…|⟧\` 之后，还剩中文吗？若还剩 → 继续译掉
-2. narrative 是否已是${p.langLabel}？`;
+1. evidence 每一段：去掉所有 \`[…]\` 之后，还剩中文吗？若还剩 → 继续译掉
+2. 是否出现上方反例那种字面直译？若有 → 按段意重写
+3. 每个 \`[…]\` 是否与输入个数一致、内容未改？
+4. narrative 是否已是${p.langLabel}？`;
 
   const payloadJson = JSON.stringify(payload, null, 2);
-  const user = `请把下列 JSON 的 narrative 与 evidence（及 summary，若有）全部译成【${p.langLabel}】。\n依据里的 \`⟦t:xxxx|⟧\` 是岛，保留即可；岛以外的中文必须全部译成${p.langLabel}，禁止 evidence 粘贴中文。\n\`\`\`json\n${payloadJson}\n\`\`\``;
+  const user = `请把下列 JSON 的 narrative 与 evidence（及 summary，若有）意译成【${p.langLabel}】。\n先理解整段意思再译；禁止字面直译。\n\`[软译:释义]\` 是岛，位置与内容必须原样保留；岛以外的中文必须全部译成${p.langLabel}，禁止 evidence 粘贴中文。\n\`\`\`json\n${payloadJson}\n\`\`\``;
   return { system, user };
 }

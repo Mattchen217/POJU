@@ -898,7 +898,7 @@
     "progress": {
       "chart_ready": "Calibrating your birth moment and spatiotemporal coordinates...",
       "v2_compute": "Deducing your innate energy structure...",
-      "v2_compute_wait": "Computing core energy matrix and multidimensional aspect correlations... (Estimated time remaining: 1–3 minutes)",
+      "v2_compute_wait": "Computing core energy matrix and multidimensional aspect correlations...",
       "v2_narrative": "Building the report narrative backbone...",
       "v2_evidence": "Deducing evidence chain and underlying reasoning...",
       "v2_translate": "Executing deep semantic construction of high-dimensional deduction matrices...",

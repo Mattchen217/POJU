@@ -11,6 +11,11 @@ import {
   type ReportSegmentTextTree,
 } from "@/lib/base-analysis-v2/segment-text";
 import {
+  collapseRenderBracketsToMarkers,
+  expandMarkersToRenderBrackets,
+  stripTranslateIslands,
+} from "@/lib/base-analysis-v2/translate/render-for-translate";
+import {
   buildTranslatePrompt,
   type TranslateSummaryInput,
 } from "@/lib/base-analysis-v2/translate/translate-prompt";
@@ -32,6 +37,40 @@ const TOTAL_TIMEOUT_MS = 300_000;
 const MARKER_RE = /⟦t:[^⟧]+⟧/g;
 /** 去掉标记后仍大量汉字 → 依据没翻（保标记过度粘贴）。 */
 const HAN_RE = /[\u4e00-\u9fff]/g;
+
+/** 把树中各 path 的标记展开为 `[软译:释义]`，并记录 slug 序。 */
+function expandEvidenceTreeForTranslate(
+  tree: Record<string, unknown>,
+  paths: readonly string[],
+): { tree: Record<string, unknown>; slugsByPath: Record<string, string[]> } {
+  const out = structuredClone(tree) as Record<string, unknown>;
+  const slugsByPath: Record<string, string[]> = {};
+  for (const path of paths) {
+    const v = readPath(out, path);
+    if (typeof v !== "string" || !v.includes("⟦t:")) continue;
+    const { text, slugs } = expandMarkersToRenderBrackets(v, "zh");
+    setPath(out, path, text);
+    if (slugs.length > 0) slugsByPath[path] = slugs;
+  }
+  return { tree: out, slugsByPath };
+}
+
+/** 把译后 `[软译:释义]` 按序回填为 `⟦t:slug|⟧`。 */
+function collapseEvidenceTreeAfterTranslate(
+  tree: Record<string, unknown>,
+  slugsByPath: Record<string, string[]>,
+  paths: readonly string[],
+): Record<string, unknown> {
+  const out = structuredClone(tree) as Record<string, unknown>;
+  for (const path of paths) {
+    const slugs = slugsByPath[path];
+    if (!slugs?.length) continue;
+    const v = readPath(out, path);
+    if (typeof v !== "string") continue;
+    setPath(out, path, collapseRenderBracketsToMarkers(v, slugs));
+  }
+  return out;
+}
 
 export type TranslatedSummary = {
   keywords: string[];
@@ -151,9 +190,9 @@ export function findMarkerDrift(
   return null;
 }
 
-/** 去掉标记后统计汉字数（依据「粘贴未译」检测用）。 */
+/** 去掉标记岛 / 渲染态括号岛后统计汉字数（依据「粘贴未译」检测用）。 */
 export function countHanOutsideMarkers(text: string): number {
-  return (text.replace(MARKER_RE, "").match(HAN_RE) ?? []).length;
+  return (stripTranslateIslands(text).match(HAN_RE) ?? []).length;
 }
 
 /**
@@ -226,10 +265,15 @@ async function runTranslateTask(
   const includeSummary = task.name === "retune_card";
   const srcNar = pickTextPaths(input.narrative, task.paths);
   const srcEv = pickTextPaths(input.evidence, task.paths);
+  // 喂模型：页面渲染态 [软译:释义]；原 srcEv 仍留 ⟦t:⟧ 供漂移回填对照
+  const { tree: evidenceForModel, slugsByPath } = expandEvidenceTreeForTranslate(
+    srcEv,
+    task.paths,
+  );
 
   const payload: Record<string, unknown> = {
     narrative: srcNar,
-    evidence: srcEv,
+    evidence: evidenceForModel,
   };
   if (includeSummary) {
     payload.summary = {
@@ -339,8 +383,12 @@ async function runTranslateTask(
         );
       }
 
-      // 标记漂移 / 未译：代码回填或观测放行（软，不重发）
-      let evidenceOut = outEv as Record<string, unknown>;
+      // 渲染态括号 → ⟦t:slug|⟧；再与原文对照漂移回填（软，不重发）
+      let evidenceOut = collapseEvidenceTreeAfterTranslate(
+        outEv as Record<string, unknown>,
+        slugsByPath,
+        task.paths,
+      );
       const drift = findMarkerDrift(srcEv, evidenceOut, task.paths);
       if (drift) {
         evidenceOut = restoreEvidenceMarkers(srcEv, evidenceOut, task.paths);
@@ -433,7 +481,7 @@ export async function runTranslate(
     };
   }
 
-  // 旧 checkpoint / 误填软译槽：压回干净代号，再喂翻译（字典只认 slug→用神）
+  // 旧 checkpoint / 误填软译槽：压回空槽，再展开为渲染态 [软译:释义] 喂翻译
   const evidenceClean = mapSegmentTexts(input.evidence, (t) =>
     collapseMarkersToEmptySlots(t),
   );

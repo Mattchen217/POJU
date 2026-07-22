@@ -2142,7 +2142,7 @@
     "progress": {
       "chart_ready": "Calibration de votre moment de naissance et de vos coordonnées spatio-temporelles...",
       "v2_compute": "Déduction de votre structure énergétique innée...",
-      "v2_compute_wait": "Calcul de la matrice énergétique centrale et des corrélations d'aspects multidimensionnelles... (Temps estimé restant : 1 à 3 minutes)",
+      "v2_compute_wait": "Calcul de la matrice énergétique centrale et des corrélations d'aspects multidimensionnelles...",
       "v2_narrative": "Construction de la trame narrative du rapport...",
       "v2_evidence": "Déduction de la chaîne de preuves et des fondements sous-jacents...",
       "v2_translate": "Réalisation de la construction sémantique profonde des matrices de déduction à haute dimension...",
