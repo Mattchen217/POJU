@@ -140,8 +140,8 @@ assert("入场仪式 INTRO_TOTAL", sseClient.includes("WAIT_ARTIFACT_INTRO_TOTAL
 
 const waitConstants = read("lib/wait-ritual/constants.ts");
 assert(
-  "center hold 2000",
-  waitConstants.includes("WAIT_ARTIFACT_CENTER_HOLD_MS = 2000"),
+  "center hold 5000",
+  waitConstants.includes("WAIT_ARTIFACT_CENTER_HOLD_MS = 5000"),
 );
 
 const artifactUi = read("components/wait-ritual/WaitArtifactDocs.tsx");
@@ -161,6 +161,9 @@ assert(
 );
 assert("dog-ear fold face", artifactUi.includes("wait-artifact-doc__fold-face"));
 assert("center hold size enlarged", artifactCss.includes("--artifact-hold-w"));
+assert("completed check badge", artifactUi.includes("wait-artifact-doc__done"));
+assert("deeper dog-ear fold", artifactCss.includes("width: 40%"));
+assert("cluster toward center", artifactCss.includes("--artifact-cluster-x"));
 
 const enProgress = read("messages/en.json");
 assert(

@@ -28,7 +28,7 @@ export function TermMarkFirstVisitHint() {
         {t("term_mark_hint")}{" "}
         <span className="term-mark term-mark--neutral" aria-hidden>
           <span className="term-mark__word term-mark__word--interactive term-mark__info--inline">
-            {t("term_mark_hint_sample")}
+            {`[${t("term_mark_hint_sample")}]`}
           </span>
         </span>{" "}
         {t("term_mark_hint_suffix")}

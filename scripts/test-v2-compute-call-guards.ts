@@ -181,8 +181,31 @@ assert("L2 仅七杀：官杀→七杀", cleanText("官杀攻身", ctxQiShaOnly)
       zhSys.includes("五行连写要拆开"),
   );
   assert(
+    "COMPUTE 初中生检验标准",
+    zhSys.includes("初中生听得懂吗") && zhSys.includes("不止上面这些"),
+  );
+  assert(
+    "COMPUTE 行话按类给(非零散列举)",
+    zhSys.includes("生克帮扶类") &&
+      zhSys.includes("合冲刑害类") &&
+      zhSys.includes("生扶") &&
+      zhSys.includes("帮身"),
+  );
+  assert(
+    "COMPUTE 无零散行话清单诱导",
+    !zhSys.includes("(逢、喜用、需…扶、化杀、受制、当令、透干、泄身…)"),
+  );
+  assert(
+    "COMPUTE 格式转换程度正例",
+    zhSys.includes("只示范\"程度\",不要照抄内容") &&
+      zhSys.includes("生扶→滋养") &&
+      zhSys.includes("帮身→帮衬"),
+  );
+  assert(
     "COMPUTE 禁行话照搬反例",
-    zhSys.includes("大运逢木火喜用") && zhSys.includes("禁止"),
+    zhSys.includes("大运逢木火喜用") &&
+      zhSys.includes("劫财帮身") &&
+      zhSys.includes("禁止"),
   );
   assert(
     "COMPUTE 无行话正例诱导",

@@ -196,10 +196,10 @@ function TermMark({
           onClick={toggle}
           onKeyDown={onWordKeyDown}
         >
-          {softLabel}
+          [{softLabel}]
         </span>
       ) : (
-        <span className="term-mark__word">{softLabel}</span>
+        <span className="term-mark__word">[{softLabel}]</span>
       )}
       {portal}
     </span>

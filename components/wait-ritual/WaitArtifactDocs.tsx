@@ -156,13 +156,28 @@ function ArtifactDoc({
           <span className="wait-artifact-doc__fold-face" />
           <span className="wait-artifact-doc__fold-crease" />
         </span>
+        {/* Completed badge — only after seated */}
+        {state === "seated" ? (
+          <span className="wait-artifact-doc__done" aria-hidden>
+            <svg viewBox="0 0 16 16" className="wait-artifact-doc__done-icon">
+              <path
+                d="M3.5 8.2 6.6 11.2 12.5 4.8"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
+        ) : null}
       </div>
     </div>
   );
 }
 
 /**
- * Wait-ritual documents: center scale-up → hold 2s → seat in left 2×2 slots.
+ * Wait-ritual documents: center scale-up → hold 5s → seat in centered-left 2×2 slots.
  * Cover layout: glyph + done caption on the paper. Non-interactive.
  */
 export function WaitArtifactDocs({ artifacts, includeTranslate }: Props) {

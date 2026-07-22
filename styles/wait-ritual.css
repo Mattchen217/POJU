@@ -243,9 +243,14 @@
 }
 
 .wait-artifact-doc {
-  --artifact-hold-w: clamp(128px, 28vmin, 176px);
-  --artifact-seat-w: clamp(48px, 10vmin, 68px);
-  --artifact-seat-gap: 10px;
+  /* ~2× previous size */
+  --artifact-hold-w: clamp(240px, 52vmin, 340px);
+  --artifact-seat-w: clamp(96px, 20vmin, 136px);
+  --artifact-seat-gap: 14px;
+  /* 2×2 cluster: vertically centered, pulled toward page center (not far left) */
+  --artifact-cluster-x: clamp(22vw, 30vw, 36vw);
+  --artifact-cluster-y: 50%;
+  --artifact-seat-h: calc(var(--artifact-seat-w) * 297 / 210);
   position: absolute;
   left: 50%;
   top: 46%;
@@ -284,17 +289,17 @@
   transform: translate(-50%, -50%) scale(1);
 }
 
-/* Left-side 2×2 slots (mid-height), matching wait mockup */
+/* 2×2 slots: group vertically centered, cluster toward page center */
 .wait-artifact-doc--seated {
   opacity: 1;
   width: var(--artifact-seat-w);
   top: calc(
-    42% + (var(--artifact-row) - 0.5) * (var(--artifact-seat-w) * 1.42 + var(--artifact-seat-gap))
+    var(--artifact-cluster-y) +
+      (var(--artifact-row) - 0.5) * (var(--artifact-seat-h) + var(--artifact-seat-gap))
   );
   left: calc(
-    max(14px, env(safe-area-inset-left, 0px) + 10px) +
-      (var(--artifact-col) * (var(--artifact-seat-w) + var(--artifact-seat-gap))) +
-      (var(--artifact-seat-w) / 2)
+    var(--artifact-cluster-x) +
+      (var(--artifact-col) - 0.5) * (var(--artifact-seat-w) + var(--artifact-seat-gap))
   );
   transform: translate(-50%, -50%) scale(1);
 }
@@ -308,23 +313,23 @@
 .wait-artifact-doc__paper {
   position: absolute;
   inset: 0;
-  /* Cut top-right so dog-ear flap sits in the notch */
-  clip-path: polygon(0% 0%, 74% 0%, 100% 18%, 100% 100%, 0% 100%);
-  border-radius: 10px 0 10px 10px;
+  /* Deeper dog-ear notch (~40% fold) */
+  clip-path: polygon(0% 0%, 60% 0%, 100% 28%, 100% 100%, 0% 100%);
+  border-radius: 12px 0 12px 12px;
   background: linear-gradient(
     155deg,
-    rgba(28, 23, 53, 0.82) 0%,
-    rgba(20, 16, 41, 0.78) 45%,
-    rgba(11, 8, 21, 0.72) 100%
+    rgba(36, 28, 64, 0.88) 0%,
+    rgba(22, 16, 44, 0.84) 48%,
+    rgba(11, 8, 21, 0.8) 100%
   );
-  border: 1px solid rgba(167, 139, 250, 0.42);
+  border: 1.5px solid rgba(167, 139, 250, 0.5);
   box-shadow:
-    0 0 0 1px rgba(139, 92, 246, 0.12),
-    0 10px 36px rgba(11, 8, 21, 0.55),
-    0 0 28px rgba(139, 92, 246, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+    0 0 0 1px rgba(139, 92, 246, 0.16),
+    0 14px 44px rgba(11, 8, 21, 0.6),
+    0 0 36px rgba(139, 92, 246, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   color: rgba(192, 132, 252, 0.98);
   overflow: hidden;
 }
@@ -336,53 +341,51 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: clamp(6px, 1.6vmin, 12px);
-  padding: 14% 10% 12%;
+  gap: clamp(8px, 2vmin, 16px);
+  padding: 16% 12% 14%;
   box-sizing: border-box;
 }
 
 .wait-artifact-doc__glyph {
-  width: 36%;
+  width: 34%;
   height: auto;
   flex-shrink: 0;
-  filter: drop-shadow(0 0 8px rgba(168, 85, 247, 0.55));
+  filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.6));
 }
 
 .wait-artifact-doc__caption {
   margin: 0;
   width: 100%;
   text-align: center;
-  font-size: clamp(9px, 2.1vmin, 13px);
+  font-size: clamp(11px, 2.4vmin, 16px);
   line-height: 1.35;
-  color: rgba(244, 244, 245, 0.92);
+  color: rgba(244, 244, 245, 0.94);
   font-weight: 500;
   text-shadow: 0 1px 10px rgba(0, 0, 0, 0.65);
-  /* Cover title — keep inside paper */
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-/* Seated slots: icon-only (mockup), hide cover copy */
 .wait-artifact-doc--seated .wait-artifact-doc__caption {
   display: none;
 }
 
 .wait-artifact-doc--seated .wait-artifact-doc__cover {
-  padding: 18% 12%;
+  padding: 20% 14%;
 }
 
 .wait-artifact-doc--seated .wait-artifact-doc__glyph {
-  width: 48%;
+  width: 46%;
 }
 
-/* Dog-ear fold — light triangle flap on top-right (matches reference photos) */
+/* Larger dog-ear fold (~40% of sheet width) */
 .wait-artifact-doc__fold {
   position: absolute;
   top: 0;
   right: 0;
-  width: 26%;
+  width: 40%;
   aspect-ratio: 1;
   pointer-events: none;
   z-index: 2;
@@ -394,15 +397,15 @@
   clip-path: polygon(0 0, 100% 0, 100% 100%);
   background: linear-gradient(
     215deg,
-    rgba(255, 255, 255, 0.55) 0%,
-    rgba(210, 200, 240, 0.42) 38%,
-    rgba(139, 92, 246, 0.28) 72%,
-    rgba(76, 40, 140, 0.4) 100%
+    rgba(255, 255, 255, 0.62) 0%,
+    rgba(220, 210, 250, 0.48) 32%,
+    rgba(167, 139, 250, 0.36) 62%,
+    rgba(76, 40, 140, 0.48) 100%
   );
   box-shadow:
-    -2px 2px 6px rgba(0, 0, 0, 0.35),
-    inset 1px -1px 0 rgba(255, 255, 255, 0.22);
-  border-radius: 0 8px 0 0;
+    -3px 3px 10px rgba(0, 0, 0, 0.4),
+    inset 1px -1px 0 rgba(255, 255, 255, 0.28);
+  border-radius: 0 10px 0 0;
 }
 
 .wait-artifact-doc__fold-crease {
@@ -411,12 +414,37 @@
   clip-path: polygon(0 0, 100% 0, 100% 100%);
   background: linear-gradient(
     225deg,
-    transparent 46%,
-    rgba(11, 8, 21, 0.45) 49.5%,
-    rgba(255, 255, 255, 0.2) 51%,
-    transparent 55%
+    transparent 45%,
+    rgba(11, 8, 21, 0.5) 49%,
+    rgba(255, 255, 255, 0.28) 51%,
+    transparent 56%
   );
   pointer-events: none;
+}
+
+/* Completed ✓ badge — bottom-right after seated */
+.wait-artifact-doc__done {
+  position: absolute;
+  right: -6%;
+  bottom: -4%;
+  z-index: 3;
+  width: clamp(22px, 28%, 36px);
+  height: clamp(22px, 28%, 36px);
+  border-radius: 50%;
+  background: #8b5cf6;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 2px 10px rgba(139, 92, 246, 0.55),
+    0 0 0 2px rgba(11, 8, 21, 0.55);
+}
+
+.wait-artifact-doc__done-icon {
+  width: 58%;
+  height: 58%;
+  display: block;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -430,12 +458,12 @@
     opacity: 1;
     width: var(--artifact-seat-w);
     top: calc(
-      42% + (var(--artifact-row) - 0.5) * (var(--artifact-seat-w) * 1.42 + var(--artifact-seat-gap))
+      var(--artifact-cluster-y) +
+        (var(--artifact-row) - 0.5) * (var(--artifact-seat-h) + var(--artifact-seat-gap))
     );
     left: calc(
-      max(14px, env(safe-area-inset-left, 0px) + 10px) +
-        (var(--artifact-col) * (var(--artifact-seat-w) + var(--artifact-seat-gap))) +
-        (var(--artifact-seat-w) / 2)
+      var(--artifact-cluster-x) +
+        (var(--artifact-col) - 0.5) * (var(--artifact-seat-w) + var(--artifact-seat-gap))
     );
     transform: translate(-50%, -50%) scale(1);
   }

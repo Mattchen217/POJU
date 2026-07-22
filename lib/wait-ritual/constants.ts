@@ -32,8 +32,8 @@ export const WAIT_STEP_INTERVAL_MS = ACTIVITY_CAPTION_ROTATE_MS;
 export const WAIT_SEMANTIC_ARTIFACT_MS = 60_000;
 /** Non-zh finalize theater: switch to final-audit copy. */
 export const WAIT_FINAL_AUDIT_MS = 120_000;
-/** A4 center hold before flying to top-left slot. */
-export const WAIT_ARTIFACT_CENTER_HOLD_MS = 2000;
+/** A4 center hold before flying to left 2×2 slot. */
+export const WAIT_ARTIFACT_CENTER_HOLD_MS = 5000;
 /** Spawn scale-up + seat flight (must cover CSS transitions). */
 export const WAIT_ARTIFACT_SPAWN_MS = 400;
 export const WAIT_ARTIFACT_SEAT_MS = 850;
