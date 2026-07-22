@@ -246,9 +246,9 @@
   /* ~2× previous size */
   --artifact-hold-w: clamp(240px, 52vmin, 340px);
   --artifact-seat-w: clamp(96px, 20vmin, 136px);
-  --artifact-seat-gap: 14px;
-  /* 2×2 cluster: vertically centered, pulled toward page center (not far left) */
-  --artifact-cluster-x: clamp(22vw, 30vw, 36vw);
+  --artifact-seat-gap: clamp(28px, 4.5vw, 44px);
+  /* 2×2 cluster: vertically centered, further left (~10vw) from center orb */
+  --artifact-cluster-x: clamp(12vw, 20vw, 26vw);
   --artifact-cluster-y: 50%;
   --artifact-seat-h: calc(var(--artifact-seat-w) * 297 / 210);
   position: absolute;
@@ -289,7 +289,7 @@
   transform: translate(-50%, -50%) scale(1);
 }
 
-/* 2×2 slots: group vertically centered, cluster toward page center */
+/* 2×2 slots: group vertically centered, further left of center orb */
 .wait-artifact-doc--seated {
   opacity: 1;
   width: var(--artifact-seat-w);
@@ -302,6 +302,9 @@
       (var(--artifact-col) - 0.5) * (var(--artifact-seat-w) + var(--artifact-seat-gap))
   );
   transform: translate(-50%, -50%) scale(1);
+  pointer-events: auto;
+  cursor: pointer;
+  z-index: 4;
 }
 
 .wait-artifact-doc__sheet {
@@ -381,7 +384,7 @@
   overflow: hidden;
 }
 
-/* Seated: icon only */
+/* Seated: icon only; caption tip via hover / focus / tap */
 .wait-artifact-doc--seated .wait-artifact-doc__cover {
   padding: 18% 14%;
   gap: 0;
@@ -393,6 +396,35 @@
 
 .wait-artifact-doc--seated .wait-artifact-doc__caption {
   display: none;
+}
+
+.wait-artifact-doc__tip {
+  display: none;
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 10px);
+  transform: translateX(-50%);
+  z-index: 5;
+  width: max-content;
+  max-width: min(220px, 42vw);
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  text-align: center;
+  font-size: clamp(10px, 1.8vmin, 13px);
+  line-height: 1.35;
+  font-weight: 500;
+  color: rgba(244, 244, 245, 0.96);
+  background: rgba(22, 16, 44, 0.92);
+  border: 1px solid rgba(167, 139, 250, 0.4);
+  box-shadow: 0 8px 24px rgba(11, 8, 21, 0.55);
+  pointer-events: none;
+}
+
+.wait-artifact-doc--seated:hover .wait-artifact-doc__tip,
+.wait-artifact-doc--seated:focus-visible .wait-artifact-doc__tip,
+.wait-artifact-doc--seated.wait-artifact-doc--tip-open .wait-artifact-doc__tip {
+  display: block;
 }
 
 /*

@@ -13,8 +13,8 @@ import type { ReportComputed } from "@/lib/base-analysis-v2/report-schema";
 import type { ReportSegmentTextTree } from "@/lib/base-analysis-v2/segment-text";
 import {
   WAIT_ARTIFACT_INTRO_TOTAL_MS,
-  WAIT_ARTIFACT_SEAT_MS,
   WAIT_FINAL_AUDIT_MS,
+  WAIT_LAST_ARTIFACT_LEAD_MS,
   WAIT_SEMANTIC_ARTIFACT_MS,
 } from "@/lib/wait-ritual/constants";
 
@@ -180,6 +180,8 @@ export async function consumeBaseAnalysisStream(input: {
     // switch to evidence copy → after evidence done, Phase 3 continues.
     const needNar = !narrative;
     const needEv = !evidence;
+    /** Wall clock when the locale's last document artifact was emitted. */
+    let lastArtifactAt = 0;
 
     if (needNar || needEv) {
       if (needNar) {
@@ -212,6 +214,7 @@ export async function consumeBaseAnalysisStream(input: {
         (async () => {
           if (!needEv) {
             emit(input.callbacks, "v2_evidence", "evidence");
+            lastArtifactAt = Date.now();
             evidenceDone = true;
             return;
           }
@@ -223,11 +226,13 @@ export async function consumeBaseAnalysisStream(input: {
           evidence = data.evidence;
           await persistCheckpoint({ evidence });
           evidenceDone = true;
+          lastArtifactAt = Date.now();
           emit(input.callbacks, "v2_evidence", "evidence");
         })(),
       ]);
     } else {
       emit(input.callbacks, "v2_narrative", "narrative");
+      lastArtifactAt = Date.now();
       emit(input.callbacks, "v2_evidence", "evidence");
     }
 
@@ -237,7 +242,7 @@ export async function consumeBaseAnalysisStream(input: {
 
     // ── Phase 3: finalize (± translate) ───────────────────────────
     // Non-zh: timed "semantic construction" theater (no translation wording).
-    // Zh: merge-only finalize — short audit, no 60/120 timers, no 4th artifact.
+    // Zh: merge-only finalize — no 4th artifact; last doc is evidence.
     const isZh = siteLocale.startsWith("zh");
     let translateArtifactEmitted = false;
     const theaterTimers: ReturnType<typeof setTimeout>[] = [];
@@ -261,13 +266,24 @@ export async function consumeBaseAnalysisStream(input: {
         );
       });
 
+    /** Finishing copy + dwell so last artifact's center→slot ritual is visible. */
+    const holdLastArtifactThenFinish = async () => {
+      emit(input.callbacks, "v2_final_audit");
+      const elapsed = lastArtifactAt > 0 ? Date.now() - lastArtifactAt : 0;
+      const need = Math.max(WAIT_LAST_ARTIFACT_LEAD_MS, WAIT_ARTIFACT_INTRO_TOTAL_MS);
+      const remain = need - elapsed;
+      if (remain > 0) await waitMs(remain);
+    };
+
     if (isZh) {
+      // Zh last artifact (evidence) already emitted — switch to finishing copy now.
       emit(input.callbacks, "v2_final_audit");
     } else {
       emit(input.callbacks, "v2_translate");
       theaterTimers.push(
         setTimeout(() => {
           translateArtifactEmitted = true;
+          lastArtifactAt = Date.now();
           emit(input.callbacks, "v2_semantic_text", "translate");
         }, WAIT_SEMANTIC_ARTIFACT_MS),
       );
@@ -308,15 +324,13 @@ export async function consumeBaseAnalysisStream(input: {
     if (!isZh && final.translated) {
       if (!translateArtifactEmitted) {
         translateArtifactEmitted = true;
+        lastArtifactAt = Date.now();
         emit(input.callbacks, "v2_semantic_text", "translate");
-        // Wait for center spawn → hold 2s → seat before tearing down wait UI.
-        await waitMs(WAIT_ARTIFACT_INTRO_TOTAL_MS);
-      } else {
-        emit(input.callbacks, "v2_final_audit");
-        await waitMs(WAIT_ARTIFACT_SEAT_MS);
       }
+      await holdLastArtifactThenFinish();
     } else if (isZh) {
-      emit(input.callbacks, "v2_final_audit");
+      // ③ evidence already shown; dwell ≥30s with finishing copy before delivery.
+      await holdLastArtifactThenFinish();
     }
 
     await clearV2Checkpoint(input.profile_id);

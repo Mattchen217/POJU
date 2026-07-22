@@ -9,6 +9,7 @@ import { buildMarkerDictionary } from "@/lib/base-analysis-v2/translate/marker-d
 import {
   collapseRenderBracketsToMarkers,
   expandMarkersToRenderBrackets,
+  stripSpuriousZhBrackets,
   stripTranslateIslands,
 } from "@/lib/base-analysis-v2/translate/render-for-translate";
 import {
@@ -75,6 +76,21 @@ assert("词典不含自造软译锚元行", !dict.includes("锚元"));
     !stripTranslateIslands(text).includes("本元") &&
       stripTranslateIslands(text).includes("偏弱"),
   );
+  const withFallback = expandMarkersToRenderBrackets(
+    "全局【内在本色】偏弱，⟦t:day_master|⟧需补。",
+    "zh",
+  );
+  assert(
+    "展开时拆掉全角平替",
+    withFallback.text.includes("内在本色") &&
+      !withFallback.text.includes("【") &&
+      withFallback.slugs.join(",") === "day_master",
+  );
+  assert(
+    "剥中文伪岛",
+    stripSpuriousZhBrackets("The [内在本色] is weak【稳健资源】.") ===
+      "The 内在本色 is weak稳健资源.",
+  );
 }
 
 const { system, user } = buildTranslatePrompt("en", {
@@ -88,12 +104,16 @@ const { system, user } = buildTranslatePrompt("en", {
 assert("translate 禁粘贴中文依据", system.includes("绝对禁止") && system.includes("evidence"));
 assert("translate 强调意译禁直译", system.includes("意译") && system.includes("字面直译"));
 assert("translate 含直译反例", system.includes("helps the body") && system.includes("has root qi"));
-assert("translate 方括号岛", system.includes("[软译:释义]") || system.includes("`[…]`"));
+assert("translate 干支教材腔反例", system.includes("Heavenly Stems") && system.includes("Si Fire"));
+assert("translate 按类反例", system.includes("行话连接类") && system.includes("干支教材腔类"));
+assert("translate 方括号岛", system.includes("[软译:一句释义]") || system.includes("[软译:释义]"));
+assert("translate 区分全角平替", system.includes("【") && system.includes("不是岛"));
 assert("translate system 无代号表", !system.includes("代号含义表") && !system.includes("代号 day_master"));
 assert("translate system 无真算", !system.includes("bazi_basis") && !system.includes("core_conclusion"));
 assert("translate user 含 payload", user.includes("你像一株藤蔓"));
 assert("translate user 禁 evidence 粘贴中文", user.includes("禁止 evidence 粘贴中文"));
 assert("translate user 渲染态岛", user.includes("[本元:"));
+assert("translate user 禁干支教材腔", user.includes("干支教材腔"));
 assert(
   "countHan 不计括号岛内汉字",
   countHanOutsideMarkers("[本元:很长的中文释义在这里面。]is weak.") < 3,
@@ -184,6 +204,12 @@ assert(
   "center hold 5000",
   waitConstants.includes("WAIT_ARTIFACT_CENTER_HOLD_MS = 5000"),
 );
+assert(
+  "last artifact lead 30s before delivery",
+  waitConstants.includes("WAIT_LAST_ARTIFACT_LEAD_MS = 30_000") &&
+    sseClient.includes("WAIT_LAST_ARTIFACT_LEAD_MS") &&
+    sseClient.includes("holdLastArtifactThenFinish"),
+);
 
 const artifactUi = read("components/wait-ritual/WaitArtifactDocs.tsx");
 assert("spawn hold seated", artifactUi.includes('"spawn"') && artifactUi.includes('"hold"') && artifactUi.includes('"seated"'));
@@ -224,6 +250,12 @@ assert(
   ),
 );
 assert(
+  "seated tip hover/tap",
+  artifactUi.includes("wait-artifact-doc__tip") &&
+    artifactUi.includes("wait-artifact-doc--tip-open") &&
+    artifactCss.includes("wait-artifact-doc__tip"),
+);
+assert(
   "cover flex glyph + caption gap",
   artifactCss.includes("flex-direction: column") &&
     artifactCss.includes("justify-content: center") &&
@@ -235,7 +267,11 @@ assert(
     !/setInterval\(\s*tick/.test(sseClient) &&
     sseClient.includes("needEv && !evidenceDone"),
 );
-assert("cluster toward center", artifactCss.includes("--artifact-cluster-x"));
+assert(
+  "cluster further left + wider gaps",
+  artifactCss.includes("--artifact-cluster-x: clamp(12vw, 20vw, 26vw)") &&
+    artifactCss.includes("--artifact-seat-gap: clamp(28px, 4.5vw, 44px)"),
+);
 
 const enProgress = read("messages/en.json");
 assert(

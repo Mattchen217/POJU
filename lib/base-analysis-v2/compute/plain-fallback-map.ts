@@ -46,7 +46,7 @@ export const PLAIN_FALLBACK_BODY_SINGLES: Readonly<Record<string, string>> = {
   大运: "【人生阶段】",
   流年: "【当下外境】",
   流时: "【当下节奏】",
-  五行: "【能量五行】",
+  // 五行/金木水火土：交付规范允许原字直出，不打标、不平替（译员与读者都能懂）
   八字: "【能量结构】",
 };
 

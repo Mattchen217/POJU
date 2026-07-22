@@ -110,14 +110,14 @@ export function forceRemarkAndFallback(text: string, locale: string): string {
 
 /**
  * 打标器兜底 + 柱位/关系词补标 + 真词/标记去重 + 五行还原；★ 不填软译槽 —— 留给 merge/finalize。
- * 依据里出现的命理词无条件全打（不限每段2个）；承重筛选交给 prompt。
+ * 承重筛选以模型为准；此处只补漏网裸词，且每段有上限、同词全文只标一次——避免把密度再打回去。
  * 先 dedupe 再打标，避免「日主⟦t:day_master|⟧」在全打下被打成双标记。
  */
 export function polishEvidenceSegment(text: string, locale: string): string {
   let marked = dedupeBareTermBeforeMarker(text);
   marked = autoMarkBareTerms(marked, locale, {
-    maxPerPara: Infinity,
-    oncePerText: false,
+    maxPerPara: 3,
+    oncePerText: true,
   });
   marked = wrapBarePillars(marked, locale);
   marked = wrapBareRelations(marked, locale);

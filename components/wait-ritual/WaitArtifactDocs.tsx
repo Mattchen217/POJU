@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties, type KeyboardEvent } from "react";
 import { useTranslations } from "next-intl";
 import { clsx } from "clsx";
 
@@ -95,8 +95,10 @@ function ArtifactDoc({
   caption: string;
 }) {
   const [state, setState] = useState<SeatState>("spawn");
+  const [tipOpen, setTipOpen] = useState(false);
   const slotCol = slotIndex % 2;
   const slotRow = Math.floor(slotIndex / 2);
+  const seated = state === "seated";
 
   useEffect(() => {
     const reduced =
@@ -125,6 +127,33 @@ function ArtifactDoc({
     return () => cancelAnimationFrame(id);
   }, []);
 
+  useEffect(() => {
+    if (!seated || !tipOpen) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target;
+      if (target instanceof Element && target.closest(`[data-artifact-kind="${kind}"]`)) {
+        return;
+      }
+      setTipOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [seated, tipOpen, kind]);
+
+  const onActivate = () => {
+    if (!seated) return;
+    setTipOpen((open) => !open);
+  };
+
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (!seated) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onActivate();
+    }
+    if (e.key === "Escape") setTipOpen(false);
+  };
+
   return (
     <div
       className={clsx(
@@ -132,7 +161,8 @@ function ArtifactDoc({
         state === "spawn" && "wait-artifact-doc--spawn",
         state === "spawn" && spawnActive && "wait-artifact-doc--spawn-active",
         state === "hold" && "wait-artifact-doc--hold",
-        state === "seated" && "wait-artifact-doc--seated",
+        seated && "wait-artifact-doc--seated",
+        seated && tipOpen && "wait-artifact-doc--tip-open",
       )}
       style={
         {
@@ -142,7 +172,13 @@ function ArtifactDoc({
           "--artifact-row": slotRow,
         } as CSSProperties
       }
-      aria-hidden
+      data-artifact-kind={kind}
+      role={seated ? "button" : undefined}
+      tabIndex={seated ? 0 : undefined}
+      aria-label={seated ? caption : undefined}
+      aria-expanded={seated ? tipOpen : undefined}
+      onClick={seated ? onActivate : undefined}
+      onKeyDown={seated ? onKeyDown : undefined}
     >
       <div className="wait-artifact-doc__sheet">
         <div className="wait-artifact-doc__paper">
@@ -157,7 +193,7 @@ function ArtifactDoc({
           <span className="wait-artifact-doc__fold-crease" />
         </span>
         {/* Completed badge — only after seated */}
-        {state === "seated" ? (
+        {seated ? (
           <span className="wait-artifact-doc__done" aria-hidden>
             <svg viewBox="0 0 16 16" className="wait-artifact-doc__done-icon">
               <path
@@ -171,6 +207,7 @@ function ArtifactDoc({
             </svg>
           </span>
         ) : null}
+        {seated ? <p className="wait-artifact-doc__tip">{caption}</p> : null}
       </div>
     </div>
   );
@@ -178,7 +215,7 @@ function ArtifactDoc({
 
 /**
  * Wait-ritual documents: center scale-up → hold 5s → seat in centered-left 2×2 slots.
- * Cover: large centered glyph + caption below. Seated: icon only.
+ * Cover: large centered glyph + caption below. Seated: icon only; hover/tap shows tip.
  */
 export function WaitArtifactDocs({ artifacts, includeTranslate }: Props) {
   const t = useTranslations("wait_ritual.artifacts");
@@ -191,7 +228,7 @@ export function WaitArtifactDocs({ artifacts, includeTranslate }: Props) {
   if (visibleKinds.length === 0) return null;
 
   return (
-    <div className="wait-artifact-layer" aria-hidden>
+    <div className="wait-artifact-layer">
       {visibleKinds.map((kind) => {
         const slotIndex = ORDER.filter((k) => k !== "translate" || includeTranslate).indexOf(kind);
         return (

@@ -232,10 +232,10 @@ function fillTree(text: string): ReportSegmentTextTree {
       "日主为乙木，得正印壬水生扶，食神透出，伤官泄秀，偏财被克。";
     const allMarked = polishEvidenceSegment(dense, "zh");
     const markCount = (allMarked.match(/⟦t:/g) ?? []).length;
-    assert("依据取消每段2个上限(≥4标)", markCount >= 4);
+    assert("依据补漏有密度上限(≤3标)", markCount >= 1 && markCount <= 3);
     assert(
-      "依据承重词全打无裸十神",
-      !/(日主|正印|食神|伤官|偏财)/.test(allMarked.replace(/⟦[^⟧]*⟧/g, "")),
+      "依据补漏后仍含标记且未无限堆标",
+      allMarked.includes("⟦t:") && markCount <= 3,
     );
   }
   {
@@ -302,6 +302,12 @@ function fillTree(text: string): ReportSegmentTextTree {
   );
   assert("evidence 标记代替真词", ep.system.includes("标记代替真词"));
   assert("evidence 最短完整承重链", ep.system.includes("最短完整承重链"));
+  assert(
+    "evidence 密度铁律",
+    ep.system.includes("密度铁律") &&
+      ep.system.includes("禁止一句里串一长排金字") &&
+      ep.user.includes("禁止一句串一长排金字"),
+  );
   assert(
     "evidence 白话连接铁律二",
     ep.system.includes("铁律二") &&
@@ -466,10 +472,10 @@ function fillTree(text: string): ReportSegmentTextTree {
     evidence.includes("EVIDENCE_TASKS") && evidence.includes("Promise.all"),
   );
   assert(
-    "evidence polish 接 wrapBarePillars + 全打",
+    "evidence polish 接 wrapBarePillars + 密度上限补漏",
     evidence.includes("wrapBarePillars") &&
-      evidence.includes("maxPerPara: Infinity") &&
-      evidence.includes("oncePerText: false"),
+      evidence.includes("maxPerPara: 3") &&
+      evidence.includes("oncePerText: true"),
   );
   assert("evidence 接 wrapBareRelations", evidence.includes("wrapBareRelations"));
   assert(

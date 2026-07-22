@@ -13,6 +13,7 @@ import {
 import {
   collapseRenderBracketsToMarkers,
   expandMarkersToRenderBrackets,
+  stripSpuriousZhBrackets,
   stripTranslateIslands,
 } from "@/lib/base-analysis-v2/translate/render-for-translate";
 import {
@@ -38,7 +39,7 @@ const MARKER_RE = /⟦t:[^⟧]+⟧/g;
 /** 去掉标记后仍大量汉字 → 依据没翻（保标记过度粘贴）。 */
 const HAN_RE = /[\u4e00-\u9fff]/g;
 
-/** 把树中各 path 的标记展开为 `[软译:释义]`，并记录 slug 序。 */
+/** 把树中各 path 展开为渲染态 `[软译:释义]`，拆掉【平替】，并记录 slug 序。 */
 function expandEvidenceTreeForTranslate(
   tree: Record<string, unknown>,
   paths: readonly string[],
@@ -47,7 +48,8 @@ function expandEvidenceTreeForTranslate(
   const slugsByPath: Record<string, string[]> = {};
   for (const path of paths) {
     const v = readPath(out, path);
-    if (typeof v !== "string" || !v.includes("⟦t:")) continue;
+    if (typeof v !== "string" || !v.trim()) continue;
+    if (!v.includes("⟦t:") && !v.includes("【")) continue;
     const { text, slugs } = expandMarkersToRenderBrackets(v, "zh");
     setPath(out, path, text);
     if (slugs.length > 0) slugsByPath[path] = slugs;
@@ -55,7 +57,7 @@ function expandEvidenceTreeForTranslate(
   return { tree: out, slugsByPath };
 }
 
-/** 把译后 `[软译:释义]` 按序回填为 `⟦t:slug|⟧`。 */
+/** 把译后 `[软译:释义]` 按序回填为 `⟦t:slug|⟧`，并剥残留中文伪岛。 */
 function collapseEvidenceTreeAfterTranslate(
   tree: Record<string, unknown>,
   slugsByPath: Record<string, string[]>,
@@ -63,11 +65,12 @@ function collapseEvidenceTreeAfterTranslate(
 ): Record<string, unknown> {
   const out = structuredClone(tree) as Record<string, unknown>;
   for (const path of paths) {
-    const slugs = slugsByPath[path];
-    if (!slugs?.length) continue;
     const v = readPath(out, path);
     if (typeof v !== "string") continue;
-    setPath(out, path, collapseRenderBracketsToMarkers(v, slugs));
+    const slugs = slugsByPath[path] ?? [];
+    const collapsed =
+      slugs.length > 0 ? collapseRenderBracketsToMarkers(v, slugs) : v;
+    setPath(out, path, stripSpuriousZhBrackets(collapsed));
   }
   return out;
 }
@@ -265,14 +268,25 @@ async function runTranslateTask(
   const includeSummary = task.name === "retune_card";
   const srcNar = pickTextPaths(input.narrative, task.paths);
   const srcEv = pickTextPaths(input.evidence, task.paths);
-  // 喂模型：页面渲染态 [软译:释义]；原 srcEv 仍留 ⟦t:⟧ 供漂移回填对照
+  // 喂模型：页面渲染态 [软译:释义]；拆掉【平替】；原 srcEv 仍留 ⟦t:⟧ 供漂移回填对照
   const { tree: evidenceForModel, slugsByPath } = expandEvidenceTreeForTranslate(
     srcEv,
     task.paths,
   );
+  const narrativeForModel = structuredClone(srcNar) as Record<string, unknown>;
+  for (const path of task.paths) {
+    const v = readPath(narrativeForModel, path);
+    if (typeof v === "string" && v.includes("【")) {
+      setPath(
+        narrativeForModel,
+        path,
+        expandMarkersToRenderBrackets(v, "zh").text,
+      );
+    }
+  }
 
   const payload: Record<string, unknown> = {
-    narrative: srcNar,
+    narrative: narrativeForModel,
     evidence: evidenceForModel,
   };
   if (includeSummary) {

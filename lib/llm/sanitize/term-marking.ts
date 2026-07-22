@@ -1189,7 +1189,7 @@ export function rewriteMarkersWithSsotSoft(text: string, locale: string): string
 /**
  * 双层交付的渲染层身份：
  * - body     正文层 —— 零金字。标记降级成贴题白话；裸词走「替换成白话」的合规网。
- * - evidence 依据层 —— 金字集中、默认折叠、允许"不好读"，密度上限放宽到 ≤3。
+ * - evidence 依据层 —— 金字集中、默认折叠；补漏打标每段有上限且同词全文一次，避免把承重筛选打回高密度。
  * - legacy   未接双层制的老界面（Glyph / Match / 底座）—— 行为与改动前 100% 一致。
  */
 export type MarkLayer = "body" | "evidence" | "legacy";
@@ -1362,19 +1362,21 @@ export function buildTermMarkingPromptBlock(
     ? zh
       ? `## 打标记规则（中立底座）
 1. 格式：\`⟦t:<slug>|⟧\` —— **竖线保留，后面留空**。
-2. **正文零标记**；标记只出现在「依据与推理」；一段依据 ≤3 金字。
-3. **slug 必须取自上表**；自造 id 无效、句子会缺字 —— 上表没有的概念，**直接用白话讲，不打标**。
-4. 守六条语义红线（不预测/不算命/不占卜/不决吉凶/不恐吓/不超自然承诺）。
-5. **标记是用来【代替】那个词的，不是加在那个词后面。**
+2. **正文零标记**；标记只出现在「依据与推理」。
+3. **只打承重项**：去掉就撑不住本段结论的才打；凑数的不打。禁止一句串一长排金字。
+4. **slug 必须取自上表**；自造 id 无效、句子会缺字 —— 上表没有的概念，**直接用白话讲，不打标**。
+5. 守六条语义红线（不预测/不算命/不占卜/不决吉凶/不恐吓/不超自然承诺）。
+6. **标记是用来【代替】那个词的，不是加在那个词后面。**
    要标注一个命理概念时，直接写 \`⟦t:代号|⟧\` 就够了——标记本身【就代表】那个概念。
    - 【不允许】把概念的中文名字写出来、再在后面补一个标记（等于同一个词说了两遍）。
    - 标记出现的地方，就是那个概念该在的地方，它前面不要再放这个概念的中文真词。`
       : `## Marking rules (neutral base)
 1. Format: \`⟦t:<slug>|⟧\` — **keep the pipe, leave the slot after it empty**.
-2. **Zero markers in body prose**; markers only in the evidence note; ≤3 markers per evidence segment.
-3. **slug must come from the table**; invented ids are invalid — for concepts not listed, **use plain language, no marker**.
-4. Keep the six semantic red lines (no prediction / fate-telling / divination / omen verdicts / fear / supernatural promises).
-5. **A marker REPLACES the term — it is not appended after the term.**
+2. **Zero markers in body prose**; markers only in the evidence note.
+3. **Mark load-bearing terms only** — if removing it collapses the claim, mark it; otherwise omit. Do not stack a long run of markers in one sentence.
+4. **slug must come from the table**; invented ids are invalid — for concepts not listed, **use plain language, no marker**.
+5. Keep the six semantic red lines (no prediction / fate-telling / divination / omen verdicts / fear / supernatural promises).
+6. **A marker REPLACES the term — it is not appended after the term.**
    When marking a concept, write only \`⟦t:slug|⟧\` — the marker itself stands for that concept.
    - Do **not** write the Chinese jargon and then a marker next to it (that says the same thing twice).
    - Where the marker appears is where the concept belongs; do not put the Chinese real-term immediately before it.`
