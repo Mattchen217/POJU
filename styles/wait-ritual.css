@@ -305,6 +305,8 @@
 }
 
 .wait-artifact-doc__sheet {
+  /* Dog-ear size: top-right isosceles triangle cut + flap folded onto page */
+  --fold-size: 40%;
   position: relative;
   width: 100%;
   aspect-ratio: 210 / 297;
@@ -313,8 +315,14 @@
 .wait-artifact-doc__paper {
   position: absolute;
   inset: 0;
-  /* Deeper dog-ear notch (~40% fold) */
-  clip-path: polygon(0% 0%, 60% 0%, 100% 28%, 100% 100%, 0% 100%);
+  /* Missing top-right corner (folded away) — not a full rectangle */
+  clip-path: polygon(
+    0% 0%,
+    calc(100% - var(--fold-size)) 0%,
+    100% var(--fold-size),
+    100% 100%,
+    0% 100%
+  );
   border-radius: 12px 0 12px 12px;
   background: linear-gradient(
     155deg,
@@ -334,26 +342,34 @@
   overflow: hidden;
 }
 
+/*
+ * Cover: caption vertically centered on the page; glyph sits directly above it.
+ * Middle row = caption; top 1fr ends with glyph so icon is above centered copy.
+ */
 .wait-artifact-doc__cover {
   position: absolute;
   inset: 0;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: 1fr auto 1fr;
+  grid-template-columns: 1fr;
+  justify-items: center;
   align-items: center;
-  justify-content: center;
-  gap: clamp(8px, 2vmin, 16px);
-  padding: 16% 12% 14%;
+  padding: 12% 14% 14%;
   box-sizing: border-box;
+  row-gap: clamp(6px, 1.6vmin, 12px);
 }
 
 .wait-artifact-doc__glyph {
-  width: 34%;
+  grid-row: 1;
+  align-self: end;
+  width: 28%;
   height: auto;
   flex-shrink: 0;
   filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.6));
 }
 
 .wait-artifact-doc__caption {
+  grid-row: 2;
   margin: 0;
   width: 100%;
   text-align: center;
@@ -368,19 +384,26 @@
   overflow: hidden;
 }
 
-.wait-artifact-doc--seated .wait-artifact-doc__caption {
-  display: none;
-}
-
+/* Seated: keep icon + caption, scaled down with the sheet */
 .wait-artifact-doc--seated .wait-artifact-doc__cover {
-  padding: 20% 14%;
+  padding: 10% 8% 14%;
+  row-gap: 4px;
 }
 
 .wait-artifact-doc--seated .wait-artifact-doc__glyph {
-  width: 46%;
+  width: 26%;
 }
 
-/* Larger dog-ear fold (~40% of sheet width) */
+.wait-artifact-doc--seated .wait-artifact-doc__caption {
+  font-size: clamp(6px, 1.35vmin, 9px);
+  line-height: 1.25;
+  -webkit-line-clamp: 3;
+}
+
+/*
+ * Folded flap: the cut-off corner folded down onto the page
+ * (lower-left half of the top-right square — sits ON the paper, not in the void).
+ */
 .wait-artifact-doc__fold {
   position: absolute;
   top: 0;
@@ -389,35 +412,34 @@
   aspect-ratio: 1;
   pointer-events: none;
   z-index: 2;
+  filter: drop-shadow(-2px 3px 4px rgba(0, 0, 0, 0.45));
 }
 
 .wait-artifact-doc__fold-face {
   position: absolute;
   inset: 0;
-  clip-path: polygon(0 0, 100% 0, 100% 100%);
+  /* Tip was (100%,0); after fold it lands at (0,100%) along the crease */
+  clip-path: polygon(0 0, 100% 100%, 0 100%);
   background: linear-gradient(
-    215deg,
-    rgba(255, 255, 255, 0.62) 0%,
-    rgba(220, 210, 250, 0.48) 32%,
-    rgba(167, 139, 250, 0.36) 62%,
-    rgba(76, 40, 140, 0.48) 100%
+    135deg,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(220, 210, 250, 0.42) 28%,
+    rgba(167, 139, 250, 0.38) 58%,
+    rgba(76, 40, 140, 0.55) 100%
   );
-  box-shadow:
-    -3px 3px 10px rgba(0, 0, 0, 0.4),
-    inset 1px -1px 0 rgba(255, 255, 255, 0.28);
-  border-radius: 0 10px 0 0;
+  box-shadow: inset 1px -1px 0 rgba(255, 255, 255, 0.22);
 }
 
 .wait-artifact-doc__fold-crease {
   position: absolute;
   inset: 0;
-  clip-path: polygon(0 0, 100% 0, 100% 100%);
+  clip-path: polygon(0 0, 100% 100%, 0 100%);
   background: linear-gradient(
-    225deg,
-    transparent 45%,
-    rgba(11, 8, 21, 0.5) 49%,
-    rgba(255, 255, 255, 0.28) 51%,
-    transparent 56%
+    135deg,
+    transparent 46%,
+    rgba(11, 8, 21, 0.55) 49.5%,
+    rgba(255, 255, 255, 0.22) 51%,
+    transparent 55%
   );
   pointer-events: none;
 }

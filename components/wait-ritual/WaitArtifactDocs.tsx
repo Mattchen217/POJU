@@ -151,7 +151,7 @@ function ArtifactDoc({
             <p className="wait-artifact-doc__caption">{caption}</p>
           </div>
         </div>
-        {/* Dog-ear outside clipped paper so the flap stays visible */}
+        {/* Dog-ear flap: folded onto the page (paper itself is missing the corner) */}
         <span className="wait-artifact-doc__fold" aria-hidden>
           <span className="wait-artifact-doc__fold-face" />
           <span className="wait-artifact-doc__fold-crease" />
@@ -178,7 +178,7 @@ function ArtifactDoc({
 
 /**
  * Wait-ritual documents: center scale-up → hold 5s → seat in centered-left 2×2 slots.
- * Cover layout: glyph + done caption on the paper. Non-interactive.
+ * Cover: caption vertically centered; glyph above. Seated keeps icon+caption scaled.
  */
 export function WaitArtifactDocs({ artifacts, includeTranslate }: Props) {
   const t = useTranslations("wait_ritual.artifacts");

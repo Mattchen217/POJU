@@ -11,7 +11,6 @@ import {
 } from "@/lib/base-analysis/v2-checkpoint-store";
 import type { ReportComputed } from "@/lib/base-analysis-v2/report-schema";
 import type { ReportSegmentTextTree } from "@/lib/base-analysis-v2/segment-text";
-import { ACTIVITY_CAPTION_ROTATE_MS } from "@/lib/ui/activity-caption-timing";
 import {
   WAIT_ARTIFACT_INTRO_TOTAL_MS,
   WAIT_ARTIFACT_SEAT_MS,
@@ -176,56 +175,57 @@ export async function consumeBaseAnalysisStream(input: {
       emit(input.callbacks, "v2_compute", "compute");
     }
 
-    // ── Phase 2: narrative ∥ evidence ─────────────────────────────
+    // ── Phase 2: narrative ∥ evidence (pipeline parallel; copy sequential) ──
+    // Bottom status: narrative copy only → after narrative artifact appears,
+    // switch to evidence copy → after evidence done, Phase 3 continues.
     const needNar = !narrative;
     const needEv = !evidence;
 
     if (needNar || needEv) {
-      let rotateOn = true;
-      let showNar = true;
-      const tick = () => {
-        if (!rotateOn) return;
-        emit(input.callbacks, showNar ? "v2_narrative" : "v2_evidence");
-        showNar = !showNar;
-      };
-      tick();
-      const rotateTimer = setInterval(tick, ACTIVITY_CAPTION_ROTATE_MS);
-
-      try {
-        await Promise.all([
-          (async () => {
-            if (!needNar) {
-              emit(input.callbacks, "v2_narrative", "narrative");
-              return;
-            }
-            const data = await postJson<{ narrative: ReportSegmentTextTree }>(
-              PHASE.narrative,
-              { profile_id: input.profile_id, report_computed: reportComputed },
-              input.signal,
-            );
-            narrative = data.narrative;
-            await persistCheckpoint({ narrative });
-            emit(input.callbacks, "v2_narrative", "narrative");
-          })(),
-          (async () => {
-            if (!needEv) {
-              emit(input.callbacks, "v2_evidence", "evidence");
-              return;
-            }
-            const data = await postJson<{ evidence: ReportSegmentTextTree }>(
-              PHASE.evidence,
-              { profile_id: input.profile_id, report_computed: reportComputed },
-              input.signal,
-            );
-            evidence = data.evidence;
-            await persistCheckpoint({ evidence });
-            emit(input.callbacks, "v2_evidence", "evidence");
-          })(),
-        ]);
-      } finally {
-        rotateOn = false;
-        clearInterval(rotateTimer);
+      if (needNar) {
+        emit(input.callbacks, "v2_narrative");
+      } else {
+        emit(input.callbacks, "v2_evidence");
       }
+
+      let evidenceDone = !needEv;
+
+      await Promise.all([
+        (async () => {
+          if (!needNar) {
+            emit(input.callbacks, "v2_narrative", "narrative");
+            return;
+          }
+          const data = await postJson<{ narrative: ReportSegmentTextTree }>(
+            PHASE.narrative,
+            { profile_id: input.profile_id, report_computed: reportComputed },
+            input.signal,
+          );
+          narrative = data.narrative;
+          await persistCheckpoint({ narrative });
+          emit(input.callbacks, "v2_narrative", "narrative");
+          // Narrative doc shown → unlock evidence broadcast if still running
+          if (needEv && !evidenceDone) {
+            emit(input.callbacks, "v2_evidence");
+          }
+        })(),
+        (async () => {
+          if (!needEv) {
+            emit(input.callbacks, "v2_evidence", "evidence");
+            evidenceDone = true;
+            return;
+          }
+          const data = await postJson<{ evidence: ReportSegmentTextTree }>(
+            PHASE.evidence,
+            { profile_id: input.profile_id, report_computed: reportComputed },
+            input.signal,
+          );
+          evidence = data.evidence;
+          await persistCheckpoint({ evidence });
+          evidenceDone = true;
+          emit(input.callbacks, "v2_evidence", "evidence");
+        })(),
+      ]);
     } else {
       emit(input.callbacks, "v2_narrative", "narrative");
       emit(input.callbacks, "v2_evidence", "evidence");

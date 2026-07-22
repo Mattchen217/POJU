@@ -304,15 +304,35 @@ function fillTree(text: string): ReportSegmentTextTree {
   assert("evidence 最短完整承重链", ep.system.includes("最短完整承重链"));
   assert(
     "evidence 白话连接铁律二",
-    ep.system.includes("铁律二") && ep.system.includes("连接术语的话必须是大白话"),
+    ep.system.includes("铁律二") &&
+      ep.system.includes("连接术语的话") &&
+      ep.system.includes("初中生一读就懂的大白话"),
   );
   assert(
-    "evidence 铁律二降级为兜底",
-    ep.system.includes("源头已白话") && ep.system.includes("不必再做一轮黑话"),
+    "evidence 铁律二完整白话化机器(非兜底)",
+    ep.system.includes("重新组织语言") &&
+      ep.system.includes("极容易滑回命理行话") &&
+      !ep.system.includes("源头已白话") &&
+      !ep.system.includes("不必再做一轮黑话"),
   );
   assert(
-    "evidence 禁文言黑话举例",
-    ep.system.includes("坐辰土得生扶") && ep.system.includes("一律不许"),
+    "evidence 白话化六类行话表",
+    ep.system.includes("生克帮扶类") &&
+      ep.system.includes("合冲刑害类") &&
+      ep.system.includes("制化泄耗类") &&
+      ep.system.includes("旺衰状态类") &&
+      ep.system.includes("格局强弱类") &&
+      ep.system.includes("喜忌取用类") &&
+      ep.system.includes("帮身") &&
+      ep.system.includes("当令") &&
+      ep.system.includes("贴身") &&
+      ep.system.includes("透出"),
+  );
+  assert(
+    "evidence 白话化带打标正例",
+    ep.system.includes("⟦t:day_master|⟧") &&
+      ep.system.includes("辰土里藏着") &&
+      ep.system.includes("帮衬"),
   );
   assert("evidence 无数量不限诱导", !ep.system.includes("数量不限") && !ep.system.includes("不设上限"));
   assert("evidence 无2-4句锚定", !ep.system.includes("2-4 句"));

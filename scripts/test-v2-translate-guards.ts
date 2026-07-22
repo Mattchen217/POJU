@@ -163,6 +163,31 @@ assert("dog-ear fold face", artifactUi.includes("wait-artifact-doc__fold-face"))
 assert("center hold size enlarged", artifactCss.includes("--artifact-hold-w"));
 assert("completed check badge", artifactUi.includes("wait-artifact-doc__done"));
 assert("deeper dog-ear fold", artifactCss.includes("width: 40%"));
+assert(
+  "paper missing top-right corner",
+  artifactCss.includes("calc(100% - var(--fold-size))") &&
+    artifactCss.includes("100% var(--fold-size)"),
+);
+assert(
+  "fold flap on paper (not void)",
+  artifactCss.includes("polygon(0 0, 100% 100%, 0 100%)"),
+);
+assert(
+  "seated keeps caption",
+  !/wait-artifact-doc--seated\s+\.wait-artifact-doc__caption\s*\{[^}]*display:\s*none/s.test(
+    artifactCss,
+  ),
+);
+assert(
+  "cover caption vertically centered grid",
+  artifactCss.includes("grid-template-rows: 1fr auto 1fr"),
+);
+assert(
+  "narrative→evidence copy gated (no rotate)",
+  !sseClient.includes("showNar") &&
+    !/setInterval\(\s*tick/.test(sseClient) &&
+    sseClient.includes("needEv && !evidenceDone"),
+);
 assert("cluster toward center", artifactCss.includes("--artifact-cluster-x"));
 
 const enProgress = read("messages/en.json");
