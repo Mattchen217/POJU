@@ -1,12 +1,14 @@
 import type { ReactNode } from "react";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
+import { Suspense } from "react";
 
 import { FirstTimeLocation } from "@/components/global/FirstTimeLocation";
 import { PWAInstallGate } from "@/components/pwa/PWAInstallGate";
 import { PwaAppShell } from "@/components/pwa/PwaAppShell";
 import { PwaModeBootstrap } from "@/components/pwa/PwaModeBootstrap";
 import { SiteChrome } from "@/components/marketing/site-chrome";
+import { UiShellBootstrap } from "@/components/workspace/UiShellBootstrap";
 import { routing } from "@/i18n/routing";
 
 type Props = {
@@ -28,6 +30,9 @@ export default async function LocaleLayout({ children, params }: Props) {
       <FirstTimeLocation />
       <PWAInstallGate>
         <PwaModeBootstrap />
+        <Suspense fallback={null}>
+          <UiShellBootstrap />
+        </Suspense>
         <PwaAppShell>
           <SiteChrome>{children}</SiteChrome>
         </PwaAppShell>

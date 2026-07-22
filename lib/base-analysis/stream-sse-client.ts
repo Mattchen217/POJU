@@ -13,7 +13,6 @@ import type { ReportComputed } from "@/lib/base-analysis-v2/report-schema";
 import type { ReportSegmentTextTree } from "@/lib/base-analysis-v2/segment-text";
 import {
   WAIT_ARTIFACT_INTRO_TOTAL_MS,
-  WAIT_FINAL_AUDIT_MS,
   WAIT_LAST_ARTIFACT_LEAD_MS,
   WAIT_SEMANTIC_ARTIFACT_MS,
 } from "@/lib/wait-ritual/constants";
@@ -213,8 +212,13 @@ export async function consumeBaseAnalysisStream(input: {
         })(),
         (async () => {
           if (!needEv) {
-            emit(input.callbacks, "v2_evidence", "evidence");
             lastArtifactAt = Date.now();
+            // Zh: ③ is last doc → finishing copy immediately with the icon.
+            emit(
+              input.callbacks,
+              siteLocale.startsWith("zh") ? "v2_final_audit" : "v2_evidence",
+              "evidence",
+            );
             evidenceDone = true;
             return;
           }
@@ -227,13 +231,22 @@ export async function consumeBaseAnalysisStream(input: {
           await persistCheckpoint({ evidence });
           evidenceDone = true;
           lastArtifactAt = Date.now();
-          emit(input.callbacks, "v2_evidence", "evidence");
+          // Zh: ③ evidence icon → 收尾播报；non-zh keeps evidence copy until ④.
+          emit(
+            input.callbacks,
+            siteLocale.startsWith("zh") ? "v2_final_audit" : "v2_evidence",
+            "evidence",
+          );
         })(),
       ]);
     } else {
       emit(input.callbacks, "v2_narrative", "narrative");
       lastArtifactAt = Date.now();
-      emit(input.callbacks, "v2_evidence", "evidence");
+      emit(
+        input.callbacks,
+        siteLocale.startsWith("zh") ? "v2_final_audit" : "v2_evidence",
+        "evidence",
+      );
     }
 
     if (!narrative || !evidence || !reportComputed) {
@@ -276,7 +289,7 @@ export async function consumeBaseAnalysisStream(input: {
     };
 
     if (isZh) {
-      // Zh last artifact (evidence) already emitted — switch to finishing copy now.
+      // Zh finishing copy already tied to evidence artifact above.
       emit(input.callbacks, "v2_final_audit");
     } else {
       emit(input.callbacks, "v2_translate");
@@ -284,13 +297,9 @@ export async function consumeBaseAnalysisStream(input: {
         setTimeout(() => {
           translateArtifactEmitted = true;
           lastArtifactAt = Date.now();
-          emit(input.callbacks, "v2_semantic_text", "translate");
+          // ④ icon appears → switch broadcast to finishing copy (not semantic_text).
+          emit(input.callbacks, "v2_final_audit", "translate");
         }, WAIT_SEMANTIC_ARTIFACT_MS),
-      );
-      theaterTimers.push(
-        setTimeout(() => {
-          emit(input.callbacks, "v2_final_audit");
-        }, WAIT_FINAL_AUDIT_MS),
       );
     }
 
@@ -325,11 +334,12 @@ export async function consumeBaseAnalysisStream(input: {
       if (!translateArtifactEmitted) {
         translateArtifactEmitted = true;
         lastArtifactAt = Date.now();
-        emit(input.callbacks, "v2_semantic_text", "translate");
+        // Late ④: icon + finishing copy together.
+        emit(input.callbacks, "v2_final_audit", "translate");
       }
       await holdLastArtifactThenFinish();
     } else if (isZh) {
-      // ③ evidence already shown; dwell ≥30s with finishing copy before delivery.
+      // ③ evidence already shown with finishing copy; dwell ≥30s before delivery.
       await holdLastArtifactThenFinish();
     }
 

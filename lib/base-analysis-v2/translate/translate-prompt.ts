@@ -1,18 +1,52 @@
 /** 母语者人设：国籍 + 母语（加新语言只加一行）。 */
 export const NATIVE_PERSONA: Record<
   string,
-  { nationality: string; language: string; langLabel: string }
+  {
+    nationality: string;
+    language: string;
+    langLabel: string;
+    /** 对用户说话的第二人称（译文必须用这个，禁止第三人称）。 */
+    youForms: string;
+    /** 禁止出现的第三人称示例（反例用）。 */
+    banThirdPerson: string;
+  }
 > = {
-  en: { nationality: "美国", language: "英语", langLabel: "英文" },
-  es: { nationality: "西班牙", language: "西班牙语", langLabel: "西班牙文" },
-  de: { nationality: "德国", language: "德语", langLabel: "德文" },
-  fr: { nationality: "法国", language: "法语", langLabel: "法文" },
+  en: {
+    nationality: "美国",
+    language: "英语",
+    langLabel: "英文",
+    youForms: "you / your / you're",
+    banThirdPerson: "he / him / his / she / her / they（指这位用户）",
+  },
+  es: {
+    nationality: "西班牙",
+    language: "西班牙语",
+    langLabel: "西班牙文",
+    youForms: "tú / tu / te",
+    banThirdPerson: "él / ella / su（指这位用户）",
+  },
+  de: {
+    nationality: "德国",
+    language: "德语",
+    langLabel: "德文",
+    youForms: "du / dein / dir",
+    banThirdPerson: "er / sie / sein / ihr（指这位用户）",
+  },
+  fr: {
+    nationality: "法国",
+    language: "法语",
+    langLabel: "法文",
+    youForms: "tu / ton / ta / te",
+    banThirdPerson: "il / elle / son / sa（指这位用户）",
+  },
 };
 
 export function resolveNativePersona(locale: string): {
   nationality: string;
   language: string;
   langLabel: string;
+  youForms: string;
+  banThirdPerson: string;
 } {
   const lang = locale.toLowerCase().slice(0, 2);
   return NATIVE_PERSONA[lang] ?? NATIVE_PERSONA.en!;
@@ -35,7 +69,7 @@ export type TranslateSummaryInput = {
  * 第4次翻译 prompt。
  *
  * ★ 入参已是「页面渲染态」：术语岛为 `[软译:释义]`，无 SSOT 大表、无真算数据。
- * ★ 先理解整段意思，再意译；禁止字面直译（按类反例 + 不止这些）。
+ * ★ 第二人称对用户说话；先理解再意译；禁止字面直译（按类反例）。
  * ★ 只有半角 `[软译:释义]`（含冒号）是岛；【平替】已在入参侧拆掉。
  * ★ 零正例。
  */
@@ -54,6 +88,14 @@ export function buildTranslatePrompt(
 
 请把每一段**岛外文字**意译成地道的【${p.langLabel}】。
 输入含 narrative（正文）与 evidence（依据）；若有 summary 短词也一并译。
+
+# 人称（硬 · 最高优先级之一）
+
+中文原文里的「你」= 正在读报告的这位用户。
+译文必须用第二人称对用户说话：\`${p.youForms}\`。
+【绝对禁止】改成第三人称旁观：\`${p.banThirdPerson}\`。
+例如英文里出现 His energy / he tends to → 一律改为 Your energy / you tend to。
+narrative、evidence、summary 全部适用。
 
 # 翻译方法（硬 · 缺一不可）
 
@@ -75,12 +117,18 @@ export function buildTranslatePrompt(
 - 调候 → regulates the climate
 - 当令 / 通根 / 泄身 → in season / through-root / leaks the body
 
-## B. 干支教材腔类（拼音硬贴 + 教材术语）
+## B. 干支教材腔 / 生肖硬翻类（整类禁）
 - 天干 / 地支 → Heavenly Stems / Earthly Branches
 - 巳火 / 寅木 / 辰土 → Si Fire / Yin Wood / Chen Earth
-- 未月 / 申金 → Wei month / Shen Metal
+- 未月 / 申金 → Wei month / Shen Metal / Shen branch
+- 申金 → Monkey metal（生肖硬翻，最糟）
+- 子水 / 午火 → Rat water / Horse fire（同类生肖硬翻）
 - 长生 / 帝旺 / 入墓 → Birth / Imperial Prosperity / Entering the Tomb
 - 魁罡日 → Kui Gang day（音译堆砌、无解释）
+
+岛外若出现「申金、巳火、未月」这类干支+五行/月份：
+用自然母语写能量意思（如 metal energy in the chart / fire-season month），
+【禁止】拼音+元素、【禁止】生肖动物名、【禁止】Shen branch 这类半译。
 
 ## C. 结构术语硬翻类
 - 日柱 / 月令 / 年干 → Day Pillar / Month Decree / Year Stem（教材目录腔）
@@ -109,24 +157,25 @@ export function buildTranslatePrompt(
 - 金木水火土 / 五行 → 按目标语习惯写（Wood, Fire… / Five Elements 或 Wuxing），不要中文、不要硬包括号
 
 # 必须翻译的范围
-- narrative 每一段 → 全部意译成${p.langLabel}
-- evidence 每一段 → **软译岛以外每一个字**都意译成${p.langLabel}
-- summary（若有）→ 全部意译
-- 【绝对禁止】evidence 整段留中文；【绝对禁止】译文残留汉字
+- narrative 每一段 → 全部意译成${p.langLabel}（第二人称）
+- evidence 每一段 → **软译岛以外每一个字**都意译成${p.langLabel}（第二人称）
+- summary（若有）→ 全部意译（第二人称）
+- 【绝对禁止】evidence 整段留中文；【绝对禁止】译文残留汉字；【绝对禁止】第三人称指用户
 
 # 输出格式
 - 保持 JSON key 结构与输入完全一致，只改 value 字符串
 - 只输出同结构 JSON，不要 Markdown 代码块，不要说明
 
 # 输出前自检（必须过）
-1. 去掉所有 \`[软译:释义]\` 后，还剩汉字或【】吗？有 → 译掉
-2. 是否出现 A–D 类教材腔/搬字？有 → 按段意重写
-3. 软译岛个数是否与输入一致、内容未改？
-4. 读一句：母语者会不会觉得像对照翻译？会 → 再意译一遍`;
+1. 全文是否用第二人称（\`${p.youForms}\`）对用户说话？有没有 \`${p.banThirdPerson}\`？有 → 改成第二人称
+2. 去掉所有 \`[软译:释义]\` 后，还剩汉字或【】吗？有 → 译掉
+3. 是否出现 Monkey metal / Si Fire / Shen branch / Heavenly Stems 或 A–D 类搬字？有 → 按段意重写
+4. 软译岛个数是否与输入一致、内容未改？
+5. 读一句：母语者会不会觉得像对照翻译？会 → 再意译一遍`;
 
   const payloadJson = JSON.stringify(payload, null, 2);
   const user = `请把下列 JSON 的 narrative 与 evidence（及 summary，若有）意译成【${p.langLabel}】。
-硬规则：先理解整段再意译；禁止字面直译与干支教材腔。
+硬规则：第二人称对用户说话（${p.youForms}），禁止第三人称（${p.banThirdPerson}）；先理解整段再意译；禁止字面直译、干支拼音硬贴、生肖硬翻（Monkey metal / Si Fire / Shen branch）。
 只有半角 \`[软译:释义]\`（必须含冒号）是岛，原样保留；岛外中文与任何【】平替必须全部译成${p.langLabel}；禁止 evidence 粘贴中文、禁止译文留汉字。
 \`\`\`json
 ${payloadJson}

@@ -20,6 +20,7 @@
 @import "../styles/streaming-analysis.css";
 @import "../styles/pwa-flow.css";
 @import "../styles/browser-desktop.css";
+@import "../styles/workspace.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

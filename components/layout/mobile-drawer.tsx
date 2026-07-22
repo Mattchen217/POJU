@@ -8,7 +8,9 @@ import { useLocale, useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
 import { ArchiveNavLabel } from "@/components/archive/ArchiveUnreadDot";
 import { useArchiveUnread } from "@/components/archive/use-archive-unread";
+import { useUiShell } from "@/components/workspace/use-ui-shell";
 import { MARKETING_LOCALE_OPTIONS } from "@/lib/i18n/marketing-locale-options";
+import { mapProductHrefForShell } from "@/lib/ui-shell/resolve-ui-shell";
 import { cn } from "@/lib/utils/classnames";
 
 type MobileDrawerProps = {
@@ -28,6 +30,7 @@ export function MobileDrawer({ open, onClose }: MobileDrawerProps) {
   const t = useTranslations("nav");
   const tLang = useTranslations("language");
   const { hasUnread: hasUnreadArchive } = useArchiveUnread();
+  const { shell } = useUiShell();
 
   useEffect(() => {
     if (!open) return;
@@ -88,19 +91,19 @@ export function MobileDrawer({ open, onClose }: MobileDrawerProps) {
 
             <nav className="flex flex-1 flex-col gap-1 overflow-y-auto overscroll-contain px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
               <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-dim">{t("mobileNavPrimary")}</p>
-              <MobileNavLink href="/poju" onNavigate={onClose}>
+              <MobileNavLink href={mapProductHrefForShell("/poju", shell)} onNavigate={onClose}>
                 {t("poju")}
               </MobileNavLink>
-              <MobileNavLink href="/glyph" onNavigate={onClose}>
+              <MobileNavLink href={mapProductHrefForShell("/glyph", shell)} onNavigate={onClose}>
                 {t("glyph")}
               </MobileNavLink>
-              <MobileNavLink href="/match" onNavigate={onClose}>
+              <MobileNavLink href={mapProductHrefForShell("/match", shell)} onNavigate={onClose}>
                 {t("match")}
               </MobileNavLink>
-              <MobileNavLink href="/syncro" onNavigate={onClose}>
+              <MobileNavLink href={mapProductHrefForShell("/syncro", shell)} onNavigate={onClose}>
                 {t("syncro")}
               </MobileNavLink>
-              <MobileNavLink href="/archive" onNavigate={onClose}>
+              <MobileNavLink href={mapProductHrefForShell("/archive", shell)} onNavigate={onClose}>
                 <ArchiveNavLabel label={t("archive")} showDot={hasUnreadArchive} />
               </MobileNavLink>
 
@@ -167,18 +170,7 @@ function MobileNavLink({
   children,
   onNavigate,
 }: {
-  href:
-    | "/poju"
-    | "/glyph"
-    | "/syncro"
-    | "/match"
-    | "/archive"
-    | "/disclaimer"
-    | "/privacy"
-    | "/terms"
-    | "/refund"
-    | "/cookies"
-    | "/contact";
+  href: string;
   children: ReactNode;
   onNavigate: () => void;
 }) {

@@ -1,12 +1,16 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 
 import { PWABottomNav } from "@/components/pwa/PWABottomNav";
+import { isWorkspaceAppRoute } from "@/lib/i18n/pathname-without-locale";
 import { detectDeviceCapability, isAppMode } from "@/lib/syncro/device-capability";
 
 export function PwaAppShell({ children }: { children: ReactNode }) {
   const [isPWA, setIsPWA] = useState(false);
+  const pathname = usePathname();
+  const hideBottomNav = isWorkspaceAppRoute(pathname);
 
   useEffect(() => {
     function syncFromDom() {
@@ -29,7 +33,7 @@ export function PwaAppShell({ children }: { children: ReactNode }) {
   return (
     <>
       <div className={isPWA ? "pwa-page" : undefined}>{children}</div>
-      {isPWA ? <PWABottomNav /> : null}
+      {isPWA && !hideBottomNav ? <PWABottomNav /> : null}
     </>
   );
 }

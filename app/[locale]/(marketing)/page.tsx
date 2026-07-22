@@ -1,8 +1,9 @@
 import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
 
-import { DsHomePage, DS_HOME_PRODUCT_ICONS, type DsHomeCopy } from "@/components/ds/DsHomePage";
+import { DS_HOME_PRODUCT_ICONS, type DsHomeCopy } from "@/components/ds/DsHomePage";
 import { PaymentCancelToast } from "@/components/marketing/payment-cancel-toast";
+import { WorkspaceAwareHome } from "@/components/workspace/WorkspaceAwareHome";
 
 export const dynamic = "force-dynamic";
 
@@ -150,7 +151,7 @@ export default async function LandingPage() {
   return (
     <Suspense fallback={<div className="min-h-screen bg-[var(--pj-bg-deep)]" />}>
       <PaymentCancelToast />
-      <DsHomePage copy={copy} />
+      <WorkspaceAwareHome copy={copy} />
     </Suspense>
   );
 }

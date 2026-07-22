@@ -6,12 +6,13 @@ import { usePathname } from "next/navigation";
 import { MainNav } from "@/components/layout/MainNav";
 import { MarketingScrollReset } from "@/components/marketing/marketing-scroll-reset";
 import { SiteFooter } from "@/components/marketing/site-footer";
-import { isChatRoute, isHomeRoute } from "@/lib/i18n/pathname-without-locale";
+import { UiShellSwitcher } from "@/components/workspace/UiShellSwitcher";
+import { isChatRoute, isHomeRoute, isWorkspaceAppRoute } from "@/lib/i18n/pathname-without-locale";
 import { cn } from "@/lib/utils/classnames";
 
 export function SiteChrome({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  if (isChatRoute(pathname)) {
+  if (isChatRoute(pathname) || isWorkspaceAppRoute(pathname)) {
     return <>{children}</>;
   }
 
@@ -23,6 +24,7 @@ export function SiteChrome({ children }: { children: ReactNode }) {
       <MainNav homeHero={home} />
       <div className="site-chrome-main flex-1">{children}</div>
       <SiteFooter />
+      <UiShellSwitcher />
     </div>
   );
 }

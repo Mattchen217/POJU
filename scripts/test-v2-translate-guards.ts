@@ -103,9 +103,12 @@ const { system, user } = buildTranslatePrompt("en", {
 });
 assert("translate 禁粘贴中文依据", system.includes("绝对禁止") && system.includes("evidence"));
 assert("translate 强调意译禁直译", system.includes("意译") && system.includes("字面直译"));
+assert("translate 第二人称硬规则", system.includes("第二人称") && system.includes("you / your"));
+assert("translate 禁第三人称", system.includes("he / him / his") && system.includes("绝对禁止"));
 assert("translate 含直译反例", system.includes("helps the body") && system.includes("has root qi"));
 assert("translate 干支教材腔反例", system.includes("Heavenly Stems") && system.includes("Si Fire"));
-assert("translate 按类反例", system.includes("行话连接类") && system.includes("干支教材腔类"));
+assert("translate 生肖硬翻反例", system.includes("Monkey metal") && system.includes("Shen branch"));
+assert("translate 按类反例", system.includes("行话连接类") && system.includes("干支教材腔"));
 assert("translate 方括号岛", system.includes("[软译:一句释义]") || system.includes("[软译:释义]"));
 assert("translate 区分全角平替", system.includes("【") && system.includes("不是岛"));
 assert("translate system 无代号表", !system.includes("代号含义表") && !system.includes("代号 day_master"));
@@ -113,7 +116,8 @@ assert("translate system 无真算", !system.includes("bazi_basis") && !system.i
 assert("translate user 含 payload", user.includes("你像一株藤蔓"));
 assert("translate user 禁 evidence 粘贴中文", user.includes("禁止 evidence 粘贴中文"));
 assert("translate user 渲染态岛", user.includes("[本元:"));
-assert("translate user 禁干支教材腔", user.includes("干支教材腔"));
+assert("translate user 第二人称", user.includes("第二人称"));
+assert("translate user 禁生肖硬翻", user.includes("Monkey metal"));
 assert(
   "countHan 不计括号岛内汉字",
   countHanOutsideMarkers("[本元:很长的中文释义在这里面。]is weak.") < 3,
@@ -191,12 +195,14 @@ assert(
   !/emit\([^)]*"v2_translate",\s*"translate"\)/.test(sseClient),
 );
 assert(
-  "60s 发 semantic_text + translate artifact",
+  "60s 发 translate artifact + 收尾播报",
   sseClient.includes("WAIT_SEMANTIC_ARTIFACT_MS") &&
-    sseClient.includes('"v2_semantic_text"') &&
-    /"translate"/.test(sseClient),
+    /"v2_final_audit",\s*"translate"/.test(sseClient),
 );
-assert("120s final audit", sseClient.includes("WAIT_FINAL_AUDIT_MS"));
+assert(
+  "zh ③ evidence 同步收尾播报",
+  sseClient.includes('startsWith("zh") ? "v2_final_audit" : "v2_evidence"'),
+);
 assert("入场仪式 INTRO_TOTAL", sseClient.includes("WAIT_ARTIFACT_INTRO_TOTAL_MS"));
 
 const waitConstants = read("lib/wait-ritual/constants.ts");
