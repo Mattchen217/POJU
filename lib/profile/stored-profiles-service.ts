@@ -51,6 +51,10 @@ export interface StoredProfileSummary {
   display_name: string;
   birth_date: string;
   hour_period: BirthInfo["hour_period"];
+  /** Clock hour 0–23 when stored; used for workspace card display. */
+  hour?: number;
+  /** Clock minute 0–59 when stored. */
+  minute?: number;
   gender: "M" | "F";
   timezone: string;
   relationship: import("@/lib/db/poju-db").StoredProfileRelationship;
@@ -116,6 +120,8 @@ export async function listStoredProfiles(): Promise<StoredProfileSummary[]> {
         display_name: record.display_name,
         birth_date: `${b.year}-${String(b.month).padStart(2, "0")}-${String(b.day).padStart(2, "0")}`,
         hour_period: b.hour_period,
+        hour: typeof b.hour === "number" ? b.hour : undefined,
+        minute: typeof b.minute === "number" ? b.minute : undefined,
         gender: b.gender,
         timezone: b.timezone,
         relationship: record.relationship,

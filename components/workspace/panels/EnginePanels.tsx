@@ -105,10 +105,11 @@ export function EnginePanel({ productId, price, onOpenArchive }: Props) {
   );
 }
 
-/** Workspace center — POJU hero + original birth picker (outer layout only). */
+/** Workspace center — POJU hero + birth form or returning-user profile list. */
 export function PojuPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (id: string) => void }) {
   const t = useTranslations("marketingSite.poju");
   const tBrand = useTranslations("poju.branding");
+  const [hasProfiles, setHasProfiles] = useState(false);
 
   const heroCopy = {
     brandTag: t("hero.brand_tag"),
@@ -126,9 +127,9 @@ export function PojuPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (i
       </div>
       <div className="workspace-poju-below">
         <div className="workspace-poju-below__unit">
-          <WorkspacePojuBirthSideCopy />
+          <WorkspacePojuBirthSideCopy hasProfiles={hasProfiles} />
           <div className="workspace-poju-birth">
-            <WorkspacePojuBirthHost />
+            <WorkspacePojuBirthHost onHasProfilesChange={setHasProfiles} />
           </div>
         </div>
       </div>

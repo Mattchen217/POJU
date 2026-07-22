@@ -1350,8 +1350,7 @@
   align-items: flex-start;
   justify-content: center;
   padding: 8px 16px 12px;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
   box-sizing: border-box;
   width: 100%;
 }
@@ -1363,12 +1362,13 @@
   justify-content: center;
   gap: 32px;
   width: max-content;
-  max-width: 100%;
+  max-width: none;
+  flex-shrink: 0;
   margin-inline: auto;
   box-sizing: border-box;
 }
 
-/* Side copy — larger type, normal spacing, top-aligned (no forced stretch) */
+/* Side copy — natural height, no forced stretch (layout only) */
 .workspace-poju-copy {
   flex: 0 0 400px;
   width: 400px;
@@ -1407,7 +1407,6 @@
 
 .workspace-poju-copy__title {
   margin: 0;
-  font-size: 1.1rem;
   font-weight: 600;
   line-height: 1.3;
   letter-spacing: -0.01em;
@@ -1418,20 +1417,16 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.95rem;
   color: #d4af37;
 }
 
 .workspace-poju-copy__lock {
   flex: 0 0 auto;
-  font-size: 0.9rem;
   line-height: 1;
 }
 
 .workspace-poju-copy__body {
   margin: 0;
-  font-size: 0.84rem;
-  line-height: 1.5;
   color: #a1a1aa;
 }
 
@@ -1455,22 +1450,142 @@
 }
 
 .workspace-poju-copy__points strong {
-  font-size: 0.8rem;
   font-weight: 600;
   letter-spacing: 0.02em;
   color: #e4e4e7;
 }
 
 .workspace-poju-copy__points span {
-  font-size: 0.8rem;
-  line-height: 1.45;
   color: #a1a1aa;
 }
 
+/*
+ * Per-locale type via [data-locale] on .workspace-poju-copy
+ * (html lang is fixed to en in root layout — :lang() would not work).
+ * Each language is independent; only zh is enlarged vs baseline.
+ */
+
+/* English (baseline) */
+.workspace-poju-copy[data-locale="en"] .workspace-poju-copy__title {
+  font-size: 1.1rem;
+}
+.workspace-poju-copy[data-locale="en"] .workspace-poju-copy__title--privacy {
+  font-size: 0.95rem;
+}
+.workspace-poju-copy[data-locale="en"] .workspace-poju-copy__lock {
+  font-size: 0.9rem;
+}
+.workspace-poju-copy[data-locale="en"] .workspace-poju-copy__body {
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+.workspace-poju-copy[data-locale="en"] .workspace-poju-copy__points strong {
+  font-size: 0.8rem;
+}
+.workspace-poju-copy[data-locale="en"] .workspace-poju-copy__points span {
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+/* Chinese (enlarged independently) */
+.workspace-poju-copy[data-locale="zh"] .workspace-poju-copy__title {
+  font-size: 1.3rem;
+}
+.workspace-poju-copy[data-locale="zh"] .workspace-poju-copy__title--privacy {
+  font-size: 1.1rem;
+}
+.workspace-poju-copy[data-locale="zh"] .workspace-poju-copy__lock {
+  font-size: 1rem;
+}
+.workspace-poju-copy[data-locale="zh"] .workspace-poju-copy__body {
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+.workspace-poju-copy[data-locale="zh"] .workspace-poju-copy__points strong {
+  font-size: 0.9rem;
+}
+.workspace-poju-copy[data-locale="zh"] .workspace-poju-copy__points span {
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* Spanish */
+.workspace-poju-copy[data-locale="es"] .workspace-poju-copy__title {
+  font-size: 1.1rem;
+}
+.workspace-poju-copy[data-locale="es"] .workspace-poju-copy__title--privacy {
+  font-size: 0.95rem;
+}
+.workspace-poju-copy[data-locale="es"] .workspace-poju-copy__lock {
+  font-size: 0.9rem;
+}
+.workspace-poju-copy[data-locale="es"] .workspace-poju-copy__body {
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+.workspace-poju-copy[data-locale="es"] .workspace-poju-copy__points strong {
+  font-size: 0.8rem;
+}
+.workspace-poju-copy[data-locale="es"] .workspace-poju-copy__points span {
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+/* German */
+.workspace-poju-copy[data-locale="de"] .workspace-poju-copy__title {
+  font-size: 1.1rem;
+}
+.workspace-poju-copy[data-locale="de"] .workspace-poju-copy__title--privacy {
+  font-size: 0.95rem;
+}
+.workspace-poju-copy[data-locale="de"] .workspace-poju-copy__lock {
+  font-size: 0.9rem;
+}
+.workspace-poju-copy[data-locale="de"] .workspace-poju-copy__body {
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+.workspace-poju-copy[data-locale="de"] .workspace-poju-copy__points strong {
+  font-size: 0.8rem;
+}
+.workspace-poju-copy[data-locale="de"] .workspace-poju-copy__points span {
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+/* French */
+.workspace-poju-copy[data-locale="fr"] .workspace-poju-copy__title {
+  font-size: 1.1rem;
+}
+.workspace-poju-copy[data-locale="fr"] .workspace-poju-copy__title--privacy {
+  font-size: 0.95rem;
+}
+.workspace-poju-copy[data-locale="fr"] .workspace-poju-copy__lock {
+  font-size: 0.9rem;
+}
+.workspace-poju-copy[data-locale="fr"] .workspace-poju-copy__body {
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+.workspace-poju-copy[data-locale="fr"] .workspace-poju-copy__points strong {
+  font-size: 0.8rem;
+}
+.workspace-poju-copy[data-locale="fr"] .workspace-poju-copy__points span {
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
 .workspace-poju-birth {
-  flex: 0 0 auto;
-  width: min(100%, 880px);
-  height: auto;
+  /* Shared frame height: records panel matches the birth form box */
+  --ws-poju-birth-frame-h: 448px;
+  flex: 0 0 880px;
+  width: 880px;
+  min-width: 880px;
+  max-width: 880px;
+  /* Fixed frame so list ↔ form switches don’t shift side copy */
+  height: var(--ws-poju-birth-frame-h);
+  min-height: var(--ws-poju-birth-frame-h);
+  max-height: var(--ws-poju-birth-frame-h);
   overflow: visible;
   overscroll-behavior: contain;
   transform: none;
@@ -1478,18 +1593,218 @@
   flex-direction: column;
 }
 
-.workspace-poju-birth .birth-info-picker {
+/* Returning-user records — fill locked frame; scroll stays inside */
+.workspace-poju-records__loading {
+  margin: auto;
+  color: #a1a1aa;
+  font-size: 0.875rem;
+}
+
+.workspace-poju-records {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Cards scroll; “Enter new info” stays pinned under this area */
+.workspace-poju-records__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.workspace-poju-records__viewport {
+  padding-right: 10px;
+  box-sizing: border-box;
+}
+
+.workspace-poju-records__stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  padding-bottom: 4px;
+}
+
+.workspace-poju-add-new {
+  flex: 0 0 auto;
+  margin-top: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.workspace-poju-add-new .plus-icon {
+  font-size: 16px;
+  margin-bottom: 2px;
+}
+
+/* Single-row profile card — birth · created · icons · delete */
+.workspace-poju-profile-card {
+  flex: 0 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: inset 0 0 0 0.5px rgba(212, 175, 55, 0.2);
+  border-radius: 12px;
+  padding: 18px 14px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.workspace-poju-profile-card:hover {
+  background: rgba(212, 175, 55, 0.05);
+}
+
+.workspace-poju-profile-card:focus-visible {
+  outline: 1px solid rgba(212, 175, 55, 0.45);
+  outline-offset: 2px;
+}
+
+.workspace-poju-card__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0;
+  width: 100%;
+  min-width: 0;
+}
+
+.workspace-poju-card__birth {
+  flex: 0 1 auto;
+  min-width: 0;
+  color: #e5e5e5;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.workspace-poju-card__created {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #888;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.workspace-poju-card__products {
+  flex: 0 0 220px;
+  width: 220px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: center;
+  gap: 4px;
+  min-width: 220px;
+}
+
+.workspace-poju-card__product {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 2px;
+  min-width: 0;
+  height: 28px;
+  background: none;
+  border-radius: 0;
+  color: #ffffff;
+}
+
+.workspace-poju-card__product--empty {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.workspace-poju-card__product-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  color: #ffffff;
+}
+
+.workspace-poju-card__product-icon .material-symbols-outlined {
+  font-size: 26px;
+  line-height: 1;
+  color: #ffffff;
+  font-variation-settings: "FILL" 0, "wght" 300, "GRAD" 0, "opsz" 24;
+}
+
+.workspace-poju-card__glyph-svg {
+  width: 26px;
+  height: 26px;
+  color: #ffffff;
+}
+
+.workspace-poju-card__product-count {
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  color: rgba(228, 228, 231, 0.72);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.workspace-poju-card__delete {
+  flex: 0 0 auto;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: #ef4444;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.workspace-poju-card__delete:hover {
+  color: #f87171;
+}
+
+.workspace-poju-birth .birth-info-picker:not(.workspace-poju-records-frame) {
   /* Neutralize full-page prep background if any inherits */
   background: transparent;
   max-width: none;
-  height: auto;
   box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
   padding: 12px 20px 10px;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   gap: 0;
-  overflow: visible;
+  overflow: hidden;
+}
+
+/* Lock returning-user frame height — scroll only inside this box */
+.workspace-poju-birth .birth-info-picker.workspace-poju-records-frame {
+  background: transparent;
+  max-width: none;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  padding: 12px 16px 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 0;
+  overflow: hidden;
 }
 
 .workspace-poju-birth .birth-info-picker--workspace .picker-section {
@@ -1597,7 +1912,7 @@
 
 .workspace-poju-birth .birth-info-picker--workspace .picker-actions {
   flex: 0 0 auto;
-  margin-top: 0;
+  margin-top: auto;
   gap: 10px;
 }
 
@@ -1624,15 +1939,29 @@
   display: none;
 }
 
-/* Right drawer open: hide side copy; form stays centered in the unit */
+/* Right drawer open: hide side copy; form/records re-center */
 .workspace-shell.is-right-open .workspace-poju-copy {
   display: none;
 }
 
+.workspace-shell.is-right-open .workspace-poju-below {
+  justify-content: center;
+}
+
 .workspace-shell.is-right-open .workspace-poju-birth {
-  transform: scale(1);
-  transform-origin: top center;
-  width: min(100%, 820px);
+  flex: 0 0 880px;
+  width: 880px;
+  min-width: 880px;
+  max-width: 880px;
+  transform: none;
+}
+
+/* Both rails open — slightly narrower so the stage isn’t cramped */
+.workspace-shell.is-right-open:not(.is-sidebar-collapsed) .workspace-poju-birth {
+  flex: 0 0 720px;
+  width: 720px;
+  min-width: 720px;
+  max-width: 720px;
 }
 
 .workspace-dual {
