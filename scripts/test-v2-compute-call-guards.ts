@@ -169,6 +169,33 @@ assert("L2 仅七杀：官杀→七杀", cleanText("官杀攻身", ctxQiShaOnly)
   assert("COMPUTE 永远中文 system", zhSys.includes("你是一位有三十年经验的命理分析师"));
   assert("COMPUTE en locale 仍用中文 prompt", enSys === zhSys);
   assert("COMPUTE 无 Summary block language 英分叉", !enSys.includes("# Summary block language"));
+  assert(
+    "COMPUTE bazi_basis 先算后译",
+    zhSys.includes("写进 JSON 时再把每条翻成") &&
+      zhSys.includes("行话草稿不输出"),
+  );
+  assert(
+    "COMPUTE bazi_basis 保留术语+白话连接",
+    zhSys.includes("保留命理术语") &&
+      zhSys.includes("用初中生能懂的大白话连接") &&
+      zhSys.includes("五行连写要拆开"),
+  );
+  assert(
+    "COMPUTE 禁行话照搬反例",
+    zhSys.includes("大运逢木火喜用") && zhSys.includes("禁止"),
+  );
+  assert(
+    "COMPUTE 无行话正例诱导",
+    !zhSys.includes('"大运逢印"') && !zhSys.includes("大运逢印"),
+  );
+  assert(
+    "COMPUTE 必须保留术语表",
+    zhSys.includes("必须保留的命理术语") && zhSys.includes("日主、用神"),
+  );
+  assert(
+    "COMPUTE 硬规矩含白话成品",
+    zhSys.includes("bazi_basis 写的是白话成品"),
+  );
 }
 
 console.log(failures.length ? "❌ compute-call guards failed" : "✅ compute-call guards ready");

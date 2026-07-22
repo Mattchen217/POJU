@@ -307,6 +307,10 @@ function fillTree(text: string): ReportSegmentTextTree {
     ep.system.includes("铁律二") && ep.system.includes("连接术语的话必须是大白话"),
   );
   assert(
+    "evidence 铁律二降级为兜底",
+    ep.system.includes("源头已白话") && ep.system.includes("不必再做一轮黑话"),
+  );
+  assert(
     "evidence 禁文言黑话举例",
     ep.system.includes("坐辰土得生扶") && ep.system.includes("一律不许"),
   );
