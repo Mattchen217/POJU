@@ -58,7 +58,7 @@ function LeadBlock({
         {body ? (
           <p className="reading-p">
             {/* 依据块自成一体（折叠、独立阅读）→ 用自己的 dedupe scope，
-                别被正文/上一段已出现过的同名词挤成没有 [···] 的裸金字。 */}
+                别被正文/上一段已出现过的同名词挤成没有下划线的裸金字。 */}
             <MarkedInline
               text={body}
               locale={locale}

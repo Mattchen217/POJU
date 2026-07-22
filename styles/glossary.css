@@ -1,4 +1,4 @@
-/* Term marks — golden soft word + [···]; detail plain in hover/click pop */
+/* Term marks — golden soft word + dotted underline; detail plain in hover/click pop */
 
 .term-mark {
   display: inline;
@@ -13,7 +13,20 @@
 
 .term-mark__word {
   font-weight: 500;
+}
+
+.term-mark__word--interactive {
+  border-bottom: 1px dotted currentColor;
+  border-bottom-color: color-mix(in srgb, currentColor 45%, transparent);
   cursor: help;
+  /* Tap opens gloss; long-press still selects surrounding prose */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.term-mark__word--interactive:hover,
+.term-mark__word--interactive:focus-visible {
+  border-bottom-color: currentColor;
 }
 
 .term-mark__paren {
@@ -71,11 +84,20 @@
   cursor: help;
 }
 
+/* Matrix/zodiac hover mode: same dotted underline language */
 .term-mark--hover .term-mark__word {
   border-bottom: 1px dotted currentColor;
-  border-bottom-color: color-mix(in srgb, currentColor 35%, transparent);
+  border-bottom-color: color-mix(in srgb, currentColor 45%, transparent);
 }
 
+.term-mark--hover .term-mark__word--interactive:hover,
+.term-mark--hover .term-mark__word--interactive:focus-visible,
+.term-mark--hover:hover .term-mark__word,
+.term-mark--hover:focus-within .term-mark__word {
+  border-bottom-color: currentColor;
+}
+
+/* Legacy [···] opener kept for first-visit hint / old CSS refs; unused in TermMark */
 .term-mark__info {
   display: inline;
   margin-left: 2px;

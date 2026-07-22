@@ -148,7 +148,19 @@ const artifactUi = read("components/wait-ritual/WaitArtifactDocs.tsx");
 assert("spawn hold seated", artifactUi.includes('"spawn"') && artifactUi.includes('"hold"') && artifactUi.includes('"seated"'));
 
 const artifactCss = read("styles/wait-ritual.css");
-assert("top-left seat", artifactCss.includes("safe-area-inset-top") && artifactCss.includes("wait-artifact-doc--seated"));
+assert(
+  "left 2x2 seat slots",
+  artifactCss.includes("wait-artifact-doc--seated") &&
+    artifactCss.includes("--artifact-col") &&
+    artifactCss.includes("--artifact-row"),
+);
+assert(
+  "cover caption on paper",
+  artifactUi.includes("wait-artifact-doc__cover") &&
+    artifactUi.includes("wait-artifact-doc__caption"),
+);
+assert("dog-ear fold face", artifactUi.includes("wait-artifact-doc__fold-face"));
+assert("center hold size enlarged", artifactCss.includes("--artifact-hold-w"));
 
 const enProgress = read("messages/en.json");
 assert(

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 import {
@@ -59,7 +59,7 @@ function TermMark({
   visible,
   plain,
   polarity = "neutral",
-  /** ellipsis = soft + [···]; hover = soft only, whole word opens gloss (matrix / zodiac). */
+  /** hover = matrix/zodiac full soft; default = delivery soft (may truncate long labels). */
   mode = "ellipsis",
 }: {
   visible: string;
@@ -168,35 +168,24 @@ function TermMark({
       ? createPortal(popNode, document.body)
       : null;
 
-  // Matrix / zodiac: gold soft word only — hover / focus / click opens gloss (no [···]).
-  if (mode === "hover") {
-    return (
-      <span
-        ref={anchorRef}
-        className={`term-mark term-mark--${polarity} term-mark--hover`}
-        tabIndex={detail ? 0 : undefined}
-        aria-label={detail ? "Explain term" : undefined}
-        aria-describedby={open ? id : undefined}
-        onMouseEnter={detail ? openFromHover : undefined}
-        onMouseLeave={detail ? scheduleHoverClose : undefined}
-        onFocus={detail ? () => setOpen(true) : undefined}
-        onBlur={detail ? () => setOpen(false) : undefined}
-        onClick={detail ? toggle : undefined}
-      >
-        <span className="term-mark__word">{softLabel}</span>
-        {portal}
-      </span>
-    );
-  }
+  // Soft word + dotted underline carries interaction (desktop hover / tap / keyboard).
+  // No bracket-ellipsis opener — keeps dense evidence readable.
+  const onWordKeyDown = (e: KeyboardEvent<HTMLSpanElement>) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      toggle();
+    }
+  };
 
-  // Golden soft word + [···] opener. Detail plain lives in hover/click pop (fixed gloss ok if fluent).
   return (
-    <span ref={anchorRef} className={`term-mark term-mark--${polarity}`}>
-      <span className="term-mark__word">{softLabel}</span>
+    <span
+      ref={anchorRef}
+      className={`term-mark term-mark--${polarity}${mode === "hover" ? " term-mark--hover" : ""}`}
+    >
       {detail ? (
-        <button
-          type="button"
-          className="term-mark__info"
+        <span
+          className="term-mark__word term-mark__word--interactive"
+          role="button"
           tabIndex={0}
           aria-label="Explain term"
           aria-describedby={open ? id : undefined}
@@ -205,16 +194,19 @@ function TermMark({
           onFocus={() => setOpen(true)}
           onBlur={() => setOpen(false)}
           onClick={toggle}
+          onKeyDown={onWordKeyDown}
         >
-          [···]
-        </button>
-      ) : null}
+          {softLabel}
+        </span>
+      ) : (
+        <span className="term-mark__word">{softLabel}</span>
+      )}
       {portal}
     </span>
   );
 }
 
-/** SSOT soft label + hover gloss — no [···]. For matrix / zodiac façades. */
+/** SSOT soft label + hover/tap gloss — dotted underline, no bracket-ellipsis opener. */
 export function SoftTermHover({
   slug,
   locale,
@@ -315,7 +307,7 @@ const MAX_PAREN_MARKS_PER_PARAGRAPH = 2;
 /**
  * 依据层：金字全显、默认折叠、允许"不好读"。
  * 【不封顶】—— 必须与门禁 auditTermMarkerDensity 的依据上限一致（那边已取消上限）。
- * 若这里留一个有限值，门禁放行 7 个、渲染只显 N 个 → 第 N+1 个起有金字无 [···]、点不开
+ * 若这里留一个有限值，门禁放行 7 个、渲染只显 N 个 → 第 N+1 个起有金字无下划线、点不开
  * （就是反复出现过的"金字点不开"）。个数由内容侧「只留承重锚点」控，不在渲染层砍。
  */
 const MAX_PAREN_MARKS_EVIDENCE = Number.POSITIVE_INFINITY;

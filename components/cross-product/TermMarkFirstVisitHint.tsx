@@ -7,7 +7,7 @@ import "@/styles/glossary.css";
 
 const HINT_KEY = "poju-term-hint-seen";
 
-/** One-time yellow bar — hover / tap [···] on highlighted terms. */
+/** One-time yellow bar — hover / tap underlined soft terms for gloss. */
 export function TermMarkFirstVisitHint() {
   const t = useTranslations("glyph");
   const [show, setShow] = useState(false);
@@ -26,8 +26,10 @@ export function TermMarkFirstVisitHint() {
     <aside className="term-hint term-hint--bar" role="note">
       <p className="term-hint__body">
         {t("term_mark_hint")}{" "}
-        <span className="term-mark__info term-mark__info--inline" aria-hidden>
-          [···]
+        <span className="term-mark term-mark--neutral" aria-hidden>
+          <span className="term-mark__word term-mark__word--interactive term-mark__info--inline">
+            {t("term_mark_hint_sample")}
+          </span>
         </span>{" "}
         {t("term_mark_hint_suffix")}
       </p>

@@ -233,7 +233,7 @@
   }
 }
 
-/* Phased v2 document artifacts (A4 fold papers) */
+/* Phased v2 document artifacts (A4 fold papers · cover layout) */
 
 .wait-artifact-layer {
   position: fixed;
@@ -243,15 +243,17 @@
 }
 
 .wait-artifact-doc {
+  --artifact-hold-w: clamp(128px, 28vmin, 176px);
+  --artifact-seat-w: clamp(48px, 10vmin, 68px);
+  --artifact-seat-gap: 10px;
   position: absolute;
   left: 50%;
   top: 46%;
-  width: clamp(72px, 14vmin, 110px);
+  width: var(--artifact-hold-w);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  transform: translate(-50%, -50%) scale(0.35);
+  transform: translate(-50%, -50%) scale(0.28);
   opacity: 0;
   transition:
     left 0.85s cubic-bezier(0.22, 1, 0.36, 1),
@@ -263,12 +265,12 @@
 
 .wait-artifact-doc--spawn {
   opacity: 1;
-  transform: translate(-50%, -50%) scale(0.35);
+  transform: translate(-50%, -50%) scale(0.28);
 }
 
 .wait-artifact-doc--spawn-active {
   opacity: 1;
-  transform: translate(-50%, -50%) scale(1.2);
+  transform: translate(-50%, -50%) scale(1);
   transition:
     transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
     opacity 0.35s ease;
@@ -278,27 +280,23 @@
   opacity: 1;
   left: 50%;
   top: 46%;
-  width: clamp(72px, 14vmin, 110px);
-  transform: translate(-50%, -50%) scale(1.2);
+  width: var(--artifact-hold-w);
+  transform: translate(-50%, -50%) scale(1);
 }
 
+/* Left-side 2×2 slots (mid-height), matching wait mockup */
 .wait-artifact-doc--seated {
   opacity: 1;
-  top: max(16px, calc(env(safe-area-inset-top, 0px) + 12px));
-  left: calc(
-    max(16px, env(safe-area-inset-left, 0px) + 12px) +
-      (var(--artifact-slot) * (clamp(44px, 9vmin, 64px) + 10px)) +
-      (clamp(44px, 9vmin, 64px) / 2)
+  width: var(--artifact-seat-w);
+  top: calc(
+    42% + (var(--artifact-row) - 0.5) * (var(--artifact-seat-w) * 1.42 + var(--artifact-seat-gap))
   );
-  width: clamp(44px, 9vmin, 64px);
-  transform: translate(-50%, 0) scale(1);
-  gap: 4px;
-}
-
-.wait-artifact-doc--seated .wait-artifact-doc__caption {
-  font-size: clamp(8px, 1.4vw, 10px);
-  max-width: 4.8rem;
-  line-height: 1.25;
+  left: calc(
+    max(14px, env(safe-area-inset-left, 0px) + 10px) +
+      (var(--artifact-col) * (var(--artifact-seat-w) + var(--artifact-seat-gap))) +
+      (var(--artifact-seat-w) / 2)
+  );
+  transform: translate(-50%, -50%) scale(1);
 }
 
 .wait-artifact-doc__sheet {
@@ -310,57 +308,115 @@
 .wait-artifact-doc__paper {
   position: absolute;
   inset: 0;
-  clip-path: polygon(0% 0%, 82% 0%, 100% 12%, 100% 100%, 0% 100%);
-  border-radius: 4px 0 4px 4px;
+  /* Cut top-right so dog-ear flap sits in the notch */
+  clip-path: polygon(0% 0%, 74% 0%, 100% 18%, 100% 100%, 0% 100%);
+  border-radius: 10px 0 10px 10px;
   background: linear-gradient(
     155deg,
-    rgba(255, 255, 255, 0.14) 0%,
-    rgba(167, 139, 250, 0.12) 45%,
-    rgba(139, 92, 246, 0.08) 100%
+    rgba(28, 23, 53, 0.82) 0%,
+    rgba(20, 16, 41, 0.78) 45%,
+    rgba(11, 8, 21, 0.72) 100%
   );
-  border: 1px solid rgba(167, 139, 250, 0.35);
+  border: 1px solid rgba(167, 139, 250, 0.42);
   box-shadow:
-    0 8px 28px rgba(11, 8, 21, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: rgba(192, 132, 252, 0.95);
+    0 0 0 1px rgba(139, 92, 246, 0.12),
+    0 10px 36px rgba(11, 8, 21, 0.55),
+    0 0 28px rgba(139, 92, 246, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: rgba(192, 132, 252, 0.98);
+  overflow: hidden;
 }
 
-.wait-artifact-doc__fold {
+.wait-artifact-doc__cover {
   position: absolute;
-  top: 0;
-  right: 0;
-  width: 18%;
-  height: 12%;
-  background: linear-gradient(
-    215deg,
-    rgba(255, 255, 255, 0.34) 0%,
-    rgba(167, 139, 250, 0.3) 48%,
-    rgba(109, 40, 217, 0.22) 100%
-  );
-  clip-path: polygon(0 0, 100% 0, 100% 100%);
-  box-shadow: -1px 1px 0 rgba(167, 139, 250, 0.35);
-  pointer-events: none;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(6px, 1.6vmin, 12px);
+  padding: 14% 10% 12%;
+  box-sizing: border-box;
 }
 
 .wait-artifact-doc__glyph {
-  width: 42%;
-  height: 42%;
+  width: 36%;
+  height: auto;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 8px rgba(168, 85, 247, 0.55));
 }
 
 .wait-artifact-doc__caption {
   margin: 0;
-  max-width: 9.5rem;
+  width: 100%;
   text-align: center;
-  font-size: clamp(10px, 1.8vw, 12px);
+  font-size: clamp(9px, 2.1vmin, 13px);
   line-height: 1.35;
-  color: rgba(228, 228, 231, 0.78);
-  font-weight: 400;
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.55);
+  color: rgba(244, 244, 245, 0.92);
+  font-weight: 500;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.65);
+  /* Cover title — keep inside paper */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Seated slots: icon-only (mockup), hide cover copy */
+.wait-artifact-doc--seated .wait-artifact-doc__caption {
+  display: none;
+}
+
+.wait-artifact-doc--seated .wait-artifact-doc__cover {
+  padding: 18% 12%;
+}
+
+.wait-artifact-doc--seated .wait-artifact-doc__glyph {
+  width: 48%;
+}
+
+/* Dog-ear fold — light triangle flap on top-right (matches reference photos) */
+.wait-artifact-doc__fold {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 26%;
+  aspect-ratio: 1;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.wait-artifact-doc__fold-face {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+  background: linear-gradient(
+    215deg,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(210, 200, 240, 0.42) 38%,
+    rgba(139, 92, 246, 0.28) 72%,
+    rgba(76, 40, 140, 0.4) 100%
+  );
+  box-shadow:
+    -2px 2px 6px rgba(0, 0, 0, 0.35),
+    inset 1px -1px 0 rgba(255, 255, 255, 0.22);
+  border-radius: 0 8px 0 0;
+}
+
+.wait-artifact-doc__fold-crease {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+  background: linear-gradient(
+    225deg,
+    transparent 46%,
+    rgba(11, 8, 21, 0.45) 49.5%,
+    rgba(255, 255, 255, 0.2) 51%,
+    transparent 55%
+  );
+  pointer-events: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -372,13 +428,15 @@
   .wait-artifact-doc--hold,
   .wait-artifact-doc--seated {
     opacity: 1;
-    top: max(16px, calc(env(safe-area-inset-top, 0px) + 12px));
-    left: calc(
-      max(16px, env(safe-area-inset-left, 0px) + 12px) +
-        (var(--artifact-slot) * (clamp(44px, 9vmin, 64px) + 10px)) +
-        (clamp(44px, 9vmin, 64px) / 2)
+    width: var(--artifact-seat-w);
+    top: calc(
+      42% + (var(--artifact-row) - 0.5) * (var(--artifact-seat-w) * 1.42 + var(--artifact-seat-gap))
     );
-    width: clamp(44px, 9vmin, 64px);
-    transform: translate(-50%, 0) scale(1);
+    left: calc(
+      max(14px, env(safe-area-inset-left, 0px) + 10px) +
+        (var(--artifact-col) * (var(--artifact-seat-w) + var(--artifact-seat-gap))) +
+        (var(--artifact-seat-w) / 2)
+    );
+    transform: translate(-50%, -50%) scale(1);
   }
 }

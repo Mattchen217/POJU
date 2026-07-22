@@ -35,9 +35,12 @@ function main(): void {
 
   assert("prompt fluency rewrite rule", prompt.includes("白话重组") && prompt.includes("禁止抠词替换"));
   assert("prompt forbids inline interrupt example", prompt.includes("错误示范（禁止）"));
-  assert("GlossaryText golden soft + dots", glossary.includes("term-mark__word") && glossary.includes("[···]"));
-  assert("uses info dots opener", glossary.includes("term-mark__info"));
-  assert("css golden word style", css.includes(".term-mark__word"));
+  assert(
+    "GlossaryText golden soft + underline",
+    glossary.includes("term-mark__word--interactive") && !glossary.includes('>[···]<'),
+  );
+  assert("interactive soft word (no info dots opener)", glossary.includes("term-mark__word--interactive") && !glossary.includes("term-mark__info"));
+  assert("css golden word style", css.includes(".term-mark__word") && css.includes("term-mark__word--interactive"));
   assert("display clear question helper", display.includes("formatFocusQuestionAsClearQuestion"));
   assert("display model first_question path", display.includes("appendModelFirstQuestion"));
   assert("marking STEM_ELEMENT_COMPOUNDS", marking.includes("STEM_ELEMENT_COMPOUNDS"));

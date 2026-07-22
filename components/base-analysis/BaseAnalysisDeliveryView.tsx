@@ -83,7 +83,7 @@ export function BaseAnalysisDeliveryView({
                 ) : null}
                 <div className="glyph-delivery-card base-analysis-delivery__card">
                   {/* dualLayer：正文零金字 / 依据块金字集中(cap=3)。
-                      不开的话依据块走 legacy 档 cap=2 → 第 3 个金字有词无 [···]、点不开。 */}
+                      不开的话依据块走 legacy 档 cap=2 → 第 3 个金字有词无下划线、点不开。 */}
                   <RichReadingText text={section.body} locale={locale} dualLayer />
                 </div>
               </section>

@@ -32,7 +32,10 @@ function main(): void {
   const prompt = read("lib/llm/deepseek/breakthrough-core.ts");
   const display = read("lib/poju/phases/segment2/display.ts");
 
-  assert("golden soft + dots UI", glossary.includes("term-mark__word") && glossary.includes("[···]"));
+  assert(
+    "golden soft + underline UI",
+    glossary.includes("term-mark__word--interactive") && !glossary.includes('>[···]<'),
+  );
   assert("no soft · plain join in UI", !glossary.includes("${visible.trim()} · ${plain.trim()}"));
   assert("paragraph density cap", glossary.includes("MAX_PAREN_MARKS_PER_PARAGRAPH = 2"));
   assert("prompt fluency + first_question", prompt.includes("白话重组") && prompt.includes("first_question"));

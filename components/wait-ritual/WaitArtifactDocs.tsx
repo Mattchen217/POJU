@@ -16,7 +16,7 @@ type Props = {
   includeTranslate: boolean;
 };
 
-/** spawn → hold (center) → seated (top-left slot). */
+/** spawn → hold (center) → seated (left 2×2 slots). */
 type SeatState = "spawn" | "hold" | "seated";
 
 const ORDER: BaseAnalysisArtifactKind[] = ["compute", "narrative", "evidence", "translate"];
@@ -95,6 +95,8 @@ function ArtifactDoc({
   caption: string;
 }) {
   const [state, setState] = useState<SeatState>("spawn");
+  const slotCol = slotIndex % 2;
+  const slotRow = Math.floor(slotIndex / 2);
 
   useEffect(() => {
     const reduced =
@@ -105,7 +107,6 @@ function ArtifactDoc({
       return;
     }
 
-    // Kick spawn → hold after scale-up finishes.
     const toHold = window.setTimeout(() => setState("hold"), WAIT_ARTIFACT_SPAWN_MS);
     const toSeat = window.setTimeout(
       () => setState("seated"),
@@ -137,24 +138,32 @@ function ArtifactDoc({
         {
           "--artifact-slot": slotIndex,
           "--artifact-count": slotCount,
+          "--artifact-col": slotCol,
+          "--artifact-row": slotRow,
         } as CSSProperties
       }
       aria-hidden
     >
       <div className="wait-artifact-doc__sheet">
         <div className="wait-artifact-doc__paper">
-          <Glyph kind={kind} />
+          <div className="wait-artifact-doc__cover">
+            <Glyph kind={kind} />
+            <p className="wait-artifact-doc__caption">{caption}</p>
+          </div>
         </div>
-        <span className="wait-artifact-doc__fold" aria-hidden />
+        {/* Dog-ear outside clipped paper so the flap stays visible */}
+        <span className="wait-artifact-doc__fold" aria-hidden>
+          <span className="wait-artifact-doc__fold-face" />
+          <span className="wait-artifact-doc__fold-crease" />
+        </span>
       </div>
-      <p className="wait-artifact-doc__caption">{caption}</p>
     </div>
   );
 }
 
 /**
- * Wait-ritual documents: center scale-up → hold 2s → seat in top-left row.
- * Non-interactive — progress only.
+ * Wait-ritual documents: center scale-up → hold 2s → seat in left 2×2 slots.
+ * Cover layout: glyph + done caption on the paper. Non-interactive.
  */
 export function WaitArtifactDocs({ artifacts, includeTranslate }: Props) {
   const t = useTranslations("wait_ritual.artifacts");
