@@ -12,9 +12,13 @@ import {
 import {
   fillFromComputeIfMissing,
   mergeTaskTrees,
-  NARRATIVE_TASKS,
   validateTaskPaths,
 } from "@/lib/base-analysis-v2/narrative/narrative-call";
+import {
+  EVIDENCE_TASKS,
+  getEvidenceTaskByName,
+  type NarrativeTask,
+} from "@/lib/base-analysis-v2/narrative/narrative-tasks";
 import type {
   ReportComputed,
   SegmentComputed,
@@ -44,6 +48,9 @@ import {
   V2_OUTPUT_MAX_TOKENS,
 } from "@/lib/base-analysis-v2/v2-llm-budget";
 
+export { EVIDENCE_TASKS, getEvidenceTaskByName };
+export type { EvidenceTaskName } from "@/lib/base-analysis-v2/narrative/narrative-tasks";
+
 /** @deprecated 用 V2_OUTPUT_MAX_TOKENS；保留别名给守卫/旧 import。 */
 export const EVIDENCE_TASK_MAX_TOKENS = V2_OUTPUT_MAX_TOKENS;
 const EVIDENCE_TEMPERATURE = 0.35;
@@ -51,9 +58,6 @@ const EVIDENCE_TEMPERATURE = 0.35;
 const ATTEMPT_TIMEOUT_MS = 120_000;
 /** 4 Task 并发；对齐 Hobby 300s。 */
 const TOTAL_TIMEOUT_MS = 300_000;
-
-/** 与第2次正文同款分组（4+6+4+5=19）。 */
-export const EVIDENCE_TASKS = NARRATIVE_TASKS;
 
 export type EvidenceOutcome =
   | { ok: true; value: ReportSegmentTextTree; attempts: number }
@@ -173,14 +177,56 @@ function polishEvidenceTree(
   return polished;
 }
 
-type EvidenceTask = (typeof EVIDENCE_TASKS)[number];
+type EvidenceTask = NarrativeTask;
+
+/** 合并 Task 树 → 零锚补 → 清洗 → 强制补救（fan-out 后共用）。 */
+export function assembleEvidenceTree(
+  trees: readonly Record<string, unknown>[],
+  rc: ReportComputed,
+  locale: string,
+): ReportSegmentTextTree {
+  const merged = mergeTaskTrees(trees);
+  const filled = fillFromComputeIfMissing(merged, rc, locale);
+
+  const backfilled = mapSegmentTexts(filled, (seg, path) => {
+    const raw = readPath(rc, path);
+    const basis =
+      raw && typeof raw === "object" && "bazi_basis" in raw
+        ? (raw as SegmentComputed).bazi_basis
+        : [];
+    return backfillZeroAnchorSegment(
+      seg,
+      Array.isArray(basis) ? basis : [],
+      locale,
+    );
+  });
+
+  let polished = polishEvidenceTree(backfilled, locale);
+
+  let evResidue = findEvidenceLeak(polished, locale);
+  if (evResidue) {
+    console.warn(`[v2/evidence] ⚠️ 首轮清洗后残留(${evResidue}) — 强制补救`);
+    polished = mapSegmentTexts(polished, (seg) =>
+      forceRemarkAndFallback(seg, locale),
+    );
+    evResidue = findEvidenceLeak(polished, locale);
+    if (evResidue) {
+      console.warn(
+        `[v2/evidence] ⚠️ 补救后仍残留(${evResidue}) — 需补 SSOT/平替表`,
+      );
+    } else {
+      console.log(`[v2/evidence] ✅ 强制补救成功,依据无裸词`);
+    }
+  }
+  return polished;
+}
 
 /**
  * 单 Task：只喂这几段的双钥匙，输出这几段依据。
  * ★ 硬错误可重试（空/截断/坏 JSON/连不上）；缺段合并后兜底；时间锚/简称/裸词清洗放行。
  *   质量问题不打回。
  */
-async function runEvidenceTask(
+export async function runEvidenceTask(
   task: EvidenceTask,
   rc: ReportComputed,
   locale: string,
@@ -335,41 +381,7 @@ export async function runEvidence(
           r.ok,
       )
       .map((r) => r.value);
-    const merged = mergeTaskTrees(trees);
-    const filled = fillFromComputeIfMissing(merged, rc, locale);
-
-    // ★ 段级0锚点：零金字 + basis 非空 → 从 bazi_basis 补锚（不打回）
-    const backfilled = mapSegmentTexts(filled, (seg, path) => {
-      const raw = readPath(rc, path);
-      const basis =
-        raw && typeof raw === "object" && "bazi_basis" in raw
-          ? (raw as SegmentComputed).bazi_basis
-          : [];
-      return backfillZeroAnchorSegment(
-        seg,
-        Array.isArray(basis) ? basis : [],
-        locale,
-      );
-    });
-
-    let polished = polishEvidenceTree(backfilled, locale);
-
-    // ★ 最后保险:检测到裸词 → 强制补救(不打回,代码兜死)
-    let evResidue = findEvidenceLeak(polished, locale);
-    if (evResidue) {
-      console.warn(`[v2/evidence] ⚠️ 首轮清洗后残留(${evResidue}) — 强制补救`);
-      polished = mapSegmentTexts(polished, (seg) =>
-        forceRemarkAndFallback(seg, locale),
-      );
-      evResidue = findEvidenceLeak(polished, locale);
-      if (evResidue) {
-        console.warn(
-          `[v2/evidence] ⚠️ 补救后仍残留(${evResidue}) — 需补 SSOT/平替表`,
-        );
-      } else {
-        console.log(`[v2/evidence] ✅ 强制补救成功,依据无裸词`);
-      }
-    }
+    const polished = assembleEvidenceTree(trees, rc, locale);
 
     const attempts = Math.max(...results.map((r) => r.attempts), 1);
     const okCount = results.filter((r) => r.ok).length;

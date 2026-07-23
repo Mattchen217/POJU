@@ -12,7 +12,6 @@ import { WorkspacePojuChatStage } from "@/components/workspace/WorkspacePojuChat
 import { useWorkspacePojuPrepare } from "@/components/workspace/WorkspacePojuPrepareContext";
 import { WorkspacePojuPreparingStage } from "@/components/workspace/WorkspacePojuPreparingStage";
 import { WorkspaceProfileSlotBar } from "@/components/workspace/WorkspaceProfileSlotBar";
-import { WorkspaceUnlockRitual } from "@/components/workspace/WorkspaceUnlockRitual";
 import { useWorkspaceUnlockRitualResume } from "@/components/workspace/useWorkspaceUnlockRitualResume";
 import {
   useWorkspaceProductHistory,
@@ -120,10 +119,10 @@ export function PojuPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (i
   const tBrand = useTranslations("poju.branding");
   const locale = useLocale();
   const [hasProfiles, setHasProfiles] = useState(false);
-  const { phase, startPrepare, setPhase, unlockRitualActive } = useWorkspacePojuPrepare();
+  const { phase, startPrepare, setPhase } = useWorkspacePojuPrepare();
   useWorkspaceUnlockRitualResume(locale);
 
-  /* Avoid flashing birth home while Stripe return resumes unlock ritual. */
+  /* Avoid flashing birth home while Stripe return resumes unlock pipeline. */
   const [unlockResumeGate, setUnlockResumeGate] = useState(() => {
     if (typeof window === "undefined") return false;
     try {
@@ -167,20 +166,11 @@ export function PojuPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (i
     return (
       <div
         className="workspace-poju-stack workspace-poju-stack--chat"
-        aria-busy={phase === "idle" || unlockRitualActive || undefined}
+        aria-busy={phase === "idle" || undefined}
       >
         {phase === "chat" ? (
-          <div
-            className={`workspace-poju-chat-layer${
-              unlockRitualActive ? " is-fade-out" : ""
-            }`}
-          >
+          <div className="workspace-poju-chat-layer">
             <WorkspacePojuChatStage />
-          </div>
-        ) : null}
-        {unlockRitualActive ? (
-          <div className="workspace-unlock-ritual-layer is-fade-in">
-            <WorkspaceUnlockRitual />
           </div>
         ) : null}
       </div>

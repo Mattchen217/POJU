@@ -112,7 +112,12 @@
       "siteLabel": "网站语言"
     },
     "pojuRail": {
-      "matrixTitle": "个人能量图"
+      "matrixTitle": "个人能量图",
+      "baComputing": "正在计算能量底座…",
+      "baWriting": "正在撰写底座报告…",
+      "baFinishing": "正在收尾底座报告…",
+      "retryBa": "重试",
+      "dismissError": "关闭"
     },
     "density": {
       "newSession": "新建会话",

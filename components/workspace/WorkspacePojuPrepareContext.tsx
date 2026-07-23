@@ -23,6 +23,7 @@ type PrepareState = {
   session: POJUSessionState | null;
   matrixExpanded: boolean;
   error: string | null;
+  /** @deprecated Center ritual removed — kept false; pipeline uses baseReportStatus. */
   unlockRitualActive: boolean;
   baseReportText: string | null;
   baseReportStatus: WorkspaceBaseReportStatus;
@@ -38,7 +39,10 @@ type PrepareApi = PrepareState & {
   setSession: (session: POJUSessionState | null) => void;
   setMatrixExpanded: (expanded: boolean) => void;
   setError: (error: string | null) => void;
-  /** Begin center unlock ritual; does not change right-rail open/close. */
+  /**
+   * Start base-analysis pipeline in the right rail (does not block center chat).
+   * Chat should release pending question in parallel.
+   */
   startUnlockRitual: () => void;
   completeUnlockRitual: (reportText: string) => void;
   failUnlockRitual: (message: string) => void;
@@ -104,14 +108,17 @@ export function WorkspacePojuPrepareProvider({
   }, []);
 
   const startUnlockRitual = useCallback(() => {
+    openRight();
     setState((s) => ({
       ...s,
-      unlockRitualActive: true,
+      unlockRitualActive: false,
       baseReportStatus: "generating",
       baseReportError: null,
+      baseReportText: null,
+      matrixExpanded: true,
       phase: "chat",
     }));
-  }, []);
+  }, [openRight]);
 
   const completeUnlockRitual = useCallback((reportText: string) => {
     setState((s) => ({
@@ -134,7 +141,11 @@ export function WorkspacePojuPrepareProvider({
   }, []);
 
   const dismissUnlockRitual = useCallback(() => {
-    setState((s) => ({ ...s, unlockRitualActive: false }));
+    setState((s) => ({
+      ...s,
+      unlockRitualActive: false,
+      baseReportStatus: s.baseReportStatus === "generating" ? "idle" : s.baseReportStatus,
+    }));
   }, []);
 
   const resetPrepare = useCallback(() => {

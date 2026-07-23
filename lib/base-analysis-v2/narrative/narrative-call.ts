@@ -7,6 +7,11 @@ import {
   pickConclusions,
 } from "@/lib/base-analysis-v2/narrative/narrative-prompt";
 import {
+  getNarrativeTaskByName,
+  NARRATIVE_TASKS,
+  type NarrativeTask,
+} from "@/lib/base-analysis-v2/narrative/narrative-tasks";
+import {
   SEGMENT_PATHS,
   type ReportComputed,
   type SegmentComputed,
@@ -28,6 +33,9 @@ import {
   V2_OUTPUT_MAX_TOKENS,
 } from "@/lib/base-analysis-v2/v2-llm-budget";
 
+export { getNarrativeTaskByName, NARRATIVE_TASKS, type NarrativeTask };
+export type { NarrativeTaskName } from "@/lib/base-analysis-v2/narrative/narrative-tasks";
+
 const NARRATIVE_TEMPERATURE = 0.65;
 /** 单次硬尝试 fetch 超时；硬重试共用 phase 总墙。 */
 const ATTEMPT_TIMEOUT_MS = 120_000;
@@ -44,30 +52,6 @@ export type RunNarrativeOptions = {
   session_id?: string;
   signal?: AbortSignal;
 };
-
-type NarrativeTask = { name: string; paths: readonly string[] };
-
-function pathsOf(prefix: string): string[] {
-  return SEGMENT_PATHS.filter((p) => p.startsWith(`${prefix}.`));
-}
-
-/**
- * 业务模块分组（按 SECTION_LAYOUT，4 Task）
- * Task1 energy_map(4) · Task2 work+interpersonal(6) · Task3 phase(4) · Task4 retune+card(5)
- * = 19，无遗漏无重叠；keywords/dos/donts 不进任何 Task。
- */
-export const NARRATIVE_TASKS: readonly NarrativeTask[] = [
-  { name: "energy_map", paths: pathsOf("energy_map") },
-  {
-    name: "work_interpersonal",
-    paths: [...pathsOf("work_style"), ...pathsOf("interpersonal")],
-  },
-  { name: "phase_states", paths: pathsOf("phase_states") },
-  {
-    name: "retune_card",
-    paths: [...pathsOf("retune"), "summary.card_basis"],
-  },
-] as const;
 
 /** 校验指定 paths 是否都有非空字符串（单 Task 用）。 */
 export function validateTaskPaths(
@@ -192,12 +176,30 @@ function polishNarrativeTree(
   return polished;
 }
 
+/** 合并 Task 树 → 兜底 → 清洗（供单 Task HTTP fan-out 后客户端/服务端共用）。 */
+export function assembleNarrativeTree(
+  trees: readonly Record<string, unknown>[],
+  rc: ReportComputed,
+  locale: string,
+): ReportSegmentTextTree {
+  const merged = mergeTaskTrees(trees);
+  const filled = fillFromComputeIfMissing(merged, rc, locale);
+  const polished = polishNarrativeTree(filled, locale);
+  const bodyResidue = findNarrativeBodyLeak(polished, locale);
+  if (bodyResidue) {
+    console.warn(
+      `[v2/narrative] ℹ️ 清洗后正文残留(${bodyResidue}) — 放行,不打回`,
+    );
+  }
+  return polished;
+}
+
 /**
  * 单 Task：只喂这几段的 core_conclusion，输出这几段白话。
  * ★ 硬错误可重试（空/截断/坏 JSON/连不上）；缺段合并后兜底；角引号/术语清洗放行。
  *   质量问题不打回。
  */
-async function runNarrativeTask(
+export async function runNarrativeTask(
   task: NarrativeTask,
   rc: ReportComputed,
   locale: string,
@@ -344,16 +346,7 @@ export async function runNarrative(
     const trees = results
       .filter((r): r is { ok: true; value: Record<string, unknown>; attempts: number } => r.ok)
       .map((r) => r.value);
-    const merged = mergeTaskTrees(trees);
-    const filled = fillFromComputeIfMissing(merged, rc, locale);
-    const polished = polishNarrativeTree(filled, locale);
-
-    const bodyResidue = findNarrativeBodyLeak(polished, locale);
-    if (bodyResidue) {
-      console.warn(
-        `[v2/narrative] ℹ️ 清洗后正文残留(${bodyResidue}) — 放行,不打回`,
-      );
-    }
+    const polished = assembleNarrativeTree(trees, rc, locale);
 
     const attempts = Math.max(...results.map((r) => r.attempts), 1);
     const okCount = results.filter((r) => r.ok).length;

@@ -1794,6 +1794,87 @@
   line-height: 1.45;
 }
 
+/* Right-rail base-analysis wait (parallel with center chat) */
+.workspace-rail-ba {
+  margin-top: 12px;
+  padding: 16px 12px;
+  border-top: 1px solid rgba(167, 139, 250, 0.18);
+  border-radius: 12px;
+  background: rgba(139, 92, 246, 0.06);
+}
+
+.workspace-rail-ba__wait {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.workspace-rail-ba__pulse {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #a855f7;
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.55);
+  animation: workspace-rail-ba-breath 2.8s ease-in-out infinite;
+}
+
+@keyframes workspace-rail-ba-breath {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-rail-ba__pulse {
+    animation: none;
+    opacity: 0.85;
+  }
+}
+
+.workspace-rail-ba__status {
+  margin: 0;
+  color: #e4e4e7;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.workspace-rail-ba__error,
+.workspace-rail-ba--error {
+  color: #fca5a5;
+  font-size: 0.8125rem;
+}
+
+.workspace-rail-ba__error button,
+.workspace-rail-ba--error button {
+  margin-top: 8px;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  background: rgba(139, 92, 246, 0.12);
+  color: #e4e4e7;
+  cursor: pointer;
+}
+
+.workspace-rail-ba__hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.workspace-rail-ba--loading {
+  min-height: 40px;
+}
+
+
 .workspace-right-matrix__body .poju-matrix-bubble,
 .workspace-right-matrix__body .pem,
 .workspace-right-matrix__body .pcm {
@@ -1900,6 +1981,11 @@
 .workspace-unlock-ritual .wait-fx,
 .workspace-unlock-ritual .wait-artifact-layer {
   position: absolute !important;
+}
+
+/* Keep 2×2 doc slots further left of the center orb inside the center column. */
+.workspace-unlock-ritual .wait-artifact-doc {
+  --artifact-cluster-x: clamp(6%, 11%, 15%);
 }
 
 .workspace-unlock-ritual .wait-fx--breath {

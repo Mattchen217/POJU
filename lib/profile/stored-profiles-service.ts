@@ -368,6 +368,7 @@ export async function saveCoreJudgmentsForProfile(input: {
     last_used_at: new Date(),
   });
   console.log("[saveCoreJudgmentsForProfile] Layer-1 judgments saved (no narrative gate)", input.profile_id);
+  dispatchBaseLayer1Ready(input.profile_id);
 }
 
 export async function saveBaseAnalysisFromStream(input: {
@@ -567,6 +568,88 @@ export async function upgradeStoredProfileLocation(
   });
 
   return userProfile;
+}
+
+/** Dispatched after saveCoreJudgmentsForProfile following 真算. */
+export const BASE_LAYER1_READY_EVENT = "poju:base-layer1-ready";
+
+export function dispatchBaseLayer1Ready(profileId: string): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent(BASE_LAYER1_READY_EVENT, { detail: { profile_id: profileId } }),
+  );
+}
+
+/** Layer-1 ready: structured present (真算后即可；不要求 display_text). */
+export function storedLayer1Present(ba: StoredProfileBaseAnalysis | undefined): boolean {
+  if (!ba) return false;
+  return Boolean(ba.structured && typeof ba.structured === "object");
+}
+
+/** Whether IndexedDB has Layer-1 (structured) for segment2 / breakthrough. */
+export async function profileHasLayer1(profileId: string): Promise<boolean> {
+  assertBrowser();
+  const data = await getStoredProfile(profileId);
+  return storedLayer1Present(data?.base_analysis);
+}
+
+/**
+ * Poll until Layer-1 is on the profile (or timeout).
+ * Used before segment2 while the existing deep_reckoning wait UI is already showing.
+ */
+export async function waitForLayer1(
+  profileId: string,
+  opts?: { timeoutMs?: number; intervalMs?: number; signal?: AbortSignal },
+): Promise<boolean> {
+  assertBrowser();
+  const timeoutMs = opts?.timeoutMs ?? 300_000;
+  const intervalMs = opts?.intervalMs ?? 800;
+  const deadline = Date.now() + timeoutMs;
+
+  if (await profileHasLayer1(profileId)) return true;
+
+  return await new Promise<boolean>((resolve) => {
+    const onAbort = () => {
+      cleanup();
+      resolve(false);
+    };
+    const cleanup = () => {
+      window.clearInterval(timer);
+      opts?.signal?.removeEventListener("abort", onAbort);
+      window.removeEventListener(BASE_LAYER1_READY_EVENT, onReady);
+    };
+    const onReady = (ev: Event) => {
+      const detail = (ev as CustomEvent<{ profile_id?: string }>).detail;
+      if (detail?.profile_id && detail.profile_id !== profileId) return;
+      void profileHasLayer1(profileId).then((ok) => {
+        if (!ok) return;
+        cleanup();
+        resolve(true);
+      });
+    };
+    const tick = () => {
+      if (opts?.signal?.aborted) {
+        cleanup();
+        resolve(false);
+        return;
+      }
+      void profileHasLayer1(profileId).then((ok) => {
+        if (ok) {
+          cleanup();
+          resolve(true);
+          return;
+        }
+        if (Date.now() >= deadline) {
+          cleanup();
+          resolve(false);
+        }
+      });
+    };
+    const timer = window.setInterval(tick, intervalMs);
+    opts?.signal?.addEventListener("abort", onAbort);
+    window.addEventListener(BASE_LAYER1_READY_EVENT, onReady);
+    tick();
+  });
 }
 
 /** Whether IndexedDB has a completed 命主基础分析 for this profile. */

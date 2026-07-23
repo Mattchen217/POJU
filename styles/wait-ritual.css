@@ -247,8 +247,8 @@
   --artifact-hold-w: clamp(240px, 52vmin, 340px);
   --artifact-seat-w: clamp(96px, 20vmin, 136px);
   --artifact-seat-gap: clamp(28px, 4.5vw, 44px);
-  /* 2×2 cluster: vertically centered, further left (~10vw) from center orb */
-  --artifact-cluster-x: clamp(12vw, 20vw, 26vw);
+  /* 2×2 cluster: vertically centered, further left of center orb */
+  --artifact-cluster-x: clamp(8vw, 14vw, 18vw);
   --artifact-cluster-y: 50%;
   --artifact-seat-h: calc(var(--artifact-seat-w) * 297 / 210);
   position: absolute;

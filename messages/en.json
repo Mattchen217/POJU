@@ -112,7 +112,12 @@
       "siteLabel": "Site language"
     },
     "pojuRail": {
-      "matrixTitle": "Personal energy chart"
+      "matrixTitle": "Personal energy chart",
+      "baComputing": "Computing your energy base…",
+      "baWriting": "Writing your base report…",
+      "baFinishing": "Finishing your base report…",
+      "retryBa": "Retry",
+      "dismissError": "Dismiss"
     },
     "density": {
       "newSession": "New Session",

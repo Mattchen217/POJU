@@ -42,7 +42,7 @@ function main(): void {
     "post-turn no per-turn ensureBaseAnalysis",
     !postTurnOrchestrationBody(orch).includes("ensureBaseAnalysis"),
   );
-  assert("ensureBaseAnalysisReady before send", ui.includes("ensureBaseAnalysisReady(profileId)"));
+  assert("UI waits Layer1 before segment2", ui.includes("waitLayer1ForSegment2"));
 
   console.log("\n=== Fix B · no phantom deep_reckoning trailing ===\n");
   assert("no trailingActivity state", !ui.includes("trailingActivity"));

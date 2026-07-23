@@ -52,7 +52,6 @@ import { getLastUserMessageContent } from "@/lib/poju/context-helpers";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import { InfraBusyRetryAction } from "@/components/poju/InfraBusyRetryAction";
 import { getPojuServiceBusyMessage, isPojuFailurePlaceholderMessage } from "@/lib/llm/poju-service-busy-message";
-import { generateBaseAnalysis } from "@/lib/llm/deepseek/base-analysis";
 import {
   acceptForAttachKind,
   attachmentClientErrorMessage,
@@ -61,7 +60,7 @@ import {
   type ComposerAttachmentLocal,
 } from "@/lib/poju/attachments/client";
 import type { PojuChatAttachment } from "@/lib/poju/attachments/types";
-import { profileHasBaseAnalysis } from "@/lib/profile/stored-profiles-service";
+import { waitForLayer1 } from "@/lib/profile/stored-profiles-service";
 import { markPOJUV4SessionResolved } from "@/lib/poju/v4-lifecycle";
 import {
   DEFAULT_NEW_SESSION_TITLE,
@@ -453,8 +452,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     const flag = sessionStorage.getItem(POJU_RELEASE_PENDING_QUESTION_FLAG);
     if (flag !== session.session_id) return;
     if (sending || pipelineBusy) return;
-    if (!hasUnlockReportMessage(session)) return;
-    if (!unlockReportGateDismissed) return;
+
+    const workspaceParallel =
+      layout === "workspace-opening" && session.unlock_status === "unlocked";
+    if (!workspaceParallel) {
+      if (!hasUnlockReportMessage(session)) return;
+      if (!unlockReportGateDismissed) return;
+    }
 
     const pending = session.pending_question?.trim() || session.original_question?.trim();
     if (!pending) return;
@@ -483,9 +487,12 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   }, [
     session.session_id,
     session.messages,
+    session.unlock_status,
+    session.pending_question,
     sending,
     pipelineBusy,
     unlockReportGateDismissed,
+    layout,
     onSessionUpdate,
   ]);
 
@@ -607,21 +614,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     scrollChatToBottom("smooth");
 
     try {
-      const profileId = baseSession.selected_stored_profile_id?.trim();
-      const isRealUserTurn =
-        userMessage.trim().length > 0 && !userMessage.startsWith("[SYSTEM:");
-      if (isRealUserTurn && profileId && resolveSessionHasProfile(baseSession)) {
-        const ready = await ensureBaseAnalysisReady(profileId);
-        if (!ready) {
-          await dialog.alert(
-            locale.startsWith("zh")
-              ? "个人能量分析报告准备中，请稍后再发送。"
-              : "Base chart analysis is still preparing. Please wait and try again.",
-          );
-          return;
-        }
-      }
-
       const attachWire: PojuChatAttachment | null = errorRestore?.attachment?.data_url
         ? {
             name: errorRestore.attachment.name,
@@ -855,6 +847,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       await savePOJUSession(unlocked);
 
       if (layout === "workspace-opening" && workspacePrepare) {
+        try {
+          sessionStorage.setItem(POJU_RELEASE_PENDING_QUESTION_FLAG, base.session_id);
+        } catch {
+          /* ignore */
+        }
         workspacePrepare.startUnlockRitual();
         return;
       }
@@ -1049,11 +1046,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     }
   }
 
-  async function ensureBaseAnalysisReady(profileId: string): Promise<boolean> {
+  /** Segment2 only: wait for 真算 Layer1 (existing deep_reckoning UI covers the wait). */
+  async function waitLayer1ForSegment2(profileId: string): Promise<boolean> {
     try {
-      if (!(await profileHasBaseAnalysis(profileId))) {
-        await generateBaseAnalysis(profileId);
-      }
+      const ok = await waitForLayer1(profileId, { timeoutMs: 300_000 });
+      if (!ok) return false;
       const cur = sessionRef.current;
       if (cur.agent_v2) {
         const withAnalysis = {
@@ -1065,7 +1062,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       }
       return true;
     } catch (e) {
-      console.warn("[poju] base analysis not ready:", e);
+      console.warn("[poju] Layer1 not ready for segment2:", e);
       return false;
     }
   }
@@ -1118,13 +1115,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     try {
       const profileId = baseSession.selected_stored_profile_id?.trim();
       if (profileId && resolveSessionHasProfile(baseSession)) {
-        const ready = await ensureBaseAnalysisReady(profileId);
+        const ready = await waitLayer1ForSegment2(profileId);
         if (!ready) {
           onSessionUpdate(baseSession);
           await dialog.alert(
             locale.startsWith("zh")
-              ? "个人能量分析报告准备中，请稍后再试。"
-              : "Base chart analysis is still preparing. Please wait and try again.",
+              ? "能量底座仍在计算，请稍后再确认。"
+              : "Energy base is still computing. Please wait a moment and try again.",
           );
           return;
         }
@@ -1388,13 +1385,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     try {
       const profileId = baseSession.selected_stored_profile_id?.trim();
       if (profileId && resolveSessionHasProfile(baseSession)) {
-        const ready = await ensureBaseAnalysisReady(profileId);
+        const ready = await waitLayer1ForSegment2(profileId);
         if (!ready) {
           onSessionUpdate(baseSession);
           await dialog.alert(
             locale.startsWith("zh")
-              ? "个人能量分析报告准备中，请稍后再试。"
-              : "Base chart analysis is still preparing. Please wait and try again.",
+              ? "能量底座仍在计算，请稍后再试。"
+              : "Energy base is still computing. Please wait a moment and try again.",
           );
           return;
         }

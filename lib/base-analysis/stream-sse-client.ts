@@ -9,8 +9,13 @@ import {
   loadV2Checkpoint,
   saveV2Checkpoint,
 } from "@/lib/base-analysis/v2-checkpoint-store";
+import { NARRATIVE_TASKS } from "@/lib/base-analysis-v2/narrative/narrative-tasks";
 import type { ReportComputed } from "@/lib/base-analysis-v2/report-schema";
 import type { ReportSegmentTextTree } from "@/lib/base-analysis-v2/segment-text";
+import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
+import {
+  saveCoreJudgmentsForProfile,
+} from "@/lib/profile/stored-profiles-service";
 import {
   WAIT_ARTIFACT_INTRO_TOTAL_MS,
   WAIT_LAST_ARTIFACT_LEAD_MS,
@@ -23,6 +28,8 @@ export type StreamSseCallbacks = {
   onPollContent?: (accumulated: string) => void;
   /** Layer-1 judgments (v1 only; v2 does not emit). */
   onCoreJudgments?: (judgments: unknown, source?: string) => void;
+  /** Fired after 真算 + Layer1 persisted (structured on profile). */
+  onLayer1Ready?: () => void;
   /** Wait-UI progress stage + optional artifact when a phase completes. */
   onProgress?: (payload: ProgressPayload) => void;
 };
@@ -45,6 +52,8 @@ const PHASE = {
 } as const;
 
 const COMPUTE_WAIT_HINT_MS = 60_000;
+
+const WRITE_TASK_NAMES = NARRATIVE_TASKS.map((t) => t.name);
 
 type PhaseErrorBody = {
   ok?: boolean;
@@ -71,7 +80,19 @@ async function postJson<T>(
     body: JSON.stringify(body),
     signal,
   });
-  const data = (await res.json()) as T & PhaseErrorBody;
+  const raw = await res.text();
+  let data: (T & PhaseErrorBody) | null = null;
+  try {
+    data = raw ? (JSON.parse(raw) as T & PhaseErrorBody) : null;
+  } catch {
+    const preview = raw.trim().slice(0, 120);
+    throw new Error(
+      `phase failed (${res.status}): non-JSON response${preview ? ` — ${preview}` : ""}`,
+    );
+  }
+  if (!data) {
+    throw new Error(`phase failed (${res.status}): empty response`);
+  }
   if (!res.ok || data.ok === false) {
     const detail = data.detail ? `: ${data.detail}` : "";
     throw new Error(`${data.error || `phase failed (${res.status})`}${detail}`);
@@ -91,8 +112,26 @@ async function abortLock(profile_id: string): Promise<void> {
   }
 }
 
+async function persistLayer1Early(input: {
+  profile_id: string;
+  locale: string;
+  structured: ProfileStructured;
+  callbacks?: StreamSseCallbacks;
+}): Promise<void> {
+  try {
+    await saveCoreJudgmentsForProfile({
+      profile_id: input.profile_id,
+      structured: input.structured,
+      locale: input.locale,
+    });
+    input.callbacks?.onLayer1Ready?.();
+  } catch (e) {
+    console.warn("[v2-phased] early Layer1 save failed", e);
+  }
+}
+
 /**
- * Phased v2: compute → (narrative ∥ evidence) → finalize.
+ * Phased v2: compute → (narrative ∥ evidence Task fan-out) → finalize.
  * Intermediates live in IndexedDB; each HTTP call stays under Vercel 300s.
  */
 export async function consumeBaseAnalysisStream(input: {
@@ -174,12 +213,17 @@ export async function consumeBaseAnalysisStream(input: {
       emit(input.callbacks, "v2_compute", "compute");
     }
 
-    // ── Phase 2: narrative ∥ evidence (pipeline parallel; copy sequential) ──
-    // Bottom status: narrative copy only → after narrative artifact appears,
-    // switch to evidence copy → after evidence done, Phase 3 continues.
+    // 真算后立刻写入 Layer1，供 POJU 第二阶段衔接（不依赖整份报告）。
+    await persistLayer1Early({
+      profile_id: input.profile_id,
+      locale: siteLocale,
+      structured: input.local_data.structured as ProfileStructured,
+      callbacks: input.callbacks,
+    });
+
+    // ── Phase 2: narrative ∥ evidence — one HTTP per Task ─────────
     const needNar = !narrative;
     const needEv = !evidence;
-    /** Wall clock when the locale's last document artifact was emitted. */
     let lastArtifactAt = 0;
 
     if (needNar || needEv) {
@@ -197,15 +241,32 @@ export async function consumeBaseAnalysisStream(input: {
             emit(input.callbacks, "v2_narrative", "narrative");
             return;
           }
-          const data = await postJson<{ narrative: ReportSegmentTextTree }>(
+          const trees = await Promise.all(
+            WRITE_TASK_NAMES.map(async (task) => {
+              const data = await postJson<{ tree: Record<string, unknown>; task: string }>(
+                PHASE.narrative,
+                {
+                  profile_id: input.profile_id,
+                  report_computed: reportComputed,
+                  task,
+                },
+                input.signal,
+              );
+              return data.tree;
+            }),
+          );
+          const assembled = await postJson<{ narrative: ReportSegmentTextTree }>(
             PHASE.narrative,
-            { profile_id: input.profile_id, report_computed: reportComputed },
+            {
+              profile_id: input.profile_id,
+              report_computed: reportComputed,
+              trees,
+            },
             input.signal,
           );
-          narrative = data.narrative;
+          narrative = assembled.narrative;
           await persistCheckpoint({ narrative });
           emit(input.callbacks, "v2_narrative", "narrative");
-          // Narrative doc shown → unlock evidence broadcast if still running
           if (needEv && !evidenceDone) {
             emit(input.callbacks, "v2_evidence");
           }
@@ -213,7 +274,6 @@ export async function consumeBaseAnalysisStream(input: {
         (async () => {
           if (!needEv) {
             lastArtifactAt = Date.now();
-            // Zh: ③ is last doc → finishing copy immediately with the icon.
             emit(
               input.callbacks,
               siteLocale.startsWith("zh") ? "v2_final_audit" : "v2_evidence",
@@ -222,16 +282,33 @@ export async function consumeBaseAnalysisStream(input: {
             evidenceDone = true;
             return;
           }
-          const data = await postJson<{ evidence: ReportSegmentTextTree }>(
+          const trees = await Promise.all(
+            WRITE_TASK_NAMES.map(async (task) => {
+              const data = await postJson<{ tree: Record<string, unknown>; task: string }>(
+                PHASE.evidence,
+                {
+                  profile_id: input.profile_id,
+                  report_computed: reportComputed,
+                  task,
+                },
+                input.signal,
+              );
+              return data.tree;
+            }),
+          );
+          const assembled = await postJson<{ evidence: ReportSegmentTextTree }>(
             PHASE.evidence,
-            { profile_id: input.profile_id, report_computed: reportComputed },
+            {
+              profile_id: input.profile_id,
+              report_computed: reportComputed,
+              trees,
+            },
             input.signal,
           );
-          evidence = data.evidence;
+          evidence = assembled.evidence;
           await persistCheckpoint({ evidence });
           evidenceDone = true;
           lastArtifactAt = Date.now();
-          // Zh: ③ evidence icon → 收尾播报；non-zh keeps evidence copy until ④.
           emit(
             input.callbacks,
             siteLocale.startsWith("zh") ? "v2_final_audit" : "v2_evidence",
@@ -254,8 +331,6 @@ export async function consumeBaseAnalysisStream(input: {
     }
 
     // ── Phase 3: finalize (± translate) ───────────────────────────
-    // Non-zh: timed "semantic construction" theater (no translation wording).
-    // Zh: merge-only finalize — no 4th artifact; last doc is evidence.
     const isZh = siteLocale.startsWith("zh");
     let translateArtifactEmitted = false;
     const theaterTimers: ReturnType<typeof setTimeout>[] = [];
@@ -279,7 +354,6 @@ export async function consumeBaseAnalysisStream(input: {
         );
       });
 
-    /** Finishing copy + dwell so last artifact's center→slot ritual is visible. */
     const holdLastArtifactThenFinish = async () => {
       emit(input.callbacks, "v2_final_audit");
       const elapsed = lastArtifactAt > 0 ? Date.now() - lastArtifactAt : 0;
@@ -289,7 +363,6 @@ export async function consumeBaseAnalysisStream(input: {
     };
 
     if (isZh) {
-      // Zh finishing copy already tied to evidence artifact above.
       emit(input.callbacks, "v2_final_audit");
     } else {
       emit(input.callbacks, "v2_translate");
@@ -297,7 +370,6 @@ export async function consumeBaseAnalysisStream(input: {
         setTimeout(() => {
           translateArtifactEmitted = true;
           lastArtifactAt = Date.now();
-          // ④ icon appears → switch broadcast to finishing copy (not semantic_text).
           emit(input.callbacks, "v2_final_audit", "translate");
         }, WAIT_SEMANTIC_ARTIFACT_MS),
       );
@@ -334,12 +406,10 @@ export async function consumeBaseAnalysisStream(input: {
       if (!translateArtifactEmitted) {
         translateArtifactEmitted = true;
         lastArtifactAt = Date.now();
-        // Late ④: icon + finishing copy together.
         emit(input.callbacks, "v2_final_audit", "translate");
       }
       await holdLastArtifactThenFinish();
     } else if (isZh) {
-      // ③ evidence already shown with finishing copy; dwell ≥30s before delivery.
       await holdLastArtifactThenFinish();
     }
 
@@ -357,7 +427,6 @@ export async function consumeBaseAnalysisStream(input: {
       job_id: jobId,
     };
   } catch (e) {
-    // Keep checkpoint + lock for resume unless aborted.
     if (input.signal?.aborted) {
       await abortLock(input.profile_id);
       lockHeld = false;

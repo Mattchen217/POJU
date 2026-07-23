@@ -1,25 +1,28 @@
 "use client";
 
 /**
- * After Stripe unlock return to `/app?tab=poju`, restore prepare context + start center ritual.
- * Does not change right-rail open/close — only restores session/matrix and flips ritual on.
+ * After Stripe unlock return to `/app?tab=poju`:
+ * restore prepare context, start right-rail base analysis, release pending question into opening.
+ * Does not block center chat.
  */
 
 import { useEffect, useRef } from "react";
 
 import { useWorkspacePojuPrepare } from "@/components/workspace/WorkspacePojuPrepareContext";
+import { markedTextFromStoredBaseAnalysis } from "@/lib/base-analysis/resolve-display-text";
 import { buildMatrixPayloadFromProfile } from "@/lib/poju/build-matrix-payload";
-import { getUnlockReportText } from "@/lib/poju/unlock-report-gate";
-import {
-  hasUnlockReportMessage,
-} from "@/lib/poju/finalize-unlock-bazi-session";
+import { hasUnlockReportMessage } from "@/lib/poju/finalize-unlock-bazi-session";
 import {
   needsUnlockBaziPreparation,
+  POJU_RELEASE_PENDING_QUESTION_FLAG,
   POJU_WORKSPACE_UNLOCK_RITUAL_KEY,
 } from "@/lib/poju/preview-unlock";
+import { getUnlockReportText } from "@/lib/poju/unlock-report-gate";
 import { loadPOJUSession } from "@/lib/poju/session-manager";
-import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
-import { markedTextFromStoredBaseAnalysis } from "@/lib/base-analysis/resolve-display-text";
+import {
+  getStoredProfile,
+  storedBaseAnalysisPresent,
+} from "@/lib/profile/stored-profiles-service";
 
 export function useWorkspaceUnlockRitualResume(locale: string) {
   const {
@@ -67,7 +70,7 @@ export function useWorkspaceUnlockRitualResume(locale: string) {
         setMatrixPayload(matrix);
         setPhase("chat");
 
-        if (hasUnlockReportMessage(session)) {
+        if (hasUnlockReportMessage(session) || storedBaseAnalysisPresent(profile.base_analysis)) {
           const reportMsg = session.messages.find((m) => m.meta?.kind === "report");
           const text =
             getUnlockReportText(reportMsg) ||
@@ -77,14 +80,19 @@ export function useWorkspaceUnlockRitualResume(locale: string) {
             setMatrixExpanded(false);
             completeUnlockRitual(text);
           }
+          // Still release pending into opening if needed
+          if (session.pending_question?.trim()) {
+            sessionStorage.setItem(POJU_RELEASE_PENDING_QUESTION_FLAG, sessionId);
+          }
           return;
         }
 
-        if (needsUnlockBaziPreparation(session)) {
+        if (needsUnlockBaziPreparation(session) || session.unlock_status === "unlocked") {
+          sessionStorage.setItem(POJU_RELEASE_PENDING_QUESTION_FLAG, sessionId);
           startUnlockRitual();
         }
       } catch (e) {
-        console.error("[workspace] unlock ritual resume failed:", e);
+        console.error("[workspace] unlock pipeline resume failed:", e);
       }
     })();
 

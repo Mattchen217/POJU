@@ -58,7 +58,7 @@ function main(): void {
   );
   assert("post-turn no per-turn ensureBaseAnalysis", !postTurnOrchestrationBody(orch).includes("ensureBaseAnalysis"));
   assert("confirmation pipeline still ensures base analysis", /runConfirmationPipeline[\s\S]*ensureBaseAnalysis/.test(orch));
-  assert("UI ensures base analysis before send", read("components/poju/POJUChatUI.tsx").includes("ensureBaseAnalysisReady"));
+  assert("UI waits Layer1 before segment2", read("components/poju/POJUChatUI.tsx").includes("waitLayer1ForSegment2"));
   assert("UI mounts preparing", read("components/poju/POJUChatUI.tsx").includes("Segment2AnalysisPreparing"));
 
   console.log("\n=== Fix 2 · collecting null-core guard + first insight once ===\n");
