@@ -2,13 +2,14 @@
 
 import { useLocale, useTranslations } from "next-intl";
 
-import { BaseAnalysisDeliveryView } from "@/components/base-analysis/BaseAnalysisDeliveryView";
 import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
 import { WorkspaceRailBaseAnalysis } from "@/components/workspace/WorkspaceRailBaseAnalysis";
+import { WorkspaceRailBaseReport } from "@/components/workspace/WorkspaceRailBaseReport";
 import { useWorkspacePojuPrepareOptional } from "@/components/workspace/WorkspacePojuPrepareContext";
 
 /**
- * Right-rail: energy matrix (collapsible) + base-analysis wait/report underneath.
+ * Right-rail: collapsible energy matrix + base-analysis ritual wait / report underneath.
+ * Unlock starts with matrix collapsed; expanding pushes the wait ritual down.
  */
 export function WorkspaceRightMatrixPanel() {
   const t = useTranslations("workspace.pojuRail");
@@ -23,6 +24,8 @@ export function WorkspaceRightMatrixPanel() {
     matrixPayload,
     matrixExpanded,
     setMatrixExpanded,
+    reportExpanded,
+    setReportExpanded,
     baseReportText,
     baseReportStatus,
     baseReportError,
@@ -45,15 +48,12 @@ export function WorkspaceRightMatrixPanel() {
       {baseReportStatus === "generating" ? <WorkspaceRailBaseAnalysis /> : null}
 
       {baseReportStatus === "ready" && baseReportText ? (
-        <div className="workspace-right-matrix__report">
-          <BaseAnalysisDeliveryView
+        <div className="workspace-right-matrix__report workspace-right-matrix__report--enter">
+          <WorkspaceRailBaseReport
             displayText={baseReportText}
-            structured={matrixPayload.structured}
-            userProfile={matrixPayload.user_profile}
             locale={locale}
-            profileId={matrixPayload.profile_id}
-            variant="modal"
-            showPageHeader={false}
+            expanded={reportExpanded}
+            onExpandedChange={setReportExpanded}
           />
         </div>
       ) : null}

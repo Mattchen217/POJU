@@ -117,7 +117,11 @@
       "baWriting": "Writing your base report…",
       "baFinishing": "Finishing your base report…",
       "retryBa": "Retry",
-      "dismissError": "Dismiss"
+      "dismissError": "Dismiss",
+      "collapsedRailLabel": "Personal energy shortcuts",
+      "matrixIconLabel": "Personal energy chart",
+      "reportIconLabel": "Energy analysis report",
+      "reportGeneratingIconLabel": "Energy analysis report generating"
     },
     "density": {
       "newSession": "New Session",
@@ -1529,13 +1533,26 @@
   "base_analysis_view": {
     "eyebrow": "Personal Energy Analysis Report",
     "title": "Personal Energy Analysis Report",
+    "rail_description": "A multi-section readout of your energy structure, with adjustments you can put into practice.",
     "close": "Close",
     "loading": "Loading…",
     "not_found": "No saved analysis found.",
     "closing": "This is your energy-config readout. How you use it is up to you.",
     "poju_cta_title": "Take this report into POJU",
     "poju_cta_description": "Ask follow-up questions with your energy readout already in context.",
-    "poju_cta_button": "Open POJU"
+    "poju_cta_button": "Open POJU",
+    "sections": {
+      "section_1": "Personality & Inner Traits",
+      "section_2": "Work Style & Decision Logic",
+      "section_3": "Communication & Collaboration",
+      "section_4": "Energy & Development Cycles",
+      "section_5": "Adjustments & Action Tips",
+      "section_6": "Summary & Action Plan",
+      "tablist_label": "Report sections",
+      "prev_page": "Previous",
+      "next_page": "Next",
+      "close_report": "Close report"
+    }
   },
   "refund": {
     "title": "Refund Your Session",
@@ -1733,7 +1750,10 @@
       "block_4": "Stage Status Markers",
       "block_5": "4D Inner Core",
       "tablist_label": "Profile sections",
-      "collapse_list": "Collapse list"
+      "collapse_list": "Collapse list",
+      "close_portrait": "Close portrait",
+      "prev_page": "Previous",
+      "next_page": "Next"
     },
     "card": {
       "calendar_alignment": "Calendar Alignment",

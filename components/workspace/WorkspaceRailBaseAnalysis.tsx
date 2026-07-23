@@ -1,24 +1,32 @@
 "use client";
 
 /**
- * Right-rail host for unlock base-analysis: wait chrome under the matrix + stream pipeline.
- * Center chat stays interactive; Layer1 is persisted mid-pipeline for segment2.
+ * Right-rail host for unlock base-analysis:
+ * full DeliveryWaitFrame ritual under the matrix (collapsed by default; expands push this down).
+ * Center chat stays interactive. Layer1 is persisted mid-pipeline for segment2.
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useLocale } from "next-intl";
 
 import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
+import { DeliveryWaitFrame } from "@/components/wait-ritual/DeliveryWaitFrame";
 import { useWorkspacePojuPrepare } from "@/components/workspace/WorkspacePojuPrepareContext";
 import { markedTextFromStoredBaseAnalysis } from "@/lib/base-analysis/resolve-display-text";
 import { useBaseAnalysisWaitProgress } from "@/lib/base-analysis/use-base-analysis-wait-progress";
 import type { StoredProfileData } from "@/lib/db/poju-db";
+import {
+  PREPARING_MIN_SPLINE_CACHE_MS,
+  PREVIEW_MATRIX_MIN_PREP_MS,
+  waitRemainingMinSpline,
+} from "@/lib/poju/preparing-spline-timing";
 import { savePOJUSession } from "@/lib/poju/session-manager";
 import type { POJUSessionState } from "@/lib/poju/types";
 import {
   getStoredProfile,
   storedBaseAnalysisPresent,
 } from "@/lib/profile/stored-profiles-service";
+import { useDeliveryWaitPhase } from "@/lib/wait-ritual/use-delivery-wait-phase";
 
 function markSessionLayer1Ready(
   session: POJUSessionState,
@@ -37,7 +45,6 @@ function markSessionLayer1Ready(
 
 export function WorkspaceRailBaseAnalysis() {
   const locale = useLocale();
-  const t = useTranslations("workspace.pojuRail");
   const {
     baseReportStatus,
     session,
@@ -49,6 +56,7 @@ export function WorkspaceRailBaseAnalysis() {
 
   const [profile, setProfile] = useState<StoredProfileData | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [startedAt] = useState(() => Date.now());
 
   useEffect(() => {
     if (baseReportStatus !== "generating") {
@@ -88,7 +96,7 @@ export function WorkspaceRailBaseAnalysis() {
       <div className="workspace-rail-ba workspace-rail-ba--error" role="alert">
         <p>{loadError}</p>
         <button type="button" onClick={() => failUnlockRitual(loadError)}>
-          {t("dismissError")}
+          Dismiss
         </button>
       </div>
     );
@@ -113,18 +121,21 @@ export function WorkspaceRailBaseAnalysis() {
   }
 
   return (
-    <WorkspaceRailBaseAnalysisInner
-      session={session}
-      profile={profile}
-      profileId={resolvedProfileId}
-      locale={locale}
-      onSessionUpdate={(next) => {
-        setSession(next);
-        void savePOJUSession(next);
-      }}
-      onComplete={(text) => completeUnlockRitual(text)}
-      onError={(msg) => failUnlockRitual(msg)}
-    />
+    <div className="workspace-rail-ba">
+      <WorkspaceRailBaseAnalysisInner
+        session={session}
+        profile={profile}
+        profileId={resolvedProfileId}
+        locale={locale}
+        startedAt={startedAt}
+        onSessionUpdate={(next) => {
+          setSession(next);
+          void savePOJUSession(next);
+        }}
+        onComplete={(text) => completeUnlockRitual(text)}
+        onError={(msg) => failUnlockRitual(msg)}
+      />
+    </div>
   );
 }
 
@@ -167,6 +178,7 @@ function WorkspaceRailBaseAnalysisInner({
   profile,
   profileId,
   locale,
+  startedAt,
   onSessionUpdate,
   onComplete,
   onError,
@@ -175,64 +187,86 @@ function WorkspaceRailBaseAnalysisInner({
   profile: StoredProfileData;
   profileId: string;
   locale: string;
+  startedAt: number;
   onSessionUpdate: (s: POJUSessionState) => void;
   onComplete: (text: string) => void;
   onError: (msg: string) => void;
 }) {
-  const t = useTranslations("workspace.pojuRail");
   const hasCachedReport = useMemo(
     () => storedBaseAnalysisPresent(profile.base_analysis),
     [profile.base_analysis],
   );
   const [error, setError] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
+  const [streamDone, setStreamDone] = useState(false);
+  const [waitVisualDone, setWaitVisualDone] = useState(false);
+  const [reportText, setReportText] = useState<string | null>(null);
   const waitProgress = useBaseAnalysisWaitProgress();
+  const includeTranslate = !locale.startsWith("zh");
 
-  const stageLabel = (() => {
-    const stage = waitProgress.liveProgressStage;
-    if (!stage) return t("baComputing");
-    if (stage.startsWith("v2_compute")) return t("baComputing");
-    if (stage.startsWith("v2_narrative") || stage.startsWith("v2_evidence")) {
-      return t("baWriting");
-    }
-    if (stage.startsWith("v2_final") || stage.startsWith("v2_translate")) {
-      return t("baFinishing");
-    }
-    return t("baComputing");
-  })();
+  const waitFlow = useDeliveryWaitPhase({
+    product: "poju",
+    baziComplete: streamDone,
+    productComplete: false,
+    enabled: !error,
+    onExitComplete: () => setWaitVisualDone(true),
+  });
+
+  useEffect(() => {
+    if (!streamDone || !waitVisualDone || !reportText) return;
+    const ac = new AbortController();
+    void (async () => {
+      try {
+        const minMs = hasCachedReport ? PREPARING_MIN_SPLINE_CACHE_MS : PREVIEW_MATRIX_MIN_PREP_MS;
+        await waitRemainingMinSpline(startedAt, minMs);
+        if (ac.signal.aborted) return;
+        onComplete(reportText);
+      } catch (e) {
+        if (ac.signal.aborted) return;
+        const msg = e instanceof Error ? e.message : String(e);
+        setError(msg);
+        onError(msg);
+      }
+    })();
+    return () => ac.abort();
+  }, [
+    streamDone,
+    waitVisualDone,
+    reportText,
+    startedAt,
+    hasCachedReport,
+    onComplete,
+    onError,
+  ]);
 
   return (
-    <div className="workspace-rail-ba" aria-busy={!error}>
-      {error ? (
-        <div className="workspace-rail-ba__error" role="alert">
-          <p>{error}</p>
-          <button
-            type="button"
-            onClick={() => {
-              setError(null);
-              waitProgress.reset();
-              setRetryKey((k) => k + 1);
-            }}
-          >
-            {t("retryBa")}
-          </button>
-        </div>
-      ) : (
-        <div className="workspace-rail-ba__wait">
-          <div className="workspace-rail-ba__pulse" aria-hidden />
-          <p className="workspace-rail-ba__status">{stageLabel}</p>
-        </div>
-      )}
-
-      <div className="workspace-rail-ba__hidden" aria-hidden>
-        {hasCachedReport ? (
+    <DeliveryWaitFrame
+      wait={waitFlow}
+      liveProgressStage={waitProgress.liveProgressStage}
+      completedArtifacts={waitProgress.completedArtifacts}
+      includeTranslateArtifact={includeTranslate}
+      showBreath={false}
+      error={error}
+      onRetry={() => {
+        setError(null);
+        setStreamDone(false);
+        setWaitVisualDone(false);
+        setReportText(null);
+        waitProgress.reset();
+        setRetryKey((k) => k + 1);
+      }}
+      hiddenWork={
+        hasCachedReport ? (
           <UnlockCachedRailWork
             key={retryKey}
             profile={profile}
             session={session}
             profileId={profileId}
             onSessionUpdate={onSessionUpdate}
-            onDone={(text) => onComplete(text)}
+            onDone={(text) => {
+              setReportText(text);
+              setStreamDone(true);
+            }}
             onError={(msg) => {
               setError(msg);
               onError(msg);
@@ -251,15 +285,16 @@ function WorkspaceRailBaseAnalysisInner({
             onComplete={async (displayText) => {
               const next = markSessionLayer1Ready(session, profileId);
               onSessionUpdate(next);
-              onComplete(displayText);
+              setReportText(displayText);
+              setStreamDone(true);
             }}
             onError={(err) => {
               setError(err);
               onError(err);
             }}
           />
-        )}
-      </div>
-    </div>
+        )
+      }
+    />
   );
 }

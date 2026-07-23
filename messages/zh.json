@@ -117,7 +117,11 @@
       "baWriting": "正在撰写底座报告…",
       "baFinishing": "正在收尾底座报告…",
       "retryBa": "重试",
-      "dismissError": "关闭"
+      "dismissError": "关闭",
+      "collapsedRailLabel": "个人能量快捷入口",
+      "matrixIconLabel": "个人能量画像",
+      "reportIconLabel": "个人能量分析报告",
+      "reportGeneratingIconLabel": "个人能量分析报告生成中"
     },
     "density": {
       "newSession": "新建会话",
@@ -1529,13 +1533,26 @@
   "base_analysis_view": {
     "eyebrow": "个人能量分析报告",
     "title": "个人能量分析报告",
+    "rail_description": "基于先天能量结构的多维解读，落到可执行的调适与行动建议。",
     "close": "关闭",
     "loading": "正在加载…",
     "not_found": "未找到已保存的分析。",
     "closing": "这是你的能量配置读数。怎么用它，取决于你自己。",
     "poju_cta_title": "带着这份报告进入 POJU",
     "poju_cta_description": "你的能量配置已在上下文中，可直接追问、深聊。",
-    "poju_cta_button": "打开 POJU"
+    "poju_cta_button": "打开 POJU",
+    "sections": {
+      "section_1": "性格与内在特质",
+      "section_2": "工作与决策逻辑",
+      "section_3": "沟通与人际协同",
+      "section_4": "状态与发展周期",
+      "section_5": "调适与行为建议",
+      "section_6": "提炼与行动指南",
+      "tablist_label": "报告段落",
+      "prev_page": "上一页",
+      "next_page": "下一页",
+      "close_report": "关闭报告"
+    }
   },
   "refund": {
     "title": "退款",
@@ -1733,7 +1750,10 @@
       "block_4": "阶段状态标记",
       "block_5": "四维底层内核",
       "tablist_label": "画像板块",
-      "collapse_list": "收起列表"
+      "collapse_list": "收起列表",
+      "close_portrait": "关闭画像",
+      "prev_page": "上一页",
+      "next_page": "下一页"
     },
     "card": {
       "calendar_alignment": "历法对齐",

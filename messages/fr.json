@@ -1357,7 +1357,10 @@
       "block_4": "Marqueurs d'État",
       "block_5": "Noyau Interne 4D",
       "tablist_label": "Sections du profil",
-      "collapse_list": "Réduire la liste"
+      "collapse_list": "Réduire la liste",
+      "close_portrait": "Fermer le portrait",
+      "prev_page": "Précédent",
+      "next_page": "Suivant"
     },
     "card": {
       "calendar_alignment": "Alignement Calendaire",
@@ -2226,13 +2229,26 @@
   "base_analysis_view": {
     "eyebrow": "Rapport d'analyse énergétique personnelle",
     "title": "Rapport d'analyse énergétique personnelle",
+    "rail_description": "Une lecture en plusieurs sections de votre structure énergétique, avec des ajustements actionnables.",
     "close": "Fermer",
     "loading": "Chargement…",
     "not_found": "Aucune analyse enregistrée trouvée.",
     "closing": "Voici votre lecture de configuration énergétique. Comment vous l'utilisez vous appartient.",
     "poju_cta_title": "Emporter ce rapport dans POJU",
     "poju_cta_description": "Votre lecture énergétique est déjà en contexte — posez des questions de suivi.",
-    "poju_cta_button": "Ouvrir POJU"
+    "poju_cta_button": "Ouvrir POJU",
+    "sections": {
+      "section_1": "Personnalité et Traits Intérieurs",
+      "section_2": "Travail et Logique de Décision",
+      "section_3": "Communication et Collaboration",
+      "section_4": "État et Cycles de Développement",
+      "section_5": "Ajustements et Conseils Pratiques",
+      "section_6": "Synthèse et Plan d'Action",
+      "tablist_label": "Sections du rapport",
+      "prev_page": "Précédent",
+      "next_page": "Suivant",
+      "close_report": "Fermer le rapport"
+    }
   },
   "birth_form": {
     "birth_location": "Lieu de naissance",

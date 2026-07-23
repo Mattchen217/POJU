@@ -1357,7 +1357,10 @@
       "block_4": "Phasen-Status-Marker",
       "block_5": "4D-Innerer Kern",
       "tablist_label": "Profilbereiche",
-      "collapse_list": "Liste einklappen"
+      "collapse_list": "Liste einklappen",
+      "close_portrait": "Porträt schließen",
+      "prev_page": "Zurück",
+      "next_page": "Weiter"
     },
     "card": {
       "calendar_alignment": "Kalenderabgleich",
@@ -2226,13 +2229,26 @@
   "base_analysis_view": {
     "eyebrow": "Persönlicher Energieanalysebericht",
     "title": "Persönlicher Energieanalysebericht",
+    "rail_description": "Eine mehrteilige Ablesung deiner Energiestruktur — mit Anpassungen, die du umsetzen kannst.",
     "close": "Schließen",
     "loading": "Wird geladen…",
     "not_found": "Keine gespeicherte Analyse gefunden.",
     "closing": "Das ist deine Energiekonfigurations-Ablesung. Wie du sie nutzt, liegt bei dir.",
     "poju_cta_title": "Mit diesem Bericht zu POJU",
     "poju_cta_description": "Dein Energie-Readout ist schon im Kontext — stell Nachfragen.",
-    "poju_cta_button": "POJU öffnen"
+    "poju_cta_button": "POJU öffnen",
+    "sections": {
+      "section_1": "Persönlichkeit & Innere Züge",
+      "section_2": "Arbeitsstil & Entscheidungslogik",
+      "section_3": "Kommunikation & Zusammenarbeit",
+      "section_4": "Energie & Entwicklungszyklen",
+      "section_5": "Anpassung & Handlungstipps",
+      "section_6": "Zusammenfassung & Aktionsplan",
+      "tablist_label": "Berichtsabschnitte",
+      "prev_page": "Zurück",
+      "next_page": "Weiter",
+      "close_report": "Bericht schließen"
+    }
   },
   "birth_form": {
     "birth_location": "Geburtsort",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 
@@ -13,6 +13,7 @@ import { WorkspaceMobileDrawer } from "@/components/workspace/WorkspaceMobileDra
 import {
   WorkspacePojuPrepareProvider,
   useWorkspacePojuPrepareOptional,
+  useWorkspaceRightRailWide,
 } from "@/components/workspace/WorkspacePojuPrepareContext";
 import { WorkspaceRightDrawer } from "@/components/workspace/WorkspaceRightDrawer";
 import { WorkspaceRightMatrixPanel } from "@/components/workspace/WorkspaceRightMatrixPanel";
@@ -81,6 +82,51 @@ function PojuRightRailGate({
   }, [tab, phase, setRightOpen, resetPrepare]);
 
   return null;
+}
+
+/** Applies right-rail wide class from prepare state (must sit under PrepareProvider). */
+function WorkspaceShellSurface({
+  sidebarCollapsed,
+  rightOpen,
+  children,
+}: {
+  sidebarCollapsed: boolean;
+  rightOpen: boolean;
+  children: ReactNode;
+}) {
+  const rightWide = useWorkspaceRightRailWide();
+  return (
+    <div
+      className={`workspace-shell${sidebarCollapsed ? " is-sidebar-collapsed" : ""}${
+        rightOpen ? " is-right-open" : ""
+      }${rightOpen && rightWide ? " is-right-wide" : ""}`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function WorkspaceRightDrawerHost({
+  rightOpen,
+  onOpen,
+  onClose,
+  tab,
+  archiveId,
+  onOpenArchive,
+}: {
+  rightOpen: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+  tab: WorkspaceTab;
+  archiveId: string | null;
+  onOpenArchive: (product: WorkspaceProductId, id: string) => void;
+}) {
+  const rightWide = useWorkspaceRightRailWide();
+  return (
+    <WorkspaceRightDrawer open={rightOpen} wide={rightWide} onOpen={onOpen} onClose={onClose}>
+      <RightDrawerContext tab={tab} archiveId={archiveId} onOpenArchive={onOpenArchive} />
+    </WorkspaceRightDrawer>
+  );
 }
 
 /** Bind prepare.resetPrepare for shell actions that live outside the hook tree. */
@@ -249,11 +295,7 @@ export function WorkspaceShell({ initialTab }: Props) {
       <WorkspacePojuPrepareProvider openRight={openRight}>
         <PojuPrepareResetBinder resetRef={pojuPrepareResetRef} />
         <PojuRightRailGate tab={tab} setRightOpen={setRightOpen} />
-        <div
-          className={`workspace-shell${sidebarCollapsed ? " is-sidebar-collapsed" : ""}${
-            rightOpen ? " is-right-open" : ""
-          }`}
-        >
+        <WorkspaceShellSurface sidebarCollapsed={sidebarCollapsed} rightOpen={rightOpen}>
         <div className="workspace-shell__sky" aria-hidden />
 
         <div className="workspace-shell__main">
@@ -318,13 +360,14 @@ export function WorkspaceShell({ initialTab }: Props) {
           </WorkspaceScrollArea>
         </aside>
 
-        <WorkspaceRightDrawer open={rightOpen} onOpen={openRight} onClose={closeRight}>
-          <RightDrawerContext
-            tab={tab}
-            archiveId={archiveId}
-            onOpenArchive={selectArchive}
-          />
-        </WorkspaceRightDrawer>
+        <WorkspaceRightDrawerHost
+          rightOpen={rightOpen}
+          onOpen={openRight}
+          onClose={closeRight}
+          tab={tab}
+          archiveId={archiveId}
+          onOpenArchive={selectArchive}
+        />
 
         <WorkspaceMobileDrawer
           open={menuOpen}
@@ -338,7 +381,7 @@ export function WorkspaceShell({ initialTab }: Props) {
         />
 
         <WorkspaceLegalDrawer open={legalOpen} onClose={() => setLegalOpen(false)} />
-      </div>
+        </WorkspaceShellSurface>
       </WorkspacePojuPrepareProvider>
     </AppDialogProvider>
   );

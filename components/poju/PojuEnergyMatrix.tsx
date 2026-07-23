@@ -7,12 +7,18 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type ReactNode,
 } from "react";
 import { useTranslations } from "next-intl";
 
 import { SoftTermHover } from "@/components/cross-product/GlossaryText";
 import { MatrixElementLabel } from "@/components/poju/MatrixElementLabel";
 import { PojuDaYunTimeline } from "@/components/poju/PojuDaYunTimeline";
+import {
+  A4PaperSheet,
+  EnergyPortraitGlyph,
+  type A4PaperSheetMode,
+} from "@/components/ui/A4PaperSheet";
 import {
   elementCssClass,
   isZhMatrixLocale,
@@ -41,6 +47,7 @@ import { formatBirthClockTime } from "@/lib/profile/birth-info-utils";
 import { HOUR_PERIOD_INFO, type UserProfile } from "@/lib/profile/types";
 import "@/styles/poju-celestial-matrix.css";
 
+const RAIL_PAPER_MORPH_MS = 680;
 type Props = {
   payload: PojuMatrixPayload;
   locale: string;
@@ -63,6 +70,35 @@ const MATRIX_BLOCKS = [
 ] as const;
 
 type MatrixBlockId = (typeof MATRIX_BLOCKS)[number]["id"];
+
+function MaybeRailPaper({
+  enabled,
+  mode,
+  cover,
+  children,
+}: {
+  enabled: boolean;
+  mode: A4PaperSheetMode;
+  cover: ReactNode;
+  children: ReactNode;
+}) {
+  if (!enabled) return children;
+  return (
+    <div
+      className={`pcm-rail-paper${mode === "flat" ? " is-flat" : " is-folded"}`}
+    >
+      <A4PaperSheet mode={mode} className="pcm-rail-paper__sheet">
+        {cover}
+        <div
+          className="pcm-rail-paper__list"
+          aria-hidden={mode === "folded" ? true : undefined}
+        >
+          {children}
+        </div>
+      </A4PaperSheet>
+    </div>
+  );
+}
 
 /** Non-zh: top line = first 2 words, bottom = remainder (or 2nd word when only two). */
 function MatrixTabLabel({ text, locale }: { text: string; locale: string }) {
@@ -789,7 +825,7 @@ export function PojuEnergyMatrix({
   expanded,
   onExpandedChange,
 }: Props) {
-  const { structured, user_profile, wuxing_scores, strength, matrix_id } = payload;
+  const { structured, user_profile, wuxing_scores, strength } = payload;
   const shenshaLocale = normalizeShenshaLocale(locale);
   const isZh = isZhMatrixLocale(locale);
   const tb = useTranslations("bazi");
@@ -876,6 +912,51 @@ export function PojuEnergyMatrix({
   const [panelOpenUncontrolled, setPanelOpenUncontrolled] = useState(true);
   const panelOpen = expanded ?? panelOpenUncontrolled;
   const matrixLocale = normalizeMatrixLocale(locale);
+  const [railSheetMode, setRailSheetMode] = useState<A4PaperSheetMode>(() =>
+    hideChrome ? (panelOpen ? "flat" : "folded") : "flat",
+  );
+  const railCloseTimerRef = useRef<number | null>(null);
+  const railMorphGenRef = useRef(0);
+  const prefersReducedMotionRef = useRef(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    prefersReducedMotionRef.current = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (railCloseTimerRef.current != null) {
+        window.clearTimeout(railCloseTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!hideChrome) return;
+    if (!panelOpen) {
+      setRailSheetMode("folded");
+      return;
+    }
+    if (prefersReducedMotionRef.current) {
+      setRailSheetMode("flat");
+      return;
+    }
+    const gen = railMorphGenRef.current;
+    setRailSheetMode("folded");
+    let raf2 = 0;
+    const raf1 = window.requestAnimationFrame(() => {
+      raf2 = window.requestAnimationFrame(() => {
+        if (railMorphGenRef.current === gen) setRailSheetMode("flat");
+      });
+    });
+    return () => {
+      window.cancelAnimationFrame(raf1);
+      window.cancelAnimationFrame(raf2);
+    };
+  }, [hideChrome, panelOpen]);
 
   function setPanelOpen(open: boolean) {
     if (expanded === undefined) {
@@ -888,6 +969,41 @@ export function PojuEnergyMatrix({
     setActiveBlock(id);
     setPanelOpen(true);
   }
+
+  function openRailPortrait() {
+    const first = MATRIX_BLOCKS[0];
+    if (!first) return;
+    selectBlock(first.id);
+  }
+
+  function closeRailPortrait() {
+    if (!hideChrome) {
+      setPanelOpen(false);
+      return;
+    }
+    railMorphGenRef.current += 1;
+    if (railCloseTimerRef.current != null) {
+      window.clearTimeout(railCloseTimerRef.current);
+      railCloseTimerRef.current = null;
+    }
+    setRailSheetMode("folded");
+    if (prefersReducedMotionRef.current) {
+      setPanelOpen(false);
+      return;
+    }
+    railCloseTimerRef.current = window.setTimeout(() => {
+      railCloseTimerRef.current = null;
+      setPanelOpen(false);
+    }, RAIL_PAPER_MORPH_MS);
+  }
+
+  const activeBlockIndex = MATRIX_BLOCKS.findIndex((b) => b.id === activeBlock);
+  const prevBlock =
+    activeBlockIndex > 0 ? MATRIX_BLOCKS[activeBlockIndex - 1] : null;
+  const nextBlock =
+    activeBlockIndex >= 0 && activeBlockIndex < MATRIX_BLOCKS.length - 1
+      ? MATRIX_BLOCKS[activeBlockIndex + 1]
+      : null;
 
   const metaRow = (
     <div className="pcm__header-meta pcm__header-meta--inline">
@@ -902,9 +1018,6 @@ export function PojuEnergyMatrix({
       <span>
         {tMatrix(locale, "coordinates")} {formatCoordinates(user_profile, locale)}
       </span>
-      <span>
-        {tMatrix(locale, "matrix_id")} {matrix_id}
-      </span>
     </div>
   );
 
@@ -917,8 +1030,32 @@ export function PojuEnergyMatrix({
     >
       <div className="pcm__stars" aria-hidden />
       <div className="pcm__wrap">
-        {/* Gold-frame top nav + content panel (active tab bridges into panel) */}
-        <div className="pcm-stage">
+        <MaybeRailPaper
+          enabled={Boolean(hideChrome)}
+          mode={railSheetMode}
+          cover={
+            hideChrome ? (
+              <button
+                type="button"
+                className="pcm-rail-paper__cover"
+                onClick={openRailPortrait}
+                aria-label={tMatrix(locale, "main_title")}
+                tabIndex={railSheetMode === "folded" ? 0 : -1}
+                aria-hidden={railSheetMode === "flat" ? true : undefined}
+              >
+                <EnergyPortraitGlyph className="pcm-rail-paper__glyph" />
+                <span className="pcm-rail-paper__cover-title">
+                  {tMatrix(locale, "main_title")}
+                </span>
+              </button>
+            ) : null
+          }
+        >
+        <div
+          className={`pcm-stage${panelOpen ? "" : " is-list-collapsed"}${
+            hideChrome ? " pcm-stage--in-paper" : ""
+          }`}
+        >
         <div className="pcm-navframe">
           <div className="pcm-navframe__title-row">
             <h1 className="pcm-navframe__title">{tMatrix(locale, "main_title")}</h1>
@@ -1197,19 +1334,16 @@ export function PojuEnergyMatrix({
                   );
                 })}
               </div>
-              <div className="pcm-bars__footer">
-                <span className="pcm-bars__id">
-                  {tm("matrix_id")} · {matrix_id}
-                </span>
-                {yongshenChips.length > 0 ? (
+              {yongshenChips.length > 0 ? (
+                <div className="pcm-bars__footer">
                   <div className="pcm-chips">
                     <span className="pcm-chip pcm-chip--caps pcm-chip--neutral">
                       {tc("fact_anchor")} ·{" "}
                       {yongshenChips.map((c) => c.label).join(" · ")}
                     </span>
                   </div>
-                ) : null}
-              </div>
+                </div>
+              ) : null}
               {!suppressNarrative && narrativeLoading ? (
                 <p className="pcm-cal__note">{tc("narrative_loading")}</p>
               ) : null}
@@ -1909,21 +2043,52 @@ export function PojuEnergyMatrix({
         </section>
             ) : null}
             <div className="pcm-shell__footer">
+              <div className="pcm-shell__footer-slot pcm-shell__footer-slot--start">
+                {prevBlock ? (
+                  <button
+                    type="button"
+                    className="pcm-shell__nav pcm-shell__nav--prev"
+                    onClick={() => selectBlock(prevBlock.id)}
+                  >
+                    <span className="pcm-shell__nav-icon" aria-hidden>
+                      ‹
+                    </span>
+                    {tm("blocks.prev_page")}
+                  </button>
+                ) : null}
+              </div>
               <button
                 type="button"
                 className="pcm-shell__collapse"
-                onClick={() => setPanelOpen(false)}
+                onClick={() =>
+                  hideChrome ? closeRailPortrait() : setPanelOpen(false)
+                }
               >
-                {tm("blocks.collapse_list")}
+                {tm(hideChrome ? "blocks.close_portrait" : "blocks.collapse_list")}
                 <span className="pcm-shell__collapse-icon" aria-hidden>
                   ▴
                 </span>
               </button>
+              <div className="pcm-shell__footer-slot pcm-shell__footer-slot--end">
+                {nextBlock ? (
+                  <button
+                    type="button"
+                    className="pcm-shell__nav pcm-shell__nav--next"
+                    onClick={() => selectBlock(nextBlock.id)}
+                  >
+                    {tm("blocks.next_page")}
+                    <span className="pcm-shell__nav-icon" aria-hidden>
+                      ›
+                    </span>
+                  </button>
+                ) : null}
+              </div>
             </div>
           </div>
           ) : null}
         </div>
         </div>
+        </MaybeRailPaper>
       </div>
     </div>
   );

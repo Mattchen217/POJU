@@ -22,6 +22,8 @@ type PrepareState = {
   matrixPayload: PojuMatrixPayload | null;
   session: POJUSessionState | null;
   matrixExpanded: boolean;
+  /** Personal energy analysis report paper open in the right rail. */
+  reportExpanded: boolean;
   error: string | null;
   /** @deprecated Center ritual removed — kept false; pipeline uses baseReportStatus. */
   unlockRitualActive: boolean;
@@ -38,6 +40,7 @@ type PrepareApi = PrepareState & {
   setMatrixPayload: (payload: PojuMatrixPayload | null) => void;
   setSession: (session: POJUSessionState | null) => void;
   setMatrixExpanded: (expanded: boolean) => void;
+  setReportExpanded: (expanded: boolean) => void;
   setError: (error: string | null) => void;
   /**
    * Start base-analysis pipeline in the right rail (does not block center chat).
@@ -57,7 +60,8 @@ const INITIAL: PrepareState = {
   profileId: null,
   matrixPayload: null,
   session: null,
-  matrixExpanded: true,
+  matrixExpanded: false,
+  reportExpanded: false,
   error: null,
   unlockRitualActive: false,
   baseReportText: null,
@@ -79,7 +83,6 @@ export function WorkspacePojuPrepareProvider({
       ...INITIAL,
       phase: "handoff",
       profileId,
-      matrixExpanded: true,
     });
   }, []);
 
@@ -103,6 +106,10 @@ export function WorkspacePojuPrepareProvider({
     setState((s) => ({ ...s, matrixExpanded }));
   }, []);
 
+  const setReportExpanded = useCallback((reportExpanded: boolean) => {
+    setState((s) => ({ ...s, reportExpanded }));
+  }, []);
+
   const setError = useCallback((error: string | null) => {
     setState((s) => ({ ...s, error }));
   }, []);
@@ -115,7 +122,9 @@ export function WorkspacePojuPrepareProvider({
       baseReportStatus: "generating",
       baseReportError: null,
       baseReportText: null,
-      matrixExpanded: true,
+      /** Force-collapse bazi list; user may expand again (wait ritual slides down). */
+      matrixExpanded: false,
+      reportExpanded: false,
       phase: "chat",
     }));
   }, [openRight]);
@@ -127,7 +136,8 @@ export function WorkspacePojuPrepareProvider({
       baseReportText: reportText,
       baseReportStatus: "ready",
       baseReportError: null,
-      matrixExpanded: false,
+      /** Arrive folded — user opens the report paper explicitly. */
+      reportExpanded: false,
     }));
   }, []);
 
@@ -162,6 +172,7 @@ export function WorkspacePojuPrepareProvider({
       setMatrixPayload,
       setSession,
       setMatrixExpanded,
+      setReportExpanded,
       setError,
       startUnlockRitual,
       completeUnlockRitual,
@@ -178,6 +189,7 @@ export function WorkspacePojuPrepareProvider({
       setMatrixPayload,
       setSession,
       setMatrixExpanded,
+      setReportExpanded,
       setError,
       startUnlockRitual,
       completeUnlockRitual,
@@ -205,4 +217,14 @@ export function useWorkspacePojuPrepare(): PrepareApi {
 /** Safe for right drawer when provider may be absent on non-POJU tabs — always provided in shell. */
 export function useWorkspacePojuPrepareOptional(): PrepareApi | null {
   return useContext(WorkspacePojuPrepareContext);
+}
+
+/** True when right rail should use the large (3×) width. */
+export function useWorkspaceRightRailWide(): boolean {
+  const prepare = useWorkspacePojuPrepareOptional();
+  if (!prepare) return false;
+  if (prepare.matrixExpanded) return true;
+  if (prepare.reportExpanded) return true;
+  if (prepare.baseReportStatus === "generating") return true;
+  return false;
 }

@@ -151,8 +151,12 @@
 }
 
 .workspace-shell__right-drawer.is-open {
-  width: var(--ws-right-drawer-width);
+  width: var(--ws-sidebar-width);
   cursor: default;
+}
+
+.workspace-shell__right-drawer.is-open.is-wide {
+  width: var(--ws-right-drawer-width);
 }
 
 .workspace-shell__right-drawer.is-collapsed {
@@ -180,22 +184,140 @@
   padding-top: 8px;
 }
 
+/* Collapsed right rail: energy matrix + report icons (left-rail icon style) */
+.workspace-right-collapsed-icons {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0 16px;
+  flex-shrink: 0;
+}
+
+.workspace-shell__right-drawer.is-collapsed .workspace-right-collapsed-icons {
+  display: flex;
+}
+
+.workspace-right-collapsed-icons__btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.88);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.workspace-right-collapsed-icons__btn:hover {
+  background: rgba(139, 92, 246, 0.18);
+  color: #fff;
+}
+
+.workspace-right-collapsed-icons__btn:focus-visible {
+  outline: 2px solid rgba(167, 139, 250, 0.65);
+  outline-offset: 2px;
+}
+
+.workspace-right-collapsed-icons__btn .workspace-sidebar__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.workspace-right-collapsed-icons__btn .material-symbols-outlined {
+  font-size: 26px;
+  line-height: 1;
+  width: 26px;
+  height: 26px;
+  display: block;
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
+.workspace-right-collapsed-icons__portrait {
+  width: 26px;
+  height: 26px;
+  display: block;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.workspace-right-collapsed-icons__report {
+  width: 26px;
+  height: 26px;
+  display: block;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.workspace-right-collapsed-icons__spin {
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(167, 139, 250, 0.22);
+  border-top-color: #a855f7;
+  border-right-color: rgba(168, 85, 247, 0.55);
+  pointer-events: none;
+  animation: workspace-right-icon-spin 0.9s linear infinite;
+}
+
+@keyframes workspace-right-icon-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-right-collapsed-icons__spin {
+    animation: none;
+    border-color: rgba(168, 85, 247, 0.55);
+    opacity: 0.85;
+  }
+}
+
+/* Tooltips open toward center (left of the right rail) */
+.workspace-right-collapsed-icons__btn[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  right: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(28, 23, 53, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: none;
+  color: #fff;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 80;
+  transition: opacity 0.15s ease-in-out;
+}
+
+.workspace-right-collapsed-icons__btn[data-tooltip]:hover::after,
+.workspace-right-collapsed-icons__btn[data-tooltip]:focus-visible::after {
+  opacity: 1;
+}
+
 .workspace-shell__right-drawer-body {
   flex: 1;
   min-height: 0;
-  display: flex;
+  display: none;
   flex-direction: column;
   overflow: hidden;
   border-radius: 0 0 0 var(--ws-rail-radius);
   padding: 0;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.15s ease;
 }
 
 .workspace-shell__right-drawer.is-open .workspace-shell__right-drawer-body {
-  opacity: 1;
-  pointer-events: auto;
+  display: flex;
 }
 
 .workspace-shell__pane-scroll {
@@ -231,7 +353,7 @@
   right: 0;
   top: 4px;
   bottom: 4px;
-  width: 12px;
+  width: 10px;
   z-index: 5;
   cursor: pointer;
   display: flex;
@@ -239,7 +361,7 @@
 }
 
 .workspace-scroll__thumb {
-  width: 8px;
+  width: 4px;
   border-radius: 9999px;
   background: rgba(161, 161, 170, 0.55);
   will-change: transform;
@@ -1582,11 +1704,27 @@
   --ws-poju-chat-col: min(1100px, 100%);
 }
 
-/* Chat fills the center canvas (same letterbox treatment as prepare) */
+/* Chat fills the center canvas — outer shell scroll hidden; messages use .pchat__scroll */
+.workspace-shell__canvas:has(.workspace-poju-stack--chat) > .workspace-scroll {
+  height: 100%;
+  min-height: 100%;
+  overflow: hidden;
+}
+
 .workspace-shell__canvas-viewport:has(.workspace-poju-stack--chat),
-.workspace-shell__canvas--dense .workspace-shell__canvas-viewport:has(.workspace-poju-stack--chat) {
+.workspace-shell__canvas--dense .workspace-shell__canvas-viewport:has(.workspace-poju-stack--chat),
+.workspace-shell__canvas:has(.workspace-poju-stack--chat) > .workspace-scroll > .workspace-scroll__viewport {
   padding-top: 0 !important;
   padding-bottom: 0 !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+  box-sizing: border-box;
+}
+
+.workspace-shell__canvas:has(.workspace-poju-stack--chat) > .workspace-scroll > .workspace-scroll__rail {
+  display: none;
 }
 
 .workspace-poju-stack--chat > .workspace-poju-opening {
@@ -1638,6 +1776,46 @@
 .workspace-poju-opening .pchat--workspace .pchat__scroll {
   flex: 1 1 auto;
   min-height: 0;
+  /* Match workspace right-rail scroll thumb (gray pill), not pchat glass scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(161, 161, 170, 0.55) transparent;
+}
+
+.workspace-poju-opening .pchat--workspace .pchat__scroll::-webkit-scrollbar {
+  display: block;
+  width: 10px;
+  height: 10px;
+}
+
+.workspace-poju-opening .pchat--workspace .pchat__scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.workspace-poju-opening .pchat--workspace .pchat__scroll::-webkit-scrollbar-thumb {
+  background: rgba(161, 161, 170, 0.55);
+  border-radius: 9999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  min-height: 32px;
+}
+
+.workspace-poju-opening .pchat--workspace .pchat__scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(161, 161, 170, 0.8);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+}
+
+.workspace-poju-opening .pchat--workspace .pchat__scroll::-webkit-scrollbar-thumb:active {
+  background: rgba(196, 181, 253, 0.75);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+}
+
+.workspace-poju-opening .pchat--workspace .pchat__scroll::-webkit-scrollbar-button,
+.workspace-poju-opening .pchat--workspace .pchat__scroll::-webkit-scrollbar-corner {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .workspace-poju-opening .pchat--workspace .pchat__messages {
@@ -1780,6 +1958,28 @@
   border-top: 1px solid rgba(212, 175, 55, 0.22);
 }
 
+.workspace-right-matrix__report--enter {
+  animation: workspace-rail-report-fade-in 700ms ease forwards;
+}
+
+@keyframes workspace-rail-report-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-right-matrix__report--enter {
+    animation: none;
+    opacity: 1;
+  }
+}
+
 .workspace-right-matrix__report .base-analysis-delivery,
 .workspace-right-matrix__report .glyph-delivery-panel,
 .workspace-right-matrix__report .glyph-delivery-inner {
@@ -1794,63 +1994,32 @@
   line-height: 1.45;
 }
 
-/* Right-rail base-analysis wait (parallel with center chat) */
+/* Right-rail base-analysis wait — full DeliveryWaitFrame, confined to drawer */
 .workspace-rail-ba {
-  margin-top: 12px;
-  padding: 16px 12px;
-  border-top: 1px solid rgba(167, 139, 250, 0.18);
-  border-radius: 12px;
-  background: rgba(139, 92, 246, 0.06);
+  position: relative;
+  margin-top: 8px;
+  flex: 1 1 auto;
+  min-height: min(52vh, 420px);
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(11, 8, 21, 0.55);
+  border: 1px solid rgba(167, 139, 250, 0.14);
 }
 
-.workspace-rail-ba__wait {
+.workspace-rail-ba--error,
+.workspace-rail-ba--loading {
   display: flex;
+  flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 12px;
-}
-
-.workspace-rail-ba__pulse {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #a855f7;
-  box-shadow: 0 0 12px rgba(139, 92, 246, 0.55);
-  animation: workspace-rail-ba-breath 2.8s ease-in-out infinite;
-}
-
-@keyframes workspace-rail-ba-breath {
-  0%,
-  100% {
-    opacity: 0.55;
-    transform: scale(0.92);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .workspace-rail-ba__pulse {
-    animation: none;
-    opacity: 0.85;
-  }
-}
-
-.workspace-rail-ba__status {
-  margin: 0;
+  min-height: 120px;
+  padding: 20px;
   color: #e4e4e7;
-  font-size: 0.8125rem;
-  line-height: 1.4;
+  font-size: 0.875rem;
+  text-align: center;
 }
 
-.workspace-rail-ba__error,
-.workspace-rail-ba--error {
-  color: #fca5a5;
-  font-size: 0.8125rem;
-}
-
-.workspace-rail-ba__error button,
 .workspace-rail-ba--error button {
   margin-top: 8px;
   padding: 6px 14px;
@@ -1861,19 +2030,66 @@
   cursor: pointer;
 }
 
-.workspace-rail-ba__hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
+/*
+ * Confine DeliveryWait / PreparingSpline / WaitFx / artifacts to the rail card
+ * (defaults are position:fixed full viewport).
+ */
+.workspace-rail-ba.preparing-spline-page,
+.workspace-rail-ba .preparing-spline-page,
+.workspace-rail-ba .delivery-wait-page {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  background: transparent !important;
+  overflow: hidden !important;
+  z-index: 0;
 }
 
-.workspace-rail-ba--loading {
-  min-height: 40px;
+.workspace-rail-ba .preparing-spline-page__scene-wrap {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  transform: none !important;
+  background: transparent !important;
 }
 
+.workspace-rail-ba .preparing-spline-page__scene,
+.workspace-rail-ba .spline-interactive-scene,
+.workspace-rail-ba .spline-interactive-scene canvas {
+  background: transparent !important;
+}
+
+.workspace-rail-ba .preparing-spline-page__overlay:not(.preparing-spline-page__overlay--error),
+.workspace-rail-ba .wait-fx,
+.workspace-rail-ba .wait-artifact-layer {
+  position: absolute !important;
+}
+
+.workspace-rail-ba .preparing-spline-page__overlay:not(.preparing-spline-page__overlay--error) {
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 12px !important;
+  padding: 12px 12px 8px !important;
+}
+
+/* Compact artifact cluster for narrow rail */
+.workspace-rail-ba .wait-artifact-doc {
+  --artifact-hold-w: clamp(120px, 48%, 200px);
+  --artifact-seat-w: clamp(56px, 22%, 88px);
+  --artifact-seat-gap: clamp(12px, 3vw, 20px);
+  --artifact-cluster-x: clamp(8%, 14%, 18%);
+}
+
+.workspace-rail-ba .wait-fx--breath {
+  display: none !important;
+}
+
+.workspace-rail-ba .delivery-wait-copy__status {
+  font-size: 0.8125rem;
+}
 
 .workspace-right-matrix__body .poju-matrix-bubble,
 .workspace-right-matrix__body .pem,
@@ -3415,6 +3631,10 @@
   }
 
   .workspace-shell.is-right-open {
+    --ws-inset-right: calc(var(--ws-sidebar-width) + var(--ws-rail-gap));
+  }
+
+  .workspace-shell.is-right-open.is-right-wide {
     --ws-inset-right: calc(var(--ws-right-drawer-width) + var(--ws-rail-gap));
   }
 
