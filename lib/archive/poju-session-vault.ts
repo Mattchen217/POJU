@@ -131,6 +131,46 @@ export async function syncPojuSessionVaultArchive(
   return archiveId;
 }
 
+/** Delete live POJU session + any matching vault rows (sidebar history). */
+export async function deletePojuSessionHistory(sessionId: string): Promise<void> {
+  const { deletePOJUSession } = await import("@/lib/poju/session-manager");
+  await deletePOJUSession(sessionId);
+  const deviceId = getPojuDeviceId();
+  const db = await ensurePojuDbReady();
+  const rows = await db.archive.where("device_id").equals(deviceId).toArray();
+  for (const row of rows) {
+    if (row.product === "poju" && row.session_id === sessionId) {
+      await db.archive.delete(row.archive_id);
+    }
+  }
+  notifyArchiveUpdated();
+}
+
+/** Rename display title for a live POJU session (updates question + vault title). */
+export async function renamePojuSessionHistory(
+  sessionId: string,
+  title: string,
+  locale = "en",
+): Promise<void> {
+  const next = title.trim();
+  if (!next) return;
+  const { loadPOJUSession, savePOJUSession } = await import("@/lib/poju/session-manager");
+  const state = await loadPOJUSession(sessionId);
+  if (state) {
+    await savePOJUSession({ ...state, original_question: next });
+    return;
+  }
+  const db = await ensurePojuDbReady();
+  await db.pojuSessionRecords.update(sessionId, { original_question: next });
+  const existing = await findPojuVaultRecordForSession(sessionId);
+  if (existing) {
+    await db.archive.update(existing.archive_id, {
+      title: formatVaultTitle(next, locale),
+    });
+  }
+  notifyArchiveUpdated();
+}
+
 export async function loadPojuSessionVault(archiveId: string): Promise<POJUSessionVaultData | null> {
   const record = await getPojuDb().archive.get(archiveId);
   if (!record || record.type !== "poju_session") return null;

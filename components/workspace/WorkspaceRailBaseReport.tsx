@@ -30,6 +30,26 @@ const REPORT_BLOCKS = [
 
 type ReportBlockId = (typeof REPORT_BLOCKS)[number]["id"];
 
+/** Explicit 2-line section titles from i18n (`line1\nline2`). */
+function ReportTabLabel({ text }: { text: string }) {
+  const lines = text
+    .split(/\n+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (lines.length <= 1) {
+    return <span className="pcm-tabs__label pcm-tabs__label--stack">{text}</span>;
+  }
+  return (
+    <span className="pcm-tabs__label pcm-tabs__label--stack">
+      {lines.map((line) => (
+        <span key={line} className="pcm-tabs__line">
+          {line}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 type Props = {
   displayText: string;
   locale: string;
@@ -156,7 +176,7 @@ export function WorkspaceRailBaseReport({
           className="pcm-rail-paper__list"
           aria-hidden={railSheetMode === "folded" ? true : undefined}
         >
-          <div className="pcm pcm--rail pcm--tabbed">
+          <div className="pcm pcm--rail pcm--tabbed" data-locale={locale.startsWith("zh") ? "zh" : locale.slice(0, 2)}>
           <div className="pcm-stage pcm-stage--in-paper">
             <div className="pcm-navframe">
               <div className="pcm-navframe__title-row">
@@ -207,9 +227,7 @@ export function WorkspaceRailBaseReport({
                       className={`pcm-tabs__btn${selected ? " is-active" : ""}`}
                       onClick={() => selectBlock(block.id)}
                     >
-                      <span className="pcm-tabs__label pcm-tabs__label--zh">
-                        {ts(block.labelKey)}
-                      </span>
+                      <ReportTabLabel text={ts(block.labelKey)} />
                     </button>
                   );
                 })}

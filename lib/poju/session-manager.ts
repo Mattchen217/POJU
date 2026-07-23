@@ -1,6 +1,7 @@
 import { safeRandomUUID } from "@/lib/client/safe-crypto";
 import { encryptJson, decryptJson } from "@/lib/crypto";
 import { getPojuDb } from "@/lib/db/poju-db";
+import { ARCHIVE_UPDATED_EVENT } from "@/lib/archive/runtime-archive";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
 import { syncSessionCyclesToDb } from "@/lib/poju/cycle-db-sync";
 import { createNewCycle, ensureSessionCycles } from "@/lib/poju/cycle-manager";
@@ -12,6 +13,11 @@ import type { POJUSessionState, PojuV4StateHint } from "@/lib/poju/types";
 
 const SESSION_SECRET = "pojulife_v4_poju_session"; // legacy encryptJson arg; not a security boundary (local plaintext phase)
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
+function notifySessionListUpdated(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(ARCHIVE_UPDATED_EVENT));
+}
 
 function isLikelyStoredProfileId(id: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id.trim());
@@ -94,6 +100,7 @@ export async function createPOJUSession(input: {
     await syncPojuSessionVaultArchive(sessionState);
   } catch (e) {
     console.error("[poju] Initial archive vault sync failed:", e);
+    notifySessionListUpdated();
   }
 
   return sessionId;
@@ -136,6 +143,7 @@ export async function savePOJUSession(state: POJUSessionState): Promise<void> {
     await syncPojuSessionVaultArchive(state);
   } catch (e) {
     console.error("[poju] Archive vault sync failed:", e);
+    notifySessionListUpdated();
   }
 
   try {

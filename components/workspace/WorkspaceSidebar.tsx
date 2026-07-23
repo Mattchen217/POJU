@@ -23,6 +23,10 @@ import {
   renameArchiveItem,
   type ArchiveSummary,
 } from "@/lib/archive/archive-service";
+import {
+  deletePojuSessionHistory,
+  renamePojuSessionHistory,
+} from "@/lib/archive/poju-session-vault";
 import type { WorkspaceTab } from "@/lib/ui-shell/resolve-ui-shell";
 
 function formatArchiveCreatedAt(iso: string, locale: string): string {
@@ -125,12 +129,14 @@ export function WorkspaceSidebarBrand({
 function HistoryItemRow({
   row,
   active,
+  product,
   onOpen,
   onChanged,
   onDeletedActive,
 }: {
   row: ArchiveSummary;
   active: boolean;
+  product: WorkspaceProductId;
   onOpen: () => void;
   onChanged: () => void;
   onDeletedActive: () => void;
@@ -159,7 +165,11 @@ function HistoryItemRow({
     const trimmed = next.trim();
     if (!trimmed || trimmed === title) return;
     try {
-      await renameArchiveItem(row.archive_id, trimmed);
+      if (product === "poju" && row.session_id) {
+        await renamePojuSessionHistory(row.session_id, trimmed, locale);
+      } else {
+        await renameArchiveItem(row.archive_id, trimmed);
+      }
       onChanged();
     } catch {
       /* ignore */
@@ -170,7 +180,11 @@ function HistoryItemRow({
     setMenuOpen(false);
     if (!window.confirm(t("deleteConfirm"))) return;
     try {
-      await deleteArchiveItem(row.archive_id);
+      if (product === "poju" && row.session_id) {
+        await deletePojuSessionHistory(row.session_id);
+      } else {
+        await deleteArchiveItem(row.archive_id);
+      }
       if (active) onDeletedActive();
       onChanged();
     } catch {
@@ -324,9 +338,14 @@ function ToolHistoryBranch({
   const { items, ready, refresh } = useWorkspaceProductHistory(product, 40);
   const [pastOpen, setPastOpen] = useState(false);
 
+  const activeHistoryId =
+    product === "poju" && prepare?.phase === "chat" && prepare.session?.session_id
+      ? prepare.session.session_id
+      : activeArchiveId;
+
   useEffect(() => {
-    if (activeArchiveId) setPastOpen(true);
-  }, [activeArchiveId]);
+    if (activeHistoryId) setPastOpen(true);
+  }, [activeHistoryId]);
 
   if (!expanded) return null;
 
@@ -343,7 +362,10 @@ function ToolHistoryBranch({
     (product !== "poju" || (prepare?.phase ?? "idle") === "idle");
 
   const newActive = alreadyOnNewHome || nestFocus === "new";
-  const pastActive = nestFocus === "past" || Boolean(activeArchiveId);
+  const pastActive =
+    nestFocus === "past" ||
+    Boolean(activeArchiveId) ||
+    (product === "poju" && prepare?.phase === "chat" && Boolean(prepare.session));
 
   async function requestNew() {
     if (alreadyOnNewHome) return;
@@ -405,7 +427,8 @@ function ToolHistoryBranch({
               <HistoryItemRow
                 key={row.archive_id}
                 row={row}
-                active={activeArchiveId === row.archive_id}
+                product={product}
+                active={activeHistoryId === row.archive_id}
                 onOpen={() => onArchive(row.archive_id)}
                 onChanged={() => void refresh()}
                 onDeletedActive={onDeletedActive}

@@ -90,21 +90,23 @@ export function EnergyReportGlyph({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden className={className} fill="none">
       <path
-        d="M7 3.75h7.1L17.25 6.9V20.25H7V3.75Z"
+        d="M6.4 3.4h7.35L17.7 7.35V20.6H6.4V3.4Z"
         stroke="currentColor"
-        strokeWidth="1.55"
+        strokeWidth="2.35"
+        strokeLinejoin="round"
+        fill="currentColor"
+        fillOpacity="0.14"
+      />
+      <path
+        d="M13.75 3.4V7.35h3.95"
+        stroke="currentColor"
+        strokeWidth="2.35"
         strokeLinejoin="round"
       />
       <path
-        d="M14.1 3.75V6.9h3.15"
+        d="M9 10.15h6.15M9 13.45h6.15M9 16.75h4.2"
         stroke="currentColor"
-        strokeWidth="1.55"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M9.25 10.25h5.5M9.25 13.5h5.5M9.25 16.75h3.75"
-        stroke="currentColor"
-        strokeWidth="1.55"
+        strokeWidth="2.45"
         strokeLinecap="round"
       />
     </svg>

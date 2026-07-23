@@ -517,13 +517,38 @@
 }
 
 .pcm-rail-paper--report {
-  margin-top: 12px;
+  margin-top: 0;
+  width: 100%;
+  max-width: 100%;
 }
 
+/* Report section tabs: always 2-line, larger + bold (all locales) */
 .pcm-rail-paper--report .pcm-stage--in-paper .pcm-tabs__btn {
-  font-size: 0.68rem;
-  padding-left: 0.2rem;
-  padding-right: 0.2rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.25;
+  padding: 0.7rem 0.2rem 0.8rem;
+}
+
+.pcm-rail-paper--report .pcm-tabs__label--stack {
+  font-weight: 700;
+}
+
+.pcm-rail-paper--report .pcm-tabs__line {
+  font-weight: 700;
+}
+
+.pcm[data-locale="zh"] .pcm-rail-paper--report .pcm-stage--in-paper .pcm-tabs__btn {
+  font-size: 0.9375rem;
+  letter-spacing: 0.04em;
+  padding: 0.75rem 0.25rem 0.85rem;
+}
+
+.pcm[data-locale="es"] .pcm-rail-paper--report .pcm-stage--in-paper .pcm-tabs__btn,
+.pcm[data-locale="de"] .pcm-rail-paper--report .pcm-stage--in-paper .pcm-tabs__btn,
+.pcm[data-locale="fr"] .pcm-rail-paper--report .pcm-stage--in-paper .pcm-tabs__btn {
+  font-size: 0.75rem;
 }
 
 @media (prefers-reduced-motion: reduce) {

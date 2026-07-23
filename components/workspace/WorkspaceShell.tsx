@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import { useRouter } from "@/i18n/navigation";
 
@@ -129,19 +129,26 @@ function WorkspaceRightDrawerHost({
   );
 }
 
-/** Bind prepare.resetPrepare for shell actions that live outside the hook tree. */
+/** Bind prepare.resetPrepare / resumeSession for shell actions outside the hook tree. */
 function PojuPrepareResetBinder({
   resetRef,
+  resumeRef,
 }: {
   resetRef: { current: (() => void) | null };
+  resumeRef: { current: ((sessionId: string) => Promise<boolean>) | null };
 }) {
   const prepare = useWorkspacePojuPrepareOptional();
+  const locale = useLocale();
   useEffect(() => {
     resetRef.current = prepare?.resetPrepare ?? null;
+    resumeRef.current = prepare
+      ? (sessionId: string) => prepare.resumeSession(sessionId, locale)
+      : null;
     return () => {
       resetRef.current = null;
+      resumeRef.current = null;
     };
-  }, [prepare?.resetPrepare, resetRef]);
+  }, [prepare, prepare?.resetPrepare, prepare?.resumeSession, locale, resetRef, resumeRef]);
   return null;
 }
 
@@ -163,6 +170,7 @@ export function WorkspaceShell({ initialTab }: Props) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [rightOpen, setRightOpen] = useState(false);
   const pojuPrepareResetRef = useRef<(() => void) | null>(null);
+  const pojuResumeSessionRef = useRef<((sessionId: string) => Promise<boolean>) | null>(null);
 
   useEffect(() => {
     try {
@@ -256,6 +264,13 @@ export function WorkspaceShell({ initialTab }: Props) {
 
   const selectArchive = useCallback(
     (product: WorkspaceProductId, id: string) => {
+      if (product === "poju") {
+        setTab("poju");
+        setArchiveId(null);
+        syncUrl("poju", null);
+        void pojuResumeSessionRef.current?.(id);
+        return;
+      }
       setTab(product);
       setArchiveId(id);
       syncUrl(product, id);
@@ -293,7 +308,10 @@ export function WorkspaceShell({ initialTab }: Props) {
   return (
     <AppDialogProvider>
       <WorkspacePojuPrepareProvider openRight={openRight}>
-        <PojuPrepareResetBinder resetRef={pojuPrepareResetRef} />
+        <PojuPrepareResetBinder
+          resetRef={pojuPrepareResetRef}
+          resumeRef={pojuResumeSessionRef}
+        />
         <PojuRightRailGate tab={tab} setRightOpen={setRightOpen} />
         <WorkspaceShellSurface sidebarCollapsed={sidebarCollapsed} rightOpen={rightOpen}>
         <div className="workspace-shell__sky" aria-hidden />

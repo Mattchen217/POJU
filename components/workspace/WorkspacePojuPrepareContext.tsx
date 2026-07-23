@@ -9,8 +9,19 @@ import {
   type ReactNode,
 } from "react";
 
-import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
+import { markedTextFromStoredBaseAnalysis } from "@/lib/base-analysis/resolve-display-text";
+import {
+  buildMatrixPayloadFromProfile,
+  type PojuMatrixPayload,
+} from "@/lib/poju/build-matrix-payload";
+import { hasUnlockReportMessage } from "@/lib/poju/finalize-unlock-bazi-session";
+import { loadPOJUSession } from "@/lib/poju/session-manager";
+import { getUnlockReportText } from "@/lib/poju/unlock-report-gate";
 import type { POJUSessionState } from "@/lib/poju/types";
+import {
+  getStoredProfile,
+  storedBaseAnalysisPresent,
+} from "@/lib/profile/stored-profiles-service";
 
 export type WorkspacePojuPreparePhase = "idle" | "handoff" | "preparing" | "exiting" | "chat";
 
@@ -51,6 +62,8 @@ type PrepareApi = PrepareState & {
   failUnlockRitual: (message: string) => void;
   dismissUnlockRitual: () => void;
   resetPrepare: () => void;
+  /** Restore a saved POJU session into center chat + right-rail matrix/report. */
+  resumeSession: (sessionId: string, locale: string) => Promise<boolean>;
 };
 
 const WorkspacePojuPrepareContext = createContext<PrepareApi | null>(null);
@@ -162,6 +175,67 @@ export function WorkspacePojuPrepareProvider({
     setState(INITIAL);
   }, []);
 
+  const resumeSession = useCallback(
+    async (sessionId: string, locale: string): Promise<boolean> => {
+      try {
+        const session = await loadPOJUSession(sessionId);
+        if (!session) return false;
+
+        const profileId =
+          session.selected_stored_profile_id?.trim() ||
+          session.agent_v2?.selected_profile_id?.trim() ||
+          "";
+
+        let matrixPayload: PojuMatrixPayload | null = session.matrix_payload ?? null;
+        let baseReportText: string | null = null;
+        let baseReportStatus: WorkspaceBaseReportStatus = "idle";
+
+        if (profileId) {
+          const profile = await getStoredProfile(profileId);
+          if (profile) {
+            matrixPayload =
+              matrixPayload ??
+              buildMatrixPayloadFromProfile(profileId, profile.user_profile, {
+                locale,
+              });
+            if (
+              hasUnlockReportMessage(session) ||
+              storedBaseAnalysisPresent(profile.base_analysis)
+            ) {
+              const reportMsg = session.messages.find((m) => m.meta?.kind === "report");
+              const text =
+                getUnlockReportText(reportMsg) ||
+                markedTextFromStoredBaseAnalysis(profile.base_analysis) ||
+                "";
+              if (text) {
+                baseReportText = text;
+                baseReportStatus = "ready";
+              }
+            }
+          }
+        }
+
+        openRight();
+        setState({
+          ...INITIAL,
+          phase: "chat",
+          profileId: profileId || null,
+          session,
+          matrixPayload,
+          matrixExpanded: false,
+          reportExpanded: false,
+          baseReportText,
+          baseReportStatus,
+        });
+        return true;
+      } catch (e) {
+        console.error("[workspace] resume POJU session failed:", e);
+        return false;
+      }
+    },
+    [openRight],
+  );
+
   const value = useMemo<PrepareApi>(
     () => ({
       ...state,
@@ -179,6 +253,7 @@ export function WorkspacePojuPrepareProvider({
       failUnlockRitual,
       dismissUnlockRitual,
       resetPrepare,
+      resumeSession,
     }),
     [
       state,
@@ -196,6 +271,7 @@ export function WorkspacePojuPrepareProvider({
       failUnlockRitual,
       dismissUnlockRitual,
       resetPrepare,
+      resumeSession,
     ],
   );
 
