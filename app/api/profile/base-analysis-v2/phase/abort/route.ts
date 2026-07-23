@@ -19,6 +19,14 @@ export async function POST(req: Request) {
   if (!profileId) {
     return NextResponse.json({ ok: false, error: "Missing profile_id" }, { status: 400 });
   }
-  await releaseLock(profileId);
+  try {
+    await releaseLock(profileId);
+  } catch (e) {
+    console.warn(
+      "[base-analysis-v2/abort] releaseLock failed:",
+      e instanceof Error ? e.message : e,
+    );
+    /* Cleanup best-effort — do not 500 the client overlay. */
+  }
   return NextResponse.json({ ok: true });
 }

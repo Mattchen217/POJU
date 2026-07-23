@@ -1763,14 +1763,18 @@
   box-sizing: border-box;
   /* Scroll via parent WorkspaceScrollArea only — do not nest a native scrollbar */
   overflow: visible;
+  min-height: 0;
 }
 
 .workspace-right-matrix__body {
   min-width: 0;
   padding: 0;
+  flex: 0 0 auto;
 }
 
 .workspace-right-matrix__report {
+  flex: 1 1 auto;
+  min-height: 0;
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid rgba(212, 175, 55, 0.22);
@@ -1782,6 +1786,14 @@
   max-width: 100%;
 }
 
+.workspace-right-matrix__report-error {
+  margin-top: 12px;
+  padding: 12px;
+  color: #fca5a5;
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
 .workspace-right-matrix__body .poju-matrix-bubble,
 .workspace-right-matrix__body .pem,
 .workspace-right-matrix__body .pcm {
@@ -1789,6 +1801,57 @@
 }
 
 /* Center unlock ritual — covers center canvas only; does not alter rail open/close */
+.workspace-poju-stack--chat {
+  position: relative;
+}
+
+.workspace-poju-chat-layer {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  opacity: 1;
+  transition: opacity 480ms ease;
+}
+
+.workspace-poju-chat-layer.is-fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.workspace-unlock-ritual-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  opacity: 0;
+  animation: workspace-unlock-ritual-fade-in 520ms ease 200ms forwards;
+}
+
+.workspace-unlock-ritual-layer.is-fade-in {
+  /* class kept for clarity; animation above handles enter */
+}
+
+@keyframes workspace-unlock-ritual-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-poju-chat-layer {
+    transition-duration: 1ms;
+  }
+
+  .workspace-unlock-ritual-layer {
+    animation-duration: 1ms;
+    animation-delay: 0ms;
+  }
+}
+
 .workspace-unlock-ritual {
   position: absolute;
   inset: 0;
@@ -1798,6 +1861,53 @@
   justify-content: stretch;
   min-height: 0;
   pointer-events: auto;
+  overflow: hidden;
+}
+
+/*
+ * Confine DeliveryWait / PreparingSpline to the center column
+ * (chart-loader defaults are position:fixed full viewport).
+ */
+.workspace-unlock-ritual.preparing-spline-page,
+.workspace-unlock-ritual .preparing-spline-page,
+.workspace-unlock-ritual .delivery-wait-page {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  background: transparent !important;
+  overflow: hidden !important;
+  z-index: 0;
+}
+
+.workspace-unlock-ritual .preparing-spline-page__scene-wrap {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  transform: none !important;
+  background: transparent !important;
+}
+
+.workspace-unlock-ritual .preparing-spline-page__scene,
+.workspace-unlock-ritual .spline-interactive-scene,
+.workspace-unlock-ritual .spline-interactive-scene canvas {
+  background: transparent !important;
+}
+
+.workspace-unlock-ritual .preparing-spline-page__overlay:not(.preparing-spline-page__overlay--error),
+.workspace-unlock-ritual .wait-fx,
+.workspace-unlock-ritual .wait-artifact-layer {
+  position: absolute !important;
+}
+
+.workspace-unlock-ritual .wait-fx--breath {
+  display: none !important;
+}
+
+.workspace-shell:has(.workspace-unlock-ritual) {
+  background: linear-gradient(180deg, #0a0810 0%, #07060c 45%, #05040a 100%);
 }
 
 .workspace-unlock-ritual .delivery-wait-page,

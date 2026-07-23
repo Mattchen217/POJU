@@ -21,6 +21,8 @@ type Props = {
   completedArtifacts?: BaseAnalysisArtifactKind[];
   /** Show translate artifact slot (false for zh). */
   includeTranslateArtifact?: boolean;
+  /** Soft purple inset vignette — off in workspace (transparent Spline). */
+  showBreath?: boolean;
   error?: string | null;
   onRetry?: () => void;
   onRefund?: () => void;
@@ -38,6 +40,7 @@ export function DeliveryWaitFrame({
   liveProgressStage = null,
   completedArtifacts = [],
   includeTranslateArtifact = false,
+  showBreath = true,
   error,
   onRetry,
   onRefund,
@@ -62,6 +65,7 @@ export function DeliveryWaitFrame({
     >
       <WaitFxLayer
         glowColor={wait.glowColor}
+        showBreath={showBreath}
         showFlash={wait.showFlash}
         showConverge={wait.showConverge}
       />

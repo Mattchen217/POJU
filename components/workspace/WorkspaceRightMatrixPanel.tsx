@@ -24,6 +24,7 @@ export function WorkspaceRightMatrixPanel() {
     setMatrixExpanded,
     baseReportText,
     baseReportStatus,
+    baseReportError,
   } = prepare;
 
   return (
@@ -52,6 +53,12 @@ export function WorkspaceRightMatrixPanel() {
             showPageHeader={false}
           />
         </div>
+      ) : null}
+
+      {baseReportStatus === "error" && baseReportError ? (
+        <p className="workspace-right-matrix__report-error" role="alert">
+          {baseReportError}
+        </p>
       ) : null}
     </section>
   );

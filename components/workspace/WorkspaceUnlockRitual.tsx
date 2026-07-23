@@ -236,6 +236,7 @@ function WorkspaceUnlockRitualInner({
       liveProgressStage={waitProgress.liveProgressStage}
       completedArtifacts={waitProgress.completedArtifacts}
       includeTranslateArtifact={includeTranslate}
+      showBreath={false}
       error={error}
       onRetry={() => {
         setError(null);

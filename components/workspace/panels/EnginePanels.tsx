@@ -18,6 +18,7 @@ import {
   useWorkspaceProductHistory,
   type WorkspaceProductId,
 } from "@/components/workspace/use-workspace-product-history";
+import { POJU_WORKSPACE_UNLOCK_RITUAL_KEY } from "@/lib/poju/preview-unlock";
 
 const PRESET_KEYS = ["career", "relationship", "timing"] as const;
 
@@ -122,6 +123,26 @@ export function PojuPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (i
   const { phase, startPrepare, setPhase, unlockRitualActive } = useWorkspacePojuPrepare();
   useWorkspaceUnlockRitualResume(locale);
 
+  /* Avoid flashing birth home while Stripe return resumes unlock ritual. */
+  const [unlockResumeGate, setUnlockResumeGate] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return Boolean(sessionStorage.getItem(POJU_WORKSPACE_UNLOCK_RITUAL_KEY)?.trim());
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    if (phase !== "idle") setUnlockResumeGate(false);
+  }, [phase]);
+
+  useEffect(() => {
+    if (!unlockResumeGate) return;
+    const timer = window.setTimeout(() => setUnlockResumeGate(false), 5000);
+    return () => window.clearTimeout(timer);
+  }, [unlockResumeGate]);
+
   const heroCopy = {
     brandTag: t("hero.brand_tag"),
     heading: t("hero.heading"),
@@ -142,11 +163,26 @@ export function PojuPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (i
     return () => window.clearTimeout(timer);
   }, [phase, setPhase]);
 
-  if (phase === "chat") {
+  if (phase === "chat" || (phase === "idle" && unlockResumeGate)) {
     return (
-      <div className="workspace-poju-stack workspace-poju-stack--chat">
-        <WorkspacePojuChatStage />
-        {unlockRitualActive ? <WorkspaceUnlockRitual /> : null}
+      <div
+        className="workspace-poju-stack workspace-poju-stack--chat"
+        aria-busy={phase === "idle" || unlockRitualActive || undefined}
+      >
+        {phase === "chat" ? (
+          <div
+            className={`workspace-poju-chat-layer${
+              unlockRitualActive ? " is-fade-out" : ""
+            }`}
+          >
+            <WorkspacePojuChatStage />
+          </div>
+        ) : null}
+        {unlockRitualActive ? (
+          <div className="workspace-unlock-ritual-layer is-fade-in">
+            <WorkspaceUnlockRitual />
+          </div>
+        ) : null}
       </div>
     );
   }
