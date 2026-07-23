@@ -111,9 +111,16 @@
     "language": {
       "siteLabel": "网站语言"
     },
+    "pojuRail": {
+      "matrixTitle": "个人能量图"
+    },
     "density": {
       "newSession": "新建会话",
       "newProduct": "新建 {name}",
+      "newConfirmTitle": "开始新的内容？",
+      "newConfirmBody": "将返回该工具的起始页，并离开当前界面。确定继续？",
+      "newConfirmOk": "开始新的",
+      "newConfirmCancel": "取消",
       "pastSessions": "历史会话 ({count})",
       "pastRecords": "历史记录 ({count})",
       "collapseSidebar": "收起侧边栏",
@@ -1714,6 +1721,15 @@
     "matrix_id": "矩阵 ID",
     "element_map_title": "五行能量分布",
     "element_map_sep": "，",
+    "blocks": {
+      "block_1": "原初时空校准",
+      "block_2": "核心能量图谱",
+      "block_3": "时间轨迹矩阵",
+      "block_4": "阶段状态标记",
+      "block_5": "四维底层内核",
+      "tablist_label": "画像板块",
+      "collapse_list": "收起列表"
+    },
     "card": {
       "calendar_alignment": "历法对齐",
       "calendar_alignment_em": "公历 · 农历",

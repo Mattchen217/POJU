@@ -111,9 +111,16 @@
     "language": {
       "siteLabel": "Site language"
     },
+    "pojuRail": {
+      "matrixTitle": "Personal energy chart"
+    },
     "density": {
       "newSession": "New Session",
       "newProduct": "New {name}",
+      "newConfirmTitle": "Start fresh?",
+      "newConfirmBody": "Return to the start screen for this tool? Your current view will be left.",
+      "newConfirmOk": "Start fresh",
+      "newConfirmCancel": "Cancel",
       "pastSessions": "Past Sessions ({count})",
       "pastRecords": "Past Records ({count})",
       "collapseSidebar": "Close sidebar",
@@ -1714,6 +1721,15 @@
     "matrix_id": "MATRIX ID",
     "element_map_title": "Elemental Pillar Map",
     "element_map_sep": ", ",
+    "blocks": {
+      "block_1": "Space-Time Calibration",
+      "block_2": "Core Energy Profile",
+      "block_3": "Time Trajectory Matrix",
+      "block_4": "Stage Status Markers",
+      "block_5": "4D Inner Core",
+      "tablist_label": "Profile sections",
+      "collapse_list": "Collapse list"
+    },
     "card": {
       "calendar_alignment": "Calendar Alignment",
       "calendar_alignment_em": "solar · lunar",

@@ -35,6 +35,13 @@ type PreparingSplineShellProps = {
   scene?: string;
   /** Standalone pages (Glyph/Match) without layout parent. Merges with `usePreparingBlockInput`. */
   blockInteraction?: boolean;
+  /**
+   * Skip desktop deferSplineMs — mount WebGL immediately.
+   * Use for workspace crossfade so the scene is ready when birth UI fades out.
+   */
+  eagerSpline?: boolean;
+  /** Extra framing / backdrop clear after scene load (e.g. workspace zoom). */
+  onSplineLoad?: (app: Application) => void;
   className?: string;
 };
 
@@ -43,20 +50,23 @@ export function PreparingSplineShell({
   sceneZoom = PREPARING_ANALYZING_ZOOM,
   scene,
   blockInteraction: blockInteractionProp = false,
+  eagerSpline = false,
+  onSplineLoad,
   className,
 }: PreparingSplineShellProps) {
   const allowWebGL = useAllowHeavyWebGL("preparing");
   const profile = useMemo(() => getPreparingDeviceProfile(), []);
   const appRef = useRef<Application | null>(null);
-  const [mountSpline, setMountSpline] = useState(profile.deferSplineMs === 0);
+  const deferMs = eagerSpline ? 0 : profile.deferSplineMs;
+  const [mountSpline, setMountSpline] = useState(deferMs === 0);
   const [blockFromContext, setBlockFromContext] = useState(false);
   const blockInteraction = blockInteractionProp || blockFromContext;
 
   useEffect(() => {
-    if (mountSpline || profile.deferSplineMs <= 0) return;
-    const timer = window.setTimeout(() => setMountSpline(true), profile.deferSplineMs);
+    if (mountSpline || deferMs <= 0) return;
+    const timer = window.setTimeout(() => setMountSpline(true), deferMs);
     return () => window.clearTimeout(timer);
-  }, [mountSpline, profile.deferSplineMs]);
+  }, [mountSpline, deferMs]);
 
   const registerApp = useCallback((app: Application | null) => {
     appRef.current = app;
@@ -73,8 +83,9 @@ export function PreparingSplineShell({
   const handleSplineLoad = useCallback(
     (app: Application) => {
       registerApp(app);
+      onSplineLoad?.(app);
     },
-    [registerApp],
+    [registerApp, onSplineLoad],
   );
 
   const activeScene = scene ?? PREPARING_ANALYZING_SCENE;

@@ -7,6 +7,7 @@ import Picker from "react-mobile-picker";
 import { PickerWheelZone } from "@/components/poju/PickerWheelZone";
 import { BirthLocationField } from "@/components/forms/BirthLocationField";
 import { hourToHourPeriod } from "@/lib/profile/birth-info-utils";
+import { getDevPrefillBirthLocation } from "@/lib/location/dev-birth-location";
 import { isBirthLocationComplete } from "@/lib/profile/validate-birth-location";
 import { HOUR_PERIOD_INFO, type BirthInfo, type BirthLocation } from "@/lib/profile/types";
 
@@ -50,7 +51,9 @@ export function BirthInfoPicker({ onSubmit, onCancel, locale }: BirthInfoPickerP
   const [hour, setHour] = useState(12);
   const [minute, setMinute] = useState(0);
   const [gender, setGender] = useState<"M" | "F">("M");
-  const [birthLocation, setBirthLocation] = useState<BirthLocation | null>(null);
+  const [birthLocation, setBirthLocation] = useState<BirthLocation | null>(() =>
+    getDevPrefillBirthLocation(),
+  );
   const [locationError, setLocationError] = useState<string | null>(null);
 
   const years = useMemo(() => {

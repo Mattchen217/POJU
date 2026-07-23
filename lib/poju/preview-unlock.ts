@@ -156,6 +156,11 @@ export async function bindPreviewProfileToSession(
 }
 
 export const POJU_PENDING_UNLOCK_SESSION_KEY = "poju_pending_unlock_session_id";
+/** Unlock payment originated from workspace `/app` — return there after pay. */
+export const POJU_UNLOCK_SURFACE_KEY = "poju_unlock_surface";
+export const POJU_UNLOCK_SURFACE_WORKSPACE = "workspace";
+/** After Stripe return to `/app`, resume center unlock ritual for this session. */
+export const POJU_WORKSPACE_UNLOCK_RITUAL_KEY = "poju_workspace_unlock_ritual";
 /** @deprecated Unlock now routes through `/preparing?unlock=1` instead of in-chat overlay. */
 export const POJU_RUN_UNLOCK_FLAG = "poju_run_unlock";
 /** After unlock bazi prep, chat auto-sends the intercepted user question. */

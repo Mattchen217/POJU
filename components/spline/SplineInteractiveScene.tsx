@@ -81,19 +81,28 @@ export function SplineInteractiveScene({
       if (initialZoom > 0) {
         applySplineZoom(app, initialZoom);
       }
-      if (renderScale > 0 && renderScale < 1 && typeof window !== "undefined") {
-        const w = Math.max(320, Math.floor(window.innerWidth * renderScale));
-        const h = Math.max(480, Math.floor(window.innerHeight * renderScale));
-        try {
-          app.setSize(w, h);
-        } catch {
-          // optional
+      if (renderScale > 0 && renderScale < 1) {
+        const root = rootRef.current;
+        const rw = root?.clientWidth || (typeof window !== "undefined" ? window.innerWidth : 0);
+        const rh = root?.clientHeight || (typeof window !== "undefined" ? window.innerHeight : 0);
+        if (rw > 0 && rh > 0) {
+          const w = Math.max(320, Math.floor(rw * renderScale));
+          const h = Math.max(240, Math.floor(rh * renderScale));
+          try {
+            app.setSize(w, h);
+          } catch {
+            // optional
+          }
         }
       }
       try {
         app.setBackgroundColor("transparent");
       } catch {
         // optional
+      }
+      const canvas = rootRef.current?.querySelector("canvas");
+      if (canvas) {
+        canvas.style.background = "transparent";
       }
       onLoad?.(app, rootRef.current);
       setSceneReady(true);
@@ -106,7 +115,19 @@ export function SplineInteractiveScene({
     const app = appRef.current;
     if (!allowWebGL || !sceneReady || !root || !app || initialZoom <= 0) return;
 
-    const reapply = () => applySplineZoom(app, initialZoom);
+    const reapply = () => {
+      applySplineZoom(app, initialZoom);
+      try {
+        app.setBackgroundColor("transparent");
+      } catch {
+        // optional
+      }
+      const canvas = root.querySelector("canvas");
+      if (canvas) {
+        canvas.style.background = "transparent";
+      }
+    };
+    reapply();
     const observer = new ResizeObserver(reapply);
     observer.observe(root);
     return () => observer.disconnect();

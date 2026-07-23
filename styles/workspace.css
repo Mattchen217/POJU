@@ -1252,7 +1252,7 @@
 
 .workspace-poju-hero .product-hero__shell {
   position: relative;
-  min-height: min(42vh, 380px);
+  min-height: min(46vh, 420px);
   padding: 0;
   overflow: visible;
 }
@@ -1272,7 +1272,7 @@
   /* Wider than the stage; shorter height → landscape frame; center fixed */
   width: min(132%, 1280px);
   max-width: none;
-  height: min(38vh, 340px);
+  height: min(42vh, 370px);
   transform: translate(-50%, -50%);
   opacity: 0.82;
 }
@@ -1339,6 +1339,502 @@
   box-sizing: border-box;
 }
 
+
+.workspace-poju-stack--prepare,
+.workspace-poju-stack--chat {
+  position: relative;
+}
+
+.workspace-poju-stack--prepare {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+/* Preparing fills the whole center canvas — no letterbox padding */
+.workspace-shell__canvas:has(.workspace-poju-stack--prepare) > .workspace-scroll {
+  height: 100%;
+  min-height: 100%;
+  overflow: hidden;
+}
+
+.workspace-shell__canvas-viewport:has(.workspace-poju-stack--prepare),
+.workspace-shell__canvas--dense .workspace-shell__canvas-viewport:has(.workspace-poju-stack--prepare),
+.workspace-shell__canvas:has(.workspace-poju-stack--prepare) > .workspace-scroll > .workspace-scroll__viewport {
+  position: relative;
+  height: 100% !important;
+  min-height: 100% !important;
+  max-height: 100% !important;
+  padding: 0 !important;
+  padding-right: var(--ws-inset-right, 0px) !important;
+  padding-left: var(--ws-inset-left, 0px) !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  overflow: hidden !important;
+  box-sizing: border-box;
+}
+
+.workspace-shell__canvas:has(.workspace-poju-stack--prepare) > .workspace-scroll > .workspace-scroll__rail {
+  display: none;
+}
+
+.workspace-poju-stack--fade-out {
+  animation: workspace-poju-center-fade-out 480ms ease forwards;
+  pointer-events: none;
+}
+
+.workspace-poju-stack--fade-in {
+  animation: workspace-poju-center-fade-in 520ms ease forwards;
+}
+
+/* Birth ↔ prepare crossfade: preload Spline under birth so reveal is smooth */
+.workspace-poju-stack--crossfade {
+  position: relative;
+}
+
+.workspace-poju-stack__layer--birth {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.workspace-poju-stack__layer--birth.is-fade-out {
+  animation: workspace-poju-center-fade-out 480ms ease forwards;
+  pointer-events: none;
+}
+
+.workspace-poju-stack__layer--prepare {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.workspace-poju-stack__layer--prepare.is-preload {
+  /* Hidden but mounted — WebGL / scene start during birth fade-out */
+  opacity: 0;
+  pointer-events: none;
+}
+
+.workspace-poju-stack__layer--prepare.is-visible {
+  z-index: 3;
+  opacity: 1;
+  pointer-events: auto;
+  animation: workspace-poju-center-fade-in 360ms ease forwards;
+}
+
+/* Preload: size prepare to the final center stage so WebGL doesn't resize on reveal */
+.workspace-poju-stack--prepare-armed {
+  position: relative;
+  min-height: 100%;
+}
+
+.workspace-shell__canvas-viewport:has(.workspace-poju-stack--prepare-armed),
+.workspace-shell__canvas--dense
+  .workspace-shell__canvas-viewport:has(.workspace-poju-stack--prepare-armed) {
+  position: relative;
+  height: 100%;
+  min-height: 100%;
+}
+
+@keyframes workspace-poju-center-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes workspace-poju-center-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-poju-stack--fade-out,
+  .workspace-poju-stack--fade-in,
+  .workspace-poju-stack__layer--birth.is-fade-out,
+  .workspace-poju-stack__layer--prepare.is-visible {
+    animation-duration: 1ms;
+  }
+}
+
+/* Preparing Spline confined to center canvas (not full-viewport fixed) */
+.workspace-poju-preparing-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.workspace-poju-preparing-stage--exit {
+  animation: workspace-poju-prepare-exit 700ms ease forwards;
+}
+
+@keyframes workspace-poju-prepare-exit {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/*
+ * Preparing Spline — fill the center column only.
+ * No CSS scale/translate on the scene root (breaks Spline canvas → subject flies to a corner).
+ * Clear color is transparent; purple ambient wash is muted on the shell while preparing.
+ */
+.workspace-shell:has(.workspace-poju-preparing) {
+  /* Keep near-black stage + stars; drop purple radials that read as the scene “plate”. */
+  background: linear-gradient(180deg, #0a0810 0%, #07060c 45%, #05040a 100%);
+}
+
+.workspace-poju-preparing.preparing-spline-page {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 0;
+  background: transparent !important;
+  overflow: hidden !important;
+}
+
+.workspace-poju-preparing .preparing-spline-page__scene-wrap {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  transform: none !important;
+  overflow: hidden !important;
+  background: transparent !important;
+}
+
+.workspace-poju-preparing .preparing-spline-page__scene,
+.workspace-poju-preparing .spline-interactive-scene {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  transform: none !important;
+  background: transparent !important;
+}
+
+.workspace-poju-preparing .preparing-spline-page__scene--static {
+  /* CSS fallback orb only — no #050508 plate from chart-loader */
+  background: transparent !important;
+}
+
+.workspace-poju-preparing .spline-interactive-scene canvas {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  display: block;
+  background: transparent !important;
+}
+
+.workspace-poju-preparing .preparing-spline-page__overlay:not(.preparing-spline-page__overlay--error),
+.workspace-poju-preparing .wait-fx {
+  position: absolute !important;
+}
+
+/* Never paint a purple plate over the transparent Spline in workspace. */
+.workspace-poju-preparing .wait-fx--breath {
+  display: none !important;
+}
+
+.workspace-poju-preparing .preparing-spline-page__overlay:not(.preparing-spline-page__overlay--error) {
+  left: 0;
+  right: 0;
+  bottom: max(2rem, env(safe-area-inset-bottom, 0px));
+}
+
+.workspace-poju-stack--chat {
+  position: relative;
+  justify-content: stretch;
+  height: 100%;
+  min-height: 100%;
+  /* Chat reads the full center column — not the birth compose island */
+  --pchat-sidebar-width: 0px;
+  --pchat-content-width: 100%;
+  --pchat-read-max: min(1100px, 100%);
+  --ws-poju-chat-col: min(1100px, 100%);
+}
+
+/* Chat fills the center canvas (same letterbox treatment as prepare) */
+.workspace-shell__canvas-viewport:has(.workspace-poju-stack--chat),
+.workspace-shell__canvas--dense .workspace-shell__canvas-viewport:has(.workspace-poju-stack--chat) {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.workspace-poju-stack--chat > .workspace-poju-opening {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+}
+
+.workspace-poju-opening {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+.workspace-poju-opening__stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Full center chat: transparent shell, messages + composer fill the column */
+.workspace-poju-opening .pchat--workspace {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  background: transparent;
+  background-image: none;
+  color: inherit;
+}
+
+.workspace-poju-opening .pchat__main--workspace {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+  background: transparent;
+}
+
+.workspace-poju-opening .pchat--workspace .pchat__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.workspace-poju-opening .pchat--workspace .pchat__messages {
+  max-width: var(--ws-poju-chat-col) !important;
+  width: 100% !important;
+  margin: 0 auto !important;
+  padding: 28px 24px 140px;
+  box-sizing: border-box;
+}
+
+.workspace-poju-opening .pchat--workspace .pchat__inputbar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 45;
+  display: flex;
+  justify-content: center;
+  padding: 12px 24px calc(20px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(transparent, rgba(8, 5, 16, 0.72) 36%, rgba(8, 5, 16, 0.92) 100%);
+  box-shadow: none;
+}
+
+.workspace-poju-opening .pchat--workspace .pchat__inputwrap {
+  width: min(100%, var(--ws-poju-chat-col));
+  max-width: min(100%, var(--ws-poju-chat-col)) !important;
+  margin: 0 auto;
+}
+
+.workspace-poju-opening .pchat--workspace .pchat__paywall-dock {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 88px;
+  z-index: 46;
+  padding: 0 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.workspace-poju-opening .pchat--workspace .pchat__paywall-dock__panel {
+  width: min(100%, var(--ws-poju-chat-col));
+}
+
+/* Legacy composer-only (if any host still uses it) */
+.workspace-poju-opening__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px 120px;
+  overflow-y: auto;
+}
+
+.workspace-poju-opening__body .pmw {
+  margin-top: 0;
+  max-width: min(40rem, 100%);
+}
+
+.workspace-poju-opening__composer-host {
+  flex: 0 0 auto;
+}
+
+.workspace-poju-opening .pchat--composer-only,
+.workspace-poju-opening .pchat__main--composer-only {
+  display: contents;
+}
+
+.workspace-poju-opening .pchat--composer-only .pchat__inputbar {
+  position: fixed;
+  left: var(--ws-inset-left, 0px);
+  right: var(--ws-inset-right, 0px);
+  bottom: 0;
+  z-index: 45;
+  display: flex;
+  justify-content: center;
+  padding: 12px 24px calc(20px + env(safe-area-inset-bottom, 0px));
+  background: transparent;
+  box-shadow: none;
+}
+
+.workspace-poju-opening .pchat--composer-only .pchat__inputwrap {
+  width: min(100%, 36rem);
+  max-width: min(100%, 36rem) !important;
+  margin: 0 auto;
+}
+
+.workspace-poju-opening .pchat--composer-only .pchat__paywall-dock {
+  position: fixed;
+  left: var(--ws-inset-left, 0px);
+  right: var(--ws-inset-right, 0px);
+  bottom: 88px;
+  z-index: 46;
+  padding: 0 24px;
+}
+
+@media (max-width: 1023px) {
+  .workspace-poju-stack--chat {
+    --ws-poju-chat-col: 100%;
+    --pchat-read-max: 100%;
+  }
+
+  .workspace-poju-opening .pchat--composer-only .pchat__inputbar,
+  .workspace-poju-opening .pchat--composer-only .pchat__paywall-dock {
+    left: 0;
+    right: 0;
+  }
+
+  .workspace-poju-opening .pchat--composer-only .pchat__inputwrap {
+    width: min(100%, 28rem);
+    max-width: min(100%, 28rem) !important;
+  }
+}
+
+/* Right rail — personal energy chart (no title chrome; matrix shell is the content box) */
+.workspace-right-matrix {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 8px 4px 20px;
+  box-sizing: border-box;
+  /* Scroll via parent WorkspaceScrollArea only — do not nest a native scrollbar */
+  overflow: visible;
+}
+
+.workspace-right-matrix__body {
+  min-width: 0;
+  padding: 0;
+}
+
+.workspace-right-matrix__report {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(212, 175, 55, 0.22);
+}
+
+.workspace-right-matrix__report .base-analysis-delivery,
+.workspace-right-matrix__report .glyph-delivery-panel,
+.workspace-right-matrix__report .glyph-delivery-inner {
+  max-width: 100%;
+}
+
+.workspace-right-matrix__body .poju-matrix-bubble,
+.workspace-right-matrix__body .pem,
+.workspace-right-matrix__body .pcm {
+  max-width: 100%;
+}
+
+/* Center unlock ritual — covers center canvas only; does not alter rail open/close */
+.workspace-unlock-ritual {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  min-height: 0;
+  pointer-events: auto;
+}
+
+.workspace-unlock-ritual .delivery-wait-page,
+.workspace-unlock-ritual .preparing-spline-shell {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.workspace-unlock-ritual--loading,
+.workspace-unlock-ritual--error {
+  align-items: center;
+  justify-content: center;
+  background: rgba(11, 8, 21, 0.72);
+  color: #e4e4e7;
+  padding: 24px;
+  text-align: center;
+}
+
+/* Clearer separation: rail stays darker/thinner glass; matrix panel is denser glass */
+.workspace-shell__right-drawer {
+  background: rgba(18, 14, 28, 0.52);
+}
+
+.workspace-shell__right-drawer .workspace-right-matrix__body .pcm--rail {
+  background: transparent;
+}
+
+.workspace-shell__canvas-viewport:has(.workspace-poju-stack),
+.workspace-shell__canvas--dense .workspace-shell__canvas-viewport:has(.workspace-poju-stack) {
+  overflow: hidden;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+
+
 .workspace-poju-stack .workspace-poju-hero {
   flex: 0 0 auto;
 }
@@ -1347,9 +1843,10 @@
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
-  align-items: flex-start;
+  /* Keep birth / phone list anchored toward the bottom of the canvas */
+  align-items: flex-end;
   justify-content: center;
-  padding: 8px 16px 12px;
+  padding: 8px 16px 16px;
   overflow: hidden;
   box-sizing: border-box;
   width: 100%;
@@ -1630,11 +2127,15 @@
   padding-bottom: 4px;
 }
 
-.workspace-poju-add-new {
+/* Beat session-prep `.add-new-card-button { padding: 32px }` (same specificity race). */
+.workspace-shell .workspace-poju-below .workspace-poju-add-new.add-new-card-button {
   flex: 0 0 auto;
   margin-top: 8px;
   padding: 8px 12px;
   font-size: 13px;
+  min-height: 0;
+  height: auto;
+  max-height: none;
 }
 
 .workspace-poju-add-new .plus-icon {

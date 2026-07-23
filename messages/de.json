@@ -1350,6 +1350,15 @@
     "matrix_id": "MATRIX-ID",
     "element_map_title": "Elementare Säulenzuordnung",
     "element_map_sep": ", ",
+    "blocks": {
+      "block_1": "Raumzeit-Kalibrierung",
+      "block_2": "Kern-Energie-Profil",
+      "block_3": "Zeit-Trajektorie-Matrix",
+      "block_4": "Phasen-Status-Marker",
+      "block_5": "4D-Innerer Kern",
+      "tablist_label": "Profilbereiche",
+      "collapse_list": "Liste einklappen"
+    },
     "card": {
       "calendar_alignment": "Kalenderabgleich",
       "calendar_alignment_em": "Kalender",

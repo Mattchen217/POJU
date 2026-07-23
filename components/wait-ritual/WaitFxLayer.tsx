@@ -6,18 +6,27 @@ import "@/styles/wait-ritual.css";
 
 type Props = {
   glowColor: string;
+  /** Soft inset vignette — default on for Classic wait pages. */
+  showBreath?: boolean;
   showFlash?: boolean;
   showConverge?: boolean;
 };
 
-export function WaitFxLayer({ glowColor, showFlash = false, showConverge = false }: Props) {
+export function WaitFxLayer({
+  glowColor,
+  showBreath = true,
+  showFlash = false,
+  showConverge = false,
+}: Props) {
   return (
     <>
-      <div
-        className="wait-fx wait-fx--breath"
-        style={{ ["--wait-glow" as string]: glowColor }}
-        aria-hidden
-      />
+      {showBreath ? (
+        <div
+          className="wait-fx wait-fx--breath"
+          style={{ ["--wait-glow" as string]: glowColor }}
+          aria-hidden
+        />
+      ) : null}
       {showFlash ? (
         <div
           className="wait-fx wait-fx--flash"

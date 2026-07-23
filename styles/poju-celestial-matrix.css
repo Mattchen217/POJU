@@ -322,6 +322,558 @@
   color: #fff;
 }
 
+/* --------------------------------------------------------------------------
+   Top nav frame (strict design) — gold border · title · desc · 5 tabs
+   Selected tab (#1B1A26) merges into content panel below
+   -------------------------------------------------------------------------- */
+
+.pcm-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 0; /* 导航栏与内容框紧贴 */
+  width: 100%;
+}
+
+.pcm-navframe {
+  --pcm-link-surface: #1b1a26;
+  position: relative;
+  z-index: 2;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 1.1rem 1.15rem 0;
+  border: none;
+  border-radius: 14px 14px 0 0;
+  /* Gold frosted glass · 20% opacity */
+  background: rgba(212, 175, 55, 0.2);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  overflow: visible;
+  transition: background 0.15s ease;
+}
+
+.pcm-navframe:hover {
+  background: rgba(212, 175, 55, 0.28);
+}
+
+.pcm-navframe__title-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  margin: 0 0 0.85rem;
+  text-align: center;
+}
+
+.pcm-navframe__title {
+  margin: 0;
+  flex: 0 0 auto;
+  color: #ffffff;
+  font-family: var(--pcm-headline);
+  font-size: clamp(1.35rem, 2.8vw, 1.75rem);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.03em;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.pcm-navframe__dot {
+  font-weight: 700;
+}
+
+.pcm-navframe__desc {
+  margin: 0;
+  width: 100%;
+  max-width: 42rem;
+  color: rgba(255, 255, 255, 0.92);
+  font-family: var(--pcm-body);
+  font-size: clamp(0.75rem, 1.45vw, 0.875rem);
+  font-weight: 400;
+  line-height: 1.4;
+  text-align: center;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.pcm-navframe .pcm-tabs {
+  border-bottom: none;
+  padding: 0;
+  gap: 0.25rem;
+  justify-content: center;
+  position: relative;
+  z-index: 3;
+  margin-bottom: 0;
+}
+
+.pcm-navframe .pcm-tabs__btn {
+  color: rgba(255, 255, 255, 0.9);
+  background: transparent;
+  border-radius: 10px 10px 0 0;
+  text-decoration: none;
+}
+
+.pcm-navframe .pcm-tabs__btn:hover {
+  color: #ffffff;
+}
+
+/* Selected tab = same #1B1A26 as content panel → one connected shape */
+.pcm-navframe .pcm-tabs__btn.is-active,
+.pcm--rail .pcm-navframe .pcm-tabs__btn.is-active,
+.pcm[data-locale="zh"] .pcm-navframe .pcm-tabs__btn.is-active {
+  color: #ffffff;
+  background: var(--pcm-link-surface);
+  box-shadow: none;
+  margin-bottom: 0;
+  padding-bottom: 0.85rem;
+  text-decoration: none;
+  border-radius: 10px 10px 0 0;
+  position: relative;
+  z-index: 4;
+}
+
+.pcm--rail .pcm-navframe {
+  margin-bottom: 0;
+}
+
+.pcm--compact .pcm-navframe {
+  padding: 0.85rem 0.75rem 0;
+}
+
+.pcm--compact .pcm-navframe__title {
+  font-size: 1.25rem;
+}
+
+.pcm--compact .pcm-navframe__desc {
+  font-size: 0.72rem;
+}
+
+/* --------------------------------------------------------------------------
+   Tabbed 5-block shell — panel shares #1B1A26 with active tab
+   -------------------------------------------------------------------------- */
+
+.pcm-shell {
+  --pcm-shell-surface: #1b1a26;
+  --pcm-shell-surface-solid: #1b1a26;
+  --pcm-shell-line: rgba(196, 181, 253, 0.16);
+  --pcm-shell-hairline: rgba(255, 255, 255, 0.08);
+  position: relative;
+  z-index: 1;
+  margin-top: 0;
+}
+
+.pcm--rail .pcm-shell {
+  --pcm-shell-surface: #1b1a26;
+  --pcm-shell-surface-solid: #1b1a26;
+}
+
+.pcm-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 3px;
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  position: relative;
+  z-index: 2;
+  padding: 0 2px;
+  border-bottom: 1px solid var(--pcm-shell-hairline);
+}
+
+.pcm-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.pcm-tabs__btn {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: none;
+  margin: 0;
+  padding: 0.7rem 0.35rem 0.8rem;
+  border: none;
+  border-radius: 12px 12px 0 0;
+  background: transparent;
+  color: rgba(227, 224, 241, 0.52);
+  font-family: var(--pcm-headline);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    color 160ms ease,
+    background 160ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pcm-tabs__label {
+  display: block;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.pcm-tabs__label--stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.12em;
+}
+
+.pcm-tabs__line {
+  display: block;
+  white-space: nowrap;
+}
+
+/* Per-locale tab type — independent size / weight / layout */
+.pcm[data-locale="zh"] .pcm-tabs__btn {
+  font-size: 0.9375rem; /* 15px */
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.85rem 0.4rem 0.95rem;
+}
+
+.pcm[data-locale="zh"] .pcm-tabs__label--zh {
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.pcm[data-locale="en"] .pcm-tabs__btn {
+  font-size: 0.8125rem; /* 13px */
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 0.65rem 0.3rem 0.75rem;
+}
+
+.pcm[data-locale="es"] .pcm-tabs__btn {
+  font-size: 0.75rem; /* 12px — longer Romance strings */
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  padding: 0.6rem 0.25rem 0.7rem;
+}
+
+.pcm[data-locale="de"] .pcm-tabs__btn {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  padding: 0.6rem 0.2rem 0.7rem;
+}
+
+.pcm[data-locale="fr"] .pcm-tabs__btn {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  padding: 0.6rem 0.25rem 0.7rem;
+}
+
+.pcm-tabs__btn:hover {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.pcm-tabs__btn:focus-visible {
+  outline: 2px solid rgba(192, 132, 252, 0.7);
+  outline-offset: 2px;
+}
+
+/* Generic tab active (outside navframe) — keep for fallback */
+.pcm-tabs__btn.is-active {
+  color: #fff;
+  background: #1b1a26;
+  box-shadow: 0 1px 0 #1b1a26;
+  margin-bottom: -1px;
+  padding-bottom: calc(0.8rem + 1px);
+}
+
+.pcm--rail .pcm-tabs__btn.is-active {
+  background: #1b1a26;
+  box-shadow: 0 1px 0 #1b1a26;
+}
+
+.pcm[data-locale="zh"] .pcm-tabs__btn.is-active {
+  padding-bottom: calc(0.95rem + 1px);
+}
+
+.pcm-shell__panel {
+  position: relative;
+  z-index: 1;
+  background: #1b1a26;
+  background-image: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: none;
+  border-radius: 0 0 14px 14px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+  padding: 1.25rem 1rem 1.5rem;
+  min-height: 12rem;
+}
+
+.pcm--rail .pcm-shell__panel {
+  background: #1b1a26;
+  background-image: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
+}
+
+.pcm-shell.is-collapsed {
+  display: none;
+}
+
+.pcm-shell__footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 1.25rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(212, 175, 55, 0.22);
+}
+
+.pcm-shell__collapse {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0.45rem 0.85rem;
+  border: none;
+  border-radius: 9999px;
+  background: transparent;
+  color: rgba(242, 202, 80, 0.92);
+  font-family: var(--pcm-body);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease;
+}
+
+.pcm-shell__collapse:hover {
+  color: #f2ca50;
+  background: rgba(242, 202, 80, 0.08);
+}
+
+.pcm-shell__collapse:focus-visible {
+  outline: 2px solid rgba(242, 202, 80, 0.65);
+  outline-offset: 2px;
+}
+
+.pcm-shell__collapse-icon {
+  font-size: 0.7rem;
+  line-height: 1;
+  opacity: 0.85;
+}
+
+/* When panel is collapsed, round the navframe bottom again */
+.pcm-stage:has(.pcm-shell.is-collapsed) .pcm-navframe {
+  border-radius: 14px;
+  padding-bottom: 0.85rem;
+}
+
+.pcm-stage:has(.pcm-shell.is-collapsed) .pcm-navframe .pcm-tabs {
+  margin-bottom: 0;
+}
+
+@media (min-width: 768px) {
+  .pcm-shell__panel {
+    padding: 1.5rem 1.35rem 1.75rem;
+  }
+}
+
+.pcm__header-meta--inline {
+  margin: 0 0 1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--pcm-shell-line);
+}
+
+.pcm--rail .pcm__header-meta--inline {
+  font-size: 0.75rem;
+}
+
+/* Flat cells inside the single panel — typography + hairlines, no nested cards */
+.pcm--tabbed .pcm-shell__panel .pcm-card {
+  background: transparent;
+  background-image: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  padding: 0.85rem 0;
+}
+
+.pcm--tabbed .pcm-shell__panel .pcm-card--glow {
+  box-shadow: none;
+}
+
+.pcm--tabbed .pcm-shell__panel .pcm__grid-12 {
+  gap: 0;
+}
+
+.pcm--tabbed .pcm-shell__panel .pcm__grid-12 > * {
+  border-bottom: 1px solid var(--pcm-shell-line);
+  padding-block: 1rem;
+}
+
+.pcm--tabbed .pcm-shell__panel .pcm__grid-12 > *:last-child {
+  border-bottom: none;
+}
+
+@media (min-width: 1024px) {
+  .pcm--tabbed .pcm-shell__panel .pcm__grid-12 {
+    column-gap: 1.25rem;
+    row-gap: 0;
+  }
+
+  .pcm--tabbed .pcm-shell__panel .pcm__grid-12 > * {
+    border-bottom: none;
+    border-right: 1px solid var(--pcm-shell-line);
+    padding-block: 0.25rem;
+    padding-inline: 0.85rem;
+  }
+
+  .pcm--tabbed .pcm-shell__panel .pcm__grid-12 > *:last-child {
+    border-right: none;
+  }
+
+  /* Multi-row grids (energy / trajectory): hairline between rows via section gap */
+  .pcm--tabbed .pcm-shell__panel .pcm__section {
+    gap: 1.25rem;
+  }
+
+  .pcm--tabbed .pcm-shell__panel .pcm__section > .pcm__grid-12 + .pcm__grid-12 {
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--pcm-shell-line);
+  }
+}
+
+.pcm--tabbed .pcm-shell__panel .pcm-cal__grid {
+  gap: 0;
+}
+
+.pcm--tabbed .pcm-shell__panel .pcm-cal__cell {
+  border-bottom: 1px solid var(--pcm-shell-line);
+  border-right: none;
+  padding-inline: 0;
+  padding-block: 0.85rem;
+  padding-bottom: 0.85rem;
+}
+
+.pcm--tabbed .pcm-shell__panel .pcm-cal__cell:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+@media (min-width: 1024px) {
+  .pcm--tabbed .pcm-shell__panel .pcm-cal__cell {
+    border-bottom: none;
+    border-right: 1px solid var(--pcm-shell-line);
+    padding-inline: 0.85rem;
+    padding-block: 0.25rem;
+  }
+
+  .pcm--tabbed .pcm-shell__panel .pcm-cal__cell:first-child {
+    padding-left: 0;
+  }
+
+  .pcm--tabbed .pcm-shell__panel .pcm-cal__cell:last-child {
+    border-right: none;
+    padding-right: 0;
+  }
+}
+
+.pcm--tabbed .pcm-shell__panel .pcm-facts,
+.pcm--tabbed .pcm-shell__panel .pcm-facts-extra {
+  gap: 0;
+}
+
+.pcm--tabbed .pcm-shell__panel .pcm-facts > .pcm-card,
+.pcm--tabbed .pcm-shell__panel .pcm-facts-extra > .pcm-card {
+  border-bottom: 1px solid var(--pcm-shell-line);
+  padding: 1rem 0;
+}
+
+.pcm--tabbed .pcm-shell__panel .pcm-facts > .pcm-card:last-child,
+.pcm--tabbed .pcm-shell__panel .pcm-facts-extra > .pcm-card:last-child {
+  border-bottom: none;
+}
+
+@media (min-width: 768px) {
+  .pcm--tabbed .pcm-shell__panel .pcm-facts,
+  .pcm--tabbed .pcm-shell__panel .pcm-facts-extra {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 1.25rem;
+  }
+
+  .pcm--tabbed .pcm-shell__panel .pcm-facts > .pcm-card,
+  .pcm--tabbed .pcm-shell__panel .pcm-facts-extra > .pcm-card {
+    border-bottom: 1px solid var(--pcm-shell-line);
+    padding: 1rem 0.5rem;
+  }
+
+  .pcm--tabbed .pcm-shell__panel .pcm-facts > .pcm-card:nth-child(odd),
+  .pcm--tabbed .pcm-shell__panel .pcm-facts-extra > .pcm-card:nth-child(odd) {
+    border-right: 1px solid var(--pcm-shell-line);
+    padding-right: 1rem;
+  }
+
+  .pcm--tabbed .pcm-shell__panel .pcm-facts > .pcm-card:nth-child(even),
+  .pcm--tabbed .pcm-shell__panel .pcm-facts-extra > .pcm-card:nth-child(even) {
+    padding-left: 1rem;
+  }
+
+  .pcm--tabbed .pcm-shell__panel .pcm-facts > .pcm-card:nth-last-child(-n + 2),
+  .pcm--tabbed .pcm-shell__panel .pcm-facts-extra > .pcm-card:nth-last-child(-n + 2) {
+    border-bottom: none;
+  }
+}
+
+.pcm--tabbed .pcm-shell__panel .pcm-pillars {
+  gap: 0;
+}
+
+.pcm--tabbed .pcm-shell__panel .pcm-pillars > .pcm-card {
+  border-bottom: 1px solid var(--pcm-shell-line);
+  padding: 1rem 0.35rem;
+}
+
+.pcm--tabbed .pcm-shell__panel .pcm-pillars > .pcm-card:last-child {
+  border-bottom: none;
+}
+
+@media (min-width: 900px) {
+  .pcm--tabbed .pcm-shell__panel .pcm-pillars {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .pcm--tabbed .pcm-shell__panel .pcm-pillars > .pcm-card {
+    border-bottom: none;
+    border-right: 1px solid var(--pcm-shell-line);
+    padding: 0.35rem 0.75rem;
+  }
+
+  .pcm--tabbed .pcm-shell__panel .pcm-pillars > .pcm-card:last-child {
+    border-right: none;
+  }
+}
+
+.pcm--compact .pcm-tabs__btn {
+  /* Locale rules above own font-size — only tighten padding in compact */
+  padding-inline: 0.2rem;
+}
+
+.pcm--compact .pcm-shell__panel {
+  padding: 0.95rem 0.75rem 1.1rem;
+  border-radius: 0 0 14px 14px;
+}
+
 /* 12-column grid — single column on mobile, 12 cols from lg */
 .pcm__grid-12 {
   display: grid;
@@ -905,37 +1457,125 @@
 }
 
 /* --------------------------------------------------------------------------
-   Radar (col-span 5)
+   Energy block — radar full-width row, then bars | vitality+eq
+   -------------------------------------------------------------------------- */
+
+.pcm-energy {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  align-items: stretch;
+}
+
+.pcm-energy__radar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 0;
+  /* Title → chart: tight */
+  gap: 0.25rem;
+}
+
+.pcm-energy__radar > .pcm-label {
+  margin: 0;
+}
+
+.pcm-energy__bottom {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.pcm-energy__rest {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+@media (min-width: 900px) {
+  .pcm-energy__bottom {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+.pcm--tabbed .pcm-shell__panel .pcm-energy__radar {
+  border-bottom: 1px solid var(--pcm-shell-line);
+  padding: 0.35rem 0 0.85rem;
+}
+
+.pcm--tabbed .pcm-shell__panel .pcm-energy__bars,
+.pcm--tabbed .pcm-shell__panel .pcm-energy__rest > .pcm-card {
+  border-bottom: 1px solid var(--pcm-shell-line);
+  padding: 0.85rem 0;
+}
+
+.pcm--tabbed .pcm-shell__panel .pcm-energy__rest > .pcm-card:last-child {
+  border-bottom: none;
+}
+
+@media (min-width: 900px) {
+  .pcm--tabbed .pcm-shell__panel .pcm-energy__bars {
+    border-bottom: none;
+    border-right: 1px solid var(--pcm-shell-line);
+    padding: 0.85rem 1rem 0.25rem 0.25rem;
+  }
+
+  .pcm--tabbed .pcm-shell__panel .pcm-energy__rest > .pcm-card {
+    padding: 0.85rem 0.25rem 0.75rem 1rem;
+  }
+
+  .pcm--tabbed .pcm-shell__panel .pcm-energy__rest > .pcm-card:first-child {
+    padding-top: 0.85rem;
+  }
+
+  .pcm--tabbed .pcm-shell__panel .pcm-energy__rest > .pcm-card:last-child {
+    padding-bottom: 0.25rem;
+    border-bottom: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Radar (full-width row)
    -------------------------------------------------------------------------- */
 
 .pcm-radar {
-  grid-column: 1 / -1;
-}
-
-@media (min-width: 1024px) {
-  .pcm-radar {
-    grid-column: span 5;
-  }
+  grid-column: auto;
 }
 
 .pcm-radar__chart {
   position: relative;
   width: 100%;
-  max-width: 20rem;
+  max-width: min(100%, 22rem);
   aspect-ratio: 1;
   margin: 0 auto;
-  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 14rem;
+  box-sizing: border-box;
+  padding: 0.15rem;
+  /* Do not stretch into empty vertical space */
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+.pcm-energy__radar .pcm-radar__chart {
+  max-width: min(100%, 24rem);
+  width: 100%;
+}
+
+@media (min-width: 900px) {
+  .pcm-energy__radar .pcm-radar__chart {
+    max-width: min(100%, 28rem);
+  }
 }
 
 .pcm-radar__chart > div,
 .pcm-radar__canvas {
   width: 100% !important;
   height: 100% !important;
-  min-height: 14rem;
+  min-height: 0 !important;
 }
 
 .pcm-radar__axis-label {
@@ -947,17 +1587,20 @@
 }
 
 /* --------------------------------------------------------------------------
-   Element bars (col-span 7)
+   Element bars (bottom-left)
    -------------------------------------------------------------------------- */
 
 .pcm-bars {
-  grid-column: 1 / -1;
+  grid-column: auto;
 }
 
-@media (min-width: 1024px) {
-  .pcm-bars {
-    grid-column: span 7;
-  }
+.pcm-energy__bars .pcm-bars__list {
+  gap: 0.85rem;
+}
+
+.pcm-energy__bars .pcm-bars__footer {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
 }
 
 .pcm-bars__list {
@@ -1075,19 +1718,13 @@
 }
 
 /* --------------------------------------------------------------------------
-   Vitality slider (col-span 5)
+   Vitality slider
    -------------------------------------------------------------------------- */
 
 .pcm-vitality {
-  grid-column: 1 / -1;
+  grid-column: auto;
   justify-content: center;
   overflow: visible;
-}
-
-@media (min-width: 1024px) {
-  .pcm-vitality {
-    grid-column: span 5;
-  }
 }
 
 .pcm-vitality__title {
@@ -1097,6 +1734,11 @@
   font-weight: 700;
   color: #fff;
   line-height: 1.3;
+}
+
+.pcm-energy__rest .pcm-vitality__title {
+  margin: 0 0 0.85rem;
+  font-size: 1.15rem;
 }
 
 .pcm-vtrack {
@@ -1146,18 +1788,12 @@
 }
 
 /* --------------------------------------------------------------------------
-   Equilibrium cards (col-span 7)
+   Equilibrium cards
    -------------------------------------------------------------------------- */
 
 .pcm-eq {
-  grid-column: 1 / -1;
+  grid-column: auto;
   justify-content: center;
-}
-
-@media (min-width: 1024px) {
-  .pcm-eq {
-    grid-column: span 7;
-  }
 }
 
 .pcm-eq__grid {
@@ -1184,6 +1820,25 @@
   font-size: 1.125rem;
   font-weight: 500;
   color: #fff;
+}
+
+.pcm-energy__rest .pcm-eq__grid {
+  gap: 0.85rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 1100px) {
+  .pcm-energy__rest .pcm-eq__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.pcm-energy__rest .pcm-eq__card {
+  padding: 0.75rem;
+}
+
+.pcm-energy__rest .pcm-eq__title {
+  font-size: 0.95rem;
 }
 
 .pcm-eq__pct {
@@ -2086,12 +2741,15 @@
   z-index: 1;
   margin: 0 0 0.5rem;
   font-family: var(--pcm-headline);
-  font-size: 1.5rem;
+  /* Match Metal (stem) visual size; was 1.5rem and overflowed longer labels */
+  font-size: 1.125rem;
   font-weight: 700;
   line-height: 1.3;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   text-transform: none;
   color: #fff;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .pcm-pl__slot .term-mark__word,

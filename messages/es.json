@@ -1350,6 +1350,15 @@
     "matrix_id": "ID DE MATRIZ",
     "element_map_title": "Mapa de Pilares Elementales",
     "element_map_sep": ", ",
+    "blocks": {
+      "block_1": "Calibración Espaciotemporal",
+      "block_2": "Perfil Energético",
+      "block_3": "Matriz de Trayectoria",
+      "block_4": "Marcadores de Estado",
+      "block_5": "Núcleo Interno 4D",
+      "tablist_label": "Secciones del perfil",
+      "collapse_list": "Ocultar lista"
+    },
     "card": {
       "calendar_alignment": "Alineación Calendárica",
       "calendar_alignment_em": "calendario",

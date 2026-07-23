@@ -1,15 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 
 import { useRouter } from "@/i18n/navigation";
 
+import { AppDialogProvider } from "@/components/ui/app-dialog";
 import { WorkspaceArchiveReportPanel } from "@/components/workspace/WorkspaceArchiveReportPanel";
 import { WorkspaceLegalDrawer } from "@/components/workspace/WorkspaceLegalDrawer";
 import { WorkspaceMobileDrawer } from "@/components/workspace/WorkspaceMobileDrawer";
+import {
+  WorkspacePojuPrepareProvider,
+  useWorkspacePojuPrepareOptional,
+} from "@/components/workspace/WorkspacePojuPrepareContext";
 import { WorkspaceRightDrawer } from "@/components/workspace/WorkspaceRightDrawer";
+import { WorkspaceRightMatrixPanel } from "@/components/workspace/WorkspaceRightMatrixPanel";
 import { WorkspaceScrollArea } from "@/components/workspace/WorkspaceScrollArea";
 import { WorkspaceSidebar, WorkspaceSidebarBrand } from "@/components/workspace/WorkspaceSidebar";
 import { isWorkspaceRailInteractiveTarget } from "@/components/workspace/workspace-rail-click";
@@ -33,7 +39,7 @@ function isEngineProduct(tab: WorkspaceTab): tab is WorkspaceProductId {
 }
 
 function RightDrawerContext({
-  tab: _tab,
+  tab,
   archiveId: _archiveId,
   onOpenArchive: _onOpenArchive,
 }: {
@@ -41,8 +47,56 @@ function RightDrawerContext({
   archiveId: string | null;
   onOpenArchive: (product: WorkspaceProductId, id: string) => void;
 }) {
-  /* Content cleared — rebuild later */
+  if (tab === "poju") {
+    return <WorkspaceRightMatrixPanel />;
+  }
   return <div className="workspace-right-drawer-placeholder" aria-hidden />;
+}
+
+/** Keeps POJU right rail closed only while birth entry is idle; resets prepare when leaving POJU. */
+function PojuRightRailGate({
+  tab,
+  setRightOpen,
+}: {
+  tab: WorkspaceTab;
+  setRightOpen: (open: boolean) => void;
+}) {
+  const prepare = useWorkspacePojuPrepareOptional();
+  const phase = prepare?.phase ?? "idle";
+  const resetPrepare = prepare?.resetPrepare;
+
+  useEffect(() => {
+    if (tab !== "poju") {
+      resetPrepare?.();
+      try {
+        setRightOpen(window.localStorage.getItem("poju.workspaceRightDrawerOpen") === "1");
+      } catch {
+        /* private mode */
+      }
+      return;
+    }
+    if (phase === "idle" || phase === "handoff") {
+      setRightOpen(false);
+    }
+  }, [tab, phase, setRightOpen, resetPrepare]);
+
+  return null;
+}
+
+/** Bind prepare.resetPrepare for shell actions that live outside the hook tree. */
+function PojuPrepareResetBinder({
+  resetRef,
+}: {
+  resetRef: { current: (() => void) | null };
+}) {
+  const prepare = useWorkspacePojuPrepareOptional();
+  useEffect(() => {
+    resetRef.current = prepare?.resetPrepare ?? null;
+    return () => {
+      resetRef.current = null;
+    };
+  }, [prepare?.resetPrepare, resetRef]);
+  return null;
 }
 
 export function WorkspaceShell({ initialTab }: Props) {
@@ -62,6 +116,7 @@ export function WorkspaceShell({ initialTab }: Props) {
   const [legalOpen, setLegalOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [rightOpen, setRightOpen] = useState(false);
+  const pojuPrepareResetRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     try {
@@ -70,20 +125,6 @@ export function WorkspaceShell({ initialTab }: Props) {
       /* private mode */
     }
   }, []);
-
-  // POJU page: right rail always starts collapsed (side copy visible).
-  // Other tabs: restore the user's last drawer preference.
-  useEffect(() => {
-    if (tab === "poju") {
-      setRightOpen(false);
-      return;
-    }
-    try {
-      setRightOpen(window.localStorage.getItem("poju.workspaceRightDrawerOpen") === "1");
-    } catch {
-      /* private mode */
-    }
-  }, [tab]);
 
   const toggleSidebarCollapsed = useCallback(() => {
     setSidebarCollapsed((prev) => {
@@ -159,6 +200,10 @@ export function WorkspaceShell({ initialTab }: Props) {
       setTab(next);
       setArchiveId(null);
       syncUrl(next, null);
+      /* New Session / engine home — leave preparing or chat surface. */
+      if (next === "poju") {
+        pojuPrepareResetRef.current?.();
+      }
     },
     [syncUrl],
   );
@@ -200,95 +245,101 @@ export function WorkspaceShell({ initialTab }: Props) {
   }
 
   return (
-    <div
-      className={`workspace-shell${sidebarCollapsed ? " is-sidebar-collapsed" : ""}${
-        rightOpen ? " is-right-open" : ""
-      }`}
-    >
-      <div className="workspace-shell__sky" aria-hidden />
+    <AppDialogProvider>
+      <WorkspacePojuPrepareProvider openRight={openRight}>
+        <PojuPrepareResetBinder resetRef={pojuPrepareResetRef} />
+        <PojuRightRailGate tab={tab} setRightOpen={setRightOpen} />
+        <div
+          className={`workspace-shell${sidebarCollapsed ? " is-sidebar-collapsed" : ""}${
+            rightOpen ? " is-right-open" : ""
+          }`}
+        >
+        <div className="workspace-shell__sky" aria-hidden />
 
-      <div className="workspace-shell__main">
-        <div className="workspace-shell__main-tools">
-          <button
-            type="button"
-            className="workspace-mobile-menu-fab"
-            aria-label={t("menuOpen")}
-            aria-expanded={menuOpen}
-            aria-controls="workspace-mobile-drawer"
-            onClick={() => setMenuOpen(true)}
-          >
-            <span className="material-symbols-outlined text-[22px] leading-none" aria-hidden>
-              menu
-            </span>
-          </button>
+        <div className="workspace-shell__main">
+          <div className="workspace-shell__main-tools">
+            <button
+              type="button"
+              className="workspace-mobile-menu-fab"
+              aria-label={t("menuOpen")}
+              aria-expanded={menuOpen}
+              aria-controls="workspace-mobile-drawer"
+              onClick={() => setMenuOpen(true)}
+            >
+              <span className="material-symbols-outlined text-[22px] leading-none" aria-hidden>
+                menu
+              </span>
+            </button>
+          </div>
+          <div className="workspace-shell__canvas workspace-shell__canvas--dense">
+            <WorkspaceScrollArea
+              className="workspace-shell__pane-scroll"
+              viewportClassName="workspace-shell__canvas-viewport"
+              fixedThumbPx={52}
+            >
+              {renderCanvas()}
+            </WorkspaceScrollArea>
+          </div>
         </div>
-        <div className="workspace-shell__canvas workspace-shell__canvas--dense">
+
+        <aside
+          className="workspace-shell__sidebar-desktop"
+          aria-label="Workspace sidebar"
+          onClick={(e) => {
+            if (sidebarCollapsed) {
+              expandLeftSidebar();
+              return;
+            }
+            if (!isWorkspaceRailInteractiveTarget(e.target)) {
+              collapseLeftSidebar();
+            }
+          }}
+        >
+          <div className="workspace-shell__left-chrome">
+            <WorkspaceSidebarBrand
+              collapsed={sidebarCollapsed}
+              onToggleCollapse={toggleSidebarCollapsed}
+            />
+          </div>
           <WorkspaceScrollArea
-            className="workspace-shell__pane-scroll"
-            viewportClassName="workspace-shell__canvas-viewport"
+            className="workspace-shell__pane-scroll workspace-shell__sidebar-scroll"
             fixedThumbPx={52}
           >
-            {renderCanvas()}
+            <WorkspaceSidebar
+              activeTab={tab}
+              activeArchiveId={archiveId}
+              onSelectNew={selectNew}
+              onSelectArchive={selectArchive}
+              onOpenLegal={() => setLegalOpen(true)}
+              onSelectProfile={() => selectNew("profile")}
+              collapsed={sidebarCollapsed}
+              showBrand={false}
+            />
           </WorkspaceScrollArea>
-        </div>
-      </div>
+        </aside>
 
-      <aside
-        className="workspace-shell__sidebar-desktop"
-        aria-label="Workspace sidebar"
-        onClick={(e) => {
-          if (sidebarCollapsed) {
-            expandLeftSidebar();
-            return;
-          }
-          if (!isWorkspaceRailInteractiveTarget(e.target)) {
-            collapseLeftSidebar();
-          }
-        }}
-      >
-        <div className="workspace-shell__left-chrome">
-          <WorkspaceSidebarBrand
-            collapsed={sidebarCollapsed}
-            onToggleCollapse={toggleSidebarCollapsed}
+        <WorkspaceRightDrawer open={rightOpen} onOpen={openRight} onClose={closeRight}>
+          <RightDrawerContext
+            tab={tab}
+            archiveId={archiveId}
+            onOpenArchive={selectArchive}
           />
-        </div>
-        <WorkspaceScrollArea
-          className="workspace-shell__pane-scroll workspace-shell__sidebar-scroll"
-          fixedThumbPx={52}
-        >
-          <WorkspaceSidebar
-            activeTab={tab}
-            activeArchiveId={archiveId}
-            onSelectNew={selectNew}
-            onSelectArchive={selectArchive}
-            onOpenLegal={() => setLegalOpen(true)}
-            onSelectProfile={() => selectNew("profile")}
-            collapsed={sidebarCollapsed}
-            showBrand={false}
-          />
-        </WorkspaceScrollArea>
-      </aside>
+        </WorkspaceRightDrawer>
 
-      <WorkspaceRightDrawer open={rightOpen} onOpen={openRight} onClose={closeRight}>
-        <RightDrawerContext
-          tab={tab}
-          archiveId={archiveId}
-          onOpenArchive={selectArchive}
+        <WorkspaceMobileDrawer
+          open={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          activeTab={tab}
+          activeArchiveId={archiveId}
+          onSelectNew={selectNew}
+          onSelectArchive={selectArchive}
+          onOpenLegal={() => setLegalOpen(true)}
+          onSelectProfile={() => selectNew("profile")}
         />
-      </WorkspaceRightDrawer>
 
-      <WorkspaceMobileDrawer
-        open={menuOpen}
-        onClose={() => setMenuOpen(false)}
-        activeTab={tab}
-        activeArchiveId={archiveId}
-        onSelectNew={selectNew}
-        onSelectArchive={selectArchive}
-        onOpenLegal={() => setLegalOpen(true)}
-        onSelectProfile={() => selectNew("profile")}
-      />
-
-      <WorkspaceLegalDrawer open={legalOpen} onClose={() => setLegalOpen(false)} />
-    </div>
+        <WorkspaceLegalDrawer open={legalOpen} onClose={() => setLegalOpen(false)} />
+      </div>
+      </WorkspacePojuPrepareProvider>
+    </AppDialogProvider>
   );
 }

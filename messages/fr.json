@@ -1350,6 +1350,15 @@
     "matrix_id": "ID MATRICE",
     "element_map_title": "Carte des Piliers Élémentaires",
     "element_map_sep": ", ",
+    "blocks": {
+      "block_1": "Calibration Spatiotemporelle",
+      "block_2": "Profil Énergétique",
+      "block_3": "Matrice de Trajectoire",
+      "block_4": "Marqueurs d'État",
+      "block_5": "Noyau Interne 4D",
+      "tablist_label": "Sections du profil",
+      "collapse_list": "Réduire la liste"
+    },
     "card": {
       "calendar_alignment": "Alignement Calendaire",
       "calendar_alignment_em": "calendrier",

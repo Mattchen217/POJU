@@ -144,6 +144,11 @@ export interface PojuChatProps {
   questionBriefingEnabled?: boolean;
   questionBriefingDismissed?: boolean;
   onQuestionBriefingDismiss?: () => void;
+  /**
+   * `composer-only` — input bar only (no sidebar / header / messages).
+   * `workspace` — center-column chat: messages + composer, no sidebar / header / page chrome.
+   */
+  chrome?: "full" | "composer-only" | "workspace";
 }
 
 /* ---------- AI 文本：定稿后走 RichReadingText（双层制：正文白话 / 依据金字） ---------- */
@@ -223,6 +228,10 @@ export default function PojuChat(props: PojuChatProps) {
     onQuestionBriefingDismiss,
   } = props;
 
+  const composerOnly = props.chrome === "composer-only";
+  const workspaceChrome = props.chrome === "workspace";
+  const hideShellChrome = composerOnly || workspaceChrome;
+
   const [input, setInput] = useState("");
   const [questionBriefingOpen, setQuestionBriefingOpen] = useState(false);
   const textareaValue = composerText ?? input;
@@ -268,13 +277,14 @@ export default function PojuChat(props: PojuChatProps) {
 
   /* Lock document scroll — only .pchat__scroll may scroll (iOS Safari rubber-band). */
   useEffect(() => {
+    if (hideShellChrome) return;
     document.documentElement.classList.add("pchat-page-lock");
     document.body.classList.add("pchat-page-lock");
     return () => {
       document.documentElement.classList.remove("pchat-page-lock");
       document.body.classList.remove("pchat-page-lock");
     };
-  }, []);
+  }, [hideShellChrome]);
 
   /* 输入框自适应高度 */
   useEffect(() => {
@@ -531,7 +541,13 @@ export default function PojuChat(props: PojuChatProps) {
   }
 
   return (
-    <div className={`pchat${sidebarCollapsed ? " pchat--sidebar-collapsed" : ""}`}>
+    <div
+      className={`pchat${sidebarCollapsed && !hideShellChrome ? " pchat--sidebar-collapsed" : ""}${
+        composerOnly ? " pchat--composer-only" : ""
+      }${workspaceChrome ? " pchat--workspace" : ""}`}
+    >
+      {!hideShellChrome ? (
+        <>
       {/* 移动端抽屉遮罩 */}
       <div
         className={`pchat__overlay ${sidebarOpen ? "is-open" : ""}`}
@@ -664,9 +680,18 @@ export default function PojuChat(props: PojuChatProps) {
           }}
         />
       ) : null}
+        </>
+      ) : null}
 
       {/* 主区 */}
-      <main className="pchat__main">
+      <main
+        className={`pchat__main${composerOnly ? " pchat__main--composer-only" : ""}${
+          workspaceChrome ? " pchat__main--workspace" : ""
+        }`}
+      >
+        {!composerOnly ? (
+          <>
+        {workspaceChrome ? null : (
         <header className="pchat__header">
           <button
             className="pchat__hamburger"
@@ -695,6 +720,7 @@ export default function PojuChat(props: PojuChatProps) {
             <span className="pchat__header-spacer" aria-hidden />
           )}
         </header>
+        )}
 
         <div className="pchat__scroll" ref={scrollRef}>
           <div className="pchat__messages">
@@ -792,6 +818,8 @@ export default function PojuChat(props: PojuChatProps) {
             </div>
           </div>
         </div>
+          </>
+        ) : null}
 
         {paywallOverlay ? (
           <div

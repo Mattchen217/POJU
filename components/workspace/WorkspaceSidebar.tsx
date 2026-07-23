@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
+import { useAppDialog } from "@/components/ui/app-dialog";
 import { BrandLockup } from "@/components/marketing/brand-lockup";
 import { WorkspaceAccountPlaceholder } from "@/components/workspace/WorkspaceAccountPlaceholder";
 import { WorkspaceLanguageSwitcher } from "@/components/workspace/WorkspaceLanguageSwitcher";
@@ -15,6 +16,7 @@ import {
   useWorkspaceProductHistory,
   type WorkspaceProductId,
 } from "@/components/workspace/use-workspace-product-history";
+import { useWorkspacePojuPrepareOptional } from "@/components/workspace/WorkspacePojuPrepareContext";
 import { Link } from "@/i18n/navigation";
 import {
   deleteArchiveItem,
@@ -296,6 +298,7 @@ const PRODUCT_NEW_NAME: Record<Exclude<WorkspaceProductId, "poju">, string> = {
 
 function ToolHistoryBranch({
   product,
+  engineActive,
   expanded,
   activeArchiveId,
   nestFocus,
@@ -305,6 +308,8 @@ function ToolHistoryBranch({
   onDeletedActive,
 }: {
   product: WorkspaceProductId;
+  /** True when this product is the current workspace tab. */
+  engineActive: boolean;
   expanded: boolean;
   activeArchiveId: string | null;
   nestFocus: "new" | "past" | null;
@@ -314,6 +319,8 @@ function ToolHistoryBranch({
   onDeletedActive: () => void;
 }) {
   const t = useTranslations("workspace.density");
+  const { confirm } = useAppDialog();
+  const prepare = useWorkspacePojuPrepareOptional();
   const { items, ready, refresh } = useWorkspaceProductHistory(product, 40);
   const [pastOpen, setPastOpen] = useState(false);
 
@@ -328,8 +335,25 @@ function ToolHistoryBranch({
     product === "poju"
       ? t("newSession")
       : t("newProduct", { name: PRODUCT_NEW_NAME[product] });
-  const newActive = nestFocus === "new";
-  const pastActive = nestFocus === "past";
+
+  /* Home / new entry is already showing — New should no-op (no confirm). */
+  const alreadyOnNewHome =
+    engineActive &&
+    !activeArchiveId &&
+    (product !== "poju" || (prepare?.phase ?? "idle") === "idle");
+
+  const newActive = alreadyOnNewHome || nestFocus === "new";
+  const pastActive = nestFocus === "past" || Boolean(activeArchiveId);
+
+  async function requestNew() {
+    if (alreadyOnNewHome) return;
+    const ok = await confirm(t("newConfirmBody"), t("newConfirmTitle"), {
+      confirmLabel: t("newConfirmOk"),
+      cancelLabel: t("newConfirmCancel"),
+    });
+    if (!ok) return;
+    onFocusNew();
+  }
 
   return (
     <div className="workspace-sidebar__subnav" role="group">
@@ -339,7 +363,7 @@ function ToolHistoryBranch({
           newActive ? " is-active" : ""
         }`}
         aria-current={newActive ? "page" : undefined}
-        onClick={onFocusNew}
+        onClick={() => void requestNew()}
       >
         <span className="material-symbols-outlined workspace-sidebar__subicon" aria-hidden>
           add
@@ -470,10 +494,14 @@ export function WorkspaceSidebar({
                     onSelectNew(tab);
                     return;
                   }
-                  const willOpen = !isOpen;
-                  setExpanded((prev) => ({ ...prev, [tab]: willOpen }));
+                  /* Already on this engine: toggle nest only — do not navigate / reset home. */
+                  if (isActive) {
+                    setExpanded((prev) => ({ ...prev, [tab]: !isOpen }));
+                    return;
+                  }
+                  setExpanded((prev) => ({ ...prev, [tab]: true }));
                   setNestFocus((prev) => ({ ...prev, [tab]: null }));
-                  if (willOpen) onSelectNew(tab);
+                  onSelectNew(tab);
                 }}
               >
                 <span className="workspace-sidebar__icon" aria-hidden>
@@ -487,6 +515,7 @@ export function WorkspaceSidebar({
               {showNested ? (
                 <ToolHistoryBranch
                   product={tab as WorkspaceProductId}
+                  engineActive={isActive}
                   expanded={isOpen}
                   activeArchiveId={isActive ? activeArchiveId : null}
                   nestFocus={

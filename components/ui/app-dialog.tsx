@@ -24,7 +24,11 @@ type DialogRequest = {
 
 type AppDialogContextValue = {
   alert: (message: string, title?: string) => Promise<void>;
-  confirm: (message: string, title?: string) => Promise<boolean>;
+  confirm: (
+    message: string,
+    title?: string,
+    labels?: { confirmLabel?: string; cancelLabel?: string },
+  ) => Promise<boolean>;
   prompt: (message: string, defaultValue?: string, title?: string) => Promise<string | null>;
 };
 
@@ -58,8 +62,14 @@ export function AppDialogProvider({ children }: { children: ReactNode }) {
   const value: AppDialogContextValue = {
     alert: (message, title) =>
       enqueue({ variant: "alert", message, title, confirmLabel: "OK" }).then(() => undefined),
-    confirm: (message, title) =>
-      enqueue({ variant: "confirm", message, title }).then((r) => r === true),
+    confirm: (message, title, labels) =>
+      enqueue({
+        variant: "confirm",
+        message,
+        title,
+        confirmLabel: labels?.confirmLabel,
+        cancelLabel: labels?.cancelLabel,
+      }).then((r) => r === true),
     prompt: (message, defaultValue, title) =>
       enqueue({ variant: "prompt", message, title, defaultValue }).then((r) =>
         typeof r === "string" ? r : null,

@@ -1,20 +1,28 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useEffect, useMemo, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 
 import { PojuProductHero } from "@/components/marketing/poju-product-hero";
 import { BeginButton } from "@/components/pwa/BeginButton";
 import { WorkspaceContextPanel } from "@/components/workspace/WorkspaceContextPanel";
 import { WorkspacePojuBirthHost } from "@/components/workspace/WorkspacePojuBirthHost";
 import { WorkspacePojuBirthSideCopy } from "@/components/workspace/WorkspacePojuBirthSideCopy";
+import { WorkspacePojuChatStage } from "@/components/workspace/WorkspacePojuChatStage";
+import { useWorkspacePojuPrepare } from "@/components/workspace/WorkspacePojuPrepareContext";
+import { WorkspacePojuPreparingStage } from "@/components/workspace/WorkspacePojuPreparingStage";
 import { WorkspaceProfileSlotBar } from "@/components/workspace/WorkspaceProfileSlotBar";
+import { WorkspaceUnlockRitual } from "@/components/workspace/WorkspaceUnlockRitual";
+import { useWorkspaceUnlockRitualResume } from "@/components/workspace/useWorkspaceUnlockRitualResume";
 import {
   useWorkspaceProductHistory,
   type WorkspaceProductId,
 } from "@/components/workspace/use-workspace-product-history";
 
 const PRESET_KEYS = ["career", "relationship", "timing"] as const;
+
+/** Birth UI → preparing Spline crossfade duration (ms). */
+const PREPARE_HANDOFF_MS = 480;
 
 type Props = {
   productId: WorkspaceProductId;
@@ -105,11 +113,14 @@ export function EnginePanel({ productId, price, onOpenArchive }: Props) {
   );
 }
 
-/** Workspace center — POJU hero + birth form or returning-user profile list. */
+/** Workspace center — birth entry, then preparing Spline → chat shell. */
 export function PojuPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (id: string) => void }) {
   const t = useTranslations("marketingSite.poju");
   const tBrand = useTranslations("poju.branding");
+  const locale = useLocale();
   const [hasProfiles, setHasProfiles] = useState(false);
+  const { phase, startPrepare, setPhase, unlockRitualActive } = useWorkspacePojuPrepare();
+  useWorkspaceUnlockRitualResume(locale);
 
   const heroCopy = {
     brandTag: t("hero.brand_tag"),
@@ -120,19 +131,95 @@ export function PojuPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (i
     billingNotice: t("hero.billing_notice"),
   };
 
-  return (
-    <div className="workspace-poju-stack">
-      <div className="workspace-poju-hero">
-        <PojuProductHero copy={heroCopy} hideActions />
+  // Confirm → fade out birth/hero, then reveal preparing (Spline already preloading underneath).
+  useEffect(() => {
+    if (phase !== "handoff") return;
+    const reduced =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const ms = reduced ? 0 : PREPARE_HANDOFF_MS;
+    const timer = window.setTimeout(() => setPhase("preparing"), ms);
+    return () => window.clearTimeout(timer);
+  }, [phase, setPhase]);
+
+  if (phase === "chat") {
+    return (
+      <div className="workspace-poju-stack workspace-poju-stack--chat">
+        <WorkspacePojuChatStage />
+        {unlockRitualActive ? <WorkspaceUnlockRitual /> : null}
       </div>
-      <div className="workspace-poju-below">
-        <div className="workspace-poju-below__unit">
-          <WorkspacePojuBirthSideCopy hasProfiles={hasProfiles} />
-          <div className="workspace-poju-birth">
-            <WorkspacePojuBirthHost onHasProfilesChange={setHasProfiles} />
+    );
+  }
+
+  /* Idle home: flat stack (hero + below) — same as pre-crossfade HEAD layout.
+     Layered crossfade only while handing off / preparing. */
+  if (phase === "idle") {
+    return (
+      <div className="workspace-poju-stack">
+        <div className="workspace-poju-hero">
+          <PojuProductHero copy={heroCopy} hideActions />
+        </div>
+        <div className="workspace-poju-below">
+          <div className="workspace-poju-below__unit">
+            <WorkspacePojuBirthSideCopy hasProfiles={hasProfiles} />
+            <div className="workspace-poju-birth">
+              <WorkspacePojuBirthHost
+                onHasProfilesChange={setHasProfiles}
+                onPrepareStart={startPrepare}
+              />
+            </div>
           </div>
         </div>
       </div>
+    );
+  }
+
+  const showBirth = phase === "handoff";
+  const showPrepare =
+    phase === "handoff" || phase === "preparing" || phase === "exiting";
+  const birthFading = phase === "handoff";
+  const preparePreloading = phase === "handoff";
+  const prepareVisible = phase === "preparing" || phase === "exiting";
+
+  return (
+    <div
+      className={`workspace-poju-stack workspace-poju-stack--crossfade${
+        prepareVisible ? " workspace-poju-stack--prepare" : ""
+      }${showPrepare ? " workspace-poju-stack--prepare-armed" : ""}`}
+      aria-busy={birthFading || undefined}
+    >
+      {showBirth ? (
+        <div
+          className={`workspace-poju-stack__layer workspace-poju-stack__layer--birth${
+            birthFading ? " is-fade-out" : ""
+          }`}
+        >
+          <div className="workspace-poju-hero">
+            <PojuProductHero copy={heroCopy} hideActions />
+          </div>
+          <div className="workspace-poju-below">
+            <div className="workspace-poju-below__unit">
+              <WorkspacePojuBirthSideCopy hasProfiles={hasProfiles} />
+              <div className="workspace-poju-birth">
+                <WorkspacePojuBirthHost
+                  onHasProfilesChange={setHasProfiles}
+                  onPrepareStart={startPrepare}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {showPrepare ? (
+        <div
+          className={`workspace-poju-stack__layer workspace-poju-stack__layer--prepare${
+            preparePreloading ? " is-preload" : ""
+          }${prepareVisible ? " is-visible" : ""}`}
+        >
+          <WorkspacePojuPreparingStage />
+        </div>
+      ) : null}
     </div>
   );
 }

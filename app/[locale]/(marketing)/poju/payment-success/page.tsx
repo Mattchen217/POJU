@@ -23,6 +23,9 @@ import {
 import {
   bindPreviewProfileToSession,
   POJU_PENDING_UNLOCK_SESSION_KEY,
+  POJU_UNLOCK_SURFACE_KEY,
+  POJU_UNLOCK_SURFACE_WORKSPACE,
+  POJU_WORKSPACE_UNLOCK_RITUAL_KEY,
 } from "@/lib/poju/preview-unlock";
 import { restorePOJUV4ArchivedSession } from "@/lib/poju/v4-lifecycle";
 
@@ -104,12 +107,19 @@ function PojuPaymentSuccessInner() {
             });
           }
 
+          const unlockSurface = sessionStorage.getItem(POJU_UNLOCK_SURFACE_KEY);
           sessionStorage.removeItem(POJU_PENDING_UNLOCK_SESSION_KEY);
           sessionStorage.removeItem(POJU_PENDING_ORDER_KEY);
           sessionStorage.removeItem("poju_pending_question");
           sessionStorage.removeItem(POJU_PENDING_ACTION_KEY);
+          sessionStorage.removeItem(POJU_UNLOCK_SURFACE_KEY);
           if (cancelled) return;
           setStatus("success");
+          if (unlockSurface === POJU_UNLOCK_SURFACE_WORKSPACE) {
+            sessionStorage.setItem(POJU_WORKSPACE_UNLOCK_RITUAL_KEY, sessionId);
+            router.replace("/app?tab=poju");
+            return;
+          }
           router.replace(`/poju/session/${sessionId}/preparing?unlock=1`);
           return;
         }

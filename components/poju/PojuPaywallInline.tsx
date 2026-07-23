@@ -11,9 +11,18 @@ type Props = {
   pendingQuestion: string;
   onUnlocked: (via: "payment" | "code") => void | Promise<void>;
   busy?: boolean;
+  /** Payment return should resume workspace center ritual. */
+  workspaceSurface?: boolean;
 };
 
-export function PojuPaywallInline({ sessionId, locale, pendingQuestion, onUnlocked, busy = false }: Props) {
+export function PojuPaywallInline({
+  sessionId,
+  locale,
+  pendingQuestion,
+  onUnlocked,
+  busy = false,
+  workspaceSurface = false,
+}: Props) {
   const [codeOpen, setCodeOpen] = useState(false);
   const [code, setCode] = useState("");
   const [payBusy, setPayBusy] = useState(false);
@@ -33,6 +42,7 @@ export function PojuPaywallInline({ sessionId, locale, pendingQuestion, onUnlock
         sessionId,
         locale,
         pendingQuestion,
+        workspaceSurface,
       });
       if (!ok) setPayBusy(false);
     } catch {

@@ -98,6 +98,7 @@ import { buildDevStateLedger } from "@/lib/poju/dev-state-ledger";
 import { useLlmDebugEnabled } from "@/lib/poju/use-llm-debug-enabled";
 import { PojuAgendaCard } from "@/components/poju/PojuAgendaCard";
 import { PojuUnlockReportModal } from "@/components/poju/PojuUnlockReportModal";
+import { useWorkspacePojuPrepareOptional } from "@/components/workspace/WorkspacePojuPrepareContext";
 import { hasUnlockReportMessage, prepareUnlockReleaseSession } from "@/lib/poju/finalize-unlock-bazi-session";
 import {
   createPaywallMessage,
@@ -127,6 +128,11 @@ interface Props {
   session: POJUSessionState;
   onSessionUpdate: (s: POJUSessionState) => void;
   locale: string;
+  /**
+   * `workspace-opening` — avatar welcome + original PojuChat composer only
+   * (no chat shell / sidebar / debug panel).
+   */
+  layout?: "full" | "workspace-opening";
 }
 
 type SessionListRow = {
@@ -162,11 +168,12 @@ function buildOptimisticUserMessage(content: string): POJUMessage {
   };
 }
 
-export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
+export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }: Props) {
   const t = useTranslations("poju.chat");
   const tActivity = useTranslations("poju.activity");
   const tBrand = useTranslations("poju.branding");
   const dialog = useAppDialog();
+  const workspacePrepare = useWorkspacePojuPrepareOptional();
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [expiryDialogOpen, setExpiryDialogOpen] = useState(false);
@@ -846,6 +853,12 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
       };
       onSessionUpdate(unlocked);
       await savePOJUSession(unlocked);
+
+      if (layout === "workspace-opening" && workspacePrepare) {
+        workspacePrepare.startUnlockRitual();
+        return;
+      }
+
       router.push(`/poju/session/${base.session_id}/preparing?unlock=1`);
     } catch (e) {
       console.error("[poju] preview unlock failed:", e);
@@ -1832,6 +1845,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
   ]);
 
   const streaming = sending;
+  const workspaceOpening = layout === "workspace-opening";
 
   return (
     <>
@@ -1868,9 +1882,14 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
           e.target.value = "";
         }}
       />
-      <div className="poju-chat-shell">
-        <div className="poju-chat-shell__main">
+      <div className={workspaceOpening ? "workspace-poju-opening" : "poju-chat-shell"}>
+        <div
+          className={
+            workspaceOpening ? "workspace-poju-opening__stage" : "poju-chat-shell__main"
+          }
+        >
       <PojuChat
+        chrome={workspaceOpening ? "workspace" : "full"}
         sessions={pojuSessions}
         currentSessionId={session.session_id}
         messages={pojuMessages}
@@ -1892,6 +1911,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
               locale={locale}
               pendingQuestion={session.pending_question ?? session.original_question}
               busy={unlockBusy}
+              workspaceSurface={workspaceOpening}
               onUnlocked={(via) => void handlePreviewUnlock(via)}
             />
           ) : undefined
@@ -1956,7 +1976,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         questionBriefingEnabled={questionBriefingEnabled}
         questionBriefingDismissed={Boolean(session.question_briefing_dismissed)}
         onQuestionBriefingDismiss={() => void handleQuestionBriefingDismiss()}
-        onClose={() => router.push("/poju")}
+        onClose={workspaceOpening ? undefined : () => router.push("/poju")}
         brandName={t("sidebar_brand_name")}
         brandTooltip={tBrand("navbar_tooltip")}
         sessionsLabel={t("sidebar_sessions_label")}
@@ -2010,7 +2030,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         }
       />
         </div>
-        {process.env.NODE_ENV === "development" ? (
+        {!workspaceOpening && process.env.NODE_ENV === "development" ? (
           <StateMachineDebugPanel ledger={debugStateLedger} />
         ) : null}
       </div>
@@ -2025,7 +2045,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale }: Props) {
         onExtend={({ snooze }) => void handleExtendSessionPayment(snooze)}
       />
 
-      {unlockReportText ? (
+      {unlockReportText && layout !== "workspace-opening" ? (
         <PojuUnlockReportModal
           open={unlockReportModalOpen}
           reportText={unlockReportText}

@@ -10,7 +10,6 @@ import {
 } from "react";
 import { useTranslations } from "next-intl";
 
-import pojuMark from "@/assets/icons/P.png";
 import { SoftTermHover } from "@/components/cross-product/GlossaryText";
 import { MatrixElementLabel } from "@/components/poju/MatrixElementLabel";
 import { PojuDaYunTimeline } from "@/components/poju/PojuDaYunTimeline";
@@ -34,7 +33,7 @@ import {
   zodiacHanToSlug,
 } from "@/lib/poju/matrix-term-labels";
 import { computeYearTransitProgress } from "@/lib/poju/matrix-transit-progress";
-import { tMatrix } from "@/lib/poju/poju-matrix-i18n";
+import { normalizeMatrixLocale, tMatrix } from "@/lib/poju/poju-matrix-i18n";
 import { resolveBaziLabel } from "@/lib/poju/resolve-bazi-i18n";
 import { normalizeShenshaLocale, resolveShenshaList } from "@/lib/poju/shensha";
 import { ZODIAC_ICON_BY_HAN } from "@/lib/poju/zodiac-icon-assets";
@@ -48,7 +47,42 @@ type Props = {
   compact?: boolean;
   suppressNarrative?: boolean;
   subjectPrefix?: string;
+  /** Hide logo + page title (workspace right rail). */
+  hideChrome?: boolean;
+  /** Controlled content panel open state (parent can force-collapse). */
+  expanded?: boolean;
+  onExpandedChange?: (open: boolean) => void;
 };
+
+const MATRIX_BLOCKS = [
+  { id: "calibration", labelKey: "block_1" },
+  { id: "energy", labelKey: "block_2" },
+  { id: "trajectory", labelKey: "block_3" },
+  { id: "markers", labelKey: "block_4" },
+  { id: "core", labelKey: "block_5" },
+] as const;
+
+type MatrixBlockId = (typeof MATRIX_BLOCKS)[number]["id"];
+
+/** Non-zh: top line = first 2 words, bottom = remainder (or 2nd word when only two). */
+function MatrixTabLabel({ text, locale }: { text: string; locale: string }) {
+  const loc = normalizeMatrixLocale(locale);
+  if (loc === "zh") {
+    return <span className="pcm-tabs__label pcm-tabs__label--zh">{text}</span>;
+  }
+  const parts = text.trim().split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) {
+    return <span className={`pcm-tabs__label pcm-tabs__label--${loc}`}>{text}</span>;
+  }
+  const top = parts.length === 2 ? parts[0]! : parts.slice(0, 2).join(" ");
+  const bottom = parts.length === 2 ? parts[1]! : parts.slice(2).join(" ");
+  return (
+    <span className={`pcm-tabs__label pcm-tabs__label--stack pcm-tabs__label--${loc}`}>
+      <span className="pcm-tabs__line">{top}</span>
+      {bottom ? <span className="pcm-tabs__line">{bottom}</span> : null}
+    </span>
+  );
+}
 
 const BAR_FILL: Record<string, string> = {
   Wood: "pcm-bar__fill--wood",
@@ -646,49 +680,49 @@ function RadarChart({
       chart.setOption({
         backgroundColor: "transparent",
         radar: {
-          center: ["50%", "52%"],
-          radius: "62%",
+          center: ["50%", "50%"],
+          radius: "68%",
           startAngle: 90,
           splitNumber: 4,
-          axisNameGap: 12,
+          axisNameGap: 18,
           axisName: {
-            fontSize: 14,
+            fontSize: 15,
             fontWeight: 600,
             fontFamily:
               '"Plus Jakarta Sans", "Noto Sans SC", "PingFang SC", Inter, sans-serif',
-            padding: [2, 6],
+            padding: [4, 8],
             rich: {
               wood: {
                 color: "#22C55E",
-                fontSize: 14,
+                fontSize: 15,
                 fontWeight: 600,
                 fontFamily:
                   '"Plus Jakarta Sans", "Noto Sans SC", "PingFang SC", Inter, sans-serif',
               },
               fire: {
                 color: "#EF4444",
-                fontSize: 14,
+                fontSize: 15,
                 fontWeight: 600,
                 fontFamily:
                   '"Plus Jakarta Sans", "Noto Sans SC", "PingFang SC", Inter, sans-serif',
               },
               earth: {
                 color: "#A16207",
-                fontSize: 14,
+                fontSize: 15,
                 fontWeight: 600,
                 fontFamily:
                   '"Plus Jakarta Sans", "Noto Sans SC", "PingFang SC", Inter, sans-serif',
               },
               metal: {
                 color: "#D4AF37",
-                fontSize: 14,
+                fontSize: 15,
                 fontWeight: 600,
                 fontFamily:
                   '"Plus Jakarta Sans", "Noto Sans SC", "PingFang SC", Inter, sans-serif',
               },
               water: {
                 color: "#3B82F6",
-                fontSize: 14,
+                fontSize: 15,
                 fontWeight: 600,
                 fontFamily:
                   '"Plus Jakarta Sans", "Noto Sans SC", "PingFang SC", Inter, sans-serif',
@@ -715,13 +749,13 @@ function RadarChart({
           {
             type: "radar",
             symbol: "circle",
-            symbolSize: 5,
+            symbolSize: 7,
             data: [
               {
                 value: scores.map((s) => s.count),
-                lineStyle: { color: "#00eefc", width: 2 },
+                lineStyle: { color: "#00eefc", width: 2.5 },
                 itemStyle: { color: "#f2ca50" },
-                areaStyle: { color: "rgba(0,238,252,0.12)" },
+                areaStyle: { color: "rgba(0,238,252,0.14)" },
               },
             ],
           },
@@ -751,6 +785,9 @@ export function PojuEnergyMatrix({
   compact = false,
   suppressNarrative = false,
   subjectPrefix,
+  hideChrome = false,
+  expanded,
+  onExpandedChange,
 }: Props) {
   const { structured, user_profile, wuxing_scores, strength, matrix_id } = payload;
   const shenshaLocale = normalizeShenshaLocale(locale);
@@ -835,47 +872,123 @@ export function PojuEnergyMatrix({
 
   const zdSlug = zodiacHanToSlug(display.zodiac.han);
   const emptyLinks = tc("fact_empty_links");
+  const [activeBlock, setActiveBlock] = useState<MatrixBlockId>("calibration");
+  const [panelOpenUncontrolled, setPanelOpenUncontrolled] = useState(true);
+  const panelOpen = expanded ?? panelOpenUncontrolled;
+  const matrixLocale = normalizeMatrixLocale(locale);
+
+  function setPanelOpen(open: boolean) {
+    if (expanded === undefined) {
+      setPanelOpenUncontrolled(open);
+    }
+    onExpandedChange?.(open);
+  }
+
+  function selectBlock(id: MatrixBlockId) {
+    setActiveBlock(id);
+    setPanelOpen(true);
+  }
+
+  const metaRow = (
+    <div className="pcm__header-meta pcm__header-meta--inline">
+      {subjectPrefix ? (
+        <span>
+          <b>{subjectPrefix}</b>
+        </span>
+      ) : null}
+      <span>
+        {tMatrix(locale, "born")} {formatBornLine(user_profile)}
+      </span>
+      <span>
+        {tMatrix(locale, "coordinates")} {formatCoordinates(user_profile, locale)}
+      </span>
+      <span>
+        {tMatrix(locale, "matrix_id")} {matrix_id}
+      </span>
+    </div>
+  );
 
   return (
-    <div className={`pcm${compact ? " pcm--compact pcm--embedded" : ""}`}>
+    <div
+      className={`pcm pcm--tabbed${compact ? " pcm--compact pcm--embedded" : ""}${
+        hideChrome ? " pcm--rail" : ""
+      }`}
+      data-locale={matrixLocale}
+    >
       <div className="pcm__stars" aria-hidden />
       <div className="pcm__wrap">
-        <header className="pcm__header">
-          <div className="pcm__header-mark" aria-hidden>
-            <Image
-              src={pojuMark}
-              alt=""
-              width={56}
-              height={56}
-              className="pcm__header-mark-img"
-            />
+        {/* Gold-frame top nav + content panel (active tab bridges into panel) */}
+        <div className="pcm-stage">
+        <div className="pcm-navframe">
+          <div className="pcm-navframe__title-row">
+            <h1 className="pcm-navframe__title">{tMatrix(locale, "main_title")}</h1>
+            <p className="pcm-navframe__desc">{tMatrix(locale, "main_description")}</p>
           </div>
-          <h1 className="pcm__title pcm__title--gradient">
-            {tMatrix(locale, "main_title")}
-          </h1>
-          <p className="pcm__header-desc">
-            {tMatrix(locale, "main_description")}
-          </p>
-          <div className="pcm__header-meta">
-            {subjectPrefix ? (
-              <span>
-                <b>{subjectPrefix}</b>
-              </span>
-            ) : null}
-            <span>
-              {tMatrix(locale, "born")} {formatBornLine(user_profile)}
-            </span>
-            <span>
-              {tMatrix(locale, "coordinates")}{" "}
-              {formatCoordinates(user_profile, locale)}
-            </span>
-            <span>
-              {tMatrix(locale, "matrix_id")} {matrix_id}
-            </span>
-          </div>
-        </header>
 
-        {/* ── 1. Zodiac + Calibration ── */}
+          <nav
+            className="pcm-tabs"
+            role="tablist"
+            aria-label={tm("blocks.tablist_label")}
+            onKeyDown={(e) => {
+              const idx = MATRIX_BLOCKS.findIndex((b) => b.id === activeBlock);
+              if (idx < 0) return;
+              let nextIdx = idx;
+              if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+                nextIdx = (idx + 1) % MATRIX_BLOCKS.length;
+              } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+                nextIdx = (idx - 1 + MATRIX_BLOCKS.length) % MATRIX_BLOCKS.length;
+              } else if (e.key === "Home") {
+                nextIdx = 0;
+              } else if (e.key === "End") {
+                nextIdx = MATRIX_BLOCKS.length - 1;
+              } else {
+                return;
+              }
+              e.preventDefault();
+              const next = MATRIX_BLOCKS[nextIdx];
+              if (!next) return;
+              selectBlock(next.id);
+              window.requestAnimationFrame(() => {
+                document.getElementById(`pcm-tab-${next.id}`)?.focus();
+              });
+            }}
+          >
+            {MATRIX_BLOCKS.map((block) => {
+              const selected = activeBlock === block.id && panelOpen;
+              return (
+                <button
+                  key={block.id}
+                  type="button"
+                  role="tab"
+                  id={`pcm-tab-${block.id}`}
+                  aria-selected={selected}
+                  aria-controls={`pcm-panel-${block.id}`}
+                  aria-expanded={panelOpen && activeBlock === block.id}
+                  tabIndex={activeBlock === block.id ? 0 : -1}
+                  className={`pcm-tabs__btn${selected ? " is-active" : ""}`}
+                  onClick={() => selectBlock(block.id)}
+                >
+                  <MatrixTabLabel
+                    text={tm(`blocks.${block.labelKey}`)}
+                    locale={locale}
+                  />
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+
+        <div className={`pcm-shell${panelOpen ? "" : " is-collapsed"}`}>
+          {panelOpen ? (
+          <div
+            className="pcm-shell__panel"
+            role="tabpanel"
+            id={`pcm-panel-${activeBlock}`}
+            aria-labelledby={`pcm-tab-${activeBlock}`}
+          >
+            {metaRow}
+            {activeBlock === "calibration" ? (
+        /* ── 1. Zodiac + Calibration ── */
         <section className="pcm__section">
           <div className="pcm__grid-12">
             <div className="pcm-card pcm-card--center pcm-zodiac pcm__span-3">
@@ -1044,20 +1157,22 @@ export function PojuEnergyMatrix({
             </div>
           </div>
         </section>
+            ) : null}
 
-        {/* ── 2. Radar + Bars ── */}
-        <section className="pcm__section">
-          <div className="pcm__grid-12">
-            <div className="pcm-card pcm-radar pcm__span-5">
-              <div className="pcm-label pcm-label--cyan">
-                {tc("radar_matrix")} · {tc("radar_matrix_em")}
-              </div>
-              <div className="pcm-radar__chart">
-                <RadarChart scores={wuxing_scores} locale={locale} />
-              </div>
+            {activeBlock === "energy" ? (
+        /* ── 2. Radar full-width → bars | vitality+eq ── */
+        <section className="pcm__section pcm-energy">
+          <div className="pcm-card pcm-radar pcm-energy__radar">
+            <div className="pcm-label pcm-label--cyan">
+              {tc("radar_matrix")} · {tc("radar_matrix_em")}
             </div>
+            <div className="pcm-radar__chart">
+              <RadarChart scores={wuxing_scores} locale={locale} />
+            </div>
+          </div>
 
-            <div className="pcm-card pcm-bars pcm__span-7">
+          <div className="pcm-energy__bottom">
+            <div className="pcm-card pcm-bars pcm-energy__bars">
               <div className="pcm-label pcm-label--cyan-soft">
                 {tc("elemental_signature")} · {tc("elemental_signature_em")}
               </div>
@@ -1124,90 +1239,91 @@ export function PojuEnergyMatrix({
                 </p>
               ) : null}
             </div>
-          </div>
 
-          {/* ── 3. Vitality + Equilibrium ── */}
-          <div className="pcm__grid-12">
-            <div className="pcm-card pcm-vitality pcm__span-5">
-              <div className="pcm-label pcm-label--coral">
-                {tc("core_vitality")}
+            <div className="pcm-energy__rest">
+              <div className="pcm-card pcm-vitality">
+                <div className="pcm-label pcm-label--coral">
+                  {tc("core_vitality")}
+                </div>
+                <h3 className="pcm-vitality__title">
+                  {tc("core_vitality")}:{" "}
+                  <SoftTermHover
+                    slug={strengthToSlug(strength)}
+                    locale={locale}
+                    fallback={strengthLabel(strength, tc)}
+                  />
+                </h3>
+                <div className="pcm-vtrack">
+                  <div
+                    className="pcm-vtrack__pin"
+                    style={{ left: vitalityPin(strength) }}
+                  />
+                </div>
+                <div className="pcm-vtrack__labels">
+                  <span>{tc("vitality_receptive")}</span>
+                  <span>{tc("vitality_balance")}</span>
+                  <span>{tc("vitality_dominant")}</span>
+                </div>
               </div>
-              <h3 className="pcm-vitality__title">
-                {tc("core_vitality")}:{" "}
-                <SoftTermHover
-                  slug={strengthToSlug(strength)}
-                  locale={locale}
-                  fallback={strengthLabel(strength, tc)}
-                />
-              </h3>
-              <div className="pcm-vtrack">
-                <div
-                  className="pcm-vtrack__pin"
-                  style={{ left: vitalityPin(strength) }}
-                />
-              </div>
-              <div className="pcm-vtrack__labels">
-                <span>{tc("vitality_receptive")}</span>
-                <span>{tc("vitality_balance")}</span>
-                <span>{tc("vitality_dominant")}</span>
-              </div>
-            </div>
 
-            <div className="pcm-card pcm-eq pcm__span-7">
-              <div className="pcm-label pcm-label--sand">
-                {tc("elemental_equilibrium")}
-              </div>
-              <div className="pcm-eq__grid">
-                {dominant ? (
-                  <div className="pcm-eq__card">
-                    <div className="pcm-eq__title">
-                      <SoftEl element={dominant.element} locale={locale} />{" "}
-                      {tc("surplus")}{" "}
-                      <span className="pcm-eq__pct">{dominant.pct}%</span>
+              <div className="pcm-card pcm-eq">
+                <div className="pcm-label pcm-label--sand">
+                  {tc("elemental_equilibrium")}
+                </div>
+                <div className="pcm-eq__grid">
+                  {dominant ? (
+                    <div className="pcm-eq__card">
+                      <div className="pcm-eq__title">
+                        <SoftEl element={dominant.element} locale={locale} />{" "}
+                        {tc("surplus")}{" "}
+                        <span className="pcm-eq__pct">{dominant.pct}%</span>
+                      </div>
+                      <div className="pcm-bar__track pcm-eq__bar" aria-hidden>
+                        <div
+                          className={`pcm-bar__fill ${BAR_FILL[dominant.element] ?? ""}`}
+                          style={
+                            {
+                              "--pcm-bar-pct": `${Math.min(100, Math.max(0, dominant.pct))}%`,
+                            } as CSSProperties
+                          }
+                        />
+                      </div>
+                      <div className="pcm-eq__hint pcm-eq__hint--up">
+                        ▲ {tc("dominant_vector")}
+                      </div>
                     </div>
-                    <div className="pcm-bar__track pcm-eq__bar" aria-hidden>
-                      <div
-                        className={`pcm-bar__fill ${BAR_FILL[dominant.element] ?? ""}`}
-                        style={
-                          {
-                            "--pcm-bar-pct": `${Math.min(100, Math.max(0, dominant.pct))}%`,
-                          } as CSSProperties
-                        }
-                      />
+                  ) : null}
+                  {deficit ? (
+                    <div className="pcm-eq__card">
+                      <div className="pcm-eq__title">
+                        <SoftEl element={deficit.element} locale={locale} />{" "}
+                        {tc("deficit")}{" "}
+                        <span className="pcm-eq__pct">{deficit.pct}%</span>
+                      </div>
+                      <div className="pcm-bar__track pcm-eq__bar" aria-hidden>
+                        <div
+                          className={`pcm-bar__fill ${BAR_FILL[deficit.element] ?? ""}`}
+                          style={
+                            {
+                              "--pcm-bar-pct": `${Math.min(100, Math.max(0, deficit.pct))}%`,
+                            } as CSSProperties
+                          }
+                        />
+                      </div>
+                      <div className="pcm-eq__hint pcm-eq__hint--down">
+                        ▼ {tc("key_gap")}
+                      </div>
                     </div>
-                    <div className="pcm-eq__hint pcm-eq__hint--up">
-                      ▲ {tc("dominant_vector")}
-                    </div>
-                  </div>
-                ) : null}
-                {deficit ? (
-                  <div className="pcm-eq__card">
-                    <div className="pcm-eq__title">
-                      <SoftEl element={deficit.element} locale={locale} />{" "}
-                      {tc("deficit")}{" "}
-                      <span className="pcm-eq__pct">{deficit.pct}%</span>
-                    </div>
-                    <div className="pcm-bar__track pcm-eq__bar" aria-hidden>
-                      <div
-                        className={`pcm-bar__fill ${BAR_FILL[deficit.element] ?? ""}`}
-                        style={
-                          {
-                            "--pcm-bar-pct": `${Math.min(100, Math.max(0, deficit.pct))}%`,
-                          } as CSSProperties
-                        }
-                      />
-                    </div>
-                    <div className="pcm-eq__hint pcm-eq__hint--down">
-                      ▼ {tc("key_gap")}
-                    </div>
-                  </div>
-                ) : null}
+                  ) : null}
+                </div>
               </div>
             </div>
           </div>
         </section>
+            ) : null}
 
-        {/* ── 4. Timeline + 2×2 facts ── */}
+            {activeBlock === "trajectory" ? (
+        /* ── 3. Timeline + 2×2 facts ── */
         <section className="pcm__section">
           <div className="pcm__grid-12">
             <div className="pcm-card pcm-timeline pcm__span-4">
@@ -1511,8 +1627,10 @@ export function PojuEnergyMatrix({
             </div>
           </div>
         </section>
+            ) : null}
 
-        {/* ── 4b. Extended fact panels (大运 / 岁君 / 神煞 / 起运) ── */}
+            {activeBlock === "markers" ? (
+        /* ── 4. Extended fact panels ── */
         <section className="pcm__section">
           <div className="pcm-label pcm-label--gold">
             {tc("fact_extra_title")} · {tc("fact_extra_em")}
@@ -1694,8 +1812,10 @@ export function PojuEnergyMatrix({
             </div>
           </div>
         </section>
+            ) : null}
 
-        {/* ── 5. Four pillars ── */}
+            {activeBlock === "core" ? (
+        /* ── 5. Four pillars ── */
         <section className="pcm__section">
           <div className="pcm-label pcm-label--white">
             {tc("layers_title")} · {tc("layers_em")}
@@ -1787,6 +1907,23 @@ export function PojuEnergyMatrix({
               })}
           </div>
         </section>
+            ) : null}
+            <div className="pcm-shell__footer">
+              <button
+                type="button"
+                className="pcm-shell__collapse"
+                onClick={() => setPanelOpen(false)}
+              >
+                {tm("blocks.collapse_list")}
+                <span className="pcm-shell__collapse-icon" aria-hidden>
+                  ▴
+                </span>
+              </button>
+            </div>
+          </div>
+          ) : null}
+        </div>
+        </div>
       </div>
     </div>
   );

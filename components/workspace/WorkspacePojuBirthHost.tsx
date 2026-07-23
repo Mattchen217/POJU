@@ -20,13 +20,15 @@ import "@/styles/session-prep.css";
 
 type Props = {
   onHasProfilesChange?: (hasProfiles: boolean) => void;
+  /** After confirm — enter workspace preparing (Spline + right-rail matrix). */
+  onPrepareStart?: (profileId: string) => void;
 };
 
 /**
  * Workspace host — new users see the birth form; returning users see profile cards
  * + add-new inside the same-sized frame. Does not modify BirthInfoPicker / SessionPreparation.
  */
-export function WorkspacePojuBirthHost({ onHasProfilesChange }: Props) {
+export function WorkspacePojuBirthHost({ onHasProfilesChange, onPrepareStart }: Props) {
   const locale = useLocale();
   const t = useTranslations("session_prep");
 
@@ -99,9 +101,11 @@ export function WorkspacePojuBirthHost({ onHasProfilesChange }: Props) {
         if (selected && !selected.has_base_analysis) {
           markPendingBaseAnalysisProfile(selectedProfileId);
         }
+        const profileId = selectedProfileId;
         setShowConfirm(false);
         setSelectedProfileId(null);
         await refreshProfiles();
+        onPrepareStart?.(profileId);
       } catch (err) {
         console.error("[workspace-poju] Select profile failed:", err);
         alert(t("error_create_profile"));
@@ -117,8 +121,8 @@ export function WorkspacePojuBirthHost({ onHasProfilesChange }: Props) {
       setShowConfirm(false);
       setPendingBirthInfo(null);
       setCreating(false);
-      const list = await refreshProfiles();
-      setMode(list.length > 0 ? "list" : "new");
+      await refreshProfiles();
+      onPrepareStart?.(result.profile_id);
     } catch (err) {
       console.error("[workspace-poju] Create profile failed:", err);
       alert(t("error_create_profile"));
