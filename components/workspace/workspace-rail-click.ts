@@ -17,6 +17,7 @@ export function isWorkspaceRailInteractiveTarget(target: EventTarget | null): bo
         ".workspace-scroll__rail",
         ".workspace-scroll__thumb",
         ".workspace-lang-row",
+        ".workspace-legal-row",
         /* Energy matrix chrome — click expands list; must not close right rail */
         ".workspace-right-matrix__body",
         ".pcm-stage",

@@ -83,30 +83,25 @@ export function EnergyPortraitGlyph({ className }: { className?: string }) {
 }
 
 /**
- * Personal energy analysis report mark — document page with text lines.
+ * Personal energy analysis report mark — rounded document + fat text lines.
  * Color via currentColor (purple on paper cover; white in collapsed rail).
  */
 export function EnergyReportGlyph({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden className={className} fill="none">
-      <path
-        d="M6.4 3.4h7.35L17.7 7.35V20.6H6.4V3.4Z"
+      <rect
+        x="5"
+        y="3"
+        width="14"
+        height="18"
+        rx="3.25"
         stroke="currentColor"
-        strokeWidth="2.35"
-        strokeLinejoin="round"
-        fill="currentColor"
-        fillOpacity="0.14"
+        strokeWidth="2.2"
       />
       <path
-        d="M13.75 3.4V7.35h3.95"
+        d="M8.5 9h7M8.5 12.5h7M8.5 16h4.75"
         stroke="currentColor"
         strokeWidth="2.35"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M9 10.15h6.15M9 13.45h6.15M9 16.75h4.2"
-        stroke="currentColor"
-        strokeWidth="2.45"
         strokeLinecap="round"
       />
     </svg>

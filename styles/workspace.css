@@ -614,17 +614,20 @@
   margin-bottom: 4px;
 }
 
-.workspace-sidebar__locale-slot {
+.workspace-sidebar__locale-slot,
+.workspace-sidebar__legal-slot {
   padding: 4px 2px 0;
   margin-top: 4px;
 }
 
-.workspace-lang-row {
+.workspace-lang-row,
+.workspace-legal-row {
   position: relative;
   width: 100%;
 }
 
-.workspace-lang-row__trigger {
+.workspace-lang-row__trigger,
+.workspace-legal-row__trigger {
   display: flex;
   width: 100%;
   align-items: center;
@@ -641,17 +644,20 @@
   transition: background 0.16s ease, color 0.16s ease;
 }
 
-.workspace-lang-row__trigger:hover {
+.workspace-lang-row__trigger:hover,
+.workspace-legal-row__trigger:hover {
   background: rgba(255, 255, 255, 0.05);
   color: var(--ws-text-secondary);
 }
 
-.workspace-lang-row__trigger:focus-visible {
+.workspace-lang-row__trigger:focus-visible,
+.workspace-legal-row__trigger:focus-visible {
   outline: 2px solid var(--ws-purple);
   outline-offset: 2px;
 }
 
-.workspace-lang-row__label {
+.workspace-lang-row__label,
+.workspace-legal-row__label {
   flex: 1;
   min-width: 0;
   font-size: 13px;
@@ -672,15 +678,18 @@
   color: rgba(255, 255, 255, 0.78);
 }
 
-.workspace-lang-row__chevron {
+.workspace-lang-row__chevron,
+.workspace-legal-row__chevron {
   display: inline-block;
   font-size: 15px;
   line-height: 1;
   font-weight: 400;
   color: rgba(255, 255, 255, 0.4);
+  flex-shrink: 0;
 }
 
-.workspace-lang-row__menu {
+.workspace-lang-row__menu,
+.workspace-legal-row__menu {
   position: absolute;
   left: 0;
   right: 0;
@@ -696,7 +705,8 @@
   backdrop-filter: blur(12px);
 }
 
-.workspace-lang-row__option {
+.workspace-lang-row__option,
+.workspace-legal-row__option {
   display: flex;
   width: 100%;
   align-items: center;
@@ -709,10 +719,14 @@
   border-radius: 8px;
   cursor: pointer;
   text-align: left;
+  text-decoration: none;
+  box-sizing: border-box;
 }
 
 .workspace-lang-row__option:hover,
-.workspace-lang-row__option[aria-selected="true"] {
+.workspace-lang-row__option[aria-selected="true"],
+.workspace-legal-row__option:hover,
+.workspace-legal-row__option:focus-visible {
   background: rgba(139, 92, 246, 0.14);
   color: var(--ws-text);
 }
@@ -1030,7 +1044,8 @@
 
 .workspace-sidebar.is-collapsed .workspace-sidebar__item[data-tooltip]::after,
 .workspace-sidebar.is-collapsed .workspace-account-chip--button[data-tooltip]::after,
-.workspace-sidebar.is-collapsed .workspace-lang-row__trigger[data-tooltip]::after {
+.workspace-sidebar.is-collapsed .workspace-lang-row__trigger[data-tooltip]::after,
+.workspace-sidebar.is-collapsed .workspace-legal-row__trigger[data-tooltip]::after {
   content: attr(data-tooltip);
   position: absolute;
   left: calc(100% + 10px);
@@ -1058,7 +1073,9 @@
 .workspace-sidebar.is-collapsed .workspace-account-chip--button[data-tooltip]:hover::after,
 .workspace-sidebar.is-collapsed .workspace-account-chip--button[data-tooltip]:focus-visible::after,
 .workspace-sidebar.is-collapsed .workspace-lang-row__trigger[data-tooltip]:hover::after,
-.workspace-sidebar.is-collapsed .workspace-lang-row__trigger[data-tooltip]:focus-visible::after {
+.workspace-sidebar.is-collapsed .workspace-lang-row__trigger[data-tooltip]:focus-visible::after,
+.workspace-sidebar.is-collapsed .workspace-legal-row__trigger[data-tooltip]:hover::after,
+.workspace-sidebar.is-collapsed .workspace-legal-row__trigger[data-tooltip]:focus-visible::after {
   opacity: 1;
 }
 
@@ -1081,7 +1098,8 @@
   justify-content: center;
 }
 
-.workspace-sidebar.is-collapsed .workspace-sidebar__locale-slot {
+.workspace-sidebar.is-collapsed .workspace-sidebar__locale-slot,
+.workspace-sidebar.is-collapsed .workspace-sidebar__legal-slot {
   display: flex;
   justify-content: center;
   width: 100%;
@@ -1089,7 +1107,8 @@
   margin-top: 4px;
 }
 
-.workspace-lang-row.is-compact .workspace-lang-row__trigger {
+.workspace-lang-row.is-compact .workspace-lang-row__trigger,
+.workspace-legal-row.is-compact .workspace-legal-row__trigger {
   justify-content: center;
   min-height: 36px;
   padding: 6px 4px;
@@ -1103,11 +1122,16 @@
   color: rgba(255, 255, 255, 0.75);
 }
 
-.workspace-lang-row.is-compact .workspace-lang-row__menu {
+.workspace-lang-row.is-compact .workspace-lang-row__menu,
+.workspace-legal-row.is-compact .workspace-legal-row__menu {
   left: calc(100% + 8px);
   right: auto;
   bottom: 0;
   min-width: 9rem;
+}
+
+.workspace-legal-row.is-compact .workspace-legal-row__menu {
+  min-width: 10.5rem;
 }
 
 @media (prefers-reduced-motion: reduce) {

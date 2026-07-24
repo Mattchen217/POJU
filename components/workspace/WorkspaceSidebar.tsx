@@ -7,9 +7,11 @@ import { useAppDialog } from "@/components/ui/app-dialog";
 import { BrandLockup } from "@/components/marketing/brand-lockup";
 import { WorkspaceAccountPlaceholder } from "@/components/workspace/WorkspaceAccountPlaceholder";
 import { WorkspaceLanguageSwitcher } from "@/components/workspace/WorkspaceLanguageSwitcher";
+import { WorkspaceLegalMenu } from "@/components/workspace/WorkspaceLegalMenu";
 import { WorkspaceSidebarDockToggle } from "@/components/workspace/WorkspaceSidebarDockToggle";
 import {
   GlyphCardIcon,
+  MatchPairIcon,
   SyncroRadarIcon,
 } from "@/components/workspace/workspace-engine-icons";
 import {
@@ -64,7 +66,7 @@ const ENGINE_ITEMS: EngineItem[] = [
   },
   {
     tab: "match",
-    icon: <span className="material-symbols-outlined">group</span>,
+    icon: <MatchPairIcon />,
     nested: true,
   },
   {
@@ -85,7 +87,6 @@ type Props = {
   activeArchiveId: string | null;
   onSelectNew: (tab: WorkspaceTab) => void;
   onSelectArchive: (product: WorkspaceProductId, archiveId: string) => void;
-  onOpenLegal: () => void;
   onSelectProfile: () => void;
   onLocaleChange?: () => void;
   collapsed?: boolean;
@@ -446,7 +447,6 @@ export function WorkspaceSidebar({
   activeArchiveId,
   onSelectNew,
   onSelectArchive,
-  onOpenLegal,
   onSelectProfile,
   onLocaleChange,
   collapsed = false,
@@ -577,18 +577,12 @@ export function WorkspaceSidebar({
             onClick={onSelectProfile}
             className="workspace-sidebar__account"
           />
-          <button
-            type="button"
-            className="workspace-sidebar__item workspace-sidebar__item--solo"
-            aria-label={t("legal")}
-            data-tooltip={t("legal")}
-            onClick={onOpenLegal}
-          >
-            <span className="workspace-sidebar__icon" aria-hidden>
-              <span className="material-symbols-outlined">gavel</span>
-            </span>
-            <span className="workspace-sidebar__label">{t("legal")}</span>
-          </button>
+          <div className="workspace-sidebar__legal-slot">
+            <WorkspaceLegalMenu
+              compact={collapsed}
+              onAfterSelect={onLocaleChange}
+            />
+          </div>
           <div className="workspace-sidebar__locale-slot">
             <WorkspaceLanguageSwitcher
               compact={collapsed}

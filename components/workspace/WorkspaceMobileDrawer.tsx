@@ -14,7 +14,6 @@ type Props = {
   activeArchiveId: string | null;
   onSelectNew: (tab: WorkspaceTab) => void;
   onSelectArchive: (product: WorkspaceProductId, archiveId: string) => void;
-  onOpenLegal: () => void;
   onSelectProfile: () => void;
   labelledBy?: string;
   id?: string;
@@ -27,7 +26,6 @@ export function WorkspaceMobileDrawer({
   activeArchiveId,
   onSelectNew,
   onSelectArchive,
-  onOpenLegal,
   onSelectProfile,
   labelledBy,
   id = "workspace-mobile-drawer",
@@ -85,10 +83,6 @@ export function WorkspaceMobileDrawer({
           }}
           onSelectArchive={(product, archiveId) => {
             onSelectArchive(product, archiveId);
-            onClose();
-          }}
-          onOpenLegal={() => {
-            onOpenLegal();
             onClose();
           }}
           onSelectProfile={() => {

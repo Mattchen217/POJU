@@ -163,6 +163,9 @@ export function WorkspaceRailBaseReport({
         railSheetMode === "flat" ? " is-flat" : " is-folded"
       }`}
     >
+      {showReportUnread && railSheetMode === "folded" ? (
+        <ArchiveUnreadDot className="pcm-rail-paper__unread" />
+      ) : null}
       <A4PaperSheet mode={railSheetMode} className="pcm-rail-paper__sheet">
         <button
           type="button"
@@ -172,12 +175,7 @@ export function WorkspaceRailBaseReport({
           tabIndex={railSheetMode === "folded" ? 0 : -1}
           aria-hidden={railSheetMode === "flat" ? true : undefined}
         >
-          <span className="pcm-rail-paper__glyph-wrap">
-            <EnergyReportGlyph className="pcm-rail-paper__glyph" />
-            {showReportUnread ? (
-              <ArchiveUnreadDot className="pcm-rail-paper__unread" />
-            ) : null}
-          </span>
+          <EnergyReportGlyph className="pcm-rail-paper__glyph" />
           <span className="pcm-rail-paper__cover-title">{t("title")}</span>
         </button>
 

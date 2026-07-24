@@ -8,7 +8,6 @@ import { useRouter } from "@/i18n/navigation";
 
 import { AppDialogProvider } from "@/components/ui/app-dialog";
 import { WorkspaceArchiveReportPanel } from "@/components/workspace/WorkspaceArchiveReportPanel";
-import { WorkspaceLegalDrawer } from "@/components/workspace/WorkspaceLegalDrawer";
 import { WorkspaceMobileDrawer } from "@/components/workspace/WorkspaceMobileDrawer";
 import {
   WorkspacePojuPrepareProvider,
@@ -166,7 +165,6 @@ export function WorkspaceShell({ initialTab }: Props) {
     archiveFromUrl && isEngineProduct(normalizedInitial) ? archiveFromUrl : null,
   );
   const [menuOpen, setMenuOpen] = useState(false);
-  const [legalOpen, setLegalOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [rightOpen, setRightOpen] = useState(false);
   const pojuPrepareResetRef = useRef<(() => void) | null>(null);
@@ -370,7 +368,6 @@ export function WorkspaceShell({ initialTab }: Props) {
               activeArchiveId={archiveId}
               onSelectNew={selectNew}
               onSelectArchive={selectArchive}
-              onOpenLegal={() => setLegalOpen(true)}
               onSelectProfile={() => selectNew("profile")}
               collapsed={sidebarCollapsed}
               showBrand={false}
@@ -394,11 +391,8 @@ export function WorkspaceShell({ initialTab }: Props) {
           activeArchiveId={archiveId}
           onSelectNew={selectNew}
           onSelectArchive={selectArchive}
-          onOpenLegal={() => setLegalOpen(true)}
           onSelectProfile={() => selectNew("profile")}
         />
-
-        <WorkspaceLegalDrawer open={legalOpen} onClose={() => setLegalOpen(false)} />
         </WorkspaceShellSurface>
       </WorkspacePojuPrepareProvider>
     </AppDialogProvider>

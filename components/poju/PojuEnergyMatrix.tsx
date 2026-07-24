@@ -78,17 +78,22 @@ function MaybeRailPaper({
   mode,
   cover,
   children,
+  unread = false,
 }: {
   enabled: boolean;
   mode: A4PaperSheetMode;
   cover: ReactNode;
   children: ReactNode;
+  unread?: boolean;
 }) {
   if (!enabled) return children;
   return (
     <div
       className={`pcm-rail-paper${mode === "flat" ? " is-flat" : " is-folded"}`}
     >
+      {unread && mode === "folded" ? (
+        <ArchiveUnreadDot className="pcm-rail-paper__unread" />
+      ) : null}
       <A4PaperSheet mode={mode} className="pcm-rail-paper__sheet">
         {cover}
         <div
@@ -1037,6 +1042,7 @@ export function PojuEnergyMatrix({
         <MaybeRailPaper
           enabled={Boolean(hideChrome)}
           mode={railSheetMode}
+          unread={showMatrixUnread}
           cover={
             hideChrome ? (
               <button
@@ -1047,12 +1053,7 @@ export function PojuEnergyMatrix({
                 tabIndex={railSheetMode === "folded" ? 0 : -1}
                 aria-hidden={railSheetMode === "flat" ? true : undefined}
               >
-                <span className="pcm-rail-paper__glyph-wrap">
-                  <EnergyPortraitGlyph className="pcm-rail-paper__glyph" />
-                  {showMatrixUnread ? (
-                    <ArchiveUnreadDot className="pcm-rail-paper__unread" />
-                  ) : null}
-                </span>
+                <EnergyPortraitGlyph className="pcm-rail-paper__glyph" />
                 <span className="pcm-rail-paper__cover-title">
                   {tMatrix(locale, "main_title")}
                 </span>

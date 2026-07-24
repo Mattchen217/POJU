@@ -3,7 +3,7 @@
 import { useLocale, useTranslations } from "next-intl";
 
 import { WorkspaceScrollArea } from "@/components/workspace/WorkspaceScrollArea";
-import { GlyphCardIcon, SyncroRadarIcon } from "@/components/workspace/workspace-engine-icons";
+import { GlyphCardIcon, MatchPairIcon, SyncroRadarIcon } from "@/components/workspace/workspace-engine-icons";
 import { HOUR_PERIOD_INFO } from "@/lib/profile/types";
 import type { StoredProfileSummary } from "@/lib/profile/stored-profiles-service";
 
@@ -70,7 +70,7 @@ function ProductUsageIcon({
         {product === "poju" ? (
           <span className="material-symbols-outlined">self_improvement</span>
         ) : null}
-        {product === "match" ? <span className="material-symbols-outlined">group</span> : null}
+        {product === "match" ? <MatchPairIcon /> : null}
         {product === "syncro" ? <SyncroRadarIcon className="workspace-poju-card__glyph-svg" /> : null}
         {product === "glyph" ? <GlyphCardIcon className="workspace-poju-card__glyph-svg" /> : null}
       </span>

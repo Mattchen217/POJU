@@ -347,6 +347,7 @@
    -------------------------------------------------------------------------- */
 
 .pcm-rail-paper {
+  position: relative;
   width: 100%;
   margin: 0 auto;
   transform-origin: top center;
@@ -420,26 +421,16 @@
   filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.55));
 }
 
-.pcm-rail-paper__glyph-wrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 42%;
-  flex-shrink: 0;
-}
-
-.pcm-rail-paper__glyph-wrap .pcm-rail-paper__glyph {
-  width: 100%;
-}
-
+/* Unread badge on the outer A4 paper corner (not on the inner glyph) */
 .pcm-rail-paper__unread {
-  top: -4%;
-  right: -6%;
+  position: absolute;
+  top: -2px;
+  right: -2px;
   width: 10px;
   height: 10px;
-  z-index: 2;
+  z-index: 6;
   box-shadow: 0 0 8px rgba(239, 68, 68, 0.85);
+  pointer-events: none;
 }
 
 .pcm-rail-paper__cover-title {
