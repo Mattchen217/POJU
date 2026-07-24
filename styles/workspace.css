@@ -4251,6 +4251,7 @@
 .workspace-match-generating {
   position: relative;
   width: 100%;
+  height: 100%;
   min-height: min(60vh, 520px);
   display: flex;
   align-items: center;
@@ -4258,13 +4259,33 @@
   flex-direction: column;
   gap: 16px;
   padding: 24px;
+  box-sizing: border-box;
+}
+
+.workspace-match-generating__wait {
+  position: relative;
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: min(48vh, 420px);
+}
+
+.workspace-match-generating__wait .delivery-wait-page,
+.workspace-match-generating__wait .preparing-spline-page {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
 }
 
 .workspace-match-generating__hint {
+  position: relative;
+  z-index: 2;
   color: var(--text-secondary, #a1a1aa);
   font-size: 14px;
   text-align: center;
   max-width: 28rem;
+  margin: 0;
 }
 
 .workspace-match-generating--error {
@@ -4369,4 +4390,12 @@
 
 .workspace-match-right-matrix .workspace-right-matrix__body {
   width: 100%;
+}
+
+.workspace-match-right-matrix .workspace-match-rail-ba {
+  flex: 0 0 auto;
+  min-height: 168px;
+  height: min(28vh, 200px);
+  max-height: 220px;
+  margin-top: 0;
 }

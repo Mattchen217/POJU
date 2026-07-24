@@ -52,6 +52,10 @@ type Props = {
   locale: string;
   expanded: boolean;
   onExpandedChange: (open: boolean) => void;
+  /** Override folded/expanded title (e.g. Match A / Match B report). */
+  coverTitle?: string;
+  /** Optional unread override (Match A/B); falls back to POJU prepare unread. */
+  unread?: boolean;
 };
 
 export function WorkspaceRailBaseReport({
@@ -59,12 +63,16 @@ export function WorkspaceRailBaseReport({
   locale,
   expanded,
   onExpandedChange,
+  coverTitle,
+  unread,
 }: Props) {
   const t = useTranslations("base_analysis_view");
   const ts = useTranslations("base_analysis_view.sections");
   const prepare = useWorkspacePojuPrepareOptional();
-  const showReportUnread = Boolean(prepare?.reportUnread);
+  const showReportUnread =
+    typeof unread === "boolean" ? unread : Boolean(prepare?.reportUnread);
   const [activeBlock, setActiveBlock] = useState<ReportBlockId>("section_1");
+  const title = coverTitle?.trim() || t("title");
 
   const sectionBodies = useMemo(() => {
     const parsed = parseBaseAnalysisSections(
@@ -108,10 +116,10 @@ export function WorkspaceRailBaseReport({
             type="button"
             className="ws-rail-report__icon-cover"
             onClick={openReport}
-            aria-label={t("title")}
+            aria-label={title}
           >
             <EnergyReportGlyph className="ws-rail-report__glyph" />
-            <span className="ws-rail-report__icon-title">{t("title")}</span>
+            <span className="ws-rail-report__icon-title">{title}</span>
           </button>
         </A4PaperSheet>
       </div>
@@ -123,7 +131,7 @@ export function WorkspaceRailBaseReport({
     <div className="ws-rail-report ws-rail-report--open" data-locale={localeAttr}>
       <div className="ws-rail-report__chrome">
         <div className="ws-rail-report__title-row">
-          <h2 className="ws-rail-report__title">{t("title")}</h2>
+          <h2 className="ws-rail-report__title">{title}</h2>
           <p className="ws-rail-report__desc">{t("rail_description")}</p>
         </div>
         <nav

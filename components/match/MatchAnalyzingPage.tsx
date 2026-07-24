@@ -30,6 +30,7 @@ import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 import { ensureProfileMatrixList } from "@/lib/poju/resolve-matrix-preview";
 import { useDeliveryWaitPhase } from "@/lib/wait-ritual/use-delivery-wait-phase";
 import { recordUsage } from "@/lib/syncro/device-usage";
+import { readFetchJson } from "@/lib/client/fetch-json";
 
 import "@/styles/match.css";
 
@@ -104,7 +105,7 @@ export function MatchAnalyzingPage() {
         }),
       });
 
-      const data = (await response.json()) as {
+      const data = await readFetchJson<{
         success?: boolean;
         report?: MatchReport;
         meta?: {
@@ -114,7 +115,7 @@ export function MatchAnalyzingPage() {
         };
         message?: string;
         error?: string;
-      };
+      }>(response);
 
       if (!response.ok) {
         if (data.error === "profile_not_ready") {
@@ -122,6 +123,9 @@ export function MatchAnalyzingPage() {
         }
         if (data.error === "same_profile") {
           throw new Error(t("same_profile"));
+        }
+        if (response.status === 504 || response.status === 408) {
+          throw new Error(t("error_timeout"));
         }
         throw new Error(data.message || data.error || t("analysis_failed"));
       }
@@ -175,8 +179,14 @@ export function MatchAnalyzingPage() {
       setPendingMatchId(matchId);
       setProductComplete(true);
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : String(e);
-      setError(message);
+      const raw = e instanceof Error ? e.message : String(e ?? "");
+      const looksLikeGatewayOrParse =
+        /non_json_response|invalid_json_response|empty_response|unexpected token|not valid json|an error occurred/i.test(
+          raw,
+        );
+      setError(
+        looksLikeGatewayOrParse ? t("error_timeout") : raw || t("analysis_failed"),
+      );
       setPhase("error");
     }
   }, [aId, bId, locale, t]);

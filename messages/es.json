@@ -1962,6 +1962,7 @@
       "profile_not_ready": "El análisis base no está listo. Completa la preparación primero.",
       "same_profile": "Las personas A y B deben ser distintas.",
       "analysis_failed": "El análisis Match falló. Inténtalo de nuevo.",
+      "error_timeout": "El análisis Match tardó demasiado o el servidor devolvió una respuesta no válida. Mantén esta página abierta con conexión estable y pulsa Reintentar: a menudo funciona a la segunda.",
       "preview_level": "Compatibilidad local: {level} (puntuación {score}) — generando la narrativa…"
     },
     "report": {

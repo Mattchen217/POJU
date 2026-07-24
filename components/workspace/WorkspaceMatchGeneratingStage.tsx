@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
-import { MatchAnalyzingOrbsLoop } from "@/components/match/MatchAnalyzingOrbsLoop";
+import { DeliveryWaitFrame } from "@/components/wait-ritual/DeliveryWaitFrame";
 import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
 import { useWorkspaceMatchPrepare } from "@/components/workspace/WorkspaceMatchPrepareContext";
 import { markedTextFromStoredBaseAnalysis } from "@/lib/base-analysis/resolve-display-text";
@@ -24,12 +24,21 @@ import { wrapProfileForMatrix } from "@/lib/match/parse-profile-for-matrix";
 import type { MatchReport } from "@/lib/match/types";
 import type { StoredProfileData } from "@/lib/db/poju-db";
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
+import {
+  PREPARING_MIN_SPLINE_CACHE_MS,
+  waitRemainingMinSpline,
+} from "@/lib/poju/preparing-spline-timing";
+import { readFetchJson } from "@/lib/client/fetch-json";
 import { ensureProfileMatrixList } from "@/lib/poju/resolve-matrix-preview";
+import { useDeliveryWaitPhase } from "@/lib/wait-ritual/use-delivery-wait-phase";
 import { recordUsage } from "@/lib/syncro/device-usage";
 
 type GenPhase = "init" | "base-a" | "base-b" | "analyzing" | "error";
 
-/** Stage 4 — dual base reports in rail + Match wait in center, then Stage 5 delivery. */
+/**
+ * Stage 4 — center uses original Match wait (matchdongxiao);
+ * A/B base reports release to the rail after stream (or forced 10s for cached).
+ */
 export function WorkspaceMatchGeneratingStage() {
   const locale = useLocale();
   const t = useTranslations("match.analyzing");
@@ -41,13 +50,19 @@ export function WorkspaceMatchGeneratingStage() {
   const [aId, setAId] = useState("");
   const [bId, setBId] = useState("");
   const [basePrepKey, setBasePrepKey] = useState(0);
+  const [baziComplete, setBaziComplete] = useState(false);
+  const [productComplete, setProductComplete] = useState(false);
+  const [bothBasesCached, setBothBasesCached] = useState(false);
   const startedRef = useRef(false);
   const analyzeStartedRef = useRef(false);
+  const slotStartedAtRef = useRef({ a: 0, b: 0 });
 
   const {
     profileIdA,
     profileIdB,
     relationship,
+    reportAStatus,
+    reportBStatus,
     setPhase: setMatchPhase,
     setReportAStatus,
     setReportBStatus,
@@ -57,6 +72,15 @@ export function WorkspaceMatchGeneratingStage() {
     setMatchSession,
     setError: setMatchError,
   } = match;
+
+  const waitFlow = useDeliveryWaitPhase({
+    product: "match",
+    skipBazi: true,
+    isReturningUser: bothBasesCached,
+    baziComplete,
+    productComplete,
+    enabled: phase !== "error" && phase !== "init",
+  });
 
   const applyRailText = useCallback(
     (slot: "a" | "b", text: string | null) => {
@@ -69,6 +93,18 @@ export function WorkspaceMatchGeneratingStage() {
       }
     },
     [setReportAStatus, setReportAText, setReportBStatus, setReportBText],
+  );
+
+  /** Release report to rail; cached/old data always holds the rail anim ≥ 10s. */
+  const releaseRailText = useCallback(
+    async (slot: "a" | "b", text: string, wasCached: boolean) => {
+      if (wasCached) {
+        const started = slotStartedAtRef.current[slot] || Date.now();
+        await waitRemainingMinSpline(started, PREPARING_MIN_SPLINE_CACHE_MS);
+      }
+      applyRailText(slot, text);
+    },
+    [applyRailText],
   );
 
   const runAnalyze = useCallback(async () => {
@@ -92,8 +128,13 @@ export function WorkspaceMatchGeneratingStage() {
         throw new Error(t("profile_b_not_ready"));
       }
 
-      applyRailText("a", markedTextFromStoredBaseAnalysis(aRow.base_analysis));
-      applyRailText("b", markedTextFromStoredBaseAnalysis(bRow.base_analysis));
+      // Ensure rail texts are present (may already be released after 10s hold).
+      const textA =
+        markedTextFromStoredBaseAnalysis(aRow.base_analysis) ?? match.reportAText;
+      const textB =
+        markedTextFromStoredBaseAnalysis(bRow.base_analysis) ?? match.reportBText;
+      if (textA) applyRailText("a", textA);
+      if (textB) applyRailText("b", textB);
 
       const matrix = calculateCompatibilityMatrix({
         profileA: wrapProfileForMatrix(aRow.user_profile, aRow.base_analysis),
@@ -115,16 +156,29 @@ export function WorkspaceMatchGeneratingStage() {
         }),
       });
 
-      const data = (await response.json()) as {
+      const data = await readFetchJson<{
         success?: boolean;
         report?: MatchReport;
         meta?: { cost_usd?: number; resonance_index?: number };
         message?: string;
         error?: string;
-      };
+      }>(response);
 
-      if (!response.ok || !data.report) {
+      if (!response.ok) {
+        if (data.error === "profile_not_ready") {
+          throw new Error(t("profile_not_ready"));
+        }
+        if (data.error === "same_profile") {
+          throw new Error(t("same_profile"));
+        }
+        if (response.status === 504 || response.status === 408) {
+          throw new Error(t("error_timeout"));
+        }
         throw new Error(data.message || data.error || t("analysis_failed"));
+      }
+
+      if (!data.report) {
+        throw new Error(t("analysis_failed"));
       }
 
       const costUsd = data.meta?.cost_usd ?? 0;
@@ -167,9 +221,17 @@ export function WorkspaceMatchGeneratingStage() {
       clearMatchPreviewSession();
       setMatchSession(session);
       setMatchReportStatus("ready");
+      setProductComplete(true);
       setMatchPhase("delivery");
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : String(e);
+      const raw = e instanceof Error ? e.message : String(e ?? "");
+      const looksLikeGatewayOrParse =
+        /non_json_response|invalid_json_response|empty_response|unexpected token|not valid json|an error occurred/i.test(
+          raw,
+        );
+      const message = looksLikeGatewayOrParse
+        ? t("error_timeout")
+        : raw || t("analysis_failed");
       setError(message);
       setMatchError(message);
       setMatchReportStatus("error");
@@ -180,6 +242,8 @@ export function WorkspaceMatchGeneratingStage() {
     applyRailText,
     bId,
     locale,
+    match.reportAText,
+    match.reportBText,
     relationship,
     setMatchError,
     setMatchPhase,
@@ -205,6 +269,8 @@ export function WorkspaceMatchGeneratingStage() {
       setReportAStatus("generating");
       setReportBStatus("generating");
       setMatchReportStatus("generating");
+      const now = Date.now();
+      slotStartedAtRef.current = { a: now, b: now };
 
       const [aRow, bRow] = await Promise.all([getStoredProfile(storedA), getStoredProfile(storedB)]);
       if (!aRow?.user_profile || !bRow?.user_profile) {
@@ -220,37 +286,54 @@ export function WorkspaceMatchGeneratingStage() {
         getCachedBaseAnalysis(storedB),
       ]);
 
-      if (cachedA?.reportText) applyRailText("a", cachedA.reportText);
-      if (cachedB?.reportText) applyRailText("b", cachedB.reportText);
+      const bothCached = Boolean(cachedA?.reportText) && Boolean(cachedB?.reportText);
+      setBothBasesCached(bothCached);
+
+      if (bothCached && cachedA?.reportText && cachedB?.reportText) {
+        // Old data: keep both rail anims for 10s, then reveal reports, then Match analyze.
+        setBaziComplete(true);
+        setPhase("analyzing");
+        void (async () => {
+          await Promise.all([
+            releaseRailText("a", cachedA.reportText, true),
+            releaseRailText("b", cachedB.reportText, true),
+          ]);
+        })();
+        return;
+      }
 
       if (!cachedA) {
         setPhase("base-a");
         setBasePrepKey((k) => k + 1);
         return;
       }
-      if (!cachedB) {
-        setPhase("base-b");
-        setBasePrepKey((k) => k + 1);
-        return;
+
+      // A cached, B needs stream — hold A 10s, start B stream.
+      if (cachedA.reportText) {
+        void releaseRailText("a", cachedA.reportText, true);
       }
-      setPhase("analyzing");
+      setPhase("base-b");
+      setBasePrepKey((k) => k + 1);
     })();
   }, [
-    applyRailText,
     profileIdA,
     profileIdB,
+    releaseRailText,
     setMatchReportStatus,
     setReportAStatus,
     setReportBStatus,
     t,
   ]);
 
+  // Start Match product analyze once both rail reports are ready.
   useEffect(() => {
     if (phase !== "analyzing") return;
     if (analyzeStartedRef.current) return;
+    if (reportAStatus !== "ready" || reportBStatus !== "ready") return;
     analyzeStartedRef.current = true;
+    setBaziComplete(true);
     void runAnalyze();
-  }, [phase, runAnalyze]);
+  }, [phase, reportAStatus, reportBStatus, runAnalyze]);
 
   if (phase === "error") {
     return (
@@ -263,10 +346,18 @@ export function WorkspaceMatchGeneratingStage() {
     );
   }
 
+  if (phase === "init") {
+    return (
+      <div className="workspace-match-generating" aria-busy="true">
+        <span className="sr-only">{t("hint")}</span>
+      </div>
+    );
+  }
+
   return (
     <div className="workspace-match-generating" aria-busy="true">
       <div className="workspace-match-generating__wait">
-        <MatchAnalyzingOrbsLoop />
+        <DeliveryWaitFrame wait={waitFlow} isReturningUser={bothBasesCached} showBreath={false} />
         <p className="workspace-match-generating__hint">{t("hint")}</p>
       </div>
 
@@ -288,16 +379,17 @@ export function WorkspaceMatchGeneratingStage() {
               });
             }}
             onComplete={async (displayText) => {
-              applyRailText("a", displayText);
+              await releaseRailText("a", displayText, false);
               const refreshed = await getStoredProfile(aId);
               if (refreshed) setProfileA(refreshed);
               const cachedB = await getCachedBaseAnalysis(bId);
-              if (!cachedB) {
+              if (!cachedB?.reportText) {
                 setPhase("base-b");
                 setBasePrepKey((k) => k + 1);
                 return;
               }
-              applyRailText("b", cachedB.reportText);
+              void releaseRailText("b", cachedB.reportText, true);
+              setBothBasesCached(false);
               setPhase("analyzing");
             }}
             onError={(err) => {
@@ -326,7 +418,7 @@ export function WorkspaceMatchGeneratingStage() {
               });
             }}
             onComplete={async (displayText) => {
-              applyRailText("b", displayText);
+              await releaseRailText("b", displayText, false);
               const refreshed = await getStoredProfile(bId);
               if (refreshed) setProfileB(refreshed);
               setPhase("analyzing");

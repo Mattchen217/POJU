@@ -2369,7 +2369,8 @@
       "profile_b_not_ready": "Person B's chart analysis is not ready. Return to prepare and wait for base analysis.",
       "profile_not_ready": "Chart analysis is not ready. Complete profile preparation first.",
       "same_profile": "Person A and Person B must be different.",
-      "analysis_failed": "Match analysis failed. Please try again."
+      "analysis_failed": "Match analysis failed. Please try again.",
+      "error_timeout": "The Match analysis took too long or the server returned an invalid response. Stay on this page with a stable connection and tap Retry — it often succeeds on the second attempt."
     },
     "report": {
       "title": "Match Report",

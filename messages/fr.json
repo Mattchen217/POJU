@@ -1962,6 +1962,7 @@
       "profile_not_ready": "Analyse de base non prête. Terminez d'abord la préparation.",
       "same_profile": "Les personnes A et B doivent être différentes.",
       "analysis_failed": "L'analyse Match a échoué. Veuillez réessayer.",
+      "error_timeout": "L'analyse Match a pris trop de temps ou le serveur a renvoyé une réponse invalide. Restez sur cette page avec une connexion stable et appuyez sur Réessayer — cela réussit souvent au second essai.",
       "preview_level": "Compatibilité locale : {level} (score {score}) — génération du récit…"
     },
     "report": {

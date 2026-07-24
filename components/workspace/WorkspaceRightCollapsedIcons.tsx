@@ -15,10 +15,11 @@ type Props = {
 /**
  * Collapsed right-rail icon stack.
  * POJU: energy matrix + base report.
- * Match: two energy portraits (A / B corner badges) + optional Match report later.
+ * Match: energy portraits A/B + base-analysis report icons A/B (same glyphs as POJU).
  */
 export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
   const t = useTranslations("workspace.pojuRail");
+  const tMatch = useTranslations("match.workspace");
   const prepare = useWorkspacePojuPrepareOptional();
   const match = useWorkspaceMatchPrepareOptional();
 
@@ -30,12 +31,35 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
       match.phase === "paywall" ||
       match.phase === "generating" ||
       match.phase === "delivery") &&
-    (Boolean(match.matrixPayloadA) || Boolean(match.matrixPayloadB));
+    (Boolean(match.matrixPayloadA) ||
+      Boolean(match.matrixPayloadB) ||
+      match.reportAStatus === "generating" ||
+      match.reportBStatus === "generating" ||
+      Boolean(match.reportAText) ||
+      Boolean(match.reportBText));
 
   if (matchActive && match) {
     const hasA = Boolean(match.matrixPayloadA);
     const hasB = Boolean(match.matrixPayloadB);
-    if (!hasA && !hasB) return null;
+    const aGenerating = match.reportAStatus === "generating";
+    const bGenerating = match.reportBStatus === "generating";
+    const aReportReady =
+      match.reportAStatus === "ready" && Boolean(match.reportAText);
+    const bReportReady =
+      match.reportBStatus === "ready" && Boolean(match.reportBText);
+    const showReportA = aGenerating || aReportReady;
+    const showReportB = bGenerating || bReportReady;
+
+    if (!hasA && !hasB && !showReportA && !showReportB) return null;
+
+    const reportLabelA = tMatch("portrait_a", { title: t("reportIconLabel") });
+    const reportLabelB = tMatch("portrait_b", { title: t("reportIconLabel") });
+    const reportGeneratingA = tMatch("portrait_a", {
+      title: t("reportGeneratingIconLabel"),
+    });
+    const reportGeneratingB = tMatch("portrait_b", {
+      title: t("reportGeneratingIconLabel"),
+    });
 
     return (
       <div className="workspace-right-collapsed-icons" role="toolbar" aria-label={t("collapsedRailLabel")}>
@@ -43,8 +67,8 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
           <button
             type="button"
             className="workspace-right-collapsed-icons__btn workspace-right-collapsed-icons__btn--slot"
-            aria-label={t("matrixIconLabel") + " A"}
-            data-tooltip={t("matrixIconLabel") + " A"}
+            aria-label={tMatch("portrait_a", { title: t("matrixIconLabel") })}
+            data-tooltip={tMatch("portrait_a", { title: t("matrixIconLabel") })}
             onClick={(e) => {
               e.stopPropagation();
               match.setMatrixExpandedA(true);
@@ -67,8 +91,8 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
           <button
             type="button"
             className="workspace-right-collapsed-icons__btn workspace-right-collapsed-icons__btn--slot"
-            aria-label={t("matrixIconLabel") + " B"}
-            data-tooltip={t("matrixIconLabel") + " B"}
+            aria-label={tMatch("portrait_b", { title: t("matrixIconLabel") })}
+            data-tooltip={tMatch("portrait_b", { title: t("matrixIconLabel") })}
             onClick={(e) => {
               e.stopPropagation();
               match.setMatrixExpandedB(true);
@@ -82,6 +106,70 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
               B
             </span>
             {match.matrixUnreadB ? (
+              <ArchiveUnreadDot className="workspace-right-collapsed-icons__unread" />
+            ) : null}
+          </button>
+        ) : null}
+
+        {showReportA ? (
+          <button
+            type="button"
+            className={`workspace-right-collapsed-icons__btn workspace-right-collapsed-icons__btn--slot${
+              aGenerating ? " is-generating" : ""
+            }`}
+            aria-label={aGenerating ? reportGeneratingA : reportLabelA}
+            data-tooltip={aGenerating ? reportGeneratingA : reportLabelA}
+            aria-busy={aGenerating || undefined}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (aReportReady) {
+                match.setReportAExpanded(true);
+              }
+              onOpenPanel();
+            }}
+          >
+            {aGenerating ? (
+              <span className="workspace-right-collapsed-icons__spin" aria-hidden />
+            ) : null}
+            <span className="workspace-sidebar__icon" aria-hidden>
+              <EnergyReportGlyph className="workspace-right-collapsed-icons__report" />
+            </span>
+            <span className="workspace-right-collapsed-icons__slot" aria-hidden>
+              A
+            </span>
+            {aReportReady && match.reportUnreadA ? (
+              <ArchiveUnreadDot className="workspace-right-collapsed-icons__unread" />
+            ) : null}
+          </button>
+        ) : null}
+
+        {showReportB ? (
+          <button
+            type="button"
+            className={`workspace-right-collapsed-icons__btn workspace-right-collapsed-icons__btn--slot${
+              bGenerating ? " is-generating" : ""
+            }`}
+            aria-label={bGenerating ? reportGeneratingB : reportLabelB}
+            data-tooltip={bGenerating ? reportGeneratingB : reportLabelB}
+            aria-busy={bGenerating || undefined}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (bReportReady) {
+                match.setReportBExpanded(true);
+              }
+              onOpenPanel();
+            }}
+          >
+            {bGenerating ? (
+              <span className="workspace-right-collapsed-icons__spin" aria-hidden />
+            ) : null}
+            <span className="workspace-sidebar__icon" aria-hidden>
+              <EnergyReportGlyph className="workspace-right-collapsed-icons__report" />
+            </span>
+            <span className="workspace-right-collapsed-icons__slot" aria-hidden>
+              B
+            </span>
+            {bReportReady && match.reportUnreadB ? (
               <ArchiveUnreadDot className="workspace-right-collapsed-icons__unread" />
             ) : null}
           </button>

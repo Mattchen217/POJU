@@ -1962,6 +1962,7 @@
       "profile_not_ready": "Grundanalyse noch nicht bereit. Vorbereitung zuerst abschließen.",
       "same_profile": "Person A und B müssen unterschiedlich sein.",
       "analysis_failed": "Match-Analyse fehlgeschlagen. Bitte erneut versuchen.",
+      "error_timeout": "Die Match-Analyse hat zu lange gedauert oder der Server hat eine ungültige Antwort geliefert. Bleiben Sie auf dieser Seite mit stabiler Verbindung und tippen Sie auf Erneut versuchen — beim zweiten Versuch gelingt es oft.",
       "preview_level": "Lokale Kompatibilität: {level} (Punktzahl {score}) — Erzählung wird erstellt…"
     },
     "report": {

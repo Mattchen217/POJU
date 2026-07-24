@@ -55,7 +55,7 @@ assert(service.includes("ensureBaseAnalysis"), "base analysis ensure");
 assert(service.includes("computation_meta"), "computation_meta");
 assert(service.includes('recordProfileUsage'), "records usage");
 
-assert(route.includes("maxDuration = 180"), "maxDuration");
+assert(route.includes("maxDuration = 300"), "maxDuration");
 assert(route.includes("generateMatchAnalysis"), "API wired");
 
 const zh = buildMatchPrompt({

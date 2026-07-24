@@ -40,6 +40,8 @@ type MatchState = {
   matchReportStatus: WorkspaceMatchRailDocStatus;
   reportAText: string | null;
   reportBText: string | null;
+  reportUnreadA: boolean;
+  reportUnreadB: boolean;
   matchSession: MatchSession | null;
   matchReportExpanded: boolean;
   reportAExpanded: boolean;
@@ -65,6 +67,8 @@ type MatchApi = MatchState & {
   setMatchReportStatus: (status: WorkspaceMatchRailDocStatus) => void;
   setReportAText: (text: string | null) => void;
   setReportBText: (text: string | null) => void;
+  setReportUnreadA: (unread: boolean) => void;
+  setReportUnreadB: (unread: boolean) => void;
   setMatchSession: (session: MatchSession | null) => void;
   setMatchReportExpanded: (expanded: boolean) => void;
   setReportAExpanded: (expanded: boolean) => void;
@@ -95,6 +99,8 @@ const INITIAL: MatchState = {
   matchReportStatus: "placeholder",
   reportAText: null,
   reportBText: null,
+  reportUnreadA: false,
+  reportUnreadB: false,
   matchSession: null,
   matchReportExpanded: false,
   reportAExpanded: false,
@@ -198,11 +204,27 @@ export function WorkspaceMatchPrepareProvider({
   }, []);
 
   const setReportAText = useCallback((reportAText: string | null) => {
-    setState((s) => ({ ...s, reportAText }));
+    setState((s) => ({
+      ...s,
+      reportAText,
+      reportUnreadA: reportAText ? true : s.reportUnreadA,
+    }));
   }, []);
 
   const setReportBText = useCallback((reportBText: string | null) => {
-    setState((s) => ({ ...s, reportBText }));
+    setState((s) => ({
+      ...s,
+      reportBText,
+      reportUnreadB: reportBText ? true : s.reportUnreadB,
+    }));
+  }, []);
+
+  const setReportUnreadA = useCallback((reportUnreadA: boolean) => {
+    setState((s) => ({ ...s, reportUnreadA }));
+  }, []);
+
+  const setReportUnreadB = useCallback((reportUnreadB: boolean) => {
+    setState((s) => ({ ...s, reportUnreadB }));
   }, []);
 
   const setMatchSession = useCallback((matchSession: MatchSession | null) => {
@@ -224,6 +246,7 @@ export function WorkspaceMatchPrepareProvider({
     setState((s) => ({
       ...s,
       reportAExpanded,
+      reportUnreadA: reportAExpanded ? false : s.reportUnreadA,
       matrixExpandedA: reportAExpanded ? false : s.matrixExpandedA,
       matrixExpandedB: reportAExpanded ? false : s.matrixExpandedB,
       reportBExpanded: reportAExpanded ? false : s.reportBExpanded,
@@ -235,6 +258,7 @@ export function WorkspaceMatchPrepareProvider({
     setState((s) => ({
       ...s,
       reportBExpanded,
+      reportUnreadB: reportBExpanded ? false : s.reportUnreadB,
       matrixExpandedA: reportBExpanded ? false : s.matrixExpandedA,
       matrixExpandedB: reportBExpanded ? false : s.matrixExpandedB,
       reportAExpanded: reportBExpanded ? false : s.reportAExpanded,
@@ -259,6 +283,8 @@ export function WorkspaceMatchPrepareProvider({
       reportAStatus: "placeholder",
       reportBStatus: "placeholder",
       matchReportStatus: "placeholder",
+      reportUnreadA: false,
+      reportUnreadB: false,
     }));
   }, []);
 
@@ -290,6 +316,8 @@ export function WorkspaceMatchPrepareProvider({
       setMatchReportStatus,
       setReportAText,
       setReportBText,
+      setReportUnreadA,
+      setReportUnreadB,
       setMatchSession,
       setMatchReportExpanded,
       setReportAExpanded,
@@ -318,6 +346,8 @@ export function WorkspaceMatchPrepareProvider({
       setMatchReportStatus,
       setReportAText,
       setReportBText,
+      setReportUnreadA,
+      setReportUnreadB,
       setMatchSession,
       setMatchReportExpanded,
       setReportAExpanded,

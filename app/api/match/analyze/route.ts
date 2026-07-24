@@ -9,7 +9,8 @@ import { parseAppLocale } from "@/lib/prompts/language-directive";
 import type { UserProfile } from "@/lib/profile/types";
 
 export const runtime = "nodejs";
-export const maxDuration = 180;
+/** Match LLM can exceed 3 min under load; align with other long LLM routes (300s). */
+export const maxDuration = 300;
 
 type RequestBody = {
   a_profile_id?: string;

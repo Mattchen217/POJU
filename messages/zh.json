@@ -2369,7 +2369,8 @@
       "profile_b_not_ready": "对象 B 的性格画像分析尚未就绪，请返回准备页等待 base analysis。",
       "profile_not_ready": "性格画像分析尚未就绪，请先完成档案准备。",
       "same_profile": "对象 A 与 B 不能相同。",
-      "analysis_failed": "Match 分析失败，请重试。"
+      "analysis_failed": "Match 分析失败，请重试。",
+      "error_timeout": "Match 分析超时或服务器返回了无效响应。请保持本页打开、网络稳定后点「重试」——第二次通常能成功。"
     },
     "report": {
       "title": "合盘报告",
