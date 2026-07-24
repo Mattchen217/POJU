@@ -30,9 +30,12 @@ export type OracleProductHeroCopy = {
 export function OracleProductHero({
   copy,
   cta,
+  hideActions = false,
 }: {
   copy: OracleProductHeroCopy;
   cta?: ReactNode;
+  /** Workspace center: no CTA / billing strip */
+  hideActions?: boolean;
 }) {
   return (
     <ProductMarketingHero
@@ -57,22 +60,26 @@ export function OracleProductHero({
             <HeroInlineBold text={copy.tagline} />
           </ProductHeroAccent>
         ) : null}
-        <ProductHeroActions>
-          {cta ?? (
-            <NotPWA>
-              <PwaInlineOpenLink
-                href="/start?next=%2Fglyph%2Freading"
-                frameTitle="Glyph"
-                closeLabel="关闭"
-                className="pj-pill-outline pj-pill-outline--violet inline-flex px-[30px] py-3.5 text-[15px]"
-              >
-                {copy.cta}
-              </PwaInlineOpenLink>
-            </NotPWA>
-          )}
-          {copy.billingNotice ? <ProductHeroBillingNotice>{copy.billingNotice}</ProductHeroBillingNotice> : null}
-          <AppModeHeroActions productId="glyph" price="$4.99" />
-        </ProductHeroActions>
+        {hideActions ? null : (
+          <ProductHeroActions>
+            {cta ?? (
+              <NotPWA>
+                <PwaInlineOpenLink
+                  href="/start?next=%2Fglyph%2Freading"
+                  frameTitle="Glyph"
+                  closeLabel="关闭"
+                  className="pj-pill-outline pj-pill-outline--violet inline-flex px-[30px] py-3.5 text-[15px]"
+                >
+                  {copy.cta}
+                </PwaInlineOpenLink>
+              </NotPWA>
+            )}
+            {copy.billingNotice ? (
+              <ProductHeroBillingNotice>{copy.billingNotice}</ProductHeroBillingNotice>
+            ) : null}
+            <AppModeHeroActions productId="glyph" price="$4.99" />
+          </ProductHeroActions>
+        )}
       </ProductHeroContent>
     </ProductMarketingHero>
   );

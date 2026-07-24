@@ -707,3 +707,16 @@ export async function deleteStoredProfile(profileId: string): Promise<void> {
   assertBrowser();
   await getPojuDb().stored_profiles.delete(profileId);
 }
+
+const DISPLAY_NAME_MAX_LEN = 48;
+
+/** Rename the card title only (IndexedDB `display_name`); birth data unchanged. */
+export async function renameStoredProfile(profileId: string, displayName: string): Promise<void> {
+  assertBrowser();
+  const trimmed = displayName.trim().slice(0, DISPLAY_NAME_MAX_LEN);
+  if (!trimmed) throw new Error("display name required");
+  const db = getPojuDb();
+  const record = await db.stored_profiles.get(profileId);
+  if (!record) throw new Error("Profile not found");
+  await db.stored_profiles.update(profileId, { display_name: trimmed });
+}

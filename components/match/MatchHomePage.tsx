@@ -17,7 +17,6 @@ import { ArchiveReturnBanner } from "@/components/archive/archive-return-banner"
 import {
   DsBand,
   DsGlassCard,
-  DsGradientTitle,
   DsIconChip,
   DsKicker,
   DsMutedCard,
@@ -25,26 +24,17 @@ import {
 } from "@/components/ds/primitives";
 import { DsMatchUseCard } from "@/components/ds/marketing/DsProductFlows";
 import { MatchHowWorksSection } from "@/components/match/MatchHowWorksSection";
+import { MatchProductHero } from "@/components/marketing/match-product-hero";
 import { ProductPricingSection } from "@/components/marketing/product-pricing-section";
 import { NotPWA } from "@/components/pwa/PWAConditional";
 import { AppModeDesktopHint } from "@/components/pwa/AppModeDesktopHint";
-import { AppModeHeroActions } from "@/components/pwa/AppModeHeroActions";
 import { AppModeProductTopBar } from "@/components/pwa/AppModeProductTopBar";
 import {
   MarketingPageHero,
   MarketingPageLayout,
   MarketingPageSections,
 } from "@/components/marketing/marketing-page-layout";
-import {
-  ProductHeroActions,
-  ProductHeroBillingNotice,
-  ProductHeroBrandTag,
-  ProductHeroContent,
-  ProductHeroDescription,
-  ProductMarketingHero,
-} from "@/components/marketing/product-marketing-hero";
 import { ProductWhatIsSection } from "@/components/marketing/product-what-is-section";
-import { MatchSplineScene } from "@/components/match/MatchSplineScene";
 import { PojuToolHandoffBanner } from "@/components/poju/PojuToolHandoffBanner";
 import { useRouter } from "@/i18n/navigation";
 import { usePojuToolHandoff } from "@/lib/poju/use-poju-tool-handoff";
@@ -87,9 +77,6 @@ const FAQ_ITEMS = [
   { q: "faq_q4", a: "faq_a4" },
 ] as const;
 
-const MATCH_CTA_CLASS =
-  "pj-pill-outline pj-pill-outline--rose inline-flex min-w-[220px] justify-center px-8 py-3.5 text-[15px] font-semibold md:px-10 md:py-4 md:text-base";
-
 export function MatchHomePage() {
   const router = useRouter();
   const t = useTranslations("match.home");
@@ -104,6 +91,14 @@ export function MatchHomePage() {
     router.push("/match/select-a");
   }
 
+  const heroCopy = {
+    brandTag: t("brand_tag"),
+    heading: t("heading"),
+    description: t("description"),
+    cta: t("cta"),
+    billingNotice: t("billing_notice"),
+  };
+
   return (
     <MarketingPageLayout theme="match" className="match-home">
       <AppModeProductTopBar />
@@ -115,28 +110,7 @@ export function MatchHomePage() {
       </NotPWA>
 
       <MarketingPageHero>
-        <ProductMarketingHero
-          theme="match"
-          backgroundClassName="product-hero__bg--match"
-          background={<MatchSplineScene variant="hero" className="match-hero-spline" pointerFollow={false} />}
-        >
-          <ProductHeroContent>
-            <ProductHeroBrandTag>{t("brand_tag")}</ProductHeroBrandTag>
-            <DsGradientTitle from="#ff6b9d" to="#ffb3c7">
-              {t("heading")}
-            </DsGradientTitle>
-            <ProductHeroDescription>{t("description")}</ProductHeroDescription>
-            <ProductHeroActions>
-              <NotPWA>
-                <button type="button" onClick={handleStart} className={MATCH_CTA_CLASS}>
-                  {t("cta")}
-                </button>
-                <ProductHeroBillingNotice>{t("billing_notice")}</ProductHeroBillingNotice>
-              </NotPWA>
-              <AppModeHeroActions productId="match" price="$4.99" />
-            </ProductHeroActions>
-          </ProductHeroContent>
-        </ProductMarketingHero>
+        <MatchProductHero copy={heroCopy} onCtaClick={handleStart} />
       </MarketingPageHero>
       <AppModeDesktopHint />
 

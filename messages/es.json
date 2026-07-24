@@ -1169,6 +1169,11 @@
     "ready": "Analizado",
     "view_analysis": "Ver informe completo",
     "delete": "Eliminar",
+    "rename": "Renombrar",
+    "rename_prompt": "Renombrar este perfil",
+    "rename_cancel": "Cancelar",
+    "rename_save": "Guardar",
+    "card_menu": "Acciones del perfil",
     "created_at": "Creado {date}",
     "confirm_delete": "¿Eliminar este perfil guardado de este dispositivo?",
     "refund_link": "No quiero compartir — reembolsar sesión",
@@ -1993,7 +1998,29 @@
       "free_first_time": "Primera vez gratis"
     },
     "select_first_person": "Elige o añade el perfil de la primera persona",
-    "select_second_person": "Elige o añade el perfil de la segunda persona — se guarda en tu biblioteca"
+    "select_second_person": "Elige o añade el perfil de la segunda persona — se guarda en tu biblioteca",
+    "workspace": {
+      "side_title": "Empezar Match",
+      "side_body": "Introduce los datos de nacimiento de las dos personas. Esta información nos permite calibrar con precisión tu energía única para una consulta personalizada de alta precisión.",
+      "side_body_returning": "Selecciona los datos de nacimiento de las dos personas, o introdúcelos de nuevo. Esta información nos permite calibrar con precisión tu energía única para una consulta personalizada de alta precisión.",
+      "submit": "Empezar MATCH",
+      "slot_a": "Match A",
+      "slot_b": "Match B",
+      "inquiry": {
+        "welcome_text": "Cuando dos personas inician una relación, colaboración o proyecto específico, sus hábitos de comunicación,\nlógica de decisión y ritmos internos interactúan profundamente. Con base en sus rasgos fundamentales, esta evaluación\nofrece un análisis objetivo y consejos de adaptación para lograr una cooperación de mayor calidad en metas compartidas.",
+        "guidance_text": "Describe a continuación el asunto o plan específico que enfrentarán juntos. Cuanto más detallada sea la\ndescripción, mejor podremos identificar fortalezas complementarias y prevenir posibles fricciones de comunicación.",
+        "placeholder_header": "Puedes preguntar así (selecciona o escribe directamente):",
+        "examples": {
+          "business": "Colaboración Comercial: 'Planeamos fundar una empresa o realizar una inversión juntos. ¿Cómo colaborar eficazmente en las decisiones y el reparto de tareas?'",
+          "relationship": "Relación a Largo Plazo: 'Consideramos el matrimonio o un compromiso duradero. ¿Qué aspectos debemos ajustar en la comunicación diaria y las decisiones familiares?'",
+          "specific_task": "Asunto Específico: 'Planeamos viajar juntos el próximo mes o asumir un proyecto. ¿Cómo evitar posibles desacuerdos?'"
+        },
+        "welcome_title": "Bienvenido a la Evaluación de Sinergia y Compatibilidad de Decisiones",
+        "input_placeholder": "Describe el asunto o pregunta concreta que enfrentarán juntos…"
+      },
+      "portrait_a": "Match A {title}",
+      "portrait_b": "Match B {title}"
+    }
   },
   "pwa": {
     "disclaimer": {

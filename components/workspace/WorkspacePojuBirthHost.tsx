@@ -5,13 +5,14 @@ import { useLocale, useTranslations } from "next-intl";
 
 import { BirthInfoConfirmDialog } from "@/components/poju/BirthInfoConfirmDialog";
 import { WorkspaceBirthInfoPicker } from "@/components/workspace/WorkspaceBirthInfoPicker";
-import { WorkspacePojuProfileRecords } from "@/components/workspace/WorkspacePojuProfileRecords";
+import { WorkspacePojuProfileRecords, getWorkspaceProfileCardTitle } from "@/components/workspace/WorkspacePojuProfileRecords";
 import { markPendingBaseAnalysisProfile } from "@/lib/profile/pending-base-analysis";
 import {
   createStoredProfile,
   deleteStoredProfile,
   listStoredProfiles,
   recordProfileUsage,
+  renameStoredProfile,
   type StoredProfileSummary,
 } from "@/lib/profile/stored-profiles-service";
 import type { BirthInfo } from "@/lib/profile/types";
@@ -22,13 +23,22 @@ type Props = {
   onHasProfilesChange?: (hasProfiles: boolean) => void;
   /** After confirm — enter workspace preparing (Spline + right-rail matrix). */
   onPrepareStart?: (profileId: string) => void;
+  /** Which product records usage against the selected profile. */
+  usageProduct?: "poju" | "match" | "glyph" | "syncro";
+  /** Hide this profile from the picker (Match B cannot equal Match A). */
+  excludeProfileId?: string | null;
 };
 
 /**
  * Workspace host — new users see the birth form; returning users see profile cards
  * + add-new inside the same-sized frame. Does not modify BirthInfoPicker / SessionPreparation.
  */
-export function WorkspacePojuBirthHost({ onHasProfilesChange, onPrepareStart }: Props) {
+export function WorkspacePojuBirthHost({
+  onHasProfilesChange,
+  onPrepareStart,
+  usageProduct = "poju",
+  excludeProfileId = null,
+}: Props) {
   const locale = useLocale();
   const t = useTranslations("session_prep");
 
@@ -40,6 +50,8 @@ export function WorkspacePojuBirthHost({ onHasProfilesChange, onPrepareStart }: 
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [creating, setCreating] = useState(false);
+
+  const visibleProfiles = profiles.filter((p) => p.profile_id !== excludeProfileId);
 
   const refreshProfiles = useCallback(async () => {
     const list = await listStoredProfiles();
@@ -55,7 +67,8 @@ export function WorkspacePojuBirthHost({ onHasProfilesChange, onPrepareStart }: 
         const list = await listStoredProfiles();
         if (cancelled) return;
         setProfiles(list);
-        setMode(list.length > 0 ? "list" : "new");
+        const visible = list.filter((p) => p.profile_id !== excludeProfileId);
+        setMode(visible.length > 0 ? "list" : "new");
         onHasProfilesChange?.(list.length > 0);
       } catch (err) {
         console.error("[workspace-poju] Load profiles failed:", err);
@@ -66,13 +79,31 @@ export function WorkspacePojuBirthHost({ onHasProfilesChange, onPrepareStart }: 
     return () => {
       cancelled = true;
     };
-  }, [onHasProfilesChange]);
+  }, [onHasProfilesChange, excludeProfileId]);
 
   async function handleDeleteProfile(profileId: string) {
-    if (!window.confirm(t("confirm_delete"))) return;
-    await deleteStoredProfile(profileId);
-    const list = await refreshProfiles();
-    if (list.length === 0) setMode("new");
+    try {
+      await deleteStoredProfile(profileId);
+      const list = await refreshProfiles();
+      const visible = list.filter((p) => p.profile_id !== excludeProfileId);
+      if (visible.length === 0) setMode("new");
+    } catch (err) {
+      console.error("[workspace-poju] Delete profile failed:", err);
+    }
+  }
+
+  async function handleRenameProfile(profileId: string, nextName: string) {
+    const trimmed = nextName.trim();
+    if (!trimmed) return;
+    const current = profiles.find((p) => p.profile_id === profileId);
+    const initial = current ? getWorkspaceProfileCardTitle(current) : "";
+    if (trimmed === initial) return;
+    try {
+      await renameStoredProfile(profileId, trimmed);
+      await refreshProfiles();
+    } catch (err) {
+      console.error("[workspace-poju] Rename profile failed:", err);
+    }
   }
 
   function handleSelectExisting(summary: StoredProfileSummary) {
@@ -96,7 +127,7 @@ export function WorkspacePojuBirthHost({ onHasProfilesChange, onPrepareStart }: 
   async function handleConfirmAndContinue() {
     if (selectedProfileId) {
       try {
-        await recordProfileUsage(selectedProfileId, "poju");
+        await recordProfileUsage(selectedProfileId, usageProduct);
         const selected = profiles.find((p) => p.profile_id === selectedProfileId);
         if (selected && !selected.has_base_analysis) {
           markPendingBaseAnalysisProfile(selectedProfileId);
@@ -118,6 +149,7 @@ export function WorkspacePojuBirthHost({ onHasProfilesChange, onPrepareStart }: 
     try {
       const result = await createStoredProfile({ birth_info: pendingBirthInfo });
       markPendingBaseAnalysisProfile(result.profile_id);
+      await recordProfileUsage(result.profile_id, usageProduct);
       setShowConfirm(false);
       setPendingBirthInfo(null);
       setCreating(false);
@@ -138,16 +170,17 @@ export function WorkspacePojuBirthHost({ onHasProfilesChange, onPrepareStart }: 
     );
   }
 
-  const showList = mode === "list" && profiles.length > 0;
+  const showList = mode === "list" && visibleProfiles.length > 0;
 
   return (
     <>
       {showList ? (
         <div className="birth-info-picker birth-info-picker--workspace workspace-poju-records-frame">
           <WorkspacePojuProfileRecords
-            profiles={profiles}
+            profiles={visibleProfiles}
             onSelect={handleSelectExisting}
             onAddNew={() => setMode("new")}
+            onRename={(id, nextName) => void handleRenameProfile(id, nextName)}
             onDelete={(id) => void handleDeleteProfile(id)}
           />
         </div>
@@ -155,7 +188,7 @@ export function WorkspacePojuBirthHost({ onHasProfilesChange, onPrepareStart }: 
         <WorkspaceBirthInfoPicker
           locale={locale}
           onSubmit={handleBirthInfoSubmit}
-          onCancel={profiles.length > 0 ? () => setMode("list") : undefined}
+          onCancel={visibleProfiles.length > 0 ? () => setMode("list") : undefined}
         />
       )}
 

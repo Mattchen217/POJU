@@ -63,10 +63,13 @@ export function legacyFormToBirthInfo(input: LegacyBirthFormInput, timezoneFallb
 
 export function generateDisplayName(birth: BirthInfo): string {
   const dateStr = `${birth.year}-${String(birth.month).padStart(2, "0")}-${String(birth.day).padStart(2, "0")}`;
-  const periodInfo = HOUR_PERIOD_INFO[birth.hour_period];
-  const periodShort = periodInfo.en_label.split(" ").slice(0, 5).join(" ");
-  const genderShort = birth.gender === "M" ? "M" : "F";
-  return `${dateStr} · ${periodShort} · ${genderShort}`;
+  const hour =
+    typeof birth.hour === "number"
+      ? birth.hour
+      : HOUR_PERIOD_INFO[birth.hour_period].representative_hour;
+  const minute = typeof birth.minute === "number" ? birth.minute : 0;
+  const genderShort = birth.gender === "M" ? "M" : birth.gender === "F" ? "F" : "X";
+  return `${dateStr} · ${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")} · ${genderShort}`;
 }
 
 export function representativeHour(birth: BirthInfo): number {

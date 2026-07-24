@@ -61,6 +61,10 @@ type Props = {
   /** Controlled content panel open state (parent can force-collapse). */
   expanded?: boolean;
   onExpandedChange?: (open: boolean) => void;
+  /** Override folded-cover / page title (e.g. Match A 个人能量画像). */
+  coverTitle?: string;
+  /** Override unread badge (defaults to POJU prepare matrixUnread). */
+  unread?: boolean;
 };
 
 const MATRIX_BLOCKS = [
@@ -831,6 +835,8 @@ export function PojuEnergyMatrix({
   hideChrome = false,
   expanded,
   onExpandedChange,
+  coverTitle,
+  unread,
 }: Props) {
   const { structured, user_profile, wuxing_scores, strength } = payload;
   const shenshaLocale = normalizeShenshaLocale(locale);
@@ -839,7 +845,11 @@ export function PojuEnergyMatrix({
   const tm = useTranslations("poju_matrix");
   const tc = useTranslations("poju_matrix.card");
   const prepare = useWorkspacePojuPrepareOptional();
-  const showMatrixUnread = Boolean(hideChrome && prepare?.matrixUnread);
+  const showMatrixUnread =
+    typeof unread === "boolean"
+      ? unread
+      : Boolean(hideChrome && prepare?.matrixUnread);
+  const matrixTitle = coverTitle?.trim() || tMatrix(locale, "main_title");
 
   const display = useMemo(() => {
     const base = buildMatrixDisplayData({
@@ -1049,13 +1059,13 @@ export function PojuEnergyMatrix({
                 type="button"
                 className="pcm-rail-paper__cover"
                 onClick={openRailPortrait}
-                aria-label={tMatrix(locale, "main_title")}
+                aria-label={matrixTitle}
                 tabIndex={railSheetMode === "folded" ? 0 : -1}
                 aria-hidden={railSheetMode === "flat" ? true : undefined}
               >
                 <EnergyPortraitGlyph className="pcm-rail-paper__glyph" />
                 <span className="pcm-rail-paper__cover-title">
-                  {tMatrix(locale, "main_title")}
+                  {matrixTitle}
                 </span>
               </button>
             ) : null
@@ -1068,7 +1078,7 @@ export function PojuEnergyMatrix({
         >
         <div className="pcm-navframe">
           <div className="pcm-navframe__title-row">
-            <h1 className="pcm-navframe__title">{tMatrix(locale, "main_title")}</h1>
+            <h1 className="pcm-navframe__title">{matrixTitle}</h1>
             <p className="pcm-navframe__desc">{tMatrix(locale, "main_description")}</p>
           </div>
 

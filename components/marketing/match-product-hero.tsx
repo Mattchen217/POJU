@@ -1,11 +1,6 @@
-import { SyncroEnergyBall } from "@/components/syncro/syncro-energy-ball";
-import { SyncroPwaInstallTrigger } from "@/components/syncro/SyncroPwaInstallGuide";
-import { NotPWA } from "@/components/pwa/PWAConditional";
-import { AppModeHeroActions } from "@/components/pwa/AppModeHeroActions";
+import { MatchSplineScene } from "@/components/match/MatchSplineScene";
 import { DsGradientTitle } from "@/components/ds/primitives";
 import {
-  HeroInlineBold,
-  ProductHeroAccent,
   ProductHeroActions,
   ProductHeroBillingNotice,
   ProductHeroBrandTag,
@@ -13,56 +8,53 @@ import {
   ProductHeroDescription,
   ProductMarketingHero,
 } from "@/components/marketing/product-marketing-hero";
+import { NotPWA } from "@/components/pwa/PWAConditional";
+import { AppModeHeroActions } from "@/components/pwa/AppModeHeroActions";
 
-export type SyncroProductHeroCopy = {
+export type MatchProductHeroCopy = {
   brandTag: string;
   heading: string;
   description: string;
-  tagline?: string;
   cta: string;
   billingNotice: string;
 };
 
-export function SyncroProductHero({
+const MATCH_CTA_CLASS =
+  "pj-pill-outline pj-pill-outline--rose inline-flex px-[30px] py-3.5 text-[15px]";
+
+export function MatchProductHero({
   copy,
   hideActions = false,
+  onCtaClick,
 }: {
-  copy: SyncroProductHeroCopy;
+  copy: MatchProductHeroCopy;
   /** Workspace center: no CTA / billing strip */
   hideActions?: boolean;
+  onCtaClick?: () => void;
 }) {
   return (
     <ProductMarketingHero
-      theme="syncro"
-      background={
-        <SyncroEnergyBall variant="hero" initialZoom={0.82} className="syncro-hero-spline" />
-      }
+      theme="match"
+      backgroundClassName="product-hero__bg--match"
+      background={<MatchSplineScene variant="hero" className="match-hero-spline" pointerFollow={false} />}
     >
       <ProductHeroContent>
         <ProductHeroBrandTag>{copy.brandTag}</ProductHeroBrandTag>
-        <DsGradientTitle from="#5eead4" to="#22d3ee">
+        <DsGradientTitle from="#ff6b9d" to="#ffb3c7">
           {copy.heading}
         </DsGradientTitle>
         <ProductHeroDescription>{copy.description}</ProductHeroDescription>
-        {copy.tagline ? (
-          <ProductHeroAccent>
-            <HeroInlineBold text={copy.tagline} />
-          </ProductHeroAccent>
-        ) : null}
         {hideActions ? null : (
           <ProductHeroActions>
             <NotPWA>
-              <SyncroPwaInstallTrigger
-                variant="button"
-                className="pj-pill-outline pj-pill-outline--cyan inline-flex px-[30px] py-3.5 text-[15px]"
-              >
+              <button type="button" onClick={onCtaClick} className={MATCH_CTA_CLASS}>
                 {copy.cta}
-              </SyncroPwaInstallTrigger>
+              </button>
               {copy.billingNotice ? (
                 <ProductHeroBillingNotice>{copy.billingNotice}</ProductHeroBillingNotice>
               ) : null}
             </NotPWA>
-            <AppModeHeroActions productId="syncro" price="$4.99" />
+            <AppModeHeroActions productId="match" price="$4.99" />
           </ProductHeroActions>
         )}
       </ProductHeroContent>

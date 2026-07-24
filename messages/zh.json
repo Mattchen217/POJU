@@ -1525,6 +1525,11 @@
     "ready": "已分析",
     "view_analysis": "查看完整报告",
     "delete": "删除",
+    "rename": "重命名",
+    "rename_prompt": "重命名此档案",
+    "rename_cancel": "取消",
+    "rename_save": "保存",
+    "card_menu": "档案操作",
     "created_at": "创建时间：{date}",
     "confirm_delete": "从本机删除这条已保存的档案？",
     "refund_link": "我不想分享 — 退款",
@@ -2398,6 +2403,28 @@
       "overall": "总体",
       "top_actions": "重点行动",
       "view_full_report": "查看完整报告"
+    },
+    "workspace": {
+      "side_title": "开始Match",
+      "side_body": "请输入2个人的出生信息。这些信息将用于精准匹配您的独特能量，为您生成专属的高精度决策解读。",
+      "side_body_returning": "请选择2个人的出生信息或重新输入。这些信息将用于精准匹配您的独特能量，为您生成专属的高精度决策解读。",
+      "submit": "开始 MATCH",
+      "slot_a": "Match A",
+      "slot_b": "Match B",
+      "inquiry": {
+        "welcome_text": "当两个人共同开启一段关系、一项合作或某件具体事务时，双方的沟通习惯、\n决策逻辑与内在节奏都会产生深层的碰撞。本评估基于双方的底层特质，为你提供\n客观的协同分析与风险调适建议，帮助你们在共同的目标中实现更高质量的配合。",
+        "guidance_text": "请在下方写下你们计划共同面对或执行的具体事项。\n越具体的场景描述，越能帮你们厘清潜在的互补优势与沟通避坑点。",
+        "placeholder_header": "你可以这样提问（请选择或直接输入）：",
+        "examples": {
+          "business": "商业合作：“我们准备合伙开一家公司/做一项投资，在决策和分工上该如何高效配合？”",
+          "relationship": "长期关系：“我们正考虑步入婚姻/建立长期关系，在日常沟通与家庭决策中有哪些需要调适的点？”",
+          "specific_task": "具体事项：“我们计划下个月共同出行/承接一个项目，如何避开可能出现的意见分歧？”"
+        },
+        "welcome_title": "欢迎进入双人协同与决策契合度评估",
+        "input_placeholder": "写下你们共同面对的具体事项或问题…"
+      },
+      "portrait_a": "Match A {title}",
+      "portrait_b": "Match B {title}"
     }
   },
   "tool_suggestion": {

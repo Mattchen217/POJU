@@ -1525,6 +1525,11 @@
     "ready": "Analyzed",
     "view_analysis": "View full report",
     "delete": "Delete",
+    "rename": "Rename",
+    "rename_prompt": "Rename this profile",
+    "rename_cancel": "Cancel",
+    "rename_save": "Save",
+    "card_menu": "Profile actions",
     "created_at": "Created {date}",
     "confirm_delete": "Delete this saved profile from this device?",
     "refund_link": "I don't want to share — refund my session",
@@ -2398,6 +2403,28 @@
       "overall": "Overall",
       "top_actions": "Top Actions",
       "view_full_report": "View full report"
+    },
+    "workspace": {
+      "side_title": "Start Match",
+      "side_body": "Please enter birth details for both people. This information allows us to accurately calibrate your unique energy for a personalized, high-precision consult.",
+      "side_body_returning": "Please select birth details for both people, or enter them again. This information allows us to accurately calibrate your unique energy for a personalized, high-precision consult.",
+      "submit": "Start MATCH",
+      "slot_a": "Match A",
+      "slot_b": "Match B",
+      "inquiry": {
+        "welcome_text": "When two individuals embark on a relationship, partnership, or specific endeavor, their communication habits,\ndecision logic, and internal rhythms interact deeply. Based on core underlying traits, this assessment provides\nobjective synergy insights and risk management guidance to help you achieve seamless alignment toward shared goals.",
+        "guidance_text": "Please describe the specific goal or event you plan to undertake together. The more detailed your\ndescription, the better we can help identify complementary strengths and communication pitfalls.",
+        "placeholder_header": "You can ask like this (select or type directly):",
+        "examples": {
+          "business": "Business Partnership: 'We plan to start a company / make an investment together. How can we align efficiently on decision-making and task division?'",
+          "relationship": "Long-term Relationship: 'We are considering marriage / a long-term commitment. What key areas should we adjust for daily communication and family decisions?'",
+          "specific_task": "Specific Endeavor: 'We plan to travel together next month / take on a joint project. How can we avoid potential disagreements?'"
+        },
+        "welcome_title": "Welcome to the Dual Synergy & Decision Compatibility Assessment",
+        "input_placeholder": "Describe the specific goal or question you face together…"
+      },
+      "portrait_a": "Match A {title}",
+      "portrait_b": "Match B {title}"
     }
   },
   "tool_suggestion": {

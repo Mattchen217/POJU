@@ -14,6 +14,12 @@ import {
   useWorkspacePojuPrepareOptional,
   useWorkspaceRightRailWide,
 } from "@/components/workspace/WorkspacePojuPrepareContext";
+import {
+  WorkspaceMatchPrepareProvider,
+  useWorkspaceMatchPrepareOptional,
+  useWorkspaceMatchRightRailWide,
+} from "@/components/workspace/WorkspaceMatchPrepareContext";
+import { WorkspaceMatchRightPanel } from "@/components/workspace/WorkspaceMatchRightPanel";
 import { WorkspaceRightDrawer } from "@/components/workspace/WorkspaceRightDrawer";
 import { WorkspaceRightMatrixPanel } from "@/components/workspace/WorkspaceRightMatrixPanel";
 import { WorkspaceScrollArea } from "@/components/workspace/WorkspaceScrollArea";
@@ -50,6 +56,9 @@ function RightDrawerContext({
   if (tab === "poju") {
     return <WorkspaceRightMatrixPanel />;
   }
+  if (tab === "match") {
+    return <WorkspaceMatchRightPanel />;
+  }
   return <div className="workspace-right-drawer-placeholder" aria-hidden />;
 }
 
@@ -68,10 +77,12 @@ function PojuRightRailGate({
   useEffect(() => {
     if (tab !== "poju") {
       resetPrepare?.();
-      try {
-        setRightOpen(window.localStorage.getItem("poju.workspaceRightDrawerOpen") === "1");
-      } catch {
-        /* private mode */
+      if (tab !== "match") {
+        try {
+          setRightOpen(window.localStorage.getItem("poju.workspaceRightDrawerOpen") === "1");
+        } catch {
+          /* private mode */
+        }
       }
       return;
     }
@@ -79,6 +90,34 @@ function PojuRightRailGate({
       setRightOpen(false);
     }
   }, [tab, phase, setRightOpen, resetPrepare]);
+
+  return null;
+}
+
+/** Opens Match right rail after warmup matrices are ready; resets when leaving Match. */
+function MatchRightRailGate({
+  tab,
+  setRightOpen,
+}: {
+  tab: WorkspaceTab;
+  setRightOpen: (open: boolean) => void;
+}) {
+  const match = useWorkspaceMatchPrepareOptional();
+  const phase = match?.phase ?? "entry";
+  const resetMatch = match?.resetMatch;
+  const hasMatrices = Boolean(match?.matrixPayloadA || match?.matrixPayloadB);
+
+  useEffect(() => {
+    if (tab !== "match") {
+      resetMatch?.();
+      return;
+    }
+    if (phase === "entry" || phase === "warmup" || !hasMatrices) {
+      setRightOpen(false);
+      return;
+    }
+    setRightOpen(true);
+  }, [tab, phase, hasMatrices, setRightOpen, resetMatch]);
 
   return null;
 }
@@ -93,7 +132,9 @@ function WorkspaceShellSurface({
   rightOpen: boolean;
   children: ReactNode;
 }) {
-  const rightWide = useWorkspaceRightRailWide();
+  const pojuWide = useWorkspaceRightRailWide();
+  const matchWide = useWorkspaceMatchRightRailWide();
+  const rightWide = pojuWide || matchWide;
   return (
     <div
       className={`workspace-shell${sidebarCollapsed ? " is-sidebar-collapsed" : ""}${
@@ -120,7 +161,9 @@ function WorkspaceRightDrawerHost({
   archiveId: string | null;
   onOpenArchive: (product: WorkspaceProductId, id: string) => void;
 }) {
-  const rightWide = useWorkspaceRightRailWide();
+  const pojuWide = useWorkspaceRightRailWide();
+  const matchWide = useWorkspaceMatchRightRailWide();
+  const rightWide = pojuWide || matchWide;
   return (
     <WorkspaceRightDrawer open={rightOpen} wide={rightWide} onOpen={onOpen} onClose={onClose}>
       <RightDrawerContext tab={tab} archiveId={archiveId} onOpenArchive={onOpenArchive} />
@@ -306,11 +349,13 @@ export function WorkspaceShell({ initialTab }: Props) {
   return (
     <AppDialogProvider>
       <WorkspacePojuPrepareProvider openRight={openRight}>
+        <WorkspaceMatchPrepareProvider openRight={openRight}>
         <PojuPrepareResetBinder
           resetRef={pojuPrepareResetRef}
           resumeRef={pojuResumeSessionRef}
         />
         <PojuRightRailGate tab={tab} setRightOpen={setRightOpen} />
+        <MatchRightRailGate tab={tab} setRightOpen={setRightOpen} />
         <WorkspaceShellSurface sidebarCollapsed={sidebarCollapsed} rightOpen={rightOpen}>
         <div className="workspace-shell__sky" aria-hidden />
 
@@ -394,6 +439,7 @@ export function WorkspaceShell({ initialTab }: Props) {
           onSelectProfile={() => selectNew("profile")}
         />
         </WorkspaceShellSurface>
+        </WorkspaceMatchPrepareProvider>
       </WorkspacePojuPrepareProvider>
     </AppDialogProvider>
   );

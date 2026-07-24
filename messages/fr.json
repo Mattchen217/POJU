@@ -1169,6 +1169,11 @@
     "ready": "Analysé",
     "view_analysis": "Voir le rapport complet",
     "delete": "Supprimer",
+    "rename": "Renommer",
+    "rename_prompt": "Renommer ce profil",
+    "rename_cancel": "Annuler",
+    "rename_save": "Enregistrer",
+    "card_menu": "Actions du profil",
     "created_at": "Créé le {date}",
     "confirm_delete": "Supprimer ce profil enregistré de cet appareil ?",
     "refund_link": "Je ne veux pas partager — rembourser",
@@ -1993,7 +1998,29 @@
       "free_first_time": "Première fois gratuite"
     },
     "select_first_person": "Choisissez ou ajoutez le profil de la première personne",
-    "select_second_person": "Choisissez ou ajoutez le profil de la deuxième personne — enregistré dans votre bibliothèque"
+    "select_second_person": "Choisissez ou ajoutez le profil de la deuxième personne — enregistré dans votre bibliothèque",
+    "workspace": {
+      "side_title": "Commencer Match",
+      "side_body": "Veuillez saisir les informations de naissance des deux personnes. Elles nous permettent de calibrer avec précision votre énergie unique pour une consultation personnalisée de haute précision.",
+      "side_body_returning": "Veuillez sélectionner les informations de naissance des deux personnes, ou les saisir à nouveau. Elles nous permettent de calibrer avec précision votre énergie unique pour une consultation personnalisée de haute précision.",
+      "submit": "Commencer MATCH",
+      "slot_a": "Match A",
+      "slot_b": "Match B",
+      "inquiry": {
+        "welcome_text": "Lorsque deux personnes s'engagent dans une relation, un partenariat ou un projet précis, leurs habitudes de communication,\nleur logique de décision et leurs rythmes intérieurs interagissent profondément. Basée sur vos traits fondamentaux,\ncette évaluation offre une analyse objective et des conseils pour une collaboration optimale vers vos objectifs communs.",
+        "guidance_text": "Veuillez décrire ci-dessous le projet ou l'événement précis que vous envisagez d'aborder ensemble. Plus la description\nest détaillée, plus il sera facile d'identifier vos forces complémentaires et d'éviter les pièges relationnels.",
+        "placeholder_header": "Vous pouvez poser votre question ainsi (sélectionnez ou saisissez directement) :",
+        "examples": {
+          "business": "Partenariat Commercial : 'Nous prévoyons de créer une entreprise ou d'investir ensemble. Comment collaborer efficacement sur les décisions et le partage des tâches ?'",
+          "relationship": "Relation Durable : 'Nous envisageons le mariage ou un engagement à long terme. Quels aspects ajuster dans la communication quotidienne et les décisions familiales ?'",
+          "specific_task": "Projet Précis : 'Nous prévoyons de voyager ensemble le mois prochain ou de mener un projet. Comment éviter les éventuels désaccords ?'"
+        },
+        "welcome_title": "Bienvenue dans l'Évaluation de Synergie et de Compatibilité de Décision",
+        "input_placeholder": "Décrivez le projet ou la question précise que vous abordez ensemble…"
+      },
+      "portrait_a": "Match A {title}",
+      "portrait_b": "Match B {title}"
+    }
   },
   "pwa": {
     "disclaimer": {

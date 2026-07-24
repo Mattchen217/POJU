@@ -1,22 +1,39 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
+import { MatchProductHero } from "@/components/marketing/match-product-hero";
+import { OracleProductHero } from "@/components/marketing/oracle-product-hero";
 import { PojuProductHero } from "@/components/marketing/poju-product-hero";
+import { SyncroProductHero } from "@/components/marketing/syncro-product-hero";
+import { MatchDeliveryView } from "@/components/match/MatchDeliveryView";
+import { ToolPaywallInline } from "@/components/cross-product/ToolPaywallInline";
 import { BeginButton } from "@/components/pwa/BeginButton";
 import { WorkspaceContextPanel } from "@/components/workspace/WorkspaceContextPanel";
+import { WorkspaceMatchBirthSideCopy } from "@/components/workspace/WorkspaceMatchBirthSideCopy";
+import { WorkspaceMatchGeneratingStage } from "@/components/workspace/WorkspaceMatchGeneratingStage";
+import { WorkspaceMatchInquiryForm } from "@/components/workspace/WorkspaceMatchInquiryForm";
+import { useWorkspaceMatchPrepare } from "@/components/workspace/WorkspaceMatchPrepareContext";
+import { WorkspaceMatchWarmupStage } from "@/components/workspace/WorkspaceMatchWarmupStage";
 import { WorkspacePojuBirthHost } from "@/components/workspace/WorkspacePojuBirthHost";
 import { WorkspacePojuBirthSideCopy } from "@/components/workspace/WorkspacePojuBirthSideCopy";
 import { WorkspacePojuChatStage } from "@/components/workspace/WorkspacePojuChatStage";
 import { useWorkspacePojuPrepare } from "@/components/workspace/WorkspacePojuPrepareContext";
 import { WorkspacePojuPreparingStage } from "@/components/workspace/WorkspacePojuPreparingStage";
 import { WorkspaceProfileSlotBar } from "@/components/workspace/WorkspaceProfileSlotBar";
+import { WorkspaceScrollArea } from "@/components/workspace/WorkspaceScrollArea";
 import { useWorkspaceUnlockRitualResume } from "@/components/workspace/useWorkspaceUnlockRitualResume";
 import {
   useWorkspaceProductHistory,
   type WorkspaceProductId,
 } from "@/components/workspace/use-workspace-product-history";
+import {
+  ensureMatchPreviewSession,
+  loadMatchPreviewSession,
+  patchMatchPreviewSession,
+} from "@/lib/match/match-preview-session";
+import { isMatchPreviewSession } from "@/lib/match/match-preview-unlock";
 import { POJU_WORKSPACE_UNLOCK_RITUAL_KEY } from "@/lib/poju/preview-unlock";
 
 const PRESET_KEYS = ["career", "relationship", "timing"] as const;
@@ -29,6 +46,17 @@ type Props = {
   price: string;
   onOpenArchive: (archiveId: string) => void;
 };
+
+function WorkspaceProductHome({ hero, children }: { hero: ReactNode; children: ReactNode }) {
+  return (
+    <div className="workspace-product-stack workspace-poju-stack">
+      <div className="workspace-product-hero">{hero}</div>
+      <div className="workspace-product-below workspace-poju-below">
+        <div className="workspace-product-below__form">{children}</div>
+      </div>
+    </div>
+  );
+}
 
 export function EnginePanel({ productId, price, onOpenArchive }: Props) {
   const t = useTranslations(`workspace.${productId}`);
@@ -181,11 +209,11 @@ export function PojuPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (i
      Layered crossfade only while handing off / preparing. */
   if (phase === "idle") {
     return (
-      <div className="workspace-poju-stack">
-        <div className="workspace-poju-hero">
+      <div className="workspace-product-stack workspace-poju-stack">
+        <div className="workspace-product-hero workspace-poju-hero">
           <PojuProductHero copy={heroCopy} hideActions />
         </div>
-        <div className="workspace-poju-below">
+        <div className="workspace-product-below workspace-poju-below">
           <div className="workspace-poju-below__unit">
             <WorkspacePojuBirthSideCopy hasProfiles={hasProfiles} />
             <div className="workspace-poju-birth">
@@ -220,10 +248,10 @@ export function PojuPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (i
             birthFading ? " is-fade-out" : ""
           }`}
         >
-          <div className="workspace-poju-hero">
+          <div className="workspace-product-hero workspace-poju-hero">
             <PojuProductHero copy={heroCopy} hideActions />
           </div>
-          <div className="workspace-poju-below">
+          <div className="workspace-product-below workspace-poju-below">
             <div className="workspace-poju-below__unit">
               <WorkspacePojuBirthSideCopy hasProfiles={hasProfiles} />
               <div className="workspace-poju-birth">
@@ -250,14 +278,214 @@ export function PojuPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (i
   );
 }
 
-export function MatchPanel({ onOpenArchive }: { onOpenArchive: (id: string) => void }) {
-  return <EnginePanel productId="match" price="$9.99" onOpenArchive={onOpenArchive} />;
+export function MatchPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (id: string) => void }) {
+  const t = useTranslations("match.home");
+  const tWs = useTranslations("match.workspace");
+  const locale = useLocale();
+  const [hasProfiles, setHasProfiles] = useState(false);
+  const match = useWorkspaceMatchPrepare();
+
+  useEffect(() => {
+    if (match.phase !== "paywall") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") match.setPhase("inquiry");
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [match.phase, match.setPhase]);
+
+  const heroCopy = {
+    brandTag: t("brand_tag"),
+    heading: t("heading"),
+    description: t("description"),
+    cta: t("cta"),
+    billingNotice: t("billing_notice"),
+  };
+
+  function handleBirthConfirmed(profileId: string) {
+    if (match.collectingSlot === "a") {
+      match.setProfileA(profileId);
+      match.setCollectingSlot("b");
+      return;
+    }
+    if (profileId === match.profileIdA) {
+      return;
+    }
+    match.setProfileB(profileId);
+    match.beginWarmup();
+  }
+
+  function handleInquirySubmit() {
+    const q = match.relationship.trim();
+    if (q.length < 10 || !match.profileIdA || !match.profileIdB) return;
+
+    try {
+      sessionStorage.setItem("match_relationship", q);
+      sessionStorage.setItem("match_a_profile_id", match.profileIdA);
+      sessionStorage.setItem("match_b_profile_id", match.profileIdB);
+    } catch {
+      /* private mode */
+    }
+
+    const preview = ensureMatchPreviewSession({
+      a_profile_id: match.profileIdA,
+      b_profile_id: match.profileIdB,
+      locale,
+    });
+    match.setPreviewId(preview.preview_id);
+    patchMatchPreviewSession({
+      pending_question: q,
+      unlock_status: preview.unlock_status === "unlocked" ? "unlocked" : "preview",
+    });
+
+    const next = loadMatchPreviewSession();
+    if (next && isMatchPreviewSession(next)) {
+      match.setPhase("paywall");
+      return;
+    }
+    match.setPhase("generating");
+  }
+
+  async function handleUnlocked() {
+    const q = match.relationship.trim();
+    patchMatchPreviewSession({
+      unlock_status: "unlocked",
+      pending_question: q,
+    });
+    try {
+      sessionStorage.setItem("match_relationship", q);
+    } catch {
+      /* private mode */
+    }
+    match.setPhase("generating");
+  }
+
+  if (match.phase === "warmup") {
+    return (
+      <div className="workspace-product-stack workspace-poju-stack workspace-match-stack">
+        <WorkspaceMatchWarmupStage />
+      </div>
+    );
+  }
+
+  if (match.phase === "inquiry" || match.phase === "paywall") {
+    return (
+      <div className="workspace-product-stack workspace-poju-stack workspace-match-stack workspace-match-stack--inquiry">
+        <WorkspaceScrollArea className="workspace-match-inquiry-scroll" fixedThumbPx={52}>
+          <div className="workspace-match-inquiry-stage">
+            <WorkspaceMatchInquiryForm
+              value={match.relationship}
+              onChange={match.setRelationship}
+              onSubmit={handleInquirySubmit}
+              submitBusy={match.phase === "paywall"}
+            />
+          </div>
+        </WorkspaceScrollArea>
+        {match.phase === "paywall" && match.previewId ? (
+          <div
+            className="workspace-match-paywall-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="workspace-match-paywall-title"
+          >
+            <button
+              type="button"
+              className="workspace-match-paywall-modal__backdrop"
+              aria-label="Close"
+              onClick={() => match.setPhase("inquiry")}
+            />
+            <div className="workspace-match-paywall-modal__panel" id="workspace-match-paywall-title">
+              <ToolPaywallInline
+                product="match"
+                previewId={match.previewId}
+                locale={locale}
+                pendingQuestion={match.relationship.trim()}
+                onUnlocked={() => void handleUnlocked()}
+              />
+            </div>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (match.phase === "generating") {
+    return (
+      <div className="workspace-product-stack workspace-poju-stack workspace-match-stack">
+        <WorkspaceMatchGeneratingStage />
+      </div>
+    );
+  }
+
+  if (match.phase === "delivery" && match.matchSession) {
+    return (
+      <div className="workspace-product-stack workspace-poju-stack workspace-match-stack workspace-match-stack--delivery">
+        <WorkspaceScrollArea className="workspace-match-delivery" fixedThumbPx={52}>
+          <MatchDeliveryView session={match.matchSession} locale={locale} variant="live" />
+        </WorkspaceScrollArea>
+      </div>
+    );
+  }
+
+  /* Stage 1 — Match A then Match B birth entry */
+  return (
+    <div className="workspace-product-stack workspace-poju-stack">
+      <div className="workspace-product-hero">
+        <MatchProductHero copy={heroCopy} hideActions />
+      </div>
+      <div className="workspace-product-below workspace-poju-below">
+        <div className="workspace-poju-below__unit">
+          <WorkspaceMatchBirthSideCopy hasProfiles={hasProfiles} />
+          <div className="workspace-poju-birth">
+            <p className="workspace-match-slot-badge" aria-live="polite">
+              {match.collectingSlot === "a" ? tWs("slot_a") : tWs("slot_b")}
+            </p>
+            <WorkspacePojuBirthHost
+              key={match.collectingSlot}
+              usageProduct="match"
+              excludeProfileId={match.collectingSlot === "b" ? match.profileIdA : null}
+              onHasProfilesChange={setHasProfiles}
+              onPrepareStart={handleBirthConfirmed}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function SyncroPanel({ onOpenArchive }: { onOpenArchive: (id: string) => void }) {
-  return <EnginePanel productId="syncro" price="Free" onOpenArchive={onOpenArchive} />;
+  const t = useTranslations("marketingSite.syncro");
+  const heroCopy = {
+    brandTag: t("hero.brand_tag"),
+    heading: t("hero.heading"),
+    description: t("hero.description"),
+    tagline: t.has("hero.tagline") ? t("hero.tagline") : undefined,
+    cta: t("hero.cta"),
+    billingNotice: t("hero.billing_notice"),
+  };
+
+  return (
+    <WorkspaceProductHome hero={<SyncroProductHero copy={heroCopy} hideActions />}>
+      <EnginePanel productId="syncro" price="Free" onOpenArchive={onOpenArchive} />
+    </WorkspaceProductHome>
+  );
 }
 
 export function GlyphPanel({ onOpenArchive }: { onOpenArchive: (id: string) => void }) {
-  return <EnginePanel productId="glyph" price="$9.99" onOpenArchive={onOpenArchive} />;
+  const t = useTranslations("marketingSite.glyph");
+  const heroCopy = {
+    brandTag: t("hero.brand_tag"),
+    heading: t("hero.heading"),
+    description: t("hero.description"),
+    tagline: t.has("hero.tagline") ? t("hero.tagline") : undefined,
+    cta: t("hero.cta"),
+    billingNotice: t("hero.billing_notice"),
+  };
+
+  return (
+    <WorkspaceProductHome hero={<OracleProductHero copy={heroCopy} hideActions />}>
+      <EnginePanel productId="glyph" price="$4.99" onOpenArchive={onOpenArchive} />
+    </WorkspaceProductHome>
+  );
 }

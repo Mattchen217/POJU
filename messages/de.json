@@ -1169,6 +1169,11 @@
     "ready": "Analysiert",
     "view_analysis": "Vollständigen Bericht ansehen",
     "delete": "Löschen",
+    "rename": "Umbenennen",
+    "rename_prompt": "Dieses Profil umbenennen",
+    "rename_cancel": "Abbrechen",
+    "rename_save": "Speichern",
+    "card_menu": "Profilaktionen",
     "created_at": "Erstellt {date}",
     "confirm_delete": "Dieses gespeicherte Profil von diesem Gerät löschen?",
     "refund_link": "Ich möchte nicht teilen — Erstattung",
@@ -1993,7 +1998,29 @@
       "free_first_time": "Erstes Mal kostenlos"
     },
     "select_first_person": "Wähle oder füge das Profil der ersten Person hinzu",
-    "select_second_person": "Wähle oder füge das Profil der zweiten Person hinzu — wird in deiner Bibliothek gespeichert"
+    "select_second_person": "Wähle oder füge das Profil der zweiten Person hinzu — wird in deiner Bibliothek gespeichert",
+    "workspace": {
+      "side_title": "Match starten",
+      "side_body": "Bitte geben Sie die Geburtsdaten beider Personen ein. Damit kalibrieren wir Ihre einzigartige Energie für eine personalisierte, hochpräzise Beratung.",
+      "side_body_returning": "Bitte wählen Sie die Geburtsdaten beider Personen, oder geben Sie sie erneut ein. Damit kalibrieren wir Ihre einzigartige Energie für eine personalisierte, hochpräzise Beratung.",
+      "submit": "MATCH starten",
+      "slot_a": "Match A",
+      "slot_b": "Match B",
+      "inquiry": {
+        "welcome_text": "Wenn zwei Personen eine Beziehung, Partnerschaft oder ein konkretes Vorhaben beginnen, treffen Kommunikationsgewohnheiten,\nEntscheidungslogik und innere Rhythmen tiefgreifend aufeinander. Auf Basis Ihrer Kerneigenschaften bietet diese\nAnalyse objektive Einblicke und Empfehlungen für eine optimale Zusammenarbeit bei gemeinsamen Zielen.",
+        "guidance_text": "Bitte beschreiben Sie unten das konkrete Vorhaben, das Sie gemeinsam planen. Je detaillierter die Beschreibung,\ndesto präziser lassen sich ergänzende Stärken und potenzielle Kommunikationshürden aufzeigen.",
+        "placeholder_header": "Sie können wie folgt fragen (auswählen oder direkt eingeben):",
+        "examples": {
+          "business": "Geschäftspartnerschaft: 'Wir planen, gemeinsam ein Unternehmen zu gründen / zu investieren. Wie können wir uns bei Entscheidungen und Aufgabenteilung effizient abstimmen?'",
+          "relationship": "Langfristige Beziehung: 'Wir erwägen die Ehe / eine feste Partnerschaft. Welchen Anpassungsbedarf gibt es bei der täglichen Kommunikation und Familienentscheidungen?'",
+          "specific_task": "Konkretes Vorhaben: 'Wir planen eine gemeinsame Reise nächsten Monat / ein Projekt. Wie vermeiden wir potenzielle Meinungsverschiedenheiten?'"
+        },
+        "welcome_title": "Willkommen zur Bewertung der Synergie & Entscheidungskompatibilität",
+        "input_placeholder": "Beschreiben Sie das konkrete Vorhaben oder die Frage, die Sie gemeinsam angehen…"
+      },
+      "portrait_a": "Match A {title}",
+      "portrait_b": "Match B {title}"
+    }
   },
   "pwa": {
     "disclaimer": {
