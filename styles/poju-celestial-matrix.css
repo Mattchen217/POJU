@@ -525,6 +525,25 @@
   border-radius: 0 0 14px 14px;
 }
 
+/* Expanded report: drop A4 paper chrome — content sits on the right rail */
+.pcm-rail-paper--report.is-flat .a4-paper-sheet__paper {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.pcm-rail-paper--report.is-flat .pcm-stage--in-paper .pcm-navframe {
+  border-radius: 0;
+}
+
+.pcm-rail-paper--report.is-flat .pcm-stage--in-paper .pcm-shell__panel {
+  border-radius: 0;
+  box-shadow: none;
+}
+
 .pcm-rail-report__body {
   min-height: 8rem;
   color: rgba(228, 228, 231, 0.95);

@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
 
 type Props = {
   children: ReactNode;
@@ -16,6 +23,8 @@ type Props = {
    * Use for left / center / right so all three match visually.
    */
   fixedThumbPx?: number;
+  /** Optional external ref to the scrollable viewport (e.g. chat stick-to-bottom). */
+  viewportRef?: RefObject<HTMLDivElement | null>;
 };
 
 const OVERFLOW_EPS = 4;
@@ -30,11 +39,22 @@ export function WorkspaceScrollArea({
   viewportClassName,
   thumbMaxRatio,
   fixedThumbPx,
+  viewportRef: viewportRefProp,
 }: Props) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const railRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ startY: number; startScroll: number } | null>(null);
   const [thumb, setThumb] = useState({ top: 0, height: 0, visible: false });
+
+  const setViewportNode = useCallback(
+    (node: HTMLDivElement | null) => {
+      viewportRef.current = node;
+      if (viewportRefProp) {
+        viewportRefProp.current = node;
+      }
+    },
+    [viewportRefProp],
+  );
 
   const syncThumb = useCallback(() => {
     const el = viewportRef.current;
@@ -144,7 +164,7 @@ export function WorkspaceScrollArea({
   return (
     <div className={["workspace-scroll", className].filter(Boolean).join(" ")}>
       <div
-        ref={viewportRef}
+        ref={setViewportNode}
         className={["workspace-scroll__viewport", viewportClassName]
           .filter(Boolean)
           .join(" ")}

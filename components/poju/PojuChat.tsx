@@ -21,6 +21,7 @@ import {
   type SessionSidebarDialogState,
 } from "@/components/poju/SessionSidebarDialog";
 import { QuestionBriefingDialog } from "@/components/poju/QuestionBriefingDialog";
+import { WorkspaceScrollArea } from "@/components/workspace/WorkspaceScrollArea";
 import "./poju-chat.css";
 import "@/styles/reading-typography.css";
 
@@ -722,6 +723,109 @@ export default function PojuChat(props: PojuChatProps) {
         </header>
         )}
 
+        {workspaceChrome ? (
+          <WorkspaceScrollArea
+            className="pchat__ws-scroll"
+            viewportClassName="pchat__scroll pchat__scroll--ws"
+            viewportRef={scrollRef}
+            fixedThumbPx={52}
+          >
+            <div className="pchat__messages">
+            {messages.map((m) => {
+              const isPendingReply = m.id === pendingReplyId;
+              const showPendingBundle =
+                isPendingReply &&
+                m.role === "assistant" &&
+                (activityOverlayVisible || revealPendingContent);
+              return (
+              <div key={m.id}>
+                <div
+                  className={`pchat__msg pchat__msg--${
+                    m.role === "user" ? "user" : "ai"
+                  }`}
+                >
+                  {m.role === "user" ? (
+                    <>
+                      <div className="pchat__bubble">{m.content}</div>
+                      {m.editable && onEditMessage ? (
+                        <button
+                          type="button"
+                          className="pchat__msg-edit icon-btn"
+                          disabled={editDisabled}
+                          onClick={() => onEditMessage(m.id, m.content)}
+                          aria-label={editLabel ?? "Edit"}
+                        >
+                          <span className="material-symbols-outlined">edit</span>
+                        </button>
+                      ) : null}
+                    </>
+                  ) : showPendingBundle ? (
+                    <AiReplyShell>
+                      <div
+                        className={`pchat__pending-bundle${
+                          revealPendingContent ? " is-revealed" : ""
+                        }${pendingActivityFading ? " is-fading" : ""}`}
+                      >
+                        <div
+                          className="pchat__pending-bundle__content"
+                          aria-hidden={!revealPendingContent}
+                        >
+                          {renderAssistantBody(m, revealPendingContent)}
+                        </div>
+                        {activityOverlayVisible && pendingActivityLines?.length ? (
+                          <div className="pchat__pending-bundle__activity">
+                            <PojuActivityIndicator
+                              lines={pendingActivityLines}
+                              thinkingLine={thinkingLiveLine}
+                            />
+                          </div>
+                        ) : null}
+                      </div>
+                    </AiReplyShell>
+                  ) : bareMessageSlotIds?.has(m.id) && messageSlots?.[m.id] ? (
+                    messageSlots[m.id]
+                  ) : (
+                    <AiReplyShell>
+                      {renderAssistantBody(m)}
+                    </AiReplyShell>
+                  )}
+                </div>
+                {messageFollowUps?.[m.id] ? (
+                  <div className="pchat__msg pchat__msg--ai">
+                    <AiReplyShell>
+                      {messageFollowUps[m.id]}
+                      {messageFollowUpActionsText?.[m.id] ? (
+                        <AssistantMessageActions
+                          content={messageFollowUpActionsText[m.id]!}
+                          locale={thinkingLocale ?? "en"}
+                        />
+                      ) : null}
+                    </AiReplyShell>
+                  </div>
+                ) : null}
+              </div>
+            );
+            })}
+
+            {inlineNotice ? <div className="pchat__inline-notice">{inlineNotice}</div> : null}
+
+            <div
+              className={`pchat__activity-slot${
+                activitySlotVisible ? " is-visible" : ""
+              }${pendingActivityFading ? " is-fading" : ""}`}
+              aria-hidden={!activitySlotVisible}
+            >
+              {pendingOnlyLegacy || (pendingActivityFading && !pendingReplyId && pendingActivityLines?.length) ? (
+                <div className="pchat__msg pchat__msg--ai pchat__pending-reply">
+                  <AiReplyShell>
+                    <PojuActivityIndicator lines={pendingActivityLines!} thinkingLine={thinkingLiveLine} />
+                  </AiReplyShell>
+                </div>
+              ) : null}
+            </div>
+          </div>
+          </WorkspaceScrollArea>
+        ) : (
         <div className="pchat__scroll" ref={scrollRef}>
           <div className="pchat__messages">
             {messages.map((m) => {
@@ -818,6 +922,7 @@ export default function PojuChat(props: PojuChatProps) {
             </div>
           </div>
         </div>
+        )}
           </>
         ) : null}
 

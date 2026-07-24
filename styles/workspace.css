@@ -1805,46 +1805,19 @@
   background: transparent;
 }
 
-.workspace-poju-opening .pchat--workspace .pchat__scroll {
+.workspace-poju-opening .pchat--workspace .pchat__ws-scroll {
   flex: 1 1 auto;
   min-height: 0;
-  /* Match thickened workspace rail scroll thumb (gray pill) */
-  scrollbar-width: auto;
-  scrollbar-color: rgba(161, 161, 170, 0.55) transparent;
+  height: 100%;
 }
 
-.workspace-poju-opening .pchat--workspace .pchat__scroll::-webkit-scrollbar {
-  display: block;
-  width: 16px;
-  height: 16px;
+.workspace-poju-opening .pchat--workspace .pchat__scroll--ws {
+  /* Same custom thumb as right rail — hide native scrollbar entirely */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-.workspace-poju-opening .pchat--workspace .pchat__scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.workspace-poju-opening .pchat--workspace .pchat__scroll::-webkit-scrollbar-thumb {
-  background: rgba(161, 161, 170, 0.55);
-  border-radius: 9999px;
-  border: 4px solid transparent;
-  background-clip: padding-box;
-  min-height: 48px;
-}
-
-.workspace-poju-opening .pchat--workspace .pchat__scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(161, 161, 170, 0.8);
-  background-clip: padding-box;
-  border: 4px solid transparent;
-}
-
-.workspace-poju-opening .pchat--workspace .pchat__scroll::-webkit-scrollbar-thumb:active {
-  background: rgba(196, 181, 253, 0.75);
-  background-clip: padding-box;
-  border: 4px solid transparent;
-}
-
-.workspace-poju-opening .pchat--workspace .pchat__scroll::-webkit-scrollbar-button,
-.workspace-poju-opening .pchat--workspace .pchat__scroll::-webkit-scrollbar-corner {
+.workspace-poju-opening .pchat--workspace .pchat__scroll--ws::-webkit-scrollbar {
   display: none;
   width: 0;
   height: 0;
