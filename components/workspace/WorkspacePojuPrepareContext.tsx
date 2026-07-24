@@ -35,6 +35,10 @@ type PrepareState = {
   matrixExpanded: boolean;
   /** Personal energy analysis report paper open in the right rail. */
   reportExpanded: boolean;
+  /** Chat-style unread until user opens the energy portrait. */
+  matrixUnread: boolean;
+  /** Chat-style unread until user opens the analysis report. */
+  reportUnread: boolean;
   error: string | null;
   /** @deprecated Center ritual removed — kept false; pipeline uses baseReportStatus. */
   unlockRitualActive: boolean;
@@ -75,6 +79,8 @@ const INITIAL: PrepareState = {
   session: null,
   matrixExpanded: false,
   reportExpanded: false,
+  matrixUnread: false,
+  reportUnread: false,
   error: null,
   unlockRitualActive: false,
   baseReportText: null,
@@ -108,7 +114,12 @@ export function WorkspacePojuPrepareProvider({
   }, []);
 
   const setMatrixPayload = useCallback((matrixPayload: PojuMatrixPayload | null) => {
-    setState((s) => ({ ...s, matrixPayload }));
+    setState((s) => ({
+      ...s,
+      matrixPayload,
+      /** Fresh matrix → unread until user opens the portrait. */
+      matrixUnread: Boolean(matrixPayload),
+    }));
   }, []);
 
   const setSession = useCallback((session: POJUSessionState | null) => {
@@ -116,11 +127,19 @@ export function WorkspacePojuPrepareProvider({
   }, []);
 
   const setMatrixExpanded = useCallback((matrixExpanded: boolean) => {
-    setState((s) => ({ ...s, matrixExpanded }));
+    setState((s) => ({
+      ...s,
+      matrixExpanded,
+      matrixUnread: matrixExpanded ? false : s.matrixUnread,
+    }));
   }, []);
 
   const setReportExpanded = useCallback((reportExpanded: boolean) => {
-    setState((s) => ({ ...s, reportExpanded }));
+    setState((s) => ({
+      ...s,
+      reportExpanded,
+      reportUnread: reportExpanded ? false : s.reportUnread,
+    }));
   }, []);
 
   const setError = useCallback((error: string | null) => {
@@ -135,6 +154,7 @@ export function WorkspacePojuPrepareProvider({
       baseReportStatus: "generating",
       baseReportError: null,
       baseReportText: null,
+      reportUnread: false,
       /** Force-collapse bazi list; user may expand again (wait ritual slides down). */
       matrixExpanded: false,
       reportExpanded: false,
@@ -151,6 +171,7 @@ export function WorkspacePojuPrepareProvider({
       baseReportError: null,
       /** Arrive folded — user opens the report paper explicitly. */
       reportExpanded: false,
+      reportUnread: true,
     }));
   }, []);
 

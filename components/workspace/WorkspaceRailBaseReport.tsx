@@ -9,11 +9,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { RichReadingText } from "@/components/cross-product/RichReadingText";
+import { ArchiveUnreadDot } from "@/components/archive/ArchiveUnreadDot";
 import {
   A4PaperSheet,
   EnergyReportGlyph,
   type A4PaperSheetMode,
 } from "@/components/ui/A4PaperSheet";
+import { useWorkspacePojuPrepareOptional } from "@/components/workspace/WorkspacePojuPrepareContext";
 import { parseBaseAnalysisSections } from "@/lib/base-analysis/parse-base-analysis-sections";
 import { stripBaseAnalysisClosingLines } from "@/lib/base-analysis/report-closing";
 
@@ -65,6 +67,8 @@ export function WorkspaceRailBaseReport({
 }: Props) {
   const t = useTranslations("base_analysis_view");
   const ts = useTranslations("base_analysis_view.sections");
+  const prepare = useWorkspacePojuPrepareOptional();
+  const showReportUnread = Boolean(prepare?.reportUnread);
   const [activeBlock, setActiveBlock] = useState<ReportBlockId>("section_1");
   const [railSheetMode, setRailSheetMode] = useState<A4PaperSheetMode>(() =>
     expanded ? "flat" : "folded",
@@ -168,7 +172,12 @@ export function WorkspaceRailBaseReport({
           tabIndex={railSheetMode === "folded" ? 0 : -1}
           aria-hidden={railSheetMode === "flat" ? true : undefined}
         >
-          <EnergyReportGlyph className="pcm-rail-paper__glyph" />
+          <span className="pcm-rail-paper__glyph-wrap">
+            <EnergyReportGlyph className="pcm-rail-paper__glyph" />
+            {showReportUnread ? (
+              <ArchiveUnreadDot className="pcm-rail-paper__unread" />
+            ) : null}
+          </span>
           <span className="pcm-rail-paper__cover-title">{t("title")}</span>
         </button>
 

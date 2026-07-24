@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 
+import { ArchiveUnreadDot } from "@/components/archive/ArchiveUnreadDot";
 import { EnergyPortraitGlyph, EnergyReportGlyph } from "@/components/ui/A4PaperSheet";
 import { useWorkspacePojuPrepareOptional } from "@/components/workspace/WorkspacePojuPrepareContext";
 
@@ -24,6 +25,8 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
   const reportReady =
     prepare.baseReportStatus === "ready" && Boolean(prepare.baseReportText);
   const showReport = generating || reportReady;
+  const matrixUnread = hasMatrix && prepare.matrixUnread;
+  const reportUnread = reportReady && prepare.reportUnread;
 
   if (!hasMatrix && !showReport) return null;
 
@@ -45,6 +48,9 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
           <span className="workspace-sidebar__icon" aria-hidden>
             <EnergyPortraitGlyph className="workspace-right-collapsed-icons__portrait" />
           </span>
+          {matrixUnread ? (
+            <ArchiveUnreadDot className="workspace-right-collapsed-icons__unread" />
+          ) : null}
         </button>
       ) : null}
 
@@ -76,6 +82,9 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
           <span className="workspace-sidebar__icon" aria-hidden>
             <EnergyReportGlyph className="workspace-right-collapsed-icons__report" />
           </span>
+          {reportUnread ? (
+            <ArchiveUnreadDot className="workspace-right-collapsed-icons__unread" />
+          ) : null}
         </button>
       ) : null}
     </div>

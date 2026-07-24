@@ -12,6 +12,7 @@ import {
 import { useTranslations } from "next-intl";
 
 import { SoftTermHover } from "@/components/cross-product/GlossaryText";
+import { ArchiveUnreadDot } from "@/components/archive/ArchiveUnreadDot";
 import { MatrixElementLabel } from "@/components/poju/MatrixElementLabel";
 import { PojuDaYunTimeline } from "@/components/poju/PojuDaYunTimeline";
 import {
@@ -19,6 +20,7 @@ import {
   EnergyPortraitGlyph,
   type A4PaperSheetMode,
 } from "@/components/ui/A4PaperSheet";
+import { useWorkspacePojuPrepareOptional } from "@/components/workspace/WorkspacePojuPrepareContext";
 import {
   elementCssClass,
   isZhMatrixLocale,
@@ -831,6 +833,8 @@ export function PojuEnergyMatrix({
   const tb = useTranslations("bazi");
   const tm = useTranslations("poju_matrix");
   const tc = useTranslations("poju_matrix.card");
+  const prepare = useWorkspacePojuPrepareOptional();
+  const showMatrixUnread = Boolean(hideChrome && prepare?.matrixUnread);
 
   const display = useMemo(() => {
     const base = buildMatrixDisplayData({
@@ -1043,7 +1047,12 @@ export function PojuEnergyMatrix({
                 tabIndex={railSheetMode === "folded" ? 0 : -1}
                 aria-hidden={railSheetMode === "flat" ? true : undefined}
               >
-                <EnergyPortraitGlyph className="pcm-rail-paper__glyph" />
+                <span className="pcm-rail-paper__glyph-wrap">
+                  <EnergyPortraitGlyph className="pcm-rail-paper__glyph" />
+                  {showMatrixUnread ? (
+                    <ArchiveUnreadDot className="pcm-rail-paper__unread" />
+                  ) : null}
+                </span>
                 <span className="pcm-rail-paper__cover-title">
                   {tMatrix(locale, "main_title")}
                 </span>

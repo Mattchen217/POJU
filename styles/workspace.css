@@ -223,6 +223,14 @@
   outline-offset: 2px;
 }
 
+.workspace-right-collapsed-icons__unread {
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  z-index: 2;
+}
+
 .workspace-right-collapsed-icons__btn .workspace-sidebar__icon {
   display: inline-flex;
   align-items: center;
@@ -337,7 +345,7 @@
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding-right: 12px;
+  padding-right: 14px;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -353,7 +361,7 @@
   right: 0;
   top: 4px;
   bottom: 4px;
-  width: 10px;
+  width: 16px;
   z-index: 5;
   cursor: pointer;
   display: flex;
@@ -361,7 +369,7 @@
 }
 
 .workspace-scroll__thumb {
-  width: 4px;
+  width: 8px;
   border-radius: 9999px;
   background: rgba(161, 161, 170, 0.55);
   will-change: transform;
@@ -1776,15 +1784,15 @@
 .workspace-poju-opening .pchat--workspace .pchat__scroll {
   flex: 1 1 auto;
   min-height: 0;
-  /* Match workspace right-rail scroll thumb (gray pill), not pchat glass scrollbar */
-  scrollbar-width: thin;
+  /* Match thickened workspace rail scroll thumb (gray pill) */
+  scrollbar-width: auto;
   scrollbar-color: rgba(161, 161, 170, 0.55) transparent;
 }
 
 .workspace-poju-opening .pchat--workspace .pchat__scroll::-webkit-scrollbar {
   display: block;
-  width: 10px;
-  height: 10px;
+  width: 16px;
+  height: 16px;
 }
 
 .workspace-poju-opening .pchat--workspace .pchat__scroll::-webkit-scrollbar-track {
@@ -1794,21 +1802,21 @@
 .workspace-poju-opening .pchat--workspace .pchat__scroll::-webkit-scrollbar-thumb {
   background: rgba(161, 161, 170, 0.55);
   border-radius: 9999px;
-  border: 3px solid transparent;
+  border: 4px solid transparent;
   background-clip: padding-box;
-  min-height: 32px;
+  min-height: 48px;
 }
 
 .workspace-poju-opening .pchat--workspace .pchat__scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(161, 161, 170, 0.8);
   background-clip: padding-box;
-  border: 2px solid transparent;
+  border: 4px solid transparent;
 }
 
 .workspace-poju-opening .pchat--workspace .pchat__scroll::-webkit-scrollbar-thumb:active {
   background: rgba(196, 181, 253, 0.75);
   background-clip: padding-box;
-  border: 2px solid transparent;
+  border: 4px solid transparent;
 }
 
 .workspace-poju-opening .pchat--workspace .pchat__scroll::-webkit-scrollbar-button,
@@ -1937,7 +1945,7 @@
   display: flex;
   flex-direction: column;
   gap: 0;
-  padding: 8px 4px 20px;
+  padding: 8px 0 16px;
   box-sizing: border-box;
   /* Scroll via parent WorkspaceScrollArea only — do not nest a native scrollbar */
   overflow: visible;

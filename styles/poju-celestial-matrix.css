@@ -420,6 +420,28 @@
   filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.55));
 }
 
+.pcm-rail-paper__glyph-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42%;
+  flex-shrink: 0;
+}
+
+.pcm-rail-paper__glyph-wrap .pcm-rail-paper__glyph {
+  width: 100%;
+}
+
+.pcm-rail-paper__unread {
+  top: -4%;
+  right: -6%;
+  width: 10px;
+  height: 10px;
+  z-index: 2;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.85);
+}
+
 .pcm-rail-paper__cover-title {
   margin: 0;
   width: 100%;
@@ -432,7 +454,7 @@
 }
 
 .pcm-rail-paper.is-flat .pcm-rail-paper__list {
-  padding: 0.35rem 0.35rem 0.5rem;
+  padding: 0;
   box-sizing: border-box;
 }
 
@@ -501,6 +523,15 @@
   background-image: none;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
   border-radius: 0 0 12px 12px;
+}
+
+/* Flat rail paper: fill sheet width (no inset gutter around the report/portrait) */
+.pcm-rail-paper.is-flat .pcm-stage--in-paper .pcm-navframe {
+  border-radius: 14px 14px 0 0;
+}
+
+.pcm-rail-paper.is-flat .pcm-stage--in-paper .pcm-shell__panel {
+  border-radius: 0 0 14px 14px;
 }
 
 .pcm-rail-report__body {
