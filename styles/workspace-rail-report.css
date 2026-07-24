@@ -1,0 +1,246 @@
+/* Right-rail analysis report — folded icon vs open content (no paper parent). */
+
+.ws-rail-report {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* —— Folded: A4 icon only —— */
+.ws-rail-report--folded {
+  position: relative;
+  width: min(148px, 78%);
+  margin: 0 auto;
+}
+
+.ws-rail-report__unread {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  z-index: 6;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.85);
+  pointer-events: none;
+}
+
+.ws-rail-report__icon-sheet {
+  width: 100%;
+}
+
+.ws-rail-report__icon-cover {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(12px, 4vmin, 22px);
+  margin: 0;
+  padding: 18% 12% 16%;
+  border: none;
+  background: transparent;
+  color: rgba(192, 132, 252, 0.98);
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.ws-rail-report__glyph {
+  width: 42%;
+  height: auto;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.55));
+}
+
+.ws-rail-report__icon-title {
+  margin: 0;
+  width: 100%;
+  text-align: center;
+  font-size: clamp(11px, 2.2vmin, 15px);
+  line-height: 1.35;
+  color: rgba(244, 244, 245, 0.94);
+  font-weight: 500;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.65);
+}
+
+/* —— Open: flush content in the rail (this IS the content, not nested in a frame) —— */
+.ws-rail-report--open {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.ws-rail-report__chrome {
+  width: 100%;
+  margin: 0;
+  padding: 1.35rem 0.75rem 0;
+  box-sizing: border-box;
+  background: rgba(139, 92, 246, 0.14);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: inset 0 1px 0 rgba(196, 181, 253, 0.16);
+}
+
+.ws-rail-report__title-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  margin: 0.15rem 0 1.15rem;
+  padding: 0 0.25rem;
+  text-align: center;
+}
+
+.ws-rail-report__title {
+  margin: 0;
+  font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+  font-weight: 700;
+  line-height: 1.25;
+  color: #fff;
+}
+
+.ws-rail-report__desc {
+  margin: 0;
+  max-width: 100%;
+  font-size: clamp(0.7rem, 1.45vw, 0.8rem);
+  line-height: 1.45;
+  color: rgba(228, 228, 231, 0.88);
+}
+
+.ws-rail-report__tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  gap: 0;
+  border: none;
+  background: transparent;
+}
+
+.ws-rail-report__tab {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  padding: 0.75rem 0.15rem 0.85rem;
+  border: none;
+  border-radius: 10px 10px 0 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.78);
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.ws-rail-report__tab:hover {
+  color: #fff;
+}
+
+.ws-rail-report__tab.is-active {
+  color: #fff;
+  background: #1b1a26;
+  box-shadow: 0 1px 0 #1b1a26;
+  z-index: 2;
+}
+
+.ws-rail-report__tab-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.12em;
+  font-weight: 700;
+}
+
+.ws-rail-report__tab-line {
+  display: block;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.ws-rail-report[data-locale="zh"] .ws-rail-report__tab {
+  font-size: 0.9375rem;
+  letter-spacing: 0.04em;
+}
+
+.ws-rail-report[data-locale="es"] .ws-rail-report__tab,
+.ws-rail-report[data-locale="de"] .ws-rail-report__tab,
+.ws-rail-report[data-locale="fr"] .ws-rail-report__tab {
+  font-size: 0.75rem;
+}
+
+.ws-rail-report__panel {
+  width: 100%;
+  margin: 0;
+  padding: 1.25rem 0.75rem 1.5rem;
+  box-sizing: border-box;
+  background: #1b1a26;
+}
+
+.ws-rail-report__body {
+  min-height: 8rem;
+  color: rgba(228, 228, 231, 0.95);
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.ws-rail-report__empty {
+  margin: 0;
+  color: rgba(161, 161, 170, 0.9);
+  font-size: 0.8125rem;
+}
+
+.ws-rail-report__footer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 0.5rem;
+  margin-top: 1.25rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(167, 139, 250, 0.18);
+}
+
+.ws-rail-report__footer-slot {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.ws-rail-report__footer-slot--start {
+  justify-content: flex-start;
+}
+
+.ws-rail-report__footer-slot--end {
+  justify-content: flex-end;
+}
+
+.ws-rail-report__nav,
+.ws-rail-report__close {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0.45rem 0.65rem;
+  border: none;
+  border-radius: 9999px;
+  background: transparent;
+  color: rgba(228, 228, 231, 0.85);
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.ws-rail-report__nav:hover,
+.ws-rail-report__close:hover {
+  color: #fff;
+  background: rgba(139, 92, 246, 0.16);
+}
+
+.ws-rail-report__close {
+  justify-self: center;
+}

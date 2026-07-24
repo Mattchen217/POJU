@@ -1961,8 +1961,8 @@
   min-width: 0;
   box-sizing: border-box;
   margin-top: 12px;
-  padding: 12px 0 0;
-  border-top: 1px solid rgba(212, 175, 55, 0.22);
+  padding: 0;
+  border-top: none;
 }
 
 .workspace-right-matrix__report--enter {
