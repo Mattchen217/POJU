@@ -1119,7 +1119,7 @@ export async function GET(req: Request) {
       }),
       {
         headers: {
-          'User-Agent': 'pojulife/1.0 (https://pojulife.com)'
+          'User-Agent': 'pojulife/1.0 (https://easternos.com)'
         }
       }
     );

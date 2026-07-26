@@ -41,7 +41,7 @@
 ## 问题描述
 
 ```
-用户在华为安卓手机浏览器打开 pojulife.com,
+用户在华为安卓手机浏览器打开 easternos.com,
 点击我们的 "Install" 按钮,
 结果:
   - 主屏上只创建了【网页快捷方式】
@@ -232,7 +232,7 @@ function ChromeRedirectGuide({ browserName }: { browserName: string }) {
   const t = useTranslations('pwa.install.chrome_required');
   
   function copyUrl() {
-    navigator.clipboard.writeText('https://pojulife.com');
+    navigator.clipboard.writeText('https://easternos.com');
   }
   
   return (
@@ -259,7 +259,7 @@ function ChromeRedirectGuide({ browserName }: { browserName: string }) {
             <strong>{t('step_2_title')}</strong>
             <p>{t('step_2_desc')}</p>
             <button className="copy-url-btn" onClick={copyUrl}>
-              pojulife.com <i className="ti ti-copy" />
+              easternos.com <i className="ti ti-copy" />
             </button>
           </div>
         </div>
@@ -306,7 +306,7 @@ function getBrowserDisplay(name: string): string {
         "subtitle_huawei": "{browser} doesn't support pojulife's full app installation. Please open this page in Chrome to install.",
         "step_1_title": "Install Chrome",
         "step_1_desc": "Get it from your app store if you don't have it",
-        "step_2_title": "Open pojulife.com in Chrome",
+        "step_2_title": "Open easternos.com in Chrome",
         "step_2_desc": "Copy the link below, then paste it into Chrome's address bar",
         "step_3_title": "Tap 'Install'",
         "step_3_desc": "Chrome will show an install button — tap to add pojulife to your home screen",
@@ -328,7 +328,7 @@ function getBrowserDisplay(name: string): string {
         "subtitle_huawei": "{browser} 不支持 pojulife 的完整应用安装,请用 Chrome 打开此页面安装。",
         "step_1_title": "安装 Chrome",
         "step_1_desc": "如果还没有,从应用商店下载",
-        "step_2_title": "在 Chrome 中打开 pojulife.com",
+        "step_2_title": "在 Chrome 中打开 easternos.com",
         "step_2_desc": "复制下方链接,粘贴到 Chrome 地址栏",
         "step_3_title": "点击 '安装'",
         "step_3_desc": "Chrome 会显示安装按钮,点击即可将 pojulife 添加到桌面",

@@ -28,6 +28,31 @@
   /* Shared dock row — keeps left/right toggle icons on one horizontal line */
   --ws-dock-row-height: 52px;
   --ws-dock-edge-gap: 2px;
+  /*
+   * Report upper chrome — brighter purple-glass than the A4 CSS base so it
+   * reads like the folded document icon next to the open report.
+   */
+  --ws-frame-chrome: linear-gradient(
+    155deg,
+    rgba(78, 56, 130, 0.96) 0%,
+    rgba(54, 38, 96, 0.94) 42%,
+    rgba(34, 24, 64, 0.92) 100%
+  );
+  --ws-frame-chrome-hover: linear-gradient(
+    155deg,
+    rgba(88, 64, 144, 0.98) 0%,
+    rgba(62, 44, 108, 0.96) 42%,
+    rgba(40, 28, 72, 0.94) 100%
+  );
+  --ws-frame-chrome-solid: rgba(54, 38, 96, 0.94);
+  --ws-frame-well: #0b0a10;
+  /* Match A4 document icon border (lavender stroke + soft purple rim) */
+  --ws-frame-border: rgba(167, 139, 250, 0.5);
+  --ws-frame-shadow:
+    0 0 0 1px rgba(139, 92, 246, 0.16),
+    0 8px 32px rgba(0, 0, 0, 0.25),
+    0 0 28px rgba(139, 92, 246, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
 
   /* Full-viewport stage: darker near-black (less purple than homepage ambient) */
   position: relative;
@@ -2619,6 +2644,24 @@
   max-height: none;
 }
 
+/* Match: pinned tip above cards — same dashed shell as add-new, non-interactive */
+.workspace-shell .workspace-poju-below .workspace-poju-match-hint.add-new-card-button {
+  margin-top: 0;
+  margin-bottom: 8px;
+  cursor: default;
+  pointer-events: none;
+  text-align: center;
+  line-height: 1.45;
+  color: #d4af37;
+  background: rgba(212, 175, 55, 0.05);
+}
+
+.workspace-poju-match-hint__text {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+}
+
 .workspace-poju-add-new .plus-icon {
   font-size: 16px;
   margin-bottom: 2px;
@@ -3409,24 +3452,18 @@
 }
 
 .workspace-sidebar__subitem:hover {
-  background: rgba(139, 92, 246, 0.06);
+  background: transparent;
   color: #fff;
 }
 
-/* Nest siblings share one lavender; opacity only differs. New XOR Past. */
+/* New / History: no selected fill — text emphasis only */
 .workspace-sidebar__subitem--new.is-active,
-.workspace-sidebar__subitem--new[aria-current="page"] {
-  background: rgba(139, 92, 246, 0.22);
-  border-color: transparent;
-  color: #fff;
-  box-shadow: none;
-}
-
+.workspace-sidebar__subitem--new[aria-current="page"],
 .workspace-sidebar__past-toggle.is-active,
 .workspace-sidebar__past-toggle[aria-current="page"] {
-  background: rgba(139, 92, 246, 0.14);
+  background: transparent;
   border-color: transparent;
-  color: rgba(255, 255, 255, 0.92);
+  color: #fff;
   box-shadow: none;
 }
 
@@ -3939,16 +3976,6 @@
 }
 
 /* —— Match workspace stages —— */
-.workspace-match-slot-badge {
-  margin: 0 0 8px;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--purple-vivid, #c084fc);
-  text-align: center;
-}
-
 .workspace-match-warmup {
   position: relative;
   width: 100%;
@@ -4096,7 +4123,7 @@
   margin: 4px auto 0;
   padding: 10px 14px 12px;
   border-radius: 16px;
-  border: 1px solid rgba(167, 139, 250, 0.28);
+  border: none;
   background:
     linear-gradient(180deg, rgba(139, 92, 246, 0.1) 0%, rgba(11, 8, 21, 0.55) 100%);
   box-shadow:
@@ -4194,18 +4221,18 @@
   text-align: left;
   padding: 14px 16px;
   border-radius: 14px;
-  border: 1px solid rgba(167, 139, 250, 0.2);
+  border: none;
   background: rgba(139, 92, 246, 0.05);
   color: rgba(228, 228, 231, 0.9);
   font-size: 13px;
   line-height: 1.5;
   cursor: pointer;
-  transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+  transition: background 180ms ease, transform 180ms ease;
 }
 
 .workspace-match-inquiry__example:hover,
 .workspace-match-inquiry__example.is-active {
-  border-color: rgba(217, 70, 239, 0.45);
+  border: none;
   background: rgba(139, 92, 246, 0.12);
   transform: translateY(-1px);
 }
@@ -4399,3 +4426,480 @@
   max-height: 220px;
   margin-top: 0;
 }
+
+/* Atmos forecast calendar (Sun-Sat · 5x7) */
+.atmos-forecast {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+.atmos-forecast__header {
+  margin-bottom: 24px;
+}
+
+.atmos-forecast__header--center {
+  text-align: center;
+}
+
+.atmos-forecast__title {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+  margin: 0;
+}
+
+.atmos-forecast__sub {
+  margin: 8px auto 0;
+  font-size: 14px;
+  color: var(--text-secondary, #a1a1aa);
+  max-width: 42rem;
+}
+
+.atmos-forecast__cal {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.atmos-forecast__weekdays,
+.atmos-forecast__row {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.atmos-forecast__weekday {
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--gold-rare, #d4af37);
+  padding: 6px 0 4px;
+}
+
+.atmos-forecast__cell {
+  aspect-ratio: 1 / 1;
+  min-height: 0;
+  padding: 12px 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(167, 139, 250, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
+}
+
+/* Past / beyond window — keep prior dark glass look */
+.atmos-forecast__cell.is-past,
+.atmos-forecast__cell.is-beyond {
+  background: rgba(139, 92, 246, 0.06);
+  backdrop-filter: blur(16px);
+}
+
+/* Today + next 29 days — same chrome as energy portrait upper header */
+.atmos-forecast__cell.is-active {
+  background: var(
+    --ws-frame-chrome,
+    linear-gradient(
+      155deg,
+      rgba(78, 56, 130, 0.96) 0%,
+      rgba(54, 38, 96, 0.94) 42%,
+      rgba(34, 24, 64, 0.92) 100%
+    )
+  );
+  border-color: rgba(167, 139, 250, 0.45);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 18px rgba(139, 92, 246, 0.18);
+}
+
+.atmos-forecast__cell.is-today {
+  border-color: rgba(192, 132, 252, 0.65);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 0 28px rgba(139, 92, 246, 0.35);
+}
+
+.atmos-forecast__cell.is-ready.is-active {
+  border-color: rgba(192, 132, 252, 0.55);
+}
+
+.atmos-forecast__date {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  color: var(--text-body, #e4e4e7);
+}
+
+.atmos-forecast__day-num {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.1;
+  color: #fff;
+}
+
+.atmos-forecast__cell.is-past .atmos-forecast__day-num,
+.atmos-forecast__cell.is-beyond .atmos-forecast__day-num {
+  color: var(--text-secondary, #a1a1aa);
+  font-weight: 500;
+}
+
+.atmos-forecast__month-tag {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(228, 228, 231, 0.78);
+}
+
+.atmos-forecast__cell.is-past .atmos-forecast__month-tag,
+.atmos-forecast__cell.is-beyond .atmos-forecast__month-tag {
+  color: rgba(161, 161, 170, 0.75);
+}
+
+.atmos-forecast__pending-row {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+}
+
+.atmos-forecast__pending-label {
+  font-size: 11px;
+  color: rgba(161, 161, 170, 0.92);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.atmos-forecast__parse-btn {
+  flex: 0 0 auto;
+  border: 0;
+  cursor: pointer;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: #1b1030;
+  background: linear-gradient(135deg, #e8c56f 0%, #d4af37 55%, #b8922e 100%);
+  box-shadow: 0 2px 10px rgba(212, 175, 55, 0.28);
+}
+
+.atmos-forecast__parse-btn:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.atmos-forecast__parse-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.atmos-forecast__cta,
+.atmos-forecast__snippet {
+  margin-top: auto;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  border-radius: 9999px;
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #fff;
+  background: #8b5cf6;
+  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.3);
+}
+
+.atmos-forecast__cta:hover:not(:disabled),
+.atmos-forecast__snippet:hover {
+  background: #a855f7;
+}
+
+.atmos-forecast__cta:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.atmos-forecast__snippet {
+  background: rgba(139, 92, 246, 0.28);
+  border: 1px solid rgba(167, 139, 250, 0.4);
+  color: var(--text-body, #e4e4e7);
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.atmos-forecast__snippet-text {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.atmos-forecast__expand {
+  color: var(--purple-vivid, #c084fc);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.atmos-forecast__error {
+  margin-top: 16px;
+  color: #fca5a5;
+  font-size: 13px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.atmos-forecast__retry {
+  border: 0;
+  background: transparent;
+  color: var(--purple-vivid, #c084fc);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.atmos-paywall-backdrop,
+.atmos-reading-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(11, 8, 21, 0.72);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.atmos-paywall-sheet,
+.atmos-reading-sheet {
+  position: relative;
+  width: min(440px, 100%);
+  max-height: min(80vh, 640px);
+  overflow: auto;
+  border-radius: 16px;
+  background: rgba(20, 16, 41, 0.96);
+  border: 1px solid rgba(167, 139, 250, 0.28);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+  padding: 20px;
+}
+
+.atmos-reading-sheet {
+  width: min(560px, 100%);
+}
+
+.atmos-paywall-sheet__close,
+.atmos-reading-sheet__close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary, #a1a1aa);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.atmos-reading-sheet__head {
+  padding-right: 28px;
+  margin-bottom: 16px;
+}
+
+.atmos-reading-sheet__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.atmos-reading-sheet__body {
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--text-body, #e4e4e7);
+}
+
+@media (max-width: 720px) {
+  .atmos-forecast__weekdays,
+  .atmos-forecast__row {
+    gap: 6px;
+  }
+
+  .atmos-forecast__cell {
+    padding: 8px 6px;
+    border-radius: 10px;
+  }
+
+  .atmos-forecast__day-num {
+    font-size: 15px;
+  }
+
+  .atmos-forecast__cta,
+  .atmos-forecast__snippet {
+    font-size: 10px;
+    padding: 6px 8px;
+  }
+
+  .atmos-forecast__weekday {
+    font-size: 12px;
+  }
+}
+
+.atmos-inquiry-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 85;
+  background: rgba(11, 8, 21, 0.72);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.atmos-inquiry-sheet {
+  position: relative;
+  width: min(720px, 100%);
+  max-height: min(90vh, 880px);
+  overflow: auto;
+  border-radius: 18px;
+  background: rgba(20, 16, 41, 0.98);
+  border: 1px solid rgba(167, 139, 250, 0.28);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+  padding: 28px 28px 22px;
+}
+
+.atmos-inquiry-sheet__close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary, #a1a1aa);
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.atmos-inquiry-sheet__date {
+  margin: 0 0 10px;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--gold-rare, #d4af37);
+  font-variant-numeric: tabular-nums;
+}
+
+.atmos-inquiry-sheet__title {
+  margin: 0 0 12px;
+  padding-right: 32px;
+  font-size: 22px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.atmos-inquiry-sheet__hint {
+  margin: 0 0 16px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: rgba(228, 228, 231, 0.88);
+}
+
+.atmos-inquiry-sheet__input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 120px;
+  resize: vertical;
+  margin: 0 0 20px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(167, 139, 250, 0.28);
+  background: rgba(0, 0, 0, 0.28);
+  color: #fff;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.atmos-inquiry-sheet__input:focus {
+  outline: none;
+  border-color: rgba(192, 132, 252, 0.55);
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+}
+
+.atmos-inquiry-sheet__tags-label {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(161, 161, 170, 0.95);
+  text-align: center;
+}
+
+.atmos-inquiry-sheet__examples {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.atmos-inquiry-sheet__example {
+  text-align: left;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: none;
+  background: rgba(139, 92, 246, 0.05);
+  color: rgba(228, 228, 231, 0.9);
+  font-size: 13px;
+  line-height: 1.55;
+  cursor: pointer;
+  transition: background 180ms ease;
+}
+
+.atmos-inquiry-sheet__example:hover,
+.atmos-inquiry-sheet__example.is-active {
+  background: rgba(139, 92, 246, 0.14);
+}
+
+.atmos-inquiry-sheet__example:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.atmos-inquiry-sheet__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  position: sticky;
+  bottom: 0;
+  padding-top: 8px;
+  background: linear-gradient(180deg, transparent 0%, rgba(20, 16, 41, 0.98) 30%);
+}
+
+.atmos-inquiry-sheet__cancel {
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary, #a1a1aa);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 10px 14px;
+}
+
+.atmos-inquiry-sheet__submit {
+  border: 0;
+  cursor: pointer;
+  border-radius: 9999px;
+  padding: 10px 22px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1b1030;
+  background: linear-gradient(135deg, #e8c56f 0%, #d4af37 55%, #b8922e 100%);
+}
+
+.atmos-inquiry-sheet__submit:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+

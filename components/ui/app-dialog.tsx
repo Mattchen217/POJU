@@ -10,7 +10,18 @@ import {
   type ReactNode,
 } from "react";
 
+import "@/styles/app-dialog.css";
+
 export type AppDialogVariant = "alert" | "confirm" | "prompt";
+
+export type AppDialogConfirmOptions = {
+  confirmLabel?: string;
+  cancelLabel?: string;
+  /** Destructive confirm — red primary button (delete flows). */
+  tone?: "default" | "danger";
+  /** Optional record/profile title shown under the message. */
+  target?: string;
+};
 
 type DialogRequest = {
   variant: AppDialogVariant;
@@ -18,6 +29,8 @@ type DialogRequest = {
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
+  tone?: "default" | "danger";
+  target?: string;
   defaultValue?: string;
   resolve: (value: boolean | string | null) => void;
 };
@@ -27,7 +40,7 @@ type AppDialogContextValue = {
   confirm: (
     message: string,
     title?: string,
-    labels?: { confirmLabel?: string; cancelLabel?: string },
+    labels?: AppDialogConfirmOptions,
   ) => Promise<boolean>;
   prompt: (message: string, defaultValue?: string, title?: string) => Promise<string | null>;
 };
@@ -69,6 +82,8 @@ export function AppDialogProvider({ children }: { children: ReactNode }) {
         title,
         confirmLabel: labels?.confirmLabel,
         cancelLabel: labels?.cancelLabel,
+        tone: labels?.tone,
+        target: labels?.target,
       }).then((r) => r === true),
     prompt: (message, defaultValue, title) =>
       enqueue({ variant: "prompt", message, title, defaultValue }).then((r) =>
@@ -78,13 +93,14 @@ export function AppDialogProvider({ children }: { children: ReactNode }) {
 
   const isConfirm = request?.variant === "confirm";
   const isPrompt = request?.variant === "prompt";
+  const isDanger = request?.tone === "danger";
 
   return (
     <AppDialogContext.Provider value={value}>
       {children}
       {open && request ? (
         <div
-          className="fixed inset-0 z-[600] flex items-center justify-center bg-black/70 p-4"
+          className="app-dialog-backdrop"
           role="presentation"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget && !isConfirm && !isPrompt) close(true);
@@ -93,18 +109,27 @@ export function AppDialogProvider({ children }: { children: ReactNode }) {
           <div
             role="dialog"
             aria-modal="true"
-            aria-labelledby={titleId}
+            aria-labelledby={request.title ? titleId : undefined}
             aria-describedby={descId}
-            className="w-full max-w-md rounded-2xl border border-white/10 bg-gradient-to-br from-[#221f33] to-[#1a1824] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.45)]"
+            className="app-dialog-panel"
             onMouseDown={(e) => e.stopPropagation()}
           >
             {request.title ? (
-              <h2 id={titleId} className="text-lg font-semibold text-on-surface">
+              <h2 id={titleId} className="app-dialog-panel__title">
                 {request.title}
               </h2>
             ) : null}
-            <p id={descId} className={`whitespace-pre-line text-sm leading-relaxed text-on-surface-variant ${request.title ? "mt-3" : ""}`}>
+            <p
+              id={descId}
+              className={`app-dialog-panel__desc${request.title ? " has-title" : ""}`}
+            >
               {request.message}
+              {request.target ? (
+                <>
+                  <br />
+                  <span className="app-dialog-panel__target">{request.target}</span>
+                </>
+              ) : null}
             </p>
             {isPrompt ? (
               <input
@@ -112,7 +137,7 @@ export function AppDialogProvider({ children }: { children: ReactNode }) {
                 type="text"
                 value={promptValue}
                 onChange={(e) => setPromptValue(e.target.value)}
-                className="mt-4 w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-on-surface outline-none focus:border-violet-400/50"
+                className="app-dialog-panel__input"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") close(promptValue.trim() || null);
                   if (e.key === "Escape") close(null);
@@ -120,11 +145,11 @@ export function AppDialogProvider({ children }: { children: ReactNode }) {
                 autoFocus
               />
             ) : null}
-            <div className="mt-6 flex flex-wrap justify-end gap-2">
+            <div className="app-dialog-panel__actions">
               {isConfirm || isPrompt ? (
                 <button
                   type="button"
-                  className="rounded-lg border border-white/15 px-4 py-2 text-sm text-on-surface-variant hover:bg-white/5"
+                  className="app-dialog-panel__cancel"
                   onClick={() => close(null)}
                 >
                   {request.cancelLabel ?? "Cancel"}
@@ -132,7 +157,8 @@ export function AppDialogProvider({ children }: { children: ReactNode }) {
               ) : null}
               <button
                 type="button"
-                className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500"
+                className={`app-dialog-panel__confirm${isDanger ? " is-danger" : ""}`}
+                autoFocus={isDanger || isConfirm}
                 onClick={() => {
                   if (isPrompt) close(promptValue.trim() || null);
                   else close(true);

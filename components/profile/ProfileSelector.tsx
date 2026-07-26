@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { BirthInfoForm } from "@/components/forms/BirthInfoForm";
+import { AppDialogProvider, useAppDialog } from "@/components/ui/app-dialog";
 import type { StoredProfileRelationship } from "@/lib/db/poju-db";
 import {
   deleteStoredProfile,
@@ -61,8 +62,18 @@ function relLabel(r: StoredProfileRelationship, tr: (key: string) => string): st
   }
 }
 
-export function ProfileSelector({ product, onSelected, onCancel, allowSkip, onSkip }: ProfileSelectorProps) {
+export function ProfileSelector(props: ProfileSelectorProps) {
+  return (
+    <AppDialogProvider>
+      <ProfileSelectorInner {...props} />
+    </AppDialogProvider>
+  );
+}
+
+function ProfileSelectorInner({ product, onSelected, onCancel, allowSkip, onSkip }: ProfileSelectorProps) {
   const t = useTranslations("profile_selector");
+  const tCommon = useTranslations("common");
+  const { confirm } = useAppDialog();
   const router = useRouter();
   const [step, setStep] = useState<Step>("list");
   const [profiles, setProfiles] = useState<StoredProfileSummary[]>([]);
@@ -94,7 +105,14 @@ export function ProfileSelector({ product, onSelected, onCancel, allowSkip, onSk
   }
 
   async function handleDelete(profileId: string) {
-    if (!window.confirm(t("confirm_delete"))) return;
+    const profile = profiles.find((p) => p.profile_id === profileId);
+    const ok = await confirm(tCommon("deleteConfirmWarning"), t("delete"), {
+      confirmLabel: t("delete"),
+      cancelLabel: t("cancel"),
+      tone: "danger",
+      target: profile?.display_name?.trim() || profile?.birth_date,
+    });
+    if (!ok) return;
     await deleteStoredProfile(profileId);
     await loadProfiles();
   }

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { ArchiveDetailClient } from "@/components/archive/archive-detail-client";
 
 export const metadata: Metadata = {
-  title: "Archive — pojulife",
+  title: "Archive — Eastern OS",
 };
 
 type Props = {

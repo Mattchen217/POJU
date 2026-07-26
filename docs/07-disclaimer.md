@@ -211,7 +211,7 @@ asked to re-confirm agreement before continuing.
 If you have questions about this Disclaimer, 
 please contact:
 
-legal@pojulife.com
+legal@easternos.com
 
 ──
 

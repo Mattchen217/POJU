@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, mocked: true, to, template });
   }
 
-  const from = process.env.RESEND_FROM_EMAIL ?? "no-reply@pojulife.com";
+  const from = process.env.RESEND_FROM_EMAIL?.trim() || "noreply@easternos.com";
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {

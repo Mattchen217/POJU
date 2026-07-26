@@ -280,7 +280,6 @@ export function PojuPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (i
 
 export function MatchPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (id: string) => void }) {
   const t = useTranslations("match.home");
-  const tWs = useTranslations("match.workspace");
   const locale = useLocale();
   const [hasProfiles, setHasProfiles] = useState(false);
   const match = useWorkspaceMatchPrepare();
@@ -437,12 +436,10 @@ export function MatchPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (
         <div className="workspace-poju-below__unit">
           <WorkspaceMatchBirthSideCopy hasProfiles={hasProfiles} />
           <div className="workspace-poju-birth">
-            <p className="workspace-match-slot-badge" aria-live="polite">
-              {match.collectingSlot === "a" ? tWs("slot_a") : tWs("slot_b")}
-            </p>
             <WorkspacePojuBirthHost
               key={match.collectingSlot}
               usageProduct="match"
+              matchCollectingSlot={match.collectingSlot}
               excludeProfileId={match.collectingSlot === "b" ? match.profileIdA : null}
               onHasProfilesChange={setHasProfiles}
               onPrepareStart={handleBirthConfirmed}

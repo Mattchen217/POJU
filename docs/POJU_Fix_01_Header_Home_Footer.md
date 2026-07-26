@@ -428,7 +428,7 @@ No upsells. One price: $9.99 when you need it.
 
 ```
 POJU
-pojulife.com
+easternos.com
 
 [Home] [Disclaimer] [Privacy Policy] [Terms of Service] [Contact]
 
@@ -442,7 +442,7 @@ outcomes or replace professional advice.
 
 ```
 POJU
-pojulife.com
+easternos.com
 
 [Home] [Disclaimer] [Privacy Policy] [Terms of Service] [Contact]
 

@@ -13,11 +13,13 @@ export const WORKSPACE_POJU_PROFILE_SCROLL_LIMIT = 3;
 
 const RENAME_MAX_LEN = 48;
 
-type ProductKey = "poju" | "match" | "syncro" | "glyph";
+type ProductKey = "poju" | "match" | "atmos" | "syncro" | "glyph";
 
+/** Pack used products left into 4 card slots (unused stay empty on the right). */
 const PRODUCT_SLOTS: { key: ProductKey; usageKey: ProductKey }[] = [
   { key: "poju", usageKey: "poju" },
   { key: "match", usageKey: "match" },
+  { key: "atmos", usageKey: "atmos" },
   { key: "syncro", usageKey: "syncro" },
   { key: "glyph", usageKey: "glyph" },
 ];
@@ -28,6 +30,8 @@ type Props = {
   onAddNew: () => void;
   onRename: (profileId: string, nextName: string) => void;
   onDelete: (profileId: string) => void;
+  /** Match-only: pinned dashed tip above the scrollable cards (non-interactive). */
+  pinnedHint?: string;
 };
 
 type RenameDialogState = {
@@ -113,6 +117,9 @@ function ProductUsageIcon({
           <span className="material-symbols-outlined">self_improvement</span>
         ) : null}
         {product === "match" ? <MatchPairIcon className="workspace-poju-card__glyph-svg" /> : null}
+        {product === "atmos" ? (
+          <span className="material-symbols-outlined">blur_on</span>
+        ) : null}
         {product === "syncro" ? <SyncroRadarIcon className="workspace-poju-card__glyph-svg" /> : null}
         {product === "glyph" ? <GlyphCardIcon className="workspace-poju-card__glyph-svg" /> : null}
       </span>
@@ -235,6 +242,7 @@ function ProfileDeleteDialog({
   onConfirm: () => void;
 }) {
   const t = useTranslations("session_prep");
+  const tCommon = useTranslations("common");
   const titleId = useId();
   const descId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -276,7 +284,7 @@ function ProfileDeleteDialog({
           {t("delete")}
         </h2>
         <p id={descId} className="workspace-poju-rename-dialog__desc">
-          {t("confirm_delete")}
+          {tCommon("deleteConfirmWarning")}
           {state.title ? (
             <>
               <br />
@@ -422,6 +430,7 @@ export function WorkspacePojuProfileRecords({
   onAddNew,
   onRename,
   onDelete,
+  pinnedHint,
 }: Props) {
   const t = useTranslations("session_prep");
   const locale = useLocale();
@@ -457,6 +466,12 @@ export function WorkspacePojuProfileRecords({
       className={`workspace-poju-records${scrollable ? " is-scrollable" : " is-fit"}`}
       data-profile-count={profiles.length}
     >
+      {pinnedHint ? (
+        <div className="add-new-card-button workspace-poju-add-new workspace-poju-match-hint" role="status">
+          <span className="workspace-poju-match-hint__text">{pinnedHint}</span>
+        </div>
+      ) : null}
+
       <WorkspaceScrollArea
         className="workspace-poju-records__scroll"
         viewportClassName="workspace-poju-records__viewport"

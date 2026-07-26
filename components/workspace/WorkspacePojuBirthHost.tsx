@@ -24,9 +24,14 @@ type Props = {
   /** After confirm — enter workspace preparing (Spline + right-rail matrix). */
   onPrepareStart?: (profileId: string) => void;
   /** Which product records usage against the selected profile. */
-  usageProduct?: "poju" | "match" | "glyph" | "syncro";
+  usageProduct?: "poju" | "match" | "glyph" | "syncro" | "atmos";
   /** Hide this profile from the picker (Match B cannot equal Match A). */
   excludeProfileId?: string | null;
+  /**
+   * Match-only: always show the records frame (tip + scroll cards + add-new),
+   * with a pinned slot tip that switches A/B copy.
+   */
+  matchCollectingSlot?: "a" | "b";
 };
 
 /**
@@ -38,9 +43,12 @@ export function WorkspacePojuBirthHost({
   onPrepareStart,
   usageProduct = "poju",
   excludeProfileId = null,
+  matchCollectingSlot,
 }: Props) {
   const locale = useLocale();
   const t = useTranslations("session_prep");
+  const tMatchWs = useTranslations("match.workspace");
+  const isMatchFrame = matchCollectingSlot === "a" || matchCollectingSlot === "b";
 
   const [loading, setLoading] = useState(true);
   const [profiles, setProfiles] = useState<StoredProfileSummary[]>([]);
@@ -68,7 +76,7 @@ export function WorkspacePojuBirthHost({
         if (cancelled) return;
         setProfiles(list);
         const visible = list.filter((p) => p.profile_id !== excludeProfileId);
-        setMode(visible.length > 0 ? "list" : "new");
+        setMode(isMatchFrame || visible.length > 0 ? "list" : "new");
         onHasProfilesChange?.(list.length > 0);
       } catch (err) {
         console.error("[workspace-poju] Load profiles failed:", err);
@@ -79,14 +87,14 @@ export function WorkspacePojuBirthHost({
     return () => {
       cancelled = true;
     };
-  }, [onHasProfilesChange, excludeProfileId]);
+  }, [onHasProfilesChange, excludeProfileId, isMatchFrame]);
 
   async function handleDeleteProfile(profileId: string) {
     try {
       await deleteStoredProfile(profileId);
       const list = await refreshProfiles();
       const visible = list.filter((p) => p.profile_id !== excludeProfileId);
-      if (visible.length === 0) setMode("new");
+      if (visible.length === 0 && !isMatchFrame) setMode("new");
     } catch (err) {
       console.error("[workspace-poju] Delete profile failed:", err);
     }
@@ -170,7 +178,16 @@ export function WorkspacePojuBirthHost({
     );
   }
 
-  const showList = mode === "list" && visibleProfiles.length > 0;
+  const showList = mode === "list" && (isMatchFrame || visibleProfiles.length > 0);
+
+  const matchPinnedHint = (() => {
+    if (!isMatchFrame || !matchCollectingSlot) return undefined;
+    const hasSelectable = visibleProfiles.length > 0;
+    if (matchCollectingSlot === "a") {
+      return hasSelectable ? tMatchWs("hint_a_with_history") : tMatchWs("hint_a_new");
+    }
+    return hasSelectable ? tMatchWs("hint_b_with_history") : tMatchWs("hint_b_new");
+  })();
 
   return (
     <>
@@ -182,13 +199,16 @@ export function WorkspacePojuBirthHost({
             onAddNew={() => setMode("new")}
             onRename={(id, nextName) => void handleRenameProfile(id, nextName)}
             onDelete={(id) => void handleDeleteProfile(id)}
+            pinnedHint={matchPinnedHint}
           />
         </div>
       ) : (
         <WorkspaceBirthInfoPicker
           locale={locale}
           onSubmit={handleBirthInfoSubmit}
-          onCancel={visibleProfiles.length > 0 ? () => setMode("list") : undefined}
+          onCancel={
+            visibleProfiles.length > 0 || isMatchFrame ? () => setMode("list") : undefined
+          }
         />
       )}
 

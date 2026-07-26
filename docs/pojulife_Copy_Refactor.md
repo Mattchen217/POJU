@@ -1,7 +1,7 @@
 # pojulife 全站文案对齐 + 支付网关合规重写
 
 > **背景**:
-> - Claude 已抓取并审阅 pojulife.com 主页 + 4 产品页 + Privacy / Terms / Contact
+> - Claude 已抓取并审阅 easternos.com 主页 + 4 产品页 + Privacy / Terms / Contact
 > - 发现 10 个对齐问题 + 6 个支付网关合规问题
 >
 > **本文档包含**:
@@ -754,7 +754,7 @@ psychologists use terminology like "attachment style" or
 pojulife is intended for users 18 years of age or older. 
 We do not knowingly serve users under 18. If you believe 
 a minor has used pojulife, please contact 
-privacy@pojulife.com.
+privacy@easternos.com.
 
 ## AI-generated content
 
@@ -809,10 +809,10 @@ constitutes acceptance.
 ## Questions
 
 For questions about this Disclaimer:
-**legal@pojulife.com**
+**legal@easternos.com**
 
 For general questions:
-**support@pojulife.com**
+**support@easternos.com**
 
 ---
 
@@ -896,7 +896,7 @@ pojulife 在概念上借鉴东方哲学传统,包括八字(四柱反思
 
 pojulife 面向 18 岁及以上的用户。我们不会有意服务
 18 岁以下用户。如果你认为有未成年人使用过 pojulife,
-请联系 privacy@pojulife.com。
+请联系 privacy@easternos.com。
 
 ## AI 生成内容
 
@@ -942,10 +942,10 @@ pojulife 不具备处理心理健康紧急情况的能力。请联系
 ## 问题
 
 关于本免责声明的问题:
-**legal@pojulife.com**
+**legal@easternos.com**
 
 一般问题:
-**support@pojulife.com**
+**support@easternos.com**
 
 ---
 
@@ -1039,7 +1039,7 @@ fees. Each purchase is a transparent, one-time transaction.
 
 To request a refund:
 
-1. Email **support@pojulife.com** within the eligible 
+1. Email **support@easternos.com** within the eligible 
    window (typically 7 days).
 2. Include:
    * Your payment confirmation ID (from your receipt email).
@@ -1064,14 +1064,14 @@ When a refund is approved:
 If you dispute a charge directly with your bank or card 
 provider (a chargeback) without first contacting us, 
 we may be unable to provide our usual support process. 
-We strongly encourage you to email **support@pojulife.com** 
+We strongly encourage you to email **support@easternos.com** 
 first — we resolve most issues faster than chargeback 
 processes.
 
 ## Questions
 
 Questions about this Refund Policy:
-**support@pojulife.com**
+**support@easternos.com**
 
 We typically respond within 24 hours.
 ```
@@ -1147,7 +1147,7 @@ pojulife 不提供订阅服务。所有付费购买都是针对特定
 申请退款的步骤:
 
 1. 在符合条件的时间窗口内(通常 7 天)发邮件至
-   **support@pojulife.com**。
+   **support@easternos.com**。
 2. 邮件需包含:
    * 你的支付确认编号(来自收据邮件)。
    * 产品名称(POJU / Glyph / Syncro / Match)。
@@ -1169,13 +1169,13 @@ pojulife 不提供订阅服务。所有付费购买都是针对特定
 
 如果你不先联系我们,直接向银行或信用卡机构申请退单
 (chargeback),我们可能无法提供常规的支持流程。我们
-强烈建议你先发邮件至 **support@pojulife.com** ——
+强烈建议你先发邮件至 **support@easternos.com** ——
 大多数问题我们解决得比退单流程更快。
 
 ## 问题
 
 关于本退款政策的问题:
-**support@pojulife.com**
+**support@easternos.com**
 
 我们通常 24 小时内回复。
 ```
@@ -1235,7 +1235,7 @@ and self-reflection. They do not constitute:
 * Predictions of future events or outcomes.
 * Guarantees of specific results.
 
-See our Disclaimer at <https://pojulife.com/disclaimer> 
+See our Disclaimer at <https://easternos.com/disclaimer> 
 for full details.
 
 You acknowledge that AI-generated outputs are inherently 
@@ -1279,7 +1279,7 @@ payment card details.
 ## 4. Refunds
 
 We offer refunds under the conditions described in our 
-Refund Policy: <https://pojulife.com/refund>.
+Refund Policy: <https://easternos.com/refund>.
 
 In summary:
 * Full refund for technical failures (within 7 days).
@@ -1289,7 +1289,7 @@ In summary:
 * No refunds for dissatisfaction with AI outputs or 
   changes of mind after delivery.
 
-To request a refund, email support@pojulife.com.
+To request a refund, email support@easternos.com.
 
 ## 5. Intellectual property
 
@@ -1324,7 +1324,7 @@ user accounts:
 * Your conversations and readings are encrypted and 
   stored locally on your device.
 * We collect minimal data — see our Privacy Policy at 
-  <https://pojulife.com/privacy>.
+  <https://easternos.com/privacy>.
 
 You are responsible for the security of your device. 
 We are not liable for loss of data resulting from device 
@@ -1395,13 +1395,13 @@ Termination does not affect:
 ## 11. Contact
 
 Questions about these Terms:
-**legal@pojulife.com**
+**legal@easternos.com**
 
 General support:
-**support@pojulife.com**
+**support@easternos.com**
 
 Privacy and data:
-**privacy@pojulife.com**
+**privacy@easternos.com**
 
 ---
 
@@ -1446,7 +1446,7 @@ Syncro 和 Match(统称"服务")—— 即表示你同意本服务
 * 任何特定结果的保证。
 
 完整说明见我们的免责声明:
-<https://pojulife.com/disclaimer>。
+<https://easternos.com/disclaimer>。
 
 你承认 AI 生成的输出本质上具有概率性,可能包含错误。
 你同意对服务生成的任何内容运用你自己的判断。
@@ -1484,7 +1484,7 @@ Syncro 和 Match(统称"服务")—— 即表示你同意本服务
 
 ## 4. 退款
 
-我们按退款政策提供退款:<https://pojulife.com/refund>。
+我们按退款政策提供退款:<https://easternos.com/refund>。
 
 简要说明:
 * 技术故障全额退款(7 天内)。
@@ -1492,7 +1492,7 @@ Syncro 和 Match(统称"服务")—— 即表示你同意本服务
 * 重复或未授权扣款全额退款(任何时间)。
 * 不为对 AI 输出不满或交付后反悔提供退款。
 
-申请退款请发邮件至 support@pojulife.com。
+申请退款请发邮件至 support@easternos.com。
 
 ## 5. 知识产权
 
@@ -1520,7 +1520,7 @@ pojulife 所有。你不得复制、修改或重新分发。
 * 使用服务无需登录。
 * 你的对话和解读经加密后保存在你设备本地。
 * 我们收集的数据极少 — 见隐私政策:
-  <https://pojulife.com/privacy>。
+  <https://easternos.com/privacy>。
 
 你负责自己设备的安全。我们不对因设备丢失、损坏、
 浏览器清理或类似事件造成的数据丢失负责。在此类
@@ -1582,13 +1582,13 @@ pojulife 所有。你不得复制、修改或重新分发。
 ## 11. 联系
 
 关于本条款的问题:
-**legal@pojulife.com**
+**legal@easternos.com**
 
 一般支持:
-**support@pojulife.com**
+**support@easternos.com**
 
 隐私与数据:
-**privacy@pojulife.com**
+**privacy@easternos.com**
 
 ---
 
@@ -1617,7 +1617,7 @@ pojulife 所有。你不得复制、修改或重新分发。
    → 暂时改为:
    ```
    Physical address:
-   [Available upon request — email legal@pojulife.com]
+   [Available upon request — email legal@easternos.com]
    ```
    (LLC 注册后再用实际地址替换)
 
@@ -1763,7 +1763,7 @@ remembering your language).
 To clear all locally stored conversations, readings, and 
 data:
 * Use your browser's "Clear site data" option for 
-  pojulife.com
+  easternos.com
 * Or use the "End & Wipe" button within our app
 
 ## EU / UK users — your rights
@@ -1778,7 +1778,7 @@ UK GDPR:
 * **Access**: You can request information about cookies 
   set on your device.
 
-To exercise these rights, contact privacy@pojulife.com.
+To exercise these rights, contact privacy@easternos.com.
 
 ## Changes to this policy
 
@@ -1789,7 +1789,7 @@ the most recent revision.
 ## Questions
 
 Privacy and cookie questions:
-**privacy@pojulife.com**
+**privacy@easternos.com**
 ```
 
 **ZH 完整翻译**(简化版,Cursor 可补全):
@@ -1864,7 +1864,7 @@ pojulife 设计上使用**尽可能少的 Cookie**。我们不为
 ## 问题
 
 隐私与 Cookie 问题:
-**privacy@pojulife.com**
+**privacy@easternos.com**
 ```
 
 ---
@@ -1925,7 +1925,7 @@ pojulife 设计上使用**尽可能少的 Cookie**。我们不为
 <footer>
   <div class="footer-brand">
     <img src="/logo.png" alt="pojulife" />
-    <span>pojulife.com</span>
+    <span>easternos.com</span>
   </div>
   
   <div class="footer-links">

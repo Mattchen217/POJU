@@ -30,7 +30,7 @@ Cursor 会读取完整单页规格，不会漏任何细节。
 ## 路由地图
 
 ```
-pojulife.com
+easternos.com
 │
 ├─ /                        01-landing.md              主落地页
 │
@@ -171,7 +171,7 @@ pojulife.com
 **所有公开页面底部都有**（Chat 页除外，Chat 是全屏对话界面不含 Footer）：
 
 - POJU Logo（纯字母版）
-- 副标题：`pojulife.com`
+- 副标题：`easternos.com`
 - 分隔线
 - **Legal 链接组**：
   - Disclaimer

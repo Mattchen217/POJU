@@ -8,6 +8,7 @@ import { GlyphArchiveDetail } from "@/components/archive/glyph-archive-detail";
 import { MatchArchiveDetail } from "@/components/archive/match-archive-detail";
 import { PojuSessionArchiveDetail } from "@/components/archive/poju-session-archive-detail";
 import { SyncroArchiveDetail } from "@/components/archive/syncro-archive-detail";
+import { AppDialogProvider, useAppDialog } from "@/components/ui/app-dialog";
 import {
   deleteArchiveItem,
   loadArchiveItem,
@@ -28,10 +29,20 @@ type Props = {
   archiveId: string;
 };
 
-export function ArchiveDetailClient({ archiveId }: Props) {
+export function ArchiveDetailClient(props: Props) {
+  return (
+    <AppDialogProvider>
+      <ArchiveDetailClientInner {...props} />
+    </AppDialogProvider>
+  );
+}
+
+function ArchiveDetailClientInner({ archiveId }: Props) {
   const t = useTranslations("archiveDetail");
+  const tCommon = useTranslations("common");
   const locale = useLocale();
   const router = useRouter();
+  const { confirm } = useAppDialog();
   const [pojuVaultData, setPojuVaultData] = useState<POJUSessionVaultData | null>(null);
   const [pojuData, setPojuData] = useState<POJUActionRecommendationsData | null>(null);
   const [glyphData, setGlyphData] = useState<GlyphReadingArchiveData | null>(null);
@@ -117,7 +128,12 @@ export function ArchiveDetailClient({ archiveId }: Props) {
   }
 
   async function handleDelete() {
-    if (!confirm(t("confirm_delete"))) return;
+    const ok = await confirm(tCommon("deleteConfirmWarning"), t("delete"), {
+      confirmLabel: t("delete"),
+      cancelLabel: tCommon("cancel"),
+      tone: "danger",
+    });
+    if (!ok) return;
     await deleteArchiveItem(archiveId);
     router.push("/archive");
   }

@@ -1,13 +1,15 @@
 {
   "common": {
-    "brandWordmark": "pojulife",
-    "brand": "pojulife",
-    "domain": "pojulife.com",
+    "brandWordmark": "Eastern OS",
+    "brand": "Eastern OS",
+    "domain": "easternos.com",
     "tagline": "Where AI meets a thousand years of wisdom.",
     "footerTagline": "pojulife offers perspectives and insight. Designed for self-reflection only. All decisions are yours alone.",
     "copyright": "© 2026 pojulife. All rights reserved.",
     "syncroFooterTagline": "Syncro is a self-awareness tool. Take what resonates. Decisions are yours alone.",
-    "openNavigationMenu": "Open navigation menu"
+    "openNavigationMenu": "Open navigation menu",
+    "cancel": "Cancel",
+    "deleteConfirmWarning": "Due to Pojulife's local-first privacy architecture, once deletion is confirmed, this record will be permanently erased and cannot be recovered."
   },
   "nav": {
     "home": "Home",
@@ -69,10 +71,39 @@
     "dilemmaHint": "Notes stay on this canvas for now. Begin opens the existing {product} flow.",
     "atmos": {
       "headline": "Sense the field around this moment.",
-      "guidance": "Atmos will surface ambient timing and field cues. The canvas is reserved — feature coming soon.",
+      "guidance": "Enter your birth chart, then read the energy weather ahead.",
       "badge": "Coming soon",
       "title": "Atmos",
-      "body": "A calm read of the energy weather around you. We are holding this place for the full experience."
+      "body": "A calm read of the energy weather around you.",
+      "hero": {
+        "brandTag": "ATMOS",
+        "heading": "Daily Cosmic Resonance",
+        "description": "Local day-level compute. A calm forecast of the field around you — today through the next thirty days.",
+        "ctaPrimary": "Begin Atmos",
+        "billingNotice": "$9.99 · today's forecast · one-time"
+      },
+      "forecastTitle": "30-Day Decision & Status Calendar",
+      "forecastSub": "",
+      "viewToday": "View today's forecast",
+      "generating": "Writing…",
+      "expandReading": "Open",
+      "comingCell": "Soon",
+      "pendingLabel": "Pending",
+      "startParse": "Start",
+      "retry": "Retry",
+      "readingTitle": "Field reading · {date}",
+      "weekdays": {
+        "sun": "Sunday",
+        "mon": "Monday",
+        "tue": "Tuesday",
+        "wed": "Wednesday",
+        "thu": "Thursday",
+        "fri": "Friday",
+        "sat": "Saturday"
+      }
+    },
+    "atmosRail": {
+      "matrixTitle": "Personal energy chart"
     },
     "poju": {
       "headline": "Deep Strategic Consult for Life Crossroads.",
@@ -141,7 +172,7 @@
       "rename": "Rename",
       "delete": "Delete",
       "renamePrompt": "Rename this record",
-      "deleteConfirm": "Delete this record? This cannot be undone.",
+      "deleteConfirm": "Due to Pojulife's local-first privacy architecture, once deletion is confirmed, this record will be permanently erased and cannot be recovered.",
       "backToNew": "Back to new session",
       "contextLabel": "Context panel",
       "statusEyebrow": "System status",
@@ -201,7 +232,7 @@
   },
   "home": {
     "hero": {
-      "brand": "pojulife",
+      "brand": "Eastern OS",
       "headline": "Break through what won't let you go.",
       "descLine1": "Three thousand years of Eastern time-space frameworks.",
       "descLine2": "Reframed by cognitive psychology.",
@@ -658,7 +689,7 @@
         "tagline": "A live dynamic companion for your next 24-hour cycle.",
         "cta": "Activate 24-Hour Synchronization",
         "billing_notice": "$4.99 per 24-hour sync or use experience voucher",
-        "qr_label": "pojulife.com/syncro",
+        "qr_label": "easternos.com/syncro",
         "sms_label": "Text yourself the link",
         "sms_button": "Text me the link",
         "sms_body": "Open Syncro on your phone: __SYNCRO_URL__",
@@ -785,10 +816,10 @@
         "footnote": "Real-time loop · Adaptive chronobiological telemetry · Optimized for on-the-go execution"
       },
       "pwa_guide": {
-        "title": "Open pojulife.com in your mobile browser, or install the pojulife app on your phone.",
+        "title": "Open easternos.com in your mobile browser, or install the pojulife app on your phone.",
         "subtitle": "Syncro only works in a mobile browser or as a PWA installed to your home screen. Follow the steps below for your phone.",
-        "ios_browser_note": "Open pojulife.com/syncro in Safari only — other browsers on iPhone cannot install the app.",
-        "android_browser_note": "Open pojulife.com/syncro in Chrome only — other Android browsers cannot install the full app.",
+        "ios_browser_note": "Open easternos.com/syncro in Safari only — other browsers on iPhone cannot install the app.",
+        "android_browser_note": "Open easternos.com/syncro in Chrome only — other Android browsers cannot install the full app.",
         "ios_step_4": "Leave Safari and open pojulife from your Home Screen icon.",
         "android_step_1": "Tap the Share button in Chrome (or the menu ⋮ if Share is inside it).",
         "android_step_2": "Choose Add to Home screen or Install app.",
@@ -881,7 +912,7 @@
     "list_title": "Choose a birth profile",
     "list_description": "Pick someone you already saved, or add a new chart. Data stays on this device.",
     "add_new": "Add new profile",
-    "confirm_delete": "Delete this saved profile from this device?",
+    "confirm_delete": "Due to Pojulife's local-first privacy architecture, once deletion is confirmed, this record will be permanently erased and cannot be recovered.",
     "skip_for_now": "Skip for now",
     "cancel": "Cancel",
     "rel_self": "Self",
@@ -1236,8 +1267,8 @@
       "voice_input_start": "Start voice input",
       "voice_input_stop": "Stop voice input",
       "dialog_delete_session": "Delete this session?",
-      "dialog_delete_session_confirm": "Permanently delete this session from this device? This cannot be undone.",
-      "dialog_delete_session_bilingual": "Permanently delete this session from this device? This cannot be undone.\n\n从本设备永久删除该会话？此操作不可撤销。",
+      "dialog_delete_session_confirm": "Due to Pojulife's local-first privacy architecture, once deletion is confirmed, this record will be permanently erased and cannot be recovered.",
+      "dialog_delete_session_bilingual": "Due to Pojulife's local-first privacy architecture, once deletion is confirmed, this record will be permanently erased and cannot be recovered.",
       "dialog_rename_session": "Edit session title",
       "dialog_rename_placeholder": "Session title",
       "session_menu_label": "Session options",
@@ -1369,7 +1400,7 @@
       "restore": "Restore",
       "restore_paid": "Continue — $9.99",
       "delete_forever": "Delete forever",
-      "delete_confirm": "Permanently delete this session from this device? This cannot be undone.",
+      "delete_confirm": "Due to Pojulife's local-first privacy architecture, once deletion is confirmed, this record will be permanently erased and cannot be recovered.",
       "meta_expires": "Expires",
       "meta_status": "Status"
     }
@@ -1420,7 +1451,7 @@
     "back_to_session": "Back to full conversation",
     "back": "Back",
     "delete": "Delete",
-    "confirm_delete": "Permanently delete this record?",
+    "confirm_delete": "Due to Pojulife's local-first privacy architecture, once deletion is confirmed, this record will be permanently erased and cannot be recovered.",
     "syncro_title": "Syncro session",
     "syncro_task_label": "Your task",
     "syncro_best_peak": "Strongest peak in your 24h field",
@@ -1531,7 +1562,7 @@
     "rename_save": "Save",
     "card_menu": "Profile actions",
     "created_at": "Created {date}",
-    "confirm_delete": "Delete this saved profile from this device?",
+    "confirm_delete": "Due to Pojulife's local-first privacy architecture, once deletion is confirmed, this record will be permanently erased and cannot be recovered.",
     "refund_link": "I don't want to share — refund my session",
     "error_create_profile": "Failed to save your information. Please try again."
   },
@@ -1607,14 +1638,14 @@
     "side_title": "Begin Your Session",
     "side_body": "Please enter your birth details. This information allows us to accurately calibrate your unique energy for a personalized, high-precision consult.",
     "side_body_returning": "Please select your birth details, or enter them again. This information allows us to accurately calibrate your unique energy for a personalized, high-precision consult.",
-    "side_privacy_title": "Your Privacy First",
-    "side_privacy_intro": "At Pojulife, your privacy is our highest priority. Please rest assured: we never store your personal information on our servers.",
+    "side_privacy_title": "Privacy & Security",
+    "side_privacy_intro": "Pojulife takes your privacy very seriously. Rest assured: we do not store any of your personal privacy information on our servers.",
     "side_local_title": "Stored Locally Only",
-    "side_local_body": "All data stays exclusively inside your current browser.",
-    "side_wipe_title": "Automatic Wipe",
-    "side_wipe_body": "Clearing your browser cache or closing an incognito window instantly erases all information.",
-    "side_isolation_title": "Device Isolation",
-    "side_isolation_body": "Switching browsers or devices—even when logged into the same account—will never reveal past records. Your data stays 100% in your control.",
+    "side_local_body": "Your usage history is stored 100% locally in your current browser, and you can manually clear your history within the app at any time.",
+    "side_wipe_title": "Automatic & Complete Erasure",
+    "side_wipe_body": "Clear your browser cache or close incognito/private windows, and all records will be destroyed immediately and automatically.",
+    "side_isolation_title": "Complete Terminal Isolation",
+    "side_isolation_body": "Switching browsers or changing devices will show no previous records, even if you are logged into the same account.",
     "gender": "Gender",
     "male": "Male",
     "female": "Female",
@@ -1963,7 +1994,7 @@
     "desktop_section_heading": "Use Syncro on your phone",
     "desktop_message_1": "Syncro needs your phone.",
     "desktop_message_2": "Its core is reading directions through your device — that requires a mobile compass.",
-    "open_on_mobile_hint": "Open pojulife.com on your phone to use Syncro.",
+    "open_on_mobile_hint": "Open easternos.com on your phone to use Syncro.",
     "not_supported_device": "This device doesn't support the compass sensors Syncro needs. Try a different phone or browser.",
     "payment_coming_soon": "Paid checkout is not connected yet — continuing into Syncro without payment for now.",
     "payment_continue_without_checkout": "Continue to Syncro →",
@@ -2412,6 +2443,10 @@
       "submit": "Start MATCH",
       "slot_a": "Match A",
       "slot_b": "Match B",
+      "hint_a_with_history": "Match A: Enter person A's birth details or select a saved profile.",
+      "hint_b_with_history": "Match B: Enter person B's birth details or select a saved profile.",
+      "hint_a_new": "Match A: Enter person A's birth details.",
+      "hint_b_new": "Match B: Enter person B's birth details.",
       "inquiry": {
         "welcome_text": "When two individuals embark on a relationship, partnership, or specific endeavor, their communication habits,\ndecision logic, and internal rhythms interact deeply. Based on core underlying traits, this assessment provides\nobjective synergy insights and risk management guidance to help you achieve seamless alignment toward shared goals.",
         "guidance_text": "Please describe the specific goal or event you plan to undertake together. The more detailed your\ndescription, the better we can help identify complementary strengths and communication pitfalls.",
@@ -2487,7 +2522,7 @@
         "subtitle_huawei": "{browser} doesn't support pojulife's full app installation. Please open this page in Chrome to install.",
         "step_1_title": "Install Chrome",
         "step_1_desc": "Get it from your app store if you don't have it",
-        "step_2_title": "Open pojulife.com in Chrome",
+        "step_2_title": "Open easternos.com in Chrome",
         "step_2_desc": "Copy the link below, then paste it into Chrome's address bar",
         "step_3_title": "Tap 'Install'",
         "step_3_desc": "Chrome will show an install button — tap to add pojulife to your home screen",
@@ -2520,7 +2555,7 @@
       }
     },
     "app_mode": {
-      "desktop_hint": "On mobile, pojulife focuses on using POJU, Glyph, Syncro, and Match with a brief overview. For detailed feature guides, privacy policy, terms of service, refund policy, cookie policy, and other legal information, please visit pojulife.com on a desktop or laptop computer.",
+      "desktop_hint": "On mobile, pojulife focuses on using POJU, Glyph, Syncro, and Match with a brief overview. For detailed feature guides, privacy policy, terms of service, refund policy, cookie policy, and other legal information, please visit easternos.com on a desktop or laptop computer.",
       "add_to_home_title": "Add to home screen",
       "add_to_home_title_ios": "Add to Home Screen",
       "add_to_home_desc": "Add pojulife to your phone's home screen for fewer interruptions and quicker access next time."

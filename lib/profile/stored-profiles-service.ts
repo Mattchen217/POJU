@@ -46,6 +46,32 @@ async function hashBirthInfo(birth: BirthInfo): Promise<string> {
   return sha256Hex(new TextEncoder().encode(canonical));
 }
 
+export type StoredProfileProductUsage = {
+  poju: number;
+  match: number;
+  atmos: number;
+  syncro: number;
+  glyph: number;
+};
+
+export type ProfileUsageProduct = keyof StoredProfileProductUsage;
+
+export function emptyProductUsage(): StoredProfileProductUsage {
+  return { poju: 0, match: 0, atmos: 0, syncro: 0, glyph: 0 };
+}
+
+export function normalizeProductUsage(
+  raw: Partial<StoredProfileProductUsage> | null | undefined,
+): StoredProfileProductUsage {
+  return {
+    poju: raw?.poju ?? 0,
+    match: raw?.match ?? 0,
+    atmos: raw?.atmos ?? 0,
+    syncro: raw?.syncro ?? 0,
+    glyph: raw?.glyph ?? 0,
+  };
+}
+
 export interface StoredProfileSummary {
   profile_id: string;
   display_name: string;
@@ -62,7 +88,7 @@ export interface StoredProfileSummary {
   used_true_solar_time?: boolean;
   birth_location_name?: string;
   birth_location_use_defaults?: boolean;
-  used_in_products: { poju: number; glyph: number; syncro: number; match: number };
+  used_in_products: StoredProfileProductUsage;
   last_used_at: string;
   created_at: string;
 }
@@ -132,12 +158,7 @@ export async function listStoredProfiles(): Promise<StoredProfileSummary[]> {
           (loc ? !loc.use_defaults : undefined),
         birth_location_name: loc?.name,
         birth_location_use_defaults: loc?.use_defaults,
-        used_in_products: {
-          poju: record.used_in_products.poju ?? 0,
-          glyph: record.used_in_products.glyph ?? 0,
-          syncro: record.used_in_products.syncro ?? 0,
-          match: record.used_in_products.match ?? 0,
-        },
+        used_in_products: normalizeProductUsage(record.used_in_products),
         last_used_at: record.last_used_at.toISOString(),
         created_at: record.created_at.toISOString(),
       });
@@ -229,7 +250,7 @@ export async function createStoredProfile(input: {
     iv: enc.iv,
     created_at: now,
     last_used_at: now,
-    used_in_products: { poju: 0, glyph: 0, syncro: 0, match: 0 },
+    used_in_products: emptyProductUsage(),
     has_base_analysis: false,
   });
 
@@ -684,18 +705,13 @@ export async function discardIncompletePendingProfile(profileId: string): Promis
 
 export async function recordProfileUsage(
   profileId: string,
-  product: "poju" | "glyph" | "syncro" | "match",
+  product: ProfileUsageProduct,
 ): Promise<void> {
   if (typeof window === "undefined") return;
   const db = getPojuDb();
   const record = await db.stored_profiles.get(profileId);
   if (!record) return;
-  const updated = {
-    poju: record.used_in_products.poju ?? 0,
-    glyph: record.used_in_products.glyph ?? 0,
-    syncro: record.used_in_products.syncro ?? 0,
-    match: record.used_in_products.match ?? 0,
-  };
+  const updated = normalizeProductUsage(record.used_in_products);
   updated[product] += 1;
   await db.stored_profiles.update(profileId, {
     used_in_products: updated,

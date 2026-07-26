@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-const SYNCRO_URL = "https://pojulife.com/syncro";
+const SYNCRO_URL = "https://easternos.com/syncro";
 
 export type SyncroSmsLinkFormCopy = {
   hint: string;

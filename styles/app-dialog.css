@@ -1,0 +1,124 @@
+/* Shared confirm/alert/prompt — aligned with workspace profile delete dialog */
+
+.app-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.7);
+  box-sizing: border-box;
+}
+
+.app-dialog-panel {
+  width: 100%;
+  max-width: 360px;
+  box-sizing: border-box;
+  padding: 18px 20px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(167, 139, 250, 0.22);
+  background: linear-gradient(160deg, #221f33 0%, #141029 100%);
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.app-dialog-panel__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #f4f4f5;
+}
+
+.app-dialog-panel__desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(161, 161, 170, 0.95);
+  white-space: pre-line;
+}
+
+.app-dialog-panel__desc.has-title {
+  margin-top: 8px;
+}
+
+.app-dialog-panel__target {
+  display: inline-block;
+  margin-top: 8px;
+  color: rgba(244, 244, 245, 0.92);
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.app-dialog-panel__input {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 10px;
+  padding: 11px 12px;
+  background: rgba(0, 0, 0, 0.28);
+  color: #fff;
+  font-size: 15px;
+  line-height: 1.45;
+  font-family: inherit;
+  outline: none;
+  box-shadow: inset 0 0 0 1px rgba(167, 139, 250, 0.2);
+}
+
+.app-dialog-panel__input:focus {
+  box-shadow: inset 0 0 0 1px rgba(167, 139, 250, 0.55);
+}
+
+.app-dialog-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.app-dialog-panel__cancel,
+.app-dialog-panel__confirm {
+  border: none;
+  border-radius: 9999px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    opacity 160ms ease;
+}
+
+.app-dialog-panel__cancel {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(228, 228, 231, 0.92);
+}
+
+.app-dialog-panel__cancel:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.app-dialog-panel__confirm {
+  background: #8b5cf6;
+  color: #fff;
+}
+
+.app-dialog-panel__confirm:hover {
+  background: #a855f7;
+}
+
+.app-dialog-panel__confirm.is-danger {
+  background: #dc2626;
+  color: #fff;
+}
+
+.app-dialog-panel__confirm.is-danger:hover {
+  background: #ef4444;
+}

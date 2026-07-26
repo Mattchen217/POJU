@@ -12,7 +12,7 @@ export function SyncroDesktopGuide() {
   const locale = useLocale();
   const syncroUrl = useMemo(() => {
     const path = locale === routing.defaultLocale ? "/syncro" : `/${locale}/syncro`;
-    if (typeof window === "undefined") return `https://pojulife.com${path}?ref=desktop_qr`;
+    if (typeof window === "undefined") return `https://easternos.com${path}?ref=desktop_qr`;
     return `${window.location.origin}${path}?ref=desktop_qr`;
   }, [locale]);
 

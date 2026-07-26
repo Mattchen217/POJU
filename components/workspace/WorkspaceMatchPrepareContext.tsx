@@ -378,13 +378,14 @@ export function useWorkspaceMatchPrepareOptional(): MatchApi | null {
   return useContext(WorkspaceMatchPrepareContext);
 }
 
-/** True when Match right rail needs the large width. */
+/** True when Match right rail needs the large width (open doc or BA wait anim). */
 export function useWorkspaceMatchRightRailWide(): boolean {
   const match = useWorkspaceMatchPrepareOptional();
   if (!match) return false;
+  /* Open documents */
   if (match.matrixExpandedA || match.matrixExpandedB) return true;
   if (match.reportAExpanded || match.reportBExpanded || match.matchReportExpanded) return true;
+  /* Base-analysis wait ritual (动效) — not Match LLM itself (center stage). */
   if (match.reportAStatus === "generating" || match.reportBStatus === "generating") return true;
-  if (match.matchReportStatus === "generating") return true;
   return false;
 }

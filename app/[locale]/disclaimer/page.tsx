@@ -6,7 +6,7 @@ import { Link } from "@/i18n/navigation";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Disclaimer — pojulife",
+  title: "Disclaimer — Eastern OS",
   description: "pojulife disclaimer — Version 1.1",
 };
 
@@ -116,7 +116,7 @@ export default function DisclaimerPage() {
       <p>
         The Services are strictly intended for individuals who are 18 years of age or older. We do not knowingly
         facilitate sessions for minors. If you have reason to believe a minor has accessed the platform, please notify
-        us immediately at <a href="mailto:privacy@pojulife.com">privacy@pojulife.com</a>.
+        us immediately at <a href="mailto:privacy@easternos.com">privacy@easternos.com</a>.
       </p>
 
       <h2>7. Crisis Support Protocol</h2>
@@ -171,12 +171,12 @@ export default function DisclaimerPage() {
       <p>
         <strong>Legal &amp; Regulatory Inquiries:</strong>
         <br />
-        <a href="mailto:legal@pojulife.com">legal@pojulife.com</a>
+        <a href="mailto:legal@easternos.com">legal@easternos.com</a>
       </p>
       <p>
         <strong>Operational &amp; Technical Support:</strong>
         <br />
-        <a href="mailto:support@pojulife.com">support@pojulife.com</a>
+        <a href="mailto:support@easternos.com">support@easternos.com</a>
       </p>
     </LegalPageShell>
   );

@@ -105,7 +105,7 @@ export function RefundErrorStage({
         <button type="button" onClick={onRetry} disabled={retrying} className="primary">
           {t("retry")}
         </button>
-        <a href="mailto:support@pojulife.com" className="email-btn">
+        <a href="mailto:support@easternos.com" className="email-btn">
           {t("contact_support")}
         </a>
       </div>

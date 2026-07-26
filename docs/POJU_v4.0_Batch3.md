@@ -1662,7 +1662,7 @@ async function handlePaymentSuccess(data: any) {
 ### 新用户首次进入
 
 ```
-[首次访问 pojulife.com]
+[首次访问 easternos.com]
        ↓
 看到首页(品牌 + 三件套)
   - "Three ways in. One way through."
@@ -1702,7 +1702,7 @@ DodoPayments checkout
   - 选择支付方式
   - 完成付款
        ↓
-返回 pojulife.com
+返回 easternos.com
        ↓
 跳转到 /poju/session/[id]
        ↓
@@ -1716,7 +1716,7 @@ Phase 1 → 2 → 3 → 4 → 5
 ### 回访用户
 
 ```
-[再次访问 pojulife.com]
+[再次访问 easternos.com]
        ↓
 首页显示个性化卡片:
   "Continue your POJU session"

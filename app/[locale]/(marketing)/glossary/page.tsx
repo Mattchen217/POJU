@@ -12,7 +12,7 @@ import {
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Glossary — pojulife",
+  title: "Glossary — Eastern OS",
   description: "Soft-label terminology dictionary used across pojulife products.",
 };
 

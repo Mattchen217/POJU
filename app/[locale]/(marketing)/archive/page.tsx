@@ -10,7 +10,7 @@ import {
 } from "@/components/marketing/marketing-page-layout";
 
 export const metadata: Metadata = {
-  title: "The Archive — pojulife",
+  title: "The Archive — Eastern OS",
   description:
     "Everything here lives only on this device. Your POJU sessions, Glyph reflections, and Syncro readings in one local vault.",
 };

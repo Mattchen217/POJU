@@ -19,7 +19,7 @@ function buildEn() {
     { kind: "h2", text: "Operator" },
     {
       kind: "p",
-      text: 'pojulife (pojulife.com) is operated by Tonghui Chen, an individual developer based in the People\'s Republic of China. In these Terms, "we", "us", and "our" refer to Tonghui Chen operating pojulife. For direct correspondence with the operator, email founder@pojulife.com.',
+      text: 'pojulife (easternos.com) is operated by Tonghui Chen, an individual developer based in the People\'s Republic of China. In these Terms, "we", "us", and "our" refer to Tonghui Chen operating pojulife. For direct correspondence with the operator, email founder@easternos.com.',
     },
   );
   const h2 = (text) => en.blocks.push({ kind: "h2", text });
@@ -104,7 +104,7 @@ function buildEn() {
     "Full refund for duplicate or unauthorized charges (any time).",
     "No refunds for dissatisfaction with AI outputs or changes of mind after delivery.",
   ]);
-  p("To request a refund, email support@pojulife.com.");
+  p("To request a refund, email support@easternos.com.");
 
   h2("5. Intellectual property");
   h3("Our property");
@@ -191,12 +191,12 @@ function buildEn() {
   en.blocks.push({
     kind: "contact",
     lines: [
-      { label: "Questions about these Terms:", email: "legal@pojulife.com" },
-      { label: "General support:", email: "support@pojulife.com" },
-      { label: "Privacy and data:", email: "privacy@pojulife.com" },
+      { label: "Questions about these Terms:", email: "legal@easternos.com" },
+      { label: "General support:", email: "support@easternos.com" },
+      { label: "Privacy and data:", email: "privacy@easternos.com" },
     ],
   });
-  p("We do not publish a physical mailing address on this website. Physical address: [Available upon request — email legal@pojulife.com]");
+  p("We do not publish a physical mailing address on this website. Physical address: [Available upon request — email legal@easternos.com]");
 
   return en;
 }
@@ -216,7 +216,7 @@ function buildZh() {
     { kind: "h2", text: "运营方" },
     {
       kind: "p",
-      text: "pojulife（pojulife.com）由位于中华人民共和国境内的个人开发者陈同辉运营。在本条款中，「我们」「我方」指运营 pojulife 的陈同辉。如需直接联系运营者，请发邮件至 founder@pojulife.com。",
+      text: "pojulife（easternos.com）由位于中华人民共和国境内的个人开发者陈同辉运营。在本条款中，「我们」「我方」指运营 pojulife 的陈同辉。如需直接联系运营者，请发邮件至 founder@easternos.com。",
     },
   );
   const h2 = (text) => zh.blocks.push({ kind: "h2", text });
@@ -293,7 +293,7 @@ function buildZh() {
     "重复或未授权扣款（随时）全额退款。",
     "对 AI 输出的不满或交付后的反悔不予退款。",
   ]);
-  p("申请退款请发邮件至 support@pojulife.com。");
+  p("申请退款请发邮件至 support@easternos.com。");
 
   h2("5. 知识产权");
   h3("我们的财产");
@@ -366,12 +366,12 @@ function buildZh() {
   zh.blocks.push({
     kind: "contact",
     lines: [
-      { label: "关于本条款的问题：", email: "legal@pojulife.com" },
-      { label: "一般支持：", email: "support@pojulife.com" },
-      { label: "隐私与数据：", email: "privacy@pojulife.com" },
+      { label: "关于本条款的问题：", email: "legal@easternos.com" },
+      { label: "一般支持：", email: "support@easternos.com" },
+      { label: "隐私与数据：", email: "privacy@easternos.com" },
     ],
   });
-  p("本站不公开物理邮寄地址。物理地址：[应要求提供 — 请发邮件至 legal@pojulife.com]");
+  p("本站不公开物理邮寄地址。物理地址：[应要求提供 — 请发邮件至 legal@easternos.com]");
 
   return zh;
 }

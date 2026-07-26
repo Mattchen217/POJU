@@ -13,7 +13,7 @@ interface RefundRequest {
 }
 
 function invalidBody(message: string) {
-  return NextResponse.json({ success: false, error: message, fallback: "support@pojulife.com" }, { status: 400 });
+  return NextResponse.json({ success: false, error: message, fallback: "support@easternos.com" }, { status: 400 });
 }
 
 async function refundViaDodoPayments(req: RefundRequest): Promise<{ refund_id: string; amount: number }> {
@@ -90,7 +90,7 @@ export async function POST(req: Request) {
         {
           success: false,
           error: "Stripe not configured",
-          fallback: "support@pojulife.com",
+          fallback: "support@easternos.com",
         },
         { status: 503 },
       );
@@ -100,7 +100,7 @@ export async function POST(req: Request) {
       {
         success: false,
         error: "Stripe refund integration pending",
-        fallback: "support@pojulife.com",
+        fallback: "support@easternos.com",
       },
       { status: 501 },
     );
@@ -111,7 +111,7 @@ export async function POST(req: Request) {
       {
         success: false,
         error: message,
-        fallback: "support@pojulife.com",
+        fallback: "support@easternos.com",
       },
       { status: 500 },
     );

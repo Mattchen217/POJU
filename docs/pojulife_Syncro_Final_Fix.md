@@ -802,7 +802,7 @@ Generate advice for all 8 directions. Output JSON only.`;
       headers: {
         'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://pojulife.com',
+        'HTTP-Referer': 'https://easternos.com',
         'X-Title': 'pojulife'
       },
       body: JSON.stringify({

@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 
+import { useAppDialog } from "@/components/ui/app-dialog";
 import { deleteArchiveItem, type MatchArchiveData } from "@/lib/archive/archive-service";
 import { normalizeMatchArchiveSynergyType } from "@/lib/match/synergy-normalize";
 import {
@@ -21,14 +22,21 @@ type Props = {
 export function MatchArchiveDetail({ archiveId, data, locale }: Props) {
   const t = useTranslations("match.archive");
   const tDetail = useTranslations("archiveDetail");
+  const tCommon = useTranslations("common");
   const router = useRouter();
+  const { confirm } = useAppDialog();
   const isZh = locale.startsWith("zh");
 
   const synergyType = normalizeMatchArchiveSynergyType(data.synergy_type);
   const synergy = SYNERGY_TYPES[synergyType as SynergyType] ?? SYNERGY_TYPES.adaptive_balance;
 
   async function handleDelete() {
-    if (!confirm(tDetail("confirm_delete"))) return;
+    const ok = await confirm(tCommon("deleteConfirmWarning"), tDetail("delete"), {
+      confirmLabel: tDetail("delete"),
+      cancelLabel: tCommon("cancel"),
+      tone: "danger",
+    });
+    if (!ok) return;
     await deleteArchiveItem(archiveId);
     router.push("/archive");
   }

@@ -187,7 +187,7 @@ By using POJU, you acknowledge:
 ## Questions
 
 If you're unsure how to interpret a POJU output:
-support@pojulife.com
+support@easternos.com
 
 If you're in distress:
 988 (US) or findahelpline.com (worldwide)
@@ -314,13 +314,13 @@ If you're in distress:
 - 
 - ```
 - For privacy questions:
-- privacy@pojulife.com
+- privacy@easternos.com
 - 
 - For general questions:
-- support@pojulife.com
+- support@easternos.com
 - 
 - For legal matters:
-- legal@pojulife.com
+- legal@easternos.com
 - 
 - Physical address (if required by your jurisdiction):
 - [待律师确定后填入]
@@ -328,9 +328,9 @@ If you're in distress:
 
 + ## 11. Contact
 + 
-+ For privacy questions: privacy@pojulife.com  
-+ For general questions: support@pojulife.com  
-+ For legal matters: legal@pojulife.com
++ For privacy questions: privacy@easternos.com  
++ For general questions: support@easternos.com  
++ For legal matters: legal@easternos.com
 ```
 
 **理由**: 早期个人开发者不必提供物理地址。如果支付审核要求,后期再加。
@@ -400,7 +400,7 @@ Version 1.0
 
 *Last updated: October 30, 2025*
 
-By using POJU (pojulife.com), you agree to these Terms of Service.
+By using POJU (easternos.com), you agree to these Terms of Service.
 
 ---
 
@@ -467,10 +467,10 @@ Click "Refund" within 5 minutes for an immediate full refund.
 
 **Full refund for technical issues** — If a technical 
 failure prevented you from accessing your Session, contact 
-support@pojulife.com within 7 days.
+support@easternos.com within 7 days.
 
 **Case-by-case review after 5 minutes** — Email 
-support@pojulife.com with your reason. Most reasonable 
+support@easternos.com with your reason. Most reasonable 
 requests are approved within 24 hours.
 
 We typically do not offer refunds for:
@@ -480,7 +480,7 @@ We typically do not offer refunds for:
 - Substantial Session use beyond initial exploration
 - Requests after 30 days from purchase
 
-To request a refund, email support@pojulife.com with your 
+To request a refund, email support@easternos.com with your 
 order ID.
 
 Refunds typically process within 5-10 business days, 
@@ -554,8 +554,8 @@ statutory rights remain intact.
 
 ## Contact
 
-Questions about these Terms? legal@pojulife.com  
-General support: support@pojulife.com
+Questions about these Terms? legal@easternos.com  
+General support: support@easternos.com
 ```
 
 ### 关键改动说明
@@ -621,15 +621,15 @@ a real person.
 ## Reach us
 
 **General questions / customer support**  
-support@pojulife.com  
+support@easternos.com  
 *Response time: usually within 24 hours, often faster*
 
 **Privacy or data requests** (GDPR, CCPA, deletion)  
-privacy@pojulife.com  
+privacy@easternos.com  
 *Response time: 24-72 hours*
 
 **Legal matters** (Terms questions, disputes)  
-legal@pojulife.com  
+legal@easternos.com  
 *Response time: 2-5 business days*
 
 ---
@@ -678,7 +678,7 @@ We read every message.
 
 ```
 Glyph 页 Five winds 区域:
-  "[查看五张卡面](https://www.pojulife.com/five-wind-cards)（/five-wind-cards）"
+  "[查看五张卡面](https://www.easternos.com/five-wind-cards)（/five-wind-cards）"
 
 问题:
   ❌ "查看五张卡面" 是中文
@@ -694,7 +694,7 @@ Glyph 页 Five winds 区域:
 - describes a human situation and helps you frame what is 
 - already happening.
 - 
-- [查看五张卡面](https://www.pojulife.com/five-wind-cards)（/five-wind-cards）
+- [查看五张卡面](https://www.easternos.com/five-wind-cards)（/five-wind-cards）
 - 
 - [Five Winds 5 张卡片渲染区...]
 
@@ -745,7 +745,7 @@ Syncro 页 Hero 区显示了 3 次 "Text me the link" 按钮
 期望最终结构:
   ┌──────────────────────────────────┐
   │  [QR code 280x280]               │
-  │   pojulife.com/syncro            │
+  │   easternos.com/syncro            │
   │                                  │
   │   ─────────────────              │
   │                                  │
@@ -845,12 +845,12 @@ POJU 页 Final CTA 下方:
 ### 残留 1: Syncro 页"Open Syncro"按钮链接
 
 ```
-当前: [Open Syncro] → https://pojulife.com/syncro (循环到当前页)
+当前: [Open Syncro] → https://easternos.com/syncro (循环到当前页)
 
 修复:
   - 现阶段 Syncro 移动端 PWA 还没做
   - 暂时把按钮改为 "Coming soon" 或禁用状态
-  - 或者跳到 mailto:hello@pojulife.com 接收用户兴趣表
+  - 或者跳到 mailto:support@easternos.com 接收用户兴趣表
   
 推荐: 改为 "Get notified when Syncro launches" 邮件订阅
   → 收集等待用户邮箱(将来运营有用)
@@ -1110,15 +1110,15 @@ const languages = [
 
 ```
 默认 (英文):
-  pojulife.com/         (= pojulife.com/en/)
-  pojulife.com/poju
-  pojulife.com/glyph
+  easternos.com/         (= easternos.com/en/)
+  easternos.com/poju
+  easternos.com/glyph
 
 其他语言:
-  pojulife.com/es/poju
-  pojulife.com/zh/glyph
-  pojulife.com/fr/syncro
-  pojulife.com/de/
+  easternos.com/es/poju
+  easternos.com/zh/glyph
+  easternos.com/fr/syncro
+  easternos.com/de/
 
 next-intl 自动处理这种路由
 SEO 友好(每个语言有独立 URL)

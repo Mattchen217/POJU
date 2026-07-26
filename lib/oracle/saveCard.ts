@@ -20,7 +20,7 @@ export async function saveCardBack(
         try {
           await navigator.share({
             title: "A glyph from POJU",
-            text: "A sincere heart opens the channel. pojulife.com",
+            text: "A sincere heart opens the channel. easternos.com",
             files: [file],
           });
           return { success: true, method: "mobile-share" };

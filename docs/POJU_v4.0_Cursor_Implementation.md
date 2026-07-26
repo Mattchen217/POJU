@@ -1,6 +1,6 @@
 # POJU v4.0 实施指令(给 Cursor)
 
-> **目的**: 在现有 pojulife.com 基础上,完成 v4.0 升级
+> **目的**: 在现有 easternos.com 基础上,完成 v4.0 升级
 >
 > **范围**:
 > - 完善 POJU 功能(深度对话 Agent)
@@ -21,7 +21,7 @@
 
 ```
 你要做的:
-  ✓ 在现有 pojulife.com 项目基础上实施 v4.0
+  ✓ 在现有 easternos.com 项目基础上实施 v4.0
   ✓ 完善 POJU 和 Syncro 功能(从现状到 v4.0)
   ✓ 优化 Glyph(从旧版到 v4.0,但保留现有 UI/卡片样式/抽签动画)
   ✓ 集成 shunshi-bazi-core 库作为计算引擎基础
@@ -657,7 +657,7 @@ export default function SyncroRouter() {
 import { QRCodeSVG } from 'qrcode.react';
 
 export default function SyncroDesktopGuide() {
-  const syncroLink = 'https://pojulife.com/syncro?ref=desktop_qr';
+  const syncroLink = 'https://easternos.com/syncro?ref=desktop_qr';
   
   return (
     <div className="syncro-desktop-guide">

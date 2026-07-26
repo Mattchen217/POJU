@@ -565,8 +565,8 @@ function PWAInstallScreen({ capability, installPrompt }: {
         
         <div className="desktop-fallback">
           <p className="muted">{t('want_explore')}</p>
-          <a href="https://pojulife.com" className="desktop-link">
-            pojulife.com
+          <a href="https://easternos.com" className="desktop-link">
+            easternos.com
           </a>
         </div>
       </div>
@@ -3728,7 +3728,7 @@ export function BeginButton({ productId, price, freeFirstTime }: Props) {
   ✓ 完整流程
 
 □ PC Mac/Windows
-  ✓ 访问 pojulife.com 看到完整 Marketing
+  ✓ 访问 easternos.com 看到完整 Marketing
   ✓ POJU/Glyph/Match 可用
   ✓ Syncro 显示介绍 + QR 码(原有,不变)
 

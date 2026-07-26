@@ -430,7 +430,7 @@ export async function openRouterStream(input: StreamInput): Promise<void> {
     headers: {
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
-      'HTTP-Referer': 'https://pojulife.com',
+      'HTTP-Referer': 'https://easternos.com',
       'X-Title': 'Pojulife'
     },
     body: JSON.stringify({

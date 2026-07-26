@@ -756,7 +756,7 @@ Generate the JSON guidance per the system prompt format.`;
       "tagline": "A weather forecast for your inner life, updated every two hours.",
       "footnote": "Free · Opens on mobile only",
       "cta": "Open Syncro",
-      "qr_label": "pojulife.com/syncro",
+      "qr_label": "easternos.com/syncro",
       "sms_label": "Text yourself the link",
       "sms_button": "Text me the link"
     },
@@ -1072,7 +1072,7 @@ Generate the JSON guidance per the system prompt format.`;
       "tagline": "为你的内在世界提供天气预报,每两小时更新一次。",
       "footnote": "免费 · 仅在手机上打开",
       "cta": "打开 Syncro",
-      "qr_label": "pojulife.com/syncro",
+      "qr_label": "easternos.com/syncro",
       "sms_label": "把链接发给自己",
       "sms_button": "把链接发给我"
     },
@@ -1388,7 +1388,7 @@ Generate the JSON guidance per the system prompt format.`;
       "tagline": "Un pronóstico del clima para tu vida interior, actualizado cada dos horas.",
       "footnote": "Gratis · Solo se abre en móvil",
       "cta": "Abrir Syncro",
-      "qr_label": "pojulife.com/syncro",
+      "qr_label": "easternos.com/syncro",
       "sms_label": "Envíate el enlace",
       "sms_button": "Envíame el enlace"
     },
@@ -1704,7 +1704,7 @@ Generate the JSON guidance per the system prompt format.`;
       "tagline": "Une prévision météo pour votre vie intérieure, mise à jour toutes les deux heures.",
       "footnote": "Gratuit · S'ouvre uniquement sur mobile",
       "cta": "Ouvrir Syncro",
-      "qr_label": "pojulife.com/syncro",
+      "qr_label": "easternos.com/syncro",
       "sms_label": "Envoyez-vous le lien",
       "sms_button": "Envoyez-moi le lien"
     },
@@ -2020,7 +2020,7 @@ Generate the JSON guidance per the system prompt format.`;
       "tagline": "Eine Wettervorhersage für dein Innenleben, alle zwei Stunden aktualisiert.",
       "footnote": "Kostenlos · Öffnet nur auf dem Handy",
       "cta": "Syncro öffnen",
-      "qr_label": "pojulife.com/syncro",
+      "qr_label": "easternos.com/syncro",
       "sms_label": "Sende dir den Link",
       "sms_button": "Schick mir den Link"
     },

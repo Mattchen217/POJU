@@ -100,7 +100,7 @@
 │                                  │
 │   If you're still receiving      │
 │   emails, please contact         │
-│   support@pojulife.com           │
+│   support@easternos.com           │
 │   and we'll remove you           │
 │   immediately.                   │
 │                                  │
@@ -116,7 +116,7 @@
 - Token 已被使用过一次
 
 **按钮行为**：
-- `Contact Support` → `mailto:support@pojulife.com?subject=Unsubscribe%20request`
+- `Contact Support` → `mailto:support@easternos.com?subject=Unsubscribe%20request`
 - `Return to POJU` → 跳转 `/`
 
 ---
@@ -233,7 +233,7 @@ useEffect(() => {
 
 ### API 调用失败
 
-- 显示：`Something went wrong. Try again or contact support@pojulife.com.`
+- 显示：`Something went wrong. Try again or contact support@easternos.com.`
 - 重试按钮
 
 ### 网络断开

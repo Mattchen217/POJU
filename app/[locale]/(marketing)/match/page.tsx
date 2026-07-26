@@ -6,7 +6,7 @@ import { MatchHomePage } from "@/components/match/MatchHomePage";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Match — pojulife",
+  title: "Match — Eastern OS",
   description:
     "Two personality profiles, one relationship. Deep compatibility reading for couples, partners, family, and teams.",
 };

@@ -162,7 +162,7 @@ async function handleRetry() {
 ### Stripe Checkout 再次失败
 
 点击 `Try again` 后若 Stripe 调用失败：
-- Toast 替换为错误提示：`Something went wrong. Try again or contact support@pojulife.com.`
+- Toast 替换为错误提示：`Something went wrong. Try again or contact support@easternos.com.`
 
 ### URL 参数丢失
 

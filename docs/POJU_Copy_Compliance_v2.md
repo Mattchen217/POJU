@@ -46,7 +46,7 @@
 | 原名称 | 新名称 | 原因 |
 |---|---|---|
 | **POJU** | POJU（不变） | 干净的品牌资产 |
-| **pojulife.com** | pojulife.com（不变） | 工具型域名,无需改 |
+| **easternos.com** | easternos.com（不变） | 工具型域名,无需改 |
 | **Oracle** | **Glyph** | "Oracle"在英文中触发占卜联想 |
 | **Syncro** | Syncro（不变） | 工具型名字,完美 |
 
@@ -780,7 +780,7 @@ For reflection and self-exploration. POJU offers
 perspectives, not prophecies. All decisions are yours 
 alone.
 
-Privacy questions: privacy@pojulife.com
+Privacy questions: privacy@easternos.com
 ```
 
 ---
@@ -871,7 +871,7 @@ grep -ri "fortune\|divination\|psychic\|occult\|mystic\|sacred\|spiritual\|proph
 
 ```
 ✓ POJU 这个名字 - 保留
-✓ pojulife.com 域名 - 保留
+✓ easternos.com 域名 - 保留
 ✓ 三件套架构(POJU + Glyph + Syncro) - 保留
 ✓ 5 个等级英文名(Divine Tailwind 等) - 保留
 ✓ 100 签数据 - 保留

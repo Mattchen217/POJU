@@ -36,7 +36,7 @@
 ## 1. 网站路由地图
 
 ```
-pojulife.com
+easternos.com
 │
 ├─ /                           主落地页（Hero + 三产品 + 科学 + 隐私）
 │
@@ -120,7 +120,7 @@ pojulife.com
 所有公开页面底部都有，包含：
 
 - POJU Logo（纯字母版）
-- 副标题：`pojulife.com`
+- 副标题：`easternos.com`
 - 分隔线
 - Legal 链接组：
   - Disclaimer
@@ -432,7 +432,7 @@ Before you pay — what happens to your words:
 - 宣传视频或 GIF（循环展示粒子球 + AR 视口）
 - 提示框：`Opens on mobile only`
 - 说明：`Syncro needs your phone's compass, GPS, and camera. Scan the code or text yourself the link.`
-- 二维码（链接到 `pojulife.com/syncro` 的手机版）
+- 二维码（链接到 `easternos.com/syncro` 的手机版）
 - 输入框 + 按钮：`[phone number]` `Text me the link`（发送 SMS）
 
 **下方**（所有设备都有）：
@@ -591,7 +591,7 @@ AR 模式下长按视窗 1 秒触发：
 - 粒子球快照
 - 核心方位信息（Wealth / Focus / Avoid 三组）
 - 底部钩子：`Ask POJU to see what's underneath · $9.99`
-- `pojulife.com`
+- `easternos.com`
 
 ---
 
@@ -692,7 +692,7 @@ One question · $9.99
 
 [ Ask POJU →  ]
 
-pojulife.com
+easternos.com
 ```
 
 ### 6.7 Stage 7 · 携带（Carry）
@@ -1045,7 +1045,7 @@ Type "WIPE" to confirm:
 9. **AI-GENERATED CONTENT** - AI 生成内容声明
 10. **CHANGES TO THIS DISCLAIMER** - 条款变更
 
-底部：`Contact: legal@pojulife.com`
+底部：`Contact: legal@easternos.com`
 
 ---
 
@@ -1102,11 +1102,11 @@ Type "WIPE" to confirm:
 - 标题：`Contact`
 - 副标题：`We read every email.`
 - 三个邮箱分类：
-  - **Support**: `support@pojulife.com`
+  - **Support**: `support@easternos.com`
     For payments, refunds, technical issues
-  - **Privacy**: `privacy@pojulife.com`
+  - **Privacy**: `privacy@easternos.com`
     For data questions, CCPA/GDPR requests
-  - **Legal**: `legal@pojulife.com`
+  - **Legal**: `legal@easternos.com`
     For legal matters, press inquiries
 - 响应时间说明：`We aim to reply within 24 hours on business days.`
 
@@ -1146,7 +1146,7 @@ You can come back anytime without leaving anything behind.
 This unsubscribe link has expired or is invalid.
 
 If you're still receiving emails, please contact 
-support@pojulife.com and we'll remove you immediately.
+support@easternos.com and we'll remove you immediately.
 
 [ Return to POJU ]
 ```
@@ -1175,7 +1175,7 @@ Stripe 支付成功后重定向到此 URL，带 Stripe session ID。
 
 - 提示：`We're confirming your payment. This usually takes a moment.`
 - 5 秒后自动重试 3 次
-- 仍失败 → 提示：`Something went wrong. Please contact support@pojulife.com — your payment is safe.`
+- 仍失败 → 提示：`Something went wrong. Please contact support@easternos.com — your payment is safe.`
 - 按钮：`Contact support`
 - 按钮：`Try again`
 
@@ -1225,7 +1225,7 @@ Payment cancelled. No charge was made.
 - 副标题：`The system hit a bump. This is not your fault.`
 - 按钮：`Try again`（刷新当前页）
 - 按钮：`Return home`
-- 底部小字：`If this keeps happening, email support@pojulife.com`
+- 底部小字：`If this keeps happening, email support@easternos.com`
 
 ---
 

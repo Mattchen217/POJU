@@ -4,7 +4,7 @@ import { Suspense } from "react";
 
 // 1. 保留元数据（只能在服务端组件导出）
 export const metadata: Metadata = {
-  title: "pojulife Session",
+  title: "Eastern OS Session",
   description: "pojulife chat session",
 };
 

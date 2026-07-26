@@ -209,7 +209,7 @@ Tell me:
 │   Don't worry — your payment     │
 │   is safe. Please contact us:    │
 │                                  │
-│   support@pojulife.com           │
+│   support@easternos.com           │
 │                                  │
 │   Reference: [Stripe session ID] │
 │                                  │
@@ -222,7 +222,7 @@ Tell me:
 **关键**：
 - 明确告知用户**"你的钱没丢"**，降低恐慌
 - 提供 Stripe session ID 作为查询凭证
-- `Contact Support` → `mailto:support@pojulife.com?subject=POJU%20Payment%20Recovery&body=My%20Stripe%20session%20ID:%20cs_xxx`
+- `Contact Support` → `mailto:support@easternos.com?subject=POJU%20Payment%20Recovery&body=My%20Stripe%20session%20ID:%20cs_xxx`
 - `Try Again` → 重新加载页面
 
 ---

@@ -353,7 +353,7 @@ async function openRouterChatCompletionWithModel(
     Authorization: `Bearer ${apiKey}`,
     "Content-Type": "application/json",
   };
-  const referer = process.env.OPENROUTER_HTTP_REFERER?.trim() || "https://pojulife.com";
+  const referer = process.env.OPENROUTER_HTTP_REFERER?.trim() || "https://easternos.com";
   const title = process.env.OPENROUTER_APP_TITLE?.trim() || "Pojulife";
   headers["HTTP-Referer"] = referer;
   headers["X-Title"] = title;

@@ -22,7 +22,7 @@ import { ProductWhatIsSection } from "@/components/marketing/product-what-is-sec
 import { SyncroProductHero } from "@/components/marketing/syncro-product-hero";
 
 export const syncroMarketingMetadata: Metadata = {
-  title: "Syncro — pojulife",
+  title: "Syncro — Eastern OS",
   description:
     "See your natural rhythms. First Syncro free, then $4.99 per 24-hour window — mobile only.",
 };

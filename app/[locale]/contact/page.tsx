@@ -40,7 +40,7 @@ async function ContactContent() {
       <ul>
         <li>
           <strong>{t("billing.emailLabel")}</strong>{" "}
-          <a href="mailto:support@pojulife.com">support@pojulife.com</a>
+          <a href="mailto:support@easternos.com">support@easternos.com</a>
         </li>
         <li>
           <strong>{t("billing.responseLabel")}</strong> {t("billing.response")}
@@ -61,7 +61,7 @@ async function ContactContent() {
       <ul>
         <li>
           <strong>{t("privacy.emailLabel")}</strong>{" "}
-          <a href="mailto:privacy@pojulife.com">privacy@pojulife.com</a>
+          <a href="mailto:privacy@easternos.com">privacy@easternos.com</a>
         </li>
         <li>
           <strong>{t("privacy.responseLabel")}</strong> {t("privacy.response")}
@@ -73,7 +73,7 @@ async function ContactContent() {
       <ul>
         <li>
           <strong>{t("legal.emailLabel")}</strong>{" "}
-          <a href="mailto:legal@pojulife.com">legal@pojulife.com</a>
+          <a href="mailto:legal@easternos.com">legal@easternos.com</a>
         </li>
         <li>
           <strong>{t("legal.responseLabel")}</strong> {t("legal.response")}

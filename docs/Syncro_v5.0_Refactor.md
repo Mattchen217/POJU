@@ -965,7 +965,7 @@ export async function requestOrientationPermission(): Promise<boolean> {
   
   "desktop_message_1": "Syncro needs your phone.",
   "desktop_message_2": "Its core is reading directions through your device — that requires a mobile compass.",
-  "open_on_mobile_hint": "Open pojulife.com on your phone to use Syncro."
+  "open_on_mobile_hint": "Open easternos.com on your phone to use Syncro."
 }
 ```
 
@@ -992,7 +992,7 @@ export async function requestOrientationPermission(): Promise<boolean> {
   
   "desktop_message_1": "Syncro 需要你的手机。",
   "desktop_message_2": "它的核心是通过设备读取方位——这需要移动罗盘。",
-  "open_on_mobile_hint": "请在手机上打开 pojulife.com 使用 Syncro。"
+  "open_on_mobile_hint": "请在手机上打开 easternos.com 使用 Syncro。"
 }
 ```
 

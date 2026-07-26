@@ -5,7 +5,7 @@ import { LegalPageShell } from "@/components/legal/legal-page-shell";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Cookie Policy — pojulife",
+  title: "Cookie Policy — Eastern OS",
   description: "pojulife cookie and local storage policy — Version 1.1",
 };
 
@@ -183,7 +183,7 @@ export default function CookiesPage() {
         </li>
         <li>
           <strong>Delete local data:</strong> Use the in-app <strong>&quot;End &amp; Wipe&quot;</strong> action or clear
-          site data for <code>pojulife.com</code> in your browser settings.
+          site data for <code>easternos.com</code> in your browser settings.
         </li>
         <li>
           <strong>Subscription email records:</strong> Email addresses used for Monthly Pass billing can be removed from
@@ -196,7 +196,7 @@ export default function CookiesPage() {
       <ul>
         <li>
           <strong>Data Privacy Inquiries:</strong>{" "}
-          <a href="mailto:privacy@pojulife.com">privacy@pojulife.com</a>
+          <a href="mailto:privacy@easternos.com">privacy@easternos.com</a>
         </li>
       </ul>
     </LegalPageShell>

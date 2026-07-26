@@ -100,7 +100,7 @@ Oracle 的"爆炸粒子 + 神秘卡片 + 毛笔写入"完整仪式流，以及 P
 │  One question · $9.99                │
 │                                      │
 │            Your Sign                 │
-│           pojulife.com               │
+│           easternos.com               │
 └──────────────────────────────────────┘
 ```
 

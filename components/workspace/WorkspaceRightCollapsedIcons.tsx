@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 
 import { ArchiveUnreadDot } from "@/components/archive/ArchiveUnreadDot";
 import { EnergyPortraitGlyph, EnergyReportGlyph } from "@/components/ui/A4PaperSheet";
+import { useWorkspaceAtmosPrepareOptional } from "@/components/workspace/WorkspaceAtmosPrepareContext";
 import { useWorkspaceMatchPrepareOptional } from "@/components/workspace/WorkspaceMatchPrepareContext";
 import { useWorkspacePojuPrepareOptional } from "@/components/workspace/WorkspacePojuPrepareContext";
 
@@ -15,15 +16,48 @@ type Props = {
 /**
  * Collapsed right-rail icon stack.
  * POJU: energy matrix + base report.
+ * Atmos: energy matrix only.
  * Match: energy portraits A/B + base-analysis report icons A/B (same glyphs as POJU).
  */
 export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
   const t = useTranslations("workspace.pojuRail");
+  const tAtmos = useTranslations("workspace.atmosRail");
   const tMatch = useTranslations("match.workspace");
   const prepare = useWorkspacePojuPrepareOptional();
+  const atmos = useWorkspaceAtmosPrepareOptional();
   const match = useWorkspaceMatchPrepareOptional();
 
   if (!visible) return null;
+
+  const atmosActive =
+    atmos &&
+    (atmos.phase === "exiting" || atmos.phase === "forecast") &&
+    Boolean(atmos.matrixPayload);
+
+  if (atmosActive && atmos) {
+    return (
+      <div className="workspace-right-collapsed-icons" role="toolbar" aria-label={tAtmos("matrixTitle")}>
+        <button
+          type="button"
+          className="workspace-right-collapsed-icons__btn"
+          aria-label={tAtmos("matrixTitle")}
+          data-tooltip={tAtmos("matrixTitle")}
+          onClick={(e) => {
+            e.stopPropagation();
+            atmos.setMatrixExpanded(true);
+            onOpenPanel();
+          }}
+        >
+          <span className="workspace-sidebar__icon" aria-hidden>
+            <EnergyPortraitGlyph className="workspace-right-collapsed-icons__portrait" />
+          </span>
+          {atmos.matrixUnread ? (
+            <ArchiveUnreadDot className="workspace-right-collapsed-icons__unread" />
+          ) : null}
+        </button>
+      </div>
+    );
+  }
 
   const matchActive =
     match &&

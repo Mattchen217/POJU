@@ -46,7 +46,7 @@ export default function BaseAnalysisAuditListPage() {
         <h1 className="text-xl font-semibold tracking-tight">个人能量分析报告 · 审核台</h1>
         <p className="mt-1 max-w-2xl text-sm text-white/55">
           每次调用 DeepSeek 生成基础分析时，服务端会尝试保存明文 JSON。本地 <code className="text-white/70">pnpm dev</code>{" "}
-          默认可用；线上 pojulife.com 默认关闭或无法持久化，见下方说明。
+          默认可用；线上 easternos.com 默认关闭或无法持久化，见下方说明。
         </p>
         <div className="mt-3 flex flex-wrap gap-3 text-sm">
           <button

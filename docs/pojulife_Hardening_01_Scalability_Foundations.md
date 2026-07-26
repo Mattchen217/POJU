@@ -1,6 +1,6 @@
 # pojulife 加固文档 #01 · 可扩展性地基（Scalability Foundations）
 
-> **背景**：pojulife.com（Next.js + PWA，已部署在 Vercel）尚未大规模上线，
+> **背景**：easternos.com（Next.js + PWA，已部署在 Vercel）尚未大规模上线，
 > 现在做的是「便宜、不重写框架、为未来铺路」的预防性加固，**不是**架构重构。
 >
 > **目标（4 项）**：

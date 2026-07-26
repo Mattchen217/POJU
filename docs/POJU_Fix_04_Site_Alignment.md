@@ -71,7 +71,7 @@
 - describes a human situation and helps you frame what is 
 - already happening.
 - 
-- [查看五张卡面](https://www.pojulife.com/five-wind-cards)（/five-wind-cards）
+- [查看五张卡面](https://www.easternos.com/five-wind-cards)（/five-wind-cards）
 
 + ## Five winds — five archetypal patterns
 + 
@@ -279,14 +279,14 @@ situation evolves between deeper conversations.
 
 ```diff
 - POJU
-- pojulife.com
+- easternos.com
 - 
 - ...links...
 - 
 - © 2026 POJU. All rights reserved.
 
 + pojulife
-+ pojulife.com
++ easternos.com
 + 
 + ...links...
 + 

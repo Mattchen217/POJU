@@ -396,13 +396,13 @@ export async function GET(req: NextRequest) {
 1. typecheck
 2. 手动 curl 测试:
    
-   curl -X POST https://pojulife.com/api/syncro/inngest_start \
+   curl -X POST https://easternos.com/api/syncro/inngest_start \
      -H "Content-Type: application/json" \
      -d '{ "sessionId": "test-xxx", "hourOrder": [...], "llmInputs": {...} }'
    
    → 应返回 { success: true, started: true }
    
-   curl https://pojulife.com/api/syncro/inngest_status?sid=test-xxx&include_hours=1
+   curl https://easternos.com/api/syncro/inngest_status?sid=test-xxx&include_hours=1
    
    → 应返回 { status: {...}, hours: {...} }
 ```
@@ -791,7 +791,7 @@ D-3:SyncroPreparingLiveHour 改造 + 废弃 BatchRunner(中风险)
 
 Inngest Dashboard:
   ✓ App 状态 enabled
-  ✓ Serve URL: https://pojulife.com/api/inngest
+  ✓ Serve URL: https://easternos.com/api/inngest
   ✓ Function "syncro-generate-all-hours" 注册
   ✓ Concurrency 配置(初始 10)
 

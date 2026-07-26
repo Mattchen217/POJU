@@ -49,7 +49,7 @@ export function OpenInChromeGuide({ browserName }: OpenInChromeGuideProps) {
               onClick={() => void copyUrl()}
             >
               {copied ? <IconCheck aria-hidden /> : <IconCopy aria-hidden />}
-              {copied ? t("copied") : "pojulife.com"}
+              {copied ? t("copied") : "easternos.com"}
             </button>
           </div>
         </div>

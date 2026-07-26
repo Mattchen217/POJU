@@ -439,7 +439,7 @@ export async function shareCardBack(level: GlyphLevel, signNumber: number): Prom
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
           title: 'A glyph from POJU',
-          text: 'A sincere heart opens the channel. pojulife.com',
+          text: 'A sincere heart opens the channel. easternos.com',
           files: [file],
         });
         return { success: true, method: 'native-share' };

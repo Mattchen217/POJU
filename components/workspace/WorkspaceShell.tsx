@@ -15,6 +15,11 @@ import {
   useWorkspaceRightRailWide,
 } from "@/components/workspace/WorkspacePojuPrepareContext";
 import {
+  WorkspaceAtmosPrepareProvider,
+  useWorkspaceAtmosPrepareOptional,
+  useWorkspaceAtmosRightRailWide,
+} from "@/components/workspace/WorkspaceAtmosPrepareContext";
+import {
   WorkspaceMatchPrepareProvider,
   useWorkspaceMatchPrepareOptional,
   useWorkspaceMatchRightRailWide,
@@ -22,6 +27,7 @@ import {
 import { WorkspaceMatchRightPanel } from "@/components/workspace/WorkspaceMatchRightPanel";
 import { WorkspaceRightDrawer } from "@/components/workspace/WorkspaceRightDrawer";
 import { WorkspaceRightMatrixPanel } from "@/components/workspace/WorkspaceRightMatrixPanel";
+import { WorkspaceAtmosRightPanel } from "@/components/workspace/WorkspaceAtmosRightPanel";
 import { WorkspaceScrollArea } from "@/components/workspace/WorkspaceScrollArea";
 import { WorkspaceSidebar, WorkspaceSidebarBrand } from "@/components/workspace/WorkspaceSidebar";
 import { isWorkspaceRailInteractiveTarget } from "@/components/workspace/workspace-rail-click";
@@ -56,13 +62,16 @@ function RightDrawerContext({
   if (tab === "poju") {
     return <WorkspaceRightMatrixPanel />;
   }
+  if (tab === "atmos") {
+    return <WorkspaceAtmosRightPanel />;
+  }
   if (tab === "match") {
     return <WorkspaceMatchRightPanel />;
   }
   return <div className="workspace-right-drawer-placeholder" aria-hidden />;
 }
 
-/** Keeps POJU right rail closed only while birth entry is idle; resets prepare when leaving POJU. */
+/** Keeps POJU right rail closed only while birth entry is idle. Never resets on tab leave. */
 function PojuRightRailGate({
   tab,
   setRightOpen,
@@ -72,12 +81,10 @@ function PojuRightRailGate({
 }) {
   const prepare = useWorkspacePojuPrepareOptional();
   const phase = prepare?.phase ?? "idle";
-  const resetPrepare = prepare?.resetPrepare;
 
   useEffect(() => {
     if (tab !== "poju") {
-      resetPrepare?.();
-      if (tab !== "match") {
+      if (tab !== "match" && tab !== "atmos") {
         try {
           setRightOpen(window.localStorage.getItem("poju.workspaceRightDrawerOpen") === "1");
         } catch {
@@ -89,12 +96,12 @@ function PojuRightRailGate({
     if (phase === "idle" || phase === "handoff") {
       setRightOpen(false);
     }
-  }, [tab, phase, setRightOpen, resetPrepare]);
+  }, [tab, phase, setRightOpen]);
 
   return null;
 }
 
-/** Opens Match right rail after warmup matrices are ready; resets when leaving Match. */
+/** Opens Match right rail after warmup matrices are ready. Never resets on tab leave. */
 function MatchRightRailGate({
   tab,
   setRightOpen,
@@ -104,20 +111,37 @@ function MatchRightRailGate({
 }) {
   const match = useWorkspaceMatchPrepareOptional();
   const phase = match?.phase ?? "entry";
-  const resetMatch = match?.resetMatch;
   const hasMatrices = Boolean(match?.matrixPayloadA || match?.matrixPayloadB);
 
   useEffect(() => {
-    if (tab !== "match") {
-      resetMatch?.();
-      return;
-    }
+    if (tab !== "match") return;
     if (phase === "entry" || phase === "warmup" || !hasMatrices) {
       setRightOpen(false);
       return;
     }
     setRightOpen(true);
-  }, [tab, phase, hasMatrices, setRightOpen, resetMatch]);
+  }, [tab, phase, hasMatrices, setRightOpen]);
+
+  return null;
+}
+
+/** Keeps Atmos right rail closed while birth entry is idle. Never resets on tab leave. */
+function AtmosRightRailGate({
+  tab,
+  setRightOpen,
+}: {
+  tab: WorkspaceTab;
+  setRightOpen: (open: boolean) => void;
+}) {
+  const prepare = useWorkspaceAtmosPrepareOptional();
+  const phase = prepare?.phase ?? "idle";
+
+  useEffect(() => {
+    if (tab !== "atmos") return;
+    if (phase === "idle" || phase === "handoff") {
+      setRightOpen(false);
+    }
+  }, [tab, phase, setRightOpen]);
 
   return null;
 }
@@ -134,7 +158,8 @@ function WorkspaceShellSurface({
 }) {
   const pojuWide = useWorkspaceRightRailWide();
   const matchWide = useWorkspaceMatchRightRailWide();
-  const rightWide = pojuWide || matchWide;
+  const atmosWide = useWorkspaceAtmosRightRailWide();
+  const rightWide = pojuWide || matchWide || atmosWide;
   return (
     <div
       className={`workspace-shell${sidebarCollapsed ? " is-sidebar-collapsed" : ""}${
@@ -163,7 +188,8 @@ function WorkspaceRightDrawerHost({
 }) {
   const pojuWide = useWorkspaceRightRailWide();
   const matchWide = useWorkspaceMatchRightRailWide();
-  const rightWide = pojuWide || matchWide;
+  const atmosWide = useWorkspaceAtmosRightRailWide();
+  const rightWide = pojuWide || matchWide || atmosWide;
   return (
     <WorkspaceRightDrawer open={rightOpen} wide={rightWide} onOpen={onOpen} onClose={onClose}>
       <RightDrawerContext tab={tab} archiveId={archiveId} onOpenArchive={onOpenArchive} />
@@ -194,6 +220,36 @@ function PojuPrepareResetBinder({
   return null;
 }
 
+function MatchPrepareResetBinder({
+  resetRef,
+}: {
+  resetRef: { current: (() => void) | null };
+}) {
+  const match = useWorkspaceMatchPrepareOptional();
+  useEffect(() => {
+    resetRef.current = match?.resetMatch ?? null;
+    return () => {
+      resetRef.current = null;
+    };
+  }, [match, match?.resetMatch, resetRef]);
+  return null;
+}
+
+function AtmosPrepareResetBinder({
+  resetRef,
+}: {
+  resetRef: { current: (() => void) | null };
+}) {
+  const prepare = useWorkspaceAtmosPrepareOptional();
+  useEffect(() => {
+    resetRef.current = prepare?.resetPrepare ?? null;
+    return () => {
+      resetRef.current = null;
+    };
+  }, [prepare, prepare?.resetPrepare, resetRef]);
+  return null;
+}
+
 export function WorkspaceShell({ initialTab }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -212,6 +268,8 @@ export function WorkspaceShell({ initialTab }: Props) {
   const [rightOpen, setRightOpen] = useState(false);
   const pojuPrepareResetRef = useRef<(() => void) | null>(null);
   const pojuResumeSessionRef = useRef<((sessionId: string) => Promise<boolean>) | null>(null);
+  const matchPrepareResetRef = useRef<(() => void) | null>(null);
+  const atmosPrepareResetRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     try {
@@ -290,14 +348,30 @@ export function WorkspaceShell({ initialTab }: Props) {
     [router],
   );
 
+  /** Switch product tab — keep in-progress flow (no reset). */
+  const selectTab = useCallback(
+    (next: WorkspaceTab) => {
+      setTab(next);
+      setArchiveId(null);
+      syncUrl(next, null);
+    },
+    [syncUrl],
+  );
+
+  /** Explicit New — reset that product to its entry state. */
   const selectNew = useCallback(
     (next: WorkspaceTab) => {
       setTab(next);
       setArchiveId(null);
       syncUrl(next, null);
-      /* New Session / engine home — leave preparing or chat surface. */
       if (next === "poju") {
         pojuPrepareResetRef.current?.();
+      }
+      if (next === "match") {
+        matchPrepareResetRef.current?.();
+      }
+      if (next === "atmos") {
+        atmosPrepareResetRef.current?.();
       }
     },
     [syncUrl],
@@ -349,12 +423,16 @@ export function WorkspaceShell({ initialTab }: Props) {
   return (
     <AppDialogProvider>
       <WorkspacePojuPrepareProvider openRight={openRight}>
+        <WorkspaceAtmosPrepareProvider openRight={openRight}>
         <WorkspaceMatchPrepareProvider openRight={openRight}>
         <PojuPrepareResetBinder
           resetRef={pojuPrepareResetRef}
           resumeRef={pojuResumeSessionRef}
         />
+        <MatchPrepareResetBinder resetRef={matchPrepareResetRef} />
+        <AtmosPrepareResetBinder resetRef={atmosPrepareResetRef} />
         <PojuRightRailGate tab={tab} setRightOpen={setRightOpen} />
+        <AtmosRightRailGate tab={tab} setRightOpen={setRightOpen} />
         <MatchRightRailGate tab={tab} setRightOpen={setRightOpen} />
         <WorkspaceShellSurface sidebarCollapsed={sidebarCollapsed} rightOpen={rightOpen}>
         <div className="workspace-shell__sky" aria-hidden />
@@ -411,9 +489,10 @@ export function WorkspaceShell({ initialTab }: Props) {
             <WorkspaceSidebar
               activeTab={tab}
               activeArchiveId={archiveId}
+              onSelectTab={selectTab}
               onSelectNew={selectNew}
               onSelectArchive={selectArchive}
-              onSelectProfile={() => selectNew("profile")}
+              onSelectProfile={() => selectTab("profile")}
               collapsed={sidebarCollapsed}
               showBrand={false}
             />
@@ -434,12 +513,14 @@ export function WorkspaceShell({ initialTab }: Props) {
           onClose={() => setMenuOpen(false)}
           activeTab={tab}
           activeArchiveId={archiveId}
+          onSelectTab={selectTab}
           onSelectNew={selectNew}
           onSelectArchive={selectArchive}
-          onSelectProfile={() => selectNew("profile")}
+          onSelectProfile={() => selectTab("profile")}
         />
         </WorkspaceShellSurface>
         </WorkspaceMatchPrepareProvider>
+        </WorkspaceAtmosPrepareProvider>
       </WorkspacePojuPrepareProvider>
     </AppDialogProvider>
   );

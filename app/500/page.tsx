@@ -26,7 +26,7 @@ export default function Error500Page() {
           </Link>
         </div>
         <p className="mt-4 text-xs text-text-dim">
-          If this keeps happening, email support@pojulife.com
+          If this keeps happening, email support@easternos.com
         </p>
       </GlassCard>
     </div>

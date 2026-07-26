@@ -72,7 +72,7 @@ function openRouterHeaders(): Record<string, string> {
   const referer = process.env.OPENROUTER_HTTP_REFERER?.trim();
   const title = process.env.OPENROUTER_APP_TITLE?.trim();
   if (referer) headers["HTTP-Referer"] = referer;
-  else headers["HTTP-Referer"] = "https://pojulife.com";
+  else headers["HTTP-Referer"] = "https://easternos.com";
   if (title) headers["X-Title"] = title;
   else headers["X-Title"] = "pojulife";
   return headers;

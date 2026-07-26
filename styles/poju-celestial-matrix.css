@@ -462,18 +462,36 @@
 }
 
 .pcm--rail .pcm-stage--in-paper .pcm-navframe {
-  /* Upper chrome ≠ panel — purple glass; active tab bridges into #1b1a26 panel */
-  --pcm-link-surface: #1b1a26;
-  background: rgba(139, 92, 246, 0.14);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  /* Upper chrome = A4 document icon purple-glass fill + blur */
+  --pcm-link-surface: var(--ws-frame-well, #0b0a10);
+  background: var(
+    --ws-frame-chrome,
+    linear-gradient(
+      155deg,
+      rgba(78, 56, 130, 0.96) 0%,
+      rgba(54, 38, 96, 0.94) 42%,
+      rgba(34, 24, 64, 0.92) 100%
+    )
+  );
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border-radius: 12px 12px 0 0;
+  border: 1.5px solid var(--ws-frame-border, rgba(167, 139, 250, 0.5));
+  border-bottom: none;
   padding: 1.35rem 0.85rem 0;
-  box-shadow: inset 0 1px 0 rgba(196, 181, 253, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 .pcm--rail .pcm-stage--in-paper .pcm-navframe:hover {
-  background: rgba(139, 92, 246, 0.2);
+  background: var(
+    --ws-frame-chrome-hover,
+    linear-gradient(
+      155deg,
+      rgba(88, 64, 144, 0.98) 0%,
+      rgba(62, 44, 108, 0.96) 42%,
+      rgba(40, 28, 72, 0.94) 100%
+    )
+  );
 }
 
 .pcm--rail .pcm-stage--in-paper .pcm-navframe__title-row {
@@ -503,16 +521,21 @@
 
 .pcm--rail .pcm-stage--in-paper .pcm-navframe .pcm-tabs__btn.is-active {
   color: #ffffff;
-  background: #1b1a26;
-  box-shadow: 0 1px 0 #1b1a26;
+  background: var(--ws-frame-well, #0b0a10);
+  box-shadow: 0 1px 0 var(--ws-frame-well, #0b0a10);
   border-radius: 10px 10px 0 0;
   z-index: 4;
 }
 
 .pcm--rail .pcm-stage--in-paper .pcm-shell__panel {
-  background: #1b1a26;
+  background: var(--ws-frame-well, #0b0a10);
   background-image: none;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
+  border: 1.5px solid var(--ws-frame-border, rgba(167, 139, 250, 0.5));
+  border-top: none;
+  box-shadow:
+    0 0 0 1px rgba(139, 92, 246, 0.16),
+    0 8px 32px rgba(0, 0, 0, 0.25),
+    0 0 28px rgba(139, 92, 246, 0.18);
   border-radius: 0 0 12px 12px;
 }
 
@@ -858,8 +881,8 @@
 }
 
 .pcm--rail .pcm-tabs__btn.is-active {
-  background: #1b1a26;
-  box-shadow: 0 1px 0 #1b1a26;
+  background: var(--ws-frame-well, #0b0a10);
+  box-shadow: 0 1px 0 var(--ws-frame-well, #0b0a10);
 }
 
 .pcm[data-locale="zh"] .pcm-tabs__btn.is-active {

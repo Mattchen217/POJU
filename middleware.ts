@@ -8,6 +8,6 @@ export const config = {
   matcher: [
     "/",
     "/(zh|es|de|fr)/:path*",
-    "/((?!api|_next|_vercel|oracle-test|oracle-fronts-preview|unsubscribe|ops|kv|.*\\..*).*)",
+    "/((?!api|_next|_vercel|v2-landing|oracle-test|oracle-fronts-preview|unsubscribe|ops|kv|.*\\..*).*)",
   ],
 };

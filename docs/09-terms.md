@@ -117,7 +117,7 @@ We do not offer refunds for:
   active, the service has been delivered
 · Requests after 7 days from purchase
 
-To request a refund, email support@pojulife.com with your 
+To request a refund, email support@easternos.com with your 
 Stripe payment ID.
 
 Refunds typically process within 5-10 business days.
@@ -190,10 +190,10 @@ statutory rights remain intact.
 
 ```
 Questions about these Terms?
-legal@pojulife.com
+legal@easternos.com
 
 General support:
-support@pojulife.com
+support@easternos.com
 ```
 
 ---

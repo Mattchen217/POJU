@@ -40,6 +40,11 @@ export function matrixNarrativeCacheSessionId(product: MatrixNarrativeProduct, l
   return `preview-mn-${product}-${loc}`;
 }
 
+/** Atmos daily probe / future daily call — profile + bazi-day date (observability only). */
+export function atmosCacheSessionId(profileId: string, baziDayDate: string): string {
+  return `atmos-${profileId.trim()}-${baziDayDate.trim()}`;
+}
+
 export function baseAnalysisCacheSessionId(profileId: string): string {
   return `base-analysis-${profileId.trim()}`;
 }

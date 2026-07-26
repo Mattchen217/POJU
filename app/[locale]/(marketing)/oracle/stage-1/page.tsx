@@ -652,7 +652,7 @@ function OracleStageOneContent() {
               <p className="mt-1 text-sm text-text-secondary">{forTodayText}</p>
             ) : null}
             {inscribeTick >= 5 ? <p className="mt-3 text-xs text-text-secondary">If this knot needs untying, POJU will sit with you.</p> : null}
-            {inscribeTick >= 5 ? <p className="text-center text-xs text-text-dim">pojulife.com</p> : null}
+            {inscribeTick >= 5 ? <p className="text-center text-xs text-text-dim">easternos.com</p> : null}
             {signLevel?.name === "Eye of Storm" ? (
               <p className="mt-3 text-xs text-fuchsia-100/90">
                 The eye is the calm in the storm. This is where clarity lives.
@@ -688,7 +688,7 @@ function OracleStageOneContent() {
             <p className="mt-1 text-sm text-text-secondary">{whatItMeansText}</p>
             <p className="mt-3 text-xs text-text-secondary">── FOR TODAY ──</p>
             <p className="mt-1 text-sm text-text-secondary">{forTodayText}</p>
-            <p className="mt-3 text-center text-xs text-text-dim">pojulife.com</p>
+            <p className="mt-3 text-center text-xs text-text-dim">easternos.com</p>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-2">
             <button
@@ -712,7 +712,7 @@ function OracleStageOneContent() {
                   void navigator.share({
                     title: "POJU Glyph Reflection",
                     text: `My sign: ${signLevel?.name ?? "Unknown"} · Sign No. ${signNo || "-"}`,
-                    url: "https://pojulife.com",
+                    url: "https://easternos.com",
                   });
                 }
               }}

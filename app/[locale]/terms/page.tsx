@@ -6,7 +6,7 @@ import { Link } from "@/i18n/navigation";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Terms of Service — pojulife",
+  title: "Terms of Service — Eastern OS",
   description: "pojulife terms of service — Version 1.2",
 };
 
@@ -26,7 +26,7 @@ export default function TermsPage() {
     >
       <h2>Welcome to pojulife</h2>
       <p>
-        pojulife (pojulife.com) and its modular decision-support engines—POJU, Glyph, Syncro, and Match (collectively,
+        pojulife (easternos.com) and its modular decision-support engines—POJU, Glyph, Syncro, and Match (collectively,
         &quot;the Services&quot;)—are operated by Tonghui Chen, an individual developer based in the People&apos;s
         Republic of China (&quot;we&quot;, &quot;us&quot;, and &quot;our&quot;).
       </p>
@@ -128,7 +128,7 @@ export default function TermsPage() {
           <strong>Single-Click Cancellation:</strong> We reject predatory retaining loops. You maintain absolute
           jurisdiction over your subscription. You can cancel your automated Monthly Pass renewal at any time with a
           single click via your secure checkout portal or by messaging billing notifications to{" "}
-          <a href="mailto:support@pojulife.com">support@pojulife.com</a>.
+          <a href="mailto:support@easternos.com">support@easternos.com</a>.
         </li>
         <li>
           <strong>Service Continuance:</strong> Upon cancellation of your Monthly Pass, your premium token allotment
@@ -251,15 +251,15 @@ export default function TermsPage() {
       <ul>
         <li>
           <strong>Legal Compliance &amp; Gateway Disputes:</strong>{" "}
-          <a href="mailto:legal@pojulife.com">legal@pojulife.com</a>
+          <a href="mailto:legal@easternos.com">legal@easternos.com</a>
         </li>
         <li>
           <strong>Subscription Operations &amp; Token Validation:</strong>{" "}
-          <a href="mailto:support@pojulife.com">support@pojulife.com</a>
+          <a href="mailto:support@easternos.com">support@easternos.com</a>
         </li>
         <li>
           <strong>Data Rectification &amp; Privacy Inquiries:</strong>{" "}
-          <a href="mailto:privacy@pojulife.com">privacy@pojulife.com</a>
+          <a href="mailto:privacy@easternos.com">privacy@easternos.com</a>
         </li>
       </ul>
     </LegalPageShell>

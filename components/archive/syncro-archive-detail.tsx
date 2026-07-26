@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 
+import { useAppDialog } from "@/components/ui/app-dialog";
 import { deleteArchiveItem, type SyncroTaskArchiveData } from "@/lib/archive/archive-service";
 import { CURRENT_LEVELS, DIRECTIONS, type CurrentLevel, type DirectionId } from "@/lib/syncro/current-system";
 import { HOUR_PERIODS } from "@/lib/syncro/types";
@@ -39,14 +40,21 @@ function hourLabel(hour: string, isZh: boolean): string {
 
 export function SyncroArchiveDetail({ archiveId, data, locale }: Props) {
   const t = useTranslations("archiveDetail");
+  const tCommon = useTranslations("common");
   const router = useRouter();
+  const { confirm } = useAppDialog();
   const isZh = locale.startsWith("zh");
 
   const expired = new Date(data.expires_at).getTime() < Date.now();
   const best = data.best_combination;
 
   async function handleDelete() {
-    if (!confirm(t("confirm_delete"))) return;
+    const ok = await confirm(tCommon("deleteConfirmWarning"), t("delete"), {
+      confirmLabel: t("delete"),
+      cancelLabel: tCommon("cancel"),
+      tone: "danger",
+    });
+    if (!ok) return;
     await deleteArchiveItem(archiveId);
     router.push("/archive");
   }

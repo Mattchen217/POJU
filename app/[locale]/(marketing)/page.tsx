@@ -2,9 +2,9 @@ import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
 
 import { DsHomePage, DS_HOME_PRODUCT_ICONS, type DsHomeCopy } from "@/components/ds/DsHomePage";
+import { V2WorkspaceLandingPage } from "@/components/ds/v2/V2WorkspaceLandingPage";
 import { PaymentCancelToast } from "@/components/marketing/payment-cancel-toast";
 import { WorkspaceAwareHome } from "@/components/workspace/WorkspaceAwareHome";
-import { remapHomeCopyForShell } from "@/lib/ui-shell/remap-home-copy";
 
 export const dynamic = "force-dynamic";
 
@@ -149,14 +149,12 @@ export default async function LandingPage() {
     },
   };
 
-  const workspaceCopy = remapHomeCopyForShell(copy, "workspace");
-
   return (
     <Suspense fallback={<div className="min-h-screen bg-[var(--pj-bg-deep)]" />}>
       <PaymentCancelToast />
       <WorkspaceAwareHome
         classic={<DsHomePage copy={copy} />}
-        workspace={<DsHomePage copy={workspaceCopy} />}
+        workspace={<V2WorkspaceLandingPage />}
       />
     </Suspense>
   );

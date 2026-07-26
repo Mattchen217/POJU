@@ -1,13 +1,15 @@
 {
   "common": {
-    "brandWordmark": "pojulife",
-    "brand": "pojulife",
-    "domain": "pojulife.com",
+    "brandWordmark": "Eastern OS",
+    "brand": "Eastern OS",
+    "domain": "easternos.com",
     "tagline": "AI 与千年智慧的相遇。",
     "footerTagline": "pojulife 提供视角，仅供自我反思使用。所有决定永远属于你。",
     "copyright": "© 2026 pojulife. 版权所有。",
     "syncroFooterTagline": "Syncro 是自我觉察工具。取走与你共鸣的。决定由你自己做出。",
-    "openNavigationMenu": "打开导航菜单"
+    "openNavigationMenu": "打开导航菜单",
+    "cancel": "取消",
+    "deleteConfirmWarning": "由于 Pojulife 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。"
   },
   "nav": {
     "home": "首页",
@@ -69,10 +71,39 @@
     "dilemmaHint": "备注仅留在此画布。开始后进入既有的 {product} 流程。",
     "atmos": {
       "headline": "感知这一刻周围的场域。",
-      "guidance": "Atmos 将呈现氛围时机与场域线索。此处先占位 — 功能即将上线。",
+      "guidance": "输入八字信息，然后阅读前方的能量天气。",
       "badge": "即将推出",
       "title": "Atmos",
-      "body": "平静地读取你周遭的能量天气。我们正在为完整体验预留这个位置。"
+      "body": "平静地读取你周遭的能量天气。",
+      "hero": {
+        "brandTag": "ATMOS",
+        "heading": "每日时空共振",
+        "description": "本地算力到日。平静预报你周遭的场域——从今天起往后三十天。",
+        "ctaPrimary": "开始 Atmos",
+        "billingNotice": "$9.99 · 今日预报 · 一次性"
+      },
+      "forecastTitle": "30天决策与状态日历",
+      "forecastSub": "",
+      "viewToday": "查看今日预报",
+      "generating": "解析中…",
+      "expandReading": "展开",
+      "comingCell": "待开放",
+      "pendingLabel": "待解析",
+      "startParse": "开始解析",
+      "retry": "重试",
+      "readingTitle": "场域阅读 · {date}",
+      "weekdays": {
+        "sun": "星期日",
+        "mon": "星期一",
+        "tue": "星期二",
+        "wed": "星期三",
+        "thu": "星期四",
+        "fri": "星期五",
+        "sat": "星期六"
+      }
+    },
+    "atmosRail": {
+      "matrixTitle": "个人能量图"
     },
     "poju": {
       "headline": "人生十字路口的深度战略咨询。",
@@ -141,7 +172,7 @@
       "rename": "重命名",
       "delete": "删除",
       "renamePrompt": "重命名此记录",
-      "deleteConfirm": "确定删除此记录？删除后无法恢复。",
+      "deleteConfirm": "由于 Pojulife 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。",
       "backToNew": "返回新建会话",
       "contextLabel": "上下文面板",
       "statusEyebrow": "系统状态",
@@ -201,7 +232,7 @@
   },
   "home": {
     "hero": {
-      "brand": "pojulife",
+      "brand": "Eastern OS",
       "headline": "破除那些将你禁锢的执念。",
       "descLine1": "三千载东方时空框架。",
       "descLine2": "认知心理学全新重塑。",
@@ -658,7 +689,7 @@
         "tagline": "未来 24 小时的动态共生时空随行指南。",
         "cta": "激活 24 小时动态同步",
         "billing_notice": "单次 24 小时节律同步 $4.99，或使用体验凭证",
-        "qr_label": "pojulife.com/syncro",
+        "qr_label": "easternos.com/syncro",
         "sms_label": "把链接发给自己",
         "sms_button": "把链接发给我",
         "sms_body": "在手机上打开 Syncro：__SYNCRO_URL__",
@@ -785,10 +816,10 @@
         "footnote": "实时闭环推演 · 动态生物节律测算 · 专为移动端高频执行优化"
       },
       "pwa_guide": {
-        "title": "请在手机浏览器中打开 pojulife.com 或在手机上安装 pojulife 的应用。",
+        "title": "请在手机浏览器中打开 easternos.com 或在手机上安装 pojulife 的应用。",
         "subtitle": "Syncro 只能在手机浏览器或通过安装到主屏幕的 PWA 应用使用。请根据你的手机，按下方步骤操作。",
-        "ios_browser_note": "请仅用 Safari 打开 pojulife.com/syncro —— iPhone 上其他浏览器无法完成安装。",
-        "android_browser_note": "请仅用 Chrome 打开 pojulife.com/syncro —— Android 上其他浏览器无法安装完整应用。",
+        "ios_browser_note": "请仅用 Safari 打开 easternos.com/syncro —— iPhone 上其他浏览器无法完成安装。",
+        "android_browser_note": "请仅用 Chrome 打开 easternos.com/syncro —— Android 上其他浏览器无法安装完整应用。",
         "ios_step_4": "退出 Safari，从主屏幕的 pojulife 图标进入。",
         "android_step_1": "在 Chrome 中点击分享按钮（或在菜单 ⋮ 里找到分享）。",
         "android_step_2": "选择「添加到主屏幕」或「安装应用」。",
@@ -881,7 +912,7 @@
     "list_title": "选择性格画像档案",
     "list_description": "选择已保存的档案，或新增一条。数据仅保存在本机。",
     "add_new": "新增档案",
-    "confirm_delete": "从本机删除这条已保存的档案？",
+    "confirm_delete": "由于 Pojulife 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。",
     "skip_for_now": "暂时跳过",
     "cancel": "取消",
     "rel_self": "本人",
@@ -1236,8 +1267,8 @@
       "voice_input_start": "开始语音输入",
       "voice_input_stop": "停止语音输入",
       "dialog_delete_session": "确定删除此会话？",
-      "dialog_delete_session_confirm": "从本设备永久删除该会话？此操作不可撤销。",
-      "dialog_delete_session_bilingual": "从本设备永久删除该会话？此操作不可撤销。\n\nPermanently delete this session from this device? This cannot be undone.",
+      "dialog_delete_session_confirm": "由于 Pojulife 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。",
+      "dialog_delete_session_bilingual": "由于 Pojulife 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。",
       "dialog_rename_session": "编辑会话标题",
       "dialog_rename_placeholder": "会话标题",
       "session_menu_label": "会话选项",
@@ -1369,7 +1400,7 @@
       "restore": "恢复",
       "restore_paid": "继续会话 — $9.99",
       "delete_forever": "永久删除",
-      "delete_confirm": "从本设备永久删除该会话？此操作不可撤销。",
+      "delete_confirm": "由于 Pojulife 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。",
       "meta_expires": "到期",
       "meta_status": "状态"
     }
@@ -1420,7 +1451,7 @@
     "back_to_session": "回到完整对话",
     "back": "返回",
     "delete": "删除",
-    "confirm_delete": "永久删除这条记录？",
+    "confirm_delete": "由于 Pojulife 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。",
     "syncro_title": "Syncro 会话",
     "syncro_task_label": "你的任务",
     "syncro_best_peak": "24 小时场中最强峰值",
@@ -1531,7 +1562,7 @@
     "rename_save": "保存",
     "card_menu": "档案操作",
     "created_at": "创建时间：{date}",
-    "confirm_delete": "从本机删除这条已保存的档案？",
+    "confirm_delete": "由于 Pojulife 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。",
     "refund_link": "我不想分享 — 退款",
     "error_create_profile": "保存失败，请重试。"
   },
@@ -1607,14 +1638,14 @@
     "side_title": "开启专属会话",
     "side_body": "请填写您的出生信息。这些信息将用于精准匹配您的独特能量，为您生成专属的高精度决策解读。",
     "side_body_returning": "请选择您的出生信息或重新输入您的出生信息。这些信息将用于精准匹配您的独特能量，为您生成专属的高精度决策解读。",
-    "side_privacy_title": "隐私安全无忧",
-    "side_privacy_intro": "Pojulife 极度重视您的隐私，请您放心：我们绝不会在服务器上保存您的任何个人隐私信息。",
+    "side_privacy_title": "隐私安全",
+    "side_privacy_intro": "Pojulife 极度重视您的隐私，请您放心：我们不会在服务器上保存您的任何个人隐私信息。",
     "side_local_title": "仅存于本地",
-    "side_local_body": "所有信息只保存在您当前的浏览器中。",
+    "side_local_body": "使用记录100% 本地化存储在您当前的浏览器中，可以随时在应用内手动删除历史记录。",
     "side_wipe_title": "自动彻底清除",
-    "side_wipe_body": "清理浏览器缓存或关闭无痕隐身窗口，所有数据将立刻自动销毁。",
+    "side_wipe_body": "清理浏览器缓存或关闭无痕隐身窗口，所有记录将立刻自动销毁。",
     "side_isolation_title": "终端彻底隔离",
-    "side_isolation_body": "切换浏览器或更换设备，哪怕登录同一个账户，也看不到以往的任何记录，确保绝对安全。",
+    "side_isolation_body": "切换浏览器或更换设备，哪怕登录同一个账户，也看不到以往的任何记录。",
     "gender": "性别",
     "male": "男",
     "female": "女",
@@ -1963,7 +1994,7 @@
     "desktop_section_heading": "在手机上使用 Syncro",
     "desktop_message_1": "Syncro 需要你的手机。",
     "desktop_message_2": "它的核心是通过设备读取方位——这需要移动罗盘。",
-    "open_on_mobile_hint": "请在手机上打开 pojulife.com 使用 Syncro。",
+    "open_on_mobile_hint": "请在手机上打开 easternos.com 使用 Syncro。",
     "not_supported_device": "此设备不支持 Syncro 所需的罗盘传感器。请换用手机或浏览器重试。",
     "payment_coming_soon": "付费结账尚未接入，暂时跳过支付直接进入 Syncro。",
     "payment_continue_without_checkout": "继续进入 Syncro →",
@@ -2412,6 +2443,10 @@
       "submit": "开始 MATCH",
       "slot_a": "Match A",
       "slot_b": "Match B",
+      "hint_a_with_history": "Match A：请输入用户A的出生信息或选择一个历史记录。",
+      "hint_b_with_history": "Match B：请输入用户B的出生信息或选择一个历史记录。",
+      "hint_a_new": "Match A：请输入用户A的出生信息。",
+      "hint_b_new": "Match B：请输入用户B的出生信息。",
       "inquiry": {
         "welcome_text": "当两个人共同开启一段关系、一项合作或某件具体事务时，双方的沟通习惯、\n决策逻辑与内在节奏都会产生深层的碰撞。本评估基于双方的底层特质，为你提供\n客观的协同分析与风险调适建议，帮助你们在共同的目标中实现更高质量的配合。",
         "guidance_text": "请在下方写下你们计划共同面对或执行的具体事项。\n越具体的场景描述，越能帮你们厘清潜在的互补优势与沟通避坑点。",
@@ -2487,7 +2522,7 @@
         "subtitle_huawei": "{browser} 不支持 pojulife 的完整应用安装，请用 Chrome 打开此页面安装。",
         "step_1_title": "安装 Chrome",
         "step_1_desc": "如果还没有，从应用商店下载",
-        "step_2_title": "在 Chrome 中打开 pojulife.com",
+        "step_2_title": "在 Chrome 中打开 easternos.com",
         "step_2_desc": "复制下方链接，粘贴到 Chrome 地址栏",
         "step_3_title": "点击「安装」",
         "step_3_desc": "Chrome 会显示安装按钮，点击即可将 pojulife 添加到桌面",
@@ -2520,7 +2555,7 @@
       }
     },
     "app_mode": {
-      "desktop_hint": "手机端 pojulife 专注于 POJU、Glyph、Syncro、Match 的使用入口与简要说明。详细的功能介绍、隐私政策、用户协议、退款政策、Cookie 政策及其他法律信息，请使用电脑访问 pojulife.com 查看。",
+      "desktop_hint": "手机端 pojulife 专注于 POJU、Glyph、Syncro、Match 的使用入口与简要说明。详细的功能介绍、隐私政策、用户协议、退款政策、Cookie 政策及其他法律信息，请使用电脑访问 easternos.com 查看。",
       "add_to_home_title": "添加到主屏幕",
       "add_to_home_title_ios": "添加到主屏幕",
       "add_to_home_desc": "将 pojulife 添加到手机桌面，减少干扰，方便下次快速打开。"

@@ -1,0 +1,1728 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Eastern OS - Cognitive Velocity</title>
+<link rel="icon" type="image/png" href="/v2/LOGOE.png"/>
+<link rel="shortcut icon" type="image/png" href="/v2/LOGOE.png"/>
+<link rel="apple-touch-icon" href="/v2/LOGOE.png"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=Outfit:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&amp;display=swap" rel="stylesheet"/>
+<style>
+.material-symbols-outlined {
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+  font-size: inherit;
+  line-height: 1;
+}
+</style>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#D4AF37", // Metallic Gold from the logo
+              "background-light": "#f8fafc",
+              "background-dark": "#05070a",
+            },
+            fontFamily: {
+              display: ["Outfit", "sans-serif"],
+              sans: ["Inter", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+            },
+            animation: {
+              'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              'float': 'float 6s ease-in-out infinite',
+              'fade-in-up': 'fadeInUp 0.8s ease-out forwards',
+            },
+            keyframes: {
+              float: {
+                '0%, 100%': { transform: 'translateY(0)' },
+                '50%': { transform: 'translateY(-20px)' },
+              },
+              fadeInUp: {
+                '0%': { opacity: '0', transform: 'translateY(20px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              }
+            }
+          },
+        },
+      };
+    </script>
+<style>
+        .gold-gradient {
+            background: linear-gradient(135deg, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .gold-border {
+            border: 1px solid rgba(212, 175, 55, 0.3);
+        }
+        .glow-effect {
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.15);
+        }
+        .blur-bg {
+            backdrop-filter: blur(12px);
+        }
+        @keyframes rotate-slow {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-rotate {
+            animation: rotate-slow 20s linear infinite;
+        }
+        
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s ease-out;
+        }
+        
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Team / core-logic marquee — right → left, seamless loop */
+        @keyframes v2-team-scroll {
+            from { transform: translateX(0); }
+            to { transform: translateX(-50%); }
+        }
+        .v2-team-marquee {
+            /* room for half-out avatars + hover scale without clipping */
+            padding-top: 9rem;
+            padding-bottom: 2.5rem;
+            overflow-x: hidden;
+            overflow-y: visible;
+            mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
+            -webkit-mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
+        }
+        .v2-team-track {
+            display: flex;
+            gap: 3.25rem;
+            width: max-content;
+            animation: v2-team-scroll 70s linear infinite;
+            will-change: transform;
+            align-items: stretch;
+        }
+        .v2-team-track:has(.v2-team-card:hover) {
+            animation-play-state: paused;
+        }
+        .v2-team-card {
+            width: min(360px, 82vw);
+            flex-shrink: 0;
+            overflow: visible;
+            display: flex;
+            flex-direction: column;
+            /* room for the lower half of the standing figure + gap above quote */
+            padding-top: 6.25rem !important;
+            /* lock height so name/role dividers share one baseline across cards */
+            min-height: 24.5rem;
+            transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 300ms cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1);
+            transform-origin: center center;
+        }
+        .v2-team-quote {
+            flex: 1 1 auto;
+            margin-bottom: 0 !important;
+        }
+        .v2-team-meta {
+            margin-top: auto;
+        }
+        .v2-team-avatar-wrap {
+            position: absolute;
+            left: 1.75rem;
+            top: 0;
+            /* lift further above the card edge so figure clears the quote */
+            transform: translateY(-58%);
+            z-index: 20;
+            width: 12rem;
+            height: 12rem;
+            pointer-events: none;
+            display: flex;
+            align-items: flex-end;
+            justify-content: flex-start;
+        }
+        .v2-team-avatar {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            object-position: left bottom;
+            /* chalk-on-black art: drop the solid black plate so the figure sits on the card */
+            mix-blend-mode: screen;
+            user-select: none;
+        }
+        .v2-team-name {
+            color: #E4E4E7;
+            font-size: 0.95rem;
+            font-weight: 600;
+            line-height: 1.35;
+            transition: color 300ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .v2-team-role {
+            color: #94A3B8;
+            font-size: 0.8125rem;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            line-height: 1.4;
+            margin-top: 0.25rem;
+            transition: color 300ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .v2-team-card:hover .v2-team-name,
+        .v2-team-card:hover .v2-team-role {
+            color: #D4AF37;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .v2-team-track {
+                animation: none;
+                flex-wrap: wrap;
+                justify-content: center;
+                width: 100%;
+                max-width: 80rem;
+                margin-inline: auto;
+                padding-inline: 1.5rem;
+                row-gap: 5rem;
+            }
+            .v2-team-card:hover {
+                transform: none;
+            }
+            .v2-glass-card:hover {
+                transform: none;
+            }
+        }
+
+        /* Centered hero — Silicon Valley SaaS rhythm */
+        #v2-starfield-layer {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        #v2-starfield-layer canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        #v2-page-layer {
+            position: relative;
+            z-index: 1;
+            isolation: isolate;
+        }
+
+        /* Match workspace WorkspaceScrollArea — gray pill thumb, hide native bar */
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+        }
+        .v2-page-scroll {
+            position: relative;
+            height: 100dvh;
+            height: 100vh;
+            min-height: 0;
+        }
+        .v2-page-scroll__viewport {
+            height: 100%;
+            overflow-x: hidden;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            padding-right: 14px;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .v2-page-scroll__viewport::-webkit-scrollbar {
+            display: none;
+            width: 0;
+            height: 0;
+        }
+        .v2-page-scroll__rail {
+            position: absolute;
+            right: 0;
+            top: 4px;
+            bottom: 4px;
+            width: 16px;
+            z-index: 60;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+        }
+        .v2-page-scroll__rail[hidden] {
+            display: none;
+        }
+        .v2-page-scroll__thumb {
+            width: 8px;
+            border-radius: 9999px;
+            background: rgba(161, 161, 170, 0.55);
+            will-change: transform;
+            cursor: grab;
+            flex-shrink: 0;
+            align-self: flex-start;
+            transition: background 0.12s ease;
+        }
+        .v2-page-scroll__thumb:hover {
+            background: rgba(161, 161, 170, 0.8);
+        }
+        .v2-page-scroll__thumb:active {
+            cursor: grabbing;
+            background: rgba(196, 181, 253, 0.75);
+        }
+
+        /*
+         * Unified glass-card hover (team-card standard):
+         * thin gold rim + rear gold glow + slight lift
+         */
+        .v2-glass-card {
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition:
+              transform 300ms cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 300ms cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1),
+              background-color 300ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .v2-glass-card:hover,
+        .v2-team-card:hover {
+            border-color: rgba(212, 175, 55, 0.55) !important;
+            box-shadow:
+              0 0 30px rgba(212, 175, 55, 0.18),
+              0 0 0 1px rgba(212, 175, 55, 0.35);
+            transform: translateY(-4px);
+        }
+        .v2-team-card:hover {
+            transform: translateY(-4px) scale(1.04);
+            z-index: 30;
+        }
+        /* Engine bars: size locked to original POJU card (width→hbar height, height→vbar height) */
+        #v2-engine-bars .v2-engine-hbar {
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        #v2-engine-bars .v2-engine-vbar {
+            box-sizing: border-box;
+            min-height: 0;
+        }
+        @media (min-width: 1024px) {
+            #v2-engine-bars .v2-engine-hbar {
+                flex-direction: row;
+                align-items: center;
+            }
+            #v2-engine-bars .v2-engine-vbar-row {
+                gap: 2rem; /* match engines grid gap-8 */
+            }
+        }
+        #v2-hero {
+            min-height: auto;
+            background: transparent;
+            isolation: isolate;
+            overflow: hidden;
+        }
+        #v2-hero-constellation {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            background: transparent;
+        }
+        #v2-hero .v2-hero-foreground {
+            position: relative;
+            z-index: 1;
+        }
+        #v2-hero-title {
+            max-width: 960px;
+            text-wrap: balance;
+            line-height: 1.18;
+        }
+        #v2-hero-subtitle {
+            max-width: 650px;
+            text-wrap: pretty;
+            margin-top: 1.75rem; /* 28px — breathing room after taller title */
+        }
+        @media (prefers-reduced-motion: reduce) {
+            #v2-hero-constellation { display: none; }
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300">
+<!-- STITCH_SHADER_START:ANIMATION_41 -->
+<div id="v2-starfield-layer" aria-hidden="true">
+<canvas id="shader-canvas-ANIMATION_41"></canvas>
+<script>
+(function() {
+  const canvas = document.getElementById('shader-canvas-ANIMATION_41');
+
+  // Sync the WebGL drawing-buffer size with the CSS-driven layout size.
+  // This fires on initial layout and whenever the element is resized.
+  function syncSize() {
+    const w = canvas.clientWidth  || 1280;
+    const h = canvas.clientHeight || 720;
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width  = w;
+      canvas.height = h;
+    }
+  }
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(syncSize).observe(canvas);
+  }
+  syncSize();
+
+  const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+  if (!gl) return;
+  const vs = `attribute vec2 a_position;
+varying vec2 v_texCoord;
+void main() {
+  v_texCoord = a_position * 0.5 + 0.5;
+  gl_Position = vec4(a_position, 0.0, 1.0);
+}`;
+  const fs = `precision highp float;
+uniform float u_time;
+uniform vec2 u_resolution;
+uniform vec2 u_mouse;
+varying vec2 v_texCoord;
+
+void main() {
+    vec2 uv = v_texCoord;
+    vec2 m = u_mouse / u_resolution;
+    
+    // Create a subtle, flowing celestial background
+    float strength = 0.5;
+    float t = u_time * 0.2;
+    
+    vec3 color1 = vec3(0.06, 0.08, 0.1); // Surface
+    vec3 color2 = vec3(0.12, 0.15, 0.2); // Surface bright
+    vec3 gold = vec3(0.83, 0.69, 0.22); // Primary Gold
+    
+    float n = fract(sin(dot(uv, vec2(12.9898, 78.233))) * 43758.5453);
+    float stars = pow(n, 100.0) * strength;
+    
+    float wave = sin(uv.x * 5.0 + t) * 0.5 + 0.5;
+    wave *= cos(uv.y * 3.0 - t * 0.5) * 0.5 + 0.5;
+    
+    vec3 finalColor = mix(color1, color2, wave * 0.3);
+    
+    // Add a mouse glow effect
+    float dist = length(uv - m);
+    float glow = smoothstep(0.3, 0.0, dist) * 0.1;
+    finalColor += gold * glow;
+    
+    // Add tiny shimmering stars
+    finalColor += vec3(stars);
+    
+    gl_FragColor = vec4(finalColor, 1.0);
+}`;
+  function cs(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    return s;
+  }
+  const prog = gl.createProgram();
+  gl.attachShader(prog, cs(gl.VERTEX_SHADER, vs));
+  gl.attachShader(prog, cs(gl.FRAGMENT_SHADER, fs));
+  gl.linkProgram(prog);
+  gl.useProgram(prog);
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+  const pos = gl.getAttribLocation(prog, 'a_position');
+  gl.enableVertexAttribArray(pos);
+  gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
+  const uTime = gl.getUniformLocation(prog, 'u_time');
+  const uRes = gl.getUniformLocation(prog, 'u_resolution');
+  const uMouse = gl.getUniformLocation(prog, 'u_mouse');
+
+  // u_mouse is in pixel coordinates matching u_resolution (ShaderToy convention).
+  // Shaders that need normalized coords should use: u_mouse / u_resolution.
+  let mouse = { x: canvas.width / 2, y: canvas.height / 2 };
+  window.addEventListener('mousemove', (event) => {
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width && rect.height) {
+      const nx = (event.clientX - rect.left) / rect.width;
+      const ny = 1.0 - (event.clientY - rect.top) / rect.height;
+      mouse.x = nx * canvas.width;
+      mouse.y = ny * canvas.height;
+    }
+  });
+
+  function render(t) {
+    if (typeof ResizeObserver === 'undefined') syncSize();
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    if (uTime) gl.uniform1f(uTime, t * 0.001);
+    if (uRes) gl.uniform2f(uRes, canvas.width, canvas.height);
+    if (uMouse) gl.uniform2f(uMouse, mouse.x, mouse.y);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    requestAnimationFrame(render);
+  }
+  render(0);
+})();
+</script>
+</div>
+<!-- STITCH_SHADER_END:ANIMATION_41 -->
+<div class="v2-page-scroll">
+<div class="v2-page-scroll__viewport" id="v2-scroll-viewport">
+<div id="v2-page-layer">
+<nav class="fixed top-0 w-full z-50 border-b border-slate-200/10 dark:border-white/5 blur-bg bg-white/70 dark:bg-black/50">
+<div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between gap-4">
+<a class="flex items-center shrink-0" href="/" target="_top" aria-label="Eastern OS home">
+<img alt="Eastern OS" class="h-9 w-auto object-contain sm:h-10" src="/v2/LOGO.png"/>
+</a>
+<div class="hidden md:flex items-center gap-6 lg:gap-8">
+<a class="text-sm font-medium hover:text-primary transition-colors" href="/app?tab=atmos" target="_top">Atmos</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="/app?tab=poju" target="_top">Pivot</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="/app?tab=match" target="_top">Match</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="/app?tab=syncro" target="_top">Syncro</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="/app?tab=glyph" target="_top">Glyph</a>
+</div>
+<div class="flex items-center gap-3 sm:gap-4">
+<div class="relative" id="v2-lang-switcher">
+<button type="button" id="v2-lang-btn" aria-expanded="false" aria-haspopup="listbox" aria-label="Language" class="flex min-h-[44px] items-center gap-2 px-1 py-1.5 text-sm font-medium text-slate-100 hover:text-primary transition-colors">
+<span id="v2-lang-label">English</span>
+<span class="material-icons-outlined text-base text-slate-400 transition-transform duration-200" id="v2-lang-chevron">expand_more</span>
+</button>
+<ul id="v2-lang-menu" role="listbox" class="hidden absolute right-0 top-[calc(100%+0.35rem)] z-[2000] min-w-[10.5rem] overflow-hidden rounded-xl bg-[#14121f]/95 py-1 shadow-[0_12px_40px_rgba(0,0,0,0.55)] backdrop-blur-md border border-white/10">
+<li role="none"><button type="button" role="option" data-locale="en" class="v2-lang-opt flex w-full items-center px-3 py-2 text-left text-sm text-slate-300 hover:bg-white/8 hover:text-white"><span class="mr-2 w-8 font-mono text-xs text-slate-500">EN</span>English</button></li>
+<li role="none"><button type="button" role="option" data-locale="es" class="v2-lang-opt flex w-full items-center px-3 py-2 text-left text-sm text-slate-300 hover:bg-white/8 hover:text-white"><span class="mr-2 w-8 font-mono text-xs text-slate-500">ES</span>Español</button></li>
+<li role="none"><button type="button" role="option" data-locale="de" class="v2-lang-opt flex w-full items-center px-3 py-2 text-left text-sm text-slate-300 hover:bg-white/8 hover:text-white"><span class="mr-2 w-8 font-mono text-xs text-slate-500">DE</span>Deutsch</button></li>
+<li role="none"><button type="button" role="option" data-locale="fr" class="v2-lang-opt flex w-full items-center px-3 py-2 text-left text-sm text-slate-300 hover:bg-white/8 hover:text-white"><span class="mr-2 w-8 font-mono text-xs text-slate-500">FR</span>Français</button></li>
+<li role="none"><button type="button" role="option" data-locale="zh" class="v2-lang-opt flex w-full items-center px-3 py-2 text-left text-sm text-slate-300 hover:bg-white/8 hover:text-white"><span class="mr-2 w-8 font-mono text-xs text-slate-500">ZH</span>中文</button></li>
+</ul>
+</div>
+<a class="px-5 py-2.5 bg-primary text-black font-semibold rounded-lg hover:brightness-110 transition-all shadow-lg shadow-primary/20" href="#" target="_top" id="v2-login-btn">
+                    登录
+                </a>
+</div>
+</div>
+</nav>
+<main id="v2-hero" class="relative pt-28 pb-10 md:pt-32 md:pb-12 overflow-hidden animate-fade-in-up">
+<canvas id="v2-hero-constellation" aria-hidden="true"></canvas>
+<div class="v2-hero-foreground mx-auto flex max-w-7xl flex-col items-center px-6 text-center">
+<div class="mb-8 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-4 py-1.5 text-primary text-xs font-bold tracking-widest">
+<span aria-hidden="true">✦</span>
+<span id="v2-hero-trust">去中心化隐私保护 · 无云存储数据 · 本地加密保存</span>
+</div>
+<h1 id="v2-hero-title" class="font-display text-4xl font-bold leading-[1.18] tracking-tight sm:text-5xl md:text-6xl lg:text-[3.75rem]">
+<span class="gold-gradient">Eastern OS</span> — A personal decision operating system powered by <span class="gold-gradient">3,000 years</span> of Eastern wisdom.
+</h1>
+<p id="v2-hero-subtitle" class="mt-7 text-base leading-relaxed text-slate-400 sm:text-lg md:text-xl">
+Combining your native energy architecture with the environmental energy matrix to deliver highly confidential, data-driven business and life decision support.
+</p>
+<div class="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+<a href="/app?tab=atmos" target="_top" class="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-8 py-4 font-bold text-black shadow-xl shadow-primary/25 transition-all hover:scale-[1.02] hover:brightness-110">
+马上开始
+<span class="material-icons-outlined text-xl">arrow_forward</span>
+</a>
+<button type="button" class="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-8 py-4 font-bold text-slate-100 transition-all hover:bg-white/10">
+Add to desktop
+</button>
+</div>
+</div>
+</main>
+<script>
+(function () {
+  const canvas = document.getElementById('v2-hero-constellation');
+  const hero = document.getElementById('v2-hero');
+  if (!canvas || !hero) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const STAR_COUNT = 140;
+  const LINK_DIST = 90;
+  let stars = [];
+  let w = 0;
+  let h = 0;
+  let raf = 0;
+  let last = 0;
+
+  function resize() {
+    const rect = hero.getBoundingClientRect();
+    w = Math.max(1, Math.floor(rect.width));
+    h = Math.max(1, Math.floor(rect.height));
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.floor(w * dpr);
+    canvas.height = Math.floor(h * dpr);
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function spawn(far) {
+    return {
+      x: (Math.random() - 0.5) * 2.2,
+      y: (Math.random() - 0.5) * 2.2,
+      z: far ? 0.35 + Math.random() * 0.65 : Math.random(),
+      tw: Math.random() * Math.PI * 2,
+      gold: Math.random() > 0.82,
+    };
+  }
+
+  function initStars() {
+    stars = [];
+    for (let i = 0; i < STAR_COUNT; i++) stars.push(spawn(false));
+  }
+
+  function project(s) {
+    const depth = Math.max(0.08, s.z);
+    const scale = 0.55 / depth;
+    return {
+      px: w * 0.5 + s.x * scale * w * 0.42,
+      py: h * 0.42 + s.y * scale * h * 0.38,
+      r: Math.max(0.4, (1.15 - s.z) * 2.1),
+      a: Math.max(0.05, (1 - s.z) * 0.75),
+    };
+  }
+
+  function tick(t) {
+    const dt = Math.min(0.05, (t - last) / 1000 || 0.016);
+    last = t;
+    ctx.clearRect(0, 0, w, h);
+
+    const projected = [];
+    for (const s of stars) {
+      s.z += dt * 0.028;
+      s.tw += dt * 1.2;
+      if (s.z >= 1) {
+        Object.assign(s, spawn(true));
+        s.z = 0.12 + Math.random() * 0.2;
+      }
+      projected.push({ s: s, p: project(s) });
+    }
+
+    ctx.lineWidth = 0.6;
+    for (let i = 0; i < projected.length; i++) {
+      const a = projected[i];
+      if (a.s.z > 0.72) continue;
+      for (let j = i + 1; j < projected.length; j++) {
+        const b = projected[j];
+        if (b.s.z > 0.72) continue;
+        const dx = a.p.px - b.p.px;
+        const dy = a.p.py - b.p.py;
+        const d = Math.hypot(dx, dy);
+        if (d > LINK_DIST) continue;
+        const alpha = (1 - d / LINK_DIST) * 0.14 * (1 - (a.s.z + b.s.z) * 0.35);
+        ctx.strokeStyle = a.s.gold || b.s.gold
+          ? 'rgba(212,175,55,' + (alpha * 1.2) + ')'
+          : 'rgba(180,190,220,' + alpha + ')';
+        ctx.beginPath();
+        ctx.moveTo(a.p.px, a.p.py);
+        ctx.lineTo(b.p.px, b.p.py);
+        ctx.stroke();
+      }
+    }
+
+    for (let k = 0; k < projected.length; k++) {
+      const s = projected[k].s;
+      const p = projected[k].p;
+      const twinkle = 0.65 + 0.35 * Math.sin(s.tw);
+      const alpha = p.a * twinkle;
+      if (s.gold) {
+        ctx.fillStyle = 'rgba(232,201,110,' + alpha + ')';
+        ctx.shadowColor = 'rgba(212,175,55,0.55)';
+        ctx.shadowBlur = 6;
+      } else {
+        ctx.fillStyle = 'rgba(220,228,245,' + alpha + ')';
+        ctx.shadowBlur = 0;
+      }
+      ctx.beginPath();
+      ctx.arc(p.px, p.py, p.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+    raf = requestAnimationFrame(tick);
+  }
+
+  function start() {
+    resize();
+    initStars();
+    cancelAnimationFrame(raf);
+    last = performance.now();
+    raf = requestAnimationFrame(tick);
+  }
+
+  start();
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(start).observe(hero);
+  } else {
+    window.addEventListener('resize', start);
+  }
+})();
+</script>
+
+<section id="v2-scenarios" class="py-12 border-y border-slate-200/10 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] animate-fade-in-up" style="animation-delay: 0.2s;">
+<div class="max-w-7xl mx-auto px-6 overflow-hidden">
+<p id="v2-scenarios-header" class="text-center text-base md:text-lg font-mono text-slate-400 uppercase tracking-widest mb-8">DESIGNED FOR HIGH-STAKES SCENARIOS</p>
+<div class="flex w-full flex-nowrap justify-between items-center gap-2 md:gap-3 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
+<span class="font-display font-bold text-base sm:text-lg md:text-xl lg:text-2xl leading-none tracking-tight flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap">
+<svg class="h-6 w-6 md:h-7 md:w-7 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v7l5 3 5-3V4"/><path d="M12 14v6"/><circle cx="12" cy="4" r="1.2" fill="currentColor" stroke="none"/></svg>
+<span data-scenario="strategic_choices" class="truncate inline-block origin-center [transform:scaleY(1.18)]">Strategic Choices</span>
+</span>
+<span class="font-display font-bold text-base sm:text-lg md:text-xl lg:text-2xl leading-none tracking-tight flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap">
+<svg class="h-6 w-6 md:h-7 md:w-7 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 18V6"/><path d="M4 18h16"/><path d="M7 14l4-5 3 3 5-7"/><path d="M16 5h3v3"/></svg>
+<span data-scenario="career_trajectory" class="truncate inline-block origin-center [transform:scaleY(1.18)]">Career Trajectory</span>
+</span>
+<span class="font-display font-bold text-base sm:text-lg md:text-xl lg:text-2xl leading-none tracking-tight flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap">
+<svg class="h-6 w-6 md:h-7 md:w-7 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="12" r="3.5"/><circle cx="15" cy="12" r="3.5"/></svg>
+<span data-scenario="relational_synergy" class="truncate inline-block origin-center [transform:scaleY(1.18)]">Relational Synergy</span>
+</span>
+<span class="font-display font-bold text-base sm:text-lg md:text-xl lg:text-2xl leading-none tracking-tight flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap">
+<svg class="h-6 w-6 md:h-7 md:w-7 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4.5l3 1.5"/></svg>
+<span data-scenario="timing_pace" class="truncate inline-block origin-center [transform:scaleY(1.18)]">Timing &amp; Pace</span>
+</span>
+<span class="font-display font-bold text-base sm:text-lg md:text-xl lg:text-2xl leading-none tracking-tight flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap">
+<svg class="h-6 w-6 md:h-7 md:w-7 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 4v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V7l7-4z"/><path d="M9.5 12h5"/><path d="M12 9.5v5"/></svg>
+<span data-scenario="life_architecture" class="truncate inline-block origin-center [transform:scaleY(1.18)]">Life Architecture</span>
+</span>
+</div>
+</div>
+</section>
+<section class="py-24 relative overflow-hidden animate-fade-in-up" style="animation-delay: 0.4s;">
+<div class="max-w-7xl mx-auto px-6">
+<div class="text-center mb-16">
+<h2 class="text-3xl md:text-5xl font-display font-bold mb-6">Four Specialized Engines. Aligned by Need.</h2>
+<p class="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+                    Tailored analytical dimensions for distinct situational challenges. From long-term transitions and instant resonance to spatial-temporal routing and dual-matrix synergy — precisely calibrated to your immediate context.
+                </p>
+</div>
+<div class="mb-8 relative">
+<div class="group relative w-full overflow-hidden rounded-2xl border border-white/10 bg-slate-900 shadow-2xl shadow-black/40">
+<div class="flex items-center justify-between border-b border-white/10 bg-slate-800/50 px-4 py-3">
+<div class="flex gap-2">
+<div class="h-3 w-3 rounded-full bg-red-500/20"></div>
+<div class="h-3 w-3 rounded-full bg-yellow-500/20"></div>
+<div class="h-3 w-3 rounded-full bg-green-500/20"></div>
+</div>
+<div class="font-mono text-[10px] uppercase tracking-widest text-slate-500">eastern_os · decision matrix</div>
+<div class="w-8"></div>
+</div>
+<div class="p-1">
+<img alt="Eastern OS decision matrix preview" class="h-auto w-full rounded-lg" src="/v2/product-preview.png"/>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 lg:grid-rows-2 gap-8 auto-rows-fr" id="v2-engines-grid">
+<div id="v2-engine-poju-card" class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full md:col-span-2 lg:col-span-1 lg:row-span-2">
+<div class="flex justify-between items-start mb-6">
+<div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined text-3xl text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">self_improvement</span>
+</div>
+<span class="text-sm font-mono text-slate-500">$9.99</span>
+</div>
+<h3 class="text-xl font-bold mb-4">POJU</h3>
+<p class="text-slate-600 dark:text-slate-400 mb-6 flex-1">Navigating specific transitions. 30 days of immersive, interactive deep coaching to deliver clear, actionable strategies that guide you through cognitive blind spots.</p>
+<button class="text-primary font-semibold flex items-center gap-2 group-hover:gap-3 transition-all mt-auto">Go to POJU <span class="material-icons-outlined text-sm">arrow_forward</span></button>
+</div>
+<div class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full">
+<div class="flex justify-between items-start mb-6">
+<div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined text-3xl text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">blur_on</span>
+</div>
+<span class="text-sm font-mono text-slate-500">$9.99</span>
+</div>
+<h3 class="text-xl font-bold">Atmos</h3>
+<p class="text-sm text-primary font-medium mb-4">Daily Cosmic Resonance</p>
+<p class="text-slate-600 dark:text-slate-400 mb-6 flex-1">Local day-level compute. A calm forecast of the field around you — today through the next thirty days.</p>
+<button class="text-primary font-semibold flex items-center gap-2 group-hover:gap-3 transition-all mt-auto">Begin Atmos <span class="material-icons-outlined text-sm">arrow_forward</span></button>
+</div>
+<div class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full">
+<div class="flex justify-between items-start mb-6">
+<div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+<svg class="w-7 h-7 text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+<circle cx="6.55" cy="6.75" r="2.55" fill="currentColor"/>
+<path d="M2.55 18.85c.3-3.85 1.85-5.75 4-5.75 1.45 0 2.7.9 3.55 2.55" stroke="currentColor" stroke-width="2.35" stroke-linecap="round"/>
+<circle cx="17.45" cy="6.75" r="2.55" fill="currentColor"/>
+<path d="M21.45 18.85c-.3-3.85-1.85-5.75-4-5.75-1.45 0-2.7.9-3.55 2.55" stroke="currentColor" stroke-width="2.35" stroke-linecap="round"/>
+</svg>
+</div>
+<span class="text-sm font-mono text-slate-500">$4.99</span>
+</div>
+<h3 class="text-xl font-bold mb-4">Match</h3>
+<p class="text-slate-600 dark:text-slate-400 mb-6 flex-1">Dual-matrix synergistic network. Independently mapping two distinct temporal profiles to thoroughly evaluate structural alignment, friction points, and collective compatibility regarding specific milestones.</p>
+<button class="text-primary font-semibold flex items-center gap-2 group-hover:gap-3 transition-all mt-auto">Go to Match <span class="material-icons-outlined text-sm">arrow_forward</span></button>
+</div>
+<div class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full">
+<div class="flex justify-between items-start mb-6">
+<div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+<svg class="w-7 h-7 text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+<circle cx="12" cy="12.2" r="6.6" stroke="currentColor" stroke-width="1.6"/>
+<circle cx="12" cy="12.2" r="3.9" stroke="currentColor" stroke-width="1.4" opacity="0.75"/>
+<circle cx="12" cy="12.2" r="1.25" fill="currentColor"/>
+<path d="M12 12.2 L15.85 8.85 A6.6 6.6 0 0 1 17.15 13.05 Z" fill="currentColor" opacity="0.3"/>
+<path d="M12 12.2 L15.85 8.85" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+<text x="12" y="4.15" text-anchor="middle" fill="currentColor" font-size="5" font-family="Inter, system-ui, sans-serif" font-weight="700">N</text>
+<text x="21.15" y="13.55" text-anchor="middle" fill="currentColor" font-size="5" font-family="Inter, system-ui, sans-serif" font-weight="700">E</text>
+<text x="12" y="22.55" text-anchor="middle" fill="currentColor" font-size="5" font-family="Inter, system-ui, sans-serif" font-weight="700">S</text>
+<text x="2.85" y="13.55" text-anchor="middle" fill="currentColor" font-size="5" font-family="Inter, system-ui, sans-serif" font-weight="700">W</text>
+</svg>
+</div>
+<span class="text-sm font-mono text-slate-500">$4.99</span>
+</div>
+<h3 class="text-xl font-bold mb-4">Syncro</h3>
+<p class="text-slate-600 dark:text-slate-400 mb-6 flex-1">24-hour dynamic spatial-temporal decision matrix. Tailored to a specific upcoming action, evaluating environmental tailwinds and potential friction across 8 directions over the next 12 cycles.</p>
+<button class="text-primary font-semibold flex items-center gap-2 group-hover:gap-3 transition-all mt-auto">Go to Syncro <span class="material-icons-outlined text-sm">arrow_forward</span></button>
+</div>
+<div class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full">
+<div class="flex justify-between items-start mb-6">
+<div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+<svg class="w-7 h-7 text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+<rect x="4.5" y="2.75" width="15" height="18.5" rx="2.5" stroke="currentColor" stroke-width="1.6"/>
+<text x="12" y="15.1" text-anchor="middle" fill="currentColor" font-size="10.5" font-family="Inter, system-ui, sans-serif" font-weight="600">G</text>
+</svg>
+</div>
+<span class="text-sm font-mono text-slate-500">$4.99</span>
+</div>
+<h3 class="text-xl font-bold mb-4">Glyph</h3>
+<p class="text-slate-600 dark:text-slate-400 mb-6 flex-1">Intent anchoring and archetypal resonance. Grounded in classical 100-image symbolic frameworks, draw a signature matrix card via randomized digital particle dynamics, allowing Glyph to deeply deconstruct your core themes.</p>
+<button class="text-primary font-semibold flex items-center gap-2 group-hover:gap-3 transition-all mt-auto">Go to Glyph <span class="material-icons-outlined text-sm">arrow_forward</span></button>
+</div>
+</div>
+</div>
+</section>
+<section class="pb-24 relative animate-fade-in-up" id="v2-engine-bars" style="animation-delay: 0.45s;" aria-label="Engine pathways">
+<div class="max-w-7xl mx-auto px-6">
+<div class="flex flex-col gap-6">
+<!-- Row 1: Atmos — horizontal bar -->
+<a href="/app?tab=atmos" target="_top" class="v2-engine-hbar group flex flex-col sm:flex-row sm:items-center gap-6 p-7 md:p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300">
+<div class="w-14 h-14 shrink-0 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined text-3xl text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">blur_on</span>
+</div>
+<div class="min-w-0 flex-1">
+<div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-2">
+<h3 class="text-xl font-bold">Atmos</h3>
+<span class="text-sm text-primary font-medium">Daily Cosmic Resonance</span>
+<span class="text-sm font-mono text-slate-500 sm:ml-auto">$9.99</span>
+</div>
+<p class="text-slate-600 dark:text-slate-400 text-sm md:text-base leading-relaxed">Local day-level compute. A calm forecast of the field around you — today through the next thirty days.</p>
+</div>
+<span class="text-primary font-semibold flex items-center gap-2 shrink-0 group-hover:gap-3 transition-all">Begin Atmos <span class="material-icons-outlined text-sm">arrow_forward</span></span>
+</a>
+<!-- Row 2: Pivot — horizontal bar -->
+<a href="/app?tab=poju" target="_top" class="v2-engine-hbar group flex flex-col sm:flex-row sm:items-center gap-6 p-7 md:p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300">
+<div class="w-14 h-14 shrink-0 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined text-3xl text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">self_improvement</span>
+</div>
+<div class="min-w-0 flex-1">
+<div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-2">
+<h3 class="text-xl font-bold">Pivot</h3>
+<span class="text-sm font-mono text-slate-500 sm:ml-auto">$9.99</span>
+</div>
+<p class="text-slate-600 dark:text-slate-400 text-sm md:text-base leading-relaxed">Navigating specific transitions. 30 days of immersive, interactive deep coaching to deliver clear, actionable strategies that guide you through cognitive blind spots.</p>
+</div>
+<span class="text-primary font-semibold flex items-center gap-2 shrink-0 group-hover:gap-3 transition-all">Go to Pivot <span class="material-icons-outlined text-sm">arrow_forward</span></span>
+</a>
+<!-- Row 3: Syncro · Match · Glyph — vertical tall bars -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 v2-engine-vbar-row">
+<a href="/app?tab=syncro" target="_top" class="v2-engine-vbar group flex flex-col p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300">
+<div class="flex justify-between items-start mb-8">
+<div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+<svg class="w-7 h-7 text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+<circle cx="12" cy="12.2" r="6.6" stroke="currentColor" stroke-width="1.6"/>
+<circle cx="12" cy="12.2" r="3.9" stroke="currentColor" stroke-width="1.4" opacity="0.75"/>
+<circle cx="12" cy="12.2" r="1.25" fill="currentColor"/>
+<path d="M12 12.2 L15.85 8.85 A6.6 6.6 0 0 1 17.15 13.05 Z" fill="currentColor" opacity="0.3"/>
+<path d="M12 12.2 L15.85 8.85" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+<text x="12" y="4.15" text-anchor="middle" fill="currentColor" font-size="5" font-family="Inter, system-ui, sans-serif" font-weight="700">N</text>
+<text x="21.15" y="13.55" text-anchor="middle" fill="currentColor" font-size="5" font-family="Inter, system-ui, sans-serif" font-weight="700">E</text>
+<text x="12" y="22.55" text-anchor="middle" fill="currentColor" font-size="5" font-family="Inter, system-ui, sans-serif" font-weight="700">S</text>
+<text x="2.85" y="13.55" text-anchor="middle" fill="currentColor" font-size="5" font-family="Inter, system-ui, sans-serif" font-weight="700">W</text>
+</svg>
+</div>
+<span class="text-sm font-mono text-slate-500">$4.99</span>
+</div>
+<h3 class="text-xl font-bold mb-4">Syncro</h3>
+<p class="text-slate-600 dark:text-slate-400 mb-8 flex-1 text-sm md:text-base leading-relaxed">24-hour dynamic spatial-temporal decision matrix. Tailored to a specific upcoming action, evaluating environmental tailwinds and potential friction across 8 directions over the next 12 cycles.</p>
+<span class="text-primary font-semibold flex items-center gap-2 group-hover:gap-3 transition-all mt-auto">Go to Syncro <span class="material-icons-outlined text-sm">arrow_forward</span></span>
+</a>
+<a href="/app?tab=match" target="_top" class="v2-engine-vbar group flex flex-col p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300">
+<div class="flex justify-between items-start mb-8">
+<div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+<svg class="w-7 h-7 text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+<circle cx="6.55" cy="6.75" r="2.55" fill="currentColor"/>
+<path d="M2.55 18.85c.3-3.85 1.85-5.75 4-5.75 1.45 0 2.7.9 3.55 2.55" stroke="currentColor" stroke-width="2.35" stroke-linecap="round"/>
+<circle cx="17.45" cy="6.75" r="2.55" fill="currentColor"/>
+<path d="M21.45 18.85c-.3-3.85-1.85-5.75-4-5.75-1.45 0-2.7.9-3.55 2.55" stroke="currentColor" stroke-width="2.35" stroke-linecap="round"/>
+</svg>
+</div>
+<span class="text-sm font-mono text-slate-500">$4.99</span>
+</div>
+<h3 class="text-xl font-bold mb-4">Match</h3>
+<p class="text-slate-600 dark:text-slate-400 mb-8 flex-1 text-sm md:text-base leading-relaxed">Dual-matrix synergistic network. Independently mapping two distinct temporal profiles to thoroughly evaluate structural alignment, friction points, and collective compatibility regarding specific milestones.</p>
+<span class="text-primary font-semibold flex items-center gap-2 group-hover:gap-3 transition-all mt-auto">Go to Match <span class="material-icons-outlined text-sm">arrow_forward</span></span>
+</a>
+<a href="/app?tab=glyph" target="_top" class="v2-engine-vbar group flex flex-col p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300">
+<div class="flex justify-between items-start mb-8">
+<div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+<svg class="w-7 h-7 text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+<rect x="4.5" y="2.75" width="15" height="18.5" rx="2.5" stroke="currentColor" stroke-width="1.6"/>
+<text x="12" y="15.1" text-anchor="middle" fill="currentColor" font-size="10.5" font-family="Inter, system-ui, sans-serif" font-weight="600">G</text>
+</svg>
+</div>
+<span class="text-sm font-mono text-slate-500">$4.99</span>
+</div>
+<h3 class="text-xl font-bold mb-4">Glyph</h3>
+<p class="text-slate-600 dark:text-slate-400 mb-8 flex-1 text-sm md:text-base leading-relaxed">Intent anchoring and archetypal resonance. Grounded in classical 100-image symbolic frameworks, draw a signature matrix card via randomized digital particle dynamics, allowing Glyph to deeply deconstruct your core themes.</p>
+<span class="text-primary font-semibold flex items-center gap-2 group-hover:gap-3 transition-all mt-auto">Go to Glyph <span class="material-icons-outlined text-sm">arrow_forward</span></span>
+</a>
+</div>
+</div>
+</div>
+</section>
+<section class="pt-24 pb-28 bg-slate-50 dark:bg-slate-900/50 relative reveal" id="v2-team-section">
+<div class="max-w-7xl mx-auto px-6">
+<div class="text-center mb-16">
+<h2 class="text-3xl md:text-5xl font-display font-bold mb-6" id="v2-team-title">The Underlying <span class="gold-gradient">Logic</span> Built for Clear <span class="gold-gradient">Decisions</span></h2>
+<p class="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto" id="v2-team-subtitle">
+                From core algorithms to cognitive control: The system design and decision philosophy behind Eastern OS.
+            </p>
+</div>
+</div>
+<div class="v2-team-marquee w-full">
+<div class="v2-team-track" id="v2-team-track" aria-live="off"></div>
+</div>
+</section>
+<section class="py-24 bg-slate-50 dark:bg-slate-900/30 relative overflow-hidden animate-fade-in-up" style="animation-delay: 0.6s;" id="v2-methodology">
+<div class="absolute inset-0 z-0 opacity-20 dark:opacity-30 mix-blend-luminosity">
+<img alt="Command Center" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCaCQBE0UvjK1px4fhSvnsNhY7NpfBETzOrx-Yhyyayw2sQBKPA14YlLMQ4d5YWQyfO6G4umtE2ddcc0HQE1yzBnNXkN2YZF82kVxsVzGuF-BRnVJJkRQ4NqMqnE71CEAnJJt0uM-0mJ4E72R_fha6wB_KXePeQydL2osgl0R-KB800NmNo0Rtp5MGr8v5QZQWN2y4g45Wo9alBfSX27r7Kl0QenIql83cmiMkc7Ilk9ghfXP_IfyTcCQS4ynRAbtb3cHMWWNmrBHJA"/>
+<div class="absolute inset-0 bg-gradient-to-b from-slate-900/80 via-slate-900/90 to-slate-900"></div>
+</div>
+<div class="max-w-7xl mx-auto px-6 relative z-10">
+<div class="text-center mb-16">
+<h2 class="text-3xl md:text-5xl font-display font-bold mb-6">Our Methodology. Why It Works.</h2>
+<p class="text-slate-600 dark:text-slate-400 max-w-3xl mx-auto">
+                    Three millennia of structural human philosophy, calibrated by contemporary interdisciplinary research and translated through an advanced language engine. Designed to empower your core decisions and illuminate cognitive blind spots you cannot navigate alone.
+                </p>
+</div>
+<div class="grid md:grid-cols-3 gap-12 mb-16">
+<div class="v2-glass-card bg-slate-900/60 p-6 rounded-2xl backdrop-blur-md border border-white/5">
+<h4 class="text-lg font-bold mb-4 text-primary">Eastern Frameworks</h4>
+<p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">For three thousand years, Eastern philosophical traditions have examined time cycles and systemic balance—dissecting choices, direction, and the intrinsic patterns that shape human behavior. Alignment · Momentum · Reframing · Clarity. These ancient traditions are engineered to help you untangle inner logic and evolutionary paths. They are highly structured cognitive models, iterated over dozens of generations.</p>
+</div>
+<div class="v2-glass-card bg-slate-900/60 p-6 rounded-2xl backdrop-blur-md border border-white/5">
+<h4 class="text-lg font-bold mb-4 text-primary">Modern Research</h4>
+<p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">The empirical regularities observed by ancient traditions are now finding their validation and measurement through the lens of modern science. Cognitive science in decision framing. Archetypal psychology in spatial awareness. Chronobiology in natural circadian rhythms. Behavioral economics in cognitive biases. A millennial-tested conceptual framework, now re-examined and verified under the rigor of contemporary research.</p>
+</div>
+<div class="v2-glass-card bg-slate-900/60 p-6 rounded-2xl backdrop-blur-md border border-white/5">
+<h4 class="text-lg font-bold mb-4 text-primary">Algorithmic Translation</h4>
+<p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">We harvest the structural data inherent in these ancient calendar systems, cross-reference them with contemporary behavioral insights, and utilize an advanced language engine to translate them into clear, contextual feedback tailored to your unique inquiries. Not to replace your judgment. To return the cognitive agency back to you.</p>
+</div>
+</div>
+<div class="p-6 bg-slate-200/50 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 text-center text-sm text-slate-500 mb-16 backdrop-blur-md">
+                These tools are engineered exclusively for self-reflection and personal growth exploration — offering thematic frameworks for reference only, never as a substitute for professional diagnosis or deterministic forecasting.
+            </div>
+<div class="text-center max-w-2xl mx-auto">
+<h3 class="text-2xl font-display font-bold mb-4">This is the core essence of pojulife.</h3>
+<p class="text-slate-600 dark:text-slate-400">
+                    The essential questions of life deserve nothing less than three thousand years of philosophical reflection, the empirical rigor of modern science, and the precision of a personalized linguistic engine.
+                </p>
+</div>
+</div>
+</section>
+<section class="py-24 relative overflow-hidden animate-fade-in-up" style="animation-delay: 0.8s;">
+<div class="max-w-7xl mx-auto px-6">
+<div class="text-center mb-16">
+<h2 class="text-3xl md:text-5xl font-display font-bold mb-6">When Insight Meets Concrete Contexts.</h2>
+<p class="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+                    Unfolding a holistic perspective at your real-world turning points.
+                </p>
+</div>
+<div class="grid md:grid-cols-2 gap-8">
+<div class="p-8 rounded-2xl bg-white dark:bg-slate-900 v2-glass-card border border-slate-200 dark:border-white/5 transition-all">
+<h3 class="text-xl font-bold mb-4">Standing at a Critical Crossroads.</h3>
+<p class="text-slate-600 dark:text-slate-400 mb-6">Career transitions, core relationship directions, or strategic relocations. After endless deliberation, POJU shifts your cognitive coordinates to see a way forward.</p>
+<a class="text-primary font-semibold flex items-center gap-2 hover:gap-3 transition-all" href="#">Go to POJU <span class="material-icons-outlined text-sm">arrow_forward</span></a>
+</div>
+<div class="p-8 rounded-2xl bg-white dark:bg-slate-900 v2-glass-card border border-slate-200 dark:border-white/5 transition-all">
+<h3 class="text-xl font-bold mb-4">Navigating Lingering Uncertainties.</h3>
+<p class="text-slate-600 dark:text-slate-400 mb-6">Facing an unnamable complexity. Feeling that implicit underlying forces are at play but unable to pinpoint them. Let Glyph act as your archetypal mirror to decode structural signals below the surface.</p>
+<a class="text-primary font-semibold flex items-center gap-2 hover:gap-3 transition-all" href="#">Go to Glyph <span class="material-icons-outlined text-sm">arrow_forward</span></a>
+</div>
+<div class="p-8 rounded-2xl bg-white dark:bg-slate-900 v2-glass-card border border-slate-200 dark:border-white/5 transition-all">
+<h3 class="text-xl font-bold mb-4">Syncing with Your Spatial-Temporal Pulse.</h3>
+<p class="text-slate-600 dark:text-slate-400 mb-6">Seeking precision over your actionable rhythm. When to push forward for breakthroughs? When to preserve energy and mitigate friction? Syncro dynamically maps the environment over the next 24 hours.</p>
+<a class="text-primary font-semibold flex items-center gap-2 hover:gap-3 transition-all" href="#">Go to Syncro <span class="material-icons-outlined text-sm">arrow_forward</span></a>
+</div>
+<div class="p-8 rounded-2xl bg-white dark:bg-slate-900 v2-glass-card border border-slate-200 dark:border-white/5 transition-all">
+<h3 class="text-xl font-bold mb-4">Evaluating Commitments or Strategic Alliances.</h3>
+<p class="text-slate-600 dark:text-slate-400 mb-6">Whether establishing a lifelong personal partnership, a commercial joint venture, or locking in a key organizational structure. Clarify systemic synergy before the final signature.</p>
+<a class="text-primary font-semibold flex items-center gap-2 hover:gap-3 transition-all" href="#">Go to Match <span class="material-icons-outlined text-sm">arrow_forward</span></a>
+</div>
+<div class="p-8 rounded-2xl bg-white dark:bg-slate-900 v2-glass-card border border-slate-200 dark:border-white/5 transition-all md:col-span-2">
+<h3 class="text-xl font-bold mb-4">Daily Rhythm.</h3>
+<p class="text-slate-600 dark:text-slate-400 mb-6">A 30-Day Field Forecast designed for consistent resonance and long-term clarity in an ever-shifting environment.</p>
+<a class="text-primary font-semibold flex items-center gap-2 hover:gap-3 transition-all" href="#">Begin Atmos <span class="material-icons-outlined text-sm">arrow_forward</span></a>
+</div>
+</div>
+</div>
+</section>
+<section class="py-24 relative overflow-hidden animate-fade-in-up">
+<div class="max-w-7xl mx-auto px-6">
+<div class="text-center mb-16">
+<h2 class="text-3xl md:text-5xl font-display font-bold mb-6">Our Guarantees. Decentralized Sovereignty.</h2>
+<p class="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+                    We do not monetize your history, because our system is engineered to never collect it.
+                </p>
+</div>
+<div class="grid md:grid-cols-3 gap-8 mb-12">
+<div class="p-6">
+<div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-6">
+<span class="material-icons-outlined text-primary">cloud_off</span>
+</div>
+<h3 class="text-xl font-bold mb-4">Zero Central Storage.</h3>
+<p class="text-sm text-slate-600 dark:text-slate-400">Complete localization. All inputs and interactions are securely encrypted and retained strictly within your local browser storage. We run no centralized servers to harvest privacy and host no databases tracking your inputs. Your narrative stays entirely yours.</p>
+</div>
+<div class="p-6">
+<div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-6">
+<span class="material-icons-outlined text-primary">speed</span>
+</div>
+<h3 class="text-xl font-bold mb-4">Zero Friction.</h3>
+<p class="text-sm text-slate-600 dark:text-slate-400">No account registration, no password walls. We delay and strictly limit email requests to only two transparent use cases: 1) Secure gateway routing handled by our payment processor for receipt delivery, or 2) Voluntary sign-up to claim your monthly complimentary ecosystem vouchers. Your inbox stays yours.</p>
+</div>
+<div class="p-6">
+<div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-6">
+<span class="material-icons-outlined text-primary">visibility</span>
+</div>
+<h3 class="text-xl font-bold mb-4">Absolute Transparency.</h3>
+<p class="text-sm text-slate-600 dark:text-slate-400">No deceptive dark patterns. Beyond explicit pay-per-use billing, we offer a high-value voluntary Monthly Pass subscription ($29.99/mo delivering an ecosystem voucher package worth $125). Zero hidden checkouts, absolute single-click cancellation anytime.</p>
+</div>
+</div>
+<div class="mt-20 pt-16 border-t border-slate-200/50 dark:border-white/10">
+<div class="text-center mb-12">
+<h3 class="text-2xl font-display font-bold mb-4"><span class="gold-gradient glow-effect inline-block">Technical Specifications</span></h3>
+<p class="text-slate-600 dark:text-slate-400 text-sm max-w-2xl mx-auto">Engineered for security, speed, and absolute data sovereignty.</p>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+<div class="p-4 border border-slate-200 dark:border-white/5 rounded-lg text-center bg-slate-50 dark:bg-white/[0.01]">
+<span class="material-icons-outlined text-primary mb-2">lock</span>
+<h4 class="font-bold text-sm mb-1">AES-256 Encryption</h4>
+<p class="text-xs text-slate-500 font-mono">Local state storage</p>
+</div>
+<div class="p-4 border border-slate-200 dark:border-white/5 rounded-lg text-center bg-slate-50 dark:bg-white/[0.01]">
+<span class="material-icons-outlined text-primary mb-2">network_check</span>
+<h4 class="font-bold text-sm mb-1">99.99% Uptime</h4>
+<p class="text-xs text-slate-500 font-mono">Edge delivery network</p>
+</div>
+<div class="p-4 border border-slate-200 dark:border-white/5 rounded-lg text-center bg-slate-50 dark:bg-white/[0.01]">
+<span class="material-icons-outlined text-primary mb-2">bolt</span>
+<h4 class="font-bold text-sm mb-1">&lt;50ms Latency</h4>
+<p class="text-xs text-slate-500 font-mono">Global CDN routing</p>
+</div>
+<div class="p-4 border border-slate-200 dark:border-white/5 rounded-lg text-center bg-slate-50 dark:bg-white/[0.01]">
+<span class="material-icons-outlined text-primary mb-2">memory</span>
+<h4 class="font-bold text-sm mb-1">WASM Compute</h4>
+<p class="text-xs text-slate-500 font-mono">Client-side execution</p>
+</div>
+</div>
+</div>
+<div class="text-center mt-12">
+<a class="inline-flex items-center gap-2 px-6 py-3 border border-slate-200 dark:border-white/10 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 transition-colors font-semibold" href="#">
+                    Read Complete Privacy Architecture <span class="material-icons-outlined text-sm">arrow_forward</span>
+</a>
+</div>
+</div>
+</section>
+<section class="py-24 bg-slate-50 dark:bg-slate-900/50 relative overflow-hidden reveal">
+<div class="max-w-4xl mx-auto px-6">
+<div class="text-center mb-16">
+<h2 class="text-3xl md:text-5xl font-display font-bold mb-6"><span class="gold-gradient">System Parameters.</span> FAQs.</h2>
+</div>
+<div class="space-y-4">
+<details class="group border border-slate-200 dark:border-white/10 rounded-xl bg-white dark:bg-slate-900 overflow-hidden [&amp;_summary::-webkit-details-marker]:hidden">
+<summary class="flex items-center justify-between p-6 cursor-pointer font-bold">
+                    How does the local storage architecture work?
+                    <span class="material-icons-outlined transition duration-300 group-open:-rotate-180 text-primary">expand_more</span>
+</summary>
+<div class="px-6 pb-6 text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+                    All session data is written exclusively to your device's IndexedDB and LocalStorage using AES-256 encryption. When you close your browser or clear your cache, the data is permanently destroyed. We have zero backend databases capable of receiving or storing this information.
+                </div>
+</details>
+<details class="group border border-slate-200 dark:border-white/10 rounded-xl bg-white dark:bg-slate-900 overflow-hidden [&amp;_summary::-webkit-details-marker]:hidden">
+<summary class="flex items-center justify-between p-6 cursor-pointer font-bold">
+                    Can I switch devices mid-session?
+                    <span class="material-icons-outlined transition duration-300 group-open:-rotate-180 text-primary">expand_more</span>
+</summary>
+<div class="px-6 pb-6 text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+                    By default, no. Because we use strict local storage to guarantee privacy, sessions are device-bound. However, you can generate a secure, temporary, single-use transfer key to manually migrate an active POJU session to another device if necessary.
+                </div>
+</details>
+<details class="group border border-slate-200 dark:border-white/10 rounded-xl bg-white dark:bg-slate-900 overflow-hidden [&amp;_summary::-webkit-details-marker]:hidden">
+<summary class="flex items-center justify-between p-6 cursor-pointer font-bold">
+                    What happens if I don't use all my Monthly Pass vouchers?
+                    <span class="material-icons-outlined transition duration-300 group-open:-rotate-180 text-primary">expand_more</span>
+</summary>
+<div class="px-6 pb-6 text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+                    Vouchers roll over for up to 90 days. The ecosystem is designed to be used when you genuinely need clarity, not to force arbitrary daily usage.
+                </div>
+</details>
+</div>
+</div>
+</section>
+<section class="py-24 relative overflow-hidden animate-fade-in-up">
+<div class="max-w-7xl mx-auto px-6">
+<div class="text-center mb-16">
+<h2 class="text-3xl md:text-5xl font-display font-bold mb-6">Ready to begin?</h2>
+<p class="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+                    Four gateways to cognitive velocity. Choose the vector that fits this moment.
+                </p>
+</div>
+<div class="grid md:grid-cols-2 gap-4 max-w-4xl mx-auto">
+<a class="p-6 rounded-xl v2-glass-card border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 transition-all flex flex-col justify-between" href="#">
+<h3 class="font-bold text-lg mb-2">Initialize POJU Session</h3>
+<p class="text-sm text-slate-500 font-mono">$9.99 · One Strategic Inquiry · 30 Days</p>
+</a>
+<a class="p-6 rounded-xl v2-glass-card border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 transition-all flex flex-col justify-between" href="#">
+<h3 class="font-bold text-lg mb-2">Decode Glyph Matrix</h3>
+<p class="text-sm text-slate-500 font-mono">$4.99 · Systemic Architectural Reading</p>
+</a>
+<a class="p-6 rounded-xl v2-glass-card border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 transition-all flex flex-col justify-between" href="#">
+<h3 class="font-bold text-lg mb-2">Activate Syncro Loop</h3>
+<p class="text-sm text-slate-500 font-mono">$4.99 · 24-Hour Spatiotemporal Matrix</p>
+</a>
+<a class="p-6 rounded-xl v2-glass-card border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 transition-all flex flex-col justify-between" href="#">
+<h3 class="font-bold text-lg mb-2">Initialize Match Alignment</h3>
+<p class="text-sm text-slate-500 font-mono">$4.99 · Relational Dynamics Profiling</p>
+</a>
+<a class="p-6 rounded-xl v2-glass-card border border-primary/30 bg-primary/5 hover:bg-primary/10 transition-all flex flex-col justify-between md:col-span-2 text-center" href="#">
+<h3 class="font-bold text-lg mb-2">Begin Atmos</h3>
+<p class="text-sm text-primary font-mono">$9.99</p>
+</a>
+</div>
+</div>
+</section>
+<footer class="relative border-t border-slate-200 dark:border-white/5 bg-background-dark pt-16 pb-10">
+<div class="max-w-7xl mx-auto px-6">
+<div class="grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-4 lg:gap-10">
+<div class="max-w-sm">
+<a class="inline-flex items-center gap-3" href="/" target="_top" aria-label="Eastern OS home">
+<img alt="Eastern OS" class="h-8 w-auto object-contain" src="/v2/LOGO.png"/>
+<span class="font-display text-lg font-bold tracking-tight text-white">Eastern <span class="gold-gradient">OS</span></span>
+</a>
+<p class="mt-5 text-sm leading-relaxed text-slate-500">
+                    Engineered for Clarity. A data-driven decision support system designed for high-stakes scenarios.
+                </p>
+</div>
+<div>
+<h3 class="text-xs font-bold uppercase tracking-[0.18em] text-slate-200">Product</h3>
+<ul class="mt-5 space-y-3">
+<li><a class="text-sm text-slate-500 transition-colors hover:text-primary" href="/app?tab=atmos" target="_top">Atmos Engine</a></li>
+<li><a class="text-sm text-slate-500 transition-colors hover:text-primary" href="/app?tab=poju" target="_top">Pivot Simulator</a></li>
+<li><a class="text-sm text-slate-500 transition-colors hover:text-primary" href="/app?tab=match" target="_top">Match Analysis</a></li>
+<li><a class="text-sm text-slate-500 transition-colors hover:text-primary" href="/app?tab=syncro" target="_top">Syncro &amp; Glyph</a></li>
+</ul>
+</div>
+<div>
+<h3 class="text-xs font-bold uppercase tracking-[0.18em] text-slate-200">Resources</h3>
+<ul class="mt-5 space-y-3">
+<li><a class="text-sm text-slate-500 transition-colors hover:text-primary" href="#v2-methodology">Decision Methodology</a></li>
+<li><a class="text-sm text-slate-500 transition-colors hover:text-primary" href="/glossary" target="_top">Documentation</a></li>
+<li><a class="text-sm text-slate-500 transition-colors hover:text-primary" href="#v2-system-status" id="v2-system-status">System Status</a></li>
+<li><a class="text-sm text-slate-500 transition-colors hover:text-primary" href="/contact" target="_top">Support &amp; Contact</a></li>
+</ul>
+<p class="mt-4 inline-flex items-center gap-2 text-xs font-mono text-slate-500">
+<span class="relative flex h-2 w-2" aria-hidden="true">
+<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+<span class="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
+</span>
+                All Systems Operational
+            </p>
+</div>
+<div>
+<h3 class="text-xs font-bold uppercase tracking-[0.18em] text-slate-200">Legal &amp; Security</h3>
+<ul class="mt-5 space-y-3">
+<li><a class="text-sm text-slate-500 transition-colors hover:text-primary" href="/disclaimer" target="_top">Disclaimer</a></li>
+<li><a class="text-sm text-slate-500 transition-colors hover:text-primary" href="/privacy" target="_top">Privacy Policy</a></li>
+<li><a class="text-sm text-slate-500 transition-colors hover:text-primary" href="/terms" target="_top">Terms of Service</a></li>
+<li><a class="text-sm text-slate-500 transition-colors hover:text-primary" href="/refund" target="_top">Refund Policy</a></li>
+<li><a class="text-sm text-slate-500 transition-colors hover:text-primary" href="/cookies" target="_top">Cookie Settings</a></li>
+</ul>
+</div>
+</div>
+<div class="mt-14 flex flex-col gap-4 border-t border-white/5 pt-8 md:flex-row md:items-start md:justify-between">
+<p class="text-xs text-slate-500 shrink-0">© 2026 Eastern OS Technologies. All rights reserved.</p>
+<p class="text-xs leading-relaxed text-slate-500 md:max-w-xl md:text-right">
+                Eastern OS offers dynamic perspectives and decision insights. Designed for self-reflection and strategic reference only. All final choices remain strictly yours.
+            </p>
+</div>
+</div>
+</footer>
+</div>
+</div>
+<div class="v2-page-scroll__rail" id="v2-scroll-rail" hidden>
+<div class="v2-page-scroll__thumb" id="v2-scroll-thumb" role="scrollbar" aria-orientation="vertical"></div>
+</div>
+</div>
+<script>
+        // Scroll reveal effect
+        document.addEventListener('DOMContentLoaded', () => {
+            const reveals = document.querySelectorAll('.reveal');
+            const scrollViewport = document.getElementById('v2-scroll-viewport');
+            
+            const revealOnScroll = () => {
+                for (let i = 0; i < reveals.length; i++) {
+                    const windowHeight = window.innerHeight;
+                    const elementTop = reveals[i].getBoundingClientRect().top;
+                    const elementVisible = 150;
+                    
+                    if (elementTop < windowHeight - elementVisible) {
+                        reveals[i].classList.add('active');
+                    }
+                }
+            };
+            
+            (scrollViewport || window).addEventListener('scroll', revealOnScroll, { passive: true });
+            revealOnScroll(); // Trigger once on load
+
+            // Workspace-style custom scrollbar (same thumb language as WorkspaceScrollArea)
+            (function initV2WorkspaceScrollbar() {
+              const viewport = document.getElementById('v2-scroll-viewport');
+              const rail = document.getElementById('v2-scroll-rail');
+              const thumb = document.getElementById('v2-scroll-thumb');
+              if (!viewport || !rail || !thumb) return;
+
+              const OVERFLOW_EPS = 4;
+              let thumbH = 0;
+              let dragging = null;
+
+              const syncThumb = () => {
+                const { scrollTop, scrollHeight, clientHeight } = viewport;
+                const overflow = scrollHeight - clientHeight;
+                if (overflow <= OVERFLOW_EPS || clientHeight <= 0) {
+                  rail.hidden = true;
+                  return;
+                }
+                rail.hidden = false;
+                const trackH = clientHeight - 8; // rail top/bottom inset
+                thumbH = Math.max(32, Math.min(trackH * 0.22, (clientHeight / scrollHeight) * trackH));
+                const maxTop = Math.max(0, trackH - thumbH);
+                const top = maxTop * (scrollTop / overflow);
+                thumb.style.height = `${thumbH}px`;
+                thumb.style.transform = `translateY(${top}px)`;
+              };
+
+              viewport.addEventListener('scroll', syncThumb, { passive: true });
+              window.addEventListener('resize', syncThumb);
+              if (typeof ResizeObserver !== 'undefined') {
+                const ro = new ResizeObserver(syncThumb);
+                ro.observe(viewport);
+                if (viewport.firstElementChild) ro.observe(viewport.firstElementChild);
+              }
+              syncThumb();
+
+              const onMove = (e) => {
+                if (!dragging) return;
+                const overflow = viewport.scrollHeight - viewport.clientHeight;
+                if (overflow <= OVERFLOW_EPS) return;
+                const trackH = viewport.clientHeight - 8;
+                const maxTop = Math.max(0, trackH - thumbH);
+                if (maxTop <= 0) return;
+                const deltaY = e.clientY - dragging.startY;
+                viewport.scrollTop = Math.min(
+                  overflow,
+                  Math.max(0, dragging.startScroll + (deltaY / maxTop) * overflow),
+                );
+              };
+              const onUp = () => {
+                dragging = null;
+                document.body.style.removeProperty('user-select');
+                document.body.style.removeProperty('cursor');
+              };
+              document.addEventListener('pointermove', onMove);
+              document.addEventListener('pointerup', onUp);
+              document.addEventListener('pointercancel', onUp);
+
+              thumb.addEventListener('pointerdown', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dragging = { startY: e.clientY, startScroll: viewport.scrollTop };
+                document.body.style.userSelect = 'none';
+                document.body.style.cursor = 'grabbing';
+              });
+
+              rail.addEventListener('pointerdown', (e) => {
+                if (e.target.closest('.v2-page-scroll__thumb')) return;
+                e.preventDefault();
+                const rect = rail.getBoundingClientRect();
+                const overflow = viewport.scrollHeight - viewport.clientHeight;
+                if (overflow <= OVERFLOW_EPS) return;
+                const trackH = rect.height;
+                const y = e.clientY - rect.top - thumbH / 2;
+                const maxTop = Math.max(0, trackH - thumbH);
+                const ratio = maxTop <= 0 ? 0 : Math.min(1, Math.max(0, y / maxTop));
+                viewport.scrollTop = ratio * overflow;
+                dragging = { startY: e.clientY, startScroll: viewport.scrollTop };
+                document.body.style.userSelect = 'none';
+                document.body.style.cursor = 'grabbing';
+              });
+            })();
+
+            // Lock new engine bars to original POJU card size:
+            // horizontal bar height = POJU width; vertical bar height = POJU height
+            (function syncEngineBarsToPoju() {
+              const poju = document.getElementById('v2-engine-poju-card');
+              const barsRoot = document.getElementById('v2-engine-bars');
+              if (!poju || !barsRoot) return;
+              const hbars = barsRoot.querySelectorAll('.v2-engine-hbar');
+              const vbars = barsRoot.querySelectorAll('.v2-engine-vbar');
+
+              const apply = () => {
+                const rect = poju.getBoundingClientRect();
+                const w = Math.round(rect.width);
+                const h = Math.round(rect.height);
+                if (w < 80 || h < 80) return;
+                const wide = window.matchMedia('(min-width: 1024px)').matches;
+                hbars.forEach((el) => {
+                  if (wide) {
+                    el.style.height = w + 'px';
+                    el.style.minHeight = w + 'px';
+                  } else {
+                    el.style.height = '';
+                    el.style.minHeight = '';
+                  }
+                });
+                vbars.forEach((el) => {
+                  if (wide) {
+                    el.style.height = h + 'px';
+                    el.style.minHeight = h + 'px';
+                  } else {
+                    el.style.height = '';
+                    el.style.minHeight = '28rem';
+                  }
+                });
+              };
+
+              apply();
+              requestAnimationFrame(apply);
+              window.addEventListener('resize', apply);
+              if (typeof ResizeObserver !== 'undefined') {
+                const ro = new ResizeObserver(apply);
+                ro.observe(poju);
+                const grid = document.getElementById('v2-engines-grid');
+                if (grid) ro.observe(grid);
+              }
+            })();
+
+            // Hero copy (locale from parent URL; gold on Eastern OS + wisdom-term)
+            const HERO_COPY = {
+              en: {
+                title:
+                  '<span class="gold-gradient">Eastern OS</span> — A personal decision operating system powered by <span class="gold-gradient">3,000 years</span> of Eastern wisdom.',
+                subtitle:
+                  'Combining your native energy architecture with the environmental energy matrix to deliver highly confidential, data-driven business and life decision support.',
+              },
+              zh: {
+                title:
+                  '<span class="gold-gradient">Eastern OS</span> — 沉淀 <span class="gold-gradient">3,000 年</span>东方智慧的个人决策操作系统。',
+                subtitle:
+                  '结合个人原生能量架构与环境场能矩阵，为你提供高保密、数据化的商业与人生决策支持。',
+              },
+              es: {
+                title:
+                  '<span class="gold-gradient">Eastern OS</span> — Un sistema operativo de decisiones personales impulsado por <span class="gold-gradient">3.000 años</span> de sabiduría oriental.',
+                subtitle:
+                  'Combinando su arquitectura de energía nativa con la matriz de energía ambiental para ofrecer un soporte de decisiones personal y empresarial altamente confidencial y basado en datos.',
+              },
+              de: {
+                title:
+                  '<span class="gold-gradient">Eastern OS</span> — Ein Betriebssystem für persönliche Entscheidungen, angetrieben von <span class="gold-gradient">3.000 Jahren</span> östlicher Weisheit.',
+                subtitle:
+                  'Kombiniert Ihre native Energiearchitektur mit der Umwelt-Energie-Matrix, um hochvertrauliche, datengestützte Unterstützung für geschäftliche und persönliche Entscheidungen zu bieten.',
+              },
+              fr: {
+                title:
+                  '<span class="gold-gradient">Eastern OS</span> — Un système d\'exploitation de décision personnelle propulsé par <span class="gold-gradient">3 000 ans</span> de sagesse orientale.',
+                subtitle:
+                  'Combinant votre architecture d\'énergie native avec la matrice d\'énergie environnementale pour vous fournir un soutien décisionnel professionnel et personnel hautement confidentiel et fondé sur les données.',
+              },
+            };
+
+            const SCENARIOS_COPY = {
+              en: {
+                header: 'DESIGNED FOR HIGH-STAKES SCENARIOS',
+                strategic_choices: 'Strategic Choices',
+                career_trajectory: 'Career Trajectory',
+                relational_synergy: 'Relational Synergy',
+                timing_pace: 'Timing & Pace',
+                life_architecture: 'Life Architecture',
+              },
+              zh: {
+                header: '专为高价值与高风险场景打造',
+                strategic_choices: '重大抉择',
+                career_trajectory: '事业破局',
+                relational_synergy: '关系契合',
+                timing_pace: '时机与节奏',
+                life_architecture: '人生与能量',
+              },
+              es: {
+                header: 'DISEÑADO PARA ESCENARIOS DE ALTO IMPACTO',
+                strategic_choices: 'Elecciones Estratégicas',
+                career_trajectory: 'Trayectoria Profesional',
+                relational_synergy: 'Sinergia Relacional',
+                timing_pace: 'Tiempos y Ritmo',
+                life_architecture: 'Arquitectura de Vida',
+              },
+              de: {
+                header: 'ENTWICKELT FÜR SCHLÜSSEL- UND RISIKOSZENARIEN',
+                strategic_choices: 'Strategische Entscheidungen',
+                career_trajectory: 'Beruflicher Durchbruch',
+                relational_synergy: 'Beziehungs-Synergie',
+                timing_pace: 'Timing & Rhythmus',
+                life_architecture: 'Lebensarchitektur',
+              },
+              fr: {
+                header: 'CONÇU POUR LES SCÉNARIOS À HAUTS ENJEUX',
+                strategic_choices: 'Choix Stratégiques',
+                career_trajectory: 'Trajectoire Professionnelle',
+                relational_synergy: 'Synergie Relationnelle',
+                timing_pace: 'Timing & Rythme',
+                life_architecture: 'Architecture de Vie',
+              },
+            };
+
+            const TEAM_AVATARS = [
+              '/v2/touxiang1.png', // Max C. · CEO
+              '/v2/touxiang4.png', // Maya C. · UX
+              '/v2/touxiang3.png', // Marcus T. · Algorithm
+              '/v2/touxiang2.png', // Elena S. · Strategy
+              '/v2/touxiang5.png', // Arthur M. · Architect
+            ];
+
+            const TEAM_COPY = {
+              zh: {
+                section_title: '为清晰<span class="gold-gradient">决策</span>而生的底层<span class="gold-gradient">逻辑</span>',
+                section_subtitle: '从核心算法到认知控制：Eastern OS 的底层设计与决策哲学',
+                team: [
+                  {
+                    name: 'Max C.',
+                    role: 'Founder & CEO',
+                    quote:
+                      '在人生的各个关键节点——无论是战略方向、职业重组还是人际协同，真正的挑战在于缺乏全局视角。我们打造 Eastern OS，正是为了提供一套动态的‘个人决策导航系统’，用严密的结构与清晰度，让每一次重大抉择都有据可依。',
+                  },
+                  {
+                    name: 'Arthur M.',
+                    role: 'Chief Systems Architect',
+                    quote:
+                      '当你纠结于复杂的抉择时，含糊不清或情绪化的建议毫无帮助。我们以严密的工程精度打造 Eastern OS 的内核，将复杂的环境变数转化为客观确定的计算模型，确保你每次面临难题时都能获得真正值得信赖的参考。',
+                  },
+                  {
+                    name: 'Marcus T.',
+                    role: 'Lead Algorithmic Data Engineer',
+                    quote:
+                      '许多挫折并非来自能力不足，而是源于节奏错位。Eastern OS 通过算法将环境的暗涌与周期转化为直观的数据，帮你精准校准行动的节奏与节点，让生活中的‘顺势而为’变得自然而高效。',
+                  },
+                  {
+                    name: 'Elena S.',
+                    role: 'Head of Decision Strategy',
+                    quote:
+                      '在看不清前方风险时做出重大改变是极其吃力的。Eastern OS 通过推演不同路径下的局势演变，为你交付具体的行动预案，让你在面对人生重大转折时拥有足够的底气与清晰的选择。',
+                  },
+                  {
+                    name: 'Maya C.',
+                    role: 'Principal Product & UX Lead',
+                    quote:
+                      '面对高密度的抉择时，繁琐的工具只会增加无谓的认知消耗。我们把 Eastern OS 打造成一个极沉静的暗色个人控制台，过滤一切视觉噪点与信息冗余，让用户在极简的交互中快速恢复专注与掌控感。',
+                  },
+                ],
+              },
+              en: {
+                section_title: 'The Underlying <span class="gold-gradient">Logic</span> Built for Clear <span class="gold-gradient">Decisions</span>',
+                section_subtitle:
+                  'From core algorithms to cognitive control: The system design and decision philosophy behind Eastern OS.',
+                team: [
+                  {
+                    name: 'Max C.',
+                    role: 'Founder & CEO',
+                    quote:
+                      'At life’s critical intersections—whether navigating career transitions, strategic pivots, or relational synergy—the true challenge is the lack of a systemic picture. We built Eastern OS to deliver a dynamic personal navigation engine, turning raw complexity into structural clarity and grounded confidence.',
+                  },
+                  {
+                    name: 'Arthur M.',
+                    role: 'Chief Systems Architect',
+                    quote:
+                      'When evaluating complex decisions, vague or emotional advice offers no real utility. We engineered the core of Eastern OS with mathematical precision—transforming environmental variables into an objective, deterministic model that delivers trustworthy clarity whenever you face a dilemma.',
+                  },
+                  {
+                    name: 'Marcus T.',
+                    role: 'Lead Algorithmic Data Engineer',
+                    quote:
+                      'Missteps rarely come from a lack of capability; they stem from misaligned timing. Eastern OS quantifies subtle environmental cycles into intuitive data insights—helping you calibrate your decision pace so you can seamlessly move with natural momentum.',
+                  },
+                  {
+                    name: 'Elena S.',
+                    role: 'Head of Decision Strategy',
+                    quote:
+                      'Making major pivots without visibility into risk creates severe resistance. Eastern OS simulates scenario dynamics across different paths, providing actionable playbooks so you can navigate pivotal transitions with complete confidence and strategic clarity.',
+                  },
+                  {
+                    name: 'Maya C.',
+                    role: 'Principal Product & UX Lead',
+                    quote:
+                      'When evaluating high-stakes choices, chaotic interfaces only add unnecessary cognitive friction. We sculpted Eastern OS into a serene dark-mode console—stripping away visual clutter and information noise so users can instantly reclaim focus and complete control.',
+                  },
+                ],
+              },
+              es: {
+                section_title: 'La <span class="gold-gradient">lógica</span> fundamental para <span class="gold-gradient">decisiones</span> claras',
+                section_subtitle:
+                  'Desde algoritmos centrales hasta el control cognitivo: El diseño del sistema y la filosofía de decisión tras Eastern OS.',
+                team: [
+                  {
+                    name: 'Max C.',
+                    role: 'Fundador y CEO',
+                    quote:
+                      'En los puntos de inflexión clave de la vida, ya sea una transición profesional, un giro estratégico o la sinergia relacional, el verdadero desafío es la falta de una visión sistémica. Creamos Eastern OS para ofrecer un motor dinámico de navegación personal, transformando la complejidad en claridad estructural y confianza real.',
+                  },
+                  {
+                    name: 'Arthur M.',
+                    role: 'Arquitecto Jefe de Sistemas',
+                    quote:
+                      'Al evaluar decisiones complejas, los consejos vagos o emocionales no aportan valor real. Diseñamos el núcleo de Eastern OS con precisión matemática, transformando las variables del entorno en un modelo objetivo y determinista que ofrece claridad confiable cada vez que enfrenta un dilema.',
+                  },
+                  {
+                    name: 'Marcus T.',
+                    role: 'Ingeniero Jefe de Datos y Algoritmos',
+                    quote:
+                      'Los tropiezos rara vez provienen de una falta de capacidad; se deben a un ritmo desalineado. Eastern OS cuantifica los ciclos del entorno en análisis de datos intuitivos, ayudándole a calibrar el ritmo de sus decisiones para avanzar de manera fluida y natural.',
+                  },
+                  {
+                    name: 'Elena S.',
+                    role: 'Directora de Estrategia de Decisión',
+                    quote:
+                      'Realizar giros importantes sin visibilidad del riesgo genera una gran resistencia. Eastern OS simula la dinámica de escenarios en diferentes trayectorias, ofreciendo guías de acción concretas para que pueda afrontar las transiciones clave con total confianza y claridad estratégica.',
+                  },
+                  {
+                    name: 'Maya C.',
+                    role: 'Líder de Producto y UX',
+                    quote:
+                      'Al evaluar elecciones de alto impacto, las interfaces caóticas solo añaden fricción cognitiva innecesaria. Diseñamos Eastern OS como una consola serena en modo oscuro, eliminando el ruido visual y la redundancia de información para que pueda recuperar al instante el enfoque y el control total.',
+                  },
+                ],
+              },
+              de: {
+                section_title: 'Die grundlegende <span class="gold-gradient">Logik</span> für klare <span class="gold-gradient">Entscheidungen</span>',
+                section_subtitle:
+                  'Von Kernalgorithmen bis zur kognitiven Steuerung: Das Systemdesign und die Entscheidungsphilosophie von Eastern OS.',
+                team: [
+                  {
+                    name: 'Max C.',
+                    role: 'Gründer & CEO',
+                    quote:
+                      'An den entscheidenden Wendepunkten des Lebens – ob bei beruflichen Veränderungen, strategischen Weichenstellungen oder relationaler Synergie – liegt die wahre Herausforderung im Mangel an einem Gesamtbild. Wir haben Eastern OS entwickelt, um ein dynamisches persönliches Navigationssystem bereitzustellen, das komplexe Situationen in strukturelle Klarheit und fundiertes Vertrauen verwandelt.',
+                  },
+                  {
+                    name: 'Arthur M.',
+                    role: 'Chef-Systemarchitekt',
+                    quote:
+                      'Bei komplexen Entscheidungen bieten vage oder emotionale Ratschläge keinen echten Mehrwert. Wir haben den Kern von Eastern OS mit mathematischer Präzision entwickelt und Umgebungsvariablen in ein objektives, deterministisches Modell verwandelt, das bei jedem Dilemma verlässliche Klarheit liefert.',
+                  },
+                  {
+                    name: 'Marcus T.',
+                    role: 'Leitender Algorithmen- & Dateningenieur',
+                    quote:
+                      'Fehlschläge entstehen selten durch mangelnde Fähigkeiten, sondern durch ein falsches Timing. Eastern OS quantifiziert Umweltzyklen in intuitive Daten-Insights, die Ihnen helfen, das Tempo Ihrer Entscheidungen zu kalibrieren und mühelos im richtigen Rhythmus zu agieren.',
+                  },
+                  {
+                    name: 'Elena S.',
+                    role: 'Leiterin Entscheidungsstrategie',
+                    quote:
+                      'Entscheidende Veränderungen ohne Sicht auf Risiken verursachen große Unsicherheit. Eastern OS simuliert Szenariodynamiken auf verschiedenen Pfaden und liefert konkrete Handlungsempfehlungen, damit Sie wichtige Lebensphasen mit voller Zuversicht und klarer Strategie meistern.',
+                  },
+                  {
+                    name: 'Maya C.',
+                    role: 'Leitende Produkt- & UX-Designerin',
+                    quote:
+                      'Bei weitreichenden Entscheidungen erzeugen unübersichtliche Benutzeroberflächen nur unnötige kognitive Belastung. Wir haben Eastern OS als ruhige Dark-Mode-Konsole gestaltet, die visuellen Lärm und Informationsüberschuss filtert, damit Sie sofort Ihren Fokus und die volle Kontrolle zurückgewinnen.',
+                  },
+                ],
+              },
+              fr: {
+                section_title: 'La <span class="gold-gradient">logique</span> sous-jacente pour des <span class="gold-gradient">décisions</span> claires',
+                section_subtitle:
+                  "Des algorithmes clés au contrôle cognitif : La conception système et la philosophie de décision derrière Eastern OS.",
+                team: [
+                  {
+                    name: 'Max C.',
+                    role: 'Fondateur & CEO',
+                    quote:
+                      "Aux moments charnières de la vie, qu'il s'agisse de transitions de carrière, de pivots stratégiques ou de synergie relationnelle, le vrai défi réside dans le manque de vision globale. Nous avons créé Eastern OS pour offrir un moteur dynamique de navigation personnelle, transformant la complexité brute en clarté structurelle et en confiance solide.",
+                  },
+                  {
+                    name: 'Arthur M.',
+                    role: 'Architecte Système en Chef',
+                    quote:
+                      "Face à des décisions complexes, les conseils flous ou émotionnels n'apportent aucune utilité réelle. Nous avons conçu le cœur d'Eastern OS avec une précision mathématique, transformant les variables environnementales en un modèle objectif et déterministe qui offre une clarté fiable lors de chaque dilemme.",
+                  },
+                  {
+                    name: 'Marcus T.',
+                    role: 'Ingénieur en Chef Algorithmes & Données',
+                    quote:
+                      "Les faux pas proviennent rarement d'un manque de capacités ; ils découlent d'un mauvais timing. Eastern OS quantifie les cycles environnementaux en données intuitives, vous aidant à calibrer le rythme de vos décisions pour avancer naturellement avec dynamisme.",
+                  },
+                  {
+                    name: 'Elena S.',
+                    role: 'Directrice de la Stratégie de Décision',
+                    quote:
+                      'Effectuer des changements majeurs sans visibilité sur les risques crée une forte résistance. Eastern OS simule les dynamiques de scénarios sur différents parcours, vous fournissant des plans d\'action concrets pour aborder les transitions clés en toute confiance et avec une clarté stratégique.',
+                  },
+                  {
+                    name: 'Maya C.',
+                    role: 'Responsable Produit & Design UX',
+                    quote:
+                      'Lors de choix décisifs, les interfaces chaotiques ne font qu\'ajouter une friction cognitive inutile. Nous avons façonné Eastern OS comme une console épurée en mode sombre, éliminant le bruit visuel et le surplus d\'informations pour que vous puissiez instantanément retrouver votre concentration et un contrôle total.',
+                  },
+                ],
+              },
+            };
+
+            function escapeHtml(value) {
+              return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+            }
+
+            function renderTeamCard(member, avatarSrc, index) {
+              const name = escapeHtml(member.name);
+              const role = escapeHtml(member.role);
+              const quote = escapeHtml(member.quote);
+              return (
+                '<article class="v2-team-card v2-glass-card p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 group relative" data-team-index="' +
+                index +
+                '">' +
+                '<div class="v2-team-avatar-wrap" aria-hidden="true">' +
+                '<img class="v2-team-avatar" src="' +
+                avatarSrc +
+                '" alt="" width="176" height="176" loading="lazy" decoding="async"/>' +
+                '</div>' +
+                '<div class="absolute top-0 right-0 p-6 opacity-10 pointer-events-none">' +
+                '<span class="material-icons-outlined text-6xl text-primary">format_quote</span>' +
+                '</div>' +
+                '<p class="v2-team-quote text-slate-600 dark:text-slate-300 relative z-10 text-sm leading-relaxed">"' +
+                quote +
+                '"</p>' +
+                '<div class="v2-team-meta border-t border-slate-200/50 dark:border-white/10 pt-6 mt-8 relative z-10 text-left">' +
+                '<h4 class="v2-team-name">' +
+                name +
+                '</h4>' +
+                '<p class="v2-team-role">' +
+                role +
+                '</p>' +
+                '</div>' +
+                '<span class="sr-only">' +
+                name +
+                '</span>' +
+                '</article>'
+              );
+            }
+
+            function applyTeamCopy(locale) {
+              const pack = TEAM_COPY[locale] || TEAM_COPY.en;
+              const titleEl = document.getElementById('v2-team-title');
+              const subtitleEl = document.getElementById('v2-team-subtitle');
+              const track = document.getElementById('v2-team-track');
+              if (titleEl) titleEl.innerHTML = pack.section_title;
+              if (subtitleEl) subtitleEl.textContent = pack.section_subtitle;
+              if (!track) return;
+              // Display order: Max → Maya → Marcus → Elena → Arthur (Maya/Arthur swapped)
+              const team =
+                pack.team.length >= 5
+                  ? [pack.team[0], pack.team[4], pack.team[2], pack.team[3], pack.team[1]]
+                  : pack.team;
+              const cardsHtml = team
+                .map((member, i) => renderTeamCard(member, TEAM_AVATARS[i] || TEAM_AVATARS[0], i))
+                .join('');
+              const reduceMotion =
+                window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+              // Duplicate set for seamless infinite scroll (RTL motion via CSS translateX -50%)
+              track.innerHTML = reduceMotion ? cardsHtml : cardsHtml + cardsHtml;
+            }
+
+            // Language switcher (mirrors marketing site: en / es / de / fr / zh)
+            const LOCALE_LABELS = {
+              en: 'English',
+              es: 'Español',
+              de: 'Deutsch',
+              fr: 'Français',
+              zh: '中文',
+            };
+            const rootWin = window.top || window;
+            const path = rootWin.location.pathname || '/';
+            const match = path.match(/^\/(zh|es|de|fr)(\/|$)/);
+            const currentLocale = match ? match[1] : 'en';
+            const hero = HERO_COPY[currentLocale] || HERO_COPY.en;
+            const titleEl = document.getElementById('v2-hero-title');
+            const subtitleEl = document.getElementById('v2-hero-subtitle');
+            if (titleEl) titleEl.innerHTML = hero.title;
+            if (subtitleEl) subtitleEl.textContent = hero.subtitle;
+
+            const scenarios = SCENARIOS_COPY[currentLocale] || SCENARIOS_COPY.en;
+            const scenariosHeader = document.getElementById('v2-scenarios-header');
+            if (scenariosHeader) scenariosHeader.textContent = scenarios.header;
+            document.querySelectorAll('[data-scenario]').forEach((el) => {
+              const key = el.getAttribute('data-scenario');
+              if (key && scenarios[key]) el.textContent = scenarios[key];
+            });
+
+            applyTeamCopy(currentLocale);
+
+            document.documentElement.lang = currentLocale === 'zh' ? 'zh-CN' : currentLocale;
+
+            const labelEl = document.getElementById('v2-lang-label');
+            const btn = document.getElementById('v2-lang-btn');
+            const menu = document.getElementById('v2-lang-menu');
+            const chevron = document.getElementById('v2-lang-chevron');
+            if (labelEl) labelEl.textContent = LOCALE_LABELS[currentLocale] || 'English';
+
+            const setOpen = (open) => {
+              if (!menu || !btn || !chevron) return;
+              menu.classList.toggle('hidden', !open);
+              btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+              chevron.style.transform = open ? 'rotate(180deg)' : '';
+            };
+
+            btn?.addEventListener('click', (e) => {
+              e.stopPropagation();
+              setOpen(menu?.classList.contains('hidden'));
+            });
+            document.addEventListener('click', () => setOpen(false));
+            document.addEventListener('keydown', (e) => {
+              if (e.key === 'Escape') setOpen(false);
+            });
+
+            document.querySelectorAll('.v2-lang-opt').forEach((opt) => {
+              const code = opt.getAttribute('data-locale');
+              if (code === currentLocale) {
+                opt.classList.add('bg-white/12', 'text-white');
+                opt.classList.remove('text-slate-300');
+                opt.setAttribute('aria-selected', 'true');
+              }
+              opt.addEventListener('click', () => {
+                if (!code || code === currentLocale) {
+                  setOpen(false);
+                  return;
+                }
+                const params = new URLSearchParams(rootWin.location.search);
+                params.set('ui', 'workspace');
+                const qs = params.toString();
+                const nextPath =
+                  code === 'en'
+                    ? qs
+                      ? `/?${qs}`
+                      : '/'
+                    : qs
+                      ? `/${code}/?${qs}`
+                      : `/${code}/`;
+                rootWin.location.assign(nextPath);
+              });
+            });
+        });
+    </script>
+</body></html>

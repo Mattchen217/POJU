@@ -1,6 +1,6 @@
 {
-  "name": "pojulife",
-  "short_name": "pojulife",
+  "name": "Eastern OS",
+  "short_name": "Eastern OS",
   "description": "Eastern wisdom, modern translation",
   "start_url": "/?source=pwa",
   "scope": "/",
@@ -10,6 +10,12 @@
   "background_color": "#07091A",
   "theme_color": "#07091A",
   "icons": [
+    {
+      "src": "/v2/LOGOE.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "/api/pwa-icon?size=192",
       "sizes": "192x192",

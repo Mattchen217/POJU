@@ -1408,7 +1408,7 @@ two hours.
 Free · Opens on mobile only
 
 [QR Code]
-pojulife.com/syncro
+easternos.com/syncro
 
 [Phone Input]      [ Text me the link ]
 
@@ -1431,7 +1431,7 @@ pojulife.com/syncro
 - Scan the QR code or text yourself the link.
 - 
 - [QR code]
-- pojulife.com/syncro
+- easternos.com/syncro
 - 
 - Text yourself the link
 - [Text me the link]
@@ -1559,7 +1559,7 @@ Updated every two hours, with your context.
 - 
 - Text me the link
 - [QR code]
-- pojulife.com/syncro
+- easternos.com/syncro
 
 + [全部删除]
 + 
@@ -1612,7 +1612,7 @@ Updated every two hours, with your context.
     用户进来了解 Syncro 是什么、能做什么
     看到 QR 码,扫码到手机
   
-  [真正的应用] mobile.pojulife.com/syncro
+  [真正的应用] mobile.easternos.com/syncro
     或 PWA 版本
     用户在手机上使用
     这里才需要权限请求、校准、表单输入

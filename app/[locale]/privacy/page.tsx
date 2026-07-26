@@ -5,7 +5,7 @@ import { LegalPageShell } from "@/components/legal/legal-page-shell";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — pojulife",
+  title: "Privacy Policy — Eastern OS",
   description: "pojulife privacy policy — Version 1.1",
 };
 
@@ -46,7 +46,7 @@ export default function PrivacyPage() {
           </p>
           <p>
             <strong>Operator contact:</strong>{" "}
-            <a href="mailto:privacy@pojulife.com">privacy@pojulife.com</a>
+            <a href="mailto:privacy@easternos.com">privacy@easternos.com</a>
           </p>
           <p>
             pojulife and its specialized modular engines (POJU, Glyph, Syncro, Match) are designed so that your
@@ -167,7 +167,7 @@ export default function PrivacyPage() {
           <strong>Subscription &amp; Voucher Email Records:</strong> Maintained continuously only for the active duration
           of your subscription service or voucher pool allocation. You can request absolute erasure of your server-side
           identifier records at any time by contacting{" "}
-          <a href="mailto:privacy@pojulife.com">privacy@pojulife.com</a>.
+          <a href="mailto:privacy@easternos.com">privacy@easternos.com</a>.
         </li>
         <li>
           <strong>Tax Audit Data:</strong> Payment compliance transaction references are systematically archived for 7
@@ -184,7 +184,7 @@ export default function PrivacyPage() {
       </p>
       <p>
         For formal data validation requests, dispatch an inquiry to{" "}
-        <a href="mailto:privacy@pojulife.com">privacy@pojulife.com</a> with the subject token &quot;Data Sovereignty
+        <a href="mailto:privacy@easternos.com">privacy@easternos.com</a> with the subject token &quot;Data Sovereignty
         Request.&quot;
       </p>
 

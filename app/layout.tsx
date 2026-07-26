@@ -31,19 +31,20 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "pojulife",
+  title: "Eastern OS",
+  applicationName: "Eastern OS",
   description:
     "Where AI meets a thousand years of wisdom. Decision support for the questions that won't let you go.",
   manifest: "/manifest.json",
   icons: {
     icon: [
+      { url: "/v2/LOGOE.png", type: "image/png" },
       { url: "/api/pwa-icon?size=32", sizes: "32x32", type: "image/png" },
-      { url: "/api/pwa-icon?size=48", sizes: "48x48", type: "image/png" },
       { url: "/api/pwa-icon?size=192", sizes: "192x192", type: "image/png" },
       { url: "/api/pwa-icon?size=512", sizes: "512x512", type: "image/png" },
     ],
-    apple: [{ url: "/api/pwa-icon?size=180", sizes: "180x180", type: "image/png" }],
-    shortcut: ["/api/pwa-icon?size=32"],
+    apple: [{ url: "/v2/LOGOE.png", sizes: "180x180", type: "image/png" }],
+    shortcut: ["/v2/LOGOE.png"],
   },
 };
 
@@ -64,9 +65,9 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="pojulife" />
-        <link rel="apple-touch-icon" href="/api/pwa-icon?size=180" />
-        <meta name="theme-color" content="#07091A" />
+        <meta name="apple-mobile-web-app-title" content="Eastern OS" />
+        <link rel="apple-touch-icon" href="/v2/LOGOE.png" />
+        <meta name="theme-color" content="#000000" />
         <link
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"

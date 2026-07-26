@@ -3,13 +3,10 @@
  */
 
 import {
-  baseAnalysisCacheSessionId,
   matchCacheSessionId,
 } from "@/lib/llm/cache-session-id";
 import {
-  buildBaseAnalysisPrompt,
   generateBaseAnalysis,
-  parseBaseAnalysisResponseText,
 } from "@/lib/llm/deepseek/base-analysis";
 import {
   hasBaseAnalysisPayload,
@@ -17,7 +14,6 @@ import {
 } from "@/lib/llm/prompts/base-analysis-context";
 import { buildMatchPrompt } from "@/lib/llm/prompts/match-deepseek-prompt";
 import { buildMatchRelationClosedSet } from "@/lib/llm/prompts/relation-closed-set-context";
-import { callLLM } from "@/lib/llm/router";
 import {
   requestJsonWithRepair,
   type JsonValidateResult,
@@ -80,26 +76,20 @@ type ProfileBundle = {
   base_analysis: unknown;
 };
 
-async function generateBaseAnalysisOnServer(profile: UserProfile): Promise<unknown> {
-  const { system, user } = buildBaseAnalysisPrompt(profile);
-  const result = await callLLM({
-    call_type: "match_report",
-    system,
-    messages: [{ role: "user", content: user }],
-    max_tokens: 10_000,
-    thinking_effort: "medium",
-    response_format: "json",
-    session_id: baseAnalysisCacheSessionId(profile.id),
-  });
-  return parseBaseAnalysisResponseText(result.content);
-}
-
 async function ensureBaseAnalysis(
   profileId: string,
   user_profile: UserProfile | null | undefined,
   base_analysis: unknown | null | undefined,
 ): Promise<ProfileBundle> {
-  if (user_profile && base_analysis != null) {
+  /**
+   * Match analyze must NOT regenerate base analysis on the server — that doubles
+   * LLM wall time and routinely exceeds Vercel maxDuration (300s).
+   * Client prepares A/B base reports before calling /api/match/analyze.
+   */
+  if (
+    user_profile &&
+    hasBaseAnalysisPayload(normalizeBaseAnalysisInput(base_analysis))
+  ) {
     return { user_profile, base_analysis };
   }
 
@@ -127,19 +117,9 @@ async function ensureBaseAnalysis(
     };
   }
 
-  if (!user_profile) {
-    throw new Error(
-      `Profile payload missing for ${profileId}. Send user_profile + base_analysis from the client.`,
-    );
-  }
-
-  if (base_analysis == null) {
-    console.log(`[match] Generating base_analysis for ${profileId} (server)...`);
-    const generated = await generateBaseAnalysisOnServer(user_profile);
-    return { user_profile, base_analysis: generated };
-  }
-
-  return { user_profile, base_analysis };
+  throw new Error(
+    `Profile has no base_analysis (${profileId}). Complete profile preparation first.`,
+  );
 }
 
 
@@ -366,6 +346,9 @@ export async function generateMatchAnalysis(
 
   console.log(`[match] Calling DeepSeek for report (language: ${detected_language})`);
   const startTime = Date.now();
+  /** Leave headroom under Vercel maxDuration=300s; never start a 2nd LLM past this. */
+  const SECOND_LLM_BUDGET_MS = 100_000;
+  const MATCH_LLM_TIMEOUT_MS = 270_000;
 
   const cacheSessionId =
     input.cache_session_id?.trim() ||
@@ -390,17 +373,23 @@ export async function generateMatchAnalysis(
   let result!: Awaited<ReturnType<typeof requestJsonWithRepair<MatchReport>>>["result"];
 
   for (;;) {
+    const llmStarted = Date.now();
     const out = await requestJsonWithRepair({
       llm: {
         call_type: "match_report",
         system,
         messages: [{ role: "user", content: userContent }],
-        max_tokens: 10_000,
-        thinking_effort: "medium",
+        max_tokens: 8_000,
+        /** low: ~2× faster than medium; Match already has local matrix facts. */
+        thinking_effort: "low",
         response_format: "json",
         temperature: auditRetried ? 0.3 : 0.55,
         session_id: cacheSessionId,
+        timeout_ms: MATCH_LLM_TIMEOUT_MS,
+        max_attempts: 1,
       },
+      /** Soft validation already fills gaps — a repair round doubles wall time → Vercel 504. */
+      allowRepair: false,
       validate: (parsed) => {
         if (parsed.conclusion && typeof parsed.conclusion === "object") {
           const conclusion = parsed.conclusion as Record<string, unknown>;
@@ -433,12 +422,21 @@ export async function generateMatchAnalysis(
     });
     reportRaw = out.value;
     result = out.result;
+    console.log(`[match] LLM round done in ${Date.now() - llmStarted}ms (auditRetried=${auditRetried})`);
 
     const auditViolations = auditDeepStringFields(reportRaw, input.locale, "match", {
       structured: structuredA,
       relations: relationAudit?.auditAllowlist,
     });
+    const elapsed = Date.now() - startTime;
     if (isCriticalDeliveryAuditFailure(auditViolations) && !auditRetried) {
+      if (elapsed >= SECOND_LLM_BUDGET_MS) {
+        console.warn(
+          `[match] audit critical but skip regen (elapsed=${elapsed}ms ≥ ${SECOND_LLM_BUDGET_MS}ms); sanitize only`,
+          auditViolations.slice(0, 5),
+        );
+        break;
+      }
       auditRetried = true;
       console.warn("[match] audit regen (1x)", auditViolations.slice(0, 5));
       userContent = user + buildAuditRegenHint(auditViolations, input.locale);

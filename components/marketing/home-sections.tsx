@@ -10,7 +10,7 @@ export function HomeSections() {
             <span className="!bg-yellow-300/80" />
             <span className="!bg-emerald-300/80" />
           </div>
-          <p className="poju-browser-url">pojulife.com</p>
+          <p className="poju-browser-url">easternos.com</p>
           <div className="h-4 w-14 rounded-full border border-white/10 bg-white/5" />
         </div>
         <div className="poju-cosmic-panel p-6 md:p-8">

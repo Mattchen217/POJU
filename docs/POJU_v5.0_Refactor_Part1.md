@@ -1773,7 +1773,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: false,
       error: error.message,
-      fallback: 'Please contact support@pojulife.com'
+      fallback: 'Please contact support@easternos.com'
     }, { status: 500 });
   }
 }
@@ -2014,7 +2014,7 @@ function ErrorStage({ error, onRetry }: any) {
         <button onClick={onRetry} className="primary">
           {t('retry')}
         </button>
-        <a href="mailto:support@pojulife.com" className="email-btn">
+        <a href="mailto:support@easternos.com" className="email-btn">
           {t('contact_support')}
         </a>
       </div>

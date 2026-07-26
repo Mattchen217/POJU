@@ -134,7 +134,7 @@ conversations to steal.
 · Payment records: kept 7 years (tax requirement), then deleted
 
 You can request immediate deletion of all server-side data 
-associated with your device by emailing privacy@pojulife.com.
+associated with your device by emailing privacy@easternos.com.
 ```
 
 #### 6. Third-Party Services
@@ -202,7 +202,7 @@ This guarantee is contractual — we pay extra for ZDR.
 POJU is not intended for users under 18.
 
 We do not knowingly collect data from minors. If you 
-believe a minor has used POJU, contact privacy@pojulife.com 
+believe a minor has used POJU, contact privacy@easternos.com 
 and we'll delete any associated data immediately.
 ```
 
@@ -217,7 +217,7 @@ As a California resident, you have the right to:
   (We don't sell data, so this is automatic)
 · Non-discrimination for exercising your rights
 
-To exercise any of these rights, email privacy@pojulife.com 
+To exercise any of these rights, email privacy@easternos.com 
 with "CCPA Request" in the subject line.
 ```
 
@@ -237,20 +237,20 @@ Legal basis for processing:
 · Contract (providing the service you paid for)
 · Legitimate interest (fraud prevention)
 
-Data Protection Officer: privacy@pojulife.com
+Data Protection Officer: privacy@easternos.com
 ```
 
 #### 11. Contact
 
 ```
 For privacy questions:
-privacy@pojulife.com
+privacy@easternos.com
 
 For general questions:
-support@pojulife.com
+support@easternos.com
 
 For legal matters:
-legal@pojulife.com
+legal@easternos.com
 
 Physical address (if required by your jurisdiction):
 [待律师确定后填入]
@@ -272,7 +272,7 @@ When we update this policy, we'll:
 ### 4. 底部联系方式
 
 ```
-Questions? Email privacy@pojulife.com.
+Questions? Email privacy@easternos.com.
 We read every message.
 ```
 

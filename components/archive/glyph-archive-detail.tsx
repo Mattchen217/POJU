@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 
 import { GlyphDeliveryView } from "@/components/glyph/GlyphDeliveryView";
+import { useAppDialog } from "@/components/ui/app-dialog";
 import { getCachedBaseAnalysis } from "@/lib/cross-product/get-cached-base-analysis";
 import {
   deleteArchiveItem,
@@ -21,8 +22,10 @@ type Props = {
 
 export function GlyphArchiveDetail({ archiveId, data }: Props) {
   const t = useTranslations("archiveDetail");
+  const tCommon = useTranslations("common");
   const tGlyph = useTranslations("glyph");
   const router = useRouter();
+  const { confirm } = useAppDialog();
   const [baseReportText, setBaseReportText] = useState<string | undefined>();
 
   const glyph = useMemo(
@@ -60,7 +63,12 @@ export function GlyphArchiveDetail({ archiveId, data }: Props) {
   }, [data.profile_id, data.reading_id]);
 
   async function handleDelete() {
-    if (!confirm(t("confirm_delete"))) return;
+    const ok = await confirm(tCommon("deleteConfirmWarning"), t("delete"), {
+      confirmLabel: t("delete"),
+      cancelLabel: tCommon("cancel"),
+      tone: "danger",
+    });
+    if (!ok) return;
     await deleteArchiveItem(archiveId);
     router.push("/archive");
   }

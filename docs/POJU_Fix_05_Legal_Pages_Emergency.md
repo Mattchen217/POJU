@@ -214,7 +214,7 @@ By using pojulife, you acknowledge:
 ## Questions
 
 If you're unsure how to interpret a pojulife output:  
-support@pojulife.com
+support@easternos.com
 
 If you're in distress:  
 988 (US) or findahelpline.com (worldwide)
@@ -313,13 +313,13 @@ If you're in distress:
 - 
 - ```
 - For privacy questions:
-- privacy@pojulife.com
+- privacy@easternos.com
 - 
 - For general questions:
-- support@pojulife.com
+- support@easternos.com
 - 
 - For legal matters:
-- legal@pojulife.com
+- legal@easternos.com
 - 
 - Physical address (if required by your jurisdiction):
 - [待律师确定后填入]
@@ -327,9 +327,9 @@ If you're in distress:
 
 + ## 11. Contact
 + 
-+ For privacy questions: privacy@pojulife.com  
-+ For general questions: support@pojulife.com  
-+ For legal matters: legal@pojulife.com
++ For privacy questions: privacy@easternos.com  
++ For general questions: support@easternos.com  
++ For legal matters: legal@easternos.com
 ```
 
 ### Task 2.6: 第 9 节 CCPA 标题简化
@@ -600,14 +600,14 @@ because your privacy is the entire foundation of pojulife.
 
 ```diff
 - POJU
-- pojulife.com
+- easternos.com
 - 
 - ...links...
 - 
 - © 2026 POJU. All rights reserved.
 
 + pojulife
-+ pojulife.com
++ easternos.com
 + 
 + ...links...
 + 

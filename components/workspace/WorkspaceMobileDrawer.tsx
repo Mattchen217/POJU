@@ -12,6 +12,7 @@ type Props = {
   onClose: () => void;
   activeTab: WorkspaceTab;
   activeArchiveId: string | null;
+  onSelectTab: (tab: WorkspaceTab) => void;
   onSelectNew: (tab: WorkspaceTab) => void;
   onSelectArchive: (product: WorkspaceProductId, archiveId: string) => void;
   onSelectProfile: () => void;
@@ -24,6 +25,7 @@ export function WorkspaceMobileDrawer({
   onClose,
   activeTab,
   activeArchiveId,
+  onSelectTab,
   onSelectNew,
   onSelectArchive,
   onSelectProfile,
@@ -77,6 +79,10 @@ export function WorkspaceMobileDrawer({
         <WorkspaceSidebar
           activeTab={activeTab}
           activeArchiveId={activeArchiveId}
+          onSelectTab={(tab) => {
+            onSelectTab(tab);
+            onClose();
+          }}
           onSelectNew={(tab) => {
             onSelectNew(tab);
             onClose();

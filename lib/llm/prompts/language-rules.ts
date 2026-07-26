@@ -1,5 +1,5 @@
 /**
- * Step 4 — pojulife 全站 LLM 输出用语（用户可见字段须遵守）
+ * Step 4 — Eastern OS 全站 LLM 输出用语（用户可见字段须遵守）
  * @see docs/pojulife_BirthLocation_And_Copy_Compliance.md
  */
 
@@ -25,13 +25,13 @@ export const POJULIFE_LANGUAGE_RULES = `
 - 风水
 
 ✓ 用以下替代:
-- pojulife / POJU / Glyph / Syncro / Match (品牌/工具名)
+- Eastern OS / POJU / Glyph / Syncro / Match (品牌/工具名)
 - reading / analysis / reflection / insight / guidance
 - 解读 / 分析 / 反思 / 洞察 / 指引
 - structural profile / hour pillar / 真太阳时 / 日主 / 用神 (中性术语文案可简短白话解释)
 
 原因:
-pojulife 是面向现代北美用户的【生活智慧工具】,
+Eastern OS 是面向现代北美用户的【生活智慧工具】,
 不是算命/占卜网站。语言必须现代、专业、中性。
 任何让用户感觉是"算命软件"的词汇都必须避免。
 `;

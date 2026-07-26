@@ -1052,7 +1052,7 @@ import { QRCodeSVG } from 'qrcode.react';
 
 function SyncroDesktopGuide() {
   // 生成短链接(带 UTM)
-  const syncroLink = 'https://pojulife.com/syncro?ref=desktop_qr';
+  const syncroLink = 'https://easternos.com/syncro?ref=desktop_qr';
   
   return (
     <div>
@@ -1080,11 +1080,11 @@ export async function POST(req) {
   if (method === 'email') {
     // 用 Resend 发送
     await resend.emails.send({
-      from: 'hello@pojulife.com',
+      from: 'support@easternos.com',
       to: contact,
       subject: 'Open Syncro on your phone',
       html: `Open this link on your phone: 
-             https://pojulife.com/syncro`
+             https://easternos.com/syncro`
     });
   } else if (method === 'sms') {
     // MVP 阶段可暂缓

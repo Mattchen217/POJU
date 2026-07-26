@@ -38,13 +38,19 @@ export async function requestJsonWithRepair<T>(input: {
   llm: CallLLMInput;
   validate: (parsed: Record<string, unknown>) => JsonValidateResult<T>;
   repairHint: (missing: string[]) => string;
+  /** When false, skip the second LLM repair round (use soft validation / throw). Default true. */
+  allowRepair?: boolean;
 }): Promise<{ value: T; result: CallLLMResult; parsed: Record<string, unknown> }> {
+  const allowRepair = input.allowRepair !== false;
   let result = await callLLM(input.llm);
   let parsed: Record<string, unknown>;
 
   try {
     parsed = parseJsonLoose(result.content);
   } catch (e) {
+    if (!allowRepair) {
+      throw e instanceof Error ? e : new Error("invalid_json");
+    }
     console.warn("[delivery-resilience] JSON parse failed, repair retry:", e);
     result = await callLLM({
       ...input.llm,
@@ -61,6 +67,10 @@ export async function requestJsonWithRepair<T>(input: {
   let validation = input.validate(parsed);
   if (validation.ok) {
     return { value: validation.value, result, parsed };
+  }
+
+  if (!allowRepair) {
+    throw new Error(validation.message);
   }
 
   console.warn("[delivery-resilience] Validation failed, repair retry:", validation.message);

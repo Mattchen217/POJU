@@ -58,7 +58,7 @@ respond as fast as we can.
 - 图标：生活支持
 - 标题：**Support**
 - 说明：`For payments, refunds, technical issues`
-- 邮箱：**`support@pojulife.com`**
+- 邮箱：**`support@easternos.com`**
 - 按钮：`Email Support →`（`mailto:` 链接）
 
 **常见咨询**：
@@ -73,7 +73,7 @@ respond as fast as we can.
 - 图标：锁
 - 标题：**Privacy**
 - 说明：`For data questions, CCPA/GDPR requests`
-- 邮箱：**`privacy@pojulife.com`**
+- 邮箱：**`privacy@easternos.com`**
 - 按钮：`Email Privacy Team →`
 
 **常见咨询**：
@@ -87,7 +87,7 @@ respond as fast as we can.
 - 图标：文件
 - 标题：**Legal**
 - 说明：`For legal matters, press inquiries`
-- 邮箱：**`legal@pojulife.com`**
+- 邮箱：**`legal@easternos.com`**
 - 按钮：`Email Legal →`
 
 **常见咨询**：
@@ -136,7 +136,7 @@ Common questions:
   immediately.
 
 ▸ Does POJU work on Android?
-  Yes, as a PWA (Progressive Web App). Visit pojulife.com 
+  Yes, as a PWA (Progressive Web App). Visit easternos.com 
   in Chrome and "Add to Home Screen" for the full experience.
 
 ▸ Can I use POJU without payment?
@@ -164,7 +164,7 @@ FAQ 区折叠式（手风琴），默认关闭，点击展开。
 
 每个邮箱按钮都是 `mailto:` 链接：
 ```html
-<a href="mailto:support@pojulife.com?subject=POJU Support Request">
+<a href="mailto:support@easternos.com?subject=POJU Support Request">
   Email Support →
 </a>
 ```
@@ -174,7 +174,7 @@ FAQ 区折叠式（手风琴），默认关闭，点击展开。
 
 ### 邮箱复制
 
-点击邮箱文本（如 `support@pojulife.com`）→ 复制到剪贴板 + Toast：`Copied!`
+点击邮箱文本（如 `support@easternos.com`）→ 复制到剪贴板 + Toast：`Copied!`
 
 **目的**：有些用户浏览器没配置邮箱客户端，需要手动复制粘贴。
 

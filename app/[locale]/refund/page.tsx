@@ -5,7 +5,7 @@ import { LegalPageShell } from "@/components/legal/legal-page-shell";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Refund Policy — pojulife",
+  title: "Refund Policy — Eastern OS",
   description: "pojulife refund policy — Version 1.1",
 };
 
@@ -78,7 +78,7 @@ export default function RefundPolicyPage() {
         <li>
           <strong>Absolute Cancellation Autonomy:</strong> You hold unrestricted control over your financial cycles. You
           may revoke your automated subscription renewal at any moment via your secure self-service billing link or by
-          alerting <a href="mailto:support@pojulife.com">support@pojulife.com</a>. Upon cancellation, your existing
+          alerting <a href="mailto:support@easternos.com">support@easternos.com</a>. Upon cancellation, your existing
           token package remains valid and executable until the natural expiration date of your current active billing
           iteration.
         </li>
@@ -107,7 +107,7 @@ export default function RefundPolicyPage() {
       <h2>4. How to Submit a Valid Verification Request</h2>
       <p>
         To initiate an official administrative review, please dispatch an inquiry to our operations team at{" "}
-        <a href="mailto:support@pojulife.com">support@pojulife.com</a> within your statutory 7-day technical window. You
+        <a href="mailto:support@easternos.com">support@easternos.com</a> within your statutory 7-day technical window. You
         must include the following precise metadata parameters:
       </p>
       <ol>
@@ -130,7 +130,7 @@ export default function RefundPolicyPage() {
       <ul>
         <li>
           <strong>The Voluntary First-Contact Framework:</strong> If you experience any technical transactional friction,
-          you explicitly pledge to contact <a href="mailto:support@pojulife.com">support@pojulife.com</a> prior to filing
+          you explicitly pledge to contact <a href="mailto:support@easternos.com">support@easternos.com</a> prior to filing
           external banking disputes. We resolve 100% of validated structural issues exponentially faster than legacy
           financial institutions.
         </li>

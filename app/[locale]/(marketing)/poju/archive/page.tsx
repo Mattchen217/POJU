@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
+import { AppDialogProvider, useAppDialog } from "@/components/ui/app-dialog";
 import type { POJUSessionRecord } from "@/lib/db/poju-db";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
 import { listPOJUV4SessionRowsForDevice } from "@/lib/poju/session-manager";
@@ -10,8 +11,18 @@ import { permanentlyDeletePOJUV4Session, runPOJUV4SessionMaintenance, setPOJUV4S
 import { redirectToPojuSessionPayment } from "@/lib/poju/start-poju-session-payment";
 
 export default function PojuArchivePage() {
+  return (
+    <AppDialogProvider>
+      <PojuArchivePageInner />
+    </AppDialogProvider>
+  );
+}
+
+function PojuArchivePageInner() {
   const t = useTranslations("poju.archive");
+  const tCommon = useTranslations("common");
   const locale = useLocale();
+  const { confirm } = useAppDialog();
   const [rows, setRows] = useState<POJUSessionRecord[]>([]);
 
   const reload = useCallback(async () => {
@@ -28,6 +39,17 @@ export default function PojuArchivePage() {
   const active = rows.filter((r) => r.status === "active");
   const paused = rows.filter((r) => r.status === "paused");
   const resolved = rows.filter((r) => r.status === "resolved");
+
+  async function deleteRow(sessionId: string) {
+    const ok = await confirm(tCommon("deleteConfirmWarning"), t("delete_forever"), {
+      confirmLabel: t("delete_forever"),
+      cancelLabel: tCommon("cancel"),
+      tone: "danger",
+    });
+    if (!ok) return;
+    await permanentlyDeletePOJUV4Session(sessionId);
+    await reload();
+  }
   const archived = rows.filter((r) => r.status === "archived");
 
   return (
@@ -40,10 +62,38 @@ export default function PojuArchivePage() {
         </Link>
       </p>
 
-      <SessionSection title={`${t("section_active")} (${active.length})`} rows={active} onChange={reload} locale={locale} t={t} />
-      <SessionSection title={`${t("section_paused")} (${paused.length})`} rows={paused} onChange={reload} locale={locale} t={t} />
-      <SessionSection title={`${t("section_resolved")} (${resolved.length})`} rows={resolved} onChange={reload} locale={locale} t={t} />
-      <SessionSection title={`${t("section_archived")} (${archived.length})`} rows={archived} onChange={reload} locale={locale} t={t} />
+      <SessionSection
+        title={`${t("section_active")} (${active.length})`}
+        rows={active}
+        onChange={reload}
+        locale={locale}
+        t={t}
+        onDelete={(id) => void deleteRow(id)}
+      />
+      <SessionSection
+        title={`${t("section_paused")} (${paused.length})`}
+        rows={paused}
+        onChange={reload}
+        locale={locale}
+        t={t}
+        onDelete={(id) => void deleteRow(id)}
+      />
+      <SessionSection
+        title={`${t("section_resolved")} (${resolved.length})`}
+        rows={resolved}
+        onChange={reload}
+        locale={locale}
+        t={t}
+        onDelete={(id) => void deleteRow(id)}
+      />
+      <SessionSection
+        title={`${t("section_archived")} (${archived.length})`}
+        rows={archived}
+        onChange={reload}
+        locale={locale}
+        t={t}
+        onDelete={(id) => void deleteRow(id)}
+      />
     </main>
   );
 }
@@ -54,12 +104,14 @@ function SessionSection({
   onChange,
   locale,
   t,
+  onDelete,
 }: {
   title: string;
   rows: POJUSessionRecord[];
   onChange: () => void;
   locale: string;
   t: (key: string, values?: Record<string, string | number>) => string;
+  onDelete: (sessionId: string) => void;
 }) {
   if (rows.length === 0) return null;
   return (
@@ -105,7 +157,7 @@ function SessionSection({
                   <button
                     type="button"
                     className="rounded-lg border border-red-400/40 px-3 py-1.5 text-xs text-red-200"
-                    onClick={() => void deleteRow(row.session_id, onChange, t)}
+                    onClick={() => onDelete(row.session_id)}
                   >
                     {t("delete_forever")}
                   </button>
@@ -115,7 +167,7 @@ function SessionSection({
                 <button
                   type="button"
                   className="rounded-lg border border-red-400/40 px-3 py-1.5 text-xs text-red-200"
-                  onClick={() => void deleteRow(row.session_id, onChange, t)}
+                  onClick={() => onDelete(row.session_id)}
                 >
                   {t("delete_forever")}
                 </button>
@@ -135,10 +187,4 @@ async function pauseRow(sessionId: string, onChange: () => void) {
 
 async function restoreRow(sessionId: string, locale: string) {
   await redirectToPojuSessionPayment({ action: "restore", sessionId, locale });
-}
-
-async function deleteRow(sessionId: string, onChange: () => void, t: (key: string) => string) {
-  if (!window.confirm(t("delete_confirm"))) return;
-  await permanentlyDeletePOJUV4Session(sessionId);
-  onChange();
 }

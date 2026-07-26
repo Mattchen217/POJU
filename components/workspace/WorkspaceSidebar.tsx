@@ -18,6 +18,8 @@ import {
   useWorkspaceProductHistory,
   type WorkspaceProductId,
 } from "@/components/workspace/use-workspace-product-history";
+import { useWorkspaceAtmosPrepareOptional } from "@/components/workspace/WorkspaceAtmosPrepareContext";
+import { useWorkspaceMatchPrepareOptional } from "@/components/workspace/WorkspaceMatchPrepareContext";
 import { useWorkspacePojuPrepareOptional } from "@/components/workspace/WorkspacePojuPrepareContext";
 import { Link } from "@/i18n/navigation";
 import {
@@ -85,6 +87,9 @@ const ENGINE_ITEMS: EngineItem[] = [
 type Props = {
   activeTab: WorkspaceTab;
   activeArchiveId: string | null;
+  /** Switch engine without resetting in-progress flow. */
+  onSelectTab: (tab: WorkspaceTab) => void;
+  /** Explicit New — reset that product to entry. */
   onSelectNew: (tab: WorkspaceTab) => void;
   onSelectArchive: (product: WorkspaceProductId, archiveId: string) => void;
   onSelectProfile: () => void;
@@ -143,7 +148,9 @@ function HistoryItemRow({
   onDeletedActive: () => void;
 }) {
   const t = useTranslations("workspace.density");
+  const tCommon = useTranslations("common");
   const locale = useLocale();
+  const { confirm } = useAppDialog();
   const [menuOpen, setMenuOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const title = row.title || t("untitled");
@@ -179,7 +186,13 @@ function HistoryItemRow({
 
   async function handleDelete() {
     setMenuOpen(false);
-    if (!window.confirm(t("deleteConfirm"))) return;
+    const ok = await confirm(tCommon("deleteConfirmWarning"), t("delete"), {
+      confirmLabel: t("delete"),
+      cancelLabel: t("newConfirmCancel"),
+      tone: "danger",
+      target: title,
+    });
+    if (!ok) return;
     try {
       if (product === "poju" && row.session_id) {
         await deletePojuSessionHistory(row.session_id);
@@ -336,6 +349,8 @@ function ToolHistoryBranch({
   const t = useTranslations("workspace.density");
   const { confirm } = useAppDialog();
   const prepare = useWorkspacePojuPrepareOptional();
+  const match = useWorkspaceMatchPrepareOptional();
+  const atmos = useWorkspaceAtmosPrepareOptional();
   const { items, ready, refresh } = useWorkspaceProductHistory(product, 40);
   const [pastOpen, setPastOpen] = useState(false);
 
@@ -360,7 +375,11 @@ function ToolHistoryBranch({
   const alreadyOnNewHome =
     engineActive &&
     !activeArchiveId &&
-    (product !== "poju" || (prepare?.phase ?? "idle") === "idle");
+    ((product === "poju" && (prepare?.phase ?? "idle") === "idle") ||
+      (product === "match" && (match?.phase ?? "entry") === "entry") ||
+      (product === "atmos" && (atmos?.phase ?? "idle") === "idle") ||
+      product === "syncro" ||
+      product === "glyph");
 
   const newActive = alreadyOnNewHome || nestFocus === "new";
   const pastActive =
@@ -445,6 +464,7 @@ function ToolHistoryBranch({
 export function WorkspaceSidebar({
   activeTab,
   activeArchiveId,
+  onSelectTab,
   onSelectNew,
   onSelectArchive,
   onSelectProfile,
@@ -514,7 +534,7 @@ export function WorkspaceSidebar({
                 onClick={() => {
                   if (!showNested || collapsed) {
                     setNestFocus((prev) => ({ ...prev, [tab]: null }));
-                    onSelectNew(tab);
+                    onSelectTab(tab);
                     return;
                   }
                   /* Already on this engine: toggle nest only — do not navigate / reset home. */
@@ -524,7 +544,7 @@ export function WorkspaceSidebar({
                   }
                   setExpanded((prev) => ({ ...prev, [tab]: true }));
                   setNestFocus((prev) => ({ ...prev, [tab]: null }));
-                  onSelectNew(tab);
+                  onSelectTab(tab);
                 }}
               >
                 <span className="workspace-sidebar__icon" aria-hidden>

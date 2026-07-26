@@ -1,24 +1,8 @@
 "use client";
 
-import { Suspense, useEffect, type ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 
 import { useUiShell } from "@/components/workspace/use-ui-shell";
-import { useRouter } from "@/i18n/navigation";
-import { hasWorkspaceEntered } from "@/lib/ui-shell/resolve-ui-shell";
-
-function ReturningVisitorRedirect() {
-  const { shell, ready } = useUiShell();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!ready || shell !== "workspace") return;
-    if (hasWorkspaceEntered()) {
-      router.replace("/app?tab=atmos");
-    }
-  }, [ready, shell, router]);
-
-  return null;
-}
 
 function ShellHomeSwitchInner({
   classic,
@@ -33,9 +17,9 @@ function ShellHomeSwitchInner({
 }
 
 /**
- * Server passes two pre-built DsHomePage trees (classic vs workspace hrefs).
- * This client gate only picks which tree to show + optional returner redirect.
- * Keeps DsHomePage (and node:fs) out of the client bundle.
+ * Server passes classic vs workspace home trees.
+ * Picks which tree to show from ui shell. Returning-visitor auto-skip to /app
+ * is disabled while V2 landing is the workspace entry surface.
  */
 export function WorkspaceAwareHome({
   classic,
@@ -45,13 +29,8 @@ export function WorkspaceAwareHome({
   workspace: ReactNode;
 }) {
   return (
-    <>
-      <Suspense fallback={null}>
-        <ReturningVisitorRedirect />
-      </Suspense>
-      <Suspense fallback={<>{classic}</>}>
-        <ShellHomeSwitchInner classic={classic} workspace={workspace} />
-      </Suspense>
-    </>
+    <Suspense fallback={<>{classic}</>}>
+      <ShellHomeSwitchInner classic={classic} workspace={workspace} />
+    </Suspense>
   );
 }

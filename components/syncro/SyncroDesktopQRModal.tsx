@@ -56,7 +56,7 @@ export function SyncroDesktopQRModal({ onClose, url }: SyncroDesktopQRModalProps
 }
 
 export function buildSyncroMobileUrl(locale: string, origin?: string): string {
-  const base = origin ?? (typeof window !== "undefined" ? window.location.origin : "https://pojulife.com");
+  const base = origin ?? (typeof window !== "undefined" ? window.location.origin : "https://easternos.com");
   const path = locale === routing.defaultLocale ? "/syncro" : `/${locale}/syncro`;
   return `${base}${path}`;
 }

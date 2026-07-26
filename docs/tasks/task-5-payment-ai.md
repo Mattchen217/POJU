@@ -183,7 +183,7 @@ Vercel Cron 配置：
 
 全部 5 个 Task 验证通过后：
 
-1. 一个完整的 PWA 在 `pojulife.com` 运行
+1. 一个完整的 PWA 在 `easternos.com` 运行
 2. 访问者首次弹出免责协议，勾选后可进入
 3. 落地页展示完整品牌叙事
 4. 用户可 $9.99 付费进入 POJU Chat，与真实 AI 完成深度破局对话

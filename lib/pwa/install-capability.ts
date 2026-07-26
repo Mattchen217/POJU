@@ -15,7 +15,7 @@ export interface CapabilityResult {
   recommend_redirect: boolean;
 }
 
-export const POJULIFE_SITE_URL = "https://pojulife.com";
+export const POJULIFE_SITE_URL = "https://easternos.com";
 
 function detectStandaloneMode(): boolean {
   if (typeof window === "undefined") return false;

@@ -26,7 +26,7 @@ import fairSky from "@/assets/images/fair sky.png";
 import stillWater from "@/assets/images/still water.png";
 
 export const glyphMarketingMetadata: Metadata = {
-  title: "Glyph — pojulife",
+  title: "Glyph — Eastern OS",
   description:
     "Where AI meets a thousand years of wisdom. A pocket-sized mirror — hold a question, draw a pattern, read what comes back.",
 };

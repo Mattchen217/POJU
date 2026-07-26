@@ -1,6 +1,6 @@
 # POJU v4.0 · 完整实施文档(给 Cursor)
 
-> **目标**: 在 pojulife.com 上实现 POJU 产品功能
+> **目标**: 在 easternos.com 上实现 POJU 产品功能
 >
 > **前置依赖**: Foundation 文档已完成(shunshi 真实接入 + user_profile + 加密 + IndexedDB)
 >

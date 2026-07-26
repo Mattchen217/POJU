@@ -6,6 +6,7 @@ import { useRouter } from "@/i18n/navigation";
 import { BirthInfoPicker } from "@/components/poju/BirthInfoPicker";
 import { BirthInfoConfirmDialog } from "@/components/poju/BirthInfoConfirmDialog";
 import { ProfileAccuracyBadge } from "@/components/profile/ProfileAccuracyBadge";
+import { AppDialogProvider, useAppDialog } from "@/components/ui/app-dialog";
 import { formatBirthLocationLabel } from "@/lib/profile/birth-info-display";
 import { ProfileUpgradeModal } from "@/components/profile/ProfileUpgradeModal";
 import {
@@ -41,7 +42,15 @@ export interface SessionPreparationProps {
   onProceedBlocked?: () => void;
 }
 
-export function SessionPreparation({
+export function SessionPreparation(props: SessionPreparationProps) {
+  return (
+    <AppDialogProvider>
+      <SessionPreparationInner {...props} />
+    </AppDialogProvider>
+  );
+}
+
+function SessionPreparationInner({
   existingProfiles,
   onProfileSelected,
   onRefund,
@@ -57,9 +66,11 @@ export function SessionPreparation({
   onProceedBlocked,
 }: SessionPreparationProps) {
   const t = useTranslations("session_prep");
+  const tCommon = useTranslations("common");
   const tGlyph = useTranslations("glyph");
   const tSyncro = useTranslations("syncro");
   const tMatch = useTranslations("match");
+  const { confirm } = useAppDialog();
   const router = useRouter();
 
   const [mode, setMode] = useState<"list" | "new">(existingProfiles.length > 0 ? "list" : "new");
@@ -82,7 +93,14 @@ export function SessionPreparation({
   }
 
   async function handleDeleteProfile(profileId: string) {
-    if (!window.confirm(t("confirm_delete"))) return;
+    const profile = profiles.find((p) => p.profile_id === profileId);
+    const ok = await confirm(tCommon("deleteConfirmWarning"), t("delete"), {
+      confirmLabel: t("delete"),
+      cancelLabel: t("rename_cancel"),
+      tone: "danger",
+      target: profile?.display_name?.trim() || profile?.birth_date,
+    });
+    if (!ok) return;
     await deleteStoredProfile(profileId);
     const list = await refreshProfiles();
     if (list.length === 0) {
@@ -327,6 +345,8 @@ function ProfileListView({
               <ProfileAccuracyBadge profile={p} onUpgrade={() => onUpgrade(p)} />
               <div className="usage-stats">
                 {p.used_in_products.poju > 0 ? <span>POJU {p.used_in_products.poju}×</span> : null}
+                {p.used_in_products.match > 0 ? <span>Match {p.used_in_products.match}×</span> : null}
+                {p.used_in_products.atmos > 0 ? <span>Atmos {p.used_in_products.atmos}×</span> : null}
                 {p.used_in_products.glyph > 0 ? <span>Glyph {p.used_in_products.glyph}×</span> : null}
                 {p.used_in_products.syncro > 0 ? <span>Syncro {p.used_in_products.syncro}×</span> : null}
               </div>

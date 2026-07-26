@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 
 import { PojuSessionChatShell } from "@/components/poju/PojuSessionChatShell";
-import { AppDialogProvider } from "@/components/ui/app-dialog";
+import { AppDialogProvider, useAppDialog } from "@/components/ui/app-dialog";
 import { deleteArchiveItem } from "@/lib/archive/archive-service";
 import type { POJUSessionVaultData } from "@/lib/archive/poju-session-vault";
 import { getPOJUSessionRecord, loadPOJUSession } from "@/lib/poju/session-manager";
@@ -29,8 +29,10 @@ function isExpired(expiresAt: string): boolean {
 
 export function PojuSessionArchiveDetail({ archiveId, data }: Props) {
   const t = useTranslations("archiveDetail");
+  const tCommon = useTranslations("common");
   const locale = useLocale();
   const router = useRouter();
+  const { confirm } = useAppDialog();
   const [sessionRow, setSessionRow] = useState<POJUSessionRecord | undefined>();
   const [chatUnlocked, setChatUnlocked] = useState(false);
   const [liveSession, setLiveSession] = useState<POJUSessionState | null>(null);
@@ -86,7 +88,12 @@ export function PojuSessionArchiveDetail({ archiveId, data }: Props) {
   }
 
   async function handleDelete() {
-    if (!confirm(t("confirm_delete"))) return;
+    const ok = await confirm(tCommon("deleteConfirmWarning"), t("delete"), {
+      confirmLabel: t("delete"),
+      cancelLabel: tCommon("cancel"),
+      tone: "danger",
+    });
+    if (!ok) return;
     await deleteArchiveItem(archiveId);
     router.push("/archive");
   }

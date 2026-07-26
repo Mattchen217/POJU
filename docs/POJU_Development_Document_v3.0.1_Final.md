@@ -1,6 +1,6 @@
 # POJU Development Document v3.0.1 (Final)
 
-**破局** · POJULIFE.COM
+**破局** · EASTERNOS.COM
 **Product Development Document & Technical Specification**
 
 Version v3.0.1 · 2026 · CONFIDENTIAL
@@ -1026,7 +1026,7 @@ AI 在 Phase 5 生成行动方案时，会在响应中输出 `<check_in_schedule
 
 **封底**：
 - 免责声明
-- pojulife.com
+- easternos.com
 - "Your PDF is encrypted. Your email will be deleted after we send it."
 
 **技术实现**：
@@ -1737,7 +1737,7 @@ Syncro 的结果可导出分享，作为 POJU 的引流载体。
 │   Ask POJU to see what's underneath. │
 │                                      │
 │   One question · $9.99               │
-│   pojulife.com                       │
+│   easternos.com                       │
 │                                      │
 └──────────────────────────────────────┘
 ```
@@ -1767,7 +1767,7 @@ Syncro 的结果可导出分享，作为 POJU 的引流载体。
 │   something deeper in your life.     │
 │                                      │
 │   Ask POJU to decode it · $9.99      │
-│   pojulife.com                       │
+│   easternos.com                       │
 │                                      │
 └──────────────────────────────────────┘
 ```
@@ -1780,7 +1780,7 @@ Syncro 的结果可导出分享，作为 POJU 的引流载体。
 - 显示产品介绍 + 宣传视频 + 扫码打开手机
 - 提示："Syncro needs your phone's compass, GPS, and camera. Open on mobile."
 - 提供：
-  - 二维码（扫码访问 pojulife.com/syncro 手机版）
+  - 二维码（扫码访问 easternos.com/syncro 手机版）
   - "Send me the link"（用户输入手机号接收 SMS 链接）
 
 **PWA 安装引导**：
@@ -2589,7 +2589,7 @@ Oracle 的差异化有 50% 依赖音效：
 │  One question · $9.99                │
 │                                      │
 │            Your Sign                 │
-│           pojulife.com               │
+│           easternos.com               │
 │                                      │
 └──────────────────────────────────────┘
 ```
@@ -3675,7 +3675,7 @@ async function consumeToken(token: string): Promise<{ sessionId: string } | null
 ```typescript
 async function sendPDFReport(email: string, pdfPath: string, sessionContext: any) {
   await resend.emails.send({
-    from: 'POJU <readings@pojulife.com>',
+    from: 'POJU <readings@easternos.com>',
     to: email,
     subject: 'Your POJU Reading',
     html: renderEmailTemplate('pdf_report', sessionContext),
@@ -3695,7 +3695,7 @@ async function sendPDFReport(email: string, pdfPath: string, sessionContext: any
 ```typescript
 async function scheduleCheckIn(email: string, sendAt: Date, context: any) {
   await resend.emails.send({
-    from: 'POJU <checkin@pojulife.com>',
+    from: 'POJU <checkin@easternos.com>',
     to: email,
     subject: 'A check-in from POJU',
     html: renderEmailTemplate('check_in', context),
@@ -3869,7 +3869,7 @@ async function callAIWithFallback(params: AICallParams): Promise<AIResponse> {
 - 支付过程失败 → Stripe / Paddle 侧就失败 → 用户看到 "Payment failed" 页面
 - 支付成功但 webhook 丢失 → 客户端有 token 持久化 + 重试机制
 - 支付成功但 AI 首次调用失败 → 保持 session 有效，显示 "Try again"
-- 用户要求退款 → 人工处理（邮件到 support@pojulife.com）
+- 用户要求退款 → 人工处理（邮件到 support@easternos.com）
 
 
 
@@ -4978,7 +4978,7 @@ export async function fetchWithRetry(
 # .env.local
 
 # Public
-NEXT_PUBLIC_SITE_URL=https://pojulife.com
+NEXT_PUBLIC_SITE_URL=https://easternos.com
 NEXT_PUBLIC_FINGERPRINT_API_KEY=xxx
 
 # Private
@@ -5094,7 +5094,7 @@ const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
 ## 07.1 全站信息架构
 
 ```
-pojulife.com
+easternos.com
 │
 ├─ /                         主落地页（产品综合入口）
 │
@@ -5403,7 +5403,7 @@ Screen 6 · 底部（Footer · 链接 · 版权）
 ┌──────────────────────────────────────────────┐
 │                                              │
 │   POJU                                       │
-│   pojulife.com                               │
+│   easternos.com                               │
 │                                              │
 │   Disclaimer · Privacy · Terms · Contact     │
 │                                              │
@@ -5522,7 +5522,7 @@ PC 端访问 `/syncro` 时，**不启动粒子球**，而是展示：
 └──────────────────────────────────────────────┘
 ```
 
-- **二维码**：扫描后直达 `pojulife.com/syncro` 的手机版
+- **二维码**：扫描后直达 `easternos.com/syncro` 的手机版
 - **Text me the link**：用户输入手机号，发送 SMS（用 Twilio）
 - **不做 App Store / Play Store 链接**（因为是 PWA，不上商店）
 
@@ -5737,7 +5737,7 @@ Linked with POJU session Apr 18
 ### 07.8.1 触发时机
 
 ```
-用户访问 pojulife.com 任意页面
+用户访问 easternos.com 任意页面
   ↓
 检测 localStorage.pojulife_disclaimer_v1
   ↓
@@ -5861,7 +5861,7 @@ One question · $9.99
 ┌──────────────────────────────────────────┐
 │                                          │
 │        POJU                              │
-│        pojulife.com                      │
+│        easternos.com                      │
 │                                          │
 │   ─────────────────────────              │
 │                                          │
@@ -5888,7 +5888,7 @@ One question · $9.99
 ### 07.10.1 Footer 移动端
 
 移动端折叠为手风琴，默认只显示：
-- Logo + pojulife.com
+- Logo + easternos.com
 - `[ Legal ∨ ]`  `[ Support ∨ ]`
 - 版权和免责简短说明
 
@@ -5968,7 +5968,7 @@ async function createCheckoutSession(params: CheckoutParams) {
         product_data: {
           name: 'POJU · One Breakthrough Session',
           description: 'One question · Unlimited depth · PDF report by email',
-          images: ['https://pojulife.com/logos/poju-og.png'],
+          images: ['https://easternos.com/logos/poju-og.png'],
         },
         unit_amount: 999,  // $9.99 in cents
       },
@@ -6118,11 +6118,11 @@ if (urlToken) {
 - Session 保持有效
 - 显示"Something in the signal is unclear. Try again?"
 - 重试不消耗 token
-- 连续 3 次失败则升级到 `support@pojulife.com` 人工处理
+- 连续 3 次失败则升级到 `support@easternos.com` 人工处理
 
 **场景 3：用户要求退款**
 - 手动流程（MVP 阶段）
-- 用户发邮件到 support@pojulife.com
+- 用户发邮件到 support@easternos.com
 - 客服在 Stripe 后台全额退款
 - 同时从 payment_records 标记 status='refunded'
 - 对应 Session Token 作废（即使用户还在 Chat 中）
@@ -6139,9 +6139,9 @@ Resend 相对 SendGrid/Mailgun 的优势：
 - 送达率高，deliverability 专注
 
 域名配置：
-- **readings@pojulife.com** · 发送 PDF 报告
-- **checkin@pojulife.com** · 发送回访 check-in
-- **noreply@pojulife.com** · 其他系统通知（如有）
+- **readings@easternos.com** · 发送 PDF 报告
+- **checkin@easternos.com** · 发送回访 check-in
+- **noreply@easternos.com** · 其他系统通知（如有）
 
 DNS 配置必须：
 - SPF 记录
@@ -6183,7 +6183,7 @@ DNS 配置必须：
   
   <div class="footer">
     <p>This email was sent because you requested your reading as a PDF. Your email address will be deleted from our servers within 24 hours.</p>
-    <p>pojulife.com · Not medical, legal, or financial advice.</p>
+    <p>easternos.com · Not medical, legal, or financial advice.</p>
   </div>
 </body>
 </html>
@@ -6284,7 +6284,7 @@ export async function scheduleCheckIn(params: {
   const sendAt = new Date(Date.now() + params.daysFromNow * 24 * 60 * 60 * 1000);
   
   const response = await resend.emails.send({
-    from: 'POJU <checkin@pojulife.com>',
+    from: 'POJU <checkin@easternos.com>',
     to: params.email,
     subject: 'A check-in from POJU',
     html: renderCheckInEmail({
@@ -6424,7 +6424,7 @@ async function generateResumeToken(sessionId: string): Promise<string> {
 ```
 用户打开邮件 → 点击 "Resume your reading →"
   ↓
-浏览器打开 pojulife.com/archive?resume=TOKEN
+浏览器打开 easternos.com/archive?resume=TOKEN
   ↓
 前端检测 URL 参数
   ↓
@@ -6489,7 +6489,7 @@ async function generateResumeToken(sessionId: string): Promise<string> {
 
 > **Refunds**
 > 
-> Each POJU reading is $9.99 and non-refundable once the conversation begins. If you experience a technical issue that prevents you from accessing your reading, contact support@pojulife.com within 7 days for a full refund.
+> Each POJU reading is $9.99 and non-refundable once the conversation begins. If you experience a technical issue that prevents you from accessing your reading, contact support@easternos.com within 7 days for a full refund.
 > 
 > Refunds are processed through the original payment method and may take 5-10 business days to appear.
 
@@ -6497,7 +6497,7 @@ async function generateResumeToken(sessionId: string): Promise<string> {
 
 - Stripe 自动发送付款收据（含用户在 Stripe Checkout 填入的邮箱）
 - 我们**完全不接触这封收据**——Stripe 直发
-- 如用户需要税务发票（B2B 场景），联系 support@pojulife.com 手动开具
+- 如用户需要税务发票（B2B 场景），联系 support@easternos.com 手动开具
 
 ### 08.4.4 多货币与跨境
 
@@ -6568,7 +6568,7 @@ MVP 只支持 **USD**。面向北美市场足够。
 ### 08.6.1 用户主动要求退款
 
 ```
-用户发邮件到 support@pojulife.com
+用户发邮件到 support@easternos.com
   ↓
 客服收到 → 核对：
   · 是否在 7 天内
@@ -6711,7 +6711,7 @@ POJU 面临的合规风险有五个维度：
    — Right to delete your data
    — Right to opt-out of "sale" of data (we don't sell)
    — Right to non-discrimination
-   — How to exercise: email privacy@pojulife.com
+   — How to exercise: email privacy@easternos.com
 
 10. GDPR-Specific (if applicable)
     — Legal basis for processing
@@ -6720,7 +6720,7 @@ POJU 面临的合规风险有五个维度：
     — Data Protection Officer contact
 
 11. Contact
-    — privacy@pojulife.com
+    — privacy@easternos.com
     — (Physical address if required by jurisdiction)
 
 12. Updates to This Policy
@@ -6876,7 +6876,7 @@ use of POJU after updates constitutes acceptance.
 By using POJU, you acknowledge that you have read, 
 understood, and agreed to this Disclaimer.
 
-Contact: legal@pojulife.com
+Contact: legal@easternos.com
 ```
 
 ### 09.3.3 摘要版（弹窗用）
@@ -6979,7 +6979,7 @@ Stripe 的 [Restricted Businesses](https://stripe.com/restricted-businesses) 列
    - 存档他们的回复（未来争议时的凭证）
 
 3. **在 Stripe Dashboard 中启用的配置**
-   - Statement descriptor: `POJU` 或 `POJULIFE.COM`（简短、清晰）
+   - Statement descriptor: `POJU` 或 `EASTERNOS.COM`（简短、清晰）
    - Shipping address: 不收集
    - Billing address: Auto（让 Stripe 按需决定）
    - Save payment methods: Off
@@ -7064,7 +7064,7 @@ Paddle 是 **Merchant of Record（MoR）** 模式：
 
 ### 09.5.4 域名策略
 
-- **pojulife.com** - 已有，主域名
+- **easternos.com** - 已有，主域名
 - **poju.life** - 建议注册并 301 重定向到主域名
 - **poju.com** - 如果能拿下成本合理（<$50K），强烈建议拿下；拿不下不影响
 
@@ -8940,7 +8940,7 @@ Desktop:  1024px+
 | 广告 Headline | 短版 |
 | Press Kit | 长版 |
 | 口碑引用 | Three ways in 单行版 |
-| PDF 封底 | 极短版 + pojulife.com |
+| PDF 封底 | 极短版 + easternos.com |
 
 ## D.6 禁用文案
 
@@ -9015,7 +9015,7 @@ Desktop:  1024px+
 
 ## D.6 运营类
 
-- [ ] **support@pojulife.com 邮箱建立**
+- [ ] **support@easternos.com 邮箱建立**
 - [ ] **首批内测用户名单**（10-100 人）
 - [ ] **Product Hunt Hunter 联系**
 - [ ] **社交媒体账号注册**（IG / TikTok / Twitter / Reddit）
@@ -9077,7 +9077,7 @@ POJU 不是一个追求"增长黑客"的产品。它追求的是：
 **POJU**
 *Ancient Eastern Wisdom, reinforced by modern science, delivered by AI Agent, personalized for you.*
 
-**pojulife.com**
+**easternos.com**
 
 **CONFIDENTIAL · v3.0.1 · 2026**
 

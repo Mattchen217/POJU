@@ -17,7 +17,7 @@ import { AppModeDesktopHint } from "@/components/pwa/AppModeDesktopHint";
 import { AppModeProductTopBar } from "@/components/pwa/AppModeProductTopBar";
 
 export const metadata: Metadata = {
-  title: "pojulife — Break your deadlock",
+  title: "Eastern OS — Break your deadlock",
   description:
     "Where AI meets a thousand years of wisdom. Decision support for the questions that won't let you go.",
 };

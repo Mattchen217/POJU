@@ -86,7 +86,13 @@ export interface StoredProfileRecord {
   iv: string;
   created_at: Date;
   last_used_at: Date;
-  used_in_products: { poju: number; glyph: number; syncro: number; match: number };
+  used_in_products: {
+    poju: number;
+    glyph: number;
+    syncro: number;
+    match: number;
+    atmos: number;
+  };
   has_base_analysis: boolean;
   base_analysis_at?: Date;
 }

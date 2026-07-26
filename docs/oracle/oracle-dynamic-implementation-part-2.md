@@ -264,7 +264,7 @@ export function GlyphFront({ sign, animate = true }: GlyphFrontProps) {
           
           {/* 水印 */}
           <p className="text-xs tracking-[0.3em] text-white/30 mt-3">
-            pojulife.com
+            easternos.com
           </p>
         </motion.div>
       </div>
@@ -489,7 +489,7 @@ const config = {
 │                                        │
 │            ❀  ·  ❀                    │
 │                                        │
-│           pojulife.com                 │
+│           easternos.com                 │
 │                                        │
 └────────────────────────────────────────┘
 背景:深紫底 + 顶部金色光晕
@@ -519,7 +519,7 @@ const config = {
 │                                        │
 │              ◉                         │
 │                                        │
-│           pojulife.com                 │
+│           easternos.com                 │
 │                                        │
 └────────────────────────────────────────┘
 背景:深紫底 + 中心金色光晕
@@ -677,7 +677,7 @@ export default function OracleFrontsPreviewPage() {
    - SW: ◯ · ◯
    - CW: ✕ · ✕
    - ES: ◉ (单个)
-□ pojulife.com 水印底部居中?
+□ easternos.com 水印底部居中?
 □ 边框颜色匹配等级 primary_color?
 □ 背景光晕在正确位置(顶部/中心/侧边)?
 ```

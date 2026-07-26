@@ -5,6 +5,8 @@
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import type { LiuNianGanzhi } from "@/lib/calculations/liunian";
 import { getCurrentLiunian } from "@/lib/calculations/liunian";
+import type { LiuRiGanzhi, LiuYueGanzhi } from "@/lib/calculations/liuri";
+import type { ResolvedLuckCycles } from "@/lib/calculations/resolve-luck-cycles";
 import type { RelationFocusHints } from "@/lib/poju/relation-focus-hints";
 import {
   analyzeAllBranchInteractions,
@@ -21,7 +23,7 @@ import {
   type TenGod,
 } from "@/lib/match/data/stems-branches";
 
-export type RelationSource = "natal" | "dayun" | "liunian" | "cross";
+export type RelationSource = "natal" | "dayun" | "liunian" | "liuyue" | "liuri" | "cross";
 export type RelationKind =
   | "chong"
   | "xing"
@@ -226,15 +228,30 @@ const POS_HAN: Record<Pos, string> = {
   hour: "时",
 };
 
-/** 流年地支 × 四柱地支：冲 / 刑 / 害 / 六合 / 半合（不含三合齐局）。 */
-export function computeLiunianRelations(
-  structured: ProfileStructured,
-  liunian: LiuNianGanzhi,
+type TransientSource = "dayun" | "liunian" | "liuyue" | "liuri";
+
+const TRANSIENT_HAN: Record<TransientSource, string> = {
+  dayun: "大运",
+  liunian: "流年",
+  liuyue: "流月",
+  liuri: "流日",
+};
+
+type BranchPillar = { stem: string; branch: string; ganzhi: string };
+
+/**
+ * Transient pillar branch × target pillars: 冲 / 刑 / 害 / 六合 / 半合（不含三合齐局）。
+ * Used for 大运/流年/流月/流日 × 命局（及流日 × 大运/流年）。
+ */
+function computeTransientBranchRelations(
+  source: TransientSource,
+  transient: BranchPillar,
+  targets: Array<{ key: string; branch: EarthlyBranch; palace?: Palace }>,
 ): RelationLabel[] {
-  const pillars = extractPillars(structured);
-  const lb = liunian.branch as EarthlyBranch;
+  const tb = transient.branch as EarthlyBranch;
   const out: RelationLabel[] = [];
   const seen = new Set<string>();
+  const srcHan = TRANSIENT_HAN[source];
 
   const push = (r: RelationLabel) => {
     if (seen.has(r.id)) return;
@@ -242,55 +259,58 @@ export function computeLiunianRelations(
     out.push(r);
   };
 
-  for (const pos of POSITIONS) {
-    const nb = pillars[pos].branch as EarthlyBranch;
-    const palaces: Palace[] = [POS_PALACE[pos]];
-    const positions = ["liunian", pos];
-    const posHan = POS_HAN[pos];
+  for (const target of targets) {
+    const nb = target.branch;
+    const palaces: Palace[] = target.palace ? [target.palace] : [];
+    const positions = [source, target.key];
+    const targetHan =
+      (POSITIONS as readonly string[]).includes(target.key)
+        ? POS_HAN[target.key as Pos]
+        : TRANSIENT_HAN[target.key as TransientSource] ?? target.key;
 
-    const idSuffix = `${sortedPair(lb, nb)}_${pos}`;
+    const idSuffix = `${sortedPair(tb, nb)}_${target.key}`;
 
-    if (isLiuChong(lb, nb)) {
+    if (isLiuChong(tb, nb)) {
       push({
-        id: `liunian_chong_${idSuffix}`,
-        han: `${lb}${nb}相冲(流年引动·${posHan}支)`,
+        id: `${source}_chong_${idSuffix}`,
+        han: `${tb}${nb}相冲(${srcHan}引动·${targetHan}支)`,
         kind: "chong",
-        source: "liunian",
+        source,
         positions,
         palaces,
         polarity: "red",
       });
     }
-    const x = isXing(lb, nb);
+    const x = isXing(tb, nb);
     if (x.isXing) {
       push({
-        id: `liunian_xing_${idSuffix}`,
-        han: `${lb}${nb}相刑(流年引动·${posHan}支)`,
+        id: `${source}_xing_${idSuffix}`,
+        han: `${tb}${nb}相刑(${srcHan}引动·${targetHan}支)`,
         kind: "xing",
-        source: "liunian",
+        source,
         positions,
         palaces,
         polarity: "red",
       });
     }
-    if (isLiuHai(lb, nb)) {
+    if (isLiuHai(tb, nb)) {
       push({
-        id: `liunian_hai_${idSuffix}`,
-        han: `${lb}${nb}相害(流年引动·${posHan}支)`,
+        id: `${source}_hai_${idSuffix}`,
+        han: `${tb}${nb}相害(${srcHan}引动·${targetHan}支)`,
         kind: "hai",
-        source: "liunian",
+        source,
         positions,
         palaces,
         polarity: "red",
       });
     }
-    const he = isLiuHe(lb, nb);
+    const he = isLiuHe(tb, nb);
     if (he.isHe) {
       push({
-        id: `liunian_liuhe_${idSuffix}`,
-        han: `${lb}${nb}六合${he.element ?? ""}(流年引动·${posHan}支)`,
+        id: `${source}_liuhe_${idSuffix}`,
+        han: `${tb}${nb}六合${he.element ?? ""}(${srcHan}引动·${targetHan}支)`,
         kind: "liuhe",
-        source: "liunian",
+        source,
         positions,
         palaces,
         polarity: "green",
@@ -298,12 +318,12 @@ export function computeLiunianRelations(
     }
     for (const { branches, element } of SAN_HE) {
       const wang = WANG_ZHI[element];
-      if (branches.includes(lb) && branches.includes(nb) && (lb === wang || nb === wang)) {
+      if (branches.includes(tb) && branches.includes(nb) && (tb === wang || nb === wang)) {
         push({
-          id: `liunian_banhe_${idSuffix}_${element}`,
-          han: `${lb}${nb}半合${element}(流年引动·${posHan}支)`,
+          id: `${source}_banhe_${idSuffix}_${element}`,
+          han: `${tb}${nb}半合${element}(${srcHan}引动·${targetHan}支)`,
           kind: "banhe",
-          source: "liunian",
+          source,
           positions,
           palaces,
           polarity: "green",
@@ -312,6 +332,89 @@ export function computeLiunianRelations(
     }
   }
 
+  return out;
+}
+
+function natalBranchTargets(
+  structured: ProfileStructured,
+): Array<{ key: string; branch: EarthlyBranch; palace?: Palace }> {
+  const pillars = extractPillars(structured);
+  return POSITIONS.map((pos) => ({
+    key: pos,
+    branch: pillars[pos].branch as EarthlyBranch,
+    palace: POS_PALACE[pos],
+  }));
+}
+
+/** 流年地支 × 四柱地支：冲 / 刑 / 害 / 六合 / 半合（不含三合齐局）。 */
+export function computeLiunianRelations(
+  structured: ProfileStructured,
+  liunian: LiuNianGanzhi,
+): RelationLabel[] {
+  return computeTransientBranchRelations("liunian", liunian, natalBranchTargets(structured));
+}
+
+/** 大运地支 × 四柱地支。 */
+export function computeDayunRelations(
+  structured: ProfileStructured,
+  dayun: BranchPillar,
+): RelationLabel[] {
+  return computeTransientBranchRelations("dayun", dayun, natalBranchTargets(structured));
+}
+
+/** 流月地支 × 四柱地支。 */
+export function computeLiuyueRelations(
+  structured: ProfileStructured,
+  liuyue: LiuYueGanzhi,
+): RelationLabel[] {
+  return computeTransientBranchRelations("liuyue", liuyue, natalBranchTargets(structured));
+}
+
+/** 流日地支 × 四柱地支。 */
+export function computeLiuriRelations(
+  structured: ProfileStructured,
+  liuri: LiuRiGanzhi,
+): RelationLabel[] {
+  return computeTransientBranchRelations("liuri", liuri, natalBranchTargets(structured));
+}
+
+/**
+ * 流日 × 大运/流年（跨层引动；positions 标 liuri+dayun / liuri+liunian）。
+ */
+export function computeLiuriCrossCycleRelations(
+  liuri: LiuRiGanzhi,
+  dayun: BranchPillar | null,
+  liunian: LiuNianGanzhi,
+): RelationLabel[] {
+  const targets: Array<{ key: string; branch: EarthlyBranch; palace?: Palace }> = [
+    { key: "liunian", branch: liunian.branch as EarthlyBranch },
+  ];
+  if (dayun?.branch) {
+    targets.push({ key: "dayun", branch: dayun.branch as EarthlyBranch });
+  }
+  return computeTransientBranchRelations("liuri", liuri, targets);
+}
+
+/**
+ * Atmos 动态关系网：大运 + 流年 + 流月 + 流日 × 命局 + 流日跨层 + 十神张力。
+ * 不含本命内柱关系（natal 由底座/矩阵另算）。
+ */
+export function computeAtmosDynamicRelations(
+  structured: ProfileStructured,
+  cycles: ResolvedLuckCycles,
+): RelationLabel[] {
+  const out: RelationLabel[] = [];
+  if (cycles.dayun) {
+    out.push(...computeDayunRelations(structured, cycles.dayun));
+  }
+  out.push(...computeLiunianRelations(structured, cycles.liunian));
+  out.push(...computeLiuyueRelations(structured, cycles.liuyue));
+  out.push(...computeLiuriRelations(structured, cycles.liuri));
+  out.push(
+    ...computeLiuriCrossCycleRelations(cycles.liuri, cycles.dayun, cycles.liunian),
+  );
+  const dayunIndex = cycles.dayunIndex ?? 0;
+  out.push(...detectTenGodTensions(structured, cycles.liunian, dayunIndex));
   return out;
 }
 
@@ -350,7 +453,14 @@ function relationTouchesWealthOfficerPillar(
   r: RelationLabel,
 ): boolean {
   for (const pos of r.positions) {
-    if (pos === "liunian" || pos === "dayun") continue;
+    if (
+      pos === "liunian" ||
+      pos === "dayun" ||
+      pos === "liuyue" ||
+      pos === "liuri"
+    ) {
+      continue;
+    }
     if (!(POSITIONS as readonly string[]).includes(pos)) continue;
     const tg = structured.pillars_detail?.[pos as Pos]?.ten_god as TenGod | undefined;
     if (tg && WEALTH_OFFICER_GODS.has(tg)) return true;
@@ -469,7 +579,14 @@ function relationTouchesPeerOutputPillar(
   r: RelationLabel,
 ): boolean {
   for (const pos of r.positions) {
-    if (pos === "liunian" || pos === "dayun") continue;
+    if (
+      pos === "liunian" ||
+      pos === "dayun" ||
+      pos === "liuyue" ||
+      pos === "liuri"
+    ) {
+      continue;
+    }
     if (!(POSITIONS as readonly string[]).includes(pos)) continue;
     const tg = structured.pillars_detail?.[pos as Pos]?.ten_god as TenGod | undefined;
     if (tg && PEER_OUTPUT_GODS.has(tg)) return true;
