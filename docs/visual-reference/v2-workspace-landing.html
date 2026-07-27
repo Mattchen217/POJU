@@ -317,6 +317,613 @@
                 gap: 2rem; /* match engines grid gap-8 */
             }
         }
+        /* Pricing cards — layout aligned to 订阅.HTML (colors stay Eastern OS gold) */
+        #v2-pricing {
+            background:
+              radial-gradient(ellipse 70% 45% at 50% 0%, rgba(212, 175, 55, 0.05), transparent 55%),
+              #07080a;
+        }
+        #v2-pricing::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0.22;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 0.9 0 0 0 0 0.55 0 0 0 0.45 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            background-size: 160px 160px;
+            mix-blend-mode: soft-light;
+        }
+        .v2-price-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            width: 100%;
+            align-items: stretch;
+        }
+        @media (min-width: 768px) {
+            .v2-price-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 1.25rem;
+            }
+        }
+        .v2-price-card {
+            --card-radius: 1rem;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            min-height: 100%;
+            padding: 1.5rem 1.35rem 1.35rem;
+            border-radius: 1rem;
+            overflow: hidden;
+            isolation: isolate;
+            background: rgba(28, 32, 36, 0.72);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(212, 175, 55, 0.35);
+            box-shadow:
+              0 14px 36px rgba(0, 0, 0, 0.4),
+              0 0 18px rgba(212, 175, 55, 0.1);
+            transition:
+              transform 300ms cubic-bezier(0.22, 1, 0.36, 1),
+              background-color 300ms ease,
+              border-color 300ms ease,
+              box-shadow 300ms ease;
+        }
+        .v2-price-card::before {
+            content: "";
+            position: absolute;
+            inset: 0 0 auto 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.85), transparent);
+            box-shadow: 0 0 8px rgba(212, 175, 55, 0.4);
+            pointer-events: none;
+            z-index: 2;
+        }
+        .v2-price-card::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            border-radius: inherit;
+            background: linear-gradient(180deg, rgba(212, 175, 55, 0.05), transparent 40%);
+        }
+        .v2-price-card__field {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            pointer-events: none;
+            opacity: 0.16;
+            mix-blend-mode: screen;
+        }
+        .v2-price-card__body {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            flex: 1 1 auto;
+            min-height: 0;
+            height: 100%;
+        }
+        .v2-price-card__head {
+            display: flex;
+            flex-direction: column;
+            flex: 0 0 auto;
+            gap: 1.1rem;
+            margin-bottom: 0.35rem;
+        }
+        .v2-price-card:hover {
+            transform: translateY(-3px);
+            background: rgba(28, 32, 36, 0.85);
+            border-color: rgba(212, 175, 55, 0.5);
+            box-shadow:
+              0 16px 40px rgba(0, 0, 0, 0.45),
+              0 0 22px rgba(212, 175, 55, 0.16);
+        }
+        @media (min-width: 1024px) {
+            .v2-price-card {
+                transform: translateY(-2px);
+            }
+            .v2-price-card:hover {
+                transform: translateY(-5px);
+            }
+        }
+        .v2-price-badge {
+            display: inline-block;
+            width: fit-content;
+            max-width: 100%;
+            margin: 0;
+            padding: 0;
+            border: none;
+            background: none;
+            color: #f2ca50;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            line-height: 1.35;
+            box-shadow: none;
+        }
+        .v2-price-name {
+            margin: 0;
+            min-height: 1.75rem;
+            font-size: 1.25rem;
+            font-weight: 600;
+            line-height: 1.25;
+            color: #e0e2e8;
+            letter-spacing: -0.01em;
+        }
+        .v2-price-amount-row {
+            display: flex;
+            align-items: baseline;
+            gap: 0.4rem;
+            margin: 0;
+            min-height: 2.25rem;
+        }
+        .v2-price-amount {
+            margin: 0;
+            font-size: clamp(1.75rem, 2.2vw, 2.1rem);
+            font-weight: 700;
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+            color: #ffffff;
+            filter: none;
+        }
+        .v2-price-unit {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.85rem;
+            font-weight: 500;
+            letter-spacing: 0.06em;
+            color: #ffffff;
+        }
+        .v2-price-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin: 0 0 1.25rem;
+            min-height: 2.75rem;
+            padding: 0.65rem 0.85rem;
+            border-radius: 0.5rem;
+            border: 1px solid rgba(212, 175, 55, 0.22);
+            background: rgba(11, 15, 18, 0.5);
+        }
+        .v2-price-meta__label {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 1rem;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #ffffff;
+        }
+        .v2-price-meta__value {
+            font-size: 1rem;
+            font-weight: 700;
+            line-height: 1.2;
+            color: #f2ca50;
+            text-align: right;
+        }
+        .v2-price-qty {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .v2-price-qty button {
+            width: 1.75rem;
+            height: 1.75rem;
+            border-radius: 0.35rem;
+            border: 1px solid rgba(212, 175, 55, 0.35);
+            background: rgba(212, 175, 55, 0.08);
+            color: #f2ca50;
+            font-size: 1rem;
+            line-height: 1;
+            cursor: pointer;
+        }
+        .v2-price-qty button:hover {
+            background: rgba(212, 175, 55, 0.18);
+        }
+        .v2-price-qty button:focus-visible {
+            outline: 2px solid #d4af37;
+            outline-offset: 2px;
+        }
+        .v2-price-qty__value {
+            min-width: 3.6rem;
+            text-align: center;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #f2ca50;
+        }
+        .v2-price-list {
+            list-style: none;
+            margin: 0 0 1.25rem;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+            flex: 1 1 auto;
+        }
+        .v2-price-feature {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.55rem;
+        }
+        .v2-price-feature__icon {
+            flex-shrink: 0;
+            margin-top: 0.15rem;
+            font-size: 18px;
+            line-height: 1;
+            color: #ffffff;
+            font-variation-settings: "FILL" 1, "wght" 400;
+        }
+        .v2-price-feature__content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+            min-width: 0;
+        }
+        .v2-price-feature__text {
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: #e0e2e8;
+        }
+        .v2-price-feature__note {
+            font-size: 0.8rem;
+            line-height: 1.45;
+            color: #a1a1aa;
+        }
+        .v2-price-feature.is-bonus {
+            position: relative;
+            overflow: hidden;
+            padding: 0.65rem 0.7rem;
+            border-radius: 0.5rem;
+            border: 1px solid rgba(212, 175, 55, 0.22);
+            background: rgba(212, 175, 55, 0.1);
+        }
+        .v2-price-feature.is-bonus .v2-price-feature__text {
+            color: #f2ca50;
+            font-weight: 500;
+            position: relative;
+            z-index: 1;
+        }
+        .v2-price-feature.is-bonus .v2-price-feature__note {
+            color: rgba(242, 202, 80, 0.75);
+            position: relative;
+            z-index: 1;
+        }
+        .v2-price-feature.is-bonus .v2-price-feature__icon {
+            position: relative;
+            z-index: 1;
+            font-variation-settings: "FILL" 1, "wght" 400;
+        }
+        .v2-price-cta {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            margin-top: auto;
+            min-height: 2.75rem;
+            padding: 0.7rem 0.9rem;
+            border-radius: 0.45rem;
+            border: 1px solid #d4af37;
+            background: transparent;
+            color: #ffffff;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            box-shadow: none;
+            transition: background 200ms ease, color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
+        }
+        .v2-price-cta:hover {
+            background: #d4af37;
+            color: #ffffff;
+            box-shadow: 0 0 18px rgba(212, 175, 55, 0.4);
+            transform: translateY(-1px);
+        }
+        .v2-price-cta:focus-visible {
+            outline: 2px solid #f2ca50;
+            outline-offset: 3px;
+        }
+        .v2-price-cta.is-secondary {
+            background: transparent;
+            color: #ffffff;
+            border: 1px solid #d4af37;
+            box-shadow: none;
+        }
+        .v2-price-cta.is-secondary:hover {
+            background: #d4af37;
+            color: #ffffff;
+            box-shadow: 0 0 18px rgba(212, 175, 55, 0.4);
+            transform: translateY(-1px);
+        }
+
+        /* ── Auth Modal (OTP · V2 gold glass) ── */
+        .v2-auth-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 90;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            background: rgba(0, 0, 0, 0.68);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .v2-auth-modal.is-open { display: flex; }
+        .v2-auth-modal__panel {
+            position: relative;
+            width: min(28rem, 100%);
+            padding: 2rem 1.75rem 1.75rem;
+            border-radius: 1rem;
+            border: 1px solid rgba(212, 175, 55, 0.35);
+            background: linear-gradient(165deg, rgba(28, 32, 36, 0.96), rgba(11, 12, 16, 0.98));
+            box-shadow: 0 28px 72px rgba(0, 0, 0, 0.6), 0 0 28px rgba(212, 175, 55, 0.12);
+            overflow: hidden;
+        }
+        .v2-auth-modal__panel::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.75), transparent);
+        }
+        .v2-auth-modal__close {
+            position: absolute;
+            top: 0.85rem;
+            right: 0.85rem;
+            width: 2rem;
+            height: 2rem;
+            border: none;
+            border-radius: 0.4rem;
+            background: transparent;
+            color: #a1a1aa;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .v2-auth-modal__close:hover { color: #f2ca50; background: rgba(212, 175, 55, 0.08); }
+        .v2-auth-modal__icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 3.25rem;
+            height: 3.25rem;
+            margin: 0 auto 1rem;
+            border-radius: 0.65rem;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            background: rgba(212, 175, 55, 0.1);
+            color: #f2ca50;
+            box-shadow: 0 0 18px rgba(212, 175, 55, 0.16);
+        }
+        .v2-auth-modal__icon .material-symbols-outlined {
+            font-size: 1.65rem;
+            font-variation-settings: "FILL" 1, "wght" 400;
+        }
+        .v2-auth-modal__title {
+            margin: 0 0 0.4rem;
+            font-size: 1.35rem;
+            font-weight: 700;
+            text-align: center;
+            color: #fff;
+            letter-spacing: -0.01em;
+        }
+        .v2-auth-modal__subtitle {
+            margin: 0 0 1.5rem;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            text-align: center;
+            color: #a1a1aa;
+        }
+        .v2-auth-modal__subtitle strong { color: #f2ca50; font-weight: 600; }
+        .v2-auth-field { margin-bottom: 1.15rem; }
+        .v2-auth-field label {
+            display: block;
+            margin-bottom: 0.45rem;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: #a1a1aa;
+        }
+        .v2-auth-field input[type="email"] {
+            width: 100%;
+            padding: 0.9rem 1rem;
+            border-radius: 0.55rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(11, 15, 18, 0.75);
+            color: #e0e2e8;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 200ms ease, box-shadow 200ms ease;
+        }
+        .v2-auth-field input[type="email"]:focus {
+            border-color: rgba(212, 175, 55, 0.45);
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.12);
+        }
+        .v2-auth-otp {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.4rem;
+        }
+        .v2-auth-otp input {
+            width: 2.6rem;
+            height: 3.25rem;
+            text-align: center;
+            font-size: 1.35rem;
+            font-weight: 700;
+            border-radius: 0.45rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(11, 15, 18, 0.85);
+            color: #fff;
+            outline: none;
+        }
+        @media (min-width: 400px) {
+            .v2-auth-otp input { width: 3rem; height: 3.5rem; font-size: 1.5rem; }
+        }
+        .v2-auth-otp input:focus {
+            border-color: rgba(212, 175, 55, 0.55);
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.14);
+        }
+        .v2-auth-error {
+            display: none;
+            margin: 0 0 0.85rem;
+            padding: 0.65rem 0.75rem;
+            border-radius: 0.45rem;
+            border: 1px solid rgba(239, 68, 68, 0.35);
+            background: rgba(239, 68, 68, 0.1);
+            color: #fca5a5;
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+        .v2-auth-error.is-visible { display: block; }
+        .v2-auth-submit {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+            width: 100%;
+            min-height: 3rem;
+            padding: 0.85rem 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid #d4af37;
+            background: transparent;
+            color: #fff;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 200ms ease, box-shadow 200ms ease, transform 200ms ease;
+        }
+        .v2-auth-submit:hover:not(:disabled) {
+            background: #d4af37;
+            box-shadow: 0 0 18px rgba(212, 175, 55, 0.35);
+            transform: translateY(-1px);
+        }
+        .v2-auth-submit:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+        .v2-auth-footer {
+            margin-top: 1.15rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.7rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #71717a;
+        }
+        .v2-auth-footer button {
+            border: none;
+            background: none;
+            color: #a1a1aa;
+            cursor: pointer;
+            font: inherit;
+            letter-spacing: inherit;
+            text-transform: inherit;
+            padding: 0;
+        }
+        .v2-auth-footer button:hover:not(:disabled) { color: #f2ca50; }
+        .v2-auth-footer button:disabled { opacity: 0.45; cursor: not-allowed; }
+        .v2-auth-step { display: none; }
+        .v2-auth-step.is-active { display: block; }
+        @media (prefers-reduced-motion: reduce) {
+            .v2-auth-submit { transition: none; }
+            .v2-auth-submit:hover:not(:disabled) { transform: none; }
+        }
+
+        .v2-price-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 80;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            background: rgba(0, 0, 0, 0.62);
+            backdrop-filter: blur(8px);
+        }
+        .v2-price-modal.is-open {
+            display: flex;
+        }
+        .v2-price-modal__panel {
+            width: min(34rem, 100%);
+            padding: 1.75rem 1.75rem 1.5rem;
+            border-radius: 1rem;
+            border: 1px solid rgba(212, 175, 55, 0.35);
+            background: linear-gradient(165deg, #17181d, #0b0c10);
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+        }
+        .v2-price-modal__icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 3.25rem;
+            height: 3.25rem;
+            margin: 0 auto 1rem;
+            border-radius: 50%;
+            border: 1px solid rgba(212, 175, 55, 0.35);
+            background: rgba(212, 175, 55, 0.12);
+            color: #f2ca50;
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.18);
+        }
+        .v2-price-modal__icon .material-symbols-outlined {
+            font-size: 1.75rem;
+            font-variation-settings: "FILL" 1, "wght" 400;
+        }
+        .v2-price-modal__title {
+            margin: 0 0 0.85rem;
+            font-size: 1.35rem;
+            font-weight: 700;
+            line-height: 1.3;
+            color: #fff;
+            text-align: center;
+        }
+        .v2-price-modal__body {
+            margin: 0;
+            font-size: 1rem;
+            line-height: 1.6;
+            color: #c4c4cc;
+            text-align: center;
+        }
+        .v2-price-modal__actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+        .v2-price-modal__actions .v2-price-cta {
+            width: 100%;
+            min-height: 3rem;
+            padding: 0.85rem 1rem;
+            white-space: normal;
+            line-height: 1.45;
+            text-align: center;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .v2-price-card,
+            .v2-price-card:hover,
+            .v2-price-card.is-featured,
+            .v2-price-card.is-featured:hover {
+                transform: none;
+            }
+        }
         #v2-hero {
             min-height: auto;
             background: transparent;
@@ -472,14 +1079,14 @@ void main() {
 <nav class="fixed top-0 w-full z-50 border-b border-slate-200/10 dark:border-white/5 blur-bg bg-white/70 dark:bg-black/50">
 <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between gap-4">
 <a class="flex items-center shrink-0" href="/" target="_top" aria-label="Eastern OS home">
-<img alt="Eastern OS" class="h-9 w-auto object-contain sm:h-10" src="/v2/LOGO.png"/>
+<img alt="Eastern OS" class="h-7 w-auto object-contain sm:h-8" src="/v2/LOGO.png"/>
 </a>
 <div class="hidden md:flex items-center gap-6 lg:gap-8">
-<a class="text-sm font-medium hover:text-primary transition-colors" href="/app?tab=atmos" target="_top">Atmos</a>
-<a class="text-sm font-medium hover:text-primary transition-colors" href="/app?tab=poju" target="_top">Pivot</a>
-<a class="text-sm font-medium hover:text-primary transition-colors" href="/app?tab=match" target="_top">Match</a>
-<a class="text-sm font-medium hover:text-primary transition-colors" href="/app?tab=syncro" target="_top">Syncro</a>
-<a class="text-sm font-medium hover:text-primary transition-colors" href="/app?tab=glyph" target="_top">Glyph</a>
+<a class="text-base font-medium tracking-wide text-slate-100 hover:text-primary transition-colors" href="/app?tab=atmos" target="_top">Atmos</a>
+<a class="text-base font-medium tracking-wide text-slate-100 hover:text-primary transition-colors" href="/app?tab=poju" target="_top">Pivot</a>
+<a class="text-base font-medium tracking-wide text-slate-100 hover:text-primary transition-colors" href="/app?tab=match" target="_top">Match</a>
+<a class="text-base font-medium tracking-wide text-slate-100 hover:text-primary transition-colors" href="/app?tab=syncro" target="_top">Syncro</a>
+<a class="text-base font-medium tracking-wide text-slate-100 hover:text-primary transition-colors" href="/app?tab=glyph" target="_top">Glyph</a>
 </div>
 <div class="flex items-center gap-3 sm:gap-4">
 <div class="relative" id="v2-lang-switcher">
@@ -495,9 +1102,9 @@ void main() {
 <li role="none"><button type="button" role="option" data-locale="zh" class="v2-lang-opt flex w-full items-center px-3 py-2 text-left text-sm text-slate-300 hover:bg-white/8 hover:text-white"><span class="mr-2 w-8 font-mono text-xs text-slate-500">ZH</span>中文</button></li>
 </ul>
 </div>
-<a class="px-5 py-2.5 bg-primary text-black font-semibold rounded-lg hover:brightness-110 transition-all shadow-lg shadow-primary/20" href="#" target="_top" id="v2-login-btn">
-                    登录
-                </a>
+<button type="button" class="px-5 py-2.5 bg-primary text-black font-semibold rounded-lg hover:brightness-110 transition-all shadow-lg shadow-primary/20" id="v2-login-btn" data-auth-login>
+                    Log in
+                </button>
 </div>
 </div>
 </nav>
@@ -709,30 +1316,33 @@ Add to desktop
 </div>
 </div>
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 lg:grid-rows-2 gap-8 auto-rows-fr" id="v2-engines-grid">
-<div id="v2-engine-poju-card" class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full md:col-span-2 lg:col-span-1 lg:row-span-2">
+<a href="/app?tab=poju" target="_top" data-engine="pivot" id="v2-engine-poju-card" class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full md:col-span-2 lg:col-span-1 lg:row-span-2">
 <div class="flex justify-between items-start mb-6">
 <div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
 <span class="material-symbols-outlined text-3xl text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">self_improvement</span>
 </div>
 <span class="text-sm font-mono text-slate-500">$9.99</span>
 </div>
-<h3 class="text-xl font-bold mb-4">POJU</h3>
-<p class="text-slate-600 dark:text-slate-400 mb-6 flex-1">Navigating specific transitions. 30 days of immersive, interactive deep coaching to deliver clear, actionable strategies that guide you through cognitive blind spots.</p>
-<button class="text-primary font-semibold flex items-center gap-2 group-hover:gap-3 transition-all mt-auto">Go to POJU <span class="material-icons-outlined text-sm">arrow_forward</span></button>
-</div>
-<div class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full">
+<h3 class="text-xl font-bold" data-engine-title>PIVOT</h3>
+<p class="text-sm text-primary font-medium mt-1" data-engine-subtitle>Transitions & Strategic Decisions</p>
+<p class="text-sm text-slate-300/90 mt-3 mb-3 leading-relaxed" data-engine-tagline>At life's pivotal crossroads, what you need most is a master map.</p>
+<p class="text-slate-600 dark:text-slate-400 mb-6 flex-1 text-sm md:text-base leading-relaxed" data-engine-desc>Pivot is a system engineered for major transitions and critical decisions. Through deep dialogue, it clarifies your true circumstances and applies Eastern decision models for multi-dimensional simulation, delivering a comprehensive decision report with blind-spot diagnostics and actionable roadmaps—giving you the clarity and confidence to navigate the challenge ahead.</p>
+<span class="text-primary font-semibold flex items-center gap-2 group-hover:gap-3 transition-all mt-auto"><span data-engine-cta>Go to Pivot</span> <span class="material-icons-outlined text-sm">arrow_forward</span></span>
+</a>
+<a href="/app?tab=atmos" target="_top" data-engine="atmos" class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full">
 <div class="flex justify-between items-start mb-6">
 <div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
 <span class="material-symbols-outlined text-3xl text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">blur_on</span>
 </div>
 <span class="text-sm font-mono text-slate-500">$9.99</span>
 </div>
-<h3 class="text-xl font-bold">Atmos</h3>
-<p class="text-sm text-primary font-medium mb-4">Daily Cosmic Resonance</p>
-<p class="text-slate-600 dark:text-slate-400 mb-6 flex-1">Local day-level compute. A calm forecast of the field around you — today through the next thirty days.</p>
-<button class="text-primary font-semibold flex items-center gap-2 group-hover:gap-3 transition-all mt-auto">Begin Atmos <span class="material-icons-outlined text-sm">arrow_forward</span></button>
-</div>
-<div class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full">
+<h3 class="text-xl font-bold" data-engine-title>ATMOS</h3>
+<p class="text-sm text-primary font-medium mt-1" data-engine-subtitle>Daily Rhythm Readings</p>
+<p class="text-sm text-slate-300/90 mt-3 mb-3 leading-relaxed" data-engine-tagline>Atmos is your daily decision and energy dashboard.</p>
+<p class="text-slate-600 dark:text-slate-400 mb-6 flex-1 text-sm md:text-base leading-relaxed" data-engine-desc>For 30 consecutive days, Atmos decodes your daily macro rhythm (whether momentum favors progress or restraint) and where your focus yields peak efficiency. Submit real-time queries for urgent daily decisions, and the system delivers targeted insights alongside your macro reading—making Atmos your very first decision every morning.</p>
+<span class="text-primary font-semibold flex items-center gap-2 group-hover:gap-3 transition-all mt-auto"><span data-engine-cta>Begin Atmos</span> <span class="material-icons-outlined text-sm">arrow_forward</span></span>
+</a>
+<a href="/app?tab=match" target="_top" data-engine="match" class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full">
 <div class="flex justify-between items-start mb-6">
 <div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
 <svg class="w-7 h-7 text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -744,11 +1354,13 @@ Add to desktop
 </div>
 <span class="text-sm font-mono text-slate-500">$4.99</span>
 </div>
-<h3 class="text-xl font-bold mb-4">Match</h3>
-<p class="text-slate-600 dark:text-slate-400 mb-6 flex-1">Dual-matrix synergistic network. Independently mapping two distinct temporal profiles to thoroughly evaluate structural alignment, friction points, and collective compatibility regarding specific milestones.</p>
-<button class="text-primary font-semibold flex items-center gap-2 group-hover:gap-3 transition-all mt-auto">Go to Match <span class="material-icons-outlined text-sm">arrow_forward</span></button>
-</div>
-<div class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full">
+<h3 class="text-xl font-bold" data-engine-title>MATCH</h3>
+<p class="text-sm text-primary font-medium mt-1" data-engine-subtitle>Relational Dynamics & Alignment</p>
+<p class="text-sm text-slate-300/90 mt-3 mb-3 leading-relaxed" data-engine-tagline>Compatibility shouldn't rely on guesswork or mere intuition.</p>
+<p class="text-slate-600 dark:text-slate-400 mb-6 flex-1 text-sm md:text-base leading-relaxed" data-engine-desc>Match independently models behavioral and cognitive tendencies for both parties, cross-simulating both structures to reveal natural synergies, potential friction zones, and optimal collaboration modes at key junctions—giving you complete foresight before committing, partnering, or deepening a relationship.</p>
+<span class="text-primary font-semibold flex items-center gap-2 group-hover:gap-3 transition-all mt-auto"><span data-engine-cta>Go to Match</span> <span class="material-icons-outlined text-sm">arrow_forward</span></span>
+</a>
+<a href="/app?tab=syncro" target="_top" data-engine="syncro" class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full">
 <div class="flex justify-between items-start mb-6">
 <div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
 <svg class="w-7 h-7 text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -765,11 +1377,13 @@ Add to desktop
 </div>
 <span class="text-sm font-mono text-slate-500">$4.99</span>
 </div>
-<h3 class="text-xl font-bold mb-4">Syncro</h3>
-<p class="text-slate-600 dark:text-slate-400 mb-6 flex-1">24-hour dynamic spatial-temporal decision matrix. Tailored to a specific upcoming action, evaluating environmental tailwinds and potential friction across 8 directions over the next 12 cycles.</p>
-<button class="text-primary font-semibold flex items-center gap-2 group-hover:gap-3 transition-all mt-auto">Go to Syncro <span class="material-icons-outlined text-sm">arrow_forward</span></button>
-</div>
-<div class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full">
+<h3 class="text-xl font-bold" data-engine-title>SYNCRO</h3>
+<p class="text-sm text-primary font-medium mt-1" data-engine-subtitle>Action Timing & Windows</p>
+<p class="text-sm text-slate-300/90 mt-3 mb-3 leading-relaxed" data-engine-tagline>Doing the right thing matters; doing it at the right time changes everything.</p>
+<p class="text-slate-600 dark:text-slate-400 mb-6 flex-1 text-sm md:text-base leading-relaxed" data-engine-desc>Syncro dynamically analyzes environmental friction and efficiency windows over the next 24 hours for your specific action plan. It pinpoints when momentum is on your side and when to avoid direct resistance—helping you focus your efforts precisely when friction is at its lowest.</p>
+<span class="text-primary font-semibold flex items-center gap-2 group-hover:gap-3 transition-all mt-auto"><span data-engine-cta>Go to Syncro</span> <span class="material-icons-outlined text-sm">arrow_forward</span></span>
+</a>
+<a href="/app?tab=glyph" target="_top" data-engine="glyph" class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full">
 <div class="flex justify-between items-start mb-6">
 <div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
 <svg class="w-7 h-7 text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -779,49 +1393,51 @@ Add to desktop
 </div>
 <span class="text-sm font-mono text-slate-500">$4.99</span>
 </div>
-<h3 class="text-xl font-bold mb-4">Glyph</h3>
-<p class="text-slate-600 dark:text-slate-400 mb-6 flex-1">Intent anchoring and archetypal resonance. Grounded in classical 100-image symbolic frameworks, draw a signature matrix card via randomized digital particle dynamics, allowing Glyph to deeply deconstruct your core themes.</p>
-<button class="text-primary font-semibold flex items-center gap-2 group-hover:gap-3 transition-all mt-auto">Go to Glyph <span class="material-icons-outlined text-sm">arrow_forward</span></button>
-</div>
+<h3 class="text-xl font-bold" data-engine-title>GLYPH</h3>
+<p class="text-sm text-primary font-medium mt-1" data-engine-subtitle>Archetypal Signals & Hidden Structures</p>
+<p class="text-sm text-slate-300/90 mt-3 mb-3 leading-relaxed" data-engine-tagline>When a situation becomes too complex to articulate, you need a mirror to reveal its underlying structure.</p>
+<p class="text-slate-600 dark:text-slate-400 mb-6 flex-1 text-sm md:text-base leading-relaxed" data-engine-desc>Glyph integrates classic archetypal frameworks to retrieve real-time signal reflections corresponding to your current state, visualizing hidden dynamics and blind spots—giving unspoken concerns and vague intuitions a rational, articulable outline.</p>
+<span class="text-primary font-semibold flex items-center gap-2 group-hover:gap-3 transition-all mt-auto"><span data-engine-cta>Go to Glyph</span> <span class="material-icons-outlined text-sm">arrow_forward</span></span>
+</a>
 </div>
 </div>
 </section>
 <section class="pb-24 relative animate-fade-in-up" id="v2-engine-bars" style="animation-delay: 0.45s;" aria-label="Engine pathways">
 <div class="max-w-7xl mx-auto px-6">
 <div class="flex flex-col gap-6">
-<!-- Row 1: Atmos — horizontal bar -->
-<a href="/app?tab=atmos" target="_top" class="v2-engine-hbar group flex flex-col sm:flex-row sm:items-center gap-6 p-7 md:p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300">
+<a href="/app?tab=atmos" target="_top" data-engine="atmos" class="v2-engine-hbar group flex flex-col sm:flex-row sm:items-center gap-6 p-7 md:p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300">
 <div class="w-14 h-14 shrink-0 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
 <span class="material-symbols-outlined text-3xl text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">blur_on</span>
 </div>
 <div class="min-w-0 flex-1">
 <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-2">
-<h3 class="text-xl font-bold">Atmos</h3>
-<span class="text-sm text-primary font-medium">Daily Cosmic Resonance</span>
+<h3 class="text-xl font-bold" data-engine-title>ATMOS</h3>
+<span class="text-sm text-primary font-medium" data-engine-subtitle>Daily Rhythm Readings</span>
 <span class="text-sm font-mono text-slate-500 sm:ml-auto">$9.99</span>
 </div>
-<p class="text-slate-600 dark:text-slate-400 text-sm md:text-base leading-relaxed">Local day-level compute. A calm forecast of the field around you — today through the next thirty days.</p>
+<p class="text-sm text-slate-300/90 mb-2 leading-relaxed" data-engine-tagline>Atmos is your daily decision and energy dashboard.</p>
+<p class="text-slate-600 dark:text-slate-400 text-sm md:text-base leading-relaxed" data-engine-desc>For 30 consecutive days, Atmos decodes your daily macro rhythm (whether momentum favors progress or restraint) and where your focus yields peak efficiency. Submit real-time queries for urgent daily decisions, and the system delivers targeted insights alongside your macro reading—making Atmos your very first decision every morning.</p>
 </div>
-<span class="text-primary font-semibold flex items-center gap-2 shrink-0 group-hover:gap-3 transition-all">Begin Atmos <span class="material-icons-outlined text-sm">arrow_forward</span></span>
+<span class="text-primary font-semibold flex items-center gap-2 shrink-0 group-hover:gap-3 transition-all"><span data-engine-cta>Begin Atmos</span> <span class="material-icons-outlined text-sm">arrow_forward</span></span>
 </a>
-<!-- Row 2: Pivot — horizontal bar -->
-<a href="/app?tab=poju" target="_top" class="v2-engine-hbar group flex flex-col sm:flex-row sm:items-center gap-6 p-7 md:p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300">
+<a href="/app?tab=poju" target="_top" data-engine="pivot" class="v2-engine-hbar group flex flex-col sm:flex-row sm:items-center gap-6 p-7 md:p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300">
 <div class="w-14 h-14 shrink-0 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
 <span class="material-symbols-outlined text-3xl text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">self_improvement</span>
 </div>
 <div class="min-w-0 flex-1">
 <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-2">
-<h3 class="text-xl font-bold">Pivot</h3>
+<h3 class="text-xl font-bold" data-engine-title>PIVOT</h3>
+<span class="text-sm text-primary font-medium" data-engine-subtitle>Transitions & Strategic Decisions</span>
 <span class="text-sm font-mono text-slate-500 sm:ml-auto">$9.99</span>
 </div>
-<p class="text-slate-600 dark:text-slate-400 text-sm md:text-base leading-relaxed">Navigating specific transitions. 30 days of immersive, interactive deep coaching to deliver clear, actionable strategies that guide you through cognitive blind spots.</p>
+<p class="text-sm text-slate-300/90 mb-2 leading-relaxed" data-engine-tagline>At life's pivotal crossroads, what you need most is a master map.</p>
+<p class="text-slate-600 dark:text-slate-400 text-sm md:text-base leading-relaxed" data-engine-desc>Pivot is a system engineered for major transitions and critical decisions. Through deep dialogue, it clarifies your true circumstances and applies Eastern decision models for multi-dimensional simulation, delivering a comprehensive decision report with blind-spot diagnostics and actionable roadmaps—giving you the clarity and confidence to navigate the challenge ahead.</p>
 </div>
-<span class="text-primary font-semibold flex items-center gap-2 shrink-0 group-hover:gap-3 transition-all">Go to Pivot <span class="material-icons-outlined text-sm">arrow_forward</span></span>
+<span class="text-primary font-semibold flex items-center gap-2 shrink-0 group-hover:gap-3 transition-all"><span data-engine-cta>Go to Pivot</span> <span class="material-icons-outlined text-sm">arrow_forward</span></span>
 </a>
-<!-- Row 3: Syncro · Match · Glyph — vertical tall bars -->
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 v2-engine-vbar-row">
-<a href="/app?tab=syncro" target="_top" class="v2-engine-vbar group flex flex-col p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300">
-<div class="flex justify-between items-start mb-8">
+<a href="/app?tab=syncro" target="_top" data-engine="syncro" class="v2-engine-vbar group flex flex-col p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300">
+<div class="flex justify-between items-start mb-6">
 <div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
 <svg class="w-7 h-7 text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" aria-hidden="true">
 <circle cx="12" cy="12.2" r="6.6" stroke="currentColor" stroke-width="1.6"/>
@@ -837,12 +1453,14 @@ Add to desktop
 </div>
 <span class="text-sm font-mono text-slate-500">$4.99</span>
 </div>
-<h3 class="text-xl font-bold mb-4">Syncro</h3>
-<p class="text-slate-600 dark:text-slate-400 mb-8 flex-1 text-sm md:text-base leading-relaxed">24-hour dynamic spatial-temporal decision matrix. Tailored to a specific upcoming action, evaluating environmental tailwinds and potential friction across 8 directions over the next 12 cycles.</p>
-<span class="text-primary font-semibold flex items-center gap-2 group-hover:gap-3 transition-all mt-auto">Go to Syncro <span class="material-icons-outlined text-sm">arrow_forward</span></span>
+<h3 class="text-xl font-bold" data-engine-title>SYNCRO</h3>
+<p class="text-sm text-primary font-medium mt-1" data-engine-subtitle>Action Timing & Windows</p>
+<p class="text-sm text-slate-300/90 mt-3 mb-3 leading-relaxed" data-engine-tagline>Doing the right thing matters; doing it at the right time changes everything.</p>
+<p class="text-slate-600 dark:text-slate-400 mb-8 flex-1 text-sm md:text-base leading-relaxed" data-engine-desc>Syncro dynamically analyzes environmental friction and efficiency windows over the next 24 hours for your specific action plan. It pinpoints when momentum is on your side and when to avoid direct resistance—helping you focus your efforts precisely when friction is at its lowest.</p>
+<span class="text-primary font-semibold flex items-center gap-2 group-hover:gap-3 transition-all mt-auto"><span data-engine-cta>Go to Syncro</span> <span class="material-icons-outlined text-sm">arrow_forward</span></span>
 </a>
-<a href="/app?tab=match" target="_top" class="v2-engine-vbar group flex flex-col p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300">
-<div class="flex justify-between items-start mb-8">
+<a href="/app?tab=match" target="_top" data-engine="match" class="v2-engine-vbar group flex flex-col p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300">
+<div class="flex justify-between items-start mb-6">
 <div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
 <svg class="w-7 h-7 text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" aria-hidden="true">
 <circle cx="6.55" cy="6.75" r="2.55" fill="currentColor"/>
@@ -853,12 +1471,14 @@ Add to desktop
 </div>
 <span class="text-sm font-mono text-slate-500">$4.99</span>
 </div>
-<h3 class="text-xl font-bold mb-4">Match</h3>
-<p class="text-slate-600 dark:text-slate-400 mb-8 flex-1 text-sm md:text-base leading-relaxed">Dual-matrix synergistic network. Independently mapping two distinct temporal profiles to thoroughly evaluate structural alignment, friction points, and collective compatibility regarding specific milestones.</p>
-<span class="text-primary font-semibold flex items-center gap-2 group-hover:gap-3 transition-all mt-auto">Go to Match <span class="material-icons-outlined text-sm">arrow_forward</span></span>
+<h3 class="text-xl font-bold" data-engine-title>MATCH</h3>
+<p class="text-sm text-primary font-medium mt-1" data-engine-subtitle>Relational Dynamics & Alignment</p>
+<p class="text-sm text-slate-300/90 mt-3 mb-3 leading-relaxed" data-engine-tagline>Compatibility shouldn't rely on guesswork or mere intuition.</p>
+<p class="text-slate-600 dark:text-slate-400 mb-8 flex-1 text-sm md:text-base leading-relaxed" data-engine-desc>Match independently models behavioral and cognitive tendencies for both parties, cross-simulating both structures to reveal natural synergies, potential friction zones, and optimal collaboration modes at key junctions—giving you complete foresight before committing, partnering, or deepening a relationship.</p>
+<span class="text-primary font-semibold flex items-center gap-2 group-hover:gap-3 transition-all mt-auto"><span data-engine-cta>Go to Match</span> <span class="material-icons-outlined text-sm">arrow_forward</span></span>
 </a>
-<a href="/app?tab=glyph" target="_top" class="v2-engine-vbar group flex flex-col p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300">
-<div class="flex justify-between items-start mb-8">
+<a href="/app?tab=glyph" target="_top" data-engine="glyph" class="v2-engine-vbar group flex flex-col p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300">
+<div class="flex justify-between items-start mb-6">
 <div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
 <svg class="w-7 h-7 text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" aria-hidden="true">
 <rect x="4.5" y="2.75" width="15" height="18.5" rx="2.5" stroke="currentColor" stroke-width="1.6"/>
@@ -867,9 +1487,11 @@ Add to desktop
 </div>
 <span class="text-sm font-mono text-slate-500">$4.99</span>
 </div>
-<h3 class="text-xl font-bold mb-4">Glyph</h3>
-<p class="text-slate-600 dark:text-slate-400 mb-8 flex-1 text-sm md:text-base leading-relaxed">Intent anchoring and archetypal resonance. Grounded in classical 100-image symbolic frameworks, draw a signature matrix card via randomized digital particle dynamics, allowing Glyph to deeply deconstruct your core themes.</p>
-<span class="text-primary font-semibold flex items-center gap-2 group-hover:gap-3 transition-all mt-auto">Go to Glyph <span class="material-icons-outlined text-sm">arrow_forward</span></span>
+<h3 class="text-xl font-bold" data-engine-title>GLYPH</h3>
+<p class="text-sm text-primary font-medium mt-1" data-engine-subtitle>Archetypal Signals & Hidden Structures</p>
+<p class="text-sm text-slate-300/90 mt-3 mb-3 leading-relaxed" data-engine-tagline>When a situation becomes too complex to articulate, you need a mirror to reveal its underlying structure.</p>
+<p class="text-slate-600 dark:text-slate-400 mb-8 flex-1 text-sm md:text-base leading-relaxed" data-engine-desc>Glyph integrates classic archetypal frameworks to retrieve real-time signal reflections corresponding to your current state, visualizing hidden dynamics and blind spots—giving unspoken concerns and vague intuitions a rational, articulable outline.</p>
+<span class="text-primary font-semibold flex items-center gap-2 group-hover:gap-3 transition-all mt-auto"><span data-engine-cta>Go to Glyph</span> <span class="material-icons-outlined text-sm">arrow_forward</span></span>
 </a>
 </div>
 </div>
@@ -1096,12 +1718,146 @@ Add to desktop
 </div>
 </div>
 </section>
+<section class="py-24 relative overflow-hidden reveal" id="v2-pricing" aria-labelledby="v2-pricing-title">
+<div class="max-w-7xl mx-auto px-6">
+<div class="text-center mb-16 max-w-3xl mx-auto">
+<h2 id="v2-pricing-title" class="text-3xl md:text-5xl font-display font-bold mb-6" data-pricing-h="title"></h2>
+<p class="text-slate-600 dark:text-slate-400 text-base md:text-lg leading-relaxed max-w-2xl mx-auto" data-pricing-h="subtitle"></p>
+</div>
+<div class="v2-price-grid">
+<article class="v2-price-card is-featured" id="v2-price-flex" data-plan="flex">
+<img class="v2-price-card__field" src="/v2/context-career.svg" alt="" aria-hidden="true" decoding="async"/>
+<div class="v2-price-card__body">
+<div class="v2-price-card__head">
+<span class="v2-price-badge" data-pricing-c="card1.badge"></span>
+<h3 class="v2-price-name" data-pricing-c="card1.title"></h3>
+<div class="v2-price-amount-row">
+<span class="v2-price-amount" data-pricing-c="card1.price"></span>
+<span class="v2-price-unit" data-pricing-c="card1.unit"></span>
+</div>
+<div class="v2-price-meta">
+<span class="v2-price-meta__label" data-pricing-label="quantity">Quantity</span>
+<div class="v2-price-qty" role="group" aria-label="Pass quantity">
+<button type="button" id="v2-pass-minus" aria-label="Decrease quantity">−</button>
+<span class="v2-price-qty__value" id="v2-pass-qty-label">1 Pass</span>
+<button type="button" id="v2-pass-plus" aria-label="Increase quantity">+</button>
+</div>
+</div>
+</div>
+<ul class="v2-price-list" data-pricing-features="card1"></ul>
+<button type="button" class="v2-price-cta" id="v2-pass-buy"></button>
+</div>
+</article>
+<article class="v2-price-card is-featured" id="v2-price-personal" data-plan="personal">
+<img class="v2-price-card__field" src="/v2/context-uncertainty.svg" alt="" aria-hidden="true" decoding="async"/>
+<div class="v2-price-card__body">
+<div class="v2-price-card__head">
+<span class="v2-price-badge" data-pricing-c="card2.badge"></span>
+<h3 class="v2-price-name" data-pricing-c="card2.title"></h3>
+<div class="v2-price-amount-row">
+<span class="v2-price-amount" data-pricing-c="card2.price"></span>
+<span class="v2-price-unit" data-pricing-c="card2.unit"></span>
+</div>
+<div class="v2-price-meta">
+<span class="v2-price-meta__label" data-pricing-label="allocation">Allocation</span>
+<span class="v2-price-meta__value" data-pricing-c="card2.passCount"></span>
+</div>
+</div>
+<ul class="v2-price-list" data-pricing-features="card2"></ul>
+<button type="button" class="v2-price-cta" data-pricing-c="card2.cta" data-plan-intent="personal_plan"></button>
+</div>
+</article>
+<article class="v2-price-card is-featured" id="v2-price-family" data-plan="family">
+<img class="v2-price-card__field" src="/v2/context-rhythm.svg" alt="" aria-hidden="true" decoding="async"/>
+<div class="v2-price-card__body">
+<div class="v2-price-card__head">
+<span class="v2-price-badge" data-pricing-c="card3.badge"></span>
+<h3 class="v2-price-name" data-pricing-c="card3.title"></h3>
+<div class="v2-price-amount-row">
+<span class="v2-price-amount" data-pricing-c="card3.price"></span>
+<span class="v2-price-unit" data-pricing-c="card3.unit"></span>
+</div>
+<div class="v2-price-meta">
+<span class="v2-price-meta__label" data-pricing-label="allocation">Allocation</span>
+<span class="v2-price-meta__value" data-pricing-c="card3.passCount"></span>
+</div>
+</div>
+<ul class="v2-price-list" data-pricing-features="card3"></ul>
+<button type="button" class="v2-price-cta" data-pricing-c="card3.cta" data-plan-intent="team_plan"></button>
+</div>
+</article>
+</div>
+</div>
+<div id="v2-price-modal" class="v2-price-modal" role="dialog" aria-modal="true" aria-labelledby="v2-price-modal-title" hidden>
+<div class="v2-price-modal__panel">
+<div class="v2-price-modal__icon" aria-hidden="true">
+<span class="material-symbols-outlined">auto_awesome</span>
+</div>
+<h3 class="v2-price-modal__title" id="v2-price-modal-title"></h3>
+<p class="v2-price-modal__body" id="v2-price-modal-body"></p>
+<div class="v2-price-modal__actions">
+<button type="button" class="v2-price-cta" id="v2-price-modal-upgrade"></button>
+<button type="button" class="v2-price-cta is-secondary" id="v2-price-modal-keep"></button>
+</div>
+</div>
+</div>
+</section>
+
+
+<div id="v2-auth-modal" class="v2-auth-modal" role="dialog" aria-modal="true" aria-labelledby="v2-auth-title" hidden>
+<div class="v2-auth-modal__panel">
+<button type="button" class="v2-auth-modal__close" id="v2-auth-close" aria-label="Close">
+<span class="material-symbols-outlined" style="font-size:1.25rem">close</span>
+</button>
+<div class="v2-auth-modal__icon" aria-hidden="true">
+<span class="material-symbols-outlined" id="v2-auth-icon">mail</span>
+</div>
+<div class="v2-auth-step is-active" id="v2-auth-step-email" data-step="email">
+<h3 class="v2-auth-modal__title" id="v2-auth-title" data-auth-i18n="emailTitle">Continue with email</h3>
+<p class="v2-auth-modal__subtitle" data-auth-i18n="emailSubtitle">We'll send a 6-digit code. No password needed.</p>
+<div class="v2-auth-error" id="v2-auth-error" role="alert"></div>
+<div class="v2-auth-field">
+<label for="v2-auth-email" data-auth-i18n="emailLabel">Email</label>
+<input id="v2-auth-email" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com" />
+</div>
+<button type="button" class="v2-auth-submit" id="v2-auth-send">
+<span data-auth-i18n="sendCode">Send Verification Code</span>
+<span class="material-symbols-outlined" style="font-size:1.1rem" aria-hidden="true">arrow_forward</span>
+</button>
+</div>
+<div class="v2-auth-step" id="v2-auth-step-otp" data-step="otp">
+<h3 class="v2-auth-modal__title" data-auth-i18n="otpTitle">Enter verification code</h3>
+<p class="v2-auth-modal__subtitle" id="v2-auth-otp-subtitle">Code sent to your email</p>
+<div class="v2-auth-error" id="v2-auth-error-otp" role="alert"></div>
+<div class="v2-auth-field">
+<label data-auth-i18n="otpLabel">6-digit code</label>
+<div class="v2-auth-otp" id="v2-auth-otp" role="group" aria-label="Verification code">
+<input type="text" inputmode="numeric" maxlength="1" data-otp-i="0" aria-label="Digit 1" />
+<input type="text" inputmode="numeric" maxlength="1" data-otp-i="1" aria-label="Digit 2" />
+<input type="text" inputmode="numeric" maxlength="1" data-otp-i="2" aria-label="Digit 3" />
+<input type="text" inputmode="numeric" maxlength="1" data-otp-i="3" aria-label="Digit 4" />
+<input type="text" inputmode="numeric" maxlength="1" data-otp-i="4" aria-label="Digit 5" />
+<input type="text" inputmode="numeric" maxlength="1" data-otp-i="5" aria-label="Digit 6" />
+</div>
+</div>
+<button type="button" class="v2-auth-submit" id="v2-auth-verify">
+<span data-auth-i18n="verifyContinue">Verify &amp; Continue</span>
+<span class="material-symbols-outlined" style="font-size:1.1rem" aria-hidden="true">arrow_forward</span>
+</button>
+<div class="v2-auth-footer">
+<button type="button" id="v2-auth-back" data-auth-i18n="changeEmail">Change email</button>
+<button type="button" id="v2-auth-resend" disabled><span data-auth-i18n="resend">Resend Code</span> (<span id="v2-auth-resend-sec">60</span>s)</button>
+</div>
+</div>
+</div>
+</div>
+
 <footer class="relative border-t border-slate-200 dark:border-white/5 bg-background-dark pt-16 pb-10">
 <div class="max-w-7xl mx-auto px-6">
 <div class="grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-4 lg:gap-10">
 <div class="max-w-sm">
 <a class="inline-flex items-center gap-3" href="/" target="_top" aria-label="Eastern OS home">
-<img alt="Eastern OS" class="h-8 w-auto object-contain" src="/v2/LOGO.png"/>
+<img alt="Eastern OS" class="h-6 w-auto object-contain sm:h-7" src="/v2/LOGO.png"/>
 <span class="font-display text-lg font-bold tracking-tight text-white">Eastern <span class="gold-gradient">OS</span></span>
 </a>
 <p class="mt-5 text-sm leading-relaxed text-slate-500">
@@ -1623,6 +2379,213 @@ Add to desktop
               );
             }
 
+const ENGINE_COPY = {
+  "zh": {
+    "pivot": {
+      "title": "PIVOT",
+      "subtitle": "转型与困境决策",
+      "tagline": "人生的关键岔路口，最缺的是一张全局地图。",
+      "description": "Pivot 是专为重大转型与关键决策打造的系统。通过深度对话厘清你的真实处境，基于东方决策模型进行多维推演，为你交出一份包含盲区诊断与具体落地路径的完整决策报告——让你带着清晰与底气，走过眼前这个坎。",
+      "cta": "进入 PIVOT"
+    },
+    "match": {
+      "title": "MATCH",
+      "subtitle": "关系协同与契合",
+      "tagline": "两个人合不合，不该只靠感觉凭空猜。",
+      "description": "Match 独立建立双方的行为与认知倾向模型，将两套结构进行交叉推演，为你清晰呈现关键节点上的天然契合点、潜在摩擦区与深度协作模式——让你在决定并肩、合作或深交之前，对这段关系心里有数。",
+      "cta": "进入 MATCH"
+    },
+    "syncro": {
+      "title": "SYNCRO",
+      "subtitle": "行动时机与窗口",
+      "tagline": "做对的事，更要在对的时候做。",
+      "description": "Syncro 针对你的具体行动方案，动态分析未来 24 小时的环境阻力与效率窗口。告诉你在哪个时段推进更顺、哪个窗口期适合避开硬碰硬——让你把关键力气，精准花在阻力最小的那一刻。",
+      "cta": "进入 SYNCRO"
+    },
+    "glyph": {
+      "title": "GLYPH",
+      "subtitle": "原型信号与隐性结构",
+      "tagline": "当处境过于复杂，连问题都难以理清时，你需要一面映照隐性结构的镜子。",
+      "description": "Glyph 引入经典原型体系，为你实时调取对应当前状态的信号镜像，把隐藏在表象之下的深层动力与盲区可视化——让模糊的心事与直觉，第一次有了可以清晰讨论的理性轮廓。",
+      "cta": "进入 GLYPH"
+    },
+    "atmos": {
+      "title": "ATMOS",
+      "subtitle": "每日节奏读数",
+      "tagline": "Atmos 是你每天的决策与精力仪表盘。",
+      "description": "连续30天为你读清当天的整体节奏（偏顺还是偏紧）、精力投向何处效率最高。遇到当天需要决策的突发事项随时提问，系统会在全局读数之外给出实时回应——让打开 Atmos，成为你每天的第一个决定。",
+      "cta": "进入 ATMOS"
+    }
+  },
+  "en": {
+    "pivot": {
+      "title": "PIVOT",
+      "subtitle": "Transitions & Strategic Decisions",
+      "tagline": "At life's pivotal crossroads, what you need most is a master map.",
+      "description": "Pivot is a system engineered for major transitions and critical decisions. Through deep dialogue, it clarifies your true circumstances and applies Eastern decision models for multi-dimensional simulation, delivering a comprehensive decision report with blind-spot diagnostics and actionable roadmaps—giving you the clarity and confidence to navigate the challenge ahead.",
+      "cta": "Go to Pivot"
+    },
+    "match": {
+      "title": "MATCH",
+      "subtitle": "Relational Dynamics & Alignment",
+      "tagline": "Compatibility shouldn't rely on guesswork or mere intuition.",
+      "description": "Match independently models behavioral and cognitive tendencies for both parties, cross-simulating both structures to reveal natural synergies, potential friction zones, and optimal collaboration modes at key junctions—giving you complete foresight before committing, partnering, or deepening a relationship.",
+      "cta": "Go to Match"
+    },
+    "syncro": {
+      "title": "SYNCRO",
+      "subtitle": "Action Timing & Windows",
+      "tagline": "Doing the right thing matters; doing it at the right time changes everything.",
+      "description": "Syncro dynamically analyzes environmental friction and efficiency windows over the next 24 hours for your specific action plan. It pinpoints when momentum is on your side and when to avoid direct resistance—helping you focus your efforts precisely when friction is at its lowest.",
+      "cta": "Go to Syncro"
+    },
+    "glyph": {
+      "title": "GLYPH",
+      "subtitle": "Archetypal Signals & Hidden Structures",
+      "tagline": "When a situation becomes too complex to articulate, you need a mirror to reveal its underlying structure.",
+      "description": "Glyph integrates classic archetypal frameworks to retrieve real-time signal reflections corresponding to your current state, visualizing hidden dynamics and blind spots—giving unspoken concerns and vague intuitions a rational, articulable outline.",
+      "cta": "Go to Glyph"
+    },
+    "atmos": {
+      "title": "ATMOS",
+      "subtitle": "Daily Rhythm Readings",
+      "tagline": "Atmos is your daily decision and energy dashboard.",
+      "description": "For 30 consecutive days, Atmos decodes your daily macro rhythm (whether momentum favors progress or restraint) and where your focus yields peak efficiency. Submit real-time queries for urgent daily decisions, and the system delivers targeted insights alongside your macro reading—making Atmos your very first decision every morning.",
+      "cta": "Begin Atmos"
+    }
+  },
+  "es": {
+    "pivot": {
+      "title": "PIVOT",
+      "subtitle": "Transiciones y Decisiones Críticas",
+      "tagline": "En los cruces decisivos de la vida, lo que más se necesita es un mapa global.",
+      "description": "Pivot es un sistema diseñado para grandes transiciones y decisiones críticas. A través de un diálogo profundo, clarifica tu situación real y aplica modelos de decisión orientales para realizar simulaciones multidimensionales, entregándote un informe de decisión completo con diagnóstico de puntos ciegos y rutas de acción concretas, para que superes el obstáculo con claridad y firmeza.",
+      "cta": "Ir a Pivot"
+    },
+    "match": {
+      "title": "MATCH",
+      "subtitle": "Sinergia Relacional y Compatibilidad",
+      "tagline": "La compatibilidad entre dos personas no debe basarse en meras suposiciones.",
+      "description": "Match modela de forma independiente las tendencias conductuales y cognitivas de ambas partes, cruzando ambas estructuras para revelar sinergias naturales, posibles zonas de fricción y modos de colaboración óptimos en momentos clave, brindándote total certeza antes de asociarte, colaborar o profundizar una relación.",
+      "cta": "Ir a Match"
+    },
+    "syncro": {
+      "title": "SYNCRO",
+      "subtitle": "Momentos de Acción y Ventanas de Oportunidad",
+      "tagline": "Hacer lo correcto es importante; hacerlo en el momento adecuado lo cambia todo.",
+      "description": "Syncro analiza dinámicamente la fricción ambiental y las ventanas de eficiencia durante las próximas 24 horas para tu plan de acción específico. Te indica en qué momentos avanzar con fluidez y cuándo evitar el desgaste innecesario, permitiéndote concentrar tu energía cuando la resistencia es mínima.",
+      "cta": "Ir a Syncro"
+    },
+    "glyph": {
+      "title": "GLYPH",
+      "subtitle": "Señales Arquetípicas y Estructuras Ocultas",
+      "tagline": "Cuando la situación es tan compleja que cuesta formular la pregunta, necesitas un espejo de estructuras ocultas.",
+      "description": "Glyph incorpora un sistema de arquetipos clásicos para reflejar en tiempo real la señal correspondiente a tu estado actual, visualizando las dinámicas subyacentes y los puntos ciegos, dándole por primera vez un contorno racional y articulable a tus intuiciones e inquietudes.",
+      "cta": "Ir a Glyph"
+    },
+    "atmos": {
+      "title": "ATMOS",
+      "subtitle": "Lectura del Ritmo Diario",
+      "tagline": "Atmos es tu panel diario de decisiones y gestión de energía.",
+      "description": "Durante 30 días consecutivos, interpreta con claridad el ritmo de tu jornada (si la corriente favorece el avance o la cautela) y dónde enfocar tu energía para máxima eficiencia. Ante decisiones imprevistas del día, realiza tu consulta y el sistema ofrecerá una respuesta específica junto con la lectura general, haciendo de Atmos tu primera decisión cada mañana.",
+      "cta": "Comenzar Atmos"
+    }
+  },
+  "de": {
+    "pivot": {
+      "title": "PIVOT",
+      "subtitle": "Transformationen & Kritische Entscheidungen",
+      "tagline": "An den entscheidenden Wendepunkten des Lebens fehlt vor allem eine Übersichtskarte.",
+      "description": "Pivot ist ein System, das speziell für große Umbrüche und kritische Entscheidungen entwickelt wurde. Durch tiefgehenden Dialog klärt es Ihre reale Situation und führt auf Basis östlicher Entscheidungsmodelle mehrdimensionale Simulationen durch. Sie erhalten einen vollständigen Entscheidungsbericht mit blinden Flecken und konkreten Handlungspfaden – damit Sie die anstehende Hürde mit Klarheit und Souveränität meistern.",
+      "cta": "Zu Pivot"
+    },
+    "match": {
+      "title": "MATCH",
+      "subtitle": "Beziehungssynchronität & Kompatibilität",
+      "tagline": "Ob zwei Menschen harmonieren, sollte nicht auf bloßem Bauchgefühl beruhen.",
+      "description": "Match modelliert unabhängig voneinander die Verhaltens- und Kognitionsmuster beider Parteien und überschneidet beide Strukturen, um natürliche Synergien, potenzielle Reibungspunkte und optimale Kooperationsmuster an Schlüsselpunkten aufzuzeigen – damit Sie von Anfang an Klarheit über die Beziehung haben, bevor Sie eine Partnerschaft, Zusammenarbeit oder tiefere Verbindung eingehen.",
+      "cta": "Zu Match"
+    },
+    "syncro": {
+      "title": "SYNCRO",
+      "subtitle": "Handlungszeitpunkte & Effizienzfenster",
+      "tagline": "Das Richtige zu tun ist gut; es zur richtigen Zeit zu tun, ist entscheidend.",
+      "description": "Syncro analysiert dynamisch die Umweltwiderstände und Effizienzfenster der nächsten 24 Stunden für Ihren spezifischen Handlungsplan. Es zeigt Ihnen, in welchen Zeitfenstern der Aufwind am stärksten ist und wann Sie Reibung vermeiden sollten – damit Sie Ihre Energie genau dann einsetzen, wenn der Widerstand am geringsten ist.",
+      "cta": "Zu Syncro"
+    },
+    "glyph": {
+      "title": "GLYPH",
+      "subtitle": "Archetypische Signale & Verborgene Strukturen",
+      "tagline": "Wenn eine Situation so komplex ist, dass sich Fragen schwer fassen lassen, brauchen Sie einen Spiegel der verborgenen Strukturen.",
+      "description": "Glyph nutzt ein klassisches Archetypen-System, um das zu Ihrem aktuellen Zustand passende Signalmuster in Echtzeit zu spiegeln. Es macht verborgene Dynamiken und blinde Flecken sichtbar – und verleiht vagen Ahnungen und Bauchgefühlen erstmals eine rationale, besprechbare Struktur.",
+      "cta": "Zu Glyph"
+    },
+    "atmos": {
+      "title": "ATMOS",
+      "subtitle": "Tägliche Rhythmus-Analysen",
+      "tagline": "Atmos ist Ihr tägliches Dashboard für Entscheidungen und Energie.",
+      "description": "Atmos entschlüsselt 30 Tage lang jeden Morgen den Gesamtrhythmus Ihres Tages (ob Aufwind oder Widerstand herrscht) und wo der Energieeinsatz am effizientesten ist. Bei kurzfristigen Tagesentscheidungen können Sie jederzeit Fragen stellen; das System liefert eine gezielte Antwort zusätzlich zur Gesamtanalyse – machen Sie das Öffnen von Atmos zu Ihrer ersten Entscheidung des Tages.",
+      "cta": "Atmos starten"
+    }
+  },
+  "fr": {
+    "pivot": {
+      "title": "PIVOT",
+      "subtitle": "Transitions & Décisions Stratégiques",
+      "tagline": "Aux carrefours décisifs de la vie, ce qui manque le plus, c'est une carte d'ensemble.",
+      "description": "Pivot est un système conçu pour les grandes transitions et les décisions stratégiques. À travers un dialogue approfondi, il clarifie votre situation réelle et applique des modèles de décision orientaux pour modéliser plusieurs scénarios. Il vous délivre un rapport de décision complet incluant le diagnostic de vos angles morts et un plan d'action concret, pour franchir l'obstacle avec clarté et assurance.",
+      "cta": "Aller à Pivot"
+    },
+    "match": {
+      "title": "MATCH",
+      "subtitle": "Synergies Relationnelles & Compatibilité",
+      "tagline": "La compatibilité entre deux personnes ne devrait pas reposer sur de simples intuitions.",
+      "description": "Match modélise de manière indépendante les tendances comportementales et cognitives de chaque partie, croisant les deux structures pour révéler les synergies naturelles, les zones de friction potentielle et les modes de collaboration optimaux lors des étapes clés — vous donnant une vision claire avant de vous engager, d'associer vos forces ou d'approfondir une relation.",
+      "cta": "Aller à Match"
+    },
+    "syncro": {
+      "title": "SYNCRO",
+      "subtitle": "Fenêtres d'Action & Timing",
+      "tagline": "Faire ce qui est juste est essentiel ; le faire au bon moment change tout.",
+      "description": "Syncro analyse dynamiquement la friction environnementale et les fenêtres d'efficacité sur les prochaines 24 heures pour votre plan d'action spécifique. Il vous indique les créneaux propices et ceux où éviter la confrontation directe — vous permettant d'investir votre énergie là où la résistance est la plus faible.",
+      "cta": "Aller à Syncro"
+    },
+    "glyph": {
+      "title": "GLYPH",
+      "subtitle": "Signaux Archétypiques & Structures Implicites",
+      "tagline": "Quand une situation devient trop complexe pour être formulée, vous avez besoin d'un miroir de ses structures cachées.",
+      "description": "Glyph intègre un système d'archétypes classiques pour refléter en temps réel les signaux correspondant à votre état actuel, visualisant les dynamiques profondes et les angles morts — offrant pour la première fois un cadre rationnel et exprimable à vos intuitions.",
+      "cta": "Aller à Glyph"
+    },
+    "atmos": {
+      "title": "ATMOS",
+      "subtitle": "Lectures du Rythme Quotidien",
+      "tagline": "Atmos est votre tableau de bord quotidien de décision et d'énergie.",
+      "description": "Pendant 30 jours consécutifs, Atmos décode le rythme global de votre journée (favorable ou sous tension) et les domaines où concentrer votre énergie pour une efficacité maximale. Face à une décision imprévue dans la journée, posez votre question : le système apportera une réponse ciblée en plus de la lecture globale — faites de la consultation d'Atmos votre toute première décision de la journée.",
+      "cta": "Commencer Atmos"
+    }
+  }
+};
+
+
+            function applyEngineCopy(locale) {
+              const pack = ENGINE_COPY[locale] || ENGINE_COPY.en;
+              document.querySelectorAll('[data-engine]').forEach((card) => {
+                const key = card.getAttribute('data-engine');
+                const copy = pack[key];
+                if (!copy) return;
+                const title = card.querySelector('[data-engine-title]');
+                const subtitle = card.querySelector('[data-engine-subtitle]');
+                const tagline = card.querySelector('[data-engine-tagline]');
+                const desc = card.querySelector('[data-engine-desc]');
+                const cta = card.querySelector('[data-engine-cta]');
+                if (title) title.textContent = copy.title;
+                if (subtitle) subtitle.textContent = copy.subtitle;
+                if (tagline) tagline.textContent = copy.tagline;
+                if (desc) desc.textContent = copy.description;
+                if (cta) cta.textContent = copy.cta;
+              });
+            }
             function applyTeamCopy(locale) {
               const pack = TEAM_COPY[locale] || TEAM_COPY.en;
               const titleEl = document.getElementById('v2-team-title');
@@ -1671,6 +2634,906 @@ Add to desktop
               if (key && scenarios[key]) el.textContent = scenarios[key];
             });
 
+            const PASS_UNIT = 9.99;
+            let passQty = 1;
+            const qtyLabel = document.getElementById('v2-pass-qty-label');
+            const buyBtn = document.getElementById('v2-pass-buy');
+            const minusBtn = document.getElementById('v2-pass-minus');
+            const plusBtn = document.getElementById('v2-pass-plus');
+            const modal = document.getElementById('v2-price-modal');
+            const modalTitle = document.getElementById('v2-price-modal-title');
+            const modalBody = document.getElementById('v2-price-modal-body');
+            const modalUpgrade = document.getElementById('v2-price-modal-upgrade');
+            const modalKeep = document.getElementById('v2-price-modal-keep');
+
+            const PRICING_I18N = {
+  "zh": {
+    "header": {
+      "title": "透明计费，随心选择",
+      "subtitle": "1 个 Pass 即可解锁全站任意产品的 1 次完整项目（包括 Atmos 30天完整交付）。零绑定按需购买，或选择订阅套餐享受更高性价比。"
+    },
+    "card1": {
+      "badge": "零绑定 · 按需购买",
+      "title": "购买 Pass",
+      "price": "$9.99",
+      "unit": "/ Pass",
+      "features": [
+        "全站所有功能通用（Atmos / Pivot / Match / Syncro / Glyph）",
+        "1 个 Pass 解锁 1 个项目的完整交付（包括 Atmos 30天完整交付）",
+        "一次性购买，不绑定自动续费",
+        "Pass 额度随买随用，永久有效",
+        "支持一键退款"
+      ],
+      "cta": "购买 1 Pass ($9.99)",
+      "qty": "{n} Pass",
+      "cta_tpl": "购买 {n} Pass (${total})"
+    },
+    "card2": {
+      "badge": "最受欢迎 · 单 Pass 低至 $5.98",
+      "title": "个人订阅包",
+      "price": "$29.90",
+      "unit": "/ 月",
+      "passCount": "5 Passes / 月",
+      "features": [
+        "全站所有功能通用（Atmos / Pivot / Match / Syncro / Glyph）",
+        "1 个 Pass 解锁 1 个项目的完整交付（包括 Atmos 30天完整交付）",
+        "每月发放 5 个 Pass",
+        "限时加送 +2 Passes（共 7 个 Passes，仅 $4.27 / Pass）",
+        "Pass 额度每月刷新",
+        "支持随时一键取消订阅，透明无隐形扣费"
+      ],
+      "cta": "订阅个人包 (领 7 个 Pass)"
+    },
+    "card3": {
+      "badge": "极致性价比 · 单 Pass 低至 $3.99",
+      "title": "家庭/团队订阅包",
+      "price": "$59.90",
+      "unit": "/ 月",
+      "passCount": "15 Passes / 月",
+      "features": [
+        "全站所有功能通用（Atmos / Pivot / Match / Syncro / Glyph）",
+        "1 个 Pass 解锁 1 个项目的完整交付（包括 Atmos 30天完整交付）",
+        "每月发放 15 个 Pass",
+        "限时加送 +5 Passes（共 20 个 Passes，仅 $2.99 / Pass）",
+        "支持最多 5 位成员/设备共享 Pass 额度",
+        "集中统一管理，Pass 额度每月刷新",
+        "支持随时一键取消订阅，透明无隐形扣费"
+      ],
+      "cta": "解锁家庭包 (领 20 个 Pass)"
+    },
+    "upsell": {
+      "u3_title": "为你发现更划算的方案",
+      "u3_body": "你当前选择了 {n} 个 Pass（总价 ${total}）。推荐切换为个人订阅包，只需 $29.90 /月，首月直接到手 7 个 Pass。",
+      "u3_upgrade": "升级为个人包（拿 7 Passes）",
+      "u3_keep": "坚持购买 {n} 个 Pass (${total})",
+      "u6_title": "预算相同，Pass 额度翻倍有余",
+      "u6_body": "你当前选择了 {n} 个 Pass（总价 ${total}）。推荐直接解锁家庭/团队包，只需 $59.90 /月，首月直接到手 20 个 Pass。",
+      "u6_upgrade": "切换为团队包（拿 20 Passes）",
+      "u6_keep": "坚持购买 {n} 个 Pass (${total})"
+    }
+  },
+  "en": {
+    "header": {
+      "title": "Transparent Pricing, Total Flexibility",
+      "subtitle": "1 Pass unlocks 1 complete project for any product site-wide (including 30-day full delivery for Atmos). Buy on-demand with zero commitment, or subscribe for maximum value."
+    },
+    "card1": {
+      "badge": "Zero Lock-in · On-demand",
+      "title": "Buy Passes",
+      "price": "$9.99",
+      "unit": "/ Pass",
+      "features": [
+        "Works across all 5 products (Atmos / Pivot / Match / Syncro / Glyph)",
+        "1 Pass unlocks 1 full project delivery (including Atmos 30-day delivery)",
+        "One-time purchase — no auto-renewal attached",
+        "Passes stay available until you use them — no expiration",
+        "1-click refund supported"
+      ],
+      "cta": "Buy 1 Pass ($9.99)",
+      "qty": "{n} Pass|{n} Passes",
+      "cta_tpl": "Buy {n} Pass (${total})|Buy {n} Passes (${total})"
+    },
+    "card2": {
+      "badge": "Most Popular · As low as $5.98 / Pass",
+      "title": "Personal Plan",
+      "price": "$29.90",
+      "unit": "/ month",
+      "passCount": "5 Passes / month",
+      "features": [
+        "Works across all 5 products (Atmos / Pivot / Match / Syncro / Glyph)",
+        "1 Pass unlocks 1 full project delivery (including Atmos 30-day delivery)",
+        "5 Passes issued every month",
+        "Limited-time bonus: +2 Passes (7 Passes total — only $4.27 / Pass)",
+        "Pass balance resets monthly",
+        "Cancel anytime in one click — no hidden fees"
+      ],
+      "cta": "Subscribe Personal (Get 7 Passes)"
+    },
+    "card3": {
+      "badge": "Best Value · As low as $3.99 / Pass",
+      "title": "Family / Team Plan",
+      "price": "$59.90",
+      "unit": "/ month",
+      "passCount": "15 Passes / month",
+      "features": [
+        "Works across all 5 products (Atmos / Pivot / Match / Syncro / Glyph)",
+        "1 Pass unlocks 1 full project delivery (including Atmos 30-day delivery)",
+        "15 Passes issued every month",
+        "Limited-time bonus: +5 Passes (20 Passes total — only $2.99 / Pass)",
+        "Share Passes across up to 5 members / devices",
+        "Central management with monthly Pass refresh",
+        "Cancel anytime in one click — no hidden fees"
+      ],
+      "cta": "Unlock Team Plan (Get 20 Passes)"
+    },
+    "upsell": {
+      "u3_title": "A clearer value option",
+      "u3_body": "You selected {n} Passes (${total}). Switching to Personal Plan is $29.90 / month and includes 7 Passes in month one.",
+      "u3_upgrade": "Upgrade to Personal (7 Passes)",
+      "u3_keep": "Keep {n} Passes (${total})",
+      "u6_title": "Same budget. Far more Passes.",
+      "u6_body": "You selected {n} Passes (${total}). Family / Team Plan is $59.90 / month and includes 20 Passes in month one.",
+      "u6_upgrade": "Switch to Team Plan (20 Passes)",
+      "u6_keep": "Keep {n} Passes (${total})"
+    }
+  },
+  "es": {
+    "header": {
+      "title": "Precios transparentes, máxima flexibilidad",
+      "subtitle": "1 Pass desbloquea 1 proyecto completo en cualquier producto de la plataforma (incluye 30 días de entrega para Atmos). Compra a demanda sin compromisos o suscríbete para obtener el mejor valor."
+    },
+    "card1": {
+      "badge": "Sin permanencia · A demanda",
+      "title": "Comprar Passes",
+      "price": "$9.99",
+      "unit": "/ Pass",
+      "features": [
+        "Válido para los 5 productos (Atmos / Pivot / Match / Syncro / Glyph)",
+        "1 Pass desbloquea 1 entrega completa de proyecto (incluye 30 días para Atmos)",
+        "Pago único, sin renovación automática",
+        "Los Passes nunca caducan, úsalos cuando quieras",
+        "Reembolso en un clic"
+      ],
+      "cta": "Comprar 1 Pass ($9.99)",
+      "qty": "{n} Pass|{n} Passes",
+      "cta_tpl": "Comprar {n} Pass (${total})|Comprar {n} Passes (${total})"
+    },
+    "card2": {
+      "badge": "Más popular · Desde $5.98 / Pass",
+      "title": "Plan Personal",
+      "price": "$29.90",
+      "unit": "/ mes",
+      "passCount": "5 Passes / mes",
+      "features": [
+        "Válido para los 5 productos (Atmos / Pivot / Match / Syncro / Glyph)",
+        "1 Pass desbloquea 1 entrega completa de proyecto (incluye 30 días para Atmos)",
+        "5 Passes mensuales",
+        "Bono por tiempo limitado: +2 Passes (7 Passes en total — solo $4.27 / Pass)",
+        "Renovación mensual de saldo de Passes",
+        "Cancela cuando quieras en un clic — sin cargos ocultos"
+      ],
+      "cta": "Suscribir Personal (Consigue 7 Passes)"
+    },
+    "card3": {
+      "badge": "Mejor precio · Desde $3.99 / Pass",
+      "title": "Plan Familiar / Equipo",
+      "price": "$59.90",
+      "unit": "/ mes",
+      "passCount": "15 Passes / mes",
+      "features": [
+        "Válido para los 5 productos (Atmos / Pivot / Match / Syncro / Glyph)",
+        "1 Pass desbloquea 1 entrega completa de proyecto (incluye 30 días para Atmos)",
+        "15 Passes mensuales",
+        "Bono por tiempo limitado: +5 Passes (20 Passes en total — solo $2.99 / Pass)",
+        "Comparte Passes con hasta 5 miembros o dispositivos",
+        "Gestión centralizada con renovación mensual de Passes",
+        "Cancela cuando quieras en un clic — sin cargos ocultos"
+      ],
+      "cta": "Desbloquear Plan Equipo (Consigue 20 Passes)"
+    },
+    "upsell": {
+      "u3_title": "Una opción con mejor valor",
+      "u3_body": "Has elegido {n} Passes (${total}). El Plan Personal cuesta $29.90 / mes e incluye 7 Passes el primer mes.",
+      "u3_upgrade": "Pasar al Plan Personal (7 Passes)",
+      "u3_keep": "Seguir con {n} Passes (${total})",
+      "u6_title": "Mismo presupuesto. Muchos más Passes.",
+      "u6_body": "Has elegido {n} Passes (${total}). El Plan Familiar / Equipo cuesta $59.90 / mes e incluye 20 Passes el primer mes.",
+      "u6_upgrade": "Pasar al Plan Equipo (20 Passes)",
+      "u6_keep": "Seguir con {n} Passes (${total})"
+    }
+  },
+  "de": {
+    "header": {
+      "title": "Transparente Preise, volle Flexibilität",
+      "subtitle": "1 Pass schaltet 1 vollständiges Projekt für jedes Produkt auf der gesamten Plattform frei (inkl. 30 Tage Komplettlieferung für Atmos). Ohne Bindung nach Bedarf kaufen oder durch Abonnements sparen."
+    },
+    "card1": {
+      "badge": "Keine Bindung · Nach Bedarf",
+      "title": "Pass kaufen",
+      "price": "$9.99",
+      "unit": "/ Pass",
+      "features": [
+        "Gültig für alle 5 Produkte (Atmos / Pivot / Match / Syncro / Glyph)",
+        "1 Pass schaltet 1 vollständige Projektlieferung frei (inkl. 30 Tage für Atmos)",
+        "Einmalzahlung – keine automatische Verlängerung",
+        "Pass-Guthaben verfällt nie – jederzeit nutzbar",
+        "1-Klick-Rückerstattung unterstützt"
+      ],
+      "cta": "1 Pass kaufen ($9.99)",
+      "qty": "{n} Pass|{n} Passes",
+      "cta_tpl": "{n} Pass kaufen (${total})|{n} Passes kaufen (${total})"
+    },
+    "card2": {
+      "badge": "Am beliebtesten · Nur $5.98 / Pass",
+      "title": "Einzel-Abo",
+      "price": "$29.90",
+      "unit": "/ Monat",
+      "passCount": "5 Passes / Monat",
+      "features": [
+        "Gültig für alle 5 Produkte (Atmos / Pivot / Match / Syncro / Glyph)",
+        "1 Pass schaltet 1 vollständige Projektlieferung frei (inkl. 30 Tage für Atmos)",
+        "Monatlich 5 Passes erhalten",
+        "Zeitlich begrenzter Bonus: +2 Passes (insgesamt 7 Passes — nur $4.27 / Pass)",
+        "Monatliche Erneuerung des Pass-Guthabens",
+        "Jederzeit mit einem Klick kündbar – keine versteckten Kosten"
+      ],
+      "cta": "Einzel-Abo sichern (7 Passes erhalten)"
+    },
+    "card3": {
+      "badge": "Beste Preis-Leistung · Nur $3.99 / Pass",
+      "title": "Familien- / Team-Abo",
+      "price": "$59.90",
+      "unit": "/ Monat",
+      "passCount": "15 Passes / Monat",
+      "features": [
+        "Gültig für alle 5 Produkte (Atmos / Pivot / Match / Syncro / Glyph)",
+        "1 Pass schaltet 1 vollständige Projektlieferung frei (inkl. 30 Tage für Atmos)",
+        "Monatlich 15 Passes erhalten",
+        "Zeitlich begrenzter Bonus: +5 Passes (insgesamt 20 Passes — nur $2.99 / Pass)",
+        "Teilen Sie Passes mit bis zu 5 Mitgliedern / Geräten",
+        "Zentrale Verwaltung mit monatlicher Pass-Erneuerung",
+        "Jederzeit mit einem Klick kündbar – keine versteckten Kosten"
+      ],
+      "cta": "Team-Abo freischalten (20 Passes erhalten)"
+    },
+    "upsell": {
+      "u3_title": "Eine klarere Preisoption",
+      "u3_body": "Sie haben {n} Passes gewählt (${total}). Das Einzel-Abo kostet $29.90 / Monat und enthält im ersten Monat 7 Passes.",
+      "u3_upgrade": "Zum Einzel-Abo wechseln (7 Passes)",
+      "u3_keep": "Bei {n} Passes bleiben (${total})",
+      "u6_title": "Gleiches Budget. Deutlich mehr Passes.",
+      "u6_body": "Sie haben {n} Passes gewählt (${total}). Das Familien-/Team-Abo kostet $59.90 / Monat und enthält im ersten Monat 20 Passes.",
+      "u6_upgrade": "Zum Team-Abo wechseln (20 Passes)",
+      "u6_keep": "Bei {n} Passes bleiben (${total})"
+    }
+  },
+  "fr": {
+    "header": {
+      "title": "Tarification transparente, flexibilité totale",
+      "subtitle": "1 Pass débloque 1 projet complet pour n'importe quel produit du site (y compris 30 jours de livraison complète pour Atmos). Achetez à la demande sans engagement, ou abonnez-vous pour profiter du meilleur rapport qualité-prix."
+    },
+    "card1": {
+      "badge": "Sans engagement · À la demande",
+      "title": "Acheter des Passes",
+      "price": "$9.99",
+      "unit": "/ Pass",
+      "features": [
+        "Valable sur les 5 produits (Atmos / Pivot / Match / Syncro / Glyph)",
+        "1 Pass débloque 1 livraison complète de projet (y compris 30 jours pour Atmos)",
+        "Achat unique — sans renouvellement automatique",
+        "Les Passes n'expirent jamais — utilisez-les à votre rythme",
+        "Remboursement en un clic"
+      ],
+      "cta": "Acheter 1 Pass ($9.99)",
+      "qty": "{n} Pass|{n} Passes",
+      "cta_tpl": "Acheter {n} Pass (${total})|Acheter {n} Passes (${total})"
+    },
+    "card2": {
+      "badge": "Le plus populaire · Dès $5.98 / Pass",
+      "title": "Formule Personnelle",
+      "price": "$29.90",
+      "unit": "/ mois",
+      "passCount": "5 Passes / mois",
+      "features": [
+        "Valable sur les 5 produits (Atmos / Pivot / Match / Syncro / Glyph)",
+        "1 Pass débloque 1 livraison complète de projet (y compris 30 jours pour Atmos)",
+        "5 Passes crédités chaque mois",
+        "Bonus à durée limitée : +2 Passes (7 Passes au total — seulement $4.27 / Pass)",
+        "Recharge mensuelle du solde de Passes",
+        "Annulation en un clic à tout moment — sans frais cachés"
+      ],
+      "cta": "S'abonner à la formule Personnelle (Obtenir 7 Passes)"
+    },
+    "card3": {
+      "badge": "Meilleur rapport qualité-prix · Dès $3.99 / Pass",
+      "title": "Formule Famille / Équipe",
+      "price": "$59.90",
+      "unit": "/ mois",
+      "passCount": "15 Passes / mois",
+      "features": [
+        "Valable sur les 5 produits (Atmos / Pivot / Match / Syncro / Glyph)",
+        "1 Pass débloque 1 livraison complète de projet (y compris 30 jours pour Atmos)",
+        "15 Passes crédités chaque mois",
+        "Bonus à durée limitée : +5 Passes (20 Passes au total — seulement $2.99 / Pass)",
+        "Partagez des Passes avec jusqu'à 5 membres / appareils",
+        "Gestion centralisée avec recharge mensuelle des Passes",
+        "Annulation en un clic à tout moment — sans frais cachés"
+      ],
+      "cta": "Débloquer la formule Équipe (Obtenir 20 Passes)"
+    },
+    "upsell": {
+      "u3_title": "Une option plus avantageuse",
+      "u3_body": "Vous avez choisi {n} Passes (${total}). La formule Personnelle est à $29.90 / mois et inclut 7 Passes le premier mois.",
+      "u3_upgrade": "Passer à la formule Personnelle (7 Passes)",
+      "u3_keep": "Garder {n} Passes (${total})",
+      "u6_title": "Même budget. Bien plus de Passes.",
+      "u6_body": "Vous avez choisi {n} Passes (${total}). La formule Famille / Équipe est à $59.90 / mois et inclut 20 Passes le premier mois.",
+      "u6_upgrade": "Passer à la formule Équipe (20 Passes)",
+      "u6_keep": "Garder {n} Passes (${total})"
+    }
+  }
+};
+
+            function pricingPack(locale) {
+              return PRICING_I18N[locale] || PRICING_I18N.en;
+            }
+
+            function pickPlural(tpl, n) {
+              if (!tpl) return '';
+              if (tpl.indexOf('|') === -1) return tpl;
+              const parts = tpl.split('|');
+              return n === 1 ? parts[0] : (parts[1] || parts[0]);
+            }
+
+            function fillTpl(tpl, n, total) {
+              return pickPlural(tpl, n)
+                .replace(/\{n\}/g, String(n))
+                .replace(/\$\{total\}/g, '$' + total.toFixed(2));
+            }
+
+            function fillUpsellTpl(tpl, n, total) {
+              return pickPlural(tpl, n)
+                .replace(/\{n\}/g, String(n))
+                .replace(/\$\{total\}/g, '$' + total.toFixed(2));
+            }
+
+
+              const META_LABELS = {
+                zh: { quantity: '数量', allocation: '额度' },
+                en: { quantity: 'Quantity', allocation: 'Allocation' },
+                es: { quantity: 'Cantidad', allocation: 'Asignación' },
+                de: { quantity: 'Menge', allocation: 'Kontingent' },
+                fr: { quantity: 'Quantité', allocation: 'Allocation' },
+              };
+              function isBonusFeature(text) {
+                return /限时|加送|bonus|Bono|Bonus|Limited-time|Zeitlich|durée limitée|限时加送/i.test(String(text || ''));
+              }
+              function escapeHtml(s) {
+                return String(s)
+                  .replace(/&/g, '&amp;')
+                  .replace(/</g, '&lt;')
+                  .replace(/>/g, '&gt;')
+                  .replace(/"/g, '&quot;');
+              }
+              function splitFeatureText(text) {
+                const raw = String(text || '').trim();
+                const m = raw.match(/^(.*?)\s*([（(][^）)]*[）)])\s*$/u);
+                if (m && m[1].trim()) {
+                  return { main: m[1].trim(), note: m[2].trim() };
+                }
+                return { main: raw, note: '' };
+              }
+              function renderFeatureItem(text, featured) {
+                const bonus = isBonusFeature(text);
+                const icon = bonus ? 'stars' : 'check_circle';
+                const cls = bonus ? 'v2-price-feature is-bonus' : 'v2-price-feature';
+                const parts = splitFeatureText(text);
+                const noteHtml = parts.note
+                  ? '<span class="v2-price-feature__note">' + escapeHtml(parts.note) + '</span>'
+                  : '';
+                return (
+                  '<li class="' + cls + '">' +
+                  '<span class="material-symbols-outlined v2-price-feature__icon" aria-hidden="true">' + icon + '</span>' +
+                  '<span class="v2-price-feature__content">' +
+                  '<span class="v2-price-feature__text">' + escapeHtml(parts.main) + '</span>' +
+                  noteHtml +
+                  '</span>' +
+                  '</li>'
+                );
+              }
+
+            function applyPricingCopy(locale) {
+              const pack = pricingPack(locale);
+              document.querySelectorAll('[data-pricing-h]').forEach((el) => {
+                const key = el.getAttribute('data-pricing-h');
+                if (key && pack.header && pack.header[key] != null) el.textContent = pack.header[key];
+              });
+              document.querySelectorAll('[data-pricing-c]').forEach((el) => {
+                const path = el.getAttribute('data-pricing-c') || '';
+                const [card, field] = path.split('.');
+                const node = pack[card];
+                if (!node || field == null || node[field] == null) return;
+                el.textContent = node[field];
+              });
+              const labels = META_LABELS[locale] || META_LABELS.en;
+              document.querySelectorAll('[data-pricing-label]').forEach((el) => {
+                const key = el.getAttribute('data-pricing-label');
+                if (key && labels[key]) el.textContent = labels[key];
+              });
+              document.querySelectorAll('[data-pricing-features]').forEach((ul) => {
+                const card = ul.getAttribute('data-pricing-features');
+                const features = pack[card] && pack[card].features;
+                if (!features) return;
+                const featured = card === 'card2';
+                ul.innerHTML = features.map((f) => renderFeatureItem(f, featured)).join('');
+              });
+              syncPassUi();
+            }
+
+            function syncPassUi() {
+              const pack = pricingPack(currentLocale);
+              const c1 = pack.card1 || {};
+              const total = passQty * PASS_UNIT;
+              if (qtyLabel) qtyLabel.textContent = fillTpl(c1.qty || '{n} Pass', passQty, total);
+              if (buyBtn) buyBtn.textContent = fillTpl(c1.cta_tpl || c1.cta || '', passQty, total);
+            }
+
+            function openUpsell(kind, qty) {
+              const pack = pricingPack(currentLocale);
+              const u = pack.upsell || {};
+              const n = qty || passQty;
+              const total = n * PASS_UNIT;
+              if (!modal || !modalTitle || !modalBody || !modalUpgrade || !modalKeep) return;
+              if (kind === 3) {
+                modalTitle.textContent = u.u3_title || '';
+                modalBody.textContent = fillUpsellTpl(u.u3_body || '', n, total);
+                modalUpgrade.textContent = u.u3_upgrade || '';
+                modalKeep.textContent = fillUpsellTpl(u.u3_keep || '', n, total);
+                modalUpgrade.dataset.target = 'personal';
+              } else {
+                modalTitle.textContent = u.u6_title || '';
+                modalBody.textContent = fillUpsellTpl(u.u6_body || '', n, total);
+                modalUpgrade.textContent = u.u6_upgrade || '';
+                modalKeep.textContent = fillUpsellTpl(u.u6_keep || '', n, total);
+                modalUpgrade.dataset.target = 'family';
+              }
+              modal.hidden = false;
+              modal.classList.add('is-open');
+            }
+
+            function closeUpsell() {
+              if (!modal) return;
+              modal.classList.remove('is-open');
+              modal.hidden = true;
+            }
+
+            function setPassQty(next) {
+              passQty = Math.max(1, Math.min(99, next));
+              syncPassUi();
+            }
+
+            if (minusBtn) minusBtn.addEventListener('click', () => setPassQty(passQty - 1));
+            if (plusBtn) plusBtn.addEventListener('click', () => setPassQty(passQty + 1));
+
+            /* ── Auth Modal + Intent Memory ── */
+            const PENDING_INTENT_KEY = 'pending_intent';
+            const AUTH_I18N = {
+              en: {
+                emailTitle: 'Continue with email',
+                emailSubtitle: "We'll send a 6-digit code. No password needed.",
+                emailLabel: 'Email',
+                sendCode: 'Send Verification Code',
+                sending: 'Sending…',
+                otpTitle: 'Enter verification code',
+                otpSubtitle: 'Code sent to {email}',
+                otpLabel: '6-digit code',
+                verifyContinue: 'Verify & Continue',
+                verifying: 'Verifying…',
+                changeEmail: 'Change email',
+                resend: 'Resend Code',
+                invalidEmail: 'Enter a valid email address.',
+                sendFailed: 'Could not send the code. Please try again.',
+                rateLimited: 'Please wait before requesting another code.',
+                invalidCode: 'Invalid or expired code. Try again.',
+                checkoutFailed: 'Could not start checkout. Please try again.',
+                placeholder: 'you@example.com'
+              },
+              zh: {
+                emailTitle: '使用邮箱继续',
+                emailSubtitle: '我们将发送 6 位验证码，无需密码。',
+                emailLabel: '邮箱',
+                sendCode: '发送验证码',
+                sending: '发送中…',
+                otpTitle: '输入验证码',
+                otpSubtitle: '验证码已发送至 {email}',
+                otpLabel: '6 位验证码',
+                verifyContinue: '验证并继续',
+                verifying: '验证中…',
+                changeEmail: '更换邮箱',
+                resend: '重新发送',
+                invalidEmail: '请输入有效邮箱地址。',
+                sendFailed: '验证码发送失败，请重试。',
+                rateLimited: '请稍后再请求验证码。',
+                invalidCode: '验证码无效或已过期，请重试。',
+                checkoutFailed: '无法启动支付，请重试。',
+                placeholder: 'you@example.com'
+              }
+            };
+
+            function authCopy() {
+              return AUTH_I18N[currentLocale] || AUTH_I18N.en;
+            }
+
+            function applyAuthI18n() {
+              const c = authCopy();
+              document.querySelectorAll('[data-auth-i18n]').forEach((el) => {
+                const key = el.getAttribute('data-auth-i18n');
+                if (key && c[key] != null) el.textContent = c[key];
+              });
+              const emailInput = document.getElementById('v2-auth-email');
+              if (emailInput) emailInput.placeholder = c.placeholder;
+            }
+
+            function savePendingIntent(intent) {
+              try {
+                localStorage.setItem(PENDING_INTENT_KEY, JSON.stringify(intent));
+              } catch (_) {}
+            }
+
+            function readPendingIntent() {
+              try {
+                const raw = localStorage.getItem(PENDING_INTENT_KEY);
+                if (!raw) return null;
+                const parsed = JSON.parse(raw);
+                if (!parsed || !parsed.plan) return null;
+                return parsed;
+              } catch (_) {
+                return null;
+              }
+            }
+
+            function clearPendingIntent() {
+              try { localStorage.removeItem(PENDING_INTENT_KEY); } catch (_) {}
+            }
+
+            const authModal = document.getElementById('v2-auth-modal');
+            const authClose = document.getElementById('v2-auth-close');
+            const authStepEmail = document.getElementById('v2-auth-step-email');
+            const authStepOtp = document.getElementById('v2-auth-step-otp');
+            const authEmail = document.getElementById('v2-auth-email');
+            const authSend = document.getElementById('v2-auth-send');
+            const authVerify = document.getElementById('v2-auth-verify');
+            const authBack = document.getElementById('v2-auth-back');
+            const authResend = document.getElementById('v2-auth-resend');
+            const authResendSec = document.getElementById('v2-auth-resend-sec');
+            const authError = document.getElementById('v2-auth-error');
+            const authErrorOtp = document.getElementById('v2-auth-error-otp');
+            const authOtpInputs = Array.from(document.querySelectorAll('#v2-auth-otp input'));
+            const authIcon = document.getElementById('v2-auth-icon');
+            const authOtpSubtitle = document.getElementById('v2-auth-otp-subtitle');
+            let authEmailValue = '';
+            let resendTimer = null;
+            let resendLeft = 0;
+
+            function showAuthError(el, msg) {
+              if (!el) return;
+              el.textContent = msg || '';
+              el.classList.toggle('is-visible', Boolean(msg));
+            }
+
+            function setAuthStep(step) {
+              if (authStepEmail) authStepEmail.classList.toggle('is-active', step === 'email');
+              if (authStepOtp) authStepOtp.classList.toggle('is-active', step === 'otp');
+              if (authIcon) authIcon.textContent = step === 'otp' ? 'shield_lock' : 'mail';
+              showAuthError(authError, '');
+              showAuthError(authErrorOtp, '');
+            }
+
+            function openAuthModal() {
+              applyAuthI18n();
+              setAuthStep('email');
+              if (authModal) {
+                authModal.hidden = false;
+                authModal.classList.add('is-open');
+              }
+              setTimeout(() => authEmail && authEmail.focus(), 50);
+            }
+
+            function closeAuthModal() {
+              if (!authModal) return;
+              authModal.classList.remove('is-open');
+              authModal.hidden = true;
+              if (resendTimer) { clearInterval(resendTimer); resendTimer = null; }
+            }
+
+            function startResendCooldown(sec) {
+              resendLeft = sec;
+              if (authResend) authResend.disabled = true;
+              if (authResendSec) authResendSec.textContent = String(resendLeft);
+              if (resendTimer) clearInterval(resendTimer);
+              resendTimer = setInterval(() => {
+                resendLeft -= 1;
+                if (authResendSec) authResendSec.textContent = String(Math.max(0, resendLeft));
+                if (resendLeft <= 0) {
+                  clearInterval(resendTimer);
+                  resendTimer = null;
+                  if (authResend) authResend.disabled = false;
+                }
+              }, 1000);
+            }
+
+            function readOtp() {
+              return authOtpInputs.map((i) => i.value.replace(/\D/g, '')).join('');
+            }
+
+            function clearOtp() {
+              authOtpInputs.forEach((i) => { i.value = ''; });
+            }
+
+            function beginPurchase(intent) {
+              savePendingIntent(intent);
+              openAuthModal();
+            }
+
+            async function sendOtpRequest(email) {
+              const res = await fetch('/api/auth/otp/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+              });
+              const data = await res.json().catch(() => ({}));
+              return { res, data };
+            }
+
+            async function verifyOtpRequest(email, token) {
+              const res = await fetch('/api/auth/otp/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, token })
+              });
+              const data = await res.json().catch(() => ({}));
+              return { res, data };
+            }
+
+            async function triggerCheckout(intent, userId, email, accessToken) {
+              const res = await fetch('/api/checkout/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  intent,
+                  user_id: userId,
+                  email,
+                  access_token: accessToken,
+                  locale: currentLocale
+                })
+              });
+              const data = await res.json().catch(() => ({}));
+              if (!res.ok || !data.ok || !data.checkout_url) {
+                throw new Error('checkout_failed');
+              }
+              clearPendingIntent();
+              (window.top || window).location.href = data.checkout_url;
+            }
+
+            if (authSend) {
+              authSend.addEventListener('click', async () => {
+                const c = authCopy();
+                const email = String(authEmail && authEmail.value || '').trim().toLowerCase();
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                  showAuthError(authError, c.invalidEmail);
+                  return;
+                }
+                authSend.disabled = true;
+                const label = authSend.querySelector('[data-auth-i18n="sendCode"]');
+                if (label) label.textContent = c.sending;
+                showAuthError(authError, '');
+                try {
+                  const { res, data } = await sendOtpRequest(email);
+                  if (!res.ok || !data.ok) {
+                    showAuthError(authError, res.status === 429 ? c.rateLimited : c.sendFailed);
+                    return;
+                  }
+                  authEmailValue = email;
+                  if (authOtpSubtitle) {
+                    authOtpSubtitle.textContent = c.otpSubtitle.replace('{email}', email);
+                  }
+                  clearOtp();
+                  setAuthStep('otp');
+                  startResendCountdown(60);
+                  setTimeout(() => authOtpInputs[0] && authOtpInputs[0].focus(), 40);
+                } catch (_) {
+                  showAuthError(authError, c.sendFailed);
+                } finally {
+                  authSend.disabled = false;
+                  if (label) label.textContent = c.sendCode;
+                }
+              });
+            }
+
+            if (authVerify) {
+              authVerify.addEventListener('click', async () => {
+                const c = authCopy();
+                const token = readOtp();
+                if (token.length !== 6) {
+                  showAuthError(authErrorOtp, c.invalidCode);
+                  return;
+                }
+                authVerify.disabled = true;
+                const label = authVerify.querySelector('[data-auth-i18n="verifyContinue"]');
+                if (label) label.textContent = c.verifying;
+                showAuthError(authErrorOtp, '');
+                try {
+                  const { res, data } = await verifyOtpRequest(authEmailValue, token);
+                  if (!res.ok || !data.ok || !data.user) {
+                    showAuthError(authErrorOtp, c.invalidCode);
+                    return;
+                  }
+                  const intent = readPendingIntent();
+                  if (intent) {
+                    await triggerCheckout(intent, data.user.id, data.user.email || authEmailValue, data.access_token);
+                  } else {
+                    clearPendingIntent();
+                    (window.top || window).location.href = '/app?tab=atmos';
+                  }
+                } catch (_) {
+                  showAuthError(authErrorOtp, c.checkoutFailed);
+                } finally {
+                  authVerify.disabled = false;
+                  if (label) label.textContent = c.verifyContinue;
+                }
+              });
+            }
+
+            if (authResend) {
+              authResend.addEventListener('click', async () => {
+                if (authResend.disabled || !authEmailValue) return;
+                const c = authCopy();
+                authResend.disabled = true;
+                try {
+                  const { res, data } = await sendOtpRequest(authEmailValue);
+                  if (!res.ok || !data.ok) {
+                    showAuthError(authErrorOtp, res.status === 429 ? c.rateLimited : c.sendFailed);
+                    authResend.disabled = false;
+                    return;
+                  }
+                  startResendCountdown(60);
+                  showAuthError(authErrorOtp, '');
+                } catch (_) {
+                  showAuthError(authErrorOtp, c.sendFailed);
+                  authResend.disabled = false;
+                }
+              });
+            }
+
+            if (authBack) {
+              authBack.addEventListener('click', () => {
+                setAuthStep('email');
+                if (resendTimer) { clearInterval(resendTimer); resendTimer = null; }
+              });
+            }
+
+            authOtpInputs.forEach((input, index) => {
+              input.addEventListener('input', (e) => {
+                const v = e.target.value.replace(/\D/g, '').slice(0, 1);
+                e.target.value = v;
+                if (v && index < authOtpInputs.length - 1) authOtpInputs[index + 1].focus();
+                if (readOtp().length === 6) authVerify && authVerify.click();
+              });
+              input.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                  authOtpInputs[index - 1].focus();
+                }
+              });
+              input.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const paste = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6);
+                paste.split('').forEach((ch, i) => {
+                  if (authOtpInputs[i]) authOtpInputs[i].value = ch;
+                });
+                if (paste.length === 6) authVerify && authVerify.click();
+                else if (paste.length > 0 && authOtpInputs[Math.min(paste.length, 5)]) {
+                  authOtpInputs[Math.min(paste.length, 5)].focus();
+                }
+              });
+            });
+
+            if (authClose) authClose.addEventListener('click', closeAuthModal);
+            if (authModal) {
+              authModal.addEventListener('click', (e) => {
+                if (e.target === authModal) closeAuthModal();
+              });
+            }
+            document.addEventListener('keydown', (e) => {
+              if (e.key === 'Escape' && authModal && authModal.classList.contains('is-open')) {
+                closeAuthModal();
+              }
+            });
+            if (authEmail) {
+              authEmail.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); authSend && authSend.click(); }
+              });
+            }
+
+            applyAuthI18n();
+
+            const LOGIN_I18N = {
+              en: 'Log in',
+              zh: '登录',
+              es: 'Iniciar sesión',
+              de: 'Anmelden',
+              fr: 'Connexion'
+            };
+            function syncLoginBtnLabel() {
+              const el = document.getElementById('v2-login-btn');
+              if (el) el.textContent = LOGIN_I18N[currentLocale] || LOGIN_I18N.en;
+            }
+            syncLoginBtnLabel();
+
+            const loginBtn = document.getElementById('v2-login-btn');
+            if (loginBtn) {
+              loginBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                clearPendingIntent();
+                openAuthModal();
+              });
+            }
+
+            if (modalKeep) {
+              modalKeep.addEventListener('click', () => {
+                closeUpsell();
+                beginPurchase({ plan: 'flex_pass', quantity: passQty });
+              });
+            }
+            if (modalUpgrade) {
+              modalUpgrade.addEventListener('click', () => {
+                const target = modalUpgrade.dataset.target === 'family' ? 'v2-price-family' : 'v2-price-personal';
+                closeUpsell();
+                const el = document.getElementById(target);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              });
+            }
+            if (modal) {
+              modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeUpsell();
+              });
+              document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && modal.classList.contains('is-open') && !(authModal && authModal.classList.contains('is-open'))) {
+                  closeUpsell();
+                }
+              });
+            }
+            if (buyBtn) {
+              buyBtn.addEventListener('click', () => {
+                if (passQty >= 3 && passQty <= 5) {
+                  openUpsell(3, passQty);
+                  return;
+                }
+                if (passQty >= 6) {
+                  openUpsell(6, passQty);
+                  return;
+                }
+                beginPurchase({ plan: 'flex_pass', quantity: passQty });
+              });
+            }
+
+            const personalCta = document.querySelector('#v2-price-personal .v2-price-cta');
+            const familyCta = document.querySelector('#v2-price-family .v2-price-cta');
+            if (personalCta) {
+              personalCta.addEventListener('click', (e) => {
+                e.preventDefault();
+                beginPurchase({ plan: 'personal_plan' });
+              });
+            }
+            if (familyCta) {
+              familyCta.addEventListener('click', (e) => {
+                e.preventDefault();
+                beginPurchase({ plan: 'team_plan' });
+              });
+            }
+
+            applyPricingCopy(currentLocale);
+
+            applyEngineCopy(currentLocale);
             applyTeamCopy(currentLocale);
 
             document.documentElement.lang = currentLocale === 'zh' ? 'zh-CN' : currentLocale;

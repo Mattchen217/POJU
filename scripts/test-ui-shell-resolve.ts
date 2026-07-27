@@ -3,6 +3,7 @@
  * Run: pnpm exec tsx scripts/test-ui-shell-resolve.ts
  */
 import {
+  getEnvUiShell,
   getWorkspaceHref,
   mapProductHrefForShell,
   parseUiShellValue,
@@ -23,5 +24,13 @@ assert(getWorkspaceHref("atmos") === "/app?tab=atmos", "atmos href");
 assert(mapProductHrefForShell("/archive", "workspace") === "/archive", "archive stays vault");
 assert(parseWorkspaceTab("glyph") === "glyph", "tab glyph");
 assert(parseWorkspaceTab("x") === "atmos", "tab default atmos");
+
+{
+  const prev = process.env.NEXT_PUBLIC_UI_SHELL;
+  delete process.env.NEXT_PUBLIC_UI_SHELL;
+  assert(getEnvUiShell() === "workspace", "default shell is workspace (V2)");
+  if (prev !== undefined) process.env.NEXT_PUBLIC_UI_SHELL = prev;
+  else delete process.env.NEXT_PUBLIC_UI_SHELL;
+}
 
 console.log("test-ui-shell-resolve: ok");

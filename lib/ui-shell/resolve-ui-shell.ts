@@ -1,12 +1,29 @@
 /**
- * Parallel UI shell switch: classic (current marketing) vs workspace (left-sidebar app).
- * Precedence: ?ui= → localStorage → NEXT_PUBLIC_UI_SHELL → classic.
+ * Parallel UI shell switch: classic (legacy marketing) vs workspace (V2 landing + app shell).
+ * Precedence: ?ui= → localStorage → NEXT_PUBLIC_UI_SHELL → workspace (V2 default).
+ * Keep classic via `?ui=classic` — do not delete the legacy home tree.
  */
 
 export type UiShellMode = "classic" | "workspace";
 
 export const UI_SHELL_STORAGE_KEY = "poju.uiShell";
 export const WORKSPACE_ENTERED_KEY = "poju.workspaceEntered";
+/** One-time: promote default landing to V2 workspace. */
+export const UI_SHELL_V2_DEFAULT_MIGRATION_KEY = "poju.uiShell.defaultV2";
+
+/**
+ * Sync migration before first paint/read so hydrate does not flash classic → V2.
+ */
+export function ensureV2DefaultShellMigrated(): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (window.localStorage.getItem(UI_SHELL_V2_DEFAULT_MIGRATION_KEY)) return;
+    window.localStorage.setItem(UI_SHELL_STORAGE_KEY, "workspace");
+    window.localStorage.setItem(UI_SHELL_V2_DEFAULT_MIGRATION_KEY, "1");
+  } catch {
+    /* private mode */
+  }
+}
 
 export type WorkspaceTab =
   | "atmos"
@@ -45,12 +62,13 @@ export function parseUiShellValue(raw: string | null | undefined): UiShellMode |
 }
 
 export function getEnvUiShell(): UiShellMode {
-  return parseUiShellValue(process.env.NEXT_PUBLIC_UI_SHELL) ?? "classic";
+  return parseUiShellValue(process.env.NEXT_PUBLIC_UI_SHELL) ?? "workspace";
 }
 
 export function readStoredUiShell(): UiShellMode | null {
   if (typeof window === "undefined") return null;
   try {
+    ensureV2DefaultShellMigrated();
     return parseUiShellValue(window.localStorage.getItem(UI_SHELL_STORAGE_KEY));
   } catch {
     return null;

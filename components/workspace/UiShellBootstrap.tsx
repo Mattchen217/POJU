@@ -3,7 +3,12 @@
 import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 
-import { resolveUiShell, writeStoredUiShell, parseUiShellValue } from "@/lib/ui-shell/resolve-ui-shell";
+import {
+  ensureV2DefaultShellMigrated,
+  resolveUiShell,
+  writeStoredUiShell,
+  parseUiShellValue,
+} from "@/lib/ui-shell/resolve-ui-shell";
 
 /**
  * Sets `html[data-ui-shell=classic|workspace]` for CSS and chrome branching.
@@ -14,6 +19,7 @@ export function UiShellBootstrap() {
   const uiParam = searchParams.get("ui");
 
   useEffect(() => {
+    ensureV2DefaultShellMigrated();
     const parsed = parseUiShellValue(uiParam);
     if (parsed) {
       writeStoredUiShell(parsed);

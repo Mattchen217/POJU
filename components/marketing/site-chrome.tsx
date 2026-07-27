@@ -10,11 +10,12 @@ import { SiteFooter } from "@/components/marketing/site-footer";
 import { UiShellSwitcher } from "@/components/workspace/UiShellSwitcher";
 import { useUiShell } from "@/components/workspace/use-ui-shell";
 import { isChatRoute, isHomeRoute, isWorkspaceAppRoute } from "@/lib/i18n/pathname-without-locale";
+import { getEnvUiShell } from "@/lib/ui-shell/resolve-ui-shell";
 import { cn } from "@/lib/utils/classnames";
 
 function SiteChromeInner({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { shell, ready } = useUiShell();
+  const { shell } = useUiShell();
 
   if (isChatRoute(pathname) || isWorkspaceAppRoute(pathname)) {
     return <>{children}</>;
@@ -22,7 +23,7 @@ function SiteChromeInner({ children }: { children: ReactNode }) {
 
   const home = isHomeRoute(pathname);
   /** V2 workspace landing brings its own nav/footer — skip marketing chrome. */
-  const workspaceHome = home && ready && shell === "workspace";
+  const workspaceHome = home && shell === "workspace";
 
   if (workspaceHome) {
     return (
@@ -51,6 +52,15 @@ function SiteChromeFallback({ children }: { children: ReactNode }) {
     return <>{children}</>;
   }
   const home = isHomeRoute(pathname);
+  // Match V2 default: do not wrap home in classic nav during Suspense (avoids chrome flash).
+  if (home && getEnvUiShell() === "workspace") {
+    return (
+      <>
+        <MarketingScrollReset />
+        {children}
+      </>
+    );
+  }
   return (
     <div className={cn("site-chrome flex min-h-screen flex-col text-text-body", home && "site-chrome--home")}>
       <MarketingScrollReset />

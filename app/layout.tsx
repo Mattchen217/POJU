@@ -72,6 +72,12 @@ export default function RootLayout({
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         />
+        {/* Before React: default V2 shell + avoid classic chrome flash on home */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var k='poju.uiShell',m='poju.uiShell.defaultV2';if(!localStorage.getItem(m)){localStorage.setItem(k,'workspace');localStorage.setItem(m,'1');}var s=localStorage.getItem(k)||'workspace';document.documentElement.setAttribute('data-ui-shell',s);}catch(e){document.documentElement.setAttribute('data-ui-shell','workspace');}})();`,
+          }}
+        />
       </head>
       <body className="min-h-full" suppressHydrationWarning>
         <div className="site-starry-bg" aria-hidden />

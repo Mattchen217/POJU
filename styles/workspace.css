@@ -978,6 +978,11 @@
   justify-content: center;
 }
 
+/* Expanded / marketing: full LOGO.png. Collapsed rail: LOGOE mark only. */
+.workspace-sidebar__brand.is-collapsed .workspace-sidebar__brand-lockup .brand-lockup-mark {
+  display: block;
+}
+
 .workspace-sidebar__brand.is-collapsed .workspace-sidebar__brand-lockup > :not(:first-child) {
   display: none;
 }

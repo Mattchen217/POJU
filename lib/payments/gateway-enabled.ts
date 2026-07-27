@@ -17,6 +17,7 @@ export function isMockOrderId(orderId: string): boolean {
     orderId.startsWith("mockglyph_") ||
     orderId.startsWith("mockmatch_") ||
     orderId.startsWith("mocksyncro_") ||
+    orderId.startsWith("mock_cs_") ||
     orderId.startsWith("mock-") ||
     orderId.startsWith("mock_")
   );

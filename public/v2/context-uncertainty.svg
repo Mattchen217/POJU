@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500">
+  <defs>
+    <linearGradient id="u-foil" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#C9A227" stop-opacity="0.55"/>
+      <stop offset="50%" stop-color="#F2CA50" stop-opacity="0.75"/>
+      <stop offset="100%" stop-color="#8A6F28" stop-opacity="0.4"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="200" cy="250" rx="10.0" ry="7.0" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.080"/>
+  <ellipse cx="200" cy="250" rx="15.2" ry="13.6" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.110"/>
+  <ellipse cx="200" cy="250" rx="20.4" ry="20.2" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.140"/>
+  <ellipse cx="200" cy="250" rx="25.6" ry="26.8" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.170"/>
+  <ellipse cx="200" cy="250" rx="30.8" ry="33.4" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.200"/>
+  <ellipse cx="200" cy="250" rx="36.0" ry="40.0" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.080"/>
+  <ellipse cx="200" cy="250" rx="41.2" ry="46.6" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.110"/>
+  <ellipse cx="200" cy="250" rx="46.4" ry="53.2" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.140"/>
+  <ellipse cx="200" cy="250" rx="51.6" ry="59.8" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.170"/>
+  <ellipse cx="200" cy="250" rx="56.8" ry="66.4" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.200"/>
+  <ellipse cx="200" cy="250" rx="62.0" ry="73.0" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.080"/>
+  <ellipse cx="200" cy="250" rx="67.2" ry="79.6" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.110"/>
+  <ellipse cx="200" cy="250" rx="72.4" ry="86.2" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.140"/>
+  <ellipse cx="200" cy="250" rx="77.6" ry="92.8" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.170"/>
+  <ellipse cx="200" cy="250" rx="82.8" ry="99.4" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.200"/>
+  <ellipse cx="200" cy="250" rx="88.0" ry="106.0" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.080"/>
+  <ellipse cx="200" cy="250" rx="93.2" ry="112.6" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.110"/>
+  <ellipse cx="200" cy="250" rx="98.4" ry="119.2" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.140"/>
+  <ellipse cx="200" cy="250" rx="103.6" ry="125.8" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.170"/>
+  <ellipse cx="200" cy="250" rx="108.8" ry="132.4" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.200"/>
+  <ellipse cx="200" cy="250" rx="114.0" ry="139.0" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.080"/>
+  <ellipse cx="200" cy="250" rx="119.2" ry="145.6" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.110"/>
+  <ellipse cx="200" cy="250" rx="124.4" ry="152.2" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.140"/>
+  <ellipse cx="200" cy="250" rx="129.6" ry="158.8" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.170"/>
+  <ellipse cx="200" cy="250" rx="134.8" ry="165.4" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.200"/>
+  <ellipse cx="200" cy="250" rx="140.0" ry="172.0" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.080"/>
+  <ellipse cx="200" cy="250" rx="145.2" ry="178.6" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.110"/>
+  <ellipse cx="200" cy="250" rx="150.4" ry="185.2" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.140"/>
+  <ellipse cx="200" cy="250" rx="155.6" ry="191.8" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.170"/>
+  <ellipse cx="200" cy="250" rx="160.8" ry="198.4" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.200"/>
+  <ellipse cx="200" cy="250" rx="166.0" ry="205.0" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.080"/>
+  <ellipse cx="200" cy="250" rx="171.2" ry="211.6" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.110"/>
+  <ellipse cx="200" cy="250" rx="176.4" ry="218.2" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.140"/>
+  <ellipse cx="200" cy="250" rx="181.6" ry="224.8" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.170"/>
+  <ellipse cx="200" cy="250" rx="186.8" ry="231.4" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.200"/>
+  <ellipse cx="200" cy="250" rx="192.0" ry="238.0" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.080"/>
+  <ellipse cx="200" cy="250" rx="197.2" ry="244.6" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.110"/>
+  <ellipse cx="200" cy="250" rx="202.4" ry="251.2" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.140"/>
+  <ellipse cx="200" cy="250" rx="207.6" ry="257.8" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.170"/>
+  <ellipse cx="200" cy="250" rx="212.8" ry="264.4" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.200"/>
+  <ellipse cx="200" cy="250" rx="218.0" ry="271.0" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.080"/>
+  <ellipse cx="200" cy="250" rx="223.2" ry="277.6" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.110"/>
+  <ellipse cx="200" cy="250" rx="228.4" ry="284.2" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.140"/>
+  <ellipse cx="200" cy="250" rx="233.6" ry="290.8" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.170"/>
+  <ellipse cx="200" cy="250" rx="238.8" ry="297.4" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.200"/>
+  <ellipse cx="200" cy="250" rx="244.0" ry="304.0" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.080"/>
+  <ellipse cx="200" cy="250" rx="249.2" ry="310.6" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.110"/>
+  <ellipse cx="200" cy="250" rx="254.4" ry="317.2" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.140"/>
+  <ellipse cx="200" cy="250" rx="259.6" ry="323.8" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.170"/>
+  <ellipse cx="200" cy="250" rx="264.8" ry="330.4" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.200"/>
+  <ellipse cx="200" cy="250" rx="270.0" ry="337.0" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.080"/>
+  <ellipse cx="200" cy="250" rx="275.2" ry="343.6" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.110"/>
+  <ellipse cx="200" cy="250" rx="280.4" ry="350.2" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.140"/>
+  <ellipse cx="200" cy="250" rx="285.6" ry="356.8" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.170"/>
+  <ellipse cx="200" cy="250" rx="290.8" ry="363.4" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.200"/>
+  <ellipse cx="200" cy="250" rx="296.0" ry="370.0" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.080"/>
+  <ellipse cx="200" cy="250" rx="301.2" ry="376.6" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.110"/>
+  <ellipse cx="200" cy="250" rx="306.4" ry="383.2" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.140"/>
+  <ellipse cx="200" cy="250" rx="311.6" ry="389.8" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.170"/>
+  <ellipse cx="200" cy="250" rx="316.8" ry="396.4" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.200"/>
+  <ellipse cx="200" cy="250" rx="322.0" ry="403.0" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.080"/>
+  <ellipse cx="200" cy="250" rx="327.2" ry="409.6" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.110"/>
+  <ellipse cx="200" cy="250" rx="332.4" ry="416.2" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.140"/>
+  <ellipse cx="200" cy="250" rx="337.6" ry="422.8" fill="none" stroke="url(#u-foil)" stroke-width="0.32" opacity="0.170"/>
+</svg>

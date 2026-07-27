@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { useSearchParams } from "next/navigation";
 
 import {
-  getEnvUiShell,
   parseUiShellValue,
   readStoredUiShell,
   resolveUiShell,
@@ -66,7 +65,7 @@ export function useUiShell(): {
 
   const shell = resolveUiShell({
     query: uiParam ? new URLSearchParams(`ui=${uiParam}`) : null,
-    stored: ready ? stored : null,
+    stored,
   });
 
   const setShell = useCallback((mode: UiShellMode) => {
@@ -77,5 +76,7 @@ export function useUiShell(): {
     }
   }, []);
 
-  return { shell: ready ? shell : getEnvUiShell(), setShell, ready };
+  // Prefer env/query immediately; do not wait on `ready` or the home chrome will
+  // flash classic nav around the V2 landing.
+  return { shell, setShell, ready };
 }
