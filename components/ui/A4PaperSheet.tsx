@@ -64,7 +64,7 @@ export function A4PaperComputeGlyph({ className }: { className?: string }) {
 
 /**
  * Personal energy portrait mark — concentric rings + Q-tail.
- * Color via currentColor (purple on paper cover; white in collapsed rail).
+ * Color via currentColor (gold on paper cover; white in collapsed rail).
  */
 export function EnergyPortraitGlyph({ className }: { className?: string }) {
   return (
@@ -84,7 +84,7 @@ export function EnergyPortraitGlyph({ className }: { className?: string }) {
 
 /**
  * Personal energy analysis report mark — rounded document + fat text lines.
- * Color via currentColor (purple on paper cover; white in collapsed rail).
+ * Color via currentColor (gold on paper cover; white in collapsed rail).
  */
 export function EnergyReportGlyph({ className }: { className?: string }) {
   return (

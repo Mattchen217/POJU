@@ -740,35 +740,35 @@ function RadarChart({
             padding: [4, 8],
             rich: {
               wood: {
-                color: "#22C55E",
+                color: "#ffffff",
                 fontSize: 15,
                 fontWeight: 600,
                 fontFamily:
                   '"Plus Jakarta Sans", "Noto Sans SC", "PingFang SC", Inter, sans-serif',
               },
               fire: {
-                color: "#EF4444",
+                color: "#ffffff",
                 fontSize: 15,
                 fontWeight: 600,
                 fontFamily:
                   '"Plus Jakarta Sans", "Noto Sans SC", "PingFang SC", Inter, sans-serif',
               },
               earth: {
-                color: "#A16207",
+                color: "#ffffff",
                 fontSize: 15,
                 fontWeight: 600,
                 fontFamily:
                   '"Plus Jakarta Sans", "Noto Sans SC", "PingFang SC", Inter, sans-serif',
               },
               metal: {
-                color: "#D4AF37",
+                color: "#ffffff",
                 fontSize: 15,
                 fontWeight: 600,
                 fontFamily:
                   '"Plus Jakarta Sans", "Noto Sans SC", "PingFang SC", Inter, sans-serif',
               },
               water: {
-                color: "#3B82F6",
+                color: "#ffffff",
                 fontSize: 15,
                 fontWeight: 600,
                 fontFamily:

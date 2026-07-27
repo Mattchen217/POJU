@@ -1,4 +1,4 @@
-/* Shared purple-glass dog-ear paper (wait ritual + matrix rail) */
+/* Shared gold-glass dog-ear paper (wait ritual + matrix rail) */
 
 .a4-paper-sheet {
   --fold-size: 40%;
@@ -35,15 +35,15 @@
     rgba(22, 16, 44, 0.9) 48%,
     rgba(11, 8, 21, 0.88) 100%
   );
-  border: 1.5px solid rgba(167, 139, 250, 0.5);
+  border: 1.5px solid rgba(212, 175, 55, 0.5);
   box-shadow:
-    0 0 0 1px rgba(139, 92, 246, 0.16),
+    0 0 0 1px rgba(242, 202, 80, 0.16),
     0 14px 44px rgba(11, 8, 21, 0.55),
-    0 0 36px rgba(139, 92, 246, 0.2),
+    0 0 36px rgba(242, 202, 80, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  color: rgba(192, 132, 252, 0.98);
+  color: rgba(242, 202, 80, 0.98);
   overflow: hidden;
   transition:
     clip-path 0.55s cubic-bezier(0.22, 1, 0.36, 1),
@@ -103,7 +103,7 @@
     135deg,
     rgba(255, 255, 255, 0.55) 0%,
     rgba(220, 210, 250, 0.42) 28%,
-    rgba(167, 139, 250, 0.38) 58%,
+    rgba(212, 175, 55, 0.38) 58%,
     rgba(76, 40, 140, 0.55) 100%
   );
   box-shadow: inset 1px -1px 0 rgba(255, 255, 255, 0.22);

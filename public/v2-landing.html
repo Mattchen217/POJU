@@ -62,6 +62,50 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
+        /* Logged-in account chip (landing header) */
+        .v2-auth-account {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.55rem;
+            padding: 0.25rem 0.8rem 0.25rem 0.25rem;
+            border-radius: 9999px;
+            border: 1px solid rgba(212, 175, 55, 0.35);
+            background: rgba(212, 175, 55, 0.08);
+            color: #f4f4f5;
+            font-weight: 600;
+            font-size: 0.875rem;
+            line-height: 1;
+            cursor: pointer;
+            transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+        }
+        .v2-auth-account:hover {
+            border-color: rgba(212, 175, 55, 0.6);
+            background: rgba(212, 175, 55, 0.14);
+            transform: translateY(-1px);
+        }
+        .v2-auth-account:focus-visible {
+            outline: 2px solid rgba(212, 175, 55, 0.7);
+            outline-offset: 2px;
+        }
+        .v2-auth-avatar {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 9999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #BF953F, #FCF6BA, #B38728);
+            color: #0a0a0a;
+            font-weight: 700;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+        .v2-auth-name {
+            max-width: 9rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
         .gold-border {
             border: 1px solid rgba(212, 175, 55, 0.3);
         }
@@ -1650,7 +1694,7 @@ Add to desktop
 </div>
 </div>
 </section>
-<section class="py-24 bg-slate-50 dark:bg-slate-900/50 relative overflow-hidden reveal">
+<section class="py-24 bg-slate-50 dark:bg-slate-900/50 relative overflow-hidden reveal" id="v2-faq">
 <div class="max-w-4xl mx-auto px-6">
 <div class="text-center mb-16">
 <h2 class="text-3xl md:text-5xl font-display font-bold mb-6"><span class="gold-gradient">System Parameters.</span> FAQs.</h2>
@@ -3494,17 +3538,79 @@ const ENGINE_COPY = {
               de: 'Anmelden',
               fr: 'Connexion'
             };
+            const ACCOUNT_FALLBACK_I18N = {
+              en: 'Account',
+              zh: '账户',
+              es: 'Cuenta',
+              de: 'Konto',
+              fr: 'Compte'
+            };
+            const LOGIN_BTN_CLASS =
+              'px-5 py-2.5 bg-primary text-black font-semibold rounded-lg hover:brightness-110 transition-all shadow-lg shadow-primary/20';
+            let authUser = null;
+
+            function escapeHtml(s) {
+              return String(s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+            }
+
+            function displayNameFromEmail(email) {
+              const local = String(email || '').includes('@')
+                ? String(email).split('@')[0]
+                : String(email || '');
+              const cleaned = local.trim();
+              if (!cleaned) return '';
+              return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+            }
+
             function syncLoginBtnLabel() {
               const el = document.getElementById('v2-login-btn');
-              if (el) el.textContent = LOGIN_I18N[currentLocale] || LOGIN_I18N.en;
+              if (!el) return;
+              if (authUser) {
+                const email = String(authUser.email || '');
+                const name =
+                  displayNameFromEmail(email) ||
+                  (ACCOUNT_FALLBACK_I18N[currentLocale] || ACCOUNT_FALLBACK_I18N.en);
+                const initial = name.charAt(0).toUpperCase() || 'A';
+                el.className = 'v2-auth-account';
+                el.innerHTML =
+                  '<span class="v2-auth-avatar" aria-hidden="true">' +
+                  escapeHtml(initial) +
+                  '</span><span class="v2-auth-name">' +
+                  escapeHtml(name) +
+                  '</span>';
+                el.title = email || name;
+                el.setAttribute('aria-label', name);
+                el.dataset.authed = '1';
+              } else {
+                el.className = LOGIN_BTN_CLASS;
+                el.textContent = LOGIN_I18N[currentLocale] || LOGIN_I18N.en;
+                el.removeAttribute('title');
+                el.removeAttribute('aria-label');
+                el.dataset.authed = '0';
+              }
             }
+
+            async function refreshAuthChrome() {
+              authUser = await probeAuthUser();
+              syncLoginBtnLabel();
+            }
+
             syncLoginBtnLabel();
+            void refreshAuthChrome();
 
             const loginBtn = document.getElementById('v2-login-btn');
             if (loginBtn) {
               loginBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 clearPendingIntent();
+                if (authUser) {
+                  (window.top || window).location.href = '/app?tab=profile';
+                  return;
+                }
                 goAuthLogin('/');
               });
             }

@@ -196,36 +196,38 @@ function ProfileRenameDialog({
         style={{ top: pos.top, left: pos.left }}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <h2 id={titleId} className="workspace-poju-rename-dialog__title">
-          {t("rename")}
-        </h2>
-        <p id={descId} className="workspace-poju-rename-dialog__desc">
-          {t("rename_prompt")}
-        </p>
-        <input
-          type="text"
-          className="workspace-poju-rename-dialog__input"
-          value={value}
-          maxLength={RENAME_MAX_LEN}
-          autoFocus
-          onChange={(e) => setValue(e.target.value.slice(0, RENAME_MAX_LEN))}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && canSave) onConfirm(trimmed);
-            if (e.key === "Escape") onCancel();
-          }}
-        />
-        <div className="workspace-poju-rename-dialog__actions">
-          <button type="button" className="workspace-poju-rename-dialog__cancel" onClick={onCancel}>
-            {t("rename_cancel")}
-          </button>
-          <button
-            type="button"
-            className="workspace-poju-rename-dialog__confirm"
-            disabled={!canSave}
-            onClick={() => onConfirm(trimmed)}
-          >
-            {t("rename_save")}
-          </button>
+        <div className="workspace-poju-rename-dialog__body">
+          <h2 id={titleId} className="workspace-poju-rename-dialog__title">
+            {t("rename")}
+          </h2>
+          <p id={descId} className="workspace-poju-rename-dialog__desc">
+            {t("rename_prompt")}
+          </p>
+          <input
+            type="text"
+            className="workspace-poju-rename-dialog__input"
+            value={value}
+            maxLength={RENAME_MAX_LEN}
+            autoFocus
+            onChange={(e) => setValue(e.target.value.slice(0, RENAME_MAX_LEN))}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && canSave) onConfirm(trimmed);
+              if (e.key === "Escape") onCancel();
+            }}
+          />
+          <div className="workspace-poju-rename-dialog__actions">
+            <button type="button" className="workspace-poju-rename-dialog__cancel" onClick={onCancel}>
+              {t("rename_cancel")}
+            </button>
+            <button
+              type="button"
+              className="workspace-poju-rename-dialog__confirm"
+              disabled={!canSave}
+              onClick={() => onConfirm(trimmed)}
+            >
+              {t("rename_save")}
+            </button>
+          </div>
         </div>
       </div>
     </>
@@ -280,30 +282,36 @@ function ProfileDeleteDialog({
         style={{ top: pos.top, left: pos.left }}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <h2 id={titleId} className="workspace-poju-rename-dialog__title">
-          {t("delete")}
-        </h2>
-        <p id={descId} className="workspace-poju-rename-dialog__desc">
-          {tCommon("deleteConfirmWarning")}
-          {state.title ? (
-            <>
-              <br />
-              <span className="workspace-poju-rename-dialog__target">{state.title}</span>
-            </>
-          ) : null}
-        </p>
-        <div className="workspace-poju-rename-dialog__actions">
-          <button type="button" className="workspace-poju-rename-dialog__cancel" onClick={onCancel}>
-            {t("rename_cancel")}
-          </button>
-          <button
-            type="button"
-            className="workspace-poju-rename-dialog__confirm is-danger"
-            autoFocus
-            onClick={onConfirm}
-          >
+        <div className="workspace-poju-rename-dialog__status" aria-hidden>
+          <span>Core status: compromised</span>
+          <span className="material-symbols-outlined text-[16px] leading-none">warning</span>
+        </div>
+        <div className="workspace-poju-rename-dialog__body">
+          <h2 id={titleId} className="workspace-poju-rename-dialog__title">
             {t("delete")}
-          </button>
+          </h2>
+          <p id={descId} className="workspace-poju-rename-dialog__desc">
+            {tCommon("deleteConfirmWarning")}
+            {state.title ? (
+              <>
+                <br />
+                <span className="workspace-poju-rename-dialog__target">{state.title}</span>
+              </>
+            ) : null}
+          </p>
+          <div className="workspace-poju-rename-dialog__actions">
+            <button type="button" className="workspace-poju-rename-dialog__cancel" onClick={onCancel}>
+              {t("rename_cancel")}
+            </button>
+            <button
+              type="button"
+              className="workspace-poju-rename-dialog__confirm is-danger"
+              autoFocus
+              onClick={onConfirm}
+            >
+              {t("delete")}
+            </button>
+          </div>
         </div>
       </div>
     </>
@@ -521,8 +529,10 @@ export function WorkspacePojuProfileRecords({
       </WorkspaceScrollArea>
 
       <button type="button" className="add-new-card-button workspace-poju-add-new" onClick={onAddNew}>
-        <span className="plus-icon">+</span>
         <span>{t("enter_new_info")}</span>
+        <span className="workspace-poju-add-new__arrow" aria-hidden>
+          →
+        </span>
       </button>
 
       {renameDialog ? (

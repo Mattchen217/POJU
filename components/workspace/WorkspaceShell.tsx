@@ -30,6 +30,7 @@ import { WorkspaceRightMatrixPanel } from "@/components/workspace/WorkspaceRight
 import { WorkspaceAtmosRightPanel } from "@/components/workspace/WorkspaceAtmosRightPanel";
 import { WorkspaceScrollArea } from "@/components/workspace/WorkspaceScrollArea";
 import { WorkspaceSidebar, WorkspaceSidebarBrand } from "@/components/workspace/WorkspaceSidebar";
+import { WorkspaceStarfieldLayer } from "@/components/workspace/WorkspaceStarfieldLayer";
 import { isWorkspaceRailInteractiveTarget } from "@/components/workspace/workspace-rail-click";
 import { AtmosPanel } from "@/components/workspace/panels/AtmosPanel";
 import {
@@ -47,7 +48,13 @@ type Props = {
 };
 
 function isEngineProduct(tab: WorkspaceTab): tab is WorkspaceProductId {
-  return tab === "poju" || tab === "match" || tab === "syncro" || tab === "glyph";
+  return (
+    tab === "atmos" ||
+    tab === "poju" ||
+    tab === "match" ||
+    tab === "syncro" ||
+    tab === "glyph"
+  );
 }
 
 function RightDrawerContext({
@@ -435,6 +442,7 @@ export function WorkspaceShell({ initialTab }: Props) {
         <AtmosRightRailGate tab={tab} setRightOpen={setRightOpen} />
         <MatchRightRailGate tab={tab} setRightOpen={setRightOpen} />
         <WorkspaceShellSurface sidebarCollapsed={sidebarCollapsed} rightOpen={rightOpen}>
+        <WorkspaceStarfieldLayer />
         <div className="workspace-shell__sky" aria-hidden />
 
         <div className="workspace-shell__main">

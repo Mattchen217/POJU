@@ -61,6 +61,7 @@ const ENGINE_ITEMS: EngineItem[] = [
   {
     tab: "atmos",
     icon: <span className="material-symbols-outlined">blur_on</span>,
+    nested: true,
   },
   {
     tab: "poju",
@@ -320,6 +321,7 @@ function PastSessionsScroll({ children }: { children: ReactNode }) {
 }
 
 const PRODUCT_NEW_NAME: Record<Exclude<WorkspaceProductId, "poju">, string> = {
+  atmos: "Atmos",
   match: "Match",
   syncro: "Syncro",
   glyph: "Glyph",
@@ -500,6 +502,7 @@ export function WorkspaceSidebar({
     if (prevTabRef.current === activeTab) return;
     prevTabRef.current = activeTab;
     const canNest =
+      activeTab === "atmos" ||
       activeTab === "poju" ||
       activeTab === "match" ||
       activeTab === "glyph" ||

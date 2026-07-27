@@ -111,61 +111,72 @@ export function AppDialogProvider({ children }: { children: ReactNode }) {
             aria-modal="true"
             aria-labelledby={request.title ? titleId : undefined}
             aria-describedby={descId}
-            className="app-dialog-panel"
+            className={`app-dialog-panel${isDanger ? " is-danger" : ""}`}
             onMouseDown={(e) => e.stopPropagation()}
           >
-            {request.title ? (
-              <h2 id={titleId} className="app-dialog-panel__title">
-                {request.title}
-              </h2>
+            {isDanger ? (
+              <div className="app-dialog-panel__status" aria-hidden>
+                <span>
+                  <span className="app-dialog-panel__status-dot" />
+                  Core status: compromised
+                </span>
+                <span className="material-symbols-outlined text-[16px] leading-none">warning</span>
+              </div>
             ) : null}
-            <p
-              id={descId}
-              className={`app-dialog-panel__desc${request.title ? " has-title" : ""}`}
-            >
-              {request.message}
-              {request.target ? (
-                <>
-                  <br />
-                  <span className="app-dialog-panel__target">{request.target}</span>
-                </>
+            <div className="app-dialog-panel__body">
+              {request.title ? (
+                <h2 id={titleId} className="app-dialog-panel__title">
+                  {request.title}
+                </h2>
               ) : null}
-            </p>
-            {isPrompt ? (
-              <input
-                ref={inputRef}
-                type="text"
-                value={promptValue}
-                onChange={(e) => setPromptValue(e.target.value)}
-                className="app-dialog-panel__input"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") close(promptValue.trim() || null);
-                  if (e.key === "Escape") close(null);
-                }}
-                autoFocus
-              />
-            ) : null}
-            <div className="app-dialog-panel__actions">
-              {isConfirm || isPrompt ? (
+              <p
+                id={descId}
+                className={`app-dialog-panel__desc${request.title ? " has-title" : ""}`}
+              >
+                {request.message}
+                {request.target ? (
+                  <>
+                    <br />
+                    <span className="app-dialog-panel__target">{request.target}</span>
+                  </>
+                ) : null}
+              </p>
+              {isPrompt ? (
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={promptValue}
+                  onChange={(e) => setPromptValue(e.target.value)}
+                  className="app-dialog-panel__input"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") close(promptValue.trim() || null);
+                    if (e.key === "Escape") close(null);
+                  }}
+                  autoFocus
+                />
+              ) : null}
+              <div className="app-dialog-panel__actions">
+                {isConfirm || isPrompt ? (
+                  <button
+                    type="button"
+                    className="app-dialog-panel__cancel"
+                    onClick={() => close(null)}
+                  >
+                    {request.cancelLabel ?? "Cancel"}
+                  </button>
+                ) : null}
                 <button
                   type="button"
-                  className="app-dialog-panel__cancel"
-                  onClick={() => close(null)}
+                  className={`app-dialog-panel__confirm${isDanger ? " is-danger" : ""}`}
+                  autoFocus={isDanger || isConfirm}
+                  onClick={() => {
+                    if (isPrompt) close(promptValue.trim() || null);
+                    else close(true);
+                  }}
                 >
-                  {request.cancelLabel ?? "Cancel"}
+                  {request.confirmLabel ?? (isConfirm || isPrompt ? "OK" : "OK")}
                 </button>
-              ) : null}
-              <button
-                type="button"
-                className={`app-dialog-panel__confirm${isDanger ? " is-danger" : ""}`}
-                autoFocus={isDanger || isConfirm}
-                onClick={() => {
-                  if (isPrompt) close(promptValue.trim() || null);
-                  else close(true);
-                }}
-              >
-                {request.confirmLabel ?? (isConfirm || isPrompt ? "OK" : "OK")}
-              </button>
+              </div>
             </div>
           </div>
         </div>

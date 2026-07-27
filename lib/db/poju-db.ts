@@ -172,7 +172,7 @@ export interface ArchiveRecord {
   encrypted_data: string;
   iv: string;
   created_at: Date;
-  product: "poju" | "glyph" | "syncro" | "match";
+  product: "poju" | "glyph" | "syncro" | "match" | "atmos";
 }
 
 /** Match v5 — encrypted match report row (plaintext index + encrypted blob). */

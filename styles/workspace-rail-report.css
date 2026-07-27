@@ -43,7 +43,7 @@
   padding: 18% 12% 16%;
   border: none;
   background: transparent;
-  color: rgba(192, 132, 252, 0.98);
+  color: rgba(242, 202, 80, 0.98);
   cursor: pointer;
   box-sizing: border-box;
 }
@@ -52,7 +52,7 @@
   width: 42%;
   height: auto;
   flex-shrink: 0;
-  filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.55));
+  filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.55));
 }
 
 .ws-rail-report__icon-title {
@@ -78,12 +78,12 @@
   width: 100%;
   overflow: hidden;
   border-radius: 14px;
-  border: 1.5px solid var(--ws-frame-border, rgba(167, 139, 250, 0.5));
+  border: 1.5px solid var(--ws-frame-border, rgba(212, 175, 55, 0.5));
   box-shadow: var(
     --ws-frame-shadow,
-    0 0 0 1px rgba(139, 92, 246, 0.16),
+    0 0 0 1px rgba(242, 202, 80, 0.16),
     0 8px 32px rgba(0, 0, 0, 0.25),
-    0 0 28px rgba(139, 92, 246, 0.18),
+    0 0 28px rgba(242, 202, 80, 0.18),
     inset 0 1px 0 rgba(255, 255, 255, 0.12)
   );
 }
@@ -93,7 +93,7 @@
   margin: 0;
   padding: 1.35rem 0.75rem 0;
   box-sizing: border-box;
-  /* Same purple-glass as A4 document icon / energy portrait chrome */
+  /* Same gold-glass as A4 document icon / energy portrait chrome */
   background: var(
     --ws-frame-chrome,
     linear-gradient(
@@ -232,7 +232,7 @@
   column-gap: 0.5rem;
   margin-top: 1.25rem;
   padding-top: 0.85rem;
-  border-top: 1px solid rgba(167, 139, 250, 0.18);
+  border-top: 1px solid rgba(212, 175, 55, 0.18);
 }
 
 .ws-rail-report__footer-slot {
@@ -267,7 +267,7 @@
 .ws-rail-report__nav:hover,
 .ws-rail-report__close:hover {
   color: #fff;
-  background: rgba(139, 92, 246, 0.16);
+  background: rgba(242, 202, 80, 0.16);
 }
 
 .ws-rail-report__close {

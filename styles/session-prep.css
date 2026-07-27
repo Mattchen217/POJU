@@ -591,7 +591,7 @@
 .confirm-dialog-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.85);
+  background: rgba(0, 0, 0, 0.72);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -601,30 +601,34 @@
 }
 
 .confirm-dialog {
-  background: #1a1a25;
-  box-shadow: inset 0 0 0 0.5px rgba(212, 175, 55, 0.3);
-  border-radius: 16px;
+  background: #0b0f12;
+  border: 1px solid rgba(242, 202, 80, 0.4);
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.55),
+    0 0 30px rgba(242, 202, 80, 0.05);
+  border-radius: 0;
   padding: 32px;
   max-width: 500px;
   width: 100%;
 }
 
 .confirm-dialog h2 {
-  color: #d4af37;
+  color: #f2ca50;
   margin-bottom: 12px;
   font-size: 1.25rem;
 }
 
 .confirm-dialog .description {
-  color: #ccc;
+  color: #a1a1aa;
   margin-bottom: 24px;
   line-height: 1.6;
   font-size: 0.875rem;
 }
 
 .info-display {
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(0, 218, 243, 0.18);
+  border-radius: 0;
   padding: 16px;
   margin-bottom: 24px;
 }
@@ -635,7 +639,7 @@
   align-items: flex-start;
   gap: 12px;
   padding: 8px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .info-row:last-child {
@@ -643,32 +647,32 @@
 }
 
 .info-row .label {
-  color: #888;
+  color: #71717a;
   font-size: 13px;
   flex-shrink: 0;
 }
 
 .info-row .value {
-  color: #e5e5e5;
+  color: #e0e2e8;
   font-weight: 500;
   text-align: right;
   font-size: 14px;
 }
 
 .info-row .value-sub {
-  color: #888;
+  color: #71717a;
   font-size: 13px;
   font-weight: normal;
 }
 
 .info-row .value.tz {
-  color: #87ceeb;
+  color: #9cf0ff;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 13px;
 }
 
 .confirm-existing-name {
-  color: #d4af37;
+  color: #f2ca50;
   font-size: 15px;
   font-weight: 500;
   margin: -8px 0 16px;
@@ -676,14 +680,15 @@
 }
 
 .confirm-dialog .reassure {
-  background: rgba(135, 206, 235, 0.05);
-  border-left: 3px solid #87ceeb;
+  background: rgba(0, 218, 243, 0.06);
+  border-left: 3px solid #9cf0ff;
+  border-radius: 0;
   padding: 12px 16px;
   margin-bottom: 24px;
 }
 
 .confirm-dialog .reassure p {
-  color: #87ceeb;
+  color: #9cf0ff;
   font-size: 13px;
   margin: 0 0 4px;
   line-height: 1.5;
@@ -698,14 +703,14 @@
   align-items: flex-start;
   gap: 8px;
   font-size: var(--pj-text-xs);
-  color: var(--pj-text-tertiary);
+  color: #a1a1aa;
   line-height: var(--pj-leading-normal);
   margin-top: 8px;
 }
 
 .confirm-dialog .reassure .privacy-note svg {
   flex-shrink: 0;
-  color: var(--pj-following);
+  color: #9cf0ff;
   margin-top: 2px;
 }
 
@@ -717,11 +722,15 @@
 .dialog-actions button {
   flex: 1;
   padding: 14px;
-  border-radius: 8px;
+  border-radius: 0;
   font-weight: 600;
   cursor: pointer;
   border: none;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
 .dialog-actions button:disabled {
@@ -730,23 +739,28 @@
 }
 
 .dialog-actions .secondary {
-  background: transparent;
-  color: #888;
-  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.1) !important;
+  background: #000;
+  color: #e0e2e8;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: none !important;
 }
 
 .dialog-actions .secondary:hover:not(:disabled) {
-  color: #ccc;
-  /* border-color removed (Step 1) */
+  color: #fff;
+  border-color: #fff;
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .dialog-actions .primary {
-  background: #d4af37;
-  color: #0a0a0f;
+  background: #f2ca50;
+  color: #0b0f12;
+  border: 1px solid rgba(242, 202, 80, 0.5);
+  box-shadow: 0 0 15px rgba(242, 202, 80, 0.15);
 }
 
 .dialog-actions .primary:hover:not(:disabled) {
   background: #e8c56f;
+  box-shadow: 0 0 20px rgba(242, 202, 80, 0.35);
 }
 
 .refund-page {

@@ -9,6 +9,7 @@ import { WorkspaceAtmosPreparingStage } from "@/components/workspace/WorkspaceAt
 import { useWorkspaceAtmosPrepare } from "@/components/workspace/WorkspaceAtmosPrepareContext";
 import { WorkspacePojuBirthHost } from "@/components/workspace/WorkspacePojuBirthHost";
 import { WorkspacePojuBirthSideCopy } from "@/components/workspace/WorkspacePojuBirthSideCopy";
+import { WorkspaceUsageGuideLink } from "@/components/workspace/WorkspaceUsageGuideLink";
 
 /** Birth UI → preparing Spline crossfade duration (ms). */
 const PREPARE_HANDOFF_MS = 480;
@@ -58,15 +59,18 @@ export function AtmosPanel() {
           <PojuProductHero copy={heroCopy} hideActions />
         </div>
         <div className="workspace-product-below workspace-poju-below">
-          <div className="workspace-poju-below__unit">
-            <WorkspacePojuBirthSideCopy hasProfiles={hasProfiles} />
-            <div className="workspace-poju-birth">
-              <WorkspacePojuBirthHost
-                onHasProfilesChange={setHasProfiles}
-                onPrepareStart={startPrepare}
-                usageProduct="atmos"
-              />
+          <div className="workspace-poju-below__cluster">
+            <div className="workspace-poju-below__unit">
+              <WorkspacePojuBirthSideCopy hasProfiles={hasProfiles} />
+              <div className="workspace-poju-birth">
+                <WorkspacePojuBirthHost
+                  onHasProfilesChange={setHasProfiles}
+                  onPrepareStart={startPrepare}
+                  usageProduct="atmos"
+                />
+              </div>
             </div>
+            <WorkspaceUsageGuideLink />
           </div>
         </div>
       </div>
@@ -97,15 +101,18 @@ export function AtmosPanel() {
             <PojuProductHero copy={heroCopy} hideActions />
           </div>
           <div className="workspace-product-below workspace-poju-below">
-            <div className="workspace-poju-below__unit">
-              <WorkspacePojuBirthSideCopy hasProfiles={hasProfiles} />
-              <div className="workspace-poju-birth">
-                <WorkspacePojuBirthHost
-                  onHasProfilesChange={setHasProfiles}
-                  onPrepareStart={startPrepare}
-                  usageProduct="atmos"
-                />
+            <div className="workspace-poju-below__cluster">
+              <div className="workspace-poju-below__unit">
+                <WorkspacePojuBirthSideCopy hasProfiles={hasProfiles} />
+                <div className="workspace-poju-birth">
+                  <WorkspacePojuBirthHost
+                    onHasProfilesChange={setHasProfiles}
+                    onPrepareStart={startPrepare}
+                    usageProduct="atmos"
+                  />
+                </div>
               </div>
+              <WorkspaceUsageGuideLink />
             </div>
           </div>
         </div>

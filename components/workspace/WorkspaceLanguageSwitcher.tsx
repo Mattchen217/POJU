@@ -5,23 +5,28 @@ import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 
 import { usePathname, useRouter } from "@/i18n/navigation";
-import type { MarketingLocaleCode } from "@/lib/i18n/marketing-locale-options";
+import {
+  MARKETING_LOCALE_COMPACT_LABEL,
+  MARKETING_LOCALE_OPTIONS,
+  type MarketingLocaleCode,
+} from "@/lib/i18n/marketing-locale-options";
 
-/** Workspace v1: English + Chinese only (more locales later). */
-export const WORKSPACE_LOCALE_OPTIONS = [
-  { code: "en" as const, label: "English", short: "EN" },
-  { code: "zh" as const, label: "中文", short: "ZH" },
-] as const;
+export const WORKSPACE_LOCALE_OPTIONS = MARKETING_LOCALE_OPTIONS.map((o) => ({
+  code: o.code,
+  label: o.label,
+  short: MARKETING_LOCALE_COMPACT_LABEL[o.code],
+}));
 
-export type WorkspaceLocaleCode = (typeof WORKSPACE_LOCALE_OPTIONS)[number]["code"];
+export type WorkspaceLocaleCode = MarketingLocaleCode;
 
 function resolveWorkspaceLocale(locale: string): WorkspaceLocaleCode {
-  return locale === "zh" ? "zh" : "en";
+  const hit = WORKSPACE_LOCALE_OPTIONS.find((o) => o.code === locale);
+  return hit?.code ?? "en";
 }
 
 type Props = {
   onAfterSelect?: () => void;
-  /** Collapsed rail: show EN / 中文 only */
+  /** Collapsed rail: show compact code only */
   compact?: boolean;
 };
 
@@ -36,7 +41,7 @@ function WorkspaceLanguageSwitcherInner({ onAfterSelect, compact = false }: Prop
   const rootRef = useRef<HTMLDivElement>(null);
   const active = resolveWorkspaceLocale(locale);
   const current = WORKSPACE_LOCALE_OPTIONS.find((o) => o.code === active)!;
-  const compactLabel = active === "zh" ? "中文" : "EN";
+  const compactLabel = current.short;
 
   useEffect(() => {
     if (!open) return;
@@ -63,7 +68,7 @@ function WorkspaceLanguageSwitcherInner({ onAfterSelect, compact = false }: Prop
 
   function select(code: WorkspaceLocaleCode) {
     if (code !== locale) {
-      router.replace(hrefForLocale(), { locale: code as MarketingLocaleCode });
+      router.replace(hrefForLocale(), { locale: code });
     }
     setOpen(false);
     onAfterSelect?.();

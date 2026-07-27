@@ -8,7 +8,7 @@ import { ARCHIVE_UPDATED_EVENT } from "@/lib/archive/runtime-archive";
 import { listActivePojuSessionsForPicker } from "@/lib/cross-product/list-active-poju-sessions-for-picker";
 import { sessionListTopicLine } from "@/lib/poju/session-list-label";
 
-export type WorkspaceProductId = "poju" | "match" | "syncro" | "glyph";
+export type WorkspaceProductId = "atmos" | "poju" | "match" | "syncro" | "glyph";
 
 function pojuHistoryTitle(originalQuestion: string, locale: string): string {
   const snippet = sessionListTopicLine(originalQuestion);

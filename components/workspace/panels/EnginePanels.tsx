@@ -23,6 +23,7 @@ import { useWorkspacePojuPrepare } from "@/components/workspace/WorkspacePojuPre
 import { WorkspacePojuPreparingStage } from "@/components/workspace/WorkspacePojuPreparingStage";
 import { WorkspaceProfileSlotBar } from "@/components/workspace/WorkspaceProfileSlotBar";
 import { WorkspaceScrollArea } from "@/components/workspace/WorkspaceScrollArea";
+import { WorkspaceUsageGuideLink } from "@/components/workspace/WorkspaceUsageGuideLink";
 import { useWorkspaceUnlockRitualResume } from "@/components/workspace/useWorkspaceUnlockRitualResume";
 import {
   useWorkspaceProductHistory,
@@ -52,7 +53,10 @@ function WorkspaceProductHome({ hero, children }: { hero: ReactNode; children: R
     <div className="workspace-product-stack workspace-poju-stack">
       <div className="workspace-product-hero">{hero}</div>
       <div className="workspace-product-below workspace-poju-below">
-        <div className="workspace-product-below__form">{children}</div>
+        <div className="workspace-poju-below__cluster workspace-poju-below__cluster--form">
+          <div className="workspace-product-below__form">{children}</div>
+          <WorkspaceUsageGuideLink />
+        </div>
       </div>
     </div>
   );
@@ -214,14 +218,17 @@ export function PojuPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (i
           <PojuProductHero copy={heroCopy} hideActions />
         </div>
         <div className="workspace-product-below workspace-poju-below">
-          <div className="workspace-poju-below__unit">
-            <WorkspacePojuBirthSideCopy hasProfiles={hasProfiles} />
-            <div className="workspace-poju-birth">
-              <WorkspacePojuBirthHost
-                onHasProfilesChange={setHasProfiles}
-                onPrepareStart={startPrepare}
-              />
+          <div className="workspace-poju-below__cluster">
+            <div className="workspace-poju-below__unit">
+              <WorkspacePojuBirthSideCopy hasProfiles={hasProfiles} />
+              <div className="workspace-poju-birth">
+                <WorkspacePojuBirthHost
+                  onHasProfilesChange={setHasProfiles}
+                  onPrepareStart={startPrepare}
+                />
+              </div>
             </div>
+            <WorkspaceUsageGuideLink />
           </div>
         </div>
       </div>
@@ -252,14 +259,17 @@ export function PojuPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (i
             <PojuProductHero copy={heroCopy} hideActions />
           </div>
           <div className="workspace-product-below workspace-poju-below">
-            <div className="workspace-poju-below__unit">
-              <WorkspacePojuBirthSideCopy hasProfiles={hasProfiles} />
-              <div className="workspace-poju-birth">
-                <WorkspacePojuBirthHost
-                  onHasProfilesChange={setHasProfiles}
-                  onPrepareStart={startPrepare}
-                />
+            <div className="workspace-poju-below__cluster">
+              <div className="workspace-poju-below__unit">
+                <WorkspacePojuBirthSideCopy hasProfiles={hasProfiles} />
+                <div className="workspace-poju-birth">
+                  <WorkspacePojuBirthHost
+                    onHasProfilesChange={setHasProfiles}
+                    onPrepareStart={startPrepare}
+                  />
+                </div>
               </div>
+              <WorkspaceUsageGuideLink />
             </div>
           </div>
         </div>
@@ -433,18 +443,21 @@ export function MatchPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (
         <MatchProductHero copy={heroCopy} hideActions />
       </div>
       <div className="workspace-product-below workspace-poju-below">
-        <div className="workspace-poju-below__unit">
-          <WorkspaceMatchBirthSideCopy hasProfiles={hasProfiles} />
-          <div className="workspace-poju-birth">
-            <WorkspacePojuBirthHost
-              key={match.collectingSlot}
-              usageProduct="match"
-              matchCollectingSlot={match.collectingSlot}
-              excludeProfileId={match.collectingSlot === "b" ? match.profileIdA : null}
-              onHasProfilesChange={setHasProfiles}
-              onPrepareStart={handleBirthConfirmed}
-            />
+        <div className="workspace-poju-below__cluster">
+          <div className="workspace-poju-below__unit">
+            <WorkspaceMatchBirthSideCopy hasProfiles={hasProfiles} />
+            <div className="workspace-poju-birth">
+              <WorkspacePojuBirthHost
+                key={match.collectingSlot}
+                usageProduct="match"
+                matchCollectingSlot={match.collectingSlot}
+                excludeProfileId={match.collectingSlot === "b" ? match.profileIdA : null}
+                onHasProfilesChange={setHasProfiles}
+                onPrepareStart={handleBirthConfirmed}
+              />
+            </div>
           </div>
+          <WorkspaceUsageGuideLink />
         </div>
       </div>
     </div>
