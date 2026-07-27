@@ -1,7 +1,7 @@
 /**
- * Parallel UI shell switch: classic (legacy marketing) vs workspace (V2 landing + app shell).
- * Precedence: ?ui= → localStorage → NEXT_PUBLIC_UI_SHELL → workspace (V2 default).
- * Keep classic via `?ui=classic` — do not delete the legacy home tree.
+ * Parallel UI shell switch: classic (legacy marketing at `/classic`) vs workspace (V2 `/` + `/app`).
+ * Precedence for nav remaps: ?ui= → localStorage → NEXT_PUBLIC_UI_SHELL → workspace (V2 default).
+ * Public home is always V2; classic marketing is kept at `/classic` until retired.
  */
 
 export type UiShellMode = "classic" | "workspace";

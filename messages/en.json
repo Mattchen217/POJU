@@ -133,11 +133,22 @@
     },
     "profile": {
       "headline": "Profiles and account.",
-      "guidance": "Manage birth-chart slots here. Sign-in will land in the account area when registration ships.",
-      "accountSection": "Account (coming soon)",
-      "accountBody": "Email is your account name after registration. Sign-in will land here when auth ships.",
+      "guidance": "Manage birth-chart slots and your signed-in account here.",
+      "accountSection": "Account",
+      "accountBody": "Sign in to buy Passes and sync your account across devices.",
       "slotsSection": "Chart slots",
-      "setupCta": "Set up or edit a profile"
+      "setupCta": "Set up or edit a profile",
+      "loginCta": "Log in",
+      "signupCta": "Sign up",
+      "logout": "Log out",
+      "loggingOut": "Signing out…",
+      "signedInAs": "Signed in as {email}",
+      "changePassword": "Change password",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm password",
+      "updatePassword": "Update password",
+      "updatingPassword": "Updating…",
+      "passwordUpdated": "Password updated."
     },
     "language": {
       "siteLabel": "Site language"

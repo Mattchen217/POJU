@@ -21,7 +21,8 @@ import {
 import { useWorkspaceAtmosPrepareOptional } from "@/components/workspace/WorkspaceAtmosPrepareContext";
 import { useWorkspaceMatchPrepareOptional } from "@/components/workspace/WorkspaceMatchPrepareContext";
 import { useWorkspacePojuPrepareOptional } from "@/components/workspace/WorkspacePojuPrepareContext";
-import { Link } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
+import { useAuthUser } from "@/lib/auth/use-auth-user";
 import {
   deleteArchiveItem,
   renameArchiveItem,
@@ -474,7 +475,11 @@ export function WorkspaceSidebar({
   showBrand = true,
 }: Props) {
   const t = useTranslations("workspace.tabs");
+  const tWs = useTranslations("workspace");
+  const tProfile = useTranslations("workspace.profile");
   const tBlurb = useTranslations("workspace.blurb");
+  const router = useRouter();
+  const { user, email, ready } = useAuthUser();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   /** Sibling focus under an engine: New XOR Past — never both. */
   const [nestFocus, setNestFocus] = useState<Record<string, "new" | "past" | null>>({});
@@ -593,8 +598,22 @@ export function WorkspaceSidebar({
 
         <div className="workspace-sidebar__bottom">
           <WorkspaceAccountPlaceholder
+            email={
+              !ready
+                ? tWs("guest")
+                : user
+                  ? email
+                  : tProfile("loginCta")
+            }
             active={activeTab === "profile"}
-            onClick={onSelectProfile}
+            onClick={() => {
+              if (!ready) return;
+              if (user) {
+                onSelectProfile();
+                return;
+              }
+              router.push("/login");
+            }}
             className="workspace-sidebar__account"
           />
           <div className="workspace-sidebar__legal-slot">

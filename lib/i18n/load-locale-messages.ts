@@ -3,7 +3,7 @@ import path from "node:path";
 
 import type { AbstractIntlMessages } from "next-intl";
 
-const LOCALE_MODULES = ["contact"] as const;
+const LOCALE_MODULES = ["contact", "auth"] as const;
 
 function readLocaleModule(locale: string, mod: (typeof LOCALE_MODULES)[number]): Record<string, unknown> | null {
   const filePath = path.join(process.cwd(), "messages", locale, `${mod}.json`);

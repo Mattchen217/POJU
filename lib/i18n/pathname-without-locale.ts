@@ -28,10 +28,32 @@ export function isHomeRoute(pathname: string): boolean {
   return getPathnameWithoutLocale(pathname) === "/";
 }
 
+/** Legacy V1 marketing home kept at `/classic` until the tree is deleted. */
+export function isClassicLandingRoute(pathname: string): boolean {
+  return getPathnameWithoutLocale(pathname) === "/classic";
+}
+
 /** Left-sidebar workspace shell (`/app`) — skip marketing chrome. */
 export function isWorkspaceAppRoute(pathname: string): boolean {
   const path = getPathnameWithoutLocale(pathname);
   return path === "/app" || path.startsWith("/app/");
+}
+
+/** Auth pages bring their own shell — skip marketing chrome. */
+export function isAuthRoute(pathname: string): boolean {
+  const path = getPathnameWithoutLocale(pathname);
+  return (
+    path === "/login" ||
+    path === "/signup" ||
+    path === "/verify" ||
+    path === "/forgot-password" ||
+    path === "/reset-password" ||
+    path.startsWith("/login/") ||
+    path.startsWith("/signup/") ||
+    path.startsWith("/verify/") ||
+    path.startsWith("/forgot-password/") ||
+    path.startsWith("/reset-password/")
+  );
 }
 
 export type SiteNavActive = "poju" | "glyph" | "syncro" | "match" | "archive";

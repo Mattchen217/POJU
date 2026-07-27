@@ -1,38 +1,42 @@
 "use client";
 
 import { Suspense } from "react";
+import { usePathname } from "next/navigation";
 
 import { useUiShell } from "@/components/workspace/use-ui-shell";
+import { isClassicLandingRoute, isHomeRoute } from "@/lib/i18n/pathname-without-locale";
 
 function UiShellSwitcherInner() {
   const { shell, setShell, ready } = useUiShell();
+  const pathname = usePathname();
 
   if (!ready) return null;
+
+  const onClassic =
+    shell === "classic" || isClassicLandingRoute(pathname);
+  const onWorkspace =
+    shell === "workspace" || (isHomeRoute(pathname) && !isClassicLandingRoute(pathname));
 
   return (
     <div className="workspace-ui-switcher" role="group" aria-label="UI shell switcher">
       <button
         type="button"
-        className={shell === "classic" ? "is-active" : undefined}
-        aria-pressed={shell === "classic"}
+        className={onClassic ? "is-active" : undefined}
+        aria-pressed={onClassic}
         onClick={() => {
           setShell("classic");
-          if (typeof window !== "undefined" && window.location.pathname.includes("/app")) {
-            window.location.href = "/";
-          } else {
-            window.location.reload();
-          }
+          window.location.href = "/classic";
         }}
       >
         Classic
       </button>
       <button
         type="button"
-        className={shell === "workspace" ? "is-active" : undefined}
-        aria-pressed={shell === "workspace"}
+        className={onWorkspace && !onClassic ? "is-active" : undefined}
+        aria-pressed={onWorkspace && !onClassic}
         onClick={() => {
           setShell("workspace");
-          window.location.href = "/app?tab=atmos";
+          window.location.href = "/";
         }}
       >
         Workspace
@@ -41,7 +45,7 @@ function UiShellSwitcherInner() {
   );
 }
 
-/** Floating Classic / Workspace control so the new shell stays reversible. */
+/** Floating Classic / Workspace control — Classic = `/classic`, Workspace = V2 `/`. */
 export function UiShellSwitcher() {
   return (
     <Suspense fallback={null}>

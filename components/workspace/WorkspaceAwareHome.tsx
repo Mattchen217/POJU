@@ -20,11 +20,8 @@ function HomeShellPaint() {
 }
 
 /**
- * Server passes classic vs workspace home trees.
- * Default shell is V2 workspace landing; classic remains at `?ui=classic`.
- *
- * Suspense fallback is a solid paint only — never a second V2 iframe instance
- * (that remount caused: show → blank → show again).
+ * Server passes classic vs workspace home trees (legacy helper).
+ * Prefer dedicated routes: `/` = V2, `/classic` = V1 marketing.
  */
 export function WorkspaceAwareHome({
   classic,
