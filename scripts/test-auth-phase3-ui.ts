@@ -62,7 +62,7 @@ function main() {
     "full-page redirect",
   ]);
   mustInclude("components/auth/use-redirect-if-signed-in.ts", ["onAuthStateChange", "SIGNED_IN"]);
-  mustInclude("app/api/auth/callback/route.ts", ["exchangeCodeForSession", "/app"]);
+  mustInclude("app/api/auth/callback/route.ts", ["exchangeCodeForSession", 'safeNextPath(url.searchParams.get("next"), "/")']);
   mustInclude("lib/auth/middleware-guard.ts", ["localizedPath", "/login"]);
   mustInclude("lib/i18n/pathname-without-locale.ts", ["isAuthRoute", "/forgot-password", "/reset-password"]);
   mustInclude("lib/i18n/load-locale-messages.ts", ['"auth"']);

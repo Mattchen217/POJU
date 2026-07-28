@@ -19,7 +19,7 @@ function VerifyForm() {
   const router = useRouter();
   const emailParam = searchParams.get("email")?.trim().toLowerCase() ?? "";
   const mode = searchParams.get("mode") === "signup" ? "signup" : "email";
-  const next = safeNextPath(searchParams.get("next"), "/app");
+  const next = safeNextPath(searchParams.get("next"), "/");
   const [email, setEmail] = useState(emailParam);
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);

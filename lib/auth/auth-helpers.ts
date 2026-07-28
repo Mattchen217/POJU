@@ -11,8 +11,10 @@ export function normalizeEmail(email: string): string {
 /**
  * Only allow same-origin relative paths (block open redirects).
  * Rejects protocol-relative (`//evil.com`) and absolute URLs.
+ * Default return path is site home `/` — not `/app` — so login from marketing
+ * returns there unless callers pass an explicit `next`.
  */
-export function safeNextPath(raw: string | null | undefined, fallback = "/app"): string {
+export function safeNextPath(raw: string | null | undefined, fallback = "/"): string {
   if (!raw) return fallback;
   const next = raw.trim();
   if (!next.startsWith("/")) return fallback;

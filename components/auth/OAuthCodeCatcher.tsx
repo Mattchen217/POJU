@@ -4,7 +4,8 @@ import { useEffect } from "react";
 
 /**
  * If OAuth returns `?code=` on the marketing home (Site URL fallback),
- * send it to the server callback so cookies are set and the user reaches /app.
+ * send it to the server callback so cookies are set, then honor `next`
+ * (defaults to `/` — the page the user came from when unspecified).
  */
 export function OAuthCodeCatcher() {
   useEffect(() => {
@@ -27,7 +28,7 @@ export function OAuthCodeCatcher() {
         target.searchParams.set(key, value);
       });
       if (!target.searchParams.get("next")) {
-        target.searchParams.set("next", "/app");
+        target.searchParams.set("next", "/");
       }
       window.location.replace(target.toString());
     } catch {

@@ -103,8 +103,10 @@ function buildRedirectTo(site: string, nextPath: string): string {
 /**
  * Social OAuth — full-page redirect only.
  * Popup + PKCE + COOP was closing early and leaving the opener on /login.
+ * Uses window.location.origin so PKCE cookies and redirectTo share the same host
+ * (www is canonicalized to apex via next.config redirect).
  */
-export function OAuthButtons({ nextPath = "/app", disabled = false }: Props) {
+export function OAuthButtons({ nextPath = "/", disabled = false }: Props) {
   const t = useTranslations("auth.oauth");
   const tErr = useTranslations("auth.errors");
   const configured = isSupabaseConfigured();

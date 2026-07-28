@@ -615,7 +615,7 @@ export function WorkspaceSidebar({
                 onSelectProfile();
                 return;
               }
-              router.push("/login");
+              router.push("/login?next=/app");
             }}
             className="workspace-sidebar__account"
           />

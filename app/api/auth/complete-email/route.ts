@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     }
 
     const email = normalizeEmail(parsed.data.email);
-    const next = safeNextPath(parsed.data.next, "/app");
+    const next = safeNextPath(parsed.data.next, "/");
     const supabase = await createSupabaseServerClient();
     const {
       data: { user },

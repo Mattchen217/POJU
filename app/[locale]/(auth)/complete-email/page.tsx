@@ -21,7 +21,7 @@ function CompleteEmailForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, ready, signOut, refresh } = useAuthUser();
-  const next = safeNextPath(searchParams.get("next"), "/app");
+  const next = safeNextPath(searchParams.get("next"), "/");
   const isPopup = searchParams.get("popup") === "1";
 
   const [email, setEmail] = useState("");

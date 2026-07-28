@@ -104,10 +104,9 @@ export function applyAuthRouteGuard(
       pathNoLocale.startsWith("/login/") ||
       pathNoLocale.startsWith("/signup/"))
   ) {
-    const next = safeNextPath(request.nextUrl.searchParams.get("next"), "/app");
-    const dest = request.nextUrl.clone();
-    dest.pathname = localizedPath(locale, next);
-    dest.search = "";
+    const next = safeNextPath(request.nextUrl.searchParams.get("next"), "/");
+    const dest = new URL(next, request.nextUrl.origin);
+    dest.pathname = localizedPath(locale, dest.pathname || "/");
     const redirect = NextResponse.redirect(dest);
     copyCookies(response, redirect);
     return redirect;

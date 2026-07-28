@@ -27,7 +27,7 @@ export default async function middleware(request: NextRequest) {
       target.searchParams.set(key, value);
     });
     if (!target.searchParams.get("next")) {
-      target.searchParams.set("next", "/app");
+      target.searchParams.set("next", "/");
     }
     return NextResponse.redirect(target);
   }

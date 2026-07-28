@@ -47,9 +47,10 @@ async function main() {
     "../lib/auth/auth-helpers"
   );
   assert(safeNextPath("/app") === "/app", "safe next /app");
-  assert(safeNextPath("//evil.com") === "/app", "block protocol-relative");
-  assert(safeNextPath("https://evil.com") === "/app", "block absolute");
+  assert(safeNextPath("//evil.com") === "/", "block protocol-relative");
+  assert(safeNextPath("https://evil.com") === "/", "block absolute");
   assert(safeNextPath("/reset-password") === "/reset-password", "allow reset");
+  assert(safeNextPath(null) === "/", "default home");
   assert(normalizeEmail("  A@B.Com ") === "a@b.com", "normalize email");
   assert(mapAuthErrorCode("Invalid login credentials") === "invalid_credentials", "map creds");
   assert(mapAuthErrorCode("Email not confirmed") === "email_not_confirmed", "map unconfirmed");

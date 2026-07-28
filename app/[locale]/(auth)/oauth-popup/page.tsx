@@ -78,7 +78,7 @@ function OAuthPopupFinish() {
 
     void (async () => {
       const code = searchParams.get("code");
-      const next = safeNextPath(searchParams.get("next"), "/app");
+      const next = safeNextPath(searchParams.get("next"), "/");
       const oauthError = searchParams.get("error");
 
       if (oauthError || !code) {

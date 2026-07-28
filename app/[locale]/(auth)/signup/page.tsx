@@ -19,7 +19,7 @@ function SignupForm() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
-  const next = safeNextPath(searchParams.get("next"), "/app");
+  const next = safeNextPath(searchParams.get("next"), "/");
   useRedirectIfSignedIn(next);
 
   return (

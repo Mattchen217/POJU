@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const origin = url.origin;
   const code = url.searchParams.get("code");
-  const next = safeNextPath(url.searchParams.get("next"), "/app");
+  const next = safeNextPath(url.searchParams.get("next"), "/");
   const isPopup = url.searchParams.get("popup") === "1";
   const cookiesToSet: CookieToSet[] = [];
 

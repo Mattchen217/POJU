@@ -115,10 +115,10 @@ export function ProfilePanel() {
           <WorkspaceAccountPlaceholder email={tWs("guest")} />
           <p className="m-0 text-sm text-[var(--ws-text-secondary,#9a9cae)]">{t("accountBody")}</p>
           <div className="flex flex-wrap gap-2">
-            <Link href="/login" className="workspace-link-btn">
+            <Link href="/login?next=/app" className="workspace-link-btn">
               {t("loginCta")}
             </Link>
-            <Link href="/signup" className="workspace-link-btn">
+            <Link href="/signup?next=/app" className="workspace-link-btn">
               {t("signupCta")}
             </Link>
           </div>
