@@ -22,7 +22,7 @@ export async function GET() {
 
     const supabase = await createSupabaseServerClient();
 
-    const [passesRes, purchasesRes, usageRes, atmosRes] = await Promise.all([
+    const [passesRes, purchasesRes, usageRes, atmosRes, profileRes] = await Promise.all([
       supabase
         .from("user_passes")
         .select(
@@ -51,6 +51,11 @@ export async function GET() {
         .gt("ends_at", new Date().toISOString())
         .order("ends_at", { ascending: false })
         .limit(20),
+      supabase
+        .from("profiles")
+        .select("stripe_customer_id, notify_pass_low, notify_marketing, display_name")
+        .eq("id", user.id)
+        .maybeSingle(),
     ]);
 
     if (passesRes.error) {
@@ -65,8 +70,12 @@ export async function GET() {
     if (atmosRes.error) {
       console.error("[account/summary] atmos_entitlements", atmosRes.error.code);
     }
+    if (profileRes.error) {
+      console.error("[account/summary] profiles", profileRes.error.code);
+    }
 
     const passes = passesRes.data;
+    const profile = profileRes.data;
     const flex =
       typeof passes?.flex_balance === "number"
         ? passes.flex_balance
@@ -81,6 +90,10 @@ export async function GET() {
     return NextResponse.json({
       ok: true,
       email: user.email ?? null,
+      has_stripe_customer: Boolean(profile?.stripe_customer_id?.trim()),
+      notify_pass_low: profile?.notify_pass_low ?? true,
+      notify_marketing: profile?.notify_marketing ?? false,
+      display_name: profile?.display_name ?? null,
       pass_balance: total,
       flex_balance: flex,
       sub_balance: sub,

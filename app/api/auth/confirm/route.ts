@@ -37,7 +37,7 @@ export async function GET(request: Request) {
 
   try {
     const supabase = await createSupabaseServerClient();
-    const { error } = await supabase.auth.verifyOtp({
+    const { data, error } = await supabase.auth.verifyOtp({
       token_hash: tokenHash,
       type,
     });
@@ -45,6 +45,14 @@ export async function GET(request: Request) {
       console.error("[auth/confirm]", error.name, error.message);
       return NextResponse.redirect(new URL("/login?error=link_expired", origin));
     }
+
+    // Email-change confirm for OAuth phone-only users → ensure email is present
+    if (type === "email_change" && data.user && !data.user.email?.trim()) {
+      return NextResponse.redirect(
+        new URL(`/complete-email?next=${encodeURIComponent(next)}`, origin),
+      );
+    }
+
     return NextResponse.redirect(new URL(next, origin));
   } catch (error) {
     console.error("[auth/confirm] unexpected", error instanceof Error ? error.name : "unknown");

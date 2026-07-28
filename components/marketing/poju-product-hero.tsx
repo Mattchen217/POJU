@@ -26,18 +26,29 @@ export type PojuProductHeroCopy = {
 export function PojuProductHero({
   copy,
   hideActions = false,
+  scene = "/animations/POJURENscene.splinecode",
+  initialZoom = 0.62,
+  hideStarrySky = false,
+  hideVignette = false,
 }: {
   copy: PojuProductHeroCopy;
   /** Workspace center: no CTA / billing strip */
   hideActions?: boolean;
+  /** Spline scene URL — Atmos workspace uses `/spline/atmoswork.splinecode` */
+  scene?: string;
+  initialZoom?: number;
+  hideStarrySky?: boolean;
+  hideVignette?: boolean;
 }) {
   return (
     <ProductMarketingHero
       theme="poju"
+      hideStarrySky={hideStarrySky}
+      hideVignette={hideVignette}
       background={
         <HeroSpline
-          scene="/animations/POJURENscene.splinecode"
-          initialZoom={0.62}
+          scene={scene}
+          initialZoom={initialZoom}
           className="poju-hero-spline"
         />
       }

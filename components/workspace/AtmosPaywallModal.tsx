@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { PassPurchaseModal } from "@/components/account/PassPurchaseModal";
 import { unlockWithPass } from "@/lib/passes/unlock-with-pass";
 import "@/styles/poju-paywall-inline.css";
 
@@ -15,8 +16,9 @@ type Props = {
 };
 
 /**
- * Atmos unlock: spends 1 Pass and starts a 30-day entitlement for this account+record.
- * Payment gateway for buying Passes lives on Pricing; this modal only consumes Passes.
+ * Atmos unlock: 1 Pass → 30-day entitlement for this account+record.
+ * Spend order (server): subscription Passes first, then purchased Flex.
+ * No balance → Pass purchase / subscribe modal.
  */
 export function AtmosPaywallModal({
   locale,
@@ -26,13 +28,11 @@ export function AtmosPaywallModal({
   busy = false,
 }: Props) {
   const zh = locale.startsWith("zh");
-  const [codeOpen, setCodeOpen] = useState(false);
-  const [code, setCode] = useState("");
   const [payBusy, setPayBusy] = useState(false);
-  const [codeBusy, setCodeBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [buyOpen, setBuyOpen] = useState(false);
 
-  async function spendPass(via: "payment" | "code") {
+  async function spendPass() {
     if (!recordKey.trim()) {
       setErr(zh ? "缺少档案记录" : "Missing profile record");
       return;
@@ -48,17 +48,13 @@ export function AtmosPaywallModal({
       if (result.error === "unauthorized" || result.error === "pass_login_required") {
         setErr(zh ? "请先登录后再使用 Pass" : "Sign in to use a Pass");
       } else if (result.error === "insufficient_balance") {
-        setErr(
-          zh
-            ? "Pass 不足，请先购买或订阅"
-            : "Not enough Passes — buy or subscribe first",
-        );
+        setBuyOpen(true);
       } else {
         setErr(zh ? "解锁失败，请重试" : "Unlock failed — try again");
       }
       return;
     }
-    await onUnlocked(via);
+    await onUnlocked("payment");
   }
 
   async function handlePay() {
@@ -66,109 +62,88 @@ export function AtmosPaywallModal({
     setPayBusy(true);
     setErr(null);
     try {
-      await spendPass("payment");
+      await spendPass();
     } finally {
       setPayBusy(false);
     }
   }
 
-  async function handleRedeem() {
-    if (codeBusy || busy || !code.trim()) return;
-    setCodeBusy(true);
-    setErr(null);
-    try {
-      void code;
-      await spendPass("code");
-    } finally {
-      setCodeBusy(false);
-    }
-  }
-
   return (
-    <div
-      className="atmos-paywall-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="atmos-paywall-title"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-      onKeyDown={(e) => {
-        if (e.key === "Escape") onClose();
-      }}
-    >
-      <div className="atmos-paywall-sheet">
-        <button type="button" className="atmos-paywall-sheet__close" onClick={onClose} aria-label={zh ? "关闭" : "Close"}>
-          ×
-        </button>
-        <div className="pwall">
-          <div className="pwall__lab">
-            <span aria-hidden>🔒</span>
-            {zh ? "解锁今日场域预报" : "Unlock today's field forecast"}
-          </div>
-          <h2 id="atmos-paywall-title" className="pwall__title">
-            {zh ? (
-              <>
-                查看<span className="pwall__gold">今日能量气象</span>与行动建议
-              </>
-            ) : (
-              <>
-                See today&apos;s <span className="pwall__gold">energy weather</span> &amp; one clear move
-              </>
-            )}
-          </h2>
-          <p className="pwall__sub">
-            {zh
-              ? "消耗 1 个 Pass，对该档案开启 30 天追踪窗口。期内可反复展开阅读。"
-              : "Spend 1 Pass to open a 30-day tracking window for this profile. Reopen readings anytime within the window."}
-          </p>
+    <>
+      <div
+        className="atmos-paywall-backdrop"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="atmos-paywall-title"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) onClose();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") onClose();
+        }}
+      >
+        <div className="atmos-paywall-sheet">
           <button
             type="button"
-            className="pwall__cta"
-            disabled={payBusy || busy}
-            onClick={() => void handlePay()}
+            className="atmos-paywall-sheet__close"
+            onClick={onClose}
+            aria-label={zh ? "关闭" : "Close"}
           >
-            {payBusy || busy
-              ? zh
-                ? "处理中…"
-                : "Working…"
-              : zh
-                ? "✦ 使用 1 Pass 解锁 · 30 天"
-                : "✦ Unlock with 1 Pass · 30 days"}
+            ×
           </button>
-          {err ? (
-            <p className="m-0 mt-2 text-center text-xs text-[#fca5a5]" role="alert">
-              {err}
-            </p>
-          ) : null}
-          <button
-            type="button"
-            className="pwall__code-toggle"
-            onClick={() => setCodeOpen((v) => !v)}
-          >
-            {zh ? "有体验码？" : "Have a code?"}
-          </button>
-          {codeOpen ? (
-            <div className="pwall__code-row">
-              <input
-                className="pwall__code-input"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                placeholder={zh ? "体验码 ATMOS-XXXX" : "Code ATMOS-XXXX"}
-                aria-label={zh ? "体验码" : "Unlock code"}
-              />
-              <button
-                type="button"
-                className="pwall__code-go"
-                disabled={codeBusy || busy || !code.trim()}
-                onClick={() => void handleRedeem()}
-              >
-                {zh ? "兑换" : "Redeem"}
-              </button>
+          <div className="pwall">
+            <div className="pwall__lab">
+              <span aria-hidden>🔒</span>
+              {zh ? "解锁今日场域预报" : "Unlock today's field forecast"}
             </div>
-          ) : null}
+            <h2 id="atmos-paywall-title" className="pwall__title">
+              {zh ? (
+                <>
+                  查看<span className="pwall__gold">今日能量气象</span>与行动建议
+                </>
+              ) : (
+                <>
+                  See today&apos;s <span className="pwall__gold">energy weather</span> &amp; one clear
+                  move
+                </>
+              )}
+            </h2>
+            <p className="pwall__sub">
+              {zh
+                ? "消耗 1 个 Pass（优先订阅额度），对该档案开启 30 天追踪窗口。"
+                : "Spend 1 Pass (subscription balance first) to open a 30-day tracking window for this profile."}
+            </p>
+            <button
+              type="button"
+              className="pwall__cta"
+              disabled={payBusy || busy}
+              onClick={() => void handlePay()}
+            >
+              {payBusy || busy
+                ? zh
+                  ? "处理中…"
+                  : "Working…"
+                : zh
+                  ? "✦ 使用 1 Pass 解锁 · 30 天"
+                  : "✦ Unlock with 1 Pass · 30 days"}
+            </button>
+            <button type="button" className="pwall__code-toggle" onClick={() => setBuyOpen(true)}>
+              {zh ? "购买 / 订阅 Pass" : "Buy / subscribe Passes"}
+            </button>
+            {err ? (
+              <p className="m-0 mt-2 text-center text-xs text-[#fca5a5]" role="alert">
+                {err}
+              </p>
+            ) : null}
+          </div>
         </div>
       </div>
-    </div>
+
+      <PassPurchaseModal
+        open={buyOpen}
+        onClose={() => setBuyOpen(false)}
+        reason="insufficient"
+      />
+    </>
   );
 }

@@ -112,6 +112,45 @@
         .glow-effect {
             box-shadow: 0 0 20px rgba(212, 175, 55, 0.15);
         }
+        /* Product preview: OS window + screen bezel + rear gold halo */
+        .v2-product-stage {
+            position: relative;
+            padding: 1.25rem 0.75rem 1.75rem;
+        }
+        .v2-product-halo {
+            position: absolute;
+            inset: -6% -4% -10% -4%;
+            pointer-events: none;
+            z-index: 0;
+            background:
+              radial-gradient(ellipse 68% 58% at 50% 42%, rgba(212, 175, 55, 0.42) 0%, rgba(212, 175, 55, 0.18) 38%, rgba(184, 134, 11, 0.06) 58%, transparent 72%);
+            filter: blur(36px);
+        }
+        .v2-product-frame {
+            position: relative;
+            z-index: 1;
+            border-color: rgba(212, 175, 55, 0.28) !important;
+            box-shadow:
+              0 0 0 1px rgba(212, 175, 55, 0.12),
+              0 0 36px rgba(212, 175, 55, 0.28),
+              0 0 72px rgba(212, 175, 55, 0.16),
+              0 28px 56px rgba(0, 0, 0, 0.55);
+        }
+        .v2-product-screen {
+            background: #05070a;
+            padding: 3px;
+        }
+        .v2-product-screen img {
+            display: block;
+            width: 100%;
+            height: auto;
+            border-radius: 0.5rem;
+        }
+        @media (min-width: 1024px) {
+            .v2-product-stage {
+                padding: 1.75rem 1.25rem 2.25rem;
+            }
+        }
         .blur-bg {
             backdrop-filter: blur(12px);
         }
@@ -343,22 +382,54 @@
             transform: translateY(-4px) scale(1.04);
             z-index: 30;
         }
-        /* Engine bars: size locked to original POJU card (width→hbar height, height→vbar height) */
-        #v2-engine-bars .v2-engine-hbar {
-            box-sizing: border-box;
-            overflow: hidden;
-        }
-        #v2-engine-bars .v2-engine-vbar {
-            box-sizing: border-box;
+        /* Engine bars removed from DOM; keep rules harmless if reintroduced */
+        #v2-engine-bars { display: none !important; }
+        /* ATMOS tall card: copy block = one square height (CTA aligns with PIVOT); spline below */
+        #v2-engine-poju-card .v2-engine-atmos-copy {
+            display: flex;
+            flex-direction: column;
             min-height: 0;
+            flex: 1 1 auto;
+        }
+        #v2-engine-poju-card .v2-atmos-spline {
+            position: relative;
+            width: 100%;
+            margin-top: 1rem;
+            flex: 1 1 auto;
+            min-height: 10rem;
+            border-radius: 1rem;
+            overflow: hidden;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        #v2-engine-poju-card .v2-atmos-spline canvas {
+            display: block;
+            width: 100% !important;
+            height: 100% !important;
         }
         @media (min-width: 1024px) {
-            #v2-engine-bars .v2-engine-hbar {
-                flex-direction: row;
-                align-items: center;
+            #v2-engine-poju-card .v2-engine-atmos-copy {
+                flex: 0 0 auto;
             }
-            #v2-engine-bars .v2-engine-vbar-row {
-                gap: 2rem; /* match engines grid gap-8 */
+            #v2-engine-poju-card .v2-atmos-spline {
+                flex: 1 1 0;
+                min-height: 0;
+            }
+        }
+        /* Engine cards: hide legacy subtitle; tagline = primary yellow; gold gradient reserved for titles */
+        [data-engine-subtitle] {
+            display: none !important;
+        }
+        .v2-engine-tagline {
+            font-size: 1rem;
+            font-weight: 600;
+            line-height: 1.45;
+            letter-spacing: 0.01em;
+            color: #D4AF37; /* same as Go to * hover (text-primary) */
+        }
+        @media (min-width: 768px) {
+            .v2-engine-tagline {
+                font-size: 1.0625rem;
             }
         }
         /* FAQ accordion: match site glass cards (rounded-2xl + gold hover) */
@@ -1308,153 +1379,87 @@ Add to desktop
 </div>
 </div>
 </section>
-<section class="py-24 relative overflow-hidden animate-fade-in-up" style="animation-delay: 0.4s;">
+<section id="v2-product-preview" class="pt-16 pb-10 md:pt-20 md:pb-12 relative overflow-hidden animate-fade-in-up" style="animation-delay: 0.35s;" aria-label="Eastern OS product preview">
 <div class="max-w-7xl mx-auto px-6">
-<div class="text-center mb-16">
-<h2 class="text-3xl md:text-5xl font-display font-bold mb-6">Four Specialized Engines. Aligned by Need.</h2>
-<p class="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-                    Tailored analytical dimensions for distinct situational challenges. From long-term transitions and instant resonance to spatial-temporal routing and dual-matrix synergy — precisely calibrated to your immediate context.
-                </p>
-</div>
-<div class="mb-8 relative">
-<div class="group relative w-full overflow-hidden rounded-2xl border border-white/10 bg-slate-900 shadow-2xl shadow-black/40">
-<div class="flex items-center justify-between border-b border-white/10 bg-slate-800/50 px-4 py-3">
+<div class="mb-8 v2-product-stage">
+<div class="v2-product-halo" aria-hidden="true"></div>
+<div class="group relative w-full overflow-hidden rounded-2xl border border-white/10 bg-slate-900 v2-product-frame">
+<div class="flex items-center justify-between border-b border-white/10 bg-slate-800/70 px-4 py-3">
 <div class="flex gap-2">
-<div class="h-3 w-3 rounded-full bg-red-500/20"></div>
-<div class="h-3 w-3 rounded-full bg-yellow-500/20"></div>
-<div class="h-3 w-3 rounded-full bg-green-500/20"></div>
+<div class="h-3 w-3 rounded-full bg-red-500/70"></div>
+<div class="h-3 w-3 rounded-full bg-yellow-500/70"></div>
+<div class="h-3 w-3 rounded-full bg-green-500/70"></div>
 </div>
-<div class="font-mono text-[10px] uppercase tracking-widest text-slate-500">eastern_os · decision matrix</div>
+<div class="font-mono text-[10px] uppercase tracking-widest text-slate-400">eastern_os · decision matrix</div>
 <div class="w-8"></div>
 </div>
-<div class="p-1">
-<img alt="Eastern OS decision matrix preview" class="h-auto w-full rounded-lg" src="/v2/product-preview.png"/>
+<div class="v2-product-screen">
+<img alt="Eastern OS — 30-Day Decision & Status Calendar" width="1600" height="900" src="/v2/v2.png"/>
 </div>
 </div>
-</div>
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 lg:grid-rows-2 gap-8 auto-rows-fr" id="v2-engines-grid">
-<a href="/app?tab=poju" target="_top" data-engine="pivot" id="v2-engine-poju-card" class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full md:col-span-2 lg:col-span-1 lg:row-span-2">
-<div class="flex justify-between items-start mb-6">
-<div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-<span class="material-symbols-outlined text-3xl text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">self_improvement</span>
-</div>
-<span class="text-sm font-mono text-slate-500">$9.99</span>
-</div>
-<h3 class="text-xl font-bold" data-engine-title>PIVOT</h3>
-<p class="text-sm text-primary font-medium mt-1" data-engine-subtitle>Transitions & Strategic Decisions</p>
-<p class="text-sm text-slate-300/90 mt-3 mb-3 leading-relaxed" data-engine-tagline>At life's pivotal crossroads, what you need most is a master map.</p>
-<p class="text-slate-600 dark:text-slate-400 mb-6 flex-1 text-sm md:text-base leading-relaxed" data-engine-desc>Pivot is a system engineered for major transitions and critical decisions. Through deep dialogue, it clarifies your true circumstances and applies Eastern decision models for multi-dimensional simulation, delivering a comprehensive decision report with blind-spot diagnostics and actionable roadmaps—giving you the clarity and confidence to navigate the challenge ahead.</p>
-<span class="text-primary font-semibold flex items-center gap-2 group-hover:gap-3 transition-all mt-auto"><span data-engine-cta>Go to Pivot</span> <span class="material-icons-outlined text-sm">arrow_forward</span></span>
-</a>
-<a href="/app?tab=atmos" target="_top" data-engine="atmos" class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full">
-<div class="flex justify-between items-start mb-6">
-<div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-<span class="material-symbols-outlined text-3xl text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">blur_on</span>
-</div>
-<span class="text-sm font-mono text-slate-500">$9.99</span>
-</div>
-<h3 class="text-xl font-bold" data-engine-title>ATMOS</h3>
-<p class="text-sm text-primary font-medium mt-1" data-engine-subtitle>Daily Rhythm Readings</p>
-<p class="text-sm text-slate-300/90 mt-3 mb-3 leading-relaxed" data-engine-tagline>Atmos is your daily decision and energy dashboard.</p>
-<p class="text-slate-600 dark:text-slate-400 mb-6 flex-1 text-sm md:text-base leading-relaxed" data-engine-desc>For 30 consecutive days, Atmos decodes your daily macro rhythm (whether momentum favors progress or restraint) and where your focus yields peak efficiency. Submit real-time queries for urgent daily decisions, and the system delivers targeted insights alongside your macro reading—making Atmos your very first decision every morning.</p>
-<span class="text-primary font-semibold flex items-center gap-2 group-hover:gap-3 transition-all mt-auto"><span data-engine-cta>Begin Atmos</span> <span class="material-icons-outlined text-sm">arrow_forward</span></span>
-</a>
-<a href="/app?tab=match" target="_top" data-engine="match" class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full">
-<div class="flex justify-between items-start mb-6">
-<div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-<svg class="w-7 h-7 text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-<circle cx="6.55" cy="6.75" r="2.55" fill="currentColor"/>
-<path d="M2.55 18.85c.3-3.85 1.85-5.75 4-5.75 1.45 0 2.7.9 3.55 2.55" stroke="currentColor" stroke-width="2.35" stroke-linecap="round"/>
-<circle cx="17.45" cy="6.75" r="2.55" fill="currentColor"/>
-<path d="M21.45 18.85c-.3-3.85-1.85-5.75-4-5.75-1.45 0-2.7.9-3.55 2.55" stroke="currentColor" stroke-width="2.35" stroke-linecap="round"/>
-</svg>
-</div>
-<span class="text-sm font-mono text-slate-500">$4.99</span>
-</div>
-<h3 class="text-xl font-bold" data-engine-title>MATCH</h3>
-<p class="text-sm text-primary font-medium mt-1" data-engine-subtitle>Relational Dynamics & Alignment</p>
-<p class="text-sm text-slate-300/90 mt-3 mb-3 leading-relaxed" data-engine-tagline>Compatibility shouldn't rely on guesswork or mere intuition.</p>
-<p class="text-slate-600 dark:text-slate-400 mb-6 flex-1 text-sm md:text-base leading-relaxed" data-engine-desc>Match independently models behavioral and cognitive tendencies for both parties, cross-simulating both structures to reveal natural synergies, potential friction zones, and optimal collaboration modes at key junctions—giving you complete foresight before committing, partnering, or deepening a relationship.</p>
-<span class="text-primary font-semibold flex items-center gap-2 group-hover:gap-3 transition-all mt-auto"><span data-engine-cta>Go to Match</span> <span class="material-icons-outlined text-sm">arrow_forward</span></span>
-</a>
-<a href="/app?tab=syncro" target="_top" data-engine="syncro" class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full">
-<div class="flex justify-between items-start mb-6">
-<div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-<svg class="w-7 h-7 text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-<circle cx="12" cy="12.2" r="6.6" stroke="currentColor" stroke-width="1.6"/>
-<circle cx="12" cy="12.2" r="3.9" stroke="currentColor" stroke-width="1.4" opacity="0.75"/>
-<circle cx="12" cy="12.2" r="1.25" fill="currentColor"/>
-<path d="M12 12.2 L15.85 8.85 A6.6 6.6 0 0 1 17.15 13.05 Z" fill="currentColor" opacity="0.3"/>
-<path d="M12 12.2 L15.85 8.85" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-<text x="12" y="4.15" text-anchor="middle" fill="currentColor" font-size="5" font-family="Inter, system-ui, sans-serif" font-weight="700">N</text>
-<text x="21.15" y="13.55" text-anchor="middle" fill="currentColor" font-size="5" font-family="Inter, system-ui, sans-serif" font-weight="700">E</text>
-<text x="12" y="22.55" text-anchor="middle" fill="currentColor" font-size="5" font-family="Inter, system-ui, sans-serif" font-weight="700">S</text>
-<text x="2.85" y="13.55" text-anchor="middle" fill="currentColor" font-size="5" font-family="Inter, system-ui, sans-serif" font-weight="700">W</text>
-</svg>
-</div>
-<span class="text-sm font-mono text-slate-500">$4.99</span>
-</div>
-<h3 class="text-xl font-bold" data-engine-title>SYNCRO</h3>
-<p class="text-sm text-primary font-medium mt-1" data-engine-subtitle>Action Timing & Windows</p>
-<p class="text-sm text-slate-300/90 mt-3 mb-3 leading-relaxed" data-engine-tagline>Doing the right thing matters; doing it at the right time changes everything.</p>
-<p class="text-slate-600 dark:text-slate-400 mb-6 flex-1 text-sm md:text-base leading-relaxed" data-engine-desc>Syncro dynamically analyzes environmental friction and efficiency windows over the next 24 hours for your specific action plan. It pinpoints when momentum is on your side and when to avoid direct resistance—helping you focus your efforts precisely when friction is at its lowest.</p>
-<span class="text-primary font-semibold flex items-center gap-2 group-hover:gap-3 transition-all mt-auto"><span data-engine-cta>Go to Syncro</span> <span class="material-icons-outlined text-sm">arrow_forward</span></span>
-</a>
-<a href="/app?tab=glyph" target="_top" data-engine="glyph" class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full">
-<div class="flex justify-between items-start mb-6">
-<div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-<svg class="w-7 h-7 text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-<rect x="4.5" y="2.75" width="15" height="18.5" rx="2.5" stroke="currentColor" stroke-width="1.6"/>
-<text x="12" y="15.1" text-anchor="middle" fill="currentColor" font-size="10.5" font-family="Inter, system-ui, sans-serif" font-weight="600">G</text>
-</svg>
-</div>
-<span class="text-sm font-mono text-slate-500">$4.99</span>
-</div>
-<h3 class="text-xl font-bold" data-engine-title>GLYPH</h3>
-<p class="text-sm text-primary font-medium mt-1" data-engine-subtitle>Archetypal Signals & Hidden Structures</p>
-<p class="text-sm text-slate-300/90 mt-3 mb-3 leading-relaxed" data-engine-tagline>When a situation becomes too complex to articulate, you need a mirror to reveal its underlying structure.</p>
-<p class="text-slate-600 dark:text-slate-400 mb-6 flex-1 text-sm md:text-base leading-relaxed" data-engine-desc>Glyph integrates classic archetypal frameworks to retrieve real-time signal reflections corresponding to your current state, visualizing hidden dynamics and blind spots—giving unspoken concerns and vague intuitions a rational, articulable outline.</p>
-<span class="text-primary font-semibold flex items-center gap-2 group-hover:gap-3 transition-all mt-auto"><span data-engine-cta>Go to Glyph</span> <span class="material-icons-outlined text-sm">arrow_forward</span></span>
-</a>
 </div>
 </div>
 </section>
-<section class="pb-24 relative animate-fade-in-up" id="v2-engine-bars" style="animation-delay: 0.45s;" aria-label="Engine pathways">
+<section id="v2-engines" class="pt-10 pb-24 md:pt-14 relative overflow-hidden animate-fade-in-up" style="animation-delay: 0.4s;">
 <div class="max-w-7xl mx-auto px-6">
-<div class="flex flex-col gap-6">
-<a href="/app?tab=atmos" target="_top" data-engine="atmos" class="v2-engine-hbar group flex flex-col sm:flex-row sm:items-center gap-6 p-7 md:p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300">
-<div class="w-14 h-14 shrink-0 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+<div class="text-center mb-16">
+<h2 id="v2-engines-title" class="text-3xl md:text-5xl font-display font-bold mb-6"><span class="gold-gradient">Five</span> Specialized <span class="gold-gradient">Engines</span>. Aligned by Need.</h2>
+<p id="v2-engines-subtitle" class="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+                    Tailored analytical dimensions for distinct situational challenges. From long-term transitions and instant resonance to spatial-temporal routing and dual-matrix synergy — precisely calibrated to your immediate context.
+                </p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 lg:grid-rows-2 gap-8 auto-rows-fr" id="v2-engines-grid">
+<a href="/app?tab=atmos" target="_top" data-engine="pivot" id="v2-engine-poju-card" class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full md:col-span-2 lg:col-span-1 lg:row-span-2">
+<div class="v2-engine-atmos-copy">
+<div class="flex justify-between items-center mb-6">
+<div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
 <span class="material-symbols-outlined text-3xl text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">blur_on</span>
 </div>
-<div class="min-w-0 flex-1">
-<div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-2">
+<span class="v2-engine-pass text-lg font-mono font-bold tracking-wider text-slate-500 transition-colors group-hover:text-primary">PASSX1</span>
+</div>
 <h3 class="text-xl font-bold" data-engine-title>ATMOS</h3>
-<span class="text-sm text-primary font-medium" data-engine-subtitle>Daily Rhythm Readings</span>
-<span class="text-sm font-mono text-slate-500 sm:ml-auto">$9.99</span>
+<p class="text-sm text-primary font-medium mt-1" data-engine-subtitle>Daily Rhythm Readings</p>
+<p class="v2-engine-tagline mt-2 mb-3 leading-relaxed" data-engine-tagline>Atmos is your daily decision and energy dashboard.</p>
+<p class="text-slate-600 dark:text-slate-400 mb-6 flex-1 min-h-0 overflow-hidden text-sm md:text-base leading-relaxed" data-engine-desc>For 30 consecutive days, Atmos decodes your daily macro rhythm (whether momentum favors progress or restraint) and where your focus yields peak efficiency. Submit real-time queries for urgent daily decisions, and the system delivers targeted insights alongside your macro reading—making Atmos your very first decision every morning.</p>
+<span class="v2-engine-cta text-slate-500 font-semibold flex items-center gap-2 transition-all group-hover:gap-3 group-hover:text-primary mt-auto shrink-0"><span data-engine-cta>Begin Atmos</span> <span class="material-icons-outlined text-sm">arrow_forward</span></span>
 </div>
-<p class="text-sm text-slate-300/90 mb-2 leading-relaxed" data-engine-tagline>Atmos is your daily decision and energy dashboard.</p>
-<p class="text-slate-600 dark:text-slate-400 text-sm md:text-base leading-relaxed" data-engine-desc>For 30 consecutive days, Atmos decodes your daily macro rhythm (whether momentum favors progress or restraint) and where your focus yields peak efficiency. Submit real-time queries for urgent daily decisions, and the system delivers targeted insights alongside your macro reading—making Atmos your very first decision every morning.</p>
+<div class="v2-atmos-spline" id="v2-atmos-spline" aria-hidden="true">
+<canvas id="v2-atmos-spline-canvas"></canvas>
 </div>
-<span class="text-primary font-semibold flex items-center gap-2 shrink-0 group-hover:gap-3 transition-all"><span data-engine-cta>Begin Atmos</span> <span class="material-icons-outlined text-sm">arrow_forward</span></span>
 </a>
-<a href="/app?tab=poju" target="_top" data-engine="pivot" class="v2-engine-hbar group flex flex-col sm:flex-row sm:items-center gap-6 p-7 md:p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300">
-<div class="w-14 h-14 shrink-0 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+<a href="/app?tab=poju" target="_top" data-engine="atmos" class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full">
+<div class="flex justify-between items-center mb-6">
+<div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
 <span class="material-symbols-outlined text-3xl text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">self_improvement</span>
 </div>
-<div class="min-w-0 flex-1">
-<div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-2">
+<span class="v2-engine-pass text-lg font-mono font-bold tracking-wider text-slate-500 transition-colors group-hover:text-primary">PASSX1</span>
+</div>
 <h3 class="text-xl font-bold" data-engine-title>PIVOT</h3>
-<span class="text-sm text-primary font-medium" data-engine-subtitle>Transitions & Strategic Decisions</span>
-<span class="text-sm font-mono text-slate-500 sm:ml-auto">$9.99</span>
-</div>
-<p class="text-sm text-slate-300/90 mb-2 leading-relaxed" data-engine-tagline>At life's pivotal crossroads, what you need most is a master map.</p>
-<p class="text-slate-600 dark:text-slate-400 text-sm md:text-base leading-relaxed" data-engine-desc>Pivot is a system engineered for major transitions and critical decisions. Through deep dialogue, it clarifies your true circumstances and applies Eastern decision models for multi-dimensional simulation, delivering a comprehensive decision report with blind-spot diagnostics and actionable roadmaps—giving you the clarity and confidence to navigate the challenge ahead.</p>
-</div>
-<span class="text-primary font-semibold flex items-center gap-2 shrink-0 group-hover:gap-3 transition-all"><span data-engine-cta>Go to Pivot</span> <span class="material-icons-outlined text-sm">arrow_forward</span></span>
+<p class="text-sm text-primary font-medium mt-1" data-engine-subtitle>Transitions & Strategic Decisions</p>
+<p class="v2-engine-tagline mt-2 mb-3 leading-relaxed" data-engine-tagline>At life's pivotal crossroads, what you need most is a master map.</p>
+<p class="text-slate-600 dark:text-slate-400 mb-6 flex-1 text-sm md:text-base leading-relaxed" data-engine-desc>Pivot is a system engineered for major transitions and critical decisions. Through deep dialogue, it clarifies your true circumstances and applies Eastern decision models for multi-dimensional simulation, delivering a comprehensive decision report with blind-spot diagnostics and actionable roadmaps—giving you the clarity and confidence to navigate the challenge ahead.</p>
+<span class="v2-engine-cta text-slate-500 font-semibold flex items-center gap-2 transition-all group-hover:gap-3 group-hover:text-primary mt-auto"><span data-engine-cta>Go to Pivot</span> <span class="material-icons-outlined text-sm">arrow_forward</span></span>
 </a>
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 v2-engine-vbar-row">
-<a href="/app?tab=syncro" target="_top" data-engine="syncro" class="v2-engine-vbar group flex flex-col p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300">
-<div class="flex justify-between items-start mb-6">
+<a href="/app?tab=match" target="_top" data-engine="match" class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full">
+<div class="flex justify-between items-center mb-6">
+<div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+<svg class="w-7 h-7 text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+<circle cx="6.55" cy="6.75" r="2.55" fill="currentColor"/>
+<path d="M2.55 18.85c.3-3.85 1.85-5.75 4-5.75 1.45 0 2.7.9 3.55 2.55" stroke="currentColor" stroke-width="2.35" stroke-linecap="round"/>
+<circle cx="17.45" cy="6.75" r="2.55" fill="currentColor"/>
+<path d="M21.45 18.85c-.3-3.85-1.85-5.75-4-5.75-1.45 0-2.7.9-3.55 2.55" stroke="currentColor" stroke-width="2.35" stroke-linecap="round"/>
+</svg>
+</div>
+<span class="v2-engine-pass text-lg font-mono font-bold tracking-wider text-slate-500 transition-colors group-hover:text-primary">PASSX1</span>
+</div>
+<h3 class="text-xl font-bold" data-engine-title>MATCH</h3>
+<p class="text-sm text-primary font-medium mt-1" data-engine-subtitle>Relational Dynamics & Alignment</p>
+<p class="v2-engine-tagline mt-2 mb-3 leading-relaxed" data-engine-tagline>Compatibility shouldn't rely on guesswork or mere intuition.</p>
+<p class="text-slate-600 dark:text-slate-400 mb-6 flex-1 text-sm md:text-base leading-relaxed" data-engine-desc>Match independently models behavioral and cognitive tendencies for both parties, cross-simulating both structures to reveal natural synergies, potential friction zones, and optimal collaboration modes at key junctions—giving you complete foresight before committing, partnering, or deepening a relationship.</p>
+<span class="v2-engine-cta text-slate-500 font-semibold flex items-center gap-2 transition-all group-hover:gap-3 group-hover:text-primary mt-auto"><span data-engine-cta>Go to Match</span> <span class="material-icons-outlined text-sm">arrow_forward</span></span>
+</a>
+<a href="/app?tab=syncro" target="_top" data-engine="syncro" class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full">
+<div class="flex justify-between items-center mb-6">
 <div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
 <svg class="w-7 h-7 text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" aria-hidden="true">
 <circle cx="12" cy="12.2" r="6.6" stroke="currentColor" stroke-width="1.6"/>
@@ -1468,49 +1473,30 @@ Add to desktop
 <text x="2.85" y="13.55" text-anchor="middle" fill="currentColor" font-size="5" font-family="Inter, system-ui, sans-serif" font-weight="700">W</text>
 </svg>
 </div>
-<span class="text-sm font-mono text-slate-500">$4.99</span>
+<span class="v2-engine-pass text-lg font-mono font-bold tracking-wider text-slate-500 transition-colors group-hover:text-primary">PASSX1</span>
 </div>
 <h3 class="text-xl font-bold" data-engine-title>SYNCRO</h3>
 <p class="text-sm text-primary font-medium mt-1" data-engine-subtitle>Action Timing & Windows</p>
-<p class="text-sm text-slate-300/90 mt-3 mb-3 leading-relaxed" data-engine-tagline>Doing the right thing matters; doing it at the right time changes everything.</p>
-<p class="text-slate-600 dark:text-slate-400 mb-8 flex-1 text-sm md:text-base leading-relaxed" data-engine-desc>Syncro dynamically analyzes environmental friction and efficiency windows over the next 24 hours for your specific action plan. It pinpoints when momentum is on your side and when to avoid direct resistance—helping you focus your efforts precisely when friction is at its lowest.</p>
-<span class="text-primary font-semibold flex items-center gap-2 group-hover:gap-3 transition-all mt-auto"><span data-engine-cta>Go to Syncro</span> <span class="material-icons-outlined text-sm">arrow_forward</span></span>
+<p class="v2-engine-tagline mt-2 mb-3 leading-relaxed" data-engine-tagline>Doing the right thing matters; doing it at the right time changes everything.</p>
+<p class="text-slate-600 dark:text-slate-400 mb-6 flex-1 text-sm md:text-base leading-relaxed" data-engine-desc>Syncro dynamically analyzes environmental friction and efficiency windows over the next 24 hours for your specific action plan. It pinpoints when momentum is on your side and when to avoid direct resistance—helping you focus your efforts precisely when friction is at its lowest.</p>
+<span class="v2-engine-cta text-slate-500 font-semibold flex items-center gap-2 transition-all group-hover:gap-3 group-hover:text-primary mt-auto"><span data-engine-cta>Go to Syncro</span> <span class="material-icons-outlined text-sm">arrow_forward</span></span>
 </a>
-<a href="/app?tab=match" target="_top" data-engine="match" class="v2-engine-vbar group flex flex-col p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300">
-<div class="flex justify-between items-start mb-6">
-<div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-<svg class="w-7 h-7 text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-<circle cx="6.55" cy="6.75" r="2.55" fill="currentColor"/>
-<path d="M2.55 18.85c.3-3.85 1.85-5.75 4-5.75 1.45 0 2.7.9 3.55 2.55" stroke="currentColor" stroke-width="2.35" stroke-linecap="round"/>
-<circle cx="17.45" cy="6.75" r="2.55" fill="currentColor"/>
-<path d="M21.45 18.85c-.3-3.85-1.85-5.75-4-5.75-1.45 0-2.7.9-3.55 2.55" stroke="currentColor" stroke-width="2.35" stroke-linecap="round"/>
-</svg>
-</div>
-<span class="text-sm font-mono text-slate-500">$4.99</span>
-</div>
-<h3 class="text-xl font-bold" data-engine-title>MATCH</h3>
-<p class="text-sm text-primary font-medium mt-1" data-engine-subtitle>Relational Dynamics & Alignment</p>
-<p class="text-sm text-slate-300/90 mt-3 mb-3 leading-relaxed" data-engine-tagline>Compatibility shouldn't rely on guesswork or mere intuition.</p>
-<p class="text-slate-600 dark:text-slate-400 mb-8 flex-1 text-sm md:text-base leading-relaxed" data-engine-desc>Match independently models behavioral and cognitive tendencies for both parties, cross-simulating both structures to reveal natural synergies, potential friction zones, and optimal collaboration modes at key junctions—giving you complete foresight before committing, partnering, or deepening a relationship.</p>
-<span class="text-primary font-semibold flex items-center gap-2 group-hover:gap-3 transition-all mt-auto"><span data-engine-cta>Go to Match</span> <span class="material-icons-outlined text-sm">arrow_forward</span></span>
-</a>
-<a href="/app?tab=glyph" target="_top" data-engine="glyph" class="v2-engine-vbar group flex flex-col p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300">
-<div class="flex justify-between items-start mb-6">
+<a href="/app?tab=glyph" target="_top" data-engine="glyph" class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full">
+<div class="flex justify-between items-center mb-6">
 <div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
 <svg class="w-7 h-7 text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" aria-hidden="true">
 <rect x="4.5" y="2.75" width="15" height="18.5" rx="2.5" stroke="currentColor" stroke-width="1.6"/>
 <text x="12" y="15.1" text-anchor="middle" fill="currentColor" font-size="10.5" font-family="Inter, system-ui, sans-serif" font-weight="600">G</text>
 </svg>
 </div>
-<span class="text-sm font-mono text-slate-500">$4.99</span>
+<span class="v2-engine-pass text-lg font-mono font-bold tracking-wider text-slate-500 transition-colors group-hover:text-primary">PASSX1</span>
 </div>
 <h3 class="text-xl font-bold" data-engine-title>GLYPH</h3>
 <p class="text-sm text-primary font-medium mt-1" data-engine-subtitle>Archetypal Signals & Hidden Structures</p>
-<p class="text-sm text-slate-300/90 mt-3 mb-3 leading-relaxed" data-engine-tagline>When a situation becomes too complex to articulate, you need a mirror to reveal its underlying structure.</p>
-<p class="text-slate-600 dark:text-slate-400 mb-8 flex-1 text-sm md:text-base leading-relaxed" data-engine-desc>Glyph integrates classic archetypal frameworks to retrieve real-time signal reflections corresponding to your current state, visualizing hidden dynamics and blind spots—giving unspoken concerns and vague intuitions a rational, articulable outline.</p>
-<span class="text-primary font-semibold flex items-center gap-2 group-hover:gap-3 transition-all mt-auto"><span data-engine-cta>Go to Glyph</span> <span class="material-icons-outlined text-sm">arrow_forward</span></span>
+<p class="v2-engine-tagline mt-2 mb-3 leading-relaxed" data-engine-tagline>When a situation becomes too complex to articulate, you need a mirror to reveal its underlying structure.</p>
+<p class="text-slate-600 dark:text-slate-400 mb-6 flex-1 text-sm md:text-base leading-relaxed" data-engine-desc>Glyph integrates classic archetypal frameworks to retrieve real-time signal reflections corresponding to your current state, visualizing hidden dynamics and blind spots—giving unspoken concerns and vague intuitions a rational, articulable outline.</p>
+<span class="v2-engine-cta text-slate-500 font-semibold flex items-center gap-2 transition-all group-hover:gap-3 group-hover:text-primary mt-auto"><span data-engine-cta>Go to Glyph</span> <span class="material-icons-outlined text-sm">arrow_forward</span></span>
 </a>
-</div>
 </div>
 </div>
 </section>
@@ -2055,6 +2041,105 @@ Add to desktop
               }
             })();
 
+            // Align ATMOS "Begin Atmos" with PIVOT "Go to Pivot" (same horizontal baseline)
+            (function syncAtmosCopyToSquare() {
+              const tall = document.getElementById('v2-engine-poju-card');
+              const copy = tall && tall.querySelector('.v2-engine-atmos-copy');
+              const grid = document.getElementById('v2-engines-grid');
+              if (!tall || !copy || !grid) return;
+              const square = grid.querySelector('a[data-engine="atmos"]');
+              const atmosCta = copy.querySelector('.v2-engine-cta');
+
+              const apply = () => {
+                const wide = window.matchMedia('(min-width: 1024px)').matches;
+                if (!wide || !square || !atmosCta) {
+                  copy.style.height = '';
+                  copy.style.minHeight = '';
+                  return;
+                }
+                const pivotCta = square.querySelector('.v2-engine-cta');
+                if (!pivotCta) return;
+
+                // Size copy so its bottom (CTA with mt-auto) matches PIVOT CTA bottom.
+                // Do not use full card height — that includes padding and pushes Atmos CTA down.
+                const copyTop = copy.getBoundingClientRect().top;
+                const pivotCtaBottom = pivotCta.getBoundingClientRect().bottom;
+                const nextH = Math.round(pivotCtaBottom - copyTop);
+                if (nextH < 120) return;
+                copy.style.height = nextH + 'px';
+                copy.style.minHeight = nextH + 'px';
+              };
+
+              apply();
+              requestAnimationFrame(apply);
+              window.setTimeout(apply, 100);
+              window.setTimeout(apply, 400);
+              window.addEventListener('resize', apply);
+              if (typeof ResizeObserver !== 'undefined') {
+                const ro = new ResizeObserver(apply);
+                ro.observe(square);
+                ro.observe(grid);
+                ro.observe(tall);
+              }
+            })();
+
+            // ATMOS tall card Spline — lazy load when visible; pull camera back
+            (function loadAtmosCardSpline() {
+              const host = document.getElementById('v2-atmos-spline');
+              const canvas = document.getElementById('v2-atmos-spline-canvas');
+              if (!host || !canvas) return;
+              if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                host.hidden = true;
+                return;
+              }
+              const ATMOS_SPLINE_ZOOM = 0.42;
+              let started = false;
+
+              const applyZoom = (app) => {
+                const run = () => {
+                  try {
+                    app.setZoom(ATMOS_SPLINE_ZOOM);
+                  } catch (e) {}
+                  try {
+                    const controls = app.controls;
+                    if (controls && controls.orbitControls && controls.orbitControls.setZoom) {
+                      controls.orbitControls.setZoom(ATMOS_SPLINE_ZOOM);
+                    }
+                  } catch (e) {}
+                };
+                run();
+                requestAnimationFrame(run);
+                [120, 400, 800, 1500].forEach((ms) => window.setTimeout(run, ms));
+              };
+
+              const run = async () => {
+                if (started) return;
+                started = true;
+                try {
+                  const mod = await import('https://unpkg.com/@splinetool/runtime@1.12.97/build/runtime.js');
+                  const app = new mod.Application(canvas);
+                  await app.load('/spline/atmos.splinecode');
+                  applyZoom(app);
+                } catch (err) {
+                  console.error('[v2-atmos-spline]', err && err.message ? err.message : err);
+                  host.hidden = true;
+                }
+              };
+              if (typeof IntersectionObserver === 'undefined') {
+                void run();
+                return;
+              }
+              const io = new IntersectionObserver(
+                (entries) => {
+                  if (!entries.some((e) => e.isIntersecting)) return;
+                  io.disconnect();
+                  void run();
+                },
+                { rootMargin: '160px' },
+              );
+              io.observe(host);
+            })();
+
             // Hero copy (locale from parent URL; gold on Eastern OS + wisdom-term)
             const HERO_COPY = {
               en: {
@@ -2086,6 +2171,35 @@ Add to desktop
                   '<span class="gold-gradient">Eastern OS</span> — Un système d\'exploitation de décision personnelle propulsé par <span class="gold-gradient">3 000 ans</span> de sagesse orientale.',
                 subtitle:
                   'Combinant votre architecture d\'énergie native avec la matrice d\'énergie environnementale pour vous fournir un soutien décisionnel professionnel et personnel hautement confidentiel et fondé sur les données.',
+              },
+            };
+
+
+            const ENGINES_SECTION_COPY = {
+              en: {
+                title: '<span class="gold-gradient">Five</span> Specialized <span class="gold-gradient">Engines</span>. Aligned by Need.',
+                subtitle:
+                  'Tailored analytical dimensions for distinct situational challenges. From long-term transitions and instant resonance to spatial-temporal routing and dual-matrix synergy — precisely calibrated to your immediate context.',
+              },
+              zh: {
+                title: '<span class="gold-gradient">五大</span>专属<span class="gold-gradient">引擎</span>，按需对齐。',
+                subtitle:
+                  '针对不同情境挑战的专属分析维度。从长期转型与即时共鸣，到时空路径与双矩阵协同——精确校准于你此刻的真实语境。',
+              },
+              es: {
+                title: '<span class="gold-gradient">Cinco</span> <span class="gold-gradient">Motores</span> Especializados. Alineados a tu necesidad.',
+                subtitle:
+                  'Dimensiones analíticas a medida para distintos desafíos situacionales. Desde transiciones a largo plazo y resonancia instantánea hasta rutas espacio-temporales y sinergia de doble matriz — calibradas con precisión a tu contexto inmediato.',
+              },
+              de: {
+                title: '<span class="gold-gradient">Fünf</span> Spezialisierte <span class="gold-gradient">Engines</span>. Ausgerichtet auf Ihren Bedarf.',
+                subtitle:
+                  'Maßgeschneiderte Analysedimensionen für unterschiedliche Situationsanforderungen. Von langfristigen Übergängen und sofortiger Resonanz bis zu raumzeitlicher Navigation und Doppelmatrix-Synergie — präzise auf Ihren aktuellen Kontext kalibriert.',
+              },
+              fr: {
+                title: '<span class="gold-gradient">Cinq</span> <span class="gold-gradient">Moteurs</span> Spécialisés. Alignés selon le besoin.',
+                subtitle:
+                  'Des dimensions analytiques adaptées à des défis situationnels distincts. Des transitions de long terme et de la résonance immédiate au routage spatio-temporel et à la synergie bi-matrice — calibrées avec précision sur votre contexte immédiat.',
               },
             };
 
@@ -2373,11 +2487,11 @@ Add to desktop
 const ENGINE_COPY = {
   "zh": {
     "pivot": {
-      "title": "PIVOT",
-      "subtitle": "转型与困境决策",
-      "tagline": "人生的关键岔路口，最缺的是一张全局地图。",
-      "description": "Pivot 是专为重大转型与关键决策打造的系统。通过深度对话厘清你的真实处境，基于东方决策模型进行多维推演，为你交出一份包含盲区诊断与具体落地路径的完整决策报告——让你带着清晰与底气，走过眼前这个坎。",
-      "cta": "进入 PIVOT"
+      "title": "ATMOS",
+      "subtitle": "每日节奏读数",
+      "tagline": "Atmos 是你每天的决策与精力仪表盘。",
+      "description": "连续30天为你读清当天的整体节奏（偏顺还是偏紧）、精力投向何处效率最高。遇到当天需要决策的突发事项随时提问，系统会在全局读数之外给出实时回应——让打开 Atmos，成为你每天的第一个决定。",
+      "cta": "进入 ATMOS"
     },
     "match": {
       "title": "MATCH",
@@ -2401,20 +2515,20 @@ const ENGINE_COPY = {
       "cta": "进入 GLYPH"
     },
     "atmos": {
-      "title": "ATMOS",
-      "subtitle": "每日节奏读数",
-      "tagline": "Atmos 是你每天的决策与精力仪表盘。",
-      "description": "连续30天为你读清当天的整体节奏（偏顺还是偏紧）、精力投向何处效率最高。遇到当天需要决策的突发事项随时提问，系统会在全局读数之外给出实时回应——让打开 Atmos，成为你每天的第一个决定。",
-      "cta": "进入 ATMOS"
+      "title": "PIVOT",
+      "subtitle": "转型与困境决策",
+      "tagline": "人生的关键岔路口，最缺的是一张全局地图。",
+      "description": "Pivot 是专为重大转型与关键决策打造的系统。通过深度对话厘清你的真实处境，基于东方决策模型进行多维推演，为你交出一份包含盲区诊断与具体落地路径的完整决策报告——让你带着清晰与底气，走过眼前这个坎。",
+      "cta": "进入 PIVOT"
     }
   },
   "en": {
     "pivot": {
-      "title": "PIVOT",
-      "subtitle": "Transitions & Strategic Decisions",
-      "tagline": "At life's pivotal crossroads, what you need most is a master map.",
-      "description": "Pivot is a system engineered for major transitions and critical decisions. Through deep dialogue, it clarifies your true circumstances and applies Eastern decision models for multi-dimensional simulation, delivering a comprehensive decision report with blind-spot diagnostics and actionable roadmaps—giving you the clarity and confidence to navigate the challenge ahead.",
-      "cta": "Go to Pivot"
+      "title": "ATMOS",
+      "subtitle": "Daily Rhythm Readings",
+      "tagline": "Atmos is your daily decision and energy dashboard.",
+      "description": "For 30 consecutive days, Atmos decodes your daily macro rhythm (whether momentum favors progress or restraint) and where your focus yields peak efficiency. Submit real-time queries for urgent daily decisions, and the system delivers targeted insights alongside your macro reading—making Atmos your very first decision every morning.",
+      "cta": "Begin Atmos"
     },
     "match": {
       "title": "MATCH",
@@ -2438,20 +2552,20 @@ const ENGINE_COPY = {
       "cta": "Go to Glyph"
     },
     "atmos": {
-      "title": "ATMOS",
-      "subtitle": "Daily Rhythm Readings",
-      "tagline": "Atmos is your daily decision and energy dashboard.",
-      "description": "For 30 consecutive days, Atmos decodes your daily macro rhythm (whether momentum favors progress or restraint) and where your focus yields peak efficiency. Submit real-time queries for urgent daily decisions, and the system delivers targeted insights alongside your macro reading—making Atmos your very first decision every morning.",
-      "cta": "Begin Atmos"
+      "title": "PIVOT",
+      "subtitle": "Transitions & Strategic Decisions",
+      "tagline": "At life's pivotal crossroads, what you need most is a master map.",
+      "description": "Pivot is a system engineered for major transitions and critical decisions. Through deep dialogue, it clarifies your true circumstances and applies Eastern decision models for multi-dimensional simulation, delivering a comprehensive decision report with blind-spot diagnostics and actionable roadmaps—giving you the clarity and confidence to navigate the challenge ahead.",
+      "cta": "Go to Pivot"
     }
   },
   "es": {
     "pivot": {
-      "title": "PIVOT",
-      "subtitle": "Transiciones y Decisiones Críticas",
-      "tagline": "En los cruces decisivos de la vida, lo que más se necesita es un mapa global.",
-      "description": "Pivot es un sistema diseñado para grandes transiciones y decisiones críticas. A través de un diálogo profundo, clarifica tu situación real y aplica modelos de decisión orientales para realizar simulaciones multidimensionales, entregándote un informe de decisión completo con diagnóstico de puntos ciegos y rutas de acción concretas, para que superes el obstáculo con claridad y firmeza.",
-      "cta": "Ir a Pivot"
+      "title": "ATMOS",
+      "subtitle": "Lectura del Ritmo Diario",
+      "tagline": "Atmos es tu panel diario de decisiones y gestión de energía.",
+      "description": "Durante 30 días consecutivos, interpreta con claridad el ritmo de tu jornada (si la corriente favorece el avance o la cautela) y dónde enfocar tu energía para máxima eficiencia. Ante decisiones imprevistas del día, realiza tu consulta y el sistema ofrecerá una respuesta específica junto con la lectura general, haciendo de Atmos tu primera decisión cada mañana.",
+      "cta": "Comenzar Atmos"
     },
     "match": {
       "title": "MATCH",
@@ -2475,20 +2589,20 @@ const ENGINE_COPY = {
       "cta": "Ir a Glyph"
     },
     "atmos": {
-      "title": "ATMOS",
-      "subtitle": "Lectura del Ritmo Diario",
-      "tagline": "Atmos es tu panel diario de decisiones y gestión de energía.",
-      "description": "Durante 30 días consecutivos, interpreta con claridad el ritmo de tu jornada (si la corriente favorece el avance o la cautela) y dónde enfocar tu energía para máxima eficiencia. Ante decisiones imprevistas del día, realiza tu consulta y el sistema ofrecerá una respuesta específica junto con la lectura general, haciendo de Atmos tu primera decisión cada mañana.",
-      "cta": "Comenzar Atmos"
+      "title": "PIVOT",
+      "subtitle": "Transiciones y Decisiones Críticas",
+      "tagline": "En los cruces decisivos de la vida, lo que más se necesita es un mapa global.",
+      "description": "Pivot es un sistema diseñado para grandes transiciones y decisiones críticas. A través de un diálogo profundo, clarifica tu situación real y aplica modelos de decisión orientales para realizar simulaciones multidimensionales, entregándote un informe de decisión completo con diagnóstico de puntos ciegos y rutas de acción concretas, para que superes el obstáculo con claridad y firmeza.",
+      "cta": "Ir a Pivot"
     }
   },
   "de": {
     "pivot": {
-      "title": "PIVOT",
-      "subtitle": "Transformationen & Kritische Entscheidungen",
-      "tagline": "An den entscheidenden Wendepunkten des Lebens fehlt vor allem eine Übersichtskarte.",
-      "description": "Pivot ist ein System, das speziell für große Umbrüche und kritische Entscheidungen entwickelt wurde. Durch tiefgehenden Dialog klärt es Ihre reale Situation und führt auf Basis östlicher Entscheidungsmodelle mehrdimensionale Simulationen durch. Sie erhalten einen vollständigen Entscheidungsbericht mit blinden Flecken und konkreten Handlungspfaden – damit Sie die anstehende Hürde mit Klarheit und Souveränität meistern.",
-      "cta": "Zu Pivot"
+      "title": "ATMOS",
+      "subtitle": "Tägliche Rhythmus-Analysen",
+      "tagline": "Atmos ist Ihr tägliches Dashboard für Entscheidungen und Energie.",
+      "description": "Atmos entschlüsselt 30 Tage lang jeden Morgen den Gesamtrhythmus Ihres Tages (ob Aufwind oder Widerstand herrscht) und wo der Energieeinsatz am effizientesten ist. Bei kurzfristigen Tagesentscheidungen können Sie jederzeit Fragen stellen; das System liefert eine gezielte Antwort zusätzlich zur Gesamtanalyse – machen Sie das Öffnen von Atmos zu Ihrer ersten Entscheidung des Tages.",
+      "cta": "Atmos starten"
     },
     "match": {
       "title": "MATCH",
@@ -2512,20 +2626,20 @@ const ENGINE_COPY = {
       "cta": "Zu Glyph"
     },
     "atmos": {
-      "title": "ATMOS",
-      "subtitle": "Tägliche Rhythmus-Analysen",
-      "tagline": "Atmos ist Ihr tägliches Dashboard für Entscheidungen und Energie.",
-      "description": "Atmos entschlüsselt 30 Tage lang jeden Morgen den Gesamtrhythmus Ihres Tages (ob Aufwind oder Widerstand herrscht) und wo der Energieeinsatz am effizientesten ist. Bei kurzfristigen Tagesentscheidungen können Sie jederzeit Fragen stellen; das System liefert eine gezielte Antwort zusätzlich zur Gesamtanalyse – machen Sie das Öffnen von Atmos zu Ihrer ersten Entscheidung des Tages.",
-      "cta": "Atmos starten"
+      "title": "PIVOT",
+      "subtitle": "Transformationen & Kritische Entscheidungen",
+      "tagline": "An den entscheidenden Wendepunkten des Lebens fehlt vor allem eine Übersichtskarte.",
+      "description": "Pivot ist ein System, das speziell für große Umbrüche und kritische Entscheidungen entwickelt wurde. Durch tiefgehenden Dialog klärt es Ihre reale Situation und führt auf Basis östlicher Entscheidungsmodelle mehrdimensionale Simulationen durch. Sie erhalten einen vollständigen Entscheidungsbericht mit blinden Flecken und konkreten Handlungspfaden – damit Sie die anstehende Hürde mit Klarheit und Souveränität meistern.",
+      "cta": "Zu Pivot"
     }
   },
   "fr": {
     "pivot": {
-      "title": "PIVOT",
-      "subtitle": "Transitions & Décisions Stratégiques",
-      "tagline": "Aux carrefours décisifs de la vie, ce qui manque le plus, c'est une carte d'ensemble.",
-      "description": "Pivot est un système conçu pour les grandes transitions et les décisions stratégiques. À travers un dialogue approfondi, il clarifie votre situation réelle et applique des modèles de décision orientaux pour modéliser plusieurs scénarios. Il vous délivre un rapport de décision complet incluant le diagnostic de vos angles morts et un plan d'action concret, pour franchir l'obstacle avec clarté et assurance.",
-      "cta": "Aller à Pivot"
+      "title": "ATMOS",
+      "subtitle": "Lectures du Rythme Quotidien",
+      "tagline": "Atmos est votre tableau de bord quotidien de décision et d'énergie.",
+      "description": "Pendant 30 jours consécutifs, Atmos décode le rythme global de votre journée (favorable ou sous tension) et les domaines où concentrer votre énergie pour une efficacité maximale. Face à une décision imprévue dans la journée, posez votre question : le système apportera une réponse ciblée en plus de la lecture globale — faites de la consultation d'Atmos votre toute première décision de la journée.",
+      "cta": "Commencer Atmos"
     },
     "match": {
       "title": "MATCH",
@@ -2549,11 +2663,11 @@ const ENGINE_COPY = {
       "cta": "Aller à Glyph"
     },
     "atmos": {
-      "title": "ATMOS",
-      "subtitle": "Lectures du Rythme Quotidien",
-      "tagline": "Atmos est votre tableau de bord quotidien de décision et d'énergie.",
-      "description": "Pendant 30 jours consécutifs, Atmos décode le rythme global de votre journée (favorable ou sous tension) et les domaines où concentrer votre énergie pour une efficacité maximale. Face à une décision imprévue dans la journée, posez votre question : le système apportera une réponse ciblée en plus de la lecture globale — faites de la consultation d'Atmos votre toute première décision de la journée.",
-      "cta": "Commencer Atmos"
+      "title": "PIVOT",
+      "subtitle": "Transitions & Décisions Stratégiques",
+      "tagline": "Aux carrefours décisifs de la vie, ce qui manque le plus, c'est une carte d'ensemble.",
+      "description": "Pivot est un système conçu pour les grandes transitions et les décisions stratégiques. À travers un dialogue approfondi, il clarifie votre situation réelle et applique des modèles de décision orientaux pour modéliser plusieurs scénarios. Il vous délivre un rapport de décision complet incluant le diagnostic de vos angles morts et un plan d'action concret, pour franchir l'obstacle avec clarté et assurance.",
+      "cta": "Aller à Pivot"
     }
   }
 };
@@ -2571,7 +2685,6 @@ const ENGINE_COPY = {
                 const desc = card.querySelector('[data-engine-desc]');
                 const cta = card.querySelector('[data-engine-cta]');
                 if (title) title.textContent = copy.title;
-                if (subtitle) subtitle.textContent = copy.subtitle;
                 if (tagline) tagline.textContent = copy.tagline;
                 if (desc) desc.textContent = copy.description;
                 if (cta) cta.textContent = copy.cta;
@@ -2683,6 +2796,12 @@ const ENGINE_COPY = {
               const key = el.getAttribute('data-scenario');
               if (key && scenarios[key]) el.textContent = scenarios[key];
             });
+
+            const enginesSection = ENGINES_SECTION_COPY[currentLocale] || ENGINES_SECTION_COPY.en;
+            const enginesTitle = document.getElementById('v2-engines-title');
+            const enginesSubtitle = document.getElementById('v2-engines-subtitle');
+            if (enginesTitle) enginesTitle.innerHTML = enginesSection.title;
+            if (enginesSubtitle) enginesSubtitle.textContent = enginesSection.subtitle;
 
             const PASS_UNIT = 9.99;
             let passQty = 1;

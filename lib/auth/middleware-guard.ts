@@ -2,6 +2,7 @@ import type { User } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
 
 import { safeNextPath } from "@/lib/auth/auth-helpers";
+import { userNeedsEmail } from "@/lib/auth/user-identity";
 import { isSupabaseConfigured } from "@/lib/auth/supabase";
 import {
   getPathnameWithoutLocale,
@@ -43,6 +44,11 @@ function loginPathForLocale(locale: string): string {
   return `/${locale}/login`;
 }
 
+function completeEmailPathForLocale(locale: string): string {
+  if (locale === routing.defaultLocale) return "/complete-email";
+  return `/${locale}/complete-email`;
+}
+
 function copyCookies(from: NextResponse, to: NextResponse): void {
   from.cookies.getAll().forEach((cookie) => {
     to.cookies.set(cookie.name, cookie.value);
@@ -51,7 +57,7 @@ function copyCookies(from: NextResponse, to: NextResponse): void {
 
 /**
  * After intl + session refresh: redirect unauthenticated users away from
- * protected routes to `/login?next=<path-without-locale>`.
+ * protected routes to `/login?next=...`, and users without email to `/complete-email`.
  */
 export function applyAuthRouteGuard(
   request: NextRequest,
@@ -62,15 +68,30 @@ export function applyAuthRouteGuard(
   if (!isAuthRouteGuardEnabled()) return response;
 
   const pathname = request.nextUrl.pathname;
+  const pathNoLocale = getPathnameWithoutLocale(pathname);
+  const locale = localeFromPathname(pathname);
+  const search = request.nextUrl.search || "";
+
+  // Signed in but missing email → hard gate before protected app use
+  if (user && userNeedsEmail(user) && isAuthProtectedPath(pathname)) {
+    if (pathNoLocale === "/complete-email" || pathNoLocale.startsWith("/complete-email/")) {
+      return response;
+    }
+    const next = safeNextPath(`${pathNoLocale}${search}`, "/app");
+    const gateUrl = request.nextUrl.clone();
+    gateUrl.pathname = completeEmailPathForLocale(locale);
+    gateUrl.search = "";
+    gateUrl.searchParams.set("next", next);
+    const redirect = NextResponse.redirect(gateUrl);
+    copyCookies(response, redirect);
+    return redirect;
+  }
+
   if (isAuthRoute(pathname)) return response;
   if (!isAuthProtectedPath(pathname)) return response;
   if (user) return response;
 
-  const pathNoLocale = getPathnameWithoutLocale(pathname);
-  const search = request.nextUrl.search || "";
   const next = safeNextPath(`${pathNoLocale}${search}`, "/app");
-  const locale = localeFromPathname(pathname);
-
   const loginUrl = request.nextUrl.clone();
   loginUrl.pathname = loginPathForLocale(locale);
   loginUrl.search = "";

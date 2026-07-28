@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Link } from "@/i18n/navigation";
+
+import { PassPurchaseModal } from "@/components/account/PassPurchaseModal";
 import { unlockWithPass } from "@/lib/passes/unlock-with-pass";
 import type { PassProduct } from "@/lib/passes/types";
 import "@/styles/poju-paywall-inline.css";
@@ -39,16 +40,17 @@ type PaywallCopy = {
   title: ReactNode;
   sub: string;
   cta: string;
-  codePh: string;
 };
 
+/**
+ * Match / Syncro / Glyph unlock: 1 Pass each.
+ * Spend order (server): subscription → flex. No balance → purchase modal.
+ */
 export function ToolPaywallInline(props: Props) {
   const { product, locale, onUnlocked, busy = false } = props;
-  const [codeOpen, setCodeOpen] = useState(false);
-  const [code, setCode] = useState("");
   const [payBusy, setPayBusy] = useState(false);
-  const [codeBusy, setCodeBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [buyOpen, setBuyOpen] = useState(false);
   const zh = locale.startsWith("zh");
 
   function refIdForProduct(): string {
@@ -56,7 +58,7 @@ export function ToolPaywallInline(props: Props) {
     return props.previewId;
   }
 
-  async function spendPass(via: "payment" | "code") {
+  async function spendPass() {
     setErr(null);
     const result = await unlockWithPass({
       product: product as PassProduct,
@@ -67,38 +69,22 @@ export function ToolPaywallInline(props: Props) {
       if (result.error === "unauthorized") {
         setErr(zh ? "请先登录后再使用 Pass" : "Sign in to use a Pass");
       } else if (result.error === "insufficient_balance") {
-        setErr(
-          zh
-            ? "Pass 不足，请先购买或订阅"
-            : "Not enough Passes — buy or subscribe first",
-        );
+        setBuyOpen(true);
       } else {
         setErr(zh ? "解锁失败，请重试" : "Unlock failed — try again");
       }
-      return false;
+      return;
     }
-    await onUnlocked(via);
-    return true;
+    await onUnlocked("payment");
   }
 
   async function handlePay() {
     if (payBusy || busy) return;
     setPayBusy(true);
     try {
-      await spendPass("payment");
+      await spendPass();
     } finally {
       setPayBusy(false);
-    }
-  }
-
-  async function handleRedeem() {
-    if (codeBusy || busy || !code.trim()) return;
-    setCodeBusy(true);
-    try {
-      void code;
-      await spendPass("code");
-    } finally {
-      setCodeBusy(false);
     }
   }
 
@@ -117,10 +103,9 @@ export function ToolPaywallInline(props: Props) {
             </>
           ),
           sub: zh
-            ? "消耗 1 个 Pass，解锁完整 96 格时空矩阵与 AI 择时解读。"
-            : "Spend 1 Pass to unlock the full 96-cell timing matrix and AI guidance.",
+            ? "消耗 1 个 Pass（优先订阅额度），解锁完整矩阵与 AI 择时解读。"
+            : "Spend 1 Pass (subscription balance first) to unlock the full matrix and AI guidance.",
           cta: zh ? "✦ 使用 1 Pass 解锁" : "✦ Unlock with 1 Pass",
-          codePh: zh ? "体验码 SYNCRO-XXXX-XXXX" : "Have a code? SYNCRO-XXXX-XXXX",
         }
       : product === "match"
         ? {
@@ -136,10 +121,9 @@ export function ToolPaywallInline(props: Props) {
               </>
             ),
             sub: zh
-              ? "消耗 1 个 Pass，解锁双方完整结构分析与关系深度报告。"
-              : "Spend 1 Pass to unlock full structural reports and a deep relationship analysis.",
+              ? "消耗 1 个 Pass（优先订阅额度），解锁双方深度报告。"
+              : "Spend 1 Pass (subscription balance first) to unlock dual depth reports.",
             cta: zh ? "✦ 使用 1 Pass 解锁" : "✦ Unlock with 1 Pass",
-            codePh: zh ? "体验码 MATCH-XXXX-XXXX" : "Have a code? MATCH-XXXX-XXXX",
           }
         : {
             lab: zh ? "解锁完整解读" : "Unlock full reading",
@@ -153,72 +137,49 @@ export function ToolPaywallInline(props: Props) {
               </>
             ),
             sub: zh
-              ? "消耗 1 个 Pass，解锁完整结构分析与符号深度解读。"
-              : "Spend 1 Pass to unlock the full structural birth analysis and glyph reading.",
+              ? "消耗 1 个 Pass（优先订阅额度），解锁完整符号解读。"
+              : "Spend 1 Pass (subscription balance first) to unlock the full glyph reading.",
             cta: zh ? "✦ 使用 1 Pass 解锁" : "✦ Unlock with 1 Pass",
-            codePh: zh ? "体验码 GLYPH-XXXX-XXXX" : "Have a code? GLYPH-XXXX-XXXX",
           };
 
   return (
-    <div className="pwall">
-      <div className="pwall__lab">
-        <span aria-hidden>🔒</span>
-        {copy.lab}
-      </div>
-      <h2 className="pwall__title">{copy.title}</h2>
-      <p className="pwall__sub">{copy.sub}</p>
-      <div className="pwall__price">
-        <span className="pwall__num">1</span>
-        <span className="pwall__unit">{zh ? " Pass / 次" : " Pass / unlock"}</span>
-      </div>
-      <div className="pwall__trust">
-        <span>
-          <b>✓</b> {zh ? "先买 Pass 或订阅" : "Buy Passes or subscribe first"}
-        </span>
-        <span>
-          <b>✓</b> {zh ? "一次交付扣 1 Pass" : "1 Pass per delivery"}
-        </span>
-      </div>
-      <div className="pwall__actions">
-        <button
-          type="button"
-          className="pwall__cta"
-          disabled={payBusy || busy}
-          onClick={() => void handlePay()}
-        >
-          {payBusy ? (zh ? "处理中…" : "Working…") : copy.cta}
-        </button>
-        <Link href="/#v2-pricing" className="pwall__code-toggle">
-          {zh ? "购买 / 订阅 Pass" : "Buy / subscribe Passes"}
-        </Link>
-        {!codeOpen ? (
-          <button type="button" className="pwall__code-toggle" onClick={() => setCodeOpen(true)}>
-            {zh ? "使用体验码" : "Use experience code"}
+    <>
+      <div className="pwall">
+        <div className="pwall__lab">
+          <span aria-hidden>🔒</span>
+          {copy.lab}
+        </div>
+        <h2 className="pwall__title">{copy.title}</h2>
+        <p className="pwall__sub">{copy.sub}</p>
+        <div className="pwall__price">
+          <span className="pwall__num">1</span>
+          <span className="pwall__unit">{zh ? " Pass / 次" : " Pass / unlock"}</span>
+        </div>
+        <div className="pwall__actions">
+          <button
+            type="button"
+            className="pwall__cta"
+            disabled={payBusy || busy}
+            onClick={() => void handlePay()}
+          >
+            {payBusy ? (zh ? "处理中…" : "Working…") : copy.cta}
           </button>
-        ) : (
-          <div className="pwall__codebox">
-            <input
-              type="text"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder={copy.codePh}
-              disabled={codeBusy || busy}
-            />
-            <button
-              type="button"
-              disabled={codeBusy || busy || !code.trim()}
-              onClick={() => void handleRedeem()}
-            >
-              {zh ? "核销" : "Redeem"}
-            </button>
-          </div>
-        )}
+          <button type="button" className="pwall__code-toggle" onClick={() => setBuyOpen(true)}>
+            {zh ? "购买 / 订阅 Pass" : "Buy / subscribe Passes"}
+          </button>
+        </div>
+        {err ? (
+          <p className="m-0 mt-2 text-center text-xs text-[#fca5a5]" role="alert">
+            {err}
+          </p>
+        ) : null}
       </div>
-      {err ? (
-        <p className="m-0 mt-2 text-center text-xs text-[#fca5a5]" role="alert">
-          {err}
-        </p>
-      ) : null}
-    </div>
+
+      <PassPurchaseModal
+        open={buyOpen}
+        onClose={() => setBuyOpen(false)}
+        reason="insufficient"
+      />
+    </>
   );
 }

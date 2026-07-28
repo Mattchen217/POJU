@@ -56,7 +56,13 @@ function main() {
   );
   mustInclude("app/[locale]/(auth)/forgot-password/page.tsx", ["/api/auth/forgot-password"]);
   mustInclude("app/[locale]/(auth)/reset-password/page.tsx", ["/api/auth/update-password"]);
-  mustInclude("components/auth/OAuthButtons.tsx", ["signInWithOAuth", "/api/auth/callback"]);
+  mustInclude("components/auth/OAuthButtons.tsx", [
+    "signInWithOAuth",
+    "/api/auth/callback",
+    "skipBrowserRedirect",
+  ]);
+  mustInclude("app/api/auth/callback/route.ts", ["popup", "easternos-oauth-done"]);
+  mustInclude("lib/auth/oauth-popup.ts", ["prefersFullPageOAuth", "openCenteredOAuthPopup"]);
   mustInclude("lib/i18n/pathname-without-locale.ts", ["isAuthRoute", "/forgot-password", "/reset-password"]);
   mustInclude("lib/i18n/load-locale-messages.ts", ['"auth"']);
 

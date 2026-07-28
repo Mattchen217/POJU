@@ -7,7 +7,6 @@ import { usePathname } from "next/navigation";
 import { MainNav } from "@/components/layout/MainNav";
 import { MarketingScrollReset } from "@/components/marketing/marketing-scroll-reset";
 import { SiteFooter } from "@/components/marketing/site-footer";
-import { UiShellSwitcher } from "@/components/workspace/UiShellSwitcher";
 import {
   isAuthRoute,
   isChatRoute,
@@ -33,7 +32,6 @@ function SiteChromeInner({ children }: { children: ReactNode }) {
       <>
         <MarketingScrollReset />
         {children}
-        <UiShellSwitcher />
       </>
     );
   }
@@ -49,7 +47,6 @@ function SiteChromeInner({ children }: { children: ReactNode }) {
       <MainNav homeHero={classicLanding} />
       <div className="site-chrome-main flex-1">{children}</div>
       <SiteFooter />
-      <UiShellSwitcher />
     </div>
   );
 }

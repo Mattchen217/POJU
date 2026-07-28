@@ -42,7 +42,8 @@ export const SUBSCRIPTION_FIRST_GRANT: Record<"personal" | "team", number> = {
 
 /**
  * Unlock boundary: debit 1 Pass + write usage. Idempotent on (user, product, refId).
- * Prefers subscription bucket, then flex. Uses service-role RPC.
+ * Prefers subscription bucket, then flex (purchased). Uses service-role RPC.
+ * Callers with insufficient_balance should open PassPurchaseModal (buy / subscribe).
  */
 export async function assertAndConsumePass(params: {
   userId: string;

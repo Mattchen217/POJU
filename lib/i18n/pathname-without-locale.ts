@@ -48,11 +48,13 @@ export function isAuthRoute(pathname: string): boolean {
     path === "/verify" ||
     path === "/forgot-password" ||
     path === "/reset-password" ||
+    path === "/complete-email" ||
     path.startsWith("/login/") ||
     path.startsWith("/signup/") ||
     path.startsWith("/verify/") ||
     path.startsWith("/forgot-password/") ||
-    path.startsWith("/reset-password/")
+    path.startsWith("/reset-password/") ||
+    path.startsWith("/complete-email/")
   );
 }
 

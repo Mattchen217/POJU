@@ -4,8 +4,16 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { Provider } from "@supabase/supabase-js";
 
+import { useRouter } from "@/i18n/navigation";
+import {
+  isOAuthPopupMessage,
+  openCenteredOAuthPopup,
+  prefersFullPageOAuth,
+} from "@/lib/auth/oauth-popup";
 import { createSupabaseBrowserClient } from "@/lib/auth/supabase-browser";
 import { isSupabaseConfigured } from "@/lib/auth/supabase";
+import { userNeedsEmail } from "@/lib/auth/user-identity";
+import { safeNextPath } from "@/lib/auth/auth-helpers";
 
 type Props = {
   nextPath?: string;
@@ -21,7 +29,8 @@ const PROVIDERS: Array<{
 }> = [
   { id: "google", supabase: "google", labelKey: "google" },
   { id: "facebook", supabase: "facebook", labelKey: "facebook" },
-  { id: "twitter", supabase: "twitter", labelKey: "twitter" },
+  // Supabase: "x" = X / Twitter OAuth 2.0 (enabled). "twitter" = deprecated 1.0a.
+  { id: "twitter", supabase: "x" as Provider, labelKey: "twitter" },
   { id: "discord", supabase: "discord", labelKey: "discord" },
 ];
 
@@ -94,9 +103,16 @@ function ProviderLogo({ id, className }: { id: OAuthProviderId; className?: stri
   }
 }
 
+function buildRedirectTo(site: string, nextPath: string, popup: boolean): string {
+  const q = new URLSearchParams({ next: nextPath });
+  if (popup) q.set("popup", "1");
+  return `${site}/api/auth/callback?${q.toString()}`;
+}
+
 export function OAuthButtons({ nextPath = "/app", disabled = false }: Props) {
   const t = useTranslations("auth.oauth");
   const tErr = useTranslations("auth.errors");
+  const router = useRouter();
   const configured = isSupabaseConfigured();
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<OAuthProviderId | null>(null);
@@ -108,23 +124,121 @@ export function OAuthButtons({ nextPath = "/app", disabled = false }: Props) {
       return;
     }
     setBusyId(provider.id);
+
+    const site = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || window.location.origin;
+    const usePopup = !prefersFullPageOAuth();
+
     try {
-      const site = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || window.location.origin;
       const supabase = createSupabaseBrowserClient();
-      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+
+      if (!usePopup) {
+        const { error: oauthError } = await supabase.auth.signInWithOAuth({
+          provider: provider.supabase,
+          options: {
+            redirectTo: buildRedirectTo(site, nextPath, false),
+          },
+        });
+        if (oauthError) {
+          console.error(`[oauth/${provider.id}]`, oauthError.name, oauthError.message);
+          setError("oauth_failed");
+          setBusyId(null);
+        }
+        // Full-page redirect keeps busy until navigation.
+        return;
+      }
+
+      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: provider.supabase,
         options: {
-          redirectTo: `${site}/api/auth/callback?next=${encodeURIComponent(nextPath)}`,
+          redirectTo: buildRedirectTo(site, nextPath, true),
+          skipBrowserRedirect: true,
         },
       });
-      if (oauthError) {
-        console.error(`[oauth/${provider.id}]`, oauthError.name, oauthError.message);
+
+      if (oauthError || !data.url) {
+        console.error(
+          `[oauth/${provider.id}]`,
+          oauthError?.name ?? "missing_url",
+          oauthError?.message ?? "",
+        );
         setError("oauth_failed");
+        setBusyId(null);
+        return;
       }
+
+      const popup = openCenteredOAuthPopup(data.url, `easternos_oauth_${provider.id}`);
+      if (!popup) {
+        // Popup blocked → fall back to full-page redirect.
+        const { error: fallbackError } = await supabase.auth.signInWithOAuth({
+          provider: provider.supabase,
+          options: {
+            redirectTo: buildRedirectTo(site, nextPath, false),
+          },
+        });
+        if (fallbackError) {
+          console.error(`[oauth/${provider.id}] fallback`, fallbackError.name, fallbackError.message);
+          setError("oauth_failed");
+          setBusyId(null);
+        }
+        return;
+      }
+
+      const origin = window.location.origin;
+      let settled = false;
+
+      const finish = (status: "ok" | "error" | "cancel", next?: string) => {
+        if (settled) return;
+        settled = true;
+        window.removeEventListener("message", onMessage);
+        window.clearInterval(pollClosed);
+        setBusyId(null);
+        try {
+          if (!popup.closed) popup.close();
+        } catch {
+          /* ignore */
+        }
+        if (status === "ok") {
+          router.push(next || nextPath);
+          router.refresh();
+          return;
+        }
+        if (status === "error") {
+          setError("oauth_failed");
+        }
+      };
+
+      const onMessage = (event: MessageEvent) => {
+        if (event.origin !== origin) return;
+        if (!isOAuthPopupMessage(event.data)) return;
+        finish(event.data.status, event.data.next);
+      };
+
+      window.addEventListener("message", onMessage);
+
+      const pollClosed = window.setInterval(() => {
+        if (!popup.closed) return;
+        void (async () => {
+          try {
+            const { data } = await createSupabaseBrowserClient().auth.getUser();
+            if (data.user) {
+              if (userNeedsEmail(data.user)) {
+                const gate = `/complete-email?next=${encodeURIComponent(safeNextPath(nextPath, "/app"))}`;
+                finish("ok", gate);
+                return;
+              }
+              finish("ok", nextPath);
+              return;
+            }
+          } catch {
+            /* ignore */
+          }
+          // Closed without completing — keep the login page intact, no hard error.
+          finish("cancel");
+        })();
+      }, 500);
     } catch (err) {
       console.error(`[oauth/${provider.id}] unexpected`, err instanceof Error ? err.name : "unknown");
       setError("oauth_failed");
-    } finally {
       setBusyId(null);
     }
   }

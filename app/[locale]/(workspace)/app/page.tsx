@@ -4,7 +4,6 @@ import { Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { WorkspaceShell } from "@/components/workspace/WorkspaceShell";
-import { UiShellSwitcher } from "@/components/workspace/UiShellSwitcher";
 import { useUiShell } from "@/components/workspace/use-ui-shell";
 import { ResumePendingCheckout } from "@/components/auth/ResumePendingCheckout";
 import { parseWorkspaceTab } from "@/lib/ui-shell/resolve-ui-shell";
@@ -35,7 +34,6 @@ function WorkspaceAppInner() {
     <>
       <ResumePendingCheckout />
       <WorkspaceShell initialTab={tab} />
-      <UiShellSwitcher />
     </>
   );
 }

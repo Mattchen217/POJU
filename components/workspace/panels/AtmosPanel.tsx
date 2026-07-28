@@ -55,8 +55,15 @@ export function AtmosPanel() {
   if (phase === "idle") {
     return (
       <div className="workspace-product-stack workspace-poju-stack">
-        <div className="workspace-product-hero workspace-poju-hero">
-          <PojuProductHero copy={heroCopy} hideActions />
+        <div className="workspace-product-hero workspace-poju-hero workspace-atmos-hero">
+          <PojuProductHero
+            copy={heroCopy}
+            hideActions
+            scene="/spline/atmoswork.splinecode"
+            initialZoom={0.92}
+            hideStarrySky
+            hideVignette
+          />
         </div>
         <div className="workspace-product-below workspace-poju-below">
           <div className="workspace-poju-below__cluster">
@@ -97,8 +104,15 @@ export function AtmosPanel() {
             birthFading ? " is-fade-out" : ""
           }`}
         >
-          <div className="workspace-product-hero workspace-poju-hero">
-            <PojuProductHero copy={heroCopy} hideActions />
+          <div className="workspace-product-hero workspace-poju-hero workspace-atmos-hero">
+            <PojuProductHero
+              copy={heroCopy}
+              hideActions
+              scene="/spline/atmoswork.splinecode"
+              initialZoom={0.92}
+              hideStarrySky
+              hideVignette
+            />
           </div>
           <div className="workspace-product-below workspace-poju-below">
             <div className="workspace-poju-below__cluster">

@@ -30,6 +30,11 @@ async function main() {
   assert(isAuthProtectedPath("/poju") === false, "poju marketing public");
   assert(isAuthProtectedPath("/contact") === false, "contact public");
 
+  const { userNeedsEmail } = await import("../lib/auth/user-identity");
+  assert(userNeedsEmail(null) === false, "null user no email need");
+  assert(userNeedsEmail({ email: "" } as never) === true, "empty email needs gate");
+  assert(userNeedsEmail({ email: "a@b.co" } as never) === false, "email present ok");
+
   const prev = process.env.AUTH_ROUTE_GUARD;
   process.env.AUTH_ROUTE_GUARD = "0";
   assert(isAuthRouteGuardEnabled() === false, "guard off via env");

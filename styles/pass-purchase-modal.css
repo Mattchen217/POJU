@@ -1,0 +1,221 @@
+.pass-buy-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(7, 7, 14, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.pass-buy-sheet {
+  position: relative;
+  width: min(720px, 100%);
+  max-height: min(90vh, 820px);
+  overflow: auto;
+  border-radius: 20px;
+  padding: 28px 22px 24px;
+  background: linear-gradient(180deg, rgba(28, 26, 40, 0.96), rgba(14, 12, 22, 0.98));
+  border: 1px solid rgba(242, 202, 80, 0.22);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+  color: #e4e4e7;
+}
+
+.pass-buy-sheet__close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #a1a1aa;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.pass-buy-sheet__close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.pass-buy__eyebrow {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #f2ca50;
+  text-align: center;
+}
+
+.pass-buy__title {
+  margin: 8px 0 0;
+  text-align: center;
+  font-size: clamp(20px, 3.5vw, 28px);
+  font-weight: 600;
+  color: #fff;
+}
+
+.pass-buy__sub {
+  margin: 10px auto 0;
+  max-width: 36rem;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #a1a1aa;
+}
+
+.pass-buy__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  margin-top: 22px;
+}
+
+@media (min-width: 640px) {
+  .pass-buy__grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.pass-buy-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px 16px;
+  border-radius: 16px;
+  background: rgba(242, 202, 80, 0.04);
+  border: 1px solid rgba(242, 202, 80, 0.18);
+}
+
+.pass-buy-card--sub {
+  border-color: rgba(242, 202, 80, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.pass-buy-card__lab {
+  margin: 0;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #71717a;
+}
+
+.pass-buy-card__price {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.pass-buy-card__cur {
+  font-size: 18px;
+  color: #f2ca50;
+}
+
+.pass-buy-card__num {
+  font-size: 36px;
+  font-weight: 600;
+  line-height: 1;
+  color: #f2ca50;
+  font-variant-numeric: tabular-nums;
+}
+
+.pass-buy-card__unit {
+  margin-left: 4px;
+  font-size: 12px;
+  color: #a1a1aa;
+}
+
+.pass-buy-card__name {
+  margin: 4px 0 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.pass-buy-card__badge {
+  margin: 0;
+  font-size: 13px;
+  color: #e4e4e7;
+}
+
+.pass-buy-card__bonus {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #f2ca50;
+  line-height: 1.45;
+}
+
+.pass-buy-card__qty {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  align-self: flex-start;
+}
+
+.pass-buy-card__qty-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid rgba(242, 202, 80, 0.35);
+  background: transparent;
+  color: #f2ca50;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.pass-buy-card__qty-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pass-buy-card__qty-val {
+  min-width: 1.5rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.pass-buy-card__cta {
+  margin-top: auto;
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(242, 202, 80, 0.45);
+  background: transparent;
+  color: #f2ca50;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.pass-buy-card__cta:hover:not(:disabled) {
+  background: rgba(242, 202, 80, 0.12);
+}
+
+.pass-buy-card__cta--primary {
+  background: #f2ca50;
+  color: #141018;
+  border-color: #f2ca50;
+}
+
+.pass-buy-card__cta--primary:hover:not(:disabled) {
+  background: #f5d56a;
+}
+
+.pass-buy-card__cta:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.pass-buy__err {
+  margin: 14px 0 0;
+  text-align: center;
+  font-size: 12px;
+  color: #fca5a5;
+}

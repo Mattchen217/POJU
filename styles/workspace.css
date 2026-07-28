@@ -1568,6 +1568,37 @@
   margin-inline: auto;
 }
 
+/*
+ * Atmos workspace hero: no CSS star plate; spline sits on page.
+ * Frame to the scene's translucent box — full width, height only slightly taller
+ * (non-uniform scaleX > scaleY so we don't blow up vertical size).
+ */
+.workspace-atmos-hero .product-hero__shell {
+  overflow: hidden;
+}
+
+.workspace-atmos-hero .product-hero__bg {
+  overflow: hidden;
+}
+
+.workspace-atmos-hero .poju-hero-spline {
+  left: 50%;
+  top: 50%;
+  width: 100%;
+  max-width: none;
+  height: min(46vh, 400px);
+  min-height: 0;
+  /* Stretch sides only — keep vertical scale at 1 so height stays put */
+  transform: translate(-50%, -50%) scaleX(1.28);
+  transform-origin: center center;
+  opacity: 1;
+}
+
+.workspace-atmos-hero .poju-hero-spline canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
 /* —— Product stack: hero + form (outer layout only) —— */
 .workspace-product-stack,
 .workspace-poju-stack {

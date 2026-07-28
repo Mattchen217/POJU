@@ -15,6 +15,10 @@ type ProductMarketingHeroProps = {
   backgroundClassName?: string;
   reserveBackgroundSlot?: boolean;
   theme?: ProductPageTheme | "archive";
+  /** Hide CSS starfield overlay (Atmos: spline sits directly on the page). */
+  hideStarrySky?: boolean;
+  /** Hide radial vignette plate behind the spline. */
+  hideVignette?: boolean;
 };
 
 /** DS ProductHero shell（chrome.jsx）— 动效层 + 暗角叠层 + 居中内容 */
@@ -27,6 +31,8 @@ export function ProductMarketingHero({
   backgroundClassName,
   reserveBackgroundSlot,
   theme,
+  hideStarrySky = false,
+  hideVignette = false,
 }: ProductMarketingHeroProps) {
   const showBg = Boolean(background) || reserveBackgroundSlot;
 
@@ -42,9 +48,9 @@ export function ProductMarketingHero({
           </div>
         ) : null}
 
-        <ProductHeroStarrySky />
+        {hideStarrySky ? null : <ProductHeroStarrySky />}
 
-        <div className="product-hero__vignette" aria-hidden />
+        {hideVignette ? null : <div className="product-hero__vignette" aria-hidden />}
 
         <div
           className={cn(

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import PojuChat from "@/components/poju/PojuChat";
+import { PassPurchaseModal } from "@/components/account/PassPurchaseModal";
 import { useAppDialog } from "@/components/ui/app-dialog";
 import { OffTopicAction } from "@/components/poju/OffTopicAction";
 import { RefundOfferAction } from "@/components/poju/RefundOfferAction";
@@ -203,6 +204,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   const [driftReason, setDriftReason] = useState("");
   const [editDialog, setEditDialog] = useState<{ messageId: string; content: string } | null>(null);
   const [unlockBusy, setUnlockBusy] = useState(false);
+  const [passBuyOpen, setPassBuyOpen] = useState(false);
   const [unlockReportModalOpen, setUnlockReportModalOpen] = useState(
     () => getInitialUnlockReportUiState(session).modalOpen,
   );
@@ -1591,6 +1593,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       const msg = e instanceof Error ? e.message : String(e);
       if (msg === "PASS_REQUIRED") {
         setFinalError(t("pass_required"));
+        setPassBuyOpen(true);
       } else if (msg === "PASS_LOGIN_REQUIRED") {
         setFinalError(t("pass_login_required"));
       } else {
@@ -2066,6 +2069,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           }}
         />
       ) : null}
+      <PassPurchaseModal
+        open={passBuyOpen}
+        onClose={() => setPassBuyOpen(false)}
+        reason="insufficient"
+      />
     </>
   );
 }
