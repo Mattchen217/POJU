@@ -22,6 +22,11 @@ const withSerwist = withSerwistInit({
 const nextConfig = {
   reactStrictMode: true,
   /**
+   * Keep sharp as a native Node package — webpack must not try to resolve
+   * optional platform stubs like `@img/sharp-wasm32` during the Vercel build.
+   */
+  serverExternalPackages: ["sharp"],
+  /**
    * Allow LAN-origin dev resources (HMR/chunks) when opening the site on phones
    * via http://192.168.31.197:3000 during local development.
    */

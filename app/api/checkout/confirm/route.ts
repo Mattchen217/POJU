@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { getServerUser } from "@/lib/auth/supabase-server";
 import { isSupabaseAdminConfigured } from "@/lib/auth/supabase";
-import { PLAN_PRICES_CENTS, type PendingIntentPlan } from "@/lib/auth/pending-intent";
+import { PLAN_PRICES_CENTS, type PendingIntent } from "@/lib/auth/pending-intent";
 import { creditPassesFromCheckout } from "@/lib/passes/credit-passes";
 import { isPaymentGatewayEnabled } from "@/lib/payments/gateway-enabled";
 import { createStripeClient, isStripeConfigured } from "@/lib/payments/create-checkout-session";
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
             ? "team"
             : "flex_pass";
       const quantity = parsed.data.quantity ?? 1;
-      const intentPlan: PendingIntentPlan =
+      const intentPlan: PendingIntent["plan"] =
         planType === "personal"
           ? "personal_plan"
           : planType === "team"
