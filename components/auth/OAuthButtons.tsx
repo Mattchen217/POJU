@@ -103,8 +103,10 @@ function buildRedirectTo(site: string, nextPath: string): string {
 /**
  * Social OAuth — full-page redirect only.
  * Popup + PKCE + COOP was closing early and leaving the opener on /login.
- * Uses window.location.origin so PKCE cookies and redirectTo share the same host
- * (www is canonicalized to apex via next.config redirect).
+ *
+ * Always use the current page origin for redirectTo so PKCE cookies and the
+ * callback host match. Do NOT force apex↔www here — that fights Vercel domain
+ * redirects and causes ERR_TOO_MANY_REDIRECTS.
  */
 export function OAuthButtons({ nextPath = "/", disabled = false }: Props) {
   const t = useTranslations("auth.oauth");

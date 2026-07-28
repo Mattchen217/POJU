@@ -53,13 +53,6 @@ const nextConfig = {
   },
   async redirects() {
     return [
-      // Canonical host: www → apex (OAuth PKCE cookies break across www/non-www)
-      {
-        source: "/:path*",
-        has: [{ type: "host", value: "www.easternos.com" }],
-        destination: "https://easternos.com/:path*",
-        permanent: true,
-      },
       {
         source: "/favicon.ico",
         destination: "/api/pwa-icon?size=32",
