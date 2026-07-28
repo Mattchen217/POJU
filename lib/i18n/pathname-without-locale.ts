@@ -49,12 +49,14 @@ export function isAuthRoute(pathname: string): boolean {
     path === "/forgot-password" ||
     path === "/reset-password" ||
     path === "/complete-email" ||
+    path === "/oauth-popup" ||
     path.startsWith("/login/") ||
     path.startsWith("/signup/") ||
     path.startsWith("/verify/") ||
     path.startsWith("/forgot-password/") ||
     path.startsWith("/reset-password/") ||
-    path.startsWith("/complete-email/")
+    path.startsWith("/complete-email/") ||
+    path.startsWith("/oauth-popup/")
   );
 }
 

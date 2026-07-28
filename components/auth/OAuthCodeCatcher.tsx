@@ -2,21 +2,49 @@
 
 import { useEffect } from "react";
 
-import { OAUTH_POPUP_COOKIE } from "@/lib/auth/oauth-popup";
+import {
+  clearOAuthPopupPending,
+  OAUTH_POPUP_MESSAGE_TYPE,
+} from "@/lib/auth/oauth-popup";
 
 /**
  * Supabase sometimes returns the OAuth `code` to Site URL (`/`) instead of
- * `/api/auth/callback`. In a popup that paints the whole marketing site.
- * Forward those codes to the real callback (and force popup=1 when opener exists).
+ * `/oauth-popup`. Forward before the marketing shell paints in the popup.
+ * Also close the popup if it ever lands on `/login?error=oauth_failed`.
  */
 export function OAuthCodeCatcher() {
   useEffect(() => {
     try {
       const url = new URL(window.location.href);
+      const path = url.pathname.replace(/\/$/, "") || "/";
+      const pathNoLocale = path.replace(/^\/(zh|es|de|fr)(?=\/|$)/, "") || "/";
+      const hasOpener = Boolean(window.opener && !window.opener.closed);
+
+      if (hasOpener && pathNoLocale === "/login" && url.searchParams.get("error")) {
+        clearOAuthPopupPending();
+        try {
+          window.opener!.postMessage(
+            {
+              type: OAUTH_POPUP_MESSAGE_TYPE,
+              status: "error",
+              next: "/app",
+            },
+            window.location.origin,
+          );
+        } catch {
+          /* ignore */
+        }
+        try {
+          window.close();
+        } catch {
+          /* ignore */
+        }
+        return;
+      }
+
       const code = url.searchParams.get("code");
       if (!code) return;
 
-      const path = url.pathname.replace(/\/$/, "") || "/";
       const isHome =
         path === "/" ||
         path === "/zh" ||
@@ -25,22 +53,13 @@ export function OAuthCodeCatcher() {
         path === "/fr";
       if (!isHome) return;
 
-      const target = new URL("/api/auth/callback", window.location.origin);
+      const target = new URL("/oauth-popup", window.location.origin);
       url.searchParams.forEach((value, key) => {
         target.searchParams.set(key, value);
       });
       if (!target.searchParams.get("next")) {
         target.searchParams.set("next", "/app");
       }
-
-      const hasOpener = Boolean(window.opener && !window.opener.closed);
-      const cookiePending = document.cookie
-        .split(";")
-        .some((part) => part.trim().startsWith(`${OAUTH_POPUP_COOKIE}=1`));
-      if (hasOpener || cookiePending) {
-        target.searchParams.set("popup", "1");
-      }
-
       window.location.replace(target.toString());
     } catch {
       /* ignore */

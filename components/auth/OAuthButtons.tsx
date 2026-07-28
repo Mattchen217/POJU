@@ -106,7 +106,11 @@ function ProviderLogo({ id, className }: { id: OAuthProviderId; className?: stri
 
 function buildRedirectTo(site: string, nextPath: string, popup: boolean): string {
   const q = new URLSearchParams({ next: nextPath });
-  if (popup) q.set("popup", "1");
+  // Popup must return to the client PKCE handler — not the server callback —
+  // so the code_verifier in the browser storage can complete the exchange.
+  if (popup) {
+    return `${site}/oauth-popup?${q.toString()}`;
+  }
   return `${site}/api/auth/callback?${q.toString()}`;
 }
 
