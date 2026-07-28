@@ -10,8 +10,9 @@ export function WorkspaceStarfieldLayer() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    const maybeCanvas = canvasRef.current;
+    if (!maybeCanvas) return;
+    const canvas: HTMLCanvasElement = maybeCanvas;
 
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
