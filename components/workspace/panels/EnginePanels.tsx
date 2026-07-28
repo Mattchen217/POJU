@@ -9,7 +9,7 @@ import { PojuProductHero } from "@/components/marketing/poju-product-hero";
 import { SyncroProductHero } from "@/components/marketing/syncro-product-hero";
 import { MatchDeliveryView } from "@/components/match/MatchDeliveryView";
 import { ToolPaywallInline } from "@/components/cross-product/ToolPaywallInline";
-import { BeginButton } from "@/components/pwa/BeginButton";
+import { BeginButton, type BeginProductId } from "@/components/pwa/BeginButton";
 import { WorkspaceContextPanel } from "@/components/workspace/WorkspaceContextPanel";
 import { WorkspaceMatchBirthSideCopy } from "@/components/workspace/WorkspaceMatchBirthSideCopy";
 import { WorkspaceMatchGeneratingStage } from "@/components/workspace/WorkspaceMatchGeneratingStage";
@@ -25,10 +25,7 @@ import { WorkspaceProfileSlotBar } from "@/components/workspace/WorkspaceProfile
 import { WorkspaceScrollArea } from "@/components/workspace/WorkspaceScrollArea";
 import { WorkspaceUsageGuideLink } from "@/components/workspace/WorkspaceUsageGuideLink";
 import { useWorkspaceUnlockRitualResume } from "@/components/workspace/useWorkspaceUnlockRitualResume";
-import {
-  useWorkspaceProductHistory,
-  type WorkspaceProductId,
-} from "@/components/workspace/use-workspace-product-history";
+import { useWorkspaceProductHistory } from "@/components/workspace/use-workspace-product-history";
 import {
   ensureMatchPreviewSession,
   loadMatchPreviewSession,
@@ -43,7 +40,8 @@ const PRESET_KEYS = ["career", "relationship", "timing"] as const;
 const PREPARE_HANDOFF_MS = 480;
 
 type Props = {
-  productId: WorkspaceProductId;
+  /** Engine home CTA products only — Atmos has its own panel. */
+  productId: BeginProductId;
   price: string;
   onOpenArchive: (archiveId: string) => void;
 };
