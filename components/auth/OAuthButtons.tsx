@@ -13,8 +13,6 @@ import {
 } from "@/lib/auth/oauth-popup";
 import { createSupabaseBrowserClient } from "@/lib/auth/supabase-browser";
 import { isSupabaseConfigured } from "@/lib/auth/supabase";
-import { userNeedsEmail } from "@/lib/auth/user-identity";
-import { safeNextPath } from "@/lib/auth/auth-helpers";
 
 type Props = {
   nextPath?: string;
@@ -197,13 +195,18 @@ export function OAuthButtons({ nextPath = "/app", disabled = false }: Props) {
         if (settled) return;
         settled = true;
         window.removeEventListener("message", onMessage);
-        window.clearInterval(pollClosed);
+        window.clearInterval(watchPopup);
         clearOAuthPopupPending();
         setBusyId(null);
-        try {
-          if (!popup.closed) popup.close();
-        } catch {
-          /* ignore */
+        // Only close after /oauth-popup posts back. Never close on "cancel":
+        // with COOP, popup.closed is often true while Google is still open — closing
+        // here would kill the consent window before the user can confirm.
+        if (status === "ok" || status === "error") {
+          try {
+            popup.close();
+          } catch {
+            /* ignore */
+          }
         }
         if (status === "ok") {
           router.push(next || nextPath);
@@ -223,26 +226,28 @@ export function OAuthButtons({ nextPath = "/app", disabled = false }: Props) {
 
       window.addEventListener("message", onMessage);
 
-      const pollClosed = window.setInterval(() => {
-        if (!popup.closed) return;
-        void (async () => {
-          try {
-            const { data } = await createSupabaseBrowserClient().auth.getUser();
-            if (data.user) {
-              if (userNeedsEmail(data.user)) {
-                const gate = `/complete-email?next=${encodeURIComponent(safeNextPath(nextPath, "/app"))}`;
-                finish("ok", gate);
-                return;
-              }
-              finish("ok", nextPath);
-              return;
-            }
-          } catch {
-            /* ignore */
-          }
-          // Closed without completing — keep the login page intact, no hard error.
-          finish("cancel");
-        })();
+      // Do not trust popup.closed while on Google (COOP false positives).
+      // Only clear the busy state if the window is gone for a sustained period
+      // and we never got a postMessage (user dismissed the popup).
+      let closedStreak = 0;
+      const watchPopup = window.setInterval(() => {
+        if (settled) return;
+        let reportedlyClosed = false;
+        try {
+          reportedlyClosed = popup.closed;
+        } catch {
+          // Cross-origin: treat as still open, keep waiting for postMessage.
+          closedStreak = 0;
+          return;
+        }
+        if (!reportedlyClosed) {
+          closedStreak = 0;
+          return;
+        }
+        closedStreak += 1;
+        // ~3s of sustained "closed" before we give up (not the first COOP blip).
+        if (closedStreak < 6) return;
+        finish("cancel");
       }, 500);
     } catch (err) {
       console.error(`[oauth/${provider.id}] unexpected`, err instanceof Error ? err.name : "unknown");
