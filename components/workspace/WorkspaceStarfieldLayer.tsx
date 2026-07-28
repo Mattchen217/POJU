@@ -30,12 +30,13 @@ export function WorkspaceStarfieldLayer() {
     ro?.observe(canvas);
     syncSize();
 
-    const gl =
+    const maybeGl =
       canvas.getContext("webgl", { alpha: false, antialias: false }) ||
       canvas.getContext("experimental-webgl", { alpha: false, antialias: false });
-    if (!gl || !(gl instanceof WebGLRenderingContext)) {
+    if (!maybeGl || !(maybeGl instanceof WebGLRenderingContext)) {
       return () => ro?.disconnect();
     }
+    const gl: WebGLRenderingContext = maybeGl;
 
     const vs = `attribute vec2 a_position;
 varying vec2 v_texCoord;
