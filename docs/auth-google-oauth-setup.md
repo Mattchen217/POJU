@@ -11,6 +11,8 @@
 
 不要用 NextAuth 风格的 `/api/auth/callback/google`。
 
+**Supabase → Authentication → URL Configuration → Redirect URLs** 必须包含上述「应用回跳」地址（可带 `*` 通配查询串）。若只配了 Site URL 根路径，Google 会把 `?code=` 丢回首页，弹窗里就会整页打开落地页而不是关闭。
+
 ## Providers（本仓按钮）
 
 | 按钮 | Supabase Provider 名 |

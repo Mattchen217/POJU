@@ -6,6 +6,7 @@ import type { Provider } from "@supabase/supabase-js";
 
 import { useRouter } from "@/i18n/navigation";
 import {
+  clearOAuthPopupPending,
   isOAuthPopupMessage,
   openCenteredOAuthPopup,
   prefersFullPageOAuth,
@@ -125,7 +126,9 @@ export function OAuthButtons({ nextPath = "/app", disabled = false }: Props) {
     }
     setBusyId(provider.id);
 
-    const site = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || window.location.origin;
+    // Prefer the actual tab origin so redirectTo matches this host (Site URL
+    // fallback otherwise drops us on /?code=… inside the popup).
+    const site = window.location.origin;
     const usePopup = !prefersFullPageOAuth();
 
     try {
@@ -191,6 +194,7 @@ export function OAuthButtons({ nextPath = "/app", disabled = false }: Props) {
         settled = true;
         window.removeEventListener("message", onMessage);
         window.clearInterval(pollClosed);
+        clearOAuthPopupPending();
         setBusyId(null);
         try {
           if (!popup.closed) popup.close();

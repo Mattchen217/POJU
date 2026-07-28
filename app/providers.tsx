@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { ScrollToTopButton } from "@/components/scroll-to-top-button";
 import { DisclaimerModal } from "@/components/disclaimer/disclaimer-modal";
+import { OAuthCodeCatcher } from "@/components/auth/OAuthCodeCatcher";
 import { PwaInstallProvider } from "@/components/pwa/pwa-install-context";
 import { siteConfig } from "@/lib/config/site";
 import { initApp } from "@/lib/init";
@@ -38,6 +39,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <PwaInstallProvider>
+      <OAuthCodeCatcher />
       {children}
       <ScrollToTopButton />
       <PwaTabbar />

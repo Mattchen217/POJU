@@ -5,6 +5,9 @@
 
 export const OAUTH_POPUP_MESSAGE_TYPE = "easternos-oauth-done" as const;
 
+/** Short-lived flag so Site-URL fallback `/?code=` can still close as a popup. */
+export const OAUTH_POPUP_COOKIE = "easternos_oauth_popup";
+
 export type OAuthPopupMessage = {
   type: typeof OAUTH_POPUP_MESSAGE_TYPE;
   status: "ok" | "error";
@@ -33,11 +36,30 @@ export function prefersFullPageOAuth(): boolean {
   }
 }
 
+export function markOAuthPopupPending(): void {
+  if (typeof document === "undefined") return;
+  try {
+    document.cookie = `${OAUTH_POPUP_COOKIE}=1; Path=/; Max-Age=600; SameSite=Lax`;
+  } catch {
+    /* ignore */
+  }
+}
+
+export function clearOAuthPopupPending(): void {
+  if (typeof document === "undefined") return;
+  try {
+    document.cookie = `${OAUTH_POPUP_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
+  } catch {
+    /* ignore */
+  }
+}
+
 export function openCenteredOAuthPopup(url: string, name = "easternos_oauth"): Window | null {
   const width = 600;
   const height = 720;
   const left = Math.max(0, Math.round(window.screenX + (window.outerWidth - width) / 2));
   const top = Math.max(0, Math.round(window.screenY + (window.outerHeight - height) / 2));
+  markOAuthPopupPending();
   return window.open(
     url,
     name,

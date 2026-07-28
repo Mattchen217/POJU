@@ -1,17 +1,46 @@
 import createMiddleware from "next-intl/middleware";
-import { type NextRequest } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 
 import { routing } from "./i18n/routing";
 import { applyAuthRouteGuard } from "./lib/auth/middleware-guard";
+import { OAUTH_POPUP_COOKIE } from "./lib/auth/oauth-popup";
 import { updateSupabaseSession } from "./lib/auth/middleware-session";
 
 const intlMiddleware = createMiddleware(routing);
+
+function isLocaleHomePath(pathname: string): boolean {
+  return pathname === "/" || /^\/(zh|es|de|fr)\/?$/.test(pathname);
+}
 
 /**
  * Compose next-intl → Supabase cookie refresh → optional auth route guard.
  * Do not replace intl — i18n depends on it.
  */
 export default async function middleware(request: NextRequest) {
+  const url = request.nextUrl;
+  const oauthCode = url.searchParams.get("code");
+
+  // OAuth PKCE often lands on Site URL (/?code=…) when Redirect URL allowlist
+  // doesn't match — forward to the real cookie exchange endpoint.
+  if (oauthCode && isLocaleHomePath(url.pathname)) {
+    const target = new URL("/api/auth/callback", url.origin);
+    url.searchParams.forEach((value, key) => {
+      target.searchParams.set(key, value);
+    });
+    if (!target.searchParams.get("next")) {
+      target.searchParams.set("next", "/app");
+    }
+    if (request.cookies.get(OAUTH_POPUP_COOKIE)?.value === "1") {
+      target.searchParams.set("popup", "1");
+    }
+    const redirect = NextResponse.redirect(target);
+    redirect.cookies.set(OAUTH_POPUP_COOKIE, "", {
+      path: "/",
+      maxAge: 0,
+    });
+    return redirect;
+  }
+
   const intlResponse = intlMiddleware(request);
   const { response, user } = await updateSupabaseSession(request, intlResponse);
   return applyAuthRouteGuard(request, response, user);

@@ -39,6 +39,9 @@ function popupDoneHtml(origin: string, status: "ok" | "error", next: string): st
         }
       } catch (e) {}
       try { window.close(); } catch (e) {}
+      // Some browsers ignore the first close(); retry briefly.
+      setTimeout(function () { try { window.close(); } catch (e) {} }, 120);
+      setTimeout(function () { try { window.close(); } catch (e) {} }, 400);
     })();
   </script>
 </body>
