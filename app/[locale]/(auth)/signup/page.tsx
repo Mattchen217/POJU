@@ -8,6 +8,7 @@ import { AuthCard } from "@/components/auth/AuthCard";
 import { AuthErrorText } from "@/components/auth/AuthErrorText";
 import { EmailPasswordForm } from "@/components/auth/EmailPasswordForm";
 import { OAuthButtons } from "@/components/auth/OAuthButtons";
+import { useRedirectIfSignedIn } from "@/components/auth/use-redirect-if-signed-in";
 import { Link, useRouter } from "@/i18n/navigation";
 import { postAuthJson } from "@/lib/auth/post-auth-json";
 import { safeNextPath } from "@/lib/auth/auth-helpers";
@@ -19,6 +20,7 @@ function SignupForm() {
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
   const next = safeNextPath(searchParams.get("next"), "/app");
+  useRedirectIfSignedIn(next);
 
   return (
     <AuthCard

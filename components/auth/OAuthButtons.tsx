@@ -4,13 +4,6 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { Provider } from "@supabase/supabase-js";
 
-import { useRouter } from "@/i18n/navigation";
-import {
-  clearOAuthPopupPending,
-  isOAuthPopupMessage,
-  openCenteredOAuthPopup,
-  prefersFullPageOAuth,
-} from "@/lib/auth/oauth-popup";
 import { createSupabaseBrowserClient } from "@/lib/auth/supabase-browser";
 import { isSupabaseConfigured } from "@/lib/auth/supabase";
 
@@ -102,20 +95,18 @@ function ProviderLogo({ id, className }: { id: OAuthProviderId; className?: stri
   }
 }
 
-function buildRedirectTo(site: string, nextPath: string, popup: boolean): string {
+function buildRedirectTo(site: string, nextPath: string): string {
   const q = new URLSearchParams({ next: nextPath });
-  // Popup must return to the client PKCE handler — not the server callback —
-  // so the code_verifier in the browser storage can complete the exchange.
-  if (popup) {
-    return `${site}/oauth-popup?${q.toString()}`;
-  }
   return `${site}/api/auth/callback?${q.toString()}`;
 }
 
+/**
+ * Social OAuth — full-page redirect only.
+ * Popup + PKCE + COOP was closing early and leaving the opener on /login.
+ */
 export function OAuthButtons({ nextPath = "/app", disabled = false }: Props) {
   const t = useTranslations("auth.oauth");
   const tErr = useTranslations("auth.errors");
-  const router = useRouter();
   const configured = isSupabaseConfigured();
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<OAuthProviderId | null>(null);
@@ -128,127 +119,22 @@ export function OAuthButtons({ nextPath = "/app", disabled = false }: Props) {
     }
     setBusyId(provider.id);
 
-    // Prefer the actual tab origin so redirectTo matches this host (Site URL
-    // fallback otherwise drops us on /?code=… inside the popup).
     const site = window.location.origin;
-    const usePopup = !prefersFullPageOAuth();
 
     try {
       const supabase = createSupabaseBrowserClient();
-
-      if (!usePopup) {
-        const { error: oauthError } = await supabase.auth.signInWithOAuth({
-          provider: provider.supabase,
-          options: {
-            redirectTo: buildRedirectTo(site, nextPath, false),
-          },
-        });
-        if (oauthError) {
-          console.error(`[oauth/${provider.id}]`, oauthError.name, oauthError.message);
-          setError("oauth_failed");
-          setBusyId(null);
-        }
-        // Full-page redirect keeps busy until navigation.
-        return;
-      }
-
-      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: provider.supabase,
         options: {
-          redirectTo: buildRedirectTo(site, nextPath, true),
-          skipBrowserRedirect: true,
+          redirectTo: buildRedirectTo(site, nextPath),
         },
       });
-
-      if (oauthError || !data.url) {
-        console.error(
-          `[oauth/${provider.id}]`,
-          oauthError?.name ?? "missing_url",
-          oauthError?.message ?? "",
-        );
+      if (oauthError) {
+        console.error(`[oauth/${provider.id}]`, oauthError.name, oauthError.message);
         setError("oauth_failed");
         setBusyId(null);
-        return;
       }
-
-      const popup = openCenteredOAuthPopup(data.url, `easternos_oauth_${provider.id}`);
-      if (!popup) {
-        // Popup blocked → fall back to full-page redirect.
-        const { error: fallbackError } = await supabase.auth.signInWithOAuth({
-          provider: provider.supabase,
-          options: {
-            redirectTo: buildRedirectTo(site, nextPath, false),
-          },
-        });
-        if (fallbackError) {
-          console.error(`[oauth/${provider.id}] fallback`, fallbackError.name, fallbackError.message);
-          setError("oauth_failed");
-          setBusyId(null);
-        }
-        return;
-      }
-
-      const origin = window.location.origin;
-      let settled = false;
-
-      const finish = (status: "ok" | "error" | "cancel", next?: string) => {
-        if (settled) return;
-        settled = true;
-        window.removeEventListener("message", onMessage);
-        window.clearInterval(watchPopup);
-        clearOAuthPopupPending();
-        setBusyId(null);
-        // Only close after /oauth-popup posts back. Never close on "cancel":
-        // with COOP, popup.closed is often true while Google is still open — closing
-        // here would kill the consent window before the user can confirm.
-        if (status === "ok" || status === "error") {
-          try {
-            popup.close();
-          } catch {
-            /* ignore */
-          }
-        }
-        if (status === "ok") {
-          router.push(next || nextPath);
-          router.refresh();
-          return;
-        }
-        if (status === "error") {
-          setError("oauth_failed");
-        }
-      };
-
-      const onMessage = (event: MessageEvent) => {
-        if (event.origin !== origin) return;
-        if (!isOAuthPopupMessage(event.data)) return;
-        finish(event.data.status, event.data.next);
-      };
-
-      window.addEventListener("message", onMessage);
-
-      // Do not trust popup.closed while on Google (COOP false positives).
-      // Only clear the busy state if the window is gone for a sustained period
-      // and we never got a postMessage (user dismissed the popup).
-      let closedStreak = 0;
-      const watchPopup = window.setInterval(() => {
-        if (settled) return;
-        let reportedlyClosed = false;
-        try {
-          reportedlyClosed = popup.closed;
-        } catch {
-          // Cross-origin: treat as still open, keep waiting for postMessage.
-          closedStreak = 0;
-          return;
-        }
-        if (!reportedlyClosed) {
-          closedStreak = 0;
-          return;
-        }
-        closedStreak += 1;
-        // ~3s of sustained "closed" before we give up (not the first COOP blip).
-        if (closedStreak < 6) return;
-        finish("cancel");
-      }, 500);
+      // Browser navigates away to the IdP; keep busy until then.
     } catch (err) {
       console.error(`[oauth/${provider.id}] unexpected`, err instanceof Error ? err.name : "unknown");
       setError("oauth_failed");

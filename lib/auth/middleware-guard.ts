@@ -49,6 +49,14 @@ function completeEmailPathForLocale(locale: string): string {
   return `/${locale}/complete-email`;
 }
 
+/** Prefix a safe relative path with locale when needed (default locale has no prefix). */
+function localizedPath(locale: string, path: string): string {
+  const clean = path.startsWith("/") ? path : `/${path}`;
+  if (locale === routing.defaultLocale) return clean;
+  if (clean === "/") return `/${locale}`;
+  return `/${locale}${clean}`;
+}
+
 function copyCookies(from: NextResponse, to: NextResponse): void {
   from.cookies.getAll().forEach((cookie) => {
     to.cookies.set(cookie.name, cookie.value);
@@ -83,6 +91,24 @@ export function applyAuthRouteGuard(
     gateUrl.search = "";
     gateUrl.searchParams.set("next", next);
     const redirect = NextResponse.redirect(gateUrl);
+    copyCookies(response, redirect);
+    return redirect;
+  }
+
+  // Already signed in → leave login/signup (OAuth may set cookies without a client nav)
+  if (
+    user &&
+    !userNeedsEmail(user) &&
+    (pathNoLocale === "/login" ||
+      pathNoLocale === "/signup" ||
+      pathNoLocale.startsWith("/login/") ||
+      pathNoLocale.startsWith("/signup/"))
+  ) {
+    const next = safeNextPath(request.nextUrl.searchParams.get("next"), "/app");
+    const dest = request.nextUrl.clone();
+    dest.pathname = localizedPath(locale, next);
+    dest.search = "";
+    const redirect = NextResponse.redirect(dest);
     copyCookies(response, redirect);
     return redirect;
   }

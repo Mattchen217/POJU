@@ -42,7 +42,7 @@ function main() {
   }
 
   mustInclude("app/[locale]/(auth)/login/page.tsx", ["/api/auth/login", "OAuthButtons", "Suspense"]);
-  mustInclude("app/[locale]/(auth)/signup/page.tsx", ["/api/auth/signup", "mode=signup"]);
+  mustInclude("app/[locale]/(auth)/signup/page.tsx", ["/api/auth/signup", 'mode="signup"']);
   mustInclude("app/[locale]/(auth)/verify/page.tsx", [
     "/api/auth/verify-signup",
     "/api/auth/otp/verify",
@@ -59,10 +59,11 @@ function main() {
   mustInclude("components/auth/OAuthButtons.tsx", [
     "signInWithOAuth",
     "/api/auth/callback",
-    "skipBrowserRedirect",
+    "full-page redirect",
   ]);
-  mustInclude("app/api/auth/callback/route.ts", ["popup", "easternos-oauth-done"]);
-  mustInclude("lib/auth/oauth-popup.ts", ["prefersFullPageOAuth", "openCenteredOAuthPopup"]);
+  mustInclude("components/auth/use-redirect-if-signed-in.ts", ["onAuthStateChange", "SIGNED_IN"]);
+  mustInclude("app/api/auth/callback/route.ts", ["exchangeCodeForSession", "/app"]);
+  mustInclude("lib/auth/middleware-guard.ts", ["localizedPath", "/login"]);
   mustInclude("lib/i18n/pathname-without-locale.ts", ["isAuthRoute", "/forgot-password", "/reset-password"]);
   mustInclude("lib/i18n/load-locale-messages.ts", ['"auth"']);
 

@@ -3,7 +3,6 @@ import { type NextRequest, NextResponse } from "next/server";
 
 import { routing } from "./i18n/routing";
 import { applyAuthRouteGuard } from "./lib/auth/middleware-guard";
-import { OAUTH_POPUP_COOKIE } from "./lib/auth/oauth-popup";
 import { updateSupabaseSession } from "./lib/auth/middleware-session";
 
 const intlMiddleware = createMiddleware(routing);
@@ -20,22 +19,17 @@ export default async function middleware(request: NextRequest) {
   const url = request.nextUrl;
   const oauthCode = url.searchParams.get("code");
 
-  // OAuth PKCE often lands on Site URL (/?code=…) when Redirect URL allowlist
-  // doesn't match — send to the client popup finisher (keeps PKCE verifier).
+  // OAuth PKCE can land on Site URL (/?code=…) — finish via server callback
+  // (sets auth cookies) then redirect to next.
   if (oauthCode && isLocaleHomePath(url.pathname)) {
-    const target = new URL("/oauth-popup", url.origin);
+    const target = new URL("/api/auth/callback", url.origin);
     url.searchParams.forEach((value, key) => {
       target.searchParams.set(key, value);
     });
     if (!target.searchParams.get("next")) {
       target.searchParams.set("next", "/app");
     }
-    const redirect = NextResponse.redirect(target);
-    redirect.cookies.set(OAUTH_POPUP_COOKIE, "", {
-      path: "/",
-      maxAge: 0,
-    });
-    return redirect;
+    return NextResponse.redirect(target);
   }
 
   const intlResponse = intlMiddleware(request);

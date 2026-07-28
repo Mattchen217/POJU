@@ -6,20 +6,19 @@
 
 | 用途 | 正确地址 |
 |------|----------|
-| 应用回跳（全页） | `https://easternos.com/api/auth/callback`（本地：`http://localhost:3000/api/auth/callback`） |
-| 应用回跳（弹窗 Google 等） | `https://easternos.com/oauth-popup`（本地：`http://localhost:3000/oauth-popup`） |
+| 应用回跳 | `https://easternos.com/api/auth/callback`（本地：`http://localhost:3000/api/auth/callback`） |
 | 各平台 Authorized redirect URI | `https://<PROJECT_REF>.supabase.co/auth/v1/callback` |
 
 不要用 NextAuth 风格的 `/api/auth/callback/google`。
 
-**Supabase → Authentication → URL Configuration → Redirect URLs** 必须同时包含：
+登录使用**同窗口全页跳转**（不再用弹窗），避免浏览器 COOP/PKCE 导致弹窗提前关闭、主页仍停在 `/login`。
+
+**Supabase → Authentication → URL Configuration → Redirect URLs** 必须包含：
 
 - `https://easternos.com/api/auth/callback**`
-- `https://easternos.com/oauth-popup**`
 - `http://localhost:3000/api/auth/callback**`
-- `http://localhost:3000/oauth-popup**`
 
-（或等价通配）。若只配了 Site URL 根路径，Google 会把 `?code=` 丢回首页。
+（或等价通配）。若只配了 Site URL 根路径，Google 会把 `?code=` 丢回首页；中间件会转发到 callback。
 
 ## Providers（本仓按钮）
 
