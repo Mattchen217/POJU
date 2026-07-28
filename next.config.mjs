@@ -16,6 +16,9 @@ const withSerwist = withSerwistInit({
   swDest: "public/sw.js",
   // 在开发环境下禁用 Serwist 以避免 Turbopack 冲突
   disable: process.env.NODE_ENV === "development",
+  // Marketing "What is" hero PNGs are ~2.4MB — keep them out of SW precache
+  // (avoids build warnings and bloated install payloads).
+  exclude: [/POJU\.[a-f0-9]+\.png$/i, /glyph\.[a-f0-9]+\.png$/i, /match\.[a-f0-9]+\.png$/i],
 });
 
 /** @type {import('next').NextConfig} */
